@@ -1,0 +1,35 @@
+# Generated simulation artifacts
+*.log
+*.jou
+*.wlf
+*.vcd
+*.fsdb
+*.shm
+*.key
+*.history
+xrun.*
+INCA_libs/
+xcelium.d/
+
+# Build outputs (iverilog/verilator)
+build/
+*.vvp
+
+# Python caches
+__pycache__/
+*.pyc
+.venv/
+
+# Calibration results
+results/
+scripts/results/
+
+# Local TB dumps
+tb/**/*.csv
+tb/**/*.txt
+*:Zone.Identifier
+
+# Documentation build
+.venv_docs/
+docs/datasheet/build/
+node_modules/
