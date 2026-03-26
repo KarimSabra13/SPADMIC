@@ -33,3 +33,5 @@ tb/**/*.txt
 .venv_docs/
 docs/datasheet/build/
 node_modules/
+results/campaign/
+results/calibration_final/
