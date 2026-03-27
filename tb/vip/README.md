@@ -37,29 +37,29 @@ Test Factory ──▶ Test (build_sequence) ──▶ Generator (queue txns)
                                           │  Mailbox   │
                                           └─────┬─────┘
                                                 │
-         ┌──────────────────────────────────────▼──────────────────┐
-         │                      Driver                             │
-         │  Routes by txn.kind:                                    │
-         │    TXN_RESET → pulse_drv.hard_reset()                   │
-         │    TXN_CFG   → csr_drv.program_cfg()                    │
-         │    TXN_BP    → ready_drv.set_mode()                     │
-         │    TXN_CONV  → BFM arm + pulse inject                   │
-         │    TXN_EOT   → break loop                               │
-         │  Also: clone TXN_CONV → exp_mailbox, sample stim_cg    │
-         └──────────────────────────┬─────────────────────────────┘
-                                    │
-                              ┌─────▼─────┐
-                              │    DUT     │
-                              │ mptdc_top  │
-                              └─────┬─────┘
-                                    │ narrow bus (16-bit valid/ready)
-                              ┌─────▼─────┐
-                              │  Monitor   │
-                              │ Captures   │
-                              │ packets    │
-                              └─────┬─────┘
-                                    │
-                              ┌─────▼──────┐
+          ┌──────────────────────────────────────▼──────────────────┐
+          │                      Driver                             │
+          │  Routes by txn.kind:                                    │
+          │    TXN_RESET → pulse_drv.hard_reset()                   │
+          │    TXN_CFG   → csr_drv.program_cfg()                    │
+          │    TXN_BP    → ready_drv.set_mode()                     │
+          │    TXN_CONV  → queue for BFM + sample stim_cg           │
+          │    TXN_EOT   → drain pending + break loop               │
+          │  Also: route accepted conversions → exp_mailbox         │
+          └──────────────────────────┬─────────────────────────────┘
+                                     │
+                               ┌─────▼─────┐
+                               │    DUT     │
+                               │ mptdc_top  │
+                               └─────┬─────┘
+                                     │ sampled accepted words
+                               ┌─────▼─────┐
+                               │  Monitor   │
+                               │ Rebuilds   │
+                               │ packets    │
+                               └─────┬─────┘
+                                     │
+                               ┌─────▼──────┐
                               │ Scoreboard │
                               │ Validates  │
                               │ + Coverage │
@@ -70,9 +70,16 @@ Test Factory ──▶ Test (build_sequence) ──▶ Generator (queue txns)
 
 - **Mailbox coupling** — classes never poke the DUT hierarchy directly.
   A module-resident BFM in `mptdc_vip_tb.sv` bridges between the
-  class mailbox (`g_bfm_req_mb`) and the DUT interface signals.
+   class mailbox (`g_bfm_req_mb`) and the DUT interface signals.
+- **Acceptance routing** — the driver does not assume every START is
+  accepted. A BFM acknowledgment mailbox (`g_bfm_ack_mb`) determines
+  whether a conversion should be forwarded to the scoreboard.
+- **Sampled monitor bridge** — accepted narrow-bus words are sampled in
+  the testbench module and delivered through `g_mon_word_mb`, avoiding
+  race-sensitive class sampling under random backpressure.
 - **Async/ready decoupling** — the ready driver runs in a parallel
-  `fork`; backpressure mode can be changed mid-test.
+  `fork`; backpressure mode can be changed mid-test, and `BP_RANDOM_50`
+  is generated deterministically on the safe clock edge.
 - **Coverage gating** — all covergroup code is wrapped in
   `` `ifdef MPTDC_ENABLE_FUNC_COV ``. Smoke runs skip coverage;
   coverage runs pass `+define+MPTDC_ENABLE_FUNC_COV`.
@@ -127,7 +134,7 @@ Represents one conversion stimulus (START/STOP pulse pair or START-only).
 | Field | Description |
 |-------|-------------|
 | `start_stop_delay_ps` | Delay between START and STOP (picoseconds) |
-| `pulse_width_ps` | Pulse width (default 500 ps) |
+| `pulse_width_ps` | Pulse width (default 1000 ps) |
 | `idle_after_ps` | Idle time after this conversion |
 | `start_only` | 1 = no STOP pulse (triggers watchdog) |
 | `expect_packet` | 1 = scoreboard expects a packet |
@@ -174,8 +181,9 @@ Controls narrow-bus backpressure in a background `fork`.
 ### Main Driver (`mptdc_driver`)
 Consumes transactions from generator mailbox, routes by kind:
 
-1. **TXN_CONV**: clones to expectation mailbox → samples coverage →
-   passes to module-resident BFM (arm + pulse inject)
+1. **TXN_CONV**: queues conversion for the module-resident BFM,
+   samples coverage, and later forwards it to the expectation mailbox
+   only if the BFM reports it was accepted
 2. **TXN_CFG**: updates `current_cfg`, programs CSR
 3. **TXN_BP**: switches ready driver mode
 4. **TXN_RESET**: triggers hard reset via BFM
@@ -185,15 +193,16 @@ Consumes transactions from generator mailbox, routes by kind:
 
 ## 5. Monitor & Packet Parsing
 
-The `mptdc_output_monitor` watches the narrow-bus interface:
+The `mptdc_output_monitor` consumes accepted words from the sampled-word
+mailbox populated in `mptdc_vip_tb.sv`:
 
-1. **Wait** for `narrow_valid && narrow_ready` (handshake)
+1. **Wait** for sampled accepted words to appear
 2. **Collect** 16-bit words until a complete packet is assembled
 3. **Detect** header (bits [15:14] = 2'b10) and EOC (bits [15:14] = 2'b11)
 4. **Parse** hits based on `out_mode` from header:
-   - **RAW_FEATURES**: 3 words/hit (coarse timing, phase indices, event seq)
-   - **RAW_TIMESTAMP**: 1 word/hit (timestamp LSW only)
-   - **FULL**: 3 words/hit (features + timestamp)
+    - **RAW_FEATURES**: 3 words/hit (coarse timing, phase indices, event seq)
+    - **RAW_TIMESTAMP**: 2 words/hit (`W0` raw coarse features, `W1` timestamp)
+    - **FULL**: 4 words/hit (RAW_FEATURES `W0-W2` plus timestamp `W3`)
 5. **Forward** parsed `mptdc_packet_txn` to scoreboard via mailbox
 
 ---
@@ -507,7 +516,7 @@ that the Vernier TDC maintains measurement accuracy despite phase noise.
 ```bash
 bash ci/run_vip_smoke.sh
 ```
-Runs all 11 tests. Expected: 11/11 pass in ~30 seconds.
+Runs all 11 tests. Expected: 11/11 pass in roughly 5–8 minutes.
 
 ### Single Test (any simulator)
 
@@ -528,8 +537,14 @@ bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun \
 ```bash
 bash ci/run_vip_coverage.sh --sim xrun --clean
 ```
-Runs 8 tests with functional + code coverage. Results in
+Runs 9 tests with functional + code coverage. Results in
 `build/vip_coverage_xrun/cov_work/`.
+
+### Broader coverage + stress campaign
+
+```bash
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+```
 
 ### With jitter
 
@@ -633,10 +648,10 @@ In the GUI:
 VIP RESULTS: 11 passed, 0 failed out of 11
 ```
 
-### Coverage Regression (8 tests)
+### Coverage Regression (9 tests)
 
 ```
-VIP coverage results: 8 passed, 0 failed
+VIP coverage results: 9 passed, 0 failed
 ```
 
 ### Per-Test Expected Behavior
@@ -668,18 +683,19 @@ HEADER  [15:14]=10  [13:12]=ctx_id  [11]=phase0_snap
   flags[3]=reserved  [2]=closed_by_watchdog
   flags[1]=closed_by_maxhits  [0]=closed_by_firsthit
 
-HIT WORDS (per out_mode):
+  HIT WORDS (per out_mode):
   RAW_FEATURES (3 words/hit):
     W0: [14:8]=nslow  [7:1]=nfast_hit
     W1: [14:11]=ns  [10:7]=nf  [6:0]=pd_idx
     W2: [14:11]=event_seq  [10:4]=nfast_snap
 
-  RAW_TIMESTAMP (1 word/hit):
-    W0: t_raw_lsw[15:0]
+  RAW_TIMESTAMP (2 words/hit):
+    W0: same as RAW_FEATURES W0
+    W1: t_raw_lsw[15:0]
 
-  FULL (3 words/hit):
+  FULL (4 words/hit):
     W0–W2: same as RAW_FEATURES
-    W2 also carries t_raw_lsw via third word
+    W3: t_raw_lsw[15:0]
 
 EOC     [15:14]=11  [13:0]=conv_id (14-bit conversion counter)
 ```
@@ -690,8 +706,8 @@ EOC     [15:14]=11  [13:0]=conv_id (14-bit conversion counter)
 words = 2 + (hit_count × words_per_hit)
 
   RAW_FEATURES:  2 + 3 × hits
-  RAW_TIMESTAMP: 2 + 1 × hits
-  FULL:          2 + 3 × hits
+  RAW_TIMESTAMP: 2 + 2 × hits
+  FULL:          2 + 4 × hits
 ```
 
 ---
@@ -707,10 +723,10 @@ tb/vip/
 │   ├── mptdc_async_io_if.sv   ← async pulse I/O interface
 │   └── mptdc_narrow_if.sv     ← 16-bit output bus interface
 └── pkg/
-    └── mptdc_vip_pkg.sv       ← all VIP classes (1546 lines)
+    └── mptdc_vip_pkg.sv       ← all VIP classes
 
 tb/tests/
-└── mptdc_vip_tb.sv            ← top-level harness + BFM bridge
+└── mptdc_vip_tb.sv            ← top-level harness + BFM / sampling bridge
 
 tb/common/
 ├── mptdc_tb_pkg.sv            ← shared helpers (parsing, CSR tasks)
@@ -718,7 +734,8 @@ tb/common/
 
 ci/
 ├── run_vip_smoke.sh           ← smoke regression (11 tests, Verilator)
-└── run_vip_coverage.sh        ← coverage regression (8 tests, xrun)
+├── run_vip_coverage.sh        ← coverage regression (9 tests, xrun)
+└── run_coverage_campaign.sh   ← merged coverage + stress campaign (xrun)
 
 scripts/sim/
 └── run_vip_test.sh            ← single test runner (all simulators)

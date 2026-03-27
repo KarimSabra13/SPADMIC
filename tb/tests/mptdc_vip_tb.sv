@@ -40,6 +40,9 @@ module mptdc_vip_tb;
   logic                  tb_narrow_ready;
   logic                  tb_narrow_valid;
   logic [NARROW_W-1:0]   tb_narrow_data;
+  logic                  mon_valid_q;
+  logic                  mon_ready_q;
+  logic [NARROW_W-1:0]   mon_data_q;
 
   // Bridge the interface state into plain DUT wires while leaving the VIP
   // classes and helper tasks bound to the interfaces themselves.
@@ -101,6 +104,29 @@ module mptdc_vip_tb;
                                csr_if.csr_addr, csr_if.csr_wdata, addr, data);
   endtask
 
+  // START rejection capture for the most recent injected conversion.
+  // Sample 1ps after the async START edge so the frontend SR latch settles.
+  logic bfm_last_start_rejected;
+  initial bfm_last_start_rejected = 1'b0;
+
+  /* verilator lint_off BLKSEQ */
+  always @(posedge tb_start_spad or posedge tb_cal_start) begin
+    #1;
+    bfm_last_start_rejected = u_dut.u_core.u_frontend.start_rejected_o;
+  end
+  /* verilator lint_on BLKSEQ */
+
+  always @(negedge clk_sys) begin
+    mon_valid_q <= tb_narrow_valid;
+    mon_ready_q <= tb_narrow_ready;
+    mon_data_q  <= tb_narrow_data;
+  end
+
+  always @(posedge clk_sys) begin
+    if ((g_mon_word_mb != null) && mon_valid_q && mon_ready_q)
+      g_mon_word_mb.put(mon_data_q);
+  end
+
   // Module-resident BFM consumes mailbox transactions so the class-based
   // environment can stay protocol-focused and avoid hierarchical pokes.
   initial begin : vip_module_bfm
@@ -108,6 +134,7 @@ module mptdc_vip_tb;
     mptdc_reset_txn rst;
     mptdc_cfg_txn   cfg_txn;
     mptdc_conv_txn  conv;
+    bit             bfm_prev_start_latched;
 
     wait(g_bfm_req_mb != null);
     forever begin
@@ -142,10 +169,13 @@ module mptdc_vip_tb;
             $fatal(1, "VIP BFM failed to cast conv txn");
           bfm_csr_write(CSR_CTRL, 32'h0000_0001);
           #conv.arm_settle_ps;
+          bfm_prev_start_latched = u_dut.u_core.u_frontend.start_latched_o;
+          bfm_last_start_rejected = 1'b0;
           if (conv.start_only)
             async_if.inject_start_only(conv.source_sel, conv.pulse_width_ps);
           else
             async_if.inject_pair(conv.source_sel, conv.start_stop_delay_ps, conv.pulse_width_ps);
+          g_bfm_ack_mb.put((!bfm_prev_start_latched) && (!bfm_last_start_rejected));
           if (conv.idle_after_ps > 0)
             #conv.idle_after_ps;
         end

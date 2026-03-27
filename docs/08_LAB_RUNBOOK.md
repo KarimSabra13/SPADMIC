@@ -9,6 +9,31 @@ data collection → calibration → synthesis.
 
 ---
 
+## Current recommended command sequence
+
+If you want the shortest path from repo checkout to a trustworthy checkpoint on a Cadence server, run in this order:
+
+```bash
+bash ci/run_vip_coverage.sh --sim xrun --clean
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+imc -load build/coverage_campaign/cov_work/scope/test &
+
+bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --out-dir results/campaign
+bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --seed-start 100 --out-dir results/campaign_validation
+
+python3 scripts/calibration/calibrate_6d_lut.py \
+  --train-dir results/campaign/multihit_15_cal_nominal \
+  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
+  --out-dir results/calibration_final
+
+cd syn/scripts
+genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
+```
+
+Use the rest of this document when you want the detailed step-by-step breakdown and expected results.
+
+---
+
 ## Prerequisites
 
 | Tool | Version | Used for |
@@ -140,6 +165,12 @@ echo "Results: $PASS passed, $FAIL failed out of 9"
 with scoreboard validation.
 
 ```bash
+bash ci/run_vip_smoke.sh
+```
+
+If you want the explicit expanded form:
+
+```bash
 for test in smoke_single_conv full_mode_timestamp firsthit_contract \
             backpressure_integrity start_watchdog cal_inject \
             overflow_status long_random multi_conv_rearm_stress \
@@ -148,13 +179,12 @@ for test in smoke_single_conv full_mode_timestamp firsthit_contract \
   bash scripts/sim/run_vip_test.sh "$test" --sim xrun
 done
 
-# Jitter test (separate — needs plusargs)
 echo "=== VIP: jitter_robustness ==="
 bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
   --osc-jitter-sigma 8 --osc-jitter-bound 24
 ```
 
-**Expected:** Each test prints `===== TEST PASSED =====` and exits cleanly.
+**Expected:** `11/11` pass, with each test printing `===== TEST PASSED =====` and exiting cleanly.
 
 **Runtime:** ~5–8 minutes total
 
@@ -188,25 +218,63 @@ bash ci/run_vip_coverage.sh --sim xrun --clean
   MPTDC VIP Coverage Regression
 ============================================
   Simulator: xrun
-  Tests: 8
+  Tests: 9
 ...
 === Running VIP coverage: smoke_single_conv ===
 --- smoke_single_conv: PASSED ---
 ...
-VIP coverage results: 8 passed, 0 failed
+VIP coverage results: 9 passed, 0 failed
 Coverage workdir: .../build/vip_coverage_xrun/cov_work
 Logs: .../build/vip_coverage_xrun/logs
 ```
 
 **Runtime:** ~10–15 minutes
 
+Default merged coverage suite:
+
+- `smoke_single_conv`
+- `full_mode_timestamp`
+- `firsthit_contract`
+- `backpressure_integrity`
+- `start_watchdog`
+- `cal_inject`
+- `overflow_status`
+- `long_random`
+- `coverage_exhaustive`
+
+### Step 4b — Broader coverage + stress campaign
+
+If you want a stronger pre-calibration checkpoint than the stable merged VIP suite alone, run:
+
+```bash
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+```
+
+This runs:
+
+- the merged coverage suite first
+- then `stress_random` across many seeds
+- a shared Cadence coverage database under `build/coverage_campaign/cov_work/`
+- per-test logs under `build/coverage_campaign/logs/`
+
 ### Review coverage in IMC
 
 ```bash
-# Launch IMC
-imc &
-# File → Open → navigate to build/vip_coverage_xrun/cov_work/
-# Select scope/test to view merged coverage
+# Stable merged VIP DB
+imc -load build/vip_coverage_xrun/cov_work/scope/test &
+
+# Broader coverage-campaign DB
+imc -load build/coverage_campaign/cov_work/scope/test &
+```
+
+Generate a text report:
+
+```bash
+imc -execcmd "
+  load_test build/coverage_campaign/cov_work -run *
+  report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover
+  exit
+" -batch -nocopyright
 ```
 
 **Coverage targets:**
@@ -232,32 +300,39 @@ imc &
 ### Option A: Verilator campaign (recommended — faster)
 
 ```bash
-# Install Verilator if needed (check version ≥ 5.006)
+# Check Verilator first
 verilator --version
 
-# Run full campaign (12 parallel seeds, 30 seeds per config, 50k conversions)
+# Run the full maintained campaign
 bash scripts/sim/run_campaign.sh --jobs 12
 
-# Smoke test first (quick — ~2 min)
+# Quick smoke first
 bash scripts/sim/run_campaign.sh --smoke
+
+# Or collect only the calibration-focused configuration
+bash scripts/sim/run_campaign.sh --jobs 12 --configs multihit_15_cal_nominal
 ```
 
 **Expected output:**
 ```
 Campaign complete
-  Configs run: 4
-  Total CSV files: 120
-  Total data rows: ~6,000,000
+  Configs run: 24
+  Total CSV files: 720
+  Total data rows: ~36,000,000
 ```
 
-Results land in `results/campaign_<timestamp>/`:
+By default, results land in `results/campaign/`:
+
 ```
-results/campaign_<ts>/
-  multihit_raw/seed_0.csv ... seed_29.csv
-  multihit_full/seed_0.csv ... seed_29.csv
-  firsthit_raw/seed_0.csv ... seed_29.csv
-  firsthit_full/seed_0.csv ... seed_29.csv
+results/campaign/
+  multihit_15_cal_nominal/seed_0.csv ... seed_29.csv
+  multihit_15_cal_jitter/seed_0.csv ... seed_29.csv
+  multihit_15_spad_nominal/seed_0.csv ... seed_29.csv
+  ...
+  firsthit_5_spad_jitter/seed_0.csv ... seed_29.csv
 ```
+
+Use `--out-dir DIR` if you want a separate run location.
 
 ### Option B: Xcelium single-run collection
 
@@ -286,20 +361,34 @@ Verilator is strongly preferred.
 **Goal:** Train the 6D mean-correction LUT and validate precision.
 
 ```bash
-# Run calibration on the collected campaign data
-python3 scripts/calibration/calibrate_6d_lut.py
+# Recommended: build the exact train/fresh directory structure expected by the calibrator
+bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --out-dir results/campaign
+bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --seed-start 100 --out-dir results/campaign_validation
+
+python3 scripts/calibration/calibrate_6d_lut.py \
+  --train-dir results/campaign/multihit_15_cal_nominal \
+  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
+  --out-dir results/calibration_final
 ```
 
-If the script expects a specific data directory, point it to the campaign
-results:
+Optional explicit directory control:
 
 ```bash
 python3 scripts/calibration/calibrate_6d_lut.py \
-  --data-dir results/campaign_<timestamp>
+  --train-dir results/campaign/multihit_15_cal_nominal \
+  --val-dir results/campaign/multihit_15_cal_nominal \
+  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
+  --out-dir results/calibration_final
 ```
 
-(Check `python3 scripts/calibration/calibrate_6d_lut.py --help` for exact
-arguments.)
+The calibrator does **not** use a `--data-dir` flag. Its maintained interface is:
+
+- `--train-dir`
+- `--val-dir`
+- `--fresh-dir`
+- `--out-dir`
+- `--train-seeds`
+- `--chunk-load`
 
 **Expected output:**
 
@@ -462,12 +551,12 @@ syn/
 Step  What                       Tool        Time      Pass Criteria
 ─────────────────────────────────────────────────────────────────────
  1    Directed smoke test        Xcelium     30s       TEST PASSED
- 2    Full directed regression   Xcelium     3-5 min   9/9 pass
- 3    VIP smoke regression       Xcelium     5-8 min   11/11 pass
- 4    VIP coverage regression    Xcelium     10-15 min 8/8 pass + coverage DB
- 5    Data collection campaign   Verilator   30-60 min CSV files generated
- 6    6D LUT calibration         Python      5-15 min  RMSE < 20 ps
- 7    Trial synthesis            Genus       3-5 min   Timing clean, 5 latches
+  2    Full directed regression   Xcelium     3-5 min   9/9 pass
+  3    VIP smoke regression       Xcelium     5-8 min   11/11 pass
+  4    VIP coverage regression    Xcelium     10-15 min 9/9 pass + coverage DB
+  5    Data collection campaign   Verilator   30-60 min CSV files generated
+  6    6D LUT calibration         Python      5-15 min  RMSE < 20 ps
+  7    Trial synthesis            Genus       3-5 min   Timing clean, 5 latches
 ```
 
 **Total time from clone to synthesis: ~1–2 hours** (most of it is the

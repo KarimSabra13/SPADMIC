@@ -51,8 +51,9 @@ The reusable VIP flow is built around:
 - interfaces for CSR, async START/STOP/CAL stimulus, and narrow output
 - transaction classes for reset, configuration, conversion stimulus, and backpressure
 - generator / scenario queueing
-- driver plus module-scope BFM bridging for stable timed DUT driving
-- passive packet monitor
+- a class driver plus module-scope BFM bridge for stable timed DUT driving
+- acceptance routing so only conversions actually accepted by the DUT are forwarded to the scoreboard expectation path
+- a sampled monitor bridge for deterministic narrow-bus word capture under random backpressure
 - scoreboard and protocol / semantic checks
 - functional coverage hooks guarded by `MPTDC_ENABLE_FUNC_COV`
 
@@ -105,6 +106,18 @@ It:
 - shares one coverage work directory across tests so IMC / Xcelium can review a merged database
 - supports `--clean`, `--seed-base`, `--waves`, `--dry-run`, and optional per-invocation test selection
 
+The default merged coverage suite currently contains:
+
+- `smoke_single_conv`
+- `full_mode_timestamp`
+- `firsthit_contract`
+- `backpressure_integrity`
+- `start_watchdog`
+- `cal_inject`
+- `overflow_status`
+- `long_random`
+- `coverage_exhaustive`
+
 Examples:
 
 ```bash
@@ -113,7 +126,24 @@ bash ci/run_vip_coverage.sh long_random --sim xcelium --seed-base 100
 bash ci/run_vip_coverage.sh --dry-run
 ```
 
-### 2.8 `ci/run_full_regression.sh`
+### 2.8 `ci/run_coverage_campaign.sh`
+
+Cadence-side exhaustive/stress campaign wrapper.
+
+It:
+
+- runs the stable merged coverage suite first
+- then runs `stress_random` across many seeds
+- merges all Cadence coverage data into one database
+- is the recommended server-side command when you want both coverage evidence and long stress exposure in one campaign
+
+Example:
+
+```bash
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+```
+
+### 2.9 `ci/run_full_regression.sh`
 
 Current active regression driver.
 
@@ -234,6 +264,27 @@ Closure review goals for the new VIP flow:
 4. Code coverage is reviewed on the active RTL path (`mptdc_top_asic`, `mptdc_core`, async/control/readout/FIFO logic), with exclusions documented instead of silently ignored.
 5. The Cadence-generated coverage database and report snapshot are archived together with the regression log as the closure handoff artifact.
 
+For deeper stress closure beyond the stable merged VIP suite, use:
+
+```bash
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+```
+
+### 6.3 Current validated checkpoint
+
+At the current checkpoint:
+
+- `ci/run_smoke.sh` is expected to pass locally
+- `ci/run_full_regression.sh` is expected to pass locally
+- `ci/run_vip_smoke.sh` is expected to pass locally (`11/11`)
+- `scripts/sim/run_vip_test.sh stress_random --sim verilator --seed 2 --num-conv 5000` has been used as the maintained long-stress local reproducer and passes on the current tree
+
+This is the practical meaning of the current repository state:
+
+- Verilator is the fast local confidence path
+- Cadence remains the required path for merged coverage closure
+- the next important verification gate is the Cadence-side coverage campaign on the updated VIP
+
 ## 7. What the current verification does not replace
 
 The repository tests do not replace:
@@ -274,6 +325,12 @@ bash ci/run_vip_smoke.sh
 
 # Cadence VIP coverage regression
 bash ci/run_vip_coverage.sh --sim xrun --clean
+
+# Cadence exhaustive/stress coverage campaign
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+
+# IMC review of the campaign DB
+imc -load build/coverage_campaign/cov_work/scope/test &
 
 # Local dry-run of the Cadence coverage commands
 bash ci/run_vip_coverage.sh --dry-run
@@ -358,10 +415,22 @@ This is the key pre-synthesis signoff step:
 bash ci/run_vip_coverage.sh --sim xrun --clean
 ```
 
-This runs 8 stable VIP tests with:
+This runs 9 stable VIP tests with:
 - **Functional coverage:** `stim_cg` and `pkt_cg` covergroups sampled
 - **Code coverage:** line + condition + toggle + FSM + branch
 - **Shared database:** all tests merge into `build/vip_coverage_xrun/cov_work/`
+
+Default suite membership:
+
+- `smoke_single_conv`
+- `full_mode_timestamp`
+- `firsthit_contract`
+- `backpressure_integrity`
+- `start_watchdog`
+- `cal_inject`
+- `overflow_status`
+- `long_random`
+- `coverage_exhaustive`
 
 Individual logs are saved to `build/vip_coverage_xrun/logs/<test>.log`.
 
@@ -371,11 +440,30 @@ Individual logs are saved to `build/vip_coverage_xrun/logs/<test>.log`.
 bash ci/run_vip_coverage.sh --sim xrun --clean --seed-base 42
 ```
 
+For broader server-side stress plus merged coverage:
+
+```bash
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+```
+
 ### 10.6 Step 4 — Review coverage in IMC
 
 ```bash
-# Launch IMC on the merged coverage database
+# Launch IMC on the stable VIP merged coverage database
 imc -load build/vip_coverage_xrun/cov_work/scope/test &
+
+# Or review the broader campaign database
+imc -load build/coverage_campaign/cov_work/scope/test &
+```
+
+Generate a text report:
+
+```bash
+imc -execcmd "
+  load_test build/coverage_campaign/cov_work -run *
+  report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover
+  exit
+" -batch -nocopyright
 ```
 
 **Coverage goals:**
@@ -419,7 +507,7 @@ bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --dry-run
 |-------|-------|----------|----------------|
 | VIP smoke | 11 tests | All pass | ~5 min total |
 | Directed integration | 9 tests | All pass | ~3 min total |
-| VIP coverage regression | 8 tests | All pass + coverage DB | ~10 min total |
+| VIP coverage regression | 9 tests | All pass + coverage DB | ~10 min total |
 
 All tests are self-checking — no manual waveform inspection needed for pass/fail.
 Failures produce `$error` or `$fatal` messages with descriptive context.

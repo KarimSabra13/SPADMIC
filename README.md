@@ -1,173 +1,252 @@
 # MPTDC — Vernier Multi-Phase Time-to-Digital Converter
 
 > **Author:** Karim Sabra  
-> **Status:** Pre-synthesis, calibration-validated  
+> **Current status:** RTL and VIP locally verified, Cadence coverage flow ready, trial synthesis flow prepared
 > **License:** Copyright © 2025 Karim Sabra. All rights reserved.
 
-## Overview
+## What this repository is
 
-MPTDC is a Vernier multi-phase time-to-digital converter designed for SPAD (Single-Photon Avalanche Diode) matrix readout. The architecture is purpose-built for offline calibration: silicon exports raw measurement features over a 16-bit ready/valid stream, and all correction is performed host-side.
+`MPTDC` is a Vernier multi-phase TDC for SPAD readout, built around:
 
-**Key specifications:**
+- a `9 × 9` slow/fast phase matrix
+- `2` context buffers (hardwired double buffer)
+- `15` maximum hits per conversion
+- a `16-bit` ready/valid output stream
+- three output modes: `RAW_FEATURES`, `RAW_TIMESTAMP`, and `FULL`
 
-| Parameter | Value |
-|-----------|-------|
-| Nominal LSB | 10 ps |
-| Vernier phases | 9 slow × 9 fast (81-cell PD matrix) |
-| Max hits per conversion | 15 |
-| Context buffers | 2 (double-buffered) |
-| Output interface | 16-bit ready/valid |
-| Output modes | RAW_FEATURES, RAW_TIMESTAMP, FULL |
-| **Calibrated single-shot RMSE** | **18.89 ps** |
-| **Calibrated RMSE (N=100 avg)** | **1.90 ps** |
+The digital RTL is intended to be used with a behavioral oscillator model in simulation and a real current-starved oscillator macro in silicon.
 
-## Architecture
+## Status snapshot
 
-```
-mptdc_top_asic
-  ├── mptdc_reset_sync          Reset synchronizer
-  ├── mptdc_input_mux           SPAD / CAL input selector
-  ├── mptdc_csr_minimal         Control & status registers
-  └── mptdc_core
-       ├── mptdc_async_frontend_v2   Async START/STOP capture
-       ├── mptdc_osc_wrapper ×2      Slow + fast ring oscillators
-       ├── mptdc_pd_cell ×81         Phase detector matrix
-       ├── mptdc_stop_capture_async  STOP-side coarse snapshot
-       ├── mptdc_gray_cnt_sync ×2    CDC for coarse counters
-       ├── mptdc_meas_ctrl           Measurement FSM
-       ├── mptdc_context_bank        Double-buffered context storage
-       ├── mptdc_drain_ctrl          Readout drain FSM
-       ├── mptdc_sync_fifo           Output FIFO
-       ├── mptdc_narrow16_tx_v2      16-bit packet serializer
-       └── mptdc_watchdog            START timeout watchdog
-```
+### RTL
 
-## Repository Structure
+- Top level: `rtl/top/mptdc_top_asic.sv`
+- Core integration: `rtl/top/mptdc_core.sv`
+- Async capture frontend: `rtl/async/mptdc_async_frontend_v2.sv`
+- Readout serializer: `rtl/readout/mptdc_narrow16_tx_v2.sv`
+- Package constants/types: `rtl/pkg/mptdc_pkg.sv`
 
-```
+Key architectural facts from RTL:
+
+| Item | Value |
+| --- | --- |
+| Vernier geometry | `NE = 9` slow × `9` fast |
+| Context buffers | `N_CTX = 2` |
+| Max hits | `15` |
+| FIFO depth | `64` acquisition records |
+| System clock | `160 MHz` |
+| Oscillator timing model | behavioral model in simulation, stub for synthesis |
+
+### Verification
+
+Local Verilator validation is green on the current tree:
+
+- `bash ci/run_smoke.sh`
+- `bash ci/run_full_regression.sh`
+- `bash ci/run_vip_smoke.sh`
+- `bash scripts/sim/run_vip_test.sh stress_random --sim verilator --seed 2 --num-conv 5000`
+
+That means:
+
+- unit benches are passing
+- active integration benches are passing
+- the maintained VIP smoke suite (`11` tests) is passing
+- the exact long stress reproducer used during coverage-campaign debugging is passing locally
+
+Cadence-only flows are prepared but must be run on a machine with `xrun` / `xcelium`, `imc`, and `genus`.
+
+### Coverage
+
+There are two distinct Cadence coverage entrypoints:
+
+- `bash ci/run_vip_coverage.sh --sim xrun --clean`
+  - stable merged VIP coverage suite
+  - functional + code coverage
+  - shared coverage DB under `build/vip_coverage_xrun/`
+
+- `bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32`
+  - exhaustive + multi-seed stress coverage campaign
+  - merged coverage DB under `build/coverage_campaign/`
+
+### Calibration
+
+Offline calibration flow is present and documented:
+
+- data collection: `bash scripts/sim/run_campaign.sh`
+- LUT calibration: `python3 scripts/calibration/calibrate_6d_lut.py ...`
+
+The committed calibration flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`.
+
+### Synthesis
+
+Cadence Genus setup is committed under `syn/`.
+
+- entrypoint: `syn/scripts/genus.tcl`
+- documentation: `syn/README.md`
+- PDK path setup required before first run
+- oscillator model is **not** synthesized; the synthesis flow uses the oscillator stub
+
+## Repository map
+
+```text
 rtl/
-  pkg/          Package constants, types, Vernier algebra
-  cdc/          Reset sync, pulse sync, gray-counter CDC, sync FIFO
-  osc/          Oscillator wrapper, simulation model, synthesis stub
-  pd/           Phase detector cell
-  async/        Async frontend, STOP capture, context bank
-  ctrl/         Input mux, measurement FSM, drain FSM, watchdog
-  readout/      CSR block, timestamp helper, 16-bit serializer
-  top/          Core integration and ASIC top wrapper
+  pkg/        constants, enums, packet types, CSR addresses
+  cdc/        reset sync, pulse sync, gray-counter CDC, sync FIFO
+  osc/        oscillator wrapper, model, and synthesis stub
+  pd/         phase detector cells
+  async/      START/STOP capture, context bank, async-side logic
+  ctrl/       measurement FSM, watchdog, drain control
+  readout/    CSR block, timestamp reconstruction helper, serializer
+  top/        core + top-level integration
 
 tb/
-  common/       Shared testbench package and raw monitor
-  unit/         5 unit testbenches (leaf block verification)
-  int/          9 integration testbenches + campaign collector
-  vip/          Class-based VIP (transactions, drivers, monitor, scoreboard)
-  tests/        VIP top-level harness
+  common/     shared bench helpers and raw packet monitor
+  unit/       5 leaf-level benches
+  int/        9 active integration benches + campaign collector
+  vip/        class-based verification environment
+  tests/      VIP top-level harness
 
 scripts/
-  sim/          Simulation runners (run_tb.sh, run_campaign.sh, run_vip_test.sh)
-  analysis/     Campaign analysis (analyze_campaign.py)
-  calibration/  6D LUT calibrator (calibrate_6d_lut.py)
+  sim/        test and campaign runners
+  calibration/ calibration and LUT analysis
 
-ci/             CI regression scripts (smoke, full, VIP coverage)
-syn/            Cadence Genus synthesis flow (XFAB XH018)
-docs/           Architecture, protocol, CSR map, verification, calibration, design review
+ci/           regression wrappers and coverage entrypoints
+docs/         architecture, protocol, verification, calibration, runbook, status
+syn/          Cadence Genus synthesis collateral
 ```
 
-## Quick Start
+## Recommended command flow
+
+### 1) Local sanity before pushing
 
 ```bash
-# Lint the RTL
-verilator --lint-only --timing +define+MPTDC_USE_OSC_MODEL \
-  -f rtl/filelist.f --top-module mptdc_top_asic
-
-# Run a single integration test
-bash scripts/sim/run_tb.sh tb_single_conv
-
-# Run the full regression (13 directed tests)
+bash ci/run_smoke.sh
 bash ci/run_full_regression.sh
-
-# Run VIP smoke tests
 bash ci/run_vip_smoke.sh
+```
 
-# Run a data collection campaign (12-core parallel)
+### 2) Single VIP test
+
+```bash
+bash scripts/sim/run_vip_test.sh smoke_single_conv --sim verilator
+```
+
+### 3) Cadence VIP smoke / debug
+
+```bash
+bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun
+bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
+  --osc-jitter-sigma 8 --osc-jitter-bound 24
+```
+
+### 4) Cadence coverage closure
+
+```bash
+bash ci/run_vip_coverage.sh --sim xrun --clean
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32
+```
+
+### 5) Review coverage in IMC
+
+```bash
+imc -load build/coverage_campaign/cov_work/scope/test &
+```
+
+Generate a text report:
+
+```bash
+imc -execcmd "
+  load_test build/coverage_campaign/cov_work -run *
+  report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover
+  exit
+" -batch -nocopyright
+```
+
+### 6) Data collection and calibration
+
+```bash
 bash scripts/sim/run_campaign.sh --jobs 12
 
-# Run calibration
-python3 scripts/calibration/calibrate_6d_lut.py
+python3 scripts/calibration/calibrate_6d_lut.py \
+  --train-dir results/campaign/multihit_15_cal_nominal \
+  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
+  --out-dir results/calibration_final
 ```
 
-### Running on Cadence Xcelium
+### 7) Trial synthesis
 
 ```bash
-# Single VIP test
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun
-
-# Single directed test
-bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
-
-# Full VIP coverage regression (functional + code coverage)
-bash ci/run_vip_coverage.sh --sim xrun --clean
-
-# Preview commands without Cadence tools (dry-run)
-bash ci/run_vip_coverage.sh --dry-run
+cd syn/scripts
+genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ```
 
-See [04 Verification](docs/04_VERIFICATION.md) §10 for the complete Xcelium guide.
+## Verification inventory
 
-## Calibration Results
+| Category | Current maintained set |
+| --- | --- |
+| Unit benches | `5` |
+| Active integration benches | `9` in `ci/run_full_regression.sh` |
+| Collection / characterization benches | `tb_campaign_collect` plus maintained collection flows |
+| VIP smoke tests | `11` in `ci/run_vip_smoke.sh` |
+| VIP coverage suite | `9` in `ci/run_vip_coverage.sh` |
+| Coverage campaign | `coverage_exhaustive` + `stress_random × N seeds` |
 
-The TDC uses a **6D mean-correction look-up table** keyed on fields available in all output modes:
+## Coverage guidance
 
-```
-Key: (ns_inf, nf_inf, nslow, nfast_hit, phase0_snap, hit_idx)
-```
+Use Verilator for fast local confidence and Cadence for coverage closure.
 
-`ns` and `nf` are deterministically recovered from `t_raw_ps` in compact mode via Vernier algebra — no information loss.
+Recommended interpretation order for Cadence coverage:
 
-### Single-Shot Precision
+1. confirm every coverage-suite test passed cleanly
+2. inspect `stim_cg` for stimulus-space holes
+3. inspect `pkt_cg` for packet-space holes
+4. review line/condition/toggle/FSM coverage on active RTL
+5. classify remaining holes as:
+   - intentionally unreachable
+   - simulator / environment limitation
+   - missing scenario
+   - real RTL or VIP bug
 
-| Metric | Pre-Cal | Post-Cal | Improvement |
-|--------|---------|----------|-------------|
-| RMSE | 425.8 ps | **18.89 ps** | 95.6% |
-| MAE | 350.8 ps | 14.6 ps | 95.8% |
-| P90 | 637 ps | 32.9 ps | 94.8% |
-| P99 | 1057 ps | 45.0 ps | 95.7% |
+## Calibration note
 
-Validated on 21 million fresh data points (seeds never seen during training). 16,014 LUT bins, 100% coverage.
+The RTL is designed for offline calibration, not on-chip correction. The host reconstructs and corrects time using exported raw features and/or timestamps.
 
-### Averaging Performance
+Previously reported calibration quality remains the repository target:
 
-| Averages | RMSE (ps) |
-|----------|-----------|
-| 1 | 18.95 |
-| 4 | 9.49 |
-| 10 | 6.03 |
-| 100 | **1.90** |
-| 1000 | **0.60** |
+- single-shot post-calibration RMSE: about `18.89 ps`
+- `N=100` averaging RMSE: about `1.90 ps`
 
-Follows 1/√N — residual is purely random noise.
+## Synthesis note
 
-## Verification
+For synthesis, the oscillator wrapper must use the stub path. The behavioral oscillator model is for simulation only.
 
-- **5 unit tests** covering leaf blocks (context bank, input mux, serializer, reset sync, watchdog)
-- **9 integration tests** covering end-to-end conversion, backpressure, calibration injection, deadtime, first-hit mode, overflow, watchdog recovery, stress
-- **1 campaign collector** for large-scale data generation (tb_campaign_collect)
-- **Class-based VIP** with transaction-level modeling, coverage hooks, and Xcelium compatibility
+What the current Genus flow is intended to validate:
 
-All 13 directed tests pass on Verilator. The VIP framework targets Xcelium for coverage closure.
+- RTL synthesizability
+- latch audit for intentional async SR latches
+- `clk_sys` timing setup
+- oscillator-domain virtual-clock timing sanity
+- area / QoR / reporting infrastructure
 
-## Documentation
+What it does **not** replace:
 
-| Document | Contents |
-|----------|----------|
-| [01 Architecture](docs/01_ARCHITECTURE.md) | Module hierarchy and conversion flow |
-| [02 Output Protocol](docs/02_OUTPUT_PROTOCOL.md) | 16-bit packet format and parsing |
-| [03 CSR Map](docs/03_CSR_MAP.md) | Register addresses, fields, control semantics |
-| [04 Verification](docs/04_VERIFICATION.md) | Test suite and VIP description |
-| [05 Calibration Plan](docs/05_OFFLINE_CALIBRATION_PLAN.md) | Calibration methodology, LUT results, averaging study |
-| [06 Deadtime Analysis](docs/06_DEADTIME_ANALYSIS.md) | Re-arm timing and throughput |
-| [07 Design Review](docs/07_DESIGN_REVIEW.md) | Pre-synthesis review findings and recommendations |
-| [08 Lab Runbook](docs/08_LAB_RUNBOOK.md) | Step-by-step server guide: clone → verify → calibrate → synthesize |
+- final macro timing for the analog oscillator
+- signoff STA
+- formal CDC signoff
+- post-layout correlation
 
-## Synthesis Note
+## Documentation index
 
-The oscillator wrappers instantiate `mptdc_osc_model` (behavioral) when `MPTDC_USE_OSC_MODEL` is defined, or `mptdc_osc_stub` (deterministic placeholder) otherwise. A real silicon build must replace the stub with the target current-starved oscillator macro and constrain the generated clocks accordingly.
+| Document | Purpose |
+| --- | --- |
+| `docs/01_ARCHITECTURE.md` | block-level architecture and dataflow |
+| `docs/02_OUTPUT_PROTOCOL.md` | 16-bit output packet format |
+| `docs/03_CSR_MAP.md` | CSR programming model |
+| `docs/04_VERIFICATION.md` | bench inventory, VIP flow, coverage strategy |
+| `docs/05_OFFLINE_CALIBRATION_PLAN.md` | calibration methodology and analysis |
+| `docs/06_DEADTIME_ANALYSIS.md` | recovery / throughput discussion |
+| `docs/07_DESIGN_REVIEW.md` | design review findings and silicon-readiness concerns |
+| `docs/08_LAB_RUNBOOK.md` | server workflow and run commands |
+| `docs/09_PROJECT_STATUS.md` | current repository status and recommended next steps |
+| `tb/vip/README.md` | VIP internals and usage |
+| `syn/README.md` | Genus flow details |

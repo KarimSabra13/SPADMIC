@@ -14,6 +14,17 @@ procedures, and a single `genus.tcl` entry point that orchestrates everything.
 **System Clock:** 160 MHz (6.25 ns period)  
 **Oscillator Clocks:** osc_slow ~1 GHz, osc_fast ~1.11 GHz (virtual, from analog macro)
 
+### Current repository status
+
+The synthesis collateral in `syn/` is prepared for a trial Genus run, but it should be interpreted as **flow-ready, not signoff-complete**.
+
+At the current checkpoint:
+
+- the RTL and verification environment are locally validated
+- the oscillator behavioral model is a simulation-only artifact and is excluded from synthesis
+- the async frontend intentionally contains `5` latch-style storage elements that must be reviewed, not treated as accidental inference
+- final QoR, timing, and library legality still depend on your actual XFAB/XH018 PDK installation and Genus run logs
+
 ## Directory Structure
 
 ```

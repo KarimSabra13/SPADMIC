@@ -363,9 +363,11 @@ package mptdc_vip_pkg;
     endfunction
   endclass
 
-  // Shared mailbox that bridges class-based sequencing to the
+  // Shared mailboxes that bridge class-based sequencing to the
   // module-resident BFM loop inside mptdc_vip_tb.
   mailbox #(mptdc_base_txn) g_bfm_req_mb;
+  mailbox #(bit)            g_bfm_ack_mb;   // 1=accepted, 0=rejected
+  mailbox #(logic [NARROW_W-1:0]) g_mon_word_mb;
 
   class mptdc_csr_driver;
     virtual mptdc_csr_if vif;
@@ -416,28 +418,34 @@ package mptdc_vip_pkg;
     virtual mptdc_narrow_if vif;
     mptdc_bp_mode_e         mode;
     int unsigned            seed;
+    int unsigned            rng_state;
     bit                     stop_request;
 
     function new(virtual mptdc_narrow_if vif_i);
       vif          = vif_i;
       mode         = BP_ALWAYS_READY;
       seed         = 32'hca11_ab1e;
+      rng_state    = 32'hca11_ab1e;
       stop_request = 1'b0;
     endfunction
 
     function void set_mode(input mptdc_bp_mode_e mode_i,
                            input int unsigned seed_i = 32'hca11_ab1e);
-      mode = mode_i;
-      seed = seed_i;
+      mode      = mode_i;
+      seed      = seed_i;
+      rng_state = seed_i;
     endfunction
 
     task run();
       vif.narrow_ready = 1'b1;
       while (!stop_request) begin
-        @(posedge vif.clk_sys);
+        @(negedge vif.clk_sys);
         case (mode)
           BP_ALWAYS_READY: vif.narrow_ready = 1'b1;
-          BP_RANDOM_50:    vif.narrow_ready = $urandom(seed) & 1'b1;
+          BP_RANDOM_50: begin
+            rng_state = (rng_state * 32'h41C6_4E6D) + 32'h3039;
+            vif.narrow_ready = rng_state[0];
+          end
           BP_ALWAYS_STALL: vif.narrow_ready = 1'b0;
           default:         vif.narrow_ready = 1'b1;
         endcase
@@ -637,6 +645,7 @@ package mptdc_vip_pkg;
   class mptdc_driver;
     mailbox #(mptdc_base_txn) in_mb;
     mailbox #(mptdc_conv_txn) exp_mb;
+    mailbox #(mptdc_conv_txn) pending_conv_mb;
     mptdc_csr_driver          csr_drv;
     mptdc_pulse_driver        pulse_drv;
     mptdc_ready_driver        ready_drv;
@@ -644,6 +653,8 @@ package mptdc_vip_pkg;
     mptdc_coverage            cov;
     mptdc_env_cfg             env_cfg;
     bit                       done;
+    bit                       routing_done;
+    int                       rejected_count;
 
     function new(mailbox #(mptdc_base_txn) in_mb_i,
                  mailbox #(mptdc_conv_txn) exp_mb_i,
@@ -659,14 +670,39 @@ package mptdc_vip_pkg;
       ready_drv   = ready_drv_i;
       cov         = cov_i;
       env_cfg     = env_cfg_i;
+      pending_conv_mb = new();
       current_cfg = new("current_cfg");
       done        = 1'b0;
+      routing_done   = 1'b0;
+      rejected_count = 0;
     endfunction
 
     task initialize();
       ready_drv.set_mode(BP_ALWAYS_READY, env_cfg.random_seed);
       if (g_bfm_req_mb == null)
         g_bfm_req_mb = new();
+      if (g_bfm_ack_mb == null)
+        g_bfm_ack_mb = new();
+    endtask
+
+    task route_expectations();
+      mptdc_conv_txn conv;
+      bit            accepted;
+      forever begin
+        pending_conv_mb.get(conv);
+        if (conv == null)
+          break;
+
+        g_bfm_ack_mb.get(accepted);
+        if (conv.expect_packet) begin
+          if (accepted)
+            exp_mb.put(conv.clone());
+          else
+            rejected_count++;
+        end
+      end
+      exp_mb.put(null);
+      routing_done = 1'b1;
     endtask
 
     task run();
@@ -675,8 +711,10 @@ package mptdc_vip_pkg;
       mptdc_backpressure_txn bp;
       mptdc_reset_txn        rst;
       mptdc_conv_txn         conv;
-      mptdc_conv_txn         exp;
       initialize();
+      fork
+        route_expectations();
+      join_none
       forever begin
         in_mb.get(base);
         if (base == null)
@@ -715,15 +753,16 @@ package mptdc_vip_pkg;
             cov.sample_stim(conv, ready_drv.mode, env_cfg.osc_jitter_sigma_ps);
             $display("[VIP][DRV] %s", conv.sprint());
 
-            if (conv.expect_packet) begin
-              exp = conv.clone();
-              exp_mb.put(exp);
-            end
             g_bfm_req_mb.put(base);
+            pending_conv_mb.put(conv.clone());
           end
 
           TXN_EOT: begin
             $display("[VIP][DRV] End-of-test transaction observed");
+            pending_conv_mb.put(null);
+            wait (routing_done);
+            if (rejected_count > 0)
+              $display("[VIP][DRV] %0d conversions had START rejected (FIFO backpressure)", rejected_count);
             done = 1'b1;
             break;
           end
@@ -744,15 +783,15 @@ package mptdc_vip_pkg;
       vif          = vif_i;
       out_mb       = out_mb_i;
       stop_request = 1'b0;
+      if (g_mon_word_mb == null)
+        g_mon_word_mb = new();
     endfunction
 
     task automatic wait_accept(output logic [NARROW_W-1:0] word);
       while (!stop_request) begin
-        @(posedge vif.clk_sys);
-        if (vif.narrow_valid && vif.narrow_ready) begin
-          word = vif.narrow_data;
+        if (g_mon_word_mb.try_get(word))
           return;
-        end
+        @(posedge vif.clk_sys);
       end
       word = '0;
     endtask
@@ -964,14 +1003,19 @@ package mptdc_vip_pkg;
       $display("[VIP][SB] PASS %s -> %s", exp.sprint(), pkt.sprint());
     endfunction
 
-    task run(input int expected_packets);
+    task run();
       mptdc_conv_txn   exp;
       mptdc_packet_txn pkt;
-      for (int i = 0; i < expected_packets; i++) begin
+      int              count;
+      count = 0;
+      forever begin
         exp_mb.get(exp);
+        if (exp == null) break;   // sentinel from driver — all conversions processed
         act_mb.get(pkt);
         check_packet(exp, pkt);
+        count++;
       end
+      $display("[VIP][SB] Scoreboard done: %0d packets checked", count);
       done = 1'b1;
     endtask
   endclass
@@ -1009,10 +1053,8 @@ package mptdc_vip_pkg;
     endfunction
 
     task run();
-      int expected_packets;
       // The ready driver and monitor stay alive in the background while the
       // generator, driver, and scoreboard complete the planned test sequence.
-      expected_packets = gen.expected_packet_count();
       fork
         ready_drv.run();
         mon.run();
@@ -1021,7 +1063,7 @@ package mptdc_vip_pkg;
       fork
         gen.run();
         drv.run();
-        sb.run(expected_packets);
+        sb.run();
       join
 
       mon.stop_request      = 1'b1;
