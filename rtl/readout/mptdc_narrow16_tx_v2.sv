@@ -2,22 +2,21 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.0 — Raw-Output Vernier TDC
+// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
 // File     : mptdc_narrow16_tx_v2.sv
-// Purpose  : 16-bit ready/valid serializer — reads from async FIFO, emits
+// Purpose  : 16-bit ready/valid serializer — reads from sync FIFO, emits
 //            configurable narrow packets (raw features / raw timestamp / full)
 // Author   : Karim Sabra
 // =============================================================================
-// Reads META + HIT acquisition records from the system-side of the async FIFO
+// Reads META + HIT acquisition records from the sync FIFO
 // and serialises them onto a 16-bit ready/valid bus.
 //
 // Packet format (per conversion):
-//   1 × Header   — context id, hit count, flags, output mode
+//   1 × Header   — context id, hit count, flags, output mode, boundary_inc
 //   N × Hit word  — 2/3/4 words per hit depending on out_mode
 //   1 × EOC      — end-of-conversion marker with 14-bit running counter
 //
-// Backpressure: when narrow_ready_i is de-asserted the TX stalls — it does
-// not pop the FIFO and does not advance the FSM.
+// v2.2: header bit[0] carries slow_boundary_inc for offline calibration
 // =============================================================================
 module mptdc_narrow16_tx_v2
   import mptdc_pkg::*;
@@ -28,7 +27,7 @@ module mptdc_narrow16_tx_v2
   // Configuration
   input  out_mode_e             out_mode_i,
 
-  // Async-FIFO read port (FWFT: data valid while fifo_rd_valid_i is high)
+  // Sync-FIFO read port (FWFT: data valid while fifo_rd_valid_i is high)
   input  wire                   fifo_rd_valid_i,
   input  mptdc_acq_rec_t        fifo_rd_data_i,
   output logic                  fifo_rd_en_o,
@@ -60,10 +59,12 @@ module mptdc_narrow16_tx_v2
   // ---------------------------------------------------------------------------
   ctx_id_t                ctx_id_q;
   logic                   phase0_snap_q;
+  logic                   slow_boundary_inc_q;  // v2.2
   logic [MAX_HITS_W-1:0]  hit_count_q;
   tdc_conv_flags_t        flags_q;
   out_mode_e              out_mode_q;
   logic [NSLOW_W-1:0]     nslow_q;
+  logic [NFAST_W-1:0]     nfast_snap_q;       // v2.2.2: nfast at CAPTURE time
 
   // ---------------------------------------------------------------------------
   // Latched hit data (from HIT record)
@@ -90,20 +91,15 @@ module mptdc_narrow16_tx_v2
   assign pd_idx = pd_from_phases(ns_q, nf_q);
 
   // ---------------------------------------------------------------------------
-  // Raw Vernier time reconstruction (combinational)
-  //   coef = (nslow-1)*K_VERNIER*NE + (nfast-1)*NE + ns*K_VERNIER
-  //          - nf*(K_VERNIER-1)
-  //   t_raw_ps = coef * DELTA_LSB
+  // Raw Vernier time reconstruction (combinational).
+  // Keeps the original Vernier topology and applies the package-level
+  // geometry-origin corrections for STOP-side nslow and per-hit nfast.
   // ---------------------------------------------------------------------------
   logic signed [31:0] t_raw_ps;
 
   always_comb begin
-    int signed coef;
-    coef = (int'(nslow_q) - 1) * int'(K_VERNIER) * int'(NE)
-         + (int'(nfast_q) - 1) * int'(NE)
-         + int'(ns_q) * int'(K_VERNIER)
-         - int'(nf_q) * (int'(K_VERNIER) - 1);
-    t_raw_ps = 32'(coef * int'(DELTA_LSB));
+    t_raw_ps = vernier_tconv_ps(nslow_q, nfast_q, ns_q, nf_q,
+                                slow_boundary_inc_q);
   end
 
   // ---------------------------------------------------------------------------
@@ -113,15 +109,16 @@ module mptdc_narrow16_tx_v2
   // Header: [15]=1, [14:13]=ctx_id, [12]=phase0, [11:8]=hit_count,
   //         [7:4]=flags, [3:2]=out_mode, [1:0]=rsvd
   logic [NARROW_W-1:0] header_word;
-  // [15:14]=2'b10 (header), [13:12]=ctx_id, [11]=phase0,
-  // [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=0
+  // Header: [15:14]=2'b10 (header), [13:12]=ctx_id, [11]=phase0,
+  // [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=slow_boundary_inc
+  // ctx_id_q is CTX_W bits (1 for N_CTX=2) — always pad to 2 bits
   assign header_word = {2'b10,
-                        ctx_id_q,
+                        2'(ctx_id_q),
                         phase0_snap_q,
                         hit_count_q,
                         flags_q,
                         out_mode_q,
-                        1'b0};
+                        slow_boundary_inc_q};
 
   // Hit W0: [15]=0, [14:8]=nslow[6:0], [7:1]=nfast[6:0], [0]=0
   // Bit 15 always 0 to distinguish from header/EOC markers
@@ -136,9 +133,9 @@ module mptdc_narrow16_tx_v2
   logic [NARROW_W-1:0] hit_w1_ts;
   assign hit_w1_ts = t_raw_ps[15:0];
 
-  // Hit W2: [15]=0, [14:11]=event_seq, [10:0]=0
+  // Hit W2: [15]=0, [14:11]=event_seq, [10:4]=nfast_snap, [3:0]=0
   logic [NARROW_W-1:0] hit_w2;
-  assign hit_w2 = {1'b0, event_seq_q, 11'b0};
+  assign hit_w2 = {1'b0, event_seq_q, nfast_snap_q, 4'b0};
 
   // Hit W3 (FULL only): [15:0]=t_raw_ps[15:0]
   logic [NARROW_W-1:0] hit_w3;
@@ -164,10 +161,12 @@ module mptdc_narrow16_tx_v2
       hit_idx_q     <= '0;
       ctx_id_q      <= '0;
       phase0_snap_q <= 1'b0;
+      slow_boundary_inc_q <= 1'b0;  // v2.2
       hit_count_q   <= '0;
       flags_q       <= '0;
       out_mode_q    <= OUT_MODE_RAW_FEATURES;
       nslow_q       <= '0;
+      nfast_snap_q  <= '0;
       ns_q          <= '0;
       nf_q          <= '0;
       nfast_q       <= '0;
@@ -179,9 +178,11 @@ module mptdc_narrow16_tx_v2
           if (fifo_rd_valid_i && fifo_rd_data_i.kind == ACQ_REC_META) begin
             ctx_id_q      <= fifo_rd_data_i.meta.ctx_id;
             phase0_snap_q <= fifo_rd_data_i.meta.phase0_snap;
+            slow_boundary_inc_q <= fifo_rd_data_i.meta.slow_boundary_inc; // v2.2
             hit_count_q   <= fifo_rd_data_i.meta.hit_count;
             flags_q       <= fifo_rd_data_i.meta.flags;
             nslow_q       <= fifo_rd_data_i.meta.nslow;
+            nfast_snap_q  <= fifo_rd_data_i.meta.nfast;  // v2.2.2
             out_mode_q    <= out_mode_i;
             hit_idx_q     <= '0;
             state_q       <= S_HEADER;

@@ -1,23 +1,15 @@
 // SPDX-FileCopyrightText: 2025 MPTDC Authors
 // SPDX-License-Identifier: Apache-2.0
 //
-// tb_deadtime_measure.sv — Deadtime (re-arm latency) measurement testbench
-//
-// Measures the minimum time from STOP rising edge of conversion N to the
-// earliest START that triggers conversion N+1.  This is the key performance
-// metric of the triple-buffer architecture.
-//
-// Strategy: sweep the requested gap between STOP_N and START_{N+1} from large
-// to small.  For each gap, run N_TRIALS back-to-back conversion pairs with
-// concurrent packet collection (fork/join_none).  The arm() CSR write and the
-// gap delay run in parallel (fork/join), so the actual measured gap equals
-// max(arm_overhead + 1 ns, requested_gap).  A hard pad reset between trials
-// ensures a clean starting state.  Report the smallest requested gap for which
-// all trials produce two valid packets.
-//
-// Run with: +verilator+noassert  (suppress known writer_scan assertion)
-
-`timescale 1ns / 1ps
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_deadtime_measure.sv
+// Purpose : Measures re-arm deadtime between consecutive conversions.
+// Author  : Karim Sabra
+// Notes   : Sweeps the STOP_N to START_{N+1} gap with background packet
+//           collection to find the smallest fully passing interval.
+// =============================================================================
+`timescale 1ps/1ps
 
 module tb_deadtime_measure;
   import mptdc_pkg::*;

@@ -1,81 +1,123 @@
-# MPTDC v2.0 — Deadtime Analysis
+# MPTDC v2.2 — Deadtime and Throughput Analysis
 
-## Definition
+> - **Author:** Karim Sabra
+> - **Purpose:** Explain the active deadtime path and the practical throughput limits implied by the current RTL.
+> - **Scope:** Uses the checked-in architecture and nominal oscillator assumptions; it is not a silicon signoff timing report.
 
-**Deadtime** = time from STOP rising edge of conversion N to the earliest moment START can successfully trigger conversion N+1.
+## 1. Definition
 
-## v1 Architecture Deadtime
+Deadtime is the time from the STOP edge of conversion `N` to the earliest moment a new START can be accepted for conversion `N+1`.
 
-The previous single-context design had sequential processing:
+In this architecture, deadtime is dominated by the fast-domain measurement FSM and frontend clear/re-arm path, not by the system-domain drain and serializer path.
 
-```
-STOP → FSM closure → writer serialization → writer_done CDC → ready
-       └── ~6ns ──┘  └── 14.4ns (15 hits) ──────────────┘  └── 6.25ns ──┘
-```
+## 2. Why the current design is fast
 
-**Total deadtime: ~91 ns (multi-hit, 15 hits)**
+The current architecture uses two contexts:
 
-### v1 Bottleneck Breakdown
-| Stage | Duration | Notes |
-|-------|----------|-------|
-| FSM closure + snapshot | ~6 ns | CDC delays |
-| Writer serialization | ~14.4 ns | 81 cells × ~178 ps/cell |
-| Writer_done CDC | ~6.25 ns | sys clock synchronization |
-| Frontend re-arm | ~2 ns | Async latch clear |
-| **Total** | **~29 ns** | (theoretical, ~91ns measured with overhead) |
+- one context can be in `CAPTURING`
+- the other can be in `DRAINING`
 
-## v2 Triple-Buffer Architecture
+That means packet drain, FIFO buffering, and 16-bit serialization are largely off the critical re-arm path.
 
-```
-STOP → snapshot to context bank → context→DRAINING → frontend re-armed
-  └── 1 fast cycle (~0.9ns) ──────┘  └── async ──────┘  └── <1ns ──┘
+## 3. Active closure path
 
-Meanwhile (in parallel, no impact on deadtime):
-  writer scans context → async FIFO → narrow TX → 16-bit output
+The measurement FSM is:
+
+```text
+IDLE -> MEASURE -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
 ```
 
-### Key Insight
-The frontend re-arms **immediately** after snapshot — it doesn't wait for the writer. The writer works on the DRAINING context independently.
+Approximate role of each state:
 
-### Expected Deadtime Contributions
+- `MEASURE`   : accumulate hits and wait for close condition
+- `CAPTURE`   : snapshot data into the context bank
+- `STOP_OSC`  : clear frontend latches so the slow oscillator stops cleanly
+- `CLEAR`     : asynchronously clear PD cells and counters once oscillators are safe
+- `IDLE`      : frontend may accept the next START
 
-| Stage | Duration | Notes |
-|-------|----------|-------|
-| Capture pulse (fast domain) | ~0.9 ns | 1 osc_fast cycle |
-| Context state transition | ~0.5 ns | Async latch |
-| PD clear (delayed 1 fast cycle) | ~0.9 ns | pd_clear_fast_r |
-| Frontend osc_en update | ~0.5 ns | Combinational |
-| **Theoretical minimum** | **~2-4 ns** | |
+## 4. Nominal deadtime components
 
-### Practical Limitations
+Using the nominal oscillator values in the live package:
 
-1. **CSR arm latency**: conv_arm must propagate through CSR → FSM (sys clock domain). This adds ~2 sys clock cycles = 12.5 ns. However, if the FSM auto-re-arms (no CSR involvement), this is eliminated.
+- fast half-period = `450 ps`
+- full fast period = `900 ps`
 
-2. **Context availability**: If all 3 contexts are busy (1 capturing + 2 draining), the frontend is masked. With FIFO_DEPTH=64 and max 16 records per conversion, this shouldn't happen unless the output consumer is severely backpressured.
+The post-close sequence costs roughly:
 
-3. **Oscillator startup**: The oscillators must restart for the new conversion. Ring oscillator startup is nearly instantaneous (~1 ring delay = 9 × 55ps = 495ps).
+| Stage | Approximate cost |
+|-------|------------------|
+| close detect -> `CAPTURE` | 1 fast cycle |
+| `CAPTURE` -> `STOP_OSC` | 1 fast cycle |
+| `STOP_OSC` -> `CLEAR` | 1 fast cycle |
+| `CLEAR` -> `IDLE` | 1 fast cycle |
+| async frontend re-arm | sub-cycle / small additional margin |
 
-### Measured Deadtime (Simulation)
+That gives a nominal practical deadtime on the order of `4-5 ns`.
 
-From `tb_single_conv` results:
-- STOP at ~370 ns
-- Frontend re-armed at ~372 ns (2 ns later, dominated by fast clock edge alignment)
-- Next START can trigger at ~372 ns
+## 5. Why drain does not dominate deadtime
 
-**Measured deadtime: ~2-4 ns** (limited by fast clock edge alignment)
+After capture:
 
-**With CSR re-arm: ~15-20 ns** (dominated by sys clock CDC for conv_arm)
+1. the context is marked `DRAINING`
+2. the frontend is released for a new measurement path
+3. the system-domain drain FSM handles packetization separately
 
-## Comparison
+So the 16-bit output path mainly affects sustained throughput and overflow risk, not the immediate re-arm latency of the frontend.
 
-| Metric | v1 | v2 |
-|--------|-----|-----|
-| Deadtime (multi-hit, 15 hits) | ~91 ns | ~2-4 ns (async) |
-| Deadtime (with CSR re-arm) | ~91 ns | ~15-20 ns |
-| Improvement | — | **~6-45×** |
+## 6. Factors that still affect effective deadtime
 
-## Recommendations for Minimum Deadtime
+### 6.1 FIRST_HIT vs MULTI_HIT close path
 
-1. **Auto-re-arm mode**: Add a CSR bit to auto-arm after each conversion, bypassing CSR write latency
-2. **Persistent arm**: Keep conv_arm high continuously for maximum throughput
-3. **Monitor overflow counter**: If ovf_count increases, reduce event rate or check backpressure
+- `FIRST_HIT` close is a fast OR reduction of the PD matrix
+- `MULTI_HIT` close uses a pipelined count tree, adding one fast-cycle latency to close detection
+
+That added cycle is intentionally accepted to make the fast-domain logic synthesizable.
+
+### 6.2 Persistent arm vs software re-arm
+
+If `conv_arm` is kept high continuously, the frontend can re-arm as soon as the measurement path returns to idle.
+
+If software drops and rewrites `conv_arm`, the effective system-level gap becomes much larger because now `clk_sys` software/control latency is in the loop.
+
+### 6.3 Output backpressure and context pressure
+
+Heavy output backpressure does not directly stretch the frontend deadtime, but it can make both contexts unavailable:
+
+- one context may still be draining
+- the other may become the active capturing context
+
+If both are occupied when a START arrives, the frontend rejects the START and `OVF_COUNT` increments.
+
+### 6.4 Missing STOP
+
+The slow-domain START watchdog prevents the system from hanging forever if START arrives and STOP never follows. This is a robustness feature, not a throughput optimization, but it matters for real deployment.
+
+## 7. Practical throughput interpretation
+
+There are really three different notions of speed:
+
+1. **frontend re-arm deadtime**: about `4-5 ns` nominal
+2. **conversion acceptance under sustained streaming**: depends on whether both contexts remain available
+3. **output bandwidth**: depends on packet size and host backpressure on the 16-bit stream
+
+For example, in `RAW_FEATURES` mode with 15 hits, one packet is:
+
+```text
+1 header + 15*3 hit words + 1 EOC = 47 words
+```
+
+At `160 MHz`, that is many system-clock cycles of output activity, but it is mostly overlapped with future frontend activity because of the double-buffer structure.
+
+## 8. Reviewer checklist
+
+When evaluating deadtime before synthesis, review:
+
+- whether the oscillator implementation preserves the assumed startup behavior
+- whether generated-clock constraints correctly cover `osc_fast_ph0`
+- whether the async frontend clear path is constrained and implemented as intended
+- whether `conv_arm` will be held persistently in the target use case
+- whether downstream backpressure can realistically fill the FIFO or tie up both contexts
+
+## 9. Bottom line
+
+The active architecture is no longer output-serialization-limited in the same way as older single-context or older writer-centered flows. Its critical deadtime is the measurement shutdown and re-arm path, and that path is intentionally short and silicon-structured.

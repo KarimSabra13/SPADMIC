@@ -1,12 +1,15 @@
 // SPDX-FileCopyrightText: 2025 MPTDC Authors
 // SPDX-License-Identifier: Apache-2.0
 //
-// tb_reset_sync_unit.sv — Unit test for mptdc_reset_sync
-//
-// Self-checking testbench exercising async-assert / sync-deassert behaviour
-// across two DUT instances (STAGES=2, STAGES=3).
-
-`timescale 1ns / 1ps
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_reset_sync_unit.sv
+// Purpose : Unit test for async-assert / sync-deassert reset timing.
+// Author  : Karim Sabra
+// Notes   : Exercises STAGES=2, STAGES=3, reassertion mid-release, and
+//           clock-stopped behavior.
+// =============================================================================
+`timescale 1ps/1ps
 `default_nettype none
 
 module tb_reset_sync_unit;
@@ -17,7 +20,7 @@ module tb_reset_sync_unit;
 
   logic clk;
   initial clk = 0;
-  always #3.125 clk = ~clk;
+  always #3_125 clk = ~clk;
 
   // Gated clock for test 6 (clock-independent assert)
   logic clk_en;
@@ -73,7 +76,7 @@ module tb_reset_sync_unit;
   // Assert reset and let it propagate through both instances fully
   task automatic full_reset();
     async_rst_n <= 1'b0;
-    #1;
+    #1_000;
     wait_clks(1);
     async_rst_n <= 1'b1;
     wait_clks(5);  // enough for STAGES=3
@@ -87,7 +90,7 @@ module tb_reset_sync_unit;
     clk_en      = 1'b1;
 
     // Let simulation settle
-    #1;
+    #1_000;
 
     // ================================================================
     // TEST 1 — Async assert: rst_n_o goes low within 1 ns of async_rst_n=0
@@ -102,7 +105,7 @@ module tb_reset_sync_unit;
     @(posedge clk);
     #(HALF_PERIOD / 2);  // quarter-cycle after posedge — between edges
     async_rst_n = 1'b0;
-    #1;  // 1 ns propagation
+    #1_000;  // 1 ns propagation
     check("T1: rst_n_s2 low after async assert", rst_n_s2, 1'b0);
     check("T1: rst_n_s3 low after async assert", rst_n_s3, 1'b0);
     $display("[PASS] Test 1: Async assert verified");
@@ -113,22 +116,22 @@ module tb_reset_sync_unit;
     $display("\n--- Test 2: Sync deassert STAGES=2 ---");
     // Ensure in reset
     async_rst_n = 1'b0;
-    #1;
+    #1_000;
     check("T2-pre: rst_n_s2 low in reset", rst_n_s2, 1'b0);
 
     // Deassert reset just after a posedge so we count edges cleanly
     @(posedge clk);
-    #1;
+    #1_000;
     async_rst_n = 1'b1;
 
     // After 1st posedge: sync_q shifts in one 1 → sync_q = 2'b01, rst_n_o still 0
     @(posedge clk);
-    #1;
+    #1_000;
     check("T2: rst_n_s2 still low after 1st edge", rst_n_s2, 1'b0);
 
     // After 2nd posedge: sync_q = 2'b11, rst_n_o = 1
     @(posedge clk);
-    #1;
+    #1_000;
     check("T2: rst_n_s2 high after 2nd edge", rst_n_s2, 1'b1);
     $display("[PASS] Test 2: Sync deassert STAGES=2 verified");
 
@@ -138,27 +141,27 @@ module tb_reset_sync_unit;
     $display("\n--- Test 3: Sync deassert STAGES=3 ---");
     // Assert reset
     async_rst_n = 1'b0;
-    #1;
+    #1_000;
     check("T3-pre: rst_n_s3 low in reset", rst_n_s3, 1'b0);
 
     // Deassert
     @(posedge clk);
-    #1;
+    #1_000;
     async_rst_n = 1'b1;
 
     // After 1st edge
     @(posedge clk);
-    #1;
+    #1_000;
     check("T3: rst_n_s3 low after 1st edge", rst_n_s3, 1'b0);
 
     // After 2nd edge
     @(posedge clk);
-    #1;
+    #1_000;
     check("T3: rst_n_s3 low after 2nd edge", rst_n_s3, 1'b0);
 
     // After 3rd edge
     @(posedge clk);
-    #1;
+    #1_000;
     check("T3: rst_n_s3 high after 3rd edge", rst_n_s3, 1'b1);
     $display("[PASS] Test 3: Sync deassert STAGES=3 verified");
 
@@ -173,18 +176,18 @@ module tb_reset_sync_unit;
         @(posedge clk);
         #(HALF_PERIOD / 2);
         async_rst_n = 1'b0;
-        #1;
+        #1_000;
         check($sformatf("T4-iter%0d: assert immediate", i), rst_n_s2, 1'b0);
 
         // Deassert
         @(posedge clk);
-        #1;
+        #1_000;
         async_rst_n = 1'b1;
         @(posedge clk);
-        #1;
+        #1_000;
         check($sformatf("T4-iter%0d: still low after 1 edge", i), rst_n_s2, 1'b0);
         @(posedge clk);
-        #1;
+        #1_000;
         check($sformatf("T4-iter%0d: high after 2 edges", i), rst_n_s2, 1'b1);
       end
     end
@@ -197,28 +200,28 @@ module tb_reset_sync_unit;
     // Start from reset
     async_rst_n = 1'b0;
     wait_clks(2);
-    #1;
+    #1_000;
     check("T5-pre: in reset", rst_n_s2, 1'b0);
 
     // Begin deasserting
     @(posedge clk);
-    #1;
+    #1_000;
     async_rst_n = 1'b1;
 
     // After 1 edge, rst_n_s2 still 0 (chain not full yet)
     @(posedge clk);
-    #1;
+    #1_000;
     check("T5: rst_n_s2 still low mid-deassert", rst_n_s2, 1'b0);
 
     // Re-assert before the 2nd edge completes the chain
     #(HALF_PERIOD / 2);
     async_rst_n = 1'b0;
-    #1;
+    #1_000;
     check("T5: rst_n_s2 low after re-assert", rst_n_s2, 1'b0);
 
     // Let another edge pass — should still be low since we re-asserted
     @(posedge clk);
-    #1;
+    #1_000;
     check("T5: rst_n_s2 remains low after edge", rst_n_s2, 1'b0);
     $display("[PASS] Test 5: Assert during deassert verified");
 
@@ -239,12 +242,12 @@ module tb_reset_sync_unit;
 
     // Assert reset with clock stopped
     async_rst_n = 1'b0;
-    #1;
+    #1_000;
     check("T6: rst_n_gated low with clock stopped", rst_n_gated, 1'b0);
 
     // Re-enable clock and verify it can deassert
     clk_en = 1'b1;
-    #1;
+    #1_000;
     async_rst_n = 1'b1;
     wait_clks(4);
     check("T6: rst_n_gated high after clock resumed", rst_n_gated, 1'b1);
@@ -267,7 +270,7 @@ module tb_reset_sync_unit;
 
   // Timeout watchdog
   initial begin
-    #100_000;
+    #100_000_000;
     $fatal(1, "tb_reset_sync_unit: TIMEOUT");
   end
 

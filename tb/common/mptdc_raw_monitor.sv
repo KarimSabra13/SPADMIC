@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2025 MPTDC Authors
 // SPDX-License-Identifier: Apache-2.0
 //
-// mptdc_raw_monitor.sv — 16-bit narrow output stream monitor
-//
-// Passively monitors the narrow_valid/narrow_ready/narrow_data bus and
-// logs all packets.  Performs basic protocol checks (header/EOC framing,
-// hit count consistency).  Does NOT drive any signals.
-
-`timescale 1ns / 1ps
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : mptdc_raw_monitor.sv
+// Purpose : Passive monitor for the 16-bit narrow output stream.
+// Author  : Karim Sabra
+// Notes   : Checks header/EOC framing and hit-count-driven word counts without
+//           driving narrow_ready.
+// =============================================================================
+`timescale 1ps/1ps
 `default_nettype none
 
 module mptdc_raw_monitor

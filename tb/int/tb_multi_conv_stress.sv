@@ -1,4 +1,15 @@
-`timescale 1ns/1ps
+// SPDX-FileCopyrightText: 2025 MPTDC Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_multi_conv_stress.sv
+// Purpose : Stress test for repeated arm/start/stop/readout sequencing.
+// Author  : Karim Sabra
+// Notes   : Keeps the consumer ready, checks every packet structure, and verifies
+//           monotonic conversion IDs across the burst.
+// =============================================================================
+`timescale 1ps/1ps
 
 module tb_multi_conv_stress;
   import mptdc_pkg::*;

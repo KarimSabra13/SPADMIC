@@ -1,11 +1,15 @@
 // SPDX-FileCopyrightText: 2025 MPTDC Authors
 // SPDX-License-Identifier: Apache-2.0
 //
-// mptdc_tb_pkg.sv — Testbench support package
-//
-// Provides utilities, checkers, and constants for all MPTDC testbenches.
-
-`timescale 1ns / 1ps
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : mptdc_tb_pkg.sv
+// Purpose : Shared package for CSR helpers, packet parsing, and pulse injection.
+// Author  : Karim Sabra
+// Notes   : Helper functions mirror the narrow packet contract used by the
+//           legacy testbenches and the VIP scoreboard.
+// =============================================================================
+`timescale 1ps / 1ps
 
 package mptdc_tb_pkg;
   import mptdc_pkg::*;
@@ -13,7 +17,7 @@ package mptdc_tb_pkg;
   // =========================================================================
   // Clock generation parameters
   // =========================================================================
-  localparam realtime CLK_SYS_PERIOD = 6.25ns;   // 160 MHz
+  localparam realtime CLK_SYS_PERIOD = 6250ps;   // 160 MHz
   localparam realtime CLK_SYS_HALF   = CLK_SYS_PERIOD / 2;
 
   // =========================================================================
@@ -24,6 +28,8 @@ package mptdc_tb_pkg;
   // =========================================================================
   // 16-bit output packet parsing helpers
   // =========================================================================
+  // These helpers decode the exact narrow-bus framing consumed by monitors,
+  // directed testbenches, and the VIP scoreboard.
   function automatic logic is_header(input logic [NARROW_W-1:0] word);
     return (word[15:14] == 2'b10);
   endfunction
@@ -58,6 +64,10 @@ package mptdc_tb_pkg;
     return out_mode_e'(word[2:1]);
   endfunction
 
+  function automatic logic header_boundary_inc(input logic [NARROW_W-1:0] word);
+    return word[0];
+  endfunction
+
   function automatic logic [13:0] eoc_conv_id(
     input logic [NARROW_W-1:0] word
   );
@@ -69,7 +79,8 @@ package mptdc_tb_pkg;
   // =========================================================================
   typedef struct {
     logic [NSLOW_W-1:0]     nslow;
-    logic [NFAST_W-1:0]     nfast;
+    logic [NFAST_W-1:0]     nfast;        // per-hit nfast (from PD cell)
+    logic [NFAST_W-1:0]     nfast_snap;   // global nfast at CAPTURE
     ph_idx_t                ns;
     ph_idx_t                nf;
     logic [PD_W-1:0]        pd_idx;
@@ -83,14 +94,15 @@ package mptdc_tb_pkg;
   );
     tb_hit_features_t h;
     // W0: {1'b0, nslow[6:0], nfast[6:0], 1'b0}
-    h.nslow     = w0[14:8];
-    h.nfast     = w0[7:1];
+    h.nslow      = w0[14:8];
+    h.nfast      = w0[7:1];
     // W1: {1'b0, ns[3:0], nf[3:0], pd_idx[6:0]}
-    h.ns        = w1[14:11];
-    h.nf        = w1[10:7];
-    h.pd_idx    = w1[6:0];
-    // W2: {1'b0, event_seq[3:0], 11'b0}
-    h.event_seq = w2[14:11];
+    h.ns         = w1[14:11];
+    h.nf         = w1[10:7];
+    h.pd_idx     = w1[6:0];
+    // W2: {1'b0, event_seq[3:0], nfast_snap[6:0], 4'b0}
+    h.event_seq  = w2[14:11];
+    h.nfast_snap = w2[10:4];
     return h;
   endfunction
 
@@ -149,7 +161,7 @@ package mptdc_tb_pkg;
     ref logic start_sig,
     ref logic stop_sig,
     input realtime delay_ps,   // Time between START and STOP
-    input realtime pulse_w = 1ns
+    input realtime pulse_w = 1000ps
   );
     start_sig = 1'b1;
     #(pulse_w);
@@ -163,6 +175,8 @@ package mptdc_tb_pkg;
   // =========================================================================
   // Task: Collect one complete 16-bit packet
   // =========================================================================
+  // Drives narrow_ready high and returns one complete header-to-EOC packet so
+  // tests do not have to duplicate the same ready/valid collection loop.
   task automatic collect_packet(
     ref logic                      clk,
     ref logic                      narrow_valid,

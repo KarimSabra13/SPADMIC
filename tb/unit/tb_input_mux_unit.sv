@@ -1,9 +1,16 @@
-`timescale 1ns/1ps
+// SPDX-FileCopyrightText: 2025 MPTDC Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_input_mux_unit.sv
+// Purpose : Unit test for SPAD/CAL input selection pass-through and isolation.
+// Author  : Karim Sabra
+// Notes   : Covers mode switching, combinational response, and cross-talk
+//           rejection on the pad-facing mux.
+// =============================================================================
+`timescale 1ps/1ps
 `default_nettype none
-
-// =============================================================================
-// tb_input_mux_unit — Self-checking unit test for mptdc_input_mux
-// =============================================================================
 
 module tb_input_mux_unit;
   import mptdc_pkg::*;
@@ -11,7 +18,7 @@ module tb_input_mux_unit;
   // ---------- Clock (combinational DUT, but kept for port conventions) ------
   logic clk_sys;
   initial clk_sys = 0;
-  always #3.125 clk_sys = ~clk_sys;
+  always #3_125 clk_sys = ~clk_sys;
 
   logic rst_n;
 
@@ -72,26 +79,26 @@ module tb_input_mux_unit;
   initial begin
     rst_n = 1'b0;
     drive_all(0, 0, 0, 0, INPUT_SPAD);
-    #20;
+    #20_000;
     rst_n = 1'b1;
-    #10;
+    #10_000;
 
     // ====================================================================
     // Test 1 — SPAD mode pass-through
     // ====================================================================
     $display("\n--- Test 1: SPAD mode pass-through ---");
     drive_all(1, 0, 0, 0, INPUT_SPAD);
-    #1;
+    #1_000;
     check("SPAD start=1 -> start_o", start_async_o, 1'b1);
     check("SPAD start=1 -> stop_o",  stop_async_o,  1'b0);
 
     drive_all(0, 1, 0, 0, INPUT_SPAD);
-    #1;
+    #1_000;
     check("SPAD stop=1 -> stop_o",   stop_async_o,  1'b1);
     check("SPAD stop=1 -> start_o",  start_async_o, 1'b0);
 
     drive_all(1, 1, 0, 0, INPUT_SPAD);
-    #1;
+    #1_000;
     check("SPAD both=1 -> start_o",  start_async_o, 1'b1);
     check("SPAD both=1 -> stop_o",   stop_async_o,  1'b1);
 
@@ -100,17 +107,17 @@ module tb_input_mux_unit;
     // ====================================================================
     $display("\n--- Test 2: CAL mode pass-through ---");
     drive_all(0, 0, 1, 0, INPUT_CAL);
-    #1;
+    #1_000;
     check("CAL cal_start=1 -> start_o", start_async_o, 1'b1);
     check("CAL cal_start=1 -> stop_o",  stop_async_o,  1'b0);
 
     drive_all(0, 0, 0, 1, INPUT_CAL);
-    #1;
+    #1_000;
     check("CAL cal_stop=1 -> stop_o",   stop_async_o,  1'b1);
     check("CAL cal_stop=1 -> start_o",  start_async_o, 1'b0);
 
     drive_all(0, 0, 1, 1, INPUT_CAL);
-    #1;
+    #1_000;
     check("CAL both=1 -> start_o",  start_async_o, 1'b1);
     check("CAL both=1 -> stop_o",   stop_async_o,  1'b1);
 
@@ -119,47 +126,47 @@ module tb_input_mux_unit;
     // ====================================================================
     $display("\n--- Test 3: Combinational immediacy (no clock edge) ---");
     drive_all(0, 0, 0, 0, INPUT_SPAD);
-    #1;  // sub-clock-cycle settle; proves no posedge needed
+    #1_000;  // sub-clock-cycle settle; proves no posedge needed
     check("Comb pre: start_o=0",  start_async_o, 1'b0);
     check("Comb pre: stop_o=0",   stop_async_o,  1'b0);
 
     start_spad_async = 1'b1;
-    #1;
-    check("Comb imm: start_o=1 after #1", start_async_o, 1'b1);
+    #1_000;
+    check("Comb imm: start_o=1 after #1_000", start_async_o, 1'b1);
 
     stop_spad_async = 1'b1;
-    #1;
-    check("Comb imm: stop_o=1 after #1",  stop_async_o,  1'b1);
+    #1_000;
+    check("Comb imm: stop_o=1 after #1_000",  stop_async_o,  1'b1);
 
     start_spad_async = 1'b0;
-    #1;
-    check("Comb imm: start_o=0 after #1", start_async_o, 1'b0);
+    #1_000;
+    check("Comb imm: start_o=0 after #1_000", start_async_o, 1'b0);
 
     // ====================================================================
     // Test 4 — Mode switching (SPAD → CAL while SPAD active)
     // ====================================================================
     $display("\n--- Test 4: Mode switching ---");
     drive_all(1, 1, 0, 0, INPUT_SPAD);
-    #1;
+    #1_000;
     check("Pre-switch SPAD start_o", start_async_o, 1'b1);
     check("Pre-switch SPAD stop_o",  stop_async_o,  1'b1);
 
     // Switch to CAL — SPAD signals still high, CAL inputs low
     input_sel = INPUT_CAL;
-    #1;
+    #1_000;
     check("Post-switch CAL start_o (SPAD high, CAL low)", start_async_o, 1'b0);
     check("Post-switch CAL stop_o  (SPAD high, CAL low)", stop_async_o,  1'b0);
 
     // Now raise CAL inputs
     cal_start_async = 1'b1;
     cal_stop_async  = 1'b1;
-    #1;
+    #1_000;
     check("Post-switch CAL start_o (CAL high)", start_async_o, 1'b1);
     check("Post-switch CAL stop_o  (CAL high)", stop_async_o,  1'b1);
 
     // Switch back to SPAD — SPAD still high
     input_sel = INPUT_SPAD;
-    #1;
+    #1_000;
     check("Back to SPAD start_o", start_async_o, 1'b1);
     check("Back to SPAD stop_o",  stop_async_o,  1'b1);
 
@@ -168,12 +175,12 @@ module tb_input_mux_unit;
     // ====================================================================
     $display("\n--- Test 5: All inputs zero ---");
     drive_all(0, 0, 0, 0, INPUT_SPAD);
-    #1;
+    #1_000;
     check("SPAD all-zero start_o", start_async_o, 1'b0);
     check("SPAD all-zero stop_o",  stop_async_o,  1'b0);
 
     drive_all(0, 0, 0, 0, INPUT_CAL);
-    #1;
+    #1_000;
     check("CAL all-zero start_o",  start_async_o, 1'b0);
     check("CAL all-zero stop_o",   stop_async_o,  1'b0);
 
@@ -184,25 +191,25 @@ module tb_input_mux_unit;
 
     // SPAD mode: drive CAL inputs high, SPAD inputs low
     drive_all(0, 0, 1, 1, INPUT_SPAD);
-    #1;
+    #1_000;
     check("Xtalk SPAD: cal high -> start_o=0", start_async_o, 1'b0);
     check("Xtalk SPAD: cal high -> stop_o=0",  stop_async_o,  1'b0);
 
     // CAL mode: drive SPAD inputs high, CAL inputs low
     drive_all(1, 1, 0, 0, INPUT_CAL);
-    #1;
+    #1_000;
     check("Xtalk CAL: spad high -> start_o=0", start_async_o, 1'b0);
     check("Xtalk CAL: spad high -> stop_o=0",  stop_async_o,  1'b0);
 
     // SPAD mode: both sides high — only SPAD should appear
     drive_all(1, 1, 1, 1, INPUT_SPAD);
-    #1;
+    #1_000;
     check("Xtalk SPAD both high: start_o=spad", start_async_o, 1'b1);
     check("Xtalk SPAD both high: stop_o=spad",  stop_async_o,  1'b1);
 
     // CAL mode: both sides high — only CAL should appear
     drive_all(1, 1, 1, 1, INPUT_CAL);
-    #1;
+    #1_000;
     check("Xtalk CAL both high: start_o=cal", start_async_o, 1'b1);
     check("Xtalk CAL both high: stop_o=cal",  stop_async_o,  1'b1);
 
@@ -223,7 +230,7 @@ module tb_input_mux_unit;
 
   // Timeout watchdog
   initial begin
-    #100_000;
+    #100_000_000;
     $fatal(1, "TIMEOUT: tb_input_mux_unit did not finish in 100 us");
   end
 

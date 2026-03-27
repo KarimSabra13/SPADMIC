@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# MPTDC v2.0 — Smoke test: lint + single conversion TB
+# -----------------------------------------------------------------------------
+# Purpose : Run the fast lint-plus-single-bench smoke flow for MPTDC.
+# Usage   : bash ci/run_smoke.sh
+# Context : Quick local sanity check built around tb_single_conv and the
+#           shared scripts/sim/run_tb.sh runner.
+# Author  : Karim Sabra
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,7 +31,7 @@ run_test() {
 }
 
 echo "============================================"
-echo "  MPTDC v2.0 Smoke Test Suite"
+echo "  MPTDC v2.2 Smoke Test Suite"
 echo "============================================"
 echo ""
 

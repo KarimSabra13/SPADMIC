@@ -1,12 +1,26 @@
-// ============================================================================
-//  mptdc_top_asic.sv — Pad-facing ASIC top-level wrapper
-//
-//  Instantiates reset synchroniser, input mux, CSR register file, and
-//  TDC core.  All pads connect here; nothing above this module except
-//  the pad ring.
-// ============================================================================
-`timescale 1ns / 1ps
+`timescale 1ps/1ps
 `default_nettype none
+
+// =============================================================================
+// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// File     : mptdc_top_asic.sv
+// Purpose  : Pad-facing ASIC top wrapper — reset entry, input selection, CSR,
+//            and core integration boundary.
+// Author   : Karim Sabra
+// =============================================================================
+// This is the integration boundary intended to sit directly below the pad ring.
+// It deliberately contains only pad-facing glue:
+//   - pad reset synchronization into clk_sys
+//   - SPAD-vs-CAL async input selection
+//   - CSR register block for quasi-static configuration and live status
+//   - instantiation of the measurement/readout core
+//
+// Architectural rule:
+//   - measurement timing, CDC, packetization, watchdog, and context handling
+//     all live below this wrapper in mptdc_core
+//   - this file should stay simple so pad integration and SoC-level review are
+//     separated from the Vernier measurement internals
+// =============================================================================
 
 module mptdc_top_asic
   import mptdc_pkg::*;
@@ -49,11 +63,12 @@ module mptdc_top_asic
 
   mptdc_cfg_t      cfg;               // CSR → core  (quasi-static config)
   mptdc_status_t   status;            // core → CSR  (live status)
-  logic            conv_arm_pulse;
+  logic            conv_arm;          // latched level from CSR (v2.1)
   logic            fifo_clr_pulse;
   logic            soft_rst_pulse;
 
-  // Combined reset: pad-synchronised AND inverse of software reset pulse
+  // Combined reset: software reset is folded into the same synchronised tree
+  // seen by the core, so pad and CSR reset sources share one local boundary.
   assign rst_n_internal = rst_sync_n & ~soft_rst_pulse;
 
   // ────────────────────────────────────────────────────────────────
@@ -95,7 +110,7 @@ module mptdc_top_asic
     .csr_rdata_o      (csr_rdata_o),
     .status_i         (status),
     .cfg_o            (cfg),
-    .conv_arm_pulse_o (conv_arm_pulse),
+    .conv_arm_o       (conv_arm),
     .fifo_clr_pulse_o (fifo_clr_pulse),
     .soft_rst_pulse_o (soft_rst_pulse)
   );
@@ -109,7 +124,7 @@ module mptdc_top_asic
     .start_async_i  (start_async),
     .stop_async_i   (stop_async),
     .cfg_i          (cfg),
-    .conv_arm_i     (conv_arm_pulse),
+    .conv_arm_i     (conv_arm),
     .fifo_clr_i     (fifo_clr_pulse),
     .status_o       (status),
     .narrow_ready_i (narrow_ready_i),

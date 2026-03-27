@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# MPTDC v2.0 — Full regression: all integration TBs
+# -----------------------------------------------------------------------------
+# Purpose : Run the active top-level lint pass and full integration regression
+#           suite for MPTDC sanity checks.
+# Usage   : bash ci/run_full_regression.sh
+# Context : Local/CI helper that delegates each integration bench to
+#           scripts/sim/run_tb.sh.
+# Author  : Karim Sabra
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,7 +35,7 @@ run_test() {
 }
 
 echo "============================================"
-echo "  MPTDC v2.0 Full Regression Suite"
+echo "  MPTDC v2.2 Full Regression Suite"
 echo "============================================"
 echo ""
 
@@ -51,6 +59,9 @@ INTEGRATION_TBS=(
     tb_cal_inject
     tb_backpressure
     tb_watchdog_recovery
+    tb_start_wdt
+    tb_overflow_count
+    tb_firsthit_mode
 )
 
 for tb in "${INTEGRATION_TBS[@]}"; do

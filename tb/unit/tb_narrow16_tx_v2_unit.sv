@@ -1,10 +1,17 @@
-`timescale 1ns/1ps
+// SPDX-FileCopyrightText: 2025 MPTDC Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_narrow16_tx_v2_unit.sv
+// Purpose : Unit test for 16-bit packet serialization across output modes.
+// Author  : Karim Sabra
+// Notes   : Uses a queue-based FIFO model to verify header, hit, timestamp, EOC,
+//           and backpressure contracts.
+// =============================================================================
+`timescale 1ps/1ps
 `default_nettype none
 
-// =============================================================================
-// tb_narrow16_tx_v2_unit — Self-checking unit testbench for
-//                          mptdc_narrow16_tx_v2 (16-bit ready/valid serializer)
-// =============================================================================
 module tb_narrow16_tx_v2_unit;
   import mptdc_pkg::*;
   import mptdc_tb_pkg::*;
@@ -12,7 +19,7 @@ module tb_narrow16_tx_v2_unit;
   // ── Clock & reset ─────────────────────────────────────────────────
   logic clk_sys;
   initial clk_sys = 0;
-  always #3.125 clk_sys = ~clk_sys;  // 160 MHz
+  always #3_125 clk_sys = ~clk_sys;  // 160 MHz
 
   logic rst_n;
 
@@ -26,6 +33,8 @@ module tb_narrow16_tx_v2_unit;
   logic [NARROW_W-1:0] narrow_data;
 
   // ── FIFO model ────────────────────────────────────────────────────
+  // Queue ordering mirrors the drain contract: one META record followed by
+  // zero or more HIT records for the current conversion.
   mptdc_acq_rec_t fifo_mem [$];
 
   assign fifo_rd_valid = (fifo_mem.size() > 0);
@@ -55,19 +64,23 @@ module tb_narrow16_tx_v2_unit;
 
   task automatic push_meta(
     input logic [NSLOW_W-1:0]    nslow,
+    input logic [NFAST_W-1:0]    nfast = '0,
     input logic [MAX_HITS_W-1:0] hit_count,
     input ctx_id_t               ctx_id,
     input logic                  phase0,
-    input tdc_conv_flags_t       flags
+    input tdc_conv_flags_t       flags,
+    input logic                  slow_boundary_inc = 1'b0
   );
     mptdc_acq_rec_t rec;
-    rec.kind            = ACQ_REC_META;
-    rec.meta.nslow      = nslow;
-    rec.meta.hit_count  = hit_count;
-    rec.meta.ctx_id     = ctx_id;
-    rec.meta.phase0_snap = phase0;
-    rec.meta.flags      = flags;
-    rec.hit             = '0;
+    rec.kind                    = ACQ_REC_META;
+    rec.meta.nslow              = nslow;
+    rec.meta.nfast              = nfast;
+    rec.meta.hit_count          = hit_count;
+    rec.meta.ctx_id             = ctx_id;
+    rec.meta.phase0_snap        = phase0;
+    rec.meta.slow_boundary_inc  = slow_boundary_inc;
+    rec.meta.flags              = flags;
+    rec.hit                     = '0;
     fifo_mem.push_back(rec);
   endtask
 
@@ -87,7 +100,9 @@ module tb_narrow16_tx_v2_unit;
     fifo_mem.push_back(rec);
   endtask
 
-  // Collect exactly one packet (header through EOC) with timeout
+  // Collect exactly one packet (header through EOC) with timeout. Ready
+  // remains under TB control so backpressure cases can intentionally stall the
+  // header before any word is accepted.
   task automatic collect_pkt(
     output logic [NARROW_W-1:0] words [$],
     input  int timeout_cyc = 2000
@@ -159,12 +174,7 @@ module tb_narrow16_tx_v2_unit;
     input ph_idx_t            ns,
     input ph_idx_t            nf
   );
-    int signed coef;
-    coef = (int'(nslow) - 1) * int'(K_VERNIER) * int'(NE)
-         + (int'(nfast) - 1) * int'(NE)
-         + int'(ns) * int'(K_VERNIER)
-         - int'(nf) * (int'(K_VERNIER) - 1);
-    return 32'(coef * int'(DELTA_LSB));
+    return vernier_tconv_ps(nslow, nfast, ns, nf, 1'b0);
   endfunction
 
   // ── Main test sequence ────────────────────────────────────────────
@@ -188,7 +198,7 @@ module tb_narrow16_tx_v2_unit;
     narrow_ready = 1'b1;
     @(posedge clk_sys);
 
-    push_meta(.nslow(7'd10), .hit_count(4'd1), .ctx_id(2'd0),
+    push_meta(.nslow(7'd10), .hit_count(4'd1), .ctx_id(1'd0),
               .phase0(1'b1), .flags(4'b0));
     push_hit(.ns(4'd2), .nf(4'd3), .nfast(7'd5), .event_seq(4'd0));
 
@@ -205,7 +215,7 @@ module tb_narrow16_tx_v2_unit;
       check("T1 header hit_count",w[10:7]  == 4'd1);
       check("T1 header flags",    w[6:3]   == 4'b0);
       check("T1 header out_mode", w[2:1]   == 2'(OUT_MODE_RAW_FEATURES));
-      check("T1 header rsvd",     w[0]     == 1'b0);
+      check("T1 header rsvd",     w[0]     == 1'b0);  // slow_boundary_inc=0
 
       // Hit W0: nslow=10, nfast=5
       w = pkt[1];
@@ -221,11 +231,12 @@ module tb_narrow16_tx_v2_unit;
       check("T1 W1 nf",     w[10:7]  == 4'd3);
       check("T1 W1 pd_idx", w[6:0]   == pd_from_phases(4'd2, 4'd3));
 
-      // Hit W2: event_seq=0
+      // Hit W2: event_seq=0, nfast_snap=0 (default)
       w = pkt[3];
       check("T1 W2 bit15",     w[15]    == 1'b0);
       check("T1 W2 event_seq", w[14:11] == 4'd0);
-      check("T1 W2 padding",   w[10:0]  == 11'b0);
+      check("T1 W2 nfast_snap", w[10:4] == 7'd0);
+      check("T1 W2 padding",   w[3:0]   == 4'b0);
 
       // EOC: conv_count=0
       w = pkt[4];
@@ -240,7 +251,7 @@ module tb_narrow16_tx_v2_unit;
     out_mode = OUT_MODE_RAW_FEATURES;
     @(posedge clk_sys);
 
-    push_meta(.nslow(7'd20), .hit_count(4'd0), .ctx_id(2'd1),
+    push_meta(.nslow(7'd20), .hit_count(4'd0), .ctx_id(1'd1),
               .phase0(1'b0), .flags(4'b0));
 
     collect_pkt(pkt);
@@ -250,8 +261,7 @@ module tb_narrow16_tx_v2_unit;
     if (n >= 2) begin
       w = pkt[0];
       check("T2 header marker",    w[15:14] == 2'b10);
-      check("T2 header ctx_id",    w[13:12] == 2'd1);
-      check("T2 header hit_count", w[10:7]  == 4'd0);
+      check("T2 header ctx_id",    w[13:12] == 2'd1);      check("T2 header hit_count", w[10:7]  == 4'd0);
 
       w = pkt[1];
       check("T2 EOC marker", w[15:14] == 2'b11);
@@ -265,7 +275,7 @@ module tb_narrow16_tx_v2_unit;
     out_mode = OUT_MODE_RAW_TIMESTAMP;
     @(posedge clk_sys);
 
-    push_meta(.nslow(7'd15), .hit_count(4'd2), .ctx_id(2'd2),
+    push_meta(.nslow(7'd15), .hit_count(4'd2), .ctx_id(1'd0),
               .phase0(1'b1), .flags(4'b0101));
     push_hit(.ns(4'd1), .nf(4'd2), .nfast(7'd8), .event_seq(4'd0));
     push_hit(.ns(4'd4), .nf(4'd5), .nfast(7'd10), .event_seq(4'd1));
@@ -278,7 +288,7 @@ module tb_narrow16_tx_v2_unit;
     if (n >= 6) begin
       w = pkt[0];
       check("T3 header marker",    w[15:14] == 2'b10);
-      check("T3 header ctx_id",    w[13:12] == 2'd2);
+      check("T3 header ctx_id",    w[13:12] == 2'd0);
       check("T3 header phase0",    w[11]    == 1'b1);
       check("T3 header hit_count", w[10:7]  == 4'd2);
       check("T3 header flags",     w[6:3]   == 4'b0101);
@@ -317,8 +327,8 @@ module tb_narrow16_tx_v2_unit;
     out_mode = OUT_MODE_FULL;
     @(posedge clk_sys);
 
-    push_meta(.nslow(7'd30), .hit_count(4'd1), .ctx_id(2'd0),
-              .phase0(1'b0), .flags(4'b1000));
+    push_meta(.nslow(7'd30), .nfast(7'd25), .hit_count(4'd1), .ctx_id(1'd0),
+              .phase0(1'b0), .flags(4'b0000));
     push_hit(.ns(4'd7), .nf(4'd8), .nfast(7'd20), .event_seq(4'd3));
 
     collect_pkt(pkt);
@@ -329,7 +339,7 @@ module tb_narrow16_tx_v2_unit;
     if (n >= 6) begin
       w = pkt[0];
       check("T4 header out_mode", w[2:1] == 2'(OUT_MODE_FULL));
-      check("T4 header flags",    w[6:3] == 4'b1000);
+      check("T4 header flags",    w[6:3] == 4'b0000);
 
       // W0
       w = pkt[1];
@@ -344,7 +354,8 @@ module tb_narrow16_tx_v2_unit;
 
       // W2
       w = pkt[3];
-      check("T4 W2 event_seq", w[14:11] == 4'd3);
+      check("T4 W2 event_seq",  w[14:11] == 4'd3);
+      check("T4 W2 nfast_snap", w[10:4]  == 7'd25);
 
       // W3 timestamp
       t_raw_exp = calc_t_raw_ps(7'd30, 7'd20, 4'd7, 4'd8);
@@ -367,7 +378,7 @@ module tb_narrow16_tx_v2_unit;
     narrow_ready = 1'b0;   // ready OFF before pushing
     @(posedge clk_sys);
 
-    push_meta(.nslow(7'd5), .hit_count(4'd1), .ctx_id(2'd0),
+    push_meta(.nslow(7'd5), .hit_count(4'd1), .ctx_id(1'd0),
               .phase0(1'b0), .flags(4'b0));
     push_hit(.ns(4'd1), .nf(4'd1), .nfast(7'd3), .event_seq(4'd0));
 
@@ -414,10 +425,10 @@ module tb_narrow16_tx_v2_unit;
     @(posedge clk_sys);
 
     // Packet A: 0 hits
-    push_meta(.nslow(7'd1), .hit_count(4'd0), .ctx_id(2'd0),
+    push_meta(.nslow(7'd1), .hit_count(4'd0), .ctx_id(1'd0),
               .phase0(1'b0), .flags(4'b0));
     // Packet B: 0 hits
-    push_meta(.nslow(7'd2), .hit_count(4'd0), .ctx_id(2'd1),
+    push_meta(.nslow(7'd2), .hit_count(4'd0), .ctx_id(1'd1),
               .phase0(1'b1), .flags(4'b0));
 
     collect_pkt(pkt);
@@ -434,7 +445,7 @@ module tb_narrow16_tx_v2_unit;
     end
 
     // ────────────────────────────────────────────────────────────────
-    // TEST 7: Header encoding — all fields
+    // TEST 7: Header encoding — all fields + slow_boundary_inc
     // ────────────────────────────────────────────────────────────────
     $display("\n--- Test 7: Header encoding ---");
     do_reset();
@@ -442,18 +453,19 @@ module tb_narrow16_tx_v2_unit;
     narrow_ready = 1'b1;
     @(posedge clk_sys);
 
-    push_meta(.nslow(7'd50), .hit_count(4'd0), .ctx_id(2'd2),
-              .phase0(1'b1), .flags(4'b1010));
+    push_meta(.nslow(7'd50), .hit_count(4'd0), .ctx_id(1'd0),
+              .phase0(1'b1), .flags(4'b0010),
+              .slow_boundary_inc(1'b1));
 
     collect_pkt(pkt);
     if (pkt.size() >= 1) begin
       w = pkt[0];
-      check("T7 ctx_id==2",     w[13:12] == 2'd2);
+      check("T7 ctx_id==0",     w[13:12] == 2'd0);
       check("T7 phase0==1",     w[11]    == 1'b1);
       check("T7 hit_count==0",  w[10:7]  == 4'd0);
-      check("T7 flags==1010",   w[6:3]   == 4'b1010);
+      check("T7 flags==0010",   w[6:3]   == 4'b0010);
       check("T7 out_mode==TS",  w[2:1]   == 2'(OUT_MODE_RAW_TIMESTAMP));
-      check("T7 bit0==0",       w[0]     == 1'b0);
+      check("T7 boundary_inc",  w[0]     == 1'b1);
     end
 
     // ────────────────────────────────────────────────────────────────
@@ -484,7 +496,7 @@ module tb_narrow16_tx_v2_unit;
 
   // ── Watchdog ──────────────────────────────────────────────────────
   initial begin
-    #200_000;
+    #200_000_000;
     $display("[FAIL] Global watchdog timeout");
     $fatal(1, "Watchdog");
   end

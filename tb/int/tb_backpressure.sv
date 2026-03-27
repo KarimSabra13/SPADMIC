@@ -1,4 +1,15 @@
-`timescale 1ns/1ps
+// SPDX-FileCopyrightText: 2025 MPTDC Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_backpressure.sv
+// Purpose : Integration test for narrow ready/valid backpressure handling.
+// Author  : Karim Sabra
+// Notes   : Exercises intermittent stalls, full stalls, and packet-integrity
+//           comparisons without changing DUT sequencing.
+// =============================================================================
+`timescale 1ps/1ps
 
 module tb_backpressure;
   import mptdc_pkg::*;

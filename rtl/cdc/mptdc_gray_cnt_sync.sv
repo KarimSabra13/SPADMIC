@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ps/1ps
 `default_nettype none
 
 // =============================================================================
@@ -8,12 +8,12 @@
 // Author   : Karim Sabra
 // =============================================================================
 // Implements a binary counter in the source (oscillator) clock domain that
-// is safely transferred to the destination (clk_sys) domain via Gray-code
-// encoding and a 2-FF synchroniser chain.  Two independent channels are
-// provided:
+// is safely transferred to the destination domain via Gray-code encoding and
+// a 2-FF synchroniser chain.  Two independent channels are provided:
 //   - Continuous: the free-running counter value, updated every source cycle.
-//   - Latched: a snapshot captured on src_latch_p (triggered by the STOP
-//     edge), held stable until the next conversion.
+//   - Latched: a snapshot captured either synchronously on src_latch_p or,
+//     when USE_ASYNC_SNAPSHOT=1, asynchronously on src_async_latch_p.  The
+//     async path is intended for STOP-edge capture of the slow Gray counter.
 //
 // Counter behaviour (source domain):
 //   - Counts up every cycle when src_en is asserted.
@@ -41,7 +41,8 @@
 //     use by the system-clock logic.
 // =============================================================================
 module mptdc_gray_cnt_sync #(
-  parameter int unsigned W = 16
+  parameter int unsigned W = 16,
+  parameter bit          USE_ASYNC_SNAPSHOT = 1'b0
 )(
   input  wire             src_clk,
   input  wire             src_rst_n,
@@ -51,6 +52,7 @@ module mptdc_gray_cnt_sync #(
   input  wire             src_en,
   input  wire             src_clr,
   input  wire             src_latch_p,
+  input  wire             src_async_latch_p,
   output logic [W-1:0]    src_count,
 
   input  wire             dst_clk,
@@ -63,7 +65,9 @@ module mptdc_gray_cnt_sync #(
   logic [W-1:0] bin_q;
   logic [W-1:0] bin_snap_q;
   logic [W-1:0] gray_src_cont_q;
-  logic [W-1:0] gray_src_snap_q;
+  logic [W-1:0] gray_src_snap_sync_q;
+  logic [W-1:0] gray_src_snap_async_q;
+  logic [W-1:0] gray_src_snap_sel;
   logic         src_en_q;
 
   logic [W-1:0] gray_cont_ff1, gray_cont_ff2;
@@ -109,12 +113,29 @@ module mptdc_gray_cnt_sync #(
   always_ff @(posedge src_clk or negedge src_rst_n or posedge src_async_clr) begin
     if (!src_rst_n || src_async_clr) begin
       gray_src_cont_q <= '0;
-      gray_src_snap_q <= '0;
+      gray_src_snap_sync_q <= '0;
     end else begin
-      gray_src_cont_q <= bin_q ^ (bin_q >> 1);
-      gray_src_snap_q <= bin_snap_q ^ (bin_snap_q >> 1);
+      gray_src_cont_q      <= bin_q ^ (bin_q >> 1);
+      gray_src_snap_sync_q <= bin_snap_q ^ (bin_snap_q >> 1);
     end
   end
+
+  // -----------------------------------------------------------------------
+  // Async STOP-edge snapshot (optional)
+  // -----------------------------------------------------------------------
+  // The slow counter uses this path so the exported coarse count represents
+  // the true STOP boundary instead of a later CAPTURE-time observation.
+  // Capturing the Gray code keeps the ambiguity bounded to at most one count
+  // when STOP lands close to a source-clock edge.
+  always_ff @(posedge src_async_latch_p or negedge src_rst_n or posedge src_async_clr) begin
+    if (!src_rst_n || src_async_clr)
+      gray_src_snap_async_q <= '0;
+    else
+      gray_src_snap_async_q <= gray_src_cont_q;
+  end
+
+  assign gray_src_snap_sel = USE_ASYNC_SNAPSHOT ? gray_src_snap_async_q
+                                                : gray_src_snap_sync_q;
 
   // -----------------------------------------------------------------------
   // 2-FF synchroniser chains (destination domain), annotated for placement
@@ -133,7 +154,7 @@ module mptdc_gray_cnt_sync #(
     end else begin
       gray_cont_ff1_async <= gray_src_cont_q;
       gray_cont_ff2_async <= gray_cont_ff1_async;
-      gray_snap_ff1_async <= gray_src_snap_q;
+      gray_snap_ff1_async <= gray_src_snap_sel;
       gray_snap_ff2_async <= gray_snap_ff1_async;
     end
   end
@@ -164,7 +185,9 @@ module mptdc_gray_cnt_sync #(
       dst_count_latched    <= '0;
     end else begin
       dst_count_continuous <= bin_dec_cont;
-      if (dst_latch_p) begin
+      if (USE_ASYNC_SNAPSHOT)
+        dst_count_latched <= bin_dec_snap;
+      else if (dst_latch_p) begin
         dst_count_latched <= bin_dec_snap;
       end
     end

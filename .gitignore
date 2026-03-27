@@ -1,4 +1,11 @@
-# Generated simulation artifacts
+# ── Build artifacts ───────────────────────────────────────────────────
+obj_dir*/
+build/
+*.vvp
+*.o
+*.a
+
+# ── Simulation outputs ───────────────────────────────────────────────
 *.log
 *.jou
 *.wlf
@@ -11,27 +18,23 @@ xrun.*
 INCA_libs/
 xcelium.d/
 
-# Build outputs (iverilog/verilator)
-build/
-*.vvp
+# ── IDE / tool configs ───────────────────────────────────────────────
+*.cfproj
+*:Zone.Identifier
 
-# Python caches
+# ── Python ───────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 .venv/
 
-# Calibration results
+# ── Results (large data, not tracked) ────────────────────────────────
 results/
-scripts/results/
 
-# Local TB dumps
+# ── TB dump files ────────────────────────────────────────────────────
 tb/**/*.csv
 tb/**/*.txt
-*:Zone.Identifier
 
-# Documentation build
+# ── Docs build ───────────────────────────────────────────────────────
 .venv_docs/
 docs/datasheet/build/
 node_modules/
-results/campaign/
-results/calibration_final/

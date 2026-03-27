@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
-# =============================================================================
-# run_tb.sh — Universal testbench runner for MPTDC v2.0
-#
-# Usage:
-#   ./scripts/sim/run_tb.sh <testbench_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N]
-#
-# Examples:
-#   ./scripts/sim/run_tb.sh tb_single_conv
-#   ./scripts/sim/run_tb.sh tb_single_conv --waves --seed 42
-#   ./scripts/sim/run_tb.sh tb_single_conv --sim xcelium
-# =============================================================================
+# -----------------------------------------------------------------------------
+# Purpose : Build and run one unit or integration SystemVerilog testbench.
+# Usage   : bash scripts/sim/run_tb.sh <tb_name>
+#           [--sim verilator|xcelium|vcs] [--waves] [--seed N]
+# Context : Primary filelist-driven runner for benches under tb/unit and
+#           tb/int.
+# Author  : Karim Sabra
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -82,7 +80,7 @@ TB_COMMON=("$TB_DIR/common/mptdc_tb_pkg.sv" "$TB_DIR/common/mptdc_raw_monitor.sv
 TB_BUILD="$BUILD_DIR/$TB_NAME"
 mkdir -p "$TB_BUILD"
 
-echo "=== MPTDC v2.0 TB Runner ==="
+echo "=== MPTDC v2.2 TB Runner ==="
 echo "  Testbench: $TB_NAME"
 echo "  Simulator: $SIM"
 echo "  Build dir: $TB_BUILD"

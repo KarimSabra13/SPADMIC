@@ -1,19 +1,15 @@
 // SPDX-FileCopyrightText: 2025 MPTDC Authors
 // SPDX-License-Identifier: Apache-2.0
 //
-// tb_single_conv.sv — Integration test: single START→STOP→readout cycle
-//
-// Verifies the complete data path through the MPTDC v2.0:
-//   1. Configure via CSR (mode, max_hits, output mode)
-//   2. Arm the TDC
-//   3. Inject async START pulse
-//   4. Wait, then inject async STOP pulse
-//   5. Collect 16-bit output packet
-//   6. Verify header, hits, and EOC framing
-//
-// Uses the oscillator behavioral model for accurate Vernier simulation.
-
-`timescale 1ns / 1ps
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_single_conv.sv
+// Purpose : Basic end-to-end START/STOP/readout integration test.
+// Author  : Karim Sabra
+// Notes   : Pairs the DUT with the passive raw monitor and validates one
+//           RAW_FEATURES packet from arm through EOC.
+// =============================================================================
+`timescale 1ps/1ps
 `default_nettype none
 
 module tb_single_conv;

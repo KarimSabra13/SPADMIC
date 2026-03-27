@@ -1,146 +1,206 @@
-# MPTDC v2.0 — 16-bit Output Protocol
+# MPTDC v2.2 — 16-bit Output Protocol
 
-## Overview
+> - **Author:** Karim Sabra
+> - **Purpose:** Define the live 16-bit packet format emitted by the MPTDC serializer.
+> - **Scope:** Covers header, hit, and EOC words plus parsing rules for `RAW_FEATURES`, `RAW_TIMESTAMP`, and `FULL` modes.
 
-The TDC streams conversion results over a 16-bit ready/valid bus. Each conversion produces a **packet** consisting of:
+## 1. Overview
 
-1. **Header** (1 word)
-2. **Hit words** (2-4 words per hit, depending on output mode)
-3. **End-of-Conversion marker** (1 word)
+The active design emits conversion results on a 16-bit ready/valid stream. Each conversion is packetized as:
 
-## Word Type Detection
+1. one header word
+2. zero or more hit words (format depends on `out_mode`)
+3. one EOC word
 
-```
-Bits [15:14] determine word type:
-  2'b10  →  Header
-  2'b11  →  End-of-Conversion (EOC)
-  2'b0x  →  Hit data (bit[15] always 0)
-```
+The serializer is implemented by `rtl/readout/mptdc_narrow16_tx_v2.sv` and consumes acquisition records produced by `mptdc_drain_ctrl` through `mptdc_sync_fifo`.
 
-## Header Word
+## 2. Word-class identification
 
-```
-Bit   Field           Width  Description
-───── ─────────────── ────── ─────────────────────────────
-15:14 type            2      Always 2'b10 (header marker)
-13:12 ctx_id          2      Context ID (0-2)
-   11 phase0_snap     1      Boundary phase snapshot
- 10:7 hit_count       4      Number of hits in this conversion (0-15)
-  6:3 flags           4      Conversion flags (see below)
-  2:1 out_mode        2      Output mode used
-    0 reserved        1      Always 0
+```text
+[15:14] = 2'b10 -> header
+[15:14] = 2'b11 -> EOC
+[15]    = 1'b0 -> hit payload word
 ```
 
-### Flags Field
+In `RAW_TIMESTAMP` and `FULL` modes, timestamp payload words may have any pattern on the lower 16 bits, so the receiver must parse by packet structure rather than by trying to infer semantic word types from the payload value.
 
-```
-Bit  Flag                 Meaning
-──── ──────────────────── ─────────────────────────────
-  3  overflow             All contexts were busy at START
-  2  closed_by_firsthit   First-hit mode forced closure
-  1  closed_by_maxhits    Max hit count reached
-  0  closed_by_watchdog   Watchdog timer forced closure
-```
+## 3. Header word
 
-## Hit Words — RAW_FEATURES Mode (out_mode=0)
-
-3 words per hit. This is the primary mode for offline calibration.
-
-### Word 0 (Counter Snapshots)
-```
-Bit   Field       Width  Description
-───── ─────────── ────── ───────────────────────
-   15 zero        1      Always 0
- 14:8 nslow       7      Slow counter (revolutions)
-  7:1 nfast       7      Fast counter (revolutions)
-    0 zero        1      Always 0
+```text
+[15:14] type              = 2'b10
+[13:12] ctx_id            = context id (padded to 2 bits, live design uses 2 contexts)
+[11]    phase0_snap       = STOP-side snapshot of slow phase 0
+[10:7]  hit_count         = number of hits carried in this packet
+[6:3]   flags             = close reason flags
+[2:1]   out_mode          = serializer mode
+[0]     slow_boundary_inc = STOP-side boundary carry
 ```
 
-### Word 1 (Phase + Cell Index)
-```
-Bit   Field       Width  Description
-───── ─────────── ────── ───────────────────────
-   15 zero        1      Always 0
-14:11 ns          4      Slow phase index (0-8)
- 10:7 nf          4      Fast phase index (0-8)
-  6:0 pd_idx      7      PD cell flat index (0-80)
-```
+### 3.1 Flag semantics
 
-### Word 2 (Sequence)
-```
-Bit   Field       Width  Description
-───── ─────────── ────── ───────────────────────
-   15 zero        1      Always 0
-14:11 event_seq   4      Hit sequence number (0-14)
- 10:0 reserved    11     Always 0
+```text
+bit 3  reserved             = currently always 0
+bit 2  closed_by_firsthit   = conversion closed because FIRST_HIT mode saw a hit
+bit 1  closed_by_maxhits    = conversion closed because hit count reached max_hits
+bit 0  closed_by_watchdog   = conversion closed because the fast-domain context watchdog fired
 ```
 
-## Hit Words — RAW_TIMESTAMP Mode (out_mode=1)
+Important: true context-allocation overflow is not encoded in the packet header. It is counted separately in CSR `OVF_COUNT`.
 
-2 words per hit.
+## 4. RAW_FEATURES mode (`out_mode = 0`)
 
-### Word 0
-Same as RAW_FEATURES Word 0.
+This is the preferred mode for offline calibration and silicon characterization because it exports the raw measured fields instead of only a derived timestamp.
 
-### Word 1
-```
-Bit   Field       Width  Description
-───── ─────────── ────── ───────────────────────
- 15:0 t_raw_ps    16     Raw time in picoseconds (signed, truncated)
+Packet size:
+
+```text
+1 header + 3 * hit_count + 1 EOC
 ```
 
-**Note**: t_raw_ps can have bit[15]=1 (negative or large values). In this mode, the consumer must use packet structure (word count from header) to parse, not bit[15] detection.
+### 4.1 Hit word W0
 
-## Hit Words — FULL Mode (out_mode=2)
-
-4 words per hit (all features + timestamp).
-
-### Words 0-2
-Same as RAW_FEATURES Words 0-2.
-
-### Word 3
-```
-Bit   Field       Width  Description
-───── ─────────── ────── ───────────────────────
- 15:0 t_raw_ps    16     Raw time in picoseconds (signed, truncated)
+```text
+[15]   0
+[14:8] nslow
+[7:1]  nfast_hit
+[0]    0
 ```
 
-## End-of-Conversion (EOC) Word
+Field meaning:
 
+- `nslow` = STOP-side slow coarse snapshot exported from the context META record
+- `nfast_hit` = per-hit fast coarse count latched by the PD cell that produced this hit
+
+### 4.2 Hit word W1
+
+```text
+[15]    0
+[14:11] ns
+[10:7]  nf
+[6:0]   pd_idx
 ```
-Bit   Field       Width  Description
-───── ─────────── ────── ───────────────────────
-15:14 type        2      Always 2'b11 (EOC marker)
- 13:0 conv_id     14     Conversion counter (wraps at 16383)
+
+Field meaning:
+
+- `ns` = slow phase index associated with this PD cell
+- `nf` = fast phase index associated with this PD cell
+- `pd_idx` = flattened PD-cell index `ns * NE + nf`
+
+### 4.3 Hit word W2
+
+```text
+[15]    0
+[14:11] event_seq
+[10:4]  nfast_snap
+[3:0]   0
 ```
 
-## Packet Size Summary
+Field meaning:
 
-| Mode | Words per hit | Packet size (N hits) |
-|------|--------------|---------------------|
-| RAW_FEATURES (0) | 3 | 1 + 3N + 1 = 3N+2 |
-| RAW_TIMESTAMP (1) | 2 | 1 + 2N + 1 = 2N+2 |
-| FULL (2) | 4 | 1 + 4N + 1 = 4N+2 |
+- `event_seq` = order in which the drain FSM discovered the hit while scanning the frozen PD bitmap
+- `nfast_snap` = CAPTURE-time fast coarse snapshot repeated with each hit for host convenience
 
-For max 15 hits: 47 words (features), 32 words (timestamp), 62 words (full).
+This field is part of the live RTL contract. If any older document says W2 is just reserved padding, trust the RTL and this document instead.
 
-## Handshake Protocol
+## 5. RAW_TIMESTAMP mode (`out_mode = 1`)
 
-Standard ready/valid:
-- `narrow_valid_o`: Asserted when data is available
-- `narrow_ready_i`: Consumer ready to accept
-- Transfer occurs on rising clock edge when both are high
-- Backpressure: deassert `narrow_ready_i` to stall output (FIFO buffers internally)
+This mode emits the coarse counters plus one derived raw timestamp word per hit.
 
-## Example Packet (RAW_FEATURES, 2 hits)
+Packet size:
 
+```text
+1 header + 2 * hit_count + 1 EOC
 ```
-Word 0: 0x8xxx  Header (ctx_id, phase0, hit_count=2, flags, mode)
-Word 1: 0x0xxx  Hit 0, W0 (nslow, nfast)
-Word 2: 0x0xxx  Hit 0, W1 (ns, nf, pd_idx)
-Word 3: 0x0xxx  Hit 0, W2 (event_seq=0)
-Word 4: 0x0xxx  Hit 1, W0 (nslow, nfast)
-Word 5: 0x0xxx  Hit 1, W1 (ns, nf, pd_idx)
-Word 6: 0x0xxx  Hit 1, W2 (event_seq=1)
-Word 7: 0xCxxx  EOC (conv_id)
+
+### 5.1 Hit word W0
+
+Same layout as RAW_FEATURES W0.
+
+### 5.2 Hit word W1
+
+```text
+[15:0] t_raw_ps[15:0]
+```
+
+`rtl/readout/mptdc_narrow16_tx_v2.sv` computes `t_raw_ps` using `mptdc_pkg::vernier_tconv_ps()`. The formula preserves the original Vernier dependence on:
+
+- `Nslow`
+- `Nfast`
+- `ns`
+- `nf`
+- `K_VERNIER`
+- `DELTA_LSB`
+
+and also applies the current fixed geometry-origin corrections and `slow_boundary_inc`.
+
+## 6. FULL mode (`out_mode = 2`)
+
+This mode emits all raw feature words plus the derived timestamp.
+
+Packet size:
+
+```text
+1 header + 4 * hit_count + 1 EOC
+```
+
+### 6.1 Hit words W0-W2
+
+Same as RAW_FEATURES W0-W2.
+
+### 6.2 Hit word W3
+
+```text
+[15:0] t_raw_ps[15:0]
+```
+
+This is the same derived timestamp used in RAW_TIMESTAMP mode.
+
+## 7. EOC word
+
+```text
+[15:14] = 2'b11
+[13:0]  = conv_id
+```
+
+`conv_id` is maintained by `mptdc_narrow16_tx_v2.sv` as a local 14-bit wrapping packet counter.
+
+## 8. Internal origin of packet fields
+
+The serializer consumes two internal acquisition-record types:
+
+- META record: conversion-level information (`nslow`, `nfast_snap`, `hit_count`, flags, boundary info, `ctx_id`)
+- HIT record: per-hit information (`ns`, `nf`, `nfast_hit`, `event_seq`)
+
+The serializer latches META first, then fetches HIT records until `hit_count` hits have been emitted, then emits EOC.
+
+## 9. Host-side parsing rules
+
+1. Wait for a header word.
+2. Decode `hit_count` and `out_mode` from the header.
+3. Derive the total packet length:
+   - RAW_FEATURES: `3 * hit_count + 2`
+   - RAW_TIMESTAMP: `2 * hit_count + 2`
+   - FULL: `4 * hit_count + 2`
+4. Consume the expected number of hit words.
+5. Expect one EOC word at the end.
+
+Do not rely on payload bit patterns to infer semantic word boundaries in timestamp modes.
+
+## 10. Recommended operating usage
+
+- Use `RAW_FEATURES` for silicon characterization and offline calibration.
+- Use `RAW_TIMESTAMP` when the host only needs a compact pre-centered raw time and does not need `ns`, `nf`, `pd_idx`, or `nfast_snap`.
+- Use `FULL` when you want both the original raw features and the on-chip raw timestamp reconstruction for debug correlation.
+
+## 11. Example packet (RAW_FEATURES, 2 hits)
+
+```text
+word 0  header
+word 1  hit0 W0  (nslow, nfast_hit)
+word 2  hit0 W1  (ns, nf, pd_idx)
+word 3  hit0 W2  (event_seq, nfast_snap)
+word 4  hit1 W0
+word 5  hit1 W1
+word 6  hit1 W2
+word 7  EOC
 ```

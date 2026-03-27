@@ -2,19 +2,18 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.0 — Raw-Output Vernier TDC with Triple-Buffer
+// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
 // File     : mptdc_pkg.sv
 // Purpose  : Central parameter, type, and helper-function package
 // Author   : Karim Sabra
 // =============================================================================
-// This package defines every shared constant, type, and utility function used
-// across the MPTDC v2.0 design.  Key changes from v1:
-//   - All on-chip calibration removed (ridge LUT, averaging, precision pipe)
-//   - Triple-buffer snapshot contexts (N_CTX=3)
-//   - Simplified output: raw features only
-//   - 16-bit ready/valid output with configurable modes
-//   - Per-context + global watchdog (no guard timer)
-//   - Async-assert / sync-deassert reset
+// v2.2 changes (design-review fixes):
+//   - Measurement FSM: 5-state (added ST_M_STOP_OSC for safe PD clear)
+//   - Close detection: OR-reduction for FIRST_HIT, pipelined for MULTI_HIT
+//   - Overflow flag removed from conv_flags (was misused as hit-saturation)
+//   - slow_boundary_inc added to meta/snapshot for offline calibration
+//   - N_CTX = 2 (hardwired double-buffer, not parameterizable)
+//   - Readout: sync FIFO in sys_clk domain (no async FIFO)
 // =============================================================================
 package mptdc_pkg;
 
@@ -40,6 +39,16 @@ package mptdc_pkg;
   localparam int unsigned DELTA_LSB  = 2 * DELTA_STEP;     // 10 ps
   localparam int unsigned K_VERNIER  = OSC_TS_SLOW_PS / DELTA_STEP; // 11
   localparam integer OSC_TRIM_DELTA_PS = 0;  // Trim offset (reserved for silicon tuning)
+  // Raw timestamp reconstruction keeps the original Vernier topology but adds
+  // fixed geometry-origin corrections for the live counter semantics:
+  //   - STOP-side nslow snapshot is two slow counts behind the historical
+  //     one-based loop index.
+  //   - Per-hit nfast capture is one fast count behind the same loop index.
+  //   - slow_boundary_inc contributes one extra coarse slow revolution.
+  //   - A fixed residual 25-coef term (= 250 ps) recenters the raw estimator.
+  localparam int signed VERNIER_NSLOW_ORIGIN_BIAS = 2;
+  localparam int signed VERNIER_NFAST_ORIGIN_BIAS = 1;
+  localparam int signed VERNIER_COEF_BIAS         = 25;
 
   // =========================================================================
   // Counter widths and measurement window
@@ -64,7 +73,7 @@ package mptdc_pkg;
   localparam int unsigned MAX_HITS_W        = $clog2(MAX_HITS + 1);  // 4 bits
   localparam int unsigned EVENT_IDX_W       = MAX_HITS_W;
 
-  // FIFO sized for triple-buffer: 3 × (1 META + 15 HITs) = 48, round to 64
+  // FIFO sized for double-buffer: 2 × (1 META + 15 HITs) = 32, use 64 for margin
   parameter int unsigned FIFO_DEPTH         = 64;
   localparam int unsigned FIFO_LVL_W        = $clog2(FIFO_DEPTH + 1);
 
@@ -75,10 +84,10 @@ package mptdc_pkg;
   typedef logic [PD_W-1:0] pd_idx_t;
 
   // =========================================================================
-  // Triple-buffer context parameters
+  // Double-buffer context parameters (hardwired for v2.2)
   // =========================================================================
-  localparam int unsigned N_CTX   = 3;
-  localparam int unsigned CTX_W   = $clog2(N_CTX);  // 2 bits
+  localparam int unsigned N_CTX   = 2;
+  localparam int unsigned CTX_W   = (N_CTX <= 1) ? 1 : $clog2(N_CTX);  // 1 bit
 
   typedef logic [CTX_W-1:0] ctx_id_t;
 
@@ -108,19 +117,38 @@ package mptdc_pkg;
   } input_sel_e;
 
   // =========================================================================
-  // FSM states
+  // Measurement FSM states (fast domain — mptdc_meas_ctrl)
+  // 5-state: IDLE → MEASURE → CAPTURE → STOP_OSC → CLEAR → IDLE
+  // STOP_OSC deasserts osc_keep_alive before PD clear to avoid async race.
   // =========================================================================
   typedef enum logic [2:0] {
-    ST_IDLE        = 2'd0,
-    ST_ACTIVE      = 2'd1,
-    ST_DRAIN_WAIT  = 2'd2
-  } fsm_state_e;
+    ST_M_IDLE     = 3'd0,
+    ST_M_MEASURE  = 3'd1,
+    ST_M_CAPTURE  = 3'd2,
+    ST_M_STOP_OSC = 3'd3,
+    ST_M_CLEAR    = 3'd4
+  } meas_state_e;
 
   // =========================================================================
-  // Conversion flags
+  // Drain FSM states (sys_clk domain — mptdc_drain_ctrl)
+  // =========================================================================
+  typedef enum logic [1:0] {
+    ST_D_IDLE = 2'd0,
+    ST_D_META = 2'd1,
+    ST_D_SCAN = 2'd2,
+    ST_D_EOC  = 2'd3
+  } drain_state_e;
+
+  // =========================================================================
+  // Conversion flags (4 bits, packed MSB-first)
+  // Bit 3: reserved (was 'overflow' in v2.1 — misused as hit-saturation)
+  // Bit 2: closed_by_firsthit
+  // Bit 1: closed_by_maxhits  (also means hit-count saturation)
+  // Bit 0: closed_by_watchdog
+  // Context-allocation overflow is tracked separately in ovf_count_r.
   // =========================================================================
   typedef struct packed {
-    logic overflow;
+    logic reserved;
     logic closed_by_firsthit;
     logic closed_by_maxhits;
     logic closed_by_watchdog;
@@ -129,7 +157,7 @@ package mptdc_pkg;
   localparam int unsigned CONV_FLAGS_W = $bits(tdc_conv_flags_t);
 
   // =========================================================================
-  // Internal acquisition record (pushed through async FIFO)
+  // Internal acquisition record (pushed through sync FIFO in sys_clk)
   // =========================================================================
   typedef struct packed {
     ph_idx_t                ns;
@@ -139,10 +167,12 @@ package mptdc_pkg;
   } mptdc_hit_raw_t;
 
   typedef struct packed {
-    logic [NSLOW_W-1:0]     nslow;
+    logic [NSLOW_W-1:0]     nslow;          // STOP-side slow snapshot
+    logic [NFAST_W-1:0]     nfast;          // v2.2.2: nfast_snap at CAPTURE
     logic [MAX_HITS_W-1:0]  hit_count;
     tdc_conv_flags_t        flags;
     logic                   phase0_snap;
+    logic                   slow_boundary_inc;  // v2.2: boundary correction carry
     ctx_id_t                ctx_id;
   } mptdc_conv_meta_t;
 
@@ -165,7 +195,7 @@ package mptdc_pkg;
   localparam int unsigned NARROW_W = 16;
 
   // Header word:  [15:14]=2'b10, [13:12]=ctx_id, [11]=phase0_snap,
-  //               [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=rsvd
+  //               [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=slow_boundary_inc
   // Hit words:    depend on out_mode (2-4 words per hit), bit[15]=0 always
   // EOC word:     [15:14]=2'b11, [13:0]=conv_id[13:0]
 
@@ -209,12 +239,12 @@ package mptdc_pkg;
     logic                      ready;
     logic                      busy;
     logic [N_CTX*2-1:0]        ctx_state_packed;  // 2 bits per context, packed
+    logic [1:0]                drain_state;        // drain_state_e (v2.1)
     logic [MAX_HITS_W-1:0]     last_hit_count;
     tdc_conv_flags_t           last_flags;
     logic [FIFO_LVL_W-1:0]    fifo_level;
     logic                      fifo_full;
     logic                      fifo_empty;
-    logic [7:0]                wdt_ctx_trip_cnt;
     logic [7:0]                wdt_global_trip_cnt;
     logic [31:0]               conv_count;
     logic [15:0]               ovf_count;
@@ -226,9 +256,10 @@ package mptdc_pkg;
   typedef struct packed {
     logic [PD_N-1:0]                     hit_level;
     logic [PD_N*NFAST_W-1:0]             nfast_hit_packed;  // PD_N × NFAST_W flattened
-    logic [NSLOW_W-1:0]                  nslow_snap;
-    logic [NFAST_W-1:0]                  nfast_snap;
+    logic [NSLOW_W-1:0]                  nslow_snap;        // STOP-side slow snapshot
+    logic [NFAST_W-1:0]                  nfast_snap;        // global fast counter at CAPTURE
     logic                                phase0_snap;
+    logic                                slow_boundary_inc; // v2.2: phase-0 boundary carry
     logic [MAX_HITS_W-1:0]               hit_count;
     tdc_conv_flags_t                     flags;
   } mptdc_ctx_snapshot_t;
@@ -245,19 +276,40 @@ package mptdc_pkg;
     pd_from_phases = pd_idx_t'(PD_W'(ns_i) * PD_W'(NE) + PD_W'(nf_i));
   endfunction
 
-  // Raw Vernier time coefficient (used by tconv_reco)
+  // Raw Vernier time coefficient.
+  //
+  // This preserves the original dependence on nslow/nfast/ns/nf, K_VERNIER,
+  // and DELTA_LSB.  The only additions are fixed origin corrections plus the
+  // source-side slow boundary carry.
   function automatic logic signed [31:0] vernier_coef(
     input logic [NSLOW_W-1:0] nslow_i,
     input logic [NFAST_W-1:0] nfast_i,
     input ph_idx_t            ns_i,
-    input ph_idx_t            nf_i
+    input ph_idx_t            nf_i,
+    input logic               slow_boundary_inc_i
   );
     automatic int signed coef;
-    coef = (int'(nslow_i) - 1) * int'(K_VERNIER) * int'(NE)
-         + (int'(nfast_i) - 1) * int'(NE)
+    coef = (int'(nslow_i)
+            + int'(VERNIER_NSLOW_ORIGIN_BIAS)
+            + int'(slow_boundary_inc_i)
+            - 1) * int'(K_VERNIER) * int'(NE)
+         + (int'(nfast_i) + int'(VERNIER_NFAST_ORIGIN_BIAS) - 1) * int'(NE)
          + int'(ns_i) * int'(K_VERNIER)
-         - int'(nf_i) * (int'(K_VERNIER) - 1);
+         - int'(nf_i) * (int'(K_VERNIER) - 1)
+         + int'(VERNIER_COEF_BIAS);
     vernier_coef = 32'(coef);
+  endfunction
+
+  function automatic logic signed [31:0] vernier_tconv_ps(
+    input logic [NSLOW_W-1:0] nslow_i,
+    input logic [NFAST_W-1:0] nfast_i,
+    input ph_idx_t            ns_i,
+    input ph_idx_t            nf_i,
+    input logic               slow_boundary_inc_i
+  );
+    vernier_tconv_ps = 32'(vernier_coef(nslow_i, nfast_i, ns_i, nf_i,
+                                        slow_boundary_inc_i)
+                           * int'(DELTA_LSB));
   endfunction
 
 endpackage

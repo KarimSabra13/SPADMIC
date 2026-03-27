@@ -1,10 +1,21 @@
-`timescale 1ns/1ps
+// SPDX-FileCopyrightText: 2025 MPTDC Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// =============================================================================
+// Project : SPAD_MPTDC Verification Collateral
+// File    : tb_cal_inject.sv
+// Purpose : Integration test for the CAL input path and packet generation.
+// Author  : Karim Sabra
+// Notes   : Arms through CSR, injects CAL START/STOP pairs, and delays output
+//           consumption so source selection and drain timing are both exercised.
+// =============================================================================
+`timescale 1ps/1ps
 
 module tb_cal_inject;
   import mptdc_pkg::*;
   import mptdc_tb_pkg::*;
 
-  localparam real CLK_SYS_PERIOD = 6.25;
+  localparam real CLK_SYS_PERIOD = 6250.0;   // 6250 ps = 160 MHz with 1ps timescale
 
   logic clk_sys;
   initial clk_sys = 0;
@@ -59,6 +70,8 @@ module tb_cal_inject;
     tb_csr_read(clk_sys, csr_valid, csr_wr, csr_addr, csr_wdata, csr_rvalid, csr_rdata, addr, data);
   endtask
 
+  // Poll CSR_STATUS.ready so each delay point starts from the same
+  // arm/idle contract before CAL pulses are injected.
   task automatic wait_tdc_ready(input int max_cycles = 50000);
     logic [CSR_DATA_W-1:0] status;
     for (int i = 0; i < max_cycles; i++) begin
@@ -75,10 +88,10 @@ module tb_cal_inject;
     int wc, hit_count, pass_count, fail_count, expected_wc, conv_ok;
     tb_hit_features_t hf;
 
-    fork begin #50_000_000; $error("[TB] GLOBAL TIMEOUT"); $finish; end join_none
+    fork begin #50_000_000_000; $error("[TB] GLOBAL TIMEOUT"); $finish; end join_none
 
-    async_rst_n = 0; #100;
-    async_rst_n = 1; #100;
+    async_rst_n = 0; #100_000;
+    async_rst_n = 1; #100_000;
 
     csr_wr_reg(CSR_MODE,     32'h0000_0002);   // CAL input
     csr_wr_reg(CSR_MAX_HITS, 32'h0000_000F);   // max_hits=15
@@ -90,31 +103,35 @@ module tb_cal_inject;
       pkt.delete();
       wc = 0;
       conv_ok = 0;
+      // Hold the output sink stalled until after the CAL pulse pair so
+      // source selection and drain timing are exercised independently.
       narrow_ready = 0;
 
-      wait_tdc_ready();
+      // Arm conversion first, then wait for ready
       csr_wr_reg(CSR_CTRL, 32'h0000_0001);
-      #50;
+      wait_tdc_ready();
+      #50_000;
 
-      cal_start = 1; #1; cal_start = 0;
-      #(d);
-      cal_stop = 1; #1; cal_stop = 0;
+      cal_start = 1; #1_000; cal_start = 0;
+      #(d * 1000);
+      cal_stop = 1; #1_000; cal_stop = 0;
 
-      #800;
+      #800_000;
       narrow_ready = 1;
 
       fork
         begin collect_packet(clk_sys, narrow_valid, narrow_ready, narrow_data, pkt, wc); conv_ok = 1; end
-        begin #200_000; end
+        begin #200_000_000; end
       join_any
       disable fork;
-      #500;
+      #500_000;
 
       if (!conv_ok) begin
         $display("[TB] delay=%0dns: SKIP (timeout)", d);
         fail_count++;
-        async_rst_n = 0; narrow_ready = 0; #200;
-        async_rst_n = 1; #200;
+        // Re-establish a clean CAL-path baseline before the next delay point.
+        async_rst_n = 0; narrow_ready = 0; #200_000;
+        async_rst_n = 1; #200_000;
         csr_wr_reg(CSR_MODE, 32'h0000_0002);
         csr_wr_reg(CSR_MAX_HITS, 32'h0000_000F);
         continue;

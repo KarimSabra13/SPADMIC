@@ -1,22 +1,30 @@
-`timescale 1ns/1ps
+`timescale 1ps/1ps
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.0 — Vernier Time-to-Digital Converter
+// Project  : SPAD_MPTDC v2.2 — Vernier Time-to-Digital Converter
 // File     : mptdc_input_mux.sv
-// Purpose  : Route SPAD matrix or calibration injection signals to TDC core
+// Purpose  : Route either the SPAD async pair or the calibration async pair
+//            into the active TDC core
 // Author   : Karim Sabra
 // =============================================================================
-// Pure combinational mux — no registers.  The selected signals are
-// asynchronous pulses; any pipeline stage would add unwanted latency.
-// input_sel_i is driven from a CSR and is guaranteed stable during
-// measurement, so glitch-free switching is ensured by design.
+// This block is intentionally a pure combinational mux.
+//
+// Why no registering:
+//   - START and STOP are asynchronous edge events, not synchronous payloads
+//   - adding a pipeline stage here would distort the very timing relationship
+//     the TDC is trying to measure
+//
+// Safe-usage assumption:
+//   - input_sel_i is configured through CSR and kept stable while a conversion
+//     is active; switching it mid-conversion would deliberately violate the
+//     intended operating model
 // =============================================================================
 
 module mptdc_input_mux
   import mptdc_pkg::*;
 (
-    // -- System (unused — kept for uniform port conventions) ----------------
+    // -- System (unused — kept for uniform instantiation style) -------------
     input  wire         clk_sys,
     input  wire         rst_n,
 
