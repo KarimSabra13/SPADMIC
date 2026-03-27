@@ -270,11 +270,9 @@ imc -load build/coverage_campaign/cov_work/scope/test &
 Generate a text report:
 
 ```bash
-imc -execcmd "
-  load_test build/coverage_campaign/cov_work -run *
-  report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover
-  exit
-" -nocopyright
+imc -load build/coverage_campaign/cov_work/scope/test \
+  -execcmd "report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover; exit" \
+  -nocopyright
 ```
 
 **Coverage targets:**

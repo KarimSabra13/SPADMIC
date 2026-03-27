@@ -566,9 +566,6 @@ Use `-exec` or `-execcmd` with Tcl commands instead.
 Create a Tcl script `gen_cov_report.tcl`:
 
 ```tcl
-# Load merged coverage database
-load_test build/vip_coverage_xrun/cov_work -run *
-
 # Functional coverage summary
 report_metrics -out func_summary.txt -detail -kind cover
 
@@ -581,25 +578,22 @@ exit
 Run it:
 
 ```bash
-imc -exec gen_cov_report.tcl -nocopyright 2>&1 | tail -20
+imc -load build/vip_coverage_xrun/cov_work/scope/test \
+    -exec gen_cov_report.tcl -nocopyright 2>&1 | tail -20
 ```
 
 ### Alternative: use `imc -execcmd` inline
 
 ```bash
 # Functional coverage
-imc -execcmd "
-  load_test build/vip_coverage_xrun/cov_work -run *
-  report_metrics -out func_report.txt -detail -kind cover
-  exit
-" -nocopyright
+imc -load build/vip_coverage_xrun/cov_work/scope/test \
+    -execcmd "report_metrics -out func_report.txt -detail -kind cover; exit" \
+    -nocopyright
 
 # Code coverage
-imc -execcmd "
-  load_test build/vip_coverage_xrun/cov_work -run *
-  report_metrics -out code_report.txt -detail -kind block
-  exit
-" -nocopyright
+imc -load build/vip_coverage_xrun/cov_work/scope/test \
+    -execcmd "report_metrics -out code_report.txt -detail -kind block; exit" \
+    -nocopyright
 ```
 
 ### Interactive IMC (GUI)
