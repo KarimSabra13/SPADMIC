@@ -68,6 +68,7 @@ scripts/
   calibration/  6D LUT calibrator (calibrate_6d_lut.py)
 
 ci/             CI regression scripts (smoke, full, VIP coverage)
+syn/            Cadence Genus synthesis flow (XFAB XH018)
 docs/           Architecture, protocol, CSR map, verification, calibration, design review
 ```
 
@@ -93,6 +94,24 @@ bash scripts/sim/run_campaign.sh --jobs 12
 # Run calibration
 python3 scripts/calibration/calibrate_6d_lut.py
 ```
+
+### Running on Cadence Xcelium
+
+```bash
+# Single VIP test
+bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun
+
+# Single directed test
+bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
+
+# Full VIP coverage regression (functional + code coverage)
+bash ci/run_vip_coverage.sh --sim xrun --clean
+
+# Preview commands without Cadence tools (dry-run)
+bash ci/run_vip_coverage.sh --dry-run
+```
+
+See [04 Verification](docs/04_VERIFICATION.md) §10 for the complete Xcelium guide.
 
 ## Calibration Results
 

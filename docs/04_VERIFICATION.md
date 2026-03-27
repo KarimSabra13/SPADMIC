@@ -283,7 +283,190 @@ mkdir -p build/tb_v21_collect/results
 bash scripts/sim/run_tb.sh tb_v21_collect
 ```
 
-## 10. Review guidance before synthesis
+## 10. Running verification with Cadence Xcelium
+
+This section covers step-by-step instructions for running the full MPTDC
+verification suite on a Cadence Xcelium-equipped Linux machine.
+
+### 10.1 Prerequisites
+
+| Item | Requirement |
+|------|-------------|
+| **Xcelium** | 23.09 or later (xrun binary in PATH) |
+| **IMC** | Integrated Metrics Center for coverage review |
+| **OS** | RHEL/CentOS 7+ or equivalent |
+| **License** | Cadence xrun + coverage license features |
+
+Verify your setup:
+
+```bash
+which xrun && xrun -version
+```
+
+### 10.2 Clone and prepare
+
+```bash
+git clone https://github.com/KarimSabra13/SPADMIC.git
+cd SPADMIC/MPTDC
+```
+
+### 10.3 Step 1 — Smoke regression (all VIP tests, no coverage)
+
+Run all 11 VIP tests to confirm functional correctness:
+
+```bash
+# Run each VIP test individually on Xcelium
+for test in smoke_single_conv full_mode_timestamp firsthit_contract \
+            backpressure_integrity start_watchdog cal_inject \
+            overflow_status long_random multi_conv_rearm_stress \
+            global_watchdog_recovery jitter_robustness; do
+  echo "=== Running: $test ==="
+  bash scripts/sim/run_vip_test.sh "$test" --sim xrun
+done
+```
+
+Or run a single test first:
+
+```bash
+bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun
+```
+
+**Expected output:** Each test prints `===== TEST PASSED =====` or
+`MPTDC VIP: All checks passed` and exits without `$fatal`.
+
+### 10.4 Step 2 — Directed integration tests
+
+Run the 9 direct testbenches (non-VIP):
+
+```bash
+for tb in tb_single_conv tb_multi_conv_stress tb_deadtime_measure \
+          tb_cal_inject tb_backpressure tb_watchdog_recovery \
+          tb_start_wdt tb_overflow_count tb_firsthit_mode; do
+  echo "=== Running: $tb ==="
+  bash scripts/sim/run_tb.sh "$tb" --sim xcelium
+done
+```
+
+**Expected output:** Each test prints `TEST PASSED` and exits cleanly.
+
+### 10.5 Step 3 — Coverage regression (functional + code)
+
+This is the key pre-synthesis signoff step:
+
+```bash
+# Clean run with both functional and code coverage
+bash ci/run_vip_coverage.sh --sim xrun --clean
+```
+
+This runs 8 stable VIP tests with:
+- **Functional coverage:** `stim_cg` and `pkt_cg` covergroups sampled
+- **Code coverage:** line + condition + toggle + FSM + branch
+- **Shared database:** all tests merge into `build/vip_coverage_xrun/cov_work/`
+
+Individual logs are saved to `build/vip_coverage_xrun/logs/<test>.log`.
+
+**To add jitter seed sweep:**
+
+```bash
+bash ci/run_vip_coverage.sh --sim xrun --clean --seed-base 42
+```
+
+### 10.6 Step 4 — Review coverage in IMC
+
+```bash
+# Launch IMC on the merged coverage database
+imc -load build/vip_coverage_xrun/cov_work/scope/test &
+```
+
+**Coverage goals:**
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| `stim_cg` | >90% | Stimulus space: modes, delays, jitter, backpressure |
+| `pkt_cg` | >85% | Packet space: hit counts, flags, output modes |
+| Line coverage | >90% | On active RTL (`mptdc_core`, `mptdc_async_frontend_v2`, etc.) |
+| Condition coverage | >80% | Branch conditions in control FSMs |
+| Toggle coverage | >70% | On critical data paths |
+
+**Known exclusions (document, do not waive silently):**
+- `mptdc_osc_stub`: dead code when `MPTDC_USE_OSC_MODEL` is defined
+- `mptdc_osc_model`: simulation-only, not synthesized
+- DFT/scan logic: not yet inserted
+
+### 10.7 Step 5 — Waveform debug (optional)
+
+```bash
+# Run with SimVision waveform capture
+bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --waves
+
+# Waves saved to: build/vip_smoke_single_conv_xrun/waves.shm
+# Open in SimVision:
+simvision build/vip_smoke_single_conv_xrun/waves.shm &
+```
+
+### 10.8 Dry-run mode (preview without Cadence tools)
+
+Review exact xrun commands without executing:
+
+```bash
+bash ci/run_vip_coverage.sh --dry-run
+bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --dry-run
+```
+
+### 10.9 Expected results summary
+
+| Suite | Tests | Expected | Runtime (est.) |
+|-------|-------|----------|----------------|
+| VIP smoke | 11 tests | All pass | ~5 min total |
+| Directed integration | 9 tests | All pass | ~3 min total |
+| VIP coverage regression | 8 tests | All pass + coverage DB | ~10 min total |
+
+All tests are self-checking — no manual waveform inspection needed for pass/fail.
+Failures produce `$error` or `$fatal` messages with descriptive context.
+
+### 10.10 Simulator compatibility notes
+
+- **Timescale:** All sources use `` `timescale 1ps/1ps ``. Runner scripts pass
+  `-timescale 1ps/1ps` to match. This is critical for picosecond-precision
+  oscillator jitter modeling.
+- **Oscillator model:** `+define+MPTDC_USE_OSC_MODEL` is automatically passed
+  by both `run_tb.sh` and `run_vip_test.sh` for all simulators.
+- **Functional coverage:** Guarded by `+define+MPTDC_ENABLE_FUNC_COV`.
+  Automatically enabled by `--func-cov` flag. Not used with Verilator.
+- **$dist_normal():** Used for Gaussian jitter in the oscillator model.
+  Supported in Xcelium 20.09+. If your version is older, the
+  `jitter_robustness` test may fail to compile.
+- **Waveforms:** Xcelium uses `.shm` format via `-input @database`. The
+  `$dumpfile`/`$dumpvars` calls in testbenches are guarded by `` `ifdef VERILATOR ``
+  to avoid conflicts.
+
+## 11. Calibration — do I need to re-run it on Xcelium?
+
+**Short answer: No.** The existing calibration LUTs are valid.
+
+The 6D LUT calibration was trained on simulation data from the behavioral
+oscillator model. Since the same RTL + same oscillator model + same timing
+parameters are used regardless of simulator, the raw TDC output for a given
+input delay is deterministic (ignoring jitter). The calibration data depends
+on the *design*, not the *simulator*.
+
+**When you WOULD need to re-calibrate:**
+- If you change oscillator parameters (`TS_STEP_PS`, `NE`)
+- If you modify the phase detector or counter RTL
+- If you add/remove pipeline stages that affect the raw output encoding
+- When moving to silicon (real oscillator replaces behavioral model)
+
+**Recommended verification of calibration validity:**
+```bash
+# Run the campaign collection bench on Xcelium and compare CSV output
+bash scripts/sim/run_tb.sh tb_campaign_collect --sim xcelium
+# Compare results/campaign_*.csv with the Verilator-generated baseline
+```
+
+If the raw feature values (`nslow`, `nfast`, `ns`, `nf`, `pd_idx`) match
+between simulators for the same input delay, the calibration is valid.
+
+## 12. Review guidance before synthesis
 
 Before synthesis signoff, use the simulation suite to confirm functional intent, then add dedicated implementation-stage checks for:
 

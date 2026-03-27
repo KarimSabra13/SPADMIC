@@ -86,6 +86,9 @@ echo "  Simulator: $SIM"
 echo "  Build dir: $TB_BUILD"
 echo ""
 
+# Plusargs common to all simulators (seed handled per-sim below)
+PLUSARGS=()
+
 case "$SIM" in
   verilator)
     VERILATOR_FLAGS=(
@@ -112,7 +115,6 @@ case "$SIM" in
 
     echo ""
     echo "--- Running simulation ---"
-    PLUSARGS=()
     if [[ -n "$SEED" ]]; then
       PLUSARGS+=("+verilator+seed+$SEED")
     fi
@@ -137,17 +139,22 @@ case "$SIM" in
       -64
       -sv
       -access +rwc
-      -timescale 1ns/1ps
+      -timescale 1ps/1ps
       -top "$TB_NAME"
+      +define+MPTDC_USE_OSC_MODEL
     )
 
     if [[ -n "$SEED" ]]; then
       XRUN_FLAGS+=(-svseed "$SEED")
     fi
 
+    if [[ $WAVES -eq 1 ]]; then
+      XRUN_FLAGS+=(-input "@database -open waves -into $TB_BUILD/waves.shm -default @probe -create $TB_NAME -all -depth all @run @exit")
+    fi
+
     cd "$TB_BUILD"
     xrun "${XRUN_FLAGS[@]}" \
-      "${RTL_FILES[@]}" "${TB_COMMON[@]}" "$TB_FILE" 2>&1
+      "${RTL_FILES[@]}" "${TB_COMMON[@]}" "$TB_FILE" "${PLUSARGS[@]}" 2>&1
     ;;
 
   vcs)
@@ -155,8 +162,9 @@ case "$SIM" in
     VCS_FLAGS=(
       -full64
       -sverilog
-      -timescale=1ns/1ps
+      -timescale=1ps/1ps
       +lint=all
+      +define+MPTDC_USE_OSC_MODEL
       -top "$TB_NAME"
       -o "$TB_BUILD/$TB_NAME"
     )
@@ -169,7 +177,7 @@ case "$SIM" in
       "${RTL_FILES[@]}" "${TB_COMMON[@]}" "$TB_FILE" 2>&1
     echo ""
     echo "--- Running simulation ---"
-    "$TB_BUILD/$TB_NAME" 2>&1
+    "$TB_BUILD/$TB_NAME" "${PLUSARGS[@]}" 2>&1
     ;;
 
   *)

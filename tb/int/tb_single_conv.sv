@@ -185,11 +185,13 @@ module tb_single_conv;
     tb_csr_write(clk_sys, csr_valid, csr_write, csr_addr, csr_wdata, addr, data);
   endtask
 
-  // ── Dump waveforms ──────────────────────────────────────────────
+  // ── Dump waveforms (portable across simulators) ─────────────────
+`ifdef VERILATOR
   initial begin
     $dumpfile("tb_single_conv.vcd");
     $dumpvars(0, tb_single_conv);
   end
+`endif
 
 endmodule
 

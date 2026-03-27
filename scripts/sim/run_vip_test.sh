@@ -208,6 +208,7 @@ case "$SIM" in
     require_tool xrun
     XRUN_FLAGS=(
       -64 -sv -access +rwc
+      -timescale 1ps/1ps
       -top mptdc_vip_tb
       +define+MPTDC_USE_OSC_MODEL
       -f "$REPO_ROOT/rtl/filelist.f"
