@@ -140,6 +140,7 @@ case "$SIM" in
       -sv
       -access +rwc
       -timescale 1ps/1ps
+      -nowarn DLCVAR
       -top "$TB_NAME"
       +define+MPTDC_USE_OSC_MODEL
     )

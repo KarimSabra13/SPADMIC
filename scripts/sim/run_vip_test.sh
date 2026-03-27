@@ -209,6 +209,7 @@ case "$SIM" in
     XRUN_FLAGS=(
       -64 -sv -access +rwc
       -timescale 1ps/1ps
+      -nowarn DLCVAR
       -top mptdc_vip_tb
       +define+MPTDC_USE_OSC_MODEL
       -f "$REPO_ROOT/rtl/filelist.f"
