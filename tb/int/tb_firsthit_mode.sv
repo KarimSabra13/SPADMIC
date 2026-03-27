@@ -71,11 +71,14 @@ module tb_firsthit_mode;
     // flag) but the PD matrix still accumulates hits during the CAPTURE cycle.
     // The key test is: (1) flag is set, (2) packet is valid, (3) hits > 0.
     begin
-      int flag_cnt = 0;
-      int total = 10;
+      int flag_cnt;
+      int total;
+      flag_cnt = 0;
+      total = 10;
 
       for (int i = 0; i < total; i++) begin
-        int delay_ps = 5000 + i * 2000;  // 5ns to 23ns
+        automatic int delay_ps;
+        delay_ps = 5000 + i * 2000;  // 5ns to 23ns
 
         csr_wr(CSR_CTRL, 32'h0000_0001);
         #50_000;
@@ -91,8 +94,10 @@ module tb_firsthit_mode;
         disable fork;
 
         if (wc >= 2 && is_header(pkt[0]) && is_eoc(pkt[wc-1])) begin
-          int hits = header_hit_count(pkt[0]);
-          tdc_conv_flags_t flags = header_flags(pkt[0]);
+          automatic int hits;
+          automatic tdc_conv_flags_t flags;
+          hits = header_hit_count(pkt[0]);
+          flags = header_flags(pkt[0]);
 
           $display("[TB] Conv %0d: delay=%0dps hits=%0d flags=%04b firsthit=%b",
                    i, delay_ps, hits, flags, flags.closed_by_firsthit);
@@ -128,7 +133,8 @@ module tb_firsthit_mode;
     disable fork;
 
     if (wc >= 2 && is_header(pkt[0])) begin
-      int mh_hits = header_hit_count(pkt[0]);
+      automatic int mh_hits;
+      mh_hits = header_hit_count(pkt[0]);
       $display("[TB] MULTI_HIT same delay: hits=%0d (should be > FIRST_HIT count)", mh_hits);
     end
 
