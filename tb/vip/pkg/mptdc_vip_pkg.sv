@@ -1502,6 +1502,9 @@ package mptdc_vip_pkg;
       conv_id = 0;
 
       // Phase 1: walk every mode × source × output × delay (always_ready)
+      // idle_after must be long enough for measurement + drain + narrow TX:
+      //   ~100ns measurement + ~100ns drain + ~400ns narrow TX = ~600ns
+      // Use 1µs per conv, 5µs after last conv to drain before config change.
       for (int m = 0; m < 2; m++) begin
         for (int s = 0; s < 2; s++) begin
           for (int o = 0; o < 3; o++) begin
@@ -1522,7 +1525,9 @@ package mptdc_vip_pkg;
               conv.source_sel         = input_sel_e'(sources[s]);
               conv.start_stop_delay_ps = delays_ps[d];
               conv.arm_settle_ps       = 0;
-              conv.idle_after_ps       = 10_000;
+              // Last conv in group: extra drain to flush narrow TX before
+              // next CSR_MODE write (prevents out_mode race condition)
+              conv.idle_after_ps       = (d == 4) ? 5_000_000 : 1_000_000;
               conv.require_nonzero_hits = 1'b1;
               conv.min_hits            = 1;
               if (modes[m] == MODE_FIRST_HIT) begin
@@ -1691,7 +1696,9 @@ package mptdc_vip_pkg;
         conv.source_sel         = input_sel_e'(cur_src);
         conv.start_stop_delay_ps = delay_ps;
         conv.arm_settle_ps       = 0;
-        conv.idle_after_ps       = 2_000;
+        // 1µs: enough for measurement + drain + narrow TX (see coverage_exhaustive)
+        // Last conv before reconfig: 5µs to drain all pending packets
+        conv.idle_after_ps       = (((i+1) % reconfig_interval) == 0) ? 5_000_000 : 1_000_000;
         conv.require_nonzero_hits = 1'b1;
         conv.min_hits            = 1;
         if (cur_mode == MODE_FIRST_HIT) begin

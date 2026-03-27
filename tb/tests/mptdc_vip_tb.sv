@@ -205,13 +205,14 @@ module mptdc_vip_tb;
   end
 
   // Global timeout — scales with num_conv for stress tests
+  // Per-conv budget: ~1.5µs (1µs idle + measurement + drain overhead)
   initial begin
     automatic int timeout_conv;
     automatic longint timeout_ps;
     if (!$value$plusargs("MPTDC_NUM_CONV=%d", timeout_conv))
       timeout_conv = 0;
-    // Base 5ms + 200ps per conversion (for stress scaling)
-    timeout_ps = 64'd5_000_000_000 + (longint'(timeout_conv) * 64'd200_000);
+    // Base 10ms + 2µs per conversion (generous margin)
+    timeout_ps = 64'd10_000_000_000 + (longint'(timeout_conv) * 64'd2_000_000);
     #(timeout_ps);
     $fatal(1, "VIP TB global timeout after %0d ps", timeout_ps);
   end
