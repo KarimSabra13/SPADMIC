@@ -528,9 +528,9 @@ package mptdc_vip_pkg;
         bins full          = {OUT_MODE_FULL};
       }
       cp_bp: coverpoint bp_mode_i {
-        bins ready = {BP_ALWAYS_READY};
-        bins rand  = {BP_RANDOM_50};
-        bins stall = {BP_ALWAYS_STALL};
+        bins rdy   = {BP_ALWAYS_READY};
+        bins rnd   = {BP_RANDOM_50};
+        bins stl   = {BP_ALWAYS_STALL};
       }
       cp_delay: coverpoint delay_bin_i {
         bins very_short = {0};

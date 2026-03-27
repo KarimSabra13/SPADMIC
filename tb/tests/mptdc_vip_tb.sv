@@ -201,7 +201,7 @@ module mptdc_vip_tb;
   end
 
   initial begin
-    #5_000_000_000;
+    #(64'd5_000_000_000);
     $fatal(1, "VIP TB global timeout");
   end
 endmodule
