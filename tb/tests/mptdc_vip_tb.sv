@@ -135,6 +135,7 @@ module mptdc_vip_tb;
     mptdc_cfg_txn   cfg_txn;
     mptdc_conv_txn  conv;
     bit             bfm_prev_start_latched;
+    bit             bfm_conv_accepted;
 
     wait(g_bfm_req_mb != null);
     forever begin
@@ -175,7 +176,8 @@ module mptdc_vip_tb;
             async_if.inject_start_only(conv.source_sel, conv.pulse_width_ps);
           else
             async_if.inject_pair(conv.source_sel, conv.start_stop_delay_ps, conv.pulse_width_ps);
-          g_bfm_ack_mb.put((!bfm_prev_start_latched) && (!bfm_last_start_rejected));
+          bfm_conv_accepted = (!bfm_prev_start_latched) && (!bfm_last_start_rejected);
+          g_bfm_ack_mb.put(bfm_conv_accepted);
           if (conv.idle_after_ps > 0)
             #conv.idle_after_ps;
         end
