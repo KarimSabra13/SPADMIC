@@ -30,6 +30,7 @@ DEFAULT_TESTS=(
   cal_inject
   overflow_status
   long_random
+  coverage_exhaustive
 )
 SELECTED_TESTS=()
 

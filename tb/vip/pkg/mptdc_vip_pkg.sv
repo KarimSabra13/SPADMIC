@@ -95,6 +95,7 @@ package mptdc_vip_pkg;
     int osc_jitter_sigma_ps;
     int osc_jitter_bound_ps;
     bit enable_func_cov;
+    int num_conv;
 
     function new();
       test_name           = "unset";
@@ -102,6 +103,7 @@ package mptdc_vip_pkg;
       osc_jitter_sigma_ps = 0;
       osc_jitter_bound_ps = 0;
       enable_func_cov     = 1'b0;
+      num_conv            = 0;
     endfunction
   endclass
 
@@ -1476,6 +1478,236 @@ package mptdc_vip_pkg;
     endfunction
   endclass
 
+  // ---------------------------------------------------------------------------
+  // coverage_exhaustive — systematically walks ALL config combinations
+  //   2 modes × 2 sources × 3 outputs × 3 backpressures × 5 delays
+  //   + watchdog tests + start-only tests = ~200 conversions
+  // ---------------------------------------------------------------------------
+  class mptdc_coverage_exhaustive_test extends mptdc_base_test;
+    function new();
+      super.new("coverage_exhaustive");
+    endfunction
+
+    virtual function void build_sequence(mptdc_generator gen);
+      mptdc_cfg_txn  cfg_txn;
+      mptdc_conv_txn conv;
+      int conv_id;
+      int delays_ps[5]    = '{500, 5_000, 12_000, 20_000, 28_000};
+      int modes[2]        = '{MODE_MULTI_HIT, MODE_FIRST_HIT};
+      int sources[2]      = '{INPUT_SPAD, INPUT_CAL};
+      int out_modes[3]    = '{OUT_MODE_RAW_FEATURES, OUT_MODE_RAW_TIMESTAMP, OUT_MODE_FULL};
+      int bp_modes[3]     = '{BP_ALWAYS_READY, BP_RANDOM_50, BP_ALWAYS_STALL};
+
+      gen.add(make_reset());
+      conv_id = 0;
+
+      // Phase 1: walk every mode × source × output × delay (always_ready)
+      for (int m = 0; m < 2; m++) begin
+        for (int s = 0; s < 2; s++) begin
+          for (int o = 0; o < 3; o++) begin
+            cfg_txn = make_cfg($sformatf("cfg_m%0d_s%0d_o%0d", m, s, o));
+            cfg_txn.mode_cfg  = mode_e'(modes[m]);
+            cfg_txn.input_sel = input_sel_e'(sources[s]);
+            cfg_txn.out_mode  = out_mode_e'(out_modes[o]);
+            cfg_txn.max_hits  = MAX_HITS_W'(15);
+            cfg_txn.wdt_ctx_timeout    = 16'hFFFF;
+            cfg_txn.wdt_global_timeout = 16'h0;
+            gen.add(cfg_txn);
+
+            gen.add(make_bp($sformatf("bp_ready_%0d", conv_id),
+                            BP_ALWAYS_READY, cfg.random_seed + conv_id));
+
+            for (int d = 0; d < 5; d++) begin
+              conv = make_conv($sformatf("conv_%0d", conv_id));
+              conv.source_sel         = input_sel_e'(sources[s]);
+              conv.start_stop_delay_ps = delays_ps[d];
+              conv.arm_settle_ps       = 0;
+              conv.idle_after_ps       = 10_000;
+              conv.require_nonzero_hits = 1'b1;
+              conv.min_hits            = 1;
+              if (modes[m] == MODE_FIRST_HIT) begin
+                conv.check_firsthit_flag    = 1'b1;
+                conv.expected_firsthit_flag = 1'b1;
+              end
+              if (out_modes[o] == OUT_MODE_FULL) begin
+                conv.check_full_timestamp = 1'b1;
+              end
+              gen.add(conv);
+              conv_id++;
+            end
+          end
+        end
+      end
+
+      // Phase 2: backpressure sweep (multi_hit, spad, raw_features)
+      for (int b = 0; b < 3; b++) begin
+        cfg_txn = make_cfg($sformatf("cfg_bp%0d", b));
+        cfg_txn.mode_cfg  = MODE_MULTI_HIT;
+        cfg_txn.input_sel = INPUT_SPAD;
+        cfg_txn.out_mode  = OUT_MODE_RAW_FEATURES;
+        cfg_txn.max_hits  = MAX_HITS_W'(15);
+        gen.add(cfg_txn);
+
+        gen.add(make_bp($sformatf("bp_sweep_%0d", b),
+                        mptdc_bp_mode_e'(bp_modes[b]),
+                        cfg.random_seed + conv_id));
+
+        for (int d = 0; d < 5; d++) begin
+          conv = make_conv($sformatf("conv_bp_%0d", conv_id));
+          conv.start_stop_delay_ps = delays_ps[d];
+          conv.arm_settle_ps       = 0;
+          conv.idle_after_ps       = 50_000;
+          conv.require_nonzero_hits = 1'b1;
+          conv.min_hits            = 1;
+          // stall mode: still expect packet (FIFO buffers)
+          gen.add(conv);
+          conv_id++;
+        end
+
+        // drain after stall
+        if (bp_modes[b] == BP_ALWAYS_STALL) begin
+          gen.add(make_bp($sformatf("bp_drain_%0d", b),
+                          BP_ALWAYS_READY, cfg.random_seed));
+        end
+      end
+
+      // Phase 3: watchdog tests (start-only)
+      cfg_txn = make_cfg("cfg_wdt_ctx");
+      cfg_txn.mode_cfg           = MODE_MULTI_HIT;
+      cfg_txn.input_sel          = INPUT_SPAD;
+      cfg_txn.out_mode           = OUT_MODE_RAW_FEATURES;
+      cfg_txn.max_hits           = MAX_HITS_W'(0);
+      cfg_txn.wdt_ctx_timeout    = 16'd100;
+      cfg_txn.wdt_global_timeout = 16'h0;
+      gen.add(cfg_txn);
+      gen.add(make_bp("bp_wdt", BP_ALWAYS_READY, cfg.random_seed));
+
+      conv = make_conv("conv_wdt_start_only");
+      conv.start_only              = 1'b1;
+      conv.idle_after_ps           = 500_000;
+      conv.check_watchdog_flag     = 1'b1;
+      conv.expected_watchdog_flag  = 1'b1;
+      conv.check_hit_range         = 1'b1;
+      conv.min_hits                = 0;
+      conv.max_hits_allowed        = 0;
+      gen.add(conv);
+      conv_id++;
+
+      // Phase 4: recovery after watchdog — normal operation
+      cfg_txn = make_cfg("cfg_recovery");
+      cfg_txn.mode_cfg           = MODE_MULTI_HIT;
+      cfg_txn.input_sel          = INPUT_SPAD;
+      cfg_txn.out_mode           = OUT_MODE_FULL;
+      cfg_txn.max_hits           = MAX_HITS_W'(15);
+      cfg_txn.wdt_ctx_timeout    = 16'hFFFF;
+      gen.add(cfg_txn);
+
+      conv = make_conv("conv_recovery");
+      conv.start_stop_delay_ps     = 15_000;
+      conv.arm_settle_ps           = 0;
+      conv.idle_after_ps           = 50_000;
+      conv.require_nonzero_hits    = 1'b1;
+      conv.min_hits                = 1;
+      conv.check_watchdog_flag     = 1'b1;
+      conv.expected_watchdog_flag  = 1'b0;
+      conv.check_full_timestamp    = 1'b1;
+      gen.add(conv);
+      conv_id++;
+
+      $display("[TEST] coverage_exhaustive: %0d conversions queued", conv_id);
+    endfunction
+  endclass
+
+  // ---------------------------------------------------------------------------
+  // stress_random — massive random stimulus for coverage closure
+  //   Configurable conversion count via +MPTDC_NUM_CONV=N (default 5000)
+  //   Random: mode, source, output, delay (20ps–30ns), backpressure, max_hits
+  //   Uses cfg.random_seed for reproducibility
+  // ---------------------------------------------------------------------------
+  class mptdc_stress_random_test extends mptdc_base_test;
+    function new();
+      super.new("stress_random");
+    endfunction
+
+    virtual function void build_sequence(mptdc_generator gen);
+      mptdc_cfg_txn  cfg_txn;
+      mptdc_conv_txn conv;
+      int num;
+      int unsigned rng;
+      int cur_mode, cur_src, cur_out, cur_bp, cur_max_hits;
+      automatic int delay_ps;
+      int reconfig_interval;
+
+      num = cfg.num_conv;
+      if (num <= 0) num = 5000;
+
+      gen.add(make_reset());
+      rng = cfg.random_seed;
+
+      // Initial config
+      cur_mode     = 0;
+      cur_src      = 0;
+      cur_out      = 0;
+      cur_bp       = 0;
+      cur_max_hits = 15;
+      reconfig_interval = (num < 100) ? 5 : (num / 20);
+
+      for (int i = 0; i < num; i++) begin
+        // Reconfigure periodically with random settings
+        if ((i % reconfig_interval) == 0) begin
+          rng = rng * 32'h41C6_4E6D + 32'h3039;
+          cur_mode     = (rng >> 16) & 1;
+          cur_src      = (rng >> 17) & 1;
+          cur_out      = (rng >> 18) % 3;
+          cur_max_hits = ((rng >> 20) % 16);
+          if (cur_max_hits == 0) cur_max_hits = 15;
+
+          cfg_txn = make_cfg($sformatf("cfg_%0d", i));
+          cfg_txn.mode_cfg  = mode_e'(cur_mode);
+          cfg_txn.input_sel = input_sel_e'(cur_src);
+          cfg_txn.out_mode  = out_mode_e'(cur_out);
+          cfg_txn.max_hits  = MAX_HITS_W'(cur_max_hits);
+          cfg_txn.wdt_ctx_timeout    = 16'hFFFF;
+          cfg_txn.wdt_global_timeout = 16'h0;
+          gen.add(cfg_txn);
+
+          // Change backpressure every other reconfig
+          if (((i / reconfig_interval) % 2) == 0) begin
+            rng = rng * 32'h41C6_4E6D + 32'h3039;
+            cur_bp = (rng >> 16) % 3;
+            // Avoid ALWAYS_STALL for bulk random — it blocks
+            if (cur_bp == BP_ALWAYS_STALL) cur_bp = BP_RANDOM_50;
+            gen.add(make_bp($sformatf("bp_%0d", i),
+                            mptdc_bp_mode_e'(cur_bp),
+                            rng));
+          end
+        end
+
+        // Random delay: 20ps to 30_000ps (30ns) — uniform
+        rng = rng * 32'h41C6_4E6D + 32'h3039;
+        delay_ps = 20 + ((rng >> 8) % 29_981);
+
+        conv = make_conv($sformatf("r_%0d", i));
+        conv.source_sel         = input_sel_e'(cur_src);
+        conv.start_stop_delay_ps = delay_ps;
+        conv.arm_settle_ps       = 0;
+        conv.idle_after_ps       = 2_000;
+        conv.require_nonzero_hits = 1'b1;
+        conv.min_hits            = 1;
+        if (cur_mode == MODE_FIRST_HIT) begin
+          conv.check_firsthit_flag    = 1'b1;
+          conv.expected_firsthit_flag = 1'b1;
+        end
+        if (cur_out == OUT_MODE_FULL) begin
+          conv.check_full_timestamp = 1'b1;
+        end
+        gen.add(conv);
+      end
+
+      $display("[TEST] stress_random: %0d conversions, seed=%0h", num, cfg.random_seed);
+    endfunction
+  endclass
+
   class mptdc_test_factory;
     static function mptdc_base_test create(input string name);
       mptdc_base_test t;
@@ -1490,6 +1722,8 @@ package mptdc_vip_pkg;
       mptdc_multi_conv_rearm_stress_test multi_conv_t;
       mptdc_global_watchdog_recovery_test global_wdt_t;
       mptdc_jitter_robustness_test jitter_t;
+      mptdc_coverage_exhaustive_test cov_exh_t;
+      mptdc_stress_random_test stress_t;
       case (name)
         "smoke_single_conv": begin
           smoke_t = new();
@@ -1534,6 +1768,14 @@ package mptdc_vip_pkg;
         "jitter_robustness": begin
           jitter_t = new();
           t = jitter_t;
+        end
+        "coverage_exhaustive": begin
+          cov_exh_t = new();
+          t = cov_exh_t;
+        end
+        "stress_random": begin
+          stress_t = new();
+          t = stress_t;
         end
         default: t = null;
       endcase

@@ -163,6 +163,7 @@ module mptdc_vip_tb;
     int unsigned     seed;
     int              jitter_sigma_ps;
     int              jitter_bound_ps;
+    int              num_conv;
     mptdc_base_test  test;
     mptdc_env_cfg    cfg;
 
@@ -174,9 +175,11 @@ module mptdc_vip_tb;
       jitter_sigma_ps = 0;
     if (!$value$plusargs("OSC_JITTER_BOUND_PS=%d", jitter_bound_ps))
       jitter_bound_ps = 0;
+    if (!$value$plusargs("MPTDC_NUM_CONV=%d", num_conv))
+      num_conv = 0;
 
-    $display("[VIP][TB] Starting test=%s seed=%0d jitter_sigma_ps=%0d jitter_bound_ps=%0d",
-             test_name, seed, jitter_sigma_ps, jitter_bound_ps);
+    $display("[VIP][TB] Starting test=%s seed=%0d jitter_sigma_ps=%0d jitter_bound_ps=%0d num_conv=%0d",
+             test_name, seed, jitter_sigma_ps, jitter_bound_ps, num_conv);
 
     test = mptdc_test_factory::create(test_name);
     if (test == null)
@@ -187,6 +190,7 @@ module mptdc_vip_tb;
     cfg.random_seed         = seed;
     cfg.osc_jitter_sigma_ps = jitter_sigma_ps;
     cfg.osc_jitter_bound_ps = jitter_bound_ps;
+    cfg.num_conv            = num_conv;
 `ifdef MPTDC_ENABLE_FUNC_COV
     cfg.enable_func_cov     = 1'b1;
 `else
@@ -200,9 +204,16 @@ module mptdc_vip_tb;
     $finish;
   end
 
+  // Global timeout — scales with num_conv for stress tests
   initial begin
-    #(64'd5_000_000_000);
-    $fatal(1, "VIP TB global timeout");
+    automatic int timeout_conv;
+    automatic longint timeout_ps;
+    if (!$value$plusargs("MPTDC_NUM_CONV=%d", timeout_conv))
+      timeout_conv = 0;
+    // Base 5ms + 200ps per conversion (for stress scaling)
+    timeout_ps = 64'd5_000_000_000 + (longint'(timeout_conv) * 64'd200_000);
+    #(timeout_ps);
+    $fatal(1, "VIP TB global timeout after %0d ps", timeout_ps);
   end
 endmodule
 

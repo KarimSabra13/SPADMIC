@@ -23,6 +23,7 @@ FUNC_COV=0
 CODE_COV=0
 OSC_JITTER_SIGMA=""
 OSC_JITTER_BOUND=""
+NUM_CONV=""
 COV_WORKDIR=""
 COV_TEST_NAME=""
 DRY_RUN=0
@@ -47,13 +48,16 @@ while [[ $# -gt 0 ]]; do
       OSC_JITTER_SIGMA="$2"; shift 2 ;;
     --osc-jitter-bound)
       OSC_JITTER_BOUND="$2"; shift 2 ;;
+    --num-conv)
+      NUM_CONV="$2"; shift 2 ;;
     --dry-run)
       DRY_RUN=1; shift ;;
     -h|--help)
       cat <<EOF
 Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
           [--func-cov] [--code-cov] [--cov-workdir DIR] [--cov-test-name NAME]
-          [--osc-jitter-sigma ps] [--osc-jitter-bound ps] [--dry-run]
+          [--osc-jitter-sigma ps] [--osc-jitter-bound ps] [--num-conv N]
+          [--dry-run]
 
 Notes:
   --func-cov/--code-cov require xrun/xcelium or vcs.
@@ -165,6 +169,9 @@ if [[ -n "$OSC_JITTER_SIGMA" ]]; then
 fi
 if [[ -n "$OSC_JITTER_BOUND" ]]; then
   PLUSARGS+=("+OSC_JITTER_BOUND_PS=$OSC_JITTER_BOUND")
+fi
+if [[ -n "$NUM_CONV" ]]; then
+  PLUSARGS+=("+MPTDC_NUM_CONV=$NUM_CONV")
 fi
 
 COMMON_FILES=(
