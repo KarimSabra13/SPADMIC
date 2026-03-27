@@ -34,6 +34,14 @@ results/
 tb/**/*.csv
 tb/**/*.txt
 
+# ── Synthesis outputs (Genus) ─────────────────────────────────────────
+syn/work/
+syn/outputs/
+syn/reports/
+syn/logs/
+*.genus_db
+fv/
+
 # ── Docs build ───────────────────────────────────────────────────────
 .venv_docs/
 docs/datasheet/build/
