@@ -41,30 +41,45 @@ syn/
 └── logs/                               ← (gitignored) Genus log files
 ```
 
-## Prerequisites
+## What You Need to Run Synthesis
 
-1. **Cadence Genus** installed and in your `PATH`
-2. **XFAB XH018 PDK** with Liberty timing libraries (`.lib`)
-3. Valid Cadence license
+### Required PDK Files
 
-## Quick Start
+For **logic synthesis only**, you need a single file from the XFAB PDK:
 
-### Step 0: Configure Library Paths
+| File | Required? | Purpose |
+|---|---|---|
+| **Liberty `.lib`** | ✅ **YES** | Cell timing, area, and power data — this is the **only** PDK file Genus needs |
+| LEF `.lef` | ❌ Optional | Physical cell abstracts — enables "physical-aware" synthesis for better estimates, but not required |
+| Technology LEF `.tlef` | ❌ No | Layer/via definitions — only needed for Place & Route (Innovus) |
+| QRC tech files | ❌ No | Parasitic extraction — only needed for PnR signoff |
 
-Edit two files with your XFAB installation paths:
+**Bottom line:** Get your `.lib` file (e.g., `D_CELLS_HD_LPMOS_typ_1_80V_25C.lib`),
+set the path, and you can run synthesis immediately.
 
-**`libraries/libraries.xh018.tcl`** — Set the PDK root:
+### What to Edit Before Running
+
+You need to modify **exactly two files** with your XFAB installation paths:
+
+**1. `libraries/libraries.xh018.tcl`** — Set the PDK root:
 ```tcl
-set paths(PDK_ROOT) "/your/path/to/xfab/XH018"
+set paths(PDK_ROOT) "/your/actual/path/to/xfab/XH018"
 ```
 
-**`libraries/libraries.xh018-stdcells.tcl`** — Verify lib file names:
+**2. `libraries/libraries.xh018-stdcells.tcl`** — Verify the standard cell
+path and `.lib` file names match your PDK version:
 ```tcl
 set paths(SC_ROOT) "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v3_0"
 set paths(LIB_DIR) "$paths(SC_ROOT)/liberty_LPMOS/v3_0_0/PVT_1_80V_range"
+
+# Verify these file names match your actual .lib files:
+set tech_files(STDCELLS_TC_LIB) "$paths(LIB_DIR)/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
 ```
 
-### Step 1: Run Genus
+Everything else (clocks, ports, constraints, flow settings) is already
+configured and should not need modification for a trial run.
+
+### How to Run
 
 ```bash
 cd syn/scripts
@@ -73,6 +88,22 @@ genus -files genus.tcl -log ../logs/genus.log
 
 That's it — `genus.tcl` handles everything: loading libraries, reading RTL,
 elaborating, synthesizing, generating reports, and exporting the netlist.
+
+### Generated Directories (Gitignored)
+
+Genus creates several output directories during a run. These are all
+gitignored and should **not** be committed:
+
+| Directory | Content | Gitignored? |
+|---|---|---|
+| `syn/work/` | Genus internal working files | ✅ Yes |
+| `syn/outputs/` | Netlist (`.v`), SDC, SDF, Genus database | ✅ Yes |
+| `syn/reports/` | All synthesis reports (timing, area, power, etc.) | ✅ Yes |
+| `syn/logs/` | Genus log files | ✅ Yes |
+| `fv/` | Formal verification directory (auto-created by Genus) | ✅ Yes |
+
+Additionally, Genus may create a `debug.txt` file in the working directory
+and various `.genus_db` files — these are also gitignored.
 
 ---
 
@@ -246,11 +277,49 @@ pulse capture. These are architecturally required — the design captures
 sub-nanosecond START/STOP pulses that cannot be sampled by clocked FFs.
 The latch audit verifies exactly 5 exist post-synthesis.
 
-### Oscillator Stubs
-Oscillators are analog macros (current-starved ring oscillators) designed
-separately. For synthesis, `mptdc_osc_stub` provides static outputs.
-Virtual clocks at the stub pins enable timing analysis. In the final chip,
-stubs are replaced by the physical oscillator macro.
+### Oscillator Stubs — How Timing Works Without a Real Oscillator
+
+The oscillator blocks are **analog macros** (current-starved ring oscillators)
+designed separately by the analog team. They are NOT synthesizable — so how
+does Genus perform timing analysis on oscillator-domain logic?
+
+**What Genus sees:**
+The `mptdc_osc_stub` module is fully synthesizable — it's just constant assigns:
+```verilog
+assign phase = {{8{1'b0}}, 1'b1};  // phase[0]=1, all others=0
+```
+Genus synthesizes this as **tie-high/tie-low cells** (wires to VDD/VSS).
+The oscillator "block" essentially disappears — zero gates, zero area.
+
+**The virtual clock trick:**
+In the SDC, we define **virtual clocks** on the stub's output pins:
+```tcl
+create_clock -name clk_osc_slow -period 1.0 [get_pins u_core/u_osc_slow/u_stub/phase[0]]
+create_clock -name clk_osc_fast -period 0.9 [get_pins u_core/u_osc_fast/u_stub/phase[0]]
+```
+Even though `phase[0]` is tied to `1'b1` (not physically toggling), **Genus
+treats it as if a 1 GHz / 1.11 GHz clock drives that pin** for timing analysis.
+This means:
+- All FFs clocked by `phase[0]` (meas_ctrl, gray_cnt_sync, pd_cell, etc.)
+  get proper setup/hold analysis against the correct period
+- CDC paths (osc→sys) get `set_max_delay` constraints applied
+- The PD pipeline timing is checked against the 0.9 ns fast clock period
+
+**What gets validated vs what doesn't:**
+
+| Aspect | Validated? | Why |
+|---|---|---|
+| Combinational logic depth in osc domain | ✅ Yes | Virtual clock enforces timing |
+| CDC synchronizer paths (osc↔sys) | ✅ Yes | `set_max_delay` constraints |
+| System clock domain logic | ✅ Yes | Real clock definition |
+| Actual oscillator frequency | ❌ No | Analog — not synthesized |
+| Phase tap matching / routing skew | ❌ No | Physical routing concern, PnR stage |
+| Oscillator startup time | ❌ No | Analog characterization |
+
+**In the real chip:** The stub is replaced by the physical oscillator macro.
+At that point, you provide a Liberty model (`.lib`) for the macro that
+specifies its output timing characteristics, and PnR connects the macro
+outputs to the digital logic.
 
 For simulation, `mptdc_osc_model.sv` provides a behavioural oscillator
 with `#delay` and configurable jitter via `+osc_jitter_ps=<value>` plusarg.
