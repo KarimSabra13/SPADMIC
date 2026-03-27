@@ -581,7 +581,7 @@ exit
 Run it:
 
 ```bash
-imc -exec gen_cov_report.tcl -batch -nocopyright 2>&1 | tail -20
+imc -exec gen_cov_report.tcl -nocopyright 2>&1 | tail -20
 ```
 
 ### Alternative: use `imc -execcmd` inline
@@ -592,14 +592,14 @@ imc -execcmd "
   load_test build/vip_coverage_xrun/cov_work -run *
   report_metrics -out func_report.txt -detail -kind cover
   exit
-" -batch -nocopyright
+" -nocopyright
 
 # Code coverage
 imc -execcmd "
   load_test build/vip_coverage_xrun/cov_work -run *
   report_metrics -out code_report.txt -detail -kind block
   exit
-" -batch -nocopyright
+" -nocopyright
 ```
 
 ### Interactive IMC (GUI)

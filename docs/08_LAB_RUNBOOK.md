@@ -274,7 +274,7 @@ imc -execcmd "
   load_test build/coverage_campaign/cov_work -run *
   report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover
   exit
-" -batch -nocopyright
+" -nocopyright
 ```
 
 **Coverage targets:**
