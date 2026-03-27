@@ -1,0 +1,222 @@
+# =============================================================================
+# Project  : SPAD_MPTDC — Vernier Time-to-Digital Converter
+# File     : genus.tcl
+# Purpose  : Main Genus synthesis entry point — complete flow in one script
+# Author   : Karim Sabra
+# =============================================================================
+# Usage:
+#   cd syn/scripts
+#   genus -files genus.tcl -log ../logs/genus.log
+#
+# Or interactively:
+#   genus
+#   genus> source genus.tcl
+#
+# This script orchestrates the full synthesis flow:
+#   1. Load design definitions and library configurations
+#   2. Read MMMC (Multi-Mode Multi-Corner) view definitions
+#   3. Read LEF physical abstracts
+#   4. Read RTL and elaborate
+#   5. Run design checks (lint)
+#   6. Synthesize (generic → map → optimize)
+#   7. Generate comprehensive reports
+#   8. Export netlist, SDC, SDF, and database
+# =============================================================================
+
+set runtype "synthesis"
+
+puts "================================================================"
+puts " MPTDC — Cadence Genus Logic Synthesis"
+puts " Target: XFAB XH018 (180 nm)"
+puts " Design: mptdc_top_asic"
+puts "================================================================"
+
+set debug_file "debug.txt"
+
+#############################################
+# 1. LOAD DEFINITIONS AND LIBRARIES
+#############################################
+
+# Helper procedures (must be loaded first — defines mptdc_message, etc.)
+source ../scripts/procedures.tcl -quiet
+
+mptdc_start_stage "init"
+
+# Design-specific variables (ports, clocks, paths, SDC params)
+mptdc_message "Loading design definitions"
+source ../inputs/mptdc.defines -quiet
+
+# Technology and standard cell library paths
+mptdc_message "Loading XFAB XH018 PDK definitions"
+source ../libraries/libraries.$TECHNOLOGY.tcl -quiet
+source ../libraries/libraries.$SC_TECHNOLOGY.tcl -quiet
+
+# General Genus settings (effort, ramstyle, clock gating)
+source ../scripts/settings.tcl -quiet
+
+# Create output directories
+foreach dir [list $design(work_dir) $design(export_dir) \
+             $design(reports_dir) $design(logs_dir) \
+             $design(synthesis_reports)] {
+    file mkdir $dir
+}
+
+# Suppress known benign messages
+if {[llength $design(SUPPRESS_MESSAGES_GENUS)] > 0} {
+    mptdc_message "Suppressing known messages"
+    suppress_messages $design(SUPPRESS_MESSAGES_GENUS)
+}
+if {[llength $tech(LIB_SUPPRESS_MESSAGES_GENUS)] > 0} {
+    suppress_messages $tech(LIB_SUPPRESS_MESSAGES_GENUS)
+}
+
+#############################################
+# 2. READ MMMC
+#############################################
+mptdc_start_stage "mmmc"
+
+mptdc_message "Loading MMMC view definitions"
+read_mmmc $design(mmmc_view_file)
+
+#############################################
+# 3. READ LEF (physical abstracts)
+#############################################
+# LEF gives Genus physical awareness for better optimization.
+# Suppress LEF-specific messages.
+if {[llength $tech(LEF_SUPPRESS_MESSAGES_GENUS)] > 0} {
+    suppress_messages $tech(LEF_SUPPRESS_MESSAGES_GENUS)
+}
+
+mptdc_message "Loading LEF physical abstracts"
+# Uncomment when LEF files are available:
+# read_physical -lef $tech_files(ALL_LEFS)
+
+#############################################
+# 4. READ RTL
+#############################################
+mptdc_start_stage "read_rtl"
+
+set_db init_hdl_search_path $design(hdl_search_paths)
+
+mptdc_message "Reading RTL from [file tail $design(read_hdl_list)]"
+mptdc_message "  Filelist: $design(read_hdl_list)"
+read_hdl -sv -f $design(read_hdl_list)
+
+#############################################
+# 5. ELABORATE
+#############################################
+mptdc_start_stage "elaborate"
+
+mptdc_message "Elaborating $design(TOPLEVEL) ..."
+elaborate $design(TOPLEVEL)
+
+# ── Post-Elaboration Checks ──────────────────────────────────────
+mptdc_start_stage "post_elaboration"
+
+mptdc_message "Running design checks"
+check_design -unresolved
+check_design -all > "$design(synthesis_reports)/post_elaboration/check_design.rpt"
+
+# Init design (applies MMMC constraints)
+mptdc_message "Initializing design with MMMC constraints"
+init_design
+
+# Check timing intent (SDC lint)
+mptdc_message "Checking timing intent (SDC lint)"
+check_timing_intent
+check_timing_intent -verbose > \
+    "$design(synthesis_reports)/post_elaboration/check_timing_intent.rpt"
+
+# Hierarchy and latch reports
+report_hierarchy > "$design(synthesis_reports)/post_elaboration/report_hierarchy.rpt"
+report_gates -type latch > \
+    "$design(synthesis_reports)/post_elaboration/latch_pre_synth.rpt"
+
+# Save elaborated design checkpoint
+mptdc_message "Saving elaborated design checkpoint"
+write_design -base_name "$design(export_dir)/post_elaboration/$design(TOPLEVEL)"
+
+#############################################
+# 6. SYNTHESIZE
+#############################################
+mptdc_start_stage "synthesis"
+
+# Define cost groups for targeted optimization
+mptdc_default_cost_groups
+
+# Pre-synthesis timing snapshot
+mptdc_report_timing $design(synthesis_reports)
+
+# Clock gating configuration
+set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_min_flops 8
+set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_style latch
+
+# Don't use scan cells (no scan chain in this design)
+mptdc_message "Excluding scan flip-flops from mapping"
+foreach cell [get_db lib_cells -if {.scan_enable_pins!=""}] {
+    set_db $cell .avoid true
+}
+
+# ── Phase 1: Generic Optimization ─────────────────────────────────
+# Technology-independent: boolean opt, resource sharing, FSM encoding
+mptdc_start_stage "syn_generic"
+mptdc_message "Phase 1: Generic optimization"
+syn_generic
+mptdc_report_timing $design(synthesis_reports)
+
+# ── Phase 2: Technology Mapping ───────────────────────────────────
+# Maps to XFAB XH018 standard cells, selects drive strengths
+mptdc_start_stage "syn_map"
+mptdc_message "Phase 2: Technology mapping to XFAB XH018"
+syn_map
+mptdc_report_timing $design(synthesis_reports)
+
+# ── Phase 3: Incremental Optimization ─────────────────────────────
+# Gate sizing, buffer insertion, hold fixing, power optimization
+mptdc_start_stage "syn_opt"
+mptdc_message "Phase 3: Incremental optimization"
+syn_opt
+
+#############################################
+# 7. POST-SYNTHESIS REPORTS
+#############################################
+mptdc_start_stage "post_synthesis"
+
+# Refresh cost groups (may be lost during optimization)
+mptdc_default_cost_groups
+
+# Timing reports
+mptdc_report_timing $design(synthesis_reports)
+
+# Full report suite (area, gates, power, hierarchy, DRV, QoR, latches)
+mptdc_full_reports $design(synthesis_reports)
+
+#############################################
+# 8. EXPORT DESIGN
+#############################################
+mptdc_start_stage "export"
+
+# Gate-level netlist
+mptdc_message "Writing post-synthesis netlist"
+write_netlist > $design(postsyn_netlist)
+mptdc_message "  Netlist: $design(postsyn_netlist)"
+
+# Updated SDC
+mptdc_message "Writing post-synthesis SDC"
+write_sdc > $design(postsyn_sdc)
+mptdc_message "  SDC: $design(postsyn_sdc)"
+
+# SDF for gate-level simulation
+mptdc_message "Writing SDF"
+write_sdf > $design(postsyn_sdf)
+mptdc_message "  SDF: $design(postsyn_sdf)"
+
+# Genus database (for incremental runs or Innovus handoff)
+mptdc_message "Writing design database"
+write_design -base_name "$design(export_dir)/post_synth/$design(TOPLEVEL)" -innovus
+mptdc_message "  DB: $design(export_dir)/post_synth/$design(TOPLEVEL)"
+
+#############################################
+# 9. SUMMARY
+#############################################
+mptdc_print_summary

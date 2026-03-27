@@ -2,10 +2,13 @@
 
 ## Overview
 
-This directory contains the complete Cadence Genus synthesis flow for the
-MPTDC (Multi-Phase Time-to-Digital Converter). The flow is structured as
-four sequential TCL scripts that you source step-by-step inside the Genus
-shell.
+Industry-grade Cadence Genus synthesis flow for the MPTDC (Multi-Phase
+Time-to-Digital Converter), targeting the XFAB XH018 180 nm CMOS process.
+
+The flow follows the centralized-defines methodology (inspired by
+[enics-labs/rtl2gds-demo](https://github.com/enics-labs/rtl2gds-demo)):
+all design variables in one file, separated library definitions, reusable
+procedures, and a single `genus.tcl` entry point that orchestrates everything.
 
 **Target Technology:** XFAB XH018 — 180 nm CMOS  
 **System Clock:** 160 MHz (6.25 ns period)  
@@ -15,250 +18,268 @@ shell.
 
 ```
 syn/
-├── README.md                 ← You are here
-├── filelist_synth.f           ← RTL compile list (excludes osc_model)
-├── constraints/
-│   └── mptdc.sdc              ← Timing constraints (clocks, I/O, CDC, false paths)
-├── scripts/
-│   ├── genus_setup.tcl        ← Step 1: Library & design configuration
-│   ├── genus_elaborate.tcl    ← Step 2: Read HDL, elaborate, lint
-│   ├── genus_synthesize.tcl   ← Step 3: Synthesis (generic → map → opt)
-│   └── genus_reports.tcl      ← Step 4: Post-synthesis reports
-├── work/                      ← (gitignored) Genus working directory
-├── outputs/                   ← (gitignored) Netlist, SDC, SDF outputs
-├── reports/                   ← (gitignored) All synthesis reports
-└── logs/                      ← (gitignored) Genus log files
+├── README.md                          ← You are here
+├── filelist_synth.f                    ← RTL compile list (excludes osc_model)
+│
+├── inputs/                             ← Design-specific definitions
+│   ├── mptdc.defines                   ← All variables: ports, clocks, paths, SDC params
+│   ├── mptdc.sdc                       ← Timing constraints (parameterized)
+│   └── mptdc.mmmc                      ← Multi-Mode Multi-Corner view definitions
+│
+├── libraries/                          ← Technology library definitions
+│   ├── libraries.xh018.tcl             ← XFAB PDK: process, metal stack, physical cells
+│   └── libraries.xh018-stdcells.tcl    ← Standard cells: Liberty (.lib), LEF, corners
+│
+├── scripts/                            ← Synthesis flow scripts
+│   ├── genus.tcl                       ← Main entry point (run this)
+│   ├── settings.tcl                    ← Genus tool configuration
+│   └── procedures.tcl                  ← Helper procs: logging, reports, cost groups
+│
+├── work/                               ← (gitignored) Genus working directory
+├── outputs/                            ← (gitignored) Netlist, SDC, SDF, DB
+├── reports/                            ← (gitignored) All synthesis reports
+└── logs/                               ← (gitignored) Genus log files
 ```
 
 ## Prerequisites
 
 1. **Cadence Genus** installed and in your `PATH`
-2. **XFAB XH018 PDK** with:
-   - Liberty timing library (`.lib`) — at least typical corner
-   - LEF physical library (`.lef`) — optional for logic synthesis
-   - Technology LEF (`.tlef`) — optional for logic synthesis
+2. **XFAB XH018 PDK** with Liberty timing libraries (`.lib`)
 3. Valid Cadence license
 
 ## Quick Start
 
 ### Step 0: Configure Library Paths
 
-Edit `scripts/genus_setup.tcl` and set the three placeholder paths:
+Edit two files with your XFAB installation paths:
 
+**`libraries/libraries.xh018.tcl`** — Set the PDK root:
 ```tcl
-set XFAB_PDK_ROOT "/path/to/xfab/XH018"
-set LIB_TYPICAL   "${XFAB_PDK_ROOT}/diglibs/D_CELLS_HD/.../typical.lib"
-set LEF_FILE      "${XFAB_PDK_ROOT}/diglibs/D_CELLS_HD/.../cells.lef"
-set TECH_LEF      "${XFAB_PDK_ROOT}/techdata/xh018_xx.tlef"
+set paths(PDK_ROOT) "/your/path/to/xfab/XH018"
 ```
 
-### Step 1: Launch Genus and Run
+**`libraries/libraries.xh018-stdcells.tcl`** — Verify lib file names:
+```tcl
+set paths(SC_ROOT) "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v3_0"
+set paths(LIB_DIR) "$paths(SC_ROOT)/liberty_LPMOS/v3_0_0/PVT_1_80V_range"
+```
+
+### Step 1: Run Genus
 
 ```bash
 cd syn/scripts
-genus -log ../logs/genus_run.log
+genus -files genus.tcl -log ../logs/genus.log
 ```
 
-Inside the Genus shell, source the scripts in order:
-
-```tcl
-source genus_setup.tcl        ;# Load libraries
-source genus_elaborate.tcl    ;# Read RTL, elaborate, lint
-source genus_synthesize.tcl   ;# Synthesize (generic → map → opt)
-source genus_reports.tcl      ;# Generate all reports
-```
-
-Or run all at once:
-
-```tcl
-source genus_setup.tcl
-source genus_elaborate.tcl
-source genus_synthesize.tcl
-source genus_reports.tcl
-```
-
-## Script Details
-
-### `genus_setup.tcl` — Library & Design Configuration
-
-**What it does:**
-- Sets the XFAB PDK root path and locates the Liberty timing library
-- Configures project directory paths (RTL, outputs, reports, logs)
-- Reads the Liberty `.lib` file into Genus
-- Configures global Genus settings:
-  - `hdl_error_on_latch false` — allows intentional latches (async frontend)
-  - `syn_ramstyle registers` — forces register-based memory (no SRAM IP)
-  - `hdl_sv_packages true` — enables SystemVerilog package support
-
-**What to check:**
-- Genus prints the library name it loaded — verify it matches your PDK
-- If the path is wrong, you'll get `Error: Cannot open file`
+That's it — `genus.tcl` handles everything: loading libraries, reading RTL,
+elaborating, synthesizing, generating reports, and exporting the netlist.
 
 ---
 
-### `genus_elaborate.tcl` — Read HDL, Elaborate, Lint
+## Flow Details
 
-**What it does:**
-1. **Reads RTL** from `filelist_synth.f`:
-   - 20 SystemVerilog files in compile order (package → leaves → top)
-   - Excludes `mptdc_osc_model.sv` (non-synthesizable behavioural oscillator)
-   - Adds `+define+SYNTHESIS` (activates synthesis-specific code guards)
+### File: `inputs/mptdc.defines`
 
-2. **Elaborates** `mptdc_top_asic`:
-   - Resolves all parameters (NE=9, N_CTX=2, MAX_HITS=15, etc.)
-   - Unrolls generate blocks (81 PD cells = 9×9 matrix)
-   - Validates parameter-check `$fatal` guards (e.g., STAGES ≥ 2)
+**What it contains:**
+All design-specific variables in one place — the single source of truth.
 
-3. **Forces register memory**:
-   - Sets `syn_ramstyle = registers` globally
-   - The 57-bit × 64-entry sync FIFO will be implemented as flip-flops
-   - No SRAM compiler/IP is needed
-
-4. **Reads SDC constraints** from `constraints/mptdc.sdc`
-
-5. **Runs design checks** (`check_design -all`):
-   - Reports undriven/unloaded ports
-   - Detects combinational loops (should be 0)
-   - Flags multi-driven nets
-   - Checks constraint completeness
-
-6. **Reports inferred latches**:
-   - Expect exactly **5 intentional latches** from `mptdc_async_frontend_v2`:
-     - `start_latched_q` — SR latch capturing async START pulse
-     - `stop_latched_q` — SR latch capturing async STOP pulse
-     - `active_ctx_q[1:0]` — Transparent latch for context ID
-     - `ctx_drain_q[0]`, `ctx_drain_q[1]` — Per-context drain SR latches
-   - Any additional latches indicate an RTL bug
-
-**What to check:**
-- `check_design.rpt` — should have no errors, warnings are OK to review
-- `latch_report.rpt` — exactly 5 latches, all in `async_frontend_v2`
-- `hierarchy.rpt` — 81 `mptdc_pd_cell` instances under `u_core`
-
----
-
-### `genus_synthesize.tcl` — Three-Phase Synthesis
-
-**What it does:**
-
-**Phase 1: `syn_generic` (Technology-Independent)**
-- Boolean optimization: constant propagation, dead-code removal
-- Resource sharing: identifies shared arithmetic (adders, comparators)
-- FSM encoding: chooses optimal encoding (one-hot, binary, gray)
-- Output: optimized design in generic gates (AND, OR, MUX, FF, LATCH)
-- Generates `timing_post_generic.rpt` — catches gross timing violations
-
-**Phase 2: `syn_map` (Technology Mapping)**
-- Maps generic gates to actual XFAB XH018 standard cells
-- Selects drive strengths based on fanout and timing requirements
-- Maps latches to XFAB latch cells (DLN/DLP variants)
-- Maps FFs to XFAB DFF cells with appropriate set/reset
-- Generates `timing_post_map.rpt` — post-mapping timing snapshot
-
-**Phase 3: `syn_opt` (Incremental Optimization)**
-- Gate sizing: upsizes cells on critical paths, downsizes non-critical
-- Buffer insertion: adds buffers for high-fanout nets
-- Logic restructuring: re-synthesizes critical cones
-- Hold-time fixing: inserts delay cells where hold is violated
-
-**Outputs written:**
-- `outputs/mptdc_top_asic_synth.v` — Gate-level Verilog netlist
-- `outputs/mptdc_top_asic_synth.sdc` — Updated timing constraints
-- `outputs/mptdc_top_asic_synth.sdf` — Standard Delay Format (for GLS)
-- `outputs/mptdc_top_asic.genus_db` — Genus database (for incremental)
-
-**What to check:**
-- Compare `timing_post_generic.rpt` vs `timing_post_map.rpt` — slack should
-  improve or stay similar after mapping
-- If timing degrades significantly, the library may not have cells fast enough
-
----
-
-### `genus_reports.tcl` — Comprehensive Post-Synthesis Reports
-
-**What it does:**
-
-Generates 12 report files covering every aspect of synthesis quality:
-
-| Report File | Content | What to Look For |
+| Variable Group | Examples | Purpose |
 |---|---|---|
-| `timing_setup.rpt` | Worst 20 setup paths | All paths should have positive slack |
-| `timing_hold.rpt` | Worst 20 hold paths | Hold violations need delay cell insertion |
-| `timing_summary.rpt` | Per-clock timing summary | WNS (Worst Negative Slack) per clock |
-| `timing_violations.rpt` | Only violating paths | **Must be empty** for clean synthesis |
-| `area_summary.rpt` | Total area | Compare against chip budget |
-| `area_detail.rpt` | Per-module area breakdown | Identify area-dominant blocks |
-| `power_summary.rpt` | Total power (dynamic + leak) | Compare against power budget |
-| `power_detail.rpt` | Per-module power breakdown | Find power-hungry modules |
-| `gates_summary.rpt` | Total gate count | Sanity check for 180 nm |
-| `gates_by_type.rpt` | Cell usage statistics | Verify cell library coverage |
-| `gates_sequential.rpt` | FF and latch count | Cross-check with RTL |
-| `latch_audit.rpt` | Latch instances | **Must show exactly 5 latches** |
-| `clock_summary.rpt` | Clock definitions | Verify 3 clocks defined correctly |
-| `drv_summary.rpt` | Design rule violations | Max transition, max fanout, max cap |
-| `constraint_coverage.rpt` | Unconstrained paths | Should have minimal unconstrained endpoints |
-| `qor_summary.rpt` | Quality of Results | Overall synthesis health dashboard |
+| **Design hierarchy** | `TOPLEVEL`, `FULLCHIP_OR_MACRO` | What to synthesize |
+| **Technology names** | `TECHNOLOGY`, `SC_TECHNOLOGY` | Which library TCL files to load |
+| **Clock definitions** | `CLK_NAME/PORT/PERIOD`, `OSC_SLOW_*`, `OSC_FAST_*` | Clock constraints (SDC uses these) |
+| **Port names** | `RST_PORT`, `ASYNC_INPUTS` | Reset and async input definitions |
+| **SDC parameters** | `INPUT_DELAY`, `CLOCK_UNCERTAINTY`, `MAX_FANOUT` | Constraint values |
+| **File paths** | `rtl_dir`, `export_dir`, `synthesis_reports` | Directory structure |
+| **MMMC views** | `selected_setup/hold_analysis_views` | Corner selection |
+| **Latch audit** | `EXPECTED_LATCH_COUNT = 5` | Post-synthesis verification |
 
-**What to check (trial synthesis checklist):**
-1. ✅ `timing_violations.rpt` is empty (no setup violations)
-2. ✅ `latch_audit.rpt` shows exactly 5 latches (all in async_frontend)
-3. ✅ Area is reasonable for 180 nm (typical MPTDC: ~50K-100K gates)
-4. ✅ No critical DRV violations
-5. ✅ All three clocks appear in `clock_summary.rpt`
+**Why centralized:** Changing a clock frequency or adding a port only requires
+editing `mptdc.defines` — the SDC, MMMC, and genus.tcl all read from it.
 
-## SDC Constraints Explained
+---
 
-The `constraints/mptdc.sdc` file defines:
+### File: `inputs/mptdc.sdc`
 
-| Section | What | Why |
+**What it does:**
+Defines all timing constraints. Uses variables from `mptdc.defines` so
+constraint values are never hardcoded in two places.
+
+| Section | Constraint | Purpose |
 |---|---|---|
-| **Primary clock** | `clk_sys` @ 160 MHz (6.25 ns) | System domain — CSR, FIFO, drain logic |
-| **Oscillator clocks** | Virtual `clk_osc_slow` @ 1 GHz, `clk_osc_fast` @ 1.11 GHz | Timing analysis for osc-domain logic (stubs provide static output) |
-| **Clock groups** | All 3 clocks are asynchronous | CDC handled by structural synchronizers |
-| **False paths** | START/STOP async inputs, async_rst_n | Truly asynchronous — no timing relationship |
-| **CDC dont_touch** | Reset sync, gray sync, pulse sync flops | Prevents optimization from breaking metastability barriers |
-| **CDC max_delay** | Cross-domain paths limited to 1 period | Ensures combinational path fits within synchronizer window |
-| **I/O delays** | 2 ns input/output delay on CSR and narrow ports | Conservative for 180 nm external routing |
-| **Design rules** | Max fanout 20, max transition 0.5 ns | Prevents signal integrity issues |
+| **§1 Primary clock** | `create_clock clk_sys -period 6.25` | 160 MHz system domain |
+| **§2 Osc clocks** | Virtual clocks at osc stub pins | Timing for osc-domain logic |
+| **§3 Clock groups** | `set_clock_groups -asynchronous` | 3 async domains (sys, slow, fast) |
+| **§4 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
+| **§5 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
+| **§6 CDC protection** | `set_dont_touch` on sync FFs | Prevents optimizer from breaking synchronizers |
+| **§7 CDC max delay** | `set_max_delay` across domains | Limits combinational path in CDC |
+| **§8-9 I/O delays** | 2 ns input/output delay | Conservative for 180 nm routing |
+| **§10 Load/drive** | 50 fF load, 100 ps transition | Pad characteristics |
+| **§11 Design rules** | Max fanout 20, max transition 0.5 ns | Signal integrity |
 
-## Oscillator Notes
+---
 
-The oscillator blocks in this design are **analog macros** — they will be
-designed separately by an analog designer as current-starved ring oscillators.
+### File: `inputs/mptdc.mmmc`
 
-For synthesis:
-- `mptdc_osc_stub.sv` provides **static phase outputs** (phase[0]=1, rest=0)
-- No actual oscillation occurs — the stub is purely for logic verification
-- The SDC uses **virtual clocks** at the oscillator pins so Genus can
-  analyze timing through the oscillator-domain logic
-- In the final chip, the stub is replaced by the physical oscillator macro
+**What it does:**
+Defines PVT (Process-Voltage-Temperature) corners for timing analysis.
+For trial synthesis, only the typical corner (TC) is active. BC and WC
+corners are prepared as commented-out templates for signoff.
 
-For simulation:
-- `mptdc_osc_model.sv` provides a **behavioural oscillator** with `#delay`
-- Supports configurable jitter via `+osc_jitter_ps=<value>` plusarg
-- Selected via `` `define MPTDC_USE_OSC_MODEL `` (never set during synthesis)
+| Corner | PVT | Purpose | Status |
+|---|---|---|---|
+| **TC** (typical) | TT, 1.80V, 25°C | Trial synthesis | ✅ Active |
+| **BC** (best-case) | FF, 1.98V, −40°C | Hold analysis | 📋 Prepared |
+| **WC** (worst-case) | SS, 1.62V, 125°C | Setup analysis | 📋 Prepared |
+
+---
+
+### File: `libraries/libraries.xh018.tcl`
+
+**What it does:**
+Technology-level PDK definitions: process node, metal stack, parasitic
+extraction files, physical cell names (well taps, fillers, endcaps),
+and CTS routing layer preferences.
+
+**Action required:** Set `paths(PDK_ROOT)` and physical cell names.
+
+---
+
+### File: `libraries/libraries.xh018-stdcells.tcl`
+
+**What it does:**
+Standard cell library paths for all PVT corners (Liberty `.lib`, LEF, Verilog).
+Also defines the driving cell and load pin for SDC constraints.
+
+**Action required:** Verify `.lib` file names match your PDK version.
+
+---
+
+### File: `scripts/procedures.tcl`
+
+**What it does:**
+Reusable helper procedures used throughout the flow:
+
+| Procedure | Purpose |
+|---|---|
+| `mptdc_start_stage` | Prints a banner, creates report subdirectory, tracks elapsed time |
+| `mptdc_message` | Formatted info/debug/warning messages |
+| `mptdc_report_timing` | Generates setup/hold/summary/violation timing reports |
+| `mptdc_default_cost_groups` | Creates reg2reg, in2reg, reg2out, in2out path groups |
+| `mptdc_latch_audit` | Counts latches and compares to expected count (5) |
+| `mptdc_full_reports` | Generates all post-synthesis reports (area, gates, power, DRV, QoR) |
+| `mptdc_print_summary` | Final summary banner with checklist |
+
+---
+
+### File: `scripts/settings.tcl`
+
+**What it does:**
+Genus tool-level configuration (not design-specific):
+
+- **HDL settings**: SystemVerilog mode, latch tolerance, undriven signals
+- **Memory inference**: `syn_ramstyle = registers` (no SRAM IP available)
+- **Clock gating**: Enabled with min 8 FFs threshold
+- **Synthesis effort**: Medium (increase to high for tapeout)
+- **Verbosity**: Level 7 (detailed logging)
+
+---
+
+### File: `scripts/genus.tcl`
+
+**What it does:**
+The single entry point that orchestrates the entire synthesis flow:
+
+```
+Stage 1: INIT
+  └── Load defines → libraries → settings
+  └── Create output directories
+
+Stage 2: MMMC
+  └── Load multi-corner view definitions
+
+Stage 3: READ_RTL
+  └── Read 20 SystemVerilog files (osc_model excluded)
+
+Stage 4: ELABORATE
+  └── Resolve parameters, unroll generates (81 PD cells)
+  └── Run check_design (lint)
+
+Stage 5: POST_ELABORATION
+  └── Init design with MMMC constraints
+  └── check_timing_intent (SDC lint)
+  └── Save elaboration checkpoint
+
+Stage 6: SYNTHESIS
+  └── Define cost groups (reg2reg, in2reg, reg2out, in2out)
+  └── syn_generic  → Phase 1: technology-independent optimization
+  └── syn_map      → Phase 2: map to XFAB XH018 cells
+  └── syn_opt      → Phase 3: incremental gate sizing, buffering, hold fixing
+
+Stage 7: POST_SYNTHESIS
+  └── Timing reports (setup, hold, violations)
+  └── Area, power, gate count, design rules, QoR
+  └── Latch audit (expect exactly 5)
+
+Stage 8: EXPORT
+  └── Gate-level netlist (.v)
+  └── Updated SDC
+  └── SDF for gate-level simulation
+  └── Genus/Innovus database
+```
+
+Each stage creates its own report subdirectory under `reports/synthesis/`.
+
+---
+
+## Key Design Decisions
+
+### No SRAM IP
+The 57-bit × 64-entry sync FIFO is implemented entirely as flip-flops
+(~3648 FFs). `syn_ramstyle = registers` prevents Genus from attempting
+SRAM inference.
+
+### Intentional Latches
+The async frontend (`mptdc_async_frontend_v2`) uses 5 SR latches for
+pulse capture. These are architecturally required — the design captures
+sub-nanosecond START/STOP pulses that cannot be sampled by clocked FFs.
+The latch audit verifies exactly 5 exist post-synthesis.
+
+### Oscillator Stubs
+Oscillators are analog macros (current-starved ring oscillators) designed
+separately. For synthesis, `mptdc_osc_stub` provides static outputs.
+Virtual clocks at the stub pins enable timing analysis. In the final chip,
+stubs are replaced by the physical oscillator macro.
+
+For simulation, `mptdc_osc_model.sv` provides a behavioural oscillator
+with `#delay` and configurable jitter via `+osc_jitter_ps=<value>` plusarg.
+It is selected via `` `define MPTDC_USE_OSC_MODEL `` (never set during synthesis).
+
+### CDC Synchronizers
+All clock domain crossings use structural synchronizers with `ASYNC_REG`
+attributes. SDC `set_dont_touch` prevents the optimizer from breaking
+these metastability barriers.
+
+---
 
 ## Troubleshooting
 
 ### "Cannot open file" errors
-→ Check `genus_setup.tcl` — the XFAB_PDK_ROOT path must point to your
-actual PDK installation directory.
+→ Check `libraries/libraries.xh018.tcl` — `paths(PDK_ROOT)` must point
+to your actual XFAB installation.
 
 ### Unexpected latches (more than 5)
-→ Check `latch_report.rpt` for the module hierarchy. Latches outside
-`mptdc_async_frontend_v2` indicate an RTL bug. Common cause: incomplete
-`if/case` in `always_comb` blocks.
+→ Check `reports/synthesis/post_synthesis/latch_audit.rpt`. Latches
+outside `mptdc_async_frontend_v2` indicate an RTL bug.
 
 ### Timing violations on oscillator-domain paths
-→ The PD pipeline must fit within ~0.9 ns (osc_fast period). If violations
-appear, check the critical path — it's likely through the phase detector
-matrix OR-reduction tree. May need pipeline registers.
+→ The PD pipeline must fit within ~0.9 ns. If violated, the critical path
+is likely through the phase detector OR-reduction tree.
 
 ### FIFO area too large
-→ The 57b × 64 sync FIFO is implemented entirely in flip-flops (~3648 FFs).
-This is intentional (no SRAM IP available). If area is critical, consider
-reducing FIFO_DEPTH from 64 to 32 in `mptdc_pkg.sv`.
+→ The 57b × 64 FIFO uses ~3648 FFs. To reduce area, change `FIFO_DEPTH`
+from 64 to 32 in `rtl/pkg/mptdc_pkg.sv`.
 
-### Memory inference warnings
-→ Genus may warn about "array not mapped to memory". This is expected —
-we force register-based implementation via `syn_ramstyle = registers`.
+### "Memory not mapped" warnings
+→ Expected — we force register-based implementation. Not an error.
