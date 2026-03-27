@@ -534,9 +534,9 @@ package mptdc_vip_pkg;
       }
       cp_delay: coverpoint delay_bin_i {
         bins very_short = {0};
-        bins short      = {1};
-        bins medium     = {2};
-        bins long       = {3};
+        bins short_d    = {1};
+        bins medium_d   = {2};
+        bins long_d     = {3};
       }
       cp_jitter: coverpoint jitter_bin_i {
         bins none  = {0};
