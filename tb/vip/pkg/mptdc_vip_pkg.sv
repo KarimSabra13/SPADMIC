@@ -1545,34 +1545,51 @@ package mptdc_vip_pkg;
       end
 
       // Phase 2: backpressure sweep (multi_hit, spad, raw_features)
+      // FIFO_DEPTH=64, each conv produces up to 16 entries (1 META + 15 hits).
+      // always_stall: narrow TX blocked → FIFO fills; cap at 3 convs (48 < 64).
+      // All groups: 1µs per conv, 5µs drain on last conv before next CSR write.
       for (int b = 0; b < 3; b++) begin
+        automatic int bp_num_delays;
         cfg_txn = make_cfg($sformatf("cfg_bp%0d", b));
         cfg_txn.mode_cfg  = MODE_MULTI_HIT;
         cfg_txn.input_sel = INPUT_SPAD;
         cfg_txn.out_mode  = OUT_MODE_RAW_FEATURES;
         cfg_txn.max_hits  = MAX_HITS_W'(15);
+        cfg_txn.wdt_ctx_timeout    = 16'hFFFF;
+        cfg_txn.wdt_global_timeout = 16'h0;
         gen.add(cfg_txn);
 
         gen.add(make_bp($sformatf("bp_sweep_%0d", b),
                         mptdc_bp_mode_e'(bp_modes[b]),
                         cfg.random_seed + conv_id));
 
-        for (int d = 0; d < 5; d++) begin
+        // Limit always_stall to 3 convs to avoid FIFO overflow (3×16=48 < 64)
+        bp_num_delays = (bp_modes[b] == BP_ALWAYS_STALL) ? 3 : 5;
+
+        for (int d = 0; d < bp_num_delays; d++) begin
           conv = make_conv($sformatf("conv_bp_%0d", conv_id));
           conv.start_stop_delay_ps = delays_ps[d];
           conv.arm_settle_ps       = 0;
-          conv.idle_after_ps       = 50_000;
+          conv.idle_after_ps       = (d == bp_num_delays - 1) ? 5_000_000 : 1_000_000;
           conv.require_nonzero_hits = 1'b1;
           conv.min_hits            = 1;
-          // stall mode: still expect packet (FIFO buffers)
           gen.add(conv);
           conv_id++;
         end
 
-        // drain after stall
+        // drain after stall: switch back to always_ready
         if (bp_modes[b] == BP_ALWAYS_STALL) begin
           gen.add(make_bp($sformatf("bp_drain_%0d", b),
                           BP_ALWAYS_READY, cfg.random_seed));
+          // Drain conv: let all stalled packets flush through narrow TX
+          conv = make_conv($sformatf("conv_drain_%0d", conv_id));
+          conv.start_stop_delay_ps = 10_000;
+          conv.arm_settle_ps       = 0;
+          conv.idle_after_ps       = 10_000_000;
+          conv.require_nonzero_hits = 1'b1;
+          conv.min_hits            = 1;
+          gen.add(conv);
+          conv_id++;
         end
       end
 
@@ -1589,7 +1606,7 @@ package mptdc_vip_pkg;
 
       conv = make_conv("conv_wdt_start_only");
       conv.start_only              = 1'b1;
-      conv.idle_after_ps           = 500_000;
+      conv.idle_after_ps           = 5_000_000;
       conv.check_watchdog_flag     = 1'b1;
       conv.expected_watchdog_flag  = 1'b1;
       conv.check_hit_range         = 1'b1;
@@ -1610,7 +1627,7 @@ package mptdc_vip_pkg;
       conv = make_conv("conv_recovery");
       conv.start_stop_delay_ps     = 15_000;
       conv.arm_settle_ps           = 0;
-      conv.idle_after_ps           = 50_000;
+      conv.idle_after_ps           = 5_000_000;
       conv.require_nonzero_hits    = 1'b1;
       conv.min_hits                = 1;
       conv.check_watchdog_flag     = 1'b1;
