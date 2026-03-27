@@ -166,6 +166,7 @@ All 13 directed tests pass on Verilator. The VIP framework targets Xcelium for c
 | [05 Calibration Plan](docs/05_OFFLINE_CALIBRATION_PLAN.md) | Calibration methodology, LUT results, averaging study |
 | [06 Deadtime Analysis](docs/06_DEADTIME_ANALYSIS.md) | Re-arm timing and throughput |
 | [07 Design Review](docs/07_DESIGN_REVIEW.md) | Pre-synthesis review findings and recommendations |
+| [08 Lab Runbook](docs/08_LAB_RUNBOOK.md) | Step-by-step server guide: clone → verify → calibrate → synthesize |
 
 ## Synthesis Note
 
