@@ -1594,11 +1594,13 @@ package mptdc_vip_pkg;
       end
 
       // Phase 3: watchdog tests (start-only)
+      // max_hits=0 means "unlimited" in HW (comparison disabled when cfg==0).
+      // The oscillators will capture hits until the watchdog fires.
       cfg_txn = make_cfg("cfg_wdt_ctx");
       cfg_txn.mode_cfg           = MODE_MULTI_HIT;
       cfg_txn.input_sel          = INPUT_SPAD;
       cfg_txn.out_mode           = OUT_MODE_RAW_FEATURES;
-      cfg_txn.max_hits           = MAX_HITS_W'(0);
+      cfg_txn.max_hits           = MAX_HITS_W'(15);
       cfg_txn.wdt_ctx_timeout    = 16'd100;
       cfg_txn.wdt_global_timeout = 16'h0;
       gen.add(cfg_txn);
@@ -1609,9 +1611,9 @@ package mptdc_vip_pkg;
       conv.idle_after_ps           = 5_000_000;
       conv.check_watchdog_flag     = 1'b1;
       conv.expected_watchdog_flag  = 1'b1;
-      conv.check_hit_range         = 1'b1;
-      conv.min_hits                = 0;
-      conv.max_hits_allowed        = 0;
+      // Don't check hit range: with start-only, oscillators free-run
+      // and capture a non-deterministic number of hits before watchdog
+      conv.check_hit_range         = 1'b0;
       gen.add(conv);
       conv_id++;
 
