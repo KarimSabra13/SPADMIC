@@ -224,7 +224,7 @@ case "$SIM" in
       XRUN_FLAGS+=(-input "@database -open waves -into $TB_BUILD/waves.shm -default @probe -create mptdc_vip_tb -all -depth all @run @exit")
     fi
     echo "--- Compiling/running VIP test with xrun ---"
-    run_in_dir "$TB_BUILD" xrun "${XRUN_FLAGS[@]}" "${PLUSARGS[@]}"
+    run_in_dir "$REPO_ROOT" xrun "${XRUN_FLAGS[@]}" "${PLUSARGS[@]}"
     ;;
 
   vcs)
