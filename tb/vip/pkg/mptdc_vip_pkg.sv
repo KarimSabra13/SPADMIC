@@ -1594,13 +1594,15 @@ package mptdc_vip_pkg;
       end
 
       // Phase 3: watchdog tests (start-only)
-      // max_hits=0 means "unlimited" in HW (comparison disabled when cfg==0).
-      // The oscillators will capture hits until the watchdog fires.
+      // max_hits=0 disables the maxhits comparator in HW (meas_ctrl line 142:
+      // max_hits_cfg_i != '0).  This keeps the measurement open so only the
+      // watchdog can close it.  PD cells still fire (both oscillators start on
+      // START) producing 15 hits, but the measurement won't close by maxhits.
       cfg_txn = make_cfg("cfg_wdt_ctx");
       cfg_txn.mode_cfg           = MODE_MULTI_HIT;
       cfg_txn.input_sel          = INPUT_SPAD;
       cfg_txn.out_mode           = OUT_MODE_RAW_FEATURES;
-      cfg_txn.max_hits           = MAX_HITS_W'(15);
+      cfg_txn.max_hits           = MAX_HITS_W'(0);
       cfg_txn.wdt_ctx_timeout    = 16'd100;
       cfg_txn.wdt_global_timeout = 16'h0;
       gen.add(cfg_txn);
