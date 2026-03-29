@@ -1,0 +1,48 @@
+# ── Build artifacts ───────────────────────────────────────────────────
+obj_dir*/
+build/
+*.vvp
+*.o
+*.a
+
+# ── Simulation outputs ───────────────────────────────────────────────
+*.log
+*.jou
+*.wlf
+*.vcd
+*.fsdb
+*.shm
+*.key
+*.history
+xrun.*
+INCA_libs/
+xcelium.d/
+
+# ── IDE / tool configs ───────────────────────────────────────────────
+*.cfproj
+*:Zone.Identifier
+
+# ── Python ───────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+.venv/
+
+# ── Results (large data, not tracked) ────────────────────────────────
+results/
+
+# ── TB dump files ────────────────────────────────────────────────────
+tb/**/*.csv
+tb/**/*.txt
+
+# ── Synthesis outputs (Genus) ─────────────────────────────────────────
+syn/work/
+syn/outputs/
+syn/reports/
+syn/logs/
+*.genus_db
+fv/
+
+# ── Docs build ───────────────────────────────────────────────────────
+.venv_docs/
+docs/datasheet/build/
+node_modules/

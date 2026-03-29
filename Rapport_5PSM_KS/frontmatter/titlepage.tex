@@ -1,0 +1,64 @@
+\begin{titlepage}
+
+% ---------- Background full page ----------
+\AddToShipoutPictureBG*{%
+  \AtPageLowerLeft{%
+    \includegraphics[width=\paperwidth,height=\paperheight]{figures/cover/cover_bg.png}%
+  }%
+}
+
+% ---------- Overlay elements (logos + text) ----------
+\AddToShipoutPictureFG*{%
+
+  % --- Logo CPE (haut gauche) ---
+  \AtPageUpperLeft{%
+    \raisebox{-4.8cm}[0pt][0pt]{\hspace{-0.6cm}%
+      \includegraphics[height=6cm]{figures/logos/cpe.png}%
+    }%
+  }%
+
+  % --- Logo IP2I (bas droite) ---
+  \AtPageLowerLeft{%
+    \hspace{16.2cm}\raisebox{0.5cm}[0pt][0pt]{%
+      \includegraphics[height=4cm]{figures/logos/ip2i.png}%
+    }%
+  }%
+
+  % --- Logo CNRS (bas gauche, optionnel) ---
+  %\AtPageLowerLeft{%
+  %  \hspace{1.6cm}\raisebox{1.1cm}[0pt][0pt]{%
+  %    \includegraphics[height=1.5cm]{figures/logos/cnrs.png}%
+  %  }%
+  %}%
+
+}
+
+\begin{center}
+\vspace*{5.2cm}
+
+{\Large \textbf{CPE Lyon}} \newline
+{\large Rapport d'alternance (PFE) -- 3\textsuperscript{e} année} \newline
+{\large IP2I -- CNRS} \newline
+
+\vspace{1.0cm}
+
+{\LARGE \textbf{Titre du PFE}} \newline
+\vspace{0.3cm}
+{\large Sous-titre optionnel} \newline
+
+\vspace{1.2cm}
+
+{\large \textbf{Karim SABRA}} \newline
+
+\vspace{1.0cm}
+
+\begin{tabular}{ll}
+\textbf{Encadrant IP2I} &  BECHETOILLE Edouard \\
+\textbf{Encadrant école} & Massouri Abdelbassat \\
+\textbf{Période} & 09/2025 -- 09/2026 \\
+\end{tabular}
+
+\vfill
+\end{center}
+
+\end{titlepage}
