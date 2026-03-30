@@ -118,10 +118,13 @@ module tb_cal_inject;
       cal_stop = 1; #1_000; cal_stop = 0;
 
       #800_000;
-      narrow_ready = 1;
 
       fork
-        begin collect_packet(clk_sys, narrow_valid, narrow_ready, narrow_data, pkt, wc); conv_ok = 1; end
+        begin
+          @(negedge clk_sys);
+          collect_packet(clk_sys, narrow_valid, narrow_ready, narrow_data, pkt, wc);
+          conv_ok = 1;
+        end
         begin #200_000_000; end
       join_any
       disable fork;
