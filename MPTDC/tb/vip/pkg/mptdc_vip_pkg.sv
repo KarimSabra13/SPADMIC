@@ -437,20 +437,22 @@ package mptdc_vip_pkg;
     endfunction
 
     task run();
-      vif.narrow_ready = 1'b1;
+      vif.narrow_ready <= 1'b1;
       while (!stop_request) begin
         @(negedge vif.clk_sys);
+        // Update READY in the NBA region so the monitor's negedge sampler
+        // still observes the previous cycle's settled handshake state.
         case (mode)
-          BP_ALWAYS_READY: vif.narrow_ready = 1'b1;
+          BP_ALWAYS_READY: vif.narrow_ready <= 1'b1;
           BP_RANDOM_50: begin
             rng_state = (rng_state * 32'h41C6_4E6D) + 32'h3039;
-            vif.narrow_ready = rng_state[0];
+            vif.narrow_ready <= rng_state[0];
           end
-          BP_ALWAYS_STALL: vif.narrow_ready = 1'b0;
-          default:         vif.narrow_ready = 1'b1;
+          BP_ALWAYS_STALL: vif.narrow_ready <= 1'b0;
+          default:         vif.narrow_ready <= 1'b1;
         endcase
       end
-      vif.narrow_ready = 1'b1;
+      vif.narrow_ready <= 1'b1;
     endtask
   endclass
 
