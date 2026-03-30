@@ -134,6 +134,10 @@ run_in_dir() {
   fi
 }
 
+sanitize_path_token() {
+  printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_'
+}
+
 if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
   if [[ "$SIM" == "verilator" ]]; then
     echo "Error: Verilator smoke does not support --func-cov/--code-cov; use --sim xrun or --sim xcelium on a Cadence machine." >&2
@@ -153,11 +157,6 @@ fi
 if [[ "$SIM" == "vcs" && -n "$COV_TEST_NAME" ]]; then
   echo "Error: --cov-test-name is only supported for xrun/xcelium coverage runs" >&2
   exit 1
-fi
-
-TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}"
-if [[ $DRY_RUN -eq 0 ]]; then
-  mkdir -p "$TB_BUILD"
 fi
 
 PLUSARGS=("+MPTDC_TEST=$TEST_NAME")
@@ -182,8 +181,23 @@ COMMON_FILES=(
 COV_DIR=""
 COV_TEST=""
 if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
-  COV_DIR="${COV_WORKDIR:-$TB_BUILD/cov_work}"
   COV_TEST="${COV_TEST_NAME:-$TEST_NAME}"
+fi
+
+TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}"
+if [[ -n "$COV_TEST_NAME" ]]; then
+  # Parallel xrun campaign jobs must not share one xcelium.d library.
+  TB_BUILD+="_$(sanitize_path_token "$COV_TEST_NAME")"
+elif [[ -n "$SEED" ]]; then
+  TB_BUILD+="_seed_$(sanitize_path_token "$SEED")"
+fi
+
+if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
+  COV_DIR="${COV_WORKDIR:-$TB_BUILD/cov_work}"
+fi
+
+if [[ $DRY_RUN -eq 0 ]]; then
+  mkdir -p "$TB_BUILD"
 fi
 
 case "$SIM" in
