@@ -162,8 +162,8 @@ Accesses DUT registers via the CSR interface (valid/ready handshake).
 
 - `program_cfg(cfg)` — writes MODE, MAX_HITS, WDT registers
 - `arm_only()` — sets CSR_CTRL bit 0 to arm conversion
-- `fifo_clear()` — sets CSR_CTRL bit 1
-- `soft_reset()` — sets CSR_CTRL bit 2
+- `fifo_clear()` — writes `CSR_CTRL=0x2`; clears the FIFO pulse and also de-arms because bit 0 is written as `0`
+- `soft_reset()` — writes `CSR_CTRL=0x4`; resets the local top-level domain back to defaults
 
 ### Pulse Driver (`mptdc_pulse_driver`)
 Injects asynchronous START/STOP pulses on SPAD or CAL inputs.
@@ -345,7 +345,8 @@ Protocol: Simple valid/ready streaming
 | 8 | `long_random` | 8 | All timestamps valid | Extended random |
 | 9 | `multi_conv_rearm_stress` | 12 | conv_id 0→11 | Rearm + mode switch |
 | 10 | `global_watchdog_recovery` | 1–2 | WDT_STATUS.global_trip ≥ 1 | Global watchdog |
-| 11 | `jitter_robustness` | 6 | Timestamps under jitter | Clock jitter |
+| 11 | `csr_readback_control` | 0 scoreboard packets | CSR readback, FIFO clear, soft reset | Control-path closure |
+| 12 | `jitter_robustness` | 6 | Timestamps under jitter | Clock jitter |
 
 ### Detailed Test Descriptions
 
@@ -492,7 +493,23 @@ mechanism. It must reset the TDC and report the event.
 
 ---
 
-#### Test 11: `jitter_robustness`
+#### Test 11: `csr_readback_control`
+**Purpose:** Close CSR/control coverage around readback, `fifo_clr`, and `soft_rst`.
+
+**Sequence:**
+1. Configure: FIRST_HIT, CAL input, FULL output, custom max_hits/watchdogs
+2. Force `ALWAYS_STALL` and queue two conversions with `expect_packet=0`
+3. Post-run: read back `MODE`, `MAX_HITS`, watchdog regs, `CONV_COUNT`, `FIFO_STATUS`
+4. Issue `fifo_clear()` and verify FIFO empties and `conv_arm` drops
+5. Re-arm, inject START-only, observe `STATUS.busy=1`
+6. Issue `soft_reset_and_fifo_clear()` and verify the local domain returns to default CSR settings
+
+**Why it matters:** This is the main closure test for the previously weak
+`mptdc_csr_if`, `mptdc_csr_minimal`, and top-level soft-reset path.
+
+---
+
+#### Test 12: `jitter_robustness`
 **Purpose:** Verify TDC accuracy under oscillator jitter.
 
 **Sequence:**
@@ -504,8 +521,8 @@ mechanism. It must reset the TDC and report the event.
 **Why it matters:** Real oscillators have jitter. This test validates
 that the Vernier TDC maintains measurement accuracy despite phase noise.
 
-> **Note:** This test is in the smoke suite but NOT in the default
-> coverage suite because it requires jitter plusargs.
+> **Note:** The default Cadence coverage wrapper now runs this test with
+> built-in jitter plusargs so the heavy-jitter bins are part of the maintained closure flow.
 
 ---
 
@@ -516,7 +533,7 @@ that the Vernier TDC maintains measurement accuracy despite phase noise.
 ```bash
 bash ci/run_vip_smoke.sh
 ```
-Runs all 11 tests. Expected: 11/11 pass in roughly 5–8 minutes.
+Runs all 12 tests. Expected: 12/12 pass in roughly 5–8 minutes.
 
 ### Single Test (any simulator)
 
@@ -537,7 +554,7 @@ bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun \
 ```bash
 bash ci/run_vip_coverage.sh --sim xrun --clean
 ```
-Runs 9 tests with functional + code coverage. Results in
+Runs 13 tests with functional + code coverage. Results in
 `build/vip_coverage_xrun/cov_work/`.
 
 ### Broader coverage + stress campaign
@@ -566,40 +583,32 @@ Use `-exec` or `-execcmd` with Tcl commands instead.
 Create a Tcl script `gen_cov_report.tcl`:
 
 ```tcl
-# Functional coverage summary
-report_metrics -out func_summary.txt -detail -kind cover
-
-# Code coverage summary
-report_metrics -out code_summary.txt -detail -kind block
-
+# IMC 23.03 report_metrics writes HTML report directories.
+# Aggregate gives the compact summary, expand gives the detailed hierarchy.
+report_metrics -out func_summary -detail -kind aggregate
+report_metrics -out func_detail -detail -kind expand
 exit
 ```
 
 Run it:
 
 ```bash
-imc -load build/vip_coverage_xrun/cov_work/scope/test \
+bash scripts/sim/report_coverage.sh --cov-root build/vip_coverage_xrun --merge-name vip_merged
+imc -load build/vip_coverage_xrun/cov_work/scope/vip_merged \
     -exec gen_cov_report.tcl -nocopyright 2>&1 | tail -20
 ```
 
 ### Alternative: use `imc -execcmd` inline
 
 ```bash
-# Functional coverage
-imc -load build/vip_coverage_xrun/cov_work/scope/test \
-    -execcmd "report_metrics -out func_report.txt -detail -kind cover; exit" \
-    -nocopyright
-
-# Code coverage
-imc -load build/vip_coverage_xrun/cov_work/scope/test \
-    -execcmd "report_metrics -out code_report.txt -detail -kind block; exit" \
-    -nocopyright
+# Merge and generate IMC HTML reports in one step
+bash scripts/sim/report_coverage.sh --cov-root build/vip_coverage_xrun --merge-name vip_merged
 ```
 
 ### Interactive IMC (GUI)
 
 ```bash
-imc -load build/vip_coverage_xrun/cov_work/scope/test &
+imc -load build/vip_coverage_xrun/cov_work/scope/vip_merged &
 ```
 
 In the GUI:
@@ -628,7 +637,7 @@ In the GUI:
 |------|--------|--------------|
 | `cp_hits.maxed` (15 hits) | Needs exact max_hits=15 with long delay | `long_random` test with >30 ns delay |
 | `cp_hits.zero` (0 hits) | Needs max_hits=0 or very short delay | `start_watchdog` test covers this |
-| `cp_jitter.heavy` | Only hit when jitter_robustness runs | Add to coverage suite with plusargs |
+| `cp_jitter.heavy` | Should now be covered by default suite | If still missing, rerun `jitter_robustness` with non-zero plusargs and inspect IMC merge inputs |
 | `bp_x_delay` sparse | Not all BP×delay combos exercised | Add targeted test or extend `long_random` |
 | `flags_x_hits` sparse | 48-bin cross; many flag combos are rare | Expected — focus on realistic combos |
 
@@ -636,16 +645,16 @@ In the GUI:
 
 ## 12. Expected Results
 
-### Smoke Regression (11 tests)
+### Smoke Regression (12 tests)
 
 ```
-VIP RESULTS: 11 passed, 0 failed out of 11
+VIP RESULTS: 12 passed, 0 failed out of 12
 ```
 
-### Coverage Regression (9 tests)
+### Coverage Regression (13 tests)
 
 ```
-VIP coverage results: 9 passed, 0 failed
+VIP coverage results: 13 passed, 0 failed
 ```
 
 ### Per-Test Expected Behavior
@@ -662,6 +671,7 @@ VIP coverage results: 9 passed, 0 failed
 | long_random | ~5s | 8 | All timestamps verified |
 | multi_conv_rearm_stress | ~3s | 12 | conv_id 0→11 |
 | global_watchdog_recovery | ~1s | 1–2 | `global_trip_cnt ≥ 1` |
+| csr_readback_control | ~8s | 0 scoreboard packets | CSR readback + `fifo_clr` + `soft_rst` semantics |
 | jitter_robustness | ~3s | 6 | Timestamps valid under jitter |
 
 ---
@@ -727,8 +737,8 @@ tb/common/
 └── mptdc_raw_monitor.sv       ← raw narrow-bus monitor (directed TBs)
 
 ci/
-├── run_vip_smoke.sh           ← smoke regression (11 tests, Verilator)
-├── run_vip_coverage.sh        ← coverage regression (9 tests, xrun)
+├── run_vip_smoke.sh           ← smoke regression (12 tests, Verilator)
+├── run_vip_coverage.sh        ← coverage regression (13 tests, xrun)
 └── run_coverage_campaign.sh   ← merged coverage + stress campaign (xrun)
 
 scripts/sim/

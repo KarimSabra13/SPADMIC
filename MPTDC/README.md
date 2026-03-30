@@ -1,7 +1,7 @@
 # MPTDC — Vernier Multi-Phase Time-to-Digital Converter
 
 > **Author:** Karim Sabra  
-> **Current status:** RTL and VIP locally verified, Cadence coverage flow ready, trial synthesis flow prepared
+> **Current status:** Cadence baseline campaign `109/109` passed, merged coverage baseline `67.03%`, targeted closure on CSR/top/reset paths in progress
 > **License:** Copyright © 2025 Karim Sabra. All rights reserved.
 
 ## What this repository is
@@ -39,19 +39,17 @@ Key architectural facts from RTL:
 
 ### Verification
 
-Local Verilator validation is green on the current tree:
+Most recently revalidated on the current tree:
 
-- `bash ci/run_smoke.sh`
-- `bash ci/run_full_regression.sh`
-- `bash ci/run_vip_smoke.sh`
-- `bash scripts/sim/run_vip_test.sh stress_random --sim verilator --seed 2 --num-conv 5000`
+- `bash ci/run_vip_smoke.sh` → `12/12` pass
+- `bash scripts/sim/run_vip_test.sh csr_readback_control --sim verilator`
+- `bash scripts/sim/run_vip_test.sh coverage_exhaustive --sim verilator`
 
 That means:
 
-- unit benches are passing
-- active integration benches are passing
-- the maintained VIP smoke suite (`11` tests) is passing
-- the exact long stress reproducer used during coverage-campaign debugging is passing locally
+- the maintained VIP smoke suite (`12` tests) is passing
+- the new CSR/control-path closure scenario is regression-safe locally
+- the exhaustive VIP closure test still passes after the coverage-suite expansion
 
 Cadence-only flows are prepared but must be run on a machine with `xrun` / `xcelium`, `imc`, and `genus`.
 
@@ -63,10 +61,18 @@ There are two distinct Cadence coverage entrypoints:
   - stable merged VIP coverage suite
   - functional + code coverage
   - shared coverage DB under `build/vip_coverage_xrun/`
+  - current repo contents expand this suite to `13` directed tests, including CSR/readback and jitter closure
 
 - `bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32`
   - exhaustive + multi-seed stress coverage campaign
   - merged coverage DB under `build/coverage_campaign/`
+
+Latest measured Cadence campaign baseline (before the new directed-closure expansion):
+
+- `109 / 109` tests passed (`9` directed + `100` stress),
+- merged IMC aggregate report: `10986 / 16389 (67.03%)`,
+- average grade: `73.62%`,
+- weakest reported modules: `mptdc_top_asic 45.95%`, `mptdc_csr_if 28.26%`, `mptdc_csr_minimal 61.39%`, `mptdc_reset_sync 61.67%`.
 
 ### Calibration
 
@@ -149,16 +155,17 @@ bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --j
 ### 5) Review coverage in IMC
 
 ```bash
-imc -load build/coverage_campaign/cov_work/scope/test &
+bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
+
+# Open the merged run in IMC
+imc -load build/coverage_campaign/cov_work/scope/merged_cov &
+
+# Open the generated HTML summary
+xdg-open build/coverage_campaign/cov_report_aggregate/index.html
 ```
 
-Generate a text report:
-
-```bash
-imc -load build/coverage_campaign/cov_work/scope/test \
-  -execcmd "report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover; exit" \
-  -nocopyright
-```
+`xrun` writes one coverage bucket per `-covtest`, so IMC reporting must merge
+those buckets before load/report.
 
 ### 6) Data collection and calibration
 
@@ -185,9 +192,9 @@ genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 | Unit benches | `5` |
 | Active integration benches | `9` in `ci/run_full_regression.sh` |
 | Collection / characterization benches | `tb_campaign_collect` plus maintained collection flows |
-| VIP smoke tests | `11` in `ci/run_vip_smoke.sh` |
-| VIP coverage suite | `9` in `ci/run_vip_coverage.sh` |
-| Coverage campaign | `coverage_exhaustive` + `stress_random × N seeds` |
+| VIP smoke tests | `12` in `ci/run_vip_smoke.sh` |
+| VIP coverage suite | `13` in `ci/run_vip_coverage.sh` |
+| Coverage campaign | `13` directed tests + `stress_random × N seeds` |
 
 ## Coverage guidance
 
@@ -204,6 +211,8 @@ Recommended interpretation order for Cadence coverage:
    - simulator / environment limitation
    - missing scenario
    - real RTL or VIP bug
+
+At the current checkpoint, the most important open holes are not packetizer stress anymore; they are CSR/control/reset visibility and top-level wrapper coverage.
 
 ## Calibration note
 

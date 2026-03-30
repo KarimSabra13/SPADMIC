@@ -12,7 +12,7 @@ SPADMIC is the digital readout IC for a SPAD (Single-Photon Avalanche Diode) mat
 
 | Directory | Description | Status |
 |-----------|-------------|--------|
-| [`MPTDC/`](MPTDC/) | Vernier Multi-Phase Time-to-Digital Converter | Pre-synthesis, calibration-validated |
+| [`MPTDC/`](MPTDC/) | Vernier Multi-Phase Time-to-Digital Converter | `109/109` Cadence campaign baseline passed; exploratory calibration-ready; targeted coverage closure ongoing |
 | [`Rapport_5PSM_KS/`](Rapport_5PSM_KS/) | Rapport d'alternance 5PSM autour de SPADMIC | Rédaction en cours |
 
 ## MPTDC
@@ -25,6 +25,12 @@ A high-precision Vernier TDC with an 81-cell phase detector matrix, designed for
 - double-buffered context architecture,
 - 16-bit ready/valid output with 3 selectable modes,
 - verification and calibration infrastructure.
+
+Current checkpoint summary for `MPTDC/`:
+
+- latest broad Cadence baseline campaign passed `109/109`,
+- merged IMC aggregate coverage baseline is `10986 / 16389 (67.03%)` with average grade `73.62%`,
+- the repository is suitable for **exploratory offline calibration**, but not yet for synthesis signoff or freeze.
 
 See [`MPTDC/README.md`](MPTDC/README.md) for the detailed architecture, flows, and status of the TDC implementation.
 

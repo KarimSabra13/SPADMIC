@@ -30,6 +30,10 @@ DEFAULT_TESTS=(
   cal_inject
   overflow_status
   long_random
+  multi_conv_rearm_stress
+  global_watchdog_recovery
+  jitter_robustness
+  csr_readback_control
   coverage_exhaustive
 )
 SELECTED_TESTS=()
@@ -168,6 +172,12 @@ for idx in "${!TESTS[@]}"; do
     --cov-workdir "$COV_WORKDIR"
     --cov-test-name "$test_name"
   )
+
+  case "$test_name" in
+    jitter_robustness)
+      cmd+=(--osc-jitter-sigma 8 --osc-jitter-bound 24)
+      ;;
+  esac
 
   if [[ $WAVES -eq 1 ]]; then
     cmd+=(--waves)

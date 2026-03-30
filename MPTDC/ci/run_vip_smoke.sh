@@ -40,6 +40,7 @@ run_smoke overflow_status
 run_smoke long_random
 run_smoke multi_conv_rearm_stress
 run_smoke global_watchdog_recovery
+run_smoke csr_readback_control
 run_smoke jitter_robustness --osc-jitter-sigma 8 --osc-jitter-bound 24
 
 echo "VIP smoke results: $pass passed, $fail failed"

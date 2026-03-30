@@ -1532,6 +1532,180 @@ package mptdc_vip_pkg;
     endfunction
   endclass
 
+  class mptdc_csr_readback_control_test extends mptdc_base_test;
+    logic [CSR_DATA_W-1:0] expected_mode_data;
+    logic [CSR_DATA_W-1:0] expected_max_hits_data;
+    logic [CSR_DATA_W-1:0] expected_wdt_ctx_data;
+    logic [CSR_DATA_W-1:0] expected_wdt_global_data;
+    int                    expected_conv_count;
+
+    function new();
+      super.new("csr_readback_control");
+      expected_mode_data       = '0;
+      expected_max_hits_data   = '0;
+      expected_wdt_ctx_data    = '0;
+      expected_wdt_global_data = '0;
+      expected_conv_count      = 0;
+    endfunction
+
+    task automatic expect_reg_eq(input string label,
+                                 input logic [CSR_ADDR_W-1:0] addr,
+                                 input logic [CSR_DATA_W-1:0] expected,
+                                 input logic [CSR_DATA_W-1:0] mask = {CSR_DATA_W{1'b1}});
+      logic [CSR_DATA_W-1:0] actual;
+      env.csr_drv.read(addr, actual);
+      if ((actual & mask) !== (expected & mask)) begin
+        env.sb.fail($sformatf("%s mismatch: got 0x%08h expected 0x%08h mask 0x%08h",
+                              label, actual, expected, mask));
+      end
+    endtask
+
+    virtual function void build_sequence(mptdc_generator gen);
+      mptdc_cfg_txn  cfg_txn;
+      mptdc_conv_txn conv;
+      gen.add(make_reset());
+
+      cfg_txn = make_cfg("cfg_csr_readback");
+      cfg_txn.mode_cfg           = MODE_FIRST_HIT;
+      cfg_txn.input_sel          = INPUT_CAL;
+      cfg_txn.out_mode           = OUT_MODE_FULL;
+      cfg_txn.max_hits           = MAX_HITS_W'(3);
+      cfg_txn.wdt_ctx_timeout    = 16'd400;
+      cfg_txn.wdt_global_timeout = 16'd64;
+
+      expected_mode_data         = '0;
+      expected_mode_data[0]      = cfg_txn.mode_cfg;
+      expected_mode_data[1]      = cfg_txn.input_sel;
+      expected_mode_data[3:2]    = cfg_txn.out_mode;
+      expected_max_hits_data     = '0;
+      expected_max_hits_data[MAX_HITS_W-1:0] = cfg_txn.max_hits;
+      expected_wdt_ctx_data      = '0;
+      expected_wdt_ctx_data[15:0] = cfg_txn.wdt_ctx_timeout;
+      expected_wdt_global_data   = '0;
+      expected_wdt_global_data[15:0] = cfg_txn.wdt_global_timeout;
+      expected_conv_count        = 2;
+
+      gen.add(cfg_txn);
+      gen.add(make_bp("bp_stall", BP_ALWAYS_STALL, cfg.random_seed));
+
+      for (int i = 0; i < expected_conv_count; i++) begin
+        conv = make_conv($sformatf("csr_fifo_fill_%0d", i));
+        conv.source_sel          = INPUT_CAL;
+        conv.start_stop_delay_ps = 12_000 + (i * 2_000);
+        conv.expect_packet       = 1'b0;
+        conv.check_hit_range     = 1'b0;
+        conv.idle_after_ps       = (i == (expected_conv_count - 1)) ? 5_000_000 : 1_000_000;
+        gen.add(conv);
+      end
+    endfunction
+
+    virtual task post_run();
+      logic [CSR_DATA_W-1:0] ctrl_data;
+      logic [CSR_DATA_W-1:0] status_data;
+      logic [CSR_DATA_W-1:0] fifo_status_data;
+      logic [CSR_DATA_W-1:0] conv_count_data;
+      logic [CSR_DATA_W-1:0] invalid_data;
+
+      csr_vif.csr_valid       = 1'b0;
+      csr_vif.csr_write       = 1'b0;
+      narrow_vif.narrow_ready = 1'b0;
+      #200_000;
+
+      expect_reg_eq("CSR_MODE", CSR_MODE, expected_mode_data, 32'h0000_000F);
+      expect_reg_eq("CSR_MAX_HITS", CSR_MAX_HITS, expected_max_hits_data,
+                    {{(CSR_DATA_W-MAX_HITS_W){1'b0}}, {MAX_HITS_W{1'b1}}});
+      expect_reg_eq("CSR_WDT_CTX", CSR_WDT_CTX, expected_wdt_ctx_data, 32'h0000_FFFF);
+      expect_reg_eq("CSR_WDT_GLOBAL", CSR_WDT_GLOBAL, expected_wdt_global_data, 32'h0000_FFFF);
+
+      env.csr_drv.read(CSR_CTRL, ctrl_data);
+      if (ctrl_data[0] !== 1'b1)
+        env.sb.fail("CSR_CTRL expected conv_arm=1 after queued conversions");
+
+      env.csr_drv.read(CSR_CONV_COUNT, conv_count_data);
+      if (conv_count_data != expected_conv_count) begin
+        env.sb.fail($sformatf("CSR_CONV_COUNT mismatch: got %0d expected %0d",
+                              conv_count_data, expected_conv_count));
+      end
+
+      env.csr_drv.read(CSR_FIFO_STATUS, fifo_status_data);
+      if (fifo_status_data[FIFO_LVL_W-1:0] == '0)
+        env.sb.fail("CSR_FIFO_STATUS expected fifo_level > 0 before fifo_clear");
+      if (fifo_status_data[FIFO_LVL_W+1] !== 1'b0)
+        env.sb.fail("CSR_FIFO_STATUS expected fifo_empty=0 before fifo_clear");
+
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if (status_data[0] !== 1'b1)
+        env.sb.fail("CSR_STATUS expected ready=1 before fifo_clear");
+
+      env.csr_drv.read(6'h3C, invalid_data);
+      if (invalid_data !== '0)
+        env.sb.fail($sformatf("Invalid CSR address read expected zero, got 0x%08h", invalid_data));
+
+      env.csr_drv.fifo_clear();
+      #100_000;
+
+      env.csr_drv.read(CSR_CTRL, ctrl_data);
+      if (ctrl_data[0] !== 1'b0)
+        env.sb.fail("fifo_clear write should leave conv_arm cleared because CSR_CTRL[0]=0");
+
+      env.csr_drv.read(CSR_FIFO_STATUS, fifo_status_data);
+      if (fifo_status_data[FIFO_LVL_W-1:0] != '0)
+        env.sb.fail($sformatf("FIFO clear failed: fifo_level=%0d", fifo_status_data[FIFO_LVL_W-1:0]));
+      if (fifo_status_data[FIFO_LVL_W+1] !== 1'b1)
+        env.sb.fail("FIFO clear failed: fifo_empty did not assert");
+
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if (status_data[0] !== 1'b0)
+        env.sb.fail("CSR_STATUS expected ready=0 after fifo_clear cleared conv_arm");
+
+      expect_reg_eq("CSR_MODE sticky after fifo_clear", CSR_MODE, expected_mode_data, 32'h0000_000F);
+
+      env.csr_drv.arm_only();
+      #50_000;
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if ((status_data[0] !== 1'b1) || (status_data[1] !== 1'b0))
+        env.sb.fail($sformatf("Expected ready=1,busy=0 after re-arm, got status=0x%08h", status_data));
+
+      narrow_vif.narrow_ready = 1'b1;
+      async_vif.inject_start_only(INPUT_CAL, 1_000);
+      #50_000;
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if (status_data[1] !== 1'b1)
+        env.sb.fail($sformatf("Expected busy=1 during start-only ownership, got status=0x%08h", status_data));
+
+      env.csr_drv.soft_reset_and_fifo_clear();
+      #200_000;
+
+      env.csr_drv.read(CSR_CTRL, ctrl_data);
+      if (ctrl_data[0] !== 1'b0)
+        env.sb.fail("soft_reset_and_fifo_clear should leave conv_arm=0");
+
+      env.csr_drv.read(CSR_FIFO_STATUS, fifo_status_data);
+      if (fifo_status_data[FIFO_LVL_W-1:0] != '0)
+        env.sb.fail($sformatf("Combined reset failed to clear FIFO level (%0d)",
+                              fifo_status_data[FIFO_LVL_W-1:0]));
+      if (fifo_status_data[FIFO_LVL_W+1] !== 1'b1)
+        env.sb.fail("Combined reset expected fifo_empty=1");
+
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if ((status_data[0] !== 1'b0) || (status_data[1] !== 1'b0))
+        env.sb.fail($sformatf("Expected ready=0,busy=0 after combined reset, got status=0x%08h", status_data));
+
+      expect_reg_eq("CSR_MODE reset default after soft reset", CSR_MODE, '0, 32'h0000_000F);
+      expect_reg_eq("CSR_MAX_HITS reset default after soft reset", CSR_MAX_HITS,
+                    CSR_DATA_W'(MAX_HITS), {{(CSR_DATA_W-MAX_HITS_W){1'b0}}, {MAX_HITS_W{1'b1}}});
+      expect_reg_eq("CSR_WDT_CTX reset default after soft reset", CSR_WDT_CTX, '0, 32'h0000_FFFF);
+      expect_reg_eq("CSR_WDT_GLOBAL reset default after soft reset", CSR_WDT_GLOBAL, '0,
+                    32'h0000_FFFF);
+
+      env.csr_drv.arm_only();
+      #50_000;
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if ((status_data[0] !== 1'b1) || (status_data[1] !== 1'b0))
+        env.sb.fail($sformatf("Expected ready=1,busy=0 after final re-arm, got status=0x%08h", status_data));
+    endtask
+  endclass
+
   // ---------------------------------------------------------------------------
   // coverage_exhaustive — systematically walks ALL config combinations
   //   2 modes × 2 sources × 3 outputs × 3 backpressures × 5 delays
@@ -1804,6 +1978,7 @@ package mptdc_vip_pkg;
       mptdc_multi_conv_rearm_stress_test multi_conv_t;
       mptdc_global_watchdog_recovery_test global_wdt_t;
       mptdc_jitter_robustness_test jitter_t;
+      mptdc_csr_readback_control_test csr_ctrl_t;
       mptdc_coverage_exhaustive_test cov_exh_t;
       mptdc_stress_random_test stress_t;
       case (name)
@@ -1850,6 +2025,10 @@ package mptdc_vip_pkg;
         "jitter_robustness": begin
           jitter_t = new();
           t = jitter_t;
+        end
+        "csr_readback_control": begin
+          csr_ctrl_t = new();
+          t = csr_ctrl_t;
         end
         "coverage_exhaustive": begin
           cov_exh_t = new();

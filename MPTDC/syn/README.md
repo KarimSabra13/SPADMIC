@@ -21,6 +21,8 @@ The synthesis collateral in `syn/` is prepared for a trial Genus run, but it sho
 At the current checkpoint:
 
 - the RTL and verification environment are locally validated
+- the latest broad Cadence verification baseline passed `109/109`, but merged coverage is still only `67.03%` overall (average grade `73.62%`)
+- targeted closure work is currently focused on CSR/top/reset coverage, so synthesis should still be treated as exploratory rather than freeze-ready
 - the oscillator behavioral model is a simulation-only artifact and is excluded from synthesis
 - the async frontend intentionally contains `5` latch-style storage elements that must be reviewed, not treated as accidental inference
 - final QoR, timing, and library legality still depend on your actual XFAB/XH018 PDK installation and Genus run logs

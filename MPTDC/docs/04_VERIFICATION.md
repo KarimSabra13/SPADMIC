@@ -93,6 +93,7 @@ Smoke regression wrapper for the VIP suite. It currently exercises:
 - `long_random`
 - `multi_conv_rearm_stress`
 - `global_watchdog_recovery`
+- `csr_readback_control`
 - `jitter_robustness` (run with non-zero oscillator jitter plusargs)
 
 ### 2.7 `ci/run_vip_coverage.sh`
@@ -116,6 +117,10 @@ The default merged coverage suite currently contains:
 - `cal_inject`
 - `overflow_status`
 - `long_random`
+- `multi_conv_rearm_stress`
+- `global_watchdog_recovery`
+- `jitter_robustness`
+- `csr_readback_control`
 - `coverage_exhaustive`
 
 Examples:
@@ -276,14 +281,17 @@ At the current checkpoint:
 
 - `ci/run_smoke.sh` is expected to pass locally
 - `ci/run_full_regression.sh` is expected to pass locally
-- `ci/run_vip_smoke.sh` is expected to pass locally (`11/11`)
-- `scripts/sim/run_vip_test.sh stress_random --sim verilator --seed 2 --num-conv 5000` has been used as the maintained long-stress local reproducer and passes on the current tree
+- `ci/run_vip_smoke.sh` was revalidated on the current tree (`12/12`)
+- `scripts/sim/run_vip_test.sh csr_readback_control --sim verilator` passes on the current tree
+- `scripts/sim/run_vip_test.sh coverage_exhaustive --sim verilator` passes on the current tree
+- the latest measured Cadence campaign baseline passed `109/109` with merged IMC aggregate coverage `10986 / 16389 (67.03%)`, average grade `73.62%`
+- the weakest measured modules in that baseline were `mptdc_top_asic`, `mptdc_csr_if`, `mptdc_csr_minimal`, and `mptdc_reset_sync`, which is why the current repo expands the closure suite with CSR/control-path scenarios
 
 This is the practical meaning of the current repository state:
 
 - Verilator is the fast local confidence path
 - Cadence remains the required path for merged coverage closure
-- the next important verification gate is the Cadence-side coverage campaign on the updated VIP
+- the next important verification gate is a Cadence rerun of the updated `13`-test directed suite plus the broader stress campaign
 
 ## 7. What the current verification does not replace
 
@@ -330,7 +338,8 @@ bash ci/run_vip_coverage.sh --sim xrun --clean
 bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
 
 # IMC review of the campaign DB
-imc -load build/coverage_campaign/cov_work/scope/test &
+bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
+imc -load build/coverage_campaign/cov_work/scope/merged_cov &
 
 # Local dry-run of the Cadence coverage commands
 bash ci/run_vip_coverage.sh --dry-run
@@ -369,14 +378,14 @@ cd SPADMIC/MPTDC
 
 ### 10.3 Step 1 — Smoke regression (all VIP tests, no coverage)
 
-Run all 11 VIP tests to confirm functional correctness:
+Run all 12 VIP tests to confirm functional correctness:
 
 ```bash
 # Run each VIP test individually on Xcelium
 for test in smoke_single_conv full_mode_timestamp firsthit_contract \
             backpressure_integrity start_watchdog cal_inject \
             overflow_status long_random multi_conv_rearm_stress \
-            global_watchdog_recovery jitter_robustness; do
+            global_watchdog_recovery csr_readback_control jitter_robustness; do
   echo "=== Running: $test ==="
   bash scripts/sim/run_vip_test.sh "$test" --sim xrun
 done
@@ -408,14 +417,14 @@ done
 
 ### 10.5 Step 3 — Coverage regression (functional + code)
 
-This is the key pre-synthesis signoff step:
+This is the key Cadence-side closure step before calibration handoff and any synthesis freeze discussion:
 
 ```bash
 # Clean run with both functional and code coverage
 bash ci/run_vip_coverage.sh --sim xrun --clean
 ```
 
-This runs 9 stable VIP tests with:
+This runs 13 stable VIP tests with:
 - **Functional coverage:** `stim_cg` and `pkt_cg` covergroups sampled
 - **Code coverage:** line + condition + toggle + FSM + branch
 - **Shared database:** all tests merge into `build/vip_coverage_xrun/cov_work/`
@@ -430,6 +439,10 @@ Default suite membership:
 - `cal_inject`
 - `overflow_status`
 - `long_random`
+- `multi_conv_rearm_stress`
+- `global_watchdog_recovery`
+- `jitter_robustness`
+- `csr_readback_control`
 - `coverage_exhaustive`
 
 Individual logs are saved to `build/vip_coverage_xrun/logs/<test>.log`.
@@ -449,19 +462,15 @@ bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --j
 ### 10.6 Step 4 — Review coverage in IMC
 
 ```bash
-# Launch IMC on the stable VIP merged coverage database
-imc -load build/vip_coverage_xrun/cov_work/scope/test &
+# Merge per-covtest buckets and generate IMC HTML reports
+bash scripts/sim/report_coverage.sh --cov-root build/vip_coverage_xrun --merge-name vip_merged
 
-# Or review the broader campaign database
-imc -load build/coverage_campaign/cov_work/scope/test &
-```
+# Or review the broader coverage-campaign database
+bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
 
-Generate a text report:
-
-```bash
-imc -load build/coverage_campaign/cov_work/scope/test \
-  -execcmd "report_metrics -out build/coverage_campaign/cov_report.txt -detail -kind cover; exit" \
-  -nocopyright
+# Open the merged runs in IMC
+imc -load build/vip_coverage_xrun/cov_work/scope/vip_merged &
+imc -load build/coverage_campaign/cov_work/scope/merged_cov &
 ```
 
 **Coverage goals:**
@@ -473,6 +482,13 @@ imc -load build/coverage_campaign/cov_work/scope/test \
 | Line coverage | >90% | On active RTL (`mptdc_core`, `mptdc_async_frontend_v2`, etc.) |
 | Condition coverage | >80% | Branch conditions in control FSMs |
 | Toggle coverage | >70% | On critical data paths |
+
+Current measured broad-campaign baseline before the new closure additions:
+
+- `109 / 109` tests passed,
+- aggregate IMC coverage `10986 / 16389 (67.03%)`,
+- average grade `73.62%`,
+- weakest reported modules: `mptdc_top_asic 45.95%`, `mptdc_csr_if 28.26%`, `mptdc_csr_minimal 61.39%`, `mptdc_reset_sync 61.67%`.
 
 **Known exclusions (document, do not waive silently):**
 - `mptdc_osc_stub`: dead code when `MPTDC_USE_OSC_MODEL` is defined
@@ -503,9 +519,9 @@ bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --dry-run
 
 | Suite | Tests | Expected | Runtime (est.) |
 |-------|-------|----------|----------------|
-| VIP smoke | 11 tests | All pass | ~5 min total |
+| VIP smoke | 12 tests | All pass | ~5–8 min total |
 | Directed integration | 9 tests | All pass | ~3 min total |
-| VIP coverage regression | 9 tests | All pass + coverage DB | ~10 min total |
+| VIP coverage regression | 13 tests | All pass + coverage DB | ~10–15 min total |
 
 All tests are self-checking — no manual waveform inspection needed for pass/fail.
 Failures produce `$error` or `$fatal` messages with descriptive context.

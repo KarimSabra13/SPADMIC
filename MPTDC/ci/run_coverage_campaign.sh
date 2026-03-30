@@ -110,14 +110,22 @@ run_test() {
 # ===== Phase 1: Directed exhaustive coverage =====
 echo "=== Phase 1: coverage_exhaustive ==="
 PASS=0; FAIL=0
+DIRECTED_EXPECTED=0
 
 run_test "coverage_exhaustive" "42" "exhaustive" "" && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+DIRECTED_EXPECTED=$((DIRECTED_EXPECTED + 1))
 
-# Also run the existing directed tests for completeness
+# Also run the directed closure tests for completeness
 for t in smoke_single_conv full_mode_timestamp firsthit_contract \
          backpressure_integrity start_watchdog cal_inject \
-         overflow_status long_random; do
-  run_test "$t" "42" "directed_${t}" "" && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+         overflow_status long_random multi_conv_rearm_stress \
+         global_watchdog_recovery csr_readback_control jitter_robustness; do
+  EXTRA_ARGS=""
+  if [[ "$t" == "jitter_robustness" ]]; then
+    EXTRA_ARGS="--osc-jitter-sigma 8 --osc-jitter-bound 24"
+  fi
+  run_test "$t" "42" "directed_${t}" "$EXTRA_ARGS" && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+  DIRECTED_EXPECTED=$((DIRECTED_EXPECTED + 1))
 done
 
 echo ""
@@ -147,6 +155,13 @@ done
 # Wait for all remaining jobs
 wait
 
+if [[ $DRY_RUN -eq 1 ]]; then
+  echo ""
+  echo "Coverage campaign dry-run prepared $DIRECTED_EXPECTED directed tests and $NUM_SEEDS stress jobs"
+  echo "Coverage workdir (planned): $COV_WORK"
+  exit 0
+fi
+
 # Count results from logs
 for ((i=1; i<=NUM_SEEDS; i++)); do
   LOG="$LOG_DIR/stress_s${i}.log"
@@ -164,12 +179,12 @@ echo ""
 # ===== Summary =====
 TOTAL_PASS=$((PASS + STRESS_PASS))
 TOTAL_FAIL=$((FAIL + STRESS_FAIL))
-TOTAL_TESTS=$((9 + NUM_SEEDS))
+TOTAL_TESTS=$((DIRECTED_EXPECTED + NUM_SEEDS))
 
 echo "============================================"
 echo "  CAMPAIGN RESULTS"
 echo "============================================"
-echo "  Directed:   $PASS / 9"
+echo "  Directed:   $PASS / $DIRECTED_EXPECTED"
 echo "  Stress:     $STRESS_PASS / $NUM_SEEDS"
 echo "  Total:      $TOTAL_PASS / $TOTAL_TESTS"
 echo "  Total conv: ~$TOTAL_CONV"
@@ -190,14 +205,12 @@ if [[ $TOTAL_FAIL -gt 0 ]]; then
 fi
 
 echo "Next steps:"
-echo "  1. View coverage in IMC:"
-echo "     imc -load $COV_WORK/scope/test &"
+echo "  1. Merge coverage buckets and generate IMC reports:"
+echo "     bash scripts/sim/report_coverage.sh --cov-root $COV_ROOT"
 echo ""
-echo "  2. Generate text reports:"
-echo "     imc -load $COV_WORK/scope/test \\"
-echo "         -execcmd \"report_metrics -out cov_report.txt -detail -kind cover; exit\" \\"
-echo "         -nocopyright"
+echo "  2. Open the merged run in IMC:"
+echo "     imc -load $COV_WORK/scope/merged_cov &"
 echo ""
-echo "  3. View report:"
-echo "     cat cov_report.txt"
+echo "  3. Open the generated HTML report:"
+echo "     xdg-open $COV_ROOT/cov_report_aggregate/index.html"
 echo ""

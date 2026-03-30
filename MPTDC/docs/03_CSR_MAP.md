@@ -55,13 +55,16 @@ bit 2  soft_rst   self-clearing pulse
 
 Important semantics:
 
-- `conv_arm` is not self-clearing. It stays at the written level until rewritten or cleared by soft reset.
+- `conv_arm` is not self-clearing by itself, but every write to `CTRL` rewrites bit `0`.
+  So a write of `0x2` (`fifo_clr`) or `0x4` (`soft_rst`) also de-arms the design unless software writes `conv_arm=1` again afterward.
 - `fifo_clr` is a one-cycle synchronous pulse in `clk_sys`.
-- `soft_rst` is a one-cycle synchronous pulse in `clk_sys` and also clears `conv_arm`.
+- `soft_rst` is a one-cycle synchronous pulse in `clk_sys` and, in the current top-level implementation, resets the whole local `rst_n_internal` domain. That means `mptdc_core` and `mptdc_csr_minimal` both return to reset defaults, not just `conv_arm`.
 
 Recommended usage:
 
 - keep `conv_arm=1` for sustained operation
+- after `fifo_clr`, explicitly re-arm if you want to resume conversions immediately
+- after `soft_rst`, reprogram `MODE`, `MAX_HITS`, and watchdog registers because the local CSR block has been reset to defaults
 - use `soft_rst` only when the design is idle or when forced recovery is required
 
 ### 3.2 `MODE` (`0x04`)
