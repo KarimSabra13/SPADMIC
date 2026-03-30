@@ -119,7 +119,8 @@ DIRECTED_EXPECTED=$((DIRECTED_EXPECTED + 1))
 for t in smoke_single_conv full_mode_timestamp firsthit_contract \
          backpressure_integrity start_watchdog cal_inject \
          overflow_status long_random multi_conv_rearm_stress \
-         global_watchdog_recovery csr_readback_control jitter_robustness; do
+         global_watchdog_recovery csr_readback_control hard_reset_readback \
+         jitter_robustness; do
   EXTRA_ARGS=""
   if [[ "$t" == "jitter_robustness" ]]; then
     EXTRA_ARGS="--osc-jitter-sigma 8 --osc-jitter-bound 24"

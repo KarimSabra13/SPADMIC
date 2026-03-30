@@ -34,6 +34,7 @@ DEFAULT_TESTS=(
   global_watchdog_recovery
   jitter_robustness
   csr_readback_control
+  hard_reset_readback
   coverage_exhaustive
 )
 SELECTED_TESTS=()

@@ -7,11 +7,11 @@ This document is the current checkpoint handoff for the repository. It summarize
 The repository is in a strong pre-calibration checkpoint, but not yet at verification or synthesis signoff:
 
 - the RTL architecture is stable and documented
-- the maintained Verilator VIP regressions are currently green (`12/12`)
+- the maintained Verilator VIP regressions are currently green (`13/13`)
 - the class-based VIP is functioning and no longer deadlocks on the previously failing stress pattern
 - the latest broad Cadence baseline campaign passed `109/109` and merges cleanly in IMC
-- the merged IMC aggregate baseline is `10986 / 16389 (67.03%)` with average grade `73.62%`
-- the repo now includes additional CSR/control-path closure stimulus on top of the earlier stress fix
+- the most recent merged IMC report observed on the lab server improved to `11486 / 16389 (70.08%)` with average grade `82.05%`
+- the repo now includes additional deterministic overflow/recovery and pad-reset readback closure stimulus on top of the earlier stress fix
 - the offline calibration and Genus synthesis flows are both scripted and documented
 
 The main remaining gate is **targeted Cadence-side coverage closure** on the updated VIP, especially around the top wrapper, CSR block/interface, and reset behavior.
@@ -71,7 +71,7 @@ Those flows cover:
 
 ### VIP status
 
-The maintained VIP smoke suite currently contains `12` tests:
+The maintained VIP smoke suite currently contains `13` tests:
 
 1. `smoke_single_conv`
 2. `full_mode_timestamp`
@@ -84,9 +84,10 @@ The maintained VIP smoke suite currently contains `12` tests:
 9. `multi_conv_rearm_stress`
 10. `global_watchdog_recovery`
 11. `csr_readback_control`
-12. `jitter_robustness`
+12. `hard_reset_readback`
+13. `jitter_robustness`
 
-The Cadence merged-coverage VIP suite currently contains `13` tests:
+The Cadence merged-coverage VIP suite currently contains `14` tests:
 
 1. `smoke_single_conv`
 2. `full_mode_timestamp`
@@ -100,7 +101,8 @@ The Cadence merged-coverage VIP suite currently contains `13` tests:
 10. `global_watchdog_recovery`
 11. `jitter_robustness`
 12. `csr_readback_control`
-13. `coverage_exhaustive`
+13. `hard_reset_readback`
+14. `coverage_exhaustive`
 
 There is also a stress test kept outside the normal smoke/coverage suites:
 
@@ -150,19 +152,19 @@ Broader stress campaign:
 bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
 ```
 
-Latest measured Cadence baseline:
+Most recent merged IMC report observed on the lab server:
 
-- campaign pass count: `109 / 109` (`9` directed + `100` stress),
-- aggregate IMC coverage: `10986 / 16389 (67.03%)`,
-- average grade: `73.62%`,
+- aggregate IMC coverage: `11486 / 16389 (70.08%)`,
+- average grade: `82.05%`,
 - weakest reported modules: `mptdc_top_asic 45.95%`, `mptdc_csr_if 28.26%`, `mptdc_csr_minimal 61.39%`, `mptdc_reset_sync 61.67%`.
 
-The current repo expands the directed closure suite to `13` tests by adding:
+The current repo expands the directed closure suite to `14` tests by adding:
 
 - `multi_conv_rearm_stress`
 - `global_watchdog_recovery`
 - `jitter_robustness`
 - `csr_readback_control`
+- `hard_reset_readback`
 
 ### IMC review
 

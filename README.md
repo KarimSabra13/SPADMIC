@@ -29,7 +29,8 @@ A high-precision Vernier TDC with an 81-cell phase detector matrix, designed for
 Current checkpoint summary for `MPTDC/`:
 
 - latest broad Cadence baseline campaign passed `109/109`,
-- merged IMC aggregate coverage baseline is `10986 / 16389 (67.03%)` with average grade `73.62%`,
+- the most recent merged IMC report observed on the lab server improved to `11486 / 16389 (70.08%)` with average grade `82.05%`,
+- the current repo further expands the maintained VIP closure suite with deterministic overflow/recovery and pad-reset readback checks,
 - the repository is suitable for **exploratory offline calibration**, but not yet for synthesis signoff or freeze.
 
 See [`MPTDC/README.md`](MPTDC/README.md) for the detailed architecture, flows, and status of the TDC implementation.

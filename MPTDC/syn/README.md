@@ -21,7 +21,7 @@ The synthesis collateral in `syn/` is prepared for a trial Genus run, but it sho
 At the current checkpoint:
 
 - the RTL and verification environment are locally validated
-- the latest broad Cadence verification baseline passed `109/109`, but merged coverage is still only `67.03%` overall (average grade `73.62%`)
+- the most recent merged IMC report observed on the lab server improved to `70.08%` overall (average grade `82.05%`), but the design still needs another Cadence rerun after the newest local closure additions before any freeze decision
 - targeted closure work is currently focused on CSR/top/reset coverage, so synthesis should still be treated as exploratory rather than freeze-ready
 - the oscillator behavioral model is a simulation-only artifact and is excluded from synthesis
 - the async frontend intentionally contains `5` latch-style storage elements that must be reviewed, not treated as accidental inference

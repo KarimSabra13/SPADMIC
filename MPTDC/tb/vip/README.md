@@ -341,12 +341,13 @@ Protocol: Simple valid/ready streaming
 | 4 | `backpressure_integrity` | 3 | Packets valid despite stalls | FIFO stress |
 | 5 | `start_watchdog` | 2 | WDT flag toggles | Context watchdog |
 | 6 | `cal_inject` | 1 | Packet from CAL input | Calibration path |
-| 7 | `overflow_status` | 2+ | OVF_COUNT check | FIFO overflow |
+| 7 | `overflow_status` | 2+ | Rejected START increments `OVF_COUNT` | Deterministic overflow/recovery |
 | 8 | `long_random` | 8 | All timestamps valid | Extended random |
 | 9 | `multi_conv_rearm_stress` | 12 | conv_id 0→11 | Rearm + mode switch |
 | 10 | `global_watchdog_recovery` | 1–2 | WDT_STATUS.global_trip ≥ 1 | Global watchdog |
 | 11 | `csr_readback_control` | 0 scoreboard packets | CSR readback, FIFO clear, soft reset | Control-path closure |
-| 12 | `jitter_robustness` | 6 | Timestamps under jitter | Clock jitter |
+| 12 | `hard_reset_readback` | 1 + reset | `CSR_HIT_COUNT` + reset defaults | Pad-reset recovery |
+| 13 | `jitter_robustness` | 6 | Timestamps under jitter | Clock jitter |
 
 ### Detailed Test Descriptions
 
@@ -437,17 +438,20 @@ offline calibration. Must produce identical packet structure to SPAD.
 ---
 
 #### Test 7: `overflow_status`
-**Purpose:** Exercise FIFO overflow under sustained backpressure.
+**Purpose:** Deterministically exercise rejected-START accounting and recovery.
 
 **Sequence:**
-1. Configure: OUT_MODE_FULL, ALWAYS_STALL
-2. Inject two rapid conversions (FIFO fills)
-3. Inject START-only (overflow attempt)
-4. Switch to ALWAYS_READY to drain
-5. Post-run: read CSR_OVF_COUNT register
+1. Configure: MULTI_HIT, SPAD input, RAW_FEATURES, `max_hits=15`
+2. Inject one real conversion and poll `CSR_STATUS` until one context is draining
+3. Inject a second real conversion and poll until both contexts are draining
+4. Re-arm and inject a widened rejecting START pulse
+5. Post-run: verify `CSR_OVF_COUNT == 1`
+6. Issue `soft_reset_and_fifo_clear()` and verify `OVF_COUNT`, `busy`, and `conv_arm` return to defaults
 
-**Why it matters:** FIFO overflow is a critical failure mode. The
-OVF_COUNT register lets software detect data loss.
+**Why it matters:** In this RTL, `OVF_COUNT` counts synchronized
+rejected START allocations, not generic downstream backpressure. This
+test closes the real top/core overflow path that software will use to
+detect lost conversion opportunities.
 
 ---
 
@@ -509,7 +513,24 @@ mechanism. It must reset the TDC and report the event.
 
 ---
 
-#### Test 12: `jitter_robustness`
+#### Test 12: `hard_reset_readback`
+**Purpose:** Verify `CSR_HIT_COUNT` readback and full pad-reset recovery.
+
+**Sequence:**
+1. Configure: FIRST_HIT, CAL input, RAW_TIMESTAMP, custom max_hits/watchdogs
+2. Run one normal conversion and read back `CSR_HIT_COUNT`
+3. Verify `last_hit_count > 0` and `closed_by_firsthit = 1`
+4. Re-arm and inject START-only to observe `STATUS.busy = 1`
+5. Assert pad reset via `async_rst_n`
+6. Verify `CTRL`, `MODE`, `MAX_HITS`, watchdog CSRs, `STATUS`, and `CSR_HIT_COUNT` return to reset defaults
+
+**Why it matters:** This closes the pad-reset path through the real top
+wrapper and the CSR read-mux branch for `CSR_HIT_COUNT`, which were both
+weak spots in the previous coverage hierarchy.
+
+---
+
+#### Test 13: `jitter_robustness`
 **Purpose:** Verify TDC accuracy under oscillator jitter.
 
 **Sequence:**
@@ -533,7 +554,7 @@ that the Vernier TDC maintains measurement accuracy despite phase noise.
 ```bash
 bash ci/run_vip_smoke.sh
 ```
-Runs all 12 tests. Expected: 12/12 pass in roughly 5–8 minutes.
+Runs all 13 tests. Expected: 13/13 pass in roughly 5–8 minutes.
 
 ### Single Test (any simulator)
 
@@ -554,7 +575,7 @@ bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun \
 ```bash
 bash ci/run_vip_coverage.sh --sim xrun --clean
 ```
-Runs 13 tests with functional + code coverage. Results in
+Runs 14 tests with functional + code coverage. Results in
 `build/vip_coverage_xrun/cov_work/`.
 
 ### Broader coverage + stress campaign
@@ -645,16 +666,16 @@ In the GUI:
 
 ## 12. Expected Results
 
-### Smoke Regression (12 tests)
+### Smoke Regression (13 tests)
 
 ```
-VIP RESULTS: 12 passed, 0 failed out of 12
+VIP RESULTS: 13 passed, 0 failed out of 13
 ```
 
-### Coverage Regression (13 tests)
+### Coverage Regression (14 tests)
 
 ```
-VIP coverage results: 13 passed, 0 failed
+VIP coverage results: 14 passed, 0 failed
 ```
 
 ### Per-Test Expected Behavior
@@ -667,11 +688,12 @@ VIP coverage results: 13 passed, 0 failed
 | backpressure_integrity | ~2s | 3 | Packets valid despite stalls |
 | start_watchdog | ~1s | 2 | `watchdog=1` then `watchdog=0` |
 | cal_inject | <1s | 1 | Packet from CAL source |
-| overflow_status | ~2s | 2+ | `OVF_COUNT` logged |
+| overflow_status | ~2s | 2+ | `OVF_COUNT == 1` after rejected START, then reset recovery |
 | long_random | ~5s | 8 | All timestamps verified |
 | multi_conv_rearm_stress | ~3s | 12 | conv_id 0→11 |
 | global_watchdog_recovery | ~1s | 1–2 | `global_trip_cnt ≥ 1` |
 | csr_readback_control | ~8s | 0 scoreboard packets | CSR readback + `fifo_clr` + `soft_rst` semantics |
+| hard_reset_readback | ~2s | 1 + reset | `CSR_HIT_COUNT` readback + pad-reset defaults |
 | jitter_robustness | ~3s | 6 | Timestamps valid under jitter |
 
 ---
@@ -684,8 +706,8 @@ VIP coverage results: 13 passed, 0 failed
 HEADER  [15:14]=10  [13:12]=ctx_id  [11]=phase0_snap
         [10:7]=hit_count  [6:3]=flags  [2:1]=out_mode  [0]=slow_boundary_inc
 
-  flags[3]=reserved  [2]=closed_by_watchdog
-  flags[1]=closed_by_maxhits  [0]=closed_by_firsthit
+  flags[3]=reserved  [2]=closed_by_firsthit
+  flags[1]=closed_by_maxhits  [0]=closed_by_watchdog
 
   HIT WORDS (per out_mode):
   RAW_FEATURES (3 words/hit):
@@ -737,8 +759,8 @@ tb/common/
 └── mptdc_raw_monitor.sv       ← raw narrow-bus monitor (directed TBs)
 
 ci/
-├── run_vip_smoke.sh           ← smoke regression (12 tests, Verilator)
-├── run_vip_coverage.sh        ← coverage regression (13 tests, xrun)
+├── run_vip_smoke.sh           ← smoke regression (13 tests, Verilator)
+├── run_vip_coverage.sh        ← coverage regression (14 tests, xrun)
 └── run_coverage_campaign.sh   ← merged coverage + stress campaign (xrun)
 
 scripts/sim/

@@ -155,12 +155,12 @@ echo "Results: $PASS passed, $FAIL failed out of 9"
 | `tb_backpressure` | Ready/valid stalling, data preservation |
 | `tb_watchdog_recovery` | Global watchdog timeout and recovery |
 | `tb_start_wdt` | Missing-STOP → START watchdog fires |
-| `tb_overflow_count` | FIFO overflow counting |
+| `tb_overflow_count` | Overflow counter / rejected-START accounting |
 | `tb_firsthit_mode` | FIRST_HIT mode single-hit packet |
 
 ---
 
-## Step 3 — VIP Smoke Regression (12 Class-Based Tests)
+## Step 3 — VIP Smoke Regression (13 Class-Based Tests)
 
 **Goal:** Run the full VIP framework — transaction-driven, self-checking,
 with scoreboard validation.
@@ -175,7 +175,7 @@ If you want the explicit expanded form:
 for test in smoke_single_conv full_mode_timestamp firsthit_contract \
             backpressure_integrity start_watchdog cal_inject \
             overflow_status long_random multi_conv_rearm_stress \
-            global_watchdog_recovery csr_readback_control; do
+            global_watchdog_recovery csr_readback_control hard_reset_readback; do
   echo "=== VIP: $test ==="
   bash scripts/sim/run_vip_test.sh "$test" --sim xrun
 done
@@ -185,7 +185,7 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
   --osc-jitter-sigma 8 --osc-jitter-bound 24
 ```
 
-**Expected:** `12/12` pass, with each test printing `===== TEST PASSED =====` and exiting cleanly.
+**Expected:** `13/13` pass, with each test printing `===== TEST PASSED =====` and exiting cleanly.
 
 **Runtime:** ~5–8 minutes total
 
@@ -197,11 +197,12 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
 | `backpressure_integrity` | Packets survive random stalls |
 | `start_watchdog` | START-only → watchdog fires + recovery |
 | `cal_inject` | CAL source produces valid hits |
-| `overflow_status` | FIFO overflow detection |
+| `overflow_status` | Deterministic rejected START / OVF_COUNT / recovery |
 | `long_random` | 8 conversions, random delays, timestamp check |
 | `multi_conv_rearm_stress` | 12 rapid conversions, conv_id tracking |
 | `global_watchdog_recovery` | Global trip counter and recovery |
 | `csr_readback_control` | CSR readback, FIFO clear, soft reset semantics |
+| `hard_reset_readback` | `CSR_HIT_COUNT` readback and pad-reset recovery |
 | `jitter_robustness` | 6 conversions with oscillator jitter |
 
 ---
@@ -220,12 +221,12 @@ bash ci/run_vip_coverage.sh --sim xrun --clean
   MPTDC VIP Coverage Regression
 ============================================
   Simulator: xrun
-  Tests: 13
+  Tests: 14
 ...
 === Running VIP coverage: smoke_single_conv ===
 --- smoke_single_conv: PASSED ---
 ...
- VIP coverage results: 13 passed, 0 failed
+ VIP coverage results: 14 passed, 0 failed
 Coverage workdir: .../build/vip_coverage_xrun/cov_work
 Logs: .../build/vip_coverage_xrun/logs
 ```
@@ -244,8 +245,9 @@ Default merged coverage suite:
 - `long_random`
 - `multi_conv_rearm_stress`
 - `global_watchdog_recovery`
-- `jitter_robustness`
 - `csr_readback_control`
+- `hard_reset_readback`
+- `jitter_robustness`
 - `coverage_exhaustive`
 
 ### Step 4b — Broader coverage + stress campaign
@@ -263,11 +265,10 @@ This runs:
 - a shared Cadence coverage database under `build/coverage_campaign/cov_work/`
 - per-test logs under `build/coverage_campaign/logs/`
 
-Latest measured broad-campaign baseline before the current closure expansion:
+Most recent merged IMC report observed on the lab server before the latest local-only closure additions:
 
-- `109 / 109` tests passed,
-- aggregate IMC coverage `10986 / 16389 (67.03%)`,
-- average grade `73.62%`,
+- aggregate IMC coverage `11486 / 16389 (70.08%)`,
+- average grade `82.05%`,
 - weakest reported modules: `mptdc_top_asic 45.95%`, `mptdc_csr_if 28.26%`, `mptdc_csr_minimal 61.39%`, `mptdc_reset_sync 61.67%`.
 
 ### Review coverage in IMC
@@ -560,8 +561,8 @@ Step  What                       Tool        Time      Pass Criteria
 ─────────────────────────────────────────────────────────────────────
  1    Directed smoke test        Xcelium     30s       TEST PASSED
   2    Full directed regression   Xcelium     3-5 min   9/9 pass
-  3    VIP smoke regression       Xcelium     5-8 min   12/12 pass
-  4    VIP coverage regression    Xcelium     10-20 min 13/13 pass + coverage DB
+  3    VIP smoke regression       Xcelium     5-8 min   13/13 pass
+  4    VIP coverage regression    Xcelium     10-20 min 14/14 pass + coverage DB
   5    Data collection campaign   Verilator   30-60 min CSV files generated
   6    6D LUT calibration         Python      5-15 min  RMSE < 20 ps
   7    Trial synthesis            Genus       3-5 min   Timing clean, 5 latches

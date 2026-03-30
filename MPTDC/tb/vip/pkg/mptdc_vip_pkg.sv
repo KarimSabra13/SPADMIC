@@ -1317,54 +1317,100 @@ package mptdc_vip_pkg;
 
   class mptdc_overflow_status_test extends mptdc_base_test;
     logic [CSR_DATA_W-1:0] ovf_count_data;
+    logic [CSR_DATA_W-1:0] status_data;
+    logic [CSR_DATA_W-1:0] ctrl_data;
 
     function new();
       super.new("overflow_status");
       ovf_count_data = '0;
+      status_data    = '0;
+      ctrl_data      = '0;
     endfunction
+
+    task automatic wait_for_ctx_state(input logic [1:0] ctx0_expected,
+                                      input logic [1:0] ctx1_expected,
+                                      input int unsigned max_polls = 32);
+      logic [CSR_DATA_W-1:0] poll_status;
+      for (int unsigned poll = 0; poll < max_polls; poll++) begin
+        env.csr_drv.read(CSR_STATUS, poll_status);
+        if ((poll_status[3:2] == ctx0_expected) && (poll_status[5:4] == ctx1_expected))
+          return;
+        #20_000;
+      end
+      env.sb.fail($sformatf("overflow_status timed out waiting for ctx states {%0d,%0d}",
+                            ctx0_expected, ctx1_expected));
+    endtask
 
     virtual function void build_sequence(mptdc_generator gen);
       mptdc_cfg_txn  cfg_txn;
-      mptdc_conv_txn conv;
       gen.add(make_reset());
       cfg_txn = make_cfg("cfg_ovf");
-      cfg_txn.out_mode = OUT_MODE_FULL;
+      cfg_txn.mode_cfg           = MODE_MULTI_HIT;
+      cfg_txn.input_sel          = INPUT_SPAD;
+      cfg_txn.out_mode           = OUT_MODE_FULL;
+      cfg_txn.max_hits           = MAX_HITS_W'(15);
+      cfg_txn.wdt_ctx_timeout    = 16'd0;
+      cfg_txn.wdt_global_timeout = 16'd0;
       gen.add(cfg_txn);
-      gen.add(make_bp("bp_stall", BP_ALWAYS_STALL, cfg.random_seed));
-
-      conv = make_conv("ovf_conv0");
-      conv.start_stop_delay_ps  = 5_000;
-      conv.idle_after_ps        = 50_000;
-      conv.require_nonzero_hits = 1'b1;
-      conv.min_hits             = 1;
-      gen.add(conv);
-
-      conv = make_conv("ovf_conv1");
-      conv.start_stop_delay_ps  = 5_000;
-      conv.idle_after_ps        = 50_000;
-      conv.require_nonzero_hits = 1'b1;
-      conv.min_hits             = 1;
-      gen.add(conv);
-
-      conv = make_conv("ovf_reject");
-      conv.start_only          = 1'b1;
-      conv.expect_packet       = 1'b0;
-      conv.idle_after_ps       = 100_000;
-      conv.check_hit_range     = 1'b0;
-      gen.add(conv);
-
-      gen.add(make_bp("bp_release", BP_ALWAYS_READY, cfg.random_seed));
+      gen.add(make_bp("bp_ready", BP_ALWAYS_READY, cfg.random_seed));
     endfunction
 
     virtual task post_run();
       csr_vif.csr_valid = 1'b0;
       csr_vif.csr_write = 1'b0;
-      #500_000;
+      narrow_vif.narrow_ready = 1'b1;
+      #200_000;
+
       env.csr_drv.read(CSR_OVF_COUNT, ovf_count_data);
-      if (ovf_count_data[15:0] == 0)
-        $display("[VIP][TEST] overflow_status INFO: OVF_COUNT stayed zero; overflow remains timing-dependent under current drain/FIFO timing");
-      else
-        $display("[VIP][TEST] overflow_status OVF_COUNT=%0d", ovf_count_data[15:0]);
+      if (ovf_count_data[15:0] != 16'd0)
+        env.sb.fail($sformatf("overflow_status expected OVF_COUNT reset baseline 0, got %0d",
+                              ovf_count_data[15:0]));
+
+      env.csr_drv.arm_only();
+      #20_000;
+      async_vif.inject_pair(INPUT_SPAD, 28_000, 1_000);
+      wait_for_ctx_state(CTX_DRAINING, CTX_FREE);
+
+      env.csr_drv.arm_only();
+      #20_000;
+      async_vif.inject_pair(INPUT_SPAD, 28_000, 1_000);
+      wait_for_ctx_state(CTX_DRAINING, CTX_DRAINING);
+
+      env.csr_drv.read(CSR_CTRL, ctrl_data);
+      if (ctrl_data[0] !== 1'b1)
+        env.sb.fail("overflow_status expected conv_arm=1 while contexts remain occupied");
+
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if ((status_data[0] !== 1'b0) || (status_data[1] !== 1'b1))
+        env.sb.fail($sformatf("overflow_status expected ready=0,busy=1 before recovery, got status=0x%08h",
+                              status_data));
+
+      env.csr_drv.arm_only();
+      #20_000;
+      async_vif.inject_start_only(INPUT_SPAD, 20_000);
+      #200_000;
+
+      env.csr_drv.read(CSR_OVF_COUNT, ovf_count_data);
+      if (ovf_count_data[15:0] != 16'd1)
+        env.sb.fail($sformatf("overflow_status expected exactly one rejected START, got OVF_COUNT=%0d",
+                              ovf_count_data[15:0]));
+
+      env.csr_drv.soft_reset_and_fifo_clear();
+      #200_000;
+
+      env.csr_drv.read(CSR_CTRL, ctrl_data);
+      if (ctrl_data[0] !== 1'b0)
+        env.sb.fail("overflow_status recovery expected conv_arm=0 after combined reset");
+
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if ((status_data[0] !== 1'b0) || (status_data[1] !== 1'b0))
+        env.sb.fail($sformatf("overflow_status recovery expected ready=0,busy=0 after reset, got status=0x%08h",
+                              status_data));
+
+      env.csr_drv.read(CSR_OVF_COUNT, ovf_count_data);
+      if (ovf_count_data[15:0] != 16'd0)
+        env.sb.fail($sformatf("overflow_status recovery expected OVF_COUNT reset to 0, got %0d",
+                              ovf_count_data[15:0]));
     endtask
   endclass
 
@@ -1706,6 +1752,119 @@ package mptdc_vip_pkg;
     endtask
   endclass
 
+  class mptdc_hard_reset_readback_test extends mptdc_base_test;
+    logic [CSR_DATA_W-1:0] hit_count_data;
+    logic [CSR_DATA_W-1:0] status_data;
+    logic [CSR_DATA_W-1:0] ctrl_data;
+    logic [CSR_DATA_W-1:0] mode_data;
+    logic [CSR_DATA_W-1:0] max_hits_data;
+    logic [CSR_DATA_W-1:0] wdt_ctx_data;
+    logic [CSR_DATA_W-1:0] wdt_global_data;
+
+    function new();
+      super.new("hard_reset_readback");
+      hit_count_data  = '0;
+      status_data     = '0;
+      ctrl_data       = '0;
+      mode_data       = '0;
+      max_hits_data   = '0;
+      wdt_ctx_data    = '0;
+      wdt_global_data = '0;
+    endfunction
+
+    virtual function void build_sequence(mptdc_generator gen);
+      mptdc_cfg_txn  cfg_txn;
+      mptdc_conv_txn conv;
+
+      gen.add(make_reset());
+
+      cfg_txn = make_cfg("cfg_hard_reset_readback");
+      cfg_txn.mode_cfg           = MODE_FIRST_HIT;
+      cfg_txn.input_sel          = INPUT_CAL;
+      cfg_txn.out_mode           = OUT_MODE_FULL;
+      cfg_txn.max_hits           = MAX_HITS_W'(3);
+      cfg_txn.wdt_ctx_timeout    = 16'd0;
+      cfg_txn.wdt_global_timeout = 16'd0;
+      gen.add(cfg_txn);
+      gen.add(make_bp("bp_ready", BP_ALWAYS_READY, cfg.random_seed));
+
+      conv = make_conv("hard_reset_conv");
+      conv.source_sel             = INPUT_CAL;
+      conv.start_stop_delay_ps    = 11_000;
+      conv.idle_after_ps          = 1_000_000;
+      conv.require_nonzero_hits   = 1'b1;
+      conv.min_hits               = 1;
+      conv.check_firsthit_flag    = 1'b1;
+      conv.expected_firsthit_flag = 1'b1;
+      gen.add(conv);
+    endfunction
+
+    virtual task post_run();
+      csr_vif.csr_valid       = 1'b0;
+      csr_vif.csr_write       = 1'b0;
+      narrow_vif.narrow_ready = 1'b1;
+      #200_000;
+
+      env.csr_drv.read(CSR_HIT_COUNT, hit_count_data);
+      if (hit_count_data[MAX_HITS_W-1:0] == '0)
+        env.sb.fail("hard_reset_readback expected CSR_HIT_COUNT last_hit_count > 0 after conversion");
+      if (hit_count_data[MAX_HITS_W+CONV_FLAGS_W-2] !== 1'b1)
+        env.sb.fail($sformatf("hard_reset_readback expected closed_by_firsthit=1, got CSR_HIT_COUNT=0x%08h",
+                              hit_count_data));
+      if (hit_count_data[MAX_HITS_W+CONV_FLAGS_W-3] !== 1'b0)
+        env.sb.fail($sformatf("hard_reset_readback expected closed_by_maxhits=0, got CSR_HIT_COUNT=0x%08h",
+                              hit_count_data));
+      if (hit_count_data[MAX_HITS_W+CONV_FLAGS_W-4] !== 1'b0)
+        env.sb.fail($sformatf("hard_reset_readback expected closed_by_watchdog=0, got CSR_HIT_COUNT=0x%08h",
+                              hit_count_data));
+
+      env.csr_drv.arm_only();
+      #50_000;
+      async_vif.inject_start_only(INPUT_CAL, 1_000);
+      #50_000;
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if (status_data[1] !== 1'b1)
+        env.sb.fail($sformatf("hard_reset_readback expected busy=1 before hard reset, got status=0x%08h",
+                              status_data));
+
+      async_vif.hard_reset(100_000, 100_000);
+      #50_000;
+
+      env.csr_drv.read(CSR_CTRL, ctrl_data);
+      if (ctrl_data[0] !== 1'b0)
+        env.sb.fail("hard_reset_readback expected conv_arm=0 after hard reset");
+
+      env.csr_drv.read(CSR_MODE, mode_data);
+      if ((mode_data & 32'h0000_000F) !== 32'h0000_0000)
+        env.sb.fail($sformatf("hard_reset_readback expected CSR_MODE reset defaults, got 0x%08h", mode_data));
+
+      env.csr_drv.read(CSR_MAX_HITS, max_hits_data);
+      if ((max_hits_data & {{(CSR_DATA_W-MAX_HITS_W){1'b0}}, {MAX_HITS_W{1'b1}}}) !== CSR_DATA_W'(MAX_HITS))
+        env.sb.fail($sformatf("hard_reset_readback expected CSR_MAX_HITS reset default %0d, got 0x%08h",
+                              MAX_HITS, max_hits_data));
+
+      env.csr_drv.read(CSR_WDT_CTX, wdt_ctx_data);
+      if ((wdt_ctx_data & 32'h0000_FFFF) !== 32'h0000_0000)
+        env.sb.fail($sformatf("hard_reset_readback expected CSR_WDT_CTX reset default 0, got 0x%08h",
+                              wdt_ctx_data));
+
+      env.csr_drv.read(CSR_WDT_GLOBAL, wdt_global_data);
+      if ((wdt_global_data & 32'h0000_FFFF) !== 32'h0000_0000)
+        env.sb.fail($sformatf("hard_reset_readback expected CSR_WDT_GLOBAL reset default 0, got 0x%08h",
+                              wdt_global_data));
+
+      env.csr_drv.read(CSR_STATUS, status_data);
+      if ((status_data[0] !== 1'b0) || (status_data[1] !== 1'b0))
+        env.sb.fail($sformatf("hard_reset_readback expected ready=0,busy=0 after hard reset, got status=0x%08h",
+                              status_data));
+
+      env.csr_drv.read(CSR_HIT_COUNT, hit_count_data);
+      if ((hit_count_data & 32'h0000_00FF) !== 32'h0000_0000)
+        env.sb.fail($sformatf("hard_reset_readback expected CSR_HIT_COUNT cleared after hard reset, got 0x%08h",
+                              hit_count_data));
+    endtask
+  endclass
+
   // ---------------------------------------------------------------------------
   // coverage_exhaustive — systematically walks ALL config combinations
   //   2 modes × 2 sources × 3 outputs × 3 backpressures × 5 delays
@@ -1979,6 +2138,7 @@ package mptdc_vip_pkg;
       mptdc_global_watchdog_recovery_test global_wdt_t;
       mptdc_jitter_robustness_test jitter_t;
       mptdc_csr_readback_control_test csr_ctrl_t;
+      mptdc_hard_reset_readback_test hard_reset_t;
       mptdc_coverage_exhaustive_test cov_exh_t;
       mptdc_stress_random_test stress_t;
       case (name)
@@ -2029,6 +2189,10 @@ package mptdc_vip_pkg;
         "csr_readback_control": begin
           csr_ctrl_t = new();
           t = csr_ctrl_t;
+        end
+        "hard_reset_readback": begin
+          hard_reset_t = new();
+          t = hard_reset_t;
         end
         "coverage_exhaustive": begin
           cov_exh_t = new();
