@@ -437,7 +437,7 @@ module tb_campaign_collect;
   //  Global timeout — 500 ms of sim time
   // =========================================================================
   initial begin
-    #(500_000_000_000);
+    #500ms;
     $display("[ERR] Global timeout reached!");
     $finish;
   end

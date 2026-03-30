@@ -16,6 +16,7 @@ module tb_cal_inject;
   import mptdc_tb_pkg::*;
 
   localparam real CLK_SYS_PERIOD = 6250.0;   // 6250 ps = 160 MHz with 1ps timescale
+  localparam time GLOBAL_TIMEOUT = 50ms;
 
   logic clk_sys;
   initial clk_sys = 0;
@@ -88,7 +89,7 @@ module tb_cal_inject;
     int wc, hit_count, pass_count, fail_count, expected_wc, conv_ok;
     tb_hit_features_t hf;
 
-    fork begin #50_000_000_000; $error("[TB] GLOBAL TIMEOUT"); $finish; end join_none
+    fork begin #(GLOBAL_TIMEOUT); $error("[TB] GLOBAL TIMEOUT"); $finish; end join_none
 
     async_rst_n = 0; #100_000;
     async_rst_n = 1; #100_000;

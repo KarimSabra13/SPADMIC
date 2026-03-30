@@ -31,7 +31,7 @@ package mptdc_pkg;
   localparam int unsigned PD_W = (PD_N <= 1) ? 1 : $clog2(PD_N); // 7
 
   // System clock period
-  localparam integer SYS_CLK_PS = 1_000_000_000_000 / CLK_SYS_HZ; // 6250 ps
+  localparam longint unsigned SYS_CLK_PS = 64'd1_000_000_000_000 / CLK_SYS_HZ; // 6250 ps
 
   // Vernier parameters
   localparam integer DELTA_STEP_SIGNED = OSC_TS_SLOW_PS - OSC_TS_FAST_PS;

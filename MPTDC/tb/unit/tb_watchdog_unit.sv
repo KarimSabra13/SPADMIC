@@ -143,7 +143,7 @@ module tb_watchdog_unit;
 
   // Safety timeout
   initial begin
-    #5_000_000_000;
+    #5ms;
     $fatal(1, "TB timeout — simulation exceeded 5 ms");
   end
 
