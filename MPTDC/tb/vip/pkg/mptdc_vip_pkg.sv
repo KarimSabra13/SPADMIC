@@ -367,6 +367,7 @@ package mptdc_vip_pkg;
   // module-resident BFM loop inside mptdc_vip_tb.
   mailbox #(mptdc_base_txn) g_bfm_req_mb;
   mailbox #(bit)            g_bfm_ack_mb;   // 1=accepted, 0=rejected
+  mailbox #(bit)            g_bfm_done_mb;  // 1=transaction fully completed
   mailbox #(logic [NARROW_W-1:0]) g_mon_word_mb;
 
   class mptdc_csr_driver;
@@ -685,6 +686,8 @@ package mptdc_vip_pkg;
         g_bfm_req_mb = new();
       if (g_bfm_ack_mb == null)
         g_bfm_ack_mb = new();
+      if (g_bfm_done_mb == null)
+        g_bfm_done_mb = new();
     endtask
 
     task route_expectations();
@@ -713,10 +716,9 @@ package mptdc_vip_pkg;
       mptdc_backpressure_txn bp;
       mptdc_reset_txn        rst;
       mptdc_conv_txn         conv;
+      bit                    accepted;
+      bit                    txn_done;
       initialize();
-      fork
-        route_expectations();
-      join_none
       forever begin
         in_mb.get(base);
         if (base == null)
@@ -728,14 +730,16 @@ package mptdc_vip_pkg;
               $fatal(1, "Failed to cast reset txn");
             $display("[VIP][DRV] %s", rst.sprint());
             g_bfm_req_mb.put(base);
+            g_bfm_done_mb.get(txn_done);
           end
 
           TXN_CFG: begin
             if (!$cast(cfg, base))
               $fatal(1, "Failed to cast cfg txn");
             $display("[VIP][DRV] %s", cfg.sprint());
-            current_cfg = cfg.clone();
             g_bfm_req_mb.put(base);
+            g_bfm_done_mb.get(txn_done);
+            current_cfg = cfg.clone();
           end
 
           TXN_BP: begin
@@ -756,13 +760,19 @@ package mptdc_vip_pkg;
             $display("[VIP][DRV] %s", conv.sprint());
 
             g_bfm_req_mb.put(base);
-            pending_conv_mb.put(conv.clone());
+            g_bfm_ack_mb.get(accepted);
+            if (conv.expect_packet) begin
+              if (accepted)
+                exp_mb.put(conv.clone());
+              else
+                rejected_count++;
+            end
+            g_bfm_done_mb.get(txn_done);
           end
 
           TXN_EOT: begin
             $display("[VIP][DRV] End-of-test transaction observed");
-            pending_conv_mb.put(null);
-            wait (routing_done);
+            exp_mb.put(null);
             if (rejected_count > 0)
               $display("[VIP][DRV] %0d conversions had START rejected (FIFO backpressure)", rejected_count);
             done = 1'b1;

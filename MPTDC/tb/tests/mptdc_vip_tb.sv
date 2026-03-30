@@ -37,12 +37,6 @@ module mptdc_vip_tb;
   logic                  tb_csr_ready;
   logic                  tb_csr_rvalid;
   logic [CSR_DATA_W-1:0] tb_csr_rdata;
-  logic                  tb_narrow_ready;
-  logic                  tb_narrow_valid;
-  logic [NARROW_W-1:0]   tb_narrow_data;
-  logic                  mon_valid_q;
-  logic                  mon_ready_q;
-  logic [NARROW_W-1:0]   mon_data_q;
 
   // Bridge the interface state into plain DUT wires while leaving the VIP
   // classes and helper tasks bound to the interfaces themselves.
@@ -61,9 +55,6 @@ module mptdc_vip_tb;
     csr_if.csr_rvalid = tb_csr_rvalid;
     csr_if.csr_rdata  = tb_csr_rdata;
 
-    tb_narrow_ready     = narrow_if.narrow_ready;
-    narrow_if.narrow_valid = tb_narrow_valid;
-    narrow_if.narrow_data  = tb_narrow_data;
   end
 
   mptdc_top_asic u_dut (
@@ -80,9 +71,9 @@ module mptdc_vip_tb;
     .csr_ready_o        (tb_csr_ready),
     .csr_rvalid_o       (tb_csr_rvalid),
     .csr_rdata_o        (tb_csr_rdata),
-    .narrow_ready_i     (tb_narrow_ready),
-    .narrow_valid_o     (tb_narrow_valid),
-    .narrow_data_o      (tb_narrow_data)
+    .narrow_ready_i     (narrow_if.narrow_ready),
+    .narrow_valid_o     (narrow_if.narrow_valid),
+    .narrow_data_o      (narrow_if.narrow_data)
   );
 
   initial begin
@@ -116,15 +107,9 @@ module mptdc_vip_tb;
   end
   /* verilator lint_on BLKSEQ */
 
-  always @(negedge clk_sys) begin
-    mon_valid_q <= tb_narrow_valid;
-    mon_ready_q <= tb_narrow_ready;
-    mon_data_q  <= tb_narrow_data;
-  end
-
   always @(posedge clk_sys) begin
-    if ((g_mon_word_mb != null) && mon_valid_q && mon_ready_q)
-      g_mon_word_mb.put(mon_data_q);
+    if ((g_mon_word_mb != null) && u_dut.u_core.u_narrow_tx.out_accepted)
+      g_mon_word_mb.put(narrow_if.narrow_data);
   end
 
   // Module-resident BFM consumes mailbox transactions so the class-based
@@ -153,6 +138,7 @@ module mptdc_vip_tb;
           #rst.low_time_ps;
           async_if.async_rst_n = 1'b1;
           #rst.settle_time_ps;
+          g_bfm_done_mb.put(1'b1);
         end
 
         TXN_CFG: begin
@@ -163,6 +149,7 @@ module mptdc_vip_tb;
           bfm_csr_write(CSR_WDT_CTX,    {16'd0, cfg_txn.wdt_ctx_timeout});
           bfm_csr_write(CSR_WDT_GLOBAL, {16'd0, cfg_txn.wdt_global_timeout});
           #50_000;
+          g_bfm_done_mb.put(1'b1);
         end
 
         TXN_CONV: begin
@@ -180,6 +167,7 @@ module mptdc_vip_tb;
           g_bfm_ack_mb.put(bfm_conv_accepted);
           if (conv.idle_after_ps > 0)
             #conv.idle_after_ps;
+          g_bfm_done_mb.put(1'b1);
         end
 
         default: begin
