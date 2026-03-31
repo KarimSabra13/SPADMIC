@@ -8,6 +8,8 @@ generates plots, and produces a summary report.
 Author: Karim Sabra
 """
 
+from __future__ import annotations
+
 import argparse
 import fnmatch
 import os
