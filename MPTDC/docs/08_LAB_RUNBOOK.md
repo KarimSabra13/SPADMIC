@@ -19,13 +19,16 @@ bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --j
 bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
 imc -load build/coverage_campaign/cov_work/scope/merged_cov &
 
-bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --out-dir results/campaign
-bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --seed-start 100 --out-dir results/campaign_validation
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 100 --n-conv 50000 --delay-min 20 --delay-max 30000 --configs multihit_15_cal_nominal --out-dir results/calib_xrun/train_nominal_100s
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 30 --n-conv 50000 --delay-min 20 --delay-max 30000 --seed-start 100 --configs multihit_15_cal_nominal --out-dir results/calib_xrun/val_nominal_30s
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 30 --n-conv 50000 --delay-min 20 --delay-max 30000 --seed-start 200 --configs multihit_15_cal_jitter --out-dir results/calib_xrun/val_jitter_30s
 
 python3 scripts/calibration/calibrate_6d_lut.py \
-  --train-dir results/campaign/multihit_15_cal_nominal \
-  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
-  --out-dir results/calibration_final
+  --train-dir results/calib_xrun/train_nominal_100s/multihit_15_cal_nominal \
+  --val-dir results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal \
+  --fresh-dir results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter \
+  --train-seeds 100 \
+  --out-dir results/calib_xrun/calibration_lut6d
 
 cd syn/scripts
 genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
@@ -302,24 +305,29 @@ The helper script also generates HTML reports under
 
 **Goal:** Generate large-scale simulation data for calibration training.
 
-> **Note:** The campaign runner currently uses Verilator. If Verilator is
-> available on your server, use it directly. If only Xcelium is available,
-> run the collection bench manually (see alternative below).
+> **Note:** `scripts/sim/run_campaign.sh` now supports both `--sim verilator`
+> and `--sim xrun|xcelium`. Use Verilator for the fastest local collection;
+> use `xrun` / Xcelium on Cadence-equipped servers when you want the same
+> collection flow under the industry simulator.
 
-### Option A: Verilator campaign (recommended — faster)
+### Option A: Native campaign runner (recommended)
 
 ```bash
 # Check Verilator first
 verilator --version
 
-# Run the full maintained campaign
-bash scripts/sim/run_campaign.sh --jobs 12
+# Or check Xcelium on a Cadence server
+which xrun && xrun -version | head -1
+
+# Run the full maintained campaign with Verilator
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
 
 # Quick smoke first
-bash scripts/sim/run_campaign.sh --smoke
+bash scripts/sim/run_campaign.sh --sim verilator --smoke
+bash scripts/sim/run_campaign.sh --sim xrun --smoke
 
 # Or collect only the calibration-focused configuration
-bash scripts/sim/run_campaign.sh --jobs 12 --configs multihit_15_cal_nominal
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
 ```
 
 **Expected output:**
@@ -343,25 +351,34 @@ results/campaign/
 
 Use `--out-dir DIR` if you want a separate run location.
 
-### Option B: Xcelium single-run collection
+### Option B: Native Xcelium campaign collection
 
-If Verilator is not available, run the collection bench directly:
+For Cadence collection with the same runner interface:
 
 ```bash
-# Single config, single seed
-bash scripts/sim/run_tb.sh tb_campaign_collect --sim xcelium
+# Single config, single seed smoke
+bash scripts/sim/run_campaign.sh --sim xrun --smoke --out-dir results/campaign_xrun_smoke
 
-# The CSV is written to the build directory
-ls build/tb_campaign_collect/*.csv
+# 100 seeds × 50k conversions on the calibration-focused config
+bash scripts/sim/run_campaign.sh \
+  --sim xrun \
+  --jobs 32 \
+  --seeds 100 \
+  --n-conv 50000 \
+  --delay-min 20 \
+  --delay-max 30000 \
+  --configs multihit_15_cal_nominal \
+  --out-dir results/campaign_xrun_train
 ```
 
-This is slower and single-threaded — for full calibration, Option A with
-Verilator is strongly preferred.
+The runner handles Xcelium correctly by launching each seed with its own
+`xcelium.d` library under `build/campaign_xrun/`, so 32-way parallel jobs do
+not contend for one shared Cadence worklib.
 
 **Runtime:**
 - Smoke: ~2 minutes
 - Full campaign (12 cores): ~30–60 minutes
-- Single Xcelium run: ~10 minutes per seed
+- Native Xcelium campaign: slower than Verilator because each seed runs through `xrun`
 
 ---
 
@@ -370,9 +387,9 @@ Verilator is strongly preferred.
 **Goal:** Train the 6D mean-correction LUT and validate precision.
 
 ```bash
-# Recommended: build the exact train/fresh directory structure expected by the calibrator
-bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --out-dir results/campaign
-bash scripts/sim/run_campaign.sh --configs multihit_15_cal_nominal --seed-start 100 --out-dir results/campaign_validation
+# Recommended: explicit train / held-out / fresh-jitter split
+bash scripts/sim/run_campaign.sh --sim verilator --configs multihit_15_cal_nominal --out-dir results/campaign
+bash scripts/sim/run_campaign.sh --sim xrun --configs multihit_15_cal_nominal --seed-start 100 --out-dir results/campaign_validation
 
 python3 scripts/calibration/calibrate_6d_lut.py \
   --train-dir results/campaign/multihit_15_cal_nominal \

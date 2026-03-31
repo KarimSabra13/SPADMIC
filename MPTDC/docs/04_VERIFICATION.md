@@ -563,9 +563,10 @@ on the *design*, not the *simulator*.
 
 **Recommended verification of calibration validity:**
 ```bash
-# Run the campaign collection bench on Xcelium and compare CSV output
-bash scripts/sim/run_tb.sh tb_campaign_collect --sim xcelium
-# Compare results/campaign_*.csv with the Verilator-generated baseline
+# Run one smoke seed through each simulator path
+bash scripts/sim/run_campaign.sh --sim verilator --smoke --out-dir results/campaign_vlt_smoke
+bash scripts/sim/run_campaign.sh --sim xrun      --smoke --out-dir results/campaign_xrun_smoke
+# Compare the matching CSVs under those two output roots
 ```
 
 If the raw feature values (`nslow`, `nfast`, `ns`, `nf`, `pd_idx`) match

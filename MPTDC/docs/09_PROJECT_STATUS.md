@@ -206,7 +206,9 @@ Current gate recommendation:
 Generate fresh data:
 
 ```bash
-bash scripts/sim/run_campaign.sh --jobs 12
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
+# or, on a Cadence-equipped server:
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
 ```
 
 Run the LUT calibrator with explicit directories:
@@ -256,7 +258,7 @@ imc -load build/coverage_campaign/cov_work/scope/merged_cov &
 If that looks clean enough, then move to:
 
 ```bash
-bash scripts/sim/run_campaign.sh --jobs 12
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
 python3 scripts/calibration/calibrate_6d_lut.py \
   --train-dir results/campaign/multihit_15_cal_nominal \
   --fresh-dir results/campaign_validation/multihit_15_cal_nominal \

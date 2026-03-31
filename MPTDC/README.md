@@ -85,7 +85,7 @@ path before the next Cadence rerun.
 
 Offline calibration flow is present and documented:
 
-- data collection: `bash scripts/sim/run_campaign.sh`
+- data collection: `bash scripts/sim/run_campaign.sh --sim verilator|xrun|xcelium`
 - LUT calibration: `python3 scripts/calibration/calibrate_6d_lut.py ...`
 
 The committed calibration flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`.
@@ -177,7 +177,8 @@ those buckets before load/report.
 ### 6) Data collection and calibration
 
 ```bash
-bash scripts/sim/run_campaign.sh --jobs 12
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
 
 python3 scripts/calibration/calibrate_6d_lut.py \
   --train-dir results/campaign/multihit_15_cal_nominal \

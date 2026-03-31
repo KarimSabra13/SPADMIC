@@ -58,7 +58,7 @@ That makes `t_raw_ps` a useful debug observable, but not a replacement for full 
 Recommended local collection flow:
 
 - bench: `tb/int/tb_campaign_collect.sv` (plusarg-configurable)
-- orchestrator: `scripts/sim/run_campaign.sh` (parallel, resume-capable)
+- orchestrator: `scripts/sim/run_campaign.sh` (parallel, resume-capable, native `--sim verilator|xrun|xcelium`)
 - input source: `CAL`
 - mode: `MULTI_HIT` for dense raw data, `FIRST_HIT` for earliest-close behavior
 - output mode: `FULL` (all raw features + raw timestamp)
@@ -74,11 +74,15 @@ The campaign runner enumerates all combinations of:
 That gives 24 configurations × 30 seeds each = 720 simulation runs.
 
 ```bash
-# Full campaign (12-core parallel)
-bash scripts/sim/run_campaign.sh --jobs 12
+# Full campaign with Verilator (12-core parallel)
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
+
+# Same runner on a Cadence-equipped machine
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
 
 # Smoke test (1 seed per config, 500 conversions)
-bash scripts/sim/run_campaign.sh --smoke
+bash scripts/sim/run_campaign.sh --sim verilator --smoke
+bash scripts/sim/run_campaign.sh --sim xrun --smoke
 ```
 
 ### 4.3 Silicon lab flow

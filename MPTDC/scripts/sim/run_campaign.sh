@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # Purpose : Orchestrate a full data-collection campaign across all TDC
-#           configurations.  Builds the collection testbench once, then
-#           enumerates every (mode × max_hits × source × jitter) config,
-#           spawning --jobs parallel seeds per config.
+#           configurations. Builds the collection testbench once for Verilator,
+#           or launches one xrun/xcelium job per seed with a unique worklib.
 # Usage   : bash scripts/sim/run_campaign.sh [options]
+#           --sim NAME       Simulator: verilator|xrun|xcelium (default verilator)
 #           --jobs N         Parallel seeds (default 12)
 #           --seeds N        Seeds per config (default 30)
 #           --n-conv N       Conversions per seed (default 50000)
@@ -13,7 +13,7 @@
 #           --seed-start N   First PRNG seed number (default 0)
 #           --configs GLOB   Config name filter glob (default '*')
 #           --out-dir DIR    Output directory (default results/campaign)
-#           --rebuild        Force rebuild even if binary exists
+#           --rebuild        Force rebuild / clean simulator workdir
 #           --dry-run        Print what would run without executing
 #           --smoke          Quick smoke: 1 config, 1 seed, 100 conv
 # Author  : Karim Sabra
@@ -25,8 +25,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD_DIR="$REPO_ROOT/build"
 OBJ_DIR="$BUILD_DIR/obj_dir_campaign"
 BINARY="$OBJ_DIR/tb_campaign_collect"
+XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun"
 
 # ── defaults ────────────────────────────────────────────────────────────────
+SIM="verilator"
 JOBS=12
 SEEDS_PER_CONFIG=30
 N_CONV=50000
@@ -39,26 +41,69 @@ REBUILD=0
 DRY_RUN=0
 SMOKE=0
 
+print_cmd() {
+  local prefix="$1"
+  shift
+  printf '%s' "$prefix"
+  for arg in "$@"; do
+    printf ' %q' "$arg"
+  done
+  printf '\n'
+}
+
+print_cd_cmd() {
+  local dir="$1"
+  shift
+  printf '[DRY-RUN] (cd %q &&' "$dir"
+  for arg in "$@"; do
+    printf ' %q' "$arg"
+  done
+  printf ' )\n'
+}
+
+sanitize_path_token() {
+  local token="$1"
+  token="${token//\//_}"
+  token="${token// /_}"
+  token="${token//[^A-Za-z0-9_.-]/_}"
+  printf '%s' "$token"
+}
+
 # ── parse arguments ────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --jobs)       JOBS="$2";            shift 2;;
-    --seeds)      SEEDS_PER_CONFIG="$2"; shift 2;;
-    --n-conv)     N_CONV="$2";          shift 2;;
-    --delay-min)  DELAY_MIN="$2";       shift 2;;
-    --delay-max)  DELAY_MAX="$2";       shift 2;;
-    --seed-start) SEED_START="$2";      shift 2;;
-    --configs)    CONFIG_FILTER="$2";   shift 2;;
-    --out-dir)    OUT_DIR="$2";         shift 2;;
-    --rebuild)    REBUILD=1;            shift;;
-    --dry-run)    DRY_RUN=1;           shift;;
-    --smoke)      SMOKE=1;             shift;;
+    --sim)        SIM="$2";              shift 2 ;;
+    --jobs)       JOBS="$2";             shift 2 ;;
+    --seeds)      SEEDS_PER_CONFIG="$2"; shift 2 ;;
+    --n-conv)     N_CONV="$2";           shift 2 ;;
+    --delay-min)  DELAY_MIN="$2";        shift 2 ;;
+    --delay-max)  DELAY_MAX="$2";        shift 2 ;;
+    --seed-start) SEED_START="$2";       shift 2 ;;
+    --configs)    CONFIG_FILTER="$2";    shift 2 ;;
+    --out-dir)    OUT_DIR="$2";          shift 2 ;;
+    --rebuild)    REBUILD=1;              shift ;;
+    --dry-run)    DRY_RUN=1;              shift ;;
+    --smoke)      SMOKE=1;                shift ;;
     -h|--help)
       sed -n '2,/^# ---/{ /^# ---/d; s/^# //; p }' "$0"
-      exit 0;;
-    *) echo "Unknown option: $1"; exit 1;;
+      exit 0 ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
+
+case "$SIM" in
+  verilator) ;;
+  xrun|xcelium) SIM="xrun" ;;
+  *)
+    echo "[ERROR] Unknown simulator '$SIM' (use verilator, xrun, or xcelium)"
+    exit 1
+    ;;
+esac
+
+case "$OUT_DIR" in
+  /*) ;;
+  *) OUT_DIR="$(pwd)/$OUT_DIR" ;;
+esac
 
 # ── smoke mode overrides ───────────────────────────────────────────────────
 if (( SMOKE )); then
@@ -68,30 +113,67 @@ if (( SMOKE )); then
   echo "[CAMPAIGN] Smoke mode: 1 config, 1 seed, 100 conversions"
 fi
 
-# ── build ───────────────────────────────────────────────────────────────────
+# ── simulator preparation ───────────────────────────────────────────────────
 build_tb() {
-  echo "[CAMPAIGN] Building collection testbench..."
+  local -a cmd=(
+    verilator --binary --timing -j 4
+    +define+MPTDC_USE_OSC_MODEL
+    -f "$REPO_ROOT/rtl/filelist.f"
+    "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv"
+    "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
+    "$REPO_ROOT/tb/int/tb_campaign_collect.sv"
+    --top-module tb_campaign_collect
+    -Mdir "$OBJ_DIR"
+    -Wno-fatal
+  )
+
+  if (( DRY_RUN )); then
+    print_cmd "[DRY-RUN]" "${cmd[@]}"
+    return 0
+  fi
+
+  echo "[CAMPAIGN] Building collection testbench with Verilator..."
   mkdir -p "$BUILD_DIR"
-  verilator --binary --timing -j 4 \
-    +define+MPTDC_USE_OSC_MODEL \
-    -f "$REPO_ROOT/rtl/filelist.f" \
-    "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv" \
-    "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv" \
-    "$REPO_ROOT/tb/int/tb_campaign_collect.sv" \
-    --top-module tb_campaign_collect \
-    -Mdir "$OBJ_DIR" \
-    -Wno-fatal 2>&1 | tail -5
+  "${cmd[@]}" 2>&1 | tail -5
   echo "[CAMPAIGN] Build complete: $BINARY"
 }
 
-if [[ ! -x "$BINARY" ]] || (( REBUILD )); then
-  build_tb
-fi
+prepare_sim() {
+  case "$SIM" in
+    verilator)
+      if (( DRY_RUN )); then
+        if [[ ! -x "$BINARY" ]] || (( REBUILD )); then
+          build_tb
+        fi
+        return 0
+      fi
+      if ! command -v verilator >/dev/null 2>&1; then
+        echo "[ERROR] Verilator not found in PATH"
+        exit 1
+      fi
+      if [[ ! -x "$BINARY" ]] || (( REBUILD )); then
+        build_tb
+      fi
+      if [[ ! -x "$BINARY" ]]; then
+        echo "[ERROR] Binary not found at $BINARY"
+        exit 1
+      fi
+      ;;
 
-if [[ ! -x "$BINARY" ]]; then
-  echo "[ERROR] Binary not found at $BINARY"
-  exit 1
-fi
+    xrun)
+      if (( ! DRY_RUN )) && ! command -v xrun >/dev/null 2>&1; then
+        echo "[ERROR] xrun not found in PATH"
+        exit 1
+      fi
+      if (( ! DRY_RUN && REBUILD )) && [[ -d "$XRUN_BUILD_ROOT" ]]; then
+        rm -rf "$XRUN_BUILD_ROOT"
+      fi
+      mkdir -p "$XRUN_BUILD_ROOT"
+      ;;
+  esac
+}
+
+prepare_sim
 
 # ── config enumeration ──────────────────────────────────────────────────────
 #  mode: multihit (0), firsthit (1)
@@ -141,12 +223,19 @@ if [[ ${#FILTERED[@]} -eq 0 ]]; then
 fi
 
 echo "[CAMPAIGN] Matched ${#FILTERED[@]} config(s), ${SEEDS_PER_CONFIG} seeds each, ${N_CONV} conv/seed"
+echo "[CAMPAIGN] Simulator: ${SIM}"
 echo "[CAMPAIGN] Parallelism: ${JOBS} jobs"
 echo "[CAMPAIGN] Output: ${OUT_DIR}"
 echo ""
 
-# ── run one seed ────────────────────────────────────────────────────────────
-run_seed() {
+# Export associative arrays via temp file (bash limitation)
+CFG_EXPORT_FILE=$(mktemp)
+for cfg in "${FILTERED[@]}"; do
+  echo "${cfg} ${CFG_MODE[$cfg]} ${CFG_MAXHITS[$cfg]} ${CFG_INPUT[$cfg]} ${CFG_JSIG[$cfg]} ${CFG_JBOUND[$cfg]}"
+done > "$CFG_EXPORT_FILE"
+export CFG_EXPORT_FILE
+
+worker() {
   local cfg="$1" seed_num="$2"
   local cfg_dir="${OUT_DIR}/${cfg}"
   local csv_file="${cfg_dir}/seed_${seed_num}.csv"
@@ -154,60 +243,92 @@ run_seed() {
 
   mkdir -p "$cfg_dir"
 
-  local mode="${CFG_MODE[$cfg]}"
-  local mh="${CFG_MAXHITS[$cfg]}"
-  local inp="${CFG_INPUT[$cfg]}"
-  local jsig="${CFG_JSIG[$cfg]}"
-  local jb="${CFG_JBOUND[$cfg]}"
+  local line
+  line=$(grep "^${cfg} " "$CFG_EXPORT_FILE")
+  local mode mh inp jsig jb
+  read -r _ mode mh inp jsig jb <<< "$line"
 
-  local cmd="$BINARY"
-  cmd+=" +CAMPAIGN_MODE=${mode}"
-  cmd+=" +CAMPAIGN_MAX_HITS=${mh}"
-  cmd+=" +CAMPAIGN_INPUT_SEL=${inp}"
-  cmd+=" +CAMPAIGN_N_CONV=${N_CONV}"
-  cmd+=" +CAMPAIGN_DELAY_MIN_PS=${DELAY_MIN}"
-  cmd+=" +CAMPAIGN_DELAY_MAX_PS=${DELAY_MAX}"
-  cmd+=" +CAMPAIGN_SEED=${seed_num}"
-  cmd+=" +CAMPAIGN_OUTPUT_FILE=${csv_file}"
-  cmd+=" +OSC_JITTER_SIGMA_PS=${jsig}"
-  cmd+=" +OSC_JITTER_BOUND_PS=${jb}"
+  local rc=0
+  local -a cmd
 
-  if (( DRY_RUN )); then
-    echo "[DRY-RUN] $cmd"
-    return 0
-  fi
+  case "$SIM" in
+    verilator)
+      cmd=(
+        "$BINARY"
+        "+CAMPAIGN_MODE=${mode}"
+        "+CAMPAIGN_MAX_HITS=${mh}"
+        "+CAMPAIGN_INPUT_SEL=${inp}"
+        "+CAMPAIGN_N_CONV=${N_CONV}"
+        "+CAMPAIGN_DELAY_MIN_PS=${DELAY_MIN}"
+        "+CAMPAIGN_DELAY_MAX_PS=${DELAY_MAX}"
+        "+CAMPAIGN_SEED=${seed_num}"
+        "+CAMPAIGN_OUTPUT_FILE=${csv_file}"
+        "+OSC_JITTER_SIGMA_PS=${jsig}"
+        "+OSC_JITTER_BOUND_PS=${jb}"
+      )
+      if (( DRY_RUN )); then
+        print_cmd "[DRY-RUN]" "${cmd[@]}"
+        return 0
+      fi
+      "${cmd[@]}" > "$log_file" 2>&1
+      rc=$?
+      ;;
 
-  $cmd > "$log_file" 2>&1
-  local rc=$?
+    xrun)
+      local work_dir="${XRUN_BUILD_ROOT}/$(sanitize_path_token "$cfg")/seed_${seed_num}"
+      mkdir -p "$work_dir"
+      cmd=(
+        xrun
+        -64 -sv -access +rwc
+        -timescale 1ps/1ps
+        -nowarn DLCVAR
+        -top tb_campaign_collect
+        +define+MPTDC_USE_OSC_MODEL
+        -f "$REPO_ROOT/rtl/filelist.f"
+        "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv"
+        "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
+        "$REPO_ROOT/tb/int/tb_campaign_collect.sv"
+        -xmlibdirname "$work_dir/xcelium.d"
+        "+CAMPAIGN_MODE=${mode}"
+        "+CAMPAIGN_MAX_HITS=${mh}"
+        "+CAMPAIGN_INPUT_SEL=${inp}"
+        "+CAMPAIGN_N_CONV=${N_CONV}"
+        "+CAMPAIGN_DELAY_MIN_PS=${DELAY_MIN}"
+        "+CAMPAIGN_DELAY_MAX_PS=${DELAY_MAX}"
+        "+CAMPAIGN_SEED=${seed_num}"
+        "+CAMPAIGN_OUTPUT_FILE=${csv_file}"
+        "+OSC_JITTER_SIGMA_PS=${jsig}"
+        "+OSC_JITTER_BOUND_PS=${jb}"
+      )
+      if (( DRY_RUN )); then
+        print_cd_cmd "$REPO_ROOT" "${cmd[@]}"
+        return 0
+      fi
+      (cd "$REPO_ROOT" && "${cmd[@]}") > "$log_file" 2>&1
+      rc=$?
+      ;;
+  esac
 
   if (( rc != 0 )); then
     echo "[FAIL] ${cfg}/seed_${seed_num} (rc=${rc})"
-    return $rc
+    return "$rc"
   fi
 
-  # Quick validation: CSV should have >1 line (header + data)
   local lines
   lines=$(wc -l < "$csv_file" 2>/dev/null || echo 0)
   if (( lines < 2 )); then
     echo "[WARN] ${cfg}/seed_${seed_num}: CSV has ${lines} lines"
+  else
+    echo "[DONE] ${cfg}/seed_${seed_num} — ${lines} rows"
   fi
-
   return 0
 }
 
-export -f run_seed
-export BINARY OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN
-
-# Export associative arrays via temp file (bash limitation)
-CFG_EXPORT_FILE=$(mktemp)
-for cfg in "${FILTERED[@]}"; do
-  echo "${cfg} ${CFG_MODE[$cfg]} ${CFG_MAXHITS[$cfg]} ${CFG_INPUT[$cfg]} ${CFG_JSIG[$cfg]} ${CFG_JBOUND[$cfg]}"
-done > "$CFG_EXPORT_FILE"
+export -f worker print_cmd print_cd_cmd sanitize_path_token
+export REPO_ROOT BINARY XRUN_BUILD_ROOT OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN SIM
 
 # ── launch all seeds ────────────────────────────────────────────────────────
 TOTAL_SEEDS=$(( ${#FILTERED[@]} * SEEDS_PER_CONFIG ))
-COMPLETED=0
-FAILED=0
 
 echo "[CAMPAIGN] Starting ${TOTAL_SEEDS} seed runs..."
 echo "==========================================================="
@@ -229,55 +350,6 @@ done > "$JOB_LIST_FILE"
 ACTUAL_JOBS=$(wc -l < "$JOB_LIST_FILE")
 echo "[CAMPAIGN] Skipped ${SKIPPED} already-complete seeds, ${ACTUAL_JOBS} remaining"
 
-# Worker function that re-reads config from export file
-worker() {
-  local cfg="$1" seed_num="$2"
-  local cfg_dir="${OUT_DIR}/${cfg}"
-  local csv_file="${cfg_dir}/seed_${seed_num}.csv"
-  local log_file="${cfg_dir}/seed_${seed_num}.log"
-
-  mkdir -p "$cfg_dir"
-
-  # Read config parameters
-  local line
-  line=$(grep "^${cfg} " "$CFG_EXPORT_FILE")
-  local mode mh inp jsig jb
-  read -r _ mode mh inp jsig jb <<< "$line"
-
-  local cmd="$BINARY"
-  cmd+=" +CAMPAIGN_MODE=${mode}"
-  cmd+=" +CAMPAIGN_MAX_HITS=${mh}"
-  cmd+=" +CAMPAIGN_INPUT_SEL=${inp}"
-  cmd+=" +CAMPAIGN_N_CONV=${N_CONV}"
-  cmd+=" +CAMPAIGN_DELAY_MIN_PS=${DELAY_MIN}"
-  cmd+=" +CAMPAIGN_DELAY_MAX_PS=${DELAY_MAX}"
-  cmd+=" +CAMPAIGN_SEED=${seed_num}"
-  cmd+=" +CAMPAIGN_OUTPUT_FILE=${csv_file}"
-  cmd+=" +OSC_JITTER_SIGMA_PS=${jsig}"
-  cmd+=" +OSC_JITTER_BOUND_PS=${jb}"
-
-  if (( DRY_RUN )); then
-    echo "[DRY-RUN] $cmd"
-    return 0
-  fi
-
-  $cmd > "$log_file" 2>&1
-  local rc=$?
-
-  if (( rc != 0 )); then
-    echo "[FAIL] ${cfg}/seed_${seed_num} (rc=${rc})"
-    return $rc
-  fi
-
-  local lines
-  lines=$(wc -l < "$csv_file" 2>/dev/null || echo 0)
-  echo "[DONE] ${cfg}/seed_${seed_num} — ${lines} rows"
-  return 0
-}
-
-export -f worker
-export CFG_EXPORT_FILE
-
 # Use GNU parallel if available, otherwise xargs
 if command -v parallel &>/dev/null; then
   echo "[CAMPAIGN] Using GNU parallel with ${JOBS} jobs"
@@ -285,7 +357,7 @@ if command -v parallel &>/dev/null; then
   RC=$?
 else
   echo "[CAMPAIGN] Using xargs with ${JOBS} jobs"
-  cat "$JOB_LIST_FILE" | xargs -P "$JOBS" -L 1 bash -c 'worker "$@"' _
+  xargs -P "$JOBS" -L 1 bash -c 'worker "$@"' _ < "$JOB_LIST_FILE"
   RC=$?
 fi
 
@@ -307,7 +379,6 @@ if (( ! DRY_RUN )); then
   echo "[CAMPAIGN] Total data rows: ${TOTAL_ROWS}"
   echo "[CAMPAIGN] Output directory: ${OUT_DIR}"
 
-  # Check for failures (|| true prevents set -e from tripping on no-match)
   FAIL_COUNT=$(find "$OUT_DIR" -name '*.log' -exec grep -l 'ERROR\|FATAL\|FAIL' {} + 2>/dev/null | wc -l || true)
   if (( FAIL_COUNT > 0 )); then
     echo "[WARN] ${FAIL_COUNT} seed(s) had errors — check logs"
