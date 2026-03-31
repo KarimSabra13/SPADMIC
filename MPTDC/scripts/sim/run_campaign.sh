@@ -69,6 +69,11 @@ sanitize_path_token() {
   printf '%s' "$token"
 }
 
+has_gnu_parallel() {
+  command -v parallel >/dev/null 2>&1 || return 1
+  parallel --version 2>/dev/null | grep -q '^GNU parallel'
+}
+
 # ── parse arguments ────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -350,8 +355,9 @@ done > "$JOB_LIST_FILE"
 ACTUAL_JOBS=$(wc -l < "$JOB_LIST_FILE")
 echo "[CAMPAIGN] Skipped ${SKIPPED} already-complete seeds, ${ACTUAL_JOBS} remaining"
 
-# Use GNU parallel if available, otherwise xargs
-if command -v parallel &>/dev/null; then
+# Use GNU parallel if available, otherwise xargs. Some Cadence installs ship a
+# different `parallel` helper that is not GNU parallel and must not be used here.
+if has_gnu_parallel; then
   echo "[CAMPAIGN] Using GNU parallel with ${JOBS} jobs"
   parallel --jobs "$JOBS" --colsep ' ' worker {1} {2} < "$JOB_LIST_FILE"
   RC=$?
