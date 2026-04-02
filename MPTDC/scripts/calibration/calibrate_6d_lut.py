@@ -80,19 +80,43 @@ def load_and_prepare(csv_files, core_only=True):
     for f in csv_files:
         frames.append(pd.read_csv(f))
     df = pd.concat(frames, ignore_index=True)
+    n_before = len(df)
+    df.attrs["rows_before_filter"] = int(n_before)
+    df.attrs["core_filter_label"] = "nslow > 0"
+    df.attrs["core_filter_applied"] = bool(core_only)
     if core_only:
-        n_before = len(df)
         df = df[df["nslow"] > 0].copy()
         pct = (1 - len(df) / n_before) * 100 if n_before else 0
         print(f"  Core filter: removed {n_before - len(df):,} rows "
               f"({pct:.1f}%) with nslow=0")
+    df.attrs["rows_after_filter"] = int(len(df))
+    df.attrs["rows_filtered_out"] = int(n_before - len(df))
+    df.attrs["rows_filtered_out_pct"] = float((1 - len(df) / n_before) * 100) if n_before else 0.0
     df["offset"] = df["Tref_ps"] - df["t_raw_ps"]
     infer_ns_nf(df)
     bad = df["ns_inf"].isna().sum()
     if bad:
         print(f"  WARNING: {bad} rows failed ns/nf inference – dropped")
         df = df.dropna(subset=["ns_inf", "nf_inf"])
+    df.attrs["rows_after_inference"] = int(len(df))
     return df
+
+
+def filter_summary(df):
+    """Return structured filter metadata captured by load_and_prepare()."""
+    before = int(df.attrs.get("rows_before_filter", len(df)))
+    after_filter = int(df.attrs.get("rows_after_filter", len(df)))
+    after_inference = int(df.attrs.get("rows_after_inference", len(df)))
+    filtered_out = int(df.attrs.get("rows_filtered_out", before - after_filter))
+    return {
+        "filter": df.attrs.get("core_filter_label", "nslow > 0"),
+        "applied": bool(df.attrs.get("core_filter_applied", False)),
+        "rows_before_filter": before,
+        "rows_after_filter": after_filter,
+        "rows_after_inference": after_inference,
+        "rows_filtered_out": filtered_out,
+        "rows_filtered_out_pct": float(df.attrs.get("rows_filtered_out_pct", 0.0)),
+    }
 
 
 def build_lut(train_df):
@@ -571,7 +595,8 @@ def main():
 
     print(f"\n[2/6] Validating on held-out seeds ({len(val_files)} files)...")
     val_data = load_and_prepare(val_files, core_only=True)
-    print(f"  Validation rows: {len(val_data):,}")
+    val_filter = filter_summary(val_data)
+    print(f"  Validation rows (core subset): {len(val_data):,}")
 
     val_result = apply_lut(val_data, lut_df)
     unmatched = val_result["correction"].isna().sum()
@@ -579,8 +604,10 @@ def main():
           f"({unmatched} unmatched)")
     val_result = val_result.dropna(subset=["correction"])
 
-    m_raw = compute_metrics(val_result["raw_error_ps"].values, "Pre-calibration (held-out)")
-    m_cal = compute_metrics(val_result["error_ps"].values, "Post-calibration (held-out)")
+    m_raw = compute_metrics(val_result["raw_error_ps"].values,
+                            "Pre-calibration (held-out, core subset)")
+    m_cal = compute_metrics(val_result["error_ps"].values,
+                            "Post-calibration (held-out, core subset)")
     print_metrics(m_raw)
     print_metrics(m_cal)
 
@@ -621,6 +648,9 @@ def main():
         raw_sum, cal_sum = 0.0, 0.0
         raw_abs, cal_abs = 0.0, 0.0
         total_n, unmatched_total = 0, 0
+        fresh_rows_before = 0
+        fresh_rows_after_filter = 0
+        fresh_rows_after_inference = 0
         all_raw_errs = []
         all_cal_errs = []
         # Per-hit_idx and per-nslow accumulators
@@ -631,6 +661,9 @@ def main():
         for ci in range(0, len(fresh_files), CHUNK):
             batch = fresh_files[ci:ci+CHUNK]
             chunk = load_and_prepare(batch, core_only=True)
+            fresh_rows_before += int(chunk.attrs.get("rows_before_filter", len(chunk)))
+            fresh_rows_after_filter += int(chunk.attrs.get("rows_after_filter", len(chunk)))
+            fresh_rows_after_inference += int(chunk.attrs.get("rows_after_inference", len(chunk)))
             result = apply_lut(chunk, lut_df)
             unmatched_total += result["correction"].isna().sum()
             result = result.dropna(subset=["correction"])
@@ -676,8 +709,8 @@ def main():
         all_raw = np.concatenate(all_raw_errs)
         all_cal = np.concatenate(all_cal_errs)
 
-        m_raw_f = compute_metrics(all_raw, "Pre-calibration (fresh, sampled)")
-        m_cal_f = compute_metrics(all_cal, "Post-calibration (fresh, sampled)")
+        m_raw_f = compute_metrics(all_raw, "Pre-calibration (fresh core subset, sampled)")
+        m_cal_f = compute_metrics(all_cal, "Post-calibration (fresh core subset, sampled)")
         # Override with exact aggregated values
         m_raw_f["rmse"] = float(raw_rmse)
         m_raw_f["mae"]  = float(raw_mae)
@@ -687,8 +720,20 @@ def main():
         m_cal_f["mae"]  = float(cal_mae)
         m_cal_f["mean"] = float(cal_mean)
         m_cal_f["count"] = total_n
+        fresh_filter = {
+            "filter": "nslow > 0",
+            "applied": True,
+            "rows_before_filter": int(fresh_rows_before),
+            "rows_after_filter": int(fresh_rows_after_filter),
+            "rows_after_inference": int(fresh_rows_after_inference),
+            "rows_filtered_out": int(fresh_rows_before - fresh_rows_after_filter),
+            "rows_filtered_out_pct": float(
+                (1 - fresh_rows_after_filter / fresh_rows_before) * 100
+            ) if fresh_rows_before else 0.0,
+        }
 
-        print(f"  LUT coverage: {(1 - unmatched_total/total_n)*100:.2f}% "
+        coverage_den = fresh_rows_after_inference if fresh_rows_after_inference else 1
+        print(f"  LUT coverage: {(1 - unmatched_total/coverage_den)*100:.2f}% "
               f"({unmatched_total} unmatched)")
         print_metrics(m_raw_f)
         print_metrics(m_cal_f)
@@ -797,22 +842,36 @@ def main():
             "n_bins": len(lut_df),
             "median_bin_pop": int(lut_df["train_count"].median()),
             "core_filter": "nslow > 0 (removes ~6.6% boundary-ambiguous hits)",
+            "rows_before_filter": int(total_rows),
+            "rows_after_filter": int(total_core),
+            "rows_filtered_out": int(total_rows - total_core),
+            "rows_filtered_out_pct": float(
+                (1 - total_core / total_rows) * 100
+            ) if total_rows else 0.0,
         },
         "held_out_validation": {
+            "scope": "Core subset only (nslow > 0); nslow=0 rows excluded for published calibration metrics.",
+            "filter_summary": val_filter,
             "pre_cal":  m_raw,
             "post_cal": m_cal,
         },
     }
     if m_raw_f and m_cal_f:
         report["fresh_validation"] = {
+            "scope": "Core subset only (nslow > 0); chunked fresh-seed validation.",
+            "filter_summary": fresh_filter,
             "pre_cal":  m_raw_f,
             "post_cal": m_cal_f,
         }
-    report["averaging_study"] = [
-        {"N": r["N"], "rmse_ps": round(r["rmse"], 3),
-         "mae_ps": round(r["mae"], 3), "p90_ps": round(r["p90_ae"], 3)}
-        for r in avg_results
-    ]
+    report["averaging_study"] = {
+        "scope": "Post-calibration core-subset error pool",
+        "method": "Analysis-side resampling of independent error draws; not a fixed-delay repeated-measurement TB proof.",
+        "results": [
+            {"N": r["N"], "rmse_ps": round(r["rmse"], 3),
+             "mae_ps": round(r["mae"], 3), "p90_ps": round(r["p90_ae"], 3)}
+            for r in avg_results
+        ],
+    }
 
     report_path = os.path.join(args.out_dir, "calibration_report.json")
     with open(report_path, "w") as f:
@@ -831,8 +890,13 @@ def main():
         f.write(f"Mode compatibility: ALL output modes (0, 1, 2)\n\n")
 
         f.write("─" * 70 + "\n")
-        f.write("HELD-OUT VALIDATION (seeds 24-29)\n")
+        f.write("HELD-OUT VALIDATION (core subset: nslow > 0, seeds 24-29)\n")
         f.write("─" * 70 + "\n")
+        f.write(f"  Rows before filter     : {val_filter['rows_before_filter']:>8,}\n")
+        f.write(f"  Rows after filter      : {val_filter['rows_after_filter']:>8,}\n")
+        f.write(f"  Rows after ns/nf infer : {val_filter['rows_after_inference']:>8,}\n")
+        f.write(f"  Excluded nslow=0 rows  : {val_filter['rows_filtered_out']:>8,} "
+                f"({val_filter['rows_filtered_out_pct']:.1f}%)\n\n")
         f.write(f"  Pre-calibration  RMSE: {m_raw['rmse']:>8.2f} ps\n")
         f.write(f"  Post-calibration RMSE: {m_cal['rmse']:>8.2f} ps\n")
         f.write(f"  Improvement:           {(1-m_cal['rmse']/m_raw['rmse'])*100:>7.1f}%\n\n")
@@ -845,8 +909,13 @@ def main():
 
         if m_raw_f and m_cal_f:
             f.write("─" * 70 + "\n")
-            f.write("FRESH VALIDATION (seeds 100-129, never seen during training)\n")
+            f.write("FRESH VALIDATION (core subset: nslow > 0, seeds 100-129)\n")
             f.write("─" * 70 + "\n")
+            f.write(f"  Rows before filter     : {fresh_filter['rows_before_filter']:>8,}\n")
+            f.write(f"  Rows after filter      : {fresh_filter['rows_after_filter']:>8,}\n")
+            f.write(f"  Rows after ns/nf infer : {fresh_filter['rows_after_inference']:>8,}\n")
+            f.write(f"  Excluded nslow=0 rows  : {fresh_filter['rows_filtered_out']:>8,} "
+                    f"({fresh_filter['rows_filtered_out_pct']:.1f}%)\n\n")
             f.write(f"  Pre-calibration  RMSE: {m_raw_f['rmse']:>8.2f} ps\n")
             f.write(f"  Post-calibration RMSE: {m_cal_f['rmse']:>8.2f} ps\n")
             f.write(f"  Improvement:           "
@@ -859,8 +928,11 @@ def main():
                     f"{m_cal_f['p90_ae']:.1f} / {m_cal_f['p99_ae']:.1f} ps\n\n")
 
         f.write("─" * 70 + "\n")
-        f.write("AVERAGING STUDY\n")
+        f.write("ANALYSIS-SIDE RESAMPLED AVERAGING STUDY\n")
         f.write("─" * 70 + "\n")
+        f.write("  Scope  : post-calibration core subset (nslow > 0)\n")
+        f.write("  Method : resamples independent error draws from the calibrated pool;\n")
+        f.write("           this is not a fixed-delay repeated-measurement TB proof.\n\n")
         f.write(f"  {'N':>6s}  {'RMSE (ps)':>10s}  {'MAE (ps)':>10s}  "
                 f"{'P90 (ps)':>10s}  {'vs N=1':>8s}\n")
         for r in avg_results:
@@ -893,11 +965,11 @@ def main():
     print(f"\n{'='*70}")
     print(f"  FINAL RESULTS")
     print(f"{'='*70}")
-    print(f"  Held-out:  {m_raw['rmse']:.2f} ps → {m_cal['rmse']:.2f} ps "
+    print(f"  Held-out core subset:  {m_raw['rmse']:.2f} ps → {m_cal['rmse']:.2f} ps "
           f"({(1-m_cal['rmse']/m_raw['rmse'])*100:.1f}% improvement)")
     if m_cal_f:
-        print(f"  Fresh:     {m_raw_f['rmse']:.2f} ps → {m_cal_f['rmse']:.2f} ps "
-              f"({(1-m_cal_f['rmse']/m_raw_f['rmse'])*100:.1f}% improvement)")
+        print(f"  Fresh core subset:     {m_raw_f['rmse']:.2f} ps → {m_cal_f['rmse']:.2f} ps "
+               f"({(1-m_cal_f['rmse']/m_raw_f['rmse'])*100:.1f}% improvement)")
     # Find N for sub-10ps, sub-5ps, sub-1ps
     for target in [15, 10, 5, 2, 1]:
         for r in avg_results:

@@ -1,583 +1,298 @@
 # MPTDC v2.2 — Verification Guide
 
 > - **Author:** Karim Sabra
-> - **Purpose:** Summarize the active bench inventory, VIP flow, and supported regression entry points.
-> - **Scope:** Covers repository verification collateral and runner usage; it does not replace signoff methodology.
+> - **Purpose:** Describe the maintained verification, collection, and characterization flows in the current repository.
+> - **Scope:** Covers active benches, VIP regressions, coverage entrypoints, and measurement-proof helpers. It is not a signoff methodology document.
 
 ## 1. Verification philosophy
 
-The active verification strategy combines:
+The maintained verification stack is intentionally layered:
 
-- unit benches for leaf blocks and protocol helpers
-- integration benches for end-to-end behavior through `mptdc_top_asic`
-- a reusable class-based VIP environment for layered regression
-- focused collection benches for raw-data characterization
-- simulation with the behavioral oscillator model (`MPTDC_USE_OSC_MODEL`) so the async Vernier path behaves realistically
+- unit benches for leaf RTL and packet formatting
+- integration benches for end-to-end functional behavior through `mptdc_top_asic`
+- a reusable class-based VIP for scenario-driven regression and coverage hooks
+- campaign collectors for raw-data characterization
+- fixed-delay characterization to prove same-delay one-shot RMS and averaging behavior
 
-This is functional verification of the RTL architecture. It is not a replacement for gate-level signoff, static timing, formal CDC review, or real oscillator-macro integration.
+This validates RTL behavior and exported observables. It does **not** replace:
 
-## 2. Shared TB infrastructure
+- STA / MMMC signoff
+- formal CDC review
+- analog oscillator integration
+- DFT / silicon test planning
+
+## 2. Shared infrastructure
 
 ### 2.1 `tb/common/mptdc_tb_pkg.sv`
 
-Provides reusable helpers for:
+Reusable helpers for:
 
-- packet detection: `is_header()`, `is_eoc()`
-- header parsing: context id, hit count, flags, mode, boundary bit
-- hit parsing: `nslow`, `nfast`, `nfast_snap`, `ns`, `nf`, `pd_idx`, `event_seq`
-- CSR transactions
-- async START/STOP injection
-- packet collection from the 16-bit output stream
+- CSR reads/writes
+- async START / STOP / CAL injection
+- output-word parsing and packet collection
+- RAW feature extraction and timestamp checks
 
 ### 2.2 `tb/common/mptdc_raw_monitor.sv`
 
-Passive packet observer that can log and sanity-check the 16-bit stream.
+Passive monitor for the 16-bit packet stream.
 
 ### 2.3 `scripts/sim/run_tb.sh`
 
-Universal test runner used by most local workflows.
+Universal runner for unit and integration benches.
 
 Examples:
 
 ```bash
 bash scripts/sim/run_tb.sh tb_single_conv
-bash scripts/sim/run_tb.sh tb_v21_collect
+bash scripts/sim/run_tb.sh tb_overflow_count --sim xrun
 ```
 
-### 2.4 `tb/vip/` and `tb/tests/`
+### 2.4 VIP environment: `tb/vip/` + `tb/tests/mptdc_vip_tb.sv`
 
-The reusable VIP flow is built around:
+The maintained VIP contains:
 
-- interfaces for CSR, async START/STOP/CAL stimulus, and narrow output
-- transaction classes for reset, configuration, conversion stimulus, and backpressure
-- generator / scenario queueing
-- a class driver plus module-scope BFM bridge for stable timed DUT driving
-- acceptance routing so only conversions actually accepted by the DUT are forwarded to the scoreboard expectation path
-- a sampled monitor bridge for deterministic narrow-bus word capture under random backpressure
-- scoreboard and protocol / semantic checks
+- transaction classes for reset, configuration, conversions, and backpressure
+- generator / scenario sequencing
+- driver + BFM bridge for timed DUT interaction
+- monitor bridge for deterministic accepted-word sampling
+- scoreboard / protocol checks
 - functional coverage hooks guarded by `MPTDC_ENABLE_FUNC_COV`
-
-The current reusable top is `tb/tests/mptdc_vip_tb.sv`. The main package is `tb/vip/pkg/mptdc_vip_pkg.sv`.
 
 ### 2.5 `scripts/sim/run_vip_test.sh`
 
-Runner for the class-based VIP tests.
+Primary VIP runner.
 
-It also provides the coverage-runner hooks used for closure handoff:
+Key uses:
 
-- `--func-cov` / `--code-cov` to enable coverage-capable simulator flows
-- `--cov-workdir DIR` and `--cov-test-name NAME` so multiple Cadence runs can share one coverage database
-- `--dry-run` so command lines can be reviewed locally without requiring `xrun`
+- fast local Verilator regression
+- Cadence functional/code coverage runs
+- jitter-aware VIP stress
 
 Examples:
 
 ```bash
 bash scripts/sim/run_vip_test.sh smoke_single_conv --sim verilator
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --func-cov --code-cov \
-  --cov-workdir build/vip_coverage_xrun/cov_work --cov-test-name smoke_single_conv
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --func-cov --code-cov --dry-run
-bash scripts/sim/run_vip_test.sh long_random --sim verilator
+bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
+  --osc-jitter-sigma 8 --osc-jitter-bound 24
 ```
 
-### 2.6 `ci/run_vip_smoke.sh`
+## 3. Active maintained benches
 
-Smoke regression wrapper for the VIP suite. It currently exercises:
+### 3.1 Unit benches
 
-- `smoke_single_conv`
-- `full_mode_timestamp`
-- `firsthit_contract`
-- `backpressure_integrity`
-- `start_watchdog`
-- `cal_inject`
-- `overflow_status`
-- `long_random`
-- `multi_conv_rearm_stress`
-- `global_watchdog_recovery`
-- `csr_readback_control`
-- `jitter_robustness` (run with non-zero oscillator jitter plusargs)
+| Bench | Purpose |
+| --- | --- |
+| `tb_input_mux_unit` | SPAD / CAL routing behavior |
+| `tb_reset_sync_unit` | reset synchronizer semantics |
+| `tb_watchdog_unit` | watchdog counting and trip behavior |
+| `tb_context_bank_unit` | context freeze / retention correctness |
+| `tb_narrow16_tx_v2_unit` | serializer packet formatting and sequencing |
 
-### 2.7 `ci/run_vip_coverage.sh`
+### 3.2 Integration benches
 
-Cadence-side VIP coverage regression wrapper.
+| Bench | Purpose |
+| --- | --- |
+| `tb_single_conv` | single conversion sanity |
+| `tb_multi_conv_stress` | repeated conversions and sequencing |
+| `tb_deadtime_measure` | re-arm timing trends |
+| `tb_cal_inject` | CAL injection path |
+| `tb_backpressure` | ready/valid stalls and FIFO tolerance |
+| `tb_watchdog_recovery` | global watchdog trip and recovery |
+| `tb_start_wdt` | START-without-STOP watchdog behavior |
+| `tb_overflow_count` | rejected START / overflow accounting |
+| `tb_firsthit_mode` | FIRST_HIT early-close contract |
 
-It:
+### 3.3 Collection / characterization benches
 
-- runs the stable VIP coverage suite under `xrun` / `xcelium`
-- enables both functional coverage and code coverage
-- shares one coverage work directory across tests so IMC / Xcelium can review a merged database
-- supports `--clean`, `--seed-base`, `--waves`, `--dry-run`, and optional per-invocation test selection
+The maintained raw-data collector is:
 
-The default merged coverage suite currently contains:
+- `tb/int/tb_campaign_collect.sv`
 
-- `smoke_single_conv`
-- `full_mode_timestamp`
-- `firsthit_contract`
-- `backpressure_integrity`
-- `start_watchdog`
-- `cal_inject`
-- `overflow_status`
-- `long_random`
-- `multi_conv_rearm_stress`
-- `global_watchdog_recovery`
-- `jitter_robustness`
-- `csr_readback_control`
-- `coverage_exhaustive`
+It is driven through:
 
-Examples:
+- `bash scripts/sim/run_campaign.sh ...`
+
+This is the active characterization bench for broad `20 ps .. 30 ns` sweeps. Older
+`tb_v21_*` collection benches are **not** the maintained path anymore.
+
+## 4. Maintained runner entrypoints
+
+### 4.1 Fast local regression
 
 ```bash
-bash ci/run_vip_coverage.sh --sim xrun --clean
-bash ci/run_vip_coverage.sh long_random --sim xcelium --seed-base 100
-bash ci/run_vip_coverage.sh --dry-run
+bash ci/run_smoke.sh
+bash ci/run_full_regression.sh
+bash ci/run_vip_smoke.sh
 ```
 
-### 2.8 `ci/run_coverage_campaign.sh`
+### 4.2 VIP smoke suite
 
-Cadence-side exhaustive/stress campaign wrapper.
+`ci/run_vip_smoke.sh` currently runs `13` tests:
 
-It:
+1. `smoke_single_conv`
+2. `full_mode_timestamp`
+3. `firsthit_contract`
+4. `backpressure_integrity`
+5. `start_watchdog`
+6. `cal_inject`
+7. `overflow_status`
+8. `long_random`
+9. `multi_conv_rearm_stress`
+10. `global_watchdog_recovery`
+11. `csr_readback_control`
+12. `hard_reset_readback`
+13. `jitter_robustness`
 
-- runs the stable merged coverage suite first
-- then runs `stress_random` across many seeds
-- merges all Cadence coverage data into one database
-- is the recommended server-side command when you want both coverage evidence and long stress exposure in one campaign
+### 4.3 Cadence coverage suite
+
+`ci/run_vip_coverage.sh` currently runs `14` tests:
+
+1. `smoke_single_conv`
+2. `full_mode_timestamp`
+3. `firsthit_contract`
+4. `backpressure_integrity`
+5. `start_watchdog`
+6. `cal_inject`
+7. `overflow_status`
+8. `long_random`
+9. `multi_conv_rearm_stress`
+10. `global_watchdog_recovery`
+11. `jitter_robustness`
+12. `csr_readback_control`
+13. `hard_reset_readback`
+14. `coverage_exhaustive`
+
+For a broader Cadence checkpoint:
+
+```bash
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+```
+
+## 5. Raw-data and measurement-proof flows
+
+### 5.1 Broad-range campaign collection
+
+Use the maintained sweep flow when you want statistical coverage across the full delay range:
+
+```bash
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
+bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
+```
+
+Supported knobs that matter for characterization:
+
+- `--sim verilator|xrun|xcelium`
+- `--out-mode full|raw_features`
+- `--jitter-sigma <ps> --jitter-bound <ps>`
+- `--delay-min <ps> --delay-max <ps>`
+- `--seed-start`, `--seeds`, `--n-conv`, `--configs`, `--out-dir`
+
+### 5.2 Broad-range campaign analysis
+
+`scripts/analysis/analyze_campaign.py` is the maintained post-processing entrypoint for sweep campaigns.
+
+It now emits first-class outputs for:
+
+- RMSE / mean / tails vs true delay
+- RMSE / tails vs `nslow`
+- RMSE / tails vs `nfast_hit`
+- RMSE / tails vs `t_raw_ps`
+- fixed engineering delay-region summary tables
 
 Example:
 
 ```bash
-bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+python3 scripts/analysis/analyze_campaign.py \
+  --campaign-dir results/campaign \
+  --output-dir results/campaign/analysis \
+  --config-filter 'multihit_15_*'
 ```
 
-### 2.9 `ci/run_full_regression.sh`
+### 5.3 Repeated fixed-delay characterization
 
-Current active regression driver.
-
-Runs:
-
-- lint on `mptdc_top_asic`
-- the active integration suite
-
-## 3. Active unit benches
-
-| Bench | Purpose |
-|------|---------|
-| `tb_input_mux_unit` | SPAD/CAL routing behavior |
-| `tb_reset_sync_unit` | reset synchronizer semantics |
-| `tb_watchdog_unit` | global watchdog counting and trip behavior |
-| `tb_context_bank_unit` | snapshot storage correctness and boundary-bit retention |
-| `tb_narrow16_tx_v2_unit` | packet formatting, serializer sequencing, and timestamp-word generation |
-
-## 4. Active integration benches
-
-| Bench | Purpose | Typical focus |
-|------|---------|---------------|
-| `tb_single_conv` | single conversion sanity | packet framing, hit presence, basic data validity |
-| `tb_multi_conv_stress` | repeated conversions | sustained operation, sequencing, no packet loss |
-| `tb_deadtime_measure` | re-arm timing | conversion-to-conversion recovery and deadtime behavior |
-| `tb_cal_inject` | calibration input path | muxing, CAL-mode behavior, delay sweep sanity |
-| `tb_backpressure` | output stalls | ready/valid backpressure and FIFO tolerance |
-| `tb_watchdog_recovery` | global watchdog recovery | force-reset behavior and cleanup |
-| `tb_start_wdt` | missing-STOP recovery | slow-domain START watchdog and synthetic STOP flow |
-| `tb_overflow_count` | rejected START accounting | real overflow counting via `start_rejected` |
-| `tb_firsthit_mode` | FIRST_HIT semantics | close behavior and limited-hit packet expectations |
-
-These nine benches make up the active regression suite.
-
-## 5. Collection and characterization benches
-
-### 5.1 `tb/int/tb_v21_collect.sv`
-
-This is the maintained comprehensive collection bench for the current architecture.
-
-It:
-
-- runs `1000` `FIRST_HIT` conversions
-- runs `1000` `MULTI_HIT` conversions with `max_hits=15`
-- generates delays across the active measurement range
-- writes CSV files in `results/`
-- logs raw features plus the current raw timestamp reconstruction
-
-Current CSV fields include:
-
-- `Nslow`
-- `Nfast_hit`
-- `Nfast_snap`
-- `ns`
-- `nf`
-- `event_seq`
-- `phase0_snap`
-- `slow_boundary_inc`
-- `Tconv_ps`
-- `offset_ps`
-
-### 5.2 `tb/int/tb_data_collect.sv`
-
-Legacy-style sweep bench retained for targeted collection. It now uses the shared package raw-timestamp helper but is not the primary maintained collection flow.
-
-### 5.3 `tb/int/tb_v21_debug.sv`
-
-Debug-oriented bench, useful during investigation work but not part of the main regression contract.
-
-## 6. What the current verification covers well
-
-1. Packet framing and serializer behavior across all active output modes
-2. Double-buffer context flow and context release
-3. Missing-STOP and global-watchdog recovery behavior
-4. Output backpressure and FIFO stalling behavior
-5. FIRST_HIT and MULTI_HIT operation
-6. Raw-data collection over a broad time range using the behavioral oscillator model
-7. Current STOP-side `Nslow` snapshot behavior and boundary metadata export
-8. Reusable scenario-driven regression through the class-based VIP
-9. Cross-checking of packet structure, flags, output mode, and timestamp reconstruction in the VIP scoreboard
-
-### 6.1 Coverage strategy in the VIP flow
-
-The VIP is designed to support:
-
-- functional coverage through the `stim_cg` and `pkt_cg` covergroups in the VIP package
-- code coverage in `xrun` / Xcelium
-- scenario-driven smoke validation in Verilator
-
-In the current local environment, Verilator is the validated runtime path and does not support covergroups. As a result:
-
-- local preflight stays on `ci/run_vip_smoke.sh`
-- functional coverage must be enabled on a coverage-capable simulator such as `xrun`
-- `scripts/sim/run_vip_test.sh` intentionally rejects `--func-cov` / `--code-cov` when `--sim verilator` is selected
-- `ci/run_vip_coverage.sh` is the handoff entrypoint for Cadence-side coverage closure
-- Verilator should be treated as compile-and-smoke validation for the VIP flow
-- coverage closure remains a Cadence-side activity even though the hooks are already present in the TB architecture
-
-### 6.2 Coverage-closure handoff
-
-Recommended Cadence-side entry command:
+Use this flow when the question is **same-delay empirical one-shot RMS** rather than broad sweep behavior:
 
 ```bash
-bash ci/run_vip_coverage.sh --sim xrun --clean
+bash scripts/sim/run_fixed_delay_campaign.sh \
+  --sim verilator \
+  --configs multihit_15_cal_nominal \
+  --delay-list "20,50,100,200,500,1000,2000,5000,10000,30000" \
+  --seeds 6 \
+  --n-conv 2000 \
+  --out-dir results/fixed_delay_campaign \
+  --analyze
 ```
 
-Local command review without Cadence tools:
+This wrapper reuses `tb_campaign_collect` and simply runs independent campaigns with
+`delay_min == delay_max`.
+
+The paired analyzer:
+
+- `scripts/analysis/analyze_fixed_delay_campaign.py`
+
+produces:
+
+- `fixed_delay_summary.csv`
+- `fixed_delay_averaging.csv`
+- `fixed_delay_report.txt`
+- RMSE / tail plots vs fixed delay
+- same-delay averaging curves for:
+  - `first_hit_scan`
+  - `conv_mean`
+
+This is the maintained proof path for repeated-measurement RMS and averaging studies.
+
+## 6. What the current verification proves well
+
+The current tree gives good confidence in:
+
+1. serializer and packet framing behavior across active modes
+2. context freeze / drain / release sequencing
+3. watchdog and overflow recovery semantics
+4. FIRST_HIT vs MULTI_HIT behavior
+5. broad raw-data collection across `20 ps .. 30 ns`
+6. same-delay empirical characterization through the fixed-delay flow
+7. VIP-driven regression and coverage handoff infrastructure
+
+## 7. What is still not proven here
+
+The verification collateral is still **not** a silicon-signoff package.
+
+Important remaining gaps:
+
+- no signoff-quality CDC / async exception proof
+- no analog oscillator macro timing signoff
+- no dedicated maintained bench that isolates `nfast_snap` coherency under stress
+- coverage closure still depends on Cadence reruns
+
+## 8. Recommended usage order
+
+### Local engineering loop
 
 ```bash
-bash ci/run_vip_coverage.sh --dry-run
-```
-
-Closure review goals for the new VIP flow:
-
-1. Every test in the stable VIP coverage suite passes with the scoreboard clean.
-2. The shared coverage database under `build/vip_coverage_<sim>/cov_work` contains one `covtest` bucket per executed scenario.
-3. `stim_cg` and `pkt_cg` are reviewed in IMC / Xcelium coverage reporting; any remaining holes are traced to a missing scenario, a known simulator limitation, or a documented waiver.
-4. Code coverage is reviewed on the active RTL path (`mptdc_top_asic`, `mptdc_core`, async/control/readout/FIFO logic), with exclusions documented instead of silently ignored.
-5. The Cadence-generated coverage database and report snapshot are archived together with the regression log as the closure handoff artifact.
-
-For deeper stress closure beyond the stable merged VIP suite, use:
-
-```bash
-bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
-```
-
-### 6.3 Current validated checkpoint
-
-At the current checkpoint:
-
-- `ci/run_smoke.sh` is expected to pass locally
-- `ci/run_full_regression.sh` is expected to pass locally
-- `ci/run_vip_smoke.sh` was revalidated on the current tree (`13/13`)
-- `scripts/sim/run_vip_test.sh overflow_status --sim verilator` passes on the current tree
-- `scripts/sim/run_vip_test.sh hard_reset_readback --sim verilator` passes on the current tree
-- `scripts/sim/run_vip_test.sh csr_readback_control --sim verilator` passes on the current tree
-- `scripts/sim/run_vip_test.sh coverage_exhaustive --sim verilator` passes on the current tree
-- the most recent merged IMC report observed on the lab server improved to `11486 / 16389 (70.08%)`, average grade `82.05%`
-- the weakest measured modules in the earlier hierarchy review were `mptdc_top_asic`, `mptdc_csr_if`, `mptdc_csr_minimal`, and `mptdc_reset_sync`, which is why the current repo now expands the closure suite further with deterministic overflow/recovery and hard-reset readback scenarios
-
-This is the practical meaning of the current repository state:
-
-- Verilator is the fast local confidence path
-- Cadence remains the required path for merged coverage closure
-- the next important verification gate is a Cadence rerun of the updated `14`-test directed suite plus the broader stress campaign
-
-## 7. What the current verification does not replace
-
-The repository tests do not replace:
-
-- signoff CDC analysis
-- static timing analysis on generated oscillator clocks
-- real oscillator-macro characterization
-- gate-level simulation with implementation-specific cells
-- DFT and scan insertion checks
-- post-layout extraction and correlation
-
-## 8. Oscillator-model assumptions
-
-All benches that care about real timing should run with the oscillator model enabled.
-
-That means:
-
-- `mptdc_osc_model` is active
-- `mptdc_osc_stub` is not used
-- phase relationships, startup, and optional jitter are exercised realistically enough for RTL-level architecture verification
-
-The oscillator model is still a behavioral approximation. Silicon correlation is the job of the offline calibration flow.
-
-## 9. Typical commands
-
-```bash
-# Full active regression
+bash ci/run_smoke.sh
 bash ci/run_full_regression.sh
-
-# One end-to-end sanity bench
-bash scripts/sim/run_tb.sh tb_single_conv
-
-# One VIP smoke test
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim verilator
-
-# VIP smoke regression
 bash ci/run_vip_smoke.sh
+python3 scripts/analysis/analyze_campaign.py --campaign-dir results/campaign --output-dir results/campaign/analysis
+```
 
-# Cadence VIP coverage regression
+### Cadence-equipped server loop
+
+```bash
 bash ci/run_vip_coverage.sh --sim xrun --clean
-
-# Cadence exhaustive/stress coverage campaign
 bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
-
-# IMC review of the campaign DB
 bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
 imc -load build/coverage_campaign/cov_work/scope/merged_cov &
-
-# Local dry-run of the Cadence coverage commands
-bash ci/run_vip_coverage.sh --dry-run
-
-# Comprehensive collection bench
-mkdir -p build/tb_v21_collect/results
-bash scripts/sim/run_tb.sh tb_v21_collect
 ```
 
-## 10. Running verification with Cadence Xcelium
-
-This section covers step-by-step instructions for running the full MPTDC
-verification suite on a Cadence Xcelium-equipped Linux machine.
-
-### 10.1 Prerequisites
-
-| Item | Requirement |
-|------|-------------|
-| **Xcelium** | 23.09 or later (xrun binary in PATH) |
-| **IMC** | Integrated Metrics Center for coverage review |
-| **OS** | RHEL/CentOS 7+ or equivalent |
-| **License** | Cadence xrun + coverage license features |
-
-Verify your setup:
+### Calibration-proof loop
 
 ```bash
-which xrun && xrun -version
+bash scripts/sim/run_campaign.sh --sim verilator --configs multihit_15_cal_nominal
+python3 scripts/calibration/calibrate_6d_lut.py \
+  --train-dir results/campaign/multihit_15_cal_nominal \
+  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
+  --out-dir results/calibration_final
+
+bash scripts/sim/run_fixed_delay_campaign.sh --sim verilator --smoke --analyze
 ```
-
-### 10.2 Clone and prepare
-
-```bash
-git clone https://github.com/KarimSabra13/SPADMIC.git
-cd SPADMIC/MPTDC
-```
-
-### 10.3 Step 1 — Smoke regression (all VIP tests, no coverage)
-
-Run all 13 VIP tests to confirm functional correctness:
-
-```bash
-# Run each VIP test individually on Xcelium
-for test in smoke_single_conv full_mode_timestamp firsthit_contract \
-            backpressure_integrity start_watchdog cal_inject \
-            overflow_status long_random multi_conv_rearm_stress \
-            global_watchdog_recovery csr_readback_control hard_reset_readback \
-            jitter_robustness; do
-  echo "=== Running: $test ==="
-  bash scripts/sim/run_vip_test.sh "$test" --sim xrun
-done
-```
-
-Or run a single test first:
-
-```bash
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun
-```
-
-**Expected output:** Each test prints `===== TEST PASSED =====` or
-`MPTDC VIP: All checks passed` and exits without `$fatal`.
-
-### 10.4 Step 2 — Directed integration tests
-
-Run the 9 direct testbenches (non-VIP):
-
-```bash
-for tb in tb_single_conv tb_multi_conv_stress tb_deadtime_measure \
-          tb_cal_inject tb_backpressure tb_watchdog_recovery \
-          tb_start_wdt tb_overflow_count tb_firsthit_mode; do
-  echo "=== Running: $tb ==="
-  bash scripts/sim/run_tb.sh "$tb" --sim xcelium
-done
-```
-
-**Expected output:** Each test prints `TEST PASSED` and exits cleanly.
-
-### 10.5 Step 3 — Coverage regression (functional + code)
-
-This is the key Cadence-side closure step before calibration handoff and any synthesis freeze discussion:
-
-```bash
-# Clean run with both functional and code coverage
-bash ci/run_vip_coverage.sh --sim xrun --clean
-```
-
-This runs 14 stable VIP tests with:
-- **Functional coverage:** `stim_cg` and `pkt_cg` covergroups sampled
-- **Code coverage:** line + condition + toggle + FSM + branch
-- **Shared database:** all tests merge into `build/vip_coverage_xrun/cov_work/`
-
-Default suite membership:
-
-- `smoke_single_conv`
-- `full_mode_timestamp`
-- `firsthit_contract`
-- `backpressure_integrity`
-- `start_watchdog`
-- `cal_inject`
-- `overflow_status`
-- `long_random`
-- `multi_conv_rearm_stress`
-- `global_watchdog_recovery`
-- `csr_readback_control`
-- `hard_reset_readback`
-- `jitter_robustness`
-- `coverage_exhaustive`
-
-Individual logs are saved to `build/vip_coverage_xrun/logs/<test>.log`.
-
-**To add jitter seed sweep:**
-
-```bash
-bash ci/run_vip_coverage.sh --sim xrun --clean --seed-base 42
-```
-
-For broader server-side stress plus merged coverage:
-
-```bash
-bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
-```
-
-### 10.6 Step 4 — Review coverage in IMC
-
-```bash
-# Merge per-covtest buckets and generate IMC HTML reports
-bash scripts/sim/report_coverage.sh --cov-root build/vip_coverage_xrun --merge-name vip_merged
-
-# Or review the broader coverage-campaign database
-bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
-
-# Open the merged runs in IMC
-imc -load build/vip_coverage_xrun/cov_work/scope/vip_merged &
-imc -load build/coverage_campaign/cov_work/scope/merged_cov &
-```
-
-**Coverage goals:**
-
-| Metric | Target | Notes |
-|--------|--------|-------|
-| `stim_cg` | >90% | Stimulus space: modes, delays, jitter, backpressure |
-| `pkt_cg` | >85% | Packet space: hit counts, flags, output modes |
-| Line coverage | >90% | On active RTL (`mptdc_core`, `mptdc_async_frontend_v2`, etc.) |
-| Condition coverage | >80% | Branch conditions in control FSMs |
-| Toggle coverage | >70% | On critical data paths |
-
-Most recent merged IMC report observed on the lab server before the latest local-only closure additions:
-
-- aggregate IMC coverage `11486 / 16389 (70.08%)`,
-- average grade `82.05%`,
-- weakest reported modules: `mptdc_top_asic 45.95%`, `mptdc_csr_if 28.26%`, `mptdc_csr_minimal 61.39%`, `mptdc_reset_sync 61.67%`.
-
-**Known exclusions (document, do not waive silently):**
-- `mptdc_osc_stub`: dead code when `MPTDC_USE_OSC_MODEL` is defined
-- `mptdc_osc_model`: simulation-only, not synthesized
-- DFT/scan logic: not yet inserted
-
-### 10.7 Step 5 — Waveform debug (optional)
-
-```bash
-# Run with SimVision waveform capture
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --waves
-
-# Waves saved to: build/vip_smoke_single_conv_xrun/waves.shm
-# Open in SimVision:
-simvision build/vip_smoke_single_conv_xrun/waves.shm &
-```
-
-### 10.8 Dry-run mode (preview without Cadence tools)
-
-Review exact xrun commands without executing:
-
-```bash
-bash ci/run_vip_coverage.sh --dry-run
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun --dry-run
-```
-
-### 10.9 Expected results summary
-
-| Suite | Tests | Expected | Runtime (est.) |
-|-------|-------|----------|----------------|
-| VIP smoke | 13 tests | All pass | ~5–8 min total |
-| Directed integration | 9 tests | All pass | ~3 min total |
-| VIP coverage regression | 14 tests | All pass + coverage DB | ~10–15 min total |
-
-All tests are self-checking — no manual waveform inspection needed for pass/fail.
-Failures produce `$error` or `$fatal` messages with descriptive context.
-
-### 10.10 Simulator compatibility notes
-
-- **Timescale:** All sources use `` `timescale 1ps/1ps ``. Runner scripts pass
-  `-timescale 1ps/1ps` to match. This is critical for picosecond-precision
-  oscillator jitter modeling.
-- **Oscillator model:** `+define+MPTDC_USE_OSC_MODEL` is automatically passed
-  by both `run_tb.sh` and `run_vip_test.sh` for all simulators.
-- **Functional coverage:** Guarded by `+define+MPTDC_ENABLE_FUNC_COV`.
-  Automatically enabled by `--func-cov` flag. Not used with Verilator.
-- **$dist_normal():** Used for Gaussian jitter in the oscillator model.
-  Supported in Xcelium 20.09+. If your version is older, the
-  `jitter_robustness` test may fail to compile.
-- **Waveforms:** Xcelium uses `.shm` format via `-input @database`. The
-  `$dumpfile`/`$dumpvars` calls in testbenches are guarded by `` `ifdef VERILATOR ``
-  to avoid conflicts.
-
-## 11. Calibration — do I need to re-run it on Xcelium?
-
-**Short answer: No.** The existing calibration LUTs are valid.
-
-The 6D LUT calibration was trained on simulation data from the behavioral
-oscillator model. Since the same RTL + same oscillator model + same timing
-parameters are used regardless of simulator, the raw TDC output for a given
-input delay is deterministic (ignoring jitter). The calibration data depends
-on the *design*, not the *simulator*.
-
-**When you WOULD need to re-calibrate:**
-- If you change oscillator parameters (`TS_STEP_PS`, `NE`)
-- If you modify the phase detector or counter RTL
-- If you add/remove pipeline stages that affect the raw output encoding
-- When moving to silicon (real oscillator replaces behavioral model)
-
-**Recommended verification of calibration validity:**
-```bash
-# Run one smoke seed through each simulator path
-bash scripts/sim/run_campaign.sh --sim verilator --smoke --out-dir results/campaign_vlt_smoke
-bash scripts/sim/run_campaign.sh --sim xrun      --smoke --out-dir results/campaign_xrun_smoke
-# Compare the matching CSVs under those two output roots
-```
-
-If the raw feature values (`nslow`, `nfast`, `ns`, `nf`, `pd_idx`) match
-between simulators for the same input delay, the calibration is valid.
-
-## 12. Review guidance before synthesis
-
-Before synthesis signoff, use the simulation suite to confirm functional intent, then add dedicated implementation-stage checks for:
-
-- generated-clock constraints
-- async latch handling in `mptdc_async_frontend_v2`
-- STOP-edge capture logic in `mptdc_stop_capture_async`
-- Gray-counter snapshot assumptions in `mptdc_gray_cnt_sync`
-- real oscillator replacement for `mptdc_osc_stub`

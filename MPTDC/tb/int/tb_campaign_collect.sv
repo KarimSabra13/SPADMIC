@@ -25,6 +25,7 @@ module tb_campaign_collect;
   int          cfg_delay_min_ps;
   int          cfg_delay_max_ps;
   int unsigned cfg_seed;
+  int          cfg_out_mode;        // 0=RAW_FEATURES, 2=FULL
   string       cfg_output_file;
   int          cfg_osc_jitter_sigma;
   int          cfg_osc_jitter_bound;
@@ -147,8 +148,7 @@ module tb_campaign_collect;
     csr_wr(CSR_CTRL, 32'h0000_0000);
 
     // CSR_MODE: mode_cfg[0], input_sel[1], out_mode[3:2]
-    // out_mode = OUT_MODE_FULL = 2'b10
-    mode_word = {28'd0, 2'b10, cfg_input_sel[0], cfg_mode[0]};
+    mode_word = {28'd0, cfg_out_mode[1:0], cfg_input_sel[0], cfg_mode[0]};
     csr_wr(CSR_MODE, mode_word);
 
     // CSR_MAX_HITS
@@ -203,6 +203,108 @@ module tb_campaign_collect;
 
     // Disarm
     csr_wr(CSR_CTRL, 32'h0000_0000);
+  endtask
+
+  task automatic parse_and_write_raw_features(
+    input int fd,
+    input int tref_ps,
+    input logic [NARROW_W-1:0] words [$],
+    input int word_count,
+    output int hits_found,
+    output int error_count
+  );
+    int idx;
+    logic [NARROW_W-1:0] w;
+    int hdr_hit_count;
+    int hdr_ctx_id, hdr_phase0, hdr_boundary_inc;
+    tdc_conv_flags_t hdr_flags;
+    int eoc_id;
+
+    tb_hit_features_t hf;
+    int nslow_i, nfast_hit_i, nfast_snap_i, ns_i, nf_i, pd_idx_i, eseq_i;
+    int signed t_raw_ps_i;
+
+    hits_found  = 0;
+    error_count = 0;
+    idx         = 0;
+
+    if (word_count < 2) begin
+      $display("[ERR] Packet too short (%0d words)", word_count);
+      error_count++;
+      return;
+    end
+
+    w = words[0];
+    if (!is_header(w)) begin
+      $display("[ERR] First word not header (0x%04x)", w);
+      error_count++;
+      return;
+    end
+    hdr_hit_count    = header_hit_count(w);
+    hdr_ctx_id       = header_ctx_id(w);
+    hdr_phase0       = header_phase0(w);
+    hdr_boundary_inc = header_boundary_inc(w);
+    hdr_flags        = header_flags(w);
+    idx = 1;
+
+    if (is_eoc(words[word_count - 1])) begin
+      eoc_id = eoc_conv_id(words[word_count - 1]);
+    end else begin
+      $display("[WARN] No EOC found at end of packet");
+      eoc_id = -1;
+    end
+
+    while (idx + 2 < word_count) begin
+      w = words[idx];
+      if (is_eoc(w)) break;
+      if (w[15]) begin
+        $display("[ERR] Conv %0d word %0d: unexpected marker 0x%04x", eoc_id, idx, w);
+        error_count++;
+        idx++;
+        continue;
+      end
+
+      if (idx + 2 >= word_count) break;
+
+      hf = parse_hit_features(words[idx], words[idx+1], words[idx+2]);
+      nslow_i      = hf.nslow;
+      nfast_hit_i  = hf.nfast;
+      nfast_snap_i = hf.nfast_snap;
+      ns_i         = hf.ns;
+      nf_i         = hf.nf;
+      pd_idx_i     = hf.pd_idx;
+      eseq_i       = hf.event_seq;
+      t_raw_ps_i   = vernier_tconv_ps(hf.nslow, hf.nfast, hf.ns, hf.nf,
+                                      logic'(hdr_boundary_inc));
+
+      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
+              eoc_id,                // conv_id
+              hits_found,            // hit_idx (0-based)
+              tref_ps,               // Tref_ps
+              nslow_i,               // nslow
+              nfast_hit_i,           // nfast_hit
+              nfast_snap_i,          // nfast_snap
+              ns_i,                  // ns
+              nf_i,                  // nf
+              pd_idx_i,              // pd_idx
+              eseq_i,                // event_seq
+              hdr_phase0,            // phase0_snap
+              hdr_boundary_inc,      // slow_boundary_inc
+              hdr_hit_count,         // hit_count
+              hdr_flags,             // flags
+              hdr_ctx_id,            // ctx_id
+              t_raw_ps_i,            // t_raw_ps (reconstructed from RAW_FEATURES fields)
+              cfg_mode,              // mode
+              cfg_max_hits);         // max_hits
+
+      hits_found++;
+      idx += 3;
+    end
+
+    if (hits_found != hdr_hit_count && hdr_hit_count > 0) begin
+      $display("[WARN] Conv %0d: header says %0d hits, parsed %0d",
+               eoc_id, hdr_hit_count, hits_found);
+    end
   endtask
 
   // =========================================================================
@@ -331,6 +433,7 @@ module tb_campaign_collect;
     if (!$value$plusargs("CAMPAIGN_DELAY_MIN_PS=%d",cfg_delay_min_ps))   cfg_delay_min_ps   = 20;
     if (!$value$plusargs("CAMPAIGN_DELAY_MAX_PS=%d",cfg_delay_max_ps))   cfg_delay_max_ps   = 30000;
     if (!$value$plusargs("CAMPAIGN_SEED=%d",        cfg_seed))           cfg_seed           = 12345;
+    if (!$value$plusargs("CAMPAIGN_OUT_MODE=%d",    cfg_out_mode))       cfg_out_mode       = OUT_MODE_FULL;
     if (!$value$plusargs("CAMPAIGN_OUTPUT_FILE=%s", cfg_output_file))    cfg_output_file    = "campaign_output.csv";
     // OSC jitter params are consumed directly by mptdc_osc_model via its own plusargs
   endtask
@@ -367,6 +470,9 @@ module tb_campaign_collect;
     $display("[CAMPAIGN]   MODE         = %s", cfg_mode ? "FIRST_HIT" : "MULTI_HIT");
     $display("[CAMPAIGN]   MAX_HITS     = %0d", cfg_max_hits);
     $display("[CAMPAIGN]   INPUT_SEL    = %s", cfg_input_sel ? "CAL" : "SPAD");
+    $display("[CAMPAIGN]   OUT_MODE     = %s",
+             (cfg_out_mode == OUT_MODE_RAW_FEATURES) ? "RAW_FEATURES" :
+             (cfg_out_mode == OUT_MODE_FULL) ? "FULL" : "UNSUPPORTED");
     $display("[CAMPAIGN]   N_CONV       = %0d", cfg_n_conv);
     $display("[CAMPAIGN]   DELAY_MIN_PS = %0d", cfg_delay_min_ps);
     $display("[CAMPAIGN]   DELAY_MAX_PS = %0d", cfg_delay_max_ps);
@@ -389,6 +495,13 @@ module tb_campaign_collect;
     // Write CSV header
     $fwrite(fd, "conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,ns,nf,pd_idx,event_seq,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits\n");
 
+    if (cfg_out_mode != OUT_MODE_RAW_FEATURES && cfg_out_mode != OUT_MODE_FULL) begin
+      $display("[ERR] Unsupported CAMPAIGN_OUT_MODE=%0d (use %0d for RAW_FEATURES or %0d for FULL)",
+               cfg_out_mode, OUT_MODE_RAW_FEATURES, OUT_MODE_FULL);
+      $fclose(fd);
+      $finish;
+    end
+
     // Configure DUT
     configure_campaign();
 
@@ -403,7 +516,14 @@ module tb_campaign_collect;
       delay_ps = rand_delay();
 
       do_one_conversion(delay_ps, pkt, pkt_len);
-      parse_and_write_full(fd, delay_ps, pkt, pkt_len, hits, errs);
+      case (cfg_out_mode)
+        OUT_MODE_RAW_FEATURES: parse_and_write_raw_features(fd, delay_ps, pkt, pkt_len, hits, errs);
+        OUT_MODE_FULL:         parse_and_write_full(fd, delay_ps, pkt, pkt_len, hits, errs);
+        default: begin
+          hits = 0;
+          errs = 1;
+        end
+      endcase
 
       total_hits   += hits;
       total_errors += errs;

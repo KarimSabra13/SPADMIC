@@ -10,6 +10,17 @@ This review covers the current checked-out repository state in `/home/karim/SPAD
 
 Note: the worktree was already dirty at the time of review, so this document evaluates the **present RTL/docs/testbench state as checked out**, not a clean tagged release.
 
+## Revalidation note
+
+This document is an important review snapshot, but parts of it were later rechecked
+against the live repository and should be read with the following corrections in mind:
+
+- the active top path still bypasses `mptdc_tconv_reco.sv`; `t_raw_ps` is computed inline in `mptdc_narrow16_tx_v2.sv`
+- `mptdc_pulse_sync.sv` remains compiled collateral, not an instantiated live-top block
+- `hit_idx` and `event_seq` are drain scan-order semantics, not chronological time order
+- the repository now contains trial synthesis collateral under `syn/` (`filelist_synth.f`, `inputs/mptdc.sdc`, `scripts/genus.tcl`)
+- the strongest remaining measurement-evidence gap was empirical fixed-delay RMS proof; the maintained flow for that is now `scripts/sim/run_fixed_delay_campaign.sh` plus `scripts/analysis/analyze_fixed_delay_campaign.py`
+
 ## Review method
 
 The review was done by:
@@ -49,7 +60,7 @@ Observed baseline during this review:
 
 - **Functional RTL checkpoint:** strong and coherent
 - **Offline calibration readiness:** **GO**
-- **Exploratory front-end synthesis readiness:** **conditional GO only after oscillator replacement/black-boxing and constraint authoring**
+- **Exploratory front-end synthesis readiness:** **conditional GO with the checked-in trial Genus flow, but still blocked on oscillator-macro ownership and signoff-quality constraints**
 - **Standard-cell synthesis / STA / CDC signoff readiness:** **NO-GO**
 - **Silicon-ready verdict today:** **not yet silicon-ready**
 
@@ -62,7 +73,7 @@ The design is no longer at the "toy RTL" stage. The architecture is coherent, th
 The remaining blockers are **not mainly logical RTL collapse**. They are mostly **implementation-signoff blockers**:
 
 - no real oscillator implementation in the live synthesis path
-- no generated-clock / async / CDC constraint set in the repo
+- trial generated-clock / async constraint collateral exists, but it is not yet signoff-complete
 - multiple intentional async capture structures that need custom signoff treatment
 - no visible DFT/test strategy for a ring-oscillator + async-latch architecture
 
@@ -346,12 +357,13 @@ Recommended enhancement:
 - replace the stub with the intended oscillator macro/custom implementation, or black-box the oscillator outputs explicitly for front-end synthesis
 - define the physical ownership of `fast_phase[*]`, `slow_phase[*]`, and `osc_fast_ph0`
 
-### [CRITICAL] No real signoff constraint package is present for generated clocks / async capture / CDC intent
+### [CRITICAL] The checked-in constraint package is only trial-grade, not a signoff-complete implementation package
 
 Evidence:
 
-- repo search found documentation telling the reader to create generated-clock constraints
-- no active `.sdc`/constraint collateral was found implementing those requirements
+- `syn/inputs/mptdc.sdc` now exists and defines virtual oscillator clocks on the stub phase pins
+- `syn/filelist_synth.f` and `syn/scripts/genus.tcl` provide a real exploratory synthesis entrypoint
+- the flow is still limited to the stubbed oscillator path and a non-signoff constraint scope
 
 Why this matters:
 
@@ -368,7 +380,7 @@ Without that, any synthesis/STA/CDC result is incomplete at best and misleading 
 
 Recommended enhancement:
 
-- create a real implementation collateral set: generated clocks, asynchronous exceptions, path groups, CDC signoff notes, and methodology waivers where appropriate
+- extend the trial collateral into a signoff-oriented package: full MMMC views, async exceptions, static-data CDC signoff notes, and explicit methodology waivers where appropriate
 
 ### [HIGH] The design intentionally uses custom async measurement structures that standard digital flow will not sign off automatically
 

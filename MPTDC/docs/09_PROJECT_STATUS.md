@@ -12,9 +12,11 @@ The repository is in a strong pre-calibration checkpoint, but not yet at verific
 - the latest broad Cadence baseline campaign passed `109/109` and merges cleanly in IMC
 - the most recent merged IMC report observed on the lab server improved to `11486 / 16389 (70.08%)` with average grade `82.05%`
 - the repo now includes additional deterministic overflow/recovery and pad-reset readback closure stimulus on top of the earlier stress fix
-- the offline calibration and Genus synthesis flows are both scripted and documented
+- the offline calibration, fixed-delay characterization, and Genus synthesis flows are all scripted and documented
 
-The main remaining gate is **targeted Cadence-side coverage closure** on the updated VIP, especially around the top wrapper, CSR block/interface, and reset behavior.
+The main remaining gates are **targeted Cadence-side coverage closure** and continued
+measurement evidence for deployed / jitter-limited calibration behavior, not basic RTL
+functionality.
 
 ## 2. RTL status
 
@@ -49,7 +51,7 @@ What still depends on downstream work:
 
 - oscillator realism still depends on the eventual analog macro
 - final timing closure still needs Genus + STA review
-- offline calibration quality still depends on campaign data and LUT fitting
+- deployed / jitter-limited calibration quality still depends on measurement data and host-side fitting
 
 ## 3. Verification status
 
@@ -198,10 +200,19 @@ If the stress campaign still shows failures, debug the failing seeds first befor
 
 The repo is set up for offline LUT calibration after RTL behavior is trusted.
 
+What is already in place:
+
+- `run_campaign.sh` for broad `20 ps .. 30 ns` collection
+- `analyze_campaign.py` for per-delay / per-count / tail views on sweep campaigns
+- `calibrate_6d_lut.py` for the maintained nominal 6D LUT baseline
+- `run_fixed_delay_campaign.sh` + `analyze_fixed_delay_campaign.py` for empirical same-delay RMS / averaging proof
+
 Current gate recommendation:
 
 - **Allowed now:** exploratory offline calibration using the existing data-collection flow
 - **Not yet recommended as a freeze criterion:** using the current codebase as the final verification signoff point for synthesis, because merged code coverage is still too low in CSR/top/reset logic
+- **Important scope note:** the classic `~18.9 ps` number is the nominal `multihit_15_cal_nominal` core-subset (`nslow > 0`) baseline, not a blanket statement for jitter-limited `RAW_FEATURES` deployment
+- **Current local short-format checkpoint:** the maintained broad-corpus deployment-proof flow still shows the deployed `RAW_FEATURES` observable set as the dominant limiter under the local jitter anchor; no populated held-out delay bucket reaches sub-`20 ps`, `nfast_snap` helps by only single-digit ps, and `all_visible` adds no measurable oracle gain over `short_core`
 
 Generate fresh data:
 
@@ -218,6 +229,15 @@ python3 scripts/calibration/calibrate_6d_lut.py \
   --train-dir results/campaign/multihit_15_cal_nominal \
   --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
   --out-dir results/calibration_final
+
+bash scripts/sim/run_fixed_delay_campaign.sh \
+  --sim verilator \
+  --configs multihit_15_cal_nominal \
+  --delay-list "20,50,100,200,500,1000,2000,5000,10000,30000" \
+  --seeds 6 \
+  --n-conv 2000 \
+  --out-dir results/fixed_delay_campaign \
+  --analyze
 ```
 
 Optional arguments:
@@ -241,6 +261,7 @@ Important synthesis assumptions:
 
 - the oscillator model is for simulation only
 - synthesis should use the stub path
+- the checked-in `syn/inputs/mptdc.sdc` is a trial constraint set, not a signoff-complete MMMC / CDC package
 - the async frontend contains intentional latch-style structures that must be reviewed, not blindly eliminated
 - final silicon closure still depends on real library data and the analog oscillator macro
 
@@ -263,6 +284,7 @@ python3 scripts/calibration/calibrate_6d_lut.py \
   --train-dir results/campaign/multihit_15_cal_nominal \
   --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
   --out-dir results/calibration_final
+bash scripts/sim/run_fixed_delay_campaign.sh --sim verilator --smoke --analyze
 cd syn/scripts
 genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ```
@@ -275,5 +297,5 @@ The repo is **not yet at final silicon signoff**, but it is at a strong engineer
 - verification infrastructure is mature
 - the known VIP stress deadlock class has been fixed and the `109/109` broad campaign baseline is green
 - the remaining meaningful holes are concentrated in CSR / top-level / reset control paths, not in the packet stress path
-- exploratory calibration can proceed in parallel with closure work
+- exploratory calibration and fixed-delay characterization can proceed in parallel with closure work
 - final synthesis freeze should wait for the next Cadence closure rerun on the expanded directed suite

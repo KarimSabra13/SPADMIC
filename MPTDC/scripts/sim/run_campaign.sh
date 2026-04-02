@@ -12,6 +12,9 @@
 #           --delay-max N    Max delay in ps (default 30000)
 #           --seed-start N   First PRNG seed number (default 0)
 #           --configs GLOB   Config name filter glob (default '*')
+#           --out-mode NAME  Serializer mode: full|raw_features (default full)
+#           --jitter-sigma N Override oscillator jitter sigma in ps
+#           --jitter-bound N Override oscillator jitter bound in ps
 #           --out-dir DIR    Output directory (default results/campaign)
 #           --rebuild        Force rebuild / clean simulator workdir
 #           --dry-run        Print what would run without executing
@@ -36,6 +39,10 @@ DELAY_MIN=20
 DELAY_MAX=30000
 SEED_START=0
 CONFIG_FILTER="*"
+OUT_MODE="full"
+OUT_MODE_ENUM=2
+JITTER_SIGMA_OVERRIDE=""
+JITTER_BOUND_OVERRIDE=""
 OUT_DIR="$REPO_ROOT/results/campaign"
 REBUILD=0
 DRY_RUN=0
@@ -74,6 +81,21 @@ has_gnu_parallel() {
   parallel --version 2>/dev/null | grep -q '^GNU parallel'
 }
 
+config_output_name() {
+  local base_cfg="$1"
+  local jsig="$2"
+  local jb="$3"
+  local name="$base_cfg"
+
+  if [[ "$OUT_MODE" != "full" ]]; then
+    name+="_${OUT_MODE}"
+  fi
+  if [[ -n "$JITTER_SIGMA_OVERRIDE" || -n "$JITTER_BOUND_OVERRIDE" ]]; then
+    name+="_js${jsig}_jb${jb}"
+  fi
+  printf '%s' "$name"
+}
+
 # ── parse arguments ────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -85,6 +107,9 @@ while [[ $# -gt 0 ]]; do
     --delay-max)  DELAY_MAX="$2";        shift 2 ;;
     --seed-start) SEED_START="$2";       shift 2 ;;
     --configs)    CONFIG_FILTER="$2";    shift 2 ;;
+    --out-mode)   OUT_MODE="$2";         shift 2 ;;
+    --jitter-sigma) JITTER_SIGMA_OVERRIDE="$2"; shift 2 ;;
+    --jitter-bound) JITTER_BOUND_OVERRIDE="$2"; shift 2 ;;
     --out-dir)    OUT_DIR="$2";          shift 2 ;;
     --rebuild)    REBUILD=1;              shift ;;
     --dry-run)    DRY_RUN=1;              shift ;;
@@ -104,6 +129,24 @@ case "$SIM" in
     exit 1
     ;;
 esac
+
+case "$OUT_MODE" in
+  full|2) OUT_MODE="full"; OUT_MODE_ENUM=2 ;;
+  raw_features|raw|0) OUT_MODE="raw_features"; OUT_MODE_ENUM=0 ;;
+  *)
+    echo "[ERROR] Unknown out mode '$OUT_MODE' (use full or raw_features)"
+    exit 1
+    ;;
+esac
+
+if [[ -n "$JITTER_SIGMA_OVERRIDE" && -z "$JITTER_BOUND_OVERRIDE" ]]; then
+  echo "[ERROR] --jitter-sigma requires --jitter-bound"
+  exit 1
+fi
+if [[ -z "$JITTER_SIGMA_OVERRIDE" && -n "$JITTER_BOUND_OVERRIDE" ]]; then
+  echo "[ERROR] --jitter-bound requires --jitter-sigma"
+  exit 1
+fi
 
 case "$OUT_DIR" in
   /*) ;;
@@ -229,6 +272,10 @@ fi
 
 echo "[CAMPAIGN] Matched ${#FILTERED[@]} config(s), ${SEEDS_PER_CONFIG} seeds each, ${N_CONV} conv/seed"
 echo "[CAMPAIGN] Simulator: ${SIM}"
+echo "[CAMPAIGN] Out mode: ${OUT_MODE}"
+if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
+  echo "[CAMPAIGN] Jitter override: sigma=${JITTER_SIGMA_OVERRIDE} ps, bound=${JITTER_BOUND_OVERRIDE} ps"
+fi
 echo "[CAMPAIGN] Parallelism: ${JOBS} jobs"
 echo "[CAMPAIGN] Output: ${OUT_DIR}"
 echo ""
@@ -242,16 +289,23 @@ export CFG_EXPORT_FILE
 
 worker() {
   local cfg="$1" seed_num="$2"
-  local cfg_dir="${OUT_DIR}/${cfg}"
-  local csv_file="${cfg_dir}/seed_${seed_num}.csv"
-  local log_file="${cfg_dir}/seed_${seed_num}.log"
-
-  mkdir -p "$cfg_dir"
-
   local line
   line=$(grep "^${cfg} " "$CFG_EXPORT_FILE")
   local mode mh inp jsig jb
   read -r _ mode mh inp jsig jb <<< "$line"
+
+  if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
+    jsig="$JITTER_SIGMA_OVERRIDE"
+    jb="$JITTER_BOUND_OVERRIDE"
+  fi
+
+  local cfg_tag
+  cfg_tag="$(config_output_name "$cfg" "$jsig" "$jb")"
+  local cfg_dir="${OUT_DIR}/${cfg_tag}"
+  local csv_file="${cfg_dir}/seed_${seed_num}.csv"
+  local log_file="${cfg_dir}/seed_${seed_num}.log"
+
+  mkdir -p "$cfg_dir"
 
   local rc=0
   local -a cmd
@@ -268,6 +322,7 @@ worker() {
         "+CAMPAIGN_DELAY_MAX_PS=${DELAY_MAX}"
         "+CAMPAIGN_SEED=${seed_num}"
         "+CAMPAIGN_OUTPUT_FILE=${csv_file}"
+        "+CAMPAIGN_OUT_MODE=${OUT_MODE_ENUM}"
         "+OSC_JITTER_SIGMA_PS=${jsig}"
         "+OSC_JITTER_BOUND_PS=${jb}"
       )
@@ -280,7 +335,7 @@ worker() {
       ;;
 
     xrun)
-      local work_dir="${XRUN_BUILD_ROOT}/$(sanitize_path_token "$cfg")/seed_${seed_num}"
+      local work_dir="${XRUN_BUILD_ROOT}/$(sanitize_path_token "$cfg_tag")/seed_${seed_num}"
       mkdir -p "$work_dir"
       cmd=(
         xrun
@@ -302,6 +357,7 @@ worker() {
         "+CAMPAIGN_DELAY_MAX_PS=${DELAY_MAX}"
         "+CAMPAIGN_SEED=${seed_num}"
         "+CAMPAIGN_OUTPUT_FILE=${csv_file}"
+        "+CAMPAIGN_OUT_MODE=${OUT_MODE_ENUM}"
         "+OSC_JITTER_SIGMA_PS=${jsig}"
         "+OSC_JITTER_BOUND_PS=${jb}"
       )
@@ -329,8 +385,8 @@ worker() {
   return 0
 }
 
-export -f worker print_cmd print_cd_cmd sanitize_path_token
-export REPO_ROOT BINARY XRUN_BUILD_ROOT OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN SIM
+export -f worker print_cmd print_cd_cmd sanitize_path_token config_output_name
+export REPO_ROOT BINARY XRUN_BUILD_ROOT OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN SIM OUT_MODE OUT_MODE_ENUM JITTER_SIGMA_OVERRIDE JITTER_BOUND_OVERRIDE
 
 # ── launch all seeds ────────────────────────────────────────────────────────
 TOTAL_SEEDS=$(( ${#FILTERED[@]} * SEEDS_PER_CONFIG ))
@@ -343,7 +399,14 @@ JOB_LIST_FILE=$(mktemp)
 SKIPPED=0
 for cfg in "${FILTERED[@]}"; do
   for (( s = SEED_START; s < SEED_START + SEEDS_PER_CONFIG; s++ )); do
-    csv_check="${OUT_DIR}/${cfg}/seed_${s}.csv"
+    line=$(grep "^${cfg} " "$CFG_EXPORT_FILE")
+    read -r _ _ _ _ jsig jb <<< "$line"
+    if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
+      jsig="$JITTER_SIGMA_OVERRIDE"
+      jb="$JITTER_BOUND_OVERRIDE"
+    fi
+    cfg_tag="$(config_output_name "$cfg" "$jsig" "$jb")"
+    csv_check="${OUT_DIR}/${cfg_tag}/seed_${s}.csv"
     if [[ -f "$csv_check" ]] && (( $(wc -l < "$csv_check") > 10 )); then
       SKIPPED=$(( SKIPPED + 1 ))
     else

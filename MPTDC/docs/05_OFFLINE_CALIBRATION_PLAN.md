@@ -21,12 +21,12 @@ That means:
 | Field | Width | Meaning |
 |-------|-------|---------|
 | `nslow` | 7 | STOP-side slow coarse snapshot |
-| `nfast` | 7 | per-hit fast coarse count captured by the PD cell |
+| `nfast_hit` | 7 | per-hit fast coarse count captured by the PD cell |
 | `nfast_snap` | 7 | CAPTURE-time fast coarse snapshot |
 | `ns` | 4 | slow phase index |
 | `nf` | 4 | fast phase index |
 | `pd_idx` | 7 | flattened PD index |
-| `event_seq` | 4 | scan order within the packet |
+| `event_seq` | 4 | drain scan order within the packet |
 | `phase0_snap` | 1 | STOP-side boundary snapshot |
 | `slow_boundary_inc` | 1 | STOP-side boundary carry |
 
@@ -34,7 +34,14 @@ That means:
 
 If the host selects `RAW_TIMESTAMP` or `FULL` mode, the chip also emits `t_raw_ps`, which is generated using the live Vernier formula helper in `mptdc_pkg::vernier_tconv_ps()`.
 
-For highest-fidelity calibration work, `RAW_FEATURES` is still the recommended mode because it preserves all primitive fields.
+Important semantics:
+
+- `event_seq` is **drain / scan order**, not chronological hit order
+- `hit_idx` in the CSV/reporting flow is the same kind of scan-order index
+- calibration that keys on `hit_idx` is therefore using packet position, not time order
+
+For highest-fidelity debug/calibration work, `FULL` is the richest collection mode.
+For deployed-format-fidelity studies, use `RAW_FEATURES`.
 
 ## 3. Raw timestamp contract
 
@@ -61,7 +68,20 @@ Recommended local collection flow:
 - orchestrator: `scripts/sim/run_campaign.sh` (parallel, resume-capable, native `--sim verilator|xrun|xcelium`)
 - input source: `CAL`
 - mode: `MULTI_HIT` for dense raw data, `FIRST_HIT` for earliest-close behavior
-- output mode: `FULL` (all raw features + raw timestamp)
+- output mode:
+  - `FULL` for classic debug-heavy campaigns
+  - `RAW_FEATURES` for deployed-format-fidelity studies
+
+`run_campaign.sh` now exposes the deployed-format and jitter knobs directly:
+
+- `--out-mode full|raw_features`
+- `--jitter-sigma <ps>`
+- `--jitter-bound <ps>`
+
+When `--out-mode raw_features` is selected, `tb_campaign_collect.sv` still emits the
+same 18-column CSV schema by reconstructing `t_raw_ps` from the narrow packet fields.
+That keeps the downstream Python calibration flow compatible while matching the real
+ASIC serializer contract.
 
 ### 4.2 Campaign configuration
 
@@ -79,6 +99,19 @@ bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
 
 # Same runner on a Cadence-equipped machine
 bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
+
+# Deployed-format short campaign
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 8 \
+  --configs multihit_15_cal_jitter \
+  --out-mode raw_features \
+  --out-dir results/shortformat_jitter
+
+# Explicit jitter override sweep point
+bash scripts/sim/run_campaign.sh --sim verilator --jobs 8 \
+  --configs multihit_15_cal_nominal \
+  --out-mode raw_features \
+  --jitter-sigma 12 --jitter-bound 36 \
+  --out-dir results/shortformat_jitter_js12
 
 # Smoke test (1 seed per config, 500 conversions)
 bash scripts/sim/run_campaign.sh --sim verilator --smoke
@@ -129,9 +162,10 @@ This `diff` value maps uniquely to all 81 `(ns, nf)` combinations — zero ambig
 
 **All 6D LUT key fields are available in ALL three output modes.**
 
-### 5.4 Validated results
+### 5.4 Validated nominal baseline (core subset only)
 
-Training: 24 seeds × 50,000 conversions × 15 hits/conv = 16.8M core samples.
+Training: 24 seeds × 50,000 conversions × 15 hits/conv = 16.8M **core-subset**
+samples.
 
 | Metric | Pre-Calibration | Post-Calibration | Improvement |
 |--------|-----------------|------------------|-------------|
@@ -144,9 +178,13 @@ Training: 24 seeds × 50,000 conversions × 15 hits/conv = 16.8M core samples.
 - **LUT bins:** 16,014
 - **Coverage:** 100% on 21M fresh validation points (seeds 100–129)
 - **Held-out vs fresh:** 18.88 ps vs 18.89 ps (no overfitting)
-- **Core filter:** nslow > 0 (removes 6.5% boundary-ambiguous hits)
+- **Published scope:** `nslow > 0` core subset only (removes ~6.5% boundary-ambiguous hits)
 
-### 5.5 Averaging performance
+This result is the maintained **nominal** reference point. It does **not** by itself
+prove the jitter-limited deployed `RAW_FEATURES` case, and it is not the maintained
+same-delay repeated-measurement proof.
+
+### 5.5 Averaging performance (analysis-side resampling)
 
 Averaging N independent measurements of the same delay:
 
@@ -159,9 +197,39 @@ Averaging N independent measurements of the same delay:
 | 100 | 1.90 | −90% |
 | 1000 | 0.60 | −97% |
 
-The residual follows 1/√N perfectly — no residual systematic structure.
+The residual follows 1/√N well on the nominal calibrated error pool. This table comes
+from **analysis-side resampling**, not from a dedicated fixed-delay repeated-measurement
+testbench campaign.
 
-### 5.6 Running calibration
+### 5.6 Fixed-delay empirical characterization
+
+Use the maintained fixed-delay flow when you want same-delay one-shot RMS and real
+same-delay averaging curves from measured conversions:
+
+```bash
+bash scripts/sim/run_fixed_delay_campaign.sh \
+  --sim verilator \
+  --configs multihit_15_cal_nominal \
+  --delay-list "20,50,100,200,500,1000,2000,5000,10000,30000" \
+  --seeds 6 \
+  --n-conv 2000 \
+  --out-dir results/fixed_delay_campaign \
+  --analyze
+```
+
+Main outputs:
+
+- `results/fixed_delay_campaign/analysis/fixed_delay_summary.csv`
+- `results/fixed_delay_campaign/analysis/fixed_delay_averaging.csv`
+- `results/fixed_delay_campaign/analysis/fixed_delay_report.txt`
+
+These reports use actual fixed-delay populations and distinguish:
+
+- row-level error
+- `first_hit_scan` conversion estimator
+- `conv_mean` conversion estimator
+
+### 5.7 Running calibration
 
 ```bash
 python3 scripts/calibration/calibrate_6d_lut.py \
@@ -175,6 +243,57 @@ Outputs:
 - `calibration_report.txt` — human-readable report
 - `calibration_report.json` — machine-readable metrics
 - `plots/` — 19 diagnostic plots (histograms, scatter, Q-Q, INL/DNL, averaging curves)
+
+### 5.8 Short-format observability study
+
+For jitter-limited narrow-packet studies, use:
+
+```bash
+python3 scripts/calibration/analyze_shortformat_models.py \
+  --nominal-train-dir results/shortformat_local/nominal_train/multihit_15_cal_nominal_raw_features \
+  --jitter-train-dir  results/shortformat_local/jitter_train/multihit_15_cal_jitter_raw_features \
+  --val-dir           results/shortformat_local/jitter_val/multihit_15_cal_jitter_raw_features \
+  --fresh-dir         results/shortformat_local/jitter_fresh/multihit_15_cal_jitter_raw_features \
+  --out-dir           results/shortformat_local/analysis
+```
+
+This tool reports:
+
+- exact-LUT performance for multiple narrow-field keys
+- oracle per-key floors, which estimate the best possible single-shot RMSE for a
+  deterministic model that only sees the deployed `RAW_FEATURES` fields
+- matched-bin coverage versus richer key fragmentation
+- a full-coverage hierarchical fallback result for deployment-oriented comparisons
+- delay-bucketed practical and oracle RMSE tables/plots aligned to the maintained
+  fixed-delay reference grid (`20 ps .. 30 ns`)
+- incremental oracle-gain tables/plots that separate:
+  - `current_6d -> boundary_aug`
+  - `boundary_aug -> short_core` (the true incremental value of `nfast_snap`)
+  - `short_core -> all_visible`
+- focused `nfast_snap` coherence outputs (`nfast_snap_split_summary.csv`) that show how
+  often a `boundary_aug` bin actually splits into multiple `nfast_snap` states
+
+If the oracle floor itself stays above the target, more LUT tuning will not close the
+gap; the narrow observable set is the dominant limiter under the current jitter model.
+
+Use this broad-corpus flow as the **headline deployment-proof view** because it
+evaluates a continuous jittered delay population. A separate fixed-delay helper,
+`scripts/calibration/analyze_fixed_delay_shortformat.py`, is useful for pointwise
+characterization of selected delays, but isolated zero-RMSE fixed-delay points do not
+override the continuous broad-corpus oracle floor.
+
+Current local conclusion at the `sigma=6 ps`, `bound=24 ps` anchor:
+
+- `nfast_snap` is **coherent enough to help**, but only modestly in the broad
+  deployment-proof view:
+  - core-only broad corpus: about `+8.5 ps` oracle gain over `boundary_aug`
+  - all-rows broad corpus: about `+6.2 ps` oracle gain over `boundary_aug`
+- `slow_boundary_inc` adds almost no extra oracle information on top of `current_6d`
+  in the current local datasets
+- `all_visible` adds no measurable oracle gain over `short_core`
+
+So `nfast_snap` is not the whole problem: it helps, but it does **not** close the much
+larger deployed short-format observability gap by itself.
 
 ## 6. Methods evaluated and rejected
 
@@ -218,4 +337,8 @@ conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,ns,nf,pd_idx,event_seq,phase0
 
 ## 10. Practical recommendation
 
-For serious silicon characterization, prefer storing the raw feature vectors in FULL mode and recomputing any derived timestamp offline. The 6D LUT achieves 18.89 ps single-shot RMSE and sub-1 ps with 1000-point averaging, making it suitable for high-precision SPAD timing experiments.
+For serious silicon characterization, collect in `FULL` when you need maximum debug
+richness and in `RAW_FEATURES` when you need deployment-faithful observability. Treat
+the `18.89 ps` figure as the maintained **nominal core-subset baseline** only. Use the
+fixed-delay flow for empirical repeated-measurement proof and the short-format
+observability study for jitter-limited deployment realism.

@@ -86,9 +86,11 @@ path before the next Cadence rerun.
 Offline calibration flow is present and documented:
 
 - data collection: `bash scripts/sim/run_campaign.sh --sim verilator|xrun|xcelium`
+- sweep analysis: `python3 scripts/analysis/analyze_campaign.py ...`
+- fixed-delay characterization: `bash scripts/sim/run_fixed_delay_campaign.sh ...`
 - LUT calibration: `python3 scripts/calibration/calibrate_6d_lut.py ...`
 
-The committed calibration flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`.
+The committed LUT flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`. The oft-quoted `~18.9 ps` result is the **nominal core-subset (`nslow > 0`) baseline**, not a blanket claim for jitter-limited `RAW_FEATURES` deployment.
 
 ### Synthesis
 
@@ -180,10 +182,23 @@ those buckets before load/report.
 bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
 bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
 
+python3 scripts/analysis/analyze_campaign.py \
+  --campaign-dir results/campaign \
+  --output-dir results/campaign/analysis
+
 python3 scripts/calibration/calibrate_6d_lut.py \
   --train-dir results/campaign/multihit_15_cal_nominal \
   --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
   --out-dir results/calibration_final
+
+bash scripts/sim/run_fixed_delay_campaign.sh \
+  --sim verilator \
+  --configs multihit_15_cal_nominal \
+  --delay-list "20,50,100,200,500,1000,2000,5000,10000,30000" \
+  --seeds 6 \
+  --n-conv 2000 \
+  --out-dir results/fixed_delay_campaign \
+  --analyze
 ```
 
 ### 7) Trial synthesis
@@ -226,10 +241,19 @@ At the current checkpoint, the most important open holes are not packetizer stre
 
 The RTL is designed for offline calibration, not on-chip correction. The host reconstructs and corrects time using exported raw features and/or timestamps.
 
-Previously reported calibration quality remains the repository target:
+The currently maintained nominal baseline is:
 
-- single-shot post-calibration RMSE: about `18.89 ps`
-- `N=100` averaging RMSE: about `1.90 ps`
+- single-shot post-calibration RMSE: about `18.9 ps` on the nominal `multihit_15_cal_nominal` **core subset** (`nslow > 0`)
+- `N=100` resampled averaging RMSE: about `1.9 ps` on that same nominal calibrated pool
+
+For empirical same-delay proof, use `run_fixed_delay_campaign.sh` +
+`analyze_fixed_delay_campaign.py`. For jitter-limited deployed-format studies, use the
+continuous broad-corpus short-format flow in
+`docs/05_OFFLINE_CALIBRATION_PLAN.md`; the fixed-delay short-format helper is a
+pointwise characterization tool, not the headline deployment proof. The maintained
+short-format analysis now also reports incremental oracle gain from `boundary_aug` and
+from `nfast_snap`; in the current local jitter anchor, `nfast_snap` helps by only a
+single-digit number of ps and does not close the deployed observability gap on its own.
 
 ## Synthesis note
 
@@ -246,8 +270,8 @@ What the current Genus flow is intended to validate:
 What it does **not** replace:
 
 - final macro timing for the analog oscillator
-- signoff STA
-- formal CDC signoff
+- signoff STA / MMMC
+- formal CDC / async-exception signoff
 - post-layout correlation
 
 ## Documentation index

@@ -30,6 +30,16 @@ python3 scripts/calibration/calibrate_6d_lut.py \
   --train-seeds 100 \
   --out-dir results/calib_xrun/calibration_lut6d
 
+bash scripts/sim/run_fixed_delay_campaign.sh \
+  --sim xrun \
+  --jobs 32 \
+  --configs multihit_15_cal_nominal \
+  --delay-list "20,50,100,200,500,1000,2000,5000,10000,30000" \
+  --seeds 8 \
+  --n-conv 5000 \
+  --out-dir results/calib_xrun/fixed_delay_nominal \
+  --analyze
+
 cd syn/scripts
 genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ```
@@ -427,13 +437,13 @@ Pre-calibration:
   RMSE:  425.8 ps
   MAE:   350.8 ps
 
-Post-calibration:
-  RMSE:  18.89 ps    ← target: sub-20 ps
+Post-calibration (nominal core subset: nslow > 0):
+  RMSE:  18.89 ps    ← nominal baseline
   MAE:   14.6 ps
   P90:   32.9 ps
   P99:   45.0 ps
 
-Averaging study:
+Averaging study (analysis-side resampling, not fixed-delay TB proof):
   N=1:    18.95 ps
   N=4:     9.49 ps
   N=10:    6.03 ps
@@ -451,12 +461,47 @@ Averaging study:
 
 ### Interpreting results
 
-- **Sub-20 ps single-shot RMSE** = calibration is good → proceed to synthesis
-- **RMSE > 25 ps** = investigate: check if campaign data is clean, verify
-  oscillator parameters match the calibration script constants
-- **Averaging follows 1/√N** = residual is purely random noise (correct behavior)
-- **Averaging plateaus** = systematic bias remains (need more LUT bins or
-  additional correction dimensions)
+- **~18.9 ps on the nominal core subset** = the classic nominal LUT baseline is healthy
+- **RMSE > 25 ps on the same nominal scope** = investigate the dataset, constants, and LUT coverage first
+- **Averaging follows 1/√N in `calibrate_6d_lut.py`** = the nominal calibrated pool is largely random after correction, but this is still analysis-side resampling
+- **Use the fixed-delay flow below** when you need empirical same-delay one-shot RMS / averaging proof
+
+### Step 6b — Fixed-delay characterization
+
+**Goal:** prove same-delay one-shot RMS and real same-delay averaging behavior from measured conversions.
+
+```bash
+bash scripts/sim/run_fixed_delay_campaign.sh \
+  --sim xrun \
+  --jobs 32 \
+  --configs multihit_15_cal_nominal \
+  --delay-list "20,50,100,200,500,1000,2000,5000,10000,30000" \
+  --seeds 8 \
+  --n-conv 5000 \
+  --out-dir results/calib_xrun/fixed_delay_nominal \
+  --analyze
+```
+
+Key outputs:
+
+- `results/calib_xrun/fixed_delay_nominal/analysis/fixed_delay_summary.csv`
+- `results/calib_xrun/fixed_delay_nominal/analysis/fixed_delay_averaging.csv`
+- `results/calib_xrun/fixed_delay_nominal/analysis/fixed_delay_report.txt`
+
+These reports distinguish:
+
+- row-level error
+- first scanned hit per conversion
+- per-conversion mean estimator
+
+Important interpretation note:
+
+- this fixed-delay flow is the right tool for **pointwise same-delay** RMS / averaging proof
+- it is **not** the headline deployment-proof flow for jitter-limited `RAW_FEATURES`
+  operation across a continuous delay population
+- for that question, use `scripts/calibration/analyze_shortformat_models.py`, which now
+  reports delay-bucketed oracle/practical curves and separates the incremental value of
+  `boundary_aug`, `nfast_snap`, and `all_visible`
 
 ---
 
