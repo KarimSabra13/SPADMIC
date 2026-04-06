@@ -1,0 +1,31 @@
+\chapter{Introduction générale}
+\label{chap:introduction}
+\justifying
+\sloppy
+
+Les systèmes de détection contemporains accordent une place croissante à la mesure fine du temps. Dans de nombreux contextes expérimentaux, la seule détection d’un événement ne suffit plus : il devient également nécessaire d’en connaître l’instant d’apparition avec une précision suffisamment élevée pour améliorer la reconstruction, lever des ambiguïtés et exploiter au mieux l’information physique disponible. Cette exigence explique l’intérêt porté aux convertisseurs temps-numérique, ou \textit{Time-to-Digital Converters} (\textbf{TDC}), qui constituent aujourd’hui une brique essentielle de nombreuses chaînes de lecture rapides.
+
+Dans le cadre du projet \textbf{SPADMIC}, cette problématique prend une importance particulière. Le chip vise à intégrer des fonctions de lecture numérique adaptées à une matrice de \textbf{SPAD}, avec des contraintes simultanées de précision temporelle, d’intégrabilité et de robustesse architecturale. Même si l’architecture globale du circuit n’est pas encore totalement finalisée, le bloc de conversion temps-numérique est d’ores et déjà suffisamment structuré pour faire l’objet d’une analyse détaillée. Il constitue donc un point d’entrée pertinent pour documenter à la fois le contexte théorique du sujet et les choix d’implémentation retenus au cours de l’alternance.
+
+\section{Contexte et problématique}
+
+La conception d’un TDC de haute précision impose de concilier plusieurs exigences souvent antagonistes : réduire le pas de quantification, conserver une plage dynamique utile, limiter le bruit et le jitter, et maintenir une architecture compatible avec une intégration sur \textit{ASIC}. Dans ce cadre, les architectures de type Vernier occupent une place particulièrement intéressante, car elles permettent de s’affranchir partiellement de la limite imposée par le délai élémentaire d’une cellule logique en exploitant la différence entre deux délais voisins.
+
+La thèse d’Amina Annagrebah, utilisée ici comme référence théorique principale, propose une étude approfondie de ces architectures et, plus précisément, d’une approche Vernier à oscillateurs en anneau multiphase appliquée à des besoins de mesure temporelle de très haute précision \cite{annagrebah2021thesis}. Ce travail constitue une base particulièrement solide pour introduire les notions nécessaires avant d’aborder l’architecture développée dans le cadre du projet \textbf{SPADMIC}.
+
+\section{Périmètre du rapport}
+
+Le présent rapport adopte volontairement un périmètre maîtrisé. Il ne cherche pas à décrire l’intégralité du chip \textbf{SPADMIC} comme s’il s’agissait d’un système déjà complètement figé. L’accent est au contraire mis sur les parties déjà documentées, justifiables et techniquement défendables. Cette démarche conduit à privilégier :
+\begin{itemize}
+    \item le cadre institutionnel du projet ;
+    \item les fondements théoriques de la conversion temps-numérique ;
+    \item l’architecture Vernier de référence issue de la thèse ;
+    \item la transition vers l’implémentation effectivement développée ;
+    \item l’architecture du TDC aujourd’hui structurée dans \textbf{MPTDC} et destinée à s’inscrire dans le chip \textbf{SPADMIC}.
+\end{itemize}
+
+\section{Organisation du document}
+
+Le rapport s’ouvre sur la présentation du cadre scientifique et institutionnel au sein duquel s’inscrit l’alternance. Il introduit ensuite le contexte général du projet \textbf{SPADMIC} avant de développer la partie théorique consacrée aux \textbf{TDC}, à leurs métriques de performance et aux architectures de type Vernier. Sur cette base, l’étude se prolonge par la description de l’architecture de référence extraite de la thèse, puis par une transition vers l’implémentation effectivement retenue. Enfin, une présentation détaillée de l’architecture actuellement développée vient relier les concepts théoriques aux choix concrets de conception.
+
+\clearpage

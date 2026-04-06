@@ -1,0 +1,146 @@
+\chapter{Principe Vernier et architecture de référence issue de la thèse}
+\label{chap:vernier-reference}
+\justifying
+\sloppy
+
+\section{Principe Vernier appliqué à la mesure du temps}
+
+Le principe Vernier consiste à comparer deux évolutions temporelles voisines mais non identiques. Dans un \textbf{TDC} Vernier, cette idée se traduit par l'utilisation de deux chemins de propagation, ou de deux oscillateurs, dont les délais élémentaires diffèrent légèrement. L'information temporelle n'est alors plus codée par une période unique, mais par la différence entre deux périodes proches \cite{annagrebah2021thesis}.
+
+Dans le cas d'un Vernier à oscillateurs en anneau, un oscillateur lent est déclenché par l'événement de départ, tandis qu'un oscillateur rapide est déclenché par l'événement d'arrêt. Comme la période de l'oscillateur rapide est plus faible, ce dernier rattrape progressivement l'oscillateur lent. La première coïncidence utile permet de localiser l'intervalle mesuré avec une finesse déterminée par l'écart entre les deux périodes.
+
+La formulation de base rappelée dans la thèse s'écrit sous la forme \cite{annagrebah2021thesis} :
+\begin{equation}
+    T_{\mathrm{in}} = N_{\mathrm{slow}}\,T_{\mathrm{slow}} + N_{\mathrm{fast}}\,T_{\mathrm{LSB}}
+\end{equation}
+
+\begin{equation}
+    T_{\mathrm{LSB}} = T_{\mathrm{slow}} - T_{\mathrm{fast}}
+\end{equation}
+
+Cette écriture met en évidence deux idées majeures. D'une part, le temps mesuré repose sur une décomposition \textit{coarse/fine}. D'autre part, la résolution n'est pas fixée par une période absolue mais par la différence entre deux périodes voisines. Cette propriété est à l'origine de l'intérêt de l'approche Vernier pour les mesures de très haute précision.
+
+Dans une écriture plus proche d'une implémentation multiphase, la mesure peut être lue comme :
+\begin{equation}
+    T_{\mathrm{mes}} \approx N_{\mathrm{slow}}\,T_{\mathrm{slow}} + N_{\mathrm{fast}}\,(T_{\mathrm{slow}}-T_{\mathrm{fast}}) + t_{\mathrm{fine}}(n_s,n_f)
+\end{equation}
+où $N_{\mathrm{slow}}$ et $N_{\mathrm{fast}}$ correspondent aux compteurs coarse, tandis que $t_{\mathrm{fine}}(n_s,n_f)$ représente la correction associée à la cellule de phase effectivement activée. Dans un montage multiphase, cette dernière contribution n'est plus un simple résidu abstrait : elle est directement portée par l'indice de phase lent $n_s$ et l'indice de phase rapide $n_f$.
+
+La figure \ref{fig:vernier-principle-detailed} met ce mécanisme en scène sous forme temporelle détaillée. Le rattrapage progressif du chemin rapide par rapport au chemin lent illustre directement la séparation entre l'information \textit{coarse}, liée au nombre de cycles accumulés avant coïncidence, et l'information \textit{fine}, portée par la position de la coïncidence elle-même.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{tdc/vernier_principle_detailed.pdf}
+    \caption{Schéma temporel de synthèse du principe Vernier détaillé. Le rattrapage progressif du chemin rapide structure la mesure coarse, tandis que l'observation multiphase raffine la position de la première coïncidence dans l'intervalle $T_{\mathrm{LSB}}$.}
+    \label{fig:vernier-principle-detailed}
+\end{figure}
+
+\section{Pourquoi passer à une architecture multiphase}
+
+La thèse ne s'arrête pas à une architecture Vernier monophase classique. Elle étudie une adaptation multiphase inspirée de l'approche 2D Vernier, de manière à exploiter simultanément plusieurs sorties de phase des oscillateurs en anneau \cite{annagrebah2021thesis}. Cette extension augmente le nombre de points d'observation et améliore l'efficacité de la quantification temporelle.
+
+Dans cette approche, la résolution temporelle multiphase $\Delta$ est reliée à la résolution monophase $T_{\mathrm{LSB}}$ par la relation :
+\begin{equation}
+    \Delta = \frac{T_{\mathrm{LSB}}}{n_b}
+\end{equation}
+où $n_b$ représente le nombre d’étages exploités dans l’oscillateur en anneau.
+
+Autrement dit, l'approche multiphase ne remplace pas le principe Vernier ; elle le raffine en subdivisant l'intervalle élémentaire $T_{\mathrm{LSB}}$ grâce à l'observation simultanée de plusieurs taps. Là où un Vernier simple attendrait la coïncidence sur une seule paire de phases, une architecture multiphase observe une famille entière de combinaisons et transforme ce rattrapage en une grille 2D.
+
+La thèse montre également que l'architecture multiphase permet, en première approximation :
+\begin{itemize}
+    \item de réduire le temps de conversion par rapport à l’approche monophase ;
+    \item d’améliorer la résolution temporelle ;
+    \item de limiter l’impact du jitter cumulé, dont la croissance suit une loi en racine du temps d’observation.
+\end{itemize}
+
+Cette propriété est importante, car elle montre qu'un gain de résolution ne provient pas uniquement d'une interpolation plus fine, mais aussi d'une meilleure exploitation du comportement temporel global des oscillateurs \cite{annagrebah2021thesis}. En d'autres termes, l'amélioration n'est pas purement géométrique ; elle agit aussi sur le temps nécessaire pour conclure une mesure et donc sur l'accumulation de jitter.
+
+\section{Architecture de référence}
+
+Après la vue temporelle du rattrapage, la figure \ref{fig:vernier-reference-architecture} synthétise l'architecture de référence retenue dans la thèse. Celle-ci s'organise autour de quatre briques principales :
+\begin{itemize}
+    \item les deux oscillateurs en anneau, lent et rapide ;
+    \item une matrice de détection de phase chargée d’observer la coïncidence entre les phases ;
+    \item les compteurs, qui assurent la partie coarse de la mesure ;
+    \item une mémoire ou structure de stockage, qui fige les informations utiles au moment de la conversion.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{tdc/vernier_reference_architecture.pdf}
+    \caption{Schéma de synthèse de l'architecture Vernier multiphase de référence, inspiré des principes décrits dans la thèse \cite{annagrebah2021thesis}.}
+    \label{fig:vernier-reference-architecture}
+\end{figure}
+
+Sur le plan conceptuel, cette structuration est particulièrement intéressante pour un futur passage vers une implémentation numérique plus complète. Elle sépare clairement la génération des phases, leur observation, le comptage coarse et le stockage des résultats. Cette séparation fonctionnelle facilite ensuite les adaptations nécessaires à une intégration plus large dans un système de lecture.
+
+\section{Lecture explicite de la matrice de phase}
+
+Dans l'implémentation active du projet, la matrice de détection de phase utilise $9$ phases lentes et $9$ phases rapides, soit \mbox{$9\times9 = 81$} cellules. Chaque cellule correspond à une paire $(n_s,n_f)$, avec :
+\begin{itemize}
+    \item $n_s \in \{0,\dots,8\}$ pour l'indice de phase lente ;
+    \item $n_f \in \{0,\dots,8\}$ pour l'indice de phase rapide.
+\end{itemize}
+
+Le coefficient fin nominal utilisé dans le RTL est alors gouverné par la relation :
+\begin{equation}
+    \mathrm{fine\_coef}(n_s,n_f) = 11\,n_s - 10\,n_f
+\end{equation}
+qui provient directement du rapport entre le pas lent (\SI{55}{\pico\second}) et la différence Vernier élémentaire (\SI{5}{\pico\second}), soit $K_{\mathrm{Vernier}} = 11$.
+
+Ce point est fondamental, car il montre que l'information fine n'est pas issue d'une simple énumération régulière. Elle dépend d'une combinaison linéaire d'indices de phase. La figure \ref{fig:pd-matrix-heatmap} représente cette structure sur la matrice complète.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{tdc/pd_matrix_heatmap.pdf}
+    \caption{Carte de la matrice \mbox{$9\times9$} des détecteurs de phase. Chaque cellule correspond à une paire $(n_s,n_f)$ et à un coefficient fin nominal associé.}
+    \label{fig:pd-matrix-heatmap}
+\end{figure}
+
+Cette représentation permet de lire immédiatement deux phénomènes. D'une part, les diagonales traduisent la progression régulière du rattrapage Vernier. D'autre part, la grille n'est pas uniformément peuplée lorsqu'on la projette sur l'axe des temps fins. Plusieurs couples distincts produisent des coefficients voisins, alors que d'autres intervalles restent vides.
+
+\section{Non-uniformité intrinsèque de la grille fine}
+
+La non-uniformité de la grille fine est une conséquence directe de la relation $11\,n_s - 10\,n_f$. Si l'on considère l'intervalle total théorique allant de $-80$ à $+88$, on obtient $169$ positions entières possibles. Or, seules $81$ positions sont effectivement atteignables avec les couples $(n_s,n_f)$ disponibles. La couverture réelle n'est donc que de \mbox{$81/169 \approx 47{,}9~\%$}.
+
+Cette propriété a plusieurs conséquences :
+\begin{itemize}
+    \item la grille fine contient des trous, donc des zones où aucune cellule ne correspond exactement à la valeur idéale ;
+    \item la densité des codes n'est pas constante, ce qui dégrade la linéarité brute ;
+    \item la distribution des erreurs dépend de la position dans la matrice, et pas seulement du bruit des oscillateurs.
+\end{itemize}
+
+La figure \ref{fig:fine-grid-coverage} illustre cette situation en représentant les valeurs atteignables, les valeurs manquantes et les conséquences de cette structure sur la linéarité brute. Dans l'état actuel de l'analyse, on compte $88$ trous sur la grille et l'écart maximal entre deux positions atteignables atteint \SI{100}{\pico\second} sur certaines frontières diagonales.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{tdc/fine_grid_coverage.pdf}
+    \caption{Visualisation de la couverture de la grille fine Vernier. La non-uniformité est structurelle : elle vient de la géométrie du codage, et non d'un défaut ponctuel du RTL.}
+    \label{fig:fine-grid-coverage}
+\end{figure}
+
+Ce point est particulièrement important pour la suite du rapport. La non-uniformité de la grille fine ne peut pas être \og corrigée \fg{} par une simple retouche RTL sans changer la topologie de l'architecture. En revanche, elle peut être fortement compensée par la calibration \textit{offline}, à condition d'exporter les bons observables et de conserver une sémantique de données stable.
+
+\section{Points de vigilance}
+
+Les bénéfices de l'approche Vernier ne doivent pas masquer ses contraintes. La thèse souligne en particulier plusieurs points de vigilance \cite{annagrebah2021thesis} :
+\begin{itemize}
+    \item la sensibilité au \textit{mismatch} lorsque la différence de délai devient très faible ;
+    \item l’influence du bruit de premier ordre lié aux variations de procédé, de tension et de température ;
+    \item le rôle du jitter cumulé dans les oscillateurs en anneau ;
+    \item la nécessité d’une stratégie de calibration adaptée.
+\end{itemize}
+
+Dans le cas du projet \textbf{SPADMIC}, il faut y ajouter des points plus directement liés à l'implémentation :
+\begin{itemize}
+    \item la cohérence entre compteurs coarse et détection fine lorsque l'événement \texttt{STOP} tombe sur une frontière de phase ;
+    \item la maîtrise des traversées entre domaines d'horloge, car les oscillateurs ne sont asservis ni à \texttt{clk\_sys} ni entre eux ;
+    \item la nécessité d'un format de sortie qui reste exploitable malgré la complexité des données brutes.
+\end{itemize}
+
+\begin{summaryBox}
+L'architecture Vernier de référence explique pourquoi la résolution fine est théoriquement accessible. L'architecture active du projet devra ensuite résoudre un second problème : comment capturer cette information sans perdre la cohérence du comptage coarse, sans allonger excessivement le temps mort, et sans rendre la lecture ou la calibration impraticables.
+\end{summaryBox}
+
+\clearpage

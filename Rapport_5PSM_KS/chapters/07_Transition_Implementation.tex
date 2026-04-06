@@ -1,0 +1,142 @@
+\chapter{Transition vers l'implémentation retenue}
+\label{chap:transition-implementation}
+\justifying
+\sloppy
+
+\section{De la structure de référence à une architecture exploitable}
+
+La structure décrite dans la thèse constitue une base théorique et architecturale solide, mais elle ne peut pas être reprise telle quelle dans un projet de lecture numérique complet sans adaptation. Dans le cadre du projet \textbf{SPADMIC}, la problématique ne consiste pas uniquement à démontrer le potentiel d'un \textbf{TDC} Vernier multiphase. Il faut également organiser la capture des événements, la gestion de plusieurs mesures, le stockage des résultats, leur transmission et leur exploitation hors puce.
+
+La continuité entre la thèse et l'implémentation actuelle se situe donc au niveau des principes fondamentaux :
+\begin{itemize}
+    \item utilisation de deux oscillateurs proches pour définir une résolution issue d’une différence de délai ;
+    \item séparation entre information \textit{coarse} et information \textit{fine} ;
+    \item observation multiphase par matrice de détection ;
+    \item nécessité d’une calibration adaptée pour transformer les observables brutes en temps exploitable.
+\end{itemize}
+
+\section{Évolutions nécessaires dans le contexte SPADMIC}
+
+L'architecture actuellement développée s'écarte toutefois du prototype de thèse sur plusieurs aspects structurants. Elle doit en effet répondre à des besoins plus larges de robustesse, d'intégration numérique et de lecture :
+\begin{itemize}
+    \item prise en charge d’événements \texttt{START}/\texttt{STOP} avec une logique asynchrone explicite ;
+    \item gestion de plusieurs hits et de plusieurs contextes de mesure ;
+    \item séparation entre la capture rapide et la lecture système ;
+    \item format de sortie numérique compatible avec une chaîne de lecture externe ;
+    \item calibration pensée comme une opération \textbf{offline}, et non comme une correction embarquée figée dans le silicium.
+\end{itemize}
+
+Ces choix traduisent un déplacement du centre de gravité du problème. Dans la thèse, l'accent est mis sur la démonstration et la compréhension approfondie de l'architecture Vernier multiphase. Dans l'implémentation actuelle, l'objectif devient plus systémique : il faut préserver les bénéfices du principe Vernier tout en construisant une architecture de lecture cohérente, réarmable, vérifiable et intégrable.
+
+\section{Arbitrages de conception structurants}
+
+\subsection{Pourquoi un frontend asynchrone}
+
+Le premier arbitrage fondamental concerne la capture des événements d'entrée. Dans un \textbf{TDC} Vernier, les signaux \texttt{START} et \texttt{STOP} sont, par nature, des événements asynchrones par rapport à \texttt{clk\_sys} et par rapport aux oscillateurs eux-mêmes. Les forcer artificiellement dans un domaine synchrone unique reviendrait soit à dégrader la précision, soit à compliquer fortement le chemin de capture.
+
+Le bloc actif adopte donc un frontend asynchrone à base de verrous \textit{set/reset}. Ce choix répond à une logique simple : il faut déclencher l'oscillateur lent au plus près de \texttt{START}, puis déclencher l'oscillateur rapide au plus près de \texttt{STOP}, sans attendre une remise en phase sur une horloge externe. L'architecture reste ainsi fidèle au principe Vernier, tout en rendant explicites les points sensibles de réarmement, de clear et de rejet des départs.
+
+\subsection{Pourquoi une matrice \mbox{$9\times9$} et non une matrice plus grande}
+
+Le second arbitrage porte sur la taille de la matrice de détection. Une matrice plus grande, par exemple \mbox{$16\times16$}, augmenterait mécaniquement le nombre de cellules observées et, en apparence, la richesse de la grille fine. Mais ce choix aurait plusieurs contreparties immédiates :
+\begin{itemize}
+    \item le nombre de cellules passerait de $81$ à $256$, soit un facteur \mbox{$256/81 \approx 3{,}16$} en surface brute sur cette seule brique ;
+    \item le réseau de signaux de phases, de comptage et de capture deviendrait plus lourd à distribuer ;
+    \item le coût de scan côté drain augmenterait dans la même proportion ;
+    \item les chemins de réduction et de fermeture dans le domaine rapide seraient plus difficiles à tenir dans une technologie \SI{180}{\nano\meter}.
+\end{itemize}
+
+Le choix \mbox{$9\times9$} doit donc être lu comme un compromis. Il donne déjà une matrice assez riche pour exploiter le multiphase, tout en gardant une architecture encore compatible avec une logique de lecture et de fermeture réaliste.
+
+\subsection{Pourquoi deux contextes et non un seul}
+
+Le troisième arbitrage concerne le buffering. Un seul contexte simplifierait la conception, mais il placerait directement le drain et la sérialisation sur le chemin critique de réarmement. À l'inverse, un nombre élevé de contextes améliorerait le masquage de latence, mais au prix d'une surface mémoire et d'une logique de gestion supplémentaires.
+
+Le choix de \textbf{deux contextes} permet un recouvrement simple et efficace :
+\begin{itemize}
+    \item un contexte peut être en capture ou en attente de fermeture ;
+    \item l'autre peut être en train d'être drainé vers le FIFO et le sérialiseur.
+\end{itemize}
+
+La figure \ref{fig:context-pipeline} illustre cette logique de double-buffer. C'est un point important du projet, car il explique pourquoi le temps mort pratique n'est pas directement imposé par la longueur des paquets de sortie.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{tdc/context_pipeline.pdf}
+    \caption{Pipeline à deux contextes. La capture d'une conversion et le drain de la conversion précédente peuvent se recouvrir partiellement, ce qui réduit la dépendance directe entre mesure et lecture.}
+    \label{fig:context-pipeline}
+\end{figure}
+
+\subsection{Pourquoi une calibration \textit{offline}}
+
+Le quatrième arbitrage est méthodologique. Une calibration embarquée sur puce pourrait sembler attractive, car elle donnerait directement un temps corrigé. Mais dans un contexte de développement et de caractérisation, ce choix rigidifie très tôt l'architecture. Il impose de figer :
+\begin{itemize}
+    \item le type de modèle de correction ;
+    \item sa granularité ;
+    \item la place mémoire nécessaire pour le stocker ;
+    \item le coût logique de son application en temps réel.
+\end{itemize}
+
+À l'inverse, une calibration \textit{offline} permet de conserver dans le silicium une logique de mesure relativement sobre et de déplacer la complexité vers le traitement hôte, là où les modèles peuvent encore évoluer. Ce choix est particulièrement pertinent ici, car la grille fine Vernier est intrinsèquement non uniforme. Il est donc plus efficace de compenser ce défaut structurel par un traitement de calibration riche que d'essayer de l'effacer par une topologie RTL beaucoup plus coûteuse.
+
+\subsection{Pourquoi une sortie étroite sur \SI{16}{\bit}}
+
+Le cinquième arbitrage concerne l'intégration système. Une sortie parallèle large simplifierait la lecture des données, mais augmenterait fortement le coût en broches et la complexité de l'interface. Le projet retient au contraire une sortie \textbf{narrow-16} à \SI{160}{\mega\hertz}, accompagnée d'un format de paquets explicitement typé.
+
+Cette décision a plusieurs avantages :
+\begin{itemize}
+    \item la sortie reste compacte ;
+    \item les différents mots du paquet sont distingués par des préfixes simples ;
+    \item le même canal supporte plusieurs modes de sortie ;
+    \item la gestion du back-pressure est localisée dans la logique de sérialisation.
+\end{itemize}
+
+Le prix à payer est une complexité plus élevée dans les automates de drain et de transmission, mais cette complexité reste plus acceptable qu'une explosion du nombre de broches de sortie.
+
+\section{Une transition vers une architecture plus structurée}
+
+La progression visuelle retenue dans ce rapport est volontaire : la figure \ref{fig:vernier-principle-detailed} explicite d'abord le mécanisme de rattrapage, la figure \ref{fig:vernier-reference-architecture} en isole ensuite les briques Vernier de référence, puis la figure \ref{fig:vernier-transition-map} montre comment ces mêmes briques sont encapsulées dans une architecture système. On passe ainsi d'un schéma de principe à un schéma d'intégration, sans rupture conceptuelle.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{tdc/vernier_transition_map.pdf}
+    \caption{Schéma de synthèse de la transition entre l'architecture Vernier de référence et son intégration dans \textbf{MPTDC}. Les oscillateurs, la matrice de phase et la séparation \textit{coarse/fine} sont conservés ; la gestion asynchrone \texttt{START}/\texttt{STOP}, les contextes et la chaîne de lecture sont ajoutés ou réinterprétés pour répondre aux contraintes système de \textbf{SPADMIC}.}
+    \label{fig:vernier-transition-map}
+\end{figure}
+
+Cette transition peut également être relue sous l'angle des domaines d'horloge. L'architecture réelle n'oppose pas seulement théorie et implémentation ; elle superpose trois mondes temporels différents : le domaine système \texttt{clk\_sys}, le domaine de l'oscillateur lent et le domaine de l'oscillateur rapide. La figure \ref{fig:clock-domain-diagram} résume cette répartition.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{tdc/clock_domain_diagram.pdf}
+    \caption{Carte des domaines d'horloge et des frontières asynchrones dans l'architecture active. Les signaux \texttt{START}/\texttt{STOP} sont capturés de manière asynchrone, tandis que les compteurs et les automates se répartissent entre domaines rapide et système.}
+    \label{fig:clock-domain-diagram}
+\end{figure}
+
+La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficultés qui seront détaillées au chapitre suivant : la logique de mesure ne se résume pas à un automate unique. Elle s'appuie sur des traversées asynchrones, un compteur Gray pour le chemin lent vers le domaine rapide, puis une séparation stricte entre capture rapide et lecture système.
+
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.1cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+        \toprule
+        \textbf{Contrainte} & \textbf{Risque principal} & \textbf{Choix retenu} \\
+        \midrule
+        Événements d'entrée asynchrones & Perte de précision ou métastabilité si forçage prématuré dans un domaine synchrone & Frontend asynchrone à verrous \textit{set/reset} \\
+        Grille fine plus dense & Explosion du nombre de cellules PD et allongement du scan de drain & Matrice \mbox{$9\times9$} comme compromis surface / richesse de grille \\
+        Lecture pendant la mesure & Temps mort dicté par le drain et le sérialiseur & Deux contextes, capture et drain découplés \\
+        Correction des non-idéalités & Coût silicium élevé si correction embarquée figée & Calibration \textit{offline} avec export d'observables riches \\
+        Intégration au système & Trop grand nombre de broches ou protocole trop ambigu & Bus \SI{16}{\bit}, mots typés, gestion explicite du back-pressure \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Arbitrages structurants qui font passer l'architecture Vernier de référence à un bloc réellement intégrable dans \textbf{SPADMIC}.}
+    \label{tab:transition-tradeoffs}
+\end{table}
+
+\begin{summaryBox}
+La transition vers l'implémentation n'est pas une simple étape d'encapsulation. C'est le moment où apparaissent les vrais compromis d'ingénierie : accepter des signaux asynchrones, limiter la taille de la matrice, séparer capture et lecture, choisir une stratégie de calibration, puis formaliser un protocole de sortie compatible avec le reste du système.
+\end{summaryBox}
+
+La suite du rapport s'attache donc à décrire non seulement le principe de mesure, mais aussi la manière dont celui-ci est concrètement encapsulé dans une architecture numérique cohérente.
+
+\clearpage

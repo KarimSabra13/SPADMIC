@@ -1,0 +1,125 @@
+\chapter{Fondements théoriques des convertisseurs temps-numérique}
+\label{chap:tdc-fondements}
+\justifying
+\sloppy
+
+\section{Rôle d'un TDC dans une chaîne de détection}
+
+Un convertisseur temps-numérique a pour fonction de transformer un intervalle de temps en un mot binaire exploitable par une chaîne numérique. Cette opération est indispensable dès lors que l'information utile n'est pas portée uniquement par l'amplitude d'un signal, mais aussi par son instant d'apparition, sa durée, ou le décalage temporel entre deux événements. Dans le domaine de l'instrumentation scientifique, cette capacité intervient notamment pour la chronométrie fine, la localisation temporelle d'un événement et l'amélioration de la reconstruction globale d'un système de détection \cite{annagrebah2021thesis}.
+
+Dans sa forme la plus générale, un \textbf{TDC} reçoit deux événements : un événement de départ, qui initialise l'observation, puis un événement d'arrêt, qui ferme l'intervalle à mesurer. Dans une architecture intégrée réelle, cette vision simplifiée doit être enrichie : les événements sont asynchrones, la conversion peut produire plusieurs hits, la fermeture peut aussi être déclenchée par un watchdog, et la valeur exportée n'est pas toujours un timestamp final prêt à l'emploi. Dans de nombreuses architectures modernes, le \textbf{TDC} fournit plutôt un ensemble d'observables qui devront ensuite être interprétées, corrigées et parfois recalibrées.
+
+La figure \ref{fig:tdc-measurement-chain} résume cette idée à l'échelle système. Elle donne volontairement une vue d'ensemble avant de zoomer, dans les chapitres suivants, sur le mécanisme Vernier puis sur l'architecture qui l'exploite. Une chaîne de lecture dédiée à la mesure du temps comprend généralement un détecteur ou une source d'événement, un front-end chargé de mettre le signal en forme, puis un \textbf{TDC} responsable de la conversion de l'information temporelle en données numériques.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{tdc/tdc_measurement_chain.pdf}
+    \caption{Schéma de synthèse d'une chaîne de mesure temporelle, du détecteur au codage binaire.}
+    \label{fig:tdc-measurement-chain}
+\end{figure}
+
+Dans la thèse de référence, cette problématique est traitée dans le contexte d'une électronique de lecture destinée à des applications de physique des particules, où la qualité de la mesure temporelle conditionne directement la performance du système complet \cite{annagrebah2021thesis}. Même si le cas d'usage étudié dans le présent rapport diffère, les contraintes fondamentales restent proches : obtenir une mesure fine, robuste et intégrable.
+
+\section{Grandeurs de performance à considérer}
+
+L'analyse d'un \textbf{TDC} ne se limite pas à sa seule résolution nominale. Plusieurs métriques complémentaires sont nécessaires pour caractériser son comportement \cite{annagrebah2021thesis}. Dans un projet comme \textbf{SPADMIC}, cette lecture multi-critère est indispensable, car une amélioration d'une grandeur peut dégrader fortement une autre.
+
+\subsection{Résolution temporelle et plage dynamique}
+
+La première métrique est la résolution temporelle, souvent notée $T_{\mathrm{LSB}}$. Elle correspond au plus petit intervalle de temps que le convertisseur peut discriminer. Dans un convertisseur idéal, cette grandeur joue un rôle analogue au bit de poids faible d'un convertisseur amplitude-numérique. Dans la pratique, cette grandeur ne doit pas être confondue avec la précision mesurée en \textbf{RMS} : une résolution nominale très fine ne garantit pas, à elle seule, une dispersion faible.
+
+La seconde métrique est la plage dynamique. Elle désigne l'intervalle maximal que le convertisseur peut mesurer tout en conservant un codage exploitable. En pratique, une architecture très précise mais de faible dynamique devient rapidement difficile à utiliser si elle ne couvre pas les délais réellement rencontrés dans le système. Dans un \textbf{Vernier} à oscillateurs en anneau, cette dynamique dépend non seulement du nombre de comptes coarse disponibles, mais aussi du temps nécessaire au rattrapage entre oscillateur lent et oscillateur rapide.
+
+\subsection{Linéarité}
+
+La linéarité traduit l'écart entre la caractéristique réelle du convertisseur et sa caractéristique idéale. Deux indicateurs sont classiquement utilisés \cite{annagrebah2021thesis} :
+\begin{itemize}
+    \item la non-linéarité différentielle (\textbf{DNL}), qui mesure l’écart de largeur d’un palier par rapport à $1$~LSB ;
+    \item la non-linéarité intégrale (\textbf{INL}), qui cumule ces écarts le long de la fonction de transfert.
+\end{itemize}
+
+Dans le cadre rappelé par la thèse, ces grandeurs peuvent être exprimées sous la forme :
+\begin{equation}
+    \mathrm{DNL}(n)=\frac{\Delta T_{n+1,n}-T_{\mathrm{LSB}}}{T_{\mathrm{LSB}}}
+\end{equation}
+
+\begin{equation}
+    \mathrm{INL}(i)=\sum_{n=1}^{i}\mathrm{DNL}(n)
+\end{equation}
+
+Une bonne résolution ne suffit donc pas. Un convertisseur réellement exploitable doit également conserver une linéarité compatible avec la précision recherchée.
+
+\subsection{Précision temporelle RMS}
+
+Une autre métrique essentielle est l'erreur de conversion exprimée sous forme \textbf{RMS}. Elle reflète la dispersion de l'erreur lorsque le convertisseur est soumis aux différentes sources d'aléas : bruit électronique, jitter, bruit de quantification ou variations des conditions opératoires. Dans la thèse, cette grandeur est utilisée comme indicateur central de la précision temporelle effective du convertisseur \cite{annagrebah2021thesis}. Pour un \textbf{TDC} Vernier, cette métrique est particulièrement sensible au jitter cumulé des oscillateurs et à la façon dont la frontière coarse/fine est reconstruite.
+
+\subsection{Temps mort, débit et observabilité}
+
+Dans une architecture embarquée, il faut également considérer le temps mort et le débit. Le temps mort représente l'intervalle minimal entre deux mesures acceptées. Il dépend de la fermeture de la conversion, du nettoyage interne des détecteurs de phase, de la remise à zéro des compteurs et du mécanisme de réarmement. Le débit, lui, dépend en plus de la lecture, de la profondeur des files FIFO et de la présence éventuelle de back-pressure sur la sortie numérique.
+
+Enfin, l'observabilité constitue une métrique moins classique mais essentielle dans ce travail. Un \textbf{TDC} qui n'exporte qu'un code final compact peut être suffisant dans un cas d'usage simple, mais il devient difficile à recalibrer, à diagnostiquer ou à caractériser finement. À l'inverse, un bloc qui exporte des observables riches permet un traitement \textit{offline} plus puissant, au prix d'un format de sortie plus élaboré.
+
+\section{Panorama des grandes familles d'architectures}
+
+La littérature distingue plusieurs familles d'architectures pour la mesure d'intervalles de temps \cite{annagrebah2021thesis}. Parmi les plus importantes, on retrouve :
+\begin{itemize}
+    \item les architectures analogiques de type \textbf{TAC}, qui convertissent le temps en tension avant numérisation ;
+    \item les architectures numériques à \textbf{compteur}, très intégrables mais limitées par la fréquence d’horloge requise pour atteindre de très fines résolutions ;
+    \item les structures à \textbf{ligne à délais}, qui exploitent les retards élémentaires des cellules logiques ;
+    \item les architectures à \textbf{oscillateurs en anneau}, intéressantes pour combiner compacité et dynamique ;
+    \item les architectures \textbf{Vernier}, qui exploitent la différence entre deux délais ou deux périodes proches pour descendre sous le seuil technologique imposé par un seul élément de retard.
+\end{itemize}
+
+Le tableau \ref{tab:tdc-arch-compare} synthétise les compromis les plus importants. Les ordres de grandeur indiqués sont volontairement donnés à titre comparatif : ils dépendent fortement de la technologie, du niveau d'intégration et des choix d'implémentation. Ils restent néanmoins suffisants pour motiver le choix architectural retenu dans \textbf{SPADMIC}.
+
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{1.6cm}}
+        \toprule
+        \textbf{Architecture} & \textbf{Principe} & \textbf{Résolution typique} & \textbf{Plage dynamique} & \textbf{Surface} & \textbf{Puissance} \\
+        \midrule
+        TAC analogique & Intégration d'un courant sur condensateur puis conversion ADC & \SIrange{10}{100}{\pico\second} & Moyenne & Moyenne & Moyenne à élevée \\
+        Compteur numérique & Horloge de référence échantillonnée au \texttt{START}/\texttt{STOP} & $>\SI{100}{\pico\second}$ sauf horloge très rapide & Très large & Faible & Forte si l'horloge monte en fréquence \\
+        Ligne à délais & Propagation d'une impulsion le long d'une chaîne de retard & \SIrange{10}{100}{\pico\second} & Courte à moyenne & Élevée si la plage augmente & Faible à moyenne \\
+        DLL / PLL / interpolation & Phases verrouillées ou interpolation fractionnaire & \SIrange{5}{20}{\pico\second} & Moyenne & Moyenne à élevée & Moyenne à élevée \\
+        Oscillateur en anneau & Comptage sur oscillateur local et capture de phase & \SIrange{20}{100}{\pico\second} & Moyenne à large & Faible à moyenne & Moyenne \\
+        Vernier ligne à délais & Deux chaînes à retards légèrement différents & \SIrange{1}{20}{\pico\second} & Moyenne & Élevée & Moyenne \\
+        Vernier RO multiphase & Deux oscillateurs + observation multiphase des croisements & \SIrange{5}{20}{\pico\second} nominal brut & Moyenne à large & Moyenne & Moyenne \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Comparaison synthétique des principales familles de \textbf{TDC}. Les ordres de grandeur sont indicatifs et servent ici à positionner le compromis recherché pour \textbf{SPADMIC} \cite{annagrebah2021thesis}.}
+    \label{tab:tdc-arch-compare}
+\end{table}
+
+\section{Pourquoi l'approche Vernier a été retenue}
+
+La thèse montre clairement que les architectures Vernier occupent une position particulièrement favorable lorsque l'on cherche à atteindre des résolutions très fines tout en conservant une intégration réaliste en technologie CMOS \cite{annagrebah2021thesis}. Cet intérêt tient à un point fondamental : la résolution n'est plus fixée par le délai absolu d'une seule cellule, mais par la différence entre deux délais voisins. Il devient alors possible de descendre sous le seuil technologique apparent d'un simple inverseur.
+
+Dans le contexte \textbf{SPADMIC}, plusieurs arguments renforcent ce choix :
+\begin{itemize}
+    \item les événements \texttt{START}/\texttt{STOP} sont asynchrones, ce qui se prête naturellement à une architecture déclenchée par événements plutôt qu'à une simple logique synchrone à horloge unique ;
+    \item les oscillateurs en anneau permettent de construire une architecture compacte, réplicable et compatible avec une logique purement numérique ;
+    \item l'observation multiphase améliore la granularité fine sans imposer une ligne à délais extrêmement longue ;
+    \item l'export d'observables riches autorise une calibration \textit{offline}, ce qui détend fortement les contraintes de correction embarquée.
+\end{itemize}
+
+Le choix Vernier ne signifie toutefois pas que l'architecture devient simple. Il déplace au contraire la difficulté : au lieu de subir surtout la limite de l'horloge de référence, le concepteur doit désormais gérer le jitter des oscillateurs, la non-uniformité de la grille fine, les ambiguïtés de frontière et les contraintes de traversée entre domaines d'horloge.
+
+\section{Limites structurelles d'un Vernier multiphase}
+
+Une architecture Vernier multiphase apporte donc un gain réel, mais ce gain n'est pas gratuit. Les limites les plus importantes sont les suivantes :
+\begin{itemize}
+    \item la grille fine n'est pas uniformément couverte ; toutes les valeurs intermédiaires ne sont pas atteignables ;
+    \item les oscillateurs introduisent du jitter cumulé, qui augmente avec le temps de conversion ;
+    \item la cohérence entre compteurs coarse et détection fine dépend fortement de la gestion correcte des frontières temporelles ;
+    \item l'architecture fait intervenir plusieurs domaines d'horloge et des signaux asynchrones, ce qui impose une discipline RTL et CDC beaucoup plus stricte qu'un simple schéma de principe.
+\end{itemize}
+
+\begin{summaryBox}
+Le choix d'un \textbf{Vernier multiphase} dans \textbf{SPADMIC} vient d'un compromis clair : cette architecture donne un chemin réaliste vers une résolution fine dans une implémentation numérique intégrable, mais elle impose en échange une forte maîtrise des effets de frontière, du jitter, du format de données exporté et de la calibration \textit{offline}.
+\end{summaryBox}
+
+Dans cette optique, la suite du rapport ne cherche pas à accumuler les schémas de toutes les familles de \textbf{TDC}. Elle privilégie au contraire une montée en précision : principe Vernier, architecture de référence, contraintes d'implémentation, puis description détaillée du bloc \textbf{MPTDC}.
+
+\clearpage
