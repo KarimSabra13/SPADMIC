@@ -32,7 +32,17 @@ package mptdc_vip_pkg;
   // These helpers decode the exact narrow packet format observed on the
   // wire so the monitor and scoreboard stay anchored to the DUT contract.
   function automatic bit is_header_word(input logic [NARROW_W-1:0] word);
-    return word[15:14] == 2'b10;
+    return word[15:13] == 3'b100;  // v2.3: distinguish from sub-header
+  endfunction
+
+  function automatic bit is_subheader_word(input logic [NARROW_W-1:0] word);
+    return word[15:13] == 3'b101;  // v2.3: sub-header marker
+  endfunction
+
+  function automatic logic [NFAST_W-1:0] subheader_nfast_stop_vip(
+    input logic [NARROW_W-1:0] word
+  );
+    return word[12:6];
   endfunction
 
   function automatic bit is_eoc_word(input logic [NARROW_W-1:0] word);
@@ -76,8 +86,9 @@ package mptdc_vip_pkg;
     endcase
   endfunction
 
+  // v2.3: +1 for sub-header word (header + sub-header + hits + EOC)
   function automatic int unsigned packet_words_from_header(input logic [NARROW_W-1:0] hdr);
-    return 2 + (packet_hit_count(hdr) * words_per_hit(packet_out_mode(hdr)));
+    return 3 + (packet_hit_count(hdr) * words_per_hit(packet_out_mode(hdr)));
   endfunction
 
   function automatic string bp_mode_name(input mptdc_bp_mode_e mode);
@@ -822,7 +833,8 @@ package mptdc_vip_pkg;
       pkt.slow_boundary_inc = packet_boundary_inc(hdr);
       pkt.conv_id           = packet_conv_id(pkt.words[pkt.words.size()-1]);
 
-      idx = 1;
+      // v2.3: skip sub-header at words[1] (carries nfast_stop)
+      idx = 2;
       for (int hit_idx = 0; hit_idx < pkt.hit_count; hit_idx++) begin
         mptdc_hit_txn hit = new();
         logic [NARROW_W-1:0] w0;

@@ -718,3 +718,48 @@ That leads to the most accurate overall call:
 - **ASIC realism/signoff readiness:** clearly not there yet
 
 No code changes were made as part of this review.
+
+---
+
+## Addendum — v2.3 Enhancement Results
+
+*Added after implementation of the precision enhancement plan.*
+
+### What was implemented
+
+1. **Sub-header packet word (RTL v2.3):** Added a sub-header word
+   (`[15:13]=3'b101`) after the header carrying `nfast_stop[12:6]`.
+   In the current architecture the fast oscillator starts at STOP time,
+   so `nfast_stop` is always 0 — the field is reserved for future use.
+   All 13 Verilator testbenches pass with the v2.3 packet format.
+
+2. **Fine phase grid analysis:** The Vernier grid `ns×11 − nf×10` has
+   81 achievable values out of 169 (47.9% coverage), with worst gaps
+   of 100 ps at diagonal boundaries.  Worst DNL = +3.76 LSB,
+   worst INL = ±9.05 LSB.
+
+3. **Enhanced calibration scripts:** 8-method comparison including
+   LUT variants, polynomial regression, GradientBoosted regression,
+   temporal re-keying, and quality-gated multi-hit averaging.
+
+### Key calibration results
+
+| Condition | Method | Single-Shot RMSE | 15-Hit Averaged RMSE |
+|-----------|--------|-----------------|---------------------|
+| Nominal | 6D LUT (mean) | 18.99 ps | 5.29 ps (trimmed) |
+| Nominal | GBR | **18.56 ps** | **5.19 ps** (weighted) |
+| Jitter σ=6 ps | 6D LUT (mean) | 53.64 ps | 19.75 ps (trimmed) |
+| Jitter σ=6 ps | GBR | **48.24 ps** | — |
+
+### Review recommendations — status update
+
+| Original recommendation | Status |
+|------------------------|--------|
+| Empirical per-delay RMS proof | Partially addressed: maintained calibration scripts now report per-method RMSE; fixed-delay repeated-measurement TB still needed |
+| Enhanced calibration beyond LUT | **Done**: GBR, polynomial, temporal re-key, quality-gated averaging implemented |
+| Multi-hit averaging study | **Done**: trimmed/weighted/uniform comparison shows 5.19 ps at 15 hits (nominal) |
+| Fine-grid gap characterization | **Done**: analyze_fine_grid.py with PDF output |
+| `hit_idx` semantics documentation | **Done**: calibration scripts document scan-order vs temporal-order distinction |
+| nfast_stop observable | **Investigated and resolved**: fast osc starts at STOP → field is always 0; kept as reserved |
+| Same-delay repeated-measurement TB | Still needed for silicon-grade proof |
+| ASIC synthesis realism | Still at flow-ready, not signoff-complete |

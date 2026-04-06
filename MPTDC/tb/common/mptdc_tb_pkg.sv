@@ -31,7 +31,11 @@ package mptdc_tb_pkg;
   // These helpers decode the exact narrow-bus framing consumed by monitors,
   // directed testbenches, and the VIP scoreboard.
   function automatic logic is_header(input logic [NARROW_W-1:0] word);
-    return (word[15:14] == 2'b10);
+    return (word[15:13] == 3'b100);  // v2.3: distinguish from sub-header
+  endfunction
+
+  function automatic logic is_subheader(input logic [NARROW_W-1:0] word);
+    return (word[15:13] == 3'b101);  // v2.3: sub-header marker
   endfunction
 
   function automatic logic is_eoc(input logic [NARROW_W-1:0] word);
@@ -72,6 +76,15 @@ package mptdc_tb_pkg;
     input logic [NARROW_W-1:0] word
   );
     return word[13:0];
+  endfunction
+
+  // =========================================================================
+  // Sub-header extraction (v2.3: nfast_stop)
+  // =========================================================================
+  function automatic logic [NFAST_W-1:0] subheader_nfast_stop(
+    input logic [NARROW_W-1:0] word
+  );
+    return word[12:6];
   endfunction
 
   // =========================================================================

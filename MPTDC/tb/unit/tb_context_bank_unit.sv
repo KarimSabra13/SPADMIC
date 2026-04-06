@@ -27,6 +27,7 @@ module tb_context_bank_unit;
   logic [PD_N*NFAST_W-1:0] pd_nfast_hit_packed;
   logic [NSLOW_W-1:0]     nslow_snap;
   logic [NFAST_W-1:0]     nfast_snap;
+  logic [NFAST_W-1:0]     nfast_stop;  // v2.3
   logic                   phase0_snap;
   logic                   slow_boundary_inc;
   logic [MAX_HITS_W-1:0]  hit_count;
@@ -43,6 +44,7 @@ module tb_context_bank_unit;
     .pd_nfast_hit_packed_i  (pd_nfast_hit_packed),
     .nslow_snap_i           (nslow_snap),
     .nfast_snap_i           (nfast_snap),
+    .nfast_stop_i           (nfast_stop),  // v2.3
     .phase0_snap_i          (phase0_snap),
     .slow_boundary_inc_i    (slow_boundary_inc),
     .hit_count_i            (hit_count),
@@ -86,6 +88,7 @@ module tb_context_bank_unit;
     pd_nfast_hit_packed  = nfp;
     nslow_snap           = ns;
     nfast_snap           = nf;
+    nfast_stop           = nf;  // v2.3: drive nfast_stop same as nfast for unit test
     phase0_snap          = ph0;
     slow_boundary_inc    = binc;
     hit_count            = hc;

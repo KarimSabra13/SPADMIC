@@ -37,6 +37,7 @@ module mptdc_context_bank
   input  wire  [PD_N*NFAST_W-1:0]      pd_nfast_hit_packed_i,
   input  wire  [NSLOW_W-1:0]           nslow_snap_i,
   input  wire  [NFAST_W-1:0]           nfast_snap_i,
+  input  wire  [NFAST_W-1:0]           nfast_stop_i,          // v2.3: fast counter at STOP
   input  wire                           phase0_snap_i,
   input  wire                           slow_boundary_inc_i, // v2.2: boundary carry
   input  wire  [MAX_HITS_W-1:0]        hit_count_i,
@@ -55,6 +56,7 @@ module mptdc_context_bank
   logic [PD_N*NFAST_W-1:0]   ctx_nfast_packed  [N_CTX];
   logic [NSLOW_W-1:0]        ctx_nslow_snap   [N_CTX];
   logic [NFAST_W-1:0]        ctx_nfast_snap   [N_CTX];
+  logic [NFAST_W-1:0]        ctx_nfast_stop   [N_CTX];  // v2.3
   logic                      ctx_phase0       [N_CTX];
   logic                      ctx_boundary_inc [N_CTX]; // v2.2
   logic [MAX_HITS_W-1:0]     ctx_hit_count    [N_CTX];
@@ -70,6 +72,7 @@ module mptdc_context_bank
       ctx_nfast_packed[capture_ctx_i] <= pd_nfast_hit_packed_i;
       ctx_nslow_snap  [capture_ctx_i] <= nslow_snap_i;
       ctx_nfast_snap  [capture_ctx_i] <= nfast_snap_i;
+      ctx_nfast_stop  [capture_ctx_i] <= nfast_stop_i;   // v2.3
       ctx_phase0      [capture_ctx_i] <= phase0_snap_i;
       ctx_boundary_inc[capture_ctx_i] <= slow_boundary_inc_i;
       ctx_hit_count   [capture_ctx_i] <= hit_count_i;
@@ -86,6 +89,7 @@ module mptdc_context_bank
   assign snapshot_o.nfast_hit_packed = ctx_nfast_packed [read_ctx_i];
   assign snapshot_o.nslow_snap       = ctx_nslow_snap   [read_ctx_i];
   assign snapshot_o.nfast_snap       = ctx_nfast_snap   [read_ctx_i];
+  assign snapshot_o.nfast_stop       = ctx_nfast_stop   [read_ctx_i];  // v2.3
   assign snapshot_o.phase0_snap       = ctx_phase0        [read_ctx_i];
   assign snapshot_o.slow_boundary_inc = ctx_boundary_inc  [read_ctx_i];
   assign snapshot_o.hit_count         = ctx_hit_count     [read_ctx_i];

@@ -320,13 +320,64 @@ This can be done in software, firmware, or an external FPGA.
 
 ## 8. Recommended CSV schema
 
-Collection schema (18 columns, FULL mode):
+Collection schema (19 columns, FULL mode — v2.3):
 
 ```csv
-conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,ns,nf,pd_idx,event_seq,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits
+conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,nfast_stop,ns,nf,pd_idx,event_seq,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits
 ```
 
-## 9. Why this architecture is calibration-friendly
+**Note:** `nfast_stop` is a reserved field (always 0 in the current architecture
+where the fast oscillator starts at STOP time).  The calibration scripts handle
+both 18-column (legacy) and 19-column (v2.3) formats transparently.
+
+## 9. Enhanced calibration methods (v2.3)
+
+Beyond the proven 6D LUT, the following methods are now maintained and evaluated:
+
+| Method | Nominal RMSE | Jitter RMSE | Notes |
+|--------|-------------|------------|-------|
+| 6D LUT (mean) | 18.99 ps | 53.64 ps | Baseline |
+| 6D LUT (median) | 20.01 ps | 54.21 ps | Marginally worse |
+| 6D LUT (trimmed mean 10%) | 19.06 ps | 53.67 ps | No significant gain |
+| GradientBoosted regression | **18.56 ps** | **48.24 ps** | Best single-shot under jitter |
+| Polynomial (deg 3) | 70.85 ps | 95.20 ps | Insufficient nonlinearity capture |
+| Temporal re-keyed LUT | 25.54 ps | 63.15 ps | Lower coverage (88–94%) |
+
+**GBR feature importances (jitter):** `nf=0.41, ns=0.28, phase0_snap=0.25,
+nfast_hit=0.06, hit_idx<0.01, nfast_snap<0.01, nslow≈0`.
+
+### Quality-gated multi-hit averaging
+
+Calibrated timestamps can be averaged per-conversion using three strategies:
+
+| Strategy | Description |
+|----------|-------------|
+| Uniform | Simple arithmetic mean of all per-hit timestamps |
+| Weighted | Inverse-variance weighting (proxy: `nfast_hit` level) |
+| Trimmed | Remove highest/lowest 10% of per-hit timestamps, then mean |
+
+Results (15 hits max):
+
+| Hits | Nominal Weighted | Nominal Trimmed | Jitter Trimmed |
+|------|-----------------|----------------|---------------|
+| 1 | 21.46 ps | 21.46 ps | 55.32 ps |
+| 5 | 7.82 ps | 7.61 ps | 24.54 ps |
+| 10 | 5.90 ps | 5.82 ps | 21.16 ps |
+| 15 | **5.19 ps** | **5.29 ps** | **19.75 ps** |
+
+### Maintained enhanced calibration scripts
+
+```bash
+# Fine phase grid analysis
+python3 scripts/calibration/analyze_fine_grid.py -o results/fine_grid_analysis.pdf
+
+# Multi-method comparison
+python3 scripts/calibration/calibrate_enhanced.py \
+  --input "results/campaign/<dataset>/seed_*.csv" \
+  --out-dir results/calibration_enhanced
+```
+
+## 10. Why this architecture is calibration-friendly
 
 1. It exports both coarse counts and phase indices.
 2. It tags boundary condition information explicitly.
@@ -334,11 +385,21 @@ conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,ns,nf,pd_idx,event_seq,phase0
 4. It allows recalibration without changing silicon.
 5. It separates measurement hardware from correction policy.
 6. The Vernier algebra allows full field recovery even in the most compact output mode.
+7. The sub-header infrastructure (v2.3) provides per-conversion metadata extensibility.
 
-## 10. Practical recommendation
+## 11. Practical recommendation
 
 For serious silicon characterization, collect in `FULL` when you need maximum debug
-richness and in `RAW_FEATURES` when you need deployment-faithful observability. Treat
-the `18.89 ps` figure as the maintained **nominal core-subset baseline** only. Use the
-fixed-delay flow for empirical repeated-measurement proof and the short-format
-observability study for jitter-limited deployment realism.
+richness and in `RAW_FEATURES` when you need deployment-faithful observability.
+
+**Maintained performance baselines:**
+
+| Metric | Nominal | Jitter (σ=6 ps) |
+|--------|---------|-----------------|
+| Single-shot RMSE (6D LUT) | 18.99 ps | 53.64 ps |
+| Single-shot RMSE (GBR) | 18.56 ps | 48.24 ps |
+| 15-hit averaged RMSE (trimmed) | 5.29 ps | 19.75 ps |
+| 15-hit averaged RMSE (weighted) | 5.19 ps | — |
+
+Use the fixed-delay flow for empirical repeated-measurement proof and the
+short-format observability study for jitter-limited deployment realism.

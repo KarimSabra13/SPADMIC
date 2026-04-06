@@ -191,8 +191,8 @@ module tb_watchdog_recovery;
         $finish;
       end
 
-      // Word count: 1 header + hits*3 + 1 EOC
-      expected_total = 1 + hc * 3 + 1;
+      // v2.3: header + sub-header + hits*3 + EOC
+      expected_total = 1 + 1 + hc * 3 + 1;
       assert (pkt_word_count == int'(expected_total)) else begin
         $error("[TB] FAIL Test 1: word count %0d != expected %0d",
                pkt_word_count, expected_total);
@@ -288,8 +288,8 @@ module tb_watchdog_recovery;
         $finish;
       end
 
-      // Word count
-      expected_total = 1 + hc * 3 + 1;
+      // v2.3: word count
+      expected_total = 1 + 1 + hc * 3 + 1;
       assert (pkt_word_count == int'(expected_total)) else begin
         $error("[TB] FAIL Test 2: word count %0d != expected %0d",
                pkt_word_count, expected_total);
@@ -379,8 +379,8 @@ module tb_watchdog_recovery;
         $finish;
       end
 
-      // Word count
-      expected_total = 1 + hc * 3 + 1;
+      // v2.3: word count
+      expected_total = 1 + 1 + hc * 3 + 1;
       assert (pkt_word_count == int'(expected_total)) else begin
         $error("[TB] FAIL Test 3: word count %0d != expected %0d",
                pkt_word_count, expected_total);
@@ -468,7 +468,7 @@ module tb_watchdog_recovery;
         $finish;
       end
 
-      expected_total = 1 + hc * 3 + 1;
+      expected_total = 1 + 1 + hc * 3 + 1;
       assert (pkt_word_count == int'(expected_total)) else begin
         $error("[TB] FAIL Test 3b: word count %0d != expected %0d",
                pkt_word_count, expected_total);

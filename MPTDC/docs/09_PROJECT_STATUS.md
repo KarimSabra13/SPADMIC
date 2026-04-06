@@ -289,13 +289,89 @@ cd syn/scripts
 genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ```
 
-## 8. Bottom line
+## 8. v2.3 Precision Enhancement (Latest)
+
+### Packet format
+
+The narrow-16 packet now includes a **sub-header word** after the header:
+
+| Word | Bits | Content |
+|------|------|---------|
+| Header | `[15:13]=3'b100` | ctx, phase0, hit_count, flags, mode |
+| **Sub-header** | `[15:13]=3'b101` | `nfast_stop[12:6]` (reserved — currently 0) |
+| Hit W0..Wn | — | per-hit data (unchanged) |
+| EOC | — | end-of-conversion (unchanged) |
+
+**Note on `nfast_stop`:** In the current architecture the fast oscillator starts
+at STOP time (`osc_fast_en = stop_latched | osc_keep_alive`), so the fast
+counter is always 0 at STOP.  The field is reserved for future architectures
+where the fast oscillator start policy may change.  The sub-header infrastructure
+is clean and costs only 1 word per packet.
+
+### Enhanced calibration results
+
+Multi-method calibration comparison on 750k-row datasets (single seed, max 15 hits):
+
+**Nominal (no jitter):**
+
+| Method | Test RMSE (ps) | Test P90 (ps) | Test P99 (ps) |
+|--------|---------------|---------------|---------------|
+| 6D LUT (mean) — baseline | 18.99 | 33.10 | 46.57 |
+| 6D LUT (trimmed mean) | 19.06 | 33.31 | 47.59 |
+| GradientBoosted regression | **18.56** | **30.02** | **43.90** |
+| Temporal re-keyed LUT | 25.54 | 42.00 | 62.50 |
+
+**With jitter (σ = 6 ps, bound 18 ps):**
+
+| Method | Test RMSE (ps) | Test P90 (ps) | Test P99 (ps) |
+|--------|---------------|---------------|---------------|
+| 6D LUT (mean) — baseline | 53.64 | 87.00 | 148.38 |
+| GradientBoosted regression | **48.24** | **75.89** | **138.57** |
+
+### Multi-hit averaging results
+
+Quality-gated multi-hit averaging using 6D LUT calibrated timestamps:
+
+| Hits | Nominal Weighted RMSE | Nominal Trimmed RMSE | Jitter Trimmed RMSE |
+|------|----------------------|---------------------|---------------------|
+| 1 | 21.46 ps | 21.46 ps | 55.32 ps |
+| 3 | 11.22 ps | 10.82 ps | 26.63 ps |
+| 5 | 7.82 ps | 7.61 ps | 24.54 ps |
+| 10 | 5.90 ps | 5.82 ps | 21.16 ps |
+| 15 | **5.19 ps** | **5.29 ps** | **19.75 ps** |
+
+### Fine phase grid characterization
+
+The Vernier fine encoding `ns×11 − nf×10` for `(ns, nf) ∈ {0..8}²`:
+
+- **81 achievable values** out of 169 in range (47.9% coverage)
+- Maximum inter-diagonal gap: 100 ps (d = ±8 boundaries)
+- Worst DNL: +3.76 / −0.52 LSB
+- Worst INL: ±9.05 LSB
+
+### GBR feature importances
+
+Under jitter: `nf=0.41, ns=0.28, phase0_snap=0.25, nfast_hit=0.06` — the
+fine phase indices and phase0 snapshot dominate; `nslow` and `nfast_snap` are
+nearly irrelevant for fine correction.
+
+### New calibration scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/calibration/analyze_fine_grid.py` | Fine phase grid non-uniformity analysis with PDF |
+| `scripts/calibration/calibrate_enhanced.py` | 8-method comparison: LUT variants, polynomial, GBR, temporal re-key, quality-gated averaging |
+
+## 9. Bottom line
 
 The repo is **not yet at final silicon signoff**, but it is at a strong engineering checkpoint:
 
-- RTL looks coherent
-- verification infrastructure is mature
+- RTL looks coherent (v2.3 with sub-header infrastructure)
+- verification infrastructure is mature — all 13 Verilator TBs pass
 - the known VIP stress deadlock class has been fixed and the `109/109` broad campaign baseline is green
 - the remaining meaningful holes are concentrated in CSR / top-level / reset control paths, not in the packet stress path
+- **single-shot RMSE: 18.56 ps (GBR) / 18.99 ps (6D LUT)** under nominal conditions
+- **multi-hit averaged RMSE: 5.19 ps** with 15 hits (nominal) — exceeds target
+- **jitter-limited multi-hit RMSE: 19.75 ps** with 15 hits (σ=6 ps jitter)
 - exploratory calibration and fixed-delay characterization can proceed in parallel with closure work
 - final synthesis freeze should wait for the next Cadence closure rerun on the expanded directed suite

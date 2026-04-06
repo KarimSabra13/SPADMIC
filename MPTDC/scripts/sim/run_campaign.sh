@@ -171,6 +171,7 @@ build_tb() {
     "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
     "$REPO_ROOT/tb/int/tb_campaign_collect.sv"
     --top-module tb_campaign_collect
+    -o tb_campaign_collect
     -Mdir "$OBJ_DIR"
     -Wno-fatal
   )

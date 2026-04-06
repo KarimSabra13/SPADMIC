@@ -32,6 +32,7 @@ CSV_DTYPES = {
     "nslow": "int16",
     "nfast_hit": "int16",
     "nfast_snap": "int16",
+    "nfast_stop": "int16",
     "ns": "int16",
     "nf": "int16",
     "pd_idx": "int16",
@@ -52,6 +53,7 @@ USECOLS = [
     "nslow",
     "nfast_hit",
     "nfast_snap",
+    "nfast_stop",
     "ns",
     "nf",
     "pd_idx",
@@ -65,7 +67,8 @@ KEY_SETS = {
     "current_6d": ["ns", "nf", "nslow", "nfast_hit", "phase0_snap", "hit_idx"],
     "boundary_aug": ["ns", "nf", "nslow", "nfast_hit", "phase0_snap", "slow_boundary_inc", "hit_idx"],
     "short_core": ["ns", "nf", "nslow", "nfast_hit", "nfast_snap", "phase0_snap", "slow_boundary_inc", "hit_idx"],
-    "all_visible": ["ns", "nf", "nslow", "nfast_hit", "nfast_snap",
+    "nfast_stop_aug": ["ns", "nf", "nslow", "nfast_hit", "nfast_stop", "phase0_snap", "slow_boundary_inc", "hit_idx"],
+    "all_visible": ["ns", "nf", "nslow", "nfast_hit", "nfast_snap", "nfast_stop",
                     "phase0_snap", "slow_boundary_inc", "pd_idx", "event_seq", "hit_idx"],
 }
 
@@ -112,7 +115,13 @@ def discover_csvs(dataset_dir: str | None, max_files: int | None = None) -> list
 def load_dataset(label: str, files: list[Path], core_only: bool = True) -> pd.DataFrame:
     frames = []
     for path in files:
-        df = pd.read_csv(path, usecols=USECOLS, dtype=CSV_DTYPES)
+        # v2.3: handle both old (18-col) and new (19-col with nfast_stop) CSVs
+        hdr = pd.read_csv(path, nrows=0).columns.tolist()
+        use = [c for c in USECOLS if c in hdr]
+        dt  = {c: v for c, v in CSV_DTYPES.items() if c in hdr}
+        df = pd.read_csv(path, usecols=use, dtype=dt)
+        if "nfast_stop" not in df.columns:
+            df["nfast_stop"] = 0
         frames.append(df)
 
     data = pd.concat(frames, ignore_index=True)

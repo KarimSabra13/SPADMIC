@@ -133,6 +133,7 @@ module mptdc_drain_ctrl
     meta_rec.kind               = ACQ_REC_META;
     meta_rec.meta.nslow         = snapshot_i.nslow_snap;
     meta_rec.meta.nfast         = snapshot_i.nfast_snap;
+    meta_rec.meta.nfast_stop    = snapshot_i.nfast_stop;    // v2.3
     meta_rec.meta.hit_count     = snapshot_i.hit_count;
     meta_rec.meta.flags         = snapshot_i.flags;
     meta_rec.meta.phase0_snap   = snapshot_i.phase0_snap;

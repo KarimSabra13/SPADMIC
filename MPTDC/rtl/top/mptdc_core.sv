@@ -88,6 +88,12 @@ module mptdc_core
   wire [NSLOW_W-1:0] nslow_src_count, nslow_stop_latched;
   wire [NFAST_W-1:0] nfast_src_count;
 
+  // v2.3: nfast_stop field — reserved.  In the current architecture the fast
+  // oscillator starts at STOP time (osc_fast_en = stop_latched | keep_alive),
+  // so the fast counter is always 0 at STOP.  The sub-header word carries this
+  // field for future use (e.g. if the fast oscillator start policy changes).
+  wire [NFAST_W-1:0] nfast_stop_latched = '0;
+
   // =========================================================================
   //  Internal wires — meas_ctrl (fast domain)
   // =========================================================================
@@ -332,8 +338,11 @@ module mptdc_core
     .dst_count_latched    (nslow_stop_latched)
   );
 
-  // ── Fast counter ──────────────────────────────────────────────
-  mptdc_gray_cnt_sync #(.W(NFAST_W)) u_fast_cnt (
+  // ── Fast counter — same domain, no CDC needed ────────────────
+  mptdc_gray_cnt_sync #(
+    .W                  (NFAST_W),
+    .USE_ASYNC_SNAPSHOT (1'b0)
+  ) u_fast_cnt (
     .src_clk              (osc_fast_ph0),
     .src_rst_n            (rst_fast_n),
     .src_async_clr        (meas_pd_clear),
@@ -377,6 +386,7 @@ module mptdc_core
     .pd_nfast_hit_packed_i (pd_nfast_hit_packed),
     .nslow_snap_i          (nslow_stop_latched),
     .nfast_snap_i          (nfast_src_count),
+    .nfast_stop_i          (nfast_stop_latched),   // v2.3
     .phase0_snap_i         (phase0_snap),
     .slow_boundary_inc_i   (slow_boundary_inc),   // v2.2
     .hit_count_i           (meas_hit_count),

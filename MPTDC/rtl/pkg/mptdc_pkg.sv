@@ -7,6 +7,11 @@
 // Purpose  : Central parameter, type, and helper-function package
 // Author   : Karim Sabra
 // =============================================================================
+// v2.3 changes (precision-enhancement):
+//   - nfast_stop: async fast-counter snapshot at STOP edge added to ctx_snapshot
+//     and conv_meta structs for tightly correlated coarse-Vernier reference
+//   - Sub-header word added to narrow packet (carries nfast_stop)
+//
 // v2.2 changes (design-review fixes):
 //   - Measurement FSM: 5-state (added ST_M_STOP_OSC for safe PD clear)
 //   - Close detection: OR-reduction for FIRST_HIT, pipelined for MULTI_HIT
@@ -169,6 +174,7 @@ package mptdc_pkg;
   typedef struct packed {
     logic [NSLOW_W-1:0]     nslow;          // STOP-side slow snapshot
     logic [NFAST_W-1:0]     nfast;          // v2.2.2: nfast_snap at CAPTURE
+    logic [NFAST_W-1:0]     nfast_stop;     // v2.3: fast counter at STOP edge
     logic [MAX_HITS_W-1:0]  hit_count;
     tdc_conv_flags_t        flags;
     logic                   phase0_snap;
@@ -258,6 +264,7 @@ package mptdc_pkg;
     logic [PD_N*NFAST_W-1:0]             nfast_hit_packed;  // PD_N × NFAST_W flattened
     logic [NSLOW_W-1:0]                  nslow_snap;        // STOP-side slow snapshot
     logic [NFAST_W-1:0]                  nfast_snap;        // global fast counter at CAPTURE
+    logic [NFAST_W-1:0]                  nfast_stop;        // v2.3: fast counter at STOP edge
     logic                                phase0_snap;
     logic                                slow_boundary_inc; // v2.2: phase-0 boundary carry
     logic [MAX_HITS_W-1:0]               hit_count;
