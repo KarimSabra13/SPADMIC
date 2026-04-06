@@ -18,4 +18,8 @@ Rapport_5PSM_KS/*.run.xml
 Rapport_5PSM_KS/*.synctex.gz
 Rapport_5PSM_KS/*.toc
 
+__pycache__/
+*.pyc
+.venv/
+
 *:Zone.Identifier
