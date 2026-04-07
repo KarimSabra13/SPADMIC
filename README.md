@@ -13,6 +13,8 @@ SPADMIC is the digital readout IC for a SPAD (Single-Photon Avalanche Diode) mat
 | Directory | Description | Status |
 |-----------|-------------|--------|
 | [`MPTDC/`](MPTDC/) | Vernier Multi-Phase Time-to-Digital Converter | `109/109` Cadence campaign baseline passed; exploratory calibration-ready; targeted coverage closure ongoing |
+| [`TOP/`](TOP/) | SPADMIC top-level integration (3-axis TDC, arbiter, position scanner, CSR) | First integration scaffold — lint clean, unit tests passing |
+| [`I2C/`](I2C/) | I2C slave and CSR bridge for chip configuration | First-pass implementation — lint clean |
 | [`Rapport_5PSM_KS/`](Rapport_5PSM_KS/) | Rapport d'alternance 5PSM autour de SPADMIC | Rédaction en cours |
 
 ## MPTDC
@@ -34,6 +36,23 @@ Current checkpoint summary for `MPTDC/`:
 - the repository is suitable for **exploratory offline calibration**, but not yet for synthesis signoff or freeze.
 
 See [`MPTDC/README.md`](MPTDC/README.md) for the detailed architecture, flows, and status of the TDC implementation.
+
+## SPADMIC Top-Level Integration
+
+Branch `SPADMIC_top_v1` contains the first chip-level integration scaffold:
+
+- **3 TDC axes** (X, Y, Z) each wrapping an `mptdc_top_asic` instance with a reverse start-stop qualifier
+- **Shared TDC TX path** via a 3-to-1 round-robin arbiter ensuring packet atomicity
+- **Position scanner** detecting up to 2 clusters per axis on 127-bit SPAD line bitmaps
+- **I2C-to-CSR bridge** for configuration with address-decoded regions (Global, TDC\_X/Y/Z, Position)
+
+Key design rules:
+- `clk_sys = 160 MHz`, `clk_ref_40m = 40 MHz`
+- Reverse start-stop: SPAD event → START, next 40 MHz rising edge → STOP
+- No packet interleaving on shared TX
+- Position block has its own dedicated TX path
+
+See [`TOP/docs/SPADMIC_TOPLEVEL_PLAN.md`](TOP/docs/SPADMIC_TOPLEVEL_PLAN.md) for the full architecture design note.
 
 ## Report Project
 
@@ -57,6 +76,14 @@ SPADMIC/
 │   ├── ci/                 Regression scripts
 │   ├── docs/               Architecture and calibration documentation
 │   └── syn/                Synthesis collateral
+├── TOP/                    SPADMIC top-level integration
+│   ├── rtl/                Integration RTL (wrappers, arbiter, position, CSR)
+│   ├── tb/                 Unit and integration testbenches
+│   ├── docs/               Architecture design notes
+│   └── filelist.f          Compile list (references MPTDC/ and I2C/)
+├── I2C/                    I2C control plane
+│   ├── rtl/                I2C slave and CSR bridge
+│   └── filelist.f          Compile list
 └── Rapport_5PSM_KS/        LaTeX report project
 ```
 
@@ -72,6 +99,25 @@ verilator --lint-only --timing +define+MPTDC_USE_OSC_MODEL \
   -f rtl/filelist.f --top-module mptdc_top_asic
 
 bash ci/run_full_regression.sh
+```
+
+### SPADMIC top-level (branch SPADMIC_top_v1)
+
+```bash
+git checkout SPADMIC_top_v1
+cd MPTDC
+
+# Lint full SPADMIC top
+verilator --lint-only --timing +define+MPTDC_USE_OSC_MODEL \
+  -f rtl/filelist.f -f ../TOP/filelist.f -f ../I2C/filelist.f \
+  --top-module spadmic_top_v1
+
+# Run SPADMIC unit tests
+verilator --binary --timing rtl/pkg/mptdc_pkg.sv \
+  ../TOP/rtl/spadmic_pkg.sv ../TOP/rtl/spadmic_ref_stop_qualifier.sv \
+  ../TOP/tb/tb_spadmic_ref_stop_qualifier_unit.sv \
+  --top-module tb_spadmic_ref_stop_qualifier_unit && \
+  obj_dir/Vtb_spadmic_ref_stop_qualifier_unit
 ```
 
 ### Report build

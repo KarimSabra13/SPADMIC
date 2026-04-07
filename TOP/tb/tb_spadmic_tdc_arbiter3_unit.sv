@@ -98,8 +98,10 @@ module tb_spadmic_tdc_arbiter3_unit;
   );
 
   always @(posedge clk_sys) begin
-    if (shared_valid && shared_ready)
+    if (shared_valid && shared_ready) begin
       $display("[ARB] t=%0t word=0x%04h sop=%0b eop=%0b", $time, shared_data, shared_sop, shared_eop);
+      out_words.push_back(shared_data);
+    end
   end
 
   task automatic check(input string label, input logic cond);
@@ -165,11 +167,8 @@ module tb_spadmic_tdc_arbiter3_unit;
     check("all three packets available before arbitration", pkt_available == 3'b111);
     shared_ready = 1'b1;
 
-    while (out_words.size() < 12) begin
+    while (out_words.size() < 12)
       @(posedge clk_sys);
-      if (shared_valid && shared_ready)
-        out_words.push_back(shared_data);
-    end
 
     check("exactly three 4-word packets emitted", out_words.size() == 12);
     check("packet 0 starts with header", is_header(out_words[0]));
