@@ -198,8 +198,10 @@ mailbox populated in `mptdc_vip_tb.sv`:
 
 1. **Wait** for sampled accepted words to appear
 2. **Collect** 16-bit words until a complete packet is assembled
-3. **Detect** header (bits [15:14] = 2'b10) and EOC (bits [15:14] = 2'b11)
-4. **Parse** hits based on `out_mode` from header:
+3. **Detect** header (`[15:13] = 3'b100`), sub-header (`[15:13] = 3'b101`),
+   and EOC (`[15:14] = 2'b11`)
+4. **Parse** hits based on `out_mode` from header, skipping the v2.3
+   sub-header word that carries the reserved `nfast_stop` field:
     - **RAW_FEATURES**: 3 words/hit (coarse timing, phase indices, event seq)
     - **RAW_TIMESTAMP**: 2 words/hit (`W0` raw coarse features, `W1` timestamp)
     - **FULL**: 4 words/hit (RAW_FEATURES `W0-W2` plus timestamp `W3`)
@@ -217,7 +219,7 @@ The `mptdc_scoreboard` receives:
 
 | Check | Description |
 |-------|-------------|
-| Word count | Must equal `2 + hit_count × words_per_hit(out_mode)` |
+| Word count | Must equal `3 + hit_count × words_per_hit(out_mode)` |
 | Hit array size | Decoded hits must match header hit_count |
 | out_mode | Must match configured out_mode |
 | Hit count range | If enabled: `min_hits ≤ hit_count ≤ max_hits_allowed` |
