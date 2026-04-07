@@ -45,6 +45,15 @@ QUANT     = 10  # ps per LSB
 
 # LUT key columns (6D + hit_idx = 7 fields total, called "6D LUT" for brevity)
 LUT_KEY = ["ns_inf", "nf_inf", "nslow", "nfast_hit", "phase0_snap", "hit_idx"]
+REQUIRED_COLUMNS = [
+    "Tref_ps",
+    "t_raw_ps",
+    "nslow",
+    "nfast_hit",
+    "phase0_snap",
+    "hit_idx",
+    "slow_boundary_inc",
+]
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -74,16 +83,93 @@ def infer_ns_nf(df):
     return df
 
 
-def load_and_prepare(csv_files, core_only=True):
+def read_seed_csv(csv_file):
+    """Load one seed CSV, skipping files that contain no data rows."""
+    try:
+        df = pd.read_csv(csv_file)
+    except pd.errors.EmptyDataError:
+        return None, "empty"
+
+    missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{csv_file} missing required columns: {', '.join(missing)}"
+        )
+
+    if df.empty:
+        return None, "header_only"
+
+    return df, None
+
+
+def print_skipped_csv_summary(skipped, indent=2):
+    """Print a concise summary of CSV files skipped for having no data rows."""
+    if not skipped:
+        return
+
+    counts = {}
+    for item in skipped:
+        counts[item["reason"]] = counts.get(item["reason"], 0) + 1
+
+    reasons = []
+    if counts.get("empty"):
+        reasons.append(f"{counts['empty']} empty")
+    if counts.get("header_only"):
+        reasons.append(f"{counts['header_only']} header-only")
+
+    sample = ", ".join(os.path.basename(item["path"]) for item in skipped[:5])
+    if len(skipped) > 5:
+        sample += ", ..."
+
+    sp = " " * indent
+    print(f"{sp}WARNING: skipped {len(skipped)} CSV file(s) with no data rows "
+          f"({', '.join(reasons)}): {sample}")
+
+
+def load_and_prepare(csv_files, core_only=True, allow_empty=False):
     """Load CSVs, infer ns/nf, optionally filter to core (nslow > 0)."""
     frames = []
+    skipped = []
     for f in csv_files:
-        frames.append(pd.read_csv(f))
-    df = pd.concat(frames, ignore_index=True)
+        frame, skip_reason = read_seed_csv(f)
+        if frame is None:
+            skipped.append({"path": f, "reason": skip_reason})
+            continue
+        frames.append(frame)
+
+    print_skipped_csv_summary(skipped)
+
+    if not frames:
+        if not allow_empty:
+            raise ValueError(
+                f"No usable calibration rows found in {len(csv_files)} CSV file(s)"
+            )
+        df = pd.DataFrame(columns=REQUIRED_COLUMNS)
+    else:
+        df = pd.concat(frames, ignore_index=True)
+
     n_before = len(df)
     df.attrs["rows_before_filter"] = int(n_before)
     df.attrs["core_filter_label"] = "nslow > 0"
     df.attrs["core_filter_applied"] = bool(core_only)
+    df.attrs["skipped_csv_files"] = int(len(skipped))
+    df.attrs["skipped_empty_csv_files"] = int(sum(
+        1 for item in skipped if item["reason"] == "empty"
+    ))
+    df.attrs["skipped_header_only_csv_files"] = int(sum(
+        1 for item in skipped if item["reason"] == "header_only"
+    ))
+
+    if df.empty:
+        df["offset"] = pd.Series(dtype=np.float64)
+        df["ns_inf"] = pd.Series(dtype="Int64")
+        df["nf_inf"] = pd.Series(dtype="Int64")
+        df.attrs["rows_after_filter"] = 0
+        df.attrs["rows_filtered_out"] = 0
+        df.attrs["rows_filtered_out_pct"] = 0.0
+        df.attrs["rows_after_inference"] = 0
+        return df
+
     if core_only:
         df = df[df["nslow"] > 0].copy()
         pct = (1 - len(df) / n_before) * 100 if n_before else 0
@@ -116,6 +202,11 @@ def filter_summary(df):
         "rows_after_inference": after_inference,
         "rows_filtered_out": filtered_out,
         "rows_filtered_out_pct": float(df.attrs.get("rows_filtered_out_pct", 0.0)),
+        "skipped_csv_files": int(df.attrs.get("skipped_csv_files", 0)),
+        "skipped_empty_csv_files": int(df.attrs.get("skipped_empty_csv_files", 0)),
+        "skipped_header_only_csv_files": int(
+            df.attrs.get("skipped_header_only_csv_files", 0)
+        ),
     }
 
 
@@ -152,6 +243,21 @@ def compute_metrics(errors, label=""):
         "max":     float(np.max(errors)),
     }
     return m
+
+
+def compute_improvement_pct(baseline, current):
+    """Return percent improvement, guarding degenerate zero-baseline cases."""
+    if baseline == 0:
+        return 0.0 if current == 0 else float("nan")
+    return (1 - current / baseline) * 100.0
+
+
+def format_improvement(baseline, current, width=7, precision=1):
+    """Format percent improvement for terminal/text reports."""
+    improvement = compute_improvement_pct(baseline, current)
+    if np.isnan(improvement):
+        return "n/a"
+    return f"{improvement:>{width}.{precision}f}%"
 
 
 def print_metrics(m, indent=2):
@@ -382,13 +488,12 @@ def plot_averaging_table(avg_results, out_path):
     headers = ["N", "RMSE (ps)", "MAE (ps)", "|err| P90 (ps)", "Improvement"]
     rows = []
     for r in avg_results:
-        imp = (1 - r["rmse"] / avg_results[0]["rmse"]) * 100
         rows.append([
             str(r["N"]),
             f'{r["rmse"]:.2f}',
             f'{r["mae"]:.2f}',
             f'{r["p90_ae"]:.2f}',
-            f'{imp:+.1f}%'
+            format_improvement(avg_results[0]["rmse"], r["rmse"], width=0, precision=1).strip()
         ])
 
     table = ax.table(cellText=rows, colLabels=headers, loc="center",
@@ -531,8 +636,17 @@ def main():
         bin_count = {}
         total_rows = 0
         total_core = 0
+        train_skipped = []
+        usable_train_files = 0
         for i, f in enumerate(train_files):
-            chunk = pd.read_csv(f)
+            chunk, skip_reason = read_seed_csv(f)
+            if chunk is None:
+                train_skipped.append({"path": f, "reason": skip_reason})
+                if (i + 1) % 6 == 0:
+                    print(f"    ... scanned {i+1}/{len(train_files)} seeds "
+                          f"({usable_train_files} usable)")
+                continue
+            usable_train_files += 1
             total_rows += len(chunk)
             chunk = chunk[chunk["nslow"] > 0].copy()
             total_core += len(chunk)
@@ -551,7 +665,21 @@ def main():
                     bin_count[keys] = c
             del chunk; gc.collect()
             if (i + 1) % 6 == 0:
-                print(f"    ... loaded {i+1}/{len(train_files)} seeds")
+                print(f"    ... scanned {i+1}/{len(train_files)} seeds "
+                      f"({usable_train_files} usable)")
+
+        print_skipped_csv_summary(train_skipped)
+        if not bin_count:
+            raise ValueError(
+                "Training set produced no usable rows after skipping empty/header-only CSVs"
+            )
+        train_skipped_csv_files = len(train_skipped)
+        train_skipped_empty_csv_files = sum(
+            1 for item in train_skipped if item["reason"] == "empty"
+        )
+        train_skipped_header_only_csv_files = sum(
+            1 for item in train_skipped if item["reason"] == "header_only"
+        )
 
         # Build LUT DataFrame
         records = []
@@ -570,6 +698,13 @@ def main():
         train_data = load_and_prepare(train_files, core_only=True)
         total_rows = len(train_data)
         lut_df = build_lut(train_data)
+        train_skipped_csv_files = int(train_data.attrs.get("skipped_csv_files", 0))
+        train_skipped_empty_csv_files = int(
+            train_data.attrs.get("skipped_empty_csv_files", 0)
+        )
+        train_skipped_header_only_csv_files = int(
+            train_data.attrs.get("skipped_header_only_csv_files", 0)
+        )
         del train_data; gc.collect()
 
     print(f"  LUT bins          : {len(lut_df):>12,}")
@@ -595,6 +730,8 @@ def main():
 
     print(f"\n[2/6] Validating on held-out seeds ({len(val_files)} files)...")
     val_data = load_and_prepare(val_files, core_only=True)
+    if val_data.empty:
+        raise ValueError("Held-out validation produced no usable rows after filtering")
     val_filter = filter_summary(val_data)
     print(f"  Validation rows (core subset): {len(val_data):,}")
 
@@ -651,6 +788,9 @@ def main():
         fresh_rows_before = 0
         fresh_rows_after_filter = 0
         fresh_rows_after_inference = 0
+        fresh_skipped_csv_files = 0
+        fresh_skipped_empty_csv_files = 0
+        fresh_skipped_header_only_csv_files = 0
         all_raw_errs = []
         all_cal_errs = []
         # Per-hit_idx and per-nslow accumulators
@@ -660,14 +800,30 @@ def main():
 
         for ci in range(0, len(fresh_files), CHUNK):
             batch = fresh_files[ci:ci+CHUNK]
-            chunk = load_and_prepare(batch, core_only=True)
+            chunk = load_and_prepare(batch, core_only=True, allow_empty=True)
             fresh_rows_before += int(chunk.attrs.get("rows_before_filter", len(chunk)))
             fresh_rows_after_filter += int(chunk.attrs.get("rows_after_filter", len(chunk)))
             fresh_rows_after_inference += int(chunk.attrs.get("rows_after_inference", len(chunk)))
+            fresh_skipped_csv_files += int(chunk.attrs.get("skipped_csv_files", 0))
+            fresh_skipped_empty_csv_files += int(
+                chunk.attrs.get("skipped_empty_csv_files", 0)
+            )
+            fresh_skipped_header_only_csv_files += int(
+                chunk.attrs.get("skipped_header_only_csv_files", 0)
+            )
+            if chunk.empty:
+                print(f"    ... processed {min(ci+CHUNK, len(fresh_files))}/{len(fresh_files)} files "
+                      f"({total_n:,} rows, batch had no usable data)")
+                del chunk; gc.collect()
+                continue
             result = apply_lut(chunk, lut_df)
             unmatched_total += result["correction"].isna().sum()
             result = result.dropna(subset=["correction"])
             n = len(result)
+            if n == 0:
+                print(f"    WARNING: batch {ci//CHUNK + 1} had no LUT-matched rows after join")
+                del chunk, result; gc.collect()
+                continue
             total_n += n
 
             re = result["raw_error_ps"].values
@@ -697,6 +853,11 @@ def main():
             del chunk, result; gc.collect()
             print(f"    ... processed {min(ci+CHUNK, len(fresh_files))}/{len(fresh_files)} files "
                   f"({total_n:,} rows)")
+
+        if total_n == 0:
+            raise ValueError(
+                "Fresh validation files were found, but no usable LUT-matched rows remained"
+            )
 
         # Compute aggregate metrics
         raw_rmse = np.sqrt(raw_sse / total_n)
@@ -730,6 +891,9 @@ def main():
             "rows_filtered_out_pct": float(
                 (1 - fresh_rows_after_filter / fresh_rows_before) * 100
             ) if fresh_rows_before else 0.0,
+            "skipped_csv_files": int(fresh_skipped_csv_files),
+            "skipped_empty_csv_files": int(fresh_skipped_empty_csv_files),
+            "skipped_header_only_csv_files": int(fresh_skipped_header_only_csv_files),
         }
 
         coverage_den = fresh_rows_after_inference if fresh_rows_after_inference else 1
@@ -794,6 +958,8 @@ def main():
         # Fall back to held-out val
         val_files_avg = sorted(glob.glob(os.path.join(val_dir, "seed_*.csv")))[args.train_seeds:30]
         val_avg = load_and_prepare(val_files_avg, core_only=True)
+        if val_avg.empty:
+            raise ValueError("Averaging fallback produced no usable held-out validation rows")
         val_avg_r = apply_lut(val_avg, lut_df).dropna(subset=["correction"])
         errors_for_avg = val_avg_r["error_ps"].values.copy()
         del val_avg, val_avg_r; gc.collect()
@@ -808,9 +974,9 @@ def main():
     print(f"\n  {'N':>6s}  {'RMSE':>10s}  {'MAE':>10s}  {'P90':>10s}  {'Improvement':>12s}")
     print(f"  {'─'*6}  {'─'*10}  {'─'*10}  {'─'*10}  {'─'*12}")
     for r in avg_results:
-        imp = (1 - r["rmse"] / avg_results[0]["rmse"]) * 100
+        imp = format_improvement(avg_results[0]["rmse"], r["rmse"], width=11, precision=1)
         print(f"  {r['N']:>6d}  {r['rmse']:>10.3f}  {r['mae']:>10.3f}  "
-              f"{r['p90_ae']:>10.3f}  {imp:>+11.1f}%")
+              f"{r['p90_ae']:>10.3f}  {imp:>12s}")
 
     plot_averaging(avg_results, os.path.join(plots_dir, "averaging_rmse_curve.png"))
     plot_averaging_table(avg_results, os.path.join(plots_dir, "averaging_table.png"))
@@ -848,6 +1014,9 @@ def main():
             "rows_filtered_out_pct": float(
                 (1 - total_core / total_rows) * 100
             ) if total_rows else 0.0,
+            "skipped_csv_files": int(train_skipped_csv_files),
+            "skipped_empty_csv_files": int(train_skipped_empty_csv_files),
+            "skipped_header_only_csv_files": int(train_skipped_header_only_csv_files),
         },
         "held_out_validation": {
             "scope": "Core subset only (nslow > 0); nslow=0 rows excluded for published calibration metrics.",
@@ -888,6 +1057,11 @@ def main():
         f.write(f"Key:    ({', '.join(LUT_KEY)})\n")
         f.write(f"Bins:   {len(lut_df):,}\n")
         f.write(f"Mode compatibility: ALL output modes (0, 1, 2)\n\n")
+        f.write(f"Training skipped CSVs: {train_skipped_csv_files}")
+        if train_skipped_csv_files:
+            f.write(f" (empty={train_skipped_empty_csv_files}, "
+                    f"header-only={train_skipped_header_only_csv_files})")
+        f.write("\n\n")
 
         f.write("─" * 70 + "\n")
         f.write("HELD-OUT VALIDATION (core subset: nslow > 0, seeds 24-29)\n")
@@ -897,9 +1071,14 @@ def main():
         f.write(f"  Rows after ns/nf infer : {val_filter['rows_after_inference']:>8,}\n")
         f.write(f"  Excluded nslow=0 rows  : {val_filter['rows_filtered_out']:>8,} "
                 f"({val_filter['rows_filtered_out_pct']:.1f}%)\n\n")
+        f.write(f"  Skipped CSVs           : {val_filter['skipped_csv_files']:>8,}")
+        if val_filter["skipped_csv_files"]:
+            f.write(f" (empty={val_filter['skipped_empty_csv_files']}, "
+                    f"header-only={val_filter['skipped_header_only_csv_files']})")
+        f.write("\n\n")
         f.write(f"  Pre-calibration  RMSE: {m_raw['rmse']:>8.2f} ps\n")
         f.write(f"  Post-calibration RMSE: {m_cal['rmse']:>8.2f} ps\n")
-        f.write(f"  Improvement:           {(1-m_cal['rmse']/m_raw['rmse'])*100:>7.1f}%\n\n")
+        f.write(f"  Improvement:           {format_improvement(m_raw['rmse'], m_cal['rmse'])}\n\n")
         f.write(f"  Pre-cal  MAE / P50 / P90 / P99: "
                 f"{m_raw['mae']:.1f} / {m_raw['p50_ae']:.1f} / "
                 f"{m_raw['p90_ae']:.1f} / {m_raw['p99_ae']:.1f} ps\n")
@@ -916,10 +1095,15 @@ def main():
             f.write(f"  Rows after ns/nf infer : {fresh_filter['rows_after_inference']:>8,}\n")
             f.write(f"  Excluded nslow=0 rows  : {fresh_filter['rows_filtered_out']:>8,} "
                     f"({fresh_filter['rows_filtered_out_pct']:.1f}%)\n\n")
+            f.write(f"  Skipped CSVs           : {fresh_filter['skipped_csv_files']:>8,}")
+            if fresh_filter["skipped_csv_files"]:
+                f.write(f" (empty={fresh_filter['skipped_empty_csv_files']}, "
+                        f"header-only={fresh_filter['skipped_header_only_csv_files']})")
+            f.write("\n\n")
             f.write(f"  Pre-calibration  RMSE: {m_raw_f['rmse']:>8.2f} ps\n")
             f.write(f"  Post-calibration RMSE: {m_cal_f['rmse']:>8.2f} ps\n")
             f.write(f"  Improvement:           "
-                    f"{(1-m_cal_f['rmse']/m_raw_f['rmse'])*100:>7.1f}%\n\n")
+                    f"{format_improvement(m_raw_f['rmse'], m_cal_f['rmse'])}\n\n")
             f.write(f"  Pre-cal  MAE / P50 / P90 / P99: "
                     f"{m_raw_f['mae']:.1f} / {m_raw_f['p50_ae']:.1f} / "
                     f"{m_raw_f['p90_ae']:.1f} / {m_raw_f['p99_ae']:.1f} ps\n")
@@ -936,9 +1120,9 @@ def main():
         f.write(f"  {'N':>6s}  {'RMSE (ps)':>10s}  {'MAE (ps)':>10s}  "
                 f"{'P90 (ps)':>10s}  {'vs N=1':>8s}\n")
         for r in avg_results:
-            imp = (1 - r["rmse"] / avg_results[0]["rmse"]) * 100
+            imp = format_improvement(avg_results[0]["rmse"], r["rmse"])
             f.write(f"  {r['N']:>6d}  {r['rmse']:>10.3f}  {r['mae']:>10.3f}  "
-                    f"{r['p90_ae']:>10.3f}  {imp:>+7.1f}%\n")
+                    f"{r['p90_ae']:>10.3f}  {imp:>8s}\n")
 
         f.write("\n" + "─" * 70 + "\n")
         f.write("LUT KEY FIELD AVAILABILITY BY OUTPUT MODE\n")
@@ -966,10 +1150,10 @@ def main():
     print(f"  FINAL RESULTS")
     print(f"{'='*70}")
     print(f"  Held-out core subset:  {m_raw['rmse']:.2f} ps → {m_cal['rmse']:.2f} ps "
-          f"({(1-m_cal['rmse']/m_raw['rmse'])*100:.1f}% improvement)")
+          f"({format_improvement(m_raw['rmse'], m_cal['rmse'], width=0, precision=1).strip()} improvement)")
     if m_cal_f:
         print(f"  Fresh core subset:     {m_raw_f['rmse']:.2f} ps → {m_cal_f['rmse']:.2f} ps "
-               f"({(1-m_cal_f['rmse']/m_raw_f['rmse'])*100:.1f}% improvement)")
+               f"({format_improvement(m_raw_f['rmse'], m_cal_f['rmse'], width=0, precision=1).strip()} improvement)")
     # Find N for sub-10ps, sub-5ps, sub-1ps
     for target in [15, 10, 5, 2, 1]:
         for r in avg_results:
