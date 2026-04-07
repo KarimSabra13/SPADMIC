@@ -164,9 +164,11 @@ def read_seed_csv(csv_file):
 
     missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing:
-        raise ValueError(
-            f"{csv_file} missing required columns: {', '.join(missing)}"
+        print(
+            f"  WARNING: skipped CSV {os.path.basename(csv_file)}: "
+            f"missing required columns: {', '.join(missing)}"
         )
+        return None, "missing_required_columns"
 
     if df.empty:
         return None, "header_only"
@@ -175,7 +177,7 @@ def read_seed_csv(csv_file):
 
 
 def print_skipped_csv_summary(skipped, indent=2):
-    """Print a concise summary of CSV files skipped for having no data rows."""
+    """Print a concise summary of CSV files skipped for being unusable."""
     if not skipped:
         return
 
@@ -188,14 +190,25 @@ def print_skipped_csv_summary(skipped, indent=2):
         reasons.append(f"{counts['empty']} empty")
     if counts.get("header_only"):
         reasons.append(f"{counts['header_only']} header-only")
+    if counts.get("missing_required_columns"):
+        reasons.append(f"{counts['missing_required_columns']} missing-required-columns")
+    other = sum(
+        v for k, v in counts.items()
+        if k not in {"empty", "header_only", "missing_required_columns"}
+    )
+    if other:
+        reasons.append(f"{other} other")
 
     sample = ", ".join(os.path.basename(item["path"]) for item in skipped[:5])
     if len(skipped) > 5:
         sample += ", ..."
 
     sp = " " * indent
-    print(f"{sp}WARNING: skipped {len(skipped)} CSV file(s) with no data rows "
-          f"({', '.join(reasons)}): {sample}")
+    reason_text = ", ".join(reasons) if reasons else "unknown reasons"
+    print(
+        f"{sp}WARNING: skipped {len(skipped)} CSV file(s) "
+        f"({reason_text}): {sample}"
+    )
 
 
 def load_and_prepare(csv_files, core_only=True, allow_empty=False):
@@ -234,6 +247,9 @@ def load_and_prepare(csv_files, core_only=True, allow_empty=False):
     ))
     df.attrs["skipped_header_only_csv_files"] = int(sum(
         1 for item in skipped if item["reason"] == "header_only"
+    ))
+    df.attrs["skipped_missing_required_columns_csv_files"] = int(sum(
+        1 for item in skipped if item["reason"] == "missing_required_columns"
     ))
     df.attrs["recovered_csv_files"] = int(recovered_files)
     df.attrs["recovered_malformed_rows"] = int(recovered_rows)
@@ -284,6 +300,9 @@ def filter_summary(df):
         "skipped_empty_csv_files": int(df.attrs.get("skipped_empty_csv_files", 0)),
         "skipped_header_only_csv_files": int(
             df.attrs.get("skipped_header_only_csv_files", 0)
+        ),
+        "skipped_missing_required_columns_csv_files": int(
+            df.attrs.get("skipped_missing_required_columns_csv_files", 0)
         ),
         "recovered_csv_files": int(df.attrs.get("recovered_csv_files", 0)),
         "recovered_malformed_rows": int(df.attrs.get("recovered_malformed_rows", 0)),
@@ -759,7 +778,7 @@ def main():
         print_skipped_csv_summary(train_skipped)
         if not bin_count:
             raise ValueError(
-                "Training set produced no usable rows after skipping empty/header-only CSVs"
+                "Training set produced no usable rows after skipping unusable CSVs"
             )
         train_skipped_csv_files = len(train_skipped)
         train_skipped_empty_csv_files = sum(
@@ -767,6 +786,9 @@ def main():
         )
         train_skipped_header_only_csv_files = sum(
             1 for item in train_skipped if item["reason"] == "header_only"
+        )
+        train_skipped_missing_required_columns_csv_files = sum(
+            1 for item in train_skipped if item["reason"] == "missing_required_columns"
         )
 
         # Build LUT DataFrame
@@ -792,6 +814,9 @@ def main():
         )
         train_skipped_header_only_csv_files = int(
             train_data.attrs.get("skipped_header_only_csv_files", 0)
+        )
+        train_skipped_missing_required_columns_csv_files = int(
+            train_data.attrs.get("skipped_missing_required_columns_csv_files", 0)
         )
         train_recovered_csv_files = int(
             train_data.attrs.get("recovered_csv_files", 0)
@@ -885,6 +910,7 @@ def main():
         fresh_skipped_csv_files = 0
         fresh_skipped_empty_csv_files = 0
         fresh_skipped_header_only_csv_files = 0
+        fresh_skipped_missing_required_columns_csv_files = 0
         all_raw_errs = []
         all_cal_errs = []
         # Per-hit_idx and per-nslow accumulators
@@ -904,6 +930,9 @@ def main():
             )
             fresh_skipped_header_only_csv_files += int(
                 chunk.attrs.get("skipped_header_only_csv_files", 0)
+            )
+            fresh_skipped_missing_required_columns_csv_files += int(
+                chunk.attrs.get("skipped_missing_required_columns_csv_files", 0)
             )
             if chunk.empty:
                 print(f"    ... processed {min(ci+CHUNK, len(fresh_files))}/{len(fresh_files)} files "
@@ -988,6 +1017,9 @@ def main():
             "skipped_csv_files": int(fresh_skipped_csv_files),
             "skipped_empty_csv_files": int(fresh_skipped_empty_csv_files),
             "skipped_header_only_csv_files": int(fresh_skipped_header_only_csv_files),
+            "skipped_missing_required_columns_csv_files": int(
+                fresh_skipped_missing_required_columns_csv_files
+            ),
         }
 
         coverage_den = fresh_rows_after_inference if fresh_rows_after_inference else 1
@@ -1111,6 +1143,9 @@ def main():
             "skipped_csv_files": int(train_skipped_csv_files),
             "skipped_empty_csv_files": int(train_skipped_empty_csv_files),
             "skipped_header_only_csv_files": int(train_skipped_header_only_csv_files),
+            "skipped_missing_required_columns_csv_files": int(
+                train_skipped_missing_required_columns_csv_files
+            ),
             "recovered_csv_files": int(train_recovered_csv_files),
             "recovered_malformed_rows": int(train_recovered_malformed_rows),
         },
@@ -1156,7 +1191,9 @@ def main():
         f.write(f"Training skipped CSVs: {train_skipped_csv_files}")
         if train_skipped_csv_files:
             f.write(f" (empty={train_skipped_empty_csv_files}, "
-                    f"header-only={train_skipped_header_only_csv_files})")
+                    f"header-only={train_skipped_header_only_csv_files}, "
+                    f"missing-required-columns="
+                    f"{train_skipped_missing_required_columns_csv_files})")
         f.write("\n\n")
 
         f.write("─" * 70 + "\n")
@@ -1170,7 +1207,9 @@ def main():
         f.write(f"  Skipped CSVs           : {val_filter['skipped_csv_files']:>8,}")
         if val_filter["skipped_csv_files"]:
             f.write(f" (empty={val_filter['skipped_empty_csv_files']}, "
-                    f"header-only={val_filter['skipped_header_only_csv_files']})")
+                    f"header-only={val_filter['skipped_header_only_csv_files']}, "
+                    f"missing-required-columns="
+                    f"{val_filter['skipped_missing_required_columns_csv_files']})")
         f.write("\n\n")
         f.write(f"  Pre-calibration  RMSE: {m_raw['rmse']:>8.2f} ps\n")
         f.write(f"  Post-calibration RMSE: {m_cal['rmse']:>8.2f} ps\n")
@@ -1194,7 +1233,9 @@ def main():
             f.write(f"  Skipped CSVs           : {fresh_filter['skipped_csv_files']:>8,}")
             if fresh_filter["skipped_csv_files"]:
                 f.write(f" (empty={fresh_filter['skipped_empty_csv_files']}, "
-                        f"header-only={fresh_filter['skipped_header_only_csv_files']})")
+                        f"header-only={fresh_filter['skipped_header_only_csv_files']}, "
+                        f"missing-required-columns="
+                        f"{fresh_filter['skipped_missing_required_columns_csv_files']})")
             f.write("\n\n")
             f.write(f"  Pre-calibration  RMSE: {m_raw_f['rmse']:>8.2f} ps\n")
             f.write(f"  Post-calibration RMSE: {m_cal_f['rmse']:>8.2f} ps\n")
