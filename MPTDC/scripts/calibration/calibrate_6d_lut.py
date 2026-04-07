@@ -24,6 +24,7 @@ import glob
 import gc
 import json
 import os
+import re
 import sys
 import time
 
@@ -54,6 +55,9 @@ REQUIRED_COLUMNS = [
     "hit_idx",
     "slow_boundary_inc",
 ]
+PARSER_ERROR_RE = re.compile(
+    r"Expected (?P<expected>\d+) fields in line (?P<line>\d+), saw (?P<saw>\d+)"
+)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -83,12 +87,80 @@ def infer_ns_nf(df):
     return df
 
 
+def recover_malformed_csv(csv_file, parser_error):
+    """Recover a CSV with a small number of malformed data rows.
+
+    This path is only used after the fast C parser rejects a file due to
+    inconsistent row widths.  We count total data lines, re-read with
+    on_bad_lines="skip", and report the difference.
+
+    Compatible with pandas >= 1.3 (string on_bad_lines) and Python 3.9+.
+    """
+    recovery = {
+        "recovered_from_parser_error": True,
+        "malformed_rows_skipped": 0,
+        "first_bad_line": None,
+        "expected_fields": None,
+        "first_bad_line_fields": None,
+    }
+
+    match = PARSER_ERROR_RE.search(str(parser_error))
+    if match:
+        recovery["first_bad_line"] = int(match.group("line"))
+        recovery["expected_fields"] = int(match.group("expected"))
+        recovery["first_bad_line_fields"] = int(match.group("saw"))
+
+    # Count total data lines (excluding header) for an accurate skip count
+    with open(csv_file, "r") as fh:
+        total_data_lines = sum(1 for _ in fh) - 1  # subtract header
+
+    try:
+        df = pd.read_csv(csv_file, on_bad_lines="skip")
+    except pd.errors.ParserError as exc:
+        raise ValueError(
+            f"{csv_file} still failed to parse after malformed-row recovery: {exc}"
+        ) from exc
+
+    recovery["malformed_rows_skipped"] = max(0, total_data_lines - len(df))
+
+    if recovery["malformed_rows_skipped"] == 0:
+        raise ValueError(
+            f"{csv_file} raised ParserError but no malformed rows were identified "
+            f"(total_data_lines={total_data_lines}, df_rows={len(df)}): {parser_error}"
+        ) from parser_error
+
+    if df.empty:
+        raise ValueError(
+            f"{csv_file} has no usable rows after skipping "
+            f"{recovery['malformed_rows_skipped']} malformed rows"
+        ) from parser_error
+
+    detail = f"skipped {recovery['malformed_rows_skipped']} malformed row(s)"
+    if recovery["first_bad_line"] is not None and recovery["expected_fields"] is not None:
+        detail += (
+            f"; first bad line {recovery['first_bad_line']} saw "
+            f"{recovery['first_bad_line_fields']} fields "
+            f"(expected {recovery['expected_fields']})"
+        )
+    print(f"  WARNING: recovered malformed CSV {os.path.basename(csv_file)}: {detail}")
+    df.attrs.update(recovery)
+    return df
+
+
 def read_seed_csv(csv_file):
     """Load one seed CSV, skipping files that contain no data rows."""
     try:
         df = pd.read_csv(csv_file)
     except pd.errors.EmptyDataError:
         return None, "empty"
+    except pd.errors.ParserError as err:
+        df = recover_malformed_csv(csv_file, err)
+
+    df.attrs.setdefault("recovered_from_parser_error", False)
+    df.attrs.setdefault("malformed_rows_skipped", 0)
+    df.attrs.setdefault("first_bad_line", None)
+    df.attrs.setdefault("expected_fields", None)
+    df.attrs.setdefault("first_bad_line_fields", None)
 
     missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing:
@@ -130,11 +202,15 @@ def load_and_prepare(csv_files, core_only=True, allow_empty=False):
     """Load CSVs, infer ns/nf, optionally filter to core (nslow > 0)."""
     frames = []
     skipped = []
+    recovered_files = 0
+    recovered_rows = 0
     for f in csv_files:
         frame, skip_reason = read_seed_csv(f)
         if frame is None:
             skipped.append({"path": f, "reason": skip_reason})
             continue
+        recovered_files += int(bool(frame.attrs.get("recovered_from_parser_error", False)))
+        recovered_rows += int(frame.attrs.get("malformed_rows_skipped", 0))
         frames.append(frame)
 
     print_skipped_csv_summary(skipped)
@@ -159,6 +235,8 @@ def load_and_prepare(csv_files, core_only=True, allow_empty=False):
     df.attrs["skipped_header_only_csv_files"] = int(sum(
         1 for item in skipped if item["reason"] == "header_only"
     ))
+    df.attrs["recovered_csv_files"] = int(recovered_files)
+    df.attrs["recovered_malformed_rows"] = int(recovered_rows)
 
     if df.empty:
         df["offset"] = pd.Series(dtype=np.float64)
@@ -207,6 +285,8 @@ def filter_summary(df):
         "skipped_header_only_csv_files": int(
             df.attrs.get("skipped_header_only_csv_files", 0)
         ),
+        "recovered_csv_files": int(df.attrs.get("recovered_csv_files", 0)),
+        "recovered_malformed_rows": int(df.attrs.get("recovered_malformed_rows", 0)),
     }
 
 
@@ -637,6 +717,8 @@ def main():
         total_rows = 0
         total_core = 0
         train_skipped = []
+        train_recovered_csv_files = 0
+        train_recovered_malformed_rows = 0
         usable_train_files = 0
         for i, f in enumerate(train_files):
             chunk, skip_reason = read_seed_csv(f)
@@ -647,6 +729,12 @@ def main():
                           f"({usable_train_files} usable)")
                 continue
             usable_train_files += 1
+            train_recovered_csv_files += int(
+                bool(chunk.attrs.get("recovered_from_parser_error", False))
+            )
+            train_recovered_malformed_rows += int(
+                chunk.attrs.get("malformed_rows_skipped", 0)
+            )
             total_rows += len(chunk)
             chunk = chunk[chunk["nslow"] > 0].copy()
             total_core += len(chunk)
@@ -704,6 +792,12 @@ def main():
         )
         train_skipped_header_only_csv_files = int(
             train_data.attrs.get("skipped_header_only_csv_files", 0)
+        )
+        train_recovered_csv_files = int(
+            train_data.attrs.get("recovered_csv_files", 0)
+        )
+        train_recovered_malformed_rows = int(
+            train_data.attrs.get("recovered_malformed_rows", 0)
         )
         del train_data; gc.collect()
 
@@ -1017,6 +1111,8 @@ def main():
             "skipped_csv_files": int(train_skipped_csv_files),
             "skipped_empty_csv_files": int(train_skipped_empty_csv_files),
             "skipped_header_only_csv_files": int(train_skipped_header_only_csv_files),
+            "recovered_csv_files": int(train_recovered_csv_files),
+            "recovered_malformed_rows": int(train_recovered_malformed_rows),
         },
         "held_out_validation": {
             "scope": "Core subset only (nslow > 0); nslow=0 rows excluded for published calibration metrics.",
