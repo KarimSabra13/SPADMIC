@@ -35,7 +35,7 @@ run_test() {
 }
 
 echo "============================================"
-echo "  MPTDC v2.2 Full Regression Suite"
+echo "  MPTDC v2.3 Full Regression Suite"
 echo "============================================"
 echo ""
 

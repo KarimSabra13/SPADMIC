@@ -5,24 +5,31 @@
 > **Repo:** `https://github.com/KarimSabra13/SPADMIC.git`
 
 Complete step-by-step guide to run the full MPTDC flow: verification →
-data collection → calibration → synthesis.
+data collection → calibration → exploratory synthesis.
 
 ---
 
 ## Current recommended command sequence
 
-If you want the shortest path from repo checkout to a trustworthy checkpoint on a Cadence server, run in this order:
+If you want the shortest path from repo checkout to the **current best lab-server checkpoint**, run in this order:
 
 ```bash
-bash ci/run_vip_coverage.sh --sim xrun --clean
-bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
-bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
-imc -load build/coverage_campaign/cov_work/scope/merged_cov &
+cd /path/to/your/workspace/SPADMIC
+git fetch origin
+git pull --ff-only origin main
+cd MPTDC
 
+# 1) Xrun sanity first
+bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
+bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun
+bash scripts/sim/run_campaign.sh --sim xrun --smoke --out-dir results/calib_xrun/smoke
+
+# 2) Full xrun calibration datasets
 bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 100 --n-conv 50000 --delay-min 20 --delay-max 30000 --configs multihit_15_cal_nominal --out-dir results/calib_xrun/train_nominal_100s
 bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 30 --n-conv 50000 --delay-min 20 --delay-max 30000 --seed-start 100 --configs multihit_15_cal_nominal --out-dir results/calib_xrun/val_nominal_30s
 bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 30 --n-conv 50000 --delay-min 20 --delay-max 30000 --seed-start 200 --configs multihit_15_cal_jitter --out-dir results/calib_xrun/val_jitter_30s
 
+# 3) Baseline LUT recalibration
 python3 scripts/calibration/calibrate_6d_lut.py \
   --train-dir results/calib_xrun/train_nominal_100s/multihit_15_cal_nominal \
   --val-dir results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal \
@@ -30,6 +37,19 @@ python3 scripts/calibration/calibrate_6d_lut.py \
   --train-seeds 100 \
   --out-dir results/calib_xrun/calibration_lut6d
 
+# 4) Enhanced comparison (GBR, trimmed/weighted averaging, etc.)
+python3 scripts/calibration/calibrate_enhanced.py \
+  --input "results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal/seed_*.csv" \
+  --out-dir results/calib_xrun/calibration_enhanced_nominal
+
+python3 scripts/calibration/calibrate_enhanced.py \
+  --input "results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter/seed_*.csv" \
+  --out-dir results/calib_xrun/calibration_enhanced_jitter
+
+python3 scripts/calibration/analyze_fine_grid.py \
+  -o results/calib_xrun/fine_grid_analysis.pdf
+
+# 5) Pointwise same-delay proof
 bash scripts/sim/run_fixed_delay_campaign.sh \
   --sim xrun \
   --jobs 32 \
@@ -40,6 +60,14 @@ bash scripts/sim/run_fixed_delay_campaign.sh \
   --out-dir results/calib_xrun/fixed_delay_nominal \
   --analyze
 
+# 6) Coverage refresh before any freeze decision (recommended, but not required
+#    before an exploratory Genus run)
+bash ci/run_vip_coverage.sh --sim xrun --clean
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
+imc -load build/coverage_campaign/cov_work/scope/merged_cov &
+
+# 7) Exploratory synthesis with oscillator stub / virtual clocks
 cd syn/scripts
 genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ```
@@ -81,10 +109,21 @@ pip3 install --user numpy pandas matplotlib
 
 ## Step 0 — Clone and Set Up
 
+If this is your first checkout:
+
 ```bash
 cd /path/to/your/workspace
 git clone https://github.com/KarimSabra13/SPADMIC.git
 cd SPADMIC/MPTDC
+```
+
+If the repository is already present on the lab server:
+
+```bash
+cd /path/to/your/workspace/SPADMIC
+git fetch origin
+git pull --ff-only origin main
+cd MPTDC
 ```
 
 Verify repo structure:
@@ -107,7 +146,7 @@ bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
 
 **Expected output:**
 ```
-=== MPTDC v2.2 TB Runner ===
+=== MPTDC v2.3 TB Runner ===
   Testbench: tb_single_conv
   Simulator: xcelium
   Build dir: .../build/tb_single_conv
@@ -120,6 +159,7 @@ bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
 [TB] Waiting for output packet...
 [TB] Collected N words
 [TB] Header: ctx=0, hits=X, flags=0000, mode=0
+[MON] ... SUBHDR: nfast_stop=0 raw=0xa000
 [TB] EOC: conv_id=0
 [TB] ===== TEST PASSED =====
 ```
@@ -385,6 +425,16 @@ The runner handles Xcelium correctly by launching each seed with its own
 `xcelium.d` library under `build/campaign_xrun/`, so 32-way parallel jobs do
 not contend for one shared Cadence worklib.
 
+**v2.3 CSV note:** `FULL` mode now emits a **19-column** schema:
+
+```csv
+conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,nfast_stop,ns,nf,pd_idx,event_seq,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits
+```
+
+`nfast_stop` is reserved and currently always `0` because the fast oscillator
+starts at `STOP` time in the active architecture. Calibration scripts remain
+backward-compatible with legacy 18-column CSV files.
+
 **Runtime:**
 - Smoke: ~2 minutes
 - Full campaign (12 cores): ~30–60 minutes
@@ -392,29 +442,62 @@ not contend for one shared Cadence worklib.
 
 ---
 
-## Step 6 — Calibration (6D LUT)
+## Step 6 — Calibration Refresh (6D LUT baseline + enhanced comparison)
 
-**Goal:** Train the 6D mean-correction LUT and validate precision.
+**Goal:** retrain the maintained baseline LUT, then rerun the richer
+post-processing so the Xrun server results can be compared against the current
+repository baselines.
 
 ```bash
-# Recommended: explicit train / held-out / fresh-jitter split
-bash scripts/sim/run_campaign.sh --sim verilator --configs multihit_15_cal_nominal --out-dir results/campaign
-bash scripts/sim/run_campaign.sh --sim xrun --configs multihit_15_cal_nominal --seed-start 100 --out-dir results/campaign_validation
+# Recommended lab-server split: train nominal + held-out nominal + fresh jitter
+bash scripts/sim/run_campaign.sh \
+  --sim xrun \
+  --jobs 32 \
+  --seeds 100 \
+  --n-conv 50000 \
+  --delay-min 20 \
+  --delay-max 30000 \
+  --configs multihit_15_cal_nominal \
+  --out-dir results/calib_xrun/train_nominal_100s
+
+bash scripts/sim/run_campaign.sh \
+  --sim xrun \
+  --jobs 32 \
+  --seeds 30 \
+  --n-conv 50000 \
+  --delay-min 20 \
+  --delay-max 30000 \
+  --seed-start 100 \
+  --configs multihit_15_cal_nominal \
+  --out-dir results/calib_xrun/val_nominal_30s
+
+bash scripts/sim/run_campaign.sh \
+  --sim xrun \
+  --jobs 32 \
+  --seeds 30 \
+  --n-conv 50000 \
+  --delay-min 20 \
+  --delay-max 30000 \
+  --seed-start 200 \
+  --configs multihit_15_cal_jitter \
+  --out-dir results/calib_xrun/val_jitter_30s
 
 python3 scripts/calibration/calibrate_6d_lut.py \
-  --train-dir results/campaign/multihit_15_cal_nominal \
-  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
-  --out-dir results/calibration_final
+  --train-dir results/calib_xrun/train_nominal_100s/multihit_15_cal_nominal \
+  --val-dir results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal \
+  --fresh-dir results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter \
+  --train-seeds 100 \
+  --out-dir results/calib_xrun/calibration_lut6d
 ```
 
 Optional explicit directory control:
 
 ```bash
 python3 scripts/calibration/calibrate_6d_lut.py \
-  --train-dir results/campaign/multihit_15_cal_nominal \
-  --val-dir results/campaign/multihit_15_cal_nominal \
-  --fresh-dir results/campaign_validation/multihit_15_cal_nominal \
-  --out-dir results/calibration_final
+  --train-dir results/calib_xrun/train_nominal_100s/multihit_15_cal_nominal \
+  --val-dir results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal \
+  --fresh-dir results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter \
+  --out-dir results/calib_xrun/calibration_lut6d
 ```
 
 The calibrator does **not** use a `--data-dir` flag. Its maintained interface is:
@@ -466,6 +549,39 @@ Averaging study (analysis-side resampling, not fixed-delay TB proof):
 - **Averaging follows 1/√N in `calibrate_6d_lut.py`** = the nominal calibrated pool is largely random after correction, but this is still analysis-side resampling
 - **Use the fixed-delay flow below** when you need empirical same-delay one-shot RMS / averaging proof
 
+### Step 6a — Enhanced calibration comparison
+
+Use the maintained enhanced script to compare LUT variants, GBR, and
+quality-gated averaging on the new Xrun datasets:
+
+```bash
+python3 scripts/calibration/calibrate_enhanced.py \
+  --input "results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal/seed_*.csv" \
+  --out-dir results/calib_xrun/calibration_enhanced_nominal
+
+python3 scripts/calibration/calibrate_enhanced.py \
+  --input "results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter/seed_*.csv" \
+  --out-dir results/calib_xrun/calibration_enhanced_jitter
+
+python3 scripts/calibration/analyze_fine_grid.py \
+  -o results/calib_xrun/fine_grid_analysis.pdf
+```
+
+Current maintained repo baselines to compare against:
+
+| Metric | Nominal | Jitter (`σ = 6 ps`) |
+|--------|---------|---------------------|
+| 6D LUT single-shot RMSE | `18.99 ps` | `53.64 ps` |
+| GBR single-shot RMSE | `18.56 ps` | `48.24 ps` |
+| 15-hit weighted / trimmed RMSE | `5.19 ps` / `5.29 ps` | `19.75 ps` (trimmed) |
+
+If your Xrun results are materially worse than these baselines, check:
+
+- whether the campaign used the same configuration names (`multihit_15_cal_nominal`, `multihit_15_cal_jitter`)
+- whether the server build picked up the latest `main`
+- whether the CSV schema is the new 19-column `FULL` mode output
+- whether the calibration script filtered to the same `nslow > 0` core subset
+
 ### Step 6b — Fixed-delay characterization
 
 **Goal:** prove same-delay one-shot RMS and real same-delay averaging behavior from measured conversions.
@@ -508,6 +624,13 @@ Important interpretation note:
 ## Step 7 — Trial Synthesis with Genus
 
 **Goal:** Verify the RTL synthesizes cleanly and check timing.
+
+> **Important:** this synthesis step is still **exploratory** until the analog
+> oscillator macro is available. You can advance now because the maintained
+> synthesis flow already excludes the behavioral oscillator model and constrains
+> the oscillator domains through a stub + virtual clocks. That is enough for
+> logic- and flow-readiness work, but **not** for final signoff on the analog
+> boundary or final QoR.
 
 ### 7a. Prepare PDK paths
 
@@ -619,19 +742,23 @@ syn/
 ## Full Flow Summary
 
 ```
-Step  What                       Tool        Time      Pass Criteria
-─────────────────────────────────────────────────────────────────────
- 1    Directed smoke test        Xcelium     30s       TEST PASSED
-  2    Full directed regression   Xcelium     3-5 min   9/9 pass
-  3    VIP smoke regression       Xcelium     5-8 min   13/13 pass
-  4    VIP coverage regression    Xcelium     10-20 min 14/14 pass + coverage DB
-  5    Data collection campaign   Verilator   30-60 min CSV files generated
-  6    6D LUT calibration         Python      5-15 min  RMSE < 20 ps
-  7    Trial synthesis            Genus       3-5 min   Timing clean, 5 latches
+Step  What                                Tool        Time         Pass Criteria
+────────────────────────────────────────────────────────────────────────────────────
+ 1    Pull latest main                    Git         <1 min       Clean fast-forward
+ 2    Single-conv Xrun smoke             Xcelium     ~30s         TEST PASSED
+ 3    VIP single-test smoke              Xrun        ~1 min       TEST PASSED
+ 4    Xrun campaign smoke                Xrun        ~2 min       CSV + log generated
+ 5    Full Xrun campaign train/val       Xrun        hours        CSV datasets complete
+ 6    LUT + enhanced recalibration       Python      10-30 min    Baselines reproduced
+ 7    Fixed-delay proof run              Xrun+Py     variable     Summary/averaging CSVs
+ 8    Coverage refresh (recommended)     Xrun+IMC    variable     Coverage DB + merged report
+ 9    Exploratory synthesis              Genus       3-5 min      Timing clean, 5 latches
 ```
 
-**Total time from clone to synthesis: ~1–2 hours** (most of it is the
-data collection campaign).
+**Practical interpretation:** your next logical checkpoint on the lab server is
+indeed **pull → Xrun sanity → Xrun campaign → recalibration → fixed-delay proof
+→ exploratory synthesis**. Keep coverage as a recommended refresh before any
+freeze/signoff decision, but it does not have to block a trial Genus run.
 
 ---
 

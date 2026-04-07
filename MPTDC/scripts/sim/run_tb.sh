@@ -80,7 +80,7 @@ TB_COMMON=("$TB_DIR/common/mptdc_tb_pkg.sv" "$TB_DIR/common/mptdc_raw_monitor.sv
 TB_BUILD="$BUILD_DIR/$TB_NAME"
 mkdir -p "$TB_BUILD"
 
-echo "=== MPTDC v2.2 TB Runner ==="
+echo "=== MPTDC v2.3 TB Runner ==="
 echo "  Testbench: $TB_NAME"
 echo "  Simulator: $SIM"
 echo "  Build dir: $TB_BUILD"
