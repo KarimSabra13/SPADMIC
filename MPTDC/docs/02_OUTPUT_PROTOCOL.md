@@ -9,8 +9,9 @@
 The active design emits conversion results on a 16-bit ready/valid stream. Each conversion is packetized as:
 
 1. one header word
-2. zero or more hit words (format depends on `out_mode`)
-3. one EOC word
+2. one sub-header word
+3. zero or more hit words (format depends on `out_mode`)
+4. one EOC word
 
 The serializer is implemented by `rtl/readout/mptdc_narrow16_tx_v2.sv` and consumes acquisition records produced by `mptdc_drain_ctrl` through `mptdc_sync_fifo`.
 
@@ -47,14 +48,28 @@ bit 0  closed_by_watchdog   = conversion closed because the fast-domain context 
 
 Important: true context-allocation overflow is not encoded in the packet header. It is counted separately in CSR `OVF_COUNT`.
 
-## 4. RAW_FEATURES mode (`out_mode = 0`)
+## 4. Sub-header word
+
+```text
+[15:13] = 3'b101
+[12:6]  = nfast_stop
+[5:4]   = shared-top tdc_id tag (only when routed through SPADMIC shared TDC TX)
+[3:0]   = reserved
+```
+
+Notes:
+
+- standalone `mptdc_top_asic` keeps `[5:4] = 0`
+- the SPADMIC top-level shared 3-to-1 arbiter patches `[5:4]` to identify `TDC_X`, `TDC_Y`, or `TDC_Z`
+
+## 5. RAW_FEATURES mode (`out_mode = 0`)
 
 This is the preferred mode for offline calibration and silicon characterization because it exports the raw measured fields instead of only a derived timestamp.
 
 Packet size:
 
 ```text
-1 header + 3 * hit_count + 1 EOC
+1 header + 1 sub-header + 3 * hit_count + 1 EOC
 ```
 
 ### 4.1 Hit word W0
@@ -102,14 +117,14 @@ Field meaning:
 
 This field is part of the live RTL contract. If any older document says W2 is just reserved padding, trust the RTL and this document instead.
 
-## 5. RAW_TIMESTAMP mode (`out_mode = 1`)
+## 6. RAW_TIMESTAMP mode (`out_mode = 1`)
 
 This mode emits the coarse counters plus one derived raw timestamp word per hit.
 
 Packet size:
 
 ```text
-1 header + 2 * hit_count + 1 EOC
+1 header + 1 sub-header + 2 * hit_count + 1 EOC
 ```
 
 ### 5.1 Hit word W0
@@ -133,14 +148,14 @@ Same layout as RAW_FEATURES W0.
 
 and also applies the current fixed geometry-origin corrections and `slow_boundary_inc`.
 
-## 6. FULL mode (`out_mode = 2`)
+## 7. FULL mode (`out_mode = 2`)
 
 This mode emits all raw feature words plus the derived timestamp.
 
 Packet size:
 
 ```text
-1 header + 4 * hit_count + 1 EOC
+1 header + 1 sub-header + 4 * hit_count + 1 EOC
 ```
 
 ### 6.1 Hit words W0-W2
@@ -155,7 +170,7 @@ Same as RAW_FEATURES W0-W2.
 
 This is the same derived timestamp used in RAW_TIMESTAMP mode.
 
-## 7. EOC word
+## 8. EOC word
 
 ```text
 [15:14] = 2'b11
@@ -164,7 +179,7 @@ This is the same derived timestamp used in RAW_TIMESTAMP mode.
 
 `conv_id` is maintained by `mptdc_narrow16_tx_v2.sv` as a local 14-bit wrapping packet counter.
 
-## 8. Internal origin of packet fields
+## 9. Internal origin of packet fields
 
 The serializer consumes two internal acquisition-record types:
 
@@ -173,34 +188,36 @@ The serializer consumes two internal acquisition-record types:
 
 The serializer latches META first, then fetches HIT records until `hit_count` hits have been emitted, then emits EOC.
 
-## 9. Host-side parsing rules
+## 10. Host-side parsing rules
 
 1. Wait for a header word.
 2. Decode `hit_count` and `out_mode` from the header.
-3. Derive the total packet length:
-   - RAW_FEATURES: `3 * hit_count + 2`
-   - RAW_TIMESTAMP: `2 * hit_count + 2`
-   - FULL: `4 * hit_count + 2`
-4. Consume the expected number of hit words.
-5. Expect one EOC word at the end.
+3. Consume one sub-header word after the header.
+4. Derive the total packet length:
+   - RAW_FEATURES: `3 * hit_count + 3`
+   - RAW_TIMESTAMP: `2 * hit_count + 3`
+   - FULL: `4 * hit_count + 3`
+5. Consume the expected number of hit words.
+6. Expect one EOC word at the end.
 
 Do not rely on payload bit patterns to infer semantic word boundaries in timestamp modes.
 
-## 10. Recommended operating usage
+## 11. Recommended operating usage
 
 - Use `RAW_FEATURES` for silicon characterization and offline calibration.
 - Use `RAW_TIMESTAMP` when the host only needs a compact pre-centered raw time and does not need `ns`, `nf`, `pd_idx`, or `nfast_snap`.
 - Use `FULL` when you want both the original raw features and the on-chip raw timestamp reconstruction for debug correlation.
 
-## 11. Example packet (RAW_FEATURES, 2 hits)
+## 12. Example packet (RAW_FEATURES, 2 hits)
 
 ```text
 word 0  header
-word 1  hit0 W0  (nslow, nfast_hit)
-word 2  hit0 W1  (ns, nf, pd_idx)
-word 3  hit0 W2  (event_seq, nfast_snap)
-word 4  hit1 W0
-word 5  hit1 W1
-word 6  hit1 W2
-word 7  EOC
+word 1  sub-header
+word 2  hit0 W0  (nslow, nfast_hit)
+word 3  hit0 W1  (ns, nf, pd_idx)
+word 4  hit0 W2  (event_seq, nfast_snap)
+word 5  hit1 W0
+word 6  hit1 W1
+word 7  hit1 W2
+word 8  EOC
 ```
