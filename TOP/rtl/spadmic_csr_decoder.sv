@@ -57,6 +57,10 @@ module spadmic_csr_decoder (
 );
   import spadmic_pkg::*;
 
+  // Safety timeout for downstream CSR read responses (in clk_sys cycles).
+  // Prevents bus hang if a downstream slave never responds.
+  localparam int unsigned WAIT_TIMEOUT_MAX = 15;
+
   typedef enum logic [2:0] {
     TGT_NONE   = 3'd0,
     TGT_GLOBAL = 3'd1,
@@ -77,6 +81,7 @@ module spadmic_csr_decoder (
   csr_target_e target_sel;
   csr_target_e pending_target_q;
   logic pending_write_q;
+  logic [$clog2(WAIT_TIMEOUT_MAX+1)-1:0] wait_timeout_q;
 
   wire accept_req = csr_req_valid_i & csr_req_ready_o;
 
@@ -114,11 +119,46 @@ module spadmic_csr_decoder (
   assign z_csr_valid_o      = accept_req & (target_sel == TGT_Z);
   assign z_csr_write_o      = csr_req_write_i;
 
+  // Downstream response mux (combinational, module-level)
+  logic downstream_rvalid;
+  logic [SPADMIC_CSR_DATA_W-1:0] downstream_rdata;
+
+  always_comb begin
+    downstream_rvalid = 1'b0;
+    downstream_rdata  = '0;
+    case (pending_target_q)
+      TGT_GLOBAL: begin
+        downstream_rvalid = global_csr_rvalid_i;
+        downstream_rdata  = global_csr_rdata_i;
+      end
+      TGT_X: begin
+        downstream_rvalid = x_csr_rvalid_i;
+        downstream_rdata  = {x_csr_rdata_i};
+      end
+      TGT_Y: begin
+        downstream_rvalid = y_csr_rvalid_i;
+        downstream_rdata  = {y_csr_rdata_i};
+      end
+      TGT_Z: begin
+        downstream_rvalid = z_csr_rvalid_i;
+        downstream_rdata  = {z_csr_rdata_i};
+      end
+      TGT_POS: begin
+        downstream_rvalid = pos_csr_rvalid_i;
+        downstream_rdata  = pos_csr_rdata_i;
+      end
+      default: begin
+        downstream_rvalid = 1'b1;
+      end
+    endcase
+  end
+
   always_ff @(posedge clk_sys or negedge rst_n) begin
     if (!rst_n) begin
       state_q          <= ST_IDLE;
       pending_target_q <= TGT_NONE;
       pending_write_q  <= 1'b0;
+      wait_timeout_q   <= '0;
       csr_rsp_valid_o  <= 1'b0;
       csr_rsp_rdata_o  <= '0;
       csr_rsp_err_o    <= 1'b0;
@@ -141,46 +181,25 @@ module spadmic_csr_decoder (
               state_q         <= ST_HOLD_RSP;
             end else begin
               state_q <= ST_WAIT_READ;
+              wait_timeout_q <= '0;
             end
           end
         end
 
         ST_WAIT_READ: begin
-          csr_rsp_valid_o <= 1'b1;
-          csr_rsp_err_o   <= 1'b0;
-          csr_rsp_rdata_o <= '0;
-          case (pending_target_q)
-            TGT_GLOBAL: begin
-              csr_rsp_valid_o <= global_csr_rvalid_i;
-              csr_rsp_rdata_o <= global_csr_rdata_i;
-              csr_rsp_err_o   <= ~global_csr_rvalid_i;
-            end
-            TGT_X: begin
-              csr_rsp_valid_o <= x_csr_rvalid_i;
-              csr_rsp_rdata_o <= x_csr_rdata_i;
-              csr_rsp_err_o   <= ~x_csr_rvalid_i;
-            end
-            TGT_Y: begin
-              csr_rsp_valid_o <= y_csr_rvalid_i;
-              csr_rsp_rdata_o <= y_csr_rdata_i;
-              csr_rsp_err_o   <= ~y_csr_rvalid_i;
-            end
-            TGT_Z: begin
-              csr_rsp_valid_o <= z_csr_rvalid_i;
-              csr_rsp_rdata_o <= z_csr_rdata_i;
-              csr_rsp_err_o   <= ~z_csr_rvalid_i;
-            end
-            TGT_POS: begin
-              csr_rsp_valid_o <= pos_csr_rvalid_i;
-              csr_rsp_rdata_o <= pos_csr_rdata_i;
-              csr_rsp_err_o   <= ~pos_csr_rvalid_i;
-            end
-            default: begin
-              csr_rsp_valid_o <= 1'b1;
-              csr_rsp_err_o   <= 1'b1;
-            end
-          endcase
-          state_q <= ST_HOLD_RSP;
+          if (downstream_rvalid) begin
+            csr_rsp_valid_o <= 1'b1;
+            csr_rsp_rdata_o <= downstream_rdata;
+            csr_rsp_err_o   <= (pending_target_q == TGT_ERR) || (pending_target_q == TGT_NONE);
+            state_q         <= ST_HOLD_RSP;
+          end else if (wait_timeout_q == WAIT_TIMEOUT_MAX[$bits(wait_timeout_q)-1:0]) begin
+            csr_rsp_valid_o <= 1'b1;
+            csr_rsp_rdata_o <= '0;
+            csr_rsp_err_o   <= 1'b1;
+            state_q         <= ST_HOLD_RSP;
+          end else begin
+            wait_timeout_q <= wait_timeout_q + 1'b1;
+          end
         end
 
         ST_HOLD_RSP: begin

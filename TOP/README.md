@@ -23,11 +23,25 @@ See [`docs/SPADMIC_TOPLEVEL_PLAN.md`](docs/SPADMIC_TOPLEVEL_PLAN.md) for the ful
 
 ### Testbenches
 
-| Testbench | Tests |
-|-----------|-------|
-| `tb_spadmic_ref_stop_qualifier_unit` | Stop qualifier edge semantics (7 checks) |
-| `tb_spadmic_tdc_arbiter3_unit` | Arbiter + FIFO non-interleaving, tdc_id patching (15 checks) |
-| `tb_spadmic_axis_cluster_scan_unit` | Cluster detection, merging, overflow (12 checks) |
+#### Unit tests (34 checks)
+
+| Testbench | Checks | Status |
+|-----------|--------|--------|
+| `tb_spadmic_ref_stop_qualifier_unit` | 7 | ✅ PASS |
+| `tb_spadmic_tdc_arbiter3_unit` | 15 | ✅ PASS |
+| `tb_spadmic_axis_cluster_scan_unit` | 12 | ✅ PASS |
+
+#### Stress tests (159 checks)
+
+| Testbench | Checks | Status |
+|-----------|--------|--------|
+| `tb_spadmic_stress_stop_qualifier` | 16 | ✅ PASS |
+| `tb_spadmic_stress_cluster_scan` | 94 | ✅ PASS |
+| `tb_spadmic_stress_csr` | 23 | ✅ PASS |
+| `tb_spadmic_stress_arbiter` | 15 | ✅ PASS |
+| `tb_spadmic_stress_position` | 11 | ✅ PASS |
+
+**Total: 193 self-checking assertions across 8 testbenches.**
 
 ## Clock domains
 
