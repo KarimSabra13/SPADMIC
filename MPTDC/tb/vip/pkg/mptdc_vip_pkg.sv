@@ -970,7 +970,8 @@ package mptdc_vip_pkg;
     function automatic void check_packet(input mptdc_conv_txn exp,
                                          input mptdc_packet_txn pkt);
       int unsigned expected_words;
-      expected_words = 2 + (pkt.hit_count * words_per_hit(pkt.out_mode));
+      // v2.3 packet contract: header + sub-header + hit payload + EOC.
+      expected_words = 3 + (pkt.hit_count * words_per_hit(pkt.out_mode));
       if (pkt.word_count() != expected_words)
         fail($sformatf("%s word count mismatch: got %0d expected %0d",
                        exp.label, pkt.word_count(), expected_words));

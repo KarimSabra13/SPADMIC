@@ -37,7 +37,7 @@ module mptdc_input_mux
     input  wire         cal_stop_async_i,
 
     // -- Mux control (from CSR, stable during operation) --------------------
-    input  input_sel_e  input_sel_i,
+    input  mptdc_pkg::input_sel_e  input_sel_i,
 
     // -- Selected async outputs to TDC core ---------------------------------
     output wire         start_async_o,

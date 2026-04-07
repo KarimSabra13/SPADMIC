@@ -14,7 +14,7 @@
 
 interface mptdc_narrow_if #(parameter int NARROW_W = mptdc_pkg::NARROW_W)
 (
-  input logic clk_sys
+  input wire clk_sys
 );
   import mptdc_pkg::*;
 

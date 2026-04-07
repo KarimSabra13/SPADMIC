@@ -15,7 +15,7 @@
 interface mptdc_csr_if #(parameter int ADDR_W = mptdc_pkg::CSR_ADDR_W,
                          parameter int DATA_W = mptdc_pkg::CSR_DATA_W)
 (
-  input logic clk_sys
+  input wire clk_sys
 );
   import mptdc_pkg::*;
 

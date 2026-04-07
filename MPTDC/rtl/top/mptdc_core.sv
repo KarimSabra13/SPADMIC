@@ -40,12 +40,12 @@ module mptdc_core
   input  wire                   stop_async_i,
 
   // Configuration from CSR
-  input  mptdc_cfg_t            cfg_i,
+  input  mptdc_pkg::mptdc_cfg_t cfg_i,
   input  wire                   conv_arm_i,
   input  wire                   fifo_clr_i,
 
   // Status to CSR
-  output mptdc_status_t         status_o,
+  output mptdc_pkg::mptdc_status_t status_o,
 
   // 16-bit output
   input  wire                   narrow_ready_i,

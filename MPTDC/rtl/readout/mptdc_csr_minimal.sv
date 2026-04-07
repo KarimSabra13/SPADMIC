@@ -42,10 +42,10 @@ module mptdc_csr_minimal
   output logic [CSR_DATA_W-1:0]    csr_rdata_o,
 
   // Status from datapath (read-only registers)
-  input  mptdc_status_t             status_i,
+  input  mptdc_pkg::mptdc_status_t  status_i,
 
   // Configuration to datapath
-  output mptdc_cfg_t                cfg_o,
+  output mptdc_pkg::mptdc_cfg_t     cfg_o,
 
   // Conv_arm: latched level (RW), cleared by soft_rst or explicit write
   output logic                      conv_arm_o,

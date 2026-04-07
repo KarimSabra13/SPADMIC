@@ -32,12 +32,12 @@ module mptdc_drain_ctrl
   input  wire [N_CTX-1:0]         ctx_drain_sync_i,
 
   // Context bank read port
-  output ctx_id_t                 read_ctx_o,
-  input  mptdc_ctx_snapshot_t     snapshot_i,
+  output mptdc_pkg::ctx_id_t                 read_ctx_o,
+  input  mptdc_pkg::mptdc_ctx_snapshot_t     snapshot_i,
 
   // Sync FIFO write port
   output logic                    fifo_wr_en_o,
-  output mptdc_acq_rec_t          fifo_wr_data_o,
+  output mptdc_pkg::mptdc_acq_rec_t          fifo_wr_data_o,
   input  wire                     fifo_wr_full_i,
 
   // Context release (directly to frontend async latches)
@@ -47,7 +47,7 @@ module mptdc_drain_ctrl
   output logic                    conv_done_o,
 
   // Debug / status
-  output drain_state_e            state_o
+  output mptdc_pkg::drain_state_e            state_o
 );
 
   // =========================================================================

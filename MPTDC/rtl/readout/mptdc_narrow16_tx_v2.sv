@@ -25,11 +25,11 @@ module mptdc_narrow16_tx_v2
   input  wire                   rst_n,
 
   // Configuration
-  input  out_mode_e             out_mode_i,
+  input  mptdc_pkg::out_mode_e  out_mode_i,
 
   // Sync-FIFO read port (FWFT: data valid while fifo_rd_valid_i is high)
   input  wire                   fifo_rd_valid_i,
-  input  mptdc_acq_rec_t        fifo_rd_data_i,
+  input  mptdc_pkg::mptdc_acq_rec_t fifo_rd_data_i,
   output logic                  fifo_rd_en_o,
 
   // 16-bit narrow output (ready / valid)
