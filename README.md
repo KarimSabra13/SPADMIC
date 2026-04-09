@@ -1,137 +1,86 @@
 # SPADMIC — SPAD Matrix Digital IC
 
 > **Author:** Karim Sabra  
-> **Affiliation:** IP2I Lyon / Université Claude Bernard Lyon 1  
+> **Affiliation:** IP2I Lyon / Universite Claude Bernard Lyon 1  
 > **License:** Copyright © 2025 Karim Sabra. All rights reserved.
 
-## Overview
+## Repository overview
 
-SPADMIC is the digital readout IC for a SPAD (Single-Photon Avalanche Diode) matrix detector. The repository now contains both the digital design work around the TDC and the active LaTeX report used to document the project work and its theoretical context.
+This repository contains the active digital implementation of the SPADMIC readout IC and the supporting MPTDC core it integrates.
 
-## Sub-Projects
+The current active first-silicon digital baseline is:
 
-| Directory | Description | Status |
-|-----------|-------------|--------|
-| [`MPTDC/`](MPTDC/) | Vernier Multi-Phase Time-to-Digital Converter | `109/109` Cadence campaign baseline passed; exploratory calibration-ready; targeted coverage closure ongoing |
-| [`TOP/`](TOP/) | SPADMIC top-level integration (3-axis TDC, arbiter, position scanner, CSR) | First integration scaffold — lint clean, unit tests passing |
-| [`I2C/`](I2C/) | I2C slave and CSR bridge for chip configuration | First-pass implementation — lint clean |
-| [`Rapport_5PSM_KS/`](Rapport_5PSM_KS/) | Rapport d'alternance 5PSM autour de SPADMIC | Rédaction en cours |
+- one physical `chip_tx_*` output bus
+- three preserved `mptdc_top_asic` TDC axes
+- one shared TDC serializer fed by per-axis acquisition-record exports
+- one async-qualified position path with explicit drop/reject reporting
+- one top-level sequencer that commits requested control only after the old datapath drains
+- one I2C control plane bridged into the shared CSR fabric
 
-## MPTDC
+## Repository guide
 
-A high-precision Vernier TDC with an 81-cell phase detector matrix, designed for offline calibration. The implementation provides:
+| Directory | Role | Main entrypoint |
+|-----------|------|-----------------|
+| [`MPTDC/`](MPTDC/) | Vernier multi-phase TDC core, verification, calibration, synthesis collateral | [`MPTDC/README.md`](MPTDC/README.md) |
+| [`TOP/`](TOP/) | SPADMIC chip-level integration around three MPTDC axes | [`TOP/README.md`](TOP/README.md) |
+| [`I2C/`](I2C/) | I2C slave and CSR bridge used by the active top-level | [`I2C/README.md`](I2C/README.md) |
+| [`Rapport_5PSM_KS/`](Rapport_5PSM_KS/) | Report project kept in the repo but excluded from the current cleanup/documentation pass | — |
 
-- 10 ps nominal LSB,
-- 9×9 Vernier phase detector,
-- 15-hit multi-hit capability per conversion,
-- double-buffered context architecture,
-- 16-bit ready/valid output with 3 selectable modes,
-- verification and calibration infrastructure.
+## Documentation map
 
-Current checkpoint summary for `MPTDC/`:
+| Area | Quick reference | Deep reference |
+|------|-----------------|----------------|
+| Full chip / integration | [`TOP/README.md`](TOP/README.md) | [`TOP/docs/01_ACTIVE_ARCHITECTURE.md`](TOP/docs/01_ACTIVE_ARCHITECTURE.md), [`TOP/docs/02_CSR_MAP.md`](TOP/docs/02_CSR_MAP.md) |
+| TDC core | [`MPTDC/README.md`](MPTDC/README.md) | [`MPTDC/docs/01_ARCHITECTURE.md`](MPTDC/docs/01_ARCHITECTURE.md), [`MPTDC/docs/10_SHARED_READOUT_EXPORT.md`](MPTDC/docs/10_SHARED_READOUT_EXPORT.md) |
+| I2C control plane | [`I2C/README.md`](I2C/README.md) | [`I2C/docs/01_INTEGRATION_GUIDE.md`](I2C/docs/01_INTEGRATION_GUIDE.md) |
 
-- latest broad Cadence baseline campaign passed `109/109`,
-- the most recent merged IMC report observed on the lab server improved to `11486 / 16389 (70.08%)` with average grade `82.05%`,
-- the current repo further expands the maintained VIP closure suite with deterministic overflow/recovery and pad-reset readback checks,
-- the repository is suitable for **exploratory offline calibration**, but not yet for synthesis signoff or freeze.
+## Active system dataflow
 
-See [`MPTDC/README.md`](MPTDC/README.md) for the detailed architecture, flows, and status of the TDC implementation.
+1. **Control path:** `i2c_scl_i/i2c_sda_i` -> `spadmic_i2c_slave` -> `spadmic_i2c_csr_bridge` -> `spadmic_csr_decoder` -> global, per-axis TDC, or position CSR blocks.
+2. **TDC path:** one `spadmic_tdc_axis_wrapper` per axis -> local `mptdc_top_asic` -> exported acquisition records -> `spadmic_tdc_shared_readout` -> shared `mptdc_narrow16_tx_v2`.
+3. **Position path:** asynchronous `x/y/z_lines_i` -> synchronizers -> cluster scan and qualification in `spadmic_position_block` -> fixed 12-word position packet.
+4. **Final egress:** `spadmic_shared_tx_mux` selects either the packetized TDC stream or the packetized position stream onto the one physical `chip_tx_*` interface.
 
-## SPADMIC Top-Level Integration
+## Current top-level control model
 
-Branch `SPADMIC_top_v1` contains the first chip-level integration scaffold:
+- `spadmic_global_csr` stores the **requested** control image visible to software.
+- `spadmic_top_sequencer` owns the **active** control image that drives the live datapath.
+- Source and mode changes are accepted only when the datapath is idle and are committed only after the previous path drains.
+- Fault counters and sticky bits report rejected mode writes and position-side capture issues.
 
-- **3 TDC axes** (X, Y, Z) each wrapping an `mptdc_top_asic` instance with a reverse start-stop qualifier
-- **Shared TDC TX path** via a 3-to-1 round-robin arbiter ensuring packet atomicity
-- **Position scanner** detecting up to 2 clusters per axis on 127-bit SPAD line bitmaps
-- **I2C-to-CSR bridge** for configuration with address-decoded regions (Global, TDC\_X/Y/Z, Position)
+## Quick start
 
-Key design rules:
-- `clk_sys = 160 MHz`, `clk_ref_40m = 40 MHz`
-- Reverse start-stop: SPAD event → START, next 40 MHz rising edge → STOP
-- No packet interleaving on shared TX
-- Position block has its own dedicated TX path
-
-See [`TOP/docs/SPADMIC_TOPLEVEL_PLAN.md`](TOP/docs/SPADMIC_TOPLEVEL_PLAN.md) for the full architecture design note.
-
-## Report Project
-
-The active report project is stored in [`Rapport_5PSM_KS/`](Rapport_5PSM_KS/). It contains:
-
-- the LaTeX source of the report,
-- the figures and front matter,
-- a `build_pdf.sh` helper script for iterative PDF builds,
-- a `README_COPILOT.md` continuity file capturing writing context and editorial constraints.
-
-Some local reference material used during writing may remain outside the published Git content when redistribution rights are uncertain.
-
-## Repository Structure
-
-```text
-SPADMIC/
-├── MPTDC/                  Vernier Multi-Phase TDC
-│   ├── rtl/                SystemVerilog RTL
-│   ├── tb/                 Testbenches and VIP
-│   ├── scripts/            Simulation, analysis, and calibration
-│   ├── ci/                 Regression scripts
-│   ├── docs/               Architecture and calibration documentation
-│   └── syn/                Synthesis collateral
-├── TOP/                    SPADMIC top-level integration
-│   ├── rtl/                Integration RTL (wrappers, arbiter, position, CSR)
-│   ├── tb/                 Unit and integration testbenches
-│   ├── docs/               Architecture design notes
-│   └── filelist.f          Compile list (references MPTDC/ and I2C/)
-├── I2C/                    I2C control plane
-│   ├── rtl/                I2C slave and CSR bridge
-│   └── filelist.f          Compile list
-└── Rapport_5PSM_KS/        LaTeX report project
-```
-
-## Getting Started
-
-### TDC work
+### Lint the active full-chip top
 
 ```bash
-git clone https://github.com/KarimSabra13/SPADMIC.git
-cd SPADMIC/MPTDC
-
+cd /home/karim/SPADMIC
+MPTDC_FILES=$(sed -e 's,//.*$,,' -e '/^[[:space:]]*$/d' MPTDC/rtl/filelist.f | sed 's,^,MPTDC/,')
+TOP_FILES=$(sed -e 's,//.*$,,' -e '/^[[:space:]]*$/d' TOP/filelist.f | sed 's,^,TOP/,')
 verilator --lint-only --timing +define+MPTDC_USE_OSC_MODEL \
-  -f rtl/filelist.f --top-module mptdc_top_asic
-
-bash ci/run_full_regression.sh
-```
-
-### SPADMIC top-level (branch SPADMIC_top_v1)
-
-```bash
-git checkout SPADMIC_top_v1
-cd MPTDC
-
-# Lint full SPADMIC top
-verilator --lint-only --timing +define+MPTDC_USE_OSC_MODEL \
-  -f rtl/filelist.f -f ../TOP/filelist.f -f ../I2C/filelist.f \
+  $MPTDC_FILES $TOP_FILES \
   --top-module spadmic_top_v1
-
-# Run SPADMIC unit tests
-verilator --binary --timing rtl/pkg/mptdc_pkg.sv \
-  ../TOP/rtl/spadmic_pkg.sv ../TOP/rtl/spadmic_ref_stop_qualifier.sv \
-  ../TOP/tb/tb_spadmic_ref_stop_qualifier_unit.sv \
-  --top-module tb_spadmic_ref_stop_qualifier_unit && \
-  obj_dir/Vtb_spadmic_ref_stop_qualifier_unit
 ```
 
-### Report build
+### Run the maintained MPTDC smoke regression
 
 ```bash
-cd SPADMIC/Rapport_5PSM_KS
-./build_pdf.sh
+cd /home/karim/SPADMIC/MPTDC
+bash ci/run_smoke.sh
 ```
 
-## Tools
+### Run a representative TOP-level unit bench
 
-| Tool | Purpose | Required |
-|------|---------|----------|
-| Verilator | RTL lint & simulation | Yes (primary) |
-| Xcelium / xrun | Coverage-driven verification | Optional |
-| Python 3.10+ | Calibration and analysis | For calibration only |
-| `pdflatex` + `biber` | Report compilation | For report only |
+```bash
+cd /home/karim/SPADMIC
+verilator --binary --timing -Wall \
+  -Wno-UNUSEDSIGNAL -Wno-UNDRIVEN -Wno-DECLFILENAME -Wno-WIDTHEXPAND \
+  -Wno-WIDTHTRUNC -Wno-UNUSEDPARAM -Wno-PINMISSING -Wno-UNUSEDGENVAR \
+  -Wno-CASEINCOMPLETE -Wno-LATCH -Wno-REALCVT -Wno-INITIALDLY -Wno-COMBDLY \
+  -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
+  MPTDC/rtl/pkg/mptdc_pkg.sv \
+  TOP/rtl/spadmic_pkg.sv \
+  MPTDC/rtl/readout/mptdc_narrow16_tx_v2.sv \
+  TOP/rtl/spadmic_tdc_shared_readout.sv \
+  TOP/tb/tb_spadmic_tdc_shared_readout_unit.sv \
+  --top-module tb_spadmic_tdc_shared_readout_unit
+```

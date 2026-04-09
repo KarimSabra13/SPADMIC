@@ -19,6 +19,8 @@
 #           --rebuild        Force rebuild / clean simulator workdir
 #           --dry-run        Print what would run without executing
 #           --smoke          Quick smoke: 1 config, 1 seed, 100 conv
+# Notes   : Active v2.4 RTL has no FIRST_HIT mode bit. Compatibility-named
+#           firsthit_* configs are driven as fast-close runs via max_hits=1.
 # Author  : Karim Sabra
 # -----------------------------------------------------------------------------
 
@@ -225,7 +227,7 @@ prepare_sim() {
 prepare_sim
 
 # ── config enumeration ──────────────────────────────────────────────────────
-#  mode: multihit (0), firsthit (1)
+#  mode: multihit (0), firsthit-compat fast-close (1)
 #  max_hits: 15, 10, 5
 #  source: cal (1), spad (0)
 #  jitter: nominal (sigma=0), jitter (sigma=8, bound=24)
@@ -294,6 +296,10 @@ worker() {
   line=$(grep "^${cfg} " "$CFG_EXPORT_FILE")
   local mode mh inp jsig jb
   read -r _ mode mh inp jsig jb <<< "$line"
+  local effective_mh="$mh"
+  if [[ "$mode" -eq 1 ]]; then
+    effective_mh=1
+  fi
 
   if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
     jsig="$JITTER_SIGMA_OVERRIDE"
@@ -316,7 +322,7 @@ worker() {
       cmd=(
         "$BINARY"
         "+CAMPAIGN_MODE=${mode}"
-        "+CAMPAIGN_MAX_HITS=${mh}"
+        "+CAMPAIGN_MAX_HITS=${effective_mh}"
         "+CAMPAIGN_INPUT_SEL=${inp}"
         "+CAMPAIGN_N_CONV=${N_CONV}"
         "+CAMPAIGN_DELAY_MIN_PS=${DELAY_MIN}"
@@ -351,7 +357,7 @@ worker() {
         "$REPO_ROOT/tb/int/tb_campaign_collect.sv"
         -xmlibdirname "$work_dir/xcelium.d"
         "+CAMPAIGN_MODE=${mode}"
-        "+CAMPAIGN_MAX_HITS=${mh}"
+        "+CAMPAIGN_MAX_HITS=${effective_mh}"
         "+CAMPAIGN_INPUT_SEL=${inp}"
         "+CAMPAIGN_N_CONV=${N_CONV}"
         "+CAMPAIGN_DELAY_MIN_PS=${DELAY_MIN}"

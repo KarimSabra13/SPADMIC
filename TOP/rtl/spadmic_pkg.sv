@@ -1,9 +1,17 @@
+// =============================================================================
+// Project  : SPADMIC Top-Level Integration
+// File     : spadmic_pkg.sv
+// Purpose  : Shared constants, CSR addresses, packet helpers, and position-side
+//            cluster types for TOP and I2C integration logic.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
 package spadmic_pkg;
   import mptdc_pkg::*;
 
+  // Top-level dimensions and control-plane widths.
   localparam int unsigned SPADMIC_AXIS_COUNT  = 3;
   localparam int unsigned SPADMIC_AXIS_ID_W   = 2;
   localparam int unsigned SPADMIC_LINE_W      = 127;
@@ -11,12 +19,21 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_CSR_ADDR_W  = 12;
   localparam int unsigned SPADMIC_CSR_DATA_W  = mptdc_pkg::CSR_DATA_W;
   localparam logic [6:0] SPADMIC_I2C_ADDR     = 7'h42;
+  localparam int unsigned SPADMIC_POS_PKT_WORDS = 12;
 
   typedef enum logic [SPADMIC_AXIS_ID_W-1:0] {
     TDC_ID_X = 2'd0,
     TDC_ID_Y = 2'd1,
-    TDC_ID_Z = 2'd2
-  } spadmic_tdc_id_e;
+    TDC_ID_Z = 2'd2,
+    SPADMIC_SRC_POSITION = 2'd3
+  } spadmic_source_id_e;
+
+  typedef spadmic_source_id_e spadmic_tdc_id_e;
+
+  typedef enum logic {
+    SPADMIC_TX_TDC      = 1'b0,
+    SPADMIC_TX_POSITION = 1'b1
+  } spadmic_tx_sel_e;
 
   localparam logic [3:0] SPADMIC_REGION_GLOBAL   = 4'h0;
   localparam logic [3:0] SPADMIC_REGION_TDC_X    = 4'h1;
@@ -28,12 +45,20 @@ package spadmic_pkg;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_VERSION = 12'h004;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_CTRL    = 12'h008;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_STATUS  = 12'h00C;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_FAULT   = 12'h010;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_FAULT_COUNT = 12'h014;
 
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_CTRL        = 12'h400;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_GAP_CFG     = 12'h404;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_FILTER_CFG  = 12'h408;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_STATUS      = 12'h420;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_EVENT_COUNT = 12'h424;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_FAULT_STATUS = 12'h428;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_DROP_COUNT   = 12'h42C;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_REJECT_COUNT = 12'h430;
 
+  // Position-side cluster summaries keep only the highest-priority two clusters
+  // per axis. Additional qualifying clusters set overflow.
   typedef struct packed {
     logic                             valid;
     logic [SPADMIC_LINE_IDX_W-1:0]    lo;
@@ -71,6 +96,19 @@ package spadmic_pkg;
     return patched;
   endfunction
 
+  function automatic logic [SPADMIC_LINE_IDX_W:0] spadmic_cluster_span(
+    input spadmic_cluster_t cluster
+  );
+    logic [SPADMIC_LINE_IDX_W:0] lo_ext;
+    logic [SPADMIC_LINE_IDX_W:0] hi_ext;
+    if (!cluster.valid)
+      return '0;
+
+    lo_ext = {1'b0, cluster.lo};
+    hi_ext = {1'b0, cluster.hi};
+    return hi_ext - lo_ext + 1'b1;
+  endfunction
+
   function automatic logic [NARROW_W-1:0] spadmic_pos_header_word(
     input logic overflow_any,
     input logic [2:0] non_empty_mask,
@@ -83,6 +121,19 @@ package spadmic_pkg;
       multi_cluster_mask,
       2'b01,
       4'b0000
+    };
+  endfunction
+
+  function automatic logic [NARROW_W-1:0] spadmic_pos_subheader_word(
+    input logic [2:0] qualifying_axis_mask
+  );
+    return {
+      3'b101,
+      1'b0,
+      qualifying_axis_mask,
+      3'b000,
+      SPADMIC_SRC_POSITION,
+      4'h1
     };
   endfunction
 

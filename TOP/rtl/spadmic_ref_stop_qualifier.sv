@@ -1,9 +1,16 @@
+// =============================================================================
+// Project  : SPADMIC Top-Level Integration
+// File     : spadmic_ref_stop_qualifier.sv
+// Purpose  : Generate exactly one qualified STOP pulse on the next ref-clock
+//            edge after an asynchronous START request.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
-// Qualify exactly one high phase of clk_ref_40m after an async START request.
 // The gate enable is latched only while clk_ref_40m is low, so the qualified
 // pulse is glitch-free and self-disarms after the first consumed rising edge.
+// A held-high async request must return low before a fresh STOP can be armed.
 module spadmic_ref_stop_qualifier (
   input  wire rst_n,
   input  wire start_async_i,
@@ -15,12 +22,20 @@ module spadmic_ref_stop_qualifier (
   logic arm_req_q;
   logic gate_en_q;
   logic pulse_seen_q;
+  logic rearm_block_q;
 
   always_latch begin
     if (!rst_n || pulse_seen_q)
       arm_req_q = 1'b0;
-    else if (start_async_i)
+    else if (start_async_i && !rearm_block_q)
       arm_req_q = 1'b1;
+  end
+
+  always_latch begin
+    if (!rst_n || !start_async_i)
+      rearm_block_q = 1'b0;
+    else if (pulse_seen_q)
+      rearm_block_q = 1'b1;
   end
 
   always_latch begin

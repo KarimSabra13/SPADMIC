@@ -26,6 +26,7 @@ module tb_spadmic_stress_position;
   logic [spadmic_pkg::SPADMIC_CSR_DATA_W-1:0] csr_wdata, csr_rdata;
 
   logic busy, pkt_pending;
+  logic drop_sticky, glitch_reject_sticky;
 
   initial clk_sys = 0;
   always #(CLK_PERIOD/2) clk_sys = ~clk_sys;
@@ -48,7 +49,9 @@ module tb_spadmic_stress_position;
     .pos_valid_o     (tx_valid),
     .pos_data_o      (tx_data),
     .busy_o          (busy),
-    .packet_pending_o(pkt_pending)
+    .packet_pending_o(pkt_pending),
+    .drop_sticky_o   (drop_sticky),
+    .glitch_reject_sticky_o(glitch_reject_sticky)
   );
 
   // Scoreboard
@@ -65,6 +68,43 @@ module tb_spadmic_stress_position;
       $display("[FAIL] T%0d: %s", test_num, name);
       fail_count++;
     end
+  endtask
+
+  function automatic spadmic_cluster_t make_cluster(
+    input logic        valid,
+    input int unsigned lo,
+    input int unsigned hi
+  );
+    spadmic_cluster_t cluster;
+    cluster = '0;
+    cluster.valid = valid;
+    cluster.lo    = 7'(lo);
+    cluster.hi    = 7'(hi);
+    return cluster;
+  endfunction
+
+  function automatic spadmic_axis_clusters_t make_axis_clusters(
+    input spadmic_cluster_t cluster0,
+    input spadmic_cluster_t cluster1,
+    input logic             overflow
+  );
+    spadmic_axis_clusters_t axis_clusters;
+    axis_clusters = '0;
+    axis_clusters.cluster0 = cluster0;
+    axis_clusters.cluster1 = cluster1;
+    axis_clusters.overflow = overflow;
+    axis_clusters.empty    = ~(cluster0.valid | cluster1.valid);
+    axis_clusters.cluster_count = {1'b0, cluster0.valid}
+                                + {1'b0, cluster1.valid};
+    return axis_clusters;
+  endfunction
+
+  task automatic check_word(
+    input string       name,
+    input int unsigned idx,
+    input logic [15:0] expected
+  );
+    check(name, pkt_words[idx] === expected);
   endtask
 
   // Collect output packet
@@ -88,6 +128,39 @@ module tb_spadmic_stress_position;
     end
     #1;
     tx_ready = 1'b0;
+  endtask
+
+  task automatic csr_write_pos(
+    input logic [spadmic_pkg::SPADMIC_CSR_ADDR_W-1:0] addr,
+    input logic [spadmic_pkg::SPADMIC_CSR_DATA_W-1:0] data
+  );
+    @(posedge clk_sys);
+    #1;
+    csr_valid = 1'b1;
+    csr_write = 1'b1;
+    csr_addr  = addr;
+    csr_wdata = data;
+    @(posedge clk_sys);
+    #1;
+    csr_valid = 1'b0;
+    csr_write = 1'b0;
+  endtask
+
+  task automatic csr_read_pos(
+    input logic [spadmic_pkg::SPADMIC_CSR_ADDR_W-1:0] addr,
+    output logic [spadmic_pkg::SPADMIC_CSR_DATA_W-1:0] data
+  );
+    @(posedge clk_sys);
+    #1;
+    csr_valid = 1'b1;
+    csr_write = 1'b0;
+    csr_addr  = addr;
+    csr_wdata = '0;
+    @(posedge clk_sys);
+    #1;
+    csr_valid = 1'b0;
+    while (!csr_rvalid) @(posedge clk_sys);
+    data = csr_rdata;
   endtask
 
   initial begin
@@ -117,26 +190,28 @@ module tb_spadmic_stress_position;
     // ========================================
     begin
       int n;
+      logic [31:0] rd_data;
       // Set lines active — this triggers capture automatically
       @(posedge clk_sys);
       x_lines = '0; x_lines[10] = 1; x_lines[11] = 1; x_lines[12] = 1;
       y_lines = '0; y_lines[50] = 1; y_lines[51] = 1;
       z_lines = '0; z_lines[100] = 1;
 
-      // Wait a couple cycles for capture to register
-      repeat (3) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
       collect_packet(n);
 
-      check("T1 basic packet: 11 words", n === 11);
-      // Header check
+      check("T1 basic packet: 12 words", n === SPADMIC_POS_PKT_WORDS);
       check("T1 header word", pkt_words[0][15:14] == 2'b10);
-      // EOC check
+      check("T1 subheader marker", pkt_words[1][15:13] == 3'b101);
+      check("T1 subheader source tag", pkt_words[1][5:4] == SPADMIC_SRC_POSITION);
       check("T1 EOC word", pkt_words[n-1][15:14] == 2'b11);
+      csr_read_pos(SPADMIC_CSR_POS_EVENT_COUNT, rd_data);
+      check("T1 event count increments", rd_data[13:0] === 14'd1);
 
       // Clear lines
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
-      repeat (5) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
     end
 
     // ========================================
@@ -148,12 +223,12 @@ module tb_spadmic_stress_position;
       x_lines = {127{1'b1}};
       y_lines = {127{1'b1}};
       z_lines = {127{1'b1}};
-      repeat (3) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
       collect_packet(n);
-      check("T2 full bitmaps → 11 words", n === 11);
+      check("T2 full bitmaps → 12 words", n === SPADMIC_POS_PKT_WORDS);
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
-      repeat (5) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
     end
 
     // ========================================
@@ -167,19 +242,19 @@ module tb_spadmic_stress_position;
         int n;
         // Trigger: set lines active
         @(posedge clk_sys);
-        x_lines = '0; x_lines[5] = 1;
-        y_lines = '0; y_lines[60] = 1;
-        z_lines = '0; z_lines[120] = 1;
-        repeat (3) @(posedge clk_sys);
+        x_lines = '0; x_lines[5] = 1; x_lines[6] = 1;
+        y_lines = '0; y_lines[60] = 1; y_lines[61] = 1;
+        z_lines = '0; z_lines[120] = 1; z_lines[121] = 1;
+        repeat (6) @(posedge clk_sys);
         collect_packet(n);
         total_words += n;
         // Clear lines to allow next rising edge trigger
         @(posedge clk_sys);
         x_lines = '0; y_lines = '0; z_lines = '0;
-        repeat (5) @(posedge clk_sys);
+        repeat (6) @(posedge clk_sys);
       end
 
-      check("T3 10 back-to-back events → 110 words", total_words === 110);
+      check("T3 10 back-to-back events → 120 words", total_words === (10 * SPADMIC_POS_PKT_WORDS));
     end
 
     // ========================================
@@ -187,23 +262,24 @@ module tb_spadmic_stress_position;
     // ========================================
     begin
       int n;
+      logic [31:0] rd_data;
       // Send first capture
       @(posedge clk_sys);
-      x_lines = '0; x_lines[20] = 1;
+      x_lines = '0; x_lines[20] = 1; x_lines[21] = 1;
       y_lines = '0; z_lines = '0;
       // Don't assert tx_ready — packet stays active
-      repeat (3) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
 
       // Clear and re-set lines to try a second trigger while busy
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
-      repeat (2) @(posedge clk_sys);
-      x_lines[30] = 1; // Try to trigger another capture
-      repeat (3) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
+      x_lines[30] = 1; x_lines[31] = 1; // Try to trigger another capture
+      repeat (6) @(posedge clk_sys);
 
       // Now collect first packet
       collect_packet(n);
-      check("T4 first packet collected", n === 11);
+      check("T4 first packet collected", n === SPADMIC_POS_PKT_WORDS);
 
       // Clear lines
       @(posedge clk_sys);
@@ -211,10 +287,14 @@ module tb_spadmic_stress_position;
 
       // Wait to see if second packet appears (it shouldn't)
       tx_ready = 1'b1;
-      repeat (20) @(posedge clk_sys);
+      repeat (24) @(posedge clk_sys);
       check("T4 dropped event during busy", tx_valid === 1'b0);
       tx_ready = 0;
-      repeat (5) @(posedge clk_sys);
+      csr_read_pos(SPADMIC_CSR_POS_DROP_COUNT, rd_data);
+      check("T4 drop counter increments", rd_data[15:0] === 16'd1);
+      csr_read_pos(SPADMIC_CSR_POS_FAULT_STATUS, rd_data);
+      check("T4 drop sticky set", rd_data[0] === 1'b1);
+      repeat (6) @(posedge clk_sys);
     end
 
     // ========================================
@@ -224,17 +304,17 @@ module tb_spadmic_stress_position;
       int n;
       // Trigger capture
       @(posedge clk_sys);
-      x_lines = '0; x_lines[30] = 1;
-      y_lines = '0; y_lines[70] = 1;
-      z_lines = '0; z_lines[110] = 1;
+      x_lines = '0; x_lines[30] = 1; x_lines[31] = 1;
+      y_lines = '0; y_lines[70] = 1; y_lines[71] = 1;
+      z_lines = '0; z_lines[110] = 1; z_lines[111] = 1;
       // Hold tx_ready low for a while
-      repeat (20) @(posedge clk_sys);
+      repeat (24) @(posedge clk_sys);
       // Now start collecting
       collect_packet(n);
-      check("T5 backpressure → correct packet", n === 11);
+      check("T5 backpressure → correct packet", n === SPADMIC_POS_PKT_WORDS);
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
-      repeat (5) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
     end
 
     // ========================================
@@ -243,7 +323,7 @@ module tb_spadmic_stress_position;
     begin
       enable = 0;
       @(posedge clk_sys);
-      x_lines = '0; x_lines[40] = 1;
+      x_lines = '0; x_lines[40] = 1; x_lines[41] = 1;
       y_lines = '0; z_lines = '0;
       repeat (10) @(posedge clk_sys);
       tx_ready = 1;
@@ -259,13 +339,13 @@ module tb_spadmic_stress_position;
       begin
         int n;
         @(posedge clk_sys);
-        x_lines[40] = 1;
-        repeat (3) @(posedge clk_sys);
+        x_lines[40] = 1; x_lines[41] = 1;
+        repeat (6) @(posedge clk_sys);
         collect_packet(n);
-        check("T6 re-enabled → packet OK", n === 11);
+        check("T6 re-enabled → packet OK", n === SPADMIC_POS_PKT_WORDS);
         @(posedge clk_sys);
         x_lines = '0; y_lines = '0; z_lines = '0;
-        repeat (5) @(posedge clk_sys);
+        repeat (6) @(posedge clk_sys);
       end
     end
 
@@ -274,14 +354,7 @@ module tb_spadmic_stress_position;
     // ========================================
     begin
       int n;
-      // Write gap_threshold CSR (position region typically at addr 0x004)
-      @(posedge clk_sys);
-      csr_valid <= 1'b1;
-      csr_write <= 1'b1;
-      csr_addr <= 12'h004;
-      csr_wdata <= 32'd5;
-      @(posedge clk_sys);
-      csr_valid <= 1'b0;
+      csr_write_pos(SPADMIC_CSR_POS_GAP_CFG, 32'd5);
       repeat (4) @(posedge clk_sys);
 
       // Trigger capture with modified gap threshold
@@ -290,12 +363,221 @@ module tb_spadmic_stress_position;
       // Gap of 4 (below threshold 5 → should merge)
       x_lines[16] = 1; x_lines[17] = 1;
       y_lines = '0; z_lines = '0;
-      repeat (3) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
       collect_packet(n);
-      check("T7 CSR gap config → packet produced", n === 11);
+      check("T7 CSR gap config → packet produced", n === SPADMIC_POS_PKT_WORDS);
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
-      repeat (5) @(posedge clk_sys);
+      repeat (6) @(posedge clk_sys);
+    end
+
+    // ========================================
+    // TEST 8: Glitch rejection accounting and sticky clear
+    // ========================================
+    begin
+      logic [31:0] fault_status;
+      logic [31:0] reject_before;
+      logic [31:0] reject_after;
+
+      csr_read_pos(SPADMIC_CSR_POS_REJECT_COUNT, reject_before);
+
+      @(posedge clk_sys);
+      x_lines = '0; x_lines[24] = 1; x_lines[25] = 1;
+      y_lines = '0; z_lines = '0;
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (12) @(posedge clk_sys);
+
+      check("T8 glitch pulse produces no packet", tx_valid === 1'b0);
+      csr_read_pos(SPADMIC_CSR_POS_REJECT_COUNT, reject_after);
+      check("T8 reject counter increments", reject_after[15:0] === (reject_before[15:0] + 16'd1));
+      csr_read_pos(SPADMIC_CSR_POS_FAULT_STATUS, fault_status);
+      check("T8 glitch sticky set", fault_status[1] === 1'b1);
+
+      csr_write_pos(SPADMIC_CSR_POS_FAULT_STATUS, 32'h0000_0002);
+      repeat (2) @(posedge clk_sys);
+      csr_read_pos(SPADMIC_CSR_POS_FAULT_STATUS, fault_status);
+      check("T8 glitch sticky clears", fault_status[1] === 1'b0);
+    end
+
+    // ========================================
+    // TEST 9: Settle-cycle configuration gates acceptance
+    // ========================================
+    begin
+      int n;
+      logic [31:0] reject_before;
+      logic [31:0] reject_after;
+
+      csr_write_pos(SPADMIC_CSR_POS_FILTER_CFG, 32'h0000_0302);
+      repeat (2) @(posedge clk_sys);
+      csr_read_pos(SPADMIC_CSR_POS_REJECT_COUNT, reject_before);
+
+      @(posedge clk_sys);
+      x_lines = '0; x_lines[32] = 1; x_lines[33] = 1;
+      y_lines = '0; z_lines = '0;
+      repeat (4) @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (12) @(posedge clk_sys);
+
+      check("T9 short pulse rejected by settle window", tx_valid === 1'b0);
+      csr_read_pos(SPADMIC_CSR_POS_REJECT_COUNT, reject_after);
+      check("T9 settle-window reject counted", reject_after[15:0] === (reject_before[15:0] + 16'd1));
+
+      @(posedge clk_sys);
+      x_lines = '0; x_lines[36] = 1; x_lines[37] = 1;
+      repeat (6) @(posedge clk_sys);
+      check("T9 settle window delays packet start", tx_valid === 1'b0);
+      repeat (2) @(posedge clk_sys);
+      check("T9 settle window eventually allows packet", tx_valid === 1'b1);
+
+      collect_packet(n);
+      check("T9 stable event captured after settle window", n === SPADMIC_POS_PKT_WORDS);
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+
+      csr_write_pos(SPADMIC_CSR_POS_FILTER_CFG, 32'h0000_0102);
+      repeat (2) @(posedge clk_sys);
+    end
+
+    // ========================================
+    // TEST 10: Gap threshold boundary updates packetized clusters
+    // ========================================
+    begin
+      int n;
+      spadmic_axis_clusters_t exp_x;
+
+      csr_write_pos(SPADMIC_CSR_POS_GAP_CFG, 32'd5);
+      repeat (2) @(posedge clk_sys);
+
+      @(posedge clk_sys);
+      x_lines = '0;
+      x_lines[10] = 1; x_lines[11] = 1;
+      x_lines[16] = 1; x_lines[17] = 1;
+      y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+      collect_packet(n);
+
+      exp_x = make_axis_clusters(
+        make_cluster(1'b1, 10, 17),
+        make_cluster(1'b0, 0, 0),
+        1'b0
+      );
+      check("T10 merged-gap packet length", n === SPADMIC_POS_PKT_WORDS);
+      check_word("T10 merged-gap header", 0, spadmic_pos_header_word(1'b0, 3'b001, 3'b000));
+      check_word("T10 merged-gap subheader", 1, spadmic_pos_subheader_word(3'b001));
+      check_word("T10 merged-gap x summary", 2, spadmic_pos_axis_summary_word(TDC_ID_X, exp_x));
+      check_word("T10 merged-gap x cluster0", 3, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T10 merged-gap x cluster1 invalid", 4, spadmic_pos_cluster_word(exp_x.cluster1));
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+
+      @(posedge clk_sys);
+      x_lines = '0;
+      x_lines[10] = 1; x_lines[11] = 1;
+      x_lines[17] = 1; x_lines[18] = 1;
+      y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+      collect_packet(n);
+
+      exp_x = make_axis_clusters(
+        make_cluster(1'b1, 10, 11),
+        make_cluster(1'b1, 17, 18),
+        1'b0
+      );
+      check("T10 threshold-gap packet length", n === SPADMIC_POS_PKT_WORDS);
+      check_word("T10 threshold-gap header", 0, spadmic_pos_header_word(1'b0, 3'b001, 3'b001));
+      check_word("T10 threshold-gap subheader", 1, spadmic_pos_subheader_word(3'b001));
+      check_word("T10 threshold-gap x summary", 2, spadmic_pos_axis_summary_word(TDC_ID_X, exp_x));
+      check_word("T10 threshold-gap x cluster0", 3, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T10 threshold-gap x cluster1", 4, spadmic_pos_cluster_word(exp_x.cluster1));
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+
+      csr_write_pos(SPADMIC_CSR_POS_GAP_CFG, 32'd2);
+      repeat (2) @(posedge clk_sys);
+    end
+
+    // ========================================
+    // TEST 11: Mid-packet stalls hold the current word stable
+    // ========================================
+    begin
+      int words_seen;
+      logic [15:0] stalled_word;
+
+      @(posedge clk_sys);
+      x_lines = '0; x_lines[44] = 1; x_lines[45] = 1;
+      y_lines = '0; y_lines[70] = 1; y_lines[71] = 1;
+      z_lines = '0; z_lines[100] = 1; z_lines[101] = 1;
+      repeat (6) @(posedge clk_sys);
+
+      words_seen = 0;
+      @(posedge clk_sys);
+      #1;
+      tx_ready = 1'b1;
+      while (words_seen < 4) begin
+        @(posedge clk_sys);
+        if (tx_valid)
+          words_seen++;
+      end
+
+      #1;
+      tx_ready = 1'b0;
+      stalled_word = tx_data;
+      check("T11 mid-packet stall keeps valid high", tx_valid === 1'b1);
+      repeat (2) begin
+        @(posedge clk_sys);
+        #1;
+        check("T11 mid-packet stall keeps valid high", tx_valid === 1'b1);
+        check("T11 mid-packet stall holds data", tx_data === stalled_word);
+      end
+
+      tx_ready = 1'b1;
+      while (tx_valid) @(posedge clk_sys);
+      #1;
+      tx_ready = 1'b0;
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+    end
+
+    // ========================================
+    // TEST 12: Overflow keeps the first two cluster bounds
+    // ========================================
+    begin
+      int n;
+      spadmic_axis_clusters_t exp_x;
+
+      @(posedge clk_sys);
+      x_lines = '0;
+      x_lines[0] = 1; x_lines[1] = 1;
+      x_lines[4] = 1; x_lines[5] = 1;
+      x_lines[8] = 1; x_lines[9] = 1;
+      y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+      collect_packet(n);
+
+      exp_x = make_axis_clusters(
+        make_cluster(1'b1, 0, 1),
+        make_cluster(1'b1, 4, 5),
+        1'b1
+      );
+      check("T12 overflow packet length", n === SPADMIC_POS_PKT_WORDS);
+      check_word("T12 overflow header", 0, spadmic_pos_header_word(1'b1, 3'b001, 3'b001));
+      check_word("T12 overflow subheader", 1, spadmic_pos_subheader_word(3'b001));
+      check_word("T12 overflow x summary", 2, spadmic_pos_axis_summary_word(TDC_ID_X, exp_x));
+      check_word("T12 overflow x cluster0 retained", 3, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T12 overflow x cluster1 retained", 4, spadmic_pos_cluster_word(exp_x.cluster1));
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
     end
 
     // ========================================

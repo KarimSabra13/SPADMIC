@@ -37,6 +37,12 @@ module mptdc_top_asic
   input  wire                    cal_start_async_i,
   input  wire                    cal_stop_async_i,
 
+  // ── Optional top-level overrides for globally managed operation ─
+  input  wire                    input_sel_override_en_i,
+  input  mptdc_pkg::input_sel_e  input_sel_override_i,
+  input  wire                    out_mode_override_en_i,
+  input  mptdc_pkg::out_mode_e   out_mode_override_i,
+
   // ── CSR bus (from controller / SPI bridge) ──────────────────────
   input  wire                    csr_valid_i,
   input  wire                    csr_write_i,
@@ -49,35 +55,62 @@ module mptdc_top_asic
   // ── 16-bit narrow output (ready/valid) ──────────────────────────
   input  wire                    narrow_ready_i,
   output wire                    narrow_valid_o,
-  output wire  [NARROW_W-1:0]   narrow_data_o
+  output wire  [NARROW_W-1:0]   narrow_data_o,
+
+  // ── Optional exported acquisition-record stream for shared readout ─
+  input  wire                    shared_readout_en_i,
+  input  wire                    acq_ready_i,
+  output wire                    acq_valid_o,
+  output wire  [ACQ_REC_W-1:0]  acq_data_o,
+  output wire                    fifo_full_o
 );
 
   // ────────────────────────────────────────────────────────────────
   //  Internal wires
   // ────────────────────────────────────────────────────────────────
-  wire             rst_sync_n;        // synchronised reset from pad
-  wire             rst_n_internal;    // combined reset (pad + soft)
+  wire             rst_n_internal;    // synchronised reset from pad + soft reset hold
+  wire             local_async_rst_n;
 
   wire             start_async;       // mux → core
   wire             stop_async;        // mux → core
 
   mptdc_cfg_t      cfg;               // CSR → core  (quasi-static config)
+  mptdc_cfg_t      cfg_eff;           // effective config after top-level overrides
   mptdc_status_t   status;            // core → CSR  (live status)
   logic            conv_arm;          // latched level from CSR (v2.1)
   logic            fifo_clr_pulse;
   logic            soft_rst_pulse;
+  logic [1:0]      soft_rst_hold_q;
 
-  // Combined reset: software reset is folded into the same synchronised tree
-  // seen by the core, so pad and CSR reset sources share one local boundary.
-  assign rst_n_internal = rst_sync_n & ~soft_rst_pulse;
+  // Hold the software reset request low for multiple clk_sys cycles before it
+  // enters the synchronizer, so the local reset tree sees a real reset rather
+  // than a combinational pulse.
+  always_ff @(posedge clk_sys or negedge async_rst_n) begin
+    if (!async_rst_n)
+      soft_rst_hold_q <= '0;
+    else if (soft_rst_pulse)
+      soft_rst_hold_q <= 2'd3;
+    else if (soft_rst_hold_q != '0)
+      soft_rst_hold_q <= soft_rst_hold_q - 2'd1;
+  end
+
+  assign local_async_rst_n = async_rst_n & ~(soft_rst_hold_q != 2'd0);
+
+  always_comb begin
+    cfg_eff = cfg;
+    if (input_sel_override_en_i)
+      cfg_eff.input_sel = input_sel_override_i;
+    if (out_mode_override_en_i)
+      cfg_eff.out_mode = out_mode_override_i;
+  end
 
   // ────────────────────────────────────────────────────────────────
   //  Reset synchroniser
   // ────────────────────────────────────────────────────────────────
   mptdc_reset_sync #(.STAGES(2)) u_rst_sync (
     .clk         (clk_sys),
-    .async_rst_n (async_rst_n),
-    .rst_n_o     (rst_sync_n)
+    .async_rst_n (local_async_rst_n),
+    .rst_n_o     (rst_n_internal)
   );
 
   // ────────────────────────────────────────────────────────────────
@@ -90,7 +123,7 @@ module mptdc_top_asic
     .stop_spad_async_i  (stop_spad_async_i),
     .cal_start_async_i  (cal_start_async_i),
     .cal_stop_async_i   (cal_stop_async_i),
-    .input_sel_i        (cfg.input_sel),
+    .input_sel_i        (cfg_eff.input_sel),
     .start_async_o      (start_async),
     .stop_async_o       (stop_async)
   );
@@ -123,14 +156,20 @@ module mptdc_top_asic
     .rst_sys_n      (rst_n_internal),
     .start_async_i  (start_async),
     .stop_async_i   (stop_async),
-    .cfg_i          (cfg),
+    .cfg_i          (cfg_eff),
     .conv_arm_i     (conv_arm),
     .fifo_clr_i     (fifo_clr_pulse),
     .status_o       (status),
     .narrow_ready_i (narrow_ready_i),
     .narrow_valid_o (narrow_valid_o),
-    .narrow_data_o  (narrow_data_o)
+    .narrow_data_o  (narrow_data_o),
+    .shared_readout_en_i(shared_readout_en_i),
+    .acq_ready_i    (acq_ready_i),
+    .acq_valid_o    (acq_valid_o),
+    .acq_data_o     (acq_data_o)
   );
+
+  assign fifo_full_o = status.fifo_full;
 
 endmodule : mptdc_top_asic
 

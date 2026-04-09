@@ -51,6 +51,10 @@ module tb_multi_conv_stress;
     .stop_spad_async_i  (stop_spad),
     .cal_start_async_i  (cal_start),
     .cal_stop_async_i   (cal_stop),
+    .input_sel_override_en_i(1'b0),
+    .input_sel_override_i(INPUT_SPAD),
+    .out_mode_override_en_i(1'b0),
+    .out_mode_override_i(OUT_MODE_RAW_FEATURES),
     .csr_valid_i        (csr_valid),
     .csr_write_i        (csr_write),
     .csr_addr_i         (csr_addr),
@@ -60,7 +64,12 @@ module tb_multi_conv_stress;
     .csr_rdata_o        (csr_rdata),
     .narrow_ready_i     (narrow_ready),
     .narrow_valid_o     (narrow_valid),
-    .narrow_data_o      (narrow_data)
+    .narrow_data_o      (narrow_data),
+    .shared_readout_en_i(1'b0),
+    .acq_ready_i        (1'b0),
+    .acq_valid_o        (),
+    .acq_data_o         (),
+    .fifo_full_o        ()
   );
 
   // ── CSR helper ──────────────────────────────────────────────

@@ -8,19 +8,26 @@
 //            oscillator stop, clear, and re-arm.  Runs at ~1 GHz (fast_phase[0]).
 // Author   : Karim Sabra
 // =============================================================================
+// v2.4 changes (first-hit mode removal):
+//   - Removed first_hit_mode_i port — single multi-hit operating mode.
+//   - max_hits=1 uses the fast OR-reduction close path (close_fast) for
+//     minimum-latency single-hit operation (~0.3-0.6 ns at 180nm).
+//   - max_hits>1 uses the pipelined hierarchical count close (close_counted).
+//   - closed_by_fast_maxhit flag replaces closed_by_firsthit.
+//
 // v2.2 changes:
 //   - 5-state FSM: IDLE → MEASURE → CAPTURE → STOP_OSC → CLEAR → IDLE
 //     STOP_OSC deasserts osc_keep_alive BEFORE pd_clear to eliminate the
 //     async-clear-while-clock-running race on PD cells.
 //   - Close detection split:
-//     FIRST_HIT: pure OR-reduction (~0.3-0.6 ns at 180nm, fits 900 ps)
-//     MULTI_HIT: 2-stage pipelined hierarchical saturating count
+//     max_hits=1: pure OR-reduction (~0.3-0.6 ns at 180nm, fits 900 ps)
+//     max_hits>1: 2-stage pipelined hierarchical saturating count
 //       Stage 1: 9 row popcounts (9 bits each → 4-bit partial) + tree → registered
-//       Stage 2: compare registered count against max_hits_cfg → close_mh
-//     This adds 1 fast-cycle latency to MULTI_HIT close (deadtime ~4.5 ns).
+//       Stage 2: compare registered count against max_hits_cfg → close_counted
+//     This adds 1 fast-cycle latency to counted close (deadtime ~4.5 ns).
 //   - Overflow flag removed (was misused as hit-saturation).
-//   - pd_gate_o: gates PD enable off immediately on first-hit close to
-//     limit hit accumulation in FIRST_HIT mode.
+//   - pd_gate_o: gates PD enable off immediately on fast close to
+//     limit hit accumulation in single-hit mode.
 // =============================================================================
 module mptdc_meas_ctrl
   import mptdc_pkg::*;
@@ -36,7 +43,6 @@ module mptdc_meas_ctrl
 
   // Configuration (quasi-static from CSR — latched before measurement)
   input  wire [MAX_HITS_W-1:0]  max_hits_cfg_i,
-  input  wire                   first_hit_mode_i,
   input  wire [15:0]            wdt_timeout_i,   // 0 = disabled
 
   // Context bank control
@@ -67,7 +73,7 @@ module mptdc_meas_ctrl
   // Hit count — split close paths for 180nm timing closure
   // =========================================================================
 
-  // ── FIRST_HIT: pure OR-reduction (~0.3-0.6 ns) ──
+  // ── OR-reduction: any hit present (~0.3-0.6 ns) ──
   logic any_hit;
   assign any_hit = |hit_level_i;
 
@@ -130,17 +136,18 @@ module mptdc_meas_ctrl
   assign hit_count_o = hit_cnt_q;
 
   // =========================================================================
-  // Close conditions
+  // Close conditions (v2.4: unified — no first_hit_mode_i)
+  //   close_fast:    max_hits==1  → OR-reduction, zero-cycle, fits 900 ps
+  //   close_counted: max_hits>1   → pipelined comparator, 1-cycle lag
   // =========================================================================
-  logic close_fh, close_mh, close_wd, close_any;
+  logic close_fast, close_counted, close_wd, close_any;
 
-  // FIRST_HIT: OR-reduction — zero-cycle combinational, fits 900 ps at 180nm
-  assign close_fh = first_hit_mode_i && any_hit;
+  // Fast single-hit close: OR-reduction — zero-cycle combinational
+  assign close_fast = (max_hits_cfg_i == MAX_HITS_W'(1)) && any_hit;
 
-  // MULTI_HIT: pipelined — compares against REGISTERED count (1-cycle lag)
-  assign close_mh = !first_hit_mode_i
-                  && (max_hits_cfg_i != '0)
-                  && (hit_cnt_q >= max_hits_cfg_i);
+  // Counted close: pipelined — compares against REGISTERED count (1-cycle lag)
+  assign close_counted = (max_hits_cfg_i > MAX_HITS_W'(1))
+                       && (hit_cnt_q >= max_hits_cfg_i);
 
   // ── Watchdog counter ────────────────────────────────────────────
   logic [15:0] wdt_cnt_q;
@@ -158,7 +165,7 @@ module mptdc_meas_ctrl
 
   // Close fires ONLY in MEASURE state
   assign close_any = (state_q == ST_M_MEASURE)
-                   && (close_fh | close_mh | close_wd);
+                   && (close_fast | close_counted | close_wd);
 
   // =========================================================================
   // Flags — latched on MEASURE → CAPTURE transition
@@ -168,10 +175,10 @@ module mptdc_meas_ctrl
   always_comb begin
     flags_d = flags_q;
     if (state_q == ST_M_MEASURE && close_any) begin
-      flags_d.reserved           = 1'b0;
-      flags_d.closed_by_firsthit = close_fh;
-      flags_d.closed_by_maxhits  = close_mh & ~close_fh;
-      flags_d.closed_by_watchdog = close_wd;
+      flags_d.reserved              = 1'b0;
+      flags_d.closed_by_fast_maxhit = close_fast;
+      flags_d.closed_by_maxhits     = close_counted & ~close_fast;
+      flags_d.closed_by_watchdog    = close_wd;
     end
   end
 
@@ -180,7 +187,7 @@ module mptdc_meas_ctrl
   // Starts LOW (IDLE): prevents hits during rst_fast_n warmup when
   // counters are held in reset and CDC pipeline hasn't settled.
   // Goes HIGH on IDLE→MEASURE: counters are operational, hits are valid.
-  // Goes LOW on first-hit close: freezes PD matrix in FIRST_HIT mode.
+  // Goes LOW on fast close: freezes PD matrix in single-hit mode.
   // Goes LOW outside MEASURE: prevents spurious hits during CAPTURE/CLEAR.
   // =========================================================================
   logic pd_gate_q;

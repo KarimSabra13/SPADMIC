@@ -12,6 +12,7 @@
 - `2` context buffers (hardwired double buffer)
 - `15` maximum hits per conversion
 - a `16-bit` ready/valid output stream
+- an optional acquisition-record export path for shared top-level readout
 - three output modes: `RAW_FEATURES`, `RAW_TIMESTAMP`, and `FULL`
 
 The digital RTL is intended to be used with a behavioral oscillator model in simulation and a real current-starved oscillator macro in silicon.
@@ -34,6 +35,7 @@ Key architectural facts from RTL:
 | Context buffers | `N_CTX = 2` |
 | Max hits | `15` |
 | FIFO depth | `64` acquisition records |
+| Shared-readout export | optional `shared_readout_en_i` switches the FIFO consumer from the local serializer to the `acq_*` export interface |
 | System clock | `160 MHz` |
 | Oscillator timing model | behavioral model in simulation, stub for synthesis |
 
@@ -129,6 +131,16 @@ ci/           regression wrappers and coverage entrypoints
 docs/         architecture, protocol, verification, calibration, runbook, status
 syn/          Cadence Genus synthesis collateral
 ```
+
+## Documentation guide
+
+| Document | Purpose |
+|----------|---------|
+| [`docs/01_ARCHITECTURE.md`](docs/01_ARCHITECTURE.md) | active RTL hierarchy, dataflow, and timing-domain split |
+| [`docs/02_OUTPUT_PROTOCOL.md`](docs/02_OUTPUT_PROTOCOL.md) | live 16-bit packet contract |
+| [`docs/03_CSR_MAP.md`](docs/03_CSR_MAP.md) | software-visible CSR contract |
+| [`docs/04_VERIFICATION.md`](docs/04_VERIFICATION.md) | maintained verification and characterization entrypoints |
+| [`docs/10_SHARED_READOUT_EXPORT.md`](docs/10_SHARED_READOUT_EXPORT.md) | optional acquisition-record export used by the active SPADMIC top |
 
 ## Recommended command flow
 

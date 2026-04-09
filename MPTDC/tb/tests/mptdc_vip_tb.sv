@@ -64,6 +64,10 @@ module mptdc_vip_tb;
     .stop_spad_async_i  (tb_stop_spad),
     .cal_start_async_i  (tb_cal_start),
     .cal_stop_async_i   (tb_cal_stop),
+    .input_sel_override_en_i(1'b0),
+    .input_sel_override_i(INPUT_SPAD),
+    .out_mode_override_en_i(1'b0),
+    .out_mode_override_i(OUT_MODE_RAW_FEATURES),
     .csr_valid_i        (tb_csr_valid),
     .csr_write_i        (tb_csr_write),
     .csr_addr_i         (tb_csr_addr),
@@ -73,7 +77,12 @@ module mptdc_vip_tb;
     .csr_rdata_o        (tb_csr_rdata),
     .narrow_ready_i     (narrow_if.narrow_ready),
     .narrow_valid_o     (narrow_if.narrow_valid),
-    .narrow_data_o      (narrow_if.narrow_data)
+    .narrow_data_o      (narrow_if.narrow_data),
+    .shared_readout_en_i(1'b0),
+    .acq_ready_i        (1'b0),
+    .acq_valid_o        (),
+    .acq_data_o         (),
+    .fifo_full_o        ()
   );
 
   initial begin
@@ -145,7 +154,7 @@ module mptdc_vip_tb;
           if (!$cast(cfg_txn, base))
             $fatal(1, "VIP BFM failed to cast cfg txn");
           bfm_csr_write(CSR_MODE,       cfg_txn.pack_mode_reg());
-          bfm_csr_write(CSR_MAX_HITS,   {28'd0, cfg_txn.max_hits});
+          bfm_csr_write(CSR_MAX_HITS,   {28'd0, cfg_txn.effective_max_hits()});
           bfm_csr_write(CSR_WDT_CTX,    {16'd0, cfg_txn.wdt_ctx_timeout});
           bfm_csr_write(CSR_WDT_GLOBAL, {16'd0, cfg_txn.wdt_global_timeout});
           #50_000;

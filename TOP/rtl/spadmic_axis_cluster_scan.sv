@@ -1,3 +1,9 @@
+// =============================================================================
+// Project  : SPADMIC Top-Level Integration
+// File     : spadmic_axis_cluster_scan.sv
+// Purpose  : Scan one axis bitmap and report up to two clusters plus overflow.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
@@ -12,6 +18,8 @@ module spadmic_axis_cluster_scan #(
 
   spadmic_axis_clusters_t result_r;
 
+  // A new cluster starts only after a gap of at least gap_threshold_i zeros.
+  // Additional qualifying clusters beyond cluster1 raise overflow instead.
   always_comb begin
     logic in_cluster;
     logic [6:0] gap_run;
@@ -41,7 +49,7 @@ module spadmic_axis_cluster_scan #(
             result_r.overflow = 1'b1;
           end else if (cluster_idx == 0) begin
             result_r.cluster0.hi = 7'(i);
-          end else if (cluster_idx == 1) begin
+          end else if ((cluster_idx == 1) && !result_r.overflow) begin
             result_r.cluster1.hi = 7'(i);
           end
           in_cluster = 1'b1;
@@ -50,7 +58,7 @@ module spadmic_axis_cluster_scan #(
           gap_run = 7'd0;
           if (cluster_idx == 0)
             result_r.cluster0.hi = 7'(i);
-          else if (cluster_idx == 1)
+          else if ((cluster_idx == 1) && !result_r.overflow)
             result_r.cluster1.hi = 7'(i);
         end
       end else if (in_cluster) begin

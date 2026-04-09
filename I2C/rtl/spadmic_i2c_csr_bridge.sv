@@ -1,3 +1,10 @@
+// =============================================================================
+// Project  : SPADMIC I2C Control Plane
+// File     : spadmic_i2c_csr_bridge.sv
+// Purpose  : Translate the I2C transaction channel into the shared local CSR
+//            request/response handshake used by the SPADMIC top.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
@@ -42,6 +49,8 @@ module spadmic_i2c_csr_bridge (
   assign i2c_cmd_ready_o = (state_q == ST_IDLE) & csr_req_ready_i;
   assign csr_rsp_ready_o = (state_q == ST_WAIT_RSP);
 
+  // The bridge allows only one outstanding CSR transaction at a time, which
+  // matches the simple pointer-based I2C access model.
   always_ff @(posedge clk_sys or negedge rst_n) begin
     if (!rst_n) begin
       state_q          <= ST_IDLE;

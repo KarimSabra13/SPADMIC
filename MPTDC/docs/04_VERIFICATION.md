@@ -21,6 +21,10 @@ This validates RTL behavior and exported observables. It does **not** replace:
 - analog oscillator integration
 - DFT / silicon test planning
 
+Compatibility note: some maintained bench and VIP names still use the historical
+`firsthit` label. In the active v2.4 RTL, that label maps to the fast-close
+behavior obtained with `max_hits = 1`; there is no separate mode bit in the DUT.
+
 ## 2. Shared infrastructure
 
 ### 2.1 `tb/common/mptdc_tb_pkg.sv`
@@ -100,7 +104,7 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
 | `tb_watchdog_recovery` | global watchdog trip and recovery |
 | `tb_start_wdt` | START-without-STOP watchdog behavior |
 | `tb_overflow_count` | rejected START / overflow accounting |
-| `tb_firsthit_mode` | FIRST_HIT early-close contract |
+| `tb_firsthit_mode` | compatibility-named fast-close contract (`max_hits = 1`) |
 
 ### 3.3 Collection / characterization benches
 
@@ -249,7 +253,7 @@ The current tree gives good confidence in:
 1. serializer and packet framing behavior across active modes
 2. context freeze / drain / release sequencing
 3. watchdog and overflow recovery semantics
-4. FIRST_HIT vs MULTI_HIT behavior
+4. fast close (`max_hits = 1`) vs higher-`max_hits` behavior
 5. broad raw-data collection across `20 ps .. 30 ns`
 6. same-delay empirical characterization through the fixed-delay flow
 7. VIP-driven regression and coverage handoff infrastructure

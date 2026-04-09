@@ -32,6 +32,11 @@ The review was done by:
 - rerunning the active regression and unit benches
 - analyzing the existing collection outputs in `results/first_hit.csv` and `results/multi_hit.csv`
 
+Compatibility note: this historical review predates the active v2.4 cleanup that
+removed the separate `FIRST_HIT` mode. References to `FIRST_HIT` in the findings
+below should now be read as references to the fast-close behavior that the live
+RTL exposes through `max_hits = 1` and the `closed_by_fast_maxhit` flag.
+
 Commands rerun during this review:
 
 ```bash

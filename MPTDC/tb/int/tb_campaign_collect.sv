@@ -18,7 +18,7 @@ module tb_campaign_collect;
   // =========================================================================
   //  Plusarg-configurable parameters (with sensible defaults)
   // =========================================================================
-  int          cfg_mode;            // 0=MULTI_HIT, 1=FIRST_HIT
+  int          cfg_mode;            // 0=multi-hit, 1=fast-close compatibility
   int          cfg_max_hits;
   int          cfg_input_sel;       // 0=SPAD, 1=CAL
   int          cfg_n_conv;
@@ -84,6 +84,10 @@ module tb_campaign_collect;
     .stop_spad_async_i  (stop_spad),
     .cal_start_async_i  (cal_start),
     .cal_stop_async_i   (cal_stop),
+    .input_sel_override_en_i(1'b0),
+    .input_sel_override_i(INPUT_SPAD),
+    .out_mode_override_en_i(1'b0),
+    .out_mode_override_i(OUT_MODE_RAW_FEATURES),
     .csr_valid_i        (csr_valid),
     .csr_write_i        (csr_write),
     .csr_addr_i         (csr_addr),
@@ -93,7 +97,12 @@ module tb_campaign_collect;
     .csr_rdata_o        (w_csr_rdata),
     .narrow_ready_i     (narrow_ready),
     .narrow_valid_o     (w_narrow_valid),
-    .narrow_data_o      (w_narrow_data)
+    .narrow_data_o      (w_narrow_data),
+    .shared_readout_en_i(1'b0),
+    .acq_ready_i        (1'b0),
+    .acq_valid_o        (),
+    .acq_data_o         (),
+    .fifo_full_o        ()
   );
 
   // =========================================================================
@@ -138,6 +147,12 @@ module tb_campaign_collect;
            + int'((raw[30:0]) % (cfg_delay_max_ps - cfg_delay_min_ps + 1));
   endfunction
 
+  function automatic int effective_max_hits();
+    if (cfg_mode[0])
+      return 1;
+    return cfg_max_hits;
+  endfunction
+
   // =========================================================================
   //  Configure DUT for campaign
   // =========================================================================
@@ -147,12 +162,15 @@ module tb_campaign_collect;
     // Disarm first
     csr_wr(CSR_CTRL, 32'h0000_0000);
 
-    // CSR_MODE: mode_cfg[0], input_sel[1], out_mode[3:2]
-    mode_word = {28'd0, cfg_out_mode[1:0], cfg_input_sel[0], cfg_mode[0]};
+    // Active v2.4 contract: CSR_MODE[0] is reserved. Campaign "mode" is kept
+    // only as a compatibility selector so firsthit-named configs map onto the
+    // real fast-close setting (max_hits=1) without programming a dead mode bit.
+    mode_word = {28'd0, cfg_out_mode[1:0], cfg_input_sel[0], 1'b0};
     csr_wr(CSR_MODE, mode_word);
 
-    // CSR_MAX_HITS
-    csr_wr(CSR_MAX_HITS, {28'd0, cfg_max_hits[3:0]});
+    // Fast-close compatibility flows request max_hits=1 regardless of the
+    // named max_hits bucket in the config string.
+    csr_wr(CSR_MAX_HITS, {28'd0, effective_max_hits()[3:0]});
 
     // Fast-domain watchdog: 500 fast cycles (~450 ns) safety net
     csr_wr(CSR_WDT_CTX, 32'd500);
@@ -306,7 +324,7 @@ module tb_campaign_collect;
               hdr_ctx_id,            // ctx_id
               t_raw_ps_i,            // t_raw_ps (reconstructed from RAW_FEATURES fields)
               cfg_mode,              // mode
-              cfg_max_hits);         // max_hits
+              effective_max_hits()); // max_hits
 
       hits_found++;
       idx += 3;
@@ -431,7 +449,7 @@ module tb_campaign_collect;
               hdr_ctx_id,            // ctx_id
               t_raw_ps_i,            // t_raw_ps
               cfg_mode,              // mode
-              cfg_max_hits);         // max_hits
+              effective_max_hits()); // max_hits
 
       hits_found++;
       idx += 4;
@@ -489,8 +507,8 @@ module tb_campaign_collect;
 
     $display("========================================================");
     $display("[CAMPAIGN] Configuration:");
-    $display("[CAMPAIGN]   MODE         = %s", cfg_mode ? "FIRST_HIT" : "MULTI_HIT");
-    $display("[CAMPAIGN]   MAX_HITS     = %0d", cfg_max_hits);
+    $display("[CAMPAIGN]   MODE         = %s", cfg_mode ? "FAST_CLOSE(max_hits=1)" : "MULTI_HIT");
+    $display("[CAMPAIGN]   MAX_HITS     = %0d", effective_max_hits());
     $display("[CAMPAIGN]   INPUT_SEL    = %s", cfg_input_sel ? "CAL" : "SPAD");
     $display("[CAMPAIGN]   OUT_MODE     = %s",
              (cfg_out_mode == OUT_MODE_RAW_FEATURES) ? "RAW_FEATURES" :

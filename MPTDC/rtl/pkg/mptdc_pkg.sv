@@ -12,9 +12,15 @@
 //     and conv_meta structs for tightly correlated coarse-Vernier reference
 //   - Sub-header word added to narrow packet (carries nfast_stop)
 //
+// v2.4 changes (first-hit mode removal):
+//   - Removed MODE_FIRST_HIT / mode_e enum — single multi-hit operating mode
+//   - max_hits=1 preserves fast close (OR-reduction) internally
+//   - closed_by_firsthit flag renamed to closed_by_fast_maxhit
+//   - mode_cfg removed from mptdc_cfg_t; CSR_MODE[0] is now reserved
+//
 // v2.2 changes (design-review fixes):
 //   - Measurement FSM: 5-state (added ST_M_STOP_OSC for safe PD clear)
-//   - Close detection: OR-reduction for FIRST_HIT, pipelined for MULTI_HIT
+//   - Close detection: OR-reduction for max_hits=1, pipelined for max_hits>1
 //   - Overflow flag removed from conv_flags (was misused as hit-saturation)
 //   - slow_boundary_inc added to meta/snapshot for offline calibration
 //   - N_CTX = 2 (hardwired double-buffer, not parameterizable)
@@ -105,10 +111,11 @@ package mptdc_pkg;
   // =========================================================================
   // Operating modes
   // =========================================================================
-  typedef enum logic [0:0] {
-    MODE_MULTI_HIT = 1'b0,
-    MODE_FIRST_HIT = 1'b1
-  } mode_e;
+  // v2.4: single operating mode — multi-hit with configurable max_hits.
+  // max_hits=1 triggers an internal fast close path (OR-reduction) for
+  // minimum-latency single-hit operation.  The former MODE_FIRST_HIT is
+  // removed; MODE_MULTI_HIT is kept as a compatibility constant.
+  localparam logic [0:0] MODE_MULTI_HIT = 1'b0;
 
   typedef enum logic [1:0] {
     OUT_MODE_RAW_FEATURES  = 2'd0,  // nslow, nfast, ns, nf, pd_idx, event_seq
@@ -147,14 +154,14 @@ package mptdc_pkg;
   // =========================================================================
   // Conversion flags (4 bits, packed MSB-first)
   // Bit 3: reserved (was 'overflow' in v2.1 — misused as hit-saturation)
-  // Bit 2: closed_by_firsthit
-  // Bit 1: closed_by_maxhits  (also means hit-count saturation)
+  // Bit 2: closed_by_fast_maxhit  (v2.4: fast OR-reduction close when max_hits=1)
+  // Bit 1: closed_by_maxhits     (pipelined hit-count saturation close)
   // Bit 0: closed_by_watchdog
   // Context-allocation overflow is tracked separately in ovf_count_r.
   // =========================================================================
   typedef struct packed {
     logic reserved;
-    logic closed_by_firsthit;
+    logic closed_by_fast_maxhit;
     logic closed_by_maxhits;
     logic closed_by_watchdog;
   } tdc_conv_flags_t;
@@ -213,7 +220,7 @@ package mptdc_pkg;
 
   // Control registers (write)
   localparam logic [CSR_ADDR_W-1:0] CSR_CTRL        = 6'h00;  // conv_arm, fifo_clr, soft_rst
-  localparam logic [CSR_ADDR_W-1:0] CSR_MODE        = 6'h04;  // mode_cfg, input_sel, out_mode
+  localparam logic [CSR_ADDR_W-1:0] CSR_MODE        = 6'h04;  // reserved[0], input_sel, out_mode
   localparam logic [CSR_ADDR_W-1:0] CSR_MAX_HITS    = 6'h08;  // max_hits[3:0]
   localparam logic [CSR_ADDR_W-1:0] CSR_WDT_CTX     = 6'h0C;  // per-context watchdog timeout
   localparam logic [CSR_ADDR_W-1:0] CSR_WDT_GLOBAL  = 6'h10;  // global watchdog timeout
@@ -228,9 +235,10 @@ package mptdc_pkg;
 
   // =========================================================================
   // Configuration struct
+  // v2.4: mode_cfg removed — single multi-hit operating mode.
+  //       CSR_MODE[0] is reserved (read-as-zero / ignored on write).
   // =========================================================================
   typedef struct packed {
-    mode_e      mode_cfg;
     input_sel_e input_sel;
     out_mode_e  out_mode;
     logic [MAX_HITS_W-1:0] max_hits;

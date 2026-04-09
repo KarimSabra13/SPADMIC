@@ -19,11 +19,14 @@ rtl/spadmic_ref_stop_qualifier.sv
 
 // ── CSR decode / global registers ────────────────────────────────
 rtl/spadmic_global_csr.sv
+rtl/spadmic_top_sequencer.sv
 rtl/spadmic_csr_decoder.sv
 
 // ── Packet arbiter path ──────────────────────────────────────────
 rtl/spadmic_tdc_packet_fifo.sv
 rtl/spadmic_tdc_arbiter3.sv
+rtl/spadmic_tdc_shared_readout.sv
+rtl/spadmic_shared_tx_mux.sv
 
 // ── Position scanner ─────────────────────────────────────────────
 rtl/spadmic_axis_cluster_scan.sv

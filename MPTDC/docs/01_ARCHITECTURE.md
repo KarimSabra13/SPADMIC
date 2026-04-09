@@ -17,6 +17,10 @@ The live design is a Vernier multi-phase TDC with:
 - a fast-domain measurement FSM and a system-domain drain/serialization pipeline
 - purely offline calibration
 
+Compatibility note: the active v2.4 RTL no longer has a separate `FIRST_HIT`
+mode. The equivalent minimum-latency close behavior is now obtained with
+`max_hits = 1`, and the close flag is named `closed_by_fast_maxhit`.
+
 ## 2. Key architectural constants
 
 | Parameter | Value | Meaning |
@@ -52,9 +56,12 @@ mptdc_top_asic
        |- mptdc_context_bank
        |- mptdc_drain_ctrl
        |- mptdc_sync_fifo
-       |- mptdc_narrow16_tx_v2
-       `- mptdc_watchdog
+        |- mptdc_narrow16_tx_v2
+        `- mptdc_watchdog
 ```
+
+`mptdc_top_asic` and `mptdc_core` also expose an optional acquisition-record
+export interface used by the active SPADMIC shared-readout top.
 
 Compiled but not instantiated in the live top path:
 
@@ -134,8 +141,8 @@ The slow counter also takes a STOP-side Gray snapshot so exported `Nslow` is coh
 
 `mptdc_meas_ctrl` runs on `osc_fast_ph0` and closes the conversion when one of three conditions occurs:
 
-- `FIRST_HIT`: any PD cell has asserted `hit_level`
-- `MULTI_HIT`: pipelined registered hit count has reached `max_hits_cfg_i`
+- fast close: `max_hits_cfg_i == 1` and any PD cell has asserted `hit_level`
+- counted close: registered hit count has reached `max_hits_cfg_i` for `max_hits_cfg_i > 1`
 - watchdog: fast-domain context watchdog reaches `wdt_timeout_i`
 
 ### 5.6 Safe shutdown sequence
@@ -165,6 +172,8 @@ Once captured, the owning context enters `DRAINING`. The system-clock drain FSM 
 5. pulses `conv_done`
 
 The FIFO buffers those acquisition records, and the 16-bit serializer converts them into external packet words.
+In the shared-readout integration, the same FIFO can instead be drained through
+the exported `acq_*` interface; see [`10_SHARED_READOUT_EXPORT.md`](10_SHARED_READOUT_EXPORT.md).
 
 ## 6. Module-by-module reference
 
@@ -200,12 +209,14 @@ Inputs:
 Outputs:
 - CSR response
 - 16-bit output valid/data
+- optional acquisition-record export plus FIFO-full indication for shared top-level readout
 
 Behavior:
 - synchronizes pad reset into `clk_sys`
 - combines synchronized reset with `soft_rst_pulse`
 - routes selected async inputs into the core
 - pushes config into the core and returns status to CSR
+- optionally bypasses the local narrow serializer and exports acquisition records from the internal FIFO
 
 Silicon notes:
 - straightforward synchronous wrapper
@@ -240,7 +251,6 @@ Domain:
 - `clk_sys`
 
 Writes control:
-- mode (`MULTI_HIT` / `FIRST_HIT`)
 - input source (`SPAD` / `CAL`)
 - output mode (`RAW_FEATURES`, `RAW_TIMESTAMP`, `FULL`)
 - max hits
@@ -262,6 +272,7 @@ Silicon notes:
 
 Purpose:
 - integrates all runtime datapath blocks
+- optionally exports acquisition records from the internal FIFO when shared readout is enabled
 
 Domains:
 - `clk_sys`
@@ -490,7 +501,7 @@ Domain:
 Inputs:
 - measurement-active level from frontend
 - full PD bitmap
-- max-hits config, first-hit mode, watchdog timeout
+- max-hits config and watchdog timeout
 
 Outputs:
 - capture pulse
@@ -501,8 +512,8 @@ Outputs:
 - hit count and close flags
 
 Behavior:
-- `FIRST_HIT` close uses an OR reduction
-- `MULTI_HIT` close uses a pipelined hierarchical count tree
+- fast close (`max_hits = 1`) uses an OR reduction
+- higher `max_hits` values use a pipelined hierarchical count tree
 - watchdog close is local to the measurement window
 - safe sequence: capture first, stop oscillators next, clear last
 

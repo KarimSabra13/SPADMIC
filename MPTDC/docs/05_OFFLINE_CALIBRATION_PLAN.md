@@ -67,7 +67,7 @@ Recommended local collection flow:
 - bench: `tb/int/tb_campaign_collect.sv` (plusarg-configurable)
 - orchestrator: `scripts/sim/run_campaign.sh` (parallel, resume-capable, native `--sim verilator|xrun|xcelium`)
 - input source: `CAL`
-- mode: `MULTI_HIT` for dense raw data, `FIRST_HIT` for earliest-close behavior
+- hit-depth policy: higher `max_hits` for dense raw data, `max_hits = 1` for minimum-latency fast-close studies
 - output mode:
   - `FULL` for classic debug-heavy campaigns
   - `RAW_FEATURES` for deployed-format-fidelity studies
@@ -86,7 +86,7 @@ ASIC serializer contract.
 ### 4.2 Campaign configuration
 
 The campaign runner enumerates all combinations of:
-- **Mode:** MULTI_HIT (0), FIRST_HIT (1)
+- **Close behavior:** high-`max_hits` collection points plus compatibility-labelled fast-close points
 - **Max hits:** 15, 10, 5
 - **Source:** CAL (1), SPAD (0)
 - **Jitter:** nominal (σ=0), jitter (σ=8 ps, bound=24 ps)

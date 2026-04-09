@@ -7,9 +7,9 @@
 // Purpose  : Minimal CSR register file — offline calibration, no LUTs
 // Author   : Karim Sabra
 // =============================================================================
-// Register map (v2.2):
+// Register map (v2.4):
 //   0x00  CSR_CTRL        RW  conv_arm[0], fifo_clr[1](SC), soft_rst[2](SC)
-//   0x04  CSR_MODE        RW  mode_cfg[0], input_sel[1], out_mode[3:2]
+//   0x04  CSR_MODE        RW  [0]=reserved, input_sel[1], out_mode[3:2]
 //   0x08  CSR_MAX_HITS    RW  max_hits[3:0]
 //   0x0C  CSR_WDT_CTX     RW  per-context watchdog timeout[15:0]
 //   0x10  CSR_WDT_GLOBAL  RW  global watchdog timeout[15:0]
@@ -63,7 +63,6 @@ module mptdc_csr_minimal
   // ===========================================================================
   // Configuration registers (reset defaults)
   // ===========================================================================
-  mode_e                      r_mode_cfg;
   input_sel_e                 r_input_sel;
   out_mode_e                  r_out_mode;
   logic [MAX_HITS_W-1:0]     r_max_hits;
@@ -72,7 +71,6 @@ module mptdc_csr_minimal
 
   // Pack cfg output
   always_comb begin
-    cfg_o.mode_cfg           = r_mode_cfg;
     cfg_o.input_sel          = r_input_sel;
     cfg_o.out_mode           = r_out_mode;
     cfg_o.max_hits           = r_max_hits;
@@ -91,7 +89,6 @@ module mptdc_csr_minimal
       conv_arm_o             <= 1'b0;
       fifo_clr_pulse_o       <= 1'b0;
       soft_rst_pulse_o       <= 1'b0;
-      r_mode_cfg             <= MODE_MULTI_HIT;
       r_input_sel            <= INPUT_SPAD;
       r_out_mode             <= OUT_MODE_RAW_FEATURES;
       r_max_hits             <= MAX_HITS_W'(MAX_HITS);
@@ -111,7 +108,6 @@ module mptdc_csr_minimal
           end
 
           CSR_MODE: begin
-            r_mode_cfg  <= mode_e'(csr_wdata_i[0]);
             r_input_sel <= input_sel_e'(csr_wdata_i[1]);
             r_out_mode  <= out_mode_e'(csr_wdata_i[3:2]);
           end
@@ -156,7 +152,6 @@ module mptdc_csr_minimal
       end
 
       CSR_MODE: begin
-        rd_data_next[0]   = r_mode_cfg;
         rd_data_next[1]   = r_input_sel;
         rd_data_next[3:2] = r_out_mode;
       end

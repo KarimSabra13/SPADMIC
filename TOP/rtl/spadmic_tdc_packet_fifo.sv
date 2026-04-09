@@ -1,3 +1,10 @@
+// =============================================================================
+// Project  : SPADMIC Top-Level Integration
+// File     : spadmic_tdc_packet_fifo.sv
+// Purpose  : Legacy packet FIFO retained for standalone collateral around the
+//            older per-axis narrow packet path.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
@@ -49,6 +56,8 @@ module spadmic_tdc_packet_fifo #(
   assign {pkt_sop_o, pkt_eop_o, pkt_data_o} = fifo_rd_data;
   assign fifo_rd_en      = pkt_valid_o & pkt_ready_i;
 
+  // The FIFO stores SOP/EOP sideband bits with each word so the downstream
+  // legacy arbiter can preserve packet boundaries without reparsing payloads.
   mptdc_sync_fifo #(
     .WIDTH (FIFO_W),
     .DEPTH (DEPTH)

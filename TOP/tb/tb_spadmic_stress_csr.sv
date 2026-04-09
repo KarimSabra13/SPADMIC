@@ -47,6 +47,29 @@ module tb_spadmic_stress_csr;
   logic [SPADMIC_CSR_ADDR_W-1:0] pos_addr;
   logic [SPADMIC_CSR_DATA_W-1:0] pos_wdata, pos_rdata;
 
+  logic tdc_tx_busy;
+  logic [2:0] tdc_pkt_pending;
+  logic [2:0] tdc_pkt_full;
+  logic position_busy_status;
+  logic position_pending_status;
+  logic position_drop_sticky;
+  logic position_glitch_sticky;
+  logic req_global_enable;
+  logic [2:0] req_axis_enable;
+  logic req_position_enable;
+  spadmic_tx_sel_e req_shared_tx_sel;
+  mptdc_pkg::input_sel_e req_tdc_input_sel;
+  mptdc_pkg::out_mode_e  req_tdc_out_mode;
+  logic cfg_accept;
+  logic transition_busy;
+  logic cfg_update;
+  logic active_global_enable;
+  logic [2:0] active_axis_enable;
+  logic active_position_enable;
+  spadmic_tx_sel_e shared_tx_sel;
+  mptdc_pkg::input_sel_e tdc_input_sel;
+  mptdc_pkg::out_mode_e  tdc_out_mode;
+
   initial clk_sys = 0;
   always #(CLK_PERIOD/2) clk_sys = ~clk_sys;
 
@@ -111,13 +134,52 @@ module tb_spadmic_stress_csr;
     .csr_ready_o (glob_ready),
     .csr_rvalid_o(glob_rvalid),
     .csr_rdata_o (glob_rdata),
-    .tdc_tx_busy_i    (1'b0),
-    .tdc_pkt_pending_i(3'b000),
-    .position_busy_i  (1'b0),
-    .position_pending_i(1'b0),
-    .global_enable_o  (),
-    .axis_enable_o    (),
-    .position_enable_o()
+    .tdc_tx_busy_i    (tdc_tx_busy),
+    .tdc_pkt_pending_i(tdc_pkt_pending),
+    .tdc_pkt_full_i   (tdc_pkt_full),
+    .position_busy_i  (position_busy_status),
+    .position_pending_i(position_pending_status),
+    .position_drop_sticky_i(position_drop_sticky),
+    .position_glitch_sticky_i(position_glitch_sticky),
+    .cfg_accept_i     (cfg_accept),
+    .transition_busy_i(transition_busy),
+    .active_global_enable_i(active_global_enable),
+    .active_axis_enable_i(active_axis_enable),
+    .active_position_enable_i(active_position_enable),
+    .active_shared_tx_sel_i(shared_tx_sel),
+    .active_tdc_input_sel_i(tdc_input_sel),
+    .active_tdc_out_mode_i(tdc_out_mode),
+    .req_global_enable_o(req_global_enable),
+    .req_axis_enable_o (req_axis_enable),
+    .req_position_enable_o(req_position_enable),
+    .req_shared_tx_sel_o(req_shared_tx_sel),
+    .req_tdc_input_sel_o(req_tdc_input_sel),
+    .req_tdc_out_mode_o(req_tdc_out_mode),
+    .cfg_update_o     (cfg_update)
+  );
+
+  spadmic_top_sequencer u_seq (
+    .clk_sys              (clk_sys),
+    .rst_n                (rst_n),
+    .cfg_update_i         (cfg_update),
+    .req_global_enable_i  (req_global_enable),
+    .req_axis_enable_i    (req_axis_enable),
+    .req_position_enable_i(req_position_enable),
+    .req_shared_tx_sel_i  (req_shared_tx_sel),
+    .req_tdc_input_sel_i  (req_tdc_input_sel),
+    .req_tdc_out_mode_i   (req_tdc_out_mode),
+    .tdc_tx_busy_i        (tdc_tx_busy),
+    .tdc_pkt_pending_i    (tdc_pkt_pending),
+    .position_busy_i      (position_busy_status),
+    .position_pending_i   (position_pending_status),
+    .cfg_accept_o         (cfg_accept),
+    .transition_busy_o    (transition_busy),
+    .active_global_enable_o(active_global_enable),
+    .active_axis_enable_o (active_axis_enable),
+    .active_position_enable_o(active_position_enable),
+    .active_shared_tx_sel_o(shared_tx_sel),
+    .active_tdc_input_sel_o(tdc_input_sel),
+    .active_tdc_out_mode_o(tdc_out_mode)
   );
 
   // ── Simple CSR stub for TDC/POS regions ──
@@ -274,6 +336,13 @@ module tb_spadmic_stress_csr;
     req_addr = '0;
     req_wdata = '0;
     rsp_ready = 0;
+    tdc_tx_busy = 1'b0;
+    tdc_pkt_pending = '0;
+    tdc_pkt_full = '0;
+    position_busy_status = 1'b0;
+    position_pending_status = 1'b0;
+    position_drop_sticky = 1'b0;
+    position_glitch_sticky = 1'b0;
 
     repeat (10) @(posedge clk_sys);
     rst_n = 1;
@@ -299,14 +368,58 @@ module tb_spadmic_stress_csr;
     // ========================================
     csr_write(12'h008, 32'h0000_001F); // Enable all
     csr_read(12'h008, rd_data, rd_err);
-    check("T3 ctrl readback", rd_data[4:0] === 5'h1F);
+    check("T3 ctrl readback", rd_data[8:0] === 9'h01F);
+    repeat (4) @(posedge clk_sys);
+    csr_read(12'h00C, rd_data, rd_err);
+    check("T3b active global enable applied", rd_data[16] === 1'b1);
+    check("T3b active axis enables applied", rd_data[19:17] === 3'b111);
+    check("T3b sequencer idle after commit", rd_data[14] === 1'b0);
+    check("T3b control accept high when idle", rd_data[21] === 1'b1);
 
     // ========================================
     // TEST 4: Read STATUS register (addr 0x00C)
     // ========================================
+    tdc_tx_busy = 1'b1;
+    tdc_pkt_pending = 3'b101;
+    tdc_pkt_full = 3'b010;
+    position_busy_status = 1'b1;
+    position_pending_status = 1'b1;
     csr_read(12'h00C, rd_data, rd_err);
     check("T4 status read no error", rd_err === 1'b0);
-    // Status is read-only, composed from inputs (all tied to 0/0)
+    check("T4 status busy bit", rd_data[0] === 1'b1);
+    check("T4 status pending bits", rd_data[3:1] === 3'b101);
+    check("T4 position busy/pending bits", rd_data[5:4] === 2'b11);
+    check("T4 packet full bits", rd_data[13:11] === 3'b010);
+    check("T4 control accept low while busy", rd_data[21] === 1'b0);
+
+    // ========================================
+    // TEST 4b: Reject control update while not idle
+    // ========================================
+    csr_write(12'h008, 32'h0000_003F); // Request position TX while busy
+    csr_read(12'h008, rd_data, rd_err);
+    check("T4b ctrl write rejected while busy", rd_data[5] === 1'b0);
+    csr_read(12'h010, rd_data, rd_err);
+    check("T4b reject sticky set", rd_data[0] === 1'b1);
+    csr_read(12'h014, rd_data, rd_err);
+    check("T4b reject count increments", rd_data[15:0] === 16'd1);
+
+    tdc_tx_busy = 1'b0;
+    tdc_pkt_pending = '0;
+    tdc_pkt_full = '0;
+    position_busy_status = 1'b0;
+    position_pending_status = 1'b0;
+
+    // ========================================
+    // TEST 4c: Accepted source switch once idle
+    // ========================================
+    csr_write(12'h008, 32'h0000_003F);
+    csr_read(12'h008, rd_data, rd_err);
+    check("T4c ctrl readback updates request", rd_data[5] === 1'b1);
+    repeat (4) @(posedge clk_sys);
+    csr_read(12'h00C, rd_data, rd_err);
+    check("T4c active shared-tx switched", rd_data[7] === 1'b1);
+    check("T4c transition complete", rd_data[14] === 1'b0);
+    check("T4c no pending config mismatch", rd_data[15] === 1'b0);
 
     // ========================================
     // TEST 5: Write/readback TDC_X region

@@ -1,3 +1,10 @@
+// =============================================================================
+// Project  : SPADMIC Top-Level Integration
+// File     : spadmic_csr_decoder.sv
+// Purpose  : Decode the shared CSR request channel across global, per-axis TDC,
+//            and position regions, with timeout-protected read responses.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
@@ -85,6 +92,8 @@ module spadmic_csr_decoder (
 
   wire accept_req = csr_req_valid_i & csr_req_ready_o;
 
+  // Region decode uses the shared 12-bit SPADMIC CSR map. TDC regions forward
+  // the lower MPTDC-local address subset to each axis instance.
   always_comb begin
     case (csr_req_addr_i[11:8])
       SPADMIC_REGION_GLOBAL:   target_sel = TGT_GLOBAL;
@@ -153,6 +162,8 @@ module spadmic_csr_decoder (
     endcase
   end
 
+  // Writes return an immediate empty response. Reads wait for the selected slave
+  // or terminate with an error if the region is invalid or never responds.
   always_ff @(posedge clk_sys or negedge rst_n) begin
     if (!rst_n) begin
       state_q          <= ST_IDLE;

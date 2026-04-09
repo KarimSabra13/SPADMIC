@@ -32,7 +32,7 @@ Read timing model:
 | Addr | Name | R/W | Purpose |
 |------|------|-----|---------|
 | `0x00` | `CTRL` | R/W | arm level and self-clearing control pulses |
-| `0x04` | `MODE` | R/W | mode, input source, output format |
+| `0x04` | `MODE` | R/W | reserved bit, input source, output format |
 | `0x08` | `MAX_HITS` | R/W | max hits per conversion |
 | `0x0C` | `WDT_CTX` | R/W | fast-domain context watchdog timeout |
 | `0x10` | `WDT_GLOBAL` | R/W | system-domain global watchdog timeout |
@@ -70,14 +70,15 @@ Recommended usage:
 ### 3.2 `MODE` (`0x04`)
 
 ```text
-bit 0    mode_cfg   0 = MULTI_HIT, 1 = FIRST_HIT
+bit 0    reserved   read-as-zero / ignored on write in the active v2.4 RTL
 bit 1    input_sel  0 = SPAD inputs, 1 = CAL inputs
 bit 3:2  out_mode   0 = RAW_FEATURES, 1 = RAW_TIMESTAMP, 2 = FULL
 ```
 
 Usage rule:
 
-Do not change `mode_cfg`, `input_sel`, or `out_mode` while a conversion is active. The RTL assumes these fields are quasi-static during measurement.
+Do not change `input_sel` or `out_mode` while a conversion is active. The RTL assumes these fields are quasi-static during measurement.
+If you want the minimum-latency fast-close behavior that older collateral called `FIRST_HIT`, use `MAX_HITS = 1`.
 
 ### 3.3 `MAX_HITS` (`0x08`)
 
@@ -192,12 +193,26 @@ This counts true rejected START events:
 
 It is not the same thing as hit saturation.
 
-## 5. Typical configuration sequences
+## 5. Shared-readout export note
+
+The optional shared-readout export used by the active SPADMIC top is **not**
+controlled through this CSR block. It is driven through the top-level ports:
+
+- `shared_readout_en_i`
+- `acq_ready_i`
+- `acq_valid_o`
+- `acq_data_o`
+
+When `shared_readout_en_i = 1`, the internal FIFO is drained through the
+acquisition-record export path instead of the local narrow serializer. The CSR
+map itself does not change.
+
+## 6. Typical configuration sequences
 
 ### 5.1 SPAD multi-hit collection
 
 ```text
-1. Write MODE      : input_sel=SPAD, mode=MULTI_HIT, out_mode=RAW_FEATURES
+1. Write MODE      : reserved[0]=0, input_sel=SPAD, out_mode=RAW_FEATURES
 2. Write MAX_HITS  : 15
 3. Write WDT_CTX   : fast-domain timeout value
 4. Write WDT_GLOBAL: sys-domain timeout value
@@ -208,14 +223,14 @@ It is not the same thing as hit saturation.
 ### 5.2 Calibration collection
 
 ```text
-1. Write MODE      : input_sel=CAL, mode=MULTI_HIT, out_mode=RAW_FEATURES
+1. Write MODE      : reserved[0]=0, input_sel=CAL, out_mode=RAW_FEATURES
 2. Program MAX_HITS / watchdogs as needed
 3. Write CTRL      : conv_arm=1
 4. Apply external calibration START/STOP pulses
 5. Capture packet stream and log raw features offline
 ```
 
-## 6. Operational cautions
+## 7. Operational cautions
 
 1. Keep `conv_arm` high if you want minimum deadtime between conversions.
 2. Do not retarget `input_sel` during an active conversion.

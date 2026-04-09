@@ -66,10 +66,10 @@ So the 16-bit output path mainly affects sustained throughput and overflow risk,
 
 ## 6. Factors that still affect effective deadtime
 
-### 6.1 FIRST_HIT vs MULTI_HIT close path
+### 6.1 Fast close (`max_hits = 1`) vs higher-`max_hits` close path
 
-- `FIRST_HIT` close is a fast OR reduction of the PD matrix
-- `MULTI_HIT` close uses a pipelined count tree, adding one fast-cycle latency to close detection
+- fast close uses a direct OR reduction of the PD matrix
+- higher `max_hits` values use a pipelined count tree, adding one fast-cycle latency to close detection
 
 That added cycle is intentionally accepted to make the fast-domain logic synthesizable.
 

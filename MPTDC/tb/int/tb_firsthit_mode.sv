@@ -4,10 +4,11 @@
 // =============================================================================
 // Project : SPAD_MPTDC Verification Collateral
 // File    : tb_firsthit_mode.sv
-// Purpose : Verifies FIRST_HIT closure semantics and packet flags.
+// Purpose : Compatibility-named bench that verifies fast-close semantics via
+//           max_hits=1 and checks the exported close flags.
 // Author  : Karim Sabra
-// Notes   : Checks packet validity and the first-hit flag, then compares against a
-//           MULTI_HIT reference conversion.
+// Notes   : The bench name is kept for collateral continuity, but the active
+//           v2.4 DUT no longer has a separate FIRST_HIT mode bit.
 // =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
@@ -34,12 +35,18 @@ module tb_firsthit_mode;
     .clk_sys(clk_sys), .async_rst_n(async_rst_n),
     .start_spad_async_i(start_spad), .stop_spad_async_i(stop_spad),
     .cal_start_async_i(cal_start), .cal_stop_async_i(cal_stop),
+    .input_sel_override_en_i(1'b0),
+    .input_sel_override_i(INPUT_SPAD),
+    .out_mode_override_en_i(1'b0),
+    .out_mode_override_i(OUT_MODE_RAW_FEATURES),
     .csr_valid_i(csr_valid), .csr_write_i(csr_write),
     .csr_addr_i(csr_addr), .csr_wdata_i(csr_wdata),
     .csr_ready_o(csr_ready), .csr_rvalid_o(csr_rvalid),
     .csr_rdata_o(csr_rdata),
     .narrow_ready_i(narrow_ready), .narrow_valid_o(narrow_valid),
-    .narrow_data_o(narrow_data)
+    .narrow_data_o(narrow_data),
+    .shared_readout_en_i(1'b0), .acq_ready_i(1'b0),
+    .acq_valid_o(), .acq_data_o(), .fifo_full_o()
   );
 
   task automatic csr_wr(input logic [CSR_ADDR_W-1:0] a, input logic [CSR_DATA_W-1:0] d);
@@ -56,18 +63,18 @@ module tb_firsthit_mode;
     async_rst_n = 1'b0;
     #100_000; async_rst_n = 1'b1; #100_000;
 
-    $display("[TB] === tb_firsthit_mode: FIRST_HIT behavior test ===");
+    $display("[TB] === tb_firsthit_mode: fast-close (max_hits=1) behavior test ===");
 
-    // Configure: FIRST_HIT mode, max_hits=15 (won't matter), SPAD input
-    csr_wr(CSR_MODE,       32'h0000_0001);  // mode=FIRST_HIT
-    csr_wr(CSR_MAX_HITS,   32'h0000_000F);
+    // Configure: SPAD input, RAW_FEATURES output, and fast close via max_hits=1.
+    csr_wr(CSR_MODE,       32'h0000_0000);  // reserved[0]=0, input_sel=SPAD, out_mode=RAW_FEATURES
+    csr_wr(CSR_MAX_HITS,   32'h0000_0001);
     csr_wr(CSR_WDT_CTX,    32'h0000_FFFF);  // won't fire
     csr_wr(CSR_WDT_GLOBAL, 32'h0000_0000);  // disabled
     #50_000;
 
-    // ── Run 10 FIRST_HIT conversions with different delays ─────────
+    // ── Run 10 fast-close conversions with different delays ────────
     // Note: In the current architecture, PD cells don't have a gating input,
-    // so FIRST_HIT mode closes the measurement early (sets closed_by_firsthit
+    // so max_hits=1 closes the measurement early (sets closed_by_fast_maxhit
     // flag) but the PD matrix still accumulates hits during the CAPTURE cycle.
     // The key test is: (1) flag is set, (2) packet is valid, (3) hits > 0.
     begin
@@ -99,25 +106,25 @@ module tb_firsthit_mode;
           hits = header_hit_count(pkt[0]);
           flags = header_flags(pkt[0]);
 
-          $display("[TB] Conv %0d: delay=%0dps hits=%0d flags=%04b firsthit=%b",
-                   i, delay_ps, hits, flags, flags.closed_by_firsthit);
+          $display("[TB] Conv %0d: delay=%0dps hits=%0d flags=%04b fast_close=%b",
+                   i, delay_ps, hits, flags, flags.closed_by_fast_maxhit);
 
-          if (flags.closed_by_firsthit) flag_cnt++;
+          if (flags.closed_by_fast_maxhit) flag_cnt++;
         end else begin
           $display("[TB] Conv %0d: bad packet (wc=%0d)", i, wc);
         end
         #50_000;
       end
 
-      $display("[TB] Results: %0d/%0d had closed_by_firsthit flag set", flag_cnt, total);
+      $display("[TB] Results: %0d/%0d had closed_by_fast_maxhit flag set", flag_cnt, total);
       assert (flag_cnt >= total - 2) else begin
-        $error("[TB] FAIL: closed_by_firsthit not consistently set"); $finish;
+        $error("[TB] FAIL: closed_by_fast_maxhit not consistently set"); $finish;
       end
     end
 
-    // ── Compare with MULTI_HIT: same delay should produce more hits ──
-    $display("[TB] Comparison: same delay in MULTI_HIT mode...");
-    csr_wr(CSR_MODE, 32'h0000_0000);  // MULTI_HIT
+    // ── Compare with higher max_hits: same delay should produce more hits ──
+    $display("[TB] Comparison: same delay with max_hits=15...");
+    csr_wr(CSR_MAX_HITS, 32'h0000_000F);
     #50_000;
 
     csr_wr(CSR_CTRL, 32'h0000_0001);
@@ -135,7 +142,7 @@ module tb_firsthit_mode;
     if (wc >= 2 && is_header(pkt[0])) begin
       automatic int mh_hits;
       mh_hits = header_hit_count(pkt[0]);
-      $display("[TB] MULTI_HIT same delay: hits=%0d (should be > FIRST_HIT count)", mh_hits);
+      $display("[TB] max_hits=15 same delay: hits=%0d (should be > fast-close count)", mh_hits);
     end
 
     $display("[TB] ===== TEST PASSED =====");

@@ -1,3 +1,10 @@
+// =============================================================================
+// Project  : SPADMIC Top-Level Integration
+// File     : spadmic_tdc_arbiter3.sv
+// Purpose  : Legacy packet-level round-robin arbiter retained for standalone
+//            collateral around the older per-axis narrow packet path.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
@@ -33,6 +40,7 @@ module spadmic_tdc_arbiter3 (
   logic [15:0] active_data;
   wire        shared_xfer;
 
+  // A new grant is chosen only on SOP so one packet is forwarded atomically.
   always_comb begin
     choice_valid = 1'b0;
     choice_idx   = 2'd0;

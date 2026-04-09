@@ -1,3 +1,10 @@
+// =============================================================================
+// Project  : SPADMIC I2C Control Plane
+// File     : spadmic_i2c_slave.sv
+// Purpose  : Synchronized I2C slave that converts register-pointer reads/writes
+//            into local CSR-style transactions in the clk_sys domain.
+// Author   : Karim Sabra
+// =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
 
@@ -61,6 +68,9 @@ module spadmic_i2c_slave #(
   logic [7:0] tx_shift_q;
   logic       addr_match_q;
   logic       rw_q;
+  // ACK bits must remain driven through the full SCL-high phase and only release
+  // on the following SCL-low phase, otherwise the slave can self-generate STOPs.
+  logic       ack_seen_high_q;
   logic       pointer_valid_q;
   logic [SPADMIC_CSR_ADDR_W-1:0] pointer_addr_q;
   logic [SPADMIC_CSR_DATA_W-1:0] write_data_q;
@@ -85,6 +95,8 @@ module spadmic_i2c_slave #(
   assign txn_wdata_o     = cmd_wdata_q;
   assign txn_rsp_ready_o = 1'b1;
 
+  // SCL/SDA are double-synchronized into clk_sys before the slave FSM decodes
+  // START/STOP conditions and bit transfers.
   always_ff @(posedge clk_sys or negedge rst_n) begin
     if (!rst_n) begin
       scl_sync_q      <= 2'b11;
@@ -98,6 +110,7 @@ module spadmic_i2c_slave #(
       tx_shift_q      <= 8'h00;
       addr_match_q    <= 1'b0;
       rw_q            <= 1'b0;
+      ack_seen_high_q <= 1'b0;
       pointer_valid_q <= 1'b0;
       pointer_addr_q  <= '0;
       write_data_q    <= '0;
@@ -121,9 +134,11 @@ module spadmic_i2c_slave #(
         state_q      <= ST_DEV_ADDR;
         bit_idx_q    <= 3'd7;
         rx_shift_q   <= 8'h00;
+        ack_seen_high_q <= 1'b0;
         i2c_sda_oe_o <= 1'b0;
       end else if (stop_cond) begin
         state_q      <= ST_IDLE;
+        ack_seen_high_q <= 1'b0;
         i2c_sda_oe_o <= 1'b0;
       end else begin
         case (state_q)
@@ -145,23 +160,28 @@ module spadmic_i2c_slave #(
 
           ST_ACK_ADDR: begin
             if (scl_fall) begin
-              i2c_sda_oe_o <= addr_match_q
-                            & (~rw_q | (rw_q & pointer_valid_q));
-            end else if (scl_rise) begin
-              i2c_sda_oe_o <= 1'b0;
-              if (!addr_match_q) begin
-                state_q <= ST_IDLE;
-              end else if (!rw_q) begin
-                state_q    <= ST_PTR_HI;
-                bit_idx_q  <= 3'd7;
-                rx_shift_q <= 8'h00;
+              if (!ack_seen_high_q) begin
+                i2c_sda_oe_o <= addr_match_q
+                              & (~rw_q | (rw_q & pointer_valid_q));
               end else begin
-                cmd_valid_q <= 1'b1;
-                cmd_write_q <= 1'b0;
-                cmd_addr_q  <= pointer_addr_q;
-                cmd_wdata_q <= '0;
-                state_q     <= ST_READ_WAIT_RSP;
+                ack_seen_high_q <= 1'b0;
+                i2c_sda_oe_o    <= 1'b0;
+                if (!addr_match_q) begin
+                  state_q <= ST_IDLE;
+                end else if (!rw_q) begin
+                  state_q    <= ST_PTR_HI;
+                  bit_idx_q  <= 3'd7;
+                  rx_shift_q <= 8'h00;
+                end else begin
+                  cmd_valid_q <= 1'b1;
+                  cmd_write_q <= 1'b0;
+                  cmd_addr_q  <= pointer_addr_q;
+                  cmd_wdata_q <= '0;
+                  state_q     <= ST_READ_WAIT_RSP;
+                end
               end
+            end else if (scl_rise) begin
+              ack_seen_high_q <= 1'b1;
             end
           end
 
@@ -169,10 +189,7 @@ module spadmic_i2c_slave #(
             rx_byte = {rx_shift_q[6:0], sda_sync};
             rx_shift_q <= rx_byte;
             if (bit_idx_q == 3'd0) begin
-              pointer_addr_q[11:8] <= 4'h0;
-              pointer_addr_q[7:0]  <= 8'h00;
-              pointer_addr_q[11:4] <= {4'h0, rx_byte[7:4]};
-              pointer_addr_q[3:0]  <= rx_byte[3:0];
+              pointer_addr_q <= {rx_byte[3:0], 8'h00};
               state_q <= ST_ACK_PTR_HI;
             end else begin
               bit_idx_q <= bit_idx_q - 3'd1;
@@ -181,12 +198,17 @@ module spadmic_i2c_slave #(
 
           ST_ACK_PTR_HI: begin
             if (scl_fall) begin
-              i2c_sda_oe_o <= 1'b1;
+              if (!ack_seen_high_q) begin
+                i2c_sda_oe_o <= 1'b1;
+              end else begin
+                ack_seen_high_q <= 1'b0;
+                i2c_sda_oe_o    <= 1'b0;
+                state_q         <= ST_PTR_LO;
+                bit_idx_q       <= 3'd7;
+                rx_shift_q      <= 8'h00;
+              end
             end else if (scl_rise) begin
-              i2c_sda_oe_o <= 1'b0;
-              state_q      <= ST_PTR_LO;
-              bit_idx_q    <= 3'd7;
-              rx_shift_q   <= 8'h00;
+              ack_seen_high_q <= 1'b1;
             end
           end
 
@@ -204,12 +226,17 @@ module spadmic_i2c_slave #(
 
           ST_ACK_PTR_LO: begin
             if (scl_fall) begin
-              i2c_sda_oe_o <= 1'b1;
+              if (!ack_seen_high_q) begin
+                i2c_sda_oe_o <= 1'b1;
+              end else begin
+                ack_seen_high_q <= 1'b0;
+                i2c_sda_oe_o    <= 1'b0;
+                state_q         <= ST_WAIT_RW_RESTART;
+                bit_idx_q       <= 3'd7;
+                rx_shift_q      <= 8'h00;
+              end
             end else if (scl_rise) begin
-              i2c_sda_oe_o <= 1'b0;
-              state_q      <= ST_WAIT_RW_RESTART;
-              bit_idx_q    <= 3'd7;
-              rx_shift_q   <= 8'h00;
+              ack_seen_high_q <= 1'b1;
             end
           end
 
@@ -238,12 +265,17 @@ module spadmic_i2c_slave #(
 
           ST_ACK_WRITE_D0: begin
             if (scl_fall) begin
-              i2c_sda_oe_o <= 1'b1;
+              if (!ack_seen_high_q) begin
+                i2c_sda_oe_o <= 1'b1;
+              end else begin
+                ack_seen_high_q <= 1'b0;
+                i2c_sda_oe_o    <= 1'b0;
+                state_q         <= ST_WRITE_D1;
+                bit_idx_q       <= 3'd7;
+                rx_shift_q      <= 8'h00;
+              end
             end else if (scl_rise) begin
-              i2c_sda_oe_o <= 1'b0;
-              state_q      <= ST_WRITE_D1;
-              bit_idx_q    <= 3'd7;
-              rx_shift_q   <= 8'h00;
+              ack_seen_high_q <= 1'b1;
             end
           end
 
@@ -260,12 +292,17 @@ module spadmic_i2c_slave #(
 
           ST_ACK_WRITE_D1: begin
             if (scl_fall) begin
-              i2c_sda_oe_o <= 1'b1;
+              if (!ack_seen_high_q) begin
+                i2c_sda_oe_o <= 1'b1;
+              end else begin
+                ack_seen_high_q <= 1'b0;
+                i2c_sda_oe_o    <= 1'b0;
+                state_q         <= ST_WRITE_D2;
+                bit_idx_q       <= 3'd7;
+                rx_shift_q      <= 8'h00;
+              end
             end else if (scl_rise) begin
-              i2c_sda_oe_o <= 1'b0;
-              state_q      <= ST_WRITE_D2;
-              bit_idx_q    <= 3'd7;
-              rx_shift_q   <= 8'h00;
+              ack_seen_high_q <= 1'b1;
             end
           end
 
@@ -282,12 +319,17 @@ module spadmic_i2c_slave #(
 
           ST_ACK_WRITE_D2: begin
             if (scl_fall) begin
-              i2c_sda_oe_o <= 1'b1;
+              if (!ack_seen_high_q) begin
+                i2c_sda_oe_o <= 1'b1;
+              end else begin
+                ack_seen_high_q <= 1'b0;
+                i2c_sda_oe_o    <= 1'b0;
+                state_q         <= ST_WRITE_D3;
+                bit_idx_q       <= 3'd7;
+                rx_shift_q      <= 8'h00;
+              end
             end else if (scl_rise) begin
-              i2c_sda_oe_o <= 1'b0;
-              state_q      <= ST_WRITE_D3;
-              bit_idx_q    <= 3'd7;
-              rx_shift_q   <= 8'h00;
+              ack_seen_high_q <= 1'b1;
             end
           end
 
@@ -304,14 +346,19 @@ module spadmic_i2c_slave #(
 
           ST_ACK_WRITE_D3: begin
             if (scl_fall) begin
-              i2c_sda_oe_o <= 1'b1;
+              if (!ack_seen_high_q) begin
+                i2c_sda_oe_o <= 1'b1;
+              end else begin
+                ack_seen_high_q <= 1'b0;
+                i2c_sda_oe_o    <= 1'b0;
+                cmd_valid_q     <= 1'b1;
+                cmd_write_q     <= 1'b1;
+                cmd_addr_q      <= pointer_addr_q;
+                cmd_wdata_q     <= write_data_q;
+                state_q         <= ST_IDLE;
+              end
             end else if (scl_rise) begin
-              i2c_sda_oe_o <= 1'b0;
-              cmd_valid_q  <= 1'b1;
-              cmd_write_q  <= 1'b1;
-              cmd_addr_q   <= pointer_addr_q;
-              cmd_wdata_q  <= write_data_q;
-              state_q      <= ST_IDLE;
+              ack_seen_high_q <= 1'b1;
             end
           end
 
@@ -320,6 +367,7 @@ module spadmic_i2c_slave #(
               read_data_q  <= txn_rsp_err_i ? '0 : txn_rsp_rdata_i;
               tx_shift_q   <= txn_rsp_err_i ? 8'h00 : txn_rsp_rdata_i[31:24];
               bit_idx_q    <= 3'd7;
+              i2c_sda_oe_o <= txn_rsp_err_i ? 1'b1 : ~txn_rsp_rdata_i[31];
               state_q      <= ST_READ_D0;
             end
           end
@@ -329,7 +377,6 @@ module spadmic_i2c_slave #(
               i2c_sda_oe_o <= ~tx_shift_q[bit_idx_q];
             end else if (scl_rise) begin
               if (bit_idx_q == 3'd0) begin
-                i2c_sda_oe_o <= 1'b0;
                 case (state_q)
                   ST_READ_D0: state_q <= ST_READ_ACK_D0;
                   ST_READ_D1: state_q <= ST_READ_ACK_D1;

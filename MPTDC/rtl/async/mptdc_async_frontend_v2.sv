@@ -148,10 +148,10 @@ module mptdc_async_frontend_v2
   // =========================================================================
   always_comb begin
     for (int i = 0; i < N_CTX; i++) begin
-      if (ctx_drain_q[i])
-        ctx_state_o[i] = CTX_DRAINING;
-      else if (start_latched_q & (active_ctx_q == ctx_id_t'(i)))
+      if (start_latched_q & (active_ctx_q == ctx_id_t'(i)))
         ctx_state_o[i] = CTX_CAPTURING;
+      else if (ctx_drain_q[i])
+        ctx_state_o[i] = CTX_DRAINING;
       else
         ctx_state_o[i] = CTX_FREE;
     end

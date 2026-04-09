@@ -41,12 +41,13 @@ In `RAW_TIMESTAMP` and `FULL` modes, timestamp payload words may have any patter
 
 ```text
 bit 3  reserved             = currently always 0
-bit 2  closed_by_firsthit   = conversion closed because FIRST_HIT mode saw a hit
+bit 2  closed_by_fast_maxhit = conversion closed by the fast close path used when max_hits = 1
 bit 1  closed_by_maxhits    = conversion closed because hit count reached max_hits
 bit 0  closed_by_watchdog   = conversion closed because the fast-domain context watchdog fired
 ```
 
 Important: true context-allocation overflow is not encoded in the packet header. It is counted separately in CSR `OVF_COUNT`.
+There is no separate `FIRST_HIT` mode in the active v2.4 RTL; the bit above reports the compatibility-equivalent fast-close path.
 
 ## 4. Sub-header word
 

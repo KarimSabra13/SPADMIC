@@ -209,7 +209,7 @@ echo "Results: $PASS passed, $FAIL failed out of 9"
 | `tb_watchdog_recovery` | Global watchdog timeout and recovery |
 | `tb_start_wdt` | Missing-STOP → START watchdog fires |
 | `tb_overflow_count` | Overflow counter / rejected-START accounting |
-| `tb_firsthit_mode` | FIRST_HIT mode single-hit packet |
+| `tb_firsthit_mode` | compatibility-named fast-close packet check (`max_hits = 1`) |
 
 ---
 
@@ -246,7 +246,7 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
 |------|-----------------|
 | `smoke_single_conv` | Single conversion, ≥1 hit, no flags |
 | `full_mode_timestamp` | FULL mode, timestamp vs Vernier algebra |
-| `firsthit_contract` | FIRST_HIT flag set, min 1 hit |
+| `firsthit_contract` | fast-close flag set, min 1 hit |
 | `backpressure_integrity` | Packets survive random stalls |
 | `start_watchdog` | START-only → watchdog fires + recovery |
 | `cal_inject` | CAL source produces valid hits |

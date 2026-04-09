@@ -21,7 +21,7 @@
 //   - Global watchdog wdt_force_reset consumed: force-clears frontend
 //   - Overflow counting from start_rejected (real context-allocation overflow)
 //   - Status.ready/busy reflect active measurement state
-//   - pd_gate from meas_ctrl gates PD enable (FIRST_HIT freeze)
+//   - pd_gate from meas_ctrl gates PD enable on fast-close (max_hits=1)
 //   - slow_boundary_inc wired into context bank for offline calibration
 //   - meas_state_e is now 3-bit (5 states)
 // =============================================================================
@@ -50,7 +50,13 @@ module mptdc_core
   // 16-bit output
   input  wire                   narrow_ready_i,
   output wire                   narrow_valid_o,
-  output wire [NARROW_W-1:0]   narrow_data_o
+  output wire [NARROW_W-1:0]   narrow_data_o,
+
+  // Optional shared-readout export (uses the same internal acquisition FIFO)
+  input  wire                   shared_readout_en_i,
+  input  wire                   acq_ready_i,
+  output wire                   acq_valid_o,
+  output wire [ACQ_REC_W-1:0]  acq_data_o
 );
 
   // =========================================================================
@@ -99,7 +105,7 @@ module mptdc_core
   // =========================================================================
   wire           meas_capture_en, meas_fe_clear, meas_pd_clear;
   wire           meas_osc_keep_alive;
-  wire           meas_pd_gate;        // v2.2: PD gate for FIRST_HIT freeze
+  wire           meas_pd_gate;        // v2.2: PD gate for fast-close freeze when max_hits=1
   tdc_conv_flags_t meas_close_flags;
   wire [MAX_HITS_W-1:0] meas_hit_count;
   meas_state_e   meas_state;
@@ -128,6 +134,7 @@ module mptdc_core
   wire           fifo_rd_valid;
   wire [ACQ_REC_W-1:0] fifo_rd_data;
   wire           fifo_rd_en;
+  wire           fifo_rd_en_narrow;
   wire [$clog2(FIFO_DEPTH+1)-1:0] fifo_level;
 
   // =========================================================================
@@ -365,7 +372,6 @@ module mptdc_core
     .meas_active_i    (fe_start_latched & fe_stop_latched),
     .hit_level_i      (pd_hit_level),
     .max_hits_cfg_i   (cfg_i.max_hits),
-    .first_hit_mode_i (cfg_i.mode_cfg == MODE_FIRST_HIT),
     .wdt_timeout_i    (cfg_i.wdt_ctx_timeout),
     .capture_en_o     (meas_capture_en),
     .fe_clear_o       (meas_fe_clear),
@@ -427,14 +433,22 @@ module mptdc_core
     .level_o   (fifo_level)
   );
 
+  // shared_readout_en_i switches the single internal FIFO reader between the
+  // exported acquisition-record interface and the legacy local serializer.
+  assign fifo_rd_en = shared_readout_en_i
+                    ? (fifo_rd_valid & acq_ready_i)
+                    : fifo_rd_en_narrow;
+  assign acq_valid_o = shared_readout_en_i & fifo_rd_valid;
+  assign acq_data_o  = fifo_rd_data;
+
   // ── Narrow 16-bit TX ──────────────────────────────────────────
   mptdc_narrow16_tx_v2 u_narrow_tx (
     .clk_sys         (clk_sys),
     .rst_n           (rst_sys_n),
     .out_mode_i      (cfg_i.out_mode),
-    .fifo_rd_valid_i (fifo_rd_valid),
+    .fifo_rd_valid_i (shared_readout_en_i ? 1'b0 : fifo_rd_valid),
     .fifo_rd_data_i  (fifo_rd_data),
-    .fifo_rd_en_o    (fifo_rd_en),
+    .fifo_rd_en_o    (fifo_rd_en_narrow),
     .narrow_ready_i  (narrow_ready_i),
     .narrow_valid_o  (narrow_valid_o),
     .narrow_data_o   (narrow_data_o)

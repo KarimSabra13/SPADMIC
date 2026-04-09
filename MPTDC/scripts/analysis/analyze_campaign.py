@@ -51,13 +51,17 @@ vernier_tconv_ps_vec = np.vectorize(vernier_tconv_ps)
 
 # ---------------------------------------------------------------------------
 # Flag bit definitions (bit-field positions)
+# Active v2.4 packet flags are packed as:
+#   bit 2 = closed_by_fast_maxhit
+#   bit 1 = closed_by_maxhits
+#   bit 0 = closed_by_watchdog
 # ---------------------------------------------------------------------------
-FLAG_CLOSED_BY_FIRSTHIT = 0
+FLAG_CLOSED_BY_FAST_MAXHIT = 2
 FLAG_CLOSED_BY_MAXHITS = 1
-FLAG_CLOSED_BY_WATCHDOG = 2
+FLAG_CLOSED_BY_WATCHDOG = 0
 
 FLAG_NAMES = {
-    FLAG_CLOSED_BY_FIRSTHIT: "closed_by_firsthit",
+    FLAG_CLOSED_BY_FAST_MAXHIT: "closed_by_fast_maxhit",
     FLAG_CLOSED_BY_MAXHITS: "closed_by_maxhits",
     FLAG_CLOSED_BY_WATCHDOG: "closed_by_watchdog",
 }
