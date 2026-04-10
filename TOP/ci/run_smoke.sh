@@ -33,16 +33,20 @@ xrun -64 -sv -compile \
 
 if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
   echo "  ✓ Compile PASS"
-  ((PASS++))
+  PASS=$((PASS + 1))
 else
   echo "  ✗ Compile FAIL"
-  ((FAIL++))
+  FAIL=$((FAIL + 1))
 fi
 
 # ── Step 2: First directed bench ───────────────────────────────
 echo ""
 echo "─── Step 2: Directed bench (stress_csr) ──────────────"
-bash "$REPO_ROOT/scripts/sim/run_tb.sh" tb_spadmic_stress_csr --sim xrun && ((PASS++)) || ((FAIL++))
+if bash "$REPO_ROOT/scripts/sim/run_tb.sh" tb_spadmic_stress_csr --sim xrun; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+fi
 
 # ── Summary ────────────────────────────────────────────────────
 echo ""

@@ -26,9 +26,9 @@ for test in "${SMOKE_TESTS[@]}"; do
   echo ""
   echo "─── VIP Smoke: $test ───────────────────────────────"
   if bash "$REPO_ROOT/scripts/sim/run_vip_test.sh" "$test"; then
-    ((PASS++))
+    PASS=$((PASS + 1))
   else
-    ((FAIL++))
+    FAIL=$((FAIL + 1))
   fi
 done
 

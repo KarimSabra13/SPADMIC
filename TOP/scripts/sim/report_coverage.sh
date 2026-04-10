@@ -22,7 +22,7 @@ echo "  Report:  $REPORT_DIR"
 # Build IMC command file
 CMD_FILE="$REPORT_DIR/imc_merge.tcl"
 cat > "$CMD_FILE" <<EOF
-// Auto-generated IMC merge script
+# Auto-generated IMC merge script
 merge $COV_WORKDIR/* -overwrite -out $REPORT_DIR/merged_cov
 load $REPORT_DIR/merged_cov
 report_metrics -out $REPORT_DIR/report -detail -kind aggregate -overwrite

@@ -58,9 +58,9 @@ echo ""
 echo "Waiting for all $NUM_SEEDS jobs to complete..."
 for pid in "${PIDS[@]}"; do
   if wait "$pid"; then
-    ((PASS++))
+    PASS=$((PASS + 1))
   else
-    ((FAIL++))
+    FAIL=$((FAIL + 1))
   fi
 done
 

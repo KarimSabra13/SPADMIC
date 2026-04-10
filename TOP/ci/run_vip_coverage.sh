@@ -42,9 +42,9 @@ for test in "${ALL_TESTS[@]}"; do
        --func-cov --code-cov \
        --cov-workdir "$COV_WORKDIR" \
        --cov-test-name "$test"; then
-    ((PASS++))
+    PASS=$((PASS + 1))
   else
-    ((FAIL++))
+    FAIL=$((FAIL + 1))
     FAILED_LIST+=("$test")
   fi
 done

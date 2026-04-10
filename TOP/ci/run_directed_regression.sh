@@ -37,9 +37,9 @@ for tb in "${BENCHES[@]}"; do
   echo ""
   echo "─── Running: $tb ───────────────────────────────────"
   if bash "$REPO_ROOT/scripts/sim/run_tb.sh" "$tb" --sim xrun; then
-    ((PASS++))
+    PASS=$((PASS + 1))
   else
-    ((FAIL++))
+    FAIL=$((FAIL + 1))
     FAILED_LIST+=("$tb")
   fi
 done
