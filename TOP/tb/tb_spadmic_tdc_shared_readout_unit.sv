@@ -207,7 +207,8 @@ module tb_spadmic_tdc_shared_readout_unit;
     stalled_pkt2_eoc = 1'b0;
 
     repeat (4) @(posedge clk_sys);
-    rst_n = 1'b1;
+    #1;                   // Deassert rst_n between posedges to avoid scheduling
+    rst_n = 1'b1;         // race with always_ff idx counters in Xcelium
     shared_ready = 1'b1;
 
     while (accepted_words < TOTAL_WORDS) begin

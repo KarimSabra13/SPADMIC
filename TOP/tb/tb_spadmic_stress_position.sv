@@ -99,6 +99,10 @@ module tb_spadmic_stress_position;
     return axis_clusters;
   endfunction
 
+  // Collect output packet (declared before check_word to satisfy Xcelium forward-ref rules)
+  int pkt_word_count;
+  logic [15:0] pkt_words [32];
+
   task automatic check_word(
     input string       name,
     input int unsigned idx,
@@ -106,10 +110,6 @@ module tb_spadmic_stress_position;
   );
     check(name, pkt_words[idx] === expected);
   endtask
-
-  // Collect output packet
-  int pkt_word_count;
-  logic [15:0] pkt_words [32];
 
   task automatic collect_packet(output int n_words);
     n_words = 0;

@@ -58,9 +58,11 @@ module tb_spadmic_stress_stop_qualifier;
   endtask
 
   // ── Detect stop edges ──
+  // Use 'always' instead of 'always_ff': the initial block also drives
+  // stop_edge_count between test phases, which Xcelium flags as MULAXX.
   logic stop_prev;
   int stop_edge_count;
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always @(posedge clk_sys or negedge rst_n) begin
     if (!rst_n) begin
       stop_prev       <= 1'b0;
       stop_edge_count <= 0;

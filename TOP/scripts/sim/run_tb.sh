@@ -48,6 +48,13 @@ echo "  Directed Bench: $TB_NAME"
 echo "═══════════════════════════════════════════════════════"
 
 if [[ "$SIM" == "xrun" ]]; then
+  # Detect if the TB imports mptdc_tb_pkg and add it to compile
+  MPTDC_TB_PKG="$MPTDC_ROOT/tb/common/mptdc_tb_pkg.sv"
+  EXTRA_PKG_ARGS=()
+  if grep -q 'mptdc_tb_pkg' "$TB_FILE" && [[ -f "$MPTDC_TB_PKG" ]]; then
+    EXTRA_PKG_ARGS=("$MPTDC_TB_PKG")
+  fi
+
   XRUN_ARGS=(
     -64 -sv -access +rwc
     -timescale 1ps/1ps
@@ -55,6 +62,7 @@ if [[ "$SIM" == "xrun" ]]; then
     +define+MPTDC_USE_OSC_MODEL
     -f "$BUILD_DIR/mptdc.f"
     -f "$BUILD_DIR/top.f"
+    "${EXTRA_PKG_ARGS[@]}"
     "$TB_FILE"
     -top "$TB_NAME"
     -xmlibdirname "$BUILD_DIR/xcelium.d"
