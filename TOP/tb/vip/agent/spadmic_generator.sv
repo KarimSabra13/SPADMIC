@@ -62,13 +62,14 @@ class spadmic_generator;
 
   // ── Directed: Mode switch (drain + reconfig) ──────────────────
   task automatic gen_mode_switch(spadmic_tx_sel_e new_sel);
+    spadmic_ctrl_txn t0, t1;
     // Disable global enable → drain → switch → re-enable
-    spadmic_ctrl_txn t0 = new();
+    t0 = new();
     t0.global_enable  = 1'b0;
     t0.drv_mode       = cfg.drv_mode;
     drv_mb.put(t0);
 
-    spadmic_ctrl_txn t1 = new();
+    t1 = new();
     t1.global_enable   = 1'b1;
     t1.shared_tx_sel   = new_sel;
     t1.position_enable = (new_sel == SPADMIC_TX_POSITION) ? 1'b1 : 1'b0;
