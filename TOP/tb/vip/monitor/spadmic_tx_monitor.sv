@@ -105,7 +105,7 @@ class spadmic_tx_monitor;
     sb_mb.put(mtxn);
 
     // Signal coverage sampler
-    cov_mb.put(total_packets);
+    cov_mb.put(int'(total_packets));
   endtask
 
 endclass

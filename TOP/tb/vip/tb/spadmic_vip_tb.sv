@@ -125,7 +125,7 @@ module spadmic_vip_tb;
 
   // ── Timeout Watchdog ──────────────────────────────────────────
   initial begin
-    #100_000_000_000;  // 100ms absolute timeout
+    #(100_000_000 * 1000);  // 100ms absolute timeout
     $display("[HARNESS] GLOBAL TIMEOUT — aborting");
     $finish;
   end
