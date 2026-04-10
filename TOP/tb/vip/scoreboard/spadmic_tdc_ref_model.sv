@@ -5,20 +5,24 @@
 
 class spadmic_tdc_ref_model;
 
-  // Predict expected word count for a TDC packet
+  // Predict expected word count for a TDC packet.
+  // v2.3 format: Header + SubHeader + hit_count × words_per_hit + EOC
+  //   RAW_FEATURES:  W0 + W1_feat + W2          = 3 words/hit
+  //   RAW_TIMESTAMP: W0 + W1_ts                  = 2 words/hit
+  //   FULL:          W0 + W1_feat + W2 + W3      = 4 words/hit
   function automatic int unsigned predict_word_count(
     out_mode_e   mode,
     int unsigned hit_count
   );
     int unsigned words_per_hit;
     case (mode)
-      OUT_MODE_RAW_FEATURES:  words_per_hit = 1;
-      OUT_MODE_RAW_TIMESTAMP: words_per_hit = 1;
-      OUT_MODE_FULL:          words_per_hit = 2;
-      default:                words_per_hit = 1;
+      OUT_MODE_RAW_FEATURES:  words_per_hit = 3;
+      OUT_MODE_RAW_TIMESTAMP: words_per_hit = 2;
+      OUT_MODE_FULL:          words_per_hit = 4;
+      default:                words_per_hit = 3;
     endcase
-    // header + subheader + hit_count×words_per_hit + EOC
-    return 2 + hit_count * words_per_hit + 1;
+    // header(1) + subheader(1) + hit data + EOC(1)
+    return 3 + hit_count * words_per_hit;
   endfunction
 
   // Validate a captured TDC packet against expected structure

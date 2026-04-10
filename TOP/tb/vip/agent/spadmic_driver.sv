@@ -64,6 +64,10 @@ class spadmic_driver;
           spadmic_tdc_event_txn et;
           $cast(et, txn);
           ev_drv.inject_tdc_events(et);
+          // Wait for the MPTDC measurement + serialization pipeline to flush.
+          // Without this, a subsequent disable-CTRL can catch a transient
+          // path_idle window between back-to-back packets and kill in-flight data.
+          #(et.num_conversions * 500_000);  // 500 ns per conversion
           sb_mb.put(txn);
         end
 
