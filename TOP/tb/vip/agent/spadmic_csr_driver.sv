@@ -76,7 +76,7 @@ class spadmic_csr_driver;
     int unsigned count = 0;
     forever begin
       read_csr(SPADMIC_CSR_GLOBAL_STATUS, status, err);
-      if (status[0]) return;  // cfg_accept
+      if (status[21]) return;  // cfg_accept
       count++;
       if (count >= timeout_cycles) begin
         $display("[CSR_DRV] WARN: cfg_accept timeout after %0d polls", count);

@@ -64,12 +64,16 @@ class spadmic_base_test;
     // Report
     env.report();
 
-    // Pass/fail verdict
-    if (env.sb.check_fail == 0)
+    // Pass/fail verdict — check both explicit failures AND expected vs received
+    if (env.sb.check_fail == 0 &&
+        env.sb.tdc_pkts_received >= env.sb.tdc_pkts_expected &&
+        env.sb.pos_pkts_received >= env.sb.pos_pkts_expected)
       $display("═══ TEST %s: PASS ═══", test_name);
     else
-      $display("═══ TEST %s: FAIL (%0d checks failed) ═══",
-               test_name, env.sb.check_fail);
+      $display("═══ TEST %s: FAIL (fail=%0d, tdc=%0d/%0d, pos=%0d/%0d) ═══",
+               test_name, env.sb.check_fail,
+               env.sb.tdc_pkts_received, env.sb.tdc_pkts_expected,
+               env.sb.pos_pkts_received, env.sb.pos_pkts_expected);
   endtask
 
 endclass

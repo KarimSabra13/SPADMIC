@@ -107,15 +107,15 @@ class spadmic_driver;
     end else begin
       // Full chip config sequence
       if (ct.drv_mode == DRV_MODE_DIRECT_CSR) begin
-        csr_drv.program_global_ctrl(ct);
+        csr_drv.wait_cfg_accept(500);
         for (int ax = 0; ax < 3; ax++)
           csr_drv.program_tdc_max_hits(ax, ct.max_hits);
-        csr_drv.wait_cfg_accept(500);
+        csr_drv.program_global_ctrl(ct);
       end else begin
-        i2c_drv.program_global_ctrl(ct);
+        i2c_drv.wait_cfg_accept(500);
         for (int ax = 0; ax < 3; ax++)
           i2c_drv.program_tdc_max_hits(ax, ct.max_hits);
-        i2c_drv.wait_cfg_accept(500);
+        i2c_drv.program_global_ctrl(ct);
       end
     end
   endtask

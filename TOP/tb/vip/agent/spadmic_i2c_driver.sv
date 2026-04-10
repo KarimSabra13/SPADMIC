@@ -75,7 +75,7 @@ class spadmic_i2c_driver;
     int unsigned count = 0;
     forever begin
       read_csr(SPADMIC_CSR_GLOBAL_STATUS, status, err);
-      if (status[0]) return;
+      if (status[21]) return;
       count++;
       if (count >= timeout_cycles) begin
         $display("[I2C_DRV] WARN: cfg_accept timeout after %0d polls", count);

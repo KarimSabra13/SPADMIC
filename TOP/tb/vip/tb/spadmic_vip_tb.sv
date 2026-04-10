@@ -81,15 +81,21 @@ module spadmic_vip_tb;
   assign tx_if.data     = chip_tx_data;
 
   // ── Direct CSR BFM Bridge ────────────────────────────────────
-  // For direct CSR mode, drive the DUT's internal CSR req/rsp bus
-  // via hierarchical access or a multiplexer at the I2C bridge output.
-  // In this harness, we use I2C as the primary path.
-  // Direct CSR can be implemented by driving the DUT's i2c_bridge output
-  // signals when the I2C driver is not in use.
+  // For direct CSR mode, override the DUT's internal CSR decoder inputs
+  // via force (continuous force tracks RHS expression) to bypass I2C.
+  initial begin
+    force u_dut.csr_req_valid = csr_if.req_valid;
+    force u_dut.csr_req_write = csr_if.req_write;
+    force u_dut.csr_req_addr  = csr_if.req_addr;
+    force u_dut.csr_req_wdata = csr_if.req_wdata;
+    force u_dut.csr_rsp_ready = csr_if.rsp_ready;
+  end
 
-  // Bridge: CSR interface drives into the I2C bridge output
-  // (or directly to csr_decoder if DUT supports dual-path)
-  assign csr_if.req_ready = 1'b1;  // placeholder — real bridge below
+  // Reflect DUT CSR bus responses back to the VIP interface
+  assign csr_if.req_ready = u_dut.csr_req_ready;
+  assign csr_if.rsp_valid = u_dut.csr_rsp_valid;
+  assign csr_if.rsp_rdata = u_dut.csr_rsp_rdata;
+  assign csr_if.rsp_err   = u_dut.csr_rsp_err;
 
   // ── Reset Sequence ────────────────────────────────────────────
   initial begin
