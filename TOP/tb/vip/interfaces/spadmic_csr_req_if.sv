@@ -68,23 +68,23 @@ interface spadmic_csr_req_if (
     req_valid = 1'b0;
     #1;
 
-    // Wait for response
-    rsp_ready = 1'b1;
+    // Wait for response (rsp_ready is always high)
     @(posedge clk_sys);
     while (!rsp_valid) @(posedge clk_sys);
     data = rsp_rdata;
     err  = rsp_err;
-    rsp_ready = 1'b0;
     #1;
   endtask
 
   // ── Initial state ─────────────────────────────────────────────
+  // rsp_ready is held high so the decoder can always retire responses
+  // (both write-acks and read data) without stalling in ST_HOLD_RSP.
   initial begin
     req_valid = 1'b0;
     req_write = 1'b0;
     req_addr  = '0;
     req_wdata = '0;
-    rsp_ready = 1'b0;
+    rsp_ready = 1'b1;
   end
 
 endinterface
