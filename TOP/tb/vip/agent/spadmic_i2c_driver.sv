@@ -58,6 +58,18 @@ class spadmic_i2c_driver;
     write_csr(base_addr, {28'b0, max_hits});
   endtask
 
+  // Arm TDC conversion on specified axis (writes MPTDC CSR_CTRL.conv_arm)
+  task automatic program_tdc_conv_arm(int unsigned axis, logic arm);
+    logic [SPADMIC_CSR_ADDR_W-1:0] base_addr;
+    case (axis)
+      0: base_addr = {SPADMIC_REGION_TDC_X, 8'h00};
+      1: base_addr = {SPADMIC_REGION_TDC_Y, 8'h00};
+      2: base_addr = {SPADMIC_REGION_TDC_Z, 8'h00};
+      default: base_addr = {SPADMIC_REGION_TDC_X, 8'h00};
+    endcase
+    write_csr(base_addr, {31'b0, arm});
+  endtask
+
   // Program position gap/filter config
   task automatic program_position_config(
     logic [6:0] gap_threshold,
