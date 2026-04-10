@@ -6,39 +6,62 @@
 `timescale 1ps/1ps
 `default_nettype none
 
-// NOTE: These bind statements connect SVA modules to the DUT hierarchy.
-// The exact signal paths depend on the DUT internal naming.
-// Some signals may need hierarchical cross-module references.
-
-// ── Shared TX Mux assertions ────────────────────────────────────
-// The mux is combinational inside spadmic_top_v1 (no separate module).
-// Bind at the top-level where mux signals are visible.
+// ── Control-plane assertions ────────────────────────────────────
+// Bound at spadmic_top_v1 because signals span u_global_csr and u_top_sequencer.
+bind spadmic_top_v1 spadmic_ctrl_sva u_ctrl_sva (
+  .clk_sys              (clk_sys),
+  .rst_n                (rst_sys_n),
+  .seq_state            (u_top_sequencer.state_q),
+  .cfg_accept           (seq_cfg_accept),
+  .global_enable_active (global_enable),
+  .path_idle            (u_top_sequencer.path_idle),
+  .transition_busy      (seq_transition_busy),
+  .csr_req_valid        (csr_req_valid),
+  .csr_req_write        (csr_req_write),
+  .csr_req_addr         (csr_req_addr),
+  .csr_req_ready        (csr_req_ready),
+  .csr_rsp_valid        (csr_rsp_valid),
+  .csr_rsp_err          (csr_rsp_err),
+  .mode_reject_sticky   (u_global_csr.mode_reject_sticky_q),
+  .mode_reject_count    (u_global_csr.mode_reject_count_q[7:0])
+);
 
 // ── Shared Readout assertions ───────────────────────────────────
-// bind spadmic_tdc_shared_readout spadmic_readout_sva u_readout_sva (
-//   .clk_sys    (clk_sys),
-//   .rst_n      (rst_n),
-//   .acq_valid  (acq_valid_i),
-//   .acq_ready  (acq_ready_o),
-//   .busy       (busy),
-//   .packet_src (grant_idx),
-//   .out_valid  (out_valid_o),
-//   .out_data   (out_data_o)
-// );
+bind spadmic_tdc_shared_readout spadmic_readout_sva u_readout_sva (
+  .clk_sys    (clk_sys),
+  .rst_n      (rst_n),
+  .acq_valid  (acq_valid_i),
+  .acq_ready  (acq_ready_o),
+  .busy       (busy_o),
+  .packet_src (packet_src_o),
+  .out_valid  (shared_valid_o),
+  .out_data   (shared_data_o)
+);
 
-// NOTE: Position SVA binds require access to internal FSM signals.
-// These are commented out as templates — uncomment and adjust paths
-// once the exact DUT signal names are verified during integration.
+// ── Shared TX Mux assertions ────────────────────────────────────
+// The mux is combinational (no clock port), so bind at spadmic_top_v1.
+bind spadmic_top_v1 spadmic_mux_sva u_mux_sva (
+  .clk_sys        (clk_sys),
+  .rst_n          (rst_sys_n),
+  .tx_sel         (shared_tx_sel),
+  .tdc_tx_valid   (tdc_tx_valid_mux),
+  .tdc_tx_ready   (tdc_tx_ready_mux),
+  .pos_tx_valid   (pos_tx_valid_mux),
+  .pos_tx_ready   (pos_tx_ready_mux),
+  .chip_tx_valid  (chip_tx_valid_o),
+  .chip_tx_ready  (chip_tx_ready_i)
+);
 
-// ── Manual instantiation alternative ────────────────────────────
-// If bind doesn't work for some signal paths, instantiate SVA modules
-// directly in the harness (spadmic_vip_tb.sv) using hierarchical references:
-//
-//   spadmic_ctrl_sva u_ctrl_sva (
-//     .clk_sys   (clk_sys),
-//     .rst_n     (rst_n),
-//     .seq_state (dut.u_sequencer.state_q),
-//     ...
-//   );
+// ── Position path framing assertions ────────────────────────────
+bind spadmic_position_block spadmic_pos_sva u_pos_sva (
+  .clk_sys       (clk_sys),
+  .rst_n         (rst_n),
+  .pos_tx_valid  (pos_valid_o),
+  .pos_tx_data   (pos_data_o),
+  .pos_tx_ready  (pos_ready_i),
+  .pos_fsm_state ({1'b0, det_state_q}),
+  .word_idx      (word_idx_q),
+  .pos_busy      (busy_o)
+);
 
 `default_nettype wire

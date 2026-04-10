@@ -31,7 +31,8 @@ class spadmic_pkt_cov;
                                            bins few = {[2:4]}; bins many = {[5:10]};
                                            bins deep = {[11:14]}; bins max_h = {15}; }
     cp_out_mode:  coverpoint out_mode   { bins raw_feat = {0}; bins raw_ts = {1};
-                                           bins full = {2}; }
+                                           bins full = {2};
+                                           illegal_bins bad_mode = {3}; }
     cp_flags:     coverpoint flags      { bins none = {0}; bins fastclose = {4};
                                            bins maxhits = {2}; bins watchdog_f = {1};
                                            bins fast_and_max = {6}; }
@@ -45,7 +46,7 @@ class spadmic_pkt_cov;
     cp_overflow:       coverpoint overflow_any;
     cp_non_empty_mask: coverpoint non_empty_mask { bins all_empty = {0}; bins x_only = {1};
                                                     bins xy = {3}; bins all_set = {7};
-                                                    default: bins other = default; }
+                                                    bins other = default; }
     cp_multi_mask:     coverpoint multi_cluster_mask;
     cp_event_count:    coverpoint event_count    { bins low = {[0:10]}; bins med = {[11:100]};
                                                     bins high = {[101:$]}; }

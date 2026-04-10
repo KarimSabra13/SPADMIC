@@ -64,7 +64,7 @@ module spadmic_ctrl_sva
   // P4: mode_reject_count monotonically increases (never decreases except on reset)
   property p_reject_count_monotonic;
     @(posedge clk_sys) disable iff (!rst_n)
-    mode_reject_count >= $past(mode_reject_count);
+    $past(rst_n) |-> mode_reject_count >= $past(mode_reject_count);
   endproperty
   a_reject_monotonic: assert property (p_reject_count_monotonic)
     else $error("[CTRL_SVA] mode_reject_count decreased");

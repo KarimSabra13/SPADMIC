@@ -24,7 +24,8 @@ class spadmic_stim_cov;
     cp_tx_sel:    coverpoint tx_sel    { bins tdc = {0}; bins pos = {1}; }
     cp_input_sel: coverpoint input_sel { bins spad = {0}; bins cal = {1}; }
     cp_out_mode:  coverpoint out_mode  { bins raw_feat = {0}; bins raw_ts = {1};
-                                          bins full = {2}; }
+                                          bins full = {2};
+                                          illegal_bins bad_mode = {3}; }
     cp_max_hits:  coverpoint max_hits  { bins mh1 = {1}; bins mh5 = {5};
                                           bins mh10 = {10}; bins mh15 = {15}; }
     cp_bp_mode:   coverpoint bp_mode   { bins ready = {0}; bins random = {1};
