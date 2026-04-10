@@ -88,6 +88,10 @@ class spadmic_driver;
         end
 
         TXN_EOT: begin
+          spadmic_eot_txn eot;
+          $cast(eot, txn);
+          // Wait for pipeline drain before signalling completion
+          #(int'(eot.drain_timeout_ns) * 1000);
           sb_mb.put(txn);
           done = 1'b1;
           return;
@@ -111,11 +115,14 @@ class spadmic_driver;
         for (int ax = 0; ax < 3; ax++)
           csr_drv.program_tdc_max_hits(ax, ct.max_hits);
         csr_drv.program_global_ctrl(ct);
+        // Wait for sequencer to commit the new active config
+        csr_drv.wait_cfg_accept(500);
       end else begin
         i2c_drv.wait_cfg_accept(500);
         for (int ax = 0; ax < 3; ax++)
           i2c_drv.program_tdc_max_hits(ax, ct.max_hits);
         i2c_drv.program_global_ctrl(ct);
+        i2c_drv.wait_cfg_accept(500);
       end
     end
   endtask
