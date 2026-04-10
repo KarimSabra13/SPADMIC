@@ -35,12 +35,14 @@ class spadmic_generator;
   task automatic gen_tdc_conversions(
     int unsigned axis,
     int unsigned count,
-    int unsigned delay_ps
+    int unsigned delay_ps,
+    int unsigned gap_ps = 0   // 0 = use txn default (400 ns)
   );
     spadmic_tdc_event_txn t = new();
     t.axis                 = axis;
     t.num_conversions      = count;
     t.start_stop_delay_ps  = delay_ps;
+    if (gap_ps != 0) t.inter_conv_gap_ps = gap_ps;
     t.use_spad             = (cfg.default_input_sel == INPUT_SPAD);
     drv_mb.put(t);
     txn_count++;

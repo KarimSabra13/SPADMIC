@@ -41,7 +41,7 @@ class spadmic_tdc_event_txn extends spadmic_base_txn;
     this.axis                 = 0;
     this.num_conversions      = 1;
     this.start_stop_delay_ps  = 10000;
-    this.inter_conv_gap_ps    = 50000;
+    this.inter_conv_gap_ps    = 400000;  // 400 ns — safe for N_CTX=2
     this.use_spad             = 1'b0;
     this.cal_start_width_ps   = 2000;
     this.cal_stop_width_ps    = 2000;
