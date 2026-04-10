@@ -87,6 +87,7 @@ XRUN_ARGS=(
   -nowarn DLCVAR
   -svseed "$SEED"
   +define+MPTDC_USE_OSC_MODEL
+  "+incdir+$TOP_ROOT/tb/vip"
   -f "$BUILD_DIR/mptdc.f"
   -f "$BUILD_DIR/top.f"
   -f "$BUILD_DIR/vip.f"
