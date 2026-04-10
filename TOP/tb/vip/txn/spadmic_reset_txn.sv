@@ -7,7 +7,7 @@
 class spadmic_reset_txn extends spadmic_base_txn;
   import spadmic_vip_pkg::*;
 
-  int unsigned reset_duration_ns;  // how long to hold reset
+  rand int unsigned reset_duration_ns;  // how long to hold reset
   logic        during_traffic;     // inject while traffic is in flight
 
   constraint c_reasonable_duration {

@@ -10,15 +10,15 @@ class spadmic_tdc_event_txn extends spadmic_base_txn;
   import spadmic_pkg::*;
   import mptdc_pkg::*;
 
-  int unsigned axis;             // 0=X, 1=Y, 2=Z
-  int unsigned num_conversions;  // how many START/STOP pairs to inject
-  int unsigned start_stop_delay_ps;
+  rand int unsigned axis;             // 0=X, 1=Y, 2=Z
+  rand int unsigned num_conversions;  // how many START/STOP pairs to inject
+  rand int unsigned start_stop_delay_ps;
   int unsigned inter_conv_gap_ps;
   logic        use_spad;         // 1=SPAD event, 0=CAL start/stop pair
 
   // For CAL injection timing
-  int unsigned cal_start_width_ps;
-  int unsigned cal_stop_width_ps;
+  rand int unsigned cal_start_width_ps;
+  rand int unsigned cal_stop_width_ps;
 
   // Expected results (populated by reference model)
   int unsigned expected_hit_count;
@@ -51,7 +51,7 @@ class spadmic_tdc_event_txn extends spadmic_base_txn;
     this.cal_start_width_ps   = 2000;
     this.cal_stop_width_ps    = 2000;
     this.expected_hit_count   = 0;
-    this.expected_out_mode    = OUT_RAW_FEATURES;
+    this.expected_out_mode    = OUT_MODE_RAW_FEATURES;
   endfunction
 
   function string to_string();

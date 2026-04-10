@@ -14,7 +14,7 @@ class spadmic_pos_event_txn extends spadmic_base_txn;
   logic [SPADMIC_LINE_W-1:0] y_pattern;
   logic [SPADMIC_LINE_W-1:0] z_pattern;
 
-  int unsigned hold_time_ns;       // how long to hold the pattern
+  rand int unsigned hold_time_ns;       // how long to hold the pattern
   logic        inject_glitch;      // inject a short glitch before stable pattern
   int unsigned glitch_axis;        // which axis gets glitch (0,1,2)
   int unsigned glitch_bit;         // which bit glitches
@@ -25,9 +25,9 @@ class spadmic_pos_event_txn extends spadmic_base_txn;
   logic [2:0]  expected_overflow_mask;
 
   // Position config snapshot at injection time
-  logic [6:0]  gap_threshold;
-  logic [6:0]  min_cluster_span;
-  logic [3:0]  settle_cycles;
+  rand logic [6:0]  gap_threshold;
+  rand logic [6:0]  min_cluster_span;
+  rand logic [3:0]  settle_cycles;
 
   constraint c_legal_position_config {
     gap_threshold    inside {[7'd5 : 7'd20]};

@@ -17,12 +17,12 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
 
   // Semantic fields for high-level config (used by generator)
   logic                  global_enable;
-  logic [2:0]            axis_enable;
+  rand logic [2:0]            axis_enable;
   logic                  position_enable;
   spadmic_tx_sel_e       shared_tx_sel;
   input_sel_e            tdc_input_sel;
-  out_mode_e             tdc_out_mode;
-  logic [MAX_HITS_W-1:0] max_hits;
+  rand out_mode_e             tdc_out_mode;
+  rand logic [MAX_HITS_W-1:0] max_hits;
 
   // Response capture (for reads)
   logic [SPADMIC_CSR_DATA_W-1:0] rdata;
@@ -41,7 +41,7 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
   }
 
   constraint c_legal_out_mode {
-    tdc_out_mode inside {OUT_RAW_FEATURES, OUT_RAW_TIMESTAMP, OUT_FULL};
+    tdc_out_mode inside {OUT_MODE_RAW_FEATURES, OUT_MODE_RAW_TIMESTAMP, OUT_MODE_FULL};
   }
 
   function new();
@@ -54,7 +54,7 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
     this.position_enable = 1'b0;
     this.shared_tx_sel   = SPADMIC_TX_TDC;
     this.tdc_input_sel   = INPUT_CAL;
-    this.tdc_out_mode    = OUT_RAW_FEATURES;
+    this.tdc_out_mode    = OUT_MODE_RAW_FEATURES;
     this.max_hits        = 4'd15;
     this.drv_mode        = DRV_MODE_DIRECT_CSR;
   endfunction
