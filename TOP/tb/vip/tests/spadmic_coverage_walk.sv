@@ -21,7 +21,7 @@ class spadmic_coverage_walk extends spadmic_base_test;
   endfunction
 
   task body();
-    out_mode_e modes[3] = '{OUT_RAW_FEATURES, OUT_RAW_TIMESTAMP, OUT_FULL};
+    out_mode_e modes[3] = '{OUT_MODE_RAW_FEATURES, OUT_MODE_RAW_TIMESTAMP, OUT_MODE_FULL};
     int hits[4] = '{1, 5, 10, 15};
 
     // Walk: all modes × all max_hits × all axes × both BP modes
@@ -51,7 +51,7 @@ class spadmic_coverage_walk extends spadmic_base_test;
       ct.axis_enable    = 3'b111;
       ct.shared_tx_sel  = SPADMIC_TX_TDC;
       ct.tdc_input_sel  = INPUT_SPAD;
-      ct.tdc_out_mode   = OUT_RAW_FEATURES;
+      ct.tdc_out_mode   = OUT_MODE_RAW_FEATURES;
       ct.max_hits       = 4'd15;
       ct.drv_mode       = cfg.drv_mode;
       env.gen.drv_mb.put(ct);

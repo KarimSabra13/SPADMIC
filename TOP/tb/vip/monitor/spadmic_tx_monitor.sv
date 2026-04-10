@@ -19,7 +19,7 @@ class spadmic_tx_monitor;
     logic [NARROW_W-1:0] words[$];
     logic                is_tdc;     // 1=TDC, 0=Position
     int unsigned         source_id;  // TDC axis or POSITION
-    int unsigned         timestamp;
+    longint unsigned     timestamp;
   } captured_packet_t;
 
   int unsigned total_packets;
@@ -61,39 +61,29 @@ class spadmic_tx_monitor;
         total_words++;
 
         if (is_tdc_header(word)) begin
-          // New TDC packet starts
+          // New packet starts (TDC and position share the 3'b100 header encoding)
           if (in_packet && pkt.words.size() > 0)
             dispatch_packet(pkt);  // flush any incomplete packet
           pkt.words = {};
           pkt.words.push_back(word);
-          pkt.is_tdc    = 1'b1;
+          pkt.is_tdc    = 1'b1;  // tentatively TDC; corrected upon subheader
+          pkt.source_id = 0;
           pkt.timestamp = $time;
           in_packet     = 1'b1;
         end else if (in_packet && is_tdc_eoc(word)) begin
           // End of current packet
           pkt.words.push_back(word);
-          if (pkt.is_tdc) begin
-            // Extract source from subheader (word[1] bits [5:4])
-            if (pkt.words.size() >= 2)
-              pkt.source_id = pkt.words[1][5:4];
-          end
           dispatch_packet(pkt);
           pkt.words = {};
           in_packet = 1'b0;
         end else if (in_packet) begin
           // Mid-packet word
           pkt.words.push_back(word);
-          // Detect subheader for source extraction
-          if (is_tdc_subheader(word))
+          // Detect subheader to classify packet type and extract source
+          if (is_tdc_subheader(word)) begin
             pkt.source_id = word[5:4];
-        end else begin
-          // Check if this is a position header (same encoding but different source tag)
-          if (is_tdc_header(word)) begin
-            pkt.words = {};
-            pkt.words.push_back(word);
-            pkt.is_tdc    = 1'b0;
-            pkt.timestamp = $time;
-            in_packet     = 1'b1;
+            if (word[5:4] == SPADMIC_SRC_POSITION)
+              pkt.is_tdc = 1'b0;
           end
         end
       end
@@ -101,6 +91,7 @@ class spadmic_tx_monitor;
   endtask
 
   task automatic dispatch_packet(captured_packet_t pkt);
+    spadmic_mon_pkt_txn mtxn;
     total_packets++;
     $display("[TX_MON] Packet #%0d: %s src=%0d words=%0d @%0t",
              total_packets,
@@ -108,6 +99,15 @@ class spadmic_tx_monitor;
              pkt.source_id,
              pkt.words.size(),
              pkt.timestamp);
+
+    // Send to scoreboard
+    mtxn = new();
+    mtxn.is_tdc     = pkt.is_tdc;
+    mtxn.source_id  = pkt.source_id;
+    mtxn.word_count = pkt.words.size();
+    mtxn.words      = pkt.words;
+    mtxn.timestamp  = $time;
+    sb_mb.put(mtxn);
 
     // Signal coverage sampler
     cov_mb.put(total_packets);

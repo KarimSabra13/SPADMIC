@@ -17,10 +17,10 @@ class spadmic_tdc_ref_model;
   );
     int unsigned words_per_hit;
     case (mode)
-      OUT_RAW_FEATURES:  words_per_hit = 1;
-      OUT_RAW_TIMESTAMP: words_per_hit = 1;
-      OUT_FULL:          words_per_hit = 2;
-      default:           words_per_hit = 1;
+      OUT_MODE_RAW_FEATURES:  words_per_hit = 1;
+      OUT_MODE_RAW_TIMESTAMP: words_per_hit = 1;
+      OUT_MODE_FULL:          words_per_hit = 2;
+      default:                words_per_hit = 1;
     endcase
     // header + subheader + hit_count×words_per_hit + EOC
     return 2 + hit_count * words_per_hit + 1;
@@ -67,14 +67,16 @@ class spadmic_tdc_ref_model;
     // Validate hit count from header
     // Header bits [10:7] = hit_count
     begin
-      int unsigned hc = words[0][10:7];
+      int unsigned hc;
+      int unsigned expected_wc;
+      hc = words[0][10:7];
       if (hc > expected_max_hits) begin
         $display("[TDC_REF] FAIL: hit_count=%0d > max_hits=%0d", hc, expected_max_hits);
         return 0;
       end
 
       // Validate word count
-      int unsigned expected_wc = predict_word_count(expected_mode, hc);
+      expected_wc = predict_word_count(expected_mode, hc);
       if (words.size() != expected_wc) begin
         $display("[TDC_REF] WARN: word count %0d != predicted %0d (mode=%s hits=%0d)",
                  words.size(), expected_wc, expected_mode.name(), hc);

@@ -16,6 +16,7 @@ class spadmic_env;
   // Mailboxes
   mailbox #(spadmic_base_txn) gen_to_drv_mb;
   mailbox #(spadmic_base_txn) drv_to_sb_mb;
+  mailbox #(spadmic_base_txn) mon_to_sb_mb;
   mailbox #(int)              mon_to_cov_mb;
 
   // Components
@@ -55,6 +56,7 @@ class spadmic_env;
     // Create mailboxes
     gen_to_drv_mb = new();
     drv_to_sb_mb  = new();
+    mon_to_sb_mb  = new();
     mon_to_cov_mb = new();
 
     // Build sub-drivers
@@ -72,12 +74,12 @@ class spadmic_env;
     gen = new(gen_to_drv_mb, cfg);
 
     // Build monitors
-    tx_mon   = new(tx_if, drv_to_sb_mb, mon_to_cov_mb);
+    tx_mon   = new(tx_if, mon_to_sb_mb, mon_to_cov_mb);
     csr_mon  = new(csr_if, mon_to_cov_mb);
     ctrl_mon = new(csr_if);
 
     // Build scoreboard
-    sb = new(drv_to_sb_mb, cfg);
+    sb = new(drv_to_sb_mb, mon_to_sb_mb, cfg);
 
     // Build coverage
 `ifdef SPADMIC_ENABLE_FUNC_COV

@@ -21,6 +21,7 @@ txn/spadmic_pos_event_txn.sv
 txn/spadmic_reset_txn.sv
 txn/spadmic_bp_txn.sv
 txn/spadmic_eot_txn.sv
+txn/spadmic_mon_pkt_txn.sv
 
 // ── Agent / Driver classes ───────────────────────────────────────
 agent/spadmic_generator.sv

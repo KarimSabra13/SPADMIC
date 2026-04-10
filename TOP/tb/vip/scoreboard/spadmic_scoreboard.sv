@@ -10,7 +10,12 @@ class spadmic_scoreboard;
   import mptdc_pkg::*;
 
   mailbox #(spadmic_base_txn)  stim_mb;   // from driver
+  mailbox #(spadmic_base_txn)  mon_mb;    // from TX monitor
   spadmic_env_cfg              cfg;
+
+  // Reference models
+  spadmic_tdc_ref_model  tdc_ref;
+  spadmic_pos_ref_model  pos_ref;
 
   // Counters
   int unsigned tdc_pkts_expected;
@@ -31,10 +36,14 @@ class spadmic_scoreboard;
 
   function new(
     mailbox #(spadmic_base_txn) stim_mb,
+    mailbox #(spadmic_base_txn) mon_mb,
     spadmic_env_cfg             cfg
   );
     this.stim_mb           = stim_mb;
+    this.mon_mb            = mon_mb;
     this.cfg               = cfg;
+    this.tdc_ref           = new();
+    this.pos_ref           = new();
     this.tdc_pkts_expected = 0;
     this.tdc_pkts_received = 0;
     this.pos_pkts_expected = 0;
@@ -45,11 +54,19 @@ class spadmic_scoreboard;
     this.done              = 1'b0;
     this.active_global_enable = 1'b0;
     this.active_tx_sel     = SPADMIC_TX_TDC;
-    this.active_out_mode   = OUT_RAW_FEATURES;
+    this.active_out_mode   = OUT_MODE_RAW_FEATURES;
     this.active_max_hits   = 4'd15;
   endfunction
 
   task automatic run();
+    fork
+      stim_run();
+      monitor_run();
+    join_any
+    disable fork;
+  endtask
+
+  task automatic stim_run();
     spadmic_base_txn txn;
     done = 1'b0;
 
@@ -94,6 +111,30 @@ class spadmic_scoreboard;
 
         default: ;
       endcase
+    end
+  endtask
+
+  task automatic monitor_run();
+    spadmic_base_txn  btxn;
+    spadmic_mon_pkt_txn mtxn;
+    bit ref_ok;
+
+    forever begin
+      mon_mb.get(btxn);
+      if (!$cast(mtxn, btxn)) continue;
+
+      if (mtxn.is_tdc) begin
+        ref_ok = tdc_ref.validate_tdc_packet(
+          mtxn.words, mtxn.source_id,
+          active_out_mode, active_max_hits);
+        if (!ref_ok) check_fail++;
+        notify_tdc_packet(mtxn.source_id, mtxn.word_count);
+      end else begin
+        ref_ok = pos_ref.validate_pos_packet(
+          mtxn.words, '0, '0, '0, 0, 0);
+        if (!ref_ok) check_fail++;
+        notify_pos_packet(mtxn.word_count);
+      end
     end
   endtask
 

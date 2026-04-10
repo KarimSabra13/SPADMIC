@@ -18,7 +18,7 @@ class spadmic_smoke_tdc extends spadmic_base_test;
     cfg.drv_mode          = DRV_MODE_DIRECT_CSR;
     cfg.profile           = PROFILE_TDC_CHAR;
     cfg.default_input_sel = INPUT_CAL;
-    cfg.default_out_mode  = OUT_RAW_FEATURES;
+    cfg.default_out_mode  = OUT_MODE_RAW_FEATURES;
     cfg.default_max_hits  = 4'd15;
     cfg.num_conversions   = 1;
     cfg.timeout_ns        = 200_000;

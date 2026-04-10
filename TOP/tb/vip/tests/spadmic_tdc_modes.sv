@@ -21,7 +21,7 @@ class spadmic_tdc_modes extends spadmic_base_test;
   endfunction
 
   task body();
-    out_mode_e modes[3] = '{OUT_RAW_FEATURES, OUT_RAW_TIMESTAMP, OUT_FULL};
+    out_mode_e modes[3] = '{OUT_MODE_RAW_FEATURES, OUT_MODE_RAW_TIMESTAMP, OUT_MODE_FULL};
     int hits[4] = '{1, 5, 10, 15};
 
     env.gen.gen_initial_config();

@@ -22,7 +22,8 @@ package spadmic_vip_pkg;
     TXN_POS_EVENT  = 2,
     TXN_RESET      = 3,
     TXN_BP         = 4,
-    TXN_EOT        = 5
+    TXN_EOT        = 5,
+    TXN_MON_PKT    = 6
   } spadmic_txn_kind_e;
 
   // ── Control driver mode (I2C vs direct CSR) ─────────────────────
@@ -61,6 +62,7 @@ package spadmic_vip_pkg;
   typedef class spadmic_env_cfg;
   typedef class spadmic_generator;
   typedef class spadmic_scoreboard;
+  typedef class spadmic_mon_pkt_txn;
   typedef class spadmic_base_test;
 
 endpackage

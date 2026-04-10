@@ -41,7 +41,7 @@ class spadmic_env_cfg;
     drv_mode              = DRV_MODE_DIRECT_CSR;
     profile               = PROFILE_TDC_CHAR;
     default_input_sel     = INPUT_CAL;
-    default_out_mode      = OUT_RAW_FEATURES;
+    default_out_mode      = OUT_MODE_RAW_FEATURES;
     default_max_hits      = 4'd15;
     default_gap_threshold    = 7'd10;
     default_min_cluster_span = 7'd5;
