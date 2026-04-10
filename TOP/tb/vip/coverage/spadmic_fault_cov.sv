@@ -18,10 +18,15 @@ class spadmic_fault_cov;
     cp_pos_drop:     coverpoint pos_drop_sticky;
     cp_pos_glitch:   coverpoint pos_glitch_sticky;
     cp_mode_reject:  coverpoint mode_reject_sticky;
-    cp_fifo_full:    coverpoint tdc_pkt_full { bins none = {0}; bins x_f = {1};
-                                                bins y_f = {2}; bins z_f = {4};
-                                                bins xy_f = {3}; bins all_f = {7};
-                                                default: bins other = default; }
+    cp_fifo_full:    coverpoint tdc_pkt_full {
+      bins none  = {0};
+      bins x_f   = {1};
+      bins y_f   = {2};
+      bins z_f   = {4};
+      bins xy_f  = {3};
+      bins all_f = {7};
+      bins other = default;
+    }
     cp_reset_during: coverpoint reset_during_traffic;
     cp_csr_timeout:  coverpoint csr_read_timeout_hit;
 
