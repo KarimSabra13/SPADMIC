@@ -81,7 +81,7 @@ class spadmic_csr_driver;
     read_csr(SPADMIC_CSR_GLOBAL_STATUS, status, err);
   endtask
 
-  // Poll for cfg_accept (bit 0 of STATUS)
+  // Poll for cfg_accept (bit 21 of STATUS)
   task automatic wait_cfg_accept(int unsigned timeout_cycles);
     logic [SPADMIC_CSR_DATA_W-1:0] status;
     logic err;

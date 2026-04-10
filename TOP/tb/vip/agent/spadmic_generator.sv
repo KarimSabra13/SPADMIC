@@ -107,6 +107,8 @@ class spadmic_generator;
 
   // ── Constrained-random: profile-based sequence ────────────────
   task automatic gen_random_sequence(int unsigned num_phases);
+    spadmic_bp_mode_e last_bp_mode = BP_ALWAYS_READY;
+
     for (int p = 0; p < num_phases; p++) begin
       int unsigned phase_kind;
       phase_kind = $urandom_range(0, 3);
@@ -123,17 +125,31 @@ class spadmic_generator;
           gen_position_event(xp, yp, zp, $urandom_range(50, 500));
         end
         2: begin  // Mode switch
-          spadmic_tx_sel_e sel;
-          sel = ($urandom_range(0,1) == 0) ? SPADMIC_TX_TDC : SPADMIC_TX_POSITION;
-          gen_mode_switch(sel);
+          // Release any ALWAYS_STALL first — the sequencer needs to
+          // drain the old path before committing a source change, and
+          // drain can't complete while the output is permanently stalled.
+          if (last_bp_mode == BP_ALWAYS_STALL) begin
+            gen_bp_change(BP_ALWAYS_READY, 200);
+            last_bp_mode = BP_ALWAYS_READY;
+          end
+          begin
+            spadmic_tx_sel_e sel;
+            sel = ($urandom_range(0,1) == 0) ? SPADMIC_TX_TDC : SPADMIC_TX_POSITION;
+            gen_mode_switch(sel);
+          end
         end
         3: begin  // BP change
           spadmic_bp_mode_e bp;
           bp = spadmic_bp_mode_e'($urandom_range(0, 2));
           gen_bp_change(bp, $urandom_range(100, 2000));
+          last_bp_mode = bp;
         end
       endcase
     end
+    // Release stall before EOT so pipeline can drain
+    if (last_bp_mode == BP_ALWAYS_STALL)
+      gen_bp_change(BP_ALWAYS_READY, 200);
+
     gen_eot();
   endtask
 

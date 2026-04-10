@@ -26,6 +26,7 @@ class spadmic_scoreboard;
   spadmic_tx_sel_e active_tx_sel;
   out_mode_e   active_out_mode;
   logic [MAX_HITS_W-1:0] active_max_hits;
+  input_sel_e  active_input_sel;
 
   bit done;
 
@@ -51,6 +52,7 @@ class spadmic_scoreboard;
     this.active_tx_sel     = SPADMIC_TX_TDC;
     this.active_out_mode   = OUT_MODE_RAW_FEATURES;
     this.active_max_hits   = 4'd15;
+    this.active_input_sel  = INPUT_CAL;
   endfunction
 
   task automatic run();
@@ -78,16 +80,30 @@ class spadmic_scoreboard;
         TXN_TDC_EVENT: begin
           spadmic_tdc_event_txn et;
           $cast(et, txn);
-          // Track expected packets
-          if (active_global_enable && active_tx_sel == SPADMIC_TX_TDC)
+          // Track expected packets — INPUT_SPAD events cannot be generated
+          // in simulation (no real SPAD matrix), so skip those.
+          if (active_global_enable && active_tx_sel == SPADMIC_TX_TDC
+              && active_input_sel != INPUT_SPAD) begin
             tdc_pkts_expected += et.num_conversions;
+          end else if (active_input_sel == INPUT_SPAD) begin
+            $display("[SB] TDC event skipped (INPUT_SPAD — no sim packets expected)");
+          end
           $display("[SB] TDC event: axis=%0d convs=%0d (total expected=%0d)",
                    et.axis, et.num_conversions, tdc_pkts_expected);
         end
 
         TXN_POS_EVENT: begin
-          if (active_global_enable && active_tx_sel == SPADMIC_TX_POSITION)
-            pos_pkts_expected++;
+          if (active_global_enable && active_tx_sel == SPADMIC_TX_POSITION) begin
+            // The position block only produces a packet when all enabled
+            // axes see at least one active line.  Events with empty axes
+            // (e.g. y=0, z=0) produce no hardware output.
+            spadmic_pos_event_txn pet;
+            if ($cast(pet, txn) &&
+                pet.x_pattern != '0 && pet.y_pattern != '0 && pet.z_pattern != '0)
+              pos_pkts_expected++;
+            else
+              $display("[SB] POS event skipped (empty axis pattern — no packet expected)");
+          end
           $display("[SB] POS event (total expected=%0d)", pos_pkts_expected);
         end
 
@@ -139,9 +155,11 @@ class spadmic_scoreboard;
       active_tx_sel        = ct.shared_tx_sel;
       active_out_mode      = ct.tdc_out_mode;
       active_max_hits      = ct.max_hits;
-      $display("[SB] Config update: en=%0b sel=%s mode=%s hits=%0d",
+      active_input_sel     = ct.tdc_input_sel;
+      $display("[SB] Config update: en=%0b sel=%s mode=%s hits=%0d in=%s",
                active_global_enable, active_tx_sel.name(),
-               active_out_mode.name(), active_max_hits);
+               active_out_mode.name(), active_max_hits,
+               active_input_sel.name());
     end
   endfunction
 

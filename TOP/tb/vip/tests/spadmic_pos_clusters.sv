@@ -20,6 +20,8 @@ class spadmic_pos_clusters extends spadmic_base_test;
     int gap_vals[3] = '{5, 10, 15};
     int span_vals[3] = '{5, 10, 20};
 
+    env.gen.gen_initial_config();
+
     for (int g = 0; g < 3; g++) begin
       for (int s = 0; s < 3; s++) begin
         // Reconfigure position

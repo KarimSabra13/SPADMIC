@@ -19,6 +19,8 @@ class spadmic_coverage_walk extends spadmic_base_test;
     out_mode_e modes[3] = '{OUT_MODE_RAW_FEATURES, OUT_MODE_RAW_TIMESTAMP, OUT_MODE_FULL};
     int hits[4] = '{1, 5, 10, 15};
 
+    env.gen.gen_initial_config();
+
     // Walk: all modes × all max_hits × all axes × both BP modes
     for (int m = 0; m < 3; m++) begin
       for (int h = 0; h < 4; h++) begin
@@ -39,7 +41,8 @@ class spadmic_coverage_walk extends spadmic_base_test;
       end
     end
 
-    // Also cover SPAD input
+    // Also cover SPAD input config (for config coverage — no events
+    // injected since SPAD matrix doesn't exist in behavioural sim)
     begin
       spadmic_ctrl_txn ct = new();
       ct.global_enable  = 1'b1;
@@ -51,7 +54,19 @@ class spadmic_coverage_walk extends spadmic_base_test;
       ct.drv_mode       = cfg.drv_mode;
       env.gen.drv_mb.put(ct);
     end
-    env.gen.gen_tdc_conversions(0, 5, 10000);
+    // Switch back to CAL before injecting — SPAD events can't be
+    // generated in simulation so there's nothing to collect.
+    begin
+      spadmic_ctrl_txn ct = new();
+      ct.global_enable  = 1'b1;
+      ct.axis_enable    = 3'b111;
+      ct.shared_tx_sel  = SPADMIC_TX_TDC;
+      ct.tdc_input_sel  = INPUT_CAL;
+      ct.tdc_out_mode   = OUT_MODE_RAW_FEATURES;
+      ct.max_hits       = 4'd15;
+      ct.drv_mode       = cfg.drv_mode;
+      env.gen.drv_mb.put(ct);
+    end
 
     // Position coverage
     env.gen.gen_mode_switch(SPADMIC_TX_POSITION);
