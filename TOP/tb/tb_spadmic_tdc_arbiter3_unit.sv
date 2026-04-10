@@ -116,12 +116,18 @@ module tb_spadmic_tdc_arbiter3_unit;
     end
   endtask
 
+  // Drive one word on source `idx`.  The #1 after each @(posedge) moves
+  // blocking assignments out of the Active region that contains the DUT's
+  // always_ff.  Without it Xcelium can evaluate the FIFO before the TB
+  // updates valid/data, causing the EOC write to be silently missed.
   task automatic drive_word(input int idx, input logic [15:0] word);
     @(posedge clk_sys);
+    #1;
     src_valid[idx] = 1'b1;
     src_data[idx]  = word;
-    while (!src_ready[idx]) @(posedge clk_sys);
     @(posedge clk_sys);
+    while (!src_ready[idx]) @(posedge clk_sys);
+    #1;
     src_valid[idx] = 1'b0;
     src_data[idx]  = '0;
   endtask
