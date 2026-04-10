@@ -22,12 +22,17 @@ echo "─── Step 1: Compile check ──────────────
 BUILD_DIR="$REPO_ROOT/build/smoke_compile"
 mkdir -p "$BUILD_DIR"
 
+# Resolve relative-path filelists to absolute paths
+source "$REPO_ROOT/scripts/sim/resolve_flist.sh"
+resolve_flist "$MPTDC_ROOT" "$MPTDC_ROOT/rtl/filelist.f" "$BUILD_DIR/mptdc.f"
+resolve_flist "$REPO_ROOT"  "$REPO_ROOT/filelist.f"      "$BUILD_DIR/top.f"
+
 xrun -64 -sv -compile \
   -timescale 1ps/1ps \
   -nowarn DLCVAR \
   +define+MPTDC_USE_OSC_MODEL \
-  -f "$MPTDC_ROOT/rtl/filelist.f" \
-  -f "$REPO_ROOT/filelist.f" \
+  -f "$BUILD_DIR/mptdc.f" \
+  -f "$BUILD_DIR/top.f" \
   -xmlibdirname "$BUILD_DIR/xcelium.d" \
   2>&1 | tee "$BUILD_DIR/compile.log"
 

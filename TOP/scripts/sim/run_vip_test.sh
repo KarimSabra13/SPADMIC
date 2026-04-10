@@ -70,6 +70,12 @@ done
 BUILD_DIR="$TOP_ROOT/build/vip/${TEST_NAME}_s${SEED}"
 mkdir -p "$BUILD_DIR"
 
+# ── Resolve filelists to absolute paths ────────────────────────
+source "$SCRIPT_DIR/resolve_flist.sh"
+resolve_flist "$MPTDC_ROOT"      "$MPTDC_ROOT/rtl/filelist.f"    "$BUILD_DIR/mptdc.f"
+resolve_flist "$TOP_ROOT"        "$TOP_ROOT/filelist.f"          "$BUILD_DIR/top.f"
+resolve_flist "$TOP_ROOT/tb/vip" "$TOP_ROOT/tb/vip/filelist.f"   "$BUILD_DIR/vip.f"
+
 echo "═══════════════════════════════════════════════════════"
 echo "  SPADMIC VIP Test: $TEST_NAME (seed=$SEED)"
 echo "═══════════════════════════════════════════════════════"
@@ -81,9 +87,9 @@ XRUN_ARGS=(
   -nowarn DLCVAR
   -svseed "$SEED"
   +define+MPTDC_USE_OSC_MODEL
-  -f "$MPTDC_ROOT/rtl/filelist.f"
-  -f "$TOP_ROOT/filelist.f"
-  -f "$TOP_ROOT/tb/vip/filelist.f"
+  -f "$BUILD_DIR/mptdc.f"
+  -f "$BUILD_DIR/top.f"
+  -f "$BUILD_DIR/vip.f"
   -top spadmic_vip_tb
   -xmlibdirname "$BUILD_DIR/xcelium.d"
   "+SPADMIC_TEST=$TEST_NAME"

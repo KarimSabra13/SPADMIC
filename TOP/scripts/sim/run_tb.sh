@@ -38,6 +38,11 @@ fi
 BUILD_DIR="$REPO_ROOT/build/directed/$TB_NAME"
 mkdir -p "$BUILD_DIR"
 
+# ── Resolve filelists to absolute paths ────────────────────────
+source "$SCRIPT_DIR/resolve_flist.sh"
+resolve_flist "$MPTDC_ROOT" "$MPTDC_ROOT/rtl/filelist.f" "$BUILD_DIR/mptdc.f"
+resolve_flist "$REPO_ROOT"  "$REPO_ROOT/filelist.f"      "$BUILD_DIR/top.f"
+
 echo "═══════════════════════════════════════════════════════"
 echo "  Directed Bench: $TB_NAME"
 echo "═══════════════════════════════════════════════════════"
@@ -48,8 +53,8 @@ if [[ "$SIM" == "xrun" ]]; then
     -timescale 1ps/1ps
     -nowarn DLCVAR
     +define+MPTDC_USE_OSC_MODEL
-    -f "$MPTDC_ROOT/rtl/filelist.f"
-    -f "$REPO_ROOT/filelist.f"
+    -f "$BUILD_DIR/mptdc.f"
+    -f "$BUILD_DIR/top.f"
     "$TB_FILE"
     -top "$TB_NAME"
     -xmlibdirname "$BUILD_DIR/xcelium.d"
