@@ -2,13 +2,8 @@
 // SPADMIC VIP — Per-Axis Async Event Driver
 // Injects SPAD events or CAL start/stop pairs onto the async interface.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_event_driver;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   virtual spadmic_async_event_if ev_if[3];  // X, Y, Z
 
@@ -41,4 +36,3 @@ class spadmic_event_driver;
 
 endclass
 
-`default_nettype wire

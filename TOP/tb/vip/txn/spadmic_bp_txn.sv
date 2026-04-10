@@ -1,11 +1,8 @@
 // =============================================================================
 // SPADMIC VIP — Backpressure Transaction
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_bp_txn extends spadmic_base_txn;
-  import spadmic_vip_pkg::*;
 
   spadmic_bp_mode_e mode;
   int unsigned      duration_cycles;  // how many cycles to hold this BP mode
@@ -22,4 +19,3 @@ class spadmic_bp_txn extends spadmic_base_txn;
   endfunction
 endclass
 
-`default_nettype wire

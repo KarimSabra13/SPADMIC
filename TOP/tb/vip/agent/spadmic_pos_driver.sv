@@ -2,12 +2,8 @@
 // SPADMIC VIP — Position Stimulus Driver
 // Drives position line patterns onto the position interface.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_pos_driver;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
 
   virtual spadmic_position_line_if pos_if;
 
@@ -34,4 +30,3 @@ class spadmic_pos_driver;
 
 endclass
 
-`default_nettype wire

@@ -2,13 +2,8 @@
 // SPADMIC VIP — Direct CSR Driver
 // Drives CSR request/response interface for fast targeted regressions.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_csr_driver;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   virtual spadmic_csr_req_if csr_if;
 
@@ -93,4 +88,3 @@ class spadmic_csr_driver;
 
 endclass
 
-`default_nettype wire

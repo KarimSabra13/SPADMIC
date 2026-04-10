@@ -2,13 +2,8 @@
 // SPADMIC VIP — Coverage Walk Test
 // Systematic hole-filler: walks through specific cross-coverage bins.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_coverage_walk extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("coverage_walk");
@@ -71,4 +66,3 @@ class spadmic_coverage_walk extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

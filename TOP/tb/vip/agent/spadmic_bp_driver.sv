@@ -2,11 +2,8 @@
 // SPADMIC VIP — Backpressure Driver
 // Controls chip_tx_ready to simulate downstream stalls.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_bp_driver;
-  import spadmic_vip_pkg::*;
 
   virtual spadmic_narrow_tx_if tx_if;
   spadmic_bp_mode_e current_mode;
@@ -43,4 +40,3 @@ class spadmic_bp_driver;
 
 endclass
 
-`default_nettype wire

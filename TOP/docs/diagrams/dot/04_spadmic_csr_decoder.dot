@@ -1,0 +1,114 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_csr_decoder</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Shared 12-bit CSR routing page with timeout-protected read behavior and explicit invalid-region handling.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_csr_decoder.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    csr_req [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Shared CSR request</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>csr_req_valid_i<BR ALIGN='LEFT'/>csr_req_write_i<BR ALIGN='LEFT'/>csr_req_addr_i[11:0]<BR ALIGN='LEFT'/>csr_req_wdata_i<BR ALIGN='LEFT'/>csr_req_ready_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    decode [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Region decode</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>[11:8] -&gt; GLOBAL / X / Y / Z / POS<BR ALIGN='LEFT'/>lower subset forwarded to local MPTDC CSR</FONT></TD></TR>
+    </TABLE>
+    >];
+    write_fast [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Write fast-path</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>immediate empty response<BR ALIGN='LEFT'/>invalid region -&gt; error</FONT></TD></TR>
+    </TABLE>
+    >];
+    read_wait [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Read wait / timeout</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>wait downstream rvalid<BR ALIGN='LEFT'/>15-cycle timeout<BR ALIGN='LEFT'/>avoid stalled CSR fabric</FONT></TD></TR>
+    </TABLE>
+    >];
+    global [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>GLOBAL region</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>global_csr_*</FONT></TD></TR>
+    </TABLE>
+    >];
+    x_tdc [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC X region</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>x_csr_*</FONT></TD></TR>
+    </TABLE>
+    >];
+    y_tdc [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC Y region</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>y_csr_*</FONT></TD></TR>
+    </TABLE>
+    >];
+    z_tdc [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC Z region</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>z_csr_*</FONT></TD></TR>
+    </TABLE>
+    >];
+    pos [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>POSITION region</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>pos_csr_*</FONT></TD></TR>
+    </TABLE>
+    >];
+    rsp_mux [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Response mux / hold</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>csr_rsp_valid_o<BR ALIGN='LEFT'/>csr_rsp_rdata_o<BR ALIGN='LEFT'/>csr_rsp_err_o<BR ALIGN='LEFT'/>csr_rsp_ready_i</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; csr_req; decode; global; x_tdc; y_tdc; z_tdc; pos; }
+    { rank=same; write_fast; read_wait; rsp_mux; }
+
+    csr_req -> decode [style="invis" weight=20];
+    global -> x_tdc [style="invis" weight=20];
+    x_tdc -> y_tdc [style="invis" weight=20];
+    y_tdc -> z_tdc [style="invis" weight=20];
+    z_tdc -> pos [style="invis" weight=20];
+
+    csr_req -> decode [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="region select", fontsize=10, fontcolor="#334155"];
+    decode -> global [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="GLOBAL", fontsize=10, fontcolor="#334155"];
+    decode -> x_tdc [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="X", fontsize=10, fontcolor="#334155"];
+    decode -> y_tdc [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="Y", fontsize=10, fontcolor="#334155"];
+    decode -> z_tdc [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="Z", fontsize=10, fontcolor="#334155"];
+    decode -> pos [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="POS", fontsize=10, fontcolor="#334155"];
+    decode -> write_fast [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="write requests", fontsize=10, fontcolor="#334155"];
+    decode -> read_wait [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="read requests", fontsize=10, fontcolor="#334155"];
+    global -> rsp_mux [color="#2563EB", penwidth=1.6, style="solid", weight=2];
+    x_tdc -> rsp_mux [color="#7C3AED", penwidth=1.6, style="solid", weight=2];
+    y_tdc -> rsp_mux [color="#7C3AED", penwidth=1.6, style="solid", weight=2];
+    z_tdc -> rsp_mux [color="#7C3AED", penwidth=1.6, style="solid", weight=2];
+    pos -> rsp_mux [color="#059669", penwidth=1.6, style="solid", weight=2];
+    
+    }

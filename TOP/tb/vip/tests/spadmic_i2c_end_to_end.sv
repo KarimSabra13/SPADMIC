@@ -2,13 +2,8 @@
 // SPADMIC VIP — I2C End-to-End Test
 // Full I2C programming: write + readback across all 5 CSR regions.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_i2c_end_to_end extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("i2c_end_to_end");
@@ -58,4 +53,3 @@ class spadmic_i2c_end_to_end extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

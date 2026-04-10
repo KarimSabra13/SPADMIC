@@ -2,13 +2,8 @@
 // SPADMIC VIP — Smoke Switching Test
 // Sanity: TDC session → drain → switch to position → back to TDC.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_smoke_switching extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("smoke_switching");
@@ -41,4 +36,3 @@ class spadmic_smoke_switching extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

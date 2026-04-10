@@ -196,7 +196,11 @@ module tb_spadmic_tdc_arbiter3_unit;
     check("packet 2 subheader patched with Z id", out_words[9][5:4] == TDC_ID_Z);
     check("packet 2 payload preserved", out_words[10] == 16'h0303);
     check("packet 2 ends on eoc", is_eoc(out_words[11]));
-    @(posedge clk_sys); // grant_active_q clears via NBA — need 1 cycle
+    // grant_active_q clears via NBA on the cycle the last EOC transfers;
+    // wait 2 cycles + #1 to guarantee the NBA has settled and no stale
+    // pkt_valid re-acquires the grant.
+    repeat (2) @(posedge clk_sys);
+    #1;
     check("arbiter idle after all packets", arb_busy == 1'b0);
 
     if (fail_cnt != 0)

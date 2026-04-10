@@ -3,13 +3,8 @@
 // Consumes transactions from the generator mailbox and dispatches to
 // the appropriate sub-drivers (CSR/I2C, event, position, BP, reset).
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_driver;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   mailbox #(spadmic_base_txn)  drv_mb;
   spadmic_csr_driver           csr_drv;
@@ -127,4 +122,3 @@ class spadmic_driver;
 
 endclass
 
-`default_nettype wire

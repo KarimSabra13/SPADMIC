@@ -18,6 +18,21 @@ First-silicon SPADMIC chip-level integration around three preserved `mptdc_top_a
 | [`docs/01_ACTIVE_ARCHITECTURE.md`](docs/01_ACTIVE_ARCHITECTURE.md) | Detailed dataflow, clocks/resets, module responsibilities, and active-path behavior |
 | [`docs/02_CSR_MAP.md`](docs/02_CSR_MAP.md) | Global and position CSR register map, field semantics, and software control rules |
 
+## Visual pack
+
+Generate the A4 chip/floorplan visual pack and per-block editable SVG schematics with:
+
+```bash
+python3 TOP/docs/generate_spadmic_visual_pack.py
+```
+
+The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and writes:
+
+- `TOP/docs/diagrams/spadmic_visual_pack_a4.pdf`
+- `TOP/docs/diagrams/pdf/*.pdf`
+- `TOP/docs/diagrams/svg/*.svg`
+- `TOP/docs/diagrams/dot/*.dot`
+
 ## Active datapath summary
 
 ### Control plane

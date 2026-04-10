@@ -2,13 +2,8 @@
 // SPADMIC VIP — TDC Reference Model
 // Predicts expected TDC packet structure given config and injection.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_tdc_ref_model;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   // Predict expected word count for a TDC packet
   function automatic int unsigned predict_word_count(
@@ -88,4 +83,3 @@ class spadmic_tdc_ref_model;
 
 endclass
 
-`default_nettype wire

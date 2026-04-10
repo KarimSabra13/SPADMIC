@@ -1,5 +1,7 @@
 // =============================================================================
-// SPADMIC VIP — Forward Declarations, Typedefs, and Enums
+// SPADMIC VIP — Master Package
+// All VIP enums, typedefs, and class definitions live inside this package.
+// Class files are `included so that Xcelium resolves all types in one unit.
 // =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
@@ -51,19 +53,68 @@ package spadmic_vip_pkg;
   // Legal max_hits values
   localparam int LEGAL_MAX_HITS[4] = '{1, 5, 10, 15};
 
-  // ── Forward class declarations ─────────────────────────────────
-  typedef class spadmic_base_txn;
-  typedef class spadmic_ctrl_txn;
-  typedef class spadmic_tdc_event_txn;
-  typedef class spadmic_pos_event_txn;
-  typedef class spadmic_reset_txn;
-  typedef class spadmic_bp_txn;
-  typedef class spadmic_eot_txn;
-  typedef class spadmic_env_cfg;
-  typedef class spadmic_generator;
-  typedef class spadmic_scoreboard;
-  typedef class spadmic_mon_pkt_txn;
-  typedef class spadmic_base_test;
+  // ══════════════════════════════════════════════════════════════════
+  // Class includes (dependency order — base classes first)
+  // ══════════════════════════════════════════════════════════════════
+
+  // ── Configuration ───────────────────────────────────────────────
+  `include "../env/spadmic_env_cfg.sv"
+
+  // ── Transactions ────────────────────────────────────────────────
+  `include "../txn/spadmic_base_txn.sv"
+  `include "../txn/spadmic_ctrl_txn.sv"
+  `include "../txn/spadmic_tdc_event_txn.sv"
+  `include "../txn/spadmic_pos_event_txn.sv"
+  `include "../txn/spadmic_reset_txn.sv"
+  `include "../txn/spadmic_bp_txn.sv"
+  `include "../txn/spadmic_eot_txn.sv"
+  `include "../txn/spadmic_mon_pkt_txn.sv"
+
+  // ── Agent / Drivers ─────────────────────────────────────────────
+  `include "../agent/spadmic_generator.sv"
+  `include "../agent/spadmic_csr_driver.sv"
+  `include "../agent/spadmic_i2c_driver.sv"
+  `include "../agent/spadmic_event_driver.sv"
+  `include "../agent/spadmic_pos_driver.sv"
+  `include "../agent/spadmic_bp_driver.sv"
+  `include "../agent/spadmic_driver.sv"
+
+  // ── Monitors ────────────────────────────────────────────────────
+  `include "../monitor/spadmic_tx_monitor.sv"
+  `include "../monitor/spadmic_csr_monitor.sv"
+  `include "../monitor/spadmic_ctrl_monitor.sv"
+
+  // ── Reference Models + Scoreboard ───────────────────────────────
+  `include "../scoreboard/spadmic_tdc_ref_model.sv"
+  `include "../scoreboard/spadmic_pos_ref_model.sv"
+  `include "../scoreboard/spadmic_scoreboard.sv"
+
+  // ── Coverage ────────────────────────────────────────────────────
+  `include "../coverage/spadmic_stim_cov.sv"
+  `include "../coverage/spadmic_pkt_cov.sv"
+  `include "../coverage/spadmic_ctrl_cov.sv"
+  `include "../coverage/spadmic_fault_cov.sv"
+
+  // ── Environment ─────────────────────────────────────────────────
+  `include "../env/spadmic_env.sv"
+  `include "../env/spadmic_base_test.sv"
+
+  // ── Test Library ────────────────────────────────────────────────
+  `include "../tests/spadmic_smoke_tdc.sv"
+  `include "../tests/spadmic_smoke_position.sv"
+  `include "../tests/spadmic_smoke_switching.sv"
+  `include "../tests/spadmic_tdc_modes.sv"
+  `include "../tests/spadmic_pos_clusters.sv"
+  `include "../tests/spadmic_ctrl_reject.sv"
+  `include "../tests/spadmic_reset_recovery.sv"
+  `include "../tests/spadmic_bp_stress.sv"
+  `include "../tests/spadmic_i2c_end_to_end.sv"
+  `include "../tests/spadmic_long_random.sv"
+  `include "../tests/spadmic_coverage_walk.sv"
+  `include "../tests/spadmic_stress_random.sv"
+
+  // ── Test Factory (must be last — references all test classes) ───
+  `include "../env/spadmic_test_factory.sv"
 
 endpackage
 

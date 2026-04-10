@@ -2,11 +2,8 @@
 // SPADMIC VIP — Test Factory
 // Maps test name string (from +SPADMIC_TEST=...) to test class instance.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_test_factory;
-  import spadmic_vip_pkg::*;
 
   static function spadmic_base_test create_test(string name);
     case (name)
@@ -31,4 +28,3 @@ class spadmic_test_factory;
 
 endclass
 
-`default_nettype wire

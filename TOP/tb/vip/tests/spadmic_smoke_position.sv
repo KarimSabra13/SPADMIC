@@ -2,13 +2,8 @@
 // SPADMIC VIP — Smoke Position Test
 // Sanity: enable position, inject known line pattern, collect 1 packet.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_smoke_position extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("smoke_position");
@@ -38,4 +33,3 @@ class spadmic_smoke_position extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

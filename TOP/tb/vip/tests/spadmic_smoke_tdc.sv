@@ -2,13 +2,8 @@
 // SPADMIC VIP — Smoke TDC Test
 // Sanity: enable all axes + CAL, inject 1 event per axis, collect 3 packets.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_smoke_tdc extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("smoke_tdc");
@@ -34,4 +29,3 @@ class spadmic_smoke_tdc extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

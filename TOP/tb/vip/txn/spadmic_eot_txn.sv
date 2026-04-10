@@ -1,11 +1,8 @@
 // =============================================================================
 // SPADMIC VIP — End-of-Test Sentinel Transaction
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_eot_txn extends spadmic_base_txn;
-  import spadmic_vip_pkg::*;
 
   int unsigned drain_timeout_ns;  // max time to wait for outstanding packets
 
@@ -19,4 +16,3 @@ class spadmic_eot_txn extends spadmic_base_txn;
   endfunction
 endclass
 
-`default_nettype wire

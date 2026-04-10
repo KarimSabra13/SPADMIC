@@ -1,0 +1,88 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_ref_stop_qualifier</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">One-shot STOP qualifier with explicit held-high re-arm blocking.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_ref_stop_qualifier.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    inputs [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>rst_n<BR ALIGN='LEFT'/>start_async_i<BR ALIGN='LEFT'/>clk_ref_40m</FONT></TD></TR>
+    </TABLE>
+    >];
+    arm [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>arm_req_q</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>latch request while clock low<BR ALIGN='LEFT'/>clear after pulse_seen_q</FONT></TD></TR>
+    </TABLE>
+    >];
+    rearm [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>rearm_block_q</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>held-high request must drop low<BR ALIGN='LEFT'/>prevents repeated STOPs</FONT></TD></TR>
+    </TABLE>
+    >];
+    gate [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>gate_en_q</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>sample arm_req_q only when clk_ref_40m is low</FONT></TD></TR>
+    </TABLE>
+    >];
+    pulse [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>pulse_seen_q</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>remember one consumed pulse<BR ALIGN='LEFT'/>clear when clock returns low</FONT></TD></TR>
+    </TABLE>
+    >];
+    outputs [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Outputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>stop_async_o<BR ALIGN='LEFT'/>armed_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    timing_note [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#CA8A04" BGCOLOR="#FEF3C7">
+      <TR><TD BGCOLOR="#CA8A04" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Waveform rule</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FEF3C7'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>Held-high start_async_i generates one STOP pulse only.<BR ALIGN='LEFT'/>A new pulse is allowed only after the source returns low.</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; inputs; arm; rearm; gate; outputs; }
+    { rank=same; pulse; timing_note; }
+
+    inputs -> arm [style="invis" weight=20];
+    arm -> rearm [style="invis" weight=20];
+    rearm -> gate [style="invis" weight=20];
+    gate -> outputs [style="invis" weight=20];
+
+    inputs -> arm [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="request", fontsize=10, fontcolor="#334155"];
+    arm -> rearm [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="pulse seen", fontsize=10, fontcolor="#334155"];
+    rearm -> gate [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="re-arm enable", fontsize=10, fontcolor="#334155"];
+    gate -> pulse [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="qualified high phase", fontsize=10, fontcolor="#334155"];
+    gate -> outputs [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="stop_async_o", fontsize=10, fontcolor="#334155"];
+    pulse -> outputs [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="armed_o contribution", fontsize=10, fontcolor="#334155"];
+    
+    }

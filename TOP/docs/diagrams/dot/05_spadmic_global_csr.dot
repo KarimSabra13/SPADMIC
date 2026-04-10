@@ -1,0 +1,89 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_global_csr</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Requested-control bank with active-state mirror, path-idle visibility, and counted reject reporting.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_global_csr.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    csr_if [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>CSR interface</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>csr_valid_i / csr_write_i<BR ALIGN='LEFT'/>csr_addr_i / csr_wdata_i<BR ALIGN='LEFT'/>csr_ready_o / csr_rvalid_o / csr_rdata_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    requested [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Requested image registers</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>req_global_enable_o<BR ALIGN='LEFT'/>req_axis_enable_o[2:0]<BR ALIGN='LEFT'/>req_position_enable_o<BR ALIGN='LEFT'/>req_shared_tx_sel_o<BR ALIGN='LEFT'/>req_tdc_input_sel_o / req_tdc_out_mode_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    admission [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Admission + reject logic</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>cfg_accept_i gate<BR ALIGN='LEFT'/>ctrl_change_req detect<BR ALIGN='LEFT'/>mode_reject_count_q<BR ALIGN='LEFT'/>mode_reject_sticky_q</FONT></TD></TR>
+    </TABLE>
+    >];
+    status_in [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Datapath status inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>tdc_tx_busy_i / tdc_pkt_pending_i<BR ALIGN='LEFT'/>tdc_pkt_full_i<BR ALIGN='LEFT'/>position busy / pending<BR ALIGN='LEFT'/>position drop / glitch sticky</FONT></TD></TR>
+    </TABLE>
+    >];
+    active [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Active image mirror</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>active_global_enable_i<BR ALIGN='LEFT'/>active_axis_enable_i<BR ALIGN='LEFT'/>active_position_enable_i<BR ALIGN='LEFT'/>active_shared_tx_sel_i<BR ALIGN='LEFT'/>active_tdc_input_sel_i / active_tdc_out_mode_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    readback [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Readback mux</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>GLOBAL_ID / VERSION<BR ALIGN='LEFT'/>GLOBAL_CTRL request image<BR ALIGN='LEFT'/>GLOBAL_STATUS live image + path state<BR ALIGN='LEFT'/>GLOBAL_FAULT / GLOBAL_FAULT_COUNT</FONT></TD></TR>
+    </TABLE>
+    >];
+    out_req [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Requested outputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>req_* image<BR ALIGN='LEFT'/>cfg_update_o pulse</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; csr_if; requested; admission; out_req; }
+    { rank=same; status_in; active; readback; }
+
+    csr_if -> requested [style="invis" weight=20];
+    requested -> admission [style="invis" weight=20];
+    admission -> out_req [style="invis" weight=20];
+    status_in -> active [style="invis" weight=20];
+    active -> readback [style="invis" weight=20];
+
+    csr_if -> requested [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="writes requested image", fontsize=10, fontcolor="#334155"];
+    requested -> admission [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="ctrl_change_req", fontsize=10, fontcolor="#334155"];
+    admission -> out_req [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="req_* + cfg_update_o", fontsize=10, fontcolor="#334155"];
+    status_in -> readback [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="fault / path state", fontsize=10, fontcolor="#334155"];
+    active -> readback [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="active image mirror", fontsize=10, fontcolor="#334155"];
+    requested -> readback [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="requested image mirror", fontsize=10, fontcolor="#334155"];
+    
+    }

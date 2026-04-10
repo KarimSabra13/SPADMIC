@@ -2,13 +2,8 @@
 // SPADMIC VIP — Position Clusters Test
 // Walks gap_threshold × min_span × diverse patterns.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_pos_clusters extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("pos_clusters");
@@ -57,4 +52,3 @@ class spadmic_pos_clusters extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

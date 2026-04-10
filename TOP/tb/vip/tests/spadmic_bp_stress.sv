@@ -2,13 +2,8 @@
 // SPADMIC VIP — Backpressure Stress Test
 // Walks BP modes: ALWAYS_READY → RANDOM_50 → ALWAYS_STALL → recovery.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_bp_stress extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("bp_stress");
@@ -42,4 +37,3 @@ class spadmic_bp_stress extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

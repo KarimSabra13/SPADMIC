@@ -1,0 +1,80 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_shared_tx_mux</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Final one-of-two packet mux onto the chip output interface.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_shared_tx_mux.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    tdc_in [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC packet input</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>tdc_valid_i<BR ALIGN='LEFT'/>tdc_data_i<BR ALIGN='LEFT'/>tdc_ready_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    pos_in [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Position packet input</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>pos_valid_i<BR ALIGN='LEFT'/>pos_data_i<BR ALIGN='LEFT'/>pos_ready_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    select [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>tx_sel_i</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>SPADMIC_TX_TDC<BR ALIGN='LEFT'/>SPADMIC_TX_POSITION</FONT></TD></TR>
+    </TABLE>
+    >];
+    mux [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Combinational source mux</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>shared_valid_o &lt;- selected valid<BR ALIGN='LEFT'/>shared_data_o &lt;- selected data<BR ALIGN='LEFT'/>ready only to selected source</FONT></TD></TR>
+    </TABLE>
+    >];
+    chip_bus [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Physical chip TX bus</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>shared_ready_i<BR ALIGN='LEFT'/>shared_valid_o<BR ALIGN='LEFT'/>shared_data_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    note_mux [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#CA8A04" BGCOLOR="#FEF3C7">
+      <TR><TD BGCOLOR="#CA8A04" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Safety assumption</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FEF3C7'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>The sequencer changes tx_sel_i only while both candidate sources are idle.<BR ALIGN='LEFT'/>That makes this final mux purely combinational and packet-safe.</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; tdc_in; select; mux; chip_bus; }
+    { rank=same; pos_in; }
+    { rank=same; note_mux; }
+
+    tdc_in -> select [style="invis" weight=20];
+    select -> mux [style="invis" weight=20];
+    mux -> chip_bus [style="invis" weight=20];
+
+    tdc_in -> mux [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="TDC packet bus", fontsize=10, fontcolor="#334155"];
+    pos_in -> mux [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="position packet bus", fontsize=10, fontcolor="#334155"];
+    select -> mux [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="select", fontsize=10, fontcolor="#334155"];
+    mux -> chip_bus [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="chip_tx_*", fontsize=10, fontcolor="#334155"];
+    
+    }

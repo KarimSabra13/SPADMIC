@@ -1,0 +1,88 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_i2c_csr_bridge</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Single-outstanding bridge between the I2C transaction channel and the shared local CSR bus.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">I2C/rtl/spadmic_i2c_csr_bridge.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    i2c_cmd [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>I2C command channel</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>i2c_cmd_valid_i<BR ALIGN='LEFT'/>i2c_cmd_write_i<BR ALIGN='LEFT'/>i2c_cmd_addr_i<BR ALIGN='LEFT'/>i2c_cmd_wdata_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    idle [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>ST_IDLE</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>accept next command only<BR ALIGN='LEFT'/>no outstanding CSR response</FONT></TD></TR>
+    </TABLE>
+    >];
+    wait_rsp [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>ST_WAIT_RSP</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>drive csr_req_*<BR ALIGN='LEFT'/>hold one outstanding transaction<BR ALIGN='LEFT'/>wait csr_rsp_valid_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    hold_rsp [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>ST_HOLD_RSP</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>hold i2c_rsp_* stable<BR ALIGN='LEFT'/>release after i2c_rsp_ready_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    csr_req [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>CSR request bus</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>csr_req_valid_o<BR ALIGN='LEFT'/>csr_req_write_o<BR ALIGN='LEFT'/>csr_req_addr_o<BR ALIGN='LEFT'/>csr_req_wdata_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    csr_rsp [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>CSR response bus</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>csr_rsp_valid_i<BR ALIGN='LEFT'/>csr_rsp_rdata_i<BR ALIGN='LEFT'/>csr_rsp_err_i<BR ALIGN='LEFT'/>csr_rsp_ready_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    i2c_rsp [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>I2C response channel</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>i2c_rsp_valid_o<BR ALIGN='LEFT'/>i2c_rsp_rdata_o<BR ALIGN='LEFT'/>i2c_rsp_err_o<BR ALIGN='LEFT'/>i2c_rsp_ready_i</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; i2c_cmd; idle; wait_rsp; hold_rsp; csr_req; }
+    { rank=same; i2c_rsp; csr_rsp; }
+
+    i2c_cmd -> idle [style="invis" weight=20];
+    idle -> wait_rsp [style="invis" weight=20];
+    wait_rsp -> hold_rsp [style="invis" weight=20];
+    hold_rsp -> csr_req [style="invis" weight=20];
+
+    i2c_cmd -> idle [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="command arrival", fontsize=10, fontcolor="#334155"];
+    idle -> wait_rsp [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="accepted", fontsize=10, fontcolor="#334155"];
+    wait_rsp -> csr_req [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="csr_req_*", fontsize=10, fontcolor="#334155"];
+    csr_rsp -> wait_rsp [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="csr_rsp_*", fontsize=10, fontcolor="#334155"];
+    wait_rsp -> hold_rsp [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="capture response", fontsize=10, fontcolor="#334155"];
+    hold_rsp -> i2c_rsp [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="i2c_rsp_*", fontsize=10, fontcolor="#334155"];
+    
+    }

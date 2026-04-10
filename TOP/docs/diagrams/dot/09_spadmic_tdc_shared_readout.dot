@@ -1,0 +1,89 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_tdc_shared_readout</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">META-first shared serializer front end with packet-atomic ownership and stable source tagging.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_tdc_shared_readout.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    inputs [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Axis ACQ inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>acq_valid_i[2:0]<BR ALIGN='LEFT'/>acq_data_i[3]<BR ALIGN='LEFT'/>META or HIT records</FONT></TD></TR>
+    </TABLE>
+    >];
+    meta [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>META availability</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>Only META can start packet ownership</FONT></TD></TR>
+    </TABLE>
+    >];
+    rr [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Round-robin chooser</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>rr_ptr_q<BR ALIGN='LEFT'/>choice_valid / choice_idx</FONT></TD></TR>
+    </TABLE>
+    >];
+    owner [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Owner hold</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>record_grant_active_q<BR ALIGN='LEFT'/>record_grant_idx_q<BR ALIGN='LEFT'/>hits_remaining_q</FONT></TD></TR>
+    </TABLE>
+    >];
+    serializer [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Shared mptdc_narrow16_tx_v2</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>selected record stream<BR ALIGN='LEFT'/>serializer_rd_en<BR ALIGN='LEFT'/>shared_valid_o / shared_data_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    tag [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Source-tag patch + busy</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>packet_src_q held until EOC<BR ALIGN='LEFT'/>patch sub-header bits [5:4]<BR ALIGN='LEFT'/>busy_o / packet_src_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    ready [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Ready return</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>acq_ready_o asserted only for current owner axis</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; inputs; meta; rr; owner; }
+    { rank=same; ready; serializer; tag; }
+
+    inputs -> meta [style="invis" weight=20];
+    meta -> rr [style="invis" weight=20];
+    rr -> owner [style="invis" weight=20];
+    ready -> serializer [style="invis" weight=20];
+    serializer -> tag [style="invis" weight=20];
+
+    inputs -> meta [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="record kind decode", fontsize=10, fontcolor="#334155"];
+    meta -> rr [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="choice_idx", fontsize=10, fontcolor="#334155"];
+    rr -> owner [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="grant packet owner", fontsize=10, fontcolor="#334155"];
+    owner -> serializer [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="selected record stream", fontsize=10, fontcolor="#334155"];
+    serializer -> tag [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="narrow words", fontsize=10, fontcolor="#334155"];
+    owner -> ready [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="owner-only ready", fontsize=10, fontcolor="#334155"];
+    
+    }

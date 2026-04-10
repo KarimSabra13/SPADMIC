@@ -1,0 +1,80 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_axis_cluster_scan</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Two-cluster bitmap scanner with threshold-based split and overflow retention of the first two clusters.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_axis_cluster_scan.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    in_bits [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>lines_i[LINE_W-1:0]<BR ALIGN='LEFT'/>gap_threshold_i[6:0]</FONT></TD></TR>
+    </TABLE>
+    >];
+    c0 [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>cluster0 builder</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>first active run<BR ALIGN='LEFT'/>track lo / hi<BR ALIGN='LEFT'/>merge sub-threshold gaps</FONT></TD></TR>
+    </TABLE>
+    >];
+    c1 [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>cluster1 builder</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>start only after gap &gt;= threshold<BR ALIGN='LEFT'/>track second lo / hi</FONT></TD></TR>
+    </TABLE>
+    >];
+    ovf [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Overflow detect</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>third qualified cluster -&gt; overflow<BR ALIGN='LEFT'/>freeze cluster1 after overflow</FONT></TD></TR>
+    </TABLE>
+    >];
+    out_sum [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>clusters_o</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>cluster0<BR ALIGN='LEFT'/>cluster1<BR ALIGN='LEFT'/>overflow<BR ALIGN='LEFT'/>empty / cluster_count</FONT></TD></TR>
+    </TABLE>
+    >];
+    rule [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#CA8A04" BGCOLOR="#FEF3C7">
+      <TR><TD BGCOLOR="#CA8A04" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Scan rule</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FEF3C7'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>A new cluster begins only after a zero-gap run reaches gap_threshold_i.<BR ALIGN='LEFT'/>Additional clusters do not overwrite the first two reported clusters.</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; in_bits; c0; c1; ovf; out_sum; }
+    { rank=same; rule; }
+
+    in_bits -> c0 [style="invis" weight=20];
+    c0 -> c1 [style="invis" weight=20];
+    c1 -> ovf [style="invis" weight=20];
+    ovf -> out_sum [style="invis" weight=20];
+
+    in_bits -> c0 [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="scan bitmap", fontsize=10, fontcolor="#334155"];
+    c0 -> c1 [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="gap split", fontsize=10, fontcolor="#334155"];
+    c1 -> ovf [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="third cluster check", fontsize=10, fontcolor="#334155"];
+    ovf -> out_sum [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="summary result", fontsize=10, fontcolor="#334155"];
+    
+    }

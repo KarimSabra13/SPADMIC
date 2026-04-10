@@ -1,0 +1,81 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_tdc_axis_wrapper</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Per-axis wrapper around the qualifier and one preserved MPTDC kernel, exporting acquisition records to the top-level shared readout.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_tdc_axis_wrapper.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    in_async [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Async/event inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>clk_sys / clk_ref_40m / async_rst_n<BR ALIGN='LEFT'/>spad_event_async_i<BR ALIGN='LEFT'/>cal_start_async_i / cal_stop_async_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    mode_csr [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Mode + CSR inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>global_enable_i / axis_enable_i<BR ALIGN='LEFT'/>input_sel_override_i<BR ALIGN='LEFT'/>out_mode_override_i<BR ALIGN='LEFT'/>csr_valid_i / csr_addr_i / csr_wdata_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    gate_evt [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Event gate</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>spad_event_async_i AND global/axis enable</FONT></TD></TR>
+    </TABLE>
+    >];
+    qual [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>STOP qualifier</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>exactly one qualified STOP pulse<BR ALIGN='LEFT'/>stop_armed_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    mptdc [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Preserved mptdc_top_asic</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT POINT-SIZE='10' COLOR='#475569'>kernel remains local to the axis</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>async measurement kernel<BR ALIGN='LEFT'/>CSR endpoint<BR ALIGN='LEFT'/>local acquisition FIFO<BR ALIGN='LEFT'/>shared_readout_en_i = 1</FONT></TD></TR>
+    </TABLE>
+    >];
+    export [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Export outputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>acq_valid_o / acq_data_o<BR ALIGN='LEFT'/>acq_ready_i<BR ALIGN='LEFT'/>fifo_full_o</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; in_async; gate_evt; qual; mptdc; export; }
+    { rank=same; mode_csr; }
+
+    in_async -> gate_evt [style="invis" weight=20];
+    gate_evt -> qual [style="invis" weight=20];
+    qual -> mptdc [style="invis" weight=20];
+    mptdc -> export [style="invis" weight=20];
+
+    in_async -> gate_evt [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="SPAD event", fontsize=10, fontcolor="#334155"];
+    gate_evt -> qual [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="start_async_gated", fontsize=10, fontcolor="#334155"];
+    qual -> mptdc [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="qualified STOP", fontsize=10, fontcolor="#334155"];
+    mode_csr -> mptdc [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="CSR + override controls", fontsize=10, fontcolor="#334155"];
+    mptdc -> export [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="ACQ record export", fontsize=10, fontcolor="#334155"];
+    
+    }

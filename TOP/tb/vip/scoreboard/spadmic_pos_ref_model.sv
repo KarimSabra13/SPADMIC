@@ -2,13 +2,8 @@
 // SPADMIC VIP — Position Reference Model
 // Predicts expected position packet content from line patterns + config.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_pos_ref_model;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   // Software cluster-scan reference implementation
   function automatic void scan_axis(
@@ -117,4 +112,3 @@ class spadmic_pos_ref_model;
 
 endclass
 
-`default_nettype wire

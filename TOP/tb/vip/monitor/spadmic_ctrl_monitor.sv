@@ -2,13 +2,8 @@
 // SPADMIC VIP — Control-State Transition Monitor
 // Tracks requested vs active state transitions and drain/commit behavior.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_ctrl_monitor;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   // Direct signal access via hierarchical path (set by harness)
   // These are sampled from DUT internals
@@ -55,4 +50,3 @@ class spadmic_ctrl_monitor;
 
 endclass
 
-`default_nettype wire

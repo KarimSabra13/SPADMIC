@@ -2,13 +2,8 @@
 // SPADMIC VIP — TX Packet Monitor
 // Captures chip_tx words, assembles packets, and dispatches to scoreboard.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_tx_monitor;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   virtual spadmic_narrow_tx_if tx_if;
   mailbox #(spadmic_base_txn)  sb_mb;     // to scoreboard
@@ -115,4 +110,3 @@ class spadmic_tx_monitor;
 
 endclass
 
-`default_nettype wire

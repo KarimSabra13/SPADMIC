@@ -1,11 +1,8 @@
 // =============================================================================
 // SPADMIC VIP — Reset Transaction
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_reset_txn extends spadmic_base_txn;
-  import spadmic_vip_pkg::*;
 
   rand int unsigned reset_duration_ns;  // how long to hold reset
   logic        during_traffic;     // inject while traffic is in flight
@@ -26,4 +23,3 @@ class spadmic_reset_txn extends spadmic_base_txn;
   endfunction
 endclass
 
-`default_nettype wire

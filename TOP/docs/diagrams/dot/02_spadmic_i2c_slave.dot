@@ -1,0 +1,99 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_i2c_slave</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Schematic page for the synchronized I2C front end and its pointer-based command/readback behavior.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">I2C/rtl/spadmic_i2c_slave.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    in_pins [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>clk_sys<BR ALIGN='LEFT'/>rst_n<BR ALIGN='LEFT'/>i2c_scl_i<BR ALIGN='LEFT'/>i2c_sda_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    sync [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>SCL/SDA synchronizers</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>double-sync into clk_sys<BR ALIGN='LEFT'/>START / STOP decode<BR ALIGN='LEFT'/>scl_rise / scl_fall timing</FONT></TD></TR>
+    </TABLE>
+    >];
+    addr_ptr [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Address + pointer FSM</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>device address match<BR ALIGN='LEFT'/>16-bit pointer capture<BR ALIGN='LEFT'/>12-bit CSR mapping</FONT></TD></TR>
+    </TABLE>
+    >];
+    write_path [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Write-byte path</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>D0 / D1 / D2 / D3 assembly<BR ALIGN='LEFT'/>ACK held through full SCL-high<BR ALIGN='LEFT'/>emit write transaction</FONT></TD></TR>
+    </TABLE>
+    >];
+    read_path [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Repeated-start read path</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>pointer-valid read launch<BR ALIGN='LEFT'/>predrive first read bit<BR ALIGN='LEFT'/>ACK/NACK byte stepping</FONT></TD></TR>
+    </TABLE>
+    >];
+    sda_drive [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>SDA drive control</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>i2c_sda_oe_o<BR ALIGN='LEFT'/>ACK generation<BR ALIGN='LEFT'/>read-data bit drive</FONT></TD></TR>
+    </TABLE>
+    >];
+    txn_out [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Local transaction outputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>txn_valid_o / txn_write_o<BR ALIGN='LEFT'/>txn_addr_o / txn_wdata_o<BR ALIGN='LEFT'/>txn_rsp_ready_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    rsp_in [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Response inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>txn_ready_i<BR ALIGN='LEFT'/>txn_rsp_valid_i<BR ALIGN='LEFT'/>txn_rsp_rdata_i<BR ALIGN='LEFT'/>txn_rsp_err_i</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; in_pins; sync; addr_ptr; write_path; txn_out; }
+    { rank=same; rsp_in; sda_drive; read_path; }
+
+    in_pins -> sync [style="invis" weight=20];
+    sync -> addr_ptr [style="invis" weight=20];
+    addr_ptr -> write_path [style="invis" weight=20];
+    write_path -> txn_out [style="invis" weight=20];
+    rsp_in -> sda_drive [style="invis" weight=20];
+    sda_drive -> read_path [style="invis" weight=20];
+
+    in_pins -> sync [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="raw I2C pins", fontsize=10, fontcolor="#334155"];
+    sync -> addr_ptr [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="sampled bits", fontsize=10, fontcolor="#334155"];
+    addr_ptr -> write_path [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="pointer + write bytes", fontsize=10, fontcolor="#334155"];
+    addr_ptr -> read_path [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="repeated-start path", fontsize=10, fontcolor="#334155"];
+    write_path -> txn_out [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="write transaction", fontsize=10, fontcolor="#334155"];
+    read_path -> txn_out [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="read transaction", fontsize=10, fontcolor="#334155"];
+    rsp_in -> read_path [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="readback payload", fontsize=10, fontcolor="#334155"];
+    sync -> sda_drive [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="ACK / SDA timing", fontsize=10, fontcolor="#334155"];
+    read_path -> sda_drive [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="read-bit drive", fontsize=10, fontcolor="#334155"];
+    
+    }

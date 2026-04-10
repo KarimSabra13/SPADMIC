@@ -2,13 +2,8 @@
 // SPADMIC VIP — TDC Event Transaction
 // Represents injection of START/STOP events on one TDC axis.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_tdc_event_txn extends spadmic_base_txn;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   rand int unsigned axis;             // 0=X, 1=Y, 2=Z
   rand int unsigned num_conversions;  // how many START/STOP pairs to inject
@@ -61,4 +56,3 @@ class spadmic_tdc_event_txn extends spadmic_base_txn;
   endfunction
 endclass
 
-`default_nettype wire

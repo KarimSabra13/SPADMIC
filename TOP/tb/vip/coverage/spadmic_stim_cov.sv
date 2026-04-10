@@ -2,15 +2,10 @@
 // SPADMIC VIP — Stimulus Coverage
 // Tracks configuration combinations exercised during simulation.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 `ifdef SPADMIC_ENABLE_FUNC_COV
 
 class spadmic_stim_cov;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   // Sampled fields
   logic       tx_sel;
@@ -68,4 +63,3 @@ endclass
 
 `endif
 
-`default_nettype wire

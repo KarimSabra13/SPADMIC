@@ -2,13 +2,8 @@
 // SPADMIC VIP — Environment Assembly
 // Connects generator → driver → DUT → monitor → scoreboard pipeline.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_env;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   // Configuration
   spadmic_env_cfg     cfg;
@@ -124,4 +119,3 @@ class spadmic_env;
 
 endclass
 
-`default_nettype wire

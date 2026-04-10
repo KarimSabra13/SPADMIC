@@ -1,13 +1,8 @@
 // =============================================================================
 // SPADMIC VIP — Scoreboard + End-to-End Packet Checker
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_scoreboard;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   mailbox #(spadmic_base_txn)  stim_mb;   // from driver
   mailbox #(spadmic_base_txn)  mon_mb;    // from TX monitor
@@ -196,4 +191,3 @@ class spadmic_scoreboard;
 
 endclass
 
-`default_nettype wire

@@ -1,0 +1,97 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>spadmic_position_block</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Async-qualified position detector with explicit settle filtering, cluster extraction, and fixed packet output.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_position_block.sv</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    pins [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Position inputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>clk_sys / rst_n<BR ALIGN='LEFT'/>global_enable_i<BR ALIGN='LEFT'/>x_lines_i / y_lines_i / z_lines_i<BR ALIGN='LEFT'/>pos_ready_i</FONT></TD></TR>
+    </TABLE>
+    >];
+    csr [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Position CSR</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>csr_valid_i / csr_write_i<BR ALIGN='LEFT'/>csr_addr_i / csr_wdata_i<BR ALIGN='LEFT'/>csr_ready_o / csr_rvalid_o / csr_rdata_o</FONT></TD></TR>
+    </TABLE>
+    >];
+    sync [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#334155" BGCOLOR="#F8FAFC">
+      <TR><TD BGCOLOR="#334155" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>3-stage synchronizers</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F8FAFC'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>ff1 / ff2 / ff3 for x, y, z<BR ALIGN='LEFT'/>lines_nonzero_sync<BR ALIGN='LEFT'/>lines_stable_sync</FONT></TD></TR>
+    </TABLE>
+    >];
+    fsm [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Detect / settle / eval FSM</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>DET_IDLE<BR ALIGN='LEFT'/>DET_SETTLE<BR ALIGN='LEFT'/>DET_EVAL<BR ALIGN='LEFT'/>DET_WAIT_CLEAR</FONT></TD></TR>
+    </TABLE>
+    >];
+    scan [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>3x cluster scan + filter</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>u_scan_x / u_scan_y / u_scan_z<BR ALIGN='LEFT'/>gap_threshold_q<BR ALIGN='LEFT'/>min_cluster_span_q<BR ALIGN='LEFT'/>meaningful_event / overflow_any</FONT></TD></TR>
+    </TABLE>
+    >];
+    acct [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Accounting</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>event_count_q<BR ALIGN='LEFT'/>drop_count_q<BR ALIGN='LEFT'/>reject_count_q<BR ALIGN='LEFT'/>drop / glitch sticky</FONT></TD></TR>
+    </TABLE>
+    >];
+    pkt [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Fixed 12-word packetizer</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>header<BR ALIGN='LEFT'/>source-tagged sub-header<BR ALIGN='LEFT'/>X/Y/Z summaries + clusters<BR ALIGN='LEFT'/>EOC</FONT></TD></TR>
+    </TABLE>
+    >];
+    outs [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Outputs</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>pos_valid_o / pos_data_o<BR ALIGN='LEFT'/>busy_o / packet_pending_o<BR ALIGN='LEFT'/>drop_sticky_o<BR ALIGN='LEFT'/>glitch_reject_sticky_o</FONT></TD></TR>
+    </TABLE>
+    >];
+
+    { rank=same; pins; sync; fsm; scan; pkt; outs; }
+    { rank=same; csr; acct; }
+
+    pins -> sync [style="invis" weight=20];
+    sync -> fsm [style="invis" weight=20];
+    fsm -> scan [style="invis" weight=20];
+    scan -> pkt [style="invis" weight=20];
+    pkt -> outs [style="invis" weight=20];
+
+    pins -> sync [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="async line buses", fontsize=10, fontcolor="#334155"];
+    sync -> fsm [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="stable / nonzero detect", fontsize=10, fontcolor="#334155"];
+    fsm -> scan [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="accepted snapshots", fontsize=10, fontcolor="#334155"];
+    scan -> pkt [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="cluster summaries", fontsize=10, fontcolor="#334155"];
+    csr -> fsm [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="enable / settle config", fontsize=10, fontcolor="#334155"];
+    csr -> scan [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="gap / span config", fontsize=10, fontcolor="#334155"];
+    fsm -> acct [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="drops / rejects", fontsize=10, fontcolor="#334155"];
+    pkt -> outs [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="position packet bus", fontsize=10, fontcolor="#334155"];
+    
+    }

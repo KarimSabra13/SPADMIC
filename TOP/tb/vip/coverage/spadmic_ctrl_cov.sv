@@ -2,14 +2,10 @@
 // SPADMIC VIP — Control-Plane State Coverage
 // Tracks control-plane states and transitions exercised during simulation.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 `ifdef SPADMIC_ENABLE_FUNC_COV
 
 class spadmic_ctrl_cov;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
 
   logic       cfg_accept;
   logic       transition_busy;
@@ -57,4 +53,3 @@ endclass
 
 `endif
 
-`default_nettype wire

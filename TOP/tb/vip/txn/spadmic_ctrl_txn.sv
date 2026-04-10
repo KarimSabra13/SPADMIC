@@ -2,13 +2,8 @@
 // SPADMIC VIP — Control/Config Transaction
 // Programs global CSR fields: enable, axis mask, tx_sel, TDC mode, etc.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_ctrl_txn extends spadmic_base_txn;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   // Target CSR address and data (for raw CSR writes)
   logic [SPADMIC_CSR_ADDR_W-1:0] addr;
@@ -71,4 +66,3 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
   endfunction
 endclass
 
-`default_nettype wire

@@ -1,0 +1,166 @@
+digraph G {
+      graph [
+        rankdir=TB,
+        splines=ortho,
+        overlap=false,
+        newrank=true,
+        compound=true,
+        nodesep=0.38,
+        ranksep=0.68,
+        pad=0.18,
+        margin=0.08,
+        bgcolor="white",
+        fontname="Helvetica",
+        labelloc=t,
+        labeljust=l,
+        label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="28"><B>SPADMIC top conceptual floorplan schematic</B></FONT></TD></TR>
+      <TR><TD HEIGHT="4"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Professional chip-level page with grouped I/O pads, black-box SPAD matrix, black-box PLL, and the active shared-bus architecture.</FONT></TD></TR>
+      <TR><TD HEIGHT="2"></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_top_v1.sv + TOP/docs/01_ACTIVE_ARCHITECTURE.md</FONT></TD></TR>
+    </TABLE>
+    >,
+        size="11.69,8.27!"
+      ];
+      node [fontname="Helvetica"];
+      edge [fontname="Helvetica", arrowsize=0.8];
+      
+    subgraph cluster_chip {
+      label="SPADMIC top chip - conceptual floorplan schematic";
+      labeljust=l;
+      labelloc=t;
+      fontsize=18;
+      fontcolor="#0F172A";
+      color="#1E293B";
+      penwidth=2.2;
+      style="rounded";
+
+      pad_clk [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>I/O pads - clock/reset</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>ref clock in<BR ALIGN='LEFT'/>reset / test straps<BR ALIGN='LEFT'/>power-good / enables</FONT></TD></TR>
+    </TABLE>
+    >];
+      pll [shape=box style="rounded,filled,bold" penwidth=2.0 color="#0B0F14" fillcolor="#0B0F14" fontcolor="white" fontname="Helvetica" fontsize=14 width=2.3 height=1.0 label="PLL / CLOCK MACRO\nblack-box clock source\nclk_ref_40m\nclk_sys_160m"];
+      pad_status [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>I/O pads - status</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>tdc_stop_armed[2:0]<BR ALIGN='LEFT'/>tdc_shared_busy<BR ALIGN='LEFT'/>position_busy</FONT></TD></TR>
+    </TABLE>
+    >];
+
+      pad_i2c [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>I/O pads - control</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>i2c_scl_i<BR ALIGN='LEFT'/>i2c_sda_i<BR ALIGN='LEFT'/>i2c_sda_oe_o</FONT></TD></TR>
+    </TABLE>
+    >];
+      control [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
+      <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Control plane</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT POINT-SIZE='10' COLOR='#475569'>I2C slave -&gt; bridge -&gt; CSR decoder -&gt; global CSR -&gt; sequencer</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>requested image<BR ALIGN='LEFT'/>active image commit<BR ALIGN='LEFT'/>fault / status readback</FONT></TD></TR>
+    </TABLE>
+    >];
+      axis_x [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC axis X</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT POINT-SIZE='10' COLOR='#475569'>stop qualifier + preserved mptdc_top_asic</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>spad event X<BR ALIGN='LEFT'/>CAL start/stop X<BR ALIGN='LEFT'/>CSR + ACQ export</FONT></TD></TR>
+    </TABLE>
+    >];
+      axis_y [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC axis Y</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT POINT-SIZE='10' COLOR='#475569'>stop qualifier + preserved mptdc_top_asic</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>spad event Y<BR ALIGN='LEFT'/>CAL start/stop Y<BR ALIGN='LEFT'/>CSR + ACQ export</FONT></TD></TR>
+    </TABLE>
+    >];
+      axis_z [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC axis Z</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT POINT-SIZE='10' COLOR='#475569'>stop qualifier + preserved mptdc_top_asic</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>spad event Z<BR ALIGN='LEFT'/>CAL start/stop Z<BR ALIGN='LEFT'/>CSR + ACQ export</FONT></TD></TR>
+    </TABLE>
+    >];
+      tx_mux [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Shared TX mux</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT POINT-SIZE='10' COLOR='#475569'>one physical chip_tx_* bus</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>select TDC or position packet<BR ALIGN='LEFT'/>ready only to selected source</FONT></TD></TR>
+    </TABLE>
+    >];
+      pad_tx [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
+      <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>I/O pads - chip TX</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>chip_tx_valid_o<BR ALIGN='LEFT'/>chip_tx_ready_i<BR ALIGN='LEFT'/>chip_tx_data_o[15:0]</FONT></TD></TR>
+    </TABLE>
+    >];
+
+      shared_readout [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
+      <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Shared TDC readout</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT POINT-SIZE='10' COLOR='#475569'>META arbitration + shared narrow16 serializer</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>packet-atomic owner hold<BR ALIGN='LEFT'/>source tag patch<BR ALIGN='LEFT'/>shared TDC packet stream</FONT></TD></TR>
+    </TABLE>
+    >];
+      position [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Position path</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT POINT-SIZE='10' COLOR='#475569'>sync + settle FSM + cluster scan + packetizer</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>x/y/z line snapshots<BR ALIGN='LEFT'/>fault counters / stickies<BR ALIGN='LEFT'/>fixed 12-word position packet</FONT></TD></TR>
+    </TABLE>
+    >];
+
+      spad_matrix [shape=box style="rounded,filled,bold" penwidth=2.0 color="#0B0F14" fillcolor="#0B0F14" fontcolor="white" fontname="Helvetica" fontsize=14 width=2.6 height=2.4 label="SPAD MATRIX\nblack-box sensor macro\nevent taps X / Y / Z\nx_lines / y_lines / z_lines"];
+
+      { rank=same; pad_clk; pll; pad_status; }
+      { rank=same; pad_i2c; control; axis_x; axis_y; axis_z; tx_mux; pad_tx; }
+      { rank=same; shared_readout; position; }
+      { rank=same; spad_matrix; }
+
+      pad_i2c -> control [style="invis" weight=20];
+      control -> axis_x [style="invis" weight=20];
+      axis_x -> axis_y [style="invis" weight=20];
+      axis_y -> axis_z [style="invis" weight=20];
+      axis_z -> tx_mux [style="invis" weight=20];
+      tx_mux -> pad_tx [style="invis" weight=20];
+      shared_readout -> position [style="invis" weight=20];
+
+      pad_clk -> pll [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="ref clock / reset", fontsize=10, fontcolor="#334155"];
+      pll -> control [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="clk_sys_160m", fontsize=10, fontcolor="#334155"];
+      pll -> axis_x [color="#334155", penwidth=1.6, style="solid", weight=2, xlabel="clk_ref_40m + clk_sys", fontsize=10, fontcolor="#334155"];
+      pll -> axis_y [color="#334155", penwidth=1.6, style="solid", weight=2];
+      pll -> axis_z [color="#334155", penwidth=1.6, style="solid", weight=2];
+      pll -> shared_readout [color="#334155", penwidth=1.6, style="solid", weight=2];
+      pll -> position [color="#334155", penwidth=1.6, style="solid", weight=2];
+
+      pad_i2c -> control [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="scl / sda", fontsize=10, fontcolor="#334155"];
+      control -> axis_x [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="X CSR + mode", fontsize=10, fontcolor="#334155"];
+      control -> axis_y [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="Y CSR + mode", fontsize=10, fontcolor="#334155"];
+      control -> axis_z [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="Z CSR + mode", fontsize=10, fontcolor="#334155"];
+      control -> position [color="#2563EB", penwidth=1.6, style="solid", weight=2, xlabel="POS CSR", fontsize=10, fontcolor="#334155"];
+
+      spad_matrix -> axis_x [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="event X", fontsize=10, fontcolor="#334155"];
+      spad_matrix -> axis_y [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="event Y", fontsize=10, fontcolor="#334155"];
+      spad_matrix -> axis_z [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="event Z", fontsize=10, fontcolor="#334155"];
+      spad_matrix -> position [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="x/y/z line buses", fontsize=10, fontcolor="#334155"];
+
+      axis_x -> shared_readout [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="ACQ export X", fontsize=10, fontcolor="#334155"];
+      axis_y -> shared_readout [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="ACQ export Y", fontsize=10, fontcolor="#334155"];
+      axis_z -> shared_readout [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="ACQ export Z", fontsize=10, fontcolor="#334155"];
+      shared_readout -> tx_mux [color="#7C3AED", penwidth=1.6, style="solid", weight=2, xlabel="TDC packet bus", fontsize=10, fontcolor="#334155"];
+      position -> tx_mux [color="#059669", penwidth=1.6, style="solid", weight=2, xlabel="position packet bus", fontsize=10, fontcolor="#334155"];
+      tx_mux -> pad_tx [color="#EA580C", penwidth=1.6, style="solid", weight=2, xlabel="chip_tx_*", fontsize=10, fontcolor="#334155"];
+
+      axis_x -> pad_status [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="stop_armed[0]", fontsize=10, fontcolor="#334155"];
+      axis_y -> pad_status [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="stop_armed[1]", fontsize=10, fontcolor="#334155"];
+      axis_z -> pad_status [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="stop_armed[2]", fontsize=10, fontcolor="#334155"];
+      shared_readout -> pad_status [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="tdc_shared_busy", fontsize=10, fontcolor="#334155"];
+      position -> pad_status [color="#B45309", penwidth=1.6, style="solid", weight=2, xlabel="position_busy", fontsize=10, fontcolor="#334155"];
+    }
+
+    top_note [shape=plain margin=0 label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#CA8A04" BGCOLOR="#FEF3C7">
+      <TR><TD BGCOLOR="#CA8A04" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Technical note</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FEF3C7'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>The SPAD matrix and PLL are shown as black-box macros for chip-level communication clarity.<BR ALIGN='LEFT'/>The active RTL still treats clocks and matrix outputs as top-level interfaces.<BR ALIGN='LEFT'/>Three preserved TDC kernels stay local until acquisition-record export.</FONT></TD></TR>
+    </TABLE>
+    >];
+    { rank=same; top_note; }
+    
+    }

@@ -2,13 +2,8 @@
 // SPADMIC VIP — Transaction Generator / Sequencer
 // Builds transaction sequences based on mission profile and constraints.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_generator;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   mailbox #(spadmic_base_txn) drv_mb;
   spadmic_env_cfg             cfg;
@@ -141,4 +136,3 @@ class spadmic_generator;
 
 endclass
 
-`default_nettype wire

@@ -2,14 +2,10 @@
 // SPADMIC VIP — Fault/Corner Coverage
 // Tracks error injection, fault observation, and corner-case scenarios.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 `ifdef SPADMIC_ENABLE_FUNC_COV
 
 class spadmic_fault_cov;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
 
   logic       pos_drop_sticky;
   logic       pos_glitch_sticky;
@@ -57,4 +53,3 @@ endclass
 
 `endif
 
-`default_nettype wire

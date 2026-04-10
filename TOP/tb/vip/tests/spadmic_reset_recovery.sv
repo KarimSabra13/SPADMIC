@@ -2,13 +2,8 @@
 // SPADMIC VIP — Reset Recovery Test
 // Asserts async_rst_n during active TDC traffic, checks clean recovery.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_reset_recovery extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("reset_recovery");
@@ -38,4 +33,3 @@ class spadmic_reset_recovery extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

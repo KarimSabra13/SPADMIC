@@ -2,13 +2,8 @@
 // SPADMIC VIP — I2C Driver
 // Drives I2C interface for chip-realistic end-to-end control.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_i2c_driver;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   virtual spadmic_i2c_if i2c_if;
 
@@ -92,4 +87,3 @@ class spadmic_i2c_driver;
 
 endclass
 
-`default_nettype wire

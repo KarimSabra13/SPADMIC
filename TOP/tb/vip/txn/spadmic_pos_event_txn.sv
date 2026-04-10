@@ -2,13 +2,8 @@
 // SPADMIC VIP — Position Event Transaction
 // Represents injection of position line patterns on 3 axes.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_pos_event_txn extends spadmic_base_txn;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   logic [SPADMIC_LINE_W-1:0] x_pattern;
   logic [SPADMIC_LINE_W-1:0] y_pattern;
@@ -61,4 +56,3 @@ class spadmic_pos_event_txn extends spadmic_base_txn;
   endfunction
 endclass
 
-`default_nettype wire

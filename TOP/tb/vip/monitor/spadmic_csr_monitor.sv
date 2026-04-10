@@ -2,13 +2,8 @@
 // SPADMIC VIP — CSR Response Monitor
 // Watches CSR reads/writes for status polling and fault tracking.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_csr_monitor;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   virtual spadmic_csr_req_if csr_if;
   mailbox #(int)             cov_mb;
@@ -63,4 +58,3 @@ class spadmic_csr_monitor;
 
 endclass
 
-`default_nettype wire

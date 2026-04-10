@@ -2,15 +2,10 @@
 // SPADMIC VIP — Packet Content Coverage
 // Tracks TDC and position packet diversity observed during simulation.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 `ifdef SPADMIC_ENABLE_FUNC_COV
 
 class spadmic_pkt_cov;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   // TDC packet fields
   logic [1:0] pkt_source;
@@ -88,4 +83,3 @@ endclass
 
 `endif
 
-`default_nettype wire

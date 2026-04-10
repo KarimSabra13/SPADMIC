@@ -2,13 +2,8 @@
 // SPADMIC VIP — Control Reject Test
 // Writes GLOBAL_CTRL while NOT idle → expects reject sticky + count.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_ctrl_reject extends spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   function new();
     super.new("ctrl_reject");
@@ -48,4 +43,3 @@ class spadmic_ctrl_reject extends spadmic_base_test;
   endtask
 endclass
 
-`default_nettype wire

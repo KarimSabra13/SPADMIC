@@ -2,13 +2,8 @@
 // SPADMIC VIP — Base Test
 // Provides standard test lifecycle: build → configure → run → report.
 // =============================================================================
-`timescale 1ps/1ps
-`default_nettype none
 
 class spadmic_base_test;
-  import spadmic_vip_pkg::*;
-  import spadmic_pkg::*;
-  import mptdc_pkg::*;
 
   spadmic_env     env;
   spadmic_env_cfg cfg;
@@ -79,4 +74,3 @@ class spadmic_base_test;
 
 endclass
 
-`default_nettype wire
