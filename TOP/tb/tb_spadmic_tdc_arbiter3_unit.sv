@@ -9,7 +9,9 @@ module tb_spadmic_tdc_arbiter3_unit;
   logic clk_sys;
   logic rst_n;
 
-  logic [2:0] src_valid;
+  // Per-source valids are separate variables to avoid read-modify-write
+  // races when forked threads concurrently drive different bits.
+  logic src_valid [3];
   logic [15:0] src_data [3];
   wire [2:0] src_ready;
 
@@ -150,7 +152,9 @@ module tb_spadmic_tdc_arbiter3_unit;
     fail_cnt = 0;
     rst_n = 1'b0;
     shared_ready = 1'b0;
-    src_valid = '0;
+    src_valid[0] = 1'b0;
+    src_valid[1] = 1'b0;
+    src_valid[2] = 1'b0;
     src_data[0] = '0;
     src_data[1] = '0;
     src_data[2] = '0;
@@ -164,6 +168,7 @@ module tb_spadmic_tdc_arbiter3_unit;
       push_packet_z();
     join
 
+    repeat (2) @(posedge clk_sys); // let packet_count_q register
     check("all three packets available before arbitration", pkt_available == 3'b111);
     shared_ready = 1'b1;
 
