@@ -48,11 +48,11 @@ set design(CLK_PERIOD) 6.25              ;# 160 MHz → 6.25 ns
 # enable timing analysis through oscillator-domain logic.
 set design(OSC_SLOW_NAME)   "clk_osc_slow"
 set design(OSC_SLOW_PERIOD) 1.0          ;# ~1.0 GHz → 1.0 ns (9 taps × ~111 ps)
-set design(OSC_SLOW_PIN)    "u_core/u_osc_slow/u_stub/phase[0]"
+set design(OSC_SLOW_PIN)    {u_core/u_osc_slow/u_stub/phase[0]}
 
 set design(OSC_FAST_NAME)   "clk_osc_fast"
 set design(OSC_FAST_PERIOD) 0.9          ;# ~1.11 GHz → 0.9 ns (9 taps × ~100 ps)
-set design(OSC_FAST_PIN)    "u_core/u_osc_fast/u_stub/phase[0]"
+set design(OSC_FAST_PIN)    {u_core/u_osc_fast/u_stub/phase[0]}
 
 # ── Reset ───────────────────────────────────────────────────────────
 set design(RST_PORT) "async_rst_n"       ;# Async active-low reset
@@ -90,13 +90,14 @@ set design(EXPECTED_LATCH_COUNT) 5       ;# start, stop, active_ctx, ctx_drain×
 #############################################
 #       Files and Paths
 #############################################
-set design(workdir)           $env(PWD)
-set design(project_root)      [file normalize "$env(PWD)/.."]
-set design(syn_root)          [file normalize "$env(PWD)/.."]
+set design(workdir)           [pwd]
+set defines_dir               [file dirname [file normalize [info script]]]
+set design(syn_root)          [file dirname $defines_dir]
+set design(project_root)      [file dirname $design(syn_root)]
 
 # Source directories
 set design(rtl_dir)           "$design(project_root)/rtl"
-set design(inputs_dir)        "$design(syn_root)/inputs"
+set design(inputs_dir)        $defines_dir
 set design(libraries_dir)     "$design(syn_root)/libraries"
 set design(scripts_dir)       "$design(syn_root)/scripts"
 

@@ -9,6 +9,7 @@
 //
 // Usage:
 //   In Genus TCL: read_hdl -f ../filelist_synth.f
+//   Paths below are resolved from syn/ (genus.tcl switches there before read_hdl)
 // =============================================================================
 
 // Synthesis define

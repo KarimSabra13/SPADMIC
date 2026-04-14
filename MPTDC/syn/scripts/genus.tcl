@@ -97,6 +97,11 @@ mptdc_message "Loading LEF physical abstracts"
 #############################################
 mptdc_start_stage "read_rtl"
 
+## read_hdl resolves filelist entries from the current working directory.
+## The checked-in filelist uses paths relative to syn/, so switch there first.
+mptdc_message "Switching to $design(syn_root) for HDL filelist resolution"
+cd $design(syn_root)
+
 set_db init_hdl_search_path $design(hdl_search_paths)
 
 mptdc_message "Reading RTL from [file tail $design(read_hdl_list)]"
