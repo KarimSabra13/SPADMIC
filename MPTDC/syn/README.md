@@ -164,8 +164,8 @@ constraint values are never hardcoded in two places.
 | **§3 Clock groups** | `set_clock_groups -asynchronous` | 3 async domains (sys, slow, fast) |
 | **§4 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
 | **§5 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
-| **§6 CDC protection** | best-effort `set_dont_touch` wrappers on sync FFs | Preserves synchronizers where the active Genus/DC parser supports the object form |
-| **§7 CDC max delay** | `set_max_delay` across domains with compatibility fallback | Limits CDC datapath depth without aborting on builds that reject `-datapath_only` |
+| **§6 CDC protection** | best-effort `set_dont_touch` wrappers on sync FF patterns | Preserves synchronizers where the active Genus/DC parser accepts the matched objects |
+| **§7 CDC max delay** | simplified `set_max_delay` across domains | Keeps CDC intent without relying on unsupported `-datapath_only` forms |
 | **§8-9 I/O delays** | 2 ns input/output delay | Conservative for 180 nm routing |
 | **§10 Load/drive** | 50 fF load, 100 ps transition | Pad characteristics |
 | **§11 Design rules** | Max fanout 20, max transition 0.5 ns | Signal integrity |
@@ -235,7 +235,7 @@ Genus tool-level configuration (not design-specific):
   active Genus build
 - **Genus compatibility**: tolerate unsupported root attributes and minor SDC
   option differences across lab-server releases
-- **Clock gating**: Enabled with min 8 FFs threshold
+- **Clock gating**: Disabled for bring-up because the current XFAB HD ICG cells are marked `dont_use`
 - **Synthesis effort**: Medium (increase to high for tapeout)
 - **Verbosity**: Level 7 (detailed logging)
 
@@ -267,7 +267,7 @@ Stage 5: POST_ELABORATION
   └── Save elaboration checkpoint
 
 Stage 6: SYNTHESIS
-  └── Define cost groups (reg2reg, in2reg, reg2out, in2out)
+  └── Define custom cost groups when supported, otherwise keep default clock-derived groups
   └── syn_generic  → Phase 1: technology-independent optimization
   └── syn_map      → Phase 2: map to XFAB XH018 cells
   └── syn_opt      → Phase 3: incremental gate sizing, buffering, hold fixing
@@ -302,7 +302,8 @@ The checked-in flow is written to survive the small command-set differences seen
 across deployed Genus releases:
 
 - unsupported root attributes are guarded instead of aborting the run
-- unsupported SDC option forms fall back to simpler constraints
+- unsupported SDC option forms are reduced to the simpler forms accepted by the lab-server build
+- unsupported cost-group commands fall back to the default clock-derived optimization groups
 - latch reporting uses `get_db` instead of `report_gates -type`
 
 ### Intentional Latches
@@ -325,26 +326,24 @@ assign phase = {{8{1'b0}}, 1'b1};  // phase[0]=1, all others=0
 Genus synthesizes this as **tie-high/tie-low cells** (wires to VDD/VSS).
 The oscillator "block" essentially disappears — zero gates, zero area.
 
-**The virtual clock trick:**
+**The intended virtual clock trick:**
 In the SDC, we define **virtual clocks** on the stub's output pins:
 ```tcl
 create_clock -name clk_osc_slow -period 1.0 [get_pins u_core/u_osc_slow/u_stub/phase[0]]
 create_clock -name clk_osc_fast -period 0.9 [get_pins u_core/u_osc_fast/u_stub/phase[0]]
 ```
-Even though `phase[0]` is tied to `1'b1` (not physically toggling), **Genus
-treats it as if a 1 GHz / 1.11 GHz clock drives that pin** for timing analysis.
-This means:
-- All FFs clocked by `phase[0]` (meas_ctrl, gray_cnt_sync, pd_cell, etc.)
-  get proper setup/hold analysis against the correct period
-- CDC paths (osc→sys) get `set_max_delay` constraints applied
-- The PD pipeline timing is checked against the 0.9 ns fast clock period
+However, the current Genus 22.13 lab-server run still propagates the constant
+stub values into the netlist and reports hundreds of oscillator-domain
+sequential clock pins as having **no clock waveform**. In other words, the
+virtual clocks are created, but this stub model is **not yet sufficient to make
+oscillator-domain timing signoff-meaningful** in the active bring-up flow.
 
 **What gets validated vs what doesn't:**
 
 | Aspect | Validated? | Why |
 |---|---|---|
-| Combinational logic depth in osc domain | ✅ Yes | Virtual clock enforces timing |
-| CDC synchronizer paths (osc↔sys) | ✅ Yes | `set_max_delay` constraints |
+| Combinational logic depth in osc domain | ⚠️ Partial only | Current constant stub still collapses many osc clocks to case constants |
+| CDC synchronizer paths (osc↔sys) | ⚠️ Intent only | Simplified constraints load, but current stub prevents full waveform-based checking |
 | System clock domain logic | ✅ Yes | Real clock definition |
 | Actual oscillator frequency | ❌ No | Analog — not synthesized |
 | Phase tap matching / routing skew | ❌ No | Physical routing concern, PnR stage |
@@ -361,8 +360,15 @@ It is selected via `` `define MPTDC_USE_OSC_MODEL `` (never set during synthesis
 
 ### CDC Synchronizers
 All clock domain crossings use structural synchronizers with `ASYNC_REG`
-attributes. SDC `set_dont_touch` prevents the optimizer from breaking
-these metastability barriers.
+attributes. The checked-in flow applies best-effort synchronizer preservation
+constraints where the active Genus build accepts the matched objects, but this
+area still needs a cleaner tool-native preservation strategy for final signoff.
+
+### Clock Gating
+Clock-gating insertion is currently disabled in the checked-in bring-up flow.
+The active XFAB HD liberty marks the integrated clock-gating cells as
+`dont_use`, so enabling automatic insertion is not reliable until the library
+policy is revisited.
 
 ---
 

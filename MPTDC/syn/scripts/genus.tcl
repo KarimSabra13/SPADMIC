@@ -154,8 +154,12 @@ mptdc_default_cost_groups
 mptdc_report_timing $design(synthesis_reports)
 
 # Clock gating configuration
-set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_min_flops 8
-set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_style latch
+if {[info exists mptdc_enable_clock_gating] && $mptdc_enable_clock_gating} {
+    set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_min_flops 8
+    set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_style latch
+} else {
+    mptdc_message "Clock gating insertion disabled for current synthesis bring-up"
+}
 
 # Don't use scan cells (no scan chain in this design)
 mptdc_message "Excluding scan flip-flops from mapping"

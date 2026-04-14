@@ -94,24 +94,35 @@ proc mptdc_default_cost_groups {} {
 
     mptdc_message "Defining cost groups (reg2reg, in2reg, reg2out, in2out)"
 
-    # Remove existing cost groups if any
-    catch { delete_obj [get_db cost_groups] }
+    if {[llength [info commands create_cost_group]] == 0 || \
+        [llength [info commands path_group]] == 0} {
+        mptdc_message \
+            "Genus build lacks create_cost_group/path_group; keeping default clock-derived cost groups" \
+            high
+        return
+    }
 
-    # Register-to-register (internal paths — usually the tightest)
-    create_cost_group -name reg2reg
-    path_group -from [all_registers] -to [all_registers] -group reg2reg
+    if {[catch {
+        # Register-to-register (internal paths — usually the tightest)
+        create_cost_group -name reg2reg
+        path_group -from [all_registers] -to [all_registers] -group reg2reg
 
-    # Input-to-register
-    create_cost_group -name in2reg
-    path_group -from [all_inputs] -to [all_registers] -group in2reg
+        # Input-to-register
+        create_cost_group -name in2reg
+        path_group -from [all_inputs] -to [all_registers] -group in2reg
 
-    # Register-to-output
-    create_cost_group -name reg2out
-    path_group -from [all_registers] -to [all_outputs] -group reg2out
+        # Register-to-output
+        create_cost_group -name reg2out
+        path_group -from [all_registers] -to [all_outputs] -group reg2out
 
-    # Input-to-output (combinational feedthrough)
-    create_cost_group -name in2out
-    path_group -from [all_inputs] -to [all_outputs] -group in2out
+        # Input-to-output (combinational feedthrough)
+        create_cost_group -name in2out
+        path_group -from [all_inputs] -to [all_outputs] -group in2out
+    } cost_group_err]} {
+        mptdc_message \
+            "Could not define custom cost groups ($cost_group_err); keeping default clock-derived cost groups" \
+            high
+    }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

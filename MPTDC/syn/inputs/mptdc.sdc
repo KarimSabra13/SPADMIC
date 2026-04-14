@@ -14,13 +14,15 @@
 # Genus/DC compatibility helpers. Some SDC subcommands/options used for
 # exploratory synthesis are not uniformly supported across tool versions.
 proc mptdc_try_dont_touch {pattern} {
-    catch {set_dont_touch [get_cells -hierarchical $pattern] true}
+    set cells [get_cells -quiet -hierarchical $pattern]
+    if {[llength $cells] > 0} {
+        catch {set_dont_touch $cells true}
+    }
 }
 
 proc mptdc_try_async_max_delay {delay from_obj to_obj} {
-    if {[catch {set_max_delay $delay -from $from_obj -to $to_obj -datapath_only}]} {
-        catch {set_max_delay $delay -from $from_obj -to $to_obj}
-    }
+    # Genus 22.13 on the lab server rejects -datapath_only in SDC mode.
+    set_max_delay $delay -from $from_obj -to $to_obj
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

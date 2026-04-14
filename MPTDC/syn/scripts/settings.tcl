@@ -43,9 +43,12 @@ if {[catch {set_db syn_ramstyle registers} ramstyle_err]} {
 #############################################
 #       Clock Gating
 #############################################
-# Enable clock gating insertion for power reduction.
-# Minimum 8 flip-flops to justify a clock gate cell.
-set_db lp_insert_clock_gating true
+# Disabled for initial bring-up: the checked-in XFAB HD liberty marks the
+# integrated clock-gating cells as dont_use, so automatic insertion is not
+# reliable yet on the current lab-server setup.
+set mptdc_enable_clock_gating false
+set clock_gating_note "clock gating disabled (library ICG cells are dont_use)"
+set_db lp_insert_clock_gating $mptdc_enable_clock_gating
 
 #############################################
 #       Synthesis Effort
@@ -62,4 +65,4 @@ set_db design_power_effort high           ;# none|low|high
 #############################################
 set_db information_level 7                ;# 1 (quiet) to 9 (verbose)
 
-mptdc_message "Genus settings loaded (medium effort, $ramstyle_note)"
+mptdc_message "Genus settings loaded (medium effort, $ramstyle_note, $clock_gating_note)"
