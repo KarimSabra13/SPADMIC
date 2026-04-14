@@ -358,6 +358,202 @@ For simulation, `mptdc_osc_model.sv` provides a behavioural oscillator
 with `#delay` and configurable jitter via `+osc_jitter_ps=<value>` plusarg.
 It is selected via `` `define MPTDC_USE_OSC_MODEL `` (never set during synthesis).
 
+### Advancing Before the Analog Oscillator Is Finished
+
+The analog oscillator design does **not** need to be transistor-final before the
+digital flow can advance. What must be frozen early is the **macro contract**
+that digital synthesis and physical design will build around.
+
+At the current checkpoint, the right interpretation is:
+
+- continue with **system-domain synthesis bring-up**
+- continue with **floorplan / placement planning**
+- continue with **PD-matrix symmetry planning**
+- do **not** claim oscillator-domain timing closure yet
+
+The current constant-output oscillator stub is good enough to keep the digital
+project moving, but it is **not** a valid endpoint for mixed-signal timing
+signoff. The Genus lab run already shows why: the stub collapses to constants,
+the virtual oscillator clocks are stripped during optimization, and hundreds of
+oscillator-domain sequential pins end up without a waveform.
+
+#### What the analog designer must freeze as soon as possible
+
+For each oscillator macro, freeze these interface items before final analog
+completion:
+
+1. **Tap contract**
+   - exactly `9` phase taps per oscillator
+   - stable logical order (`tap[0]` ... `tap[8]`)
+   - unambiguous mapping between tap name and physical output pin
+2. **Macro outline**
+   - approximate width / height
+   - preferred orientation(s)
+   - origin convention and pin coordinates
+   - keepout / blockage expectations around the macro
+3. **Electrical contract**
+   - nominal output swing / logic interface assumption
+   - maximum capacitive load per tap
+   - whether digital buffering is allowed or forbidden on tap nets
+   - enable / reset / trim interface semantics
+4. **Power / noise contract**
+   - supply pins and domains
+   - guard-ring / shielding expectations
+   - allowed aggressor classes near tap outputs
+   - any substrate or supply isolation requirements
+
+#### What digital / PnR can do immediately
+
+Even before the oscillator transistor design is done, the project can still
+advance in a disciplined way:
+
+1. **Replace the current constant stub for synthesis/PnR handoff**
+   - black-box Verilog wrapper
+   - LEF abstract with the real `9` tap pins
+   - placeholder timing shell / macro Liberty (even approximate) so the clock
+     source survives synthesis
+   - preserve / dont_touch treatment on the oscillator macro instances
+2. **Build an early floorplan**
+   - reserve real space for the two oscillator macros
+   - reserve a dedicated symmetry-critical region for the PD matrix
+   - place the oscillator macros with pin locations that make matched routing
+     physically achievable
+3. **Run early place-and-route experiments**
+   - verify that the `9 x 9` PD matrix can be placed without overlap or
+     legalization distortion
+   - verify that tap routing can be matched with practical metal resources
+   - verify that the surrounding logic can escape without disturbing the matrix
+
+#### What must wait for the real macro model
+
+These items are **not** credible until the oscillator macro has a real timing
+abstraction:
+
+- oscillator-domain setup / hold closure
+- final phase-tap skew assessment
+- final RC-matching judgment on tap delivery
+- startup / enable / trim timing behavior
+- analog jitter / phase-noise interaction with the digital front-end
+
+### `9 x 9` PD Matrix — Physical Design Requirements
+
+The PD matrix is the most symmetry-sensitive digital block in the design. The
+goal is not merely “legal placement”; the goal is **matched electrical
+environment** across the full detector array.
+
+The architecture is fixed:
+
+- `9` slow-phase taps
+- `9` fast-phase taps
+- `81` PD cells (`9 x 9`)
+- each PD cell sees one slow tap and one fast tap
+
+That means the matrix must be treated as a **symmetry-critical island**, not as
+ordinary standard-cell logic.
+
+#### Non-negotiable implementation goals
+
+| Requirement | Why it matters | Implementation direction |
+|---|---|---|
+| Fixed `9 x 9` regular array | Prevents placer distortion from changing electrical symmetry | Preserve matrix hierarchy; constrain to a dedicated region / fence |
+| No PD overlap or spill | Legalizer movement destroys regular geometry | Keep enough whitespace and rows so the whole array fits cleanly |
+| Slow taps distributed uniformly to rows | Keeps one consistent slow-phase environment per row | Route slow taps as matched row trunks |
+| Fast taps distributed uniformly to columns | Keeps one consistent fast-phase environment per column | Route fast taps as matched column trunks |
+| Same routing class for matched nets | RC mismatch comes from metal / via / shielding differences, not only length | Same layers, widths, spacing, shielding, via count, and jog style |
+| Same load seen by each tap | Unequal fanout changes edge shape and delay | Keep one PD input load per crossing and matched buffering policy |
+| No opportunistic reshaping by tools | Ungrouping / logic spreading breaks geometric intent | Preserve hierarchy; use regions / placement constraints; review optimization settings |
+| Quiet routing neighborhood | Nearby switching aggressors can disturb the matched nets differently | Keep unrelated high-activity nets away from the tap-routing channels |
+
+#### Practical placement topology
+
+For a clean physical implementation, the preferred conceptual topology is:
+
+1. one oscillator macro feeds the **row family**
+2. the other oscillator macro feeds the **column family**
+3. slow taps fan out in one dominant direction
+4. fast taps fan out orthogonally
+5. each PD cell sits at one controlled row/column intersection
+
+In practice this means:
+
+- place the slow-oscillator macro on one side of the matrix
+- place the fast-oscillator macro on an orthogonal side if possible
+- route the slow taps as matched trunks across the rows
+- route the fast taps as matched trunks across the columns
+- keep PD outputs and downstream logic escape routes away from the sensitive tap
+  channels
+
+#### Important note on “same wire length”
+
+The design goal should be stated carefully.
+
+It is reasonable to ask for:
+
+- the **same routing topology**
+- the **same metal stack**
+- the **same shielding strategy**
+- the **same via count**
+- and as much **length matching** as is physically practical
+
+But for an edge-fed macro, making every source-to-destination path literally
+identical in Euclidean length is often impossible. The more correct target for
+mixed-signal quality is **matched RC and matched environment**, not only a
+single geometric length number.
+
+So the review criterion after PnR should be:
+
+- row-family matching
+- column-family matching
+- extracted parasitic consistency
+- skew and imbalance metrics from routed extraction
+
+not just “did every segment have exactly the same drawn length.”
+
+#### Buffering policy for tap nets
+
+If the oscillator taps can directly drive the PD inputs within the allowed load
+budget, that is the cleanest case.
+
+If buffering becomes necessary, do **not** allow ad-hoc per-net fixes.
+Instead:
+
+- use the same buffer structure on every matched tap family
+- place the buffers symmetrically
+- keep the same drive strength and stage count
+- keep the same metal / via environment on the buffer outputs
+
+An unmatched buffer insertion can easily break more symmetry than it fixes.
+
+#### What synthesis can and cannot enforce
+
+Cadence Genus can help with:
+
+- preserving hierarchy
+- preventing macro removal
+- preventing unwanted logical reshaping around the matrix
+- keeping the netlist aligned with the intended block structure
+
+But Genus **cannot by itself guarantee**:
+
+- symmetric physical placement
+- equal tap routing topology
+- equal RC
+- matched shielding
+- no overlap / no spill after legalization
+
+Those are fundamentally **floorplanning / placement / routing** responsibilities
+for Innovus (and possibly semi-custom manual guidance for the PD island).
+
+#### Recommended mixed-signal handoff strategy
+
+1. Freeze the oscillator macro contract.
+2. Replace the synthesis constant stub with a preserved macro placeholder.
+3. Floorplan the oscillator macros and the `9 x 9` PD island together.
+4. Constrain the PD matrix as a symmetry-critical region before detailed place.
+5. Route taps with matched topology and review extracted RC/skew explicitly.
+6. Only after a real oscillator timing model exists should oscillator-domain STA
+   be treated as signoff-relevant.
+
 ### CDC Synchronizers
 All clock domain crossings use structural synchronizers with `ASYNC_REG`
 attributes. The checked-in flow applies best-effort synchronizer preservation

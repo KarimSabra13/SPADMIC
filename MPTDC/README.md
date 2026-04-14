@@ -102,6 +102,12 @@ Cadence Genus setup is committed under `syn/`.
 - documentation: `syn/README.md`
 - PDK path setup required before first run
 - oscillator model is **not** synthesized; the synthesis flow uses the oscillator stub
+- until the analog oscillator macro is ready, synthesis should be treated as
+  **digital bring-up + floorplan preparation**, not oscillator-domain timing
+  signoff
+- the detailed pre-analog advance plan, required oscillator macro contract, and
+  `9 x 9` PD-matrix symmetry / placement rules are documented in
+  `syn/README.md`
 
 ## Repository map
 
