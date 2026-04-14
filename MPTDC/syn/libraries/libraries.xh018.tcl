@@ -5,9 +5,13 @@
 # Author   : Karim Sabra
 # =============================================================================
 # INSTRUCTIONS:
-#   1. Set paths(PDK_ROOT) to your XFAB XH018 installation
-#   2. Update METAL_STACK and TRACKS for your specific variant
-#   3. Set QRC tech file paths if available
+#   1. Defaults below target the verified lab-server XFAB XH018 install
+#      under /data/pdk/xfab/xh018
+#   2. Override with environment variables when needed:
+#        PDK_ROOT       -> full XH018 root
+#        TECHNOLOGY_LEF -> explicit technology LEF file
+#   3. Update METAL_STACK / routing layers only if your metal option differs
+#   4. Set QRC tech file paths if available
 #
 # This file defines technology-level settings (process node, metal stack,
 # parasitic extraction, routing layers). Standard cell library definitions
@@ -17,23 +21,33 @@
 #############################################
 #       Process / Metal Stack
 #############################################
-set METAL_STACK "1P6M"                ;# XFAB XH018 — 1 poly, 6 metal layers
-set TRACKS      "12T"                 ;# Standard cell track height
+set METAL_STACK "1P4M"                ;# Verified lab flow: 4-metal HD option
+set TRACKS      "12T"                 ;# Metadata only; not consumed by current Genus flow
 set_db design_process_node 180        ;# 180 nm process node
 
 #############################################
-#       PDK Root Path (EDIT THIS)
+#       PDK Root Path
 #############################################
-set paths(PDK_ROOT) "/path/to/xfab/XH018"
+if {[info exists ::env(PDK_ROOT)]} {
+    set paths(PDK_ROOT) $::env(PDK_ROOT)
+} else {
+    set paths(PDK_ROOT) "/data/pdk/xfab/xh018"
+}
 
 #############################################
 #       Technology Files
 #############################################
-set paths(TECHNOLOGY_FILES) "$paths(PDK_ROOT)/techdata"
+set paths(TECH_LEF_DIR) "$paths(PDK_ROOT)/cadence/v9_0/techLEF/v9_0_1"
 
-# Technology LEF (layer and via definitions)
-set tech_files(TECHNOLOGY_LEF) "$paths(TECHNOLOGY_FILES)/xh018_xx.tlef"
-    set tech_files(ALL_LEFS) [list $tech_files(TECHNOLOGY_LEF)]
+# Technology LEF (layer and via definitions). The current checked-in default
+# matches the 4-metal HD lab flow. Override TECHNOLOGY_LEF for another option.
+if {[info exists ::env(TECHNOLOGY_LEF)]} {
+    set tech_files(TECHNOLOGY_LEF) $::env(TECHNOLOGY_LEF)
+} else {
+    set tech_files(TECHNOLOGY_LEF) \
+        "$paths(TECH_LEF_DIR)/xh018_xx41_HD_MET4_METMID.lef"
+}
+set tech_files(ALL_LEFS) [list $tech_files(TECHNOLOGY_LEF)]
 
 #############################################
 #       Parasitic Extraction (QRC)
@@ -54,8 +68,8 @@ set tech(TEMPERATURE_WC)  125    ;# Worst case (slow)
 #############################################
 #       Physical Design Constants
 #############################################
-# Layer names (XFAB XH018 1P6M stack)
-set tech(layer_names) "M1 M2 M3 M4 M5 M6"
+# Layer names (default 4-metal HD stack)
+set tech(layer_names) "M1 M2 M3 M4"
 
 # Standard cell dimensions
 set tech(row_height)  7.56        ;# µm — XH018 standard cell height
@@ -80,12 +94,12 @@ set tech(ENDCAPS_left)     ""     ;# Left endcap cell
 #############################################
 #       CTS Routing Layers
 #############################################
-set tech(cts_top_routing_layer_top)   "M6"
-set tech(cts_bottom_routing_layer_top) "M5"
-set tech(cts_top_routing_layer_trunk)  "M6"
-set tech(cts_bottom_routing_layer_trunk) "M5"
-set tech(cts_top_routing_layer_leaf)   "M4"
-set tech(cts_bottom_routing_layer_leaf) "M3"
+set tech(cts_top_routing_layer_top)     "M4"
+set tech(cts_bottom_routing_layer_top)  "M3"
+set tech(cts_top_routing_layer_trunk)   "M4"
+set tech(cts_bottom_routing_layer_trunk) "M3"
+set tech(cts_top_routing_layer_leaf)    "M3"
+set tech(cts_bottom_routing_layer_leaf) "M2"
 
 #############################################
 #       Message Suppression

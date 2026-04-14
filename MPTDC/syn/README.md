@@ -70,27 +70,34 @@ For **logic synthesis only**, you need a single file from the XFAB PDK:
 **Bottom line:** Get your `.lib` file (e.g., `D_CELLS_HD_LPMOS_typ_1_80V_25C.lib`),
 set the path, and you can run synthesis immediately.
 
-### What to Edit Before Running
+### What to Set Before Running
 
-You need to modify **exactly two files** with your XFAB installation paths:
+The checked-in defaults now target the verified lab-server install:
 
-**1. `libraries/libraries.xh018.tcl`** — Set the PDK root:
-```tcl
-set paths(PDK_ROOT) "/your/actual/path/to/xfab/XH018"
+- `PDK_ROOT=/data/pdk/xfab/xh018`
+- `SC_ROOT=$PDK_ROOT/diglibs/D_CELLS_HD/v6_0`
+- `TECHNOLOGY_LEF=$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef`
+
+If you are using that server, you can run Genus immediately with no further
+library edits. On another machine, override the defaults with shell environment
+variables before launching Genus:
+
+```bash
+export PDK_ROOT=/your/actual/path/to/xfab/xh018
+export SC_ROOT=$PDK_ROOT/diglibs/D_CELLS_HD/v6_0
+export TECHNOLOGY_LEF=$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef
 ```
 
-**2. `libraries/libraries.xh018-stdcells.tcl`** — Verify the standard cell
-path and `.lib` file names match your PDK version:
-```tcl
-set paths(SC_ROOT) "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v3_0"
-set paths(LIB_DIR) "$paths(SC_ROOT)/liberty_LPMOS/v3_0_0/PVT_1_80V_range"
+The default standard-cell timing set is:
 
-# Verify these file names match your actual .lib files:
-set tech_files(STDCELLS_TC_LIB) "$paths(LIB_DIR)/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+```tcl
+set tech_files(STDCELLS_TC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+set tech_files(STDCELLS_WC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_slow_1_62V_125C.lib"
+set tech_files(STDCELLS_BC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_fast_1_98V_m40C.lib"
 ```
 
-Everything else (clocks, ports, constraints, flow settings) is already
-configured and should not need modification for a trial run.
+For the current checked-in flow, the typical corner is enough for first bring-up
+because `syn/inputs/mptdc.mmmc` uses `tc_view` for both setup and hold.
 
 ### How to Run
 

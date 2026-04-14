@@ -5,10 +5,11 @@
 # Author   : Karim Sabra
 # =============================================================================
 # INSTRUCTIONS:
-#   1. Set paths(SC_ROOT) to your XFAB standard cell installation
-#   2. Update the .lib file names for each PVT corner
-#   3. Update the LEF file name
-#   4. Set SDC driving cell and load pin names
+#   1. Defaults below target the verified lab-server D_CELLS_HD v6.0 install
+#   2. Override with environment variables when needed:
+#        SC_ROOT -> full standard-cell library root
+#   3. Verify the .lib file names if your PDK revision differs
+#   4. Update SDC driving/load pin details only when enabling set_driving_cell
 #
 # This file defines the standard cell library paths for all PVT corners
 # (BC/TC/WC). The technology-level settings (process, metal stack) are
@@ -16,32 +17,36 @@
 # =============================================================================
 
 #############################################
-#       Standard Cell Root (EDIT THIS)
+#       Standard Cell Root
 #############################################
-set paths(SC_ROOT) "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v3_0"
+if {[info exists ::env(SC_ROOT)]} {
+    set paths(SC_ROOT) $::env(SC_ROOT)
+} else {
+    set paths(SC_ROOT) "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v6_0"
+}
 
 #############################################
 #       LEF (Library Exchange Format)
 #############################################
-set tech_files(STDCELLS_LEF) "$paths(SC_ROOT)/lef/v3_0_0/xh018_D_CELLS_HD.lef"
+set tech_files(STDCELLS_LEF) "$paths(SC_ROOT)/LEF/v6_0_0/xh018_D_CELLS_HD.lef"
 lappend tech_files(ALL_LEFS) $tech_files(STDCELLS_LEF)
 
 #############################################
 #       Standard Cell Site
 #############################################
-set tech(STANDARD_CELL_SITE) "xh018_HD"   ;# LEF SITE name (check your LEF)
+set tech(STANDARD_CELL_SITE) "core_hd"    ;# Verified from xh018_D_CELLS_HD.lef
 set tech(STANDARD_CELL_VDD)  "VDD"
 set tech(STANDARD_CELL_GND)  "VSS"
 
 #############################################
 #       Liberty Timing Libraries (.lib)
 #############################################
-# XFAB XH018 D_CELLS_HD naming convention (typical example):
+# Verified XFAB XH018 D_CELLS_HD v6.0 naming convention:
 #   D_CELLS_HD_LPMOS_typ_1_80V_25C.lib   (typical: 1.8V, 25°C)
 #   D_CELLS_HD_LPMOS_slow_1_62V_125C.lib (worst case: 1.62V, 125°C)
 #   D_CELLS_HD_LPMOS_fast_1_98V_m40C.lib (best case: 1.98V, -40°C)
 
-set paths(LIB_DIR) "$paths(SC_ROOT)/liberty_LPMOS/v3_0_0/PVT_1_80V_range"
+set paths(LIB_DIR) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range"
 
 # ── Typical Corner (TT, 1.80V, 25°C) ──────────────────────────────
 set tech_files(STDCELLS_TC_LIB) "$paths(LIB_DIR)/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
@@ -65,9 +70,11 @@ set tech_files(ALL_BC_LIBS) [list $tech_files(STDCELLS_BC_LIB)]
 #############################################
 # For set_driving_cell and set_load in SDC constraints.
 # Use a mid-sized buffer from your standard cell library.
-# Example: BUFX4 (4× drive strength buffer)
-set tech(SDC_DRIVING_CELL)  "BUFX4"      ;# Cell name for set_driving_cell
-set tech(SDC_LOAD_PIN)      "BUFX4/A"    ;# Pin for capacitance-based load
+# Verified lab-server buffer cell: BUHDX4
+# SDC_LOAD_PIN is not currently consumed because set_driving_cell remains
+# commented out in syn/inputs/mptdc.sdc.
+set tech(SDC_DRIVING_CELL)  "BUHDX4"     ;# Cell name for set_driving_cell
+set tech(SDC_LOAD_PIN)      ""           ;# Fill in when enabling set_driving_cell
 set tech(EXTERNAL_SDC_LOAD) 0.05         ;# pF — external load if FULLCHIP
 
 #############################################
