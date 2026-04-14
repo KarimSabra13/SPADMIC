@@ -11,6 +11,18 @@
 # All numeric values come from the design() array for single-source-of-truth.
 # =============================================================================
 
+# Genus/DC compatibility helpers. Some SDC subcommands/options used for
+# exploratory synthesis are not uniformly supported across tool versions.
+proc mptdc_try_dont_touch {pattern} {
+    catch {set_dont_touch [get_cells -hierarchical $pattern] true}
+}
+
+proc mptdc_try_async_max_delay {delay from_obj to_obj} {
+    if {[catch {set_max_delay $delay -from $from_obj -to $to_obj -datapath_only}]} {
+        catch {set_max_delay $delay -from $from_obj -to $to_obj}
+    }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. PRIMARY CLOCK
 # ─────────────────────────────────────────────────────────────────────────────
@@ -79,14 +91,14 @@ set_false_path -from [get_ports $design(RST_PORT)]
 # Protect 2-FF synchronizer chains from optimization.
 # These flops are metastability barriers — must not be merged or retimed.
 
-set_dont_touch [get_cells -hierarchical *u_rst_sync*/sync_q_reg*]   true
-set_dont_touch [get_cells -hierarchical *gray_cont_ff1*]            true
-set_dont_touch [get_cells -hierarchical *gray_cont_ff2*]            true
-set_dont_touch [get_cells -hierarchical *gray_snap_ff1*]            true
-set_dont_touch [get_cells -hierarchical *gray_snap_ff2*]            true
-set_dont_touch [get_cells -hierarchical *u_pulse_sync*/sync_ff1*]   true
-set_dont_touch [get_cells -hierarchical *u_pulse_sync*/sync_ff2*]   true
-set_dont_touch [get_cells -hierarchical *ctx_drain_sync_ff*]        true
+mptdc_try_dont_touch *u_rst_sync*/sync_q_reg*
+mptdc_try_dont_touch *gray_cont_ff1*
+mptdc_try_dont_touch *gray_cont_ff2*
+mptdc_try_dont_touch *gray_snap_ff1*
+mptdc_try_dont_touch *gray_snap_ff2*
+mptdc_try_dont_touch *u_pulse_sync*/sync_ff1*
+mptdc_try_dont_touch *u_pulse_sync*/sync_ff2*
+mptdc_try_dont_touch *ctx_drain_sync_ff*
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. CDC MAX DELAY
@@ -95,21 +107,21 @@ set_dont_touch [get_cells -hierarchical *ctx_drain_sync_ff*]        true
 # to one destination clock period, ensuring metastability resolution.
 
 # osc → sys (max 1 sys_clk period)
-set_max_delay $design(CLK_PERIOD) \
-    -from [get_clocks $design(OSC_SLOW_NAME)] \
-    -to   [get_clocks $design(CLK_NAME)] \
-    -datapath_only
+mptdc_try_async_max_delay \
+    $design(CLK_PERIOD) \
+    [get_clocks $design(OSC_SLOW_NAME)] \
+    [get_clocks $design(CLK_NAME)]
 
-set_max_delay $design(CLK_PERIOD) \
-    -from [get_clocks $design(OSC_FAST_NAME)] \
-    -to   [get_clocks $design(CLK_NAME)] \
-    -datapath_only
+mptdc_try_async_max_delay \
+    $design(CLK_PERIOD) \
+    [get_clocks $design(OSC_FAST_NAME)] \
+    [get_clocks $design(CLK_NAME)]
 
 # sys → osc_fast (max 1 fast period)
-set_max_delay $design(OSC_FAST_PERIOD) \
-    -from [get_clocks $design(CLK_NAME)] \
-    -to   [get_clocks $design(OSC_FAST_NAME)] \
-    -datapath_only
+mptdc_try_async_max_delay \
+    $design(OSC_FAST_PERIOD) \
+    [get_clocks $design(CLK_NAME)] \
+    [get_clocks $design(OSC_FAST_NAME)]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. INPUT DELAYS

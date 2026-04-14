@@ -135,7 +135,7 @@ check_timing_intent -verbose > \
 
 # Hierarchy and latch reports
 report_hierarchy > "$design(synthesis_reports)/post_elaboration/report_hierarchy.rpt"
-report_gates -type latch > \
+mptdc_write_latch_report \
     "$design(synthesis_reports)/post_elaboration/latch_pre_synth.rpt"
 
 # Save elaborated design checkpoint

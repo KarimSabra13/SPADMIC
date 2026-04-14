@@ -164,8 +164,8 @@ constraint values are never hardcoded in two places.
 | **§3 Clock groups** | `set_clock_groups -asynchronous` | 3 async domains (sys, slow, fast) |
 | **§4 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
 | **§5 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
-| **§6 CDC protection** | `set_dont_touch` on sync FFs | Prevents optimizer from breaking synchronizers |
-| **§7 CDC max delay** | `set_max_delay` across domains | Limits combinational path in CDC |
+| **§6 CDC protection** | best-effort `set_dont_touch` wrappers on sync FFs | Preserves synchronizers where the active Genus/DC parser supports the object form |
+| **§7 CDC max delay** | `set_max_delay` across domains with compatibility fallback | Limits CDC datapath depth without aborting on builds that reject `-datapath_only` |
 | **§8-9 I/O delays** | 2 ns input/output delay | Conservative for 180 nm routing |
 | **§10 Load/drive** | 50 fF load, 100 ps transition | Pad characteristics |
 | **§11 Design rules** | Max fanout 20, max transition 0.5 ns | Signal integrity |
@@ -219,7 +219,7 @@ Reusable helper procedures used throughout the flow:
 | `mptdc_message` | Formatted info/debug/warning messages |
 | `mptdc_report_timing` | Generates setup/hold/summary/violation timing reports |
 | `mptdc_default_cost_groups` | Creates reg2reg, in2reg, reg2out, in2out path groups |
-| `mptdc_latch_audit` | Counts latches and compares to expected count (5) |
+| `mptdc_latch_audit` | Writes a latch inventory via `get_db` and compares the count to the expected value (5) |
 | `mptdc_full_reports` | Generates all post-synthesis reports (area, gates, power, DRV, QoR) |
 | `mptdc_print_summary` | Final summary banner with checklist |
 
@@ -233,6 +233,8 @@ Genus tool-level configuration (not design-specific):
 - **HDL settings**: SystemVerilog mode, latch tolerance, undriven signals
 - **Memory inference**: request `syn_ramstyle = registers` when supported by the
   active Genus build
+- **Genus compatibility**: tolerate unsupported root attributes and minor SDC
+  option differences across lab-server releases
 - **Clock gating**: Enabled with min 8 FFs threshold
 - **Synthesis effort**: Medium (increase to high for tapeout)
 - **Verbosity**: Level 7 (detailed logging)
@@ -293,6 +295,15 @@ The 57-bit × 64-entry sync FIFO is implemented entirely as flip-flops
 (~3648 FFs). The settings script requests `syn_ramstyle = registers` when the
 active Genus build supports that attribute; if the build rejects the root
 attribute, the flow now continues instead of aborting.
+
+### Genus-Version Tolerance
+
+The checked-in flow is written to survive the small command-set differences seen
+across deployed Genus releases:
+
+- unsupported root attributes are guarded instead of aborting the run
+- unsupported SDC option forms fall back to simpler constraints
+- latch reporting uses `get_db` instead of `report_gates -type`
 
 ### Intentional Latches
 The async frontend (`mptdc_async_frontend_v2`) uses 5 SR latches for

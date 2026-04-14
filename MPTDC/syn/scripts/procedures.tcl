@@ -117,16 +117,35 @@ proc mptdc_default_cost_groups {} {
 # ─────────────────────────────────────────────────────────────────────────────
 # mptdc_latch_audit — Check that only expected latches exist
 # ─────────────────────────────────────────────────────────────────────────────
+proc mptdc_write_latch_report {rpt_file} {
+    set fh [open $rpt_file w]
+    set latches [get_db insts -if {.base_cell.is_latch==true}]
+
+    puts $fh "MPTDC latch report"
+    puts $fh "=================="
+    puts $fh "Count: [llength $latches]"
+    puts $fh ""
+    puts $fh [format "%-80s %s" "Instance" "Base cell"]
+    puts $fh [string repeat "-" 120]
+
+    foreach inst $latches {
+        set inst_name [get_db $inst .name]
+        set base_name [get_db $inst .base_cell.name]
+        puts $fh [format "%-80s %s" $inst_name $base_name]
+    }
+
+    close $fh
+    return [llength $latches]
+}
+
 proc mptdc_latch_audit {report_dir} {
     global design
 
     set rpt_file "$report_dir/latch_audit.rpt"
     mptdc_message "Latch audit → $rpt_file"
 
-    report_gates -type latch > $rpt_file
-
     # Count latches
-    set latch_count [llength [get_db insts -if {.base_cell.is_latch==true}]]
+    set latch_count [mptdc_write_latch_report $rpt_file]
     set expected $design(EXPECTED_LATCH_COUNT)
 
     if {$latch_count == $expected} {
@@ -168,10 +187,6 @@ proc mptdc_full_reports {report_dir} {
 
     # Power (may not work without switching activity)
     catch { report_power > "$dir/report_power.rpt" }
-
-    # Gate type breakdown
-    catch { report_gates -type seq > "$dir/gates_sequential.rpt" }
-    catch { report_gates -type all > "$dir/gates_by_type.rpt" }
 
     # Clocks
     catch { report_clocks > "$dir/report_clocks.rpt" }
