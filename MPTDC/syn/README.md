@@ -217,7 +217,7 @@ Reusable helper procedures used throughout the flow:
 |---|---|
 | `mptdc_start_stage` | Prints a banner, creates report subdirectory, tracks elapsed time |
 | `mptdc_message` | Formatted info/debug/warning messages |
-| `mptdc_report_timing` | Generates setup/hold/summary/violation timing reports |
+| `mptdc_report_timing` | Generates Genus-22.13-compatible worst-path, summary, and violation reports; writes a note when a dedicated hold split is unavailable |
 | `mptdc_default_cost_groups` | Creates reg2reg, in2reg, reg2out, in2out path groups |
 | `mptdc_latch_audit` | Writes a latch inventory via `get_db` and compares the count to the expected value (5) |
 | `mptdc_full_reports` | Generates all post-synthesis reports (area, gates, power, DRV, QoR) |
@@ -369,6 +369,19 @@ Clock-gating insertion is currently disabled in the checked-in bring-up flow.
 The active XFAB HD liberty marks the integrated clock-gating cells as
 `dont_use`, so enabling automatic insertion is not reliable until the library
 policy is revisited.
+
+### Timing Report Compatibility
+The lab-server Genus 22.13 build rejects `report_timing` options such as
+`-late`, `-early`, `-summary`, and `-slack_lesser_than`. The checked-in helper
+therefore uses only the supported forms:
+
+- a generic worst-path report for the active view
+- a QoR-based summary report
+- a violations-only report using `-max_slack 0.0`
+
+The helper currently writes a note instead of a split hold report. That is
+acceptable for bring-up, but dedicated hold reporting should be revisited before
+claiming signoff-quality synthesis reporting.
 
 ---
 

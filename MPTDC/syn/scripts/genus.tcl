@@ -213,7 +213,7 @@ mptdc_message "  Netlist: $design(postsyn_netlist)"
 
 # Updated SDC
 mptdc_message "Writing post-synthesis SDC"
-write_sdc > $design(postsyn_sdc)
+write_sdc -view tc_view > $design(postsyn_sdc)
 mptdc_message "  SDC: $design(postsyn_sdc)"
 
 # SDF for gate-level simulation
