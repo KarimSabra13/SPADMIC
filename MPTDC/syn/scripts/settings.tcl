@@ -31,7 +31,14 @@ set_db detailed_sdc_messages true
 # Force ALL memories to flip-flop implementation.
 # No SRAM IP is available for this design — the sync FIFO
 # (57-bit × 64-entry) will be implemented entirely as registers.
-set_db syn_ramstyle registers
+set ramstyle_mode "default"
+if {[catch {set_db syn_ramstyle registers} ramstyle_err]} {
+    set ramstyle_note \
+        "Genus build does not support root attribute syn_ramstyle; continuing without it"
+} else {
+    set ramstyle_mode "registers"
+    set ramstyle_note "syn_ramstyle=registers"
+}
 
 #############################################
 #       Clock Gating
@@ -55,4 +62,4 @@ set_db design_power_effort high           ;# none|low|high
 #############################################
 set_db information_level 7                ;# 1 (quiet) to 9 (verbose)
 
-mptdc_message "Genus settings loaded (medium effort, ramstyle=registers)"
+mptdc_message "Genus settings loaded (medium effort, $ramstyle_note)"

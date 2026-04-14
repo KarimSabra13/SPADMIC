@@ -103,6 +103,7 @@ because `syn/inputs/mptdc.mmmc` uses `tc_view` for both setup and hold.
 
 ```bash
 cd syn/scripts
+mkdir -p ../logs
 genus -files genus.tcl -log ../logs/genus.log
 ```
 
@@ -230,7 +231,8 @@ Reusable helper procedures used throughout the flow:
 Genus tool-level configuration (not design-specific):
 
 - **HDL settings**: SystemVerilog mode, latch tolerance, undriven signals
-- **Memory inference**: `syn_ramstyle = registers` (no SRAM IP available)
+- **Memory inference**: request `syn_ramstyle = registers` when supported by the
+  active Genus build
 - **Clock gating**: Enabled with min 8 FFs threshold
 - **Synthesis effort**: Medium (increase to high for tapeout)
 - **Verbosity**: Level 7 (detailed logging)
@@ -288,8 +290,9 @@ Each stage creates its own report subdirectory under `reports/synthesis/`.
 
 ### No SRAM IP
 The 57-bit × 64-entry sync FIFO is implemented entirely as flip-flops
-(~3648 FFs). `syn_ramstyle = registers` prevents Genus from attempting
-SRAM inference.
+(~3648 FFs). The settings script requests `syn_ramstyle = registers` when the
+active Genus build supports that attribute; if the build rejects the root
+attribute, the flow now continues instead of aborting.
 
 ### Intentional Latches
 The async frontend (`mptdc_async_frontend_v2`) uses 5 SR latches for

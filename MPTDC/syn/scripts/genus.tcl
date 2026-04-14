@@ -6,6 +6,7 @@
 # =============================================================================
 # Usage:
 #   cd syn/scripts
+#   mkdir -p ../logs
 #   genus -files genus.tcl -log ../logs/genus.log
 #
 # Or interactively:
