@@ -24,23 +24,23 @@ OSC_TS_SLOW_PS = 55
 OSC_TS_FAST_PS = 50
 
 COLORS = {
-    "sys": "#3A6EA5",
-    "sys_fill": "#DCEAF7",
-    "slow": "#4C956C",
-    "slow_fill": "#DDEFE3",
-    "fast": "#D67E2C",
-    "fast_fill": "#F9E4CF",
-    "async": "#C44536",
-    "async_fill": "#F8D7D3",
-    "purple": "#6F5AA7",
-    "purple_fill": "#E6DFF5",
-    "gray": "#495057",
-    "mid_gray": "#868E96",
-    "light_gray": "#F1F3F5",
-    "dark": "#212529",
-    "success": "#2B8A3E",
-    "danger": "#C92A2A",
-    "gold": "#E9A228",
+    "sys": "#1f4e79",
+    "sys_fill": "#e8eef5",
+    "slow": "#3a3a3a",
+    "slow_fill": "#f0f0f0",
+    "fast": "#4a7ab8",
+    "fast_fill": "#d9e4f2",
+    "async": "#8b2e2e",
+    "async_fill": "#f2e4e4",
+    "purple": "#5a5a5a",
+    "purple_fill": "#ededed",
+    "gray": "#2f2f2f",
+    "mid_gray": "#7a7a7a",
+    "light_gray": "#f5f5f5",
+    "dark": "#000000",
+    "success": "#1f4e79",
+    "danger": "#8b2e2e",
+    "gold": "#5a5a5a",
     "white": "#FFFFFF",
 }
 
@@ -1158,6 +1158,157 @@ def draw_multihit_averaging_plot() -> None:
     save(fig, "multihit_averaging_plot")
 
 
+def _load_fixed_delay(config_dir: str) -> dict:
+    import csv
+
+    path = RESULTS_DIR / config_dir / "analysis" / "fixed_delay_summary.csv"
+    if not path.exists():
+        return {}
+    rows = {"conv_mean": {}, "first_hit_scan": {}, "row": {}}
+    with open(path) as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            kind = r["sample_kind"]
+            if kind not in rows:
+                continue
+            d = int(r["delay_ps"])
+            rows[kind][d] = {
+                "rmse": float(r["rmse"]),
+                "mae": float(r["mae"]),
+                "p90": float(r["p90_ae"]),
+                "p99": float(r["p99_ae"]),
+                "std": float(r["std"]),
+            }
+    return rows
+
+
+def draw_fixed_delay_rmse_curve() -> None:
+    """RMSE vs programmed delay, nominal vs jitter, single-shot vs moyenne par conversion."""
+    full = _load_fixed_delay("fixed_delay_full_jitter_js6b24")
+    short = _load_fixed_delay("fixed_delay_shortformat_jitter_js6b24")
+    if not full or not short:
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(12.6, 5.2), sharey=True)
+    for ax, data, title in zip(
+        axes,
+        (full, short),
+        ("Mode FULL (jitter $\sigma=6$ ps)", "Mode SHORT-FORMAT (jitter $\sigma=6$ ps)"),
+    ):
+        for kind, color, label, marker in [
+            ("row", COLORS["mid_gray"], "Single-shot", "o"),
+            ("first_hit_scan", COLORS["fast"], "First-hit (scan order)", "s"),
+            ("conv_mean", COLORS["sys"], "Moyenne 15-hit (conv_mean)", "D"),
+        ]:
+            delays = sorted(data[kind].keys())
+            rmse = [data[kind][d]["rmse"] for d in delays]
+            ax.plot(delays, rmse, marker=marker, linewidth=1.6, color=color, label=label, markersize=5)
+        ax.set_xscale("log")
+        ax.set_xlabel("Délai programmé (ps)")
+        ax.set_title(title, fontsize=11)
+        ax.grid(alpha=0.25, which="both", linestyle=":")
+    axes[0].set_ylabel("RMSE sur l'erreur de mesure (ps)")
+    axes[0].legend(frameon=False, fontsize=9, loc="upper right")
+    fig.suptitle(
+        "Caractérisation délai fixe : RMSE en fonction du délai de consigne",
+        fontsize=12, fontweight="bold", y=1.00,
+    )
+    save(fig, "fixed_delay_rmse_curve")
+
+
+def draw_calibration_methods_comparison() -> None:
+    """Comparaison nominale vs jitter des méthodes enrichies."""
+    nom = load_json_result("calibration_enhanced_nominal")
+    jit = load_json_result("calibration_enhanced_jitter")
+    if not nom or not jit:
+        return
+
+    labels_order = [
+        "6D LUT (mean)",
+        "6D LUT (median)",
+        "6D LUT (trimmed mean)",
+        "GradientBoosted",
+        "Temporal Re-Keyed LUT",
+        "Polynomial (deg 3)",
+        "Polynomial (deg 2)",
+    ]
+    short_names = {
+        "6D LUT (mean)": "LUT 6D\nmoyenne",
+        "6D LUT (median)": "LUT 6D\nmédiane",
+        "6D LUT (trimmed mean)": "LUT 6D\ntronquée",
+        "GradientBoosted": "GBR",
+        "Temporal Re-Keyed LUT": "LUT re-clefée\ntemporel",
+        "Polynomial (deg 3)": "Polynôme\ndeg 3",
+        "Polynomial (deg 2)": "Polynôme\ndeg 2",
+    }
+    by_label_nom = {m["label"]: m for m in nom["methods"]}
+    by_label_jit = {m["label"]: m for m in jit["methods"]}
+    rmse_nom, rmse_jit, names = [], [], []
+    for lab in labels_order:
+        if lab in by_label_nom and lab in by_label_jit:
+            rmse_nom.append(by_label_nom[lab]["test"]["rmse"])
+            rmse_jit.append(by_label_jit[lab]["test"]["rmse"])
+            names.append(short_names[lab])
+
+    x = np.arange(len(names))
+    w = 0.4
+    fig, ax = plt.subplots(figsize=(12.2, 5.4))
+    bars_n = ax.bar(x - w / 2, rmse_nom, width=w, color=COLORS["sys"], edgecolor=COLORS["dark"], linewidth=0.8, label="Nominal")
+    bars_j = ax.bar(x + w / 2, rmse_jit, width=w, color=COLORS["mid_gray"], edgecolor=COLORS["dark"], linewidth=0.8, label=r"Jitter $\sigma=6$ ps")
+    for bar in list(bars_n) + list(bars_j):
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, h + 1.5, f"{h:.1f}", ha="center", va="bottom", fontsize=8, color=COLORS["dark"])
+    ax.set_xticks(x)
+    ax.set_xticklabels(names, fontsize=9)
+    ax.set_ylabel("RMSE sur jeu de test (ps)")
+    ax.set_title("Comparaison des méthodes de correction, single-shot", fontweight="bold")
+    ax.legend(frameon=False, loc="upper left")
+    ax.grid(axis="y", alpha=0.25, linestyle=":")
+    ax.set_axisbelow(True)
+    save(fig, "calibration_methods_comparison")
+
+
+def draw_shortformat_limit_plot() -> None:
+    """Plafond pratique du mode short-format sous jitter, illustré via l'oracle et les modèles."""
+    report = RESULTS_DIR / "shortformat_deep" / "analysis" / "report.txt"
+    if not report.exists():
+        return
+    text = report.read_text()
+
+    import re as _re
+
+    def grab(pattern: str) -> float | None:
+        m = _re.search(pattern, text)
+        return float(m.group(1)) if m else None
+
+    best_practical = grab(r"Best practical model:[\s\S]+?RMSE\s*:\s*([0-9.]+)\s*ps")
+    best_exact = grab(r"Best exact-key[\s\S]+?RMSE\s*:\s*([0-9.]+)\s*ps")
+    oracle = grab(r"Oracle floor \(robust[\s\S]+?RMSE\s*:\s*([0-9.]+)\s*ps")
+    if None in (best_practical, best_exact, oracle):
+        return
+
+    labels = [
+        "Oracle\n(clef robuste)",
+        "Meilleur\nexact-key",
+        "Meilleur\nmodèle pratique",
+    ]
+    values = [oracle, best_exact, best_practical]
+    colors = [COLORS["mid_gray"], COLORS["sys"], COLORS["fast"]]
+
+    fig, ax = plt.subplots(figsize=(9.5, 5.0))
+    bars = ax.bar(labels, values, color=colors, edgecolor=COLORS["dark"], linewidth=0.9, width=0.55)
+    for bar, v in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, v + 0.8, f"{v:.2f} ps", ha="center", va="bottom", fontsize=10, color=COLORS["dark"])
+    ax.axhline(20.0, color=COLORS["async"], linestyle="--", linewidth=1.2, alpha=0.8)
+    ax.text(2.45, 21.0, "Cible < 20 ps", color=COLORS["async"], fontsize=9, ha="right")
+    ax.set_ylabel("RMSE (ps) sur jeu jitter tenu de côté")
+    ax.set_title("Plafond pratique du mode SHORT-FORMAT sous jitter $\sigma=6$ ps", fontweight="bold")
+    ax.grid(axis="y", alpha=0.25, linestyle=":")
+    ax.set_axisbelow(True)
+    ax.set_ylim(0, max(values) * 1.25)
+    save(fig, "shortformat_limit_plot")
+
+
 def draw_all() -> None:
     draw_measurement_chain()
     draw_vernier_reference_architecture()
@@ -1179,6 +1330,9 @@ def draw_all() -> None:
     draw_calibration_flow()
     draw_calibration_results_plot()
     draw_multihit_averaging_plot()
+    draw_fixed_delay_rmse_curve()
+    draw_calibration_methods_comparison()
+    draw_shortformat_limit_plot()
 
 
 if __name__ == "__main__":
