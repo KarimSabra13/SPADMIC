@@ -1,0 +1,37 @@
+\documentclass[tikz,border=5pt]{standalone}
+\input{tdc_thesis_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[module slow, minimum width=2.30cm, minimum height=0.95cm] (start) at (0.0,1.65) {\texttt{START}\\source lente};
+  \node[module fast, minimum width=2.30cm, minimum height=0.95cm] (stop) at (0.0,-1.65) {\texttt{STOP}\\source rapide};
+
+  \node[module slow, minimum width=2.60cm, minimum height=1.05cm] (slowring) at (4.05,1.65) {Anneau lent\\$9$ phases};
+  \node[module fast, minimum width=2.60cm, minimum height=1.05cm] (fastring) at (4.05,-1.65) {Anneau rapide\\$9$ phases};
+
+  \node[module gray, minimum width=2.75cm, minimum height=1.55cm] (matrix) at (8.45,0.0) {Matrice de détection\\multiphase\\$\{PD_{ij}\}$};
+
+  \node[module ctrl, minimum width=2.00cm, minimum height=0.92cm] (counters) at (12.45,1.55) {Compteurs\\\textit{coarse}};
+  \node[module ctrl, minimum width=2.00cm, minimum height=0.92cm] (snapshot) at (12.45,0.15) {Mémoire\\snapshot};
+  \node[module io, minimum width=2.15cm, minimum height=0.92cm] (calib) at (12.45,-1.35) {Calibration\\hors puce};
+
+  \draw[signal slow] (start.east) -- (slowring.west);
+  \draw[signal fast] (stop.east) -- (fastring.west);
+  \draw[signal slow] (slowring.east) -- node[note, above] {phases lentes $n_s$} (matrix.west|-slowring.east);
+  \draw[signal fast] (fastring.east) -- node[note, below] {phases rapides $n_f$} (matrix.west|-fastring.east);
+
+  \draw[signal ctrl] (matrix.east) |- node[note, pos=0.62, above] {$N_{\mathrm{slow}},\,N_{\mathrm{fast}}$} (counters.west);
+  \draw[signal] (matrix.east) -- node[note, above] {$\{n_s,n_f,\mathrm{hit}\}$} (snapshot.west);
+  \draw[signal io] (snapshot.south) -- (calib.north);
+
+  \draw[bidir, draw=TdcBlue] ($(slowring.north west)+(0.15,0.45)$) -- node[note, above] {$T_{\mathrm{slow}}$} ($(slowring.north east)+(-0.15,0.45)$);
+  \draw[bidir, draw=TdcRed] ($(fastring.south west)+(0.15,-0.45)$) -- node[note, below] {$T_{\mathrm{fast}}$} ($(fastring.south east)+(-0.15,-0.45)$);
+
+  \draw[brace note] ($(slowring.south east)+(0.90,-0.10)$) -- node[note, right=3pt] {première coïncidence utile} ($(fastring.north east)+(0.90,0.10)$);
+
+  \node[font=\normalsize] at (8.35,-2.60) {$T_{\mathrm{LSB}} = T_{\mathrm{slow}} - T_{\mathrm{fast}}$};
+  \node[axis label, align=center] at (8.35,-3.18)
+    {La partie fine provient de la première coïncidence observée dans la matrice,\quad
+     la partie \textit{coarse} reste portée par les compteurs.};
+\end{tikzpicture}
+\end{document}

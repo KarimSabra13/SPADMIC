@@ -1,0 +1,36 @@
+\documentclass[tikz,border=5pt]{standalone}
+\input{tdc_thesis_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[guide] (0.9,2.50) -- (11.2,2.50);
+  \draw[guide] (0.9,0.95) -- (11.2,0.95);
+  \node[lane label, anchor=east] at (0.65,2.50) {$ctx_0$};
+  \node[lane label, anchor=east] at (0.65,0.95) {$ctx_1$};
+  \node[axis label, anchor=west] at (0.90,3.32) {temps arbitraire};
+
+  \foreach \x in {1.0,3.6,4.3,7.3,9.8} {
+    \draw[guide dashed] (\x,0.35) -- (\x,3.05);
+  }
+
+  \node[timeline capture, minimum width=2.60cm] (c0cap) at (2.30,2.50) {capture conv.\ $k$};
+  \node[timeline snapshot, minimum width=0.95cm, right=0.15cm of c0cap] (c0snap) {snapshot};
+  \node[timeline drain, minimum width=2.85cm, right=0.15cm of c0snap] (c0drain) {drain + FIFO + TX};
+  \node[timeline free, minimum width=2.00cm, right=0.15cm of c0drain] (c0free) {libre / réarmé};
+
+  \node[timeline free, minimum width=1.55cm] (c1free0) at (1.75,0.95) {libre};
+  \node[timeline capture, minimum width=2.45cm, right=0.35cm of c1free0] (c1cap) {capture conv.\ $k{+}1$};
+  \node[timeline snapshot, minimum width=0.95cm, right=0.15cm of c1cap] (c1snap) {snapshot};
+  \node[timeline drain, minimum width=2.75cm, right=0.15cm of c1snap] (c1drain) {drain + FIFO + TX};
+
+  \draw[bidir, draw=TdcLilac] (4.65,3.05) -- node[note, above] {recouvrement mesure / lecture} (7.25,3.05);
+  \draw[guide dashed] (9.1,0.45) -- (9.1,2.95);
+  \node[axis label, align=center, anchor=west] at (9.30,2.80)
+    {si les deux contextes sont occupés,\\le \texttt{START} suivant est rejeté};
+
+  \LegendItem{(1.00,0.15)}{TdcRedFill}{TdcRed}{capture}
+  \LegendItem{(3.55,0.15)}{TdcLilacFill}{TdcLilac}{snapshot figé}
+  \LegendItem{(6.55,0.15)}{TdcCyanFill}{TdcCyan}{drain / sérialisation}
+  \LegendItem{(9.90,0.15)}{TdcGrayFill}{black!60}{libre}
+\end{tikzpicture}
+\end{document}

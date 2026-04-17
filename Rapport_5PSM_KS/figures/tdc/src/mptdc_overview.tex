@@ -1,0 +1,41 @@
+\documentclass[tikz,border=5pt]{standalone}
+\input{tdc_thesis_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[module io, minimum width=2.20cm, minimum height=1.15cm] (inputs) at (0.0,0.0) {Entrées\\SPAD / CAL};
+  \node[module gray, minimum width=2.35cm, minimum height=1.15cm, right=1.55cm of inputs] (frontend) {Frontend\\asynchrone};
+
+  \node[module slow, minimum width=2.10cm, minimum height=0.95cm] (slowosc) at (6.75,1.35) {Oscillateur lent};
+  \node[module fast, minimum width=2.10cm, minimum height=0.95cm] (fastosc) at (6.75,-1.35) {Oscillateur rapide};
+  \node[module gray, minimum width=2.35cm, minimum height=1.35cm] (pd) at (10.15,0.0) {Matrice PD $9\times9$\\et capture fine};
+
+  \node[module ctrl, minimum width=1.95cm, minimum height=0.92cm] (ctx) at (13.45,1.05) {Contextes\\$\times 2$};
+  \node[module io, minimum width=1.95cm, minimum height=0.92cm] (drain) at (13.45,0.0) {Drain\\+ FIFO};
+  \node[module io, minimum width=1.95cm, minimum height=0.92cm] (tx) at (13.45,-1.05) {TX\\\SI{16}{bit}};
+
+  \node[domain box, fit=(slowosc)(fastosc)(pd), inner sep=6pt] (corefit) {};
+  \node[domain box, fit=(ctx)(drain)(tx), inner sep=6pt] (iofit) {};
+  \DomainLabel{corefit}{cœur Vernier}
+  \DomainLabel{iofit}{lecture système}
+
+  \draw[signal io] (inputs.east) -- node[note, above] {événements} (frontend.west);
+  \draw[signal slow] (frontend.east) |- node[note, pos=0.34, above] {\texttt{START}} (slowosc.west);
+  \draw[signal fast] (frontend.east) |- node[note, pos=0.34, below] {\texttt{STOP}} (fastosc.west);
+  \draw[signal slow] (slowosc.east) -- node[note, above] {phases lentes} (pd.west|-slowosc.east);
+  \draw[signal fast] (fastosc.east) -- node[note, below] {phases rapides} (pd.west|-fastosc.east);
+  \draw[signal ctrl] (pd.east) |- node[note, pos=0.62, right] {snapshot} (ctx.west);
+  \draw[signal io] (pd.east) -- node[note, above] {records bruts} (drain.west);
+  \draw[signal io] (drain.south) -- (tx.north);
+  \draw[signal io] (tx.east) -- ++(1.00,0) node[note, right] {bus narrow16};
+
+  \draw[guide dashed] ($(frontend.south)+(0,-0.45)$) -- ($(frontend.south)+(9.6,-0.45)$);
+  \node[axis label, anchor=north] at ($(frontend.south)+(4.80,-0.45)$)
+    {Le double-buffer retire la chaîne de sortie du chemin de réarmement immédiat.};
+
+  \LegendItem{(1.10,-2.25)}{TdcBlueFill}{TdcBlue}{famille lente}
+  \LegendItem{(4.65,-2.25)}{TdcRedFill}{TdcRed}{famille rapide}
+  \LegendItem{(8.15,-2.25)}{TdcLilacFill}{TdcLilac}{capture / contrôle}
+  \LegendItem{(12.20,-2.25)}{TdcCyanFill}{TdcCyan}{interface système}
+\end{tikzpicture}
+\end{document}

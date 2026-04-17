@@ -1,0 +1,73 @@
+\documentclass[tikz,border=5pt]{standalone}
+\input{tdc_thesis_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[module io, minimum width=2.05cm] (mux) at (0.0,3.10) {\texttt{input\_mux}};
+  \node[module gray, minimum width=2.55cm, below=0.55cm of mux] (fe) {\texttt{async\_frontend\_v2}};
+  \node[module gray, minimum width=2.35cm, below=0.55cm of fe] (stopcap) {\texttt{stop\_capture\_async}};
+  \node[module gray, minimum width=2.05cm, below=0.55cm of stopcap] (reset) {\texttt{reset\_sync}};
+
+  \node[module slow, minimum width=2.25cm] (slowosc) at (4.45,3.10) {oscillateur lent\\$9$ taps};
+  \node[module slow, minimum width=2.25cm, below=0.75cm of slowosc] (slowcnt) {\texttt{gray\_cnt\_sync}\\lent $\rightarrow$ rapide};
+
+  \node[module fast, minimum width=2.25cm] (fastosc) at (8.00,3.10) {oscillateur rapide\\$9$ taps};
+  \node[module fast, minimum width=2.15cm, below=0.75cm of fastosc] (fastcnt) {\texttt{gray\_cnt\_sync}\\rapide};
+  \node[module fast, minimum width=2.70cm, below=0.75cm of fastcnt] (matrix) {\texttt{pd\_matrix}\\$81$ cellules + \texttt{nfast\_hit}};
+  \node[module ctrl, minimum width=2.05cm, below left=0.70cm and 0.10cm of matrix] (meas) {\texttt{meas\_ctrl}};
+  \node[module ctrl, minimum width=2.20cm, below right=0.70cm and 0.10cm of matrix] (ctx) {\texttt{context\_bank}};
+  \node[module ctrl, minimum width=2.05cm, below=0.75cm of meas] (wdt) {\texttt{watchdog}};
+
+  \node[module io, minimum width=2.05cm] (drain) at (12.10,3.10) {\texttt{drain\_ctrl}};
+  \node[module io, minimum width=2.05cm, below=0.75cm of drain] (fifo) {\texttt{sync\_fifo}};
+  \node[module io, minimum width=2.05cm, below=0.75cm of fifo] (tx) {\texttt{narrow16\_tx\_v2}};
+  \node[module io, minimum width=2.05cm, below=0.75cm of tx] (csr) {CSR +\\watchdog global};
+
+  \begin{scope}[on background layer]
+    \node[domain box, fit=(mux)(fe)(stopcap)(reset), inner sep=6pt] (asyncfit) {};
+    \node[domain box, fit=(slowosc)(slowcnt), inner sep=6pt] (slowfit) {};
+    \node[domain box, fit=(fastosc)(fastcnt)(matrix)(meas)(ctx)(wdt), inner sep=6pt] (fastfit) {};
+    \node[domain box, fit=(drain)(fifo)(tx)(csr), inner sep=6pt] (sysfit) {};
+  \end{scope}
+
+  \DomainLabel{asyncfit}{événements asynchrones}
+  \DomainLabel{slowfit}{domaine lent}
+  \DomainLabel{fastfit}{domaine rapide}
+  \DomainLabel{sysfit}{domaine système}
+
+  \draw[signal io] (mux.south) -- (fe.north);
+  \draw[signal slow] (fe.east) -- node[note, above] {\texttt{osc\_slow\_en}} (slowosc.west);
+  \draw[signal fast] (fe.east) -- node[note, above] {\texttt{osc\_fast\_en}} (fastosc.west);
+  \draw[signal dashed] (fe.east) |- node[note, pos=0.35, above] {\texttt{pd\_enable}} (matrix.west);
+
+  \draw[signal slow] (slowosc.south) -- (slowcnt.north);
+  \draw[signal slow] (slowosc.east) -- node[note, above] {phases lentes} (matrix.west|-slowosc.east);
+  \draw[signal slow] (slowcnt.east) |- node[note, pos=0.65, above] {$N_{\mathrm{slow}}^{Gray}$ + snapshot} (ctx.west);
+
+  \draw[signal fast] (fastosc.south) -- (fastcnt.north);
+  \draw[signal fast] (fastosc.south) |- node[note, pos=0.32, right] {phases rapides} (matrix.north);
+  \draw[signal fast] (fastcnt.south) -- node[note, right] {$N_{\mathrm{fast}}$ local} (matrix.north);
+
+  \draw[signal] (stopcap.east) |- node[note, pos=0.40, above] {\texttt{phase0\_snap}, \texttt{sbi}} (ctx.west);
+  \draw[signal io] (reset.east) |- node[note, pos=0.35, below] {\texttt{rst\_fast\_n}} (wdt.west);
+
+  \draw[signal fast] (matrix.south) -- node[note, right] {bitmap hit} (meas.north);
+  \draw[signal ctrl] (meas.east) -- node[note, above] {\texttt{capture\_en}} (ctx.west);
+  \draw[signal ctrl] (meas.north) -- ++(0,0.45) -| node[note, pos=0.82, right] {\texttt{pd\_clear}} (matrix.east);
+  \draw[signal ctrl] (wdt.north) -- node[note, left] {\texttt{close\_any}} (meas.south);
+  \draw[signal ctrl] (meas.west) -| node[note, pos=0.18, below] {\texttt{fe\_clear}} (fe.south);
+
+  \draw[signal io] (ctx.east) -- node[note, above] {snapshot statique} (drain.west);
+  \draw[signal io] (drain.south) -- (fifo.north);
+  \draw[signal io] (fifo.south) -- (tx.north);
+  \draw[signal io] (csr.north) -- (tx.south);
+  \draw[signal io] (tx.east) -- ++(1.00,0) node[note, right] {bus \SI{16}{bit}};
+  \draw[signal io] (drain.west) |- node[note, pos=0.18, below] {\texttt{ctx\_release}} (fe.east);
+
+  \LegendItem{(0.35,-0.45)}{TdcGrayFill}{black!60}{asynchrone / structure}
+  \LegendItem{(3.70,-0.45)}{TdcBlueFill}{TdcBlue}{famille lente}
+  \LegendItem{(6.75,-0.45)}{TdcRedFill}{TdcRed}{famille rapide}
+  \LegendItem{(9.90,-0.45)}{TdcLilacFill}{TdcLilac}{contrôle de mesure}
+  \LegendItem{(13.10,-0.45)}{TdcCyanFill}{TdcCyan}{sortie système}
+\end{tikzpicture}
+\end{document}
