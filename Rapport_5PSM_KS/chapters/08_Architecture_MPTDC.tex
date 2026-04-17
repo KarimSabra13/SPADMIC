@@ -405,19 +405,20 @@ Le dépôt contient déjà une intention de contraintes claire : groupes d'horlo
 Le rapport présente donc ces contraintes avec honnêteté. L'architecture est suffisamment structurée pour une synthèse d'essai et une revue d'architecture, mais la partie oscillateur, generated clocks complets et signoff final reste explicitement à consolider.
 
 \section{Calibration \textit{offline}}
+\label{sec:calibration-offline}
 
-L'architecture active est conçue dès l'origine pour une calibration hors puce. La philosophie générale est simple : le silicium exporte des observables brutes riches ; la correction, l'adaptation PVT et les méthodes d'apprentissage restent côté hôte. Cette approche évite d'embarquer dans la puce un LUT ou un moteur de régression figé trop tôt.
+L'architecture active est conçue dès l'origine pour une calibration hors puce. La philosophie générale est simple : le silicium exporte des observables brutes riches et la correction, l'adaptation aux variations PVT et les méthodes d'apprentissage restent côté hôte. Cette approche évite d'embarquer dans la puce un LUT ou un moteur de régression figé trop tôt dans le cycle de conception.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.98\textwidth]{tdc/calibration_flow.pdf}
-    \caption{Chaîne de calibration \textit{offline}. Le bloc \textbf{MPTDC} exporte un jeu d'observables brutes ; la reconstruction temporelle et la correction statistique sont réalisées côté hôte.}
+    \caption{Chaîne de calibration \textit{offline}. Le bloc \textbf{MPTDC} exporte un jeu d'observables brutes et la reconstruction temporelle puis la correction statistique sont réalisées côté hôte.}
     \label{fig:calibration-flow}
 \end{figure}
 
 \subsection{Observables exportés}
 
-Les observables réellement utiles à la calibration ne se limitent pas à un timestamp brut. Le tableau \ref{tab:calib-observables} résume les champs importants.
+Les observables réellement utiles à la calibration ne se limitent pas à un timestamp brut. Le tableau \ref{tab:calib-observables} résume les champs importants ; leur exploitation statistique et leur impact quantitatif sont développés en détail au chapitre \ref{chap:resultats-calibration}.
 
 \begin{table}[H]
     \centering
@@ -430,9 +431,9 @@ Les observables réellement utiles à la calibration ne se limitent pas à un ti
         \texttt{nfast\_hit} & W0 & compteur rapide local de la cellule qui a hit \\
         \texttt{ns}, \texttt{nf} & \shortstack[l]{W1 en \texttt{RAW\_FEATURES}\\ou \texttt{FULL}} & indices de phase utiles à la reconstruction fine \\
         \texttt{pd\_idx} & W1 & identifiant aplati de la cellule PD \\
-        \texttt{event\_seq} & W2 & ordre de scan/export du hit dans le paquet \\
+        \texttt{event\_seq} & W2 & ordre de scan et d'export du hit dans le paquet \\
         \texttt{nfast\_snap} & W2 & snapshot global rapide au moment de \texttt{CAPTURE} \\
-        \texttt{phase0\_snap} & header & classe de frontière coarse/fine \\
+        \texttt{phase0\_snap} & header & classe de frontière coarse vers fine \\
         \texttt{sbi} (\textit{slow boundary inc}) & header & correction de frontière sur le compteur lent \\
         \texttt{t\_raw\_ps} & \shortstack[l]{mode brut\\ou complet} & timestamp brut local reconstruit par le RTL \\
         \texttt{nfast\_stop} & sous-header & champ réservé, actuellement nul dans l'architecture active \\
@@ -442,80 +443,11 @@ Les observables réellement utiles à la calibration ne se limitent pas à un ti
     \label{tab:calib-observables}
 \end{table}
 
-Le maintien d'un jeu d'observables riche est l'une des forces du projet. Il autorise des stratégies de calibration très différentes sans nécessiter de changement matériel dans le silicium.
+Le maintien d'un jeu d'observables riche est l'une des forces du projet. Il autorise des stratégies de calibration très différentes sans nécessiter de changement matériel dans le silicium, qu'il s'agisse d'une simple table de correction moyenne, d'une régression non linéaire ou d'un schéma de moyennage multi-hit.
 
-\subsection{Clé 6D et méthodes évaluées}
+\subsection{Positionnement dans le flot global}
 
-Le flux de calibration de référence maintenu dans le dépôt repose sur une table de correction 6D. La clé historiquement retenue pour le nominal est :
-\[
-(\texttt{ns\_inf},\ \texttt{nf\_inf},\ \texttt{nslow},\ \texttt{nfast\_hit},\ \texttt{phase0\_snap},\ \texttt{hit\_idx})
-\]
-
-Dans les modes riches, \texttt{ns} et \texttt{nf} sont disponibles directement. Dans les modes plus compacts, ils peuvent être retrouvés à partir de l'algèbre Vernier et d'un inverseur de table sur les $81$ états possibles. Cette souplesse explique pourquoi la même philosophie de calibration peut être conservée à travers plusieurs contrats de sortie.
-
-Le dépôt maintient également des méthodes plus avancées, notamment :
-\begin{itemize}
-    \item un modèle de type \textbf{6D LUT} à correction moyenne ;
-    \item des méthodes de type \textbf{Gradient Boosted Regressor} ;
-    \item des variantes de moyennage multi-hit, pondérées ou tronquées ;
-    \item des analyses dites \textit{short-format}, plus proches des observables déployables mais nettement plus difficiles.
-\end{itemize}
-
-\subsection{Résultats chiffrés}
-
-Le tableau \ref{tab:enhanced-calibration-results} synthétise les comparaisons les plus lisibles pour la rédaction du rapport.
-
-\begin{table}[H]
-    \centering
-    \small
-    \begin{tabularx}{0.92\textwidth}{>{\raggedright\arraybackslash}Xcc}
-        \toprule
-        \textbf{Méthode} & \textbf{RMSE mono-coup nominale} & \textbf{RMSE après moyennage 15 hits} \\
-        \midrule
-        6D LUT (moyenne) & \SI{18.99}{\pico\second} & \SI{5.29}{\pico\second} (tronqué) \\
-        GBR (\textit{Gradient Boosted Regressor}) & \SI{18.56}{\pico\second} & \SI{5.19}{\pico\second} (pondéré) \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Comparaison des méthodes de calibration avancées en régime nominal.}
-    \label{tab:enhanced-calibration-results}
-\end{table}
-
-\begin{table}[H]
-    \centering
-    \small
-    \begin{tabularx}{0.92\textwidth}{>{\raggedright\arraybackslash}Xcc}
-        \toprule
-        \textbf{Méthode} & \textbf{RMSE mono-coup sous jitter} & \textbf{RMSE après moyennage 15 hits} \\
-        \midrule
-        6D LUT (moyenne) & \SI{53.64}{\pico\second} & \SI{19.75}{\pico\second} (tronqué) \\
-        GBR (\textit{Gradient Boosted Regressor}) & \SI{48.24}{\pico\second} & --- \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Comparaison des méthodes de calibration avancées sous jitter (\(\sigma = \SI{6}{\pico\second}\)).}
-    \label{tab:enhanced-calibration-jitter}
-\end{table}
-
-Ces chiffres doivent toutefois être lus avec discernement. Les comparaisons \textit{enhanced} sont très utiles pour comparer des méthodes entre elles, mais la référence la plus stable du dépôt reste la calibration nominale maintenue à grande échelle, pour laquelle le rapport de calibration complet indique une amélioration de \SI{425.71}{\pico\second} à \SI{18.89}{\pico\second} en \textbf{RMSE} sur des jeux de validation frais et fortement peuplés.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.95\textwidth]{tdc/calibration_results_plot.pdf}
-    \caption{Synthèse graphique des performances de calibration. La lecture importante n'est pas seulement le meilleur score absolu, mais aussi l'écart entre nominal et cas jitterés, qui mesure la sensibilité réelle de la chaîne.}
-    \label{fig:calibration-results}
-\end{figure}
-
-Le comportement en moyennage est également central. Sur les campagnes nominales, l'erreur résiduelle suit une tendance proche de \(1/\sqrt{N}\), ce qui confirme que la chaîne conserve une composante aléatoire significative et moyennable.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.92\textwidth]{tdc/multihit_averaging_plot.pdf}
-    \caption{Évolution de la RMSE en fonction du nombre de hits moyennés. L'intérêt du mode multi-hit apparaît clairement : l'information utile n'est pas seulement le premier hit, mais aussi la redondance statistique disponible dans une conversion.}
-    \label{fig:multihit-averaging}
-\end{figure}
-
-Un autre résultat important concerne les importances de variables dans les approches de type \textbf{GBR}. En présence de jitter, les termes dominants sont \texttt{nf}, \texttt{ns} et \texttt{phase0\_snap}, tandis que \texttt{nfast\_snap} a un poids beaucoup plus faible. Cette observation confirme que la structure fine de la matrice et la classe de frontière restent les premiers déterminants de la qualité de reconstruction.
-
-Enfin, les campagnes \textit{short-format} rappellent une réalité importante : dès que l'on restreint le contrat de données exporté, la qualité pratique chute fortement. Les rapports maintenus du dépôt montrent alors des erreurs de l'ordre de \SIrange{95}{160}{\pico\second} selon le filtrage et l'ensemble de clés utilisé. Cette dégradation justifie pleinement la stratégie actuelle d'export d'observables riches pour les phases de caractérisation.
+La section présente se limite volontairement au rôle fonctionnel de la calibration au sein de l'architecture. L'ensemble des jeux de données, des protocoles de comparaison, des métriques, des courbes de moyennage, de la caractérisation à délai fixe et de la discussion des limites pratiques est regroupé dans le chapitre \ref{chap:resultats-calibration}, qui constitue le volet expérimental du rapport. Cette séparation permet de lire l'architecture indépendamment des résultats et de garder, dans le présent chapitre, une progression purement fonctionnelle et structurelle.
 
 \section{Vérification et validation}
 

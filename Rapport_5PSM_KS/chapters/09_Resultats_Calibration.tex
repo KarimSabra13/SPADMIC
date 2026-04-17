@@ -1,0 +1,154 @@
+\chapter{Résultats de calibration et analyse de performance}
+\label{chap:resultats-calibration}
+\justifying
+\sloppy
+
+Le présent chapitre regroupe le volet expérimental du rapport. L'architecture décrite au chapitre \ref{chap:architecture-mptdc} fournit un jeu d'observables riche ; il s'agit ici de mesurer quantitativement ce que l'on peut en faire. La démarche reste volontairement progressive : on part de la performance brute avant correction, puis l'on observe l'effet d'une correction 6D de référence, l'impact d'un jitter réaliste, la contribution du moyennage multi-hit, le comportement à délai fixe et enfin la dégradation attendue lorsque le contrat de sortie se restreint au mode compact. Les analyses s'appuient exclusivement sur des campagnes maintenues dans le dépôt.
+
+\section{Jeux de données et méthodologie}
+
+Les résultats présentés reposent sur plusieurs campagnes complémentaires conservées dans \texttt{MPTDC/results/}. Le tableau \ref{tab:calib-datasets} en donne un résumé. Les séparations \textit{train} et \textit{test} sont systématiquement effectuées par graine distincte, de manière à ce que l'estimation finale reste représentative d'une reprise de mesure et non d'un surapprentissage.
+
+\begin{table}[H]
+    \centering
+    \footnotesize
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.2cm}}
+        \toprule
+        \textbf{Campagne} & \textbf{Rôle dans l'analyse} & \textbf{Volumétrie} \\
+        \midrule
+        \texttt{calibration\_final} & Référence stable, construction et validation du LUT 6D nominal. & $\approx 16\,000$ bacs, seeds de validation dédiées. \\
+        \texttt{calibration\_enhanced\_nominal} & Comparaison des méthodes enrichies (LUT moyenne, tronquée, GBR, polynômes, re-clef temporelle) en régime nominal. & $\approx 560\,000$ échantillons d'entraînement et $140\,000$ de test. \\
+        \texttt{calibration\_enhanced\_jitter} & Mêmes méthodes sous jitter d'oscillateur $\sigma = \SI{6}{\pico\second}$. & Même protocole, avec modèle de bruit injecté. \\
+        \texttt{overnight\_calib\_10M} & Campagne longue multi-hit utilisée comme socle quantitatif de l'étude de moyennage. & Plusieurs millions d'échantillons. \\
+        \texttt{fixed\_delay\_shortformat\_jitter} et \texttt{fixed\_delay\_full\_jitter} & Caractérisation à délai fixe, de \SI{20}{\pico\second} à \SI{15}{\nano\second}, en mode \texttt{FULL} et \texttt{SHORT\_FORMAT}. & $21$ points de délai, $6000$ conversions par point. \\
+        \texttt{shortformat\_deep} & Étude approfondie des limites pratiques du mode compact sous jitter. & Plusieurs sous-jeux \textit{train}, \textit{val}, \textit{heldout}. \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Campagnes exploitées pour l'analyse de calibration et de performance.}
+    \label{tab:calib-datasets}
+\end{table}
+
+Dans la suite du chapitre, les métriques retenues sont les métriques usuelles pour un TDC : erreur quadratique moyenne (\textbf{RMSE}), erreur absolue moyenne (\textbf{MAE}), quantiles P90 et P99 de l'erreur absolue. La RMSE est l'indicateur principal, car c'est la grandeur pertinente pour les applications de comptage de photons et pour la plupart des interprétations statistiques. Les P90 et P99 complètent cette lecture en caractérisant la queue de distribution.
+
+\section{Performance avant et après correction 6D}
+
+Le point de départ naturel est la comparaison entre la performance brute du cœur TDC et celle obtenue après application d'une simple correction moyenne indexée par la clé 6D. Les résultats maintenus pour la campagne \texttt{calibration\_final} donnent, sur des jeux de validation frais (seeds $100$ à $129$, jamais vus à l'entraînement) :
+
+\begin{itemize}
+    \item RMSE avant correction : \SI{425.79}{\pico\second} ;
+    \item RMSE après correction : \SI{18.89}{\pico\second} ;
+    \item MAE après correction : \SI{14.6}{\pico\second}, P90 \SI{32.8}{\pico\second}, P99 \SI{45.0}{\pico\second} ;
+    \item amélioration relative : \SI{95.6}{\percent}.
+\end{itemize}
+
+Cette simple étape livre l'information la plus importante du rapport de calibration : l'essentiel du biais structurel introduit par la géométrie Vernier et par les rapports de phase est capturable par une table indexée sur six variables discrètes. Le reste de ce chapitre s'attache à quantifier ce qui est gagné ou perdu par rapport à ce socle, selon que l'on enrichit la méthode ou que l'on dégrade les conditions de mesure.
+
+\section{Comparaison des méthodes enrichies}
+
+Les campagnes \texttt{calibration\_enhanced\_nominal} et \texttt{calibration\_enhanced\_jitter} évaluent dans un même protocole plusieurs méthodes de correction. La figure \ref{fig:calib-methods} présente la synthèse la plus lisible.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{tdc/calibration_methods_comparison.pdf}
+    \caption{RMSE mono-coup sur jeu de test, méthodes de correction comparées en régime nominal et sous jitter $\sigma = \SI{6}{\pico\second}$. Les trois variantes de LUT 6D et le GBR se tiennent dans un mouchoir de poche en nominal, mais se différencient nettement en présence de jitter.}
+    \label{fig:calib-methods}
+\end{figure}
+
+Les enseignements de cette comparaison sont doubles. D'une part, les variantes de LUT 6D (moyenne, médiane, tronquée) donnent des performances proches les unes des autres en nominal, ce qui signifie que la statistique de peuplement par bac est globalement saine. D'autre part, le modèle \textbf{Gradient Boosted Regressor} ne creuse réellement l'écart qu'en présence de jitter, où il passe de $\approx \SI{48.2}{\pico\second}$ contre $\approx \SI{53.6}{\pico\second}$ pour la LUT moyenne. L'apport d'un modèle continu et non linéaire devient donc tangible précisément dans les régimes les plus bruités, là où les bacs du LUT voient leur variance augmenter.
+
+Les méthodes polynomiales de degré 2 et 3 ne sont pas compétitives, ni en nominal ni sous jitter. Elles sont conservées ici uniquement comme élément de lecture, pour rappeler qu'une correction lisse et globale ne peut pas reproduire la structure discrète de la grille Vernier.
+
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xcccc}
+        \toprule
+        \textbf{Méthode} & \textbf{RMSE nom.} & \textbf{P99 nom.} & \textbf{RMSE jitter} & \textbf{P99 jitter} \\
+        \midrule
+        6D LUT moyenne & \SI{18.99}{\pico\second} & \SI{46.6}{\pico\second} & \SI{53.64}{\pico\second} & \SI{148.4}{\pico\second} \\
+        6D LUT médiane & \SI{20.01}{\pico\second} & \SI{58.0}{\pico\second} & \SI{54.21}{\pico\second} & \SI{151.0}{\pico\second} \\
+        6D LUT tronquée & \SI{19.06}{\pico\second} & \SI{47.6}{\pico\second} & \SI{53.67}{\pico\second} & \SI{148.9}{\pico\second} \\
+        GBR & \SI{18.56}{\pico\second} & \SI{43.9}{\pico\second} & \SI{48.24}{\pico\second} & \SI{138.6}{\pico\second} \\
+        LUT re-clef temporel & \SI{25.54}{\pico\second} & \SI{62.5}{\pico\second} & \SI{63.15}{\pico\second} & \SI{174.0}{\pico\second} \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Performance mono-coup sur jeu de test, méthodes de correction enrichies.}
+    \label{tab:calib-methods-detailed}
+\end{table}
+
+La variante \textit{temporal re-keying}, qui tente de redéfinir la clé à partir d'un ordre chronologique estimé des hits, se dégrade dans les deux régimes. Cela confirme l'intuition portée au chapitre \ref{chap:architecture-mptdc} : l'ordre de scan déterministe de la matrice est plus stable que toute reconstruction temporelle indirecte, parce qu'il est répétable et exempt de bruit supplémentaire.
+
+\section{Impact du jitter}
+
+La comparaison nominale contre jittrée est un élément central du rapport. Elle répond à la question pratique : que vaut la chaîne si les oscillateurs ne sont pas parfaits ? Les ordres de grandeur observés sont les suivants.
+
+\begin{itemize}
+    \item La RMSE de la LUT 6D moyenne passe de $\approx \SI{19.0}{\pico\second}$ à $\approx \SI{53.6}{\pico\second}$, soit un facteur $\approx 2.8$.
+    \item Le GBR passe de $\approx \SI{18.6}{\pico\second}$ à $\approx \SI{48.2}{\pico\second}$, soit un facteur $\approx 2.6$.
+    \item Les P99 suivent la même tendance, en restant contenus sous les \SI{150}{\pico\second}.
+\end{itemize}
+
+Ce comportement est cohérent. Un jitter d'oscillateur de l'ordre de quelques picosecondes cumule ses effets sur le nombre de fronts qui séparent \texttt{START} et l'instant de mesure, ce qui élargit la distribution résiduelle dans chaque bac du LUT. Le GBR, en exploitant de manière continue les relations entre \texttt{nf}, \texttt{ns} et \texttt{phase0\_snap}, atténue partiellement cet effet sans toutefois le supprimer. On retrouve ici le fait que les observables disponibles sont, à ce niveau de bruit, le véritable facteur limitant.
+
+\section{Gain par moyennage multi-hit}
+
+Le mode multi-hit est une des valeurs ajoutées de l'architecture. Il permet, pour une même conversion, de disposer jusqu'à $15$ estimations partiellement indépendantes du délai \texttt{STOP} vers \texttt{START}. La campagne longue \texttt{calibration\_final} fournit la courbe de moyennage la plus propre.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.94\textwidth]{tdc/multihit_averaging_plot.pdf}
+    \caption{Évolution de la RMSE en fonction du nombre de hits moyennés. En nominal, la décroissance suit de près la loi idéale en $1/\sqrt{N}$, jusqu'à environ \SI{0.6}{\pico\second} à $N = 1000$. Sous jitter, la décroissance reste forte mais plafonne plus haut.}
+    \label{fig:multihit-averaging-ch9}
+\end{figure}
+
+Les points chiffrés les plus utiles à mémoriser sont : \SI{18.96}{\pico\second} à $N = 1$, \SI{4.92}{\pico\second} à $N = 15$, \SI{1.90}{\pico\second} à $N = 100$ et \SI{0.60}{\pico\second} à $N = 1000$. L'amélioration relative par rapport à $N = 1$ atteint \SI{96.8}{\percent} à $N = 1000$. Ce comportement confirme que la composante d'erreur résiduelle est majoritairement aléatoire et moyennable, ce qui est une information importante lorsque l'on discute du bilan de précision du TDC à l'échelle d'une expérience de comptage de photons.
+
+Sous jitter, la campagne \texttt{enhanced} maintient une trace pertinente : la variante LUT 6D tronquée descend jusqu'à environ \SI{19.8}{\pico\second} à $15$ hits moyennés, ce qui reste un gain utile mais signale clairement que le plancher sous bruit d'oscillateur est nettement au-dessus du plancher nominal.
+
+\section{Caractérisation à délai fixe}
+
+Les campagnes \texttt{fixed\_delay\_*} imposent un délai connu entre \texttt{START} et \texttt{STOP} et balaient systématiquement cette consigne, de \SI{20}{\pico\second} à \SI{15}{\nano\second}. La figure \ref{fig:fixed-delay} met en regard le mode \texttt{FULL} et le mode \texttt{SHORT\_FORMAT}, pour trois estimateurs : simple sample \textit{row}, balayage \textit{first-hit}, et moyenne sur la conversion.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{tdc/fixed_delay_rmse_curve.pdf}
+    \caption{RMSE à délai fixe, en fonction du délai programmé, pour les deux modes de sortie. Le moyennage sur la conversion apporte un gain significatif et la dégradation du mode compact est systématique sur toute la plage de délais.}
+    \label{fig:fixed-delay}
+\end{figure}
+
+Deux observations se détachent. D'abord, quel que soit le mode, l'écart entre la RMSE du single-shot et celle de la moyenne par conversion est du même ordre que celui attendu par la loi en $1/\sqrt{N}$, ce qui est un signe de cohérence entre l'étude statistique et la caractérisation matérielle. Ensuite, le mode \texttt{SHORT\_FORMAT} reste perceptiblement au-dessus du mode \texttt{FULL} sur l'ensemble des délais testés, en particulier pour les petits délais. Cette dégradation ne disparaît pas même à délais plus grands, ce qui confirme que la réduction du contrat de sortie touche la qualité de reconstruction de manière structurelle, pas seulement marginale.
+
+\section{Plafond pratique du mode \textit{short-format}}
+
+La campagne \texttt{shortformat\_deep} pousse l'analyse jusqu'au plafond théorique atteignable par le mode compact. Elle compare, pour une configuration jitter \textit{heldout}, le meilleur modèle pratique, le meilleur modèle avec clef exacte présente dans l'ensemble d'entraînement, et un oracle fondé sur la clef robuste \texttt{short\_core}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{tdc/shortformat_limit_plot.pdf}
+    \caption{Plafond pratique du mode \texttt{SHORT\_FORMAT} sous jitter. L'oracle lui-même reste au-dessus de la cible de \SI{20}{\pico\second}, ce qui signale que l'ensemble d'observables compact est le facteur limitant dominant à ce niveau de bruit.}
+    \label{fig:shortformat-limit}
+\end{figure}
+
+Le meilleur modèle pratique tombe à $\approx \SI{62.9}{\pico\second}$, le meilleur modèle exact-key à $\approx \SI{45.4}{\pico\second}$ et l'oracle \texttt{short\_core} à $\approx \SI{41.1}{\pico\second}$. La conclusion est claire : aucun de ces trois points ne passe sous la cible à \SI{20}{\pico\second}. Le mode \texttt{SHORT\_FORMAT} dans sa forme actuelle n'est donc pas un candidat crédible pour une exploitation haute performance sous jitter de l'ordre de $\sigma = \SI{6}{\pico\second}$. Il reste néanmoins pertinent lorsque la contrainte de débit ou de stockage est prioritaire et que le besoin de précision tolère cette dégradation.
+
+\section{Importance relative des observables}
+
+Les importances de variables extraites du modèle GBR, sous jitter, font ressortir un classement stable : \texttt{nf} domine, suivi de \texttt{ns} et de \texttt{phase0\_snap}, tandis que \texttt{nfast\_snap} contribue de manière plus marginale. Cette hiérarchie recoupe la structure de la grille fine Vernier décrite au chapitre \ref{chap:vernier-reference} : les indices de phase fine portent la majeure partie de l'information utile, la classe de frontière servant principalement à désambiguïser les cas de transition coarse.
+
+Du point de vue de la conception, cette hiérarchie justifie a posteriori le choix du format \texttt{RAW\_FEATURES} maintenu dans l'architecture active. Il exporte précisément les variables auxquelles la qualité de correction est la plus sensible, sans alourdir inutilement le contrat de sortie.
+
+\section{Synthèse et limites}
+
+L'analyse conduite dans ce chapitre permet d'établir plusieurs points de manière stable.
+
+\begin{itemize}
+    \item Une simple LUT 6D suffit déjà à ramener la RMSE en dessous de \SI{20}{\pico\second} en régime nominal.
+    \item Les méthodes enrichies, à commencer par le GBR, apportent un gain modéré mais identifiable, surtout en présence de jitter.
+    \item Le multi-hit est un levier puissant. Il rapproche la RMSE de la barre du picoseconde pour des conversions longues, à condition de pouvoir effectivement accumuler $10^{2}$ à $10^{3}$ hits utiles.
+    \item Le mode compact \texttt{SHORT\_FORMAT} ne permet pas, à cet endroit du projet, de tenir une cible $< \SI{20}{\pico\second}$ sous jitter réaliste. Sa valeur d'usage reste conditionnelle.
+    \item Les observables \texttt{nf}, \texttt{ns} et \texttt{phase0\_snap} sont les premiers porteurs d'information, ce qui conforte le choix du format d'export riche par défaut.
+\end{itemize}
+
+Ces résultats n'ont pas vocation à constituer un signoff de performance final. Ils décrivent l'état actuel d'une chaîne RTL, d'un modèle d'oscillateur comportemental et d'un flot de calibration hors puce maintenus dans le dépôt. Les marges restantes concernent principalement le passage à une mesure réelle de silicium, l'adaptation du modèle de bruit et l'intégration des variations PVT à l'échelle d'un système complet. L'ensemble de la méthodologie présentée ici est cependant conçue pour s'y prêter sans refonte profonde.
+
+\clearpage
