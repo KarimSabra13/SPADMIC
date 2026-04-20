@@ -187,7 +187,7 @@ def top_page() -> Page:
       {block_node("axis_y", "TDC axis Y", theme="tdc", subtitle="stop qualifier + preserved mptdc_top_asic", lines=["spad event Y", "CAL start/stop Y", "CSR + ACQ export"])}
       {block_node("axis_z", "TDC axis Z", theme="tdc", subtitle="stop qualifier + preserved mptdc_top_asic", lines=["spad event Z", "CAL start/stop Z", "CSR + ACQ export"])}
       {block_node("tx_mux", "Shared TX mux", theme="egress", subtitle="one physical chip_tx_* bus", lines=["select TDC or position packet", "ready only to selected source"])}
-      {block_node("pad_tx", "I/O pads - chip TX", theme="io", lines=["chip_tx_valid_o", "chip_tx_ready_i", "chip_tx_data_o[15:0]"])}
+      {block_node("pad_tx", "I/O pads - chip TX", theme="io", lines=["chip_tx_clk_o", "chip_tx_valid_o", "chip_tx_data_o[7:0] DDR"])}
 
       {block_node("shared_readout", "Shared TDC readout", theme="tdc", subtitle="META arbitration + shared narrow16 serializer", lines=["packet-atomic owner hold", "source tag patch", "shared TDC packet stream"])}
       {block_node("position", "Position path", theme="position", subtitle="sync + settle FSM + cluster scan + packetizer", lines=["x/y/z line snapshots", "fault counters / stickies", "fixed 12-word position packet"])}
@@ -518,7 +518,7 @@ def shared_readout_page() -> Page:
     {block_node("rr", "Round-robin chooser", theme="control", lines=["rr_ptr_q", "choice_valid / choice_idx"], mono=True)}
     {block_node("owner", "Owner hold", theme="egress", lines=["record_grant_active_q", "record_grant_idx_q", "hits_remaining_q"], mono=True)}
     {block_node("serializer", "Shared mptdc_narrow16_tx_v2", theme="tdc", lines=["selected record stream", "serializer_rd_en", "shared_valid_o / shared_data_o"], mono=True)}
-    {block_node("tag", "Source-tag patch + busy", theme="egress", lines=["packet_src_q held until EOC", "patch sub-header bits [5:4]", "busy_o / packet_src_o"], mono=False)}
+    {block_node("tag", "Source-tag patch + busy", theme="egress", lines=["packet_src_q held until EOC", "patch header bit [12] + flag[6]", "busy_o / packet_src_o"], mono=False)}
     {block_node("ready", "Ready return", theme="control", lines=["acq_ready_o asserted only for current owner axis"], mono=True)}
 
     {{ rank=same; inputs; meta; rr; owner; }}

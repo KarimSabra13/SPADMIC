@@ -7,11 +7,6 @@
 // Purpose  : Central parameter, type, and helper-function package
 // Author   : Karim Sabra
 // =============================================================================
-// v2.3 changes (precision-enhancement):
-//   - nfast_stop: async fast-counter snapshot at STOP edge added to ctx_snapshot
-//     and conv_meta structs for tightly correlated coarse-Vernier reference
-//   - Sub-header word added to narrow packet (carries nfast_stop)
-//
 // v2.4 changes (first-hit mode removal):
 //   - Removed MODE_FIRST_HIT / mode_e enum — single multi-hit operating mode
 //   - max_hits=1 preserves fast close (OR-reduction) internally
@@ -118,7 +113,7 @@ package mptdc_pkg;
   localparam logic [0:0] MODE_MULTI_HIT = 1'b0;
 
   typedef enum logic [1:0] {
-    OUT_MODE_RAW_FEATURES  = 2'd0,  // nslow, nfast, ns, nf, pd_idx, event_seq
+    OUT_MODE_RAW_FEATURES  = 2'd0,  // nslow, nfast_hit, ns, nf
     OUT_MODE_RAW_TIMESTAMP = 2'd1,  // nslow, nfast, t_raw_ps
     OUT_MODE_FULL          = 2'd2   // all features + timestamp
   } out_mode_e;
@@ -209,7 +204,7 @@ package mptdc_pkg;
 
   // Header word:  [15:14]=2'b10, [13:12]=ctx_id, [11]=phase0_snap,
   //               [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=slow_boundary_inc
-  // Hit words:    depend on out_mode (2-4 words per hit), bit[15]=0 always
+  // Hit words:    depend on out_mode (2/2/3 words per hit), bit[15]=0 always
   // EOC word:     [15:14]=2'b11, [13:0]=conv_id[13:0]
 
   // =========================================================================

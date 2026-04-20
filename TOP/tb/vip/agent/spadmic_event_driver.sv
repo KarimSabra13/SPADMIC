@@ -34,5 +34,9 @@ class spadmic_event_driver;
     end
   endtask
 
-endclass
+  task automatic clear_all();
+    for (int ax = 0; ax < 3; ax++)
+      ev_if[ax].clear_all();
+  endtask
 
+endclass

@@ -293,9 +293,9 @@
 <polygon fill="#b45309" stroke="transparent" points="1007,-222.5 1007,-253.5 1169,-253.5 1169,-222.5 1007,-222.5"/>
 <text text-anchor="start" x="1014" y="-235.5" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="15.00" fill="white">I/O pads &#45; chip TX</text>
 <polygon fill="#fffbeb" stroke="transparent" points="1007,-175.5 1007,-222.5 1169,-222.5 1169,-175.5 1007,-175.5"/>
-<text text-anchor="start" x="1014" y="-207.5" font-family="DejaVu Sans" font-size="10.00">chip_tx_valid_o</text>
-<text text-anchor="start" x="1014" y="-196.5" font-family="DejaVu Sans" font-size="10.00">chip_tx_ready_i</text>
-<text text-anchor="start" x="1014" y="-185.5" font-family="DejaVu Sans" font-size="10.00">chip_tx_data_o[15:0]</text>
+<text text-anchor="start" x="1014" y="-207.5" font-family="DejaVu Sans" font-size="10.00">chip_tx_clk_o</text>
+<text text-anchor="start" x="1014" y="-196.5" font-family="DejaVu Sans" font-size="10.00">chip_tx_valid_o</text>
+<text text-anchor="start" x="1014" y="-185.5" font-family="DejaVu Sans" font-size="10.00">chip_tx_data_o[7:0] DDR</text>
 <polygon fill="none" stroke="#b45309" points="1006,-174.5 1006,-254.5 1170,-254.5 1170,-174.5 1006,-174.5"/>
 </g>
 <!-- tx_mux&#45;&gt;pad_tx -->

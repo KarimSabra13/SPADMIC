@@ -8,6 +8,7 @@
 // =============================================================================
 
 // ── Interfaces (compiled first — classes reference them via virtual) ──
+interfaces/spadmic_reset_if.sv
 interfaces/spadmic_i2c_if.sv
 interfaces/spadmic_csr_req_if.sv
 interfaces/spadmic_async_event_if.sv

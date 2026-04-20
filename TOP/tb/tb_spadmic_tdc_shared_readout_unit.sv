@@ -6,7 +6,7 @@ module tb_spadmic_tdc_shared_readout_unit;
   import spadmic_pkg::*;
 
   localparam int CLK_PERIOD = 6250;
-  localparam int TOTAL_WORDS = 18;
+  localparam int TOTAL_WORDS = 12;
 
   logic clk_sys;
   logic rst_n;
@@ -35,7 +35,7 @@ module tb_spadmic_tdc_shared_readout_unit;
   logic [NARROW_W-1:0] words [0:TOTAL_WORDS-1];
   logic busy_q;
   logic [1:0] busy_src_q;
-  logic stalled_pkt0_subhdr;
+  logic stalled_pkt0_w0;
   logic stalled_pkt1_midhit;
   logic stalled_pkt2_eoc;
 
@@ -202,7 +202,7 @@ module tb_spadmic_tdc_shared_readout_unit;
     pass_count = 0;
     fail_count = 0;
     stall_count = 0;
-    stalled_pkt0_subhdr = 1'b0;
+    stalled_pkt0_w0 = 1'b0;
     stalled_pkt1_midhit = 1'b0;
     stalled_pkt2_eoc = 1'b0;
 
@@ -215,13 +215,13 @@ module tb_spadmic_tdc_shared_readout_unit;
       @(negedge clk_sys);
       #1;
 
-      if (!stalled_pkt0_subhdr && (accepted_words == 1) && shared_valid) begin
-        stalled_pkt0_subhdr = 1'b1;
-        stall_and_check("Packet 0 subheader backpressure", shared_data);
-      end else if (!stalled_pkt1_midhit && (accepted_words == 9) && shared_valid) begin
+      if (!stalled_pkt0_w0 && (accepted_words == 1) && shared_valid) begin
+        stalled_pkt0_w0 = 1'b1;
+        stall_and_check("Packet 0 W0 backpressure", shared_data);
+      end else if (!stalled_pkt1_midhit && (accepted_words == 7) && shared_valid) begin
         stalled_pkt1_midhit = 1'b1;
         stall_and_check("Packet 1 mid-hit backpressure", shared_data);
-      end else if (!stalled_pkt2_eoc && (accepted_words == 17) && shared_valid) begin
+      end else if (!stalled_pkt2_eoc && (accepted_words == 11) && shared_valid) begin
         stalled_pkt2_eoc = 1'b1;
         stall_and_check("Packet 2 EOC backpressure", shared_data);
       end
@@ -239,13 +239,13 @@ module tb_spadmic_tdc_shared_readout_unit;
     check("Shared readout drains all axis1 records", idx1 == 3);
     check("Shared readout drains all axis2 records", idx2 == 1);
     check("Readout returns idle after final EOC", busy === 1'b0);
-    check("Packet 0 subheader tagged as X", words[1][5:4] == TDC_ID_X);
-    check("Packet 1 subheader tagged as Y", words[7][5:4] == TDC_ID_Y);
-    check("Packet 2 subheader tagged as Z", words[16][5:4] == TDC_ID_Z);
-    check("Packet 0 ends with EOC", is_tdc_eoc(words[5]));
-    check("Packet 1 ends with EOC", is_tdc_eoc(words[14]));
-    check("Packet 2 ends with EOC", is_tdc_eoc(words[17]));
-    check("Zero-hit packet stays compact", words[15][15:14] == 2'b10 && words[16][15:13] == 3'b101);
+    check("Packet 0 header tagged as X", tdc_header_source_id(words[0]) == TDC_ID_X);
+    check("Packet 1 header tagged as Y", tdc_header_source_id(words[4]) == TDC_ID_Y);
+    check("Packet 2 header tagged as Z", tdc_header_source_id(words[10]) == TDC_ID_Z);
+    check("Packet 0 ends with EOC", is_tdc_eoc(words[3]));
+    check("Packet 1 ends with EOC", is_tdc_eoc(words[9]));
+    check("Packet 2 ends with EOC", is_tdc_eoc(words[11]));
+    check("Zero-hit packet stays compact", words[10][15:13] == 3'b100 && words[11][15:14] == 2'b11);
     check("Shared readout exercised three stall points", stall_count == 3);
     check("Packet source stays stable while busy", src_change_during_busy_count == 0);
     check("Ready returns only to the packet owner", wrong_ready_owner_count == 0);

@@ -30,9 +30,9 @@ module spadmic_top_v1 (
   input  wire [spadmic_pkg::SPADMIC_LINE_W-1:0] y_lines_i,
   input  wire [spadmic_pkg::SPADMIC_LINE_W-1:0] z_lines_i,
 
-  input  wire                                chip_tx_ready_i,
+  output wire                                chip_tx_clk_o,
   output wire                                chip_tx_valid_o,
-  output wire [mptdc_pkg::NARROW_W-1:0]      chip_tx_data_o,
+  output wire [spadmic_pkg::SPADMIC_TX_PHY_W-1:0] chip_tx_data_o,
 
   output wire [2:0]                          tdc_stop_armed_o,
   output wire                                tdc_shared_busy_o,
@@ -116,9 +116,13 @@ module spadmic_top_v1 (
   wire pos_tx_ready_mux;
   wire pos_tx_valid_mux;
   wire [NARROW_W-1:0] pos_tx_data_mux;
+  wire chip_tx_word_ready;
+  wire chip_tx_word_valid;
+  wire [NARROW_W-1:0] chip_tx_word_data;
   wire position_pkt_pending;
   wire position_drop_sticky;
   wire position_glitch_sticky;
+  wire correlation_overflow_sticky;
 
   // System-reset entry for all clk_sys-domain glue.
   mptdc_reset_sync #(.STAGES(2)) u_rst_sync (
@@ -234,6 +238,7 @@ module spadmic_top_v1 (
     .position_pending_i(position_pkt_pending),
     .position_drop_sticky_i(position_drop_sticky),
     .position_glitch_sticky_i(position_glitch_sticky),
+    .correlation_overflow_i(correlation_overflow_sticky),
     .cfg_accept_i      (seq_cfg_accept),
     .transition_busy_i (seq_transition_busy),
     .active_global_enable_i(global_enable),
@@ -379,7 +384,7 @@ module spadmic_top_v1 (
   spadmic_position_block u_position (
     .clk_sys        (clk_sys),
     .rst_n          (rst_sys_n),
-    .global_enable_i(global_enable & position_enable & (shared_tx_sel == SPADMIC_TX_POSITION)),
+    .global_enable_i(global_enable & position_enable),
     .x_lines_i      (x_lines_i),
     .y_lines_i      (y_lines_i),
     .z_lines_i      (z_lines_i),
@@ -399,19 +404,39 @@ module spadmic_top_v1 (
     .glitch_reject_sticky_o(position_glitch_sticky)
   );
 
-  // One physical bus is exposed at the chip boundary; the sequencer guarantees
-  // source changes happen only after the old datapath has drained.
-  spadmic_shared_tx_mux u_shared_tx_mux (
+  // One physical bus is exposed at the chip boundary. TDC-only, position-only,
+  // and correlated both-active export are derived from the committed control
+  // image without changing the external CSR width.
+  spadmic_correlated_tx u_correlated_tx (
+    .clk_sys       (clk_sys),
+    .rst_n         (rst_sys_n),
     .tx_sel_i      (shared_tx_sel),
+    .axis_enable_i (axis_enable),
+    .position_enable_i(position_enable),
     .tdc_valid_i   (tdc_tx_valid_mux),
     .tdc_data_i    (tdc_tx_data_mux),
     .tdc_ready_o   (tdc_tx_ready_mux),
     .pos_valid_i   (pos_tx_valid_mux),
     .pos_data_i    (pos_tx_data_mux),
     .pos_ready_o   (pos_tx_ready_mux),
-    .shared_ready_i(chip_tx_ready_i),
-    .shared_valid_o(chip_tx_valid_o),
-    .shared_data_o (chip_tx_data_o)
+    .shared_ready_i(chip_tx_word_ready),
+    .shared_valid_o(chip_tx_word_valid),
+    .shared_data_o (chip_tx_word_data),
+    .correlation_overflow_o(correlation_overflow_sticky)
+  );
+
+  // The logical correlated packet stream is repacked onto the silicon-facing DDR
+  // interface here. All elasticity stays on-chip; the forwarded clock is the
+  // physical receiver timing reference.
+  spadmic_ddr_tx u_ddr_tx (
+    .clk_sys         (clk_sys),
+    .rst_n           (rst_sys_n),
+    .word_valid_i    (chip_tx_word_valid),
+    .word_data_i     (chip_tx_word_data),
+    .word_ready_o    (chip_tx_word_ready),
+    .chip_tx_clk_o   (chip_tx_clk_o),
+    .chip_tx_valid_o (chip_tx_valid_o),
+    .chip_tx_data_o  (chip_tx_data_o)
   );
 
 endmodule

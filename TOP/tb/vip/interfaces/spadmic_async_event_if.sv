@@ -42,11 +42,15 @@ interface spadmic_async_event_if;
     cal_start_async = 1'b0;
   endtask
 
-  // ── Initial state ─────────────────────────────────────────────
-  initial begin
+  task automatic clear_all();
     spad_event_async = 1'b0;
     cal_start_async  = 1'b0;
     cal_stop_async   = 1'b0;
+  endtask
+
+  // ── Initial state ─────────────────────────────────────────────
+  initial begin
+    clear_all();
   end
 
 endinterface

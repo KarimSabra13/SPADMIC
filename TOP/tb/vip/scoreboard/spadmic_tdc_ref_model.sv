@@ -6,23 +6,22 @@
 class spadmic_tdc_ref_model;
 
   // Predict expected word count for a TDC packet.
-  // v2.3 format: Header + SubHeader + hit_count × words_per_hit + EOC
-  //   RAW_FEATURES:  W0 + W1_feat + W2          = 3 words/hit
-  //   RAW_TIMESTAMP: W0 + W1_ts                  = 2 words/hit
-  //   FULL:          W0 + W1_feat + W2 + W3      = 4 words/hit
+  // Active format: Header + hit_count × words_per_hit + EOC
+  //   RAW_FEATURES:  W0 + W1_feat               = 2 words/hit
+  //   RAW_TIMESTAMP: W0 + W1_ts                 = 2 words/hit
+  //   FULL:          W0 + W1_feat + W2_ts       = 3 words/hit
   function automatic int unsigned predict_word_count(
     out_mode_e   mode,
     int unsigned hit_count
   );
     int unsigned words_per_hit;
     case (mode)
-      OUT_MODE_RAW_FEATURES:  words_per_hit = 3;
+      OUT_MODE_RAW_FEATURES:  words_per_hit = 2;
       OUT_MODE_RAW_TIMESTAMP: words_per_hit = 2;
-      OUT_MODE_FULL:          words_per_hit = 4;
-      default:                words_per_hit = 3;
+      OUT_MODE_FULL:          words_per_hit = 3;
+      default:                words_per_hit = 2;
     endcase
-    // header(1) + subheader(1) + hit data + EOC(1)
-    return 3 + hit_count * words_per_hit;
+    return 2 + hit_count * words_per_hit;
   endfunction
 
   // Validate a captured TDC packet against expected structure
@@ -32,7 +31,7 @@ class spadmic_tdc_ref_model;
     out_mode_e     expected_mode,
     int unsigned   expected_max_hits
   );
-    if (words.size() < 3) begin
+    if (words.size() < 2) begin
       $display("[TDC_REF] FAIL: packet too short (%0d words)", words.size());
       return 0;
     end
@@ -43,16 +42,10 @@ class spadmic_tdc_ref_model;
       return 0;
     end
 
-    // Check subheader marker
-    if (!is_tdc_subheader(words[1])) begin
-      $display("[TDC_REF] FAIL: word[1] is not a subheader (0x%04h)", words[1]);
-      return 0;
-    end
-
-    // Check source tag in subheader
-    if (words[1][5:4] != expected_source[1:0]) begin
+    // Check source tag in header
+    if (tdc_header_source_id(words[0]) != expected_source[1:0]) begin
       $display("[TDC_REF] FAIL: source tag %0d != expected %0d",
-               words[1][5:4], expected_source);
+               tdc_header_source_id(words[0]), expected_source);
       return 0;
     end
 
@@ -80,8 +73,9 @@ class spadmic_tdc_ref_model;
       // Validate word count
       expected_wc = predict_word_count(expected_mode, hc);
       if (words.size() != expected_wc) begin
-        $display("[TDC_REF] WARN: word count %0d != predicted %0d (mode=%s hits=%0d)",
+        $display("[TDC_REF] FAIL: word count %0d != predicted %0d (mode=%s hits=%0d)",
                  words.size(), expected_wc, expected_mode.name(), hc);
+        return 0;
       end
     end
 
@@ -89,4 +83,3 @@ class spadmic_tdc_ref_model;
   endfunction
 
 endclass
-

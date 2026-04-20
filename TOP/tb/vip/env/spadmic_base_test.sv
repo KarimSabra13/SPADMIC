@@ -12,7 +12,6 @@ class spadmic_base_test;
   function new(string name);
     this.test_name = name;
     cfg = new();
-    cfg.parse_plusargs();
   endfunction
 
   // Override in derived tests to customize config
@@ -29,6 +28,7 @@ class spadmic_base_test;
 
   // Main entry point called by harness
   task automatic run_test(
+    virtual spadmic_reset_if          reset_if,
     virtual spadmic_csr_req_if        csr_if,
     virtual spadmic_i2c_if            i2c_if,
     virtual spadmic_async_event_if    x_ev_if,
@@ -37,44 +37,51 @@ class spadmic_base_test;
     virtual spadmic_position_line_if  pos_line_if,
     virtual spadmic_narrow_tx_if      tx_if
   );
+    bit timed_out;
+
     $display("══════════════════════════════════════════════════════");
     $display("  TEST: %s", test_name);
     $display("══════════════════════════════════════════════════════");
 
     // Configure
     configure();
+    cfg.parse_plusargs();
     cfg.display();
 
     // Build environment
     env = new(cfg);
-    env.build(csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_line_if, tx_if);
+    env.build(reset_if, csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_line_if, tx_if);
 
     // Generate stimulus
     body();
 
     // Run with timeout
+    timed_out = 1'b0;
     fork
       env.run();
       begin
         #(cfg.timeout_ns * 1000);
+        timed_out = 1'b1;
+        env.sb.check_fail++;
         $display("[TEST] TIMEOUT after %0d ns", cfg.timeout_ns);
       end
     join_any
+    disable fork;
 
     // Report
     env.report();
 
     // Pass/fail verdict — check both explicit failures AND expected vs received
-    if (env.sb.check_fail == 0 &&
-        env.sb.tdc_pkts_received >= env.sb.tdc_pkts_expected &&
-        env.sb.pos_pkts_received >= env.sb.pos_pkts_expected)
+    if (!timed_out &&
+        env.sb.check_fail == 0 &&
+        env.sb.tdc_pkts_received == env.sb.tdc_pkts_expected &&
+        env.sb.pos_pkts_received == env.sb.pos_pkts_expected)
       $display("═══ TEST %s: PASS ═══", test_name);
     else
-      $display("═══ TEST %s: FAIL (fail=%0d, tdc=%0d/%0d, pos=%0d/%0d) ═══",
-               test_name, env.sb.check_fail,
+      $display("═══ TEST %s: FAIL (timeout=%0b, fail=%0d, tdc=%0d/%0d, pos=%0d/%0d) ═══",
+               test_name, timed_out, env.sb.check_fail,
                env.sb.tdc_pkts_received, env.sb.tdc_pkts_expected,
                env.sb.pos_pkts_received, env.sb.pos_pkts_expected);
   endtask
 
 endclass
-

@@ -79,6 +79,8 @@ def load_and_tag(csv_files, core_only=True):
     global_conv = 0
     for fi, f in enumerate(csv_files):
         d = pd.read_csv(f)
+        if "nfast_snap" not in d.columns:
+            d["nfast_snap"] = 0
         # Build conversion boundaries from hit_idx resets
         conv_breaks = (d["hit_idx"].diff().fillna(0) < 0).cumsum()
         d["conv_id"] = global_conv + conv_breaks

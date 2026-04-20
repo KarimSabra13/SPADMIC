@@ -12,9 +12,9 @@
 // and serialises them onto a 16-bit ready/valid bus.
 //
 // Packet format (per conversion):
-//   1 × Header   — context id, hit count, flags, output mode, boundary_inc
-//   N × Hit word  — 2/3/4 words per hit depending on out_mode
-//   1 × EOC      — end-of-conversion marker with 14-bit running counter
+//   1 × Header    — context id, hit count, flags, output mode, boundary_inc
+//   N × Hit words — 2/2/3 words per hit depending on out_mode
+//   1 × EOC       — end-of-conversion marker with 14-bit running counter
 //
 // v2.2: header bit[0] carries slow_boundary_inc for offline calibration
 // =============================================================================
@@ -44,13 +44,11 @@ module mptdc_narrow16_tx_v2
   typedef enum logic [3:0] {
     S_IDLE      = 4'd0,
     S_HEADER    = 4'd1,
-    S_SUBHDR    = 4'd2,     // v2.3: sub-header carrying nfast_stop
-    S_HIT_FETCH = 4'd3,
-    S_HIT_W0    = 4'd4,
-    S_HIT_W1    = 4'd5,
-    S_HIT_W2    = 4'd6,
-    S_HIT_W3    = 4'd7,
-    S_EOC       = 4'd8
+    S_HIT_FETCH = 4'd2,
+    S_HIT_W0    = 4'd3,
+    S_HIT_W1    = 4'd4,
+    S_HIT_W2    = 4'd5,
+    S_EOC       = 4'd6
   } tx_state_e;
 
   tx_state_e state_q;
@@ -65,8 +63,6 @@ module mptdc_narrow16_tx_v2
   tdc_conv_flags_t        flags_q;
   out_mode_e              out_mode_q;
   logic [NSLOW_W-1:0]     nslow_q;
-  logic [NFAST_W-1:0]     nfast_snap_q;       // v2.2.2: nfast at CAPTURE time
-  logic [NFAST_W-1:0]     nfast_stop_q;       // v2.3: nfast at STOP edge
 
   // ---------------------------------------------------------------------------
   // Latched hit data (from HIT record)
@@ -74,7 +70,6 @@ module mptdc_narrow16_tx_v2
   ph_idx_t                ns_q;
   ph_idx_t                nf_q;
   logic [NFAST_W-1:0]     nfast_q;
-  logic [EVENT_SEQ_W-1:0] event_seq_q;
 
   // ---------------------------------------------------------------------------
   // Hit index (counts fully-emitted hits, 0-based)
@@ -85,12 +80,6 @@ module mptdc_narrow16_tx_v2
   // 14-bit wrapping conversion counter (appears in EOC word)
   // ---------------------------------------------------------------------------
   logic [13:0] conv_count_q;
-
-  // ---------------------------------------------------------------------------
-  // PD index — combinational from latched ns/nf
-  // ---------------------------------------------------------------------------
-  logic [PD_W-1:0] pd_idx;
-  assign pd_idx = pd_from_phases(ns_q, nf_q);
 
   // ---------------------------------------------------------------------------
   // Raw Vernier time reconstruction (combinational).
@@ -127,26 +116,17 @@ module mptdc_narrow16_tx_v2
   logic [NARROW_W-1:0] hit_w0;
   assign hit_w0 = {1'b0, nslow_q[6:0], nfast_q[6:0], 1'b0};
 
-  // Hit W1 — features variant: [15]=0, [14:11]=ns, [10:7]=nf, [6:0]=pd_idx
+  // Hit W1 — features variant: [15]=0, [14:11]=ns, [10:7]=nf, [6:0]=reserved
   logic [NARROW_W-1:0] hit_w1_feat;
-  assign hit_w1_feat = {1'b0, ns_q, nf_q, pd_idx};
+  assign hit_w1_feat = {1'b0, ns_q, nf_q, 7'b0};
 
   // Hit W1 — timestamp variant: [15:0]=t_raw_ps[15:0]
   logic [NARROW_W-1:0] hit_w1_ts;
   assign hit_w1_ts = t_raw_ps[15:0];
 
-  // Sub-header (v2.3): [15:13]=3'b101 (sub-header marker),
-  //   [12:6]=nfast_stop[6:0], [5:0]=reserved
-  logic [NARROW_W-1:0] subhdr_word;
-  assign subhdr_word = {3'b101, nfast_stop_q, 6'b0};
-
-  // Hit W2: [15]=0, [14:11]=event_seq, [10:4]=nfast_snap, [3:0]=0
+  // Hit W2 (FULL only): [15:0]=t_raw_ps[15:0]
   logic [NARROW_W-1:0] hit_w2;
-  assign hit_w2 = {1'b0, event_seq_q, nfast_snap_q, 4'b0};
-
-  // Hit W3 (FULL only): [15:0]=t_raw_ps[15:0]
-  logic [NARROW_W-1:0] hit_w3;
-  assign hit_w3 = t_raw_ps[15:0];
+  assign hit_w2 = t_raw_ps[15:0];
 
   // EOC: [15:14]=11, [13:0]=conv_count
   logic [NARROW_W-1:0] eoc_word;
@@ -173,12 +153,9 @@ module mptdc_narrow16_tx_v2
       flags_q       <= '0;
       out_mode_q    <= OUT_MODE_RAW_FEATURES;
       nslow_q       <= '0;
-      nfast_snap_q  <= '0;
-      nfast_stop_q  <= '0;
       ns_q          <= '0;
       nf_q          <= '0;
       nfast_q       <= '0;
-      event_seq_q   <= '0;
     end else begin
       case (state_q)
         // -----------------------------------------------------------------
@@ -190,8 +167,6 @@ module mptdc_narrow16_tx_v2
             hit_count_q   <= fifo_rd_data_i.meta.hit_count;
             flags_q       <= fifo_rd_data_i.meta.flags;
             nslow_q       <= fifo_rd_data_i.meta.nslow;
-            nfast_snap_q  <= fifo_rd_data_i.meta.nfast;  // v2.2.2
-            nfast_stop_q  <= fifo_rd_data_i.meta.nfast_stop;  // v2.3
             out_mode_q    <= out_mode_i;
             hit_idx_q     <= '0;
             state_q       <= S_HEADER;
@@ -200,14 +175,6 @@ module mptdc_narrow16_tx_v2
 
         // -----------------------------------------------------------------
         S_HEADER: begin
-          if (out_accepted) begin
-            state_q <= S_SUBHDR;  // v2.3: emit sub-header next
-          end
-        end
-
-        // -----------------------------------------------------------------
-        // v2.3: Sub-header word carries nfast_stop
-        S_SUBHDR: begin
           if (out_accepted) begin
             state_q <= (hit_count_q == '0) ? S_EOC : S_HIT_FETCH;
           end
@@ -219,7 +186,6 @@ module mptdc_narrow16_tx_v2
             ns_q        <= fifo_rd_data_i.hit.ns;
             nf_q        <= fifo_rd_data_i.hit.nf;
             nfast_q     <= fifo_rd_data_i.hit.nfast;
-            event_seq_q <= fifo_rd_data_i.hit.event_seq;
             state_q     <= S_HIT_W0;
           end
         end
@@ -233,7 +199,7 @@ module mptdc_narrow16_tx_v2
         // -----------------------------------------------------------------
         S_HIT_W1: begin
           if (out_accepted) begin
-            if (out_mode_q == OUT_MODE_RAW_TIMESTAMP) begin
+            if (out_mode_q != OUT_MODE_FULL) begin
               hit_idx_q <= hit_idx_q + MAX_HITS_W'(1);
               state_q   <= last_hit_done ? S_EOC : S_HIT_FETCH;
             end else begin
@@ -244,18 +210,6 @@ module mptdc_narrow16_tx_v2
 
         // -----------------------------------------------------------------
         S_HIT_W2: begin
-          if (out_accepted) begin
-            if (out_mode_q == OUT_MODE_FULL) begin
-              state_q <= S_HIT_W3;
-            end else begin
-              hit_idx_q <= hit_idx_q + MAX_HITS_W'(1);
-              state_q   <= last_hit_done ? S_EOC : S_HIT_FETCH;
-            end
-          end
-        end
-
-        // -----------------------------------------------------------------
-        S_HIT_W3: begin
           if (out_accepted) begin
             hit_idx_q <= hit_idx_q + MAX_HITS_W'(1);
             state_q   <= last_hit_done ? S_EOC : S_HIT_FETCH;
@@ -295,11 +249,6 @@ module mptdc_narrow16_tx_v2
         narrow_data_o  = header_word;
       end
 
-      S_SUBHDR: begin
-        narrow_valid_o = 1'b1;
-        narrow_data_o  = subhdr_word;
-      end
-
       S_HIT_FETCH: begin
         // Pop HIT when available
         fifo_rd_en_o = fifo_rd_valid_i;
@@ -319,11 +268,6 @@ module mptdc_narrow16_tx_v2
       S_HIT_W2: begin
         narrow_valid_o = 1'b1;
         narrow_data_o  = hit_w2;
-      end
-
-      S_HIT_W3: begin
-        narrow_valid_o = 1'b1;
-        narrow_data_o  = hit_w3;
       end
 
       S_EOC: begin

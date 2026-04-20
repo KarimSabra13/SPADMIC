@@ -302,9 +302,8 @@ module tb_local_export_boundary;
     hits    = {};
     conv_id = '0;
 
-    must(words.size() >= 3, "local packet too short");
+    must(words.size() >= 2, "local packet too short");
     must(is_header(words[0]), "local packet first word is not a header");
-    must(is_subheader(words[1]), "local packet missing sub-header");
     must(is_eoc(words[words.size()-1]), "local packet missing EOC");
 
     meta.ctx_id            = header_ctx_id(words[0]);
@@ -312,14 +311,13 @@ module tb_local_export_boundary;
     meta.hit_count         = header_hit_count(words[0]);
     meta.flags             = header_flags(words[0]);
     meta.slow_boundary_inc = header_boundary_inc(words[0]);
-    meta.nfast_stop        = subheader_nfast_stop(words[1]);
     conv_id                = eoc_conv_id(words[words.size()-1]);
 
-    idx = 2;
-    while (idx + 2 < words.size()-1) begin
-      hf = parse_hit_features(words[idx], words[idx+1], words[idx+2]);
+    idx = 1;
+    while (idx + 1 < words.size()-1) begin
+      hf = parse_hit_features(words[idx], words[idx+1]);
       hits.push_back(hf);
-      idx += 3;
+      idx += 2;
     end
 
     must(hits.size() == int'(meta.hit_count),
@@ -328,16 +326,9 @@ module tb_local_export_boundary;
 
     if (hits.size() > 0) begin
       meta.nslow = hits[0].nslow;
-      meta.nfast = hits[0].nfast_snap;
       for (int i = 0; i < hits.size(); i++) begin
         must(hits[i].nslow == meta.nslow,
                $sformatf("local packet hit %0d changed nslow within packet", i));
-        must(hits[i].nfast_snap == meta.nfast,
-               $sformatf("local packet hit %0d changed nfast_snap within packet", i));
-        must(hits[i].event_seq == EVENT_SEQ_W'(i),
-               $sformatf("local packet hit %0d event_seq mismatch", i));
-        must(hits[i].pd_idx == pd_from_phases(hits[i].ns, hits[i].nf),
-               $sformatf("local packet hit %0d pd_idx mismatch", i));
       end
     end
   endtask
@@ -355,9 +346,9 @@ module tb_local_export_boundary;
 
     decode_local_raw_features_packet(words, local_meta, local_hits, local_conv_id);
 
-    must(words.size() == (3 + (3 * exp_hits.size())),
+    must(words.size() == (2 + (2 * exp_hits.size())),
            $sformatf("%s: local packet word count mismatch got=%0d exp=%0d",
-                     label, words.size(), 3 + (3 * exp_hits.size())));
+                     label, words.size(), 2 + (2 * exp_hits.size())));
     must(header_out_mode(words[0]) == OUT_MODE_RAW_FEATURES,
            $sformatf("%s: local packet out_mode mismatch", label));
     must(local_conv_id == exp_conv_id,
@@ -373,17 +364,10 @@ module tb_local_export_boundary;
            $sformatf("%s: flags mismatch", label));
     must(local_meta.slow_boundary_inc == exp_meta.slow_boundary_inc,
            $sformatf("%s: slow_boundary_inc mismatch", label));
-    must(local_meta.nfast_stop == exp_meta.nfast_stop,
-           $sformatf("%s: nfast_stop mismatch got=%0d exp=%0d",
-                     label, local_meta.nfast_stop, exp_meta.nfast_stop));
-
     if (exp_hits.size() > 0) begin
       must(local_meta.nslow == exp_meta.nslow,
              $sformatf("%s: nslow mismatch got=%0d exp=%0d",
-                       label, local_meta.nslow, exp_meta.nslow));
-      must(local_meta.nfast == exp_meta.nfast,
-             $sformatf("%s: nfast_snap mismatch got=%0d exp=%0d",
-                       label, local_meta.nfast, exp_meta.nfast));
+                        label, local_meta.nslow, exp_meta.nslow));
     end
 
     for (int i = 0; i < exp_hits.size(); i++) begin
@@ -392,14 +376,10 @@ module tb_local_export_boundary;
       must(local_hits[i].nfast == exp_hits[i].nfast,
              $sformatf("%s: hit %0d nfast_hit mismatch got=%0d exp=%0d",
                        label, i, local_hits[i].nfast, exp_hits[i].nfast));
-      must(local_hits[i].nfast_snap == exp_meta.nfast,
-             $sformatf("%s: hit %0d nfast_snap mismatch", label, i));
       must(local_hits[i].ns == exp_hits[i].ns,
              $sformatf("%s: hit %0d ns mismatch", label, i));
       must(local_hits[i].nf == exp_hits[i].nf,
              $sformatf("%s: hit %0d nf mismatch", label, i));
-      must(local_hits[i].event_seq == exp_hits[i].event_seq,
-             $sformatf("%s: hit %0d event_seq mismatch", label, i));
     end
   endtask
 

@@ -1,6 +1,6 @@
 // ============================================================================
 // Stress test: spadmic_position_block + spadmic_axis_cluster_scan
-// Tests: back-to-back events, capture during busy (event-drop), CSR config,
+// Tests: back-to-back events, capture during busy (queued overlap), CSR config,
 //        multi-axis simultaneous, empty bitmaps, full bitmaps, packet format.
 // ============================================================================
 `timescale 1ps/1ps
@@ -258,7 +258,7 @@ module tb_spadmic_stress_position;
     end
 
     // ========================================
-    // TEST 4: Capture during busy (event should be dropped)
+    // TEST 4: Capture during busy (event should queue)
     // ========================================
     begin
       int n;
@@ -285,15 +285,13 @@ module tb_spadmic_stress_position;
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
 
-      // Wait to see if second packet appears (it shouldn't)
-      tx_ready = 1'b1;
-      repeat (24) @(posedge clk_sys);
-      check("T4 dropped event during busy", tx_valid === 1'b0);
-      tx_ready = 0;
+      // Drain the queued second packet
+      collect_packet(n);
+      check("T4 second packet queued behind first", n === SPADMIC_POS_PKT_WORDS);
       csr_read_pos(SPADMIC_CSR_POS_DROP_COUNT, rd_data);
-      check("T4 drop counter increments", rd_data[15:0] === 16'd1);
+      check("T4 no drop counted while queue absorbs overlap", rd_data[15:0] === 16'd0);
       csr_read_pos(SPADMIC_CSR_POS_FAULT_STATUS, rd_data);
-      check("T4 drop sticky set", rd_data[0] === 1'b1);
+      check("T4 drop sticky remains clear", rd_data[0] === 1'b0);
       repeat (6) @(posedge clk_sys);
     end
 
@@ -428,7 +426,7 @@ module tb_spadmic_stress_position;
       repeat (6) @(posedge clk_sys);
       check("T9 settle window delays packet start", tx_valid === 1'b0);
       repeat (2) @(posedge clk_sys);
-      check("T9 settle window eventually allows packet", tx_valid === 1'b1);
+      check("T9 settle window eventually queues packet", pkt_pending === 1'b1);
 
       collect_packet(n);
       check("T9 stable event captured after settle window", n === SPADMIC_POS_PKT_WORDS);

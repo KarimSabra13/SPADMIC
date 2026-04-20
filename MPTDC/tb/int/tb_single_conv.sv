@@ -172,8 +172,7 @@ module tb_single_conv;
                header_ctx_id(hdr), hc, header_flags(hdr),
                header_out_mode(hdr));
 
-      // v2.3: header + sub-header + 3*hits + EOC
-      expected_total = 1 + 1 + hc * 3 + 1;
+      expected_total = 1 + hc * 2 + 1;
       assert (pkt_word_count == expected_total)
         else $error("[TB] Word count mismatch: got %0d, expected %0d",
                     pkt_word_count, expected_total);

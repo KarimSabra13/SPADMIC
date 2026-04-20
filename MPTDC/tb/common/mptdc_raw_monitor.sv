@@ -28,9 +28,8 @@ module mptdc_raw_monitor
   // ── Internal state ────────────────────────────────────────────────
   typedef enum logic [1:0] {
     MON_IDLE     = 2'd0,
-    MON_SUBHDR   = 2'd1,    // v2.3: waiting for sub-header after header
-    MON_HITS     = 2'd2,
-    MON_WAIT_EOC = 2'd3
+    MON_HITS     = 2'd1,
+    MON_WAIT_EOC = 2'd2
   } mon_state_e;
 
   mon_state_e  mon_state;
@@ -53,10 +52,10 @@ module mptdc_raw_monitor
     mon_hc   = header_hit_count(mon_w);
     mon_mode = header_out_mode(mon_w);
     case (mon_mode)
-      OUT_MODE_RAW_FEATURES:  mon_wph = 3;
+      OUT_MODE_RAW_FEATURES:  mon_wph = 2;
       OUT_MODE_RAW_TIMESTAMP: mon_wph = 2;
-      OUT_MODE_FULL:          mon_wph = 4;
-      default:                mon_wph = 3;
+      OUT_MODE_FULL:          mon_wph = 3;
+      default:                mon_wph = 2;
     endcase
   end
 
@@ -76,27 +75,12 @@ module mptdc_raw_monitor
             expected_words <= mon_hc * mon_wph;
             word_idx       <= 0;
             total_hits     <= total_hits + mon_hc;
-            mon_state <= MON_SUBHDR;  // v2.3: wait for sub-header next
+            mon_state <= (mon_hc == 0) ? MON_WAIT_EOC : MON_HITS;
             $display("[MON] t=%0t PKT#%0d HEADER: ctx=%0d phase0=%b hits=%0d flags=%04b mode=%0d",
                      $time, pkt_count, header_ctx_id(mon_w), header_phase0(mon_w),
                      mon_hc, header_flags(mon_w), mon_mode);
           end else if (is_eoc(mon_w)) begin
             $error("[MON] t=%0t Unexpected EOC without header!", $time);
-          end
-        end
-
-        // v2.3: consume sub-header word carrying nfast_stop
-        MON_SUBHDR: begin
-          if (is_subheader(mon_w)) begin
-            $display("[MON] t=%0t   SUBHDR: nfast_stop=%0d raw=0x%04h",
-                     $time, subheader_nfast_stop(mon_w), mon_w);
-            if (expected_words == 0)
-              mon_state <= MON_WAIT_EOC;
-            else
-              mon_state <= MON_HITS;
-          end else begin
-            $error("[MON] t=%0t Expected sub-header, got 0x%04h", $time, mon_w);
-            mon_state <= MON_IDLE;
           end
         end
 

@@ -85,7 +85,11 @@ def load_csv(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
     n_raw = len(df)
 
-    # Handle missing nfast_stop gracefully
+    # Active compact CSVs omit the legacy repeated-snapshot fields. Keep the
+    # historical model sweep runnable by synthesizing zero-valued compatibility
+    # columns when they are absent.
+    if "nfast_snap" not in df.columns:
+        df["nfast_snap"] = 0
     if "nfast_stop" not in df.columns:
         df["nfast_stop"] = 0
 

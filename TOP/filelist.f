@@ -27,6 +27,8 @@ rtl/spadmic_tdc_packet_fifo.sv
 rtl/spadmic_tdc_arbiter3.sv
 rtl/spadmic_tdc_shared_readout.sv
 rtl/spadmic_shared_tx_mux.sv
+rtl/spadmic_correlated_tx.sv
+rtl/spadmic_ddr_tx.sv
 
 // ── Position scanner ─────────────────────────────────────────────
 rtl/spadmic_axis_cluster_scan.sv

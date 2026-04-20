@@ -22,11 +22,8 @@ That means:
 |-------|-------|---------|
 | `nslow` | 7 | STOP-side slow coarse snapshot |
 | `nfast_hit` | 7 | per-hit fast coarse count captured by the PD cell |
-| `nfast_snap` | 7 | CAPTURE-time fast coarse snapshot |
 | `ns` | 4 | slow phase index |
 | `nf` | 4 | fast phase index |
-| `pd_idx` | 7 | flattened PD index |
-| `event_seq` | 4 | drain scan order within the packet |
 | `phase0_snap` | 1 | STOP-side boundary snapshot |
 | `slow_boundary_inc` | 1 | STOP-side boundary carry |
 
@@ -36,9 +33,9 @@ If the host selects `RAW_TIMESTAMP` or `FULL` mode, the chip also emits `t_raw_p
 
 Important semantics:
 
-- `event_seq` is **drain / scan order**, not chronological hit order
-- `hit_idx` in the CSV/reporting flow is the same kind of scan-order index
-- calibration that keys on `hit_idx` is therefore using packet position, not time order
+- `hit_idx` in the CSV/reporting flow is packet position, not chronological hit order
+- if an older analysis still wants `pd_idx`, reconstruct it from `ns` and `nf`
+- `nfast_snap`, `nfast_stop`, and `event_seq` are now historical/compatibility observables, not live packet fields
 
 For highest-fidelity debug/calibration work, `FULL` is the richest collection mode.
 For deployed-format-fidelity studies, use `RAW_FEATURES`.
@@ -78,10 +75,10 @@ Recommended local collection flow:
 - `--jitter-sigma <ps>`
 - `--jitter-bound <ps>`
 
-When `--out-mode raw_features` is selected, `tb_campaign_collect.sv` still emits the
-same 18-column CSV schema by reconstructing `t_raw_ps` from the narrow packet fields.
-That keeps the downstream Python calibration flow compatible while matching the real
-ASIC serializer contract.
+When `--out-mode raw_features` is selected, `tb_campaign_collect.sv` reconstructs
+`t_raw_ps` from the narrow packet fields and writes the active compact CSV schema.
+Historical Python sweeps can still synthesize removed columns if they want to rerun
+older comparison models.
 
 ### 4.2 Campaign configuration
 
@@ -282,15 +279,14 @@ evaluates a continuous jittered delay population. A separate fixed-delay helper,
 characterization of selected delays, but isolated zero-RMSE fixed-delay points do not
 override the continuous broad-corpus oracle floor.
 
-Current local conclusion at the `sigma=6 ps`, `bound=24 ps` anchor:
+Current active compact-format takeaway:
 
-- `nfast_snap` is **coherent enough to help**, but only modestly in the broad
-  deployment-proof view:
-  - core-only broad corpus: about `+8.5 ps` oracle gain over `boundary_aug`
-  - all-rows broad corpus: about `+6.2 ps` oracle gain over `boundary_aug`
-- `slow_boundary_inc` adds almost no extra oracle information on top of `current_6d`
-  in the current local datasets
-- `all_visible` adds no measurable oracle gain over `short_core`
+- the maintained deployed packet keeps the fields that still matter directly for
+  reconstruction and calibration (`nslow`, `nfast_hit`, `ns`, `nf`, `phase0_snap`,
+  `slow_boundary_inc`, `hit_idx`)
+- removed packet fields are either reconstructable (`pd_idx`) or were judged not
+  worth their bandwidth cost in the live stream (`nfast_snap`, `nfast_stop`,
+  `event_seq`)
 
 So `nfast_snap` is not the whole problem: it helps, but it does **not** close the much
 larger deployed short-format observability gap by itself.
@@ -320,15 +316,15 @@ This can be done in software, firmware, or an external FPGA.
 
 ## 8. Recommended CSV schema
 
-Collection schema (19 columns, FULL mode — v2.3):
+Collection schema (15 columns, active RAW_FEATURES/FULL campaign flow):
 
 ```csv
-conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,nfast_stop,ns,nf,pd_idx,event_seq,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits
+conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits
 ```
 
-**Note:** `nfast_stop` is a reserved field (always 0 in the current architecture
-where the fast oscillator starts at STOP time).  The calibration scripts handle
-both 18-column (legacy) and 19-column (v2.3) formats transparently.
+**Note:** compatibility scripts may synthesize removed columns (`nfast_snap`,
+`nfast_stop`, `pd_idx`, `event_seq`) when re-running historical analyses, but they
+are no longer emitted by the live packet/export path.
 
 ## 9. Enhanced calibration methods (v2.3)
 
@@ -385,7 +381,7 @@ python3 scripts/calibration/calibrate_enhanced.py \
 4. It allows recalibration without changing silicon.
 5. It separates measurement hardware from correction policy.
 6. The Vernier algebra allows full field recovery even in the most compact output mode.
-7. The sub-header infrastructure (v2.3) provides per-conversion metadata extensibility.
+7. The compact packet keeps only observables that still justify their bandwidth cost.
 
 ## 11. Practical recommendation
 

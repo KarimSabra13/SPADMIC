@@ -150,22 +150,21 @@ module tb_cal_inject;
         continue;
       end
 
-      // v2.3: minimum 3 words (header + sub-header + EOC)
-      if (wc < 3 || !is_header(pkt[0]) || !is_eoc(pkt[wc-1])) begin
+      if (wc < 2 || !is_header(pkt[0]) || !is_eoc(pkt[wc-1])) begin
         $display("[TB] delay=%0dns: FAIL structure (wc=%0d)", d, wc);
         fail_count++;
         continue;
       end
 
       hit_count = int'(header_hit_count(pkt[0]));
-      expected_wc = 1 + 1 + hit_count * 3 + 1;  // v2.3: header + sub-header + hits + EOC
+      expected_wc = 1 + hit_count * 2 + 1;
       if (wc != expected_wc || hit_count < 1) begin
         $display("[TB] delay=%0dns: FAIL wc=%0d exp=%0d hits=%0d", d, wc, expected_wc, hit_count);
         fail_count++;
         continue;
       end
 
-      hf = parse_hit_features(pkt[2], pkt[3], pkt[4]);  // v2.3: skip sub-header
+      hf = parse_hit_features(pkt[1], pkt[2]);
       $display("[TB] delay=%0dns  nslow=%0d  nfast=%0d  hits=%0d  words=%0d  conv_id=%0d",
                d, hf.nslow, hf.nfast, hit_count, wc, eoc_conv_id(pkt[wc-1]));
       pass_count++;

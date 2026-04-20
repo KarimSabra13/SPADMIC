@@ -21,7 +21,7 @@ class spadmic_generator;
     t.is_read         = 1'b0;
     t.global_enable   = 1'b1;
     t.axis_enable     = 3'b111;
-    t.position_enable = (cfg.profile == PROFILE_POSITION) ? 1'b1 : 1'b0;
+    t.position_enable = (cfg.profile == PROFILE_POSITION || cfg.profile == PROFILE_STRESS) ? 1'b1 : 1'b0;
     t.shared_tx_sel   = (cfg.profile == PROFILE_POSITION) ? SPADMIC_TX_POSITION : SPADMIC_TX_TDC;
     t.tdc_input_sel   = cfg.default_input_sel;
     t.tdc_out_mode    = cfg.default_out_mode;
@@ -58,6 +58,32 @@ class spadmic_generator;
     t.y_pattern    = y;
     t.z_pattern    = z;
     t.hold_time_ns = hold_ns;
+    drv_mb.put(t);
+    txn_count++;
+  endtask
+
+  task automatic gen_correlated_event(
+    logic [2:0]               axis_mask,
+    int unsigned              delay_ps,
+    logic [SPADMIC_LINE_W-1:0] x,
+    logic [SPADMIC_LINE_W-1:0] y,
+    logic [SPADMIC_LINE_W-1:0] z,
+    int unsigned              hold_ns,
+    bit                       use_spad = 1'b0,
+    int unsigned              axis_skew_ps = 1500,
+    int unsigned              pos_offset_ps = 3000
+  );
+    spadmic_correlated_event_txn t = new();
+    t.axis_mask           = axis_mask;
+    t.start_stop_delay_ps = delay_ps;
+    t.axis_skew_ps        = axis_skew_ps;
+    t.position_offset_ps  = pos_offset_ps;
+    t.position_present    = (x != '0) || (y != '0) || (z != '0);
+    t.x_pattern           = x;
+    t.y_pattern           = y;
+    t.z_pattern           = z;
+    t.hold_time_ns        = hold_ns;
+    t.use_spad            = use_spad;
     drv_mb.put(t);
     txn_count++;
   endtask
@@ -111,7 +137,10 @@ class spadmic_generator;
 
     for (int p = 0; p < num_phases; p++) begin
       int unsigned phase_kind;
-      phase_kind = $urandom_range(0, 3);
+      if (cfg.profile == PROFILE_STRESS)
+        phase_kind = $urandom_range(0, 9);
+      else
+        phase_kind = $urandom_range(0, 3);
       case (phase_kind)
         0: begin  // TDC conversions
           int unsigned ax = $urandom_range(0, 2);
@@ -121,7 +150,16 @@ class spadmic_generator;
         end
         1: begin  // Position event
           logic [SPADMIC_LINE_W-1:0] xp, yp, zp;
-          xp = $urandom(); yp = $urandom(); zp = $urandom();
+          int unsigned span;
+          int unsigned base_idx;
+          xp = '0; yp = '0; zp = '0;
+          span = $urandom_range(6, 18);
+          base_idx = $urandom_range(0, SPADMIC_LINE_W - span - 1);
+          for (int i = 0; i < span; i++) begin
+            xp[base_idx + i] = 1'b1;
+            yp[(base_idx + 9 + i) % SPADMIC_LINE_W] = 1'b1;
+            zp[(base_idx + 17 + i) % SPADMIC_LINE_W] = 1'b1;
+          end
           gen_position_event(xp, yp, zp, $urandom_range(50, 500));
         end
         2: begin  // Mode switch
@@ -144,6 +182,34 @@ class spadmic_generator;
           gen_bp_change(bp, $urandom_range(100, 2000));
           last_bp_mode = bp;
         end
+        default: begin  // Correlated both-active family
+          logic [SPADMIC_LINE_W-1:0] xp, yp, zp;
+          logic [2:0] axis_mask;
+          int unsigned span;
+          int unsigned base_idx;
+          axis_mask = (3'b001 << $urandom_range(0, 2));
+          if ($urandom_range(0, 2) != 0)
+            axis_mask |= 3'b111;
+
+          xp = '0; yp = '0; zp = '0;
+          span = $urandom_range(6, 18);
+          base_idx = $urandom_range(0, SPADMIC_LINE_W - span - 1);
+          for (int i = 0; i < span; i++) begin
+            xp[base_idx + i] = 1'b1;
+            yp[(base_idx + 7 + i) % SPADMIC_LINE_W] = 1'b1;
+            zp[(base_idx + 13 + i) % SPADMIC_LINE_W] = 1'b1;
+          end
+
+          gen_correlated_event(
+            axis_mask,
+            $urandom_range(4000, 22000),
+            xp, yp, zp,
+            $urandom_range(120, 350),
+            (cfg.default_input_sel == INPUT_SPAD),
+            $urandom_range(0, 4000),
+            $urandom_range(0, 12000)
+          );
+        end
       endcase
     end
     // Release stall before EOT so pipeline can drain
@@ -154,4 +220,3 @@ class spadmic_generator;
   endtask
 
 endclass
-

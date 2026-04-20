@@ -4,10 +4,12 @@ First-silicon SPADMIC chip-level integration around three preserved `mptdc_top_a
 
 ## Active architecture at a glance
 
-- one physical `chip_tx_valid/chip_tx_data/chip_tx_ready` interface
+- one physical source-synchronous TX interface: forwarded `chip_tx_clk_o`, SDR `chip_tx_valid_o`, and 8-bit DDR `chip_tx_data_o`
 - one requested-to-active control contract (`spadmic_global_csr` + `spadmic_top_sequencer`)
 - one shared TDC serializer fed by per-axis acquisition-record exports
-- one async-qualified position path with explicit counters and sticky faults
+- one async-qualified position path with queued snapshots, explicit counters, and sticky faults
+- one correlated shared egress that supports TDC-only, position-only, and both-active export
+- one physical DDR TX packer that preserves the internal 16-bit logical packet stream while repacking it onto the chip pins
 - one shared CSR fabric fronted by the I2C slave and CSR bridge
 
 ## Document map
@@ -17,6 +19,12 @@ First-silicon SPADMIC chip-level integration around three preserved `mptdc_top_a
 | [`docs/SPADMIC_TOPLEVEL_PLAN.md`](docs/SPADMIC_TOPLEVEL_PLAN.md) | Compact integration note and file inventory |
 | [`docs/01_ACTIVE_ARCHITECTURE.md`](docs/01_ACTIVE_ARCHITECTURE.md) | Detailed dataflow, clocks/resets, module responsibilities, and active-path behavior |
 | [`docs/02_CSR_MAP.md`](docs/02_CSR_MAP.md) | Global and position CSR register map, field semantics, and software control rules |
+| [`docs/03_CORRELATED_EVENT_EXPORT.md`](docs/03_CORRELATED_EVENT_EXPORT.md) | Correlated event-ID contract, both-active semantics, and post-arbiter FIFO rules |
+| [`docs/03_VERIFICATION_STRATEGY.md`](docs/03_VERIFICATION_STRATEGY.md) | Current verification philosophy, active VIP scope, and regression entrypoints |
+| [`docs/04_TEST_CATALOG.md`](docs/04_TEST_CATALOG.md) | Bench and regression inventory, including active versus legacy collateral |
+| [`docs/07_BLOCK_GUIDE.md`](docs/07_BLOCK_GUIDE.md) | Block-by-block RTL guide for the active and retained legacy TOP modules |
+| [`docs/08_TX_INTERFACE.md`](docs/08_TX_INTERFACE.md) | Source-synchronous DDR TX pin contract and receiver expectations |
+| [`docs/09_VIP_GUIDE.md`](docs/09_VIP_GUIDE.md) | VIP architecture, physical-to-logical TX adapter, and monitor/scoreboard flow |
 
 ## Visual pack
 
@@ -53,12 +61,14 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 1. `spadmic_position_block` synchronizes the asynchronous line buses.
 2. A detect/settle/evaluate/wait-clear FSM snapshots stable activity only.
 3. Three `spadmic_axis_cluster_scan` instances derive up to two clusters per axis.
-4. The block emits a fixed 12-word packet and raises explicit counters/sticky bits for drops and glitch rejects.
+4. The block emits fixed 12-word packets from an internal queue and raises explicit counters/sticky bits for queue drops and glitch rejects.
 
 ### Final egress
 
-- `spadmic_shared_tx_mux` selects either the packetized TDC stream or the packetized position stream.
-- The sequencer guarantees `tx_sel` changes only while both candidate sources are idle.
+1. `spadmic_correlated_tx` arbitrates packetized TDC and position traffic at packet granularity.
+2. It patches a shared 14-bit event ID into every packet EOC so software can regroup correlated X/Y/Z/position traffic off-chip.
+3. `spadmic_ddr_tx` forwards `clk_sys` as the source-synchronous TX clock and emits each internal 16-bit logical word as two 8-bit DDR transfers.
+4. The sequencer still guarantees control-image changes only after the old datapath drains.
 
 ## Active module inventory
 
@@ -72,9 +82,10 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 | `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | Per-axis wrapper around stop qualification and `mptdc_top_asic` |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | One-shot qualified STOP pulse generator |
 | `spadmic_tdc_shared_readout` | `rtl/spadmic_tdc_shared_readout.sv` | Shared TDC record arbiter + shared serializer |
-| `spadmic_position_block` | `rtl/spadmic_position_block.sv` | Position detector, packetizer, and local CSR block |
+| `spadmic_position_block` | `rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
 | `spadmic_axis_cluster_scan` | `rtl/spadmic_axis_cluster_scan.sv` | Per-axis two-cluster scanner with overflow flag |
-| `spadmic_shared_tx_mux` | `rtl/spadmic_shared_tx_mux.sv` | Final mux onto the physical chip TX bus |
+| `spadmic_correlated_tx` | `rtl/spadmic_correlated_tx.sv` | Packet arbiter, shared event tagger, and post-arbiter FIFO |
+| `spadmic_ddr_tx` | `rtl/spadmic_ddr_tx.sv` | Source-synchronous 8-bit DDR physical TX packer |
 
 ### Retained legacy collateral
 
@@ -82,12 +93,13 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 |--------|------|---------------|
 | `spadmic_tdc_arbiter3` | `rtl/spadmic_tdc_arbiter3.sv` | Legacy packet arbiter retained for collateral around the old per-axis narrow packet path |
 | `spadmic_tdc_packet_fifo` | `rtl/spadmic_tdc_packet_fifo.sv` | Legacy packet FIFO retained for collateral around the old per-axis narrow packet path |
+| `spadmic_shared_tx_mux` | `rtl/spadmic_shared_tx_mux.sv` | Legacy final mux retained for collateral around the pre-correlated egress path |
 
 ## Clock and reset summary
 
 | Domain | Frequency | Usage |
 |--------|-----------|-------|
-| `clk_sys` | 160 MHz | I2C, CSR, sequencer, shared TDC readout, shared TX mux, position block |
+| `clk_sys` | 160 MHz | I2C, CSR, sequencer, shared TDC readout, correlated TX, position block, forwarded TX clock |
 | `clk_ref_40m` | 40 MHz | STOP qualification only |
 | MPTDC internal generated clocks | varies | Preserved inside each `mptdc_top_asic` instance |
 
@@ -114,4 +126,14 @@ verilator --binary --timing -Wall \
   TOP/rtl/spadmic_tdc_shared_readout.sv \
   TOP/tb/tb_spadmic_tdc_shared_readout_unit.sv \
   --top-module tb_spadmic_tdc_shared_readout_unit
+
+# Correlated-export unit test
+verilator --binary --timing -Wall \
+  -Wno-UNUSEDSIGNAL -Wno-UNDRIVEN -Wno-DECLFILENAME -Wno-WIDTHEXPAND \
+  -Wno-WIDTHTRUNC -Wno-UNUSEDPARAM -Wno-PINMISSING -Wno-UNUSEDGENVAR \
+  -Wno-CASEINCOMPLETE -Wno-LATCH -Wno-REALCVT -Wno-INITIALDLY -Wno-COMBDLY \
+  -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
+  $MPTDC_FILES $TOP_FILES \
+  TOP/tb/tb_spadmic_correlated_tx_unit.sv \
+  --top-module tb_spadmic_correlated_tx_unit
 ```

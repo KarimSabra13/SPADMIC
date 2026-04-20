@@ -40,6 +40,7 @@ class spadmic_env;
   endfunction
 
   function void build(
+    virtual spadmic_reset_if          reset_if,
     virtual spadmic_csr_req_if        csr_if,
     virtual spadmic_i2c_if            i2c_if,
     virtual spadmic_async_event_if    x_ev_if,
@@ -61,9 +62,21 @@ class spadmic_env;
     pos_drv  = new(pos_line_if);
     bp_drv   = new(tx_if);
 
+    // Build coverage
+`ifdef SPADMIC_ENABLE_FUNC_COV
+    stim_cov  = new();
+    pkt_cov   = new();
+    ctrl_cov  = new();
+    fault_cov = new();
+`endif
+
     // Build top-level driver
-    drv = new(gen_to_drv_mb, drv_to_sb_mb, cfg,
-              csr_drv, i2c_drv, ev_drv, pos_drv, bp_drv);
+    drv = new(gen_to_drv_mb, drv_to_sb_mb, cfg, reset_if,
+              csr_drv, i2c_drv, ev_drv, pos_drv, bp_drv
+`ifdef SPADMIC_ENABLE_FUNC_COV
+              , stim_cov, ctrl_cov, fault_cov
+`endif
+              );
 
     // Build generator
     gen = new(gen_to_drv_mb, cfg);
@@ -74,15 +87,11 @@ class spadmic_env;
     ctrl_mon = new(csr_if);
 
     // Build scoreboard
-    sb = new(drv_to_sb_mb, mon_to_sb_mb, cfg);
-
-    // Build coverage
+    sb = new(drv_to_sb_mb, mon_to_sb_mb, cfg
 `ifdef SPADMIC_ENABLE_FUNC_COV
-    stim_cov  = new();
-    pkt_cov   = new();
-    ctrl_cov  = new();
-    fault_cov = new();
+             , pkt_cov
 `endif
+             );
 
     $display("[ENV] Build complete — driver mode: %s", cfg.drv_mode.name());
   endfunction
@@ -95,7 +104,10 @@ class spadmic_env;
       ctrl_mon.run();
       sb.run();
       bp_drv.run();
-    join_any
+    join_none
+    wait (sb.done);
+    #1;
+    disable fork;
   endtask
 
   function void report();
@@ -118,4 +130,3 @@ class spadmic_env;
   endfunction
 
 endclass
-

@@ -38,20 +38,6 @@ bind spadmic_tdc_shared_readout spadmic_readout_sva u_readout_sva (
   .out_data   (shared_data_o)
 );
 
-// ── Shared TX Mux assertions ────────────────────────────────────
-// The mux is combinational (no clock port), so bind at spadmic_top_v1.
-bind spadmic_top_v1 spadmic_mux_sva u_mux_sva (
-  .clk_sys        (clk_sys),
-  .rst_n          (rst_sys_n),
-  .tx_sel         (shared_tx_sel),
-  .tdc_tx_valid   (tdc_tx_valid_mux),
-  .tdc_tx_ready   (tdc_tx_ready_mux),
-  .pos_tx_valid   (pos_tx_valid_mux),
-  .pos_tx_ready   (pos_tx_ready_mux),
-  .chip_tx_valid  (chip_tx_valid_o),
-  .chip_tx_ready  (chip_tx_ready_i)
-);
-
 // ── Position path framing assertions ────────────────────────────
 bind spadmic_position_block spadmic_pos_sva u_pos_sva (
   .clk_sys       (clk_sys),

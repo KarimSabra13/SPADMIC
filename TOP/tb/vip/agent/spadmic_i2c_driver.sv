@@ -80,6 +80,20 @@ class spadmic_i2c_driver;
     write_csr(SPADMIC_CSR_POS_FILTER_CFG, {21'b0, min_cluster_span, settle_cycles});
   endtask
 
+  task automatic read_global_status(
+    output logic [SPADMIC_CSR_DATA_W-1:0] status,
+    output logic                          err
+  );
+    read_csr(SPADMIC_CSR_GLOBAL_STATUS, status, err);
+  endtask
+
+  task automatic read_global_fault(
+    output logic [SPADMIC_CSR_DATA_W-1:0] fault,
+    output logic                          err
+  );
+    read_csr(SPADMIC_CSR_GLOBAL_FAULT, fault, err);
+  endtask
+
   // Poll for cfg_accept (bit 21 of STATUS)
   task automatic wait_cfg_accept(int unsigned timeout_cycles);
     logic [SPADMIC_CSR_DATA_W-1:0] status;
@@ -98,4 +112,3 @@ class spadmic_i2c_driver;
   endtask
 
 endclass
-

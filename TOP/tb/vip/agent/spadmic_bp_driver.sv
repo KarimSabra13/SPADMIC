@@ -1,6 +1,7 @@
 // =============================================================================
 // SPADMIC VIP — Backpressure Driver
-// Controls chip_tx_ready to simulate downstream stalls.
+// Legacy backpressure driver retained so older VIP flows still compile.
+// The silicon-facing TX boundary is now source-synchronous and ignores ready.
 // =============================================================================
 
 class spadmic_bp_driver;
@@ -24,11 +25,7 @@ class spadmic_bp_driver;
     running = 1'b1;
     forever begin
       @(posedge tx_if.clk_sys);
-      case (current_mode)
-        BP_ALWAYS_READY: tx_if.ready = 1'b1;
-        BP_ALWAYS_STALL: tx_if.ready = 1'b0;
-        BP_RANDOM_50:    tx_if.ready = $urandom_range(0, 1);
-      endcase
+      tx_if.ready = 1'b1;
       #1;
     end
   endtask
@@ -39,4 +36,3 @@ class spadmic_bp_driver;
   endtask
 
 endclass
-

@@ -26,6 +26,7 @@ module spadmic_global_csr (
   input  wire                                position_pending_i,
   input  wire                                position_drop_sticky_i,
   input  wire                                position_glitch_sticky_i,
+  input  wire                                correlation_overflow_i,
 
   input  wire                                cfg_accept_i,
   input  wire                                transition_busy_i,
@@ -169,6 +170,7 @@ module spadmic_global_csr (
         rd_data_next[0] = mode_reject_sticky_q;
         rd_data_next[1] = position_drop_sticky_i;
         rd_data_next[2] = position_glitch_sticky_i;
+        rd_data_next[3] = correlation_overflow_i;
       end
 
       SPADMIC_CSR_GLOBAL_FAULT_COUNT: begin

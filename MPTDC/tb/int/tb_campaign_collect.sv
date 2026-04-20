@@ -235,19 +235,18 @@ module tb_campaign_collect;
     logic [NARROW_W-1:0] w;
     int hdr_hit_count;
     int hdr_ctx_id, hdr_phase0, hdr_boundary_inc;
-    int hdr_nfast_stop;  // v2.3
     tdc_conv_flags_t hdr_flags;
     int eoc_id;
 
     tb_hit_features_t hf;
-    int nslow_i, nfast_hit_i, nfast_snap_i, ns_i, nf_i, pd_idx_i, eseq_i;
+    int nslow_i, nfast_hit_i, ns_i, nf_i;
     int signed t_raw_ps_i;
 
     hits_found  = 0;
     error_count = 0;
     idx         = 0;
 
-    if (word_count < 3) begin  // v2.3: header + sub-header + EOC minimum
+    if (word_count < 2) begin
       $display("[ERR] Packet too short (%0d words)", word_count);
       error_count++;
       return;
@@ -266,15 +265,6 @@ module tb_campaign_collect;
     hdr_flags        = header_flags(w);
     idx = 1;
 
-    // v2.3: parse sub-header (nfast_stop)
-    if (idx < word_count && is_subheader(words[idx])) begin
-      hdr_nfast_stop = subheader_nfast_stop(words[idx]);
-      idx++;
-    end else begin
-      hdr_nfast_stop = 0;
-      $display("[WARN] No sub-header found after header");
-    end
-
     if (is_eoc(words[word_count - 1])) begin
       eoc_id = eoc_conv_id(words[word_count - 1]);
     end else begin
@@ -282,7 +272,7 @@ module tb_campaign_collect;
       eoc_id = -1;
     end
 
-    while (idx + 2 < word_count) begin
+    while (idx + 1 < word_count) begin
       w = words[idx];
       if (is_eoc(w)) break;
       if (w[15]) begin
@@ -292,31 +282,24 @@ module tb_campaign_collect;
         continue;
       end
 
-      if (idx + 2 >= word_count) break;
+      if (idx + 1 >= word_count) break;
 
-      hf = parse_hit_features(words[idx], words[idx+1], words[idx+2]);
+      hf = parse_hit_features(words[idx], words[idx+1]);
       nslow_i      = hf.nslow;
       nfast_hit_i  = hf.nfast;
-      nfast_snap_i = hf.nfast_snap;
       ns_i         = hf.ns;
       nf_i         = hf.nf;
-      pd_idx_i     = hf.pd_idx;
-      eseq_i       = hf.event_seq;
       t_raw_ps_i   = vernier_tconv_ps(hf.nslow, hf.nfast, hf.ns, hf.nf,
                                       logic'(hdr_boundary_inc));
 
-      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
+      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
               eoc_id,                // conv_id
               hits_found,            // hit_idx (0-based)
               tref_ps,               // Tref_ps
               nslow_i,               // nslow
               nfast_hit_i,           // nfast_hit
-              nfast_snap_i,          // nfast_snap
-              hdr_nfast_stop,        // nfast_stop (v2.3)
               ns_i,                  // ns
               nf_i,                  // nf
-              pd_idx_i,              // pd_idx
-              eseq_i,                // event_seq
               hdr_phase0,            // phase0_snap
               hdr_boundary_inc,      // slow_boundary_inc
               hdr_hit_count,         // hit_count
@@ -327,7 +310,7 @@ module tb_campaign_collect;
               effective_max_hits()); // max_hits
 
       hits_found++;
-      idx += 3;
+      idx += 2;
     end
 
     if (hits_found != hdr_hit_count && hdr_hit_count > 0) begin
@@ -339,7 +322,7 @@ module tb_campaign_collect;
   // =========================================================================
   //  Parse FULL-mode packet and write CSV rows
   // =========================================================================
-  // FULL mode: 4 words per hit (W0-W2 = features, W3 = t_raw_ps[15:0])
+  // FULL mode: 3 words per hit (W0-W1 = features, W2 = t_raw_ps[15:0])
   task automatic parse_and_write_full(
     input int fd,
     input int tref_ps,
@@ -352,12 +335,11 @@ module tb_campaign_collect;
     logic [NARROW_W-1:0] w;
     int hdr_hit_count;
     int hdr_ctx_id, hdr_phase0, hdr_boundary_inc;
-    int hdr_nfast_stop;  // v2.3
     tdc_conv_flags_t hdr_flags;
     int eoc_id;
 
     tb_hit_features_t hf;
-    int nslow_i, nfast_hit_i, nfast_snap_i, ns_i, nf_i, pd_idx_i, eseq_i;
+    int nslow_i, nfast_hit_i, ns_i, nf_i;
     int signed t_raw_ps_i;
 
     hits_found  = 0;
@@ -365,7 +347,7 @@ module tb_campaign_collect;
     idx         = 0;
 
     // ── Validate minimum packet length ──
-    if (word_count < 3) begin  // v2.3: header + sub-header + EOC minimum
+    if (word_count < 2) begin
       $display("[ERR] Packet too short (%0d words)", word_count);
       error_count++;
       return;
@@ -385,15 +367,6 @@ module tb_campaign_collect;
     hdr_flags        = header_flags(w);
     idx = 1;
 
-    // v2.3: parse sub-header (nfast_stop)
-    if (idx < word_count && is_subheader(words[idx])) begin
-      hdr_nfast_stop = subheader_nfast_stop(words[idx]);
-      idx++;
-    end else begin
-      hdr_nfast_stop = 0;
-      $display("[WARN] No sub-header found after header");
-    end
-
     // ── Parse EOC (last word) to get conv_id ──
     if (is_eoc(words[word_count - 1])) begin
       eoc_id = eoc_conv_id(words[word_count - 1]);
@@ -402,8 +375,8 @@ module tb_campaign_collect;
       eoc_id = -1;
     end
 
-    // ── Parse hit words (FULL mode: 4 words per hit) ──
-    while (idx + 3 < word_count) begin
+    // ── Parse hit words (FULL mode: 3 words per hit) ──
+    while (idx + 2 < word_count) begin
       w = words[idx];
       if (is_eoc(w)) break;
       if (w[15]) begin
@@ -413,35 +386,28 @@ module tb_campaign_collect;
         continue;
       end
 
-      // Need 4 words for this hit
-      if (idx + 3 >= word_count) break;
+      // Need 3 words for this hit
+      if (idx + 2 >= word_count) break;
 
-      // W0-W2: features (same as RAW_FEATURES)
-      hf = parse_hit_features(words[idx], words[idx+1], words[idx+2]);
+      // W0-W1: features (same as RAW_FEATURES)
+      hf = parse_hit_features(words[idx], words[idx+1]);
       nslow_i      = hf.nslow;
       nfast_hit_i  = hf.nfast;
-      nfast_snap_i = hf.nfast_snap;
       ns_i         = hf.ns;
       nf_i         = hf.nf;
-      pd_idx_i     = hf.pd_idx;
-      eseq_i       = hf.event_seq;
 
-      // W3: t_raw_ps[15:0] — sign-extend from 16 bits
-      t_raw_ps_i = $signed(words[idx+3]);
+      // W2: t_raw_ps[15:0] — sign-extend from 16 bits
+      t_raw_ps_i = $signed(words[idx+2]);
 
       // Write CSV row
-      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
+      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
               eoc_id,                // conv_id
               hits_found,            // hit_idx (0-based)
               tref_ps,               // Tref_ps
               nslow_i,               // nslow
               nfast_hit_i,           // nfast_hit
-              nfast_snap_i,          // nfast_snap
-              hdr_nfast_stop,        // nfast_stop (v2.3)
               ns_i,                  // ns
               nf_i,                  // nf
-              pd_idx_i,              // pd_idx
-              eseq_i,               // event_seq
               hdr_phase0,            // phase0_snap
               hdr_boundary_inc,      // slow_boundary_inc
               hdr_hit_count,         // hit_count
@@ -452,7 +418,7 @@ module tb_campaign_collect;
               effective_max_hits()); // max_hits
 
       hits_found++;
-      idx += 4;
+      idx += 3;
     end
 
     // Validate hit count
@@ -532,8 +498,7 @@ module tb_campaign_collect;
       $finish;
     end
 
-    // Write CSV header (v2.3: added nfast_stop)
-    $fwrite(fd, "conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,nfast_stop,ns,nf,pd_idx,event_seq,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits\n");
+    $fwrite(fd, "conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits\n");
 
     if (cfg_out_mode != OUT_MODE_RAW_FEATURES && cfg_out_mode != OUT_MODE_FULL) begin
       $display("[ERR] Unsupported CAMPAIGN_OUT_MODE=%0d (use %0d for RAW_FEATURES or %0d for FULL)",

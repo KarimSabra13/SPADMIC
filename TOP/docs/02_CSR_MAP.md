@@ -44,7 +44,7 @@ This register holds the **requested** control image, not the live committed imag
 | `[0]` | `req_global_enable` | requested top-level enable |
 | `[3:1]` | `req_axis_enable` | requested enables for X/Y/Z TDC axes |
 | `[4]` | `req_position_enable` | requested enable for the position block |
-| `[5]` | `req_shared_tx_sel` | `0 = TDC`, `1 = POSITION` |
+| `[5]` | `req_shared_tx_sel` | with `req_position_enable`, selects `TDC-only`, `position-only`, or `both-active` |
 | `[6]` | `req_tdc_input_sel` | `0 = SPAD`, `1 = CAL` |
 | `[8:7]` | `req_tdc_out_mode` | `0 = RAW_FEATURES`, `1 = RAW_TIMESTAMP`, `2 = FULL` |
 
@@ -57,7 +57,7 @@ This register holds the **requested** control image, not the live committed imag
 | `[4]` | `position_busy` | position detector or packetizer busy |
 | `[5]` | `position_pending` | position path still has a packet outstanding |
 | `[6]` | `path_idle` | no shared TDC packet, no pending TDC META, no position activity |
-| `[7]` | `active_shared_tx_sel` | live committed bus source |
+| `[7]` | `active_shared_tx_sel` | live committed export selector (`POSITION` means position-only, `TDC` means TDC-only or both-active depending on `active_position_enable`) |
 | `[8]` | `active_tdc_input_sel` | live committed TDC input source |
 | `[10:9]` | `active_tdc_out_mode` | live committed TDC output mode |
 | `[13:11]` | `tdc_pkt_full` | each bit mirrors one axis-local acquisition FIFO full flag |
@@ -73,8 +73,9 @@ This register holds the **requested** control image, not the live committed imag
 | Bits | Name | Meaning | Clear behavior |
 |------|------|---------|----------------|
 | `[0]` | `mode_reject_sticky` | software attempted a control change while `cfg_accept = 0` | write `1` to clear |
-| `[1]` | `position_drop_sticky` | a new position event arrived while another one was still outstanding | clear in `POSITION_FAULT_STATUS` |
+| `[1]` | `position_drop_sticky` | a qualifying position snapshot was dropped because the internal queue was full | clear in `POSITION_FAULT_STATUS` |
 | `[2]` | `position_glitch_sticky` | unstable or empty position activity was rejected | clear in `POSITION_FAULT_STATUS` |
+| `[3]` | `correlation_overflow` | reserved sticky fault for event-tagger correlation state overflow | read only in the active RTL |
 
 ### 2.5 `GLOBAL_FAULT_COUNT` (`0x014`)
 
@@ -89,6 +90,10 @@ This register holds the **requested** control image, not the live committed imag
    - `transition_busy = 0`
    - `ctrl_apply_pending = 0`
 3. Read the active fields from `GLOBAL_STATUS`, not from `GLOBAL_CTRL`, when software needs the live state.
+4. Interpret `shared_tx_sel` together with `position_enable`:
+   - `TDC` + `0` -> TDC-only
+   - `POSITION` + `1` -> position-only
+   - `TDC` + `1` -> correlated both-active
 
 ## 4. Position CSR block
 
@@ -102,7 +107,7 @@ This register holds the **requested** control image, not the live committed imag
 | `0x420` | `POS_STATUS` | R | live detector and packet status |
 | `0x424` | `POS_EVENT_COUNT` | R | accepted position-event count |
 | `0x428` | `POS_FAULT_STATUS` | R/W1C | sticky faults and detector-state snapshot |
-| `0x42C` | `POS_DROP_COUNT` | R | count of overlapping accepted-event drops |
+| `0x42C` | `POS_DROP_COUNT` | R | count of accepted snapshots dropped because the internal queue was full |
 | `0x430` | `POS_REJECT_COUNT` | R | count of glitch/empty rejections |
 
 ### 4.2 `POS_CTRL` (`0x400`)
@@ -134,8 +139,8 @@ The effective enable is `global_enable_i & local_enable`.
 | `[1]` | `overflow_any` | at least one axis had more than two qualifying clusters in the snapshot |
 | `[4:2]` | `non_empty_mask` | axis snapshot contains at least one kept cluster (`X/Y/Z`) |
 | `[7:5]` | `multi_cluster_mask` | axis snapshot contains two kept clusters (`X/Y/Z`) |
-| `[8]` | `busy` | detector or packetizer busy |
-| `[9]` | `packet_pending` | packet still outstanding |
+| `[8]` | `busy` | detector busy, active packet, or queued packet pending |
+| `[9]` | `packet_pending` | packet still outstanding or queued for emission |
 | `[11:10]` | `det_state` | detector FSM state (`IDLE/SETTLE/EVAL/WAIT_CLEAR`) |
 
 ### 4.6 `POS_EVENT_COUNT` (`0x424`)
@@ -148,7 +153,7 @@ The effective enable is `global_enable_i & local_enable`.
 
 | Bits | Name | Meaning | Clear behavior |
 |------|------|---------|----------------|
-| `[0]` | `drop_sticky` | an overlapping event was dropped | write `1` to clear |
+| `[0]` | `drop_sticky` | an accepted snapshot was dropped because the internal queue was full | write `1` to clear |
 | `[1]` | `glitch_reject_sticky` | unstable or empty activity was rejected | write `1` to clear |
 | `[3:2]` | `det_state` | current detector FSM state snapshot | read only |
 
@@ -156,7 +161,7 @@ The effective enable is `global_enable_i & local_enable`.
 
 | Bits | Name | Meaning |
 |------|------|---------|
-| `[15:0]` | `drop_count` | count of dropped overlapping events |
+| `[15:0]` | `drop_count` | count of accepted snapshots dropped because the queue was full |
 
 ### 4.9 `POS_REJECT_COUNT` (`0x430`)
 

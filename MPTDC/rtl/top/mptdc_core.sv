@@ -94,10 +94,10 @@ module mptdc_core
   wire [NSLOW_W-1:0] nslow_src_count, nslow_stop_latched;
   wire [NFAST_W-1:0] nfast_src_count;
 
-  // v2.3: nfast_stop field — reserved.  In the current architecture the fast
-  // oscillator starts at STOP time (osc_fast_en = stop_latched | keep_alive),
-  // so the fast counter is always 0 at STOP.  The sub-header word carries this
-  // field for future use (e.g. if the fast oscillator start policy changes).
+  // nfast_stop is retained only as an internal compatibility field. In the
+  // current architecture the fast oscillator starts at STOP time
+  // (osc_fast_en = stop_latched | keep_alive), so the fast counter is always 0
+  // at STOP and the live narrow packet does not export it.
   wire [NFAST_W-1:0] nfast_stop_latched = '0;
 
   // =========================================================================

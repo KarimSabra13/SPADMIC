@@ -179,8 +179,7 @@ module tb_multi_conv_stress;
         $finish;
       end
 
-      // v2.3: header + sub-header + hits*3 + EOC
-      exp_words = 1 + 1 + hdr_hits * 3 + 1;
+      exp_words = 1 + hdr_hits * 2 + 1;
       if (pkt_cnt !== exp_words) begin
         $error("[TB] conv %0d: word_count mismatch (expected %0d, got %0d)",
                conv, exp_words, pkt_cnt);

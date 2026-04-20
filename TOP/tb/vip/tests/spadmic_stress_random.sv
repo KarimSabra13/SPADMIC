@@ -10,7 +10,7 @@ class spadmic_stress_random extends spadmic_base_test;
   endfunction
 
   function void configure();
-    cfg.drv_mode       = DRV_MODE_DIRECT_CSR;
+    cfg.drv_mode       = DRV_MODE_I2C;
     cfg.profile        = PROFILE_STRESS;
     cfg.num_phases     = 200;
     cfg.timeout_ns     = 50_000_000;
@@ -24,4 +24,3 @@ class spadmic_stress_random extends spadmic_base_test;
     env.gen.gen_random_sequence(cfg.num_phases);
   endtask
 endclass
-

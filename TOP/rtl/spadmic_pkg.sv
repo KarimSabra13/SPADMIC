@@ -14,12 +14,19 @@ package spadmic_pkg;
   // Top-level dimensions and control-plane widths.
   localparam int unsigned SPADMIC_AXIS_COUNT  = 3;
   localparam int unsigned SPADMIC_AXIS_ID_W   = 2;
+  localparam int unsigned SPADMIC_SRC_COUNT   = 4;
+  localparam int unsigned SPADMIC_SRC_MASK_W  = SPADMIC_SRC_COUNT;
   localparam int unsigned SPADMIC_LINE_W      = 127;
   localparam int unsigned SPADMIC_LINE_IDX_W  = 7;
   localparam int unsigned SPADMIC_CSR_ADDR_W  = 12;
   localparam int unsigned SPADMIC_CSR_DATA_W  = mptdc_pkg::CSR_DATA_W;
+  localparam int unsigned SPADMIC_EVENT_ID_W  = 14;
+  localparam int unsigned SPADMIC_TX_PHY_W    = 8;
   localparam logic [6:0] SPADMIC_I2C_ADDR     = 7'h42;
   localparam int unsigned SPADMIC_POS_PKT_WORDS = 12;
+  localparam int unsigned SPADMIC_POS_QUEUE_DEPTH = 16;
+  localparam int unsigned SPADMIC_EVENT_BUNDLE_DEPTH = 16;
+  localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 2048;
 
   typedef enum logic [SPADMIC_AXIS_ID_W-1:0] {
     TDC_ID_X = 2'd0,
@@ -34,6 +41,12 @@ package spadmic_pkg;
     SPADMIC_TX_TDC      = 1'b0,
     SPADMIC_TX_POSITION = 1'b1
   } spadmic_tx_sel_e;
+
+  typedef enum logic [1:0] {
+    SPADMIC_EXPORT_TDC_ONLY      = 2'd0,
+    SPADMIC_EXPORT_POSITION_ONLY = 2'd1,
+    SPADMIC_EXPORT_BOTH_ACTIVE   = 2'd2
+  } spadmic_export_mode_e;
 
   localparam logic [3:0] SPADMIC_REGION_GLOBAL   = 4'h0;
   localparam logic [3:0] SPADMIC_REGION_TDC_X    = 4'h1;
@@ -73,11 +86,20 @@ package spadmic_pkg;
     spadmic_cluster_t     cluster1;
   } spadmic_axis_clusters_t;
 
+  typedef struct packed {
+    logic [2:0]               non_empty_mask;
+    logic [2:0]               multi_cluster_mask;
+    logic                     overflow_any;
+    spadmic_axis_clusters_t   x_clusters;
+    spadmic_axis_clusters_t   y_clusters;
+    spadmic_axis_clusters_t   z_clusters;
+  } spadmic_pos_frame_t;
+
   function automatic logic is_tdc_header(input logic [NARROW_W-1:0] word);
     return (word[15:13] == 3'b100);
   endfunction
 
-  function automatic logic is_tdc_subheader(input logic [NARROW_W-1:0] word);
+  function automatic logic is_spadmic_subheader(input logic [NARROW_W-1:0] word);
     return (word[15:13] == 3'b101);
   endfunction
 
@@ -85,14 +107,22 @@ package spadmic_pkg;
     return (word[15:14] == 2'b11);
   endfunction
 
-  function automatic logic [NARROW_W-1:0] patch_tdc_id_into_subheader(
+  function automatic spadmic_tdc_id_e tdc_header_source_id(
+    input logic [NARROW_W-1:0] word
+  );
+    return spadmic_tdc_id_e'({word[6], word[12]});
+  endfunction
+
+  function automatic logic [NARROW_W-1:0] patch_tdc_id_into_header(
     input logic [NARROW_W-1:0]     word,
     input spadmic_tdc_id_e         tdc_id
   );
     logic [NARROW_W-1:0] patched;
     patched = word;
-    if (is_tdc_subheader(word))
-      patched[5:4] = tdc_id;
+    if (is_tdc_header(word)) begin
+      patched[12] = tdc_id[0];
+      patched[6]  = tdc_id[1];
+    end
     return patched;
   endfunction
 
@@ -107,6 +137,46 @@ package spadmic_pkg;
     lo_ext = {1'b0, cluster.lo};
     hi_ext = {1'b0, cluster.hi};
     return hi_ext - lo_ext + 1'b1;
+  endfunction
+
+  function automatic logic [SPADMIC_SRC_MASK_W-1:0] spadmic_source_bit(
+    input spadmic_source_id_e source_id
+  );
+    logic [SPADMIC_SRC_MASK_W-1:0] src_mask;
+    src_mask = '0;
+    src_mask[source_id] = 1'b1;
+    return src_mask;
+  endfunction
+
+  function automatic spadmic_export_mode_e spadmic_export_mode_from_ctrl(
+    input spadmic_tx_sel_e tx_sel,
+    input logic            position_enable
+  );
+    if (tx_sel == SPADMIC_TX_POSITION)
+      return SPADMIC_EXPORT_POSITION_ONLY;
+    if (position_enable)
+      return SPADMIC_EXPORT_BOTH_ACTIVE;
+    return SPADMIC_EXPORT_TDC_ONLY;
+  endfunction
+
+  function automatic logic [SPADMIC_SRC_MASK_W-1:0] spadmic_expected_source_mask(
+    input spadmic_export_mode_e export_mode,
+    input logic [SPADMIC_AXIS_COUNT-1:0] axis_enable,
+    input logic                          position_enable
+  );
+    logic [SPADMIC_SRC_MASK_W-1:0] mask;
+    mask = '0;
+
+    if (export_mode != SPADMIC_EXPORT_POSITION_ONLY) begin
+      mask[TDC_ID_X] = axis_enable[0];
+      mask[TDC_ID_Y] = axis_enable[1];
+      mask[TDC_ID_Z] = axis_enable[2];
+    end
+
+    if ((export_mode != SPADMIC_EXPORT_TDC_ONLY) && position_enable)
+      mask[SPADMIC_SRC_POSITION] = 1'b1;
+
+    return mask;
   endfunction
 
   function automatic logic [NARROW_W-1:0] spadmic_pos_header_word(

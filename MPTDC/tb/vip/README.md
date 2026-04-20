@@ -96,7 +96,7 @@ Test Factory ──▶ Test (build_sequence) ──▶ Generator (queue txns)
 | `mptdc_reset_txn` | Hard reset | `low_time_ps`, `settle_time_ps` |
 | `mptdc_backpressure_txn` | Ready mode switch | `mode` (READY/RANDOM/STALL) |
 | `mptdc_eot_txn` | End-of-test signal | breaks driver/monitor loops |
-| `mptdc_hit_txn` | Decoded single hit (data class) | nslow, nfast, ns, nf, pd_idx |
+| `mptdc_hit_txn` | Decoded single hit (data class) | nslow, nfast, ns, nf |
 | `mptdc_packet_txn` | Complete captured packet | `parse_packet()`, `word_count()` |
 | `mptdc_csr_driver` | CSR register access | `write()`, `read()`, `program_cfg()` |
 | `mptdc_pulse_driver` | Async pulse injection | `inject_pair()`, `inject_start_only()` |
@@ -198,13 +198,11 @@ mailbox populated in `mptdc_vip_tb.sv`:
 
 1. **Wait** for sampled accepted words to appear
 2. **Collect** 16-bit words until a complete packet is assembled
-3. **Detect** header (`[15:13] = 3'b100`), sub-header (`[15:13] = 3'b101`),
-   and EOC (`[15:14] = 2'b11`)
-4. **Parse** hits based on `out_mode` from header, skipping the v2.3
-   sub-header word that carries the reserved `nfast_stop` field:
-    - **RAW_FEATURES**: 3 words/hit (coarse timing, phase indices, event seq)
+3. **Detect** header (`[15:13] = 3'b100`) and EOC (`[15:14] = 2'b11`)
+4. **Parse** hits based on `out_mode` from header:
+    - **RAW_FEATURES**: 2 words/hit (`W0` coarse timing, `W1` phase indices)
     - **RAW_TIMESTAMP**: 2 words/hit (`W0` raw coarse features, `W1` timestamp)
-    - **FULL**: 4 words/hit (RAW_FEATURES `W0-W2` plus timestamp `W3`)
+    - **FULL**: 3 words/hit (RAW_FEATURES `W0-W1` plus timestamp `W2`)
 5. **Forward** parsed `mptdc_packet_txn` to scoreboard via mailbox
 
 ---
@@ -219,7 +217,7 @@ The `mptdc_scoreboard` receives:
 
 | Check | Description |
 |-------|-------------|
-| Word count | Must equal `3 + hit_count × words_per_hit(out_mode)` |
+| Word count | Must equal `2 + hit_count × words_per_hit(out_mode)` |
 | Hit array size | Decoded hits must match header hit_count |
 | out_mode | Must match configured out_mode |
 | Hit count range | If enabled: `min_hits ≤ hit_count ≤ max_hits_allowed` |
@@ -227,8 +225,6 @@ The `mptdc_scoreboard` receives:
 | Maxhits flag | If enabled: `flags.closed_by_maxhits == expected` |
 | Watchdog flag | If enabled: `flags.closed_by_watchdog == expected` |
 | conv_id | If enabled: EOC conv_id matches expected counter |
-| pd_idx | Must equal calculated value from (ns, nf) |
-| event_seq | Must match hit index within packet |
 | Timestamp | If enabled: LSW matches vernier calculation |
 
 A test **passes** when `error_count == 0` at completion.
@@ -712,10 +708,9 @@ HEADER  [15:14]=10  [13:12]=ctx_id  [11]=phase0_snap
   flags[1]=closed_by_maxhits  [0]=closed_by_watchdog
 
   HIT WORDS (per out_mode):
-  RAW_FEATURES (3 words/hit):
+  RAW_FEATURES (2 words/hit):
     W0: [14:8]=nslow  [7:1]=nfast_hit
-    W1: [14:11]=ns  [10:7]=nf  [6:0]=pd_idx
-    W2: [14:11]=event_seq  [10:4]=nfast_snap
+    W1: [14:11]=ns  [10:7]=nf  [6:0]=reserved
 
   RAW_TIMESTAMP (2 words/hit):
     W0: same as RAW_FEATURES W0

@@ -43,7 +43,7 @@ module spadmic_tdc_packet_fifo #(
 
   wire sop_word = is_tdc_header(narrow_data_i);
   wire eop_word = is_tdc_eoc(narrow_data_i);
-  wire [NARROW_W-1:0] patched_word = patch_tdc_id_into_subheader(
+  wire [NARROW_W-1:0] patched_word = patch_tdc_id_into_header(
     narrow_data_i,
     TDC_ID
   );

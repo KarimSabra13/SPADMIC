@@ -10,6 +10,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 BENCHES=(
   tb_spadmic_axis_cluster_scan_unit
+  tb_spadmic_correlated_tx_unit
+  tb_spadmic_ddr_tx_unit
   tb_spadmic_i2c_control_plane_unit
   tb_spadmic_ref_stop_qualifier_hold_unit
   tb_spadmic_ref_stop_qualifier_unit

@@ -5,58 +5,60 @@
 `timescale 1ps/1ps
 `default_nettype none
 
-interface spadmic_i2c_if (
-  input wire clk_sys,
-  input wire rst_n
-);
+interface spadmic_i2c_if;
   import spadmic_pkg::*;
+
+  logic clk_sys;
+  logic rst_n;
 
   // I2C bus signals (directly connected to DUT)
   logic scl;
   logic sda_drive;    // TB drives SDA when master
   logic sda_oe;       // DUT drives SDA via open-drain
-  wire  sda = sda_drive & ~sda_oe;  // resolved SDA line
+  logic sda;          // resolved SDA line
 
   // Timing parameters (in clk_sys cycles)
-  int unsigned i2c_half_period = 80;  // ~1 MHz I2C @ 160 MHz sys clock
+  localparam int unsigned I2C_HALF_PERIOD_CYC = 80;  // ~1 MHz @ 160 MHz sys clock
+
+  assign sda = sda_drive & ~sda_oe;
 
   // ── Helpers ────────────────────────────────────────────────────
   task automatic drive_bit(input logic bit_val);
     sda_drive = bit_val;
     #1;
     scl = 1'b1;
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
     scl = 1'b0;
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
   endtask
 
   task automatic read_bit(output logic bit_val);
     sda_drive = 1'b1;  // release SDA for slave to drive
     #1;
     scl = 1'b1;
-    repeat (i2c_half_period / 2) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC / 2) @(posedge clk_sys);
     bit_val = sda;
-    repeat (i2c_half_period - i2c_half_period / 2) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC - I2C_HALF_PERIOD_CYC / 2) @(posedge clk_sys);
     scl = 1'b0;
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
   endtask
 
   task automatic start_condition();
     sda_drive = 1'b1;
     scl = 1'b1;
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
     sda_drive = 1'b0;  // SDA falls while SCL is high
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
     scl = 1'b0;
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
   endtask
 
   task automatic stop_condition();
     sda_drive = 1'b0;
     scl = 1'b1;
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
     sda_drive = 1'b1;  // SDA rises while SCL is high
-    repeat (i2c_half_period) @(posedge clk_sys);
+    repeat (I2C_HALF_PERIOD_CYC) @(posedge clk_sys);
   endtask
 
   task automatic write_byte(input logic [7:0] data, output logic ack);
@@ -143,12 +145,11 @@ interface spadmic_i2c_if (
     stop_condition();
   endtask
 
-  // ── Initial state ─────────────────────────────────────────────
-  initial begin
+  task automatic idle_bus();
     scl       = 1'b1;
     sda_drive = 1'b1;
-  end
-
+    sda_oe    = 1'b0;
+  endtask
 endinterface
 
 `default_nettype wire

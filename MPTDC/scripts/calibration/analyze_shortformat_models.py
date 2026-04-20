@@ -8,6 +8,11 @@ per-key floors to answer a key question:
 
   "Is sub-20 ps single-shot under jitter blocked by the model, by data sparsity,
    or by the information content of the deployed narrow packet itself?"
+
+The active compact CSV no longer emits `nfast_snap`, `nfast_stop`, `pd_idx`, or
+`event_seq`. When those columns are absent this script synthesizes compatibility
+views (`pd_idx` from `ns/nf`, `event_seq` from `hit_idx`, the removed fast-side
+snapshots as zero) so historical comparisons can still be rerun on the new data.
 """
 
 from __future__ import annotations
@@ -115,13 +120,19 @@ def discover_csvs(dataset_dir: str | None, max_files: int | None = None) -> list
 def load_dataset(label: str, files: list[Path], core_only: bool = True) -> pd.DataFrame:
     frames = []
     for path in files:
-        # v2.3: handle both old (18-col) and new (19-col with nfast_stop) CSVs
+        # Active compact CSVs omit several historical observability columns.
         hdr = pd.read_csv(path, nrows=0).columns.tolist()
         use = [c for c in USECOLS if c in hdr]
         dt  = {c: v for c, v in CSV_DTYPES.items() if c in hdr}
         df = pd.read_csv(path, usecols=use, dtype=dt)
+        if "nfast_snap" not in df.columns:
+            df["nfast_snap"] = 0
         if "nfast_stop" not in df.columns:
             df["nfast_stop"] = 0
+        if "event_seq" not in df.columns:
+            df["event_seq"] = df["hit_idx"]
+        if "pd_idx" not in df.columns:
+            df["pd_idx"] = (df["ns"].astype(int) * 9 + df["nf"].astype(int)).astype("int16")
         frames.append(df)
 
     data = pd.concat(frames, ignore_index=True)

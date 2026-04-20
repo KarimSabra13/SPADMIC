@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SPADMIC TOP — Single VIP Test Runner (Xcelium)
+# SPADMIC TOP — Single VIP Test Runner
 # Usage: bash scripts/sim/run_vip_test.sh <test_name> [options]
 #
 # Options:
-#   --sim <xrun|verilator>   Simulator (default: xrun)
+#   --sim <xrun|verilator>   xrun executes tests, verilator does lint-only compile
 #   --seed <N>               Random seed (default: 1)
 #   --func-cov               Enable functional coverage
 #   --code-cov               Enable code coverage
@@ -80,69 +80,99 @@ echo "════════════════════════�
 echo "  SPADMIC VIP Test: $TEST_NAME (seed=$SEED)"
 echo "═══════════════════════════════════════════════════════"
 
-# ── Build xrun command ─────────────────────────────────────────
-XRUN_ARGS=(
-  -64 -sv -access +rwc
-  -timescale 1ps/1ps
-  -nowarn DLCVAR
-  -svseed "$SEED"
-  +define+MPTDC_USE_OSC_MODEL
-  "+incdir+$TOP_ROOT/tb/vip"
-  -f "$BUILD_DIR/mptdc.f"
-  -f "$BUILD_DIR/top.f"
-  -f "$BUILD_DIR/vip.f"
-  -top spadmic_vip_tb
-  -xmlibdirname "$BUILD_DIR/xcelium.d"
-  "+SPADMIC_TEST=$TEST_NAME"
-  "+SPADMIC_SEED=$SEED"
-)
-
-# Plusargs
-[[ -n "$NUM_CONV" ]]   && XRUN_ARGS+=("+SPADMIC_NUM_CONV=$NUM_CONV")
-[[ -n "$NUM_PHASES" ]] && XRUN_ARGS+=("+SPADMIC_NUM_PHASES=$NUM_PHASES")
-[[ -n "$MAX_HITS" ]]   && XRUN_ARGS+=("+SPADMIC_MAX_HITS=$MAX_HITS")
-[[ -n "$OUT_MODE" ]]   && XRUN_ARGS+=("+SPADMIC_OUT_MODE=$OUT_MODE")
-[[ -n "$DRV_MODE" ]]   && XRUN_ARGS+=("+SPADMIC_DRV_MODE=$DRV_MODE")
-[[ -n "$PROFILE" ]]    && XRUN_ARGS+=("+SPADMIC_PROFILE=$PROFILE")
-[[ -n "$TIMEOUT" ]]    && XRUN_ARGS+=("+SPADMIC_TIMEOUT=$TIMEOUT")
-
-# Coverage
-if [[ $FUNC_COV -eq 1 ]]; then
-  XRUN_ARGS+=("+define+SPADMIC_ENABLE_FUNC_COV")
-fi
-if [[ $CODE_COV -eq 1 || $FUNC_COV -eq 1 ]]; then
-  mkdir -p "$COV_WORKDIR"
-  XRUN_ARGS+=(
-    -coverage all -covoverwrite
-    -covworkdir "$COV_WORKDIR"
-    -covtest "$COV_TEST_NAME"
+if [[ "$SIM" == "xrun" ]]; then
+  # ── Build xrun command ───────────────────────────────────────
+  XRUN_ARGS=(
+    -64 -sv -access +rwc
+    -timescale 1ps/1ps
+    -nowarn DLCVAR
+    -svseed "$SEED"
+    +define+MPTDC_USE_OSC_MODEL
+    "+incdir+$TOP_ROOT/tb/vip"
+    -f "$BUILD_DIR/mptdc.f"
+    -f "$BUILD_DIR/top.f"
+    -f "$BUILD_DIR/vip.f"
+    -top spadmic_vip_tb
+    -xmlibdirname "$BUILD_DIR/xcelium.d"
+    "+SPADMIC_TEST=$TEST_NAME"
+    "+SPADMIC_SEED=$SEED"
   )
-fi
 
-# Waveform
-if [[ $WAVES -eq 1 ]]; then
-  mkdir -p "$BUILD_DIR/waves"
-  XRUN_ARGS+=(
-    -input "@database -open waves -into $BUILD_DIR/waves/waves.shm -default"
-    -input "@probe -create spadmic_vip_tb -all -depth all"
-    -input "@run"
-    -input "@exit"
+  # Plusargs
+  [[ -n "$NUM_CONV" ]]   && XRUN_ARGS+=("+SPADMIC_NUM_CONV=$NUM_CONV")
+  [[ -n "$NUM_PHASES" ]] && XRUN_ARGS+=("+SPADMIC_NUM_PHASES=$NUM_PHASES")
+  [[ -n "$MAX_HITS" ]]   && XRUN_ARGS+=("+SPADMIC_MAX_HITS=$MAX_HITS")
+  [[ -n "$OUT_MODE" ]]   && XRUN_ARGS+=("+SPADMIC_OUT_MODE=$OUT_MODE")
+  [[ -n "$DRV_MODE" ]]   && XRUN_ARGS+=("+SPADMIC_DRV_MODE=$DRV_MODE")
+  [[ -n "$PROFILE" ]]    && XRUN_ARGS+=("+SPADMIC_PROFILE=$PROFILE")
+  [[ -n "$TIMEOUT" ]]    && XRUN_ARGS+=("+SPADMIC_TIMEOUT=$TIMEOUT")
+
+  # Coverage
+  if [[ $FUNC_COV -eq 1 ]]; then
+    XRUN_ARGS+=("+define+SPADMIC_ENABLE_FUNC_COV")
+  fi
+  if [[ $CODE_COV -eq 1 || $FUNC_COV -eq 1 ]]; then
+    mkdir -p "$COV_WORKDIR"
+    XRUN_ARGS+=(
+      -coverage all -covoverwrite
+      -covworkdir "$COV_WORKDIR"
+      -covtest "$COV_TEST_NAME"
+    )
+  fi
+
+  # Waveform
+  if [[ $WAVES -eq 1 ]]; then
+    mkdir -p "$BUILD_DIR/waves"
+    XRUN_ARGS+=(
+      -input "@database -open waves -into $BUILD_DIR/waves/waves.shm -default"
+      -input "@probe -create spadmic_vip_tb -all -depth all"
+      -input "@run"
+      -input "@exit"
+    )
+  fi
+
+  # GUI
+  if [[ $GUI -eq 1 ]]; then
+    XRUN_ARGS+=(-gui)
+  fi
+
+  echo "Running: xrun ${XRUN_ARGS[*]}"
+  cd "$BUILD_DIR"
+  xrun "${XRUN_ARGS[@]}" 2>&1 | tee "$BUILD_DIR/run.log"
+  RC=${PIPESTATUS[0]}
+elif [[ "$SIM" == "verilator" ]]; then
+  if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 || $WAVES -eq 1 || $GUI -eq 1 ]]; then
+    echo "Verilator mode only supports lint-only compile (no coverage/gui/waves)." >&2
+    exit 1
+  fi
+
+  VERILATOR_ARGS=(
+    --lint-only
+    --timing
+    -Wall
+    -Wno-fatal
+    +define+MPTDC_USE_OSC_MODEL
+    "+incdir+$TOP_ROOT/tb/vip"
+    -f "$BUILD_DIR/mptdc.f"
+    -f "$BUILD_DIR/top.f"
+    -f "$BUILD_DIR/vip.f"
+    --top-module spadmic_vip_tb
   )
-fi
 
-# GUI
-if [[ $GUI -eq 1 ]]; then
-  XRUN_ARGS+=(-gui)
+  echo "Running: verilator ${VERILATOR_ARGS[*]}"
+  cd "$TOP_ROOT"
+  verilator "${VERILATOR_ARGS[@]}" 2>&1 | tee "$BUILD_DIR/run.log"
+  RC=${PIPESTATUS[0]}
+else
+  echo "Unsupported simulator: $SIM" >&2
+  exit 1
 fi
-
-# ── Run ────────────────────────────────────────────────────────
-echo "Running: xrun ${XRUN_ARGS[*]}"
-cd "$BUILD_DIR"
-xrun "${XRUN_ARGS[@]}" 2>&1 | tee "$BUILD_DIR/run.log"
-RC=${PIPESTATUS[0]}
 
 # ── Result ─────────────────────────────────────────────────────
-if grep -q "PASS" "$BUILD_DIR/run.log" && [[ $RC -eq 0 ]]; then
+if [[ "$SIM" == "verilator" && $RC -eq 0 ]] && ! grep -q "^%Error" "$BUILD_DIR/run.log"; then
+  echo "═══ RESULT: PASS (verilator lint) ═══"
+  exit 0
+elif grep -q "PASS" "$BUILD_DIR/run.log" && [[ $RC -eq 0 ]]; then
   echo "═══ RESULT: PASS ═══"
   exit 0
 else

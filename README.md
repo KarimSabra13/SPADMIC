@@ -30,16 +30,16 @@ The current active first-silicon digital baseline is:
 
 | Area | Quick reference | Deep reference |
 |------|-----------------|----------------|
-| Full chip / integration | [`TOP/README.md`](TOP/README.md) | [`TOP/docs/01_ACTIVE_ARCHITECTURE.md`](TOP/docs/01_ACTIVE_ARCHITECTURE.md), [`TOP/docs/02_CSR_MAP.md`](TOP/docs/02_CSR_MAP.md) |
-| TDC core | [`MPTDC/README.md`](MPTDC/README.md) | [`MPTDC/docs/01_ARCHITECTURE.md`](MPTDC/docs/01_ARCHITECTURE.md), [`MPTDC/docs/10_SHARED_READOUT_EXPORT.md`](MPTDC/docs/10_SHARED_READOUT_EXPORT.md) |
-| I2C control plane | [`I2C/README.md`](I2C/README.md) | [`I2C/docs/01_INTEGRATION_GUIDE.md`](I2C/docs/01_INTEGRATION_GUIDE.md) |
+| Full chip / integration | [`TOP/README.md`](TOP/README.md) | [`TOP/docs/01_ACTIVE_ARCHITECTURE.md`](TOP/docs/01_ACTIVE_ARCHITECTURE.md), [`TOP/docs/07_BLOCK_GUIDE.md`](TOP/docs/07_BLOCK_GUIDE.md), [`TOP/docs/08_TX_INTERFACE.md`](TOP/docs/08_TX_INTERFACE.md), [`TOP/docs/09_VIP_GUIDE.md`](TOP/docs/09_VIP_GUIDE.md) |
+| TDC core | [`MPTDC/README.md`](MPTDC/README.md) | [`MPTDC/docs/01_ARCHITECTURE.md`](MPTDC/docs/01_ARCHITECTURE.md), [`MPTDC/docs/10_SHARED_READOUT_EXPORT.md`](MPTDC/docs/10_SHARED_READOUT_EXPORT.md), [`MPTDC/docs/11_BLOCK_GUIDE.md`](MPTDC/docs/11_BLOCK_GUIDE.md) |
+| I2C control plane | [`I2C/README.md`](I2C/README.md) | [`I2C/docs/01_INTEGRATION_GUIDE.md`](I2C/docs/01_INTEGRATION_GUIDE.md), [`I2C/docs/02_BLOCK_GUIDE.md`](I2C/docs/02_BLOCK_GUIDE.md) |
 
 ## Active system dataflow
 
 1. **Control path:** `i2c_scl_i/i2c_sda_i` -> `spadmic_i2c_slave` -> `spadmic_i2c_csr_bridge` -> `spadmic_csr_decoder` -> global, per-axis TDC, or position CSR blocks.
 2. **TDC path:** one `spadmic_tdc_axis_wrapper` per axis -> local `mptdc_top_asic` -> exported acquisition records -> `spadmic_tdc_shared_readout` -> shared `mptdc_narrow16_tx_v2`.
 3. **Position path:** asynchronous `x/y/z_lines_i` -> synchronizers -> cluster scan and qualification in `spadmic_position_block` -> fixed 12-word position packet.
-4. **Final egress:** `spadmic_shared_tx_mux` selects either the packetized TDC stream or the packetized position stream onto the one physical `chip_tx_*` interface.
+4. **Final egress:** `spadmic_correlated_tx` groups packetized TDC and position traffic into one shared correlated stream, then `spadmic_ddr_tx` maps that stream onto the source-synchronous `chip_tx_*` DDR pins.
 
 ## Current top-level control model
 

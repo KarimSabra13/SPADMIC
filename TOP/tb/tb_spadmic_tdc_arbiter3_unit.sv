@@ -134,21 +134,18 @@ module tb_spadmic_tdc_arbiter3_unit;
 
   task automatic push_packet_x();
     drive_word(0, 16'h8001);
-    drive_word(0, 16'hA000);
     drive_word(0, 16'h0101);
     drive_word(0, 16'hC001);
   endtask
 
   task automatic push_packet_y();
     drive_word(1, 16'h8002);
-    drive_word(1, 16'hA000);
     drive_word(1, 16'h0202);
     drive_word(1, 16'hC002);
   endtask
 
   task automatic push_packet_z();
     drive_word(2, 16'h8003);
-    drive_word(2, 16'hA000);
     drive_word(2, 16'h0303);
     drive_word(2, 16'hC003);
   endtask
@@ -178,24 +175,24 @@ module tb_spadmic_tdc_arbiter3_unit;
     check("all three packets available before arbitration", pkt_available == 3'b111);
     shared_ready = 1'b1;
 
-    while (out_words.size() < 12)
+    while (out_words.size() < 9)
       @(posedge clk_sys);
 
-    check("exactly three 4-word packets emitted", out_words.size() == 12);
+    check("exactly three 3-word packets emitted", out_words.size() == 9);
     check("packet 0 starts with header", is_header(out_words[0]));
-    check("packet 0 subheader patched with X id", out_words[1][5:4] == TDC_ID_X);
-    check("packet 0 payload preserved", out_words[2] == 16'h0101);
-    check("packet 0 ends on eoc", is_eoc(out_words[3]));
+    check("packet 0 header patched with X id", tdc_header_source_id(out_words[0]) == TDC_ID_X);
+    check("packet 0 payload preserved", out_words[1] == 16'h0101);
+    check("packet 0 ends on eoc", is_eoc(out_words[2]));
 
-    check("packet 1 starts after packet 0 eoc", is_header(out_words[4]));
-    check("packet 1 subheader patched with Y id", out_words[5][5:4] == TDC_ID_Y);
-    check("packet 1 payload preserved", out_words[6] == 16'h0202);
-    check("packet 1 ends on eoc", is_eoc(out_words[7]));
+    check("packet 1 starts after packet 0 eoc", is_header(out_words[3]));
+    check("packet 1 header patched with Y id", tdc_header_source_id(out_words[3]) == TDC_ID_Y);
+    check("packet 1 payload preserved", out_words[4] == 16'h0202);
+    check("packet 1 ends on eoc", is_eoc(out_words[5]));
 
-    check("packet 2 starts after packet 1 eoc", is_header(out_words[8]));
-    check("packet 2 subheader patched with Z id", out_words[9][5:4] == TDC_ID_Z);
-    check("packet 2 payload preserved", out_words[10] == 16'h0303);
-    check("packet 2 ends on eoc", is_eoc(out_words[11]));
+    check("packet 2 starts after packet 1 eoc", is_header(out_words[6]));
+    check("packet 2 header patched with Z id", tdc_header_source_id(out_words[6]) == TDC_ID_Z);
+    check("packet 2 payload preserved", out_words[7] == 16'h0303);
+    check("packet 2 ends on eoc", is_eoc(out_words[8]));
     // grant_active_q clears via NBA on the cycle the last EOC transfers;
     // wait 2 cycles + #1 to guarantee the NBA has settled and no stale
     // pkt_valid re-acquires the grant.

@@ -8,7 +8,7 @@
 | 2 | `tb_spadmic_i2c_control_plane_unit` | I2C → CSR bridge | I2C write/read, pointer handling, NACK |
 | 3 | `tb_spadmic_ref_stop_qualifier_hold_unit` | Stop qualifier | Hold timing, qualifier window |
 | 4 | `tb_spadmic_ref_stop_qualifier_unit` | Stop qualifier | Basic qualification, timeout |
-| 5 | `tb_spadmic_shared_tx_mux_unit` | TX mux | Source selection, ready routing |
+| 5 | `tb_spadmic_shared_tx_mux_unit` | Legacy TX mux | Source selection on the older logical mux path |
 | 6 | `tb_spadmic_stress_arbiter` | TDC arbiter | Fairness, back-to-back, starvation |
 | 7 | `tb_spadmic_stress_cluster_scan` | Cluster scanner | Random patterns, gap/span sweep |
 | 8 | `tb_spadmic_stress_csr` | CSR decoder + global CSR | All-region RW, timeout, back-to-back |

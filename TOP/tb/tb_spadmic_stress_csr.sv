@@ -54,6 +54,7 @@ module tb_spadmic_stress_csr;
   logic position_pending_status;
   logic position_drop_sticky;
   logic position_glitch_sticky;
+  logic correlation_overflow_sticky;
   logic req_global_enable;
   logic [2:0] req_axis_enable;
   logic req_position_enable;
@@ -141,6 +142,7 @@ module tb_spadmic_stress_csr;
     .position_pending_i(position_pending_status),
     .position_drop_sticky_i(position_drop_sticky),
     .position_glitch_sticky_i(position_glitch_sticky),
+    .correlation_overflow_i(correlation_overflow_sticky),
     .cfg_accept_i     (cfg_accept),
     .transition_busy_i(transition_busy),
     .active_global_enable_i(active_global_enable),
@@ -343,6 +345,7 @@ module tb_spadmic_stress_csr;
     position_pending_status = 1'b0;
     position_drop_sticky = 1'b0;
     position_glitch_sticky = 1'b0;
+    correlation_overflow_sticky = 1'b0;
 
     repeat (10) @(posedge clk_sys);
     rst_n = 1;

@@ -206,9 +206,9 @@ module tb_narrow16_tx_v2_unit;
 
     collect_pkt(pkt);
     n = pkt.size();
-    check("T1 word_count==6", n == 6);  // v2.3: +1 for sub-header
+    check("T1 word_count==4", n == 4);
 
-    if (n >= 7) begin
+    if (n >= 4) begin
       // Header
       w = pkt[0];
       check("T1 header marker",   w[15:13] == 3'b100);  // v2.3
@@ -219,33 +219,22 @@ module tb_narrow16_tx_v2_unit;
       check("T1 header out_mode", w[2:1]   == 2'(OUT_MODE_RAW_FEATURES));
       check("T1 header rsvd",     w[0]     == 1'b0);  // slow_boundary_inc=0
 
-      // v2.3: sub-header
-      w = pkt[1];
-      check("T1 subhdr marker", w[15:13] == 3'b101);
-
       // Hit W0: nslow=10, nfast=5
-      w = pkt[2];
+      w = pkt[1];
       check("T1 W0 bit15",  w[15]   == 1'b0);
       check("T1 W0 nslow",  w[14:8] == 7'd10);
       check("T1 W0 nfast",  w[7:1]  == 7'd5);
       check("T1 W0 bit0",   w[0]    == 1'b0);
 
-      // Hit W1 features: ns=2, nf=3, pd_idx=pd_from_phases(2,3)
-      w = pkt[3];
+      // Hit W1 features: ns=2, nf=3, low bits reserved
+      w = pkt[2];
       check("T1 W1 bit15",  w[15]    == 1'b0);
       check("T1 W1 ns",     w[14:11] == 4'd2);
       check("T1 W1 nf",     w[10:7]  == 4'd3);
-      check("T1 W1 pd_idx", w[6:0]   == pd_from_phases(4'd2, 4'd3));
-
-      // Hit W2: event_seq=0, nfast_snap=0 (default)
-      w = pkt[4];
-      check("T1 W2 bit15",     w[15]    == 1'b0);
-      check("T1 W2 event_seq", w[14:11] == 4'd0);
-      check("T1 W2 nfast_snap", w[10:4] == 7'd0);
-      check("T1 W2 padding",   w[3:0]   == 4'b0);
+      check("T1 W1 reserved", w[6:0]   == 7'd0);
 
       // EOC: conv_count=0
-      w = pkt[5];
+      w = pkt[3];
       check("T1 EOC marker",   w[15:14] == 2'b11);
       check("T1 EOC count",    w[13:0]  == 14'd0);
     end
@@ -262,14 +251,15 @@ module tb_narrow16_tx_v2_unit;
 
     collect_pkt(pkt);
     n = pkt.size();
-    check("T2 word_count==3", n == 3);  // v2.3: +1 for sub-header
+    check("T2 word_count==2", n == 2);
 
-    if (n >= 3) begin
+    if (n >= 2) begin
       w = pkt[0];
-      check("T2 header marker",    w[15:13] == 3'b100);  // v2.3
-      check("T2 header ctx_id",    w[13:12] == 2'd1);      check("T2 header hit_count", w[10:7]  == 4'd0);
+      check("T2 header marker",    w[15:13] == 3'b100);
+      check("T2 header ctx_id",    w[13:12] == 2'd1);
+      check("T2 header hit_count", w[10:7]  == 4'd0);
 
-      w = pkt[2];  // v2.3: EOC after sub-header
+      w = pkt[1];
       check("T2 EOC marker", w[15:14] == 2'b11);
       check("T2 EOC count",  w[13:0]  == 14'd1);  // second packet
     end
@@ -288,10 +278,9 @@ module tb_narrow16_tx_v2_unit;
 
     collect_pkt(pkt);
     n = pkt.size();
-    // v2.3: Header + subhdr + 2*(W0+W1_ts) + EOC = 1 + 1 + 4 + 1 = 7
-    check("T3 word_count==7", n == 7);
+    check("T3 word_count==6", n == 6);
 
-    if (n >= 7) begin
+    if (n >= 6) begin
       w = pkt[0];
       check("T3 header marker",    w[15:13] == 3'b100);  // v2.3
       check("T3 header ctx_id",    w[13:12] == 2'd0);
@@ -301,27 +290,27 @@ module tb_narrow16_tx_v2_unit;
       check("T3 header out_mode",  w[2:1]   == 2'(OUT_MODE_RAW_TIMESTAMP));
 
       // Hit 0 W0
-      w = pkt[2];  // v2.3: after sub-header
+      w = pkt[1];
       check("T3 H0 W0 nslow", w[14:8] == 7'd15);
       check("T3 H0 W0 nfast", w[7:1]  == 7'd8);
 
       // Hit 0 W1 timestamp
       t_raw_exp = calc_t_raw_ps(7'd15, 7'd8, 4'd1, 4'd2);
-      w = pkt[3];
+      w = pkt[2];
       check("T3 H0 W1 t_raw", w == t_raw_exp[15:0]);
 
       // Hit 1 W0
-      w = pkt[4];
+      w = pkt[3];
       check("T3 H1 W0 nslow", w[14:8] == 7'd15);
       check("T3 H1 W0 nfast", w[7:1]  == 7'd10);
 
       // Hit 1 W1 timestamp
       t_raw_exp = calc_t_raw_ps(7'd15, 7'd10, 4'd4, 4'd5);
-      w = pkt[5];
+      w = pkt[4];
       check("T3 H1 W1 t_raw", w == t_raw_exp[15:0]);
 
       // EOC
-      w = pkt[6];
+      w = pkt[5];
       check("T3 EOC marker", w[15:14] == 2'b11);
       check("T3 EOC count",  w[13:0]  == 14'd2);
     end
@@ -339,37 +328,31 @@ module tb_narrow16_tx_v2_unit;
 
     collect_pkt(pkt);
     n = pkt.size();
-    // v2.3: Header + subhdr + W0+W1+W2+W3 + EOC = 1 + 1 + 4 + 1 = 7
-    check("T4 word_count==7", n == 7);
+    check("T4 word_count==5", n == 5);
 
-    if (n >= 6) begin
+    if (n >= 5) begin
       w = pkt[0];
       check("T4 header out_mode", w[2:1] == 2'(OUT_MODE_FULL));
       check("T4 header flags",    w[6:3] == 4'b0000);
 
       // W0
-      w = pkt[2];  // v2.3: after sub-header
+      w = pkt[1];
       check("T4 W0 nslow", w[14:8] == 7'd30);
       check("T4 W0 nfast", w[7:1]  == 7'd20);
 
       // W1 features (FULL uses features variant)
-      w = pkt[3];
+      w = pkt[2];
       check("T4 W1 ns",     w[14:11] == 4'd7);
       check("T4 W1 nf",     w[10:7]  == 4'd8);
-      check("T4 W1 pd_idx", w[6:0]   == pd_from_phases(4'd7, 4'd8));
+      check("T4 W1 reserved", w[6:0]   == 7'd0);
 
-      // W2
-      w = pkt[4];
-      check("T4 W2 event_seq",  w[14:11] == 4'd3);
-      check("T4 W2 nfast_snap", w[10:4]  == 7'd25);
-
-      // W3 timestamp
+      // W2 timestamp
       t_raw_exp = calc_t_raw_ps(7'd30, 7'd20, 4'd7, 4'd8);
-      w = pkt[5];
-      check("T4 W3 t_raw", w == t_raw_exp[15:0]);
+      w = pkt[3];
+      check("T4 W2 t_raw", w == t_raw_exp[15:0]);
 
       // EOC
-      w = pkt[6];
+      w = pkt[4];
       check("T4 EOC marker", w[15:14] == 2'b11);
       check("T4 EOC count",  w[13:0]  == 14'd3);
     end
@@ -412,7 +395,7 @@ module tb_narrow16_tx_v2_unit;
     narrow_ready = 1'b1;
     collect_pkt(pkt);
     n = pkt.size();
-    check("T5 packet completes after stall", n == 6);  // v2.3
+    check("T5 packet completes after stall", n == 4);
 
     if (n >= 1) begin
       w = pkt[n-1];
@@ -438,15 +421,15 @@ module tb_narrow16_tx_v2_unit;
               .phase0(1'b1), .flags(4'b0));
 
     collect_pkt(pkt);
-    check("T6 pktA size==3", pkt.size() == 3);  // v2.3: +1 sub-header
-    if (pkt.size() >= 3) begin
-      check("T6 pktA EOC count==0", pkt[2][13:0] == 14'd0);  // v2.3
+    check("T6 pktA size==2", pkt.size() == 2);
+    if (pkt.size() >= 2) begin
+      check("T6 pktA EOC count==0", pkt[1][13:0] == 14'd0);
     end
 
     collect_pkt(pkt);
-    check("T6 pktB size==3", pkt.size() == 3);  // v2.3
-    if (pkt.size() >= 3) begin
-      check("T6 pktB EOC count==1", pkt[2][13:0] == 14'd1);  // v2.3
+    check("T6 pktB size==2", pkt.size() == 2);
+    if (pkt.size() >= 2) begin
+      check("T6 pktB EOC count==1", pkt[1][13:0] == 14'd1);
       check("T6 pktB ctx_id==1",    pkt[0][13:12] == 2'd1);
     end
 
@@ -464,7 +447,7 @@ module tb_narrow16_tx_v2_unit;
               .slow_boundary_inc(1'b1));
 
     collect_pkt(pkt);
-    if (pkt.size() >= 3) begin  // v2.3: header + sub-header + EOC
+    if (pkt.size() >= 2) begin
       w = pkt[0];
       check("T7 ctx_id==0",     w[13:12] == 2'd0);
       check("T7 phase0==1",     w[11]    == 1'b1);
@@ -479,8 +462,8 @@ module tb_narrow16_tx_v2_unit;
     // ────────────────────────────────────────────────────────────────
     $display("\n--- Test 8: EOC marker ---");
     // Already collected in T7 — check its EOC
-    if (pkt.size() >= 3) begin
-      w = pkt[2];  // v2.3: EOC after sub-header
+    if (pkt.size() >= 2) begin
+      w = pkt[1];
       check("T8 EOC [15:14]==11", w[15:14] == 2'b11);
       check("T8 EOC count==0",    w[13:0]  == 14'd0);
     end

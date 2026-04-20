@@ -225,8 +225,7 @@ module tb_backpressure;
     end
 
     hc = header_hit_count(words[0]);
-    // v2.3: header + sub-header + 3*hits + EOC
-    expected_wc = 1 + 1 + hc * 3 + 1;
+    expected_wc = 1 + hc * 2 + 1;
     if (word_count != expected_wc) begin
       $error("[TB] %s: word count %0d != expected %0d (hits=%0d)",
              label, word_count, expected_wc, hc);

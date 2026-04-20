@@ -25,7 +25,8 @@ package spadmic_vip_pkg;
     TXN_RESET      = 3,
     TXN_BP         = 4,
     TXN_EOT        = 5,
-    TXN_MON_PKT    = 6
+    TXN_MON_PKT    = 6,
+    TXN_CORRELATED_EVENT = 7
   } spadmic_txn_kind_e;
 
   // ── Control driver mode (I2C vs direct CSR) ─────────────────────
@@ -41,6 +42,13 @@ package spadmic_vip_pkg;
     PROFILE_MODE_SWITCH  = 2,
     PROFILE_STRESS       = 3
   } spadmic_profile_e;
+
+  typedef enum int unsigned {
+    STIM_KIND_TDC        = 0,
+    STIM_KIND_POSITION   = 1,
+    STIM_KIND_CORRELATED = 2,
+    STIM_KIND_RESET      = 3
+  } spadmic_stim_kind_e;
 
   // ── Mailbox types ──────────────────────────────────────────────
   typedef mailbox #(int) mb_int_t;
@@ -65,6 +73,7 @@ package spadmic_vip_pkg;
   `include "txn/spadmic_ctrl_txn.sv"
   `include "txn/spadmic_tdc_event_txn.sv"
   `include "txn/spadmic_pos_event_txn.sv"
+  `include "txn/spadmic_correlated_event_txn.sv"
   `include "txn/spadmic_reset_txn.sv"
   `include "txn/spadmic_bp_txn.sv"
   `include "txn/spadmic_eot_txn.sv"

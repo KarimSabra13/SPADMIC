@@ -28,5 +28,8 @@ class spadmic_pos_driver;
     pos_if.clear_all();
   endtask
 
-endclass
+  task automatic clear_all();
+    pos_if.clear_all();
+  endtask
 
+endclass

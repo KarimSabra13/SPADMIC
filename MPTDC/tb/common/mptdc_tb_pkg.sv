@@ -31,11 +31,11 @@ package mptdc_tb_pkg;
   // These helpers decode the exact narrow-bus framing consumed by monitors,
   // directed testbenches, and the VIP scoreboard.
   function automatic logic is_header(input logic [NARROW_W-1:0] word);
-    return (word[15:13] == 3'b100);  // v2.3: distinguish from sub-header
+    return (word[15:13] == 3'b100);
   endfunction
 
   function automatic logic is_subheader(input logic [NARROW_W-1:0] word);
-    return (word[15:13] == 3'b101);  // v2.3: sub-header marker
+    return (word[15:13] == 3'b101);
   endfunction
 
   function automatic logic is_eoc(input logic [NARROW_W-1:0] word);
@@ -79,43 +79,26 @@ package mptdc_tb_pkg;
   endfunction
 
   // =========================================================================
-  // Sub-header extraction (v2.3: nfast_stop)
-  // =========================================================================
-  function automatic logic [NFAST_W-1:0] subheader_nfast_stop(
-    input logic [NARROW_W-1:0] word
-  );
-    return word[12:6];
-  endfunction
-
-  // =========================================================================
-  // Hit word extraction (RAW_FEATURES mode: 3 words)
+  // Hit word extraction (RAW_FEATURES mode: 2 words)
   // =========================================================================
   typedef struct {
-    logic [NSLOW_W-1:0]     nslow;
-    logic [NFAST_W-1:0]     nfast;        // per-hit nfast (from PD cell)
-    logic [NFAST_W-1:0]     nfast_snap;   // global nfast at CAPTURE
-    ph_idx_t                ns;
-    ph_idx_t                nf;
-    logic [PD_W-1:0]        pd_idx;
-    logic [EVENT_SEQ_W-1:0] event_seq;
+     logic [NSLOW_W-1:0]     nslow;
+     logic [NFAST_W-1:0]     nfast;        // per-hit nfast (from PD cell)
+     ph_idx_t                ns;
+     ph_idx_t                nf;
   } tb_hit_features_t;
 
   function automatic tb_hit_features_t parse_hit_features(
     input logic [NARROW_W-1:0] w0,
-    input logic [NARROW_W-1:0] w1,
-    input logic [NARROW_W-1:0] w2
+    input logic [NARROW_W-1:0] w1
   );
     tb_hit_features_t h;
     // W0: {1'b0, nslow[6:0], nfast[6:0], 1'b0}
     h.nslow      = w0[14:8];
     h.nfast      = w0[7:1];
-    // W1: {1'b0, ns[3:0], nf[3:0], pd_idx[6:0]}
+    // W1: {1'b0, ns[3:0], nf[3:0], 7'b0}
     h.ns         = w1[14:11];
     h.nf         = w1[10:7];
-    h.pd_idx     = w1[6:0];
-    // W2: {1'b0, event_seq[3:0], nfast_snap[6:0], 4'b0}
-    h.event_seq  = w2[14:11];
-    h.nfast_snap = w2[10:4];
     return h;
   endfunction
 

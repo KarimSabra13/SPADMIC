@@ -90,7 +90,7 @@ digraph G {
       pad_tx [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#B45309" BGCOLOR="#FFFBEB">
       <TR><TD BGCOLOR="#B45309" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>I/O pads - chip TX</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>chip_tx_valid_o<BR ALIGN='LEFT'/>chip_tx_ready_i<BR ALIGN='LEFT'/>chip_tx_data_o[15:0]</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFFBEB'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>chip_tx_clk_o<BR ALIGN='LEFT'/>chip_tx_valid_o<BR ALIGN='LEFT'/>chip_tx_data_o[7:0] DDR</FONT></TD></TR>
     </TABLE>
     >];
 

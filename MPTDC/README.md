@@ -147,6 +147,7 @@ syn/          Cadence Genus synthesis collateral
 | [`docs/03_CSR_MAP.md`](docs/03_CSR_MAP.md) | software-visible CSR contract |
 | [`docs/04_VERIFICATION.md`](docs/04_VERIFICATION.md) | maintained verification and characterization entrypoints |
 | [`docs/10_SHARED_READOUT_EXPORT.md`](docs/10_SHARED_READOUT_EXPORT.md) | optional acquisition-record export used by the active SPADMIC top |
+| [`docs/11_BLOCK_GUIDE.md`](docs/11_BLOCK_GUIDE.md) | block-by-block guide to every compiled RTL module group |
 
 ## Recommended command flow
 
@@ -268,10 +269,9 @@ For empirical same-delay proof, use `run_fixed_delay_campaign.sh` +
 `analyze_fixed_delay_campaign.py`. For jitter-limited deployed-format studies, use the
 continuous broad-corpus short-format flow in
 `docs/05_OFFLINE_CALIBRATION_PLAN.md`; the fixed-delay short-format helper is a
-pointwise characterization tool, not the headline deployment proof. The maintained
-short-format analysis now also reports incremental oracle gain from `boundary_aug` and
-from `nfast_snap`; in the current local jitter anchor, `nfast_snap` helps by only a
-single-digit number of ps and does not close the deployed observability gap on its own.
+pointwise characterization tool, not the headline deployment proof. The active compact
+packet now keeps only the fields still judged worth exporting live; historical scripts
+can synthesize removed columns when rerunning older observability studies.
 
 ## Synthesis note
 
@@ -307,3 +307,4 @@ What it does **not** replace:
 | `docs/09_PROJECT_STATUS.md` | current repository status and recommended next steps |
 | `tb/vip/README.md` | VIP internals and usage |
 | `syn/README.md` | Genus flow details |
+| `docs/11_BLOCK_GUIDE.md` | grouped per-module reference for package, async, CDC, oscillator, control, readout, and top wrappers |

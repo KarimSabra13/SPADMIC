@@ -15,33 +15,34 @@ module spadmic_vip_tb;
   localparam int REF_PERIOD   = 25000;    // 40 MHz
 
   logic clk_sys, clk_ref_40m;
-  logic async_rst_n;
 
   initial begin clk_sys = 1'b0;     forever #(CLK_PERIOD/2)  clk_sys = ~clk_sys;     end
   initial begin clk_ref_40m = 1'b0; forever #(REF_PERIOD/2)  clk_ref_40m = ~clk_ref_40m; end
 
   // ── DUT output wires ──────────────────────────────────────────
   wire        i2c_sda_oe;
+  wire        chip_tx_clk;
   wire        chip_tx_valid;
-  wire [NARROW_W-1:0] chip_tx_data;
+  wire [SPADMIC_TX_PHY_W-1:0] chip_tx_data;
   wire [2:0]  tdc_stop_armed;
   wire        tdc_shared_busy;
   wire        position_busy;
 
   // ── VIP Interfaces ────────────────────────────────────────────
-  spadmic_i2c_if            i2c_if   (.clk_sys(clk_sys), .rst_n(async_rst_n));
-  spadmic_csr_req_if        csr_if   (.clk_sys(clk_sys), .rst_n(async_rst_n));
+  spadmic_reset_if          reset_if (.clk_sys(clk_sys));
+  spadmic_i2c_if            i2c_if   ();
+  spadmic_csr_req_if        csr_if   (.clk_sys(clk_sys), .rst_n(reset_if.rst_n));
   spadmic_async_event_if    x_ev_if  ();
   spadmic_async_event_if    y_ev_if  ();
   spadmic_async_event_if    z_ev_if  ();
   spadmic_position_line_if  pos_if   ();
-  spadmic_narrow_tx_if      tx_if    (.clk_sys(clk_sys), .rst_n(async_rst_n));
+  spadmic_narrow_tx_if      tx_if    (.clk_sys(clk_sys), .rst_n(reset_if.rst_n));
 
   // ── DUT Instantiation ─────────────────────────────────────────
   spadmic_top_v1 u_dut (
     .clk_sys              (clk_sys),
     .clk_ref_40m          (clk_ref_40m),
-    .async_rst_n          (async_rst_n),
+    .async_rst_n          (reset_if.rst_n),
 
     // I2C
     .i2c_scl_i            (i2c_if.scl),
@@ -65,7 +66,7 @@ module spadmic_vip_tb;
     .z_lines_i            (pos_if.z_lines),
 
     // Chip TX output
-    .chip_tx_ready_i      (tx_if.ready),
+    .chip_tx_clk_o        (chip_tx_clk),
     .chip_tx_valid_o      (chip_tx_valid),
     .chip_tx_data_o       (chip_tx_data),
 
@@ -76,9 +77,16 @@ module spadmic_vip_tb;
   );
 
   // ── Wire connections ──────────────────────────────────────────
+  assign i2c_if.clk_sys = clk_sys;
+  assign i2c_if.rst_n   = reset_if.rst_n;
   assign i2c_if.sda_oe = i2c_sda_oe;
-  assign tx_if.valid    = chip_tx_valid;
-  assign tx_if.data     = chip_tx_data;
+  assign tx_if.phy_clk   = chip_tx_clk;
+  assign tx_if.phy_valid = chip_tx_valid;
+  assign tx_if.phy_data  = chip_tx_data;
+
+  initial begin
+    i2c_if.idle_bus();
+  end
 
   // ── Direct CSR BFM Bridge ────────────────────────────────────
   // For direct CSR mode, override the DUT's internal CSR decoder inputs
@@ -99,9 +107,7 @@ module spadmic_vip_tb;
 
   // ── Reset Sequence ────────────────────────────────────────────
   initial begin
-    async_rst_n = 1'b0;
-    repeat (20) @(posedge clk_sys);
-    async_rst_n = 1'b1;
+    reset_if.apply_startup_reset(20);
     $display("[HARNESS] Reset released at %0t", $time);
   end
 
@@ -111,7 +117,7 @@ module spadmic_vip_tb;
     spadmic_base_test test;
 
     // Wait for reset release
-    @(posedge async_rst_n);
+    @(posedge reset_if.rst_n);
     repeat (10) @(posedge clk_sys);
 
     // Get test name from plusargs
@@ -122,7 +128,7 @@ module spadmic_vip_tb;
 
     // Create and run test
     test = spadmic_test_factory::create_test(test_name);
-    test.run_test(csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_if, tx_if);
+    test.run_test(reset_if, csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_if, tx_if);
 
     // Finish
     repeat (100) @(posedge clk_sys);

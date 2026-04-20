@@ -103,16 +103,15 @@ package mptdc_vip_pkg;
 
   function automatic int unsigned words_per_hit(input out_mode_e mode);
     case (mode)
-      OUT_MODE_RAW_FEATURES:  return 3;
+      OUT_MODE_RAW_FEATURES:  return 2;
       OUT_MODE_RAW_TIMESTAMP: return 2;
-      OUT_MODE_FULL:          return 4;
-      default:                return 3;
+      OUT_MODE_FULL:          return 3;
+      default:                return 2;
     endcase
   endfunction
 
-  // v2.3: +1 for sub-header word (header + sub-header + hits + EOC)
   function automatic int unsigned packet_words_from_header(input logic [NARROW_W-1:0] hdr);
-    return 3 + (packet_hit_count(hdr) * words_per_hit(packet_out_mode(hdr)));
+    return 2 + (packet_hit_count(hdr) * words_per_hit(packet_out_mode(hdr)));
   endfunction
 
   function automatic string bp_mode_name(input mptdc_bp_mode_e mode);
@@ -368,8 +367,8 @@ package mptdc_vip_pkg;
     endfunction
 
     function string sprint();
-      return $sformatf("hit nslow=%0d nfast=%0d nfast_snap=%0d ns=%0d nf=%0d pd_idx=%0d seq=%0d ts_lsw=0x%04h feat=%0b ts=%0b",
-                       nslow, nfast_hit, nfast_snap, ns, nf, pd_idx, event_seq,
+      return $sformatf("hit nslow=%0d nfast=%0d ns=%0d nf=%0d ts_lsw=0x%04h feat=%0b ts=%0b",
+                       nslow, nfast_hit, ns, nf,
                        t_raw_lsw, has_features, has_timestamp);
     endfunction
   endclass
@@ -867,8 +866,7 @@ package mptdc_vip_pkg;
       pkt.slow_boundary_inc = packet_boundary_inc(hdr);
       pkt.conv_id           = packet_conv_id(pkt.words[pkt.words.size()-1]);
 
-      // v2.3: skip sub-header at words[1] (carries nfast_stop)
-      idx = 2;
+      idx = 1;
       for (int hit_idx = 0; hit_idx < pkt.hit_count; hit_idx++) begin
         mptdc_hit_txn hit = new();
         logic [NARROW_W-1:0] w0;
@@ -879,16 +877,12 @@ package mptdc_vip_pkg;
 
         case (pkt.out_mode)
           OUT_MODE_RAW_FEATURES: begin
-            logic [NARROW_W-1:0] w1, w2;
+            logic [NARROW_W-1:0] w1;
             w1 = pkt.words[idx + 0];
-            w2 = pkt.words[idx + 1];
             hit.ns           = ph_idx_t'(w1[14:11]);
             hit.nf           = ph_idx_t'(w1[10:7]);
-            hit.pd_idx       = pd_idx_t'(w1[6:0]);
-            hit.event_seq    = w2[14:11];
-            hit.nfast_snap   = w2[10:4];
             hit.has_features = 1'b1;
-            idx += 2;
+            idx += 1;
           end
 
           OUT_MODE_RAW_TIMESTAMP: begin
@@ -898,18 +892,14 @@ package mptdc_vip_pkg;
           end
 
           OUT_MODE_FULL: begin
-            logic [NARROW_W-1:0] w1, w2;
+            logic [NARROW_W-1:0] w1;
             w1 = pkt.words[idx + 0];
-            w2 = pkt.words[idx + 1];
             hit.ns            = ph_idx_t'(w1[14:11]);
             hit.nf            = ph_idx_t'(w1[10:7]);
-            hit.pd_idx        = pd_idx_t'(w1[6:0]);
-            hit.event_seq     = w2[14:11];
-            hit.nfast_snap    = w2[10:4];
-            hit.t_raw_lsw     = pkt.words[idx + 2];
+            hit.t_raw_lsw     = pkt.words[idx + 1];
             hit.has_features  = 1'b1;
             hit.has_timestamp = 1'b1;
-            idx += 3;
+            idx += 2;
           end
 
           default: begin
@@ -1004,8 +994,7 @@ package mptdc_vip_pkg;
     function automatic void check_packet(input mptdc_conv_txn exp,
                                          input mptdc_packet_txn pkt);
       int unsigned expected_words;
-      // v2.3 packet contract: header + sub-header + hit payload + EOC.
-      expected_words = 3 + (pkt.hit_count * words_per_hit(pkt.out_mode));
+      expected_words = 2 + (pkt.hit_count * words_per_hit(pkt.out_mode));
       if (pkt.word_count() != expected_words)
         fail($sformatf("%s word count mismatch: got %0d expected %0d",
                        exp.label, pkt.word_count(), expected_words));
@@ -1042,18 +1031,6 @@ package mptdc_vip_pkg;
       if (exp.check_conv_id && (int'(pkt.conv_id) != exp.expected_conv_id))
         fail($sformatf("%s conv_id mismatch: got=%0d expected=%0d",
                        exp.label, pkt.conv_id, exp.expected_conv_id));
-
-      foreach (pkt.hits[i]) begin
-        if (pkt.hits[i].has_features) begin
-          if (pkt.hits[i].pd_idx != pd_from_phases(pkt.hits[i].ns, pkt.hits[i].nf))
-            fail($sformatf("%s hit %0d pd_idx mismatch: got=%0d expected=%0d",
-                           exp.label, i, pkt.hits[i].pd_idx,
-                           pd_from_phases(pkt.hits[i].ns, pkt.hits[i].nf)));
-          if (pkt.hits[i].event_seq != EVENT_SEQ_W'(i))
-            fail($sformatf("%s hit %0d event_seq mismatch: got=%0d expected=%0d",
-                           exp.label, i, pkt.hits[i].event_seq, i));
-        end
-      end
 
       if (exp.check_full_timestamp && (pkt.out_mode == OUT_MODE_FULL))
         check_full_timestamp(pkt);

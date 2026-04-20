@@ -12,9 +12,10 @@ class spadmic_tx_monitor;
   // Packet assembly state
   typedef struct {
     logic [NARROW_W-1:0] words[$];
-    logic                is_tdc;     // 1=TDC, 0=Position
-    int unsigned         source_id;  // TDC axis or POSITION
-    longint unsigned     timestamp;
+      logic                is_tdc;     // 1=TDC, 0=Position
+      int unsigned         source_id;  // TDC axis or POSITION
+      int unsigned         event_id;   // shared correlated-event ID from EOC
+      longint unsigned     timestamp;
   } captured_packet_t;
 
   int unsigned total_packets;
@@ -51,7 +52,7 @@ class spadmic_tx_monitor;
         continue;
       end
 
-      if (tx_if.valid && tx_if.ready) begin
+      if (tx_if.valid) begin
         word = tx_if.data;
         total_words++;
 
@@ -61,21 +62,23 @@ class spadmic_tx_monitor;
             dispatch_packet(pkt);  // flush any incomplete packet
           pkt.words = {};
           pkt.words.push_back(word);
-          pkt.is_tdc    = 1'b1;  // tentatively TDC; corrected upon subheader
-          pkt.source_id = 0;
+          pkt.is_tdc    = 1'b1;  // position corrects this when its subheader arrives
+          pkt.source_id = tdc_header_source_id(word);
+          pkt.event_id  = 0;
           pkt.timestamp = $time;
           in_packet     = 1'b1;
         end else if (in_packet && is_tdc_eoc(word)) begin
-          // End of current packet
-          pkt.words.push_back(word);
-          dispatch_packet(pkt);
+            // End of current packet
+            pkt.words.push_back(word);
+            pkt.event_id = word[13:0];
+            dispatch_packet(pkt);
           pkt.words = {};
           in_packet = 1'b0;
         end else if (in_packet) begin
           // Mid-packet word
           pkt.words.push_back(word);
-          // Detect subheader to classify packet type and extract source
-          if (is_tdc_subheader(word)) begin
+          // Position packets still use the shared 3'b101 subheader marker.
+          if (is_spadmic_subheader(word)) begin
             pkt.source_id = word[5:4];
             if (word[5:4] == SPADMIC_SRC_POSITION)
               pkt.is_tdc = 1'b0;
@@ -88,10 +91,11 @@ class spadmic_tx_monitor;
   task automatic dispatch_packet(captured_packet_t pkt);
     spadmic_mon_pkt_txn mtxn;
     total_packets++;
-    $display("[TX_MON] Packet #%0d: %s src=%0d words=%0d @%0t",
+    $display("[TX_MON] Packet #%0d: %s src=%0d event=%0d words=%0d @%0t",
              total_packets,
              pkt.is_tdc ? "TDC" : "POS",
              pkt.source_id,
+             pkt.event_id,
              pkt.words.size(),
              pkt.timestamp);
 
@@ -100,6 +104,7 @@ class spadmic_tx_monitor;
     mtxn.is_tdc     = pkt.is_tdc;
     mtxn.source_id  = pkt.source_id;
     mtxn.word_count = pkt.words.size();
+    mtxn.event_id   = pkt.event_id;
     mtxn.words      = pkt.words;
     mtxn.timestamp  = $time;
     sb_mb.put(mtxn);
@@ -109,4 +114,3 @@ class spadmic_tx_monitor;
   endtask
 
 endclass
-

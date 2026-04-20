@@ -67,6 +67,7 @@ See [`TOP/docs/02_CSR_MAP.md`](../TOP/docs/02_CSR_MAP.md) for the detailed globa
 |----------|---------|
 | [`README.md`](README.md) | Quick integration-facing contract |
 | [`docs/01_INTEGRATION_GUIDE.md`](docs/01_INTEGRATION_GUIDE.md) | Detailed transaction flow, error handling, and top-level integration notes |
+| [`docs/02_BLOCK_GUIDE.md`](docs/02_BLOCK_GUIDE.md) | Block-by-block guide to the I2C slave, CSR bridge, and end-to-end control-plane contract |
 
 ## Known limits
 

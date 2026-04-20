@@ -121,7 +121,7 @@ module spadmic_tdc_shared_readout (
 
   assign selected_rec   = selected_data_vec;
   assign shared_valid_o = serializer_valid;
-  assign shared_data_o  = patch_tdc_id_into_subheader(serializer_data, packet_src_q);
+  assign shared_data_o  = patch_tdc_id_into_header(serializer_data, packet_src_q);
   assign busy_o         = packet_active_q;
   assign packet_src_o   = packet_src_q;
 
@@ -139,8 +139,8 @@ module spadmic_tdc_shared_readout (
     .narrow_data_o   (serializer_data)
   );
 
-  // packet_src_q is held until EOC so the shared sub-header tag remains coherent
-  // even while the serializer is consuming several HIT records.
+  // packet_src_q is held until EOC so the shared header source tag remains
+  // coherent even while the serializer is consuming several HIT records.
   always_ff @(posedge clk_sys or negedge rst_n) begin
     if (!rst_n) begin
       rr_ptr_q             <= 2'd0;
