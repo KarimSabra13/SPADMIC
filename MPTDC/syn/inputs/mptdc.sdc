@@ -132,6 +132,7 @@ mptdc_try_async_max_delay \
 set timed_inputs [remove_from_collection \
     [all_inputs] \
     [get_ports [concat $design(clock_port_list) $design(ASYNC_INPUTS) [list $design(RST_PORT)]]]]
+set async_inputs_and_reset [get_ports [concat $design(ASYNC_INPUTS) [list $design(RST_PORT)]]]
 
 if {$design(FULLCHIP_OR_MACRO) == "FULLCHIP"} {
     set_input_delay -clock $design(CLK_NAME) $design(INPUT_DELAY_FULLCHIP) $timed_inputs
@@ -157,6 +158,9 @@ if {$design(FULLCHIP_OR_MACRO) == "FULLCHIP"} {
     set_load $design(OUTPUT_LOAD_MACRO) [all_outputs]
 }
 set_input_transition $design(INPUT_TRANSITION) $timed_inputs
+# Async inputs are false-pathed, but still model a non-zero source slew so
+# check_timing_intent does not assume ideal zero-transition sources.
+set_input_transition $design(INPUT_TRANSITION) $async_inputs_and_reset
 
 # Use library driving cell if available (otherwise generic transition)
 # Uncomment when SDC_DRIVING_CELL is set to an actual cell name:

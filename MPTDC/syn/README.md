@@ -129,6 +129,19 @@ gitignored and should **not** be committed:
 Additionally, Genus may create a `debug.txt` file in the working directory
 and various `.genus_db` files — these are also gitignored.
 
+### Tracked Lab Snapshot Workflow
+
+Because the raw Genus output tree is gitignored and the XFAB PDK is only
+available on the lab server, the maintained review workflow is:
+
+1. run Genus on the lab server from `MPTDC/syn/scripts`
+2. copy the key reports/log/netlist/SDC into `MPTDC/lab_snapshots/<run_tag>/`
+3. commit that snapshot on `SPADMIC_TOP`
+4. pull the branch locally and review the tracked snapshot here
+
+This keeps the repository clean while still preserving synthesis evidence for
+future analysis sessions.
+
 ---
 
 ## Flow Details
@@ -581,6 +594,19 @@ therefore uses only the supported forms:
 The helper currently writes a note instead of a split hold report. That is
 acceptable for bring-up, but dedicated hold reporting should be revisited before
 claiming signoff-quality synthesis reporting.
+
+### Expected Remaining Timing-Intent Noise
+
+Two `check_timing_intent` findings are still expected in the checked-in flow:
+
+- the five async input/reset ports have no clocked external delay because they
+  are intentionally asynchronous and are false-pathed
+- hundreds of oscillator-domain sequential pins still show no waveform because
+  the synthesis stub collapses the oscillator outputs to constants
+
+The first item is acceptable for macro-level bring-up. The second remains the
+main blocker to oscillator-domain signoff and will require a preserved macro
+placeholder or real oscillator timing model.
 
 ---
 
