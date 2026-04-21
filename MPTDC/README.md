@@ -100,6 +100,7 @@ Cadence Genus setup is committed under `syn/`.
 
 - entrypoint: `syn/scripts/genus.tcl`
 - documentation: `syn/README.md`
+- tracked lab run history: `lab_snapshots/README.md`
 - PDK path setup required before first run
 - oscillator model is **not** synthesized; the synthesis flow uses the oscillator stub
 - until the analog oscillator macro is ready, synthesis should be treated as
