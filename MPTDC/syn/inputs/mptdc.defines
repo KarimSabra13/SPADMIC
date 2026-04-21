@@ -68,10 +68,19 @@ set design(ASYNC_INPUTS) [list \
 #############################################
 #       SDC Settings
 #############################################
-# IO Constraints (conservative for 180 nm)
-set design(INPUT_DELAY)      2.0         ;# ns — input delay relative to clk_sys
-set design(OUTPUT_DELAY)     2.0         ;# ns — output delay relative to clk_sys
-set design(INPUT_TRANSITION) 0.1         ;# ns — max input transition time
+# IO Constraints
+# FULLCHIP budgets include pad/package/board assumptions.
+# MACRO budgets model an internal on-chip block boundary and are intentionally
+# much tighter than the pad-level defaults.
+set design(INPUT_DELAY_FULLCHIP)   2.0    ;# ns — pad/package-level assumption
+set design(OUTPUT_DELAY_FULLCHIP)  2.0    ;# ns — pad/package-level assumption
+set design(OUTPUT_LOAD_FULLCHIP)   0.05   ;# pF — conservative pad load
+
+set design(INPUT_DELAY_MACRO)      0.5    ;# ns — provisional internal interface budget
+set design(OUTPUT_DELAY_MACRO)     0.5    ;# ns — provisional internal interface budget
+set design(OUTPUT_LOAD_MACRO)      0.01   ;# pF — light on-chip sink estimate
+
+set design(INPUT_TRANSITION)       0.1    ;# ns — max input transition time
 
 # Clock Constraints
 set design(CLOCK_UNCERTAINTY)    0.3     ;# ns — jitter + skew budget (180 nm)
@@ -81,7 +90,6 @@ set design(OSC_CLOCK_UNCERTAINTY) 0.05   ;# ns — oscillator jitter budget
 # Design Rule Constraints
 set design(MAX_FANOUT)     20
 set design(MAX_TRANSITION) 0.5           ;# ns
-set design(OUTPUT_LOAD)    0.05          ;# pF — conservative pad load
 
 # Intentional latches expected in mptdc_async_frontend_v2
 # (Used for post-synthesis auditing)

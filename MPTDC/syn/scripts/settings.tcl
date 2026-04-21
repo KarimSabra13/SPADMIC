@@ -53,11 +53,10 @@ set_db lp_insert_clock_gating $mptdc_enable_clock_gating
 #############################################
 #       Synthesis Effort
 #############################################
-# Trial synthesis — use medium effort for reasonable runtime.
-# For final tapeout, increase to high/extreme.
-set_db syn_generic_effort  medium         ;# low|medium|high|express
-set_db syn_map_effort      medium         ;# low|medium|high
-set_db syn_opt_effort      medium         ;# low|medium|high|extreme
+# Signoff-oriented front-end runs: spend more effort on mapping/optimization.
+set_db syn_generic_effort  high           ;# low|medium|high|express
+set_db syn_map_effort      high           ;# low|medium|high
+set_db syn_opt_effort      extreme        ;# low|medium|high|extreme
 set_db design_power_effort high           ;# none|low|high
 
 #############################################
@@ -65,4 +64,4 @@ set_db design_power_effort high           ;# none|low|high
 #############################################
 set_db information_level 7                ;# 1 (quiet) to 9 (verbose)
 
-mptdc_message "Genus settings loaded (medium effort, $ramstyle_note, $clock_gating_note)"
+mptdc_message "Genus settings loaded (high/extreme effort, $ramstyle_note, $clock_gating_note)"

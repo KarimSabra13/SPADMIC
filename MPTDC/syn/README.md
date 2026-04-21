@@ -144,7 +144,7 @@ All design-specific variables in one place — the single source of truth.
 | **Technology names** | `TECHNOLOGY`, `SC_TECHNOLOGY` | Which library TCL files to load |
 | **Clock definitions** | `CLK_NAME/PORT/PERIOD`, `OSC_SLOW_*`, `OSC_FAST_*` | Clock constraints (SDC uses these) |
 | **Port names** | `RST_PORT`, `ASYNC_INPUTS` | Reset and async input definitions |
-| **SDC parameters** | `INPUT_DELAY`, `CLOCK_UNCERTAINTY`, `MAX_FANOUT` | Constraint values |
+| **SDC parameters** | `INPUT_DELAY_*`, `OUTPUT_DELAY_*`, `CLOCK_UNCERTAINTY`, `MAX_FANOUT` | Constraint values |
 | **File paths** | `rtl_dir`, `export_dir`, `synthesis_reports` | Directory structure |
 | **MMMC views** | `selected_setup/hold_analysis_views` | Corner selection |
 | **Latch audit** | `EXPECTED_LATCH_COUNT = 5` | Post-synthesis verification |

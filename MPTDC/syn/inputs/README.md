@@ -12,8 +12,10 @@ datasheet to replace the placeholder values with accurate numbers.
 ## 1. Input / Output Delays
 
 ```tcl
-set design(INPUT_DELAY)      2.0   ;# ns
-set design(OUTPUT_DELAY)     2.0   ;# ns
+set design(INPUT_DELAY_FULLCHIP)   2.0   ;# ns
+set design(OUTPUT_DELAY_FULLCHIP)  2.0   ;# ns
+set design(INPUT_DELAY_MACRO)      0.5   ;# ns
+set design(OUTPUT_DELAY_MACRO)     0.5   ;# ns
 ```
 
 ### What they mean
@@ -25,8 +27,12 @@ These tell Genus how much of the clock period is already consumed
 Available internal time = CLK_PERIOD − INPUT_DELAY − OUTPUT_DELAY
 ```
 
-For `clk_sys` at 160 MHz (6.25 ns): `6.25 − 2.0 − 2.0 = 2.25 ns` of
-internal slack.
+For a full-chip pad-level assumption at `clk_sys = 160 MHz` (6.25 ns):
+`6.25 − 2.0 − 2.0 = 2.25 ns` of internal time.
+
+For the checked-in `MACRO` mode, the default placeholder budget is much lighter:
+`6.25 − 0.5 − 0.5 = 5.25 ns`. That better matches an on-chip block boundary
+until a real top-level timing allocation exists.
 
 ### Why 2.0 ns
 
