@@ -65,7 +65,7 @@ For **logic synthesis only**, you need a single file from the XFAB PDK:
 | **Liberty `.lib`** | ✅ **YES** | Cell timing, area, and power data — this is the **only** PDK file Genus needs |
 | LEF `.lef` | ❌ Optional | Physical cell abstracts — enables "physical-aware" synthesis for better estimates, but not required |
 | Technology LEF `.tlef` | ❌ No | Layer/via definitions — only needed for Place & Route (Innovus) |
-| QRC tech files | ❌ No | Parasitic extraction — only needed for PnR signoff |
+| QRC tech files | ❌ Optional but recommended | Enables RC-corner-aware MMMC during synthesis and is now wired by default for the verified lab-server deck |
 
 **Bottom line:** Get your `.lib` file (e.g., `D_CELLS_HD_LPMOS_typ_1_80V_25C.lib`),
 set the path, and you can run synthesis immediately.
@@ -77,6 +77,7 @@ The checked-in defaults now target the verified lab-server install:
 - `PDK_ROOT=/data/pdk/xfab/xh018`
 - `SC_ROOT=$PDK_ROOT/diglibs/D_CELLS_HD/v6_0`
 - `TECHNOLOGY_LEF=$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef`
+- `QRC_ROOT=$PDK_ROOT/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141`
 
 If you are using that server, you can run Genus immediately with no further
 library edits. On another machine, override the defaults with shell environment
@@ -96,8 +97,10 @@ set tech_files(STDCELLS_WC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_
 set tech_files(STDCELLS_BC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_fast_1_98V_m40C.lib"
 ```
 
-For the current checked-in flow, the typical corner is enough for first bring-up
-because `syn/inputs/mptdc.mmmc` uses `tc_view` for both setup and hold.
+The checked-in flow now builds BC/TC/WC MMMC views by default, with
+`wc_view` selected for setup and `bc_view` selected for hold. Override
+`design(selected_setup_analysis_views)` / `design(selected_hold_analysis_views)`
+in `syn/inputs/mptdc.defines` if you need a tc-only bring-up run.
 
 ### How to Run
 
@@ -176,14 +179,14 @@ constraint values are never hardcoded in two places.
 
 **What it does:**
 Defines PVT (Process-Voltage-Temperature) corners for timing analysis.
-For trial synthesis, only the typical corner (TC) is active. BC and WC
-corners are prepared as commented-out templates for signoff.
+The checked-in flow defines BC/TC/WC corners and selects signoff-oriented
+views by default.
 
 | Corner | PVT | Purpose | Status |
 |---|---|---|---|
-| **TC** (typical) | TT, 1.80V, 25°C | Trial synthesis | ✅ Active |
-| **BC** (best-case) | FF, 1.98V, −40°C | Hold analysis | 📋 Prepared |
-| **WC** (worst-case) | SS, 1.62V, 125°C | Setup analysis | 📋 Prepared |
+| **TC** (typical) | TT, 1.80V, 25°C | Correlation / debug | ✅ Defined |
+| **BC** (best-case) | FF, 1.98V, −40°C | Hold analysis | ✅ Active |
+| **WC** (worst-case) | SS, 1.62V, 125°C | Setup analysis | ✅ Active |
 
 ---
 

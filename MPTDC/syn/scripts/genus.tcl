@@ -89,8 +89,17 @@ if {[llength $tech(LEF_SUPPRESS_MESSAGES_GENUS)] > 0} {
 }
 
 mptdc_message "Loading LEF physical abstracts"
-# Uncomment when LEF files are available:
-# read_physical -lef $tech_files(ALL_LEFS)
+set available_lefs [list]
+foreach lef_file $tech_files(ALL_LEFS) {
+    if {[file exists $lef_file]} {
+        lappend available_lefs $lef_file
+    }
+}
+if {[llength $available_lefs] > 0} {
+    read_physical -lef $available_lefs
+} else {
+    mptdc_message "No LEF abstracts found; continuing without physical-aware synthesis" high
+}
 
 #############################################
 # 4. READ RTL
@@ -212,8 +221,9 @@ write_netlist > $design(postsyn_netlist)
 mptdc_message "  Netlist: $design(postsyn_netlist)"
 
 # Updated SDC
-mptdc_message "Writing post-synthesis SDC"
-write_sdc -view tc_view > $design(postsyn_sdc)
+set export_view [lindex $design(selected_setup_analysis_views) 0]
+mptdc_message "Writing post-synthesis SDC from $export_view"
+write_sdc -view $export_view > $design(postsyn_sdc)
 mptdc_message "  SDC: $design(postsyn_sdc)"
 
 # SDF for gate-level simulation

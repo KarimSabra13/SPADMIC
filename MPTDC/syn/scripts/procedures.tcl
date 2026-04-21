@@ -62,6 +62,14 @@ proc mptdc_message {msg {level "medium"}} {
     puts "$prefix: $msg"
 }
 
+proc mptdc_write_report_failure {rpt_file title err} {
+    set fh [open $rpt_file w]
+    puts $fh "$title could not be generated."
+    puts $fh ""
+    puts $fh $err
+    close $fh
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # mptdc_report_timing — Generate timing reports for current stage
 # ─────────────────────────────────────────────────────────────────────────────
@@ -77,7 +85,9 @@ proc mptdc_report_timing {report_dir} {
     mptdc_message "Generating timing reports → $dir"
 
     # Worst paths in the active view (setup-oriented in the current MMMC setup).
-    catch { report_timing -max_paths 20 > "$dir/timing_setup.rpt" }
+    if {[catch { report_timing -max_paths 20 > "$dir/timing_setup.rpt" } err]} {
+        mptdc_write_report_failure "$dir/timing_setup.rpt" "Setup timing report" $err
+    }
 
     # This Genus build does not accept -early/-late on report_timing. Keep a
     # placeholder report so downstream checklisting remains deterministic.
@@ -89,10 +99,14 @@ proc mptdc_report_timing {report_dir} {
     close $fh
 
     # Use QoR as a compact timing summary on this build.
-    catch { report_qor > "$dir/timing_summary.rpt" }
+    if {[catch { report_qor > "$dir/timing_summary.rpt" } err]} {
+        mptdc_write_report_failure "$dir/timing_summary.rpt" "Timing summary report" $err
+    }
 
     # Violations only: max_slack filters to paths with slack < 0.
-    catch { report_timing -max_paths 200 -max_slack 0.0 > "$dir/timing_violations.rpt" }
+    if {[catch { report_timing -max_paths 200 -max_slack 0.0 > "$dir/timing_violations.rpt" } err]} {
+        mptdc_write_report_failure "$dir/timing_violations.rpt" "Timing violations report" $err
+    }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -203,17 +217,25 @@ proc mptdc_full_reports {report_dir} {
 
     foreach rpt $report_list {
         mptdc_message "  $rpt" low
-        catch { $rpt > "$dir/${rpt}.rpt" }
+        if {[catch { $rpt > "$dir/${rpt}.rpt" } err]} {
+            mptdc_write_report_failure "$dir/${rpt}.rpt" "$rpt" $err
+        }
     }
 
     # Power (may not work without switching activity)
-    catch { report_power > "$dir/report_power.rpt" }
+    if {[catch { report_power > "$dir/report_power.rpt" } err]} {
+        mptdc_write_report_failure "$dir/report_power.rpt" "report_power" $err
+    }
 
     # Clocks
-    catch { report_clocks > "$dir/report_clocks.rpt" }
+    if {[catch { report_clocks > "$dir/report_clocks.rpt" } err]} {
+        mptdc_write_report_failure "$dir/report_clocks.rpt" "report_clocks" $err
+    }
 
     # Constraints
-    catch { report_constraints > "$dir/report_constraints.rpt" }
+    if {[catch { report_constraints > "$dir/report_constraints.rpt" } err]} {
+        mptdc_write_report_failure "$dir/report_constraints.rpt" "report_constraints" $err
+    }
 
     # Latch audit
     mptdc_latch_audit $dir

@@ -52,11 +52,50 @@ set tech_files(ALL_LEFS) [list $tech_files(TECHNOLOGY_LEF)]
 #############################################
 #       Parasitic Extraction (QRC)
 #############################################
-# Uncomment and set when QRC tech files are available
-# set paths(QRC_ROOT)          "$paths(PDK_ROOT)/qrc"
-# set tech_files(QRCTECH_BC)   "$paths(QRC_ROOT)/rcbest/qrcTechFile"
-# set tech_files(QRCTECH_TC)   "$paths(QRC_ROOT)/typical/qrcTechFile"
-# set tech_files(QRCTECH_WC)   "$paths(QRC_ROOT)/rcworst/qrcTechFile"
+# Defaults target the verified lab-server XH018 deck matching:
+#   xh018_xx41_HD_MET4_METMID.lef  ->  XH018_1141 QRC family
+if {[info exists ::env(QRC_ROOT)]} {
+    set paths(QRC_ROOT) $::env(QRC_ROOT)
+} else {
+    set paths(QRC_ROOT) \
+        "$paths(PDK_ROOT)/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141"
+}
+
+if {[info exists ::env(CAPTABLE_DIR)]} {
+    set paths(CAPTABLE_DIR) $::env(CAPTABLE_DIR)
+} else {
+    set paths(CAPTABLE_DIR) "$paths(PDK_ROOT)/cadence/v9_0/capTbl/v9_0_1"
+}
+
+if {[info exists ::env(QRCTECH_BC)]} {
+    set tech_files(QRCTECH_BC) $::env(QRCTECH_BC)
+} else {
+    set tech_files(QRCTECH_BC) "$paths(QRC_ROOT)/QRC-Min/qrcTechFile"
+}
+if {[info exists ::env(QRCTECH_TC)]} {
+    set tech_files(QRCTECH_TC) $::env(QRCTECH_TC)
+} else {
+    set tech_files(QRCTECH_TC) "$paths(QRC_ROOT)/QRC-Typ/qrcTechFile"
+}
+if {[info exists ::env(QRCTECH_WC)]} {
+    set tech_files(QRCTECH_WC) $::env(QRCTECH_WC)
+} else {
+    set tech_files(QRCTECH_WC) "$paths(QRC_ROOT)/QRC-Max/qrcTechFile"
+}
+
+set tech_files(CAPTABLE_BC) "$paths(CAPTABLE_DIR)/xh018_xx41_MET4_METMID_min.capTbl"
+set tech_files(CAPTABLE_TC) "$paths(CAPTABLE_DIR)/xh018_xx41_MET4_METMID_typ.capTbl"
+set tech_files(CAPTABLE_WC) "$paths(CAPTABLE_DIR)/xh018_xx41_MET4_METMID_max.capTbl"
+
+set tech(HAS_QRC_TECH) 1
+foreach qrc_file [list \
+    $tech_files(QRCTECH_BC) \
+    $tech_files(QRCTECH_TC) \
+    $tech_files(QRCTECH_WC)] {
+    if {![file exists $qrc_file]} {
+        set tech(HAS_QRC_TECH) 0
+    }
+}
 
 #############################################
 #       PVT Corners (Temperature)
