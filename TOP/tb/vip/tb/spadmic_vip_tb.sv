@@ -93,15 +93,23 @@ module spadmic_vip_tb;
   end
 
   // ── Direct CSR BFM Bridge ────────────────────────────────────
-  // For direct CSR mode, override the DUT's internal CSR decoder inputs
-  // via force (continuous force tracks RHS expression) to bypass I2C.
-  initial begin
+  // Direct-CSR tests bypass I2C with a hierarchical force. I2C tests must leave
+  // the DUT bridge in control, otherwise pin-level reads can never retire.
+  task automatic enable_direct_csr_override();
     force u_dut.csr_req_valid = csr_if.req_valid;
     force u_dut.csr_req_write = csr_if.req_write;
     force u_dut.csr_req_addr  = csr_if.req_addr;
     force u_dut.csr_req_wdata = csr_if.req_wdata;
     force u_dut.csr_rsp_ready = csr_if.rsp_ready;
-  end
+  endtask
+
+  task automatic enable_i2c_csr_monitor_mirror();
+    force csr_if.req_valid = u_dut.csr_req_valid;
+    force csr_if.req_write = u_dut.csr_req_write;
+    force csr_if.req_addr  = u_dut.csr_req_addr;
+    force csr_if.req_wdata = u_dut.csr_req_wdata;
+    force csr_if.rsp_ready = u_dut.csr_rsp_ready;
+  endtask
 
   // Reflect DUT CSR bus responses back to the VIP interface
   assign csr_if.req_ready = u_dut.csr_req_ready;
@@ -130,8 +138,19 @@ module spadmic_vip_tb;
 
     $display("[HARNESS] Running test: %s", test_name);
 
-    // Create and run test
+    // Create test and pre-resolve its driver mode so the harness does not
+    // permanently override the real I2C CSR path during I2C-mode tests.
     test = spadmic_test_factory::create_test(test_name);
+    test.configure();
+    test.cfg.parse_plusargs();
+    if (test.cfg.drv_mode == DRV_MODE_DIRECT_CSR) begin
+      $display("[HARNESS] Direct CSR override enabled");
+      enable_direct_csr_override();
+    end else begin
+      $display("[HARNESS] Direct CSR override disabled; mirroring DUT I2C CSR bus");
+      enable_i2c_csr_monitor_mirror();
+    end
+
     test.run_test(reset_if, csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_if, tx_if, spad_rst_if);
 
     // Finish
