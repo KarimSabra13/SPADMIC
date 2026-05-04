@@ -27,6 +27,7 @@ module tb_spadmic_stress_position;
 
   logic busy, pkt_pending;
   logic drop_sticky, glitch_reject_sticky;
+  logic spad_matrix_rst;
 
   initial clk_sys = 0;
   always #(CLK_PERIOD/2) clk_sys = ~clk_sys;
@@ -51,7 +52,8 @@ module tb_spadmic_stress_position;
     .busy_o          (busy),
     .packet_pending_o(pkt_pending),
     .drop_sticky_o   (drop_sticky),
-    .glitch_reject_sticky_o(glitch_reject_sticky)
+    .glitch_reject_sticky_o(glitch_reject_sticky),
+    .spad_matrix_rst_o(spad_matrix_rst)
   );
 
   // Scoreboard
@@ -109,6 +111,21 @@ module tb_spadmic_stress_position;
     input logic [15:0] expected
   );
     check(name, pkt_words[idx] === expected);
+  endtask
+
+  task automatic wait_spad_reset_pulse(
+    input int unsigned max_cycles,
+    output logic       seen
+  );
+    seen = 1'b0;
+    for (int cycle = 0; cycle < max_cycles; cycle++) begin
+      @(posedge clk_sys);
+      #1;
+      if (spad_matrix_rst) begin
+        seen = 1'b1;
+        break;
+      end
+    end
   endtask
 
   task automatic collect_packet(output int n_words);
@@ -370,6 +387,39 @@ module tb_spadmic_stress_position;
     end
 
     // ========================================
+    // TEST 7b: Threshold/min-span can be lowered to 1 via CSR
+    // ========================================
+    begin
+      int n;
+      spadmic_axis_clusters_t exp_x;
+
+      csr_write_pos(SPADMIC_CSR_POS_FILTER_CFG, 32'h0000_0101);
+      repeat (2) @(posedge clk_sys);
+
+      @(posedge clk_sys);
+      x_lines = '0;
+      x_lines[12] = 1;
+      y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+      collect_packet(n);
+
+      exp_x = make_axis_clusters(
+        make_cluster(1'b1, 12, 12),
+        make_cluster(1'b0, 0, 0),
+        1'b0
+      );
+      check("T7b min-span 1 packet length", n === SPADMIC_POS_PKT_WORDS);
+      check_word("T7b single line retained as cluster", 3, spadmic_pos_cluster_word(exp_x.cluster0));
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+
+      csr_write_pos(SPADMIC_CSR_POS_FILTER_CFG, 32'h0000_0102);
+      repeat (2) @(posedge clk_sys);
+    end
+
+    // ========================================
     // TEST 8: Glitch rejection accounting and sticky clear
     // ========================================
     begin
@@ -576,6 +626,76 @@ module tb_spadmic_stress_position;
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
       repeat (6) @(posedge clk_sys);
+    end
+
+    // ========================================
+    // TEST 13: Raw low-rate bitmap mode emits full X/Y/Z line levels
+    // ========================================
+    begin
+      int n;
+
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_0003); // enable + raw mode
+      repeat (2) @(posedge clk_sys);
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      x_lines[0] = 1; x_lines[15] = 1; x_lines[126] = 1;
+      y_lines[16] = 1; y_lines[64] = 1;
+      z_lines[31] = 1; z_lines[125] = 1;
+      repeat (6) @(posedge clk_sys);
+      collect_packet(n);
+
+      check("T13 raw packet length", n === SPADMIC_POS_RAW_PKT_WORDS);
+      check_word("T13 raw header", 0, spadmic_pos_raw_header_word(3'b111));
+      check_word("T13 raw X word0", 1, spadmic_pos_raw_word(x_lines, 3'd0));
+      check_word("T13 raw X word7", 8, spadmic_pos_raw_word(x_lines, 3'd7));
+      check_word("T13 raw Y word1", 10, spadmic_pos_raw_word(y_lines, 3'd1));
+      check_word("T13 raw Z word1", 18, spadmic_pos_raw_word(z_lines, 3'd1));
+      check_word("T13 raw Z word7", 24, spadmic_pos_raw_word(z_lines, 3'd7));
+      check("T13 raw EOC", pkt_words[n-1][15:14] === 2'b11);
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_0001); // back to cluster/manual
+      repeat (2) @(posedge clk_sys);
+    end
+
+    // ========================================
+    // TEST 14: SPAD matrix reset CSR modes
+    // ========================================
+    begin
+      logic seen_reset;
+
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_0011); // manual W1P
+      #1;
+      check("T14 manual reset pulse asserted", spad_matrix_rst === 1'b1);
+      @(posedge clk_sys);
+      #1;
+      check("T14 manual reset pulse is one cycle", spad_matrix_rst === 1'b0);
+
+      csr_write_pos(SPADMIC_CSR_POS_RESET_CFG, 32'd4);
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_000B); // enable + raw + periodic
+      wait_spad_reset_pulse(8, seen_reset);
+      check("T14 periodic reset pulse appears", seen_reset === 1'b1);
+
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_0005); // enable + event-deferred
+      @(posedge clk_sys);
+      x_lines = '0; x_lines[20] = 1; x_lines[21] = 1;
+      wait_spad_reset_pulse(8, seen_reset);
+      check("T14 deferred reset waits while lines active", seen_reset === 1'b0);
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      tx_ready = 1'b1;
+      repeat (20) @(posedge clk_sys);
+      tx_ready = 1'b0;
+      wait_spad_reset_pulse(12, seen_reset);
+      check("T14 deferred reset fires after safe idle", seen_reset === 1'b1);
+
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_0001);
+      csr_write_pos(SPADMIC_CSR_POS_RESET_CFG, 32'd0);
+      repeat (2) @(posedge clk_sys);
     end
 
     // ========================================

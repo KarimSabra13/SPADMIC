@@ -190,4 +190,60 @@ class spadmic_pos_ref_model;
     return 1;
   endfunction
 
+  function automatic bit validate_raw_pos_packet(
+    logic [15:0] words[$],
+    logic [SPADMIC_LINE_W-1:0] x_pattern,
+    logic [SPADMIC_LINE_W-1:0] y_pattern,
+    logic [SPADMIC_LINE_W-1:0] z_pattern,
+    bit                        check_payload
+  );
+    logic [2:0] expected_mask;
+
+    if (words.size() != SPADMIC_POS_RAW_PKT_WORDS) begin
+      $display("[POS_REF] FAIL: raw packet has %0d words (expected %0d)",
+               words.size(), SPADMIC_POS_RAW_PKT_WORDS);
+      return 0;
+    end
+
+    if (!is_spadmic_pos_raw_header(words[0])) begin
+      $display("[POS_REF] FAIL: raw word[0] is not raw header (0x%04h)", words[0]);
+      return 0;
+    end
+
+    if (!is_tdc_eoc(words[SPADMIC_POS_RAW_PKT_WORDS-1])) begin
+      $display("[POS_REF] FAIL: raw final word is not EOC (0x%04h)",
+               words[SPADMIC_POS_RAW_PKT_WORDS-1]);
+      return 0;
+    end
+
+    if (check_payload) begin
+      expected_mask = {|z_pattern, |y_pattern, |x_pattern};
+      if (words[0][11:9] != expected_mask) begin
+        $display("[POS_REF] FAIL: raw non-empty mask %03b != expected %03b",
+                 words[0][11:9], expected_mask);
+        return 0;
+      end
+
+      for (int idx = 0; idx < 8; idx++) begin
+        if (words[1 + idx] != spadmic_pos_raw_word(x_pattern, idx[2:0])) begin
+          $display("[POS_REF] FAIL: raw X word%0d 0x%04h != expected 0x%04h",
+                   idx, words[1 + idx], spadmic_pos_raw_word(x_pattern, idx[2:0]));
+          return 0;
+        end
+        if (words[9 + idx] != spadmic_pos_raw_word(y_pattern, idx[2:0])) begin
+          $display("[POS_REF] FAIL: raw Y word%0d 0x%04h != expected 0x%04h",
+                   idx, words[9 + idx], spadmic_pos_raw_word(y_pattern, idx[2:0]));
+          return 0;
+        end
+        if (words[17 + idx] != spadmic_pos_raw_word(z_pattern, idx[2:0])) begin
+          $display("[POS_REF] FAIL: raw Z word%0d 0x%04h != expected 0x%04h",
+                   idx, words[17 + idx], spadmic_pos_raw_word(z_pattern, idx[2:0]));
+          return 0;
+        end
+      end
+    end
+
+    return 1;
+  endfunction
+
 endclass

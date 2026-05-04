@@ -19,6 +19,8 @@ class spadmic_test_factory;
       "long_random":        begin spadmic_long_random t = new(); return t; end
       "coverage_walk":      begin spadmic_coverage_walk t = new(); return t; end
       "stress_random":      begin spadmic_stress_random t = new(); return t; end
+      "smoke_position_raw": begin spadmic_smoke_position_raw t = new(); return t; end
+      "spad_reset_modes":   begin spadmic_spad_reset_modes t = new(); return t; end
       default: begin
         $display("[FACTORY] Unknown test: %s — using base test", name);
         begin spadmic_base_test t = new(name); return t; end
@@ -27,4 +29,3 @@ class spadmic_test_factory;
   endfunction
 
 endclass
-

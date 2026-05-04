@@ -136,6 +136,8 @@ foreach pattern {
 #
 # TODO: After SPAD matrix integration:
 # - replace broad async line false paths with the final SPAD output contract.
+# - time/load spad_matrix_rst_o against the matrix reset input and verify the
+#   one-clk_sys pulse width meets the analog/matrix recovery requirement.
 # - add max event rate / settle requirements to the verification plan.
 #
 # TODO: After MPTDC oscillator macro integration:

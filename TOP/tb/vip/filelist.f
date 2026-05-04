@@ -14,6 +14,7 @@ interfaces/spadmic_csr_req_if.sv
 interfaces/spadmic_async_event_if.sv
 interfaces/spadmic_position_line_if.sv
 interfaces/spadmic_narrow_tx_if.sv
+interfaces/spadmic_spad_reset_if.sv
 
 // ── VIP package (includes all class files) ───────────────────────
 pkg/spadmic_vip_pkg.sv

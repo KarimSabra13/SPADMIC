@@ -15,11 +15,13 @@ mkdir -p "$COV_WORKDIR"
 ALL_TESTS=(
   smoke_tdc
   smoke_position
+  smoke_position_raw
   smoke_switching
   tdc_modes
   pos_clusters
   ctrl_reject
   reset_recovery
+  spad_reset_modes
   bp_stress
   i2c_end_to_end
   long_random

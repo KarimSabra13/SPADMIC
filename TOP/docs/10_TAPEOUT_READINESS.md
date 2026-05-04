@@ -18,7 +18,7 @@ are not frozen.
 | TOP control sequencing | Coherent active/requested model | Needs full reset/mode-switch regression closure | Verify all non-idle reject and drain-commit cases |
 | TDC axes | Preserved MPTDC kernels integrated cleanly | Blocked on oscillator macro and generated-clock signoff | Freeze macro contract and CDC/STA waiver deck |
 | Shared readout | Packet-atomic META-first architecture | Needs stress and packet-integrity evidence | Run/extend shared-readout and correlated-TX tests |
-| Position path | Robust queued detector/packetizer exists | Needs async-line and queue-stress evidence | Stress settle, glitch, overflow, and disable cases |
+| Position path | Robust queued detector/packetizer plus raw bitmap mode and SPAD reset output exist | Needs final SPAD-matrix contract and async-line/reset stress evidence | Stress settle, glitch, overflow, raw packets, reset modes, and disable cases |
 | I2C/CSR | Region decode and timeout protection exist | Needs negative-path coverage | Test invalid regions, timeout, reset, NACK, and CSR error propagation |
 | DDR TX | Simple source-synchronous contract | Needs output timing constraints | Define output delay and receiver sampling assumptions |
 | PLL/SPAD/oscillator macros | Not final | Not signoff-ready | Keep wrappers/constraints explicit until real macros arrive |
@@ -69,6 +69,7 @@ Legacy TOP modules still in-tree but not on the active chip datapath:
 | context bank snapshot | fast capture | `clk_sys` drain | static-data CDC after drain flag sync | Waive only with frozen-data proof/inspection |
 | correlated TX to DDR TX | `clk_sys` | forwarded output clock | synchronous logical word stream | Normal `clk_sys` timing plus output delay constraints |
 | `chip_tx_*` pins | forwarded `clk_sys` | off-chip receiver | source-synchronous DDR | Board/receiver setup-hold budget required |
+| `spad_matrix_rst_o` | `clk_sys` position CSR/reset controller | SPAD matrix reset input | synchronous pulse leaving digital top | Matrix reset pulse-width and recovery contract required |
 
 ## Active module risk map
 
@@ -86,7 +87,7 @@ Legacy TOP modules still in-tree but not on the active chip datapath:
 | `mptdc_top_asic` | preserved axis wrapper | `clk_sys` + async | depends on stable top-level overrides | per-axis CSR/readout tests |
 | `mptdc_core` | Vernier measurement kernel | generated clocks + async + `clk_sys` | highest signoff risk: oscillator, PD, CDC, constraints | MPTDC regression, CDC/STA waiver deck, macro contract |
 | `spadmic_tdc_shared_readout` | shared TDC serializer | `clk_sys` | source interleaving or starvation would corrupt event stream | META-first, fairness, zero-hit, stall tests |
-| `spadmic_position_block` | position detect/queue/packetize | async lines into `clk_sys` | async bus sampling and queue overflow behavior | settle/glitch/queue stress tests |
+| `spadmic_position_block` | position detect/queue/packetize and matrix reset control | async lines into `clk_sys` | async bus sampling, queue overflow, raw payload framing, reset timing versus matrix behavior | settle/glitch/queue/raw/reset stress tests |
 | `spadmic_axis_cluster_scan` | combinational cluster extraction | `clk_sys` datapath | wide combinational scan timing and edge correctness | stress cluster tests and synthesis timing |
 | `spadmic_correlated_tx` | packet arbiter/event tagger/FIFO | `clk_sys` | event-ID wrap, packet interleaving, FIFO pressure | correlated TX unit/stress tests |
 | `spadmic_ddr_tx` | physical DDR packer | both edges of `clk_sys` | output timing and tool support for dual-edge logic | DDR unit test and STA output-delay constraints |
@@ -114,7 +115,7 @@ define:
 - event pulse width or held-level behavior,
 - line-bus settle/clear behavior,
 - maximum event rate and overlap behavior,
-- reset/disable behavior,
+- reset/disable behavior, including one-cycle active-high `spad_matrix_rst_o` pulse width and recovery time,
 - whether outputs can glitch during bias or mode transitions.
 
 ### MPTDC oscillator
@@ -148,6 +149,7 @@ evidence:
 - static context-bank CDC waived only after frozen-data protocol review,
 - PD-cell intentional async sampling waived with physical-design constraints,
 - DDR TX output delays defined against the off-chip receiver,
+- SPAD matrix reset output timing/load and matrix-side recovery constraints defined,
 - false paths do not mask real synchronous logic,
 - no unconstrained active output or control path remains.
 
@@ -169,6 +171,7 @@ Minimum digital evidence before a tapeout-readiness review:
 - MPTDC smoke/regression pass.
 - Fixed-delay or equivalent TDC characterization campaign has current results.
 - Correlated export tests prove packet atomicity and event-ID behavior.
+- Raw position export tests prove EOC-looking bitmap payload words do not terminate packets early.
 - I2C negative tests prove errors do not hang the control plane.
 - Reset tests cover reset during TDC, position, TX, and I2C activity.
 - Documentation and RTL packet contracts agree.

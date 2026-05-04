@@ -62,6 +62,19 @@ class spadmic_generator;
     txn_count++;
   endtask
 
+  task automatic gen_csr_write(
+    logic [SPADMIC_CSR_ADDR_W-1:0]  addr,
+    logic [SPADMIC_CSR_DATA_W-1:0]  data
+  );
+    spadmic_ctrl_txn t = new();
+    t.raw_csr_write = 1'b1;
+    t.addr          = addr;
+    t.wdata         = data;
+    t.drv_mode      = cfg.drv_mode;
+    drv_mb.put(t);
+    txn_count++;
+  endtask
+
   task automatic gen_correlated_event(
     logic [2:0]               axis_mask,
     int unsigned              delay_ps,

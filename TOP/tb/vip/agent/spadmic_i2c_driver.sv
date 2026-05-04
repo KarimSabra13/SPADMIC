@@ -77,7 +77,7 @@ class spadmic_i2c_driver;
     logic [3:0] settle_cycles
   );
     write_csr(SPADMIC_CSR_POS_GAP_CFG, {25'b0, gap_threshold});
-    write_csr(SPADMIC_CSR_POS_FILTER_CFG, {21'b0, min_cluster_span, settle_cycles});
+    write_csr(SPADMIC_CSR_POS_FILTER_CFG, {20'b0, settle_cycles, 1'b0, min_cluster_span});
   endtask
 
   task automatic read_global_status(

@@ -35,7 +35,8 @@ class spadmic_base_test;
     virtual spadmic_async_event_if    y_ev_if,
     virtual spadmic_async_event_if    z_ev_if,
     virtual spadmic_position_line_if  pos_line_if,
-    virtual spadmic_narrow_tx_if      tx_if
+    virtual spadmic_narrow_tx_if      tx_if,
+    virtual spadmic_spad_reset_if     spad_reset_if
   );
     bit timed_out;
 
@@ -50,7 +51,7 @@ class spadmic_base_test;
 
     // Build environment
     env = new(cfg);
-    env.build(reset_if, csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_line_if, tx_if);
+    env.build(reset_if, csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_line_if, tx_if, spad_reset_if);
 
     // Generate stimulus
     body();
@@ -75,7 +76,8 @@ class spadmic_base_test;
     if (!timed_out &&
         env.sb.check_fail == 0 &&
         env.sb.tdc_pkts_received == env.sb.tdc_pkts_expected &&
-        env.sb.pos_pkts_received == env.sb.pos_pkts_expected)
+        env.sb.pos_pkts_received == env.sb.pos_pkts_expected &&
+        env.sb.spad_reset_pulses_received >= env.sb.spad_reset_pulses_expected_min)
       $display("═══ TEST %s: PASS ═══", test_name);
     else
       $display("═══ TEST %s: FAIL (timeout=%0b, fail=%0d, tdc=%0d/%0d, pos=%0d/%0d) ═══",

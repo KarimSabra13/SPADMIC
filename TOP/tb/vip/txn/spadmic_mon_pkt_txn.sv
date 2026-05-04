@@ -10,6 +10,7 @@ class spadmic_mon_pkt_txn extends spadmic_base_txn;
   int unsigned         word_count;
   int unsigned         event_id;
   bit                  is_tdc;
+  spadmic_mon_pkt_kind_e pkt_kind;
 
   function new();
     super.new(TXN_MON_PKT);
@@ -17,11 +18,12 @@ class spadmic_mon_pkt_txn extends spadmic_base_txn;
     this.word_count = 0;
     this.event_id   = 0;
     this.is_tdc     = 1'b1;
+    this.pkt_kind   = MON_PKT_TDC;
   endfunction
 
   function string to_string();
     return $sformatf("[MON_PKT #%0d] %s src=%0d event=%0d words=%0d",
-                      txn_id, is_tdc ? "TDC" : "POS",
+                      txn_id, pkt_kind.name(),
                       source_id, event_id, word_count);
   endfunction
 endclass

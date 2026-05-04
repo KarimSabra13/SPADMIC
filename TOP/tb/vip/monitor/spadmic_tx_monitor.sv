@@ -56,33 +56,46 @@ class spadmic_tx_monitor;
         word = tx_if.data;
         total_words++;
 
-        if (is_tdc_header(word)) begin
-          // New packet starts (TDC and position share the 3'b100 header encoding)
-          if (in_packet && pkt.words.size() > 0)
-            dispatch_packet(pkt);  // flush any incomplete packet
+        if (!in_packet && is_tdc_header(word)) begin
+          // New packet starts (TDC, cluster-position, and raw-position headers
+          // share the 3'b100 marker).
           pkt.words = {};
           pkt.words.push_back(word);
-          pkt.is_tdc    = 1'b1;  // position corrects this when its subheader arrives
-          pkt.source_id = tdc_header_source_id(word);
+          if (is_spadmic_pos_raw_header(word)) begin
+            pkt.is_tdc    = 1'b0;
+            pkt.source_id = SPADMIC_SRC_POSITION;
+          end else begin
+            pkt.is_tdc    = 1'b1;  // cluster-position corrects this on subheader.
+            pkt.source_id = tdc_header_source_id(word);
+          end
           pkt.event_id  = 0;
           pkt.timestamp = $time;
           in_packet     = 1'b1;
-        end else if (in_packet && is_tdc_eoc(word)) begin
-            // End of current packet
-            pkt.words.push_back(word);
+        end else if (in_packet) begin
+          pkt.words.push_back(word);
+
+          if (!pkt.is_tdc && is_spadmic_pos_raw_header(pkt.words[0])) begin
+            if (pkt.words.size() == SPADMIC_POS_RAW_PKT_WORDS) begin
+              pkt.event_id = word[13:0];
+              dispatch_packet(pkt);
+              pkt.words = {};
+              in_packet = 1'b0;
+            end
+          end else if (is_tdc_eoc(word)) begin
             pkt.event_id = word[13:0];
             dispatch_packet(pkt);
-          pkt.words = {};
-          in_packet = 1'b0;
-        end else if (in_packet) begin
-          // Mid-packet word
-          pkt.words.push_back(word);
-          // Position packets still use the shared 3'b101 subheader marker.
-          if (is_spadmic_subheader(word)) begin
-            pkt.source_id = word[5:4];
-            if (word[5:4] == SPADMIC_SRC_POSITION)
-              pkt.is_tdc = 1'b0;
+            pkt.words = {};
+            in_packet = 1'b0;
+          end else begin
+            // Position cluster packets use the shared 3'b101 subheader marker.
+            if (is_spadmic_subheader(word)) begin
+              pkt.source_id = word[5:4];
+              if (word[5:4] == SPADMIC_SRC_POSITION)
+                pkt.is_tdc = 1'b0;
+            end
           end
+        end else if (is_tdc_header(word)) begin
+          $display("[TX_MON] WARN: unreachable header decode for word 0x%04h", word);
         end
       end
     end
@@ -102,6 +115,12 @@ class spadmic_tx_monitor;
     // Send to scoreboard
     mtxn = new();
     mtxn.is_tdc     = pkt.is_tdc;
+    if (pkt.is_tdc)
+      mtxn.pkt_kind = MON_PKT_TDC;
+    else if ((pkt.words.size() > 0) && is_spadmic_pos_raw_header(pkt.words[0]))
+      mtxn.pkt_kind = MON_PKT_POS_RAW;
+    else
+      mtxn.pkt_kind = MON_PKT_POS_CLUSTER;
     mtxn.source_id  = pkt.source_id;
     mtxn.word_count = pkt.words.size();
     mtxn.event_id   = pkt.event_id;

@@ -15,6 +15,7 @@ off-chip receiver.
 | `chip_tx_clk_o` | output | forwarded source-synchronous clock, same frequency as `clk_sys` |
 | `chip_tx_valid_o` | output | SDR qualifier: one asserted cycle means one logical 16-bit word is present across the two DDR edges of that cycle |
 | `chip_tx_data_o[7:0]` | output | DDR byte lane carrying the two bytes of the logical word |
+| `spad_matrix_rst_o` | output | active-high one-`clk_sys` pulse to the SPAD matrix reset input |
 
 There is **no** `chip_tx_ready_i` pin in the active contract.
 
@@ -63,8 +64,10 @@ At the logical-word level, the receiver still expects:
 2. payload words
 3. EOC
 
-Position packets are the one exception: they still include a position sub-header
-after the header.
+Cluster-position packets include a position sub-header after the header. Raw
+bitmap position packets are fixed-length 26-word packets with 24 unescaped
+bitmap payload words; a receiver must parse them by raw header and length because
+raw payload words can look like EOC markers.
 
 For correlated export, the EOC word contains the shared event ID:
 

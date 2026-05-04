@@ -104,6 +104,7 @@ The retained `ready` field only exists so older collateral still compiles.
 
 - detects packet headers and EOC
 - extracts TDC source from the patched header and position source from the position sub-header
+- distinguishes `TDC`, 12-word position-cluster, and fixed 26-word position-raw packets
 - extracts the shared event ID from EOC
 - emits one `spadmic_mon_pkt_txn` per complete packet
 
@@ -115,13 +116,21 @@ That packet transaction is what the scoreboard consumes.
 |-------|------|
 | `spadmic_scoreboard.sv` | packet counting, pass/fail accounting, active-config tracking |
 | `spadmic_tdc_ref_model.sv` | validates TDC packet structure |
-| `spadmic_pos_ref_model.sv` | validates position packet structure |
+| `spadmic_pos_ref_model.sv` | validates cluster and raw position packet structure |
+| `spadmic_spad_reset_monitor.sv` | observes `spad_matrix_rst_o` pulse count and width |
 
 The scoreboard keeps separate expected/received counts for TDC and position
 packets, exact per-source accounting, and per-source event-ID monotonicity.
 It updates its expectations from control transactions and reset transactions, so
 it is not just a passive packet checker; it is the central execution-state model
 for the VIP.
+
+For the new position characterization features, the scoreboard also tracks:
+
+- position mode (`cluster` versus `raw bitmap`)
+- position reset mode and auto-reset period
+- expected raw position payloads from the driven X/Y/Z line patterns
+- minimum expected SPAD reset pulse count and one-cycle pulse-width quality
 
 ## 6. Coverage and assertions
 
@@ -133,6 +142,7 @@ The maintained coverage classes are:
 - `spadmic_pkt_cov`
 - `spadmic_ctrl_cov`
 - `spadmic_fault_cov`
+- `spadmic_reset_cov`
 
 ### Assertions
 
@@ -146,17 +156,33 @@ The maintained SVA files are:
 They check integration-level invariants rather than re-proving the internals of
 each `mptdc_top_asic` measurement kernel.
 
+### 6.3 Current high-priority VIP status
+
+The VIP now has first-class monitor/scoreboard coverage for the newest raw
+position and SPAD reset features. Remaining work is focused on deeper
+control/fault closure and campaign coverage:
+
+| Area | Status |
+|------|--------|
+| Raw position packets | implemented in packet transaction, TX monitor, position reference model, scoreboard, packet coverage, and `smoke_position_raw` |
+| SPAD matrix reset output | implemented in reset observation interface, monitor, reset transaction, scoreboard pulse checks, reset coverage, and `spad_reset_modes` |
+| Position CSR state | scoreboard tracks position mode, reset mode, auto-reset period, and core filter fields from raw CSR writes |
+| Fault/status closure | still needs deeper status/fault clear checks and CSR timeout/invalid-region coverage in VIP |
+| Coverage closure | `run_vip_coverage.sh` includes raw/reset tests; Xcelium coverage reports still need lab execution and bin-level review |
+
 ## 7. Test library
 
 Current named tests under `tests/`:
 
 - `smoke_tdc`
 - `smoke_position`
+- `smoke_position_raw`
 - `smoke_switching`
 - `tdc_modes`
 - `pos_clusters`
 - `ctrl_reject`
 - `reset_recovery`
+- `spad_reset_modes`
 - `bp_stress`
 - `i2c_end_to_end`
 - `long_random`

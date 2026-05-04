@@ -27,6 +27,8 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_POS_QUEUE_DEPTH = 16;
   localparam int unsigned SPADMIC_EVENT_BUNDLE_DEPTH = 16;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 2048;
+  localparam int unsigned SPADMIC_POS_RAW_PAYLOAD_WORDS = 24;
+  localparam int unsigned SPADMIC_POS_RAW_PKT_WORDS = 1 + SPADMIC_POS_RAW_PAYLOAD_WORDS + 1;
 
   typedef enum logic [SPADMIC_AXIS_ID_W-1:0] {
     TDC_ID_X = 2'd0,
@@ -48,6 +50,17 @@ package spadmic_pkg;
     SPADMIC_EXPORT_BOTH_ACTIVE   = 2'd2
   } spadmic_export_mode_e;
 
+  typedef enum logic {
+    SPADMIC_POS_MODE_CLUSTER = 1'b0,
+    SPADMIC_POS_MODE_RAW     = 1'b1
+  } spadmic_pos_mode_e;
+
+  typedef enum logic [1:0] {
+    SPADMIC_SPAD_RST_MANUAL_ONLY    = 2'd0,
+    SPADMIC_SPAD_RST_EVENT_DEFERRED = 2'd1,
+    SPADMIC_SPAD_RST_PERIODIC       = 2'd2
+  } spadmic_spad_reset_mode_e;
+
   localparam logic [3:0] SPADMIC_REGION_GLOBAL   = 4'h0;
   localparam logic [3:0] SPADMIC_REGION_TDC_X    = 4'h1;
   localparam logic [3:0] SPADMIC_REGION_TDC_Y    = 4'h2;
@@ -64,6 +77,7 @@ package spadmic_pkg;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_CTRL        = 12'h400;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_GAP_CFG     = 12'h404;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_FILTER_CFG  = 12'h408;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_RESET_CFG   = 12'h40C;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_STATUS      = 12'h420;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_EVENT_COUNT = 12'h424;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_FAULT_STATUS = 12'h428;
@@ -87,12 +101,16 @@ package spadmic_pkg;
   } spadmic_axis_clusters_t;
 
   typedef struct packed {
+    spadmic_pos_mode_e       mode;
     logic [2:0]               non_empty_mask;
     logic [2:0]               multi_cluster_mask;
     logic                     overflow_any;
     spadmic_axis_clusters_t   x_clusters;
     spadmic_axis_clusters_t   y_clusters;
     spadmic_axis_clusters_t   z_clusters;
+    logic [SPADMIC_LINE_W-1:0] x_raw_lines;
+    logic [SPADMIC_LINE_W-1:0] y_raw_lines;
+    logic [SPADMIC_LINE_W-1:0] z_raw_lines;
   } spadmic_pos_frame_t;
 
   function automatic logic is_tdc_header(input logic [NARROW_W-1:0] word);
@@ -101,6 +119,10 @@ package spadmic_pkg;
 
   function automatic logic is_spadmic_subheader(input logic [NARROW_W-1:0] word);
     return (word[15:13] == 3'b101);
+  endfunction
+
+  function automatic logic is_spadmic_pos_raw_header(input logic [NARROW_W-1:0] word);
+    return (word[15:13] == 3'b100) && (word[5:4] == 2'b10) && (word[3:0] == 4'h2);
   endfunction
 
   function automatic logic is_tdc_eoc(input logic [NARROW_W-1:0] word);
@@ -194,6 +216,19 @@ package spadmic_pkg;
     };
   endfunction
 
+  function automatic logic [NARROW_W-1:0] spadmic_pos_raw_header_word(
+    input logic [2:0] non_empty_mask
+  );
+    return {
+      3'b100,
+      1'b0,
+      non_empty_mask,
+      3'b000,
+      2'b10,
+      4'h2
+    };
+  endfunction
+
   function automatic logic [NARROW_W-1:0] spadmic_pos_subheader_word(
     input logic [2:0] qualifying_axis_mask
   );
@@ -236,6 +271,23 @@ package spadmic_pkg;
     input logic [13:0] event_count
   );
     return {2'b11, event_count};
+  endfunction
+
+  function automatic logic [NARROW_W-1:0] spadmic_pos_raw_word(
+    input logic [SPADMIC_LINE_W-1:0] lines,
+    input logic [2:0]                word_idx
+  );
+    logic [NARROW_W-1:0] word;
+    int unsigned bit_base;
+
+    word = '0;
+    bit_base = word_idx * NARROW_W;
+    for (int bit_idx = 0; bit_idx < NARROW_W; bit_idx++) begin
+      if ((bit_base + bit_idx) < SPADMIC_LINE_W)
+        word[bit_idx] = lines[bit_base + bit_idx];
+    end
+
+    return word;
   endfunction
 
 endpackage

@@ -9,6 +9,7 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
   logic [SPADMIC_CSR_ADDR_W-1:0] addr;
   logic [SPADMIC_CSR_DATA_W-1:0] wdata;
   logic                          is_read;
+  logic                          raw_csr_write;
 
   // Semantic fields for high-level config (used by generator)
   logic                  global_enable;
@@ -44,6 +45,7 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
     this.addr            = '0;
     this.wdata           = '0;
     this.is_read         = 1'b0;
+    this.raw_csr_write   = 1'b0;
     this.global_enable   = 1'b1;
     this.axis_enable     = 3'b111;
     this.position_enable = 1'b0;
@@ -58,6 +60,9 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
     if (is_read)
       return $sformatf("[CTRL_TXN #%0d] READ addr=0x%03h rdata=0x%08h err=%0b",
                         txn_id, addr, rdata, rsp_err);
+    else if (raw_csr_write)
+      return $sformatf("[CTRL_TXN #%0d] WRITE addr=0x%03h data=0x%08h",
+                        txn_id, addr, wdata);
     else
       return $sformatf("[CTRL_TXN #%0d] en=%0b axis=%03b pos=%0b tx_sel=%s in=%s mode=%s hits=%0d",
                         txn_id, global_enable, axis_enable, position_enable,
@@ -65,4 +70,3 @@ class spadmic_ctrl_txn extends spadmic_base_txn;
                         tdc_out_mode.name(), max_hits);
   endfunction
 endclass
-

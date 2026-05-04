@@ -63,7 +63,8 @@ TDC and position packets now identify source differently:
 | Packet type | Source encoding |
 |-------------|-----------------|
 | TDC | header bit `[12]` = `tdc_id[0]`, header bit `[6]` = `tdc_id[1]` |
-| Position | sub-header bits `[5:4] = 2'b11` |
+| Position cluster | sub-header bits `[5:4] = 2'b11` |
+| Position raw bitmap | raw header pattern from `spadmic_pos_raw_header_word()`; source is implicitly position |
 
 Off-chip software should therefore group packets by:
 
@@ -120,6 +121,12 @@ Host software should parse packets as:
 3. reconstruct the 16-bit logical word from `{falling_edge_byte, rising_edge_byte}`
 4. parse the logical packet stream as:
    - TDC: header, payload, EOC
-   - position: header, sub-header, payload, EOC
+   - position cluster: header, sub-header, payload, EOC
+   - position raw bitmap: raw header, 24 unescaped bitmap payload words, EOC
 
 For both-active mode, the receiver should build one correlated event record by collecting all packets with the same `shared_event_id`.
+
+Raw bitmap position packets are fixed length because payload words carry true
+16-bit line levels and can therefore have `[15:14] = 2'b11`. The on-chip
+correlator and the off-chip receiver must parse raw bitmap packets by the raw
+header plus 26 total words, not by the first EOC-looking payload word.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # SPADMIC TOP — VIP Smoke Suite
-# Runs the 3 smoke tests (TDC, Position, Switching) without coverage.
+# Runs the fast VIP smoke tests without coverage.
 # Usage: bash ci/run_vip_smoke.sh
 # =============================================================================
 set -euo pipefail
@@ -12,6 +12,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SMOKE_TESTS=(
   smoke_tdc
   smoke_position
+  smoke_position_raw
   smoke_switching
 )
 

@@ -23,6 +23,7 @@ class spadmic_env;
   spadmic_pos_driver   pos_drv;
   spadmic_bp_driver    bp_drv;
   spadmic_tx_monitor   tx_mon;
+  spadmic_spad_reset_monitor spad_reset_mon;
   spadmic_csr_monitor  csr_mon;
   spadmic_ctrl_monitor ctrl_mon;
   spadmic_scoreboard   sb;
@@ -33,6 +34,7 @@ class spadmic_env;
   spadmic_pkt_cov   pkt_cov;
   spadmic_ctrl_cov  ctrl_cov;
   spadmic_fault_cov fault_cov;
+  spadmic_reset_cov reset_cov;
 `endif
 
   function new(spadmic_env_cfg cfg);
@@ -47,7 +49,8 @@ class spadmic_env;
     virtual spadmic_async_event_if    y_ev_if,
     virtual spadmic_async_event_if    z_ev_if,
     virtual spadmic_position_line_if  pos_line_if,
-    virtual spadmic_narrow_tx_if      tx_if
+    virtual spadmic_narrow_tx_if      tx_if,
+    virtual spadmic_spad_reset_if     spad_reset_if
   );
     // Create mailboxes
     gen_to_drv_mb = new();
@@ -68,6 +71,7 @@ class spadmic_env;
     pkt_cov   = new();
     ctrl_cov  = new();
     fault_cov = new();
+    reset_cov = new();
 `endif
 
     // Build top-level driver
@@ -83,13 +87,14 @@ class spadmic_env;
 
     // Build monitors
     tx_mon   = new(tx_if, mon_to_sb_mb, mon_to_cov_mb);
+    spad_reset_mon = new(spad_reset_if, mon_to_sb_mb);
     csr_mon  = new(csr_if, mon_to_cov_mb);
     ctrl_mon = new(csr_if);
 
     // Build scoreboard
     sb = new(drv_to_sb_mb, mon_to_sb_mb, cfg
 `ifdef SPADMIC_ENABLE_FUNC_COV
-             , pkt_cov
+             , pkt_cov, reset_cov
 `endif
              );
 
@@ -100,6 +105,7 @@ class spadmic_env;
     fork
       drv.run();
       tx_mon.run();
+      spad_reset_mon.run();
       csr_mon.run();
       ctrl_mon.run();
       sb.run();
@@ -122,9 +128,11 @@ class spadmic_env;
     pkt_cov.report();
     ctrl_cov.report();
     fault_cov.report();
+    reset_cov.report();
 `endif
     $display("[ENV] TX Monitor: %0d packets, %0d words total",
              tx_mon.total_packets, tx_mon.total_words);
+    spad_reset_mon.report();
     $display("[ENV] CSR Monitor: %0d writes, %0d reads, %0d errors",
              csr_mon.total_writes, csr_mon.total_reads, csr_mon.total_errors);
   endfunction

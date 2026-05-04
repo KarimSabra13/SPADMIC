@@ -26,8 +26,15 @@ package spadmic_vip_pkg;
     TXN_BP         = 4,
     TXN_EOT        = 5,
     TXN_MON_PKT    = 6,
-    TXN_CORRELATED_EVENT = 7
+    TXN_CORRELATED_EVENT = 7,
+    TXN_SPAD_RESET = 8
   } spadmic_txn_kind_e;
+
+  typedef enum int unsigned {
+    MON_PKT_TDC         = 0,
+    MON_PKT_POS_CLUSTER = 1,
+    MON_PKT_POS_RAW     = 2
+  } spadmic_mon_pkt_kind_e;
 
   // ── Control driver mode (I2C vs direct CSR) ─────────────────────
   typedef enum int unsigned {
@@ -78,6 +85,14 @@ package spadmic_vip_pkg;
   `include "txn/spadmic_bp_txn.sv"
   `include "txn/spadmic_eot_txn.sv"
   `include "txn/spadmic_mon_pkt_txn.sv"
+  `include "txn/spadmic_spad_reset_txn.sv"
+
+  // ── Coverage ────────────────────────────────────────────────────
+  `include "coverage/spadmic_stim_cov.sv"
+  `include "coverage/spadmic_pkt_cov.sv"
+  `include "coverage/spadmic_ctrl_cov.sv"
+  `include "coverage/spadmic_fault_cov.sv"
+  `include "coverage/spadmic_reset_cov.sv"
 
   // ── Agent / Drivers ─────────────────────────────────────────────
   `include "agent/spadmic_generator.sv"
@@ -90,6 +105,7 @@ package spadmic_vip_pkg;
 
   // ── Monitors ────────────────────────────────────────────────────
   `include "monitor/spadmic_tx_monitor.sv"
+  `include "monitor/spadmic_spad_reset_monitor.sv"
   `include "monitor/spadmic_csr_monitor.sv"
   `include "monitor/spadmic_ctrl_monitor.sv"
 
@@ -97,12 +113,6 @@ package spadmic_vip_pkg;
   `include "scoreboard/spadmic_tdc_ref_model.sv"
   `include "scoreboard/spadmic_pos_ref_model.sv"
   `include "scoreboard/spadmic_scoreboard.sv"
-
-  // ── Coverage ────────────────────────────────────────────────────
-  `include "coverage/spadmic_stim_cov.sv"
-  `include "coverage/spadmic_pkt_cov.sv"
-  `include "coverage/spadmic_ctrl_cov.sv"
-  `include "coverage/spadmic_fault_cov.sv"
 
   // ── Environment ─────────────────────────────────────────────────
   `include "env/spadmic_env.sv"
@@ -121,6 +131,8 @@ package spadmic_vip_pkg;
   `include "tests/spadmic_long_random.sv"
   `include "tests/spadmic_coverage_walk.sv"
   `include "tests/spadmic_stress_random.sv"
+  `include "tests/spadmic_smoke_position_raw.sv"
+  `include "tests/spadmic_spad_reset_modes.sv"
 
   // ── Test Factory (must be last — references all test classes) ───
   `include "env/spadmic_test_factory.sv"

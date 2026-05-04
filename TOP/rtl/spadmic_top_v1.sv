@@ -33,6 +33,7 @@ module spadmic_top_v1 (
   output wire                                chip_tx_clk_o,
   output wire                                chip_tx_valid_o,
   output wire [spadmic_pkg::SPADMIC_TX_PHY_W-1:0] chip_tx_data_o,
+  output wire                                spad_matrix_rst_o,
 
   output wire [2:0]                          tdc_stop_armed_o,
   output wire                                tdc_shared_busy_o,
@@ -401,7 +402,8 @@ module spadmic_top_v1 (
     .busy_o         (position_busy_o),
     .packet_pending_o(position_pkt_pending),
     .drop_sticky_o  (position_drop_sticky),
-    .glitch_reject_sticky_o(position_glitch_sticky)
+    .glitch_reject_sticky_o(position_glitch_sticky),
+    .spad_matrix_rst_o(spad_matrix_rst_o)
   );
 
   // One physical bus is exposed at the chip boundary. TDC-only, position-only,

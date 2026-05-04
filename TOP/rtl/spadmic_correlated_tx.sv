@@ -44,9 +44,10 @@ module spadmic_correlated_tx (
   logic                               selected_ready;
   logic                               input_accept;
 
-  logic [3:0]                         word_idx_q;
+  logic [4:0]                         word_idx_q;
   spadmic_source_id_e                 packet_source_q;
   logic                               packet_source_valid_q;
+  logic                               packet_is_raw_pos_q;
 
   logic [NARROW_W-1:0]                fifo_wr_data;
   logic [NARROW_W-1:0]                fifo_rd_data;
@@ -65,6 +66,9 @@ module spadmic_correlated_tx (
 
   assign packet_source_now = grant_is_pos_q ? SPADMIC_SRC_POSITION : packet_source_q;
   assign assigned_event_id = source_event_id_q[packet_source_now];
+  wire selected_eop = packet_is_raw_pos_q
+                    ? (word_idx_q == (SPADMIC_POS_RAW_PKT_WORDS - 1))
+                    : is_tdc_eoc(selected_data);
 
   assign fifo_wr_en     = input_accept;
   assign fifo_rd_en     = fifo_rd_valid & shared_ready_i;
@@ -133,7 +137,7 @@ module spadmic_correlated_tx (
     end
   end
 
-  assign fifo_wr_data = (input_accept && is_tdc_eoc(selected_data))
+  assign fifo_wr_data = (input_accept && selected_eop)
                       ? {2'b11, assigned_event_id}
                       : selected_data;
 
@@ -161,13 +165,15 @@ module spadmic_correlated_tx (
       word_idx_q             <= '0;
       packet_source_q        <= TDC_ID_X;
       packet_source_valid_q  <= 1'b0;
+      packet_is_raw_pos_q    <= 1'b0;
       correlation_overflow_o <= 1'b0;
 
       for (int i = 0; i < SPADMIC_SRC_COUNT; i++)
         source_event_id_q[i] <= '0;
     end else begin
-      if (input_accept && is_tdc_header(selected_data)) begin
-        word_idx_q            <= 4'd1;
+      if (input_accept && (word_idx_q == '0) && is_tdc_header(selected_data)) begin
+        word_idx_q            <= 5'd1;
+        packet_is_raw_pos_q   <= selected_is_pos && is_spadmic_pos_raw_header(selected_data);
         if (selected_is_pos) begin
           packet_source_valid_q <= 1'b1;
           packet_source_q <= SPADMIC_SRC_POSITION;
@@ -176,28 +182,29 @@ module spadmic_correlated_tx (
           packet_source_q       <= tdc_header_source_id(selected_data);
         end
       end else if (input_accept) begin
-        if (!packet_source_valid_q && (word_idx_q == 4'd1) && is_spadmic_subheader(selected_data)) begin
+        if (!packet_source_valid_q && (word_idx_q == 5'd1) && is_spadmic_subheader(selected_data)) begin
           packet_source_q       <= spadmic_source_id_e'(selected_data[5:4]);
           packet_source_valid_q <= 1'b1;
         end
 
-        if (is_tdc_eoc(selected_data)) begin
+        if (selected_eop) begin
           word_idx_q            <= '0;
           packet_source_valid_q <= 1'b0;
+          packet_is_raw_pos_q   <= 1'b0;
         end else begin
-          word_idx_q <= word_idx_q + 4'd1;
+          word_idx_q <= word_idx_q + 5'd1;
         end
       end
 
-      if (input_accept && !grant_active_q && !is_tdc_eoc(selected_data)) begin
+      if (input_accept && !grant_active_q && !selected_eop) begin
         grant_active_q <= 1'b1;
         grant_is_pos_q <= selected_is_pos;
-      end else if (input_accept && is_tdc_eoc(selected_data)) begin
+      end else if (input_accept && selected_eop) begin
         grant_active_q  <= 1'b0;
         rr_prefer_pos_q <= ~grant_is_pos_q;
       end
 
-      if (input_accept && is_tdc_eoc(selected_data) && packet_source_valid_q) begin
+      if (input_accept && selected_eop && packet_source_valid_q) begin
         if (&source_event_id_q[packet_source_now])
           correlation_overflow_o <= 1'b1;
         source_event_id_q[packet_source_now] <= source_event_id_q[packet_source_now]

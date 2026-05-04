@@ -280,6 +280,15 @@ class spadmic_driver;
         csr_drv.read_csr(ct.addr, ct.rdata, ct.rsp_err);
       else
         i2c_drv.read_csr(ct.addr, ct.rdata, ct.rsp_err);
+    end else if (ct.raw_csr_write) begin
+      if (ct.drv_mode == DRV_MODE_DIRECT_CSR)
+        csr_drv.write_csr(ct.addr, ct.wdata);
+      else
+        i2c_drv.write_csr(ct.addr, ct.wdata);
+
+`ifdef SPADMIC_ENABLE_FUNC_COV
+      sample_ctrl_fault_cov(1'b0);
+`endif
     end else begin
       // Full chip config sequence
       if (ct.drv_mode == DRV_MODE_DIRECT_CSR) begin

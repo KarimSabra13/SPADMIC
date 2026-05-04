@@ -109,6 +109,8 @@ run_vip_feature_suite() {
   local tests=(
     ctrl_reject
     reset_recovery
+    smoke_position_raw
+    spad_reset_modes
     bp_stress
     i2c_end_to_end
     tdc_modes
@@ -131,6 +133,7 @@ run_step "Verilator full TOP lint" run_verilator_top_lint
 
 VERILATOR_TBS=(
   tb_spadmic_correlated_tx_unit
+  tb_spadmic_correlated_tx_raw_unit
   tb_spadmic_i2c_control_plane_unit
   tb_spadmic_top_sequencer_unit
   tb_spadmic_stress_csr

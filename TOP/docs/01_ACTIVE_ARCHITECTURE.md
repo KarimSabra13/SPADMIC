@@ -61,7 +61,7 @@ async x/y/z line buses
   -> synchronizer chain
   -> detect/settle/evaluate/wait-clear FSM
   -> per-axis cluster scan
-  -> queued fixed 12-word position packets
+  -> queued cluster or raw bitmap position packets
   -> spadmic_correlated_tx
   -> spadmic_ddr_tx
   -> chip_tx_clk_o / chip_tx_valid_o / chip_tx_data_o[7:0] DDR
@@ -179,6 +179,7 @@ The position block therefore:
 - requires the synchronized lines to settle
 - snapshots only stable data
 - rejects glitches or empty snapshots explicitly
+- can emit one active-high `spad_matrix_rst_o` pulse in the `clk_sys` domain
 
 ### 6.2 Cluster extraction
 
@@ -191,9 +192,9 @@ Each axis uses `spadmic_axis_cluster_scan` to find:
 
 The active block then filters out clusters whose span is below the configured minimum.
 
-### 6.3 Position packet format
+### 6.3 Position packet formats
 
-The active position packet is fixed at 12 words:
+Cluster mode emits the normal fixed 12-word position packet:
 
 1. header
 2. source-tagged sub-header
@@ -208,7 +209,30 @@ The active position packet is fixed at 12 words:
 11. Z cluster 1
 12. EOC
 
-### 6.4 Position overlap behavior
+Raw bitmap mode emits a fixed 26-word low-rate characterization packet:
+
+1. raw header
+2. X line bitmap words 0..7 (`x_lines[15:0]` through `x_lines[126:112]`, bit 127 padded zero)
+3. Y line bitmap words 0..7
+4. Z line bitmap words 0..7
+5. EOC
+
+Because raw payload words are unescaped 16-bit line levels and may look like a
+normal EOC marker, `spadmic_correlated_tx` recognizes the raw position header and
+holds arbitration for the fixed 26-word raw packet length.
+
+### 6.4 SPAD matrix reset modes
+
+The top-level output `spad_matrix_rst_o` is an active-high one-cycle pulse in
+the `clk_sys` domain. Software controls it through the position CSR block:
+
+| Mode | Meaning |
+|------|---------|
+| `manual only` | no automatic reset; `POS_CTRL.manual_reset_req` emits one pulse |
+| `event-deferred auto-reset` | period expiry waits until the position detector, packetizer, FIFO read port, and synchronized line buses are idle |
+| `periodic auto-reset` | period expiry emits a pulse immediately on schedule, intended for raw characterization |
+
+### 6.5 Position overlap behavior
 
 Accepted position snapshots are queued in an internal FIFO before packetization. That means:
 

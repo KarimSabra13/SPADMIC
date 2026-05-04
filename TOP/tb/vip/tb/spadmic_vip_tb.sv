@@ -24,6 +24,7 @@ module spadmic_vip_tb;
   wire        chip_tx_clk;
   wire        chip_tx_valid;
   wire [SPADMIC_TX_PHY_W-1:0] chip_tx_data;
+  wire        spad_matrix_rst;
   wire [2:0]  tdc_stop_armed;
   wire        tdc_shared_busy;
   wire        position_busy;
@@ -37,6 +38,7 @@ module spadmic_vip_tb;
   spadmic_async_event_if    z_ev_if  ();
   spadmic_position_line_if  pos_if   ();
   spadmic_narrow_tx_if      tx_if    (.clk_sys(clk_sys), .rst_n(reset_if.rst_n));
+  spadmic_spad_reset_if     spad_rst_if (.clk_sys(clk_sys), .rst_n(reset_if.rst_n));
 
   // ── DUT Instantiation ─────────────────────────────────────────
   spadmic_top_v1 u_dut (
@@ -69,6 +71,7 @@ module spadmic_vip_tb;
     .chip_tx_clk_o        (chip_tx_clk),
     .chip_tx_valid_o      (chip_tx_valid),
     .chip_tx_data_o       (chip_tx_data),
+    .spad_matrix_rst_o    (spad_matrix_rst),
 
     // Debug / status
     .tdc_stop_armed_o     (tdc_stop_armed),
@@ -83,6 +86,7 @@ module spadmic_vip_tb;
   assign tx_if.phy_clk   = chip_tx_clk;
   assign tx_if.phy_valid = chip_tx_valid;
   assign tx_if.phy_data  = chip_tx_data;
+  assign spad_rst_if.spad_matrix_rst = spad_matrix_rst;
 
   initial begin
     i2c_if.idle_bus();
@@ -128,7 +132,7 @@ module spadmic_vip_tb;
 
     // Create and run test
     test = spadmic_test_factory::create_test(test_name);
-    test.run_test(reset_if, csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_if, tx_if);
+    test.run_test(reset_if, csr_if, i2c_if, x_ev_if, y_ev_if, z_ev_if, pos_if, tx_if, spad_rst_if);
 
     // Finish
     repeat (100) @(posedge clk_sys);

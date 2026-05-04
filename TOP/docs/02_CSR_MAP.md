@@ -101,9 +101,10 @@ This register holds the **requested** control image, not the live committed imag
 
 | Addr | Name | R/W | Purpose |
 |------|------|-----|---------|
-| `0x400` | `POS_CTRL` | R/W | local position enable |
+| `0x400` | `POS_CTRL` | R/W | local position enable, packet mode, and SPAD reset mode/request |
 | `0x404` | `POS_GAP_CFG` | R/W | zero-gap threshold used to split clusters |
 | `0x408` | `POS_FILTER_CFG` | R/W | minimum cluster span and settle-cycle count |
+| `0x40C` | `POS_RESET_CFG` | R/W | SPAD matrix auto-reset period in `clk_sys` cycles |
 | `0x420` | `POS_STATUS` | R | live detector and packet status |
 | `0x424` | `POS_EVENT_COUNT` | R | accepted position-event count |
 | `0x428` | `POS_FAULT_STATUS` | R/W1C | sticky faults and detector-state snapshot |
@@ -115,6 +116,9 @@ This register holds the **requested** control image, not the live committed imag
 | Bits | Name | Meaning |
 |------|------|---------|
 | `[0]` | `local_enable` | local enable inside the position block |
+| `[1]` | `pos_mode` | `0 = cluster packet`, `1 = raw bitmap packet` |
+| `[3:2]` | `spad_reset_mode` | `0 = manual only`, `1 = event-deferred auto-reset`, `2 = periodic auto-reset` |
+| `[4]` | `manual_reset_req` | write `1` to emit one active-high `spad_matrix_rst_o` pulse; reads back as `0` |
 
 The effective enable is `global_enable_i & local_enable`.
 
@@ -128,10 +132,22 @@ The effective enable is `global_enable_i & local_enable`.
 
 | Bits | Name | Meaning |
 |------|------|---------|
-| `[6:0]` | `min_cluster_span` | clusters smaller than this are suppressed |
+| `[6:0]` | `min_cluster_span` | clusters smaller than this are suppressed; `1` keeps single-line clusters |
 | `[11:8]` | `settle_cycles` | number of stable `clk_sys` cycles required before snapshot |
 
-### 4.5 `POS_STATUS` (`0x420`)
+### 4.5 `POS_RESET_CFG` (`0x40C`)
+
+| Bits | Name | Meaning |
+|------|------|---------|
+| `[31:0]` | `auto_reset_period` | auto-reset period in `clk_sys` cycles; `0` disables auto-reset |
+
+`spad_matrix_rst_o` is a one-`clk_sys` active-high pulse. In `event-deferred`
+mode, the period expiry is held pending until the detector, packetizer, FIFO
+read port, and synchronized line buses are idle. In `periodic` mode, the pulse
+fires on schedule even if the matrix is active; this is intended for low-rate raw
+characterization sweeps.
+
+### 4.6 `POS_STATUS` (`0x420`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
@@ -142,14 +158,18 @@ The effective enable is `global_enable_i & local_enable`.
 | `[8]` | `busy` | detector busy, active packet, or queued packet pending |
 | `[9]` | `packet_pending` | packet still outstanding or queued for emission |
 | `[11:10]` | `det_state` | detector FSM state (`IDLE/SETTLE/EVAL/WAIT_CLEAR`) |
+| `[12]` | `pos_mode` | live packet mode (`0 = cluster`, `1 = raw`) |
+| `[14:13]` | `spad_reset_mode` | live reset mode |
+| `[15]` | `auto_reset_pending` | event-deferred auto-reset has expired and is waiting for safe idle |
+| `[16]` | `spad_matrix_rst` | reset pulse is asserted in the current `clk_sys` cycle |
 
-### 4.6 `POS_EVENT_COUNT` (`0x424`)
+### 4.7 `POS_EVENT_COUNT` (`0x424`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
 | `[13:0]` | `event_count` | accepted position-event count |
 
-### 4.7 `POS_FAULT_STATUS` (`0x428`)
+### 4.8 `POS_FAULT_STATUS` (`0x428`)
 
 | Bits | Name | Meaning | Clear behavior |
 |------|------|---------|----------------|
@@ -157,13 +177,13 @@ The effective enable is `global_enable_i & local_enable`.
 | `[1]` | `glitch_reject_sticky` | unstable or empty activity was rejected | write `1` to clear |
 | `[3:2]` | `det_state` | current detector FSM state snapshot | read only |
 
-### 4.8 `POS_DROP_COUNT` (`0x42C`)
+### 4.9 `POS_DROP_COUNT` (`0x42C`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
 | `[15:0]` | `drop_count` | count of accepted snapshots dropped because the queue was full |
 
-### 4.9 `POS_REJECT_COUNT` (`0x430`)
+### 4.10 `POS_REJECT_COUNT` (`0x430`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
@@ -174,3 +194,5 @@ The effective enable is `global_enable_i & local_enable`.
 1. Keep the global and local enables aligned to the intended operating mode.
 2. Use `drop_count` and `glitch_reject_sticky` as health indicators, not just the packet stream.
 3. Treat `overflow_any` as "more than two clusters existed," not as a transport error.
+4. Use cluster mode for normal event extraction and raw mode for low-rate dark-count/noise or matrix-position characterization.
+5. Use event-deferred reset mode for normal cluster operation and periodic reset mode only when forced periodic reset is acceptable for the characterization mode.
