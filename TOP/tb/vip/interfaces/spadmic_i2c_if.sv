@@ -148,7 +148,6 @@ interface spadmic_i2c_if;
   task automatic idle_bus();
     scl       = 1'b1;
     sda_drive = 1'b1;
-    sda_oe    = 1'b0;
   endtask
 endinterface
 

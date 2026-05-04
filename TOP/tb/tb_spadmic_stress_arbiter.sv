@@ -8,9 +8,11 @@
 
 module tb_spadmic_stress_arbiter;
   import mptdc_pkg::*;
+  import spadmic_pkg::*;
 
   localparam int FIFO_DEPTH_TB = 128;
   localparam int CLK_PERIOD = 6250; // 160 MHz
+  localparam time TIMEOUT_PS = 5_000_000_000;
 
   logic clk_sys, rst_n;
 
@@ -154,19 +156,11 @@ module tb_spadmic_stress_arbiter;
         end
         in_packet <= 1'b1;
         current_pkt_words <= 1;
-        // Extract tdc_id from sub-header word (bits[5:4] in the NEXT word)
-        // For header word, extract from bits — but tdc_id is in sub-header
-        // We'll check sub-header separately; for now track source via header
         if (arb_data[15:13] == 3'b100) begin
-          // This is header; tdc_id will be in next word (sub-header bits[5:4])
-          current_tdc_id <= '0; // Will be set on sub-header
+          current_tdc_id <= tdc_header_source_id(arb_data);
         end
       end else if (in_packet) begin
         current_pkt_words <= current_pkt_words + 1;
-        // Check sub-header for tdc_id
-        if (current_pkt_words == 1 && arb_data[15:13] == 3'b101) begin
-          current_tdc_id <= arb_data[5:4];
-        end
       end
 
       if (arb_eop) begin
@@ -294,9 +288,9 @@ module tb_spadmic_stress_arbiter;
       end
       repeat (2000) @(posedge clk_sys);
 
-      check("T6 fairness: src0 got 30 packets", packets_from[0] === 30);
-      check("T6 fairness: src1 got 30 packets", packets_from[1] === 30);
-      check("T6 fairness: src2 got 30 packets", packets_from[2] === 30);
+      check($sformatf("T6 fairness: src0 got 30 packets (got %0d)", packets_from[0]), packets_from[0] === 30);
+      check($sformatf("T6 fairness: src1 got 30 packets (got %0d)", packets_from[1]), packets_from[1] === 30);
+      check($sformatf("T6 fairness: src2 got 30 packets (got %0d)", packets_from[2]), packets_from[2] === 30);
       check("T6 total is 90", total_packets === 90);
     end
 
@@ -333,7 +327,7 @@ module tb_spadmic_stress_arbiter;
 
   // Timeout watchdog
   initial begin
-    #5_000_000_000;
+    #TIMEOUT_PS;
     $fatal(1, "TIMEOUT");
   end
 

@@ -3,8 +3,8 @@
 # SPADMIC TOP — Tapeout Readiness Gate
 #
 # This gate is intentionally stricter than a smoke test and more portable than
-# the Xcelium-only full regression.  It always runs Verilator lint/unit coverage
-# for the active TOP RTL, and it also runs the maintained Xcelium regressions
+# the Xcelium-only full regression.  It runs Verilator lint/unit coverage when
+# Verilator is available, and it also runs the maintained Xcelium regressions
 # when xrun is available on the host.
 # =============================================================================
 set -uo pipefail
@@ -129,8 +129,6 @@ echo "  MPTDC_ROOT:   $MPTDC_ROOT"
 echo "  BUILD_ROOT:   $BUILD_ROOT"
 echo "═══════════════════════════════════════════════════════"
 
-run_step "Verilator full TOP lint" run_verilator_top_lint
-
 VERILATOR_TBS=(
   tb_spadmic_correlated_tx_unit
   tb_spadmic_correlated_tx_raw_unit
@@ -141,9 +139,17 @@ VERILATOR_TBS=(
   tb_spadmic_ddr_tx_unit
 )
 
-for tb in "${VERILATOR_TBS[@]}"; do
-  run_step "Verilator unit: $tb" run_verilator_tb "$tb"
-done
+if command -v verilator >/dev/null 2>&1; then
+  run_step "Verilator full TOP lint" run_verilator_top_lint
+  for tb in "${VERILATOR_TBS[@]}"; do
+    run_step "Verilator unit: $tb" run_verilator_tb "$tb"
+  done
+else
+  skip_step "Verilator full TOP lint" "verilator not found"
+  for tb in "${VERILATOR_TBS[@]}"; do
+    skip_step "Verilator unit: $tb" "verilator not found"
+  done
+fi
 
 if command -v xrun >/dev/null 2>&1; then
   run_step "Xcelium TOP smoke" bash "$TOP_ROOT/ci/run_smoke.sh"
