@@ -248,6 +248,11 @@ class spadmic_scoreboard;
     bit ref_ok;
 
     forever begin
+      if (stim_mb.num() != 0) begin
+        #1;
+        continue;
+      end
+
       if (!mon_mb.try_get(btxn)) begin
         #1;
         continue;

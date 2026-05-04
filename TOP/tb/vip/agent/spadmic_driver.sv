@@ -165,6 +165,7 @@ class spadmic_driver;
 `ifdef SPADMIC_ENABLE_FUNC_COV
           sample_stimulus_cov(STIM_KIND_TDC, (3'b001 << et.axis), 1'b0, et.start_stop_delay_ps);
 `endif
+          sb_mb.put(txn);
           ev_drv.inject_tdc_events(et);
           if (!cfg.enable_reset_test) begin
             // Keep a short guard in normal sequencing so an immediate follow-on
@@ -172,7 +173,6 @@ class spadmic_driver;
             // shared export path.
             #(et.num_conversions * 500_000);  // 500 ns per conversion
           end
-          sb_mb.put(txn);
         end
 
         TXN_POS_EVENT: begin
@@ -185,8 +185,8 @@ class spadmic_driver;
             pt.hold_time_ns * 1000
           );
 `endif
-          pos_drv.drive_position_event(pt);
           sb_mb.put(txn);
+          pos_drv.drive_position_event(pt);
         end
 
         TXN_CORRELATED_EVENT: begin
@@ -196,6 +196,7 @@ class spadmic_driver;
           sample_stimulus_cov(STIM_KIND_CORRELATED, ct.axis_mask, ct.position_present,
                               ct.start_stop_delay_ps);
 `endif
+          sb_mb.put(txn);
           fork
             begin : tdc_family
               for (int ax = 0; ax < 3; ax++) begin
@@ -232,7 +233,6 @@ class spadmic_driver;
             end
           join
           #(ct.post_family_idle_ps);
-          sb_mb.put(txn);
         end
 
         TXN_BP: begin
