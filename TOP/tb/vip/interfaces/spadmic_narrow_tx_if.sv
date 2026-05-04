@@ -27,19 +27,22 @@ interface spadmic_narrow_tx_if (
   logic                  ready;
   logic [SPADMIC_TX_PHY_W-1:0] low_byte_q;
 
-  always_ff @(posedge phy_clk or negedge rst_n) begin
+  always @(posedge phy_clk or negedge rst_n) begin
     if (!rst_n) begin
       low_byte_q <= '0;
-    end else if (phy_valid) begin
-      low_byte_q <= phy_data;
+    end else begin
+      #1;
+      if (phy_valid)
+        low_byte_q <= phy_data;
     end
   end
 
-  always_ff @(negedge phy_clk or negedge rst_n) begin
+  always @(negedge phy_clk or negedge rst_n) begin
     if (!rst_n) begin
       valid <= 1'b0;
       data  <= '0;
     end else begin
+      #1;
       valid <= phy_valid;
       if (phy_valid)
         data <= {phy_data, low_byte_q};

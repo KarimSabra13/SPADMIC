@@ -12,7 +12,7 @@ module tb_spadmic_stress_arbiter;
 
   localparam int FIFO_DEPTH_TB = 128;
   localparam int CLK_PERIOD = 6250; // 160 MHz
-  localparam time TIMEOUT_PS = 5_000_000_000;
+  localparam time TIMEOUT_PS = 64'd5_000_000_000;
 
   logic clk_sys, rst_n;
 
