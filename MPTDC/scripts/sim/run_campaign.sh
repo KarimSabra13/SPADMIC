@@ -425,16 +425,21 @@ done > "$JOB_LIST_FILE"
 ACTUAL_JOBS=$(wc -l < "$JOB_LIST_FILE")
 echo "[CAMPAIGN] Skipped ${SKIPPED} already-complete seeds, ${ACTUAL_JOBS} remaining"
 
-# Use GNU parallel if available, otherwise xargs. Some Cadence installs ship a
-# different `parallel` helper that is not GNU parallel and must not be used here.
-if has_gnu_parallel; then
-  echo "[CAMPAIGN] Using GNU parallel with ${JOBS} jobs"
-  parallel --jobs "$JOBS" --colsep ' ' worker {1} {2} < "$JOB_LIST_FILE"
-  RC=$?
+if (( ACTUAL_JOBS == 0 )); then
+  echo "[CAMPAIGN] Nothing to run after resume check"
+  RC=0
 else
-  echo "[CAMPAIGN] Using xargs with ${JOBS} jobs"
-  xargs -P "$JOBS" -L 1 bash -c 'worker "$@"' _ < "$JOB_LIST_FILE"
-  RC=$?
+  # Use GNU parallel if available, otherwise xargs. Some Cadence installs ship a
+  # different `parallel` helper that is not GNU parallel and must not be used here.
+  if has_gnu_parallel; then
+    echo "[CAMPAIGN] Using GNU parallel with ${JOBS} jobs"
+    parallel --jobs "$JOBS" --colsep ' ' worker {1} {2} < "$JOB_LIST_FILE"
+    RC=$?
+  else
+    echo "[CAMPAIGN] Using xargs with ${JOBS} jobs"
+    xargs -r -P "$JOBS" -L 1 bash -c 'worker "$@"' _ < "$JOB_LIST_FILE"
+    RC=$?
+  fi
 fi
 
 # ── cleanup temp files ──────────────────────────────────────────────────────

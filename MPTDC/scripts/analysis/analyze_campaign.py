@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 import os
 import sys
 from pathlib import Path
@@ -21,7 +22,14 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.colors import TwoSlopeNorm
 from scipy import stats
+
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from plot_style import PALETTE, apply_report_style, save_figure, style_axes
 
 # ---------------------------------------------------------------------------
 # Vernier reconstruction constants & function
@@ -74,6 +82,8 @@ DELAY_REGION_BANDS_PS = [
     ("1-10 ns", 1000, 10_000),
     ("10-30 ns", 10_000, 30_000),
 ]
+
+apply_report_style()
 
 
 # ---------------------------------------------------------------------------
@@ -340,13 +350,14 @@ def boundary_class_analysis(df: pd.DataFrame):
 # ---------------------------------------------------------------------------
 
 def phase_heatmaps(df: pd.DataFrame):
-    """Return (mean_pivot, std_pivot) DataFrames indexed by (ns, nf)."""
+    """Return (mean, std, count) pivots indexed by (ns, nf)."""
     required = {"ns", "nf", "offset_ps"}
     if not required.issubset(df.columns):
-        return None, None
+        return None, None, None
     mean_piv = df.pivot_table(values="offset_ps", index="ns", columns="nf", aggfunc="mean")
     std_piv = df.pivot_table(values="offset_ps", index="ns", columns="nf", aggfunc="std")
-    return mean_piv, std_piv
+    count_piv = df.pivot_table(values="offset_ps", index="ns", columns="nf", aggfunc="count")
+    return mean_piv, std_piv, count_piv
 
 
 # ---------------------------------------------------------------------------
@@ -373,6 +384,16 @@ def _safe_config(name: str) -> str:
     return name.replace("/", "_").replace("\\", "_").replace(" ", "_")
 
 
+def _annotate_heatmap(ax, matrix: np.ndarray, *, fmt: str):
+    for row_idx in range(matrix.shape[0]):
+        for col_idx in range(matrix.shape[1]):
+            value = matrix[row_idx, col_idx]
+            if np.isnan(value):
+                continue
+            ax.text(col_idx, row_idx, format(value, fmt),
+                    ha="center", va="center", fontsize=7, color="black")
+
+
 def plot_linearity(df: pd.DataFrame, config: str, out_dir: Path):
     """Scatter Traw vs Tref (sub-sampled)."""
     sub = df.sample(n=min(5000, len(df)), random_state=42)
@@ -383,23 +404,21 @@ def plot_linearity(df: pd.DataFrame, config: str, out_dir: Path):
     ax.set_title(f"Linearity – {config}")
     ax.plot(ax.get_xlim(), ax.get_xlim(), "r--", lw=0.8, label="ideal")
     ax.legend()
-    fig.tight_layout()
-    fig.savefig(out_dir / f"linearity_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    style_axes(ax)
+    save_figure(fig, out_dir / f"linearity_{_safe_config(config)}.png")
 
 
 def plot_residual(df: pd.DataFrame, config: str, out_dir: Path):
     """Offset vs Tref."""
     sub = df.sample(n=min(5000, len(df)), random_state=42)
     fig, ax = plt.subplots(figsize=(7, 4))
-    ax.scatter(sub["Tref_ps"], sub["offset_ps"], s=1, alpha=0.4)
-    ax.axhline(0, color="r", lw=0.8)
+    ax.scatter(sub["Tref_ps"], sub["offset_ps"], s=1, alpha=0.4, color=PALETTE["blue"])
+    ax.axhline(0, color=PALETTE["gray"], lw=0.8)
     ax.set_xlabel("Tref (ps)")
     ax.set_ylabel("Offset (ps)")
     ax.set_title(f"Residual – {config}")
-    fig.tight_layout()
-    fig.savefig(out_dir / f"residual_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    style_axes(ax)
+    save_figure(fig, out_dir / f"residual_{_safe_config(config)}.png")
 
 
 def plot_residual_hist(df: pd.DataFrame, config: str, out_dir: Path):
@@ -415,40 +434,77 @@ def plot_residual_hist(df: pd.DataFrame, config: str, out_dir: Path):
     ax.set_xlabel("Offset (ps)")
     ax.set_ylabel("Count")
     ax.set_title(f"Residual histogram – {config}")
-    fig.tight_layout()
-    fig.savefig(out_dir / f"residual_hist_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    style_axes(ax, grid_axis="y")
+    save_figure(fig, out_dir / f"residual_hist_{_safe_config(config)}.png")
 
 
 def plot_inl_dnl(edges, dnl, inl, config: str, out_dir: Path):
     """INL and DNL vs bin index."""
     fig, axes = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
     x = np.arange(len(dnl))
-    axes[0].bar(x, dnl, width=1.0, color="steelblue")
+    axes[0].bar(x, dnl, width=1.0, color=PALETTE["blue"])
     axes[0].set_ylabel("DNL (LSB)")
     axes[0].set_title(f"DNL – {config}")
-    axes[1].plot(x, inl, color="darkorange")
+    axes[1].plot(x, inl, color=PALETTE["orange"])
     axes[1].set_ylabel("INL (LSB)")
     axes[1].set_xlabel("Bin index")
     axes[1].set_title(f"INL – {config}")
-    fig.tight_layout()
-    fig.savefig(out_dir / f"inl_dnl_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    for ax in axes:
+        style_axes(ax)
+    save_figure(fig, out_dir / f"inl_dnl_{_safe_config(config)}.png")
 
 
-def plot_phase_heatmap(mean_piv, config: str, out_dir: Path):
-    """ns x nf mean-offset heatmap."""
+def plot_phase_heatmap(matrix: pd.DataFrame, config: str, out_dir: Path, *,
+                       stem: str, title: str, cbar_label: str,
+                       cmap: str = "viridis", center_zero: bool = False,
+                       fmt: str = ".1f"):
+    """Generic heatmap for ns x nf phase statistics."""
+    if matrix is None or matrix.empty:
+        return
     fig, ax = plt.subplots(figsize=(6, 5))
-    im = ax.imshow(mean_piv.values, aspect="auto", origin="lower",
-                   extent=[-0.5, mean_piv.shape[1] - 0.5,
-                           -0.5, mean_piv.shape[0] - 0.5])
+    values = matrix.values.astype(float)
+    norm = None
+    if center_zero and np.isfinite(values).any():
+        vmax = float(np.nanmax(np.abs(values)))
+        if vmax > 0:
+            norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+    im = ax.imshow(values, aspect="auto", origin="lower", cmap=cmap, norm=norm)
     ax.set_xlabel("nf")
     ax.set_ylabel("ns")
-    ax.set_title(f"Mean offset (ps) ns×nf – {config}")
-    fig.colorbar(im, ax=ax, label="ps")
-    fig.tight_layout()
-    fig.savefig(out_dir / f"phase_heatmap_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    ax.set_xticks(range(matrix.shape[1]))
+    ax.set_yticks(range(matrix.shape[0]))
+    ax.set_title(f"{title} – {config}")
+    _annotate_heatmap(ax, values, fmt=fmt)
+    fig.colorbar(im, ax=ax, label=cbar_label)
+    save_figure(fig, out_dir / f"{stem}_{_safe_config(config)}.png")
+
+
+def plot_boundary_class_summary(class_stats: dict, config: str, out_dir: Path):
+    """Plot mean/RMSE/count per boundary class."""
+    if not class_stats:
+        return
+
+    labels = [f"p0={p0}, sbi={sbi}" for p0, sbi in sorted(class_stats)]
+    means = [class_stats[key]["mean"] for key in sorted(class_stats)]
+    rmses = [class_stats[key]["rmse"] for key in sorted(class_stats)]
+    counts = [class_stats[key]["count"] for key in sorted(class_stats)]
+
+    fig, axes = plt.subplots(3, 1, figsize=(8.5, 8), sharex=True)
+    axes[0].bar(labels, means, color=PALETTE["red"], alpha=0.85)
+    axes[0].axhline(0.0, color=PALETTE["gray"], lw=0.8)
+    axes[0].set_ylabel("Biais moyen (ps)")
+    axes[0].set_title(f"Boundary classes – {config}")
+
+    axes[1].bar(labels, rmses, color=PALETTE["blue"], alpha=0.85)
+    axes[1].set_ylabel("RMSE (ps)")
+
+    axes[2].bar(labels, counts, color=PALETTE["green"], alpha=0.85)
+    axes[2].set_ylabel("Population")
+    axes[2].set_xlabel("Classe de frontiere")
+
+    for ax in axes:
+        style_axes(ax, grid_axis="y")
+    save_figure(fig, out_dir / f"boundary_class_summary_{_safe_config(config)}.png")
 
 
 def plot_hit_count_dist(df: pd.DataFrame, config: str, out_dir: Path):
@@ -457,13 +513,12 @@ def plot_hit_count_dist(df: pd.DataFrame, config: str, out_dir: Path):
         return
     fig, ax = plt.subplots(figsize=(6, 4))
     counts = df["hit_count"].value_counts().sort_index()
-    ax.bar(counts.index, counts.values, color="teal")
+    ax.bar(counts.index, counts.values, color=PALETTE["teal"])
     ax.set_xlabel("hit_count")
     ax.set_ylabel("Conversions")
     ax.set_title(f"Hit-count distribution – {config}")
-    fig.tight_layout()
-    fig.savefig(out_dir / f"hit_count_dist_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    style_axes(ax, grid_axis="y")
+    save_figure(fig, out_dir / f"hit_count_dist_{_safe_config(config)}.png")
 
 
 def plot_binned_profile(profile: pd.DataFrame, config: str, out_dir: Path, stem: str, *,
@@ -476,21 +531,21 @@ def plot_binned_profile(profile: pd.DataFrame, config: str, out_dir: Path, stem:
     fig, axes = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
 
     axes[0].plot(x, profile["rmse"].values, color="#1976d2", lw=1.6, label="RMSE")
-    axes[0].plot(x, profile["mean"].values, color="#d32f2f", lw=1.1, label="Mean offset")
+    axes[0].plot(x, profile["mean"].values, color=PALETTE["red"], lw=1.1, label="Mean offset")
     axes[0].axhline(0, color="k", ls="--", lw=0.8)
     axes[0].set_ylabel("Erreur (ps)")
     axes[0].set_title(f"{title} – {config}")
     axes[0].legend()
 
-    axes[1].plot(x, profile["p90_ae"].values, color="#2e7d32", lw=1.4, label="|err| P90")
-    axes[1].plot(x, profile["p99_ae"].values, color="#6a1b9a", lw=1.4, label="|err| P99")
+    axes[1].plot(x, profile["p90_ae"].values, color=PALETTE["green"], lw=1.4, label="|err| P90")
+    axes[1].plot(x, profile["p99_ae"].values, color=PALETTE["purple"], lw=1.4, label="|err| P99")
     axes[1].set_xlabel(x_label)
     axes[1].set_ylabel("|Erreur| (ps)")
     axes[1].legend()
 
-    fig.tight_layout()
-    fig.savefig(out_dir / f"{stem}_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    for ax in axes:
+        style_axes(ax)
+    save_figure(fig, out_dir / f"{stem}_{_safe_config(config)}.png")
 
 
 def plot_discrete_profile(profile: pd.DataFrame, config: str, out_dir: Path, stem: str, *,
@@ -501,17 +556,41 @@ def plot_discrete_profile(profile: pd.DataFrame, config: str, out_dir: Path, ste
 
     x = profile["x"].values
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    ax.plot(x, profile["rmse"].values, color="#1976d2", marker="o", ms=3, lw=1.4, label="RMSE")
-    ax.plot(x, profile["p99_ae"].values, color="#6a1b9a", marker="s", ms=2.5, lw=1.1,
+    ax.plot(x, profile["rmse"].values, color=PALETTE["blue"], marker="o", ms=3, lw=1.4, label="RMSE")
+    ax.plot(x, profile["p99_ae"].values, color=PALETTE["purple"], marker="s", ms=2.5, lw=1.1,
             label="|err| P99")
     ax.set_xlabel(x_label)
     ax.set_ylabel("Erreur (ps)")
     ax.set_title(f"{title} – {config}")
-    ax.grid(alpha=0.25)
     ax.legend()
-    fig.tight_layout()
-    fig.savefig(out_dir / f"{stem}_{_safe_config(config)}.png", dpi=150)
-    plt.close(fig)
+    style_axes(ax)
+    save_figure(fig, out_dir / f"{stem}_{_safe_config(config)}.png")
+
+
+def _json_ready_results(all_results: dict, ttest_all: dict) -> dict:
+    """Convert analysis results to JSON-friendly scalars."""
+    ready: dict[str, dict] = {}
+    for cfg, res in sorted(all_results.items()):
+        cfg_ready: dict[str, object] = {
+            "offset_stats": res.get("offset_stats", {}),
+            "peak_dnl": res.get("peak_dnl"),
+            "peak_inl": res.get("peak_inl"),
+            "mismatches": res.get("mismatches"),
+            "flag_dist": res.get("flag_dist", {}),
+            "ttest_results": ttest_all.get(cfg, []),
+        }
+        boundary = res.get("boundary_classes", {})
+        cfg_ready["boundary_classes"] = {
+            f"phase0_{key[0]}__sbi_{key[1]}": value
+            for key, value in boundary.items()
+        }
+        for profile_name in ("delay_profile", "nslow_profile", "nfast_profile", "hit_idx_profile",
+                             "traw_profile", "delay_regions"):
+            profile = res.get(profile_name)
+            if isinstance(profile, pd.DataFrame):
+                cfg_ready[profile_name] = profile.to_dict(orient="records")
+        ready[cfg] = cfg_ready
+    return ready
 
 
 # ---------------------------------------------------------------------------
@@ -680,7 +759,7 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
         print(f"  Boundary classes found: {len(class_stats)}")
 
     # phase heatmaps
-    mean_piv, std_piv = phase_heatmaps(df)
+    mean_piv, std_piv, count_piv = phase_heatmaps(df)
 
     # flag distribution
     fdist = flag_distribution(df)
@@ -693,12 +772,14 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
     delay_profile = compute_binned_profile(df, "Tref_ps", n_bins=PROFILE_DELAY_BINS)
     nslow_profile = compute_discrete_profile(df, "nslow")
     nfast_profile = compute_discrete_profile(df, "nfast_hit")
+    hit_idx_profile = compute_discrete_profile(df, "hit_idx")
     traw_profile = compute_binned_profile(df, "t_raw_ps", n_bins=PROFILE_TRAW_BINS)
     delay_regions = compute_delay_regions(df)
 
     result["delay_profile"] = delay_profile
     result["nslow_profile"] = nslow_profile
     result["nfast_profile"] = nfast_profile
+    result["hit_idx_profile"] = hit_idx_profile
     result["traw_profile"] = traw_profile
     result["delay_regions"] = delay_regions
 
@@ -714,10 +795,14 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
         nslow_profile.to_csv(out_dir / f"nslow_profile_{safe_cfg}.csv", index=False)
     if not nfast_profile.empty:
         nfast_profile.to_csv(out_dir / f"nfast_hit_profile_{safe_cfg}.csv", index=False)
+    if not hit_idx_profile.empty:
+        hit_idx_profile.to_csv(out_dir / f"hit_idx_profile_{safe_cfg}.csv", index=False)
     if not traw_profile.empty:
         traw_profile.to_csv(out_dir / f"t_raw_profile_{safe_cfg}.csv", index=False)
     if not delay_regions.empty:
         delay_regions.to_csv(out_dir / f"delay_regions_{safe_cfg}.csv", index=False)
+    if count_piv is not None and not count_piv.empty:
+        count_piv.to_csv(out_dir / f"phase_count_heatmap_{safe_cfg}.csv")
 
     # plots
     if do_plots:
@@ -729,7 +814,26 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
             if len(dnl) > 0:
                 plot_inl_dnl(edges, dnl, inl, config, out_dir)
             if mean_piv is not None and not mean_piv.empty:
-                plot_phase_heatmap(mean_piv, config, out_dir)
+                plot_phase_heatmap(mean_piv, config, out_dir,
+                                   stem="phase_heatmap_mean",
+                                   title="Biais moyen ns×nf",
+                                   cbar_label="ps",
+                                   cmap="RdBu_r",
+                                   center_zero=True)
+            if std_piv is not None and not std_piv.empty:
+                plot_phase_heatmap(std_piv, config, out_dir,
+                                   stem="phase_heatmap_std",
+                                   title="Ecart-type ns×nf",
+                                   cbar_label="ps",
+                                   cmap="viridis")
+            if count_piv is not None and not count_piv.empty:
+                plot_phase_heatmap(count_piv, config, out_dir,
+                                   stem="phase_heatmap_count",
+                                   title="Occupation ns×nf",
+                                   cbar_label="echantillons",
+                                   cmap="magma",
+                                   fmt=".0f")
+            plot_boundary_class_summary(class_stats, config, out_dir)
             plot_hit_count_dist(df, config, out_dir)
             plot_binned_profile(delay_profile, config, out_dir, "delay_error_profile",
                                 title="Error profile vs Tref",
@@ -738,6 +842,8 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
                                   title="Error profile vs nslow", x_label="nslow")
             plot_discrete_profile(nfast_profile, config, out_dir, "nfast_hit_error_profile",
                                   title="Error profile vs nfast_hit", x_label="nfast_hit")
+            plot_discrete_profile(hit_idx_profile, config, out_dir, "hit_idx_error_profile",
+                                  title="Error profile vs hit_idx", x_label="hit_idx")
             plot_binned_profile(traw_profile, config, out_dir, "t_raw_error_profile",
                                 title="Error profile vs t_raw",
                                 x_label="t_raw (ns)", x_scale=1000.0)
@@ -799,6 +905,12 @@ def main():
     # summary report
     report_path = out_dir / "summary_report.txt"
     write_summary_report(all_results, report_path, ttest_all)
+    summary_json = out_dir / "summary_report.json"
+    summary_json.write_text(
+        json.dumps(_json_ready_results(all_results, ttest_all), indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
+    print(f"[INFO] Summary JSON written to {summary_json}")
 
     print("[INFO] Analysis complete.")
 

@@ -15,6 +15,7 @@ averaging curves from measured conversions.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -28,11 +29,18 @@ import pandas as pd
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+SCRIPT_ROOT = SCRIPT_DIR.parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
 
 from analyze_campaign import basic_stats, discover_csv_files, load_config_data
+from plot_style import PALETTE, apply_report_style, save_figure, style_axes
 
 AVERAGING_N_VALUES = list(range(1, 16))
 PLOT_N_VALUES = [1, 2, 4, 8, 15]
+SELECTED_DELAY_TARGETS_PS = [20, 100, 1000, 10000, 30000]
+
+apply_report_style()
 
 
 def parse_delay_dir(path: Path) -> int | None:
@@ -121,6 +129,18 @@ def safe_name(name: str) -> str:
     return name.replace("/", "_").replace("\\", "_").replace(" ", "_")
 
 
+def pick_representative_delays(delays: list[int], targets: list[int]) -> list[int]:
+    """Pick a small set of existing delays closest to engineering targets."""
+    if not delays:
+        return []
+    picked: list[int] = []
+    for target in targets:
+        nearest = min(delays, key=lambda value: abs(value - target))
+        if nearest not in picked:
+            picked.append(nearest)
+    return picked
+
+
 def plot_oneshot_vs_delay(summary_df: pd.DataFrame, config: str, out_dir: Path):
     """Plot one-shot RMSE versus fixed delay for each estimator."""
     if summary_df.empty:
@@ -144,11 +164,9 @@ def plot_oneshot_vs_delay(summary_df: pd.DataFrame, config: str, out_dir: Path):
     ax.set_xlabel("Delai fixe (ns)")
     ax.set_ylabel("RMSE (ps)")
     ax.set_title(f"RMSE mono-mesure vs delai fixe – {config}")
-    ax.grid(alpha=0.25)
+    style_axes(ax)
     ax.legend()
-    fig.tight_layout()
-    fig.savefig(out_dir / f"fixed_delay_oneshot_rmse_{safe_name(config)}.png", dpi=150)
-    plt.close(fig)
+    save_figure(fig, out_dir / f"fixed_delay_oneshot_rmse_{safe_name(config)}.png")
 
 
 def plot_tail_vs_delay(summary_df: pd.DataFrame, config: str, out_dir: Path):
@@ -171,13 +189,11 @@ def plot_tail_vs_delay(summary_df: pd.DataFrame, config: str, out_dir: Path):
     axes[0].set_ylabel("|Erreur| P90 (ps)")
     axes[0].set_title(f"Queues d'erreur vs delai fixe – {config}")
     axes[0].legend()
-    axes[0].grid(alpha=0.25)
     axes[1].set_ylabel("|Erreur| P99 (ps)")
     axes[1].set_xlabel("Delai fixe (ns)")
-    axes[1].grid(alpha=0.25)
-    fig.tight_layout()
-    fig.savefig(out_dir / f"fixed_delay_tails_{safe_name(config)}.png", dpi=150)
-    plt.close(fig)
+    for ax in axes:
+        style_axes(ax)
+    save_figure(fig, out_dir / f"fixed_delay_tails_{safe_name(config)}.png")
 
 
 def plot_averaging_vs_delay(avg_df: pd.DataFrame, config: str, estimator: str, out_dir: Path):
@@ -201,11 +217,60 @@ def plot_averaging_vs_delay(avg_df: pd.DataFrame, config: str, estimator: str, o
     ax.set_xlabel("Delai fixe (ns)")
     ax.set_ylabel("RMSE (ps)")
     ax.set_title(f"Averaging meme-delai ({estimator_title}) – {config}")
-    ax.grid(alpha=0.25)
+    style_axes(ax)
     ax.legend(ncol=min(5, len(PLOT_N_VALUES)))
-    fig.tight_layout()
-    fig.savefig(out_dir / f"fixed_delay_avg_{estimator}_{safe_name(config)}.png", dpi=150)
-    plt.close(fig)
+    save_figure(fig, out_dir / f"fixed_delay_avg_{estimator}_{safe_name(config)}.png")
+
+
+def plot_averaging_vs_n(avg_df: pd.DataFrame, config: str, estimator: str, out_dir: Path):
+    """Plot RMSE vs averaging depth for representative fixed delays."""
+    subset = avg_df[avg_df["estimator"] == estimator].copy()
+    if subset.empty:
+        return
+
+    delays = sorted(int(value) for value in subset["delay_ps"].unique())
+    chosen_delays = pick_representative_delays(delays, SELECTED_DELAY_TARGETS_PS)
+    if not chosen_delays:
+        return
+
+    estimator_title = {
+        "first_hit_scan": "premier hit scanne",
+        "conv_mean": "moyenne intra-conversion",
+    }.get(estimator, estimator)
+
+    fig, ax = plt.subplots(figsize=(8.5, 5))
+    color_cycle = [PALETTE["blue"], PALETTE["red"], PALETTE["green"], PALETTE["purple"], PALETTE["orange"]]
+    for color, delay_ps in zip(color_cycle, chosen_delays):
+        group = subset[subset["delay_ps"] == delay_ps].sort_values("N")
+        if group.empty:
+            continue
+        rmse = group["rmse"].values
+        n_vals = group["N"].values
+        ref = rmse[0] / np.sqrt(n_vals.astype(float))
+        ax.plot(n_vals, rmse, marker="o", ms=3.5, lw=1.5, color=color,
+                label=f"{delay_ps/1000.0:g} ns")
+        ax.plot(n_vals, ref, ls="--", lw=1.0, color=color, alpha=0.45)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Nombre de moyennes N")
+    ax.set_ylabel("RMSE (ps)")
+    ax.set_title(f"Averaging vs N ({estimator_title}) – {config}")
+    style_axes(ax)
+    ax.legend(title="Delai fixe")
+    save_figure(fig, out_dir / f"fixed_delay_avg_vs_n_{estimator}_{safe_name(config)}.png")
+
+
+def _json_ready(summary_df: pd.DataFrame, avg_df: pd.DataFrame) -> dict:
+    """Convert fixed-delay outputs to a JSON-friendly structure."""
+    result: dict[str, dict] = {}
+    for cfg in sorted(summary_df["config"].unique()):
+        cfg_summary = summary_df[summary_df["config"] == cfg].copy()
+        cfg_avg = avg_df[avg_df["config"] == cfg].copy()
+        result[cfg] = {
+            "oneshot_summary": cfg_summary.to_dict(orient="records"),
+            "averaging_summary": cfg_avg.to_dict(orient="records"),
+        }
+    return result
 
 
 def write_text_report(summary_df: pd.DataFrame, avg_df: pd.DataFrame, out_path: Path):
@@ -343,6 +408,9 @@ def main():
     avg_df.sort_values(["config", "estimator", "delay_ps", "N"]).to_csv(avg_csv, index=False)
     print(f"[INFO] Wrote {summary_csv}")
     print(f"[INFO] Wrote {avg_csv}")
+    json_path = out_dir / "fixed_delay_report.json"
+    json_path.write_text(json.dumps(_json_ready(summary_df, avg_df), indent=2) + "\n", encoding="utf-8")
+    print(f"[INFO] Wrote {json_path}")
 
     write_text_report(summary_df, avg_df, out_dir / "fixed_delay_report.txt")
 
@@ -354,6 +422,7 @@ def main():
             cfg_avg = avg_df[avg_df["config"] == cfg].copy()
             for estimator in ("first_hit_scan", "conv_mean"):
                 plot_averaging_vs_delay(cfg_avg, cfg, estimator, out_dir)
+                plot_averaging_vs_n(cfg_avg, cfg, estimator, out_dir)
 
     print("[INFO] Fixed-delay analysis complete.")
 

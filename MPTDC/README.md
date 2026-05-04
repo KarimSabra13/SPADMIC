@@ -199,6 +199,14 @@ those buckets before load/report.
 ### 6) Data collection and calibration
 
 ```bash
+# Official nominal RTL characterization baseline
+bash scripts/sim/run_characterization_baseline.sh \
+  --sim verilator \
+  --analyze \
+  --calibrate \
+  --with-fixed-delay
+
+# Broad sweep only
 bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
 bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
 
@@ -220,6 +228,10 @@ bash scripts/sim/run_fixed_delay_campaign.sh \
   --out-dir results/fixed_delay_campaign \
   --analyze
 ```
+
+The baseline wrapper standardizes the output tree under
+`results/characterization/...` and writes `characterization_manifest.json`
+alongside the campaign, sweep analysis, calibration, and fixed-delay results.
 
 ### 7) Trial synthesis
 

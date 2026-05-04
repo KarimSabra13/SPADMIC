@@ -63,6 +63,7 @@ Recommended local collection flow:
 
 - bench: `tb/int/tb_campaign_collect.sv` (plusarg-configurable)
 - orchestrator: `scripts/sim/run_campaign.sh` (parallel, resume-capable, native `--sim verilator|xrun|xcelium`)
+- official nominal baseline wrapper: `scripts/sim/run_characterization_baseline.sh`
 - input source: `CAL`
 - hit-depth policy: higher `max_hits` for dense raw data, `max_hits = 1` for minimum-latency fast-close studies
 - output mode:
@@ -91,6 +92,13 @@ The campaign runner enumerates all combinations of:
 That gives 24 configurations × 30 seeds each = 720 simulation runs.
 
 ```bash
+# Official nominal baseline (campaign + sweep analysis + calibration + fixed-delay)
+bash scripts/sim/run_characterization_baseline.sh \
+  --sim verilator \
+  --analyze \
+  --calibrate \
+  --with-fixed-delay
+
 # Full campaign with Verilator (12-core parallel)
 bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
 
@@ -114,6 +122,17 @@ bash scripts/sim/run_campaign.sh --sim verilator --jobs 8 \
 bash scripts/sim/run_campaign.sh --sim verilator --smoke
 bash scripts/sim/run_campaign.sh --sim xrun --smoke
 ```
+
+The baseline wrapper fixes the current reference sweep to:
+
+- `multihit_15_cal_nominal`
+- `FULL` mode
+- `12` parallel jobs
+- `100000` conversions per seed/job
+- `20 ps .. 30 ns`
+
+and writes a `characterization_manifest.json` file together with the normalized
+campaign, sweep-analysis, calibration, and fixed-delay directories.
 
 ### 4.3 Silicon lab flow
 
@@ -239,7 +258,10 @@ Outputs:
 - `lut_6d.csv` — the saved LUT (16K bins)
 - `calibration_report.txt` — human-readable report
 - `calibration_report.json` — machine-readable metrics
-- `plots/` — 19 diagnostic plots (histograms, scatter, Q-Q, INL/DNL, averaging curves)
+- `plots/` — 22 diagnostic plots, now including:
+  - pre/post delay-profile overlays
+  - pre/post `ns_inf × nf_inf` heatmaps
+  - pre/post hit-index RMSE comparison
 
 ### 5.8 Short-format observability study
 

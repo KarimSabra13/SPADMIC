@@ -27,6 +27,7 @@ import os
 import re
 import sys
 import time
+from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
@@ -34,6 +35,13 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
+from matplotlib.colors import TwoSlopeNorm
+
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from plot_style import PALETTE, apply_report_style, save_figure, style_axes
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 # Vernier algebra: t_raw_ps = ((nslow+2+sbi-1)*K_SLOW + nfast*K_FAST
@@ -58,6 +66,8 @@ REQUIRED_COLUMNS = [
 PARSER_ERROR_RE = re.compile(
     r"Expected (?P<expected>\d+) fields in line (?P<line>\d+), saw (?P<saw>\d+)"
 )
+
+apply_report_style()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -460,6 +470,146 @@ def plot_error_vs_code(df, error_col, code_col, out_path, title="", n_bins=100):
     print(f"  Saved: {out_path}")
 
 
+def compute_binned_profile(df, x_col, error_col, *, n_bins=60):
+    """Aggregate mean/rmse/tails of *error_col* over evenly spaced bins of *x_col*."""
+    work = df[[x_col, error_col]].dropna().copy()
+    if work.empty:
+        return pd.DataFrame()
+
+    x = work[x_col].astype(float)
+    if x.nunique() < 2:
+        return pd.DataFrame()
+
+    edges = np.linspace(float(x.min()), float(x.max()), num=min(n_bins, x.nunique()) + 1)
+    edges = np.unique(edges)
+    if len(edges) < 2:
+        return pd.DataFrame()
+
+    work["bin"] = pd.cut(work[x_col], bins=edges, include_lowest=True, duplicates="drop")
+    records = []
+    for interval, grp in work.groupby("bin", observed=True):
+        arr = grp[error_col].to_numpy(dtype=float)
+        if arr.size == 0:
+            continue
+        ae = np.abs(arr)
+        records.append({
+            "x_lo": float(interval.left),
+            "x_hi": float(interval.right),
+            "x_mid": float((interval.left + interval.right) / 2.0),
+            "mean": float(np.mean(arr)),
+            "rmse": float(np.sqrt(np.mean(arr**2))),
+            "p90_ae": float(np.percentile(ae, 90)),
+            "p99_ae": float(np.percentile(ae, 99)),
+            "count": int(arr.size),
+        })
+    return pd.DataFrame.from_records(records)
+
+
+def _phase_pivot(df, error_col, aggfunc):
+    key_cols = ["ns_inf", "nf_inf"]
+    if not set(key_cols + [error_col]).issubset(df.columns):
+        return None
+    piv = df.pivot_table(values=error_col, index="ns_inf", columns="nf_inf", aggfunc=aggfunc)
+    return piv.sort_index().sort_index(axis=1)
+
+
+def _annotate_heatmap(ax, values, fmt):
+    for row_idx in range(values.shape[0]):
+        for col_idx in range(values.shape[1]):
+            value = values[row_idx, col_idx]
+            if np.isnan(value):
+                continue
+            ax.text(col_idx, row_idx, format(value, fmt),
+                    ha="center", va="center", fontsize=7, color="black")
+
+
+def plot_pre_post_delay_profile(df, out_path, title_suffix=""):
+    """Compare delay-dependent mean/RMSE before and after calibration."""
+    raw_profile = compute_binned_profile(df, "Tref_ps", "raw_error_ps")
+    cal_profile = compute_binned_profile(df, "Tref_ps", "error_ps")
+    if raw_profile.empty or cal_profile.empty:
+        return
+
+    x_raw = raw_profile["x_mid"].values / 1000.0
+    x_cal = cal_profile["x_mid"].values / 1000.0
+
+    fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+    axes[0].plot(x_raw, raw_profile["rmse"].values, color=PALETTE["red"], label="Pre-calibration")
+    axes[0].plot(x_cal, cal_profile["rmse"].values, color=PALETTE["blue"], label="Post-calibration")
+    axes[0].set_ylabel("RMSE (ps)")
+    axes[0].set_title(f"RMSE vs delai vrai{title_suffix}")
+    axes[0].legend()
+
+    axes[1].plot(x_raw, raw_profile["mean"].values, color=PALETTE["red"], label="Pre-calibration")
+    axes[1].plot(x_cal, cal_profile["mean"].values, color=PALETTE["blue"], label="Post-calibration")
+    axes[1].axhline(0.0, color=PALETTE["gray"], ls="--", lw=0.8)
+    axes[1].set_xlabel("Delai vrai (ns)")
+    axes[1].set_ylabel("Biais moyen (ps)")
+    axes[1].set_title(f"Biais moyen vs delai vrai{title_suffix}")
+
+    for ax in axes:
+        style_axes(ax)
+    save_figure(fig, out_path)
+    print(f"  Saved: {out_path}")
+
+
+def plot_pre_post_phase_heatmaps(df, out_path, title_suffix=""):
+    """Compare ns_inf × nf_inf mean-error maps before and after calibration."""
+    raw_mean = _phase_pivot(df, "raw_error_ps", "mean")
+    cal_mean = _phase_pivot(df, "error_ps", "mean")
+    raw_std = _phase_pivot(df, "raw_error_ps", "std")
+    cal_std = _phase_pivot(df, "error_ps", "std")
+    if raw_mean is None or cal_mean is None or raw_std is None or cal_std is None:
+        return
+
+    fig, axes = plt.subplots(2, 2, figsize=(11, 9))
+    panels = [
+        (axes[0, 0], raw_mean, "Biais moyen avant calibration", "RdBu_r", True, ".1f"),
+        (axes[0, 1], cal_mean, "Biais moyen apres calibration", "RdBu_r", True, ".1f"),
+        (axes[1, 0], raw_std, "Ecart-type avant calibration", "viridis", False, ".1f"),
+        (axes[1, 1], cal_std, "Ecart-type apres calibration", "viridis", False, ".1f"),
+    ]
+
+    for ax, piv, title, cmap, center_zero, fmt in panels:
+        values = piv.values.astype(float)
+        norm = None
+        if center_zero and np.isfinite(values).any():
+            vmax = float(np.nanmax(np.abs(values)))
+            if vmax > 0:
+                norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+        im = ax.imshow(values, origin="lower", aspect="auto", cmap=cmap, norm=norm)
+        ax.set_xticks(range(piv.shape[1]))
+        ax.set_yticks(range(piv.shape[0]))
+        ax.set_xlabel("nf_inf")
+        ax.set_ylabel("ns_inf")
+        ax.set_title(title)
+        _annotate_heatmap(ax, values, fmt)
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    fig.suptitle(f"Structure Vernier pre/post calibration{title_suffix}", fontsize=13, fontweight="semibold")
+    save_figure(fig, out_path)
+    print(f"  Saved: {out_path}")
+
+
+def plot_pre_post_hit_idx_rmse(df, out_path, title_suffix=""):
+    """Compare hit-index RMSE before and after calibration."""
+    raw = df.groupby("hit_idx")["raw_error_ps"].apply(lambda x: np.sqrt(np.mean(np.square(x))))
+    cal = df.groupby("hit_idx")["error_ps"].apply(lambda x: np.sqrt(np.mean(np.square(x))))
+    if raw.empty or cal.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+    ax.plot(raw.index, raw.values, marker="o", color=PALETTE["red"], label="Pre-calibration")
+    ax.plot(cal.index, cal.values, marker="o", color=PALETTE["blue"], label="Post-calibration")
+    ax.set_xlabel("Hit index")
+    ax.set_ylabel("RMSE (ps)")
+    ax.set_title(f"RMSE par hit index{title_suffix}")
+    style_axes(ax)
+    ax.legend()
+    save_figure(fig, out_path)
+    print(f"  Saved: {out_path}")
+
+
 def plot_inl_dnl(lut_df, out_path):
     """INL / DNL from LUT corrections sorted by code."""
     fig, axes = plt.subplots(2, 1, figsize=(12, 7), sharex=True)
@@ -843,7 +993,12 @@ def main():
     # ── 2) Validate on held-out seeds from same campaign ──────────────────
     val_dir = args.val_dir or args.train_dir
     if val_dir == args.train_dir:
-        val_files = sorted(glob.glob(os.path.join(val_dir, "seed_*.csv")))[args.train_seeds:30]
+        all_val_files = sorted(glob.glob(os.path.join(val_dir, "seed_*.csv")))
+        val_files = all_val_files[args.train_seeds:30]
+        if not val_files and all_val_files:
+            print("  WARNING: no held-out seeds remain after the training split; "
+                  "reusing the available validation directory for a shape check.")
+            val_files = all_val_files
     else:
         val_files = sorted(glob.glob(os.path.join(val_dir, "seed_*.csv")))
 
@@ -891,6 +1046,15 @@ def main():
     plot_qq(val_result["error_ps"].values,
             os.path.join(plots_dir, "val_qq_plot.png"),
             "Q-Q Plot – Calibrated Error (Held-Out)")
+    plot_pre_post_delay_profile(val_result,
+                                os.path.join(plots_dir, "val_delay_profile_pre_post.png"),
+                                " – Held-Out Validation")
+    plot_pre_post_phase_heatmaps(val_result,
+                                 os.path.join(plots_dir, "val_phase_heatmaps_pre_post.png"),
+                                 " – Held-Out Validation")
+    plot_pre_post_hit_idx_rmse(val_result,
+                               os.path.join(plots_dir, "val_rmse_by_hit_idx_pre_post.png"),
+                               " – Held-Out Validation")
 
     del val_data, val_result; gc.collect()
 

@@ -179,6 +179,14 @@ bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --j
 Use the maintained sweep flow when you want statistical coverage across the full delay range:
 
 ```bash
+# Official nominal baseline (12 jobs, 100000 conv/seed, optional downstream stages)
+bash scripts/sim/run_characterization_baseline.sh \
+  --sim verilator \
+  --analyze \
+  --calibrate \
+  --with-fixed-delay
+
+# Generic sweep entrypoint
 bash scripts/sim/run_campaign.sh --sim verilator --jobs 12
 bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --configs multihit_15_cal_nominal
 ```
@@ -191,6 +199,10 @@ Supported knobs that matter for characterization:
 - `--delay-min <ps> --delay-max <ps>`
 - `--seed-start`, `--seeds`, `--n-conv`, `--configs`, `--out-dir`
 
+The baseline wrapper writes a stable output tree and a
+`characterization_manifest.json` file that records the campaign parameters and
+the optional downstream analysis/calibration/fixed-delay stages.
+
 ### 5.2 Broad-range campaign analysis
 
 `scripts/analysis/analyze_campaign.py` is the maintained post-processing entrypoint for sweep campaigns.
@@ -200,8 +212,12 @@ It now emits first-class outputs for:
 - RMSE / mean / tails vs true delay
 - RMSE / tails vs `nslow`
 - RMSE / tails vs `nfast_hit`
+- RMSE / tails vs `hit_idx`
 - RMSE / tails vs `t_raw_ps`
+- boundary-class summary figures
+- `ns × nf` mean / std / occupancy heatmaps
 - fixed engineering delay-region summary tables
+- a machine-readable `summary_report.json`
 
 Example:
 
@@ -238,11 +254,13 @@ produces:
 
 - `fixed_delay_summary.csv`
 - `fixed_delay_averaging.csv`
+- `fixed_delay_report.json`
 - `fixed_delay_report.txt`
 - RMSE / tail plots vs fixed delay
 - same-delay averaging curves for:
   - `first_hit_scan`
   - `conv_mean`
+- RMSE-vs-`N` plots for representative fixed delays
 
 This is the maintained proof path for repeated-measurement RMS and averaging studies.
 
