@@ -249,6 +249,24 @@ module tb_spadmic_i2c_control_plane_unit;
     rst_n = 1'b1;
     repeat (10) @(posedge clk_sys);
 
+    begin
+      logic ack_ok;
+
+      i2c_start();
+      i2c_write_byte({7'h43, 1'b0}, ack_ok);
+      check("Non-matching I2C address NACKs", ack_ok === 1'b0);
+      i2c_stop();
+      repeat (4) @(posedge clk_sys);
+      check("Non-matching address emits no transaction", txn_valid === 1'b0);
+
+      i2c_start();
+      i2c_write_byte({SPADMIC_I2C_ADDR, 1'b1}, ack_ok);
+      check("Read without valid pointer NACKs", ack_ok === 1'b0);
+      i2c_stop();
+      repeat (4) @(posedge clk_sys);
+      check("Pointerless read emits no transaction", txn_valid === 1'b0);
+    end
+
     i2c_write_cmd(16'h0100, 32'hAABB_CCDD);
     check("Write command emitted", txn_valid === 1'b1);
     check("Write command marked write", txn_write === 1'b1);

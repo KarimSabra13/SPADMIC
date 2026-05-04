@@ -30,7 +30,7 @@ The current active first-silicon digital baseline is:
 
 | Area | Quick reference | Deep reference |
 |------|-----------------|----------------|
-| Full chip / integration | [`TOP/README.md`](TOP/README.md) | [`TOP/docs/01_ACTIVE_ARCHITECTURE.md`](TOP/docs/01_ACTIVE_ARCHITECTURE.md), [`TOP/docs/07_BLOCK_GUIDE.md`](TOP/docs/07_BLOCK_GUIDE.md), [`TOP/docs/08_TX_INTERFACE.md`](TOP/docs/08_TX_INTERFACE.md), [`TOP/docs/09_VIP_GUIDE.md`](TOP/docs/09_VIP_GUIDE.md) |
+| Full chip / integration | [`TOP/README.md`](TOP/README.md) | [`TOP/docs/01_ACTIVE_ARCHITECTURE.md`](TOP/docs/01_ACTIVE_ARCHITECTURE.md), [`TOP/docs/07_BLOCK_GUIDE.md`](TOP/docs/07_BLOCK_GUIDE.md), [`TOP/docs/08_TX_INTERFACE.md`](TOP/docs/08_TX_INTERFACE.md), [`TOP/docs/09_VIP_GUIDE.md`](TOP/docs/09_VIP_GUIDE.md), [`TOP/docs/10_TAPEOUT_READINESS.md`](TOP/docs/10_TAPEOUT_READINESS.md) |
 | TDC core | [`MPTDC/README.md`](MPTDC/README.md) | [`MPTDC/docs/01_ARCHITECTURE.md`](MPTDC/docs/01_ARCHITECTURE.md), [`MPTDC/docs/10_SHARED_READOUT_EXPORT.md`](MPTDC/docs/10_SHARED_READOUT_EXPORT.md), [`MPTDC/docs/11_BLOCK_GUIDE.md`](MPTDC/docs/11_BLOCK_GUIDE.md) |
 | I2C control plane | [`I2C/README.md`](I2C/README.md) | [`I2C/docs/01_INTEGRATION_GUIDE.md`](I2C/docs/01_INTEGRATION_GUIDE.md), [`I2C/docs/02_BLOCK_GUIDE.md`](I2C/docs/02_BLOCK_GUIDE.md) |
 

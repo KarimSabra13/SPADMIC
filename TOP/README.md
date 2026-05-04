@@ -25,6 +25,7 @@ First-silicon SPADMIC chip-level integration around three preserved `mptdc_top_a
 | [`docs/07_BLOCK_GUIDE.md`](docs/07_BLOCK_GUIDE.md) | Block-by-block RTL guide for the active and retained legacy TOP modules |
 | [`docs/08_TX_INTERFACE.md`](docs/08_TX_INTERFACE.md) | Source-synchronous DDR TX pin contract and receiver expectations |
 | [`docs/09_VIP_GUIDE.md`](docs/09_VIP_GUIDE.md) | VIP architecture, physical-to-logical TX adapter, and monitor/scoreboard flow |
+| [`docs/10_TAPEOUT_READINESS.md`](docs/10_TAPEOUT_READINESS.md) | Tapeout-readiness risk map, CDC/STA checklist, placeholder macro contracts, and verification closure gate |
 
 ## Visual pack
 
@@ -106,6 +107,10 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 ## Validation entrypoints
 
 ```bash
+# Tapeout-readiness gate with Verilator fallback and Xcelium regressions when available
+cd /home/karim/SPADMIC
+bash TOP/ci/run_tapeout_readiness.sh
+
 # Full top lint
 cd /home/karim/SPADMIC
 MPTDC_FILES=$(sed -e 's,//.*$,,' -e '/^[[:space:]]*$/d' MPTDC/rtl/filelist.f | sed 's,^,MPTDC/,')

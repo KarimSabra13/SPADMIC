@@ -151,6 +151,24 @@ module tb_spadmic_correlated_tx_unit;
     check("Packet 1 stays atomic", out_words[2][15:13] == 3'b100 && out_words[3][15:13] == 3'b101 && out_words[4][15:14] == 2'b11);
     check("Packet 2 stays atomic", out_words[5][15:13] == 3'b100 && out_words[6][15:14] == 2'b11);
 
+    // White-box wrap test: force the X source counter to its terminal value and
+    // confirm the existing global overflow health bit becomes a real sticky flag.
+    rst_n = 1'b0;
+    repeat (2) @(posedge clk_sys);
+    #1;
+    check("Correlation overflow clears on reset", correlation_overflow == 1'b0);
+    rst_n = 1'b1;
+    #1;
+    dut.source_event_id_q[0] = {SPADMIC_EVENT_ID_W{1'b1}};
+
+    while (out_idx < 2)
+      @(posedge clk_sys);
+
+    repeat (2) @(posedge clk_sys);
+    #1;
+    check("Terminal X event ID patched before wrap", out_words[1] == 16'hFFFF);
+    check("Correlation overflow flags event-ID wrap", correlation_overflow == 1'b1);
+
     if (fail_count != 0)
       $fatal(1, "tb_spadmic_correlated_tx_unit: %0d failures", fail_count);
 

@@ -166,7 +166,7 @@ module spadmic_i2c_slave #(
               end else begin
                 ack_seen_high_q <= 1'b0;
                 i2c_sda_oe_o    <= 1'b0;
-                if (!addr_match_q) begin
+                if (!addr_match_q || (rw_q && !pointer_valid_q)) begin
                   state_q <= ST_IDLE;
                 end else if (!rw_q) begin
                   state_q    <= ST_PTR_HI;

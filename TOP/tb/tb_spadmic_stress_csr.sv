@@ -395,6 +395,17 @@ module tb_spadmic_stress_csr;
     check("T4 packet full bits", rd_data[13:11] === 3'b010);
     check("T4 control accept low while busy", rd_data[21] === 1'b0);
 
+    position_drop_sticky = 1'b1;
+    position_glitch_sticky = 1'b1;
+    correlation_overflow_sticky = 1'b1;
+    csr_read(12'h010, rd_data, rd_err);
+    check("T4a global fault mirrors position drop", rd_data[1] === 1'b1);
+    check("T4a global fault mirrors position glitch", rd_data[2] === 1'b1);
+    check("T4a global fault mirrors correlation overflow", rd_data[3] === 1'b1);
+    position_drop_sticky = 1'b0;
+    position_glitch_sticky = 1'b0;
+    correlation_overflow_sticky = 1'b0;
+
     // ========================================
     // TEST 4b: Reject control update while not idle
     // ========================================

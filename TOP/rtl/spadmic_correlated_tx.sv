@@ -198,6 +198,8 @@ module spadmic_correlated_tx (
       end
 
       if (input_accept && is_tdc_eoc(selected_data) && packet_source_valid_q) begin
+        if (&source_event_id_q[packet_source_now])
+          correlation_overflow_o <= 1'b1;
         source_event_id_q[packet_source_now] <= source_event_id_q[packet_source_now]
                                              + SPADMIC_EVENT_ID_W'(1);
       end
