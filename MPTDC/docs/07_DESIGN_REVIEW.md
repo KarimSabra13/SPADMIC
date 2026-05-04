@@ -188,7 +188,7 @@ For an offline-calibrated TDC, this is exactly what I want to see.
 
 ### 4. The MULTI_HIT close path shows timing awareness
 
-`mptdc_meas_ctrl.sv` does not try to close MULTI_HIT with a giant unpipelined 81-bit popcount in the fast domain. The hit-count tree is pipelined and saturating, which is the right direction for a near-GHz measurement domain.
+`mptdc_meas_ctrl.sv` does not try to close MULTI_HIT with a giant unpipelined 64-bit popcount in the fast domain. The hit-count tree is pipelined and saturating, which is the right direction for a near-GHz measurement domain.
 
 ## Timing, clocking, CDC, and reset assessment
 

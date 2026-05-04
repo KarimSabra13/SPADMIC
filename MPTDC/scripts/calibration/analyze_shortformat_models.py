@@ -29,6 +29,8 @@ import pandas as pd
 
 from calibrate_6d_lut import compute_metrics
 
+NE = 8
+
 
 CSV_DTYPES = {
     "conv_id": "int32",
@@ -132,7 +134,7 @@ def load_dataset(label: str, files: list[Path], core_only: bool = True) -> pd.Da
         if "event_seq" not in df.columns:
             df["event_seq"] = df["hit_idx"]
         if "pd_idx" not in df.columns:
-            df["pd_idx"] = (df["ns"].astype(int) * 9 + df["nf"].astype(int)).astype("int16")
+            df["pd_idx"] = (df["ns"].astype(int) * NE + df["nf"].astype(int)).astype("int16")
         frames.append(df)
 
     data = pd.concat(frames, ignore_index=True)

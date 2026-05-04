@@ -46,9 +46,10 @@ from plot_style import PALETTE, apply_report_style, save_figure, style_axes
 # ── Constants ──────────────────────────────────────────────────────────────────
 # Vernier algebra: t_raw_ps = ((nslow+2+sbi-1)*K_SLOW + nfast*K_FAST
 #                               + ns*K_VERNIER - nf*(K_VERNIER-1) + OFFSET) * QUANT
-K_SLOW    = 99
-K_FAST    = 9
+NE        = 8
 K_VERNIER = 11
+K_SLOW    = K_VERNIER * NE
+K_FAST    = NE
 OFFSET    = 25
 QUANT     = 10  # ps per LSB
 
@@ -74,12 +75,12 @@ apply_report_style()
 
 def build_nsnf_reverse_lut():
     """Build the (ns*11 - nf*10) → (ns, nf) reverse look-up.
-    Every one of the 81 combinations maps to a unique difference."""
+    Every one of the 64 active 8×8 combinations maps to a unique difference."""
     lut = {}
-    for ns in range(9):
-        for nf in range(9):
+    for ns in range(NE):
+        for nf in range(NE):
             lut[ns * K_VERNIER - nf * (K_VERNIER - 1)] = (ns, nf)
-    assert len(lut) == 81, "ns/nf reverse LUT must have 81 unique entries"
+    assert len(lut) == NE * NE, f"ns/nf reverse LUT must have {NE * NE} unique entries"
     return lut
 
 NSNF_REV = build_nsnf_reverse_lut()
@@ -1001,6 +1002,8 @@ def main():
             val_files = all_val_files
     else:
         val_files = sorted(glob.glob(os.path.join(val_dir, "seed_*.csv")))
+    val_file_labels = [os.path.basename(path) for path in val_files]
+    val_scope_label = ", ".join(val_file_labels) if val_file_labels else "none"
 
     print(f"\n[2/6] Validating on held-out seeds ({len(val_files)} files)...")
     val_data = load_and_prepare(val_files, core_only=True)
@@ -1277,8 +1280,8 @@ def main():
         "method": "6D+hit_idx Mean-Correction LUT",
         "lut_key": LUT_KEY,
         "lut_key_description": {
-            "ns_inf":  "Slow phase index (0-8), inferred from t_raw_ps via Vernier algebra",
-            "nf_inf":  "Fast phase index (0-8), inferred from t_raw_ps via Vernier algebra",
+            "ns_inf":  "Slow phase index (0-7), inferred from t_raw_ps via Vernier algebra",
+            "nf_inf":  "Fast phase index (0-7), inferred from t_raw_ps via Vernier algebra",
             "nslow":   "Slow oscillator hit count (coarse counter)",
             "nfast_hit": "Fast oscillator hit count at measurement time",
             "phase0_snap": "Phase-0 snapshot (oscillator alignment at conversion start)",
@@ -1290,8 +1293,8 @@ def main():
             "FULL (mode 2)": "Fully supported – all fields available directly",
         },
         "ns_nf_inference": {
-            "formula": "diff = t_raw_ps/10 - (nslow+2+sbi-1)*99 - nfast*9 - 25 → unique (ns,nf)",
-            "accuracy": "100% – all 81 (ns,nf) combinations map to unique diff values",
+            "formula": f"diff = t_raw_ps/10 - (nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET} → unique (ns,nf)",
+            "accuracy": f"100% – all {NE * NE} active 8×8 (ns,nf) combinations map to unique diff values",
         },
         "training": {
             "n_seeds": args.train_seeds,
@@ -1315,6 +1318,7 @@ def main():
         },
         "held_out_validation": {
             "scope": "Core subset only (nslow > 0); nslow=0 rows excluded for published calibration metrics.",
+            "files": val_file_labels,
             "filter_summary": val_filter,
             "pre_cal":  m_raw,
             "post_cal": m_cal,
@@ -1361,7 +1365,7 @@ def main():
         f.write("\n\n")
 
         f.write("─" * 70 + "\n")
-        f.write("HELD-OUT VALIDATION (core subset: nslow > 0, seeds 24-29)\n")
+        f.write(f"HELD-OUT VALIDATION (core subset: nslow > 0, files: {val_scope_label})\n")
         f.write("─" * 70 + "\n")
         f.write(f"  Rows before filter     : {val_filter['rows_before_filter']:>8,}\n")
         f.write(f"  Rows after filter      : {val_filter['rows_after_filter']:>8,}\n")
@@ -1440,8 +1444,8 @@ def main():
         f.write("  t_raw_ps        (compute) W1        W3\n\n")
         f.write("  All 6D LUT key fields available in ALL modes.\n")
         f.write("  ns/nf inferred in Mode 1 via: diff = t_raw/10 - "
-                "(nslow+2+sbi-1)*99 - nfast*9 - 25\n")
-        f.write("  → maps uniquely to (ns, nf) for all 81 combinations.\n")
+                f"(nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET}\n")
+        f.write(f"  → maps uniquely to (ns, nf) for all {NE * NE} active 8×8 combinations.\n")
 
     print(f"  Text report saved: {txt_path}")
 

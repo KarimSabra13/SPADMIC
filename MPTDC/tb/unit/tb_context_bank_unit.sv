@@ -172,7 +172,7 @@ module tb_context_bank_unit;
     rec[0].phase0       = 1'b1;
     rec[0].boundary_inc = 1'b0;
     rec[0].hcount       = 4'd5;
-    rec[0].fl           = '{reserved: 1'b0, closed_by_firsthit: 1'b1,
+    rec[0].fl           = '{reserved: 1'b0, closed_by_fast_maxhit: 1'b1,
                             closed_by_maxhits: 1'b0, closed_by_watchdog: 1'b0};
 
     do_capture(1'd0, rec[0].hit_level, rec[0].nfast_packed,
@@ -191,7 +191,7 @@ module tb_context_bank_unit;
     rec[1].phase0       = 1'b0;
     rec[1].boundary_inc = 1'b1;
     rec[1].hcount       = 4'd15;
-    rec[1].fl           = '{reserved: 1'b0, closed_by_firsthit: 1'b0,
+    rec[1].fl           = '{reserved: 1'b0, closed_by_fast_maxhit: 1'b0,
                             closed_by_maxhits: 1'b1, closed_by_watchdog: 1'b0};
 
     do_capture(1'd1, rec[1].hit_level, rec[1].nfast_packed,
@@ -216,7 +216,7 @@ module tb_context_bank_unit;
     rec[0].phase0       = 1'b0;
     rec[0].boundary_inc = 1'b1;
     rec[0].hcount       = 4'd9;
-    rec[0].fl           = '{reserved: 1'b0, closed_by_firsthit: 1'b1,
+    rec[0].fl           = '{reserved: 1'b0, closed_by_fast_maxhit: 1'b1,
                             closed_by_maxhits: 1'b1, closed_by_watchdog: 1'b1};
 
     do_capture(1'd0, rec[0].hit_level, rec[0].nfast_packed,
@@ -246,11 +246,11 @@ module tb_context_bank_unit;
       hl6 = '0;
       hl6[0]  = 1'b1;
       hl6[40] = 1'b1;
-      hl6[80] = 1'b1;
+      hl6[63] = 1'b1;
 
       nfp6 = build_nfast_packed(hl6, 7'd10);
 
-      fl_tmp = '{reserved: 1'b0, closed_by_firsthit: 1'b0,
+      fl_tmp = '{reserved: 1'b0, closed_by_fast_maxhit: 1'b0,
                  closed_by_maxhits: 1'b0, closed_by_watchdog: 1'b0};
 
       do_capture(1'd1, hl6, nfp6, 7'd50, 7'd60, 1'b1, 1'b0, 4'd3, fl_tmp);
@@ -262,9 +262,9 @@ module tb_context_bank_unit;
       ok = 1;
       if (snapshot.hit_level[0] !== 1'b1)  ok = 0;
       if (snapshot.hit_level[40] !== 1'b1) ok = 0;
-      if (snapshot.hit_level[80] !== 1'b1) ok = 0;
+      if (snapshot.hit_level[63] !== 1'b1) ok = 0;
       if (snapshot.hit_level[1] !== 1'b0)  ok = 0;
-      if (snapshot.hit_level[79] !== 1'b0) ok = 0;
+      if (snapshot.hit_level[62] !== 1'b0) ok = 0;
 
       cell_val = snapshot.nfast_hit_packed[0*NFAST_W +: NFAST_W];
       if (cell_val !== 7'(7'd10 + 7'd0))  begin
@@ -276,9 +276,9 @@ module tb_context_bank_unit;
         $display("  cell[40] exp=%0d got=%0d", 7'd50, cell_val);
         ok = 0;
       end
-      cell_val = snapshot.nfast_hit_packed[80*NFAST_W +: NFAST_W];
-      if (cell_val !== 7'(7'd10 + 7'd80)) begin
-        $display("  cell[80] exp=%0d got=%0d", 7'd90, cell_val);
+      cell_val = snapshot.nfast_hit_packed[63*NFAST_W +: NFAST_W];
+      if (cell_val !== 7'(7'd10 + 7'd63)) begin
+        $display("  cell[63] exp=%0d got=%0d", 7'd73, cell_val);
         ok = 0;
       end
 
@@ -301,7 +301,7 @@ module tb_context_bank_unit;
     // Test 7: slow_boundary_inc toggling
     // ────────────────────────────────────────────────────────────────
     begin
-      fl_tmp = '{reserved: 1'b0, closed_by_firsthit: 1'b0,
+      fl_tmp = '{reserved: 1'b0, closed_by_fast_maxhit: 1'b0,
                  closed_by_maxhits: 1'b0, closed_by_watchdog: 1'b1};
       do_capture(1'd0, '0, '0, 7'd1, 7'd2, 1'b0, 1'b1, 4'd0, fl_tmp);
       @(posedge clk_fast);

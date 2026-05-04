@@ -20,7 +20,7 @@
 // (TS_STEP_PS = 50).
 // =============================================================================
 module mptdc_osc_wrapper #(
-  parameter int unsigned NE         = 9,
+  parameter int unsigned NE         = 8,
   parameter int unsigned TS_STEP_PS = 1000
 )(
   input  wire              en,       // Enable oscillation

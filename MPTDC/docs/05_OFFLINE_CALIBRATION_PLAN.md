@@ -152,8 +152,8 @@ After evaluating multiple calibration approaches (GPR, spline, MLP, multi-dimens
 
 | Field | Source | Description |
 |-------|--------|-------------|
-| `ns_inf` | Inferred from `t_raw_ps` | Slow Vernier phase index (0–8) |
-| `nf_inf` | Inferred from `t_raw_ps` | Fast Vernier phase index (0–8) |
+| `ns_inf` | Inferred from `t_raw_ps` | Slow Vernier phase index (0–7) |
+| `nf_inf` | Inferred from `t_raw_ps` | Fast Vernier phase index (0–7) |
 | `nslow` | Word 0 | Slow oscillator coarse count |
 | `nfast_hit` | Word 0 | Fast oscillator hit count |
 | `phase0_snap` | Header | Oscillator alignment at conversion start |
@@ -161,9 +161,9 @@ After evaluating multiple calibration approaches (GPR, spline, MLP, multi-dimens
 
 **ns/nf recovery formula (for compact mode):**
 ```
-diff = t_raw_ps / 10 - (nslow + 2 + sbi - 1) × 99 - nfast × 9 - 25
+diff = t_raw_ps / 10 - (nslow + 2 + sbi - 1) × 88 - nfast × 8 - 25
 ```
-This `diff` value maps uniquely to all 81 `(ns, nf)` combinations — zero ambiguity.
+This `diff` value maps uniquely to all 64 active 8×8 `(ns, nf)` combinations — zero ambiguity.
 
 ### 5.3 Output mode compatibility
 

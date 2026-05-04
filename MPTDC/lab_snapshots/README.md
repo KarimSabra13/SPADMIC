@@ -160,7 +160,7 @@ Do not wait for final analog transistor closure to reserve:
 - slow oscillator macro site
 - fast oscillator macro site
 - PLL macro site
-- symmetry-critical `9 x 9` PD matrix region
+- symmetry-critical `8 x 8` PD matrix region
 
 ### 3. Run Innovus on the `clk_sys` domain only
 

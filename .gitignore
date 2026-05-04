@@ -23,3 +23,7 @@ __pycache__/
 .venv/
 
 *:Zone.Identifier
+
+# SPADMIC/TOP generated simulation artifacts
+TOP/build/
+TOP/results/

@@ -62,7 +62,7 @@ class spadmic_tdc_ref_model;
       int unsigned hc;
       int unsigned expected_wc;
       hc = words[0][10:7];
-      // The MPTDC oscillator produces all hits from the 9×9 phase matrix;
+      // The MPTDC oscillator produces all hits from the 8×8 phase matrix;
       // max_hits triggers "fast close" but pipeline latency means
       // hit_count can exceed max_hits. This is correct RTL behaviour.
       if (hc > expected_max_hits) begin

@@ -17,7 +17,7 @@ question: **what does each block do, and where does it sit in the design?**
 | Async frontend | `rtl/async/*.sv` | START/STOP acceptance, context allocation, async-side capture |
 | CDC | `rtl/cdc/*.sv` | reset sync, Gray-counter sync, FIFO, pulse crossing helpers |
 | Oscillator | `rtl/osc/*.sv` | model, wrapper, synthesis stub |
-| Phase detector | `rtl/pd/mptdc_pd_cell.sv` | single PD-cell behavior, instantiated across the 9x9 matrix |
+| Phase detector | `rtl/pd/mptdc_pd_cell.sv` | single PD-cell behavior, instantiated across the 8x8 matrix |
 | Control | `rtl/ctrl/*.sv` | input select, measurement close, drain ownership, watchdog |
 | Readout | `rtl/readout/*.sv` | CSR file, record reconstruction helper, narrow serializer |
 
@@ -58,7 +58,7 @@ This is the real TDC kernel integration point. It contains:
 
 - async START/STOP handling
 - both oscillator domains
-- the 9x9 PD matrix
+- the 8x8 PD matrix
 - context capture
 - drain/FIFO/readout plumbing
 
@@ -129,10 +129,10 @@ while simulation and synthesis use different oscillator realizations.
 
 | Block | File | Role |
 |-------|------|------|
-| `mptdc_pd_cell` | `rtl/pd/mptdc_pd_cell.sv` | one phase-detector cell in the 9x9 matrix |
+| `mptdc_pd_cell` | `rtl/pd/mptdc_pd_cell.sv` | one phase-detector cell in the 8x8 matrix |
 
 This is the leaf that turns the slow/fast phase relationship into one hit-level
-decision plus local metadata. It is replicated `81` times, so its behavior is
+decision plus local metadata. It is replicated `64` times, so its behavior is
 small locally but architecturally dominant globally.
 
 ## 7. Control blocks

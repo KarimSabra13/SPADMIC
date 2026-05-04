@@ -116,9 +116,11 @@ module mptdc_narrow16_tx_v2
   logic [NARROW_W-1:0] hit_w0;
   assign hit_w0 = {1'b0, nslow_q[6:0], nfast_q[6:0], 1'b0};
 
-  // Hit W1 — features variant: [15]=0, [14:11]=ns, [10:7]=nf, [6:0]=reserved
+  // Hit W1 — features variant: [15]=0, [14:11]=ns, [10:7]=nf, [6:0]=reserved.
+  // The packet keeps 4-bit phase fields for protocol compatibility; the active
+  // 8-tap RTL drives only values 0..7.
   logic [NARROW_W-1:0] hit_w1_feat;
-  assign hit_w1_feat = {1'b0, ns_q, nf_q, 7'b0};
+  assign hit_w1_feat = {1'b0, 4'(ns_q), 4'(nf_q), 7'b0};
 
   // Hit W1 — timestamp variant: [15:0]=t_raw_ps[15:0]
   logic [NARROW_W-1:0] hit_w1_ts;

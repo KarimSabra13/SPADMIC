@@ -3,13 +3,13 @@
 Fine Grid Analysis — MPTDC Vernier TDC
 =======================================
 
-Characterizes the Vernier fine-phase grid for a 9×9 MPTDC TDC.
+Characterizes the Vernier fine-phase grid for an 8×8 MPTDC TDC.
 
 For each hit the fine-value coefficient is:
     fine_coef = ns * K_VERNIER - nf * (K_VERNIER - 1)
               = ns * 11 - nf * 10
 
-where (ns, nf) ∈ {0, …, 8}².  Not all integers in [min, max] are
+where (ns, nf) ∈ {0, …, 7}².  Not all integers in [min, max] are
 reachable — this script identifies the gaps, computes theoretical
 DNL / INL, and produces diagnostic plots.
 """
@@ -25,7 +25,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import TwoSlopeNorm
 
 # ── Physical / design constants ──────────────────────────────────────
-NE = 9                       # number of phases (slow & fast)
+NE = 8                       # number of phases (slow & fast)
 K_VERNIER = 11               # Vernier ratio
 DELTA_LSB = 10               # ps per fine_coef unit
 

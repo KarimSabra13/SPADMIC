@@ -35,9 +35,10 @@ import numpy as np
 import pandas as pd
 
 # Vernier algebra constants (must match calibrate_6d_lut.py)
-K_SLOW    = 99
-K_FAST    = 9
+NE        = 8
 K_VERNIER = 11
+K_SLOW    = K_VERNIER * NE
+K_FAST    = NE
 OFFSET    = 25
 QUANT     = 10  # ps per LSB
 
@@ -57,10 +58,10 @@ GB_FEATURES = REGRESSION_FEATURES + ["hit_idx"]
 
 def _build_nsnf_reverse_lut() -> dict[int, tuple[int, int]]:
     lut = {}
-    for ns in range(9):
-        for nf in range(9):
+    for ns in range(NE):
+        for nf in range(NE):
             lut[ns * K_VERNIER - nf * (K_VERNIER - 1)] = (ns, nf)
-    assert len(lut) == 81
+    assert len(lut) == NE * NE
     return lut
 
 _NSNF_REV = _build_nsnf_reverse_lut()

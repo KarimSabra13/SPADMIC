@@ -34,7 +34,7 @@ from plot_style import PALETTE, apply_report_style, save_figure, style_axes
 # ---------------------------------------------------------------------------
 # Vernier reconstruction constants & function
 # ---------------------------------------------------------------------------
-NE = 9
+NE = 8
 K_VERNIER = 11
 DELTA_LSB = 10
 VERNIER_NSLOW_ORIGIN_BIAS = 2

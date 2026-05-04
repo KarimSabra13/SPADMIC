@@ -458,7 +458,7 @@ module tb_local_export_boundary;
     hits = {};
     hits.push_back(make_hit(ph_idx_t'(4'd1), ph_idx_t'(4'd7), 7'd9,  EVENT_SEQ_W'(0)));
     hits.push_back(make_hit(ph_idx_t'(4'd3), ph_idx_t'(4'd2), 7'd11, EVENT_SEQ_W'(1)));
-    hits.push_back(make_hit(ph_idx_t'(4'd8), ph_idx_t'(4'd0), 7'd13, EVENT_SEQ_W'(2)));
+    hits.push_back(make_hit(ph_idx_t'(4'd6), ph_idx_t'(4'd0), 7'd13, EVENT_SEQ_W'(2)));
   endtask
 
   initial begin

@@ -22,7 +22,7 @@
 //   - Close detection split:
 //     max_hits=1: pure OR-reduction (~0.3-0.6 ns at 180nm, fits 900 ps)
 //     max_hits>1: 2-stage pipelined hierarchical saturating count
-//       Stage 1: 9 row popcounts (9 bits each → 4-bit partial) + tree → registered
+//       Stage 1: 8 row popcounts (8 bits each → 4-bit partial) + tree → registered
 //       Stage 2: compare registered count against max_hits_cfg → close_counted
 //     This adds 1 fast-cycle latency to counted close (deadtime ~4.5 ns).
 //   - Overflow flag removed (was misused as hit-saturation).
@@ -78,12 +78,12 @@ module mptdc_meas_ctrl
   assign any_hit = |hit_level_i;
 
   // ── MULTI_HIT: 2-stage pipelined hierarchical saturating count ──
-  // Stage 1: 9 row popcounts (9 bits each) → balanced tree → registered
-  logic [3:0] row_cnt [0:NE-1];      // 9 partial sums (max 9 each → 4 bits)
-  logic [6:0] total_cnt_comb;         // 7-bit sum (max 81)
+  // Stage 1: 8 row popcounts (8 bits each) → balanced tree → registered
+  logic [3:0] row_cnt [0:NE-1];      // 8 partial sums (max 8 each → 4 bits)
+  logic [6:0] total_cnt_comb;         // 7-bit sum (max 64)
   logic [MAX_HITS_W-1:0] hit_cnt_q;  // registered, saturated at MAX_HITS
 
-  // Row popcounts (each row is 9 bits → 4-bit result)
+  // Row popcounts (each row is 8 bits → 4-bit result)
   always_comb begin
     for (int r = 0; r < NE; r++) begin
       automatic int unsigned rsum = 0;
@@ -93,28 +93,24 @@ module mptdc_meas_ctrl
     end
   end
 
-  // Balanced 3-level adder tree: 9 → 5 → 3 → 1
+  // Balanced 3-level adder tree: 8 → 4 → 2 → 1
   logic [4:0] l1_a, l1_b, l1_c, l1_d;  // level 1: pairs → 5-bit
-  logic [4:0] l1_e;                      // level 1: leftover
   logic [5:0] l2_a, l2_b;               // level 2: pairs → 6-bit
-  logic [5:0] l2_c;                      // level 2: leftover
   logic [6:0] l3;                        // level 3: final → 7-bit
 
   always_comb begin
-    // Level 1: 9 → 5 values (4 pairs + 1 leftover)
+    // Level 1: 8 → 4 values
     l1_a = {1'b0, row_cnt[0]} + {1'b0, row_cnt[1]};
     l1_b = {1'b0, row_cnt[2]} + {1'b0, row_cnt[3]};
     l1_c = {1'b0, row_cnt[4]} + {1'b0, row_cnt[5]};
     l1_d = {1'b0, row_cnt[6]} + {1'b0, row_cnt[7]};
-    l1_e = {1'b0, row_cnt[8]};
 
-    // Level 2: 5 → 3 values (2 pairs + 1 leftover)
+    // Level 2: 4 → 2 values
     l2_a = {1'b0, l1_a} + {1'b0, l1_b};
     l2_b = {1'b0, l1_c} + {1'b0, l1_d};
-    l2_c = {1'b0, l1_e};
 
-    // Level 3: 3 → 1 value
-    l3 = {1'b0, l2_a} + {1'b0, l2_b} + {1'b0, l2_c};
+    // Level 3: 2 → 1 value
+    l3 = {1'b0, l2_a} + {1'b0, l2_b};
 
     // Saturate at MAX_HITS for combinational output
     total_cnt_comb = l3;

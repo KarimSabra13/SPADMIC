@@ -274,7 +274,7 @@ Stage 3: READ_RTL
   └── Read 20 SystemVerilog files (osc_model excluded)
 
 Stage 4: ELABORATE
-  └── Resolve parameters, unroll generates (81 PD cells)
+  └── Resolve parameters, unroll generates (64 PD cells)
   └── Run check_design (lint)
 
 Stage 5: POST_ELABORATION
@@ -435,7 +435,7 @@ advance in a disciplined way:
    - place the oscillator macros with pin locations that make matched routing
      physically achievable
 3. **Run early place-and-route experiments**
-   - verify that the `9 x 9` PD matrix can be placed without overlap or
+   - verify that the `8 x 8` PD matrix can be placed without overlap or
      legalization distortion
    - verify that tap routing can be matched with practical metal resources
    - verify that the surrounding logic can escape without disturbing the matrix
@@ -451,7 +451,7 @@ abstraction:
 - startup / enable / trim timing behavior
 - analog jitter / phase-noise interaction with the digital front-end
 
-### `9 x 9` PD Matrix — Physical Design Requirements
+### `8 x 8` PD Matrix — Physical Design Requirements
 
 The PD matrix is the most symmetry-sensitive digital block in the design. The
 goal is not merely “legal placement”; the goal is **matched electrical
@@ -459,9 +459,9 @@ environment** across the full detector array.
 
 The architecture is fixed:
 
-- `9` slow-phase taps
-- `9` fast-phase taps
-- `81` PD cells (`9 x 9`)
+- `8` slow-phase taps
+- `8` fast-phase taps
+- `64` PD cells (`8 x 8`)
 - each PD cell sees one slow tap and one fast tap
 
 That means the matrix must be treated as a **symmetry-critical island**, not as
@@ -471,7 +471,7 @@ ordinary standard-cell logic.
 
 | Requirement | Why it matters | Implementation direction |
 |---|---|---|
-| Fixed `9 x 9` regular array | Prevents placer distortion from changing electrical symmetry | Preserve matrix hierarchy; constrain to a dedicated region / fence |
+| Fixed `8 x 8` regular array | Prevents placer distortion from changing electrical symmetry | Preserve matrix hierarchy; constrain to a dedicated region / fence |
 | No PD overlap or spill | Legalizer movement destroys regular geometry | Keep enough whitespace and rows so the whole array fits cleanly |
 | Slow taps distributed uniformly to rows | Keeps one consistent slow-phase environment per row | Route slow taps as matched row trunks |
 | Fast taps distributed uniformly to columns | Keeps one consistent fast-phase environment per column | Route fast taps as matched column trunks |
@@ -564,7 +564,7 @@ for Innovus (and possibly semi-custom manual guidance for the PD island).
 
 1. Freeze the oscillator macro contract.
 2. Replace the synthesis constant stub with a preserved macro placeholder.
-3. Floorplan the oscillator macros and the `9 x 9` PD island together.
+3. Floorplan the oscillator macros and the `8 x 8` PD island together.
 4. Constrain the PD matrix as a symmetry-critical region before detailed place.
 5. Route taps with matched topology and review extracted RC/skew explicitly.
 6. Only after a real oscillator timing model exists should oscillator-domain STA

@@ -27,14 +27,15 @@ package mptdc_pkg;
   // Physical constants and global dimensioning
   // =========================================================================
   parameter int unsigned CLK_SYS_HZ     = 160_000_000;
-  parameter int unsigned NE              = 9;
+  parameter int unsigned NE              = 8;
   parameter int unsigned OSC_TS_SLOW_PS  = 55;
   parameter int unsigned OSC_TS_FAST_PS  = 50;
 
-  // Phase-detector matrix: NE × NE
-  localparam int unsigned PD_N = NE * NE;                 // 81
-  localparam int unsigned PH_W = (NE <= 1) ? 1 : $clog2(NE);   // 4
-  localparam int unsigned PD_W = (PD_N <= 1) ? 1 : $clog2(PD_N); // 7
+  // Phase-detector matrix: NE × NE.  The active differential-oscillator
+  // contract uses 8 taps per ring, so PD_N=64 and PD_W=6.
+  localparam int unsigned PD_N = NE * NE;
+  localparam int unsigned PH_W = (NE <= 1) ? 1 : $clog2(NE);
+  localparam int unsigned PD_W = (PD_N <= 1) ? 1 : $clog2(PD_N);
 
   // System clock period
   localparam longint unsigned SYS_CLK_PS = 64'd1_000_000_000_000 / CLK_SYS_HZ; // 6250 ps
@@ -64,8 +65,8 @@ package mptdc_pkg;
   parameter int unsigned EVENT_SEQ_W = 4;  // Max 15 hits → 4 bits sufficient
 
   localparam int unsigned DLY_MAX_PS           = 32_000;
-  localparam int unsigned SLOW_HALF_PERIOD_PS  = NE * OSC_TS_SLOW_PS;  // 495 ps
-  localparam int unsigned FAST_HALF_PERIOD_PS  = NE * OSC_TS_FAST_PS;  // 450 ps
+  localparam int unsigned SLOW_HALF_PERIOD_PS  = NE * OSC_TS_SLOW_PS;  // 440 ps @ 8 taps, 55 ps/tap
+  localparam int unsigned FAST_HALF_PERIOD_PS  = NE * OSC_TS_FAST_PS;  // 400 ps @ 8 taps, 50 ps/tap
 
   localparam int unsigned NSLOW_CAPTURE_MAX =
       1 + ((DLY_MAX_PS + SLOW_HALF_PERIOD_PS - 1) / SLOW_HALF_PERIOD_PS);

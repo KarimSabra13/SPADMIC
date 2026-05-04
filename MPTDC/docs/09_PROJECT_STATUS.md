@@ -24,7 +24,7 @@ functionality.
 
 The current TDC implements:
 
-- a `9 × 9` Vernier phase matrix
+- an `8 × 8` Vernier phase matrix
 - `2` measurement contexts
 - up to `15` hits per conversion
 - three output modes:
@@ -342,12 +342,12 @@ Quality-gated multi-hit averaging using 6D LUT calibrated timestamps:
 
 ### Fine phase grid characterization
 
-The Vernier fine encoding `ns×11 − nf×10` for `(ns, nf) ∈ {0..8}²`:
+The Vernier fine encoding `ns×11 − nf×10` for `(ns, nf) ∈ {0..7}²`:
 
-- **81 achievable values** out of 169 in range (47.9% coverage)
-- Maximum inter-diagonal gap: 100 ps (d = ±8 boundaries)
-- Worst DNL: +3.76 / −0.52 LSB
-- Worst INL: ±9.05 LSB
+- **64 achievable values** out of 148 in range (43.2% coverage)
+- Maximum inter-diagonal gap: 100 ps (d = ±7 boundaries)
+- Worst DNL: +3.29 / −0.57 LSB
+- Worst INL: ±7.14 LSB
 
 ### GBR feature importances
 

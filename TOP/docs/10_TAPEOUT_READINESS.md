@@ -128,7 +128,7 @@ contract must define:
 - enable/disable latency,
 - reset or deterministic idle phase behavior,
 - generated clock names for tap 0 and phase taps,
-- physical matching/symmetry requirements for the 9x9 PD island.
+- physical matching/symmetry requirements for the 8x8 PD island.
 
 ## Constraint and waiver checklist
 

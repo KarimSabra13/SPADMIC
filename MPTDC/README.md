@@ -8,7 +8,7 @@
 
 `MPTDC` is a Vernier multi-phase TDC for SPAD readout, built around:
 
-- a `9 × 9` slow/fast phase matrix
+- an `8 × 8` slow/fast phase matrix for the differential oscillator tap contract
 - `2` context buffers (hardwired double buffer)
 - `15` maximum hits per conversion
 - a `16-bit` ready/valid output stream
@@ -31,7 +31,7 @@ Key architectural facts from RTL:
 
 | Item | Value |
 | --- | --- |
-| Vernier geometry | `NE = 9` slow × `9` fast |
+| Vernier geometry | `NE = 8` slow × `8` fast |
 | Context buffers | `N_CTX = 2` |
 | Max hits | `15` |
 | FIFO depth | `64` acquisition records |
@@ -92,7 +92,7 @@ Offline calibration flow is present and documented:
 - fixed-delay characterization: `bash scripts/sim/run_fixed_delay_campaign.sh ...`
 - LUT calibration: `python3 scripts/calibration/calibrate_6d_lut.py ...`
 
-The committed LUT flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`. The oft-quoted `~18.9 ps` result is the **nominal core-subset (`nslow > 0`) baseline**, not a blanket claim for jitter-limited `RAW_FEATURES` deployment.
+The committed LUT flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`. After the 8×8 oscillator-geometry migration, the presentation-scale pre-silicon RTL campaign reports `374.11 ps → 24.64 ps` held-out core-subset RMSE with a 6D LUT; older `~18.9 ps` notes are historical nominal baselines, not current 8×8 signoff numbers.
 
 ### Synthesis
 
@@ -107,7 +107,7 @@ Cadence Genus setup is committed under `syn/`.
   **digital bring-up + floorplan preparation**, not oscillator-domain timing
   signoff
 - the detailed pre-analog advance plan, required oscillator macro contract, and
-  `9 x 9` PD-matrix symmetry / placement rules are documented in
+  `8 x 8` PD-matrix symmetry / placement rules are documented in
   `syn/README.md`
 
 ## Repository map
@@ -273,10 +273,10 @@ At the current checkpoint, the most important open holes are not packetizer stre
 
 The RTL is designed for offline calibration, not on-chip correction. The host reconstructs and corrects time using exported raw features and/or timestamps.
 
-The currently maintained nominal baseline is:
+The latest 8×8 presentation-scale nominal baseline is:
 
-- single-shot post-calibration RMSE: about `18.9 ps` on the nominal `multihit_15_cal_nominal` **core subset** (`nslow > 0`)
-- `N=100` resampled averaging RMSE: about `1.9 ps` on that same nominal calibrated pool
+- single-shot post-calibration RMSE: about `24.6 ps` on LUT-matched held-out `multihit_15_cal_nominal` **core subset** (`nslow > 0`)
+- `N=100` resampled averaging RMSE: about `2.55 ps` on that same calibrated pool
 
 For empirical same-delay proof, use `run_fixed_delay_campaign.sh` +
 `analyze_fixed_delay_campaign.py`. For jitter-limited deployed-format studies, use the

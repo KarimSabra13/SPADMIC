@@ -190,6 +190,10 @@ module tb_narrow16_tx_v2_unit;
     fail_count = 0;
 
     $display("=== tb_narrow16_tx_v2_unit ===");
+    check("geometry NE==8", NE == 8);
+    check("geometry PD_N==64", PD_N == 64);
+    check("geometry PD_W==6", PD_W == 6);
+    check("geometry pd_from_phases(7,7)==63", pd_from_phases(ph_idx_t'(7), ph_idx_t'(7)) == pd_idx_t'(63));
     do_reset();
 
     // ────────────────────────────────────────────────────────────────
@@ -324,7 +328,7 @@ module tb_narrow16_tx_v2_unit;
 
     push_meta(.nslow(7'd30), .nfast(7'd25), .hit_count(4'd1), .ctx_id(1'd0),
               .phase0(1'b0), .flags(4'b0000));
-    push_hit(.ns(4'd7), .nf(4'd8), .nfast(7'd20), .event_seq(4'd3));
+    push_hit(.ns(ph_idx_t'(7)), .nf(ph_idx_t'(7)), .nfast(7'd20), .event_seq(4'd3));
 
     collect_pkt(pkt);
     n = pkt.size();
@@ -343,11 +347,11 @@ module tb_narrow16_tx_v2_unit;
       // W1 features (FULL uses features variant)
       w = pkt[2];
       check("T4 W1 ns",     w[14:11] == 4'd7);
-      check("T4 W1 nf",     w[10:7]  == 4'd8);
+      check("T4 W1 nf",     w[10:7]  == 4'd7);
       check("T4 W1 reserved", w[6:0]   == 7'd0);
 
       // W2 timestamp
-      t_raw_exp = calc_t_raw_ps(7'd30, 7'd20, 4'd7, 4'd8);
+      t_raw_exp = calc_t_raw_ps(7'd30, 7'd20, ph_idx_t'(7), ph_idx_t'(7));
       w = pkt[3];
       check("T4 W2 t_raw", w == t_raw_exp[15:0]);
 

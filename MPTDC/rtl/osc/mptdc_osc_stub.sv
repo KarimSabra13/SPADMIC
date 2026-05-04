@@ -17,7 +17,7 @@
 // measurements can be performed — it is purely for logic verification.
 // =============================================================================
 module mptdc_osc_stub #(
-  parameter int unsigned NE = 9
+  parameter int unsigned NE = 8
 )(
   input  wire          en,        // Enable (ignored — no oscillation)
   input  wire          rst_n,     // Reset (ignored — output always stable)

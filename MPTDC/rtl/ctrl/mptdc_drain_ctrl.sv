@@ -98,22 +98,26 @@ module mptdc_drain_ctrl
   // =========================================================================
   // Scan counters
   // =========================================================================
-  logic [PD_W-1:0]          pd_scan_q;
+  localparam int unsigned PD_SCAN_W = PD_W + 1;  // must represent sentinel PD_N=64
+
+  logic [PD_SCAN_W-1:0]     pd_scan_q;
   ph_idx_t                  ns_cnt_q, nf_cnt_q;
   logic [EVENT_SEQ_W-1:0]   event_seq_q;
+  pd_idx_t                  pd_scan_idx;
 
   // Scan helpers
   logic scan_done, all_hits_found, cell_has_hit;
-  assign scan_done      = (pd_scan_q >= PD_W'(PD_N));
+  assign pd_scan_idx    = pd_idx_t'(pd_scan_q[PD_W-1:0]);
+  assign scan_done      = (pd_scan_q >= PD_SCAN_W'(PD_N));
   assign all_hits_found = (event_seq_q >= snapshot_i.hit_count);
-  assign cell_has_hit   = ~scan_done & snapshot_i.hit_level[pd_scan_q];
+  assign cell_has_hit   = ~scan_done & snapshot_i.hit_level[pd_scan_idx];
 
   // Next scan position
-  logic [PD_W-1:0] pd_scan_nxt;
-  ph_idx_t         ns_cnt_nxt, nf_cnt_nxt;
+  logic [PD_SCAN_W-1:0] pd_scan_nxt;
+  ph_idx_t              ns_cnt_nxt, nf_cnt_nxt;
 
   always_comb begin
-    pd_scan_nxt = pd_scan_q + PD_W'(1);
+    pd_scan_nxt = pd_scan_q + PD_SCAN_W'(1);
     if (nf_cnt_q == ph_idx_t'(NE - 1)) begin
       nf_cnt_nxt = '0;
       ns_cnt_nxt = ns_cnt_q + ph_idx_t'(1);
@@ -146,7 +150,7 @@ module mptdc_drain_ctrl
     hit_rec.kind                = ACQ_REC_HIT;
     hit_rec.hit.ns              = ns_cnt_q;
     hit_rec.hit.nf              = nf_cnt_q;
-    hit_rec.hit.nfast           = snapshot_i.nfast_hit_packed[pd_scan_q*NFAST_W +: NFAST_W];
+    hit_rec.hit.nfast           = snapshot_i.nfast_hit_packed[pd_scan_idx*NFAST_W +: NFAST_W];
     hit_rec.hit.event_seq       = event_seq_q;
   end
 

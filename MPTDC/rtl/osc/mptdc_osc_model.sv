@@ -29,7 +29,7 @@
 // assignments within always blocks.  For synthesis, use mptdc_osc_stub.
 // =============================================================================
 module mptdc_osc_model #(
-  parameter int  unsigned NE            = 9,
+  parameter int  unsigned NE            = 8,
   parameter int  unsigned TS_STEP_PS    = 1000,
   parameter int  unsigned TRIM_DELTA_PS = mptdc_pkg::OSC_TRIM_DELTA_PS
 )(
@@ -42,8 +42,8 @@ module mptdc_osc_model #(
 );
 
   // Half-period = NE * TS_STEP
-  // Slow oscillator: 9 * 55 ps = 495 ps
-  // Fast oscillator: 9 * 50 ps = 450 ps
+  // Slow oscillator: 8 * 55 ps = 440 ps with the current behavioural model
+  // Fast oscillator: 8 * 50 ps = 400 ps with the current behavioural model
   localparam time TS_STEP_T    = time'(TS_STEP_PS);
   localparam time HALF_PERIOD  = time'(NE * TS_STEP_PS);
   localparam time MIN_STEP_T   = 1ps;

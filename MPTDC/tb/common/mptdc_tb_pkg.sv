@@ -96,7 +96,7 @@ package mptdc_tb_pkg;
     // W0: {1'b0, nslow[6:0], nfast[6:0], 1'b0}
     h.nslow      = w0[14:8];
     h.nfast      = w0[7:1];
-    // W1: {1'b0, ns[3:0], nf[3:0], 7'b0}
+    // W1: {1'b0, ns[3:0], nf[3:0], 7'b0}; active 8-tap RTL uses 0..7.
     h.ns         = w1[14:11];
     h.nf         = w1[10:7];
     return h;

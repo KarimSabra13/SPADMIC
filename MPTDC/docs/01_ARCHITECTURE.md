@@ -12,7 +12,7 @@ The live design is a Vernier multi-phase TDC with:
 
 - one slow ring oscillator (`55 ps` tap delay)
 - one fast ring oscillator (`50 ps` tap delay)
-- a `9 x 9` phase-detector matrix (`81` cells)
+- an `8 x 8` phase-detector matrix (`64` cells)
 - a two-context snapshot bank (`N_CTX=2`)
 - a fast-domain measurement FSM and a system-domain drain/serialization pipeline
 - purely offline calibration
@@ -25,13 +25,13 @@ mode. The equivalent minimum-latency close behavior is now obtained with
 
 | Parameter | Value | Meaning |
 |-----------|-------|---------|
-| `NE` | `9` | Number of taps per oscillator |
+| `NE` | `8` | Number of taps per oscillator |
 | `OSC_TS_SLOW_PS` | `55 ps` | Slow oscillator tap delay |
 | `OSC_TS_FAST_PS` | `50 ps` | Fast oscillator tap delay |
 | `DELTA_STEP` | `5 ps` | Vernier tap-delay difference |
 | `DELTA_LSB` | `10 ps` | Nominal output LSB (`2 * DELTA_STEP`) |
 | `K_VERNIER` | `11` | `OSC_TS_SLOW_PS / DELTA_STEP` |
-| `PD_N` | `81` | Number of PD cells (`NE * NE`) |
+| `PD_N` | `64` | Number of PD cells (`NE * NE`) |
 | `MAX_HITS` | `15` | Maximum emitted hits per conversion |
 | `N_CTX` | `2` | Number of snapshot contexts |
 | `CLK_SYS_HZ` | `160 MHz` | System clock for CSR, drain, and TX |
@@ -48,7 +48,7 @@ mptdc_top_asic
        |- mptdc_async_frontend_v2
        |- mptdc_osc_wrapper   (slow)
        |- mptdc_osc_wrapper   (fast)
-       |- mptdc_pd_cell x 81
+       |- mptdc_pd_cell x 64
        |- mptdc_stop_capture_async
        |- mptdc_gray_cnt_sync (slow counter)
        |- mptdc_gray_cnt_sync (fast counter)
@@ -167,7 +167,7 @@ Once captured, the owning context enters `DRAINING`. The system-clock drain FSM 
 
 1. reads the frozen context bank snapshot
 2. emits one META record
-3. scans all 81 PD cells and emits one HIT record per active cell
+3. scans all 64 PD cells and emits one HIT record per active cell
 4. releases the context
 5. pulses `conv_done`
 
@@ -396,7 +396,7 @@ Silicon notes:
 ### 6.13 `rtl/pd/mptdc_pd_cell.sv`
 
 Purpose:
-- one phase-detector cell in the `9 x 9` matrix
+- one phase-detector cell in the `8 x 8` matrix
 
 Inputs:
 - one slow phase tap

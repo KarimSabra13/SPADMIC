@@ -18,7 +18,7 @@
 // Where:
 //   K_VERNIER  = OSC_TS_SLOW_PS / DELTA_STEP  (slow steps per Vernier step)
 //   DELTA_LSB  = 2 * DELTA_STEP                (LSB of the time measurement)
-//   NE         = 9                              (ring oscillator element count)
+//   NE         = 8                              (ring oscillator tap count)
 //
 // This formulation unfolds the Vernier delay-line model into a single
 // signed multiplication, avoiding iterative counting.
