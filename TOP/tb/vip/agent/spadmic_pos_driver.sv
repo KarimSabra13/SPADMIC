@@ -22,7 +22,7 @@ class spadmic_pos_driver;
     pos_if.set_all(t.x_pattern, t.y_pattern, t.z_pattern);
 
     // Hold for specified duration
-    #(t.hold_time_ns * 1000);  // convert ns to ps
+    #(64'd1000 * t.hold_time_ns);  // convert ns to ps
 
     // Clear lines
     pos_if.clear_all();

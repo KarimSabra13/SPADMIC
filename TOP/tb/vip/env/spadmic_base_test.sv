@@ -61,7 +61,7 @@ class spadmic_base_test;
     fork
       env.run();
       begin
-        #(cfg.timeout_ns * 1000);
+        #(64'd1000 * cfg.timeout_ns);
         timed_out = 1'b1;
         env.sb.check_fail++;
         $display("[TEST] TIMEOUT after %0d ns", cfg.timeout_ns);

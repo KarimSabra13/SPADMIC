@@ -21,7 +21,7 @@ interface spadmic_reset_if (
 
   task automatic pulse_reset_ns(input int unsigned duration_ns);
     rst_n = 1'b0;
-    #(duration_ns * 1000);
+    #(64'd1000 * duration_ns);
     rst_n = 1'b1;
     repeat (4) @(posedge clk_sys);
   endtask

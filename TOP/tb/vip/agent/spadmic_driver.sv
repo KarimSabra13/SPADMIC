@@ -263,7 +263,7 @@ class spadmic_driver;
           spadmic_eot_txn eot;
           $cast(eot, txn);
           // Wait for pipeline drain before signalling completion
-          #(int'(eot.drain_timeout_ns) * 1000);
+          #(64'd1000 * eot.drain_timeout_ns);
           sb_mb.put(txn);
           done = 1'b1;
           return;
