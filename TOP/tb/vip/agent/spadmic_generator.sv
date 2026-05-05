@@ -138,14 +138,18 @@ class spadmic_generator;
   endtask
 
   // ── End of test ───────────────────────────────────────────────
-  task automatic gen_eot();
+  task automatic gen_eot(int unsigned drain_timeout_ns = 50000);
     spadmic_eot_txn t = new();
+    t.drain_timeout_ns = drain_timeout_ns;
     drv_mb.put(t);
     txn_count++;
   endtask
 
   // ── Constrained-random: profile-based sequence ────────────────
-  task automatic gen_random_sequence(int unsigned num_phases);
+  task automatic gen_random_sequence(
+    int unsigned num_phases,
+    int unsigned eot_drain_timeout_ns = 50000
+  );
     spadmic_bp_mode_e last_bp_mode = BP_ALWAYS_READY;
 
     for (int p = 0; p < num_phases; p++) begin
@@ -229,7 +233,7 @@ class spadmic_generator;
     if (last_bp_mode == BP_ALWAYS_STALL)
       gen_bp_change(BP_ALWAYS_READY, 200);
 
-    gen_eot();
+    gen_eot(eot_drain_timeout_ns);
   endtask
 
 endclass

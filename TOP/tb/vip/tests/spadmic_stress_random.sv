@@ -20,7 +20,8 @@ class spadmic_stress_random extends spadmic_base_test;
   task body();
     env.gen.gen_initial_config();
 
-    // Mix of all phase types
-    env.gen.gen_random_sequence(cfg.num_phases);
+    // Mix of all phase types. Multi-seed I2C stress can finish with several
+    // long TDC packets still draining, so use a longer EOT drain than smoke tests.
+    env.gen.gen_random_sequence(cfg.num_phases, 1_000_000);
   endtask
 endclass
