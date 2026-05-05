@@ -87,6 +87,9 @@ package spadmic_vip_pkg;
   `include "txn/spadmic_mon_pkt_txn.sv"
   `include "txn/spadmic_spad_reset_txn.sv"
 
+  // ── Shared runtime state ────────────────────────────────────────
+  `include "env/spadmic_runtime_state.sv"
+
   // ── Coverage ────────────────────────────────────────────────────
   `include "coverage/spadmic_stim_cov.sv"
   `include "coverage/spadmic_pkt_cov.sv"

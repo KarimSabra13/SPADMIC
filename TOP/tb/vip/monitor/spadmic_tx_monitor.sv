@@ -8,6 +8,7 @@ class spadmic_tx_monitor;
   virtual spadmic_narrow_tx_if tx_if;
   mailbox #(spadmic_base_txn)  sb_mb;     // to scoreboard
   mailbox #(int)               cov_mb;    // to coverage (packet events)
+  spadmic_runtime_state        state;
 
   // Packet assembly state
   typedef struct {
@@ -25,11 +26,13 @@ class spadmic_tx_monitor;
   function new(
     virtual spadmic_narrow_tx_if tx_if,
     mailbox #(spadmic_base_txn)  sb_mb,
-    mailbox #(int)               cov_mb
+    mailbox #(int)               cov_mb,
+    spadmic_runtime_state        state
   );
     this.tx_if         = tx_if;
     this.sb_mb         = sb_mb;
     this.cov_mb        = cov_mb;
+    this.state         = state;
     this.total_packets = 0;
     this.total_words   = 0;
     this.running       = 1'b0;
@@ -61,7 +64,7 @@ class spadmic_tx_monitor;
           // share the 3'b100 marker).
           pkt.words = {};
           pkt.words.push_back(word);
-          if (is_spadmic_pos_raw_header(word)) begin
+          if (state.raw_pos_allowed() && is_spadmic_pos_raw_header(word)) begin
             pkt.is_tdc    = 1'b0;
             pkt.source_id = SPADMIC_SRC_POSITION;
           end else begin

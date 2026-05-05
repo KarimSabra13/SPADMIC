@@ -7,6 +7,7 @@ class spadmic_env;
 
   // Configuration
   spadmic_env_cfg     cfg;
+  spadmic_runtime_state state;
 
   // Mailboxes
   mailbox #(spadmic_base_txn) gen_to_drv_mb;
@@ -39,6 +40,7 @@ class spadmic_env;
 
   function new(spadmic_env_cfg cfg);
     this.cfg = cfg;
+    this.state = new();
   endfunction
 
   function void build(
@@ -75,7 +77,7 @@ class spadmic_env;
 `endif
 
     // Build top-level driver
-    drv = new(gen_to_drv_mb, drv_to_sb_mb, cfg, reset_if,
+    drv = new(gen_to_drv_mb, drv_to_sb_mb, cfg, state, reset_if,
               csr_drv, i2c_drv, ev_drv, pos_drv, bp_drv
 `ifdef SPADMIC_ENABLE_FUNC_COV
               , stim_cov, ctrl_cov, fault_cov
@@ -86,7 +88,7 @@ class spadmic_env;
     gen = new(gen_to_drv_mb, cfg);
 
     // Build monitors
-    tx_mon   = new(tx_if, mon_to_sb_mb, mon_to_cov_mb);
+    tx_mon   = new(tx_if, mon_to_sb_mb, mon_to_cov_mb, state);
     spad_reset_mon = new(spad_reset_if, mon_to_sb_mb);
     csr_mon  = new(csr_if, mon_to_cov_mb);
     ctrl_mon = new(csr_if);

@@ -13,6 +13,7 @@ class spadmic_driver;
   spadmic_pos_driver           pos_drv;
   spadmic_bp_driver            bp_drv;
   spadmic_env_cfg              cfg;
+  spadmic_runtime_state        state;
 
   // Reconstructed TX stream plus real reset BFM
   virtual spadmic_narrow_tx_if tx_if;
@@ -40,6 +41,7 @@ class spadmic_driver;
     mailbox #(spadmic_base_txn) drv_mb,
     mailbox #(spadmic_base_txn) sb_mb,
     spadmic_env_cfg             cfg,
+    spadmic_runtime_state       state,
     virtual spadmic_reset_if    reset_if,
     spadmic_csr_driver          csr_drv,
     spadmic_i2c_driver          i2c_drv,
@@ -56,6 +58,7 @@ class spadmic_driver;
     this.drv_mb  = drv_mb;
     this.sb_mb   = sb_mb;
     this.cfg     = cfg;
+    this.state   = state;
     this.reset_if = reset_if;
     this.csr_drv = csr_drv;
     this.i2c_drv = i2c_drv;
@@ -83,6 +86,7 @@ class spadmic_driver;
     active_input_sel       = INPUT_SPAD;
     active_out_mode        = OUT_MODE_RAW_FEATURES;
     active_max_hits        = 4'd15;
+    state.apply_reset_defaults();
   endfunction
 
   function automatic int delay_bin(input int unsigned delay_ps);
@@ -289,6 +293,7 @@ class spadmic_driver;
 `ifdef SPADMIC_ENABLE_FUNC_COV
       sample_ctrl_fault_cov(1'b0);
 `endif
+      state.note_ctrl_txn(ct);
     end else begin
       // Full chip config sequence
       if (ct.drv_mode == DRV_MODE_DIRECT_CSR) begin
@@ -314,6 +319,7 @@ class spadmic_driver;
       active_input_sel       = ct.tdc_input_sel;
       active_out_mode        = ct.tdc_out_mode;
       active_max_hits        = ct.max_hits;
+      state.note_ctrl_txn(ct);
 
 `ifdef SPADMIC_ENABLE_FUNC_COV
       sample_ctrl_fault_cov(1'b0);
