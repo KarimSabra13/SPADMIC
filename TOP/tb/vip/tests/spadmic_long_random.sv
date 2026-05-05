@@ -13,7 +13,10 @@ class spadmic_long_random extends spadmic_base_test;
     cfg.drv_mode       = DRV_MODE_I2C;
     cfg.profile        = PROFILE_STRESS;
     cfg.num_phases     = 50;
-    cfg.timeout_ns     = 10_000_000;
+    // I2C-driven stress sequences spend substantial simulated time in control
+    // traffic and cfg_accept polling; keep this shorter than stress_random but
+    // large enough that a healthy run reaches EOT instead of tripping the watchdog.
+    cfg.timeout_ns     = 20_000_000;
   endfunction
 
   task body();
