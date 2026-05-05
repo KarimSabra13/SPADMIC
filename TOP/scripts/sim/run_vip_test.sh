@@ -69,6 +69,7 @@ done
 
 BUILD_DIR="$TOP_ROOT/build/vip/${TEST_NAME}_s${SEED}"
 mkdir -p "$BUILD_DIR"
+XRUN_XMLIBDIR="$BUILD_DIR/xcelium_${SEED}_$$.d"
 
 # ── Resolve filelists to absolute paths ────────────────────────
 source "$SCRIPT_DIR/resolve_flist.sh"
@@ -93,7 +94,7 @@ if [[ "$SIM" == "xrun" ]]; then
     -f "$BUILD_DIR/top.f"
     -f "$BUILD_DIR/vip.f"
     -top spadmic_vip_tb
-    -xmlibdirname "$BUILD_DIR/xcelium.d"
+    -xmlibdirname "$XRUN_XMLIBDIR"
     "+SPADMIC_TEST=$TEST_NAME"
     "+SPADMIC_SEED=$SEED"
   )
