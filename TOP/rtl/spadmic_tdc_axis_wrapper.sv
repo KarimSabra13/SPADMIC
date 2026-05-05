@@ -36,11 +36,15 @@ module spadmic_tdc_axis_wrapper (
   output wire                       stop_armed_o
 );
   wire start_async_gated;
+  wire cal_start_async_gated;
+  wire cal_stop_async_gated;
   wire stop_async_qualified;
 
   // These enables are configured quiescently through CSR and are treated as
   // stable during active measurement, matching the existing MPTDC async-mux use.
   assign start_async_gated = spad_event_async_i & global_enable_i & axis_enable_i;
+  assign cal_start_async_gated = cal_start_async_i & global_enable_i & axis_enable_i;
+  assign cal_stop_async_gated  = cal_stop_async_i  & global_enable_i & axis_enable_i;
 
   // Convert the asynchronous SPAD event into exactly one qualified STOP pulse on
   // the next clk_ref_40m rising edge.
@@ -59,8 +63,8 @@ module spadmic_tdc_axis_wrapper (
     .async_rst_n        (async_rst_n),
     .start_spad_async_i (start_async_gated),
     .stop_spad_async_i  (stop_async_qualified),
-    .cal_start_async_i  (cal_start_async_i),
-    .cal_stop_async_i   (cal_stop_async_i),
+    .cal_start_async_i  (cal_start_async_gated),
+    .cal_stop_async_i   (cal_stop_async_gated),
     .input_sel_override_en_i(1'b1),
     .input_sel_override_i(input_sel_override_i),
     .out_mode_override_en_i(1'b1),
