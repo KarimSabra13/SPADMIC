@@ -14,7 +14,10 @@ class spadmic_stress_random extends spadmic_base_test;
     cfg.profile        = PROFILE_STRESS;
     cfg.num_phases     = 200;
     cfg.timeout_ns     = 50_000_000;
-    cfg.enable_reset_test = 1'b1;
+    // Keep the normal post-TDC guard active in this campaign. True reset-during-
+    // traffic coverage belongs to reset_recovery; disabling the guard here lets
+    // immediate follow-on mode switches cut off in-flight TDC export.
+    cfg.enable_reset_test = 1'b0;
   endfunction
 
   task body();
