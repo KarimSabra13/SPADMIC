@@ -13,6 +13,15 @@ REPORT_DIR="${2:-$REPO_ROOT/build/coverage_report}"
 
 mkdir -p "$REPORT_DIR"
 
+mapfile -t RUN_DIRS < <(find "$COV_WORKDIR" -type f -name '*.ucd' -printf '%h\n' | sort -u)
+
+if [[ ${#RUN_DIRS[@]} -eq 0 ]]; then
+  echo "No coverage run directories with UCD data were found under: $COV_WORKDIR" >&2
+  exit 1
+fi
+
+MERGE_INPUTS="${RUN_DIRS[*]}"
+
 echo "═══════════════════════════════════════════════════════"
 echo "  SPADMIC TOP — Coverage Merge & Report"
 echo "═══════════════════════════════════════════════════════"
@@ -23,7 +32,7 @@ echo "  Report:  $REPORT_DIR"
 CMD_FILE="$REPORT_DIR/imc_merge.tcl"
 cat > "$CMD_FILE" <<EOF
 # Auto-generated IMC merge script
-merge $COV_WORKDIR/* -overwrite -out $REPORT_DIR/merged_cov
+merge $MERGE_INPUTS -overwrite -out $REPORT_DIR/merged_cov
 load $REPORT_DIR/merged_cov
 report_metrics -out $REPORT_DIR/report -detail -kind aggregate -overwrite
 report_metrics -out $REPORT_DIR/summary.txt -kind aggregate -overwrite

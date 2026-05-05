@@ -23,10 +23,10 @@ class spadmic_ctrl_reject extends spadmic_base_test;
     // While traffic is in-flight, attempt to change mode (should be rejected)
     begin
       spadmic_ctrl_txn ct = new();
-      ct.global_enable  = 1'b1;
-      ct.axis_enable    = 3'b111;
-      ct.shared_tx_sel  = SPADMIC_TX_POSITION;  // try switching
-      ct.drv_mode       = cfg.drv_mode;
+      ct.raw_csr_write = 1'b1;
+      ct.addr          = SPADMIC_CSR_GLOBAL_CTRL;
+      ct.wdata         = 32'h0000_006f;  // en=1 axis=111 tx_sel=POSITION input=CAL
+      ct.drv_mode      = cfg.drv_mode;
       env.gen.drv_mb.put(ct);
     end
 
@@ -42,4 +42,3 @@ class spadmic_ctrl_reject extends spadmic_base_test;
     env.gen.gen_eot();
   endtask
 endclass
-

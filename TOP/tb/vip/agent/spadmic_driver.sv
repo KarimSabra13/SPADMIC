@@ -297,6 +297,10 @@ class spadmic_driver;
     end else begin
       // Full chip config sequence
       if (ct.drv_mode == DRV_MODE_DIRECT_CSR) begin
+        // Respect the DUT control protocol: GLOBAL_CTRL writes are only accepted
+        // while cfg_accept is high. Poll first so random/stress tests don't turn
+        // a transient busy window into a rejected write plus a long timeout.
+        csr_drv.wait_cfg_accept(500);
         for (int ax = 0; ax < 3; ax++) begin
           csr_drv.program_tdc_max_hits(ax, ct.max_hits);
           csr_drv.program_tdc_conv_arm(ax, 1'b1);
@@ -305,6 +309,10 @@ class spadmic_driver;
         // Wait for sequencer to commit the new active config
         csr_drv.wait_cfg_accept(500);
       end else begin
+        // Respect the DUT control protocol: GLOBAL_CTRL writes are only accepted
+        // while cfg_accept is high. Poll first so random/stress tests don't turn
+        // a transient busy window into a rejected write plus a long timeout.
+        i2c_drv.wait_cfg_accept(500);
         for (int ax = 0; ax < 3; ax++) begin
           i2c_drv.program_tdc_max_hits(ax, ct.max_hits);
           i2c_drv.program_tdc_conv_arm(ax, 1'b1);
