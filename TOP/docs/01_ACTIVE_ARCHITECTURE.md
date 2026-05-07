@@ -209,17 +209,17 @@ Cluster mode emits the normal fixed 12-word position packet:
 11. Z cluster 1
 12. EOC
 
-Raw bitmap mode emits a fixed 26-word low-rate characterization packet:
+Raw bitmap mode emits a fixed 14-word low-rate characterization packet:
 
 1. raw header
-2. X line bitmap words 0..7 (`x_lines[15:0]` through `x_lines[126:112]`, bit 127 padded zero)
-3. Y line bitmap words 0..7
-4. Z line bitmap words 0..7
+2. X line bitmap words 0..3 (`x_lines[15:0]` through `x_lines[63:48]`)
+3. Y line bitmap words 0..3
+4. Z line bitmap words 0..3
 5. EOC
 
 Because raw payload words are unescaped 16-bit line levels and may look like a
 normal EOC marker, `spadmic_correlated_tx` recognizes the raw position header and
-holds arbitration for the fixed 26-word raw packet length.
+holds arbitration for the fixed 14-word raw packet length.
 
 ### 6.4 SPAD matrix reset modes
 

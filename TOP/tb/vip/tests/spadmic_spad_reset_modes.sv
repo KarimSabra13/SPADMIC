@@ -30,7 +30,7 @@ class spadmic_spad_reset_modes extends spadmic_base_test;
     env.gen.gen_csr_write(SPADMIC_CSR_POS_CTRL, 32'h0000_000B);
     xp = '0;
     xp[0] = 1'b1;
-    xp[126] = 1'b1;
+    xp[SPADMIC_LINE_W-1] = 1'b1;
     env.gen.gen_position_event(xp, '0, '0, 150);
 
     // Event-deferred reset waits until the position block reaches safe idle.
@@ -46,4 +46,3 @@ class spadmic_spad_reset_modes extends spadmic_base_test;
   endtask
 
 endclass
-

@@ -122,11 +122,11 @@ Host software should parse packets as:
 4. parse the logical packet stream as:
    - TDC: header, payload, EOC
    - position cluster: header, sub-header, payload, EOC
-   - position raw bitmap: raw header, 24 unescaped bitmap payload words, EOC
+   - position raw bitmap: raw header, 12 unescaped bitmap payload words, EOC
 
 For both-active mode, the receiver should build one correlated event record by collecting all packets with the same `shared_event_id`.
 
 Raw bitmap position packets are fixed length because payload words carry true
 16-bit line levels and can therefore have `[15:14] = 2'b11`. The on-chip
 correlator and the off-chip receiver must parse raw bitmap packets by the raw
-header plus 26 total words, not by the first EOC-looking payload word.
+header plus 14 total words, not by the first EOC-looking payload word.

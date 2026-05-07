@@ -10,7 +10,9 @@ module tb_spadmic_stress_cluster_scan;
 
   import spadmic_pkg::*;
 
-  localparam int W = SPADMIC_LINE_W; // 127
+  localparam int W = SPADMIC_LINE_W;
+  localparam int LAST = W - 1;
+  localparam int LAST_EVEN = LAST & ~1;
 
   logic [W-1:0] lines;
   logic [6:0]   gap_threshold;
@@ -64,14 +66,14 @@ module tb_spadmic_stress_cluster_scan;
     check("T1 empty → count=0", cluster_count === 2'd0);
 
     // ========================================
-    // TEST 2: All 127 bits set → 1 cluster [0,126]
+    // TEST 2: All bits set → 1 cluster [0,LAST]
     // ========================================
     lines = {W{1'b1}};
     #10;
     check("T2 all-ones valid", valid === 1'b1);
     check("T2 all-ones 1 cluster", cluster_count === 2'd1);
     check("T2 all-ones c0_min=0", c0_min === 7'd0);
-    check("T2 all-ones c0_max=126", c0_max === 7'd126);
+    check("T2 all-ones c0_max=LAST", c0_max === 7'(LAST));
     check("T2 all-ones no overflow", overflow === 1'b0);
 
     // ========================================
@@ -86,27 +88,27 @@ module tb_spadmic_stress_cluster_scan;
     check("T3 bit[0] c0_max=0", c0_max === 7'd0);
 
     // ========================================
-    // TEST 4: Single bit at position 126
+    // TEST 4: Single bit at the highest position
     // ========================================
     lines = '0;
-    lines[126] = 1'b1;
+    lines[LAST] = 1'b1;
     #10;
-    check("T4 bit[126] valid", valid === 1'b1);
-    check("T4 bit[126] 1 cluster", cluster_count === 2'd1);
-    check("T4 bit[126] c0_min=126", c0_min === 7'd126);
-    check("T4 bit[126] c0_max=126", c0_max === 7'd126);
+    check("T4 bit[LAST] valid", valid === 1'b1);
+    check("T4 bit[LAST] 1 cluster", cluster_count === 2'd1);
+    check("T4 bit[LAST] c0_min=LAST", c0_min === 7'(LAST));
+    check("T4 bit[LAST] c0_max=LAST", c0_max === 7'(LAST));
 
     // ========================================
-    // TEST 5: Two distant clusters (bits 10-15 and bits 100-105)
+    // TEST 5: Two distant clusters
     // ========================================
     lines = '0;
     for (int i = 10; i <= 15; i++) lines[i] = 1'b1;
-    for (int i = 100; i <= 105; i++) lines[i] = 1'b1;
+    for (int i = 50; i <= 55; i++) lines[i] = 1'b1;
     #10;
     check("T5 two clusters valid", valid === 1'b1);
     check("T5 two clusters count=2", cluster_count === 2'd2);
     check("T5 c0=[10,15]", c0_min === 7'd10 && c0_max === 7'd15);
-    check("T5 c1=[100,105]", c1_min === 7'd100 && c1_max === 7'd105);
+    check("T5 c1=[50,55]", c1_min === 7'd50 && c1_max === 7'd55);
     check("T5 no overflow", overflow === 1'b0);
 
     // ========================================
@@ -114,8 +116,8 @@ module tb_spadmic_stress_cluster_scan;
     // ========================================
     lines = '0;
     for (int i = 0; i <= 3; i++) lines[i] = 1'b1;
+    for (int i = 25; i <= 28; i++) lines[i] = 1'b1;
     for (int i = 50; i <= 53; i++) lines[i] = 1'b1;
-    for (int i = 110; i <= 113; i++) lines[i] = 1'b1;
     #10;
     check("T6 three clusters valid", valid === 1'b1);
     check("T6 three clusters overflow", overflow === 1'b1);
@@ -154,7 +156,7 @@ module tb_spadmic_stress_cluster_scan;
     #10;
     check("T8 alternating gap=2 → 1 cluster", cluster_count === 2'd1);
     check("T8 alternating c0_min=0", c0_min === 7'd0);
-    check("T8 alternating c0_max=126", c0_max === 7'd126);
+    check("T8 alternating c0_max=LAST_EVEN", c0_max === 7'(LAST_EVEN));
 
     gap_threshold = 7'd1;
     #10;
@@ -168,12 +170,12 @@ module tb_spadmic_stress_cluster_scan;
     gap_threshold = 7'd3;
     lines = '0;
     for (int i = 0; i <= 9; i++) lines[i] = 1'b1;
-    for (int i = 117; i <= 126; i++) lines[i] = 1'b1;
+    for (int i = LAST - 9; i <= LAST; i++) lines[i] = 1'b1;
     #10;
     check("T9 two ends valid", valid === 1'b1);
     check("T9 two ends count=2", cluster_count === 2'd2);
     check("T9 c0=[0,9]", c0_min === 7'd0 && c0_max === 7'd9);
-    check("T9 c1=[117,126]", c1_min === 7'd117 && c1_max === 7'd126);
+    check("T9 c1=[LAST-9,LAST]", c1_min === 7'(LAST - 9) && c1_max === 7'(LAST));
 
     // ========================================
     // TEST 10: Random patterns (LFSR-based)

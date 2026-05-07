@@ -104,7 +104,7 @@ The retained `ready` field only exists so older collateral still compiles.
 
 - detects packet headers and EOC
 - extracts TDC source from the patched header and position source from the position sub-header
-- distinguishes `TDC`, 12-word position-cluster, and fixed 26-word position-raw packets
+- distinguishes `TDC`, 12-word position-cluster, and fixed 14-word position-raw packets
 - extracts the shared event ID from EOC
 - emits one `spadmic_mon_pkt_txn` per complete packet
 

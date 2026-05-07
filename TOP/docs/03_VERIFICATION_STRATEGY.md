@@ -217,7 +217,7 @@ RTL:
 |------|---------------------------|
 | TDC packet | detect header, hold until EOC, extract source from patched header, extract shared event ID |
 | Position cluster packet | detect cluster header, recognize position sub-header, require 12 total words |
-| Position raw bitmap packet | detect raw-position header and collect exactly 26 words, because raw payload words can look like header or EOC markers |
+| Position raw bitmap packet | detect raw-position header and collect exactly 14 words, because raw payload words can look like header or EOC markers |
 | Packet atomicity | report incomplete packet flushes as monitor errors, not silent packets |
 | Physical TX | keep DDR byte reconstruction in `spadmic_narrow_tx_if` as the only physical observation boundary |
 
@@ -246,7 +246,7 @@ It should track:
 | Expected packets | per-source expected packet counts, accepted drops, reset-cleared in-flight expectations |
 | Event IDs | per-source monotonic IDs, wrap behavior, no cross-source accidental coupling |
 | Position cluster packets | exact 12-word format, masks, summaries, cluster words, overflow semantics |
-| Position raw packets | exact 26-word format, X/Y/Z bitmap packing, bit-127 padding, EOC only at word 25 |
+| Position raw packets | exact 14-word format, X/Y/Z bitmap packing, EOC only at word 13 |
 | Reset output | expected manual/deferred/periodic pulse count and one-cycle width |
 | Fault/status CSRs | mode rejects, position drops/glitches, correlation overflow, CSR timeout/error visibility |
 
@@ -296,9 +296,9 @@ Key crosses:
 | TDC flags | none, fast close, max hit, watchdog/overflow-related flags |
 | position cluster masks | every non-empty mask, every multi-cluster mask, overflow asserted/deasserted |
 | raw axis masks | X only, Y only, Z only, XY, XZ, YZ, XYZ |
-| raw bitmap pattern | single bit, edge bits 0/126, sparse, dense, all-zero rejection, EOC-looking words, header-looking words |
+| raw bitmap pattern | single bit, edge bits 0/63, sparse, dense, all-zero rejection, EOC-looking words, header-looking words |
 | event ID | low values, adjacent events, wrap boundary |
-| packet length | TDC legal lengths, cluster 12, raw 26 |
+| packet length | TDC legal lengths, cluster 12, raw 14 |
 
 Key crosses:
 
@@ -331,8 +331,8 @@ Key crosses:
 | TDC shared readout | zero-hit packets, all axes pending, fairness, stalls at serializer boundary, max-hit packet length, reset mid-packet |
 | Correlated TX | packet atomicity, TDC/position alternation, event-ID wrap, raw payload header/EOC-looking words, output FIFO pressure |
 | DDR TX | low/high byte ordering, valid timing, reset during word, idle byte behavior, forwarded-clock phase assumptions |
-| Position cluster | gap threshold sweep, min-span 1, edge line 0/126 clusters, two clusters, more-than-two overflow, queue-full drop, glitch reject |
-| Position raw/reset | 26-word raw packet, all axes and edge bits, raw payload marker collisions, manual reset, period 0 disabled, deferred reset waits, periodic reset fires under activity |
+| Position cluster | gap threshold sweep, min-span 1, edge line 0/63 clusters, two clusters, more-than-two overflow, queue-full drop, glitch reject |
+| Position raw/reset | 14-word raw packet, all axes and edge bits, raw payload marker collisions, manual reset, period 0 disabled, deferred reset waits, periodic reset fires under activity |
 
 ### 10.6 Xcelium coverage workflow
 
@@ -360,7 +360,7 @@ coverage suite:
 
 | Test | Purpose |
 |------|---------|
-| `smoke_position_raw` | drives raw X/Y/Z bitmaps with header/EOC-looking payload words and checks the fixed 26-word raw packet through the physical TX monitor |
+| `smoke_position_raw` | drives raw X/Y/Z bitmaps with header/EOC-looking payload words and checks the fixed 14-word raw packet through the physical TX monitor |
 | `spad_reset_modes` | observes manual, periodic, and event-deferred `spad_matrix_rst_o` pulses and checks one-cycle pulse width |
 
 ### 10.7 Immediate implementation slices

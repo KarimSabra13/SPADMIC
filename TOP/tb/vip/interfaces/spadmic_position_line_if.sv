@@ -1,6 +1,6 @@
 // =============================================================================
 // SPADMIC VIP — Position Line Interface
-// Carries 3×127-bit asynchronous line buses from the SPAD matrix.
+// Carries 3xSPADMIC_LINE_W asynchronous line buses from the SPAD matrix.
 // =============================================================================
 `timescale 1ps/1ps
 `default_nettype none

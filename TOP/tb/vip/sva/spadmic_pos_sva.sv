@@ -23,7 +23,7 @@ module spadmic_pos_sva
   input wire        pos_busy
 );
 
-  // P13: position packets are either 12-word cluster packets or 26-word raw packets.
+  // P13: position packets are either 12-word cluster packets or fixed-length raw packets.
   property p_word_idx_bounded;
     @(posedge clk_sys) disable iff (!rst_n)
     pos_busy |-> (word_idx < SPADMIC_POS_RAW_PKT_WORDS);

@@ -16,7 +16,7 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_AXIS_ID_W   = 2;
   localparam int unsigned SPADMIC_SRC_COUNT   = 4;
   localparam int unsigned SPADMIC_SRC_MASK_W  = SPADMIC_SRC_COUNT;
-  localparam int unsigned SPADMIC_LINE_W      = 127;
+  localparam int unsigned SPADMIC_LINE_W      = 64;
   localparam int unsigned SPADMIC_LINE_IDX_W  = 7;
   localparam int unsigned SPADMIC_CSR_ADDR_W  = 12;
   localparam int unsigned SPADMIC_CSR_DATA_W  = mptdc_pkg::CSR_DATA_W;
@@ -27,7 +27,8 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_POS_QUEUE_DEPTH = 16;
   localparam int unsigned SPADMIC_EVENT_BUNDLE_DEPTH = 16;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 2048;
-  localparam int unsigned SPADMIC_POS_RAW_PAYLOAD_WORDS = 24;
+  localparam int unsigned SPADMIC_POS_RAW_WORDS_PER_AXIS = (SPADMIC_LINE_W + NARROW_W - 1) / NARROW_W;
+  localparam int unsigned SPADMIC_POS_RAW_PAYLOAD_WORDS = SPADMIC_AXIS_COUNT * SPADMIC_POS_RAW_WORDS_PER_AXIS;
   localparam int unsigned SPADMIC_POS_RAW_PKT_WORDS = 1 + SPADMIC_POS_RAW_PAYLOAD_WORDS + 1;
 
   typedef enum logic [SPADMIC_AXIS_ID_W-1:0] {
@@ -275,7 +276,7 @@ package spadmic_pkg;
 
   function automatic logic [NARROW_W-1:0] spadmic_pos_raw_word(
     input logic [SPADMIC_LINE_W-1:0] lines,
-    input logic [2:0]                word_idx
+    input int unsigned               word_idx
   );
     logic [NARROW_W-1:0] word;
     int unsigned bit_base;

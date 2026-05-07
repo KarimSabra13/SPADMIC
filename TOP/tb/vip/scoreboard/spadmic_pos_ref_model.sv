@@ -224,20 +224,20 @@ class spadmic_pos_ref_model;
         return 0;
       end
 
-      for (int idx = 0; idx < 8; idx++) begin
-        if (words[1 + idx] != spadmic_pos_raw_word(x_pattern, idx[2:0])) begin
+      for (int idx = 0; idx < SPADMIC_POS_RAW_WORDS_PER_AXIS; idx++) begin
+        if (words[1 + idx] != spadmic_pos_raw_word(x_pattern, idx)) begin
           $display("[POS_REF] FAIL: raw X word%0d 0x%04h != expected 0x%04h",
-                   idx, words[1 + idx], spadmic_pos_raw_word(x_pattern, idx[2:0]));
+                   idx, words[1 + idx], spadmic_pos_raw_word(x_pattern, idx));
           return 0;
         end
-        if (words[9 + idx] != spadmic_pos_raw_word(y_pattern, idx[2:0])) begin
+        if (words[1 + SPADMIC_POS_RAW_WORDS_PER_AXIS + idx] != spadmic_pos_raw_word(y_pattern, idx)) begin
           $display("[POS_REF] FAIL: raw Y word%0d 0x%04h != expected 0x%04h",
-                   idx, words[9 + idx], spadmic_pos_raw_word(y_pattern, idx[2:0]));
+                   idx, words[1 + SPADMIC_POS_RAW_WORDS_PER_AXIS + idx], spadmic_pos_raw_word(y_pattern, idx));
           return 0;
         end
-        if (words[17 + idx] != spadmic_pos_raw_word(z_pattern, idx[2:0])) begin
+        if (words[1 + (2 * SPADMIC_POS_RAW_WORDS_PER_AXIS) + idx] != spadmic_pos_raw_word(z_pattern, idx)) begin
           $display("[POS_REF] FAIL: raw Z word%0d 0x%04h != expected 0x%04h",
-                   idx, words[17 + idx], spadmic_pos_raw_word(z_pattern, idx[2:0]));
+                   idx, words[1 + (2 * SPADMIC_POS_RAW_WORDS_PER_AXIS) + idx], spadmic_pos_raw_word(z_pattern, idx));
           return 0;
         end
       end

@@ -65,7 +65,7 @@ At the logical-word level, the receiver still expects:
 3. EOC
 
 Cluster-position packets include a position sub-header after the header. Raw
-bitmap position packets are fixed-length 26-word packets with 24 unescaped
+bitmap position packets are fixed-length 14-word packets with 12 unescaped
 bitmap payload words; a receiver must parse them by raw header and length because
 raw payload words can look like EOC markers.
 

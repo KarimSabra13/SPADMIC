@@ -14,7 +14,7 @@ module tb_spadmic_stress_position;
 
   logic clk_sys, rst_n;
   logic enable;
-  logic [126:0] x_lines, y_lines, z_lines;
+  logic [SPADMIC_LINE_W-1:0] x_lines, y_lines, z_lines;
 
   // TX output
   logic tx_valid, tx_ready;
@@ -212,7 +212,7 @@ module tb_spadmic_stress_position;
       @(posedge clk_sys);
       x_lines = '0; x_lines[10] = 1; x_lines[11] = 1; x_lines[12] = 1;
       y_lines = '0; y_lines[50] = 1; y_lines[51] = 1;
-      z_lines = '0; z_lines[100] = 1;
+      z_lines = '0; z_lines[60] = 1;
 
       repeat (6) @(posedge clk_sys);
       collect_packet(n);
@@ -232,14 +232,14 @@ module tb_spadmic_stress_position;
     end
 
     // ========================================
-    // TEST 2: Full bitmaps (all 127 bits)
+    // TEST 2: Full bitmaps
     // ========================================
     begin
       int n;
       @(posedge clk_sys);
-      x_lines = {127{1'b1}};
-      y_lines = {127{1'b1}};
-      z_lines = {127{1'b1}};
+      x_lines = {SPADMIC_LINE_W{1'b1}};
+      y_lines = {SPADMIC_LINE_W{1'b1}};
+      z_lines = {SPADMIC_LINE_W{1'b1}};
       repeat (6) @(posedge clk_sys);
       collect_packet(n);
       check("T2 full bitmaps → 12 words", n === SPADMIC_POS_PKT_WORDS);
@@ -261,7 +261,7 @@ module tb_spadmic_stress_position;
         @(posedge clk_sys);
         x_lines = '0; x_lines[5] = 1; x_lines[6] = 1;
         y_lines = '0; y_lines[60] = 1; y_lines[61] = 1;
-        z_lines = '0; z_lines[120] = 1; z_lines[121] = 1;
+        z_lines = '0; z_lines[62] = 1; z_lines[63] = 1;
         repeat (6) @(posedge clk_sys);
         collect_packet(n);
         total_words += n;
@@ -320,8 +320,8 @@ module tb_spadmic_stress_position;
       // Trigger capture
       @(posedge clk_sys);
       x_lines = '0; x_lines[30] = 1; x_lines[31] = 1;
-      y_lines = '0; y_lines[70] = 1; y_lines[71] = 1;
-      z_lines = '0; z_lines[110] = 1; z_lines[111] = 1;
+      y_lines = '0; y_lines[52] = 1; y_lines[53] = 1;
+      z_lines = '0; z_lines[60] = 1; z_lines[61] = 1;
       // Hold tx_ready low for a while
       repeat (24) @(posedge clk_sys);
       // Now start collecting
@@ -560,8 +560,8 @@ module tb_spadmic_stress_position;
 
       @(posedge clk_sys);
       x_lines = '0; x_lines[44] = 1; x_lines[45] = 1;
-      y_lines = '0; y_lines[70] = 1; y_lines[71] = 1;
-      z_lines = '0; z_lines[100] = 1; z_lines[101] = 1;
+      y_lines = '0; y_lines[52] = 1; y_lines[53] = 1;
+      z_lines = '0; z_lines[60] = 1; z_lines[61] = 1;
       repeat (6) @(posedge clk_sys);
 
       words_seen = 0;
@@ -639,19 +639,19 @@ module tb_spadmic_stress_position;
 
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
-      x_lines[0] = 1; x_lines[15] = 1; x_lines[126] = 1;
-      y_lines[16] = 1; y_lines[64] = 1;
-      z_lines[31] = 1; z_lines[125] = 1;
+      x_lines[0] = 1; x_lines[15] = 1; x_lines[SPADMIC_LINE_W-1] = 1;
+      y_lines[16] = 1; y_lines[SPADMIC_LINE_W-1] = 1;
+      z_lines[31] = 1; z_lines[SPADMIC_LINE_W-2] = 1;
       repeat (6) @(posedge clk_sys);
       collect_packet(n);
 
       check("T13 raw packet length", n === SPADMIC_POS_RAW_PKT_WORDS);
       check_word("T13 raw header", 0, spadmic_pos_raw_header_word(3'b111));
-      check_word("T13 raw X word0", 1, spadmic_pos_raw_word(x_lines, 3'd0));
-      check_word("T13 raw X word7", 8, spadmic_pos_raw_word(x_lines, 3'd7));
-      check_word("T13 raw Y word1", 10, spadmic_pos_raw_word(y_lines, 3'd1));
-      check_word("T13 raw Z word1", 18, spadmic_pos_raw_word(z_lines, 3'd1));
-      check_word("T13 raw Z word7", 24, spadmic_pos_raw_word(z_lines, 3'd7));
+      check_word("T13 raw X word0", 1, spadmic_pos_raw_word(x_lines, 0));
+      check_word("T13 raw X word3", 4, spadmic_pos_raw_word(x_lines, 3));
+      check_word("T13 raw Y word1", 6, spadmic_pos_raw_word(y_lines, 1));
+      check_word("T13 raw Z word1", 10, spadmic_pos_raw_word(z_lines, 1));
+      check_word("T13 raw Z word3", 12, spadmic_pos_raw_word(z_lines, 3));
       check("T13 raw EOC", pkt_words[n-1][15:14] === 2'b11);
 
       @(posedge clk_sys);

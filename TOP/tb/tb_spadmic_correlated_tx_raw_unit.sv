@@ -82,10 +82,10 @@ module tb_spadmic_correlated_tx_raw_unit;
     for (int i = 1; i <= SPADMIC_POS_RAW_PAYLOAD_WORDS; i++)
       pos_words[i] = i;
 
-    pos_words[2]  = 16'hFFFF;
-    pos_words[5]  = 16'h8123;
-    pos_words[7]  = 16'hC123;
-    pos_words[18] = 16'hF00D;
+    pos_words[2]                          = 16'hFFFF;
+    pos_words[5]                          = 16'h8123;
+    pos_words[7]                          = 16'hC123;
+    pos_words[SPADMIC_POS_RAW_PKT_WORDS-2] = 16'hF00D;
     pos_words[SPADMIC_POS_RAW_PKT_WORDS-1] = 16'hCAFE;
   end
 
@@ -111,7 +111,7 @@ module tb_spadmic_correlated_tx_raw_unit;
     check("EOC-like raw payload 0xFFFF preserved", out_words[2] == 16'hFFFF);
     check("Header-like raw payload 0x8123 preserved", out_words[5] == 16'h8123);
     check("EOC-like raw payload 0xC123 preserved", out_words[7] == 16'hC123);
-    check("EOC-like raw payload 0xF00D preserved", out_words[18] == 16'hF00D);
+    check("EOC-like raw payload 0xF00D preserved", out_words[SPADMIC_POS_RAW_PKT_WORDS-2] == 16'hF00D);
     check("Only raw final word is event-ID patched", out_words[SPADMIC_POS_RAW_PKT_WORDS-1] == 16'hC000);
     check("No correlation overflow in raw packet", correlation_overflow == 1'b0);
 

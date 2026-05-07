@@ -59,7 +59,7 @@ async_rst_n ------->|  + top-level CSR dec  |    |
                                               +------------------+
                                                        |
                                                        v
- x/y/z lines[126:0] ----------------------+   +------------------+
+ x/y/z lines[63:0] -----------------------+   +------------------+
                                            v   | shared TX mux    |
                                 +-----------------------+  (idle- |
                                 | async qualify +       |  only   |
@@ -138,7 +138,7 @@ Implementation:
 
 ## Position block contract
 
-- Inputs: `x_lines[126:0]`, `y_lines[126:0]`, `z_lines[126:0]` are treated as asynchronous black-box SPAD-matrix outputs
+- Inputs: `x_lines[63:0]`, `y_lines[63:0]`, `z_lines[63:0]` are treated as asynchronous black-box SPAD-matrix outputs
 - Three synchronizer stages feed a detect/settle/evaluate/wait-clear FSM before snapshotting
 - Up to 2 clusters per axis, configurable gap threshold, minimum cluster span, and settle-cycle filtering
 - Accepted position snapshots are queued; overlaps increment drop counters only if that queue becomes full
@@ -165,7 +165,7 @@ Implementation:
 | `spadmic_correlated_tx.sv` | Active correlated packet arbiter, event tagger, and output FIFO |
 | `spadmic_ddr_tx.sv` | Active physical 8-bit DDR TX packer with forwarded clock |
 | `spadmic_position_block.sv` | Position capture, scan, packetize pipeline |
-| `spadmic_axis_cluster_scan.sv` | 127-bit line bitmap cluster scanner |
+| `spadmic_axis_cluster_scan.sv` | 64-bit line bitmap cluster scanner |
 
 ### I2C/rtl/
 

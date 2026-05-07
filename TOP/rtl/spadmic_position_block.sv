@@ -38,6 +38,11 @@ module spadmic_position_block (
   import spadmic_pkg::*;
 
   localparam int unsigned POS_FRAME_W = $bits(spadmic_pos_frame_t);
+  localparam logic [4:0] POS_CLUSTER_LAST_WORD = 5'(SPADMIC_POS_PKT_WORDS - 1);
+  localparam logic [4:0] POS_RAW_X_BASE        = 5'd1;
+  localparam logic [4:0] POS_RAW_Y_BASE        = 5'(1 + SPADMIC_POS_RAW_WORDS_PER_AXIS);
+  localparam logic [4:0] POS_RAW_Z_BASE        = 5'(1 + (2 * SPADMIC_POS_RAW_WORDS_PER_AXIS));
+  localparam logic [4:0] POS_RAW_EOC_WORD      = 5'(SPADMIC_POS_RAW_PKT_WORDS - 1);
 
   typedef enum logic [1:0] {
     DET_IDLE       = 2'd0,
@@ -451,7 +456,7 @@ module spadmic_position_block (
         packet_active_q <= 1'b1;
         word_idx_q      <= '0;
       end else if (packet_active_q && pos_valid_o && pos_ready_i) begin
-        if (word_idx_q == ((frame_active_q.mode == SPADMIC_POS_MODE_RAW) ? 5'd25 : 5'd11)) begin
+        if (word_idx_q == ((frame_active_q.mode == SPADMIC_POS_MODE_RAW) ? POS_RAW_EOC_WORD : POS_CLUSTER_LAST_WORD)) begin
           packet_active_q <= 1'b0;
           word_idx_q      <= '0;
         end else begin
@@ -466,24 +471,27 @@ module spadmic_position_block (
   assign status_multi_cluster_mask = packet_active_q ? frame_active_q.multi_cluster_mask : multi_cluster_mask;
 
   always_comb begin
-    logic [2:0] raw_word_idx;
+    logic [4:0] raw_axis_word_idx;
 
     pos_valid_o = packet_active_q;
     pos_data_o  = '0;
-    raw_word_idx = word_idx_q[2:0] - 3'd1;
+    raw_axis_word_idx = '0;
 
     if (frame_active_q.mode == SPADMIC_POS_MODE_RAW) begin
-      unique case (word_idx_q)
-        5'd0: pos_data_o = spadmic_pos_raw_header_word(frame_active_q.non_empty_mask);
-        5'd1, 5'd2, 5'd3, 5'd4, 5'd5, 5'd6, 5'd7, 5'd8:
-          pos_data_o = spadmic_pos_raw_word(frame_active_q.x_raw_lines, raw_word_idx);
-        5'd9, 5'd10, 5'd11, 5'd12, 5'd13, 5'd14, 5'd15, 5'd16:
-          pos_data_o = spadmic_pos_raw_word(frame_active_q.y_raw_lines, raw_word_idx);
-        5'd17, 5'd18, 5'd19, 5'd20, 5'd21, 5'd22, 5'd23, 5'd24:
-          pos_data_o = spadmic_pos_raw_word(frame_active_q.z_raw_lines, raw_word_idx);
-        5'd25: pos_data_o = spadmic_pos_eoc_word(event_count_q);
-        default: ;
-      endcase
+      if (word_idx_q == 5'd0) begin
+        pos_data_o = spadmic_pos_raw_header_word(frame_active_q.non_empty_mask);
+      end else if (word_idx_q == POS_RAW_EOC_WORD) begin
+        pos_data_o = spadmic_pos_eoc_word(event_count_q);
+      end else if (word_idx_q < POS_RAW_Y_BASE) begin
+        raw_axis_word_idx = word_idx_q - POS_RAW_X_BASE;
+        pos_data_o = spadmic_pos_raw_word(frame_active_q.x_raw_lines, int'(raw_axis_word_idx));
+      end else if (word_idx_q < POS_RAW_Z_BASE) begin
+        raw_axis_word_idx = word_idx_q - POS_RAW_Y_BASE;
+        pos_data_o = spadmic_pos_raw_word(frame_active_q.y_raw_lines, int'(raw_axis_word_idx));
+      end else if (word_idx_q < POS_RAW_EOC_WORD) begin
+        raw_axis_word_idx = word_idx_q - POS_RAW_Z_BASE;
+        pos_data_o = spadmic_pos_raw_word(frame_active_q.z_raw_lines, int'(raw_axis_word_idx));
+      end
     end else begin
       unique case (word_idx_q)
         5'd0: pos_data_o = spadmic_pos_header_word(

@@ -30,14 +30,13 @@ class spadmic_smoke_position_raw extends spadmic_base_test;
     // Deliberately create marker-looking raw payload words. The raw packet
     // monitor and correlator must not terminate early on these data words.
     xp[15:0] = 16'hFFFF;
-    xp[126] = 1'b1;
+    xp[SPADMIC_LINE_W-1] = 1'b1;
     yp[31:16] = 16'h8123;
     zp[47:32] = 16'hC123;
-    zp[125] = 1'b1;
+    zp[SPADMIC_LINE_W-2] = 1'b1;
 
     env.gen.gen_position_event(xp, yp, zp, 300);
     env.gen.gen_eot();
   endtask
 
 endclass
-
