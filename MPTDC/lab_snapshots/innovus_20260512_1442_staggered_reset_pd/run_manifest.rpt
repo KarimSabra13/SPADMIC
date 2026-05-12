@@ -1,0 +1,27 @@
+MPTDC Innovus estimate manifest
+===============================
+Generated: 2026-05-12 14:40:35 CEST
+Top: mptdc_top_asic
+Optimization goal: area_first
+Metal stack: 1P4M
+Core utilization: 0.78
+Placement max density: 0.82
+Aspect ratio: 1.0
+Core margin um: 20.0
+Signal routing layers: MET1-MET3
+Signal routing layer indexes: 1-3
+Reserved power layer: METTP
+Explicit PG pin connect enabled: 1
+VDD PG pin candidates: vdd VDD
+VSS PG pin candidates: gnd VSS
+Expected routing directions: MET1=horizontal, MET2=vertical, MET3=horizontal, METTP=vertical
+PD symmetry prep enabled: 1
+PD target grid: 8x8
+PD group: mptdc_pd_matrix
+PD instance patterns: *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell* *u_pd*
+PD region margin um: 10.0
+Detail route enabled: 0
+Netlist: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/outputs/mptdc_top_asic.postsyn.v
+SDC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/outputs/mptdc_top_asic.postsyn.sdc
+MMMC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/inputs/mptdc_innovus.mmmc
+LEF: /data/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/LEF/v6_0_0/xh018_D_CELLS_HD.lef
