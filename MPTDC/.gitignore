@@ -42,6 +42,12 @@ syn/logs/
 *.genus_db
 fv/
 
+# ── Physical implementation outputs (Innovus) ─────────────────────────
+pnr/work/
+pnr/outputs/
+pnr/reports/
+pnr/logs/
+
 # ── Docs build ───────────────────────────────────────────────────────
 .venv_docs/
 docs/datasheet/build/

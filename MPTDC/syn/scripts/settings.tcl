@@ -53,7 +53,15 @@ set_db lp_insert_clock_gating $mptdc_enable_clock_gating
 #############################################
 #       Synthesis Effort
 #############################################
-# Signoff-oriented front-end runs: spend more effort on mapping/optimization.
+# Signoff-oriented front-end runs: spend maximum effort on area/timing/power
+# exploration before handoff to physical implementation. Override the label
+# with MPTDC_OPT_GOAL if a future run intentionally trades area for timing.
+if {[info exists ::env(MPTDC_OPT_GOAL)]} {
+    set mptdc_optimization_goal $::env(MPTDC_OPT_GOAL)
+} else {
+    set mptdc_optimization_goal "area_first"
+}
+
 set_db syn_generic_effort  high           ;# low|medium|high|express
 set_db syn_map_effort      high           ;# low|medium|high
 set_db syn_opt_effort      extreme        ;# low|medium|high|extreme
@@ -64,4 +72,4 @@ set_db design_power_effort high           ;# none|low|high
 #############################################
 set_db information_level 7                ;# 1 (quiet) to 9 (verbose)
 
-mptdc_message "Genus settings loaded (high/extreme effort, $ramstyle_note, $clock_gating_note)"
+mptdc_message "Genus settings loaded ($mptdc_optimization_goal, high/extreme effort, $ramstyle_note, $clock_gating_note)"

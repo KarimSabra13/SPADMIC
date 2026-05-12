@@ -112,6 +112,13 @@ genus -files genus.tcl -log ../logs/genus.log
 
 That's it — `genus.tcl` handles everything: loading libraries, reading RTL,
 elaborating, synthesizing, generating reports, and exporting the netlist.
+The default optimization label is `area_first`, with high/extreme Genus effort
+settings and expanded QoR reports for area/timing/power triage. Override only
+when intentionally running a different experiment:
+
+```bash
+export MPTDC_OPT_GOAL=timing_first
+```
 
 ### Generated Directories (Gitignored)
 
@@ -135,12 +142,28 @@ Because the raw Genus output tree is gitignored and the XFAB PDK is only
 available on the lab server, the maintained review workflow is:
 
 1. run Genus on the lab server from `MPTDC/syn/scripts`
-2. copy the key reports/log/netlist/SDC into `MPTDC/lab_snapshots/<run_tag>/`
+2. collect the key reports/log/netlist/SDC into `MPTDC/lab_snapshots/<run_tag>/`
 3. commit that snapshot on `SPADMIC_TOP`
 4. pull the branch locally and review the tracked snapshot here
 
 This keeps the repository clean while still preserving synthesis evidence for
 future analysis sessions.
+
+Use the helper after each lab run:
+
+```bash
+cd MPTDC/syn/scripts
+bash collect_snapshot.sh genus_$(date +%Y%m%d_%H%M)_area_first
+```
+
+First reports to review:
+
+- `run_manifest.rpt` — exact PDK/MMMC/settings baseline
+- `timing_violations.rpt` and `timing_summary.rpt` — timing closure status
+- `report_area.rpt` and `report_area_hier.rpt` — total and per-hierarchy area targets
+- `report_power.rpt` and `report_power_hier.rpt` — vectorless or activity-backed power baseline
+- `report_design_rules.rpt` — transition/fanout/capacitance issues
+- `latch_audit.rpt` — intentional async-frontend latch count
 
 ---
 

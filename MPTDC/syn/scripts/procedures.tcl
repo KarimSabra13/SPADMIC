@@ -70,6 +70,12 @@ proc mptdc_write_report_failure {rpt_file title err} {
     close $fh
 }
 
+proc mptdc_run_report {cmd rpt_file title} {
+    if {[catch {eval $cmd > $rpt_file} err]} {
+        mptdc_write_report_failure $rpt_file $title $err
+    }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # mptdc_report_timing — Generate timing reports for current stage
 # ─────────────────────────────────────────────────────────────────────────────
@@ -206,39 +212,121 @@ proc mptdc_full_reports {report_dir} {
 
     mptdc_message "Generating full report set → $dir"
 
-    # Standard reports
-    set report_list [list \
-        report_area \
-        report_gates \
-        report_hierarchy \
-        report_design_rules \
-        report_qor \
-    ]
+    mptdc_run_report "report_area" \
+        "$dir/report_area.rpt" "report_area"
+    mptdc_run_report "report_area -hierarchy" \
+        "$dir/report_area_hier.rpt" "report_area -hierarchy"
+    mptdc_run_report "report_gates" \
+        "$dir/report_gates.rpt" "report_gates"
+    mptdc_run_report "report_gates -hierarchy" \
+        "$dir/report_gates_hier.rpt" "report_gates -hierarchy"
+    mptdc_run_report "report_hierarchy" \
+        "$dir/report_hierarchy.rpt" "report_hierarchy"
+    mptdc_run_report "report_design_rules" \
+        "$dir/report_design_rules.rpt" "report_design_rules"
+    mptdc_run_report "report_qor" \
+        "$dir/report_qor.rpt" "report_qor"
 
-    foreach rpt $report_list {
-        mptdc_message "  $rpt" low
-        if {[catch { $rpt > "$dir/${rpt}.rpt" } err]} {
-            mptdc_write_report_failure "$dir/${rpt}.rpt" "$rpt" $err
-        }
-    }
+    # Power is vectorless unless a later flow reads switching activity.
+    mptdc_run_report "report_power" \
+        "$dir/report_power.rpt" "report_power"
+    mptdc_run_report "report_power -by_hierarchy" \
+        "$dir/report_power_hier.rpt" "report_power -by_hierarchy"
 
-    # Power (may not work without switching activity)
-    if {[catch { report_power > "$dir/report_power.rpt" } err]} {
-        mptdc_write_report_failure "$dir/report_power.rpt" "report_power" $err
-    }
-
-    # Clocks
-    if {[catch { report_clocks > "$dir/report_clocks.rpt" } err]} {
-        mptdc_write_report_failure "$dir/report_clocks.rpt" "report_clocks" $err
-    }
-
-    # Constraints
-    if {[catch { report_constraints > "$dir/report_constraints.rpt" } err]} {
-        mptdc_write_report_failure "$dir/report_constraints.rpt" "report_constraints" $err
-    }
+    mptdc_run_report "report_clocks" \
+        "$dir/report_clocks.rpt" "report_clocks"
+    mptdc_run_report "report_constraints" \
+        "$dir/report_constraints.rpt" "report_constraints"
 
     # Latch audit
     mptdc_latch_audit $dir
+
+    mptdc_write_qor_manifest $dir
+}
+
+proc mptdc_write_qor_manifest {dir} {
+    global design tech tech_files paths METAL_STACK TRACKS
+    global mptdc_optimization_goal mptdc_enable_clock_gating
+    global ramstyle_note clock_gating_note
+
+    set fh [open "$dir/run_manifest.rpt" w]
+    puts $fh "MPTDC Genus run manifest"
+    puts $fh "========================"
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+
+    puts $fh "Design"
+    puts $fh "------"
+    foreach key {
+        TOPLEVEL FULLCHIP_OR_MACRO CLK_PERIOD OSC_SLOW_PERIOD OSC_FAST_PERIOD
+        CLOCK_UNCERTAINTY OSC_CLOCK_UNCERTAINTY INPUT_DELAY_MACRO
+        OUTPUT_DELAY_MACRO OUTPUT_LOAD_MACRO MAX_FANOUT MAX_TRANSITION
+        EXPECTED_LATCH_COUNT selected_setup_analysis_views
+        selected_hold_analysis_views
+    } {
+        if {[info exists design($key)]} {
+            puts $fh [format "  %-32s %s" $key $design($key)]
+        }
+    }
+
+    puts $fh ""
+    puts $fh "Optimization"
+    puts $fh "------------"
+    foreach item {
+        mptdc_optimization_goal mptdc_enable_clock_gating
+        ramstyle_note clock_gating_note
+    } {
+        if {[info exists $item]} {
+            puts $fh [format "  %-32s %s" $item [set $item]]
+        }
+    }
+
+    puts $fh ""
+    puts $fh "Technology"
+    puts $fh "----------"
+    foreach item {METAL_STACK TRACKS} {
+        if {[info exists $item]} {
+            puts $fh [format "  %-32s %s" $item [set $item]]
+        }
+    }
+    foreach key {
+        STANDARD_CELL_SITE STANDARD_CELL_VDD STANDARD_CELL_GND row_height
+        grid_unit HAS_QRC_TECH cts_top_routing_layer_top
+        cts_bottom_routing_layer_top
+    } {
+        if {[info exists tech($key)]} {
+            puts $fh [format "  %-32s %s" $key $tech($key)]
+        }
+    }
+
+    puts $fh ""
+    puts $fh "Library and physical files"
+    puts $fh "--------------------------"
+    foreach key {
+        PDK_ROOT SC_ROOT LIB_DIR TECH_LEF_DIR QRC_ROOT
+    } {
+        if {[info exists paths($key)]} {
+            puts $fh [format "  %-32s %s" $key $paths($key)]
+        }
+    }
+    foreach key {
+        STDCELLS_BC_LIB STDCELLS_TC_LIB STDCELLS_WC_LIB TECHNOLOGY_LEF
+        STDCELLS_LEF QRCTECH_BC QRCTECH_TC QRCTECH_WC
+    } {
+        if {[info exists tech_files($key)]} {
+            puts $fh [format "  %-32s %s" $key $tech_files($key)]
+        }
+    }
+
+    puts $fh ""
+    puts $fh "Review checklist"
+    puts $fh "----------------"
+    puts $fh "  [ ] timing_violations.rpt contains no real violations"
+    puts $fh "  [ ] report_area_hier.rpt identifies dominant blocks"
+    puts $fh "  [ ] report_power.rpt/report_power_hier.rpt are understood as vectorless or activity-backed"
+    puts $fh "  [ ] latch_audit.rpt matches the intentional async-frontend latch count"
+    puts $fh "  [ ] report_design_rules.rpt has no critical transition/fanout/capacitance issues"
+    close $fh
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -262,8 +350,9 @@ proc mptdc_print_summary {} {
     puts " Post-synthesis checklist:"
     puts "   [ ] timing_violations.rpt is empty"
     puts "   [ ] Latch audit: exactly $design(EXPECTED_LATCH_COUNT) latches"
-    puts "   [ ] Area fits within budget"
+    puts "   [ ] report_area_hier.rpt identifies the first area targets"
+    puts "   [ ] run_manifest.rpt captures the exact PDK/MMMC/settings baseline"
     puts "   [ ] No critical DRV violations"
-    puts "   [ ] Gate count reasonable for 180 nm"
+    puts "   [ ] Power report is tagged as vectorless or activity-backed"
     puts "================================================================"
 }
