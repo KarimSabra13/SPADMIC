@@ -104,7 +104,8 @@ class spadmic_driver;
     input spadmic_stim_kind_e stim_kind,
     input logic [2:0]         axis_mask,
     input logic               pos_present,
-    input int unsigned        delay_ps
+    input int unsigned        delay_ps,
+    input spadmic_random_intent_e random_intent = RANDOM_INTENT_LEGAL
   );
     stim_cov.sample(
       spadmic_export_mode_from_ctrl(active_tx_sel, active_position_enable),
@@ -115,7 +116,8 @@ class spadmic_driver;
       axis_mask,
       pos_present,
       delay_bin(delay_ps),
-      stim_kind
+      stim_kind,
+      random_intent
     );
   endtask
 
@@ -160,6 +162,15 @@ class spadmic_driver;
           spadmic_ctrl_txn ct;
           $cast(ct, txn);
           drive_ctrl(ct);
+`ifdef SPADMIC_ENABLE_FUNC_COV
+          sample_stimulus_cov(
+            STIM_KIND_CSR,
+            ct.axis_enable,
+            ct.position_enable,
+            0,
+            ct.raw_csr_write ? RANDOM_INTENT_FAULT : RANDOM_INTENT_LEGAL
+          );
+`endif
           sb_mb.put(txn);
         end
 
@@ -242,6 +253,15 @@ class spadmic_driver;
         TXN_BP: begin
           spadmic_bp_txn bt;
           $cast(bt, txn);
+`ifdef SPADMIC_ENABLE_FUNC_COV
+          sample_stimulus_cov(
+            STIM_KIND_BP,
+            3'b000,
+            1'b0,
+            bt.duration_cycles * CLK_PERIOD_PS,
+            (bt.mode == BP_ALWAYS_STALL) ? RANDOM_INTENT_FAULT : RANDOM_INTENT_LEGAL
+          );
+`endif
           bp_drv.set_mode(bt.mode);
         end
 
@@ -249,7 +269,13 @@ class spadmic_driver;
           spadmic_reset_txn rt;
           $cast(rt, txn);
 `ifdef SPADMIC_ENABLE_FUNC_COV
-          sample_stimulus_cov(STIM_KIND_RESET, 3'b000, 1'b0, rt.reset_duration_ns * 1000);
+          sample_stimulus_cov(
+            STIM_KIND_RESET,
+            3'b000,
+            1'b0,
+            rt.reset_duration_ns * 1000,
+            rt.during_traffic ? RANDOM_INTENT_FAULT : RANDOM_INTENT_LEGAL
+          );
 `endif
           ev_drv.clear_all();
           pos_drv.clear_all();

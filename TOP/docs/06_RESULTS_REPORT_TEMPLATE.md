@@ -17,6 +17,11 @@
 | VIP random tests | 3/3 pass | ___/3 | ☐ |
 | Functional coverage | ≥ 95% | ___% | ☐ |
 | Code coverage | ≥ 90% | ___% | ☐ |
+| Functional bin review | 100% reviewed/waived | ___% | ☐ |
+| Active block evidence | bench/stress/VIP/assertion or waiver for every active block | ___ | ☐ |
+| Python decoder cross-check | PASS | ___ | ☐ |
+| CDC/lint/formal-style gate | PASS / waived | ___ | ☐ |
+| Synthesis/timing sanity | PASS / waived | ___ | ☐ |
 | SVA failures | 0 | ___ | ☐ |
 | **Overall** | **PASS** | ___ | ☐ |
 
@@ -74,6 +79,18 @@
 | `cg_fault` | ___% | ___/___ |
 | **Total** | **___**% | |
 
+### 4.1.1 Mandatory Safety/Protocol Bin Review
+
+| Category | Hit/Reviewed/Waived | Notes |
+|----------|---------------------|-------|
+| Reset behavior | | |
+| CDC boundary assumptions | | |
+| CSR faults/errors/W1C/readback | | |
+| Packet grammar/source/length | | |
+| Shared event IDs and wrap | | |
+| FIFO pressure/queue drops/overflow | | |
+| Mode transitions/drain-commit | | |
+
 ### 4.2 Code Coverage
 
 | Module | Line | Branch | Toggle | FSM |
@@ -124,14 +141,59 @@
 
 ---
 
-## 6. Known Limitations
+## 6. Active Block Evidence / Waivers
+
+| Block | Evidence | Waiver needed? | Notes |
+|-------|----------|----------------|-------|
+| `spadmic_i2c_slave` | | | |
+| `spadmic_i2c_csr_bridge` | | | |
+| `spadmic_csr_decoder` | | | |
+| `spadmic_global_csr` | | | |
+| `spadmic_top_sequencer` | | | |
+| `spadmic_ref_stop_qualifier` | | | |
+| `spadmic_tdc_shared_readout` | | | |
+| `spadmic_position_block` | | | |
+| `spadmic_axis_cluster_scan` | | | |
+| `spadmic_correlated_tx` | | | |
+| `spadmic_ddr_tx` | | | |
+| MPTDC active blocks | | | See `MPTDC/docs/04_VERIFICATION.md` |
+
+---
+
+## 7. Off-chip Decoder Cross-check
+
+| Artifact | Result | Notes |
+|----------|--------|-------|
+| Dumped logical TX words parsed by Python decoder | | |
+| SV monitor packet classification matches Python decoder | | |
+| TDC packet grammar | | |
+| Position cluster packet grammar | | |
+| Position raw packet grammar | | |
+| Shared event-ID grouping | | |
+
+---
+
+## 8. Static and Implementation Sanity
+
+| Gate | Result | Waivers / Notes |
+|------|--------|-----------------|
+| CDC/reset exception review | | |
+| Lint | | |
+| Formal/assertion checks | | |
+| Synthesis elaboration | | |
+| Timing constraints sanity | | |
+| Macro contract assumptions | | |
+
+---
+
+## 9. Known Limitations
 
 1. _(Fill in any untested scenarios)_
 2. _(Fill in any excluded coverage bins with justification)_
 
 ---
 
-## 7. Open Issues
+## 10. Open Issues
 
 | # | Issue | Severity | Status |
 |---|-------|----------|--------|
@@ -139,6 +201,6 @@
 
 ---
 
-## 8. Recommendation
+## 11. Recommendation
 
 _(Fill in: PASS / PASS WITH WAIVERS / FAIL — and next steps)_

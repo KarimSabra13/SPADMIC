@@ -54,8 +54,23 @@ package spadmic_vip_pkg;
     STIM_KIND_TDC        = 0,
     STIM_KIND_POSITION   = 1,
     STIM_KIND_CORRELATED = 2,
-    STIM_KIND_RESET      = 3
+    STIM_KIND_RESET      = 3,
+    STIM_KIND_BP         = 4,
+    STIM_KIND_CSR        = 5
   } spadmic_stim_kind_e;
+
+  typedef enum int unsigned {
+    RANDOM_PHASE_TDC        = 0,
+    RANDOM_PHASE_POSITION   = 1,
+    RANDOM_PHASE_MODE_SWITCH = 2,
+    RANDOM_PHASE_BP         = 3,
+    RANDOM_PHASE_CORRELATED = 4
+  } spadmic_random_phase_e;
+
+  typedef enum int unsigned {
+    RANDOM_INTENT_LEGAL = 0,
+    RANDOM_INTENT_FAULT = 1
+  } spadmic_random_intent_e;
 
   // ── Mailbox types ──────────────────────────────────────────────
   typedef mailbox #(int) mb_int_t;

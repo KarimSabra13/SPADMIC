@@ -14,6 +14,14 @@ The maintained verification stack is intentionally layered:
 - campaign collectors for raw-data characterization
 - fixed-delay characterization to prove same-delay one-shot RMS and averaging behavior
 
+The enhanced closure plan treats MPTDC internals as first-class verification
+scope, not only as a pre-verified IP used by TOP. Each active RTL block should
+have either direct bench/stress evidence or a documented waiver explaining why
+subsystem evidence is sufficient. Verification and characterization are separate
+but linked gates: verification proves data integrity, control/status behavior,
+packet grammar, and safe recovery; characterization proves timing accuracy and
+calibration quality using the verified data path.
+
 This validates RTL behavior and exported observables. It does **not** replace:
 
 - STA / MMMC signoff
@@ -276,7 +284,82 @@ The current tree gives good confidence in:
 6. same-delay empirical characterization through the fixed-delay flow
 7. VIP-driven regression and coverage handoff infrastructure
 
-## 7. What is still not proven here
+## 7. Spec-driven closure plan
+
+The MPTDC spec-to-verification map should cover every rule in:
+
+- [`01_ARCHITECTURE.md`](01_ARCHITECTURE.md)
+- [`02_OUTPUT_PROTOCOL.md`](02_OUTPUT_PROTOCOL.md)
+- [`03_CSR_MAP.md`](03_CSR_MAP.md)
+- [`10_SHARED_READOUT_EXPORT.md`](10_SHARED_READOUT_EXPORT.md)
+- [`11_BLOCK_GUIDE.md`](11_BLOCK_GUIDE.md)
+
+Each rule should map to directed tests, constrained-random scenarios,
+assertions, scoreboard checks, coverpoints, or an explicit waiver. The mandatory
+non-waivable categories are reset behavior, CDC-boundary assumptions, CSR
+fault/status semantics, serializer packet grammar, FIFO/backpressure behavior,
+overflow/rejected-START accounting, watchdog recovery, and output-mode/max-hit
+coverage.
+
+### 7.1 Block closure matrix
+
+| Block area | Required verification evidence |
+|------------|--------------------------------|
+| `mptdc_pkg` | constant/domain sanity, legal `ns/nf` ranges, helper-function packet/timestamp checks |
+| `mptdc_input_mux` | SPAD/CAL selection, disabled/quasi-static select assumptions, reset/readback interaction |
+| `mptdc_reset_sync` | async assert, sync release, recovery after short/long reset pulses |
+| `mptdc_async_frontend_v2` | START acceptance, STOP acceptance, context availability, ignored/rejected starts, held-level behavior |
+| `mptdc_stop_capture_async` | STOP-edge boundary metadata, phase snapshots, boundary carry assumptions |
+| `mptdc_context_bank` | freeze, retention, drain read stability, release, double-buffer interaction |
+| `mptdc_gray_cnt_sync` | Gray transition assumptions, snapshot coherence, reset behavior |
+| `mptdc_pd_cell` and PD matrix | legal 8x8 geometry, hit latch/clear, one-cell and multi-cell hit patterns, model/macro assumptions |
+| `mptdc_meas_ctrl` | fast close, max-hit close, watchdog close, CAPTURE->STOP_OSC->CLEAR ordering |
+| `mptdc_drain_ctrl` | META-first sequencing, HIT count agreement, context release, zero-hit and max-hit scans |
+| `mptdc_sync_fifo` | full/empty, simultaneous read/write, clear/reset, sustained backpressure |
+| `mptdc_csr_minimal` | W/R/W1C/readback, invalid or stale status avoidance, soft reset, `OVF_COUNT`, `CSR_HIT_COUNT` |
+| `mptdc_narrow16_tx_v2` | RAW_FEATURES, RAW_TIMESTAMP, FULL packet lengths, EOC, local `conv_id`, payload parsing by structure |
+| shared-readout export | local serializer bypass, `acq_valid/ready`, META grant assumptions for TOP |
+| `mptdc_top_asic` / `mptdc_core` | complete conversion flow, reset recovery, output modes, jitter robustness, calibration-data integrity |
+
+### 7.2 Golden model and timing tolerance policy
+
+Digital contracts should be checked exactly: CSR state, packet grammar, META/HIT
+sequencing, output mode, hit counts, flags, FIFO behavior, and reset/fault
+status. Timing/timestamp accuracy should use configurable tolerance data loaded
+from calibration or campaign manifests with documented defaults. The test code
+should not hide magic tolerances; any default tolerance must point back to a
+characterization artifact or an explicit temporary engineering assumption.
+
+Until the real analog oscillator macro is available, the verification spec
+should document a formal macro contract and check the digital logic against the
+behavioral oscillator model plus assumption checks. The macro contract should
+cover tap count/order, nominal/min/max tap delays, enable/disable latency,
+deterministic idle/reset behavior if required, generated clock names, jitter
+inputs, and physical symmetry constraints for the 8x8 PD island.
+
+### 7.3 Coverage and signoff tiers
+
+Closure targets:
+
+- 100% functional-bin review
+- at least 95% aggregate functional coverage
+- at least 90% code coverage
+- zero accepted scoreboard or assertion failures
+- waivers tied to unreachable logic, documented analog/macro assumptions, or
+  intentionally excluded features
+
+Signoff should be split into:
+
+| Tier | Purpose | Evidence |
+|------|---------|----------|
+| Local Verilator | fast portable regression | `ci/run_smoke.sh`, `ci/run_full_regression.sh`, `ci/run_vip_smoke.sh` |
+| Xcelium regression | full SV behavior and assertions | VIP smoke/feature/stress tests under `xrun` |
+| Coverage campaign | functional and code closure | merged coverage DB, zero-bin review, waiver list |
+| CDC/lint/formal-style | async/reset/static safety | CDC exception review, lint/formal reports where available |
+| Synthesis/timing sanity | implementation readiness | clean elaboration, generated-clock/false-path review, macro-contract alignment |
+| Characterization | timing accuracy/calibration quality | campaign and fixed-delay reports using verified data outputs |
+
+## 8. What is still not proven here
 
 The verification collateral is still **not** a silicon-signoff package.
 
@@ -287,7 +370,7 @@ Important remaining gaps:
 - no dedicated maintained bench that isolates `nfast_snap` coherency under stress
 - coverage closure still depends on Cadence reruns
 
-## 8. Recommended usage order
+## 9. Recommended usage order
 
 ### Local engineering loop
 

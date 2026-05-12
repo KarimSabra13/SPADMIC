@@ -32,6 +32,15 @@ class spadmic_env_cfg;
   bit                enable_sva;
   bit                enable_reset_test;
 
+  // Constrained-random policy. Normal random stays legal/coherent by default;
+  // dedicated fault tests can override these knobs.
+  bit                random_legal_only;
+  int unsigned       random_weight_tdc;
+  int unsigned       random_weight_position;
+  int unsigned       random_weight_mode_switch;
+  int unsigned       random_weight_bp;
+  int unsigned       random_weight_correlated;
+
   function new();
     drv_mode              = DRV_MODE_DIRECT_CSR;
     profile               = PROFILE_TDC_CHAR;
@@ -48,6 +57,12 @@ class spadmic_env_cfg;
     enable_coverage       = 1'b1;
     enable_sva            = 1'b1;
     enable_reset_test     = 1'b0;
+    random_legal_only     = 1'b1;
+    random_weight_tdc         = 20;
+    random_weight_position    = 20;
+    random_weight_mode_switch = 10;
+    random_weight_bp          = 10;
+    random_weight_correlated  = 40;
   endfunction
 
   function void parse_plusargs();
@@ -75,6 +90,18 @@ class spadmic_env_cfg;
       default_max_hits = v[MAX_HITS_W-1:0];
     if ($value$plusargs("SPADMIC_OUT_MODE=%d", v))
       default_out_mode = out_mode_e'(v[1:0]);
+    if ($value$plusargs("SPADMIC_RANDOM_LEGAL_ONLY=%d", v))
+      random_legal_only = (v != 0);
+    if ($value$plusargs("SPADMIC_RAND_W_TDC=%d", v))
+      random_weight_tdc = v;
+    if ($value$plusargs("SPADMIC_RAND_W_POS=%d", v))
+      random_weight_position = v;
+    if ($value$plusargs("SPADMIC_RAND_W_SWITCH=%d", v))
+      random_weight_mode_switch = v;
+    if ($value$plusargs("SPADMIC_RAND_W_BP=%d", v))
+      random_weight_bp = v;
+    if ($value$plusargs("SPADMIC_RAND_W_CORR=%d", v))
+      random_weight_correlated = v;
   endfunction
 
   function void display();
@@ -90,6 +117,11 @@ class spadmic_env_cfg;
     $display("║  Num phases:      %0d", num_phases);
     $display("║  Timeout:         %0d ns", timeout_ns);
     $display("║  Seed:            %0d", seed);
+    $display("║  Random legal:    %0b", random_legal_only);
+    $display("║  Rand weights:    TDC=%0d POS=%0d SWITCH=%0d BP=%0d CORR=%0d",
+             random_weight_tdc, random_weight_position,
+             random_weight_mode_switch, random_weight_bp,
+             random_weight_correlated);
     $display("╚═══════════════════════════════════════════════════╝");
   endfunction
 

@@ -133,6 +133,31 @@ For the new position characterization features, the scoreboard also tracks:
 - expected 64-line cluster bounds from the driven X/Y/Z line patterns
 - minimum expected SPAD reset pulse count and one-cycle pulse-width quality
 
+The VIP should remain the existing lightweight SystemVerilog class-based
+environment rather than migrating to UVM. The intended evolution is stronger
+transaction constraints, deeper monitors, more exact scoreboards, and functional
+coverage sampled from decoded transactions. Normal random sequences should be
+legal and coherent by default; FIFO-full, event-ID wrap, reset-during-packet, and
+intentionally mismatched TDC/position behavior belong in named stress/fault
+tests.
+
+`spadmic_generator` now uses a constrained `spadmic_random_scenario` object for
+random phase selection. The default random policy is legal/coherent: TDC phases
+run only in TDC-capable modes, position phases run only in position-capable
+modes, and correlated phases force both-active export before driving a coherent
+TDC-axis plus position event family. Phase weights and legal-only behavior are
+controlled by:
+
+```bash
+--random-legal-only 0|1
+--rand-w-tdc N --rand-w-pos N --rand-w-switch N --rand-w-bp N --rand-w-corr N
+```
+
+A repo-level Python packet decoder is planned as an independent off-chip
+reference checker. It should parse dumped or captured logical TX words and
+cross-check the SV monitor's packet kind, source, length, event ID, and payload
+classification.
+
 ## 6. Coverage and assertions
 
 ### Coverage classes
@@ -170,6 +195,11 @@ control/fault closure and campaign coverage:
 | Position CSR state | scoreboard tracks position mode, reset mode, auto-reset period, and core filter fields from raw CSR writes |
 | Fault/status closure | still needs deeper status/fault clear checks and CSR timeout/invalid-region coverage in VIP |
 | Coverage closure | `run_vip_coverage.sh` includes raw/reset tests; Xcelium coverage reports still need lab execution and bin-level review |
+
+Mandatory/non-waivable VIP coverage areas are reset, CDC-boundary assumptions as
+observed through synchronized behavior, CSR faults, packet grammar, event IDs,
+FIFO pressure, overflow/drop behavior, and mode transitions. Other bins can be
+waived only with documented spec rationale.
 
 ## 7. Test library
 

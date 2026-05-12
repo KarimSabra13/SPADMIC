@@ -175,6 +175,21 @@ Minimum digital evidence before a tapeout-readiness review:
 - I2C negative tests prove errors do not hang the control plane.
 - Reset tests cover reset during TDC, position, TX, and I2C activity.
 - Documentation and RTL packet contracts agree.
+- Every active TOP and MPTDC block has direct bench/stress/VIP/assertion evidence or an explicit waiver.
+- A shared Python off-chip decoder cross-checks dumped/captured logical TX streams against the documented packet grammar.
+- Functional coverage bins are 100% reviewed, aggregate functional coverage is at least 95%, code coverage is at least 90%, and all waivers are tied to spec rationale.
+- Non-waivable safety/protocol coverage categories are closed: reset, CDC boundaries, CSR faults, packet grammar, event IDs, FIFO pressure, overflow/drop behavior, and mode transitions.
+
+Verification signoff is tiered:
+
+| Tier | Required evidence |
+|------|-------------------|
+| Local Verilator | portable compile/lint and directed sanity for changed blocks |
+| Xcelium regression | full SystemVerilog simulation for TOP and MPTDC VIP suites |
+| Coverage campaign | merged functional/code coverage, zero-bin review, waiver list |
+| CDC/lint/formal-style | static reset/CDC exception review and assertion/formal evidence where available |
+| Synthesis/timing sanity | clean elaboration, constraints reviewed, no unconstrained active output/control path |
+| Characterization | MPTDC campaign/fixed-delay reports using verified output data, tracked separately from functional correctness |
 
 ## Low-risk hardening policy
 

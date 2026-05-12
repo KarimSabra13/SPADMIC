@@ -18,6 +18,12 @@
 #   --drv-mode <I2C|CSR>     Override driver mode
 #   --profile <name>         Override mission profile
 #   --timeout <ns>           Override timeout
+#   --random-legal-only <0|1>  Keep random legal/coherent (default from test)
+#   --rand-w-tdc <N>         Random phase weight: TDC
+#   --rand-w-pos <N>         Random phase weight: position
+#   --rand-w-switch <N>      Random phase weight: mode switch
+#   --rand-w-bp <N>          Random phase weight: BP compatibility
+#   --rand-w-corr <N>        Random phase weight: correlated event
 #   --gui                    Open SimVision after run
 # =============================================================================
 set -euo pipefail
@@ -43,6 +49,12 @@ OUT_MODE=""
 DRV_MODE=""
 PROFILE=""
 TIMEOUT=""
+RANDOM_LEGAL_ONLY=""
+RAND_W_TDC=""
+RAND_W_POS=""
+RAND_W_SWITCH=""
+RAND_W_BP=""
+RAND_W_CORR=""
 GUI=0
 
 shift
@@ -62,6 +74,12 @@ while [[ $# -gt 0 ]]; do
     --drv-mode)   DRV_MODE="$2"; shift 2 ;;
     --profile)    PROFILE="$2"; shift 2 ;;
     --timeout)    TIMEOUT="$2"; shift 2 ;;
+    --random-legal-only) RANDOM_LEGAL_ONLY="$2"; shift 2 ;;
+    --rand-w-tdc) RAND_W_TDC="$2"; shift 2 ;;
+    --rand-w-pos) RAND_W_POS="$2"; shift 2 ;;
+    --rand-w-switch) RAND_W_SWITCH="$2"; shift 2 ;;
+    --rand-w-bp) RAND_W_BP="$2"; shift 2 ;;
+    --rand-w-corr) RAND_W_CORR="$2"; shift 2 ;;
     --gui)        GUI=1; shift ;;
     *)            echo "Unknown option: $1"; exit 1 ;;
   esac
@@ -107,6 +125,12 @@ if [[ "$SIM" == "xrun" ]]; then
   [[ -n "$DRV_MODE" ]]   && XRUN_ARGS+=("+SPADMIC_DRV_MODE=$DRV_MODE")
   [[ -n "$PROFILE" ]]    && XRUN_ARGS+=("+SPADMIC_PROFILE=$PROFILE")
   [[ -n "$TIMEOUT" ]]    && XRUN_ARGS+=("+SPADMIC_TIMEOUT=$TIMEOUT")
+  [[ -n "$RANDOM_LEGAL_ONLY" ]] && XRUN_ARGS+=("+SPADMIC_RANDOM_LEGAL_ONLY=$RANDOM_LEGAL_ONLY")
+  [[ -n "$RAND_W_TDC" ]]        && XRUN_ARGS+=("+SPADMIC_RAND_W_TDC=$RAND_W_TDC")
+  [[ -n "$RAND_W_POS" ]]        && XRUN_ARGS+=("+SPADMIC_RAND_W_POS=$RAND_W_POS")
+  [[ -n "$RAND_W_SWITCH" ]]     && XRUN_ARGS+=("+SPADMIC_RAND_W_SWITCH=$RAND_W_SWITCH")
+  [[ -n "$RAND_W_BP" ]]         && XRUN_ARGS+=("+SPADMIC_RAND_W_BP=$RAND_W_BP")
+  [[ -n "$RAND_W_CORR" ]]       && XRUN_ARGS+=("+SPADMIC_RAND_W_CORR=$RAND_W_CORR")
 
   # Coverage
   if [[ $FUNC_COV -eq 1 ]]; then

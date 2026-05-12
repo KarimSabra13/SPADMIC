@@ -22,6 +22,8 @@ class spadmic_pkt_cov;
   int         pkt_kind;
   int         packet_words;
   int         raw_pattern_class;
+  int         event_id_class;
+  logic [2:0] raw_axis_mask;
 
   covergroup cg_tdc_pkt;
     cp_source:    coverpoint pkt_source { bins x = {0}; bins y = {1}; bins z = {2}; }
@@ -51,7 +53,14 @@ class spadmic_pkt_cov;
                                                      bins other = default; }
     cp_multi_mask:     coverpoint multi_cluster_mask;
     cp_event_count:    coverpoint event_count    { bins low = {[0:10]}; bins med = {[11:100]};
-                                                     bins high = {[101:$]}; }
+                                                      bins high = {[101:16382]};
+                                                      bins wrap_edge = {16383}; }
+    cp_event_id_class: coverpoint event_id_class {
+      bins zero     = {0};
+      bins adjacent = {1};
+      bins mid      = {2};
+      bins wrap     = {3};
+    }
     cp_packet_words:   coverpoint packet_words {
       bins cluster_len = {SPADMIC_POS_PKT_WORDS};
       bins raw_len     = {SPADMIC_POS_RAW_PKT_WORDS};
@@ -64,9 +73,21 @@ class spadmic_pkt_cov;
       bins marker_like   = {3};
       bins dense         = {4};
     }
+    cp_raw_axis_mask:  coverpoint raw_axis_mask {
+      bins not_raw = {0};
+      bins x_only  = {3'b001};
+      bins y_only  = {3'b010};
+      bins z_only  = {3'b100};
+      bins xy      = {3'b011};
+      bins xz      = {3'b101};
+      bins yz      = {3'b110};
+      bins xyz     = {3'b111};
+    }
 
     cx_kind_x_mask: cross cp_pkt_kind, cp_non_empty_mask;
     cx_kind_x_len:  cross cp_pkt_kind, cp_packet_words;
+    cx_kind_x_event: cross cp_pkt_kind, cp_event_id_class;
+    cx_raw_pattern_x_axis: cross cp_raw_pattern, cp_raw_axis_mask;
   endgroup
 
   function new();
@@ -115,6 +136,35 @@ class spadmic_pkt_cov;
     return 1;
   endfunction
 
+  function automatic logic [2:0] classify_raw_axis_mask(logic [15:0] words[$]);
+    logic [2:0] mask;
+    mask = 3'b000;
+
+    if ((words.size() == 0) || !is_spadmic_pos_raw_header(words[0]))
+      return mask;
+
+    for (int axis = 0; axis < 3; axis++) begin
+      for (int idx = 0; idx < SPADMIC_POS_RAW_WORDS_PER_AXIS; idx++) begin
+        int word_idx;
+        word_idx = 1 + (axis * SPADMIC_POS_RAW_WORDS_PER_AXIS) + idx;
+        if ((word_idx < words.size()) && (words[word_idx] != '0))
+          mask[axis] = 1'b1;
+      end
+    end
+
+    return mask;
+  endfunction
+
+  function automatic int classify_event_id(int ec);
+    if (ec == 0)
+      return 0;
+    if (ec <= 10)
+      return 1;
+    if (ec >= 16380)
+      return 3;
+    return 2;
+  endfunction
+
   function void sample_pos(
     spadmic_mon_pkt_kind_e kind,
     logic overflow, logic [2:0] ne_mask, logic [2:0] mc_mask, int ec,
@@ -128,6 +178,8 @@ class spadmic_pkt_cov;
     event_count        = ec;
     packet_words       = words_count;
     raw_pattern_class  = classify_raw_pattern(words);
+    raw_axis_mask      = classify_raw_axis_mask(words);
+    event_id_class     = classify_event_id(ec);
     cg_pos_pkt.sample();
   endfunction
 

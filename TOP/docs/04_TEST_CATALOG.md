@@ -41,9 +41,20 @@
 
 | Test | Phases | Seeds | Focus |
 |------|--------|-------|-------|
-| `long_random` | 50 | 1 | Mixed TDC/position/switching/BP |
+| `long_random` | 50 | 1 | Legal/coherent mixed TDC/position/switching/BP/correlated traffic |
 | `coverage_walk` | Systematic | 1 | Fill cross-coverage holes |
-| `stress_random` | 200 | 20–100 | Maximum coverage closure |
+| `stress_random` | 200 | 20–100 | Legal/coherent high-volume coverage closure with explicit phase weights |
+
+Random phase weights can be overridden through `run_vip_test.sh`:
+
+```bash
+--random-legal-only 0|1
+--rand-w-tdc N --rand-w-pos N --rand-w-switch N --rand-w-bp N --rand-w-corr N
+```
+
+The default is legal-only randomization. Fault campaigns that intentionally use
+reset-during-traffic, FIFO-full pressure, or permanently stalled output must be
+named and checked as stress/fault tests rather than mixed into ordinary random.
 
 ## 5. Mission Profile Weights
 

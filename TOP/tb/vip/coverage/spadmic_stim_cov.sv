@@ -17,6 +17,7 @@ class spadmic_stim_cov;
   logic       pos_present;
   int         delay_bin;   // 0=short, 1=med, 2=long, 3=max
   int         stim_kind;
+  int         random_intent;
 
   covergroup cg_stim;
     cp_export_mode: coverpoint export_mode {
@@ -40,15 +41,22 @@ class spadmic_stim_cov;
     cp_delay_bin: coverpoint delay_bin { bins short_d = {0}; bins med_d = {1};
                                            bins long_d = {2}; bins max_d = {3}; }
     cp_stim_kind: coverpoint stim_kind { bins tdc = {STIM_KIND_TDC};
-                                         bins pos = {STIM_KIND_POSITION};
-                                         bins corr = {STIM_KIND_CORRELATED};
-                                         bins reset = {STIM_KIND_RESET}; }
+                                          bins pos = {STIM_KIND_POSITION};
+                                          bins corr = {STIM_KIND_CORRELATED};
+                                          bins reset = {STIM_KIND_RESET};
+                                          bins bp = {STIM_KIND_BP};
+                                          bins csr = {STIM_KIND_CSR}; }
+    cp_random_intent: coverpoint random_intent {
+      bins legal = {RANDOM_INTENT_LEGAL};
+      bins fault = {RANDOM_INTENT_FAULT};
+    }
 
     cx_mode_x_hits:  cross cp_out_mode, cp_max_hits;
     cx_export_x_kind: cross cp_export_mode, cp_stim_kind;
     cx_drv_x_export:  cross cp_drv_mode, cp_export_mode;
     cx_axis_x_kind:   cross cp_axis_mask, cp_stim_kind;
     cx_input_x_mode: cross cp_input_sel, cp_out_mode;
+    cx_kind_x_intent: cross cp_stim_kind, cp_random_intent;
   endgroup
 
   function new();
@@ -64,7 +72,8 @@ class spadmic_stim_cov;
     logic [2:0] axis_mask_v,
     logic       pos_present_v,
     int         delay_bin_v,
-    int         stim_kind_v
+    int         stim_kind_v,
+    int         random_intent_v = RANDOM_INTENT_LEGAL
   );
     this.export_mode = export_mode_v;
     this.drv_mode    = drv_mode_v;
@@ -75,6 +84,7 @@ class spadmic_stim_cov;
     this.pos_present = pos_present_v;
     this.delay_bin   = delay_bin_v;
     this.stim_kind   = stim_kind_v;
+    this.random_intent = random_intent_v;
     cg_stim.sample();
   endfunction
 

@@ -24,6 +24,14 @@ The important system-level checks are now:
 4. shared event IDs remain parseable and deterministic off-chip
 5. the chip-facing DDR TX pins can be reconstructed back into the logical 16-bit packet stream without ambiguity
 
+The verification plan is now **spec-driven**: every externally visible rule in the
+architecture, CSR, TX, reset, and fault-status documents must map to at least one
+directed test, constrained-random scenario, assertion, scoreboard check,
+coverpoint, or explicit waiver. Normal constrained-random tests should generate
+legal, coherent physical events by default. Event-ID wrap, FIFO-full pressure,
+reset-during-packet, and intentionally mismatched TDC/position activity are
+dedicated stress or fault campaigns so the legal random stream remains debuggable.
+
 ## 3. Environment architecture
 
 ```text
@@ -202,11 +210,18 @@ then compose the blocks through the top-level VIP.
 
 | Stage | Scope | Main evidence |
 |-------|-------|---------------|
-| Leaf directed | one RTL block or small protocol boundary | deterministic unit/stress benches, local assertions, code coverage |
+| Leaf directed | one RTL block or small protocol boundary | deterministic unit/stress benches, local assertions, code coverage, or explicit waiver |
 | Subsystem directed | two or three connected active blocks | protocol monitors, scoreboard checks, corner-case tests |
 | Top VIP smoke | full `spadmic_top_v1` with physical TX observation | smoke tests for TDC-only, position-only, both-active, reset recovery |
 | Top VIP coverage | constrained/randomized feature walks | functional coverage, code coverage, no scoreboard/SVA failures |
-| Tapeout gate | curated mix of portable and Xcelium-only tests | reproducible pass/fail matrix plus coverage report |
+| Fault/stress campaigns | illegal timing/control/reset/FIFO pressure scenarios | isolated negative tests with expected status/fault outcomes |
+| Off-chip decode cross-check | captured logical/physical TX streams | shared Python decoder agrees with SV monitor packet classification |
+| Signoff gate | curated mix of portable and Xcelium-only tests plus static checks | reproducible pass/fail matrix, coverage report, CDC/lint/formal and synthesis/timing sanity evidence |
+
+Every active TOP RTL block should have either a standalone bench/stress target or
+a documented waiver explaining why subsystem-level evidence is stronger than a
+leaf bench. Legacy modules can remain compile-checked, but they must not be
+counted as evidence for active chip behavior unless the active datapath uses them.
 
 ### 10.2 VIP monitor and transaction upgrades
 
@@ -254,6 +269,14 @@ The position reference model must validate against the stimulus patterns wheneve
 the VIP can know them. For cases with intentionally unstable line stimulus, it
 should classify the expected result as accepted packet, rejected glitch, or
 possible race-window observation rather than blindly expecting one packet.
+
+The independent off-chip reference checker should live in a repo-level shared
+tools directory and parse the same logical packet streams that firmware or lab
+capture tooling will see. It should decode TDC packets, position cluster packets,
+position raw bitmap packets, source tags, packet lengths, and shared event IDs.
+The SV monitor remains the cycle/testbench-facing checker; the Python decoder is
+the independent receiver-facing cross-check used for dumped word streams and
+captured logs.
 
 ### 10.4 Functional coverage groups
 
@@ -321,6 +344,22 @@ Key crosses:
 | reset during traffic | reset during TDC packet, position packet, raw packet, I2C transaction |
 | correlation faults | event-ID wrap, post-arbiter FIFO pressure |
 
+Mandatory/non-waivable coverage categories are:
+
+- reset behavior at block, subsystem, and top level
+- CDC boundary assumptions and synchronizer/reset-release behavior
+- CSR invalid-region, timeout, W1C, readback, and non-idle reject paths
+- packet grammar, source tags, packet lengths, and DDR byte reconstruction
+- shared event-ID monotonicity, grouping, and wrap behavior
+- FIFO pressure, queue drops, overflow, and backpressure-equivalent stalls
+- mode transitions through requested-to-active drain/commit sequencing
+
+All other uncovered bins may be waived only with a short rationale tying the
+waiver back to the spec, unreachable logic, or an intentionally removed feature.
+The closure target is 100% review of functional bins, at least 95% aggregate
+functional coverage, at least 90% code coverage, and zero scoreboard/SVA failures
+for the accepted regression set.
+
 ### 10.5 Block-by-block corner-case matrix
 
 | Block | Directed corner cases before top VIP |
@@ -334,6 +373,13 @@ Key crosses:
 | Position cluster | gap threshold sweep, min-span 1, edge line 0/63 clusters, two clusters, more-than-two overflow, queue-full drop, glitch reject |
 | Position raw/reset | 14-word raw packet, all axes and edge bits, raw payload marker collisions, manual reset, period 0 disabled, deferred reset waits, periodic reset fires under activity |
 
+For the three instantiated MPTDC axes, TOP-level evidence should prove wrapper
+and integration behavior, while MPTDC-internal closure is tracked in the MPTDC
+verification plan. The TOP plan still must verify the active override boundary:
+input selection, output mode, `max_hits`, shared-readout enable, acquisition
+record readiness, per-axis FIFO-full status, and source tagging after shared
+readout arbitration.
+
 ### 10.6 Xcelium coverage workflow
 
 Use the existing test runner knobs as the foundation:
@@ -342,6 +388,19 @@ Use the existing test runner knobs as the foundation:
 bash TOP/scripts/sim/run_vip_test.sh <test> --func-cov --code-cov --seed <N>
 bash TOP/ci/run_vip_coverage.sh
 ```
+
+Random-campaign shaping is explicit rather than hidden inside test code:
+
+```bash
+bash TOP/scripts/sim/run_vip_test.sh long_random \
+  --func-cov \
+  --random-legal-only 1 \
+  --rand-w-tdc 20 --rand-w-pos 20 --rand-w-switch 10 --rand-w-bp 10 --rand-w-corr 40
+```
+
+Legal random keeps coherent traffic in normal campaigns. Dedicated stress/fault
+tests should use `--random-legal-only 0` only when the scoreboard and expected
+fault/status behavior for that campaign are explicit.
 
 Coverage closure should archive:
 
@@ -354,6 +413,17 @@ Coverage closure should archive:
 Do not treat a high aggregate coverage percentage as sufficient by itself. Any
 zero-hit bin in the raw/reset/control/fault covergroups must be reviewed because
 those bins represent silicon-debug-critical behavior.
+
+Signoff should be reported in tiers:
+
+| Tier | Purpose | Evidence |
+|------|---------|----------|
+| Local Verilator | portable syntax and directed sanity | `TOP/ci/run_tapeout_readiness.sh` plus targeted Verilator benches |
+| Xcelium regression | full SV simulation behavior | VIP smoke, feature, and stress tests under `xrun` |
+| Coverage campaign | functional/code closure | merged coverage DB, zero-bin review, waiver list |
+| CDC/lint/formal-style | static safety checks | CDC exception review, lint clean/waived, assertions or formal checks where available |
+| Synthesis/timing sanity | implementation-risk screening | clean elaboration, constraints reviewed, no unconstrained active outputs |
+| Characterization | timing accuracy and calibration quality | MPTDC campaign/fixed-delay reports using verified output data |
 
 The raw/reset VIP closure added two focused top-level tests to the Xcelium
 coverage suite:

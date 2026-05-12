@@ -208,7 +208,31 @@ preserves the logical 16-bit packet grammar upstream of the physical packer.
 - simulation-only: `mptdc_osc_model`
 - synthesis placeholder: `mptdc_osc_stub`
 
-## 10. Suggested reading order
+## 10. Verification-closure expectation
+
+Every active-in-path block should have direct verification evidence or an
+explicit waiver. Direct evidence can be a unit bench, stress bench, VIP scenario,
+assertion, functional coverage bin, scoreboard check, or campaign analysis hook.
+Waivers should be reserved for blocks whose behavior is better proven at a
+subsystem boundary than at the leaf boundary.
+
+The minimum closure intent by group is:
+
+| Area | Closure expectation |
+|------|---------------------|
+| Package | constants, legal ranges, packet helpers, and timestamp helpers cross-checked against protocol docs |
+| Top wrappers | CSR/reset/input-select/shared-export behavior checked in standalone and TOP-integrated modes |
+| Async frontend | START/STOP/context acceptance, rejected STARTs, held events, and reset recovery stressed |
+| CDC | reset release, Gray snapshots, FIFO state, and intentional exceptions reviewed with CDC/lint evidence |
+| Oscillator | behavioral model checked against a documented macro contract until the real macro exists |
+| Phase detector | single-cell behavior, matrix geometry, clear behavior, and physical-symmetry assumptions covered |
+| Control | fast close, max-hit close, watchdog close, and safe shutdown ordering asserted/tested |
+| Readout | META/HIT sequencing, FIFO pressure, serializer packet grammar, and shared-export mode checked exactly |
+
+The verification guide owns the detailed closure matrix and signoff tiers:
+[`04_VERIFICATION.md`](04_VERIFICATION.md).
+
+## 11. Suggested reading order
 
 For a newcomer trying to understand the live RTL:
 
