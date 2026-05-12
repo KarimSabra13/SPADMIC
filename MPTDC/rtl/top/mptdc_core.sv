@@ -146,8 +146,9 @@ module mptdc_core
   // =========================================================================
   //  Reset distribution
   //  The pad/core boundary reset is already async-assert/sync-deassert in
-  //  clk_sys. Build local reset leaves for high-fanout sys-domain blocks so
-  //  recovery/removal closure does not depend on one global reset spine.
+  //  clk_sys. Local clk_sys leaves drive synchronous reset checks inside normal
+  //  downstream logic; only true CDC/oscillator-domain logic keeps async reset
+  //  sensitivity.
   // =========================================================================
   wire rst_fast_n;
   wire rst_sys_status_n;
@@ -503,7 +504,7 @@ module mptdc_core
   // =========================================================================
   //  Conversion and overflow counters
   // =========================================================================
-  always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_sys_status_n) begin
       conv_count_r     <= '0;
       ovf_count_r      <= '0;

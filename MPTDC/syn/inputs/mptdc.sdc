@@ -94,6 +94,7 @@ set_false_path -from [get_ports $design(RST_PORT)]
 # These flops are metastability barriers — must not be merged or retimed.
 
 mptdc_try_dont_touch *u_rst_sync*/sync_q_reg*
+mptdc_try_dont_touch *u_rst_*_sync*/sync_q_reg*
 mptdc_try_dont_touch *gray_cont_ff1*
 mptdc_try_dont_touch *gray_cont_ff2*
 mptdc_try_dont_touch *gray_snap_ff1*
@@ -172,9 +173,9 @@ set_input_transition $design(INPUT_TRANSITION) $async_inputs_and_reset
 set_max_fanout     $design(MAX_FANOUT)     [current_design]
 set_max_transition $design(MAX_TRANSITION) [current_design]
 
-# Reset leaf nets are intentionally distributed hierarchically in RTL. Keep
-# their implementation bounded so PnR does not recreate a single slow reset
-# spine with unsafe recovery/removal margins.
+# Reset leaf nets are intentionally distributed hierarchically in RTL. Normal
+# clk_sys consumers use these as synchronous reset controls; keep their
+# implementation bounded so PnR does not recreate one slow high-fanout spine.
 foreach reset_pattern {
     *rst_*_n*
     *rst_n_o*

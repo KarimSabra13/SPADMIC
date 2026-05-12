@@ -10,7 +10,7 @@
 #
 # This is an estimation flow, not a signoff PnR recipe. It starts from the
 # Genus post-synthesis netlist/SDC, uses the same XH018 1P4M collateral, keeps
-# signal routing on M1-M3 by default, and reserves M4 for VDD/VSS/top-level
+# signal routing on MET1-MET3 by default, and reserves METTP for VDD/VSS/top-level
 # power distribution as much as practical.
 # =============================================================================
 
@@ -32,6 +32,98 @@ proc mptdc_pnr_optional {label body} {
     if {[catch {uplevel 1 $body} err]} {
         puts "MPTDC_PNR_WARN: $label skipped: $err"
     }
+}
+
+proc mptdc_pnr_collect_cells {patterns} {
+    set matches [list]
+    foreach pattern $patterns {
+        set cells [list]
+        if {[catch {get_cells -hierarchical -quiet $pattern} cells]} {
+            if {[catch {get_cells -hier $pattern} cells]} {
+                set cells [list]
+            }
+        }
+        foreach cell $cells {
+            if {[lsearch -exact $matches $cell] < 0} {
+                lappend matches $cell
+            }
+        }
+    }
+    return $matches
+}
+
+proc mptdc_pnr_core_box {} {
+    set core_box [list]
+    if {[catch {dbGet top.fPlan.coreBox} core_box]} {
+        if {[catch {dbGet top.fPlan.box} core_box]} {
+            return [list]
+        }
+    }
+    if {[llength $core_box] == 1} {
+        set core_box [lindex $core_box 0]
+    }
+    return $core_box
+}
+
+proc mptdc_pnr_prepare_pd_symmetry {} {
+    global pnr
+
+    set report_file "$pnr(reports_dir)/pd_matrix_symmetry.rpt"
+    set cells [mptdc_pnr_collect_cells $pnr(pd_instance_patterns)]
+    set fh [open $report_file w]
+    puts $fh "MPTDC phase-detector matrix symmetry prep"
+    puts $fh "========================================"
+    puts $fh "Rows x cols target: $pnr(pd_rows) x $pnr(pd_cols)"
+    puts $fh "Instance patterns: $pnr(pd_instance_patterns)"
+    puts $fh "Matched instances found: [llength $cells]"
+    foreach cell $cells {
+        puts $fh "  $cell"
+    }
+
+    if {[llength $cells] == 0} {
+        puts $fh "Status: no PD instances matched after synthesis; no group/region created."
+        close $fh
+        return
+    }
+
+    if {$pnr(pd_symmetry_create_group)} {
+        if {[catch {createInstGroup $pnr(pd_symmetry_group)} err]} {
+            puts $fh "Group create warning: $err"
+        } else {
+            puts $fh "Group created: $pnr(pd_symmetry_group)"
+        }
+        foreach cell $cells {
+            if {[catch {addInstToInstGroup $pnr(pd_symmetry_group) $cell} err]} {
+                puts $fh "Group add warning for $cell: $err"
+            }
+        }
+    }
+
+    if {$pnr(pd_symmetry_create_region)} {
+        set core_box [mptdc_pnr_core_box]
+        puts $fh "Core box: $core_box"
+        if {[llength $core_box] >= 4} {
+            set margin $pnr(pd_region_margin_um)
+            set llx [expr {[lindex $core_box 0] + $margin}]
+            set lly [expr {[lindex $core_box 1] + $margin}]
+            set urx [expr {[lindex $core_box 2] - $margin}]
+            set ury [expr {[lindex $core_box 3] - $margin}]
+            if {($urx > $llx) && ($ury > $lly)} {
+                if {[catch {createRegion $pnr(pd_symmetry_group) $llx $lly $urx $ury} err]} {
+                    puts $fh "Region create warning: $err"
+                } else {
+                    puts $fh "Region created for $pnr(pd_symmetry_group): $llx $lly $urx $ury"
+                }
+            } else {
+                puts $fh "Region skipped: core box too small for margin $margin"
+            }
+        } else {
+            puts $fh "Region skipped: unable to read Innovus core box"
+        }
+    }
+
+    puts $fh "Note: final symmetry and matched-RC constraints still require oscillator/PD macro LEFs and extracted routing rules."
+    close $fh
 }
 
 set script_dir [file dirname [file normalize [info script]]]
@@ -99,6 +191,14 @@ mptdc_pnr_required "Creating compact area-first floorplan" {
         $margin $margin $margin $margin
 }
 
+mptdc_pnr_optional "Preparing phase-detector symmetry placement hooks" {
+    if {$pnr(pd_symmetry_enable)} {
+        mptdc_pnr_prepare_pd_symmetry
+    } else {
+        mptdc_pnr_msg "Skipping PD symmetry prep because MPTDC_PNR_PD_SYMMETRY_ENABLE=0"
+    }
+}
+
 mptdc_pnr_optional "Limiting signal route layers to preserve top metal for power" {
     setNanoRouteMode -routeBottomRoutingLayer $pnr(signal_bottom_layer_idx)
     setNanoRouteMode -routeTopRoutingLayer    $pnr(signal_top_layer_idx)
@@ -162,7 +262,12 @@ if {[info exists tech(STANDARD_CELL_VDD_PINS)]} {
 if {[info exists tech(STANDARD_CELL_GND_PINS)]} {
     puts $fh "VSS PG pin candidates: $tech(STANDARD_CELL_GND_PINS)"
 }
-puts $fh "Expected routing directions: M1=$pnr(route_dir_M1), M2=$pnr(route_dir_M2), M3=$pnr(route_dir_M3), M4=$pnr(route_dir_M4)"
+puts $fh "Expected routing directions: MET1=$pnr(route_dir_MET1), MET2=$pnr(route_dir_MET2), MET3=$pnr(route_dir_MET3), METTP=$pnr(route_dir_METTP)"
+puts $fh "PD symmetry prep enabled: $pnr(pd_symmetry_enable)"
+puts $fh "PD target grid: $pnr(pd_rows)x$pnr(pd_cols)"
+puts $fh "PD group: $pnr(pd_symmetry_group)"
+puts $fh "PD instance patterns: $pnr(pd_instance_patterns)"
+puts $fh "PD region margin um: $pnr(pd_region_margin_um)"
 puts $fh "Detail route enabled: $pnr(do_detail_route)"
 puts $fh "Netlist: $design(postsyn_netlist)"
 puts $fh "SDC: $design(postsyn_sdc)"

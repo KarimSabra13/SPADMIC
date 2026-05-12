@@ -30,7 +30,7 @@ module mptdc_csr_minimal
 (
   // Clock / reset
   input  wire                       clk_sys,
-  input  wire                       rst_n,          // async-assert, sync-deassert
+  input  wire                       rst_n,          // synchronous clk_sys reset, active-low
 
   // CSR bus (simple valid/ready)
   input  wire                       csr_valid_i,
@@ -84,7 +84,7 @@ module mptdc_csr_minimal
   logic wr_en;
   assign wr_en = csr_valid_i & csr_write_i & csr_ready_o;
 
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n) begin
       conv_arm_o             <= 1'b0;
       fifo_clr_pulse_o       <= 1'b0;
@@ -207,7 +207,7 @@ module mptdc_csr_minimal
   end
 
   // Register read response
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n) begin
       csr_rvalid_o <= 1'b0;
       csr_rdata_o  <= '0;

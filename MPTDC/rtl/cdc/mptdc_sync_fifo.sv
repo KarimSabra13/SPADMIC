@@ -20,7 +20,7 @@ module mptdc_sync_fifo #(
   parameter int DEPTH = 32
 )(
   input  wire              clk,
-  input  wire              rst_n,
+  input  wire              rst_n,       // synchronous reset, active-low
   input  wire              clr_i,       // synchronous clear
 
   // Write port
@@ -69,7 +69,7 @@ module mptdc_sync_fifo #(
   // =========================================================================
   // Pointer and count update
   // =========================================================================
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge clk) begin
     if (!rst_n) begin
       wr_ptr_q <= '0;
       rd_ptr_q <= '0;

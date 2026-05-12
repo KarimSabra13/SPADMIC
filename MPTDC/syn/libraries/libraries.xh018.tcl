@@ -107,8 +107,10 @@ set tech(TEMPERATURE_WC)  125    ;# Worst case (slow)
 #############################################
 #       Physical Design Constants
 #############################################
-# Layer names (default 4-metal HD stack)
-set tech(layer_names) "M1 M2 M3 M4"
+# Layer names (default XH018 4-metal HD stack). The lab LEF names the usable
+# metals MET1/MET2/MET3/METTP; METTP is the top/thick metal reserved primarily
+# for power distribution in the estimation flow.
+set tech(layer_names) "MET1 MET2 MET3 METTP"
 
 # Standard cell dimensions
 set tech(row_height)  7.56        ;# µm — XH018 standard cell height
@@ -133,12 +135,12 @@ set tech(ENDCAPS_left)     ""     ;# Left endcap cell
 #############################################
 #       CTS Routing Layers
 #############################################
-set tech(cts_top_routing_layer_top)     "M4"
-set tech(cts_bottom_routing_layer_top)  "M3"
-set tech(cts_top_routing_layer_trunk)   "M4"
-set tech(cts_bottom_routing_layer_trunk) "M3"
-set tech(cts_top_routing_layer_leaf)    "M3"
-set tech(cts_bottom_routing_layer_leaf) "M2"
+set tech(cts_top_routing_layer_top)     "METTP"
+set tech(cts_bottom_routing_layer_top)  "MET3"
+set tech(cts_top_routing_layer_trunk)   "METTP"
+set tech(cts_bottom_routing_layer_trunk) "MET3"
+set tech(cts_top_routing_layer_leaf)    "MET3"
+set tech(cts_bottom_routing_layer_leaf) "MET2"
 
 #############################################
 #       Message Suppression

@@ -18,7 +18,7 @@ module mptdc_watchdog
   import mptdc_pkg::*;
 (
     input  wire                   clk_sys,
-    input  wire                   rst_n,
+    input  wire                   rst_n,          // synchronous clk_sys reset, active-low
 
     // Conversion-done pulse (resets global watchdog)
     input  wire                   conv_done_i,
@@ -41,7 +41,7 @@ module mptdc_watchdog
 
   // global_trip self-clears the counter so each timeout produces one pulse and
   // the next watchdog window starts immediately.
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n)
       global_cnt <= 16'd0;
     else if (conv_done_i || global_trip)
@@ -55,7 +55,7 @@ module mptdc_watchdog
 
   // Force-reset output — registered single-cycle pulse into the
   // frontend clear path.
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n)
       wdt_force_reset_o <= 1'b0;
     else
@@ -63,7 +63,7 @@ module mptdc_watchdog
   end
 
   // Global trip counter (saturating at 255)
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n)
       wdt_global_trip_cnt_o <= 8'd0;
     else if (global_trip && (wdt_global_trip_cnt_o != 8'hFF))

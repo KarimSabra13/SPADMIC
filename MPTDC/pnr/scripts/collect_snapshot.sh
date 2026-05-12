@@ -31,6 +31,7 @@ copy_as_if_present "${pnr_dir}/logs/innovus_estimate.log" "innovus_estimate_log.
 for file in \
   "${pnr_dir}/outputs/mptdc_top_asic.place.enc" \
   "${pnr_dir}/reports/run_manifest.rpt" \
+  "${pnr_dir}/reports/pd_matrix_symmetry.rpt" \
   "${pnr_dir}/reports/report_area_place.rpt" \
   "${pnr_dir}/reports/report_gate_count_place.rpt" \
   "${pnr_dir}/reports/report_power_place.rpt"; do

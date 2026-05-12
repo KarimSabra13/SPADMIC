@@ -26,7 +26,7 @@ module mptdc_drain_ctrl
   import mptdc_pkg::*;
 (
   input  wire                     clk_sys,
-  input  wire                     rst_n,
+  input  wire                     rst_n,          // synchronous clk_sys reset, active-low
 
   // Context drain status (2-FF synced from async domain)
   input  wire [N_CTX-1:0]         ctx_drain_sync_i,
@@ -66,7 +66,7 @@ module mptdc_drain_ctrl
   // re-selecting this context until the sync bit actually goes low.
   logic [N_CTX-1:0] released_mask;
 
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n) begin
       released_mask <= '0;
     end else begin
@@ -213,7 +213,7 @@ module mptdc_drain_ctrl
   // =========================================================================
   // Sequential — state + scan counters
   // =========================================================================
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n) begin
       state_q     <= ST_D_IDLE;
       drain_ctx_q <= '0;

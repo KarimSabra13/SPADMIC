@@ -7,10 +7,10 @@ This directory contains the first-pass physical-estimation flow for the MPTDC ma
 - Technology: XFAB XH018, 1P4M / 4-metal HD baseline.
 - Optimization goal: area-first.
 - Default core utilization: `0.78`, with placement max density `0.82`.
-- Default signal routing layers: `M1` through `M3`.
-- Default NanoRoute routing layer indexes: `1` through `3` (`M1-M3` in the lab LEF).
-- Default reserved power layer: `M4`, so top metal remains available for VDD/VSS straps and top-level power distribution as much as practical.
-- Expected route directions: `M1` horizontal, `M2` vertical, `M3` horizontal, `M4` vertical. The technology LEF remains the source of truth; the run manifest records these expectations for review.
+- Default signal routing layers: `MET1` through `MET3`.
+- Default NanoRoute routing layer indexes: `1` through `3` (`MET1-MET3` in the lab LEF).
+- Default reserved power layer: `METTP`, so top/thick metal remains available for VDD/VSS straps and top-level power distribution as much as practical.
+- Expected route directions: `MET1` horizontal, `MET2` vertical, `MET3` horizontal, `METTP` vertical. The technology LEF remains the source of truth; the run manifest records these expectations for review.
 
 ## Quick run
 
@@ -41,9 +41,9 @@ Useful overrides:
 ```bash
 export MPTDC_PNR_CORE_UTIL=0.75
 export MPTDC_PNR_MAX_DENSITY=0.80
-export MPTDC_PNR_SIGNAL_TOP_LAYER=M3
+export MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
 export MPTDC_PNR_SIGNAL_TOP_LAYER_IDX=3
-export MPTDC_PNR_POWER_LAYER=M4
+export MPTDC_PNR_POWER_LAYER=METTP
 export MPTDC_PNR_DO_DETAIL_ROUTE=1
 ```
 
@@ -63,6 +63,7 @@ Review these outputs first:
 - `pnr/reports/report_gate_count_place.rpt`
 - `pnr/reports/report_power_place.rpt`
 - `pnr/reports/prects/`
+- `pnr/reports/pd_matrix_symmetry.rpt`
 
 Use the helper to preserve the estimate for review:
 
@@ -71,4 +72,6 @@ cd MPTDC/pnr/scripts
 bash collect_snapshot.sh innovus_$(date +%Y%m%d_%H%M)_estimate
 ```
 
-If congestion is high with `M1-M3` signal routing, relax utilization before allowing signal routing on `M4`; preserving the top metal for power is the default priority for this baseline.
+The flow also prepares a first-pass phase-detector matrix placement hook. By default it searches for the synthesized `gen_pd_row[*]/gen_pd_col[*]/u_pd` instances, creates the `mptdc_pd_matrix` group/region when Innovus supports those commands, and writes a review report. This is preparation only: final symmetry and matched-RC closure still need the real oscillator/PD macro LEFs and extraction/routing rules.
+
+If congestion is high with `MET1-MET3` signal routing, relax utilization before allowing signal routing on `METTP`; preserving the top metal for power is the default priority for this baseline.

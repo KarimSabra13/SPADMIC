@@ -22,7 +22,7 @@ module mptdc_narrow16_tx_v2
   import mptdc_pkg::*;
 (
   input  wire                   clk_sys,
-  input  wire                   rst_n,
+  input  wire                   rst_n,          // synchronous clk_sys reset, active-low
 
   // Configuration
   input  mptdc_pkg::out_mode_e  out_mode_i,
@@ -143,7 +143,7 @@ module mptdc_narrow16_tx_v2
   // ---------------------------------------------------------------------------
   // Sequential FSM + datapath
   // ---------------------------------------------------------------------------
-  always_ff @(posedge clk_sys or negedge rst_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!rst_n) begin
       state_q       <= S_IDLE;
       conv_count_q  <= 14'd0;
