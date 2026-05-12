@@ -29,6 +29,10 @@ mkdir -p ../logs
 innovus -nowin -init innovus_estimate.tcl -log ../logs/innovus_estimate.log
 ```
 
+The PnR flow uses `pnr/inputs/mptdc_innovus.mmmc`, an Innovus-compatible MMMC
+file that consumes the Genus post-synthesis netlist and SDC. The Genus
+`syn/inputs/mptdc.mmmc` remains the synthesis MMMC source of truth.
+
 Useful overrides:
 
 ```bash

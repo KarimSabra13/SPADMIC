@@ -69,7 +69,7 @@ if {![file exists $design(postsyn_sdc)]} {
 set init_top_cell  $design(TOPLEVEL)
 set init_verilog   $design(postsyn_netlist)
 set init_lef_file  $tech_files(ALL_LEFS)
-set init_mmmc_file $design(mmmc_view_file)
+set init_mmmc_file "$pnr_root/inputs/mptdc_innovus.mmmc"
 set init_pwr_net   $tech(STANDARD_CELL_VDD)
 set init_gnd_net   $tech(STANDARD_CELL_GND)
 
@@ -148,6 +148,7 @@ puts $fh "Expected routing directions: M1=$pnr(route_dir_M1), M2=$pnr(route_dir_
 puts $fh "Detail route enabled: $pnr(do_detail_route)"
 puts $fh "Netlist: $design(postsyn_netlist)"
 puts $fh "SDC: $design(postsyn_sdc)"
+puts $fh "MMMC: $init_mmmc_file"
 puts $fh "LEF: $tech_files(ALL_LEFS)"
 close $fh
 

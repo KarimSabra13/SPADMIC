@@ -76,6 +76,18 @@ proc mptdc_run_report {cmd rpt_file title} {
     }
 }
 
+proc mptdc_run_report_candidates {cmds rpt_file title} {
+    set errors [list]
+    foreach cmd $cmds {
+        if {![catch {eval $cmd > $rpt_file} err]} {
+            return
+        }
+        lappend errors "$cmd: $err"
+    }
+
+    mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # mptdc_report_timing — Generate timing reports for current stage
 # ─────────────────────────────────────────────────────────────────────────────
@@ -214,12 +226,18 @@ proc mptdc_full_reports {report_dir} {
 
     mptdc_run_report "report_area" \
         "$dir/report_area.rpt" "report_area"
-    mptdc_run_report "report_area -hierarchy" \
-        "$dir/report_area_hier.rpt" "report_area -hierarchy"
+    mptdc_run_report_candidates [list \
+        "report_area -depth 20" \
+        "report_area -hier" \
+        "report_area -hierarchy" \
+    ] "$dir/report_area_hier.rpt" "hierarchical area report"
     mptdc_run_report "report_gates" \
         "$dir/report_gates.rpt" "report_gates"
-    mptdc_run_report "report_gates -hierarchy" \
-        "$dir/report_gates_hier.rpt" "report_gates -hierarchy"
+    mptdc_run_report_candidates [list \
+        "report_gates -depth 20" \
+        "report_gates -hier" \
+        "report_gates -hierarchy" \
+    ] "$dir/report_gates_hier.rpt" "hierarchical gate report"
     mptdc_run_report "report_hierarchy" \
         "$dir/report_hierarchy.rpt" "report_hierarchy"
     mptdc_run_report "report_design_rules" \
