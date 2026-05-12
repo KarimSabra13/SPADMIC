@@ -18,8 +18,17 @@ copy_if_present() {
   fi
 }
 
+copy_as_if_present() {
+  local src="$1"
+  local dst="$2"
+  if [[ -f "$src" ]]; then
+    cp "$src" "${snapshot_dir}/${dst}"
+  fi
+}
+
+copy_as_if_present "${syn_dir}/logs/genus.log" "genus_log.rpt"
+
 for file in \
-  "${syn_dir}/logs/genus.log" \
   "${syn_dir}/outputs/mptdc_top_asic.postsyn.v" \
   "${syn_dir}/outputs/mptdc_top_asic.postsyn.sdc" \
   "${syn_dir}/outputs/mptdc_top_asic.postsyn.sdf" \
