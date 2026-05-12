@@ -47,4 +47,11 @@ Review these outputs first:
 - `pnr/reports/report_power_place.rpt`
 - `pnr/reports/prects/`
 
+Use the helper to preserve the estimate for review:
+
+```bash
+cd MPTDC/pnr/scripts
+bash collect_snapshot.sh innovus_$(date +%Y%m%d_%H%M)_estimate
+```
+
 If congestion is high with `M1-M3` signal routing, relax utilization before allowing signal routing on `M4`; preserving the top metal for power is the default priority for this baseline.
