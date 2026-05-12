@@ -45,9 +45,9 @@ if {$runtype == "synthesis"} {
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. OSCILLATOR CLOCKS (VIRTUAL)
 # ─────────────────────────────────────────────────────────────────────────────
-# Analog oscillator macros provide these clocks in the real chip.
-# For synthesis, stubs output static phases — virtual clocks allow Genus
-# to perform timing analysis on oscillator-domain logic.
+# Analog oscillator macros provide these clocks in the real chip.  Until the
+# macro LEFs are available, the implementation stub exposes non-constant phase
+# pins so oscillator-domain structure stays present for physical planning.
 
 create_clock -name $design(OSC_SLOW_NAME) -period $design(OSC_SLOW_PERIOD) \
     [get_pins $design(OSC_SLOW_PIN)] -add

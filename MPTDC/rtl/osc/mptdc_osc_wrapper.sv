@@ -13,7 +13,7 @@
 //
 // Selection is controlled by the `MPTDC_USE_OSC_MODEL define:
 //   - Defined   : instantiate mptdc_osc_model (simulation with #delays)
-//   - Undefined : instantiate mptdc_osc_stub  (static placeholder)
+//   - Undefined : instantiate mptdc_osc_stub  (implementation placeholder)
 //
 // The wrapper is instantiated twice at the top level — once for the slow
 // oscillator (TS_STEP_PS = 55) and once for the fast oscillator
@@ -37,7 +37,7 @@ module mptdc_osc_wrapper #(
 `ifdef MPTDC_USE_OSC_MODEL
     $display("[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)");
 `else
-    $display("[OSC_WRAPPER] MODE = STUB (synthesis placeholder, no oscillation)");
+    $display("[OSC_WRAPPER] MODE = STUB (implementation placeholder, no real oscillation)");
 `endif
   end
   // synthesis translate_on
@@ -57,7 +57,7 @@ module mptdc_osc_wrapper #(
     .phase7d_probe_o(phase7d_probe_o)
   );
 `else
-  // Synthesis: static placeholder (phase = {0...0, 1})
+  // Synthesis/implementation: controllable placeholder, not a real oscillator.
   mptdc_osc_stub #(
     .NE(NE)
   ) u_stub (

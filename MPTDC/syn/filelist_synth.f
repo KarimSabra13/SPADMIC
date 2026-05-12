@@ -24,7 +24,7 @@
 ../rtl/cdc/mptdc_gray_cnt_sync.sv
 ../rtl/cdc/mptdc_sync_fifo.sv
 
-// Oscillator abstraction — STUB ONLY for synthesis (static phases)
+// Oscillator abstraction — STUB ONLY for synthesis/implementation placeholder
 // NOTE: mptdc_osc_model.sv is EXCLUDED (non-synthesizable behavioural model)
 ../rtl/osc/mptdc_osc_stub.sv
 ../rtl/osc/mptdc_osc_wrapper.sv

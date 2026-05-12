@@ -384,13 +384,14 @@ Silicon notes:
 ### 6.12 `rtl/osc/mptdc_osc_stub.sv` (synthesis placeholder)
 
 Purpose:
-- deterministic placeholder with no real oscillation
+- deterministic implementation placeholder with no real oscillation
 
 Behavior:
-- `phase[0]=1`, all other taps `0`
+- phase pins are controllable from `en/rst_n`, but do not model tap delay or
+  real oscillation
 
 Silicon notes:
-- safe placeholder for logic synthesis only
+- keeps oscillator-domain/PD structure present for early physical planning
 - not a functional oscillator
 
 ### 6.13 `rtl/pd/mptdc_pd_cell.sv`

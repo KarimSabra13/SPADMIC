@@ -48,10 +48,10 @@ export MPTDC_PNR_DO_PRECTS_OPT=1
 export MPTDC_PNR_DO_DETAIL_ROUTE=1
 ```
 
-Explicit standard-cell PG pin connection is enabled by default. The flow tries
-lower-case `vdd/gnd` first, then upper-case `VDD/VSS`, because the lab
-Innovus/Voltus log reports lower-case power levels while the macro rails remain
-upper-case. Disable only for debug:
+Explicit standard-cell PG pin connection is enabled by default. The XH018 HD
+standard-cell LEF exposes lower-case `vdd/gnd` PG pins while the macro rails
+remain upper-case `VDD/VSS`, so the flow connects upper-case nets to lower-case
+cell pins. Disable only for debug:
 
 ```bash
 export MPTDC_PNR_CONNECT_PG_PINS=0

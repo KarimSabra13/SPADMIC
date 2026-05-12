@@ -43,9 +43,9 @@ set design(CLK_PERIOD) 6.25              ;# 160 MHz → 6.25 ns
     set design(clock_period_list) [list $design(CLK_PERIOD)]
 
 # ── Oscillator Virtual Clocks ──────────────────────────────────────
-# These come from analog macros (current-starved ring oscillators).
-# During synthesis the stubs provide static outputs; virtual clocks
-# enable timing analysis through oscillator-domain logic.
+# These come from analog macros (current-starved ring oscillators). During
+# synthesis the implementation stubs provide controllable placeholder outputs
+# so oscillator-domain logic remains present for physical planning.
 set design(OSC_SLOW_NAME)   "clk_osc_slow"
 set design(OSC_SLOW_PERIOD) 1.0          ;# ~1.0 GHz → 1.0 ns (9 taps × ~111 ps)
 set design(OSC_SLOW_PIN)    {u_core/u_osc_slow/u_stub/phase[0]}

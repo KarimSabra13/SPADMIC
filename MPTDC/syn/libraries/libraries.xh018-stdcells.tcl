@@ -38,10 +38,10 @@ set tech(STANDARD_CELL_SITE) "core_hd"    ;# Verified from xh018_D_CELLS_HD.lef
 set tech(STANDARD_CELL_VDD)  "VDD"
 set tech(STANDARD_CELL_GND)  "VSS"
 # Lab Innovus/Voltus reports power-level names as lower-case for this library,
-# while top-level rails remain VDD/VSS. Try lower-case PG pins first and keep
-# upper-case as a fallback for PDK revisions that expose matching LEF names.
-set tech(STANDARD_CELL_VDD_PINS) [list vdd VDD]
-set tech(STANDARD_CELL_GND_PINS) [list gnd VSS]
+# while top-level rails remain VDD/VSS. Use the LEF-visible lower-case PG pin
+# names so globalNetConnect does not emit false errors for absent VDD/VSS pins.
+set tech(STANDARD_CELL_VDD_PINS) [list vdd]
+set tech(STANDARD_CELL_GND_PINS) [list gnd]
 
 #############################################
 #       Liberty Timing Libraries (.lib)

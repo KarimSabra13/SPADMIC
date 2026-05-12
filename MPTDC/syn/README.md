@@ -358,12 +358,14 @@ designed separately by the analog team. They are NOT synthesizable — so how
 does Genus perform timing analysis on oscillator-domain logic?
 
 **What Genus sees:**
-The `mptdc_osc_stub` module is fully synthesizable — it's just constant assigns:
+The `mptdc_osc_stub` module is fully synthesizable. It provides controllable,
+non-constant placeholder tap outputs derived from `en/rst_n`:
 ```verilog
-assign phase = {{8{1'b0}}, 1'b1};  // phase[0]=1, all others=0
+assign phase[tap] = <deterministic function of en/rst_n>;
 ```
-Genus synthesizes this as **tie-high/tie-low cells** (wires to VDD/VSS).
-The oscillator "block" essentially disappears — zero gates, zero area.
+Genus can therefore keep downstream oscillator-domain/PD structure present for
+early physical planning. The oscillator "block" is still not a real macro and
+does not model tap delay, startup, jitter, or phase matching.
 
 **The intended virtual clock trick:**
 In the SDC, we define **virtual clocks** on the stub's output pins:
@@ -371,18 +373,16 @@ In the SDC, we define **virtual clocks** on the stub's output pins:
 create_clock -name clk_osc_slow -period 1.0 [get_pins u_core/u_osc_slow/u_stub/phase[0]]
 create_clock -name clk_osc_fast -period 0.9 [get_pins u_core/u_osc_fast/u_stub/phase[0]]
 ```
-However, the current Genus 22.13 lab-server run still propagates the constant
-stub values into the netlist and reports hundreds of oscillator-domain
-sequential clock pins as having **no clock waveform**. In other words, the
-virtual clocks are created, but this stub model is **not yet sufficient to make
-oscillator-domain timing signoff-meaningful** in the active bring-up flow.
+The virtual clocks are created on placeholder pins, but this stub model is
+**not sufficient to make oscillator-domain timing signoff-meaningful** in the
+active bring-up flow.
 
 **What gets validated vs what doesn't:**
 
 | Aspect | Validated? | Why |
 |---|---|---|
-| Combinational logic depth in osc domain | ⚠️ Partial only | Current constant stub still collapses many osc clocks to case constants |
-| CDC synchronizer paths (osc↔sys) | ⚠️ Intent only | Simplified constraints load, but current stub prevents full waveform-based checking |
+| Combinational logic depth in osc domain | ⚠️ Partial only | Placeholder tap behavior is not a real oscillator timing model |
+| CDC synchronizer paths (osc↔sys) | ⚠️ Intent only | Simplified constraints load, but macro waveform/timing model is still missing |
 | System clock domain logic | ✅ Yes | Real clock definition |
 | Actual oscillator frequency | ❌ No | Analog — not synthesized |
 | Phase tap matching / routing skew | ❌ No | Physical routing concern, PnR stage |
@@ -410,11 +410,12 @@ At the current checkpoint, the right interpretation is:
 - continue with **PD-matrix symmetry planning**
 - do **not** claim oscillator-domain timing closure yet
 
-The current constant-output oscillator stub is good enough to keep the digital
-project moving, but it is **not** a valid endpoint for mixed-signal timing
-signoff. The Genus lab run already shows why: the stub collapses to constants,
-the virtual oscillator clocks are stripped during optimization, and hundreds of
-oscillator-domain sequential pins end up without a waveform.
+The current oscillator stub is good enough to keep the digital project moving,
+but it is **not** a valid endpoint for mixed-signal timing signoff. It exposes
+controllable non-constant phase pins so PD/oscillator-domain structure remains
+available for early physical planning; the real macro contract, LEF, timing
+model, and extraction rules are still required before claiming oscillator-domain
+timing closure.
 
 #### What the analog designer must freeze as soon as possible
 

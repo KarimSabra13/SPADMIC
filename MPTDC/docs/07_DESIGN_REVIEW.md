@@ -130,7 +130,7 @@ That is a good choice.
 | `rtl/cdc/mptdc_sync_fifo.sv` | Sys-domain FWFT FIFO | Buffers drain records before TX | Simple and appropriate. |
 | `rtl/osc/mptdc_osc_wrapper.sv` | Selects model vs stub | Used by both slow and fast oscillator instances | Wrapper itself is fine. Real blocker is what sits behind it in synthesis. |
 | `rtl/osc/mptdc_osc_model.sv` | Behavioral timing model | Drives realistic phase timing in simulation | Good for RTL validation. Not a silicon model. |
-| `rtl/osc/mptdc_osc_stub.sv` | Static synthesis placeholder | Gives deterministic outputs when model is disabled | Useful only as a placeholder. It is not a signoff-ready implementation path. |
+| `rtl/osc/mptdc_osc_stub.sv` | Implementation placeholder | Gives deterministic non-constant outputs when model is disabled | Useful only as a placeholder to keep oscillator-domain structure present. It is not a signoff-ready oscillator. |
 | `rtl/pd/mptdc_pd_cell.sv` | One phase detector cell | Samples one slow tap on one fast tap, latches hit + `nfast` | Correct intentional async sampler style. Needs special STA/CDC treatment in silicon. |
 | `rtl/async/mptdc_async_frontend_v2.sv` | START/STOP latch ownership + context allocation | Drives oscillator enables, PD enable, active context, drain flags | Architecturally correct for this class of TDC. Heavy async/latch use is intentional but must be treated as such in implementation. |
 | `rtl/async/mptdc_stop_capture_async.sv` | STOP-edge boundary capture | Captures `phase0_snap`, debug probe, and `slow_boundary_inc` | Valuable for calibration, but again a non-standard async capture structure. |
@@ -344,7 +344,7 @@ Severity legend used in this document:
 Evidence:
 
 - `README.md` explicitly says the active synthesis path uses `mptdc_osc_stub`
-- `rtl/osc/mptdc_osc_stub.sv` is a static placeholder, not a measurement oscillator
+- `rtl/osc/mptdc_osc_stub.sv` is an implementation placeholder, not a measurement oscillator
 - `rtl/osc/mptdc_osc_wrapper.sv` selects that stub when the behavioral model is not compiled
 
 Why this matters:
