@@ -233,6 +233,14 @@ mptdc_pnr_required "Running pre-CTS placement" {
     placeDesign
 }
 
+mptdc_pnr_optional "Running post-place pre-CTS timing/DRV optimization" {
+    if {$pnr(do_prects_opt)} {
+        optDesign -preCTS
+    } else {
+        mptdc_pnr_msg "Skipping pre-CTS optimization because MPTDC_PNR_DO_PRECTS_OPT=0"
+    }
+}
+
 mptdc_pnr_optional "Generating pre-CTS timing reports" {
     timeDesign -preCTS -outDir "$pnr(reports_dir)/prects"
 }
@@ -289,6 +297,7 @@ puts $fh "PD target grid: $pnr(pd_rows)x$pnr(pd_cols)"
 puts $fh "PD group: $pnr(pd_symmetry_group)"
 puts $fh "PD instance patterns: $pnr(pd_instance_patterns)"
 puts $fh "PD region margin um: $pnr(pd_region_margin_um)"
+puts $fh "Pre-CTS opt enabled: $pnr(do_prects_opt)"
 puts $fh "Detail route enabled: $pnr(do_detail_route)"
 puts $fh "Netlist: $design(postsyn_netlist)"
 puts $fh "SDC: $design(postsyn_sdc)"

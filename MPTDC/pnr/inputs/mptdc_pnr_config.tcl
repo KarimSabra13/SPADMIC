@@ -43,6 +43,7 @@ set pnr(route_dir_MET2)           [mptdc_env_or_default MPTDC_PNR_DIR_MET2 verti
 set pnr(route_dir_MET3)           [mptdc_env_or_default MPTDC_PNR_DIR_MET3 horizontal]
 set pnr(route_dir_METTP)          [mptdc_env_or_default MPTDC_PNR_DIR_METTP vertical]
 
+set pnr(do_prects_opt)            [mptdc_env_or_default MPTDC_PNR_DO_PRECTS_OPT 1]
 set pnr(do_detail_route)          [mptdc_env_or_default MPTDC_PNR_DO_DETAIL_ROUTE 0]
 
 # Phase-detector matrix symmetry preparation. These hooks intentionally stay
