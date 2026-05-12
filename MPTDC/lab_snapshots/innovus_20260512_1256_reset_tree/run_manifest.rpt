@@ -1,0 +1,22 @@
+MPTDC Innovus estimate manifest
+===============================
+Generated: 2026-05-12 12:56:04 CEST
+Top: mptdc_top_asic
+Optimization goal: area_first
+Metal stack: 1P4M
+Core utilization: 0.78
+Placement max density: 0.82
+Aspect ratio: 1.0
+Core margin um: 20.0
+Signal routing layers: M1-M3
+Signal routing layer indexes: 1-3
+Reserved power layer: M4
+Explicit PG pin connect enabled: 1
+VDD PG pin candidates: vdd VDD
+VSS PG pin candidates: gnd VSS
+Expected routing directions: M1=horizontal, M2=vertical, M3=horizontal, M4=vertical
+Detail route enabled: 0
+Netlist: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/outputs/mptdc_top_asic.postsyn.v
+SDC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/outputs/mptdc_top_asic.postsyn.sdc
+MMMC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/inputs/mptdc_innovus.mmmc
+LEF: /data/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/LEF/v6_0_0/xh018_D_CELLS_HD.lef
