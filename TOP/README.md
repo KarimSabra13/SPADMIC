@@ -7,7 +7,7 @@ First-silicon SPADMIC chip-level integration around three preserved `mptdc_top_a
 - one physical source-synchronous TX interface: forwarded `chip_tx_clk_o`, SDR `chip_tx_valid_o`, and 8-bit DDR `chip_tx_data_o`
 - one requested-to-active control contract (`spadmic_global_csr` + `spadmic_top_sequencer`)
 - one shared TDC serializer fed by per-axis acquisition-record exports
-- one async-qualified position path with queued snapshots, explicit counters, and sticky faults
+- one async-qualified 64x64x64 SPAD position path with queued snapshots, explicit counters, and sticky faults
 - one correlated shared egress that supports TDC-only, position-only, and both-active export
 - one physical DDR TX packer that preserves the internal 16-bit logical packet stream while repacking it onto the chip pins
 - one shared CSR fabric fronted by the I2C slave and CSR bridge
@@ -61,8 +61,8 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 
 1. `spadmic_position_block` synchronizes the asynchronous line buses.
 2. A detect/settle/evaluate/wait-clear FSM snapshots stable activity only.
-3. Three `spadmic_axis_cluster_scan` instances derive up to two clusters per axis.
-4. The block emits fixed 12-word packets from an internal queue and raises explicit counters/sticky bits for queue drops and glitch rejects.
+3. Three `spadmic_axis_cluster_scan` instances derive up to two 6-bit coordinate clusters per 64-line axis.
+4. The block emits fixed 12-word cluster packets or 14-word raw bitmap packets from an internal queue and raises explicit counters/sticky bits for queue drops and glitch rejects.
 
 ### Final egress
 

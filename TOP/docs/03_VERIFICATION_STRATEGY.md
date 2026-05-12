@@ -245,7 +245,7 @@ It should track:
 | Position CSR state | position mode, gap threshold, minimum span, settle cycles, reset mode, auto-reset period |
 | Expected packets | per-source expected packet counts, accepted drops, reset-cleared in-flight expectations |
 | Event IDs | per-source monotonic IDs, wrap behavior, no cross-source accidental coupling |
-| Position cluster packets | exact 12-word format, masks, summaries, cluster words, overflow semantics |
+| Position cluster packets | exact 12-word format, masks, summaries, 6-bit `0..63` cluster words, overflow semantics |
 | Position raw packets | exact 14-word format, X/Y/Z bitmap packing, EOC only at word 13 |
 | Reset output | expected manual/deferred/periodic pulse count and one-cycle width |
 | Fault/status CSRs | mode rejects, position drops/glitches, correlation overflow, CSR timeout/error visibility |

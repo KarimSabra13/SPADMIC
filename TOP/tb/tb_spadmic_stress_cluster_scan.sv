@@ -21,10 +21,10 @@ module tb_spadmic_stress_cluster_scan;
   // Convenience aliases
   wire valid          = !clusters.empty;
   wire [1:0] cluster_count = clusters.cluster_count;
-  wire [6:0] c0_min   = clusters.cluster0.lo;
-  wire [6:0] c0_max   = clusters.cluster0.hi;
-  wire [6:0] c1_min   = clusters.cluster1.lo;
-  wire [6:0] c1_max   = clusters.cluster1.hi;
+  wire [SPADMIC_LINE_IDX_W-1:0] c0_min = clusters.cluster0.lo;
+  wire [SPADMIC_LINE_IDX_W-1:0] c0_max = clusters.cluster0.hi;
+  wire [SPADMIC_LINE_IDX_W-1:0] c1_min = clusters.cluster1.lo;
+  wire [SPADMIC_LINE_IDX_W-1:0] c1_max = clusters.cluster1.hi;
   wire       overflow = clusters.overflow;
 
   spadmic_axis_cluster_scan #(.LINE_W(W)) dut (
@@ -73,7 +73,7 @@ module tb_spadmic_stress_cluster_scan;
     check("T2 all-ones valid", valid === 1'b1);
     check("T2 all-ones 1 cluster", cluster_count === 2'd1);
     check("T2 all-ones c0_min=0", c0_min === 7'd0);
-    check("T2 all-ones c0_max=LAST", c0_max === 7'(LAST));
+    check("T2 all-ones c0_max=LAST", c0_max === SPADMIC_LINE_IDX_W'(LAST));
     check("T2 all-ones no overflow", overflow === 1'b0);
 
     // ========================================
@@ -95,8 +95,8 @@ module tb_spadmic_stress_cluster_scan;
     #10;
     check("T4 bit[LAST] valid", valid === 1'b1);
     check("T4 bit[LAST] 1 cluster", cluster_count === 2'd1);
-    check("T4 bit[LAST] c0_min=LAST", c0_min === 7'(LAST));
-    check("T4 bit[LAST] c0_max=LAST", c0_max === 7'(LAST));
+    check("T4 bit[LAST] c0_min=LAST", c0_min === SPADMIC_LINE_IDX_W'(LAST));
+    check("T4 bit[LAST] c0_max=LAST", c0_max === SPADMIC_LINE_IDX_W'(LAST));
 
     // ========================================
     // TEST 5: Two distant clusters
@@ -135,7 +135,7 @@ module tb_spadmic_stress_cluster_scan;
       for (int i = 26 + g; i <= 31 + g; i++) begin
         if (i < W) lines[i] = 1'b1;
       end
-      gap_threshold = 7'(g);
+      gap_threshold = SPADMIC_LINE_COUNT_W'(g);
       #10;
       // When gap == threshold, they should be separate clusters
       // When gap < threshold, they merge
@@ -156,7 +156,7 @@ module tb_spadmic_stress_cluster_scan;
     #10;
     check("T8 alternating gap=2 → 1 cluster", cluster_count === 2'd1);
     check("T8 alternating c0_min=0", c0_min === 7'd0);
-    check("T8 alternating c0_max=LAST_EVEN", c0_max === 7'(LAST_EVEN));
+    check("T8 alternating c0_max=LAST_EVEN", c0_max === SPADMIC_LINE_IDX_W'(LAST_EVEN));
 
     gap_threshold = 7'd1;
     #10;
@@ -175,7 +175,8 @@ module tb_spadmic_stress_cluster_scan;
     check("T9 two ends valid", valid === 1'b1);
     check("T9 two ends count=2", cluster_count === 2'd2);
     check("T9 c0=[0,9]", c0_min === 7'd0 && c0_max === 7'd9);
-    check("T9 c1=[LAST-9,LAST]", c1_min === 7'(LAST - 9) && c1_max === 7'(LAST));
+    check("T9 c1=[LAST-9,LAST]",
+          c1_min === SPADMIC_LINE_IDX_W'(LAST - 9) && c1_max === SPADMIC_LINE_IDX_W'(LAST));
 
     // ========================================
     // TEST 10: Random patterns (LFSR-based)

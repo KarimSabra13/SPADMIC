@@ -35,8 +35,8 @@ class spadmic_scoreboard;
   spadmic_pos_mode_e active_pos_mode;
   spadmic_spad_reset_mode_e active_spad_reset_mode;
   logic [31:0] active_spad_reset_period;
-  logic [6:0]  active_pos_gap_threshold;
-  logic [6:0]  active_pos_min_cluster_span;
+  logic [SPADMIC_LINE_COUNT_W-1:0] active_pos_gap_threshold;
+  logic [SPADMIC_LINE_COUNT_W-1:0] active_pos_min_cluster_span;
   logic [3:0]  active_pos_settle_cycles;
 
   typedef struct {
@@ -44,6 +44,8 @@ class spadmic_scoreboard;
     logic [SPADMIC_LINE_W-1:0] x_pattern;
     logic [SPADMIC_LINE_W-1:0] y_pattern;
     logic [SPADMIC_LINE_W-1:0] z_pattern;
+    logic [SPADMIC_LINE_COUNT_W-1:0] gap_threshold;
+    logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span;
   } expected_pos_packet_t;
 
   expected_pos_packet_t expected_pos_q[$];
@@ -317,6 +319,8 @@ class spadmic_scoreboard;
     exp.x_pattern = x_pattern;
     exp.y_pattern = y_pattern;
     exp.z_pattern = z_pattern;
+    exp.gap_threshold = active_pos_gap_threshold;
+    exp.min_cluster_span = active_pos_min_cluster_span;
     expected_pos_q.push_back(exp);
   endfunction
 
@@ -335,11 +339,11 @@ class spadmic_scoreboard;
         end
 
         SPADMIC_CSR_POS_GAP_CFG: begin
-          active_pos_gap_threshold = ct.wdata[6:0];
+          active_pos_gap_threshold = ct.wdata[SPADMIC_LINE_COUNT_W-1:0];
         end
 
         SPADMIC_CSR_POS_FILTER_CFG: begin
-          active_pos_min_cluster_span = ct.wdata[6:0];
+          active_pos_min_cluster_span = ct.wdata[SPADMIC_LINE_COUNT_W-1:0];
           active_pos_settle_cycles = ct.wdata[11:8];
         end
 
@@ -469,7 +473,23 @@ class spadmic_scoreboard;
       $display("[SB] FAIL: POS pkt source=%0d != POSITION(%0d)",
                source_id, SPADMIC_SRC_POSITION);
     end else begin
-      check_pass++;
+      if (have_expected) begin
+        ref_ok = pos_ref.validate_pos_packet(
+          words,
+          exp.x_pattern,
+          exp.y_pattern,
+          exp.z_pattern,
+          exp.gap_threshold,
+          exp.min_cluster_span
+        );
+      end else begin
+        ref_ok = 1'b1;
+      end
+
+      if (!ref_ok)
+        check_fail++;
+      else
+        check_pass++;
     end
     $display("[SB] POS pkt received: words=%0d (received=%0d/%0d)",
               word_count, pos_pkts_received, pos_pkts_expected);

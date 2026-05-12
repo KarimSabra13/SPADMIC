@@ -73,7 +73,7 @@ class spadmic_i2c_driver;
   // Program position gap/filter config
   task automatic program_position_config(
     logic [6:0] gap_threshold,
-    logic [6:0] min_cluster_span,
+    logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span,
     logic [3:0] settle_cycles
   );
     write_csr(SPADMIC_CSR_POS_GAP_CFG, {25'b0, gap_threshold});

@@ -54,8 +54,8 @@ module spadmic_position_block (
   logic local_enable_q;
   spadmic_pos_mode_e pos_mode_q;
   spadmic_spad_reset_mode_e reset_mode_q;
-  logic [6:0] gap_threshold_q;
-  logic [6:0] min_cluster_span_q;
+  logic [SPADMIC_LINE_COUNT_W-1:0] gap_threshold_q;
+  logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span_q;
   logic [3:0] settle_cycles_q;
   logic [31:0] auto_reset_period_q;
   logic [31:0] auto_reset_count_q;
@@ -122,11 +122,11 @@ module spadmic_position_block (
 
   function automatic spadmic_cluster_t filter_cluster(
     input spadmic_cluster_t cluster,
-    input logic [SPADMIC_LINE_IDX_W-1:0] min_span
+    input logic [SPADMIC_LINE_COUNT_W-1:0] min_span
   );
     spadmic_cluster_t filtered;
     filtered = cluster;
-    if (!cluster.valid || (spadmic_cluster_span(cluster) < {1'b0, min_span})) begin
+    if (!cluster.valid || (spadmic_cluster_span(cluster) < min_span)) begin
       filtered.valid = 1'b0;
       filtered.lo    = '0;
       filtered.hi    = '0;
@@ -335,11 +335,11 @@ module spadmic_position_block (
           end
 
           SPADMIC_CSR_POS_GAP_CFG: begin
-            gap_threshold_q <= csr_wdata_i[6:0];
+            gap_threshold_q <= csr_wdata_i[SPADMIC_LINE_COUNT_W-1:0];
           end
 
           SPADMIC_CSR_POS_FILTER_CFG: begin
-            min_cluster_span_q <= csr_wdata_i[6:0];
+            min_cluster_span_q <= csr_wdata_i[SPADMIC_LINE_COUNT_W-1:0];
             settle_cycles_q    <= csr_wdata_i[11:8];
           end
 
@@ -525,11 +525,11 @@ module spadmic_position_block (
       end
 
       SPADMIC_CSR_POS_GAP_CFG: begin
-        rd_data_next[6:0] = gap_threshold_q;
+        rd_data_next[SPADMIC_LINE_COUNT_W-1:0] = gap_threshold_q;
       end
 
       SPADMIC_CSR_POS_FILTER_CFG: begin
-        rd_data_next[6:0]  = min_cluster_span_q;
+        rd_data_next[SPADMIC_LINE_COUNT_W-1:0] = min_cluster_span_q;
         rd_data_next[11:8] = settle_cycles_q;
       end
 

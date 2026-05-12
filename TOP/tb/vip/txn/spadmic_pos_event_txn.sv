@@ -20,8 +20,8 @@ class spadmic_pos_event_txn extends spadmic_base_txn;
   logic [2:0]  expected_overflow_mask;
 
   // Position config snapshot at injection time
-  rand logic [6:0]  gap_threshold;
-  rand logic [6:0]  min_cluster_span;
+  rand logic [SPADMIC_LINE_COUNT_W-1:0] gap_threshold;
+  rand logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span;
   rand logic [3:0]  settle_cycles;
 
   constraint c_legal_position_config {
@@ -55,4 +55,3 @@ class spadmic_pos_event_txn extends spadmic_base_txn;
                       hold_time_ns, inject_glitch);
   endfunction
 endclass
-

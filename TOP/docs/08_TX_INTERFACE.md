@@ -64,10 +64,11 @@ At the logical-word level, the receiver still expects:
 2. payload words
 3. EOC
 
-Cluster-position packets include a position sub-header after the header. Raw
-bitmap position packets are fixed-length 14-word packets with 12 unescaped
-bitmap payload words; a receiver must parse them by raw header and length because
-raw payload words can look like EOC markers.
+Cluster-position packets include a position sub-header after the header and use
+6-bit `lo`/`hi` cluster coordinates for the 64x64x64 SPAD matrix. Raw bitmap
+position packets are fixed-length 14-word packets with 12 unescaped bitmap
+payload words; a receiver must parse them by raw header and length because raw
+payload words can look like EOC markers.
 
 For correlated export, the EOC word contains the shared event ID:
 

@@ -143,7 +143,8 @@ Implementation:
 - Up to 2 clusters per axis, configurable gap threshold, minimum cluster span, and settle-cycle filtering
 - Accepted position snapshots are queued; overlaps increment drop counters only if that queue becomes full
 - Weak or glitchy events increment explicit reject counters and sticky status
-- Position packets now use a 12-word format with header, source-tagged subheader, 3 axis summaries, 6 cluster words, and EOC
+- Position packets now use a 12-word cluster format with header, source-tagged subheader, 3 axis summaries, 6 cluster words, and EOC
+- Cluster words use 6-bit `lo`/`hi` fields for the reduced 64x64x64 SPAD geometry; raw bitmap mode remains 14 words because each 64-bit axis consumes four 16-bit words
 
 ## File inventory
 

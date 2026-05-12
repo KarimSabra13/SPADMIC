@@ -166,7 +166,8 @@ packetization hardware.
 
 ### `spadmic_position_block`
 
-This block is the top-level position estimator and packetizer.
+This block is the top-level position estimator and packetizer for the
+64x64x64 SPAD matrix: one 64-line X/Y/Z projection bus per axis.
 
 Its job is not only to emit packets. It also makes noisy asynchronous line
 activity software-visible in a controlled way:
@@ -182,7 +183,7 @@ first packet is still draining.
 ### `spadmic_axis_cluster_scan`
 
 This is the local geometry helper used by the position block. It looks at one
-axis snapshot and returns:
+64-line axis snapshot and returns:
 
 - first cluster
 - second cluster
@@ -191,6 +192,11 @@ axis snapshot and returns:
 
 It is intentionally isolated as a small leaf so the position estimator can stay
 readable and directly unit-testable.
+
+Cluster bounds are 6-bit coordinates (`0..63`) in both the internal
+`spadmic_cluster_t` type and the cluster-position TX word. Gap threshold and
+minimum-span controls remain 7-bit counts so software can express spans up to
+the full 64-line axis.
 
 ## 6. Shared export and physical TX blocks
 

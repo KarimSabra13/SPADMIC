@@ -33,72 +33,134 @@ class spadmic_pos_ref_model;
     return word[9];
   endfunction
 
-  // Software cluster-scan reference implementation
+  function automatic logic cluster_word_valid(input logic [15:0] word);
+    return word[0];
+  endfunction
+
+  function automatic logic [SPADMIC_LINE_IDX_W-1:0] cluster_word_hi(input logic [15:0] word);
+    return word[1 +: SPADMIC_LINE_IDX_W];
+  endfunction
+
+  function automatic logic [SPADMIC_LINE_IDX_W-1:0] cluster_word_lo(input logic [15:0] word);
+    return word[1 + SPADMIC_LINE_IDX_W +: SPADMIC_LINE_IDX_W];
+  endfunction
+
+  function automatic logic cluster_word_reserved_clear(input logic [15:0] word);
+    return word[NARROW_W-1 : 1 + (2 * SPADMIC_LINE_IDX_W)] == '0;
+  endfunction
+
+  function automatic logic [SPADMIC_LINE_IDX_W:0] cluster_span(input spadmic_cluster_t cluster);
+    logic [SPADMIC_LINE_IDX_W:0] lo_ext;
+    logic [SPADMIC_LINE_IDX_W:0] hi_ext;
+    if (!cluster.valid)
+      return '0;
+    lo_ext = {1'b0, cluster.lo};
+    hi_ext = {1'b0, cluster.hi};
+    return hi_ext - lo_ext + 1'b1;
+  endfunction
+
+  function automatic spadmic_cluster_t filter_cluster(
+    input spadmic_cluster_t cluster,
+    input logic [SPADMIC_LINE_COUNT_W-1:0] min_span
+  );
+    spadmic_cluster_t filtered;
+    filtered = cluster;
+    if (!cluster.valid || (cluster_span(cluster) < min_span)) begin
+      filtered.valid = 1'b0;
+      filtered.lo    = '0;
+      filtered.hi    = '0;
+    end
+    return filtered;
+  endfunction
+
+  function automatic bit cluster_word_matches(
+    input logic [15:0]      word,
+    input spadmic_cluster_t expected,
+    input string            label
+  );
+    if (!cluster_word_reserved_clear(word)) begin
+      $display("[POS_REF] FAIL: %s reserved bits are non-zero in 0x%04h", label, word);
+      return 0;
+    end
+    if (cluster_word_valid(word) != expected.valid) begin
+      $display("[POS_REF] FAIL: %s valid=%0b expected %0b",
+               label, cluster_word_valid(word), expected.valid);
+      return 0;
+    end
+    if (expected.valid
+        && ((cluster_word_lo(word) != expected.lo) || (cluster_word_hi(word) != expected.hi))) begin
+      $display("[POS_REF] FAIL: %s range=[%0d,%0d] expected [%0d,%0d]",
+               label, cluster_word_lo(word), cluster_word_hi(word), expected.lo, expected.hi);
+      return 0;
+    end
+    return 1;
+  endfunction
+
+  // Software cluster-scan reference implementation. Mirrors the RTL's raw scan
+  // first, then applies the configured min-span filter.
   function automatic void scan_axis(
     input  logic [SPADMIC_LINE_W-1:0] lines,
-    input  int unsigned               gap_threshold,
-    input  int unsigned               min_span,
+    input  logic [SPADMIC_LINE_COUNT_W-1:0] gap_threshold,
+    input  logic [SPADMIC_LINE_COUNT_W-1:0] min_span,
     output spadmic_axis_clusters_t     result
   );
-    int unsigned cluster_lo, cluster_hi;
-    int unsigned gap_count;
+    logic [SPADMIC_LINE_COUNT_W-1:0] gap_run;
     bit          in_cluster;
-    int unsigned found_clusters;
-    spadmic_cluster_t clusters[2];
+    int unsigned cluster_idx;
+    spadmic_axis_clusters_t raw;
 
-    result       = '0;
-    result.empty = 1'b1;
-    in_cluster   = 1'b0;
-    found_clusters = 0;
-    clusters[0]  = '0;
-    clusters[1]  = '0;
+    raw       = '0;
+    raw.empty = 1'b1;
+    in_cluster = 1'b0;
+    gap_run = 0;
+    cluster_idx = 0;
 
     for (int i = 0; i < SPADMIC_LINE_W; i++) begin
       if (lines[i]) begin
-        result.empty = 1'b0;
         if (!in_cluster) begin
+          if ((cluster_idx == 0) && !raw.cluster0.valid) begin
+            raw.cluster0.valid = 1'b1;
+            raw.cluster0.lo    = SPADMIC_LINE_IDX_W'(i);
+            raw.cluster0.hi    = SPADMIC_LINE_IDX_W'(i);
+          end else if ((cluster_idx == 0) && (gap_run >= gap_threshold)) begin
+            cluster_idx = 1;
+            if (!raw.cluster1.valid) begin
+              raw.cluster1.valid = 1'b1;
+              raw.cluster1.lo    = SPADMIC_LINE_IDX_W'(i);
+              raw.cluster1.hi    = SPADMIC_LINE_IDX_W'(i);
+            end
+          end else if ((cluster_idx >= 1) && (gap_run >= gap_threshold)) begin
+            raw.overflow = 1'b1;
+          end else if (cluster_idx == 0) begin
+            raw.cluster0.hi = SPADMIC_LINE_IDX_W'(i);
+          end else if ((cluster_idx == 1) && !raw.overflow) begin
+            raw.cluster1.hi = SPADMIC_LINE_IDX_W'(i);
+          end
           in_cluster = 1'b1;
-          cluster_lo = i;
-          cluster_hi = i;
-          gap_count  = 0;
+          gap_run = 0;
         end else begin
-          cluster_hi = i;
-          gap_count  = 0;
+          gap_run = 0;
+          if (cluster_idx == 0)
+            raw.cluster0.hi = SPADMIC_LINE_IDX_W'(i);
+          else if ((cluster_idx == 1) && !raw.overflow)
+            raw.cluster1.hi = SPADMIC_LINE_IDX_W'(i);
         end
       end else if (in_cluster) begin
-        gap_count++;
-        if (gap_count >= gap_threshold) begin
-          // Close cluster
-          if ((cluster_hi - cluster_lo + 1) >= min_span) begin
-            if (found_clusters < 2) begin
-              clusters[found_clusters].valid = 1'b1;
-              clusters[found_clusters].lo    = cluster_lo[SPADMIC_LINE_IDX_W-1:0];
-              clusters[found_clusters].hi    = cluster_hi[SPADMIC_LINE_IDX_W-1:0];
-              found_clusters++;
-            end else begin
-              result.overflow = 1'b1;
-            end
-          end
+        gap_run++;
+        if (gap_run >= gap_threshold)
           in_cluster = 1'b0;
-        end
       end
     end
 
-    // Close any open cluster at the end
-    if (in_cluster && (cluster_hi - cluster_lo + 1) >= min_span) begin
-      if (found_clusters < 2) begin
-        clusters[found_clusters].valid = 1'b1;
-        clusters[found_clusters].lo    = cluster_lo[SPADMIC_LINE_IDX_W-1:0];
-        clusters[found_clusters].hi    = cluster_hi[SPADMIC_LINE_IDX_W-1:0];
-        found_clusters++;
-      end else begin
-        result.overflow = 1'b1;
-      end
-    end
+    raw.empty = ~raw.cluster0.valid;
+    raw.cluster_count = {1'b0, raw.cluster0.valid} + {1'b0, raw.cluster1.valid};
 
-    result.cluster_count = found_clusters[1:0];
-    result.cluster0      = clusters[0];
-    result.cluster1      = clusters[1];
+    result = '0;
+    result.cluster0 = filter_cluster(raw.cluster0, min_span);
+    result.cluster1 = filter_cluster(raw.cluster1, min_span);
+    result.overflow = raw.overflow;
+    result.empty    = ~(result.cluster0.valid | result.cluster1.valid);
+    result.cluster_count = {1'b0, result.cluster0.valid} + {1'b0, result.cluster1.valid};
   endfunction
 
   // Validate a captured position packet against expected content
@@ -107,9 +169,11 @@ class spadmic_pos_ref_model;
     logic [SPADMIC_LINE_W-1:0] x_pattern,
     logic [SPADMIC_LINE_W-1:0] y_pattern,
     logic [SPADMIC_LINE_W-1:0] z_pattern,
-    int unsigned gap_threshold,
-    int unsigned min_span
+    logic [SPADMIC_LINE_COUNT_W-1:0] gap_threshold,
+    logic [SPADMIC_LINE_COUNT_W-1:0] min_span
   );
+    spadmic_axis_clusters_t expected_axis[3];
+
     if (words.size() != SPADMIC_POS_PKT_WORDS) begin
       $display("[POS_REF] FAIL: packet has %0d words (expected %0d)",
                words.size(), SPADMIC_POS_PKT_WORDS);
@@ -141,6 +205,10 @@ class spadmic_pos_ref_model;
       return 0;
     end
 
+    scan_axis(x_pattern, gap_threshold, min_span, expected_axis[0]);
+    scan_axis(y_pattern, gap_threshold, min_span, expected_axis[1]);
+    scan_axis(z_pattern, gap_threshold, min_span, expected_axis[2]);
+
     if (axis_summary_id(words[2]) != TDC_ID_X ||
         axis_summary_id(words[5]) != TDC_ID_Y ||
         axis_summary_id(words[8]) != TDC_ID_Z) begin
@@ -157,6 +225,9 @@ class spadmic_pos_ref_model;
       logic       cluster1_valid;
       logic       expect_non_empty;
       logic       expect_multi;
+      spadmic_axis_clusters_t exp_axis;
+
+      exp_axis = expected_axis[axis];
 
       cluster_count   = axis_summary_cluster_count(words[summary_idx]);
       cluster0_valid  = words[cluster0_idx][0];
@@ -179,6 +250,20 @@ class spadmic_pos_ref_model;
         $display("[POS_REF] FAIL: axis %0d multi-cluster mask mismatch", axis);
         return 0;
       end
+
+      if ((axis_summary_overflow(words[summary_idx]) != exp_axis.overflow) ||
+          (cluster_count != exp_axis.cluster_count) ||
+          (axis_summary_empty(words[summary_idx]) != exp_axis.empty)) begin
+        $display("[POS_REF] FAIL: axis %0d summary does not match expected filtered clusters", axis);
+        return 0;
+      end
+
+      if (!cluster_word_matches(words[cluster0_idx], exp_axis.cluster0,
+                                $sformatf("axis%0d cluster0", axis)))
+        return 0;
+      if (!cluster_word_matches(words[cluster1_idx], exp_axis.cluster1,
+                                $sformatf("axis%0d cluster1", axis)))
+        return 0;
     end
 
     if (pkt_overflow_any(words[0]) !=

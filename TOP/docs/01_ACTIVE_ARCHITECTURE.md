@@ -191,6 +191,9 @@ Each axis uses `spadmic_axis_cluster_scan` to find:
 - `cluster_count`
 
 The active block then filters out clusters whose span is below the configured minimum.
+The reduced SPAD geometry is 64x64x64, so each axis coordinate is a 6-bit
+`0..63` value. Gap threshold and minimum span remain 7-bit count fields because
+they may need to represent the full 64-line width.
 
 ### 6.3 Position packet formats
 
@@ -208,6 +211,15 @@ Cluster mode emits the normal fixed 12-word position packet:
 10. Z cluster 0
 11. Z cluster 1
 12. EOC
+
+Each cluster word is a 16-bit logical word:
+
+```text
+[15:13] = 3'b000 reserved
+[12:7]  = lo[5:0]
+[6:1]   = hi[5:0]
+[0]     = valid
+```
 
 Raw bitmap mode emits a fixed 14-word low-rate characterization packet:
 

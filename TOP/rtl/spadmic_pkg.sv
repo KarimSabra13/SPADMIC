@@ -17,7 +17,8 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_SRC_COUNT   = 4;
   localparam int unsigned SPADMIC_SRC_MASK_W  = SPADMIC_SRC_COUNT;
   localparam int unsigned SPADMIC_LINE_W      = 64;
-  localparam int unsigned SPADMIC_LINE_IDX_W  = 7;
+  localparam int unsigned SPADMIC_LINE_IDX_W  = $clog2(SPADMIC_LINE_W);
+  localparam int unsigned SPADMIC_LINE_COUNT_W = $clog2(SPADMIC_LINE_W + 1);
   localparam int unsigned SPADMIC_CSR_ADDR_W  = 12;
   localparam int unsigned SPADMIC_CSR_DATA_W  = mptdc_pkg::CSR_DATA_W;
   localparam int unsigned SPADMIC_EVENT_ID_W  = 14;
@@ -261,7 +262,7 @@ package spadmic_pkg;
     input spadmic_cluster_t cluster
   );
     return {
-      1'b0,
+      3'b000,
       cluster.lo,
       cluster.hi,
       cluster.valid

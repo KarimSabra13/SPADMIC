@@ -103,7 +103,12 @@ class spadmic_pkt_cov;
 
     if (marker_like)
       return 3;
-    if ((words[1][0] || words[8][14] || words[9][0] || words[16][14] || words[17][0] || words[24][14]))
+    if (words[1][0]
+        || words[SPADMIC_POS_RAW_WORDS_PER_AXIS][NARROW_W-1]
+        || words[1 + SPADMIC_POS_RAW_WORDS_PER_AXIS][0]
+        || words[2 * SPADMIC_POS_RAW_WORDS_PER_AXIS][NARROW_W-1]
+        || words[1 + (2 * SPADMIC_POS_RAW_WORDS_PER_AXIS)][0]
+        || words[3 * SPADMIC_POS_RAW_WORDS_PER_AXIS][NARROW_W-1])
       return 2;
     if (ones_total > 64)
       return 4;

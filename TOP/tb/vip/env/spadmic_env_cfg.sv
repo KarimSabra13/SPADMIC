@@ -18,7 +18,7 @@ class spadmic_env_cfg;
 
   // Default position config
   logic [6:0]        default_gap_threshold;
-  logic [6:0]        default_min_cluster_span;
+  logic [SPADMIC_LINE_COUNT_W-1:0] default_min_cluster_span;
   logic [3:0]        default_settle_cycles;
 
   // Test parameters
@@ -94,4 +94,3 @@ class spadmic_env_cfg;
   endfunction
 
 endclass
-

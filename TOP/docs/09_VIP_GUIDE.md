@@ -116,7 +116,7 @@ That packet transaction is what the scoreboard consumes.
 |-------|------|
 | `spadmic_scoreboard.sv` | packet counting, pass/fail accounting, active-config tracking |
 | `spadmic_tdc_ref_model.sv` | validates TDC packet structure |
-| `spadmic_pos_ref_model.sv` | validates cluster and raw position packet structure |
+| `spadmic_pos_ref_model.sv` | validates cluster and raw position packet structure, including 6-bit cluster coordinate packing |
 | `spadmic_spad_reset_monitor.sv` | observes `spad_matrix_rst_o` pulse count and width |
 
 The scoreboard keeps separate expected/received counts for TDC and position
@@ -130,6 +130,7 @@ For the new position characterization features, the scoreboard also tracks:
 - position mode (`cluster` versus `raw bitmap`)
 - position reset mode and auto-reset period
 - expected raw position payloads from the driven X/Y/Z line patterns
+- expected 64-line cluster bounds from the driven X/Y/Z line patterns
 - minimum expected SPAD reset pulse count and one-cycle pulse-width quality
 
 ## 6. Coverage and assertions

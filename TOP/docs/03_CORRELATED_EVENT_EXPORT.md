@@ -63,7 +63,7 @@ TDC and position packets now identify source differently:
 | Packet type | Source encoding |
 |-------------|-----------------|
 | TDC | header bit `[12]` = `tdc_id[0]`, header bit `[6]` = `tdc_id[1]` |
-| Position cluster | sub-header bits `[5:4] = 2'b11` |
+| Position cluster | sub-header bits `[5:4] = 2'b11`; cluster words use 6-bit `lo`/`hi` coordinates for positions `0..63` |
 | Position raw bitmap | raw header pattern from `spadmic_pos_raw_header_word()`; source is implicitly position |
 
 Off-chip software should therefore group packets by:
@@ -121,7 +121,7 @@ Host software should parse packets as:
 3. reconstruct the 16-bit logical word from `{falling_edge_byte, rising_edge_byte}`
 4. parse the logical packet stream as:
    - TDC: header, payload, EOC
-   - position cluster: header, sub-header, payload, EOC
+   - position cluster: header, sub-header, axis summaries, six 6-bit-coordinate cluster words, EOC
    - position raw bitmap: raw header, 12 unescaped bitmap payload words, EOC
 
 For both-active mode, the receiver should build one correlated event record by collecting all packets with the same `shared_event_id`.
@@ -130,3 +130,15 @@ Raw bitmap position packets are fixed length because payload words carry true
 16-bit line levels and can therefore have `[15:14] = 2'b11`. The on-chip
 correlator and the off-chip receiver must parse raw bitmap packets by the raw
 header plus 14 total words, not by the first EOC-looking payload word.
+
+The 64x64x64 SPAD geometry does not change packet word counts: cluster packets
+remain 12 logical words and raw bitmap packets remain 14 logical words. The
+protocol-level geometry change is the cluster bound width inside each cluster
+word:
+
+```text
+[15:13] = 3'b000 reserved
+[12:7]  = lo[5:0]
+[6:1]   = hi[5:0]
+[0]     = valid
+```

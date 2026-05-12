@@ -80,8 +80,8 @@ module tb_spadmic_stress_position;
     spadmic_cluster_t cluster;
     cluster = '0;
     cluster.valid = valid;
-    cluster.lo    = 7'(lo);
-    cluster.hi    = 7'(hi);
+    cluster.lo    = SPADMIC_LINE_IDX_W'(lo);
+    cluster.hi    = SPADMIC_LINE_IDX_W'(hi);
     return cluster;
   endfunction
 

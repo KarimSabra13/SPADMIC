@@ -13,7 +13,7 @@ The current active first-silicon digital baseline is:
 - one physical `chip_tx_*` output bus
 - three preserved `mptdc_top_asic` TDC axes
 - one shared TDC serializer fed by per-axis acquisition-record exports
-- one async-qualified position path with explicit drop/reject reporting
+- one async-qualified 64x64x64 SPAD position path with explicit drop/reject reporting
 - one top-level sequencer that commits requested control only after the old datapath drains
 - one I2C control plane bridged into the shared CSR fabric
 
@@ -38,7 +38,7 @@ The current active first-silicon digital baseline is:
 
 1. **Control path:** `i2c_scl_i/i2c_sda_i` -> `spadmic_i2c_slave` -> `spadmic_i2c_csr_bridge` -> `spadmic_csr_decoder` -> global, per-axis TDC, or position CSR blocks.
 2. **TDC path:** one `spadmic_tdc_axis_wrapper` per axis -> local `mptdc_top_asic` -> exported acquisition records -> `spadmic_tdc_shared_readout` -> shared `mptdc_narrow16_tx_v2`.
-3. **Position path:** asynchronous `x/y/z_lines_i` -> synchronizers -> cluster scan and qualification in `spadmic_position_block` -> fixed 12-word position packet.
+3. **Position path:** asynchronous 64-line `x/y/z_lines_i` buses -> synchronizers -> cluster scan and qualification in `spadmic_position_block` -> fixed 12-word cluster packet or 14-word raw bitmap packet.
 4. **Final egress:** `spadmic_correlated_tx` groups packetized TDC and position traffic into one shared correlated stream, then `spadmic_ddr_tx` maps that stream onto the source-synchronous `chip_tx_*` DDR pins.
 
 ## Current top-level control model
