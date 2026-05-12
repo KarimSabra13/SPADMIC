@@ -1,0 +1,24 @@
+Snapshot: innovus_20260512_1414_preserved_reset_pd
+Created: 2026-05-12T14:14:28+02:00
+Commit:  834eac1
+Run status: COMPLETE
+WARNING: innovus_estimate.log is older than run_manifest.rpt; verify the copied log belongs to this run.
+
+Contents:
+  innovus_estimate_log.rpt
+  manifest.txt
+  mptdc_top_asic.place.enc
+  pd_matrix_symmetry.rpt
+  prects/mptdc_top_asic_preCTS.cap.gz
+  prects/mptdc_top_asic_preCTS.fanout.gz
+  prects/mptdc_top_asic_preCTS.length.gz
+  prects/mptdc_top_asic_preCTS.summary.gz
+  prects/mptdc_top_asic_preCTS.tran.gz
+  prects/mptdc_top_asic_preCTS_all.tarpt.gz
+  prects/mptdc_top_asic_preCTS_default.tarpt.gz
+  prects/mptdc_top_asic_preCTS_reg2reg.tarpt.gz
+  report_area_place.rpt
+  report_gate_count_place.rpt
+  report_power_place.rpt
+  run_manifest.rpt
+  run_status.rpt
