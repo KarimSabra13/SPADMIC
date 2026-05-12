@@ -142,6 +142,10 @@ check_timing_intent
 check_timing_intent -verbose > \
     "$design(synthesis_reports)/post_elaboration/check_timing_intent.rpt"
 
+# Preserve hierarchy that has physical meaning before optimization can flatten
+# it away: local reset synchronizer leaves and the future-matched PD matrix.
+mptdc_preserve_physical_hierarchy
+
 # Hierarchy and latch reports
 report_hierarchy > "$design(synthesis_reports)/post_elaboration/report_hierarchy.rpt"
 mptdc_write_latch_report \

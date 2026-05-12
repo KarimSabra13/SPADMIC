@@ -88,6 +88,43 @@ proc mptdc_run_report_candidates {cmds rpt_file title} {
     mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
+proc mptdc_try_set_db {objects attr value} {
+    if {[llength $objects] == 0} {
+        return
+    }
+    catch {set_db $objects $attr $value}
+}
+
+proc mptdc_preserve_physical_hierarchy {} {
+    mptdc_message "Preserving reset synchronizer and PD matrix hierarchy"
+
+    foreach pattern {
+        *u_rst*sync*
+        *gen_pd_row*gen_pd_col*u_pd*
+        *u_pd*
+    } {
+        set cells [list]
+        catch {set cells [get_cells -quiet -hierarchical $pattern]}
+        if {[llength $cells] > 0} {
+            catch {set_dont_touch $cells true}
+            mptdc_try_set_db $cells .dont_touch true
+            mptdc_try_set_db $cells .preserve true
+            mptdc_try_set_db $cells .ungroup_ok false
+        }
+    }
+
+    foreach module_pattern {
+        *mptdc_reset_sync*
+        *mptdc_pd_cell*
+    } {
+        set modules [list]
+        catch {set modules [get_db modules $module_pattern]}
+        mptdc_try_set_db $modules .dont_touch true
+        mptdc_try_set_db $modules .preserve true
+        mptdc_try_set_db $modules .ungroup_ok false
+    }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # mptdc_report_timing — Generate timing reports for current stage
 # ─────────────────────────────────────────────────────────────────────────────

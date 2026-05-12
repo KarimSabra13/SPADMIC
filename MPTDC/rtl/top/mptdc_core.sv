@@ -148,7 +148,8 @@ module mptdc_core
   //  The pad/core boundary reset is already async-assert/sync-deassert in
   //  clk_sys. Local clk_sys leaves drive synchronous reset checks inside normal
   //  downstream logic; only true CDC/oscillator-domain logic keeps async reset
-  //  sensitivity.
+  //  sensitivity. Sys-domain leaves use staggered depths so synthesis cannot
+  //  merge equivalent reset synchronizers back into one high-fanout control net.
   // =========================================================================
   (* keep = "true", dont_touch = "true" *) wire rst_fast_n;
   (* keep = "true", dont_touch = "true" *) wire rst_sys_status_n;
@@ -165,28 +166,28 @@ module mptdc_core
   );
 
   (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
-  mptdc_reset_sync #(.STAGES(2)) u_rst_drain_sync (
+  mptdc_reset_sync #(.STAGES(4)) u_rst_drain_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_drain_n)
   );
 
   (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
-  mptdc_reset_sync #(.STAGES(2)) u_rst_fifo_sync (
+  mptdc_reset_sync #(.STAGES(3)) u_rst_fifo_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_fifo_n)
   );
 
   (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
-  mptdc_reset_sync #(.STAGES(2)) u_rst_tx_sync (
+  mptdc_reset_sync #(.STAGES(5)) u_rst_tx_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_tx_n)
   );
 
   (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
-  mptdc_reset_sync #(.STAGES(2)) u_rst_wdt_sync (
+  mptdc_reset_sync #(.STAGES(6)) u_rst_wdt_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_wdt_n)

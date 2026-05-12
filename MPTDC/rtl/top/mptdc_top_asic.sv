@@ -109,9 +109,9 @@ module mptdc_top_asic
   // ────────────────────────────────────────────────────────────────
   //  Reset synchronisers
   // ────────────────────────────────────────────────────────────────
-  // Split the clk_sys reset fanout at the wrapper boundary. Each leaf keeps
-  // async assert / sync deassert behavior, while avoiding a single high-fanout
-  // reset net that is difficult to close for recovery/removal in Innovus.
+  // Split the clk_sys reset fanout at the wrapper boundary. The leaves use
+  // staggered depths so synthesis cannot legally merge equivalent synchronizers
+  // back into one high-fanout reset-control net.
   (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_input_mux_sync (
     .clk         (clk_sys),
@@ -120,14 +120,14 @@ module mptdc_top_asic
   );
 
   (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
-  mptdc_reset_sync #(.STAGES(2)) u_rst_csr_sync (
+  mptdc_reset_sync #(.STAGES(3)) u_rst_csr_sync (
     .clk         (clk_sys),
     .async_rst_n (local_async_rst_n),
     .rst_n_o     (rst_csr_n)
   );
 
   (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
-  mptdc_reset_sync #(.STAGES(2)) u_rst_core_sync (
+  mptdc_reset_sync #(.STAGES(4)) u_rst_core_sync (
     .clk         (clk_sys),
     .async_rst_n (local_async_rst_n),
     .rst_n_o     (rst_core_n)

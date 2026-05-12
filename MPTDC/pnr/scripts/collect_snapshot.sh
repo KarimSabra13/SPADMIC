@@ -26,7 +26,25 @@ copy_as_if_present() {
   fi
 }
 
-copy_as_if_present "${pnr_dir}/logs/innovus_estimate.log" "innovus_estimate_log.rpt"
+latest_innovus_log=""
+if [[ -d "${pnr_dir}/logs" ]]; then
+  latest_innovus_log="$(
+    find "${pnr_dir}/logs" -maxdepth 1 -type f -name 'innovus_estimate.log*' \
+      -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {$1=""; sub(/^ /, ""); print}'
+  )"
+fi
+
+log_copy_note="Innovus log copied: none"
+if [[ -n "${latest_innovus_log}" && -f "${latest_innovus_log}" ]]; then
+  if [[ -f "${pnr_dir}/reports/run_status.rpt" && "${latest_innovus_log}" -ot "${pnr_dir}/reports/run_status.rpt" ]]; then
+    log_copy_note="WARNING: newest Innovus log ($(basename "${latest_innovus_log}")) is older than run_status.rpt; not copying stale log."
+  else
+    copy_as_if_present "${latest_innovus_log}" "innovus_estimate_log.rpt"
+    log_copy_note="Innovus log copied: $(basename "${latest_innovus_log}")"
+  fi
+else
+  log_copy_note="WARNING: no Innovus log matching pnr/logs/innovus_estimate.log* was found."
+fi
 
 for file in \
   "${pnr_dir}/outputs/mptdc_top_asic.place.enc" \
@@ -58,11 +76,7 @@ fi
   else
     echo "Run status: missing run_status.rpt"
   fi
-  if [[ -f "${pnr_dir}/logs/innovus_estimate.log" && -f "${pnr_dir}/reports/run_manifest.rpt" ]]; then
-    if [[ "${pnr_dir}/logs/innovus_estimate.log" -ot "${pnr_dir}/reports/run_manifest.rpt" ]]; then
-      echo "WARNING: innovus_estimate.log is older than run_manifest.rpt; verify the copied log belongs to this run."
-    fi
-  fi
+  echo "${log_copy_note}"
   echo ""
   echo "Contents:"
   find "${snapshot_dir}" -maxdepth 2 -type f -printf "  %P\n" | sort
