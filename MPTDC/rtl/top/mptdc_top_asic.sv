@@ -68,7 +68,9 @@ module mptdc_top_asic
   // ────────────────────────────────────────────────────────────────
   //  Internal wires
   // ────────────────────────────────────────────────────────────────
-  wire             rst_n_internal;    // synchronised reset from pad + soft reset hold
+  wire             rst_input_mux_n;    // local reset leaf for pad input selection
+  wire             rst_csr_n;          // local reset leaf for CSR/config/status
+  wire             rst_core_n;         // local reset leaf for measurement core
   wire             local_async_rst_n;
 
   wire             start_async;       // mux → core
@@ -105,12 +107,27 @@ module mptdc_top_asic
   end
 
   // ────────────────────────────────────────────────────────────────
-  //  Reset synchroniser
+  //  Reset synchronisers
   // ────────────────────────────────────────────────────────────────
-  mptdc_reset_sync #(.STAGES(2)) u_rst_sync (
+  // Split the clk_sys reset fanout at the wrapper boundary. Each leaf keeps
+  // async assert / sync deassert behavior, while avoiding a single high-fanout
+  // reset net that is difficult to close for recovery/removal in Innovus.
+  mptdc_reset_sync #(.STAGES(2)) u_rst_input_mux_sync (
     .clk         (clk_sys),
     .async_rst_n (local_async_rst_n),
-    .rst_n_o     (rst_n_internal)
+    .rst_n_o     (rst_input_mux_n)
+  );
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_csr_sync (
+    .clk         (clk_sys),
+    .async_rst_n (local_async_rst_n),
+    .rst_n_o     (rst_csr_n)
+  );
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_core_sync (
+    .clk         (clk_sys),
+    .async_rst_n (local_async_rst_n),
+    .rst_n_o     (rst_core_n)
   );
 
   // ────────────────────────────────────────────────────────────────
@@ -118,7 +135,7 @@ module mptdc_top_asic
   // ────────────────────────────────────────────────────────────────
   mptdc_input_mux u_input_mux (
     .clk_sys            (clk_sys),
-    .rst_n              (rst_n_internal),
+    .rst_n              (rst_input_mux_n),
     .start_spad_async_i (start_spad_async_i),
     .stop_spad_async_i  (stop_spad_async_i),
     .cal_start_async_i  (cal_start_async_i),
@@ -133,7 +150,7 @@ module mptdc_top_asic
   // ────────────────────────────────────────────────────────────────
   mptdc_csr_minimal u_csr (
     .clk_sys          (clk_sys),
-    .rst_n            (rst_n_internal),
+    .rst_n            (rst_csr_n),
     .csr_valid_i      (csr_valid_i),
     .csr_write_i      (csr_write_i),
     .csr_addr_i       (csr_addr_i),
@@ -153,7 +170,7 @@ module mptdc_top_asic
   // ────────────────────────────────────────────────────────────────
   mptdc_core u_core (
     .clk_sys        (clk_sys),
-    .rst_sys_n      (rst_n_internal),
+    .rst_sys_n      (rst_core_n),
     .start_async_i  (start_async),
     .stop_async_i   (stop_async),
     .cfg_i          (cfg_eff),

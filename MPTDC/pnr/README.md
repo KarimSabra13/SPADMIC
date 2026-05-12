@@ -47,12 +47,13 @@ export MPTDC_PNR_POWER_LAYER=M4
 export MPTDC_PNR_DO_DETAIL_ROUTE=1
 ```
 
-Explicit standard-cell PG pin connection is disabled by default because the
-current lab LEF/Liberty naming must be confirmed before applying
-`globalNetConnect`. Enable it only after confirming the actual PG pin names:
+Explicit standard-cell PG pin connection is enabled by default. The flow tries
+lower-case `vdd/gnd` first, then upper-case `VDD/VSS`, because the lab
+Innovus/Voltus log reports lower-case power levels while the macro rails remain
+upper-case. Disable only for debug:
 
 ```bash
-export MPTDC_PNR_CONNECT_PG_PINS=1
+export MPTDC_PNR_CONNECT_PG_PINS=0
 ```
 
 Review these outputs first:

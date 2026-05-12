@@ -26,7 +26,7 @@ set pnr(signal_top_layer)         [mptdc_env_or_default MPTDC_PNR_SIGNAL_TOP_LAY
 set pnr(signal_bottom_layer_idx)  [mptdc_env_or_default MPTDC_PNR_SIGNAL_BOTTOM_LAYER_IDX 1]
 set pnr(signal_top_layer_idx)     [mptdc_env_or_default MPTDC_PNR_SIGNAL_TOP_LAYER_IDX 3]
 set pnr(power_reserved_layer)     [mptdc_env_or_default MPTDC_PNR_POWER_LAYER M4]
-set pnr(connect_pg_pins)          [mptdc_env_or_default MPTDC_PNR_CONNECT_PG_PINS 0]
+set pnr(connect_pg_pins)          [mptdc_env_or_default MPTDC_PNR_CONNECT_PG_PINS 1]
 
 # Direction policy is documented and carried into the run manifest. The tech LEF
 # owns the actual preferred direction; the flow reports these expected values so

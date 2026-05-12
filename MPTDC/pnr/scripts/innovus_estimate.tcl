@@ -78,12 +78,18 @@ mptdc_pnr_required "Initializing Innovus design" {
 }
 
 if {$pnr(connect_pg_pins)} {
-    mptdc_pnr_optional "Connecting standard-cell power pins" {
-        globalNetConnect $tech(STANDARD_CELL_VDD) -type pgpin -pin $tech(STANDARD_CELL_VDD) -inst *
-        globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin $tech(STANDARD_CELL_GND) -inst *
+    foreach pg_pin $tech(STANDARD_CELL_VDD_PINS) {
+        mptdc_pnr_optional "Connecting $tech(STANDARD_CELL_VDD) to PG pin $pg_pin" {
+            globalNetConnect $tech(STANDARD_CELL_VDD) -type pgpin -pin $pg_pin -inst *
+        }
+    }
+    foreach pg_pin $tech(STANDARD_CELL_GND_PINS) {
+        mptdc_pnr_optional "Connecting $tech(STANDARD_CELL_GND) to PG pin $pg_pin" {
+            globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin $pg_pin -inst *
+        }
     }
 } else {
-    mptdc_pnr_msg "Skipping explicit globalNetConnect by default; set MPTDC_PNR_CONNECT_PG_PINS=1 after confirming PG pin names"
+    mptdc_pnr_msg "Skipping explicit globalNetConnect because MPTDC_PNR_CONNECT_PG_PINS=0"
 }
 
 set margin $pnr(core_margin_um)
@@ -150,6 +156,12 @@ puts $fh "Signal routing layers: $pnr(signal_bottom_layer)-$pnr(signal_top_layer
 puts $fh "Signal routing layer indexes: $pnr(signal_bottom_layer_idx)-$pnr(signal_top_layer_idx)"
 puts $fh "Reserved power layer: $pnr(power_reserved_layer)"
 puts $fh "Explicit PG pin connect enabled: $pnr(connect_pg_pins)"
+if {[info exists tech(STANDARD_CELL_VDD_PINS)]} {
+    puts $fh "VDD PG pin candidates: $tech(STANDARD_CELL_VDD_PINS)"
+}
+if {[info exists tech(STANDARD_CELL_GND_PINS)]} {
+    puts $fh "VSS PG pin candidates: $tech(STANDARD_CELL_GND_PINS)"
+}
 puts $fh "Expected routing directions: M1=$pnr(route_dir_M1), M2=$pnr(route_dir_M2), M3=$pnr(route_dir_M3), M4=$pnr(route_dir_M4)"
 puts $fh "Detail route enabled: $pnr(do_detail_route)"
 puts $fh "Netlist: $design(postsyn_netlist)"

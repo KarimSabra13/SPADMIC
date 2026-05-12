@@ -144,11 +144,47 @@ module mptdc_core
   wire [7:0]     wdt_global_trip_cnt;
 
   // =========================================================================
-  //  v2.2: Fast-domain reset synchronizer
-  //  Ensures rst_sys_n deasserts cleanly in osc_fast_ph0 domain.
-  //  Async assert is immediate; sync deassert waits 2 fast edges.
+  //  Reset distribution
+  //  The pad/core boundary reset is already async-assert/sync-deassert in
+  //  clk_sys. Build local reset leaves for high-fanout sys-domain blocks so
+  //  recovery/removal closure does not depend on one global reset spine.
   // =========================================================================
   wire rst_fast_n;
+  wire rst_sys_status_n;
+  wire rst_sys_drain_n;
+  wire rst_sys_fifo_n;
+  wire rst_sys_tx_n;
+  wire rst_sys_wdt_n;
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_status_sync (
+    .clk         (clk_sys),
+    .async_rst_n (rst_sys_n),
+    .rst_n_o     (rst_sys_status_n)
+  );
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_drain_sync (
+    .clk         (clk_sys),
+    .async_rst_n (rst_sys_n),
+    .rst_n_o     (rst_sys_drain_n)
+  );
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_fifo_sync (
+    .clk         (clk_sys),
+    .async_rst_n (rst_sys_n),
+    .rst_n_o     (rst_sys_fifo_n)
+  );
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_tx_sync (
+    .clk         (clk_sys),
+    .async_rst_n (rst_sys_n),
+    .rst_n_o     (rst_sys_tx_n)
+  );
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_wdt_sync (
+    .clk         (clk_sys),
+    .async_rst_n (rst_sys_n),
+    .rst_n_o     (rst_sys_wdt_n)
+  );
 
   mptdc_reset_sync #(.STAGES(2)) u_rst_fast_sync (
     .clk         (osc_fast_ph0),
@@ -205,8 +241,8 @@ module mptdc_core
   // =========================================================================
   (* ASYNC_REG = "TRUE" *)
   logic [N_CTX-1:0] ctx_drain_sync_ff1, ctx_drain_sync_ff2;
-  always_ff @(posedge clk_sys or negedge rst_sys_n) begin
-    if (!rst_sys_n) begin
+  always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
+    if (!rst_sys_status_n) begin
       ctx_drain_sync_ff1 <= '0;
       ctx_drain_sync_ff2 <= '0;
     end else begin
@@ -220,8 +256,8 @@ module mptdc_core
   // =========================================================================
   (* ASYNC_REG = "TRUE" *)
   logic [1:0] rejected_sync_pipe;
-  always_ff @(posedge clk_sys or negedge rst_sys_n) begin
-    if (!rst_sys_n)
+  always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
+    if (!rst_sys_status_n)
       rejected_sync_pipe <= '0;
     else
       rejected_sync_pipe <= {rejected_sync_pipe[0], fe_start_rejected};
@@ -233,8 +269,8 @@ module mptdc_core
   // =========================================================================
   (* ASYNC_REG = "TRUE" *)
   logic [1:0] start_sync_pipe;
-  always_ff @(posedge clk_sys or negedge rst_sys_n) begin
-    if (!rst_sys_n)
+  always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
+    if (!rst_sys_status_n)
       start_sync_pipe <= '0;
     else
       start_sync_pipe <= {start_sync_pipe[0], fe_start_latched};
@@ -404,7 +440,7 @@ module mptdc_core
   // ── Drain FSM (sys domain) ────────────────────────────────────
   mptdc_drain_ctrl u_drain_ctrl (
     .clk_sys           (clk_sys),
-    .rst_n             (rst_sys_n),
+    .rst_n             (rst_sys_drain_n),
     .ctx_drain_sync_i  (ctx_drain_sync_ff2),
     .read_ctx_o        (drain_read_ctx),
     .snapshot_i        (ctx_snapshot),
@@ -422,7 +458,7 @@ module mptdc_core
     .DEPTH (FIFO_DEPTH)
   ) u_fifo (
     .clk       (clk_sys),
-    .rst_n     (rst_sys_n),
+    .rst_n     (rst_sys_fifo_n),
     .clr_i     (fifo_clr_i),
     .wr_en_i   (drain_fifo_wr_en),
     .wr_data_i (drain_fifo_wr_data),
@@ -444,7 +480,7 @@ module mptdc_core
   // ── Narrow 16-bit TX ──────────────────────────────────────────
   mptdc_narrow16_tx_v2 u_narrow_tx (
     .clk_sys         (clk_sys),
-    .rst_n           (rst_sys_n),
+    .rst_n           (rst_sys_tx_n),
     .out_mode_i      (cfg_i.out_mode),
     .fifo_rd_valid_i (shared_readout_en_i ? 1'b0 : fifo_rd_valid),
     .fifo_rd_data_i  (fifo_rd_data),
@@ -457,7 +493,7 @@ module mptdc_core
   // ── Watchdog (sys domain, global only) ─────────────────────────
   mptdc_watchdog u_wdt (
     .clk_sys               (clk_sys),
-    .rst_n                 (rst_sys_n),
+    .rst_n                 (rst_sys_wdt_n),
     .conv_done_i           (drain_conv_done),
     .wdt_global_timeout_i  (cfg_i.wdt_global_timeout),
     .wdt_force_reset_o     (wdt_force_reset),
@@ -467,8 +503,8 @@ module mptdc_core
   // =========================================================================
   //  Conversion and overflow counters
   // =========================================================================
-  always_ff @(posedge clk_sys or negedge rst_sys_n) begin
-    if (!rst_sys_n) begin
+  always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
+    if (!rst_sys_status_n) begin
       conv_count_r     <= '0;
       ovf_count_r      <= '0;
       last_hit_count_r <= '0;

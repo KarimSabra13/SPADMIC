@@ -37,6 +37,11 @@ lappend tech_files(ALL_LEFS) $tech_files(STDCELLS_LEF)
 set tech(STANDARD_CELL_SITE) "core_hd"    ;# Verified from xh018_D_CELLS_HD.lef
 set tech(STANDARD_CELL_VDD)  "VDD"
 set tech(STANDARD_CELL_GND)  "VSS"
+# Lab Innovus/Voltus reports power-level names as lower-case for this library,
+# while top-level rails remain VDD/VSS. Try lower-case PG pins first and keep
+# upper-case as a fallback for PDK revisions that expose matching LEF names.
+set tech(STANDARD_CELL_VDD_PINS) [list vdd VDD]
+set tech(STANDARD_CELL_GND_PINS) [list gnd VSS]
 
 #############################################
 #       Liberty Timing Libraries (.lib)

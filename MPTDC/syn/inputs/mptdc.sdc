@@ -171,3 +171,18 @@ set_input_transition $design(INPUT_TRANSITION) $async_inputs_and_reset
 # ─────────────────────────────────────────────────────────────────────────────
 set_max_fanout     $design(MAX_FANOUT)     [current_design]
 set_max_transition $design(MAX_TRANSITION) [current_design]
+
+# Reset leaf nets are intentionally distributed hierarchically in RTL. Keep
+# their implementation bounded so PnR does not recreate a single slow reset
+# spine with unsafe recovery/removal margins.
+foreach reset_pattern {
+    *rst_*_n*
+    *rst_n_o*
+    *rst_sys_*_n*
+} {
+    set reset_nets [get_nets -quiet -hierarchical $reset_pattern]
+    if {[llength $reset_nets] > 0} {
+        catch {set_max_fanout $design(RESET_MAX_FANOUT) $reset_nets}
+        catch {set_max_transition $design(RESET_MAX_TRANSITION) $reset_nets}
+    }
+}

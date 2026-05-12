@@ -90,6 +90,8 @@ set design(OSC_CLOCK_UNCERTAINTY) 0.05   ;# ns — oscillator jitter budget
 # Design Rule Constraints
 set design(MAX_FANOUT)     20
 set design(MAX_TRANSITION) 0.5           ;# ns
+set design(RESET_MAX_FANOUT)     32      ;# reset leaf target after hierarchy split
+set design(RESET_MAX_TRANSITION) 0.35    ;# ns — keep async reset recovery robust
 
 # Intentional latches expected in mptdc_async_frontend_v2
 # (Used for post-synthesis auditing)
