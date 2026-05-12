@@ -1,0 +1,10 @@
+    Hinst Name            Module Name                  Inst Count           Total Area
+-----------------------------------------------------------------------------------
+mptdc_top_asic                                               1456            32596.838
+  u_core_u_rst_drain_sync mptdc_reset_sync_STAGES4              4              230.810
+  u_core_u_rst_fifo_sync  mptdc_reset_sync_STAGES3              3              173.107
+  u_core_u_rst_status_sync mptdc_reset_sync_STAGES2              2              117.914
+  u_core_u_rst_tx_sync    mptdc_reset_sync_STAGES5              5              288.512
+  u_core_u_rst_wdt_sync   mptdc_reset_sync_STAGES6              6              346.214
+  u_rst_core_sync         mptdc_reset_sync_STAGES4_688          4              230.810
+  u_rst_csr_sync          mptdc_reset_sync_STAGES3_687          3              173.107
