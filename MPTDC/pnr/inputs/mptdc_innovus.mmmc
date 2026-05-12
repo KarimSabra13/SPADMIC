@@ -19,18 +19,20 @@ create_constraint_mode \
 ###########################
 #    RC Corners
 ###########################
-if {$tech(HAS_QRC_TECH)} {
+if {[file exists $tech_files(CAPTABLE_BC)] &&
+    [file exists $tech_files(CAPTABLE_TC)] &&
+    [file exists $tech_files(CAPTABLE_WC)]} {
     create_rc_corner -name bc_rc \
         -temperature $tech(TEMPERATURE_BC) \
-        -qrc_tech $tech_files(QRCTECH_BC)
+        -cap_table $tech_files(CAPTABLE_BC)
 
     create_rc_corner -name tc_rc \
         -temperature $tech(TEMPERATURE_TC) \
-        -qrc_tech $tech_files(QRCTECH_TC)
+        -cap_table $tech_files(CAPTABLE_TC)
 
     create_rc_corner -name wc_rc \
         -temperature $tech(TEMPERATURE_WC) \
-        -qrc_tech $tech_files(QRCTECH_WC)
+        -cap_table $tech_files(CAPTABLE_WC)
 } else {
     create_rc_corner -name bc_rc \
         -temperature $tech(TEMPERATURE_BC)

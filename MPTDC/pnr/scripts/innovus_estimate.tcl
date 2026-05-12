@@ -77,9 +77,13 @@ mptdc_pnr_required "Initializing Innovus design" {
     init_design
 }
 
-mptdc_pnr_optional "Connecting standard-cell power pins" {
-    globalNetConnect $tech(STANDARD_CELL_VDD) -type pgpin -pin $tech(STANDARD_CELL_VDD) -inst *
-    globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin $tech(STANDARD_CELL_GND) -inst *
+if {$pnr(connect_pg_pins)} {
+    mptdc_pnr_optional "Connecting standard-cell power pins" {
+        globalNetConnect $tech(STANDARD_CELL_VDD) -type pgpin -pin $tech(STANDARD_CELL_VDD) -inst *
+        globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin $tech(STANDARD_CELL_GND) -inst *
+    }
+} else {
+    mptdc_pnr_msg "Skipping explicit globalNetConnect by default; set MPTDC_PNR_CONNECT_PG_PINS=1 after confirming PG pin names"
 }
 
 set margin $pnr(core_margin_um)
@@ -90,8 +94,8 @@ mptdc_pnr_required "Creating compact area-first floorplan" {
 }
 
 mptdc_pnr_optional "Limiting signal route layers to preserve top metal for power" {
-    setNanoRouteMode -routeBottomRoutingLayer $pnr(signal_bottom_layer)
-    setNanoRouteMode -routeTopRoutingLayer    $pnr(signal_top_layer)
+    setNanoRouteMode -routeBottomRoutingLayer $pnr(signal_bottom_layer_idx)
+    setNanoRouteMode -routeTopRoutingLayer    $pnr(signal_top_layer_idx)
 }
 
 mptdc_pnr_optional "Applying placement density target" {
@@ -143,7 +147,9 @@ puts $fh "Placement max density: $pnr(place_global_max_density)"
 puts $fh "Aspect ratio: $pnr(aspect_ratio)"
 puts $fh "Core margin um: $pnr(core_margin_um)"
 puts $fh "Signal routing layers: $pnr(signal_bottom_layer)-$pnr(signal_top_layer)"
+puts $fh "Signal routing layer indexes: $pnr(signal_bottom_layer_idx)-$pnr(signal_top_layer_idx)"
 puts $fh "Reserved power layer: $pnr(power_reserved_layer)"
+puts $fh "Explicit PG pin connect enabled: $pnr(connect_pg_pins)"
 puts $fh "Expected routing directions: M1=$pnr(route_dir_M1), M2=$pnr(route_dir_M2), M3=$pnr(route_dir_M3), M4=$pnr(route_dir_M4)"
 puts $fh "Detail route enabled: $pnr(do_detail_route)"
 puts $fh "Netlist: $design(postsyn_netlist)"
