@@ -95,6 +95,8 @@ set_false_path -from [get_ports $design(RST_PORT)]
 
 mptdc_try_dont_touch *u_rst_sync*/sync_q_reg*
 mptdc_try_dont_touch *u_rst_*_sync*/sync_q_reg*
+mptdc_try_dont_touch *u_rst*sync*sync_q*
+mptdc_try_dont_touch *u_rst*sync*sync_q_reg*
 mptdc_try_dont_touch *gray_cont_ff1*
 mptdc_try_dont_touch *gray_cont_ff2*
 mptdc_try_dont_touch *gray_snap_ff1*
@@ -102,6 +104,7 @@ mptdc_try_dont_touch *gray_snap_ff2*
 mptdc_try_dont_touch *u_pulse_sync*/sync_ff1*
 mptdc_try_dont_touch *u_pulse_sync*/sync_ff2*
 mptdc_try_dont_touch *ctx_drain_sync_ff*
+mptdc_try_dont_touch *gen_pd_row*gen_pd_col*u_pd*
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. CDC MAX DELAY

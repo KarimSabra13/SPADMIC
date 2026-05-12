@@ -146,6 +146,27 @@ foreach dir [list $pnr(work_dir) $pnr(outputs_dir) $pnr(reports_dir) $pnr(logs_d
     file mkdir $dir
 }
 
+foreach stale_path [list \
+    "$pnr(reports_dir)/prects" \
+    "$pnr(reports_dir)/postroute" \
+    "$pnr(reports_dir)/run_manifest.rpt" \
+    "$pnr(reports_dir)/run_status.rpt" \
+    "$pnr(reports_dir)/pd_matrix_symmetry.rpt" \
+    "$pnr(reports_dir)/report_area_place.rpt" \
+    "$pnr(reports_dir)/report_gate_count_place.rpt" \
+    "$pnr(reports_dir)/report_power_place.rpt" \
+    "$pnr(outputs_dir)/$design(TOPLEVEL).place.enc"] {
+    file delete -force $stale_path
+}
+
+set status_fh [open "$pnr(reports_dir)/run_status.rpt" w]
+puts $status_fh "MPTDC Innovus estimate status"
+puts $status_fh "============================"
+puts $status_fh "Status: INCOMPLETE"
+puts $status_fh "Started: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+puts $status_fh "Script: [file normalize [info script]]"
+close $status_fh
+
 if {![file exists $design(postsyn_netlist)]} {
     puts "MPTDC_PNR_ERROR: missing Genus netlist: $design(postsyn_netlist)"
     puts "Run MPTDC/syn/scripts/genus.tcl first."
@@ -274,5 +295,17 @@ puts $fh "SDC: $design(postsyn_sdc)"
 puts $fh "MMMC: $init_mmmc_file"
 puts $fh "LEF: $tech_files(ALL_LEFS)"
 close $fh
+
+set status_fh [open "$pnr(reports_dir)/run_status.rpt" w]
+puts $status_fh "MPTDC Innovus estimate status"
+puts $status_fh "============================"
+puts $status_fh "Status: COMPLETE"
+puts $status_fh "Completed: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+puts $status_fh "Script: [file normalize [info script]]"
+puts $status_fh "Top: $design(TOPLEVEL)"
+puts $status_fh "Netlist: $design(postsyn_netlist)"
+puts $status_fh "MMMC: $init_mmmc_file"
+puts $status_fh "Pre-CTS summary: $pnr(reports_dir)/prects/${design(TOPLEVEL)}_preCTS.summary.gz"
+close $status_fh
 
 mptdc_pnr_msg "Innovus estimate complete"

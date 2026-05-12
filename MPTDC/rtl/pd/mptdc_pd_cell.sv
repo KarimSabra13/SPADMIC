@@ -31,6 +31,7 @@
 // safe because it is only asserted when the oscillators are being reset
 // (no active edges on fast_phase).
 // =============================================================================
+(* keep_hierarchy = "yes", dont_touch = "true", preserve *)
 module mptdc_pd_cell #(
   parameter int unsigned SAMPLE_DEPTH = 2  // Edge detection pipeline depth (2 or 3)
 )(

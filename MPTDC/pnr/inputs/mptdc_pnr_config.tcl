@@ -57,4 +57,4 @@ set pnr(pd_rows)                   [mptdc_env_or_default MPTDC_PNR_PD_ROWS 8]
 set pnr(pd_cols)                   [mptdc_env_or_default MPTDC_PNR_PD_COLS 8]
 set pnr(pd_region_margin_um)       [mptdc_env_or_default MPTDC_PNR_PD_REGION_MARGIN_UM 10.0]
 set pnr(pd_instance_patterns)      [mptdc_env_list_or_default MPTDC_PNR_PD_INSTANCE_PATTERNS \
-    [list "*gen_pd_row*gen_pd_col*u_pd*"]]
+    [list "*gen_pd_row*gen_pd_col*u_pd*" "*mptdc_pd_cell*" "*u_pd*"]]

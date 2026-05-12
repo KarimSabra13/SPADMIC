@@ -150,43 +150,49 @@ module mptdc_core
   //  downstream logic; only true CDC/oscillator-domain logic keeps async reset
   //  sensitivity.
   // =========================================================================
-  wire rst_fast_n;
-  wire rst_sys_status_n;
-  wire rst_sys_drain_n;
-  wire rst_sys_fifo_n;
-  wire rst_sys_tx_n;
-  wire rst_sys_wdt_n;
+  (* keep = "true", dont_touch = "true" *) wire rst_fast_n;
+  (* keep = "true", dont_touch = "true" *) wire rst_sys_status_n;
+  (* keep = "true", dont_touch = "true" *) wire rst_sys_drain_n;
+  (* keep = "true", dont_touch = "true" *) wire rst_sys_fifo_n;
+  (* keep = "true", dont_touch = "true" *) wire rst_sys_tx_n;
+  (* keep = "true", dont_touch = "true" *) wire rst_sys_wdt_n;
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_status_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_status_n)
   );
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_drain_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_drain_n)
   );
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_fifo_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_fifo_n)
   );
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_tx_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_tx_n)
   );
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_wdt_sync (
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_wdt_n)
   );
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_fast_sync (
     .clk         (osc_fast_ph0),
     .async_rst_n (rst_sys_n),
@@ -337,6 +343,7 @@ module mptdc_core
   for (genvar ns = 0; ns < NE; ns++) begin : gen_pd_row
     for (genvar nf = 0; nf < NE; nf++) begin : gen_pd_col
       localparam int unsigned CELL = ns * NE + nf;
+      (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
       mptdc_pd_cell #(.SAMPLE_DEPTH(2)) u_pd (
         .rst_n        (rst_sys_n),
         .clear_window (meas_pd_clear),

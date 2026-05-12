@@ -28,6 +28,7 @@
 //       .rst_n_o     (rst_sys_n)
 //   );
 // =============================================================================
+(* keep_hierarchy = "yes", dont_touch = "true", preserve *)
 module mptdc_reset_sync #(
     parameter int unsigned STAGES = 2    // number of synchroniser flops (≥ 2)
 ) (
@@ -48,7 +49,8 @@ module mptdc_reset_sync #(
     // -------------------------------------------------------------------------
     // Synchroniser chain
     // -------------------------------------------------------------------------
-    (* ASYNC_REG = "TRUE" *) logic [STAGES-1:0] sync_q;
+    (* ASYNC_REG = "TRUE", keep = "true", dont_touch = "true", preserve, syn_preserve = 1 *)
+    logic [STAGES-1:0] sync_q;
 
     always_ff @(posedge clk or negedge async_rst_n) begin
         if (!async_rst_n)

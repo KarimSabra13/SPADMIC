@@ -30,6 +30,7 @@ copy_as_if_present "${pnr_dir}/logs/innovus_estimate.log" "innovus_estimate_log.
 
 for file in \
   "${pnr_dir}/outputs/mptdc_top_asic.place.enc" \
+  "${pnr_dir}/reports/run_status.rpt" \
   "${pnr_dir}/reports/run_manifest.rpt" \
   "${pnr_dir}/reports/pd_matrix_symmetry.rpt" \
   "${pnr_dir}/reports/report_area_place.rpt" \
@@ -52,6 +53,16 @@ fi
   echo "Snapshot: ${tag}"
   echo "Created: $(date -Iseconds)"
   echo "Commit:  $(git -C "${mptdc_dir}" rev-parse --short HEAD 2>/dev/null || true)"
+  if [[ -f "${pnr_dir}/reports/run_status.rpt" ]]; then
+    echo "Run status: $(grep '^Status:' "${pnr_dir}/reports/run_status.rpt" | head -1 | cut -d: -f2- | xargs)"
+  else
+    echo "Run status: missing run_status.rpt"
+  fi
+  if [[ -f "${pnr_dir}/logs/innovus_estimate.log" && -f "${pnr_dir}/reports/run_manifest.rpt" ]]; then
+    if [[ "${pnr_dir}/logs/innovus_estimate.log" -ot "${pnr_dir}/reports/run_manifest.rpt" ]]; then
+      echo "WARNING: innovus_estimate.log is older than run_manifest.rpt; verify the copied log belongs to this run."
+    fi
+  fi
   echo ""
   echo "Contents:"
   find "${snapshot_dir}" -maxdepth 2 -type f -printf "  %P\n" | sort

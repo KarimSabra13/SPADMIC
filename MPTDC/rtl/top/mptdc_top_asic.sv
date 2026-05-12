@@ -68,9 +68,9 @@ module mptdc_top_asic
   // ────────────────────────────────────────────────────────────────
   //  Internal wires
   // ────────────────────────────────────────────────────────────────
-  wire             rst_input_mux_n;    // local reset leaf for pad input selection
-  wire             rst_csr_n;          // local reset leaf for CSR/config/status
-  wire             rst_core_n;         // local reset leaf for measurement core
+  (* keep = "true", dont_touch = "true" *) wire rst_input_mux_n;    // local reset leaf for pad input selection
+  (* keep = "true", dont_touch = "true" *) wire rst_csr_n;          // local reset leaf for CSR/config/status
+  (* keep = "true", dont_touch = "true" *) wire rst_core_n;         // local reset leaf for measurement core
   wire             local_async_rst_n;
 
   wire             start_async;       // mux → core
@@ -112,18 +112,21 @@ module mptdc_top_asic
   // Split the clk_sys reset fanout at the wrapper boundary. Each leaf keeps
   // async assert / sync deassert behavior, while avoiding a single high-fanout
   // reset net that is difficult to close for recovery/removal in Innovus.
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_input_mux_sync (
     .clk         (clk_sys),
     .async_rst_n (local_async_rst_n),
     .rst_n_o     (rst_input_mux_n)
   );
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_csr_sync (
     .clk         (clk_sys),
     .async_rst_n (local_async_rst_n),
     .rst_n_o     (rst_csr_n)
   );
 
+  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
   mptdc_reset_sync #(.STAGES(2)) u_rst_core_sync (
     .clk         (clk_sys),
     .async_rst_n (local_async_rst_n),

@@ -59,6 +59,7 @@ export MPTDC_PNR_CONNECT_PG_PINS=0
 Review these outputs first:
 
 - `pnr/reports/run_manifest.rpt`
+- `pnr/reports/run_status.rpt`
 - `pnr/reports/report_area_place.rpt`
 - `pnr/reports/report_gate_count_place.rpt`
 - `pnr/reports/report_power_place.rpt`
@@ -73,5 +74,7 @@ bash collect_snapshot.sh innovus_$(date +%Y%m%d_%H%M)_estimate
 ```
 
 The flow also prepares a first-pass phase-detector matrix placement hook. By default it searches for the synthesized `gen_pd_row[*]/gen_pd_col[*]/u_pd` instances, creates the `mptdc_pd_matrix` group/region when Innovus supports those commands, and writes a review report. This is preparation only: final symmetry and matched-RC closure still need the real oscillator/PD macro LEFs and extraction/routing rules.
+
+Each run now clears stale PnR reports before initialization and writes `run_status.rpt`. Treat a snapshot as invalid if `run_status.rpt` is missing or does not say `Status: COMPLETE`.
 
 If congestion is high with `MET1-MET3` signal routing, relax utilization before allowing signal routing on `METTP`; preserving the top metal for power is the default priority for this baseline.
