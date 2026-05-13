@@ -24,13 +24,14 @@ That means packet drain, FIFO buffering, and 16-bit serialization are largely of
 The measurement FSM is:
 
 ```text
-IDLE -> MEASURE -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
+IDLE -> MEASURE -> SNAPSHOT -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
 ```
 
 Approximate role of each state:
 
 - `MEASURE`   : accumulate hits and wait for close condition
-- `CAPTURE`   : snapshot data into the context bank
+- `SNAPSHOT`  : freeze the wide context image into holding registers
+- `CAPTURE`   : commit the frozen context snapshot and mark it drainable
 - `STOP_OSC`  : clear frontend latches so the slow oscillator stops cleanly
 - `CLEAR`     : asynchronously clear PD cells and counters once oscillators are safe
 - `IDLE`      : frontend may accept the next START
@@ -46,13 +47,15 @@ The post-close sequence costs roughly:
 
 | Stage | Approximate cost |
 |-------|------------------|
-| close detect -> `CAPTURE` | 1 fast cycle |
+| close detect -> `CAPTURE` | 2 fast cycles |
 | `CAPTURE` -> `STOP_OSC` | 1 fast cycle |
 | `STOP_OSC` -> `CLEAR` | 1 fast cycle |
 | `CLEAR` -> `IDLE` | 1 fast cycle |
 | async frontend re-arm | sub-cycle / small additional margin |
 
-That gives a nominal practical deadtime on the order of `4-5 ns`.
+That gives a nominal practical deadtime on the order of `5-6 ns`. The added
+snapshot-settle cycle is intentional implementation margin for the wide
+oscillator-domain context snapshot.
 
 ## 5. Why drain does not dominate deadtime
 

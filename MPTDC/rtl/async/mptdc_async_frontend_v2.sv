@@ -9,8 +9,8 @@
 // Author   : Karim Sabra
 // =============================================================================
 // v2.2 changes:
-//   - start_rejected_o: pulses when START arrives but is rejected (no free
-//     context or not armed). Used for real overflow counting in sys_clk.
+//   - start_rejected_o: pulses when START arrives but is rejected (busy,
+//     no free context, or not armed). Used for real overflow counting in sys_clk.
 //   - start_timeout_async_i: injects a synthetic STOP when slow-domain
 //     watchdog fires (STOP never arrived). Triggers normal measurement
 //     close → capture → drain → packet with watchdog flag.
@@ -67,6 +67,7 @@ module mptdc_async_frontend_v2
   // =========================================================================
   logic              start_latched_q;
   logic              stop_latched_q;
+  logic              start_accept_seen_q;
   ctx_id_t           active_ctx_q;
   logic [N_CTX-1:0]  ctx_drain_q;
 
@@ -93,11 +94,15 @@ module mptdc_async_frontend_v2
     end
   end
 
+  wire start_accept_level = start_async_i & any_ctx_free & conv_arm_i
+                          & ~start_latched_q;
+
   // =========================================================================
   // START rejected: START present but cannot be accepted
   // =========================================================================
-  assign start_rejected_o = start_async_i & (~any_ctx_free | ~conv_arm_i)
-                          & ~start_latched_q;
+  assign start_rejected_o = start_async_i
+                           & ~start_accept_seen_q
+                           & (start_latched_q | ~any_ctx_free | ~conv_arm_i);
 
   // =========================================================================
   // START latch  (SR: set by start_async, reset by clear_any / rst_n)
@@ -105,8 +110,17 @@ module mptdc_async_frontend_v2
   always_latch begin
     if (!rst_n || clear_any)
       start_latched_q = 1'b0;
-    else if (start_async_i & any_ctx_free & conv_arm_i)
+    else if (start_accept_level)
       start_latched_q = 1'b1;
+  end
+
+  // Suppress self-rejection while the accepted START pulse is still high. A
+  // later START pulse during the active measurement remains a rejected START.
+  always_latch begin
+    if (!rst_n || !start_async_i)
+      start_accept_seen_q = 1'b0;
+    else if (start_accept_level)
+      start_accept_seen_q = 1'b1;
   end
 
   // =========================================================================
@@ -126,7 +140,7 @@ module mptdc_async_frontend_v2
   always_latch begin
     if (!rst_n)
       active_ctx_q = ctx_id_t'(0);
-    else if (start_async_i & any_ctx_free & ~clear_any)
+    else if (start_accept_level & ~clear_any)
       active_ctx_q = alloc_ctx;
   end
 

@@ -45,10 +45,11 @@ module mptdc_narrow16_tx_v2
     S_IDLE      = 4'd0,
     S_HEADER    = 4'd1,
     S_HIT_FETCH = 4'd2,
-    S_HIT_W0    = 4'd3,
-    S_HIT_W1    = 4'd4,
-    S_HIT_W2    = 4'd5,
-    S_EOC       = 4'd6
+    S_HIT_CALC  = 4'd3,
+    S_HIT_W0    = 4'd4,
+    S_HIT_W1    = 4'd5,
+    S_HIT_W2    = 4'd6,
+    S_EOC       = 4'd7
   } tx_state_e;
 
   tx_state_e state_q;
@@ -82,16 +83,13 @@ module mptdc_narrow16_tx_v2
   logic [13:0] conv_count_q;
 
   // ---------------------------------------------------------------------------
-  // Raw Vernier time reconstruction (combinational).
+  // Raw Vernier time reconstruction.
   // Keeps the original Vernier topology and applies the package-level
   // geometry-origin corrections for STOP-side nslow and per-hit nfast.
+  // Registered one cycle after HIT fetch so timestamp arithmetic is not on the
+  // narrow_data_o output path.
   // ---------------------------------------------------------------------------
-  logic signed [31:0] t_raw_ps;
-
-  always_comb begin
-    t_raw_ps = vernier_tconv_ps(nslow_q, nfast_q, ns_q, nf_q,
-                                slow_boundary_inc_q);
-  end
+  logic signed [31:0] t_raw_ps_q;
 
   // ---------------------------------------------------------------------------
   // Output word formation
@@ -124,11 +122,11 @@ module mptdc_narrow16_tx_v2
 
   // Hit W1 — timestamp variant: [15:0]=t_raw_ps[15:0]
   logic [NARROW_W-1:0] hit_w1_ts;
-  assign hit_w1_ts = t_raw_ps[15:0];
+  assign hit_w1_ts = t_raw_ps_q[15:0];
 
   // Hit W2 (FULL only): [15:0]=t_raw_ps[15:0]
   logic [NARROW_W-1:0] hit_w2;
-  assign hit_w2 = t_raw_ps[15:0];
+  assign hit_w2 = t_raw_ps_q[15:0];
 
   // EOC: [15:14]=11, [13:0]=conv_count
   logic [NARROW_W-1:0] eoc_word;
@@ -158,6 +156,7 @@ module mptdc_narrow16_tx_v2
       ns_q          <= '0;
       nf_q          <= '0;
       nfast_q       <= '0;
+      t_raw_ps_q    <= '0;
     end else begin
       case (state_q)
         // -----------------------------------------------------------------
@@ -188,8 +187,15 @@ module mptdc_narrow16_tx_v2
             ns_q        <= fifo_rd_data_i.hit.ns;
             nf_q        <= fifo_rd_data_i.hit.nf;
             nfast_q     <= fifo_rd_data_i.hit.nfast;
-            state_q     <= S_HIT_W0;
+            state_q     <= S_HIT_CALC;
           end
+        end
+
+        // -----------------------------------------------------------------
+        S_HIT_CALC: begin
+          t_raw_ps_q <= vernier_tconv_ps(nslow_q, nfast_q, ns_q, nf_q,
+                                         slow_boundary_inc_q);
+          state_q <= S_HIT_W0;
         end
 
         // -----------------------------------------------------------------
@@ -254,6 +260,10 @@ module mptdc_narrow16_tx_v2
       S_HIT_FETCH: begin
         // Pop HIT when available
         fifo_rd_en_o = fifo_rd_valid_i;
+      end
+
+      S_HIT_CALC: begin
+        // Registered timestamp calculation bubble.
       end
 
       S_HIT_W0: begin

@@ -106,6 +106,7 @@ module tb_async_kernel_semantics;
 
   initial begin
     logic [CSR_DATA_W-1:0] rd_data;
+    ctx_id_t active_ctx_before;
     tdc_conv_flags_t flags;
 
     apply_reset();
@@ -166,9 +167,22 @@ module tb_async_kernel_semantics;
     start_spad = 1'b1; #1000; start_spad = 1'b0;
     wait (u_dut.u_core.fe_start_latched === 1'b1);
     repeat (3) @(posedge clk_sys);
+    active_ctx_before = u_dut.u_core.fe_active_ctx;
     csr_rd(CSR_STATUS, rd_data);
     assert (status_busy(rd_data) && status_ctx0(rd_data) == CTX_CAPTURING) else begin
       $error("[TB] FAIL Test 2: accepted START did not enter CAPTURING (0x%08h)", rd_data);
+      $finish;
+    end
+
+    start_spad = 1'b1; #1000; start_spad = 1'b0;
+    #50_000;
+    assert (u_dut.u_core.fe_active_ctx == active_ctx_before) else begin
+      $error("[TB] FAIL Test 2: busy START changed active context");
+      $finish;
+    end
+    csr_rd(CSR_OVF_COUNT, rd_data);
+    assert (rd_data[15:0] == 16'd2) else begin
+      $error("[TB] FAIL Test 2: busy START was not counted as rejected (0x%08h)", rd_data);
       $finish;
     end
 

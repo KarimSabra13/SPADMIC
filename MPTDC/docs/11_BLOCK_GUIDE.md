@@ -93,7 +93,9 @@ and debug boundary snapshots.
 
 The context bank is where an in-flight conversion becomes a frozen drainable
 record. It separates the fast capture side from the slower system-clock drain
-side and is central to the design's double-buffered behavior.
+side and is central to the design's double-buffered behavior. The active
+implementation freezes wide fast-domain data into holding registers before the
+context is committed, giving the snapshot path explicit physical timing margin.
 
 ## 4. CDC blocks
 

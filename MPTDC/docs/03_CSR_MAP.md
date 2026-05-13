@@ -189,7 +189,8 @@ bit 15:0  ovf_count
 This counts true rejected START events:
 
 - START arrived while no context was free, or
-- START arrived while `conv_arm=0`
+- START arrived while `conv_arm=0`, or
+- START arrived while another conversion was already active
 
 It is not the same thing as hit saturation.
 

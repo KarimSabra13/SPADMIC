@@ -150,12 +150,13 @@ The slow counter also takes a STOP-side Gray snapshot so exported `Nslow` is coh
 The fast FSM sequence is:
 
 ```text
-IDLE -> MEASURE -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
+IDLE -> MEASURE -> SNAPSHOT -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
 ```
 
 This ordering matters:
 
-- `CAPTURE` freezes the conversion into the context bank
+- `SNAPSHOT` freezes the wide measurement image into context-bank holding registers
+- `CAPTURE` commits the frozen image and marks the context drainable
 - `STOP_OSC` clears the frontend latches, which stops the slow oscillator and leaves phases static
 - `CLEAR` asynchronously clears the PD cells and counters only after the oscillators are safely quiesced
 
@@ -172,6 +173,9 @@ Once captured, the owning context enters `DRAINING`. The system-clock drain FSM 
 5. pulses `conv_done`
 
 The FIFO buffers those acquisition records, and the 16-bit serializer converts them into external packet words.
+The serializer is allowed to insert ready/valid bubbles; timestamp arithmetic is
+registered before timestamp/full hit words so the output pins do not depend on a
+long combinational timestamp path.
 In the shared-readout integration, the same FIFO can instead be drained through
 the exported `acq_*` interface; see [`10_SHARED_READOUT_EXPORT.md`](10_SHARED_READOUT_EXPORT.md).
 

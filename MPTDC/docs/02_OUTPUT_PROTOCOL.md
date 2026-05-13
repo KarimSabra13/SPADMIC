@@ -14,6 +14,11 @@ The active design emits conversion results on a 16-bit ready/valid stream. Each 
 
 The old dedicated TDC sub-header has been removed. `nfast_stop`, `nfast_snap`, `pd_idx`, and `event_seq` are no longer part of the live packet contract.
 
+The serializer may insert internal `clk_sys` bubbles between ready/valid words,
+including a registered timestamp-calculation bubble before hit payload emission.
+Receivers must rely on `valid`/`ready` and packet structure, not fixed cycle
+spacing between words.
+
 ## 2. Word-class identification
 
 ```text

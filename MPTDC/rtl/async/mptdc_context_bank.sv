@@ -14,8 +14,9 @@
 //   - hit_count and close flags
 //
 // CDC contract:
-//   - write side runs on clk_fast and capture_en_i stores one whole context
-//     atomically during CAPTURE
+//   - write side runs on clk_fast. snapshot_en_i freezes one completed image
+//     into holding registers, then capture_en_i commits that frozen image to
+//     the selected drainable context.
 //   - read side is a combinational mux consumed from clk_sys only after the
 //     corresponding ctx_drain bit has crossed into clk_sys and the snapshot is
 //     guaranteed static
@@ -31,6 +32,7 @@ module mptdc_context_bank
 
   // ── write (capture) port ─────────────────────────────────────────
   input  wire  ctx_id_t                 capture_ctx_i,
+  input  wire                           snapshot_en_i,
   input  wire                           capture_en_i,
 
   input  wire  [PD_N-1:0]              pd_hit_level_i,
@@ -62,21 +64,45 @@ module mptdc_context_bank
   logic [MAX_HITS_W-1:0]     ctx_hit_count    [N_CTX];
   tdc_conv_flags_t           ctx_flags        [N_CTX];
 
+  ctx_id_t                    hold_ctx;
+  logic [PD_N-1:0]            hold_hit_level;
+  logic [PD_N*NFAST_W-1:0]   hold_nfast_packed;
+  logic [NSLOW_W-1:0]        hold_nslow_snap;
+  logic [NFAST_W-1:0]        hold_nfast_snap;
+  logic [NFAST_W-1:0]        hold_nfast_stop;
+  logic                      hold_phase0;
+  logic                      hold_boundary_inc;
+  logic [MAX_HITS_W-1:0]     hold_hit_count;
+  tdc_conv_flags_t           hold_flags;
+
   // ================================================================
-  // Write port — capture the entire frozen measurement image for the
-  // selected context in one clk_fast cycle.
+  // Write port — freeze wide data first, then commit the frozen image. This
+  // keeps the high-fanout context-bank write mux off the raw PD/counter path.
   // ================================================================
   always_ff @(posedge clk_fast) begin
+    if (snapshot_en_i) begin
+      hold_ctx          <= capture_ctx_i;
+      hold_hit_level    <= pd_hit_level_i;
+      hold_nfast_packed <= pd_nfast_hit_packed_i;
+      hold_nslow_snap   <= nslow_snap_i;
+      hold_nfast_snap   <= nfast_snap_i;
+      hold_nfast_stop   <= nfast_stop_i;
+      hold_phase0       <= phase0_snap_i;
+      hold_boundary_inc <= slow_boundary_inc_i;
+      hold_hit_count    <= hit_count_i;
+      hold_flags        <= flags_i;
+    end
+
     if (capture_en_i) begin
-      ctx_hit_level   [capture_ctx_i] <= pd_hit_level_i;
-      ctx_nfast_packed[capture_ctx_i] <= pd_nfast_hit_packed_i;
-      ctx_nslow_snap  [capture_ctx_i] <= nslow_snap_i;
-      ctx_nfast_snap  [capture_ctx_i] <= nfast_snap_i;
-      ctx_nfast_stop  [capture_ctx_i] <= nfast_stop_i;   // v2.3
-      ctx_phase0      [capture_ctx_i] <= phase0_snap_i;
-      ctx_boundary_inc[capture_ctx_i] <= slow_boundary_inc_i;
-      ctx_hit_count   [capture_ctx_i] <= hit_count_i;
-      ctx_flags       [capture_ctx_i] <= flags_i;
+      ctx_hit_level   [hold_ctx] <= hold_hit_level;
+      ctx_nfast_packed[hold_ctx] <= hold_nfast_packed;
+      ctx_nslow_snap  [hold_ctx] <= hold_nslow_snap;
+      ctx_nfast_snap  [hold_ctx] <= hold_nfast_snap;
+      ctx_nfast_stop  [hold_ctx] <= hold_nfast_stop;   // v2.3
+      ctx_phase0      [hold_ctx] <= hold_phase0;
+      ctx_boundary_inc[hold_ctx] <= hold_boundary_inc;
+      ctx_hit_count   [hold_ctx] <= hold_hit_count;
+      ctx_flags       [hold_ctx] <= hold_flags;
     end
   end
 

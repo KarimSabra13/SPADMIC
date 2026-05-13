@@ -18,7 +18,7 @@
 //   - closed_by_fast_maxhit flag replaces closed_by_firsthit.
 //
 // v2.2 changes:
-//   - 5-state FSM: IDLE → MEASURE → CAPTURE → STOP_OSC → CLEAR → IDLE
+//   - FSM: IDLE → MEASURE → SNAPSHOT → CAPTURE → STOP_OSC → CLEAR → IDLE
 //     STOP_OSC deasserts osc_keep_alive BEFORE pd_clear to eliminate the
 //     async-clear-while-clock-running race on PD cells.
 //   - Close detection split:
@@ -48,7 +48,8 @@ module mptdc_meas_ctrl
   input  wire [15:0]            wdt_timeout_i,   // 0 = disabled
 
   // Context bank control
-  output logic                  capture_en_o,    // 1 cycle: snapshot
+  output logic                  snapshot_en_o,   // 1 cycle: freeze context-bank holding regs
+  output logic                  capture_en_o,    // 1 cycle: commit frozen snapshot/drain
 
   // Frontend / PD control
   output logic                  fe_clear_o,      // 1 cycle: clear start/stop latches
@@ -58,7 +59,7 @@ module mptdc_meas_ctrl
   // Oscillator keep-alive (to osc_fast_en logic)
   output logic                  osc_keep_alive_o,
 
-  // Close information (captured into context bank on capture_en)
+  // Close information (frozen into context bank holding regs on snapshot_en)
   output tdc_conv_flags_t       close_flags_o,
   output logic [MAX_HITS_W-1:0] hit_count_o,
 
@@ -67,7 +68,7 @@ module mptdc_meas_ctrl
 );
 
   // =========================================================================
-  // State register (3-bit for 5 states)
+  // State register (3-bit for 8 states)
   // =========================================================================
   meas_state_e state_q, state_d;
 
@@ -85,22 +86,21 @@ module mptdc_meas_ctrl
   // Stage 2: 4 pair sums → registered.
   // Stage 3: final total → registered hit count.
   logic [PD_N-1:0] hit_seen_q;
-  logic [PD_N-1:0] hit_seen_d;
+  logic [PD_N-1:0] hit_seen_next;
   logic [3:0] row_cnt_comb [0:NE-1];  // 8 partial sums (max 8 each → 4 bits)
   logic [3:0] row_cnt_q    [0:NE-1];
   logic [4:0] pair_cnt_q   [0:3];
   logic [6:0] total_cnt_comb;         // 7-bit sum (max 64)
   logic [MAX_HITS_W-1:0] hit_cnt_q;   // registered, saturated at MAX_HITS
 
-  assign hit_seen_d = (state_q == ST_M_MEASURE) ? (hit_seen_q | hit_level_i)
-                                                 : {PD_N{1'b0}};
+  assign hit_seen_next = hit_seen_q | hit_level_i;
 
   // Row popcounts (each row is 8 bits -> 4-bit result)
   always_comb begin
     for (int r = 0; r < NE; r++) begin
       automatic int unsigned rsum = 0;
       for (int c = 0; c < NE; c++)
-        rsum += {31'd0, hit_seen_d[r * NE + c]};
+        rsum += {31'd0, hit_seen_q[r * NE + c]};
       row_cnt_comb[r] = rsum[3:0];
     end
   end
@@ -120,15 +120,7 @@ module mptdc_meas_ctrl
       for (int p = 0; p < 4; p++)
         pair_cnt_q[p] <= '0;
       hit_cnt_q <= '0;
-    end else if (state_q == ST_M_IDLE) begin
-      hit_seen_q <= '0;
-      for (int r = 0; r < NE; r++)
-        row_cnt_q[r] <= '0;
-      for (int p = 0; p < 4; p++)
-        pair_cnt_q[p] <= '0;
-      hit_cnt_q <= '0;
-    end else if (state_q == ST_M_MEASURE) begin
-      hit_seen_q <= hit_seen_d;
+    end else begin
       for (int r = 0; r < NE; r++)
         row_cnt_q[r] <= row_cnt_comb[r];
       pair_cnt_q[0] <= {1'b0, row_cnt_q[0]} + {1'b0, row_cnt_q[1]};
@@ -137,6 +129,27 @@ module mptdc_meas_ctrl
       pair_cnt_q[3] <= {1'b0, row_cnt_q[6]} + {1'b0, row_cnt_q[7]};
       hit_cnt_q <= (total_cnt_comb > 7'(MAX_HITS)) ? MAX_HITS_W'(MAX_HITS)
                                                      : total_cnt_comb[MAX_HITS_W-1:0];
+
+      if (state_q == ST_M_IDLE) begin
+        hit_seen_q <= '0;
+      end else if (state_q == ST_M_MEASURE) begin
+        hit_seen_q <= hit_seen_next;
+      end
+    end
+  end
+
+  // Context snapshot timing control. snapshot_en_o freezes wide data into
+  // holding registers; capture_en_o commits the frozen image one fast cycle
+  // later and marks the context drainable.
+  logic snapshot_en_q, capture_en_q;
+
+  always_ff @(posedge clk_fast or negedge rst_n) begin
+    if (!rst_n) begin
+      snapshot_en_q <= 1'b0;
+      capture_en_q  <= 1'b0;
+    end else begin
+      snapshot_en_q <= (state_d == ST_M_SNAPSHOT);
+      capture_en_q <= (state_d == ST_M_CAPTURE);
     end
   end
 
@@ -209,17 +222,18 @@ module mptdc_meas_ctrl
   end
 
   // =========================================================================
-  // Next-state logic (5-state FSM)
+  // Next-state logic
   // =========================================================================
   always_comb begin
     state_d = state_q;
     case (state_q)
-      ST_M_IDLE:     if (meas_active_i) state_d = ST_M_MEASURE;
-      ST_M_MEASURE:  if (close_any)     state_d = ST_M_CAPTURE;
-      ST_M_CAPTURE:                     state_d = ST_M_STOP_OSC;
-      ST_M_STOP_OSC:                    state_d = ST_M_CLEAR;
-      ST_M_CLEAR:                       state_d = ST_M_IDLE;
-      default:                          state_d = ST_M_IDLE;
+      ST_M_IDLE:      if (meas_active_i) state_d = ST_M_MEASURE;
+      ST_M_MEASURE:   if (close_any)     state_d = ST_M_SNAPSHOT;
+      ST_M_SNAPSHOT:                     state_d = ST_M_CAPTURE;
+      ST_M_CAPTURE:                      state_d = ST_M_STOP_OSC;
+      ST_M_STOP_OSC:                     state_d = ST_M_CLEAR;
+      ST_M_CLEAR:                        state_d = ST_M_IDLE;
+      default:                           state_d = ST_M_IDLE;
     endcase
   end
 
@@ -247,7 +261,8 @@ module mptdc_meas_ctrl
   // CLEAR:    pd_clear + counter async_clr.  Safe because slow phases are
   //           now static (stopped in STOP_OSC), so no PD sampling race.
   // =========================================================================
-  assign capture_en_o     = (state_q == ST_M_CAPTURE);
+  assign snapshot_en_o    = snapshot_en_q;
+  assign capture_en_o     = capture_en_q;
   assign osc_keep_alive_o = (state_q != ST_M_IDLE);
   assign fe_clear_o       = (state_q == ST_M_STOP_OSC);
   assign pd_clear_o       = (state_q == ST_M_CLEAR);

@@ -22,6 +22,7 @@ module tb_context_bank_unit;
 
   // ── DUT signals ───────────────────────────────────────────────────
   ctx_id_t                capture_ctx;
+  logic                   snapshot_en;
   logic                   capture_en;
   logic [PD_N-1:0]        pd_hit_level;
   logic [PD_N*NFAST_W-1:0] pd_nfast_hit_packed;
@@ -39,6 +40,7 @@ module tb_context_bank_unit;
   mptdc_context_bank u_dut (
     .clk_fast               (clk_fast),
     .capture_ctx_i          (capture_ctx),
+    .snapshot_en_i          (snapshot_en),
     .capture_en_i           (capture_en),
     .pd_hit_level_i         (pd_hit_level),
     .pd_nfast_hit_packed_i  (pd_nfast_hit_packed),
@@ -83,7 +85,8 @@ module tb_context_bank_unit;
   );
     @(posedge clk_fast);
     capture_ctx          = ctx;
-    capture_en           = 1'b1;
+    snapshot_en          = 1'b1;
+    capture_en           = 1'b0;
     pd_hit_level         = hl;
     pd_nfast_hit_packed  = nfp;
     nslow_snap           = ns;
@@ -93,6 +96,9 @@ module tb_context_bank_unit;
     slow_boundary_inc    = binc;
     hit_count            = hc;
     flags                = fl_in;
+    @(posedge clk_fast);
+    snapshot_en          = 1'b0;
+    capture_en           = 1'b1;
     @(posedge clk_fast);
     capture_en           = 1'b0;
   endtask
@@ -148,6 +154,7 @@ module tb_context_bank_unit;
   initial begin
     // Init
     capture_ctx          = '0;
+    snapshot_en          = 1'b0;
     capture_en           = 1'b0;
     pd_hit_level         = '0;
     pd_nfast_hit_packed  = '0;

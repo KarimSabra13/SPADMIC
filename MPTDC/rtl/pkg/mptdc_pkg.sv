@@ -14,7 +14,8 @@
 //   - mode_cfg removed from mptdc_cfg_t; CSR_MODE[0] is now reserved
 //
 // v2.2 changes (design-review fixes):
-//   - Measurement FSM: 5-state (added ST_M_STOP_OSC for safe PD clear)
+//   - Measurement FSM adds a snapshot-settle state before CAPTURE so the
+//     wide context snapshot is frozen in holding registers before commit.
 //   - Close detection: OR-reduction for max_hits=1, pipelined for max_hits>1
 //   - Overflow flag removed from conv_flags (was misused as hit-saturation)
 //   - slow_boundary_inc added to meta/snapshot for offline calibration
@@ -126,15 +127,18 @@ package mptdc_pkg;
 
   // =========================================================================
   // Measurement FSM states (fast domain — mptdc_meas_ctrl)
-  // 5-state: IDLE → MEASURE → CAPTURE → STOP_OSC → CLEAR → IDLE
-  // STOP_OSC deasserts osc_keep_alive before PD clear to avoid async race.
+  // IDLE → MEASURE → SNAPSHOT → CAPTURE → STOP_OSC → CLEAR → IDLE.
+  // SNAPSHOT freezes the wide measurement image in holding registers before a
+  // single CAPTURE commit. STOP_OSC deasserts osc_keep_alive before PD clear to
+  // avoid async race.
   // =========================================================================
   typedef enum logic [2:0] {
-    ST_M_IDLE     = 3'd0,
-    ST_M_MEASURE  = 3'd1,
-    ST_M_CAPTURE  = 3'd2,
-    ST_M_STOP_OSC = 3'd3,
-    ST_M_CLEAR    = 3'd4
+    ST_M_IDLE      = 3'd0,
+    ST_M_MEASURE   = 3'd1,
+    ST_M_SNAPSHOT  = 3'd2,
+    ST_M_CAPTURE   = 3'd3,
+    ST_M_STOP_OSC  = 3'd4,
+    ST_M_CLEAR     = 3'd5
   } meas_state_e;
 
   // =========================================================================
