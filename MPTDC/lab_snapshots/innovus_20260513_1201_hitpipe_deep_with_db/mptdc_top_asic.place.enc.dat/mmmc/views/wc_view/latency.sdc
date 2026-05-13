@@ -1,0 +1,6 @@
+set_clock_latency -0.18  [get_pins {{u_core_ctx_drain_sync_ff2_reg[1]/C}}]
+set_clock_latency -0.18  [get_pins {{u_core_u_drain_ctrl_state_q_reg[0]/C}}]
+set_clock_latency -0.18  [get_pins {{u_core_u_drain_ctrl_state_q_reg[1]/C}}]
+set_clock_latency -0.18  [get_pins {{u_core_u_drain_ctrl_released_mask_reg[0]/C}}]
+set_clock_latency -0.18  [get_pins {{u_core_u_drain_ctrl_released_mask_reg[1]/C}}]
+set_clock_latency -0.18  [get_pins {{u_core_ctx_drain_sync_ff2_reg[0]/C}}]

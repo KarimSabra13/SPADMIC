@@ -1,0 +1,8 @@
+
+Begin checking placement ... (start mem=2681.2M, init mem=2681.2M)
+Region/Fence Violation:	2
+*info: Placed = 21357         
+*info: Unplaced = 0           
+Placement Density:76.23%(605145/793794)
+Placement Density (including fixed std cells):76.23%(605145/793794)
+Finished checkPlace (total: cpu=0:00:00.4, real=0:00:00.0; vio checks: cpu=0:00:00.3, real=0:00:00.0; mem=2681.2M)

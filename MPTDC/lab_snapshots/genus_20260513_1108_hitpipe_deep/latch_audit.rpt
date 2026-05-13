@@ -1,0 +1,11 @@
+MPTDC latch report
+==================
+Count: 5
+
+Instance                                                                         Base cell
+------------------------------------------------------------------------------------------------------------------------
+u_core_u_frontend_active_ctx_q_reg[0]                                            DLHQHDX4
+u_core_u_frontend_ctx_drain_q_reg[0]                                             DLLQHDX1
+u_core_u_frontend_ctx_drain_q_reg[1]                                             DLLQHDX2
+u_core_u_frontend_start_latched_q_reg                                            DLHQHDX4
+u_core_u_frontend_stop_latched_q_reg                                             DLHQHDX0

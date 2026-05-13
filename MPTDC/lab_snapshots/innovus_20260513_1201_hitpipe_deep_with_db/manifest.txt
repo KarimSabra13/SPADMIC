@@ -1,0 +1,64 @@
+Snapshot: innovus_20260513_1201_hitpipe_deep_with_db
+Created: 2026-05-13T12:01:25+02:00
+Commit:  545e645
+Run status: COMPLETE
+Innovus log copied: innovus_estimate.logv9
+Copied Innovus DB directory: mptdc_top_asic.place.enc.dat
+
+Contents:
+  db_copy_note.tmp
+  innovus_estimate_log.rpt
+  manifest.txt
+  mptdc_top_asic.place.enc
+  mptdc_top_asic.place.enc.dat/gui.pref.tcl
+  mptdc_top_asic.place.enc.dat/inn.cmd.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.aae.settings
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.apa
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.db.da.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.dbinfo
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.flexmv
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.fp.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.fp.spr.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.globals
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.init
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.marker.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.mode
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.opconds
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.pg.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.place.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.prop
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.route.congmap.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.route.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.symtbl.gz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.tcz
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.v.bin
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic.v.bin_lib
+  mptdc_top_asic.place.enc.dat/mptdc_top_asic_power_constraints.tcl
+  mptdc_top_asic.place.enc.dat/scheduling_file.cts
+  mptdc_top_asic.place.enc.dat/um.json.gz
+  mptdc_top_asic.place.enc.dat/user.attrdef
+  mptdc_top_asic.place.enc.dat/viewDefinition.tcl
+  pd_matrix_symmetry.rpt
+  prects/extra_check_design_all.rpt
+  prects/extra_check_place.rpt
+  prects/extra_pd_reset_audit.rpt
+  prects/extra_report_congestion.rpt
+  prects/extra_report_constraint.rpt
+  prects/extra_report_density.rpt
+  prects/extra_report_netlist_stats.rpt
+  prects/extra_report_power_hier.rpt
+  prects/extra_report_timing_100.rpt
+  prects/extra_report_timing_full_clock.rpt
+  prects/mptdc_top_asic_preCTS.cap.gz
+  prects/mptdc_top_asic_preCTS.fanout.gz
+  prects/mptdc_top_asic_preCTS.length.gz
+  prects/mptdc_top_asic_preCTS.summary.gz
+  prects/mptdc_top_asic_preCTS.tran.gz
+  prects/mptdc_top_asic_preCTS_all.tarpt.gz
+  prects/mptdc_top_asic_preCTS_default.tarpt.gz
+  prects/mptdc_top_asic_preCTS_reg2reg.tarpt.gz
+  report_area_place.rpt
+  report_gate_count_place.rpt
+  report_power_place.rpt
+  run_manifest.rpt
+  run_status.rpt

@@ -1,0 +1,129 @@
+Creating directory checkDesign.
+
+Begin checking placement ... (start mem=2681.2M, init mem=2681.2M)
+Region/Fence Violation:	2
+*info: Recommended don't use cell = 0           
+*info: Placed = 21357         
+*info: Unplaced = 0           
+Placement Density:76.23%(605145/793794)
+Placement Density (including fixed std cells):76.23%(605145/793794)
+Finished checkPlace (total: cpu=0:00:00.4, real=0:00:01.0; vio checks: cpu=0:00:00.3, real=0:00:00.0; mem=2681.2M)
+Design: mptdc_top_asic
+
+------ Design Summary:
+Total Standard Cell Number   (cells) : 21357
+Total Block Cell Number      (cells) : 0
+Total I/O Pad Cell Number    (cells) : 0
+Total Standard Cell Area     ( um^2) : 605145.14
+Total Block Cell Area        ( um^2) : 0.00
+Total I/O Pad Cell Area      ( um^2) : 0.00
+
+------ Design Statistics:
+
+Number of Instances            : 21357
+Number of Non-uniquified Insts : 21304
+Number of Nets                 : 25842
+Average number of Pins per Net : 3.01
+Maximum number of Pins in Net  : 2971
+
+------ I/O Port summary
+
+Number of Primary I/O Ports    : 157
+Number of Input Ports          : 54
+Number of Output Ports         : 103
+Number of Bidirectional Ports  : 0
+Number of Power/Ground Ports   : 0
+Number of Floating Ports                     *: 25
+Number of Ports Connected to Multiple Pads   *: 0
+Number of Ports Connected to Core Instances   : 132
+**WARN: (IMPREPO-200):	There are 25 Floating Ports in the top design.
+**WARN: (IMPREPO-202):	There are 132 Ports connected to core instances.
+
+------ Design Rule Checking:
+
+Number of Output Pins connect to Power/Ground *: 0
+Number of Insts with Input Pins tied together ?: 6
+Number of TieHi/Lo term nets not connected to instance's PG terms ?: 0
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_drain_ctrl_state_q_reg[1]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_drain_ctrl_state_q_reg[0]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_wdt_global_cnt_reg[4]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'RN' of  instance 'u_core_u_wdt_global_cnt_reg[8]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_nfast_q_reg[6]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_nf_q_reg[0]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_nfast_q_reg[2]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_drain_ctrl_pd_scan_q_reg[0]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_nfast_q_reg[5]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_nfast_q_reg[4]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_nfast_q_reg[3]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'RN' of  instance 'u_core_u_drain_ctrl_pd_scan_q_reg[5]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_fifo_rd_ptr_q_reg[0]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_drain_ctrl_drain_ctx_q_reg[0]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_state_q_reg[2]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_fifo_rd_ptr_q_reg[2]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_fifo_rd_ptr_q_reg[1]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_ns_q_reg[1]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_ns_q_reg[0]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (IMPDB-2136):	Input term 'SN' of  instance 'u_core_u_narrow_tx_state_q_reg[1]' does not connect to a 'TieHi ' net. The netlist is not correct or the net for connecting tie high/low signals is not specified. To resolve this problem, check your netlist or run globalNetConnect to specify the tie high/low signal nets.
+**WARN: (EMS-27):	Message (IMPDB-2136) has exceeded the current message display limit of 20.
+To increase the message display limit, refer to the product command reference manual.
+Number of Input/InOut Floating Pins            : 59
+Number of Output Floating Pins                 : 0
+Number of Output Term Marked TieHi/Lo         *: 0
+
+**WARN: (IMPREPO-216):	There are 6 Instances with input pins tied together.
+**WARN: (IMPREPO-218):	There are 59 Floating Instance terminals.
+Number of nets with tri-state drivers          : 0
+Number of nets with parallel drivers           : 0
+Number of nets with multiple drivers           : 0
+Number of nets with no driver (No FanIn)       : 9
+Number of Output Floating nets (No FanOut)     : 1053
+Number of High Fanout nets (>50)               : 8
+**WARN: (IMPREPO-227):	There are 8 High Fanout nets (>50).
+**WARN: (IMPREPO-212):	There are 25 Floating I/O Pins.
+**WARN: (IMPREPO-213):	There are 132 I/O Pins connected to Non-IO Insts.
+Checking for any assigns in the netlist...
+Assigns in module mptdc_pd_cell_SAMPLE_DEPTH2_1402
+  FE_OFN11_u_core_pd_nfast_hit_packed_165 nfast_hit[4]
+Assigns in module mptdc_osc_stub_NE8_1361
+  phase[0] phase[4]
+Assigns in module mptdc_osc_stub_NE8
+  phase[0] phase[4]
+Assigns in module mptdc_top_asic
+  csr_ready_o 1b'1
+  acq_data_o[17] acq_data_o[16] acq_data_o[15] acq_data_o[14] acq_data_o[13] acq_data_o[12] acq_data_o[11] acq_data_o[6] 1b'0
+Checking routing tracks.....
+Checking other grids.....
+Checking FINFET Grid is on Manufacture Grid.....
+
+Checking core/die box is on Grid.....
+
+Checking snap rule ......
+
+Checking Row is on grid......
+
+Checking AreaIO row.....
+Checking routing blockage.....
+Checking components.....
+Checking constraints (guide/region/fence).....
+**WARN: (IMPFP-7400):	Group mptdc_pd_matrix's vertexes (30.2400000000 , 896.1600000000) (905.1200000000 , 896.1600000000) (905.1200000000 , 29.1200000000)  are NOT on InstanceGrid. You can use the getFPlanMode command to check the current grid settings and use the setFPlanMode command to change the grid to snap to. You can also use the setPreference SnapAllCorners 1(0) command to control if all vertexes (or corners) need to be snapped to the grid.
+Checking groups.....
+Checking Ptn Core Box.....
+
+Checking Preroutes.....
+No. of regular pre-routes not on tracks : 0 
+ Design check done.
+Report saved in file checkDesign/mptdc_top_asic.main.htm.ascii
+
+*** Summary of all messages that are not suppressed in this session:
+Severity  ID               Count  Summary                                  
+WARNING   IMPFP-7400           1  %s are NOT on %s. You can use the %s com...
+WARNING   IMPDB-2136          59  %s term '%s' of %s instance '%s' does no...
+WARNING   IMPREPO-227          1  There are %d High Fanout nets (>50).     
+WARNING   IMPREPO-200          1  There are %d Floating Ports in the top d...
+WARNING   IMPREPO-202          1  There are %d Ports connected to core ins...
+WARNING   IMPREPO-212          1  There are %d Floating I/O Pins.          
+WARNING   IMPREPO-213          1  There are %d I/O Pins connected to Non-I...
+WARNING   IMPREPO-216          1  There are %d Instances with input pins t...
+WARNING   IMPREPO-218          1  There are %d Floating Instance terminals...
+*** Message Summary: 67 warning(s), 0 error(s)
+
