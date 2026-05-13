@@ -24,7 +24,7 @@ At the current checkpoint:
 - the most recent merged IMC report observed on the lab server improved to `70.08%` overall (average grade `82.05%`), but the design still needs another Cadence rerun after the newest local closure additions before any freeze decision
 - targeted closure work is currently focused on CSR/top/reset coverage, so synthesis should still be treated as exploratory rather than freeze-ready
 - the oscillator behavioral model is a simulation-only artifact and is excluded from synthesis
-- the async frontend intentionally contains `5` latch-style storage elements that must be reviewed, not treated as accidental inference
+- the async frontend intentionally contains `6` latch-style storage elements that must be reviewed, not treated as accidental inference
 - final QoR, timing, and library legality still depend on your actual XFAB/XH018 PDK installation and Genus run logs
 
 ## Directory Structure
@@ -183,7 +183,7 @@ All design-specific variables in one place — the single source of truth.
 | **SDC parameters** | `INPUT_DELAY_*`, `OUTPUT_DELAY_*`, `CLOCK_UNCERTAINTY`, `MAX_FANOUT` | Constraint values |
 | **File paths** | `rtl_dir`, `export_dir`, `synthesis_reports` | Directory structure |
 | **MMMC views** | `selected_setup/hold_analysis_views` | Corner selection |
-| **Latch audit** | `EXPECTED_LATCH_COUNT = 5` | Post-synthesis verification |
+| **Latch audit** | `EXPECTED_LATCH_COUNT = 6` | Post-synthesis verification |
 
 **Why centralized:** Changing a clock frequency or adding a port only requires
 editing `mptdc.defines` — the SDC, MMMC, and genus.tcl all read from it.
@@ -258,7 +258,7 @@ Reusable helper procedures used throughout the flow:
 | `mptdc_message` | Formatted info/debug/warning messages |
 | `mptdc_report_timing` | Generates Genus-22.13-compatible worst-path, summary, and violation reports; writes a note when a dedicated hold split is unavailable |
 | `mptdc_default_cost_groups` | Creates reg2reg, in2reg, reg2out, in2out path groups |
-| `mptdc_latch_audit` | Writes a latch inventory via `get_db` and compares the count to the expected value (5) |
+| `mptdc_latch_audit` | Writes a latch inventory via `get_db` and compares the count to the expected value (6) |
 | `mptdc_full_reports` | Generates all post-synthesis reports (area, gates, power, DRV, QoR) |
 | `mptdc_print_summary` | Final summary banner with checklist |
 
@@ -314,7 +314,7 @@ Stage 6: SYNTHESIS
 Stage 7: POST_SYNTHESIS
   └── Timing reports (setup, hold, violations)
   └── Area, power, gate count, design rules, QoR
-  └── Latch audit (expect exactly 5)
+  └── Latch audit (expect exactly 6)
 
 Stage 8: EXPORT
   └── Gate-level netlist (.v)
@@ -346,10 +346,11 @@ across deployed Genus releases:
 - latch reporting uses `get_db` instead of `report_gates -type`
 
 ### Intentional Latches
-The async frontend (`mptdc_async_frontend_v2`) uses 5 SR latches for
-pulse capture. These are architecturally required — the design captures
+The async frontend (`mptdc_async_frontend_v2`) uses 6 SR latches for
+pulse capture, busy-start rejection suppression, active-context ownership, and
+context drain flags. These are architecturally required — the design captures
 sub-nanosecond START/STOP pulses that cannot be sampled by clocked FFs.
-The latch audit verifies exactly 5 exist post-synthesis.
+The latch audit verifies exactly 6 exist post-synthesis.
 
 ### Oscillator Stubs — How Timing Works Without a Real Oscillator
 

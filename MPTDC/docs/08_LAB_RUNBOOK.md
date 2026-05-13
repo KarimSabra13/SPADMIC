@@ -681,7 +681,7 @@ genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ║ elaborate  ║ 0:00:10     ║ mptdc_top_asic elaborated     ║
 ║ post_elab  ║ 0:00:03     ║ check_timing_intent clean     ║
 ║ synthesis  ║ 0:02:00     ║ Synthesis complete             ║
-║ post_synth ║ 0:00:30     ║ 5 latches (expected: 5) ✓     ║
+║ post_synth ║ 0:00:30     ║ 6 latches (expected: 6) ✓     ║
 ║ export     ║ 0:00:05     ║ Netlist + SDC exported         ║
 ╚════════════╩═════════════╩═══════════════════════════════╝
 ```
@@ -706,7 +706,7 @@ ls ../reports/post_synth/
 | Check | Where | Pass criteria |
 |-------|-------|--------------|
 | **Timing met** | `timing_summary.rpt` | No negative slack (or small violations acceptable for trial) |
-| **Latch count = 5** | Genus log (latch audit) | Exactly 5 intentional SR latches |
+| **Latch count = 6** | Genus log (latch audit) | Exactly 6 intentional SR latches |
 | **No unresolved references** | Genus log | No `*W*` about missing modules |
 | **Clock groups** | `check_timing_intent` | All 3 clocks in async groups |
 | **Area reasonable** | `area.rpt` | Gate count in expected range for 180 nm |
@@ -734,7 +734,7 @@ syn/
 | `Cannot find library file` | Wrong PDK path | Fix path in `libraries.xh018-stdcells.tcl` |
 | `No .lib file` | PDK not installed | Get XFAB XH018 PDK from your foundry account |
 | Large negative slack on osc domain | Combinational depth too deep for 0.9 ns | Expected at 180 nm — check if PD matrix is the bottleneck |
-| `Warning: latch inferred` | Intentional latches in async frontend | Should be exactly 5 — latch audit checks this |
+| `Warning: latch inferred` | Intentional latches in async frontend | Should be exactly 6 — latch audit checks this |
 | `Error: undefined module mptdc_osc_model` | OSC model compiled during synthesis | Should not happen — `MPTDC_USE_OSC_MODEL` is NOT defined for synthesis |
 
 ---
@@ -752,7 +752,7 @@ Step  What                                Tool        Time         Pass Criteria
  6    LUT + enhanced recalibration       Python      10-30 min    Baselines reproduced
  7    Fixed-delay proof run              Xrun+Py     variable     Summary/averaging CSVs
  8    Coverage refresh (recommended)     Xrun+IMC    variable     Coverage DB + merged report
- 9    Exploratory synthesis              Genus       3-5 min      Timing clean, 5 latches
+ 9    Exploratory synthesis              Genus       3-5 min      Timing clean, 6 latches
 ```
 
 **Practical interpretation:** your next logical checkpoint on the lab server is
