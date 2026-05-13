@@ -26,6 +26,19 @@ copy_as_if_present() {
   fi
 }
 
+copy_dir_if_requested() {
+  local src="$1"
+  local dst="${snapshot_dir}/$(basename "$src")"
+  if [[ -d "$src" ]]; then
+    if [[ "${MPTDC_SNAPSHOT_COPY_INNOVUS_DB:-0}" == "1" ]]; then
+      cp -a "$src" "$dst"
+      echo "Copied Innovus DB directory: $(basename "$src")" >> "${snapshot_dir}/db_copy_note.tmp"
+    else
+      echo "Skipped Innovus DB directory: $(basename "$src") (set MPTDC_SNAPSHOT_COPY_INNOVUS_DB=1 to copy it)" >> "${snapshot_dir}/db_copy_note.tmp"
+    fi
+  fi
+}
+
 latest_innovus_log=""
 if [[ -d "${pnr_dir}/logs" ]]; then
   latest_innovus_log="$(
@@ -57,6 +70,8 @@ for file in \
   copy_if_present "$file"
 done
 
+copy_dir_if_requested "${pnr_dir}/outputs/mptdc_top_asic.place.enc.dat"
+
 if [[ -d "${pnr_dir}/reports/prects" ]]; then
   mkdir -p "${snapshot_dir}/prects"
   find "${pnr_dir}/reports/prects" -maxdepth 1 -type f -exec cp {} "${snapshot_dir}/prects/" \;
@@ -77,9 +92,14 @@ fi
     echo "Run status: missing run_status.rpt"
   fi
   echo "${log_copy_note}"
+  if [[ -f "${snapshot_dir}/db_copy_note.tmp" ]]; then
+    cat "${snapshot_dir}/db_copy_note.tmp"
+  fi
   echo ""
   echo "Contents:"
   find "${snapshot_dir}" -maxdepth 2 -type f -printf "  %P\n" | sort
 } > "${snapshot_dir}/manifest.txt"
+
+rm -f "${snapshot_dir}/db_copy_note.tmp"
 
 echo "Snapshot written to ${snapshot_dir}"

@@ -11,8 +11,10 @@
 // v2.4 changes (first-hit mode removal):
 //   - Removed first_hit_mode_i port — single multi-hit operating mode.
 //   - max_hits=1 uses the fast OR-reduction close path (close_fast) for
-//     minimum-latency single-hit operation (~0.3-0.6 ns at 180nm).
-//   - max_hits>1 uses the pipelined hierarchical count close (close_counted).
+//     minimum-latency single-hit operation.
+//   - max_hits>1 uses a deeply pipelined hierarchical count close
+//     (close_counted).  The extra latency is intentional: it avoids forcing the
+//     PD matrix to drive a 64-bit population-count tree in one ~900 ps cycle.
 //   - closed_by_fast_maxhit flag replaces closed_by_firsthit.
 //
 // v2.2 changes:
@@ -73,68 +75,79 @@ module mptdc_meas_ctrl
   // Hit count — split close paths for 180nm timing closure
   // =========================================================================
 
-  // ── OR-reduction: any hit present (~0.3-0.6 ns) ──
+  // ── OR-reduction: single-hit fast-close path ──
   logic any_hit;
   assign any_hit = |hit_level_i;
 
-  // ── MULTI_HIT: 2-stage pipelined hierarchical saturating count ──
-  // Stage 1: 8 row popcounts (8 bits each) → balanced tree → registered
-  logic [3:0] row_cnt [0:NE-1];      // 8 partial sums (max 8 each → 4 bits)
+  // ── MULTI_HIT: physically-safe pipelined hierarchical saturating count ──
+  // Stage 0: register the cumulative PD hit bitmap.
+  // Stage 1: 8 row popcounts (8 bits each) → registered.
+  // Stage 2: 4 pair sums → registered.
+  // Stage 3: final total → registered hit count.
+  logic [PD_N-1:0] hit_seen_q;
+  logic [PD_N-1:0] hit_seen_d;
+  logic [3:0] row_cnt_comb [0:NE-1];  // 8 partial sums (max 8 each → 4 bits)
+  logic [3:0] row_cnt_q    [0:NE-1];
+  logic [4:0] pair_cnt_q   [0:3];
   logic [6:0] total_cnt_comb;         // 7-bit sum (max 64)
-  logic [MAX_HITS_W-1:0] hit_cnt_q;  // registered, saturated at MAX_HITS
+  logic [MAX_HITS_W-1:0] hit_cnt_q;   // registered, saturated at MAX_HITS
 
-  // Row popcounts (each row is 8 bits → 4-bit result)
+  assign hit_seen_d = (state_q == ST_M_MEASURE) ? (hit_seen_q | hit_level_i)
+                                                 : {PD_N{1'b0}};
+
+  // Row popcounts (each row is 8 bits -> 4-bit result)
   always_comb begin
     for (int r = 0; r < NE; r++) begin
       automatic int unsigned rsum = 0;
       for (int c = 0; c < NE; c++)
-        rsum += {31'd0, hit_level_i[r * NE + c]};
-      row_cnt[r] = rsum[3:0];
+        rsum += {31'd0, hit_seen_d[r * NE + c]};
+      row_cnt_comb[r] = rsum[3:0];
     end
   end
 
-  // Balanced 3-level adder tree: 8 → 4 → 2 → 1
-  logic [4:0] l1_a, l1_b, l1_c, l1_d;  // level 1: pairs → 5-bit
-  logic [5:0] l2_a, l2_b;               // level 2: pairs → 6-bit
-  logic [6:0] l3;                        // level 3: final → 7-bit
-
   always_comb begin
-    // Level 1: 8 → 4 values
-    l1_a = {1'b0, row_cnt[0]} + {1'b0, row_cnt[1]};
-    l1_b = {1'b0, row_cnt[2]} + {1'b0, row_cnt[3]};
-    l1_c = {1'b0, row_cnt[4]} + {1'b0, row_cnt[5]};
-    l1_d = {1'b0, row_cnt[6]} + {1'b0, row_cnt[7]};
-
-    // Level 2: 4 → 2 values
-    l2_a = {1'b0, l1_a} + {1'b0, l1_b};
-    l2_b = {1'b0, l1_c} + {1'b0, l1_d};
-
-    // Level 3: 2 → 1 value
-    l3 = {1'b0, l2_a} + {1'b0, l2_b};
-
-    // Saturate at MAX_HITS for combinational output
-    total_cnt_comb = l3;
+    total_cnt_comb = {2'b0, pair_cnt_q[0]} + {2'b0, pair_cnt_q[1]}
+                   + {2'b0, pair_cnt_q[2]} + {2'b0, pair_cnt_q[3]};
   end
 
-  // Pipeline register: sample the tree result every fast cycle in MEASURE
+  // Pipeline registers.  Counted close is delayed by several fast cycles, but
+  // every stage now has a small, local amount of logic suitable for XH018.
   always_ff @(posedge clk_fast or negedge rst_n) begin
-    if (!rst_n)
+    if (!rst_n) begin
+      hit_seen_q <= '0;
+      for (int r = 0; r < NE; r++)
+        row_cnt_q[r] <= '0;
+      for (int p = 0; p < 4; p++)
+        pair_cnt_q[p] <= '0;
       hit_cnt_q <= '0;
-    else if (state_q == ST_M_IDLE)
+    end else if (state_q == ST_M_IDLE) begin
+      hit_seen_q <= '0;
+      for (int r = 0; r < NE; r++)
+        row_cnt_q[r] <= '0;
+      for (int p = 0; p < 4; p++)
+        pair_cnt_q[p] <= '0;
       hit_cnt_q <= '0;
-    else if (state_q == ST_M_MEASURE)
+    end else if (state_q == ST_M_MEASURE) begin
+      hit_seen_q <= hit_seen_d;
+      for (int r = 0; r < NE; r++)
+        row_cnt_q[r] <= row_cnt_comb[r];
+      pair_cnt_q[0] <= {1'b0, row_cnt_q[0]} + {1'b0, row_cnt_q[1]};
+      pair_cnt_q[1] <= {1'b0, row_cnt_q[2]} + {1'b0, row_cnt_q[3]};
+      pair_cnt_q[2] <= {1'b0, row_cnt_q[4]} + {1'b0, row_cnt_q[5]};
+      pair_cnt_q[3] <= {1'b0, row_cnt_q[6]} + {1'b0, row_cnt_q[7]};
       hit_cnt_q <= (total_cnt_comb > 7'(MAX_HITS)) ? MAX_HITS_W'(MAX_HITS)
                                                      : total_cnt_comb[MAX_HITS_W-1:0];
+    end
   end
 
-  // Snapshot hit count: use the registered pipeline value
-  // (available 1 cycle after the hits appear — close_mh acts on this)
-  assign hit_count_o = hit_cnt_q;
+  // Snapshot hit count: single-hit fast close intentionally exports one hit;
+  // counted mode uses the registered pipeline value.
+  assign hit_count_o = flags_q.closed_by_fast_maxhit ? MAX_HITS_W'(1) : hit_cnt_q;
 
   // =========================================================================
   // Close conditions (v2.4: unified — no first_hit_mode_i)
-  //   close_fast:    max_hits==1  → OR-reduction, zero-cycle, fits 900 ps
-  //   close_counted: max_hits>1   → pipelined comparator, 1-cycle lag
+  //   close_fast:    max_hits==1  -> OR-reduction, zero-cycle
+  //   close_counted: max_hits>1   -> deeply pipelined comparator
   // =========================================================================
   logic close_fast, close_counted, close_wd, close_any;
 

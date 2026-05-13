@@ -74,6 +74,24 @@ cd MPTDC/pnr/scripts
 bash collect_snapshot.sh innovus_$(date +%Y%m%d_%H%M)_estimate
 ```
 
+`saveDesign` writes a small restore script (`mptdc_top_asic.place.enc`) plus a
+database directory (`mptdc_top_asic.place.enc.dat`).  To reopen a live run from
+`pnr/scripts`, use one of:
+
+```tcl
+source ../outputs/mptdc_top_asic.place.enc
+# or:
+restoreDesign ../outputs/mptdc_top_asic.place.enc.dat mptdc_top_asic
+```
+
+The snapshot helper skips the `.enc.dat` database directory by default to avoid
+accidentally committing a large binary Innovus DB.  If you explicitly need a
+restorable snapshot, run:
+
+```bash
+MPTDC_SNAPSHOT_COPY_INNOVUS_DB=1 bash collect_snapshot.sh innovus_$(date +%Y%m%d_%H%M)_estimate_with_db
+```
+
 The flow also prepares a first-pass phase-detector matrix placement hook. By default it searches for the synthesized `gen_pd_row[*]/gen_pd_col[*]/u_pd` instances, creates the `mptdc_pd_matrix` group/region when Innovus supports those commands, and writes a review report. This is preparation only: final symmetry and matched-RC closure still need the real oscillator/PD macro LEFs and extraction/routing rules.
 
 Each run now clears stale PnR reports before initialization and writes `run_status.rpt`. Treat a snapshot as invalid if `run_status.rpt` is missing or does not say `Status: COMPLETE`.

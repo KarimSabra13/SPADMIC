@@ -34,6 +34,95 @@ proc mptdc_pnr_optional {label body} {
     }
 }
 
+proc mptdc_pnr_capture_report {report_file title body} {
+    if {[catch {uplevel 1 "$body > \"$report_file\""} err]} {
+        set fh [open $report_file w]
+        puts $fh "$title"
+        puts $fh [string repeat "=" [string length $title]]
+        puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+        puts $fh ""
+        puts $fh "FAILED:"
+        puts $fh $err
+        close $fh
+        puts "MPTDC_PNR_WARN: $title failed: $err"
+    }
+}
+
+proc mptdc_pnr_generate_extra_reports {} {
+    global pnr design
+
+    set extra_dir "$pnr(reports_dir)/prects"
+    file mkdir $extra_dir
+
+    mptdc_pnr_capture_report "$extra_dir/extra_check_place.rpt" \
+        "MPTDC extra checkPlace" {checkPlace}
+    mptdc_pnr_capture_report "$extra_dir/extra_check_design_all.rpt" \
+        "MPTDC extra checkDesign -all" {checkDesign -all}
+    mptdc_pnr_capture_report "$extra_dir/extra_report_timing_100.rpt" \
+        "MPTDC extra report_timing max_paths 100" {report_timing -max_paths 100}
+    mptdc_pnr_capture_report "$extra_dir/extra_report_timing_full_clock.rpt" \
+        "MPTDC extra report_timing full_clock" {report_timing -max_paths 50 -path_type full_clock}
+    mptdc_pnr_capture_report "$extra_dir/extra_report_constraint.rpt" \
+        "MPTDC extra report_constraint all violators" {report_constraint -all_violators}
+    mptdc_pnr_capture_report "$extra_dir/extra_report_congestion.rpt" \
+        "MPTDC extra reportCongestion" {reportCongestion}
+    mptdc_pnr_capture_report "$extra_dir/extra_report_density.rpt" \
+        "MPTDC extra reportDensity" {reportDensity}
+    mptdc_pnr_capture_report "$extra_dir/extra_report_netlist_stats.rpt" \
+        "MPTDC extra reportGateCount" {reportGateCount -level 20}
+    mptdc_pnr_capture_report "$extra_dir/extra_report_power_hier.rpt" \
+        "MPTDC extra report_power hierarchy" {report_power -hierarchy all}
+
+    set audit_file "$extra_dir/extra_pd_reset_audit.rpt"
+    set fh [open $audit_file w]
+    puts $fh "MPTDC extra PD/reset audit"
+    puts $fh "=========================="
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    set patterns $pnr(pd_instance_patterns)
+    foreach pattern $patterns {
+        set cells [mptdc_pnr_collect_cells [list $pattern]]
+        puts $fh "Pattern $pattern matched [llength $cells] cells"
+        foreach cell $cells {
+            puts $fh "  $cell"
+        }
+        puts $fh ""
+    }
+    set rst_cells [mptdc_pnr_collect_cells [list "*u_rst*sync*"]]
+    puts $fh "Reset sync cells matched [llength $rst_cells]"
+    foreach cell $rst_cells {
+        puts $fh "  $cell"
+    }
+    close $fh
+}
+
+proc mptdc_pnr_object_names {objects} {
+    set names [list]
+
+    if {[llength $objects] == 0} {
+        return $names
+    }
+
+    if {![catch {get_object_name $objects} obj_names]} {
+        foreach name $obj_names {
+            lappend names $name
+        }
+        return $names
+    }
+
+    if {![catch {get_db $objects .name} obj_names]} {
+        foreach name $obj_names {
+            lappend names $name
+        }
+        return $names
+    }
+
+    foreach obj $objects {
+        lappend names $obj
+    }
+    return $names
+}
+
 proc mptdc_pnr_collect_cells {patterns} {
     set matches [list]
     foreach pattern $patterns {
@@ -43,7 +132,7 @@ proc mptdc_pnr_collect_cells {patterns} {
                 set cells [list]
             }
         }
-        foreach cell $cells {
+        foreach cell [mptdc_pnr_object_names $cells] {
             if {[lsearch -exact $matches $cell] < 0} {
                 lappend matches $cell
             }
@@ -255,6 +344,10 @@ mptdc_pnr_optional "Generating placed gate-count report" {
 
 mptdc_pnr_optional "Generating vectorless power report" {
     report_power > "$pnr(reports_dir)/report_power_place.rpt"
+}
+
+mptdc_pnr_optional "Generating extra closure reports" {
+    mptdc_pnr_generate_extra_reports
 }
 
 if {$pnr(do_detail_route)} {
