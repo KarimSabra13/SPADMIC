@@ -1,0 +1,35 @@
+Snapshot: innovus_20260513_0925_osc_stub_pd_keep_extra
+Created: 2026-05-13T09:25:40+02:00
+Commit:  dc8d3c5
+Run status: COMPLETE
+Innovus log copied: innovus_estimate.logv8
+
+Contents:
+  innovus_estimate_log.rpt
+  manifest.txt
+  mptdc_top_asic.place.enc
+  pd_matrix_symmetry.rpt
+  prects/extra_check_design_all.rpt
+  prects/extra_check_place.rpt
+  prects/extra_pd_reset_audit.rpt
+  prects/extra_report_congestion.rpt
+  prects/extra_report_constraint.rpt
+  prects/extra_report_density.rpt
+  prects/extra_report_netlist_stats.rpt
+  prects/extra_report_place.rpt
+  prects/extra_report_power_hier.rpt
+  prects/extra_report_timing_100.rpt
+  prects/extra_report_timing_full_clock.rpt
+  prects/mptdc_top_asic_preCTS.cap.gz
+  prects/mptdc_top_asic_preCTS.fanout.gz
+  prects/mptdc_top_asic_preCTS.length.gz
+  prects/mptdc_top_asic_preCTS.summary.gz
+  prects/mptdc_top_asic_preCTS.tran.gz
+  prects/mptdc_top_asic_preCTS_all.tarpt.gz
+  prects/mptdc_top_asic_preCTS_default.tarpt.gz
+  prects/mptdc_top_asic_preCTS_reg2reg.tarpt.gz
+  report_area_place.rpt
+  report_gate_count_place.rpt
+  report_power_place.rpt
+  run_manifest.rpt
+  run_status.rpt

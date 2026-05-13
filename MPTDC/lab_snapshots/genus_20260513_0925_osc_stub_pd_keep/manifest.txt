@@ -1,0 +1,27 @@
+Snapshot: genus_20260513_0925_osc_stub_pd_keep
+Created: 2026-05-13T09:25:41+02:00
+Commit:  dc8d3c5
+
+Contents:
+  check_design.rpt
+  check_timing_intent.rpt
+  genus_log.rpt
+  latch_audit.rpt
+  manifest.txt
+  mptdc_top_asic.postsyn.sdc
+  mptdc_top_asic.postsyn.sdf
+  mptdc_top_asic.postsyn.v
+  report_area.rpt
+  report_area_hier.rpt
+  report_clocks.rpt
+  report_constraints.rpt
+  report_design_rules.rpt
+  report_gates.rpt
+  report_gates_hier.rpt
+  report_power.rpt
+  report_power_hier.rpt
+  report_qor.rpt
+  run_manifest.rpt
+  timing_setup.rpt
+  timing_summary.rpt
+  timing_violations.rpt

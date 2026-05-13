@@ -1,0 +1,11 @@
+MPTDC phase-detector matrix symmetry prep
+========================================
+Rows x cols target: 8 x 8
+Instance patterns: *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell* *u_pd*
+Matched instances found: 2
+  0x257
+  0x25a
+Group created: mptdc_pd_matrix
+Core box: 20.16 20.16 796.32 790.72
+Region created for mptdc_pd_matrix: 30.16 30.16 786.32 780.72
+Note: final symmetry and matched-RC constraints still require oscillator/PD macro LEFs and extracted routing rules.

@@ -1,0 +1,2 @@
+FAILED: extra_check_design_all
+Design must be in memory before running "checkDesign"
