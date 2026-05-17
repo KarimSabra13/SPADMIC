@@ -15,7 +15,7 @@ Les paramètres principaux de l'architecture sont rappelés dans le tableau \ref
         \toprule
         \textbf{Paramètre} & \textbf{Valeur} \\
         \midrule
-        Géométrie Vernier & $9 \times 9$ phases \\
+        Géométrie Vernier & $8 \times 8$ phases \\
         Délai de tap lent & \SI{55}{\pico\second} \\
         Délai de tap rapide & \SI{50}{\pico\second} \\
         Différence élémentaire de délai & \SI{5}{\pico\second} \\
@@ -57,13 +57,13 @@ Le tableau \ref{tab:mptdc-module-map} résume la répartition des modules princi
         \texttt{mptdc\_async\_frontend\_v2} & Asynchrone & Capture \texttt{START}/\texttt{STOP}, allocation de contexte, pilotage des oscillateurs \\
         \texttt{mptdc\_osc\_wrapper} $\times 2$ & Oscillateurs & Génération des taps de phase lents et rapides \\
         \texttt{mptdc\_gray\_cnt\_sync} $\times 2$ & Lent / rapide & Comptage grossier et transfert Gray sécurisé \\
-        \texttt{mptdc\_pd\_cell} $\times 81$ & Rapide & Détection de croisement et capture locale de \texttt{nfast\_hit} \\
+        \texttt{mptdc\_pd\_cell} $\times 64$ & Rapide & Détection de croisement et capture locale de \texttt{nfast\_hit} \\
         \texttt{mptdc\_stop\_capture\_async} & Asynchrone & Capture des informations de frontière au moment de \texttt{STOP} \\
         \texttt{mptdc\_meas\_ctrl} & Rapide & Fermeture de conversion, capture, arrêt des oscillateurs, clear \\
         \texttt{mptdc\_context\_bank} & Rapide / lecture statique & Gel atomique d'un contexte terminé \\
         \texttt{mptdc\_drain\_ctrl} & \texttt{clk\_sys} & Lecture du contexte figé, génération des enregistrements META/HIT \\
         \texttt{mptdc\_sync\_fifo} & \texttt{clk\_sys} & Découplage entre production des enregistrements et sérialisation \\
-        \texttt{mptdc\_narrow16\_tx\_v2} & \texttt{clk\_sys} & Sérialisation du paquet v2.3 sur le bus \SI{16}{\bit} \\
+        \texttt{mptdc\_narrow16\_tx\_v2} & \texttt{clk\_sys} & Sérialisation du paquet actif sur le bus \SI{16}{\bit} \\
         \texttt{mptdc\_watchdog} & Mixte & Robustesse contre \texttt{STOP} manquant, blocage ou absence de progression \\
         \bottomrule
     \end{tabularx}
@@ -150,11 +150,11 @@ Le comptage grossier est confié à deux instances de \texttt{mptdc\_gray\_cnt\_
     \item pour le compteur lent, une capture asynchrone sur l'événement \texttt{STOP} est utilisée afin que \texttt{Nslow} représente bien la frontière de \texttt{STOP} et non une observation plus tardive.
 \end{itemize}
 
-Le choix du codage Gray est classique, mais ici il est particulièrement pertinent. Puisque un seul bit change par incrément, l'ambiguïté de traversée entre domaines reste bornée, ce qui est bien plus sûr qu'un transfert binaire direct au voisinage d'une frontière.
+Le choix du codage Gray est classique, mais ici il est particulièrement pertinent. Puisque un seul bit change par incrément, l'ambiguïté de traversée entre domaines reste bornée, ce qui est bien plus sûr qu'un transfert binaire direct au voisinage d'une frontière \cite{cummings2002fifo,ginosar2011metastability}.
 
-Un point contre-intuitif est apparu lors de la lecture et de la mise au point du RTL : le champ \texttt{nfast\_stop} est aujourd'hui toujours nul. La raison est simple, mais non évidente si l'on reste au niveau du schéma global : dans l'architecture active, l'oscillateur rapide démarre précisément au moment de \texttt{STOP}. Le compteur rapide vaut donc naturellement zéro à cette frontière. Le sous-en-tête v2.3 conserve néanmoins ce champ pour compatibilité future, au cas où la politique de démarrage de l'oscillateur rapide évoluerait.
+Un point contre-intuitif est apparu lors de la lecture et de la mise au point du RTL : le champ interne \texttt{nfast\_stop} est aujourd'hui toujours nul. La raison est simple, mais non évidente si l'on reste au niveau du schéma global : dans l'architecture active, l'oscillateur rapide démarre précisément au moment de \texttt{STOP}. Le compteur rapide vaut donc naturellement zéro à cette frontière. Le paquet narrow actif ne l'exporte plus ; il reste seulement visible dans certains enregistrements internes ou outils historiques, au cas où la politique de démarrage de l'oscillateur rapide évoluerait.
 
-\section{Matrice de détection de phase \mbox{$9\times9$}}
+\section{Matrice de détection de phase \mbox{$8\times8$}}
 
 La matrice de détection de phase constitue la brique qui transforme les oscillateurs en mesure fine. Chaque cellule \texttt{mptdc\_pd\_cell} observe un couple formé d'un tap lent et d'un tap rapide. Le principe retenu est le suivant :
 \begin{itemize}
@@ -187,13 +187,13 @@ La matrice complète est visualisée figure \ref{fig:pd-matrix-heatmap}. Elle mo
 
 Le contrôle fin de la conversion est assuré dans le domaine rapide par \texttt{mptdc\_meas\_ctrl}. L'automate suit explicitement la séquence :
 \[
-\texttt{IDLE} \rightarrow \texttt{MEASURE} \rightarrow \texttt{CAPTURE} \rightarrow \texttt{STOP\_OSC} \rightarrow \texttt{CLEAR} \rightarrow \texttt{IDLE}
+\texttt{IDLE} \rightarrow \texttt{MEASURE} \rightarrow \texttt{SNAPSHOT} \rightarrow \texttt{CAPTURE} \rightarrow \texttt{STOP\_OSC} \rightarrow \texttt{CLEAR} \rightarrow \texttt{IDLE}
 \]
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{tdc/meas_ctrl_fsm.pdf}
-    \caption{Automate de mesure dans le domaine rapide. La séquence \texttt{CAPTURE} puis \texttt{STOP\_OSC} puis \texttt{CLEAR} est volontairement imposée pour préserver l'image de mesure avant tout nettoyage.}
+    \caption{Automate de mesure dans le domaine rapide. L'état \texttt{SNAPSHOT} fige d'abord l'image large, puis la séquence \texttt{CAPTURE}, \texttt{STOP\_OSC} et \texttt{CLEAR} préserve cette image avant tout nettoyage.}
     \label{fig:meas-ctrl-fsm}
 \end{figure}
 
@@ -201,6 +201,7 @@ Chaque état a un rôle précis :
 \begin{itemize}
     \item \texttt{IDLE} : attente d'une mesure active ;
     \item \texttt{MEASURE} : accumulation des hits et observation des conditions de fermeture ;
+    \item \texttt{SNAPSHOT} : gel intermédiaire de l'image large avant l'écriture atomique ;
     \item \texttt{CAPTURE} : gel atomique du contexte ;
     \item \texttt{STOP\_OSC} : remise à zéro de l'interface de capture pour arrêter proprement l'oscillateur lent ;
     \item \texttt{CLEAR} : clear asynchrone des cellules PD et des compteurs, après mise en sécurité.
@@ -208,12 +209,12 @@ Chaque état a un rôle précis :
 
 La fermeture de conversion (\texttt{close\_any}) peut venir de trois sources :
 \begin{enumerate}
-    \item \textbf{FIRST\_HIT} : un simple OR combinatoire détecte l'arrivée d'au moins un hit ;
-    \item \textbf{MULTI\_HIT} : un compteur de hits saturant, pipeliné sur deux étages d'addition, atteint \texttt{max\_hits} ;
+    \item \textbf{chemin rapide \texttt{max\_hits=1}} : un simple OR combinatoire détecte l'arrivée d'au moins un hit ;
+    \item \textbf{chemin compté \texttt{max\_hits>1}} : un compteur de hits saturant, pipeliné sur deux étages d'addition, atteint le seuil programmé ;
     \item \textbf{watchdog rapide} : la fenêtre de mesure reste ouverte trop longtemps.
 \end{enumerate}
 
-Le chemin \textbf{MULTI\_HIT} mérite une attention particulière. Pour tenir la fermeture temporelle dans une logique proche de \SI{1}{\giga\hertz}, le comptage des $81$ cellules ne peut pas être réalisé en un seul arbre combinatoire monolithique. Le RTL retient donc :
+Le chemin compté mérite une attention particulière. Pour tenir la fermeture temporelle dans une logique proche de \SI{1}{\giga\hertz}, le comptage des $64$ cellules ne peut pas être réalisé en un seul arbre combinatoire monolithique. Le RTL retient donc :
 \begin{itemize}
     \item des popcounts par ligne ;
     \item un arbre d'addition équilibré ;
@@ -221,7 +222,7 @@ Le chemin \textbf{MULTI\_HIT} mérite une attention particulière. Pour tenir la
     \item puis une comparaison avec \texttt{max\_hits}.
 \end{itemize}
 
-Cette solution ajoute un cycle rapide de latence pour \textbf{MULTI\_HIT}, mais elle rend le chemin synthétisable et maintient un temps mort pratique de l'ordre de \SIrange{4}{5}{\nano\second} selon l'analyse d'architecture.
+Cette solution ajoute un cycle rapide de latence pour le chemin compté, mais elle rend le chemin synthétisable et maintient un temps mort pratique de l'ordre de \SIrange{4}{5}{\nano\second} selon l'analyse d'architecture.
 
 \begin{figure}[H]
     \centering
@@ -232,13 +233,13 @@ Cette solution ajoute un cycle rapide de latence pour \textbf{MULTI\_HIT}, mais 
 
 Le chronogramme de la figure \ref{fig:timing-diagram-conversion} résume l'enchaînement. Le point clé est le suivant : \texttt{capture\_en} n'est pas déclenché au même instant que la détection de fermeture. Un cycle rapide complet est volontairement laissé entre \texttt{close\_any} et la capture, afin que la matrice et les compteurs observés soient stables lorsque le contexte est figé.
 
-Il faut enfin souligner une subtilité importante : le mode \textbf{FIRST\_HIT} n'est pas un mode \og un seul hit garanti \fg{}. Il s'agit d'un mode de \textit{fermeture la plus précoce possible}. Comme les cellules PD sont cadencées par plusieurs taps rapides, plusieurs cellules peuvent déjà avoir enregistré des hits au moment où l'automate rapide observe \texttt{any\_hit}. Le paquet exporté peut donc contenir plusieurs hits tout en portant le drapeau \texttt{closed\_by\_firsthit}.
+Il faut enfin souligner une subtilité importante : dans le RTL actif, il n'existe plus de bit de mode séparé pour le premier hit. Le comportement de fermeture la plus précoce est obtenu lorsque \texttt{max\_hits = 1}, par un chemin rapide d'OR-réduction. Ce réglage réduit la durée de mesure, mais ne garantit pas nécessairement un paquet mono-hit strictement chronologique : plusieurs cellules peuvent déjà avoir enregistré des hits au moment où l'automate rapide observe \texttt{any\_hit}.
 
 \section{Banque de contextes et double-buffering}
 
 Le rôle de \texttt{mptdc\_context\_bank} est de geler l'image complète d'une conversion dans un contexte identifié. L'instantané comprend notamment :
 \begin{itemize}
-    \item le bitmap complet des $81$ cellules actives ;
+    \item le bitmap complet des $64$ cellules actives ;
     \item les \texttt{nfast\_hit} locaux pour chaque cellule ;
     \item \texttt{nslow\_snap}, \texttt{nfast\_snap} et \texttt{nfast\_stop} ;
     \item \texttt{phase0\_snap} et \texttt{slow\_boundary\_inc} ;
@@ -270,38 +271,37 @@ La chaîne de lecture se compose de trois briques principales :
 
 Le drain travaille en ordre de parcours fixe : l'indice lent est majoritaire, puis l'indice rapide. Cette propriété a une conséquence méthodologique très importante : \texttt{event\_seq}, puis \texttt{hit\_idx} dans les fichiers de campagne, décrivent un \textbf{ordre de paquetisation}, pas un ordre chronologique des événements physiques. Ce point a été exploré côté calibration : l'ordre de parcours s'est révélé plus stable et plus reproductible qu'une tentative de réordonnancement temporel.
 
-Le sérialiseur \texttt{mptdc\_narrow16\_tx\_v2} utilise un automate à neuf états :
-\texttt{S\_IDLE}, \texttt{S\_HEADER}, \texttt{S\_SUBHDR}, \texttt{S\_HIT\_FETCH}, \texttt{S\_HIT\_W0}, \texttt{S\_HIT\_W1}, \texttt{S\_HIT\_W2}, \texttt{S\_HIT\_W3} et \texttt{S\_EOC}. L'ajout du sous-en-tête est lié au format v2.3 et au transport du champ \texttt{nfast\_stop}.
+Le sérialiseur \texttt{mptdc\_narrow16\_tx\_v2} utilise un automate à huit états :
+\texttt{S\_IDLE}, \texttt{S\_HEADER}, \texttt{S\_HIT\_FETCH}, \texttt{S\_HIT\_CALC}, \texttt{S\_HIT\_W0}, \texttt{S\_HIT\_W1}, \texttt{S\_HIT\_W2} et \texttt{S\_EOC}. Le format actif ne contient plus de sous-en-tête dédié : les mots de hit sont interprétés à partir de l'en-tête, du \texttt{hit\_count} et du mode de sortie.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.88\textwidth]{tdc/narrow16_tx_fsm.pdf}
-    \caption{Automate du sérialiseur \texttt{narrow16\_tx}. Les états \texttt{W1} à \texttt{W3} dépendent du mode de sortie actif, ce qui permet un même canal physique pour plusieurs contrats de données.}
+    \caption{Automate du sérialiseur \texttt{narrow16\_tx}. Les mots \texttt{W1} et \texttt{W2} dépendent du mode de sortie actif, ce qui permet un même canal physique pour plusieurs contrats de données.}
     \label{fig:narrow16-fsm}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.98\textwidth]{tdc/packet_format_v23.pdf}
-    \caption{Format de paquet v2.3 sur \SI{16}{\bit}. Le préfixe des mots permet au récepteur d'identifier en-tête, sous-en-tête, données de hit et mot EOC sans ambiguïté forte.}
+    \caption{Format de paquet actif sur \SI{16}{\bit}. Le préfixe des mots permet au récepteur d'identifier l'en-tête, les données de hit et le mot EOC ; les payloads timestamp sont décodés par position dans le paquet.}
     \label{fig:packet-format-v23}
 \end{figure}
 
 Le contrat de paquetisation en sortie peut être résumé ainsi :
 \begin{itemize}
     \item \textbf{en-tête} : type, contexte, \texttt{phase0\_snap}, nombre de hits, drapeaux, mode de sortie, \texttt{slow\_boundary\_inc} ;
-    \item \textbf{sous-en-tête} : champ \texttt{nfast\_stop} réservé ;
-    \item \textbf{mots de hit} : nombre variable selon le mode de sortie ;
+    \item \textbf{mots de hit} : \texttt{W0} transporte \texttt{nslow} et \texttt{nfast\_hit}, puis \texttt{W1}/\texttt{W2} dépendent du mode de sortie ;
     \item \textbf{EOC} : fin de conversion et compteur de paquets local.
 \end{itemize}
 
 En flux réel, les tailles de paquet deviennent donc :
 \begin{align}
-    N_{\mathrm{RAW\_FEATURES}} &= 3\times \texttt{hit\_count} + 3 \\
-    N_{\mathrm{RAW\_TIMESTAMP}} &= 2\times \texttt{hit\_count} + 3 \\
-    N_{\mathrm{FULL}} &= 4\times \texttt{hit\_count} + 3
+    N_{\mathrm{RAW\_FEATURES}} &= 2\times \texttt{hit\_count} + 2 \\
+    N_{\mathrm{RAW\_TIMESTAMP}} &= 2\times \texttt{hit\_count} + 2 \\
+    N_{\mathrm{FULL}} &= 3\times \texttt{hit\_count} + 2
 \end{align}
-où le terme constant $3$ regroupe en-tête, sous-en-tête et mot de fin.
+où le terme constant $2$ regroupe l'en-tête et le mot de fin.
 
 La prise en charge de la rétropression est explicite : si \texttt{narrow\_ready} retombe à $0$, le sérialiseur et le drain conservent leur position courante. Aucun mot n'est perdu, mais l'occupation des contextes et du FIFO peut augmenter. C'est là que réapparaît la différence entre temps mort immédiat et tenue en débit soutenu.
 
@@ -352,24 +352,24 @@ Le projet retient des verrous asynchrones \textit{set/reset} pour \texttt{start\
 \subsection{Découverte du fait que \texttt{nfast\_stop} vaut zéro}
 
 \paragraph{Problème.}
-Le paquet v2.3 transporte un champ \texttt{nfast\_stop}. Intuitivement, on pourrait s'attendre à ce qu'il contienne une information physique utile sur le compteur rapide à l'instant \texttt{STOP}.
+Certains enregistrements internes et outils historiques transportent encore un champ \texttt{nfast\_stop}. Intuitivement, on pourrait s'attendre à ce qu'il contienne une information physique utile sur le compteur rapide à l'instant \texttt{STOP}.
 
 \paragraph{Analyse.}
 La lecture du RTL montre au contraire que l'oscillateur rapide démarre précisément à \texttt{STOP}. Le compteur rapide vaut donc toujours zéro sur cette frontière, dans l'architecture actuelle.
 
 \paragraph{Solution retenue.}
-Le champ est conservé dans le sous-en-tête comme réserve d'évolution, mais il doit être présenté honnêtement dans le rapport : aujourd'hui, il n'est pas porteur d'une information de mesure utile. L'observable pertinente est \texttt{nfast\_hit}, capturée par chaque cellule PD après le démarrage du rapide.
+Le champ reste une réserve d'évolution interne, mais il doit être présenté honnêtement dans le rapport : aujourd'hui, il n'est pas porteur d'une information de mesure utile dans le paquet de sortie actif. L'observable pertinente est \texttt{nfast\_hit}, capturée par chaque cellule PD après le démarrage du rapide.
 
-\subsection{Sémantique de \textbf{FIRST\_HIT} et ordre réel des hits}
+\subsection{Sémantique du chemin \texttt{max\_hits=1} et ordre réel des hits}
 
 \paragraph{Problème.}
-Le nom \textbf{FIRST\_HIT} peut laisser penser qu'un seul hit, strictement chronologique, sera toujours exporté.
+Le réglage \texttt{max\_hits=1} peut laisser penser qu'un seul hit, strictement chronologique, sera toujours exporté.
 
 \paragraph{Analyse.}
 Ce n'est pas ce que fait réellement le RTL. Les cellules PD sont cadencées par l'ensemble des taps rapides ; plusieurs d'entre elles peuvent déjà avoir latched un hit au moment où l'automate rapide constate \texttt{any\_hit}. De plus, le drain émet les hits dans l'ordre de scan de la matrice, et non dans un ordre temporel reconstruit.
 
 \paragraph{Solution retenue.}
-Le rapport doit employer une formulation précise : \textbf{FIRST\_HIT} est un mode de fermeture la plus précoce possible. Il réduit la durée de mesure, mais n'impose pas un paquet mono-hit chronologique. Les champs \texttt{event\_seq} et \texttt{hit\_idx} sont des indices d'ordre de paquetisation.
+Le rapport doit employer une formulation précise : \texttt{max\_hits=1} active un chemin de fermeture la plus précoce possible. Il réduit la durée de mesure, mais n'impose pas un paquet mono-hit chronologique. Les champs \texttt{event\_seq} et \texttt{hit\_idx} sont des indices d'ordre de paquetisation.
 
 \subsection{Non-uniformité de la grille fine}
 
@@ -377,7 +377,7 @@ Le rapport doit employer une formulation précise : \textbf{FIRST\_HIT} est un m
 La grille fine issue de $11\,n_s - 10\,n_f$ présente des trous et des écarts de densité. Cette non-uniformité peut être vue comme une faiblesse de l'architecture.
 
 \paragraph{Analyse.}
-Elle est en réalité structurelle. Elle ne vient ni d'un bug RTL ni d'un défaut ponctuel des oscillateurs, mais du codage même choisi pour exploiter la matrice \mbox{$9\times9$}.
+Elle est en réalité structurelle. Elle ne vient ni d'un bug RTL ni d'un défaut ponctuel des oscillateurs, mais du codage même choisi pour exploiter la matrice \mbox{$8\times8$}.
 
 \paragraph{Solution retenue.}
 Le projet assume ce caractère non uniforme et le traite par calibration externe à l'ASIC. La stratégie retenue n'essaie donc pas de rendre la grille parfaitement uniforme dans le silicium ; elle s'appuie sur l'export d'observables suffisants pour reconstruire ensuite un temps corrigé de bien meilleure qualité.
@@ -404,118 +404,11 @@ Le dépôt contient déjà une intention de contraintes claire : groupes d'horlo
 \paragraph{Solution retenue.}
 Le rapport présente donc ces contraintes avec honnêteté. L'architecture est suffisamment structurée pour une synthèse d'essai et une revue d'architecture, mais la partie oscillateur, les réseaux complets d'horloges générées et la clôture finale restent explicitement à consolider.
 
-\section{Calibration externe à l'ASIC}
+\section{Lien avec la caractérisation}
 
-L'architecture active est conçue dès l'origine pour une calibration externe à l'ASIC. La philosophie générale est simple : le silicium exporte des observables brutes riches ; la correction, l'adaptation PVT et les méthodes d'apprentissage restent côté hôte. Cette approche évite d'embarquer dans l'ASIC un LUT ou un moteur de régression figé trop tôt.
+L'architecture active est conçue dès l'origine pour une calibration externe à l'ASIC. La philosophie générale est simple : le silicium exporte des observables brutes riches, tandis que la reconstruction temporelle et la correction statistique restent côté hôte. Cette décision est un choix d'architecture : elle évite de figer trop tôt une LUT ou un moteur de régression dans le silicium, et elle laisse la caractérisation faire évoluer les modèles.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.98\textwidth]{tdc/calibration_flow.pdf}
-    \caption{Chaîne de calibration externe à l'ASIC. Le bloc \textbf{MPTDC} exporte un jeu d'observables brutes ; la reconstruction temporelle et la correction statistique sont réalisées côté hôte.}
-    \label{fig:calibration-flow}
-\end{figure}
-
-\subsection{Observables exportés}
-
-Les observables réellement utiles à la calibration ne se limitent pas à un horodatage brut. Le tableau \ref{tab:calib-observables} résume les champs importants.
-
-\begin{table}[H]
-    \centering
-    \scriptsize
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm}>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}X}
-        \toprule
-        \textbf{Champ} & \textbf{Origine} & \textbf{Rôle pour la calibration} \\
-        \midrule
-        \texttt{nslow} & META / W0 & instantané grossier lent à la frontière \texttt{STOP} \\
-        \texttt{nfast\_hit} & W0 & compteur rapide local de la cellule qui a hit \\
-        \texttt{ns}, \texttt{nf} & \shortstack[l]{W1 en \texttt{RAW\_FEATURES}\\ou \texttt{FULL}} & indices de phase utiles à la reconstruction fine \\
-        \texttt{pd\_idx} & W1 & identifiant aplati de la cellule PD \\
-        \texttt{event\_seq} & W2 & ordre de scan/export du hit dans le paquet \\
-        \texttt{nfast\_snap} & W2 & instantané global rapide au moment de \texttt{CAPTURE} \\
-        \texttt{phase0\_snap} & en-tête & classe de frontière grossière/fine \\
-        \texttt{sbi} (\textit{slow boundary inc}) & en-tête & correction de frontière sur le compteur lent \\
-        \texttt{t\_raw\_ps} & \shortstack[l]{mode brut\\ou complet} & horodatage brut local reconstruit par le RTL \\
-        \texttt{nfast\_stop} & sous-en-tête & champ réservé, actuellement nul dans l'architecture active \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Observables exportés par l'architecture active et intérêt pour la calibration.}
-    \label{tab:calib-observables}
-\end{table}
-
-Le maintien d'un jeu d'observables riche est l'une des forces du projet. Il autorise des stratégies de calibration très différentes sans nécessiter de changement matériel dans le silicium.
-
-\subsection{Clé 6D et méthodes évaluées}
-
-Le flux de calibration de référence maintenu dans le dépôt repose sur une table de correction 6D. La clé historiquement retenue pour le nominal est :
-\[
-(\texttt{ns\_inf},\ \texttt{nf\_inf},\ \texttt{nslow},\ \texttt{nfast\_hit},\ \texttt{phase0\_snap},\ \texttt{hit\_idx})
-\]
-
-Dans les modes riches, \texttt{ns} et \texttt{nf} sont disponibles directement. Dans les modes plus compacts, ils peuvent être retrouvés à partir de l'algèbre Vernier et d'un inverseur de table sur les $81$ états possibles. Cette souplesse explique pourquoi la même philosophie de calibration peut être conservée à travers plusieurs contrats de sortie.
-
-Le dépôt maintient également des méthodes plus avancées, notamment :
-\begin{itemize}
-    \item un modèle de type \textbf{6D LUT} à correction moyenne ;
-    \item des méthodes de type \textbf{Gradient Boosted Regressor} ;
-    \item des variantes de moyennage multi-hit, pondérées ou tronquées ;
-    \item des analyses dites en \textit{format court}, plus proches des observables déployables mais nettement plus difficiles.
-\end{itemize}
-
-\subsection{Résultats chiffrés}
-
-Le tableau \ref{tab:enhanced-calibration-results} synthétise les comparaisons avancées les plus lisibles pour la rédaction du rapport.
-
-\begin{table}[H]
-    \centering
-    \small
-    \begin{tabularx}{0.92\textwidth}{>{\raggedright\arraybackslash}Xcc}
-        \toprule
-        \textbf{Méthode} & \textbf{RMSE mono-coup nominale} & \textbf{RMSE après moyennage 15 hits} \\
-        \midrule
-        6D LUT (moyenne) & \SI{18.99}{\pico\second} & \SI{5.29}{\pico\second} (tronqué) \\
-        GBR (\textit{Gradient Boosted Regressor}) & \SI{18.56}{\pico\second} & \SI{5.19}{\pico\second} (pondéré) \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Comparaison des méthodes de calibration avancées en régime nominal.}
-    \label{tab:enhanced-calibration-results}
-\end{table}
-
-\begin{table}[H]
-    \centering
-    \small
-    \begin{tabularx}{0.92\textwidth}{>{\raggedright\arraybackslash}Xcc}
-        \toprule
-        \textbf{Méthode} & \textbf{RMSE mono-coup sous jitter} & \textbf{RMSE après moyennage 15 hits} \\
-        \midrule
-        6D LUT (moyenne) & \SI{53.64}{\pico\second} & \SI{19.75}{\pico\second} (tronqué) \\
-        GBR (\textit{Gradient Boosted Regressor}) & \SI{48.24}{\pico\second} & --- \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Comparaison des méthodes de calibration avancées sous jitter (\(\sigma = \SI{6}{\pico\second}\)).}
-    \label{tab:enhanced-calibration-jitter}
-\end{table}
-
-Ces chiffres doivent toutefois être lus avec discernement. Les comparaisons avancées sont très utiles pour comparer des méthodes entre elles, mais la référence la plus stable du dépôt reste la calibration nominale maintenue à grande échelle, pour laquelle le rapport de calibration complet indique une amélioration de \SI{425.71}{\pico\second} à \SI{18.89}{\pico\second} en \textbf{RMSE} sur des jeux de validation frais et fortement peuplés.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.95\textwidth]{tdc/calibration_results_plot.pdf}
-    \caption{Synthèse graphique des performances de calibration. La lecture importante n'est pas seulement le meilleur score absolu, mais aussi l'écart entre nominal et cas jitterés, qui mesure la sensibilité réelle de la chaîne.}
-    \label{fig:calibration-results}
-\end{figure}
-
-Le comportement en moyennage est également central. Sur les campagnes nominales, l'erreur résiduelle suit une tendance proche de \(1/\sqrt{N}\), ce qui confirme que la chaîne conserve une composante aléatoire significative et moyennable.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.92\textwidth]{tdc/multihit_averaging_plot.pdf}
-    \caption{Évolution de la RMSE en fonction du nombre de hits moyennés. L'intérêt du mode multi-hit apparaît clairement : l'information utile n'est pas seulement le premier hit, mais aussi la redondance statistique disponible dans une conversion.}
-    \label{fig:multihit-averaging}
-\end{figure}
-
-Un autre résultat important concerne les importances de variables dans les approches de type \textbf{GBR}. En présence de jitter, les termes dominants sont \texttt{nf}, \texttt{ns} et \texttt{phase0\_snap}, tandis que \texttt{nfast\_snap} a un poids beaucoup plus faible. Cette observation confirme que la structure fine de la matrice et la classe de frontière restent les premiers déterminants de la qualité de reconstruction.
-
-Enfin, les campagnes en \textit{format court} rappellent une réalité importante : dès que l'on restreint le contrat de données exporté, la qualité pratique chute fortement. Les rapports maintenus du dépôt montrent alors des erreurs de l'ordre de \SIrange{95}{160}{\pico\second} selon le filtrage et l'ensemble de clés utilisé. Cette dégradation justifie pleinement la stratégie actuelle d'export d'observables riches pour les phases de caractérisation.
+Les observables exportés, le protocole de collecte, la LUT de calibration et les résultats quantitatifs sont donc traités dans un chapitre séparé. Cette séparation évite de mélanger deux niveaux de discours : le présent chapitre explique comment le RTL produit les données ; le chapitre \ref{chap:resultats-calibration} explique comment ces données sont exploitées pour mesurer la qualité du codage, la correction par calibration et la robustesse de flux.
 
 \section{Vérification et validation}
 
@@ -538,7 +431,7 @@ Le tableau \ref{tab:verification-stack} résume cette organisation.
         \textbf{Niveau} & \textbf{Objectif} & \textbf{Exemples} \\
         \midrule
         Unitaire & Vérifier un bloc isolé sans le bruit du système complet & \shortstack[l]{\texttt{tb\_input\_mux\_unit}\\\texttt{tb\_watchdog\_unit}\\\texttt{tb\_context\_bank\_unit}\\\textit{etc.}} \\
-        Intégration & Vérifier les chemins complets à travers \texttt{mptdc\_top\_asic} & \shortstack[l]{\texttt{tb\_single\_conv}\\\texttt{tb\_backpressure}\\\texttt{tb\_start\_wdt}\\\texttt{tb\_firsthit}} \\
+        Intégration & Vérifier les chemins complets à travers \texttt{mptdc\_top\_asic} & \shortstack[l]{\texttt{tb\_single\_conv}\\\texttt{tb\_backpressure}\\\texttt{tb\_start\_wdt}\\\texttt{tb\_firsthit\_mode}\\(chemin \texttt{max\_hits=1})} \\
         VIP & Générer des scénarios pilotés, observer et vérifier la cohérence des paquets acceptés & \shortstack[l]{\texttt{smoke\_single\_conv}\\\texttt{backpressure\_integrity}\\\texttt{jitter\_robustness}\\\textit{etc.}} \\
         Campagnes de collecte & Balayer large en délai pour l'analyse statistique & \shortstack[l]{\texttt{tb\_campaign\_collect}\\\texttt{run\_campaign}} \\
         Délais fixes & Prouver le RMS mono-coup et les lois de moyennage à délai constant & \shortstack[l]{\texttt{run\_fixed\_delay}\\\texttt{analyze\_fixed\_delay}} \\
@@ -552,7 +445,7 @@ La base locale observée pendant cette phase de travail donne une image instruct
 \begin{itemize}
     \item \texttt{ci/run\_smoke.sh} passe ;
     \item \texttt{ci/run\_full\_regression.sh} passe sur \textbf{9/9} benches d'intégration maintenus ;
-    \item \texttt{ci/run\_vip\_smoke.sh} ne passe pas intégralement au moment de cette rédaction (\textbf{11/13}), ce qui révèle un désalignement du vérificateur de cohérence VIP avec le sous-en-tête v2.3 plutôt qu'un dysfonctionnement général du cœur RTL.
+    \item \texttt{ci/run\_vip\_smoke.sh} ne passe pas intégralement au moment de cette rédaction (\textbf{11/13}), ce qui révèle un désalignement du vérificateur de cohérence VIP avec le protocole narrow actif plutôt qu'un dysfonctionnement général du cœur RTL.
 \end{itemize}
 
 Ce résultat est important à documenter honnêtement. Il montre que le cœur d'architecture et les benches d'intégration actifs sont cohérents, mais que l'environnement VIP reste en cours d'alignement avec l'évolution du protocole de sortie. Autrement dit, la vérification est vivante : elle accompagne l'architecture, elle ne la photographie pas une fois pour toutes.

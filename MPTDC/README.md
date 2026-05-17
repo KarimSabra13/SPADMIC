@@ -233,6 +233,25 @@ The baseline wrapper standardizes the output tree under
 `results/characterization/...` and writes `characterization_manifest.json`
 alongside the campaign, sweep analysis, calibration, and fixed-delay results.
 
+For large standalone Verilator-only characterization stress runs:
+
+```bash
+bash scripts/sim/run_characterization_overnight.sh \
+  --smoke \
+  --jobs 2 \
+  --seeds 1 \
+  --analyze
+
+bash scripts/sim/run_characterization_overnight.sh \
+  --overnight \
+  --jobs 12 \
+  --seeds 24 \
+  --out-dir results/characterization/overnight_verilator \
+  --analyze
+```
+
+See [`docs/12_CHARACTERIZATION_OVERNIGHT.md`](docs/12_CHARACTERIZATION_OVERNIGHT.md).
+
 ### 7) Trial synthesis
 
 ```bash
@@ -246,7 +265,7 @@ genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 | --- | --- |
 | Unit benches | `5` |
 | Active integration benches | `9` in `ci/run_full_regression.sh` |
-| Collection / characterization benches | `tb_campaign_collect` plus maintained collection flows |
+| Collection / characterization benches | `tb_campaign_collect`, maintained campaign flows, and Verilator-only overnight characterization benches |
 | VIP smoke tests | `13` in `ci/run_vip_smoke.sh` |
 | VIP coverage suite | `14` in `ci/run_vip_coverage.sh` |
 | Coverage campaign | `14` directed tests + `stress_random × N seeds` |

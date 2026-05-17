@@ -5,7 +5,7 @@
 
 \section{Rôle d'un TDC dans une chaîne de détection}
 
-Un convertisseur temps-numérique a pour fonction de transformer un intervalle de temps en un mot binaire exploitable par une chaîne numérique. Cette opération est indispensable dès lors que l'information utile n'est pas portée uniquement par l'amplitude d'un signal, mais aussi par son instant d'apparition, sa durée, ou le décalage temporel entre deux événements. Dans le domaine de l'instrumentation scientifique, cette capacité intervient notamment pour la chronométrie fine, la localisation temporelle d'un événement et l'amélioration de la reconstruction globale d'un système de détection \cite{annagrebah2021thesis}.
+Un convertisseur temps-numérique a pour fonction de transformer un intervalle de temps en un mot binaire exploitable par une chaîne numérique. Cette opération est indispensable dès lors que l'information utile n'est pas portée uniquement par l'amplitude d'un signal, mais aussi par son instant d'apparition, sa durée, ou le décalage temporel entre deux événements. Dans le domaine de l'instrumentation scientifique, cette capacité intervient notamment pour la chronométrie fine, la localisation temporelle d'un événement et l'amélioration de la reconstruction globale d'un système de détection \cite{annagrebah2021thesis,henzler2010tdc}.
 
 Dans sa forme la plus générale, un \textbf{TDC} reçoit deux événements : un événement de départ, qui initialise l'observation, puis un événement d'arrêt, qui ferme l'intervalle à mesurer. Dans une architecture intégrée réelle, cette vision simplifiée doit être enrichie : les événements sont asynchrones, la conversion peut produire plusieurs hits, la fermeture peut aussi être déclenchée par un watchdog, et la valeur exportée n'est pas toujours un horodatage final prêt à l'emploi. Dans de nombreuses architectures modernes, le \textbf{TDC} fournit plutôt un ensemble d'observables qui devront ensuite être interprétées, corrigées et parfois recalibrées.
 
@@ -32,7 +32,7 @@ La seconde métrique est la plage dynamique. Elle désigne l'intervalle maximal 
 
 \subsection{Linéarité}
 
-La linéarité traduit l'écart entre la caractéristique réelle du convertisseur et sa caractéristique idéale. Deux indicateurs sont classiquement utilisés \cite{annagrebah2021thesis} :
+La linéarité traduit l'écart entre la caractéristique réelle du convertisseur et sa caractéristique idéale. Deux indicateurs sont classiquement utilisés \cite{annagrebah2021thesis,kalisz2004review} :
 \begin{itemize}
     \item la non-linéarité différentielle (\textbf{DNL}), qui mesure l’écart de largeur d’un palier par rapport à $1$~LSB ;
     \item la non-linéarité intégrale (\textbf{INL}), qui cumule ces écarts le long de la fonction de transfert.
@@ -61,7 +61,7 @@ Enfin, l'observabilité constitue une métrique moins classique mais essentielle
 
 \section{Panorama des grandes familles d'architectures}
 
-La littérature distingue plusieurs familles d'architectures pour la mesure d'intervalles de temps \cite{annagrebah2021thesis}. Parmi les plus importantes, on retrouve :
+La littérature distingue plusieurs familles d'architectures pour la mesure d'intervalles de temps \cite{annagrebah2021thesis,henzler2010tdc}. Parmi les plus importantes, on retrouve :
 \begin{itemize}
     \item les architectures analogiques de type \textbf{TAC}, qui convertissent le temps en tension avant numérisation ;
     \item les architectures numériques à \textbf{compteur}, très intégrables mais limitées par la fréquence d’horloge requise pour atteindre de très fines résolutions ;
@@ -94,7 +94,7 @@ Le tableau \ref{tab:tdc-arch-compare} synthétise les compromis les plus importa
 
 \section{Pourquoi l'approche Vernier a été retenue}
 
-La thèse montre clairement que les architectures Vernier occupent une position particulièrement favorable lorsque l'on cherche à atteindre des résolutions très fines tout en conservant une intégration réaliste en technologie CMOS \cite{annagrebah2021thesis}. Cet intérêt tient à un point fondamental : la résolution n'est plus fixée par le délai absolu d'une seule cellule, mais par la différence entre deux délais voisins. Il devient alors possible de descendre sous le seuil technologique apparent d'un simple inverseur.
+La thèse montre clairement que les architectures Vernier occupent une position particulièrement favorable lorsque l'on cherche à atteindre des résolutions très fines tout en conservant une intégration réaliste en technologie CMOS \cite{annagrebah2021thesis,henzler2010tdc,dudek2000vernier}. Cet intérêt tient à un point fondamental : la résolution n'est plus fixée par le délai absolu d'une seule cellule, mais par la différence entre deux délais voisins. Il devient alors possible de descendre sous le seuil technologique apparent d'un simple inverseur.
 
 Dans le contexte \textbf{SPADMIC}, plusieurs arguments renforcent ce choix :
 \begin{itemize}

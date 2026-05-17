@@ -130,8 +130,16 @@ module mptdc_meas_ctrl
       hit_cnt_q <= (total_cnt_comb > 7'(MAX_HITS)) ? MAX_HITS_W'(MAX_HITS)
                                                      : total_cnt_comb[MAX_HITS_W-1:0];
 
-      if (state_q == ST_M_IDLE) begin
+      // Clear on the CLEAR->IDLE transition while the fast oscillator is still
+      // kept alive. Once state_q is IDLE, clk_fast stops and an IDLE-only clear
+      // would never be clocked before the next conversion starts.
+      if (state_d == ST_M_IDLE) begin
         hit_seen_q <= '0;
+        for (int r = 0; r < NE; r++)
+          row_cnt_q[r] <= '0;
+        for (int p = 0; p < 4; p++)
+          pair_cnt_q[p] <= '0;
+        hit_cnt_q <= '0;
       end else if (state_q == ST_M_MEASURE) begin
         hit_seen_q <= hit_seen_next;
       end
@@ -177,7 +185,7 @@ module mptdc_meas_ctrl
   always_ff @(posedge clk_fast or negedge rst_n) begin
     if (!rst_n)
       wdt_cnt_q <= '0;
-    else if (state_q == ST_M_IDLE)
+    else if (state_d == ST_M_IDLE)
       wdt_cnt_q <= '0;
     else if (state_q == ST_M_MEASURE && wdt_timeout_i != '0)
       wdt_cnt_q <= wdt_cnt_q + 16'd1;

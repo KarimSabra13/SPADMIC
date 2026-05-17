@@ -74,7 +74,11 @@ while IFS= read -r line; do
 done < "$RTL_DIR/filelist.f"
 
 # TB common files
-TB_COMMON=("$TB_DIR/common/mptdc_tb_pkg.sv" "$TB_DIR/common/mptdc_raw_monitor.sv")
+TB_COMMON=(
+  "$TB_DIR/common/mptdc_tb_pkg.sv"
+  "$TB_DIR/common/mptdc_char_tb_pkg.sv"
+  "$TB_DIR/common/mptdc_raw_monitor.sv"
+)
 
 # Build directory
 TB_BUILD="$BUILD_DIR/$TB_NAME"

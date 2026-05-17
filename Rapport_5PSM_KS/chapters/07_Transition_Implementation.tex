@@ -36,17 +36,17 @@ Le premier arbitrage fondamental concerne la capture des événements d'entrée.
 
 Le bloc actif adopte donc une interface de capture asynchrone à base de verrous \textit{set/reset}. Ce choix répond à une logique simple : il faut déclencher l'oscillateur lent au plus près de \texttt{START}, puis déclencher l'oscillateur rapide au plus près de \texttt{STOP}, sans attendre une remise en phase sur une horloge externe. L'architecture reste ainsi fidèle au principe Vernier, tout en rendant explicites les points sensibles de réarmement, de remise à zéro et de rejet des départs.
 
-\subsection{Pourquoi une matrice \mbox{$9\times9$} et non une matrice plus grande}
+\subsection{Pourquoi une matrice \mbox{$8\times8$} et non une matrice plus grande}
 
 Le second arbitrage porte sur la taille de la matrice de détection. Une matrice plus grande, par exemple \mbox{$16\times16$}, augmenterait mécaniquement le nombre de cellules observées et, en apparence, la richesse de la grille fine. Mais ce choix aurait plusieurs contreparties immédiates :
 \begin{itemize}
-    \item le nombre de cellules passerait de $81$ à $256$, soit un facteur \mbox{$256/81 \approx 3{,}16$} en surface brute sur cette seule brique ;
+    \item le nombre de cellules passerait de $64$ à $256$, soit un facteur \mbox{$256/64 = 4$} en surface brute sur cette seule brique ;
     \item le réseau de signaux de phases, de comptage et de capture deviendrait plus lourd à distribuer ;
     \item le coût de scan côté drain augmenterait dans la même proportion ;
     \item les chemins de réduction et de fermeture dans le domaine rapide seraient plus difficiles à tenir dans une technologie \SI{180}{\nano\meter}.
 \end{itemize}
 
-Le choix \mbox{$9\times9$} doit donc être lu comme un compromis. Il donne déjà une matrice assez riche pour exploiter le multiphase, tout en gardant une architecture encore compatible avec une logique de lecture et de fermeture réaliste.
+Le choix \mbox{$8\times8$} doit donc être lu comme un compromis. Il donne déjà une matrice assez riche pour exploiter le multiphase, tout en gardant une architecture encore compatible avec une logique de lecture et de fermeture réaliste.
 
 \subsection{Pourquoi deux contextes et non un seul}
 
@@ -113,7 +113,7 @@ Cette transition peut également être relue sous l'angle des domaines d'horloge
     \label{fig:clock-domain-diagram}
 \end{figure}
 
-La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficultés qui seront détaillées au chapitre suivant : la logique de mesure ne se résume pas à un automate unique. Elle s'appuie sur des traversées asynchrones, un compteur Gray pour le chemin lent vers le domaine rapide, puis une séparation stricte entre capture rapide et lecture système.
+La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficultés qui seront détaillées au chapitre suivant : la logique de mesure ne se résume pas à un automate unique. Elle s'appuie sur des traversées asynchrones, un compteur Gray pour le chemin lent vers le domaine rapide, puis une séparation stricte entre capture rapide et lecture système \cite{ginosar2011metastability,cummings2002fifo}.
 
 \begin{table}[H]
     \centering
@@ -123,7 +123,7 @@ La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficul
         \textbf{Contrainte} & \textbf{Risque principal} & \textbf{Choix retenu} \\
         \midrule
         Événements d'entrée asynchrones & Perte de précision ou métastabilité si forçage prématuré dans un domaine synchrone & Interface de capture asynchrone à verrous \textit{set/reset} \\
-        Grille fine plus dense & Explosion du nombre de cellules PD et allongement du scan de drain & Matrice \mbox{$9\times9$} comme compromis surface / richesse de grille \\
+        Grille fine plus dense & Explosion du nombre de cellules PD et allongement du scan de drain & Matrice \mbox{$8\times8$} comme compromis surface / richesse de grille \\
         Lecture pendant la mesure & Temps mort dicté par le drain et le sérialiseur & Deux contextes, capture et drain découplés \\
         Correction des non-idéalités & Coût silicium élevé si correction embarquée figée & Calibration externe à l'ASIC avec export d'observables riches \\
         Intégration au système & Trop grand nombre de broches ou protocole trop ambigu & Bus \SI{16}{\bit}, mots typés, gestion explicite de la rétropression \\

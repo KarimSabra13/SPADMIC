@@ -27,3 +27,7 @@ __pycache__/
 # SPADMIC/TOP generated simulation artifacts
 TOP/build/
 TOP/results/
+
+# Local characterization outputs and shell logs
+results/
+nohup.out

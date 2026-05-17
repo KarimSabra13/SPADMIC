@@ -1,0 +1,98 @@
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{amsmath}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usetikzlibrary{arrows.meta,calc,fit,positioning}
+
+\definecolor{bleuacier}{HTML}{315F8C}
+\definecolor{bleupale}{HTML}{E8F0F8}
+\definecolor{grisclair}{HTML}{F4F6F7}
+\definecolor{grispale}{HTML}{EEF1F4}
+\definecolor{grisligne}{HTML}{2F3437}
+\definecolor{brunasync}{HTML}{8A4B08}
+
+\tikzset{
+  bloc/.style={
+    draw=grisligne,
+    line width=0.9pt,
+    rounded corners=2pt,
+    fill=white,
+    minimum width=30mm,
+    minimum height=10mm,
+    align=center,
+    font=\sffamily\small\bfseries,
+    inner sep=3pt
+  },
+  blocaccent/.style={
+    bloc,
+    draw=bleuacier,
+    fill=bleupale
+  },
+  domaine/.style={
+    draw=grisligne,
+    dashed,
+    rounded corners=2pt,
+    line width=0.8pt,
+    inner sep=5mm
+  },
+  fluxdonnees/.style={
+    -{Latex[length=2.4mm,width=1.6mm]},
+    line width=1.8pt,
+    draw=bleuacier
+  },
+  fluxcontrole/.style={
+    -{Latex[length=2.0mm,width=1.3mm]},
+    line width=0.85pt,
+    draw=grisligne,
+    densely dashed
+  },
+  fluxasync/.style={
+    -{Latex[length=2.0mm,width=1.3mm]},
+    line width=1.05pt,
+    draw=brunasync,
+    densely dashed
+  },
+  etiquette/.style={
+    fill=white,
+    fill opacity=1,
+    text opacity=1,
+    rounded corners=1pt,
+    inner sep=1.5pt,
+    font=\ttfamily\scriptsize,
+    text=grisligne
+  },
+  titre/.style={
+    font=\sffamily\small\bfseries,
+    text=grisligne
+  },
+  axe/.style={
+    draw=grisligne,
+    line width=0.9pt,
+    -{Latex[length=2.0mm,width=1.2mm]}
+  },
+  barreCapture/.style={
+    draw=bleuacier,
+    fill=bleupale,
+    line width=0.9pt,
+    rounded corners=1.5pt
+  },
+  barreDrain/.style={
+    draw=grisligne,
+    fill=grispale,
+    line width=0.9pt,
+    rounded corners=1.5pt
+  },
+  barreLibre/.style={
+    draw=grisligne,
+    fill=grisclair,
+    line width=0.8pt,
+    rounded corners=1.5pt
+  },
+  textebarre/.style={
+    font=\sffamily\small\bfseries,
+    text=grisligne,
+    align=center
+  }
+}

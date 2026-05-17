@@ -1,0 +1,30 @@
+\documentclass[tikz,border=5pt]{standalone}
+\input{tdc_publication_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[bloc, minimum width=29mm, minimum height=13mm] (ref) at (0.0,0.0)
+{Vernier de référence\\[-0.6mm]{\ttfamily\scriptsize anneaux lent/rapide}};
+\node[bloc, minimum width=29mm, minimum height=13mm, right=17mm of ref] (async)
+{Capture asynchrone\\[-0.6mm]{\ttfamily\scriptsize START / STOP}};
+\node[blocaccent, minimum width=29mm, minimum height=13mm, right=17mm of async] (pd)
+{Matrice de PD 8x8\\[-0.6mm]{\ttfamily\scriptsize 64 cellules}};
+\node[bloc, minimum width=29mm, minimum height=13mm, right=17mm of pd] (ctx)
+{Deux contextes\\[-0.6mm]{\ttfamily\scriptsize banque de snapshot}};
+\node[bloc, minimum width=29mm, minimum height=13mm, right=17mm of ctx] (tx)
+{Lecture 16 bits\\[-0.6mm]{\ttfamily\scriptsize FIFO / TX}};
+
+\draw[fluxdonnees] (ref.east) -- (async.west);
+\draw[fluxdonnees] (async.east) -- (pd.west);
+\draw[fluxdonnees] (pd.east) -- (ctx.west);
+\draw[fluxdonnees] (ctx.east) -- (tx.west);
+
+\node[bloc, minimum width=52mm, minimum height=14mm] (lut) at ($(pd.south)!0.5!(ctx.south)+(0,-2.2)$)
+{Calibration externe (LUT 6D sur l'hôte)};
+
+\draw[fluxdonnees] (tx.south) |- ($(lut.east)+(0.2,0)$)
+  node[etiquette, pos=0.34, below] {observables brutes};
+
+\end{tikzpicture}
+\end{document}

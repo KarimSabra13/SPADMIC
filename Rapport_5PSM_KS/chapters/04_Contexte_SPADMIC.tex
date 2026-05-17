@@ -3,7 +3,7 @@
 \justifying
 \sloppy
 
-Le projet \textbf{SPADMIC} s'inscrit dans une démarche d'intégration d'une électronique de lecture dédiée à une matrice de \textbf{SPAD} (\textit{Single-Photon Avalanche Diode}). Dans un tel système, l'information utile n'est pas limitée à la simple détection d'un événement : l'instant précis auquel cet événement se produit devient lui aussi une grandeur à exploiter. La mesure temporelle fine n'est donc pas un simple complément fonctionnel ; elle conditionne directement la valeur scientifique du système complet, la qualité de la discrimination des événements et la pertinence des traitements numériques réalisés en aval.
+Le projet \textbf{SPADMIC} s'inscrit dans une démarche d'intégration d'une électronique de lecture dédiée à une matrice de \textbf{SPAD} (\textit{Single-Photon Avalanche Diode})~\cite{cova1996spad,becker2005tcspc}. Dans un tel système, l'information utile n'est pas limitée à la simple détection d'un événement : l'instant précis auquel cet événement se produit devient lui aussi une grandeur à exploiter. La mesure temporelle fine n'est donc pas un simple complément fonctionnel ; elle conditionne directement la valeur scientifique du système complet, la qualité de la discrimination des événements et la pertinence des traitements numériques réalisés en aval.
 
 Dans le contexte de cette alternance, \textbf{SPADMIC} doit être considéré comme un ASIC prototype. Il ne représente pas encore une version finale complètement figée, mais un véhicule de validation à deux niveaux : validation du comportement visé pour la matrice de SPAD dans le procédé choisi, et validation de l'architecture numérique de lecture qui devra ensuite évoluer vers une version plus avancée. Dans cet ensemble, le bloc de conversion temps-numérique développé autour du projet \textbf{MPTDC} apparaît comme l'une des briques les plus structurées et les plus documentées. Il dispose déjà d'un socle théorique clair, d'une implémentation RTL complète, d'une stratégie de calibration identifiée et d'un environnement de vérification cohérent. Cette maturité relative justifie qu'il constitue le cœur technique du présent rapport, sans être isolé artificiellement du reste de l'ASIC.
 
@@ -19,16 +19,22 @@ Une matrice de \textbf{SPAD} produit des impulsions brèves, asynchrones et pote
 
 Cette combinaison de contraintes explique pourquoi un \textbf{TDC} destiné à \textbf{SPADMIC} ne peut pas être conçu comme un bloc isolé, uniquement optimisé pour la résolution. Il doit être pensé comme une brique mixte, à l'interface entre une capture asynchrone, une logique de mesure rapide, des mécanismes de stockage temporaires et une chaîne de lecture numérique cadencée par une horloge système bien plus lente.
 
-Dans l'architecture active de l'ASIC, ce besoin ne se traduit pas par un seul TDC central. Le niveau supérieur conserve au contraire trois voies TDC distinctes, puis mutualise ensuite la lecture numérique. Ce choix est important pour l'argument du rapport : il montre que la profondeur du travail ne se limite pas au cœur \textbf{MPTDC} pris isolément, mais concerne aussi sa place dans un ASIC qui doit préserver plusieurs chemins temporels en parallèle, corréler les informations utiles et rester intégrable avec une sortie numérique partagée.
+Dans l'architecture active de l'ASIC, ce besoin ne se traduit pas par un seul TDC central. La matrice de SPAD est organisée selon une lecture \textit{tri-axis} : un événement local peut produire trois informations projetées suivant trois directions géométriques, typiquement autour de \SI{-120}{\degree}, \SI{0}{\degree} et \SI{120}{\degree}. Les trois voies TDC ne sont donc pas seulement trois canaux indépendants ajoutés pour augmenter le débit ; elles correspondent aux trois axes temporels nécessaires pour reconstruire ensuite la position du cluster détecté, par triangulation et estimation de centroïde, dans la continuité du concept déjà exploré dans \textbf{PICMIC}. La lecture numérique est mutualisée plus loin afin de conserver ce principe géométrique sans multiplier inutilement les sorties de l'ASIC.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.98\textwidth]{tdc/mptdc_overview.pdf}
-    \caption{Vue fonctionnelle simplifiée du bloc \textbf{MPTDC} étudié dans ce rapport. Cette représentation restera volontairement globale à ce stade ; la hiérarchie détaillée sera reprise au chapitre \ref{chap:architecture-mptdc}.}
+    \caption{Architecture de lecture de \textbf{SPADMIC}. Les projections de la matrice alimentent en parallèle le chemin temporel \textbf{MPTDC} et le chemin spatial de position ; le contrôleur supérieur choisit ensuite le mode d'export vers le flux \textbf{TX} partagé.}
     \label{fig:mptdc-overview-context}
 \end{figure}
 
-La figure \ref{fig:mptdc-overview-context} montre bien cette dualité. Le cœur temporel reste fondé sur le principe Vernier, mais il est immédiatement entouré de fonctions de contrôle, de capture et de lecture. Dans le cadre de \textbf{SPADMIC}, la valeur du \textbf{TDC} provient donc autant de sa résolution temporelle que de sa capacité à s'insérer proprement dans une chaîne de traitement plus large, elle-même portée ici par un ASIC prototype à plusieurs voies TDC.
+La figure \ref{fig:mptdc-overview-context} montre bien cette dualité. Le chemin temporel reste fondé sur le principe Vernier et produit des enregistrements issus des trois axes \textbf{MPTDC}. En parallèle, le bloc de position reçoit directement les lignes projetées de la matrice et produit ses propres paquets spatiaux. Cette séparation est importante : le calcul de position ne dépend pas des sorties des \textbf{MPTDC}. Le contrôleur supérieur détermine seulement quel chemin est activé ou exporté : \textbf{TDC} seul, position seule ou fonctionnement mixte.
+
+\section{Contribution numérique dans la puce}
+
+Le travail réalisé ne se limite pas à l'écriture isolée du cœur \textbf{MPTDC}. Il s'inscrit dans une contribution numérique plus large à la chaîne \textbf{SPADMIC}. Cette contribution couvre notamment la définition des registres de contrôle, l'intégration avec le bus \textbf{I2C}/CSR, l'organisation de la lecture des événements, les files \textbf{FIFO}, la sérialisation de sortie et la définition des formats de paquets.
+
+Cette vue système est importante pour la cohérence du rapport. Elle montre que le \textbf{MPTDC} n'est pas seulement un bloc de mesure, mais une brique qui doit dialoguer avec une infrastructure numérique complète. Les choix de protocole, de largeur de bus, de buffering et de mutualisation de sortie conditionnent directement la manière dont les données temporelles peuvent être exploitées hors de l'ASIC.
 
 \section{Contraintes fonctionnelles et technologiques}
 
@@ -81,7 +87,7 @@ Cette méthode évite deux écueils. Le premier serait de rester à un niveau tr
 Dans l'état actuel du projet, les objectifs poursuivis par le bloc \textbf{MPTDC} peuvent être résumés de la manière suivante :
 \begin{itemize}
     \item conserver le principe Vernier à deux oscillateurs, de façon à bénéficier d'une résolution issue d'une différence de délais plutôt que d'un délai absolu ;
-    \item exploiter une observation multiphase sur une matrice \mbox{$9\times9$}, afin d'obtenir une granularité fine tout en gardant une surface maîtrisable ;
+    \item exploiter une observation multiphase sur une matrice \mbox{$8\times8$}, afin d'obtenir une granularité fine tout en gardant une surface maîtrisable ;
     \item accepter des impulsions \texttt{START}/\texttt{STOP} réellement asynchrones, ce qui correspond à la nature même des événements à mesurer ;
     \item séparer la capture rapide de la lecture système au moyen de deux contextes, afin de réduire l'impact direct du drain sur le réarmement ;
     \item exporter des observables riches, pour permettre une calibration externe à l'ASIC plus souple et plus évolutive qu'une correction figée dans le silicium ;

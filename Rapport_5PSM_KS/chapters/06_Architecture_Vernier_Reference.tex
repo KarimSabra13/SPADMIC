@@ -5,7 +5,7 @@
 
 \section{Principe Vernier appliqué à la mesure du temps}
 
-Le principe Vernier consiste à comparer deux évolutions temporelles voisines mais non identiques. Dans un \textbf{TDC} Vernier, cette idée se traduit par l'utilisation de deux chemins de propagation, ou de deux oscillateurs, dont les délais élémentaires diffèrent légèrement. L'information temporelle n'est alors plus codée par une période unique, mais par la différence entre deux périodes proches \cite{annagrebah2021thesis}.
+Le principe Vernier consiste à comparer deux évolutions temporelles voisines mais non identiques. Dans un \textbf{TDC} Vernier, cette idée se traduit par l'utilisation de deux chemins de propagation, ou de deux oscillateurs, dont les délais élémentaires diffèrent légèrement. L'information temporelle n'est alors plus codée par une période unique, mais par la différence entre deux périodes proches \cite{annagrebah2021thesis,henzler2010tdc,dudek2000vernier}.
 
 Dans le cas d'un Vernier à oscillateurs en anneau, un oscillateur lent est déclenché par l'événement de départ, tandis qu'un oscillateur rapide est déclenché par l'événement d'arrêt. Comme la période de l'oscillateur rapide est plus faible, ce dernier rattrape progressivement l'oscillateur lent. La première coïncidence utile permet de localiser l'intervalle mesuré avec une finesse déterminée par l'écart entre les deux périodes.
 
@@ -30,7 +30,7 @@ La figure \ref{fig:vernier-principle-detailed} met ce mécanisme en scène sous 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{tdc/vernier_principle_detailed.pdf}
+    \includegraphics[width=0.98\textwidth]{tdc/vernier_principle_detailed.png}
     \caption{Schéma temporel de synthèse du principe Vernier détaillé. Le rattrapage progressif du chemin rapide structure la mesure grossière, tandis que l'observation multiphase raffine la position de la première coïncidence dans l'intervalle $T_{\mathrm{LSB}}$.}
     \label{fig:vernier-principle-detailed}
 \end{figure}
@@ -77,10 +77,10 @@ Sur le plan conceptuel, cette structuration est particulièrement intéressante 
 
 \section{Lecture explicite de la matrice de phase}
 
-Dans l'implémentation active du projet, la matrice de détection de phase utilise $9$ phases lentes et $9$ phases rapides, soit \mbox{$9\times9 = 81$} cellules. Chaque cellule correspond à une paire $(n_s,n_f)$, avec :
+Dans l'implémentation active du projet, la matrice de détection de phase utilise $8$ phases lentes et $8$ phases rapides, soit \mbox{$8\times8 = 64$} cellules. Chaque cellule correspond à une paire $(n_s,n_f)$, avec :
 \begin{itemize}
-    \item $n_s \in \{0,\dots,8\}$ pour l'indice de phase lente ;
-    \item $n_f \in \{0,\dots,8\}$ pour l'indice de phase rapide.
+    \item $n_s \in \{0,\dots,7\}$ pour l'indice de phase lente ;
+    \item $n_f \in \{0,\dots,7\}$ pour l'indice de phase rapide.
 \end{itemize}
 
 Le coefficient fin nominal utilisé dans le RTL est alors gouverné par la relation :
@@ -94,7 +94,7 @@ Ce point est fondamental, car il montre que l'information fine n'est pas issue d
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.88\textwidth]{tdc/pd_matrix_heatmap.pdf}
-    \caption{Carte de la matrice \mbox{$9\times9$} des détecteurs de phase. Chaque cellule correspond à une paire $(n_s,n_f)$ et à un coefficient fin nominal associé.}
+    \caption{Carte de la matrice \mbox{$8\times8$} des détecteurs de phase. Chaque cellule correspond à une paire $(n_s,n_f)$ et à un coefficient fin nominal associé.}
     \label{fig:pd-matrix-heatmap}
 \end{figure}
 
@@ -102,7 +102,7 @@ Cette représentation permet de lire immédiatement deux phénomènes. D'une par
 
 \section{Non-uniformité intrinsèque de la grille fine}
 
-La non-uniformité de la grille fine est une conséquence directe de la relation $11\,n_s - 10\,n_f$. Si l'on considère l'intervalle total théorique allant de $-80$ à $+88$, on obtient $169$ positions entières possibles. Or, seules $81$ positions sont effectivement atteignables avec les couples $(n_s,n_f)$ disponibles. La couverture réelle n'est donc que de \mbox{$81/169 \approx 47{,}9~\%$}.
+La non-uniformité de la grille fine est une conséquence directe de la relation $11\,n_s - 10\,n_f$. Si l'on considère l'intervalle total théorique allant de $-70$ à $+77$, on obtient $148$ positions entières possibles. Or, seules $64$ positions sont effectivement atteignables avec les couples $(n_s,n_f)$ disponibles. La couverture réelle n'est donc que de \mbox{$64/148 \approx 43{,}2~\%$}.
 
 Cette propriété a plusieurs conséquences :
 \begin{itemize}
@@ -111,7 +111,7 @@ Cette propriété a plusieurs conséquences :
     \item la distribution des erreurs dépend de la position dans la matrice, et pas seulement du bruit des oscillateurs.
 \end{itemize}
 
-La figure \ref{fig:fine-grid-coverage} illustre cette situation en représentant les valeurs atteignables, les valeurs manquantes et les conséquences de cette structure sur la linéarité brute. Dans l'état actuel de l'analyse, on compte $88$ trous sur la grille et l'écart maximal entre deux positions atteignables atteint \SI{100}{\pico\second} sur certaines frontières diagonales.
+La figure \ref{fig:fine-grid-coverage} illustre cette situation en représentant les valeurs atteignables, les valeurs manquantes et les conséquences de cette structure sur la linéarité brute. Dans l'état actuel de l'analyse, on compte $84$ positions manquantes sur l'intervalle couvert et l'écart maximal entre deux positions atteignables atteint \SI{100}{\pico\second} sur certaines frontières diagonales.
 
 \begin{figure}[H]
     \centering

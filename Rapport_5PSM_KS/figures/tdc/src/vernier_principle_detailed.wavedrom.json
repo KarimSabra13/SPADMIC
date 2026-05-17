@@ -1,0 +1,58 @@
+{
+  "config": {
+    "hscale": 2,
+    "skin": "narrow"
+  },
+  "head": {
+    "text": "Chronogramme du principe Vernier",
+    "tick": 0
+  },
+  "signal": [
+    {
+      "name": "Départ (START)",
+      "wave": "010.....................",
+      "node": ".A......................"
+    },
+    {
+      "name": "Oscillateur Lent (S1)",
+      "wave": "01..0..1..0..1..0..1..0.",
+      "node": ".C.....E.....G.........."
+    },
+    {
+      "name": "Compteur Lent",
+      "wave": "x=.....=.....=.....=....",
+      "data": ["0", "1", "2", "3"]
+    },
+    {},
+    {
+      "name": "Arrêt (STOP)",
+      "wave": "0....10.................",
+      "node": ".....B.................."
+    },
+    {
+      "name": "Oscillateur Rapide (F1)",
+      "wave": "0....1.0.1.0.1.0.1.0.1.0",
+      "node": ".....D...F...H.........."
+    },
+    {
+      "name": "Compteur Rapide",
+      "wave": "x....=...=...=...=...=..",
+      "data": ["0", "1", "2", "3", "4"]
+    },
+    {},
+    {
+      "name": "Circuit de coïncidence",
+      "wave": "0............10.........",
+      "node": ".............J.........."
+    }
+  ],
+  "edge": [
+    "A-|>B T_{hit}",
+    "C~>D T_{ver,1}",
+    "E~>F T_{ver,2}",
+    "H-|>J"
+  ],
+  "foot": {
+    "text": "Rattrapage progressif jusqu'à la première coïncidence utile."
+  }
+}

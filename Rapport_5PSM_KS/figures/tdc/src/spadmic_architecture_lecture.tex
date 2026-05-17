@@ -1,0 +1,149 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usetikzlibrary{arrows.meta,backgrounds,calc,fit,positioning}
+
+\definecolor{bleuacier}{HTML}{315F8C}
+\definecolor{bleupale}{HTML}{E8F0F8}
+\definecolor{grisperle}{HTML}{F1F4F6}
+\definecolor{grisdomaine}{HTML}{D8DEE3}
+\definecolor{grisligne}{HTML}{2F3437}
+
+\tikzset{
+  bloc/.style={
+    rectangle,
+    draw=grisligne,
+    line width=1pt,
+    rounded corners=2pt,
+    fill=grisperle,
+    minimum width=42mm,
+    minimum height=11mm,
+    inner sep=3pt,
+    align=center,
+    text=grisligne,
+    font=\sffamily\small\bfseries
+  },
+  blocaccent/.style={
+    bloc,
+    fill=bleupale
+  },
+  domaine/.style={
+    draw=grisligne,
+    dashed,
+    line width=0.9pt,
+    rounded corners=3pt,
+    fill=grisdomaine,
+    fill opacity=0.28,
+    inner sep=6mm
+  },
+  donnees/.style={
+    -{Latex[length=2.6mm,width=1.7mm]},
+    line width=1.5pt,
+    draw=bleuacier
+  },
+  controle/.style={
+    -{Latex[length=2.2mm,width=1.4mm]},
+    line width=0.95pt,
+    draw=grisligne,
+    dashed
+  },
+  etiquette/.style={
+    fill=white,
+    inner xsep=2pt,
+    inner ysep=1.5pt,
+    font=\ttfamily\scriptsize,
+    text=grisligne
+  },
+  titre/.style={
+    font=\sffamily\small\bfseries,
+    text=grisligne,
+    fill=white,
+    inner xsep=2pt,
+    inner ysep=1pt
+  }
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[blocaccent] (axezero) at (0.0,3.20) {Axe $0^\circ$};
+\node[blocaccent] (axeplus) at (0.0,1.55) {Axe $+120^\circ$};
+\node[blocaccent] (axemoins) at (0.0,-0.10) {Axe $-120^\circ$};
+
+\node[blocaccent, minimum width=44mm] (tdczero) at (9.00,3.50) {MPTDC Axe $0^\circ$\\[-1mm]{\ttfamily\scriptsize Vernier 8x8}};
+\node[blocaccent, minimum width=44mm] (tdcplus) at (9.00,1.85) {MPTDC Axe $+120^\circ$};
+\node[blocaccent, minimum width=44mm] (tdcmoins) at (9.00,0.20) {MPTDC Axe $-120^\circ$};
+\node[bloc, minimum width=46mm, minimum height=14mm] (position) at (9.00,-2.25) {Calcul de position\\[-1mm] / Centroïde};
+
+\node[bloc, minimum width=45mm, minimum height=13mm] (tsc) at (19.30,2.80) {Contrôleur Supérieur\\[-1mm](TSC)};
+\node[blocaccent, minimum width=45mm, minimum height=14mm] (arbitrage) at (19.30,-0.80) {Arbitrage et\\[-1mm] Transmission};
+
+\begin{pgfonlayer}{background}
+  \node[domaine, fit=(axezero)(axeplus)(axemoins), label={[titre]above:Projections de la matrice SPAD}] (domspad) {};
+  \node[domaine, fit=(tdczero)(tdcplus)(tdcmoins)(position), label={[titre]above:Chemins parallèles}] (domtraitement) {};
+  \node[domaine, fit=(tsc)(arbitrage), label={[titre]above:Arbitrage}] (domsortie) {};
+\end{pgfonlayer}
+
+\coordinate (positionx) at ([yshift=8pt]position.west);
+\coordinate (positiony) at (position.west);
+\coordinate (positionz) at ([yshift=-8pt]position.west);
+
+\coordinate (arbtdc0) at ([yshift=14pt]arbitrage.west);
+\coordinate (arbtdcp) at ([yshift=5pt]arbitrage.west);
+\coordinate (arbtdcm) at ([yshift=-4pt]arbitrage.west);
+\coordinate (arbpos) at ([yshift=-14pt]arbitrage.west);
+
+\coordinate (ctrltdc0) at ([yshift=11pt]tdczero.east);
+\coordinate (ctrltdcp) at ([yshift=4pt]tdcplus.east);
+\coordinate (ctrltdcm) at ([yshift=-3pt]tdcmoins.east);
+\coordinate (ctrlpos) at ([yshift=-11pt]position.east);
+
+\coordinate (busA0) at ($(axezero.east)+(2.70,0)$);
+\coordinate (busAp) at ($(axeplus.east)+(3.10,0)$);
+\coordinate (busAm) at ($(axemoins.east)+(3.50,0)$);
+
+\coordinate (busPX) at ($(axezero.east)+(4.40,0)$);
+\coordinate (busPY) at ($(axeplus.east)+(5.20,0)$);
+\coordinate (busPZ) at ($(axemoins.east)+(6.00,0)$);
+
+\coordinate (collecteTdcHaut) at ($(tdczero.east)+(3.25,0)$);
+\coordinate (collecteTdcBas) at ($(collecteTdcHaut |- arbtdcm)+(0,0)$);
+\coordinate (departPosition) at ($(position.east)+(4.10,0)$);
+
+\coordinate (busControleHaut) at ($(tsc.west)+(-1.70,0)$);
+\coordinate (busControleBas) at ($(busControleHaut |- ctrlpos)+(0,0)$);
+
+\draw[donnees] (axezero.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busA0) |- (tdczero.west);
+\draw[donnees] (axeplus.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busAp) |- (tdcplus.west);
+\draw[donnees] (axemoins.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busAm) |- (tdcmoins.west);
+
+\draw[donnees] (axezero.east) -- node[etiquette, below=2pt, pos=0.62] {lignes X} (busPX) |- (positionx);
+\draw[donnees] (axeplus.east) -- node[etiquette, below=2pt, pos=0.62] {lignes Y} (busPY) |- (positiony);
+\draw[donnees] (axemoins.east) -- node[etiquette, below=2pt, pos=0.62] {lignes Z} (busPZ) |- (positionz);
+
+\draw[donnees] (tdczero.east) -- node[etiquette, above=2pt, pos=0.55] {enregistrements TDC} (collecteTdcHaut);
+\draw[donnees] (tdcplus.east) -- ($(collecteTdcHaut |- tdcplus.east)$);
+\draw[donnees] (tdcmoins.east) -- ($(collecteTdcHaut |- tdcmoins.east)$);
+\draw[donnees] (collecteTdcHaut) -- (collecteTdcBas) |- (arbtdcp);
+\draw[donnees] (position.east) -- node[etiquette, below=2pt, pos=0.56] {paquets spatiaux} (departPosition) |- (arbpos);
+
+\draw[controle] (tsc.west) -- node[etiquette, above=2pt, pos=0.52] {mode / statut} (busControleHaut);
+\draw[controle] (busControleHaut) -- (busControleBas);
+\draw[controle] ($(busControleHaut |- ctrltdc0)$) -- (ctrltdc0);
+\draw[controle] ($(busControleHaut |- ctrltdcp)$) -- (ctrltdcp);
+\draw[controle] ($(busControleHaut |- ctrltdcm)$) -- (ctrltdcm);
+\draw[controle] ($(busControleHaut |- ctrlpos)$) -- (ctrlpos);
+\draw[controle] (tsc.south) -- node[etiquette, right=3pt, pos=0.50] {TDC seul / position seule / mixte} (arbitrage.north);
+
+\draw[donnees] (arbitrage.east) -- ++(2.40,0)
+  node[etiquette, above=2pt, pos=0.58] {Flux TX partagé};
+
+\node[font=\sffamily\footnotesize, text=grisligne, align=center] at (8.50,-3.65)
+{Le chemin temporel et le chemin spatial reçoivent directement les projections SPAD ;\\
+le bloc de position ne dépend pas des sorties MPTDC.};
+
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,55 @@
+\documentclass[tikz,border=5pt]{standalone}
+\input{tdc_publication_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[bloc, minimum width=34mm] (start) at (0.0,2.1)
+{Latch START\\[-0.6mm]{\ttfamily\scriptsize start\_latched}};
+\node[bloc, minimum width=34mm, below=16mm of start] (stop)
+{Latch STOP\\[-0.6mm]{\ttfamily\scriptsize stop\_latched}};
+\node[bloc, minimum width=34mm, below=16mm of stop] (boundary)
+{Capture de frontière\\[-0.6mm]{\ttfamily\scriptsize phase0\_snap}};
+\node[domaine, fit=(start)(stop)(boundary), label={[titre]above:Domaine d'événements asynchrones}] {};
+
+\node[bloc, minimum width=38mm] (slow)
+  at (6.2,2.2) {Compteur lent\\[-0.6mm]{\ttfamily\scriptsize instantane\_gray}};
+\node[bloc, minimum width=38mm, below=16mm of slow] (fast)
+  {Compteur rapide + Matrice PD\\[-0.6mm]{\ttfamily\scriptsize nfast\_hit}};
+\node[blocaccent, minimum width=38mm, below=16mm of fast] (fsm)
+  {FSM de Mesure\\[-0.6mm]{\ttfamily\scriptsize SNAPSHOT / CAPTURE}};
+\node[domaine, fit=(slow)(fast)(fsm), label={[titre]above:Domaines d'oscillateurs (lent/rapide)}] {};
+
+\node[bloc, minimum width=36mm] (csr)
+  at (12.6,2.2) {CSR / Watchdog\\[-0.6mm]{\ttfamily\scriptsize conv\_arm}};
+\node[bloc, minimum width=36mm, below=16mm of csr] (cdc)
+  {Synchro statut CDC\\[-0.6mm]{\ttfamily\scriptsize ctx\_ready}};
+\node[bloc, minimum width=36mm, below=16mm of cdc] (drain)
+  {Drain + FIFO + TX\\[-0.6mm]{\ttfamily\scriptsize narrow\_data}};
+\node[domaine, fit=(csr)(cdc)(drain), label={[titre]above:Domaine clk\_sys}] {};
+
+\draw[fluxasync] (start.east) -- ++(1.05,0) |- (fsm.west)
+  node[etiquette, pos=0.34, above] {start\_latched};
+\draw[fluxasync] (stop.east) -- ++(1.20,0) |- (fsm.west)
+  node[etiquette, pos=0.34, above] {stop\_latched};
+\draw[fluxasync] (boundary.east) -- ++(1.35,0) |- (fast.west)
+  node[etiquette, pos=0.34, below] {phase0\_snap};
+
+\draw[fluxcontrole] (fsm.north) -- ++(0,0.45) -| (slow.west)
+  node[etiquette, pos=0.45, above] {slow\_en};
+\draw[fluxcontrole] (fsm.east) -- ++(0.7,0) |- (fast.south)
+  node[etiquette, pos=0.36, right] {close\_any};
+\draw[fluxdonnees] (slow.east) -- (fast.west)
+  node[etiquette, midway, above=2.0mm] {instantane\_gray};
+
+\draw[fluxcontrole] (csr.west) -- ++(-0.95,0) |- (fsm.east)
+  node[etiquette, pos=0.34, above] {conv\_arm};
+\draw[fluxcontrole] (fsm.east) -- ++(1.0,0) |- (cdc.west)
+  node[etiquette, pos=0.34, above] {ctx\_ready};
+\draw[fluxcontrole] (cdc.east) -- (drain.west)
+  node[etiquette, midway, above=2.0mm] {ctx\_ready};
+\draw[fluxcontrole] (drain.west) -- ++(-0.95,0) |- (fsm.south)
+  node[etiquette, pos=0.36, below] {release\_sync};
+
+\end{tikzpicture}
+\end{document}

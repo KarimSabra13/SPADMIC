@@ -1,0 +1,126 @@
+\documentclass[tikz,border=8pt]{standalone}
+\input{tdc_publication_style.tex}
+\usetikzlibrary{calc,positioning}
+
+\tikzset{
+  boitetech/.style={
+    rectangle,
+    draw=black,
+    line width=1pt,
+    rounded corners=2pt,
+    fill=white,
+    minimum height=12mm,
+    minimum width=28mm,
+    inner sep=3pt,
+    align=center,
+    font=\sffamily\small\bfseries
+  },
+  oscillateur/.style={
+    boitetech,
+    minimum width=66mm,
+    minimum height=14mm
+  },
+  matrice/.style={
+    boitetech,
+    minimum width=66mm,
+    minimum height=34mm
+  },
+  memoire/.style={
+    boitetech,
+    minimum width=40mm,
+    minimum height=52mm
+  },
+  lent/.style={
+    draw=red!80!black,
+    line width=1.15pt,
+    -{Latex[length=2.4mm,width=1.5mm]}
+  },
+  rapide/.style={
+    draw=blue!80!black,
+    line width=1.15pt,
+    -{Latex[length=2.4mm,width=1.5mm]}
+  },
+  busdata/.style={
+    draw=blue!80!black,
+    line width=1.9pt,
+    -{Latex[length=3.0mm,width=2.0mm]}
+  },
+  etiquetteflux/.style={
+    fill=white,
+    inner xsep=1.8pt,
+    inner ysep=1.0pt,
+    font=\ttfamily\scriptsize,
+    text=grisligne
+  }
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[boitetech, minimum width=31mm, minimum height=18mm] (prelogic) at (0,0)
+{Prélogique\\(EN)};
+
+\node[oscillateur] (slowosc) at (7.0,3.45)
+{Oscillateur Lent (9 étages)};
+\node[matrice] (matrix) at (7.0,0)
+{Matrice de Détection de Phase 9x9};
+\node[oscillateur] (fastosc) at (7.0,-3.45)
+{Oscillateur Rapide (9 étages)};
+
+\node[boitetech, minimum width=30mm] (slowcnt) at (15.4,3.45)
+{Compteur Lent};
+\node[memoire] (memory) at (15.4,0)
+{Mémoire\\d'échantillonnage};
+\node[boitetech, minimum width=30mm] (fastcnt) at (15.4,-3.45)
+{Compteur Rapide};
+
+\coordinate (startin) at ($(prelogic.west)+(-2.35,0.60)$);
+\coordinate (stopin) at ($(prelogic.west)+(-2.35,-0.60)$);
+\coordinate (enslowup) at ($(prelogic.north)+(0,1.05)$);
+\coordinate (enfastdown) at ($(prelogic.south)+(0,-1.05)$);
+\coordinate (nslowin) at ([xshift=-8pt]memory.north);
+\coordinate (nfastin) at ([xshift=8pt]memory.south);
+
+\draw[lent] (startin) -- (prelogic.west |- startin)
+  node[etiquetteflux, midway, above=2pt, text=red!80!black] {START};
+\draw[rapide] (stopin) -- (prelogic.west |- stopin)
+  node[etiquetteflux, midway, below=2pt, text=blue!80!black] {STOP};
+
+\draw[lent] (prelogic.north) -- (enslowup) -| (slowosc.west)
+  node[etiquetteflux, pos=0.34, above=2pt, text=red!80!black] {$En_{slow}$};
+\draw[rapide] (prelogic.south) -- (enfastdown) -| (fastosc.west)
+  node[etiquetteflux, pos=0.34, below=2pt, text=blue!80!black] {$En_{fast}$};
+
+\draw[lent] (slowosc.east) -- ++(1.05,0) -- (slowcnt.west)
+  node[etiquetteflux, pos=0.48, above=2pt, text=red!80!black] {débordement lent};
+\draw[rapide] (fastosc.east) -- ++(1.05,0) -- (fastcnt.west)
+  node[etiquetteflux, pos=0.48, below=2pt, text=blue!80!black] {débordement rapide};
+
+\draw[busdata] (slowcnt.south) -- ++(0,-0.65) -- (nslowin)
+  node[etiquetteflux, pos=0.32, right=2pt] {$N_{slow}$};
+\draw[busdata] (fastcnt.north) -- ++(0,0.65) -- (nfastin)
+  node[etiquetteflux, pos=0.32, right=2pt] {$N_{fast}$};
+
+\foreach \i in {1,...,9} {
+  \pgfmathsetmacro{\alpha}{\i/10}
+  \pgfmathsetmacro{\beta}{(\i-0.5)/9}
+  \coordinate (slowtap\i) at ($(slowosc.south west)!\alpha!(slowosc.south east)$);
+  \coordinate (matrixtop\i) at ($(matrix.north west)!\alpha!(matrix.north east)$);
+  \coordinate (fasttap\i) at ($(fastosc.north west)!\alpha!(fastosc.north east)$);
+  \coordinate (matrixbot\i) at ($(matrix.south west)!\alpha!(matrix.south east)$);
+  \coordinate (matrixout\i) at ($(matrix.north east)!\beta!(matrix.south east)$);
+  \coordinate (memoryin\i) at (memory.west |- matrixout\i);
+
+  \draw[lent] (slowtap\i) -- (matrixtop\i)
+    node[etiquetteflux, midway, right=1pt, text=red!80!black] {$S_{\i}$};
+  \draw[rapide] (fasttap\i) -- (matrixbot\i)
+    node[etiquetteflux, midway, right=1pt, text=blue!80!black] {$F_{\i}$};
+  \draw[busdata] (matrixout\i) -- (memoryin\i)
+    node[etiquetteflux, midway, above=1pt] {$PD_{\i}$};
+}
+
+\draw[busdata, line width=2.6pt] (memory.east) -- ++(3.0,0)
+  node[etiquetteflux, pos=0.64, above=2pt, text=blue!80!black] {DATA};
+
+\end{tikzpicture}
+\end{document}

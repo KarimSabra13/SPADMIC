@@ -1,0 +1,28 @@
+\documentclass[tikz,border=5pt]{standalone}
+\input{tdc_publication_style.tex}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[bloc, minimum width=28mm, minimum height=13mm] (det) at (0.0,0.0)
+{Détecteur\\[-0.6mm]{\ttfamily\scriptsize Événement SPAD}};
+\node[bloc, minimum width=33mm, minimum height=13mm, right=20mm of det] (fe)
+{Front-end d'entrée\\[-0.6mm]{\ttfamily\scriptsize Mise en forme / Latch}};
+\node[blocaccent, minimum width=28mm, minimum height=13mm, right=21mm of fe] (tdc)
+{Cœur TDC\\[-0.6mm]{\ttfamily\scriptsize Temps -> Code}};
+\node[bloc, minimum width=28mm, minimum height=13mm, right=21mm of tdc] (ro)
+{Lecture\\[-0.6mm]{\ttfamily\scriptsize Paquet / FIFO}};
+\node[bloc, minimum width=24mm, minimum height=13mm, right=20mm of ro] (host)
+{Hôte\\[-0.6mm]{\ttfamily\scriptsize Calibration}};
+
+\draw[fluxasync] (det.east) -- (fe.west)
+  node[etiquette, midway, above=2.0mm] {impulsion asynchrone};
+\draw[fluxasync] (fe.east) -- (tdc.west)
+  node[etiquette, midway, above=2.0mm] {START / STOP};
+\draw[fluxdonnees] (tdc.east) -- (ro.west)
+  node[etiquette, midway, above=2.0mm] {données};
+\draw[fluxdonnees] (ro.east) -- (host.west)
+  node[etiquette, midway, above=2.0mm] {flux};
+
+\end{tikzpicture}
+\end{document}
