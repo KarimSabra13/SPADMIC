@@ -158,14 +158,20 @@ module mptdc_drain_ctrl
   // FSM — combinational next-state + output decode
   // =========================================================================
   logic advance_scan;
+  logic load_pending_wr;
+  mptdc_acq_rec_t pending_wr_data_d;
+  mptdc_acq_rec_t pending_wr_data_q;
+  logic pending_wr_valid_q;
+  wire  pending_wr_accept = pending_wr_valid_q & ~fifo_wr_full_i;
+  wire  pending_wr_ready  = ~pending_wr_valid_q | pending_wr_accept;
 
   always_comb begin
     state_d        = state_q;
-    fifo_wr_en_o   = 1'b0;
-    fifo_wr_data_o = '0;
     conv_done_o    = 1'b0;
     ctx_release_o  = '0;
     advance_scan   = 1'b0;
+    load_pending_wr = 1'b0;
+    pending_wr_data_d = '0;
 
     case (state_q)
       // ─────────────────────────────────────────────────────────────
@@ -176,25 +182,25 @@ module mptdc_drain_ctrl
 
       // ─────────────────────────────────────────────────────────────
       ST_D_META: begin
-        if (!fifo_wr_full_i) begin
-          fifo_wr_en_o   = 1'b1;
-          fifo_wr_data_o = meta_rec;
+        if (pending_wr_ready) begin
+          load_pending_wr   = 1'b1;
+          pending_wr_data_d = meta_rec;
           state_d        = ST_D_SCAN;
         end
       end
 
       // ─────────────────────────────────────────────────────────────
       ST_D_SCAN: begin
-        if (scan_done || all_hits_found) begin
+        if ((scan_done || all_hits_found) && pending_wr_ready) begin
           state_d = ST_D_EOC;
         end else if (cell_has_hit) begin
-          if (!fifo_wr_full_i) begin
-            fifo_wr_en_o   = 1'b1;
-            fifo_wr_data_o = hit_rec;
-            advance_scan   = 1'b1;
+          if (pending_wr_ready) begin
+            load_pending_wr   = 1'b1;
+            pending_wr_data_d = hit_rec;
+            advance_scan      = 1'b1;
           end
           // FIFO full: stall — hold scan position
-        end else begin
+        end else if (pending_wr_ready) begin
           advance_scan = 1'b1;   // skip empty cell
         end
       end
@@ -210,6 +216,9 @@ module mptdc_drain_ctrl
     endcase
   end
 
+  assign fifo_wr_en_o   = pending_wr_accept;
+  assign fifo_wr_data_o = pending_wr_data_q;
+
   // =========================================================================
   // Sequential — state + scan counters
   // =========================================================================
@@ -221,8 +230,17 @@ module mptdc_drain_ctrl
       ns_cnt_q    <= '0;
       nf_cnt_q    <= '0;
       event_seq_q <= '0;
+      pending_wr_valid_q <= 1'b0;
+      pending_wr_data_q  <= '0;
     end else begin
       state_q <= state_d;
+
+      if (load_pending_wr) begin
+        pending_wr_valid_q <= 1'b1;
+        pending_wr_data_q  <= pending_wr_data_d;
+      end else if (pending_wr_accept) begin
+        pending_wr_valid_q <= 1'b0;
+      end
 
       case (state_q)
         ST_D_IDLE: begin

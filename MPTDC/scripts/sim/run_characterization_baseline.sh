@@ -160,6 +160,7 @@ FIXED_DELAY_DIR="$OUT_DIR/fixed_delay"
 MANIFEST_PATH="$OUT_DIR/characterization_manifest.json"
 
 mkdir -p "$OUT_DIR"
+cd "$REPO_ROOT"
 
 CAMPAIGN_CMD=(
   bash "$REPO_ROOT/scripts/sim/run_campaign.sh"
@@ -387,7 +388,9 @@ if (( ! DRY_RUN )); then
   if (( CAMPAIGN_CSV_COUNT > 0 )); then
     CAMPAIGN_ROW_COUNT=$(find "$CAMPAIGN_DIR" -name 'seed_*.csv' -exec tail -n +2 {} + 2>/dev/null | wc -l)
   fi
-  FIXED_DELAY_CSV_COUNT=$(find "$FIXED_DELAY_DIR" -name 'seed_*.csv' 2>/dev/null | wc -l)
+  if [[ -d "$FIXED_DELAY_DIR" ]]; then
+    FIXED_DELAY_CSV_COUNT=$(find "$FIXED_DELAY_DIR" -name 'seed_*.csv' 2>/dev/null | wc -l)
+  fi
 fi
 write_manifest "completed" "$CAMPAIGN_CSV_COUNT" "$CAMPAIGN_ROW_COUNT" "$FIXED_DELAY_CSV_COUNT"
 

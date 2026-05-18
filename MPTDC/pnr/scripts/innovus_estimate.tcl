@@ -86,18 +86,17 @@ proc mptdc_pnr_generate_extra_reports {} {
         "MPTDC extra report_constraint all violators" {report_constraint -all_violators}
     mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_congestion.rpt" \
         "MPTDC extra reportCongestion" [list \
-            {reportCongestion -hotspot 100 -rpt_overflowCong} \
-            {reportCongestion -hotSpot 100 -overflow} \
+            {reportCongestion -hotSpot -num_hotspot 100 -overflow} \
+            {reportCongestion -hotSpot -num_hotspot 100} \
             {reportCongestion -overflow} \
-            {reportCongestion -hotspot 100} \
-            {reportCongestion -hotSpot 100} \
-            {reportCongestion -full} \
+            {reportCongestion} \
         ]
     mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_congestion_full.rpt" \
-        "MPTDC extra full congestion" [list \
-            {reportCongestion -full -rpt_overflowCong} \
-            {reportCongestion -full} \
-            {reportCongestion -rpt_overflowCong} \
+        "MPTDC extra congestion with blockage" [list \
+            {reportCongestion -includeBlockage -overflow} \
+            {reportCongestion -3d -overflow} \
+            {reportCongestion -overflow} \
+            {reportCongestion} \
         ]
     mptdc_pnr_capture_report "$extra_dir/extra_report_density.rpt" \
         "MPTDC extra reportDensity" {reportDensity}
@@ -106,9 +105,8 @@ proc mptdc_pnr_generate_extra_reports {} {
     mptdc_pnr_capture_report "$extra_dir/extra_report_power_hier.rpt" \
         "MPTDC extra report_power hierarchy" {report_power -hierarchy all}
     mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_power_verbose.rpt" \
-        "MPTDC extra verbose power" [list \
-            {report_power -hierarchy all -verbose} \
-            {report_power -verbose} \
+        "MPTDC extra power summary" [list \
+            {report_power -hierarchy all} \
             {report_power} \
         ]
     mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_clocks.rpt" \
@@ -451,14 +449,11 @@ proc mptdc_pnr_configure_vectorless_activity {} {
 
     mptdc_pnr_msg "Configuring vectorless activity: toggle=$pnr(vectorless_toggle_rate), static_probability=$pnr(vectorless_static_probability)"
 
-    if {[catch {set_db time_design_propagate_activity true} err]} {
-        mptdc_pnr_msg "Vectorless activity propagation DB knob skipped: $err"
-    }
-
     set activity_cmds [list \
-        "set_default_switching_activity -toggle_rate $pnr(vectorless_toggle_rate) -static_probability $pnr(vectorless_static_probability) \[all_inputs\]" \
-        "set_default_switching_activity -input_activity $pnr(vectorless_toggle_rate) \[all_inputs\]" \
-        "set_default_switching_activity -toggle_rate $pnr(vectorless_toggle_rate) \[all_inputs\]" \
+        "set_default_switching_activity -input_activity $pnr(vectorless_toggle_rate) -seq_activity $pnr(vectorless_toggle_rate) -duty $pnr(vectorless_static_probability)" \
+        "set_default_switching_activity -input_activity $pnr(vectorless_toggle_rate) -seq_activity $pnr(vectorless_toggle_rate)" \
+        "set_default_switching_activity -global_activity $pnr(vectorless_toggle_rate) -duty $pnr(vectorless_static_probability)" \
+        "set_default_switching_activity -global_activity $pnr(vectorless_toggle_rate)" \
     ]
     set applied 0
     foreach cmd $activity_cmds {
@@ -712,6 +707,7 @@ if {$pnr(do_detail_route)} {
         routeDesign
     }
     mptdc_pnr_optional "Generating post-route timing reports" {
+        setAnalysisMode -analysisType onChipVariation -cppr both
         timeDesign -postRoute -outDir "$pnr(reports_dir)/postroute"
     }
 }

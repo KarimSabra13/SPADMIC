@@ -21,6 +21,7 @@ module tb_context_bank_unit;
   always #450 clk_fast = ~clk_fast;  // ~900 ps period
 
   // ── DUT signals ───────────────────────────────────────────────────
+  logic                   rst_n;
   ctx_id_t                capture_ctx;
   logic                   snapshot_en;
   logic                   capture_en;
@@ -39,6 +40,7 @@ module tb_context_bank_unit;
   // ── DUT instantiation ─────────────────────────────────────────────
   mptdc_context_bank u_dut (
     .clk_fast               (clk_fast),
+    .rst_n                  (rst_n),
     .capture_ctx_i          (capture_ctx),
     .snapshot_en_i          (snapshot_en),
     .capture_en_i           (capture_en),
@@ -153,6 +155,7 @@ module tb_context_bank_unit;
 
   initial begin
     // Init
+    rst_n                = 1'b0;
     capture_ctx          = '0;
     snapshot_en          = 1'b0;
     capture_en           = 1'b0;
@@ -166,6 +169,8 @@ module tb_context_bank_unit;
     flags                = '0;
     read_ctx             = '0;
 
+    repeat (2) @(posedge clk_fast);
+    rst_n = 1'b1;
     repeat (4) @(posedge clk_fast);
 
     // ────────────────────────────────────────────────────────────────

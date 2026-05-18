@@ -432,6 +432,7 @@ module mptdc_core
   // ── Context bank ───────────────────────────────────────────────
   mptdc_context_bank u_ctx_bank (
     .clk_fast              (osc_fast_ph0),
+    .rst_n                 (rst_fast_n),
     .capture_ctx_i         (fe_active_ctx),
     .snapshot_en_i         (meas_snapshot_en),
     .capture_en_i          (meas_capture_en),

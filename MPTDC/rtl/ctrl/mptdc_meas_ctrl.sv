@@ -10,8 +10,8 @@
 // =============================================================================
 // v2.4 changes (first-hit mode removal):
 //   - Removed first_hit_mode_i port — single multi-hit operating mode.
-//   - max_hits=1 uses the fast OR-reduction close path (close_fast) for
-//     minimum-latency single-hit operation.
+//   - max_hits=1 uses a registered OR-reduction close path (close_fast) for
+//     physically-safe single-hit operation.
 //   - max_hits>1 uses a deeply pipelined hierarchical count close
 //     (close_counted).  The extra latency is intentional: it avoids forcing the
 //     PD matrix to drive a 64-bit population-count tree in one ~900 ps cycle.
@@ -22,11 +22,9 @@
 //     STOP_OSC deasserts osc_keep_alive BEFORE pd_clear to eliminate the
 //     async-clear-while-clock-running race on PD cells.
 //   - Close detection split:
-//     max_hits=1: pure OR-reduction (~0.3-0.6 ns at 180nm, fits 900 ps)
-//     max_hits>1: 2-stage pipelined hierarchical saturating count
-//       Stage 1: 8 row popcounts (8 bits each → 4-bit partial) + tree → registered
-//       Stage 2: compare registered count against max_hits_cfg → close_counted
-//     This adds 1 fast-cycle latency to counted close (deadtime ~4.5 ns).
+//     max_hits=1: registered OR-reduction close
+//     max_hits>1: deeply pipelined hierarchical saturating count
+//     This adds fast-cycle latency to close detection so each stage stays small.
 //   - Overflow flag removed (was misused as hit-saturation).
 //   - pd_gate_o: gates PD enable off immediately on fast close to
 //     limit hit accumulation in single-hit mode.
@@ -77,68 +75,91 @@ module mptdc_meas_ctrl
   // =========================================================================
 
   // ── OR-reduction: single-hit fast-close path ──
-  logic any_hit;
-  assign any_hit = |hit_level_i;
+  // Stage 0: row-local ORs registered near the PD matrix.
+  // Stage 1: final 8-row OR feeds the registered close cause.
+  logic [NE-1:0] row_hit_comb;
+  logic [NE-1:0] row_hit_q;
+  logic          any_hit_piped;
 
   // ── MULTI_HIT: physically-safe pipelined hierarchical saturating count ──
   // Stage 0: register the cumulative PD hit bitmap.
   // Stage 1: 8 row popcounts (8 bits each) → registered.
   // Stage 2: 4 pair sums → registered.
-  // Stage 3: final total → registered hit count.
+  // Stage 3: 2 half totals → registered.
+  // Stage 4: final total/saturation → registered hit count.
   logic [PD_N-1:0] hit_seen_q;
   logic [PD_N-1:0] hit_seen_next;
+  logic [1:0] row_pair_cnt_comb [0:NE-1][0:3];
+  logic [2:0] row_quad_cnt_comb [0:NE-1][0:1];
   logic [3:0] row_cnt_comb [0:NE-1];  // 8 partial sums (max 8 each → 4 bits)
   logic [3:0] row_cnt_q    [0:NE-1];
   logic [4:0] pair_cnt_q   [0:3];
-  logic [6:0] total_cnt_comb;         // 7-bit sum (max 64)
+  logic [5:0] half_cnt_q   [0:1];
+  logic [6:0] total_cnt_q;            // 7-bit sum (max 64)
   logic [MAX_HITS_W-1:0] hit_cnt_q;   // registered, saturated at MAX_HITS
 
   assign hit_seen_next = hit_seen_q | hit_level_i;
+  assign any_hit_piped = |row_hit_q;
 
-  // Row popcounts (each row is 8 bits -> 4-bit result)
+  // Row-local ORs and explicit balanced row popcounts.  Avoid an inferred
+  // serial += reduction; each row is pair sums -> quad sums -> final row sum.
   always_comb begin
     for (int r = 0; r < NE; r++) begin
-      automatic int unsigned rsum = 0;
-      for (int c = 0; c < NE; c++)
-        rsum += {31'd0, hit_seen_q[r * NE + c]};
-      row_cnt_comb[r] = rsum[3:0];
-    end
-  end
+      row_hit_comb[r] = |hit_level_i[r * NE +: NE];
 
-  always_comb begin
-    total_cnt_comb = {2'b0, pair_cnt_q[0]} + {2'b0, pair_cnt_q[1]}
-                   + {2'b0, pair_cnt_q[2]} + {2'b0, pair_cnt_q[3]};
+      row_pair_cnt_comb[r][0] = {1'b0, hit_seen_q[r * NE + 0]} + {1'b0, hit_seen_q[r * NE + 1]};
+      row_pair_cnt_comb[r][1] = {1'b0, hit_seen_q[r * NE + 2]} + {1'b0, hit_seen_q[r * NE + 3]};
+      row_pair_cnt_comb[r][2] = {1'b0, hit_seen_q[r * NE + 4]} + {1'b0, hit_seen_q[r * NE + 5]};
+      row_pair_cnt_comb[r][3] = {1'b0, hit_seen_q[r * NE + 6]} + {1'b0, hit_seen_q[r * NE + 7]};
+
+      row_quad_cnt_comb[r][0] = {1'b0, row_pair_cnt_comb[r][0]} + {1'b0, row_pair_cnt_comb[r][1]};
+      row_quad_cnt_comb[r][1] = {1'b0, row_pair_cnt_comb[r][2]} + {1'b0, row_pair_cnt_comb[r][3]};
+
+      row_cnt_comb[r] = {1'b0, row_quad_cnt_comb[r][0]} + {1'b0, row_quad_cnt_comb[r][1]};
+    end
   end
 
   // Pipeline registers.  Counted close is delayed by several fast cycles, but
   // every stage now has a small, local amount of logic suitable for XH018.
   always_ff @(posedge clk_fast or negedge rst_n) begin
     if (!rst_n) begin
+      row_hit_q <= '0;
       hit_seen_q <= '0;
       for (int r = 0; r < NE; r++)
         row_cnt_q[r] <= '0;
       for (int p = 0; p < 4; p++)
         pair_cnt_q[p] <= '0;
+      for (int h = 0; h < 2; h++)
+        half_cnt_q[h] <= '0;
+      total_cnt_q <= '0;
       hit_cnt_q <= '0;
     end else begin
+      row_hit_q <= row_hit_comb;
       for (int r = 0; r < NE; r++)
         row_cnt_q[r] <= row_cnt_comb[r];
       pair_cnt_q[0] <= {1'b0, row_cnt_q[0]} + {1'b0, row_cnt_q[1]};
       pair_cnt_q[1] <= {1'b0, row_cnt_q[2]} + {1'b0, row_cnt_q[3]};
       pair_cnt_q[2] <= {1'b0, row_cnt_q[4]} + {1'b0, row_cnt_q[5]};
       pair_cnt_q[3] <= {1'b0, row_cnt_q[6]} + {1'b0, row_cnt_q[7]};
-      hit_cnt_q <= (total_cnt_comb > 7'(MAX_HITS)) ? MAX_HITS_W'(MAX_HITS)
-                                                     : total_cnt_comb[MAX_HITS_W-1:0];
+      half_cnt_q[0] <= {1'b0, pair_cnt_q[0]} + {1'b0, pair_cnt_q[1]};
+      half_cnt_q[1] <= {1'b0, pair_cnt_q[2]} + {1'b0, pair_cnt_q[3]};
+      total_cnt_q <= {1'b0, half_cnt_q[0]} + {1'b0, half_cnt_q[1]};
+      hit_cnt_q <= (total_cnt_q > 7'(MAX_HITS)) ? MAX_HITS_W'(MAX_HITS)
+                                                 : total_cnt_q[MAX_HITS_W-1:0];
 
       // Clear on the CLEAR->IDLE transition while the fast oscillator is still
       // kept alive. Once state_q is IDLE, clk_fast stops and an IDLE-only clear
       // would never be clocked before the next conversion starts.
       if (state_d == ST_M_IDLE) begin
+        row_hit_q <= '0;
         hit_seen_q <= '0;
         for (int r = 0; r < NE; r++)
           row_cnt_q[r] <= '0;
         for (int p = 0; p < 4; p++)
           pair_cnt_q[p] <= '0;
+        for (int h = 0; h < 2; h++)
+          half_cnt_q[h] <= '0;
+        total_cnt_q <= '0;
         hit_cnt_q <= '0;
       end else if (state_q == ST_M_MEASURE) begin
         hit_seen_q <= hit_seen_next;
@@ -167,17 +188,18 @@ module mptdc_meas_ctrl
 
   // =========================================================================
   // Close conditions (v2.4: unified — no first_hit_mode_i)
-  //   close_fast:    max_hits==1  -> OR-reduction, zero-cycle
+  //   close_fast:    max_hits==1  -> registered OR-reduction
   //   close_counted: max_hits>1   -> deeply pipelined comparator
   // =========================================================================
-  logic close_fast, close_counted, close_wd, close_any;
+  logic close_fast_comb, close_counted_comb, close_wd_comb;
+  logic close_fast_q, close_counted_q, close_wd_q, close_any_q;
 
-  // Fast single-hit close: OR-reduction — zero-cycle combinational
-  assign close_fast = (max_hits_cfg_i == MAX_HITS_W'(1)) && any_hit;
+  // Fast single-hit close: registered by one fast cycle for physical timing.
+  assign close_fast_comb = (max_hits_cfg_i == MAX_HITS_W'(1)) && any_hit_piped;
 
-  // Counted close: pipelined — compares against REGISTERED count (1-cycle lag)
-  assign close_counted = (max_hits_cfg_i > MAX_HITS_W'(1))
-                       && (hit_cnt_q >= max_hits_cfg_i);
+  // Counted close: pipelined — compares against REGISTERED count.
+  assign close_counted_comb = (max_hits_cfg_i > MAX_HITS_W'(1))
+                           && (hit_cnt_q >= max_hits_cfg_i);
 
   // ── Watchdog counter ────────────────────────────────────────────
   logic [15:0] wdt_cnt_q;
@@ -191,11 +213,30 @@ module mptdc_meas_ctrl
       wdt_cnt_q <= wdt_cnt_q + 16'd1;
   end
 
-  assign close_wd = (wdt_timeout_i != '0) && (wdt_cnt_q >= wdt_timeout_i);
+  assign close_wd_comb = (wdt_timeout_i != '0) && (wdt_cnt_q >= wdt_timeout_i);
+
+  always_ff @(posedge clk_fast or negedge rst_n) begin
+    if (!rst_n) begin
+      close_fast_q    <= 1'b0;
+      close_counted_q <= 1'b0;
+      close_wd_q      <= 1'b0;
+      close_any_q     <= 1'b0;
+    end else if (state_d == ST_M_IDLE) begin
+      close_fast_q    <= 1'b0;
+      close_counted_q <= 1'b0;
+      close_wd_q      <= 1'b0;
+      close_any_q     <= 1'b0;
+    end else begin
+      close_fast_q    <= (state_q == ST_M_MEASURE) && close_fast_comb;
+      close_counted_q <= (state_q == ST_M_MEASURE) && close_counted_comb;
+      close_wd_q      <= (state_q == ST_M_MEASURE) && close_wd_comb;
+      close_any_q     <= (state_q == ST_M_MEASURE)
+                       && (close_fast_comb | close_counted_comb | close_wd_comb);
+    end
+  end
 
   // Close fires ONLY in MEASURE state
-  assign close_any = (state_q == ST_M_MEASURE)
-                   && (close_fast | close_counted | close_wd);
+  wire close_any = (state_q == ST_M_MEASURE) && close_any_q;
 
   // =========================================================================
   // Flags — latched on MEASURE → CAPTURE transition
@@ -206,9 +247,9 @@ module mptdc_meas_ctrl
     flags_d = flags_q;
     if (state_q == ST_M_MEASURE && close_any) begin
       flags_d.reserved              = 1'b0;
-      flags_d.closed_by_fast_maxhit = close_fast;
-      flags_d.closed_by_maxhits     = close_counted & ~close_fast;
-      flags_d.closed_by_watchdog    = close_wd;
+      flags_d.closed_by_fast_maxhit = close_fast_q;
+      flags_d.closed_by_maxhits     = close_counted_q & ~close_fast_q;
+      flags_d.closed_by_watchdog    = close_wd_q;
     end
   end
 
