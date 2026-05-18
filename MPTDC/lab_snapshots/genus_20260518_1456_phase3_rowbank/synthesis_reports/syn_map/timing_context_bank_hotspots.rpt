@@ -1,0 +1,5 @@
+context-bank hotspot timing report could not be generated.
+
+report_timing -to [get_pins -quiet -hierarchical *u_ctx_bank*/*/D] -max_paths 100 -path_type full_clock: 1
+
+report_timing -to [get_pins -quiet -hierarchical *u_ctx_bank*/*/D] -max_paths 100: 1

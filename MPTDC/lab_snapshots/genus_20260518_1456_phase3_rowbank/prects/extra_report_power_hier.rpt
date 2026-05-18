@@ -1,0 +1,238 @@
+Using Power View: wc_view.
+Begin Boundary Leakage Calculation
+Ended Boundary Leakage Calculation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2548.57MB/4329.14MB/2813.38MB)
+Begin Static Power Report Generation
+*----------------------------------------------------------------------------------------
+*	Innovus 22.33-s094_1 (64bit) 08/25/2023 16:48 (Linux 3.10.0-693.el7.x86_64)
+*	
+*
+* 	Date & Time:	2026-May-18 16:43:30 (2026-May-18 14:43:30 GMT)
+*
+*----------------------------------------------------------------------------------------
+*
+*	Design: mptdc_top_asic
+*
+*	Liberty Libraries used:
+*	        wc_view: /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_slow_1_62V_125C.lib
+*
+*	Parasitic Files used:
+*
+*       Power View : wc_view
+*
+*       User-Defined Activity : N.A.
+*
+*       Activity File: N.A.
+*
+*       Hierarchical Global Activity: N.A.
+*
+*       Global Activity: N.A.
+*
+*       Sequential Element Activity: 0.200000
+*
+*       Primary Input Activity: 0.200000
+*
+*       Default icg ratio: N.A.
+*
+*       Global Comb ClockGate Ratio: N.A.
+*
+*	Power Units = 1mW
+*
+*	Time Units = 1e-09 secs
+*
+*       report_power -hierarchy all
+*
+-----------------------------------------------------------------------------------------
+*
+
+
+
+Total Power
+-----------------------------------------------------------------------------------------
+Total Internal Power:      359.45629818 	   80.2309%
+Total Switching Power:      88.56078383 	   19.7668%
+Total Leakage Power:         0.01034060 	    0.0023%
+Total Power:               448.02742262
+-----------------------------------------------------------------------------------------
+
+
+Group                           Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+Sequential                         309.5       17.29    0.004825       326.8       72.94
+Macro                                  0           0           0           0           0
+IO                                     0           0           0           0           0
+Combinational                      49.94       71.27    0.005516       121.2       27.06
+Clock (Combinational)                  0           0           0           0           0
+Clock (Sequential)                     0           0           0           0           0
+-----------------------------------------------------------------------------------------
+Total                              359.5       88.56     0.01034         448         100
+-----------------------------------------------------------------------------------------
+
+
+Rail                  Voltage   Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+VDD                      1.62      359.5       88.56     0.01034         448         100
+
+
+Hierarchy                       Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+u_core_gen_pd_row[0].gen_pd_col[0].u_pd
+                                   1.107      0.2516   1.573e-05       1.359      0.3033 
+u_core_gen_pd_row[0].gen_pd_col[1].u_pd
+                                   1.089      0.1721   1.357e-05       1.261      0.2815 
+u_core_gen_pd_row[0].gen_pd_col[2].u_pd
+                                   1.107      0.1751    1.41e-05       1.282      0.2861 
+u_core_gen_pd_row[0].gen_pd_col[3].u_pd
+                                   1.084      0.1952   1.366e-05       1.279      0.2855 
+u_core_gen_pd_row[0].gen_pd_col[4].u_pd
+                                   1.097      0.1883   1.331e-05       1.285      0.2869 
+u_core_gen_pd_row[0].gen_pd_col[5].u_pd
+                                   1.102      0.2173    1.38e-05        1.32      0.2946 
+u_core_gen_pd_row[0].gen_pd_col[6].u_pd
+                                   1.103      0.1663   1.373e-05       1.269      0.2833 
+u_core_gen_pd_row[0].gen_pd_col[7].u_pd
+                                   1.094      0.1987   1.364e-05       1.293      0.2885 
+u_core_gen_pd_row[1].gen_pd_col[0].u_pd
+                                   1.069      0.2452   1.408e-05       1.315      0.2935 
+u_core_gen_pd_row[1].gen_pd_col[1].u_pd
+                                   1.075      0.1921   1.335e-05       1.267      0.2828 
+u_core_gen_pd_row[1].gen_pd_col[2].u_pd
+                                   1.106      0.1942   1.463e-05         1.3      0.2902 
+u_core_gen_pd_row[1].gen_pd_col[3].u_pd
+                                    1.07      0.1725   1.336e-05       1.242      0.2772 
+u_core_gen_pd_row[1].gen_pd_col[4].u_pd
+                                   1.104      0.1991   1.483e-05       1.303      0.2909 
+u_core_gen_pd_row[1].gen_pd_col[5].u_pd
+                                   1.074      0.2058   1.347e-05        1.28      0.2856 
+u_core_gen_pd_row[1].gen_pd_col[6].u_pd
+                                    1.13      0.1943   1.478e-05       1.324      0.2955 
+u_core_gen_pd_row[1].gen_pd_col[7].u_pd
+                                   1.092      0.1713   1.329e-05       1.264       0.282 
+u_core_gen_pd_row[2].gen_pd_col[0].u_pd
+                                   1.095      0.2634    1.53e-05       1.358      0.3032 
+u_core_gen_pd_row[2].gen_pd_col[1].u_pd
+                                   1.083      0.1814   1.322e-05       1.265      0.2823 
+u_core_gen_pd_row[2].gen_pd_col[2].u_pd
+                                   1.112      0.1877    1.38e-05         1.3      0.2902 
+u_core_gen_pd_row[2].gen_pd_col[3].u_pd
+                                   1.095       0.201   1.416e-05       1.296      0.2893 
+u_core_gen_pd_row[2].gen_pd_col[4].u_pd
+                                   1.095      0.1762   1.312e-05       1.271      0.2838 
+u_core_gen_pd_row[2].gen_pd_col[5].u_pd
+                                   1.118      0.1969   1.457e-05       1.315      0.2934 
+u_core_gen_pd_row[2].gen_pd_col[6].u_pd
+                                   1.113      0.1786    1.38e-05       1.291      0.2882 
+u_core_gen_pd_row[2].gen_pd_col[7].u_pd
+                                   1.093      0.1843   1.337e-05       1.277      0.2851 
+u_core_gen_pd_row[3].gen_pd_col[0].u_pd
+                                   1.126      0.2585    1.63e-05       1.384       0.309 
+u_core_gen_pd_row[3].gen_pd_col[1].u_pd
+                                   1.076       0.168   1.286e-05       1.244      0.2777 
+u_core_gen_pd_row[3].gen_pd_col[2].u_pd
+                                   1.106      0.1832    1.39e-05       1.289      0.2878 
+u_core_gen_pd_row[3].gen_pd_col[3].u_pd
+                                   1.076      0.1933   1.349e-05       1.269      0.2832 
+u_core_gen_pd_row[3].gen_pd_col[4].u_pd
+                                   1.113      0.1757   1.378e-05       1.289      0.2877 
+u_core_gen_pd_row[3].gen_pd_col[5].u_pd
+                                   1.075      0.1774   1.309e-05       1.252      0.2795 
+u_core_gen_pd_row[3].gen_pd_col[6].u_pd
+                                   1.066      0.1786    1.23e-05       1.244      0.2778 
+u_core_gen_pd_row[3].gen_pd_col[7].u_pd
+                                   1.151      0.2167   1.565e-05       1.368      0.3053 
+u_core_gen_pd_row[4].gen_pd_col[0].u_pd
+                                   1.059      0.2518   1.377e-05       1.311      0.2926 
+u_core_gen_pd_row[4].gen_pd_col[1].u_pd
+                                   1.098       0.201   1.359e-05       1.299      0.2899 
+u_core_gen_pd_row[4].gen_pd_col[2].u_pd
+                                    1.13      0.2398   1.566e-05        1.37      0.3058 
+u_core_gen_pd_row[4].gen_pd_col[3].u_pd
+                                   1.109      0.2169    1.43e-05       1.326       0.296 
+u_core_gen_pd_row[4].gen_pd_col[4].u_pd
+                                   1.125      0.2024   1.502e-05       1.327      0.2963 
+u_core_gen_pd_row[4].gen_pd_col[5].u_pd
+                                   1.082       0.208   1.362e-05        1.29      0.2879 
+u_core_gen_pd_row[4].gen_pd_col[6].u_pd
+                                   1.169      0.2463   1.577e-05       1.415      0.3159 
+u_core_gen_pd_row[4].gen_pd_col[7].u_pd
+                                   1.141        0.23   1.456e-05       1.371       0.306 
+u_core_gen_pd_row[5].gen_pd_col[0].u_pd
+                                   1.075      0.2544   1.407e-05       1.329      0.2967 
+u_core_gen_pd_row[5].gen_pd_col[1].u_pd
+                                   1.085       0.175   1.324e-05        1.26      0.2812 
+u_core_gen_pd_row[5].gen_pd_col[2].u_pd
+                                   1.078       0.184   1.331e-05       1.262      0.2816 
+u_core_gen_pd_row[5].gen_pd_col[3].u_pd
+                                   1.072      0.1862   1.268e-05       1.258      0.2807 
+u_core_gen_pd_row[5].gen_pd_col[4].u_pd
+                                   1.089      0.1885    1.34e-05       1.278      0.2852 
+u_core_gen_pd_row[5].gen_pd_col[5].u_pd
+                                   1.063      0.1826   1.219e-05       1.246      0.2781 
+u_core_gen_pd_row[5].gen_pd_col[6].u_pd
+                                   1.105      0.2209   1.406e-05       1.326      0.2959 
+u_core_gen_pd_row[5].gen_pd_col[7].u_pd
+                                   1.063      0.2061   1.246e-05       1.269      0.2832 
+u_core_gen_pd_row[6].gen_pd_col[0].u_pd
+                                   1.097      0.3128   1.546e-05        1.41      0.3147 
+u_core_gen_pd_row[6].gen_pd_col[1].u_pd
+                                   1.122      0.2065   1.436e-05       1.329      0.2966 
+u_core_gen_pd_row[6].gen_pd_col[2].u_pd
+                                   1.094      0.2017   1.381e-05       1.295      0.2892 
+u_core_gen_pd_row[6].gen_pd_col[3].u_pd
+                                   1.107      0.2043   1.471e-05       1.312      0.2928 
+u_core_gen_pd_row[6].gen_pd_col[4].u_pd
+                                   1.102      0.2083   1.378e-05        1.31      0.2924 
+u_core_gen_pd_row[6].gen_pd_col[5].u_pd
+                                   1.066      0.1811   1.281e-05       1.247      0.2784 
+u_core_gen_pd_row[6].gen_pd_col[6].u_pd
+                                   1.127      0.2148   1.415e-05       1.342      0.2995 
+u_core_gen_pd_row[6].gen_pd_col[7].u_pd
+                                   1.112      0.2147   1.416e-05       1.326       0.296 
+u_core_gen_pd_row[7].gen_pd_col[0].u_pd
+                                    1.07      0.3029   1.379e-05       1.373      0.3066 
+u_core_gen_pd_row[7].gen_pd_col[1].u_pd
+                                   1.081      0.1768   1.328e-05       1.258      0.2808 
+u_core_gen_pd_row[7].gen_pd_col[2].u_pd
+                                   1.113      0.2132   1.456e-05       1.326       0.296 
+u_core_gen_pd_row[7].gen_pd_col[3].u_pd
+                                   1.083      0.1948   1.361e-05       1.278      0.2851 
+u_core_gen_pd_row[7].gen_pd_col[4].u_pd
+                                   1.069      0.1749   1.266e-05       1.244      0.2777 
+u_core_gen_pd_row[7].gen_pd_col[5].u_pd
+                                   1.055      0.1741   1.273e-05       1.229      0.2744 
+u_core_gen_pd_row[7].gen_pd_col[6].u_pd
+                                   1.153      0.2238   1.588e-05       1.376      0.3072 
+u_core_gen_pd_row[7].gen_pd_col[7].u_pd
+                                    1.11      0.2385   1.507e-05       1.349       0.301 
+u_core_u_rst_drain_sync          0.05236    0.001473   2.628e-06     0.05383     0.01202 
+u_core_u_rst_fast_sync            0.1826    0.008495   1.369e-06      0.1911     0.04264 
+u_core_u_rst_fifo_sync           0.03986      0.0009   2.017e-06     0.04076    0.009098 
+u_core_u_rst_status_sync         0.02736    0.001807   1.457e-06     0.02916    0.006509 
+u_core_u_rst_tx_sync             0.06744    0.003627   3.767e-06     0.07108     0.01586 
+u_core_u_rst_wdt_sync            0.07913    0.002569   3.961e-06      0.0817     0.01824 
+u_rst_core_sync                  0.05235    0.001532   2.377e-06     0.05388     0.01203 
+u_rst_csr_sync                   0.03943    0.001881   1.797e-06     0.04132    0.009222 
+u_core_u_osc_fast_u_stub          0.1967       12.37   4.432e-07       12.57       2.805 
+u_core_u_osc_slow_u_stub          0.3012      0.7145   1.527e-06       1.016      0.2267 
+ 
+ 
+-----------------------------------------------------------------------------------------
+*	Power Distribution Summary: 
+*              Highest Average Power: u_core_u_osc_fast_u_stub/g31 (INHDX0):            4.156
+*              Highest Leakage Power:       FE_OCPC11284_n_1381 (BUHDX12):        1.803e-06
+*                Total Cap:      6.3336e-10 F
+*                Total instances in design: 25462
+*                Total instances in design with no power:     0
+*                Total instances in design with no activty:     0
+
+*                Total Fillers and Decap:     0
+-----------------------------------------------------------------------------------------
+ 
+** INFO:  (VOLTUS_POWR-3465): There are 0 decaps and 0 fillers in the design
+
+Ended Static Power Report Generation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2556.38MB/4332.64MB/2813.38MB)
+

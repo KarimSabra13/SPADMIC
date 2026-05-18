@@ -1,0 +1,58 @@
+Snapshot: innovus_20260518_1456_phase3_rowbank
+Created: 2026-05-18T16:51:09+02:00
+Commit:  bf53b22
+Run status: COMPLETE
+WARNING: no Innovus log matching pnr/logs/innovus_estimate.log* was found.
+Artifact policy: reports/log manifests only; heavy Innovus DB directories are skipped unless explicitly requested.
+Skipped Innovus restore script: mptdc_top_asic.place.enc (set MPTDC_SNAPSHOT_COPY_INNOVUS_DB=1 to copy it)
+Skipped Innovus DB directory: mptdc_top_asic.place.enc.dat (set MPTDC_SNAPSHOT_COPY_INNOVUS_DB=1 to copy it)
+
+Contents:
+  db_copy_note.tmp
+  logs/innovus_batch_20260518_1113_signoff_taps_pdmatrix.cmd
+  logs/innovus_batch_20260518_1113_signoff_taps_pdmatrix.log
+  logs/innovus_batch_20260518_1113_signoff_taps_pdmatrix.logv
+  logs/innovus_batch_20260518_1456_phase3_rowbank.cmd
+  logs/innovus_batch_20260518_1456_phase3_rowbank.log
+  logs/innovus_batch_20260518_1456_phase3_rowbank.logv
+  logs/innovus_console_20260518_1113_signoff_taps_pdmatrix.log
+  logs/innovus_console_20260518_1456_phase3_rowbank.log
+  manifest.txt
+  pd_matrix_symmetry.rpt
+  phase_mesh_route_intent.rpt
+  postroute/mptdc_top_asic_postRoute.cap.gz
+  postroute/mptdc_top_asic_postRoute.fanout.gz
+  postroute/mptdc_top_asic_postRoute.length.gz
+  postroute/mptdc_top_asic_postRoute.summary.gz
+  postroute/mptdc_top_asic_postRoute.tran.gz
+  postroute/mptdc_top_asic_postRoute_all.tarpt.gz
+  postroute/mptdc_top_asic_postRoute_default.tarpt.gz
+  postroute/mptdc_top_asic_postRoute_reg2reg.tarpt.gz
+  prects/extra_check_design_all.rpt
+  prects/extra_check_place.rpt
+  prects/extra_pd_reset_audit.rpt
+  prects/extra_phase_mesh_audit.rpt
+  prects/extra_report_clocks.rpt
+  prects/extra_report_congestion.rpt
+  prects/extra_report_congestion_full.rpt
+  prects/extra_report_constraint.rpt
+  prects/extra_report_density.rpt
+  prects/extra_report_net_fanout.rpt
+  prects/extra_report_netlist_stats.rpt
+  prects/extra_report_power_hier.rpt
+  prects/extra_report_power_verbose.rpt
+  prects/extra_report_timing_100.rpt
+  prects/extra_report_timing_full_clock.rpt
+  prects/mptdc_top_asic_preCTS.cap.gz
+  prects/mptdc_top_asic_preCTS.fanout.gz
+  prects/mptdc_top_asic_preCTS.length.gz
+  prects/mptdc_top_asic_preCTS.summary.gz
+  prects/mptdc_top_asic_preCTS.tran.gz
+  prects/mptdc_top_asic_preCTS_all.tarpt.gz
+  prects/mptdc_top_asic_preCTS_default.tarpt.gz
+  prects/mptdc_top_asic_preCTS_reg2reg.tarpt.gz
+  report_area_place.rpt
+  report_gate_count_place.rpt
+  report_power_place.rpt
+  run_manifest.rpt
+  run_status.rpt

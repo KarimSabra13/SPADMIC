@@ -1,0 +1,11 @@
+MPTDC phase mesh audit
+======================
+Generated: 2026-05-18 16:43:31 CEST
+
+Policy
+------
+Global signal routing remains MET1-MET3.
+Localized PD-matrix exception enabled: 1
+Exception top layer: METTP (index 4)
+Exception scope: 8 slow + 8 fast phase nets inside/over mptdc_pd_matrix.
+
