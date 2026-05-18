@@ -159,7 +159,6 @@ bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
 [TB] Waiting for output packet...
 [TB] Collected N words
 [TB] Header: ctx=0, hits=X, flags=0000, mode=0
-[MON] ... SUBHDR: nfast_stop=0 raw=0xa000
 [TB] EOC: conv_id=0
 [TB] ===== TEST PASSED =====
 ```
@@ -172,7 +171,7 @@ unsupported constructs.
 
 ---
 
-## Step 2 — Full Directed Regression (9 Integration Tests)
+## Step 2 — Full Directed Regression (10 Integration Tests)
 
 **Goal:** Verify all integration scenarios pass on Xcelium.
 
@@ -180,7 +179,8 @@ unsupported constructs.
 PASS=0; FAIL=0
 for tb in tb_single_conv tb_multi_conv_stress tb_deadtime_measure \
           tb_cal_inject tb_backpressure tb_watchdog_recovery \
-          tb_start_wdt tb_overflow_count tb_firsthit_mode; do
+          tb_start_wdt tb_overflow_count tb_firsthit_mode \
+          tb_lossless_pressure; do
   echo "========================================"
   echo "  Running: $tb"
   echo "========================================"
@@ -192,10 +192,10 @@ for tb in tb_single_conv tb_multi_conv_stress tb_deadtime_measure \
   fi
 done
 echo ""
-echo "Results: $PASS passed, $FAIL failed out of 9"
+echo "Results: $PASS passed, $FAIL failed out of 10"
 ```
 
-**Expected:** `9 passed, 0 failed out of 9`
+**Expected:** `10 passed, 0 failed out of 10`
 
 **Runtime:** ~3–5 minutes total
 
@@ -210,6 +210,7 @@ echo "Results: $PASS passed, $FAIL failed out of 9"
 | `tb_start_wdt` | Missing-STOP → START watchdog fires |
 | `tb_overflow_count` | Overflow counter / rejected-START accounting |
 | `tb_firsthit_mode` | compatibility-named fast-close packet check (`max_hits = 1`) |
+| `tb_lossless_pressure` | STOP-to-next-START pressure, saturation/release, exact rejected-START accounting |
 
 ---
 

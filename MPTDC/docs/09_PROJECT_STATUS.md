@@ -2,11 +2,19 @@
 
 This document is the current checkpoint handoff for the repository. It summarizes what is implemented, what has been validated, what still needs Cadence-side confirmation, and the exact recommended next commands.
 
+> **Post-pivot correction:** the active RTL now uses `clk_sys` measurement
+> control/context storage with a held-bus `mptdc_hit_capture_bridge`. Older notes
+> in this file that discuss the v2.3 sub-header experiment, fast-domain context
+> ownership, or few-ns fast-domain deadtime are historical and superseded by
+> `01_ARCHITECTURE.md`, `02_OUTPUT_PROTOCOL.md`, `04_VERIFICATION.md`, and
+> `06_DEADTIME_ANALYSIS.md`.
+
 ## 1. Executive summary
 
 The repository is in a strong pre-calibration checkpoint, but not yet at verification or synthesis signoff:
 
 - the RTL architecture is stable and documented
+- the latest architecture pivot moves synthesized measurement control/context storage to `clk_sys` and keeps the oscillator domains only for measurement fabric
 - the maintained Verilator VIP regressions are currently green (`13/13`)
 - the class-based VIP is functioning and no longer deadlocks on the previously failing stress pattern
 - the latest broad Cadence baseline campaign passed `109/109` and merges cleanly in IMC
@@ -205,6 +213,8 @@ What is already in place:
 - `run_campaign.sh` for broad `20 ps .. 30 ns` collection
 - `analyze_campaign.py` for per-delay / per-count / tail views on sweep campaigns
 - `calibrate_6d_lut.py` for the maintained nominal 6D LUT baseline
+- raw tuple/code-density exports for pre-calibration DNL/INL review
+- pre/post reconstruction-error exports for post-calibration timestamp evidence
 - `run_fixed_delay_campaign.sh` + `analyze_fixed_delay_campaign.py` for empirical same-delay RMS / averaging proof
 
 Current gate recommendation:
@@ -261,7 +271,8 @@ Important synthesis assumptions:
 
 - the oscillator model is for simulation only
 - synthesis should use the stub path
-- the checked-in `syn/inputs/mptdc.sdc` is a trial constraint set, not a signoff-complete MMMC / CDC package
+- the checked-in `syn/inputs/mptdc.sdc` is a stronger exploratory constraint set with explicit oscillator tap clocks, synchronizer preservation, and narrow async-clear exceptions, but it is still not a complete CDC signoff waiver deck
+- `clk_sys` control/context timing must close normally; do not accept timing only because of broad async clock groups
 - the async frontend contains intentional latch-style structures that must be reviewed, not blindly eliminated
 - final silicon closure still depends on real library data and the analog oscillator macro
 
@@ -289,11 +300,16 @@ cd syn/scripts
 genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ```
 
-## 8. v2.3 Precision Enhancement (Latest)
+## 8. Historical v2.3 Precision Enhancement
 
-### Packet format
+This section records an older experiment and is not the active packet/architecture
+contract. The active packet contract is `02_OUTPUT_PROTOCOL.md`; the active
+post-pivot precision evidence flow is `run_characterization_baseline.sh
+--analyze --calibrate`.
 
-The narrow-16 packet now includes a **sub-header word** after the header:
+### Historical packet format
+
+The v2.3 narrow-16 packet experiment included a **sub-header word** after the header:
 
 | Word | Bits | Content |
 |------|------|---------|
@@ -302,11 +318,12 @@ The narrow-16 packet now includes a **sub-header word** after the header:
 | Hit W0..Wn | — | per-hit data (unchanged) |
 | EOC | — | end-of-conversion (unchanged) |
 
-**Note on `nfast_stop`:** In the current architecture the fast oscillator starts
+**Historical note on `nfast_stop`:** In that architecture the fast oscillator starts
 at STOP time (`osc_fast_en = stop_latched | osc_keep_alive`), so the fast
 counter is always 0 at STOP.  The field is reserved for future architectures
-where the fast oscillator start policy may change.  The sub-header infrastructure
-is clean and costs only 1 word per packet.
+where the fast oscillator start policy may change. The historical sub-header
+infrastructure was a clean experiment, but it is not part of the active packet
+contract.
 
 ### Enhanced calibration results
 
@@ -366,7 +383,7 @@ nearly irrelevant for fine correction.
 
 The repo is **not yet at final silicon signoff**, but it is at a strong engineering checkpoint:
 
-- RTL looks coherent (v2.3 with sub-header infrastructure)
+- RTL looks coherent, but the active contract is the post-pivot no-sub-header packet flow plus `clk_sys` control/context storage
 - verification infrastructure is mature — all 13 Verilator TBs pass
 - the known VIP stress deadlock class has been fixed and the `109/109` broad campaign baseline is green
 - the remaining meaningful holes are concentrated in CSR / top-level / reset control paths, not in the packet stress path

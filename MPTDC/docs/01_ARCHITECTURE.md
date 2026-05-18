@@ -14,7 +14,7 @@ The live design is a Vernier multi-phase TDC with:
 - one fast ring oscillator (`50 ps` tap delay)
 - an `8 x 8` phase-detector matrix (`64` cells)
 - a two-context snapshot bank (`N_CTX=2`)
-- a fast-domain measurement FSM and a system-domain drain/serialization pipeline
+- a `clk_sys` measurement-control/context-commit pipeline and a system-domain drain/serialization pipeline
 - purely offline calibration
 
 Compatibility note: the active v2.4 RTL no longer has a separate `FIRST_HIT`
@@ -50,10 +50,11 @@ mptdc_top_asic
        |- mptdc_osc_wrapper   (fast)
        |- mptdc_pd_cell x 64
        |- mptdc_stop_capture_async
-       |- mptdc_gray_cnt_sync (slow counter)
-       |- mptdc_gray_cnt_sync (fast counter)
-       |- mptdc_meas_ctrl
-       |- mptdc_context_bank
+       |- mptdc_gray_cnt_sync (slow counter -> clk_sys image)
+       |- mptdc_gray_cnt_sync (fast counter -> clk_sys image)
+       |- mptdc_hit_capture_bridge
+       |- mptdc_meas_ctrl    (clk_sys)
+       |- mptdc_context_bank (clk_sys)
        |- mptdc_drain_ctrl
        |- mptdc_sync_fifo
         |- mptdc_narrow16_tx_v2
@@ -80,8 +81,8 @@ Synthesis placeholder block:
 
 | Domain | Source | Used by |
 |--------|--------|---------|
-| `clk_sys` | external `160 MHz` | CSR, drain FSM, FIFO, serializer, global watchdog |
-| `osc_fast_ph0` | fast oscillator tap 0 | measurement FSM, context-bank write, fast counter destination |
+| `clk_sys` | external `160 MHz` | CSR, measurement FSM, hit-capture bridge, context bank, drain FSM, FIFO, serializer, global watchdog |
+| `osc_fast_ph0` | fast oscillator tap 0 | fast counter source clock and PD sampling reference |
 | `fast_phase[n]` | fast oscillator taps | PD-cell sampling clocks |
 | `slow_phase[n]` | slow oscillator taps | PD sampled inputs, slow counter source clock |
 | async event domain | START, STOP, latch set/reset, STOP capture | async frontend and boundary capture |
@@ -139,24 +140,25 @@ The slow counter also takes a STOP-side Gray snapshot so exported `Nslow` is coh
 
 ### 5.5 Close detection
 
-`mptdc_meas_ctrl` runs on `osc_fast_ph0` and closes the conversion when one of three conditions occurs:
+`mptdc_meas_ctrl` now runs on `clk_sys`. STOP visibility is synchronized into the system domain, then the controller samples the held measurement image and closes the conversion when one of three conditions is observed in that registered image:
 
 - fast close: `max_hits_cfg_i == 1` and any PD cell has asserted `hit_level`
 - counted close: registered hit count has reached `max_hits_cfg_i` for `max_hits_cfg_i > 1`
-- watchdog: fast-domain context watchdog reaches `wdt_timeout_i`
+- watchdog/safety close: no usable hit is observed before the configured/derived timeout indication is visible
 
 ### 5.6 Safe shutdown sequence
 
-The fast FSM sequence is:
+The system-domain measurement sequence is:
 
 ```text
-IDLE -> MEASURE -> SNAPSHOT -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
+IDLE -> MEASURE -> SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
 ```
 
 This ordering matters:
 
-- `SNAPSHOT` freezes the wide measurement image into context-bank holding registers
-- `CAPTURE` commits the frozen image and marks the context drainable
+- `SNAPSHOT` samples the held PD/counter image through `mptdc_hit_capture_bridge`
+- `EVAL` computes hit count and close flags from the registered bridge image
+- `CAPTURE` commits that registered image into the context bank and marks the context drainable
 - `STOP_OSC` clears the frontend latches, which stops the slow oscillator and leaves phases static
 - `CLEAR` asynchronously clears the PD cells and counters only after the oscillators are safely quiesced
 
@@ -310,13 +312,13 @@ Silicon notes:
 - standard and safe
 - marked with `ASYNC_REG`
 
-### 6.7 `rtl/cdc/mptdc_pulse_sync.sv` (compiled, not instantiated)
+### 6.7 `rtl/cdc/mptdc_pulse_sync.sv` (compiled support)
 
 Purpose:
 - generic toggle-based pulse synchronizer
 
 Live-role status:
-- compiled utility, not used in the active top path
+- compiled utility for pulse-style crossings; the active pivot mostly uses level synchronizers and held-data sampling rather than this generic helper
 
 ### 6.8 `rtl/cdc/mptdc_gray_cnt_sync.sv`
 
@@ -333,8 +335,8 @@ Outputs:
 - destination latched snapshot
 
 Active use:
-- slow counter: `slow_phase[0] -> osc_fast_ph0`, with STOP-side async snapshot enabled
-- fast counter: `osc_fast_ph0 -> osc_fast_ph0`
+- slow counter: `slow_phase[0] -> clk_sys`, with STOP-side async snapshot enabled
+- fast counter: `osc_fast_ph0 -> clk_sys`
 
 Silicon notes:
 - Gray code bounds crossing ambiguity
@@ -474,10 +476,32 @@ Silicon notes:
 - another intentional async capture structure
 - `slow_boundary_inc` is a useful boundary tag for both raw timestamp centering and offline calibration
 
-### 6.16 `rtl/async/mptdc_context_bank.sv`
+### 6.16 `rtl/async/mptdc_hit_capture_bridge.sv`
+
+Purpose:
+- samples the held PD/counter/STOP-boundary image into `clk_sys`
+
+Inputs:
+- PD hit bitmap and per-cell `nfast_hit`
+- synchronized slow/fast counter snapshots
+- STOP boundary metadata
+- `snapshot_en_i` from `mptdc_meas_ctrl`
+
+Outputs:
+- one registered `mptdc_hit_snapshot_t` image for evaluation and context commit
+
+Silicon notes:
+- this is the review point for the wide static-bus CDC contract
+- the source image must be stable before `SNAPSHOT` and remain stable until after `CAPTURE`
+- `pd_clear` is intentionally delayed until after context commit
+
+### 6.17 `rtl/async/mptdc_context_bank.sv`
 
 Purpose:
 - double-buffered snapshot storage for one full conversion per context
+
+Domain:
+- `clk_sys`
 
 Write-side contents:
 - hit bitmap
@@ -492,20 +516,21 @@ Read-side behavior:
 - combinational mux of the selected context
 
 Silicon notes:
-- read path is a static-data CDC assumption, not a dynamic unsynchronized bus crossing
-- data is only consumed after the drain flag has safely crossed into `clk_sys`
+- the context bank itself is synchronous `clk_sys` storage
+- the CDC assumption is upstream: the held PD/counter image must remain static while `mptdc_hit_capture_bridge` samples it
+- data is drained only after capture commit and drain synchronization
 
-### 6.17 `rtl/ctrl/mptdc_meas_ctrl.sv`
+### 6.18 `rtl/ctrl/mptdc_meas_ctrl.sv`
 
 Purpose:
-- fast-domain conversion FSM
+- system-domain conversion FSM and safe teardown sequencer
 
 Domain:
-- `osc_fast_ph0`
+- `clk_sys`
 
 Inputs:
 - measurement-active level from frontend
-- full PD bitmap
+- registered hit-capture bridge snapshot
 - max-hits config and watchdog timeout
 
 Outputs:
@@ -517,16 +542,16 @@ Outputs:
 - hit count and close flags
 
 Behavior:
-- fast close (`max_hits = 1`) uses an OR reduction
-- higher `max_hits` values use a pipelined hierarchical count tree
-- watchdog close is local to the measurement window
-- safe sequence: capture first, stop oscillators next, clear last
+- waits for synchronized START/STOP ownership
+- `SNAPSHOT` samples the held measurement fabric
+- `EVAL` computes hit count and close flags from the registered image
+- `CAPTURE -> STOP_OSC -> CLEAR` commits data before destructive clear
 
 Silicon notes:
-- count tree is pipelined specifically to keep the fast domain synthesizable at nominal fast-oscillator speed
+- moving this control cone to `clk_sys` is the main STA hardening pivot after the near-1 GHz standard-cell path proved physically unrealistic
 - PD gate prevents bogus hits during startup and teardown
 
-### 6.18 `rtl/ctrl/mptdc_drain_ctrl.sv`
+### 6.19 `rtl/ctrl/mptdc_drain_ctrl.sv`
 
 Purpose:
 - reads one frozen context in `clk_sys` and converts it to acquisition records
@@ -546,7 +571,7 @@ Silicon notes:
 - synchronous, simple, and backpressure-safe
 - includes a released-context mask so a just-cleared async context is not immediately reselected while its synchronized drain flag is still high
 
-### 6.19 `rtl/ctrl/mptdc_watchdog.sv`
+### 6.20 `rtl/ctrl/mptdc_watchdog.sv`
 
 Purpose:
 - global inactivity watchdog in `clk_sys`
@@ -563,7 +588,7 @@ Silicon notes:
 - simple synchronous counter
 - emergency recovery path only
 
-### 6.20 `rtl/readout/mptdc_narrow16_tx_v2.sv`
+### 6.21 `rtl/readout/mptdc_narrow16_tx_v2.sv`
 
 Purpose:
 - serializes acquisition records into the external 16-bit packet stream
@@ -588,7 +613,7 @@ Silicon notes:
 - fully synchronous to `clk_sys`
 - all packet semantics should be taken from this block and the package, not from stale older docs
 
-### 6.21 `rtl/readout/mptdc_tconv_reco.sv` (compiled, not instantiated)
+### 6.22 `rtl/readout/mptdc_tconv_reco.sv` (compiled, not instantiated)
 
 Purpose:
 - standalone combinational raw timestamp helper

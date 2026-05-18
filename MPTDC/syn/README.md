@@ -25,6 +25,8 @@ At the current checkpoint:
 - targeted closure work is currently focused on CSR/top/reset coverage, so synthesis should still be treated as exploratory rather than freeze-ready
 - the oscillator behavioral model is a simulation-only artifact and is excluded from synthesis
 - the async frontend intentionally contains `6` latch-style storage elements that must be reviewed, not treated as accidental inference
+- normal measurement control and context storage now run in `clk_sys`; the near-1 GHz oscillator domains are constrained only for the PD/counter measurement fabric
+- the static PD/counter image CDC is an explicit held-bus contract through `mptdc_hit_capture_bridge`, not a bundle of independently synchronized bits
 - final QoR, timing, and library legality still depend on your actual XFAB/XH018 PDK installation and Genus run logs
 
 ## Directory Structure
@@ -203,7 +205,8 @@ constraint values are never hardcoded in two places.
 | **§3 Clock groups** | `set_clock_groups -asynchronous` | 3 async domains (sys, slow, fast) |
 | **§4 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
 | **§5 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
-| **§6 CDC protection** | best-effort `set_dont_touch` wrappers on sync FF patterns | Preserves synchronizers where the active Genus/DC parser accepts the matched objects |
+| **§5 Async clears** | narrow false paths on PD and Gray-counter clear pins | Covers intentional teardown clears after snapshot/context commit |
+| **§6 CDC protection** | best-effort `set_dont_touch` wrappers on sync FF/pending-latch patterns | Preserves synchronizers where the active Genus/DC parser accepts the matched objects |
 | **§7 CDC max delay** | simplified `set_max_delay` across domains | Keeps CDC intent without relying on unsupported `-datapath_only` forms |
 | **§8-9 I/O delays** | 2 ns input/output delay | Conservative for 180 nm routing |
 | **§10 Load/drive** | 50 fF load, 100 ps transition | Pad characteristics |

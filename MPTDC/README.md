@@ -37,6 +37,8 @@ Key architectural facts from RTL:
 | FIFO depth | `64` acquisition records |
 | Shared-readout export | optional `shared_readout_en_i` switches the FIFO consumer from the local serializer to the `acq_*` export interface |
 | System clock | `160 MHz` |
+| Measurement control/context storage | `clk_sys`; oscillator/PD/counter fabric remains the measurement-local exception |
+| CDC handoff | held PD/counter image sampled through `mptdc_hit_capture_bridge` before context commit and PD clear |
 | Oscillator timing model | behavioral model in simulation, stub for synthesis |
 
 ### Verification
@@ -91,8 +93,9 @@ Offline calibration flow is present and documented:
 - sweep analysis: `python3 scripts/analysis/analyze_campaign.py ...`
 - fixed-delay characterization: `bash scripts/sim/run_fixed_delay_campaign.sh ...`
 - LUT calibration: `python3 scripts/calibration/calibrate_6d_lut.py ...`
+- maintained baseline wrapper: `bash scripts/sim/run_characterization_baseline.sh --analyze --calibrate ...`
 
-The committed LUT flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`. After the 8×8 oscillator-geometry migration, the presentation-scale pre-silicon RTL campaign reports `374.11 ps → 24.64 ps` held-out core-subset RMSE with a 6D LUT; older `~18.9 ps` notes are historical nominal baselines, not current 8×8 signoff numbers.
+The baseline wrapper now emits both raw tuple/code-density evidence and post-reconstruction calibration evidence when `--analyze --calibrate` are enabled. The committed LUT flow targets the `multihit_15_cal_nominal` dataset structure by default and writes reports under `results/calibration_final/`. After the 8×8 oscillator-geometry migration, the presentation-scale pre-silicon RTL campaign reports `374.11 ps → 24.64 ps` held-out core-subset RMSE with a 6D LUT; older `~18.9 ps` notes are historical nominal baselines, not current 8×8 signoff numbers.
 
 ### Synthesis
 
@@ -118,7 +121,7 @@ rtl/
   cdc/        reset sync, pulse sync, gray-counter CDC, sync FIFO
   osc/        oscillator wrapper, model, and synthesis stub
   pd/         phase detector cells
-  async/      START/STOP capture, context bank, async-side logic
+  async/      START/STOP capture, hit-capture bridge, context bank, async-side logic
   ctrl/       measurement FSM, watchdog, drain control
   readout/    CSR block, timestamp reconstruction helper, serializer
   top/        core + top-level integration

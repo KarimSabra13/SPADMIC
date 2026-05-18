@@ -306,6 +306,34 @@ def compute_inl_dnl(t_raw: pd.Series, bin_width: float = DELTA_LSB):
     return edges, dnl, inl, peak_dnl, peak_inl
 
 
+def compute_raw_tuple_histogram(df: pd.DataFrame) -> pd.DataFrame:
+    """Return raw Vernier tuple occupancy for hardware code-density review."""
+    required = {"tuple_code", "nslow", "nfast_hit", "ns", "nf", "slow_boundary_inc"}
+    if not required.issubset(df.columns):
+        return pd.DataFrame()
+
+    work = df[list(required)].copy()
+    work = work[pd.to_numeric(work["tuple_code"], errors="coerce") >= 0]
+    if work.empty:
+        return pd.DataFrame()
+
+    group_cols = ["tuple_code", "nslow", "nfast_hit", "ns", "nf", "slow_boundary_inc"]
+    hist = (
+        work.groupby(group_cols, observed=True)
+        .size()
+        .reset_index(name="count")
+        .sort_values("tuple_code", ignore_index=True)
+    )
+    ideal = float(hist["count"].mean()) if not hist.empty else np.nan
+    if ideal and np.isfinite(ideal):
+        hist["raw_tuple_dnl_est"] = hist["count"] / ideal - 1.0
+        hist["raw_tuple_inl_est"] = hist["raw_tuple_dnl_est"].cumsum()
+    else:
+        hist["raw_tuple_dnl_est"] = np.nan
+        hist["raw_tuple_inl_est"] = np.nan
+    return hist
+
+
 # ---------------------------------------------------------------------------
 # Boundary-class analysis
 # ---------------------------------------------------------------------------
@@ -454,6 +482,33 @@ def plot_inl_dnl(edges, dnl, inl, config: str, out_dir: Path):
     save_figure(fig, out_dir / f"inl_dnl_{_safe_config(config)}.png")
 
 
+def plot_raw_tuple_histogram(hist: pd.DataFrame, config: str, out_dir: Path):
+    """Plot raw tuple occupancy and estimated raw tuple INL/DNL."""
+    if hist.empty:
+        return
+
+    safe_cfg = _safe_config(config)
+    fig, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=True)
+    axes[0].plot(hist["tuple_code"], hist["count"], lw=0.8, color=PALETTE["blue"])
+    axes[0].set_ylabel("Count")
+    axes[0].set_title(f"Raw tuple occupancy – {config}")
+
+    axes[1].plot(hist["tuple_code"], hist["raw_tuple_dnl_est"],
+                 lw=0.8, color=PALETTE["orange"])
+    axes[1].axhline(0.0, color=PALETTE["gray"], ls="--", lw=0.8)
+    axes[1].set_ylabel("DNL est. (LSB)")
+
+    axes[2].plot(hist["tuple_code"], hist["raw_tuple_inl_est"],
+                 lw=0.8, color=PALETTE["red"])
+    axes[2].axhline(0.0, color=PALETTE["gray"], ls="--", lw=0.8)
+    axes[2].set_ylabel("INL est. (LSB)")
+    axes[2].set_xlabel("Raw tuple code")
+
+    for ax in axes:
+        style_axes(ax)
+    save_figure(fig, out_dir / f"raw_tuple_histogram_{safe_cfg}.png")
+
+
 def plot_phase_heatmap(matrix: pd.DataFrame, config: str, out_dir: Path, *,
                        stem: str, title: str, cbar_label: str,
                        cmap: str = "viridis", center_zero: bool = False,
@@ -575,6 +630,7 @@ def _json_ready_results(all_results: dict, ttest_all: dict) -> dict:
             "offset_stats": res.get("offset_stats", {}),
             "peak_dnl": res.get("peak_dnl"),
             "peak_inl": res.get("peak_inl"),
+            "raw_tuple_histogram": res.get("raw_tuple_histogram_summary", {}),
             "mismatches": res.get("mismatches"),
             "flag_dist": res.get("flag_dist", {}),
             "ttest_results": ttest_all.get(cfg, []),
@@ -608,7 +664,7 @@ def write_summary_report(all_results: dict, out_path: Path, ttest_all: dict):
     # per-config table
     header = (
         f"{'Config':<40s} {'Count':>8s} {'Mean':>10s} {'Std':>10s} "
-        f"{'RMSE':>10s} {'PkDNL':>8s} {'PkINL':>8s} {'XChk':>6s}"
+        f"{'RMSE':>10s} {'PkDNL':>8s} {'PkINL':>8s} {'RawBins':>8s} {'XChk':>6s}"
     )
     lines.append(header)
     lines.append("-" * len(header))
@@ -620,6 +676,7 @@ def write_summary_report(all_results: dict, out_path: Path, ttest_all: dict):
             f"{s.get('std', 0):>10.2f} {s.get('rmse', 0):>10.2f} "
             f"{res.get('peak_dnl', float('nan')):>8.3f} "
             f"{res.get('peak_inl', float('nan')):>8.3f} "
+            f"{res.get('raw_tuple_histogram_summary', {}).get('occupied_bins', 0):>8d} "
             f"{res.get('mismatches', '?'):>6}"
         )
     lines.append("")
@@ -761,6 +818,25 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
     # phase heatmaps
     mean_piv, std_piv, count_piv = phase_heatmaps(df)
 
+    # raw tuple code-density histogram for pre-calibration hardware review
+    raw_tuple_hist = compute_raw_tuple_histogram(df)
+    if not raw_tuple_hist.empty:
+      result["raw_tuple_histogram_summary"] = {
+          "occupied_bins": int(len(raw_tuple_hist)),
+          "total_samples": int(raw_tuple_hist["count"].sum()),
+          "min_count": int(raw_tuple_hist["count"].min()),
+          "median_count": float(raw_tuple_hist["count"].median()),
+          "max_count": int(raw_tuple_hist["count"].max()),
+          "peak_dnl_est": float(raw_tuple_hist["raw_tuple_dnl_est"].abs().max()),
+          "peak_inl_est": float(raw_tuple_hist["raw_tuple_inl_est"].abs().max()),
+      }
+      print("  Raw tuple histogram: "
+            f"{result['raw_tuple_histogram_summary']['occupied_bins']} occupied bins, "
+            f"peak DNL est={result['raw_tuple_histogram_summary']['peak_dnl_est']:.3f} LSB, "
+            f"peak INL est={result['raw_tuple_histogram_summary']['peak_inl_est']:.3f} LSB")
+    else:
+      result["raw_tuple_histogram_summary"] = {}
+
     # flag distribution
     fdist = flag_distribution(df)
     result["flag_dist"] = fdist
@@ -803,6 +879,8 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
         delay_regions.to_csv(out_dir / f"delay_regions_{safe_cfg}.csv", index=False)
     if count_piv is not None and not count_piv.empty:
         count_piv.to_csv(out_dir / f"phase_count_heatmap_{safe_cfg}.csv")
+    if not raw_tuple_hist.empty:
+        raw_tuple_hist.to_csv(out_dir / f"raw_tuple_histogram_{safe_cfg}.csv", index=False)
 
     # plots
     if do_plots:
@@ -813,6 +891,7 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
             plot_residual_hist(df, config, out_dir)
             if len(dnl) > 0:
                 plot_inl_dnl(edges, dnl, inl, config, out_dir)
+            plot_raw_tuple_histogram(raw_tuple_hist, config, out_dir)
             if mean_piv is not None and not mean_piv.empty:
                 plot_phase_heatmap(mean_piv, config, out_dir,
                                    stem="phase_heatmap_mean",

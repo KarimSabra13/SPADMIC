@@ -10,8 +10,10 @@
 #           --config NAME         Campaign config (default multihit_15_cal_nominal)
 #           --out-mode NAME       full|raw_features (default full)
 #           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_full)
-#           --analyze             Run sweep analysis + fine-grid report
-#           --calibrate           Run maintained 6D LUT calibration after collection
+#           --analyze             Run sweep analysis + fine-grid report, including
+#                                 raw tuple histograms/code-density CSVs and plots
+#           --calibrate           Run maintained 6D LUT calibration after collection,
+#                                 including pre/post reconstruction error exports
 #           --train-seeds N       Training seeds for calibration (default 24)
 #           --val-dir DIR         Explicit held-out validation directory for calibration
 #           --fresh-dir DIR       Fresh validation dir for calibration
@@ -275,6 +277,10 @@ write_manifest() {
   export MANIFEST_CAMPAIGN_CSV_COUNT="$campaign_csv_count"
   export MANIFEST_CAMPAIGN_ROW_COUNT="$campaign_row_count"
   export MANIFEST_FIXED_DELAY_CSV_COUNT="$fixed_delay_csv_count"
+  export MANIFEST_RAW_TUPLE_HISTOGRAM_GLOB="$SWEEP_ANALYSIS_DIR/raw_tuple_histogram_*.csv"
+  export MANIFEST_RAW_TUPLE_HISTOGRAM_PLOT_GLOB="$SWEEP_ANALYSIS_DIR/raw_tuple_histogram_*.png"
+  export MANIFEST_RECON_ERROR_TABLE="$CALIBRATION_DIR/val_reconstruction_errors_pre_post.csv"
+  export MANIFEST_RECON_ERROR_PLOTS_DIR="$CALIBRATION_DIR/plots"
   python3 - <<'PY'
 import json
 import os
@@ -329,6 +335,16 @@ data = {
         "fine_grid": os.environ["MANIFEST_FINE_GRID_CMD"],
         "calibrate": os.environ["MANIFEST_CALIBRATE_CMD"],
         "fixed_delay": os.environ["MANIFEST_FIXED_DELAY_CMD"],
+    },
+    "precision_evidence": {
+        "raw_tuple_histogram_csv_glob": os.environ["MANIFEST_RAW_TUPLE_HISTOGRAM_GLOB"],
+        "raw_tuple_histogram_plot_glob": os.environ["MANIFEST_RAW_TUPLE_HISTOGRAM_PLOT_GLOB"],
+        "post_reconstruction_error_table": os.environ["MANIFEST_RECON_ERROR_TABLE"],
+        "post_reconstruction_error_plots_dir": os.environ["MANIFEST_RECON_ERROR_PLOTS_DIR"],
+        "requires": {
+            "raw_tuple_histograms": "--analyze",
+            "post_reconstruction_error_exports": "--calibrate",
+        },
     },
     "summary": {
         "campaign_csv_count": int(os.environ["MANIFEST_CAMPAIGN_CSV_COUNT"]),

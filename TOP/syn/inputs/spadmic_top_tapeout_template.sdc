@@ -43,8 +43,9 @@ set_clock_uncertainty $TOP_CLK_UNCERTAINTY_NS [get_clocks clk_ref_40m]
 # -----------------------------------------------------------------------------
 # 2. Source-synchronous DDR TX contract
 # -----------------------------------------------------------------------------
-# chip_tx_clk_o is a forwarded copy of clk_sys.  The receiver samples
-# chip_tx_valid_o and chip_tx_data_o[7:0] against this forwarded clock.
+# chip_tx_clk_o is a forwarded copy of clk_sys.  chip_tx_valid_o is launched on
+# the rising edge; chip_tx_data_o[7:0] is DDR and must be timed against both the
+# rising and falling capture edges of the forwarded clock.
 create_generated_clock -name chip_tx_clk \
   -source [get_ports $TOP_CLK_SYS_PORT] \
   -divide_by 1 \
@@ -54,6 +55,10 @@ set_output_delay -clock [get_clocks chip_tx_clk] -max $TOP_DDR_OUTPUT_MAX_NS \
   [get_ports {chip_tx_valid_o chip_tx_data_o[*]}]
 set_output_delay -clock [get_clocks chip_tx_clk] -min $TOP_DDR_OUTPUT_MIN_NS \
   [get_ports {chip_tx_valid_o chip_tx_data_o[*]}]
+set_output_delay -clock [get_clocks chip_tx_clk] -clock_fall -add_delay \
+  -max $TOP_DDR_OUTPUT_MAX_NS [get_ports {chip_tx_data_o[*]}]
+set_output_delay -clock [get_clocks chip_tx_clk] -clock_fall -add_delay \
+  -min $TOP_DDR_OUTPUT_MIN_NS [get_ports {chip_tx_data_o[*]}]
 
 # -----------------------------------------------------------------------------
 # 3. Synchronous input/output budgets

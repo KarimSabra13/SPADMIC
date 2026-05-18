@@ -471,6 +471,21 @@ def plot_error_vs_code(df, error_col, code_col, out_path, title="", n_bins=100):
     print(f"  Saved: {out_path}")
 
 
+def export_error_table(df, out_path, *, max_rows=None):
+    """Export compact pre/post reconstruction error evidence."""
+    cols = [
+        "Tref_ps", "t_raw_ps", "cal_ps", "raw_error_ps", "error_ps",
+        "nslow", "nfast_hit", "ns_inf", "nf_inf", "phase0_snap",
+        "slow_boundary_inc", "hit_idx",
+    ]
+    present = [col for col in cols if col in df.columns]
+    export_df = df[present]
+    if max_rows is not None and len(export_df) > max_rows:
+        export_df = export_df.sample(n=max_rows, random_state=0).sort_index()
+    export_df.to_csv(out_path, index=False)
+    print(f"  Saved: {out_path}")
+
+
 def compute_binned_profile(df, x_col, error_col, *, n_bins=60):
     """Aggregate mean/rmse/tails of *error_col* over evenly spaced bins of *x_col*."""
     work = df[[x_col, error_col]].dropna().copy()
@@ -1024,6 +1039,8 @@ def main():
                             "Post-calibration (held-out, core subset)")
     print_metrics(m_raw)
     print_metrics(m_cal)
+    val_error_csv = os.path.join(args.out_dir, "val_reconstruction_errors_pre_post.csv")
+    export_error_table(val_result, val_error_csv)
 
     # Pre/post plots – held-out
     plot_error_histogram(val_result["raw_error_ps"].values, val_result["error_ps"].values,
@@ -1159,6 +1176,12 @@ def main():
 
         all_raw = np.concatenate(all_raw_errs)
         all_cal = np.concatenate(all_cal_errs)
+        fresh_error_csv = os.path.join(args.out_dir, "fresh_reconstruction_error_samples.csv")
+        pd.DataFrame({
+            "raw_error_ps": all_raw,
+            "error_ps": all_cal,
+        }).to_csv(fresh_error_csv, index=False)
+        print(f"  Saved: {fresh_error_csv}")
 
         m_raw_f = compute_metrics(all_raw, "Pre-calibration (fresh core subset, sampled)")
         m_cal_f = compute_metrics(all_cal, "Post-calibration (fresh core subset, sampled)")
@@ -1322,6 +1345,7 @@ def main():
             "filter_summary": val_filter,
             "pre_cal":  m_raw,
             "post_cal": m_cal,
+            "error_table": os.path.basename(val_error_csv),
         },
     }
     if m_raw_f and m_cal_f:
@@ -1330,6 +1354,7 @@ def main():
             "filter_summary": fresh_filter,
             "pre_cal":  m_raw_f,
             "post_cal": m_cal_f,
+            "error_sample_table": os.path.basename(fresh_error_csv),
         }
     report["averaging_study"] = {
         "scope": "Post-calibration core-subset error pool",

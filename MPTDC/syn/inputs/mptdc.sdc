@@ -25,6 +25,25 @@ proc mptdc_try_async_max_delay {delay from_obj to_obj} {
     set_max_delay $delay -from $from_obj -to $to_obj
 }
 
+proc mptdc_try_false_path_pins {label patterns} {
+    set matched [list]
+    foreach pattern $patterns {
+        set pins [get_pins -quiet -hierarchical $pattern]
+        if {[llength $pins] > 0} {
+            set matched [concat $matched $pins]
+        }
+    }
+
+    if {[llength $matched] == 0} {
+        puts "MPTDC_SDC_WARN: no pins matched for $label"
+        return
+    }
+
+    puts "MPTDC_SDC_INFO: false-pathing $label ([llength $matched] pins)"
+    set_false_path -to $matched
+    set_false_path -through $matched
+}
+
 proc mptdc_create_osc_tap_clocks {base_name period tap_step tap_pins} {
     set created [list]
     set tap_idx 0
@@ -114,6 +133,9 @@ foreach osc_clk $design(OSC_ALL_CLOCKS) {
 # ─────────────────────────────────────────────────────────────────────────────
 # All three clocks are asynchronous. CDC is handled structurally by
 # gray_cnt_sync, pulse_sync, and reset_sync modules.
+# The oscillator enable pins are asynchronous macro controls, not synchronous
+# clock-gate paths. This clock grouping is therefore intentional, but every
+# functional crossing between these groups must remain covered by the CDC audit.
 
 set_clock_groups -asynchronous \
     -group [get_clocks $design(CLK_NAME)] \
@@ -138,6 +160,41 @@ foreach port $design(ASYNC_INPUTS) {
 
 set_false_path -from [get_ports $design(RST_PORT)]
 
+# PD cell conversion clear is an intentional asynchronous clear. It is asserted
+# only during conversion teardown/oscillator idle, so recovery/removal checks
+# against active fast tap clocks are not a valid synchronous timing objective.
+mptdc_try_false_path_pins "PD conversion clear pins" {
+    *gen_pd_row*gen_pd_col*u_pd*/clear_window
+    *gen_pd_row*gen_pd_col*u_pd*/clear_window_i
+    *u_pd*/clear_window
+    *u_pd*/clear_window_i
+}
+
+# Gray-counter async clears are intentional hard clears for source-domain
+# counter state when oscillator clocks may be stopped. The protocol clears only
+# after the held image has been sampled/committed, so recovery/removal on these
+# async clear pins is not a meaningful synchronous timing objective.
+mptdc_try_false_path_pins "Gray counter async clear pins" {
+    *u_slow_cnt*/src_async_clr
+    *u_fast_cnt*/src_async_clr
+    *gray_cnt_sync*/src_async_clr
+}
+
+# START-watchdog state lives in the slow oscillator domain and is intentionally
+# hard-cleared by sys-domain teardown so the counter can reset even if the
+# oscillator stops. Match both common RTL flop names and likely library clear pin
+# names as a best-effort SDC-mode guard; review matched pins in the Genus log.
+mptdc_try_false_path_pins "START watchdog async clear pins" {
+    *start_wdt_cnt*/*CLR*
+    *start_wdt_cnt*/*clr*
+    *start_wdt_cnt*/*CD*
+    *start_wdt_cnt*/*RN*
+    *start_timeout_latched*/*CLR*
+    *start_timeout_latched*/*clr*
+    *start_timeout_latched*/*CD*
+    *start_timeout_latched*/*RN*
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. CDC SYNCHRONIZER PROTECTION
 # ─────────────────────────────────────────────────────────────────────────────
@@ -155,6 +212,12 @@ mptdc_try_dont_touch *gray_snap_ff2*
 mptdc_try_dont_touch *u_pulse_sync*/sync_ff1*
 mptdc_try_dont_touch *u_pulse_sync*/sync_ff2*
 mptdc_try_dont_touch *ctx_drain_sync_ff*
+mptdc_try_dont_touch *start_sync_pipe*
+mptdc_try_dont_touch *stop_sync_pipe*
+mptdc_try_dont_touch *start_timeout_sync_pipe*
+mptdc_try_dont_touch *start_timeout_latched*
+mptdc_try_dont_touch *start_rejected_pending*
+mptdc_try_dont_touch *rejected_sync_pipe*
 mptdc_try_dont_touch *gen_pd_row*gen_pd_col*u_pd*
 
 # ─────────────────────────────────────────────────────────────────────────────

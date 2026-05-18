@@ -146,6 +146,12 @@ The active RTL keeps the existing CSR width but interprets the committed control
 3. forwards the global TDC input/output-mode overrides into the preserved `mptdc_top_asic`
 4. exports acquisition records instead of using the legacy per-axis narrow output
 
+Inside each preserved MPTDC kernel, the current measurement-control/context
+pivot is local to `mptdc_core`: oscillator/PD/counter fabric remains
+measurement-local, while `mptdc_meas_ctrl`, `mptdc_hit_capture_bridge`, and
+`mptdc_context_bank` run in `clk_sys`. TOP only sees the acquisition-record FIFO
+export and should not assume a fast-domain context-bank interface.
+
 ### 5.2 Shared TDC readout
 
 `spadmic_tdc_shared_readout` is the digital-area optimization point in the active top:

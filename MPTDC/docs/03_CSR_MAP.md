@@ -34,7 +34,7 @@ Read timing model:
 | `0x00` | `CTRL` | R/W | arm level and self-clearing control pulses |
 | `0x04` | `MODE` | R/W | reserved bit, input source, output format |
 | `0x08` | `MAX_HITS` | R/W | max hits per conversion |
-| `0x0C` | `WDT_CTX` | R/W | fast-domain context watchdog timeout |
+| `0x0C` | `WDT_CTX` | R/W | watchdog-class context/safety timeout field retained in the live config image |
 | `0x10` | `WDT_GLOBAL` | R/W | system-domain global watchdog timeout |
 | `0x20` | `STATUS` | R | readiness, busy state, context states, drain FSM state |
 | `0x24` | `HIT_COUNT` | R | last hit count and last close flags |
@@ -99,9 +99,14 @@ bit 15:0  wdt_ctx_timeout
 
 Important semantic detail:
 
-This timeout is consumed by `mptdc_meas_ctrl.sv` in the fast measurement domain, not in `clk_sys`.
+After the `clk_sys` control/context pivot, this field is still stored and passed
+through the live config image, but it is not a clean fast-domain programmable
+counter. `mptdc_meas_ctrl.sv` uses it only as part of watchdog-class close-flag
+compatibility after the held image is evaluated, while the START-without-STOP
+safety path is the slow-domain saturation latch in `mptdc_core.sv`.
 
-So the unit is approximately one `osc_fast_ph0` cycle per count, not one system-clock cycle. At nominal fast-oscillator timing that is about `0.9 ns` per count, but real silicon value depends on the actual oscillator frequency.
+Do not use `WDT_CTX` as a calibrated timeout unit in software until the desired
+post-pivot packet/CSR semantics are explicitly redefined.
 
 ### 3.5 `WDT_GLOBAL` (`0x10`)
 
@@ -215,7 +220,7 @@ map itself does not change.
 ```text
 1. Write MODE      : reserved[0]=0, input_sel=SPAD, out_mode=RAW_FEATURES
 2. Write MAX_HITS  : 15
-3. Write WDT_CTX   : fast-domain timeout value
+3. Write WDT_CTX   : 0 unless a post-pivot watchdog experiment explicitly needs the compatibility field
 4. Write WDT_GLOBAL: sys-domain timeout value
 5. Write CTRL      : conv_arm=1
 6. Stream packets from the 16-bit output

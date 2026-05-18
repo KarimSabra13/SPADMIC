@@ -85,6 +85,15 @@ to treat it as the sampling reference for both DDR edges.
 The active implementation uses `clk_sys` directly as that forwarded clock. There
 is no independent source-strobe generation stage inside the current RTL.
 
+The tapeout SDC template must therefore constrain:
+
+- rising-edge output delay for `chip_tx_valid_o` and the rising-edge data byte,
+- falling-edge output delay for `chip_tx_data_o[7:0]` using `-clock_fall -add_delay`.
+
+The placeholder max/min values in `TOP/syn/inputs/spadmic_top_tapeout_template.sdc`
+must be replaced with the real receiver setup/hold and board/package budget
+before signoff.
+
 ## 6. Flow-control assumptions
 
 The physical TX boundary is **unidirectional** and **non-backpressured**:

@@ -37,6 +37,13 @@ removed the separate `FIRST_HIT` mode. References to `FIRST_HIT` in the findings
 below should now be read as references to the fast-close behavior that the live
 RTL exposes through `max_hits = 1` and the `closed_by_fast_maxhit` flag.
 
+Post-pivot note: this review also predates the latest clock-domain pivot. Any
+statements below that place `mptdc_meas_ctrl` or `mptdc_context_bank` in
+`osc_fast_ph0`, describe context-bank readout as a fast-to-sys static CDC, or
+quote `4-6 ns` frontend deadtime are historical. The live design now sequences
+`SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR` in `clk_sys` and samples the
+held PD/counter image through `mptdc_hit_capture_bridge`.
+
 Commands rerun during this review:
 
 ```bash

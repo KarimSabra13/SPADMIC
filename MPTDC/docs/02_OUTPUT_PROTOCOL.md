@@ -47,10 +47,13 @@ In `RAW_TIMESTAMP` and `FULL` modes, timestamp payload words may have any patter
 bit 3  reserved              = currently always 0 in standalone MPTDC
 bit 2  closed_by_fast_maxhit = conversion closed by the fast close path used when max_hits = 1
 bit 1  closed_by_maxhits     = conversion closed because hit count reached max_hits
-bit 0  closed_by_watchdog    = conversion closed because the fast-domain context watchdog fired
+bit 0  closed_by_watchdog    = conversion closed by the no-STOP safety timeout / watchdog-class path
 ```
 
 Important: true context-allocation overflow is not encoded in the packet header. It is counted separately in CSR `OVF_COUNT`.
+The active pivot no longer uses a near-1 GHz fast-domain context FSM; treat this
+flag as a watchdog-class close indication rather than proof that a programmable
+fast-domain watchdog counter elapsed.
 
 ## 4. RAW_FEATURES mode (`out_mode = 0`)
 

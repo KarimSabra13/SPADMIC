@@ -141,6 +141,16 @@ mptdc_message "Checking timing intent (SDC lint)"
 check_timing_intent
 check_timing_intent -verbose > \
     "$design(synthesis_reports)/post_elaboration/check_timing_intent.rpt"
+mptdc_run_report "report_clocks" \
+    "$design(synthesis_reports)/post_elaboration/report_clocks.rpt" \
+    "post-init clock report"
+mptdc_run_report_candidates [list \
+    "check_timing -verbose" \
+    "check_timing" \
+    "check_timing_intent -verbose" \
+    "check_timing_intent" \
+] "$design(synthesis_reports)/post_elaboration/check_timing_post_init.rpt" \
+    "post-init timing coverage check"
 
 # Preserve hierarchy that has physical meaning before optimization can flatten
 # it away: local reset synchronizer leaves and the future-matched PD matrix.

@@ -39,7 +39,7 @@ clk_sys / async_rst_n / clk_ref_40m / async SPAD inputs
        |    `- mptdc_top_asic
        |         `- mptdc_core
        |              |- async frontend / oscillator wrappers / PD matrix
-       |              |- Gray counters / context bank / drain controller
+       |              |- Gray counters / hit-capture bridge / sys context bank / drain controller
        |              `- acquisition FIFO export
        |- spadmic_tdc_shared_readout
        |- spadmic_position_block
@@ -63,10 +63,11 @@ Legacy TOP modules still in-tree but not on the active chip datapath:
 | SPAD event to TDC wrapper | async event | async gate + `clk_ref_40m` qualifier | intentional async request plus ref-clock pulse qualification | Verify no held-high retrigger and no mode-switch glitch |
 | `x/y/z_lines_i` | SPAD matrix | `clk_sys` position block | multibit async sampled bus with settle filter | CDC waiver plus functional settle/glitch tests |
 | `clk_ref_40m` STOP qualifier | external ref clock | MPTDC STOP input | generated async pulse from ref edge | Treat as cross-domain/async input to MPTDC |
-| MPTDC slow/fast oscillators | oscillator macro | PD/counter/FSM domains | generated clocks | Real macro generated clocks and uncertainty required |
+| MPTDC slow/fast oscillators | oscillator macro | PD/counter measurement fabric | generated clocks | Real macro generated clocks and uncertainty required |
 | PD cell sampling | slow/fast oscillator taps | async latch/sampler | intentional measurement structure | CDC/STA exception and physical symmetry constraints |
-| Gray counter snapshots | oscillator domains | fast/sys-side capture | Gray/snapshot CDC | Constrain source clocks and document bounded ambiguity |
-| context bank snapshot | fast capture | `clk_sys` drain | static-data CDC after drain flag sync | Waive only with frozen-data proof/inspection |
+| Gray counter snapshots | oscillator domains | `clk_sys` hit-capture image | Gray/snapshot CDC | Constrain source clocks and document bounded ambiguity |
+| held PD/counter image | oscillator/PD fabric | `mptdc_hit_capture_bridge` in `clk_sys` | static-data CDC after synchronized STOP visibility | Waive only with frozen-data proof: STOP visible, image held, bridge sampled, context committed, then PD clear |
+| context bank snapshot | `clk_sys` context bank | `clk_sys` drain | ordinary synchronous storage/readout | Time normally; no CDC waiver needed for context bank storage itself |
 | correlated TX to DDR TX | `clk_sys` | forwarded output clock | synchronous logical word stream | Normal `clk_sys` timing plus output delay constraints |
 | `chip_tx_*` pins | forwarded `clk_sys` | off-chip receiver | source-synchronous DDR | Board/receiver setup-hold budget required |
 | `spad_matrix_rst_o` | `clk_sys` position CSR/reset controller | SPAD matrix reset input | synchronous pulse leaving digital top | Matrix reset pulse-width and recovery contract required |
@@ -146,9 +147,10 @@ evidence:
 - asynchronous clock groups justified between unrelated domains,
 - reset recovery/removal checked for synchronizer outputs,
 - `ASYNC_REG` synchronizers preserved and physically clustered,
-- static context-bank CDC waived only after frozen-data protocol review,
+- held PD/counter static-bus CDC waived only after frozen-data protocol review,
+- context-bank storage/readout timed as ordinary `clk_sys` logic,
 - PD-cell intentional async sampling waived with physical-design constraints,
-- DDR TX output delays defined against the off-chip receiver,
+- DDR TX output delays defined against the off-chip receiver for both rising and falling data edges,
 - SPAD matrix reset output timing/load and matrix-side recovery constraints defined,
 - false paths do not mask real synchronous logic,
 - no unconstrained active output or control path remains.

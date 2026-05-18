@@ -24,6 +24,7 @@
 |------|----------|-----------------|
 | `smoke_tdc` | Enable all axes + CAL, 1 event/axis, collect 3 packets | 3 valid TDC packets with correct source tags |
 | `smoke_position` | Enable position, single-cluster X-axis, 1 packet | 1 valid 12-word position packet |
+| `smoke_position_raw` | Enable raw bitmap position export | 1 valid raw-position packet without EOC-alias decode errors |
 | `smoke_switching` | TDC→drain→position→drain→TDC | Clean transitions, no interleaving, no faults |
 
 ## 3. VIP Feature Tests
@@ -34,6 +35,7 @@
 | `pos_clusters` | 3 gap × 3 span × patterns | Cluster extraction matches reference |
 | `ctrl_reject` | CTRL write while NOT idle | `mode_reject_sticky=1`, count increments |
 | `reset_recovery` | Reset during TDC packets | Recovery to clean config + new packets |
+| `spad_reset_modes` | Position reset modes and pulse observation | Expected reset pulse count/width and clean packet recovery |
 | `bp_stress` | READY→RANDOM→STALL→recovery | All packets eventually delivered |
 | `i2c_end_to_end` | Full I2C programming + readback | Correct data through I2C path |
 
@@ -68,8 +70,8 @@ named and checked as stress/fault tests rather than mixed into ordinary random.
 ## 6. Acceptance Criteria
 
 - [ ] All 13 directed benches pass on Xcelium
-- [ ] All 3 smoke tests pass
-- [ ] All 6 feature tests pass
+- [ ] All 4 smoke tests pass
+- [ ] All 7 feature tests pass
 - [ ] `long_random` passes with seed=1
 - [ ] `coverage_walk` passes
 - [ ] `stress_random` passes with ≥20 seeds

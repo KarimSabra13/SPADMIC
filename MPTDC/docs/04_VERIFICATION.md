@@ -109,6 +109,7 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
 | `tb_deadtime_measure` | re-arm timing trends |
 | `tb_cal_inject` | CAL injection path |
 | `tb_backpressure` | ready/valid stalls and FIFO tolerance |
+| `tb_lossless_pressure` | lossless STOP-to-next-START pressure, near-deadtime, saturation/release, and exact rejected-START accounting |
 | `tb_watchdog_recovery` | global watchdog trip and recovery |
 | `tb_start_wdt` | START-without-STOP watchdog behavior |
 | `tb_overflow_count` | rejected START / overflow accounting |
@@ -218,6 +219,7 @@ the optional downstream analysis/calibration/fixed-delay stages.
 It now emits first-class outputs for:
 
 - RMSE / mean / tails vs true delay
+- raw tuple histogram and code-density CSVs/plots for pre-calibration DNL/INL review
 - RMSE / tails vs `nslow`
 - RMSE / tails vs `nfast_hit`
 - RMSE / tails vs `hit_idx`
@@ -226,6 +228,12 @@ It now emits first-class outputs for:
 - `ns × nf` mean / std / occupancy heatmaps
 - fixed engineering delay-region summary tables
 - a machine-readable `summary_report.json`
+
+`scripts/calibration/calibrate_6d_lut.py` also exports pre/post
+reconstruction-error CSVs for held-out validation and fresh-sample evidence.
+For pivot signoff, packet tests are necessary but insufficient: keep both the
+raw tuple/code-density evidence and post-calibration reconstructed timestamp
+error evidence.
 
 Example:
 

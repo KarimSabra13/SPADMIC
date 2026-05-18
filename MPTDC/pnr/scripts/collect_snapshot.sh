@@ -56,7 +56,8 @@ if [[ -d "${pnr_dir}/logs" ]]; then
   mkdir -p "${snapshot_dir}/logs"
   find "${pnr_dir}/logs" -maxdepth 1 -type f -exec cp {} "${snapshot_dir}/logs/" \;
   latest_innovus_log="$(
-    find "${pnr_dir}/logs" -maxdepth 1 -type f -name 'innovus_estimate.log*' \
+    find "${pnr_dir}/logs" -maxdepth 1 -type f \
+      \( -name 'innovus_estimate.log*' -o -name 'innovus_batch_*.log' -o -name 'innovus_console_*.log' \) \
       -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {$1=""; sub(/^ /, ""); print}'
   )"
 fi
@@ -70,7 +71,7 @@ if [[ -n "${latest_innovus_log}" && -f "${latest_innovus_log}" ]]; then
     log_copy_note="Innovus log copied: $(basename "${latest_innovus_log}")"
   fi
 else
-  log_copy_note="WARNING: no Innovus log matching pnr/logs/innovus_estimate.log* was found."
+  log_copy_note="WARNING: no Innovus log matching pnr/logs/{innovus_estimate.log*,innovus_batch_*.log,innovus_console_*.log} was found."
 fi
 
 for file in \

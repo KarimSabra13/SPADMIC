@@ -1,126 +1,102 @@
-# MPTDC v2.2 — Deadtime and Throughput Analysis
+# MPTDC v2.4 — Deadtime, Throughput, and Overflow Analysis
 
 > - **Author:** Karim Sabra
-> - **Purpose:** Explain the active deadtime path and the practical throughput limits implied by the current RTL.
-> - **Scope:** Uses the checked-in architecture and nominal oscillator assumptions; it is not a silicon signoff timing report.
+> - **Purpose:** Define the live deadtime metrics and the practical throughput limits implied by the `clk_sys` control/context pivot.
+> - **Scope:** Uses the checked-in RTL and nominal oscillator assumptions; it is not a silicon timing-signoff report.
 
-## 1. Definition
+## 1. Definitions
 
-Deadtime is the time from the STOP edge of conversion `N` to the earliest moment a new START can be accepted for conversion `N+1`.
+Do not quote a deadtime number without its envelope. The active project uses three related metrics:
 
-In this architecture, deadtime is dominated by the fast-domain measurement FSM and frontend clear/re-arm path, not by the system-domain drain and serializer path.
+| Metric | Definition | Why it matters |
+|---|---|---|
+| Best-case lossless deadtime | Minimum STOP-to-next-START gap where the next event is accepted and produces one complete packet with sink ready/no artificial backpressure | Hero-mode throughput with `conv_arm` held high |
+| Backpressure-tolerant lossless deadtime | Same STOP-to-next-START acceptance criterion, but under a stated ready/FIFO/context-pressure envelope | Real shared-readout or bus-arbitration robustness |
+| Frontend re-arm latency | Internal STOP-to-frontend/PD/counter readiness, independent of downstream packet pressure | Implementation diagnostic, not the published product metric by itself |
 
-## 2. Why the current design is fast
+Software-paced CSR re-arm latency is a separate system-use-case number and should not be mixed with hardware deadtime.
 
-The current architecture uses two contexts:
+## 2. Live control sequence
 
-- one context can be in `CAPTURING`
-- the other can be in `DRAINING`
+The pivot moved `mptdc_meas_ctrl` and `mptdc_context_bank` to `clk_sys`. The oscillator/PD/counter fabric remains the measurement-local exception.
 
-That means packet drain, FIFO buffering, and 16-bit serialization are largely off the critical re-arm path.
-
-## 3. Active closure path
-
-The measurement FSM is:
-
-```text
-IDLE -> MEASURE -> SNAPSHOT -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
-```
-
-Approximate role of each state:
-
-- `MEASURE`   : accumulate hits and wait for close condition
-- `SNAPSHOT`  : freeze the wide context image into holding registers
-- `CAPTURE`   : commit the frozen context snapshot and mark it drainable
-- `STOP_OSC`  : clear frontend latches so the slow oscillator stops cleanly
-- `CLEAR`     : asynchronously clear PD cells and counters once oscillators are safe
-- `IDLE`      : frontend may accept the next START
-
-## 4. Nominal deadtime components
-
-Using the nominal oscillator values in the live package:
-
-- fast half-period = `450 ps`
-- full fast period = `900 ps`
-
-The post-close sequence costs roughly:
-
-| Stage | Approximate cost |
-|-------|------------------|
-| close detect -> `CAPTURE` | 2 fast cycles |
-| `CAPTURE` -> `STOP_OSC` | 1 fast cycle |
-| `STOP_OSC` -> `CLEAR` | 1 fast cycle |
-| `CLEAR` -> `IDLE` | 1 fast cycle |
-| async frontend re-arm | sub-cycle / small additional margin |
-
-That gives a nominal practical deadtime on the order of `5-6 ns`. The added
-snapshot-settle cycle is intentional implementation margin for the wide
-oscillator-domain context snapshot.
-
-## 5. Why drain does not dominate deadtime
-
-After capture:
-
-1. the context is marked `DRAINING`
-2. the frontend is released for a new measurement path
-3. the system-domain drain FSM handles packetization separately
-
-So the 16-bit output path mainly affects sustained throughput and overflow risk, not the immediate re-arm latency of the frontend.
-
-## 6. Factors that still affect effective deadtime
-
-### 6.1 Fast close (`max_hits = 1`) vs higher-`max_hits` close path
-
-- fast close uses a direct OR reduction of the PD matrix
-- higher `max_hits` values use a pipelined count tree, adding one fast-cycle latency to close detection
-
-That added cycle is intentionally accepted to make the fast-domain logic synthesizable.
-
-### 6.2 Persistent arm vs software re-arm
-
-If `conv_arm` is kept high continuously, the frontend can re-arm as soon as the measurement path returns to idle.
-
-If software drops and rewrites `conv_arm`, the effective system-level gap becomes much larger because now `clk_sys` software/control latency is in the loop.
-
-### 6.3 Output backpressure and context pressure
-
-Heavy output backpressure does not directly stretch the frontend deadtime, but it can make both contexts unavailable:
-
-- one context may still be draining
-- the other may become the active capturing context
-
-If both are occupied when a START arrives, the frontend rejects the START and `OVF_COUNT` increments.
-
-### 6.4 Missing STOP
-
-The slow-domain START watchdog prevents the system from hanging forever if START arrives and STOP never follows. This is a robustness feature, not a throughput optimization, but it matters for real deployment.
-
-## 7. Practical throughput interpretation
-
-There are really three different notions of speed:
-
-1. **frontend re-arm deadtime**: about `4-5 ns` nominal
-2. **conversion acceptance under sustained streaming**: depends on whether both contexts remain available
-3. **output bandwidth**: depends on packet size and host backpressure on the 16-bit stream
-
-For example, in `RAW_FEATURES` mode with 15 hits, one packet is:
+The live sequence is:
 
 ```text
-1 header + 15*3 hit words + 1 EOC = 47 words
+IDLE -> MEASURE -> SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
 ```
 
-At `160 MHz`, that is many system-clock cycles of output activity, but it is mostly overlapped with future frontend activity because of the double-buffer structure.
+Ordering contract:
 
-## 8. Reviewer checklist
+1. STOP/front-end ownership becomes visible in `clk_sys`.
+2. `SNAPSHOT` samples the held PD/counter/STOP-boundary image through `mptdc_hit_capture_bridge`.
+3. `EVAL` computes hit count and close flags from that registered image.
+4. `CAPTURE` commits the image to the `clk_sys` context bank and marks it drainable.
+5. `STOP_OSC` clears frontend START/STOP ownership.
+6. `CLEAR` clears PD/counter/STOP-capture fabric only after the context image has been committed.
 
-When evaluating deadtime before synthesis, review:
+This intentionally trades the obsolete few-fast-cycle teardown target for a reviewable CDC and STA structure.
 
-- whether the oscillator implementation preserves the assumed startup behavior
-- whether generated-clock constraints correctly cover `osc_fast_ph0`
-- whether the async frontend clear path is constrained and implemented as intended
-- whether `conv_arm` will be held persistently in the target use case
-- whether downstream backpressure can realistically fill the FIFO or tie up both contexts
+## 3. Current evidence
 
-## 9. Bottom line
+`tb_deadtime_measure` is useful for measuring requested gaps, but the maintained pressure proof is now:
 
-The active architecture is no longer output-serialization-limited in the same way as older single-context or older writer-centered flows. Its critical deadtime is the measurement shutdown and re-arm path, and that path is intentionally short and silicon-structured.
+```bash
+bash scripts/sim/run_tb.sh tb_lossless_pressure --sim verilator
+```
+
+That bench exercises:
+
+- always-ready sink behavior,
+- randomized short output stalls,
+- full saturation and release,
+- `max_hits = {1,2,8,15}`,
+- START/STOP gaps around the 40-60 ns region,
+- one packet per accepted START,
+- exact rejected-START overflow accounting,
+- no context double-use,
+- `pd_clear` only after context commit.
+
+At the current RTL checkpoint, the practical best-case STOP-to-next-START acceptance floor is expected around the synchronized STOP plus `clk_sys` teardown window, not `4-6 ns`. The exact number remains an RTL/model evidence number until a non-dry-run characterization/regression bundle and the final oscillator macro contract exist.
+
+## 4. Backpressure and deterministic overflow
+
+The intended policy is deterministic saturation:
+
+- accept STARTs while a safe context/FIFO slot exists,
+- reject STARTs only when accepting would risk overwrite or corruption,
+- never corrupt context 0, context 1, or FIFO data,
+- increment `OVF_COUNT` exactly once per rejected START,
+- recover and accept new events as soon as pressure releases.
+
+The frontend and core now hold a rejected START indication until `clk_sys` can count it, so short async rejected pulses are not sampled opportunistically as one-cycle levels.
+
+## 5. Precision implications
+
+The pivot should not bias the Vernier measurement itself because START/STOP boundaries, oscillator launch, PD sampling, STOP-side boundary capture, and counter snapshots remain measurement-local. The risk is not arithmetic bias from `clk_sys`; the risk is violating the held-image CDC contract.
+
+Before claiming precision/linearity stability, collect both:
+
+- pre-calibration raw tuple/code-density evidence in `RAW_FEATURES`,
+- post-calibration reconstructed timestamp evidence in `RAW_TIMESTAMP` or `FULL`.
+
+The maintained wrapper is:
+
+```bash
+bash scripts/sim/run_characterization_baseline.sh --analyze --calibrate --with-fixed-delay
+```
+
+The `--analyze --calibrate` outputs are mandatory evidence, not optional polish, for post-pivot signoff discussion.
+
+## 6. Remaining silicon caveats
+
+The digital RTL currently assumes ideal oscillator enable/disable behavior in simulation. Final silicon deadtime and precision still depend on:
+
+- oscillator enable/disable latency,
+- phase idle behavior,
+- jitter and duty-cycle distortion,
+- output slew/load and tap matching,
+- final generated-clock periods and uncertainties,
+- physical matching of the 8x8 PD island.
+
+Until those are available in the macro Liberty/LEF and implementation constraints, the design can be functionally coherent and STA-friendlier without being final signoff-ready.

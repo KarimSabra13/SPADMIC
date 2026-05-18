@@ -21,6 +21,7 @@ rtl/pd/mptdc_pd_cell.sv
 // Async frontend / capture
 rtl/async/mptdc_stop_capture_async.sv
 rtl/async/mptdc_async_frontend_v2.sv
+rtl/async/mptdc_hit_capture_bridge.sv
 rtl/async/mptdc_context_bank.sv
 
 // Control / orchestration

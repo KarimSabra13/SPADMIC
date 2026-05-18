@@ -2,321 +2,155 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.5 — system-domain measurement controller
 // File     : mptdc_meas_ctrl.sv
-// Purpose  : Fast-domain measurement controller — close detection, capture,
-//            oscillator stop, clear, and re-arm.  Runs at ~1 GHz (fast_phase[0]).
-// Author   : Karim Sabra
-// =============================================================================
-// v2.4 changes (first-hit mode removal):
-//   - Removed first_hit_mode_i port — single multi-hit operating mode.
-//   - max_hits=1 uses a registered OR-reduction close path (close_fast) for
-//     physically-safe single-hit operation.
-//   - max_hits>1 uses a deeply pipelined hierarchical count close
-//     (close_counted).  The extra latency is intentional: it avoids forcing the
-//     PD matrix to drive a 64-bit population-count tree in one ~900 ps cycle.
-//   - closed_by_fast_maxhit flag replaces closed_by_firsthit.
-//
-// v2.2 changes:
-//   - FSM: IDLE → MEASURE → SNAPSHOT → CAPTURE → STOP_OSC → CLEAR → IDLE
-//     STOP_OSC deasserts osc_keep_alive BEFORE pd_clear to eliminate the
-//     async-clear-while-clock-running race on PD cells.
-//   - Close detection split:
-//     max_hits=1: registered OR-reduction close
-//     max_hits>1: deeply pipelined hierarchical saturating count
-//     This adds fast-cycle latency to close detection so each stage stays small.
-//   - Overflow flag removed (was misused as hit-saturation).
-//   - pd_gate_o: gates PD enable off immediately on fast close to
-//     limit hit accumulation in single-hit mode.
+// Purpose  : Measurement teardown/context sequencing after the Vernier fabric
+//            has latched STOP-side PD/counter state.
 // =============================================================================
 module mptdc_meas_ctrl
   import mptdc_pkg::*;
 (
-  input  wire                   clk_fast,        // fast_phase[0], ~1 GHz
+  input  wire                   clk_sys,
   input  wire                   rst_n,
 
-  // Frontend status
-  input  wire                   meas_active_i,   // start_latched & stop_latched
+  // Synchronized frontend status: START and STOP are both latched.
+  input  wire                   meas_active_i,
+  input  wire                   timeout_active_i,
 
-  // PD hit status (combinational from PD cells)
+  // Registered static-bus image from mptdc_hit_capture_bridge.
   input  wire [PD_N-1:0]        hit_level_i,
 
-  // Configuration (quasi-static from CSR — latched before measurement)
+  // Configuration from CSR, stable in clk_sys.
   input  wire [MAX_HITS_W-1:0]  max_hits_cfg_i,
-  input  wire [15:0]            wdt_timeout_i,   // 0 = disabled
+  input  wire [15:0]            wdt_timeout_i,   // retained for status compatibility
 
-  // Context bank control
-  output logic                  snapshot_en_o,   // 1 cycle: freeze context-bank holding regs
-  output logic                  capture_en_o,    // 1 cycle: commit frozen snapshot/drain
+  // Static-bus capture / context-bank commit controls.
+  output logic                  snapshot_en_o,   // pulse: sample PD/counter fabric into bridge
+  output logic                  capture_en_o,    // pulse: commit bridge image to context bank
 
-  // Frontend / PD control
-  output logic                  fe_clear_o,      // 1 cycle: clear start/stop latches
-  output logic                  pd_clear_o,      // 1 cycle: clear PD cells
-  output logic                  pd_gate_o,       // v2.2: gates PD enable (0 = freeze)
+  // Frontend / PD control.
+  output logic                  fe_clear_o,      // pulse: clear START/STOP latches
+  output logic                  pd_clear_o,      // pulse: clear PD/counter fabric
+  output logic                  pd_gate_o,       // 0 freezes additional PD hit accumulation
 
-  // Oscillator keep-alive (to osc_fast_en logic)
+  // Fast oscillator keep-alive after STOP latch is cleared.
   output logic                  osc_keep_alive_o,
 
-  // Close information (frozen into context bank holding regs on snapshot_en)
+  // Metadata committed with the context image.
   output tdc_conv_flags_t       close_flags_o,
   output logic [MAX_HITS_W-1:0] hit_count_o,
 
-  // Debug / status
+  // Debug / status.
   output meas_state_e           state_o
 );
 
-  // =========================================================================
-  // State register (3-bit for 8 states)
-  // =========================================================================
   meas_state_e state_q, state_d;
 
-  // =========================================================================
-  // Hit count — split close paths for 180nm timing closure
-  // =========================================================================
-
-  // ── OR-reduction: single-hit fast-close path ──
-  // Stage 0: row-local ORs registered near the PD matrix.
-  // Stage 1: final 8-row OR feeds the registered close cause.
-  logic [NE-1:0] row_hit_comb;
-  logic [NE-1:0] row_hit_q;
-  logic          any_hit_piped;
-
-  // ── MULTI_HIT: physically-safe pipelined hierarchical saturating count ──
-  // Stage 0: register the cumulative PD hit bitmap.
-  // Stage 1: 8 row popcounts (8 bits each) → registered.
-  // Stage 2: 4 pair sums → registered.
-  // Stage 3: 2 half totals → registered.
-  // Stage 4: final total/saturation → registered hit count.
-  logic [PD_N-1:0] hit_seen_q;
-  logic [PD_N-1:0] hit_seen_next;
+  // Balanced 64-bit hit count in the relaxed clk_sys domain.
   logic [1:0] row_pair_cnt_comb [0:NE-1][0:3];
   logic [2:0] row_quad_cnt_comb [0:NE-1][0:1];
-  logic [3:0] row_cnt_comb [0:NE-1];  // 8 partial sums (max 8 each → 4 bits)
-  logic [3:0] row_cnt_q    [0:NE-1];
-  logic [4:0] pair_cnt_q   [0:3];
-  logic [5:0] half_cnt_q   [0:1];
-  logic [6:0] total_cnt_q;            // 7-bit sum (max 64)
-  logic [MAX_HITS_W-1:0] hit_cnt_q;   // registered, saturated at MAX_HITS
+  logic [3:0] row_cnt_comb      [0:NE-1];
+  logic [4:0] pair_cnt_comb     [0:3];
+  logic [5:0] half_cnt_comb     [0:1];
+  logic [6:0] total_cnt_comb;
 
-  assign hit_seen_next = hit_seen_q | hit_level_i;
-  assign any_hit_piped = |row_hit_q;
+  logic [6:0] total_hits_q;
+  logic [MAX_HITS_W-1:0] hit_count_q;
+  tdc_conv_flags_t flags_q;
 
-  // Row-local ORs and explicit balanced row popcounts.  Avoid an inferred
-  // serial += reduction; each row is pair sums -> quad sums -> final row sum.
+  wire [MAX_HITS_W-1:0] effective_max_hits = max_hits_cfg_i;
+  wire [6:0] effective_max_hits_ext = 7'(effective_max_hits);
+  wire       any_hit = (total_cnt_comb != 7'd0);
+
   always_comb begin
     for (int r = 0; r < NE; r++) begin
-      row_hit_comb[r] = |hit_level_i[r * NE +: NE];
-
-      row_pair_cnt_comb[r][0] = {1'b0, hit_seen_q[r * NE + 0]} + {1'b0, hit_seen_q[r * NE + 1]};
-      row_pair_cnt_comb[r][1] = {1'b0, hit_seen_q[r * NE + 2]} + {1'b0, hit_seen_q[r * NE + 3]};
-      row_pair_cnt_comb[r][2] = {1'b0, hit_seen_q[r * NE + 4]} + {1'b0, hit_seen_q[r * NE + 5]};
-      row_pair_cnt_comb[r][3] = {1'b0, hit_seen_q[r * NE + 6]} + {1'b0, hit_seen_q[r * NE + 7]};
+      row_pair_cnt_comb[r][0] = {1'b0, hit_level_i[r * NE + 0]} + {1'b0, hit_level_i[r * NE + 1]};
+      row_pair_cnt_comb[r][1] = {1'b0, hit_level_i[r * NE + 2]} + {1'b0, hit_level_i[r * NE + 3]};
+      row_pair_cnt_comb[r][2] = {1'b0, hit_level_i[r * NE + 4]} + {1'b0, hit_level_i[r * NE + 5]};
+      row_pair_cnt_comb[r][3] = {1'b0, hit_level_i[r * NE + 6]} + {1'b0, hit_level_i[r * NE + 7]};
 
       row_quad_cnt_comb[r][0] = {1'b0, row_pair_cnt_comb[r][0]} + {1'b0, row_pair_cnt_comb[r][1]};
       row_quad_cnt_comb[r][1] = {1'b0, row_pair_cnt_comb[r][2]} + {1'b0, row_pair_cnt_comb[r][3]};
 
       row_cnt_comb[r] = {1'b0, row_quad_cnt_comb[r][0]} + {1'b0, row_quad_cnt_comb[r][1]};
     end
+
+    pair_cnt_comb[0] = {1'b0, row_cnt_comb[0]} + {1'b0, row_cnt_comb[1]};
+    pair_cnt_comb[1] = {1'b0, row_cnt_comb[2]} + {1'b0, row_cnt_comb[3]};
+    pair_cnt_comb[2] = {1'b0, row_cnt_comb[4]} + {1'b0, row_cnt_comb[5]};
+    pair_cnt_comb[3] = {1'b0, row_cnt_comb[6]} + {1'b0, row_cnt_comb[7]};
+
+    half_cnt_comb[0] = {1'b0, pair_cnt_comb[0]} + {1'b0, pair_cnt_comb[1]};
+    half_cnt_comb[1] = {1'b0, pair_cnt_comb[2]} + {1'b0, pair_cnt_comb[3]};
+    total_cnt_comb   = {1'b0, half_cnt_comb[0]} + {1'b0, half_cnt_comb[1]};
   end
 
-  // Pipeline registers.  Counted close is delayed by several fast cycles, but
-  // every stage now has a small, local amount of logic suitable for XH018.
-  always_ff @(posedge clk_fast or negedge rst_n) begin
-    if (!rst_n) begin
-      row_hit_q <= '0;
-      hit_seen_q <= '0;
-      for (int r = 0; r < NE; r++)
-        row_cnt_q[r] <= '0;
-      for (int p = 0; p < 4; p++)
-        pair_cnt_q[p] <= '0;
-      for (int h = 0; h < 2; h++)
-        half_cnt_q[h] <= '0;
-      total_cnt_q <= '0;
-      hit_cnt_q <= '0;
-    end else begin
-      row_hit_q <= row_hit_comb;
-      for (int r = 0; r < NE; r++)
-        row_cnt_q[r] <= row_cnt_comb[r];
-      pair_cnt_q[0] <= {1'b0, row_cnt_q[0]} + {1'b0, row_cnt_q[1]};
-      pair_cnt_q[1] <= {1'b0, row_cnt_q[2]} + {1'b0, row_cnt_q[3]};
-      pair_cnt_q[2] <= {1'b0, row_cnt_q[4]} + {1'b0, row_cnt_q[5]};
-      pair_cnt_q[3] <= {1'b0, row_cnt_q[6]} + {1'b0, row_cnt_q[7]};
-      half_cnt_q[0] <= {1'b0, pair_cnt_q[0]} + {1'b0, pair_cnt_q[1]};
-      half_cnt_q[1] <= {1'b0, pair_cnt_q[2]} + {1'b0, pair_cnt_q[3]};
-      total_cnt_q <= {1'b0, half_cnt_q[0]} + {1'b0, half_cnt_q[1]};
-      hit_cnt_q <= (total_cnt_q > 7'(MAX_HITS)) ? MAX_HITS_W'(MAX_HITS)
-                                                 : total_cnt_q[MAX_HITS_W-1:0];
+  always_comb begin
+    state_d = state_q;
+    unique case (state_q)
+      ST_M_IDLE: begin
+        if (meas_active_i)
+          state_d = ST_M_MEASURE;
+      end
+      ST_M_MEASURE:  state_d = ST_M_SNAPSHOT;
+      ST_M_SNAPSHOT: state_d = ST_M_EVAL;
+      ST_M_EVAL:     state_d = ST_M_CAPTURE;
+      ST_M_CAPTURE:  state_d = ST_M_STOP_OSC;
+      ST_M_STOP_OSC: state_d = ST_M_CLEAR;
+      ST_M_CLEAR:    state_d = ST_M_IDLE;
+      default:       state_d = ST_M_IDLE;
+    endcase
+  end
 
-      // Clear on the CLEAR->IDLE transition while the fast oscillator is still
-      // kept alive. Once state_q is IDLE, clk_fast stops and an IDLE-only clear
-      // would never be clocked before the next conversion starts.
-      if (state_d == ST_M_IDLE) begin
-        row_hit_q <= '0;
-        hit_seen_q <= '0;
-        for (int r = 0; r < NE; r++)
-          row_cnt_q[r] <= '0;
-        for (int p = 0; p < 4; p++)
-          pair_cnt_q[p] <= '0;
-        for (int h = 0; h < 2; h++)
-          half_cnt_q[h] <= '0;
-        total_cnt_q <= '0;
-        hit_cnt_q <= '0;
-      end else if (state_q == ST_M_MEASURE) begin
-        hit_seen_q <= hit_seen_next;
+  always_ff @(posedge clk_sys) begin
+    if (!rst_n) begin
+      state_q      <= ST_M_IDLE;
+      total_hits_q <= '0;
+      hit_count_q  <= '0;
+      flags_q      <= '0;
+    end else begin
+      state_q <= state_d;
+
+      if (state_q == ST_M_IDLE) begin
+        total_hits_q <= '0;
+        hit_count_q  <= '0;
+        flags_q      <= '0;
+      end else if (state_q == ST_M_EVAL) begin
+        total_hits_q <= total_cnt_comb;
+
+        if (effective_max_hits == '0) begin
+          hit_count_q <= '0;
+        end else if (total_cnt_comb > effective_max_hits_ext) begin
+          hit_count_q <= effective_max_hits;
+        end else begin
+          hit_count_q <= total_cnt_comb[MAX_HITS_W-1:0];
+        end
+
+        flags_q.reserved              <= 1'b0;
+        flags_q.closed_by_fast_maxhit <= (effective_max_hits == MAX_HITS_W'(1)) && any_hit;
+        flags_q.closed_by_maxhits     <= (effective_max_hits > MAX_HITS_W'(1))
+                                      && (total_cnt_comb >= effective_max_hits_ext);
+        flags_q.closed_by_watchdog    <= timeout_active_i
+                                      || ((wdt_timeout_i != 16'd0) && !any_hit);
       end
     end
   end
 
-  // Context snapshot timing control. snapshot_en_o freezes wide data into
-  // holding registers; capture_en_o commits the frozen image one fast cycle
-  // later and marks the context drainable.
-  logic snapshot_en_q, capture_en_q;
-
-  always_ff @(posedge clk_fast or negedge rst_n) begin
-    if (!rst_n) begin
-      snapshot_en_q <= 1'b0;
-      capture_en_q  <= 1'b0;
-    end else begin
-      snapshot_en_q <= (state_d == ST_M_SNAPSHOT);
-      capture_en_q <= (state_d == ST_M_CAPTURE);
-    end
-  end
-
-  // Snapshot hit count: single-hit fast close intentionally exports one hit;
-  // counted mode uses the registered pipeline value.
-  assign hit_count_o = flags_q.closed_by_fast_maxhit ? MAX_HITS_W'(1) : hit_cnt_q;
-
-  // =========================================================================
-  // Close conditions (v2.4: unified — no first_hit_mode_i)
-  //   close_fast:    max_hits==1  -> registered OR-reduction
-  //   close_counted: max_hits>1   -> deeply pipelined comparator
-  // =========================================================================
-  logic close_fast_comb, close_counted_comb, close_wd_comb;
-  logic close_fast_q, close_counted_q, close_wd_q, close_any_q;
-
-  // Fast single-hit close: registered by one fast cycle for physical timing.
-  assign close_fast_comb = (max_hits_cfg_i == MAX_HITS_W'(1)) && any_hit_piped;
-
-  // Counted close: pipelined — compares against REGISTERED count.
-  assign close_counted_comb = (max_hits_cfg_i > MAX_HITS_W'(1))
-                           && (hit_cnt_q >= max_hits_cfg_i);
-
-  // ── Watchdog counter ────────────────────────────────────────────
-  logic [15:0] wdt_cnt_q;
-
-  always_ff @(posedge clk_fast or negedge rst_n) begin
-    if (!rst_n)
-      wdt_cnt_q <= '0;
-    else if (state_d == ST_M_IDLE)
-      wdt_cnt_q <= '0;
-    else if (state_q == ST_M_MEASURE && wdt_timeout_i != '0)
-      wdt_cnt_q <= wdt_cnt_q + 16'd1;
-  end
-
-  assign close_wd_comb = (wdt_timeout_i != '0) && (wdt_cnt_q >= wdt_timeout_i);
-
-  always_ff @(posedge clk_fast or negedge rst_n) begin
-    if (!rst_n) begin
-      close_fast_q    <= 1'b0;
-      close_counted_q <= 1'b0;
-      close_wd_q      <= 1'b0;
-      close_any_q     <= 1'b0;
-    end else if (state_d == ST_M_IDLE) begin
-      close_fast_q    <= 1'b0;
-      close_counted_q <= 1'b0;
-      close_wd_q      <= 1'b0;
-      close_any_q     <= 1'b0;
-    end else begin
-      close_fast_q    <= (state_q == ST_M_MEASURE) && close_fast_comb;
-      close_counted_q <= (state_q == ST_M_MEASURE) && close_counted_comb;
-      close_wd_q      <= (state_q == ST_M_MEASURE) && close_wd_comb;
-      close_any_q     <= (state_q == ST_M_MEASURE)
-                       && (close_fast_comb | close_counted_comb | close_wd_comb);
-    end
-  end
-
-  // Close fires ONLY in MEASURE state
-  wire close_any = (state_q == ST_M_MEASURE) && close_any_q;
-
-  // =========================================================================
-  // Flags — latched on MEASURE → CAPTURE transition
-  // =========================================================================
-  tdc_conv_flags_t flags_q, flags_d;
-
-  always_comb begin
-    flags_d = flags_q;
-    if (state_q == ST_M_MEASURE && close_any) begin
-      flags_d.reserved              = 1'b0;
-      flags_d.closed_by_fast_maxhit = close_fast_q;
-      flags_d.closed_by_maxhits     = close_counted_q & ~close_fast_q;
-      flags_d.closed_by_watchdog    = close_wd_q;
-    end
-  end
-
-  // =========================================================================
-  // PD gate — controls when PD cells can detect hits.
-  // Starts LOW (IDLE): prevents hits during rst_fast_n warmup when
-  // counters are held in reset and CDC pipeline hasn't settled.
-  // Goes HIGH on IDLE→MEASURE: counters are operational, hits are valid.
-  // Goes LOW on fast close: freezes PD matrix in single-hit mode.
-  // Goes LOW outside MEASURE: prevents spurious hits during CAPTURE/CLEAR.
-  // =========================================================================
-  logic pd_gate_q;
-
-  always_ff @(posedge clk_fast or negedge rst_n) begin
-    if (!rst_n)
-      pd_gate_q <= 1'b0;
-    else
-      pd_gate_q <= (state_d == ST_M_MEASURE);
-  end
-
-  // =========================================================================
-  // Next-state logic
-  // =========================================================================
-  always_comb begin
-    state_d = state_q;
-    case (state_q)
-      ST_M_IDLE:      if (meas_active_i) state_d = ST_M_MEASURE;
-      ST_M_MEASURE:   if (close_any)     state_d = ST_M_SNAPSHOT;
-      ST_M_SNAPSHOT:                     state_d = ST_M_CAPTURE;
-      ST_M_CAPTURE:                      state_d = ST_M_STOP_OSC;
-      ST_M_STOP_OSC:                     state_d = ST_M_CLEAR;
-      ST_M_CLEAR:                        state_d = ST_M_IDLE;
-      default:                           state_d = ST_M_IDLE;
-    endcase
-  end
-
-  // =========================================================================
-  // State & flags register
-  // =========================================================================
-  always_ff @(posedge clk_fast or negedge rst_n) begin
-    if (!rst_n) begin
-      state_q <= ST_M_IDLE;
-      flags_q <= '0;
-    end else begin
-      state_q <= state_d;
-      if (state_d == ST_M_IDLE)
-        flags_q <= '0;
-      else
-        flags_q <= flags_d;
-    end
-  end
-
-  // =========================================================================
-  // Output decode
-  // osc_keep_alive: high in ALL active states — FSM needs its own clock.
-  // STOP_OSC: fe_clear → clears start/stop latches → slow osc stops → slow
-  //           phases become static.  Fast osc stays via osc_keep_alive.
-  // CLEAR:    pd_clear + counter async_clr.  Safe because slow phases are
-  //           now static (stopped in STOP_OSC), so no PD sampling race.
-  // =========================================================================
-  assign snapshot_en_o    = snapshot_en_q;
-  assign capture_en_o     = capture_en_q;
-  assign osc_keep_alive_o = (state_q != ST_M_IDLE);
+  assign snapshot_en_o    = (state_q == ST_M_SNAPSHOT);
+  assign capture_en_o     = (state_q == ST_M_CAPTURE);
   assign fe_clear_o       = (state_q == ST_M_STOP_OSC);
   assign pd_clear_o       = (state_q == ST_M_CLEAR);
-  assign pd_gate_o        = pd_gate_q;
+  assign osc_keep_alive_o = (state_q == ST_M_MEASURE)
+                          || (state_q == ST_M_SNAPSHOT)
+                          || (state_q == ST_M_EVAL)
+                          || (state_q == ST_M_CAPTURE);
+  // Keep the PD fabric open while the sys-domain controller is still waiting
+  // for the synchronized STOP indication. fe_pd_enable still gates real
+  // measurement activity; this control only freezes additional accumulation
+  // once the static-bus snapshot phase begins.
+  assign pd_gate_o        = (state_q == ST_M_IDLE) || (state_q == ST_M_MEASURE);
   assign close_flags_o    = flags_q;
+  assign hit_count_o      = hit_count_q;
   assign state_o          = state_q;
 
 endmodule

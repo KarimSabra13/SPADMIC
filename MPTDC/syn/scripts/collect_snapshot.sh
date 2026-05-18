@@ -63,6 +63,7 @@ for file in \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_osc_fast_full_clock.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_meas_ctrl_hotspots.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_context_bank_hotspots.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/fast_domain_feasibility_audit.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/latch_audit.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/cdc_manual_audit.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/run_manifest.rpt"; do

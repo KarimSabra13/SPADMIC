@@ -137,6 +137,12 @@ Each axis wrapper keeps the analog-facing event side narrow and predictable:
 The wrapper exists so the top can optimize area around the TDC kernels without
 rewriting the kernels themselves.
 
+The latest MPTDC kernel keeps only the oscillator/PD/counter fabric in generated
+measurement clocks. Its normal measurement controller, hit-capture bridge,
+context bank, drain, and FIFO ownership are `clk_sys` logic, so TOP-level
+timing/CDC review should not describe the MPTDC context bank as a fast-domain
+producer.
+
 ### `spadmic_ref_stop_qualifier`
 
 This block converts an asynchronous event request into one reference-clock-aligned

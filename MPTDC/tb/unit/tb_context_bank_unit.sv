@@ -16,22 +16,15 @@ module tb_context_bank_unit;
   import mptdc_pkg::*;
 
   // ── Clock ─────────────────────────────────────────────────────────
-  logic clk_fast;
-  initial clk_fast = 0;
-  always #450 clk_fast = ~clk_fast;  // ~900 ps period
+  logic clk_sys;
+  initial clk_sys = 0;
+  always #3_125 clk_sys = ~clk_sys;  // 160 MHz
 
   // ── DUT signals ───────────────────────────────────────────────────
   logic                   rst_n;
   ctx_id_t                capture_ctx;
-  logic                   snapshot_en;
   logic                   capture_en;
-  logic [PD_N-1:0]        pd_hit_level;
-  logic [PD_N*NFAST_W-1:0] pd_nfast_hit_packed;
-  logic [NSLOW_W-1:0]     nslow_snap;
-  logic [NFAST_W-1:0]     nfast_snap;
-  logic [NFAST_W-1:0]     nfast_stop;  // v2.3
-  logic                   phase0_snap;
-  logic                   slow_boundary_inc;
+  mptdc_ctx_snapshot_t    capture_snapshot;
   logic [MAX_HITS_W-1:0]  hit_count;
   tdc_conv_flags_t        flags;
   ctx_id_t                read_ctx;
@@ -39,22 +32,15 @@ module tb_context_bank_unit;
 
   // ── DUT instantiation ─────────────────────────────────────────────
   mptdc_context_bank u_dut (
-    .clk_fast               (clk_fast),
-    .rst_n                  (rst_n),
-    .capture_ctx_i          (capture_ctx),
-    .snapshot_en_i          (snapshot_en),
-    .capture_en_i           (capture_en),
-    .pd_hit_level_i         (pd_hit_level),
-    .pd_nfast_hit_packed_i  (pd_nfast_hit_packed),
-    .nslow_snap_i           (nslow_snap),
-    .nfast_snap_i           (nfast_snap),
-    .nfast_stop_i           (nfast_stop),  // v2.3
-    .phase0_snap_i          (phase0_snap),
-    .slow_boundary_inc_i    (slow_boundary_inc),
-    .hit_count_i            (hit_count),
-    .flags_i                (flags),
-    .read_ctx_i             (read_ctx),
-    .snapshot_o             (snapshot)
+    .clk_sys              (clk_sys),
+    .rst_n                (rst_n),
+    .capture_ctx_i        (capture_ctx),
+    .capture_en_i         (capture_en),
+    .capture_snapshot_i   (capture_snapshot),
+    .hit_count_i          (hit_count),
+    .flags_i              (flags),
+    .read_ctx_i           (read_ctx),
+    .snapshot_o           (snapshot)
   );
 
   // ── Scoreboard record ─────────────────────────────────────────────
@@ -85,24 +71,21 @@ module tb_context_bank_unit;
     input logic [MAX_HITS_W-1:0] hc,
     input tdc_conv_flags_t    fl_in
   );
-    @(posedge clk_fast);
-    capture_ctx          = ctx;
-    snapshot_en          = 1'b1;
-    capture_en           = 1'b0;
-    pd_hit_level         = hl;
-    pd_nfast_hit_packed  = nfp;
-    nslow_snap           = ns;
-    nfast_snap           = nf;
-    nfast_stop           = nf;  // v2.3: drive nfast_stop same as nfast for unit test
-    phase0_snap          = ph0;
-    slow_boundary_inc    = binc;
-    hit_count            = hc;
-    flags                = fl_in;
-    @(posedge clk_fast);
-    snapshot_en          = 1'b0;
-    capture_en           = 1'b1;
-    @(posedge clk_fast);
-    capture_en           = 1'b0;
+    @(posedge clk_sys);
+    capture_ctx                         = ctx;
+    capture_snapshot                    = '0;
+    capture_snapshot.hit_level          = hl;
+    capture_snapshot.nfast_hit_packed   = nfp;
+    capture_snapshot.nslow_snap         = ns;
+    capture_snapshot.nfast_snap         = nf;
+    capture_snapshot.nfast_stop         = nf;  // v2.3: drive nfast_stop same as nfast for unit test
+    capture_snapshot.phase0_snap        = ph0;
+    capture_snapshot.slow_boundary_inc  = binc;
+    hit_count                           = hc;
+    flags                               = fl_in;
+    capture_en                          = 1'b1;
+    @(posedge clk_sys);
+    capture_en                          = 1'b0;
   endtask
 
   task automatic check_ctx(
@@ -157,21 +140,15 @@ module tb_context_bank_unit;
     // Init
     rst_n                = 1'b0;
     capture_ctx          = '0;
-    snapshot_en          = 1'b0;
     capture_en           = 1'b0;
-    pd_hit_level         = '0;
-    pd_nfast_hit_packed  = '0;
-    nslow_snap           = '0;
-    nfast_snap           = '0;
-    phase0_snap          = 1'b0;
-    slow_boundary_inc    = 1'b0;
+    capture_snapshot     = '0;
     hit_count            = '0;
     flags                = '0;
     read_ctx             = '0;
 
-    repeat (2) @(posedge clk_fast);
+    repeat (2) @(posedge clk_sys);
     rst_n = 1'b1;
-    repeat (4) @(posedge clk_fast);
+    repeat (4) @(posedge clk_sys);
 
     // ────────────────────────────────────────────────────────────────
     // Test 1: Write ctx 0, read ctx 0
@@ -190,7 +167,7 @@ module tb_context_bank_unit;
     do_capture(1'd0, rec[0].hit_level, rec[0].nfast_packed,
                rec[0].nslow, rec[0].nfast, rec[0].phase0,
                rec[0].boundary_inc, rec[0].hcount, rec[0].fl);
-    @(posedge clk_fast);
+    @(posedge clk_sys);
     check_ctx(1'd0, rec[0], "Test1: write ctx0, read ctx0");
 
     // ────────────────────────────────────────────────────────────────
@@ -209,7 +186,7 @@ module tb_context_bank_unit;
     do_capture(1'd1, rec[1].hit_level, rec[1].nfast_packed,
                rec[1].nslow, rec[1].nfast, rec[1].phase0,
                rec[1].boundary_inc, rec[1].hcount, rec[1].fl);
-    @(posedge clk_fast);
+    @(posedge clk_sys);
     check_ctx(1'd1, rec[1], "Test2: write ctx1, read ctx1");
 
     // ────────────────────────────────────────────────────────────────
@@ -234,7 +211,7 @@ module tb_context_bank_unit;
     do_capture(1'd0, rec[0].hit_level, rec[0].nfast_packed,
                rec[0].nslow, rec[0].nfast, rec[0].phase0,
                rec[0].boundary_inc, rec[0].hcount, rec[0].fl);
-    @(posedge clk_fast);
+    @(posedge clk_sys);
     check_ctx(1'd0, rec[0], "Test4a: overwrite ctx0 — new data");
     check_ctx(1'd1, rec[1], "Test4b: overwrite ctx0 — ctx1 intact");
 
@@ -242,7 +219,7 @@ module tb_context_bank_unit;
     // Test 5: Read without capture — verify no crash
     // ────────────────────────────────────────────────────────────────
     read_ctx = 1'd0;
-    @(posedge clk_fast);
+    @(posedge clk_sys);
     $display("[PASS] Test5: read without fresh capture — no crash");
     pass_cnt++;
 
@@ -266,7 +243,7 @@ module tb_context_bank_unit;
                  closed_by_maxhits: 1'b0, closed_by_watchdog: 1'b0};
 
       do_capture(1'd1, hl6, nfp6, 7'd50, 7'd60, 1'b1, 1'b0, 4'd3, fl_tmp);
-      @(posedge clk_fast);
+      @(posedge clk_sys);
 
       read_ctx = 1'd1;
       #1_000;
@@ -316,7 +293,7 @@ module tb_context_bank_unit;
       fl_tmp = '{reserved: 1'b0, closed_by_fast_maxhit: 1'b0,
                  closed_by_maxhits: 1'b0, closed_by_watchdog: 1'b1};
       do_capture(1'd0, '0, '0, 7'd1, 7'd2, 1'b0, 1'b1, 4'd0, fl_tmp);
-      @(posedge clk_fast);
+      @(posedge clk_sys);
       read_ctx = 1'd0;
       #1_000;
       if (snapshot.slow_boundary_inc === 1'b1) begin
@@ -328,7 +305,7 @@ module tb_context_bank_unit;
       end
 
       do_capture(1'd0, '0, '0, 7'd3, 7'd4, 1'b1, 1'b0, 4'd1, fl_tmp);
-      @(posedge clk_fast);
+      @(posedge clk_sys);
       read_ctx = 1'd0;
       #1_000;
       if (snapshot.slow_boundary_inc === 1'b0) begin

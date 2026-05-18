@@ -70,7 +70,8 @@ If `mptdc_top_asic` is the shell, `mptdc_core` is the engine.
 |-------|------|------|
 | `mptdc_async_frontend_v2` | `rtl/async/mptdc_async_frontend_v2.sv` | accepts START/STOP, allocates contexts, controls async oscillator enables |
 | `mptdc_stop_capture_async` | `rtl/async/mptdc_stop_capture_async.sv` | captures STOP-edge boundary metadata |
-| `mptdc_context_bank` | `rtl/async/mptdc_context_bank.sv` | frozen storage for one conversion snapshot per context |
+| `mptdc_hit_capture_bridge` | `rtl/async/mptdc_hit_capture_bridge.sv` | samples held PD/counter fabric into `clk_sys` |
+| `mptdc_context_bank` | `rtl/async/mptdc_context_bank.sv` | `clk_sys` storage for one committed conversion snapshot per context |
 
 ### `mptdc_async_frontend_v2`
 
@@ -92,10 +93,9 @@ and debug boundary snapshots.
 ### `mptdc_context_bank`
 
 The context bank is where an in-flight conversion becomes a frozen drainable
-record. It separates the fast capture side from the slower system-clock drain
-side and is central to the design's double-buffered behavior. The active
-implementation freezes wide fast-domain data into holding registers before the
-context is committed, giving the snapshot path explicit physical timing margin.
+record. In the active pivot it is synchronous to `clk_sys`; the wide measurement
+fabric CDC is isolated one stage earlier by `mptdc_hit_capture_bridge`. This
+keeps context storage and drain ownership in the same system-clock timing domain.
 
 ## 4. CDC blocks
 
@@ -142,7 +142,7 @@ small locally but architecturally dominant globally.
 | Block | File | Role |
 |-------|------|------|
 | `mptdc_input_mux` | `rtl/ctrl/mptdc_input_mux.sv` | selects SPAD or CAL async inputs |
-| `mptdc_meas_ctrl` | `rtl/ctrl/mptdc_meas_ctrl.sv` | fast-domain measurement FSM and safe shutdown sequence |
+| `mptdc_meas_ctrl` | `rtl/ctrl/mptdc_meas_ctrl.sv` | `clk_sys` measurement-control FSM and safe shutdown sequence |
 | `mptdc_drain_ctrl` | `rtl/ctrl/mptdc_drain_ctrl.sv` | system-domain drain FSM over the frozen context |
 | `mptdc_watchdog` | `rtl/ctrl/mptdc_watchdog.sv` | global/system watchdog logic |
 
@@ -153,7 +153,7 @@ This is one of the most important blocks in the design because it owns:
 - close detection
 - hit-count-based stop
 - watchdog-based stop
-- the `CAPTURE -> STOP_OSC -> CLEAR` sequence
+- the `SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR` sequence
 
 That sequence is the core of the design's safe shutdown behavior.
 
@@ -228,7 +228,7 @@ The minimum closure intent by group is:
 | CDC | reset release, Gray snapshots, FIFO state, and intentional exceptions reviewed with CDC/lint evidence |
 | Oscillator | behavioral model checked against a documented macro contract until the real macro exists |
 | Phase detector | single-cell behavior, matrix geometry, clear behavior, and physical-symmetry assumptions covered |
-| Control | fast close, max-hit close, watchdog close, and safe shutdown ordering asserted/tested |
+| Control | sys-domain snapshot/eval/capture, max-hit close, watchdog-class close, and safe shutdown ordering asserted/tested |
 | Readout | META/HIT sequencing, FIFO pressure, serializer packet grammar, and shared-export mode checked exactly |
 
 The verification guide owns the detailed closure matrix and signoff tiers:

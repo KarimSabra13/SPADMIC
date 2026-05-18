@@ -413,7 +413,9 @@ proc mptdc_pnr_write_cdc_floorplan_audit {report_file} {
         {"Reset synchronizers" "*u_rst*sync*"}
         {"Gray counter synchronizers" "*gray*ff* *u_slow_cnt* *u_fast_cnt*"}
         {"Context drain synchronizers" "*ctx_drain_sync_ff*"}
+        {"Rejected START event latch" "*start_rejected_pending* *rejected_sync_pipe*"}
         {"Measurement controller" "*u_meas_ctrl*"}
+        {"Hit capture bridge" "*u_hit_capture_bridge*"}
         {"Context bank" "*u_ctx_bank*"}
         {"PD matrix cells" "*gen_pd_row*gen_pd_col*u_pd*"}
     } {
@@ -433,8 +435,10 @@ proc mptdc_pnr_write_cdc_floorplan_audit {report_file} {
 
     puts $fh "Reviewer checklist"
     puts $fh "------------------"
-    puts $fh "  [ ] u_meas_ctrl is physically close to fast phase[0] and context-bank write side."
-    puts $fh "  [ ] context-bank capture registers are not scattered across the full macro."
+    puts $fh "  [ ] u_meas_ctrl and u_ctx_bank are clk_sys logic and are not timed as oscillator-domain logic."
+    puts $fh "  [ ] u_hit_capture_bridge sits between PD/counter fabric and sys-domain context bank."
+    puts $fh "  [ ] rejected START pending latch and synchronizer remain recognizable for exact overflow accounting."
+    puts $fh "  [ ] context-bank capture registers are sys-domain and not scattered across the full macro."
     puts $fh "  [ ] synchronizer cells remain recognizable and were not merged/retimed."
     close $fh
 }

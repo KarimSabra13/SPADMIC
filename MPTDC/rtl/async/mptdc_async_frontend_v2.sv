@@ -34,7 +34,7 @@ module mptdc_async_frontend_v2
   input  wire                  start_timeout_async_i,    // v2.2: slow-domain wdt force-clear
   input  wire  [N_CTX-1:0]    ctx_release_async_i,       // per-ctx: drain FSM done
 
-  // Capture trigger from meas_ctrl (fast domain registered output)
+  // Capture trigger from meas_ctrl (clk_sys registered output)
   input  wire                  capture_en_i,
 
   // Oscillator keep-alive from meas_ctrl
@@ -94,15 +94,18 @@ module mptdc_async_frontend_v2
     end
   end
 
+  wire start_blocked_level = start_latched_q | ~any_ctx_free | ~conv_arm_i
+                           | clear_any;
   wire start_accept_level = start_async_i & any_ctx_free & conv_arm_i
-                          & ~start_latched_q;
+                          & ~start_latched_q & ~clear_any;
 
   // =========================================================================
-  // START rejected: START present but cannot be accepted
+  // START rejected: START present but cannot be accepted.  clear_any is part
+  // of the blocked condition because the START latch gives clear priority; a
+  // START during teardown must be counted as rejected rather than disappearing.
   // =========================================================================
-  assign start_rejected_o = start_async_i
-                           & ~start_accept_seen_q
-                           & (start_latched_q | ~any_ctx_free | ~conv_arm_i);
+  assign start_rejected_o = start_async_i & ~start_accept_seen_q
+                           & start_blocked_level;
 
   // =========================================================================
   // START latch  (SR: set by start_async, reset by clear_any / rst_n)

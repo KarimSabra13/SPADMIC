@@ -111,6 +111,86 @@ proc mptdc_try_set_db {objects attr value} {
     catch {set_db $objects $attr $value}
 }
 
+proc mptdc_report_hotspot_timing {rpt_file title patterns} {
+    set cells [list]
+    foreach pattern $patterns {
+        set matches [list]
+        catch {set matches [get_cells -quiet -hierarchical $pattern]}
+        if {[llength $matches] > 0} {
+            set cells [concat $cells $matches]
+        }
+    }
+
+    if {[llength $cells] == 0} {
+        mptdc_write_report_failure $rpt_file $title \
+            "No cells matched endpoint patterns: $patterns"
+        return
+    }
+
+    if {![catch {
+        report_timing -to $cells -max_paths 100 -path_type full_clock > $rpt_file
+    } err]} {
+        return
+    }
+
+    if {![catch {
+        report_timing -to $cells -max_paths 100 > $rpt_file
+    } err2]} {
+        return
+    }
+
+    mptdc_write_report_failure $rpt_file $title \
+        "Full-clock report failed: $err\n\nBasic report failed: $err2"
+}
+
+proc mptdc_write_fast_feasibility_audit {rpt_file} {
+    global design
+
+    set fh [open $rpt_file w]
+    puts $fh "MPTDC fast-domain feasibility audit"
+    puts $fh "==================================="
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "Purpose"
+    puts $fh "-------"
+    puts $fh "Desk-check the physical plausibility of treating oscillator-domain"
+    puts $fh "standard-cell registers as ordinary single-cycle synchronous logic."
+    puts $fh ""
+    puts $fh "Timing equation"
+    puts $fh "---------------"
+    puts $fh "A same-clock register-to-register path must satisfy:"
+    puts $fh "  Tclk >= Tcq_launch + Tcomb + Tsetup_capture + uncertainty - useful_skew"
+    puts $fh ""
+    puts $fh "Current targets"
+    puts $fh "---------------"
+    if {[info exists design(OSC_FAST_PERIOD)]} {
+        puts $fh "  clk_osc_fast period: $design(OSC_FAST_PERIOD) ns"
+    }
+    if {[info exists design(OSC_SLOW_PERIOD)]} {
+        puts $fh "  clk_osc_slow period: $design(OSC_SLOW_PERIOD) ns"
+    }
+    if {[info exists design(OSC_CLOCK_UNCERTAINTY_SETUP)]} {
+        puts $fh "  oscillator setup uncertainty: $design(OSC_CLOCK_UNCERTAINTY_SETUP) ns"
+    }
+    puts $fh ""
+    puts $fh "Review rule"
+    puts $fh "-----------"
+    puts $fh "If reported library Tcq plus setup and uncertainty approaches or"
+    puts $fh "exceeds the target oscillator period before combinational delay, RTL"
+    puts $fh "pipeline slicing cannot close the path. The architecture must either"
+    puts $fh "move the affected logic to a slower clock, use custom/analog latch"
+    puts $fh "macros with a real Liberty contract, or explicitly classify the path"
+    puts $fh "as measurement fabric rather than ordinary synthesized reg-to-reg logic."
+    puts $fh ""
+    puts $fh "Evidence to inspect"
+    puts $fh "-------------------"
+    puts $fh "  timing_osc_fast_full_clock.rpt"
+    puts $fh "  timing_meas_ctrl_hotspots.rpt"
+    puts $fh "  timing_context_bank_hotspots.rpt"
+    puts $fh "  Innovus preCTS/postRoute full_clock timing reports"
+    close $fh
+}
+
 proc mptdc_preserve_physical_hierarchy {} {
     mptdc_message "Preserving reset synchronizer and PD matrix hierarchy"
 
@@ -184,15 +264,15 @@ proc mptdc_report_timing {report_dir} {
         "report_timing -from \[get_clocks clk_osc_fast\] -to \[get_clocks clk_osc_fast\] -max_paths 100" \
     ] "$dir/timing_osc_fast_full_clock.rpt" "fast oscillator-domain timing report"
 
-    mptdc_run_report_candidates [list \
-        "report_timing -to \[get_pins -quiet -hierarchical *u_meas_ctrl*/*/D\] -max_paths 100 -path_type full_clock" \
-        "report_timing -to \[get_pins -quiet -hierarchical *u_meas_ctrl*/*/D\] -max_paths 100" \
-    ] "$dir/timing_meas_ctrl_hotspots.rpt" "measurement-controller hotspot timing report"
+    mptdc_report_hotspot_timing "$dir/timing_meas_ctrl_hotspots.rpt" \
+        "measurement-controller hotspot timing report" \
+        [list *u_meas_ctrl* *u_meas_ctrl*/*]
 
-    mptdc_run_report_candidates [list \
-        "report_timing -to \[get_pins -quiet -hierarchical *u_ctx_bank*/*/D\] -max_paths 100 -path_type full_clock" \
-        "report_timing -to \[get_pins -quiet -hierarchical *u_ctx_bank*/*/D\] -max_paths 100" \
-    ] "$dir/timing_context_bank_hotspots.rpt" "context-bank hotspot timing report"
+    mptdc_report_hotspot_timing "$dir/timing_context_bank_hotspots.rpt" \
+        "context-bank hotspot timing report" \
+        [list *u_ctx_bank* *u_ctx_bank*/*]
+
+    mptdc_write_fast_feasibility_audit "$dir/fast_domain_feasibility_audit.rpt"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -360,12 +440,16 @@ proc mptdc_cdc_audit {dir} {
             "*u_rst*sync*"] \
         [list "Gray counter synchronizers" \
             "oscillator counter snapshot/continuous CDC" \
-            "manual waiver plus bounded source-to-first-stage review" \
+            "manual waiver plus bounded source-to-first-stage and async-clear review" \
             "*gray*ff*" "*u_slow_cnt*" "*u_fast_cnt*"] \
         [list "Context drain synchronizers" \
             "async drain flag into clk_sys before static context-bus read" \
             "2FF sync plus static-bus-after-handshake waiver" \
             "*ctx_drain_sync_ff*"] \
+        [list "Rejected START event latch" \
+            "async rejected START pulse is held until clk_sys counts overflow" \
+            "pending-latch plus 2FF sync/ack; verify rejected pulses are not silently dropped" \
+            "*start_rejected_pending*" "*rejected_sync_pipe*"] \
         [list "Async frontend latches" \
             "START/STOP event ownership and context allocation" \
             "intentional latch waiver; no setup/hold relation to clk_sys" \
@@ -378,6 +462,10 @@ proc mptdc_cdc_audit {dir} {
             "fast tap clocks sample slow tap signals for Vernier measurement" \
             "intentional clock-as-data structure; verify all taps are modeled" \
             "*gen_pd_row*gen_pd_col*u_pd*"] \
+        [list "Hit capture bridge" \
+            "held PD/counter levels sampled into clk_sys after STOP/PD latch" \
+            "static-bus-after-handshake waiver; pd_clear must occur only after bridge sample and context commit" \
+            "*u_hit_capture_bridge*"] \
     ]
 
     foreach class $classes {
@@ -404,7 +492,9 @@ proc mptdc_cdc_audit {dir} {
     puts $fh "------------------"
     puts $fh "  [ ] Every async-looking endpoint in check_timing_intent is in one class above."
     puts $fh "  [ ] No ordinary clk_sys logic appears only because of a broad false path."
-    puts $fh "  [ ] Static context-bank bus is sampled only after ctx_drain synchronization."
+    puts $fh "  [ ] Held PD/counter bus is sampled only after STOP visibility and before pd_clear."
+    puts $fh "  [ ] Context-bank readout occurs only after capture commit and drain synchronization."
+    puts $fh "  [ ] Gray-counter async clears are covered by the teardown-ordering waiver."
     puts $fh "  [ ] PD cell clock/data warnings are limited to intentional Vernier sampling."
     close $fh
 }

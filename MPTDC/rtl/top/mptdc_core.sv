@@ -10,11 +10,12 @@
 // Author   : Karim Sabra
 // =============================================================================
 // Architectural split:
-//   - async and fast-domain acquisition stay local to the frontend, counters,
-//     PD matrix, and measurement FSM
-//   - sys-domain draining, status, and readout stay on clk_sys
-//   - ctx_drain plus the static context-bank snapshot form the key cross-domain
-//     contract between capture and drain
+//   - analog/measurement-fabric acquisition stays local to the frontend,
+//     oscillator taps, counters, and PD matrix
+//   - measurement teardown, context commit, draining, status, and readout run on
+//     clk_sys
+//   - held PD/counter levels cross into clk_sys through a static-bus capture
+//     bridge before context-bank commit
 //
 // v2.2 review updates:
 //   - Slow-domain START watchdog: catches STOP-never-arrives
@@ -101,7 +102,7 @@ module mptdc_core
   wire [NFAST_W-1:0] nfast_stop_latched = '0;
 
   // =========================================================================
-  //  Internal wires — meas_ctrl (fast domain)
+  //  Internal wires — meas_ctrl (clk_sys domain)
   // =========================================================================
   wire           meas_capture_en, meas_snapshot_en, meas_fe_clear, meas_pd_clear;
   wire           meas_osc_keep_alive;
@@ -109,6 +110,9 @@ module mptdc_core
   tdc_conv_flags_t meas_close_flags;
   wire [MAX_HITS_W-1:0] meas_hit_count;
   meas_state_e   meas_state;
+  wire           meas_active_sync;
+  wire           stop_latched_sync;
+  wire           start_timeout_sync;
 
   // =========================================================================
   //  Internal wires — drain_ctrl (sys domain)
@@ -126,6 +130,7 @@ module mptdc_core
   // Static-data CDC contract: drain_ctrl only samples ctx_snapshot after
   // ctx_drain_sync_ff2 rises, so the selected entry is already frozen.
   mptdc_ctx_snapshot_t ctx_snapshot;
+  mptdc_ctx_snapshot_t hit_capture_snapshot;
 
   // =========================================================================
   //  Internal wires — sync FIFO
@@ -204,12 +209,13 @@ module mptdc_core
   //  v2.2: Slow-domain START watchdog
   //  Catches STOP-never-arrives: counter in slow_phase[0] domain.
   //  When start_latched is high and stop_latched is low, counts slow cycles.
-  //  On saturation, asserts start_timeout to force-clear frontend.
+  //  On saturation, asserts a held synthetic STOP into the frontend.
   //  Async reset on meas_fe_clear ensures counter resets even if slow osc
   //  stops before a rising edge (STOP_OSC kills the slow clock).
   // =========================================================================
   logic [7:0] start_wdt_cnt;
-  logic       start_timeout_raw;
+  logic       start_timeout_due;
+  logic       start_timeout_latched;
 
   always_ff @(posedge slow_phase[0] or negedge rst_sys_n or posedge meas_fe_clear) begin
     if (!rst_sys_n || meas_fe_clear)
@@ -220,10 +226,21 @@ module mptdc_core
       start_wdt_cnt <= start_wdt_cnt + 8'd1;
   end
 
-  assign start_timeout_raw = (start_wdt_cnt == 8'hFF);
+  assign start_timeout_due = fe_start_latched
+                           & !fe_stop_latched
+                           & (start_wdt_cnt == 8'hFE);
+
+  always_ff @(posedge slow_phase[0] or negedge rst_sys_n or posedge meas_fe_clear) begin
+    if (!rst_sys_n || meas_fe_clear)
+      start_timeout_latched <= 1'b0;
+    else if (!fe_start_latched)
+      start_timeout_latched <= 1'b0;
+    else if (start_timeout_due)
+      start_timeout_latched <= 1'b1;
+  end
 
   // v2.2: Combined force-clear into frontend (global watchdog only — emergency)
-  // start_timeout injects a SYNTHETIC STOP (not a clear) to trigger normal
+  // start_timeout_latched injects a SYNTHETIC STOP (not a clear) to trigger normal
   // measurement flow: meas_ctrl MEASURE → close → capture → drain → packet.
   wire fe_clear_with_wdt = meas_fe_clear | wdt_force_reset;
 
@@ -260,30 +277,58 @@ module mptdc_core
   end
 
   // =========================================================================
-  //  v2.2: start_rejected sync for real overflow counting
+  //  v2.2: rejected-START event capture for overflow counting
   // =========================================================================
+  // fe_start_rejected is an async START-width pulse.  A direct clk_sys 2-FF
+  // sampler can miss narrow rejected pulses, so first hold a pending level until
+  // clk_sys has observed and counted it.  The bounded-overload contract assumes
+  // rejected START pulses are separated by at least the synchronizer/ack latency;
+  // accepted STARTs remain protected by the frontend SR latch itself.
+  logic       start_rejected_pending;
+  logic       start_rejected_pending_clr;
   (* ASYNC_REG = "TRUE" *)
   logic [1:0] rejected_sync_pipe;
+
+  always_ff @(posedge fe_start_rejected or negedge rst_sys_n or posedge start_rejected_pending_clr) begin
+    if (!rst_sys_n || start_rejected_pending_clr)
+      start_rejected_pending <= 1'b0;
+    else
+      start_rejected_pending <= 1'b1;
+  end
+
   always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
     if (!rst_sys_status_n)
       rejected_sync_pipe <= '0;
     else
-      rejected_sync_pipe <= {rejected_sync_pipe[0], fe_start_rejected};
+      rejected_sync_pipe <= {rejected_sync_pipe[0], start_rejected_pending};
   end
   wire rejected_sync_pulse = rejected_sync_pipe[0] & ~rejected_sync_pipe[1];
+  assign start_rejected_pending_clr = rejected_sync_pipe[1];
 
   // =========================================================================
   //  v2.2: start_latched sync for accurate status reporting
   // =========================================================================
   (* ASYNC_REG = "TRUE" *)
   logic [1:0] start_sync_pipe;
+  (* ASYNC_REG = "TRUE" *)
+  logic [1:0] stop_sync_pipe;
+  (* ASYNC_REG = "TRUE" *)
+  logic [1:0] start_timeout_sync_pipe;
   always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
-    if (!rst_sys_status_n)
-      start_sync_pipe <= '0;
-    else
-      start_sync_pipe <= {start_sync_pipe[0], fe_start_latched};
+    if (!rst_sys_status_n) begin
+      start_sync_pipe         <= '0;
+      stop_sync_pipe          <= '0;
+      start_timeout_sync_pipe <= '0;
+    end else begin
+      start_sync_pipe         <= {start_sync_pipe[0], fe_start_latched};
+      stop_sync_pipe          <= {stop_sync_pipe[0], fe_stop_latched};
+      start_timeout_sync_pipe <= {start_timeout_sync_pipe[0], start_timeout_latched};
+    end
   end
   wire start_latched_sync = start_sync_pipe[1];
+  assign stop_latched_sync = stop_sync_pipe[1];
+  assign meas_active_sync  = start_latched_sync & stop_latched_sync;
+  assign start_timeout_sync = start_timeout_sync_pipe[1];
 
   // =========================================================================
   //  PD enable gating: combine frontend pd_enable with meas_ctrl pd_gate
@@ -301,7 +346,7 @@ module mptdc_core
     .start_async_i        (start_async_i),
     .stop_async_i         (stop_async_i),
     .fe_clear_async_i     (fe_clear_with_wdt),        // v2.2: meas clear + global wdt
-    .start_timeout_async_i(start_timeout_raw),         // v2.2: synthetic STOP
+    .start_timeout_async_i(start_timeout_latched),     // v2.2: held synthetic STOP
     .ctx_release_async_i  (drain_ctx_release),
     .capture_en_i         (meas_capture_en),
     .osc_keep_alive_i     (meas_osc_keep_alive),
@@ -410,12 +455,13 @@ module mptdc_core
     .dst_count_latched    (/* unused */)
   );
 
-  // ── Measurement FSM (fast domain) ─────────────────────────────
+  // ── Measurement FSM (clk_sys domain) ──────────────────────────
   mptdc_meas_ctrl u_meas_ctrl (
-    .clk_fast         (osc_fast_ph0),
-    .rst_n            (rst_fast_n),
-    .meas_active_i    (fe_start_latched & fe_stop_latched),
-    .hit_level_i      (pd_hit_level),
+    .clk_sys          (clk_sys),
+    .rst_n            (rst_sys_drain_n),
+    .meas_active_i    (meas_active_sync),
+    .timeout_active_i (start_timeout_sync),
+    .hit_level_i      (hit_capture_snapshot.hit_level),
     .max_hits_cfg_i   (cfg_i.max_hits),
     .wdt_timeout_i    (cfg_i.wdt_ctx_timeout),
     .capture_en_o     (meas_capture_en),
@@ -429,24 +475,32 @@ module mptdc_core
     .state_o          (meas_state)
   );
 
-  // ── Context bank ───────────────────────────────────────────────
+  // ── Static-bus bridge from measurement fabric to clk_sys ───────
+  mptdc_hit_capture_bridge u_hit_capture_bridge (
+    .clk_sys                (clk_sys),
+    .rst_n                  (rst_sys_drain_n),
+    .sample_en_i            (meas_snapshot_en),
+    .pd_hit_level_i         (pd_hit_level),
+    .pd_nfast_hit_packed_i  (pd_nfast_hit_packed),
+    .nslow_snap_i           (nslow_stop_latched),
+    .nfast_snap_i           (nfast_src_count),
+    .nfast_stop_i           (nfast_stop_latched),
+    .phase0_snap_i          (phase0_snap),
+    .slow_boundary_inc_i    (slow_boundary_inc),
+    .snapshot_o             (hit_capture_snapshot)
+  );
+
+  // ── Context bank (clk_sys write/read) ──────────────────────────
   mptdc_context_bank u_ctx_bank (
-    .clk_fast              (osc_fast_ph0),
-    .rst_n                 (rst_fast_n),
-    .capture_ctx_i         (fe_active_ctx),
-    .snapshot_en_i         (meas_snapshot_en),
-    .capture_en_i          (meas_capture_en),
-    .pd_hit_level_i        (pd_hit_level),
-    .pd_nfast_hit_packed_i (pd_nfast_hit_packed),
-    .nslow_snap_i          (nslow_stop_latched),
-    .nfast_snap_i          (nfast_src_count),
-    .nfast_stop_i          (nfast_stop_latched),   // v2.3
-    .phase0_snap_i         (phase0_snap),
-    .slow_boundary_inc_i   (slow_boundary_inc),   // v2.2
-    .hit_count_i           (meas_hit_count),
-    .flags_i               (meas_close_flags),
-    .read_ctx_i            (drain_read_ctx),
-    .snapshot_o            (ctx_snapshot)
+    .clk_sys              (clk_sys),
+    .rst_n                (rst_sys_drain_n),
+    .capture_ctx_i        (fe_active_ctx),
+    .capture_en_i         (meas_capture_en),
+    .capture_snapshot_i   (hit_capture_snapshot),
+    .hit_count_i          (meas_hit_count),
+    .flags_i              (meas_close_flags),
+    .read_ctx_i           (drain_read_ctx),
+    .snapshot_o           (ctx_snapshot)
   );
 
   // ── Drain FSM (sys domain) ────────────────────────────────────

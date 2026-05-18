@@ -13,10 +13,11 @@
 //   - closed_by_firsthit flag renamed to closed_by_fast_maxhit
 //   - mode_cfg removed from mptdc_cfg_t; CSR_MODE[0] is now reserved
 //
-// v2.2 changes (design-review fixes):
-//   - Measurement FSM adds a snapshot-settle state before CAPTURE so the
-//     wide context snapshot is frozen in holding registers before commit.
-//   - Close detection: OR-reduction for max_hits=1, pipelined for max_hits>1
+// Current measurement-control split:
+//   - Oscillator/PD/counter fabric remains the Vernier measurement exception.
+//   - mptdc_meas_ctrl and mptdc_context_bank run on clk_sys.
+//   - A static-bus bridge samples the held measurement image before context
+//     commit and before PD/counter clear.
 //   - Overflow flag removed from conv_flags (was misused as hit-saturation)
 //   - slow_boundary_inc added to meta/snapshot for offline calibration
 //   - N_CTX = 2 (hardwired double-buffer, not parameterizable)
@@ -126,11 +127,11 @@ package mptdc_pkg;
   } input_sel_e;
 
   // =========================================================================
-  // Measurement FSM states (fast domain — mptdc_meas_ctrl)
-  // IDLE → MEASURE → SNAPSHOT → CAPTURE → STOP_OSC → CLEAR → IDLE.
-  // SNAPSHOT freezes the wide measurement image in holding registers before a
-  // single CAPTURE commit. STOP_OSC deasserts osc_keep_alive before PD clear to
-  // avoid async race.
+  // Measurement FSM states (clk_sys domain — mptdc_meas_ctrl)
+  // IDLE → MEASURE → SNAPSHOT → EVAL → CAPTURE → STOP_OSC → CLEAR → IDLE.
+  // SNAPSHOT samples the static PD/counter measurement fabric into clk_sys,
+  // EVAL computes flags/count from that registered image, and CAPTURE commits
+  // the context before STOP_OSC/CLEAR re-arm the asynchronous frontend/PD fabric.
   // =========================================================================
   typedef enum logic [2:0] {
     ST_M_IDLE      = 3'd0,
@@ -138,7 +139,8 @@ package mptdc_pkg;
     ST_M_SNAPSHOT  = 3'd2,
     ST_M_CAPTURE   = 3'd3,
     ST_M_STOP_OSC  = 3'd4,
-    ST_M_CLEAR     = 3'd5
+    ST_M_CLEAR     = 3'd5,
+    ST_M_EVAL      = 3'd6
   } meas_state_e;
 
   // =========================================================================
