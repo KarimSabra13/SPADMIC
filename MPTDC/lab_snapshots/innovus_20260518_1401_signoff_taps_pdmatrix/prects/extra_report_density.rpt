@@ -1,0 +1,12 @@
+
+default core: bins with density > 0.750 = 74.15 % ( 327 / 441 )
+bin size: 80 sites by 10 row(s). total 441 bins ( 21 by 21 )
+  density range     #bins    %
+  (0.750 - 0.800]      20   4.54
+  (0.800 - 0.850]      66  14.97
+  (0.850 - 0.900]     154  34.92
+  (0.900 - 0.950]      80  18.14
+  (0.950 - 1.000]       7   1.59
+  total               327  74.15
+
+Density distribution unevenness ratio = 7.124%

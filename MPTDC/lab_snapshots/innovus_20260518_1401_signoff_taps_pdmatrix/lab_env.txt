@@ -1,0 +1,195 @@
+ *)
+ *v*)
+ *v*x*)
+ *x*)
+ /usr/bin/scl "$@";
+ ;;
+ ;;
+ ;;
+ ;;
+ IFS=$_mlIFS;
+ IFS=' ';
+ MODULES_USE_COMPAT_VERSION=1;
+ _mlIFS=$IFS;
+ _mlre="${_mlre:-}${_mlv}='`eval 'echo ${'$_mlrv':-}'`' ";
+ _mlre="${_mlre:-}${_mlv}_modquar='`eval 'echo ${'$_mlv'}'`' ";
+ _mlrv="MODULES_RUNENV_${_mlv}";
+ _mlshdbg=''
+ _mlshdbg='v'
+ _mlshdbg='vx'
+ _mlshdbg='x'
+ _mlstatus=$?;
+ case "$-" in 
+ do
+ done;
+ echo "Cannot switch to Modules $swname version, command not found";
+ echo "Switching to Modules $swname version";
+ else
+ else
+ else
+ else
+ else
+ esac;
+ eval "module $@";
+ eval ${which_declare} ) | /usr/bin/which --tty-only --read-alias --read-functions --show-tilde --show-dot $@
+ eval `/usr/bin/tclsh /usr/share/Modules/libexec/modulecmd.tcl bash "$@"`;
+ eval `eval ${_mlre} /usr/bin/tclsh /usr/share/Modules/libexec/modulecmd.tcl bash '"$@"'`;
+ export MODULES_USE_COMPAT_VERSION;
+ fi
+ fi
+ fi;
+ fi;
+ fi;
+ fi;
+ fi;
+ fi;
+ fi;
+ fi;
+ fi;
+ fi;
+ for _mlv in ${MODULES_RUN_QUARANTINE:-};
+ if [ "${MODULES_SILENT_SHELL_DEBUG:-0}" = '1' ]; then
+ if [ "${MODULES_USE_COMPAT_VERSION:-0}" = '1' ]; then
+ if [ "${_mlv}" = "${_mlv##*[!A-Za-z0-9_]}" -a "${_mlv}" = "${_mlv#[0-9]}" ]; then
+ if [ $swfound -eq 0 ]; then
+ if [ -e /usr/share/Modules/libexec/modulecmd-compat ]; then
+ if [ -e /usr/share/Modules/libexec/modulecmd.tcl ]; then
+ if [ -n "${IFS+x}" ]; then
+ if [ -n "${_mlIFS+x}" ]; then
+ if [ -n "${_mlre:-}" ]; then
+ if [ -n "${_mlshdbg:-}" ]; then
+ if [ -n "`eval 'echo ${'$_mlv'+x}'`" ]; then
+ return $_mlstatus
+ return 1;
+ set +v;
+ set +vx;
+ set +x;
+ set -$_mlshdbg;
+ source /usr/share/Modules/init/bash;
+ typeset swfound=0;
+ typeset swfound=0;
+ typeset swname='compatibility';
+ typeset swname='main';
+ unset IFS;
+ unset MODULES_USE_COMPAT_VERSION;
+ unset _mlre _mlIFS;
+ unset _mlre _mlv _mlrv _mlIFS;
+ unset _mlshdbg;
+ALTOSHOME=/eda/cadence/2023-24/RHELx86/LIBERATE_23.11.221
+ALTOS_64=1
+ASSURAHOME=/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231
+ASSURA_AUTO_64BIT=ALL
+BASH_FUNC__module_raw%%=() {  unset _mlshdbg;
+BASH_FUNC_ml%%=() {  module ml "$@"
+BASH_FUNC_module%%=() {  _module_raw "$@" 2>&1
+BASH_FUNC_scl%%=() {  if [ "$1" = "load" -o "$1" = "unload" ]; then
+BASH_FUNC_switchml%%=() {  typeset swfound=1;
+BASH_FUNC_which%%=() {  ( alias;
+CDSDIR=/eda/cadence/2023-24/RHELx86/IC_23.10.020
+CDSHOME=/eda/cadence/2023-24/RHELx86/IC_23.10.020
+CDS_ASSURA=/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231
+CDS_AUTO_64BIT=ALL
+CDS_CONFRML=/eda/cadence/2023-24/RHELx86/CONFRML_23.10.300
+CDS_DDIEXPORT=/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000
+CDS_ENABLE_EXP_PCELL=true
+CDS_ENABLE_EXP_PCELL_DIR=./.expressPcells
+CDS_GENUS=/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000/GENUS*
+CDS_IC=/eda/cadence/2023-24/RHELx86/IC_23.10.020
+CDS_INNOVUS=/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000/INNOVUS*
+CDS_JLS=/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000/JLS*
+CDS_LIC_FILE=30000@cadence.cnfm.fr:5280@ccflex01.in2p3.fr:5280@ccflex02.in2p3.fr:5280@ccflex03.in2p3.fr:5280@licences01.ipnl.in2p3.fr
+CDS_LITMUS=/eda/cadence/2023-24/RHELx86/LITMUS_23.10.300
+CDS_LOAD_ENV=CSF
+CDS_MODUS=/eda/cadence/2023-24/RHELx86/MODUS_22.12.000
+CDS_Netlisting_Mode=Analog
+CDS_OTHER_WM=kde
+CDS_PEGASUS=/eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000
+CDS_PEGASUSDFM=/eda/cadence/2023-24/RHELx86/PEGASUSDFM_23.11.000
+CDS_PVS=/eda/cadence/2023-24/RHELx86/PVS_22.22.000
+CDS_QUANTUS=/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000
+CDS_SPECTRE=/eda/cadence/2023-24/RHELx86/SPECTRE_23.10.242
+CDS_SSV=/eda/cadence/2023-24/RHELx86/SSV_22.13.000
+CDS_USE_PRIVATE_CMAP=True
+CDS_VERISIUMDEBUG=/eda/cadence/2023-24/RHELx86/VERISIUMDEBUG_23.03.001
+CDS_VMANAGER=/eda/cadence/2023-24/RHELx86/VMANAGER_23.03.004
+CDS_XCELIUM=/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007
+CDS_XL_DUMMY_BA_FLOW=t
+DBUS_SESSION_BUS_ADDRESS=unix:abstract=/tmp/dbus-8REFe9H2Ch,guid=930b8aa96a4a2606f52054446a0aff78
+DEBUGINFOD_URLS=https://debuginfod.centos.org/ 
+DFMHOME=/eda/cadence/2023-24/RHELx86/PEGASUSDFM_23.11.000
+DISPLAY=localhost:10.0
+EDA=/eda
+GDK_BACKEND=x11
+HISTCONTROL=ignoredups
+HISTSIZE=1000
+HOME=/home/validmgr/ksabra
+HOSTNAME=lyoelectrosrv01.in2p3.fr
+KDEDIRS=/usr
+LANG=C
+LESSOPEN=||/usr/bin/lesspipe.sh %s
+LM_LICENSE_FILE=30000@cadence.cnfm.fr:5280@ccflex01.in2p3.fr:5280@ccflex02.in2p3.fr:5280@ccflex03.in2p3.fr:5280@licences01.ipnl.in2p3.fr:1717@licences01.ipnl.in2p3.fr
+LOADEDMODULES=
+LOGNAME=ksabra
+LS_COLORS=rs=0:di=38;5;33:ln=38;5;51:mh=00:pi=40;38;5;11:so=38;5;13:do=38;5;5:bd=48;5;232;38;5;11:cd=48;5;232;38;5;3:or=48;5;232;38;5;9:mi=01;05;37;41:su=48;5;196;38;5;15:sg=48;5;11;38;5;16:ca=48;5;196;38;5;226:tw=48;5;10;38;5;16:ow=48;5;10;38;5;21:st=48;5;21;38;5;15:ex=38;5;40:*.tar=38;5;9:*.tgz=38;5;9:*.arc=38;5;9:*.arj=38;5;9:*.taz=38;5;9:*.lha=38;5;9:*.lz4=38;5;9:*.lzh=38;5;9:*.lzma=38;5;9:*.tlz=38;5;9:*.txz=38;5;9:*.tzo=38;5;9:*.t7z=38;5;9:*.zip=38;5;9:*.z=38;5;9:*.dz=38;5;9:*.gz=38;5;9:*.lrz=38;5;9:*.lz=38;5;9:*.lzo=38;5;9:*.xz=38;5;9:*.zst=38;5;9:*.tzst=38;5;9:*.bz2=38;5;9:*.bz=38;5;9:*.tbz=38;5;9:*.tbz2=38;5;9:*.tz=38;5;9:*.deb=38;5;9:*.rpm=38;5;9:*.jar=38;5;9:*.war=38;5;9:*.ear=38;5;9:*.sar=38;5;9:*.rar=38;5;9:*.alz=38;5;9:*.ace=38;5;9:*.zoo=38;5;9:*.cpio=38;5;9:*.7z=38;5;9:*.rz=38;5;9:*.cab=38;5;9:*.wim=38;5;9:*.swm=38;5;9:*.dwm=38;5;9:*.esd=38;5;9:*.jpg=38;5;13:*.jpeg=38;5;13:*.mjpg=38;5;13:*.mjpeg=38;5;13:*.gif=38;5;13:*.bmp=38;5;13:*.pbm=38;5;13:*.pgm=38;5;13:*.ppm=38;5;13:*.tga=38;5;13:*.xbm=38;5;13:*.xpm=38;5;13:*.tif=38;5;13:*.tiff=38;5;13:*.png=38;5;13:*.svg=38;5;13:*.svgz=38;5;13:*.mng=38;5;13:*.pcx=38;5;13:*.mov=38;5;13:*.mpg=38;5;13:*.mpeg=38;5;13:*.m2v=38;5;13:*.mkv=38;5;13:*.webm=38;5;13:*.ogm=38;5;13:*.mp4=38;5;13:*.m4v=38;5;13:*.mp4v=38;5;13:*.vob=38;5;13:*.qt=38;5;13:*.nuv=38;5;13:*.wmv=38;5;13:*.asf=38;5;13:*.rm=38;5;13:*.rmvb=38;5;13:*.flc=38;5;13:*.avi=38;5;13:*.fli=38;5;13:*.flv=38;5;13:*.gl=38;5;13:*.dl=38;5;13:*.xcf=38;5;13:*.xwd=38;5;13:*.yuv=38;5;13:*.cgm=38;5;13:*.emf=38;5;13:*.ogv=38;5;13:*.ogx=38;5;13:*.aac=38;5;45:*.au=38;5;45:*.flac=38;5;45:*.m4a=38;5;45:*.mid=38;5;45:*.midi=38;5;45:*.mka=38;5;45:*.mp3=38;5;45:*.mpc=38;5;45:*.ogg=38;5;45:*.ra=38;5;45:*.wav=38;5;45:*.oga=38;5;45:*.opus=38;5;45:*.spx=38;5;45:*.xspf=38;5;45:
+MAIL=/var/spool/mail/ksabra
+MANPATH=::/opt/thinlinc/share/man
+MGC_HOME=/eda/mentor/2020-21/RHELx86/CALIBRE_2020.4.15.9/aoi_cal_2020.4_15.9/
+MODULEPATH=/etc/scl/modulefiles:/usr/share/Modules/modulefiles:/etc/modulefiles:/usr/share/modulefiles
+MODULEPATH_modshare=/usr/share/Modules/modulefiles:2:/etc/modulefiles:2:/usr/share/modulefiles:2
+MODULESHOME=/usr/share/Modules
+MODULES_CMD=/usr/share/Modules/libexec/modulecmd.tcl
+MODULES_RUN_QUARANTINE=LD_LIBRARY_PATH LD_PRELOAD
+MPTDC_PNR_CORE_UTIL=0.60
+MPTDC_PNR_DO_DETAIL_ROUTE=1
+MPTDC_PNR_DO_PRECTS_OPT=1
+MPTDC_PNR_MAX_DENSITY=0.70
+MPTDC_PNR_OSC_HALO_UM=10
+MPTDC_PNR_OSC_HEIGHT_UM=100
+MPTDC_PNR_OSC_WIDTH_UM=300
+MPTDC_PNR_PD_OSC_GAP_UM=20
+MPTDC_PNR_PD_REGION_HEIGHT_UM=300
+MPTDC_PNR_PD_REGION_WIDTH_UM=300
+MPTDC_PNR_PHASE_METTP_EXCEPTION=1
+MPTDC_PNR_PHASE_TOP_LAYER=METTP
+MPTDC_PNR_PHASE_TOP_LAYER_IDX=4
+MPTDC_PNR_POWER_LAYER=METTP
+MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
+MPTDC_PNR_SIGNAL_TOP_LAYER_IDX=3
+MPTDC_PNR_VECTORLESS_ACTIVITY=1
+MPTDC_PNR_VECTORLESS_STATIC_PROB=0.5
+MPTDC_PNR_VECTORLESS_TOGGLE=0.2
+OLDPWD=/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/scripts
+OSS_IRUN_BIND2=YES
+PATH=/usr/share/Modules/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/thinlinc/bin:/opt/thinlinc/sbin:/group/picmic/software:/data/pdk/bin/:/home/validmgr/ksabra/bin:/eda/cadence/2023-24/RHELx86/SPECTRE_23.10.242/bin:/eda/cadence/2023-24/RHELx86/VMANAGER_23.03.004/bin:/eda/cadence/2023-24/RHELx86/VERISIUMDEBUG_23.03.001/bin:/eda/cadence/2023-24/RHELx86/VERISIUMDEBUG_23.03.001/tools/bin:/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/bin:/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/bin:/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/cdsgcc/gcc/bin:/eda/cadence/2023-24/RHELx86/CONFRML_23.10.300/bin:/eda/cadence/2023-24/RHELx86/LITMUS_23.10.300/bin:/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000/bin:/eda/cadence/2023-24/RHELx86/SSV_22.13.000/bin:/eda/cadence/2023-24/RHELx86/MODUS_22.12.000/bin:/eda/cadence/2023-24/RHELx86/LIBERATE_23.11.221/bin:/eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin:/eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin:/eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin:/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000/bin:/eda/cadence/2023-24/RHELx86/PEGASUSDFM_23.11.000/bin:/eda/cadence/2023-24/RHELx86/IC_23.10.020/tools/bin:/eda/cadence/2023-24/RHELx86/IC_23.10.020/tools/dfII/bin:/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231/tools/bin:/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231/tools/assura/bin:/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231/bin:/eda/mentor/2018-19/RHELx86/CALIBRE_2018.4.17/aoi_cal_2018.4_17.10//bin:/eda/cadence/2023-24/RHELx86/SPECTRE_23.10.242/bin:/eda/cadence/2023-24/RHELx86/VMANAGER_23.03.004/bin:/eda/cadence/2023-24/RHELx86/VERISIUMDEBUG_23.03.001/bin:/eda/cadence/2023-24/RHELx86/VERISIUMDEBUG_23.03.001/tools/bin:/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/bin:/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/bin:/eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/cdsgcc/gcc/bin:/eda/cadence/2023-24/RHELx86/CONFRML_23.10.300/bin:/eda/cadence/2023-24/RHELx86/LITMUS_23.10.300/bin:/eda/cadence/2023-24/RHELx86/DDIEXPORT_22.33.000/bin:/eda/cadence/2023-24/RHELx86/SSV_22.13.000/bin:/eda/cadence/2023-24/RHELx86/MODUS_22.12.000/bin:/eda/cadence/2023-24/RHELx86/LIBERATE_23.11.221/bin:/eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin:/eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin:/eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin:/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000/bin:/eda/cadence/2023-24/RHELx86/PEGASUSDFM_23.11.000/bin:/eda/cadence/2023-24/RHELx86/IC_23.10.020/tools/bin:/eda/cadence/2023-24/RHELx86/IC_23.10.020/tools/dfII/bin:/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231/tools/bin:/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231/tools/assura/bin:/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231/bin:/eda/mentor/2020-21/RHELx86/CALIBRE_2020.4.15.9/aoi_cal_2020.4_15.9//bin
+PDFMHOME=/eda/cadence/2023-24/RHELx86/PEGASUSDFM_23.11.000
+PWD=/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/scripts
+PYTHONPATH=/group/picmic/software/xypicmic:/group/picmic/driver
+QRC_HOME=/eda/cadence/2023-24/RHELx86/QUANTUS_23.10.000
+RETHOME=/eda/cadence/2023-24/RHELx86/PEGASUSDFM_23.11.000
+SALT_LICENSE_SERVER=1717@licences01.ipnl.in2p3.fr
+SHELL=/bin/bash
+SHLVL=1
+SKILLDIR=~/../ebecheto/Skill
+SSH_ASKPASS=/usr/libexec/openssh/gnome-ssh-askpass
+SSH_CLIENT=134.158.82.146 45912 22
+SSH_CONNECTION=134.158.82.146 45912 134.158.140.27 22
+SSH_TTY=/dev/pts/3
+STARTVIRTUOSO=yes
+SUBSTRATESTORMHOME=/eda/cadence/2023-24/RHELx86/ASSURA_04.16.115_231
+TERM=xterm-256color
+TMPDIR=/tmp
+USER=ksabra
+VERISIUM_DEBUG_ROOT=/eda/cadence/2023-24/RHELx86/VERISIUMDEBUG_23.03.001
+XDG_DATA_DIRS=/home/validmgr/ksabra/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share
+XDG_RUNTIME_DIR=/run/user/2350
+XDG_SESSION_ID=432
+XMODIFIERS=@im=none
+_=/usr/bin/env
+pvs_source_added_place=TRUE
+which_declare=declare -f
+}
+}
+}
+}
+}
+}

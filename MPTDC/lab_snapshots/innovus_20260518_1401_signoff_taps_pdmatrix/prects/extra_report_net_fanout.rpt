@@ -1,0 +1,8 @@
+*info: 6 clock nets excluded
+*info: 2 ideal nets excluded from IPO operation.
+*info: 1291 no-driver nets excluded.
+*info: fanout load violations report
+# Net / InstPin                         MaxFanLoad  FanLoad         FanLoadSlk       CellPort             Remark    
+#
+
+*info: there is 0 max fanout load violation in the design.
