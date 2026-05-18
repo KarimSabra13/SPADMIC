@@ -76,8 +76,10 @@ set design(OSC_FAST_TAP_PINS) [list \
     {u_core/u_osc_fast/u_stub/phase[7]} \
 ]
 
-set design(OSC_SLOW_ANALOG_PINS) "start_i ctrl_i[7:0] phase_o[7:0] vdd gnd"
-set design(OSC_FAST_ANALOG_PINS) "stop_i ctrl_i[7:0] phase_o[7:0] vdd gnd"
+set design(OSC_SLOW_ANALOG_PINS) {start_i ctrl_i[7:0] phase_o[7:0] 
+vdd gnd}
+set design(OSC_FAST_ANALOG_PINS) {stop_i ctrl_i[7:0] phase_o[7:0] 
+vdd gnd}
 set design(OSC_TOPOLOGY) "slow_north_pd_center_fast_south"
 
 # ── Reset ───────────────────────────────────────────────────────────
