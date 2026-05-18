@@ -10,8 +10,8 @@
 #
 # This is an estimation flow, not a signoff PnR recipe. It starts from the
 # Genus post-synthesis netlist/SDC, uses the same XH018 1P4M collateral, keeps
-# signal routing on MET1-MET3 by default, and reserves METTP for VDD/VSS/top-level
-# power distribution as much as practical.
+# signal routing on MET1-MET3 globally, and reserves METTP for VDD/VSS/top-level
+# power except for the localized PD-matrix phase-mesh exception.
 # =============================================================================
 
 proc mptdc_pnr_msg {msg} {
@@ -48,6 +48,26 @@ proc mptdc_pnr_capture_report {report_file title body} {
     }
 }
 
+proc mptdc_pnr_capture_report_candidates {report_file title bodies} {
+    set errors [list]
+    foreach body $bodies {
+        if {![catch {uplevel 1 "$body > \"$report_file\""} err]} {
+            return
+        }
+        lappend errors "$body: $err"
+    }
+
+    set fh [open $report_file w]
+    puts $fh "$title"
+    puts $fh [string repeat "=" [string length $title]]
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "FAILED:"
+    puts $fh [join $errors "\n\n"]
+    close $fh
+    puts "MPTDC_PNR_WARN: $title failed for all command variants"
+}
+
 proc mptdc_pnr_generate_extra_reports {} {
     global pnr design
 
@@ -64,14 +84,45 @@ proc mptdc_pnr_generate_extra_reports {} {
         "MPTDC extra report_timing full_clock" {report_timing -max_paths 50 -path_type full_clock}
     mptdc_pnr_capture_report "$extra_dir/extra_report_constraint.rpt" \
         "MPTDC extra report_constraint all violators" {report_constraint -all_violators}
-    mptdc_pnr_capture_report "$extra_dir/extra_report_congestion.rpt" \
-        "MPTDC extra reportCongestion" {reportCongestion}
+    mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_congestion.rpt" \
+        "MPTDC extra reportCongestion" [list \
+            {reportCongestion -hotspot 100 -rpt_overflowCong} \
+            {reportCongestion -hotSpot 100 -overflow} \
+            {reportCongestion -overflow} \
+            {reportCongestion -hotspot 100} \
+            {reportCongestion -hotSpot 100} \
+            {reportCongestion -full} \
+        ]
+    mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_congestion_full.rpt" \
+        "MPTDC extra full congestion" [list \
+            {reportCongestion -full -rpt_overflowCong} \
+            {reportCongestion -full} \
+            {reportCongestion -rpt_overflowCong} \
+        ]
     mptdc_pnr_capture_report "$extra_dir/extra_report_density.rpt" \
         "MPTDC extra reportDensity" {reportDensity}
     mptdc_pnr_capture_report "$extra_dir/extra_report_netlist_stats.rpt" \
         "MPTDC extra reportGateCount" {reportGateCount -level 20}
     mptdc_pnr_capture_report "$extra_dir/extra_report_power_hier.rpt" \
         "MPTDC extra report_power hierarchy" {report_power -hierarchy all}
+    mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_power_verbose.rpt" \
+        "MPTDC extra verbose power" [list \
+            {report_power -hierarchy all -verbose} \
+            {report_power -verbose} \
+            {report_power} \
+        ]
+    mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_clocks.rpt" \
+        "MPTDC extra clock report" [list \
+            {reportClockTree -summary} \
+            {report_clock_tree -summary} \
+            {report_clocks} \
+        ]
+    mptdc_pnr_capture_report_candidates "$extra_dir/extra_report_net_fanout.rpt" \
+        "MPTDC extra high fanout report" [list \
+            {reportNetStat -fanout 50} \
+            {reportHighFanoutNet -threshold 50} \
+            {reportFanoutViolation} \
+        ]
 
     set audit_file "$extra_dir/extra_pd_reset_audit.rpt"
     set fh [open $audit_file w]
@@ -94,6 +145,9 @@ proc mptdc_pnr_generate_extra_reports {} {
         puts $fh "  $cell"
     }
     close $fh
+
+    mptdc_pnr_write_phase_mesh_audit "$extra_dir/extra_phase_mesh_audit.rpt"
+    mptdc_pnr_write_cdc_floorplan_audit "$extra_dir/extra_cdc_floorplan_audit.rpt"
 }
 
 proc mptdc_pnr_object_names {objects} {
@@ -154,6 +208,274 @@ proc mptdc_pnr_core_box {} {
     return $core_box
 }
 
+proc mptdc_pnr_snap {value} {
+    global pnr
+    set snap $pnr(floorplan_snap_um)
+    if {$snap <= 0.0} {
+        return $value
+    }
+    return [expr {round($value / $snap) * $snap}]
+}
+
+proc mptdc_pnr_centered_box {core_box width height y_center} {
+    set llx [expr {([lindex $core_box 0] + [lindex $core_box 2] - $width) / 2.0}]
+    set lly [expr {$y_center - ($height / 2.0)}]
+    set urx [expr {$llx + $width}]
+    set ury [expr {$lly + $height}]
+
+    return [list \
+        [mptdc_pnr_snap $llx] \
+        [mptdc_pnr_snap $lly] \
+        [mptdc_pnr_snap $urx] \
+        [mptdc_pnr_snap $ury]]
+}
+
+proc mptdc_pnr_box_valid {box} {
+    if {[llength $box] < 4} {
+        return 0
+    }
+    return [expr {([lindex $box 2] > [lindex $box 0]) && ([lindex $box 3] > [lindex $box 1])}]
+}
+
+proc mptdc_pnr_sandwich_boxes {} {
+    global pnr
+
+    set core_box [mptdc_pnr_core_box]
+    if {![mptdc_pnr_box_valid $core_box]} {
+        return [dict create]
+    }
+
+    set core_lly [lindex $core_box 1]
+    set core_ury [lindex $core_box 3]
+    set core_h   [expr {$core_ury - $core_lly}]
+    set center_y [expr {($core_lly + $core_ury) / 2.0}]
+
+    set osc_halo_h [expr {$pnr(osc_macro_height_um) + (2.0 * $pnr(osc_macro_halo_um))}]
+    set stack_h [expr {$osc_halo_h + $pnr(pd_region_gap_um) + $pnr(pd_region_height_um) + $pnr(pd_region_gap_um) + $osc_halo_h}]
+    if {$stack_h > $core_h} {
+        set scale [expr {$core_h / $stack_h}]
+        set pd_h [expr {max(10.0, $pnr(pd_region_height_um) * $scale)}]
+        set gap  [expr {max(2.0, $pnr(pd_region_gap_um) * $scale)}]
+        set osc_halo_h [expr {max($pnr(osc_macro_height_um), $osc_halo_h * $scale)}]
+    } else {
+        set pd_h $pnr(pd_region_height_um)
+        set gap  $pnr(pd_region_gap_um)
+    }
+
+    set pd_box [mptdc_pnr_centered_box \
+        $core_box $pnr(pd_region_width_um) $pd_h $center_y]
+    set slow_center_y [expr {[lindex $pd_box 3] + $gap + ($osc_halo_h / 2.0)}]
+    set fast_center_y [expr {[lindex $pd_box 1] - $gap - ($osc_halo_h / 2.0)}]
+    set osc_w [expr {$pnr(osc_macro_width_um) + (2.0 * $pnr(osc_macro_halo_um))}]
+    set slow_box [mptdc_pnr_centered_box $core_box $osc_w $osc_halo_h $slow_center_y]
+    set fast_box [mptdc_pnr_centered_box $core_box $osc_w $osc_halo_h $fast_center_y]
+
+    return [dict create core $core_box pd $pd_box slow $slow_box fast $fast_box]
+}
+
+proc mptdc_pnr_create_place_blockage {name box} {
+    if {![mptdc_pnr_box_valid $box]} {
+        return
+    }
+
+    set llx [lindex $box 0]
+    set lly [lindex $box 1]
+    set urx [lindex $box 2]
+    set ury [lindex $box 3]
+
+    if {[catch {createPlaceBlockage -name $name -type hard -box $llx $lly $urx $ury} err]} {
+        if {[catch {createPlaceBlockage -type hard -box [list $llx $lly $urx $ury]} err2]} {
+            error "$err; fallback failed: $err2"
+        }
+    }
+}
+
+proc mptdc_pnr_phase_net_patterns {} {
+    set patterns [list]
+    for {set i 0} {$i < 8} {incr i} {
+        lappend patterns "*slow_phase\\[$i\\]*"
+        lappend patterns "*fast_phase\\[$i\\]*"
+        lappend patterns "*u_osc_slow*phase\\[$i\\]*"
+        lappend patterns "*u_osc_fast*phase\\[$i\\]*"
+    }
+    return $patterns
+}
+
+proc mptdc_pnr_collect_nets {patterns} {
+    set matches [list]
+    foreach pattern $patterns {
+        set nets [list]
+        if {[catch {get_nets -hierarchical -quiet $pattern} nets]} {
+            if {[catch {get_nets -hier $pattern} nets]} {
+                set nets [list]
+            }
+        }
+        foreach net [mptdc_pnr_object_names $nets] {
+            if {[lsearch -exact $matches $net] < 0} {
+                lappend matches $net
+            }
+        }
+    }
+    return $matches
+}
+
+proc mptdc_pnr_write_phase_mesh_audit {report_file} {
+    global pnr
+
+    set fh [open $report_file w]
+    puts $fh "MPTDC phase mesh audit"
+    puts $fh "======================"
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "Policy"
+    puts $fh "------"
+    puts $fh "Global signal routing remains $pnr(signal_bottom_layer)-$pnr(signal_top_layer)."
+    puts $fh "Localized PD-matrix exception enabled: $pnr(phase_exception_enable)"
+    puts $fh "Exception top layer: $pnr(phase_route_top_layer) (index $pnr(phase_route_top_layer_idx))"
+    puts $fh "Exception scope: 8 slow + 8 fast phase nets inside/over $pnr(pd_symmetry_group)."
+    puts $fh ""
+
+    set patterns [mptdc_pnr_phase_net_patterns]
+    set nets [mptdc_pnr_collect_nets $patterns]
+    puts $fh "Matched phase-like nets: [llength $nets]"
+    foreach net [lsort $nets] {
+        puts $fh "  $net"
+    }
+    puts $fh ""
+    puts $fh "Reviewer checklist"
+    puts $fh "------------------"
+    puts $fh "  [ ] Exactly the intended slow/fast phase nets use the METTP exception."
+    puts $fh "  [ ] PDN straps avoid consuming all METTP resources over the matrix center."
+    puts $fh "  [ ] Extracted per-phase RC deltas are reviewed after detail route/QRC."
+    close $fh
+}
+
+proc mptdc_pnr_apply_phase_mesh_route_intent {} {
+    global pnr
+
+    set report_file "$pnr(reports_dir)/phase_mesh_route_intent.rpt"
+    set fh [open $report_file w]
+    puts $fh "MPTDC phase mesh route intent"
+    puts $fh "============================"
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "Intent: keep global routing on $pnr(signal_bottom_layer)-$pnr(signal_top_layer),"
+    puts $fh "but mark phase-like nets as candidates for localized $pnr(phase_route_top_layer)"
+    puts $fh "routing/shielding over $pnr(pd_symmetry_group)."
+    puts $fh ""
+
+    if {!$pnr(phase_exception_enable)} {
+        puts $fh "Phase exception disabled; no route intent applied."
+        close $fh
+        return
+    }
+
+    set nets [mptdc_pnr_collect_nets [mptdc_pnr_phase_net_patterns]]
+    puts $fh "Matched phase-like nets: [llength $nets]"
+    foreach net [lsort $nets] {
+        puts $fh "Net: $net"
+        set objs [list]
+        catch {set objs [get_nets -quiet $net]}
+        set applied 0
+        foreach cmd [list \
+            [list set_db $objs .top_preferred_routing_layer $pnr(phase_route_top_layer)] \
+            [list set_db $objs .route_top_layer $pnr(phase_route_top_layer)] \
+            [list setAttribute -net $net -top_preferred_routing_layer $pnr(phase_route_top_layer)] \
+        ] {
+            if {![catch {eval $cmd} err]} {
+                puts $fh "  Applied: $cmd"
+                set applied 1
+            } else {
+                puts $fh "  Skipped: $cmd"
+                puts $fh "    $err"
+            }
+        }
+        if {!$applied} {
+            puts $fh "  No route-attribute variant accepted; enforce/review manually before detail route."
+        }
+    }
+
+    puts $fh ""
+    puts $fh "PDN accommodation note"
+    puts $fh "----------------------"
+    puts $fh "Do not consume the entire METTP resource over the center matrix with PDN straps."
+    puts $fh "If a later script adds sroute/ring/stripe generation, reserve channels for these"
+    puts $fh "phase-like nets before final detail routing and extracted-RC matching."
+    close $fh
+}
+
+proc mptdc_pnr_write_cdc_floorplan_audit {report_file} {
+    set fh [open $report_file w]
+    puts $fh "MPTDC CDC/floorplan audit"
+    puts $fh "========================="
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+
+    foreach item {
+        {"Reset synchronizers" "*u_rst*sync*"}
+        {"Gray counter synchronizers" "*gray*ff* *u_slow_cnt* *u_fast_cnt*"}
+        {"Context drain synchronizers" "*ctx_drain_sync_ff*"}
+        {"Measurement controller" "*u_meas_ctrl*"}
+        {"Context bank" "*u_ctx_bank*"}
+        {"PD matrix cells" "*gen_pd_row*gen_pd_col*u_pd*"}
+    } {
+        set title [lindex $item 0]
+        set patterns [lrange $item 1 end]
+        puts $fh $title
+        puts $fh [string repeat "-" [string length $title]]
+        foreach pattern $patterns {
+            set cells [mptdc_pnr_collect_cells [split $pattern]]
+            puts $fh "Pattern $pattern matched [llength $cells] cells"
+            foreach cell [lsort $cells] {
+                puts $fh "  $cell"
+            }
+        }
+        puts $fh ""
+    }
+
+    puts $fh "Reviewer checklist"
+    puts $fh "------------------"
+    puts $fh "  [ ] u_meas_ctrl is physically close to fast phase[0] and context-bank write side."
+    puts $fh "  [ ] context-bank capture registers are not scattered across the full macro."
+    puts $fh "  [ ] synchronizer cells remain recognizable and were not merged/retimed."
+    close $fh
+}
+
+proc mptdc_pnr_configure_vectorless_activity {} {
+    global pnr
+
+    if {!$pnr(vectorless_activity_enable)} {
+        mptdc_pnr_msg "Vectorless activity setup disabled"
+        return
+    }
+
+    mptdc_pnr_msg "Configuring vectorless activity: toggle=$pnr(vectorless_toggle_rate), static_probability=$pnr(vectorless_static_probability)"
+
+    if {[catch {set_db time_design_propagate_activity true} err]} {
+        mptdc_pnr_msg "Vectorless activity propagation DB knob skipped: $err"
+    }
+
+    set activity_cmds [list \
+        "set_default_switching_activity -toggle_rate $pnr(vectorless_toggle_rate) -static_probability $pnr(vectorless_static_probability) \[all_inputs\]" \
+        "set_default_switching_activity -input_activity $pnr(vectorless_toggle_rate) \[all_inputs\]" \
+        "set_default_switching_activity -toggle_rate $pnr(vectorless_toggle_rate) \[all_inputs\]" \
+    ]
+    set applied 0
+    foreach cmd $activity_cmds {
+        if {![catch {eval $cmd} err]} {
+            set applied 1
+            break
+        }
+    }
+    if {!$applied} {
+        mptdc_pnr_msg "No set_default_switching_activity variant was accepted"
+    }
+
+    if {[catch {propagate_activity} err]} {
+        mptdc_pnr_msg "propagate_activity skipped: $err"
+    }
+}
+
 proc mptdc_pnr_prepare_pd_symmetry {} {
     global pnr
 
@@ -190,28 +512,52 @@ proc mptdc_pnr_prepare_pd_symmetry {} {
 
     if {$pnr(pd_symmetry_create_region)} {
         set core_box [mptdc_pnr_core_box]
+        set boxes [mptdc_pnr_sandwich_boxes]
         puts $fh "Core box: $core_box"
-        if {[llength $core_box] >= 4} {
-            set margin $pnr(pd_region_margin_um)
-            set llx [expr {[lindex $core_box 0] + $margin}]
-            set lly [expr {[lindex $core_box 1] + $margin}]
-            set urx [expr {[lindex $core_box 2] - $margin}]
-            set ury [expr {[lindex $core_box 3] - $margin}]
+        puts $fh "Sandwich floorplan target"
+        puts $fh "  Slow oscillator north macro estimate: $pnr(osc_macro_width_um) x $pnr(osc_macro_height_um) um"
+        puts $fh "  Fast oscillator south macro estimate: $pnr(osc_macro_width_um) x $pnr(osc_macro_height_um) um"
+        puts $fh "  Oscillator halo um: $pnr(osc_macro_halo_um)"
+        puts $fh "  PD region target width x height: $pnr(pd_region_width_um) x $pnr(pd_region_height_um) um"
+        puts $fh "  PD/oscillator gap um: $pnr(pd_region_gap_um)"
+        if {[dict exists $boxes pd]} {
+            set pd_box [dict get $boxes pd]
+            set slow_box [dict get $boxes slow]
+            set fast_box [dict get $boxes fast]
+            puts $fh "  Slow reserve box: $slow_box"
+            puts $fh "  PD matrix box:    $pd_box"
+            puts $fh "  Fast reserve box: $fast_box"
+
+            set llx [lindex $pd_box 0]
+            set lly [lindex $pd_box 1]
+            set urx [lindex $pd_box 2]
+            set ury [lindex $pd_box 3]
             if {($urx > $llx) && ($ury > $lly)} {
                 if {[catch {createRegion $pnr(pd_symmetry_group) $llx $lly $urx $ury} err]} {
                     puts $fh "Region create warning: $err"
                 } else {
                     puts $fh "Region created for $pnr(pd_symmetry_group): $llx $lly $urx $ury"
                 }
+                if {[catch {mptdc_pnr_create_place_blockage mptdc_slow_osc_keepout $slow_box} err]} {
+                    puts $fh "Slow oscillator keepout warning: $err"
+                } else {
+                    puts $fh "Slow oscillator keepout requested: $slow_box"
+                }
+                if {[catch {mptdc_pnr_create_place_blockage mptdc_fast_osc_keepout $fast_box} err]} {
+                    puts $fh "Fast oscillator keepout warning: $err"
+                } else {
+                    puts $fh "Fast oscillator keepout requested: $fast_box"
+                }
             } else {
-                puts $fh "Region skipped: core box too small for margin $margin"
+                puts $fh "Region skipped: derived PD box is invalid"
             }
         } else {
-            puts $fh "Region skipped: unable to read Innovus core box"
+            puts $fh "Region skipped: unable to derive sandwich boxes"
         }
     }
 
-    puts $fh "Note: final symmetry and matched-RC constraints still require oscillator/PD macro LEFs and extracted routing rules."
+    puts $fh "METTP exception: $pnr(phase_exception_enable); phase route top layer: $pnr(phase_route_top_layer)"
+    puts $fh "Note: final symmetry and matched-RC closure still requires oscillator macro LEFs/Liberty and extracted routing rules."
     close $fh
 }
 
@@ -314,6 +660,13 @@ mptdc_pnr_optional "Limiting signal route layers to preserve top metal for power
     setNanoRouteMode -routeTopRoutingLayer    $pnr(signal_top_layer_idx)
 }
 
+mptdc_pnr_optional "Recording localized METTP phase-mesh exception" {
+    if {$pnr(phase_exception_enable)} {
+        mptdc_pnr_msg "Global route top remains $pnr(signal_top_layer); localized $pnr(phase_route_top_layer) exception is reserved for PD phase mesh review"
+        mptdc_pnr_apply_phase_mesh_route_intent
+    }
+}
+
 mptdc_pnr_optional "Applying placement density target" {
     setPlaceMode -place_global_max_density $pnr(place_global_max_density)
 }
@@ -332,6 +685,10 @@ mptdc_pnr_optional "Running post-place pre-CTS timing/DRV optimization" {
 
 mptdc_pnr_optional "Generating pre-CTS timing reports" {
     timeDesign -preCTS -outDir "$pnr(reports_dir)/prects"
+}
+
+mptdc_pnr_optional "Configuring vectorless activity propagation" {
+    mptdc_pnr_configure_vectorless_activity
 }
 
 mptdc_pnr_optional "Generating placed area report" {
@@ -377,6 +734,9 @@ puts $fh "Core margin um: $pnr(core_margin_um)"
 puts $fh "Signal routing layers: $pnr(signal_bottom_layer)-$pnr(signal_top_layer)"
 puts $fh "Signal routing layer indexes: $pnr(signal_bottom_layer_idx)-$pnr(signal_top_layer_idx)"
 puts $fh "Reserved power layer: $pnr(power_reserved_layer)"
+puts $fh "Phase METTP exception enabled: $pnr(phase_exception_enable)"
+puts $fh "Phase exception top layer: $pnr(phase_route_top_layer)"
+puts $fh "Phase exception top layer index: $pnr(phase_route_top_layer_idx)"
 puts $fh "Explicit PG pin connect enabled: $pnr(connect_pg_pins)"
 if {[info exists tech(STANDARD_CELL_VDD_PINS)]} {
     puts $fh "VDD PG pin candidates: $tech(STANDARD_CELL_VDD_PINS)"
@@ -390,12 +750,26 @@ puts $fh "PD target grid: $pnr(pd_rows)x$pnr(pd_cols)"
 puts $fh "PD group: $pnr(pd_symmetry_group)"
 puts $fh "PD instance patterns: $pnr(pd_instance_patterns)"
 puts $fh "PD region margin um: $pnr(pd_region_margin_um)"
+puts $fh "PD region target width/height um: $pnr(pd_region_width_um) / $pnr(pd_region_height_um)"
+puts $fh "Oscillator macro estimate width/height um: $pnr(osc_macro_width_um) / $pnr(osc_macro_height_um)"
+puts $fh "Oscillator macro halo/gap um: $pnr(osc_macro_halo_um) / $pnr(pd_region_gap_um)"
+puts $fh "Vectorless activity enabled: $pnr(vectorless_activity_enable)"
+puts $fh "Vectorless toggle/static probability: $pnr(vectorless_toggle_rate) / $pnr(vectorless_static_probability)"
 puts $fh "Pre-CTS opt enabled: $pnr(do_prects_opt)"
 puts $fh "Detail route enabled: $pnr(do_detail_route)"
 puts $fh "Netlist: $design(postsyn_netlist)"
 puts $fh "SDC: $design(postsyn_sdc)"
 puts $fh "MMMC: $init_mmmc_file"
 puts $fh "LEF: $tech_files(ALL_LEFS)"
+puts $fh ""
+puts $fh "Review checklist"
+puts $fh "----------------"
+puts $fh "  [ ] extra_report_congestion*.rpt contain valid hotspot/overflow data or command failures to fix."
+puts $fh "  [ ] pd_matrix_symmetry.rpt shows a grid-snapped sandwich region and oscillator keepouts."
+puts $fh "  [ ] phase_mesh_route_intent.rpt shows whether Innovus accepted phase-net route attributes."
+puts $fh "  [ ] extra_phase_mesh_audit.rpt lists only intended phase-like nets for the METTP exception."
+puts $fh "  [ ] extra_cdc_floorplan_audit.rpt keeps synchronizers, u_meas_ctrl, and u_ctx_bank recognizable."
+puts $fh "  [ ] timing reports separate u_meas_ctrl/context logic-depth blockers from placement/wire blockers."
 close $fh
 
 set status_fh [open "$pnr(reports_dir)/run_status.rpt" w]

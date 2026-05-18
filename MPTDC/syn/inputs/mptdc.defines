@@ -49,10 +49,36 @@ set design(CLK_PERIOD) 6.25              ;# 160 MHz → 6.25 ns
 set design(OSC_SLOW_NAME)   "clk_osc_slow"
 set design(OSC_SLOW_PERIOD) 1.0          ;# ~1.0 GHz → 1.0 ns (9 taps × ~111 ps)
 set design(OSC_SLOW_PIN)    {u_core/u_osc_slow/u_stub/phase[0]}
+set design(OSC_SLOW_TAP_STEP) 0.055      ;# ns — S1..S8 analog tap spacing
+set design(OSC_SLOW_TAP_PINS) [list \
+    {u_core/u_osc_slow/u_stub/phase[0]} \
+    {u_core/u_osc_slow/u_stub/phase[1]} \
+    {u_core/u_osc_slow/u_stub/phase[2]} \
+    {u_core/u_osc_slow/u_stub/phase[3]} \
+    {u_core/u_osc_slow/u_stub/phase[4]} \
+    {u_core/u_osc_slow/u_stub/phase[5]} \
+    {u_core/u_osc_slow/u_stub/phase[6]} \
+    {u_core/u_osc_slow/u_stub/phase[7]} \
+]
 
 set design(OSC_FAST_NAME)   "clk_osc_fast"
 set design(OSC_FAST_PERIOD) 0.9          ;# ~1.11 GHz → 0.9 ns (9 taps × ~100 ps)
 set design(OSC_FAST_PIN)    {u_core/u_osc_fast/u_stub/phase[0]}
+set design(OSC_FAST_TAP_STEP) 0.050      ;# ns — F1..F8 analog tap spacing
+set design(OSC_FAST_TAP_PINS) [list \
+    {u_core/u_osc_fast/u_stub/phase[0]} \
+    {u_core/u_osc_fast/u_stub/phase[1]} \
+    {u_core/u_osc_fast/u_stub/phase[2]} \
+    {u_core/u_osc_fast/u_stub/phase[3]} \
+    {u_core/u_osc_fast/u_stub/phase[4]} \
+    {u_core/u_osc_fast/u_stub/phase[5]} \
+    {u_core/u_osc_fast/u_stub/phase[6]} \
+    {u_core/u_osc_fast/u_stub/phase[7]} \
+]
+
+set design(OSC_SLOW_ANALOG_PINS) "start_i ctrl_i[7:0] phase_o[7:0] vdd gnd"
+set design(OSC_FAST_ANALOG_PINS) "stop_i ctrl_i[7:0] phase_o[7:0] vdd gnd"
+set design(OSC_TOPOLOGY) "slow_north_pd_center_fast_south"
 
 # ── Reset ───────────────────────────────────────────────────────────
 set design(RST_PORT) "async_rst_n"       ;# Async active-low reset
@@ -86,6 +112,8 @@ set design(INPUT_TRANSITION)       0.1    ;# ns — max input transition time
 set design(CLOCK_UNCERTAINTY)    0.3     ;# ns — jitter + skew budget (180 nm)
 set design(CLOCK_TRANSITION)     0.15    ;# ns — max clock edge transition
 set design(OSC_CLOCK_UNCERTAINTY) 0.05   ;# ns — oscillator jitter budget
+set design(OSC_CLOCK_UNCERTAINTY_SETUP) 0.050 ;# ns — pre-Liberty p-p jitter + skew margin
+set design(OSC_CLOCK_UNCERTAINTY_HOLD)  0.020 ;# ns — cycle-edge/local skew placeholder
 
 # Design Rule Constraints
 set design(MAX_FANOUT)     20

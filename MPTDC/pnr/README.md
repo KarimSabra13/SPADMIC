@@ -10,6 +10,7 @@ This directory contains the first-pass physical-estimation flow for the MPTDC ma
 - Default signal routing layers: `MET1` through `MET3`.
 - Default NanoRoute routing layer indexes: `1` through `3` (`MET1-MET3` in the lab LEF).
 - Default reserved power layer: `METTP`, so top/thick metal remains available for VDD/VSS straps and top-level power distribution as much as practical.
+- Local exception: over the `mptdc_pd_matrix` region, `METTP` is reserved as an allowed routing/shielding resource for the 8 slow and 8 fast oscillator phase nets. The global route top remains `MET3` until detail-route/PDN evidence justifies enabling the exception in routing.
 - Expected route directions: `MET1` horizontal, `MET2` vertical, `MET3` horizontal, `METTP` vertical. The technology LEF remains the source of truth; the run manifest records these expectations for review.
 
 ## Quick run
@@ -44,6 +45,11 @@ export MPTDC_PNR_MAX_DENSITY=0.80
 export MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
 export MPTDC_PNR_SIGNAL_TOP_LAYER_IDX=3
 export MPTDC_PNR_POWER_LAYER=METTP
+export MPTDC_PNR_PHASE_METTP_EXCEPTION=1
+export MPTDC_PNR_PD_REGION_WIDTH_UM=300
+export MPTDC_PNR_OSC_WIDTH_UM=300
+export MPTDC_PNR_OSC_HEIGHT_UM=100
+export MPTDC_PNR_VECTORLESS_ACTIVITY=1
 export MPTDC_PNR_DO_PRECTS_OPT=1
 export MPTDC_PNR_DO_DETAIL_ROUTE=1
 ```
@@ -84,9 +90,9 @@ source ../outputs/mptdc_top_asic.place.enc
 restoreDesign ../outputs/mptdc_top_asic.place.enc.dat mptdc_top_asic
 ```
 
-The snapshot helper skips the `.enc.dat` database directory by default to avoid
-accidentally committing a large binary Innovus DB.  If you explicitly need a
-restorable snapshot, run:
+The snapshot helper skips the `.enc` restore script and `.enc.dat` database
+directory by default so the repository receives reports/log manifests rather
+than heavy CAD databases. If you explicitly need a restorable snapshot, run:
 
 ```bash
 MPTDC_SNAPSHOT_COPY_INNOVUS_DB=1 bash collect_snapshot.sh innovus_$(date +%Y%m%d_%H%M)_estimate_with_db
@@ -96,4 +102,4 @@ The flow also prepares a first-pass phase-detector matrix placement hook. By def
 
 Each run now clears stale PnR reports before initialization and writes `run_status.rpt`. Treat a snapshot as invalid if `run_status.rpt` is missing or does not say `Status: COMPLETE`.
 
-If congestion is high with `MET1-MET3` signal routing, relax utilization before allowing signal routing on `METTP`; preserving the top metal for power is the default priority for this baseline.
+If congestion is high with `MET1-MET3` global signal routing, relax utilization first. The only planned `METTP` signal exception is the localized PD phase mesh; preserve top metal for PDN elsewhere.

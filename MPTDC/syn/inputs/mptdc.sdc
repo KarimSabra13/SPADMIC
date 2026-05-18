@@ -25,6 +25,39 @@ proc mptdc_try_async_max_delay {delay from_obj to_obj} {
     set_max_delay $delay -from $from_obj -to $to_obj
 }
 
+proc mptdc_create_osc_tap_clocks {base_name period tap_step tap_pins} {
+    set created [list]
+    set tap_idx 0
+
+    foreach tap_pin $tap_pins {
+        set pins [get_pins -quiet $tap_pin]
+        if {[llength $pins] == 0} {
+            puts "MPTDC_SDC_WARN: oscillator tap pin not found: $tap_pin"
+            incr tap_idx
+            continue
+        }
+
+        if {$tap_idx == 0} {
+            set clk_name $base_name
+        } else {
+            set clk_name "${base_name}_tap${tap_idx}"
+        }
+
+        set rise [expr {$tap_idx * $tap_step}]
+        set fall [expr {$rise + ($period / 2.0)}]
+        if {$fall >= $period} {
+            set fall [expr {$fall - $period}]
+        }
+
+        create_clock -name $clk_name -period $period \
+            -waveform [list $rise $fall] $pins
+        lappend created $clk_name
+        incr tap_idx
+    }
+
+    return $created
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. PRIMARY CLOCK
 # ─────────────────────────────────────────────────────────────────────────────
@@ -43,20 +76,38 @@ if {$runtype == "synthesis"} {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. OSCILLATOR CLOCKS (VIRTUAL)
+# 2. OSCILLATOR TAP CLOCKS (PRE-LIBERTY BLACK-BOX CONTRACT)
 # ─────────────────────────────────────────────────────────────────────────────
-# Analog oscillator macros provide these clocks in the real chip.  Until the
-# macro LEFs are available, the implementation stub exposes non-constant phase
-# pins so oscillator-domain structure stays present for physical planning.
+# The final analog macros are planned as:
+#   slow/north: start_i, ctrl_i[7:0], phase_o[7:0], vdd/gnd
+#   fast/south: stop_i,  ctrl_i[7:0], phase_o[7:0], vdd/gnd
+# Until LEF/Liberty are available, the implementation stub pins are the clock
+# boundary contract.  Model every tap explicitly so PD sampling clock coverage is
+# reviewable and phase-mesh timing does not collapse to phase[0] only.
 
-create_clock -name $design(OSC_SLOW_NAME) -period $design(OSC_SLOW_PERIOD) \
-    [get_pins $design(OSC_SLOW_PIN)] -add
+set design(OSC_SLOW_CLOCKS) [mptdc_create_osc_tap_clocks \
+    $design(OSC_SLOW_NAME) \
+    $design(OSC_SLOW_PERIOD) \
+    $design(OSC_SLOW_TAP_STEP) \
+    $design(OSC_SLOW_TAP_PINS)]
 
-create_clock -name $design(OSC_FAST_NAME) -period $design(OSC_FAST_PERIOD) \
-    [get_pins $design(OSC_FAST_PIN)] -add
+set design(OSC_FAST_CLOCKS) [mptdc_create_osc_tap_clocks \
+    $design(OSC_FAST_NAME) \
+    $design(OSC_FAST_PERIOD) \
+    $design(OSC_FAST_TAP_STEP) \
+    $design(OSC_FAST_TAP_PINS)]
 
-set_clock_uncertainty $design(OSC_CLOCK_UNCERTAINTY) [get_clocks $design(OSC_SLOW_NAME)]
-set_clock_uncertainty $design(OSC_CLOCK_UNCERTAINTY) [get_clocks $design(OSC_FAST_NAME)]
+set design(OSC_ALL_CLOCKS) [concat $design(OSC_SLOW_CLOCKS) $design(OSC_FAST_CLOCKS)]
+
+if {[llength $design(OSC_SLOW_CLOCKS)] == 0 || [llength $design(OSC_FAST_CLOCKS)] == 0} {
+    puts "MPTDC_SDC_WARN: one or both oscillator tap-clock groups are empty"
+}
+
+foreach osc_clk $design(OSC_ALL_CLOCKS) {
+    set_clock_uncertainty -setup $design(OSC_CLOCK_UNCERTAINTY_SETUP) [get_clocks $osc_clk]
+    set_clock_uncertainty -hold  $design(OSC_CLOCK_UNCERTAINTY_HOLD)  [get_clocks $osc_clk]
+    set_clock_transition  $design(CLOCK_TRANSITION) [get_clocks $osc_clk]
+}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. CLOCK DOMAIN CROSSING — ASYNC GROUPS
@@ -66,8 +117,8 @@ set_clock_uncertainty $design(OSC_CLOCK_UNCERTAINTY) [get_clocks $design(OSC_FAS
 
 set_clock_groups -asynchronous \
     -group [get_clocks $design(CLK_NAME)] \
-    -group [get_clocks $design(OSC_SLOW_NAME)] \
-    -group [get_clocks $design(OSC_FAST_NAME)]
+    -group [get_clocks $design(OSC_SLOW_CLOCKS)] \
+    -group [get_clocks $design(OSC_FAST_CLOCKS)]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. ASYNCHRONOUS INPUTS — FALSE PATHS
@@ -115,19 +166,19 @@ mptdc_try_dont_touch *gen_pd_row*gen_pd_col*u_pd*
 # osc → sys (max 1 sys_clk period)
 mptdc_try_async_max_delay \
     $design(CLK_PERIOD) \
-    [get_clocks $design(OSC_SLOW_NAME)] \
+    [get_clocks $design(OSC_SLOW_CLOCKS)] \
     [get_clocks $design(CLK_NAME)]
 
 mptdc_try_async_max_delay \
     $design(CLK_PERIOD) \
-    [get_clocks $design(OSC_FAST_NAME)] \
+    [get_clocks $design(OSC_FAST_CLOCKS)] \
     [get_clocks $design(CLK_NAME)]
 
 # sys → osc_fast (max 1 fast period)
 mptdc_try_async_max_delay \
     $design(OSC_FAST_PERIOD) \
     [get_clocks $design(CLK_NAME)] \
-    [get_clocks $design(OSC_FAST_NAME)]
+    [get_clocks $design(OSC_FAST_CLOCKS)]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. INPUT DELAYS

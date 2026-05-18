@@ -39,8 +39,22 @@ copy_dir_if_requested() {
   fi
 }
 
+copy_enc_if_requested() {
+  local src="$1"
+  if [[ -f "$src" ]]; then
+    if [[ "${MPTDC_SNAPSHOT_COPY_INNOVUS_DB:-0}" == "1" ]]; then
+      cp "$src" "${snapshot_dir}/$(basename "$src")"
+      echo "Copied Innovus restore script: $(basename "$src")" >> "${snapshot_dir}/db_copy_note.tmp"
+    else
+      echo "Skipped Innovus restore script: $(basename "$src") (set MPTDC_SNAPSHOT_COPY_INNOVUS_DB=1 to copy it)" >> "${snapshot_dir}/db_copy_note.tmp"
+    fi
+  fi
+}
+
 latest_innovus_log=""
 if [[ -d "${pnr_dir}/logs" ]]; then
+  mkdir -p "${snapshot_dir}/logs"
+  find "${pnr_dir}/logs" -maxdepth 1 -type f -exec cp {} "${snapshot_dir}/logs/" \;
   latest_innovus_log="$(
     find "${pnr_dir}/logs" -maxdepth 1 -type f -name 'innovus_estimate.log*' \
       -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {$1=""; sub(/^ /, ""); print}'
@@ -60,16 +74,17 @@ else
 fi
 
 for file in \
-  "${pnr_dir}/outputs/mptdc_top_asic.place.enc" \
   "${pnr_dir}/reports/run_status.rpt" \
   "${pnr_dir}/reports/run_manifest.rpt" \
   "${pnr_dir}/reports/pd_matrix_symmetry.rpt" \
+  "${pnr_dir}/reports/phase_mesh_route_intent.rpt" \
   "${pnr_dir}/reports/report_area_place.rpt" \
   "${pnr_dir}/reports/report_gate_count_place.rpt" \
   "${pnr_dir}/reports/report_power_place.rpt"; do
   copy_if_present "$file"
 done
 
+copy_enc_if_requested "${pnr_dir}/outputs/mptdc_top_asic.place.enc"
 copy_dir_if_requested "${pnr_dir}/outputs/mptdc_top_asic.place.enc.dat"
 
 if [[ -d "${pnr_dir}/reports/prects" ]]; then
@@ -92,6 +107,7 @@ fi
     echo "Run status: missing run_status.rpt"
   fi
   echo "${log_copy_note}"
+  echo "Artifact policy: reports/log manifests only; heavy Innovus DB directories are skipped unless explicitly requested."
   if [[ -f "${snapshot_dir}/db_copy_note.tmp" ]]; then
     cat "${snapshot_dir}/db_copy_note.tmp"
   fi

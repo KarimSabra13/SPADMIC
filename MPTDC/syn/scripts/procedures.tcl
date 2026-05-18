@@ -88,6 +88,22 @@ proc mptdc_run_report_candidates {cmds rpt_file title} {
     mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
+proc mptdc_collect_names {cmd} {
+    set names [list]
+    if {[catch {set objs [eval $cmd]}]} {
+        return $names
+    }
+    foreach obj $objs {
+        if {[catch {set name [get_object_name $obj]}]} {
+            if {[catch {set name [get_db $obj .name]}]} {
+                set name $obj
+            }
+        }
+        lappend names $name
+    }
+    return $names
+}
+
 proc mptdc_try_set_db {objects attr value} {
     if {[llength $objects] == 0} {
         return
@@ -162,6 +178,21 @@ proc mptdc_report_timing {report_dir} {
     if {[catch { report_timing -max_paths 200 -max_slack 0.0 > "$dir/timing_violations.rpt" } err]} {
         mptdc_write_report_failure "$dir/timing_violations.rpt" "Timing violations report" $err
     }
+
+    mptdc_run_report_candidates [list \
+        "report_timing -from \[get_clocks clk_osc_fast\] -to \[get_clocks clk_osc_fast\] -max_paths 100 -path_type full_clock" \
+        "report_timing -from \[get_clocks clk_osc_fast\] -to \[get_clocks clk_osc_fast\] -max_paths 100" \
+    ] "$dir/timing_osc_fast_full_clock.rpt" "fast oscillator-domain timing report"
+
+    mptdc_run_report_candidates [list \
+        "report_timing -to \[get_pins -quiet -hierarchical *u_meas_ctrl*/*/D\] -max_paths 100 -path_type full_clock" \
+        "report_timing -to \[get_pins -quiet -hierarchical *u_meas_ctrl*/*/D\] -max_paths 100" \
+    ] "$dir/timing_meas_ctrl_hotspots.rpt" "measurement-controller hotspot timing report"
+
+    mptdc_run_report_candidates [list \
+        "report_timing -to \[get_pins -quiet -hierarchical *u_ctx_bank*/*/D\] -max_paths 100 -path_type full_clock" \
+        "report_timing -to \[get_pins -quiet -hierarchical *u_ctx_bank*/*/D\] -max_paths 100" \
+    ] "$dir/timing_context_bank_hotspots.rpt" "context-bank hotspot timing report"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -292,11 +323,90 @@ proc mptdc_full_reports {report_dir} {
         "$dir/report_clocks.rpt" "report_clocks"
     mptdc_run_report "report_constraints" \
         "$dir/report_constraints.rpt" "report_constraints"
+    mptdc_run_report_candidates [list \
+        "report_clocks -generated" \
+        "report_clocks" \
+    ] "$dir/report_clocks_generated.rpt" "generated/all clock report"
+    mptdc_run_report_candidates [list \
+        "check_timing_intent -verbose" \
+        "check_timing_intent" \
+    ] "$dir/check_timing_intent_post_synth.rpt" "post-synthesis timing-intent report"
 
     # Latch audit
     mptdc_latch_audit $dir
+    mptdc_cdc_audit $dir
 
     mptdc_write_qor_manifest $dir
+}
+
+proc mptdc_cdc_audit {dir} {
+    set rpt_file "$dir/cdc_manual_audit.rpt"
+    set fh [open $rpt_file w]
+
+    puts $fh "MPTDC manual CDC/signoff audit"
+    puts $fh "=============================="
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "Purpose"
+    puts $fh "-------"
+    puts $fh "First-cleanup evidence because no dedicated CDC signoff tool is assumed."
+    puts $fh "Review this alongside check_timing_intent and timing reports."
+    puts $fh ""
+
+    set classes [list \
+        [list "Reset synchronizers" \
+            "async assertion / sync deassertion per local clock domain" \
+            "manual waiver if only the first stage sees async reset crossing" \
+            "*u_rst*sync*"] \
+        [list "Gray counter synchronizers" \
+            "oscillator counter snapshot/continuous CDC" \
+            "manual waiver plus bounded source-to-first-stage review" \
+            "*gray*ff*" "*u_slow_cnt*" "*u_fast_cnt*"] \
+        [list "Context drain synchronizers" \
+            "async drain flag into clk_sys before static context-bus read" \
+            "2FF sync plus static-bus-after-handshake waiver" \
+            "*ctx_drain_sync_ff*"] \
+        [list "Async frontend latches" \
+            "START/STOP event ownership and context allocation" \
+            "intentional latch waiver; no setup/hold relation to clk_sys" \
+            "*u_frontend*"] \
+        [list "STOP boundary capture" \
+            "STOP-edge measurement metadata capture" \
+            "intentional event-boundary waiver; verify no accidental normal sync path" \
+            "*u_stop_capture*"] \
+        [list "PD measurement fabric" \
+            "fast tap clocks sample slow tap signals for Vernier measurement" \
+            "intentional clock-as-data structure; verify all taps are modeled" \
+            "*gen_pd_row*gen_pd_col*u_pd*"] \
+    ]
+
+    foreach class $classes {
+        set title [lindex $class 0]
+        set contract [lindex $class 1]
+        set evidence [lindex $class 2]
+        set patterns [lrange $class 3 end]
+
+        puts $fh $title
+        puts $fh [string repeat "-" [string length $title]]
+        puts $fh "Contract: $contract"
+        puts $fh "Required evidence: $evidence"
+        foreach pattern $patterns {
+            set names [mptdc_collect_names "get_cells -quiet -hierarchical $pattern"]
+            puts $fh "Pattern $pattern matched [llength $names] cells"
+            foreach name [lsort $names] {
+                puts $fh "  $name"
+            }
+        }
+        puts $fh ""
+    }
+
+    puts $fh "Reviewer checklist"
+    puts $fh "------------------"
+    puts $fh "  [ ] Every async-looking endpoint in check_timing_intent is in one class above."
+    puts $fh "  [ ] No ordinary clk_sys logic appears only because of a broad false path."
+    puts $fh "  [ ] Static context-bank bus is sampled only after ctx_drain synchronization."
+    puts $fh "  [ ] PD cell clock/data warnings are limited to intentional Vernier sampling."
+    close $fh
 }
 
 proc mptdc_write_qor_manifest {dir} {
@@ -314,11 +424,14 @@ proc mptdc_write_qor_manifest {dir} {
     puts $fh "------"
     foreach key {
         TOPLEVEL FULLCHIP_OR_MACRO CLK_PERIOD OSC_SLOW_PERIOD OSC_FAST_PERIOD
-        CLOCK_UNCERTAINTY OSC_CLOCK_UNCERTAINTY INPUT_DELAY_MACRO
+        OSC_SLOW_TAP_STEP OSC_FAST_TAP_STEP CLOCK_UNCERTAINTY
+        OSC_CLOCK_UNCERTAINTY_SETUP OSC_CLOCK_UNCERTAINTY_HOLD
+        INPUT_DELAY_MACRO
         OUTPUT_DELAY_MACRO OUTPUT_LOAD_MACRO MAX_FANOUT MAX_TRANSITION
         RESET_MAX_FANOUT RESET_MAX_TRANSITION
         EXPECTED_LATCH_COUNT selected_setup_analysis_views
-        selected_hold_analysis_views
+        selected_hold_analysis_views OSC_TOPOLOGY OSC_SLOW_ANALOG_PINS
+        OSC_FAST_ANALOG_PINS
     } {
         if {[info exists design($key)]} {
             puts $fh [format "  %-32s %s" $key $design($key)]
@@ -381,6 +494,8 @@ proc mptdc_write_qor_manifest {dir} {
     puts $fh "  [ ] report_area_hier.rpt identifies dominant blocks"
     puts $fh "  [ ] report_power.rpt/report_power_hier.rpt are understood as vectorless or activity-backed"
     puts $fh "  [ ] latch_audit.rpt matches the intentional async-frontend latch count"
+    puts $fh "  [ ] cdc_manual_audit.rpt covers all intentional async/mixed-domain structures"
+    puts $fh "  [ ] timing_meas_ctrl_hotspots.rpt and timing_context_bank_hotspots.rpt identify logic-vs-wire blockers"
     puts $fh "  [ ] report_design_rules.rpt has no critical transition/fanout/capacitance issues"
     close $fh
 }
