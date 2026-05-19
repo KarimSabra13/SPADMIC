@@ -15,6 +15,8 @@ The repository is in a strong pre-calibration checkpoint, but not yet at verific
 
 - the RTL architecture is stable and documented
 - the latest architecture pivot moves synthesized measurement control/context storage to `clk_sys` and keeps the oscillator domains only for measurement fabric
+- the latest local hardening splits raw context commit from metadata completion and pipelines hit-count reduction
+- the maintained focused Verilator regression for context-bank, pressure/deadtime, backpressure, conversion stress, and watchdog recovery is green
 - the maintained Verilator VIP regressions are currently green (`13/13`)
 - the class-based VIP is functioning and no longer deadlocks on the previously failing stress pattern
 - the latest broad Cadence baseline campaign passed `109/109` and merges cleanly in IMC
@@ -22,9 +24,10 @@ The repository is in a strong pre-calibration checkpoint, but not yet at verific
 - the repo now includes additional deterministic overflow/recovery and pad-reset readback closure stimulus on top of the earlier stress fix
 - the offline calibration, fixed-delay characterization, and Genus synthesis flows are all scripted and documented
 
-The main remaining gates are **targeted Cadence-side coverage closure** and continued
-measurement evidence for deployed / jitter-limited calibration behavior, not basic RTL
-functionality.
+The main remaining gates are **fresh Cadence Genus/Innovus timing evidence after
+the newest RTL/SDC/flow hardening**, targeted Cadence-side coverage closure, and
+continued measurement evidence for deployed / jitter-limited calibration behavior.
+Basic RTL functionality is healthy, but timing closure is not yet proven.
 
 ## 2. RTL status
 
@@ -58,7 +61,7 @@ What looks solid:
 What still depends on downstream work:
 
 - oscillator realism still depends on the eventual analog macro
-- final timing closure still needs Genus + STA review
+- final timing closure still needs a fresh Genus/Innovus rerun; the previous pulled snapshots still showed large negative slack before the newest hit-count/deadtime hardening
 - deployed / jitter-limited calibration quality still depends on measurement data and host-side fitting
 
 ## 3. Verification status

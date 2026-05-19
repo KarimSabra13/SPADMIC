@@ -14,6 +14,7 @@ module mptdc_context_bank
 
   input  wire  ctx_id_t                 capture_ctx_i,
   input  wire                           capture_en_i,
+  input  wire                           meta_en_i,
   input  mptdc_ctx_snapshot_t           capture_snapshot_i,
   input  wire  [MAX_HITS_W-1:0]         hit_count_i,
   input  wire  tdc_conv_flags_t         flags_i,
@@ -37,6 +38,9 @@ module mptdc_context_bank
         ctx_snapshot[i] <= '0;
     end else if (capture_en_i) begin
       ctx_snapshot[capture_ctx_i] <= capture_snapshot_with_meta;
+    end else if (meta_en_i) begin
+      ctx_snapshot[capture_ctx_i].hit_count <= hit_count_i;
+      ctx_snapshot[capture_ctx_i].flags     <= flags_i;
     end
   end
 

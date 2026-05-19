@@ -23,17 +23,17 @@ The pivot moved `mptdc_meas_ctrl` and `mptdc_context_bank` to `clk_sys`. The osc
 The live sequence is:
 
 ```text
-IDLE -> MEASURE -> SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
+IDLE -> MEASURE -> SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR -> IDLE
 ```
 
 Ordering contract:
 
 1. STOP/front-end ownership becomes visible in `clk_sys`.
 2. `SNAPSHOT` samples the held PD/counter/STOP-boundary image through `mptdc_hit_capture_bridge`.
-3. `EVAL` computes hit count and close flags from that registered image.
-4. `CAPTURE` commits the image to the `clk_sys` context bank and marks it drainable.
-5. `STOP_OSC` clears frontend START/STOP ownership.
-6. `CLEAR` clears PD/counter/STOP-capture fabric only after the context image has been committed.
+3. `COUNT` registers row-level hit counts, commits the raw image to the `clk_sys` context bank, and marks the context owned/drainable.
+4. `EVAL` computes final hit count/flags, updates context metadata, and clears frontend START/STOP ownership.
+5. `CAPTURE` provides an ordering/settle cycle after metadata update.
+6. `CLEAR` clears PD/counter/STOP-capture fabric only after the raw image has been committed and metadata has been updated.
 
 This intentionally trades the obsolete few-fast-cycle teardown target for a reviewable CDC and STA structure.
 
@@ -57,7 +57,7 @@ That bench exercises:
 - no context double-use,
 - `pd_clear` only after context commit.
 
-At the current RTL checkpoint, the practical best-case STOP-to-next-START acceptance floor is expected around the synchronized STOP plus `clk_sys` teardown window, not `4-6 ns`. The exact number remains an RTL/model evidence number until a non-dry-run characterization/regression bundle and the final oscillator macro contract exist.
+At the current RTL checkpoint, `tb_deadtime_measure` reports a best-case RTL-model minimum successful requested STOP-to-next-START gap of `39 ns` with sink-ready behavior. This is not the obsolete `4-6 ns` fast-domain target and is not final silicon deadtime: it includes the digital re-arm sequence under ideal oscillator-model assumptions and still excludes real oscillator enable/disable latency, phase settling, jitter, and extracted physical skew.
 
 ## 4. Backpressure and deterministic overflow
 

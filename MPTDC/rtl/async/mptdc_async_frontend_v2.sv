@@ -68,6 +68,7 @@ module mptdc_async_frontend_v2
   logic              start_latched_q;
   logic              stop_latched_q;
   logic              start_accept_seen_q;
+  logic              start_reject_seen_q;
   ctx_id_t           active_ctx_q;
   logic [N_CTX-1:0]  ctx_drain_q;
 
@@ -97,7 +98,8 @@ module mptdc_async_frontend_v2
   wire start_blocked_level = start_latched_q | ~any_ctx_free | ~conv_arm_i
                            | clear_any;
   wire start_accept_level = start_async_i & any_ctx_free & conv_arm_i
-                          & ~start_latched_q & ~clear_any;
+                          & ~start_latched_q & ~clear_any
+                          & ~start_reject_seen_q;
 
   // =========================================================================
   // START rejected: START present but cannot be accepted.  clear_any is part
@@ -105,6 +107,7 @@ module mptdc_async_frontend_v2
   // START during teardown must be counted as rejected rather than disappearing.
   // =========================================================================
   assign start_rejected_o = start_async_i & ~start_accept_seen_q
+                           & ~start_reject_seen_q
                            & start_blocked_level;
 
   // =========================================================================
@@ -124,6 +127,15 @@ module mptdc_async_frontend_v2
       start_accept_seen_q = 1'b0;
     else if (start_accept_level)
       start_accept_seen_q = 1'b1;
+  end
+
+  // START is an event pulse, not a retry-held level.  If a pulse first arrives
+  // while blocked, it stays rejected until the input returns low.
+  always_latch begin
+    if (!rst_n || !start_async_i)
+      start_reject_seen_q = 1'b0;
+    else if (start_rejected_o)
+      start_reject_seen_q = 1'b1;
   end
 
   // =========================================================================

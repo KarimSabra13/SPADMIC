@@ -27,6 +27,8 @@ At the current checkpoint:
 - the async frontend intentionally contains `6` latch-style storage elements that must be reviewed, not treated as accidental inference
 - normal measurement control and context storage now run in `clk_sys`; the near-1 GHz oscillator domains are constrained only for the PD/counter measurement fabric
 - the static PD/counter image CDC is an explicit held-bus contract through `mptdc_hit_capture_bridge`, not a bundle of independently synchronized bits
+- the measurement controller now commits the raw bridge image before final metadata update, so timing closure must check both the raw context-commit path and the later hit-count/flag metadata path
+- the latest local RTL hardening splits the 64-bit hit-count reduction with a row-count register stage; fresh Genus/Innovus reports are required before claiming the prior `clk_sys` popcount hotspot is closed
 - final QoR, timing, and library legality still depend on your actual XFAB/XH018 PDK installation and Genus run logs
 
 ## Directory Structure

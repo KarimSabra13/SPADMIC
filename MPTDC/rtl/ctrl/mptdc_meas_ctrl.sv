@@ -26,7 +26,8 @@ module mptdc_meas_ctrl
 
   // Static-bus capture / context-bank commit controls.
   output logic                  snapshot_en_o,   // pulse: sample PD/counter fabric into bridge
-  output logic                  capture_en_o,    // pulse: commit bridge image to context bank
+  output logic                  capture_en_o,    // pulse: commit raw bridge image / reserve context
+  output logic                  meta_en_o,       // pulse: update hit-count/flag metadata
 
   // Frontend / PD control.
   output logic                  fe_clear_o,      // pulse: clear START/STOP latches
@@ -46,10 +47,13 @@ module mptdc_meas_ctrl
 
   meas_state_e state_q, state_d;
 
-  // Balanced 64-bit hit count in the relaxed clk_sys domain.
+  // Balanced 64-bit hit count in the relaxed clk_sys domain.  The physical
+  // reports still showed this as a single-cycle hotspot, so keep one registered
+  // boundary after the eight independent row reductions.
   logic [1:0] row_pair_cnt_comb [0:NE-1][0:3];
   logic [2:0] row_quad_cnt_comb [0:NE-1][0:1];
   logic [3:0] row_cnt_comb      [0:NE-1];
+  logic [3:0] row_cnt_q         [0:NE-1];
   logic [4:0] pair_cnt_comb     [0:3];
   logic [5:0] half_cnt_comb     [0:1];
   logic [6:0] total_cnt_comb;
@@ -57,6 +61,8 @@ module mptdc_meas_ctrl
   logic [6:0] total_hits_q;
   logic [MAX_HITS_W-1:0] hit_count_q;
   tdc_conv_flags_t flags_q;
+  logic [MAX_HITS_W-1:0] eval_hit_count_comb;
+  tdc_conv_flags_t eval_flags_comb;
 
   wire [MAX_HITS_W-1:0] effective_max_hits = max_hits_cfg_i;
   wire [6:0] effective_max_hits_ext = 7'(effective_max_hits);
@@ -75,14 +81,34 @@ module mptdc_meas_ctrl
       row_cnt_comb[r] = {1'b0, row_quad_cnt_comb[r][0]} + {1'b0, row_quad_cnt_comb[r][1]};
     end
 
-    pair_cnt_comb[0] = {1'b0, row_cnt_comb[0]} + {1'b0, row_cnt_comb[1]};
-    pair_cnt_comb[1] = {1'b0, row_cnt_comb[2]} + {1'b0, row_cnt_comb[3]};
-    pair_cnt_comb[2] = {1'b0, row_cnt_comb[4]} + {1'b0, row_cnt_comb[5]};
-    pair_cnt_comb[3] = {1'b0, row_cnt_comb[6]} + {1'b0, row_cnt_comb[7]};
+    pair_cnt_comb[0] = {1'b0, row_cnt_q[0]} + {1'b0, row_cnt_q[1]};
+    pair_cnt_comb[1] = {1'b0, row_cnt_q[2]} + {1'b0, row_cnt_q[3]};
+    pair_cnt_comb[2] = {1'b0, row_cnt_q[4]} + {1'b0, row_cnt_q[5]};
+    pair_cnt_comb[3] = {1'b0, row_cnt_q[6]} + {1'b0, row_cnt_q[7]};
 
     half_cnt_comb[0] = {1'b0, pair_cnt_comb[0]} + {1'b0, pair_cnt_comb[1]};
     half_cnt_comb[1] = {1'b0, pair_cnt_comb[2]} + {1'b0, pair_cnt_comb[3]};
     total_cnt_comb   = {1'b0, half_cnt_comb[0]} + {1'b0, half_cnt_comb[1]};
+  end
+
+  always_comb begin
+    eval_hit_count_comb = hit_count_q;
+    eval_flags_comb     = flags_q;
+
+    if (effective_max_hits == '0) begin
+      eval_hit_count_comb = '0;
+    end else if (total_cnt_comb > effective_max_hits_ext) begin
+      eval_hit_count_comb = effective_max_hits;
+    end else begin
+      eval_hit_count_comb = total_cnt_comb[MAX_HITS_W-1:0];
+    end
+
+    eval_flags_comb.reserved              = 1'b0;
+    eval_flags_comb.closed_by_fast_maxhit = (effective_max_hits == MAX_HITS_W'(1)) && any_hit;
+    eval_flags_comb.closed_by_maxhits     = (effective_max_hits > MAX_HITS_W'(1))
+                                          && (total_cnt_comb >= effective_max_hits_ext);
+    eval_flags_comb.closed_by_watchdog    = timeout_active_i
+                                          || ((wdt_timeout_i != 16'd0) && !any_hit);
   end
 
   always_comb begin
@@ -93,10 +119,10 @@ module mptdc_meas_ctrl
           state_d = ST_M_MEASURE;
       end
       ST_M_MEASURE:  state_d = ST_M_SNAPSHOT;
-      ST_M_SNAPSHOT: state_d = ST_M_EVAL;
+      ST_M_SNAPSHOT: state_d = ST_M_COUNT;
+      ST_M_COUNT:    state_d = ST_M_EVAL;
       ST_M_EVAL:     state_d = ST_M_CAPTURE;
-      ST_M_CAPTURE:  state_d = ST_M_STOP_OSC;
-      ST_M_STOP_OSC: state_d = ST_M_CLEAR;
+      ST_M_CAPTURE:  state_d = ST_M_CLEAR;
       ST_M_CLEAR:    state_d = ST_M_IDLE;
       default:       state_d = ST_M_IDLE;
     endcase
@@ -108,6 +134,8 @@ module mptdc_meas_ctrl
       total_hits_q <= '0;
       hit_count_q  <= '0;
       flags_q      <= '0;
+      for (int r = 0; r < NE; r++)
+        row_cnt_q[r] <= '0;
     end else begin
       state_q <= state_d;
 
@@ -115,42 +143,36 @@ module mptdc_meas_ctrl
         total_hits_q <= '0;
         hit_count_q  <= '0;
         flags_q      <= '0;
+        for (int r = 0; r < NE; r++)
+          row_cnt_q[r] <= '0;
+      end else if (state_q == ST_M_COUNT) begin
+        for (int r = 0; r < NE; r++)
+          row_cnt_q[r] <= row_cnt_comb[r];
       end else if (state_q == ST_M_EVAL) begin
         total_hits_q <= total_cnt_comb;
-
-        if (effective_max_hits == '0) begin
-          hit_count_q <= '0;
-        end else if (total_cnt_comb > effective_max_hits_ext) begin
-          hit_count_q <= effective_max_hits;
-        end else begin
-          hit_count_q <= total_cnt_comb[MAX_HITS_W-1:0];
-        end
-
-        flags_q.reserved              <= 1'b0;
-        flags_q.closed_by_fast_maxhit <= (effective_max_hits == MAX_HITS_W'(1)) && any_hit;
-        flags_q.closed_by_maxhits     <= (effective_max_hits > MAX_HITS_W'(1))
-                                      && (total_cnt_comb >= effective_max_hits_ext);
-        flags_q.closed_by_watchdog    <= timeout_active_i
-                                      || ((wdt_timeout_i != 16'd0) && !any_hit);
+        hit_count_q  <= eval_hit_count_comb;
+        flags_q      <= eval_flags_comb;
       end
     end
   end
 
   assign snapshot_en_o    = (state_q == ST_M_SNAPSHOT);
-  assign capture_en_o     = (state_q == ST_M_CAPTURE);
-  assign fe_clear_o       = (state_q == ST_M_STOP_OSC);
+  assign capture_en_o     = (state_q == ST_M_COUNT);
+  assign meta_en_o        = (state_q == ST_M_EVAL);
+  assign fe_clear_o       = (state_q == ST_M_EVAL);
   assign pd_clear_o       = (state_q == ST_M_CLEAR);
   assign osc_keep_alive_o = (state_q == ST_M_MEASURE)
-                          || (state_q == ST_M_SNAPSHOT)
-                          || (state_q == ST_M_EVAL)
-                          || (state_q == ST_M_CAPTURE);
+                           || (state_q == ST_M_SNAPSHOT)
+                           || (state_q == ST_M_COUNT)
+                           || (state_q == ST_M_EVAL)
+                           || (state_q == ST_M_CAPTURE);
   // Keep the PD fabric open while the sys-domain controller is still waiting
   // for the synchronized STOP indication. fe_pd_enable still gates real
   // measurement activity; this control only freezes additional accumulation
   // once the static-bus snapshot phase begins.
   assign pd_gate_o        = (state_q == ST_M_IDLE) || (state_q == ST_M_MEASURE);
-  assign close_flags_o    = flags_q;
-  assign hit_count_o      = hit_count_q;
+  assign close_flags_o    = (state_q == ST_M_EVAL) ? eval_flags_comb : flags_q;
+  assign hit_count_o      = (state_q == ST_M_EVAL) ? eval_hit_count_comb : hit_count_q;
   assign state_o          = state_q;
 
 endmodule

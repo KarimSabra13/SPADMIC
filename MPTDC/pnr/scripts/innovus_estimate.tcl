@@ -374,13 +374,17 @@ proc mptdc_pnr_apply_phase_mesh_route_intent {} {
         puts $fh "Net: $net"
         set objs [list]
         catch {set objs [get_nets -quiet $net]}
+        if {[llength $objs] == 0} {
+            puts $fh "  No Innovus net object found for this name."
+            continue
+        }
         set applied 0
         foreach cmd [list \
             [list set_db $objs .top_preferred_routing_layer $pnr(phase_route_top_layer)] \
             [list set_db $objs .route_top_layer $pnr(phase_route_top_layer)] \
             [list setAttribute -net $net -top_preferred_routing_layer $pnr(phase_route_top_layer)] \
         ] {
-            if {![catch {eval $cmd} err]} {
+            if {![catch {{*}$cmd} err]} {
                 puts $fh "  Applied: $cmd"
                 set applied 1
             } else {

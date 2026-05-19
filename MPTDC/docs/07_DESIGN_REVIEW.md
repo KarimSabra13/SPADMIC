@@ -41,7 +41,7 @@ Post-pivot note: this review also predates the latest clock-domain pivot. Any
 statements below that place `mptdc_meas_ctrl` or `mptdc_context_bank` in
 `osc_fast_ph0`, describe context-bank readout as a fast-to-sys static CDC, or
 quote `4-6 ns` frontend deadtime are historical. The live design now sequences
-`SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR` in `clk_sys` and samples the
+`SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR` in `clk_sys` and samples the
 held PD/counter image through `mptdc_hit_capture_bridge`.
 
 Commands rerun during this review:
@@ -141,8 +141,8 @@ That is a good choice.
 | `rtl/pd/mptdc_pd_cell.sv` | One phase detector cell | Samples one slow tap on one fast tap, latches hit + `nfast` | Correct intentional async sampler style. Needs special STA/CDC treatment in silicon. |
 | `rtl/async/mptdc_async_frontend_v2.sv` | START/STOP latch ownership + context allocation | Drives oscillator enables, PD enable, active context, drain flags | Architecturally correct for this class of TDC. Heavy async/latch use is intentional but must be treated as such in implementation. |
 | `rtl/async/mptdc_stop_capture_async.sv` | STOP-edge boundary capture | Captures `phase0_snap`, debug probe, and `slow_boundary_inc` | Valuable for calibration, but again a non-standard async capture structure. |
-| `rtl/async/mptdc_context_bank.sv` | Double-buffered frozen snapshots | Captured in fast domain, read in sys domain after drain flag sync | Good architectural choice. Read-side bus CDC relies on a static-data assumption that must be explicitly signed off. |
-| `rtl/ctrl/mptdc_meas_ctrl.sv` | Fast-domain measurement FSM | Sees PD bitmap, closes measurement, sequences capture/stop/clear | One of the strongest blocks in the repo. The `CAPTURE -> STOP_OSC -> CLEAR` sequence is the right idea. |
+| `rtl/async/mptdc_context_bank.sv` | Double-buffered frozen snapshots | Raw image and metadata are written in `clk_sys`; drain reads after drain-flag sync | Good architectural choice. The wide bus CDC is isolated upstream by the hit-capture bridge and static-image contract. |
+| `rtl/ctrl/mptdc_meas_ctrl.sv` | `clk_sys` measurement FSM | Samples held PD image, pipelines row counts, commits raw context, updates metadata, and clears fabric safely | One of the strongest blocks in the repo. The `SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR` sequence is the live ordering. |
 | `rtl/ctrl/mptdc_drain_ctrl.sv` | Sys-domain frozen-context scanner | Converts context snapshot to META/HIT records, releases contexts | Clean split from the frontend. `released_mask` is a good detail. |
 | `rtl/ctrl/mptdc_watchdog.sv` | Global inactivity watchdog | Forces emergency reset if no conversion completes | Simple and acceptable as a safety net. |
 | `rtl/readout/mptdc_narrow16_tx_v2.sv` | 16-bit serializer | Converts FIFO records into RAW_FEATURES / RAW_TIMESTAMP / FULL packets | Packet formatting is coherent and consistent with the package helpers. |
@@ -155,15 +155,16 @@ That is a good choice.
 The key sequence in `mptdc_meas_ctrl.sv` is:
 
 ```text
-IDLE -> MEASURE -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
+IDLE -> MEASURE -> SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR -> IDLE
 ```
 
 This is the right idea.
 
 Why it matters:
 
-- `CAPTURE` freezes the data before teardown
-- `STOP_OSC` drops frontend ownership before destructive clear
+- `COUNT` protects the raw image before destructive clear
+- `EVAL` updates metadata and drops frontend ownership before destructive clear
+- `CAPTURE` is an ordering/settle state after metadata update
 - `CLEAR` is delayed until after oscillator shutdown intent is established
 
 This is a real silicon-minded improvement, not just an RTL cleanup.
@@ -458,7 +459,7 @@ Recommended enhancement:
 
 Evidence:
 
-- `rtl/ctrl/mptdc_meas_ctrl.sv` intentionally sequences `CAPTURE -> STOP_OSC -> CLEAR`
+- `rtl/ctrl/mptdc_meas_ctrl.sv` intentionally sequences `COUNT -> EVAL -> CAPTURE -> CLEAR`
 - `rtl/pd/mptdc_pd_cell.sv` still uses asynchronous clear on flops clocked by `fast_phase[*]`
 - `rtl/cdc/mptdc_gray_cnt_sync.sv` also uses async clear around oscillator-driven state
 
@@ -468,7 +469,7 @@ The architecture reduces the risk by stopping the slow-side activity before dest
 
 Recommended enhancement:
 
-- run a formal or timed review specifically on STOP_OSC/CLEAR behavior
+- run a formal or timed review specifically on frontend-clear/CLEAR behavior
 - document why the next conversion cannot be contaminated by a clear/deassert coincidence on `fast_phase[*]`
 - include this case explicitly in implementation-stage signoff
 

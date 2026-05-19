@@ -104,7 +104,7 @@ module mptdc_core
   // =========================================================================
   //  Internal wires — meas_ctrl (clk_sys domain)
   // =========================================================================
-  wire           meas_capture_en, meas_snapshot_en, meas_fe_clear, meas_pd_clear;
+  wire           meas_capture_en, meas_meta_en, meas_snapshot_en, meas_fe_clear, meas_pd_clear;
   wire           meas_osc_keep_alive;
   wire           meas_pd_gate;        // v2.2: PD gate for fast-close freeze when max_hits=1
   tdc_conv_flags_t meas_close_flags;
@@ -465,6 +465,7 @@ module mptdc_core
     .max_hits_cfg_i   (cfg_i.max_hits),
     .wdt_timeout_i    (cfg_i.wdt_ctx_timeout),
     .capture_en_o     (meas_capture_en),
+    .meta_en_o        (meas_meta_en),
     .snapshot_en_o    (meas_snapshot_en),
     .fe_clear_o       (meas_fe_clear),
     .pd_clear_o       (meas_pd_clear),
@@ -496,6 +497,7 @@ module mptdc_core
     .rst_n                (rst_sys_drain_n),
     .capture_ctx_i        (fe_active_ctx),
     .capture_en_i         (meas_capture_en),
+    .meta_en_i            (meas_meta_en),
     .capture_snapshot_i   (hit_capture_snapshot),
     .hit_count_i          (meas_hit_count),
     .flags_i              (meas_close_flags),

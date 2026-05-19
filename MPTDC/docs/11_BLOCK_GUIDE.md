@@ -96,6 +96,9 @@ The context bank is where an in-flight conversion becomes a frozen drainable
 record. In the active pivot it is synchronous to `clk_sys`; the wide measurement
 fabric CDC is isolated one stage earlier by `mptdc_hit_capture_bridge`. This
 keeps context storage and drain ownership in the same system-clock timing domain.
+The raw image is committed before metadata is finalized; a later metadata-update
+pulse fills in hit count and close flags before the drain FSM can observe the
+context through its synchronizer.
 
 ## 4. CDC blocks
 
@@ -153,7 +156,7 @@ This is one of the most important blocks in the design because it owns:
 - close detection
 - hit-count-based stop
 - watchdog-based stop
-- the `SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR` sequence
+- the `SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR` sequence
 
 That sequence is the core of the design's safe shutdown behavior.
 

@@ -111,6 +111,19 @@ proc mptdc_try_set_db {objects attr value} {
     catch {set_db $objects $attr $value}
 }
 
+proc mptdc_try_preserve_cells {cells} {
+    if {[llength $cells] == 0} {
+        return
+    }
+    # Genus can emit noisy errors when preserve/dont_touch is applied to
+    # partially mapped hierarchy.  Keep this helper intentionally conservative:
+    # try leaf-safe attributes, but do not let preservation hygiene dominate the
+    # real timing log.
+    catch {set_dont_touch $cells true}
+    catch {set_db $cells .dont_touch true}
+    catch {set_db $cells .ungroup_ok false}
+}
+
 proc mptdc_report_hotspot_timing {rpt_file title patterns} {
     set cells [list]
     foreach pattern $patterns {
@@ -202,10 +215,7 @@ proc mptdc_preserve_physical_hierarchy {} {
         set cells [list]
         catch {set cells [get_cells -quiet -hierarchical $pattern]}
         if {[llength $cells] > 0} {
-            catch {set_dont_touch $cells true}
-            mptdc_try_set_db $cells .dont_touch true
-            mptdc_try_set_db $cells .preserve true
-            mptdc_try_set_db $cells .ungroup_ok false
+            mptdc_try_preserve_cells $cells
         }
     }
 
@@ -216,7 +226,6 @@ proc mptdc_preserve_physical_hierarchy {} {
         set modules [list]
         catch {set modules [get_db modules $module_pattern]}
         mptdc_try_set_db $modules .dont_touch true
-        mptdc_try_set_db $modules .preserve true
         mptdc_try_set_db $modules .ungroup_ok false
     }
 }

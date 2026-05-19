@@ -40,8 +40,12 @@ proc mptdc_try_false_path_pins {label patterns} {
     }
 
     puts "MPTDC_SDC_INFO: false-pathing $label ([llength $matched] pins)"
-    set_false_path -to $matched
-    set_false_path -through $matched
+    if {[catch {set_false_path -to $matched} err]} {
+        puts "MPTDC_SDC_WARN: set_false_path -to failed for $label: $err"
+    }
+    if {[catch {set_false_path -through $matched} err]} {
+        puts "MPTDC_SDC_WARN: set_false_path -through failed for $label: $err"
+    }
 }
 
 proc mptdc_create_osc_tap_clocks {base_name period tap_step tap_pins} {
@@ -218,7 +222,10 @@ mptdc_try_dont_touch *start_timeout_sync_pipe*
 mptdc_try_dont_touch *start_timeout_latched*
 mptdc_try_dont_touch *start_rejected_pending*
 mptdc_try_dont_touch *rejected_sync_pipe*
-mptdc_try_dont_touch *gen_pd_row*gen_pd_col*u_pd*
+# PD hierarchy preservation is handled by the Genus flow procedure, where the
+# tool can distinguish elaborated hierarchy from leaf timing objects.  Avoid a
+# broad SDC-level dont_touch on partially mapped hierarchy because Genus logs it
+# as an SDC failure and makes constraint health ambiguous.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. CDC MAX DELAY
@@ -287,8 +294,12 @@ set_input_transition $design(INPUT_TRANSITION) $async_inputs_and_reset
 # ─────────────────────────────────────────────────────────────────────────────
 # 11. DESIGN RULES
 # ─────────────────────────────────────────────────────────────────────────────
-set_max_fanout     $design(MAX_FANOUT)     [current_design]
-set_max_transition $design(MAX_TRANSITION) [current_design]
+if {[catch {set_max_fanout $design(MAX_FANOUT) [current_design]} err]} {
+    puts "MPTDC_SDC_WARN: set_max_fanout current_design failed: $err"
+}
+if {[catch {set_max_transition $design(MAX_TRANSITION) [current_design]} err]} {
+    puts "MPTDC_SDC_WARN: set_max_transition current_design failed: $err"
+}
 
 # Reset leaf nets are intentionally distributed hierarchically in RTL. Normal
 # clk_sys consumers use these as synchronous reset controls; keep their

@@ -24,6 +24,7 @@ module tb_context_bank_unit;
   logic                   rst_n;
   ctx_id_t                capture_ctx;
   logic                   capture_en;
+  logic                   meta_en;
   mptdc_ctx_snapshot_t    capture_snapshot;
   logic [MAX_HITS_W-1:0]  hit_count;
   tdc_conv_flags_t        flags;
@@ -36,6 +37,7 @@ module tb_context_bank_unit;
     .rst_n                (rst_n),
     .capture_ctx_i        (capture_ctx),
     .capture_en_i         (capture_en),
+    .meta_en_i            (meta_en),
     .capture_snapshot_i   (capture_snapshot),
     .hit_count_i          (hit_count),
     .flags_i              (flags),
@@ -86,6 +88,9 @@ module tb_context_bank_unit;
     capture_en                          = 1'b1;
     @(posedge clk_sys);
     capture_en                          = 1'b0;
+    meta_en                             = 1'b1;
+    @(posedge clk_sys);
+    meta_en                             = 1'b0;
   endtask
 
   task automatic check_ctx(
@@ -141,6 +146,7 @@ module tb_context_bank_unit;
     rst_n                = 1'b0;
     capture_ctx          = '0;
     capture_en           = 1'b0;
+    meta_en              = 1'b0;
     capture_snapshot     = '0;
     hit_count            = '0;
     flags                = '0;

@@ -140,7 +140,7 @@ The slow counter also takes a STOP-side Gray snapshot so exported `Nslow` is coh
 
 ### 5.5 Close detection
 
-`mptdc_meas_ctrl` now runs on `clk_sys`. STOP visibility is synchronized into the system domain, then the controller samples the held measurement image and closes the conversion when one of three conditions is observed in that registered image:
+`mptdc_meas_ctrl` now runs on `clk_sys`. STOP visibility is synchronized into the system domain, then the controller samples the held measurement image, commits that raw image before destructive clear, and closes the conversion when one of three conditions is observed in the registered image:
 
 - fast close: `max_hits_cfg_i == 1` and any PD cell has asserted `hit_level`
 - counted close: registered hit count has reached `max_hits_cfg_i` for `max_hits_cfg_i > 1`
@@ -151,15 +151,15 @@ The slow counter also takes a STOP-side Gray snapshot so exported `Nslow` is coh
 The system-domain measurement sequence is:
 
 ```text
-IDLE -> MEASURE -> SNAPSHOT -> EVAL -> CAPTURE -> STOP_OSC -> CLEAR -> IDLE
+IDLE -> MEASURE -> SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR -> IDLE
 ```
 
 This ordering matters:
 
 - `SNAPSHOT` samples the held PD/counter image through `mptdc_hit_capture_bridge`
-- `EVAL` computes hit count and close flags from the registered bridge image
-- `CAPTURE` commits that registered image into the context bank and marks the context drainable
-- `STOP_OSC` clears the frontend latches, which stops the slow oscillator and leaves phases static
+- `COUNT` registers row-level hit counts, commits the raw image into the context bank, and marks the context owned/drainable before the PD fabric can be cleared
+- `EVAL` computes hit count and close flags from the registered row counts and updates the context metadata while clearing frontend ownership for faster re-arm
+- `CAPTURE` is a settling/ordering state after metadata update
 - `CLEAR` asynchronously clears the PD cells and counters only after the oscillators are safely quiesced
 
 This sequence is one of the main silicon-safety improvements over older versions.
@@ -534,7 +534,8 @@ Inputs:
 - max-hits config and watchdog timeout
 
 Outputs:
-- capture pulse
+- raw capture / context-reservation pulse
+- metadata-update pulse
 - frontend clear pulse
 - PD clear pulse
 - PD gate level
@@ -544,11 +545,13 @@ Outputs:
 Behavior:
 - waits for synchronized START/STOP ownership
 - `SNAPSHOT` samples the held measurement fabric
-- `EVAL` computes hit count and close flags from the registered image
-- `CAPTURE -> STOP_OSC -> CLEAR` commits data before destructive clear
+- `COUNT` registers row counts and commits the raw image before destructive clear
+- `EVAL` computes hit count/flags, updates metadata, and clears frontend ownership
+- `CAPTURE -> CLEAR` preserves ordering before PD/counter clear
 
 Silicon notes:
 - moving this control cone to `clk_sys` is the main STA hardening pivot after the near-1 GHz standard-cell path proved physically unrealistic
+- the hit-count reduction is intentionally split across row-count and final-count cycles so normal `clk_sys` STA sees shallower logic
 - PD gate prevents bogus hits during startup and teardown
 
 ### 6.19 `rtl/ctrl/mptdc_drain_ctrl.sv`

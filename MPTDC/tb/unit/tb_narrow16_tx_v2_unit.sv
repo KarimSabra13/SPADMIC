@@ -36,12 +36,19 @@ module tb_narrow16_tx_v2_unit;
   // Queue ordering mirrors the drain contract: one META record followed by
   // zero or more HIT records for the current conversion.
   mptdc_acq_rec_t fifo_mem [$];
+  logic fifo_pop_q;
 
   assign fifo_rd_valid = (fifo_mem.size() > 0);
   assign fifo_rd_data  = (fifo_mem.size() > 0) ? fifo_mem[0] : '0;
 
   always_ff @(posedge clk_sys) begin
-    if (fifo_rd_en && fifo_mem.size() > 0)
+    fifo_pop_q <= fifo_rd_en && (fifo_mem.size() > 0);
+  end
+
+  // Model FWFT timing without a same-edge TB/DUT race: data is stable for the
+  // sampling edge and the consumed entry disappears after that edge.
+  always @(negedge clk_sys) begin
+    if (fifo_pop_q && fifo_mem.size() > 0)
       void'(fifo_mem.pop_front());
   end
 
@@ -164,6 +171,7 @@ module tb_narrow16_tx_v2_unit;
     narrow_ready = 1'b0;
     out_mode = OUT_MODE_RAW_FEATURES;
     fifo_mem.delete();
+    fifo_pop_q = 1'b0;
     repeat (5) @(posedge clk_sys);
     rst_n = 1'b1;
     repeat (2) @(posedge clk_sys);

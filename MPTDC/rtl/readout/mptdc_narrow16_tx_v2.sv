@@ -247,7 +247,10 @@ module mptdc_narrow16_tx_v2
 
     case (state_q)
       S_IDLE: begin
-        // Pop META when available
+        // Pop META when available.  The FIFO full/read-pointer path reported by
+        // Innovus should be fixed with a registered FIFO output or read command
+        // boundary; keep the protocol guard here so the serializer never consumes
+        // a malformed HIT as a conversion header.
         fifo_rd_en_o = fifo_rd_valid_i
                      & (fifo_rd_data_i.kind == ACQ_REC_META);
       end

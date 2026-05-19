@@ -318,10 +318,10 @@ coverage.
 | `mptdc_reset_sync` | async assert, sync release, recovery after short/long reset pulses |
 | `mptdc_async_frontend_v2` | START acceptance, STOP acceptance, context availability, ignored/rejected starts, held-level behavior |
 | `mptdc_stop_capture_async` | STOP-edge boundary metadata, phase snapshots, boundary carry assumptions |
-| `mptdc_context_bank` | freeze, retention, drain read stability, release, double-buffer interaction |
+| `mptdc_context_bank` | split raw-image capture and metadata update, freeze, retention, drain read stability, release, double-buffer interaction |
 | `mptdc_gray_cnt_sync` | Gray transition assumptions, snapshot coherence, reset behavior |
 | `mptdc_pd_cell` and PD matrix | legal 8x8 geometry, hit latch/clear, one-cell and multi-cell hit patterns, model/macro assumptions |
-| `mptdc_meas_ctrl` | fast close, max-hit close, watchdog close, CAPTURE->STOP_OSC->CLEAR ordering |
+| `mptdc_meas_ctrl` | fast close, max-hit close, watchdog close, `SNAPSHOT->COUNT->EVAL->CAPTURE->CLEAR` ordering, no `pd_clear` before raw commit/metadata update |
 | `mptdc_drain_ctrl` | META-first sequencing, HIT count agreement, context release, zero-hit and max-hit scans |
 | `mptdc_sync_fifo` | full/empty, simultaneous read/write, clear/reset, sustained backpressure |
 | `mptdc_csr_minimal` | W/R/W1C/readback, invalid or stale status avoidance, soft reset, `OVF_COUNT`, `CSR_HIT_COUNT` |

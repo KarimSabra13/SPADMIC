@@ -38,7 +38,7 @@ Key architectural facts from RTL:
 | Shared-readout export | optional `shared_readout_en_i` switches the FIFO consumer from the local serializer to the `acq_*` export interface |
 | System clock | `160 MHz` |
 | Measurement control/context storage | `clk_sys`; oscillator/PD/counter fabric remains the measurement-local exception |
-| CDC handoff | held PD/counter image sampled through `mptdc_hit_capture_bridge` before context commit and PD clear |
+| CDC handoff | held PD/counter image sampled through `mptdc_hit_capture_bridge`; raw image is committed before metadata update and before PD clear |
 | Oscillator timing model | behavioral model in simulation, stub for synthesis |
 
 ### Verification
@@ -57,7 +57,7 @@ That means:
 - the deterministic overflow/recovery and pad-reset readback closure scenarios are regression-safe locally
 - the exhaustive VIP closure test still passes after the coverage-suite expansion
 
-Cadence-only flows are prepared but must be run on a machine with `xrun` / `xcelium`, `imc`, and `genus`.
+Cadence-only flows are prepared but must be run on a machine with `xrun` / `xcelium`, `imc`, and `genus`. The most recent pulled Genus/Innovus snapshots were not timing-clean; after the latest local hit-count/deadtime hardening, a new lab run is required before any timing-closure claim.
 
 ### Coverage
 
