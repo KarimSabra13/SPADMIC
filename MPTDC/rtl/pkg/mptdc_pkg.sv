@@ -33,8 +33,9 @@ package mptdc_pkg;
   parameter int unsigned OSC_TS_SLOW_PS  = 55;
   parameter int unsigned OSC_TS_FAST_PS  = 50;
 
-  // Phase-detector matrix: NE × NE.  The active differential-oscillator
-  // contract uses 8 taps per ring, so PD_N=64 and PD_W=6.
+  // Phase-detector matrix: NE x NE.  The active macro is intentionally fixed at
+  // 8 taps per ring.  Keep NE as the single source of truth for widths and
+  // loops, but do not treat larger NE values as a supported tapeout target.
   localparam int unsigned PD_N = NE * NE;
   localparam int unsigned PH_W = (NE <= 1) ? 1 : $clog2(NE);
   localparam int unsigned PD_W = (PD_N <= 1) ? 1 : $clog2(PD_N);
@@ -93,10 +94,13 @@ package mptdc_pkg;
   typedef logic [PD_W-1:0] pd_idx_t;
 
   // =========================================================================
-  // Double-buffer context parameters (hardwired for v2.2)
+  // Double-buffer context parameters.  The retained context bank is fixed at
+  // two entries: one context may drain while the frontend protects the next
+  // accepted conversion under backpressure.
   // =========================================================================
   localparam int unsigned N_CTX   = 2;
   localparam int unsigned CTX_W   = (N_CTX <= 1) ? 1 : $clog2(N_CTX);  // 1 bit
+  localparam int unsigned PACKET_CTX_W = 2;  // frozen 16-bit header allocation
 
   typedef logic [CTX_W-1:0] ctx_id_t;
 

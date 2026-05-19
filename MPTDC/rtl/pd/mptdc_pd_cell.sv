@@ -30,6 +30,10 @@
 // clear_window is an asynchronous clear from the system domain — it is
 // safe because it is only asserted when the oscillators are being reset
 // (no active edges on fast_phase).
+//
+// Physical-design note: this cell is replicated in a regular 8x8 island.  Keep
+// hierarchy and pin structure reviewable so backend can match slow/fast tap
+// loading, routing RC, and PVT-sensitive skew across the full matrix.
 // =============================================================================
 (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
 module mptdc_pd_cell #(
@@ -97,6 +101,22 @@ module mptdc_pd_cell #(
 
   assign hit_level = hit_latched;
   assign nfast_hit = nfast_hit_latched;
+
+  // synthesis translate_off
+  logic hit_seen_q;
+
+  always @(posedge fast_phase or negedge rst_n or posedge clear_window) begin
+    if (!rst_n || clear_window) begin
+      hit_seen_q <= 1'b0;
+    end else begin
+      if (hit_seen_q) begin
+        assert (hit_level)
+          else $error("mptdc_pd_cell: hit_level deasserted before clear_window");
+      end
+      if (hit_level) hit_seen_q <= 1'b1;
+    end
+  end
+  // synthesis translate_on
 
 endmodule
 

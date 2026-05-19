@@ -4,7 +4,12 @@
 // =============================================================================
 // Project  : SPAD_MPTDC v2.5
 // File     : mptdc_context_bank.sv
-// Purpose  : System-clock context store for completed Vernier measurements.
+// Purpose  : Fixed two-entry system-clock context store for completed Vernier
+//            measurements.
+// Domain   : clk_sys only.
+// Why      : The bank protects a complete raw measurement image before PD/counter
+//            clear, then lets readout drain one context while the frontend can
+//            accept the next conversion under backpressure.
 // =============================================================================
 module mptdc_context_bank
   import mptdc_pkg::*;
@@ -23,7 +28,7 @@ module mptdc_context_bank
   output mptdc_ctx_snapshot_t           snapshot_o
 );
 
-  mptdc_ctx_snapshot_t ctx_snapshot [N_CTX];
+  mptdc_ctx_snapshot_t ctx_snapshot_q [N_CTX];
   mptdc_ctx_snapshot_t capture_snapshot_with_meta;
 
   always_comb begin
@@ -35,16 +40,25 @@ module mptdc_context_bank
   always_ff @(posedge clk_sys) begin
     if (!rst_n) begin
       for (int i = 0; i < N_CTX; i++)
-        ctx_snapshot[i] <= '0;
+        ctx_snapshot_q[i] <= '0;
     end else if (capture_en_i) begin
-      ctx_snapshot[capture_ctx_i] <= capture_snapshot_with_meta;
+      ctx_snapshot_q[capture_ctx_i] <= capture_snapshot_with_meta;
     end else if (meta_en_i) begin
-      ctx_snapshot[capture_ctx_i].hit_count <= hit_count_i;
-      ctx_snapshot[capture_ctx_i].flags     <= flags_i;
+      ctx_snapshot_q[capture_ctx_i].hit_count <= hit_count_i;
+      ctx_snapshot_q[capture_ctx_i].flags     <= flags_i;
     end
   end
 
-  assign snapshot_o = ctx_snapshot[read_ctx_i];
+  assign snapshot_o = ctx_snapshot_q[read_ctx_i];
+
+  // synthesis translate_off
+  always_ff @(posedge clk_sys) begin
+    if (rst_n) begin
+      assert (!(capture_en_i && meta_en_i))
+        else $error("mptdc_context_bank: capture_en_i and meta_en_i overlap");
+    end
+  end
+  // synthesis translate_on
 
 endmodule : mptdc_context_bank
 

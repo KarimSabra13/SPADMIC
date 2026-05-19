@@ -60,6 +60,20 @@ module mptdc_core
   output wire [ACQ_REC_W-1:0]  acq_data_o
 );
 
+  // synthesis translate_off
+  initial begin
+    if (NE != 8) begin
+      $fatal(1, "mptdc_core: active tapeout target requires fixed NE=8 (got %0d)", NE);
+    end
+    if (N_CTX != 2) begin
+      $fatal(1, "mptdc_core: retained context bank requires fixed N_CTX=2 (got %0d)", N_CTX);
+    end
+    if (MAX_HITS > 15) begin
+      $fatal(1, "mptdc_core: frozen packet header supports MAX_HITS<=15 (got %0d)", MAX_HITS);
+    end
+  end
+  // synthesis translate_on
+
   // =========================================================================
   //  Internal wires — oscillators
   // =========================================================================
@@ -383,9 +397,11 @@ module mptdc_core
   );
 
   // ── Phase Detector Matrix (PD_N cells) ─────────────────────────
-  // slow_phase is gated by pd_enable_gated: PD cells only see
-  // oscillator edges when FSM is in MEASURE and pd_gate is high.
-  // This prevents hits during rst_fast_n warmup (when counters = 0).
+  // The PD island is the critical physical-performance block.  Keep the 8x8
+  // hierarchy regular so backend placement/routing can preserve row/column
+  // symmetry, matched phase-tap loading, and reviewable RC/skew assumptions.
+  // slow_phase gating prevents startup/teardown edges from becoming false hits;
+  // it is a functional enable boundary, not a substitute for PD placement review.
   for (genvar ns = 0; ns < NE; ns++) begin : gen_pd_row
     for (genvar nf = 0; nf < NE; nf++) begin : gen_pd_col
       localparam int unsigned CELL = ns * NE + nf;

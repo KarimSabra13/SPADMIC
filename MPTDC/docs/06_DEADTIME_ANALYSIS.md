@@ -71,6 +71,11 @@ The intended policy is deterministic saturation:
 
 The frontend and core now hold a rejected START indication until `clk_sys` can count it, so short async rejected pulses are not sampled opportunistically as one-cycle levels.
 
+The retained two-context bank is part of this pressure envelope: one frozen
+conversion can drain while the frontend protects the next accepted image. Removing
+or collapsing the bank would require a new deadtime/backpressure proof even if
+the external packet grammar stayed unchanged.
+
 ## 5. Precision implications
 
 The pivot should not bias the Vernier measurement itself because START/STOP boundaries, oscillator launch, PD sampling, STOP-side boundary capture, and counter snapshots remain measurement-local. The risk is not arithmetic bias from `clk_sys`; the risk is violating the held-image CDC contract.

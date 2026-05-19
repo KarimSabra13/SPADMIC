@@ -98,7 +98,8 @@ module mptdc_drain_ctrl
   // =========================================================================
   // Scan counters
   // =========================================================================
-  localparam int unsigned PD_SCAN_W = PD_W + 1;  // must represent sentinel PD_N=64
+  localparam int unsigned PD_SCAN_W = PD_W + 1;  // includes one sentinel value
+  localparam logic [PD_SCAN_W-1:0] PD_SCAN_DONE = PD_SCAN_W'(PD_N);
 
   logic [PD_SCAN_W-1:0]     pd_scan_q;
   ph_idx_t                  ns_cnt_q, nf_cnt_q;
@@ -108,7 +109,7 @@ module mptdc_drain_ctrl
   // Scan helpers
   logic scan_done, all_hits_found, cell_has_hit;
   assign pd_scan_idx    = pd_idx_t'(pd_scan_q[PD_W-1:0]);
-  assign scan_done      = (pd_scan_q >= PD_SCAN_W'(PD_N));
+  assign scan_done      = (pd_scan_q >= PD_SCAN_DONE);
   assign all_hits_found = (event_seq_q >= snapshot_i.hit_count);
   assign cell_has_hit   = ~scan_done & snapshot_i.hit_level[pd_scan_idx];
 
@@ -273,6 +274,28 @@ module mptdc_drain_ctrl
   // =========================================================================
   assign read_ctx_o = (state_q == ST_D_IDLE) ? selected_ctx : drain_ctx_q;
   assign state_o    = state_q;
+
+  // synthesis translate_off
+  logic          pending_hold_valid_q;
+  mptdc_acq_rec_t pending_hold_data_q;
+
+  always_ff @(posedge clk_sys) begin
+    if (!rst_n) begin
+      pending_hold_valid_q <= 1'b0;
+      pending_hold_data_q  <= '0;
+    end else begin
+      if (state_q == ST_D_EOC) assert (!pending_wr_valid_q);
+
+      if (pending_wr_valid_q && fifo_wr_full_i) begin
+        if (pending_hold_valid_q) assert (pending_wr_data_q == pending_hold_data_q);
+        pending_hold_valid_q <= 1'b1;
+        pending_hold_data_q  <= pending_wr_data_q;
+      end else begin
+        pending_hold_valid_q <= 1'b0;
+      end
+    end
+  end
+  // synthesis translate_on
 
 endmodule
 

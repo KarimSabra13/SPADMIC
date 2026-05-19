@@ -199,6 +199,19 @@ module mptdc_async_frontend_v2
   assign osc_fast_en_async_o  = stop_latched_q | osc_keep_alive_i;
   assign pd_enable_async_o    = start_latched_q & stop_latched_q;
 
+  // synthesis translate_off
+  always_comb begin
+    if (start_accept_level) begin
+      assert (!start_rejected_o)
+        else $error("mptdc_async_frontend_v2: START accepted and rejected together");
+    end
+    if (!start_latched_q) begin
+      assert (!pd_enable_async_o)
+        else $error("mptdc_async_frontend_v2: PD enable without active START");
+    end
+  end
+  // synthesis translate_on
+
 endmodule
 
 `default_nettype wire

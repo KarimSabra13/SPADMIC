@@ -47,14 +47,18 @@ module mptdc_meas_ctrl
 
   meas_state_e state_q, state_d;
 
+  localparam int unsigned ROW_PAIR_N = NE / 2;
+  localparam int unsigned ROW_QUAD_N = NE / 4;
+  localparam int unsigned PAIR_GROUP_N = NE / 2;
+
   // Balanced 64-bit hit count in the relaxed clk_sys domain.  The physical
   // reports still showed this as a single-cycle hotspot, so keep one registered
   // boundary after the eight independent row reductions.
-  logic [1:0] row_pair_cnt_comb [0:NE-1][0:3];
-  logic [2:0] row_quad_cnt_comb [0:NE-1][0:1];
+  logic [1:0] row_pair_cnt_comb [0:NE-1][0:ROW_PAIR_N-1];
+  logic [2:0] row_quad_cnt_comb [0:NE-1][0:ROW_QUAD_N-1];
   logic [3:0] row_cnt_comb      [0:NE-1];
   logic [3:0] row_cnt_q         [0:NE-1];
-  logic [4:0] pair_cnt_comb     [0:3];
+  logic [4:0] pair_cnt_comb     [0:PAIR_GROUP_N-1];
   logic [5:0] half_cnt_comb     [0:1];
   logic [6:0] total_cnt_comb;
 
@@ -174,6 +178,22 @@ module mptdc_meas_ctrl
   assign close_flags_o    = (state_q == ST_M_EVAL) ? eval_flags_comb : flags_q;
   assign hit_count_o      = (state_q == ST_M_EVAL) ? eval_hit_count_comb : hit_count_q;
   assign state_o          = state_q;
+
+  // synthesis translate_off
+  meas_state_e prev_state_q;
+  always_ff @(posedge clk_sys) begin
+    if (!rst_n) begin
+      prev_state_q <= ST_M_IDLE;
+    end else begin
+      if (snapshot_en_o) assert (state_q == ST_M_SNAPSHOT);
+      if (capture_en_o)  assert (state_q == ST_M_COUNT);
+      if (meta_en_o)     assert (state_q == ST_M_EVAL);
+      if (pd_clear_o)    assert (state_q == ST_M_CLEAR);
+      if (state_q == ST_M_CLEAR) assert (prev_state_q == ST_M_CAPTURE);
+      prev_state_q <= state_q;
+    end
+  end
+  // synthesis translate_on
 
 endmodule
 

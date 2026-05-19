@@ -95,14 +95,13 @@ module mptdc_narrow16_tx_v2
   // Output word formation
   // ---------------------------------------------------------------------------
 
-  // Header: [15]=1, [14:13]=ctx_id, [12]=phase0, [11:8]=hit_count,
-  //         [7:4]=flags, [3:2]=out_mode, [1:0]=rsvd
   logic [NARROW_W-1:0] header_word;
   // Header: [15:14]=2'b10 (header), [13:12]=ctx_id, [11]=phase0,
   // [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=slow_boundary_inc
-  // ctx_id_q is CTX_W bits (1 for N_CTX=2) — always pad to 2 bits
+  // ctx_id_q is CTX_W bits (fixed one bit for N_CTX=2) and is padded into the
+  // frozen two-bit packet field.
   assign header_word = {2'b10,
-                        2'(ctx_id_q),
+                        PACKET_CTX_W'(ctx_id_q),
                         phase0_snap_q,
                         hit_count_q,
                         flags_q,
@@ -293,6 +292,31 @@ module mptdc_narrow16_tx_v2
       default: ;
     endcase
   end
+
+  // synthesis translate_off
+  logic                  narrow_hold_valid_q;
+  logic [NARROW_W-1:0]  narrow_data_hold_q;
+
+  always_ff @(posedge clk_sys) begin
+    if (!rst_n) begin
+      narrow_hold_valid_q <= 1'b0;
+      narrow_data_hold_q  <= '0;
+    end else begin
+      if (fifo_rd_en_o) assert (fifo_rd_valid_i);
+
+      if (narrow_valid_o && !narrow_ready_i) begin
+        if (narrow_hold_valid_q) begin
+          assert (narrow_valid_o);
+          assert (narrow_data_o == narrow_data_hold_q);
+        end
+        narrow_hold_valid_q <= 1'b1;
+        narrow_data_hold_q  <= narrow_data_o;
+      end else begin
+        narrow_hold_valid_q <= 1'b0;
+      end
+    end
+  end
+  // synthesis translate_on
 
 endmodule
 

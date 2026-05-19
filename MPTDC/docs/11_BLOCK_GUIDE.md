@@ -100,6 +100,10 @@ The raw image is committed before metadata is finalized; a later metadata-update
 pulse fills in hit count and close flags before the drain FSM can observe the
 context through its synchronizer.
 
+The bank is intentionally retained as a fixed two-entry structure. Its value is
+not generic scaling; it protects one complete raw image while another accepted
+conversion can be prepared under packet/FIFO backpressure.
+
 ## 4. CDC blocks
 
 | Block | File | Role |
@@ -139,6 +143,10 @@ while simulation and synthesis use different oscillator realizations.
 This is the leaf that turns the slow/fast phase relationship into one hit-level
 decision plus local metadata. It is replicated `64` times, so its behavior is
 small locally but architecturally dominant globally.
+
+The topology is frozen for the active macro. Optimization should focus on
+regular placement, matched phase loading, routing RC/skew control, hierarchy
+preservation, and PVT/matching review rather than changing the PD function.
 
 ## 7. Control blocks
 

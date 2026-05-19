@@ -43,6 +43,17 @@ module mptdc_sync_fifo #(
   localparam int PTR_W = $clog2(DEPTH);
   localparam int LVL_W = $clog2(DEPTH + 1);
 
+  // synthesis translate_off
+  initial begin
+    if (DEPTH < 2) begin
+      $fatal(1, "mptdc_sync_fifo: DEPTH must be >= 2 (got %0d)", DEPTH);
+    end
+    if ((DEPTH & (DEPTH - 1)) != 0) begin
+      $fatal(1, "mptdc_sync_fifo: DEPTH must be a power of two (got %0d)", DEPTH);
+    end
+  end
+  // synthesis translate_on
+
   // =========================================================================
   // Storage + pointers
   // =========================================================================
@@ -117,6 +128,30 @@ module mptdc_sync_fifo #(
       valid_q <= (count_nxt != '0);
     end
   end
+
+  // synthesis translate_off
+  logic             rd_hold_valid_q;
+  logic [WIDTH-1:0] rd_data_hold_q;
+
+  always_ff @(posedge clk) begin
+    if (!rst_n || clr_i) begin
+      rd_hold_valid_q <= 1'b0;
+      rd_data_hold_q  <= '0;
+    end else begin
+      assert (count_q <= LVL_W'(DEPTH));
+      if (wr_full_o)  assert (!wr_eff);
+      if (!rd_valid_o) assert (!rd_eff);
+
+      if (rd_valid_o && !rd_en_i) begin
+        if (rd_hold_valid_q) assert (rd_data_o == rd_data_hold_q);
+        rd_hold_valid_q <= 1'b1;
+        rd_data_hold_q  <= rd_data_o;
+      end else begin
+        rd_hold_valid_q <= 1'b0;
+      end
+    end
+  end
+  // synthesis translate_on
 
 endmodule
 

@@ -47,6 +47,28 @@ module mptdc_hit_capture_bridge
 
   assign snapshot_o = snapshot_q;
 
+  // synthesis translate_off
+  mptdc_ctx_snapshot_t snapshot_prev_q;
+  logic                snapshot_prev_valid_q;
+  logic                sample_en_prev_q;
+
+  always_ff @(posedge clk_sys) begin
+    if (!rst_n) begin
+      snapshot_prev_q       <= '0;
+      snapshot_prev_valid_q <= 1'b0;
+      sample_en_prev_q      <= 1'b0;
+    end else begin
+      if (snapshot_prev_valid_q && !sample_en_i && !sample_en_prev_q) begin
+        assert (snapshot_q == snapshot_prev_q)
+          else $error("mptdc_hit_capture_bridge: snapshot changed without sample_en_i");
+      end
+      snapshot_prev_q       <= snapshot_q;
+      snapshot_prev_valid_q <= 1'b1;
+      sample_en_prev_q      <= sample_en_i;
+    end
+  end
+  // synthesis translate_on
+
 endmodule
 
 `default_nettype wire

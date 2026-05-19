@@ -25,7 +25,7 @@ mode. The equivalent minimum-latency close behavior is now obtained with
 
 | Parameter | Value | Meaning |
 |-----------|-------|---------|
-| `NE` | `8` | Number of taps per oscillator |
+| `NE` | `8` | Number of taps per oscillator; fixed for the active macro |
 | `OSC_TS_SLOW_PS` | `55 ps` | Slow oscillator tap delay |
 | `OSC_TS_FAST_PS` | `50 ps` | Fast oscillator tap delay |
 | `DELTA_STEP` | `5 ps` | Vernier tap-delay difference |
@@ -33,8 +33,13 @@ mode. The equivalent minimum-latency close behavior is now obtained with
 | `K_VERNIER` | `11` | `OSC_TS_SLOW_PS / DELTA_STEP` |
 | `PD_N` | `64` | Number of PD cells (`NE * NE`) |
 | `MAX_HITS` | `15` | Maximum emitted hits per conversion |
-| `N_CTX` | `2` | Number of snapshot contexts |
+| `N_CTX` | `2` | Retained fixed two-entry snapshot bank |
 | `CLK_SYS_HZ` | `160 MHz` | System clock for CSR, drain, and TX |
+
+The active tapeout target is intentionally fixed at `NE=8` and `N_CTX=2`.
+Package-level constants remain the source of truth for widths and loops, but
+larger geometry/context counts are not supported without a separate packet/CSR
+and physical-design review.
 
 ## 3. Active hierarchy
 
@@ -662,6 +667,8 @@ Before synthesis / signoff, review the following explicitly:
 6. Confirm the static-data CDC assumption for the context-bank read path in the chosen signoff methodology.
 7. Keep `input_sel`, `mode`, and `conv_arm` usage consistent with the intended control model: do not retarget inputs or modes mid-conversion.
 8. Treat `mptdc_osc_model` as simulation-only and do not rely on it for synthesis behavior.
+9. Review the PD matrix as a matched physical island: every slow/fast phase tap needs comparable loading, routing RC, slew, and PVT-sensitive skew.
+10. Keep embedded safety assertions active in simulation/formal-style runs and map any disabled assertion to an explicit waiver.
 
 ## 9. Practical reading order
 

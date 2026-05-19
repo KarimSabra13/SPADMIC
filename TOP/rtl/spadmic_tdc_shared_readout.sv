@@ -177,6 +177,47 @@ module spadmic_tdc_shared_readout (
     end
   end
 
+  // synthesis translate_off
+  logic                            shared_hold_valid_q;
+  logic [NARROW_W-1:0]             shared_data_hold_q;
+  logic                            packet_src_hold_valid_q;
+  spadmic_tdc_id_e                 packet_src_hold_q;
+
+  always_ff @(posedge clk_sys or negedge rst_n) begin
+    if (!rst_n) begin
+      shared_hold_valid_q     <= 1'b0;
+      shared_data_hold_q      <= '0;
+      packet_src_hold_valid_q <= 1'b0;
+      packet_src_hold_q       <= TDC_ID_X;
+    end else begin
+      assert ((int'(acq_ready_o[0]) + int'(acq_ready_o[1]) + int'(acq_ready_o[2])) <= 1)
+        else $error("spadmic_tdc_shared_readout: more than one axis ready");
+
+      if (shared_valid_o && !shared_ready_i) begin
+        if (shared_hold_valid_q) begin
+          assert (shared_data_o == shared_data_hold_q)
+            else $error("spadmic_tdc_shared_readout: shared_data_o changed while stalled");
+        end
+        shared_hold_valid_q <= 1'b1;
+        shared_data_hold_q  <= shared_data_o;
+      end else begin
+        shared_hold_valid_q <= 1'b0;
+      end
+
+      if (packet_active_q) begin
+        if (packet_src_hold_valid_q) begin
+          assert (packet_src_q == packet_src_hold_q)
+            else $error("spadmic_tdc_shared_readout: packet source changed before EOC");
+        end
+        packet_src_hold_valid_q <= 1'b1;
+        packet_src_hold_q       <= packet_src_q;
+      end else begin
+        packet_src_hold_valid_q <= 1'b0;
+      end
+    end
+  end
+  // synthesis translate_on
+
 endmodule
 
 `default_nettype wire
