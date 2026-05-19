@@ -67,10 +67,8 @@ interface mptdc_async_io_if;
     endcase
   endtask
 
-  // Inject only the START side of a conversion to trigger watchdog-focused
-  // scenarios without changing the rest of the source-selection contract.
-  task automatic inject_start_only(input input_sel_e source_sel,
-                                   input time pulse_width_ps = 1_000);
+  task automatic drive_start(input input_sel_e source_sel,
+                             input time pulse_width_ps = 1_000);
     case (source_sel)
       INPUT_CAL: begin
         cal_start = 1'b1;
@@ -83,6 +81,29 @@ interface mptdc_async_io_if;
         start_spad = 1'b0;
       end
     endcase
+  endtask
+
+  task automatic drive_stop(input input_sel_e source_sel,
+                            input time pulse_width_ps = 1_000);
+    case (source_sel)
+      INPUT_CAL: begin
+        cal_stop = 1'b1;
+        #pulse_width_ps;
+        cal_stop = 1'b0;
+      end
+      default: begin
+        stop_spad = 1'b1;
+        #pulse_width_ps;
+        stop_spad = 1'b0;
+      end
+    endcase
+  endtask
+
+  // Inject only the START side of a conversion to trigger watchdog-focused
+  // scenarios without changing the rest of the source-selection contract.
+  task automatic inject_start_only(input input_sel_e source_sel,
+                                   input time pulse_width_ps = 1_000);
+    drive_start(source_sel, pulse_width_ps);
   endtask
 
 endinterface

@@ -5,7 +5,8 @@
 #           [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
 #           [--func-cov] [--code-cov] [--cov-workdir DIR]
 #           [--cov-test-name NAME] [--osc-jitter-sigma ps]
-#           [--osc-jitter-bound ps] [--dry-run]
+#           [--osc-jitter-bound ps] [--stop-model direct|qualified-ref]
+#           [--ref-phase-ps N] [--artifact-dir DIR] [--vip-asserts] [--dry-run]
 # Context : Verilator is intended for smoke runs; xrun/xcelium/VCS enable
 #           broader simulator and coverage flows.
 # Author  : Karim Sabra
@@ -26,6 +27,10 @@ OSC_JITTER_BOUND=""
 NUM_CONV=""
 COV_WORKDIR=""
 COV_TEST_NAME=""
+STOP_MODEL=""
+REF_PHASE_PS=""
+ARTIFACT_DIR=""
+VIP_ASSERTS=0
 DRY_RUN=0
 
 while [[ $# -gt 0 ]]; do
@@ -50,6 +55,14 @@ while [[ $# -gt 0 ]]; do
       OSC_JITTER_BOUND="$2"; shift 2 ;;
     --num-conv)
       NUM_CONV="$2"; shift 2 ;;
+    --stop-model)
+      STOP_MODEL="$2"; shift 2 ;;
+    --ref-phase-ps)
+      REF_PHASE_PS="$2"; shift 2 ;;
+    --artifact-dir)
+      ARTIFACT_DIR="$2"; shift 2 ;;
+    --vip-asserts)
+      VIP_ASSERTS=1; shift ;;
     --dry-run)
       DRY_RUN=1; shift ;;
     -h|--help)
@@ -57,7 +70,8 @@ while [[ $# -gt 0 ]]; do
 Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
           [--func-cov] [--code-cov] [--cov-workdir DIR] [--cov-test-name NAME]
           [--osc-jitter-sigma ps] [--osc-jitter-bound ps] [--num-conv N]
-          [--dry-run]
+          [--stop-model direct|qualified-ref] [--ref-phase-ps N]
+          [--artifact-dir DIR] [--vip-asserts] [--dry-run]
 
 Notes:
   --func-cov/--code-cov require xrun/xcelium or vcs.
@@ -159,6 +173,23 @@ if [[ "$SIM" == "vcs" && -n "$COV_TEST_NAME" ]]; then
   exit 1
 fi
 
+if [[ -n "$ARTIFACT_DIR" ]]; then
+  ARTIFACT_DIR="$(normalize_repo_path "$ARTIFACT_DIR")"
+  ensure_repo_path "$ARTIFACT_DIR"
+  if [[ $DRY_RUN -eq 0 ]]; then
+    mkdir -p "$ARTIFACT_DIR"
+  fi
+fi
+
+case "$STOP_MODEL" in
+  ""|direct) STOP_MODEL_NUM=0 ;;
+  qualified-ref|qualified_ref) STOP_MODEL_NUM=1 ;;
+  *)
+    echo "Error: --stop-model must be direct or qualified-ref" >&2
+    exit 1
+    ;;
+esac
+
 PLUSARGS=("+MPTDC_TEST=$TEST_NAME")
 if [[ -n "$SEED" ]]; then
   PLUSARGS+=("+MPTDC_SEED=$SEED")
@@ -171,6 +202,15 @@ if [[ -n "$OSC_JITTER_BOUND" ]]; then
 fi
 if [[ -n "$NUM_CONV" ]]; then
   PLUSARGS+=("+MPTDC_NUM_CONV=$NUM_CONV")
+fi
+PLUSARGS+=("+MPTDC_STOP_MODEL=$STOP_MODEL_NUM")
+if [[ -n "$REF_PHASE_PS" ]]; then
+  PLUSARGS+=("+MPTDC_REF_PHASE_PS=$REF_PHASE_PS")
+fi
+if [[ -n "$ARTIFACT_DIR" ]]; then
+  PLUSARGS+=("+MPTDC_TXN_LOG_CSV=$ARTIFACT_DIR/transactions.csv")
+  PLUSARGS+=("+MPTDC_TXN_LOG_JSONL=$ARTIFACT_DIR/transactions.jsonl")
+  PLUSARGS+=("+MPTDC_FAILURE_DIR=$ARTIFACT_DIR")
 fi
 
 COMMON_FILES=(
@@ -219,6 +259,9 @@ case "$SIM" in
     if [[ $WAVES -eq 1 ]]; then
       VERILATOR_FLAGS+=(--trace --trace-structs)
     fi
+    if [[ $VIP_ASSERTS -eq 1 ]]; then
+      echo "Note: --vip-asserts is reserved for assertion-capable signoff simulators; Verilator smoke keeps interface assertions disabled."
+    fi
     echo "--- Compiling VIP test with Verilator ---"
     run_cmd verilator "${VERILATOR_FLAGS[@]}" "${COMMON_FILES[@]}"
     echo "--- Running VIP test ---"
@@ -241,6 +284,9 @@ case "$SIM" in
       XRUN_FLAGS+=(+define+MPTDC_ENABLE_FUNC_COV -coverage all -covoverwrite)
       XRUN_FLAGS+=(-covworkdir "$COV_DIR" -covtest "$COV_TEST")
     fi
+    if [[ $VIP_ASSERTS -eq 1 ]]; then
+      XRUN_FLAGS+=(+define+MPTDC_ENABLE_VIP_ASSERTS)
+    fi
     if [[ $WAVES -eq 1 ]]; then
       XRUN_FLAGS+=(-input "@database -open waves -into $TB_BUILD/waves.shm -default @probe -create mptdc_vip_tb -all -depth all @run @exit")
     fi
@@ -262,6 +308,9 @@ case "$SIM" in
     if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
       VCS_FLAGS+=(+define+MPTDC_ENABLE_FUNC_COV -cm line+cond+tgl+fsm+branch)
       VCS_FLAGS+=(-cm_dir "${COV_DIR:-$TB_BUILD/vcs_cov}")
+    fi
+    if [[ $VIP_ASSERTS -eq 1 ]]; then
+      VCS_FLAGS+=(+define+MPTDC_ENABLE_VIP_ASSERTS)
     fi
     echo "--- Compiling VIP test with VCS ---"
     run_cmd vcs "${VCS_FLAGS[@]}"

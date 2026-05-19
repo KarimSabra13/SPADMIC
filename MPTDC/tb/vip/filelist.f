@@ -17,6 +17,7 @@ tb/common/mptdc_tb_pkg.sv
 // VIP interfaces
 tb/vip/interfaces/mptdc_csr_if.sv
 tb/vip/interfaces/mptdc_async_io_if.sv
+tb/vip/interfaces/mptdc_ref_stop_if.sv
 tb/vip/interfaces/mptdc_narrow_if.sv
 
 // VIP package and harness

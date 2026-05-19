@@ -64,6 +64,48 @@ package mptdc_char_tb_pkg;
     end
   endtask
 
+  task automatic char_vip_write_header(input int fd, input string extra_cols = "");
+    begin
+      $fwrite(fd,
+        "schema_version,test_name,seed,config_id,stage,train_valid_split,attempt_id,event_id,conv_id,ctx_id,hit_idx,t_start_fs,t_stop_fs,true_dt_fs,t_start_ps,t_stop_ps,true_dt_ps,accepted,rejected,reject_reason,close_reason,max_hits,out_mode,input_sel,nslow,nfast_hit,ns,nf,ns_inf,nf_inf,phase0_snap,slow_boundary_inc,hit_count,flags,t_raw_ps,reconstructed_time_pre_cal_ps,reconstructed_time_post_cal_ps,residual_pre_cal_ps,residual_post_cal_ps");
+      if (extra_cols != "")
+        $fwrite(fd, ",%s", extra_cols);
+      $fwrite(fd, "\n");
+    end
+  endtask
+
+  task automatic char_vip_write_jsonl_event(
+    input int     fd,
+    input string  test_name,
+    input int     seed,
+    input string  stage,
+    input string  split,
+    input int     attempt_id,
+    input int     event_id,
+    input int     accepted,
+    input int     rejected,
+    input string  reject_reason,
+    input longint start_time_ps,
+    input longint stop_time_ps,
+    input int     max_hits,
+    input int     input_sel,
+    input int     out_mode
+  );
+    longint start_fs;
+    longint stop_fs;
+    longint dt_ps;
+    begin
+      start_fs = start_time_ps * 1000;
+      stop_fs  = stop_time_ps * 1000;
+      dt_ps    = (stop_time_ps >= start_time_ps) ? (stop_time_ps - start_time_ps) : -1;
+      $fwrite(fd,
+        "{\"schema_version\":1,\"test_name\":\"%s\",\"seed\":%0d,\"stage\":\"%s\",\"train_valid_split\":\"%s\",\"attempt_id\":%0d,\"event_id\":%0d,\"accepted\":%0d,\"rejected\":%0d,\"reject_reason\":\"%s\",\"t_start_fs\":%0d,\"t_stop_fs\":%0d,\"true_dt_fs\":%0d,\"t_start_ps\":%0d,\"t_stop_ps\":%0d,\"true_dt_ps\":%0d,\"max_hits\":%0d,\"input_sel\":%0d,\"out_mode\":%0d}\n",
+        test_name, seed, stage, split, attempt_id, event_id, accepted, rejected,
+        reject_reason, start_fs, stop_fs, dt_ps * 1000, start_time_ps,
+        stop_time_ps, dt_ps, max_hits, input_sel, out_mode);
+    end
+  endtask
+
   task automatic char_write_summary_row(
     input int    fd,
     input int    stage_id,

@@ -27,6 +27,47 @@ interface mptdc_csr_if #(parameter int ADDR_W = mptdc_pkg::CSR_ADDR_W,
   logic              csr_rvalid;
   logic [DATA_W-1:0] csr_rdata;
 
+`ifdef MPTDC_USE_CLOCKING_BLOCKS
+  clocking drv_cb @(posedge clk_sys);
+    output csr_valid, csr_write, csr_addr, csr_wdata;
+    input  csr_ready, csr_rvalid, csr_rdata;
+  endclocking
+
+  clocking mon_cb @(posedge clk_sys);
+    input csr_valid, csr_write, csr_addr, csr_wdata, csr_ready, csr_rvalid, csr_rdata;
+  endclocking
+`endif
+
+`ifdef MPTDC_ENABLE_VIP_ASSERTS
+  logic [ADDR_W-1:0] csr_addr_q;
+  logic [DATA_W-1:0] csr_wdata_q;
+  logic              csr_write_q;
+  logic              csr_waiting_q;
+
+  initial begin : csr_assert_init
+    csr_addr_q    = '0;
+    csr_wdata_q   = '0;
+    csr_write_q   = 1'b0;
+    csr_waiting_q = 1'b0;
+  end
+
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+    if (csr_valid && !csr_waiting_q) begin
+      csr_addr_q    <= csr_addr;
+      csr_wdata_q   <= csr_wdata;
+      csr_write_q   <= csr_write;
+      csr_waiting_q <= !csr_ready;
+    end else if (csr_valid && csr_waiting_q && !csr_ready) begin
+      if ((csr_addr !== csr_addr_q) || (csr_wdata !== csr_wdata_q) ||
+          (csr_write !== csr_write_q)) begin
+        $error("[MPTDC_CSR_IF] request changed while waiting for csr_ready");
+      end
+    end else if (!csr_valid || csr_ready) begin
+      csr_waiting_q <= 1'b0;
+    end
+  end
+`endif
+
   // Return the CSR request channel to an idle state between transactions.
   task automatic reset_bus();
     csr_valid = 1'b0;

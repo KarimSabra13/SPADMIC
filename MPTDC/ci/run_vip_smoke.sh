@@ -43,6 +43,8 @@ run_smoke global_watchdog_recovery
 run_smoke csr_readback_control
 run_smoke hard_reset_readback
 run_smoke jitter_robustness --osc-jitter-sigma 8 --osc-jitter-bound 24
+run_smoke vip_ref_stop_cdv --stop-model qualified-ref --artifact-dir build/vip_smoke_ref
+run_smoke vip_maxhits_matrix --stop-model qualified-ref --artifact-dir build/vip_smoke_maxhits
 
 echo "VIP smoke results: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]

@@ -33,9 +33,72 @@ Compatibility note: some maintained bench and VIP names still use the historical
 `firsthit` label. In the active v2.4 RTL, that label maps to the fast-close
 behavior obtained with `max_hits = 1`; there is no separate mode bit in the DUT.
 
-## 2. Shared infrastructure
+## 2. VIP CDV architecture
 
-### 2.1 `tb/common/mptdc_tb_pkg.sv`
+The maintained VIP turns into the authoritative single-channel
+macro-level CDV environment.  The scope is one MPTDC instance: full SPADMIC
+three-instance shared-readout verification remains a higher-level phase.
+
+Key contracts:
+
+- **Use case:** an asynchronous SPAD pulse is START; the first qualified 40 MHz
+  reference edge after an accepted START is STOP.
+- **Clocking:** `clk_sys` stays at 160 MHz and the reference STOP clock stays at
+  40 MHz, but the reference clock receives a seed-derived static phase offset so
+  regressions sweep physical CTS skew alignments.
+- **Scoreboard:** every attempted START receives an attempt ID; accepted events
+  receive event IDs and are matched to packets by order/context with variable
+  latency.  Rejected STARTs are logged and covered but do not create expected
+  packets.
+- **Drop policy:** rejected STARTs are legal only when the macro is not ready or
+  context/FIFO pressure prevents safe allocation; rejection must not corrupt
+  accepted packets.
+- **Coverage:** functional coverage is advisory, but every critical uncovered
+  bin must be reviewed, waived, or closed with a directed test before tapeout
+  signoff.
+- **Metrics:** characterization reports pre/post 6D-LUT RMS, DNL/INL, tuple
+  occupancy, and outliers.  These are reportable distributions until explicit
+  numeric pass/fail limits are approved.
+
+### 2.1 Dual-simulator policy
+
+Verilator and Xcelium enforce the same functional rules with different depth:
+
+| Flow | Role |
+| --- | --- |
+| Verilator | First-class shift-left smoke/lint-like sanity. Runs directed and lightweight randomized checks quickly. |
+| Xcelium | Authoritative CDV/coverage/assertion/characterization engine, including 32-job overnight regressions. |
+
+Do not let a scenario mean one thing in Verilator and another in Xcelium.  If a
+boundary condition is legal or illegal in one flow, the other flow must use the
+same rule even if it samples fewer seeds.
+
+### 2.2 VIP entrypoints
+
+```bash
+# One VIP test with qualified 40 MHz STOP, transaction CSV/JSONL logs, and artifacts
+bash scripts/sim/run_vip_test.sh smoke_single_conv \
+  --sim verilator \
+  --stop-model qualified-ref \
+  --artifact-dir build/vip_smoke_artifacts
+
+# Xcelium 32-job CDV regression with coverage and automatic failure reruns
+bash ci/run_vip_xcelium_regression.sh --sim xrun --jobs 32 --seeds 32
+
+# Train/validation characterization split for 6D LUT calibration
+bash scripts/sim/run_vip_characterization.sh --jobs 32 --train-seeds 64 --valid-seeds 16
+```
+
+The VIP runner accepts:
+
+- `--stop-model direct|qualified-ref`
+- `--ref-phase-ps <N>` to override the seed-derived 40 MHz phase
+- `--artifact-dir <DIR>` to emit `transactions.csv` and `transactions.jsonl`
+- `--vip-asserts` to enable interface-level assertions
+
+## 3. Shared infrastructure
+
+### 3.1 `tb/common/mptdc_tb_pkg.sv`
 
 Reusable helpers for:
 
@@ -44,11 +107,11 @@ Reusable helpers for:
 - output-word parsing and packet collection
 - RAW feature extraction and timestamp checks
 
-### 2.2 `tb/common/mptdc_raw_monitor.sv`
+### 3.2 `tb/common/mptdc_raw_monitor.sv`
 
 Passive monitor for the 16-bit packet stream.
 
-### 2.3 `scripts/sim/run_tb.sh`
+### 3.3 `scripts/sim/run_tb.sh`
 
 Universal runner for unit and integration benches.
 
@@ -59,7 +122,7 @@ bash scripts/sim/run_tb.sh tb_single_conv
 bash scripts/sim/run_tb.sh tb_overflow_count --sim xrun
 ```
 
-### 2.4 VIP environment: `tb/vip/` + `tb/tests/mptdc_vip_tb.sv`
+### 3.4 VIP environment: `tb/vip/` + `tb/tests/mptdc_vip_tb.sv`
 
 The maintained VIP contains:
 
@@ -70,7 +133,7 @@ The maintained VIP contains:
 - scoreboard / protocol checks
 - functional coverage hooks guarded by `MPTDC_ENABLE_FUNC_COV`
 
-### 2.5 `scripts/sim/run_vip_test.sh`
+### 3.5 `scripts/sim/run_vip_test.sh`
 
 Primary VIP runner.
 
@@ -88,9 +151,40 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
   --osc-jitter-sigma 8 --osc-jitter-bound 24
 ```
 
-## 3. Active maintained benches
+### 3.6 VIP interface/bind-style assertions
 
-### 3.1 Unit benches
+The VIP interfaces contain assertion-style protocol checks guarded by
+`MPTDC_ENABLE_VIP_ASSERTS` so Xcelium signoff can enable them without forcing
+every Verilator smoke compile through simulator-specific assertion support:
+
+- CSR request stability while waiting for `csr_ready`
+- narrow-stream data stability under `valid && !ready`
+- no X/Z on accepted narrow data
+
+These are verification-only checks.  They do not change the synthesizable RTL
+interface.
+
+### 3.7 Embedded RTL safety assertions
+
+The active RTL now includes synthesis-excluded assertions around the highest-risk
+control/data-integrity contracts:
+
+- measurement teardown pulse ordering in `mptdc_meas_ctrl`
+- context-bank capture/metadata exclusivity
+- held-image stability in `mptdc_hit_capture_bridge`
+- FIFO level and FWFT data stability in `mptdc_sync_fifo`
+- pending-record stability and release safety in `mptdc_drain_ctrl`
+- narrow ready/valid stability in `mptdc_narrow16_tx_v2`
+- START accept/reject exclusivity in `mptdc_async_frontend_v2`
+- PD hit stickiness until clear in `mptdc_pd_cell`
+
+These assertions are not a replacement for CDC/STA signoff, but they convert the
+main architectural assumptions into executable checks for local simulation and
+formal-style lint flows.
+
+## 4. Active maintained benches
+
+### 4.1 Unit benches
 
 | Bench | Purpose |
 | --- | --- |
@@ -100,7 +194,7 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
 | `tb_context_bank_unit` | context freeze / retention correctness |
 | `tb_narrow16_tx_v2_unit` | serializer packet formatting and sequencing |
 
-### 3.2 Integration benches
+### 4.2 Integration benches
 
 | Bench | Purpose |
 | --- | --- |
@@ -115,7 +209,7 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
 | `tb_overflow_count` | rejected START / overflow accounting |
 | `tb_firsthit_mode` | compatibility-named fast-close contract (`max_hits = 1`) |
 
-### 3.3 Collection / characterization benches
+### 4.3 Collection / characterization benches
 
 The maintained raw-data collector is:
 
@@ -128,19 +222,20 @@ It is driven through:
 This is the active characterization bench for broad `20 ps .. 30 ns` sweeps. Older
 `tb_v21_*` collection benches are **not** the maintained path anymore.
 
-## 4. Maintained runner entrypoints
+## 5. Maintained runner entrypoints
 
-### 4.1 Fast local regression
+### 5.1 Fast local regression
 
 ```bash
 bash ci/run_smoke.sh
 bash ci/run_full_regression.sh
 bash ci/run_vip_smoke.sh
+bash scripts/sim/run_tb.sh tb_lossless_pressure --sim verilator
 ```
 
-### 4.2 VIP smoke suite
+### 5.2 VIP smoke suite
 
-`ci/run_vip_smoke.sh` currently runs `13` tests:
+`ci/run_vip_smoke.sh` currently runs `15` tests:
 
 1. `smoke_single_conv`
 2. `full_mode_timestamp`
@@ -155,10 +250,12 @@ bash ci/run_vip_smoke.sh
 11. `csr_readback_control`
 12. `hard_reset_readback`
 13. `jitter_robustness`
+14. `vip_ref_stop_cdv`
+15. `vip_maxhits_matrix`
 
-### 4.3 Cadence coverage suite
+### 5.3 Cadence coverage suite
 
-`ci/run_vip_coverage.sh` currently runs `14` tests:
+`ci/run_vip_coverage.sh` currently runs `16` tests:
 
 1. `smoke_single_conv`
 2. `full_mode_timestamp`
@@ -174,6 +271,8 @@ bash ci/run_vip_smoke.sh
 12. `csr_readback_control`
 13. `hard_reset_readback`
 14. `coverage_exhaustive`
+15. `vip_ref_stop_cdv`
+16. `vip_maxhits_matrix`
 
 For a broader Cadence checkpoint:
 
@@ -181,7 +280,7 @@ For a broader Cadence checkpoint:
 bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
 ```
 
-## 5. Raw-data and measurement-proof flows
+## 6. Raw-data and measurement-proof flows
 
 ### 5.1 Broad-range campaign collection
 

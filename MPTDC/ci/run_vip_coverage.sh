@@ -36,6 +36,8 @@ DEFAULT_TESTS=(
   csr_readback_control
   hard_reset_readback
   coverage_exhaustive
+  vip_ref_stop_cdv
+  vip_maxhits_matrix
 )
 SELECTED_TESTS=()
 

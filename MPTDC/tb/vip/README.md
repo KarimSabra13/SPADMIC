@@ -306,6 +306,18 @@ entries that IMC merges automatically when loaded.
 
 ## 8. Interface Definitions
 
+### `mptdc_ref_stop_if` — qualified 40 MHz STOP model
+```
+Signals: ref_clk
+Tasks:   start(phase_offset_ps), wait_next_edge(edge_time_ps)
+Policy:  40 MHz frequency-locked reference clock with seed-derived static
+         phase offset relative to 160 MHz clk_sys.
+```
+
+VIP tests can select `--stop-model qualified-ref`, causing the module BFM to
+drive START asynchronously and then generate STOP from the next reference edge.
+The direct-delay mode remains available for legacy directed checks.
+
 ### `mptdc_csr_if` — CSR Register Bus
 ```
 Signals: csr_valid, csr_write, csr_addr[5:0], csr_wdata[31:0],
@@ -324,6 +336,23 @@ Tasks:   hard_reset(), inject_pair(), inject_start_only(), reset_pulses()
 Signals: clk_sys, narrow_ready, narrow_valid, narrow_data[15:0]
 Protocol: Simple valid/ready streaming
 ```
+
+When `+define+MPTDC_ENABLE_VIP_ASSERTS` is enabled, the CSR and narrow
+interfaces add verification-only protocol checks for request stability,
+accepted-data X/Z, and data stability under backpressure.
+
+### VIP transaction logs
+
+`run_vip_test.sh --artifact-dir <DIR>` writes:
+
+| File | Purpose |
+| --- | --- |
+| `transactions.csv` | Flat event/attempt table for spreadsheets and quick grep. |
+| `transactions.jsonl` | Machine-readable event stream for Python debug and calibration tooling. |
+
+Each attempted START receives an `attempt_id`; accepted attempts receive an
+`event_id`.  Rejected attempts are retained in the log so deadtime and
+loss-pressure studies can distinguish legal drops from packet corruption.
 
 ---
 

@@ -23,6 +23,7 @@ module mptdc_vip_tb;
 
   mptdc_csr_if   csr_if  (clk_sys);
   mptdc_async_io_if async_if();
+  mptdc_ref_stop_if ref_stop_if();
   mptdc_narrow_if narrow_if(clk_sys);
 
   logic                  tb_async_rst_n;
@@ -168,10 +169,26 @@ module mptdc_vip_tb;
           #conv.arm_settle_ps;
           bfm_prev_start_latched = u_dut.u_core.u_frontend.start_latched_o;
           bfm_last_start_rejected = 1'b0;
-          if (conv.start_only)
-            async_if.inject_start_only(conv.source_sel, conv.pulse_width_ps);
-          else
-            async_if.inject_pair(conv.source_sel, conv.start_stop_delay_ps, conv.pulse_width_ps);
+          conv.start_time_ps = longint'($time);
+          conv.start_phase_sys_ps = int'(conv.start_time_ps % 6250);
+          conv.start_phase_ref_ps = int'((conv.start_time_ps + conv.ref_phase_offset_ps) % 25000);
+          async_if.drive_start(conv.source_sel, conv.pulse_width_ps);
+          if (conv.start_only) begin
+            conv.stop_time_ps = -1;
+            conv.true_dt_ps   = -1;
+          end else begin
+            if (conv.stop_model == STOP_QUALIFIED_REF) begin
+              time ref_edge_time_ps;
+              ref_stop_if.wait_next_edge(ref_edge_time_ps);
+              conv.stop_time_ps = longint'(ref_edge_time_ps);
+              async_if.drive_stop(conv.source_sel, conv.pulse_width_ps);
+            end else begin
+              #conv.start_stop_delay_ps;
+              conv.stop_time_ps = longint'($time);
+              async_if.drive_stop(conv.source_sel, conv.pulse_width_ps);
+            end
+            conv.true_dt_ps = conv.stop_time_ps - conv.start_time_ps;
+          end
           bfm_conv_accepted = (!bfm_prev_start_latched) && (!bfm_last_start_rejected);
           g_bfm_ack_mb.put(bfm_conv_accepted);
           if (conv.idle_after_ps > 0)
@@ -190,9 +207,14 @@ module mptdc_vip_tb;
   initial begin
     string           test_name;
     int unsigned     seed;
+    int              stop_model_i;
+    int              ref_phase_ps_i;
     int              jitter_sigma_ps;
     int              jitter_bound_ps;
     int              num_conv;
+    string           txn_log_csv;
+    string           txn_log_jsonl;
+    string           failure_dir;
     mptdc_base_test  test;
     mptdc_env_cfg    cfg;
 
@@ -200,15 +222,27 @@ module mptdc_vip_tb;
       test_name = "smoke_single_conv";
     if (!$value$plusargs("MPTDC_SEED=%d", seed))
       seed = 32'h1bad_f00d;
+    if (!$value$plusargs("MPTDC_STOP_MODEL=%d", stop_model_i))
+      stop_model_i = int'(STOP_DIRECT_DELAY);
+    if (!$value$plusargs("MPTDC_REF_PHASE_PS=%d", ref_phase_ps_i))
+      ref_phase_ps_i = int'(ref_stop_if.phase_from_seed(seed));
     if (!$value$plusargs("OSC_JITTER_SIGMA_PS=%d", jitter_sigma_ps))
       jitter_sigma_ps = 0;
     if (!$value$plusargs("OSC_JITTER_BOUND_PS=%d", jitter_bound_ps))
       jitter_bound_ps = 0;
     if (!$value$plusargs("MPTDC_NUM_CONV=%d", num_conv))
       num_conv = 0;
+    if (!$value$plusargs("MPTDC_TXN_LOG_CSV=%s", txn_log_csv))
+      txn_log_csv = "";
+    if (!$value$plusargs("MPTDC_TXN_LOG_JSONL=%s", txn_log_jsonl))
+      txn_log_jsonl = "";
+    if (!$value$plusargs("MPTDC_FAILURE_DIR=%s", failure_dir))
+      failure_dir = "";
 
-    $display("[VIP][TB] Starting test=%s seed=%0d jitter_sigma_ps=%0d jitter_bound_ps=%0d num_conv=%0d",
-             test_name, seed, jitter_sigma_ps, jitter_bound_ps, num_conv);
+    ref_stop_if.start(time'(ref_phase_ps_i));
+
+    $display("[VIP][TB] Starting test=%s seed=%0d stop_model=%0d ref_phase_ps=%0d jitter_sigma_ps=%0d jitter_bound_ps=%0d num_conv=%0d",
+             test_name, seed, stop_model_i, ref_phase_ps_i, jitter_sigma_ps, jitter_bound_ps, num_conv);
 
     test = mptdc_test_factory::create(test_name);
     if (test == null)
@@ -220,6 +254,11 @@ module mptdc_vip_tb;
     cfg.osc_jitter_sigma_ps = jitter_sigma_ps;
     cfg.osc_jitter_bound_ps = jitter_bound_ps;
     cfg.num_conv            = num_conv;
+    cfg.stop_model          = mptdc_stop_model_e'(stop_model_i);
+    cfg.ref_phase_offset_ps = ref_phase_ps_i;
+    cfg.txn_log_csv         = txn_log_csv;
+    cfg.txn_log_jsonl       = txn_log_jsonl;
+    cfg.failure_dir         = failure_dir;
 `ifdef MPTDC_ENABLE_FUNC_COV
     cfg.enable_func_cov     = 1'b1;
 `else
