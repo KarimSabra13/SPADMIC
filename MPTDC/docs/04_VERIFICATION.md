@@ -87,6 +87,30 @@ bash ci/run_vip_xcelium_regression.sh --sim xrun --jobs 32 --seeds 32
 
 # Train/validation characterization split for 6D LUT calibration
 bash scripts/sim/run_vip_characterization.sh --jobs 32 --train-seeds 64 --valid-seeds 16
+
+# Unified overnight launcher (VIP CDV + analysis + calibration + fixed-delay)
+bash scripts/sim/run_vip_overnight.sh \
+  --sim xrun \
+  --jobs 32 \
+  --vip-seeds 256 \
+  --vip-num-conv 20000 \
+  --char-seeds 128 \
+  --char-n-conv 200000 \
+  --char-train-seeds 96
+```
+
+`run_vip_overnight.sh` supports resume semantics: if the VIP summary or
+characterization manifest already exists, that stage is skipped unless
+`--rerun-vip`, `--rerun-char`, or `--clean` is used.
+
+Examples:
+
+```bash
+# Reuse existing characterization and rerun only VIP CDV
+bash scripts/sim/run_vip_overnight.sh --stages vip --rerun-vip --vip-seeds 128
+
+# Reuse existing VIP and rerun only characterization
+bash scripts/sim/run_vip_overnight.sh --stages char --rerun-char --char-seeds 64 --char-n-conv 150000
 ```
 
 The VIP runner accepts:
