@@ -190,7 +190,8 @@ if (( RERUN_FAILURES )) && (( DRY_RUN == 0 )) && [[ -s "$FAIL_LIST" ]]; then
       --cov-workdir "$OUT_DIR/cov_work" \
       --cov-test-name "${run_id}__debug" \
       --artifact-dir "$fail_dir" \
-      > "$fail_dir/rerun.log" 2>&1 || true
+      --vip-asserts \
+      > "$fail_dir/rerun.log" 2>&1 </dev/null || true
     tail -200 "$fail_dir/rerun.log" > "$fail_dir/transcript_tail.log" || true
   done < "$FAIL_LIST"
 fi

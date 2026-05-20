@@ -51,7 +51,7 @@ interface mptdc_csr_if #(parameter int ADDR_W = mptdc_pkg::CSR_ADDR_W,
     csr_waiting_q = 1'b0;
   end
 
-  always_ff @(posedge clk_sys) begin : csr_assert_seq
+  always @(posedge clk_sys) begin : csr_assert_seq
     if (csr_valid && !csr_waiting_q) begin
       csr_addr_q    <= csr_addr;
       csr_wdata_q   <= csr_wdata;
