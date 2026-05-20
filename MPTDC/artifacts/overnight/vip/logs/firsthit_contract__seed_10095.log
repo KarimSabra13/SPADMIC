@@ -1,0 +1,277 @@
+--- Compiling/running VIP test with xrun ---
+TOOL:	xrun(64)	23.03-s007: Started on May 19, 2026 at 17:27:24 CEST
+xrun(64): 23.03-s007: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+file: rtl/pkg/mptdc_pkg.sv
+	package worklib.mptdc_pkg:sv
+		errors: 0, warnings: 0
+file: rtl/cdc/mptdc_reset_sync.sv
+	module worklib.mptdc_reset_sync:sv
+		errors: 0, warnings: 0
+file: rtl/cdc/mptdc_pulse_sync.sv
+	module worklib.mptdc_pulse_sync:sv
+		errors: 0, warnings: 0
+file: rtl/cdc/mptdc_gray_cnt_sync.sv
+	module worklib.mptdc_gray_cnt_sync:sv
+		errors: 0, warnings: 0
+file: rtl/cdc/mptdc_sync_fifo.sv
+	module worklib.mptdc_sync_fifo:sv
+		errors: 0, warnings: 0
+file: rtl/osc/mptdc_osc_model.sv
+	module worklib.mptdc_osc_model:sv
+		errors: 0, warnings: 0
+file: rtl/osc/mptdc_osc_stub.sv
+	module worklib.mptdc_osc_stub:sv
+		errors: 0, warnings: 0
+file: rtl/osc/mptdc_osc_wrapper.sv
+	module worklib.mptdc_osc_wrapper:sv
+		errors: 0, warnings: 0
+file: rtl/pd/mptdc_pd_cell.sv
+	module worklib.mptdc_pd_cell:sv
+		errors: 0, warnings: 0
+file: rtl/async/mptdc_stop_capture_async.sv
+	module worklib.mptdc_stop_capture_async:sv
+		errors: 0, warnings: 0
+file: rtl/async/mptdc_async_frontend_v2.sv
+	module worklib.mptdc_async_frontend_v2:sv
+		errors: 0, warnings: 0
+file: rtl/async/mptdc_hit_capture_bridge.sv
+	module worklib.mptdc_hit_capture_bridge:sv
+		errors: 0, warnings: 0
+file: rtl/async/mptdc_context_bank.sv
+  input  mptdc_ctx_snapshot_t           capture_snapshot_i,
+                                                         |
+xmvlog: *W,NODNTW (rtl/async/mptdc_context_bank.sv,23|57): Implicit net port (capture_snapshot_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_context_bank:sv
+		errors: 0, warnings: 1
+file: rtl/ctrl/mptdc_input_mux.sv
+    input  mptdc_pkg::input_sel_e  input_sel_i,
+                                             |
+xmvlog: *W,NODNTW (rtl/ctrl/mptdc_input_mux.sv,40|45): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_input_mux:sv
+		errors: 0, warnings: 1
+file: rtl/ctrl/mptdc_meas_ctrl.sv
+	module worklib.mptdc_meas_ctrl:sv
+		errors: 0, warnings: 0
+file: rtl/ctrl/mptdc_drain_ctrl.sv
+  input  mptdc_pkg::mptdc_ctx_snapshot_t     snapshot_i,
+                                                      |
+xmvlog: *W,NODNTW (rtl/ctrl/mptdc_drain_ctrl.sv,36|54): Implicit net port (snapshot_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_drain_ctrl:sv
+		errors: 0, warnings: 1
+file: rtl/ctrl/mptdc_watchdog.sv
+	module worklib.mptdc_watchdog:sv
+		errors: 0, warnings: 0
+file: rtl/readout/mptdc_tconv_reco.sv
+	module worklib.mptdc_tconv_reco:sv
+		errors: 0, warnings: 0
+file: rtl/readout/mptdc_narrow16_tx_v2.sv
+  input  mptdc_pkg::out_mode_e  out_mode_i,
+                                         |
+xmvlog: *W,NODNTW (rtl/readout/mptdc_narrow16_tx_v2.sv,28|41): Implicit net port (out_mode_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+  input  mptdc_pkg::mptdc_acq_rec_t fifo_rd_data_i,
+                                                 |
+xmvlog: *W,NODNTW (rtl/readout/mptdc_narrow16_tx_v2.sv,32|49): Implicit net port (fifo_rd_data_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_narrow16_tx_v2:sv
+		errors: 0, warnings: 2
+file: rtl/readout/mptdc_csr_minimal.sv
+  input  mptdc_pkg::mptdc_status_t  status_i,
+                                           |
+xmvlog: *W,NODNTW (rtl/readout/mptdc_csr_minimal.sv,45|43): Implicit net port (status_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_csr_minimal:sv
+		errors: 0, warnings: 1
+file: rtl/top/mptdc_core.sv
+  input  mptdc_pkg::mptdc_cfg_t cfg_i,
+                                    |
+xmvlog: *W,NODNTW (rtl/top/mptdc_core.sv,44|36): Implicit net port (cfg_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_core:sv
+		errors: 0, warnings: 1
+file: rtl/top/mptdc_top_asic.sv
+  input  mptdc_pkg::input_sel_e  input_sel_override_i,
+                                                    |
+xmvlog: *W,NODNTW (rtl/top/mptdc_top_asic.sv,42|52): Implicit net port (input_sel_override_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+  input  mptdc_pkg::out_mode_e   out_mode_override_i,
+                                                   |
+xmvlog: *W,NODNTW (rtl/top/mptdc_top_asic.sv,44|51): Implicit net port (out_mode_override_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_top_asic:sv
+		errors: 0, warnings: 2
+file: tb/common/mptdc_tb_pkg.sv
+	package worklib.mptdc_tb_pkg:sv
+		errors: 0, warnings: 0
+file: tb/vip/interfaces/mptdc_csr_if.sv
+	interface worklib.mptdc_csr_if:sv
+		errors: 0, warnings: 0
+file: tb/vip/interfaces/mptdc_async_io_if.sv
+	interface worklib.mptdc_async_io_if:sv
+		errors: 0, warnings: 0
+file: tb/vip/interfaces/mptdc_ref_stop_if.sv
+	interface worklib.mptdc_ref_stop_if:sv
+		errors: 0, warnings: 0
+file: tb/vip/interfaces/mptdc_narrow_if.sv
+	interface worklib.mptdc_narrow_if:sv
+		errors: 0, warnings: 0
+file: tb/vip/pkg/mptdc_vip_pkg.sv
+	package worklib.mptdc_vip_pkg:sv
+		errors: 0, warnings: 0
+file: tb/tests/mptdc_vip_tb.sv
+	module worklib.mptdc_vip_tb:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory tb/vip/interfaces given but not used.
+xmvlog: *W,SPDUSD: Include directory tb/vip/pkg given but not used.
+xmvlog: *W,SPDUSD: Include directory tb/tests given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 3
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		mptdc_vip_pkg
+		mptdc_tb_pkg
+		mptdc_vip_tb
+
+	Extracting FSMs for coverage:
+		worklib.mptdc_reset_sync
+		worklib.mptdc_input_mux
+		worklib.mptdc_csr_minimal
+		worklib.mptdc_async_frontend_v2
+		worklib.mptdc_osc_model
+		worklib.mptdc_osc_wrapper
+		worklib.mptdc_pd_cell
+		worklib.mptdc_stop_capture_async
+		worklib.mptdc_gray_cnt_sync
+		worklib.mptdc_meas_ctrl
+			FSM extracted for state register state_q
+		worklib.mptdc_hit_capture_bridge
+		worklib.mptdc_context_bank
+		worklib.mptdc_drain_ctrl
+			FSM extracted for state register state_q
+		worklib.mptdc_sync_fifo
+		worklib.mptdc_narrow16_tx_v2
+			FSM extracted for state register state_q
+		worklib.mptdc_watchdog
+		worklib.mptdc_core
+		worklib.mptdc_top_asic
+		worklib.mptdc_vip_tb
+	Total FSMs extracted = 3
+xmelab: *W,COVEOS: Currently, by default, coverage is not scored for expressions containing struct datatypes. In 13.1 release, such expressions can be scored using the "set_expr_scoring -struct" coverage configuration file command. In subsequent releases, the default scoring of expressions containing struct datatypes will be enabled. This change may prevent refinements from 13.1 release to be applied on coverage databases generated using subsequent releases in the default mode.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_addr_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_addr_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_addr_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_addr_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_addr_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_addr_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_wdata_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_write_q detected.
+  always_ff @(posedge clk_sys) begin : csr_assert_seq
+          |
+xmelab: *E,MULAXX (./tb/vip/interfaces/mptdc_csr_if.sv,54|10): Multiple drivers to always_ff output variable csr_waiting_q detected.
+xrun: *E,ELBERR: Error (*E) or soft error (*SE) occurred during elaboration (status 1), exiting.
+TOOL:	xrun(64)	23.03-s007: Exiting on May 19, 2026 at 17:27:24 CEST  (total: 00:00:00)
