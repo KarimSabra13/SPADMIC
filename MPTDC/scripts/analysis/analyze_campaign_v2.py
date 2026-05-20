@@ -34,6 +34,7 @@ from plot_style import PALETTE, save_figure, style_axes  # noqa: E402
 
 
 DEFAULT_START_PULSE_WIDTH_PS = 1000
+TRANSFER_PROFILE_BINS = 120
 EPS_ZERO = 1e-12
 
 
@@ -130,6 +131,106 @@ def compute_inl_dnl_summary(df: pd.DataFrame, group_cols: list[str] | None = Non
             "peak_dnl_lsb": peak_dnl,
             "peak_inl_lsb": peak_inl,
             "final_inl_lsb": stats["final_inl"],
+        }
+        for col, key in zip(group_cols, keys):
+            row[col] = key
+        rows.append(row)
+
+    result = pd.DataFrame.from_records(rows)
+    if result.empty:
+        return result
+    sort_cols = [col for col in group_cols if col in result.columns]
+    if sort_cols:
+        result = result.sort_values(sort_cols, ignore_index=True)
+    return result
+
+
+def compute_transfer_linearity_summary(
+    df: pd.DataFrame,
+    group_cols: list[str] | None = None,
+    *,
+    n_bins: int = TRANSFER_PROFILE_BINS,
+) -> pd.DataFrame:
+    """Estimate transfer-curve DNL/INL from mean t_raw versus audited Tref.
+
+    This is the signoff-relevant linearity view for the randomized campaign:
+    bin uniformly in the true input-delay axis, average the reconstructed code
+    in each occupied bin, then measure deviation from the endpoint line.
+    Occupancy/code-density DNL remains useful as a sparsity diagnostic only.
+    """
+    if not {"Tref_ps", "t_raw_ps"}.issubset(df.columns):
+        return pd.DataFrame()
+
+    group_cols = group_cols or []
+    if group_cols:
+        missing = [col for col in group_cols if col not in df.columns]
+        if missing:
+            return pd.DataFrame()
+        groups = df.groupby(group_cols, observed=True, dropna=False)
+    else:
+        groups = [((), df)]
+
+    rows: list[dict[str, object]] = []
+    for keys, grp in groups:
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+
+        work = grp[["Tref_ps", "t_raw_ps"]].apply(pd.to_numeric, errors="coerce").dropna()
+        if work["Tref_ps"].nunique() < 4:
+            continue
+
+        edges = np.linspace(
+            float(work["Tref_ps"].min()),
+            float(work["Tref_ps"].max()),
+            num=min(n_bins, work["Tref_ps"].nunique()) + 1,
+        )
+        edges = np.unique(edges)
+        if len(edges) < 4:
+            continue
+
+        work["tref_bin"] = pd.cut(work["Tref_ps"], bins=edges, include_lowest=True, duplicates="drop")
+        prof = (
+            work.groupby("tref_bin", observed=True)
+            .agg(tref_mean_ps=("Tref_ps", "mean"),
+                 raw_mean_ps=("t_raw_ps", "mean"),
+                 count=("t_raw_ps", "size"))
+            .reset_index(drop=True)
+        )
+        if len(prof) < 4:
+            continue
+
+        tref = prof["tref_mean_ps"].to_numpy(dtype=float)
+        raw = prof["raw_mean_ps"].to_numpy(dtype=float)
+        tref_span = tref[-1] - tref[0]
+        if tref_span == 0:
+            continue
+
+        endpoint_slope = (raw[-1] - raw[0]) / tref_span
+        endpoint_offset = raw[0] - endpoint_slope * tref[0]
+        endpoint_raw = endpoint_slope * tref + endpoint_offset
+        endpoint_resid = raw - endpoint_raw
+        endpoint_inl = endpoint_resid / legacy.DELTA_LSB
+
+        d_tref = np.diff(tref)
+        d_raw = np.diff(raw)
+        valid = d_tref != 0
+        if np.any(valid) and endpoint_slope != 0:
+            transfer_dnl = (d_raw[valid] / d_tref[valid]) / endpoint_slope - 1.0
+            peak_transfer_dnl = float(np.max(np.abs(transfer_dnl)))
+        else:
+            peak_transfer_dnl = float("nan")
+
+        row: dict[str, object] = {
+            "rows": int(len(work)),
+            "occupied_tref_bins": int(len(prof)),
+            "tref_min_ps": float(tref[0]),
+            "tref_max_ps": float(tref[-1]),
+            "endpoint_slope_ps_per_ps": float(endpoint_slope),
+            "endpoint_offset_ps": float(endpoint_offset),
+            "mean_transfer_residual_ps": float(np.mean(endpoint_resid)),
+            "rmse_transfer_residual_ps": float(np.sqrt(np.mean(endpoint_resid ** 2))),
+            "peak_transfer_inl_lsb": float(np.max(np.abs(endpoint_inl))),
+            "peak_transfer_dnl_lsb": peak_transfer_dnl,
         }
         for col, key in zip(group_cols, keys):
             row[col] = key
@@ -264,6 +365,19 @@ def _best_worst_lines(summary: pd.DataFrame, label: str, key_cols: list[str]) ->
     ]
 
 
+def _best_worst_transfer_lines(summary: pd.DataFrame, label: str, key_cols: list[str]) -> list[str]:
+    if summary.empty:
+        return [f"    {label}: unavailable"]
+    worst = summary.loc[summary["peak_transfer_inl_lsb"].idxmax()]
+    key = ", ".join(f"{col}={worst[col]}" for col in key_cols if col in worst)
+    return [
+        f"    Worst {label}: {key}  rows={int(worst['rows'])}  "
+        f"slope={worst['endpoint_slope_ps_per_ps']:.6f}  "
+        f"PkTransferDNL={worst['peak_transfer_dnl_lsb']:.3f} LSB  "
+        f"PkTransferINL={worst['peak_transfer_inl_lsb']:.3f} LSB"
+    ]
+
+
 def analyze_config_v2(
     config: str,
     df: pd.DataFrame,
@@ -305,18 +419,26 @@ def analyze_config_v2(
         "peak_inl_lsb": peak_inl,
         "diagnostic_only": True,
     }
-    print("  Corrected pooled DNL/INL diagnostic: "
+    print("  Corrected pooled code-occupancy diagnostic: "
           f"Peak DNL={peak_dnl:.3f} LSB  Peak INL={peak_inl:.3f} LSB  "
           f"final INL={pooled_stats['final_inl']:.3g} LSB")
 
     hit_idx_dnl = compute_inl_dnl_summary(df, ["hit_idx"])
     nslow_dnl = compute_inl_dnl_summary(df, ["nslow"])
+    hit_idx_transfer = compute_transfer_linearity_summary(df, ["hit_idx"])
+    nslow_transfer = compute_transfer_linearity_summary(df, ["nslow"])
     result["hit_idx_dnl_inl"] = hit_idx_dnl
     result["nslow_dnl_inl"] = nslow_dnl
+    result["hit_idx_transfer_linearity"] = hit_idx_transfer
+    result["nslow_transfer_linearity"] = nslow_transfer
 
     for line in _best_worst_lines(hit_idx_dnl, "hit_idx INL", ["hit_idx"]):
         print(line)
     for line in _best_worst_lines(nslow_dnl, "nslow INL", ["nslow"]):
+        print(line)
+    for line in _best_worst_transfer_lines(hit_idx_transfer, "hit_idx transfer INL", ["hit_idx"]):
+        print(line)
+    for line in _best_worst_transfer_lines(nslow_transfer, "nslow transfer INL", ["nslow"]):
         print(line)
 
     class_stats, ttest_results = legacy.boundary_class_analysis(df)
@@ -362,6 +484,8 @@ def analyze_config_v2(
     safe_cfg = legacy._safe_config(config)
     hit_idx_dnl.to_csv(out_dir / f"stratified_dnl_inl_by_hit_idx_{safe_cfg}.csv", index=False)
     nslow_dnl.to_csv(out_dir / f"stratified_dnl_inl_by_nslow_{safe_cfg}.csv", index=False)
+    hit_idx_transfer.to_csv(out_dir / f"transfer_linearity_by_hit_idx_{safe_cfg}.csv", index=False)
+    nslow_transfer.to_csv(out_dir / f"transfer_linearity_by_nslow_{safe_cfg}.csv", index=False)
     if not delay_profile.empty:
         delay_profile.to_csv(out_dir / f"delay_profile_{safe_cfg}.csv", index=False)
         worst_delay = delay_profile.loc[delay_profile["rmse"].idxmax()]
@@ -445,6 +569,8 @@ def _json_ready_results(all_results: dict[str, dict[str, object]], ttest_all: di
             "ttest_results": ttest_all.get(cfg, []),
             "hit_idx_dnl_inl": _df_records(res.get("hit_idx_dnl_inl")),
             "nslow_dnl_inl": _df_records(res.get("nslow_dnl_inl")),
+            "hit_idx_transfer_linearity": _df_records(res.get("hit_idx_transfer_linearity")),
+            "nslow_transfer_linearity": _df_records(res.get("nslow_transfer_linearity")),
         }
         boundary = res.get("boundary_classes", {})
         cfg_ready["boundary_classes"] = {
@@ -467,25 +593,26 @@ def write_summary_report_v2(all_results: dict, out_path: Path, ttest_all: dict) 
     lines.append("=" * 80)
     lines.append("")
     lines.append("Notes:")
-    lines.append("  - Pooled DNL/INL is diagnostic only; signoff review should use strata.")
+    lines.append("  - Pooled code-occupancy DNL/INL is diagnostic only; signoff review should use strata.")
+    lines.append("  - Transfer-linearity INL/DNL is computed from mean t_raw versus Tref bins.")
     lines.append("  - DNL/INL bin edges include one full bin above max code.")
     lines.append("  - Auto Tref mode uses START-rising to STOP-rising semantics.")
     lines.append("")
 
     header = (
         f"{'Config':<40s} {'Count':>10s} {'RMSE':>10s} "
-        f"{'PoolDNL':>9s} {'PoolINL':>9s} {'WorstHitINL':>12s} "
-        f"{'WorstNslowINL':>14s} {'TrefSource':>24s}"
+        f"{'OccDNL':>9s} {'OccINL':>9s} {'HitXferINL':>12s} "
+        f"{'NslowXferINL':>14s} {'TrefSource':>24s}"
     )
     lines.append(header)
     lines.append("-" * len(header))
     for cfg, res in sorted(all_results.items()):
         stats = res.get("offset_stats", {})
         pooled = res.get("pooled_dnl_inl", {})
-        hit_df = res.get("hit_idx_dnl_inl")
-        nslow_df = res.get("nslow_dnl_inl")
-        hit_worst = float(hit_df["peak_inl_lsb"].max()) if isinstance(hit_df, pd.DataFrame) and not hit_df.empty else float("nan")
-        nslow_worst = float(nslow_df["peak_inl_lsb"].max()) if isinstance(nslow_df, pd.DataFrame) and not nslow_df.empty else float("nan")
+        hit_df = res.get("hit_idx_transfer_linearity")
+        nslow_df = res.get("nslow_transfer_linearity")
+        hit_worst = float(hit_df["peak_transfer_inl_lsb"].max()) if isinstance(hit_df, pd.DataFrame) and not hit_df.empty else float("nan")
+        nslow_worst = float(nslow_df["peak_transfer_inl_lsb"].max()) if isinstance(nslow_df, pd.DataFrame) and not nslow_df.empty else float("nan")
         tref = res.get("tref_audit", {})
         lines.append(
             f"{cfg:<40s} {stats.get('count', 0):>10d} {stats.get('rmse', 0):>10.2f} "
@@ -518,8 +645,10 @@ def write_summary_report_v2(all_results: dict, out_path: Path, ttest_all: dict) 
     lines.append("-" * 80)
     for cfg, res in sorted(all_results.items()):
         lines.append(f"  Config: {cfg}")
-        lines.extend(_best_worst_lines(res.get("hit_idx_dnl_inl", pd.DataFrame()), "hit_idx INL", ["hit_idx"]))
-        lines.extend(_best_worst_lines(res.get("nslow_dnl_inl", pd.DataFrame()), "nslow INL", ["nslow"]))
+        lines.extend(_best_worst_lines(res.get("hit_idx_dnl_inl", pd.DataFrame()), "hit_idx occupancy INL", ["hit_idx"]))
+        lines.extend(_best_worst_lines(res.get("nslow_dnl_inl", pd.DataFrame()), "nslow occupancy INL", ["nslow"]))
+        lines.extend(_best_worst_transfer_lines(res.get("hit_idx_transfer_linearity", pd.DataFrame()), "hit_idx transfer INL", ["hit_idx"]))
+        lines.extend(_best_worst_transfer_lines(res.get("nslow_transfer_linearity", pd.DataFrame()), "nslow transfer INL", ["nslow"]))
     lines.append("")
 
     lines.append("-" * 80)
@@ -553,7 +682,17 @@ def run_self_test() -> None:
             "Uniform synthetic DNL/INL self-test failed: "
             f"peak_dnl={peak_dnl}, peak_inl={peak_inl}, final_inl={stats['final_inl']}"
         )
+    linear_df = pd.DataFrame({
+        "Tref_ps": np.arange(0, 1000, legacy.DELTA_LSB),
+        "t_raw_ps": np.arange(0, 1000, legacy.DELTA_LSB),
+        "hit_idx": 0,
+        "nslow": 1,
+    })
+    xfer = compute_transfer_linearity_summary(linear_df)
+    if xfer.empty or xfer.iloc[0]["peak_transfer_inl_lsb"] != 0.0:
+        raise AssertionError("Linear transfer self-test failed")
     print("[SELFTEST] uniform synthetic DNL/INL: PASS (0.0 / 0.0 LSB)")
+    print("[SELFTEST] ideal transfer linearity: PASS (0.0 INL)")
 
 
 def main() -> None:
@@ -571,8 +710,8 @@ def main() -> None:
     parser.add_argument("--no-plots", action="store_true",
                         help="Skip plot generation.")
     parser.add_argument("--tref-mode", choices=("auto", "logged", "start_to_stop"),
-                        default="auto",
-                        help="Reference time interpretation. auto corrects legacy campaign_collect data.")
+                        default="logged",
+                        help="Reference time interpretation. Use start_to_stop/auto for explicit timing audits.")
     parser.add_argument("--start-pulse-width-ps", type=int,
                         default=DEFAULT_START_PULSE_WIDTH_PS,
                         help="START pulse width added for legacy campaign_collect Tref audit.")
