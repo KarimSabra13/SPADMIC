@@ -241,12 +241,37 @@ Main outputs:
 - `results/fixed_delay_campaign/analysis/fixed_delay_summary.csv`
 - `results/fixed_delay_campaign/analysis/fixed_delay_averaging.csv`
 - `results/fixed_delay_campaign/analysis/fixed_delay_report.txt`
+- `results/fixed_delay_campaign/analysis/raw_aliases/*/alias_key_summary.csv`
+  when `scripts/analysis/analyze_raw_aliases.py` is run on the same fixed-delay tree
 
 These reports use actual fixed-delay populations and distinguish:
 
 - row-level error
 - `first_hit_scan` conversion estimator
 - `conv_mean` conversion estimator
+
+Alias-closure signoff must use the same population as the maintained LUT:
+
+```bash
+python3 scripts/analysis/analyze_raw_aliases.py \
+  --campaign-dir results/fixed_delay_campaign \
+  --config-filter 'multihit_15_cal_nominal*' \
+  --core-only \
+  --out-dir results/fixed_delay_campaign/analysis/raw_aliases_core
+```
+
+`--core-only` applies the calibration signoff filter `nslow > 0`, matching
+`calibrate_6d_lut.py`. Run without this flag only when intentionally auditing
+all packet rows, including the `nslow == 0` boundary rows that the maintained
+LUT excludes and host software must mark low-confidence.
+
+The alias analyzer reports both packet-visible keys and the exact maintained
+calibration key:
+
+```
+cal_lut_key = ns_inf, nf_inf, nslow, nfast_hit,
+              stop_phase_disc, phase0_snap, hit_idx
+```
 
 ### 5.7 Running calibration
 

@@ -22,6 +22,17 @@ import pandas as pd
 
 
 DELAY_DIR_RE = re.compile(r"delay_(\d+)ps$")
+NE = 8
+K_VERNIER = 11
+K_SLOW = K_VERNIER * NE
+K_FAST = NE
+OFFSET = 25
+QUANT = 10
+NSNF_REV = {
+    ns * K_VERNIER - nf * (K_VERNIER - 1): (ns, nf)
+    for ns in range(NE)
+    for nf in range(NE)
+}
 DEFAULT_KEY_SETS: dict[str, list[str]] = {
     "raw_formula_inputs": ["nslow", "nfast_hit", "ns", "nf", "slow_boundary_inc"],
     "packet_no_hit": ["nslow", "nfast_hit", "ns", "nf", "phase0_snap", "slow_boundary_inc"],
@@ -30,6 +41,13 @@ DEFAULT_KEY_SETS: dict[str, list[str]] = {
     ],
     "packet_stop_disc": [
         "nslow", "nfast_hit", "ns", "nf", "stop_phase_disc", "phase0_snap",
+        "slow_boundary_inc", "hit_idx",
+    ],
+    "cal_lut_key": [
+        "ns_inf", "nf_inf", "nslow", "nfast_hit", "stop_phase_disc", "phase0_snap", "hit_idx",
+    ],
+    "cal_lut_key_with_boundary": [
+        "ns_inf", "nf_inf", "nslow", "nfast_hit", "stop_phase_disc", "phase0_snap",
         "slow_boundary_inc", "hit_idx",
     ],
     "packet_all_csv": [
@@ -79,6 +97,17 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=100,
         help="Rows to keep in each top-collisions CSV.",
+    )
+    subset = parser.add_mutually_exclusive_group()
+    subset.add_argument(
+        "--core-only",
+        action="store_true",
+        help="Analyze only calibration-core rows with nslow > 0.",
+    )
+    subset.add_argument(
+        "--noncore-only",
+        action="store_true",
+        help="Analyze only boundary rows with nslow == 0.",
     )
     parser.add_argument("--self-test", action="store_true", help="Run synthetic self-test and exit.")
     return parser.parse_args()
@@ -147,10 +176,36 @@ def load_fixed_delay_csvs(paths: list[Path]) -> pd.DataFrame:
         if col not in data.columns:
             raise ValueError(f"Required column {col!r} missing from loaded data")
         data[col] = pd.to_numeric(data[col], errors="coerce")
+    for col in {
+        col
+        for cols in DEFAULT_KEY_SETS.values()
+        for col in cols
+        if col not in {"ns_inf", "nf_inf"}
+    }:
+        if col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors="coerce")
     data = data.dropna(subset=["delay_ps", "Tref_ps", "t_raw_ps"]).copy()
     data["delay_ps"] = data["delay_ps"].astype(int)
     data["err_current_ps"] = data["Tref_ps"] - data["t_raw_ps"]
+    infer_ns_nf(data)
     return data
+
+
+def infer_ns_nf(df: pd.DataFrame) -> pd.DataFrame:
+    required = {"t_raw_ps", "nslow", "nfast_hit", "slow_boundary_inc"}
+    if not required.issubset(df.columns):
+        return df
+
+    coef = (df["t_raw_ps"] // QUANT).astype("Int64")
+    resid = (
+        coef
+        - (df["nslow"].astype("Int64") + 2 + df["slow_boundary_inc"].astype("Int64") - 1) * K_SLOW
+        - df["nfast_hit"].astype("Int64") * K_FAST
+        - OFFSET
+    )
+    df["ns_inf"] = resid.map(lambda r: NSNF_REV.get(int(r), (None, None))[0] if pd.notna(r) else None).astype("Int64")
+    df["nf_inf"] = resid.map(lambda r: NSNF_REV.get(int(r), (None, None))[1] if pd.notna(r) else None).astype("Int64")
+    return df
 
 
 def available_key_sets(df: pd.DataFrame, custom_specs: list[str]) -> dict[str, list[str]]:
@@ -161,10 +216,21 @@ def available_key_sets(df: pd.DataFrame, custom_specs: list[str]) -> dict[str, l
 
     available: dict[str, list[str]] = {}
     for name, cols in key_sets.items():
-        present = [col for col in cols if col in df.columns]
-        if present:
-            available[name] = present
+        if all(col in df.columns for col in cols):
+            available[name] = cols
     return available
+
+
+def apply_subset_filter(df: pd.DataFrame, args: argparse.Namespace) -> tuple[pd.DataFrame, str]:
+    if args.core_only:
+        if "nslow" not in df.columns:
+            raise ValueError("--core-only requires an nslow column")
+        return df[df["nslow"] > 0].copy(), "core_nslow_gt_0"
+    if args.noncore_only:
+        if "nslow" not in df.columns:
+            raise ValueError("--noncore-only requires an nslow column")
+        return df[df["nslow"] == 0].copy(), "noncore_nslow_eq_0"
+    return df, "all_rows"
 
 
 def rmse(values: pd.Series | np.ndarray) -> float:
@@ -237,12 +303,15 @@ def dominant_tuples(df: pd.DataFrame, key_cols: list[str], top_per_delay: int) -
 def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, args: argparse.Namespace) -> dict[str, object]:
     config_dir = out_dir / safe_name(config)
     config_dir.mkdir(parents=True, exist_ok=True)
+    df, subset_name = apply_subset_filter(df, args)
+    if df.empty:
+        raise ValueError(f"{config}: subset {subset_name} has no usable rows")
 
     key_sets = available_key_sets(df, args.key)
     summaries: list[dict[str, object]] = []
     for key_name, key_cols in key_sets.items():
         summary, collisions = summarize_key(df, key_cols)
-        summary = {"config": config, "key_name": key_name, **summary}
+        summary = {"config": config, "subset": subset_name, "key_name": key_name, **summary}
         summaries.append(summary)
 
         aliased = collisions[collisions["n_delays"] > 1].sort_values(
@@ -263,6 +332,7 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, args: argparse.
     write_report(config, summary_df, config_dir / "raw_alias_report.txt")
     return {
         "config": config,
+        "subset": subset_name,
         "rows": int(len(df)),
         "key_summary": summary_df.to_dict(orient="records"),
     }
@@ -276,6 +346,11 @@ def write_report(config: str, summary_df: pd.DataFrame, path: Path) -> None:
         "",
         f"Config: {config}",
         "",
+        "Subsets:",
+        "  all_rows          : raw packet population, including boundary rows",
+        "  core_nslow_gt_0   : calibration signoff population used by calibrate_6d_lut.py",
+        "  noncore_nslow_eq_0: boundary population excluded from the maintained LUT",
+        "",
         "A key with aliased_keys > 0 cannot uniquely reconstruct absolute delay",
         "without another discriminator. oracle_floor_rmse_ps is the best possible",
         "RMSE for a per-key mean timestamp on this dataset.",
@@ -285,14 +360,14 @@ def write_report(config: str, summary_df: pd.DataFrame, path: Path) -> None:
         lines.append("No candidate keys were available.")
     else:
         header = (
-            f"{'Key':<22s} {'Rows':>10s} {'Keys':>9s} {'Aliased':>9s} "
+            f"{'Subset':<18s} {'Key':<25s} {'Rows':>10s} {'Keys':>9s} {'Aliased':>9s} "
             f"{'AliasRows':>10s} {'RawRMSE':>10s} {'OracleRMSE':>11s} {'MaxSpan':>8s}"
         )
         lines.append(header)
         lines.append("-" * len(header))
         for _, row in summary_df.sort_values("oracle_floor_rmse_ps").iterrows():
             lines.append(
-                f"{row['key_name']:<22s} {int(row['rows']):>10d} "
+                f"{row['subset']:<18s} {row['key_name']:<25s} {int(row['rows']):>10d} "
                 f"{int(row['unique_keys']):>9d} {int(row['aliased_keys']):>9d} "
                 f"{int(row['aliased_rows']):>10d} {row['current_rmse_ps']:>10.2f} "
                 f"{row['oracle_floor_rmse_ps']:>11.2f} {int(row['max_delay_span_ps']):>8d}"
@@ -309,6 +384,7 @@ def run_self_test() -> None:
         "nfast_hit": [0, 1, 2, 3],
         "ns": [0, 0, 0, 0],
         "nf": [0, 0, 0, 0],
+        "stop_phase_disc": [0, 1, 2, 3],
         "phase0_snap": [0, 0, 0, 0],
         "slow_boundary_inc": [0, 0, 0, 0],
         "hit_idx": [0, 0, 0, 0],
