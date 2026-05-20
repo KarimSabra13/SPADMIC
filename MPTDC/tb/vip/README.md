@@ -733,21 +733,21 @@ VIP coverage results: 14 passed, 0 failed
 HEADER  [15:14]=10  [13:12]=ctx_id  [11]=phase0_snap
         [10:7]=hit_count  [6:3]=flags  [2:1]=out_mode  [0]=slow_boundary_inc
 
-  flags[3]=reserved  [2]=closed_by_firsthit
+  flags[3]=reserved  [2]=closed_by_fast_maxhit
   flags[1]=closed_by_maxhits  [0]=closed_by_watchdog
 
   HIT WORDS (per out_mode):
   RAW_FEATURES (2 words/hit):
     W0: [14:8]=nslow  [7:1]=nfast_hit
-    W1: [14:11]=ns  [10:7]=nf  [6:0]=reserved
+    W1: [14:11]=ns  [10:7]=nf  [6:3]=reserved  [2:0]=stop_phase_disc
 
   RAW_TIMESTAMP (2 words/hit):
     W0: same as RAW_FEATURES W0
     W1: t_raw_lsw[15:0]
 
-  FULL (4 words/hit):
-    W0–W2: same as RAW_FEATURES
-    W3: t_raw_lsw[15:0]
+  FULL (3 words/hit):
+    W0-W1: same as RAW_FEATURES
+    W2: t_raw_lsw[15:0]
 
 EOC     [15:14]=11  [13:0]=conv_id (14-bit conversion counter)
 ```

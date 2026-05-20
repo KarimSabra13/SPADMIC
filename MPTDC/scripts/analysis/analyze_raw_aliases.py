@@ -28,8 +28,12 @@ DEFAULT_KEY_SETS: dict[str, list[str]] = {
     "packet_with_hit": [
         "nslow", "nfast_hit", "ns", "nf", "phase0_snap", "slow_boundary_inc", "hit_idx",
     ],
+    "packet_stop_disc": [
+        "nslow", "nfast_hit", "ns", "nf", "stop_phase_disc", "phase0_snap",
+        "slow_boundary_inc", "hit_idx",
+    ],
     "packet_all_csv": [
-        "nslow", "nfast_hit", "ns", "nf", "phase0_snap", "slow_boundary_inc",
+        "nslow", "nfast_hit", "ns", "nf", "stop_phase_disc", "phase0_snap", "slow_boundary_inc",
         "hit_idx", "hit_count", "flags", "ctx_id", "mode", "max_hits",
     ],
     "debug_aug": [

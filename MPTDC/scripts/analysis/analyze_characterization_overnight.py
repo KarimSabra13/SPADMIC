@@ -41,8 +41,17 @@ VERNIER_COEF_BIAS = 25
 VERNIER_QUANT_PS = 10
 
 # Match scripts/calibration/calibrate_6d_lut.py:
-# "6D LUT" = (ns_inf, nf_inf, nslow, nfast_hit, phase0_snap, hit_idx).
-CALIBRATION_LUT_KEY = ["ns_inf", "nf_inf", "nslow", "nfast_hit", "phase0_snap", "hit_idx"]
+# discriminator-aware LUT = (ns_inf, nf_inf, nslow, nfast_hit,
+# stop_phase_disc, phase0_snap, hit_idx).
+CALIBRATION_LUT_KEY = [
+    "ns_inf",
+    "nf_inf",
+    "nslow",
+    "nfast_hit",
+    "stop_phase_disc",
+    "phase0_snap",
+    "hit_idx",
+]
 NSNF_REV = {
     ns * K_VERNIER - nf * (K_VERNIER - 1): (ns, nf)
     for ns in range(NE)

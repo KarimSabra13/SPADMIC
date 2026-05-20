@@ -22,6 +22,7 @@ module mptdc_hit_capture_bridge
   input  wire [NFAST_W-1:0]           nfast_snap_i,
   input  wire [NFAST_W-1:0]           nfast_stop_i,
   input  wire                         phase0_snap_i,
+  input  stop_phase_disc_t            stop_slow_phase_disc_i,
   input  wire                         slow_boundary_inc_i,
 
   output mptdc_ctx_snapshot_t         snapshot_o
@@ -39,6 +40,7 @@ module mptdc_hit_capture_bridge
       snapshot_q.nfast_snap        <= nfast_snap_i;
       snapshot_q.nfast_stop        <= nfast_stop_i;
       snapshot_q.phase0_snap       <= phase0_snap_i;
+      snapshot_q.stop_slow_phase_disc <= stop_slow_phase_disc_i;
       snapshot_q.slow_boundary_inc <= slow_boundary_inc_i;
       snapshot_q.hit_count         <= '0;
       snapshot_q.flags             <= '0;

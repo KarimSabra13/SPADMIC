@@ -57,7 +57,7 @@ package mptdc_char_tb_pkg;
   task automatic char_write_header(input int fd, input string extra_cols);
     begin
       $fwrite(fd,
-        "stage_id,config_id,seed,trial_id,conv_id,hit_idx,Tref_ps,start_time_ps,stop_time_ps,accepted,rejected,ctx_id,hit_count,flags,phase0_snap,slow_boundary_inc,nslow,nfast_hit,ns,nf,t_raw_ps,tuple_code,scalar_bin,max_hits,input_sel,out_mode");
+        "stage_id,config_id,seed,trial_id,conv_id,hit_idx,Tref_ps,start_time_ps,stop_time_ps,accepted,rejected,ctx_id,hit_count,flags,phase0_snap,slow_boundary_inc,nslow,nfast_hit,ns,nf,stop_phase_disc,t_raw_ps,tuple_code,scalar_bin,max_hits,input_sel,out_mode");
       if (extra_cols != "")
         $fwrite(fd, ",%s", extra_cols);
       $fwrite(fd, "\n");
@@ -67,7 +67,7 @@ package mptdc_char_tb_pkg;
   task automatic char_vip_write_header(input int fd, input string extra_cols = "");
     begin
       $fwrite(fd,
-        "schema_version,test_name,seed,config_id,stage,train_valid_split,attempt_id,event_id,conv_id,ctx_id,hit_idx,t_start_fs,t_stop_fs,true_dt_fs,t_start_ps,t_stop_ps,true_dt_ps,accepted,rejected,reject_reason,close_reason,max_hits,out_mode,input_sel,nslow,nfast_hit,ns,nf,ns_inf,nf_inf,phase0_snap,slow_boundary_inc,hit_count,flags,t_raw_ps,reconstructed_time_pre_cal_ps,reconstructed_time_post_cal_ps,residual_pre_cal_ps,residual_post_cal_ps");
+        "schema_version,test_name,seed,config_id,stage,train_valid_split,attempt_id,event_id,conv_id,ctx_id,hit_idx,t_start_fs,t_stop_fs,true_dt_fs,t_start_ps,t_stop_ps,true_dt_ps,accepted,rejected,reject_reason,close_reason,max_hits,out_mode,input_sel,nslow,nfast_hit,ns,nf,ns_inf,nf_inf,stop_phase_disc,phase0_snap,slow_boundary_inc,hit_count,flags,t_raw_ps,reconstructed_time_pre_cal_ps,reconstructed_time_post_cal_ps,residual_pre_cal_ps,residual_post_cal_ps");
       if (extra_cols != "")
         $fwrite(fd, ",%s", extra_cols);
       $fwrite(fd, "\n");
@@ -125,7 +125,7 @@ package mptdc_char_tb_pkg;
   );
     begin
       $fwrite(fd,
-        "%0d,%0d,%0d,%0d,%0d,-1,%0d,%0d,%0d,%0d,%0d,-1,0,0,0,0,0,0,0,0,0,-1,-1,%0d,%0d,%0d",
+        "%0d,%0d,%0d,%0d,%0d,-1,%0d,%0d,%0d,%0d,%0d,-1,0,0,0,0,0,0,0,0,0,0,-1,-1,%0d,%0d,%0d",
         stage_id, config_id, seed, trial_id, conv_id, tref_ps, start_time_ps,
         stop_time_ps, accepted, rejected, max_hits, input_sel, out_mode);
       if (extra != "")
@@ -310,6 +310,7 @@ package mptdc_char_tb_pkg;
     int nfast_hit_i;
     int ns_i;
     int nf_i;
+    int stop_phase_disc_i;
     int signed t_raw_ps_i;
     int tuple_code_i;
     int scalar_bin_i;
@@ -366,6 +367,7 @@ package mptdc_char_tb_pkg;
         nfast_hit_i = hf.nfast;
         ns_i = hf.ns;
         nf_i = hf.nf;
+        stop_phase_disc_i = hf.stop_phase_disc;
 
         if (out_mode == int'(OUT_MODE_FULL) && (idx + 2 < word_count)) begin
           word_idx2 = words_flat[(idx + 2)*NARROW_W +: NARROW_W];
@@ -382,11 +384,11 @@ package mptdc_char_tb_pkg;
         scalar_bin_i = char_scalar_bin(t_raw_ps_i);
 
         $fwrite(fd,
-          "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
+          "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
           stage_id, config_id, seed, trial_id, eoc_id, hits_found, tref_ps,
           start_time_ps, stop_time_ps, accepted_i, rejected_i, hdr_ctx_id,
           hdr_hit_count, hdr_flags, hdr_phase0, hdr_boundary_inc, nslow_i,
-          nfast_hit_i, ns_i, nf_i, t_raw_ps_i, tuple_code_i, scalar_bin_i,
+          nfast_hit_i, ns_i, nf_i, stop_phase_disc_i, t_raw_ps_i, tuple_code_i, scalar_bin_i,
           max_hits, input_sel, out_mode);
         if (extra != "")
           $fwrite(fd, ",%s", extra);

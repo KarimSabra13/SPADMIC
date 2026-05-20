@@ -79,6 +79,7 @@ mptdc_acq_rec_t
 | `hit_count` | number of HIT records that follow for this conversion |
 | `flags` | `closed_by_fast_maxhit`, `closed_by_maxhits`, `closed_by_watchdog` |
 | `phase0_snap` | STOP-side phase-0 snapshot |
+| `stop_slow_phase_disc` | STOP-edge `slow_phase[5:3]` discriminator exported in RAW_FEATURES/FULL Hit W1 `[2:0]` |
 | `slow_boundary_inc` | STOP-side boundary carry |
 | `ctx_id` | owning context ID |
 

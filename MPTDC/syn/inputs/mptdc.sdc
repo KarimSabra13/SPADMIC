@@ -48,6 +48,33 @@ proc mptdc_try_false_path_pins {label patterns} {
     }
 }
 
+proc mptdc_try_set_max_delay_pins {label delay from_patterns to_patterns} {
+    set from_pins [list]
+    set to_pins [list]
+    foreach pattern $from_patterns {
+        set pins [get_pins -quiet -hierarchical $pattern]
+        if {[llength $pins] > 0} {
+            set from_pins [concat $from_pins $pins]
+        }
+    }
+    foreach pattern $to_patterns {
+        set pins [get_pins -quiet -hierarchical $pattern]
+        if {[llength $pins] > 0} {
+            set to_pins [concat $to_pins $pins]
+        }
+    }
+
+    if {[llength $from_pins] == 0 || [llength $to_pins] == 0} {
+        puts "MPTDC_SDC_WARN: max-delay pins not found for $label"
+        return
+    }
+
+    puts "MPTDC_SDC_INFO: max-delaying $label from [llength $from_pins] pin(s) to [llength $to_pins] pin(s)"
+    if {[catch {set_max_delay $delay -from $from_pins -to $to_pins} err]} {
+        puts "MPTDC_SDC_WARN: set_max_delay failed for $label: $err"
+    }
+}
+
 proc mptdc_create_osc_tap_clocks {base_name period tap_step tap_pins} {
     set created [list]
     set tap_idx 0
@@ -199,6 +226,19 @@ mptdc_try_false_path_pins "START watchdog async clear pins" {
     *start_timeout_latched*/*RN*
 }
 
+# STOP metadata capture flops are intentionally clocked by the asynchronous STOP
+# event and sample the held slow-ring phase image.  These are source-side event
+# flops, not synchronous slow-clock endpoints; do not time setup from oscillator
+# tap clocks into their data pins.  The sampled levels are later consumed through
+# the clk_sys static-bus handshake in mptdc_hit_capture_bridge.
+mptdc_try_false_path_pins "STOP metadata async capture data pins" {
+    *u_stop_capture*/phase0_snap_o_reg*/D
+    *u_stop_capture*/phase7d_snap_o_reg*/D
+    *u_stop_capture*/slow_boundary_inc_o_reg*/D
+    *u_stop_capture*/stop_slow_phase_disc_o_reg*/D
+    *u_stop_capture*/stop_slow_phase_disc_o_reg*/*D*
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. CDC SYNCHRONIZER PROTECTION
 # ─────────────────────────────────────────────────────────────────────────────
@@ -222,6 +262,10 @@ mptdc_try_dont_touch *start_timeout_sync_pipe*
 mptdc_try_dont_touch *start_timeout_latched*
 mptdc_try_dont_touch *start_rejected_pending*
 mptdc_try_dont_touch *rejected_sync_pipe*
+mptdc_try_dont_touch *u_stop_capture*phase0_snap_o*
+mptdc_try_dont_touch *u_stop_capture*phase7d_snap_o*
+mptdc_try_dont_touch *u_stop_capture*slow_boundary_inc_o*
+mptdc_try_dont_touch *u_stop_capture*stop_slow_phase_disc_o*
 # PD hierarchy preservation is handled by the Genus flow procedure, where the
 # tool can distinguish elaborated hierarchy from leaf timing objects.  Avoid a
 # broad SDC-level dont_touch on partially mapped hierarchy because Genus logs it
@@ -249,6 +293,24 @@ mptdc_try_async_max_delay \
     $design(OSC_FAST_PERIOD) \
     [get_clocks $design(CLK_NAME)] \
     [get_clocks $design(OSC_FAST_CLOCKS)]
+
+# STOP metadata static bus: after STOP capture, these level outputs remain held
+# until pd_clear. Bound route delay into the clk_sys snapshot flops so physical
+# implementation keeps all STOP metadata bits co-located with the existing
+# phase0/slow-boundary path. This is not a new independent CDC synchronizer.
+mptdc_try_set_max_delay_pins \
+    "STOP metadata static bus into clk_sys snapshot" \
+    $design(CLK_PERIOD) \
+    {
+        *u_stop_capture*/phase0_snap_o_reg*/Q
+        *u_stop_capture*/slow_boundary_inc_o_reg*/Q
+        *u_stop_capture*/stop_slow_phase_disc_o_reg*/Q
+        *u_stop_capture*/stop_slow_phase_disc_o_reg*/*Q*
+    } \
+    {
+        *u_hit_capture_bridge*/snapshot_q_reg*/D
+        *u_hit_capture_bridge*/snapshot_q_reg*/*D*
+    }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. INPUT DELAYS

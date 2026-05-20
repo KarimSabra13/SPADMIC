@@ -116,6 +116,239 @@ module tb_campaign_collect;
     .narrow_data_i  (narrow_data)
   );
 
+  // TB-only probe set: sampled at the DUT measurement snapshot boundary so
+  // CSV rows can test candidate alias discriminators without changing RTL.
+  localparam string DBG_CSV_HEADER = {
+      "dbg_snapshot_time_ps,dbg_stop_time_ps,dbg_nslow_src_count,dbg_nslow_stop_latched,",
+      "dbg_nfast_src_count,dbg_nfast_stop_latched,dbg_hit_snapshot_nslow,dbg_hit_snapshot_nfast_snap,",
+      "dbg_hit_snapshot_nfast_stop,dbg_ctx_snapshot_nslow,dbg_ctx_snapshot_nfast_snap,",
+      "dbg_ctx_snapshot_nfast_stop,dbg_phase0_snap_live,dbg_phase7d_snap_live,",
+      "dbg_slow_boundary_inc_live,dbg_stop_phase0,dbg_stop_phase7d,dbg_stop_boundary_inc,",
+      "dbg_stop_slow_phase,dbg_stop_fast_phase,dbg_snapshot_slow_phase,dbg_snapshot_fast_phase,",
+      "dbg_stop_slow_phase0_guard,dbg_stop_slow_phase7d_probe,dbg_slow_gray_bin,",
+      "dbg_slow_gray_bin_snap,dbg_slow_gray_src_cont,dbg_slow_gray_src_snap_async,",
+      "dbg_slow_gray_snap_ff1,dbg_slow_gray_snap_ff2,dbg_fast_gray_bin,",
+      "dbg_fast_gray_src_cont,dbg_fast_gray_cont_ff1,dbg_fast_gray_cont_ff2,",
+      "dbg_start_latched,dbg_stop_latched,dbg_start_sync_pipe,dbg_stop_sync_pipe,",
+      "dbg_ctx_drain,dbg_ctx_drain_sync_ff1,dbg_ctx_drain_sync_ff2,dbg_active_ctx,",
+      "dbg_drain_read_ctx,dbg_ctx0_state,dbg_ctx1_state,dbg_meas_state,dbg_drain_state,",
+      "dbg_tx_nslow,dbg_tx_nfast,dbg_tx_ns,dbg_tx_nf,dbg_tx_hit_idx,dbg_tx_phase0,",
+      "dbg_tx_boundary_inc,dbg_tx_hit_count,dbg_tx_state"};
+
+  time dbg_snapshot_time_q, dbg_stop_time_q;
+  logic [NSLOW_W-1:0] dbg_nslow_src_count_q, dbg_nslow_stop_latched_q;
+  logic [NFAST_W-1:0] dbg_nfast_src_count_q, dbg_nfast_stop_latched_q;
+  logic [NSLOW_W-1:0] dbg_hit_snapshot_nslow_q, dbg_ctx_snapshot_nslow_q;
+  logic [NFAST_W-1:0] dbg_hit_snapshot_nfast_snap_q, dbg_hit_snapshot_nfast_stop_q;
+  logic [NFAST_W-1:0] dbg_ctx_snapshot_nfast_snap_q, dbg_ctx_snapshot_nfast_stop_q;
+  logic dbg_phase0_snap_live_q, dbg_phase7d_snap_live_q, dbg_slow_boundary_inc_live_q;
+  logic dbg_stop_phase0_q, dbg_stop_phase7d_q, dbg_stop_boundary_inc_q;
+  logic [NE-1:0] dbg_stop_slow_phase_q, dbg_stop_fast_phase_q;
+  logic [NE-1:0] dbg_snapshot_slow_phase_q, dbg_snapshot_fast_phase_q;
+  logic dbg_stop_slow_phase0_guard_q, dbg_stop_slow_phase7d_probe_q;
+  logic [NSLOW_W-1:0] dbg_slow_gray_bin_q, dbg_slow_gray_bin_snap_q;
+  logic [NSLOW_W-1:0] dbg_slow_gray_src_cont_q, dbg_slow_gray_src_snap_async_q;
+  logic [NSLOW_W-1:0] dbg_slow_gray_snap_ff1_q, dbg_slow_gray_snap_ff2_q;
+  logic [NFAST_W-1:0] dbg_fast_gray_bin_q, dbg_fast_gray_src_cont_q;
+  logic [NFAST_W-1:0] dbg_fast_gray_cont_ff1_q, dbg_fast_gray_cont_ff2_q;
+  logic dbg_start_latched_q, dbg_stop_latched_q;
+  logic [1:0] dbg_start_sync_pipe_q, dbg_stop_sync_pipe_q;
+  logic [N_CTX-1:0] dbg_ctx_drain_q, dbg_ctx_drain_sync_ff1_q, dbg_ctx_drain_sync_ff2_q;
+  logic [CTX_W-1:0] dbg_active_ctx_q, dbg_drain_read_ctx_q;
+  logic [1:0] dbg_ctx0_state_q, dbg_ctx1_state_q;
+  logic [3:0] dbg_meas_state_q, dbg_drain_state_q, dbg_tx_state_q;
+  logic [NSLOW_W-1:0] dbg_tx_nslow_q;
+  logic [NFAST_W-1:0] dbg_tx_nfast_q;
+  logic [PH_W-1:0] dbg_tx_ns_q, dbg_tx_nf_q;
+  logic [MAX_HITS_W-1:0] dbg_tx_hit_idx_q, dbg_tx_hit_count_q;
+  logic dbg_tx_phase0_q, dbg_tx_boundary_inc_q;
+
+  always @(posedge u_dut.u_core.stop_async_i or negedge async_rst_n) begin
+    if (!async_rst_n) begin
+      dbg_stop_time_q              <= 0;
+      dbg_stop_phase0_q            <= 1'b0;
+      dbg_stop_phase7d_q           <= 1'b0;
+      dbg_stop_boundary_inc_q      <= 1'b0;
+      dbg_stop_slow_phase_q        <= '0;
+      dbg_stop_fast_phase_q        <= '0;
+      dbg_stop_slow_phase0_guard_q <= 1'b0;
+      dbg_stop_slow_phase7d_probe_q <= 1'b0;
+    end else begin
+      dbg_stop_time_q              <= $time;
+      dbg_stop_phase0_q            <= u_dut.u_core.slow_phase[0];
+      dbg_stop_phase7d_q           <= u_dut.u_core.slow_phase7d_probe;
+      dbg_stop_boundary_inc_q      <= u_dut.u_core.slow_phase[0] & ~u_dut.u_core.slow_phase0_guard;
+      dbg_stop_slow_phase_q        <= u_dut.u_core.slow_phase;
+      dbg_stop_fast_phase_q        <= u_dut.u_core.fast_phase;
+      dbg_stop_slow_phase0_guard_q <= u_dut.u_core.slow_phase0_guard;
+      dbg_stop_slow_phase7d_probe_q <= u_dut.u_core.slow_phase7d_probe;
+    end
+  end
+
+  always_ff @(posedge clk_sys or negedge async_rst_n) begin
+    if (!async_rst_n) begin
+      dbg_snapshot_time_q             <= 0;
+      dbg_nslow_src_count_q           <= '0;
+      dbg_nslow_stop_latched_q        <= '0;
+      dbg_nfast_src_count_q           <= '0;
+      dbg_nfast_stop_latched_q        <= '0;
+      dbg_hit_snapshot_nslow_q        <= '0;
+      dbg_hit_snapshot_nfast_snap_q   <= '0;
+      dbg_hit_snapshot_nfast_stop_q   <= '0;
+      dbg_ctx_snapshot_nslow_q        <= '0;
+      dbg_ctx_snapshot_nfast_snap_q   <= '0;
+      dbg_ctx_snapshot_nfast_stop_q   <= '0;
+      dbg_phase0_snap_live_q          <= 1'b0;
+      dbg_phase7d_snap_live_q         <= 1'b0;
+      dbg_slow_boundary_inc_live_q    <= 1'b0;
+      dbg_snapshot_slow_phase_q       <= '0;
+      dbg_snapshot_fast_phase_q       <= '0;
+      dbg_slow_gray_bin_q             <= '0;
+      dbg_slow_gray_bin_snap_q        <= '0;
+      dbg_slow_gray_src_cont_q        <= '0;
+      dbg_slow_gray_src_snap_async_q  <= '0;
+      dbg_slow_gray_snap_ff1_q        <= '0;
+      dbg_slow_gray_snap_ff2_q        <= '0;
+      dbg_fast_gray_bin_q             <= '0;
+      dbg_fast_gray_src_cont_q        <= '0;
+      dbg_fast_gray_cont_ff1_q        <= '0;
+      dbg_fast_gray_cont_ff2_q        <= '0;
+      dbg_start_latched_q             <= 1'b0;
+      dbg_stop_latched_q              <= 1'b0;
+      dbg_start_sync_pipe_q           <= '0;
+      dbg_stop_sync_pipe_q            <= '0;
+      dbg_ctx_drain_q                 <= '0;
+      dbg_ctx_drain_sync_ff1_q        <= '0;
+      dbg_ctx_drain_sync_ff2_q        <= '0;
+      dbg_active_ctx_q                <= '0;
+      dbg_drain_read_ctx_q            <= '0;
+      dbg_ctx0_state_q                <= '0;
+      dbg_ctx1_state_q                <= '0;
+      dbg_meas_state_q                <= '0;
+      dbg_drain_state_q               <= '0;
+      dbg_tx_nslow_q                  <= '0;
+      dbg_tx_nfast_q                  <= '0;
+      dbg_tx_ns_q                     <= '0;
+      dbg_tx_nf_q                     <= '0;
+      dbg_tx_hit_idx_q                <= '0;
+      dbg_tx_phase0_q                 <= 1'b0;
+      dbg_tx_boundary_inc_q           <= 1'b0;
+      dbg_tx_hit_count_q              <= '0;
+      dbg_tx_state_q                  <= '0;
+    end else if (u_dut.u_core.meas_snapshot_en) begin
+      dbg_snapshot_time_q             <= $time;
+      dbg_nslow_src_count_q           <= u_dut.u_core.nslow_src_count;
+      dbg_nslow_stop_latched_q        <= u_dut.u_core.nslow_stop_latched;
+      dbg_nfast_src_count_q           <= u_dut.u_core.nfast_src_count;
+      dbg_nfast_stop_latched_q        <= u_dut.u_core.nfast_stop_latched;
+      dbg_hit_snapshot_nslow_q        <= u_dut.u_core.hit_capture_snapshot.nslow_snap;
+      dbg_hit_snapshot_nfast_snap_q   <= u_dut.u_core.hit_capture_snapshot.nfast_snap;
+      dbg_hit_snapshot_nfast_stop_q   <= u_dut.u_core.hit_capture_snapshot.nfast_stop;
+      dbg_ctx_snapshot_nslow_q        <= u_dut.u_core.ctx_snapshot.nslow_snap;
+      dbg_ctx_snapshot_nfast_snap_q   <= u_dut.u_core.ctx_snapshot.nfast_snap;
+      dbg_ctx_snapshot_nfast_stop_q   <= u_dut.u_core.ctx_snapshot.nfast_stop;
+      dbg_phase0_snap_live_q          <= u_dut.u_core.phase0_snap;
+      dbg_phase7d_snap_live_q         <= u_dut.u_core.phase7d_snap;
+      dbg_slow_boundary_inc_live_q    <= u_dut.u_core.slow_boundary_inc;
+      dbg_snapshot_slow_phase_q       <= u_dut.u_core.slow_phase;
+      dbg_snapshot_fast_phase_q       <= u_dut.u_core.fast_phase;
+      dbg_slow_gray_bin_q             <= u_dut.u_core.u_slow_cnt.bin_q;
+      dbg_slow_gray_bin_snap_q        <= u_dut.u_core.u_slow_cnt.bin_snap_q;
+      dbg_slow_gray_src_cont_q        <= u_dut.u_core.u_slow_cnt.gray_src_cont_q;
+      dbg_slow_gray_src_snap_async_q  <= u_dut.u_core.u_slow_cnt.gray_src_snap_async_q;
+      dbg_slow_gray_snap_ff1_q        <= u_dut.u_core.u_slow_cnt.gray_snap_ff1_async;
+      dbg_slow_gray_snap_ff2_q        <= u_dut.u_core.u_slow_cnt.gray_snap_ff2_async;
+      dbg_fast_gray_bin_q             <= u_dut.u_core.u_fast_cnt.bin_q;
+      dbg_fast_gray_src_cont_q        <= u_dut.u_core.u_fast_cnt.gray_src_cont_q;
+      dbg_fast_gray_cont_ff1_q        <= u_dut.u_core.u_fast_cnt.gray_cont_ff1_async;
+      dbg_fast_gray_cont_ff2_q        <= u_dut.u_core.u_fast_cnt.gray_cont_ff2_async;
+      dbg_start_latched_q             <= u_dut.u_core.fe_start_latched;
+      dbg_stop_latched_q              <= u_dut.u_core.fe_stop_latched;
+      dbg_start_sync_pipe_q           <= u_dut.u_core.start_sync_pipe;
+      dbg_stop_sync_pipe_q            <= u_dut.u_core.stop_sync_pipe;
+      dbg_ctx_drain_q                 <= u_dut.u_core.fe_ctx_drain;
+      dbg_ctx_drain_sync_ff1_q        <= u_dut.u_core.ctx_drain_sync_ff1;
+      dbg_ctx_drain_sync_ff2_q        <= u_dut.u_core.ctx_drain_sync_ff2;
+      dbg_active_ctx_q                <= u_dut.u_core.fe_active_ctx;
+      dbg_drain_read_ctx_q            <= u_dut.u_core.drain_read_ctx;
+      dbg_ctx0_state_q                <= u_dut.u_core.fe_ctx_state[0];
+      dbg_ctx1_state_q                <= u_dut.u_core.fe_ctx_state[1];
+      dbg_meas_state_q                <= u_dut.u_core.meas_state;
+      dbg_drain_state_q               <= u_dut.u_core.drain_state;
+      dbg_tx_nslow_q                  <= u_dut.u_core.u_narrow_tx.nslow_q;
+      dbg_tx_nfast_q                  <= u_dut.u_core.u_narrow_tx.nfast_q;
+      dbg_tx_ns_q                     <= u_dut.u_core.u_narrow_tx.ns_q;
+      dbg_tx_nf_q                     <= u_dut.u_core.u_narrow_tx.nf_q;
+      dbg_tx_hit_idx_q                <= u_dut.u_core.u_narrow_tx.hit_idx_q;
+      dbg_tx_phase0_q                 <= u_dut.u_core.u_narrow_tx.phase0_snap_q;
+      dbg_tx_boundary_inc_q           <= u_dut.u_core.u_narrow_tx.slow_boundary_inc_q;
+      dbg_tx_hit_count_q              <= u_dut.u_core.u_narrow_tx.hit_count_q;
+      dbg_tx_state_q                  <= u_dut.u_core.u_narrow_tx.state_q;
+    end
+  end
+
+  function automatic string debug_csv_extra();
+    return $sformatf(
+      "%0t,%0t,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
+      dbg_snapshot_time_q,
+      dbg_stop_time_q,
+      dbg_nslow_src_count_q,
+      dbg_nslow_stop_latched_q,
+      dbg_nfast_src_count_q,
+      dbg_nfast_stop_latched_q,
+      dbg_hit_snapshot_nslow_q,
+      dbg_hit_snapshot_nfast_snap_q,
+      dbg_hit_snapshot_nfast_stop_q,
+      dbg_ctx_snapshot_nslow_q,
+      dbg_ctx_snapshot_nfast_snap_q,
+      dbg_ctx_snapshot_nfast_stop_q,
+      dbg_phase0_snap_live_q,
+      dbg_phase7d_snap_live_q,
+      dbg_slow_boundary_inc_live_q,
+      dbg_stop_phase0_q,
+      dbg_stop_phase7d_q,
+      dbg_stop_boundary_inc_q,
+      dbg_stop_slow_phase_q,
+      dbg_stop_fast_phase_q,
+      dbg_snapshot_slow_phase_q,
+      dbg_snapshot_fast_phase_q,
+      dbg_stop_slow_phase0_guard_q,
+      dbg_stop_slow_phase7d_probe_q,
+      dbg_slow_gray_bin_q,
+      dbg_slow_gray_bin_snap_q,
+      dbg_slow_gray_src_cont_q,
+      dbg_slow_gray_src_snap_async_q,
+      dbg_slow_gray_snap_ff1_q,
+      dbg_slow_gray_snap_ff2_q,
+      dbg_fast_gray_bin_q,
+      dbg_fast_gray_src_cont_q,
+      dbg_fast_gray_cont_ff1_q,
+      dbg_fast_gray_cont_ff2_q,
+      dbg_start_latched_q,
+      dbg_stop_latched_q,
+      dbg_start_sync_pipe_q,
+      dbg_stop_sync_pipe_q,
+      dbg_ctx_drain_q,
+      dbg_ctx_drain_sync_ff1_q,
+      dbg_ctx_drain_sync_ff2_q,
+      dbg_active_ctx_q,
+      dbg_drain_read_ctx_q,
+      dbg_ctx0_state_q,
+      dbg_ctx1_state_q,
+      dbg_meas_state_q,
+      dbg_drain_state_q,
+      dbg_tx_nslow_q,
+      dbg_tx_nfast_q,
+      dbg_tx_ns_q,
+      dbg_tx_nf_q,
+      dbg_tx_hit_idx_q,
+      dbg_tx_phase0_q,
+      dbg_tx_boundary_inc_q,
+      dbg_tx_hit_count_q,
+      dbg_tx_state_q
+    );
+  endfunction
+
   // =========================================================================
   //  CSR helper — local wrapper for tasks from mptdc_tb_pkg
   // =========================================================================
@@ -239,7 +472,7 @@ module tb_campaign_collect;
     int eoc_id;
 
     tb_hit_features_t hf;
-    int nslow_i, nfast_hit_i, ns_i, nf_i;
+    int nslow_i, nfast_hit_i, ns_i, nf_i, stop_phase_disc_i;
     int signed t_raw_ps_i;
 
     hits_found  = 0;
@@ -289,10 +522,11 @@ module tb_campaign_collect;
       nfast_hit_i  = hf.nfast;
       ns_i         = hf.ns;
       nf_i         = hf.nf;
+      stop_phase_disc_i = hf.stop_phase_disc;
       t_raw_ps_i   = vernier_tconv_ps(hf.nslow, hf.nfast, hf.ns, hf.nf,
-                                      logic'(hdr_boundary_inc));
+                                       logic'(hdr_boundary_inc));
 
-      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
+      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%s\n",
               eoc_id,                // conv_id
               hits_found,            // hit_idx (0-based)
               tref_ps,               // Tref_ps
@@ -300,6 +534,7 @@ module tb_campaign_collect;
               nfast_hit_i,           // nfast_hit
               ns_i,                  // ns
               nf_i,                  // nf
+              stop_phase_disc_i,      // stop_phase_disc
               hdr_phase0,            // phase0_snap
               hdr_boundary_inc,      // slow_boundary_inc
               hdr_hit_count,         // hit_count
@@ -307,7 +542,8 @@ module tb_campaign_collect;
               hdr_ctx_id,            // ctx_id
               t_raw_ps_i,            // t_raw_ps (reconstructed from RAW_FEATURES fields)
               cfg_mode,              // mode
-              effective_max_hits()); // max_hits
+              effective_max_hits(),   // max_hits
+              debug_csv_extra());
 
       hits_found++;
       idx += 2;
@@ -339,7 +575,7 @@ module tb_campaign_collect;
     int eoc_id;
 
     tb_hit_features_t hf;
-    int nslow_i, nfast_hit_i, ns_i, nf_i;
+    int nslow_i, nfast_hit_i, ns_i, nf_i, stop_phase_disc_i;
     int signed t_raw_ps_i;
 
     hits_found  = 0;
@@ -395,12 +631,13 @@ module tb_campaign_collect;
       nfast_hit_i  = hf.nfast;
       ns_i         = hf.ns;
       nf_i         = hf.nf;
+      stop_phase_disc_i = hf.stop_phase_disc;
 
       // W2: t_raw_ps[15:0] — sign-extend from 16 bits
       t_raw_ps_i = $signed(words[idx+2]);
 
       // Write CSV row
-      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
+      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%s\n",
               eoc_id,                // conv_id
               hits_found,            // hit_idx (0-based)
               tref_ps,               // Tref_ps
@@ -408,6 +645,7 @@ module tb_campaign_collect;
               nfast_hit_i,           // nfast_hit
               ns_i,                  // ns
               nf_i,                  // nf
+              stop_phase_disc_i,      // stop_phase_disc
               hdr_phase0,            // phase0_snap
               hdr_boundary_inc,      // slow_boundary_inc
               hdr_hit_count,         // hit_count
@@ -415,7 +653,8 @@ module tb_campaign_collect;
               hdr_ctx_id,            // ctx_id
               t_raw_ps_i,            // t_raw_ps
               cfg_mode,              // mode
-              effective_max_hits()); // max_hits
+              effective_max_hits(),   // max_hits
+              debug_csv_extra());
 
       hits_found++;
       idx += 3;
@@ -498,7 +737,8 @@ module tb_campaign_collect;
       $finish;
     end
 
-    $fwrite(fd, "conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits\n");
+    $fwrite(fd, "conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,stop_phase_disc,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits,%s\n",
+            DBG_CSV_HEADER);
 
     if (cfg_out_mode != OUT_MODE_RAW_FEATURES && cfg_out_mode != OUT_MODE_FULL) begin
       $display("[ERR] Unsupported CAMPAIGN_OUT_MODE=%0d (use %0d for RAW_FEATURES or %0d for FULL)",

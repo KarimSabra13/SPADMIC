@@ -21,12 +21,22 @@ import numpy as np
 import pandas as pd
 
 
-DEFAULT_KEY = ["nslow", "nfast_hit", "ns", "nf", "phase0_snap", "slow_boundary_inc", "hit_idx"]
+DEFAULT_KEY = [
+    "nslow",
+    "nfast_hit",
+    "ns",
+    "nf",
+    "stop_phase_disc",
+    "phase0_snap",
+    "slow_boundary_inc",
+    "hit_idx",
+]
 OPTIONAL_REPORT_KEYS = {
     "current_6d": ["ns", "nf", "nslow", "nfast_hit", "phase0_snap", "hit_idx"],
-    "boundary_aug": DEFAULT_KEY,
+    "boundary_aug": ["nslow", "nfast_hit", "ns", "nf", "phase0_snap", "slow_boundary_inc", "hit_idx"],
+    "stop_disc_aug": DEFAULT_KEY,
     "packet_all": [
-        "nslow", "nfast_hit", "ns", "nf", "phase0_snap", "slow_boundary_inc",
+        "nslow", "nfast_hit", "ns", "nf", "stop_phase_disc", "phase0_snap", "slow_boundary_inc",
         "hit_idx", "hit_count", "flags", "ctx_id", "mode", "max_hits",
     ],
 }
@@ -41,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--key",
         default=",".join(DEFAULT_KEY),
-        help="Comma-separated LUT key columns. Defaults to direct packet boundary-augmented key.",
+        help="Comma-separated LUT key columns. Defaults to direct packet key with STOP discriminator.",
     )
     parser.add_argument("--recursive", action="store_true", help="Search for seed_*.csv recursively.")
     parser.add_argument("--max-train-files", type=int, default=None)
@@ -261,6 +271,7 @@ def run_self_test() -> None:
         "nfast_hit": [0, 1, 2, 3],
         "ns": [0, 0, 0, 0],
         "nf": [0, 0, 0, 0],
+        "stop_phase_disc": [0, 1, 2, 3],
         "phase0_snap": [0, 0, 0, 0],
         "slow_boundary_inc": [0, 0, 0, 0],
         "hit_idx": [0, 0, 0, 0],

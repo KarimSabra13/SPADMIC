@@ -86,7 +86,8 @@ package mptdc_tb_pkg;
      logic [NFAST_W-1:0]     nfast;        // per-hit nfast (from PD cell)
      ph_idx_t                ns;
      ph_idx_t                nf;
-  } tb_hit_features_t;
+     stop_phase_disc_t       stop_phase_disc;
+   } tb_hit_features_t;
 
   function automatic tb_hit_features_t parse_hit_features(
     input logic [NARROW_W-1:0] w0,
@@ -96,9 +97,11 @@ package mptdc_tb_pkg;
     // W0: {1'b0, nslow[6:0], nfast[6:0], 1'b0}
     h.nslow      = w0[14:8];
     h.nfast      = w0[7:1];
-    // W1: {1'b0, ns[3:0], nf[3:0], 7'b0}; active 8-tap RTL uses 0..7.
+    // W1: {1'b0, ns[3:0], nf[3:0], 4'b0, stop_phase_disc[2:0]};
+    // active 8-tap RTL uses ns/nf values 0..7.
     h.ns         = w1[14:11];
     h.nf         = w1[10:7];
+    h.stop_phase_disc = stop_phase_disc_t'(w1[2:0]);
     return h;
   endfunction
 

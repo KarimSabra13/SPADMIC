@@ -313,11 +313,15 @@ def compute_raw_tuple_histogram(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     work = df[list(required)].copy()
+    if "stop_phase_disc" in df.columns:
+        work["stop_phase_disc"] = pd.to_numeric(df["stop_phase_disc"], errors="coerce")
     work = work[pd.to_numeric(work["tuple_code"], errors="coerce") >= 0]
     if work.empty:
         return pd.DataFrame()
 
     group_cols = ["tuple_code", "nslow", "nfast_hit", "ns", "nf", "slow_boundary_inc"]
+    if "stop_phase_disc" in work.columns:
+        group_cols.append("stop_phase_disc")
     hist = (
         work.groupby(group_cols, observed=True)
         .size()
@@ -641,7 +645,7 @@ def _json_ready_results(all_results: dict, ttest_all: dict) -> dict:
             for key, value in boundary.items()
         }
         for profile_name in ("delay_profile", "nslow_profile", "nfast_profile", "hit_idx_profile",
-                             "traw_profile", "delay_regions"):
+                             "stop_disc_profile", "traw_profile", "delay_regions"):
             profile = res.get(profile_name)
             if isinstance(profile, pd.DataFrame):
                 cfg_ready[profile_name] = profile.to_dict(orient="records")
@@ -849,6 +853,7 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
     nslow_profile = compute_discrete_profile(df, "nslow")
     nfast_profile = compute_discrete_profile(df, "nfast_hit")
     hit_idx_profile = compute_discrete_profile(df, "hit_idx")
+    stop_disc_profile = compute_discrete_profile(df, "stop_phase_disc")
     traw_profile = compute_binned_profile(df, "t_raw_ps", n_bins=PROFILE_TRAW_BINS)
     delay_regions = compute_delay_regions(df)
 
@@ -856,6 +861,7 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
     result["nslow_profile"] = nslow_profile
     result["nfast_profile"] = nfast_profile
     result["hit_idx_profile"] = hit_idx_profile
+    result["stop_disc_profile"] = stop_disc_profile
     result["traw_profile"] = traw_profile
     result["delay_regions"] = delay_regions
 
@@ -873,6 +879,8 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
         nfast_profile.to_csv(out_dir / f"nfast_hit_profile_{safe_cfg}.csv", index=False)
     if not hit_idx_profile.empty:
         hit_idx_profile.to_csv(out_dir / f"hit_idx_profile_{safe_cfg}.csv", index=False)
+    if not stop_disc_profile.empty:
+        stop_disc_profile.to_csv(out_dir / f"stop_phase_disc_profile_{safe_cfg}.csv", index=False)
     if not traw_profile.empty:
         traw_profile.to_csv(out_dir / f"t_raw_profile_{safe_cfg}.csv", index=False)
     if not delay_regions.empty:

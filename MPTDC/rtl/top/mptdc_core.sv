@@ -96,6 +96,7 @@ module mptdc_core
   //  Internal wires — boundary repair
   // =========================================================================
   wire           phase0_snap, phase7d_snap, slow_boundary_inc;
+  stop_phase_disc_t stop_slow_phase_disc;
 
   // =========================================================================
   //  Internal wires — PD matrix
@@ -424,9 +425,11 @@ module mptdc_core
     .async_clr_i          (meas_pd_clear),
     .stop_async_i         (stop_async_i),
     .slow_phase0_i        (slow_phase[0]),
+    .slow_phase_disc_i    (stop_phase_disc_t'(slow_phase[STOP_PHASE_DISC_MSB:STOP_PHASE_DISC_LSB])),
     .slow_phase0_guard_i  (slow_phase0_guard),
     .slow_phase7d_probe_i (slow_phase7d_probe),
     .phase0_snap_o        (phase0_snap),
+    .stop_slow_phase_disc_o (stop_slow_phase_disc),
     .phase7d_snap_o       (phase7d_snap),
     .slow_boundary_inc_o  (slow_boundary_inc)
   );
@@ -503,6 +506,7 @@ module mptdc_core
     .nfast_snap_i           (nfast_src_count),
     .nfast_stop_i           (nfast_stop_latched),
     .phase0_snap_i          (phase0_snap),
+    .stop_slow_phase_disc_i (stop_slow_phase_disc),
     .slow_boundary_inc_i    (slow_boundary_inc),
     .snapshot_o             (hit_capture_snapshot)
   );

@@ -116,6 +116,10 @@ package mptdc_vip_pkg;
     return word[13:0];
   endfunction
 
+  function automatic stop_phase_disc_t packet_stop_phase_disc(input logic [NARROW_W-1:0] word);
+    return stop_phase_disc_t'(word[2:0]);
+  endfunction
+
   function automatic int unsigned words_per_hit(input out_mode_e mode);
     case (mode)
       OUT_MODE_RAW_FEATURES:  return 2;
@@ -413,6 +417,7 @@ package mptdc_vip_pkg;
     logic [NFAST_W-1:0]     nfast_snap;
     ph_idx_t                ns;
     ph_idx_t                nf;
+    stop_phase_disc_t       stop_phase_disc;
     pd_idx_t                pd_idx;
     logic [EVENT_SEQ_W-1:0] event_seq;
     logic [15:0]            t_raw_lsw;
@@ -425,6 +430,7 @@ package mptdc_vip_pkg;
       nfast_snap    = '0;
       ns            = '0;
       nf            = '0;
+      stop_phase_disc = '0;
       pd_idx        = '0;
       event_seq     = '0;
       t_raw_lsw     = '0;
@@ -433,9 +439,9 @@ package mptdc_vip_pkg;
     endfunction
 
     function string sprint();
-      return $sformatf("hit nslow=%0d nfast=%0d ns=%0d nf=%0d ts_lsw=0x%04h feat=%0b ts=%0b",
+      return $sformatf("hit nslow=%0d nfast=%0d ns=%0d nf=%0d stop_disc=%0d ts_lsw=0x%04h feat=%0b ts=%0b",
                        nslow, nfast_hit, ns, nf,
-                       t_raw_lsw, has_features, has_timestamp);
+                       stop_phase_disc, t_raw_lsw, has_features, has_timestamp);
     endfunction
   endclass
 
@@ -716,10 +722,11 @@ package mptdc_vip_pkg;
                                            bit fastclose_i,
                                            bit maxhits_i,
                                            bit watchdog_i,
-                                           bit phase0_i,
-                                           bit boundary_i,
-                                           int words_i,
-                                           int ctx_id_i);
+                                            bit phase0_i,
+                                            bit boundary_i,
+                                            int stop_disc_i,
+                                            int words_i,
+                                            int ctx_id_i);
       option.per_instance = 1;
       cp_out: coverpoint out_mode_i {
         bins raw_features  = {OUT_MODE_RAW_FEATURES};
@@ -739,10 +746,15 @@ package mptdc_vip_pkg;
       cp_watchdog: coverpoint watchdog_i { bins off = {0}; bins on = {1}; }
       cp_phase0: coverpoint phase0_i { bins low = {0}; bins high = {1}; }
       cp_boundary: coverpoint boundary_i { bins low = {0}; bins high = {1}; }
+      cp_stop_disc: coverpoint stop_disc_i {
+        bins all_states[] = {[0:7]};
+        ignore_bins not_feature_word = {-1};
+      }
       cp_words: coverpoint words_i;
       cp_ctx: coverpoint ctx_id_i { bins ctx0 = {0}; bins ctx1 = {1}; }
       flags_x_hits: cross cp_fastclose, cp_maxhits, cp_watchdog, cp_hits;
       out_x_boundary: cross cp_out, cp_boundary;
+      out_x_stop_disc: cross cp_out, cp_stop_disc;
       ctx_x_out: cross cp_ctx, cp_out;
     endgroup
 `endif
@@ -807,14 +819,29 @@ package mptdc_vip_pkg;
 
     function void sample_packet(input mptdc_packet_txn pkt);
 `ifdef MPTDC_ENABLE_FUNC_COV
-      pkt_cg.sample(pkt.out_mode, pkt.hit_count,
-                    pkt.flags.closed_by_fast_maxhit,
-                    pkt.flags.closed_by_maxhits,
-                    pkt.flags.closed_by_watchdog,
-                    pkt.phase0_snap,
-                    pkt.slow_boundary_inc,
-                    pkt.word_count(),
-                    pkt.ctx_id);
+      if (pkt.hits.size() == 0) begin
+        pkt_cg.sample(pkt.out_mode, pkt.hit_count,
+                      pkt.flags.closed_by_fast_maxhit,
+                      pkt.flags.closed_by_maxhits,
+                      pkt.flags.closed_by_watchdog,
+                      pkt.phase0_snap,
+                      pkt.slow_boundary_inc,
+                      -1,
+                      pkt.word_count(),
+                      pkt.ctx_id);
+      end else begin
+        foreach (pkt.hits[i]) begin
+          pkt_cg.sample(pkt.out_mode, pkt.hit_count,
+                        pkt.flags.closed_by_fast_maxhit,
+                        pkt.flags.closed_by_maxhits,
+                        pkt.flags.closed_by_watchdog,
+                        pkt.phase0_snap,
+                        pkt.slow_boundary_inc,
+                        pkt.hits[i].has_features ? int'(pkt.hits[i].stop_phase_disc) : -1,
+                        pkt.word_count(),
+                        pkt.ctx_id);
+        end
+      end
 `endif
     endfunction
   endclass
@@ -1078,6 +1105,7 @@ package mptdc_vip_pkg;
             w1 = pkt.words[idx + 0];
             hit.ns           = ph_idx_t'(w1[14:11]);
             hit.nf           = ph_idx_t'(w1[10:7]);
+            hit.stop_phase_disc = packet_stop_phase_disc(w1);
             hit.has_features = 1'b1;
             idx += 1;
           end
@@ -1093,6 +1121,7 @@ package mptdc_vip_pkg;
             w1 = pkt.words[idx + 0];
             hit.ns            = ph_idx_t'(w1[14:11]);
             hit.nf            = ph_idx_t'(w1[10:7]);
+            hit.stop_phase_disc = packet_stop_phase_disc(w1);
             hit.t_raw_lsw     = pkt.words[idx + 1];
             hit.has_features  = 1'b1;
             hit.has_timestamp = 1'b1;

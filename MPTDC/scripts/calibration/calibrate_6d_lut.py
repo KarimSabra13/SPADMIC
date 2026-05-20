@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # ==============================================================================
-#  MPTDC 6D+hit_idx Look-Up Table Calibrator
+#  MPTDC STOP-Discriminator Look-Up Table Calibrator
 # ==============================================================================
 #  Builds a mean-correction LUT keyed on compact-mode fields, trains on
 #  campaign data, validates on held-out seeds, produces comprehensive
 #  pre/post-calibration analysis plots and an averaging study.
 #
-#  Key:  (ns_inf, nf_inf, nslow, nfast_hit, phase0_snap, hit_idx)
+#  Key:  (ns_inf, nf_inf, nslow, nfast_hit, stop_phase_disc, phase0_snap, hit_idx)
 #   - ns_inf, nf_inf are deterministically recovered from t_raw_ps via
 #     the Vernier code algebra (works in ALL output modes).
 #   - All other fields are available in every TDC output mode.
@@ -53,13 +53,23 @@ K_FAST    = NE
 OFFSET    = 25
 QUANT     = 10  # ps per LSB
 
-# LUT key columns (6D + hit_idx = 7 fields total, called "6D LUT" for brevity)
-LUT_KEY = ["ns_inf", "nf_inf", "nslow", "nfast_hit", "phase0_snap", "hit_idx"]
+# LUT key columns.  stop_phase_disc is the packet-visible Hit W1[2:0] field
+# that carries STOP-edge slow_phase[5:3] in RAW_FEATURES/FULL mode.
+LUT_KEY = [
+    "ns_inf",
+    "nf_inf",
+    "nslow",
+    "nfast_hit",
+    "stop_phase_disc",
+    "phase0_snap",
+    "hit_idx",
+]
 REQUIRED_COLUMNS = [
     "Tref_ps",
     "t_raw_ps",
     "nslow",
     "nfast_hit",
+    "stop_phase_disc",
     "phase0_snap",
     "hit_idx",
     "slow_boundary_inc",
@@ -862,7 +872,7 @@ def run_averaging_study(df, n_values, n_trials=2000, rng_seed=42):
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="MPTDC 6D LUT Calibrator")
+    parser = argparse.ArgumentParser(description="MPTDC discriminator-aware LUT Calibrator")
     parser.add_argument("--train-dir", default="results/campaign/multihit_15_cal_nominal",
                         help="Directory with training CSVs (seeds 0-23)")
     parser.add_argument("--val-dir", default=None,
@@ -884,7 +894,7 @@ def main():
 
     t0 = time.time()
     print("=" * 70)
-    print("  MPTDC 6D+hit_idx LUT Calibrator")
+    print("  MPTDC STOP-discriminator LUT Calibrator")
     print("=" * 70)
 
     # ── 1) Build LUT from training data ───────────────────────────────────
@@ -1300,20 +1310,21 @@ def main():
     # ── 5) Save comprehensive report ─────────────────────────────────────
     print(f"\n[5/6] Writing report...")
     report = {
-        "method": "6D+hit_idx Mean-Correction LUT",
+        "method": "STOP-discriminator Mean-Correction LUT",
         "lut_key": LUT_KEY,
         "lut_key_description": {
             "ns_inf":  "Slow phase index (0-7), inferred from t_raw_ps via Vernier algebra",
             "nf_inf":  "Fast phase index (0-7), inferred from t_raw_ps via Vernier algebra",
             "nslow":   "Slow oscillator hit count (coarse counter)",
             "nfast_hit": "Fast oscillator hit count at measurement time",
+            "stop_phase_disc": "STOP-edge slow_phase[5:3] discriminator from Hit W1[2:0]",
             "phase0_snap": "Phase-0 snapshot (oscillator alignment at conversion start)",
             "hit_idx": "Sequential hit index within conversion (0-based)",
         },
         "output_mode_compatibility": {
-            "RAW_FEATURES (mode 0)": "Fully supported – all fields available directly",
-            "RAW_TIMESTAMP (mode 1)": "Fully supported – ns/nf inferred from t_raw_ps algebra",
-            "FULL (mode 2)": "Fully supported – all fields available directly",
+            "RAW_FEATURES (mode 0)": "Fully supported – discriminator and all feature fields available directly",
+            "RAW_TIMESTAMP (mode 1)": "Diagnostic only for this LUT – discriminator is not encoded in timestamp word",
+            "FULL (mode 2)": "Fully supported – discriminator and all feature fields available directly",
         },
         "ns_nf_inference": {
             "formula": f"diff = t_raw_ps/10 - (nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET} → unique (ns,nf)",
@@ -1375,12 +1386,12 @@ def main():
     txt_path = os.path.join(args.out_dir, "calibration_report.txt")
     with open(txt_path, "w") as f:
         f.write("=" * 70 + "\n")
-        f.write("  MPTDC 6D+hit_idx LUT CALIBRATION REPORT\n")
+        f.write("  MPTDC STOP-DISCRIMINATOR LUT CALIBRATION REPORT\n")
         f.write("=" * 70 + "\n\n")
         f.write(f"Method: Mean-correction Look-Up Table\n")
         f.write(f"Key:    ({', '.join(LUT_KEY)})\n")
         f.write(f"Bins:   {len(lut_df):,}\n")
-        f.write(f"Mode compatibility: ALL output modes (0, 1, 2)\n\n")
+        f.write("Mode compatibility: RAW_FEATURES/FULL calibrated; RAW_TIMESTAMP diagnostic\n\n")
         f.write(f"Training skipped CSVs: {train_skipped_csv_files}")
         if train_skipped_csv_files:
             f.write(f" (empty={train_skipped_empty_csv_files}, "
@@ -1463,11 +1474,12 @@ def main():
         f.write("  nfast_hit       W0        W0        W0\n")
         f.write("  ns_inf          W1→ns     inferred  W1→ns\n")
         f.write("  nf_inf          W1→nf     inferred  W1→nf\n")
+        f.write("  stop_phase_disc W1[2:0]   --        W1[2:0]\n")
         f.write("  phase0_snap     Header    Header    Header\n")
         f.write("  hit_idx         implicit  implicit  implicit\n")
         f.write("  slow_bound_inc  Header    Header    Header\n")
         f.write("  t_raw_ps        (compute) W1        W3\n\n")
-        f.write("  All 6D LUT key fields available in ALL modes.\n")
+        f.write("  Discriminator-aware LUT fields are packet-visible in RAW_FEATURES/FULL.\n")
         f.write("  ns/nf inferred in Mode 1 via: diff = t_raw/10 - "
                 f"(nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET}\n")
         f.write(f"  → maps uniquely to (ns, nf) for all {NE * NE} active 8×8 combinations.\n")

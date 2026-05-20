@@ -77,6 +77,7 @@ module tb_narrow16_tx_v2_unit;
     input ctx_id_t               ctx_id,
     input logic                  phase0,
     input tdc_conv_flags_t       flags,
+    input stop_phase_disc_t      stop_phase_disc = '0,
     input logic                  slow_boundary_inc = 1'b0
   );
     mptdc_acq_rec_t rec;
@@ -87,6 +88,7 @@ module tb_narrow16_tx_v2_unit;
     rec.meta.hit_count          = hit_count;
     rec.meta.ctx_id             = ctx_id;
     rec.meta.phase0_snap        = phase0;
+    rec.meta.stop_slow_phase_disc = stop_phase_disc;
     rec.meta.slow_boundary_inc  = slow_boundary_inc;
     rec.meta.flags              = flags;
     rec.hit                     = '0;
@@ -213,7 +215,7 @@ module tb_narrow16_tx_v2_unit;
     @(posedge clk_sys);
 
     push_meta(.nslow(7'd10), .hit_count(4'd1), .ctx_id(1'd0),
-              .phase0(1'b1), .flags(4'b0));
+              .phase0(1'b1), .flags(4'b0), .stop_phase_disc(3'd5));
     push_hit(.ns(4'd2), .nf(4'd3), .nfast(7'd5), .event_seq(4'd0));
 
     collect_pkt(pkt);
@@ -238,12 +240,13 @@ module tb_narrow16_tx_v2_unit;
       check("T1 W0 nfast",  w[7:1]  == 7'd5);
       check("T1 W0 bit0",   w[0]    == 1'b0);
 
-      // Hit W1 features: ns=2, nf=3, low bits reserved
+      // Hit W1 features: ns=2, nf=3, reserved[6:3]=0, stop discriminator[2:0]=5
       w = pkt[2];
       check("T1 W1 bit15",  w[15]    == 1'b0);
       check("T1 W1 ns",     w[14:11] == 4'd2);
       check("T1 W1 nf",     w[10:7]  == 4'd3);
-      check("T1 W1 reserved", w[6:0]   == 7'd0);
+      check("T1 W1 reserved", w[6:3]   == 4'd0);
+      check("T1 W1 stop disc", w[2:0]  == 3'd5);
 
       // EOC: conv_count=0
       w = pkt[3];
@@ -284,7 +287,7 @@ module tb_narrow16_tx_v2_unit;
     @(posedge clk_sys);
 
     push_meta(.nslow(7'd15), .hit_count(4'd2), .ctx_id(1'd0),
-              .phase0(1'b1), .flags(4'b0101));
+              .phase0(1'b1), .flags(4'b0101), .stop_phase_disc(3'd7));
     push_hit(.ns(4'd1), .nf(4'd2), .nfast(7'd8), .event_seq(4'd0));
     push_hit(.ns(4'd4), .nf(4'd5), .nfast(7'd10), .event_seq(4'd1));
 
@@ -335,7 +338,7 @@ module tb_narrow16_tx_v2_unit;
     @(posedge clk_sys);
 
     push_meta(.nslow(7'd30), .nfast(7'd25), .hit_count(4'd1), .ctx_id(1'd0),
-              .phase0(1'b0), .flags(4'b0000));
+              .phase0(1'b0), .flags(4'b0000), .stop_phase_disc(3'd6));
     push_hit(.ns(ph_idx_t'(7)), .nf(ph_idx_t'(7)), .nfast(7'd20), .event_seq(4'd3));
 
     collect_pkt(pkt);
@@ -356,7 +359,8 @@ module tb_narrow16_tx_v2_unit;
       w = pkt[2];
       check("T4 W1 ns",     w[14:11] == 4'd7);
       check("T4 W1 nf",     w[10:7]  == 4'd7);
-      check("T4 W1 reserved", w[6:0]   == 7'd0);
+      check("T4 W1 reserved", w[6:3]   == 4'd0);
+      check("T4 W1 stop disc", w[2:0]  == 3'd6);
 
       // W2 timestamp
       t_raw_exp = calc_t_raw_ps(7'd30, 7'd20, ph_idx_t'(7), ph_idx_t'(7));

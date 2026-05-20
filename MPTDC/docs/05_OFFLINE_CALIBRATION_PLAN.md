@@ -1,4 +1,4 @@
-# MPTDC v2.2 — Offline Calibration Plan
+# MPTDC v2.6 — Offline Calibration Plan
 
 > - **Author:** Karim Sabra
 > - **Purpose:** Explain how the active design exports raw features for host-side offline calibration.
@@ -24,6 +24,7 @@ That means:
 | `nfast_hit` | 7 | per-hit fast coarse count captured by the PD cell |
 | `ns` | 4 | slow phase index |
 | `nf` | 4 | fast phase index |
+| `stop_phase_disc` | 3 | STOP-edge `slow_phase[5:3]` discriminator from Hit W1 `[2:0]` |
 | `phase0_snap` | 1 | STOP-side boundary snapshot |
 | `slow_boundary_inc` | 1 | STOP-side boundary carry |
 
@@ -35,6 +36,8 @@ Important semantics:
 
 - `hit_idx` in the CSV/reporting flow is packet position, not chronological hit order
 - if an older analysis still wants `pd_idx`, reconstruct it from `ns` and `nf`
+- `stop_phase_disc` is required for the post-ECO discriminator-aware LUT; it is
+  packet-visible in `RAW_FEATURES` and `FULL`, not in `RAW_TIMESTAMP`
 - `nfast_snap`, `nfast_stop`, and `event_seq` are now historical/compatibility observables, not live packet fields
 
 For highest-fidelity debug/calibration work, `FULL` is the richest collection mode.

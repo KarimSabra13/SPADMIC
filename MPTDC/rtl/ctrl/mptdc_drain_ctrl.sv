@@ -142,6 +142,7 @@ module mptdc_drain_ctrl
     meta_rec.meta.hit_count     = snapshot_i.hit_count;
     meta_rec.meta.flags         = snapshot_i.flags;
     meta_rec.meta.phase0_snap   = snapshot_i.phase0_snap;
+    meta_rec.meta.stop_slow_phase_disc = snapshot_i.stop_slow_phase_disc;
     meta_rec.meta.slow_boundary_inc = snapshot_i.slow_boundary_inc; // v2.2
     meta_rec.meta.ctx_id        = drain_ctx_q;
   end

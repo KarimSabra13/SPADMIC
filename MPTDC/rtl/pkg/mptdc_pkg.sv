@@ -104,6 +104,15 @@ package mptdc_pkg;
 
   typedef logic [CTX_W-1:0] ctx_id_t;
 
+  // STOP-edge slow-phase discriminator exported in RAW_FEATURES/FULL packets.
+  // These are the three slow-ring phase bits proven to disambiguate early-delay
+  // raw aliases while preserving the frozen 16-bit packet word count.
+  localparam int unsigned STOP_PHASE_DISC_W   = 3;
+  localparam int unsigned STOP_PHASE_DISC_LSB = 3;
+  localparam int unsigned STOP_PHASE_DISC_MSB =
+      STOP_PHASE_DISC_LSB + STOP_PHASE_DISC_W - 1;
+  typedef logic [STOP_PHASE_DISC_W-1:0] stop_phase_disc_t;
+
   typedef enum logic [1:0] {
     CTX_FREE      = 2'd0,
     CTX_CAPTURING = 2'd1,
@@ -193,6 +202,7 @@ package mptdc_pkg;
     logic [MAX_HITS_W-1:0]  hit_count;
     tdc_conv_flags_t        flags;
     logic                   phase0_snap;
+    stop_phase_disc_t       stop_slow_phase_disc;
     logic                   slow_boundary_inc;  // v2.2: boundary correction carry
     ctx_id_t                ctx_id;
   } mptdc_conv_meta_t;
@@ -217,7 +227,8 @@ package mptdc_pkg;
 
   // Header word:  [15:14]=2'b10, [13:12]=ctx_id, [11]=phase0_snap,
   //               [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=slow_boundary_inc
-  // Hit words:    depend on out_mode (2/2/3 words per hit), bit[15]=0 always
+  // Hit words:    depend on out_mode (2/2/3 words per hit), bit[15]=0 always.
+  //               RAW_FEATURES/FULL Hit W1[2:0] carries stop_slow_phase_disc.
   // EOC word:     [15:14]=2'b11, [13:0]=conv_id[13:0]
 
   // =========================================================================
@@ -282,6 +293,7 @@ package mptdc_pkg;
     logic [NFAST_W-1:0]                  nfast_snap;        // global fast counter at CAPTURE
     logic [NFAST_W-1:0]                  nfast_stop;        // v2.3: fast counter at STOP edge
     logic                                phase0_snap;
+    stop_phase_disc_t                    stop_slow_phase_disc;
     logic                                slow_boundary_inc; // v2.2: phase-0 boundary carry
     logic [MAX_HITS_W-1:0]               hit_count;
     tdc_conv_flags_t                     flags;

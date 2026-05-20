@@ -1,4 +1,4 @@
-# MPTDC v2.4 — 16-bit Output Protocol
+# MPTDC v2.6 — 16-bit Output Protocol
 
 > - **Author:** Karim Sabra
 > - **Purpose:** Define the live 16-bit packet format emitted by the MPTDC serializer.
@@ -85,13 +85,17 @@ Field meaning:
 [15]    0
 [14:11] ns
 [10:7]  nf
-[6:0]   reserved
+[6:3]   reserved
+[2:0]   stop_phase_disc
 ```
 
 Field meaning:
 
 - `ns` = slow phase index associated with this PD cell
 - `nf` = fast phase index associated with this PD cell
+- `stop_phase_disc` = STOP-edge `slow_phase[5:3]` discriminator captured with
+  the conversion metadata. This field breaks early-delay raw aliases while
+  preserving the 16-bit word structure and hit word count.
 
 The removed fields are recovered as follows when needed offline:
 
@@ -132,7 +136,8 @@ and also applies the current fixed geometry-origin corrections and `slow_boundar
 
 ## 6. FULL mode (`out_mode = 2`)
 
-This mode emits the raw feature words plus the derived timestamp.
+This mode emits the raw feature words, including `stop_phase_disc`, plus the
+derived timestamp.
 
 Packet size:
 
@@ -165,7 +170,7 @@ This is the same derived timestamp used in RAW_TIMESTAMP mode.
 
 The serializer still consumes two internal acquisition-record types:
 
-- META record: conversion-level information (`nslow`, capture-time `nfast`, `hit_count`, flags, boundary info, `ctx_id`)
+- META record: conversion-level information (`nslow`, capture-time `nfast`, `hit_count`, flags, boundary info, `stop_phase_disc`, `ctx_id`)
 - HIT record: per-hit information (`ns`, `nf`, `nfast_hit`, internal `event_seq`)
 
 Important distinction:
