@@ -237,6 +237,9 @@ if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
 fi
 
 if [[ $DRY_RUN -eq 0 ]]; then
+  if [[ "$SIM" == "xrun" || "$SIM" == "xcelium" ]]; then
+    rm -rf "$TB_BUILD"
+  fi
   mkdir -p "$TB_BUILD"
 fi
 
@@ -288,10 +291,18 @@ case "$SIM" in
       XRUN_FLAGS+=(+define+MPTDC_ENABLE_VIP_ASSERTS)
     fi
     if [[ $WAVES -eq 1 ]]; then
-      XRUN_FLAGS+=(-input "@database -open waves -into $TB_BUILD/waves.shm -default; probe -create mptdc_vip_tb -all -depth all; run; exit")
+      WAVE_DB="${ARTIFACT_DIR:-$TB_BUILD}/waves.shm"
+      XRUN_FLAGS+=(-input "@database -open waves -into $WAVE_DB -default; probe -create mptdc_vip_tb -all -depth all; run; exit")
     fi
     echo "--- Compiling/running VIP test with xrun ---"
+    set +e
     run_in_dir "$REPO_ROOT" xrun "${XRUN_FLAGS[@]}" "${PLUSARGS[@]}"
+    XRUN_RC=$?
+    set -e
+    if [[ $DRY_RUN -eq 0 ]]; then
+      rm -rf "$TB_BUILD"
+    fi
+    exit "$XRUN_RC"
     ;;
 
   vcs)

@@ -102,13 +102,15 @@ module mptdc_async_frontend_v2
                           & ~start_reject_seen_q;
 
   // =========================================================================
-  // START rejected: START present but cannot be accepted.  clear_any is part
-  // of the blocked condition because the START latch gives clear priority; a
-  // START during teardown must be counted as rejected rather than disappearing.
+  // START rejected: hold a rejected event for the duration of the input pulse.
+  // A purely combinational self-suppressed reject pulse can collapse to a
+  // delta-cycle glitch in event-driven simulators and be missed by the status
+  // CDC event latch; the held level preserves the silicon intent.
   // =========================================================================
-  assign start_rejected_o = start_async_i & ~start_accept_seen_q
-                           & ~start_reject_seen_q
-                           & start_blocked_level;
+  wire start_reject_set_level = start_async_i & ~start_accept_seen_q
+                              & ~start_reject_seen_q
+                              & start_blocked_level;
+  assign start_rejected_o = start_reject_seen_q;
 
   // =========================================================================
   // START latch  (SR: set by start_async, reset by clear_any / rst_n)
@@ -134,7 +136,7 @@ module mptdc_async_frontend_v2
   always_latch begin
     if (!rst_n || !start_async_i)
       start_reject_seen_q = 1'b0;
-    else if (start_rejected_o)
+    else if (start_reject_set_level)
       start_reject_seen_q = 1'b1;
   end
 
