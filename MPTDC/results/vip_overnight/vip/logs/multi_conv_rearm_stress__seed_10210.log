@@ -1,0 +1,7 @@
+--- Compiling/running VIP test with xrun ---
+TOOL:	xrun(64)	23.03-s007: Started on May 20, 2026 at 11:57:25 CEST
+xrun(64): 23.03-s007: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+file: rtl/pkg/mptdc_pkg.sv
+xmvlog: *F,DLNFS: Packed library for 'worklib' was either corrupt or the file system cache consistency check failed. To correct the problem, remove the packed library, and recompile. If the problem persists, contact Cadence Design Systems.
+xrun: *E,VLGERR: An error occurred during parsing.  Review the log file for errors with the code *E and fix those identified problems to proceed.  Exiting with code (status 2).
+TOOL:	xrun(64)	23.03-s007: Exiting on May 20, 2026 at 11:57:26 CEST  (total: 00:00:01)

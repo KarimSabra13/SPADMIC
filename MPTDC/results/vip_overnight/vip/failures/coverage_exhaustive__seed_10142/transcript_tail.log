@@ -1,0 +1,200 @@
+[VIP][DRV] CONV[conv_1] attempt=1 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_1] attempt=1 event=1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=1 words=32
+[VIP][DRV] CONV[conv_2] attempt=2 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_2] attempt=2 event=2 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=2 words=32
+[VIP][DRV] CONV[conv_3] attempt=3 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_3] attempt=3 event=3 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=3 words=32
+[VIP][DRV] CONV[conv_4] attempt=4 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_4] attempt=4 event=4 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=4 words=32
+[VIP][DRV] CFG[cfg_m0_s0_o1] mode=0 input=0 out=1 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_5] mode=always_ready seed=10147
+[VIP][DRV] CONV[conv_5] attempt=5 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_5] attempt=5 event=5 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=5 words=32
+[VIP][DRV] CONV[conv_6] attempt=6 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_6] attempt=6 event=6 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=6 words=32
+[VIP][DRV] CONV[conv_7] attempt=7 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_7] attempt=7 event=7 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=7 words=32
+[VIP][DRV] CONV[conv_8] attempt=8 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_8] attempt=8 event=8 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=8 words=32
+[VIP][DRV] CONV[conv_9] attempt=9 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_9] attempt=9 event=9 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=9 words=32
+[VIP][DRV] CFG[cfg_m0_s0_o2] mode=0 input=0 out=2 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_10] mode=always_ready seed=10152
+[VIP][DRV] CONV[conv_10] attempt=10 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_10] attempt=10 event=10 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=10 words=47
+[VIP][DRV] CONV[conv_11] attempt=11 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_11] attempt=11 event=11 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=11 words=47
+[VIP][DRV] CONV[conv_12] attempt=12 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_12] attempt=12 event=12 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=12 words=47
+[VIP][DRV] CONV[conv_13] attempt=13 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_13] attempt=13 event=13 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=13 words=47
+[VIP][DRV] CONV[conv_14] attempt=14 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_14] attempt=14 event=14 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=14 words=47
+[VIP][DRV] CFG[cfg_m0_s1_o0] mode=0 input=1 out=0 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_15] mode=always_ready seed=10157
+[VIP][DRV] CONV[conv_15] attempt=15 event=-1 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_15] attempt=15 event=15 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=15 words=32
+[VIP][DRV] CONV[conv_16] attempt=16 event=-1 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_16] attempt=16 event=16 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=16 words=32
+[VIP][DRV] CONV[conv_17] attempt=17 event=-1 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_17] attempt=17 event=17 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=17 words=32
+[VIP][DRV] CONV[conv_18] attempt=18 event=-1 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_18] attempt=18 event=18 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=18 words=32
+[VIP][DRV] CONV[conv_19] attempt=19 event=-1 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_19] attempt=19 event=19 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=19 words=32
+[VIP][DRV] CFG[cfg_m0_s1_o1] mode=0 input=1 out=1 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_20] mode=always_ready seed=10162
+[VIP][DRV] CONV[conv_20] attempt=20 event=-1 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_20] attempt=20 event=20 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=20 words=32
+[VIP][DRV] CONV[conv_21] attempt=21 event=-1 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_21] attempt=21 event=21 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=21 words=32
+[VIP][DRV] CONV[conv_22] attempt=22 event=-1 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_22] attempt=22 event=22 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=22 words=32
+[VIP][DRV] CONV[conv_23] attempt=23 event=-1 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_23] attempt=23 event=23 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=23 words=32
+[VIP][DRV] CONV[conv_24] attempt=24 event=-1 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_24] attempt=24 event=24 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=1 flags=0010 conv_id=24 words=32
+[VIP][DRV] CFG[cfg_m0_s1_o2] mode=0 input=1 out=2 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_25] mode=always_ready seed=10167
+[VIP][DRV] CONV[conv_25] attempt=25 event=-1 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_25] attempt=25 event=25 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=25 words=47
+[VIP][DRV] CONV[conv_26] attempt=26 event=-1 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_26] attempt=26 event=26 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=26 words=47
+[VIP][DRV] CONV[conv_27] attempt=27 event=-1 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_27] attempt=27 event=27 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=27 words=47
+[VIP][DRV] CONV[conv_28] attempt=28 event=-1 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_28] attempt=28 event=28 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=28 words=47
+[VIP][DRV] CONV[conv_29] attempt=29 event=-1 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_29] attempt=29 event=29 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=29 words=47
+[VIP][DRV] CFG[cfg_m1_s0_o0] mode=1 input=0 out=0 max_hits=15 eff_max_hits=1 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_30] mode=always_ready seed=10172
+[VIP][DRV] CONV[conv_30] attempt=30 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_30] attempt=30 event=30 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=30 words=4
+[VIP][DRV] CONV[conv_31] attempt=31 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_31] attempt=31 event=31 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=31 words=4
+[VIP][DRV] CONV[conv_32] attempt=32 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_32] attempt=32 event=32 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=32 words=4
+[VIP][DRV] CONV[conv_33] attempt=33 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_33] attempt=33 event=33 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=33 words=4
+[VIP][DRV] CONV[conv_34] attempt=34 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_34] attempt=34 event=34 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=34 words=4
+[VIP][DRV] CFG[cfg_m1_s0_o1] mode=1 input=0 out=1 max_hits=15 eff_max_hits=1 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_35] mode=always_ready seed=10177
+[VIP][DRV] CONV[conv_35] attempt=35 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_35] attempt=35 event=35 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=35 words=4
+[VIP][DRV] CONV[conv_36] attempt=36 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_36] attempt=36 event=36 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=36 words=4
+[VIP][DRV] CONV[conv_37] attempt=37 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_37] attempt=37 event=37 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=37 words=4
+[VIP][DRV] CONV[conv_38] attempt=38 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_38] attempt=38 event=38 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=38 words=4
+[VIP][DRV] CONV[conv_39] attempt=39 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_39] attempt=39 event=39 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=39 words=4
+[VIP][DRV] CFG[cfg_m1_s0_o2] mode=1 input=0 out=2 max_hits=15 eff_max_hits=1 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_40] mode=always_ready seed=10182
+[VIP][DRV] CONV[conv_40] attempt=40 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_40] attempt=40 event=40 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=40 words=5
+[VIP][DRV] CONV[conv_41] attempt=41 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_41] attempt=41 event=41 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=41 words=5
+[VIP][DRV] CONV[conv_42] attempt=42 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_42] attempt=42 event=42 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=42 words=5
+[VIP][DRV] CONV[conv_43] attempt=43 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_43] attempt=43 event=43 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=43 words=5
+[VIP][DRV] CONV[conv_44] attempt=44 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_44] attempt=44 event=44 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=44 words=5
+[VIP][DRV] CFG[cfg_m1_s1_o0] mode=1 input=1 out=0 max_hits=15 eff_max_hits=1 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_45] mode=always_ready seed=10187
+[VIP][DRV] CONV[conv_45] attempt=45 event=-1 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_45] attempt=45 event=45 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=45 words=4
+[VIP][DRV] CONV[conv_46] attempt=46 event=-1 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_46] attempt=46 event=46 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=46 words=4
+[VIP][DRV] CONV[conv_47] attempt=47 event=-1 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_47] attempt=47 event=47 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=47 words=4
+[VIP][DRV] CONV[conv_48] attempt=48 event=-1 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_48] attempt=48 event=48 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=48 words=4
+[VIP][DRV] CONV[conv_49] attempt=49 event=-1 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_49] attempt=49 event=49 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=0 flags=0100 conv_id=49 words=4
+[VIP][DRV] CFG[cfg_m1_s1_o1] mode=1 input=1 out=1 max_hits=15 eff_max_hits=1 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_50] mode=always_ready seed=10192
+[VIP][DRV] CONV[conv_50] attempt=50 event=-1 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_50] attempt=50 event=50 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=50 words=4
+[VIP][DRV] CONV[conv_51] attempt=51 event=-1 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_51] attempt=51 event=51 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=51 words=4
+[VIP][DRV] CONV[conv_52] attempt=52 event=-1 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_52] attempt=52 event=52 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=52 words=4
+[VIP][DRV] CONV[conv_53] attempt=53 event=-1 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_53] attempt=53 event=53 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=53 words=4
+[VIP][DRV] CONV[conv_54] attempt=54 event=-1 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_54] attempt=54 event=54 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=1 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=1 flags=0100 conv_id=54 words=4
+[VIP][DRV] CFG[cfg_m1_s1_o2] mode=1 input=1 out=2 max_hits=15 eff_max_hits=1 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_ready_55] mode=always_ready seed=10197
+[VIP][DRV] CONV[conv_55] attempt=55 event=-1 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_55] attempt=55 event=55 src=1 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=55 words=5
+[VIP][DRV] CONV[conv_56] attempt=56 event=-1 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_56] attempt=56 event=56 src=1 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=56 words=5
+[VIP][DRV] CONV[conv_57] attempt=57 event=-1 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_57] attempt=57 event=57 src=1 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=57 words=5
+[VIP][DRV] CONV[conv_58] attempt=58 event=-1 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_58] attempt=58 event=58 src=1 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=58 words=5
+[VIP][DRV] CONV[conv_59] attempt=59 event=-1 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_59] attempt=59 event=59 src=1 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=1 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=1 out_mode=2 flags=0100 conv_id=59 words=5
+[VIP][DRV] CFG[cfg_bp0] mode=0 input=0 out=0 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_sweep_0] mode=always_ready seed=10202
+[VIP][DRV] CONV[conv_bp_60] attempt=60 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_60] attempt=60 event=60 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=60 words=32
+[VIP][DRV] CONV[conv_bp_61] attempt=61 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_61] attempt=61 event=61 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=61 words=32
+[VIP][DRV] CONV[conv_bp_62] attempt=62 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_62] attempt=62 event=62 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=62 words=32
+[VIP][DRV] CONV[conv_bp_63] attempt=63 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_63] attempt=63 event=63 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=63 words=32
+[VIP][DRV] CONV[conv_bp_64] attempt=64 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_64] attempt=64 event=64 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=64 words=32
+[VIP][DRV] CFG[cfg_bp1] mode=0 input=0 out=0 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_sweep_1] mode=random_50 seed=10207
+[VIP][DRV] CONV[conv_bp_65] attempt=65 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_65] attempt=65 event=65 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=65 words=32
+[VIP][DRV] CONV[conv_bp_66] attempt=66 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_66] attempt=66 event=66 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=66 words=32
+[VIP][DRV] CONV[conv_bp_67] attempt=67 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_67] attempt=67 event=67 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=67 words=32
+[VIP][DRV] CONV[conv_bp_68] attempt=68 event=-1 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_68] attempt=68 event=68 src=0 stop_model=qualified_ref delay=20000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=68 words=32
+[VIP][DRV] CONV[conv_bp_69] attempt=69 event=-1 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_69] attempt=69 event=69 src=0 stop_model=qualified_ref delay=28000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=69 words=32
+[VIP][DRV] CFG[cfg_bp2] mode=0 input=0 out=0 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] BP[bp_sweep_2] mode=always_stall seed=10212
+[VIP][DRV] CONV[conv_bp_70] attempt=70 event=-1 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][DRV] CONV[conv_bp_71] attempt=71 event=-1 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][DRV] CONV[conv_bp_72] attempt=72 event=-1 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][DRV] BP[bp_drain_2] mode=always_ready seed=10142
+[VIP][DRV] CONV[conv_drain_73] attempt=73 event=-1 src=0 stop_model=qualified_ref delay=10000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_bp_70] attempt=70 event=70 src=0 stop_model=qualified_ref delay=500 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=70 words=32
+[VIP][SB] PASS CONV[conv_bp_71] attempt=71 event=71 src=0 stop_model=qualified_ref delay=5000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=71 words=32
+[VIP][SB] PASS CONV[conv_bp_72] attempt=72 event=72 src=0 stop_model=qualified_ref delay=12000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=72 words=32
+[VIP][SB] PASS CONV[conv_drain_73] attempt=73 event=73 src=0 stop_model=qualified_ref delay=10000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=0 flags=0010 conv_id=73 words=32
+[VIP][DRV] CFG[cfg_wdt_ctx] mode=0 input=0 out=0 max_hits=0 eff_max_hits=0 wdt_ctx=100 wdt_global=0
+[VIP][DRV] BP[bp_wdt] mode=always_ready seed=10142
+[VIP][DRV] CONV[conv_wdt_start_only] attempt=74 event=-1 src=0 stop_model=qualified_ref delay=10000 arm_settle=50000 pulse_w=1000 start_only=1 expect_packet=1 accepted=0 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_wdt_start_only] attempt=74 event=74 src=0 stop_model=qualified_ref delay=10000 arm_settle=50000 pulse_w=1000 start_only=1 expect_packet=1 accepted=1 cfg_mode=0 out=0 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=0 out_mode=0 flags=0001 conv_id=74 words=2
+[VIP][DRV] CFG[cfg_recovery] mode=0 input=0 out=2 max_hits=15 eff_max_hits=15 wdt_ctx=65535 wdt_global=0
+[VIP][DRV] CONV[conv_recovery] attempt=75 event=-1 src=0 stop_model=qualified_ref delay=15000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=0 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0
+[VIP][SB] PASS CONV[conv_recovery] attempt=75 event=75 src=0 stop_model=qualified_ref delay=15000 arm_settle=0 pulse_w=1000 start_only=0 expect_packet=1 accepted=1 cfg_mode=0 out=2 conv_id_chk=0 exp_conv_id=0 -> PKT[packet] ctx=0 hits=15 out_mode=2 flags=0010 conv_id=75 words=47
+[VIP][DRV] End-of-test transaction observed
+[VIP][SB] Scoreboard done: 76 packets checked
+[VIP][TEST] coverage_exhaustive PASSED
+[VIP][TB] TEST COMPLETE: coverage_exhaustive
+xmsim: *N,COVCGN: Coverage configuration file command "set_covergroup -new_instance_reporting" can be specified to improve the scoping and naming of covergroup instances. It may be noted that subsequent merging of a coverage database saved with this command and a coverage database saved without this command is not allowed.
+xmsim: *W,CGDEFN: Default name "mptdc_vip_tb.test.mptdc_base_test::env.cov.stim_cg" will be generated for covergroup instance "stim_cg" as the name of the covergroup instance is not specified explicitly: ./tb/vip/pkg/mptdc_vip_pkg.sv, 644.
+xmsim: *W,CGDEFN: Default name "mptdc_vip_tb.test.mptdc_base_test::env.cov.pkt_cg" will be generated for covergroup instance "pkt_cg" as the name of the covergroup instance is not specified explicitly: ./tb/vip/pkg/mptdc_vip_pkg.sv, 714.
+
+coverage setup:
+  workdir  :  /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/vip_overnight/vip/cov_work
+  dutinst  :  mptdc_vip_tb(mptdc_vip_tb)
+  scope    :  scope
+  testname :  coverage_exhaustive__seed_10142__debug
+
+coverage files:
+  model(design data) :  /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/vip_overnight/vip/cov_work/scope/icc_588a7ffa_24349ca5.ucm (reused)
+  data               :  /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/vip_overnight/vip/cov_work/scope/coverage_exhaustive__seed_10142__debug/icc_588a7ffa_24349ca5.ucd
+TOOL:	xrun(64)	23.03-s007: Exiting on May 20, 2026 at 12:07:08 CEST  (total: 00:00:02)
