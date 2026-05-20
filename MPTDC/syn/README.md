@@ -43,6 +43,10 @@ syn/
 │   ├── mptdc.sdc                       ← Timing constraints (parameterized)
 │   └── mptdc.mmmc                      ← Multi-Mode Multi-Corner view definitions
 │
+├── macros/                              ← Provisional oscillator LEF/Liberty black boxes
+│   ├── mptdc_osc_blackbox.lef
+│   └── mptdc_osc_blackbox.lib
+│
 ├── libraries/                          ← Technology library definitions
 │   ├── libraries.xh018.tcl             ← XFAB PDK: process, metal stack, physical cells
 │   └── libraries.xh018-stdcells.tcl    ← Standard cells: Liberty (.lib), LEF, corners
@@ -101,6 +105,11 @@ set tech_files(STDCELLS_WC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_
 set tech_files(STDCELLS_BC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_fast_1_98V_m40C.lib"
 ```
 
+The checked-in oscillator abstracts in `syn/macros/` are placeholders for early
+planning only. They define 300 um x 100 um slow/fast black boxes with
+`VDDA/VSSA`, `ctrl_i[7:0]`, `phase_o[7:0]`, and `start_i`/`stop_i` pins; replace
+them with the final custom macro LEF/Liberty before claiming signoff timing.
+
 The checked-in flow now builds BC/TC/WC MMMC views by default, with
 `wc_view` selected for setup and `bc_view` selected for hold. Override
 `design(selected_setup_analysis_views)` / `design(selected_hold_analysis_views)`
@@ -122,6 +131,15 @@ when intentionally running a different experiment:
 
 ```bash
 export MPTDC_OPT_GOAL=timing_first
+```
+
+Production synthesis defaults to the SPADMIC TOP readout architecture:
+`shared_readout_en_i=1` and `narrow_ready_i=0`, so local per-axis narrow
+serializers are constant-trimmed and the `acq_*`/shared-serializer path remains
+the active product path. For standalone MPTDC packet-output synthesis/debug:
+
+```bash
+export MPTDC_SYN_PRODUCTION_SHARED_READOUT=0
 ```
 
 ### Generated Directories (Gitignored)
@@ -164,6 +182,8 @@ First reports to review:
 
 - `run_manifest.rpt` — exact PDK/MMMC/settings baseline
 - `timing_violations.rpt` and `timing_summary.rpt` — timing closure status
+- `timing_pd_capture_hotspots.rpt` — PD capture timing island WNS/TNS review
+- `timing_osc_counter_hotspots.rpt` — fast/slow oscillator support counters isolated from PD capture
 - `report_area.rpt` and `report_area_hier.rpt` — total and per-hierarchy area targets
 - `report_power.rpt` and `report_power_hier.rpt` — vectorless or activity-backed power baseline
 - `report_design_rules.rpt` — transition/fanout/capacitance issues
@@ -205,14 +225,15 @@ constraint values are never hardcoded in two places.
 | **§1 Primary clock** | `create_clock clk_sys -period 6.25` | 160 MHz system domain |
 | **§2 Osc clocks** | Virtual clocks at osc stub pins | Timing for osc-domain logic |
 | **§3 Clock groups** | `set_clock_groups -asynchronous` | 3 async domains (sys, slow, fast) |
-| **§4 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
-| **§5 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
-| **§5 Async clears** | narrow false paths on PD and Gray-counter clear pins | Covers intentional teardown clears after snapshot/context commit |
-| **§6 CDC protection** | best-effort `set_dont_touch` wrappers on sync FF/pending-latch patterns | Preserves synchronizers where the active Genus/DC parser accepts the matched objects |
-| **§7 CDC max delay** | simplified `set_max_delay` across domains | Keeps CDC intent without relying on unsupported `-datapath_only` forms |
-| **§8-9 I/O delays** | 2 ns input/output delay | Conservative for 180 nm routing |
-| **§10 Load/drive** | 50 fF load, 100 ps transition | Pad characteristics |
-| **§11 Design rules** | Max fanout 20, max transition 0.5 ns | Signal integrity |
+| **§4 Production readout** | `set_case_analysis` on `shared_readout_en_i` / `narrow_ready_i` | Trims standalone local serializer in product mode |
+| **§5 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
+| **§6 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
+| **§6 Async clears** | narrow false paths on PD and Gray-counter clear pins | Covers intentional teardown clears after snapshot/context commit |
+| **§7 CDC protection** | best-effort `set_dont_touch` wrappers on sync FF/pending-latch patterns | Preserves synchronizers where the active Genus/DC parser accepts the matched objects |
+| **§8 CDC max delay** | simplified `set_max_delay` across domains | Keeps CDC intent without relying on unsupported `-datapath_only` forms |
+| **§9-10 I/O delays** | 0.5 ns macro I/O delay | Provisional on-chip SPADMIC block budget |
+| **§11 Load/drive** | 10 fF macro load, 100 ps transition | Provisional on-chip sink characteristics |
+| **§12 Design rules** | Max fanout 20, max transition 0.5 ns | Signal integrity |
 
 ---
 

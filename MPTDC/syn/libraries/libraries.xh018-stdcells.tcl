@@ -66,6 +66,19 @@ set tech_files(STDCELLS_BC_LIB) "$paths(LIB_DIR)/D_CELLS_HD_LPMOS_fast_1_98V_m40
 set tech_files(ALL_BC_LIBS) [list $tech_files(STDCELLS_BC_LIB)]
 
 #############################################
+#       Provisional MPTDC Analog Macros
+#############################################
+# These black-box Liberty views provide only cell/pin shells for early Genus and
+# Innovus planning. Final characterized oscillator macro Liberty must replace or
+# augment this file before signoff timing is claimed on macro internals.
+set tech_files(MPTDC_OSC_BB_LIB) "$design(project_root)/syn/macros/mptdc_osc_blackbox.lib"
+if {[file exists $tech_files(MPTDC_OSC_BB_LIB)]} {
+    lappend tech_files(ALL_TC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
+    lappend tech_files(ALL_WC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
+    lappend tech_files(ALL_BC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
+}
+
+#############################################
 #       Behavioural Verilog (for GLS)
 #############################################
 # set tech_files(STDCELLS_VERILOG) "$paths(SC_ROOT)/verilog/D_CELLS_HD.v"

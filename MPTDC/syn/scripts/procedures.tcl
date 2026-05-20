@@ -156,6 +156,50 @@ proc mptdc_report_hotspot_timing {rpt_file title patterns} {
         "Full-clock report failed: $err\n\nBasic report failed: $err2"
 }
 
+proc mptdc_collect_cell_objects {patterns} {
+    set cells [list]
+    foreach pattern $patterns {
+        set matches [list]
+        catch {set matches [get_cells -quiet -hierarchical $pattern]}
+        if {[llength $matches] > 0} {
+            set cells [concat $cells $matches]
+        }
+    }
+    return $cells
+}
+
+proc mptdc_try_backend_cost_group {group_name patterns} {
+    set cells [mptdc_collect_cell_objects $patterns]
+    if {[llength $cells] == 0} {
+        mptdc_message "Cost group $group_name skipped; no endpoint cells matched $patterns" high
+        return
+    }
+
+    catch {create_cost_group -name $group_name}
+    if {[catch {path_group -to $cells -group $group_name} err]} {
+        mptdc_message "Cost group $group_name skipped: $err" high
+    }
+}
+
+proc mptdc_add_backend_cost_groups {} {
+    mptdc_try_backend_cost_group PD_CAPTURE_GRP {
+        *gen_pd_row*gen_pd_col*u_pd*
+        *u_pd*
+    }
+    mptdc_try_backend_cost_group OSC_COUNTER_GRP {
+        *u_fast_cnt*
+        *u_slow_cnt*
+        *nfast_src_count*
+        *start_wdt_cnt*
+        *start_timeout_latched*
+    }
+    mptdc_try_backend_cost_group READOUT_SHARED_GRP {
+        *u_narrow_tx*
+        *acq*
+        *fifo*
+    }
+}
+
 proc mptdc_write_fast_feasibility_audit {rpt_file} {
     global design
 
@@ -197,6 +241,8 @@ proc mptdc_write_fast_feasibility_audit {rpt_file} {
     puts $fh ""
     puts $fh "Evidence to inspect"
     puts $fh "-------------------"
+    puts $fh "  timing_pd_capture_hotspots.rpt"
+    puts $fh "  timing_osc_counter_hotspots.rpt"
     puts $fh "  timing_osc_fast_full_clock.rpt"
     puts $fh "  timing_meas_ctrl_hotspots.rpt"
     puts $fh "  timing_context_bank_hotspots.rpt"
@@ -273,6 +319,14 @@ proc mptdc_report_timing {report_dir} {
         "report_timing -from \[get_clocks clk_osc_fast\] -to \[get_clocks clk_osc_fast\] -max_paths 100" \
     ] "$dir/timing_osc_fast_full_clock.rpt" "fast oscillator-domain timing report"
 
+    mptdc_report_hotspot_timing "$dir/timing_pd_capture_hotspots.rpt" \
+        "phase-detector capture timing report" \
+        [list *gen_pd_row*gen_pd_col*u_pd* *u_pd*]
+
+    mptdc_report_hotspot_timing "$dir/timing_osc_counter_hotspots.rpt" \
+        "oscillator support-counter timing report" \
+        [list *u_fast_cnt* *u_slow_cnt* *nfast_src_count* *start_wdt_cnt* *start_timeout_latched*]
+
     mptdc_report_hotspot_timing "$dir/timing_meas_ctrl_hotspots.rpt" \
         "measurement-controller hotspot timing report" \
         [list *u_meas_ctrl* *u_meas_ctrl*/*]
@@ -322,6 +376,8 @@ proc mptdc_default_cost_groups {} {
             "Could not define custom cost groups ($cost_group_err); keeping default clock-derived cost groups" \
             high
     }
+
+    mptdc_add_backend_cost_groups
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -525,7 +581,7 @@ proc mptdc_write_qor_manifest {dir} {
         TOPLEVEL FULLCHIP_OR_MACRO CLK_PERIOD OSC_SLOW_PERIOD OSC_FAST_PERIOD
         OSC_SLOW_TAP_STEP OSC_FAST_TAP_STEP CLOCK_UNCERTAINTY
         OSC_CLOCK_UNCERTAINTY_SETUP OSC_CLOCK_UNCERTAINTY_HOLD
-        INPUT_DELAY_MACRO
+        PRODUCTION_SHARED_READOUT INPUT_DELAY_MACRO
         OUTPUT_DELAY_MACRO OUTPUT_LOAD_MACRO MAX_FANOUT MAX_TRANSITION
         RESET_MAX_FANOUT RESET_MAX_TRANSITION
         EXPECTED_LATCH_COUNT selected_setup_analysis_views
@@ -560,7 +616,8 @@ proc mptdc_write_qor_manifest {dir} {
     foreach key {
         STANDARD_CELL_SITE STANDARD_CELL_VDD STANDARD_CELL_GND row_height
         grid_unit HAS_QRC_TECH cts_top_routing_layer_top
-        cts_bottom_routing_layer_top
+        cts_bottom_routing_layer_top OSC_SLOW_MACRO OSC_FAST_MACRO OSC_VDD OSC_GND
+        PD_DECAP
     } {
         if {[info exists tech($key)]} {
             puts $fh [format "  %-32s %s" $key $tech($key)]
@@ -579,7 +636,8 @@ proc mptdc_write_qor_manifest {dir} {
     }
     foreach key {
         STDCELLS_BC_LIB STDCELLS_TC_LIB STDCELLS_WC_LIB TECHNOLOGY_LEF
-        STDCELLS_LEF QRCTECH_BC QRCTECH_TC QRCTECH_WC
+        STDCELLS_LEF MPTDC_OSC_LEF MPTDC_OSC_BB_LIB
+        QRCTECH_BC QRCTECH_TC QRCTECH_WC
     } {
         if {[info exists tech_files($key)]} {
             puts $fh [format "  %-32s %s" $key $tech_files($key)]
@@ -594,6 +652,8 @@ proc mptdc_write_qor_manifest {dir} {
     puts $fh "  [ ] report_power.rpt/report_power_hier.rpt are understood as vectorless or activity-backed"
     puts $fh "  [ ] latch_audit.rpt matches the intentional async-frontend latch count"
     puts $fh "  [ ] cdc_manual_audit.rpt covers all intentional async/mixed-domain structures"
+    puts $fh "  [ ] timing_pd_capture_hotspots.rpt reports PD capture WNS separately from aggregate WNS"
+    puts $fh "  [ ] timing_osc_counter_hotspots.rpt reports u_fast_cnt/u_slow_cnt/start watchdog support-counter WNS separately"
     puts $fh "  [ ] timing_meas_ctrl_hotspots.rpt and timing_context_bank_hotspots.rpt identify logic-vs-wire blockers"
     puts $fh "  [ ] report_design_rules.rpt has no critical transition/fanout/capacitance issues"
     close $fh
@@ -622,6 +682,7 @@ proc mptdc_print_summary {} {
     puts "   [ ] Latch audit: exactly $design(EXPECTED_LATCH_COUNT) latches"
     puts "   [ ] report_area_hier.rpt identifies the first area targets"
     puts "   [ ] run_manifest.rpt captures the exact PDK/MMMC/settings baseline"
+    puts "   [ ] PD capture and oscillator-counter timing reports are reviewed separately"
     puts "   [ ] No critical DRV violations"
     puts "   [ ] Power report is tagged as vectorless or activity-backed"
     puts "================================================================"

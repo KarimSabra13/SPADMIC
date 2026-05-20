@@ -76,11 +76,19 @@ set design(OSC_FAST_TAP_PINS) [list \
     {u_core/u_osc_fast/u_stub/phase[7]} \
 ]
 
-set design(OSC_SLOW_ANALOG_PINS) {start_i ctrl_i[7:0] phase_o[7:0] 
-vdd gnd}
-set design(OSC_FAST_ANALOG_PINS) {stop_i ctrl_i[7:0] phase_o[7:0] 
-vdd gnd}
+set design(OSC_SLOW_ANALOG_PINS) [list start_i {ctrl_i[7:0]} {phase_o[7:0]} VDDA VSSA]
+set design(OSC_FAST_ANALOG_PINS) [list stop_i  {ctrl_i[7:0]} {phase_o[7:0]} VDDA VSSA]
 set design(OSC_TOPOLOGY) "slow_north_pd_center_fast_south"
+
+# Production SPADMIC integration consumes the acquisition-record stream and uses
+# one shared serializer at TOP level. Keep this enabled for backend production
+# synthesis so local per-axis narrow serializers are constant-trimmed; override
+# to 0 only for standalone MPTDC packet-output synthesis/debug.
+if {[info exists ::env(MPTDC_SYN_PRODUCTION_SHARED_READOUT)]} {
+    set design(PRODUCTION_SHARED_READOUT) $::env(MPTDC_SYN_PRODUCTION_SHARED_READOUT)
+} else {
+    set design(PRODUCTION_SHARED_READOUT) 1
+}
 
 # ── Reset ───────────────────────────────────────────────────────────
 set design(RST_PORT) "async_rst_n"       ;# Async active-low reset

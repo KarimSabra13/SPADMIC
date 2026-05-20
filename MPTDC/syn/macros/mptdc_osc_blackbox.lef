@@ -1,0 +1,365 @@
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+
+MACRO MPTDC_OSC_SLOW_BB
+  CLASS BLOCK ;
+  FOREIGN MPTDC_OSC_SLOW_BB 0.000 0.000 ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 300.000 BY 100.000 ;
+  SYMMETRY X Y ;
+
+  PIN start_i
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET2 ;
+        RECT 0.000 46.000 4.000 54.000 ;
+    END
+  END start_i
+
+  PIN ctrl_i[0]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 20.000 96.000 28.000 100.000 ;
+    END
+  END ctrl_i[0]
+  PIN ctrl_i[1]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 55.000 96.000 63.000 100.000 ;
+    END
+  END ctrl_i[1]
+  PIN ctrl_i[2]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 90.000 96.000 98.000 100.000 ;
+    END
+  END ctrl_i[2]
+  PIN ctrl_i[3]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 125.000 96.000 133.000 100.000 ;
+    END
+  END ctrl_i[3]
+  PIN ctrl_i[4]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 160.000 96.000 168.000 100.000 ;
+    END
+  END ctrl_i[4]
+  PIN ctrl_i[5]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 195.000 96.000 203.000 100.000 ;
+    END
+  END ctrl_i[5]
+  PIN ctrl_i[6]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 230.000 96.000 238.000 100.000 ;
+    END
+  END ctrl_i[6]
+  PIN ctrl_i[7]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 265.000 96.000 273.000 100.000 ;
+    END
+  END ctrl_i[7]
+
+  PIN phase_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 20.000 0.000 28.000 4.000 ;
+    END
+  END phase_o[0]
+  PIN phase_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 55.000 0.000 63.000 4.000 ;
+    END
+  END phase_o[1]
+  PIN phase_o[2]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 90.000 0.000 98.000 4.000 ;
+    END
+  END phase_o[2]
+  PIN phase_o[3]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 125.000 0.000 133.000 4.000 ;
+    END
+  END phase_o[3]
+  PIN phase_o[4]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 160.000 0.000 168.000 4.000 ;
+    END
+  END phase_o[4]
+  PIN phase_o[5]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 195.000 0.000 203.000 4.000 ;
+    END
+  END phase_o[5]
+  PIN phase_o[6]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 230.000 0.000 238.000 4.000 ;
+    END
+  END phase_o[6]
+  PIN phase_o[7]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 265.000 0.000 273.000 4.000 ;
+    END
+  END phase_o[7]
+
+  PIN VDDA
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER METTP ;
+        RECT 0.000 92.000 300.000 96.000 ;
+    END
+  END VDDA
+
+  PIN VSSA
+    DIRECTION INOUT ;
+    USE GROUND ;
+    PORT
+      LAYER METTP ;
+        RECT 0.000 4.000 300.000 8.000 ;
+    END
+  END VSSA
+
+  OBS
+    LAYER MET1 ;
+      RECT 0.000 0.000 300.000 100.000 ;
+    LAYER MET2 ;
+      RECT 4.000 0.000 300.000 100.000 ;
+      RECT 0.000 0.000 4.000 46.000 ;
+      RECT 0.000 54.000 4.000 100.000 ;
+    LAYER MET3 ;
+      RECT 0.000 8.000 300.000 92.000 ;
+    LAYER METTP ;
+      RECT 0.000 8.000 300.000 92.000 ;
+      RECT 0.000 0.000 300.000 4.000 ;
+      RECT 0.000 96.000 300.000 100.000 ;
+  END
+END MPTDC_OSC_SLOW_BB
+
+MACRO MPTDC_OSC_FAST_BB
+  CLASS BLOCK ;
+  FOREIGN MPTDC_OSC_FAST_BB 0.000 0.000 ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 300.000 BY 100.000 ;
+  SYMMETRY X Y ;
+
+  PIN stop_i
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET2 ;
+        RECT 0.000 46.000 4.000 54.000 ;
+    END
+  END stop_i
+
+  PIN ctrl_i[0]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 20.000 96.000 28.000 100.000 ;
+    END
+  END ctrl_i[0]
+  PIN ctrl_i[1]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 55.000 96.000 63.000 100.000 ;
+    END
+  END ctrl_i[1]
+  PIN ctrl_i[2]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 90.000 96.000 98.000 100.000 ;
+    END
+  END ctrl_i[2]
+  PIN ctrl_i[3]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 125.000 96.000 133.000 100.000 ;
+    END
+  END ctrl_i[3]
+  PIN ctrl_i[4]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 160.000 96.000 168.000 100.000 ;
+    END
+  END ctrl_i[4]
+  PIN ctrl_i[5]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 195.000 96.000 203.000 100.000 ;
+    END
+  END ctrl_i[5]
+  PIN ctrl_i[6]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 230.000 96.000 238.000 100.000 ;
+    END
+  END ctrl_i[6]
+  PIN ctrl_i[7]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 265.000 96.000 273.000 100.000 ;
+    END
+  END ctrl_i[7]
+
+  PIN phase_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 20.000 0.000 28.000 4.000 ;
+    END
+  END phase_o[0]
+  PIN phase_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 55.000 0.000 63.000 4.000 ;
+    END
+  END phase_o[1]
+  PIN phase_o[2]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 90.000 0.000 98.000 4.000 ;
+    END
+  END phase_o[2]
+  PIN phase_o[3]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 125.000 0.000 133.000 4.000 ;
+    END
+  END phase_o[3]
+  PIN phase_o[4]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 160.000 0.000 168.000 4.000 ;
+    END
+  END phase_o[4]
+  PIN phase_o[5]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 195.000 0.000 203.000 4.000 ;
+    END
+  END phase_o[5]
+  PIN phase_o[6]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 230.000 0.000 238.000 4.000 ;
+    END
+  END phase_o[6]
+  PIN phase_o[7]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER MET3 ;
+        RECT 265.000 0.000 273.000 4.000 ;
+    END
+  END phase_o[7]
+
+  PIN VDDA
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER METTP ;
+        RECT 0.000 92.000 300.000 96.000 ;
+    END
+  END VDDA
+
+  PIN VSSA
+    DIRECTION INOUT ;
+    USE GROUND ;
+    PORT
+      LAYER METTP ;
+        RECT 0.000 4.000 300.000 8.000 ;
+    END
+  END VSSA
+
+  OBS
+    LAYER MET1 ;
+      RECT 0.000 0.000 300.000 100.000 ;
+    LAYER MET2 ;
+      RECT 4.000 0.000 300.000 100.000 ;
+      RECT 0.000 0.000 4.000 46.000 ;
+      RECT 0.000 54.000 4.000 100.000 ;
+    LAYER MET3 ;
+      RECT 0.000 8.000 300.000 92.000 ;
+    LAYER METTP ;
+      RECT 0.000 8.000 300.000 92.000 ;
+      RECT 0.000 0.000 300.000 4.000 ;
+      RECT 0.000 96.000 300.000 100.000 ;
+  END
+END MPTDC_OSC_FAST_BB
+
+END LIBRARY

@@ -12,6 +12,8 @@ This directory contains the first-pass physical-estimation flow for the MPTDC ma
 - Default reserved power layer: `METTP`, so top/thick metal remains available for VDD/VSS straps and top-level power distribution as much as practical.
 - Local exception: over the `mptdc_pd_matrix` region, `METTP` is reserved as an allowed routing/shielding resource for the 8 slow and 8 fast oscillator phase nets. The global route top remains `MET3` until detail-route/PDN evidence justifies enabling the exception in routing.
 - Expected route directions: `MET1` horizontal, `MET2` vertical, `MET3` horizontal, `METTP` vertical. The technology LEF remains the source of truth; the run manifest records these expectations for review.
+- Provisional oscillator abstracts: `syn/macros/mptdc_osc_blackbox.lef` and `.lib` define empty 300 um x 100 um slow/fast oscillator black boxes with `VDDA`/`VSSA`, top `ctrl_i[7:0]`, bottom `phase_o[7:0]`, and left-side `start_i`/`stop_i` enable pins. Replace them with foundry/custom macro views before final timing signoff.
+- PD matrix decap policy: the estimate flow attempts to pack `DECAP25HD`/`DECAP15HD` into the PD matrix region after pre-CTS placement/optimization. Review `pnr/reports/pd_matrix_decap.rpt`; if the local Innovus build rejects the candidate `addFiller` syntax, insert equivalent PD-bound decap manually before final route.
 
 ## Quick run
 
@@ -57,7 +59,8 @@ export MPTDC_PNR_DO_DETAIL_ROUTE=1
 Explicit standard-cell PG pin connection is enabled by default. The XH018 HD
 standard-cell LEF exposes lower-case `vdd/gnd` PG pins while the macro rails
 remain upper-case `VDD/VSS`, so the flow connects upper-case nets to lower-case
-cell pins. Disable only for debug:
+cell pins. The provisional oscillator black boxes use separate `VDDA/VSSA`
+analog rails and are connected explicitly by PG pin name. Disable only for debug:
 
 ```bash
 export MPTDC_PNR_CONNECT_PG_PINS=0
@@ -72,6 +75,7 @@ Review these outputs first:
 - `pnr/reports/report_power_place.rpt`
 - `pnr/reports/prects/`
 - `pnr/reports/pd_matrix_symmetry.rpt`
+- `pnr/reports/pd_matrix_decap.rpt`
 
 Use the helper to preserve the estimate for review:
 

@@ -479,6 +479,68 @@ proc mptdc_pnr_configure_vectorless_activity {} {
     }
 }
 
+proc mptdc_pnr_insert_pd_decap {} {
+    global pnr tech
+
+    set report_file "$pnr(reports_dir)/pd_matrix_decap.rpt"
+    set fh [open $report_file w]
+    puts $fh "MPTDC PD matrix decap insertion"
+    puts $fh "=============================="
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+
+    if {![info exists tech(PD_DECAP)] || $tech(PD_DECAP) eq ""} {
+        puts $fh "Status: skipped; tech(PD_DECAP) is not set."
+        close $fh
+        return
+    }
+
+    set boxes [mptdc_pnr_sandwich_boxes]
+    if {![dict exists $boxes pd]} {
+        puts $fh "Status: skipped; unable to derive PD region box."
+        close $fh
+        return
+    }
+
+    set pd_box [dict get $boxes pd]
+    if {![mptdc_pnr_box_valid $pd_box]} {
+        puts $fh "Status: skipped; invalid PD region box: $pd_box"
+        close $fh
+        return
+    }
+
+    set llx [lindex $pd_box 0]
+    set lly [lindex $pd_box 1]
+    set urx [lindex $pd_box 2]
+    set ury [lindex $pd_box 3]
+
+    puts $fh "PD region box: $pd_box"
+    puts $fh "Decap cells: $tech(PD_DECAP)"
+    puts $fh ""
+
+    set applied 0
+    foreach cmd [list \
+        [list addFiller -cell $tech(PD_DECAP) -prefix MPTDC_PD_DECAP -area [list $llx $lly $urx $ury]] \
+        [list addFiller -cell $tech(PD_DECAP) -prefix MPTDC_PD_DECAP -box  [list $llx $lly $urx $ury]] \
+        [list addFiller -cell $tech(PD_DECAP) -prefix MPTDC_PD_DECAP] \
+    ] {
+        if {![catch {uplevel 1 $cmd} err]} {
+            puts $fh "Applied: $cmd"
+            set applied 1
+            break
+        }
+        puts $fh "Skipped: $cmd"
+        puts $fh "  $err"
+    }
+
+    if {!$applied} {
+        puts $fh ""
+        puts $fh "Status: no addFiller variant accepted; insert PD-bound decap manually before final route."
+    }
+
+    close $fh
+}
+
 proc mptdc_pnr_prepare_pd_symmetry {} {
     global pnr
 
@@ -639,6 +701,20 @@ if {$pnr(connect_pg_pins)} {
             globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin $pg_pin -inst *
         }
     }
+    if {[info exists tech(OSC_VDD)] && [info exists tech(OSC_VDD_PINS)]} {
+        foreach pg_pin $tech(OSC_VDD_PINS) {
+            mptdc_pnr_optional "Connecting $tech(OSC_VDD) to oscillator PG pin $pg_pin" {
+                globalNetConnect $tech(OSC_VDD) -type pgpin -pin $pg_pin -inst *
+            }
+        }
+    }
+    if {[info exists tech(OSC_GND)] && [info exists tech(OSC_GND_PINS)]} {
+        foreach pg_pin $tech(OSC_GND_PINS) {
+            mptdc_pnr_optional "Connecting $tech(OSC_GND) to oscillator PG pin $pg_pin" {
+                globalNetConnect $tech(OSC_GND) -type pgpin -pin $pg_pin -inst *
+            }
+        }
+    }
 } else {
     mptdc_pnr_msg "Skipping explicit globalNetConnect because MPTDC_PNR_CONNECT_PG_PINS=0"
 }
@@ -684,6 +760,10 @@ mptdc_pnr_optional "Running post-place pre-CTS timing/DRV optimization" {
     } else {
         mptdc_pnr_msg "Skipping pre-CTS optimization because MPTDC_PNR_DO_PRECTS_OPT=0"
     }
+}
+
+mptdc_pnr_optional "Packing PD matrix digital-rail decap" {
+    mptdc_pnr_insert_pd_decap
 }
 
 mptdc_pnr_optional "Generating pre-CTS timing reports" {
@@ -757,6 +837,9 @@ puts $fh "PD region margin um: $pnr(pd_region_margin_um)"
 puts $fh "PD region target width/height um: $pnr(pd_region_width_um) / $pnr(pd_region_height_um)"
 puts $fh "Oscillator macro estimate width/height um: $pnr(osc_macro_width_um) / $pnr(osc_macro_height_um)"
 puts $fh "Oscillator macro halo/gap um: $pnr(osc_macro_halo_um) / $pnr(pd_region_gap_um)"
+if {[info exists tech(PD_DECAP)]} {
+    puts $fh "PD decap cells: $tech(PD_DECAP)"
+}
 puts $fh "Vectorless activity enabled: $pnr(vectorless_activity_enable)"
 puts $fh "Vectorless toggle/static probability: $pnr(vectorless_toggle_rate) / $pnr(vectorless_static_probability)"
 puts $fh "Pre-CTS opt enabled: $pnr(do_prects_opt)"
@@ -770,6 +853,7 @@ puts $fh "Review checklist"
 puts $fh "----------------"
 puts $fh "  [ ] extra_report_congestion*.rpt contain valid hotspot/overflow data or command failures to fix."
 puts $fh "  [ ] pd_matrix_symmetry.rpt shows a grid-snapped sandwich region and oscillator keepouts."
+puts $fh "  [ ] pd_matrix_decap.rpt shows DECAP25HD/DECAP15HD insertion inside or around the PD region."
 puts $fh "  [ ] phase_mesh_route_intent.rpt shows whether Innovus accepted phase-net route attributes."
 puts $fh "  [ ] extra_phase_mesh_audit.rpt lists only intended phase-like nets for the METTP exception."
 puts $fh "  [ ] extra_cdc_floorplan_audit.rpt keeps synchronizers, u_meas_ctrl, and u_ctx_bank recognizable."

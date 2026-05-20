@@ -224,7 +224,27 @@ column -s, -t < \
   /sim/ksabra/vip_overnight_stop_disc_halfseed/characterization/fixed_delay/analysis/raw_aliases_core/multihit_15_cal_nominal_raw_features/alias_key_summary.csv
 ```
 
-The row to check is `cal_lut_key` on subset `core_nslow_gt_0`.
+Core-only fixed-delay alias closure command, run after pulling commit `250e946`:
+
+```bash
+python3 scripts/analysis/analyze_raw_aliases.py \
+  --campaign-dir /sim/ksabra/vip_overnight_stop_disc_halfseed/characterization/fixed_delay \
+  --config-filter 'multihit_15_cal_nominal*' \
+  --core-only \
+  --out-dir /sim/ksabra/vip_overnight_stop_disc_halfseed/characterization/fixed_delay/analysis/raw_aliases_core
+```
+
+Core-only result on subset `core_nslow_gt_0`:
+
+| Key | Rows | Unique keys | Aliased keys | Aliased rows | Alias fraction | Oracle RMSE | Oracle P99 | Max span |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `raw_formula_inputs` | 1,800,000 | 120 | 0 | 0 | 0.0 | 0.0 ps | 0.0 ps | 0 ps |
+| `packet_no_hit` | 1,800,000 | 120 | 0 | 0 | 0.0 | 0.0 ps | 0.0 ps | 0 ps |
+| `packet_with_hit` | 1,800,000 | 120 | 0 | 0 | 0.0 | 0.0 ps | 0.0 ps | 0 ps |
+| `packet_stop_disc` | 1,800,000 | 120 | 0 | 0 | 0.0 | 0.0 ps | 0.0 ps | 0 ps |
+| `cal_lut_key` | 1,800,000 | 120 | 0 | 0 | 0.0 | 0.0 ps | 0.0 ps | 0 ps |
+| `cal_lut_key_with_boundary` | 1,800,000 | 120 | 0 | 0 | 0.0 | 0.0 ps | 0.0 ps | 0 ps |
+| `packet_all_csv` | 1,800,000 | 120 | 0 | 0 | 0.0 | 0.0 ps | 0.0 ps | 0 ps |
 
 ## 6. Signoff interpretation
 
@@ -235,14 +255,14 @@ Completed and clean:
 - Broad raw-features Xcelium characterization completed with 48M rows.
 - Discriminator-aware held-out calibration reached 18.57 ps RMSE on the core
   subset, with 95.7% improvement and no meaningful held-out bias.
+- Fixed-delay core-only alias analysis closed the maintained `cal_lut_key`:
+  `aliased_keys=0`, `aliased_rows=0`, `oracle_floor_rmse_ps=0.0`, and
+  `max_delay_span_ps=0` over 1,800,000 core rows.
 - The characterization wrapper now uses the correct raw-features campaign
   directory and does not silently mix pre-ECO fresh-validation data.
 
-Still required before treating fixed-delay alias closure as signed off:
+Boundary-policy caveat:
 
-- Re-run `analyze_raw_aliases.py --core-only` with the updated analyzer.
-- Confirm `cal_lut_key` has `aliased_keys = 0`, `aliased_rows = 0`, and
-  `oracle_floor_rmse_ps = 0.0` on subset `core_nslow_gt_0`.
 - Keep `nslow == 0` rows flagged as boundary/low-confidence in host software;
   they are not part of the maintained LUT accuracy claim.
 

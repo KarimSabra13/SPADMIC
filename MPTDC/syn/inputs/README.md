@@ -75,6 +75,27 @@ OUTPUT_DELAY = t_pad_out + t_bondwire + t_board + t_setup_downstream
 
 ---
 
+## 1.1 Production Readout Mode
+
+```tcl
+set design(PRODUCTION_SHARED_READOUT) 1
+```
+
+### What it means
+
+Production SPADMIC TOP consumes each MPTDC through `acq_*` acquisition records
+and uses one shared packet serializer. The Genus SDC therefore applies
+`set_case_analysis 1` on `shared_readout_en_i` and `set_case_analysis 0` on
+`narrow_ready_i` by default so per-axis local `narrow_*` serializers are trimmed.
+
+For standalone MPTDC packet-output synthesis or debug, launch Genus with:
+
+```bash
+export MPTDC_SYN_PRODUCTION_SHARED_READOUT=0
+```
+
+---
+
 ## 2. Input Transition
 
 ```tcl
@@ -277,7 +298,8 @@ lu_table_template(delay_template_7x7) {
 ## 7. Output Load
 
 ```tcl
-set design(OUTPUT_LOAD) 0.05   ;# pF (50 fF)
+set design(OUTPUT_LOAD_MACRO)    0.01   ;# pF (10 fF)
+set design(OUTPUT_LOAD_FULLCHIP) 0.05   ;# pF (50 fF)
 ```
 
 ### What it means
@@ -285,9 +307,11 @@ set design(OUTPUT_LOAD) 0.05   ;# pF (50 fF)
 Capacitive load Genus assumes each output pin drives. This directly
 affects output cell sizing and timing.
 
-### Why 50 fF
+### Why 10 fF / 50 fF
 
-This is the **core-side load**, not the full pad load:
+The checked-in default is `MACRO`, so `10 fF` models a light on-chip SPADMIC
+sink until the top-level timing allocation replaces it. `50 fF` remains the
+full-chip/pad-ring placeholder:
 
 | Load component | Typical value |
 |---------------|---------------|
@@ -306,8 +330,9 @@ PCB). That's modeled separately in the pad cell Liberty.
 | **Pad cell datasheet** | "Input capacitance" specification for the digital-side input pin of the I/O pad. |
 | **Post-PnR extraction** | After routing, parasitic extraction gives actual wire + load capacitance per net. |
 
-**If you don't have a pad cell yet:** 50 fF is conservative for 180 nm.
-Increase to 100–200 fF if you expect long routing to the pad ring.
+**If you don't have a pad cell yet:** 50 fF is conservative for a full-chip
+core-to-pad placeholder in 180 nm. Increase to 100–200 fF if you expect long
+routing to the pad ring.
 
 **If driving directly off-chip (no pad model):** Use 2–5 pF to model the
 full bondwire + package + board trace load.

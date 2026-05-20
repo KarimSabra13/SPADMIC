@@ -75,6 +75,19 @@ proc mptdc_try_set_max_delay_pins {label delay from_patterns to_patterns} {
     }
 }
 
+proc mptdc_try_case_analysis_port {value port_name} {
+    set ports [get_ports -quiet $port_name]
+    if {[llength $ports] == 0} {
+        puts "MPTDC_SDC_WARN: case-analysis port not found: $port_name"
+        return
+    }
+    if {[catch {set_case_analysis $value $ports} err]} {
+        puts "MPTDC_SDC_WARN: set_case_analysis $value $port_name failed: $err"
+    } else {
+        puts "MPTDC_SDC_INFO: set_case_analysis $value $port_name"
+    }
+}
+
 proc mptdc_create_osc_tap_clocks {base_name period tap_step tap_pins} {
     set created [list]
     set tap_idx 0
@@ -174,7 +187,20 @@ set_clock_groups -asynchronous \
     -group [get_clocks $design(OSC_FAST_CLOCKS)]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. ASYNCHRONOUS INPUTS — FALSE PATHS
+# 4. PRODUCTION READOUT MODE CASE ANALYSIS
+# ─────────────────────────────────────────────────────────────────────────────
+# SPADMIC TOP production uses acq_* records and one shared serializer. When this
+# macro is synthesized in production mode, constant-propagate that integration
+# contract so the local per-axis narrow serializer does not waste area/power or
+# pollute timing reports. Standalone packet-output synthesis can disable this
+# through MPTDC_SYN_PRODUCTION_SHARED_READOUT=0 before launching Genus.
+if {[info exists design(PRODUCTION_SHARED_READOUT)] && $design(PRODUCTION_SHARED_READOUT)} {
+    mptdc_try_case_analysis_port 1 shared_readout_en_i
+    mptdc_try_case_analysis_port 0 narrow_ready_i
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. ASYNCHRONOUS INPUTS — FALSE PATHS
 # ─────────────────────────────────────────────────────────────────────────────
 # START/STOP are truly async pulses from SPAD detectors or calibration.
 # The async_frontend captures them with SR latches — no setup/hold.
@@ -184,7 +210,7 @@ foreach port $design(ASYNC_INPUTS) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. ASYNCHRONOUS RESET — FALSE PATH
+# 6. ASYNCHRONOUS RESET — FALSE PATH
 # ─────────────────────────────────────────────────────────────────────────────
 # async_rst_n asserts immediately (gate delay) and deasserts through
 # reset synchronizers in each clock domain.
@@ -240,7 +266,7 @@ mptdc_try_false_path_pins "STOP metadata async capture data pins" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. CDC SYNCHRONIZER PROTECTION
+# 7. CDC SYNCHRONIZER PROTECTION
 # ─────────────────────────────────────────────────────────────────────────────
 # Protect 2-FF synchronizer chains from optimization.
 # These flops are metastability barriers — must not be merged or retimed.
@@ -272,7 +298,7 @@ mptdc_try_dont_touch *u_stop_capture*stop_slow_phase_disc_o*
 # as an SDC failure and makes constraint health ambiguous.
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. CDC MAX DELAY
+# 8. CDC MAX DELAY
 # ─────────────────────────────────────────────────────────────────────────────
 # Limit combinational delay between source flop and first synchronizer flop
 # to one destination clock period, ensuring metastability resolution.
@@ -313,7 +339,7 @@ mptdc_try_set_max_delay_pins \
     }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. INPUT DELAYS
+# 9. INPUT DELAYS
 # ─────────────────────────────────────────────────────────────────────────────
 # CSR / ready / override inputs are synchronous to clk_sys.
 set timed_inputs [remove_from_collection \
@@ -328,7 +354,7 @@ if {$design(FULLCHIP_OR_MACRO) == "FULLCHIP"} {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9. OUTPUT DELAYS
+# 10. OUTPUT DELAYS
 # ─────────────────────────────────────────────────────────────────────────────
 if {$design(FULLCHIP_OR_MACRO) == "FULLCHIP"} {
     set_output_delay -clock $design(CLK_NAME) $design(OUTPUT_DELAY_FULLCHIP) [all_outputs]
@@ -337,7 +363,7 @@ if {$design(FULLCHIP_OR_MACRO) == "FULLCHIP"} {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 10. LOAD AND DRIVE
+# 11. LOAD AND DRIVE
 # ─────────────────────────────────────────────────────────────────────────────
 if {$design(FULLCHIP_OR_MACRO) == "FULLCHIP"} {
     set_load $design(OUTPUT_LOAD_FULLCHIP) [all_outputs]
@@ -354,7 +380,7 @@ set_input_transition $design(INPUT_TRANSITION) $async_inputs_and_reset
 # set_driving_cell -lib_cell $tech(SDC_DRIVING_CELL) [all_inputs]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 11. DESIGN RULES
+# 12. DESIGN RULES
 # ─────────────────────────────────────────────────────────────────────────────
 if {[catch {set_max_fanout $design(MAX_FANOUT) [current_design]} err]} {
     puts "MPTDC_SDC_WARN: set_max_fanout current_design failed: $err"

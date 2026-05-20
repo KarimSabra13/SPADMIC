@@ -49,6 +49,14 @@ if {[info exists ::env(TECHNOLOGY_LEF)]} {
 }
 set tech_files(ALL_LEFS) [list $tech_files(TECHNOLOGY_LEF)]
 
+# Provisional MPTDC oscillator black-box abstracts. These are intentionally
+# checked-in placeholders for early Genus/Innovus planning until the custom
+# analog oscillator team delivers final LEF/Liberty views.
+set tech_files(MPTDC_OSC_LEF) "$design(project_root)/syn/macros/mptdc_osc_blackbox.lef"
+if {[file exists $tech_files(MPTDC_OSC_LEF)]} {
+    lappend tech_files(ALL_LEFS) $tech_files(MPTDC_OSC_LEF)
+}
+
 #############################################
 #       Parasitic Extraction (QRC)
 #############################################
@@ -119,18 +127,33 @@ set tech(grid_unit)   0.18        ;# µm — placement grid (half-pitch)
 #############################################
 #       Physical Cells (EDIT FOR YOUR LIB)
 #############################################
-# These are placeholders — fill in from your XFAB standard cell documentation
+# These are placeholders unless explicitly filled from XFAB documentation.
 set tech(WELLTAP)          ""     ;# Well-tap cell name
 set tech(WELLTAP_RULE)     30.0   ;# µm — max distance between well taps
 set tech(TIEHI)            ""     ;# Tie-high cell
 set tech(TIELO)            ""     ;# Tie-low cell
 set tech(TIE_MAX_FANOUT)   20
 set tech(TIE_MAX_DISTANCE) 30.0   ;# µm
-set tech(FILLERS)          ""     ;# Filler cells (widest to narrowest)
-set tech(DECAP)            ""     ;# Decap cells (widest to narrowest)
+set tech(FILLERS)          "FEED2HD FEED1HD" ;# Filler cells (widest to narrowest)
+set tech(DECAP)            "DECAP25HD DECAP15HD DECAP10HD DECAP7HD DECAP5HD DECAP3HD"
+set tech(PD_DECAP)         "DECAP25HD DECAP15HD"
 set tech(ANTENNA_DIODE)    ""     ;# Antenna diode cell
 set tech(ENDCAPS_right)    ""     ;# Right endcap cell
 set tech(ENDCAPS_left)     ""     ;# Left endcap cell
+
+#############################################
+#       MPTDC Analog Oscillator Macro Pins
+#############################################
+set tech(OSC_SLOW_MACRO)      "MPTDC_OSC_SLOW_BB"
+set tech(OSC_FAST_MACRO)      "MPTDC_OSC_FAST_BB"
+set tech(OSC_VDD)             "VDDA"
+set tech(OSC_GND)             "VSSA"
+set tech(OSC_VDD_PINS)        [list VDDA]
+set tech(OSC_GND_PINS)        [list VSSA]
+set tech(OSC_CTRL_PINS)       [list {ctrl_i[0]} {ctrl_i[1]} {ctrl_i[2]} {ctrl_i[3]} {ctrl_i[4]} {ctrl_i[5]} {ctrl_i[6]} {ctrl_i[7]}]
+set tech(OSC_PHASE_PINS)      [list {phase_o[0]} {phase_o[1]} {phase_o[2]} {phase_o[3]} {phase_o[4]} {phase_o[5]} {phase_o[6]} {phase_o[7]}]
+set tech(OSC_SLOW_ENABLE_PIN) "start_i"
+set tech(OSC_FAST_ENABLE_PIN) "stop_i"
 
 #############################################
 #       CTS Routing Layers
