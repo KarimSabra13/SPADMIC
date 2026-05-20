@@ -86,6 +86,21 @@ render_cmd() {
   printf '%s' "$joined"
 }
 
+config_output_name() {
+  local base_cfg="$1"
+  local jsig="$2"
+  local jb="$3"
+  local name="$base_cfg"
+
+  if [[ "$OUT_MODE" != "full" ]]; then
+    name+="_${OUT_MODE}"
+  fi
+  if [[ -n "$JITTER_SIGMA" || -n "$JITTER_BOUND" ]]; then
+    name+="_js${jsig}_jb${jb}"
+  fi
+  printf '%s' "$name"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --sim) SIM="$2"; shift 2 ;;
@@ -139,6 +154,13 @@ if [[ -z "$JITTER_SIGMA" && -n "$JITTER_BOUND" ]]; then
   exit 1
 fi
 
+# The ECO discriminator is part of the calibration key. Older default fresh
+# validation directories may predate the stop_phase_disc column, so only use a
+# fresh validation set when the caller explicitly supplies one.
+if (( CALIBRATE )) && (( ! FRESH_DIR_EXPLICIT )); then
+  FRESH_DIR=""
+fi
+
 if (( SMOKE )); then
   SEEDS=1
   N_CONV=200
@@ -156,6 +178,7 @@ if (( SMOKE )); then
 fi
 
 CAMPAIGN_DIR="$OUT_DIR/campaign"
+CAMPAIGN_CONFIG_DIR="$(config_output_name "$CONFIG" "$JITTER_SIGMA" "$JITTER_BOUND")"
 SWEEP_ANALYSIS_DIR="$OUT_DIR/analysis/sweep"
 CALIBRATION_DIR="$OUT_DIR/analysis/calibration"
 FIXED_DELAY_DIR="$OUT_DIR/fixed_delay"
@@ -203,14 +226,14 @@ FINE_GRID_CMD=(
 
 CALIBRATE_CMD=(
   python3 "$REPO_ROOT/scripts/calibration/calibrate_6d_lut.py"
-  --train-dir "$CAMPAIGN_DIR/$CONFIG"
+  --train-dir "$CAMPAIGN_DIR/$CAMPAIGN_CONFIG_DIR"
   --out-dir "$CALIBRATION_DIR"
   --train-seeds "$TRAIN_SEEDS"
 )
 if [[ -n "$VAL_DIR" ]]; then
   CALIBRATE_CMD+=(--val-dir "$VAL_DIR")
 elif (( SMOKE )); then
-  CALIBRATE_CMD+=(--val-dir "$CAMPAIGN_DIR/$CONFIG")
+  CALIBRATE_CMD+=(--val-dir "$CAMPAIGN_DIR/$CAMPAIGN_CONFIG_DIR")
 fi
 if [[ -n "$FRESH_DIR" ]]; then
   CALIBRATE_CMD+=(--fresh-dir "$FRESH_DIR")
@@ -253,6 +276,7 @@ write_manifest() {
   export MANIFEST_OUT_MODE="$OUT_MODE"
   export MANIFEST_OUT_DIR="$OUT_DIR"
   export MANIFEST_CAMPAIGN_DIR="$CAMPAIGN_DIR"
+  export MANIFEST_CAMPAIGN_CONFIG_DIR="$CAMPAIGN_DIR/$CAMPAIGN_CONFIG_DIR"
   export MANIFEST_SWEEP_ANALYSIS_DIR="$SWEEP_ANALYSIS_DIR"
   export MANIFEST_CALIBRATION_DIR="$CALIBRATION_DIR"
   export MANIFEST_FIXED_DELAY_DIR="$FIXED_DELAY_DIR"
@@ -325,6 +349,7 @@ data = {
     "paths": {
         "root": os.environ["MANIFEST_OUT_DIR"],
         "campaign": os.environ["MANIFEST_CAMPAIGN_DIR"],
+        "campaign_config": os.environ["MANIFEST_CAMPAIGN_CONFIG_DIR"],
         "sweep_analysis": os.environ["MANIFEST_SWEEP_ANALYSIS_DIR"],
         "calibration": os.environ["MANIFEST_CALIBRATION_DIR"],
         "fixed_delay": os.environ["MANIFEST_FIXED_DELAY_DIR"],
