@@ -50,54 +50,78 @@ module spadmic_axis_cluster_scan #(
   logic [LINE_COUNT_W-1:0]             gap_threshold_q;
   spadmic_axis_clusters_t              clusters_q;
 
-  function automatic scan_accum_t scan_range(
-    input scan_accum_t              state_i,
-    input logic [LINE_W-1:0]        lines,
-    input logic [LINE_COUNT_W-1:0]  gap_threshold,
-    input int unsigned              start_idx,
-    input int unsigned              end_idx
+  function automatic scan_accum_t scan_step(
+    input scan_accum_t             state_i,
+    input logic                    line_hit,
+    input logic [SPADMIC_LINE_IDX_W-1:0] line_idx,
+    input logic [LINE_COUNT_W-1:0] gap_threshold
   );
     scan_accum_t state;
 
     state = state_i;
 
-    for (int unsigned i = start_idx; i < end_idx; i++) begin
-      if (lines[i]) begin
-        if (!state.in_cluster) begin
-          if ((state.cluster_idx == 2'd0) && !state.clusters.cluster0.valid) begin
-            state.clusters.cluster0.valid = 1'b1;
-            state.clusters.cluster0.lo    = SPADMIC_LINE_IDX_W'(i);
-            state.clusters.cluster0.hi    = SPADMIC_LINE_IDX_W'(i);
-          end else if ((state.cluster_idx == 2'd0) && (state.gap_run >= gap_threshold)) begin
-            state.cluster_idx = 2'd1;
-            if (!state.clusters.cluster1.valid) begin
-              state.clusters.cluster1.valid = 1'b1;
-              state.clusters.cluster1.lo    = SPADMIC_LINE_IDX_W'(i);
-              state.clusters.cluster1.hi    = SPADMIC_LINE_IDX_W'(i);
-            end
-          end else if ((state.cluster_idx >= 2'd1) && (state.gap_run >= gap_threshold)) begin
-            state.clusters.overflow = 1'b1;
-          end else if (state.cluster_idx == 2'd0) begin
-            state.clusters.cluster0.hi = SPADMIC_LINE_IDX_W'(i);
-          end else if ((state.cluster_idx == 2'd1) && !state.clusters.overflow) begin
-            state.clusters.cluster1.hi = SPADMIC_LINE_IDX_W'(i);
+    if (line_hit) begin
+      if (!state.in_cluster) begin
+        if ((state.cluster_idx == 2'd0) && !state.clusters.cluster0.valid) begin
+          state.clusters.cluster0.valid = 1'b1;
+          state.clusters.cluster0.lo    = line_idx;
+          state.clusters.cluster0.hi    = line_idx;
+        end else if ((state.cluster_idx == 2'd0) && (state.gap_run >= gap_threshold)) begin
+          state.cluster_idx = 2'd1;
+          if (!state.clusters.cluster1.valid) begin
+            state.clusters.cluster1.valid = 1'b1;
+            state.clusters.cluster1.lo    = line_idx;
+            state.clusters.cluster1.hi    = line_idx;
           end
-          state.in_cluster = 1'b1;
-          state.gap_run    = '0;
-        end else begin
-          state.gap_run = '0;
-          if (state.cluster_idx == 2'd0)
-            state.clusters.cluster0.hi = SPADMIC_LINE_IDX_W'(i);
-          else if ((state.cluster_idx == 2'd1) && !state.clusters.overflow)
-            state.clusters.cluster1.hi = SPADMIC_LINE_IDX_W'(i);
+        end else if ((state.cluster_idx >= 2'd1) && (state.gap_run >= gap_threshold)) begin
+          state.clusters.overflow = 1'b1;
+        end else if (state.cluster_idx == 2'd0) begin
+          state.clusters.cluster0.hi = line_idx;
+        end else if ((state.cluster_idx == 2'd1) && !state.clusters.overflow) begin
+          state.clusters.cluster1.hi = line_idx;
         end
-      end else if (state.in_cluster) begin
-        state.gap_run = state.gap_run + LINE_COUNT_W'(1);
-        if (state.gap_run >= gap_threshold)
-          state.in_cluster = 1'b0;
+        state.in_cluster = 1'b1;
+        state.gap_run    = '0;
+      end else begin
+        state.gap_run = '0;
+        if (state.cluster_idx == 2'd0)
+          state.clusters.cluster0.hi = line_idx;
+        else if ((state.cluster_idx == 2'd1) && !state.clusters.overflow)
+          state.clusters.cluster1.hi = line_idx;
       end
+    end else if (state.in_cluster) begin
+      state.gap_run = state.gap_run + LINE_COUNT_W'(1);
+      if (state.gap_run >= gap_threshold)
+        state.in_cluster = 1'b0;
     end
 
+    return state;
+  endfunction
+
+  function automatic scan_accum_t scan_lower_half(
+    input logic [LINE_W-1:0]        lines,
+    input logic [LINE_COUNT_W-1:0]  gap_threshold
+  );
+    scan_accum_t state;
+
+    state = initial_accum();
+    for (int unsigned i = 0; i < LOWER_END; i++) begin
+      state = scan_step(state, lines[i], SPADMIC_LINE_IDX_W'(i), gap_threshold);
+    end
+    return state;
+  endfunction
+
+  function automatic scan_accum_t scan_upper_half(
+    input scan_accum_t              state_i,
+    input logic [LINE_W-1:0]        lines,
+    input logic [LINE_COUNT_W-1:0]  gap_threshold
+  );
+    scan_accum_t state;
+
+    state = state_i;
+    for (int unsigned i = LOWER_END; i < LINE_W; i++) begin
+      state = scan_step(state, lines[i], SPADMIC_LINE_IDX_W'(i), gap_threshold);
+    end
     return state;
   endfunction
 
@@ -140,14 +164,14 @@ module spadmic_axis_cluster_scan #(
           if (start_i) begin
             lines_q         <= lines_i;
             gap_threshold_q <= gap_threshold_i;
-            lower_accum_q   <= scan_range(initial_accum(), lines_i, gap_threshold_i, 0, LOWER_END);
+            lower_accum_q   <= scan_lower_half(lines_i, gap_threshold_i);
             state_q         <= SCAN_HIGH;
           end
         end
 
         default: begin
           clusters_q <= finalize_clusters(
-            scan_range(lower_accum_q, lines_q, gap_threshold_q, LOWER_END, LINE_W)
+            scan_upper_half(lower_accum_q, lines_q, gap_threshold_q)
           );
           valid_o <= 1'b1;
           state_q <= SCAN_IDLE;

@@ -146,7 +146,7 @@ evidence:
 - MPTDC slow/fast oscillator generated clocks defined after macro selection,
 - asynchronous clock groups justified between unrelated domains,
 - reset recovery/removal checked for synchronizer outputs,
-- `ASYNC_REG` synchronizers preserved and physically clustered,
+- line synchronizers preserved by SDC/implementation constraints and physically clustered,
 - held PD/counter static-bus CDC waived only after frozen-data protocol review,
 - context-bank storage/readout timed as ordinary `clk_sys` logic,
 - PD-cell intentional async sampling waived with physical-design constraints,

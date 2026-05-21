@@ -56,6 +56,54 @@ proc position_try_set_db {attr value} {
     }
 }
 
+proc position_layer_id {layer_name} {
+    global tech
+
+    set layer_obj [list]
+    foreach query [list \
+        [list get_db layers -if ".name == $layer_name"] \
+        [list get_db layers -if ".base_name == $layer_name"] \
+    ] {
+        if {![catch {{*}$query} matches] && [llength $matches] > 0} {
+            set layer_obj [lindex $matches 0]
+            break
+        }
+    }
+
+    if {[llength $layer_obj] > 0} {
+        foreach attr [list .routing_level .level .number] {
+            if {![catch {set value [get_db $layer_obj $attr]}] && [string is integer -strict $value]} {
+                return $value
+            }
+        }
+    }
+
+    if {[info exists tech(layer_names)]} {
+        set idx [lsearch -exact $tech(layer_names) $layer_name]
+        if {$idx >= 0} {
+            return [expr {$idx + 1}]
+        }
+    }
+
+    error "Unable to resolve routing-layer ID for $layer_name"
+}
+
+proc position_apply_routing_limits {} {
+    set bottom_id [position_layer_id MET1]
+    set top_id    [position_layer_id METTP]
+
+    foreach {attr value} [list \
+        route_bottom_routing_layer           $bottom_id \
+        route_top_routing_layer              $top_id \
+        route_bottom_preferred_routing_layer $bottom_id \
+        route_top_preferred_routing_layer    $top_id \
+        ple_bottom_routing_layer             $bottom_id \
+        ple_top_routing_layer                $top_id \
+    ] {
+        position_try_set_db $attr $value
+    }
+}
+
 proc position_run_report {cmd path} {
     if {[catch {eval $cmd > $path} result]} {
         set fh [open $path w]
@@ -78,16 +126,6 @@ source "$repo_root/MPTDC/syn/libraries/libraries.$SC_TECHNOLOGY.tcl"
 # stack; keep the estimator bounded to MET1/MET2/MET3/METTP so it does not assume
 # unavailable upper routing resources.
 position_try_set_db design_process_node 180
-foreach {attr value} {
-    route_bottom_routing_layer           MET1
-    route_top_routing_layer              METTP
-    route_bottom_preferred_routing_layer MET1
-    route_top_preferred_routing_layer    METTP
-    ple_bottom_routing_layer             MET1
-    ple_top_routing_layer                METTP
-} {
-    position_try_set_db $attr $value
-}
 
 # Typical-only MMMC view.  This prototype run intentionally avoids WC/BC setup
 # optimization so area is not bloated by slow-corner drive sizing.
@@ -122,6 +160,7 @@ foreach lef_file $tech_files(ALL_LEFS) {
 if {[llength $available_lefs] > 0} {
     position_msg "Reading physical LEF abstracts"
     read_physical -lef $available_lefs
+    position_apply_routing_limits
 } else {
     position_msg "No LEF abstracts found; continuing without physical-aware synthesis"
 }
@@ -164,16 +203,7 @@ init_design
 
 # Repeat routing-layer limits after init_design because some Genus versions only
 # expose routing attributes once the design and physical views are initialized.
-foreach {attr value} {
-    route_bottom_routing_layer           MET1
-    route_top_routing_layer              METTP
-    route_bottom_preferred_routing_layer MET1
-    route_top_preferred_routing_layer    METTP
-    ple_bottom_routing_layer             MET1
-    ple_top_routing_layer                METTP
-} {
-    position_try_set_db $attr $value
-}
+position_apply_routing_limits
 
 position_msg "Linting timing intent"
 position_run_report "check_timing_intent -verbose" \

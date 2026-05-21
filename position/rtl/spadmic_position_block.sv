@@ -67,12 +67,12 @@ module spadmic_position_block (
   logic        drop_sticky_q;
   logic        glitch_reject_sticky_q;
 
-  (* ASYNC_REG = "TRUE" *) logic [SPADMIC_LINE_W-1:0] x_sync_ff1_q;
-  (* ASYNC_REG = "TRUE" *) logic [SPADMIC_LINE_W-1:0] y_sync_ff1_q;
-  (* ASYNC_REG = "TRUE" *) logic [SPADMIC_LINE_W-1:0] z_sync_ff1_q;
-  (* ASYNC_REG = "TRUE" *) logic [SPADMIC_LINE_W-1:0] x_sync_ff2_q;
-  (* ASYNC_REG = "TRUE" *) logic [SPADMIC_LINE_W-1:0] y_sync_ff2_q;
-  (* ASYNC_REG = "TRUE" *) logic [SPADMIC_LINE_W-1:0] z_sync_ff2_q;
+  logic [SPADMIC_LINE_W-1:0] x_sync_ff1_q;
+  logic [SPADMIC_LINE_W-1:0] y_sync_ff1_q;
+  logic [SPADMIC_LINE_W-1:0] z_sync_ff1_q;
+  logic [SPADMIC_LINE_W-1:0] x_sync_ff2_q;
+  logic [SPADMIC_LINE_W-1:0] y_sync_ff2_q;
+  logic [SPADMIC_LINE_W-1:0] z_sync_ff2_q;
   logic [SPADMIC_LINE_W-1:0] x_sync_ff3_q;
   logic [SPADMIC_LINE_W-1:0] y_sync_ff3_q;
   logic [SPADMIC_LINE_W-1:0] z_sync_ff3_q;

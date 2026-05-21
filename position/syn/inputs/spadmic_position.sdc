@@ -12,6 +12,24 @@
 #   synchronizers.
 # =============================================================================
 
+proc position_collect_sync_stage1_pins {} {
+    set pins [list]
+    foreach pattern [list \
+        *x_sync_ff1_q*/D \
+        *y_sync_ff1_q*/D \
+        *z_sync_ff1_q*/D \
+        *x_sync_ff1_q_reg*/D \
+        *y_sync_ff1_q_reg*/D \
+        *z_sync_ff1_q_reg*/D \
+    ] {
+        set matches [get_pins -quiet -hierarchical $pattern]
+        if {[llength $matches] > 0} {
+            set pins [concat $pins $matches]
+        }
+    }
+    return $pins
+}
+
 set POS_CLK_SYS_PERIOD_NS              6.250
 set POS_CLK_UNCERTAINTY_NS             0.300
 set POS_CLK_TRANSITION_NS              0.150
@@ -88,13 +106,20 @@ if {[llength $POS_ASYNC_LINE_INPUTS] > 0} {
     set_input_delay -clock [get_clocks clk_sys] -max $POS_ASYNC_LINE_INPUT_DELAY_NS $POS_ASYNC_LINE_INPUTS
     set_input_delay -clock [get_clocks clk_sys] -min 0.000 $POS_ASYNC_LINE_INPUTS
     set_input_transition $POS_ASYNC_LINE_INPUT_TRANSITION_NS $POS_ASYNC_LINE_INPUTS
-    set_false_path -from $POS_ASYNC_LINE_INPUTS
+
+    set POS_SYNC_STAGE1_PINS [position_collect_sync_stage1_pins]
+    if {[llength $POS_SYNC_STAGE1_PINS] > 0} {
+        set_false_path -from $POS_ASYNC_LINE_INPUTS -to $POS_SYNC_STAGE1_PINS
+    } else {
+        set_false_path -from $POS_ASYNC_LINE_INPUTS
+    }
 }
 
 set_false_path -from [get_ports -quiet rst_n]
 
-# Preserve explicit line synchronizers.  The RTL carries ASYNC_REG attributes;
-# these best-effort SDC guards make the intent visible in Genus logs/reports.
+# Preserve explicit line synchronizers. These best-effort SDC guards make the
+# intent visible in Genus logs/reports even though ASYNC_REG-style FPGA
+# attributes are intentionally not used in this ASIC flow.
 foreach pattern {
     *x_sync_ff1_q* *x_sync_ff2_q*
     *y_sync_ff1_q* *y_sync_ff2_q*
