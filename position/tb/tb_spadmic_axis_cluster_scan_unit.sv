@@ -45,6 +45,8 @@ module tb_spadmic_axis_cluster_scan_unit;
     input logic [SPADMIC_LINE_W-1:0] pattern,
     input logic [6:0]                threshold
   );
+    int cycles_after_accept;
+
     @(posedge clk_sys);
     #1;
     lines = pattern;
@@ -53,8 +55,14 @@ module tb_spadmic_axis_cluster_scan_unit;
     @(posedge clk_sys);
     #1;
     start = 1'b0;
-    while (!valid)
+    cycles_after_accept = 0;
+    do begin
       @(posedge clk_sys);
+      #1;
+      cycles_after_accept++;
+    end while (!valid);
+    check("scanner 5-cycle pipeline latency",
+          (cycles_after_accept + 1) == SPADMIC_POS_SCAN_LATENCY_CYCLES);
     #1;
   endtask
 

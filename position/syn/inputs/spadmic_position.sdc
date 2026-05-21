@@ -48,6 +48,15 @@ create_clock -name clk_sys -period $POS_CLK_SYS_PERIOD_NS [get_ports clk_sys]
 set_clock_uncertainty $POS_CLK_UNCERTAINTY_NS [get_clocks clk_sys]
 set_clock_transition  $POS_CLK_TRANSITION_NS  [get_clocks clk_sys]
 
+# Async reset is false-pathed below, but give Genus a nominal OOC slew/delay so
+# timing-intent checks do not treat the port as an ideal zero-transition input.
+set POS_RESET_INPUT [get_ports -quiet rst_n]
+if {[llength $POS_RESET_INPUT] > 0} {
+    set_input_delay -clock [get_clocks clk_sys] -max 0.000 $POS_RESET_INPUT
+    set_input_delay -clock [get_clocks clk_sys] -min 0.000 $POS_RESET_INPUT
+    set_input_transition $POS_SYNC_INPUT_TRANSITION_NS $POS_RESET_INPUT
+}
+
 set POS_ASYNC_LINE_INPUTS [get_ports -quiet {
     x_lines_i[*]
     y_lines_i[*]
@@ -115,7 +124,9 @@ if {[llength $POS_ASYNC_LINE_INPUTS] > 0} {
     }
 }
 
-set_false_path -from [get_ports -quiet rst_n]
+if {[llength $POS_RESET_INPUT] > 0} {
+    set_false_path -from $POS_RESET_INPUT
+}
 
 # Preserve explicit line synchronizers. These best-effort SDC guards make the
 # intent visible in Genus logs/reports even though ASYNC_REG-style FPGA

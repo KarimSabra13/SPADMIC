@@ -294,7 +294,7 @@ There is no off-chip `ready`/backpressure pin in the active physical contract. A
 | `spadmic_tdc_axis_wrapper` | Per-axis glue around the preserved TDC |
 | `spadmic_tdc_shared_readout` | Shared TDC serializer front end |
 | `spadmic_position_block` | Position detection, queued packetization, accounting |
-| `spadmic_axis_cluster_scan` | Two-cycle registered cluster scan |
+| `spadmic_axis_cluster_scan` | Five-cycle pipelined cluster scan |
 | `spadmic_correlated_tx` | Packet arbiter, shared event tagging, and post-arbiter FIFO |
 | `spadmic_ddr_tx` | Forwarded-clock physical TX packer |
 

@@ -473,7 +473,7 @@ module tb_spadmic_stress_position;
       x_lines = '0; x_lines[36] = 1; x_lines[37] = 1;
       repeat (6) @(posedge clk_sys);
       check("T9 settle window delays packet start", tx_valid === 1'b0);
-      repeat (4) @(posedge clk_sys);
+      repeat (SPADMIC_POS_SCAN_LATENCY_CYCLES + 1) @(posedge clk_sys);
       check("T9 settle window eventually queues packet", pkt_pending === 1'b1);
 
       collect_packet(n);

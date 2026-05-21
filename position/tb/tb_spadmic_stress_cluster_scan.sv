@@ -60,7 +60,81 @@ module tb_spadmic_stress_cluster_scan;
     end
   endtask
 
+  function automatic spadmic_pkg::spadmic_axis_clusters_t ref_scan_axis(
+    input logic [W-1:0] pattern,
+    input logic [6:0]   threshold
+  );
+    spadmic_pkg::spadmic_axis_clusters_t raw;
+    logic [6:0] gap_run;
+    bit in_cluster;
+    int unsigned cluster_idx;
+
+    raw = '0;
+    raw.empty = 1'b1;
+    gap_run = '0;
+    in_cluster = 1'b0;
+    cluster_idx = 0;
+
+    for (int i = 0; i < W; i++) begin
+      if (pattern[i]) begin
+        if (!in_cluster) begin
+          if ((cluster_idx == 0) && !raw.cluster0.valid) begin
+            raw.cluster0.valid = 1'b1;
+            raw.cluster0.lo    = SPADMIC_LINE_IDX_W'(i);
+            raw.cluster0.hi    = SPADMIC_LINE_IDX_W'(i);
+          end else if ((cluster_idx == 0) && (gap_run >= threshold)) begin
+            cluster_idx = 1;
+            if (!raw.cluster1.valid) begin
+              raw.cluster1.valid = 1'b1;
+              raw.cluster1.lo    = SPADMIC_LINE_IDX_W'(i);
+              raw.cluster1.hi    = SPADMIC_LINE_IDX_W'(i);
+            end
+          end else if ((cluster_idx >= 1) && (gap_run >= threshold)) begin
+            raw.overflow = 1'b1;
+          end else if (cluster_idx == 0) begin
+            raw.cluster0.hi = SPADMIC_LINE_IDX_W'(i);
+          end else if ((cluster_idx == 1) && !raw.overflow) begin
+            raw.cluster1.hi = SPADMIC_LINE_IDX_W'(i);
+          end
+          in_cluster = 1'b1;
+          gap_run = '0;
+        end else begin
+          gap_run = '0;
+          if (cluster_idx == 0)
+            raw.cluster0.hi = SPADMIC_LINE_IDX_W'(i);
+          else if ((cluster_idx == 1) && !raw.overflow)
+            raw.cluster1.hi = SPADMIC_LINE_IDX_W'(i);
+        end
+      end else if (in_cluster) begin
+        gap_run++;
+        if (gap_run >= threshold)
+          in_cluster = 1'b0;
+      end
+    end
+
+    raw.empty = ~raw.cluster0.valid;
+    raw.cluster_count = {1'b0, raw.cluster0.valid} + {1'b0, raw.cluster1.valid};
+    return raw;
+  endfunction
+
+  function automatic logic clusters_equal(
+    input spadmic_pkg::spadmic_axis_clusters_t actual,
+    input spadmic_pkg::spadmic_axis_clusters_t expected
+  );
+    return (actual.empty == expected.empty)
+        && (actual.overflow == expected.overflow)
+        && (actual.cluster_count == expected.cluster_count)
+        && (actual.cluster0.valid == expected.cluster0.valid)
+        && (actual.cluster0.lo == expected.cluster0.lo)
+        && (actual.cluster0.hi == expected.cluster0.hi)
+        && (actual.cluster1.valid == expected.cluster1.valid)
+        && (actual.cluster1.lo == expected.cluster1.lo)
+        && (actual.cluster1.hi == expected.cluster1.hi);
+  endfunction
+
   task automatic run_scan(input logic [W-1:0] pattern, input logic [6:0] threshold);
+    spadmic_pkg::spadmic_axis_clusters_t expected;
+
     @(posedge clk_sys);
     #1;
     lines = pattern;
@@ -72,6 +146,8 @@ module tb_spadmic_stress_cluster_scan;
     while (!valid)
       @(posedge clk_sys);
     #1;
+    expected = ref_scan_axis(pattern, threshold);
+    check("scanner matches serial reference model", clusters_equal(clusters, expected));
   endtask
 
   initial begin
@@ -161,13 +237,16 @@ module tb_spadmic_stress_cluster_scan;
 
     begin
       logic [31:0] lfsr;
+      logic [6:0]  threshold_rand;
       lfsr = 32'hDEAD_BEEF;
-      for (int trial = 0; trial < 50; trial++) begin
+      for (int trial = 0; trial < 200; trial++) begin
         for (int b = 0; b < W; b++) begin
           lfsr = {lfsr[30:0], lfsr[31] ^ lfsr[21] ^ lfsr[1] ^ lfsr[0]};
           pattern[b] = lfsr[0];
         end
-        run_scan(pattern, 7'd5);
+        lfsr = {lfsr[30:0], lfsr[31] ^ lfsr[21] ^ lfsr[1] ^ lfsr[0]};
+        threshold_rand = 7'(lfsr[6:0] % (W + 1));
+        run_scan(pattern, threshold_rand);
         check($sformatf("random[%0d] no X in valid", trial),
               valid_cluster === 1'b1 || valid_cluster === 1'b0);
       end

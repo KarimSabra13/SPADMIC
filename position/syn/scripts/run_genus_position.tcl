@@ -12,7 +12,7 @@
 #   - XFAB XH018 D_CELLS_HD typical corner only.
 #   - Physical-aware synthesis with the available digital stack restricted to
 #     MET1, MET2, MET3, and METTP.
-#   - OOC area/timing estimate for the async position capture, two-cycle scanner,
+#   - OOC area/timing estimate for the async position capture, five-cycle scanner,
 #     frame FIFO, CSR/status, and 8-word/14-word packetizer.
 # =============================================================================
 
@@ -41,6 +41,7 @@ foreach dir [list \
     "$design(reports_dir)/elaboration" \
     "$design(reports_dir)/timing" \
     "$design(reports_dir)/qor" \
+    "$design(reports_dir)/messages" \
     "$design(outputs_dir)/post_elaboration" \
     "$design(outputs_dir)/post_synth"] {
     file mkdir $dir
@@ -112,6 +113,22 @@ proc position_run_report {cmd path} {
         close $fh
         puts "SPADMIC_POSITION_GENUS_WARN: report command failed: $cmd"
     }
+}
+
+proc position_write_checkpoint_reports {tag} {
+    global design
+
+    position_msg "Writing $tag checkpoint reports"
+    position_run_report "report_timing -max_paths 50 -path_type full_clock -nets" \
+        "$design(reports_dir)/timing/report_timing_${tag}.rpt"
+    position_run_report "report_qor" \
+        "$design(reports_dir)/qor/report_qor_${tag}.rpt"
+    position_run_report "report_area" \
+        "$design(reports_dir)/qor/report_area_${tag}.rpt"
+    position_run_report "report_area -hierarchy" \
+        "$design(reports_dir)/qor/report_area_hierarchy_${tag}.rpt"
+    position_run_report "report_messages" \
+        "$design(reports_dir)/messages/report_messages_${tag}.rpt"
 }
 
 position_msg "Starting OOC synthesis for $design(TOPLEVEL)"
@@ -212,6 +229,7 @@ position_run_report "report_clocks" \
     "$design(reports_dir)/timing/report_clocks.rpt"
 position_run_report "report_timing -max_paths 25" \
     "$design(reports_dir)/timing/report_timing_pre_synth.rpt"
+position_write_checkpoint_reports "pre_synth"
 
 write_design -base_name "$design(outputs_dir)/post_elaboration/$design(TOPLEVEL)"
 
@@ -240,18 +258,17 @@ foreach pattern {
 
 position_msg "Running syn_generic"
 syn_generic
-position_run_report "report_timing -max_paths 25" \
-    "$design(reports_dir)/timing/report_timing_post_generic.rpt"
+position_write_checkpoint_reports "post_generic"
 
 position_msg "Running syn_map"
 syn_map
-position_run_report "report_timing -max_paths 25" \
-    "$design(reports_dir)/timing/report_timing_post_map.rpt"
+position_write_checkpoint_reports "post_map"
 
 position_msg "Running syn_opt"
 syn_opt
 
 position_msg "Writing reports"
+position_write_checkpoint_reports "post_opt"
 position_run_report "report_qor" \
     "$design(reports_dir)/qor/report_qor.rpt"
 position_run_report "report_area" \

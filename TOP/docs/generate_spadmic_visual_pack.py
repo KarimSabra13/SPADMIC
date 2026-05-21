@@ -552,7 +552,7 @@ def position_block_page() -> Page:
     {block_node("csr", "Position CSR", theme="control", lines=["csr_valid_i / csr_write_i", "csr_addr_i / csr_wdata_i", "csr_ready_o / csr_rvalid_o / csr_rdata_o"], mono=True)}
     {block_node("sync", "3-stage synchronizers", theme="clock", lines=["ff1 / ff2 / ff3 for x, y, z", "lines_nonzero_sync", "lines_stable_sync"])}
     {block_node("fsm", "Detect / settle / scan FSM", theme="position", lines=["DET_IDLE", "DET_SETTLE", "DET_SCAN", "DET_WAIT_CLEAR"])}
-    {block_node("scan", "3x two-cycle cluster scan + filter", theme="position", lines=["u_scan_x / u_scan_y / u_scan_z", "gap_threshold_q", "min_cluster_span_q", "meaningful_event / overflow_any"])}
+    {block_node("scan", "3x five-cycle cluster scan + filter", theme="position", lines=["u_scan_x / u_scan_y / u_scan_z", "gap_threshold_q", "min_cluster_span_q", "meaningful_event / overflow_any"])}
     {block_node("acct", "Accounting", theme="egress", lines=["event_count_q", "drop_count_q", "reject_count_q", "drop / glitch sticky"], mono=True)}
     {block_node("pkt", "Fixed 8-word packetizer", theme="egress", lines=["header", "six cluster words", "EOC/tag"])}
     {block_node("outs", "Outputs", theme="position", lines=["pos_valid_o / pos_data_o", "busy_o / packet_pending_o", "drop_sticky_o", "glitch_reject_sticky_o"], mono=True)}

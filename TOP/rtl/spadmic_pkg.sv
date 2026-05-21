@@ -25,6 +25,7 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_TX_PHY_W    = 8;
   localparam logic [6:0] SPADMIC_I2C_ADDR     = 7'h42;
   localparam int unsigned SPADMIC_POS_PKT_WORDS = 8;
+  localparam int unsigned SPADMIC_POS_SCAN_LATENCY_CYCLES = 5;
   localparam int unsigned SPADMIC_POS_QUEUE_DEPTH = 16;
   localparam int unsigned SPADMIC_EVENT_BUNDLE_DEPTH = 16;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 2048;
