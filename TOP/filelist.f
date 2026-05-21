@@ -31,8 +31,8 @@ rtl/spadmic_correlated_tx.sv
 rtl/spadmic_ddr_tx.sv
 
 // ── Position scanner ─────────────────────────────────────────────
-../SPADMIC/position/rtl/spadmic_axis_cluster_scan.sv
-../SPADMIC/position/rtl/spadmic_position_block.sv
+../position/rtl/spadmic_axis_cluster_scan.sv
+../position/rtl/spadmic_position_block.sv
 
 // ── Per-axis TDC wrapper & top shell ─────────────────────────────
 rtl/spadmic_tdc_axis_wrapper.sv

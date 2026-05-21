@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MPTDC_ROOT="$(cd "$REPO_ROOT/../MPTDC" 2>/dev/null && pwd || echo "$REPO_ROOT/../MPTDC")"
-POSITION_TB_ROOT="$REPO_ROOT/../SPADMIC/position/tb"
+POSITION_TB_ROOT="$REPO_ROOT/../position/tb"
 
 TB_NAME="${1:?Usage: run_tb.sh <tb_name> [options]}"
 SIM="xrun"

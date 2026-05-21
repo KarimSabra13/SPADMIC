@@ -5,7 +5,7 @@
 # =============================================================================
 #
 # Usage:
-#   cd SPADMIC/position/syn/scripts
+#   cd position/syn/scripts
 #   genus -files run_genus_position.tcl -log ../logs/genus_position.log
 #
 # Intent:
@@ -21,7 +21,7 @@ set runtype "synthesis"
 set script_dir    [file dirname [file normalize [info script]]]
 set syn_root      [file normalize "$script_dir/.."]
 set position_root [file normalize "$syn_root/.."]
-set repo_root     [file normalize "$position_root/../.."]
+set repo_root     [file normalize "$position_root/.."]
 
 set design(TOPLEVEL)      "spadmic_position_block"
 set design(sdc_file)      "$syn_root/inputs/spadmic_position.sdc"

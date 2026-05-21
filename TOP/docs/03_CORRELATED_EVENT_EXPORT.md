@@ -5,7 +5,7 @@
 This document defines the active top-level export behavior implemented by:
 
 - `rtl/spadmic_tdc_shared_readout.sv`
-- `../SPADMIC/position/rtl/spadmic_position_block.sv`
+- `../position/rtl/spadmic_position_block.sv`
 - `rtl/spadmic_correlated_tx.sv`
 
 It is the contract for off-chip regrouping of X/Y/Z TDC packets and position packets that describe the same physical event.

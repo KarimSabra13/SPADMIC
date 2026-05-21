@@ -32,7 +32,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TOP_ROOT="$REPO_ROOT"
 MPTDC_ROOT="$(cd "$REPO_ROOT/../MPTDC" 2>/dev/null && pwd || echo "$REPO_ROOT/../MPTDC")"
-POSITION_VIP_ROOT="$TOP_ROOT/../SPADMIC/position/vip"
+POSITION_VIP_ROOT="$TOP_ROOT/../position/vip"
 
 # Defaults
 SIM="xrun"

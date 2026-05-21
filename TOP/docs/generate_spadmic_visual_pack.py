@@ -579,7 +579,7 @@ def position_block_page() -> Page:
         "10_spadmic_position_block",
         "spadmic_position_block",
         "Async-qualified position detector with explicit settle filtering, cluster extraction, and fixed packet output.",
-        "SPADMIC/position/rtl/spadmic_position_block.sv",
+        "position/rtl/spadmic_position_block.sv",
         body,
     )
 
@@ -610,7 +610,7 @@ def cluster_scan_page() -> Page:
         "11_spadmic_axis_cluster_scan",
         "spadmic_axis_cluster_scan",
         "Two-cluster bitmap scanner with threshold-based split and overflow retention of the first two clusters.",
-        "SPADMIC/position/rtl/spadmic_axis_cluster_scan.sv",
+        "position/rtl/spadmic_axis_cluster_scan.sv",
         body,
     )
 

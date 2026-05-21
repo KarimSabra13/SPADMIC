@@ -83,8 +83,8 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 | `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | Per-axis wrapper around stop qualification and `mptdc_top_asic` |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | One-shot qualified STOP pulse generator |
 | `spadmic_tdc_shared_readout` | `rtl/spadmic_tdc_shared_readout.sv` | Shared TDC record arbiter + shared serializer |
-| `spadmic_position_block` | `../SPADMIC/position/rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
-| `spadmic_axis_cluster_scan` | `../SPADMIC/position/rtl/spadmic_axis_cluster_scan.sv` | Two-cycle per-axis cluster scanner with overflow flag |
+| `spadmic_position_block` | `../position/rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
+| `spadmic_axis_cluster_scan` | `../position/rtl/spadmic_axis_cluster_scan.sv` | Two-cycle per-axis cluster scanner with overflow flag |
 | `spadmic_correlated_tx` | `rtl/spadmic_correlated_tx.sv` | Packet arbiter, shared event tagger, and post-arbiter FIFO |
 | `spadmic_ddr_tx` | `rtl/spadmic_ddr_tx.sv` | Source-synchronous 8-bit DDR physical TX packer |
 
