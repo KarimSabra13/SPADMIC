@@ -89,7 +89,7 @@ Legacy TOP modules still in-tree but not on the active chip datapath:
 | `mptdc_core` | Vernier measurement kernel | generated clocks + async + `clk_sys` | highest signoff risk: oscillator, PD, CDC, constraints | MPTDC regression, CDC/STA waiver deck, macro contract |
 | `spadmic_tdc_shared_readout` | shared TDC serializer | `clk_sys` | source interleaving or starvation would corrupt event stream | META-first, fairness, zero-hit, stall tests |
 | `spadmic_position_block` | position detect/queue/packetize and matrix reset control | async lines into `clk_sys` | async bus sampling, queue overflow, raw payload framing, reset timing versus matrix behavior | settle/glitch/queue/raw/reset stress tests |
-| `spadmic_axis_cluster_scan` | combinational cluster extraction | `clk_sys` datapath | wide combinational scan timing and edge correctness | stress cluster tests and synthesis timing |
+| `spadmic_axis_cluster_scan` | two-cycle cluster extraction | `clk_sys` datapath | scan timing and edge correctness | stress cluster tests and synthesis timing |
 | `spadmic_correlated_tx` | packet arbiter/event tagger/FIFO | `clk_sys` | event-ID wrap, packet interleaving, FIFO pressure | correlated TX unit/stress tests |
 | `spadmic_ddr_tx` | physical DDR packer | both edges of `clk_sys` | output timing and tool support for dual-edge logic | DDR unit test and STA output-delay constraints |
 

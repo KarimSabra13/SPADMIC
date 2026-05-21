@@ -7,7 +7,7 @@ module tb_spadmic_correlated_tx_unit;
 
   localparam int CLK_PERIOD = 6250;
   localparam int TDC_WORDS  = 12;
-  localparam int POS_WORDS  = 6;
+  localparam int POS_WORDS  = 16;
   localparam int OUT_WORDS  = TDC_WORDS + POS_WORDS;
 
   logic clk_sys;
@@ -102,13 +102,23 @@ module tb_spadmic_correlated_tx_unit;
     tdc_words[10] = 16'h8242;  // Z1 header
     tdc_words[11] = 16'hC666;  // Z1 eoc (patched)
 
-    // Position stream: P0 then P1.
-    pos_words[0] = 16'h9001;   // P0 header
-    pos_words[1] = 16'hA031;   // P0 subheader source=POSITION
-    pos_words[2] = 16'hC777;   // P0 eoc (patched)
-    pos_words[3] = 16'h9002;   // P1 header
-    pos_words[4] = 16'hA031;   // P1 subheader
-    pos_words[5] = 16'hC888;   // P1 eoc (patched)
+    // Position stream: P0 then P1, each using the fixed 8-word cluster format.
+    pos_words[0]  = spadmic_pos_header_word(1'b0, 3'b001, 3'b000);
+    pos_words[1]  = 16'h0001;
+    pos_words[2]  = 16'h0002;
+    pos_words[3]  = 16'h0003;
+    pos_words[4]  = 16'h0004;
+    pos_words[5]  = 16'h0005;
+    pos_words[6]  = 16'h0006;
+    pos_words[7]  = spadmic_pos_eoc_word(4'h7);
+    pos_words[8]  = spadmic_pos_header_word(1'b0, 3'b001, 3'b000);
+    pos_words[9]  = 16'h0011;
+    pos_words[10] = 16'h0012;
+    pos_words[11] = 16'h0013;
+    pos_words[12] = 16'h0014;
+    pos_words[13] = 16'h0015;
+    pos_words[14] = 16'h0016;
+    pos_words[15] = spadmic_pos_eoc_word(4'h8);
   end
 
   initial begin
@@ -135,21 +145,21 @@ module tb_spadmic_correlated_tx_unit;
     //   X0, P0, X1, P1, Y0, Z0, Y1, Z1.
     // Event 0: X0, P0, Y0, Z0 all share event ID 0.
     check("X0 event ID patched to 0", out_words[1]  == 16'hC000);
-    check("P0 event ID patched to 0", out_words[4]  == 16'hC000);
-    check("Y0 event ID patched to 0", out_words[11] == 16'hC000);
-    check("Z0 event ID patched to 0", out_words[13] == 16'hC000);
+    check("P0 event ID patched to 0", out_words[9]  == 16'hC000);
+    check("Y0 event ID patched to 0", out_words[21] == 16'hC000);
+    check("Z0 event ID patched to 0", out_words[23] == 16'hC000);
 
     // Event 1: X1, P1, Y1, Z1 all share event ID 1.
-    check("X1 event ID patched to 1", out_words[6]  == 16'hC001);
-    check("P1 event ID patched to 1", out_words[9]  == 16'hC001);
-    check("Y1 event ID patched to 1", out_words[15] == 16'hC001);
-    check("Z1 event ID patched to 1", out_words[17] == 16'hC001);
+    check("X1 event ID patched to 1", out_words[11] == 16'hC001);
+    check("P1 event ID patched to 1", out_words[19] == 16'hC001);
+    check("Y1 event ID patched to 1", out_words[25] == 16'hC001);
+    check("Z1 event ID patched to 1", out_words[27] == 16'hC001);
 
     // Arbitration is packet-atomic: each packet drains completely before the
     // next one starts.
     check("Packet 0 stays atomic", out_words[0][15:13] == 3'b100 && out_words[1][15:14] == 2'b11);
-    check("Packet 1 stays atomic", out_words[2][15:13] == 3'b100 && out_words[3][15:13] == 3'b101 && out_words[4][15:14] == 2'b11);
-    check("Packet 2 stays atomic", out_words[5][15:13] == 3'b100 && out_words[6][15:14] == 2'b11);
+    check("Packet 1 stays atomic", out_words[2][15:14] == 2'b01 && out_words[9][15:14] == 2'b11);
+    check("Packet 2 stays atomic", out_words[10][15:13] == 3'b100 && out_words[11][15:14] == 2'b11);
 
     // White-box wrap test: force the X source counter to its terminal value and
     // confirm the existing global overflow health bit becomes a real sticky flag.

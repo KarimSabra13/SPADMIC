@@ -443,7 +443,7 @@ class spadmic_scoreboard;
       exp = expected_pos_q.pop_front();
 `ifdef SPADMIC_ENABLE_FUNC_COV
     if (words.size() > 0)
-      pkt_cov.sample_pos(pos_kind_from_words(words), hdr[12], hdr[11:9], hdr[8:6],
+      pkt_cov.sample_pos(pos_kind_from_words(words), hdr[13], hdr[12:10], 3'b000,
                          eoc[13:0], word_count, words);
 `endif
     if ((have_expected && (exp.mode == SPADMIC_POS_MODE_RAW))

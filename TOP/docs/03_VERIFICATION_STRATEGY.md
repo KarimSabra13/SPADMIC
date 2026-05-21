@@ -231,7 +231,7 @@ RTL:
 | Item | Required monitor behavior |
 |------|---------------------------|
 | TDC packet | detect header, hold until EOC, extract source from patched header, extract shared event ID |
-| Position cluster packet | detect cluster header, recognize position sub-header, require 12 total words |
+| Position cluster packet | detect cluster header and require 8 total words |
 | Position raw bitmap packet | detect raw-position header and collect exactly 14 words, because raw payload words can look like header or EOC markers |
 | Packet atomicity | report incomplete packet flushes as monitor errors, not silent packets |
 | Physical TX | keep DDR byte reconstruction in `spadmic_narrow_tx_if` as the only physical observation boundary |
@@ -260,7 +260,7 @@ It should track:
 | Position CSR state | position mode, gap threshold, minimum span, settle cycles, reset mode, auto-reset period |
 | Expected packets | per-source expected packet counts, accepted drops, reset-cleared in-flight expectations |
 | Event IDs | per-source monotonic IDs, wrap behavior, no cross-source accidental coupling |
-| Position cluster packets | exact 12-word format, masks, summaries, 6-bit `0..63` cluster words, overflow semantics |
+| Position cluster packets | exact 8-word format, masks, 6-bit `0..63` cluster words, overflow semantics |
 | Position raw packets | exact 14-word format, X/Y/Z bitmap packing, EOC only at word 13 |
 | Reset output | expected manual/deferred/periodic pulse count and one-cycle width |
 | Fault/status CSRs | mode rejects, position drops/glitches, correlation overflow, CSR timeout/error visibility |

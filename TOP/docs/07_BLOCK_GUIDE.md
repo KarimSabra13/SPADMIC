@@ -167,8 +167,8 @@ packetization hardware.
 
 | Block | File | Domain | Status | Key responsibility |
 |-------|------|--------|--------|--------------------|
-| `spadmic_position_block` | `rtl/spadmic_position_block.sv` | async inputs into `clk_sys` | active | synchronize, settle, clusterize, queue, packetize, and count faults |
-| `spadmic_axis_cluster_scan` | `rtl/spadmic_axis_cluster_scan.sv` | combinational in `clk_sys` datapath | active | derive up to two clusters and overflow metadata from one axis snapshot |
+| `spadmic_position_block` | `../SPADMIC/position/rtl/spadmic_position_block.sv` | async inputs into `clk_sys` | active | synchronize, settle, clusterize, queue, packetize, and count faults |
+| `spadmic_axis_cluster_scan` | `../SPADMIC/position/rtl/spadmic_axis_cluster_scan.sv` | two-cycle registered `clk_sys` datapath | active | derive up to two clusters and overflow metadata from one axis snapshot |
 
 ### `spadmic_position_block`
 

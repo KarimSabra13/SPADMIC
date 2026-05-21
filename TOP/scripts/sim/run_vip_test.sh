@@ -32,6 +32,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TOP_ROOT="$REPO_ROOT"
 MPTDC_ROOT="$(cd "$REPO_ROOT/../MPTDC" 2>/dev/null && pwd || echo "$REPO_ROOT/../MPTDC")"
+POSITION_VIP_ROOT="$TOP_ROOT/../SPADMIC/position/vip"
 
 # Defaults
 SIM="xrun"
@@ -108,6 +109,7 @@ if [[ "$SIM" == "xrun" ]]; then
     -svseed "$SEED"
     +define+MPTDC_USE_OSC_MODEL
     "+incdir+$TOP_ROOT/tb/vip"
+    "+incdir+$POSITION_VIP_ROOT"
     -f "$BUILD_DIR/mptdc.f"
     -f "$BUILD_DIR/top.f"
     -f "$BUILD_DIR/vip.f"
@@ -178,6 +180,7 @@ elif [[ "$SIM" == "verilator" ]]; then
     -Wno-fatal
     +define+MPTDC_USE_OSC_MODEL
     "+incdir+$TOP_ROOT/tb/vip"
+    "+incdir+$POSITION_VIP_ROOT"
     -f "$BUILD_DIR/mptdc.f"
     -f "$BUILD_DIR/top.f"
     -f "$BUILD_DIR/vip.f"

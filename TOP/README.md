@@ -60,9 +60,9 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 ### Position plane
 
 1. `spadmic_position_block` synchronizes the asynchronous line buses.
-2. A detect/settle/evaluate/wait-clear FSM snapshots stable activity only.
-3. Three `spadmic_axis_cluster_scan` instances derive up to two 6-bit coordinate clusters per 64-line axis.
-4. The block emits fixed 12-word cluster packets or 14-word raw bitmap packets from an internal queue and raises explicit counters/sticky bits for queue drops and glitch rejects.
+2. A detect/settle/scan/wait-clear FSM snapshots stable activity only.
+3. Three two-cycle `spadmic_axis_cluster_scan` instances derive up to two 6-bit coordinate clusters per 64-line axis.
+4. The block emits fixed 8-word cluster packets or 14-word raw bitmap packets from an internal queue and raises explicit counters/sticky bits for queue drops and glitch rejects.
 
 ### Final egress
 
@@ -83,8 +83,8 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 | `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | Per-axis wrapper around stop qualification and `mptdc_top_asic` |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | One-shot qualified STOP pulse generator |
 | `spadmic_tdc_shared_readout` | `rtl/spadmic_tdc_shared_readout.sv` | Shared TDC record arbiter + shared serializer |
-| `spadmic_position_block` | `rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
-| `spadmic_axis_cluster_scan` | `rtl/spadmic_axis_cluster_scan.sv` | Per-axis two-cluster scanner with overflow flag |
+| `spadmic_position_block` | `../SPADMIC/position/rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
+| `spadmic_axis_cluster_scan` | `../SPADMIC/position/rtl/spadmic_axis_cluster_scan.sv` | Two-cycle per-axis cluster scanner with overflow flag |
 | `spadmic_correlated_tx` | `rtl/spadmic_correlated_tx.sv` | Packet arbiter, shared event tagger, and post-arbiter FIFO |
 | `spadmic_ddr_tx` | `rtl/spadmic_ddr_tx.sv` | Source-synchronous 8-bit DDR physical TX packer |
 

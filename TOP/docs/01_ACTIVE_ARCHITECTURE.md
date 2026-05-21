@@ -203,20 +203,16 @@ they may need to represent the full 64-line width.
 
 ### 6.3 Position packet formats
 
-Cluster mode emits the normal fixed 12-word position packet:
+Cluster mode emits the fixed 8-word position packet:
 
 1. header
-2. source-tagged sub-header
-3. X summary
-4. X cluster 0
-5. X cluster 1
-6. Y summary
-7. Y cluster 0
-8. Y cluster 1
-9. Z summary
-10. Z cluster 0
-11. Z cluster 1
-12. EOC
+2. X cluster 0
+3. X cluster 1
+4. Y cluster 0
+5. Y cluster 1
+6. Z cluster 0
+7. Z cluster 1
+8. EOC/tag
 
 Each cluster word is a 16-bit logical word:
 
@@ -298,7 +294,7 @@ There is no off-chip `ready`/backpressure pin in the active physical contract. A
 | `spadmic_tdc_axis_wrapper` | Per-axis glue around the preserved TDC |
 | `spadmic_tdc_shared_readout` | Shared TDC serializer front end |
 | `spadmic_position_block` | Position detection, queued packetization, accounting |
-| `spadmic_axis_cluster_scan` | Pure combinational cluster scan |
+| `spadmic_axis_cluster_scan` | Two-cycle registered cluster scan |
 | `spadmic_correlated_tx` | Packet arbiter, shared event tagging, and post-arbiter FIFO |
 | `spadmic_ddr_tx` | Forwarded-clock physical TX packer |
 

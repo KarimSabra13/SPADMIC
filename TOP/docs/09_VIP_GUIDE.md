@@ -103,8 +103,8 @@ The retained `ready` field only exists so older collateral still compiles.
 `monitor/spadmic_tx_monitor.sv` consumes the reconstructed logical words and:
 
 - detects packet headers and EOC
-- extracts TDC source from the patched header and position source from the position sub-header
-- distinguishes `TDC`, 12-word position-cluster, and fixed 14-word position-raw packets
+- extracts TDC source from the patched header and treats cluster/raw position headers as implicit position source
+- distinguishes `TDC`, 8-word position-cluster, and fixed 14-word position-raw packets
 - extracts the shared event ID from EOC
 - emits one `spadmic_mon_pkt_txn` per complete packet
 

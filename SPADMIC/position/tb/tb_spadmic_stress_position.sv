@@ -217,13 +217,11 @@ module tb_spadmic_stress_position;
       repeat (6) @(posedge clk_sys);
       collect_packet(n);
 
-      check("T1 basic packet: 12 words", n === SPADMIC_POS_PKT_WORDS);
-      check("T1 header word", pkt_words[0][15:14] == 2'b10);
-      check("T1 subheader marker", pkt_words[1][15:13] == 3'b101);
-      check("T1 subheader source tag", pkt_words[1][5:4] == SPADMIC_SRC_POSITION);
+      check("T1 basic packet: 8 words", n === SPADMIC_POS_PKT_WORDS);
+      check("T1 header word", pkt_words[0][15:14] == 2'b01);
       check("T1 EOC word", pkt_words[n-1][15:14] == 2'b11);
       csr_read_pos(SPADMIC_CSR_POS_EVENT_COUNT, rd_data);
-      check("T1 event count increments", rd_data[13:0] === 14'd1);
+      check("T1 event tag increments", rd_data[3:0] === 4'd1);
 
       // Clear lines
       @(posedge clk_sys);
@@ -242,7 +240,7 @@ module tb_spadmic_stress_position;
       z_lines = {SPADMIC_LINE_W{1'b1}};
       repeat (6) @(posedge clk_sys);
       collect_packet(n);
-      check("T2 full bitmaps → 12 words", n === SPADMIC_POS_PKT_WORDS);
+      check("T2 full bitmaps -> 8 words", n === SPADMIC_POS_PKT_WORDS);
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
       repeat (6) @(posedge clk_sys);
@@ -271,7 +269,7 @@ module tb_spadmic_stress_position;
         repeat (6) @(posedge clk_sys);
       end
 
-      check("T3 10 back-to-back events → 120 words", total_words === (10 * SPADMIC_POS_PKT_WORDS));
+      check("T3 10 back-to-back events -> 80 words", total_words === (10 * SPADMIC_POS_PKT_WORDS));
     end
 
     // ========================================
@@ -394,7 +392,7 @@ module tb_spadmic_stress_position;
       spadmic_axis_clusters_t exp_x;
 
       csr_write_pos(SPADMIC_CSR_POS_FILTER_CFG, 32'h0000_0101);
-      repeat (2) @(posedge clk_sys);
+      repeat (4) @(posedge clk_sys);
 
       @(posedge clk_sys);
       x_lines = '0;
@@ -409,7 +407,7 @@ module tb_spadmic_stress_position;
         1'b0
       );
       check("T7b min-span 1 packet length", n === SPADMIC_POS_PKT_WORDS);
-      check_word("T7b single line retained as cluster", 3, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T7b single line retained as cluster", 1, spadmic_pos_cluster_word(exp_x.cluster0));
 
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
@@ -475,7 +473,7 @@ module tb_spadmic_stress_position;
       x_lines = '0; x_lines[36] = 1; x_lines[37] = 1;
       repeat (6) @(posedge clk_sys);
       check("T9 settle window delays packet start", tx_valid === 1'b0);
-      repeat (2) @(posedge clk_sys);
+      repeat (4) @(posedge clk_sys);
       check("T9 settle window eventually queues packet", pkt_pending === 1'b1);
 
       collect_packet(n);
@@ -514,10 +512,8 @@ module tb_spadmic_stress_position;
       );
       check("T10 merged-gap packet length", n === SPADMIC_POS_PKT_WORDS);
       check_word("T10 merged-gap header", 0, spadmic_pos_header_word(1'b0, 3'b001, 3'b000));
-      check_word("T10 merged-gap subheader", 1, spadmic_pos_subheader_word(3'b001));
-      check_word("T10 merged-gap x summary", 2, spadmic_pos_axis_summary_word(TDC_ID_X, exp_x));
-      check_word("T10 merged-gap x cluster0", 3, spadmic_pos_cluster_word(exp_x.cluster0));
-      check_word("T10 merged-gap x cluster1 invalid", 4, spadmic_pos_cluster_word(exp_x.cluster1));
+      check_word("T10 merged-gap x cluster0", 1, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T10 merged-gap x cluster1 invalid", 2, spadmic_pos_cluster_word(exp_x.cluster1));
 
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
@@ -538,10 +534,8 @@ module tb_spadmic_stress_position;
       );
       check("T10 threshold-gap packet length", n === SPADMIC_POS_PKT_WORDS);
       check_word("T10 threshold-gap header", 0, spadmic_pos_header_word(1'b0, 3'b001, 3'b001));
-      check_word("T10 threshold-gap subheader", 1, spadmic_pos_subheader_word(3'b001));
-      check_word("T10 threshold-gap x summary", 2, spadmic_pos_axis_summary_word(TDC_ID_X, exp_x));
-      check_word("T10 threshold-gap x cluster0", 3, spadmic_pos_cluster_word(exp_x.cluster0));
-      check_word("T10 threshold-gap x cluster1", 4, spadmic_pos_cluster_word(exp_x.cluster1));
+      check_word("T10 threshold-gap x cluster0", 1, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T10 threshold-gap x cluster1", 2, spadmic_pos_cluster_word(exp_x.cluster1));
 
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;
@@ -618,10 +612,8 @@ module tb_spadmic_stress_position;
       );
       check("T12 overflow packet length", n === SPADMIC_POS_PKT_WORDS);
       check_word("T12 overflow header", 0, spadmic_pos_header_word(1'b1, 3'b001, 3'b001));
-      check_word("T12 overflow subheader", 1, spadmic_pos_subheader_word(3'b001));
-      check_word("T12 overflow x summary", 2, spadmic_pos_axis_summary_word(TDC_ID_X, exp_x));
-      check_word("T12 overflow x cluster0 retained", 3, spadmic_pos_cluster_word(exp_x.cluster0));
-      check_word("T12 overflow x cluster1 retained", 4, spadmic_pos_cluster_word(exp_x.cluster1));
+      check_word("T12 overflow x cluster0 retained", 1, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T12 overflow x cluster1 retained", 2, spadmic_pos_cluster_word(exp_x.cluster1));
 
       @(posedge clk_sys);
       x_lines = '0; y_lines = '0; z_lines = '0;

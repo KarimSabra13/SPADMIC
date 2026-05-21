@@ -24,7 +24,7 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_EVENT_ID_W  = 14;
   localparam int unsigned SPADMIC_TX_PHY_W    = 8;
   localparam logic [6:0] SPADMIC_I2C_ADDR     = 7'h42;
-  localparam int unsigned SPADMIC_POS_PKT_WORDS = 12;
+  localparam int unsigned SPADMIC_POS_PKT_WORDS = 8;
   localparam int unsigned SPADMIC_POS_QUEUE_DEPTH = 16;
   localparam int unsigned SPADMIC_EVENT_BUNDLE_DEPTH = 16;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 2048;
@@ -127,6 +127,10 @@ package spadmic_pkg;
     return (word[15:13] == 3'b100) && (word[5:4] == 2'b10) && (word[3:0] == 4'h2);
   endfunction
 
+  function automatic logic is_spadmic_pos_cluster_header(input logic [NARROW_W-1:0] word);
+    return (word[15:14] == 2'b01);
+  endfunction
+
   function automatic logic is_tdc_eoc(input logic [NARROW_W-1:0] word);
     return (word[15:14] == 2'b11);
   endfunction
@@ -208,13 +212,14 @@ package spadmic_pkg;
     input logic [2:0] non_empty_mask,
     input logic [2:0] multi_cluster_mask
   );
+    logic [9:0] reserved;
+
+    reserved = '0;
     return {
-      3'b100,
+      2'b01,
       overflow_any,
       non_empty_mask,
-      multi_cluster_mask,
-      2'b01,
-      4'b0000
+      reserved
     };
   endfunction
 
@@ -231,33 +236,6 @@ package spadmic_pkg;
     };
   endfunction
 
-  function automatic logic [NARROW_W-1:0] spadmic_pos_subheader_word(
-    input logic [2:0] qualifying_axis_mask
-  );
-    return {
-      3'b101,
-      1'b0,
-      qualifying_axis_mask,
-      3'b000,
-      SPADMIC_SRC_POSITION,
-      4'h1
-    };
-  endfunction
-
-  function automatic logic [NARROW_W-1:0] spadmic_pos_axis_summary_word(
-    input spadmic_tdc_id_e        axis_id,
-    input spadmic_axis_clusters_t axis_clusters
-  );
-    return {
-      1'b0,
-      axis_id,
-      axis_clusters.overflow,
-      axis_clusters.cluster_count,
-      axis_clusters.empty,
-      9'b0
-    };
-  endfunction
-
   function automatic logic [NARROW_W-1:0] spadmic_pos_cluster_word(
     input spadmic_cluster_t cluster
   );
@@ -270,9 +248,9 @@ package spadmic_pkg;
   endfunction
 
   function automatic logic [NARROW_W-1:0] spadmic_pos_eoc_word(
-    input logic [13:0] event_count
+    input logic [3:0] event_tag
   );
-    return {2'b11, event_count};
+    return {2'b11, 10'b0, event_tag};
   endfunction
 
   function automatic logic [NARROW_W-1:0] spadmic_pos_raw_word(

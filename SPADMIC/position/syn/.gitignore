@@ -1,0 +1,10 @@
+work/
+outputs/
+reports/
+logs/
+*.log
+*.jou
+*.cmd
+*.key
+*.history
+*.genus_db

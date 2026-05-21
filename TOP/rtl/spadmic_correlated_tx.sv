@@ -43,6 +43,7 @@ module spadmic_correlated_tx (
   logic [NARROW_W-1:0]                selected_data;
   logic                               selected_ready;
   logic                               input_accept;
+  logic                               selected_packet_start;
 
   logic [4:0]                         word_idx_q;
   spadmic_source_id_e                 packet_source_q;
@@ -63,6 +64,10 @@ module spadmic_correlated_tx (
   assign export_mode    = spadmic_export_mode_from_ctrl(tx_sel_i, position_enable_i);
   assign selected_ready = ~fifo_full;
   assign input_accept   = selected_valid & selected_ready;
+  assign selected_packet_start = selected_is_pos
+                               ? (is_spadmic_pos_cluster_header(selected_data)
+                                  || is_spadmic_pos_raw_header(selected_data))
+                               : is_tdc_header(selected_data);
 
   assign packet_source_now = grant_is_pos_q ? SPADMIC_SRC_POSITION : packet_source_q;
   assign assigned_event_id = source_event_id_q[packet_source_now];
@@ -171,7 +176,7 @@ module spadmic_correlated_tx (
       for (int i = 0; i < SPADMIC_SRC_COUNT; i++)
         source_event_id_q[i] <= '0;
     end else begin
-      if (input_accept && (word_idx_q == '0) && is_tdc_header(selected_data)) begin
+      if (input_accept && (word_idx_q == '0) && selected_packet_start) begin
         word_idx_q            <= 5'd1;
         packet_is_raw_pos_q   <= selected_is_pos && is_spadmic_pos_raw_header(selected_data);
         if (selected_is_pos) begin

@@ -6,15 +6,15 @@
 class spadmic_pos_ref_model;
 
   function automatic logic [2:0] pkt_non_empty_mask(input logic [15:0] hdr);
-    return hdr[11:9];
+    return hdr[12:10];
   endfunction
 
   function automatic logic [2:0] pkt_multi_cluster_mask(input logic [15:0] hdr);
-    return hdr[8:6];
+    return 3'b000;
   endfunction
 
   function automatic logic pkt_overflow_any(input logic [15:0] hdr);
-    return hdr[12];
+    return hdr[13];
   endfunction
 
   function automatic logic [1:0] axis_summary_id(input logic [15:0] word);
@@ -180,28 +180,13 @@ class spadmic_pos_ref_model;
       return 0;
     end
 
-    // Check header marker
-    if (!is_tdc_header(words[0])) begin
-      $display("[POS_REF] FAIL: word[0] is not a header (0x%04h)", words[0]);
+    if (!is_spadmic_pos_cluster_header(words[0])) begin
+      $display("[POS_REF] FAIL: word[0] is not a cluster position header (0x%04h)", words[0]);
       return 0;
     end
 
-    // Check EOC at last word
     if (!is_tdc_eoc(words[words.size()-1])) begin
       $display("[POS_REF] FAIL: last word not EOC (0x%04h)", words[words.size()-1]);
-      return 0;
-    end
-
-    // Check subheader source = POSITION
-    if (words[1][5:4] != SPADMIC_SRC_POSITION) begin
-      $display("[POS_REF] FAIL: subheader source=%0d != POSITION(%0d)",
-               words[1][5:4], SPADMIC_SRC_POSITION);
-      return 0;
-    end
-
-    if (words[1][11:9] != pkt_non_empty_mask(words[0])) begin
-      $display("[POS_REF] FAIL: subheader qualifying mask %03b != header non-empty mask %03b",
-               words[1][11:9], pkt_non_empty_mask(words[0]));
       return 0;
     end
 
@@ -209,52 +194,31 @@ class spadmic_pos_ref_model;
     scan_axis(y_pattern, gap_threshold, min_span, expected_axis[1]);
     scan_axis(z_pattern, gap_threshold, min_span, expected_axis[2]);
 
-    if (axis_summary_id(words[2]) != TDC_ID_X ||
-        axis_summary_id(words[5]) != TDC_ID_Y ||
-        axis_summary_id(words[8]) != TDC_ID_Z) begin
-      $display("[POS_REF] FAIL: axis summary order/tag mismatch");
-      return 0;
-    end
-
     for (int axis = 0; axis < 3; axis++) begin
-      automatic int summary_idx = 2 + axis * 3;
-      automatic int cluster0_idx = summary_idx + 1;
-      automatic int cluster1_idx = summary_idx + 2;
+      automatic int cluster0_idx = 1 + axis * 2;
+      automatic int cluster1_idx = cluster0_idx + 1;
       logic [1:0] cluster_count;
       logic       cluster0_valid;
       logic       cluster1_valid;
       logic       expect_non_empty;
-      logic       expect_multi;
       spadmic_axis_clusters_t exp_axis;
 
       exp_axis = expected_axis[axis];
 
-      cluster_count   = axis_summary_cluster_count(words[summary_idx]);
+      cluster_count   = {1'b0, cluster_word_valid(words[cluster0_idx])}
+                      + {1'b0, cluster_word_valid(words[cluster1_idx])};
       cluster0_valid  = words[cluster0_idx][0];
       cluster1_valid  = words[cluster1_idx][0];
       expect_non_empty = pkt_non_empty_mask(words[0])[axis];
-      expect_multi     = pkt_multi_cluster_mask(words[0])[axis];
 
-      if ((cluster_count != {1'b0, cluster0_valid} + {1'b0, cluster1_valid}) ||
-          (axis_summary_empty(words[summary_idx]) != ~(cluster0_valid | cluster1_valid))) begin
-        $display("[POS_REF] FAIL: axis %0d summary does not match cluster valid bits", axis);
-        return 0;
-      end
-
-      if (expect_non_empty != ~axis_summary_empty(words[summary_idx])) begin
+      if (expect_non_empty != (cluster0_valid | cluster1_valid)) begin
         $display("[POS_REF] FAIL: axis %0d header non-empty mask mismatch", axis);
         return 0;
       end
 
-      if (expect_multi != (cluster_count > 2'd1)) begin
-        $display("[POS_REF] FAIL: axis %0d multi-cluster mask mismatch", axis);
-        return 0;
-      end
-
-      if ((axis_summary_overflow(words[summary_idx]) != exp_axis.overflow) ||
-          (cluster_count != exp_axis.cluster_count) ||
-          (axis_summary_empty(words[summary_idx]) != exp_axis.empty)) begin
-        $display("[POS_REF] FAIL: axis %0d summary does not match expected filtered clusters", axis);
+      if ((cluster_count != exp_axis.cluster_count) ||
+          ((cluster0_valid | cluster1_valid) != !exp_axis.empty)) begin
+        $display("[POS_REF] FAIL: axis %0d cluster valid bits do not match expected filtered clusters", axis);
         return 0;
       end
 
@@ -267,8 +231,8 @@ class spadmic_pos_ref_model;
     end
 
     if (pkt_overflow_any(words[0]) !=
-        (axis_summary_overflow(words[2]) | axis_summary_overflow(words[5]) | axis_summary_overflow(words[8]))) begin
-      $display("[POS_REF] FAIL: header overflow_any does not match per-axis overflow");
+        (expected_axis[0].overflow | expected_axis[1].overflow | expected_axis[2].overflow)) begin
+      $display("[POS_REF] FAIL: header overflow_any does not match expected per-axis overflow");
       return 0;
     end
 

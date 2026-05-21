@@ -190,7 +190,7 @@ def top_page() -> Page:
       {block_node("pad_tx", "I/O pads - chip TX", theme="io", lines=["chip_tx_clk_o", "chip_tx_valid_o", "chip_tx_data_o[7:0] DDR"])}
 
       {block_node("shared_readout", "Shared TDC readout", theme="tdc", subtitle="META arbitration + shared narrow16 serializer", lines=["packet-atomic owner hold", "source tag patch", "shared TDC packet stream"])}
-      {block_node("position", "Position path", theme="position", subtitle="sync + settle FSM + cluster scan + packetizer", lines=["x/y/z line snapshots", "fault counters / stickies", "fixed 12-word position packet"])}
+      {block_node("position", "Position path", theme="position", subtitle="sync + settle FSM + cluster scan + packetizer", lines=["x/y/z line snapshots", "fault counters / stickies", "fixed 8-word position packet"])}
 
       {macro_node("spad_matrix", "SPAD MATRIX", ["black-box sensor macro", "event taps X / Y / Z", "x_lines / y_lines / z_lines"], width=2.6, height=2.4)}
 
@@ -551,10 +551,10 @@ def position_block_page() -> Page:
     {block_node("pins", "Position inputs", theme="position", lines=["clk_sys / rst_n", "global_enable_i", "x_lines_i / y_lines_i / z_lines_i", "pos_ready_i"], mono=True)}
     {block_node("csr", "Position CSR", theme="control", lines=["csr_valid_i / csr_write_i", "csr_addr_i / csr_wdata_i", "csr_ready_o / csr_rvalid_o / csr_rdata_o"], mono=True)}
     {block_node("sync", "3-stage synchronizers", theme="clock", lines=["ff1 / ff2 / ff3 for x, y, z", "lines_nonzero_sync", "lines_stable_sync"])}
-    {block_node("fsm", "Detect / settle / eval FSM", theme="position", lines=["DET_IDLE", "DET_SETTLE", "DET_EVAL", "DET_WAIT_CLEAR"])}
-    {block_node("scan", "3x cluster scan + filter", theme="position", lines=["u_scan_x / u_scan_y / u_scan_z", "gap_threshold_q", "min_cluster_span_q", "meaningful_event / overflow_any"])}
+    {block_node("fsm", "Detect / settle / scan FSM", theme="position", lines=["DET_IDLE", "DET_SETTLE", "DET_SCAN", "DET_WAIT_CLEAR"])}
+    {block_node("scan", "3x two-cycle cluster scan + filter", theme="position", lines=["u_scan_x / u_scan_y / u_scan_z", "gap_threshold_q", "min_cluster_span_q", "meaningful_event / overflow_any"])}
     {block_node("acct", "Accounting", theme="egress", lines=["event_count_q", "drop_count_q", "reject_count_q", "drop / glitch sticky"], mono=True)}
-    {block_node("pkt", "Fixed 12-word packetizer", theme="egress", lines=["header", "source-tagged sub-header", "X/Y/Z summaries + clusters", "EOC"])}
+    {block_node("pkt", "Fixed 8-word packetizer", theme="egress", lines=["header", "six cluster words", "EOC/tag"])}
     {block_node("outs", "Outputs", theme="position", lines=["pos_valid_o / pos_data_o", "busy_o / packet_pending_o", "drop_sticky_o", "glitch_reject_sticky_o"], mono=True)}
 
     {{ rank=same; pins; sync; fsm; scan; pkt; outs; }}
@@ -579,7 +579,7 @@ def position_block_page() -> Page:
         "10_spadmic_position_block",
         "spadmic_position_block",
         "Async-qualified position detector with explicit settle filtering, cluster extraction, and fixed packet output.",
-        "TOP/rtl/spadmic_position_block.sv",
+        "SPADMIC/position/rtl/spadmic_position_block.sv",
         body,
     )
 
@@ -610,7 +610,7 @@ def cluster_scan_page() -> Page:
         "11_spadmic_axis_cluster_scan",
         "spadmic_axis_cluster_scan",
         "Two-cluster bitmap scanner with threshold-based split and overflow retention of the first two clusters.",
-        "TOP/rtl/spadmic_axis_cluster_scan.sv",
+        "SPADMIC/position/rtl/spadmic_axis_cluster_scan.sv",
         body,
     )
 

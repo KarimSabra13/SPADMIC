@@ -23,7 +23,7 @@
 | Test | Scenario | Accept Criteria |
 |------|----------|-----------------|
 | `smoke_tdc` | Enable all axes + CAL, 1 event/axis, collect 3 packets | 3 valid TDC packets with correct source tags |
-| `smoke_position` | Enable position, single-cluster X-axis, 1 packet | 1 valid 12-word position packet |
+| `smoke_position` | Enable position, single-cluster X-axis, 1 packet | 1 valid 8-word position packet |
 | `smoke_position_raw` | Enable raw bitmap position export | 1 valid raw-position packet without EOC-alias decode errors |
 | `smoke_switching` | TDC→drain→position→drain→TDC | Clean transitions, no interleaving, no faults |
 

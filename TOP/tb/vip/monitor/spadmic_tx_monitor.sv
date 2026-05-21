@@ -59,16 +59,19 @@ class spadmic_tx_monitor;
         word = tx_if.data;
         total_words++;
 
-        if (!in_packet && is_tdc_header(word)) begin
+        if (!in_packet && (is_tdc_header(word) || is_spadmic_pos_cluster_header(word))) begin
           // New packet starts (TDC, cluster-position, and raw-position headers
-          // share the 3'b100 marker).
+          // use header markers; cluster-position uses 2'b01.
           pkt.words = {};
           pkt.words.push_back(word);
-          if (state.raw_pos_allowed() && is_spadmic_pos_raw_header(word)) begin
+          if (is_spadmic_pos_cluster_header(word)) begin
+            pkt.is_tdc    = 1'b0;
+            pkt.source_id = SPADMIC_SRC_POSITION;
+          end else if (state.raw_pos_allowed() && is_spadmic_pos_raw_header(word)) begin
             pkt.is_tdc    = 1'b0;
             pkt.source_id = SPADMIC_SRC_POSITION;
           end else begin
-            pkt.is_tdc    = 1'b1;  // cluster-position corrects this on subheader.
+            pkt.is_tdc    = 1'b1;
             pkt.source_id = tdc_header_source_id(word);
           end
           pkt.event_id  = 0;
@@ -90,7 +93,6 @@ class spadmic_tx_monitor;
             pkt.words = {};
             in_packet = 1'b0;
           end else begin
-            // Position cluster packets use the shared 3'b101 subheader marker.
             if (is_spadmic_subheader(word)) begin
               pkt.source_id = word[5:4];
               if (word[5:4] == SPADMIC_SRC_POSITION)

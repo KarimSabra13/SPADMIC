@@ -263,7 +263,7 @@ module tb_spadmic_output_characterization;
     $display("[CHAR] position.raw_first_valid_latency_ns=%.2f",
              real'(raw_latency * CLK_PERIOD_PS) / 1000.0);
     $display("[CHAR] position.raw_packet_words_measured=%0d", raw_words);
-    check("Position cluster packet is 12 words", cluster_words == SPADMIC_POS_PKT_WORDS);
+    check("Position cluster packet is 8 words", cluster_words == SPADMIC_POS_PKT_WORDS);
     check("Position raw packet is 14 words", raw_words == SPADMIC_POS_RAW_PKT_WORDS);
   endtask
 

@@ -12,7 +12,7 @@ interfaces/spadmic_reset_if.sv
 interfaces/spadmic_i2c_if.sv
 interfaces/spadmic_csr_req_if.sv
 interfaces/spadmic_async_event_if.sv
-interfaces/spadmic_position_line_if.sv
+../../../SPADMIC/position/vip/interfaces/spadmic_position_line_if.sv
 interfaces/spadmic_narrow_tx_if.sv
 interfaces/spadmic_spad_reset_if.sv
 
@@ -23,7 +23,7 @@ pkg/spadmic_vip_pkg.sv
 sva/spadmic_ctrl_sva.sv
 sva/spadmic_readout_sva.sv
 sva/spadmic_mux_sva.sv
-sva/spadmic_pos_sva.sv
+../../../SPADMIC/position/vip/sva/spadmic_pos_sva.sv
 sva/spadmic_sva_bind.sv
 
 // ── Top-Level Harness ────────────────────────────────────────────

@@ -8,6 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MPTDC_ROOT="$(cd "$REPO_ROOT/../MPTDC" 2>/dev/null && pwd || echo "$REPO_ROOT/../MPTDC")"
+POSITION_TB_ROOT="$REPO_ROOT/../SPADMIC/position/tb"
 
 TB_NAME="${1:?Usage: run_tb.sh <tb_name> [options]}"
 SIM="xrun"
@@ -24,7 +25,7 @@ done
 
 # Find testbench file
 TB_FILE=""
-for dir in "$REPO_ROOT/tb" "$REPO_ROOT/tb/unit" "$REPO_ROOT/tb/int"; do
+for dir in "$REPO_ROOT/tb" "$REPO_ROOT/tb/unit" "$REPO_ROOT/tb/int" "$POSITION_TB_ROOT"; do
   if [[ -f "$dir/${TB_NAME}.sv" ]]; then
     TB_FILE="$dir/${TB_NAME}.sv"
     break
@@ -81,8 +82,46 @@ if [[ "$SIM" == "xrun" ]]; then
   cd "$BUILD_DIR"
   xrun "${XRUN_ARGS[@]}" 2>&1 | tee "$BUILD_DIR/run.log"
   RC=${PIPESTATUS[0]}
+elif [[ "$SIM" == "verilator" ]]; then
+  mapfile -t MPTDC_FILES < "$BUILD_DIR/mptdc.f"
+  mapfile -t TOP_FILES < "$BUILD_DIR/top.f"
+  VERILATOR_WARNINGS=(
+    -Wall
+    -Wno-fatal
+    -Wno-UNUSEDSIGNAL
+    -Wno-UNDRIVEN
+    -Wno-DECLFILENAME
+    -Wno-WIDTHEXPAND
+    -Wno-WIDTHTRUNC
+    -Wno-UNUSEDPARAM
+    -Wno-PINMISSING
+    -Wno-UNUSEDGENVAR
+    -Wno-CASEINCOMPLETE
+    -Wno-LATCH
+    -Wno-INITIALDLY
+    -Wno-COMBDLY
+    -Wno-PINCONNECTEMPTY
+    -Wno-SYNCASYNCNET
+    -Wno-UNOPTFLAT
+  )
+  rm -rf "$BUILD_DIR/obj_$TB_NAME"
+  verilator --binary --timing "${VERILATOR_WARNINGS[@]}" \
+    +define+MPTDC_USE_OSC_MODEL \
+    "${MPTDC_FILES[@]}" \
+    "${TOP_FILES[@]}" \
+    "$TB_FILE" \
+    --top-module "$TB_NAME" \
+    --Mdir "$BUILD_DIR/obj_$TB_NAME" \
+    2>&1 | tee "$BUILD_DIR/build.log"
+  RC=${PIPESTATUS[0]}
+  if [[ $RC -eq 0 ]]; then
+    "$BUILD_DIR/obj_$TB_NAME/V$TB_NAME" 2>&1 | tee "$BUILD_DIR/run.log"
+    RC=${PIPESTATUS[0]}
+  else
+    cp "$BUILD_DIR/build.log" "$BUILD_DIR/run.log"
+  fi
 else
-  echo "ERROR: Only xrun is supported by this runner"
+  echo "ERROR: unsupported simulator '$SIM' (expected xrun or verilator)"
   exit 1
 fi
 

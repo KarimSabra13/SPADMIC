@@ -47,7 +47,7 @@ module spadmic_position_block (
   typedef enum logic [1:0] {
     DET_IDLE       = 2'd0,
     DET_SETTLE     = 2'd1,
-    DET_EVAL       = 2'd2,
+    DET_SCAN       = 2'd2,
     DET_WAIT_CLEAR = 2'd3
   } pos_det_state_e;
 
@@ -61,7 +61,7 @@ module spadmic_position_block (
   logic [31:0] auto_reset_count_q;
   logic        auto_reset_pending_q;
 
-  logic [13:0] event_count_q;
+  logic [3:0]  event_count_q;
   logic [15:0] drop_count_q;
   logic [15:0] reject_count_q;
   logic        drop_sticky_q;
@@ -119,6 +119,14 @@ module spadmic_position_block (
   logic [2:0]             status_non_empty_mask;
   logic [2:0]             status_multi_cluster_mask;
   logic                   load_next_frame;
+  logic                   scan_start;
+  logic                   scan_complete;
+  logic                   x_scan_busy;
+  logic                   y_scan_busy;
+  logic                   z_scan_busy;
+  logic                   x_scan_valid;
+  logic                   y_scan_valid;
+  logic                   z_scan_valid;
 
   function automatic spadmic_cluster_t filter_cluster(
     input spadmic_cluster_t cluster,
@@ -143,7 +151,10 @@ module spadmic_position_block (
   assign lines_stable_sync      = (x_sync_ff2_q == x_sync_ff3_q)
                                && (y_sync_ff2_q == y_sync_ff3_q)
                                && (z_sync_ff2_q == z_sync_ff3_q);
-  assign detector_busy          = (det_state_q != DET_IDLE);
+  assign detector_busy          = (det_state_q != DET_IDLE)
+                                | x_scan_busy
+                                | y_scan_busy
+                                | z_scan_busy;
   assign load_next_frame        = ~packet_active_q & frame_fifo_rd_valid;
   assign busy_o                 = detector_busy | packet_active_q | frame_fifo_rd_valid;
   assign packet_pending_o       = packet_active_q | frame_fifo_rd_valid;
@@ -159,22 +170,45 @@ module spadmic_position_block (
   wire csr_pos_ctrl_write = csr_valid_i & csr_write_i & (csr_addr_i == SPADMIC_CSR_POS_CTRL);
   wire csr_pos_manual_reset_write = csr_pos_ctrl_write & csr_wdata_i[4];
   wire csr_pos_reset_cfg_write = csr_valid_i & csr_write_i & (csr_addr_i == SPADMIC_CSR_POS_RESET_CFG);
+  wire settle_accept = (det_state_q == DET_SETTLE)
+                     && lines_nonzero_sync
+                     && lines_stable_sync
+                     && (settle_count_q >= settle_cycles_q);
+
+  assign scan_start    = settle_accept && (pos_mode_q == SPADMIC_POS_MODE_CLUSTER);
+  assign scan_complete = (pos_mode_q == SPADMIC_POS_MODE_RAW)
+                       || (x_scan_valid && y_scan_valid && z_scan_valid);
 
   spadmic_axis_cluster_scan #(.LINE_W(SPADMIC_LINE_W)) u_scan_x (
-    .lines_i         (x_snapshot_q),
+    .clk_sys         (clk_sys),
+    .rst_n           (rst_n),
+    .start_i         (scan_start),
+    .lines_i         (x_sync_ff2_q),
     .gap_threshold_i (gap_threshold_q),
+    .busy_o          (x_scan_busy),
+    .valid_o         (x_scan_valid),
     .clusters_o      (x_clusters_raw)
   );
 
   spadmic_axis_cluster_scan #(.LINE_W(SPADMIC_LINE_W)) u_scan_y (
-    .lines_i         (y_snapshot_q),
+    .clk_sys         (clk_sys),
+    .rst_n           (rst_n),
+    .start_i         (scan_start),
+    .lines_i         (y_sync_ff2_q),
     .gap_threshold_i (gap_threshold_q),
+    .busy_o          (y_scan_busy),
+    .valid_o         (y_scan_valid),
     .clusters_o      (y_clusters_raw)
   );
 
   spadmic_axis_cluster_scan #(.LINE_W(SPADMIC_LINE_W)) u_scan_z (
-    .lines_i         (z_snapshot_q),
+    .clk_sys         (clk_sys),
+    .rst_n           (rst_n),
+    .start_i         (scan_start),
+    .lines_i         (z_sync_ff2_q),
     .gap_threshold_i (gap_threshold_q),
+    .busy_o          (z_scan_busy),
+    .valid_o         (z_scan_valid),
     .clusters_o      (z_clusters_raw)
   );
 
@@ -256,7 +290,11 @@ module spadmic_position_block (
     .level_o    (/* unused */)
   );
 
-  assign frame_fifo_wr_en = pos_enable && (det_state_q == DET_EVAL) && meaningful_event && ~frame_fifo_full;
+  assign frame_fifo_wr_en = pos_enable
+                          && (det_state_q == DET_SCAN)
+                          && scan_complete
+                          && meaningful_event
+                          && ~frame_fifo_full;
   assign frame_fifo_rd_en = load_next_frame;
 
   wire auto_reset_period_enabled = (auto_reset_period_q != 32'd0);
@@ -423,25 +461,27 @@ module spadmic_position_block (
               y_snapshot_q   <= y_sync_ff2_q;
               z_snapshot_q   <= z_sync_ff2_q;
               settle_count_q <= '0;
-              det_state_q    <= DET_EVAL;
+              det_state_q    <= DET_SCAN;
             end else begin
               settle_count_q <= settle_count_q + 4'd1;
             end
           end
 
-          DET_EVAL: begin
-            if (meaningful_event) begin
-              if (frame_fifo_full) begin
-                drop_count_q  <= drop_count_q + 16'd1;
-                drop_sticky_q <= 1'b1;
+          DET_SCAN: begin
+            if (scan_complete) begin
+              if (meaningful_event) begin
+                if (frame_fifo_full) begin
+                  drop_count_q  <= drop_count_q + 16'd1;
+                  drop_sticky_q <= 1'b1;
+                end else begin
+                  event_count_q <= event_count_q + 4'd1;
+                end
               end else begin
-                event_count_q <= event_count_q + 14'd1;
+                reject_count_q         <= reject_count_q + 16'd1;
+                glitch_reject_sticky_q <= 1'b1;
               end
-            end else begin
-              reject_count_q         <= reject_count_q + 16'd1;
-              glitch_reject_sticky_q <= 1'b1;
+              det_state_q <= DET_WAIT_CLEAR;
             end
-            det_state_q <= DET_WAIT_CLEAR;
           end
 
           default: begin
@@ -499,17 +539,13 @@ module spadmic_position_block (
           frame_active_q.non_empty_mask,
           frame_active_q.multi_cluster_mask
         );
-        5'd1: pos_data_o = spadmic_pos_subheader_word(frame_active_q.non_empty_mask);
-        5'd2: pos_data_o = spadmic_pos_axis_summary_word(TDC_ID_X, frame_active_q.x_clusters);
-        5'd3: pos_data_o = spadmic_pos_cluster_word(frame_active_q.x_clusters.cluster0);
-        5'd4: pos_data_o = spadmic_pos_cluster_word(frame_active_q.x_clusters.cluster1);
-        5'd5: pos_data_o = spadmic_pos_axis_summary_word(TDC_ID_Y, frame_active_q.y_clusters);
-        5'd6: pos_data_o = spadmic_pos_cluster_word(frame_active_q.y_clusters.cluster0);
-        5'd7: pos_data_o = spadmic_pos_cluster_word(frame_active_q.y_clusters.cluster1);
-        5'd8: pos_data_o = spadmic_pos_axis_summary_word(TDC_ID_Z, frame_active_q.z_clusters);
-        5'd9: pos_data_o = spadmic_pos_cluster_word(frame_active_q.z_clusters.cluster0);
-        5'd10: pos_data_o = spadmic_pos_cluster_word(frame_active_q.z_clusters.cluster1);
-        5'd11: pos_data_o = spadmic_pos_eoc_word(event_count_q);
+        5'd1: pos_data_o = spadmic_pos_cluster_word(frame_active_q.x_clusters.cluster0);
+        5'd2: pos_data_o = spadmic_pos_cluster_word(frame_active_q.x_clusters.cluster1);
+        5'd3: pos_data_o = spadmic_pos_cluster_word(frame_active_q.y_clusters.cluster0);
+        5'd4: pos_data_o = spadmic_pos_cluster_word(frame_active_q.y_clusters.cluster1);
+        5'd5: pos_data_o = spadmic_pos_cluster_word(frame_active_q.z_clusters.cluster0);
+        5'd6: pos_data_o = spadmic_pos_cluster_word(frame_active_q.z_clusters.cluster1);
+        5'd7: pos_data_o = spadmic_pos_eoc_word(event_count_q);
         default: ;
       endcase
     end
@@ -552,7 +588,7 @@ module spadmic_position_block (
       end
 
       SPADMIC_CSR_POS_EVENT_COUNT: begin
-        rd_data_next[13:0] = event_count_q;
+        rd_data_next[3:0] = event_count_q;
       end
 
       SPADMIC_CSR_POS_FAULT_STATUS: begin
