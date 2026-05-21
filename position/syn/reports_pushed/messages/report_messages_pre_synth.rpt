@@ -1,0 +1,56 @@
+  =================
+   Message Summary
+  =================
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|   Id   |  Sev  |Count|                                                                                    Message Text                                                                                     |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|CDFG-508|Warning|    9|Removing unused register.                                                                                                                                                            |
+|        |       |     |Genus removes the flip-flop or latch inferred for an unused signal or variable. To preserve the flip-flop or latch, set the hdl_preserve_unused_registers attribute to true or use a |
+|        |       |     | pragma in the RTL.                                                                                                                                                                  |
+|ELAB-1  |Info   |    1|Elaborating Design.                                                                                                                                                                  |
+|ELAB-3  |Info   |    1|Done Elaborating Design.                                                                                                                                                             |
+|LBR-9   |Warning|   20|Library cell has no output pins defined.                                                                                                                                             |
+|        |       |     |Add the missing output pin(s)                                                                                                                                                        |
+|        |       |     | , then reload the library. Else the library cell will be marked as timing model i.e. unusable. Timing_model means that the cell does not have any defined function. If there is no  |
+|        |       |     | output pin, Genus will mark library cell as unusable i.e. the attribute 'usable' will be marked to 'false' on the libcell. Therefore, the cell is not used for mapping and it will  |
+|        |       |     | not be picked up from the library for synthesis. If you query the attribute 'unusable_reason' on the libcell; result will be: 'Library cell has no output pins.'Note: The message   |
+|        |       |     | LBR-9 is only for the logical pins and not for the power_ground pins. Genus will depend upon the output function defined in the pin group (output pin)                              |
+|        |       |     | of the cell, to use it for mapping. The pg_pin will not have any function defined.                                                                                                  |
+|LBR-12  |Warning|    1|Found libraries with and without pg_pin construct.                                                                                                                                   |
+|        |       |     |This can lead to issues later in the flow.                                                                                                                                           |
+|LBR-101 |Warning|   20|Unusable clock gating integrated cell found at the time of loading libraries. This warning happens because a particular library cell is defined as 'clock_gating_integrated_cell',   |
+|        |       |     | but 'dont_use' attribute is defined as true in the liberty library. To make Genus use this cell for clock gating insertion, 'dont_use' attribute should be set to false.            |
+|        |       |     |To make the cell usable, change the value of 'dont_use' attribute to false.                                                                                                          |
+|LBR-109 |Info   |    1|Set default library domain.                                                                                                                                                          |
+|LBR-412 |Info   |    2|Created nominal operating condition.                                                                                                                                                 |
+|        |       |     |The nominal operating condition is represented, either by the nominal PVT values specified in the library source (via nom_process,nom_voltage and nom_temperature respectively)      |
+|        |       |     | , or by the default PVT values (1.0,1.0,1.0).                                                                                                                                       |
+|LBR-702 |Warning|   20|Missing pg_pin group in the library.                                                                                                                                                 |
+|LBR-704 |Warning|    4|Missing voltage_map in the library.                                                                                                                                                  |
+|MESG-11 |Warning|    5|Maximum message print count reached.                                                                                                                                                 |
+|PHYS-103|Warning|    3|Marking library cell 'avoid'.                                                                                                                                                        |
+|        |       |     |To prevent the library cell from being set to 'avoid', set attribute 'lib_lef_consistency_check_enable' to 'false'.                                                                  |
+|RPT-80  |Warning|    1|The details given in report might be incorrect or incomplete.                                                                                                                        |
+|        |       |     |Map the design using syn_map before using the '-detail' option of the 'report_area' command.                                                                                         |
+|SDC-202 |Error  |    1|Could not interpret SDC command.                                                                                                                                                     |
+|        |       |     |The 'read_sdc' command encountered a problem while trying to evaluate an SDC command. This SDC command will be added to the Tcl variable $::dc::sdc_failed_commands.                 |
+|SDC-209 |Warning|    1|One or more commands failed when these constraints were applied.                                                                                                                     |
+|        |       |     |You can examine the failed commands or save them to a file by querying the Tcl variable $::dc::sdc_failed_commands.                                                                  |
+|SDC-248 |Warning|    1|Invalid object passed to SDC command.                                                                                                                                                |
+|        |       |     |This object is not valid for the indicated SDC command. Check object passed to the SDC command and contact Cadence customer support if you believe this option combination should be |
+|        |       |     | supported.                                                                                                                                                                          |
+|TUI-24  |Error  |   20|The data value for this attribute is invalid.                                                                                                                                        |
+|        |       |     |To see the usage/description for this attribute, type '::legacy::set_attribute -h <attr_name> *' (in legacy UI mode) or 'help * <attr_name> -detail' (in CUI mode).                  |
+|TUI-61  |Error  |    1|A required object parameter could not be found.                                                                                                                                      |
+|        |       |     |Check to make sure that the object exists and is of the correct type.  The 'what_is' command can be used to determine the type of an object.                                         |
+|TUI-182 |Error  |    8|<Start> word is not recognized.                                                                                                                                                      |
+|        |       |     |Check if the given <Start> word is a valid object_type, object or attribute.                                                                                                         |
+|TUI-183 |Error  |   12|Unrecognized attribute.                                                                                                                                                              |
+|        |       |     |To see the usage/description for this attribute, type 'help * <attr_name> -detail'.                                                                                                  |
+|TUI-204 |Error  |    1|An invalid option was specified.                                                                                                                                                     |
+|        |       |     |Run 'command_name -help' to check all valid options. To correct the option and rerun the command.                                                                                    |
+|TUI-210 |Error  |   20|Cannot preserve unmapped leaf instance.                                                                                                                                              |
+|        |       |     |You can only change the value of the 'preserve' attribute of mapped, non-hierarchical instances to one of the following values: true, false, size_ok, delete_ok, or size_delete_ok.  |
+|TUI-744 |Info   |    1|Timing analysis will be done for this view.                                                                                                                                          |
+|        |       |     |Worst paths will be shown in this view.                                                                                                                                              |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
