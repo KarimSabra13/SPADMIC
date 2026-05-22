@@ -123,7 +123,6 @@ run_logged smoke_shape \
     --out-mode "$OUT_MODE" \
     --out-dir "$OUT_ROOT/smoke_characterization" \
     --analyze \
-    --calibrate \
     --with-fixed-delay \
     "${JITTER_ARGS[@]}"
 
