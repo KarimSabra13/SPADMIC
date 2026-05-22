@@ -41,18 +41,13 @@ clk_sys / async_rst_n / clk_ref_40m / async SPAD inputs
        |              |- async frontend / oscillator wrappers / PD matrix
        |              |- Gray counters / hit-capture bridge / sys context bank / drain controller
        |              `- acquisition FIFO export
-       |- spadmic_tdc_shared_readout
        |- spadmic_position_block
        |    `- spadmic_axis_cluster_scan x3
        |- spadmic_correlated_tx
+       |    |- spadmic_tdc_packet_adapter x3
+       |    `- spadmic_packet_arbiter4
        `- spadmic_ddr_tx
 ```
-
-Legacy TOP modules still in-tree but not on the active chip datapath:
-
-- `spadmic_tdc_arbiter3`
-- `spadmic_tdc_packet_fifo`
-- `spadmic_shared_tx_mux`
 
 ## Clock and reset boundary map
 
@@ -87,10 +82,10 @@ Legacy TOP modules still in-tree but not on the active chip datapath:
 | `spadmic_ref_stop_qualifier` | one STOP pulse per event | async/ref clock | latch-based gating requires careful review | hold/rearm/random timing tests |
 | `mptdc_top_asic` | preserved axis wrapper | `clk_sys` + async | depends on stable top-level overrides | per-axis CSR/readout tests |
 | `mptdc_core` | Vernier measurement kernel | generated clocks + async + `clk_sys` | highest signoff risk: oscillator, PD, CDC, constraints | MPTDC regression, CDC/STA waiver deck, macro contract |
-| `spadmic_tdc_shared_readout` | shared TDC serializer | `clk_sys` | source interleaving or starvation would corrupt event stream | META-first, fairness, zero-hit, stall tests |
+| `spadmic_tdc_packet_adapter` | per-axis TDC serializer | `clk_sys` | malformed META/HIT draining or unsupported mode leakage would corrupt event stream | adapter mode, zero-hit, FULL, stall tests |
 | `spadmic_position_block` | position detect/queue/packetize and matrix reset control | async lines into `clk_sys` | async bus sampling, queue overflow, raw payload framing, reset timing versus matrix behavior | settle/glitch/queue/raw/reset stress tests |
 | `spadmic_axis_cluster_scan` | five-cycle pipelined cluster extraction | `clk_sys` datapath | scan timing and edge correctness | stress cluster tests and synthesis timing |
-| `spadmic_correlated_tx` | packet arbiter/event tagger/FIFO | `clk_sys` | event-ID wrap, packet interleaving, FIFO pressure | correlated TX unit/stress tests |
+| `spadmic_correlated_tx` | packet arbiter/event tagger/FIFO | `clk_sys` | event-ID wrap, packet interleaving, FIFO pressure | ARB mode/stress tests |
 | `spadmic_ddr_tx` | physical DDR packer | both edges of `clk_sys` | output timing and tool support for dual-edge logic | DDR unit test and STA output-delay constraints |
 
 ## Placeholder macro contracts

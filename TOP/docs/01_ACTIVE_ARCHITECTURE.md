@@ -25,7 +25,7 @@ The current top-level design is organized around one shared physical output bus 
 4. `spadmic_top_sequencer` commits the **active** image after the old datapath drains.
 5. The three TDC measurement kernels stay local inside three preserved `mptdc_top_asic` instances.
 6. TDC sharing happens only after each axis has already produced acquisition records.
-7. The shared egress assigns one explicit 14-bit event ID per source-ordinal event and patches it into the EOC word of every emitted packet.
+7. The shared egress assigns one unified rolling 14-bit event ID and patches it into the EOC word of every emitted packet.
 
 ## 2. End-to-end dataflow
 
@@ -47,8 +47,7 @@ per-axis async SPAD event
   -> mptdc_top_asic
   -> mptdc_core local acquisition FIFO
   -> exported acquisition records
-  -> spadmic_tdc_shared_readout
-  -> shared mptdc_narrow16_tx_v2
+  -> per-axis spadmic_tdc_packet_adapter
   -> spadmic_correlated_tx
   -> spadmic_ddr_tx
   -> chip_tx_clk_o / chip_tx_valid_o / chip_tx_data_o[7:0] DDR
@@ -71,7 +70,7 @@ async x/y/z line buses
 
 | Domain | Source | Used by |
 |--------|--------|---------|
-| `clk_sys` | external 160 MHz | I2C, CSR, sequencer, shared readout, position block, correlated TX, physical TX packer |
+| `clk_sys` | external 160 MHz | I2C, CSR, sequencer, ARB adapters, position block, correlated TX, physical TX packer |
 | `clk_ref_40m` | external 40 MHz | STOP qualification only |
 | MPTDC generated clocks | internal oscillators | preserved inside each `mptdc_top_asic` instance |
 | async line/event domain | external asynchronous sources | SPAD event entry and position-line entry |
@@ -152,25 +151,26 @@ measurement-local, while `mptdc_meas_ctrl`, `mptdc_hit_capture_bridge`, and
 `mptdc_context_bank` run in `clk_sys`. TOP only sees the acquisition-record FIFO
 export and should not assume a fast-domain context-bank interface.
 
-### 5.2 Shared TDC readout
+### 5.2 Unified ARB TDC packet adapters
 
-`spadmic_tdc_shared_readout` is the digital-area optimization point in the active top:
+`spadmic_tdc_packet_adapter` is the digital-area optimization point in the active top:
 
 - each axis still owns its own local acquisition FIFO inside `mptdc_core`
-- the top arbitrates only on META records
-- once a META record is accepted, the same axis remains selected until all announced HIT records drain and the serializer emits EOC
-- the selected `tdc_id` is held until packet end and is patched into the TDC header:
+- each adapter consumes one META record and then the announced HIT records
+- the central ARB arbitrates only after each axis is converted to a packet stream
+- the selected `tdc_id` is patched into the TDC header:
   - bit `[12]` carries `tdc_id[0]`
   - reserved flag bit `[6]` carries `tdc_id[1]`
+- RAW_FEATURES and FULL are the active ARB TDC modes; RAW_TIMESTAMP is masked
 
 That keeps zero-hit packets self-identifying without paying an extra source-tag word.
 
-### 5.3 Why arbitration starts on META records
+### 5.3 Why arbitration starts after packetization
 
-META-first arbitration gives two guarantees:
+Packet-stream arbitration gives two guarantees:
 
 1. no interleaving between packets from different axes
-2. one packetized TDC source can be exposed to the correlated top-level egress
+2. one central four-source ARB can handle X, Y, Z, and position uniformly
 
 ## 6. Position path details
 
@@ -292,12 +292,9 @@ There is no off-chip `ready`/backpressure pin in the active physical contract. A
 | `spadmic_top_sequencer` | Active-image commit |
 | `spadmic_ref_stop_qualifier` | One qualified STOP pulse per async event |
 | `spadmic_tdc_axis_wrapper` | Per-axis glue around the preserved TDC |
-| `spadmic_tdc_shared_readout` | Shared TDC serializer front end |
+| `spadmic_tdc_packet_adapter` | Per-axis TDC acquisition-record serializer |
 | `spadmic_position_block` | Position detection, queued packetization, accounting |
 | `spadmic_axis_cluster_scan` | Five-cycle pipelined cluster scan |
-| `spadmic_correlated_tx` | Packet arbiter, shared event tagging, and post-arbiter FIFO |
+| `spadmic_packet_arbiter4` | Masked packet-atomic four-source arbiter |
+| `spadmic_correlated_tx` | Adapters, unified event tagging, and post-arbiter FIFO |
 | `spadmic_ddr_tx` | Forwarded-clock physical TX packer |
-
-## 9. Retained legacy collateral
-
-`spadmic_tdc_arbiter3`, `spadmic_tdc_packet_fifo`, and `spadmic_shared_tx_mux` remain in the tree for collateral around older packet paths, but they are not part of the active chip-level datapath.

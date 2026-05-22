@@ -11,7 +11,7 @@
 <polygon fill="white" stroke="transparent" points="-12.96,12.96 -12.96,-172.96 1303.96,-172.96 1303.96,12.96 -12.96,12.96"/>
 <text text-anchor="start" x="8.5" y="-134.1" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="28.00">spadmic_axis_cluster_scan</text>
 <text text-anchor="start" x="8.5" y="-110.9" font-family="Helvetica,sans-Serif" font-size="12.00">Two&#45;cluster bitmap scanner with threshold&#45;based split and overflow retention of the first two clusters.</text>
-<text text-anchor="start" x="8.5" y="-97.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#475569">TOP/rtl/spadmic_axis_cluster_scan.sv</text>
+<text text-anchor="start" x="8.5" y="-97.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#475569">position/rtl/spadmic_axis_cluster_scan.sv</text>
 <!-- in_bits -->
 <g id="node1" class="node">
 <title>in_bits</title>

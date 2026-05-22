@@ -91,6 +91,15 @@ run_verilator_top_lint() {
 run_verilator_tb() {
   local tb="$1"
   local mdir="$BUILD_ROOT/obj_$tb"
+  local tb_file=""
+
+  for dir in "$TOP_ROOT/tb" "$PROJECT_ROOT/position/tb" "$PROJECT_ROOT/arb/tb"; do
+    if [[ -f "$dir/$tb.sv" ]]; then
+      tb_file="$dir/$tb.sv"
+      break
+    fi
+  done
+  [[ -n "$tb_file" ]] || return 1
 
   rm -rf "$mdir"
   cd "$PROJECT_ROOT" || return 1
@@ -98,7 +107,7 @@ run_verilator_tb() {
     +define+MPTDC_USE_OSC_MODEL \
     "${MPTDC_FILES[@]}" \
     "${TOP_FILES[@]}" \
-    "$TOP_ROOT/tb/$tb.sv" \
+    "$tb_file" \
     --top-module "$tb" \
     --Mdir "$mdir" || return 1
 
@@ -130,8 +139,8 @@ echo "  BUILD_ROOT:   $BUILD_ROOT"
 echo "═══════════════════════════════════════════════════════"
 
 VERILATOR_TBS=(
-  tb_spadmic_correlated_tx_unit
-  tb_spadmic_correlated_tx_raw_unit
+  tb_spadmic_arb_modes
+  tb_spadmic_arb_stress
   tb_spadmic_i2c_control_plane_unit
   tb_spadmic_top_sequencer_unit
   tb_spadmic_stress_csr

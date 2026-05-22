@@ -17,7 +17,8 @@ module mptdc_meas_ctrl
   input  wire                   meas_active_i,
   input  wire                   timeout_active_i,
 
-  // Registered static-bus image from mptdc_hit_capture_bridge.
+  // Held static PD hit levels. The measurement fabric remains stable until
+  // pd_clear_o, so row reductions can be sampled in parallel with SNAPSHOT.
   input  wire [PD_N-1:0]        hit_level_i,
 
   // Configuration from CSR, stable in clk_sys.
@@ -124,9 +125,7 @@ module mptdc_meas_ctrl
       end
       ST_M_MEASURE:  state_d = ST_M_SNAPSHOT;
       ST_M_SNAPSHOT: state_d = ST_M_COUNT;
-      ST_M_COUNT:    state_d = ST_M_EVAL;
-      ST_M_EVAL:     state_d = ST_M_CAPTURE;
-      ST_M_CAPTURE:  state_d = ST_M_CLEAR;
+      ST_M_COUNT:    state_d = ST_M_CLEAR;
       ST_M_CLEAR:    state_d = ST_M_IDLE;
       default:       state_d = ST_M_IDLE;
     endcase
@@ -149,10 +148,10 @@ module mptdc_meas_ctrl
         flags_q      <= '0;
         for (int r = 0; r < NE; r++)
           row_cnt_q[r] <= '0;
-      end else if (state_q == ST_M_COUNT) begin
+      end else if (state_q == ST_M_SNAPSHOT) begin
         for (int r = 0; r < NE; r++)
           row_cnt_q[r] <= row_cnt_comb[r];
-      end else if (state_q == ST_M_EVAL) begin
+      end else if (state_q == ST_M_COUNT) begin
         total_hits_q <= total_cnt_comb;
         hit_count_q  <= eval_hit_count_comb;
         flags_q      <= eval_flags_comb;
@@ -162,21 +161,18 @@ module mptdc_meas_ctrl
 
   assign snapshot_en_o    = (state_q == ST_M_SNAPSHOT);
   assign capture_en_o     = (state_q == ST_M_COUNT);
-  assign meta_en_o        = (state_q == ST_M_EVAL);
-  assign fe_clear_o       = (state_q == ST_M_EVAL);
+  assign meta_en_o        = 1'b0;
+  assign fe_clear_o       = (state_q == ST_M_COUNT);
   assign pd_clear_o       = (state_q == ST_M_CLEAR);
   assign osc_keep_alive_o = (state_q == ST_M_MEASURE)
-                           || (state_q == ST_M_SNAPSHOT)
-                           || (state_q == ST_M_COUNT)
-                           || (state_q == ST_M_EVAL)
-                           || (state_q == ST_M_CAPTURE);
+                           || (state_q == ST_M_SNAPSHOT);
   // Keep the PD fabric open while the sys-domain controller is still waiting
   // for the synchronized STOP indication. fe_pd_enable still gates real
   // measurement activity; this control only freezes additional accumulation
   // once the static-bus snapshot phase begins.
   assign pd_gate_o        = (state_q == ST_M_IDLE) || (state_q == ST_M_MEASURE);
-  assign close_flags_o    = (state_q == ST_M_EVAL) ? eval_flags_comb : flags_q;
-  assign hit_count_o      = (state_q == ST_M_EVAL) ? eval_hit_count_comb : hit_count_q;
+  assign close_flags_o    = (state_q == ST_M_COUNT) ? eval_flags_comb : flags_q;
+  assign hit_count_o      = (state_q == ST_M_COUNT) ? eval_hit_count_comb : hit_count_q;
   assign state_o          = state_q;
 
   // synthesis translate_off
@@ -187,9 +183,10 @@ module mptdc_meas_ctrl
     end else begin
       if (snapshot_en_o) assert (state_q == ST_M_SNAPSHOT);
       if (capture_en_o)  assert (state_q == ST_M_COUNT);
-      if (meta_en_o)     assert (state_q == ST_M_EVAL);
+      assert (!meta_en_o)
+        else $error("mptdc_meas_ctrl: meta_en_o is retired by fast-clear capture");
       if (pd_clear_o)    assert (state_q == ST_M_CLEAR);
-      if (state_q == ST_M_CLEAR) assert (prev_state_q == ST_M_CAPTURE);
+      if (state_q == ST_M_CLEAR) assert (prev_state_q == ST_M_COUNT);
       prev_state_q <= state_q;
     end
   end

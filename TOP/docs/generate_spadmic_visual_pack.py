@@ -511,37 +511,36 @@ def axis_wrapper_page() -> Page:
     )
 
 
-def shared_readout_page() -> Page:
+def unified_arb_page() -> Page:
     body = f"""
-    {block_node("inputs", "Axis ACQ inputs", theme="tdc", lines=["acq_valid_i[2:0]", "acq_data_i[3]", "META or HIT records"], mono=True)}
-    {block_node("meta", "META availability", theme="tdc", lines=["Only META can start packet ownership"])}
-    {block_node("rr", "Round-robin chooser", theme="control", lines=["rr_ptr_q", "choice_valid / choice_idx"], mono=True)}
-    {block_node("owner", "Owner hold", theme="egress", lines=["record_grant_active_q", "record_grant_idx_q", "hits_remaining_q"], mono=True)}
-    {block_node("serializer", "Shared mptdc_narrow16_tx_v2", theme="tdc", lines=["selected record stream", "serializer_rd_en", "shared_valid_o / shared_data_o"], mono=True)}
-    {block_node("tag", "Source-tag patch + busy", theme="egress", lines=["packet_src_q held until EOC", "patch header bit [12] + flag[6]", "busy_o / packet_src_o"], mono=False)}
-    {block_node("ready", "Ready return", theme="control", lines=["acq_ready_o asserted only for current owner axis"], mono=True)}
+    {block_node("tdc_inputs", "3 acquisition-record inputs", theme="tdc", lines=["acq_valid_i[2:0]", "ACQ_REC_META / ACQ_REC_HIT", "RAW_FEATURES or FULL only"], mono=True)}
+    {block_node("adapters", "TDC packet adapters x3", theme="tdc", lines=["HEADER", "HIT W0/W1(/W2)", "EOC placeholder"])}
+    {block_node("pos", "Position packet sideband adapter", theme="position", lines=["cluster fixed 8 words", "raw fixed 14 words", "SOP/EOP/source sidebands"])}
+    {block_node("mask", "Registered source masks", theme="control", lines=["axis_enable", "position_enable", "RAW_TIMESTAMP masked"])}
+    {block_node("arb", "4-way packet arbiter", theme="egress", lines=["source skids", "registered grant", "lock until EOP"])}
+    {block_node("tag", "Unified event tag patch", theme="egress", lines=["single 14-bit rolling tag", "overwrite producer EOC", "increment on FIFO write EOP"])}
+    {block_node("fifo", "Output FIFO", theme="control", lines=["256 words", "155-word max burst + margin", "DDR always-ready baseline"])}
 
-    {{ rank=same; inputs; meta; rr; owner; }}
-    {{ rank=same; ready; serializer; tag; }}
+    {{ rank=same; tdc_inputs; adapters; arb; tag; fifo; }}
+    {{ rank=same; pos; mask; }}
 
-    {invis("inputs", "meta")}
-    {invis("meta", "rr")}
-    {invis("rr", "owner")}
-    {invis("ready", "serializer")}
-    {invis("serializer", "tag")}
+    {invis("tdc_inputs", "adapters")}
+    {invis("adapters", "arb")}
+    {invis("arb", "tag")}
+    {invis("tag", "fifo")}
 
-    {edge("inputs", "meta", label="record kind decode", color=COLORS["tdc"])}
-    {edge("meta", "rr", label="choice_idx", color=COLORS["control"])}
-    {edge("rr", "owner", label="grant packet owner", color=COLORS["egress"])}
-    {edge("owner", "serializer", label="selected record stream", color=COLORS["tdc"])}
-    {edge("serializer", "tag", label="narrow words", color=COLORS["egress"])}
-    {edge("owner", "ready", label="owner-only ready", color=COLORS["control"])}
+    {edge("tdc_inputs", "adapters", label="per-axis records", color=COLORS["tdc"])}
+    {edge("adapters", "arb", label="TDC_X/Y/Z packet streams", color=COLORS["tdc"])}
+    {edge("pos", "arb", label="position packet stream", color=COLORS["position"])}
+    {edge("mask", "arb", label="enabled sources", color=COLORS["control"])}
+    {edge("arb", "tag", label="packet-atomic words", color=COLORS["egress"])}
+    {edge("tag", "fifo", label="tagged logical stream", color=COLORS["egress"])}
     """
     return Page(
-        "09_spadmic_tdc_shared_readout",
-        "spadmic_tdc_shared_readout",
-        "META-first shared serializer front end with packet-atomic ownership and stable source tagging.",
-        "TOP/rtl/spadmic_tdc_shared_readout.sv",
+        "09_spadmic_correlated_tx",
+        "spadmic_correlated_tx",
+        "Unified four-source ARB with per-axis TDC adapters, packet locks, event tagging, and a 256-word output FIFO.",
+        "arb/rtl/spadmic_correlated_tx.sv",
         body,
     )
 
@@ -615,37 +614,6 @@ def cluster_scan_page() -> Page:
     )
 
 
-def shared_tx_mux_page() -> Page:
-    body = f"""
-    {block_node("tdc_in", "TDC packet input", theme="tdc", lines=["tdc_valid_i", "tdc_data_i", "tdc_ready_o"], mono=True)}
-    {block_node("pos_in", "Position packet input", theme="position", lines=["pos_valid_i", "pos_data_i", "pos_ready_o"], mono=True)}
-    {block_node("select", "tx_sel_i", theme="control", lines=["SPADMIC_TX_TDC", "SPADMIC_TX_POSITION"], mono=True)}
-    {block_node("mux", "Combinational source mux", theme="egress", lines=["shared_valid_o <- selected valid", "shared_data_o <- selected data", "ready only to selected source"])}
-    {block_node("chip_bus", "Physical chip TX bus", theme="io", lines=["shared_ready_i", "shared_valid_o", "shared_data_o"], mono=True)}
-    {block_node("note_mux", "Safety assumption", theme="note", lines=["The sequencer changes tx_sel_i only while both candidate sources are idle.", "That makes this final mux purely combinational and packet-safe."])}
-
-    {{ rank=same; tdc_in; select; mux; chip_bus; }}
-    {{ rank=same; pos_in; }}
-    {{ rank=same; note_mux; }}
-
-    {invis("tdc_in", "select")}
-    {invis("select", "mux")}
-    {invis("mux", "chip_bus")}
-
-    {edge("tdc_in", "mux", label="TDC packet bus", color=COLORS["tdc"])}
-    {edge("pos_in", "mux", label="position packet bus", color=COLORS["position"])}
-    {edge("select", "mux", label="select", color=COLORS["control"])}
-    {edge("mux", "chip_bus", label="chip_tx_*", color=COLORS["egress"])}
-    """
-    return Page(
-        "12_spadmic_shared_tx_mux",
-        "spadmic_shared_tx_mux",
-        "Final one-of-two packet mux onto the chip output interface.",
-        "TOP/rtl/spadmic_shared_tx_mux.sv",
-        body,
-    )
-
-
 def pages() -> list[Page]:
     return [
         top_page(),
@@ -656,10 +624,9 @@ def pages() -> list[Page]:
         sequencer_page(),
         stop_qualifier_page(),
         axis_wrapper_page(),
-        shared_readout_page(),
+        unified_arb_page(),
         position_block_page(),
         cluster_scan_page(),
-        shared_tx_mux_page(),
     ]
 
 

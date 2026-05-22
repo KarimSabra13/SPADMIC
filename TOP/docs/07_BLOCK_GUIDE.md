@@ -26,10 +26,12 @@ spadmic_top_v1
   |- spadmic_tdc_axis_wrapper x 3
   |    |- spadmic_ref_stop_qualifier
   |    `- mptdc_top_asic
-  |- spadmic_tdc_shared_readout
+  |- spadmic_correlated_tx
+  |    |- spadmic_tdc_packet_adapter x 3
+  |    |- spadmic_position_packet_adapter
+  |    `- spadmic_packet_arbiter4
   |- spadmic_position_block
   |    `- spadmic_axis_cluster_scan x 3
-  |- spadmic_correlated_tx
   `- spadmic_ddr_tx
 ```
 
@@ -123,7 +125,7 @@ the repository.
 |-------|------|--------|--------|--------------------|
 | `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | async input + `clk_ref_40m` + `clk_sys` glue | active | per-axis top-level wrapper around STOP qualification and `mptdc_top_asic` |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | async event to `clk_ref_40m` | active | creates one qualified STOP pulse per accepted event |
-| `spadmic_tdc_shared_readout` | `rtl/spadmic_tdc_shared_readout.sv` | `clk_sys` | active | shared acquisition-record arbiter and shared serializer |
+| `spadmic_tdc_packet_adapter` | `../arb/rtl/spadmic_tdc_packet_adapter.sv` | `clk_sys` | active | per-axis META/HIT acquisition-record serializer into the unified ARB |
 
 ### `spadmic_tdc_axis_wrapper`
 
@@ -149,19 +151,17 @@ This block converts an asynchronous event request into one reference-clock-align
 STOP pulse. It is the small but important boundary between the uncontrolled SPAD
 event arrival and the preserved `mptdc_top_asic` input contract.
 
-### `spadmic_tdc_shared_readout`
+### `spadmic_tdc_packet_adapter`
 
-This is the main digital-area optimization point on the TOP side.
+The ARB path now serializes each TDC axis locally before central arbitration:
 
-Instead of keeping one packet serializer per axis, the design:
+1. each axis keeps its acquisition FIFO inside the local TDC core
+2. each adapter consumes one META record followed by the advertised HIT records
+3. packets expose internal `valid/ready/data/sop/eop/source_id` sidebands
+4. only RAW_FEATURES and FULL modes are active in the ARB path
 
-1. leaves one acquisition FIFO inside each axis-local TDC core
-2. arbitrates on META records
-3. holds the selected axis until its packet completes
-4. feeds one shared `mptdc_narrow16_tx_v2`
-
-That preserves per-axis measurement autonomy while collapsing redundant top-level
-packetization hardware.
+This removes the old two-level arbitration while keeping packet ownership local
+and easy to backpressure.
 
 ## 5. Position-path blocks
 
@@ -208,22 +208,22 @@ the full 64-line axis.
 
 | Block | File | Domain | Status | Key responsibility |
 |-------|------|--------|--------|--------------------|
-| `spadmic_correlated_tx` | `rtl/spadmic_correlated_tx.sv` | `clk_sys` | active | packet arbitration, shared event-ID patching, post-arbiter FIFO |
+| `spadmic_correlated_tx` | `../arb/rtl/spadmic_correlated_tx.sv` | `clk_sys` | active | adapters, packet arbitration, unified event-ID patching, post-arbiter FIFO |
 | `spadmic_ddr_tx` | `rtl/spadmic_ddr_tx.sv` | `clk_sys` + both edges of forwarded clock | active | map logical 16-bit words onto source-synchronous 8-bit DDR pins |
 
 ### `spadmic_correlated_tx`
 
-This block is the architectural replacement for the old final mux. It assumes
-its two inputs are already packetized and then adds system-level meaning:
+This block owns the complete logical ARB funnel from the three TDC record streams
+and the position packet stream:
 
-1. packet-granular arbitration
-2. both-active source alternation
-3. shared 14-bit event-ID insertion into EOC
-4. post-arbiter buffering before the physical TX boundary
+1. per-axis TDC packet adapters
+2. position packet sideband adapter
+3. masked four-source packet-granular arbitration
+4. unified 14-bit event-ID insertion into EOC
+5. 256-word post-arbiter buffering before the physical TX boundary
 
-It is the place where the design stops thinking in terms of "which producer owns
-the bus?" and starts thinking in terms of "how do multiple packet sources
-describe one physical event family?".
+It is the place where the design enforces packet atomicity, source masking, and
+lossless backpressure before the non-backpressured DDR wrapper.
 
 ### `spadmic_ddr_tx`
 
@@ -237,30 +237,16 @@ This block is intentionally simple:
 There is no silicon-facing backpressure. Any elasticity must already exist
 upstream, which is why `spadmic_correlated_tx` owns the post-arbiter FIFO.
 
-## 7. Retained legacy collateral
-
-| Block | File | Status today | Why it still exists |
-|-------|------|--------------|---------------------|
-| `spadmic_tdc_arbiter3` | `rtl/spadmic_tdc_arbiter3.sv` | legacy | older per-axis packet arbitration collateral |
-| `spadmic_tdc_packet_fifo` | `rtl/spadmic_tdc_packet_fifo.sv` | legacy | older packet-FIFO collateral |
-| `spadmic_shared_tx_mux` | `rtl/spadmic_shared_tx_mux.sv` | legacy | older top-level final-mux collateral and unit-test coverage |
-
-These files are **not** part of the active chip datapath. They remain in-tree for:
-
-- backward-compatible collateral
-- unit benches that still describe historical behavior
-- comparison/reference during the redesign
-
-## 8. Reading order for new contributors
+## 7. Reading order for new contributors
 
 If you need to understand the active TOP quickly, read in this order:
 
 1. `spadmic_top_v1.sv`
 2. `spadmic_global_csr.sv`
 3. `spadmic_top_sequencer.sv`
-4. `spadmic_tdc_shared_readout.sv`
+4. `../arb/rtl/spadmic_correlated_tx.sv`
 5. `spadmic_position_block.sv`
-6. `spadmic_correlated_tx.sv`
+6. `../arb/rtl/spadmic_tdc_packet_adapter.sv`
 7. `spadmic_ddr_tx.sv`
 
 Then use:

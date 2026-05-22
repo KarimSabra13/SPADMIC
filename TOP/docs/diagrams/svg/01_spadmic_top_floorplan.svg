@@ -158,7 +158,7 @@
 <polygon fill="#ecfdf5" stroke="transparent" points="938,-8.5 938,-55.5 1178,-55.5 1178,-8.5 938,-8.5"/>
 <text text-anchor="start" x="945" y="-40.5" font-family="DejaVu Sans" font-size="10.00">x/y/z line snapshots</text>
 <text text-anchor="start" x="945" y="-29.5" font-family="DejaVu Sans" font-size="10.00">fault counters / stickies</text>
-<text text-anchor="start" x="945" y="-18.5" font-family="DejaVu Sans" font-size="10.00">fixed 12&#45;word position packet</text>
+<text text-anchor="start" x="945" y="-18.5" font-family="DejaVu Sans" font-size="10.00">fixed 8&#45;word position packet</text>
 <polygon fill="none" stroke="#059669" points="937,-8 937,-113 1179,-113 1179,-8 937,-8"/>
 </g>
 <!-- pll&#45;&gt;position -->

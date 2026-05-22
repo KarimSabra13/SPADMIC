@@ -4,9 +4,10 @@
 
 This document defines the active top-level export behavior implemented by:
 
-- `rtl/spadmic_tdc_shared_readout.sv`
+- `../arb/rtl/spadmic_tdc_packet_adapter.sv`
+- `../arb/rtl/spadmic_packet_arbiter4.sv`
 - `../position/rtl/spadmic_position_block.sv`
-- `rtl/spadmic_correlated_tx.sv`
+- `../arb/rtl/spadmic_correlated_tx.sv`
 
 It is the contract for off-chip regrouping of X/Y/Z TDC packets and position packets that describe the same physical event.
 
@@ -22,10 +23,12 @@ The active RTL keeps the existing control-image width and derives the export per
 
 ## 2. Packet sources
 
-The chip-level egress consumes two already packetized producers:
+The chip-level egress consumes four uniform packet producers:
 
-1. one shared TDC packet stream from `spadmic_tdc_shared_readout`
-2. one queued position packet stream from `spadmic_position_block`
+1. TDC_X packet stream from `spadmic_tdc_packet_adapter`
+2. TDC_Y packet stream from `spadmic_tdc_packet_adapter`
+3. TDC_Z packet stream from `spadmic_tdc_packet_adapter`
+4. one queued position packet stream from `spadmic_position_block`
 
 `spadmic_correlated_tx` arbitrates between them at **packet** granularity, never at word granularity. A packet is never interleaved once its header has started.
 
@@ -38,15 +41,15 @@ Every emitted packet ends with:
 [13:0]  = shared_event_id
 ```
 
-The top-level tagger replaces the producer-local EOC count with a shared event ID.
+The top-level tagger replaces every producer-local EOC count with one unified rolling ARB event ID.
 
 ### 3.1 Current correlation rule
 
-The active contract uses **per-source ordinal correlation**:
+The active contract uses one **global emitted-packet ordinal**:
 
-- for each enabled source, the first emitted packet is event `0`
-- the second emitted packet from that same source is event `1`
-- and so on
+- the first packet accepted into the final ARB FIFO is event `0`
+- the second accepted packet is event `1`
+- and so on modulo 14 bits
 
 Under the active system contract:
 
@@ -54,7 +57,7 @@ Under the active system contract:
 2. packet order is preserved within each source
 3. the design should avoid silent drops in the normal path
 
-That means the nth packet from X, Y, Z, and position all describe the nth physical event and therefore receive the same event ID.
+This avoids variable-latency physical-event regrouping stalls in hardware. Host software should use source identity plus arrival order/event tag for prototype analysis.
 
 ## 4. Source identification
 
@@ -86,7 +89,7 @@ Instead:
 `spadmic_correlated_tx` includes a post-arbiter word FIFO with depth:
 
 ```text
-SPADMIC_OUTPUT_FIFO_DEPTH = 2048 words
+SPADMIC_OUTPUT_FIFO_DEPTH = 256 words
 ```
 
 This FIFO sits **after** packet arbitration and **after** event-ID tagging. Its role is to:
@@ -94,6 +97,17 @@ This FIFO sits **after** packet arbitration and **after** event-ID tagging. Its 
 1. absorb shared-output backpressure
 2. keep arbitration packet-atomic
 3. isolate the packet producers from the fixed-rate physical TX boundary
+
+The depth is formula-based for the legal maximum concurrent burst:
+
+```text
+Max_TDC_Packet_Words = 2 + (15 hits * 3 FULL words/hit) = 47
+Max_Burst = (3 * 47) + 14 raw-position words = 155
+Chosen power-of-two margin depth = 256
+```
+
+The current DDR boundary is treated as always-ready at one 16-bit logical word
+per `clk_sys`; recheck this contract when the final external DDR IP is delivered.
 
 ## 7. Physical TX mapping
 
@@ -124,7 +138,7 @@ Host software should parse packets as:
    - position cluster: header, six 6-bit-coordinate cluster words, EOC
    - position raw bitmap: raw header, 12 unescaped bitmap payload words, EOC
 
-For both-active mode, the receiver should build one correlated event record by collecting all packets with the same `shared_event_id`.
+For both-active mode, the receiver should treat `shared_event_id` as the emitted-packet sequence tag, not as a hardware-aligned physical-event group tag.
 
 Raw bitmap position packets are fixed length because payload words carry true
 16-bit line levels and can therefore have `[15:14] = 2'b11`. The on-chip
@@ -132,7 +146,7 @@ correlator and the off-chip receiver must parse raw bitmap packets by the raw
 header plus 14 total words, not by the first EOC-looking payload word.
 
 The 64x64x64 SPAD geometry does not change packet word counts: cluster packets
-remain 12 logical words and raw bitmap packets remain 14 logical words. The
+remain 8 logical words and raw bitmap packets remain 14 logical words. The
 protocol-level geometry change is the cluster bound width inside each cluster
 word:
 

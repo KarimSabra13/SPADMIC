@@ -19,7 +19,7 @@ digraph G {
       <TR><TD HEIGHT="4"></TD></TR>
       <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Two-cluster bitmap scanner with threshold-based split and overflow retention of the first two clusters.</FONT></TD></TR>
       <TR><TD HEIGHT="2"></TD></TR>
-      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_axis_cluster_scan.sv</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">position/rtl/spadmic_axis_cluster_scan.sv</FONT></TD></TR>
     </TABLE>
     >,
         size="11.69,8.27!"

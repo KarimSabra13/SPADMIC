@@ -6,7 +6,7 @@ First-silicon SPADMIC chip-level integration around three preserved `mptdc_top_a
 
 - one physical source-synchronous TX interface: forwarded `chip_tx_clk_o`, SDR `chip_tx_valid_o`, and 8-bit DDR `chip_tx_data_o`
 - one requested-to-active control contract (`spadmic_global_csr` + `spadmic_top_sequencer`)
-- one shared TDC serializer fed by per-axis acquisition-record exports
+- three lean per-axis TDC packet adapters feeding one unified four-source ARB
 - one async-qualified 64x64x64 SPAD position path with queued snapshots, explicit counters, and sticky faults
 - one correlated shared egress that supports TDC-only, position-only, and both-active export
 - one physical DDR TX packer that preserves the internal 16-bit logical packet stream while repacking it onto the chip pins
@@ -55,7 +55,7 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 
 1. Each axis wrapper qualifies one `clk_ref_40m` STOP pulse from the asynchronous SPAD event.
 2. Each `mptdc_top_asic` instance runs the preserved measurement kernel and exports acquisition records instead of using its local narrow output.
-3. `spadmic_tdc_shared_readout` arbitrates only on META records, keeps the selected source until EOC, and feeds one shared `mptdc_narrow16_tx_v2`.
+3. Each per-axis `spadmic_tdc_packet_adapter` serializes META/HIT acquisition records directly into the unified ARB stream.
 
 ### Position plane
 
@@ -66,8 +66,8 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 
 ### Final egress
 
-1. `spadmic_correlated_tx` arbitrates packetized TDC and position traffic at packet granularity.
-2. It patches a shared 14-bit event ID into every packet EOC so software can regroup correlated X/Y/Z/position traffic off-chip.
+1. `spadmic_correlated_tx` masks and arbitrates `{TDC_X,TDC_Y,TDC_Z,POSITION}` packet streams at packet granularity.
+2. It patches one unified rolling 14-bit event ID into every packet EOC.
 3. `spadmic_ddr_tx` forwards `clk_sys` as the source-synchronous TX clock and emits each internal 16-bit logical word as two 8-bit DDR transfers.
 4. The sequencer still guarantees control-image changes only after the old datapath drains.
 
@@ -82,19 +82,12 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 | `spadmic_top_sequencer` | `rtl/spadmic_top_sequencer.sv` | Active-image commit sequencer |
 | `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | Per-axis wrapper around stop qualification and `mptdc_top_asic` |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | One-shot qualified STOP pulse generator |
-| `spadmic_tdc_shared_readout` | `rtl/spadmic_tdc_shared_readout.sv` | Shared TDC record arbiter + shared serializer |
+| `spadmic_tdc_packet_adapter` | `../arb/rtl/spadmic_tdc_packet_adapter.sv` | Per-axis acquisition-record serializer for RAW_FEATURES/FULL packets |
+| `spadmic_packet_arbiter4` | `../arb/rtl/spadmic_packet_arbiter4.sv` | Four-source packet-atomic masked round-robin arbiter |
 | `spadmic_position_block` | `../position/rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
 | `spadmic_axis_cluster_scan` | `../position/rtl/spadmic_axis_cluster_scan.sv` | Five-cycle pipelined per-axis cluster scanner with overflow flag |
-| `spadmic_correlated_tx` | `rtl/spadmic_correlated_tx.sv` | Packet arbiter, shared event tagger, and post-arbiter FIFO |
+| `spadmic_correlated_tx` | `../arb/rtl/spadmic_correlated_tx.sv` | TDC adapters, position sideband adapter, unified tagger, and 256-word output FIFO |
 | `spadmic_ddr_tx` | `rtl/spadmic_ddr_tx.sv` | Source-synchronous 8-bit DDR physical TX packer |
-
-### Retained legacy collateral
-
-| Module | File | Purpose today |
-|--------|------|---------------|
-| `spadmic_tdc_arbiter3` | `rtl/spadmic_tdc_arbiter3.sv` | Legacy packet arbiter retained for collateral around the old per-axis narrow packet path |
-| `spadmic_tdc_packet_fifo` | `rtl/spadmic_tdc_packet_fifo.sv` | Legacy packet FIFO retained for collateral around the old per-axis narrow packet path |
-| `spadmic_shared_tx_mux` | `rtl/spadmic_shared_tx_mux.sv` | Legacy final mux retained for collateral around the pre-correlated egress path |
 
 ## Clock and reset summary
 
@@ -119,26 +112,8 @@ verilator --lint-only --timing +define+MPTDC_USE_OSC_MODEL \
   $MPTDC_FILES $TOP_FILES \
   --top-module spadmic_top_v1
 
-# Shared-readout unit test
-verilator --binary --timing -Wall \
-  -Wno-UNUSEDSIGNAL -Wno-UNDRIVEN -Wno-DECLFILENAME -Wno-WIDTHEXPAND \
-  -Wno-WIDTHTRUNC -Wno-UNUSEDPARAM -Wno-PINMISSING -Wno-UNUSEDGENVAR \
-  -Wno-CASEINCOMPLETE -Wno-LATCH -Wno-REALCVT -Wno-INITIALDLY -Wno-COMBDLY \
-  -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
-  MPTDC/rtl/pkg/mptdc_pkg.sv \
-  TOP/rtl/spadmic_pkg.sv \
-  MPTDC/rtl/readout/mptdc_narrow16_tx_v2.sv \
-  TOP/rtl/spadmic_tdc_shared_readout.sv \
-  TOP/tb/tb_spadmic_tdc_shared_readout_unit.sv \
-  --top-module tb_spadmic_tdc_shared_readout_unit
-
-# Correlated-export unit test
-verilator --binary --timing -Wall \
-  -Wno-UNUSEDSIGNAL -Wno-UNDRIVEN -Wno-DECLFILENAME -Wno-WIDTHEXPAND \
-  -Wno-WIDTHTRUNC -Wno-UNUSEDPARAM -Wno-PINMISSING -Wno-UNUSEDGENVAR \
-  -Wno-CASEINCOMPLETE -Wno-LATCH -Wno-REALCVT -Wno-INITIALDLY -Wno-COMBDLY \
-  -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
-  $MPTDC_FILES $TOP_FILES \
-  TOP/tb/tb_spadmic_correlated_tx_unit.sv \
-  --top-module tb_spadmic_correlated_tx_unit
+# Unified ARB directed tests
+cd TOP
+bash scripts/sim/run_tb.sh tb_spadmic_arb_modes --sim verilator
+bash scripts/sim/run_tb.sh tb_spadmic_arb_stress --sim verilator
 ```

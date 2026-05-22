@@ -168,8 +168,7 @@ module mptdc_async_frontend_v2
     always_latch begin
       if (!rst_n || ctx_release_async_i[g])
         ctx_drain_q[g] = 1'b0;
-      else if (capture_en_i & start_latched_q
-               & (active_ctx_q == ctx_id_t'(g)))
+      else if (capture_en_i & (active_ctx_q == ctx_id_t'(g)))
         ctx_drain_q[g] = 1'b1;
     end
   end

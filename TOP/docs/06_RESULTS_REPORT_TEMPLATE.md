@@ -32,17 +32,15 @@
 | Bench | Result | Notes |
 |-------|--------|-------|
 | `tb_spadmic_axis_cluster_scan_unit` | | |
+| `tb_spadmic_arb_modes` | | |
+| `tb_spadmic_arb_stress` | | |
 | `tb_spadmic_i2c_control_plane_unit` | | |
 | `tb_spadmic_ref_stop_qualifier_hold_unit` | | |
 | `tb_spadmic_ref_stop_qualifier_unit` | | |
-| `tb_spadmic_shared_tx_mux_unit` | | |
-| `tb_spadmic_stress_arbiter` | | |
 | `tb_spadmic_stress_cluster_scan` | | |
 | `tb_spadmic_stress_csr` | | |
 | `tb_spadmic_stress_position` | | |
 | `tb_spadmic_stress_stop_qualifier` | | |
-| `tb_spadmic_tdc_arbiter3_unit` | | |
-| `tb_spadmic_tdc_shared_readout_unit` | | |
 | `tb_spadmic_top_sequencer_unit` | | |
 
 ---
@@ -99,8 +97,8 @@
 | `spadmic_csr_decoder` | ___% | ___% | ___% | ___% |
 | `spadmic_global_csr` | ___% | ___% | ___% | N/A |
 | `spadmic_top_sequencer` | ___% | ___% | ___% | ___% |
-| `spadmic_tdc_shared_readout` | ___% | ___% | ___% | ___% |
-| `spadmic_shared_tx_mux` | ___% | ___% | ___% | N/A |
+| `spadmic_tdc_packet_adapter` | ___% | ___% | ___% | ___% |
+| `spadmic_packet_arbiter4` | ___% | ___% | ___% | ___% |
 | `spadmic_position_block` | ___% | ___% | ___% | ___% |
 | `spadmic_tdc_axis_wrapper` | ___% | ___% | ___% | N/A |
 | `spadmic_i2c_slave` | ___% | ___% | ___% | ___% |
@@ -151,7 +149,8 @@
 | `spadmic_global_csr` | | | |
 | `spadmic_top_sequencer` | | | |
 | `spadmic_ref_stop_qualifier` | | | |
-| `spadmic_tdc_shared_readout` | | | |
+| `spadmic_tdc_packet_adapter` | | | |
+| `spadmic_packet_arbiter4` | | | |
 | `spadmic_position_block` | | | |
 | `spadmic_axis_cluster_scan` | | | |
 | `spadmic_correlated_tx` | | | |

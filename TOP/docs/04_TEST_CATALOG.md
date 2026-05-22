@@ -5,18 +5,16 @@
 | # | Bench | Block Under Test | Key Checks |
 |---|-------|-------------------|------------|
 | 1 | `tb_spadmic_axis_cluster_scan_unit` | Axis cluster scanner | Single/dual/overflow cluster extraction |
-| 2 | `tb_spadmic_i2c_control_plane_unit` | I2C → CSR bridge | I2C write/read, pointer handling, NACK |
-| 3 | `tb_spadmic_ref_stop_qualifier_hold_unit` | Stop qualifier | Hold timing, qualifier window |
-| 4 | `tb_spadmic_ref_stop_qualifier_unit` | Stop qualifier | Basic qualification, timeout |
-| 5 | `tb_spadmic_shared_tx_mux_unit` | Legacy TX mux | Source selection on the older logical mux path |
-| 6 | `tb_spadmic_stress_arbiter` | TDC arbiter | Fairness, back-to-back, starvation |
+| 2 | `tb_spadmic_arb_modes` | Unified ARB | Source masks, mode cycling, unsupported RAW_TIMESTAMP mask |
+| 3 | `tb_spadmic_arb_stress` | Unified ARB | 155-word max burst, no interleaving, backpressure, unified tags |
+| 4 | `tb_spadmic_i2c_control_plane_unit` | I2C → CSR bridge | I2C write/read, pointer handling, NACK |
+| 5 | `tb_spadmic_ref_stop_qualifier_hold_unit` | Stop qualifier | Hold timing, qualifier window |
+| 6 | `tb_spadmic_ref_stop_qualifier_unit` | Stop qualifier | Basic qualification, timeout |
 | 7 | `tb_spadmic_stress_cluster_scan` | Cluster scanner | Random patterns, gap/span sweep |
 | 8 | `tb_spadmic_stress_csr` | CSR decoder + global CSR | All-region RW, timeout, back-to-back |
 | 9 | `tb_spadmic_stress_position` | Position block | Full FSM exercise, packet framing |
 | 10 | `tb_spadmic_stress_stop_qualifier` | Stop qualifier | Stress random timing |
-| 11 | `tb_spadmic_tdc_arbiter3_unit` | Legacy 3-way arbiter | (Legacy — secondary priority) |
-| 12 | `tb_spadmic_tdc_shared_readout_unit` | Shared readout | Round-robin, atomicity, META-first |
-| 13 | `tb_spadmic_top_sequencer_unit` | Top sequencer | RESET→IDLE→DRAIN FSM |
+| 11 | `tb_spadmic_top_sequencer_unit` | Top sequencer | RESET→IDLE→DRAIN FSM |
 
 ## 2. VIP Smoke Tests (Must-Pass Gate)
 
@@ -69,7 +67,7 @@ named and checked as stress/fault tests rather than mixed into ordinary random.
 
 ## 6. Acceptance Criteria
 
-- [ ] All 13 directed benches pass on Xcelium
+- [ ] All 11 directed benches pass on Xcelium
 - [ ] All 4 smoke tests pass
 - [ ] All 7 feature tests pass
 - [ ] `long_random` passes with seed=1

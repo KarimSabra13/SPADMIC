@@ -53,30 +53,26 @@ async_rst_n ------->|  + top-level CSR dec  |    |
                     +-----------------------+          |
                                                        v
                                               +------------------+
-                                              | shared TDC       |
-                                              | record arbiter + |
-                                              | serializer       |
+                                              | per-axis TDC     |
+                                              | packet adapters  |
                                               +------------------+
                                                        |
                                                        v
  x/y/z lines[63:0] -----------------------+   +------------------+
-                                           v   | shared TX mux    |
-                                +-----------------------+  (idle- |
-                                | async qualify +       |  only   |
-                                | cluster scan + TX     |  select)|
-                                +-----------------------+---------+
-                                           |                     |
-                                           +---------------------+
-                                                        |
-                                                        v
-                                                  shared chip TX
+                                           v   | unified ARB +    |
+                                +-----------------------+ event tag |
+                                | async qualify +       | + FIFO    |
+                                | cluster scan + TX     +----------+
+                                +-----------------------+     |
+                                                              v
+                                                        shared chip TX
 ```
 
 ## Clock and reset domains
 
 | Domain | Frequency | Usage |
 |--------|-----------|-------|
-| `clk_sys` | 160 MHz | I2C decode/bridge, CSR, local acquisition FIFOs, shared TDC readout, shared TX mux, position |
+| `clk_sys` | 160 MHz | I2C decode/bridge, CSR, local acquisition FIFOs, ARB adapters/tagger/FIFO, position |
 | `clk_ref_40m` | 40 MHz | Reverse stop qualification only |
 | MPTDC internal | varies | Preserved inside each `mptdc_top_asic` instance |
 | Async events | — | Per-axis SPAD OR-tree into axis wrapper |
@@ -99,13 +95,13 @@ Implementation:
 - Stop qualifier uses low-phase-latched qualification around `clk_ref_40m` (no combinational clock gating)
 - Existing MPTDC frontend still prevents stop-without-start internally
 
-## Shared TDC readout contract
+## Unified ARB/TDC readout contract
 
 - Each axis TDC keeps its own local acquisition-record FIFO inside `mptdc_core`
 - `spadmic_tdc_axis_wrapper` exports that record stream instead of using the local per-axis narrow serializer
-- `spadmic_tdc_shared_readout` arbitrates **META/HIT acquisition records** across axes and feeds one shared `mptdc_narrow16_tx_v2`
-- Round-robin selection happens only on META records, so one complete conversion stays atomic through the shared serializer
-- The active packet source ID is held until EOC so header tagging stays coherent
+- `spadmic_tdc_packet_adapter` serializes each axis into a uniform packet stream before central arbitration
+- `spadmic_correlated_tx` arbitrates `{TDC_X,TDC_Y,TDC_Z,POSITION}` with packet-level locking
+- The active packet source ID is carried on internal sidebands until EOC so header/tagging stays coherent
 - **No packet interleaving**
 
 ### `tdc_id` tagging
@@ -124,7 +120,7 @@ Implementation:
   - 8-bit DDR `chip_tx_data_o`
 - The internal logical stream still carries correlated TDC/position packets, but the chip pins no longer expose an off-chip `ready`
 - `spadmic_global_csr` accepts source-selection and mode updates only while the active path is idle/drained
-- `spadmic_correlated_tx` arbitrates only between already packetized sources and never interleaves words
+- `spadmic_correlated_tx` arbitrates four uniform packet sources and never interleaves words
 - Position packets carry an explicit source tag so one host parser can accept both TDC and position traffic
 
 ## Top-level sequencing contract
@@ -132,7 +128,7 @@ Implementation:
 - `spadmic_global_csr` stores the **requested** control image visible to software
 - `spadmic_top_sequencer` owns the **active** control image that drives the top
 - An accepted control update first forces `global_enable` low, drains the old path, then commits the new active source/mode/control state
-- Drain/idle means: no shared TDC packet in flight, no pending axis META record, and no outstanding position packet or detector activity
+- Drain/idle means: no TDC adapter packet in flight, no pending axis META record, and no outstanding position packet or detector activity
 - Busy or non-idle writes are rejected, counted, and reported back through the global fault/status registers
 - Status now distinguishes datapath idleness from control-accept readiness and requested-versus-active mismatch
 
@@ -156,17 +152,19 @@ Implementation:
 | `spadmic_top_v1.sv` | Chip-level integration shell |
 | `spadmic_tdc_axis_wrapper.sv` | Per-axis TDC wrapper (stop qualifier + mptdc_top_asic) |
 | `spadmic_ref_stop_qualifier.sv` | One-shot ref-edge stop generator |
-| `spadmic_tdc_shared_readout.sv` | Shared TDC record arbiter + shared serializer/readout |
-| `spadmic_tdc_arbiter3.sv` | Legacy packet arbiter retained for standalone collateral |
-| `spadmic_tdc_packet_fifo.sv` | Legacy packet buffer retained for standalone collateral |
 | `spadmic_csr_decoder.sv` | Address-region decoder for CSR bus |
 | `spadmic_global_csr.sv` | Global identification, enable, status registers |
 | `spadmic_top_sequencer.sv` | Requested-to-active control sequencer for safe top-level transitions |
-| `spadmic_shared_tx_mux.sv` | Legacy static selector retained for older collateral |
-| `spadmic_correlated_tx.sv` | Active correlated packet arbiter, event tagger, and output FIFO |
 | `spadmic_ddr_tx.sv` | Active physical 8-bit DDR TX packer with forwarded clock |
-| `spadmic_position_block.sv` | Position capture, scan, packetize pipeline |
-| `spadmic_axis_cluster_scan.sv` | 64-bit line bitmap cluster scanner |
+
+### arb/rtl/
+
+| File | Purpose |
+|------|---------|
+| `spadmic_tdc_packet_adapter.sv` | Per-axis META/HIT serializer for active ARB TDC modes |
+| `spadmic_position_packet_adapter.sv` | SOP/EOP/source sideband adapter for position packets |
+| `spadmic_packet_arbiter4.sv` | Masked packet-atomic four-source arbiter with source skids |
+| `spadmic_correlated_tx.sv` | Active correlated packet arbiter, unified event tagger, and output FIFO |
 
 ### I2C/rtl/
 
@@ -180,13 +178,16 @@ Implementation:
 | File | Purpose |
 |------|---------|
 | `tb_spadmic_ref_stop_qualifier_unit.sv` | Stop qualifier unit test |
-| `tb_spadmic_tdc_arbiter3_unit.sv` | Arbiter + FIFO integration test |
 | `tb_spadmic_axis_cluster_scan_unit.sv` | Cluster scan unit test |
-| `tb_spadmic_shared_tx_mux_unit.sv` | Legacy shared chip-TX mux unit test |
-| `tb_spadmic_correlated_tx_unit.sv` | Correlated packet arbiter + event-ID unit test |
 | `tb_spadmic_ddr_tx_unit.sv` | Physical DDR TX packer unit test |
 | `tb_spadmic_top_sequencer_unit.sv` | Top control sequencer unit test |
-| `tb_spadmic_tdc_shared_readout_unit.sv` | Shared TDC readout unit test |
+
+### arb/tb/
+
+| File | Purpose |
+|------|---------|
+| `tb_spadmic_arb_modes.sv` | ARB source-mask, mode, and unsupported RAW_TIMESTAMP coverage |
+| `tb_spadmic_arb_stress.sv` | Max legal 155-word concurrent burst and backpressure stress |
 
 ## Known assumptions / TBDs
 

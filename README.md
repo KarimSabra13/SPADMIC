@@ -37,7 +37,7 @@ The current active first-silicon digital baseline is:
 ## Active system dataflow
 
 1. **Control path:** `i2c_scl_i/i2c_sda_i` -> `spadmic_i2c_slave` -> `spadmic_i2c_csr_bridge` -> `spadmic_csr_decoder` -> global, per-axis TDC, or position CSR blocks.
-2. **TDC path:** one `spadmic_tdc_axis_wrapper` per axis -> local `mptdc_top_asic` -> exported acquisition records -> `spadmic_tdc_shared_readout` -> shared `mptdc_narrow16_tx_v2`.
+2. **TDC path:** one `spadmic_tdc_axis_wrapper` per axis -> local `mptdc_top_asic` -> exported acquisition records -> per-axis `spadmic_tdc_packet_adapter` -> unified ARB.
 3. **Position path:** asynchronous 64-line `x/y/z_lines_i` buses -> synchronizers -> pipelined cluster scan and qualification in `spadmic_position_block` -> fixed 8-word cluster packet or 14-word raw bitmap packet.
 4. **Final egress:** `spadmic_correlated_tx` groups packetized TDC and position traffic into one shared correlated stream, then `spadmic_ddr_tx` maps that stream onto the source-synchronous `chip_tx_*` DDR pins.
 
@@ -79,8 +79,10 @@ verilator --binary --timing -Wall \
   -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
   MPTDC/rtl/pkg/mptdc_pkg.sv \
   TOP/rtl/spadmic_pkg.sv \
-  MPTDC/rtl/readout/mptdc_narrow16_tx_v2.sv \
-  TOP/rtl/spadmic_tdc_shared_readout.sv \
-  TOP/tb/tb_spadmic_tdc_shared_readout_unit.sv \
-  --top-module tb_spadmic_tdc_shared_readout_unit
+  arb/rtl/spadmic_tdc_packet_adapter.sv \
+  arb/rtl/spadmic_position_packet_adapter.sv \
+  arb/rtl/spadmic_packet_arbiter4.sv \
+  arb/rtl/spadmic_correlated_tx.sv \
+  arb/tb/tb_spadmic_arb_modes.sv \
+  --top-module tb_spadmic_arb_modes
 ```

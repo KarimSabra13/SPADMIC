@@ -103,7 +103,7 @@ digraph G {
       position [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
       <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Position path</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT POINT-SIZE='10' COLOR='#475569'>sync + settle FSM + cluster scan + packetizer</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>x/y/z line snapshots<BR ALIGN='LEFT'/>fault counters / stickies<BR ALIGN='LEFT'/>fixed 12-word position packet</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT POINT-SIZE='10' COLOR='#475569'>sync + settle FSM + cluster scan + packetizer</FONT></TD></TR><TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>x/y/z line snapshots<BR ALIGN='LEFT'/>fault counters / stickies<BR ALIGN='LEFT'/>fixed 8-word position packet</FONT></TD></TR>
     </TABLE>
     >];
 

@@ -480,7 +480,7 @@ module mptdc_core
     .rst_n            (rst_sys_drain_n),
     .meas_active_i    (meas_active_sync),
     .timeout_active_i (start_timeout_sync),
-    .hit_level_i      (hit_capture_snapshot.hit_level),
+    .hit_level_i      (pd_hit_level),
     .max_hits_cfg_i   (cfg_i.max_hits),
     .wdt_timeout_i    (cfg_i.wdt_ctx_timeout),
     .capture_en_o     (meas_capture_en),

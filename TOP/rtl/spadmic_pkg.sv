@@ -28,10 +28,13 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_POS_SCAN_LATENCY_CYCLES = 5;
   localparam int unsigned SPADMIC_POS_QUEUE_DEPTH = 16;
   localparam int unsigned SPADMIC_EVENT_BUNDLE_DEPTH = 16;
-  localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 2048;
   localparam int unsigned SPADMIC_POS_RAW_WORDS_PER_AXIS = (SPADMIC_LINE_W + NARROW_W - 1) / NARROW_W;
   localparam int unsigned SPADMIC_POS_RAW_PAYLOAD_WORDS = SPADMIC_AXIS_COUNT * SPADMIC_POS_RAW_WORDS_PER_AXIS;
   localparam int unsigned SPADMIC_POS_RAW_PKT_WORDS = 1 + SPADMIC_POS_RAW_PAYLOAD_WORDS + 1;
+  localparam int unsigned SPADMIC_MAX_TDC_PACKET_WORDS = 2 + (mptdc_pkg::MAX_HITS * 3);
+  localparam int unsigned SPADMIC_MAX_CONCURRENT_ARB_BURST_WORDS =
+      (SPADMIC_AXIS_COUNT * SPADMIC_MAX_TDC_PACKET_WORDS) + SPADMIC_POS_RAW_PKT_WORDS;
+  localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 256;
 
   typedef enum logic [SPADMIC_AXIS_ID_W-1:0] {
     TDC_ID_X = 2'd0,

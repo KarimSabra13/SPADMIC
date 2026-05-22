@@ -19,7 +19,7 @@ digraph G {
       <TR><TD HEIGHT="4"></TD></TR>
       <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12">Async-qualified position detector with explicit settle filtering, cluster extraction, and fixed packet output.</FONT></TD></TR>
       <TR><TD HEIGHT="2"></TD></TR>
-      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">TOP/rtl/spadmic_position_block.sv</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#475569">position/rtl/spadmic_position_block.sv</FONT></TD></TR>
     </TABLE>
     >,
         size="11.69,8.27!"
@@ -47,13 +47,13 @@ digraph G {
     >];
     fsm [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
-      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Detect / settle / eval FSM</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>DET_IDLE<BR ALIGN='LEFT'/>DET_SETTLE<BR ALIGN='LEFT'/>DET_EVAL<BR ALIGN='LEFT'/>DET_WAIT_CLEAR</FONT></TD></TR>
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Detect / settle / scan FSM</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>DET_IDLE<BR ALIGN='LEFT'/>DET_SETTLE<BR ALIGN='LEFT'/>DET_SCAN<BR ALIGN='LEFT'/>DET_WAIT_CLEAR</FONT></TD></TR>
     </TABLE>
     >];
     scan [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#059669" BGCOLOR="#ECFDF5">
-      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>3x cluster scan + filter</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#059669" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>3x five-cycle cluster scan + filter</B></FONT></TD></TR>
       <TR><TD ALIGN='LEFT' BGCOLOR='#ECFDF5'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>u_scan_x / u_scan_y / u_scan_z<BR ALIGN='LEFT'/>gap_threshold_q<BR ALIGN='LEFT'/>min_cluster_span_q<BR ALIGN='LEFT'/>meaningful_event / overflow_any</FONT></TD></TR>
     </TABLE>
     >];
@@ -65,8 +65,8 @@ digraph G {
     >];
     pkt [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#EA580C" BGCOLOR="#FFF7ED">
-      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Fixed 12-word packetizer</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>header<BR ALIGN='LEFT'/>source-tagged sub-header<BR ALIGN='LEFT'/>X/Y/Z summaries + clusters<BR ALIGN='LEFT'/>EOC</FONT></TD></TR>
+      <TR><TD BGCOLOR="#EA580C" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Fixed 8-word packetizer</B></FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#FFF7ED'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>header<BR ALIGN='LEFT'/>six cluster words<BR ALIGN='LEFT'/>EOC/tag</FONT></TD></TR>
     </TABLE>
     >];
     outs [shape=plain margin=0 label=<

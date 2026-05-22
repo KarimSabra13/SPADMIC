@@ -111,9 +111,6 @@ module spadmic_top_v1 (
   wire [2:0] tdc_conv_pending;
   mptdc_acq_rec_t axis_acq_rec [3];
 
-  wire tdc_tx_ready_mux;
-  wire tdc_tx_valid_mux;
-  wire [NARROW_W-1:0] tdc_tx_data_mux;
   wire pos_tx_ready_mux;
   wire pos_tx_valid_mux;
   wire [NARROW_W-1:0] pos_tx_data_mux;
@@ -366,21 +363,6 @@ module spadmic_top_v1 (
   assign tdc_conv_pending[1] = axis_acq_valid[1] & (axis_acq_rec[1].kind == ACQ_REC_META);
   assign tdc_conv_pending[2] = axis_acq_valid[2] & (axis_acq_rec[2].kind == ACQ_REC_META);
 
-  // Shared TDC serializer keeps packets atomic by granting only on META records.
-  spadmic_tdc_shared_readout u_tdc_shared_readout (
-    .clk_sys       (clk_sys),
-    .rst_n         (rst_sys_n),
-    .acq_valid_i   (axis_acq_valid),
-    .acq_data_i    (axis_acq_data),
-    .acq_ready_o   (axis_acq_ready),
-    .out_mode_i    (tdc_out_mode),
-    .shared_ready_i(tdc_tx_ready_mux),
-    .shared_valid_o(tdc_tx_valid_mux),
-    .shared_data_o (tdc_tx_data_mux),
-    .busy_o        (tdc_shared_busy_o),
-    .packet_src_o  (/* unused */)
-  );
-
   // Position capture is packetized locally, then muxed onto the shared chip TX.
   spadmic_position_block u_position (
     .clk_sys        (clk_sys),
@@ -406,24 +388,26 @@ module spadmic_top_v1 (
     .spad_matrix_rst_o(spad_matrix_rst_o)
   );
 
-  // One physical bus is exposed at the chip boundary. TDC-only, position-only,
-  // and correlated both-active export are derived from the committed control
-  // image without changing the external CSR width.
+  // One physical bus is exposed at the chip boundary. Per-axis TDC acquisition
+  // records and position packets enter a single packet-atomic four-source ARB.
   spadmic_correlated_tx u_correlated_tx (
     .clk_sys       (clk_sys),
     .rst_n         (rst_sys_n),
     .tx_sel_i      (shared_tx_sel),
     .axis_enable_i (axis_enable),
     .position_enable_i(position_enable),
-    .tdc_valid_i   (tdc_tx_valid_mux),
-    .tdc_data_i    (tdc_tx_data_mux),
-    .tdc_ready_o   (tdc_tx_ready_mux),
+    .tdc_out_mode_i(tdc_out_mode),
+    .acq_valid_i   (axis_acq_valid),
+    .acq_data_i    (axis_acq_data),
+    .acq_ready_o   (axis_acq_ready),
     .pos_valid_i   (pos_tx_valid_mux),
     .pos_data_i    (pos_tx_data_mux),
     .pos_ready_o   (pos_tx_ready_mux),
     .shared_ready_i(chip_tx_word_ready),
     .shared_valid_o(chip_tx_word_valid),
     .shared_data_o (chip_tx_word_data),
+    .tdc_busy_o    (tdc_shared_busy_o),
+    .arb_busy_o    (/* unused */),
     .correlation_overflow_o(correlation_overflow_sticky)
   );
 
