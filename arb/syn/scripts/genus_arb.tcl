@@ -22,6 +22,7 @@ set design(work_dir)    "$syn_root/work"
 set design(reports_dir) "$syn_root/reports"
 set design(outputs_dir) "$syn_root/outputs"
 set design(logs_dir)    "$syn_root/logs"
+set design(project_root) "$repo_root/MPTDC"
 
 set TECHNOLOGY    "xh018"
 set SC_TECHNOLOGY "xh018-stdcells"
