@@ -23,11 +23,11 @@ rtl/spadmic_top_sequencer.sv
 rtl/spadmic_csr_decoder.sv
 
 // ── Packet arbiter path ──────────────────────────────────────────
-rtl/spadmic_tdc_packet_fifo.sv
-rtl/spadmic_tdc_arbiter3.sv
-rtl/spadmic_tdc_shared_readout.sv
-rtl/spadmic_shared_tx_mux.sv
-rtl/spadmic_correlated_tx.sv
+../arb/rtl/spadmic_tdc_packet_adapter.sv
+../arb/rtl/spadmic_position_packet_adapter.sv
+../arb/rtl/spadmic_packet_arbiter4.sv
+../arb/rtl/spadmic_stream_skid_buffer.sv
+../arb/rtl/spadmic_correlated_tx.sv
 rtl/spadmic_ddr_tx.sv
 
 // ── Position scanner ─────────────────────────────────────────────

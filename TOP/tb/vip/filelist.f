@@ -21,8 +21,7 @@ pkg/spadmic_vip_pkg.sv
 
 // ── SVA Assertion Modules ────────────────────────────────────────
 sva/spadmic_ctrl_sva.sv
-sva/spadmic_readout_sva.sv
-sva/spadmic_mux_sva.sv
+../../../arb/vip/sva/spadmic_arb_sva.sv
 ../../../position/vip/sva/spadmic_pos_sva.sv
 sva/spadmic_sva_bind.sv
 

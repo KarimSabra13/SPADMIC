@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MPTDC_ROOT="$(cd "$REPO_ROOT/../MPTDC" 2>/dev/null && pwd || echo "$REPO_ROOT/../MPTDC")"
 POSITION_TB_ROOT="$REPO_ROOT/../position/tb"
+ARB_TB_ROOT="$REPO_ROOT/../arb/tb"
 
 TB_NAME="${1:?Usage: run_tb.sh <tb_name> [options]}"
 SIM="xrun"
@@ -25,7 +26,7 @@ done
 
 # Find testbench file
 TB_FILE=""
-for dir in "$REPO_ROOT/tb" "$REPO_ROOT/tb/unit" "$REPO_ROOT/tb/int" "$POSITION_TB_ROOT"; do
+for dir in "$REPO_ROOT/tb" "$REPO_ROOT/tb/unit" "$REPO_ROOT/tb/int" "$POSITION_TB_ROOT" "$ARB_TB_ROOT"; do
   if [[ -f "$dir/${TB_NAME}.sv" ]]; then
     TB_FILE="$dir/${TB_NAME}.sv"
     break

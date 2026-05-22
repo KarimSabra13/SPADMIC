@@ -26,16 +26,17 @@ bind spadmic_top_v1 spadmic_ctrl_sva u_ctrl_sva (
   .mode_reject_count    (u_global_csr.mode_reject_count_q[7:0])
 );
 
-// ── Shared Readout assertions ───────────────────────────────────
-bind spadmic_tdc_shared_readout spadmic_readout_sva u_readout_sva (
+// ── Unified ARB assertions ──────────────────────────────────────
+bind spadmic_correlated_tx spadmic_arb_sva u_arb_sva (
   .clk_sys    (clk_sys),
   .rst_n      (rst_n),
   .acq_valid  (acq_valid_i),
   .acq_ready  (acq_ready_o),
-  .busy       (busy_o),
-  .packet_src (packet_src_o),
-  .out_valid  (shared_valid_o),
-  .out_data   (shared_data_o)
+  .arb_valid  (arb_pkt_valid),
+  .arb_ready  (arb_pkt_ready),
+  .arb_sop    (arb_pkt_sop),
+  .arb_eop    (arb_pkt_eop),
+  .arb_source (arb_pkt_source)
 );
 
 // ── Position path framing assertions ────────────────────────────
