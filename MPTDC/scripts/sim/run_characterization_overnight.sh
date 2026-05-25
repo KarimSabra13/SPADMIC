@@ -2,6 +2,7 @@
 # -----------------------------------------------------------------------------
 # Purpose : Verilator-only standalone MPTDC characterization orchestration.
 # Usage   : bash scripts/sim/run_characterization_overnight.sh [options]
+#           --sim NAME      Simulator: verilator|xrun|xcelium (default verilator)
 #           --jobs N        Parallel jobs (default 12)
 #           --seed-start N  First seed (default 0)
 #           --seeds N       Seeds per characterization stage
@@ -17,8 +18,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-BUILD_ROOT="$REPO_ROOT/build/char_verilator"
 
+SIM="verilator"
 JOBS=12
 SEED_START=0
 SEEDS=24
@@ -49,6 +50,7 @@ usage() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --sim) SIM="$2"; shift 2 ;;
     --jobs) JOBS="$2"; shift 2 ;;
     --seed-start) SEED_START="$2"; shift 2 ;;
     --seeds) SEEDS="$2"; shift 2 ;;
@@ -69,6 +71,13 @@ case "$OUT_DIR" in
   *) OUT_DIR="$(pwd)/$OUT_DIR" ;;
 esac
 
+case "$SIM" in
+  verilator) ;;
+  xrun|xcelium) SIM="xrun" ;;
+  *) echo "[ERROR] Unknown simulator '$SIM' (use verilator, xrun, or xcelium)" >&2; exit 1 ;;
+esac
+BUILD_ROOT="$REPO_ROOT/build/char_${SIM}"
+
 if (( SMOKE )); then
   SEEDS=1
   CODE_N_CONV=200
@@ -85,8 +94,8 @@ else
   echo "[CHAR] Aggressive overnight mode enabled"
 fi
 
-if ! command -v verilator >/dev/null 2>&1 && (( ! DRY_RUN )); then
-  echo "[ERROR] Verilator not found in PATH" >&2
+if ! command -v "$SIM" >/dev/null 2>&1 && (( ! DRY_RUN )); then
+  echo "[ERROR] $SIM not found in PATH" >&2
   exit 1
 fi
 
@@ -124,6 +133,10 @@ print_cmd() {
 
 build_tb() {
   local tb="$1"
+  if [[ "$SIM" == "xrun" ]]; then
+    echo "[CHAR] xrun will compile $tb per seed with isolated worklibs"
+    return 0
+  fi
   local mdir="$BUILD_ROOT/$tb"
   local bin="$mdir/$tb"
   local needs_build="$REBUILD"
@@ -223,18 +236,42 @@ run_worker() {
   rm -f "$csv" "$log"
 
   mapfile -t plusargs < <(stage_plusargs "$stage")
-  local cmd=(
-    "$bin"
-    "+CHAR_SEED=${seed}"
-    "+CHAR_OUTPUT_FILE=${csv}"
-    "+CHAR_CONFIG=${stage}"
-    "${plusargs[@]}"
-  )
+  local cmd=()
+  if [[ "$SIM" == "verilator" ]]; then
+    cmd=(
+      "$bin"
+      "+CHAR_SEED=${seed}"
+      "+CHAR_OUTPUT_FILE=${csv}"
+      "+CHAR_CONFIG=${stage}"
+      "${plusargs[@]}"
+    )
+  else
+    local work_dir="$BUILD_ROOT/$stage/seed_${seed}"
+    mkdir -p "$work_dir"
+    cmd=(
+      xrun
+      -64 -sv -access +rwc
+      -timescale 1ps/1ps
+      -nowarn DLCVAR
+      -top "$tb"
+      +define+MPTDC_USE_OSC_MODEL
+      -f "$REPO_ROOT/rtl/filelist.f"
+      "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv"
+      "$REPO_ROOT/tb/common/mptdc_char_tb_pkg.sv"
+      "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
+      "$REPO_ROOT/tb/int/${tb}.sv"
+      -xmlibdirname "$work_dir/xcelium.d"
+      "+CHAR_SEED=${seed}"
+      "+CHAR_OUTPUT_FILE=${csv}"
+      "+CHAR_CONFIG=${stage}"
+      "${plusargs[@]}"
+    )
+  fi
   if (( DRY_RUN )); then
     print_cmd "[DRY-RUN]" "${cmd[@]}"
     return 0
   fi
-  "${cmd[@]}" > "$log" 2>&1
+  (cd "$REPO_ROOT" && "${cmd[@]}") > "$log" 2>&1
   local rc=$?
   if (( rc != 0 )); then
     echo "[FAIL] $stage seed=$seed rc=$rc"
@@ -244,7 +281,7 @@ run_worker() {
 }
 
 export -f tb_for_stage print_cmd stage_plusargs run_worker
-export REPO_ROOT BUILD_ROOT OUT_DIR DRY_RUN
+export REPO_ROOT BUILD_ROOT OUT_DIR DRY_RUN SIM
 export CODE_N_CONV DEAD_GAP_MIN_PS DEAD_GAP_MAX_PS DEAD_GAP_STEP_PS DEAD_TRIALS_PER_GAP
 export BOUNDARIES BOUNDARY_REPEATS CONTEXT_ATTEMPTS THROUGHPUT_EVENTS
 
@@ -264,6 +301,7 @@ fi
 mkdir -p "$OUT_DIR/stages" "$OUT_DIR/logs"
 
 echo "[CHAR] Output: $OUT_DIR"
+echo "[CHAR] Simulator: $SIM"
 echo "[CHAR] Stages: ${SELECTED_STAGES[*]}"
 echo "[CHAR] Seeds per stage: $SEEDS (start=$SEED_START)"
 echo "[CHAR] Parallel jobs: $JOBS"
@@ -295,6 +333,7 @@ if (( ! DRY_RUN )); then
   export CHAR_SEED_START="$SEED_START"
   export CHAR_STAGES="${SELECTED_STAGES[*]}"
   export CHAR_SMOKE="$SMOKE"
+  export CHAR_SIM="$SIM"
   export CHAR_GIT_SHA
   CHAR_GIT_SHA="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   python3 - <<'PY'
@@ -313,8 +352,8 @@ for path in csvs:
         pass
 
 data = {
-    "name": "mptdc-standalone-verilator-characterization",
-    "simulator": "verilator",
+    "name": "mptdc-standalone-characterization",
+    "simulator": os.environ["CHAR_SIM"],
     "jobs": int(os.environ["CHAR_JOBS"]),
     "seed_start": int(os.environ["CHAR_SEED_START"]),
     "seeds_per_stage": int(os.environ["CHAR_SEEDS"]),
