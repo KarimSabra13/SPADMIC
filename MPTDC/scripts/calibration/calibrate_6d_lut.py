@@ -877,6 +877,8 @@ def main():
                         help="Directory with training CSVs (seeds 0-23)")
     parser.add_argument("--val-dir", default=None,
                         help="Directory with validation CSVs (seeds 24-29 or 100-129)")
+    parser.add_argument("--val-max-files", type=int, default=None,
+                        help="Limit held-out validation CSVs loaded at once; fresh validation remains chunked")
     parser.add_argument("--fresh-dir",
                         default="results/campaign_validation/multihit_15_cal_nominal",
                         help="Directory with fresh validation CSVs (seeds 100-129)")
@@ -1027,6 +1029,8 @@ def main():
             val_files = all_val_files
     else:
         val_files = sorted(glob.glob(os.path.join(val_dir, "seed_*.csv")))
+    if args.val_max_files is not None and args.val_max_files > 0:
+        val_files = val_files[:args.val_max_files]
     val_file_labels = [os.path.basename(path) for path in val_files]
     val_scope_label = ", ".join(val_file_labels) if val_file_labels else "none"
 
@@ -1110,7 +1114,8 @@ def main():
         # Per-hit_idx and per-nslow accumulators
         hitidx_sse = {}; hitidx_n = {}
         nslow_sse  = {}; nslow_n  = {}
-        CHUNK = 5  # files per chunk
+        CHUNK = int(os.environ.get("MPTDC_CAL_FRESH_CHUNK_FILES", "1"))
+        FRESH_SAMPLE_PER_CHUNK = int(os.environ.get("MPTDC_CAL_FRESH_SAMPLE_PER_CHUNK", "50000"))
 
         for ci in range(0, len(fresh_files), CHUNK):
             batch = fresh_files[ci:ci+CHUNK]
@@ -1152,8 +1157,8 @@ def main():
             raw_abs += np.abs(re).sum()
             cal_abs += np.abs(ce).sum()
 
-            # Subsample for histograms/scatter (keep ~500K total)
-            keep = max(1, n // 3)
+            # Subsample for plots/quantiles; exact RMSE/mean/MAE are accumulated above.
+            keep = min(n, max(1, FRESH_SAMPLE_PER_CHUNK))
             idx_s = np.random.RandomState(ci).choice(n, keep, replace=False)
             all_raw_errs.append(re[idx_s])
             all_cal_errs.append(ce[idx_s])

@@ -51,6 +51,8 @@ Paramètres lourds par défaut :
 
 Note : le jitter `1 ps` est une approximation conservatrice de `800 fs` car le modèle actuel lit `OSC_JITTER_SIGMA_PS` comme entier.
 
+Les rapports sweep/alias générés automatiquement sont volontairement échantillonnés pour éviter une explosion mémoire sur les campagnes à centaines de millions de lignes. Les métriques RMSE report-grade doivent être prises dans le rapport de calibration chunké `calibration_stop_disc/calibration_report.json`.
+
 ## Périmètre de données à remplir lundi
 
 ### 1. Traçabilité de campagne
@@ -63,6 +65,9 @@ Note : le jitter `1 ps` est une approximation conservatrice de `800 fs` car le m
 - [ ] Espace disque consommé :
 - [ ] Statut global : PASS / FAIL / PARTIAL
 - [ ] Logs principaux à archiver :
+- [ ] Valeur `SWEEP_ANALYZE_MAX_FILES` :
+- [ ] Valeur `CAL_HELDOUT_MAX_FILES` :
+- [ ] Valeur `ALIAS_MAX_FILES_PER_DELAY` :
 
 ### 2. Protocole et observables
 

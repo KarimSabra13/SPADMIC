@@ -27,6 +27,12 @@ N_CONV="${N_CONV:-200000}"
 TRAIN_SEED_START="${TRAIN_SEED_START:-0}"
 VAL_SEED_START="${VAL_SEED_START:-100000}"
 
+# Full sweep CSVs can be hundreds of millions of hit rows. Keep the quick sweep
+# plots/report sampled; the report-grade RMSE comes from chunked calibration.
+SWEEP_ANALYZE_MAX_FILES="${SWEEP_ANALYZE_MAX_FILES:-1}"
+CAL_HELDOUT_MAX_FILES="${CAL_HELDOUT_MAX_FILES:-1}"
+ALIAS_MAX_FILES_PER_DELAY="${ALIAS_MAX_FILES_PER_DELAY:-4}"
+
 # Fixed-delay data for alias analysis, boundary confidence, and N<=15 averaging.
 FIXED_DELAY_SEEDS="${FIXED_DELAY_SEEDS:-24}"
 FIXED_DELAY_N_CONV="${FIXED_DELAY_N_CONV:-10000}"
@@ -101,6 +107,9 @@ JITTER_BOUND_PS=$JITTER_BOUND_PS
 TRAIN_SEEDS=$TRAIN_SEEDS
 VAL_SEEDS=$VAL_SEEDS
 N_CONV=$N_CONV
+SWEEP_ANALYZE_MAX_FILES=$SWEEP_ANALYZE_MAX_FILES
+CAL_HELDOUT_MAX_FILES=$CAL_HELDOUT_MAX_FILES
+ALIAS_MAX_FILES_PER_DELAY=$ALIAS_MAX_FILES_PER_DELAY
 FIXED_DELAY_SEEDS=$FIXED_DELAY_SEEDS
 FIXED_DELAY_N_CONV=$FIXED_DELAY_N_CONV
 FIXED_DELAY_LIST=$FIXED_DELAY_LIST
@@ -159,13 +168,15 @@ run_logged analyze_train \
   python3 scripts/analysis/analyze_campaign.py \
     --campaign-dir "$TRAIN_CAMPAIGN" \
     --output-dir "$SWEEP_ANALYSIS_TRAIN" \
-    --config-filter "${CONFIG}*"
+    --config-filter "${CONFIG}*" \
+    --max-files "$SWEEP_ANALYZE_MAX_FILES"
 
 run_logged analyze_validation \
   python3 scripts/analysis/analyze_campaign.py \
     --campaign-dir "$VAL_CAMPAIGN" \
     --output-dir "$SWEEP_ANALYSIS_VAL" \
-    --config-filter "${CONFIG}*"
+    --config-filter "${CONFIG}*" \
+    --max-files "$SWEEP_ANALYZE_MAX_FILES"
 
 run_logged fine_grid \
   python3 scripts/calibration/analyze_fine_grid.py \
@@ -175,6 +186,7 @@ run_logged calibrate_stop_disc \
   python3 scripts/calibration/calibrate_6d_lut.py \
     --train-dir "$TRAIN_CFG_DIR" \
     --val-dir "$VAL_CFG_DIR" \
+    --val-max-files "$CAL_HELDOUT_MAX_FILES" \
     --fresh-dir "$VAL_CFG_DIR" \
     --out-dir "$CAL_DIR" \
     --train-seeds "$TRAIN_SEEDS"
@@ -197,12 +209,14 @@ run_logged alias_all_rows \
   python3 scripts/analysis/analyze_raw_aliases.py \
     --campaign-dir "$FIXED_DIR" \
     --config-filter "${CONFIG}_${OUT_MODE}*" \
+    --max-files-per-delay "$ALIAS_MAX_FILES_PER_DELAY" \
     --out-dir "$ALIAS_DIR/all_rows"
 
 run_logged alias_core_only \
   python3 scripts/analysis/analyze_raw_aliases.py \
     --campaign-dir "$FIXED_DIR" \
     --config-filter "${CONFIG}_${OUT_MODE}*" \
+    --max-files-per-delay "$ALIAS_MAX_FILES_PER_DELAY" \
     --core-only \
     --out-dir "$ALIAS_DIR/core_nslow_gt_0"
 
@@ -210,6 +224,7 @@ run_logged alias_noncore_only \
   python3 scripts/analysis/analyze_raw_aliases.py \
     --campaign-dir "$FIXED_DIR" \
     --config-filter "${CONFIG}_${OUT_MODE}*" \
+    --max-files-per-delay "$ALIAS_MAX_FILES_PER_DELAY" \
     --noncore-only \
     --out-dir "$ALIAS_DIR/noncore_nslow_eq_0"
 
