@@ -4,7 +4,8 @@
 // =============================================================================
 // Project : SPAD_MPTDC Characterization Collateral
 // File    : tb_char_code_density.sv
-// Purpose : Verilator-only code-density data collection bench.
+// Purpose : Code-density data collection bench.  The default configuration is
+//           strict mono-hit (max_hits=1) for raw INL/DNL characterization.
 // =============================================================================
 `timescale 1ps/1ps
 
@@ -57,9 +58,9 @@ module tb_char_code_density;
     if (!$value$plusargs("CHAR_N_CONV=%d", cfg_n_conv)) cfg_n_conv = 1000;
     if (!$value$plusargs("CHAR_DELAY_MIN_PS=%d", cfg_delay_min_ps)) cfg_delay_min_ps = 20;
     if (!$value$plusargs("CHAR_DELAY_MAX_PS=%d", cfg_delay_max_ps)) cfg_delay_max_ps = 30000;
-    if (!$value$plusargs("CHAR_MAX_HITS=%d", cfg_max_hits)) cfg_max_hits = 15;
+    if (!$value$plusargs("CHAR_MAX_HITS=%d", cfg_max_hits)) cfg_max_hits = 1;
     if (!$value$plusargs("CHAR_INPUT_SEL=%d", cfg_input_sel)) cfg_input_sel = int'(INPUT_CAL);
-    if (!$value$plusargs("CHAR_OUT_MODE=%d", cfg_out_mode)) cfg_out_mode = int'(OUT_MODE_FULL);
+    if (!$value$plusargs("CHAR_OUT_MODE=%d", cfg_out_mode)) cfg_out_mode = int'(OUT_MODE_RAW_FEATURES);
     if (!$value$plusargs("CHAR_POST_GAP_PS=%d", cfg_post_gap_ps)) cfg_post_gap_ps = 200_000;
     if (!$value$plusargs("CHAR_OUTPUT_FILE=%s", cfg_output_file)) cfg_output_file = "char_code_density.csv";
     if (!$value$plusargs("CHAR_CONFIG=%s", cfg_config)) cfg_config = "code_density";

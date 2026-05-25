@@ -278,17 +278,22 @@ def plot_dnl_inl_from_counts(counts_full: np.ndarray, out_dir: Path) -> pd.DataF
     if nz.size == 0:
         return pd.DataFrame()
     lo, hi = int(nz.min()), int(nz.max())
-    counts = counts_full[lo : hi + 1]
+    full_codes = np.arange(lo, hi + 1)
+    full_counts = counts_full[lo : hi + 1]
+    missing_codes = full_codes[full_counts == 0]
+    code_index = full_codes[full_counts > 0]
+    counts = full_counts[full_counts > 0]
     ideal = counts.sum() / len(counts)
     dnl = counts / ideal - 1.0
-    inl = np.cumsum(dnl)
+    transition = np.concatenate(([0.0], np.cumsum(dnl)))
+    endpoint = np.linspace(transition[0], transition[-1], len(transition))
+    inl = (transition - endpoint)[1:]
     sigma_dnl = np.sqrt(np.maximum(counts, 1)) / ideal
-    code_index = np.arange(lo, hi + 1)
 
     fig, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=True)
     axes[0].bar(code_index, counts, width=1.0, color="#1565c0")
     axes[0].set_ylabel(LABELS_FR["count"])
-    axes[0].set_title("Histogramme code-density")
+    axes[0].set_title("Histogramme code-density des codes observes")
     axes[1].plot(code_index, dnl, color="#c62828", lw=1.0, label="DNL")
     axes[1].fill_between(
         code_index,
@@ -302,7 +307,9 @@ def plot_dnl_inl_from_counts(counts_full: np.ndarray, out_dir: Path) -> pd.DataF
     axes[1].legend()
     axes[2].plot(code_index, inl, color="#ef6c00", lw=1.0)
     axes[2].set_ylabel(LABELS_FR["inl"])
-    axes[2].set_xlabel("Index de code")
+    axes[2].set_xlabel(
+        f"Index de code ({len(missing_codes)} codes non observes separes)"
+    )
     for ax in axes:
         style_axes(ax)
     save_char_figure(fig, out_dir / "code_density_dnl_inl")
@@ -314,6 +321,7 @@ def plot_dnl_inl_from_counts(counts_full: np.ndarray, out_dir: Path) -> pd.DataF
             "dnl_lsb": dnl,
             "dnl_sigma_lsb": sigma_dnl,
             "inl_lsb": inl,
+            "missing_codes_in_minmax_interval": len(missing_codes),
         }
     )
 
@@ -341,6 +349,7 @@ def analyze_code_density(
         "nf",
         "nslow",
         "nfast_hit",
+        "stop_phase_disc",
         "phase0_snap",
         "slow_boundary_inc",
     ]

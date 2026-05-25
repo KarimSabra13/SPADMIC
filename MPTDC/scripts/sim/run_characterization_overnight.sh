@@ -6,6 +6,7 @@
 #           --jobs N        Parallel jobs (default 12)
 #           --seed-start N  First seed (default 0)
 #           --seeds N       Seeds per characterization stage
+#           --code-n-conv N Code-density conversions per seed
 #           --out-dir DIR   Output root (default results/characterization/overnight_verilator)
 #           --stages LIST   Comma-separated stages, or all
 #           --smoke         Small shape-validation run
@@ -31,7 +32,7 @@ REBUILD=0
 DRY_RUN=0
 
 # Aggressive defaults; --smoke overrides them below.
-CODE_N_CONV=200000
+CODE_N_CONV=500000
 DEAD_GAP_MIN_PS=0
 DEAD_GAP_MAX_PS=80000
 DEAD_GAP_STEP_PS=500
@@ -54,6 +55,7 @@ while [[ $# -gt 0 ]]; do
     --jobs) JOBS="$2"; shift 2 ;;
     --seed-start) SEED_START="$2"; shift 2 ;;
     --seeds) SEEDS="$2"; shift 2 ;;
+    --code-n-conv) CODE_N_CONV="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --stages) STAGES="$2"; shift 2 ;;
     --smoke) SMOKE=1; shift ;;
@@ -178,9 +180,9 @@ stage_plusargs() {
     code_density)
       printf '%s\n' \
         "+CHAR_N_CONV=${CODE_N_CONV}" \
-        "+CHAR_MAX_HITS=15" \
+        "+CHAR_MAX_HITS=1" \
         "+CHAR_INPUT_SEL=1" \
-        "+CHAR_OUT_MODE=2"
+        "+CHAR_OUT_MODE=0"
       ;;
     deadtime)
       printf '%s\n' \
@@ -376,6 +378,16 @@ if (( ANALYZE )); then
     print_cmd "[DRY-RUN]" "${cmd[@]}"
   else
     "${cmd[@]}"
+  fi
+  if stage_enabled code_density; then
+    lin_cmd=(python3 "$REPO_ROOT/scripts/analysis/analyze_tdc_linearity.py"
+             --root "$OUT_DIR"
+             --output-dir "$OUT_DIR/analysis/linearity")
+    if (( DRY_RUN )); then
+      print_cmd "[DRY-RUN]" "${lin_cmd[@]}"
+    else
+      "${lin_cmd[@]}"
+    fi
   fi
 fi
 

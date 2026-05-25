@@ -51,6 +51,7 @@ bash scripts/sim/run_characterization_overnight.sh \
   --overnight \
   --jobs 12 \
   --seeds 24 \
+  --code-n-conv 500000 \
   --out-dir results/characterization/overnight_verilator \
   --rebuild \
   --analyze
@@ -75,7 +76,7 @@ Available stages:
 
 | Stage | Bench | Purpose |
 | --- | --- | --- |
-| `code_density` | `tb_char_code_density` | Randomized asynchronous phase coverage and raw tuple occupancy. |
+| `code_density` | `tb_char_code_density` | Strict mono-hit (`max_hits=1`) randomized asynchronous phase coverage and raw tuple occupancy for INL/DNL. |
 | `deadtime` | `tb_char_deadtime_persistent` | Persistent-arm double-pulse deadtime without CSR re-arm in the measured gap. |
 | `boundary` | `tb_char_boundary_stress` | STOP offsets around slow phase boundaries and PD-wavefront stress. |
 | `context_overflow` | `tb_char_context_overflow` | FIFO stall, context pressure, START rejection, and overflow behavior. |
@@ -90,7 +91,11 @@ python3 scripts/analysis/analyze_characterization_overnight.py \
 ```
 
 The analyzer writes PNG+PDF plots and CSV+Markdown tables. It avoids optional
-Python dependencies such as `tabulate`.
+Python dependencies such as `tabulate`. When `code_density` is selected, the
+wrapper also runs `scripts/analysis/analyze_tdc_linearity.py`, which separates
+observable-code DNL/INL, missing-code reporting, stimulus uniformity, and
+transfer-linearity INL instead of integrating all empty scalar bins as physical
+codes.
 
 For calibration summaries, the analyzer preserves the maintained
 `scripts/calibration/calibrate_6d_lut.py` method: the LUT key is
