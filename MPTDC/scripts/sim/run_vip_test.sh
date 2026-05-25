@@ -103,12 +103,13 @@ normalize_repo_path() {
   fi
 }
 
-ensure_repo_path() {
+ensure_output_path() {
   local checked_path="$1"
   case "$checked_path" in
     "$REPO_ROOT"/*) ;;
+    /sim/ksabra/*) ;;
     *)
-      echo "Error: coverage artifacts must stay inside the repository: $checked_path" >&2
+      echo "Error: VIP artifacts must stay inside the repository or /sim/ksabra: $checked_path" >&2
       exit 1
       ;;
   esac
@@ -159,7 +160,7 @@ if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
   fi
   if [[ -n "$COV_WORKDIR" ]]; then
     COV_WORKDIR="$(normalize_repo_path "$COV_WORKDIR")"
-    ensure_repo_path "$COV_WORKDIR"
+    ensure_output_path "$COV_WORKDIR"
   fi
 else
   if [[ -n "$COV_WORKDIR" || -n "$COV_TEST_NAME" ]]; then
@@ -175,7 +176,7 @@ fi
 
 if [[ -n "$ARTIFACT_DIR" ]]; then
   ARTIFACT_DIR="$(normalize_repo_path "$ARTIFACT_DIR")"
-  ensure_repo_path "$ARTIFACT_DIR"
+  ensure_output_path "$ARTIFACT_DIR"
   if [[ $DRY_RUN -eq 0 ]]; then
     mkdir -p "$ARTIFACT_DIR"
   fi
