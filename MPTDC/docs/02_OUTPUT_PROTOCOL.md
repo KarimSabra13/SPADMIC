@@ -94,8 +94,9 @@ Field meaning:
 - `ns` = slow phase index associated with this PD cell
 - `nf` = fast phase index associated with this PD cell
 - `stop_phase_disc` = STOP-edge `slow_phase[5:3]` discriminator captured with
-  the conversion metadata. This field breaks early-delay raw aliases while
-  preserving the 16-bit word structure and hit word count.
+  the conversion metadata. This field reduces and diagnoses early-delay raw
+  aliases while preserving the 16-bit word structure and hit word count; it is
+  not a substitute for a correct STOP-side `nslow` coarse count.
 
 The reserved `W1[6:3]` field is the preferred zero-word-count expansion point
 if the Oracle calibration analysis proves that another per-hit edge

@@ -105,8 +105,9 @@ package mptdc_pkg;
   typedef logic [CTX_W-1:0] ctx_id_t;
 
   // STOP-edge slow-phase discriminator exported in RAW_FEATURES/FULL packets.
-  // These are the three slow-ring phase bits proven to disambiguate early-delay
-  // raw aliases while preserving the frozen 16-bit packet word count.
+  // These three slow-ring phase bits reduce early-delay raw aliases while
+  // preserving the frozen 16-bit packet word count.  They are phase metadata,
+  // not a replacement for a correct STOP-side coarse count.
   localparam int unsigned STOP_PHASE_DISC_W   = 3;
   localparam int unsigned STOP_PHASE_DISC_LSB = 3;
   localparam int unsigned STOP_PHASE_DISC_MSB =

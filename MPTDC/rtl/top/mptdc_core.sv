@@ -437,7 +437,9 @@ module mptdc_core
   // ── Gray counter CDC: slow counter (slow → fast) ──────────────
   mptdc_gray_cnt_sync #(
     .W                  (NSLOW_W),
-    .USE_ASYNC_SNAPSHOT (1'b1)
+    .USE_ASYNC_SNAPSHOT (1'b1),
+    .CLEAR_ON_ENABLE    (1'b0),
+    .GRAY_ENCODE_NEXT   (1'b1)
   ) u_slow_cnt (
     .src_clk              (slow_phase[0]),
     .src_rst_n            (rst_sys_n),

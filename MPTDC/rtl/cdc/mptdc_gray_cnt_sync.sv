@@ -17,9 +17,9 @@
 //
 // Counter behaviour (source domain):
 //   - Counts up every cycle when src_en is asserted.
-//   - Cleared by src_clr (conv_arm) or on the rising edge of src_en (the
-//     first cycle after the oscillator starts), eliminating any fixed offset
-//     from CDC latency in the conv_arm pulse path.
+//   - Cleared by src_clr (conv_arm).  Legacy instances may also clear on the
+//     first src_en edge; the STOP-side slow counter disables that option so the
+//     first physical slow edge is counted instead of folded into nslow=0.
 //   - src_async_clr provides a hard asynchronous reset for conv_clr when
 //     the source clock may be stopped.
 //
@@ -42,7 +42,9 @@
 // =============================================================================
 module mptdc_gray_cnt_sync #(
   parameter int unsigned W = 16,
-  parameter bit          USE_ASYNC_SNAPSHOT = 1'b0
+  parameter bit          USE_ASYNC_SNAPSHOT = 1'b0,
+  parameter bit          CLEAR_ON_ENABLE    = 1'b1,
+  parameter bit          GRAY_ENCODE_NEXT   = 1'b0
 )(
   input  wire             src_clk,
   input  wire             src_rst_n,
@@ -75,8 +77,21 @@ module mptdc_gray_cnt_sync #(
 
   logic [W-1:0] bin_dec_cont;
   logic [W-1:0] bin_dec_snap;
+  logic [W-1:0] bin_next;
+  logic [W-1:0] gray_encode_value;
 
   assign src_count = bin_q;
+
+  always_comb begin
+    bin_next = bin_q;
+
+    if (src_clr || (CLEAR_ON_ENABLE && src_en && !src_en_q))
+      bin_next = '0;
+    else if (src_en)
+      bin_next = bin_q + 1'b1;
+  end
+
+  assign gray_encode_value = GRAY_ENCODE_NEXT ? bin_next : bin_q;
 
   // -----------------------------------------------------------------------
   // Source-domain counter and snapshot
@@ -94,12 +109,11 @@ module mptdc_gray_cnt_sync #(
       // Local rising-edge detect on src_en
       src_en_q <= src_en;
 
-      // Counter: clear on conv_arm or at the first enable cycle (start/stop).
-      // This avoids a fixed offset if conv_arm arrives late via clk_sys CDC.
-      if (src_clr || (src_en && !src_en_q))
-        bin_q <= '0;
-      else if (src_en)
-        bin_q <= bin_q + 1'b1;
+      // Counter: default legacy mode clears on the first enable edge.  The
+      // slow STOP-side counter disables that behavior because its source clock
+      // only starts at START; consuming the first slow edge folds the startup
+      // window into nslow=0.
+      bin_q <= bin_next;
 
       // Snapshot: independent capture, NEVER cleared by src_clr
       if (src_latch_p)
@@ -115,7 +129,7 @@ module mptdc_gray_cnt_sync #(
       gray_src_cont_q <= '0;
       gray_src_snap_sync_q <= '0;
     end else begin
-      gray_src_cont_q      <= bin_q ^ (bin_q >> 1);
+      gray_src_cont_q      <= gray_encode_value ^ (gray_encode_value >> 1);
       gray_src_snap_sync_q <= bin_snap_q ^ (bin_snap_q >> 1);
     end
   end

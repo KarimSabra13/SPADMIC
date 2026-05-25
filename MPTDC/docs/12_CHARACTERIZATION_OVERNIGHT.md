@@ -142,6 +142,36 @@ Interpretation rule:
 - If the failing population is limited to the dominant edge code, document and
   isolate that edge population before proposing any packet-format change.
 
+### Startup `nslow=0` root cause and RTL ECO
+
+The strict Oracle result identified a structural startup failure mode: a large
+`nslow=0` population can retain true-delay spans close to `1 ns` even when
+`stop_phase_disc`, `phase0_snap`, and `slow_boundary_inc` are included in the
+packet-visible key.  The root cause is in the STOP-side slow Gray counter, not
+in the host LUT:
+
+- the first `slow_phase[0]` edge after measurement clear was consumed by the
+  generic `src_en && !src_en_q` clear behavior;
+- the asynchronous STOP snapshot captured `gray_src_cont_q`, which encoded the
+  previous `bin_q` value;
+- therefore several startup coarse intervals were exported as `nslow=0`;
+- `stop_phase_disc` is modulo slow-ring phase metadata and cannot recover a
+  missing coarse count by itself.
+
+The targeted RTL ECO keeps the legacy synchronizer defaults but configures the
+slow STOP-side instance with `CLEAR_ON_ENABLE=0` and `GRAY_ENCODE_NEXT=1`.
+This makes the first slow coarse edge count as a real edge and keeps the
+registered Gray snapshot aligned with the current counter value.  The key
+regression for this behavior is:
+
+```bash
+bash scripts/sim/run_tb.sh tb_gray_cnt_sync_unit --sim verilator
+```
+
+After this ECO, rerun the Oracle analysis before adding any new packet
+discriminator.  Only consume `W1[6:3]` if the post-ECO Oracle still shows a
+significant startup/edge span with the corrected `nslow`.
+
 ## Methodological limits
 
 - This is RTL characterization with the behavioral oscillator model.

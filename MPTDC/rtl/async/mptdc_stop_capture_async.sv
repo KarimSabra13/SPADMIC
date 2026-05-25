@@ -14,7 +14,7 @@
 // Captured fields:
 //   - phase0_snap_o: state of slow phase 0 at STOP.
 //   - stop_slow_phase_disc_o: STOP-edge slow-ring phase sector used by
-//     offline calibration to break early-delay raw aliases.
+//     offline calibration to reduce and diagnose early-delay raw aliases.
 //   - phase7d_snap_o: simulation/helper probe aligned to the slow path.
 //   - slow_boundary_inc_o: one-bit carry used to correct nslow when STOP
 //     lands in the guarded phase-0 boundary window.
