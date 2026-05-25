@@ -126,15 +126,15 @@ Sources attendues :
 
 Source attendue : `fixed_delay/analysis` + rapport calibration.
 
-- [ ] Liste des délais testés :
-- [ ] Seeds par délai :
-- [ ] Conversions par seed :
-- [ ] Lignes par délai :
-- [ ] RMSE mono-coup par délai :
-- [ ] Biais moyen par délai :
-- [ ] P95 / P99 par délai :
-- [ ] Pire délai en RMSE :
-- [ ] Pire délai en P99 :
+- [x] Liste des délais testés : 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 et 30000 ps.
+- [x] Seeds par délai : 24.
+- [x] Conversions par seed : 10 000.
+- [x] Lignes par délai : 3 600 000 lignes `row`, 240 000 conversions moyennées et 240 000 premiers hits scannés.
+- [x] RMSE mono-coup par délai : raw `row` non calibré = 1319,546 / 1317,652 / 1276,561 / 1175,405 / 914,178 / 479,892 / 437,256 / 339,021 / 350,587 / 500,168 ps pour les délais ci-dessus.
+- [x] Biais moyen par délai : raw `row` non calibré = -1284,724 / -1282,158 / -1225,965 / -1105,460 / -872,977 / -284,153 / -168,140 / +73,798 / -53,922 / -345,362 ps.
+- [x] P95 / P99 par délai : P95 non extrait par ce rapport ; P99 raw `row` = 1700 / 1750 / 1700 / 1680 / 1280 / 800 / 840 / 760 / 840 / 840 ps.
+- [x] Pire délai en RMSE : 20 ps avec RMSE raw `row` = 1319,546 ps.
+- [x] Pire délai en P99 : 50 ps avec P99 raw `row` = 1750 ps.
 - [x] RMSE moyennée N=1 : 19,578 ps.
 - [x] RMSE moyennée N=2 : 13,866 ps.
 - [x] RMSE moyennée N=3 : 11,227 ps.
