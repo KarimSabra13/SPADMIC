@@ -104,12 +104,13 @@ module tb_char_code_density;
                + ((delay_ps + (trial * 9973) + ((trial * trial) % 7919))
                   % (cfg_delay_max_ps - cfg_delay_min_ps + 1));
 
+      char_arm(clk_sys, csr_valid, csr_write, csr_addr, csr_wdata);
+      #(20_000 + (trial % 37));
+
       rng = char_lcg_next(rng);
       skew_ps = char_rand_range(rng, 0, int'(SYS_CLK_PS - 1));
       #(skew_ps);
 
-      char_arm(clk_sys, csr_valid, csr_write, csr_addr, csr_wdata);
-      #(20_000 + (trial % 37));
       char_inject_pair(start_spad, stop_spad, cal_start, cal_stop,
                        cfg_input_sel, delay_ps, t_start_ps, t_stop_ps);
       char_collect_packet_timeout(clk_sys, narrow_valid, narrow_ready, narrow_data,
