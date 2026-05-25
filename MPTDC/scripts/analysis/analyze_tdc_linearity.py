@@ -201,7 +201,13 @@ class LinearityAggregates:
                 numeric(work, "stop_phase_disc").dropna().astype(int).clip(0, 7),
                 minlength=8,
             )[:8]
-        if "stim_phase_bin" in work.columns:
+        # Use the requested delay as the primary stimulus audit.  The optional
+        # stim_phase_bin column is useful for TB debug, but older or malformed
+        # rows can leave it incomplete while Tref_ps remains the authoritative
+        # plusarg-driven delay.
+        if "Tref_ps" in work.columns:
+            self.stim_phase_counts += _series_mod_counts(work["Tref_ps"], SLOW_HALF_PERIOD_PS)
+        elif "stim_phase_bin" in work.columns:
             self.stim_phase_counts += _series_mod_counts(work["stim_phase_bin"], SLOW_HALF_PERIOD_PS)
         if "start_time_ps" in work.columns:
             self.start_phase_counts += np.bincount(
@@ -348,6 +354,29 @@ def compute_observable_dnl_inl(counts_full: np.ndarray) -> tuple[pd.DataFrame, p
             "inl_endpoint_lsb": inl,
         }
     )
+    edge_trimmed = table.iloc[1:-1].copy() if len(table) > 2 else pd.DataFrame()
+    if not edge_trimmed.empty:
+        edge_counts = edge_trimmed["count"].to_numpy(dtype=float)
+        edge_ideal = float(edge_counts.mean())
+        edge_dnl = edge_counts / edge_ideal - 1.0
+        edge_transition = np.concatenate(([0.0], np.cumsum(edge_dnl)))
+        edge_endpoint = np.linspace(edge_transition[0], edge_transition[-1], len(edge_transition))
+        edge_inl = (edge_transition - edge_endpoint)[1:]
+        edge_trimmed["dnl_edge_trimmed_lsb"] = edge_dnl
+        edge_trimmed["inl_edge_trimmed_lsb"] = edge_inl
+
+        edge_peak_dnl = float(np.max(np.abs(edge_dnl)))
+        edge_peak_inl = float(np.max(np.abs(edge_inl)))
+        edge_final_inl = float(edge_transition[-1])
+    else:
+        edge_peak_dnl = float("nan")
+        edge_peak_inl = float("nan")
+        edge_final_inl = float("nan")
+
+    dominant_idx = int(np.argmax(observed_counts)) if len(observed_counts) else 0
+    dominant_code = int(observed_codes[dominant_idx]) if len(observed_codes) else -1
+    dominant_count = int(observed_counts[dominant_idx]) if len(observed_counts) else 0
+    dominant_fraction = float(dominant_count / observed_counts.sum()) if observed_counts.sum() else float("nan")
     summary = {
         "code_min": lo,
         "code_max": hi,
@@ -358,8 +387,15 @@ def compute_observable_dnl_inl(counts_full: np.ndarray) -> tuple[pd.DataFrame, p
         "ideal_count_observable": ideal,
         "peak_dnl_lsb": float(np.max(np.abs(dnl))) if len(dnl) else float("nan"),
         "peak_inl_endpoint_lsb": float(np.max(np.abs(inl))) if len(inl) else float("nan"),
+        "edge_trimmed_peak_dnl_lsb": edge_peak_dnl,
+        "edge_trimmed_peak_inl_endpoint_lsb": edge_peak_inl,
+        "edge_trimmed_final_inl_lsb": edge_final_inl,
+        "dominant_code": dominant_code,
+        "dominant_code_count": dominant_count,
+        "dominant_code_fraction": dominant_fraction,
         "final_inl_lsb": float(transition[-1]),
     }
+    table.attrs["edge_trimmed"] = edge_trimmed
     return table, missing, summary
 
 
@@ -574,6 +610,9 @@ def write_outputs(
     write_markdown_table(pd.DataFrame([summary]), tables_dir / "linearity_summary.md", "Synthese INL DNL mono-hit")
 
     dnl_table.to_csv(tables_dir / "observable_dnl_inl.csv", index=False)
+    edge_trimmed = dnl_table.attrs.get("edge_trimmed", pd.DataFrame())
+    if isinstance(edge_trimmed, pd.DataFrame) and not edge_trimmed.empty:
+        edge_trimmed.to_csv(tables_dir / "observable_dnl_inl_edge_trimmed.csv", index=False)
     missing.to_csv(tables_dir / "missing_scalar_codes.csv", index=False)
     transfer_profile.to_csv(tables_dir / "transfer_linearity.csv", index=False)
     phase_table(agg.phase_counts).to_csv(tables_dir / "phase_occupancy.csv", index=False)
