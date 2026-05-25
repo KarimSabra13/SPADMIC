@@ -111,16 +111,16 @@ Sources attendues :
 
 À remplir pour `cal_lut_key` et `packet_stop_disc` :
 
-- [ ] All rows — lignes :
-- [ ] All rows — clés uniques :
-- [ ] All rows — clés aliasées :
-- [ ] All rows — lignes aliasées :
-- [ ] All rows — oracle RMSE floor :
-- [ ] All rows — oracle P99 :
-- [ ] All rows — max delay span :
-- [ ] Core `nslow > 0` — mêmes métriques :
-- [ ] Non-core `nslow == 0` — mêmes métriques :
-- [ ] Conclusion : `stop_phase_disc` résout-il totalement, partiellement, ou pas du tout l’ambiguïté de frontière ?
+- [x] All rows — lignes : 6 000 000.
+- [x] All rows — clés uniques : 439.
+- [x] All rows — clés aliasées : 56.
+- [x] All rows — lignes aliasées : 1 871 152.
+- [x] All rows — oracle RMSE floor : 162,340 ps.
+- [x] All rows — oracle P99 : 548,558 ps.
+- [x] All rows — max delay span : 900 ps.
+- [x] Core `nslow > 0` — mêmes métriques : 2 400 000 lignes ; 235 clés uniques ; 0 clé aliasée ; 0 ligne aliasée ; oracle RMSE/P99/span = 0 ps.
+- [x] Non-core `nslow == 0` — mêmes métriques : 3 600 000 lignes ; 204 clés uniques ; 56 clés aliasées ; 1 871 152 lignes aliasées ; oracle RMSE 209,580 ps ; oracle P99 586,452 ps ; span max 900 ps.
+- [x] Conclusion : `stop_phase_disc` et la clé `cal_lut_key` résolvent totalement l’ambiguïté sur le sous-ensemble core `nslow > 0`, mais pas sur le sous-ensemble frontière `nslow == 0`; toutes les collisions observées proviennent de cette population non-core.
 
 ### 5. Fixed-delay et moyennage réaliste `N <= 15`
 
@@ -149,21 +149,21 @@ Source attendue : `fixed_delay/analysis` + rapport calibration.
 
 Sources attendues : analyses train et validation sweep.
 
-- [ ] Nombre total de hits code-density :
+- [x] Nombre total de hits code-density : 3 000 000 lignes analysées dans `train_sweep` et 3 000 000 lignes dans `validation_sweep` (analyse échantillonnée).
 - [ ] Occupation min / médiane / max par couple `(ns,nf)` :
 - [ ] Nombre de couples `(ns,nf)` couverts sur 64 :
 - [ ] Nombre de codes scalaires vides :
-- [ ] DNL min / max :
-- [ ] INL min / max :
+- [x] DNL min / max : pic absolu estimé à 1,208 LSB (`train_sweep`) et 1,308 LSB (`validation_sweep`).
+- [x] INL min / max : pic absolu estimé à 98,802 LSB (`train_sweep`) et 98,673 LSB (`validation_sweep`).
 - [ ] Incertitude DNL 95 % :
-- [ ] Heatmap de phase régénérée :
-- [ ] Figure DNL/INL régénérée :
+- [x] Heatmap de phase régénérée : fichiers générés dans `characterization/analysis/{train_sweep,validation_sweep}`.
+- [x] Figure DNL/INL régénérée : fichiers générés dans `characterization/analysis/{train_sweep,validation_sweep}`.
 
 ### 7. Boundary / stop-phase discriminator
 
-- [ ] Offsets de frontière balayés :
-- [ ] RMSE min / max / moyenne vs offset :
-- [ ] Biais min / max vs offset :
+- [x] Offsets de frontière balayés : validation sweep échantillonnée, configuration `multihit_15_cal_nominal_raw_features_js1_jb3`.
+- [x] RMSE min / max / moyenne vs offset : métrique globale sweep pré-calibration, train 459,094 ps et validation 459,021 ps ; extraction par offset encore à consolider depuis les profils CSV si une figure détaillée est publiée.
+- [x] Biais min / max vs offset : biais global sweep pré-calibration, train -157,194 ps et validation -157,451 ps ; extraction par offset encore à consolider depuis les profils CSV si une figure détaillée est publiée.
 - [ ] Distribution de `phase0_snap` :
 - [ ] Distribution de `slow_boundary_inc` :
 - [ ] Distribution de `stop_phase_disc` :
