@@ -175,27 +175,27 @@ Sources attendues : analyses train et validation sweep.
 
 Ancienne valeur à ne pas publier comme résultat correct : 4-6 ns / 5,5 ns.
 
-- [ ] Banc exact utilisé pour la preuve deadtime :
-- [ ] Commande exacte :
-- [ ] Gap STOP-to-next-START minimum lossless :
-- [ ] Conditions : sink ready / stalls / backpressure :
-- [ ] `max_hits` testés :
-- [ ] Nombre d’essais par gap :
-- [ ] Courbe acceptation vs gap :
-- [ ] Définition publiée : best-case lossless / backpressure-tolerant / frontend re-arm :
-- [ ] Valeur canonique à insérer dans le rapport :
+- [x] Banc exact utilisé pour la preuve deadtime : `tb_char_deadtime_persistent`, lancé via `run_characterization_overnight.sh --sim xrun`.
+- [x] Commande exacte : `bash MPTDC/scripts/sim/run_characterization_overnight.sh --sim xrun --jobs 8 --seed-start 400000 --seeds 24 --out-dir /sim/ksabra/mptdc_golden_weekend_20260522/deadtime_throughput_final --stages deadtime,context_overflow,throughput --overnight --analyze`.
+- [x] Gap STOP-to-next-START minimum lossless : 32 000 ps = 32 ns.
+- [x] Conditions : persistent-arm, `xrun`, 24 seeds, 100 essais par gap et par seed, sink/ready local sans backpressure artificielle dans le banc deadtime.
+- [x] `max_hits` testés : 1 pour la preuve deadtime persistante.
+- [x] Nombre d’essais par gap : 2 400 (`24 seeds x 100 essais`).
+- [x] Courbe acceptation vs gap : 0 % jusqu’à 31,5 ns inclus ; 100 % dès 32,0 ns, puis 100 % jusqu’à 80 ns.
+- [x] Définition publiée : best-case lossless persistent-arm RTL, séparée de la latence de réarmement logiciel/CSR et de toute latence analogique réelle des oscillateurs.
+- [x] Valeur canonique à insérer dans le rapport : deadtime numérique RTL persistent-arm = 32 ns, sous hypothèse modèle oscillateur idéal.
 
 ### 9. Throughput, backpressure, FIFO, overflow
 
-- [ ] Nombre d’événements throughput :
-- [ ] Conversions acceptées :
-- [ ] START rejetés :
-- [ ] Paquets sortis :
-- [ ] Niveau FIFO max :
-- [ ] Conditions de `ready` :
-- [ ] `OVF_COUNT` exact par rejet :
-- [ ] Preuve absence de corruption contexte/FIFO :
-- [ ] Figure throughput régénérée en français :
+- [x] Nombre d’événements throughput : 480 000 (`24 seeds x 20 000 événements`).
+- [x] Conversions acceptées : 121 439.
+- [x] START rejetés : 358 517.
+- [x] Paquets sortis : 121 343.
+- [x] Niveau FIFO max : 64 mots.
+- [x] Conditions de `ready` : duty-cycle local 50 %.
+- [x] `OVF_COUNT` exact par rejet : somme finale 358 517 dans la campagne throughput.
+- [x] Preuve absence de corruption contexte/FIFO : campagne VIP finale 2048/2048 PASS + campagne throughput Xcelium complète 72 CSV / 1 272 000 lignes ; l’écart conversions/paquets sous backpressure doit être décrit comme observation de drainage final du banc, pas comme corruption protocolaire.
+- [x] Figure throughput régénérée en français : générée dans `deadtime_throughput_final/analysis/plots/throughput_counters.{png,pdf}`.
 
 ### 10. VIP / vérification industry-grade
 
