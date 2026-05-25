@@ -97,6 +97,11 @@ Field meaning:
   the conversion metadata. This field breaks early-delay raw aliases while
   preserving the 16-bit word structure and hit word count.
 
+The reserved `W1[6:3]` field is the preferred zero-word-count expansion point
+if the Oracle calibration analysis proves that another per-hit edge
+discriminator is required. Do not consume header bits for per-hit information
+unless these four reserved bits are insufficient.
+
 The removed fields are recovered as follows when needed offline:
 
 - `pd_idx = ns * NE + nf`
