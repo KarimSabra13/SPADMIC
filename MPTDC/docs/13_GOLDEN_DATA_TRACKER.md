@@ -81,25 +81,25 @@ Les rapports sweep/alias générés automatiquement sont volontairement échanti
 
 Source attendue : `characterization/analysis/calibration_stop_disc/calibration_report.json`.
 
-- [ ] Clé LUT exacte :
-- [ ] Nombre de fichiers train :
-- [ ] Nombre de fichiers validation :
-- [ ] Lignes train avant filtre :
-- [ ] Lignes train après filtre :
-- [ ] Lignes validation avant filtre :
-- [ ] Lignes validation après filtre :
-- [ ] Nombre de bins LUT :
-- [ ] Population min / médiane / max par bin :
-- [ ] Taux de couverture LUT validation :
-- [ ] Nombre de lignes validation sans entrée LUT :
-- [ ] RMSE pré-calibration validation :
-- [ ] RMSE post-calibration validation :
-- [ ] MAE pré/post :
-- [ ] Moyenne d’erreur pré/post :
-- [ ] Écart-type pré/post :
-- [ ] P50 / P90 / P95 / P99 absolus pré/post :
-- [ ] Min / max erreur post-calibration :
-- [ ] Amélioration relative en % :
+- [x] Clé LUT exacte : `(ns_inf, nf_inf, nslow, nfast_hit, stop_phase_disc, phase0_snap, hit_idx)`.
+- [x] Nombre de fichiers train : 64 seeds/fichiers CSV.
+- [x] Nombre de fichiers validation : 1 fichier held-out (`seed_100000.csv`) + 32 fichiers fresh validation.
+- [x] Lignes train avant filtre : 192 000 000.
+- [x] Lignes train après filtre : 181 624 425 (`nslow > 0`), soit 10 375 575 lignes retirées (5,404 %).
+- [x] Lignes validation avant filtre : held-out 3 000 000 ; fresh 96 000 000.
+- [x] Lignes validation après filtre : held-out 2 835 090 ; fresh 90 810 660.
+- [x] Nombre de bins LUT : 13 195.
+- [ ] Population min / médiane / max par bin : médiane 11 180 ; min/max à extraire si nécessaire du fichier LUT.
+- [x] Taux de couverture LUT validation : held-out 2 835 073 / 2 835 090 = 99,9994 % ; fresh 90 810 228 / 90 810 660 = 99,9995 %.
+- [x] Nombre de lignes validation sans entrée LUT : held-out 17 ; fresh 432.
+- [x] RMSE pré-calibration validation : held-out 435,682 ps ; fresh 435,706 ps.
+- [x] RMSE post-calibration validation : held-out 19,614 ps ; fresh 19,608 ps.
+- [x] MAE pré/post : held-out 375,773 ps -> 15,928 ps ; fresh 375,744 ps -> 15,922 ps.
+- [x] Moyenne d’erreur pré/post : held-out -137,799 ps -> -0,0106 ps ; fresh -137,777 ps -> +0,0031 ps.
+- [x] Écart-type pré/post : held-out 413,317 ps -> 19,614 ps ; fresh 413,515 ps -> 19,625 ps.
+- [x] P50 / P90 / P95 / P99 absolus pré/post : held-out 326 / 732 / 795 / 881 ps -> 13,842 / 32,531 / 37,528 / 45,910 ps ; fresh 326 / 732 / 796 / 1161 ps -> 13,838 / 32,546 / 37,537 / 45,936 ps.
+- [x] Min / max erreur post-calibration : held-out -75,507 / +75,473 ps ; fresh -73,767 / +159,748 ps.
+- [x] Amélioration relative en % : RMSE fresh réduite de 95,50 % (435,706 ps -> 19,608 ps).
 
 ### 4. Analyse `nslow == 0` à ne pas cacher
 
@@ -135,15 +135,15 @@ Source attendue : `fixed_delay/analysis` + rapport calibration.
 - [ ] P95 / P99 par délai :
 - [ ] Pire délai en RMSE :
 - [ ] Pire délai en P99 :
-- [ ] RMSE moyennée N=1 :
-- [ ] RMSE moyennée N=2 :
-- [ ] RMSE moyennée N=3 :
-- [ ] RMSE moyennée N=4 :
-- [ ] RMSE moyennée N=5 :
-- [ ] RMSE moyennée N=8 :
-- [ ] RMSE moyennée N=10 :
-- [ ] RMSE moyennée N=15 :
-- [ ] Vérifier que la courbe publiée ne montre pas `N > 15`.
+- [x] RMSE moyennée N=1 : 19,578 ps.
+- [x] RMSE moyennée N=2 : 13,866 ps.
+- [x] RMSE moyennée N=3 : 11,227 ps.
+- [x] RMSE moyennée N=4 : 9,801 ps.
+- [x] RMSE moyennée N=5 : 8,747 ps.
+- [x] RMSE moyennée N=8 : 6,848 ps.
+- [x] RMSE moyennée N=10 : 6,194 ps.
+- [x] RMSE moyennée N=15 : 5,090 ps.
+- [x] Vérifier que la courbe publiée ne montre pas `N > 15` : le rapport peut citer uniquement N=1..15 même si le JSON contient des points exploratoires au-delà.
 
 ### 6. Code-density, DNL, INL, couverture de phase
 
@@ -199,25 +199,25 @@ Ancienne valeur à ne pas publier comme résultat correct : 4-6 ns / 5,5 ns.
 
 ### 10. VIP / vérification industry-grade
 
-Source attendue : `vip_cdv/vip_summary.json` et couverture associée.
+Source attendue : `vip_cdv_final_971cd90/vip_summary.json` et couverture associée.
 
-- [ ] Nombre total de tests VIP :
-- [ ] Nombre de PASS :
-- [ ] Nombre de FAIL :
-- [ ] Tests exacts couverts :
-- [ ] Seeds par test :
-- [ ] Conversions par test :
-- [ ] Tests avec backpressure :
-- [ ] Tests avec watchdog :
-- [ ] Tests avec overflow/recovery :
-- [ ] Tests avec max_hits matrix :
-- [ ] Tests avec reference STOP / qualified-ref :
+- [x] Nombre total de tests VIP : 2048 runs (`16 tests x 128 seeds`).
+- [x] Nombre de PASS : 2048.
+- [x] Nombre de FAIL : 0.
+- [x] Tests exacts couverts : `smoke_single_conv`, `full_mode_timestamp`, `firsthit_contract`, `backpressure_integrity`, `start_watchdog`, `cal_inject`, `overflow_status`, `long_random`, `multi_conv_rearm_stress`, `global_watchdog_recovery`, `csr_readback_control`, `hard_reset_readback`, `coverage_exhaustive`, `stress_random`, `vip_ref_stop_cdv`, `vip_maxhits_matrix`.
+- [x] Seeds par test : 128, de 300000 à 300127.
+- [x] Conversions par test : 20 000.
+- [x] Tests avec backpressure : `backpressure_integrity`, `stress_random`.
+- [x] Tests avec watchdog : `start_watchdog`, `global_watchdog_recovery`.
+- [x] Tests avec overflow/recovery : `overflow_status`, `global_watchdog_recovery`, `stress_random`.
+- [x] Tests avec max_hits matrix : `vip_maxhits_matrix`.
+- [x] Tests avec reference STOP / qualified-ref : toute la campagne VIP utilise `--stop-model qualified-ref`.
 - [ ] Couverture fonctionnelle globale :
 - [ ] Couverture code globale :
 - [ ] Modules faibles :
 - [ ] Waivers nécessaires :
-- [ ] Bugs trouvés :
-- [ ] Bugs corrigés avant rapport :
+- [x] Bugs trouvés : aucun échec RTL/VIP sur la campagne finale ; les échecs initiaux étaient dus au refus des chemins absolus `/sim/ksabra`.
+- [x] Bugs corrigés avant rapport : wrapper VIP corrigé au commit `971cd90` pour accepter les artefacts sous `/sim/ksabra`.
 
 ### 11. Figures à régénérer pour le rapport
 
