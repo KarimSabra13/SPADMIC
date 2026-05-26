@@ -1,4 +1,4 @@
-# MPTDC v2.2 — RTL Architecture Reference
+# MPTDC v2.7 — RTL Architecture Reference
 
 > - **Author:** Karim Sabra
 > - **Purpose:** Reference the active RTL hierarchy, timing-domain partitioning, and end-to-end conversion flow.
@@ -263,7 +263,8 @@ Domain:
 
 Writes control:
 - input source (`SPAD` / `CAL`)
-- output mode (`RAW_FEATURES`, `RAW_TIMESTAMP`, `FULL`)
+- legacy output-mode compatibility field; maintained v2.7 RTL emits the fixed
+  RAW_FEATURES feature packet
 - max hits
 - per-context watchdog timeout
 - global watchdog timeout

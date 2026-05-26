@@ -38,10 +38,8 @@ The current TDC implements:
 - an `8 × 8` Vernier phase matrix
 - `2` measurement contexts
 - up to `15` hits per conversion
-- three output modes:
-  - `RAW_FEATURES`
-  - `RAW_TIMESTAMP`
-  - `FULL`
+- one maintained fixed v2.7 feature packet; legacy output-mode CSR values are
+  compatibility/readback fields only
 
 Key top-level files:
 

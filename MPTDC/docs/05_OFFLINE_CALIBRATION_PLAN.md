@@ -1,4 +1,4 @@
-# MPTDC v2.6 — Offline Calibration Plan
+# MPTDC v2.7 — Offline Calibration Plan
 
 > - **Author:** Karim Sabra
 > - **Purpose:** Explain how the active design exports raw features for host-side offline calibration.
@@ -6,7 +6,10 @@
 
 ## 1. Philosophy
 
-The active architecture is intentionally built for offline calibration. Silicon exports raw measurement features and optional raw timestamps, while the PC / FPGA side performs all heavy correction, fitting, and PVT adaptation.
+The active architecture is intentionally built for offline calibration. Silicon
+exports the fixed v2.7 raw feature packet, while the PC / FPGA side reconstructs
+derived raw timestamps and performs all heavy correction, fitting, and PVT
+adaptation.
 
 That means:
 
@@ -28,20 +31,22 @@ That means:
 | `phase0_snap` | 1 | STOP-side boundary snapshot |
 | `slow_boundary_inc` | 1 | STOP-side boundary carry |
 
-### 2.2 Optional derived field
+### 2.2 Derived host-side field
 
-If the host selects `RAW_TIMESTAMP` or `FULL` mode, the chip also emits `t_raw_ps`, which is generated using the live Vernier formula helper in `mptdc_pkg::vernier_tconv_ps()`.
+The maintained RTL no longer emits a dedicated timestamp word. Characterization
+monitors and host software reconstruct `t_raw_ps` from the packet-visible fields
+using the same Vernier formula as `mptdc_pkg::vernier_tconv_ps()`.
 
 Important semantics:
 
 - `hit_idx` in the CSV/reporting flow is packet position, not chronological hit order
 - if an older analysis still wants `pd_idx`, reconstruct it from `ns` and `nf`
-- `stop_phase_disc` is required for the post-ECO discriminator-aware LUT; it is
-  packet-visible in `RAW_FEATURES` and `FULL`, not in `RAW_TIMESTAMP`
+- `stop_phase_disc` is required for the post-ECO discriminator-aware LUT and is
+  packet-visible in Hit W1 `[2:0]`
 - `nfast_snap`, `nfast_stop`, and `event_seq` are now historical/compatibility observables, not live packet fields
 
-For highest-fidelity debug/calibration work, `FULL` is the richest collection mode.
-For deployed-format-fidelity studies, use `RAW_FEATURES`.
+The fixed packet is the deployed-format-fidelity path; richer debug columns must
+be reconstructed or synthesized by tooling, not read from a live FULL packet.
 
 ## 3. Raw timestamp contract
 
@@ -69,20 +74,17 @@ Recommended local collection flow:
 - official nominal baseline wrapper: `scripts/sim/run_characterization_baseline.sh`
 - input source: `CAL`
 - hit-depth policy: higher `max_hits` for dense raw data, `max_hits = 1` for minimum-latency fast-close studies
-- output mode:
-  - `FULL` for classic debug-heavy campaigns
-  - `RAW_FEATURES` for deployed-format-fidelity studies
+- output packet: fixed RAW_FEATURES feature packet
 
 `run_campaign.sh` now exposes the deployed-format and jitter knobs directly:
 
-- `--out-mode full|raw_features`
+- `--out-mode full|raw_features` as a legacy runner/CSV-compatibility knob
 - `--jitter-sigma <ps>`
 - `--jitter-bound <ps>`
 
-When `--out-mode raw_features` is selected, `tb_campaign_collect.sv` reconstructs
-`t_raw_ps` from the narrow packet fields and writes the active compact CSV schema.
-Historical Python sweeps can still synthesize removed columns if they want to rerun
-older comparison models.
+`tb_campaign_collect.sv` reconstructs `t_raw_ps` from the narrow packet fields
+and writes the active compact CSV schema. Historical Python sweeps can still
+synthesize removed columns if they want to rerun older comparison models.
 
 ### 4.2 Campaign configuration
 
@@ -168,18 +170,20 @@ diff = t_raw_ps / 10 - (nslow + 2 + sbi - 1) × 88 - nfast × 8 - 25
 ```
 This `diff` value maps uniquely to all 64 active 8×8 `(ns, nf)` combinations — zero ambiguity.
 
-### 5.3 Output mode compatibility
+### 5.3 Fixed-packet compatibility
 
-| Field | Mode 0 (RAW_FEATURES) | Mode 1 (RAW_TIMESTAMP) | Mode 2 (FULL) |
-|-------|-----------------------|------------------------|---------------|
-| nslow | W0 | W0 | W0 |
-| nfast_hit | W0 | W0 | W0 |
-| ns_inf | W1 (direct) | Inferred | W1 (direct) |
-| nf_inf | W1 (direct) | Inferred | W1 (direct) |
-| phase0_snap | Header | Header | Header |
-| hit_idx | Implicit | Implicit | Implicit |
+| Field | v2.7 fixed packet source |
+|-------|--------------------------|
+| nslow | Hit W0 |
+| nfast_hit | Hit W0 |
+| ns_inf | Hit W1 `ns` |
+| nf_inf | Hit W1 `nf` |
+| stop_phase_disc | Hit W1 `[2:0]` |
+| phase0_snap | Header `[11]` |
+| slow_boundary_inc | Header `[2]` |
+| hit_idx | Implicit packet order |
 
-**All 6D LUT key fields are available in ALL three output modes.**
+All maintained 6D LUT key fields are available in the fixed v2.7 packet.
 
 ### 5.4 Validated nominal baseline (core subset only)
 
@@ -324,7 +328,7 @@ This can be done in software, firmware, or an external FPGA.
 
 ## 8. Recommended CSV schema
 
-Collection schema (15 columns, active RAW_FEATURES/FULL campaign flow):
+Collection schema (15 columns, active fixed-packet campaign flow):
 
 ```csv
 conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits
@@ -383,13 +387,14 @@ python3 scripts/calibration/analyze_fine_grid.py -o results/fine_grid_analysis.p
 3. It preserves multi-hit information instead of collapsing everything to one scalar.
 4. It allows recalibration without changing silicon.
 5. It separates measurement hardware from correction policy.
-6. The Vernier algebra allows full field recovery even in the most compact output mode.
+6. The Vernier algebra allows raw timestamp reconstruction from the fixed compact packet.
 7. The compact packet keeps only observables that still justify their bandwidth cost.
 
 ## 11. Practical recommendation
 
-For serious silicon characterization, collect in `FULL` when you need maximum debug
-richness and in `RAW_FEATURES` when you need deployment-faithful observability.
+For serious silicon characterization, collect the maintained fixed packet and let
+the host/reporting scripts reconstruct derived debug quantities from the
+packet-visible observables.
 
 **Maintained performance baselines:**
 

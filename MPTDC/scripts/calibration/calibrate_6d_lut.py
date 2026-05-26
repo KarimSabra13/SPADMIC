@@ -53,8 +53,8 @@ K_FAST    = NE
 OFFSET    = 25
 QUANT     = 10  # ps per LSB
 
-# LUT key columns.  stop_phase_disc is the packet-visible Hit W1[2:0] field
-# that carries STOP-edge slow_phase[5:3] in RAW_FEATURES/FULL mode.
+# LUT key columns. stop_phase_disc is the packet-visible Hit W1[2:0] field
+# that carries STOP-edge slow_phase[5:3] in the fixed RAW_FEATURES packet.
 LUT_KEY = [
     "ns_inf",
     "nf_inf",
@@ -74,9 +74,9 @@ REQUIRED_COLUMNS = [
     "hit_idx",
 ]
 OPTIONAL_COLUMNS_DEFAULTS = {
-    # v2.7 packet no longer exports slow_boundary_inc.  Missing values are
-    # treated as the high-throughput protocol default; rows that cannot be
-    # inverted without this bit are still dropped and counted after inference.
+    # The maintained v2.7 packet exports slow_boundary_inc in header[2]. Keep a
+    # default for legacy/debug CSVs, but reports must expose when this fallback
+    # was needed because forcing the bit to zero creates rare coarse-step tails.
     "slow_boundary_inc": 0,
 }
 PARSER_ERROR_RE = re.compile(
@@ -343,6 +343,23 @@ def filter_summary(df):
         "defaulted_slow_boundary_inc_files": int(
             df.attrs.get("defaulted_slow_boundary_inc_files", 0)
         ),
+    }
+
+
+def slow_boundary_summary(df):
+    """Summarize the packet-visible slow_boundary_inc column for reports."""
+    if "slow_boundary_inc" not in df.columns:
+        return {"present": False}
+
+    series = df["slow_boundary_inc"].dropna().astype(int)
+    counts = series.value_counts().sort_index()
+    nonzero = int((series != 0).sum())
+    total = int(len(series))
+    return {
+        "present": True,
+        "counts": {str(int(k)): int(v) for k, v in counts.items()},
+        "nonzero_rows": nonzero,
+        "nonzero_pct": float(100.0 * nonzero / total) if total else 0.0,
     }
 
 
@@ -1062,6 +1079,7 @@ def main():
     print(f"  LUT coverage: {(1 - unmatched/len(val_result))*100:.2f}% "
           f"({unmatched} unmatched)")
     val_result = val_result.dropna(subset=["correction"])
+    val_boundary = slow_boundary_summary(val_result)
 
     m_raw = compute_metrics(val_result["raw_error_ps"].values,
                             "Pre-calibration (held-out, core subset)")
@@ -1343,9 +1361,9 @@ def main():
             "hit_idx": "Sequential hit index within conversion (0-based)",
         },
         "output_mode_compatibility": {
-            "RAW_FEATURES (mode 0)": "Fully supported – discriminator and all feature fields available directly",
-            "RAW_TIMESTAMP (mode 1)": "Diagnostic only for this LUT – discriminator is not encoded in timestamp word",
-            "FULL (mode 2)": "Fully supported – discriminator and all feature fields available directly",
+            "RAW_FEATURES (mode 0)": "Maintained fixed packet – discriminator, phase0_snap, and slow_boundary_inc are packet-visible",
+            "RAW_TIMESTAMP (mode 1)": "Legacy CSR code ignored by maintained RTL",
+            "FULL (mode 2)": "Legacy CSR code ignored by maintained RTL",
         },
         "ns_nf_inference": {
             "formula": f"diff = t_raw_ps/10 - (nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET} → unique (ns,nf)",
@@ -1375,6 +1393,7 @@ def main():
             "scope": "Core subset only (nslow > 0); nslow=0 rows excluded for published calibration metrics.",
             "files": val_file_labels,
             "filter_summary": val_filter,
+            "slow_boundary_inc": val_boundary,
             "pre_cal":  m_raw,
             "post_cal": m_cal,
             "error_table": os.path.basename(val_error_csv),
@@ -1412,7 +1431,7 @@ def main():
         f.write(f"Method: Mean-correction Look-Up Table\n")
         f.write(f"Key:    ({', '.join(LUT_KEY)})\n")
         f.write(f"Bins:   {len(lut_df):,}\n")
-        f.write("Mode compatibility: RAW_FEATURES/FULL calibrated; RAW_TIMESTAMP diagnostic\n\n")
+        f.write("Mode compatibility: fixed RAW_FEATURES packet; legacy RAW_TIMESTAMP/FULL CSR codes ignored\n\n")
         f.write(f"Training skipped CSVs: {train_skipped_csv_files}")
         if train_skipped_csv_files:
             f.write(f" (empty={train_skipped_empty_csv_files}, "
@@ -1487,23 +1506,20 @@ def main():
                     f"{r['p90_ae']:>10.3f}  {imp:>8s}\n")
 
         f.write("\n" + "─" * 70 + "\n")
-        f.write("LUT KEY FIELD AVAILABILITY BY OUTPUT MODE\n")
+        f.write("LUT KEY FIELD AVAILABILITY IN THE MAINTAINED V2.7 PACKET\n")
         f.write("─" * 70 + "\n")
-        f.write("  Field           Mode 0    Mode 1    Mode 2\n")
-        f.write("  ─────           ──────    ──────    ──────\n")
-        f.write("  nslow           W0        W0        W0\n")
-        f.write("  nfast_hit       W0        W0        W0\n")
-        f.write("  ns_inf          W1→ns     inferred  W1→ns\n")
-        f.write("  nf_inf          W1→nf     inferred  W1→nf\n")
-        f.write("  stop_phase_disc W1[2:0]   --        W1[2:0]\n")
-        f.write("  phase0_snap     Header    Header    Header\n")
-        f.write("  hit_idx         implicit  implicit  implicit\n")
-        f.write("  slow_bound_inc  Header    Header    Header\n")
-        f.write("  t_raw_ps        (compute) W1        W3\n\n")
-        f.write("  Discriminator-aware LUT fields are packet-visible in RAW_FEATURES/FULL.\n")
-        f.write("  ns/nf inferred in Mode 1 via: diff = t_raw/10 - "
-                f"(nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET}\n")
-        f.write(f"  → maps uniquely to (ns, nf) for all {NE * NE} active 8×8 combinations.\n")
+        f.write("  Field           Packet location\n")
+        f.write("  ─────           ───────────────\n")
+        f.write("  nslow           W0[14:8]\n")
+        f.write("  nfast_hit       W0[7:1]\n")
+        f.write("  ns_inf          W1[14:11]\n")
+        f.write("  nf_inf          W1[10:7]\n")
+        f.write("  stop_phase_disc W1[2:0]\n")
+        f.write("  phase0_snap     Header[11]\n")
+        f.write("  slow_bound_inc  Header[2]\n")
+        f.write("  hit_idx         implicit packet order\n")
+        f.write("  t_raw_ps        recomputed from packet-visible fields\n\n")
+        f.write("  Legacy RAW_TIMESTAMP/FULL CSR codes are ignored by maintained RTL.\n")
 
     print(f"  Text report saved: {txt_path}")
 

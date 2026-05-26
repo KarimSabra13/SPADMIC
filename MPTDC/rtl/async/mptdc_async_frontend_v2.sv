@@ -2,13 +2,13 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
 // File     : mptdc_async_frontend_v2.sv
 // Purpose  : Asynchronous frontend — classic Vernier oscillator control
 //            with double-buffered context management
 // Author   : Karim Sabra
 // =============================================================================
-// v2.2 changes:
+// Active behavior:
 //   - start_rejected_o: pulses when START arrives but is rejected (busy,
 //     no free context, or not armed). Used for real overflow counting in sys_clk.
 //   - start_timeout_async_i: injects a synthetic STOP when slow-domain
@@ -31,7 +31,7 @@ module mptdc_async_frontend_v2
 
   // Clear / release handshake
   input  wire                  fe_clear_async_i,         // clears start+stop latches
-  input  wire                  start_timeout_async_i,    // v2.2: slow-domain wdt force-clear
+  input  wire                  start_timeout_async_i,    // slow-domain watchdog synthetic STOP
   input  wire  [N_CTX-1:0]    ctx_release_async_i,       // per-ctx: drain FSM done
 
   // Capture trigger from meas_ctrl (clk_sys registered output)
@@ -55,7 +55,7 @@ module mptdc_async_frontend_v2
   output logic [N_CTX-1:0]    ctx_drain_o,
   output logic                 all_ctx_busy_o,
 
-  // v2.2: rejected START indicator (for real overflow counting)
+  // Rejected START indicator for overflow counting.
   output logic                 start_rejected_o
 );
 
@@ -188,7 +188,7 @@ module mptdc_async_frontend_v2
   end
 
   // =========================================================================
-  // Output assignments — Classic Vernier oscillator enables (v2.2)
+  // Output assignments — classic Vernier oscillator enables.
   // =========================================================================
   assign start_latched_o      = start_latched_q;
   assign stop_latched_o       = stop_latched_q;

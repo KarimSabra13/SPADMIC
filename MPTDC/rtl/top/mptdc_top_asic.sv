@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
 // File     : mptdc_top_asic.sv
 // Purpose  : Pad-facing ASIC top wrapper — reset entry, input selection, CSR,
 //            and core integration boundary.

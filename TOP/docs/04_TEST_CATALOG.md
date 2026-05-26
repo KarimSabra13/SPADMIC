@@ -5,8 +5,8 @@
 | # | Bench | Block Under Test | Key Checks |
 |---|-------|-------------------|------------|
 | 1 | `tb_spadmic_axis_cluster_scan_unit` | Axis cluster scanner | Single/dual/overflow cluster extraction |
-| 2 | `tb_spadmic_arb_modes` | Unified ARB | Source masks, mode cycling, unsupported RAW_TIMESTAMP mask |
-| 3 | `tb_spadmic_arb_stress` | Unified ARB | 155-word max burst, no interleaving, backpressure, unified tags |
+| 2 | `tb_spadmic_arb_modes` | Unified ARB | Source masks, legacy mode requests masked to fixed packet |
+| 3 | `tb_spadmic_arb_stress` | Unified ARB | 110-word max burst, no interleaving, backpressure, unified tags |
 | 4 | `tb_spadmic_i2c_control_plane_unit` | I2C → CSR bridge | I2C write/read, pointer handling, NACK |
 | 5 | `tb_spadmic_ref_stop_qualifier_hold_unit` | Stop qualifier | Hold timing, qualifier window |
 | 6 | `tb_spadmic_ref_stop_qualifier_unit` | Stop qualifier | Basic qualification, timeout |

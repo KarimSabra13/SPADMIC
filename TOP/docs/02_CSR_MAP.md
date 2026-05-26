@@ -46,7 +46,7 @@ This register holds the **requested** control image, not the live committed imag
 | `[4]` | `req_position_enable` | requested enable for the position block |
 | `[5]` | `req_shared_tx_sel` | with `req_position_enable`, selects `TDC-only`, `position-only`, or `both-active` |
 | `[6]` | `req_tdc_input_sel` | `0 = SPAD`, `1 = CAL` |
-| `[8:7]` | `req_tdc_out_mode` | `0 = RAW_FEATURES`, `1 = RAW_TIMESTAMP`, `2 = FULL` |
+| `[8:7]` | `req_tdc_out_mode` | compatibility field; maintained RTL reads/emits RAW_FEATURES |
 
 ### 2.3 `GLOBAL_STATUS` (`0x00C`)
 
@@ -59,7 +59,7 @@ This register holds the **requested** control image, not the live committed imag
 | `[6]` | `path_idle` | no shared TDC packet, no pending TDC META, no position activity |
 | `[7]` | `active_shared_tx_sel` | live committed export selector (`POSITION` means position-only, `TDC` means TDC-only or both-active depending on `active_position_enable`) |
 | `[8]` | `active_tdc_input_sel` | live committed TDC input source |
-| `[10:9]` | `active_tdc_out_mode` | live committed TDC output mode |
+| `[10:9]` | `active_tdc_out_mode` | live committed compatibility value; fixed to RAW_FEATURES |
 | `[13:11]` | `tdc_pkt_full` | each bit mirrors one axis-local acquisition FIFO full flag |
 | `[14]` | `transition_busy` | sequencer is draining or committing a control transition |
 | `[15]` | `ctrl_apply_pending` | requested image differs from active image |

@@ -21,7 +21,7 @@
 <polygon fill="#f5f3ff" stroke="transparent" points="1.5,-1 1.5,-48 244.5,-48 244.5,-1 1.5,-1"/>
 <text text-anchor="start" x="8.5" y="-33" font-family="DejaVu Sans Mono" font-size="10.00">acq_valid_i[2:0]</text>
 <text text-anchor="start" x="8.5" y="-22" font-family="DejaVu Sans Mono" font-size="10.00">ACQ_REC_META / ACQ_REC_HIT</text>
-<text text-anchor="start" x="11.5" y="-11" font-family="DejaVu Sans Mono" font-size="10.00">RAW_FEATURES or FULL only</text>
+<text text-anchor="start" x="11.5" y="-11" font-family="DejaVu Sans Mono" font-size="10.00">fixed v2.7 feature packet</text>
 <polygon fill="none" stroke="#7c3aed" points="0,0 0,-80 245,-80 245,0 0,0"/>
 </g>
 <!-- adapters -->
@@ -31,8 +31,8 @@
 <polygon fill="#7c3aed" stroke="transparent" points="273.5,-48 273.5,-79 490.5,-79 490.5,-48 273.5,-48"/>
 <text text-anchor="start" x="280.5" y="-61" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="15.00" fill="white">TDC packet adapters x3</text>
 <polygon fill="#f5f3ff" stroke="transparent" points="273.5,-1 273.5,-48 490.5,-48 490.5,-1 273.5,-1"/>
-<text text-anchor="start" x="280.5" y="-33" font-family="DejaVu Sans" font-size="10.00">HEADER</text>
-<text text-anchor="start" x="280.5" y="-22" font-family="DejaVu Sans" font-size="10.00">HIT W0/W1(/W2)</text>
+<text text-anchor="start" x="280.5" y="-33" font-family="DejaVu Sans" font-size="10.00">HEADER[2]=boundary</text>
+<text text-anchor="start" x="280.5" y="-22" font-family="DejaVu Sans" font-size="10.00">HIT W0/W1</text>
 <text text-anchor="start" x="280.5" y="-11" font-family="DejaVu Sans" font-size="10.00">EOC placeholder</text>
 <polygon fill="none" stroke="#7c3aed" points="272,0 272,-80 491,-80 491,0 272,0"/>
 </g>
@@ -92,7 +92,7 @@
 <polygon fill="#eff6ff" stroke="transparent" points="646.5,-130 646.5,-177 874.5,-177 874.5,-130 646.5,-130"/>
 <text text-anchor="start" x="653.5" y="-162" font-family="DejaVu Sans" font-size="10.00">axis_enable</text>
 <text text-anchor="start" x="653.5" y="-151" font-family="DejaVu Sans" font-size="10.00">position_enable</text>
-<text text-anchor="start" x="653.5" y="-140" font-family="DejaVu Sans" font-size="10.00">RAW_TIMESTAMP masked</text>
+<text text-anchor="start" x="653.5" y="-140" font-family="DejaVu Sans" font-size="10.00">legacy modes masked</text>
 <polygon fill="none" stroke="#2563eb" points="645.5,-129 645.5,-209 875.5,-209 875.5,-129 645.5,-129"/>
 </g>
 <!-- mask&#45;&gt;arb -->

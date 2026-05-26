@@ -513,10 +513,10 @@ def axis_wrapper_page() -> Page:
 
 def unified_arb_page() -> Page:
     body = f"""
-    {block_node("tdc_inputs", "3 acquisition-record inputs", theme="tdc", lines=["acq_valid_i[2:0]", "ACQ_REC_META / ACQ_REC_HIT", "RAW_FEATURES or FULL only"], mono=True)}
-    {block_node("adapters", "TDC packet adapters x3", theme="tdc", lines=["HEADER", "HIT W0/W1(/W2)", "EOC placeholder"])}
+    {block_node("tdc_inputs", "3 acquisition-record inputs", theme="tdc", lines=["acq_valid_i[2:0]", "ACQ_REC_META / ACQ_REC_HIT", "fixed v2.7 feature packet"], mono=True)}
+    {block_node("adapters", "TDC packet adapters x3", theme="tdc", lines=["HEADER[2]=boundary", "HIT W0/W1", "EOC placeholder"])}
     {block_node("pos", "Position packet sideband adapter", theme="position", lines=["cluster fixed 8 words", "raw fixed 14 words", "SOP/EOP/source sidebands"])}
-    {block_node("mask", "Registered source masks", theme="control", lines=["axis_enable", "position_enable", "RAW_TIMESTAMP masked"])}
+    {block_node("mask", "Registered source masks", theme="control", lines=["axis_enable", "position_enable", "legacy modes masked"])}
     {block_node("arb", "4-way packet arbiter", theme="egress", lines=["source skids", "registered grant", "lock until EOP"])}
     {block_node("tag", "Unified event tag patch", theme="egress", lines=["single 14-bit rolling tag", "overwrite producer EOC", "increment on FIFO write EOP"])}
     {block_node("fifo", "Output FIFO", theme="control", lines=["256 words", "155-word max burst + margin", "DDR always-ready baseline"])}

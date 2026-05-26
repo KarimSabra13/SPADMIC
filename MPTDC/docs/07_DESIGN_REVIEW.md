@@ -1,7 +1,7 @@
-# MPTDC v2.2 — Design Review 1.0
+# MPTDC v2.7 — Design Review 1.0
 
 > - **Author:** Karim Sabra
-> - **Purpose:** Capture a formal review snapshot of the active MPTDC v2.2 repository before the next phase.
+> - **Purpose:** Capture a formal review snapshot of the active MPTDC v2.7 repository before the next phase.
 > - **Scope:** Evaluates the checked-out RTL, documentation, benches, and rerun evidence at this checkpoint; it is not a frozen release audit.
 
 ## Scope
@@ -145,7 +145,7 @@ That is a good choice.
 | `rtl/ctrl/mptdc_meas_ctrl.sv` | `clk_sys` measurement FSM | Samples held PD image, pipelines row counts, commits raw context, updates metadata, and clears fabric safely | One of the strongest blocks in the repo. The `SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR` sequence is the live ordering. |
 | `rtl/ctrl/mptdc_drain_ctrl.sv` | Sys-domain frozen-context scanner | Converts context snapshot to META/HIT records, releases contexts | Clean split from the frontend. `released_mask` is a good detail. |
 | `rtl/ctrl/mptdc_watchdog.sv` | Global inactivity watchdog | Forces emergency reset if no conversion completes | Simple and acceptable as a safety net. |
-| `rtl/readout/mptdc_narrow16_tx_v2.sv` | 16-bit serializer | Converts FIFO records into RAW_FEATURES / RAW_TIMESTAMP / FULL packets | Packet formatting is coherent and consistent with the package helpers. |
+| `rtl/readout/mptdc_narrow16_tx_v2.sv` | 16-bit serializer | Converts FIFO records into the fixed v2.7 feature packet | Packet formatting is coherent and consistent with the package helpers. |
 | `rtl/readout/mptdc_tconv_reco.sv` | Standalone raw timestamp helper | Compiled but not used in active top | Fine as reference collateral, not part of active silicon path. |
 
 ## What the architecture gets right

@@ -161,7 +161,7 @@ export and should not assume a fast-domain context-bank interface.
 - the selected `tdc_id` is patched into the TDC header:
   - bit `[12]` carries `tdc_id[0]`
   - reserved flag bit `[6]` carries `tdc_id[1]`
-- RAW_FEATURES and FULL are the active ARB TDC modes; RAW_TIMESTAMP is masked
+- the ARB path emits the fixed v2.7 TDC packet; legacy output-mode requests are masked to RAW_FEATURES compatibility
 
 That keeps zero-hit packets self-identifying without paying an extra source-tag word.
 

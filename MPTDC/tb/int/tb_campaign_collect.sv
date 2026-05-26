@@ -5,8 +5,8 @@
 // Project : SPAD_MPTDC Verification Collateral
 // File    : tb_campaign_collect.sv
 // Purpose : Plusarg-configurable data-collection testbench that runs N
-//           conversions with random delays in FULL output mode, collecting
-//           all raw fields and writing one CSV file per run.
+//           conversions with random delays in the fixed v2.7 packet format,
+//           collecting all raw fields and writing one CSV file per run.
 // Author  : Karim Sabra
 // =============================================================================
 `timescale 1ps/1ps
@@ -281,7 +281,7 @@ module tb_campaign_collect;
       dbg_tx_nf_q                     <= u_dut.u_core.u_narrow_tx.nf_q;
       dbg_tx_hit_idx_q                <= u_dut.u_core.u_narrow_tx.hit_idx_q;
       dbg_tx_phase0_q                 <= u_dut.u_core.u_narrow_tx.phase0_snap_q;
-      dbg_tx_boundary_inc_q           <= 1'b0;
+      dbg_tx_boundary_inc_q           <= u_dut.u_core.u_narrow_tx.slow_boundary_inc_q;
       dbg_tx_hit_count_q              <= u_dut.u_core.u_narrow_tx.hit_count_q;
       dbg_tx_state_q                  <= u_dut.u_core.u_narrow_tx.state_q;
     end
@@ -549,118 +549,6 @@ module tb_campaign_collect;
       idx += 2;
     end
 
-    if (hits_found != hdr_hit_count && hdr_hit_count > 0) begin
-      $display("[WARN] Conv %0d: header says %0d hits, parsed %0d",
-               eoc_id, hdr_hit_count, hits_found);
-    end
-  endtask
-
-  // =========================================================================
-  //  Parse FULL-mode packet and write CSV rows
-  // =========================================================================
-  // FULL mode: 3 words per hit (W0-W1 = features, W2 = t_raw_ps[15:0])
-  task automatic parse_and_write_full(
-    input int fd,
-    input int tref_ps,
-    input logic [NARROW_W-1:0] words [$],
-    input int word_count,
-    output int hits_found,
-    output int error_count
-  );
-    int idx;
-    logic [NARROW_W-1:0] w;
-    int hdr_hit_count;
-    int hdr_ctx_id, hdr_phase0, hdr_boundary_inc;
-    tdc_conv_flags_t hdr_flags;
-    int eoc_id;
-
-    tb_hit_features_t hf;
-    int nslow_i, nfast_hit_i, ns_i, nf_i, stop_phase_disc_i;
-    int signed t_raw_ps_i;
-
-    hits_found  = 0;
-    error_count = 0;
-    idx         = 0;
-
-    // ── Validate minimum packet length ──
-    if (word_count < 2) begin
-      $display("[ERR] Packet too short (%0d words)", word_count);
-      error_count++;
-      return;
-    end
-
-    // ── Parse header ──
-    w = words[0];
-    if (!is_header(w)) begin
-      $display("[ERR] First word not header (0x%04x)", w);
-      error_count++;
-      return;
-    end
-    hdr_hit_count    = header_hit_count(w);
-    hdr_ctx_id       = header_ctx_id(w);
-    hdr_phase0       = header_phase0(w);
-    hdr_boundary_inc = header_boundary_inc(w);
-    hdr_flags        = header_flags(w);
-    idx = 1;
-
-    // ── Parse EOC (last word) to get conv_id ──
-    if (is_eoc(words[word_count - 1])) begin
-      eoc_id = eoc_conv_id(words[word_count - 1]);
-    end else begin
-      $display("[WARN] No EOC found at end of packet");
-      eoc_id = -1;
-    end
-
-    // ── Parse hit words (FULL mode: 3 words per hit) ──
-    while (idx + 2 < word_count) begin
-      w = words[idx];
-      if (is_eoc(w)) break;
-      if (w[15]) begin
-        $display("[ERR] Conv %0d word %0d: unexpected marker 0x%04x", eoc_id, idx, w);
-        error_count++;
-        idx++;
-        continue;
-      end
-
-      // Need 3 words for this hit
-      if (idx + 2 >= word_count) break;
-
-      // W0-W1: features (same as RAW_FEATURES)
-      hf = parse_hit_features(words[idx], words[idx+1]);
-      nslow_i      = hf.nslow;
-      nfast_hit_i  = hf.nfast;
-      ns_i         = hf.ns;
-      nf_i         = hf.nf;
-      stop_phase_disc_i = hf.stop_phase_disc;
-
-      // W2: t_raw_ps[15:0] — sign-extend from 16 bits
-      t_raw_ps_i = $signed(words[idx+2]);
-
-      // Write CSV row
-      $fwrite(fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%s\n",
-              eoc_id,                // conv_id
-              hits_found,            // hit_idx (0-based)
-              tref_ps,               // Tref_ps
-              nslow_i,               // nslow
-              nfast_hit_i,           // nfast_hit
-              ns_i,                  // ns
-              nf_i,                  // nf
-              stop_phase_disc_i,      // stop_phase_disc
-              hdr_phase0,            // phase0_snap
-              hdr_boundary_inc,      // slow_boundary_inc
-              hdr_hit_count,         // hit_count
-              hdr_flags,             // flags
-              hdr_ctx_id,            // ctx_id
-              t_raw_ps_i,            // t_raw_ps
-              cfg_mode,              // mode
-              effective_max_hits(),   // max_hits
-              debug_csv_extra());
-
-      hits_found++;
-      idx += 3;
-    end
-
-    // Validate hit count
     if (hits_found != hdr_hit_count && hdr_hit_count > 0) begin
       $display("[WARN] Conv %0d: header says %0d hits, parsed %0d",
                eoc_id, hdr_hit_count, hits_found);

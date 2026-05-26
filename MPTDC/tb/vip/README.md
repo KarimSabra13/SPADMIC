@@ -123,7 +123,7 @@ Configures the DUT's operating mode via CSR writes.
 |-------|-------|-------------|
 | `mode_cfg` | 0–1 | 0=MULTI_HIT, 1=FIRST_HIT |
 | `input_sel` | 0–1 | 0=SPAD, 1=CAL |
-| `out_mode` | 0–2 | 0=RAW_FEATURES, 1=RAW_TIMESTAMP, 2=FULL |
+| `out_mode` | 0–2 | Compatibility stimulus only; RTL emits fixed RAW_FEATURES packet |
 | `max_hits` | 0–15 | Max hits per conversion (0 = reject all) |
 | `wdt_ctx_timeout` | 16-bit | Per-context watchdog (clock cycles) |
 | `wdt_global_timeout` | 16-bit | Global watchdog (clock cycles) |
@@ -143,7 +143,6 @@ Represents one conversion stimulus (START/STOP pulse pair or START-only).
 | `check_firsthit_flag` | 1 = verify firsthit closure flag |
 | `check_watchdog_flag` | 1 = verify watchdog closure flag |
 | `check_conv_id` | 1 = verify conversion ID matches expected |
-| `check_full_timestamp` | 1 = verify timestamp LSW in FULL mode |
 
 ### `mptdc_backpressure_txn` (TXN_BP)
 
@@ -199,10 +198,8 @@ mailbox populated in `mptdc_vip_tb.sv`:
 1. **Wait** for sampled accepted words to appear
 2. **Collect** 16-bit words until a complete packet is assembled
 3. **Detect** header (`[15:13] = 3'b100`) and EOC (`[15:14] = 2'b11`)
-4. **Parse** hits based on `out_mode` from header:
-    - **RAW_FEATURES**: 2 words/hit (`W0` coarse timing, `W1` phase indices)
-    - **RAW_TIMESTAMP**: 2 words/hit (`W0` raw coarse features, `W1` timestamp)
-    - **FULL**: 3 words/hit (RAW_FEATURES `W0-W1` plus timestamp `W2`)
+4. **Parse** hits using the fixed v2.7 packet contract: 2 words/hit
+   (`W0` coarse timing, `W1` phase indices plus `stop_phase_disc`)
 5. **Forward** parsed `mptdc_packet_txn` to scoreboard via mailbox
 
 ---
@@ -217,15 +214,15 @@ The `mptdc_scoreboard` receives:
 
 | Check | Description |
 |-------|-------------|
-| Word count | Must equal `2 + hit_count × words_per_hit(out_mode)` |
+| Word count | Must equal `2 + hit_count × 2` |
 | Hit array size | Decoded hits must match header hit_count |
-| out_mode | Must match configured out_mode |
+| out_mode | Must decode as fixed RAW_FEATURES even when legacy CSR values are requested |
 | Hit count range | If enabled: `min_hits ≤ hit_count ≤ max_hits_allowed` |
 | Firsthit flag | If enabled: `flags.closed_by_firsthit == expected` |
 | Maxhits flag | If enabled: `flags.closed_by_maxhits == expected` |
 | Watchdog flag | If enabled: `flags.closed_by_watchdog == expected` |
 | conv_id | If enabled: EOC conv_id matches expected counter |
-| Timestamp | If enabled: LSW matches vernier calculation |
+| Timestamp | Not checked; maintained packet no longer emits timestamp words |
 
 A test **passes** when `error_count == 0` at completion.
 
@@ -363,7 +360,7 @@ loss-pressure studies can distinguish legal drops from packet corruption.
 | # | Test Name | Packets | Key Validation | Corner Case |
 |---|-----------|---------|----------------|-------------|
 | 1 | `smoke_single_conv` | 1 | hit_count ≥ 1 | Basic end-to-end |
-| 2 | `full_mode_timestamp` | 1 | Timestamp LSW matches | FULL output mode |
+| 2 | `fixed_packet_legacy_mode` | 1 | Fixed packet despite legacy request | Compatibility masking |
 | 3 | `firsthit_contract` | 3 | firsthit_flag = 1 | FIRST_HIT closure |
 | 4 | `backpressure_integrity` | 3 | Packets valid despite stalls | FIFO stress |
 | 5 | `start_watchdog` | 2 | WDT flag toggles | Context watchdog |
@@ -393,17 +390,17 @@ entire datapath from async pulse capture through packet assembly.
 
 ---
 
-#### Test 2: `full_mode_timestamp`
-**Purpose:** Validate FULL output mode with timestamp verification.
+#### Test 2: `fixed_packet_legacy_mode`
+**Purpose:** Validate that legacy output-mode requests do not change the fixed packet.
 
 **Sequence:**
 1. Hard reset
-2. Configure: MULTI_HIT, OUT_MODE_FULL
-3. One conversion: 15 ns delay, timestamp check enabled
-4. Expect: 1–15 hits, timestamp LSW matches vernier calculation
+2. Configure: MULTI_HIT with a legacy output-mode value
+3. One conversion: 15 ns delay
+4. Expect: 1–15 hits in fixed v2.7 format
 
-**Why it matters:** FULL mode is the most data-rich output format.
-Timestamp accuracy is critical for scientific measurements.
+**Why it matters:** Software and legacy tests may still write old encodings,
+but the maintained RTL must keep one packet shape.
 
 ---
 
@@ -486,9 +483,9 @@ detect lost conversion opportunities.
 **Purpose:** Extended random stimulus with mixed delays and backpressure.
 
 **Sequence:**
-1. Configure: OUT_MODE_FULL, MULTI_HIT, RANDOM_50 backpressure
+1. Configure: fixed RAW_FEATURES packet, MULTI_HIT, RANDOM_50 backpressure
 2. Eight conversions with delays 2–22 ns, 5 µs idle between
-3. All require valid timestamps
+3. All require valid fixed feature packets
 
 **Why it matters:** Exercises the widest range of delay bins and
 validates TDC linearity under realistic operating conditions.
@@ -501,7 +498,7 @@ validates TDC linearity under realistic operating conditions.
 **Sequence:**
 1. Configure: MULTI_HIT, RAW_FEATURES
 2. Eight conversions with conv_id check (expect 0–7)
-3. Reconfigure: FIRST_HIT, RAW_TIMESTAMP
+3. Reconfigure: fast-close compatibility path with a legacy output-mode request
 4. Four more conversions (expect conv_id 8–11)
 
 **Why it matters:** The 14-bit conv_id must increment monotonically
@@ -528,7 +525,7 @@ mechanism. It must reset the TDC and report the event.
 **Purpose:** Close CSR/control coverage around readback, `fifo_clr`, and `soft_rst`.
 
 **Sequence:**
-1. Configure: FIRST_HIT, CAL input, FULL output, custom max_hits/watchdogs
+1. Configure: fast-close compatibility path, CAL input, fixed packet, custom max_hits/watchdogs
 2. Force `ALWAYS_STALL` and queue two conversions with `expect_packet=0`
 3. Post-run: read back `MODE`, `MAX_HITS`, watchdog regs, `CONV_COUNT`, `FIFO_STATUS`
 4. Issue `fifo_clear()` and verify FIFO empties and `conv_arm` drops
@@ -544,7 +541,7 @@ mechanism. It must reset the TDC and report the event.
 **Purpose:** Verify `CSR_HIT_COUNT` readback and full pad-reset recovery.
 
 **Sequence:**
-1. Configure: FIRST_HIT, CAL input, RAW_TIMESTAMP, custom max_hits/watchdogs
+1. Configure: fast-close compatibility path, CAL input, fixed packet, custom max_hits/watchdogs
 2. Run one normal conversion and read back `CSR_HIT_COUNT`
 3. Verify `last_hit_count > 0` and `closed_by_firsthit = 1`
 4. Re-arm and inject START-only to observe `STATUS.busy = 1`
@@ -562,7 +559,7 @@ weak spots in the previous coverage hierarchy.
 
 **Sequence:**
 1. Requires plusargs: `+OSC_JITTER_SIGMA_PS=8 +OSC_JITTER_BOUND_PS=24`
-2. Configure: OUT_MODE_FULL
+2. Configure the fixed RAW_FEATURES packet
 3. Six conversions at delays {4, 8, 11, 17, 24, 31} ns
 4. All require valid timestamps with conv_id check
 
@@ -710,7 +707,7 @@ VIP coverage results: 14 passed, 0 failed
 | Test | Runtime | Packets | Key Output |
 |------|---------|---------|------------|
 | smoke_single_conv | <1s | 1 | `[SB] PASS` |
-| full_mode_timestamp | <1s | 1 | `[SB] timestamp check PASS` |
+| full_mode_timestamp | <1s | 1 | legacy FULL request still emits fixed v2.7 packet |
 | firsthit_contract | <1s | 3 | `[SB] firsthit=1` × 3 |
 | backpressure_integrity | ~2s | 3 | Packets valid despite stalls |
 | start_watchdog | ~1s | 2 | `watchdog=1` then `watchdog=0` |
@@ -731,23 +728,14 @@ VIP coverage results: 14 passed, 0 failed
 
 ```
 HEADER  [15:14]=10  [13:12]=ctx_id  [11]=phase0_snap
-        [10:7]=hit_count  [6:3]=flags  [2:1]=out_mode  [0]=slow_boundary_inc
+        [10:7]=hit_count  [6:3]=flags  [2]=slow_boundary_inc  [1:0]=reserved
 
   flags[3]=reserved  [2]=closed_by_fast_maxhit
   flags[1]=closed_by_maxhits  [0]=closed_by_watchdog
 
-  HIT WORDS (per out_mode):
-  RAW_FEATURES (2 words/hit):
+  HIT WORDS (fixed 2 words/hit):
     W0: [14:8]=nslow  [7:1]=nfast_hit
     W1: [14:11]=ns  [10:7]=nf  [6:3]=reserved  [2:0]=stop_phase_disc
-
-  RAW_TIMESTAMP (2 words/hit):
-    W0: same as RAW_FEATURES W0
-    W1: t_raw_lsw[15:0]
-
-  FULL (3 words/hit):
-    W0-W1: same as RAW_FEATURES
-    W2: t_raw_lsw[15:0]
 
 EOC     [15:14]=11  [13:0]=conv_id (14-bit conversion counter)
 ```
@@ -755,11 +743,7 @@ EOC     [15:14]=11  [13:0]=conv_id (14-bit conversion counter)
 ### Total Packet Size
 
 ```
-words = 2 + (hit_count × words_per_hit)
-
-  RAW_FEATURES:  2 + 3 × hits
-  RAW_TIMESTAMP: 2 + 2 × hits
-  FULL:          2 + 4 × hits
+words = 2 + (2 × hit_count)
 ```
 
 ---

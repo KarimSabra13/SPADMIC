@@ -1,4 +1,4 @@
-# MPTDC v2.2 — Verification Guide
+# MPTDC v2.7 — Verification Guide
 
 > - **Author:** Karim Sabra
 > - **Purpose:** Describe the maintained verification, collection, and characterization flows in the current repository.
@@ -131,7 +131,7 @@ Reusable helpers for:
 - CSR reads/writes
 - async START / STOP / CAL injection
 - output-word parsing and packet collection
-- RAW feature extraction and timestamp checks
+- fixed v2.7 feature-packet extraction
 
 ### 3.2 `tb/common/mptdc_raw_monitor.sv`
 
@@ -438,7 +438,7 @@ coverage.
 
 | Block area | Required verification evidence |
 |------------|--------------------------------|
-| `mptdc_pkg` | constant/domain sanity, legal `ns/nf` ranges, helper-function packet/timestamp checks |
+| `mptdc_pkg` | constant/domain sanity, legal `ns/nf` ranges, fixed-packet helper checks |
 | `mptdc_input_mux` | SPAD/CAL selection, disabled/quasi-static select assumptions, reset/readback interaction |
 | `mptdc_reset_sync` | async assert, sync release, recovery after short/long reset pulses |
 | `mptdc_async_frontend_v2` | START acceptance, STOP acceptance, context availability, ignored/rejected starts, held-level behavior |
@@ -450,14 +450,14 @@ coverage.
 | `mptdc_drain_ctrl` | META-first sequencing, HIT count agreement, context release, zero-hit and max-hit scans |
 | `mptdc_sync_fifo` | full/empty, simultaneous read/write, clear/reset, sustained backpressure |
 | `mptdc_csr_minimal` | W/R/W1C/readback, invalid or stale status avoidance, soft reset, `OVF_COUNT`, `CSR_HIT_COUNT` |
-| `mptdc_narrow16_tx_v2` | RAW_FEATURES, RAW_TIMESTAMP, FULL packet lengths, EOC, local `conv_id`, payload parsing by structure |
+| `mptdc_narrow16_tx_v2` | fixed v2.7 packet length, header `slow_boundary_inc`, Hit W1 discriminator, EOC, local `conv_id`, payload parsing by structure |
 | shared-readout export | local serializer bypass, `acq_valid/ready`, META grant assumptions for TOP |
-| `mptdc_top_asic` / `mptdc_core` | complete conversion flow, reset recovery, output modes, jitter robustness, calibration-data integrity |
+| `mptdc_top_asic` / `mptdc_core` | complete conversion flow, reset recovery, fixed output packet compatibility, jitter robustness, calibration-data integrity |
 
 ### 7.2 Golden model and timing tolerance policy
 
 Digital contracts should be checked exactly: CSR state, packet grammar, META/HIT
-sequencing, output mode, hit counts, flags, FIFO behavior, and reset/fault
+sequencing, fixed packet compatibility, hit counts, flags, FIFO behavior, and reset/fault
 status. Timing/timestamp accuracy should use configurable tolerance data loaded
 from calibration or campaign manifests with documented defaults. The test code
 should not hide magic tolerances; any default tolerance must point back to a

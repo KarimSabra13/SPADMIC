@@ -13,7 +13,9 @@
 - `15` maximum hits per conversion
 - a `16-bit` ready/valid output stream
 - an optional acquisition-record export path for shared top-level readout
-- three output modes: `RAW_FEATURES`, `RAW_TIMESTAMP`, and `FULL`
+- one maintained fixed v2.7 packet format; legacy `out_mode` CSR values are
+  retained for software compatibility but the RTL emits the fixed RAW_FEATURES
+  feature packet
 
 The digital RTL is intended to be used with a behavioral oscillator model in simulation and a real current-starved oscillator macro in silicon.
 

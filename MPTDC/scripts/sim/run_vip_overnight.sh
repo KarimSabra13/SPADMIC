@@ -24,7 +24,8 @@
 #             --char-seeds N        Sweep seeds (default 128)
 #             --char-n-conv N       Sweep conversions/seed (default 200000)
 #             --char-config NAME    Campaign config (default multihit_15_cal_nominal)
-#             --char-out-mode NAME  full|raw_features (default full)
+#             --char-out-mode NAME  raw_features (default raw_features;
+#                                   legacy full/2 aliases are mapped downstream)
 #             --char-train-seeds N  Calibration training seeds (default 96)
 #             --char-val-dir DIR    Held-out validation directory
 #             --char-fresh-dir DIR  Fresh validation directory
@@ -65,7 +66,7 @@ VIP_TESTS=()
 CHAR_SEEDS=128
 CHAR_N_CONV=200000
 CHAR_CONFIG="multihit_15_cal_nominal"
-CHAR_OUT_MODE="full"
+CHAR_OUT_MODE="raw_features"
 CHAR_TRAIN_SEEDS=96
 CHAR_VAL_DIR=""
 CHAR_FRESH_DIR=""

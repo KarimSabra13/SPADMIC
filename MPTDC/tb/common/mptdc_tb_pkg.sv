@@ -69,7 +69,7 @@ package mptdc_tb_pkg;
   endfunction
 
   function automatic logic header_boundary_inc(input logic [NARROW_W-1:0] word);
-    return 1'b0;
+    return word[2];
   endfunction
 
   function automatic logic [13:0] eoc_conv_id(

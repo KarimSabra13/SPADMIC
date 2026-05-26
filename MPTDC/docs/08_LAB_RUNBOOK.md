@@ -119,7 +119,7 @@ bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
 
 **Expected output:**
 ```
-=== MPTDC v2.3 TB Runner ===
+=== MPTDC v2.7 TB Runner ===
   Testbench: tb_single_conv
   Simulator: xcelium
   Build dir: .../build/tb_single_conv
@@ -219,13 +219,13 @@ bash scripts/sim/run_vip_test.sh jitter_robustness --sim xrun \
 | Test | Key verification |
 |------|-----------------|
 | `smoke_single_conv` | Single conversion, ≥1 hit, no flags |
-| `full_mode_timestamp` | FULL mode, timestamp vs Vernier algebra |
+| `full_mode_timestamp` | historical test name; verifies a legacy FULL request still emits the fixed v2.7 packet |
 | `firsthit_contract` | fast-close flag set, min 1 hit |
 | `backpressure_integrity` | Packets survive random stalls |
 | `start_watchdog` | START-only → watchdog fires + recovery |
 | `cal_inject` | CAL source produces valid hits |
 | `overflow_status` | Deterministic rejected START / OVF_COUNT / recovery |
-| `long_random` | 8 conversions, random delays, timestamp check |
+| `long_random` | 8 conversions, random delays, fixed-packet integrity |
 | `multi_conv_rearm_stress` | 12 rapid conversions, conv_id tracking |
 | `global_watchdog_recovery` | Global trip counter and recovery |
 | `csr_readback_control` | CSR readback, FIFO clear, soft reset semantics |
@@ -399,15 +399,17 @@ The runner handles Xcelium correctly by launching each seed with its own
 `xcelium.d` library under `build/campaign_xrun/`, so 32-way parallel jobs do
 not contend for one shared Cadence worklib.
 
-**v2.3 CSV note:** `FULL` mode now emits a **19-column** schema:
+**CSV note:** maintained v2.7 campaigns use this fixed packet-visible base
+schema, followed by TB-only debug probe columns when enabled:
 
 ```csv
-conv_id,hit_idx,Tref_ps,nslow,nfast_hit,nfast_snap,nfast_stop,ns,nf,pd_idx,event_seq,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits
+conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,stop_phase_disc,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits,...
 ```
 
-`nfast_stop` is reserved and currently always `0` because the fast oscillator
-starts at `STOP` time in the active architecture. Calibration scripts remain
-backward-compatible with legacy 18-column CSV files.
+`t_raw_ps` is reconstructed from the exported fixed-packet fields, including
+`slow_boundary_inc` from header bit 2. Calibration scripts remain
+backward-compatible with older CSV files, but the report flow should consume the
+v2.7 schema above.
 
 **Runtime:**
 - Smoke: ~2 minutes
@@ -548,7 +550,7 @@ If your Xrun results are materially worse than these baselines, check:
 
 - whether the campaign used the same configuration names (`multihit_15_cal_nominal`, `multihit_15_cal_jitter`)
 - whether the server build picked up the latest `main`
-- whether the CSV schema is the current `RAW_FEATURES`/`FULL` output with `stop_phase_disc`
+- whether the CSV schema is the current fixed-packet output with `stop_phase_disc` and `slow_boundary_inc`
 - whether the calibration script filtered to the same `nslow > 0` core subset
 
 ### Step 6b — Fixed-delay characterization

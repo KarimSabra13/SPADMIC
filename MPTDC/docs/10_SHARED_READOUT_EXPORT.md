@@ -79,7 +79,7 @@ mptdc_acq_rec_t
 | `hit_count` | number of HIT records that follow for this conversion |
 | `flags` | `closed_by_fast_maxhit`, `closed_by_maxhits`, `closed_by_watchdog` |
 | `phase0_snap` | STOP-side phase-0 snapshot |
-| `stop_slow_phase_disc` | STOP-edge `slow_phase[5:3]` discriminator exported in RAW_FEATURES/FULL Hit W1 `[2:0]` |
+| `stop_slow_phase_disc` | STOP-edge `slow_phase[5:3]` discriminator exported in fixed Hit W1 `[2:0]` |
 | `slow_boundary_inc` | STOP-side boundary carry |
 | `ctx_id` | owning context ID |
 
@@ -105,7 +105,7 @@ The contract is therefore:
 - `meta.hit_count` tells the downstream consumer how many HIT records follow
 - no second META may appear for that axis until the current conversion has drained
 
-This is the rule used by `TOP/rtl/spadmic_tdc_shared_readout.sv` to grant only on META and keep the source fixed until packet end.
+This is the rule used by the TOP `spadmic_tdc_packet_adapter` instances and packet arbiter to start each TDC packet on META and keep the source fixed until packet end.
 
 ## 6. Backpressure behavior
 
@@ -129,4 +129,4 @@ The shared-readout export path does **not** change:
 It only changes where packetization happens:
 
 - standalone: inside each `mptdc_core`
-- shared-top flow: after per-axis record arbitration in `spadmic_tdc_shared_readout`
+- shared-top flow: in each per-axis `spadmic_tdc_packet_adapter`, before packet-atomic arbitration

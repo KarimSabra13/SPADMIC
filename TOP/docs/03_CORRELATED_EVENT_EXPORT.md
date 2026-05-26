@@ -101,8 +101,8 @@ This FIFO sits **after** packet arbitration and **after** event-ID tagging. Its 
 The depth is formula-based for the legal maximum concurrent burst:
 
 ```text
-Max_TDC_Packet_Words = 2 + (15 hits * 3 FULL words/hit) = 47
-Max_Burst = (3 * 47) + 14 raw-position words = 155
+Max_TDC_Packet_Words = 2 + (15 hits * 2 fixed words/hit) = 32
+Max_Burst = (3 * 32) + 14 raw-position words = 110
 Chosen power-of-two margin depth = 256
 ```
 

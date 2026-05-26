@@ -133,7 +133,7 @@ Each axis wrapper keeps the analog-facing event side narrow and predictable:
 
 - applies active enable gating
 - converts the async event into a safe STOP pulse on `clk_ref_40m`
-- forwards the selected input/output mode into the preserved TDC kernel
+- forwards the selected input and legacy output-mode compatibility value into the preserved TDC kernel
 - exports acquisition records to the shared top-level readout path
 
 The wrapper exists so the top can optimize area around the TDC kernels without
@@ -158,7 +158,7 @@ The ARB path now serializes each TDC axis locally before central arbitration:
 1. each axis keeps its acquisition FIFO inside the local TDC core
 2. each adapter consumes one META record followed by the advertised HIT records
 3. packets expose internal `valid/ready/data/sop/eop/source_id` sidebands
-4. only RAW_FEATURES and FULL modes are active in the ARB path
+4. the fixed v2.7 packet is active in the ARB path; legacy mode requests are ignored
 
 This removes the old two-level arbitration while keeping packet ownership local
 and easy to backpressure.

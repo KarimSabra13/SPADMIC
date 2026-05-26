@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
 // File     : mptdc_narrow16_tx_v2.sv
 // Purpose  : 16-bit ready/valid serializer — reads from sync FIFO and emits
 //            the fixed calibrated-feature packet.
@@ -16,8 +16,10 @@
 //   N × Hit words — two words per hit
 //   1 × EOC       — end-of-conversion marker with 14-bit running counter
 //
-// v2.7: output mode selection and slow_boundary_inc export are removed from the
-// packet. Hit W1[2:0] carries stop_slow_phase_disc for the calibrated LUT key.
+// v2.7: output mode selection is removed from the packet. Header[2] carries
+// slow_boundary_inc so offline reconstruction does not lose the rare coarse
+// boundary correction. Hit W1[2:0] carries stop_slow_phase_disc for the
+// calibrated LUT key.
 // =============================================================================
 module mptdc_narrow16_tx_v2
   import mptdc_pkg::*;
@@ -59,6 +61,7 @@ module mptdc_narrow16_tx_v2
   ctx_id_t                ctx_id_q;
   logic                   phase0_snap_q;
   stop_phase_disc_t       stop_slow_phase_disc_q;
+  logic                   slow_boundary_inc_q;
   logic [MAX_HITS_W-1:0]  hit_count_q;
   tdc_conv_flags_t        flags_q;
   logic [NSLOW_W-1:0]     nslow_q;
@@ -86,7 +89,7 @@ module mptdc_narrow16_tx_v2
 
   logic [NARROW_W-1:0] header_word;
   // Header: [15:14]=2'b10 (header), [13:12]=ctx_id, [11]=phase0,
-  // [10:7]=hit_count, [6:3]=flags, [2:0]=reserved/read-zero
+  // [10:7]=hit_count, [6:3]=flags, [2]=slow_boundary_inc, [1:0]=reserved
   // ctx_id_q is CTX_W bits (fixed one bit for N_CTX=2) and is padded into the
   // frozen two-bit packet field.
   assign header_word = {2'b10,
@@ -94,7 +97,8 @@ module mptdc_narrow16_tx_v2
                         phase0_snap_q,
                         hit_count_q,
                         flags_q,
-                        3'b000};
+                        slow_boundary_inc_q,
+                        2'b00};
 
   // Hit W0: [15]=0, [14:8]=nslow[6:0], [7:1]=nfast[6:0], [0]=0
   // Bit 15 always 0 to distinguish from header/EOC markers
@@ -133,6 +137,7 @@ module mptdc_narrow16_tx_v2
       ctx_id_q      <= '0;
       phase0_snap_q <= 1'b0;
       stop_slow_phase_disc_q <= '0;
+      slow_boundary_inc_q <= 1'b0;
       hit_count_q   <= '0;
       flags_q       <= '0;
       nslow_q       <= '0;
@@ -147,6 +152,7 @@ module mptdc_narrow16_tx_v2
             ctx_id_q      <= fifo_rd_data_i.meta.ctx_id;
             phase0_snap_q <= fifo_rd_data_i.meta.phase0_snap;
             stop_slow_phase_disc_q <= fifo_rd_data_i.meta.stop_slow_phase_disc;
+            slow_boundary_inc_q <= fifo_rd_data_i.meta.slow_boundary_inc;
             hit_count_q   <= fifo_rd_data_i.meta.hit_count;
             flags_q       <= fifo_rd_data_i.meta.flags;
             nslow_q       <= fifo_rd_data_i.meta.nslow;

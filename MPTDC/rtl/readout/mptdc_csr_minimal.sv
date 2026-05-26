@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
 // File     : mptdc_csr_minimal.sv
 // Purpose  : Minimal CSR register file — offline calibration, no LUTs
 // Author   : Karim Sabra
@@ -21,8 +21,8 @@
 //   0x30  CSR_CONV_COUNT  R   conv_count[31:0]
 //   0x34  CSR_OVF_COUNT   R   ovf_count[15:0]
 //
-// v2.2 changes:
-//   - CSR_WDT_CTX restored (was hardwired to 0 in v2.1)
+// Active behavior:
+//   - CSR_WDT_CTX programs the per-context watchdog timeout.
 // =============================================================================
 
 module mptdc_csr_minimal
@@ -65,7 +65,7 @@ module mptdc_csr_minimal
   // ===========================================================================
   input_sel_e                 r_input_sel;
   logic [MAX_HITS_W-1:0]     r_max_hits;
-  logic [15:0]               r_wdt_ctx_timeout;    // v2.2: restored
+  logic [15:0]               r_wdt_ctx_timeout;
   logic [15:0]               r_wdt_global_timeout;
 
   // Pack cfg output
@@ -73,7 +73,7 @@ module mptdc_csr_minimal
     cfg_o.input_sel          = r_input_sel;
     cfg_o.out_mode           = OUT_MODE_RAW_FEATURES;
     cfg_o.max_hits           = r_max_hits;
-    cfg_o.wdt_ctx_timeout    = r_wdt_ctx_timeout;   // v2.2: restored
+    cfg_o.wdt_ctx_timeout    = r_wdt_ctx_timeout;
     cfg_o.wdt_global_timeout = r_wdt_global_timeout;
   end
 
@@ -90,7 +90,7 @@ module mptdc_csr_minimal
       soft_rst_pulse_o       <= 1'b0;
       r_input_sel            <= INPUT_SPAD;
       r_max_hits             <= MAX_HITS_W'(MAX_HITS);
-      r_wdt_ctx_timeout      <= 16'd0;            // v2.2
+      r_wdt_ctx_timeout      <= 16'd0;
       r_wdt_global_timeout   <= 16'd0;
     end else begin
       // Self-clearing pulses default to zero
@@ -113,7 +113,7 @@ module mptdc_csr_minimal
             r_max_hits <= csr_wdata_i[MAX_HITS_W-1:0];
           end
 
-          CSR_WDT_CTX: begin                        // v2.2: restored
+          CSR_WDT_CTX: begin
             r_wdt_ctx_timeout <= csr_wdata_i[15:0];
           end
 
@@ -157,7 +157,7 @@ module mptdc_csr_minimal
         rd_data_next[MAX_HITS_W-1:0] = r_max_hits;
       end
 
-      CSR_WDT_CTX: begin                              // v2.2: restored
+      CSR_WDT_CTX: begin
         rd_data_next[15:0] = r_wdt_ctx_timeout;
       end
 

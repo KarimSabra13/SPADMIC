@@ -219,7 +219,7 @@ module tb_watchdog_recovery;
     $display("[TB] TEST 2: Recovery after per-context watchdog");
     $display("[TB] ──────────────────────────────────────────────────");
 
-    // v2.2: Reconfigure for normal conversion — max_hits=15 so hits can
+    // Reconfigure for normal conversion — max_hits=15 so hits can
     // close the measurement before the per-context watchdog fires.
     // Also increase wdt_ctx_timeout to avoid accidental watchdog close.
     csr_wr(CSR_MAX_HITS,   {28'd0, 4'(MAX_HITS)});  // 15
@@ -296,7 +296,7 @@ module tb_watchdog_recovery;
         $finish;
       end
 
-      // v2.3: word count
+      // Fixed v2.7 packet word count.
       expected_total = 1 + hc * 2 + 1;
       assert (pkt_word_count == int'(expected_total)) else begin
         $error("[TB] FAIL Test 2: word count %0d != expected %0d",
@@ -318,7 +318,7 @@ module tb_watchdog_recovery;
 
     // Reconfigure: per-context timeout small (fires after synthetic STOP),
     // max_hits disabled so only watchdog can close.
-    // v2.2: Slow-domain START watchdog injects synthetic STOP after ~255 ns.
+    // Slow-domain START watchdog injects synthetic STOP after ~255 ns.
     // Then per-context watchdog in meas_ctrl closes the measurement.
     csr_wr(CSR_MAX_HITS,   32'h0000_0000);       // disabled — only wdt closes
     csr_wr(CSR_WDT_CTX,    32'h0000_0064);       // 100 fast cycles — fires after synthetic STOP
@@ -387,7 +387,7 @@ module tb_watchdog_recovery;
         $finish;
       end
 
-      // v2.3: word count
+      // Fixed v2.7 packet word count.
       expected_total = 1 + hc * 2 + 1;
       assert (pkt_word_count == int'(expected_total)) else begin
         $error("[TB] FAIL Test 3: word count %0d != expected %0d",

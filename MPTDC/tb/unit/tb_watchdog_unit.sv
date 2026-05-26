@@ -65,7 +65,7 @@ module tb_watchdog_unit;
   // ── Main test sequence ────────────────────────────────────────────
   initial begin
     $display("========================================");
-    $display(" tb_watchdog_unit — v2.2 global-only");
+    $display(" tb_watchdog_unit — global watchdog");
     $display("========================================");
 
     // ── Test 1: Global timeout fires ────────────────────────────────

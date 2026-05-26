@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
 // File     : mptdc_core.sv
 // Purpose  : Measurement/readout integration core — ties together the async
 //            frontend, Vernier oscillators, capture path, drain path, FIFO,
@@ -17,7 +17,7 @@
 //   - held PD/counter levels cross into clk_sys through a static-bus capture
 //     bridge before context-bank commit
 //
-// v2.2 review updates:
+// Active design invariants:
 //   - Slow-domain START watchdog: catches STOP-never-arrives
 //   - Global watchdog wdt_force_reset consumed: force-clears frontend
 //   - Overflow counting from start_rejected (real context-allocation overflow)
@@ -90,7 +90,7 @@ module mptdc_core
   ctx_state_e    fe_ctx_state [N_CTX];
   wire [N_CTX-1:0] fe_ctx_drain;
   wire           fe_all_ctx_busy;
-  wire           fe_start_rejected;  // v2.2
+  wire           fe_start_rejected;
 
   // =========================================================================
   //  Internal wires — boundary repair
@@ -121,7 +121,7 @@ module mptdc_core
   // =========================================================================
   wire           meas_capture_en, meas_meta_en, meas_snapshot_en, meas_fe_clear, meas_pd_clear;
   wire           meas_osc_keep_alive;
-  wire           meas_pd_gate;        // v2.2: PD gate for fast-close freeze when max_hits=1
+  wire           meas_pd_gate;        // PD gate for fast-close freeze when max_hits=1
   tdc_conv_flags_t meas_close_flags;
   wire [MAX_HITS_W-1:0] meas_hit_count;
   meas_state_e   meas_state;
@@ -221,7 +221,7 @@ module mptdc_core
   );
 
   // =========================================================================
-  //  v2.2: Slow-domain START watchdog
+  //  Slow-domain START watchdog
   //  Catches STOP-never-arrives: counter in slow_phase[0] domain.
   //  When start_latched is high and stop_latched is low, counts slow cycles.
   //  On saturation, asserts a held synthetic STOP into the frontend.
@@ -254,7 +254,7 @@ module mptdc_core
       start_timeout_latched <= 1'b1;
   end
 
-  // v2.2: Combined force-clear into frontend (global watchdog only — emergency)
+  // Combined force-clear into frontend (global watchdog only — emergency).
   // start_timeout_latched injects a SYNTHETIC STOP (not a clear) to trigger normal
   // measurement flow: meas_ctrl MEASURE → close → capture → drain → packet.
   wire fe_clear_with_wdt = meas_fe_clear | wdt_force_reset;
@@ -292,7 +292,7 @@ module mptdc_core
   end
 
   // =========================================================================
-  //  v2.2: rejected-START event capture for overflow counting
+  //  Rejected-START event capture for overflow counting
   // =========================================================================
   // fe_start_rejected is an async START-width pulse.  A direct clk_sys 2-FF
   // sampler can miss narrow rejected pulses, so first hold a pending level until
@@ -321,7 +321,7 @@ module mptdc_core
   assign start_rejected_pending_clr = rejected_sync_pipe[1];
 
   // =========================================================================
-  //  v2.2: start_latched sync for accurate status reporting
+  //  start_latched sync for accurate status reporting
   // =========================================================================
   (* ASYNC_REG = "TRUE" *)
   logic [1:0] start_sync_pipe;
@@ -360,8 +360,8 @@ module mptdc_core
     .conv_arm_i           (conv_arm_i),
     .start_async_i        (start_async_i),
     .stop_async_i         (stop_async_i),
-    .fe_clear_async_i     (fe_clear_with_wdt),        // v2.2: meas clear + global wdt
-    .start_timeout_async_i(start_timeout_latched),     // v2.2: held synthetic STOP
+    .fe_clear_async_i     (fe_clear_with_wdt),         // meas clear + global watchdog
+    .start_timeout_async_i(start_timeout_latched),     // held synthetic STOP
     .ctx_release_async_i  (drain_ctx_release),
     .capture_en_i         (meas_capture_en),
     .osc_keep_alive_i     (meas_osc_keep_alive),
@@ -374,7 +374,7 @@ module mptdc_core
     .ctx_state_o          (fe_ctx_state),
     .ctx_drain_o          (fe_ctx_drain),
     .all_ctx_busy_o       (fe_all_ctx_busy),
-    .start_rejected_o     (fe_start_rejected)     // v2.2
+    .start_rejected_o     (fe_start_rejected)
   );
 
   // ── Slow oscillator ────────────────────────────────────────────
@@ -490,7 +490,7 @@ module mptdc_core
     .snapshot_en_o    (meas_snapshot_en),
     .fe_clear_o       (meas_fe_clear),
     .pd_clear_o       (meas_pd_clear),
-    .pd_gate_o        (meas_pd_gate),           // v2.2
+    .pd_gate_o        (meas_pd_gate),
     .osc_keep_alive_o (meas_osc_keep_alive),
     .close_flags_o    (meas_close_flags),
     .hit_count_o      (meas_hit_count),
@@ -605,14 +605,14 @@ module mptdc_core
         last_hit_count_r <= ctx_snapshot.hit_count;
         last_flags_r     <= ctx_snapshot.flags;
       end
-      // v2.2: count real rejected START events (context-allocation overflow)
+      // Count real rejected START events (context-allocation overflow).
       if (rejected_sync_pulse)
         ovf_count_r <= ovf_count_r + 16'd1;
     end
   end
 
   // =========================================================================
-  //  Status assembly (v2.2: reflects active measurement state)
+  //  Status assembly reflects active measurement state.
   // =========================================================================
   assign status_o.ready              = conv_arm_i & ~fe_all_ctx_busy
                                      & ~start_latched_sync;

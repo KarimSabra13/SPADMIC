@@ -361,7 +361,7 @@ class spadmic_scoreboard;
       active_tx_sel        = ct.shared_tx_sel;
       active_axis_enable   = ct.axis_enable;
       active_position_enable = ct.position_enable;
-      active_out_mode      = ct.tdc_out_mode;
+      active_out_mode      = OUT_MODE_RAW_FEATURES;
       active_max_hits      = ct.max_hits;
       active_input_sel     = ct.tdc_input_sel;
       $display("[SB] Config update: en=%0b sel=%s pos=%0b mode=%s hits=%0d in=%s",
@@ -411,7 +411,7 @@ class spadmic_scoreboard;
     hdr = (words.size() > 0) ? words[0] : '0;
 `ifdef SPADMIC_ENABLE_FUNC_COV
     if (words.size() > 0)
-      pkt_cov.sample_tdc(source_id[1:0], hdr[10:7], hdr[2:1], hdr[6:3], hdr[0]);
+      pkt_cov.sample_tdc(source_id[1:0], hdr[10:7], OUT_MODE_RAW_FEATURES, hdr[6:3], hdr[2]);
 `endif
     if (source_id == SPADMIC_SRC_POSITION) begin
       check_fail++;

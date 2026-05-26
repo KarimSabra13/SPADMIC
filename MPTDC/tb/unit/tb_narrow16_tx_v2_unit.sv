@@ -73,7 +73,7 @@ module tb_narrow16_tx_v2_unit;
   task automatic push_meta(
     input logic [NSLOW_W-1:0]    nslow,
     input logic [NFAST_W-1:0]    nfast = '0,
-    input logic [NFAST_W-1:0]    nfast_stop = '0,  // v2.3
+    input logic [NFAST_W-1:0]    nfast_stop = '0,
     input logic [MAX_HITS_W-1:0] hit_count,
     input ctx_id_t               ctx_id,
     input logic                  phase0,
@@ -85,7 +85,7 @@ module tb_narrow16_tx_v2_unit;
     rec.kind                    = ACQ_REC_META;
     rec.meta.nslow              = nslow;
     rec.meta.nfast              = nfast;
-    rec.meta.nfast_stop         = nfast_stop;  // v2.3
+    rec.meta.nfast_stop         = nfast_stop;
     rec.meta.hit_count          = hit_count;
     rec.meta.ctx_id             = ctx_id;
     rec.meta.phase0_snap        = phase0;
@@ -226,12 +226,13 @@ module tb_narrow16_tx_v2_unit;
     if (n >= 4) begin
       // Header
       w = pkt[0];
-      check("T1 header marker",   w[15:13] == 3'b100);  // v2.3
+      check("T1 header marker",   w[15:13] == 3'b100);
       check("T1 header ctx_id",   w[13:12] == 2'd0);
       check("T1 header phase0",   w[11]    == 1'b1);
       check("T1 header hit_count",w[10:7]  == 4'd1);
       check("T1 header flags",    w[6:3]   == 4'b0);
-      check("T1 header reserved", w[2:0]   == 3'b000);
+      check("T1 header boundary", w[2]     == 1'b0);
+      check("T1 header reserved", w[1:0]   == 2'b00);
 
       // Hit W0: nslow=10, nfast=5
       w = pkt[1];
@@ -287,7 +288,8 @@ module tb_narrow16_tx_v2_unit;
     @(posedge clk_sys);
 
     push_meta(.nslow(7'd15), .hit_count(4'd2), .ctx_id(1'd0),
-              .phase0(1'b1), .flags(4'b0101), .stop_phase_disc(3'd7));
+              .phase0(1'b1), .flags(4'b0101), .stop_phase_disc(3'd7),
+              .slow_boundary_inc(1'b1));
     push_hit(.ns(4'd1), .nf(4'd2), .nfast(7'd8), .event_seq(4'd0));
     push_hit(.ns(4'd4), .nf(4'd5), .nfast(7'd10), .event_seq(4'd1));
 
@@ -297,12 +299,13 @@ module tb_narrow16_tx_v2_unit;
 
     if (n >= 6) begin
       w = pkt[0];
-      check("T3 header marker",    w[15:13] == 3'b100);  // v2.3
+      check("T3 header marker",    w[15:13] == 3'b100);
       check("T3 header ctx_id",    w[13:12] == 2'd0);
       check("T3 header phase0",    w[11]    == 1'b1);
       check("T3 header hit_count", w[10:7]  == 4'd2);
       check("T3 header flags",     w[6:3]   == 4'b0101);
-      check("T3 header reserved",  w[2:0]   == 3'b000);
+      check("T3 header boundary",  w[2]     == 1'b1);
+      check("T3 header reserved",  w[1:0]   == 2'b00);
 
       // Hit 0 W0
       w = pkt[1];
@@ -349,7 +352,8 @@ module tb_narrow16_tx_v2_unit;
 
     if (n >= 4) begin
       w = pkt[0];
-      check("T4 header reserved", w[2:0] == 3'b000);
+      check("T4 header boundary", w[2]   == 1'b0);
+      check("T4 header reserved", w[1:0] == 2'b00);
       check("T4 header flags",    w[6:3] == 4'b0000);
 
       // W0
@@ -447,7 +451,7 @@ module tb_narrow16_tx_v2_unit;
     end
 
     // ────────────────────────────────────────────────────────────────
-    // TEST 7: Header encoding — reserved bits stay zero even if legacy inputs toggle
+    // TEST 7: Header encoding — boundary bit follows metadata and mode stays ignored
     // ────────────────────────────────────────────────────────────────
     $display("\n--- Test 7: Header encoding ---");
     do_reset();
@@ -466,7 +470,8 @@ module tb_narrow16_tx_v2_unit;
       check("T7 phase0==1",     w[11]    == 1'b1);
       check("T7 hit_count==0",  w[10:7]  == 4'd0);
       check("T7 flags==0010",   w[6:3]   == 4'b0010);
-      check("T7 reserved bits", w[2:0]   == 3'b000);
+      check("T7 boundary bit",  w[2]     == 1'b1);
+      check("T7 reserved bits", w[1:0]   == 2'b00);
     end
 
     // ────────────────────────────────────────────────────────────────

@@ -12,7 +12,8 @@
 #           --delay-max N    Max delay in ps (default 30000)
 #           --seed-start N   First PRNG seed number (default 0)
 #           --configs GLOB   Config name filter glob (default '*')
-#           --out-mode NAME  Serializer mode: full|raw_features (default full)
+#           --out-mode NAME  Serializer mode: raw_features (default raw_features;
+#                            legacy full/2 aliases are accepted and mapped to raw_features)
 #           --jitter-sigma N Override oscillator jitter sigma in ps
 #           --jitter-bound N Override oscillator jitter bound in ps
 #           --out-dir DIR    Output directory (default results/campaign)
@@ -41,8 +42,8 @@ DELAY_MIN=20
 DELAY_MAX=30000
 SEED_START=0
 CONFIG_FILTER="*"
-OUT_MODE="full"
-OUT_MODE_ENUM=2
+OUT_MODE="raw_features"
+OUT_MODE_ENUM=0
 JITTER_SIGMA_OVERRIDE=""
 JITTER_BOUND_OVERRIDE=""
 OUT_DIR="$REPO_ROOT/results/campaign"
@@ -89,7 +90,7 @@ config_output_name() {
   local jb="$3"
   local name="$base_cfg"
 
-  if [[ "$OUT_MODE" != "full" ]]; then
+  if [[ "$OUT_MODE" != "raw_features" ]]; then
     name+="_${OUT_MODE}"
   fi
   if [[ -n "$JITTER_SIGMA_OVERRIDE" || -n "$JITTER_BOUND_OVERRIDE" ]]; then
@@ -133,10 +134,13 @@ case "$SIM" in
 esac
 
 case "$OUT_MODE" in
-  full|2) OUT_MODE="full"; OUT_MODE_ENUM=2 ;;
+  full|2)
+    echo "[WARN] Legacy --out-mode '$OUT_MODE' ignored; using fixed raw_features packet"
+    OUT_MODE="raw_features"; OUT_MODE_ENUM=0
+    ;;
   raw_features|raw|0) OUT_MODE="raw_features"; OUT_MODE_ENUM=0 ;;
   *)
-    echo "[ERROR] Unknown out mode '$OUT_MODE' (use full or raw_features)"
+    echo "[ERROR] Unknown out mode '$OUT_MODE' (use raw_features)"
     exit 1
     ;;
 esac

@@ -31,7 +31,7 @@ run_test() {
 }
 
 echo "============================================"
-echo "  MPTDC v2.3 Smoke Test Suite"
+echo "  MPTDC v2.7 Smoke Test Suite"
 echo "============================================"
 echo ""
 

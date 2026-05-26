@@ -82,7 +82,7 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 | `spadmic_top_sequencer` | `rtl/spadmic_top_sequencer.sv` | Active-image commit sequencer |
 | `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | Per-axis wrapper around stop qualification and `mptdc_top_asic` |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | One-shot qualified STOP pulse generator |
-| `spadmic_tdc_packet_adapter` | `../arb/rtl/spadmic_tdc_packet_adapter.sv` | Per-axis acquisition-record serializer for RAW_FEATURES/FULL packets |
+| `spadmic_tdc_packet_adapter` | `../arb/rtl/spadmic_tdc_packet_adapter.sv` | Per-axis acquisition-record serializer for the fixed v2.7 TDC packet |
 | `spadmic_packet_arbiter4` | `../arb/rtl/spadmic_packet_arbiter4.sv` | Four-source packet-atomic masked round-robin arbiter |
 | `spadmic_position_block` | `../position/rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
 | `spadmic_axis_cluster_scan` | `../position/rtl/spadmic_axis_cluster_scan.sv` | Five-cycle pipelined per-axis cluster scanner with overflow flag |

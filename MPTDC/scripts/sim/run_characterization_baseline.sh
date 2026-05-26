@@ -8,8 +8,9 @@
 #           --seeds N             Seeds in the broad sweep campaign (default 30)
 #           --n-conv N            Conversions per seed/job (default 100000)
 #           --config NAME         Campaign config (default multihit_15_cal_nominal)
-#           --out-mode NAME       full|raw_features (default full)
-#           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_full)
+#           --out-mode NAME       raw_features (default raw_features;
+#                                 legacy full/2 aliases are mapped to raw_features)
+#           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_raw_features)
 #           --analyze             Run sweep analysis + fine-grid report, including
 #                                 raw tuple histograms/code-density CSVs and plots
 #           --calibrate           Run maintained 6D LUT calibration after collection,
@@ -38,8 +39,8 @@ JOBS=12
 SEEDS=30
 N_CONV=100000
 CONFIG="multihit_15_cal_nominal"
-OUT_MODE="full"
-OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_full"
+OUT_MODE="raw_features"
+OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_raw_features"
 ANALYZE=0
 CALIBRATE=0
 TRAIN_SEEDS=24
@@ -92,7 +93,7 @@ config_output_name() {
   local jb="$3"
   local name="$base_cfg"
 
-  if [[ "$OUT_MODE" != "full" ]]; then
+  if [[ "$OUT_MODE" != "raw_features" ]]; then
     name+="_${OUT_MODE}"
   fi
   if [[ -n "$JITTER_SIGMA" || -n "$JITTER_BOUND" ]]; then
@@ -153,6 +154,18 @@ if [[ -z "$JITTER_SIGMA" && -n "$JITTER_BOUND" ]]; then
   echo "[ERROR] --jitter-bound requires --jitter-sigma"
   exit 1
 fi
+
+case "$OUT_MODE" in
+  full|2)
+    echo "[WARN] Legacy --out-mode '$OUT_MODE' ignored; using fixed raw_features packet"
+    OUT_MODE="raw_features"
+    ;;
+  raw_features|raw|0) OUT_MODE="raw_features" ;;
+  *)
+    echo "[ERROR] Unknown out mode '$OUT_MODE' (use raw_features)"
+    exit 1
+    ;;
+esac
 
 # The ECO discriminator is part of the calibration key. Older default fresh
 # validation directories may predate the stop_phase_disc column, so only use a

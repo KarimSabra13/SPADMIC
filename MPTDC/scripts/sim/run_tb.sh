@@ -84,7 +84,7 @@ TB_COMMON=(
 TB_BUILD="$BUILD_DIR/$TB_NAME"
 mkdir -p "$TB_BUILD"
 
-echo "=== MPTDC v2.3 TB Runner ==="
+echo "=== MPTDC v2.7 TB Runner ==="
 echo "  Testbench: $TB_NAME"
 echo "  Simulator: $SIM"
 echo "  Build dir: $TB_BUILD"

@@ -10,7 +10,8 @@
 #           --n-conv N         Conversions per seed (default 2000)
 #           --seed-start N     First PRNG seed number (default 0)
 #           --configs GLOB     Config filter passed to run_campaign.sh
-#           --out-mode NAME    Serializer mode: full|raw_features (default full)
+#           --out-mode NAME    Serializer mode: raw_features (default raw_features;
+#                              legacy full/2 aliases are mapped downstream)
 #           --delay-list LIST  Comma/space-separated delays in ps
 #           --out-dir DIR      Output directory (default results/fixed_delay_campaign)
 #           --jitter-sigma N   Override oscillator jitter sigma in ps
@@ -31,7 +32,7 @@ SEEDS=6
 N_CONV=2000
 SEED_START=0
 CONFIG_FILTER="multihit_15_cal_nominal"
-OUT_MODE="full"
+OUT_MODE="raw_features"
 OUT_DIR="$REPO_ROOT/results/fixed_delay_campaign"
 DELAY_LIST="20,50,100,200,500,1000,2000,5000,10000,30000"
 JITTER_SIGMA_OVERRIDE=""

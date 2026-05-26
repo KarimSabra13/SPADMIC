@@ -1,4 +1,4 @@
-# MPTDC v2.2 — CSR Register Map and Usage
+# MPTDC v2.7 — CSR Register Map and Usage
 
 > - **Author:** Karim Sabra
 > - **Purpose:** Document the active CSR block, register semantics, and expected control/status behavior.
@@ -72,12 +72,14 @@ Recommended usage:
 ```text
 bit 0    reserved   read-as-zero / ignored on write in the active v2.4 RTL
 bit 1    input_sel  0 = SPAD inputs, 1 = CAL inputs
-bit 3:2  out_mode   0 = RAW_FEATURES, 1 = RAW_TIMESTAMP, 2 = FULL
+bit 3:2  out_mode   compatibility field; maintained RTL reads/emits RAW_FEATURES
 ```
 
 Usage rule:
 
-Do not change `input_sel` or `out_mode` while a conversion is active. The RTL assumes these fields are quasi-static during measurement.
+Do not change `input_sel` while a conversion is active. The `out_mode` field is
+retained for legacy software compatibility, but the maintained v2.7 packet path
+ignores writes and emits the fixed RAW_FEATURES feature packet.
 If you want the minimum-latency fast-close behavior that older collateral called `FIRST_HIT`, use `MAX_HITS = 1`.
 
 ### 3.3 `MAX_HITS` (`0x08`)

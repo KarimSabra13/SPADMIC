@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
 // File     : mptdc_drain_ctrl.sv
 // Purpose  : System-clock drain/readout controller — reads static context bank
 //            data, generates acquisition records, and manages context release.
@@ -138,12 +138,12 @@ module mptdc_drain_ctrl
     meta_rec.kind               = ACQ_REC_META;
     meta_rec.meta.nslow         = snapshot_i.nslow_snap;
     meta_rec.meta.nfast         = snapshot_i.nfast_snap;
-    meta_rec.meta.nfast_stop    = snapshot_i.nfast_stop;    // v2.3
+    meta_rec.meta.nfast_stop    = snapshot_i.nfast_stop;
     meta_rec.meta.hit_count     = snapshot_i.hit_count;
     meta_rec.meta.flags         = snapshot_i.flags;
     meta_rec.meta.phase0_snap   = snapshot_i.phase0_snap;
     meta_rec.meta.stop_slow_phase_disc = snapshot_i.stop_slow_phase_disc;
-    meta_rec.meta.slow_boundary_inc = snapshot_i.slow_boundary_inc; // v2.2
+    meta_rec.meta.slow_boundary_inc = snapshot_i.slow_boundary_inc;
     meta_rec.meta.ctx_id        = drain_ctx_q;
   end
 

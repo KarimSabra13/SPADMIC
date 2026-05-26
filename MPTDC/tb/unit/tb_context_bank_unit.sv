@@ -80,7 +80,7 @@ module tb_context_bank_unit;
     capture_snapshot.nfast_hit_packed   = nfp;
     capture_snapshot.nslow_snap         = ns;
     capture_snapshot.nfast_snap         = nf;
-    capture_snapshot.nfast_stop         = nf;  // v2.3: drive nfast_stop same as nfast for unit test
+    capture_snapshot.nfast_stop         = nf;  // unit test uses the same fast count for capture and STOP
     capture_snapshot.phase0_snap        = ph0;
     capture_snapshot.slow_boundary_inc  = binc;
     hit_count                           = hc;

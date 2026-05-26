@@ -43,6 +43,7 @@ module spadmic_tdc_packet_adapter #(
   ctx_id_t               ctx_id_q;
   logic                  phase0_snap_q;
   stop_phase_disc_t      stop_slow_phase_disc_q;
+  logic                  slow_boundary_inc_q;
   logic [MAX_HITS_W-1:0] hit_count_q;
   tdc_conv_flags_t       flags_q;
   logic [NSLOW_W-1:0]    nslow_q;
@@ -70,7 +71,8 @@ module spadmic_tdc_packet_adapter #(
                             phase0_snap_q,
                             hit_count_q,
                             flags_q,
-                            3'b000};
+                            slow_boundary_inc_q,
+                            2'b00};
   assign header_word = patch_tdc_id_into_header(header_word_raw, spadmic_tdc_id_e'(SOURCE_ID));
   assign hit_w0      = {1'b0, nslow_q[6:0], nfast_q[6:0], 1'b0};
   assign hit_w1_feat = {1'b0, 4'(ns_q), 4'(nf_q), 4'b0, stop_slow_phase_disc_q};
@@ -126,6 +128,7 @@ module spadmic_tdc_packet_adapter #(
       ctx_id_q                 <= '0;
       phase0_snap_q            <= 1'b0;
       stop_slow_phase_disc_q   <= '0;
+      slow_boundary_inc_q      <= 1'b0;
       hit_count_q              <= '0;
       flags_q                  <= '0;
       nslow_q                  <= '0;
@@ -140,6 +143,7 @@ module spadmic_tdc_packet_adapter #(
             ctx_id_q               <= acq_rec.meta.ctx_id;
             phase0_snap_q          <= acq_rec.meta.phase0_snap;
             stop_slow_phase_disc_q <= acq_rec.meta.stop_slow_phase_disc;
+            slow_boundary_inc_q    <= acq_rec.meta.slow_boundary_inc;
             hit_count_q            <= acq_rec.meta.hit_count;
             flags_q                <= acq_rec.meta.flags;
             nslow_q                <= acq_rec.meta.nslow;

@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
+// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
 // File     : mptdc_watchdog.sv
 // Purpose  : System-domain watchdog — raises a one-cycle force-clear pulse if
 //            conversions stop completing within the programmed timeout window.

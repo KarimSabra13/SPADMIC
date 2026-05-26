@@ -320,7 +320,6 @@ package mptdc_char_tb_pkg;
     logic [NARROW_W-1:0] word_last;
     logic [NARROW_W-1:0] word_idx;
     logic [NARROW_W-1:0] word_idx1;
-    logic [NARROW_W-1:0] word_idx2;
     tb_hit_features_t hf;
     begin
       hits_found = 0;
@@ -369,15 +368,9 @@ package mptdc_char_tb_pkg;
         nf_i = hf.nf;
         stop_phase_disc_i = hf.stop_phase_disc;
 
-        if (out_mode == int'(OUT_MODE_FULL) && (idx + 2 < word_count)) begin
-          word_idx2 = words_flat[(idx + 2)*NARROW_W +: NARROW_W];
-          t_raw_ps_i = $signed(word_idx2);
-          idx += 3;
-        end else begin
-          t_raw_ps_i = vernier_tconv_ps(hf.nslow, hf.nfast, hf.ns, hf.nf,
-                                        logic'(hdr_boundary_inc));
-          idx += 2;
-        end
+        t_raw_ps_i = vernier_tconv_ps(hf.nslow, hf.nfast, hf.ns, hf.nf,
+                                      logic'(hdr_boundary_inc));
+        idx += 2;
 
         tuple_code_i = char_tuple_code(nslow_i, nfast_hit_i, ns_i, nf_i,
                                        hdr_boundary_inc);

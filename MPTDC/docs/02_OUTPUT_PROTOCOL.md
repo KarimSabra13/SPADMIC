@@ -34,7 +34,8 @@ All hit payload words have `word[15]=0`; receivers should still parse by packet 
 [11]    phase0_snap       = STOP-side snapshot of slow phase 0
 [10:7]  hit_count         = number of hits carried in this packet
 [6:3]   flags             = close reason flags
-[2:0]   reserved          = 3'b000
+[2]     slow_boundary_inc = STOP boundary coarse-count correction
+[1:0]   reserved          = 2'b00
 ```
 
 ### 3.1 Flag semantics
@@ -105,11 +106,11 @@ The removed fields are recovered as follows when needed offline:
 - `hit_idx` remains implicit from packet order
 - `event_seq` is intentionally not exported; scan order is no longer a live packet field
 
-## 5. Removed legacy modes and boundary bit
+## 5. Removed legacy modes and retained boundary bit
 
 `RAW_TIMESTAMP` and `FULL` are no longer emitted by the maintained RTL. Legacy CSR or wrapper fields that still carry an `out_mode` type are hardwired/ignored and read back as `OUT_MODE_RAW_FEATURES`.
 
-`slow_boundary_inc` is no longer exported in the header. The final ablation showed unchanged matched-row RMSE when inference is performed without it, but about `0.123 %` of validation rows become non-inferable. Host calibration flows must therefore report effective coverage and mark/drop rows that fail `ns/nf` inference rather than hiding them in RMSE.
+`slow_boundary_inc` remains exported as a single conversion-level header bit. A v2.7 ablation showed that removing it leaves the matched-row RMSE nearly unchanged, but about `0.123 %` of validation rows become ambiguous. If the host reconstructs the raw timestamp with this bit forced to zero, those rare rows form an error tail close to one slow coarse step. Keeping the bit in `header[2]` preserves the two-word-per-hit throughput while restoring all-row calibration quality.
 
 ## 6. EOC word
 
@@ -140,7 +141,7 @@ Important distinction:
 4. Consume the expected number of hit words.
 5. Expect one EOC word at the end.
 
-Do not decode `header[2:0]` as functional payload; these bits are reserved/read-zero.
+Decode `header[2]` as `slow_boundary_inc`. Treat `header[1:0]` as reserved/read-zero.
 
 ## 9. Recommended operating usage
 

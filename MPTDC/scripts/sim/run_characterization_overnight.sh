@@ -200,7 +200,7 @@ stage_plusargs() {
         "+CHAR_REPEATS=${BOUNDARY_REPEATS}" \
         "+CHAR_MAX_HITS=15" \
         "+CHAR_INPUT_SEL=1" \
-        "+CHAR_OUT_MODE=2"
+        "+CHAR_OUT_MODE=0"
       ;;
     context_overflow)
       printf '%s\n' \

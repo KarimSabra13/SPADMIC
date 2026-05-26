@@ -161,7 +161,7 @@ Implementation:
 
 | File | Purpose |
 |------|---------|
-| `spadmic_tdc_packet_adapter.sv` | Per-axis META/HIT serializer for active ARB TDC modes |
+| `spadmic_tdc_packet_adapter.sv` | Per-axis META/HIT serializer for the fixed v2.7 TDC packet |
 | `spadmic_position_packet_adapter.sv` | SOP/EOP/source sideband adapter for position packets |
 | `spadmic_packet_arbiter4.sv` | Masked packet-atomic four-source arbiter with source skids |
 | `spadmic_correlated_tx.sv` | Active correlated packet arbiter, unified event tagger, and output FIFO |
@@ -186,8 +186,8 @@ Implementation:
 
 | File | Purpose |
 |------|---------|
-| `tb_spadmic_arb_modes.sv` | ARB source-mask, mode, and unsupported RAW_TIMESTAMP coverage |
-| `tb_spadmic_arb_stress.sv` | Max legal 155-word concurrent burst and backpressure stress |
+| `tb_spadmic_arb_modes.sv` | ARB source-mask and legacy-mode masking coverage |
+| `tb_spadmic_arb_stress.sv` | Max legal 110-word concurrent burst and backpressure stress |
 
 ## Known assumptions / TBDs
 

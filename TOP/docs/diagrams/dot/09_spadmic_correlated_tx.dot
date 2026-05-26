@@ -30,13 +30,13 @@ digraph G {
     tdc_inputs [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
       <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>3 acquisition-record inputs</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>acq_valid_i[2:0]<BR ALIGN='LEFT'/>ACQ_REC_META / ACQ_REC_HIT<BR ALIGN='LEFT'/>RAW_FEATURES or FULL only</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans Mono' POINT-SIZE='10'>acq_valid_i[2:0]<BR ALIGN='LEFT'/>ACQ_REC_META / ACQ_REC_HIT<BR ALIGN='LEFT'/>fixed v2.7 feature packet</FONT></TD></TR>
     </TABLE>
     >];
     adapters [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#7C3AED" BGCOLOR="#F5F3FF">
       <TR><TD BGCOLOR="#7C3AED" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>TDC packet adapters x3</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>HEADER<BR ALIGN='LEFT'/>HIT W0/W1(/W2)<BR ALIGN='LEFT'/>EOC placeholder</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#F5F3FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>HEADER[2]=boundary<BR ALIGN='LEFT'/>HIT W0/W1<BR ALIGN='LEFT'/>EOC placeholder</FONT></TD></TR>
     </TABLE>
     >];
     pos [shape=plain margin=0 label=<
@@ -48,7 +48,7 @@ digraph G {
     mask [shape=plain margin=0 label=<
     <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#2563EB" BGCOLOR="#EFF6FF">
       <TR><TD BGCOLOR="#2563EB" ALIGN="CENTER"><FONT COLOR="white" POINT-SIZE="15"><B>Registered source masks</B></FONT></TD></TR>
-      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>axis_enable<BR ALIGN='LEFT'/>position_enable<BR ALIGN='LEFT'/>RAW_TIMESTAMP masked</FONT></TD></TR>
+      <TR><TD ALIGN='LEFT' BGCOLOR='#EFF6FF'><FONT FACE='DejaVu Sans' POINT-SIZE='10'>axis_enable<BR ALIGN='LEFT'/>position_enable<BR ALIGN='LEFT'/>legacy modes masked</FONT></TD></TR>
     </TABLE>
     >];
     arb [shape=plain margin=0 label=<

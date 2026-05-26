@@ -68,20 +68,10 @@ package mptdc_vip_pkg;
     return vip_mode_t'(MODE_MULTI_HIT);
   endfunction
 
-  // These helpers decode the exact narrow packet format observed on the
-  // wire so the monitor and scoreboard stay anchored to the DUT contract.
+  // These helpers decode the exact v2.7 narrow packet observed on the wire
+  // so the monitor and scoreboard stay anchored to the DUT contract.
   function automatic bit is_header_word(input logic [NARROW_W-1:0] word);
-    return word[15:13] == 3'b100;  // v2.3: distinguish from sub-header
-  endfunction
-
-  function automatic bit is_subheader_word(input logic [NARROW_W-1:0] word);
-    return word[15:13] == 3'b101;  // v2.3: sub-header marker
-  endfunction
-
-  function automatic logic [NFAST_W-1:0] subheader_nfast_stop_vip(
-    input logic [NARROW_W-1:0] word
-  );
-    return word[12:6];
+    return word[15:13] == 3'b100;
   endfunction
 
   function automatic bit is_eoc_word(input logic [NARROW_W-1:0] word);
@@ -109,7 +99,7 @@ package mptdc_vip_pkg;
   endfunction
 
   function automatic bit packet_boundary_inc(input logic [NARROW_W-1:0] word);
-    return 1'b0;
+    return word[2];
   endfunction
 
   function automatic logic [13:0] packet_conv_id(input logic [NARROW_W-1:0] word);
@@ -300,7 +290,6 @@ package mptdc_vip_pkg;
     bit         check_watchdog_flag;
     bit         expected_watchdog_flag;
     bit         check_out_mode;
-    bit         check_full_timestamp;
     bit         check_conv_id;
     int         expected_conv_id;
 
@@ -342,7 +331,6 @@ package mptdc_vip_pkg;
       check_watchdog_flag     = 1'b0;
       expected_watchdog_flag  = 1'b0;
       check_out_mode          = 1'b1;
-      check_full_timestamp    = 1'b0;
       check_conv_id           = 1'b0;
       expected_conv_id        = 0;
       cfg_mode                = MODE_MULTI_HIT;
@@ -384,7 +372,6 @@ package mptdc_vip_pkg;
       c.check_watchdog_flag    = check_watchdog_flag;
       c.expected_watchdog_flag = expected_watchdog_flag;
       c.check_out_mode         = check_out_mode;
-      c.check_full_timestamp   = check_full_timestamp;
       c.check_conv_id          = check_conv_id;
       c.expected_conv_id       = expected_conv_id;
       c.cfg_mode               = cfg_mode;
@@ -411,34 +398,24 @@ package mptdc_vip_pkg;
   class mptdc_hit_txn;
     logic [NSLOW_W-1:0]     nslow;
     logic [NFAST_W-1:0]     nfast_hit;
-    logic [NFAST_W-1:0]     nfast_snap;
     ph_idx_t                ns;
     ph_idx_t                nf;
     stop_phase_disc_t       stop_phase_disc;
-    pd_idx_t                pd_idx;
-    logic [EVENT_SEQ_W-1:0] event_seq;
-    logic [15:0]            t_raw_lsw;
     bit                     has_features;
-    bit                     has_timestamp;
 
     function new();
       nslow         = '0;
       nfast_hit     = '0;
-      nfast_snap    = '0;
       ns            = '0;
       nf            = '0;
       stop_phase_disc = '0;
-      pd_idx        = '0;
-      event_seq     = '0;
-      t_raw_lsw     = '0;
       has_features  = 1'b0;
-      has_timestamp = 1'b0;
     endfunction
 
     function string sprint();
-      return $sformatf("hit nslow=%0d nfast=%0d ns=%0d nf=%0d stop_disc=%0d ts_lsw=0x%04h feat=%0b ts=%0b",
+      return $sformatf("hit nslow=%0d nfast=%0d ns=%0d nf=%0d stop_disc=%0d feat=%0b",
                        nslow, nfast_hit, ns, nf,
-                       stop_phase_disc, t_raw_lsw, has_features, has_timestamp);
+                       stop_phase_disc, has_features);
     endfunction
   endclass
 
@@ -662,8 +639,8 @@ package mptdc_vip_pkg;
       cp_src:  coverpoint src_i  { bins spad = {INPUT_SPAD}; bins cal = {INPUT_CAL}; }
       cp_out:  coverpoint out_mode_i {
         bins raw_features  = {OUT_MODE_RAW_FEATURES};
-        bins raw_timestamp = {OUT_MODE_RAW_TIMESTAMP};
-        bins full          = {OUT_MODE_FULL};
+        bins legacy_raw_timestamp_request = {OUT_MODE_RAW_TIMESTAMP};
+        bins legacy_full_request          = {OUT_MODE_FULL};
       }
       cp_bp: coverpoint bp_mode_i {
         bins rdy   = {BP_ALWAYS_READY};
@@ -726,9 +703,7 @@ package mptdc_vip_pkg;
                                             int ctx_id_i);
       option.per_instance = 1;
       cp_out: coverpoint out_mode_i {
-        bins raw_features  = {OUT_MODE_RAW_FEATURES};
-        bins raw_timestamp = {OUT_MODE_RAW_TIMESTAMP};
-        bins full          = {OUT_MODE_FULL};
+        bins fixed_raw_features = {OUT_MODE_RAW_FEATURES};
       }
       cp_hits: coverpoint hit_count_i {
         bins zero     = {0};
@@ -1074,8 +1049,7 @@ package mptdc_vip_pkg;
       word = '0;
     endtask
 
-    // Expand the accepted narrow words into typed hit records using the
-    // header-declared out_mode and hit_count contract.
+    // Expand the accepted v2.7 narrow words into typed hit records.
     function automatic void parse_packet(ref mptdc_packet_txn pkt);
       logic [NARROW_W-1:0] hdr;
       int unsigned         idx;
@@ -1170,25 +1144,6 @@ package mptdc_vip_pkg;
       $error("[VIP][SB] %s", msg);
     endfunction
 
-    function automatic void check_full_timestamp(input mptdc_packet_txn pkt);
-      foreach (pkt.hits[i]) begin
-        logic signed [31:0] expected_ps;
-        logic [15:0]        expected_lsw;
-        if (pkt.hits[i].has_features && pkt.hits[i].has_timestamp) begin
-          expected_ps  = vernier_tconv_ps(pkt.hits[i].nslow,
-                                          pkt.hits[i].nfast_hit,
-                                          pkt.hits[i].ns,
-                                          pkt.hits[i].nf,
-                                          pkt.slow_boundary_inc);
-          expected_lsw = expected_ps[15:0];
-          if (pkt.hits[i].t_raw_lsw !== expected_lsw) begin
-            fail($sformatf("FULL timestamp mismatch hit %0d: expected 0x%04h got 0x%04h",
-                           i, expected_lsw, pkt.hits[i].t_raw_lsw));
-          end
-        end
-      end
-    endfunction
-
     // Check contract-level packet semantics only; analog performance trends
     // belong in the dedicated data-collection benches, not the VIP scoreboard.
     function automatic void check_packet(input mptdc_conv_txn exp,
@@ -1231,9 +1186,6 @@ package mptdc_vip_pkg;
       if (exp.check_conv_id && (int'(pkt.conv_id) != exp.expected_conv_id))
         fail($sformatf("%s conv_id mismatch: got=%0d expected=%0d",
                        exp.label, pkt.conv_id, exp.expected_conv_id));
-
-      if (exp.check_full_timestamp && (pkt.out_mode == OUT_MODE_FULL))
-        check_full_timestamp(pkt);
 
       cov.sample_packet(pkt);
       $display("[VIP][SB] PASS %s -> %s", exp.sprint(), pkt.sprint());
@@ -1395,7 +1347,7 @@ package mptdc_vip_pkg;
     endfunction
   endclass
 
-  class mptdc_full_mode_timestamp_test extends mptdc_base_test;
+  class mptdc_legacy_full_mode_packet_test extends mptdc_base_test;
     function new();
       super.new("full_mode_timestamp");
     endfunction
@@ -1404,15 +1356,14 @@ package mptdc_vip_pkg;
       mptdc_cfg_txn  cfg_txn;
       mptdc_conv_txn conv;
       gen.add(make_reset());
-      cfg_txn = make_cfg("cfg_full");
+      cfg_txn = make_cfg("cfg_legacy_full");
       cfg_txn.out_mode = OUT_MODE_FULL;
       gen.add(cfg_txn);
       gen.add(make_bp("bp_ready", BP_ALWAYS_READY, cfg.random_seed));
-      conv = make_conv("conv_full");
+      conv = make_conv("conv_fixed_from_legacy_full");
       conv.start_stop_delay_ps  = 15_000;
       conv.require_nonzero_hits = 1'b1;
       conv.min_hits             = 1;
-      conv.check_full_timestamp = 1'b1;
       gen.add(conv);
     endfunction
   endclass
@@ -1652,7 +1603,6 @@ package mptdc_vip_pkg;
         conv.idle_after_ps       = 5_000_000;
         conv.require_nonzero_hits = 1'b1;
         conv.min_hits             = 1;
-        conv.check_full_timestamp = 1'b1;
         gen.add(conv);
       end
       gen.add(make_bp("bp_ready_done", BP_ALWAYS_READY, cfg.random_seed));
@@ -1800,7 +1750,6 @@ package mptdc_vip_pkg;
         conv.idle_after_ps        = 500_000;
         conv.require_nonzero_hits = 1'b1;
         conv.min_hits             = 1;
-        conv.check_full_timestamp = 1'b1;
         conv.check_conv_id        = 1'b1;
         conv.expected_conv_id     = i;
         gen.add(conv);
@@ -2162,9 +2111,6 @@ package mptdc_vip_pkg;
                 conv.check_firsthit_flag    = 1'b1;
                 conv.expected_firsthit_flag = 1'b1;
               end
-              if (out_modes[o] == OUT_MODE_FULL) begin
-                conv.check_full_timestamp = 1'b1;
-              end
               gen.add(conv);
               conv_id++;
             end
@@ -2264,7 +2210,6 @@ package mptdc_vip_pkg;
       conv.min_hits                = 1;
       conv.check_watchdog_flag     = 1'b1;
       conv.expected_watchdog_flag  = 1'b0;
-      conv.check_full_timestamp    = 1'b1;
       gen.add(conv);
       conv_id++;
 
@@ -2359,9 +2304,6 @@ package mptdc_vip_pkg;
           conv.check_firsthit_flag    = 1'b1;
           conv.expected_firsthit_flag = 1'b1;
         end
-        if (cur_out == OUT_MODE_FULL) begin
-          conv.check_full_timestamp = 1'b1;
-        end
         gen.add(conv);
       end
 
@@ -2395,7 +2337,6 @@ package mptdc_vip_pkg;
         conv.idle_after_ps        = 1_500_000;
         conv.require_nonzero_hits = 1'b1;
         conv.min_hits             = 1;
-        conv.check_full_timestamp = 1'b1;
         conv.check_conv_id        = 1'b1;
         conv.expected_conv_id     = i;
         gen.add(conv);
@@ -2438,7 +2379,6 @@ package mptdc_vip_pkg;
           conv.require_nonzero_hits  = 1'b1;
           conv.min_hits              = 1;
           conv.max_hits_allowed      = maxhits_values[m];
-          conv.check_full_timestamp  = 1'b1;
           conv.check_conv_id         = 1'b1;
           conv.expected_conv_id      = conv_id;
           if (maxhits_values[m] == 1) begin
@@ -2457,7 +2397,7 @@ package mptdc_vip_pkg;
     static function mptdc_base_test create(input string name);
       mptdc_base_test t;
       mptdc_smoke_single_conv_test smoke_t;
-      mptdc_full_mode_timestamp_test full_ts_t;
+      mptdc_legacy_full_mode_packet_test legacy_full_t;
       mptdc_firsthit_contract_test firsthit_t;
       mptdc_backpressure_integrity_test bp_t;
       mptdc_start_watchdog_test start_wdt_t;
@@ -2479,8 +2419,8 @@ package mptdc_vip_pkg;
           t = smoke_t;
         end
         "full_mode_timestamp": begin
-          full_ts_t = new();
-          t = full_ts_t;
+          legacy_full_t = new();
+          t = legacy_full_t;
         end
         "firsthit_contract": begin
           firsthit_t = new();
