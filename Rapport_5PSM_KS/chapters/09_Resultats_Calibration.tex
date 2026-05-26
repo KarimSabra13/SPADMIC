@@ -5,218 +5,204 @@
 
 \section{Objectif de la caractérisation}
 
-La caractérisation du \textbf{MPTDC} répond à une question plus large que la précision d'un seul timestamp : le bloc RTL exporte-t-il assez d'observables pour transformer une mesure Vernier brute, structurellement non uniforme, en une mesure temporelle exploitable et vérifiable ? La réponse est construite en quatre niveaux :
+La caractérisation du \textbf{MPTDC} ne cherche pas seulement à afficher une erreur moyenne faible. Elle doit répondre à une question plus structurante pour un jury : le RTL exporte-t-il assez d'observables pour transformer une grille Vernier non uniforme en mesure temporelle exploitable, traçable et vérifiable ? Le raisonnement suit donc quatre niveaux complémentaires :
 \begin{enumerate}
-    \item la structure de codes bruts, pour mesurer les non-linéarités DNL/INL avant correction ;
-    \item la calibration externe, pour quantifier le gain entre reconstruction brute et reconstruction corrigée ;
-    \item l'analyse d'alias, pour séparer le domaine calibrable \texttt{nslow > 0} des cas de frontière \texttt{nslow == 0} ;
-    \item les stress d'architecture, pour vérifier le réarmement, la rétropression, les contextes et le FIFO.
+    \item la validation fonctionnelle du protocole et des scénarios de robustesse ;
+    \item la structure brute de codes, avant toute correction hors circuit ;
+    \item la calibration par table de correspondance (\textit{Look-Up Table}, LUT) sur des données tenues hors apprentissage ;
+    \item la linéarité et les limites d'interprétation, en distinguant clairement RTL, modèle comportemental et performance silicium future.
 \end{enumerate}
 
-Cette séparation évite une erreur fréquente : confondre précision temporelle, couverture de codes et robustesse de flux. Une DNL élevée décrit la grille brute ; elle ne donne pas directement la RMSE après calibration. À l'inverse, une campagne throughput valide la tenue des handshakes et des contextes, mais ne constitue pas une mesure de précision temporelle.
+Cette séparation est essentielle. Une erreur quadratique moyenne (RMSE, \textit{Root Mean Square Error}) faible après calibration ne prouve pas à elle seule la robustesse du flux de sortie. À l'inverse, une campagne VIP (\textit{Verification IP}) propre ne constitue pas une preuve de précision temporelle. Les résultats ci-dessous sont donc présentés comme une chaîne de preuves : protocole fonctionnel, volume statistique, observables de calibration, puis précision reconstruite.
 
-\section{Provenance des données et traçabilité}
+Les métriques employées sont définies ici pour éviter toute ambiguïté : la MAE (\textit{Mean Absolute Error}) est l'erreur absolue moyenne, la DNL (\textit{Differential Non-Linearity}) mesure la non-linéarité différentielle entre codes adjacents, et l'INL (\textit{Integral Non-Linearity}) mesure l'écart cumulé à une droite de référence. La campagne CDV (\textit{Coverage-Driven Verification}) désigne ici la vérification pilotée par couverture.
 
-Les résultats de ce chapitre utilisent les données de référence collectées sous \texttt{/sim/ksabra/mptdc\_golden\_weekend\_20260522}. La partie deadtime/throughput finale a été relancée avec \textit{Xcelium} via la commande :
+\section{Provenance des données finales}
+
+Les résultats numériques de ce chapitre proviennent du flot final exécuté avec \textit{Xcelium} :
 \begin{center}
-\small\texttt{run\_characterization\_overnight.sh --sim xrun --jobs 8}\\
-\small\texttt{--seed-start 400000 --seeds 24}
+\small\texttt{MPTDC/scripts/sim/run\_report\_flow.sh --sim xrun --jobs 24}\\
+\small\texttt{--rebuild --out-dir /sim/ksabra/mptdc\_final\_characterization}
 \end{center}
-sur les étapes \texttt{deadtime}, \texttt{context\_overflow} et \texttt{throughput}. Le manifeste associé indique \textbf{72} fichiers CSV et \num{1272000} lignes de données. Les métriques de calibration utilisent la campagne \texttt{RAW\_FEATURES} avec le discriminateur STOP exporté dans le paquet actif.
+Les figures publiées dans ce chapitre sont les exports PDF du répertoire \texttt{Rapport\_5PSM\_KS/figures/tdc/final\_mptdc}. Les résumés JSON et tables légères sont archivés dans \texttt{Rapport\_5PSM\_KS/data/mptdc\_final\_characterization}. Aucun fichier CSV brut lourd n'est intégré au dépôt.
 
 \begin{table}[H]
     \centering
     \small
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.3cm}>{\raggedleft\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}X}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedleft\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}X}
         \toprule
-        \textbf{Bloc d'analyse} & \textbf{Volume} & \textbf{Rôle dans le rapport} \\
+        \textbf{Bloc d'analyse} & \textbf{Volume final} & \textbf{Rôle dans le rapport} \\
         \midrule
-        Calibration STOP-discriminator & \num{181624425} lignes train, \num{90810660} lignes validation fresh & apprentissage et validation séparés de la correction temporelle \\
-        Analyse alias fixed-delay & \num{6000000} lignes & séparation all-row, core \texttt{nslow > 0} et non-core \texttt{nslow == 0} \\
-        Fixed-delay raw & \num{3600000} lignes par délai & diagnostic du biais brut avant calibration sur 10 délais connus \\
-        Deadtime persistent-arm & \num{2400} essais par gap & preuve du gap STOP-to-next-START sans perte \\
-        Throughput backpressure & \num{480000} événements & occupation FIFO, rejets START et drainage sous \SI{50}{\percent} de ready \\
-        VIP final & \num{2048} runs & non-régression fonctionnelle des scénarios de protocole \\
+        VIP CDV & \num{1024}/\num{1024} exécutions réussies & non-régression des scénarios de protocole, rétropression, watchdog, reset, CSR et matrice \texttt{max\_hits} \\
+        Sweep large RAW\_FEATURES & \num{32} graines $\times$ \num{100000} conversions, \num{48000000} lignes utiles & statistique brute avant calibration et construction des histogrammes de reconstruction \\
+        Apprentissage LUT & \num{24} graines, \num{36000000} lignes & estimation des corrections moyennes par clé observable \\
+        Validation tenue hors apprentissage & \num{8999942} lignes appariées & métriques publiées avant/après LUT, sans réutiliser les graines d'apprentissage \\
+        Délais fixes & \num{10} délais, \num{60} fichiers CSV & diagnostic du biais brut sur délais connus, non utilisé comme métrique finale calibrée \\
+        Linéarité focalisée & \num{800000} lignes mono-hit valides & DNL/INL observables et linéarité de transfert \\
+        Frontières temporelles & \num{8} graines dédiées & stress des classes de frontière utilisées par la calibration \\
         \bottomrule
     \end{tabularx}
-    \caption{Traçabilité des données utilisées pour les résultats finaux. Les volumes indiqués correspondent aux extractions exploitées dans le rapport, pas à une projection théorique.}
+    \caption{Traçabilité des données finales utilisées pour les résultats MPTDC. Les volumes correspondent aux sorties du flot \texttt{run\_report\_flow.sh} et aux fichiers effectivement versionnés sous forme de résumés ou de figures.}
     \label{tab:char-global-summary}
 \end{table}
 
 \section{Observables utilisés pour la calibration}
 
-L'architecture active exporte volontairement plus qu'un timestamp brut. Les champs du tableau \ref{tab:calib-observables} donnent à l'analyse offline la granularité nécessaire pour corriger les frontières et la non-uniformité de la matrice.
+L'architecture n'exporte pas uniquement un timestamp brut. Elle fournit une image partielle de la conversion : compteur lent, compteur rapide local, indices de phase et classes de frontière. Ces observables sont nécessaires parce que la matrice \mbox{$8\times8$} ne forme pas une règle uniforme en \SI{10}{\pico\second}. Le tableau \ref{tab:calib-observables} précise le rôle de chaque champ.
 
 \begin{table}[H]
     \centering
     \scriptsize
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}X}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}X}
         \toprule
-        \textbf{Champ} & \textbf{Origine} & \textbf{Rôle pour la calibration} \\
+        \textbf{Champ} & \textbf{Origine} & \textbf{Rôle pour la correction} \\
         \midrule
-        \texttt{nslow} & META / W0 & instantané grossier lent à la frontière \texttt{STOP} \\
-        \texttt{nfast\_hit} & W0 & compteur rapide local capturé par la cellule active \\
-        \texttt{ns}, \texttt{nf} & \texttt{RAW\_FEATURES} / \texttt{FULL} & indices de phase de la cellule \mbox{$8\times8$} \\
-        \texttt{stop\_phase\_disc} & W1 features & secteur discret de phase lente au front \texttt{STOP}, ajouté pour séparer des alias de frontière \\
-        \texttt{phase0\_snap} & en-tête & classe binaire de frontière grossière/fine \\
-        \texttt{slow\_boundary\_inc} & en-tête & correction de carry sur le compteur lent \\
-        \texttt{hit\_idx} & CSV de campagne & ordre de scan/export dans le paquet, non ordre physique chronologique \\
-        \texttt{t\_raw\_ps} & reconstruction hôte & estimation brute avant correction statistique \\
+        \texttt{ns\_inf}, \texttt{nf\_inf} & inférés depuis \texttt{t\_raw\_ps} & indices de phase lente et rapide ; les \num{64} combinaisons actives sont distinguables dans l'algèbre Vernier \\
+        \texttt{nslow} & paquet META / W0 & compteur grossier lent à la frontière de mesure \\
+        \texttt{nfast\_hit} & cellule PD active & compteur rapide local capturé au moment du hit de phase \\
+        \texttt{stop\_phase\_disc} & paquet RAW\_FEATURES / FULL & discriminateur \SI{3}{\bit} de secteur lent au front \texttt{STOP} \\
+        \texttt{phase0\_snap} & en-tête de paquet & classe binaire de frontière grossière/fine \\
+        \texttt{hit\_idx} & ordre d'export CSV & ordre de paquetisation du hit, pas ordre chronologique physique \\
         \bottomrule
     \end{tabularx}
-    \caption{Observables exploités par la calibration externe. Le champ \texttt{hit\_idx} est un indice de paquetisation ; il ne doit pas être interprété comme un ordre temporel physique.}
+    \caption{Clé observable utilisée par la LUT de correction moyenne. La clé maintenue comporte \num{7} champs et prolonge la LUT 6D historique par les informations de discrimination de frontière et de paquetisation.}
     \label{tab:calib-observables}
 \end{table}
 
-La clé maintenue pour la LUT de calibration est :
+La méthode publiée est donc une LUT de correction moyenne indexée par :
 \[
 \begin{aligned}
 (&\texttt{ns\_inf},\ \texttt{nf\_inf},\ \texttt{nslow},\ \texttt{nfast\_hit},\\
  &\texttt{stop\_phase\_disc},\ \texttt{phase0\_snap},\ \texttt{hit\_idx}).
 \end{aligned}
 \]
-Elle prolonge la LUT 6D historique par le champ \texttt{stop\_phase\_disc}. Ce n'est pas un ajout cosmétique : l'analyse d'alias montre que cette information ferme totalement les collisions sur le domaine core \texttt{nslow > 0}.
+L'entraînement final construit \num{9946} classes de LUT, avec une population médiane de \num{3664} échantillons par classe. Ce point est important : la correction n'est pas une interpolation visuelle sur quelques points, mais une statistique extraite de \num{36000000} lignes d'apprentissage.
 
-\section{Structure brute : DNL, INL et biais avant calibration}
+\section{Structure brute avant correction}
 
-La matrice Vernier ne produit pas une grille fine uniforme. Sur les sweeps échantillonnés à \num{3000000} lignes train et \num{3000000} lignes validation, le pic de DNL vaut \textbf{1,208 LSB} en train et \textbf{1,308 LSB} en validation ; le pic d'INL vaut respectivement \textbf{98,802 LSB} et \textbf{98,673 LSB}. Ces nombres ne sont pas présentés comme une faiblesse isolée du RTL : ils quantifient la raison pour laquelle la calibration externe est indispensable.
+Avant calibration, la reconstruction brute présente un biais systématique important. Sur le sweep large \texttt{RAW\_FEATURES}, l'erreur moyenne vaut \SI{-1895.77}{\pico\second}, l'écart-type vaut \SI{412.49}{\pico\second} et la RMSE atteint \SI{1940.13}{\pico\second}. Le pic de non-linéarité différentielle (DNL, \textit{Differential Non-Linearity}) observable est de \textbf{1.000 LSB} dans cette analyse large, tandis que le pic de non-linéarité intégrale (INL, \textit{Integral Non-Linearity}) atteint \textbf{89.190 LSB}. Ces valeurs ne sont pas la précision finale ; elles justifient le besoin de correction hors ASIC.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.86\textwidth]{tdc/char_code_density_dnl_inl_report.pdf}
-    \caption{Synthèse DNL/INL des sweeps échantillonnés. La validation atteint un pic DNL de \textbf{1,308 LSB} et un pic INL de \textbf{98,673 LSB}; la figure caractérise la grille brute avant correction, pas la précision finale calibrée.}
+    \includegraphics[width=0.90\textwidth]{tdc/final_mptdc/04_dnl_inl_observable.pdf}
+    \caption{DNL/INL observables sur la campagne de linéarité focalisée. Sur les codes atteints, le pic DNL vaut \textbf{0.987 LSB} et le pic INL aux extrémités vaut \textbf{1.553 LSB}. Les \num{2696} emplacements non observés reflètent la parcimonie de la grille brute, pas une perte de paquets.}
     \label{fig:char-dnl-inl}
 \end{figure}
 
-Les sweeps de frontière donnent une RMSE brute globale de \SI{459.094}{\pico\second} en train et \SI{459.021}{\pico\second} en validation, avec un biais moyen proche de \SI{-157}{\pico\second}. Tant que l'extraction par offset n'est pas consolidée, le rapport doit publier cette lecture globale plutôt qu'une courbe par offset qui donnerait une précision visuelle trompeuse.
+La figure \ref{fig:char-dnl-inl} doit être lue avec précision. La grille complète entre les codes bruts \num{209} et \num{3281} contient \num{3073} emplacements scalaires possibles, mais seulement \num{377} codes sont atteints dans la campagne mono-hit. La métrique DNL/INL publiée s'applique donc aux codes observables ; elle ne transforme pas la matrice Vernier en convertisseur uniforme sans trous.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.82\textwidth]{tdc/char_boundary_rms_mean_report.pdf}
-    \caption{Métriques globales de sweep avant calibration. Le panneau distingue la dispersion RMS et le biais moyen ; il ne prétend pas fournir une décomposition exhaustive par offset de frontière.}
-    \label{fig:boundary-error-offset}
-\end{figure}
+\section{Résultat principal : correction par LUT}
 
-\section{Résultat principal : calibration avec discriminateur STOP}
-
-Le résultat central est obtenu sur des données de validation fresh tenues à l'écart de l'entraînement. Le filtre de publication est \texttt{nslow > 0}, car c'est le domaine où l'analyse d'alias démontre l'unicité des clés. Sur \num{90810660} lignes de validation après filtre, \num{90810228} trouvent une entrée LUT, soit \SI{99.9995}{\percent} de couverture ; \num{432} lignes restent sans entrée.
+La validation publiée utilise \num{6} graines tenues hors apprentissage. Après appariement LUT, \num{8999942} lignes sont utilisées pour les métriques finales, soit seulement \num{58} lignes non appariées sur \num{9000000}. La couverture effective de la LUT sur cette validation est donc de \SI{99.9994}{\percent}.
 
 \begin{table}[H]
     \centering
     \small
-    \begin{tabularx}{0.96\textwidth}{>{\raggedright\arraybackslash}Xrrrrr}
+    \begin{tabularx}{0.98\textwidth}{>{\raggedright\arraybackslash}Xrrrrr}
         \toprule
         \textbf{Métrique} & \textbf{Échantillons} & \textbf{Moyenne} & \textbf{MAE} & \textbf{RMSE} & \textbf{p99 $|e|$} \\
         \midrule
-        Avant calibration & \num{90810660} & \SI{-137.777}{\pico\second} & \SI{375.744}{\pico\second} & \SI{435.706}{\pico\second} & \SI{1161.000}{\pico\second} \\
-        Après calibration & \num{90810228} & \SI{0.0031}{\pico\second} & \SI{15.922}{\pico\second} & \SI{19.608}{\pico\second} & \SI{45.936}{\pico\second} \\
+        Avant LUT & \num{8999942} & \SI{-1895.968}{\pico\second} & \SI{1895.968}{\pico\second} & \SI{1940.325}{\pico\second} & \SI{2624.000}{\pico\second} \\
+        Après LUT & \num{8999942} & \SI{-0.008}{\pico\second} & \SI{15.219}{\pico\second} & \SI{18.555}{\pico\second} & \SI{38.994}{\pico\second} \\
         \bottomrule
     \end{tabularx}
-    \caption{Performance avant et après calibration sur validation fresh, domaine core \texttt{nslow > 0}. La RMSE baisse de \SI{435.706}{\pico\second} à \SI{19.608}{\pico\second}, soit \SI{95.50}{\percent} de réduction.}
+    \caption{Performance avant et après correction LUT sur les graines de validation tenues hors apprentissage. La RMSE baisse de \SI{1940.325}{\pico\second} à \SI{18.555}{\pico\second}, soit une réduction de \SI{99.04}{\percent}.}
     \label{tab:calibration-pre-post}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.88\textwidth]{tdc/char_calibration_prepost_summary_report.pdf}\\[0.6em]
-    \includegraphics[width=0.88\textwidth]{tdc/char_calibration_residual_hist_report.pdf}
-    \caption{Synthèse avant/après calibration et distribution résiduelle. Le résultat \SI{19.608}{\pico\second} RMSE est un résultat RTL/calibration sur modèle comportemental et seeds de validation ; il ne doit pas être converti en performance silicium finale sans mesures PVT et oscillateurs réels.}
-    \label{fig:calibration-residual-hist}
+    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/01_erreur_histogramme_pre_post_lut.pdf}
+    \caption{Distribution de l'erreur temporelle avant et après correction LUT. La correction supprime le biais de l'ordre de \SI{1.9}{\nano\second} et recentre l'erreur autour de \SI{0}{\pico\second}.}
+    \label{fig:calibration-error-hist}
 \end{figure}
-
-L'étude de moyennage reste bornée par le contrat RTL \texttt{MAX\_HITS = 15}. La figure \ref{fig:multihit-averaging} montre la tendance utile : \SI{19.578}{\pico\second} RMSE pour un hit, \SI{9.801}{\pico\second} à $N=4$, \SI{6.194}{\pico\second} à $N=10$ et \SI{5.090}{\pico\second} à $N=15$.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.78\textwidth]{tdc/multihit_averaging_plot.pdf}
-    \caption{RMSE après calibration en fonction du nombre de hits moyennés. Le tracé est volontairement limité à $N \leq 15$, conformément au paramètre RTL \texttt{MAX\_HITS}.}
-    \label{fig:multihit-averaging}
+    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/02_cdf_erreur_absolue_post_lut.pdf}
+    \caption{Fonction de répartition cumulative (CDF, \textit{Cumulative Distribution Function}) de l'erreur absolue après correction. Le percentile 99 publié est \SI{38.994}{\pico\second}.}
+    \label{fig:post-lut-abs-error-cdf}
 \end{figure}
 
-\section{Analyse des alias : pourquoi \texttt{nslow == 0} est traité séparément}
+Le point fort du résultat n'est pas seulement la RMSE de \SI{18.555}{\pico\second}. Le biais moyen résiduel vaut \SI{-0.008}{\pico\second}, la médiane de l'erreur absolue vaut \SI{13.483}{\pico\second}, et le percentile 95 vaut \SI{35.399}{\pico\second}. La correction agit donc à la fois sur le centrage et sur la dispersion.
 
-Le sous-ensemble \texttt{nslow == 0} ne doit pas être masqué. Il correspond à une population de frontière où des combinaisons de paquet restent ambiguës même avec \texttt{stop\_phase\_disc}. Le résultat important est la séparation nette entre le domaine core et le domaine non-core.
+\section{Gain statistique par moyennage}
+
+Le flot final inclut une étude de moyennage réalisée côté analyse sur le bassin d'erreurs post-LUT. Cette étude ne remplace pas un banc de mesure physique répétée à délai strictement constant ; elle quantifie l'effet attendu lorsque plusieurs échantillons indépendants corrigés peuvent être combinés.
 
 \begin{table}[H]
     \centering
     \small
-    \begin{tabularx}{0.98\textwidth}{>{\raggedright\arraybackslash}Xrrrr}
+    \begin{tabular}{rrrr}
         \toprule
-        \textbf{Domaine} & \textbf{Lignes} & \textbf{Clés uniques} & \textbf{Clés aliasées} & \textbf{RMSE oracle} \\
+        \textbf{Nombre de mesures $N$} & \textbf{RMSE} & \textbf{MAE} & \textbf{P90} \\
         \midrule
-        Toutes lignes & \num{6000000} & \num{439} & \num{56} & \SI{162.340}{\pico\second} \\
-        Core \texttt{nslow > 0} & \num{2400000} & \num{235} & \num{0} & \SI{0}{\pico\second} \\
-        Non-core \texttt{nslow == 0} & \num{3600000} & \num{204} & \num{56} & \SI{209.580}{\pico\second} \\
+        \num{1} & \SI{18.823}{\pico\second} & \SI{15.528}{\pico\second} & \SI{31.581}{\pico\second} \\
+        \num{2} & \SI{13.227}{\pico\second} & \SI{10.704}{\pico\second} & \SI{21.616}{\pico\second} \\
+        \num{4} & \SI{9.284}{\pico\second} & \SI{7.448}{\pico\second} & \SI{15.185}{\pico\second} \\
+        \num{10} & \SI{5.920}{\pico\second} & \SI{4.744}{\pico\second} & \SI{9.823}{\pico\second} \\
+        \num{15} & \SI{4.769}{\pico\second} & \SI{3.802}{\pico\second} & \SI{7.882}{\pico\second} \\
+        \num{100} & \SI{1.867}{\pico\second} & \SI{1.494}{\pico\second} & \SI{3.062}{\pico\second} \\
+        \num{400} & \SI{0.928}{\pico\second} & \SI{0.744}{\pico\second} & \SI{1.530}{\pico\second} \\
         \bottomrule
-    \end{tabularx}
-    \caption{Analyse d'alias fixed-delay avec la clé de calibration maintenue. Toutes les collisions observées proviennent du sous-ensemble \texttt{nslow == 0}.}
-    \label{tab:alias-core-noncore}
+    \end{tabular}
+    \caption{Étude de moyennage post-LUT. Le seuil \SI{10}{\pico\second} est franchi dès $N=4$, et le seuil \SI{5}{\pico\second} dès $N=15$.}
+    \label{tab:averaging-study}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.82\textwidth]{tdc/alias_core_noncore_report.pdf}
-    \caption{Séparation all-row, core et non-core. Le résultat défendable pour la calibration finale est le domaine \texttt{nslow > 0}, où le nombre de clés aliasées est nul sur \num{2400000} lignes.}
-    \label{fig:alias-core-noncore}
+    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/03_rmse_vs_moyennage.pdf}
+    \caption{Réduction statistique de la RMSE, de la MAE et du P90 par moyennage. Le tracé est en échelle logarithmique sur $N$ afin de rendre visibles les régimes $N=1$ à $N=1000$.}
+    \label{fig:multihit-averaging}
 \end{figure}
 
-Cette séparation est essentielle pour une présentation honnête : publier uniquement la RMSE core sans expliquer \texttt{nslow == 0} serait incomplet ; publier all-row comme performance finale sous-estimerait au contraire ce que la clé active sait corriger dans son domaine nominal.
+Pour le rapport, la formulation défendable est donc la suivante : la précision mono-échantillon corrigée est de \SI{18.56}{\pico\second} RMSE ; avec moyennage statistique, elle descend à \SI{9.28}{\pico\second} pour $N=4$ et à \SI{4.77}{\pico\second} pour $N=15$. La valeur sub-picoseconde de \SI{0.93}{\pico\second} à $N=400$ est une projection statistique d'analyse, pas une spécification du mode multi-hit RTL courant.
 
-\section{Fixed-delay brut : diagnostic avant correction}
+\section{Linéarité de transfert}
 
-Les campagnes fixed-delay brutes couvrent \SIlist{20;50;100;200;500;1000;2000;5000;10000;30000}{\pico\second}, avec \num{24} seeds et \num{10000} conversions par seed. La RMSE mono-coup brute varie fortement : elle atteint \SI{1319.546}{\pico\second} à \SI{20}{\pico\second}, descend à \SI{339.021}{\pico\second} à \SI{5000}{\pico\second}, puis remonte à \SI{500.168}{\pico\second} à \SI{30000}{\pico\second}. Ce graphe n'est pas la performance finale ; il documente le biais structurel que la LUT doit corriger.
+La linéarité de transfert complète mesure la relation entre le temps vrai moyen et le temps brut moyen. Sur la campagne focalisée, la pente calculée entre les extrémités vaut \num{1.010825} ps/ps, avec un offset de \SI{1076.27}{\pico\second}. La régression par ajustement aux moindres carrés donne une pente de \num{1.000355} ps/ps et un offset de \SI{1164.38}{\pico\second}. Les pics d'INL de transfert valent \textbf{35.907 LSB} avec la droite d'extrémités et \textbf{30.836 LSB} avec l'ajustement, soit respectivement \SI{359.07}{\pico\second} et \SI{308.36}{\pico\second} avec le pas de \SI{10}{\pico\second}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.84\textwidth]{tdc/fixed_delay_raw_rmse_report.pdf}
-    \caption{RMSE et biais moyens bruts par délai fixe, avant calibration. Les grands biais à très faible délai expliquent pourquoi la reconstruction brute ne peut pas être publiée comme métrique de précision.}
-    \label{fig:fixed-delay-raw-rmse}
+    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/05_linearite_transfert.pdf}
+    \caption{Linéarité de transfert brute. La pente ajustée proche de \num{1.000355} montre que l'échelle globale est correcte, tandis que l'INL de transfert aux extrémités de \textbf{35.907 LSB} quantifie les résidus de structure avant correction statistique fine.}
+    \label{fig:transfer-linearity}
 \end{figure}
 
-\section{Comportement limite : deadtime, contextes et débit}
+Cette figure complète la lecture DNL/INL. Les codes atteints peuvent avoir une DNL observable bornée, tout en conservant une courbure de transfert sur la reconstruction brute. C'est précisément l'intérêt de publier les deux vues : l'une décrit la densité des codes, l'autre la fidélité temporelle moyenne.
 
-La mesure de deadtime finale utilise le banc \texttt{tb\_char\_deadtime\_persistent} en mode persistent-arm, \textit{Xcelium}, \num{24} seeds et \num{100} essais par gap et par seed. Le résultat est binaire : \SI{0}{\percent} d'acceptation jusqu'à \SI{31.5}{\nano\second} inclus, puis \SI{100}{\percent} dès \SI{32.0}{\nano\second}. La valeur à publier est donc :
-\[
-\boxed{\text{deadtime numérique RTL persistent-arm} = \SI{32}{\nano\second}}
-\]
-sous modèle d'oscillateur idéal et sans rétropression artificielle dans ce banc.
+\section{Stress des frontières}
+
+Les frontières temporelles sont le point le plus sensible de l'architecture, car \texttt{STOP} peut couper le compteur lent au voisinage d'une transition. La campagne focalisée isole ces zones afin de vérifier que les classes \texttt{phase0\_snap}, \texttt{slow\_boundary\_inc} et \texttt{stop\_phase\_disc} restent exploitables par la calibration.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.86\textwidth]{tdc/char_deadtime_acceptance_report.pdf}
-    \caption{Probabilité d'acceptation du second événement en fonction du gap STOP-to-next-START. La transition mesurée est \SI{31.5}{\nano\second} $\rightarrow$ \SI{32.0}{\nano\second} sur \num{2400} essais par gap.}
-    \label{fig:deadtime-acceptance}
+    \includegraphics[width=0.84\textwidth]{tdc/final_mptdc/06_boundary_offset_sweep.pdf}
+    \caption{Stress des offsets autour de la frontière lente. La figure sépare RMS brut et biais moyen afin de montrer que le problème de frontière est traité comme une classe statistique mesurable, et non comme un cas masqué.}
+    \label{fig:boundary-error-offset}
 \end{figure}
 
-Le stress throughput est d'une autre nature. Avec un ready local à \SI{50}{\percent}, la campagne observe \num{480000} événements, \num{121439} conversions acceptées, \num{358517} START rejetés, \num{121343} paquets sortis et un FIFO montant à \textbf{64} mots. L'écart conversions/paquets provient de la fenêtre de fin de banc et du drainage final observé ; il ne doit pas être interprété comme une corruption protocolaire, d'autant que la campagne VIP finale passe \textbf{2048/2048}.
+La conclusion à retenir n'est pas que les frontières disparaissent. Elles restent des zones de sensibilité physique et logique. Le résultat défendable est que les champs exportés donnent à l'analyse offline une classe observable pour les corriger statistiquement.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.86\textwidth]{tdc/char_throughput_counters_report.pdf}
-    \caption{Stress de débit sous ready à \SI{50}{\percent}. La figure sépare conversions acceptées, START rejetés, paquets sortis et occupation maximale du FIFO.}
-    \label{fig:throughput-counters}
-\end{figure}
+\section{Limite architecturale et portée des chiffres}
 
-La campagne \texttt{context\_overflow} associée ne montre pas d'overflow final : les \num{24} fichiers terminent avec \texttt{ovf\_after = 0}, \texttt{fifo\_level = 0} et \texttt{fifo\_full = 0}. Cette observation complète la lecture throughput : les rejets sous rétropression forte sont comptés explicitement, mais la structure de contexte ne montre pas de corruption résiduelle dans les runs publiés.
+Les chiffres précédents ne doivent pas être interprétés comme une promesse de résolution déterministe hit-par-hit à quelques picosecondes. L'analyse Oracle menée pendant la mise au point a montré un plancher d'information d'environ \SI{79}{\pico\second} pour certaines clés packet-visibles : plusieurs événements physiquement distincts peuvent produire la même observation exportée. La LUT peut alors corriger l'erreur moyenne de cette classe, mais elle ne peut pas inventer une information non exportée par le RTL.
 
-\section{Limites d'interprétation}
+Cette limite ne contredit pas le résultat \SI{18.56}{\pico\second} RMSE. Elle précise sa nature : il s'agit d'une performance statistique calibrée sur une distribution de validation, pas d'un identifiant unique de chaque événement individuel. Le choix d'architecture est cohérent avec l'objectif SPADMIC : exporter des observables riches, garder le silicium simple, puis réaliser la reconstruction temporelle et l'amélioration statistique côté hôte.
 
-Les résultats soutiennent trois conclusions quantitatives :
+\section{Synthèse des résultats}
+
+La campagne finale établit quatre résultats quantitatifs :
 \begin{itemize}
-    \item la grille brute est non uniforme, avec un pic DNL validation de \textbf{1,308 LSB} et un pic INL validation de \textbf{98,673 LSB} ;
-    \item la calibration core \texttt{nslow > 0} réduit la RMSE de \SI{435.706}{\pico\second} à \SI{19.608}{\pico\second} sur \num{90810228} lignes validées par LUT ;
-    \item le réarmement persistent-arm sans perte est mesuré à \SI{32}{\nano\second}, tandis que le stress throughput à \SI{50}{\percent} de ready atteint un FIFO plein à \textbf{64} mots et compte explicitement les \num{358517} rejets START.
-\end{itemize}
-
-Ils imposent aussi trois limites :
-\begin{itemize}
-    \item ce sont des résultats RTL et modèles comportementaux, pas une mesure silicium finale ;
-    \item le jitter analogique cible autour de \SI{800}{\femto\second} RMS par tap n'est pas encore représenté exactement par les plusargs entiers en ps des campagnes publiées ;
-    \item la STA, la revue CDC exhaustive, les oscillateurs réels et l'extraction physique restent des étapes distinctes de maturité industrielle.
+    \item la non-régression VIP est propre : \textbf{\num{1024}/\num{1024} exécutions réussies} ;
+    \item la reconstruction brute est fortement biaisée : \SI{-1895.77}{\pico\second} de moyenne et \SI{1940.13}{\pico\second} RMSE sur \num{48000000} lignes utiles ;
+    \item la LUT ramène la validation tenue hors apprentissage à \SI{18.56}{\pico\second} RMSE, \SI{15.22}{\pico\second} MAE et \SI{38.99}{\pico\second} au percentile 99 ;
+    \item la linéarité observable atteint \textbf{0.987 LSB} de DNL crête et \textbf{1.553 LSB} d'INL aux extrémités sur les codes atteints, tandis que l'INL de transfert brute reste à \textbf{35.907 LSB} avec la droite d'extrémités.
 \end{itemize}
 
 \begin{summaryBox}
-La caractérisation finale montre que le \textbf{MPTDC} exporte les observables nécessaires à une correction externe robuste : sur le domaine core \texttt{nslow > 0}, la RMSE passe de \SI{435.706}{\pico\second} à \SI{19.608}{\pico\second} et aucune clé aliasée n'est observée sur \num{2400000} lignes fixed-delay core. Le résultat est scientifiquement fort pour le RTL, mais il doit rester présenté comme une caractérisation numérique préparant la mesure silicium, et non comme une garantie PVT finale.
+La caractérisation finale montre que le \textbf{MPTDC} exporte les observables nécessaires à une correction externe robuste. Sur \num{8999942} lignes de validation tenues hors apprentissage, la RMSE passe de \SI{1940.33}{\pico\second} avant LUT à \SI{18.56}{\pico\second} après LUT, avec un percentile 99 de \SI{38.99}{\pico\second}. Ce résultat est fort pour une caractérisation RTL comportementale, mais il doit rester présenté comme une preuve numérique pré-silicium : les oscillateurs réels, le jitter PVT, la revue CDC complète et la STA finale restent des étapes séparées.
 \end{summaryBox}
 
 \clearpage

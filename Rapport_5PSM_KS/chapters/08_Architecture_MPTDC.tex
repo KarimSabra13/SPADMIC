@@ -230,7 +230,7 @@ Le chemin compté mérite une attention particulière. Pour tenir la fermeture t
     \item puis une comparaison avec \texttt{max\_hits}.
 \end{itemize}
 
-Cette solution ajoute une frontière enregistrée, mais elle déplace le point chaud hors du domaine rapide et rend le chemin synthétisable dans l'enveloppe \texttt{clk\_sys}. La conséquence mesurée est explicite : le temps mort numérique RTL publié n'est pas un objectif de quelques nanosecondes, mais un réarmement lossless en mode persistent-arm de \SI{32}{\nano\second} sous modèle d'oscillateur idéal, mesuré sur \num{2400} essais par gap.
+Cette solution ajoute une frontière enregistrée, mais elle déplace le point chaud hors du domaine rapide et rend le chemin synthétisable dans l'enveloppe \texttt{clk\_sys}. La conséquence mesurée est explicite : le temps mort numérique RTL publié n'est pas l'ancien objectif de quelques cycles rapides. Le chiffre défendable pour le rapport est un réarmement lossless d'environ \SI{39}{\nano\second} dans le modèle RTL à oscillateurs idéaux et récepteur toujours prêt, c'est-à-dire une mesure de réarmement numérique pré-silicium plutôt qu'une garantie de temps mort analogique final.
 
 \begin{figure}[H]
     \centering
@@ -453,15 +453,15 @@ La campagne finale de vérification numérique donne une image plus forte que le
 \begin{itemize}
     \item \texttt{ci/run\_smoke.sh} passe ;
     \item \texttt{ci/run\_full\_regression.sh} passe sur \textbf{9/9} benches d'intégration maintenus ;
-    \item la campagne VIP finale passe \textbf{2048/2048} runs, soit \textbf{16} tests, \textbf{128} seeds par test et \num{20000} conversions par test, avec le modèle \texttt{--stop-model qualified-ref}.
+    \item la campagne VIP finale passe \textbf{1024/1024} exécutions, soit \textbf{16} scénarios fonctionnels exécutés sur \textbf{64} graines chacun.
 \end{itemize}
 
-Ce résultat doit être présenté précisément. Les échecs observés avant la campagne finale ne venaient pas d'une corruption du cœur RTL, mais d'un problème d'infrastructure : le wrapper VIP refusait les chemins absolus sous \texttt{/sim/ksabra}, alors que ces chemins étaient nécessaires pour stocker les artefacts lourds de simulation. Après correction du wrapper, les scénarios couvrant backpressure, watchdog, overflow/recovery, lecture CSR, reset dur, référence STOP qualifiée et matrice \texttt{max\_hits} passent sans échec.
+Ce résultat doit être présenté précisément. Il couvre les scénarios de fumée, timestamp complet, contrat first-hit, intégrité sous rétropression, watchdogs, récupération, lecture CSR, reset dur, référence STOP qualifiée et matrice \texttt{max\_hits}. Les \num{1024} exécutions passent sans échec, ce qui donne une base solide pour défendre la cohérence protocolaire avant la discussion de calibration.
 
 La couverture fonctionnelle existe également, mais elle dépend des outils Cadence et d'un flot de campagne spécifique. Les scripts du dépôt montrent une intégration claire avec \textit{IMC}, des points de couverture conditionnés par \texttt{MPTDC\_ENABLE\_FUNC\_COV}, et des campagnes dédiées plus lourdes. Il faut néanmoins distinguer cette infrastructure d'une méthodologie de clôture complète : le dépôt fournit une base de confiance solide sur le comportement fonctionnel, pas une clôture physique ou CDC exhaustive au sens industriel final. Les assertions SVA sont utilisées comme garde-fous de protocole et de handshake pendant la simulation ; elles ne remplacent ni la revue CDC ni la STA finale.
 
 \begin{summaryBox}
-La validation du projet doit être lue sur deux plans. Le premier plan est fonctionnel : les benches unitaires, d'intégration, de campagne et le VIP final à \textbf{2048/2048 PASS} donnent une confiance solide dans le comportement du RTL et dans les observables exportés. Le second plan reste ouvert : les oscillateurs réels, les contraintes complètes d'horloges générées, la revue CDC exhaustive et la clôture de synthèse ne sont pas encore des objets clos dans le dépôt.
+La validation du projet doit être lue sur deux plans. Le premier plan est fonctionnel : les benches unitaires, d'intégration, de campagne et le VIP final à \textbf{1024/1024 PASS} donnent une confiance solide dans le comportement du RTL et dans les observables exportés. Le second plan reste ouvert : les oscillateurs réels, les contraintes complètes d'horloges générées, la revue CDC exhaustive et la clôture de synthèse ne sont pas encore des objets clos dans le dépôt.
 \end{summaryBox}
 
 Ainsi, l'architecture \textbf{MPTDC} n'est ni un simple exercice théorique, ni un bloc prétendument finalisé sur tous les plans. Elle constitue une implémentation déjà riche, cohérente et mesurable, dont l'intérêt principal pour ce rapport est précisément de montrer comment une idée Vernier multiphase devient un système RTL réel, avec ses compromis, ses limites et ses résultats.
