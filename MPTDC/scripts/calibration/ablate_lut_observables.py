@@ -31,8 +31,8 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from calibrate_6d_lut import (  # noqa: E402
     LUT_KEY,
+    NSNF_REV,
     compute_metrics,
-    infer_ns_nf,
     print_skipped_csv_summary,
     read_seed_csv,
 )
@@ -66,6 +66,16 @@ VARIANTS = [
 ]
 
 
+_RESID_MIN = min(NSNF_REV)
+_RESID_MAX = max(NSNF_REV)
+_RESID_SPAN = _RESID_MAX - _RESID_MIN + 1
+_NS_LUT = np.full(_RESID_SPAN, -1, dtype=np.int16)
+_NF_LUT = np.full(_RESID_SPAN, -1, dtype=np.int16)
+for _resid, (_ns, _nf) in NSNF_REV.items():
+    _NS_LUT[_resid - _RESID_MIN] = _ns
+    _NF_LUT[_resid - _RESID_MIN] = _nf
+
+
 def seed_files(path: Path) -> list[Path]:
     return sorted(path.glob("seed_*.csv"))
 
@@ -73,6 +83,31 @@ def seed_files(path: Path) -> list[Path]:
 def lut_key_for_variant(variant: dict) -> list[str]:
     dropped = set(variant["drop_key_fields"])
     return [col for col in LUT_KEY if col not in dropped]
+
+
+def infer_ns_nf_fast(df: pd.DataFrame) -> pd.DataFrame:
+    """Vectorized ns/nf inference avoiding per-row Python map overhead."""
+    coef = np.rint(df["t_raw_ps"].to_numpy(dtype=np.float64, copy=False) / 10.0).astype(np.int64)
+    nslow = df["nslow"].to_numpy(dtype=np.int64, copy=False)
+    sbi = df["slow_boundary_inc"].to_numpy(dtype=np.int64, copy=False)
+    nfast = df["nfast_hit"].to_numpy(dtype=np.int64, copy=False)
+    resid = coef - ((nslow + 2 + sbi - 1) * 88 + nfast * 8 + 25)
+
+    ns = np.full(len(df), -1, dtype=np.int16)
+    nf = np.full(len(df), -1, dtype=np.int16)
+    valid = (resid >= _RESID_MIN) & (resid <= _RESID_MAX)
+    if np.any(valid):
+        lut_idx = resid[valid] - _RESID_MIN
+        ns_valid = _NS_LUT[lut_idx]
+        nf_valid = _NF_LUT[lut_idx]
+        matched = ns_valid >= 0
+        valid_idx = np.flatnonzero(valid)
+        ns[valid_idx[matched]] = ns_valid[matched]
+        nf[valid_idx[matched]] = nf_valid[matched]
+
+    df["ns_inf"] = ns
+    df["nf_inf"] = nf
+    return df
 
 
 def prepare_frame(df: pd.DataFrame, variant: dict, *, core_only: bool = True) -> tuple[pd.DataFrame, dict]:
@@ -94,9 +129,8 @@ def prepare_frame(df: pd.DataFrame, variant: dict, *, core_only: bool = True) ->
         work["slow_boundary_inc_actual"] = work["slow_boundary_inc"]
         work["slow_boundary_inc"] = 0
 
-    infer_ns_nf(work)
-    bad = int(work["ns_inf"].isna().sum() + work["nf_inf"].isna().sum())
-    work = work.dropna(subset=["ns_inf", "nf_inf"])
+    infer_ns_nf_fast(work)
+    work = work[(work["ns_inf"] >= 0) & (work["nf_inf"] >= 0)].copy()
     meta["rows_after_inference"] = int(len(work))
     meta["rows_inference_failed"] = int(meta["rows_after_core_filter"] - len(work))
     return work, meta
