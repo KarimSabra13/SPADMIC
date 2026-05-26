@@ -13,7 +13,8 @@ module tb_char_boundary_stress;
   import mptdc_tb_pkg::*;
   import mptdc_char_tb_pkg::*;
 
-  logic clk_sys = 1'b0;
+  logic clk_sys;
+  initial clk_sys = 1'b0;
   always #(CLK_SYS_HALF) clk_sys = ~clk_sys;
 
   logic async_rst_n;
@@ -103,8 +104,8 @@ module tb_char_boundary_stress;
 
           extra = $sformatf("%0d,%0d,%016h,%0h,%0d,%0d,%0d",
                             b, offset_ps,
-                            u_dut.u_core.u_ctx_bank.hold_hit_level,
-                            u_dut.u_core.u_ctx_bank.hold_nfast_packed,
+                            u_dut.u_core.hit_capture_snapshot.hit_level,
+                            u_dut.u_core.hit_capture_snapshot.nfast_hit_packed,
                             int'(u_dut.u_core.nslow_src_count),
                             int'(u_dut.u_core.nslow_stop_latched),
                             int'(u_dut.u_core.nfast_src_count));
