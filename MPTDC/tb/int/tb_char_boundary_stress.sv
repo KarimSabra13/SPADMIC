@@ -57,7 +57,11 @@ module tb_char_boundary_stress;
     if (!$value$plusargs("CHAR_BASE_DELAY_PS=%d", cfg_base_delay_ps)) cfg_base_delay_ps = 5000;
     if (!$value$plusargs("CHAR_MAX_HITS=%d", cfg_max_hits)) cfg_max_hits = 15;
     if (!$value$plusargs("CHAR_INPUT_SEL=%d", cfg_input_sel)) cfg_input_sel = int'(INPUT_CAL);
-    if (!$value$plusargs("CHAR_OUT_MODE=%d", cfg_out_mode)) cfg_out_mode = int'(OUT_MODE_FULL);
+    if (!$value$plusargs("CHAR_OUT_MODE=%d", cfg_out_mode)) cfg_out_mode = int'(OUT_MODE_RAW_FEATURES);
+    if (cfg_out_mode != int'(OUT_MODE_RAW_FEATURES)) begin
+      $display("[CHAR] Legacy CHAR_OUT_MODE=%0d ignored; using fixed RAW_FEATURES packet", cfg_out_mode);
+      cfg_out_mode = int'(OUT_MODE_RAW_FEATURES);
+    end
     if (!$value$plusargs("CHAR_OUTPUT_FILE=%s", cfg_output_file)) cfg_output_file = "char_boundary.csv";
     if (!$value$plusargs("CHAR_CONFIG=%s", cfg_config)) cfg_config = "boundary_stress";
   endtask

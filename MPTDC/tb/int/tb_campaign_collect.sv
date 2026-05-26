@@ -25,7 +25,7 @@ module tb_campaign_collect;
   int          cfg_delay_min_ps;
   int          cfg_delay_max_ps;
   int unsigned cfg_seed;
-  int          cfg_out_mode;        // 0=RAW_FEATURES, 2=FULL
+  int          cfg_out_mode;        // fixed RAW_FEATURES-compatible packet
   string       cfg_output_file;
   int          cfg_osc_jitter_sigma;
   int          cfg_osc_jitter_bound;
@@ -281,7 +281,7 @@ module tb_campaign_collect;
       dbg_tx_nf_q                     <= u_dut.u_core.u_narrow_tx.nf_q;
       dbg_tx_hit_idx_q                <= u_dut.u_core.u_narrow_tx.hit_idx_q;
       dbg_tx_phase0_q                 <= u_dut.u_core.u_narrow_tx.phase0_snap_q;
-      dbg_tx_boundary_inc_q           <= u_dut.u_core.u_narrow_tx.slow_boundary_inc_q;
+      dbg_tx_boundary_inc_q           <= 1'b0;
       dbg_tx_hit_count_q              <= u_dut.u_core.u_narrow_tx.hit_count_q;
       dbg_tx_state_q                  <= u_dut.u_core.u_narrow_tx.state_q;
     end
@@ -678,7 +678,11 @@ module tb_campaign_collect;
     if (!$value$plusargs("CAMPAIGN_DELAY_MIN_PS=%d",cfg_delay_min_ps))   cfg_delay_min_ps   = 20;
     if (!$value$plusargs("CAMPAIGN_DELAY_MAX_PS=%d",cfg_delay_max_ps))   cfg_delay_max_ps   = 30000;
     if (!$value$plusargs("CAMPAIGN_SEED=%d",        cfg_seed))           cfg_seed           = 12345;
-    if (!$value$plusargs("CAMPAIGN_OUT_MODE=%d",    cfg_out_mode))       cfg_out_mode       = OUT_MODE_FULL;
+    if (!$value$plusargs("CAMPAIGN_OUT_MODE=%d",    cfg_out_mode))       cfg_out_mode       = OUT_MODE_RAW_FEATURES;
+    if (cfg_out_mode != OUT_MODE_RAW_FEATURES) begin
+      $display("[CAMPAIGN] Legacy CAMPAIGN_OUT_MODE=%0d ignored; using fixed RAW_FEATURES packet", cfg_out_mode);
+      cfg_out_mode = OUT_MODE_RAW_FEATURES;
+    end
     if (!$value$plusargs("CAMPAIGN_OUTPUT_FILE=%s", cfg_output_file))    cfg_output_file    = "campaign_output.csv";
     // OSC jitter params are consumed directly by mptdc_osc_model via its own plusargs
   endtask
@@ -715,9 +719,7 @@ module tb_campaign_collect;
     $display("[CAMPAIGN]   MODE         = %s", cfg_mode ? "FAST_CLOSE(max_hits=1)" : "MULTI_HIT");
     $display("[CAMPAIGN]   MAX_HITS     = %0d", effective_max_hits());
     $display("[CAMPAIGN]   INPUT_SEL    = %s", cfg_input_sel ? "CAL" : "SPAD");
-    $display("[CAMPAIGN]   OUT_MODE     = %s",
-             (cfg_out_mode == OUT_MODE_RAW_FEATURES) ? "RAW_FEATURES" :
-             (cfg_out_mode == OUT_MODE_FULL) ? "FULL" : "UNSUPPORTED");
+    $display("[CAMPAIGN]   OUT_MODE     = RAW_FEATURES_FIXED");
     $display("[CAMPAIGN]   N_CONV       = %0d", cfg_n_conv);
     $display("[CAMPAIGN]   DELAY_MIN_PS = %0d", cfg_delay_min_ps);
     $display("[CAMPAIGN]   DELAY_MAX_PS = %0d", cfg_delay_max_ps);
@@ -740,13 +742,6 @@ module tb_campaign_collect;
     $fwrite(fd, "conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,stop_phase_disc,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,mode,max_hits,%s\n",
             DBG_CSV_HEADER);
 
-    if (cfg_out_mode != OUT_MODE_RAW_FEATURES && cfg_out_mode != OUT_MODE_FULL) begin
-      $display("[ERR] Unsupported CAMPAIGN_OUT_MODE=%0d (use %0d for RAW_FEATURES or %0d for FULL)",
-               cfg_out_mode, OUT_MODE_RAW_FEATURES, OUT_MODE_FULL);
-      $fclose(fd);
-      $finish;
-    end
-
     // Configure DUT
     configure_campaign();
 
@@ -761,14 +756,7 @@ module tb_campaign_collect;
       delay_ps = rand_delay();
 
       do_one_conversion(delay_ps, pkt, pkt_len);
-      case (cfg_out_mode)
-        OUT_MODE_RAW_FEATURES: parse_and_write_raw_features(fd, delay_ps, pkt, pkt_len, hits, errs);
-        OUT_MODE_FULL:         parse_and_write_full(fd, delay_ps, pkt, pkt_len, hits, errs);
-        default: begin
-          hits = 0;
-          errs = 1;
-        end
-      endcase
+      parse_and_write_raw_features(fd, delay_ps, pkt, pkt_len, hits, errs);
 
       total_hits   += hits;
       total_errors += errs;

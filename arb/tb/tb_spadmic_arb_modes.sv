@@ -277,11 +277,14 @@ module tb_spadmic_arb_modes;
     position_enable = 1'b0;
     tdc_out_mode = OUT_MODE_RAW_TIMESTAMP;
     apply_reset();
-    acq_valid[0] = 1'b1;
-    acq_data[0] = make_meta(1, 21);
-    repeat (20) @(posedge clk_sys);
-    #1;
-    check("RAW_TIMESTAMP mode is masked from active ARB", acq_ready[0] == 1'b0 && packet_count == 0);
+    fork
+      begin
+        drive_acq(0, make_meta(1, 21));
+        drive_acq(0, make_hit(0, 21));
+      end
+    join
+    wait_packets(1);
+    check("Legacy RAW_TIMESTAMP request is ignored by fixed TDC packet path", packet_count == 1);
     clear_drivers();
 
     check("No event-tag overflow in mode test", correlation_overflow == 1'b0);

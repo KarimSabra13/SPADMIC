@@ -104,7 +104,7 @@ package mptdc_pkg;
 
   typedef logic [CTX_W-1:0] ctx_id_t;
 
-  // STOP-edge slow-phase discriminator exported in RAW_FEATURES/FULL packets.
+  // STOP-edge slow-phase discriminator exported in the fixed feature packet.
   // These three slow-ring phase bits reduce early-delay raw aliases while
   // preserving the frozen 16-bit packet word count.  They are phase metadata,
   // not a replacement for a correct STOP-side coarse count.
@@ -130,9 +130,9 @@ package mptdc_pkg;
   localparam logic [0:0] MODE_MULTI_HIT = 1'b0;
 
   typedef enum logic [1:0] {
-    OUT_MODE_RAW_FEATURES  = 2'd0,  // nslow, nfast_hit, ns, nf
-    OUT_MODE_RAW_TIMESTAMP = 2'd1,  // nslow, nfast, t_raw_ps
-    OUT_MODE_FULL          = 2'd2   // all features + timestamp
+    OUT_MODE_RAW_FEATURES  = 2'd0,  // single retained packet format
+    OUT_MODE_RAW_TIMESTAMP = 2'd1,  // legacy CSR code, ignored by RTL
+    OUT_MODE_FULL          = 2'd2   // legacy CSR code, ignored by RTL
   } out_mode_e;
 
   typedef enum logic [0:0] {
@@ -227,9 +227,9 @@ package mptdc_pkg;
   localparam int unsigned NARROW_W = 16;
 
   // Header word:  [15:14]=2'b10, [13:12]=ctx_id, [11]=phase0_snap,
-  //               [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=slow_boundary_inc
-  // Hit words:    depend on out_mode (2/2/3 words per hit), bit[15]=0 always.
-  //               RAW_FEATURES/FULL Hit W1[2:0] carries stop_slow_phase_disc.
+  //               [10:7]=hit_count, [6:3]=flags, [2:0]=reserved/read-zero
+  // Hit words:    fixed two-word format, bit[15]=0 always.
+  //               Hit W1[2:0] carries stop_slow_phase_disc.
   // EOC word:     [15:14]=2'b11, [13:0]=conv_id[13:0]
 
   // =========================================================================
@@ -240,7 +240,7 @@ package mptdc_pkg;
 
   // Control registers (write)
   localparam logic [CSR_ADDR_W-1:0] CSR_CTRL        = 6'h00;  // conv_arm, fifo_clr, soft_rst
-  localparam logic [CSR_ADDR_W-1:0] CSR_MODE        = 6'h04;  // reserved[0], input_sel, out_mode
+  localparam logic [CSR_ADDR_W-1:0] CSR_MODE        = 6'h04;  // reserved[0], input_sel, reserved[3:2]
   localparam logic [CSR_ADDR_W-1:0] CSR_MAX_HITS    = 6'h08;  // max_hits[3:0]
   localparam logic [CSR_ADDR_W-1:0] CSR_WDT_CTX     = 6'h0C;  // per-context watchdog timeout
   localparam logic [CSR_ADDR_W-1:0] CSR_WDT_GLOBAL  = 6'h10;  // global watchdog timeout
@@ -256,7 +256,8 @@ package mptdc_pkg;
   // =========================================================================
   // Configuration struct
   // v2.4: mode_cfg removed — single multi-hit operating mode.
-  //       CSR_MODE[0] is reserved (read-as-zero / ignored on write).
+  // v2.7: output packet mode is hardwired; cfg.out_mode is retained only as a
+  //       read-zero compatibility field for wrappers that still carry the type.
   // =========================================================================
   typedef struct packed {
     input_sel_e input_sel;

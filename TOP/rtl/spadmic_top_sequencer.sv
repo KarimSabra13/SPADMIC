@@ -50,7 +50,6 @@ module spadmic_top_sequencer (
   logic          active_position_enable_q;
   spadmic_tx_sel_e active_shared_tx_sel_q;
   input_sel_e      active_tdc_input_sel_q;
-  out_mode_e       active_tdc_out_mode_q;
 
   wire path_idle = ~tdc_tx_busy_i
                  & ~(|tdc_pkt_pending_i)
@@ -71,7 +70,7 @@ module spadmic_top_sequencer (
     active_position_enable_o = active_position_enable_q;
     active_shared_tx_sel_o   = active_shared_tx_sel_q;
     active_tdc_input_sel_o   = active_tdc_input_sel_q;
-    active_tdc_out_mode_o    = active_tdc_out_mode_q;
+    active_tdc_out_mode_o    = OUT_MODE_RAW_FEATURES;
 
     if (state_q != SEQ_IDLE)
       active_global_enable_o = 1'b0;
@@ -87,7 +86,6 @@ module spadmic_top_sequencer (
       active_position_enable_q <= 1'b1;
       active_shared_tx_sel_q   <= SPADMIC_TX_TDC;
       active_tdc_input_sel_q   <= INPUT_SPAD;
-      active_tdc_out_mode_q    <= OUT_MODE_RAW_FEATURES;
     end else begin
       case (state_q)
         SEQ_RESET: begin
@@ -107,7 +105,6 @@ module spadmic_top_sequencer (
             active_position_enable_q <= req_position_enable_i;
             active_shared_tx_sel_q   <= req_shared_tx_sel_i;
             active_tdc_input_sel_q   <= req_tdc_input_sel_i;
-            active_tdc_out_mode_q    <= req_tdc_out_mode_i;
             state_q                  <= SEQ_IDLE;
           end
         end

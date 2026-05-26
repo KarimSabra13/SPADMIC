@@ -34,8 +34,6 @@ module spadmic_correlated_tx (
   import spadmic_pkg::*;
 
   spadmic_export_mode_e export_mode;
-  logic                 tdc_mode_supported;
-
   logic [SPADMIC_SRC_COUNT-1:0] source_enable_d;
   logic [SPADMIC_SRC_COUNT-1:0] source_enable_q;
   logic [SPADMIC_SRC_COUNT-1:0] source_mask_q;
@@ -74,13 +72,12 @@ module spadmic_correlated_tx (
   logic [SPADMIC_EVENT_ID_W-1:0] unified_event_id_q;
 
   assign export_mode = spadmic_export_mode_from_ctrl(tx_sel_i, position_enable_i);
-  assign tdc_mode_supported = (tdc_out_mode_i == OUT_MODE_RAW_FEATURES)
-                            || (tdc_out_mode_i == OUT_MODE_FULL);
+  wire unused_tdc_out_mode = |tdc_out_mode_i;
 
   always_comb begin
     source_enable_d = '0;
 
-    if ((export_mode != SPADMIC_EXPORT_POSITION_ONLY) && tdc_mode_supported) begin
+    if (export_mode != SPADMIC_EXPORT_POSITION_ONLY) begin
       source_enable_d[TDC_ID_X] = axis_enable_i[0];
       source_enable_d[TDC_ID_Y] = axis_enable_i[1];
       source_enable_d[TDC_ID_Z] = axis_enable_i[2];

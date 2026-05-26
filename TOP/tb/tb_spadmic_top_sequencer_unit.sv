@@ -124,7 +124,7 @@ module tb_spadmic_top_sequencer_unit;
     check("Committed request updates axis enables", active_axis_enable === 3'b101);
     check("Committed request updates shared source", active_shared_tx_sel === SPADMIC_TX_POSITION);
     check("Committed request updates input select", active_tdc_input_sel === INPUT_CAL);
-    check("Committed request updates output mode", active_tdc_out_mode === OUT_MODE_FULL);
+    check("Committed request keeps output mode fixed", active_tdc_out_mode === OUT_MODE_RAW_FEATURES);
     check("Transition completes after idle commit", transition_busy === 1'b0);
     check("Accept gate reopens after commit", cfg_accept === 1'b1);
 
@@ -155,7 +155,7 @@ module tb_spadmic_top_sequencer_unit;
     @(posedge clk_sys);
     #1;
     check("Clearing pending commits requested source", active_shared_tx_sel === SPADMIC_TX_TDC);
-    check("Clearing pending commits requested out mode", active_tdc_out_mode === OUT_MODE_RAW_TIMESTAMP);
+    check("Clearing pending keeps output mode fixed", active_tdc_out_mode === OUT_MODE_RAW_FEATURES);
     check("Transition busy clears after drain", transition_busy === 1'b0);
     check("Accept gate restores after drain", cfg_accept === 1'b1);
 

@@ -121,8 +121,8 @@ post-ECO conclusion is frozen:
 
 The strict Oracle result identified a structural startup failure mode: a large
 `nslow=0` population can retain true-delay spans close to `1 ns` even when
-`stop_phase_disc`, `phase0_snap`, and `slow_boundary_inc` are included in the
-packet-visible key.  The root cause is in the STOP-side slow Gray counter, not
+`stop_phase_disc`, `phase0_snap`, and the historical internal `slow_boundary_inc`
+are included in the diagnostic key.  The root cause is in the STOP-side slow Gray counter, not
 in the host LUT:
 
 - the first `slow_phase[0]` edge after measurement clear was consumed by the

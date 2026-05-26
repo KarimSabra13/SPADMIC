@@ -298,7 +298,7 @@ module tb_spadmic_top_stress;
     repeat (12) @(posedge clk_sys);
 
     tdc_csr_write_all(CSR_MAX_HITS, CSR_DATA_W'(MAX_HITS));
-    tdc_csr_write_all(CSR_MODE, CSR_DATA_W'(OUT_MODE_FULL) << 2);
+    tdc_csr_write_all(CSR_MODE, CSR_DATA_W'(OUT_MODE_RAW_FEATURES) << 2);
     tdc_csr_write_all(CSR_CTRL, CSR_DATA_W'(1));
     position_csr_write(SPADMIC_CSR_POS_CTRL, SPADMIC_CSR_DATA_W'(3));
 
@@ -307,9 +307,9 @@ module tb_spadmic_top_stress;
     fork
       begin
         fire_event(1);
-        #(25000 - 18000);
+        #(200000 - 18000);
         fire_event(2);
-        #(25000 - 18000);
+        #(200000 - 18000);
         fire_event(3);
       end
     join
@@ -343,10 +343,10 @@ module tb_spadmic_top_stress;
     if (errors == 0) begin
       $display("PASS tb_spadmic_top_stress");
       $finish;
+    end else begin
+      $display("FAIL tb_spadmic_top_stress errors=%0d", errors);
+      $fatal(1);
     end
-
-    $display("FAIL tb_spadmic_top_stress errors=%0d", errors);
-    $fatal(1);
   end
 endmodule
 

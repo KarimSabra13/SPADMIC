@@ -105,11 +105,11 @@ package mptdc_vip_pkg;
   endfunction
 
   function automatic out_mode_e packet_out_mode(input logic [NARROW_W-1:0] word);
-    return out_mode_e'(word[2:1]);
+    return OUT_MODE_RAW_FEATURES;
   endfunction
 
   function automatic bit packet_boundary_inc(input logic [NARROW_W-1:0] word);
-    return word[0];
+    return 1'b0;
   endfunction
 
   function automatic logic [13:0] packet_conv_id(input logic [NARROW_W-1:0] word);
@@ -121,12 +121,7 @@ package mptdc_vip_pkg;
   endfunction
 
   function automatic int unsigned words_per_hit(input out_mode_e mode);
-    case (mode)
-      OUT_MODE_RAW_FEATURES:  return 2;
-      OUT_MODE_RAW_TIMESTAMP: return 2;
-      OUT_MODE_FULL:          return 3;
-      default:                return 2;
-    endcase
+    return 2;
   endfunction
 
   function automatic int unsigned packet_words_from_header(input logic [NARROW_W-1:0] hdr);
@@ -228,7 +223,9 @@ package mptdc_vip_pkg;
       word      = '0;
       word[0]   = MODE_MULTI_HIT;
       word[1]   = input_sel;
-      word[3:2] = out_mode;
+      // CSR_MODE[3:2] is now reserved/read-zero. Leave programmed out_mode out
+      // of the CSR image so readback tests model the single-packet RTL contract.
+      word[3:2] = OUT_MODE_RAW_FEATURES;
       return word;
     endfunction
 
@@ -988,6 +985,7 @@ package mptdc_vip_pkg;
             current_cfg = cfg.clone();
             current_cfg.max_hits = current_cfg.effective_max_hits();
             current_cfg.mode_cfg = current_cfg.effective_mode_cfg();
+            current_cfg.out_mode = OUT_MODE_RAW_FEATURES;
           end
 
           TXN_BP: begin
@@ -1010,7 +1008,7 @@ package mptdc_vip_pkg;
             conv.bp_mode_at_issue = ready_drv.mode;
             conv.cfg_mode      = current_cfg.mode_cfg;
             conv.cfg_input_sel = current_cfg.input_sel;
-            conv.cfg_out_mode  = current_cfg.out_mode;
+            conv.cfg_out_mode  = OUT_MODE_RAW_FEATURES;
             conv.cfg_max_hits  = current_cfg.max_hits;
             $display("[VIP][DRV] %s", conv.sprint());
 
@@ -1099,39 +1097,15 @@ package mptdc_vip_pkg;
         hit.nfast_hit = w0[7:1];
         idx++;
 
-        case (pkt.out_mode)
-          OUT_MODE_RAW_FEATURES: begin
-            logic [NARROW_W-1:0] w1;
-            w1 = pkt.words[idx + 0];
-            hit.ns           = ph_idx_t'(w1[14:11]);
-            hit.nf           = ph_idx_t'(w1[10:7]);
-            hit.stop_phase_disc = packet_stop_phase_disc(w1);
-            hit.has_features = 1'b1;
-            idx += 1;
-          end
-
-          OUT_MODE_RAW_TIMESTAMP: begin
-            hit.t_raw_lsw     = pkt.words[idx];
-            hit.has_timestamp = 1'b1;
-            idx += 1;
-          end
-
-          OUT_MODE_FULL: begin
-            logic [NARROW_W-1:0] w1;
-            w1 = pkt.words[idx + 0];
-            hit.ns            = ph_idx_t'(w1[14:11]);
-            hit.nf            = ph_idx_t'(w1[10:7]);
-            hit.stop_phase_disc = packet_stop_phase_disc(w1);
-            hit.t_raw_lsw     = pkt.words[idx + 1];
-            hit.has_features  = 1'b1;
-            hit.has_timestamp = 1'b1;
-            idx += 2;
-          end
-
-          default: begin
-            idx += 1;
-          end
-        endcase
+        begin
+          logic [NARROW_W-1:0] w1;
+          w1 = pkt.words[idx + 0];
+          hit.ns              = ph_idx_t'(w1[14:11]);
+          hit.nf              = ph_idx_t'(w1[10:7]);
+          hit.stop_phase_disc = packet_stop_phase_disc(w1);
+          hit.has_features    = 1'b1;
+          idx += 1;
+        end
         pkt.hits.push_back(hit);
       end
     endfunction
@@ -1229,9 +1203,9 @@ package mptdc_vip_pkg;
         fail($sformatf("%s hit decode mismatch: header=%0d decoded=%0d",
                        exp.label, pkt.hit_count, pkt.hits.size()));
 
-      if (exp.check_out_mode && pkt.out_mode != exp.cfg_out_mode)
-        fail($sformatf("%s out_mode mismatch: got %0d expected %0d",
-                       exp.label, pkt.out_mode, exp.cfg_out_mode));
+      if (exp.check_out_mode && pkt.out_mode != OUT_MODE_RAW_FEATURES)
+        fail($sformatf("%s out_mode mismatch: got %0d expected fixed %0d",
+                       exp.label, pkt.out_mode, OUT_MODE_RAW_FEATURES));
 
       if (exp.require_nonzero_hits && (pkt.hit_count == 0))
         fail($sformatf("%s expected non-zero hits", exp.label));
@@ -1877,7 +1851,6 @@ package mptdc_vip_pkg;
 
       expected_mode_data         = '0;
       expected_mode_data[1]      = cfg_txn.input_sel;
-      expected_mode_data[3:2]    = cfg_txn.out_mode;
       expected_max_hits_data     = '0;
       expected_max_hits_data[MAX_HITS_W-1:0] = cfg_txn.max_hits;
       expected_wdt_ctx_data      = '0;

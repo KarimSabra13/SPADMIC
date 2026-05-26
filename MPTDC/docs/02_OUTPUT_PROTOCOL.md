@@ -1,8 +1,8 @@
-# MPTDC v2.6 — 16-bit Output Protocol
+# MPTDC v2.7 — Fixed 16-bit Output Protocol
 
 > - **Author:** Karim Sabra
 > - **Purpose:** Define the live 16-bit packet format emitted by the MPTDC serializer.
-> - **Scope:** Covers header, hit, and EOC words plus parsing rules for `RAW_FEATURES`, `RAW_TIMESTAMP`, and `FULL` modes.
+> - **Scope:** Covers the single header/hit/EOC packet format used by both the standalone MPTDC serializer and the shared SPADMIC TDC packet adapter.
 
 ## 1. Overview
 
@@ -14,10 +14,7 @@ The active design emits conversion results on a 16-bit ready/valid stream. Each 
 
 The old dedicated TDC sub-header has been removed. `nfast_stop`, `nfast_snap`, `pd_idx`, and `event_seq` are no longer part of the live packet contract.
 
-The serializer may insert internal `clk_sys` bubbles between ready/valid words,
-including a registered timestamp-calculation bubble before hit payload emission.
-Receivers must rely on `valid`/`ready` and packet structure, not fixed cycle
-spacing between words.
+The serializer may insert internal `clk_sys` bubbles between ready/valid words. Receivers must rely on `valid`/`ready` and packet structure, not fixed cycle spacing between words.
 
 ## 2. Word-class identification
 
@@ -27,7 +24,7 @@ spacing between words.
 [15]    = 1'b0   -> hit payload word
 ```
 
-In `RAW_TIMESTAMP` and `FULL` modes, timestamp payload words may have any pattern on the lower 16 bits, so the receiver must parse by packet structure rather than by payload value.
+All hit payload words have `word[15]=0`; receivers should still parse by packet structure rather than by payload value.
 
 ## 3. Header word
 
@@ -37,8 +34,7 @@ In `RAW_TIMESTAMP` and `FULL` modes, timestamp payload words may have any patter
 [11]    phase0_snap       = STOP-side snapshot of slow phase 0
 [10:7]  hit_count         = number of hits carried in this packet
 [6:3]   flags             = close reason flags
-[2:1]   out_mode          = serializer mode
-[0]     slow_boundary_inc = STOP-side boundary carry
+[2:0]   reserved          = 3'b000
 ```
 
 ### 3.1 Flag semantics
@@ -55,9 +51,9 @@ The active pivot no longer uses a near-1 GHz fast-domain context FSM; treat this
 flag as a watchdog-class close indication rather than proof that a programmable
 fast-domain watchdog counter elapsed.
 
-## 4. RAW_FEATURES mode (`out_mode = 0`)
+## 4. Fixed calibrated-feature hit format
 
-This is the preferred mode for offline calibration and silicon characterization because it exports the raw measured fields instead of only a derived timestamp.
+This is the only maintained output format. It exports the packet-visible fields required by the final LUT calibration while keeping the packet at two words per hit.
 
 Packet size:
 
@@ -109,61 +105,13 @@ The removed fields are recovered as follows when needed offline:
 - `hit_idx` remains implicit from packet order
 - `event_seq` is intentionally not exported; scan order is no longer a live packet field
 
-## 5. RAW_TIMESTAMP mode (`out_mode = 1`)
+## 5. Removed legacy modes and boundary bit
 
-This mode emits the coarse counters plus one derived raw timestamp word per hit.
+`RAW_TIMESTAMP` and `FULL` are no longer emitted by the maintained RTL. Legacy CSR or wrapper fields that still carry an `out_mode` type are hardwired/ignored and read back as `OUT_MODE_RAW_FEATURES`.
 
-Packet size:
+`slow_boundary_inc` is no longer exported in the header. The final ablation showed unchanged matched-row RMSE when inference is performed without it, but about `0.123 %` of validation rows become non-inferable. Host calibration flows must therefore report effective coverage and mark/drop rows that fail `ns/nf` inference rather than hiding them in RMSE.
 
-```text
-1 header + 2 * hit_count + 1 EOC
-```
-
-### 5.1 Hit word W0
-
-Same layout as RAW_FEATURES W0.
-
-### 5.2 Hit word W1
-
-```text
-[15:0] t_raw_ps[15:0]
-```
-
-`rtl/readout/mptdc_narrow16_tx_v2.sv` computes `t_raw_ps` using `mptdc_pkg::vernier_tconv_ps()`. The formula preserves the original Vernier dependence on:
-
-- `Nslow`
-- `Nfast`
-- `ns`
-- `nf`
-- `K_VERNIER`
-- `DELTA_LSB`
-
-and also applies the current fixed geometry-origin corrections and `slow_boundary_inc`.
-
-## 6. FULL mode (`out_mode = 2`)
-
-This mode emits the raw feature words, including `stop_phase_disc`, plus the
-derived timestamp.
-
-Packet size:
-
-```text
-1 header + 3 * hit_count + 1 EOC
-```
-
-### 6.1 Hit words W0-W1
-
-Same as RAW_FEATURES W0-W1.
-
-### 6.2 Hit word W2
-
-```text
-[15:0] t_raw_ps[15:0]
-```
-
-This is the same derived timestamp used in RAW_TIMESTAMP mode.
-
-## 7. EOC word
+## 6. EOC word
 
 ```text
 [15:14] = 2'b11
@@ -172,11 +120,11 @@ This is the same derived timestamp used in RAW_TIMESTAMP mode.
 
 `conv_id` is maintained by `mptdc_narrow16_tx_v2.sv` as a local 14-bit wrapping packet counter.
 
-## 8. Internal origin of packet fields
+## 7. Internal origin of packet fields
 
 The serializer still consumes two internal acquisition-record types:
 
-- META record: conversion-level information (`nslow`, capture-time `nfast`, `hit_count`, flags, boundary info, `stop_phase_disc`, `ctx_id`)
+- META record: conversion-level information (`nslow`, capture-time `nfast`, `hit_count`, flags, internal boundary info, `stop_phase_disc`, `ctx_id`)
 - HIT record: per-hit information (`ns`, `nf`, `nfast_hit`, internal `event_seq`)
 
 Important distinction:
@@ -184,26 +132,23 @@ Important distinction:
 - `nfast_snap`, `nfast_stop`, and `event_seq` still exist in some internal records and historical tooling
 - they are **not** emitted on the live narrow packet anymore
 
-## 9. Host-side parsing rules
+## 8. Host-side parsing rules
 
 1. Wait for a header word.
-2. Decode `hit_count` and `out_mode` from the header.
-3. Derive the total packet length:
-   - RAW_FEATURES: `2 * hit_count + 2`
-   - RAW_TIMESTAMP: `2 * hit_count + 2`
-   - FULL: `3 * hit_count + 2`
+2. Decode `hit_count` from the header.
+3. Derive the total packet length as `2 * hit_count + 2`.
 4. Consume the expected number of hit words.
 5. Expect one EOC word at the end.
 
-Do not rely on payload bit patterns to infer semantic word boundaries in timestamp modes.
+Do not decode `header[2:0]` as functional payload; these bits are reserved/read-zero.
 
-## 10. Recommended operating usage
+## 9. Recommended operating usage
 
-- Use `RAW_FEATURES` for silicon characterization and offline calibration.
-- Use `RAW_TIMESTAMP` when the host only needs a compact pre-centered raw time and does not need direct `ns/nf` export.
-- Use `FULL` when you want both the raw feature words and the on-chip raw timestamp reconstruction for debug correlation.
+- Use the fixed calibrated-feature packet for silicon characterization and offline calibration.
+- Reconstruct raw timestamps offline from packet-visible fields when needed; no live timestamp word is emitted.
+- Report both calibration error metrics and effective inference/LUT coverage.
 
-## 11. Example packet (RAW_FEATURES, 2 hits)
+## 10. Example packet (2 hits)
 
 ```text
 word 0  header

@@ -56,7 +56,8 @@ module spadmic_global_csr (
   wire         ctrl_position_enable_next = csr_wdata_i[4];
   wire spadmic_tx_sel_e ctrl_shared_tx_sel_next = spadmic_tx_sel_e'(csr_wdata_i[5]);
   wire input_sel_e      ctrl_tdc_input_sel_next = input_sel_e'(csr_wdata_i[6]);
-  wire out_mode_e       ctrl_tdc_out_mode_next  = out_mode_e'(csr_wdata_i[8:7]);
+  wire out_mode_e       ctrl_tdc_out_mode_next  = OUT_MODE_RAW_FEATURES;
+  wire                  unused_csr_out_mode_bits = |csr_wdata_i[8:7];
 
   wire wr_en = csr_valid_i & csr_write_i;
   wire rd_en = csr_valid_i & ~csr_write_i;
@@ -69,15 +70,13 @@ module spadmic_global_csr (
                       || (ctrl_axis_enable_next     != req_axis_enable_o)
                       || (ctrl_position_enable_next != req_position_enable_o)
                       || (ctrl_shared_tx_sel_next   != req_shared_tx_sel_o)
-                      || (ctrl_tdc_input_sel_next   != req_tdc_input_sel_o)
-                      || (ctrl_tdc_out_mode_next    != req_tdc_out_mode_o);
+                      || (ctrl_tdc_input_sel_next   != req_tdc_input_sel_o);
 
   wire ctrl_apply_pending = (req_global_enable_o   != active_global_enable_i)
                          || (req_axis_enable_o     != active_axis_enable_i)
                          || (req_position_enable_o != active_position_enable_i)
                          || (req_shared_tx_sel_o   != active_shared_tx_sel_i)
-                         || (req_tdc_input_sel_o   != active_tdc_input_sel_i)
-                         || (req_tdc_out_mode_o    != active_tdc_out_mode_i);
+                         || (req_tdc_input_sel_o    != active_tdc_input_sel_i);
 
   assign csr_ready_o = 1'b1;
 
@@ -109,7 +108,7 @@ module spadmic_global_csr (
                 req_position_enable_o <= ctrl_position_enable_next;
                 req_shared_tx_sel_o   <= ctrl_shared_tx_sel_next;
                 req_tdc_input_sel_o   <= ctrl_tdc_input_sel_next;
-                req_tdc_out_mode_o    <= ctrl_tdc_out_mode_next;
+                req_tdc_out_mode_o    <= OUT_MODE_RAW_FEATURES;
                 cfg_update_o          <= 1'b1;
               end
             end
@@ -145,7 +144,7 @@ module spadmic_global_csr (
         rd_data_next[4]   = req_position_enable_o;
         rd_data_next[5]   = req_shared_tx_sel_o;
         rd_data_next[6]   = req_tdc_input_sel_o;
-        rd_data_next[8:7] = req_tdc_out_mode_o;
+        rd_data_next[8:7] = OUT_MODE_RAW_FEATURES;
       end
 
       SPADMIC_CSR_GLOBAL_STATUS: begin
@@ -156,7 +155,7 @@ module spadmic_global_csr (
         rd_data_next[6]    = path_idle;
         rd_data_next[7]    = active_shared_tx_sel_i;
         rd_data_next[8]    = active_tdc_input_sel_i;
-        rd_data_next[10:9] = active_tdc_out_mode_i;
+        rd_data_next[10:9] = OUT_MODE_RAW_FEATURES;
         rd_data_next[13:11] = tdc_pkt_full_i;
         rd_data_next[14]   = transition_busy_i;
         rd_data_next[15]   = ctrl_apply_pending;

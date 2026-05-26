@@ -4,21 +4,20 @@
 // =============================================================================
 // Project  : SPAD_MPTDC v2.2 — Design Review Enhanced Vernier TDC
 // File     : mptdc_narrow16_tx_v2.sv
-// Purpose  : 16-bit ready/valid serializer — reads from sync FIFO, emits
-//            configurable narrow packets (raw features / raw timestamp / full)
+// Purpose  : 16-bit ready/valid serializer — reads from sync FIFO and emits
+//            the fixed calibrated-feature packet.
 // Author   : Karim Sabra
 // =============================================================================
 // Reads META + HIT acquisition records from the sync FIFO
 // and serialises them onto a 16-bit ready/valid bus.
 //
 // Packet format (per conversion):
-//   1 × Header    — context id, hit count, flags, output mode, boundary_inc
-//   N × Hit words — 2/2/3 words per hit depending on out_mode
+//   1 × Header    — context id, hit count, flags, reserved bits
+//   N × Hit words — two words per hit
 //   1 × EOC       — end-of-conversion marker with 14-bit running counter
 //
-// v2.2: header bit[0] carries slow_boundary_inc for offline calibration
-// v2.6 ECO: Hit W1 feature bits [2:0] carry stop_slow_phase_disc in
-// RAW_FEATURES and FULL modes. RAW_TIMESTAMP keeps Hit W1 as t_raw_ps[15:0].
+// v2.7: output mode selection and slow_boundary_inc export are removed from the
+// packet. Hit W1[2:0] carries stop_slow_phase_disc for the calibrated LUT key.
 // =============================================================================
 module mptdc_narrow16_tx_v2
   import mptdc_pkg::*;
@@ -26,7 +25,7 @@ module mptdc_narrow16_tx_v2
   input  wire                   clk_sys,
   input  wire                   rst_n,          // synchronous clk_sys reset, active-low
 
-  // Configuration
+  // Legacy configuration is ignored; the output format is hardwired.
   input  mptdc_pkg::out_mode_e  out_mode_i,
 
   // Sync-FIFO read port (FWFT: data valid while fifo_rd_valid_i is high)
@@ -47,10 +46,8 @@ module mptdc_narrow16_tx_v2
     S_IDLE      = 4'd0,
     S_HEADER    = 4'd1,
     S_HIT_FETCH = 4'd2,
-    S_HIT_CALC  = 4'd3,
     S_HIT_W0    = 4'd4,
     S_HIT_W1    = 4'd5,
-    S_HIT_W2    = 4'd6,
     S_EOC       = 4'd7
   } tx_state_e;
 
@@ -62,10 +59,8 @@ module mptdc_narrow16_tx_v2
   ctx_id_t                ctx_id_q;
   logic                   phase0_snap_q;
   stop_phase_disc_t       stop_slow_phase_disc_q;
-  logic                   slow_boundary_inc_q;  // v2.2
   logic [MAX_HITS_W-1:0]  hit_count_q;
   tdc_conv_flags_t        flags_q;
-  out_mode_e              out_mode_q;
   logic [NSLOW_W-1:0]     nslow_q;
 
   // ---------------------------------------------------------------------------
@@ -86,21 +81,12 @@ module mptdc_narrow16_tx_v2
   logic [13:0] conv_count_q;
 
   // ---------------------------------------------------------------------------
-  // Raw Vernier time reconstruction.
-  // Keeps the original Vernier topology and applies the package-level
-  // geometry-origin corrections for STOP-side nslow and per-hit nfast.
-  // Registered one cycle after HIT fetch so timestamp arithmetic is not on the
-  // narrow_data_o output path.
-  // ---------------------------------------------------------------------------
-  logic signed [31:0] t_raw_ps_q;
-
-  // ---------------------------------------------------------------------------
   // Output word formation
   // ---------------------------------------------------------------------------
 
   logic [NARROW_W-1:0] header_word;
   // Header: [15:14]=2'b10 (header), [13:12]=ctx_id, [11]=phase0,
-  // [10:7]=hit_count, [6:3]=flags, [2:1]=out_mode, [0]=slow_boundary_inc
+  // [10:7]=hit_count, [6:3]=flags, [2:0]=reserved/read-zero
   // ctx_id_q is CTX_W bits (fixed one bit for N_CTX=2) and is padded into the
   // frozen two-bit packet field.
   assign header_word = {2'b10,
@@ -108,8 +94,7 @@ module mptdc_narrow16_tx_v2
                         phase0_snap_q,
                         hit_count_q,
                         flags_q,
-                        out_mode_q,
-                        slow_boundary_inc_q};
+                        3'b000};
 
   // Hit W0: [15]=0, [14:8]=nslow[6:0], [7:1]=nfast[6:0], [0]=0
   // Bit 15 always 0 to distinguish from header/EOC markers
@@ -126,14 +111,6 @@ module mptdc_narrow16_tx_v2
   // 8-tap RTL drives only values 0..7.
   logic [NARROW_W-1:0] hit_w1_feat;
   assign hit_w1_feat = {1'b0, 4'(ns_q), 4'(nf_q), 4'b0, stop_slow_phase_disc_q};
-
-  // Hit W1 — timestamp variant: [15:0]=t_raw_ps[15:0]
-  logic [NARROW_W-1:0] hit_w1_ts;
-  assign hit_w1_ts = t_raw_ps_q[15:0];
-
-  // Hit W2 (FULL only): [15:0]=t_raw_ps[15:0]
-  logic [NARROW_W-1:0] hit_w2;
-  assign hit_w2 = t_raw_ps_q[15:0];
 
   // EOC: [15:14]=11, [13:0]=conv_count
   logic [NARROW_W-1:0] eoc_word;
@@ -156,15 +133,12 @@ module mptdc_narrow16_tx_v2
       ctx_id_q      <= '0;
       phase0_snap_q <= 1'b0;
       stop_slow_phase_disc_q <= '0;
-      slow_boundary_inc_q <= 1'b0;  // v2.2
       hit_count_q   <= '0;
       flags_q       <= '0;
-      out_mode_q    <= OUT_MODE_RAW_FEATURES;
       nslow_q       <= '0;
       ns_q          <= '0;
       nf_q          <= '0;
       nfast_q       <= '0;
-      t_raw_ps_q    <= '0;
     end else begin
       case (state_q)
         // -----------------------------------------------------------------
@@ -173,11 +147,9 @@ module mptdc_narrow16_tx_v2
             ctx_id_q      <= fifo_rd_data_i.meta.ctx_id;
             phase0_snap_q <= fifo_rd_data_i.meta.phase0_snap;
             stop_slow_phase_disc_q <= fifo_rd_data_i.meta.stop_slow_phase_disc;
-            slow_boundary_inc_q <= fifo_rd_data_i.meta.slow_boundary_inc; // v2.2
             hit_count_q   <= fifo_rd_data_i.meta.hit_count;
             flags_q       <= fifo_rd_data_i.meta.flags;
             nslow_q       <= fifo_rd_data_i.meta.nslow;
-            out_mode_q    <= out_mode_i;
             hit_idx_q     <= '0;
             state_q       <= S_HEADER;
           end
@@ -196,15 +168,8 @@ module mptdc_narrow16_tx_v2
             ns_q        <= fifo_rd_data_i.hit.ns;
             nf_q        <= fifo_rd_data_i.hit.nf;
             nfast_q     <= fifo_rd_data_i.hit.nfast;
-            state_q     <= S_HIT_CALC;
+            state_q     <= S_HIT_W0;
           end
-        end
-
-        // -----------------------------------------------------------------
-        S_HIT_CALC: begin
-          t_raw_ps_q <= vernier_tconv_ps(nslow_q, nfast_q, ns_q, nf_q,
-                                         slow_boundary_inc_q);
-          state_q <= S_HIT_W0;
         end
 
         // -----------------------------------------------------------------
@@ -215,18 +180,6 @@ module mptdc_narrow16_tx_v2
 
         // -----------------------------------------------------------------
         S_HIT_W1: begin
-          if (out_accepted) begin
-            if (out_mode_q != OUT_MODE_FULL) begin
-              hit_idx_q <= hit_idx_q + MAX_HITS_W'(1);
-              state_q   <= last_hit_done ? S_EOC : S_HIT_FETCH;
-            end else begin
-              state_q <= S_HIT_W2;
-            end
-          end
-        end
-
-        // -----------------------------------------------------------------
-        S_HIT_W2: begin
           if (out_accepted) begin
             hit_idx_q <= hit_idx_q + MAX_HITS_W'(1);
             state_q   <= last_hit_done ? S_EOC : S_HIT_FETCH;
@@ -274,10 +227,6 @@ module mptdc_narrow16_tx_v2
         fifo_rd_en_o = fifo_rd_valid_i;
       end
 
-      S_HIT_CALC: begin
-        // Registered timestamp calculation bubble.
-      end
-
       S_HIT_W0: begin
         narrow_valid_o = 1'b1;
         narrow_data_o  = hit_w0;
@@ -285,13 +234,7 @@ module mptdc_narrow16_tx_v2
 
       S_HIT_W1: begin
         narrow_valid_o = 1'b1;
-        narrow_data_o  = (out_mode_q == OUT_MODE_RAW_TIMESTAMP)
-                       ? hit_w1_ts : hit_w1_feat;
-      end
-
-      S_HIT_W2: begin
-        narrow_valid_o = 1'b1;
-        narrow_data_o  = hit_w2;
+        narrow_data_o  = hit_w1_feat;
       end
 
       S_EOC: begin

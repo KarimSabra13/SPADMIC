@@ -72,8 +72,13 @@ REQUIRED_COLUMNS = [
     "stop_phase_disc",
     "phase0_snap",
     "hit_idx",
-    "slow_boundary_inc",
 ]
+OPTIONAL_COLUMNS_DEFAULTS = {
+    # v2.7 packet no longer exports slow_boundary_inc.  Missing values are
+    # treated as the high-throughput protocol default; rows that cannot be
+    # inverted without this bit are still dropped and counted after inference.
+    "slow_boundary_inc": 0,
+}
 PARSER_ERROR_RE = re.compile(
     r"Expected (?P<expected>\d+) fields in line (?P<line>\d+), saw (?P<saw>\d+)"
 )
@@ -191,6 +196,11 @@ def read_seed_csv(csv_file):
         )
         return None, "missing_required_columns"
 
+    for col, default in OPTIONAL_COLUMNS_DEFAULTS.items():
+        if col not in df.columns:
+            df[col] = default
+            df.attrs[f"defaulted_{col}"] = True
+
     if df.empty:
         return None, "header_only"
 
@@ -238,6 +248,7 @@ def load_and_prepare(csv_files, core_only=True, allow_empty=False):
     skipped = []
     recovered_files = 0
     recovered_rows = 0
+    defaulted_slow_boundary_files = 0
     for f in csv_files:
         frame, skip_reason = read_seed_csv(f)
         if frame is None:
@@ -245,6 +256,7 @@ def load_and_prepare(csv_files, core_only=True, allow_empty=False):
             continue
         recovered_files += int(bool(frame.attrs.get("recovered_from_parser_error", False)))
         recovered_rows += int(frame.attrs.get("malformed_rows_skipped", 0))
+        defaulted_slow_boundary_files += int(bool(frame.attrs.get("defaulted_slow_boundary_inc", False)))
         frames.append(frame)
 
     print_skipped_csv_summary(skipped)
@@ -274,6 +286,7 @@ def load_and_prepare(csv_files, core_only=True, allow_empty=False):
     ))
     df.attrs["recovered_csv_files"] = int(recovered_files)
     df.attrs["recovered_malformed_rows"] = int(recovered_rows)
+    df.attrs["defaulted_slow_boundary_inc_files"] = int(defaulted_slow_boundary_files)
 
     if df.empty:
         df["offset"] = pd.Series(dtype=np.float64)
@@ -327,6 +340,9 @@ def filter_summary(df):
         ),
         "recovered_csv_files": int(df.attrs.get("recovered_csv_files", 0)),
         "recovered_malformed_rows": int(df.attrs.get("recovered_malformed_rows", 0)),
+        "defaulted_slow_boundary_inc_files": int(
+            df.attrs.get("defaulted_slow_boundary_inc_files", 0)
+        ),
     }
 
 

@@ -9,7 +9,7 @@
 // =============================================================================
 // Register map (v2.4):
 //   0x00  CSR_CTRL        RW  conv_arm[0], fifo_clr[1](SC), soft_rst[2](SC)
-//   0x04  CSR_MODE        RW  [0]=reserved, input_sel[1], out_mode[3:2]
+//   0x04  CSR_MODE        RW  [0]=reserved, input_sel[1], [3:2]=reserved/read-zero
 //   0x08  CSR_MAX_HITS    RW  max_hits[3:0]
 //   0x0C  CSR_WDT_CTX     RW  per-context watchdog timeout[15:0]
 //   0x10  CSR_WDT_GLOBAL  RW  global watchdog timeout[15:0]
@@ -64,7 +64,6 @@ module mptdc_csr_minimal
   // Configuration registers (reset defaults)
   // ===========================================================================
   input_sel_e                 r_input_sel;
-  out_mode_e                  r_out_mode;
   logic [MAX_HITS_W-1:0]     r_max_hits;
   logic [15:0]               r_wdt_ctx_timeout;    // v2.2: restored
   logic [15:0]               r_wdt_global_timeout;
@@ -72,7 +71,7 @@ module mptdc_csr_minimal
   // Pack cfg output
   always_comb begin
     cfg_o.input_sel          = r_input_sel;
-    cfg_o.out_mode           = r_out_mode;
+    cfg_o.out_mode           = OUT_MODE_RAW_FEATURES;
     cfg_o.max_hits           = r_max_hits;
     cfg_o.wdt_ctx_timeout    = r_wdt_ctx_timeout;   // v2.2: restored
     cfg_o.wdt_global_timeout = r_wdt_global_timeout;
@@ -90,7 +89,6 @@ module mptdc_csr_minimal
       fifo_clr_pulse_o       <= 1'b0;
       soft_rst_pulse_o       <= 1'b0;
       r_input_sel            <= INPUT_SPAD;
-      r_out_mode             <= OUT_MODE_RAW_FEATURES;
       r_max_hits             <= MAX_HITS_W'(MAX_HITS);
       r_wdt_ctx_timeout      <= 16'd0;            // v2.2
       r_wdt_global_timeout   <= 16'd0;
@@ -109,7 +107,6 @@ module mptdc_csr_minimal
 
           CSR_MODE: begin
             r_input_sel <= input_sel_e'(csr_wdata_i[1]);
-            r_out_mode  <= out_mode_e'(csr_wdata_i[3:2]);
           end
 
           CSR_MAX_HITS: begin
@@ -153,7 +150,7 @@ module mptdc_csr_minimal
 
       CSR_MODE: begin
         rd_data_next[1]   = r_input_sel;
-        rd_data_next[3:2] = r_out_mode;
+        rd_data_next[3:2] = OUT_MODE_RAW_FEATURES;
       end
 
       CSR_MAX_HITS: begin

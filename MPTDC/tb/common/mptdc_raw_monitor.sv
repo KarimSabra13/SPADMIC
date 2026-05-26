@@ -51,12 +51,7 @@ module mptdc_raw_monitor
   always_comb begin
     mon_hc   = header_hit_count(mon_w);
     mon_mode = header_out_mode(mon_w);
-    case (mon_mode)
-      OUT_MODE_RAW_FEATURES:  mon_wph = 2;
-      OUT_MODE_RAW_TIMESTAMP: mon_wph = 2;
-      OUT_MODE_FULL:          mon_wph = 3;
-      default:                mon_wph = 2;
-    endcase
+    mon_wph  = 2;
   end
 
   always_ff @(posedge clk_sys or negedge rst_n) begin

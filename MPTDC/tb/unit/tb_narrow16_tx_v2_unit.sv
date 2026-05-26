@@ -4,10 +4,11 @@
 // =============================================================================
 // Project : SPAD_MPTDC Verification Collateral
 // File    : tb_narrow16_tx_v2_unit.sv
-// Purpose : Unit test for 16-bit packet serialization across output modes.
+// Purpose : Unit test for the fixed 16-bit calibrated-feature packet serializer.
 // Author  : Karim Sabra
-// Notes   : Uses a queue-based FIFO model to verify header, hit, timestamp, EOC,
-//           and backpressure contracts.
+// Notes   : Uses a queue-based FIFO model to verify header, hit, EOC, and
+//           backpressure contracts. Legacy out_mode inputs are intentionally
+//           ignored by the DUT.
 // =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
@@ -230,8 +231,7 @@ module tb_narrow16_tx_v2_unit;
       check("T1 header phase0",   w[11]    == 1'b1);
       check("T1 header hit_count",w[10:7]  == 4'd1);
       check("T1 header flags",    w[6:3]   == 4'b0);
-      check("T1 header out_mode", w[2:1]   == 2'(OUT_MODE_RAW_FEATURES));
-      check("T1 header rsvd",     w[0]     == 1'b0);  // slow_boundary_inc=0
+      check("T1 header reserved", w[2:0]   == 3'b000);
 
       // Hit W0: nslow=10, nfast=5
       w = pkt[1];
@@ -280,9 +280,9 @@ module tb_narrow16_tx_v2_unit;
     end
 
     // ────────────────────────────────────────────────────────────────
-    // TEST 3: RAW_TIMESTAMP mode, 2 hits
+    // TEST 3: legacy RAW_TIMESTAMP request is ignored, 2 fixed-format hits
     // ────────────────────────────────────────────────────────────────
-    $display("\n--- Test 3: RAW_TIMESTAMP, 2 hits ---");
+    $display("\n--- Test 3: legacy RAW_TIMESTAMP ignored, 2 hits ---");
     out_mode = OUT_MODE_RAW_TIMESTAMP;
     @(posedge clk_sys);
 
@@ -302,27 +302,29 @@ module tb_narrow16_tx_v2_unit;
       check("T3 header phase0",    w[11]    == 1'b1);
       check("T3 header hit_count", w[10:7]  == 4'd2);
       check("T3 header flags",     w[6:3]   == 4'b0101);
-      check("T3 header out_mode",  w[2:1]   == 2'(OUT_MODE_RAW_TIMESTAMP));
+      check("T3 header reserved",  w[2:0]   == 3'b000);
 
       // Hit 0 W0
       w = pkt[1];
       check("T3 H0 W0 nslow", w[14:8] == 7'd15);
       check("T3 H0 W0 nfast", w[7:1]  == 7'd8);
 
-      // Hit 0 W1 timestamp
-      t_raw_exp = calc_t_raw_ps(7'd15, 7'd8, 4'd1, 4'd2);
+      // Hit 0 W1 features
       w = pkt[2];
-      check("T3 H0 W1 t_raw", w == t_raw_exp[15:0]);
+      check("T3 H0 W1 ns", w[14:11] == 4'd1);
+      check("T3 H0 W1 nf", w[10:7]  == 4'd2);
+      check("T3 H0 W1 stop disc", w[2:0] == 3'd7);
 
       // Hit 1 W0
       w = pkt[3];
       check("T3 H1 W0 nslow", w[14:8] == 7'd15);
       check("T3 H1 W0 nfast", w[7:1]  == 7'd10);
 
-      // Hit 1 W1 timestamp
-      t_raw_exp = calc_t_raw_ps(7'd15, 7'd10, 4'd4, 4'd5);
+      // Hit 1 W1 features
       w = pkt[4];
-      check("T3 H1 W1 t_raw", w == t_raw_exp[15:0]);
+      check("T3 H1 W1 ns", w[14:11] == 4'd4);
+      check("T3 H1 W1 nf", w[10:7]  == 4'd5);
+      check("T3 H1 W1 stop disc", w[2:0] == 3'd7);
 
       // EOC
       w = pkt[5];
@@ -331,9 +333,9 @@ module tb_narrow16_tx_v2_unit;
     end
 
     // ────────────────────────────────────────────────────────────────
-    // TEST 4: FULL mode, 1 hit
+    // TEST 4: legacy FULL request is ignored, 1 fixed-format hit
     // ────────────────────────────────────────────────────────────────
-    $display("\n--- Test 4: FULL mode, 1 hit ---");
+    $display("\n--- Test 4: legacy FULL ignored, 1 hit ---");
     out_mode = OUT_MODE_FULL;
     @(posedge clk_sys);
 
@@ -343,11 +345,11 @@ module tb_narrow16_tx_v2_unit;
 
     collect_pkt(pkt);
     n = pkt.size();
-    check("T4 word_count==5", n == 5);
+    check("T4 word_count==4", n == 4);
 
-    if (n >= 5) begin
+    if (n >= 4) begin
       w = pkt[0];
-      check("T4 header out_mode", w[2:1] == 2'(OUT_MODE_FULL));
+      check("T4 header reserved", w[2:0] == 3'b000);
       check("T4 header flags",    w[6:3] == 4'b0000);
 
       // W0
@@ -355,20 +357,15 @@ module tb_narrow16_tx_v2_unit;
       check("T4 W0 nslow", w[14:8] == 7'd30);
       check("T4 W0 nfast", w[7:1]  == 7'd20);
 
-      // W1 features (FULL uses features variant)
+      // W1 features (legacy FULL request still uses the fixed feature word)
       w = pkt[2];
       check("T4 W1 ns",     w[14:11] == 4'd7);
       check("T4 W1 nf",     w[10:7]  == 4'd7);
       check("T4 W1 reserved", w[6:3]   == 4'd0);
       check("T4 W1 stop disc", w[2:0]  == 3'd6);
 
-      // W2 timestamp
-      t_raw_exp = calc_t_raw_ps(7'd30, 7'd20, ph_idx_t'(7), ph_idx_t'(7));
-      w = pkt[3];
-      check("T4 W2 t_raw", w == t_raw_exp[15:0]);
-
       // EOC
-      w = pkt[4];
+      w = pkt[3];
       check("T4 EOC marker", w[15:14] == 2'b11);
       check("T4 EOC count",  w[13:0]  == 14'd3);
     end
@@ -450,7 +447,7 @@ module tb_narrow16_tx_v2_unit;
     end
 
     // ────────────────────────────────────────────────────────────────
-    // TEST 7: Header encoding — all fields + slow_boundary_inc
+    // TEST 7: Header encoding — reserved bits stay zero even if legacy inputs toggle
     // ────────────────────────────────────────────────────────────────
     $display("\n--- Test 7: Header encoding ---");
     do_reset();
@@ -469,8 +466,7 @@ module tb_narrow16_tx_v2_unit;
       check("T7 phase0==1",     w[11]    == 1'b1);
       check("T7 hit_count==0",  w[10:7]  == 4'd0);
       check("T7 flags==0010",   w[6:3]   == 4'b0010);
-      check("T7 out_mode==TS",  w[2:1]   == 2'(OUT_MODE_RAW_TIMESTAMP));
-      check("T7 boundary_inc",  w[0]     == 1'b1);
+      check("T7 reserved bits", w[2:0]   == 3'b000);
     end
 
     // ────────────────────────────────────────────────────────────────

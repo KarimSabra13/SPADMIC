@@ -65,11 +65,11 @@ package mptdc_tb_pkg;
   function automatic out_mode_e header_out_mode(
     input logic [NARROW_W-1:0] word
   );
-    return out_mode_e'(word[2:1]);
+    return OUT_MODE_RAW_FEATURES;
   endfunction
 
   function automatic logic header_boundary_inc(input logic [NARROW_W-1:0] word);
-    return word[0];
+    return 1'b0;
   endfunction
 
   function automatic logic [13:0] eoc_conv_id(
