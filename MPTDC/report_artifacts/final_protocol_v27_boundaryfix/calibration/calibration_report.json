@@ -1,0 +1,255 @@
+{
+  "method": "STOP-discriminator Mean-Correction LUT",
+  "lut_key": [
+    "ns_inf",
+    "nf_inf",
+    "nslow",
+    "nfast_hit",
+    "stop_phase_disc",
+    "phase0_snap",
+    "hit_idx"
+  ],
+  "lut_key_description": {
+    "ns_inf": "Slow phase index (0-7), inferred from t_raw_ps via Vernier algebra",
+    "nf_inf": "Fast phase index (0-7), inferred from t_raw_ps via Vernier algebra",
+    "nslow": "Slow oscillator hit count (coarse counter)",
+    "nfast_hit": "Fast oscillator hit count at measurement time",
+    "stop_phase_disc": "STOP-edge slow_phase[5:3] discriminator from Hit W1[2:0]",
+    "phase0_snap": "Phase-0 snapshot (oscillator alignment at conversion start)",
+    "hit_idx": "Sequential hit index within conversion (0-based)"
+  },
+  "output_mode_compatibility": {
+    "RAW_FEATURES (mode 0)": "Maintained fixed packet \u2013 discriminator, phase0_snap, and slow_boundary_inc are packet-visible",
+    "RAW_TIMESTAMP (mode 1)": "Legacy CSR code ignored by maintained RTL",
+    "FULL (mode 2)": "Legacy CSR code ignored by maintained RTL"
+  },
+  "ns_nf_inference": {
+    "formula": "diff = t_raw_ps/10 - (nslow+2+sbi-1)*88 - nfast*8 - 25 \u2192 unique (ns,nf)",
+    "accuracy": "100% \u2013 all 64 active 8\u00d78 (ns,nf) combinations map to unique diff values"
+  },
+  "training": {
+    "n_seeds": 24,
+    "n_bins": 9946,
+    "median_bin_pop": 3664,
+    "core_filter": "nslow > 0 (removes ~6.6% boundary-ambiguous hits)",
+    "rows_before_filter": 36000000,
+    "rows_after_filter": 36000000,
+    "rows_filtered_out": 0,
+    "rows_filtered_out_pct": 0.0,
+    "skipped_csv_files": 0,
+    "skipped_empty_csv_files": 0,
+    "skipped_header_only_csv_files": 0,
+    "skipped_missing_required_columns_csv_files": 0,
+    "recovered_csv_files": 0,
+    "recovered_malformed_rows": 0
+  },
+  "held_out_validation": {
+    "scope": "Core subset only (nslow > 0); nslow=0 rows excluded for published calibration metrics.",
+    "files": [
+      "seed_30.csv",
+      "seed_31.csv",
+      "seed_4.csv",
+      "seed_5.csv",
+      "seed_6.csv",
+      "seed_7.csv"
+    ],
+    "filter_summary": {
+      "filter": "nslow > 0",
+      "applied": true,
+      "rows_before_filter": 9000000,
+      "rows_after_filter": 9000000,
+      "rows_after_inference": 9000000,
+      "rows_filtered_out": 0,
+      "rows_filtered_out_pct": 0.0,
+      "skipped_csv_files": 0,
+      "skipped_empty_csv_files": 0,
+      "skipped_header_only_csv_files": 0,
+      "skipped_missing_required_columns_csv_files": 0,
+      "recovered_csv_files": 0,
+      "recovered_malformed_rows": 0,
+      "defaulted_slow_boundary_inc_files": 0
+    },
+    "slow_boundary_inc": {
+      "present": true,
+      "counts": {
+        "0": 8988917,
+        "1": 11025
+      },
+      "nonzero_rows": 11025,
+      "nonzero_pct": 0.12250078944953201
+    },
+    "pre_cal": {
+      "label": "Pre-calibration (held-out, core subset)",
+      "count": 8999942,
+      "mean": -1895.96811068338,
+      "std": 412.5111217415686,
+      "rmse": 1940.324844527017,
+      "mae": 1895.96811068338,
+      "p50_ae": 1969.0,
+      "p90_ae": 2469.0,
+      "p95_ae": 2554.0,
+      "p99_ae": 2624.0,
+      "min": -3020.0,
+      "max": -965.0
+    },
+    "post_cal": {
+      "label": "Post-calibration (held-out, core subset)",
+      "count": 8999942,
+      "mean": -0.008179002621201453,
+      "std": 18.55510151740323,
+      "rmse": 18.555103320036334,
+      "mae": 15.218903526330608,
+      "p50_ae": 13.482650337573432,
+      "p90_ae": 31.443627450978965,
+      "p95_ae": 35.399088761390885,
+      "p99_ae": 38.993705743509054,
+      "min": -40.59368017874294,
+      "max": 95.0
+    },
+    "error_table": "val_reconstruction_errors_pre_post.csv"
+  },
+  "averaging_study": {
+    "scope": "Post-calibration core-subset error pool",
+    "method": "Analysis-side resampling of independent error draws; not a fixed-delay repeated-measurement TB proof.",
+    "results": [
+      {
+        "N": 1,
+        "rmse_ps": 18.823,
+        "mae_ps": 15.528,
+        "p90_ps": 31.581
+      },
+      {
+        "N": 2,
+        "rmse_ps": 13.227,
+        "mae_ps": 10.704,
+        "p90_ps": 21.616
+      },
+      {
+        "N": 3,
+        "rmse_ps": 10.709,
+        "mae_ps": 8.646,
+        "p90_ps": 17.594
+      },
+      {
+        "N": 4,
+        "rmse_ps": 9.284,
+        "mae_ps": 7.448,
+        "p90_ps": 15.185
+      },
+      {
+        "N": 5,
+        "rmse_ps": 8.261,
+        "mae_ps": 6.677,
+        "p90_ps": 13.511
+      },
+      {
+        "N": 8,
+        "rmse_ps": 6.574,
+        "mae_ps": 5.295,
+        "p90_ps": 10.708
+      },
+      {
+        "N": 10,
+        "rmse_ps": 5.92,
+        "mae_ps": 4.744,
+        "p90_ps": 9.823
+      },
+      {
+        "N": 15,
+        "rmse_ps": 4.769,
+        "mae_ps": 3.802,
+        "p90_ps": 7.882
+      },
+      {
+        "N": 20,
+        "rmse_ps": 4.199,
+        "mae_ps": 3.351,
+        "p90_ps": 6.925
+      },
+      {
+        "N": 25,
+        "rmse_ps": 3.629,
+        "mae_ps": 2.902,
+        "p90_ps": 5.909
+      },
+      {
+        "N": 30,
+        "rmse_ps": 3.391,
+        "mae_ps": 2.694,
+        "p90_ps": 5.574
+      },
+      {
+        "N": 40,
+        "rmse_ps": 2.919,
+        "mae_ps": 2.323,
+        "p90_ps": 4.79
+      },
+      {
+        "N": 50,
+        "rmse_ps": 2.643,
+        "mae_ps": 2.101,
+        "p90_ps": 4.339
+      },
+      {
+        "N": 75,
+        "rmse_ps": 2.105,
+        "mae_ps": 1.68,
+        "p90_ps": 3.434
+      },
+      {
+        "N": 100,
+        "rmse_ps": 1.867,
+        "mae_ps": 1.494,
+        "p90_ps": 3.062
+      },
+      {
+        "N": 150,
+        "rmse_ps": 1.505,
+        "mae_ps": 1.196,
+        "p90_ps": 2.455
+      },
+      {
+        "N": 200,
+        "rmse_ps": 1.312,
+        "mae_ps": 1.047,
+        "p90_ps": 2.168
+      },
+      {
+        "N": 250,
+        "rmse_ps": 1.183,
+        "mae_ps": 0.946,
+        "p90_ps": 1.943
+      },
+      {
+        "N": 300,
+        "rmse_ps": 1.085,
+        "mae_ps": 0.873,
+        "p90_ps": 1.76
+      },
+      {
+        "N": 400,
+        "rmse_ps": 0.928,
+        "mae_ps": 0.744,
+        "p90_ps": 1.53
+      },
+      {
+        "N": 500,
+        "rmse_ps": 0.835,
+        "mae_ps": 0.669,
+        "p90_ps": 1.372
+      },
+      {
+        "N": 750,
+        "rmse_ps": 0.669,
+        "mae_ps": 0.534,
+        "p90_ps": 1.107
+      },
+      {
+        "N": 1000,
+        "rmse_ps": 0.59,
+        "mae_ps": 0.469,
+        "p90_ps": 0.962
+      }
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+================================================================================
+MPTDC Campaign Analysis – Summary Report
+================================================================================
+
+Config                                      Count       Mean        Std       RMSE    PkDNL    PkINL  RawBins   XChk
+--------------------------------------------------------------------------------------------------------------------
+multihit_15_cal_nominal                  48000000   -1895.77     412.49    1940.13    1.000   89.190        0      0
+
+--------------------------------------------------------------------------------
+Boundary-class t-test results
+--------------------------------------------------------------------------------
+
+  Config: multihit_15_cal_nominal
+    (np.int64(0), np.int64(0)) vs (np.int64(1), np.int64(0)): t=3697.950  p=0.00e+00  ***
+    (np.int64(0), np.int64(0)) vs (np.int64(1), np.int64(1)): t=456.483  p=0.00e+00  ***
+    (np.int64(1), np.int64(0)) vs (np.int64(1), np.int64(1)): t=176.738  p=0.00e+00  ***
+
+--------------------------------------------------------------------------------
+Delay / counter dependent summaries
+--------------------------------------------------------------------------------
+
+  Config: multihit_15_cal_nominal
+    Worst delay bin : 2518..3018 ps  RMSE=2093.24 ps  P99=2979.00 ps
+    20-200 ps   count=  288765  RMSE=2109.09 ps  P99=2611.00 ps
+    0.2-1 ns    count= 1282575  RMSE=1927.28 ps  P99=2935.00 ps
+    1-10 ns     count=14398650  RMSE=1940.83 ps  P99=2623.00 ps
+    10-30 ns    count=32028300  RMSE=1938.72 ps  P99=2624.00 ps
+    Worst nslow     :  35  RMSE=2251.14 ps  P99=2999.00 ps
+    Worst nfast_hit :  11  RMSE=2334.50 ps  P99=3009.00 ps
+
+--------------------------------------------------------------------------------
+Cross-config comparison
+--------------------------------------------------------------------------------
+  Best  RMSE : multihit_15_cal_nominal (1940.13 ps)
+  Worst RMSE : multihit_15_cal_nominal (1940.13 ps)
+
+--------------------------------------------------------------------------------
+Calibration recommendations
+--------------------------------------------------------------------------------
+  1. Apply per-boundary-class offset correction to reduce systematic bias.
+  2. Use ns×nf phase-map LUT for residual INL compensation.
+  3. Increase hit statistics in under-represented phase bins.
+  4. Re-run with jitter sweep to validate robustness of correction.
+
+================================================================================
+End of report
+================================================================================
