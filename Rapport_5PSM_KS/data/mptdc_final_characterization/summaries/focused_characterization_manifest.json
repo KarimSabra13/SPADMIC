@@ -1,0 +1,21 @@
+{
+  "name": "mptdc-standalone-characterization",
+  "simulator": "xrun",
+  "jobs": 24,
+  "seed_start": 0,
+  "seeds_per_stage": 8,
+  "stages": [
+    "code_density",
+    "boundary"
+  ],
+  "smoke": false,
+  "git_sha": "1a2f9665",
+  "paths": {
+    "root": "/sim/ksabra/mptdc_final_characterization/focused",
+    "stages": "/sim/ksabra/mptdc_final_characterization/focused/stages"
+  },
+  "summary": {
+    "csv_files": 16,
+    "data_rows": 3948800
+  }
+}

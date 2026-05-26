@@ -1,0 +1,40 @@
+{
+  "char_root": "/sim/ksabra/mptdc_final_characterization/overnight/characterization",
+  "focused_root": "/sim/ksabra/mptdc_final_characterization/focused",
+  "source_reports": {
+    "calibration_report": "/sim/ksabra/mptdc_final_characterization/overnight/characterization/analysis/calibration/calibration_report.json",
+    "linearity_tables": "/sim/ksabra/mptdc_final_characterization/focused/analysis/linearity/tables",
+    "boundary_table": "/sim/ksabra/mptdc_final_characterization/focused/analysis/tables/boundary_summary.csv",
+    "sweep_summary": "/sim/ksabra/mptdc_final_characterization/overnight/characterization/analysis/sweep/summary_report.json"
+  },
+  "figures": {
+    "error_histogram_pre_post": [
+      "/sim/ksabra/mptdc_final_characterization/report/figures/01_erreur_histogramme_pre_post_lut.png",
+      "/sim/ksabra/mptdc_final_characterization/report/figures/01_erreur_histogramme_pre_post_lut.pdf"
+    ],
+    "post_lut_abs_error_cdf": [
+      "/sim/ksabra/mptdc_final_characterization/report/figures/02_cdf_erreur_absolue_post_lut.png",
+      "/sim/ksabra/mptdc_final_characterization/report/figures/02_cdf_erreur_absolue_post_lut.pdf"
+    ],
+    "averaging_rmse": [
+      "/sim/ksabra/mptdc_final_characterization/report/figures/03_rmse_vs_moyennage.png",
+      "/sim/ksabra/mptdc_final_characterization/report/figures/03_rmse_vs_moyennage.pdf"
+    ],
+    "observable_dnl_inl": [
+      "/sim/ksabra/mptdc_final_characterization/report/figures/04_dnl_inl_observable.png",
+      "/sim/ksabra/mptdc_final_characterization/report/figures/04_dnl_inl_observable.pdf"
+    ],
+    "transfer_linearity": [
+      "/sim/ksabra/mptdc_final_characterization/report/figures/05_linearite_transfert.png",
+      "/sim/ksabra/mptdc_final_characterization/report/figures/05_linearite_transfert.pdf"
+    ],
+    "boundary_sweep": [
+      "/sim/ksabra/mptdc_final_characterization/report/figures/06_boundary_offset_sweep.png",
+      "/sim/ksabra/mptdc_final_characterization/report/figures/06_boundary_offset_sweep.pdf"
+    ]
+  },
+  "tables": {
+    "calibration_pre_post_summary": "/sim/ksabra/mptdc_final_characterization/report/tables/calibration_pre_post_summary.csv"
+  },
+  "warnings": []
+}
