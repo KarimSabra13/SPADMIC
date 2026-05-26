@@ -85,23 +85,19 @@ bash scripts/sim/run_vip_test.sh smoke_single_conv \
 # Xcelium 32-job CDV regression with coverage and automatic failure reruns
 bash ci/run_vip_xcelium_regression.sh --sim xrun --jobs 32 --seeds 32
 
-# Train/validation characterization split for 6D LUT calibration
-bash scripts/sim/run_vip_characterization.sh --jobs 32 --train-seeds 64 --valid-seeds 16
-
-# Unified overnight launcher (VIP CDV + analysis + calibration + fixed-delay)
-bash scripts/sim/run_vip_overnight.sh \
+# Unified final report flow: VIP CDV + characterization + extraction + plots
+bash scripts/sim/run_report_flow.sh \
   --sim xrun \
   --jobs 32 \
-  --vip-seeds 256 \
-  --vip-num-conv 20000 \
   --char-seeds 128 \
   --char-n-conv 200000 \
   --char-train-seeds 96
 ```
 
-`run_vip_overnight.sh` supports resume semantics: if the VIP summary or
-characterization manifest already exists, that stage is skipped unless
-`--rerun-vip`, `--rerun-char`, or `--clean` is used.
+`run_report_flow.sh` is the preferred server entrypoint for final data. It wraps
+the maintained VIP overnight flow, the baseline characterization, the focused
+code-density/boundary collection, the strict linearity analyzer, and the final
+publication-plot exporter.
 
 Examples:
 
@@ -111,6 +107,12 @@ bash scripts/sim/run_vip_overnight.sh --stages vip --rerun-vip --vip-seeds 128
 
 # Reuse existing VIP and rerun only characterization
 bash scripts/sim/run_vip_overnight.sh --stages char --rerun-char --char-seeds 64 --char-n-conv 150000
+
+# Regenerate only the final report plots from existing campaign outputs
+python3 scripts/analysis/generate_report_plots.py \
+  --char-root /sim/ksabra/mptdc_final_characterization/overnight/characterization \
+  --focused-root /sim/ksabra/mptdc_final_characterization/focused \
+  --output-dir /sim/ksabra/mptdc_final_characterization/report
 ```
 
 The VIP runner accepts:

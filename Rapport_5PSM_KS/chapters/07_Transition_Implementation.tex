@@ -5,7 +5,7 @@
 
 \section{De la structure de référence à une architecture exploitable}
 
-La structure décrite dans la thèse constitue une base théorique et architecturale solide, mais elle ne peut pas être reprise telle quelle dans un projet de lecture numérique complet sans adaptation. Dans le cadre du projet \textbf{SPADMIC}, la problématique ne consiste pas uniquement à démontrer le potentiel d'un \textbf{TDC} Vernier multiphase. Il faut également organiser la capture des événements, la gestion de plusieurs mesures, le stockage des résultats, leur transmission et leur exploitation à l'extérieur de l'ASIC dans un ASIC prototype complet.
+La structure décrite dans la thèse constitue une base théorique et architecturale solide, mais elle ne peut pas être reprise telle quelle dans un projet de lecture numérique complet sans adaptation. Dans le cadre du projet \textbf{SPADMIC}, la problématique ne consiste pas uniquement à démontrer le potentiel d'un \textbf{TDC} Vernier multiphase. Il faut également organiser la capture des événements, le stockage des résultats, leur transmission et leur exploitation à l'extérieur de l'ASIC dans un prototype complet.
 
 La continuité entre la thèse et l'implémentation actuelle se situe donc au niveau des principes fondamentaux :
 \begin{itemize}
@@ -20,13 +20,52 @@ La continuité entre la thèse et l'implémentation actuelle se situe donc au ni
 L'architecture actuellement développée s'écarte toutefois du prototype de thèse sur plusieurs aspects structurants. Elle doit en effet répondre à des besoins plus larges de robustesse, d'intégration numérique et de lecture :
 \begin{itemize}
     \item prise en charge d’événements \texttt{START}/\texttt{STOP} avec une logique asynchrone explicite ;
-    \item gestion de plusieurs hits et de plusieurs contextes de mesure ;
     \item séparation entre la capture rapide et la lecture système ;
     \item format de sortie numérique compatible avec une chaîne de lecture externe ;
     \item calibration pensée comme une opération externe à l'ASIC, et non comme une correction embarquée figée dans le silicium.
 \end{itemize}
 
 Ces choix traduisent un déplacement du centre de gravité du problème. Dans la thèse, l'accent est mis sur la démonstration et la compréhension approfondie de l'architecture Vernier multiphase. Dans l'implémentation actuelle, l'objectif devient plus systémique : il faut préserver les bénéfices du principe Vernier tout en construisant une architecture de lecture cohérente, réarmable, vérifiable et intégrable.
+
+\section{Vision globale de l'architecture active}
+
+Avant d'isoler les arbitrages de conception, il faut d'abord placer les blocs dans leur topologie numérique globale. La figure \ref{fig:vernier-transition-map} reprend le formalisme matériel de l'architecture de référence et montre les transformations essentielles : la prélogique devient un front-end de capture asynchrone, la matrice de phase est ramenée à \mbox{$8\times8$}, la mémoire d'échantillonnage devient une banque de contextes, et une chaîne de lecture système est ajoutée en sortie.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{tdc/vernier_transition_map.pdf}
+    \caption{Transition matérielle entre l'architecture Vernier de référence et l'implémentation active \textbf{MPTDC}. Le style reprend celui du modèle de référence afin de rendre visibles les briques conservées, modifiées et ajoutées.}
+    \label{fig:vernier-transition-map}
+\end{figure}
+
+Cette transition doit aussi être lue sous l'angle des domaines temporels. L'architecture réelle superpose une zone d'événements asynchrones, deux familles de signaux issues des oscillateurs lent et rapide, puis un domaine système \texttt{clk\_sys} chargé du séquençage de capture, du drain et de la sérialisation. La figure \ref{fig:clock-domain-diagram} fournit cette carte de lecture avant l'analyse détaillée des compromis.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{tdc/clock_domain_diagram.pdf}
+    \caption{Carte des domaines d'horloge et des frontières CDC dans l'architecture active. Les zones colorées séparent les événements asynchrones, le domaine lent, le domaine rapide et le domaine système \texttt{clk\_sys}.}
+    \label{fig:clock-domain-diagram}
+\end{figure}
+
+La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficultés qui seront détaillées au chapitre suivant : la logique de mesure ne se résume pas à un automate unique. Elle s'appuie sur des traversées asynchrones, des compteurs Gray pour transporter les informations d'oscillateurs, puis une séparation stricte entre capture des événements, gel de l'image de mesure et lecture dans \texttt{clk\_sys} \cite{ginosar2011metastability,cummings2002fifo}.
+
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.1cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+        \toprule
+        \textbf{Contrainte} & \textbf{Risque principal} & \textbf{Choix retenu} \\
+        \midrule
+        Événements d'entrée asynchrones & Perte de précision ou métastabilité si forçage prématuré dans un domaine synchrone & Interface de capture asynchrone à verrous \textit{set/reset} \\
+        Grille fine plus dense & Explosion du nombre de cellules PD et allongement du scan de drain & Matrice \mbox{$8\times8$} comme compromis surface / richesse de grille \\
+        Lecture pendant la mesure & Temps mort dicté par le drain et le sérialiseur & Deux contextes, capture et drain découplés \\
+        Correction des non-idéalités & Coût silicium élevé si correction embarquée figée & Calibration externe à l'ASIC avec export d'observables riches \\
+        Intégration au système & Trop grand nombre de broches ou protocole trop ambigu & Bus \SI{16}{\bit}, mots typés, gestion explicite de la rétropression \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Arbitrages structurants qui font passer l'architecture Vernier de référence à un bloc réellement intégrable dans \textbf{SPADMIC}.}
+    \label{tab:transition-tradeoffs}
+\end{table}
 
 \section{Arbitrages de conception structurants}
 
@@ -93,50 +132,8 @@ Cette décision a plusieurs avantages :
 
 Le prix à payer est une complexité plus élevée dans les automates de drain et de transmission, mais cette complexité reste plus acceptable qu'une explosion du nombre de broches de sortie.
 
-\section{Une transition vers une architecture plus structurée}
-
-La progression visuelle retenue dans ce rapport est volontaire : la figure \ref{fig:vernier-principle-detailed} explicite d'abord le mécanisme de rattrapage, la figure \ref{fig:vernier-reference-architecture} en isole ensuite les briques Vernier de référence, puis la figure \ref{fig:vernier-transition-map} montre comment ces mêmes briques sont encapsulées dans une architecture système. On passe ainsi d'un schéma de principe à un schéma d'intégration, sans rupture conceptuelle, jusqu'au cœur \textbf{MPTDC} ensuite repris au niveau ASIC dans \textbf{SPADMIC}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.98\textwidth]{tdc/vernier_transition_map.pdf}
-    \caption{Schéma de synthèse de la transition entre l'architecture Vernier de référence et son intégration dans \textbf{MPTDC}. Les oscillateurs, la matrice de phase et la séparation entre information grossière et information fine sont conservés ; la gestion asynchrone \texttt{START}/\texttt{STOP}, les contextes et la chaîne de lecture sont ajoutés ou réinterprétés pour répondre aux contraintes système de \textbf{SPADMIC}.}
-    \label{fig:vernier-transition-map}
-\end{figure}
-
-Cette transition peut également être relue sous l'angle des domaines d'horloge. L'architecture réelle n'oppose pas seulement théorie et implémentation ; elle superpose trois mondes temporels différents : le domaine système \texttt{clk\_sys}, le domaine de l'oscillateur lent et le domaine de l'oscillateur rapide. La figure \ref{fig:clock-domain-diagram} résume cette répartition.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.98\textwidth]{tdc/clock_domain_diagram.pdf}
-    \caption{Carte des domaines d'horloge et des frontières asynchrones dans l'architecture active. Les signaux \texttt{START}/\texttt{STOP} sont capturés de manière asynchrone, tandis que les compteurs et les automates se répartissent entre domaines rapide et système.}
-    \label{fig:clock-domain-diagram}
-\end{figure}
-
-La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficultés qui seront détaillées au chapitre suivant : la logique de mesure ne se résume pas à un automate unique. Elle s'appuie sur des traversées asynchrones, un compteur Gray pour le chemin lent vers le domaine rapide, puis une séparation stricte entre capture rapide et lecture système \cite{ginosar2011metastability,cummings2002fifo}.
-
-\begin{table}[H]
-    \centering
-    \small
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.1cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
-        \toprule
-        \textbf{Contrainte} & \textbf{Risque principal} & \textbf{Choix retenu} \\
-        \midrule
-        Événements d'entrée asynchrones & Perte de précision ou métastabilité si forçage prématuré dans un domaine synchrone & Interface de capture asynchrone à verrous \textit{set/reset} \\
-        Grille fine plus dense & Explosion du nombre de cellules PD et allongement du scan de drain & Matrice \mbox{$8\times8$} comme compromis surface / richesse de grille \\
-        Lecture pendant la mesure & Temps mort dicté par le drain et le sérialiseur & Deux contextes, capture et drain découplés \\
-        Correction des non-idéalités & Coût silicium élevé si correction embarquée figée & Calibration externe à l'ASIC avec export d'observables riches \\
-        Intégration au système & Trop grand nombre de broches ou protocole trop ambigu & Bus \SI{16}{\bit}, mots typés, gestion explicite de la rétropression \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Arbitrages structurants qui font passer l'architecture Vernier de référence à un bloc réellement intégrable dans \textbf{SPADMIC}.}
-    \label{tab:transition-tradeoffs}
-\end{table}
-
 \begin{summaryBox}
 La transition vers l'implémentation n'est pas une simple étape d'encapsulation. C'est le moment où apparaissent les vrais compromis d'ingénierie : accepter des signaux asynchrones, limiter la taille de la matrice, séparer capture et lecture, choisir une stratégie de calibration, puis formaliser un protocole de sortie compatible avec le reste du système.
 \end{summaryBox}
-
-La suite du rapport s'attache donc à décrire non seulement le principe de mesure, mais aussi la manière dont celui-ci est concrètement encapsulé dans une architecture numérique cohérente.
 
 \clearpage

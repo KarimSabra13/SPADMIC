@@ -1,30 +1,141 @@
-\documentclass[tikz,border=5pt]{standalone}
+\documentclass[tikz,border=8pt]{standalone}
 \input{tdc_publication_style.tex}
+\usetikzlibrary{calc,fit,positioning}
+
+\tikzset{
+  boitetech/.style={
+    rectangle,
+    draw=black,
+    line width=1pt,
+    rounded corners=2pt,
+    fill=white,
+    minimum height=12mm,
+    minimum width=30mm,
+    inner sep=3pt,
+    align=center,
+    font=\sffamily\small\bfseries
+  },
+  oscillateur/.style={
+    boitetech,
+    minimum width=56mm,
+    minimum height=13mm
+  },
+  matrice/.style={
+    boitetech,
+    minimum width=56mm,
+    minimum height=31mm
+  },
+  memoire/.style={
+    boitetech,
+    minimum width=38mm,
+    minimum height=46mm
+  },
+  ajoute/.style={
+    boitetech,
+    draw=bleuacier,
+    fill=bleupale
+  },
+  lent/.style={
+    draw=red!80!black,
+    line width=1.15pt,
+    -{Latex[length=2.4mm,width=1.5mm]}
+  },
+  rapide/.style={
+    draw=blue!80!black,
+    line width=1.15pt,
+    -{Latex[length=2.4mm,width=1.5mm]}
+  },
+  busdata/.style={
+    draw=blue!80!black,
+    line width=1.9pt,
+    -{Latex[length=3.0mm,width=2.0mm]}
+  },
+  etiquetteflux/.style={
+    fill=white,
+    inner xsep=1.8pt,
+    inner ysep=1.0pt,
+    font=\ttfamily\scriptsize,
+    text=grisligne
+  }
+}
 
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\node[bloc, minimum width=29mm, minimum height=13mm] (ref) at (0.0,0.0)
-{Vernier de référence\\[-0.6mm]{\ttfamily\scriptsize anneaux lent/rapide}};
-\node[bloc, minimum width=29mm, minimum height=13mm, right=17mm of ref] (async)
-{Capture asynchrone\\[-0.6mm]{\ttfamily\scriptsize START / STOP}};
-\node[blocaccent, minimum width=29mm, minimum height=13mm, right=17mm of async] (pd)
-{Matrice de PD 8x8\\[-0.6mm]{\ttfamily\scriptsize 64 cellules}};
-\node[bloc, minimum width=29mm, minimum height=13mm, right=17mm of pd] (ctx)
-{Deux contextes\\[-0.6mm]{\ttfamily\scriptsize banque de snapshot}};
-\node[bloc, minimum width=29mm, minimum height=13mm, right=17mm of ctx] (tx)
-{Lecture 16 bits\\[-0.6mm]{\ttfamily\scriptsize FIFO / TX}};
+\node[ajoute, minimum width=36mm, minimum height=20mm] (capture) at (0,0)
+{Capture asynchrone\\[-0.5mm]{\ttfamily\scriptsize START/STOP}\\[-0.5mm]{\ttfamily\scriptsize allocation contexte}};
 
-\draw[fluxdonnees] (ref.east) -- (async.west);
-\draw[fluxdonnees] (async.east) -- (pd.west);
-\draw[fluxdonnees] (pd.east) -- (ctx.west);
-\draw[fluxdonnees] (ctx.east) -- (tx.west);
+\node[oscillateur] (slowosc) at (6.2,3.25)
+{Oscillateur lent\\[-0.5mm]{\ttfamily\scriptsize 8 phases utiles}};
+\node[matrice] (matrix) at (6.2,0)
+{Matrice de phase\\[-0.5mm]$8\times8$\\[-0.5mm]{\ttfamily\scriptsize 64 cellules PD}};
+\node[oscillateur] (fastosc) at (6.2,-3.25)
+{Oscillateur rapide\\[-0.5mm]{\ttfamily\scriptsize 8 phases utiles}};
 
-\node[bloc, minimum width=52mm, minimum height=14mm] (lut) at ($(pd.south)!0.5!(ctx.south)+(0,-2.2)$)
-{Calibration externe (LUT 6D sur l'hôte)};
+\node[boitetech, minimum width=30mm] (slowcnt) at (13.2,3.25)
+{Compteur lent\\[-0.5mm]{\ttfamily\scriptsize snapshot STOP}};
+\node[memoire] (ctx) at (13.2,0)
+{Banque de contextes\\[-0.5mm]{\ttfamily\scriptsize 2 snapshots}\\[-0.5mm]{\ttfamily\scriptsize image figée}};
+\node[boitetech, minimum width=30mm] (fastcnt) at (13.2,-3.25)
+{Compteur rapide\\[-0.5mm]{\ttfamily\scriptsize nfast\_hit}};
 
-\draw[fluxdonnees] (tx.south) |- ($(lut.east)+(0.2,0)$)
-  node[etiquette, pos=0.34, below] {observables brutes};
+\node[ajoute, minimum width=38mm, minimum height=14mm] (drain) at (19.0,0.95)
+{Drain \texttt{clk\_sys}\\[-0.5mm]{\ttfamily\scriptsize META/SCAN/EOC}};
+\node[ajoute, minimum width=38mm, minimum height=14mm] (tx) at (19.0,-1.25)
+{FIFO + sérialiseur\\[-0.5mm]{\ttfamily\scriptsize sortie 16 bits}};
+
+\coordinate (startin) at ($(capture.west)+(-1.95,0.55)$);
+\coordinate (stopin) at ($(capture.west)+(-1.95,-0.55)$);
+\coordinate (enslowup) at ($(capture.north)+(0,1.00)$);
+\coordinate (enfastdown) at ($(capture.south)+(0,-1.00)$);
+\coordinate (nslowin) at ([xshift=-8pt]ctx.north);
+\coordinate (nfastin) at ([xshift=8pt]ctx.south);
+
+\draw[lent] (startin) -- (capture.west |- startin)
+  node[etiquetteflux, midway, above=2pt, text=red!80!black] {START};
+\draw[rapide] (stopin) -- (capture.west |- stopin)
+  node[etiquetteflux, midway, below=2pt, text=blue!80!black] {STOP};
+
+\draw[lent] (capture.north) -- (enslowup) -| (slowosc.west)
+  node[etiquetteflux, pos=0.34, above=2pt, text=red!80!black] {slow\_en};
+\draw[rapide] (capture.south) -- (enfastdown) -| (fastosc.west)
+  node[etiquetteflux, pos=0.34, below=2pt, text=blue!80!black] {fast\_en};
+
+\draw[lent] (slowosc.east) -- ++(0.75,0) -- (slowcnt.west)
+  node[etiquetteflux, pos=0.46, above=2pt, text=red!80!black] {Nslow};
+\draw[rapide] (fastosc.east) -- ++(0.75,0) -- (fastcnt.west)
+  node[etiquetteflux, pos=0.46, below=2pt, text=blue!80!black] {Nfast};
+
+\draw[busdata] (slowcnt.south) -- ++(0,-0.55) -- (nslowin)
+  node[etiquetteflux, pos=0.32, right=2pt] {Nslow};
+\draw[busdata] (fastcnt.north) -- ++(0,0.55) -- (nfastin)
+  node[etiquetteflux, pos=0.32, right=2pt] {nfast\_hit};
+
+\foreach \i in {1,...,8} {
+  \pgfmathsetmacro{\alpha}{\i/9}
+  \pgfmathsetmacro{\beta}{(\i-0.5)/8}
+  \coordinate (slowtap\i) at ($(slowosc.south west)!\alpha!(slowosc.south east)$);
+  \coordinate (matrixtop\i) at ($(matrix.north west)!\alpha!(matrix.north east)$);
+  \coordinate (fasttap\i) at ($(fastosc.north west)!\alpha!(fastosc.north east)$);
+  \coordinate (matrixbot\i) at ($(matrix.south west)!\alpha!(matrix.south east)$);
+  \coordinate (matrixout\i) at ($(matrix.north east)!\beta!(matrix.south east)$);
+  \coordinate (ctxin\i) at (ctx.west |- matrixout\i);
+
+  \draw[lent] (slowtap\i) -- (matrixtop\i);
+  \draw[rapide] (fasttap\i) -- (matrixbot\i);
+  \draw[busdata, line width=1.0pt] (matrixout\i) -- (ctxin\i);
+}
+
+\draw[busdata, line width=2.2pt] (ctx.east) -- ++(1.0,0) |- (drain.west)
+  node[etiquetteflux, pos=0.30, above=2pt] {contexte prêt};
+\draw[busdata, line width=2.2pt] (drain.south) -- (tx.north)
+  node[etiquetteflux, midway, right=2pt] {records};
+\draw[busdata, line width=2.4pt] (tx.east) -- ++(2.2,0)
+  node[etiquetteflux, pos=0.62, above=2pt] {flux TX};
+
+\node[etiquetteflux, align=center, font=\sffamily\scriptsize] at (10.0,-4.55)
+{Briques conservées : oscillateurs, matrice de phase, compteurs.\\
+Briques ajoutées : capture asynchrone, banque de contextes, drain, FIFO et sérialiseur.};
 
 \end{tikzpicture}
 \end{document}

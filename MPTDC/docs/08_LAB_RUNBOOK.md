@@ -11,7 +11,8 @@ data collection → calibration → exploratory synthesis.
 
 ## Current recommended command sequence
 
-If you want the shortest path from repo checkout to the **current best lab-server checkpoint**, run in this order:
+If you want the shortest path from repo checkout to the current report-grade
+MPTDC checkpoint, use the centralized final flow:
 
 ```bash
 cd /path/to/your/workspace/SPADMIC
@@ -19,55 +20,27 @@ git fetch origin
 git pull --ff-only origin main
 cd MPTDC
 
-# 1) Xrun sanity first
-bash scripts/sim/run_tb.sh tb_single_conv --sim xcelium
-bash scripts/sim/run_vip_test.sh smoke_single_conv --sim xrun
-bash scripts/sim/run_campaign.sh --sim xrun --smoke --out-dir results/calib_xrun/smoke
-
-# 2) Full xrun calibration datasets
-bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 100 --n-conv 50000 --delay-min 20 --delay-max 30000 --configs multihit_15_cal_nominal --out-dir results/calib_xrun/train_nominal_100s
-bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 30 --n-conv 50000 --delay-min 20 --delay-max 30000 --seed-start 100 --configs multihit_15_cal_nominal --out-dir results/calib_xrun/val_nominal_30s
-bash scripts/sim/run_campaign.sh --sim xrun --jobs 32 --seeds 30 --n-conv 50000 --delay-min 20 --delay-max 30000 --seed-start 200 --configs multihit_15_cal_jitter --out-dir results/calib_xrun/val_jitter_30s
-
-# 3) Baseline LUT recalibration
-python3 scripts/calibration/calibrate_6d_lut.py \
-  --train-dir results/calib_xrun/train_nominal_100s/multihit_15_cal_nominal \
-  --val-dir results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal \
-  --fresh-dir results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter \
-  --train-seeds 100 \
-  --out-dir results/calib_xrun/calibration_lut6d
-
-# 4) Enhanced comparison (GBR, trimmed/weighted averaging, etc.)
-python3 scripts/calibration/calibrate_enhanced.py \
-  --input "results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal/seed_*.csv" \
-  --out-dir results/calib_xrun/calibration_enhanced_nominal
-
-python3 scripts/calibration/calibrate_enhanced.py \
-  --input "results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter/seed_*.csv" \
-  --out-dir results/calib_xrun/calibration_enhanced_jitter
-
-python3 scripts/calibration/analyze_fine_grid.py \
-  -o results/calib_xrun/fine_grid_analysis.pdf
-
-# 5) Pointwise same-delay proof
-bash scripts/sim/run_fixed_delay_campaign.sh \
+# 1) Fast shape check
+bash scripts/sim/run_report_flow.sh \
   --sim xrun \
-  --jobs 32 \
-  --configs multihit_15_cal_nominal \
-  --delay-list "20,50,100,200,500,1000,2000,5000,10000,30000" \
-  --seeds 8 \
-  --n-conv 5000 \
-  --out-dir results/calib_xrun/fixed_delay_nominal \
-  --analyze
+  --jobs 4 \
+  --smoke \
+  --rebuild \
+  --out-dir /sim/ksabra/mptdc_final_smoke
 
-# 6) Coverage refresh before any freeze decision (recommended, but not required
-#    before an exploratory Genus run)
+# 2) Full final data and publication plots
+bash scripts/sim/run_report_flow.sh \
+  --sim xrun \
+  --jobs 24 \
+  --rebuild \
+  --out-dir /sim/ksabra/mptdc_final_characterization
+
+# 3) Optional coverage refresh before synthesis/tapeout discussions
 bash ci/run_vip_coverage.sh --sim xrun --clean
-bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 32 --clean
+bash ci/run_coverage_campaign.sh --sim xrun --seeds 100 --conv-per-seed 5000 --jobs 24 --clean
 bash scripts/sim/report_coverage.sh --cov-root build/coverage_campaign
-imc -load build/coverage_campaign/cov_work/scope/merged_cov &
 
-# 7) Exploratory synthesis with oscillator stub / virtual clocks
+# 4) Exploratory synthesis with oscillator stub / virtual clocks
 cd syn/scripts
 genus -batch -files genus.tcl 2>&1 | tee ../logs/genus_run.log
 ```
@@ -550,37 +523,32 @@ Averaging study (analysis-side resampling, not fixed-delay TB proof):
 - **Averaging follows 1/√N in `calibrate_6d_lut.py`** = the nominal calibrated pool is largely random after correction, but this is still analysis-side resampling
 - **Use the fixed-delay flow below** when you need empirical same-delay one-shot RMS / averaging proof
 
-### Step 6a — Enhanced calibration comparison
+### Step 6a — Report figure generation
 
-Use the maintained enhanced script to compare LUT variants, GBR, and
-quality-gated averaging on the new Xrun datasets:
+When the data already exists and only the publication figures need to be
+regenerated, run:
 
 ```bash
-python3 scripts/calibration/calibrate_enhanced.py \
-  --input "results/calib_xrun/val_nominal_30s/multihit_15_cal_nominal/seed_*.csv" \
-  --out-dir results/calib_xrun/calibration_enhanced_nominal
-
-python3 scripts/calibration/calibrate_enhanced.py \
-  --input "results/calib_xrun/val_jitter_30s/multihit_15_cal_jitter/seed_*.csv" \
-  --out-dir results/calib_xrun/calibration_enhanced_jitter
-
-python3 scripts/calibration/analyze_fine_grid.py \
-  -o results/calib_xrun/fine_grid_analysis.pdf
+python3 scripts/analysis/generate_report_plots.py \
+  --char-root /sim/ksabra/mptdc_final_characterization/overnight/characterization \
+  --focused-root /sim/ksabra/mptdc_final_characterization/focused \
+  --output-dir /sim/ksabra/mptdc_final_characterization/report
 ```
 
-Current maintained repo baselines to compare against:
+Current maintained post-ECO targets to compare against:
 
-| Metric | Nominal | Jitter (`σ = 6 ps`) |
-|--------|---------|---------------------|
-| 6D LUT single-shot RMSE | `18.99 ps` | `53.64 ps` |
-| GBR single-shot RMSE | `18.56 ps` | `48.24 ps` |
-| 15-hit weighted / trimmed RMSE | `5.19 ps` / `5.29 ps` | `19.75 ps` (trimmed) |
+| Metric | Target |
+|--------|-------:|
+| VIP CDV | `1024/1024 PASS` |
+| LUT single-shot RMSE | `~18.6 ps` |
+| LUT post-calibration P99 | `~39 ps` |
+| Averaging threshold | `<5 ps RMS` at `N=15` |
 
 If your Xrun results are materially worse than these baselines, check:
 
 - whether the campaign used the same configuration names (`multihit_15_cal_nominal`, `multihit_15_cal_jitter`)
 - whether the server build picked up the latest `main`
-- whether the CSV schema is the new 19-column `FULL` mode output
+- whether the CSV schema is the current `RAW_FEATURES`/`FULL` output with `stop_phase_disc`
 - whether the calibration script filtered to the same `nslow > 0` core subset
 
 ### Step 6b — Fixed-delay characterization
@@ -614,11 +582,8 @@ These reports distinguish:
 Important interpretation note:
 
 - this fixed-delay flow is the right tool for **pointwise same-delay** RMS / averaging proof
-- it is **not** the headline deployment-proof flow for jitter-limited `RAW_FEATURES`
-  operation across a continuous delay population
-- for that question, use `scripts/calibration/analyze_shortformat_models.py`, which now
-  reports delay-bucketed oracle/practical curves and separates the incremental value of
-  `boundary_aug`, `nfast_snap`, and `all_visible`
+- the headline report view is generated by `run_report_flow.sh`, which combines
+  baseline calibration, focused DNL/INL, boundary stress, and final plot export
 
 ---
 

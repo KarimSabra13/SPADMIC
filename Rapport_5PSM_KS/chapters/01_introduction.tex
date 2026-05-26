@@ -15,25 +15,13 @@ Pour mesurer un intervalle de temps dans une chaîne numérique, on utilise un c
 
 La conception d’un \textbf{TDC} de haute précision impose de concilier plusieurs exigences souvent difficiles à satisfaire simultanément. Il faut réduire le pas de quantification, conserver une plage dynamique utile, limiter le bruit et le jitter, et maintenir une architecture compatible avec une intégration dans un \textbf{ASIC}. Dans ce cadre, les architectures de type Vernier occupent une place particulièrement intéressante, car elles permettent de s’affranchir partiellement de la limite imposée par le délai élémentaire d’une cellule logique en exploitant la différence entre deux délais voisins.
 
-Dans \textbf{SPADMIC}, la présence de trois voies \textbf{TDC} ne vient pas d'un simple besoin de paralléliser trois événements indépendants. Elle est liée à l'organisation tri-axis de la matrice de \textbf{SPAD}, déjà explorée dans le cadre du projet \textbf{PICMIC}. Lorsqu'un événement se produit dans la matrice, il peut activer trois ensembles de lignes orientées selon trois directions distinctes, typiquement autour de \SI{-120}{\degree}, \SI{0}{\degree} et \SI{120}{\degree}. Les trois mesures temporelles associées contribuent ensuite à reconstruire la position de l'événement, par exemple en triangulant le cluster détecté autour de son centroïde. Les trois \textbf{TDC} correspondent donc aux trois axes de lecture d'un même événement physique, avant mutualisation de la sortie numérique.
+Dans \textbf{SPADMIC}, la présence de trois voies \textbf{TDC} ne vient pas d'un simple besoin de paralléliser trois événements indépendants. Elle est liée à l'organisation tri-axis déjà validée dans le cadre de \textbf{PICMIC} (\textit{PICosecond-MICrometer sensor})~\cite{abreu2024picmic0}. Ce concept repose sur une matrice de pixels hexagonaux interconnectés : la charge ou l'impulsion générée par un impact est projetée sur trois familles de lignes orientées selon \SI{-120}{\degree}, \SI{0}{\degree} et \SI{120}{\degree}. Cette lecture projective réduit fortement le nombre de canaux électroniques actifs par rapport à une lecture pixel par pixel, tout en conservant assez d'information géométrique pour reconstruire la position par croisement des projections et calcul de centroïde. Les trois \textbf{TDC} correspondent donc aux trois axes de lecture d'un même événement physique, avant mutualisation de la sortie numérique.
 
 La thèse d’Amina Annagrebah, utilisée ici comme référence théorique principale, propose une étude approfondie de ces architectures et, plus précisément, d’une approche Vernier à oscillateurs en anneau multiphase appliquée à des besoins de mesure temporelle de très haute précision \cite{annagrebah2021thesis}. Ce travail constitue une base particulièrement solide pour introduire les notions nécessaires avant d’aborder l’architecture développée dans le cadre du projet \textbf{SPADMIC} et son cœur \textbf{MPTDC}.
 
-\section{Périmètre du rapport}
+\section{Périmètre et organisation du document}
 
-Le présent rapport adopte volontairement un périmètre maîtrisé. Au moment de la rédaction initiale, l’architecture globale de \textbf{SPADMIC} n’était pas encore totalement figée, même si elle s’est depuis davantage stabilisée. Il ne s’agit donc pas de décrire tout l’ASIC comme un objet déjà définitivement arrêté, mais de présenter de manière cohérente ce qui est déjà structuré, justifiable et techniquement défendable. Cette démarche conduit à privilégier :
-\begin{itemize}
-    \item le cadre institutionnel du projet ;
-    \item la description générale de l'ASIC \textbf{SPADMIC} et de sa logique de lecture ;
-    \item les fondements théoriques de la conversion temps-numérique ;
-    \item l’architecture Vernier de référence issue de la thèse ;
-    \item la transition vers l’implémentation effectivement développée ;
-    \item l’architecture du \textbf{TDC} aujourd’hui structurée dans \textbf{MPTDC}, avec ses choix \textbf{RTL}, de vérification et de calibration ;
-    \item la méthodologie de caractérisation et les résultats obtenus sur les campagnes disponibles ;
-    \item l’ouverture vers les contraintes de synthèse et d’intégration physique de la version future.
-\end{itemize}
-
-\section{Organisation du document}
+Le présent rapport adopte volontairement un périmètre maîtrisé. Au moment de la rédaction initiale, l’architecture globale de \textbf{SPADMIC} n’était pas encore totalement figée, même si elle s’est depuis davantage stabilisée. Il ne s’agit donc pas de décrire tout l’ASIC comme un objet déjà définitivement arrêté, mais de présenter de manière cohérente ce qui est déjà structuré, justifiable et techniquement défendable.
 
 Le rapport s’ouvre sur la présentation du cadre scientifique et institutionnel au sein duquel s’inscrit l’alternance. Il introduit ensuite le contexte général du projet \textbf{SPADMIC}, les contributions numériques réalisées et la place du \textbf{MPTDC} dans la chaîne de lecture de l’ASIC. La partie suivante développe les fondements théoriques des \textbf{TDC}, leurs métriques de performance et les architectures de type Vernier. Sur cette base, l’étude se prolonge par la description de l’architecture de référence extraite de la thèse, puis par une transition vers l’implémentation effectivement retenue. Enfin, le rapport détaille l’architecture active de \textbf{MPTDC}, puis présente la méthodologie de caractérisation, les résultats de calibration et les limites encore ouvertes vers une future intégration plus aboutie.
 

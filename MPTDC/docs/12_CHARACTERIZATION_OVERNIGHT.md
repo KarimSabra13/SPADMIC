@@ -104,43 +104,18 @@ with `ns_inf/nf_inf` recovered from the Vernier algebra. The overnight analyzer
 streams the large CSV set, but it does not replace the maintained categorical
 calibration model.
 
-## Oracle calibration-key analysis
+## Oracle diagnostic closure
 
-Before adding any RTL discriminator, run the Oracle analysis on the mono-hit
-code-density dataset. The goal is to quantify whether the packet-visible key
-already bounds the true-delay ambiguity tightly enough for a post-calibration
-`< 1 LSB` target on the useful `20 ps` to `30 ns` range.
+The Oracle scripts were used as a temporary diagnostic tool during the startup
+ECO. They are no longer part of the maintained final characterization flow. The
+post-ECO conclusion is frozen:
 
-```bash
-python3 scripts/analysis/analyze_tdc_oracle.py \
-  --root /sim/ksabra/mptdc_inl_dnl_mono_hit_v2 \
-  --output-dir /sim/ksabra/mptdc_inl_dnl_mono_hit_v2/analysis/oracle \
-  --delay-min-ps 20 \
-  --delay-max-ps 30000 \
-  --lsb-ps 10 \
-  --edge-code 121
-```
-
-Main outputs:
-
-- `oracle_summary.json`: verdict, selected best key, seed-split coverage, and
-  pass/fail reason.
-- `tables/oracle_key_summary.csv`: RMSE oracle, P99 absolute oracle, weighted
-  key span percentiles, and rows with key span above `1 LSB` and `2 LSB`.
-- `tables/worst_keys_<key>.csv`: worst true-delay spans per tested key.
-- `plots/oracle_key_summary.pdf`: publication-ready comparison of candidate
-  key families.
-
-Interpretation rule:
-
-- If a current packet-visible key passes the strict oracle P99/span gates, the
-  remaining `< 1 LSB` work is software calibration: categorical LUT followed by
-  monotone inverse transfer correction.
-- If all current keys retain significant `> 2 LSB` spans, the data proves that
-  a new discriminator or an explicit edge policy is required before the
-  specification can be guaranteed.
-- If the failing population is limited to the dominant edge code, document and
-  isolate that edge population before proposing any packet-format change.
+- the `nslow=0` startup collapse was caused by the STOP-side slow Gray counter;
+- the RTL ECO is locked and covered by `tb_gray_cnt_sync_unit`;
+- the remaining `79 ps` packet-visible span is accepted as the current
+  architecture information floor, not as a blocking RTL bug;
+- final performance is reported as calibrated statistical robustness, not as a
+  deterministic `<10 ps` guarantee on every individual hit.
 
 ### Startup `nslow=0` root cause and RTL ECO
 
@@ -168,9 +143,10 @@ regression for this behavior is:
 bash scripts/sim/run_tb.sh tb_gray_cnt_sync_unit --sim verilator
 ```
 
-After this ECO, rerun the Oracle analysis before adding any new packet
-discriminator.  Only consume `W1[6:3]` if the post-ECO Oracle still shows a
-significant startup/edge span with the corrected `nslow`.
+After this ECO, no additional packet discriminator is planned for this project
+phase. Future work that targets deterministic sub-10-ps event accuracy would
+need a new intra-cell observable and a complete RTL/protocol/re-characterization
+cycle.
 
 ## Methodological limits
 

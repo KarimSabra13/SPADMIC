@@ -111,12 +111,12 @@ Cette propriété a plusieurs conséquences :
     \item la distribution des erreurs dépend de la position dans la matrice, et pas seulement du bruit des oscillateurs.
 \end{itemize}
 
-La figure \ref{fig:fine-grid-coverage} illustre cette situation en représentant les valeurs atteignables, les valeurs manquantes et les conséquences de cette structure sur la linéarité brute. Dans l'état actuel de l'analyse, on compte $84$ positions manquantes sur l'intervalle couvert et l'écart maximal entre deux positions atteignables atteint \SI{100}{\pico\second} sur certaines frontières diagonales.
+La figure \ref{fig:fine-grid-coverage} remplace volontairement une représentation de densité par une table matricielle analytique. Chaque case y donne directement le coefficient fin $11\,n_s - 10\,n_f$ associé au couple de phases considéré. La lecture est immédiate : les $64$ couples physiques de la matrice ne couvrent que $64$ positions entières sur les $148$ positions de l'intervalle $[-70,77]$, ce qui laisse $84$ codes manquants.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{tdc/fine_grid_coverage.pdf}
-    \caption{Visualisation de la couverture de la grille fine Vernier. La non-uniformité est structurelle : elle vient de la géométrie du codage, et non d'un défaut ponctuel du RTL.}
+    \includegraphics[width=0.82\textwidth]{tdc/fine_grid_coverage.pdf}
+    \caption{Table analytique des coefficients fins $11\,n_s - 10\,n_f$ pour la matrice \mbox{$8\times8$}. Les $84$ codes manquants proviennent de la projection non uniforme de ces $64$ couples sur l'axe temporel fin.}
     \label{fig:fine-grid-coverage}
 \end{figure}
 

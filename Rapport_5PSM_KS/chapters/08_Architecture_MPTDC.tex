@@ -58,9 +58,9 @@ Le tableau \ref{tab:mptdc-module-map} résume la répartition des modules princi
         \texttt{mptdc\_osc\_wrapper} $\times 2$ & Oscillateurs & Génération des taps de phase lents et rapides \\
         \texttt{mptdc\_gray\_cnt\_sync} $\times 2$ & Lent / rapide & Comptage grossier et transfert Gray sécurisé \\
         \texttt{mptdc\_pd\_cell} $\times 64$ & Rapide & Détection de croisement et capture locale de \texttt{nfast\_hit} \\
-        \texttt{mptdc\_stop\_capture\_async} & Asynchrone & Capture des informations de frontière au moment de \texttt{STOP} \\
-        \texttt{mptdc\_meas\_ctrl} & Rapide & Fermeture de conversion, capture, arrêt des oscillateurs, clear \\
-        \texttt{mptdc\_context\_bank} & Rapide / lecture statique & Gel atomique d'un contexte terminé \\
+        \texttt{mptdc\_stop\_capture\_async} & Asynchrone & Capture de \texttt{phase0\_snap}, \texttt{slow\_boundary\_inc} et \texttt{stop\_phase\_disc} au moment de \texttt{STOP} \\
+        \texttt{mptdc\_meas\_ctrl} & \texttt{clk\_sys} & Séquençage snapshot, comptage, capture et clear ordonné après synchronisation de la mesure \\
+        \texttt{mptdc\_context\_bank} & Image statique / \texttt{clk\_sys} & Gel atomique d'un contexte terminé \\
         \texttt{mptdc\_drain\_ctrl} & \texttt{clk\_sys} & Lecture du contexte figé, génération des enregistrements META/HIT \\
         \texttt{mptdc\_sync\_fifo} & \texttt{clk\_sys} & Découplage entre production des enregistrements et sérialisation \\
         \texttt{mptdc\_narrow16\_tx\_v2} & \texttt{clk\_sys} & Sérialisation du paquet actif sur le bus \SI{16}{\bit} \\
@@ -80,9 +80,9 @@ Le tableau \ref{tab:mptdc-module-map} résume la répartition des modules princi
 
 La figure \ref{fig:clock-domain-map-main} permet d'insister sur un point essentiel : l'architecture ne peut pas être comprise comme une simple machine synchrone. Elle manipule au moins trois groupes temporels distincts :
 \begin{itemize}
-    \item \texttt{clk\_sys} pour la configuration, le drain, le FIFO, le sérialiseur et le watchdog global ;
+    \item \texttt{clk\_sys} pour la configuration, le contrôleur de mesure, le drain, le FIFO, le sérialiseur et le watchdog global ;
     \item le domaine lent, lié à \texttt{slow\_phase[0]}, pour le comptage grossier du chemin lent ;
-    \item le domaine rapide, lié à \texttt{fast\_phase[0]}, pour le comptage rapide, l'automate de mesure et l'écriture de contexte.
+    \item le domaine rapide, lié à \texttt{fast\_phase[0]}, pour le comptage rapide et la matrice de détection de phase.
 \end{itemize}
 
 À cela s'ajoute un tissu d'événements asynchrones : \texttt{START}, \texttt{STOP}, les signaux de remise à zéro de l'interface de capture et les captures de frontière déclenchées directement sur l'événement \texttt{STOP}. Cette superposition de domaines est l'une des raisons pour lesquelles les contraintes RTL et CDC occupent une place centrale dans cette architecture.
@@ -168,6 +168,7 @@ Les cellules sont mémorisantes : une fois déclenchées, elles restent à $1$ j
 L'autre difficulté de cette brique est la cohérence à la frontière grossière/fine. Une simple matrice de phase ne suffit pas, car le compteur lent peut changer quasiment en même temps que \texttt{STOP}. Le bloc \texttt{mptdc\_stop\_capture\_async} capture donc trois informations au moment exact de \texttt{STOP} :
 \begin{itemize}
     \item \texttt{phase0\_snap} : état de la phase lente $0$ ;
+    \item \texttt{stop\_phase\_disc} : secteur discret de la phase lente au front de \texttt{STOP}, exporté dans le paquet \texttt{RAW\_FEATURES} pour la calibration ;
     \item \texttt{phase7d\_snap} : sonde de mise au point ;
     \item \texttt{slow\_boundary\_inc} : bit de correction de frontière.
 \end{itemize}
@@ -179,39 +180,46 @@ L'autre difficulté de cette brique est la cohérence à la frontière grossièr
     \label{fig:boundary-disambiguation}
 \end{figure}
 
-La figure \ref{fig:boundary-disambiguation} illustre ce point. Sans capture explicite de cette frontière, le système risque de reconstruire un \texttt{Nslow} décalé d'un pas complet au voisinage de la phase 0. Cette ambiguïté ne relève pas d'une simple imperfection de simulation : elle est inhérente à toute mesure où un événement asynchrone coupe un compteur au voisinage d'une transition.
+La figure \ref{fig:boundary-disambiguation} illustre ce point. Sans capture explicite de cette frontière, le système risque de reconstruire un \texttt{Nslow} décalé d'un pas complet au voisinage de la phase 0. Le discriminateur \texttt{stop\_phase\_disc} ne remplace pas ce bit de correction ; il ajoute une classe discrète de frontière utilisée par la LUT de calibration pour séparer des combinaisons brutes qui seraient sinon aliasées. Cette ambiguïté ne relève pas d'une simple imperfection de simulation : elle est inhérente à toute mesure où un événement asynchrone coupe un compteur au voisinage d'une transition.
 
 La matrice complète est visualisée figure \ref{fig:pd-matrix-heatmap}. Elle montre que l'information fine est riche, mais non uniforme. Chaque cellule correspond à un couple $(n_s,n_f)$ et à un coefficient nominal $11\,n_s - 10\,n_f$. L'ensemble de ces coefficients ne remplit pas uniformément l'espace temporel, ce qui explique pourquoi la calibration reste indispensable.
 
 \section{FSM de mesure (\texttt{mptdc\_meas\_ctrl})}
 
-Le contrôle fin de la conversion est assuré dans le domaine rapide par \texttt{mptdc\_meas\_ctrl}. L'automate suit explicitement la séquence :
+Le contrôle de fermeture de conversion a été déplacé dans le domaine \texttt{clk\_sys}. Ce choix est déterminant pour le jury : la matrice de phase reste déclenchée par les taps rapides, mais le séquençage qui fige l'image, compte les hits, réserve le contexte et nettoie le front-end est cadencé par l'horloge système à \SI{160}{\mega\hertz}. L'automate actif suit donc la séquence RTL :
 \[
-\texttt{IDLE} \rightarrow \texttt{MEASURE} \rightarrow \texttt{SNAPSHOT} \rightarrow \texttt{CAPTURE} \rightarrow \texttt{STOP\_OSC} \rightarrow \texttt{CLEAR} \rightarrow \texttt{IDLE}
+\begin{aligned}
+\texttt{ST\_M\_IDLE} &\rightarrow \texttt{ST\_M\_MEASURE}
+\rightarrow \texttt{ST\_M\_SNAPSHOT} \\
+&\rightarrow \texttt{ST\_M\_COUNT}
+\rightarrow \texttt{ST\_M\_CLEAR}
+\rightarrow \texttt{ST\_M\_IDLE}.
+\end{aligned}
 \]
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{tdc/meas_ctrl_fsm.pdf}
-    \caption{Automate de mesure dans le domaine rapide. L'état \texttt{SNAPSHOT} fige d'abord l'image large, puis la séquence \texttt{CAPTURE}, \texttt{STOP\_OSC} et \texttt{CLEAR} préserve cette image avant tout nettoyage.}
+    \caption{Automate de mesure actif dans le domaine \texttt{clk\_sys}. \texttt{SNAPSHOT} échantillonne l'image large, \texttt{COUNT} engage la capture et le clear front-end, puis \texttt{CLEAR} nettoie la matrice PD et les compteurs.}
     \label{fig:meas-ctrl-fsm}
 \end{figure}
 
 Chaque état a un rôle précis :
 \begin{itemize}
-    \item \texttt{IDLE} : attente d'une mesure active ;
-    \item \texttt{MEASURE} : accumulation des hits et observation des conditions de fermeture ;
-    \item \texttt{SNAPSHOT} : gel intermédiaire de l'image large avant l'écriture atomique ;
-    \item \texttt{CAPTURE} : gel atomique du contexte ;
-    \item \texttt{STOP\_OSC} : remise à zéro de l'interface de capture pour arrêter proprement l'oscillateur lent ;
-    \item \texttt{CLEAR} : clear asynchrone des cellules PD et des compteurs, après mise en sécurité.
+    \item \texttt{ST\_M\_IDLE} : attente de \texttt{meas\_active}, c'est-à-dire d'un \texttt{START} et d'un \texttt{STOP} déjà capturés puis synchronisés ;
+    \item \texttt{ST\_M\_MEASURE} : maintien de l'oscillateur rapide par \texttt{osc\_keep\_alive} et dernière fenêtre d'accumulation PD ;
+    \item \texttt{ST\_M\_SNAPSHOT} : échantillonnage des huit réductions de lignes et gel de l'image statique par \texttt{snapshot\_en} ;
+    \item \texttt{ST\_M\_COUNT} : addition finale, saturation du \texttt{hit\_count}, production des flags, impulsion \texttt{capture\_en} et \texttt{fe\_clear} ;
+    \item \texttt{ST\_M\_CLEAR} : nettoyage \texttt{pd\_clear} de la matrice PD et des compteurs avant retour à l'état libre.
 \end{itemize}
 
-La fermeture de conversion (\texttt{close\_any}) peut venir de trois sources :
+La fermeture de conversion est donc moins spéculative que dans l'ancienne description : le front-end asynchrone capture d'abord l'existence de la mesure complète, puis l'automate \texttt{clk\_sys} réalise une séquence déterministe de cinq cycles système. Le chemin \texttt{max\_hits=1} reste utile, car il limite le nombre de hits conservés et accélère la décision logique, mais il ne transforme plus la séquence de teardown en fermeture purement rapide.
+
+Les flags de fermeture peuvent provenir de trois sources :
 \begin{enumerate}
-    \item \textbf{chemin rapide \texttt{max\_hits=1}} : un simple OR combinatoire détecte l'arrivée d'au moins un hit ;
+    \item \textbf{chemin \texttt{max\_hits=1}} : un OR de la matrice indique qu'au moins un hit a été mémorisé ;
     \item \textbf{chemin compté \texttt{max\_hits>1}} : un compteur de hits saturant, pipeliné sur deux étages d'addition, atteint le seuil programmé ;
-    \item \textbf{watchdog rapide} : la fenêtre de mesure reste ouverte trop longtemps.
+    \item \textbf{watchdog} : la mesure est fermée par timeout lorsque la progression attendue n'apparaît pas.
 \end{enumerate}
 
 Le chemin compté mérite une attention particulière. Pour tenir la fermeture temporelle dans une logique proche de \SI{1}{\giga\hertz}, le comptage des $64$ cellules ne peut pas être réalisé en un seul arbre combinatoire monolithique. Le RTL retient donc :
@@ -222,7 +230,7 @@ Le chemin compté mérite une attention particulière. Pour tenir la fermeture t
     \item puis une comparaison avec \texttt{max\_hits}.
 \end{itemize}
 
-Cette solution ajoute un cycle rapide de latence pour le chemin compté, mais elle rend le chemin synthétisable et maintient un temps mort pratique de l'ordre de \SIrange{4}{5}{\nano\second} selon l'analyse d'architecture.
+Cette solution ajoute une frontière enregistrée, mais elle déplace le point chaud hors du domaine rapide et rend le chemin synthétisable dans l'enveloppe \texttt{clk\_sys}. La conséquence mesurée est explicite : le temps mort numérique RTL publié n'est pas un objectif de quelques nanosecondes, mais un réarmement lossless en mode persistent-arm de \SI{32}{\nano\second} sous modèle d'oscillateur idéal, mesuré sur \num{2400} essais par gap.
 
 \begin{figure}[H]
     \centering
@@ -231,7 +239,7 @@ Cette solution ajoute un cycle rapide de latence pour le chemin compté, mais el
     \label{fig:timing-diagram-conversion}
 \end{figure}
 
-Le chronogramme de la figure \ref{fig:timing-diagram-conversion} résume l'enchaînement. Le point clé est le suivant : \texttt{capture\_en} n'est pas déclenché au même instant que la détection de fermeture. Un cycle rapide complet est volontairement laissé entre \texttt{close\_any} et la capture, afin que la matrice et les compteurs observés soient stables lorsque le contexte est figé.
+Le chronogramme de la figure \ref{fig:timing-diagram-conversion} résume l'enchaînement. Le point clé est le suivant : \texttt{capture\_en} n'est pas déclenché au même instant que l'observation d'une mesure active. La séquence \texttt{SNAPSHOT}/\texttt{COUNT} laisse une frontière enregistrée entre l'image large et la capture de contexte, afin que la matrice et les compteurs observés soient stables lorsque le contexte est figé.
 
 Il faut enfin souligner une subtilité importante : dans le RTL actif, il n'existe plus de bit de mode séparé pour le premier hit. Le comportement de fermeture la plus précoce est obtenu lorsque \texttt{max\_hits = 1}, par un chemin rapide d'OR-réduction. Ce réglage réduit la durée de mesure, mais ne garantit pas nécessairement un paquet mono-hit strictement chronologique : plusieurs cellules peuvent déjà avoir enregistré des hits au moment où l'automate rapide observe \texttt{any\_hit}.
 
@@ -242,12 +250,12 @@ Le rôle de \texttt{mptdc\_context\_bank} est de geler l'image complète d'une c
     \item le bitmap complet des $64$ cellules actives ;
     \item les \texttt{nfast\_hit} locaux pour chaque cellule ;
     \item \texttt{nslow\_snap}, \texttt{nfast\_snap} et \texttt{nfast\_stop} ;
-    \item \texttt{phase0\_snap} et \texttt{slow\_boundary\_inc} ;
+    \item \texttt{phase0\_snap}, \texttt{slow\_boundary\_inc} et \texttt{stop\_phase\_disc} ;
     \item le nombre de hits contractuel \texttt{hit\_count} ;
     \item les drapeaux de fermeture.
 \end{itemize}
 
-L'écriture se fait en un cycle rapide lors de \texttt{CAPTURE}. La lecture, elle, est combinatoire côté système, mais elle n'est autorisée qu'après synchronisation du bit de drain vers \texttt{clk\_sys}. On ne transporte donc pas tout l'instantané au travers d'un CDC mot à mot ; on transporte seulement l'information \og ce contexte est maintenant figé et prêt à être lu \fg{}.
+L'écriture est engagée par \texttt{capture\_en} pendant l'état \texttt{ST\_M\_COUNT}. La lecture, elle, est combinatoire côté système, mais elle n'est autorisée qu'après synchronisation du bit de drain vers \texttt{clk\_sys}. On ne transporte donc pas tout l'instantané au travers d'un CDC mot à mot ; on transporte seulement l'information \og ce contexte est maintenant figé et prêt à être lu \fg{}.
 
 Le choix de deux contextes, déjà introduit au chapitre précédent, prend ici tout son sens. Le contexte capturé bascule en état \texttt{DRAINING} pendant qu'un autre contexte peut redevenir disponible pour une mesure suivante. La chaîne de sortie est ainsi largement retirée du chemin critique de réarmement immédiat. En revanche, sous forte rétropression, les deux contextes peuvent se retrouver occupés, ce qui réactive alors le signal \texttt{start\_rejected}.
 
@@ -291,7 +299,7 @@ Le sérialiseur \texttt{mptdc\_narrow16\_tx\_v2} utilise un automate à huit ét
 Le contrat de paquetisation en sortie peut être résumé ainsi :
 \begin{itemize}
     \item \textbf{en-tête} : type, contexte, \texttt{phase0\_snap}, nombre de hits, drapeaux, mode de sortie, \texttt{slow\_boundary\_inc} ;
-    \item \textbf{mots de hit} : \texttt{W0} transporte \texttt{nslow} et \texttt{nfast\_hit}, puis \texttt{W1}/\texttt{W2} dépendent du mode de sortie ;
+    \item \textbf{mots de hit} : \texttt{W0} transporte \texttt{nslow} et \texttt{nfast\_hit} ; en \texttt{RAW\_FEATURES} et \texttt{FULL}, \texttt{W1} transporte \texttt{ns}, \texttt{nf} et les \SI{3}{\bit} de \texttt{stop\_phase\_disc} ; \texttt{W2} n'existe qu'en mode \texttt{FULL} pour le timestamp brut ;
     \item \textbf{EOC} : fin de conversion et compteur de paquets local.
 \end{itemize}
 
@@ -330,7 +338,7 @@ Cette section adopte volontairement une lecture \og problème $\rightarrow$ anal
 \subsection{Traversée lent $\rightarrow$ rapide et cohérence de \texttt{Nslow}}
 
 \paragraph{Problème.}
-Le compteur lent évolue dans son propre domaine d'oscillateur, alors que l'instantané de contexte est écrit dans le domaine rapide. Une lecture naïve de \texttt{Nslow} au moment de \texttt{CAPTURE} risquerait de refléter une valeur postérieure à la vraie frontière \texttt{STOP}.
+Le compteur lent évolue dans son propre domaine d'oscillateur, alors que l'instantané de contexte est engagé depuis \texttt{clk\_sys}. Une lecture naïve de \texttt{Nslow} au moment de \texttt{ST\_M\_COUNT} risquerait de refléter une valeur postérieure à la vraie frontière \texttt{STOP}.
 
 \paragraph{Analyse.}
 Le défaut n'est pas marginal : au voisinage de la phase $0$, un simple cycle de décalage se traduit par une erreur grossière importante. Il faut donc capturer une image du compteur lent au moment de \texttt{STOP}, tout en gardant un transfert CDC sûr.
@@ -432,7 +440,7 @@ Le tableau \ref{tab:verification-stack} résume cette organisation.
         \midrule
         Unitaire & Vérifier un bloc isolé sans le bruit du système complet & \shortstack[l]{\texttt{tb\_input\_mux\_unit}\\\texttt{tb\_watchdog\_unit}\\\texttt{tb\_context\_bank\_unit}\\\textit{etc.}} \\
         Intégration & Vérifier les chemins complets à travers \texttt{mptdc\_top\_asic} & \shortstack[l]{\texttt{tb\_single\_conv}\\\texttt{tb\_backpressure}\\\texttt{tb\_start\_wdt}\\\texttt{tb\_firsthit\_mode}\\(chemin \texttt{max\_hits=1})} \\
-        VIP & Générer des scénarios pilotés, observer et vérifier la cohérence des paquets acceptés & \shortstack[l]{\texttt{smoke\_single\_conv}\\\texttt{backpressure\_integrity}\\\texttt{jitter\_robustness}\\\textit{etc.}} \\
+        VIP & Générer des scénarios pilotés, observer et vérifier la cohérence des paquets acceptés & \shortstack[l]{\texttt{smoke\_single\_conv}\\\texttt{backpressure\_integrity}\\\texttt{vip\_ref\_stop\_cdv}\\\texttt{vip\_maxhits\_matrix}} \\
         Campagnes de collecte & Balayer large en délai pour l'analyse statistique & \shortstack[l]{\texttt{tb\_campaign\_collect}\\\texttt{run\_campaign}} \\
         Délais fixes & Prouver le RMS mono-coup et les lois de moyennage à délai constant & \shortstack[l]{\texttt{run\_fixed\_delay}\\\texttt{analyze\_fixed\_delay}} \\
         \bottomrule
@@ -441,19 +449,19 @@ Le tableau \ref{tab:verification-stack} résume cette organisation.
     \label{tab:verification-stack}
 \end{table}
 
-La base locale observée pendant cette phase de travail donne une image instructive :
+La campagne finale de vérification numérique donne une image plus forte que le smoke initial :
 \begin{itemize}
     \item \texttt{ci/run\_smoke.sh} passe ;
     \item \texttt{ci/run\_full\_regression.sh} passe sur \textbf{9/9} benches d'intégration maintenus ;
-    \item \texttt{ci/run\_vip\_smoke.sh} ne passe pas intégralement au moment de cette rédaction (\textbf{11/13}), ce qui révèle un désalignement du vérificateur de cohérence VIP avec le protocole narrow actif plutôt qu'un dysfonctionnement général du cœur RTL.
+    \item la campagne VIP finale passe \textbf{2048/2048} runs, soit \textbf{16} tests, \textbf{128} seeds par test et \num{20000} conversions par test, avec le modèle \texttt{--stop-model qualified-ref}.
 \end{itemize}
 
-Ce résultat est important à documenter honnêtement. Il montre que le cœur d'architecture et les benches d'intégration actifs sont cohérents, mais que l'environnement VIP reste en cours d'alignement avec l'évolution du protocole de sortie. Autrement dit, la vérification est vivante : elle accompagne l'architecture, elle ne la photographie pas une fois pour toutes.
+Ce résultat doit être présenté précisément. Les échecs observés avant la campagne finale ne venaient pas d'une corruption du cœur RTL, mais d'un problème d'infrastructure : le wrapper VIP refusait les chemins absolus sous \texttt{/sim/ksabra}, alors que ces chemins étaient nécessaires pour stocker les artefacts lourds de simulation. Après correction du wrapper, les scénarios couvrant backpressure, watchdog, overflow/recovery, lecture CSR, reset dur, référence STOP qualifiée et matrice \texttt{max\_hits} passent sans échec.
 
-La couverture fonctionnelle existe également, mais elle dépend des outils Cadence et d'un flot de campagne spécifique. Les scripts du dépôt montrent une intégration claire avec \textit{IMC}, des points de couverture conditionnés par \texttt{MPTDC\_ENABLE\_FUNC\_COV}, et des campagnes dédiées plus lourdes. Il faut néanmoins distinguer cette infrastructure d'une méthodologie de clôture complète : le dépôt fournit une base de confiance solide sur le comportement fonctionnel, pas une clôture physique ou CDC exhaustive au sens industriel final.
+La couverture fonctionnelle existe également, mais elle dépend des outils Cadence et d'un flot de campagne spécifique. Les scripts du dépôt montrent une intégration claire avec \textit{IMC}, des points de couverture conditionnés par \texttt{MPTDC\_ENABLE\_FUNC\_COV}, et des campagnes dédiées plus lourdes. Il faut néanmoins distinguer cette infrastructure d'une méthodologie de clôture complète : le dépôt fournit une base de confiance solide sur le comportement fonctionnel, pas une clôture physique ou CDC exhaustive au sens industriel final. Les assertions SVA sont utilisées comme garde-fous de protocole et de handshake pendant la simulation ; elles ne remplacent ni la revue CDC ni la STA finale.
 
 \begin{summaryBox}
-La validation du projet doit être lue sur deux plans. Le premier plan est fonctionnel : les benches unitaires, d'intégration et de campagne donnent une bonne confiance dans le comportement du RTL et dans les observables exportés. Le second plan reste ouvert : les oscillateurs réels, les contraintes complètes d'horloges générées, la revue CDC exhaustive et la clôture de synthèse ne sont pas encore des objets clos dans le dépôt.
+La validation du projet doit être lue sur deux plans. Le premier plan est fonctionnel : les benches unitaires, d'intégration, de campagne et le VIP final à \textbf{2048/2048 PASS} donnent une confiance solide dans le comportement du RTL et dans les observables exportés. Le second plan reste ouvert : les oscillateurs réels, les contraintes complètes d'horloges générées, la revue CDC exhaustive et la clôture de synthèse ne sont pas encore des objets clos dans le dépôt.
 \end{summaryBox}
 
 Ainsi, l'architecture \textbf{MPTDC} n'est ni un simple exercice théorique, ni un bloc prétendument finalisé sur tous les plans. Elle constitue une implémentation déjà riche, cohérente et mesurable, dont l'intérêt principal pour ce rapport est précisément de montrer comment une idée Vernier multiphase devient un système RTL réel, avec ses compromis, ses limites et ses résultats.

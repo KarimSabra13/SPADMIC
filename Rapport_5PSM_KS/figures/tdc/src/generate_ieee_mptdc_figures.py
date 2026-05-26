@@ -311,24 +311,41 @@ def generate_pd_matrix_heatmap() -> None:
 
 
 def generate_fine_grid_coverage() -> None:
-    values = sorted({11 * ns - 10 * nf for ns in range(8) for nf in range(8)})
+    ns = np.arange(8)
+    nf = np.arange(8)
+    coef = 11 * ns[:, None] - 10 * nf[None, :]
+    values = sorted(set(coef.ravel().tolist()))
     full = np.arange(min(values), max(values) + 1)
-    missing = [v for v in full if v not in values]
-    gaps = np.diff(values)
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10.8, 4.9), gridspec_kw={"height_ratios": [1.2, 1.0]}, constrained_layout=True)
-    fig.suptitle("Structural fine-grid coverage of the 8 x 8 Vernier matrix", fontsize=12.5, fontweight="bold")
-    ax1.hlines(0, full.min(), full.max(), color=GRAY_2, linewidth=0.8)
-    ax1.vlines(missing, -0.25, 0.25, color=GRAY_3, linewidth=0.55, label="missing")
-    ax1.vlines(values, -0.45, 0.45, color=STEEL, linewidth=1.0, label="reachable")
-    ax1.set_yticks([])
-    ax1.set_xlabel("fine coefficient")
-    ax1.set_xlim(full.min() - 2, full.max() + 2)
-    ax1.legend(frameon=False, ncol=2, loc="upper right")
-    ax1.text(0.01, 0.88, "64 reachable / 148 integer positions = 43.2% coverage", transform=ax1.transAxes, fontsize=8.8)
-    ax2.bar(np.arange(len(gaps)), gaps * 10, color=STEEL, width=0.82)
-    ax2.set_xlabel("sorted reachable-code interval")
-    ax2.set_ylabel("gap (ps)")
-    ax2.axhline(10, color=GRAY_1, linewidth=0.8, linestyle="--")
+    missing = len(full) - len(values)
+
+    fig, ax = plt.subplots(figsize=(7.0, 5.8), constrained_layout=True)
+    im = ax.imshow(coef, origin="lower", cmap="RdBu_r", vmin=-77, vmax=77)
+    ax.set_title(r"Table des coefficients fins $11\,n_s - 10\,n_f$", fontsize=12.5, fontweight="bold")
+    ax.set_xlabel(r"Indice de phase rapide $n_f$")
+    ax.set_ylabel(r"Indice de phase lente $n_s$")
+    ax.set_xticks(nf)
+    ax.set_yticks(ns)
+    ax.set_xticks(np.arange(-0.5, 8, 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, 8, 1), minor=True)
+    ax.grid(which="minor", color="white", linewidth=1.2)
+    ax.tick_params(which="minor", bottom=False, left=False)
+    for slow in ns:
+        for fast in nf:
+            val = int(coef[slow, fast])
+            color = "white" if abs(val) > 42 else GRAY_0
+            ax.text(fast, slow, f"{val:+d}", ha="center", va="center", fontsize=8.5, fontweight="bold", color=color)
+    cbar = fig.colorbar(im, ax=ax, shrink=0.88)
+    cbar.set_label("Coefficient fin nominal")
+    ax.text(
+        0.5,
+        -0.16,
+        f"64 couples physiques sur {len(full)} positions entières de -70 à +77 : {missing} codes manquants.",
+        transform=ax.transAxes,
+        ha="center",
+        va="top",
+        fontsize=9.2,
+        bbox=dict(boxstyle="round,pad=0.32", facecolor="white", edgecolor=GRAY_3),
+    )
     save(fig, "fine_grid_coverage.pdf")
 
 
@@ -349,39 +366,39 @@ def generate_clock_domain_diagram() -> None:
 
 
 def generate_mptdc_block_diagram() -> None:
-    fig, ax = canvas("mptdc_top_asic / mptdc_core hierarchy", 15.0, 7.2)
-    domain(ax, 0.55, 1.0, 3.6, 5.5, "pad / async inputs")
-    domain(ax, 4.55, 1.0, 5.3, 5.5, "fast measurement core")
-    domain(ax, 10.25, 1.0, 4.2, 5.5, "clk_sys readout")
-    block(ax, 0.95, 5.05, 2.7, 0.65, "input mux", "SPAD or CAL")
-    block(ax, 0.95, 3.65, 2.7, 0.75, "async_frontend_v2", "start_latched\nstop_latched")
-    block(ax, 4.95, 5.25, 1.9, 0.65, "slow ring", "8 taps")
-    block(ax, 4.95, 4.0, 1.9, 0.65, "fast ring", "8 taps")
-    block(ax, 4.95, 2.55, 1.9, 0.65, "Gray counters", "Nslow,Nfast")
-    block(ax, 7.25, 3.8, 2.1, 1.0, "8 x 8 PD matrix", "PD_N=64", accent=True)
-    block(ax, 7.25, 2.3, 2.1, 0.8, "meas_ctrl", "SNAPSHOT")
-    block(ax, 10.65, 4.6, 3.25, 0.8, "context_bank", "2 frozen images")
-    block(ax, 10.65, 3.25, 3.25, 0.8, "drain_ctrl", "META/SCAN/EOC")
-    block(ax, 10.65, 1.9, 3.25, 0.8, "sync FIFO + narrow16", "ready/valid")
+    fig, ax = canvas("Hiérarchie mptdc_top_asic / mptdc_core", 15.0, 7.2)
+    domain(ax, 0.55, 1.0, 3.6, 5.5, "entrées pads / événements asynchrones")
+    domain(ax, 4.55, 1.0, 5.3, 5.5, "oscillateurs et matrice de mesure")
+    domain(ax, 10.25, 1.0, 4.2, 5.5, "contrôle et lecture clk_sys")
+    block(ax, 0.95, 5.05, 2.7, 0.65, "mux d'entrée", "SPAD ou CAL")
+    block(ax, 0.95, 3.65, 2.7, 0.75, "front-end asynchrone", "start_latched\nstop_latched")
+    block(ax, 4.95, 5.25, 1.9, 0.65, "anneau lent", "8 taps")
+    block(ax, 4.95, 4.0, 1.9, 0.65, "anneau rapide", "8 taps")
+    block(ax, 4.95, 2.55, 1.9, 0.65, "compteurs Gray", "Nslow,Nfast")
+    block(ax, 7.25, 3.8, 2.1, 1.0, "matrice PD 8 x 8", "PD_N=64", accent=True)
+    block(ax, 7.25, 2.3, 2.1, 0.8, "meas_ctrl", "clk_sys\nSNAPSHOT/COUNT")
+    block(ax, 10.65, 4.6, 3.25, 0.8, "banque contextes", "2 images figées")
+    block(ax, 10.65, 3.25, 3.25, 0.8, "contrôleur drain", "META/SCAN/EOC")
+    block(ax, 10.65, 1.9, 3.25, 0.8, "FIFO + narrow16", "ready/valid")
     orth_arrow(ax, (3.65, 4.0), (4.95, 5.57), "START", kind="async")
     orth_arrow(ax, (3.65, 4.0), (4.95, 4.32), "STOP", kind="async")
-    orth_arrow(ax, (6.85, 5.57), (7.25, 4.45), "slow phases", kind="data")
-    orth_arrow(ax, (6.85, 4.32), (7.25, 4.1), "fast phases", kind="data")
-    orth_arrow(ax, (6.85, 2.88), (7.25, 3.85), "counts", kind="data")
+    orth_arrow(ax, (6.85, 5.57), (7.25, 4.45), "phases lentes", kind="data")
+    orth_arrow(ax, (6.85, 4.32), (7.25, 4.1), "phases rapides", kind="data")
+    orth_arrow(ax, (6.85, 2.88), (7.25, 3.85), "compteurs", kind="data")
     orth_arrow(ax, (8.3, 3.8), (8.3, 3.1), "any_hit", kind="control")
-    orth_arrow(ax, (9.35, 4.3), (10.65, 5.0), "wide snapshot", kind="data")
+    orth_arrow(ax, (9.35, 4.3), (10.65, 5.0), "image figée", kind="data")
     orth_arrow(ax, (13.9, 4.95), (13.9, 4.05), "scan", kind="control")
-    orth_arrow(ax, (12.25, 3.25), (12.25, 2.7), "records", kind="data")
+    orth_arrow(ax, (12.25, 3.25), (12.25, 2.7), "enregistrements", kind="data")
     save(fig, "mptdc_block_diagram.pdf")
 
 
 def generate_async_frontend_fsm() -> None:
-    fig, ax = canvas("Asynchronous front-end latch flow", 11.6, 5.5)
+    fig, ax = canvas("Front-end asynchrone : verrous START/STOP", 11.6, 5.5)
     reset_dot(ax, 0.7, 2.8, (1.35, 2.8))
-    state(ax, 1.9, 2.8, "ARMED", "wait START")
+    state(ax, 1.9, 2.8, "ARMÉ", "attente START")
     state(ax, 4.3, 3.7, "START_L", "slow_en=1", accent=True)
     state(ax, 6.85, 3.7, "STOP_L", "fast_en=1", accent=True)
-    state(ax, 9.15, 2.8, "CLEAR", "latches reset")
+    state(ax, 9.15, 2.8, "CLEAR", "reset verrous")
     state(ax, 4.3, 1.45, "REJECT", "start_rejected")
     orth_arrow(ax, (2.38, 3.02), (3.8, 3.48), "start & ctx_free & conv_arm")
     orth_arrow(ax, (4.82, 3.7), (6.33, 3.7), "stop | slow_wdt", kind="async")
@@ -393,52 +410,51 @@ def generate_async_frontend_fsm() -> None:
 
 
 def generate_boundary_disambiguation() -> None:
-    fig, ax = timing_canvas("STOP-side boundary disambiguation", 9, 4.9)
+    fig, ax = timing_canvas("Désambiguïsation de frontière côté STOP", 9, 4.9)
     ax.axvspan(3.8, 4.8, color=GRAY_4, zorder=0)
     waveform(ax, 3.45, [0, 1, 1, 0, 0, 1, 1, 0, 0], "slow_phase[0]")
     waveform(ax, 2.65, [0, 0, 0, 0, 1, 0, 0, 0, 0], "STOP")
     waveform(ax, 1.85, [0, 0, 0, 0, 1, 1, 1, 1, 1], "phase0_snap")
     waveform(ax, 1.05, [0, 0, 0, 0, 1, 1, 1, 1, 1], "slow_boundary_inc")
-    ax.annotate("STOP cuts a slow boundary", xy=(4.8, 2.9), xytext=(5.45, 4.1), arrowprops=dict(arrowstyle="->", lw=0.9, connectionstyle="arc3,rad=-0.2"), fontsize=8.2)
-    ax.text(4.3, 0.45, "critical cycle", ha="center", fontsize=8, family="monospace")
+    ax.annotate("STOP coupe une frontière lente", xy=(4.8, 2.9), xytext=(5.45, 4.1), arrowprops=dict(arrowstyle="->", lw=0.9, connectionstyle="arc3,rad=-0.2"), fontsize=8.2)
+    ax.text(4.3, 0.45, "cycle critique", ha="center", fontsize=8, family="monospace")
     save(fig, "boundary_disambiguation.pdf")
 
 
 def generate_meas_ctrl_fsm() -> None:
-    fig, ax = canvas("mptdc_meas_ctrl FSM", 13.0, 6.3)
+    fig, ax = canvas("FSM mptdc_meas_ctrl dans clk_sys", 13.0, 6.3)
     reset_dot(ax, 0.75, 3.2, (1.45, 3.2))
-    coords = {"IDLE": (2.0, 3.2), "MEASURE": (4.3, 4.55), "SNAPSHOT": (6.9, 4.55), "CAPTURE": (9.5, 4.55), "STOP_OSC": (11.0, 3.2), "CLEAR": (6.9, 1.75)}
-    actions = {"IDLE": "pd_gate=0", "MEASURE": "pd_gate=1", "SNAPSHOT": "snapshot_en", "CAPTURE": "capture_en", "STOP_OSC": "fe_clear", "CLEAR": "pd_clear"}
+    coords = {"IDLE": (2.0, 3.2), "MEASURE": (4.15, 4.55), "SNAPSHOT": (6.45, 4.55), "COUNT": (8.75, 4.55), "CLEAR": (6.45, 1.75)}
+    actions = {"IDLE": "attente", "MEASURE": "pd_gate=1", "SNAPSHOT": "snapshot_en", "COUNT": "capture_en\nfe_clear", "CLEAR": "pd_clear"}
     for name, xy in coords.items():
-        state(ax, *xy, name, actions[name], accent=(name in {"SNAPSHOT", "CAPTURE"}))
+        state(ax, *xy, name, actions[name], accent=(name in {"SNAPSHOT", "COUNT"}))
     orth_arrow(ax, (2.48, 3.48), (3.82, 4.27), "meas_active")
-    orth_arrow(ax, (4.82, 4.55), (6.38, 4.55), "close_any")
-    orth_arrow(ax, (7.42, 4.55), (8.98, 4.55), "next clk_fast")
-    orth_arrow(ax, (9.98, 4.27), (10.55, 3.48), "context written")
-    orth_arrow(ax, (10.48, 2.95), (7.42, 1.98), "osc stopped", via=(10.48, 1.98))
-    orth_arrow(ax, (6.38, 1.98), (2.48, 2.95), "clear done", via=(3.1, 1.1))
+    orth_arrow(ax, (4.67, 4.55), (5.93, 4.55), "clk_sys")
+    orth_arrow(ax, (6.97, 4.55), (8.23, 4.55), "compter")
+    orth_arrow(ax, (8.75, 4.03), (6.45, 2.27), "clear ordonné", via=(8.75, 2.27))
+    orth_arrow(ax, (5.93, 1.98), (2.48, 2.95), "retour libre", via=(3.1, 1.1))
     save(fig, "meas_ctrl_fsm.pdf")
 
 
 def generate_timing_diagram_conversion() -> None:
-    fig, ax = timing_canvas("Conversion timing around close / snapshot / capture", 10, 5.2)
+    fig, ax = timing_canvas("Chronogramme de conversion : snapshot, count, clear", 10, 5.2)
     ax.axvspan(5.8, 6.8, color=GRAY_4, zorder=0)
     waveform(ax, 4.0, [0, 1, 1, 1, 1, 1, 1, 0, 0, 0], "pd_gate")
     waveform(ax, 3.25, [0, 0, 0, 0, 1, 1, 1, 0, 0, 0], "hit_level")
-    waveform(ax, 2.5, [0, 0, 0, 0, 0, 1, 0, 0, 0, 0], "close_any")
+    waveform(ax, 2.5, [0, 0, 0, 0, 0, 1, 0, 0, 0, 0], "meas_active")
     waveform(ax, 1.75, [0, 0, 0, 0, 0, 0, 1, 0, 0, 0], "snapshot_en")
     waveform(ax, 1.0, [0, 0, 0, 0, 0, 0, 0, 1, 0, 0], "capture_en")
-    ax.annotate("one fast cycle settle", xy=(6.3, 1.95), xytext=(6.9, 4.45), arrowprops=dict(arrowstyle="->", lw=0.9, connectionstyle="arc3,rad=-0.18"), fontsize=8.2)
+    ax.annotate("frontière enregistrée clk_sys", xy=(6.3, 1.95), xytext=(6.9, 4.45), arrowprops=dict(arrowstyle="->", lw=0.9, connectionstyle="arc3,rad=-0.18"), fontsize=8.2)
     save(fig, "timing_diagram_conversion.pdf")
 
 
 def generate_drain_ctrl_fsm() -> None:
-    fig, ax = canvas("mptdc_drain_ctrl FSM", 10.8, 5.8)
+    fig, ax = canvas("FSM mptdc_drain_ctrl dans clk_sys", 10.8, 5.8)
     reset_dot(ax, 0.7, 2.85, (1.45, 2.85))
-    state(ax, 2.0, 2.85, "IDLE", "wait ctx")
-    state(ax, 4.6, 4.15, "META", "push META", accent=True)
-    state(ax, 7.55, 2.85, "SCAN", "emit HIT")
-    state(ax, 4.6, 1.55, "EOC", "release")
+    state(ax, 2.0, 2.85, "IDLE", "attente ctx")
+    state(ax, 4.6, 4.15, "META", "émettre META", accent=True)
+    state(ax, 7.55, 2.85, "SCAN", "émettre HIT")
+    state(ax, 4.6, 1.55, "EOC", "libérer")
     orth_arrow(ax, (2.5, 3.08), (4.1, 3.92), "any_selectable")
     orth_arrow(ax, (5.1, 4.0), (7.05, 3.08), "!fifo_full")
     orth_arrow(ax, (7.05, 2.62), (5.1, 1.75), "scan_done | all_hits_found")
@@ -448,17 +464,17 @@ def generate_drain_ctrl_fsm() -> None:
 
 
 def generate_narrow16_tx_fsm() -> None:
-    fig, ax = canvas("mptdc_narrow16_tx_v2 serializer FSM", 13.0, 6.2)
+    fig, ax = canvas("FSM du sérialiseur mptdc_narrow16_tx_v2", 13.0, 6.2)
     reset_dot(ax, 0.65, 3.1, (1.25, 3.1))
     nodes = {
-        "S_IDLE": (1.75, 3.1, "wait META"),
-        "S_HEADER": (3.85, 4.25, "emit header"),
-        "S_HIT_FETCH": (6.15, 4.25, "read HIT"),
+        "S_IDLE": (1.75, 3.1, "attente META"),
+        "S_HEADER": (3.85, 4.25, "émettre header"),
+        "S_HIT_FETCH": (6.15, 4.25, "lire HIT"),
         "S_HIT_CALC": (8.45, 4.25, "t_raw_ps"),
-        "S_HIT_W0": (10.75, 4.25, "emit W0"),
-        "S_HIT_W1": (10.75, 2.15, "emit W1"),
-        "S_HIT_W2": (8.45, 2.15, "FULL only"),
-        "S_EOC": (4.15, 2.15, "emit EOC"),
+        "S_HIT_W0": (10.75, 4.25, "émettre W0"),
+        "S_HIT_W1": (10.75, 2.15, "émettre W1"),
+        "S_HIT_W2": (8.45, 2.15, "FULL seul"),
+        "S_EOC": (4.15, 2.15, "émettre EOC"),
     }
     for name, (x, y, act) in nodes.items():
         state(ax, x, y, name, act, r=0.47, accent=(name in {"S_HEADER", "S_EOC"}))
@@ -476,34 +492,34 @@ def generate_narrow16_tx_fsm() -> None:
 
 
 def generate_packet_format() -> None:
-    fig, ax = canvas("Active 16-bit narrow packet format", 11.0, 6.0)
-    ax.text(5.05, 5.15, "bit rule", ha="center", fontsize=8.2, family="monospace")
+    fig, ax = canvas("Format actif du paquet narrow 16 bits", 11.0, 6.0)
+    ax.text(5.05, 5.15, "bits", ha="center", fontsize=8.2, family="monospace")
     for i in range(16):
         ax.text(0.7 + (i + 0.5) * 0.54, 4.92, f"{15-i}", ha="center", va="center", fontsize=6.4, family="monospace", color=GRAY_1)
-    bit_word(ax, 4.25, "Header", [(2, "10", "hdr"), (2, "ctx", "hdr"), (1, "phase0", "hdr"), (4, "hit_count", "hdr"), (4, "flags", "hdr"), (2, "mode", "hdr"), (1, "boundary", "hdr")])
+    bit_word(ax, 4.25, "En-tête", [(2, "10", "hdr"), (2, "ctx", "hdr"), (1, "phase0", "hdr"), (4, "hit_count", "hdr"), (4, "flags", "hdr"), (2, "mode", "hdr"), (1, "boundary", "hdr")])
     bit_word(ax, 3.25, "Hit W0", [(1, "0", "rsvd"), (7, "nslow", "payload"), (7, "nfast_hit", "payload"), (1, "0", "rsvd")])
-    bit_word(ax, 2.25, "Hit W1 RAW_FEATURES", [(1, "0", "rsvd"), (4, "ns", "payload"), (4, "nf", "payload"), (7, "reserved", "rsvd")])
+    bit_word(ax, 2.25, "Hit W1 RAW_FEATURES", [(1, "0", "rsvd"), (4, "ns", "payload"), (4, "nf", "payload"), (4, "rsvd", "rsvd"), (3, "stop_disc", "payload")])
     bit_word(ax, 1.25, "Hit W1 RAW_TIMESTAMP", [(16, "t_raw_ps[15:0]", "payload")])
     bit_word(ax, 0.25, "EOC", [(2, "11", "eoc"), (14, "conv_id[13:0]", "eoc")])
-    ax.text(9.55, 2.55, "FULL mode adds\none extra W2:\nt_raw_ps[15:0]", ha="left", va="center", fontsize=8.2, family="monospace", bbox=dict(fc="white", ec=GRAY_2, pad=3))
+    ax.text(9.55, 2.55, "Le mode FULL ajoute\nun W2 supplémentaire :\nt_raw_ps[15:0]", ha="left", va="center", fontsize=8.2, family="monospace", bbox=dict(fc="white", ec=GRAY_2, pad=3))
     save(fig, "packet_format_v23.pdf")
 
 
 def generate_calibration_flow() -> None:
-    fig, ax = canvas("External characterization and calibration flow", 13.2, 4.9)
+    fig, ax = canvas("Flot externe de caractérisation et calibration", 13.2, 4.9)
     steps = [
-        (0.7, "Campaign CSV", "code_density\nboundary\nstress"),
-        (3.05, "Feature table", "ns,nf,nslow\nnfast_hit"),
-        (5.4, "Train split", "120 files"),
-        (7.75, "6D LUT", "mean residual"),
-        (10.1, "Held-out validation", "30 files"),
+        (0.7, "CSV campagne", "code_density\nboundary\nstress"),
+        (3.05, "Table features", "ns,nf,nslow\nnfast_hit\nstop_disc"),
+        (5.4, "Split train", "64 fichiers"),
+        (7.75, "LUT + STOP", "résidu moyen"),
+        (10.1, "Validation fresh", "32 fichiers"),
     ]
     for x, title, sig in steps:
         block(ax, x, 2.6, 1.75, 0.9, title, sig, accent=(title == "6D LUT"))
     for (x0, _, _), (x1, _, _) in zip(steps[:-1], steps[1:]):
         orth_arrow(ax, (x0 + 1.75, 3.05), (x1, 3.05), "stream", kind="data")
-    block(ax, 5.15, 0.95, 3.05, 0.75, "Report metrics", "RMS / p95 / DNL / INL")
-    orth_arrow(ax, (10.98, 2.6), (8.2, 1.32), "residuals", kind="data", via=(11.55, 1.32))
+    block(ax, 5.15, 0.95, 3.05, 0.75, "Métriques rapport", "RMSE / p99 / DNL / INL")
+    orth_arrow(ax, (10.98, 2.6), (8.2, 1.32), "résidus", kind="data", via=(11.55, 1.32))
     save(fig, "calibration_flow.pdf")
 
 

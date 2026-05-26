@@ -78,22 +78,22 @@
 \node[blocaccent, minimum width=44mm] (tdcmoins) at (9.00,0.20) {MPTDC Axe $-120^\circ$};
 \node[bloc, minimum width=46mm, minimum height=14mm] (position) at (9.00,-2.25) {Calcul de position\\[-1mm] / Centroïde};
 
-\node[bloc, minimum width=45mm, minimum height=13mm] (tsc) at (19.30,2.80) {Contrôleur Supérieur\\[-1mm](TSC)};
-\node[blocaccent, minimum width=45mm, minimum height=14mm] (arbitrage) at (19.30,-0.80) {Arbitrage et\\[-1mm] Transmission};
+\node[bloc, minimum width=46mm, minimum height=13mm] (tsc) at (19.30,2.80) {Arbitrage voies MPTDC\\[-1mm]et contrôle mode (TSC)};
+\node[blocaccent, minimum width=48mm, minimum height=15mm] (arbitrage) at (19.30,-0.80) {Mise en forme\\[-1mm]Paquetisation / Sérialisation TX};
 
 \begin{pgfonlayer}{background}
   \node[domaine, fit=(axezero)(axeplus)(axemoins), label={[titre]above:Projections de la matrice SPAD}] (domspad) {};
   \node[domaine, fit=(tdczero)(tdcplus)(tdcmoins)(position), label={[titre]above:Chemins parallèles}] (domtraitement) {};
-  \node[domaine, fit=(tsc)(arbitrage), label={[titre]above:Arbitrage}] (domsortie) {};
+  \node[domaine, fit=(tsc)(arbitrage), label={[titre]above:Sortie numérique partagée}] (domsortie) {};
 \end{pgfonlayer}
 
 \coordinate (positionx) at ([yshift=8pt]position.west);
 \coordinate (positiony) at (position.west);
 \coordinate (positionz) at ([yshift=-8pt]position.west);
 
-\coordinate (arbtdc0) at ([yshift=14pt]arbitrage.west);
+\coordinate (arbtdc0) at ([yshift=15pt]arbitrage.west);
 \coordinate (arbtdcp) at ([yshift=5pt]arbitrage.west);
-\coordinate (arbtdcm) at ([yshift=-4pt]arbitrage.west);
+\coordinate (arbtdcm) at ([yshift=-5pt]arbitrage.west);
 \coordinate (arbpos) at ([yshift=-14pt]arbitrage.west);
 
 \coordinate (ctrltdc0) at ([yshift=11pt]tdczero.east);
@@ -105,13 +105,16 @@
 \coordinate (busAp) at ($(axeplus.east)+(3.10,0)$);
 \coordinate (busAm) at ($(axemoins.east)+(3.50,0)$);
 
-\coordinate (busPX) at ($(axezero.east)+(4.40,0)$);
-\coordinate (busPY) at ($(axeplus.east)+(5.20,0)$);
-\coordinate (busPZ) at ($(axemoins.east)+(6.00,0)$);
+\coordinate (busPX) at ($(axezero.east)+(0.85,0)$);
+\coordinate (busPY) at ($(axeplus.east)+(1.25,0)$);
+\coordinate (busPZ) at ($(axemoins.east)+(1.65,0)$);
+\coordinate (posxturn) at (busPX |- positionx);
+\coordinate (posyturn) at (busPY |- positiony);
+\coordinate (poszturn) at (busPZ |- positionz);
 
-\coordinate (collecteTdcHaut) at ($(tdczero.east)+(3.25,0)$);
+\coordinate (collecteTdcHaut) at ($(tdczero.east)+(3.65,0)$);
 \coordinate (collecteTdcBas) at ($(collecteTdcHaut |- arbtdcm)+(0,0)$);
-\coordinate (departPosition) at ($(position.east)+(4.10,0)$);
+\coordinate (departPosition) at ($(position.east)+(4.45,0)$);
 
 \coordinate (busControleHaut) at ($(tsc.west)+(-1.70,0)$);
 \coordinate (busControleBas) at ($(busControleHaut |- ctrlpos)+(0,0)$);
@@ -120,11 +123,11 @@
 \draw[donnees] (axeplus.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busAp) |- (tdcplus.west);
 \draw[donnees] (axemoins.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busAm) |- (tdcmoins.west);
 
-\draw[donnees] (axezero.east) -- node[etiquette, below=2pt, pos=0.62] {lignes X} (busPX) |- (positionx);
-\draw[donnees] (axeplus.east) -- node[etiquette, below=2pt, pos=0.62] {lignes Y} (busPY) |- (positiony);
-\draw[donnees] (axemoins.east) -- node[etiquette, below=2pt, pos=0.62] {lignes Z} (busPZ) |- (positionz);
+\draw[donnees] (axezero.east) -- node[etiquette, above=2pt, pos=0.55] {lignes X} (busPX) -- (posxturn) -- (positionx);
+\draw[donnees] (axeplus.east) -- node[etiquette, above=2pt, pos=0.55] {lignes Y} (busPY) -- (posyturn) -- (positiony);
+\draw[donnees] (axemoins.east) -- node[etiquette, below=2pt, pos=0.55] {lignes Z} (busPZ) -- (poszturn) -- (positionz);
 
-\draw[donnees] (tdczero.east) -- node[etiquette, above=2pt, pos=0.55] {enregistrements TDC} (collecteTdcHaut);
+\draw[donnees] (tdczero.east) -- node[etiquette, above=2pt, pos=0.58] {enregistrements TDC} (collecteTdcHaut);
 \draw[donnees] (tdcplus.east) -- ($(collecteTdcHaut |- tdcplus.east)$);
 \draw[donnees] (tdcmoins.east) -- ($(collecteTdcHaut |- tdcmoins.east)$);
 \draw[donnees] (collecteTdcHaut) -- (collecteTdcBas) |- (arbtdcp);

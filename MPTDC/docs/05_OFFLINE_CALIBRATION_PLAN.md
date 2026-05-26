@@ -241,8 +241,6 @@ Main outputs:
 - `results/fixed_delay_campaign/analysis/fixed_delay_summary.csv`
 - `results/fixed_delay_campaign/analysis/fixed_delay_averaging.csv`
 - `results/fixed_delay_campaign/analysis/fixed_delay_report.txt`
-- `results/fixed_delay_campaign/analysis/raw_aliases/*/alias_key_summary.csv`
-  when `scripts/analysis/analyze_raw_aliases.py` is run on the same fixed-delay tree
 
 These reports use actual fixed-delay populations and distinguish:
 
@@ -250,28 +248,10 @@ These reports use actual fixed-delay populations and distinguish:
 - `first_hit_scan` conversion estimator
 - `conv_mean` conversion estimator
 
-Alias-closure signoff must use the same population as the maintained LUT:
-
-```bash
-python3 scripts/analysis/analyze_raw_aliases.py \
-  --campaign-dir results/fixed_delay_campaign \
-  --config-filter 'multihit_15_cal_nominal*' \
-  --core-only \
-  --out-dir results/fixed_delay_campaign/analysis/raw_aliases_core
-```
-
-`--core-only` applies the calibration signoff filter `nslow > 0`, matching
-`calibrate_6d_lut.py`. Run without this flag only when intentionally auditing
-all packet rows, including the `nslow == 0` boundary rows that the maintained
-LUT excludes and host software must mark low-confidence.
-
-The alias analyzer reports both packet-visible keys and the exact maintained
-calibration key:
-
-```
-cal_lut_key = ns_inf, nf_inf, nslow, nfast_hit,
-              stop_phase_disc, phase0_snap, hit_idx
-```
+The historical alias/Oracle scripts were removed from the maintained final flow
+after the Gray-counter ECO. The accepted signoff frame is now the maintained
+6D/7-field LUT calibration plus strict mono-hit linearity and boundary stress
+plots.
 
 ### 5.7 Running calibration
 
@@ -291,43 +271,21 @@ Outputs:
   - pre/post `ns_inf × nf_inf` heatmaps
   - pre/post hit-index RMSE comparison
 
-### 5.8 Short-format observability study
+### 5.8 Final report figure generation
 
-For jitter-limited narrow-packet studies, use:
+The final report figures are generated from the maintained calibration and
+focused characterization outputs:
 
 ```bash
-python3 scripts/calibration/analyze_shortformat_models.py \
-  --nominal-train-dir results/shortformat_local/nominal_train/multihit_15_cal_nominal_raw_features \
-  --jitter-train-dir  results/shortformat_local/jitter_train/multihit_15_cal_jitter_raw_features \
-  --val-dir           results/shortformat_local/jitter_val/multihit_15_cal_jitter_raw_features \
-  --fresh-dir         results/shortformat_local/jitter_fresh/multihit_15_cal_jitter_raw_features \
-  --out-dir           results/shortformat_local/analysis
+python3 scripts/analysis/generate_report_plots.py \
+  --char-root /sim/ksabra/mptdc_final_characterization/overnight/characterization \
+  --focused-root /sim/ksabra/mptdc_final_characterization/focused \
+  --output-dir /sim/ksabra/mptdc_final_characterization/report
 ```
 
-This tool reports:
-
-- exact-LUT performance for multiple narrow-field keys
-- oracle per-key floors, which estimate the best possible single-shot RMSE for a
-  deterministic model that only sees the deployed `RAW_FEATURES` fields
-- matched-bin coverage versus richer key fragmentation
-- a full-coverage hierarchical fallback result for deployment-oriented comparisons
-- delay-bucketed practical and oracle RMSE tables/plots aligned to the maintained
-  fixed-delay reference grid (`20 ps .. 30 ns`)
-- incremental oracle-gain tables/plots that separate:
-  - `current_6d -> boundary_aug`
-  - `boundary_aug -> short_core` (the true incremental value of `nfast_snap`)
-  - `short_core -> all_visible`
-- focused `nfast_snap` coherence outputs (`nfast_snap_split_summary.csv`) that show how
-  often a `boundary_aug` bin actually splits into multiple `nfast_snap` states
-
-If the oracle floor itself stays above the target, more LUT tuning will not close the
-gap; the narrow observable set is the dominant limiter under the current jitter model.
-
-Use this broad-corpus flow as the **headline deployment-proof view** because it
-evaluates a continuous jittered delay population. A separate fixed-delay helper,
-`scripts/calibration/analyze_fixed_delay_shortformat.py`, is useful for pointwise
-characterization of selected delays, but isolated zero-RMSE fixed-delay points do not
-override the continuous broad-corpus oracle floor.
+This exporter produces PNG and PDF figures for the pre/post LUT error
+histogram, calibrated absolute-error CDF, RMSE versus averaging count,
+observable DNL/INL, transfer linearity, and boundary offset sweep.
 
 Current active compact-format takeaway:
 
@@ -411,16 +369,11 @@ Results (15 hits max):
 | 10 | 5.90 ps | 5.82 ps | 21.16 ps |
 | 15 | **5.19 ps** | **5.29 ps** | **19.75 ps** |
 
-### Maintained enhanced calibration scripts
+### Maintained calibration scripts
 
 ```bash
 # Fine phase grid analysis
 python3 scripts/calibration/analyze_fine_grid.py -o results/fine_grid_analysis.pdf
-
-# Multi-method comparison
-python3 scripts/calibration/calibrate_enhanced.py \
-  --input "results/campaign/<dataset>/seed_*.csv" \
-  --out-dir results/calibration_enhanced
 ```
 
 ## 10. Why this architecture is calibration-friendly

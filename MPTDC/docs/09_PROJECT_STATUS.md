@@ -380,7 +380,7 @@ nearly irrelevant for fine correction.
 | Script | Purpose |
 |--------|---------|
 | `scripts/calibration/analyze_fine_grid.py` | Fine phase grid non-uniformity analysis with PDF |
-| `scripts/calibration/calibrate_enhanced.py` | 8-method comparison: LUT variants, polynomial, GBR, temporal re-key, quality-gated averaging |
+| `scripts/calibration/calibrate_6d_lut.py` | Maintained STOP-discriminator mean-correction LUT, validation metrics, and averaging study |
 
 ## 9. Bottom line
 

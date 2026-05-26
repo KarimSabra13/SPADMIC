@@ -880,8 +880,8 @@ def main():
     parser.add_argument("--val-max-files", type=int, default=None,
                         help="Limit held-out validation CSVs loaded at once; fresh validation remains chunked")
     parser.add_argument("--fresh-dir",
-                        default="results/campaign_validation/multihit_15_cal_nominal",
-                        help="Directory with fresh validation CSVs (seeds 100-129)")
+                        default=None,
+                        help="Optional directory with fresh validation CSVs")
     parser.add_argument("--out-dir", default="results/calibration_final",
                         help="Output directory for LUT, plots, reports")
     parser.add_argument("--train-seeds", type=int, default=24,
@@ -1051,6 +1051,7 @@ def main():
                             "Pre-calibration (held-out, core subset)")
     m_cal = compute_metrics(val_result["error_ps"].values,
                             "Post-calibration (held-out, core subset)")
+    heldout_errors_for_avg = val_result["error_ps"].values.copy()
     print_metrics(m_raw)
     print_metrics(m_cal)
     val_error_csv = os.path.join(args.out_dir, "val_reconstruction_errors_pre_post.csv")
@@ -1093,7 +1094,11 @@ def main():
     del val_data, val_result; gc.collect()
 
     # ── 3) Validate on fresh seeds (100-129) ── chunked for memory ──────
-    fresh_files = sorted(glob.glob(os.path.join(args.fresh_dir, "seed_*.csv")))
+    fresh_files = (
+        sorted(glob.glob(os.path.join(args.fresh_dir, "seed_*.csv")))
+        if args.fresh_dir
+        else []
+    )
     if fresh_files:
         print(f"\n[3/6] Validating on FRESH seeds ({len(fresh_files)} files, chunked)...")
 
@@ -1286,14 +1291,9 @@ def main():
     # ── 4) Averaging study ────────────────────────────────────────────────
     print(f"\n[4/6] Averaging study...")
     if errors_for_avg is None:
-        # Fall back to held-out val
-        val_files_avg = sorted(glob.glob(os.path.join(val_dir, "seed_*.csv")))[args.train_seeds:30]
-        val_avg = load_and_prepare(val_files_avg, core_only=True)
-        if val_avg.empty:
-            raise ValueError("Averaging fallback produced no usable held-out validation rows")
-        val_avg_r = apply_lut(val_avg, lut_df).dropna(subset=["correction"])
-        errors_for_avg = val_avg_r["error_ps"].values.copy()
-        del val_avg, val_avg_r; gc.collect()
+        # Fall back to the held-out validation pool already computed above. This
+        # also keeps smoke runs valid when no post-training seed split remains.
+        errors_for_avg = heldout_errors_for_avg.copy()
 
     n_values = [1, 2, 3, 4, 5, 8, 10, 15, 20, 25, 30, 40, 50,
                 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000]

@@ -267,7 +267,7 @@ case "$SIM" in
       echo "Note: --vip-asserts is reserved for assertion-capable signoff simulators; Verilator smoke keeps interface assertions disabled."
     fi
     echo "--- Compiling VIP test with Verilator ---"
-    run_cmd verilator "${VERILATOR_FLAGS[@]}" "${COMMON_FILES[@]}"
+    run_in_dir "$REPO_ROOT" verilator "${VERILATOR_FLAGS[@]}" "${COMMON_FILES[@]}"
     echo "--- Running VIP test ---"
     run_in_dir "$TB_BUILD" ./mptdc_vip_tb "${PLUSARGS[@]}"
     ;;
@@ -325,7 +325,7 @@ case "$SIM" in
       VCS_FLAGS+=(+define+MPTDC_ENABLE_VIP_ASSERTS)
     fi
     echo "--- Compiling VIP test with VCS ---"
-    run_cmd vcs "${VCS_FLAGS[@]}"
+    run_in_dir "$REPO_ROOT" vcs "${VCS_FLAGS[@]}"
     echo "--- Running VIP test ---"
     run_cmd "$TB_BUILD/mptdc_vip_tb" "${PLUSARGS[@]}"
     ;;

@@ -4,39 +4,39 @@
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\draw[axe] (0.7,4.2) -- (14.8,4.2) node[titre, right] {Temps};
-\foreach \x/\lab in {1.2/$t_0$,3.2/$t_1$,5.2/$t_2$,7.2/$t_3$,9.2/$t_4$,11.2/$t_5$,13.2/$t_6$} {
-  \draw[grisligne!35] (\x,0.7) -- (\x,4.0);
-  \node[etiquette, above=1.3mm] at (\x,4.2) {\lab};
+\draw[axe] (0.8,4.45) -- (18.2,4.45) node[titre, right] {Temps};
+\foreach \x/\lab in {1.0/$t_0$,6.4/$t_1$,8.2/$t_2$,12.0/$t_3$,13.8/$t_4$,16.4/$t_5$,17.8/$t_6$} {
+  \draw[grisligne!32] (\x,0.65) -- (\x,4.25);
+  \node[etiquette, above=1.3mm] at (\x,4.45) {\lab};
 }
 
-\node[titre, anchor=east] at (0.55,3.1) {Contexte 0};
-\node[titre, anchor=east] at (0.55,1.8) {Contexte 1};
+\node[titre, anchor=east] at (0.65,3.25) {Contexte 0};
+\node[titre, anchor=east] at (0.65,1.85) {Contexte 1};
 
-\draw[barreCapture] (1.2,2.72) rectangle (6.0,3.45);
-\node[textebarre] at (3.6,3.085) {Capture\\(Mesure $k$)};
-\draw[barreDrain] (6.0,2.72) rectangle (7.1,3.45);
-\node[textebarre] at (6.55,3.085) {Snapshot};
-\draw[barreDrain] (7.1,2.72) rectangle (10.2,3.45);
-\node[textebarre] at (8.65,3.085) {Drain \& Sérialisation TX};
-\draw[barreLibre] (10.2,2.72) rectangle (12.6,3.45);
-\node[textebarre] at (11.4,3.085) {Libre};
+\draw[barreCapture] (1.0,2.83) rectangle (6.4,3.67);
+\node[textebarre] at (3.7,3.25) {Capture mesure $k$};
+\draw[barreDrain] (6.4,2.83) rectangle (8.2,3.67);
+\node[textebarre] at (7.3,3.25) {Snapshot};
+\draw[barreDrain] (8.2,2.83) rectangle (13.8,3.67);
+\node[textebarre] at (11.0,3.25) {Drain et sérialisation TX};
+\draw[barreLibre] (13.8,2.83) rectangle (16.4,3.67);
+\node[textebarre] at (15.1,3.25) {Libre};
 
-\draw[barreLibre] (1.2,1.42) rectangle (6.0,2.15);
-\node[textebarre] at (3.6,1.785) {Libre};
-\draw[barreCapture] (6.0,1.42) rectangle (10.8,2.15);
-\node[textebarre] at (8.4,1.785) {Capture\\(Mesure $k{+}1$)};
-\draw[barreDrain] (10.8,1.42) rectangle (11.9,2.15);
-\node[textebarre] at (11.35,1.785) {Snapshot};
-\draw[barreDrain] (11.9,1.42) rectangle (14.6,2.15);
-\node[textebarre] at (13.25,1.785) {Drain \& Sérialisation TX};
+\draw[barreLibre] (1.0,1.43) rectangle (6.4,2.27);
+\node[textebarre] at (3.7,1.85) {Libre};
+\draw[barreCapture] (6.4,1.43) rectangle (12.0,2.27);
+\node[textebarre] at (9.2,1.85) {Capture mesure $k{+}1$};
+\draw[barreDrain] (12.0,1.43) rectangle (13.8,2.27);
+\node[textebarre] at (12.9,1.85) {Snapshot};
+\draw[barreDrain] (13.8,1.43) rectangle (17.8,2.27);
+\node[textebarre] at (15.8,1.85) {Drain et sérialisation TX};
 
-\draw[fluxcontrole] (6.0,0.95) -- (6.0,3.75);
-\node[etiquette, right=1.7mm] at (6.0,3.75) {fin de la mesure $k$};
+\draw[fluxcontrole] (6.4,0.95) -- (6.4,4.05);
+\node[etiquette, right=1.5mm] at (6.4,4.05) {fin mesure $k$};
 
-\draw[<->, line width=0.9pt, draw=grisligne] (7.1,0.95) -- (10.2,0.95)
-  node[etiquette, midway, below=1.8mm, align=center]
-  {Le drain du Contexte 0 est masqué\\par la capture du Contexte 1\\(Recouvrement)};
+\draw[<->, line width=0.9pt, draw=grisligne] (8.2,0.92) -- (12.0,0.92)
+  node[etiquette, midway, below=1.7mm, align=center]
+  {recouvrement : drain contexte 0\\pendant capture contexte 1};
 
 \end{tikzpicture}
 \end{document}
