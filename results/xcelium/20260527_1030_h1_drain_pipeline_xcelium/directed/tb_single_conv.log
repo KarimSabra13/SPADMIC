@@ -1,0 +1,228 @@
+=== MPTDC v2.7 TB Runner ===
+  Testbench: tb_single_conv
+  Simulator: xcelium
+  Build dir: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/build/tb_single_conv
+
+--- Compiling with Xcelium ---
+TOOL:	xrun(64)	23.03-s007: Started on May 27, 2026 at 12:17:15 CEST
+xrun(64): 23.03-s007: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/pkg/mptdc_pkg.sv
+	package worklib.mptdc_pkg:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/cdc/mptdc_reset_sync.sv
+	module worklib.mptdc_reset_sync:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/cdc/mptdc_pulse_sync.sv
+	module worklib.mptdc_pulse_sync:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/cdc/mptdc_gray_cnt_sync.sv
+	module worklib.mptdc_gray_cnt_sync:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/cdc/mptdc_sync_fifo.sv
+	module worklib.mptdc_sync_fifo:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/osc/mptdc_osc_model.sv
+	module worklib.mptdc_osc_model:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/osc/mptdc_osc_stub.sv
+	module worklib.mptdc_osc_stub:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/osc/mptdc_osc_wrapper.sv
+	module worklib.mptdc_osc_wrapper:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/pd/mptdc_pd_cell.sv
+	module worklib.mptdc_pd_cell:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/async/mptdc_stop_capture_async.sv
+	module worklib.mptdc_stop_capture_async:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/async/mptdc_async_frontend_v2.sv
+	module worklib.mptdc_async_frontend_v2:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/async/mptdc_hit_capture_bridge.sv
+  input  stop_phase_disc_t            stop_slow_phase_disc_i,
+                                                           |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/async/mptdc_hit_capture_bridge.sv,25|59): Implicit net port (stop_slow_phase_disc_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_hit_capture_bridge:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/async/mptdc_context_bank.sv
+  input  mptdc_ctx_snapshot_t           capture_snapshot_i,
+                                                         |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/async/mptdc_context_bank.sv,23|57): Implicit net port (capture_snapshot_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_context_bank:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/ctrl/mptdc_input_mux.sv
+    input  mptdc_pkg::input_sel_e  input_sel_i,
+                                             |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/ctrl/mptdc_input_mux.sv,40|45): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_input_mux:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/ctrl/mptdc_meas_ctrl.sv
+	module worklib.mptdc_meas_ctrl:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/ctrl/mptdc_drain_ctrl.sv
+  input  mptdc_pkg::mptdc_ctx_snapshot_t     snapshot_i,
+                                                      |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/ctrl/mptdc_drain_ctrl.sv,36|54): Implicit net port (snapshot_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_drain_ctrl:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/ctrl/mptdc_watchdog.sv
+	module worklib.mptdc_watchdog:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/readout/mptdc_tconv_reco.sv
+	module worklib.mptdc_tconv_reco:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/readout/mptdc_narrow16_tx_v2.sv
+  input  mptdc_pkg::out_mode_e  out_mode_i,
+                                         |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/readout/mptdc_narrow16_tx_v2.sv,31|41): Implicit net port (out_mode_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+  input  mptdc_pkg::mptdc_acq_rec_t fifo_rd_data_i,
+                                                 |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/readout/mptdc_narrow16_tx_v2.sv,35|49): Implicit net port (fifo_rd_data_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_narrow16_tx_v2:sv
+		errors: 0, warnings: 2
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/readout/mptdc_csr_minimal.sv
+  input  mptdc_pkg::mptdc_status_t  status_i,
+                                           |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/readout/mptdc_csr_minimal.sv,45|43): Implicit net port (status_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_csr_minimal:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/top/mptdc_core.sv
+  input  mptdc_pkg::mptdc_cfg_t cfg_i,
+                                    |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/top/mptdc_core.sv,44|36): Implicit net port (cfg_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_core:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/top/mptdc_top_asic.sv
+  input  mptdc_pkg::input_sel_e  input_sel_override_i,
+                                                    |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/top/mptdc_top_asic.sv,42|52): Implicit net port (input_sel_override_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+  input  mptdc_pkg::out_mode_e   out_mode_override_i,
+                                                   |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/rtl/../rtl/top/mptdc_top_asic.sv,44|51): Implicit net port (out_mode_override_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.mptdc_top_asic:sv
+		errors: 0, warnings: 2
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/common/mptdc_tb_pkg.sv
+	package worklib.mptdc_tb_pkg:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/common/mptdc_char_tb_pkg.sv
+	package worklib.mptdc_char_tb_pkg:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/common/mptdc_raw_monitor.sv
+	module worklib.mptdc_raw_monitor:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/int/tb_single_conv.sv
+	module worklib.tb_single_conv:sv
+		errors: 0, warnings: 0
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		mptdc_tb_pkg
+		tb_single_conv
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.mptdc_raw_monitor:sv <0x620a516c>
+			streams:  11, words: 11263
+		worklib.mptdc_watchdog:sv <0x6568fd5f>
+			streams:   6, words:  1989
+		worklib.mptdc_narrow16_tx_v2:sv <0x189bc8cc>
+			streams:  17, words: 13695
+		worklib.mptdc_sync_fifo:sv <0x782cd237>
+			streams:  20, words: 12211
+		worklib.mptdc_drain_ctrl:sv <0x4cd0565a>
+			streams:  31, words: 22929
+		worklib.mptdc_context_bank:sv <0x2d297321>
+			streams:   8, words:  7632
+		worklib.mptdc_hit_capture_bridge:sv <0x483472c9>
+			streams:  16, words:  9973
+		worklib.mptdc_meas_ctrl:sv <0x3b872c96>
+			streams:  20, words: 21215
+		worklib.mptdc_gray_cnt_sync:sv <0x191ad808>
+			streams:  26, words:  8526
+		worklib.mptdc_gray_cnt_sync:sv <0x27bca556>
+			streams:  26, words:  8584
+		worklib.mptdc_stop_capture_async:sv <0x0bab0334>
+			streams:   3, words:  1579
+		worklib.mptdc_pd_cell:sv <0x04f914f3>
+			streams:   7, words:  3893
+		worklib.mptdc_osc_wrapper:sv <0x6c5c8fb2>
+			streams:   1, words:   464
+		worklib.mptdc_osc_wrapper:sv <0x61d103e9>
+			streams:   1, words:   464
+		worklib.mptdc_reset_sync:sv <0x5d08d259>
+			streams:   4, words:   712
+		worklib.mptdc_reset_sync:sv <0x65c9d658>
+			streams:   4, words:   714
+		worklib.mptdc_reset_sync:sv <0x0e8e1db1>
+			streams:   4, words:   714
+		worklib.mptdc_csr_minimal:sv <0x595d1291>
+			streams:  16, words: 11247
+		worklib.mptdc_input_mux:sv <0x126508da>
+			streams:   2, words:   532
+		worklib.mptdc_reset_sync:sv <0x47823197>
+			streams:   4, words:   714
+		worklib.mptdc_reset_sync:sv <0x7d595621>
+			streams:   4, words:   714
+		worklib.mptdc_reset_sync:sv <0x063042db>
+			streams:   4, words:   712
+		worklib.mptdc_top_asic:sv <0x61de3adf>
+			streams:  14, words:  5265
+		worklib.tb_single_conv:sv <0x68ebe0da>
+			streams:  26, words: 27397
+		worklib.mptdc_tb_pkg:sv <0x0aef81ef>
+			streams:  15, words: 24754
+		worklib.mptdc_async_frontend_v2:sv <0x2a4dc49e>
+			streams:  21, words: 11742
+		worklib.mptdc_osc_model:sv <0x74f5492e>
+			streams:   4, words:  8368
+		worklib.mptdc_osc_model:sv <0x2bf4c175>
+			streams:   4, words:  8368
+		worklib.mptdc_core:sv <0x08748bd6>
+			streams:  62, words: 20830
+		worklib.mptdc_pkg:sv <0x3f45a5d7>
+			streams:   3, words:  1065
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                94      20
+		Verilog packages:        2       2
+		Registers:             770     328
+		Scalar wires:          277       -
+		Expanded wires:        503      67
+		Vectored wires:         87       -
+		Always blocks:         222      66
+		Initial blocks:         33       8
+		Final blocks:            1       1
+		Parallel blocks:         1       1
+		Cont. assignments:      94     100
+		Pseudo assignments:    114       -
+		Assertions:             85      22
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_single_conv:sv
+Loading snapshot worklib.tb_single_conv:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[TB] Configuring: MULTI_HIT, max_hits=15, OUT_MODE_RAW_FEATURES
+[TB] Arming conversion...
+[TB] Injecting START...
+[TB] Injecting STOP...
+[TB] Waiting for output packet...
+[MON] t=440625 PKT#0 HEADER: ctx=0 phase0=0 hits=15 flags=0010 mode=0
+[TB] Collected 32 words
+[TB] Header: ctx=0, hits=15, flags=0010, mode=0
+[TB] EOC: conv_id=0
+[TB] ===== TEST PASSED =====
+[MON] t=728125 PKT#0 EOC: conv_id=0
+[MON] SUMMARY: 1 packets, 15 total hits
+Simulation complete via $finish(1) at time 828125 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/int/tb_single_conv.sv:185     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on May 27, 2026 at 12:17:17 CEST  (total: 00:00:02)
