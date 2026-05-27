@@ -133,7 +133,7 @@ set design(RESET_MAX_TRANSITION) 0.35    ;# ns — keep reset-control slew bound
 
 # Intentional latches expected in mptdc_async_frontend_v2
 # (Used for post-synthesis auditing)
-set design(EXPECTED_LATCH_COUNT) 6       ;# start, stop, start_accept_seen, active_ctx, ctx_drain×2
+set design(EXPECTED_LATCH_COUNT) 7       ;# start, stop, start_accept_seen, start_reject_seen, active_ctx, ctx_drain×2
 
 #############################################
 #       Files and Paths

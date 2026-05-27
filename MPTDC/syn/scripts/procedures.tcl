@@ -104,6 +104,60 @@ proc mptdc_collect_names {cmd} {
     return $names
 }
 
+proc mptdc_unique_list {items} {
+    set out [list]
+    array set seen {}
+    foreach item $items {
+        if {![info exists seen($item)]} {
+            set seen($item) 1
+            lappend out $item
+        }
+    }
+    return $out
+}
+
+proc mptdc_collect_pin_names {patterns} {
+    set names [list]
+    foreach pattern $patterns {
+        foreach pin_pattern [list \
+            "${pattern}*/D" \
+            "${pattern}*/d" \
+            "${pattern}*/*D*" \
+            "${pattern}*/*d*" \
+        ] {
+            set matches [mptdc_collect_names "get_pins -quiet -hierarchical $pin_pattern"]
+            if {[llength $matches] > 0} {
+                set names [concat $names $matches]
+            }
+        }
+    }
+    return [mptdc_unique_list $names]
+}
+
+proc mptdc_run_timing_to_names {rpt_file title endpoint_names} {
+    if {[llength $endpoint_names] == 0} {
+        mptdc_write_report_failure $rpt_file $title "No endpoint names provided."
+        return
+    }
+
+    set errors [list]
+    foreach path_type [list full_clock full endpoint {}] {
+        if {$path_type ne ""} {
+            if {![catch {report_timing -to $endpoint_names -max_paths 100 -path_type $path_type > $rpt_file} err]} {
+                return
+            }
+            lappend errors "report_timing -to <[llength $endpoint_names] endpoints> -max_paths 100 -path_type $path_type: $err"
+        } else {
+            if {![catch {report_timing -to $endpoint_names -max_paths 100 > $rpt_file} err]} {
+                return
+            }
+            lappend errors "report_timing -to <[llength $endpoint_names] endpoints> -max_paths 100: $err"
+        }
+    }
+
+    mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
+}
+
 proc mptdc_try_set_db {objects attr value} {
     if {[llength $objects] == 0} {
         return
@@ -125,6 +179,12 @@ proc mptdc_try_preserve_cells {cells} {
 }
 
 proc mptdc_report_hotspot_timing {rpt_file title patterns} {
+    set endpoint_names [mptdc_collect_pin_names $patterns]
+    if {[llength $endpoint_names] > 0} {
+        mptdc_run_timing_to_names $rpt_file $title $endpoint_names
+        return
+    }
+
     set cells [list]
     foreach pattern $patterns {
         set matches [list]
@@ -140,20 +200,16 @@ proc mptdc_report_hotspot_timing {rpt_file title patterns} {
         return
     }
 
-    if {![catch {
-        report_timing -to $cells -max_paths 100 -path_type full_clock > $rpt_file
-    } err]} {
-        return
+    set cell_names [list]
+    foreach cell $cells {
+        if {![catch {set name [get_object_name $cell]}]} {
+            lappend cell_names $name
+        } elseif {![catch {set name [get_db $cell .name]}]} {
+            lappend cell_names $name
+        }
     }
 
-    if {![catch {
-        report_timing -to $cells -max_paths 100 > $rpt_file
-    } err2]} {
-        return
-    }
-
-    mptdc_write_report_failure $rpt_file $title \
-        "Full-clock report failed: $err\n\nBasic report failed: $err2"
+    mptdc_run_timing_to_names $rpt_file $title [mptdc_unique_list $cell_names]
 }
 
 proc mptdc_collect_cell_objects {patterns} {
@@ -250,6 +306,66 @@ proc mptdc_write_fast_feasibility_audit {rpt_file} {
     close $fh
 }
 
+proc mptdc_write_high_fanout_report {rpt_file {limit 100} {threshold 20}} {
+    set fh [open $rpt_file w]
+    puts $fh "MPTDC high-fanout net audit"
+    puts $fh "==========================="
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh "Threshold: fanout >= $threshold"
+    puts $fh ""
+
+    if {[catch {set nets [get_db nets]} err]} {
+        puts $fh "Could not query nets with get_db nets: $err"
+        close $fh
+        return
+    }
+
+    set rows [list]
+    foreach net $nets {
+        set name "<unknown>"
+        catch {set name [get_db $net .name]}
+
+        set fanout -1
+        foreach attr {.num_loads .fanout} {
+            if {![catch {set value [get_db $net $attr]}] && [string is integer -strict $value]} {
+                set fanout $value
+                break
+            }
+        }
+        if {$fanout < 0} {
+            foreach attr {.loads .load_pins .pins} {
+                if {![catch {set loads [get_db $net $attr]}]} {
+                    set fanout [llength $loads]
+                    break
+                }
+            }
+        }
+
+        if {$fanout >= $threshold} {
+            set driver ""
+            if {![catch {set drv [get_db $net .driver]}] && [llength $drv] > 0} {
+                catch {set driver [get_db $drv .name]}
+            }
+            lappend rows [list $fanout $name $driver]
+        }
+    }
+
+    set rows [lsort -integer -decreasing -index 0 $rows]
+    puts $fh [format "%-10s %-80s %s" "Fanout" "Net" "Driver"]
+    puts $fh [string repeat "-" 140]
+    set count 0
+    foreach row $rows {
+        puts $fh [format "%-10s %-80s %s" [lindex $row 0] [lindex $row 1] [lindex $row 2]]
+        incr count
+        if {$count >= $limit} {
+            break
+        }
+    }
+    puts $fh ""
+    puts $fh "Reported $count of [llength $rows] nets at or above threshold."
+    close $fh
+}
+
 proc mptdc_preserve_physical_hierarchy {} {
     mptdc_message "Preserving reset synchronizer and PD matrix hierarchy"
 
@@ -319,6 +435,18 @@ proc mptdc_report_timing {report_dir} {
         "report_timing -from \[get_clocks clk_osc_fast\] -to \[get_clocks clk_osc_fast\] -max_paths 100" \
     ] "$dir/timing_osc_fast_full_clock.rpt" "fast oscillator-domain timing report"
 
+    mptdc_run_report_candidates [list \
+        "report_timing -from \[get_clocks clk_sys\] -to \[get_clocks clk_sys\] -max_paths 100 -max_slack 0.0 -path_type full_clock" \
+        "report_timing -from \[get_clocks clk_sys\] -to \[get_clocks clk_sys\] -max_paths 100 -max_slack 0.0" \
+        "report_timing -from \[get_clocks clk_sys\] -to \[get_clocks clk_sys\] -max_paths 100 -path_type full_clock" \
+        "report_timing -from \[get_clocks clk_sys\] -to \[get_clocks clk_sys\] -max_paths 100" \
+    ] "$dir/timing_clk_sys_violations.rpt" "clk_sys violating timing report"
+
+    mptdc_run_report_candidates [list \
+        "report_timing -from \[get_clocks clk_sys\] -to \[get_clocks clk_sys\] -max_paths 100 -path_type full_clock" \
+        "report_timing -from \[get_clocks clk_sys\] -to \[get_clocks clk_sys\] -max_paths 100" \
+    ] "$dir/timing_clk_sys_full_clock.rpt" "clk_sys full-clock timing report"
+
     mptdc_report_hotspot_timing "$dir/timing_pd_capture_hotspots.rpt" \
         "phase-detector capture timing report" \
         [list *gen_pd_row*gen_pd_col*u_pd* *u_pd*]
@@ -334,6 +462,18 @@ proc mptdc_report_timing {report_dir} {
     mptdc_report_hotspot_timing "$dir/timing_context_bank_hotspots.rpt" \
         "context-bank hotspot timing report" \
         [list *u_ctx_bank* *u_ctx_bank*/*]
+
+    mptdc_report_hotspot_timing "$dir/timing_hit_capture_bridge_hotspots.rpt" \
+        "hit-capture bridge hotspot timing report" \
+        [list *u_hit_capture_bridge* *u_hit_capture_bridge*/*]
+
+    mptdc_report_hotspot_timing "$dir/timing_drain_ctrl_hotspots.rpt" \
+        "drain controller hotspot timing report" \
+        [list *u_drain_ctrl* *u_drain_ctrl*/*]
+
+    mptdc_report_hotspot_timing "$dir/timing_fifo_hotspots.rpt" \
+        "FIFO/readout hotspot timing report" \
+        [list *u_fifo* *u_sync_fifo* *u_narrow_tx* *u_tconv*]
 
     mptdc_write_fast_feasibility_audit "$dir/fast_domain_feasibility_audit.rpt"
 }
@@ -455,6 +595,13 @@ proc mptdc_full_reports {report_dir} {
         "$dir/report_hierarchy.rpt" "report_hierarchy"
     mptdc_run_report "report_design_rules" \
         "$dir/report_design_rules.rpt" "report_design_rules"
+    mptdc_run_report_candidates [list \
+        "report_design_rules -violators" \
+        "report_design_rules -all_violators" \
+        "report_design_rules -verbose" \
+        "report_design_rules" \
+    ] "$dir/report_design_rules_verbose.rpt" "verbose design-rule report"
+    mptdc_write_high_fanout_report "$dir/report_high_fanout.rpt" 200 20
     mptdc_run_report "report_qor" \
         "$dir/report_qor.rpt" "report_qor"
 

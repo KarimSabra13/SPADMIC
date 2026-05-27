@@ -56,13 +56,22 @@ for file in \
   "${syn_dir}/reports/synthesis/post_synthesis/report_power_hier.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_qor.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_design_rules.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/report_design_rules_verbose.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/report_high_fanout.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_clocks.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_clocks_generated.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_constraints.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/check_timing_intent_post_synth.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_osc_fast_full_clock.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_clk_sys_full_clock.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_clk_sys_violations.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_pd_capture_hotspots.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_osc_counter_hotspots.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_meas_ctrl_hotspots.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_context_bank_hotspots.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_hit_capture_bridge_hotspots.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_drain_ctrl_hotspots.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_fifo_hotspots.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/fast_domain_feasibility_audit.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/latch_audit.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/cdc_manual_audit.rpt" \

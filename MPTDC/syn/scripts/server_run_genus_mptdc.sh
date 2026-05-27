@@ -70,6 +70,7 @@ REPORT_AREA="$RESULT_DIR/report_area.rpt"
 REPORT_DRC="$RESULT_DIR/report_design_rules.rpt"
 LATCH_AUDIT="$RESULT_DIR/latch_audit.rpt"
 CDC_AUDIT="$RESULT_DIR/cdc_manual_audit.rpt"
+PARSED_SUMMARY="$RESULT_DIR/PARSED_SUMMARY.md"
 
 WNS_LINE="$(extract_first_match "$TIMING_SUMMARY" 'WNS|worst.*slack|slack')"
 TNS_LINE="$(extract_first_match "$TIMING_SUMMARY" 'TNS|total.*negative')"
@@ -102,6 +103,15 @@ CDC_LINE="$(extract_first_match "$CDC_AUDIT" 'CDC|held|PASS|FAIL|waiver')"
   echo "- Latch audit line: ${LATCH_LINE:-not found}"
   echo "- CDC audit line: ${CDC_LINE:-not found}"
   echo
+  if command -v python3 >/dev/null 2>&1 && [[ -f "$REPO_ROOT/tools/timing/parse_genus_summary.py" ]]; then
+    python3 "$REPO_ROOT/tools/timing/parse_genus_summary.py" "$RESULT_DIR" > "$PARSED_SUMMARY" 2>/dev/null || true
+  fi
+  if [[ -f "$PARSED_SUMMARY" ]]; then
+    echo "## Parsed Summary"
+    echo
+    echo "- present: \`PARSED_SUMMARY.md\`"
+    echo
+  fi
   echo "## Key Files Present"
   echo
   for file in \
@@ -109,11 +119,18 @@ CDC_LINE="$(extract_first_match "$CDC_AUDIT" 'CDC|held|PASS|FAIL|waiver')"
     timing_violations.rpt \
     timing_summary.rpt \
     report_design_rules.rpt \
+    report_design_rules_verbose.rpt \
+    report_high_fanout.rpt \
     check_timing_intent.rpt \
     latch_audit.rpt \
     cdc_manual_audit.rpt \
+    timing_clk_sys_full_clock.rpt \
+    timing_clk_sys_violations.rpt \
+    timing_pd_capture_hotspots.rpt \
+    timing_osc_counter_hotspots.rpt \
     timing_meas_ctrl_hotspots.rpt \
     timing_context_bank_hotspots.rpt \
+    timing_hit_capture_bridge_hotspots.rpt \
     timing_drain_ctrl_hotspots.rpt \
     timing_fifo_hotspots.rpt \
     report_clocks.rpt \
@@ -139,4 +156,3 @@ if [[ ${SNAPSHOT_RC:-0} -ne 0 ]]; then
 fi
 
 exit 0
-

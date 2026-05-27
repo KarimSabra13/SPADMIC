@@ -199,3 +199,201 @@ Next action:
 
 - Human runs `docs/timing_closure/SERVER_RUN_REQUEST.md` Genus command on the lab server.
 - After committed server results are available, parse Genus timing/DRV/latch/CDC reports before proposing RTL timing changes.
+
+## Iteration ID: 20260527_0845_current_head_genus_baseline
+
+Git HEAD: `68652ddbf7936e283882e7249c8f0e458fd080fb`
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Human lab-server Genus baseline on the infrastructure commit.
+
+Files changed:
+
+- `results/genus/20260527_0845_current_head_genus_baseline/`
+- `MPTDC/lab_snapshots/genus_20260527_0845_current_head_genus_baseline/`
+
+Tool stage:
+
+- Genus
+
+Was this actually run by agent locally?
+
+- no
+
+Was this run by human on lab server?
+
+- yes
+
+Evidence location:
+
+- `results/genus/20260527_0845_current_head_genus_baseline/SUMMARY.md`
+- `results/genus/20260527_0845_current_head_genus_baseline/timing_summary.rpt`
+- `results/genus/20260527_0845_current_head_genus_baseline/timing_violations.rpt`
+- `results/genus/20260527_0845_current_head_genus_baseline/report_design_rules.rpt`
+- `results/genus/20260527_0845_current_head_genus_baseline/latch_audit.rpt`
+- `results/genus/20260527_0845_current_head_genus_baseline/cdc_manual_audit.rpt`
+
+Local Verilator:
+
+- lint pass/fail: not run in this server-results iteration
+- smoke pass/fail: not run in this server-results iteration
+- important warnings: none new
+- tests run: none
+
+Genus:
+
+- run available? yes
+- WNS: `-3063.5 ps`
+- TNS: `-1609481.8 ps`
+- violating paths: `699`
+- worst path group: `clk_osc_fast_tap1`
+- worst startpoint: `u_core_u_fast_cnt_bin_q_reg[2]/C`
+- worst endpoint: `u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]/D`
+- design-rule violations: max_transition total `282226`
+- latch audit: `7` latches found; expected count in defines was stale at `6`
+- CDC manual audit: PD matrix count matched 64 cells; rejected START latch and held-bus bridge listed
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? no
+- tests: none
+- pass/fail: unknown
+- failed seeds: none
+
+Functional result:
+
+- unknown for Cadence simulation; local Verilator baseline from prior iteration still pass
+
+Timing result:
+
+- failing; worst detailed paths are oscillator/PD measurement fabric, not clk_sys backend
+
+Linearity/precision risk:
+
+- none from analysis only
+
+Decision:
+
+- inspect more
+
+Next action:
+
+- Do not implement H1 yet.
+- Fix detailed report generation for clk_sys, meas_ctrl, context_bank, drain/FIFO, high-fanout, and DRV net attribution.
+
+## Iteration ID: 20260527_0945_report_infra_analysis
+
+Git HEAD: `5dca9c0dd5cd5b272f6055115eeea7ef885f3622`
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Local parser/reporting improvements and baseline analysis documents; no RTL timing behavior change.
+
+Files changed:
+
+- `tools/timing/parse_genus_summary.py`
+- `tools/timing/extract_top_paths.py`
+- `tools/timing/compare_runs.py`
+- `tools/timing/parse_innovus_summary.py`
+- `MPTDC/syn/scripts/procedures.tcl`
+- `MPTDC/syn/scripts/collect_snapshot.sh`
+- `MPTDC/syn/scripts/server_run_genus_mptdc.sh`
+- `MPTDC/syn/inputs/mptdc.defines`
+- `docs/timing_closure/20260527_genus_baseline_analysis.md`
+- `docs/timing_closure/H1_hit_count_analysis.md`
+- `docs/timing_closure/H6_constraint_audit.md`
+- `docs/timing_closure/sdc_audit.md`
+- `docs/timing_closure/cdc_async_waiver_package.md`
+- `docs/timing_closure/oscillator_macro_contract.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST.md`
+- `docs/timing_closure/iteration_log.md`
+
+Tool stage:
+
+- local parser/script validation
+
+Was this actually run by agent locally?
+
+- yes
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- `docs/timing_closure/20260527_genus_baseline_analysis.md`
+- local parser output from `python3 tools/timing/parse_genus_summary.py results/genus/20260527_0845_current_head_genus_baseline`
+
+Local Verilator:
+
+- lint pass/fail: not required; no RTL changed
+- smoke pass/fail: not required; no RTL changed
+- important warnings: none new
+- tests run: parser syntax/execution only
+
+Genus:
+
+- run available? prior baseline yes; targeted rerun not yet
+- WNS: prior baseline `-3063.5 ps`
+- TNS: prior baseline `-1609481.8 ps`
+- violating paths: prior baseline `699`
+- worst path group: prior baseline `clk_osc_fast_tap1`
+- worst startpoint: prior baseline `u_core_u_fast_cnt_bin_q_reg[2]/C`
+- worst endpoint: prior baseline `u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]/D`
+- design-rule violations: prior baseline max_transition total `282226`
+- latch audit: expected count updated to `7`, matching observed intentional async frontend latches
+- CDC manual audit: no protocol change
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? no
+- tests: none
+- pass/fail: unknown
+- failed seeds: none
+
+Functional result:
+
+- unchanged; no RTL behavior change
+
+Timing result:
+
+- unknown for this patch until targeted Genus rerun is committed
+
+Linearity/precision risk:
+
+- none
+
+Decision:
+
+- request server run
+
+Next action:
+
+- Human runs `docs/timing_closure/SERVER_RUN_REQUEST.md` targeted Genus command after this patch is pushed.
+- Parse `timing_clk_sys_violations.rpt`, fixed hotspot reports, `report_high_fanout.rpt`, and `report_design_rules_verbose.rpt`.
