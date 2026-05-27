@@ -52,9 +52,9 @@ module mptdc_meas_ctrl
   localparam int unsigned ROW_QUAD_N = NE / 4;
   localparam int unsigned PAIR_GROUP_N = NE / 2;
 
-  // Balanced 64-bit hit count in the relaxed clk_sys domain.  The physical
-  // reports still showed this as a single-cycle hotspot, so keep one registered
-  // boundary after the eight independent row reductions.
+  // Balanced 64-bit hit count in the relaxed clk_sys domain.  Keep the final
+  // sum/flag result registered before context publication so the context bank
+  // write does not sit at the end of the row-count reduction cone.
   logic [1:0] row_pair_cnt_comb [0:NE-1][0:ROW_PAIR_N-1];
   logic [2:0] row_quad_cnt_comb [0:NE-1][0:ROW_QUAD_N-1];
   logic [3:0] row_cnt_comb      [0:NE-1];
@@ -125,7 +125,8 @@ module mptdc_meas_ctrl
       end
       ST_M_MEASURE:  state_d = ST_M_SNAPSHOT;
       ST_M_SNAPSHOT: state_d = ST_M_COUNT;
-      ST_M_COUNT:    state_d = ST_M_CLEAR;
+      ST_M_COUNT:    state_d = ST_M_CAPTURE;
+      ST_M_CAPTURE:  state_d = ST_M_CLEAR;
       ST_M_CLEAR:    state_d = ST_M_IDLE;
       default:       state_d = ST_M_IDLE;
     endcase
@@ -160,9 +161,9 @@ module mptdc_meas_ctrl
   end
 
   assign snapshot_en_o    = (state_q == ST_M_SNAPSHOT);
-  assign capture_en_o     = (state_q == ST_M_COUNT);
+  assign capture_en_o     = (state_q == ST_M_CAPTURE);
   assign meta_en_o        = 1'b0;
-  assign fe_clear_o       = (state_q == ST_M_COUNT);
+  assign fe_clear_o       = (state_q == ST_M_CAPTURE);
   assign pd_clear_o       = (state_q == ST_M_CLEAR);
   assign osc_keep_alive_o = (state_q == ST_M_MEASURE)
                            || (state_q == ST_M_SNAPSHOT);
@@ -171,8 +172,8 @@ module mptdc_meas_ctrl
   // measurement activity; this control only freezes additional accumulation
   // once the static-bus snapshot phase begins.
   assign pd_gate_o        = (state_q == ST_M_IDLE) || (state_q == ST_M_MEASURE);
-  assign close_flags_o    = (state_q == ST_M_COUNT) ? eval_flags_comb : flags_q;
-  assign hit_count_o      = (state_q == ST_M_COUNT) ? eval_hit_count_comb : hit_count_q;
+  assign close_flags_o    = flags_q;
+  assign hit_count_o      = hit_count_q;
   assign state_o          = state_q;
 
   // synthesis translate_off
@@ -182,11 +183,11 @@ module mptdc_meas_ctrl
       prev_state_q <= ST_M_IDLE;
     end else begin
       if (snapshot_en_o) assert (state_q == ST_M_SNAPSHOT);
-      if (capture_en_o)  assert (state_q == ST_M_COUNT);
+      if (capture_en_o)  assert (state_q == ST_M_CAPTURE);
       assert (!meta_en_o)
         else $error("mptdc_meas_ctrl: meta_en_o is retired by fast-clear capture");
       if (pd_clear_o)    assert (state_q == ST_M_CLEAR);
-      if (state_q == ST_M_CLEAR) assert (prev_state_q == ST_M_COUNT);
+      if (state_q == ST_M_CLEAR) assert (prev_state_q == ST_M_CAPTURE);
       prev_state_q <= state_q;
     end
   end

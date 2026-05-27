@@ -119,20 +119,27 @@ module tb_meas_ctrl_unit;
 
     tick();
     check(state == ST_M_COUNT, {label, ": SNAPSHOT to COUNT"});
-    check(capture_en, {label, ": capture pulse in COUNT"});
-    check(fe_clear, {label, ": frontend clear in COUNT"});
+    check(!capture_en, {label, ": no capture while COUNT computes metadata"});
+    check(!fe_clear, {label, ": no frontend clear while COUNT computes metadata"});
     check(!pd_clear, {label, ": no PD clear during COUNT"});
-    check(hit_count == MAX_HITS_W'(expected_count), {label, ": hit_count matches bitmap"});
+    check(hit_count == '0, {label, ": hit_count not published during COUNT"});
+    check(!meta_en, {label, ": retired meta_en remains low"});
+
+    tick();
+    check(state == ST_M_CAPTURE, {label, ": COUNT to CAPTURE"});
+    check(capture_en, {label, ": capture pulse in CAPTURE"});
+    check(fe_clear, {label, ": frontend clear in CAPTURE"});
+    check(!pd_clear, {label, ": no PD clear during CAPTURE"});
+    check(hit_count == MAX_HITS_W'(expected_count), {label, ": registered hit_count held for capture"});
     check(close_flags.closed_by_fast_maxhit == ((max_cfg == MAX_HITS_W'(1)) && (expected_pop != 0)),
           {label, ": fast max-hit flag"});
     check(close_flags.closed_by_maxhits == ((max_cfg > MAX_HITS_W'(1)) && (expected_pop >= int'(max_cfg))),
           {label, ": max-hits flag"});
     check(close_flags.closed_by_watchdog == (timeout_i || ((wdt_i != 16'd0) && (expected_pop == 0))),
           {label, ": watchdog flag"});
-    check(!meta_en, {label, ": retired meta_en remains low"});
 
     tick();
-    check(state == ST_M_CLEAR, {label, ": COUNT to CLEAR"});
+    check(state == ST_M_CLEAR, {label, ": CAPTURE to CLEAR"});
     check(pd_clear, {label, ": PD clear in CLEAR"});
     check(!snapshot_en && !capture_en && !fe_clear, {label, ": only PD clear in CLEAR"});
 
@@ -235,4 +242,3 @@ module tb_meas_ctrl_unit;
 endmodule
 
 `default_nettype wire
-

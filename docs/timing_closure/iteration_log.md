@@ -397,3 +397,213 @@ Next action:
 
 - Human runs `docs/timing_closure/SERVER_RUN_REQUEST.md` targeted Genus command after this patch is pushed.
 - Parse `timing_clk_sys_violations.rpt`, fixed hotspot reports, `report_high_fanout.rpt`, and `report_design_rules_verbose.rpt`.
+
+## Iteration ID: 20260527_0945_targeted_genus_reports
+
+Git HEAD: `7cc0958f4f0492b9a741f6bc897c4e8b482d5181`
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Human lab-server Genus targeted-report rerun after report infrastructure.
+
+Files changed:
+
+- `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/`
+
+Tool stage:
+
+- Genus
+
+Was this actually run by agent locally?
+
+- no
+
+Was this run by human on lab server?
+
+- yes
+
+Evidence location:
+
+- `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/timing_summary.rpt`
+- `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/timing_clk_sys_violations.rpt`
+- `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/timing_context_bank_hotspots.rpt`
+- `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/timing_drain_ctrl_hotspots.rpt`
+- `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/report_high_fanout.rpt`
+- `docs/timing_closure/20260527_targeted_genus_analysis.md`
+
+Local Verilator:
+
+- lint pass/fail: not run in this server-results iteration
+- smoke pass/fail: not run in this server-results iteration
+- important warnings: none new
+- tests run: none
+
+Genus:
+
+- run available? yes
+- WNS: `-3063.5 ps`
+- TNS: `-1609481.8 ps`
+- violating paths: `699`
+- worst path group: `clk_osc_fast_tap1`
+- worst startpoint: `u_core_u_fast_cnt_bin_q_reg[2]/C`
+- worst endpoint: `u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]/D`
+- design-rule violations: max_transition total `282226`
+- latch audit: `7` expected intentional async frontend/event latches
+- CDC manual audit: no protocol change; PD matrix count remains 64
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? no
+- tests: none
+- pass/fail: unknown
+- failed seeds: none
+
+Functional result:
+
+- unknown for Cadence simulation; analysis only
+
+Timing result:
+
+- failing; clk_sys details now identify drain record construction and
+  row-count/context publication as actionable backend cones
+
+Linearity/precision risk:
+
+- none from analysis only
+
+Decision:
+
+- continue
+
+Next action:
+
+- Implement a focused clk_sys backend patch: remove drain read pre-point mux and
+  register hit-count/flags before context publication.
+- Run local Verilator lint/smoke.
+- Request Genus and Xcelium server validation.
+
+## Iteration ID: 20260527_1030_h1_drain_pipeline
+
+Git HEAD: `62e894bb0f0e39390945bb7a18168ac6ae9a12cb` before local patch commit
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Focused clk_sys backend timing patch for H1/H2 and H4.
+
+Files changed:
+
+- `MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv`
+- `MPTDC/rtl/ctrl/mptdc_drain_ctrl.sv`
+- `MPTDC/rtl/pkg/mptdc_pkg.sv`
+- `MPTDC/rtl/top/mptdc_core.sv`
+- `MPTDC/tb/unit/tb_meas_ctrl_unit.sv`
+- `MPTDC/sim/xcelium/server_run_xcelium_mptdc.sh`
+- `docs/timing_closure/20260527_targeted_genus_analysis.md`
+- `docs/timing_closure/H1_hit_count_analysis.md`
+- `docs/timing_closure/H4_drain_record_timing_analysis.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST.md`
+- `docs/timing_closure/iteration_log.md`
+- `results/local_verilator/20260527_1030_h1_drain_pipeline/`
+
+Tool stage:
+
+- local Verilator
+
+Was this actually run by agent locally?
+
+- yes
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- `results/local_verilator/20260527_1030_h1_drain_pipeline/SUMMARY.md`
+- `results/local_verilator/20260527_1030_h1_drain_pipeline/test_summary.txt`
+- `results/local_verilator/20260527_1030_h1_drain_pipeline/lint.log`
+
+Local Verilator:
+
+- lint pass/fail: pass
+- smoke pass/fail: pass
+- important warnings: none beyond documented local Verilator waivers
+- tests run:
+  - `lint`
+  - `tb_meas_ctrl_unit`
+  - `tb_hit_capture_bridge_unit`
+  - `tb_context_bank_unit`
+  - `tb_drain_ctrl_unit`
+  - `tb_single_conv`
+  - `tb_backpressure`
+  - VIP `smoke_single_conv`
+  - VIP `backpressure_integrity`
+  - VIP `vip_maxhits_matrix`
+
+Genus:
+
+- run available? no for this patch
+- WNS: unknown for this patch
+- TNS: unknown for this patch
+- violating paths: unknown for this patch
+- worst path group: unknown for this patch
+- worst startpoint: unknown for this patch
+- worst endpoint: unknown for this patch
+- design-rule violations: unknown for this patch
+- latch audit: server rerun required
+- CDC manual audit: server rerun required
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? no for this patch
+- tests: server request prepared
+- pass/fail: unknown
+- failed seeds: unknown
+
+Functional result:
+
+- pass for local Verilator scope
+
+Timing result:
+
+- unknown until patched Genus run is committed
+
+Linearity/precision risk:
+
+- low to medium
+
+Decision:
+
+- request server run
+
+Next action:
+
+- Human runs `docs/timing_closure/SERVER_RUN_REQUEST.md` on the lab server.
+- Compare patched Genus against `20260527_0945_targeted_genus_reports` and
+  check whether `pending_wr_data_q` and `ctx_snapshot_q` leave the worst clk_sys
+  endpoint set.
+- Review Xcelium regression before treating the added CAPTURE cycle as stable.

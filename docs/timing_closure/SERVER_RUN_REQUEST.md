@@ -2,7 +2,7 @@
 
 Run ID:
 
-`20260527_0945_targeted_genus_reports`
+`20260527_1030_h1_drain_pipeline`
 
 Git branch:
 
@@ -16,15 +16,17 @@ be embedded in this file without changing the hash.
 
 Purpose:
 
-Rerun Genus after report-infrastructure and latch-audit cleanup only. This is
-not an RTL timing patch. The goal is to extract actionable clk_sys, hotspot,
-high-fanout, and DRV evidence before choosing H1/H3/H4.
+Validate the focused clk_sys backend timing patch:
+
+- H1/H2: register final hit-count/flags before context publication.
+- H4: remove the drain-controller IDLE pre-point context-read mux from the wide
+  pending-record construction cone.
 
 Required tool(s):
 
 - [x] Genus
 - [ ] Innovus
-- [ ] Xcelium
+- [x] Xcelium
 
 Before running:
 
@@ -52,57 +54,75 @@ ACTUAL_HEAD="$(git rev-parse HEAD)"
 test "$ACTUAL_HEAD" = "$EXPECTED_HEAD"
 git status --short
 git log --oneline -5
-bash MPTDC/syn/scripts/server_run_genus_mptdc.sh 20260527_0945_targeted_genus_reports
+
+bash MPTDC/syn/scripts/server_run_genus_mptdc.sh 20260527_1030_h1_drain_pipeline_genus
+bash MPTDC/sim/xcelium/server_run_xcelium_mptdc.sh 20260527_1030_h1_drain_pipeline_xcelium
 ```
 
-Expected output directory:
+Expected output directories:
 
 ```text
-results/genus/20260527_0945_targeted_genus_reports/
-MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/
+results/genus/20260527_1030_h1_drain_pipeline_genus/
+MPTDC/lab_snapshots/genus_20260527_1030_h1_drain_pipeline_genus/
+results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/
 ```
 
-Expected key files:
+Expected Genus key files:
 
-- `results/genus/20260527_0945_targeted_genus_reports/SUMMARY.md`
-- `results/genus/20260527_0945_targeted_genus_reports/PARSED_SUMMARY.md`
-- `results/genus/20260527_0945_targeted_genus_reports/genus_20260527_0945_targeted_genus_reports.log`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_summary.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_violations.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_clk_sys_full_clock.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_clk_sys_violations.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_meas_ctrl_hotspots.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_context_bank_hotspots.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_hit_capture_bridge_hotspots.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_drain_ctrl_hotspots.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/timing_fifo_hotspots.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/report_design_rules.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/report_design_rules_verbose.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/report_high_fanout.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/check_timing_intent.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/latch_audit.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/cdc_manual_audit.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/report_clocks.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/report_clocks_generated.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/report_qor.rpt`
-- `results/genus/20260527_0945_targeted_genus_reports/report_area.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/SUMMARY.md`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/PARSED_SUMMARY.md`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/genus_20260527_1030_h1_drain_pipeline_genus.log`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_summary.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_clk_sys_violations.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_meas_ctrl_hotspots.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_context_bank_hotspots.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_drain_ctrl_hotspots.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_fifo_hotspots.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_design_rules.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_design_rules_verbose.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_high_fanout.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/check_timing_intent.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/latch_audit.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/cdc_manual_audit.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_clocks.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_clocks_generated.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_constraints.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_qor.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/report_area.rpt`
+
+Expected Xcelium key files:
+
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/SUMMARY.md`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/run_manifest.txt`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/test_summary.txt`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/xcelium_20260527_1030_h1_drain_pipeline_xcelium.log`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/directed/`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/vip/`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/failures/`
 
 Files to commit/push after run:
 
-- `results/genus/20260527_0945_targeted_genus_reports/`
-- `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/`
+- `MPTDC/lab_snapshots/genus_20260527_1030_h1_drain_pipeline_genus/`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/`
 
-If run fails, still commit/push:
+If a run fails, still commit/push:
 
-- `results/genus/20260527_0945_targeted_genus_reports/genus_20260527_0945_targeted_genus_reports.log`
-- `results/genus/20260527_0945_targeted_genus_reports/run_manifest.txt`
-- `results/genus/20260527_0945_targeted_genus_reports/SUMMARY.md`
-- any partial reports copied into the result directory
-- any partial `MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/` contents
-- the tool version/banner lines from the Genus log, if available
+- the main Genus and Xcelium logs
+- `run_manifest.txt`
+- `SUMMARY.md`
+- `test_summary.txt` if present
+- any partial timing reports copied into the Genus result directory
+- any `failures/` tails from Xcelium
+- any partial `MPTDC/lab_snapshots/genus_20260527_1030_h1_drain_pipeline_genus/` contents
+- the tool version/banner lines from logs, if available
 
 Post-run commit message suggestion:
 
 ```text
-server-results: 20260527_0945_targeted_genus_reports Genus targeted reports
+server-results: 20260527_1030_h1_drain_pipeline Genus Xcelium
 ```
+
+Do not run Innovus yet unless Genus shows the targeted clk_sys paths improved or
+the remaining setup result is clearly physical/DRV dominated. If Genus improves,
+the next request will ask for Innovus post-route confirmation.

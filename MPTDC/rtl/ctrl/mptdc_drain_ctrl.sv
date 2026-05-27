@@ -271,9 +271,14 @@ module mptdc_drain_ctrl
   end
 
   // =========================================================================
-  // Context bank read port — pre-point mux during IDLE
+  // Context bank read port.
+  //
+  // The selected context is registered in drain_ctx_q on the IDLE->META edge.
+  // META is emitted on the following cycle, so a combinational IDLE pre-point
+  // mux is unnecessary. Keeping read_ctx_o registered prevents released_mask
+  // and state decode from feeding the wide record-construction cone.
   // =========================================================================
-  assign read_ctx_o = (state_q == ST_D_IDLE) ? selected_ctx : drain_ctx_q;
+  assign read_ctx_o = drain_ctx_q;
   assign state_o    = state_q;
 
   // synthesis translate_off

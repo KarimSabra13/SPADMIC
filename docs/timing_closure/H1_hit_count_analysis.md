@@ -1,13 +1,15 @@
 # H1 Hit-Count Analysis
 
-Hypothesis: the 64-bit hit-count reduction is the main clk_sys setup killer.
+Hypothesis: the 64-bit hit-count reduction is a main clk_sys setup killer.
 
-Status: not confirmed on the fresh Genus baseline.
+Status: confirmed as one of the two dominant real clk_sys setup cones in the
+targeted Genus run. It is not the top overall timing problem; the top overall
+problem remains oscillator/PD measurement timing.
 
 ## RTL Review
 
-`MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv` already contains a partially staged hit-count
-implementation:
+Before the H1 patch, `MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv` contained a partially
+staged hit-count implementation:
 
 - `SNAPSHOT`: samples the held measurement image in `mptdc_hit_capture_bridge`
   and registers eight independent row counts in `row_cnt_q`.
@@ -15,7 +17,7 @@ implementation:
   `hit_count_o` and close flags, and asserts `capture_en_o`.
 - `CLEAR`: asserts `pd_clear_o` after the snapshot/context capture cycle.
 
-Current sequence:
+Previous sequence:
 
 ```text
 IDLE -> MEASURE -> SNAPSHOT -> COUNT -> CLEAR -> IDLE
@@ -24,12 +26,27 @@ IDLE -> MEASURE -> SNAPSHOT -> COUNT -> CLEAR -> IDLE
 The capture-before-clear invariant is preserved in this RTL:
 
 - `snapshot_en_o` is asserted in `SNAPSHOT`.
-- `capture_en_o` and `fe_clear_o` are asserted in `COUNT`.
+- `capture_en_o` and `fe_clear_o` were asserted in `COUNT`.
 - `pd_clear_o` is asserted in `CLEAR`.
 
-## Remaining H1 Risk
+## Targeted Genus Evidence
 
-The current `COUNT` cycle still combines:
+`timing_context_bank_hotspots.rpt` from
+`MPTDC/lab_snapshots/genus_20260527_0945_targeted_genus_reports/` shows direct
+row-count to context-bank violations:
+
+| Slack ps | Startpoint | Endpoint |
+|---:|---|---|
+| -1484 | `u_core_u_meas_ctrl_row_cnt_q_reg[4][1]/C` | `u_core_u_ctx_bank_ctx_snapshot_q_reg[1][flags][closed_by_fast_maxhit]/D` |
+| -1479 | `u_core_u_meas_ctrl_row_cnt_q_reg[4][1]/C` | `u_core_u_ctx_bank_ctx_snapshot_q_reg[0][hit_count][3]/D` |
+| -1477 | `u_core_u_meas_ctrl_row_cnt_q_reg[0][2]/C` | `u_core_u_ctx_bank_ctx_snapshot_q_reg[0][hit_count][1]/D` |
+| -1459 | `u_core_u_meas_ctrl_row_cnt_q_reg[7][1]/C` | `u_core_u_ctx_bank_ctx_snapshot_q_reg[0][hit_count][2]/D` |
+
+These are A bucket paths: real clk_sys setup paths.
+
+## Root Cause
+
+The old `COUNT` cycle combined:
 
 - final row-count summation from `row_cnt_q`
 - max-hit saturation compare
@@ -37,33 +54,56 @@ The current `COUNT` cycle still combines:
 - context-bank capture of raw snapshot plus metadata
 - frontend clear pulse generation
 
-That could still be a real clk_sys path. A lower-risk candidate remains:
+This puts the context bank write flop at the end of the final row-count/flag
+logic cone.
+
+## Patch
+
+The applied patch changes the backend sequence to:
 
 ```text
-IDLE -> MEASURE -> SNAPSHOT -> COUNT_ROW -> COUNT_SUM -> COMMIT -> CLEAR -> IDLE
+IDLE -> MEASURE -> SNAPSHOT -> COUNT -> CAPTURE -> CLEAR -> IDLE
 ```
 
-However, the fresh Genus reports do not yet prove that this cone is the dominant
-clk_sys violation.
+- `SNAPSHOT`: samples the held measurement image and registers row counts.
+- `COUNT`: registers final `hit_count_q` and `flags_q`.
+- `CAPTURE`: asserts `capture_en_o` and `fe_clear_o`; context bank captures
+  registered count/flags.
+- `CLEAR`: asserts `pd_clear_o` after snapshot/context protection.
 
-## Server Evidence
+This is intentionally a smaller change than splitting into separate `COUNT_ROW`,
+`COUNT_SUM`, and `COMMIT` enum states because row counts were already registered
+in `SNAPSHOT`. The missing register boundary was between final sum/flags and
+context publication.
 
-`timing_summary.rpt` reports clk_sys WNS/TNS:
+## Local Verilator Evidence
 
-- WNS: `-1486.0 ps`
-- TNS: `-91719.4 ps`
-- Violating paths: `79`
+Run ID: `20260527_1030_h1_drain_pipeline`
 
-But the detailed committed path reports do not include clk_sys paths:
+Result: PASS 10/10
 
-- `timing_violations.rpt` top 200 paths are oscillator/PD measurement paths.
-- `timing_meas_ctrl_hotspots.rpt` failed generation.
-- `timing_context_bank_hotspots.rpt` failed generation.
+Evidence:
+
+- `results/local_verilator/20260527_1030_h1_drain_pipeline/SUMMARY.md`
+
+Relevant tests:
+
+- `tb_meas_ctrl_unit`
+- `tb_context_bank_unit`
+- `tb_drain_ctrl_unit`
+- `tb_single_conv`
+- `tb_backpressure`
+- VIP `smoke_single_conv`
+- VIP `backpressure_integrity`
+- VIP `vip_maxhits_matrix`
 
 ## Decision
 
-Do not implement the H1 RTL pipeline yet. First fix report generation and rerun
-Genus so the actual clk_sys startpoints/endpoints are visible.
+Keep the H1 patch for the next server iteration only if Genus confirms that the
+row-count to context-bank path is removed or materially improved.
+
+Because the FSM sequencing changed by one clk_sys cycle after the held snapshot,
+server Xcelium regression is required before considering the patch stable.
 
 Rollback trigger for future H1 patch:
 

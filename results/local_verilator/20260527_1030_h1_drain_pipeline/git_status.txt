@@ -1,0 +1,24 @@
+ M MPTDC/rtl/ctrl/mptdc_drain_ctrl.sv
+ M MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv
+ M MPTDC/rtl/pkg/mptdc_pkg.sv
+ M MPTDC/rtl/top/mptdc_core.sv
+ M MPTDC/tb/unit/tb_meas_ctrl_unit.sv
+ M Rapport_5PSM_KS/chapters/06_Architecture_Vernier_Reference.tex
+ M Rapport_5PSM_KS/chapters/07_Transition_Implementation.tex
+ M Rapport_5PSM_KS/chapters/08_Architecture_MPTDC.tex
+ M Rapport_5PSM_KS/chapters/09_Resultats_Calibration.tex
+ M Rapport_5PSM_KS/figures/tdc/clock_domain_diagram.pdf
+ M Rapport_5PSM_KS/figures/tdc/context_pipeline.pdf
+ M Rapport_5PSM_KS/figures/tdc/mptdc_block_diagram.pdf
+ M Rapport_5PSM_KS/figures/tdc/narrow16_tx_fsm.pdf
+ M Rapport_5PSM_KS/figures/tdc/src/clock_domain_diagram.tex
+ M Rapport_5PSM_KS/figures/tdc/src/context_pipeline.tex
+ M Rapport_5PSM_KS/figures/tdc/src/generate_ieee_mptdc_figures.py
+ M Rapport_5PSM_KS/main.tex
+?? Rapport_5PSM_KS/chapters/10_Conclusion_Perspectives.tex
+?? Rapport_5PSM_KS/figures/tdc/async_capture_timing.pdf
+?? Rapport_5PSM_KS/figures/tdc/calibration_export_flow.pdf
+?? Rapport_5PSM_KS/figures/tdc/packet_format_v27.pdf
+?? Rapport_5PSM_KS/figures/tdc/src/async_capture_timing.tex
+?? Rapport_5PSM_KS/figures/tdc/src/calibration_export_flow.tex
+?? Rapport_5PSM_KS/figures/tdc/src/mptdc_block_diagram.tex
