@@ -52,9 +52,9 @@ module mptdc_meas_ctrl
   localparam int unsigned ROW_QUAD_N = NE / 4;
   localparam int unsigned PAIR_GROUP_N = NE / 2;
 
-  // Balanced 64-bit hit count in the relaxed clk_sys domain.  Keep the final
-  // sum/flag result registered before context publication so the context bank
-  // write does not sit at the end of the row-count reduction cone.
+  // Balanced 64-bit hit count in the relaxed clk_sys domain.  Keep registered
+  // boundaries between row reduction, final total, and context publication so
+  // no clk_sys cycle contains the full 64-bit count plus flag/write logic.
   logic [1:0] row_pair_cnt_comb [0:NE-1][0:ROW_PAIR_N-1];
   logic [2:0] row_quad_cnt_comb [0:NE-1][0:ROW_QUAD_N-1];
   logic [3:0] row_cnt_comb      [0:NE-1];
@@ -71,7 +71,7 @@ module mptdc_meas_ctrl
 
   wire [MAX_HITS_W-1:0] effective_max_hits = max_hits_cfg_i;
   wire [6:0] effective_max_hits_ext = 7'(effective_max_hits);
-  wire       any_hit = (total_cnt_comb != 7'd0);
+  wire       any_hit_q = (total_hits_q != 7'd0);
 
   always_comb begin
     for (int r = 0; r < NE; r++) begin
@@ -102,18 +102,18 @@ module mptdc_meas_ctrl
 
     if (effective_max_hits == '0) begin
       eval_hit_count_comb = '0;
-    end else if (total_cnt_comb > effective_max_hits_ext) begin
+    end else if (total_hits_q > effective_max_hits_ext) begin
       eval_hit_count_comb = effective_max_hits;
     end else begin
-      eval_hit_count_comb = total_cnt_comb[MAX_HITS_W-1:0];
+      eval_hit_count_comb = total_hits_q[MAX_HITS_W-1:0];
     end
 
     eval_flags_comb.reserved              = 1'b0;
-    eval_flags_comb.closed_by_fast_maxhit = (effective_max_hits == MAX_HITS_W'(1)) && any_hit;
+    eval_flags_comb.closed_by_fast_maxhit = (effective_max_hits == MAX_HITS_W'(1)) && any_hit_q;
     eval_flags_comb.closed_by_maxhits     = (effective_max_hits > MAX_HITS_W'(1))
-                                          && (total_cnt_comb >= effective_max_hits_ext);
+                                          && (total_hits_q >= effective_max_hits_ext);
     eval_flags_comb.closed_by_watchdog    = timeout_active_i
-                                          || ((wdt_timeout_i != 16'd0) && !any_hit);
+                                          || ((wdt_timeout_i != 16'd0) && !any_hit_q);
   end
 
   always_comb begin
@@ -125,7 +125,8 @@ module mptdc_meas_ctrl
       end
       ST_M_MEASURE:  state_d = ST_M_SNAPSHOT;
       ST_M_SNAPSHOT: state_d = ST_M_COUNT;
-      ST_M_COUNT:    state_d = ST_M_CAPTURE;
+      ST_M_COUNT:    state_d = ST_M_EVAL;
+      ST_M_EVAL:     state_d = ST_M_CAPTURE;
       ST_M_CAPTURE:  state_d = ST_M_CLEAR;
       ST_M_CLEAR:    state_d = ST_M_IDLE;
       default:       state_d = ST_M_IDLE;
@@ -154,6 +155,7 @@ module mptdc_meas_ctrl
           row_cnt_q[r] <= row_cnt_comb[r];
       end else if (state_q == ST_M_COUNT) begin
         total_hits_q <= total_cnt_comb;
+      end else if (state_q == ST_M_EVAL) begin
         hit_count_q  <= eval_hit_count_comb;
         flags_q      <= eval_flags_comb;
       end

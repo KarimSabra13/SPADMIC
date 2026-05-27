@@ -1,0 +1,45 @@
+=== MPTDC v2.7 TB Runner ===
+  Testbench: tb_backpressure
+  Simulator: verilator
+  Build dir: /home/karim/SPADMIC/MPTDC/build/tb_backpressure
+
+--- Compiling with Verilator ---
+make: Entering directory '/home/karim/SPADMIC/MPTDC/build/tb_backpressure'
+ccache g++ -Os  -I.  -MMD -I/usr/local/share/verilator/include -I/usr/local/share/verilator/include/vltstd -DVERILATOR=1 -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TIMING=1 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-int-in-bool-context -Wno-shadow -Wno-sign-compare -Wno-subobject-linkage -Wno-tautological-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable    -DVL_TIME_CONTEXT   -fcoroutines -c -o verilated.o /usr/local/share/verilator/include/verilated.cpp
+ccache g++ -Os  -I.  -MMD -I/usr/local/share/verilator/include -I/usr/local/share/verilator/include/vltstd -DVERILATOR=1 -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TIMING=1 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-int-in-bool-context -Wno-shadow -Wno-sign-compare -Wno-subobject-linkage -Wno-tautological-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable    -DVL_TIME_CONTEXT   -fcoroutines -c -o verilated_probdist.o /usr/local/share/verilator/include/verilated_probdist.cpp
+ccache g++ -Os  -I.  -MMD -I/usr/local/share/verilator/include -I/usr/local/share/verilator/include/vltstd -DVERILATOR=1 -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TIMING=1 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-int-in-bool-context -Wno-shadow -Wno-sign-compare -Wno-subobject-linkage -Wno-tautological-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable    -DVL_TIME_CONTEXT   -fcoroutines -c -o verilated_timing.o /usr/local/share/verilator/include/verilated_timing.cpp
+ccache g++ -Os  -I.  -MMD -I/usr/local/share/verilator/include -I/usr/local/share/verilator/include/vltstd -DVERILATOR=1 -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TIMING=1 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-int-in-bool-context -Wno-shadow -Wno-sign-compare -Wno-subobject-linkage -Wno-tautological-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable    -DVL_TIME_CONTEXT   -fcoroutines -c -o verilated_threads.o /usr/local/share/verilator/include/verilated_threads.cpp
+python3 /usr/local/share/verilator/bin/verilator_includer -DVL_INCLUDE_OPT=include Vtb_backpressure.cpp Vtb_backpressure___024root__DepSet_h1bfce730__0.cpp Vtb_backpressure___024root__DepSet_hdeec85af__0.cpp Vtb_backpressure__main.cpp Vtb_backpressure__ConstPool_0.cpp Vtb_backpressure___024root__Slow.cpp Vtb_backpressure___024root__DepSet_h1bfce730__0__Slow.cpp Vtb_backpressure___024root__DepSet_hdeec85af__0__Slow.cpp Vtb_backpressure__Syms.cpp > Vtb_backpressure__ALL.cpp
+ccache g++ -Os  -I.  -MMD -I/usr/local/share/verilator/include -I/usr/local/share/verilator/include/vltstd -DVERILATOR=1 -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TIMING=1 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-int-in-bool-context -Wno-shadow -Wno-sign-compare -Wno-subobject-linkage -Wno-tautological-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable    -DVL_TIME_CONTEXT   -fcoroutines -c -o Vtb_backpressure__ALL.o Vtb_backpressure__ALL.cpp
+echo "" > Vtb_backpressure__ALL.verilator_deplist.tmp
+g++    verilated.o verilated_probdist.o verilated_timing.o verilated_threads.o Vtb_backpressure__ALL.a    -pthread -lpthread -latomic   -o tb_backpressure
+rm Vtb_backpressure__ALL.verilator_deplist.tmp
+make: Leaving directory '/home/karim/SPADMIC/MPTDC/build/tb_backpressure'
+- V e r i l a t i o n   R e p o r t: Verilator 5.040 2025-08-30 rev v5.040-50-g0a9d9db5a
+- Verilator: Built from 1.997 MB sources in 27 modules, into 1.283 MB in 9 C++ files needing 0.001 MB
+- Verilator: Walltime 3.172 s (elab=0.010, cvt=0.103, bld=3.023); cpu 0.136 s on 1 threads; alloced 43.648 MB
+
+--- Running simulation ---
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[TB] ──── Scenario A: intermittent stall ────
+[TB] ScenA: PASS — 32 words, 15 hits, conv_id=0
+[TB] ──── Scenario B: full stall then release ────
+[TB] ScenB pkt0: PASS — 32 words, 15 hits, conv_id=0
+[TB] ScenB pkt1: PASS — 32 words, 15 hits, conv_id=1
+[TB] ScenB: sequential conv_ids OK (0, 1)
+[TB] ──── Scenario C: data integrity ────
+[TB] ScenC ref: PASS — 32 words, 15 hits, conv_id=0
+[TB] ScenC bp: PASS — 32 words, 15 hits, conv_id=0
+[TB] ScenC: data integrity OK — both packets have 32 words, 15 hits
+[TB] ===== TEST PASSED =====
+- /home/karim/SPADMIC/MPTDC/tb/int/tb_backpressure.sv:377: Verilog $finish
+- S i m u l a t i o n   R e p o r t: Verilator 5.040 2025-08-30
+- Verilator: $finish at 500us; walltime 0.004 s; speed 104.280 ms/s
+- Verilator: cpu 0.005 s on 1 threads; alloced 95 MB
+
+=== SIMULATION PASSED ===

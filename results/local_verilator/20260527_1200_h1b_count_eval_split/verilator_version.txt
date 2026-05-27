@@ -1,0 +1,1 @@
+Verilator 5.040 2025-08-30 rev v5.040-50-g0a9d9db5a

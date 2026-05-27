@@ -119,14 +119,22 @@ module tb_meas_ctrl_unit;
 
     tick();
     check(state == ST_M_COUNT, {label, ": SNAPSHOT to COUNT"});
-    check(!capture_en, {label, ": no capture while COUNT computes metadata"});
-    check(!fe_clear, {label, ": no frontend clear while COUNT computes metadata"});
+    check(!capture_en, {label, ": no capture while COUNT registers total"});
+    check(!fe_clear, {label, ": no frontend clear while COUNT registers total"});
     check(!pd_clear, {label, ": no PD clear during COUNT"});
     check(hit_count == '0, {label, ": hit_count not published during COUNT"});
     check(!meta_en, {label, ": retired meta_en remains low"});
 
     tick();
-    check(state == ST_M_CAPTURE, {label, ": COUNT to CAPTURE"});
+    check(state == ST_M_EVAL, {label, ": COUNT to EVAL"});
+    check(!capture_en, {label, ": no capture while EVAL registers metadata"});
+    check(!fe_clear, {label, ": no frontend clear while EVAL registers metadata"});
+    check(!pd_clear, {label, ": no PD clear during EVAL"});
+    check(hit_count == '0, {label, ": hit_count not published during EVAL"});
+    check(!meta_en, {label, ": retired meta_en remains low during EVAL"});
+
+    tick();
+    check(state == ST_M_CAPTURE, {label, ": EVAL to CAPTURE"});
     check(capture_en, {label, ": capture pulse in CAPTURE"});
     check(fe_clear, {label, ": frontend clear in CAPTURE"});
     check(!pd_clear, {label, ": no PD clear during CAPTURE"});

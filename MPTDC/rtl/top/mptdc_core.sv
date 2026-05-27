@@ -24,7 +24,7 @@
 //   - Status.ready/busy reflect active measurement state
 //   - pd_gate from meas_ctrl gates PD enable on fast-close (max_hits=1)
 //   - slow_boundary_inc wired into context bank for offline calibration
-//   - meas_state_e is now 3-bit (6 live states)
+//   - meas_state_e is now 3-bit (7 live states)
 // =============================================================================
 
 `timescale 1ps/1ps

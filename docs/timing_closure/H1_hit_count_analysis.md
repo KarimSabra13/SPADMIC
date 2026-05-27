@@ -105,6 +105,63 @@ row-count to context-bank path is removed or materially improved.
 Because the FSM sequencing changed by one clk_sys cycle after the held snapshot,
 server Xcelium regression is required before considering the patch stable.
 
+## Server Result After H1 Patch
+
+Genus run `20260527_1030_h1_drain_pipeline_genus` confirmed that the first H1
+patch materially improved the targeted backend clock group:
+
+| Metric | Before `20260527_0945_targeted_genus_reports` | After `20260527_1030_h1_drain_pipeline_genus` | Delta |
+|---|---:|---:|---:|
+| `clk_sys` WNS | -1486.0 ps | -968.1 ps | +517.9 ps |
+| `clk_sys` TNS | -91719.4 ps | -48974.7 ps | +42744.7 ps |
+| `clk_sys` violating paths | 79 | 72 | -7 |
+
+The original row-count to context-bank endpoints are no longer the dominant
+context-bank problem. `timing_context_bank_hotspots.rpt` reports positive slack
+at the worst context-bank endpoint.
+
+The remaining H1 path is still a real `clk_sys` setup path:
+
+| Slack ps | Startpoint | Endpoint |
+|---:|---|---|
+| -968 | `u_core_u_meas_ctrl_row_cnt_q_reg[1][1]/C` | `u_core_u_meas_ctrl_flags_q_reg[closed_by_fast_maxhit]/D` |
+| -960 | `u_core_u_meas_ctrl_row_cnt_q_reg[0][1]/C` | `u_core_u_meas_ctrl_hit_count_q_reg[2]/D` |
+| -960 | `u_core_u_meas_ctrl_row_cnt_q_reg[0][1]/C` | `u_core_u_meas_ctrl_hit_count_q_reg[0]/D` |
+| -960 | `u_core_u_meas_ctrl_row_cnt_q_reg[0][1]/C` | `u_core_u_meas_ctrl_hit_count_q_reg[1]/D` |
+
+Xcelium retry `20260527_1115_h1_drain_pipeline_xcelium_retry` passed directed
+tests and the selected VIP regression after the wrapper path fix:
+
+- directed tests: 6 pass, 0 fail
+- selected VIP regression: pass
+- summary: `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/SUMMARY.md`
+
+## H1b Patch
+
+The H1b local patch adds one more registered boundary:
+
+```text
+IDLE -> MEASURE -> SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR -> IDLE
+```
+
+- `SNAPSHOT`: samples the held measurement image and registers eight row counts.
+- `COUNT`: registers `total_hits_q` from the balanced row-count sum.
+- `EVAL`: registers saturated `hit_count_q` and close flags from
+  `total_hits_q`.
+- `CAPTURE`: commits the raw snapshot with registered metadata and clears
+  frontend ownership.
+- `CLEAR`: clears source PD/counter fabric after protected storage.
+
+This is still a backend-only change after the held source image is frozen. It
+does not modify PD sampling, oscillator start relation, STOP metadata capture,
+raw snapshot fields, packet field meanings, or Vernier tap paths.
+
+Local Verilator run `20260527_1200_h1b_count_eval_split` passed lint and all
+smoke tests. Server Genus is required to prove that the
+`row_cnt_q -> meas_ctrl_hit_count_q/flags_q` path is removed or materially
+improved. Server Xcelium is required because the backend publication latency
+changes by one more `clk_sys` cycle.
+
 Rollback trigger for future H1 patch:
 
 - packet fields change

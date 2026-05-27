@@ -720,3 +720,218 @@ Next action:
 - Request Xcelium rerun only.
 - If VIP rerun passes, implement H1b to split final count registration from
   hit-count/flag publication.
+
+## Iteration ID: 20260527_1115_h1_drain_pipeline_xcelium_retry
+
+Git HEAD: `5bce4785b46872173df8bfd00c11b69e8865fcc2`
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Human lab-server Xcelium retry after fixing the VIP artifact
+directory in the server wrapper.
+
+Files changed:
+
+- `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/`
+- `MPTDC/results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/`
+
+Tool stage:
+
+- Xcelium
+
+Was this actually run by agent locally?
+
+- no
+
+Was this run by human on lab server?
+
+- yes
+
+Evidence location:
+
+- `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/SUMMARY.md`
+- `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/test_summary.txt`
+- `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/xcelium_20260527_1115_h1_drain_pipeline_xcelium_retry.log`
+- `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/vip/`
+
+Local Verilator:
+
+- lint pass/fail: prior local H1/H4 run pass
+- smoke pass/fail: prior local H1/H4 run pass
+- important warnings: none new
+- tests run: none in this server-results iteration
+
+Genus:
+
+- run available? no new Genus in this retry
+- WNS: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- TNS: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- violating paths: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- worst path group: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- worst startpoint: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- worst endpoint: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- design-rule violations: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- latch audit: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+- CDC manual audit: unchanged from `20260527_1030_h1_drain_pipeline_genus`
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? yes
+- tests:
+  - directed: `tb_meas_ctrl_unit`, `tb_hit_capture_bridge_unit`,
+    `tb_context_bank_unit`, `tb_drain_ctrl_unit`, `tb_single_conv`,
+    `tb_backpressure`
+  - VIP selected regression: `smoke_single_conv`,
+    `backpressure_integrity`, `multi_conv_rearm_stress`,
+    `global_watchdog_recovery`, `vip_maxhits_matrix`
+- pass/fail: pass
+- failed seeds: none
+
+Functional result:
+
+- pass for server Xcelium directed and selected VIP regression
+
+Timing result:
+
+- unchanged; this iteration validated simulation only
+
+Linearity/precision risk:
+
+- low to medium for the H1/H4 patch, now functionally supported by Xcelium
+
+Decision:
+
+- continue
+
+Next action:
+
+- Implement H1b count/eval split to target the remaining
+  `row_cnt_q -> meas_ctrl_hit_count_q/flags_q` `clk_sys` path.
+- Run local Verilator lint/smoke.
+- Request Genus and Xcelium for H1b.
+
+## Iteration ID: 20260527_1200_h1b_count_eval_split
+
+Git HEAD: `3ca1dd559c9b3096777096fe651bf1e7d3d437d0` before local patch commit
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Split the remaining H1 measurement-controller count path into
+separate total-count and evaluate/publication cycles.
+
+Files changed:
+
+- `MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv`
+- `MPTDC/rtl/pkg/mptdc_pkg.sv`
+- `MPTDC/rtl/top/mptdc_core.sv`
+- `MPTDC/tb/unit/tb_meas_ctrl_unit.sv`
+- `docs/timing_closure/H1_hit_count_analysis.md`
+- `docs/timing_closure/20260527_h1b_count_eval_analysis.md`
+- `docs/timing_closure/20260527_h1_drain_server_analysis.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST.md`
+- `docs/timing_closure/iteration_log.md`
+- `results/local_verilator/20260527_1200_h1b_count_eval_split/`
+
+Tool stage:
+
+- local Verilator
+
+Was this actually run by agent locally?
+
+- yes
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- `results/local_verilator/20260527_1200_h1b_count_eval_split/SUMMARY.md`
+- `results/local_verilator/20260527_1200_h1b_count_eval_split/test_summary.txt`
+- `results/local_verilator/20260527_1200_h1b_count_eval_split/lint.log`
+
+Local Verilator:
+
+- lint pass/fail: pass
+- smoke pass/fail: pass
+- important warnings: none beyond documented local Verilator waivers
+- tests run:
+  - `lint`
+  - `tb_meas_ctrl_unit`
+  - `tb_hit_capture_bridge_unit`
+  - `tb_context_bank_unit`
+  - `tb_drain_ctrl_unit`
+  - `tb_single_conv`
+  - `tb_backpressure`
+  - VIP `smoke_single_conv`
+  - VIP `backpressure_integrity`
+  - VIP `vip_maxhits_matrix`
+
+Genus:
+
+- run available? no for H1b
+- WNS: unknown for H1b
+- TNS: unknown for H1b
+- violating paths: unknown for H1b
+- worst path group: unknown for H1b
+- worst startpoint: unknown for H1b
+- worst endpoint: unknown for H1b
+- design-rule violations: unknown for H1b
+- latch audit: server rerun required
+- CDC manual audit: server rerun required
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? no for H1b
+- tests: server request prepared
+- pass/fail: unknown for H1b
+- failed seeds: unknown for H1b
+
+Functional result:
+
+- pass for local Verilator scope
+
+Timing result:
+
+- unknown until H1b Genus run is committed
+
+Linearity/precision risk:
+
+- low to medium
+
+Decision:
+
+- request server run
+
+Next action:
+
+- Human runs Genus and Xcelium commands from
+  `docs/timing_closure/SERVER_RUN_REQUEST.md`.
+- Compare H1b Genus against `20260527_1030_h1_drain_pipeline_genus`.
+- If `row_cnt_q -> meas_ctrl_hit_count_q/flags_q` improves and Xcelium passes,
+  keep H1b and then evaluate H4b drain/context prefetch as the next separate
+  hypothesis.

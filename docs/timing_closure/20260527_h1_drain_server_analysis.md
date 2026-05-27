@@ -118,14 +118,36 @@ Fix: update `MPTDC/sim/xcelium/server_run_xcelium_mptdc.sh` so the VIP manager
 runs under `MPTDC/results/xcelium/<RUN_ID>/vip` and then copies the VIP logs into
 top-level `results/xcelium/<RUN_ID>/vip` for the normal commit workflow.
 
+## Xcelium Retry Result
+
+Retry run: `20260527_1115_h1_drain_pipeline_xcelium_retry`
+
+Wrapper-fix commit run on lab server:
+`5bce4785b46872173df8bfd00c11b69e8865fcc2`
+
+Server-results commit:
+`3ca1dd559c9b3096777096fe651bf1e7d3d437d0`
+
+Result: pass.
+
+- directed tests: 6 pass, 0 fail
+- selected VIP regression: pass
+- summary:
+  `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/SUMMARY.md`
+- test summary:
+  `results/xcelium/20260527_1115_h1_drain_pipeline_xcelium_retry/test_summary.txt`
+
+This clears the evidence gate for a second focused H1 patch. The next patch
+should only address the remaining `row_cnt_q -> meas_ctrl_hit_count_q/flags_q`
+path and must be rerun through Genus and Xcelium because it adds another
+backend `clk_sys` latency stage.
+
 ## Decision
 
-Keep the RTL patch for now because Genus shows a real clk_sys improvement and
-directed Xcelium passed. Do not declare the patch stable until VIP Xcelium rerun
-passes or produces a real RTL failure.
+Keep the RTL patch because Genus shows a real clk_sys improvement and Xcelium
+directed plus selected VIP regression passed after the wrapper retry.
 
 Next action:
 
-- Commit the Xcelium wrapper fix.
-- Request Xcelium rerun only.
-- If VIP passes, implement H1b as the next RTL timing patch.
+- Implement H1b as the next RTL timing patch.
+- Request Genus and Xcelium for H1b before moving to H4b drain-prefetch work.

@@ -143,11 +143,12 @@ package mptdc_pkg;
   // =========================================================================
   // Measurement FSM states (clk_sys domain — mptdc_meas_ctrl)
   // Fast-clear sequence:
-  //   IDLE -> MEASURE -> SNAPSHOT -> COUNT -> CAPTURE -> CLEAR -> IDLE.
+  //   IDLE -> MEASURE -> SNAPSHOT -> COUNT -> EVAL -> CAPTURE -> CLEAR -> IDLE.
   // SNAPSHOT samples the static PD/counter measurement fabric into clk_sys.
-  // COUNT registers final hit_count/flags. CAPTURE commits the raw image with
-  // registered metadata and clears frontend ownership. CLEAR clears the source
-  // measurement fabric only after the raw image is protected.
+  // COUNT registers the final hit total. EVAL registers hit_count/flags from
+  // that total. CAPTURE commits the raw image with registered metadata and
+  // clears frontend ownership. CLEAR clears the source measurement fabric only
+  // after the raw image is protected.
   // =========================================================================
   typedef enum logic [2:0] {
     ST_M_IDLE      = 3'd0,
