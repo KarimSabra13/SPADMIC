@@ -607,3 +607,116 @@ Next action:
   check whether `pending_wr_data_q` and `ctx_snapshot_q` leave the worst clk_sys
   endpoint set.
 - Review Xcelium regression before treating the added CAPTURE cycle as stable.
+
+## Iteration ID: 20260527_1030_h1_drain_pipeline_server
+
+Git HEAD: `65fbfb0f0a39554836a5cd8b4528011b867f09ce`
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Human lab-server Genus and Xcelium run for the H1/H4 clk_sys
+backend patch.
+
+Files changed:
+
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/`
+- `MPTDC/lab_snapshots/genus_20260527_1030_h1_drain_pipeline_genus/`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/`
+- `docs/timing_closure/20260527_h1_drain_server_analysis.md`
+
+Tool stage:
+
+- Genus
+- Xcelium
+
+Was this actually run by agent locally?
+
+- no
+
+Was this run by human on lab server?
+
+- yes
+
+Evidence location:
+
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/PARSED_SUMMARY.md`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_clk_sys_violations.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_context_bank_hotspots.rpt`
+- `results/genus/20260527_1030_h1_drain_pipeline_genus/timing_drain_ctrl_hotspots.rpt`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/SUMMARY.md`
+- `results/xcelium/20260527_1030_h1_drain_pipeline_xcelium/test_summary.txt`
+
+Local Verilator:
+
+- lint pass/fail: prior local run pass
+- smoke pass/fail: prior local run pass
+- important warnings: none new
+- tests run: none in this server-results iteration
+
+Genus:
+
+- run available? yes
+- WNS: `-3045.0 ps`
+- TNS: `-1571801.3 ps`
+- violating paths: `692`
+- worst path group: `clk_osc_fast_tap1`
+- worst startpoint: `u_core_u_fast_cnt_bin_q_reg[2]/C`
+- worst endpoint: `u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]/D`
+- design-rule violations: max_transition total `213804`
+- latch audit: `7` expected intentional async frontend/event latches
+- CDC manual audit: no protocol change; PD matrix count remains 64
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? partial
+- tests:
+  - directed: `tb_meas_ctrl_unit`, `tb_hit_capture_bridge_unit`,
+    `tb_context_bank_unit`, `tb_drain_ctrl_unit`, `tb_single_conv`,
+    `tb_backpressure`
+  - VIP selected regression attempted
+- pass/fail:
+  - directed pass
+  - VIP did not execute RTL; all jobs failed at runner startup due wrapper output
+    path rejected by `MPTDC/scripts/sim/run_vip_test.sh`
+- failed seeds: VIP seeds `7000` through `7003` for all selected tests, all same
+  infrastructure failure
+
+Functional result:
+
+- directed Xcelium pass; VIP unknown due wrapper bug
+
+Timing result:
+
+- improved for the targeted `clk_sys` group:
+  - WNS improved from `-1486.0 ps` to `-968.1 ps`
+  - TNS improved from `-91719.4 ps` to `-48974.7 ps`
+  - violating paths improved from `79` to `72`
+  - max-transition violations improved from `282226` to `213804`
+
+Linearity/precision risk:
+
+- low to medium until VIP rerun completes
+
+Decision:
+
+- continue, but do not stack a new RTL patch until VIP Xcelium rerun is valid
+
+Next action:
+
+- Fix `MPTDC/sim/xcelium/server_run_xcelium_mptdc.sh` so VIP artifacts are
+  generated under `MPTDC/results/...`, then copied into top-level `results/...`.
+- Request Xcelium rerun only.
+- If VIP rerun passes, implement H1b to split final count registration from
+  hit-count/flag publication.

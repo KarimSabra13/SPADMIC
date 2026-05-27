@@ -8,6 +8,8 @@ REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_mptdc_xcelium}"
 RESULT_DIR="$REPO_ROOT/results/xcelium/$RUN_ID"
 MAIN_LOG="$RESULT_DIR/xcelium_${RUN_ID}.log"
+VIP_WORK_DIR="$MPTDC_DIR/results/xcelium/$RUN_ID/vip"
+VIP_PUBLISH_DIR="$RESULT_DIR/vip"
 
 DIRECTED_TESTS=(
   tb_meas_ctrl_unit
@@ -26,13 +28,15 @@ VIP_TESTS=(
   vip_maxhits_matrix
 )
 
-if [[ -e "$RESULT_DIR" ]]; then
-  echo "ERROR: result directory already exists: $RESULT_DIR" >&2
+if [[ -e "$RESULT_DIR" || -e "$MPTDC_DIR/results/xcelium/$RUN_ID" ]]; then
+  echo "ERROR: result directory already exists for RUN_ID: $RUN_ID" >&2
+  echo "Top-level result: $RESULT_DIR" >&2
+  echo "MPTDC VIP work:   $MPTDC_DIR/results/xcelium/$RUN_ID" >&2
   echo "Use a unique RUN_ID or archive the old server result first." >&2
   exit 2
 fi
 
-mkdir -p "$RESULT_DIR"/{directed,vip,failures}
+mkdir -p "$RESULT_DIR"/{directed,failures} "$VIP_WORK_DIR"
 
 {
   echo "Run ID: $RUN_ID"
@@ -84,17 +88,20 @@ bash "$MPTDC_DIR/ci/run_vip_xcelium_regression.sh" \
   --jobs "${XCELIUM_JOBS:-4}" \
   --seed-start "${XCELIUM_SEED_START:-7000}" \
   --seeds "${XCELIUM_SEEDS:-4}" \
-  --out-dir "$RESULT_DIR/vip" \
+  --out-dir "$VIP_WORK_DIR" \
   "${VIP_TESTS[@]}" \
   >> "$MAIN_LOG" 2>&1 || VIP_RC=$?
+
+mkdir -p "$VIP_PUBLISH_DIR"
+cp -a "$VIP_WORK_DIR/." "$VIP_PUBLISH_DIR/" 2>/dev/null || true
 
 if [[ $VIP_RC -eq 0 ]]; then
   echo "PASS vip_regression selected_tests" | tee -a "$RESULT_DIR/test_summary.txt" | tee -a "$MAIN_LOG"
   PASS_COUNT=$((PASS_COUNT + 1))
 else
   echo "FAIL vip_regression selected_tests rc=$VIP_RC" | tee -a "$RESULT_DIR/test_summary.txt" | tee -a "$MAIN_LOG"
-  if [[ -f "$RESULT_DIR/vip/failures.txt" ]]; then
-    cp "$RESULT_DIR/vip/failures.txt" "$RESULT_DIR/failures/vip_failures.txt" || true
+  if [[ -f "$VIP_WORK_DIR/failures.txt" ]]; then
+    cp "$VIP_WORK_DIR/failures.txt" "$RESULT_DIR/failures/vip_failures.txt" || true
   fi
   FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
@@ -105,6 +112,7 @@ fi
   echo "- Run ID: \`$RUN_ID\`"
   echo "- Git HEAD: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)\`"
   echo "- Result directory: \`results/xcelium/$RUN_ID/\`"
+  echo "- VIP work directory: \`MPTDC/results/xcelium/$RUN_ID/vip/\`"
   echo "- Directed tests: ${DIRECTED_TESTS[*]}"
   echo "- VIP tests: ${VIP_TESTS[*]}"
   echo "- VIP seeds: ${XCELIUM_SEEDS:-4} from ${XCELIUM_SEED_START:-7000}"
