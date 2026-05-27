@@ -1,5 +1,10 @@
 # SERVER RUN REQUEST
 
+Status: PAUSED.  Do not run this H4b backend request while the O0
+oscillator/PD signoff track is active.  Use
+`docs/timing_closure/SERVER_RUN_REQUEST_OSC_PD.md` unless explicitly instructed
+to resume H4b.
+
 Run ID:
 
 `20260527_1330_h4b_drain_emit_stage`

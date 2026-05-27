@@ -1,0 +1,22 @@
+macro,pin_name,signal,side,x_um,y_um,layer,width_um,height_um,direction,max_cap_fF,max_slew_ps,notes
+slow,slow_phase[0],phase0,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,slow_phase[1],phase1,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,slow_phase[2],phase2,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,slow_phase[3],phase3,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,slow_phase[4],phase4,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,slow_phase[5],phase5,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,slow_phase[6],phase6,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,slow_phase[7],phase7,bottom,,,,output,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,start_i,enable,left,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,rst_n,reset,left,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,test_i,test,left,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[0],tune0,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[1],tune1,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[2],tune2,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[3],tune3,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[4],tune4,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[5],tune5,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[6],tune6,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,ctrl_i[7],tune7,top,,,,input,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,VDDA,power,top,,,,inout,,,PROVISIONAL - NOT ANALOG VERIFIED
+slow,VSSA,ground,bottom,,,,inout,,,PROVISIONAL - NOT ANALOG VERIFIED

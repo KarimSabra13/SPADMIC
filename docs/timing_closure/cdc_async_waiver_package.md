@@ -92,3 +92,21 @@ Evidence sources:
 - Constraint: async clear false paths.
 - Evidence: local `tb_meas_ctrl_unit` asserts snapshot and capture before clear.
 - Residual risk: recovery/removal waiver requires server signoff evidence.
+
+## O0 Oscillator/PD Waiver Cross-Reference
+
+The oscillator/PD physical signoff track adds a separate draft waiver file:
+
+- `docs/timing_closure/osc_pd_exception_waivers.md`
+
+O0 does not approve new waivers.  It classifies paths and collects the physical
+reports needed to decide whether a waiver is valid:
+
+- `PD_INTENTIONAL_VERN`: slow tap sampled by fast tap inside the PD cell.
+- `OSC_FAST_REAL`: fast counter, `nfast_src_count`, and PD same-fast-clock paths.
+- `OSC_SLOW_REAL`: slow counter/watchdog ordinary sequential paths.
+- `PD_CLEAR_RECOVERY_REMOVAL`: async clear/recovery-removal review paths.
+- `OSC_TO_SYS_HELD_BUS_CDC`: held source image into `mptdc_hit_capture_bridge`.
+- `UNKNOWN_REVIEW_REQUIRED`: not signed off.
+
+Any O0 path classified as `UNKNOWN_REVIEW_REQUIRED` blocks oscillator/PD signoff.

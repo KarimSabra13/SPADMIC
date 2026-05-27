@@ -78,6 +78,25 @@ if {[file exists $tech_files(MPTDC_OSC_BB_LIB)]} {
     lappend tech_files(ALL_BC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
 }
 
+if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE_PROVISIONAL)} {
+    foreach key_file [list \
+        [list MPTDC_OSC_SLOW_PROVISIONAL_LIB "$design(project_root)/syn/macros/mptdc_osc_slow_provisional.lib"] \
+        [list MPTDC_OSC_FAST_PROVISIONAL_LIB "$design(project_root)/syn/macros/mptdc_osc_fast_provisional.lib"] \
+    ] {
+        set key [lindex $key_file 0]
+        set lib_file [lindex $key_file 1]
+        set tech_files($key) $lib_file
+        if {[file exists $lib_file]} {
+            lappend tech_files(ALL_TC_LIBS) $lib_file
+            lappend tech_files(ALL_WC_LIBS) $lib_file
+            lappend tech_files(ALL_BC_LIBS) $lib_file
+            puts "MPTDC_LIB_INFO: enabling provisional oscillator Liberty $lib_file"
+        } else {
+            puts "MPTDC_LIB_WARN: requested provisional oscillator Liberty missing: $lib_file"
+        }
+    }
+}
+
 #############################################
 #       Behavioural Verilog (for GLS)
 #############################################

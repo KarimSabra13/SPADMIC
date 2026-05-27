@@ -1,0 +1,69 @@
+/* PROVISIONAL - NOT ANALOG VERIFIED; fast macro south, phase pins exit top. */
+library (mptdc_osc_fast_provisional_lib) {
+  delay_model : table_lookup;
+  time_unit : "1ns";
+  voltage_unit : "1V";
+  current_unit : "1mA";
+  capacitive_load_unit (1, pf);
+  nom_process : 1.0;
+  nom_temperature : 25.0;
+  nom_voltage : 1.8;
+
+  type (mptdc_osc_ctrl_bus) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 8;
+    bit_from : 7;
+    bit_to : 0;
+    downto : true;
+  }
+
+  type (mptdc_osc_phase_bus) {
+    base_type : array;
+    data_type : bit;
+    bit_width : 8;
+    bit_from : 7;
+    bit_to : 0;
+    downto : true;
+  }
+
+  cell (MPTDC_OSC_FAST_PROVISIONAL) {
+    area : 30000.000;
+    cell_leakage_power : 0.0;
+    pg_pin (VDDA) { pg_type : primary_power; voltage_name : "VDDA"; }
+    pg_pin (VSSA) { pg_type : primary_ground; voltage_name : "VSSA"; }
+    pin ("stop_i") {
+      direction : input;
+      capacitance : 0.001000;
+      related_power_pin : "VDDA";
+      related_ground_pin : "VSSA";
+    }
+    pin ("rst_n") {
+      direction : input;
+      capacitance : 0.001000;
+      related_power_pin : "VDDA";
+      related_ground_pin : "VSSA";
+    }
+    pin ("test_i") {
+      direction : input;
+      capacitance : 0.001000;
+      related_power_pin : "VDDA";
+      related_ground_pin : "VSSA";
+    }
+    bus (ctrl_i) {
+      bus_type : mptdc_osc_ctrl_bus;
+      direction : input;
+      capacitance : 0.001000;
+      related_power_pin : "VDDA";
+      related_ground_pin : "VSSA";
+    }
+
+    bus (phase_o) {
+      bus_type : mptdc_osc_phase_bus;
+      direction : output;
+      max_capacitance : 0.050000;
+      related_power_pin : "VDDA";
+      related_ground_pin : "VSSA";
+    }
+  }
+}

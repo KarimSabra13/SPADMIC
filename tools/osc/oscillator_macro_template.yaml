@@ -1,0 +1,52 @@
+# PROVISIONAL - NOT ANALOG VERIFIED
+# Source for tools/osc/gen_osc_macro_views.py.
+# These values only create integration shells.  They are not a substitute for
+# extracted analog LEF/Liberty, phase-noise, startup, PVT, or load signoff.
+
+unit:
+  distance: um
+  time: ns
+  capacitance: pf
+  voltage: V
+
+defaults:
+  width_um: 300.0
+  height_um: 100.0
+  phase_pin_width_um: 8.0
+  phase_pin_height_um: 4.0
+  ctrl_pin_width_um: 8.0
+  ctrl_pin_height_um: 4.0
+  enable_pin_width_um: 4.0
+  enable_pin_height_um: 8.0
+  pg_pin_height_um: 4.0
+  signal_layer: MET3
+  enable_layer: MET2
+  power_layer: METTP
+  max_phase_cap_pf: 0.050
+  input_cap_pf: 0.001
+  area_um2: 30000.0
+  symmetry: "X Y"
+
+macros:
+  slow:
+    name: MPTDC_OSC_SLOW_PROVISIONAL
+    output_file_prefix: mptdc_osc_slow_provisional
+    enable_pin: start_i
+    phase_side: bottom
+    ctrl_side: top
+    phase_bus: phase_o
+    ctrl_bus: ctrl_i
+    pg_power_pin: VDDA
+    pg_ground_pin: VSSA
+    notes: "PROVISIONAL - NOT ANALOG VERIFIED; slow macro north, phase pins exit bottom."
+  fast:
+    name: MPTDC_OSC_FAST_PROVISIONAL
+    output_file_prefix: mptdc_osc_fast_provisional
+    enable_pin: stop_i
+    phase_side: top
+    ctrl_side: bottom
+    phase_bus: phase_o
+    ctrl_bus: ctrl_i
+    pg_power_pin: VDDA
+    pg_ground_pin: VSSA
+    notes: "PROVISIONAL - NOT ANALOG VERIFIED; fast macro south, phase pins exit top."

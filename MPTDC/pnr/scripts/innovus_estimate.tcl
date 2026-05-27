@@ -646,6 +646,17 @@ foreach dir [list $pnr(work_dir) $pnr(outputs_dir) $pnr(reports_dir) $pnr(logs_d
     file mkdir $dir
 }
 
+set pnr(osc_pd_enable) 0
+if {[info exists ::env(MPTDC_OSC_PD_ENABLE)] && $::env(MPTDC_OSC_PD_ENABLE)} {
+    set pnr(osc_pd_enable) 1
+    if {[info exists ::env(MPTDC_OSC_PD_RESULT_DIR)] && $::env(MPTDC_OSC_PD_RESULT_DIR) ne ""} {
+        set pnr(osc_pd_result_dir) $::env(MPTDC_OSC_PD_RESULT_DIR)
+    } else {
+        set pnr(osc_pd_result_dir) "$pnr(reports_dir)/osc_pd"
+    }
+    file mkdir $pnr(osc_pd_result_dir)
+}
+
 foreach stale_path [list \
     "$pnr(reports_dir)/prects" \
     "$pnr(reports_dir)/postroute" \
@@ -726,6 +737,19 @@ mptdc_pnr_required "Creating compact area-first floorplan" {
         $margin $margin $margin $margin
 }
 
+mptdc_pnr_optional "Applying oscillator/PD provisional regions and floorplan hooks" {
+    if {$pnr(osc_pd_enable)} {
+        source "$script_dir/osc_pd_regions.tcl"
+        source "$script_dir/pd_matrix_floorplan.tcl"
+        source "$script_dir/osc_pd_route_guides.tcl"
+        mptdc_osc_pd_apply_regions
+        mptdc_osc_pd_apply_pd_matrix_floorplan
+        mptdc_osc_pd_apply_route_guides
+    } else {
+        mptdc_pnr_msg "Skipping oscillator/PD O0 hooks because MPTDC_OSC_PD_ENABLE is not set"
+    }
+}
+
 mptdc_pnr_optional "Preparing phase-detector symmetry placement hooks" {
     if {$pnr(pd_symmetry_enable)} {
         mptdc_pnr_prepare_pd_symmetry
@@ -797,6 +821,19 @@ if {$pnr(do_detail_route)} {
     mptdc_pnr_optional "Generating post-route timing reports" {
         setAnalysisMode -analysisType onChipVariation -cppr both
         timeDesign -postRoute -outDir "$pnr(reports_dir)/postroute"
+    }
+}
+
+mptdc_pnr_optional "Generating oscillator/PD signoff reports" {
+    if {$pnr(osc_pd_enable)} {
+        source "$script_dir/report_pd_instance_symmetry.tcl"
+        source "$script_dir/report_pd_phase_routes.tcl"
+        source "$script_dir/report_osc_tap_loads.tcl"
+        mptdc_osc_pd_report_instance_symmetry
+        mptdc_osc_pd_report_phase_routes
+        mptdc_osc_pd_report_tap_loads
+    } else {
+        mptdc_pnr_msg "Skipping oscillator/PD O0 reports because MPTDC_OSC_PD_ENABLE is not set"
     }
 }
 

@@ -1,0 +1,3 @@
+macro,corner,temp_C,vdd_V,tune_code,load_fF,tap_index,period_ps,tap_delay_ps,duty_cycle_pct,rise_slew_ps,fall_slew_ps,jitter_rms_fs,startup_time_ps,notes
+slow,unknown,,,,,0,,,,,,613,,Screenshot datapoint only: approx 613 fs RMS after 45 START/STOP events; not PVT or extracted signoff
+fast,unknown,,,,,0,,,,,,613,,Screenshot datapoint only: approx 613 fs RMS after 45 START/STOP events; not PVT or extracted signoff

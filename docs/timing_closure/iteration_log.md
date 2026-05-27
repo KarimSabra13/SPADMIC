@@ -1154,3 +1154,90 @@ Next action:
 - Compare H4b Genus against `20260527_1200_h1b_count_eval_split_genus`.
 - If `pending_wr_data_q` leaves the worst endpoint set and Xcelium passes,
   request Innovus or move to the next clk_sys cone only with evidence.
+
+## Iteration: O0 Oscillator/PD Signoff Infrastructure
+
+Iteration ID:
+
+- `O0_osc_pd_signoff_infra`
+
+Git HEAD:
+
+- pending local commit
+
+Branch:
+
+- `SPADMIC_TOP`
+
+Patch summary:
+
+- Added oscillator/PD signoff documentation, analog handoff templates,
+  provisional macro-view generator, SDC overlay, PnR hooks, report scripts,
+  server-run wrappers, and local parsers.
+- H4b backend RTL was not modified.
+
+Tool stage:
+
+- local Python/script validation only
+
+Was this actually run by agent locally?
+
+- yes for generator, Python syntax, shell syntax, Tcl source checks, and timing
+  classifier smoke
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- `results/local_osc_pd/20260527_1500_o0_osc_pd_infra/SUMMARY.md`
+
+Local Verilator:
+
+- lint pass/fail: not run; no RTL changed
+- smoke pass/fail: not run; no RTL changed
+- important warnings: none
+- tests run: none
+
+Genus:
+
+- run available? no
+- WNS/TNS/path count: unknown
+- worst path group/startpoint/endpoint: unknown
+- design-rule violations: unknown
+- latch audit: server run required
+- CDC manual audit: server run required
+
+Innovus:
+
+- run available? no
+- phase-route/load reports: server run required
+- PD placement/symmetry reports: server run required
+- postRoute setup/hold/DRV: server run required
+
+Xcelium:
+
+- run available? no
+- tests: not requested for O0 script-only collateral
+
+Functional result:
+
+- no RTL change
+
+Timing result:
+
+- unknown until O0 Genus/Innovus reports are committed
+
+Linearity/precision risk:
+
+- none for docs/scripts
+- signoff risk remains high until real analog macro views and extracted RC exist
+
+Decision:
+
+- request O0 server run after commit/push
+
+Next action:
+
+- Human runs `docs/timing_closure/SERVER_RUN_REQUEST_OSC_PD.md`.

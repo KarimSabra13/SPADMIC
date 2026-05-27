@@ -19,9 +19,19 @@
 ###########################
 #    Constraint Modes
 ###########################
+set mptdc_functional_sdc_files [list $design(functional_sdc)]
+if {[info exists ::env(MPTDC_OSC_PD_SDC_OVERLAY)] && $::env(MPTDC_OSC_PD_SDC_OVERLAY) ne ""} {
+    if {[file exists $::env(MPTDC_OSC_PD_SDC_OVERLAY)]} {
+        lappend mptdc_functional_sdc_files $::env(MPTDC_OSC_PD_SDC_OVERLAY)
+        puts "MPTDC_MMMC_INFO: enabling oscillator/PD SDC overlay $::env(MPTDC_OSC_PD_SDC_OVERLAY)"
+    } else {
+        puts "MPTDC_MMMC_WARN: requested oscillator/PD SDC overlay does not exist: $::env(MPTDC_OSC_PD_SDC_OVERLAY)"
+    }
+}
+
 create_constraint_mode \
     -name functional_mode \
-    -sdc_files $design(functional_sdc)
+    -sdc_files $mptdc_functional_sdc_files
 
 ###########################
 #    RC Corners

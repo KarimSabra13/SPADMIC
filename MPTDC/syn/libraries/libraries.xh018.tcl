@@ -57,6 +57,27 @@ if {[file exists $tech_files(MPTDC_OSC_LEF)]} {
     lappend tech_files(ALL_LEFS) $tech_files(MPTDC_OSC_LEF)
 }
 
+# O0 oscillator/PD signoff track: optional provisional macro abstracts generated
+# from MPTDC/analog_handoff/*.  These are not enabled by default because the
+# current RTL still uses a synthesizable oscillator stub; O0 server scripts opt
+# in so the tool logs show exactly which non-final views were loaded.
+if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE_PROVISIONAL)} {
+    foreach key_file [list \
+        [list MPTDC_OSC_SLOW_PROVISIONAL_LEF "$design(project_root)/syn/macros/mptdc_osc_slow_provisional.lef"] \
+        [list MPTDC_OSC_FAST_PROVISIONAL_LEF "$design(project_root)/syn/macros/mptdc_osc_fast_provisional.lef"] \
+    ] {
+        set key [lindex $key_file 0]
+        set lef_file [lindex $key_file 1]
+        set tech_files($key) $lef_file
+        if {[file exists $lef_file]} {
+            lappend tech_files(ALL_LEFS) $lef_file
+            puts "MPTDC_LIB_INFO: enabling provisional oscillator LEF $lef_file"
+        } else {
+            puts "MPTDC_LIB_WARN: requested provisional oscillator LEF missing: $lef_file"
+        }
+    }
+}
+
 #############################################
 #       Parasitic Extraction (QRC)
 #############################################
@@ -146,6 +167,10 @@ set tech(ENDCAPS_left)     ""     ;# Left endcap cell
 #############################################
 set tech(OSC_SLOW_MACRO)      "MPTDC_OSC_SLOW_BB"
 set tech(OSC_FAST_MACRO)      "MPTDC_OSC_FAST_BB"
+if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE_PROVISIONAL)} {
+    set tech(OSC_SLOW_MACRO_PROVISIONAL) "MPTDC_OSC_SLOW_PROVISIONAL"
+    set tech(OSC_FAST_MACRO_PROVISIONAL) "MPTDC_OSC_FAST_PROVISIONAL"
+}
 set tech(OSC_VDD)             "VDDA"
 set tech(OSC_GND)             "VSSA"
 set tech(OSC_VDD_PINS)        [list VDDA]

@@ -616,6 +616,17 @@ proc mptdc_full_reports {report_dir} {
     mptdc_run_report "report_constraints" \
         "$dir/report_constraints.rpt" "report_constraints"
     mptdc_run_report_candidates [list \
+        "report_clock_groups" \
+        "report_clock_groups -verbose" \
+        "report_clocks" \
+    ] "$dir/report_clock_groups.rpt" "clock-group report"
+    mptdc_run_report_candidates [list \
+        "report_exceptions" \
+        "report_exceptions -verbose" \
+        "report_constraints -exceptions" \
+        "report_constraints" \
+    ] "$dir/report_exceptions.rpt" "timing-exception report"
+    mptdc_run_report_candidates [list \
         "report_clocks -generated" \
         "report_clocks" \
     ] "$dir/report_clocks_generated.rpt" "generated/all clock report"

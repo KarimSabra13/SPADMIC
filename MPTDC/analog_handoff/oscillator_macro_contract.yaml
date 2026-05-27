@@ -1,0 +1,59 @@
+# PROVISIONAL - NOT ANALOG VERIFIED
+# Fill this file from analog extracted-layout handoff before claiming signoff.
+
+status: provisional
+source: "Digital O0 request template, created before complete analog .lib/.lef handoff"
+known_datapoints:
+  - description: "Virtuoso screenshot eye/noise estimate around 613 fs RMS after 45 START/STOP events"
+    status: "useful datapoint only, not PVT or extracted signoff"
+
+required_per_macro_fields:
+  macro_name: null
+  nominal_supply_V: null
+  legal_orientation: []
+  layout_width_um: null
+  layout_height_um: null
+  pin_names: []
+  pin_order: []
+  pin_side: {}
+  pin_coordinates_um: {}
+  pin_metal_layer: {}
+  pin_shape_um: {}
+  power_pins: [VDDA]
+  ground_pins: [VSSA]
+  internal_obstructions: []
+  keepout_margin_um: null
+  max_load_per_tap_fF: null
+  load_used_in_analog_simulation_fF: null
+  output_high_low_levels_V: null
+  output_slew_per_tap_ps: []
+  duty_cycle_per_tap_pct: []
+  period_per_tap_ps: []
+  tap_to_tap_delay_ps: []
+  tap_to_tap_mismatch_ps: []
+  cycle_to_cycle_jitter_fs_rms: null
+  accumulated_jitter_after_startup_fs_rms: null
+  startup_delay_from_enable_ps: null
+  first_edge_behavior: null
+  enable_to_oscillation_behavior: null
+  disable_behavior: null
+  reset_behavior: null
+  pvt_corners_simulated: []
+  extracted_vs_schematic_status: null
+  tune_code_table: []
+  nominal_slow_fast_tune_code_pair: null
+  frequency_derating_tune_code_pairs: []
+
+slow:
+  macro_name: MPTDC_OSC_SLOW_PROVISIONAL
+  placement_intent: "north of PD matrix, slow_phase[0:7] pins on bottom"
+  nominal_period_ps: 1000.0
+  nominal_tap_step_ps: 55.0
+  status: "PROVISIONAL - NOT ANALOG VERIFIED"
+
+fast:
+  macro_name: MPTDC_OSC_FAST_PROVISIONAL
+  placement_intent: "south of PD matrix, fast_phase[0:7] pins on top"
+  nominal_period_ps: 900.0
+  nominal_tap_step_ps: 50.0
+  status: "PROVISIONAL - NOT ANALOG VERIFIED"
