@@ -12,7 +12,8 @@
 // State machine (sys_clk domain):
 //   ST_D_IDLE — monitor ctx_drain_sync for ready contexts
 //   ST_D_META — push META record (nslow, hit_count, flags, phase0, ctx_id)
-//   ST_D_SCAN — iterate PD cells, push HIT record per active cell
+//   ST_D_SCAN — iterate PD cells, stage HIT record per active cell
+//   ST_D_EMIT — transfer staged META/HIT record into the FIFO skid register
 //   ST_D_EOC  — assert ctx_release + conv_done, return to IDLE
 //
 // The context bank is read via combinational read port.  Data is guaranteed
@@ -160,9 +161,11 @@ module mptdc_drain_ctrl
   // FSM — combinational next-state + output decode
   // =========================================================================
   logic advance_scan;
+  logic stage_emit_wr;
   logic load_pending_wr;
   mptdc_acq_rec_t pending_wr_data_d;
   mptdc_acq_rec_t pending_wr_data_q;
+  mptdc_acq_rec_t emit_wr_data_q;
   logic pending_wr_valid_q;
   wire  pending_wr_accept = pending_wr_valid_q & ~fifo_wr_full_i;
   wire  pending_wr_ready  = ~pending_wr_valid_q | pending_wr_accept;
@@ -172,6 +175,7 @@ module mptdc_drain_ctrl
     conv_done_o    = 1'b0;
     ctx_release_o  = '0;
     advance_scan   = 1'b0;
+    stage_emit_wr  = 1'b0;
     load_pending_wr = 1'b0;
     pending_wr_data_d = '0;
 
@@ -184,11 +188,8 @@ module mptdc_drain_ctrl
 
       // ─────────────────────────────────────────────────────────────
       ST_D_META: begin
-        if (pending_wr_ready) begin
-          load_pending_wr   = 1'b1;
-          pending_wr_data_d = meta_rec;
-          state_d        = ST_D_SCAN;
-        end
+        stage_emit_wr = 1'b1;
+        state_d       = ST_D_EMIT;
       end
 
       // ─────────────────────────────────────────────────────────────
@@ -196,15 +197,22 @@ module mptdc_drain_ctrl
         if ((scan_done || all_hits_found) && pending_wr_ready) begin
           state_d = ST_D_EOC;
         end else if (cell_has_hit) begin
-          if (pending_wr_ready) begin
-            load_pending_wr   = 1'b1;
-            pending_wr_data_d = hit_rec;
-            advance_scan      = 1'b1;
-          end
-          // FIFO full: stall — hold scan position
+          stage_emit_wr = 1'b1;
+          advance_scan  = 1'b1;
+          state_d       = ST_D_EMIT;
         end else if (pending_wr_ready) begin
           advance_scan = 1'b1;   // skip empty cell
         end
+      end
+
+      // ─────────────────────────────────────────────────────────────
+      ST_D_EMIT: begin
+        if (pending_wr_ready) begin
+          load_pending_wr   = 1'b1;
+          pending_wr_data_d = emit_wr_data_q;
+          state_d          = ST_D_SCAN;
+        end
+        // FIFO full with a pending output record: stall with emit_wr_data_q held.
       end
 
       // ─────────────────────────────────────────────────────────────
@@ -234,8 +242,16 @@ module mptdc_drain_ctrl
       event_seq_q <= '0;
       pending_wr_valid_q <= 1'b0;
       pending_wr_data_q  <= '0;
+      emit_wr_data_q     <= '0;
     end else begin
       state_q <= state_d;
+
+      if (stage_emit_wr) begin
+        if (state_q == ST_D_META)
+          emit_wr_data_q <= meta_rec;
+        else
+          emit_wr_data_q <= hit_rec;
+      end
 
       if (load_pending_wr) begin
         pending_wr_valid_q <= 1'b1;

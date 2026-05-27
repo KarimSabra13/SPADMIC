@@ -935,3 +935,222 @@ Next action:
 - If `row_cnt_q -> meas_ctrl_hit_count_q/flags_q` improves and Xcelium passes,
   keep H1b and then evaluate H4b drain/context prefetch as the next separate
   hypothesis.
+
+## Iteration ID: 20260527_1200_h1b_count_eval_split_server
+
+Git HEAD: `14fb19cb9d350420a0829b68ebdc4bac593cc824`
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Human lab-server Genus and Xcelium run for H1b count/eval split.
+
+Files changed:
+
+- `results/genus/20260527_1200_h1b_count_eval_split_genus/`
+- `MPTDC/lab_snapshots/genus_20260527_1200_h1b_count_eval_split_genus/`
+- `results/xcelium/20260527_1200_h1b_count_eval_split_xcelium/`
+- `MPTDC/results/xcelium/20260527_1200_h1b_count_eval_split_xcelium/`
+
+Tool stage:
+
+- Genus
+- Xcelium
+
+Was this actually run by agent locally?
+
+- no
+
+Was this run by human on lab server?
+
+- yes
+
+Evidence location:
+
+- `results/genus/20260527_1200_h1b_count_eval_split_genus/PARSED_SUMMARY.md`
+- `results/genus/20260527_1200_h1b_count_eval_split_genus/timing_clk_sys_violations.rpt`
+- `results/genus/20260527_1200_h1b_count_eval_split_genus/timing_drain_ctrl_hotspots.rpt`
+- `results/xcelium/20260527_1200_h1b_count_eval_split_xcelium/SUMMARY.md`
+- `results/xcelium/20260527_1200_h1b_count_eval_split_xcelium/test_summary.txt`
+
+Local Verilator:
+
+- lint pass/fail: prior H1b local run pass
+- smoke pass/fail: prior H1b local run pass
+- important warnings: none new
+- tests run: none in this server-results iteration
+
+Genus:
+
+- run available? yes
+- WNS: `-3143.2 ps`
+- TNS: `-1578001.4 ps`
+- violating paths: `682`
+- worst path group: `clk_osc_fast_tap1`
+- worst startpoint: oscillator/PD measurement path, not clk_sys backend
+- worst endpoint: oscillator/PD measurement path, not clk_sys backend
+- design-rule violations: max_transition total `98322`
+- latch audit: `7` expected intentional async frontend/event latches
+- CDC manual audit: no protocol change; PD matrix count remains 64
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? yes
+- tests:
+  - directed: `tb_meas_ctrl_unit`, `tb_hit_capture_bridge_unit`,
+    `tb_context_bank_unit`, `tb_drain_ctrl_unit`, `tb_single_conv`,
+    `tb_backpressure`
+  - VIP selected regression: `smoke_single_conv`,
+    `backpressure_integrity`, `multi_conv_rearm_stress`,
+    `global_watchdog_recovery`, `vip_maxhits_matrix`
+- pass/fail: pass
+- failed seeds: none
+
+Functional result:
+
+- pass for server Xcelium directed and selected VIP regression
+
+Timing result:
+
+- improved for the targeted `clk_sys` group:
+  - WNS improved from `-968.1 ps` to `-756.8 ps`
+  - TNS improved from `-48974.7 ps` to `-37763.3 ps`
+  - violating paths improved from `72` to `62`
+  - max-transition violations improved from `213804` to `98322`
+
+Linearity/precision risk:
+
+- low to medium for added backend latency; Xcelium passed
+
+Decision:
+
+- keep H1b and continue
+
+Next action:
+
+- Implement H4b drain emit staging to target
+  `ns_cnt_q/drain_ctx_q -> pending_wr_data_q`.
+- Run local Verilator lint/smoke.
+- Request Genus and Xcelium for H4b.
+
+## Iteration ID: 20260527_1330_h4b_drain_emit_stage
+
+Git HEAD: `8ff16fa8afed8ecd2478f3c9054c780e2ace68c3` before local patch commit
+
+Branch: `SPADMIC_TOP`
+
+Patch summary: Add a registered drain `ST_D_EMIT` stage between META/HIT record
+construction and the FIFO pending-record skid register.
+
+Files changed:
+
+- `MPTDC/rtl/ctrl/mptdc_drain_ctrl.sv`
+- `MPTDC/rtl/pkg/mptdc_pkg.sv`
+- `docs/timing_closure/H4_drain_record_timing_analysis.md`
+- `docs/timing_closure/20260527_h1b_count_eval_analysis.md`
+- `docs/timing_closure/20260527_h4b_drain_emit_analysis.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST.md`
+- `docs/timing_closure/iteration_log.md`
+- `results/local_verilator/20260527_1330_h4b_drain_emit_stage/`
+
+Tool stage:
+
+- local Verilator
+
+Was this actually run by agent locally?
+
+- yes
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- `results/local_verilator/20260527_1330_h4b_drain_emit_stage/SUMMARY.md`
+- `results/local_verilator/20260527_1330_h4b_drain_emit_stage/test_summary.txt`
+- `results/local_verilator/20260527_1330_h4b_drain_emit_stage/lint.log`
+
+Local Verilator:
+
+- lint pass/fail: pass
+- smoke pass/fail: pass
+- important warnings: none beyond documented local Verilator waivers
+- tests run:
+  - `lint`
+  - `tb_meas_ctrl_unit`
+  - `tb_hit_capture_bridge_unit`
+  - `tb_context_bank_unit`
+  - `tb_drain_ctrl_unit`
+  - `tb_single_conv`
+  - `tb_backpressure`
+  - VIP `smoke_single_conv`
+  - VIP `backpressure_integrity`
+  - VIP `vip_maxhits_matrix`
+
+Genus:
+
+- run available? no for H4b
+- WNS: unknown for H4b
+- TNS: unknown for H4b
+- violating paths: unknown for H4b
+- worst path group: unknown for H4b
+- worst startpoint: unknown for H4b
+- worst endpoint: unknown for H4b
+- design-rule violations: unknown for H4b
+- latch audit: server rerun required
+- CDC manual audit: server rerun required
+
+Innovus:
+
+- run available? no
+- preCTS WNS/TNS/path count: unknown
+- postCTS WNS/TNS/path count: unknown
+- postRoute WNS/TNS/path count: unknown
+- hold WNS/TNS/path count: unknown
+- max transition violations: unknown
+- max cap violations: unknown
+- max fanout violations: unknown
+- top physical concern: unknown
+
+Xcelium:
+
+- run available? no for H4b
+- tests: server request prepared
+- pass/fail: unknown for H4b
+- failed seeds: unknown for H4b
+
+Functional result:
+
+- pass for local Verilator scope
+
+Timing result:
+
+- unknown until H4b Genus run is committed
+
+Linearity/precision risk:
+
+- low
+
+Decision:
+
+- request server run
+
+Next action:
+
+- Human runs Genus and Xcelium commands from
+  `docs/timing_closure/SERVER_RUN_REQUEST.md`.
+- Compare H4b Genus against `20260527_1200_h1b_count_eval_split_genus`.
+- If `pending_wr_data_q` leaves the worst endpoint set and Xcelium passes,
+  request Innovus or move to the next clk_sys cone only with evidence.

@@ -131,3 +131,44 @@ Rollback if:
 - Xcelium directed or VIP regression fails
 - Genus shows the targeted path did not improve and a new worse `clk_sys` path
   is introduced by this patch
+
+## Server Result
+
+Genus run: `20260527_1200_h1b_count_eval_split_genus`
+
+Xcelium run: `20260527_1200_h1b_count_eval_split_xcelium`
+
+RTL commit run on lab server:
+`14fb19cb9d350420a0829b68ebdc4bac593cc824`
+
+Server-results commit:
+`8ff16fa8afed8ecd2478f3c9054c780e2ace68c3`
+
+H1b improved the targeted `clk_sys` group again:
+
+| Metric | H1/H4 `20260527_1030_h1_drain_pipeline_genus` | H1b `20260527_1200_h1b_count_eval_split_genus` | Delta |
+|---|---:|---:|---:|
+| `clk_sys` WNS | -968.1 ps | -756.8 ps | +211.3 ps |
+| `clk_sys` TNS | -48974.7 ps | -37763.3 ps | +11211.4 ps |
+| `clk_sys` violating paths | 72 | 62 | -10 |
+| max-transition violations | 213804 | 98322 | -115482 |
+
+The intended path moved out of the top set:
+
+- before H1b: `row_cnt_q -> meas_ctrl_flags_q/hit_count_q`, worst `-968 ps`
+- after H1b: no `row_cnt_q -> meas_ctrl_hit_count_q/flags_q` top path remains
+- remaining row-count path is `row_cnt_q -> total_hits_q`, worst about `-672 ps`
+
+The new worst `clk_sys` path is H4 drain record construction:
+
+- `ns_cnt_q/drain_ctx_q -> pending_wr_data_q`, worst `-756.8 ps`
+
+Xcelium passed:
+
+- directed tests: pass
+- selected VIP regression: pass
+- failures: none
+
+Decision: keep H1b. The next isolated RTL hypothesis is H4b, adding a registered
+drain emit stage so scan counters/context-read outputs do not feed directly into
+the FIFO pending-record register.

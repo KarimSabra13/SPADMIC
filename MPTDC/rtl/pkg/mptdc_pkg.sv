@@ -164,11 +164,12 @@ package mptdc_pkg;
   // =========================================================================
   // Drain FSM states (sys_clk domain — mptdc_drain_ctrl)
   // =========================================================================
-  typedef enum logic [1:0] {
-    ST_D_IDLE = 2'd0,
-    ST_D_META = 2'd1,
-    ST_D_SCAN = 2'd2,
-    ST_D_EOC  = 2'd3
+  typedef enum logic [2:0] {
+    ST_D_IDLE = 3'd0,
+    ST_D_META = 3'd1,
+    ST_D_SCAN = 3'd2,
+    ST_D_EMIT = 3'd3,
+    ST_D_EOC  = 3'd4
   } drain_state_e;
 
   // =========================================================================
