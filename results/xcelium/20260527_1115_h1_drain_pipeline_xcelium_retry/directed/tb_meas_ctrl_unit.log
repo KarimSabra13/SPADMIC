@@ -1,0 +1,119 @@
+=== MPTDC v2.7 TB Runner ===
+  Testbench: tb_meas_ctrl_unit
+  Simulator: xcelium
+  Build dir: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/build/tb_meas_ctrl_unit
+
+--- Compiling with Xcelium ---
+TOOL:	xrun(64)	23.03-s007: Started on May 27, 2026 at 12:34:16 CEST
+xrun(64): 23.03-s007: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+Loading snapshot worklib.tb_meas_ctrl_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] reset leaves controller in IDLE
+[PASS] PD gate open in IDLE
+[PASS] three-hit conversion: IDLE to MEASURE
+[PASS] three-hit conversion: PD gate open in MEASURE
+[PASS] three-hit conversion: MEASURE to SNAPSHOT
+[PASS] three-hit conversion: snapshot pulse in SNAPSHOT
+[PASS] three-hit conversion: no clear during SNAPSHOT
+[PASS] three-hit conversion: SNAPSHOT to COUNT
+[PASS] three-hit conversion: no capture while COUNT computes metadata
+[PASS] three-hit conversion: no frontend clear while COUNT computes metadata
+[PASS] three-hit conversion: no PD clear during COUNT
+[PASS] three-hit conversion: hit_count not published during COUNT
+[PASS] three-hit conversion: retired meta_en remains low
+[PASS] three-hit conversion: COUNT to CAPTURE
+[PASS] three-hit conversion: capture pulse in CAPTURE
+[PASS] three-hit conversion: frontend clear in CAPTURE
+[PASS] three-hit conversion: no PD clear during CAPTURE
+[PASS] three-hit conversion: registered hit_count held for capture
+[PASS] three-hit conversion: fast max-hit flag
+[PASS] three-hit conversion: max-hits flag
+[PASS] three-hit conversion: watchdog flag
+[PASS] three-hit conversion: CAPTURE to CLEAR
+[PASS] three-hit conversion: PD clear in CLEAR
+[PASS] three-hit conversion: only PD clear in CLEAR
+[PASS] three-hit conversion: return to IDLE
+[PASS] three-hit conversion: outputs low in IDLE
+[PASS] saturated conversion: IDLE to MEASURE
+[PASS] saturated conversion: PD gate open in MEASURE
+[PASS] saturated conversion: MEASURE to SNAPSHOT
+[PASS] saturated conversion: snapshot pulse in SNAPSHOT
+[PASS] saturated conversion: no clear during SNAPSHOT
+[PASS] saturated conversion: SNAPSHOT to COUNT
+[PASS] saturated conversion: no capture while COUNT computes metadata
+[PASS] saturated conversion: no frontend clear while COUNT computes metadata
+[PASS] saturated conversion: no PD clear during COUNT
+[PASS] saturated conversion: hit_count not published during COUNT
+[PASS] saturated conversion: retired meta_en remains low
+[PASS] saturated conversion: COUNT to CAPTURE
+[PASS] saturated conversion: capture pulse in CAPTURE
+[PASS] saturated conversion: frontend clear in CAPTURE
+[PASS] saturated conversion: no PD clear during CAPTURE
+[PASS] saturated conversion: registered hit_count held for capture
+[PASS] saturated conversion: fast max-hit flag
+[PASS] saturated conversion: max-hits flag
+[PASS] saturated conversion: watchdog flag
+[PASS] saturated conversion: CAPTURE to CLEAR
+[PASS] saturated conversion: PD clear in CLEAR
+[PASS] saturated conversion: only PD clear in CLEAR
+[PASS] saturated conversion: return to IDLE
+[PASS] saturated conversion: outputs low in IDLE
+[PASS] watchdog no-hit conversion: IDLE to MEASURE
+[PASS] watchdog no-hit conversion: PD gate open in MEASURE
+[PASS] watchdog no-hit conversion: MEASURE to SNAPSHOT
+[PASS] watchdog no-hit conversion: snapshot pulse in SNAPSHOT
+[PASS] watchdog no-hit conversion: no clear during SNAPSHOT
+[PASS] watchdog no-hit conversion: SNAPSHOT to COUNT
+[PASS] watchdog no-hit conversion: no capture while COUNT computes metadata
+[PASS] watchdog no-hit conversion: no frontend clear while COUNT computes metadata
+[PASS] watchdog no-hit conversion: no PD clear during COUNT
+[PASS] watchdog no-hit conversion: hit_count not published during COUNT
+[PASS] watchdog no-hit conversion: retired meta_en remains low
+[PASS] watchdog no-hit conversion: COUNT to CAPTURE
+[PASS] watchdog no-hit conversion: capture pulse in CAPTURE
+[PASS] watchdog no-hit conversion: frontend clear in CAPTURE
+[PASS] watchdog no-hit conversion: no PD clear during CAPTURE
+[PASS] watchdog no-hit conversion: registered hit_count held for capture
+[PASS] watchdog no-hit conversion: fast max-hit flag
+[PASS] watchdog no-hit conversion: max-hits flag
+[PASS] watchdog no-hit conversion: watchdog flag
+[PASS] watchdog no-hit conversion: CAPTURE to CLEAR
+[PASS] watchdog no-hit conversion: PD clear in CLEAR
+[PASS] watchdog no-hit conversion: only PD clear in CLEAR
+[PASS] watchdog no-hit conversion: return to IDLE
+[PASS] watchdog no-hit conversion: outputs low in IDLE
+[PASS] fast max-hit conversion: IDLE to MEASURE
+[PASS] fast max-hit conversion: PD gate open in MEASURE
+[PASS] fast max-hit conversion: MEASURE to SNAPSHOT
+[PASS] fast max-hit conversion: snapshot pulse in SNAPSHOT
+[PASS] fast max-hit conversion: no clear during SNAPSHOT
+[PASS] fast max-hit conversion: SNAPSHOT to COUNT
+[PASS] fast max-hit conversion: no capture while COUNT computes metadata
+[PASS] fast max-hit conversion: no frontend clear while COUNT computes metadata
+[PASS] fast max-hit conversion: no PD clear during COUNT
+[PASS] fast max-hit conversion: hit_count not published during COUNT
+[PASS] fast max-hit conversion: retired meta_en remains low
+[PASS] fast max-hit conversion: COUNT to CAPTURE
+[PASS] fast max-hit conversion: capture pulse in CAPTURE
+[PASS] fast max-hit conversion: frontend clear in CAPTURE
+[PASS] fast max-hit conversion: no PD clear during CAPTURE
+[PASS] fast max-hit conversion: registered hit_count held for capture
+[PASS] fast max-hit conversion: fast max-hit flag
+[PASS] fast max-hit conversion: max-hits flag
+[PASS] fast max-hit conversion: watchdog flag
+[PASS] fast max-hit conversion: CAPTURE to CLEAR
+[PASS] fast max-hit conversion: PD clear in CLEAR
+[PASS] fast max-hit conversion: only PD clear in CLEAR
+[PASS] fast max-hit conversion: return to IDLE
+[PASS] fast max-hit conversion: outputs low in IDLE
+[PASS] reset test entered MEASURE
+[PASS] reset during active sequence returns IDLE
+===================================
+  Results: 100 PASS, 0 FAIL
+===================================
+TEST PASSED
+Simulation complete via $finish(1) at time 203126 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/unit/tb_meas_ctrl_unit.sv:234     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on May 27, 2026 at 12:34:17 CEST  (total: 00:00:01)

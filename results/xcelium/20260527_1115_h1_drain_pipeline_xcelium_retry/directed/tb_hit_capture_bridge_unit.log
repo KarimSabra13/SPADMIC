@@ -1,0 +1,50 @@
+=== MPTDC v2.7 TB Runner ===
+  Testbench: tb_hit_capture_bridge_unit
+  Simulator: xcelium
+  Build dir: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/build/tb_hit_capture_bridge_unit
+
+--- Compiling with Xcelium ---
+TOOL:	xrun(64)	23.03-s007: Started on May 27, 2026 at 12:34:17 CEST
+xrun(64): 23.03-s007: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+Loading snapshot worklib.tb_hit_capture_bridge_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] first sample: hit_level
+[PASS] first sample: nfast_hit_packed
+[PASS] first sample: nslow_snap
+[PASS] first sample: nfast_snap
+[PASS] first sample: nfast_stop
+[PASS] first sample: phase0_snap
+[PASS] first sample: stop_slow_phase_disc
+[PASS] first sample: slow_boundary_inc
+[PASS] first sample: hit_count cleared by bridge
+[PASS] first sample: flags cleared by bridge
+[PASS] held without resample: hit_level
+[PASS] held without resample: nfast_hit_packed
+[PASS] held without resample: nslow_snap
+[PASS] held without resample: nfast_snap
+[PASS] held without resample: nfast_stop
+[PASS] held without resample: phase0_snap
+[PASS] held without resample: stop_slow_phase_disc
+[PASS] held without resample: slow_boundary_inc
+[PASS] held without resample: hit_count cleared by bridge
+[PASS] held without resample: flags cleared by bridge
+[PASS] second sample: hit_level
+[PASS] second sample: nfast_hit_packed
+[PASS] second sample: nslow_snap
+[PASS] second sample: nfast_snap
+[PASS] second sample: nfast_stop
+[PASS] second sample: phase0_snap
+[PASS] second sample: stop_slow_phase_disc
+[PASS] second sample: slow_boundary_inc
+[PASS] second sample: hit_count cleared by bridge
+[PASS] second sample: flags cleared by bridge
+[PASS] reset clears snapshot
+===================================
+  Results: 31 PASS, 0 FAIL
+===================================
+TEST PASSED
+Simulation complete via $finish(1) at time 71876 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/unit/tb_hit_capture_bridge_unit.sv:138     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on May 27, 2026 at 12:34:18 CEST  (total: 00:00:01)

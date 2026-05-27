@@ -1,0 +1,33 @@
+=== MPTDC v2.7 TB Runner ===
+  Testbench: tb_single_conv
+  Simulator: xcelium
+  Build dir: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/build/tb_single_conv
+
+--- Compiling with Xcelium ---
+TOOL:	xrun(64)	23.03-s007: Started on May 27, 2026 at 12:34:21 CEST
+xrun(64): 23.03-s007: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
+Loading snapshot worklib.tb_single_conv:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[TB] Configuring: MULTI_HIT, max_hits=15, OUT_MODE_RAW_FEATURES
+[TB] Arming conversion...
+[TB] Injecting START...
+[TB] Injecting STOP...
+[TB] Waiting for output packet...
+[MON] t=440625 PKT#0 HEADER: ctx=0 phase0=0 hits=15 flags=0010 mode=0
+[TB] Collected 32 words
+[TB] Header: ctx=0, hits=15, flags=0010, mode=0
+[TB] EOC: conv_id=0
+[TB] ===== TEST PASSED =====
+[MON] t=728125 PKT#0 EOC: conv_id=0
+[MON] SUMMARY: 1 packets, 15 total hits
+Simulation complete via $finish(1) at time 828125 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/tb/int/tb_single_conv.sv:185     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on May 27, 2026 at 12:34:23 CEST  (total: 00:00:02)
