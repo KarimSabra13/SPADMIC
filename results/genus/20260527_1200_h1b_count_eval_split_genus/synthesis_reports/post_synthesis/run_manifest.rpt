@@ -1,0 +1,85 @@
+MPTDC Genus run manifest
+========================
+Generated: 2026-05-27 13:20:27 CEST
+
+Design
+------
+  TOPLEVEL                         mptdc_top_asic
+  FULLCHIP_OR_MACRO                MACRO
+  CLK_PERIOD                       6.25
+  OSC_SLOW_PERIOD                  1.0
+  OSC_FAST_PERIOD                  0.9
+  OSC_SLOW_TAP_STEP                0.055
+  OSC_FAST_TAP_STEP                0.050
+  CLOCK_UNCERTAINTY                0.3
+  OSC_CLOCK_UNCERTAINTY_SETUP      0.050
+  OSC_CLOCK_UNCERTAINTY_HOLD       0.020
+  PRODUCTION_SHARED_READOUT        1
+  INPUT_DELAY_MACRO                0.5
+  OUTPUT_DELAY_MACRO               0.5
+  OUTPUT_LOAD_MACRO                0.01
+  MAX_FANOUT                       20
+  MAX_TRANSITION                   0.5
+  RESET_MAX_FANOUT                 32
+  RESET_MAX_TRANSITION             0.35
+  EXPECTED_LATCH_COUNT             7
+  selected_setup_analysis_views    wc_view
+  selected_hold_analysis_views     bc_view
+  OSC_TOPOLOGY                     slow_north_pd_center_fast_south
+  OSC_SLOW_ANALOG_PINS             start_i {ctrl_i[7:0]} {phase_o[7:0]} VDDA VSSA
+  OSC_FAST_ANALOG_PINS             stop_i {ctrl_i[7:0]} {phase_o[7:0]} VDDA VSSA
+
+Optimization
+------------
+  mptdc_optimization_goal          area_first
+  mptdc_enable_clock_gating        false
+  ramstyle_note                    Genus build does not support root attribute syn_ramstyle; continuing without it
+  clock_gating_note                clock gating disabled (library ICG cells are dont_use)
+
+Technology
+----------
+  METAL_STACK                      1P4M
+  TRACKS                           12T
+  STANDARD_CELL_SITE               core_hd
+  STANDARD_CELL_VDD                VDD
+  STANDARD_CELL_GND                VSS
+  row_height                       7.56
+  grid_unit                        0.18
+  HAS_QRC_TECH                     1
+  cts_top_routing_layer_top        METTP
+  cts_bottom_routing_layer_top     MET3
+  OSC_SLOW_MACRO                   MPTDC_OSC_SLOW_BB
+  OSC_FAST_MACRO                   MPTDC_OSC_FAST_BB
+  OSC_VDD                          VDDA
+  OSC_GND                          VSSA
+  PD_DECAP                         DECAP25HD DECAP15HD
+
+Library and physical files
+--------------------------
+  PDK_ROOT                         /data/pdk/xfab/xh018
+  SC_ROOT                          /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0
+  LIB_DIR                          /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range
+  TECH_LEF_DIR                     /data/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1
+  QRC_ROOT                         /data/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141
+  STDCELLS_BC_LIB                  /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_fast_1_98V_m40C.lib
+  STDCELLS_TC_LIB                  /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib
+  STDCELLS_WC_LIB                  /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_slow_1_62V_125C.lib
+  TECHNOLOGY_LEF                   /data/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef
+  STDCELLS_LEF                     /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/LEF/v6_0_0/xh018_D_CELLS_HD.lef
+  MPTDC_OSC_LEF                    /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lef
+  MPTDC_OSC_BB_LIB                 /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib
+  QRCTECH_BC                       /data/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141/QRC-Min/qrcTechFile
+  QRCTECH_TC                       /data/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141/QRC-Typ/qrcTechFile
+  QRCTECH_WC                       /data/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141/QRC-Max/qrcTechFile
+
+Review checklist
+----------------
+   timing_violations.rpt contains no real violations
+   report_area_hier.rpt identifies dominant blocks
+   report_power.rpt/report_power_hier.rpt are understood as vectorless or activity-backed
+   latch_audit.rpt matches the intentional async-frontend latch count
+   cdc_manual_audit.rpt covers all intentional async/mixed-domain structures
+   timing_pd_capture_hotspots.rpt reports PD capture WNS separately from aggregate WNS
+   timing_osc_counter_hotspots.rpt reports u_fast_cnt/u_slow_cnt/start watchdog support-counter WNS separately
+   timing_meas_ctrl_hotspots.rpt and timing_context_bank_hotspots.rpt identify logic-vs-wire blockers
+   report_design_rules.rpt has no critical transition/fanout/capacitance issues
