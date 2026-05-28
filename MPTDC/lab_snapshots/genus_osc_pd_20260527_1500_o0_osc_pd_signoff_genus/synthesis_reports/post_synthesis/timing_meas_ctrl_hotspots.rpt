@@ -1,0 +1,9 @@
+measurement-controller hotspot timing report could not be generated.
+
+report_timing -to <1 endpoints> -max_paths 100 -path_type full_clock: 1
+
+report_timing -to <1 endpoints> -max_paths 100 -path_type full: 1
+
+report_timing -to <1 endpoints> -max_paths 100 -path_type endpoint: 1
+
+report_timing -to <1 endpoints> -max_paths 100: 1

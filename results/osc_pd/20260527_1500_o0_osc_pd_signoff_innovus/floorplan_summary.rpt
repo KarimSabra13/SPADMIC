@@ -1,0 +1,35 @@
+MPTDC O0 oscillator/PD floorplan summary
+========================================
+Generated: 2026-05-27 15:05:13 CEST
+Status: PROVISIONAL - NOT ANALOG VERIFIED
+
+Object discovery
+----------------
+u_osc_slow matches: 1
+  u_core_u_osc_slow_u_stub
+u_osc_fast matches: 1
+  u_core_u_osc_fast_u_stub
+PD cells: 64 (expected 64)
+hit_capture_bridge matches: 1
+meas_ctrl matches: 183
+context_bank matches: 1074
+drain_ctrl matches: 108
+FIFO matches: 2901
+
+Assigned boxes
+--------------
+core:          20.16 20.16 831.04 826.56
+slow reserve:  265.44 593.6 585.76 713.44
+PD matrix:     275.52 273.28 575.68 573.44
+fast reserve:  265.44 133.28 585.76 253.12
+backend island:595.84 20.16 831.04 826.56
+left phase channel: 20.16 253.12 275.52 593.6
+
+BLOCKAGE mptdc_o0_slow_osc_macro_keepout: applied createPlaceBlockage -name mptdc_o0_slow_osc_macro_keepout -type hard -box 265.44 593.6 585.76 713.44
+BLOCKAGE mptdc_o0_fast_osc_macro_keepout: applied createPlaceBlockage -name mptdc_o0_fast_osc_macro_keepout -type hard -box 265.44 133.28 585.76 253.12
+BLOCKAGE mptdc_o0_phase_left_channel_no_stdcell: applied createPlaceBlockage -name mptdc_o0_phase_left_channel_no_stdcell -type hard -box 20.16 253.12 275.52 593.6
+REGION mptdc_o0_backend_island: 595.84 20.16 831.04 826.56
+REGION mptdc_o0_pd_matrix: 275.52 273.28 575.68 573.44
+
+PD count check: PASS
+Note: current RTL uses mptdc_osc_stub hierarchy. The slow/fast macro boxes are reserved regions until a hard macro binding is approved.

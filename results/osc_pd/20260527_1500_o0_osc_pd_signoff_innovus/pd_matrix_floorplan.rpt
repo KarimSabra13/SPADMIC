@@ -1,0 +1,268 @@
+MPTDC O0 PD matrix floorplan
+===========================
+Generated: 2026-05-27 15:05:13 CEST
+Topology A: columns=slow/ns, rows=fast/nf
+Topology B remains documented and must be evaluated after real pin order arrives.
+
+PD box: 275.52 273.28 575.68 573.44
+Pitch x/y: 37.52 / 37.52
+
+CELL u_core_gen_pd_row[0].gen_pd_col[0].u_pd ns=0 nf=0 target=(294.56,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[0].u_pd} 294.56 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[0].u_pd} 294.56 292.32 295.56 293.32
+CELL u_core_gen_pd_row[0].gen_pd_col[1].u_pd ns=0 nf=1 target=(294.56,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[1].u_pd} 294.56 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[1].u_pd} 294.56 329.84 295.56 330.84
+CELL u_core_gen_pd_row[0].gen_pd_col[2].u_pd ns=0 nf=2 target=(294.56,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[2].u_pd} 294.56 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[2].u_pd} 294.56 367.36 295.56 368.36
+CELL u_core_gen_pd_row[0].gen_pd_col[3].u_pd ns=0 nf=3 target=(294.56,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[3].u_pd} 294.56 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[3].u_pd} 294.56 404.88 295.56 405.88
+CELL u_core_gen_pd_row[0].gen_pd_col[4].u_pd ns=0 nf=4 target=(294.56,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[4].u_pd} 294.56 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[4].u_pd} 294.56 441.84 295.56 442.84
+CELL u_core_gen_pd_row[0].gen_pd_col[5].u_pd ns=0 nf=5 target=(294.56,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[5].u_pd} 294.56 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[5].u_pd} 294.56 479.92 295.56 480.92
+CELL u_core_gen_pd_row[0].gen_pd_col[6].u_pd ns=0 nf=6 target=(294.56,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[6].u_pd} 294.56 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[6].u_pd} 294.56 517.44 295.56 518.44
+CELL u_core_gen_pd_row[0].gen_pd_col[7].u_pd ns=0 nf=7 target=(294.56,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[0].gen_pd_col[7].u_pd} 294.56 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[7].u_pd} 294.56 554.96 295.56 555.96
+CELL u_core_gen_pd_row[1].gen_pd_col[0].u_pd ns=1 nf=0 target=(332.08,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[0].u_pd} 332.08 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[0].u_pd} 332.08 292.32 333.08 293.32
+CELL u_core_gen_pd_row[1].gen_pd_col[1].u_pd ns=1 nf=1 target=(332.08,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[1].u_pd} 332.08 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[1].u_pd} 332.08 329.84 333.08 330.84
+CELL u_core_gen_pd_row[1].gen_pd_col[2].u_pd ns=1 nf=2 target=(332.08,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[2].u_pd} 332.08 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[2].u_pd} 332.08 367.36 333.08 368.36
+CELL u_core_gen_pd_row[1].gen_pd_col[3].u_pd ns=1 nf=3 target=(332.08,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[3].u_pd} 332.08 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[3].u_pd} 332.08 404.88 333.08 405.88
+CELL u_core_gen_pd_row[1].gen_pd_col[4].u_pd ns=1 nf=4 target=(332.08,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[4].u_pd} 332.08 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[4].u_pd} 332.08 441.84 333.08 442.84
+CELL u_core_gen_pd_row[1].gen_pd_col[5].u_pd ns=1 nf=5 target=(332.08,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[5].u_pd} 332.08 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[5].u_pd} 332.08 479.92 333.08 480.92
+CELL u_core_gen_pd_row[1].gen_pd_col[6].u_pd ns=1 nf=6 target=(332.08,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[6].u_pd} 332.08 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[6].u_pd} 332.08 517.44 333.08 518.44
+CELL u_core_gen_pd_row[1].gen_pd_col[7].u_pd ns=1 nf=7 target=(332.08,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[1].gen_pd_col[7].u_pd} 332.08 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[7].u_pd} 332.08 554.96 333.08 555.96
+CELL u_core_gen_pd_row[2].gen_pd_col[0].u_pd ns=2 nf=0 target=(369.6,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[0].u_pd} 369.6 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[0].u_pd} 369.6 292.32 370.6 293.32
+CELL u_core_gen_pd_row[2].gen_pd_col[1].u_pd ns=2 nf=1 target=(369.6,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[1].u_pd} 369.6 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[1].u_pd} 369.6 329.84 370.6 330.84
+CELL u_core_gen_pd_row[2].gen_pd_col[2].u_pd ns=2 nf=2 target=(369.6,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[2].u_pd} 369.6 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[2].u_pd} 369.6 367.36 370.6 368.36
+CELL u_core_gen_pd_row[2].gen_pd_col[3].u_pd ns=2 nf=3 target=(369.6,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[3].u_pd} 369.6 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[3].u_pd} 369.6 404.88 370.6 405.88
+CELL u_core_gen_pd_row[2].gen_pd_col[4].u_pd ns=2 nf=4 target=(369.6,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[4].u_pd} 369.6 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[4].u_pd} 369.6 441.84 370.6 442.84
+CELL u_core_gen_pd_row[2].gen_pd_col[5].u_pd ns=2 nf=5 target=(369.6,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[5].u_pd} 369.6 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[5].u_pd} 369.6 479.92 370.6 480.92
+CELL u_core_gen_pd_row[2].gen_pd_col[6].u_pd ns=2 nf=6 target=(369.6,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[6].u_pd} 369.6 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[6].u_pd} 369.6 517.44 370.6 518.44
+CELL u_core_gen_pd_row[2].gen_pd_col[7].u_pd ns=2 nf=7 target=(369.6,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[2].gen_pd_col[7].u_pd} 369.6 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[7].u_pd} 369.6 554.96 370.6 555.96
+CELL u_core_gen_pd_row[3].gen_pd_col[0].u_pd ns=3 nf=0 target=(407.12,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[0].u_pd} 407.12 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[0].u_pd} 407.12 292.32 408.12 293.32
+CELL u_core_gen_pd_row[3].gen_pd_col[1].u_pd ns=3 nf=1 target=(407.12,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[1].u_pd} 407.12 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[1].u_pd} 407.12 329.84 408.12 330.84
+CELL u_core_gen_pd_row[3].gen_pd_col[2].u_pd ns=3 nf=2 target=(407.12,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[2].u_pd} 407.12 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[2].u_pd} 407.12 367.36 408.12 368.36
+CELL u_core_gen_pd_row[3].gen_pd_col[3].u_pd ns=3 nf=3 target=(407.12,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[3].u_pd} 407.12 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[3].u_pd} 407.12 404.88 408.12 405.88
+CELL u_core_gen_pd_row[3].gen_pd_col[4].u_pd ns=3 nf=4 target=(407.12,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[4].u_pd} 407.12 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[4].u_pd} 407.12 441.84 408.12 442.84
+CELL u_core_gen_pd_row[3].gen_pd_col[5].u_pd ns=3 nf=5 target=(407.12,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[5].u_pd} 407.12 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[5].u_pd} 407.12 479.92 408.12 480.92
+CELL u_core_gen_pd_row[3].gen_pd_col[6].u_pd ns=3 nf=6 target=(407.12,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[6].u_pd} 407.12 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[6].u_pd} 407.12 517.44 408.12 518.44
+CELL u_core_gen_pd_row[3].gen_pd_col[7].u_pd ns=3 nf=7 target=(407.12,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[3].gen_pd_col[7].u_pd} 407.12 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[7].u_pd} 407.12 554.96 408.12 555.96
+CELL u_core_gen_pd_row[4].gen_pd_col[0].u_pd ns=4 nf=0 target=(444.64,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[0].u_pd} 444.64 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[0].u_pd} 444.64 292.32 445.64 293.32
+CELL u_core_gen_pd_row[4].gen_pd_col[1].u_pd ns=4 nf=1 target=(444.64,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[1].u_pd} 444.64 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[1].u_pd} 444.64 329.84 445.64 330.84
+CELL u_core_gen_pd_row[4].gen_pd_col[2].u_pd ns=4 nf=2 target=(444.64,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[2].u_pd} 444.64 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[2].u_pd} 444.64 367.36 445.64 368.36
+CELL u_core_gen_pd_row[4].gen_pd_col[3].u_pd ns=4 nf=3 target=(444.64,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[3].u_pd} 444.64 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[3].u_pd} 444.64 404.88 445.64 405.88
+CELL u_core_gen_pd_row[4].gen_pd_col[4].u_pd ns=4 nf=4 target=(444.64,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[4].u_pd} 444.64 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[4].u_pd} 444.64 441.84 445.64 442.84
+CELL u_core_gen_pd_row[4].gen_pd_col[5].u_pd ns=4 nf=5 target=(444.64,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[5].u_pd} 444.64 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[5].u_pd} 444.64 479.92 445.64 480.92
+CELL u_core_gen_pd_row[4].gen_pd_col[6].u_pd ns=4 nf=6 target=(444.64,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[6].u_pd} 444.64 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[6].u_pd} 444.64 517.44 445.64 518.44
+CELL u_core_gen_pd_row[4].gen_pd_col[7].u_pd ns=4 nf=7 target=(444.64,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[4].gen_pd_col[7].u_pd} 444.64 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[7].u_pd} 444.64 554.96 445.64 555.96
+CELL u_core_gen_pd_row[5].gen_pd_col[0].u_pd ns=5 nf=0 target=(482.16,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[0].u_pd} 482.16 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[0].u_pd} 482.16 292.32 483.16 293.32
+CELL u_core_gen_pd_row[5].gen_pd_col[1].u_pd ns=5 nf=1 target=(482.16,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[1].u_pd} 482.16 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[1].u_pd} 482.16 329.84 483.16 330.84
+CELL u_core_gen_pd_row[5].gen_pd_col[2].u_pd ns=5 nf=2 target=(482.16,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[2].u_pd} 482.16 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[2].u_pd} 482.16 367.36 483.16 368.36
+CELL u_core_gen_pd_row[5].gen_pd_col[3].u_pd ns=5 nf=3 target=(482.16,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[3].u_pd} 482.16 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[3].u_pd} 482.16 404.88 483.16 405.88
+CELL u_core_gen_pd_row[5].gen_pd_col[4].u_pd ns=5 nf=4 target=(482.16,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[4].u_pd} 482.16 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[4].u_pd} 482.16 441.84 483.16 442.84
+CELL u_core_gen_pd_row[5].gen_pd_col[5].u_pd ns=5 nf=5 target=(482.16,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[5].u_pd} 482.16 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[5].u_pd} 482.16 479.92 483.16 480.92
+CELL u_core_gen_pd_row[5].gen_pd_col[6].u_pd ns=5 nf=6 target=(482.16,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[6].u_pd} 482.16 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[6].u_pd} 482.16 517.44 483.16 518.44
+CELL u_core_gen_pd_row[5].gen_pd_col[7].u_pd ns=5 nf=7 target=(482.16,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[5].gen_pd_col[7].u_pd} 482.16 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[7].u_pd} 482.16 554.96 483.16 555.96
+CELL u_core_gen_pd_row[6].gen_pd_col[0].u_pd ns=6 nf=0 target=(519.68,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[0].u_pd} 519.68 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[0].u_pd} 519.68 292.32 520.68 293.32
+CELL u_core_gen_pd_row[6].gen_pd_col[1].u_pd ns=6 nf=1 target=(519.68,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[1].u_pd} 519.68 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[1].u_pd} 519.68 329.84 520.68 330.84
+CELL u_core_gen_pd_row[6].gen_pd_col[2].u_pd ns=6 nf=2 target=(519.68,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[2].u_pd} 519.68 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[2].u_pd} 519.68 367.36 520.68 368.36
+CELL u_core_gen_pd_row[6].gen_pd_col[3].u_pd ns=6 nf=3 target=(519.68,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[3].u_pd} 519.68 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[3].u_pd} 519.68 404.88 520.68 405.88
+CELL u_core_gen_pd_row[6].gen_pd_col[4].u_pd ns=6 nf=4 target=(519.68,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[4].u_pd} 519.68 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[4].u_pd} 519.68 441.84 520.68 442.84
+CELL u_core_gen_pd_row[6].gen_pd_col[5].u_pd ns=6 nf=5 target=(519.68,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[5].u_pd} 519.68 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[5].u_pd} 519.68 479.92 520.68 480.92
+CELL u_core_gen_pd_row[6].gen_pd_col[6].u_pd ns=6 nf=6 target=(519.68,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[6].u_pd} 519.68 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[6].u_pd} 519.68 517.44 520.68 518.44
+CELL u_core_gen_pd_row[6].gen_pd_col[7].u_pd ns=6 nf=7 target=(519.68,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[6].gen_pd_col[7].u_pd} 519.68 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[7].u_pd} 519.68 554.96 520.68 555.96
+CELL u_core_gen_pd_row[7].gen_pd_col[0].u_pd ns=7 nf=0 target=(557.2,292.32)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[0].u_pd} 557.2 292.32 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[0].u_pd} 557.2 292.32 558.2 293.32
+CELL u_core_gen_pd_row[7].gen_pd_col[1].u_pd ns=7 nf=1 target=(557.2,329.84)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[1].u_pd} 557.2 329.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[1].u_pd} 557.2 329.84 558.2 330.84
+CELL u_core_gen_pd_row[7].gen_pd_col[2].u_pd ns=7 nf=2 target=(557.2,367.36)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[2].u_pd} 557.2 367.36 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[2].u_pd} 557.2 367.36 558.2 368.36
+CELL u_core_gen_pd_row[7].gen_pd_col[3].u_pd ns=7 nf=3 target=(557.2,404.88)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[3].u_pd} 557.2 404.88 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[3].u_pd} 557.2 404.88 558.2 405.88
+CELL u_core_gen_pd_row[7].gen_pd_col[4].u_pd ns=7 nf=4 target=(557.2,441.84)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[4].u_pd} 557.2 441.84 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[4].u_pd} 557.2 441.84 558.2 442.84
+CELL u_core_gen_pd_row[7].gen_pd_col[5].u_pd ns=7 nf=5 target=(557.2,479.92)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[5].u_pd} 557.2 479.92 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[5].u_pd} 557.2 479.92 558.2 480.92
+CELL u_core_gen_pd_row[7].gen_pd_col[6].u_pd ns=7 nf=6 target=(557.2,517.44)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[6].u_pd} 557.2 517.44 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[6].u_pd} 557.2 517.44 558.2 518.44
+CELL u_core_gen_pd_row[7].gen_pd_col[7].u_pd ns=7 nf=7 target=(557.2,554.96)
+  skipped: placeInstance {u_core_gen_pd_row[7].gen_pd_col[7].u_pd} 557.2 554.96 R0
+    
+  applied: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[7].u_pd} 557.2 554.96 558.2 555.96
+
+Place/fence attempts accepted: 64
+If accepted count is 0, the synthesized PD hierarchy is not a hard placeable master yet; use the generated symmetry CSV and regions as the enforceable provisional check.

@@ -1,0 +1,12 @@
+MPTDC O0 provisional macro placement
+====================================
+Generated: 2026-05-27 15:05:13 CEST
+Status: PROVISIONAL - RTL hard macro binding is not yet active
+slow reserve box: 265.44 593.6 585.76 713.44
+fast reserve box: 265.44 133.28 585.76 253.12
+slow hierarchy matches: 1
+  u_core_u_osc_slow_u_stub
+fast hierarchy matches: 1
+  u_core_u_osc_fast_u_stub
+
+Required next step: bind u_osc_slow/u_osc_fast to real hard macros or analog-approved blackbox wrappers before claiming macro placement signoff.

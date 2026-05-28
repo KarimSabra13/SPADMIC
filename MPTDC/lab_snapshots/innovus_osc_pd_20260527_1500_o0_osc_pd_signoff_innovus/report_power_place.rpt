@@ -1,0 +1,139 @@
+
+Power Net Detected:
+        Voltage	    Name
+             0V	    VSS
+          1.62V	    VDD
+Using Power View: wc_view.
+** INFO:  (VOLTUS_POWR-2054): Setting default frequency to the dominant frequency 1111.11MHz.
+
+	To force set default frequency/period. Use either of the following command options:
+		set_power_analysis_mode        -default_frequency <frequency value>
+		set_default_switching_activity -period            <period value>.
+
+             0V	    VSS
+          1.62V	    VDD
+      ----------------------------------------------------------
+      # of cell(s) missing both power/leakage table: 0
+      # of cell(s) missing power table: 0
+      # of cell(s) missing leakage table: 0
+      ----------------------------------------------------------
+
+
+
+Starting Calculating power
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT)
+ ... Calculating switching power
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT): 10%
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT): 20%
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT): 30%
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT): 40%
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT): 50%
+ ... Calculating internal and leakage power
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT): 60%
+2026-May-27 17:08:38 (2026-May-27 15:08:38 GMT): 70%
+2026-May-27 17:08:39 (2026-May-27 15:08:39 GMT): 80%
+2026-May-27 17:08:39 (2026-May-27 15:08:39 GMT): 90%
+
+Finished Calculating power
+2026-May-27 17:08:39 (2026-May-27 15:08:39 GMT)
+      # of MSMV cell(s) missing power_level: 0
+Begin Processing set_power
+Ended Processing set_power: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2428.26MB/3999.55MB/2703.34MB)
+Begin Boundary Leakage Calculation
+Ended Boundary Leakage Calculation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2428.26MB/3999.55MB/2703.34MB)
+Begin Static Power Report Generation
+*----------------------------------------------------------------------------------------
+*	Innovus 22.33-s094_1 (64bit) 08/25/2023 16:48 (Linux 3.10.0-693.el7.x86_64)
+*	
+*
+* 	Date & Time:	2026-May-27 17:08:39 (2026-May-27 15:08:39 GMT)
+*
+*----------------------------------------------------------------------------------------
+*
+*	Design: mptdc_top_asic
+*
+*	Liberty Libraries used:
+*	        wc_view: /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_slow_1_62V_125C.lib
+*	        wc_view: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib
+*	        wc_view: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_slow_provisional.lib
+*	        wc_view: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_fast_provisional.lib
+*
+*	Parasitic Files used:
+*
+*       Power View : wc_view
+*
+*       User-Defined Activity : N.A.
+*
+*       Activity File: N.A.
+*
+*       Hierarchical Global Activity: N.A.
+*
+*       Global Activity: N.A.
+*
+*       Sequential Element Activity: 0.200000
+*
+*       Primary Input Activity: 0.200000
+*
+*       Default icg ratio: N.A.
+*
+*       Global Comb ClockGate Ratio: N.A.
+*
+*	Power Units = 1mW
+*
+*	Time Units = 1e-09 secs
+*
+*       report_power
+*
+-----------------------------------------------------------------------------------------
+*
+
+
+
+Total Power
+-----------------------------------------------------------------------------------------
+Total Internal Power:      161.85832892 	   72.0042%
+Total Switching Power:      62.92470001 	   27.9926%
+Total Leakage Power:         0.00720055 	    0.0032%
+Total Power:               224.79022948
+-----------------------------------------------------------------------------------------
+
+
+Group                           Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+Sequential                           146       17.98    0.004401         164       72.94
+Macro                                  0           0           0           0           0
+IO                                     0           0           0           0           0
+Combinational                      15.89       44.94    0.002799       60.83       27.06
+Clock (Combinational)                  0           0           0           0           0
+Clock (Sequential)                     0           0           0           0           0
+-----------------------------------------------------------------------------------------
+Total                              161.9       62.92    0.007201       224.8         100
+-----------------------------------------------------------------------------------------
+
+
+Rail                  Voltage   Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+VDD                      1.62      161.9       62.92    0.007201       224.8         100
+ 
+ 
+-----------------------------------------------------------------------------------------
+*	Power Distribution Summary: 
+*              Highest Average Power: u_core_u_osc_fast_u_stub/g32 (NA2HDX0):            4.677
+*              Highest Leakage Power:                FE_RC_80_0 (BUHDX12):        1.681e-06
+*                Total Cap:      6.17888e-10 F
+*                Total instances in design: 17451
+*                Total instances in design with no power:     0
+*                Total instances in design with no activty:     0
+
+*                Total Fillers and Decap:     0
+-----------------------------------------------------------------------------------------
+ 
+** INFO:  (VOLTUS_POWR-3465): There are 0 decaps and 0 fillers in the design
+
+Ended Static Power Report Generation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2436.41MB/4003.05MB/2703.34MB)
+
