@@ -12,6 +12,12 @@ Expected HEAD:
 Purpose:
   Prove whether the real `SPADMIC/RO_tune4/abstract` OA view exists on the lab server, can be found/exported as LEF, and can be bound by the O1A nominal oscillator/PD Genus/Innovus flow.
 
+Known LEF source:
+  `/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune4.lef`
+
+Notes:
+  This LEF was copied from `RO4_TUNE.lef`. The export script records the internal source macro name and creates a documented `RO_tune4` LEF-name alias if needed. This does not change pins or geometry.
+
 Do not run:
   H4b backend-only request yet, unless explicitly instructed.
   O1B R800 before O1A is analyzed.
@@ -60,6 +66,6 @@ If any tool fails, still commit/push:
 Hard-stop interpretation:
 
 - If the OA path is missing or unreadable, stop and request analog/layout path correction.
-- If no LEF exists and automatic export fails, request analog designer LEF export.
+- If `/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune4.lef` is missing, stop and restore that copied LEF before rerun.
 - If LEF pins or macro name do not match current netlist, stop for macro-binding fix.
 - If the current netlist does not instantiate `RO_tune4`, do not claim O1A real macro binding.

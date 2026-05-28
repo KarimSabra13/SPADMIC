@@ -41,11 +41,20 @@ Analog abstract identity from Virtuoso:
 
 The real LEF macro name must be parsed from `RO_tune4_real_abstract.lef` after `server_export_ro_tune4_lef.sh` runs.
 
+Known LEF source from the lab server:
+
+- Source copy path: `/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune4.lef`
+- Original filename before user copy: `/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/RO4_TUNE.lef`
+
+Because the original filename is `RO4_TUNE.lef`, the internal `MACRO` name may still be `RO4_TUNE`. The export script therefore records both source and output macro names and may create a controlled alias to `RO_tune4` when `O1_ALLOW_LEF_MACRO_ALIAS=1`.
+
 ## Known Mismatch
 
 The current post-synthesis netlist is not expected to instantiate `RO_tune4`. It instantiates synthesized logic derived from `mptdc_osc_stub`.
 
 This means loading `RO_tune4` LEF alone is insufficient. Innovus cannot place a hard `RO_tune4` macro unless the netlist has a matching master or a documented mapping/alias is applied.
+
+If the real LEF export succeeds but Genus still emits `mptdc_osc_stub_NE8*`, the next required patch is a guarded macro-binding RTL/synthesis change. Do not bypass this by disabling strict binding in the O1A wrappers.
 
 ## Pin Compatibility Unknowns
 

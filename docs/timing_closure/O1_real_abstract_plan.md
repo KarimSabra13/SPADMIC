@@ -23,6 +23,13 @@ Virtuoso property viewer data:
 
 This is OpenAccess data, not a LEF file. The O1A locator/export scripts must prove on the lab server that it exists, is readable, and can be exported or replaced by an existing LEF.
 
+Known user-provided LEF source:
+
+- `/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune4.lef`
+- Copied by the user from `/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/RO4_TUNE.lef`
+
+The O1 export script treats this as the primary real LEF source. If the LEF body still names the macro `RO4_TUNE`, the script creates a documented macro-name alias to `RO_tune4` for tool binding. This changes only the LEF macro name/FOREIGN/END records; it does not change geometry, pins, layers, or obstructions.
+
 ## Required Evidence
 
 The lab run must produce:

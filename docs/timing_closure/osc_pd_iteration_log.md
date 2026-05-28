@@ -100,6 +100,7 @@ Patch summary:
 - Reviewed committed O0 Genus/Innovus server results.
 - Added O1A real `SPADMIC/RO_tune4/abstract` locator/export collateral.
 - Added O1A Genus/Innovus wrappers that require real LEF and refuse silent provisional-LEF fallback.
+- Updated O1A export flow to use user-provided source LEF `/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune4.lef` and create a documented `RO_tune4` macro-name alias if the internal source macro is still `RO4_TUNE`.
 - Added macro-binding audit documenting current `mptdc_osc_stub` netlist mismatch.
 - Added O1B R800 STA/PnR what-if timing defines and wrappers.
 - Added conservative R800 Xcelium wrapper that blocks until analog-confirmed behavioral/tune data exists.

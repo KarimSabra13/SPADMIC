@@ -41,6 +41,8 @@ status=0
   echo "O1_RO_LIB_ROOT=$O1_RO_LIB_ROOT"
   echo "O1_RO_ABSTRACT_DIR=$O1_RO_ABSTRACT_DIR"
   echo "O1_RO_ABSTRACT_LAYOUT_OA=$O1_RO_ABSTRACT_LAYOUT_OA"
+  echo "O1_RO_SOURCE_LEF_PATH=${O1_RO_SOURCE_LEF_PATH:-unset}"
+  echo "O1_RO_EXTRA_LEF_DIR=${O1_RO_EXTRA_LEF_DIR:-unset}"
   echo
 
   if [[ -d "$O1_RO_LIB_ROOT" ]]; then
@@ -84,6 +86,13 @@ status=0
     echo "ABSTRACT_DIR_SEARCHABLE=no"
     status=1
   fi
+
+  if [[ -n "${O1_RO_SOURCE_LEF_PATH:-}" && -f "$O1_RO_SOURCE_LEF_PATH" ]]; then
+    echo "SOURCE_LEF_EXISTS=yes"
+    echo "SOURCE_LEF_READABLE=$([[ -r "$O1_RO_SOURCE_LEF_PATH" ]] && echo yes || echo no)"
+  else
+    echo "SOURCE_LEF_EXISTS=no"
+  fi
 } > "$RESULT_DIR/abstract_path_status.txt"
 
 cat "$RESULT_DIR/abstract_path_status.txt"
@@ -109,6 +118,16 @@ cat "$RESULT_DIR/abstract_path_status.txt"
          -o -iname "*RO_tune4*.lib" -o -iname "*.lib" \) -print | sort
   else
     echo "MISSING: $O1_RO_LIB_ROOT"
+  fi
+  if [[ -n "${O1_RO_EXTRA_LEF_DIR:-}" ]]; then
+    echo
+    echo "Searching extra LEF directory: $O1_RO_EXTRA_LEF_DIR"
+    if [[ -d "$O1_RO_EXTRA_LEF_DIR" ]]; then
+      find "$O1_RO_EXTRA_LEF_DIR" -maxdepth 3 \
+        \( -iname "*RO_tune4*.lef" -o -iname "*RO4*TUNE*.lef" -o -iname "*.lef" \) -print | sort
+    else
+      echo "MISSING: $O1_RO_EXTRA_LEF_DIR"
+    fi
   fi
 } > "$RESULT_DIR/nearby_lef_gds_lib_search.txt"
 

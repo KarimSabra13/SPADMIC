@@ -11,8 +11,19 @@ RESULT_DIR="$REPO_ROOT/results/osc_pd/$RUN_ID/real_abstract_lef"
 LOG="$RESULT_DIR/export.log"
 ENV_FILE="$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
 OUTPUT_LEF="$RESULT_DIR/RO_tune4_real_abstract.lef"
+SOURCE_COPY_LEF="$RESULT_DIR/RO_tune4_real_abstract.source.lef"
 
 mkdir -p "$RESULT_DIR"
+rm -f \
+  "$RESULT_DIR/lef_candidates.txt" \
+  "$RESULT_DIR/available_export_tools.txt" \
+  "$RESULT_DIR/RO_tune4_real_abstract.source.lef" \
+  "$RESULT_DIR/RO_tune4_real_abstract.lef" \
+  "$RESULT_DIR/lef_macro_summary.txt" \
+  "$RESULT_DIR/lef_pin_summary.csv" \
+  "$RESULT_DIR/lef_obs_summary.txt" \
+  "$RESULT_DIR/analog_designer_lef_request.md" \
+  "$RESULT_DIR/SUMMARY.md"
 exec > >(tee "$LOG") 2>&1
 
 echo "# O1 RO_tune4 LEF Export"
@@ -72,22 +83,55 @@ macro_name_from_lef() {
   awk '/^[[:space:]]*MACRO[[:space:]]+/ {print $2; exit}' "$1"
 }
 
+alias_lef_macro_name() {
+  local src="$1"
+  local dst="$2"
+  local old_macro="$3"
+  local new_macro="$4"
+  awk -v old="$old_macro" -v new="$new_macro" '
+    /^[[:space:]]*MACRO[[:space:]]+/ && $2 == old {$2 = new}
+    /^[[:space:]]*FOREIGN[[:space:]]+/ && $2 == old {$2 = new}
+    /^[[:space:]]*END[[:space:]]+/ && $2 == old {$2 = new}
+    {print}
+  ' "$src" > "$dst"
+}
+
 status=0
 reason=""
+selected_lef=""
+source_macro=""
+output_macro=""
+alias_created="NO"
 
 if [[ ! -d "$O1_RO_LIB_ROOT" ]]; then
-  status=2
-  reason="O1_RO_LIB_ROOT missing: $O1_RO_LIB_ROOT"
+  echo "WARNING: O1_RO_LIB_ROOT missing: $O1_RO_LIB_ROOT"
 elif [[ ! -d "$O1_RO_ABSTRACT_DIR" ]]; then
-  status=2
-  reason="O1_RO_ABSTRACT_DIR missing: $O1_RO_ABSTRACT_DIR"
+  echo "WARNING: O1_RO_ABSTRACT_DIR missing: $O1_RO_ABSTRACT_DIR"
+fi
+
+if [[ -n "${O1_RO_SOURCE_LEF_PATH:-}" && -f "$O1_RO_SOURCE_LEF_PATH" ]]; then
+  selected_lef="$O1_RO_SOURCE_LEF_PATH"
+  printf "%s\n" "$selected_lef" > "$RESULT_DIR/lef_candidates.txt"
 else
-  mapfile -t lef_candidates < <(find "$O1_RO_LIB_ROOT" -maxdepth 5 \
-    \( -iname "*RO_tune4*.lef" -o -iname "*.lef" \) -print | sort)
+  lef_search_roots=()
+  if [[ -n "${O1_RO_EXTRA_LEF_DIR:-}" && -d "$O1_RO_EXTRA_LEF_DIR" ]]; then
+    lef_search_roots+=("$O1_RO_EXTRA_LEF_DIR")
+  fi
+  if [[ -d "$O1_RO_LIB_ROOT" ]]; then
+    lef_search_roots+=("$O1_RO_LIB_ROOT")
+  fi
 
-  printf "%s\n" "${lef_candidates[@]}" > "$RESULT_DIR/lef_candidates.txt"
+  : > "$RESULT_DIR/lef_candidates.txt"
+  for root in "${lef_search_roots[@]}"; do
+    find "$root" -maxdepth 5 \
+      \( -iname "*RO_tune4*.lef" -o -iname "*RO4*TUNE*.lef" -o -iname "*.lef" \) -print >> "$RESULT_DIR/lef_candidates.txt"
+  done
+  sort -u "$RESULT_DIR/lef_candidates.txt" -o "$RESULT_DIR/lef_candidates.txt"
+fi
 
-  selected_lef=""
+if [[ -z "$selected_lef" ]]; then
+  mapfile -t lef_candidates < "$RESULT_DIR/lef_candidates.txt"
+
   for candidate in "${lef_candidates[@]}"; do
     if [[ "$(basename "$candidate")" == *RO_tune4* ]]; then
       selected_lef="$candidate"
@@ -97,18 +141,38 @@ else
   if [[ -z "$selected_lef" && ${#lef_candidates[@]} -gt 0 ]]; then
     selected_lef="${lef_candidates[0]}"
   fi
+fi
 
-  if [[ -n "$selected_lef" ]]; then
-    echo "Found existing LEF candidate: $selected_lef"
-    cp "$selected_lef" "$OUTPUT_LEF"
-    extract_lef_summaries "$OUTPUT_LEF"
-    macro_name="$(macro_name_from_lef "$OUTPUT_LEF")"
-    if [[ "$macro_name" != "$O1_RO_CELL_NAME" ]]; then
-      status=3
-      reason="Existing LEF macro name '$macro_name' does not match expected '$O1_RO_CELL_NAME'"
-    fi
+if [[ -n "$selected_lef" ]]; then
+  echo "Using existing/source LEF candidate: $selected_lef"
+  cp "$selected_lef" "$SOURCE_COPY_LEF"
+  source_macro="$(macro_name_from_lef "$SOURCE_COPY_LEF")"
+  if [[ -z "$source_macro" ]]; then
+    status=3
+    reason="Selected LEF has no MACRO statement: $selected_lef"
+  elif [[ "$source_macro" == "$O1_RO_CELL_NAME" ]]; then
+    cp "$SOURCE_COPY_LEF" "$OUTPUT_LEF"
   else
-    echo "No existing LEF found under $O1_RO_LIB_ROOT"
+    if [[ "${O1_ALLOW_LEF_MACRO_ALIAS:-0}" == "1" ]]; then
+      echo "Creating documented LEF macro-name alias: $source_macro -> $O1_RO_CELL_NAME"
+      alias_lef_macro_name "$SOURCE_COPY_LEF" "$OUTPUT_LEF" "$source_macro" "$O1_RO_CELL_NAME"
+      alias_created="YES"
+    else
+      status=3
+      reason="Selected LEF macro name '$source_macro' does not match expected '$O1_RO_CELL_NAME' and aliasing is disabled"
+    fi
+  fi
+
+  if [[ -f "$OUTPUT_LEF" ]]; then
+    output_macro="$(macro_name_from_lef "$OUTPUT_LEF")"
+    extract_lef_summaries "$OUTPUT_LEF"
+    if [[ "$output_macro" != "$O1_RO_CELL_NAME" ]]; then
+      status=3
+      reason="Output LEF macro name '$output_macro' does not match expected '$O1_RO_CELL_NAME'"
+    fi
+  fi
+else
+    echo "No existing LEF found in explicit/source/search paths"
     {
       echo "Available tool probes:"
       for tool in abstract virtuoso si lefout; do
@@ -150,7 +214,6 @@ else
         echo "- pin layers/shapes/coordinates"
       } > "$RESULT_DIR/analog_designer_lef_request.md"
     fi
-  fi
 fi
 
 if [[ -f "$OUTPUT_LEF" && ! -f "$RESULT_DIR/lef_macro_summary.txt" ]]; then
@@ -163,12 +226,20 @@ fi
   echo "- Run ID: \`$RUN_ID\`"
   echo "- Git HEAD: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)\`"
   echo "- OA abstract: \`$O1_RO_ABSTRACT_DIR\`"
+  echo "- Selected source LEF: \`${selected_lef:-none}\`"
+  echo "- Source LEF macro: \`${source_macro:-unknown}\`"
   echo "- Output LEF: \`$OUTPUT_LEF\`"
+  echo "- Output LEF macro: \`${output_macro:-unknown}\`"
+  echo "- LEF alias created: \`$alias_created\`"
   echo
   if [[ $status -eq 0 ]]; then
     echo "LEF_EXPORT_STATUS=PASS"
     echo "O1A_REAL_ABSTRACT_RUN_BLOCKED=NO"
     echo "O1_RO_LEF_PATH=$OUTPUT_LEF"
+    echo "O1_RO_SOURCE_LEF_PATH=${selected_lef:-none}"
+    echo "O1_RO_SOURCE_MACRO=${source_macro:-unknown}"
+    echo "O1_RO_OUTPUT_MACRO=${output_macro:-unknown}"
+    echo "LEF_ALIAS_CREATED=$alias_created"
     if command -v sha256sum >/dev/null 2>&1; then
       echo "LEF_SHA256=$(sha256sum "$OUTPUT_LEF" | awk '{print $1}')"
     fi
@@ -179,7 +250,7 @@ fi
   fi
   echo
   echo "Files:"
-  for file in lef_candidates.txt available_export_tools.txt RO_tune4_real_abstract.lef lef_macro_summary.txt lef_pin_summary.csv lef_obs_summary.txt analog_designer_lef_request.md; do
+  for file in lef_candidates.txt available_export_tools.txt RO_tune4_real_abstract.source.lef RO_tune4_real_abstract.lef lef_macro_summary.txt lef_pin_summary.csv lef_obs_summary.txt analog_designer_lef_request.md; do
     if [[ -f "$RESULT_DIR/$file" ]]; then
       echo "- present: \`$file\`"
     else
