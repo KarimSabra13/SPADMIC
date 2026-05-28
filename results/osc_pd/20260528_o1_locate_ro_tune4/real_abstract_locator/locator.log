@@ -1,0 +1,30 @@
+# O1 RO_tune4 Abstract Locator
+date: 2026-05-28T11:08:47+02:00
+hostname: lyoelectrosrv01.in2p3.fr
+repo: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+branch: SPADMIC_TOP
+head: ccf5b21026b07e1e10899fb5ddc27302c9cbad07
+
+O1_RO_LIB_NAME=SPADMIC
+O1_RO_CELL_NAME=RO_tune4
+O1_RO_VIEW_NAME=abstract
+O1_RO_LIB_ROOT=/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL
+O1_RO_ABSTRACT_DIR=/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/RO_tune4/abstract
+O1_RO_ABSTRACT_LAYOUT_OA=/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/RO_tune4/abstract/layout.oa
+
+LIB_ROOT_EXISTS=yes
+ABSTRACT_DIR_EXISTS=yes
+LAYOUT_OA_EXISTS=yes
+MASTER_TAG_EXISTS=yes
+ABSTRACT_DIR_READABLE=yes
+ABSTRACT_DIR_SEARCHABLE=yes
+# O1 Real Abstract Locator Summary
+
+- Run ID: `20260528_o1_locate_ro_tune4`
+- Git HEAD: `ccf5b21026b07e1e10899fb5ddc27302c9cbad07`
+- Abstract directory: `/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/RO_tune4/abstract`
+- layout.oa: `/group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/RO_tune4/abstract/layout.oa`
+- Status file: `abstract_path_status.txt`
+- Nearby file search: `nearby_lef_gds_lib_search.txt`
+
+LOCATOR_STATUS=PASS
