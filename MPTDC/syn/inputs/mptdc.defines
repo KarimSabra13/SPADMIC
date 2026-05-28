@@ -110,7 +110,7 @@ if {[info exists ::env(MPTDC_USE_RO_TUNE4_MACRO)] && $::env(MPTDC_USE_RO_TUNE4_M
 
     set design(OSC_SLOW_ANALOG_PINS) [list rstb {code[7:0]} {S[7:0]} VDD VSS {vdd!}]
     set design(OSC_FAST_ANALOG_PINS) [list rstb {code[7:0]} {S[7:0]} VDD VSS {vdd!}]
-    puts "MPTDC_DEFINES_INFO: O1C RO_tune4 macro mode enabled; oscillator tap clocks use u_ro_tune4/S[0:7]"
+    puts {MPTDC_DEFINES_INFO: O1C RO_tune4 macro mode enabled; oscillator tap clocks use u_ro_tune4/S[0:7]}
 }
 
 # Production SPADMIC integration consumes the acquisition-record stream and uses

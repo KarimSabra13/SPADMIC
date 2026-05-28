@@ -282,3 +282,26 @@ Next action:
 
 - Human runs `docs/timing_closure/SERVER_RUN_REQUEST_O1C_MACRO_BINDING.md` on
   the lab server after this patch is pushed.
+
+### O1C Tcl quote fix
+
+The first O1C server attempt stopped while sourcing `mptdc.defines`:
+
+```text
+invalid command name "0:7"
+```
+
+Root cause:
+
+- A Genus/Tcl `puts` message used double quotes around the literal text
+  `S[0:7]`.
+- Tcl treated `[0:7]` as command substitution.
+
+Fix:
+
+- Changed the O1C status `puts` in `MPTDC/syn/inputs/mptdc.defines` to use
+  braces, preserving literal `S[0:7]`.
+
+Server action:
+
+- Pull the quote-fix commit and rerun the same O1C Genus command.
