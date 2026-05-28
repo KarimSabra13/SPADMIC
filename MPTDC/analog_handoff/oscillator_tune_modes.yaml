@@ -1,0 +1,42 @@
+# O1 oscillator tune/frequency modes.
+# Values marked TBD must come from analog extracted simulations before they are
+# used as calibration-safe timing constants.
+
+nominal:
+  slow_period_ns: 1.000
+  fast_period_ns: 0.900
+  slow_tap_step_ns: 0.055
+  fast_tap_step_ns: 0.050
+  delta_tap_ns: 0.005
+  status: current
+  notes: "Matches current SDC timing variables."
+
+r800_period_delta_whatif:
+  slow_period_ns: 1.250
+  fast_period_ns: 1.150
+  slow_tap_step_ns: 0.055
+  fast_tap_step_ns: 0.050
+  delta_tap_ns: 0.005
+  preserve: oscillator_period_delta
+  status: what_if_only
+  reason: "Preserves old 0.100 ns oscillator-period separation but does not prove analog Vernier tap delta or calibration safety."
+
+r800_vernier_delta_preferred:
+  slow_period_ns: 1.250
+  fast_period_ns: TBD_FROM_ANALOG
+  slow_tap_step_ns: TBD_FROM_ANALOG
+  fast_tap_step_ns: TBD_FROM_ANALOG
+  delta_tap_ns: 0.005
+  status: blocked_until_analog_tune_table
+  required_analog_data:
+    - slow_800mhz_tune_code
+    - paired_fast_tune_code
+    - extracted_slow_tap_delay_per_tap
+    - extracted_fast_tap_delay_per_tap
+    - delta_tap_over_pvt
+    - output_slew_under_extracted_pd_load
+    - jitter_under_extracted_pd_load
+    - startup_time
+    - max_allowed_tap_load
+    - slow_fast_same_abstract_confirmation
+    - slow_fast_identical_pin_order_confirmation

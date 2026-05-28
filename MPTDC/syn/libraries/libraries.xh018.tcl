@@ -78,6 +78,27 @@ if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE
     }
 }
 
+# O1 real-abstract track: use a lab-server exported LEF from the real
+# SPADMIC/RO_tune4/abstract OA view.  This is intentionally independent of the
+# O0 provisional LEF switch so O1A cannot silently fall back to placeholder
+# macro geometry.  The server wrappers verify the file before the tool starts.
+if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
+    set tech(OSC_REAL_RO_MACRO) "RO_tune4"
+    set tech(OSC_SLOW_MACRO_REAL) "RO_tune4"
+    set tech(OSC_FAST_MACRO_REAL) "RO_tune4"
+    if {[info exists ::env(O1_RO_LEF_PATH)] && $::env(O1_RO_LEF_PATH) ne ""} {
+        set tech_files(O1_RO_TUNE4_REAL_LEF) $::env(O1_RO_LEF_PATH)
+        if {[file exists $tech_files(O1_RO_TUNE4_REAL_LEF)]} {
+            lappend tech_files(ALL_LEFS) $tech_files(O1_RO_TUNE4_REAL_LEF)
+            puts "MPTDC_LIB_INFO: enabling O1 real RO_tune4 LEF $tech_files(O1_RO_TUNE4_REAL_LEF)"
+        } else {
+            puts "MPTDC_LIB_WARN: O1_RO_LEF_PATH does not exist: $tech_files(O1_RO_TUNE4_REAL_LEF)"
+        }
+    } else {
+        puts "MPTDC_LIB_WARN: O1_USE_REAL_RO_ABSTRACT is set but O1_RO_LEF_PATH is empty"
+    }
+}
+
 #############################################
 #       Parasitic Extraction (QRC)
 #############################################

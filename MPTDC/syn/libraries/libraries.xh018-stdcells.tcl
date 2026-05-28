@@ -78,7 +78,15 @@ if {[file exists $tech_files(MPTDC_OSC_BB_LIB)]} {
     lappend tech_files(ALL_BC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
 }
 
+set mptdc_enable_provisional_osc_liberty 0
 if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE_PROVISIONAL)} {
+    set mptdc_enable_provisional_osc_liberty 1
+}
+if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL_LIBERTY)] && $::env(MPTDC_OSC_PD_USE_PROVISIONAL_LIBERTY)} {
+    set mptdc_enable_provisional_osc_liberty 1
+}
+
+if {$mptdc_enable_provisional_osc_liberty} {
     foreach key_file [list \
         [list MPTDC_OSC_SLOW_PROVISIONAL_LIB "$design(project_root)/syn/macros/mptdc_osc_slow_provisional.lib"] \
         [list MPTDC_OSC_FAST_PROVISIONAL_LIB "$design(project_root)/syn/macros/mptdc_osc_fast_provisional.lib"] \
@@ -94,6 +102,22 @@ if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE
         } else {
             puts "MPTDC_LIB_WARN: requested provisional oscillator Liberty missing: $lib_file"
         }
+    }
+}
+
+# Optional real/characterized oscillator Liberty.  O1 normally uses the
+# provisional Liberty shell with real LEF until analog timing/electrical views
+# are delivered; this hook lets the lab server select a real Liberty without
+# editing the flow scripts.
+if {[info exists ::env(O1_RO_LIBERTY_PATH)] && $::env(O1_RO_LIBERTY_PATH) ne ""} {
+    set tech_files(O1_RO_TUNE4_REAL_LIB) $::env(O1_RO_LIBERTY_PATH)
+    if {[file exists $tech_files(O1_RO_TUNE4_REAL_LIB)]} {
+        lappend tech_files(ALL_TC_LIBS) $tech_files(O1_RO_TUNE4_REAL_LIB)
+        lappend tech_files(ALL_WC_LIBS) $tech_files(O1_RO_TUNE4_REAL_LIB)
+        lappend tech_files(ALL_BC_LIBS) $tech_files(O1_RO_TUNE4_REAL_LIB)
+        puts "MPTDC_LIB_INFO: enabling O1 real RO_tune4 Liberty $tech_files(O1_RO_TUNE4_REAL_LIB)"
+    } else {
+        puts "MPTDC_LIB_WARN: O1_RO_LIBERTY_PATH does not exist: $tech_files(O1_RO_TUNE4_REAL_LIB)"
     }
 }
 

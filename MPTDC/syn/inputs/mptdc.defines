@@ -187,6 +187,21 @@ set design(SUPPRESS_MESSAGES_GENUS) [list]
 # lappend design(SUPPRESS_MESSAGES_GENUS) "CDFG-760"
 
 #############################################
+#       Optional Frequency Mode Overlay
+#############################################
+# O1B uses this hook to override only the synthesis/PnR timing variables before
+# MMMC/SDC files are read.  It does not change RTL packet semantics or the
+# calibration field definitions.  The behavioral oscillator model remains
+# nominal unless a separate simulation compile mode is explicitly added.
+if {[info exists ::env(MPTDC_FREQ_MODE_DEFINES)] && $::env(MPTDC_FREQ_MODE_DEFINES) ne ""} {
+    if {[file exists $::env(MPTDC_FREQ_MODE_DEFINES)]} {
+        source $::env(MPTDC_FREQ_MODE_DEFINES)
+    } else {
+        puts "MPTDC_DEFINES_WARN: MPTDC_FREQ_MODE_DEFINES not found: $::env(MPTDC_FREQ_MODE_DEFINES)"
+    }
+}
+
+#############################################
 #       Print values to debug file
 #############################################
 if {[info exists debug_file]} {

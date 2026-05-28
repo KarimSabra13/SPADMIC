@@ -1,0 +1,55 @@
+# =============================================================================
+# O1B MPTDC frequency-mode overrides
+# =============================================================================
+# This file is sourced from mptdc.defines only when the environment variable
+# MPTDC_FREQ_MODE_DEFINES points at it.  It changes STA/PnR timing variables
+# only.  It does not change RTL packet semantics or raw calibration fields.
+# =============================================================================
+
+if {[info exists ::env(MPTDC_FREQ_MODE)] && $::env(MPTDC_FREQ_MODE) ne ""} {
+    set design(FREQ_MODE) $::env(MPTDC_FREQ_MODE)
+} else {
+    set design(FREQ_MODE) "nominal"
+}
+
+set design(FREQ_MODE_STATUS) "current"
+set design(FREQ_MODE_CALIBRATION_SAFE) "unknown"
+
+if {$design(FREQ_MODE) eq "nominal"} {
+    set design(FREQ_MODE_STATUS) "current"
+    set design(FREQ_MODE_CALIBRATION_SAFE) "yes_current_nominal_model"
+} elseif {$design(FREQ_MODE) eq "r800_period_delta_whatif"} {
+    set design(OSC_SLOW_PERIOD) 1.250
+    set design(OSC_FAST_PERIOD) 1.150
+    # Keep nominal tap steps for this what-if.  This preserves the SDC tap
+    # delta numerically, but does not prove analog tune-code feasibility.
+    set design(OSC_SLOW_TAP_STEP) 0.055
+    set design(OSC_FAST_TAP_STEP) 0.050
+    set design(FREQ_MODE_STATUS) "STA_PNR_WHAT_IF_ONLY"
+    set design(FREQ_MODE_CALIBRATION_SAFE) "no_requires_analog_tune_table"
+} elseif {$design(FREQ_MODE) eq "r800_vernier_delta_preferred"} {
+    foreach required_var {O1_R800_FAST_PERIOD_NS O1_R800_SLOW_TAP_STEP_NS O1_R800_FAST_TAP_STEP_NS} {
+        if {![info exists ::env($required_var)] || $::env($required_var) eq ""} {
+            error "MPTDC_FREQ_MODE r800_vernier_delta_preferred requires $required_var from analog tune table"
+        }
+    }
+    set design(OSC_SLOW_PERIOD) 1.250
+    set design(OSC_FAST_PERIOD) $::env(O1_R800_FAST_PERIOD_NS)
+    set design(OSC_SLOW_TAP_STEP) $::env(O1_R800_SLOW_TAP_STEP_NS)
+    set design(OSC_FAST_TAP_STEP) $::env(O1_R800_FAST_TAP_STEP_NS)
+    set design(FREQ_MODE_STATUS) "ANALOG_VALUES_SUPPLIED_BY_ENV"
+    set design(FREQ_MODE_CALIBRATION_SAFE) "requires_post_run_analog_review"
+} else {
+    error "Unknown MPTDC_FREQ_MODE: $design(FREQ_MODE)"
+}
+
+set design(OSC_TAP_DELTA_NS) [expr {$design(OSC_SLOW_TAP_STEP) - $design(OSC_FAST_TAP_STEP)}]
+
+puts "MPTDC_FREQ_MODE_INFO: mode=$design(FREQ_MODE)"
+puts "MPTDC_FREQ_MODE_INFO: status=$design(FREQ_MODE_STATUS)"
+puts "MPTDC_FREQ_MODE_INFO: calibration_safe=$design(FREQ_MODE_CALIBRATION_SAFE)"
+puts "MPTDC_FREQ_MODE_INFO: slow_period_ns=$design(OSC_SLOW_PERIOD)"
+puts "MPTDC_FREQ_MODE_INFO: fast_period_ns=$design(OSC_FAST_PERIOD)"
+puts "MPTDC_FREQ_MODE_INFO: slow_tap_step_ns=$design(OSC_SLOW_TAP_STEP)"
+puts "MPTDC_FREQ_MODE_INFO: fast_tap_step_ns=$design(OSC_FAST_TAP_STEP)"
+puts "MPTDC_FREQ_MODE_INFO: tap_delta_ns=$design(OSC_TAP_DELTA_NS)"
