@@ -1,7 +1,7 @@
 ls -la /group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/RO_tune4/abstract
 total 56
 drwxr-xr-x 2 ebecheto validmgr  4096 May 26 15:16 .
-drwxr-xr-x 8 ebecheto validmgr  4096 May 26 15:16 ..
+drwxr-xr-x 8 ebecheto validmgr  4096 May 28 13:53 ..
 -rw-r--r-- 1 ebecheto validmgr 31284 May 26 15:16 layout.oa
 -rw-r--r-- 1 ebecheto validmgr    38 May 26 15:16 master.tag
 -rw-r--r-- 1 ebecheto validmgr 10680 May 26 15:16 thumbnail_800x800.png
