@@ -177,3 +177,108 @@ Decision:
 Next action:
 
 - Human runs `SERVER_RUN_REQUEST_O1_REAL_ABSTRACT.md` commands on lab server and commits pushed results.
+
+## O1C_macro_binding_fix_prep
+
+Iteration ID: O1C_macro_binding_fix_prep
+
+Git HEAD: pending local commit
+
+Branch: SPADMIC_TOP
+
+Patch summary:
+
+- Fixed LEF macro parsing so `PROPERTYDEFINITIONS` cannot be mistaken for a
+  physical macro block.
+- Added a Liberty shell for real `RO_tune4` logical binding.
+- Added guarded synthesis-only `MPTDC_USE_RO_TUNE4_MACRO` mode in
+  `mptdc_osc_wrapper`.
+- Mapped `RO_tune4.rstb` directly to oscillator enable/run input, not global
+  reset.
+- Added O1C SDC overlay and Genus server wrapper.
+- Documented the O1A binding failure and the fast-counter to `nfast_hit` timing
+  concern for post-binding analysis.
+
+Files changed:
+
+- `tools/timing/parse_lef_macros.py`
+- `tools/timing/test_parse_ro_tune4_lef.py`
+- `MPTDC/pnr/scripts/server_export_ro_tune4_lef.sh`
+- `MPTDC/rtl/osc/mptdc_osc_wrapper.sv`
+- `MPTDC/rtl/top/mptdc_core.sv`
+- `MPTDC/syn/filelist_o1c_macro_binding.f`
+- `MPTDC/syn/macros/RO_tune4_real_abstract_shell.lib`
+- `MPTDC/syn/inputs/mptdc.defines`
+- `MPTDC/syn/inputs/mptdc_osc_pd_o1c.sdc`
+- `MPTDC/syn/libraries/libraries.xh018.tcl`
+- `MPTDC/syn/scripts/server_run_genus_o1c_macro_binding.sh`
+- `docs/timing_closure/O1C_lef_parser_fix.md`
+- `docs/timing_closure/O1C_macro_binding_audit.md`
+- `docs/timing_closure/O1C_sdc_binding_notes.md`
+- `docs/timing_closure/O1C_fast_count_capture_analysis.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST_O1C_MACRO_BINDING.md`
+- `docs/timing_closure/osc_pd_iteration_log.md`
+
+Tool stage:
+
+- local Python syntax/checks
+- local Verilator lint/smoke attempted because RTL wrapper changed
+- Genus server request prepared
+
+Was this actually run by agent locally?
+
+- yes, local-only checks
+- no Cadence tools run locally
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- local command output in this Codex session
+- server evidence pending in `results/genus_osc_pd/20260528_o1c_macro_binding_genus/`
+
+O1A Genus review:
+
+- run available? yes
+- WNS: `-3163.0 ps` on `clk_osc_fast_tap1`
+- total TNS: `-1583170.0 ps`
+- violating paths: `697`
+- binding status: `NOT_BOUND_STILL_MPTDC_OSC_STUB`
+- dominant class: `OSC_FAST_REAL`
+- main conceptual path: fast counter to PD `nfast_hit_latched`
+
+O1C expected Genus result:
+
+- exactly two `RO_tune4` instances
+- no post-synthesis `mptdc_osc_stub` residue
+- generated clocks attached to `u_ro_tune4/S[0:7]`
+- real fast-domain paths remain visible
+
+Functional result:
+
+- normal simulation mode should remain unchanged
+- macro mode is synthesis-only and must be validated by Genus netlist inspection
+
+Timing result:
+
+- unknown until O1C Genus is run on the lab server
+
+Linearity/precision risk:
+
+- low for O1C binding if `S[0:7]` ordering and `rstb` run-control behavior are
+  correct
+- final signoff still blocked by analog tune code, load, slew, jitter, startup,
+  and tap-delay data
+
+Decision:
+
+- request O1C Genus only
+- Innovus remains blocked until binding succeeds
+- R800 remains blocked until O1C binding and analog tune data
+
+Next action:
+
+- Human runs `docs/timing_closure/SERVER_RUN_REQUEST_O1C_MACRO_BINDING.md` on
+  the lab server after this patch is pushed.

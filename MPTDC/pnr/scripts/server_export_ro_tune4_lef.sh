@@ -45,18 +45,26 @@ source "$ENV_FILE"
 extract_lef_summaries() {
   local lef="$1"
   awk '
-    /^[[:space:]]*MACRO[[:space:]]+/ {macro=$2; print "MACRO " macro}
-    /^[[:space:]]*CLASS[[:space:]]+/ {print}
-    /^[[:space:]]*ORIGIN[[:space:]]+/ {print}
-    /^[[:space:]]*SIZE[[:space:]]+/ {print}
-    /^[[:space:]]*SYMMETRY[[:space:]]+/ {print}
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {macro=$2; print "MACRO " macro; inmacro=1; next}
+    inmacro && /^[[:space:]]*CLASS[[:space:]]+/ {print}
+    inmacro && /^[[:space:]]*ORIGIN[[:space:]]+/ {print}
+    inmacro && /^[[:space:]]*SIZE[[:space:]]+/ {print}
+    inmacro && /^[[:space:]]*SYMMETRY[[:space:]]+/ {print}
+    inmacro && /^[[:space:]]*END[[:space:]]+/ && $2 == macro {inmacro=0}
   ' "$lef" > "$RESULT_DIR/lef_macro_summary.txt"
 
   {
     echo "macro,pin_name,direction,use,layer,rect"
     awk '
-      /^[[:space:]]*MACRO[[:space:]]+/ {macro=$2}
-      /^[[:space:]]*PIN[[:space:]]+/ {pin=$2; direction=""; use=""; layer=""; rect=""}
+      /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+      inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+      inprop {next}
+      /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {macro=$2; inmacro=1; next}
+      inmacro && /^[[:space:]]*END[[:space:]]+/ && $2 == macro {inmacro=0; next}
+      inmacro && /^[[:space:]]*PIN[[:space:]]+/ {pin=$2; direction=""; use=""; layer=""; rect=""}
       pin != "" && /^[[:space:]]*DIRECTION[[:space:]]+/ {direction=$2; gsub(/;/, "", direction)}
       pin != "" && /^[[:space:]]*USE[[:space:]]+/ {use=$2; gsub(/;/, "", use)}
       pin != "" && /^[[:space:]]*LAYER[[:space:]]+/ {layer=$2; gsub(/;/, "", layer)}
@@ -73,6 +81,9 @@ extract_lef_summaries() {
   } > "$RESULT_DIR/lef_pin_summary.csv"
 
   awk '
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
     /^[[:space:]]*OBS[[:space:]]*$/ {inobs=1; print; next}
     inobs {print}
     inobs && /^[[:space:]]*END[[:space:]]*$/ {inobs=0}
@@ -80,7 +91,12 @@ extract_lef_summaries() {
 }
 
 macro_name_from_lef() {
-  awk '/^[[:space:]]*MACRO[[:space:]]+/ {print $2; exit}' "$1"
+  awk '
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {print $2; exit}
+  ' "$1"
 }
 
 alias_lef_macro_name() {
@@ -89,9 +105,12 @@ alias_lef_macro_name() {
   local old_macro="$3"
   local new_macro="$4"
   awk -v old="$old_macro" -v new="$new_macro" '
-    /^[[:space:]]*MACRO[[:space:]]+/ && $2 == old {$2 = new}
-    /^[[:space:]]*FOREIGN[[:space:]]+/ && $2 == old {$2 = new}
-    /^[[:space:]]*END[[:space:]]+/ && $2 == old {$2 = new}
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; print; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; print; next}
+    inprop {print; next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ && $2 == old {$2 = new; inmacro=1}
+    inmacro && /^[[:space:]]*FOREIGN[[:space:]]+/ && $2 == old {$2 = new}
+    inmacro && /^[[:space:]]*END[[:space:]]+/ && $2 == old {$2 = new; inmacro=0}
     {print}
   ' "$src" > "$dst"
 }

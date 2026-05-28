@@ -80,6 +80,39 @@ set design(OSC_SLOW_ANALOG_PINS) [list start_i {ctrl_i[7:0]} {phase_o[7:0]} VDDA
 set design(OSC_FAST_ANALOG_PINS) [list stop_i  {ctrl_i[7:0]} {phase_o[7:0]} VDDA VSSA]
 set design(OSC_TOPOLOGY) "slow_north_pd_center_fast_south"
 
+# O1C real RO_tune4 macro-binding mode.  This only changes synthesis/PnR
+# timing pin names so clocks attach to the real macro pins.  Simulation keeps
+# using the normal wrapper/model path unless explicitly compiled otherwise.
+if {[info exists ::env(MPTDC_USE_RO_TUNE4_MACRO)] && $::env(MPTDC_USE_RO_TUNE4_MACRO)} {
+    set design(OSC_SLOW_PIN) {u_core/u_osc_slow/u_ro_tune4/S[0]}
+    set design(OSC_SLOW_TAP_PINS) [list \
+        {u_core/u_osc_slow/u_ro_tune4/S[0]} \
+        {u_core/u_osc_slow/u_ro_tune4/S[1]} \
+        {u_core/u_osc_slow/u_ro_tune4/S[2]} \
+        {u_core/u_osc_slow/u_ro_tune4/S[3]} \
+        {u_core/u_osc_slow/u_ro_tune4/S[4]} \
+        {u_core/u_osc_slow/u_ro_tune4/S[5]} \
+        {u_core/u_osc_slow/u_ro_tune4/S[6]} \
+        {u_core/u_osc_slow/u_ro_tune4/S[7]} \
+    ]
+
+    set design(OSC_FAST_PIN) {u_core/u_osc_fast/u_ro_tune4/S[0]}
+    set design(OSC_FAST_TAP_PINS) [list \
+        {u_core/u_osc_fast/u_ro_tune4/S[0]} \
+        {u_core/u_osc_fast/u_ro_tune4/S[1]} \
+        {u_core/u_osc_fast/u_ro_tune4/S[2]} \
+        {u_core/u_osc_fast/u_ro_tune4/S[3]} \
+        {u_core/u_osc_fast/u_ro_tune4/S[4]} \
+        {u_core/u_osc_fast/u_ro_tune4/S[5]} \
+        {u_core/u_osc_fast/u_ro_tune4/S[6]} \
+        {u_core/u_osc_fast/u_ro_tune4/S[7]} \
+    ]
+
+    set design(OSC_SLOW_ANALOG_PINS) [list rstb {code[7:0]} {S[7:0]} VDD VSS {vdd!}]
+    set design(OSC_FAST_ANALOG_PINS) [list rstb {code[7:0]} {S[7:0]} VDD VSS {vdd!}]
+    puts "MPTDC_DEFINES_INFO: O1C RO_tune4 macro mode enabled; oscillator tap clocks use u_ro_tune4/S[0:7]"
+}
+
 # Production SPADMIC integration consumes the acquisition-record stream and uses
 # one shared serializer at TOP level. Keep this enabled for backend production
 # synthesis so local per-axis narrow serializers are constant-trimmed; override
@@ -159,6 +192,10 @@ set design(synthesis_reports) "$design(reports_dir)/synthesis"
 # HDL source paths
 set design(hdl_search_paths)  [list $design(rtl_dir)]
 set design(read_hdl_list)     "$design(syn_root)/filelist_synth.f"
+if {[info exists ::env(MPTDC_READ_HDL_LIST)] && $::env(MPTDC_READ_HDL_LIST) ne ""} {
+    set design(read_hdl_list) $::env(MPTDC_READ_HDL_LIST)
+    puts "MPTDC_DEFINES_INFO: overriding HDL filelist with $design(read_hdl_list)"
+}
 
 # SDC and MMMC
 set design(functional_sdc)    "$design(inputs_dir)/mptdc.sdc"

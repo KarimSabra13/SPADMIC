@@ -381,7 +381,7 @@ module mptdc_core
   mptdc_osc_wrapper #(.NE(NE), .TS_STEP_PS(OSC_TS_SLOW_PS)) u_osc_slow (
     .en              (fe_osc_slow_en),
     .rst_n           (rst_sys_n),
-    .trim_i          (1'b0),
+    .trim_i          (8'h00),
     .phase           (slow_phase),
     .phase0_guard_o  (slow_phase0_guard),
     .phase7d_probe_o (slow_phase7d_probe)
@@ -391,7 +391,7 @@ module mptdc_core
   mptdc_osc_wrapper #(.NE(NE), .TS_STEP_PS(OSC_TS_FAST_PS)) u_osc_fast (
     .en              (fe_osc_fast_en),
     .rst_n           (rst_sys_n),
-    .trim_i          (1'b0),
+    .trim_i          (8'h00),
     .phase           (fast_phase),
     .phase0_guard_o  (/* unused */),
     .phase7d_probe_o (/* unused */)

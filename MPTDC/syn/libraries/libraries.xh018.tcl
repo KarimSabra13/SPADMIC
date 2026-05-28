@@ -201,6 +201,20 @@ set tech(OSC_PHASE_PINS)      [list {phase_o[0]} {phase_o[1]} {phase_o[2]} {phas
 set tech(OSC_SLOW_ENABLE_PIN) "start_i"
 set tech(OSC_FAST_ENABLE_PIN) "stop_i"
 
+if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
+    set tech(OSC_SLOW_MACRO)      "RO_tune4"
+    set tech(OSC_FAST_MACRO)      "RO_tune4"
+    set tech(OSC_VDD)             "VDD"
+    set tech(OSC_GND)             "VSS"
+    set tech(OSC_VDD_PINS)        [list VDD {vdd!}]
+    set tech(OSC_GND_PINS)        [list VSS]
+    set tech(OSC_CTRL_PINS)       [list {code[0]} {code[1]} {code[2]} {code[3]} {code[4]} {code[5]} {code[6]} {code[7]}]
+    set tech(OSC_PHASE_PINS)      [list {S[0]} {S[1]} {S[2]} {S[3]} {S[4]} {S[5]} {S[6]} {S[7]}]
+    set tech(OSC_SLOW_ENABLE_PIN) "rstb"
+    set tech(OSC_FAST_ENABLE_PIN) "rstb"
+    puts "MPTDC_LIB_INFO: O1 real RO_tune4 macro pin contract enabled"
+}
+
 #############################################
 #       CTS Routing Layers
 #############################################
