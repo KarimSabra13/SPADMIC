@@ -98,29 +98,7 @@ Ce point est fondamental, car il montre que l'information fine n'est pas issue d
     \label{fig:pd-matrix-heatmap}
 \end{figure}
 
-Cette représentation permet de lire immédiatement deux phénomènes. D'une part, les diagonales traduisent la progression régulière du rattrapage Vernier. D'autre part, la grille n'est pas uniformément peuplée lorsqu'on la projette sur l'axe des temps fins. Plusieurs couples distincts produisent des coefficients voisins, alors que d'autres intervalles restent vides.
-
-\section{Non-uniformité intrinsèque de la grille fine}
-
-La non-uniformité de la grille fine est une conséquence directe de la relation $11\,n_s - 10\,n_f$. Si l'on considère l'intervalle total théorique allant de $-70$ à $+77$, on obtient $148$ positions entières possibles. Or, seules $64$ positions sont effectivement atteignables avec les couples $(n_s,n_f)$ disponibles. La couverture réelle n'est donc que de \mbox{$64/148 \approx 43{,}2~\%$}.
-
-Cette propriété a plusieurs conséquences :
-\begin{itemize}
-    \item la grille fine contient des trous, donc des zones où aucune cellule ne correspond exactement à la valeur idéale ;
-    \item la densité des codes n'est pas constante, ce qui dégrade la linéarité brute ;
-    \item la distribution des erreurs dépend de la position dans la matrice, et pas seulement du bruit des oscillateurs.
-\end{itemize}
-
-La figure \ref{fig:fine-grid-coverage} remplace volontairement une représentation de densité par une table matricielle analytique. Chaque case y donne directement le coefficient fin $11\,n_s - 10\,n_f$ associé au couple de phases considéré. La lecture est immédiate : les $64$ couples physiques de la matrice ne couvrent que $64$ positions entières sur les $148$ positions de l'intervalle $[-70,77]$, ce qui laisse $84$ codes manquants.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.82\textwidth]{tdc/fine_grid_coverage.pdf}
-    \caption{Table analytique des coefficients fins $11\,n_s - 10\,n_f$ pour la matrice \mbox{$8\times8$}. Les $84$ codes manquants proviennent de la projection non uniforme de ces $64$ couples sur l'axe temporel fin.}
-    \label{fig:fine-grid-coverage}
-\end{figure}
-
-Ce point est particulièrement important pour la suite du rapport. La non-uniformité de la grille fine ne peut pas être \og corrigée \fg{} par une simple retouche RTL sans changer la topologie de l'architecture. En revanche, elle peut être fortement compensée par la calibration externe à l'ASIC, à condition d'exporter les bons observables et de conserver une sémantique de données stable.
+Cette représentation permet de lire immédiatement deux phénomènes. D'une part, les diagonales traduisent la progression régulière du rattrapage Vernier. D'autre part, la matrice \mbox{$8\times8$} ne projette pas ses cellules de manière uniforme sur l'axe temporel fin : plusieurs couples distincts produisent des coefficients voisins, alors que certains coefficients ne sont pas représentés. Cette propriété suffit ici comme point de vigilance théorique. Elle expliquera plus loin le choix d'exporter des observables riches et de confier la correction fine à une calibration externe, plutôt que d'introduire une correction matérielle prématurée dans le coeur ASIC.
 
 \section{Points de vigilance}
 

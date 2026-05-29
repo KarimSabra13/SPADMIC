@@ -1,0 +1,84 @@
+\documentclass[tikz,border=7pt]{standalone}
+\input{tdc_publication_style.tex}
+\usetikzlibrary{calc,fit,positioning}
+
+\definecolor{slowred}{HTML}{B84A4A}
+\definecolor{fastblue}{HTML}{315F8C}
+\definecolor{cleargray}{HTML}{6C737A}
+
+\tikzset{
+  mini/.style={
+    bloc,
+    minimum width=24mm,
+    minimum height=8.5mm,
+    font=\sffamily\scriptsize\bfseries,
+    inner sep=2pt
+  },
+  labeltag/.style={
+    etiquette,
+    font=\ttfamily\scriptsize,
+    inner sep=1.4pt
+  },
+  signal/.style={
+    -{Latex[length=2.1mm,width=1.3mm]},
+    draw=grisligne,
+    line width=0.95pt
+  },
+  slow/.style={signal,draw=slowred},
+  fast/.style={signal,draw=fastblue},
+  wave/.style={draw=grisligne,line width=0.85pt},
+  wslow/.style={wave,draw=slowred},
+  wfast/.style={wave,draw=fastblue},
+  wclear/.style={wave,draw=cleargray}
+}
+
+\newcommand{\pulsewave}[4]{%
+  \draw[#4] (#1,#2) -- ++(0.55,0) -- ++(0,0.38) -- ++(0.36,0) -- ++(0,-0.38) -- (#3,#2);
+}
+\newcommand{\latchwave}[5]{%
+  \draw[#5] (#1,#2) -- (#3,#2) -- (#3,{#2+0.38}) -- (#4,{#2+0.38}) -- (#4,#2) -- (16.95,#2);
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[titre,anchor=west] at (0.0,4.55) {Chemin direct des événements};
+\node[mini] (in) at (1.25,3.35) {START / STOP\\[-0.3mm]\ttfamily pads};
+\node[mini,draw=brunasync] (latch) at (4.10,3.35) {Verrous SR\\[-0.3mm]\ttfamily start/stop};
+\node[mini,draw=slowred] (slowen) at (6.95,4.15) {slow\_en\\[-0.3mm]\ttfamily anneau lent};
+\node[mini,draw=fastblue] (fasten) at (6.95,2.55) {fast\_en\\[-0.3mm]\ttfamily anneau rapide};
+
+\draw[signal] (in.east) -- node[labeltag,above=2pt] {fronts} (latch.west);
+\draw[slow] (latch.east) |- node[labeltag,above=2pt,pos=0.32,text=slowred] {start\_latched} (slowen.west);
+\draw[fast] (latch.east) |- node[labeltag,below=2pt,pos=0.32,text=fastblue] {stop\_latched} (fasten.west);
+\node[align=center,font=\sffamily\scriptsize,text=grisligne] at (3.95,1.35)
+{La capture ne traverse pas \texttt{clk\_sys} avant de lancer les anneaux.};
+
+\draw[grisligne!35] (8.4,0.55) -- (8.4,4.65);
+\node[titre,anchor=west] at (9.0,4.55) {Chronogramme simplifié};
+
+\foreach \y/\name in {4.05/START,3.45/start\_latched,2.85/slow\_en,2.25/STOP,1.65/stop\_latched,1.05/fast\_en,0.45/fe\_clear} {
+  \node[anchor=east,font=\ttfamily\scriptsize,text=grisligne] at (10.25,\y) {\name};
+  \draw[grisligne!25] (10.45,\y) -- (16.95,\y);
+}
+
+\foreach \x/\lab in {10.9/$t_s$,13.65/$t_p$,15.85/$t_c$} {
+  \draw[grisligne!35] (\x,0.20) -- (\x,4.25);
+  \node[font=\sffamily\tiny,text=grisligne] at (\x,0.02) {\lab};
+}
+
+\pulsewave{10.45}{4.05}{16.95}{wslow}
+\latchwave{10.45}{3.45}{10.9}{15.85}{wslow}
+\latchwave{10.45}{2.85}{10.9}{15.85}{wslow}
+
+\draw[wfast] (10.45,2.25) -- (13.65,2.25) -- ++(0,0.38) -- ++(0.36,0) -- ++(0,-0.38) -- (16.95,2.25);
+\latchwave{10.45}{1.65}{13.65}{15.85}{wfast}
+\latchwave{10.45}{1.05}{13.65}{15.85}{wfast}
+\draw[wclear] (10.45,0.45) -- (15.85,0.45) -- ++(0,0.38) -- ++(0.45,0) -- ++(0,-0.38) -- (16.95,0.45);
+
+\node[labeltag] at (12.10,3.78) {START lance le lent};
+\node[labeltag] at (14.55,2.68) {STOP lance le rapide};
+\node[labeltag] at (16.18,0.94) {clear};
+
+\end{tikzpicture}
+\end{document}

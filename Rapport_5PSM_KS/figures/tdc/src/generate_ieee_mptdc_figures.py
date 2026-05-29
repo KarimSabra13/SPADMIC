@@ -353,6 +353,14 @@ def generate_context_pipeline() -> None:
     compile_tikz_source("context_pipeline.tex", "context_pipeline")
 
 
+def generate_async_capture_timing() -> None:
+    compile_tikz_source("async_capture_timing.tex", "async_capture_timing")
+
+
+def generate_calibration_export_flow() -> None:
+    compile_tikz_source("calibration_export_flow.tex", "calibration_export_flow")
+
+
 def generate_mptdc_overview() -> None:
     compile_tikz_source("spadmic_architecture_lecture.tex", "mptdc_overview")
 
@@ -366,30 +374,7 @@ def generate_clock_domain_diagram() -> None:
 
 
 def generate_mptdc_block_diagram() -> None:
-    fig, ax = canvas("Hiérarchie mptdc_top_asic / mptdc_core", 15.0, 7.2)
-    domain(ax, 0.55, 1.0, 3.6, 5.5, "entrées pads / événements asynchrones")
-    domain(ax, 4.55, 1.0, 5.3, 5.5, "oscillateurs et matrice de mesure")
-    domain(ax, 10.25, 1.0, 4.2, 5.5, "contrôle et lecture clk_sys")
-    block(ax, 0.95, 5.05, 2.7, 0.65, "mux d'entrée", "SPAD ou CAL")
-    block(ax, 0.95, 3.65, 2.7, 0.75, "front-end asynchrone", "start_latched\nstop_latched")
-    block(ax, 4.95, 5.25, 1.9, 0.65, "anneau lent", "8 taps")
-    block(ax, 4.95, 4.0, 1.9, 0.65, "anneau rapide", "8 taps")
-    block(ax, 4.95, 2.55, 1.9, 0.65, "compteurs Gray", "Nslow,Nfast")
-    block(ax, 7.25, 3.8, 2.1, 1.0, "matrice PD 8 x 8", "PD_N=64", accent=True)
-    block(ax, 7.25, 2.3, 2.1, 0.8, "meas_ctrl", "clk_sys\nSNAPSHOT/COUNT")
-    block(ax, 10.65, 4.6, 3.25, 0.8, "banque contextes", "2 images figées")
-    block(ax, 10.65, 3.25, 3.25, 0.8, "contrôleur drain", "META/SCAN/EOC")
-    block(ax, 10.65, 1.9, 3.25, 0.8, "FIFO + narrow16", "ready/valid")
-    orth_arrow(ax, (3.65, 4.0), (4.95, 5.57), "START", kind="async")
-    orth_arrow(ax, (3.65, 4.0), (4.95, 4.32), "STOP", kind="async")
-    orth_arrow(ax, (6.85, 5.57), (7.25, 4.45), "phases lentes", kind="data")
-    orth_arrow(ax, (6.85, 4.32), (7.25, 4.1), "phases rapides", kind="data")
-    orth_arrow(ax, (6.85, 2.88), (7.25, 3.85), "compteurs", kind="data")
-    orth_arrow(ax, (8.3, 3.8), (8.3, 3.1), "any_hit", kind="control")
-    orth_arrow(ax, (9.35, 4.3), (10.65, 5.0), "image figée", kind="data")
-    orth_arrow(ax, (13.9, 4.95), (13.9, 4.05), "scan", kind="control")
-    orth_arrow(ax, (12.25, 3.25), (12.25, 2.7), "enregistrements", kind="data")
-    save(fig, "mptdc_block_diagram.pdf")
+    compile_tikz_source("mptdc_block_diagram.tex", "mptdc_block_diagram")
 
 
 def generate_async_frontend_fsm() -> None:
@@ -470,10 +455,8 @@ def generate_narrow16_tx_fsm() -> None:
         "S_IDLE": (1.75, 3.1, "attente META"),
         "S_HEADER": (3.85, 4.25, "émettre header"),
         "S_HIT_FETCH": (6.15, 4.25, "lire HIT"),
-        "S_HIT_CALC": (8.45, 4.25, "t_raw_ps"),
-        "S_HIT_W0": (10.75, 4.25, "émettre W0"),
-        "S_HIT_W1": (10.75, 2.15, "émettre W1"),
-        "S_HIT_W2": (8.45, 2.15, "FULL seul"),
+        "S_HIT_W0": (8.45, 4.25, "émettre W0"),
+        "S_HIT_W1": (10.75, 4.25, "émettre W1"),
         "S_EOC": (4.15, 2.15, "émettre EOC"),
     }
     for name, (x, y, act) in nodes.items():
@@ -481,13 +464,13 @@ def generate_narrow16_tx_fsm() -> None:
     orth_arrow(ax, (2.15, 3.35), (3.45, 4.0), "META valid")
     orth_arrow(ax, (4.32, 4.25), (5.68, 4.25), "hit_count>0")
     orth_arrow(ax, (6.62, 4.25), (7.98, 4.25), "HIT valid")
-    orth_arrow(ax, (8.92, 4.25), (10.28, 4.25), "calc done")
-    orth_arrow(ax, (10.75, 3.78), (10.75, 2.62), "accepted")
-    orth_arrow(ax, (10.28, 2.15), (8.92, 2.15), "FULL")
-    orth_arrow(ax, (7.98, 2.15), (4.62, 2.15), "last hit")
+    orth_arrow(ax, (8.92, 4.25), (10.28, 4.25), "accepted")
+    orth_arrow(ax, (10.75, 3.78), (4.62, 2.15), "last hit")
     orth_arrow(ax, (3.72, 2.15), (2.15, 2.85), "accepted")
-    orth_arrow(ax, (10.75, 1.68), (6.15, 3.78), "more hits", via=(11.8, 1.68))
+    orth_arrow(ax, (10.75, 3.78), (6.15, 3.78), "more hits", via=(11.8, 3.78))
     orth_arrow(ax, (3.85, 3.78), (4.15, 2.62), "hit_count==0")
+    ax.text(8.45, 1.25, "Protocole v2.7 fixe : aucun état W2,\naucune branche RAW_TIMESTAMP/FULL active.",
+            ha="center", va="center", fontsize=8.0, bbox=dict(fc="white", ec=GRAY_2, pad=3))
     save(fig, "narrow16_tx_fsm.pdf")
 
 
@@ -496,13 +479,13 @@ def generate_packet_format() -> None:
     ax.text(5.05, 5.15, "bits", ha="center", fontsize=8.2, family="monospace")
     for i in range(16):
         ax.text(0.7 + (i + 0.5) * 0.54, 4.92, f"{15-i}", ha="center", va="center", fontsize=6.4, family="monospace", color=GRAY_1)
-    bit_word(ax, 4.25, "En-tête", [(2, "10", "hdr"), (2, "ctx", "hdr"), (1, "phase0", "hdr"), (4, "hit_count", "hdr"), (4, "flags", "hdr"), (2, "mode", "hdr"), (1, "boundary", "hdr")])
+    bit_word(ax, 4.25, "En-tête v2.7", [(2, "10", "hdr"), (2, "ctx", "hdr"), (1, "phase0", "hdr"), (4, "hit_count", "hdr"), (4, "flags", "hdr"), (1, "sbi", "hdr"), (2, "rsvd", "rsvd")])
     bit_word(ax, 3.25, "Hit W0", [(1, "0", "rsvd"), (7, "nslow", "payload"), (7, "nfast_hit", "payload"), (1, "0", "rsvd")])
-    bit_word(ax, 2.25, "Hit W1 RAW_FEATURES", [(1, "0", "rsvd"), (4, "ns", "payload"), (4, "nf", "payload"), (4, "rsvd", "rsvd"), (3, "stop_disc", "payload")])
-    bit_word(ax, 1.25, "Hit W1 RAW_TIMESTAMP", [(16, "t_raw_ps[15:0]", "payload")])
-    bit_word(ax, 0.25, "EOC", [(2, "11", "eoc"), (14, "conv_id[13:0]", "eoc")])
-    ax.text(9.55, 2.55, "Le mode FULL ajoute\nun W2 supplémentaire :\nt_raw_ps[15:0]", ha="left", va="center", fontsize=8.2, family="monospace", bbox=dict(fc="white", ec=GRAY_2, pad=3))
-    save(fig, "packet_format_v23.pdf")
+    bit_word(ax, 2.25, "Hit W1", [(1, "0", "rsvd"), (4, "ns", "payload"), (4, "nf", "payload"), (4, "rsvd", "rsvd"), (3, "stop_disc", "payload")])
+    bit_word(ax, 1.25, "EOC", [(2, "11", "eoc"), (14, "conv_id[13:0]", "eoc")])
+    ax.text(9.55, 2.55, "sbi = slow_boundary_inc\nheader[1:0] réservés\nTaille = 2*hit_count + 2",
+            ha="left", va="center", fontsize=8.2, family="monospace", bbox=dict(fc="white", ec=GRAY_2, pad=3))
+    save(fig, "packet_format_v27.pdf")
 
 
 def generate_calibration_flow() -> None:
@@ -530,6 +513,8 @@ def main() -> None:
     generate_pd_matrix_heatmap()
     generate_fine_grid_coverage()
     generate_context_pipeline()
+    generate_async_capture_timing()
+    generate_calibration_export_flow()
     generate_mptdc_overview()
     generate_vernier_transition_map()
     generate_clock_domain_diagram()

@@ -22,9 +22,9 @@ Les métriques employées sont définies ici pour éviter toute ambiguïté : la
 Les résultats numériques de ce chapitre proviennent du flot final exécuté avec \textit{Xcelium} :
 \begin{center}
 \small\texttt{MPTDC/scripts/sim/run\_report\_flow.sh --sim xrun --jobs 24}\\
-\small\texttt{--rebuild --out-dir /sim/ksabra/mptdc\_final\_characterization}
+\small\texttt{--rebuild --out-dir /sim/ksabra/mptdc\_final\_protocol\_v27\_boundaryfix}
 \end{center}
-Les figures publiées dans ce chapitre sont les exports PDF du répertoire \texttt{Rapport\_5PSM\_KS/figures/tdc/final\_mptdc}. Les résumés JSON et tables légères sont archivés dans \texttt{Rapport\_5PSM\_KS/data/mptdc\_final\_characterization}. Aucun fichier CSV brut lourd n'est intégré au dépôt.
+Les artefacts sources sont archivés dans le bundle versionné \texttt{MPTDC/report\_artifacts}. Les figures publiées sont les exports finaux du flot \texttt{generate\_report\_plots.py}, réutilisés dans le répertoire \texttt{Rapport\_5PSM\_KS/figures/tdc/final\_mptdc}. Aucun fichier CSV brut lourd de campagne n'est intégré au dépôt.
 
 \begin{table}[H]
     \centering
@@ -60,12 +60,13 @@ L'architecture n'exporte pas uniquement un timestamp brut. Elle fournit une imag
         \texttt{ns\_inf}, \texttt{nf\_inf} & inférés depuis \texttt{t\_raw\_ps} & indices de phase lente et rapide ; les \num{64} combinaisons actives sont distinguables dans l'algèbre Vernier \\
         \texttt{nslow} & paquet META / W0 & compteur grossier lent à la frontière de mesure \\
         \texttt{nfast\_hit} & cellule PD active & compteur rapide local capturé au moment du hit de phase \\
-        \texttt{stop\_phase\_disc} & paquet RAW\_FEATURES / FULL & discriminateur \SI{3}{\bit} de secteur lent au front \texttt{STOP} \\
+        \texttt{stop\_phase\_disc} & paquet v2.7, \texttt{W1[2:0]} & discriminateur \SI{3}{\bit} de secteur lent au front \texttt{STOP} \\
         \texttt{phase0\_snap} & en-tête de paquet & classe binaire de frontière grossière/fine \\
+        \texttt{slow\_boundary\_inc} & en-tête v2.7, \texttt{header[2]} & report du cas rare où la frontière lente impose une correction grossière d'un pas \\
         \texttt{hit\_idx} & ordre d'export CSV & ordre de paquetisation du hit, pas ordre chronologique physique \\
         \bottomrule
     \end{tabularx}
-    \caption{Clé observable utilisée par la LUT de correction moyenne. La clé maintenue comporte \num{7} champs et prolonge la LUT 6D historique par les informations de discrimination de frontière et de paquetisation.}
+    \caption{Observables exportées ou dérivées pour la correction moyenne. La clé LUT maintenue comporte \num{7} champs ; \texttt{slow\_boundary\_inc} reste indispensable en amont pour reconstruire \texttt{t\_raw\_ps} et inférer correctement les indices de phase.}
     \label{tab:calib-observables}
 \end{table}
 
@@ -78,13 +79,15 @@ La méthode publiée est donc une LUT de correction moyenne indexée par :
 \]
 L'entraînement final construit \num{9946} classes de LUT, avec une population médiane de \num{3664} échantillons par classe. Ce point est important : la correction n'est pas une interpolation visuelle sur quelques points, mais une statistique extraite de \num{36000000} lignes d'apprentissage.
 
+La campagne boundary-fix confirme que \texttt{slow\_boundary\_inc} est bien présent dans les paquets maintenus : sur la validation tenue hors apprentissage, \num{11025} lignes portent ce bit à $1$, soit \SI{0.1225}{\percent}. Cette proportion est faible, mais suffisante pour créer des erreurs grossières si le bit n'est pas visible côté hôte. Le protocole v2.7 le conserve donc dans \texttt{header[2]} sans augmenter le nombre de mots transmis.
+
 \section{Structure brute avant correction}
 
 Avant calibration, la reconstruction brute présente un biais systématique important. Sur le sweep large \texttt{RAW\_FEATURES}, l'erreur moyenne vaut \SI{-1895.77}{\pico\second}, l'écart-type vaut \SI{412.49}{\pico\second} et la RMSE atteint \SI{1940.13}{\pico\second}. Le pic de non-linéarité différentielle (DNL, \textit{Differential Non-Linearity}) observable est de \textbf{1.000 LSB} dans cette analyse large, tandis que le pic de non-linéarité intégrale (INL, \textit{Integral Non-Linearity}) atteint \textbf{89.190 LSB}. Ces valeurs ne sont pas la précision finale ; elles justifient le besoin de correction hors ASIC.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.90\textwidth]{tdc/final_mptdc/04_dnl_inl_observable.pdf}
+    \includegraphics[width=0.90\textwidth]{tdc/final_mptdc/04_dnl_inl_observable.png}
     \caption{DNL/INL observables sur la campagne de linéarité focalisée. Sur les codes atteints, le pic DNL vaut \textbf{0.987 LSB} et le pic INL aux extrémités vaut \textbf{1.553 LSB}. Les \num{2696} emplacements non observés reflètent la parcimonie de la grille brute, pas une perte de paquets.}
     \label{fig:char-dnl-inl}
 \end{figure}
@@ -112,14 +115,14 @@ La validation publiée utilise \num{6} graines tenues hors apprentissage. Après
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/01_erreur_histogramme_pre_post_lut.pdf}
+    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/01_erreur_histogramme_pre_post_lut.png}
     \caption{Distribution de l'erreur temporelle avant et après correction LUT. La correction supprime le biais de l'ordre de \SI{1.9}{\nano\second} et recentre l'erreur autour de \SI{0}{\pico\second}.}
     \label{fig:calibration-error-hist}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/02_cdf_erreur_absolue_post_lut.pdf}
+    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/02_cdf_erreur_absolue_post_lut.png}
     \caption{Fonction de répartition cumulative (CDF, \textit{Cumulative Distribution Function}) de l'erreur absolue après correction. Le percentile 99 publié est \SI{38.994}{\pico\second}.}
     \label{fig:post-lut-abs-error-cdf}
 \end{figure}
@@ -152,7 +155,7 @@ Le flot final inclut une étude de moyennage réalisée côté analyse sur le ba
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/03_rmse_vs_moyennage.pdf}
+    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/03_rmse_vs_moyennage.png}
     \caption{Réduction statistique de la RMSE, de la MAE et du P90 par moyennage. Le tracé est en échelle logarithmique sur $N$ afin de rendre visibles les régimes $N=1$ à $N=1000$.}
     \label{fig:multihit-averaging}
 \end{figure}
@@ -165,7 +168,7 @@ La linéarité de transfert complète mesure la relation entre le temps vrai moy
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/05_linearite_transfert.pdf}
+    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/05_linearite_transfert.png}
     \caption{Linéarité de transfert brute. La pente ajustée proche de \num{1.000355} montre que l'échelle globale est correcte, tandis que l'INL de transfert aux extrémités de \textbf{35.907 LSB} quantifie les résidus de structure avant correction statistique fine.}
     \label{fig:transfer-linearity}
 \end{figure}
@@ -178,7 +181,7 @@ Les frontières temporelles sont le point le plus sensible de l'architecture, ca
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.84\textwidth]{tdc/final_mptdc/06_boundary_offset_sweep.pdf}
+    \includegraphics[width=0.84\textwidth]{tdc/final_mptdc/06_boundary_offset_sweep.png}
     \caption{Stress des offsets autour de la frontière lente. La figure sépare RMS brut et biais moyen afin de montrer que le problème de frontière est traité comme une classe statistique mesurable, et non comme un cas masqué.}
     \label{fig:boundary-error-offset}
 \end{figure}

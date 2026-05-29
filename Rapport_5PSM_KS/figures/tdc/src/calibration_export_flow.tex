@@ -1,0 +1,70 @@
+\documentclass[tikz,border=8pt]{standalone}
+\input{tdc_publication_style.tex}
+\usetikzlibrary{backgrounds,fit,positioning}
+
+\definecolor{asicbg}{HTML}{E8F0F8}
+\definecolor{hostbg}{HTML}{E6F3EA}
+
+\tikzset{
+  flowblock/.style={
+    bloc,
+    minimum width=30mm,
+    minimum height=10mm,
+    font=\sffamily\small\bfseries,
+    inner sep=2.5pt
+  },
+  labeltag/.style={
+    etiquette,
+    font=\sffamily\footnotesize,
+    inner sep=1.4pt
+  },
+  dataarrow/.style={
+    -{Latex[length=2.4mm,width=1.6mm]},
+    draw=bleuacier,
+    line width=1.35pt
+  },
+  zone/.style={
+    rounded corners=4pt,
+    draw=grisligne!35,
+    line width=0.65pt,
+    fill=#1,
+    fill opacity=0.45,
+    inner sep=6mm
+  }
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[flowblock] (ctx) at (1.35,2.0)
+{Image contexte\\[-0.3mm]\ttfamily ns,nf,nslow};
+\node[flowblock] (rec) at (4.90,2.0)
+{Records\\[-0.3mm]\ttfamily META / HIT};
+\node[flowblock] (pkt) at (8.45,2.0)
+{Trame compacte\\[-0.3mm]\ttfamily 16 bit};
+\node[flowblock] (host) at (12.85,2.0)
+{Décodeur hôte\\[-0.3mm]\ttfamily observables};
+\node[flowblock] (lut) at (16.40,2.0)
+{LUT externe\\[-0.3mm]\ttfamily temps corrigé};
+
+\begin{pgfonlayer}{background}
+  \node[zone=asicbg,fit=(ctx)(rec)(pkt),label={[titre]above:Dans l'ASIC}] {};
+  \node[zone=hostbg,fit=(host)(lut),label={[titre]above:Hors ASIC}] {};
+\end{pgfonlayer}
+
+\draw[grisligne!55,densely dashed,line width=0.9pt] (10.62,0.75) -- (10.62,3.15);
+
+\draw[dataarrow] (ctx.east) -- (rec.west);
+\node[labeltag] at (3.12,2.34) {scan};
+\draw[dataarrow] (rec.east) -- (pkt.west);
+\node[labeltag] at (6.68,2.58) {mise en paquet};
+\draw[dataarrow] (pkt.east) -- (host.west);
+\node[labeltag] at (10.62,2.34) {flux TX};
+\draw[dataarrow] (host.east) -- (lut.west);
+\node[labeltag] at (14.62,2.58) {observables};
+
+\node[align=center,font=\sffamily\small,text=grisligne] at (8.85,0.55)
+{Le silicium exporte une trame compacte ; le décodage et la correction restent hors circuit.};
+
+\end{tikzpicture}
+\end{document}

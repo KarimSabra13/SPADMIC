@@ -1,0 +1,34 @@
+\chapter{Conclusion, limites et perspectives}
+\label{chap:conclusion-perspectives}
+\justifying
+\sloppy
+
+\section{Bilan technique}
+
+Le travail présenté dans ce rapport montre le passage d'un principe Vernier multiphase vers une implémentation \textbf{RTL} exploitable dans le contexte \textbf{SPADMIC}. Le cœur \textbf{MPTDC} actif conserve l'idée centrale de la thèse, c'est-à-dire l'utilisation de deux oscillateurs proches et d'une matrice de phase, mais il l'organise autour d'une architecture intégrable : capture asynchrone \texttt{START}/\texttt{STOP}, matrice \mbox{$8\times8$}, double contexte, drain en \texttt{clk\_sys}, FIFO synchrone, sérialiseur \SI{16}{\bit} et watchdogs.
+
+Le protocole de sortie a également été figé. La version maintenue est le paquet \texttt{raw\_features}/v2.7 : un en-tête, deux mots par hit, puis un mot de fin de conversion. Les anciens codes \texttt{RAW\_TIMESTAMP} et \texttt{FULL} ne sont plus des formats actifs concurrents. Le bit \texttt{slow\_boundary\_inc}, restauré dans \texttt{header[2]}, complète \texttt{phase0\_snap} et \texttt{stop\_phase\_disc} pour rendre les cas de frontière visibles à la reconstruction hôte.
+
+La campagne finale \textit{Xcelium} fournit une validation numérique cohérente avec ce contrat. Le \textbf{VIP} passe \num{1024}/\num{1024} exécutions, la campagne principale analyse \num{48000000} lignes utiles, et la calibration externe par LUT ramène la validation tenue hors apprentissage de \SI{1940.32}{\pico\second} RMSE avant correction à \SI{18.56}{\pico\second} après correction. Le percentile 99 après LUT vaut \SI{38.99}{\pico\second}. Ces valeurs démontrent que les observables exportées suffisent à corriger efficacement la structure non uniforme du codage brut, dans le cadre du modèle RTL caractérisé.
+
+\section{Limites de portée}
+
+Ces résultats restent des résultats de simulation et de caractérisation \textbf{RTL}/\textit{Xcelium}. Ils ne doivent pas être présentés comme des mesures silicium. Les oscillateurs utilisés dans la campagne restent des modèles comportementaux ; la macro analogique réelle, son jitter, ses variations PVT et son contrat d'interface devront être consolidés séparément.
+
+La grille fine Vernier reste intrinsèquement non uniforme. La LUT corrige les classes observées et réduit fortement le biais, mais elle ne transforme pas le bloc en convertisseur uniforme idéal. La performance publiée est donc une performance statistique calibrée sur une distribution de validation, pas une garantie déterministe que chaque hit individuel contient une information temporelle unique à quelques picosecondes.
+
+Enfin, la structure RTL est organisée pour être défendable physiquement, mais la clôture industrielle n'est pas achevée. Les contraintes CDC, les chemins asynchrones liés à \texttt{START}/\texttt{STOP}, les horloges générées par les oscillateurs, la STA multi-corners et la validation post-layout restent des étapes nécessaires avant une revendication de signoff ASIC complet.
+
+\section{Perspectives}
+
+Les prochaines étapes naturelles sont d'abord physiques : revue CDC formelle, STA complète, simulation post-synthèse, puis post-layout avec les modèles d'oscillateurs et les délais extraits. Cette étape doit vérifier que le partitionnement actuel, qui place le drain et la sérialisation dans \texttt{clk\_sys}, conserve sa marge lorsque les réseaux d'horloges et les charges réelles remplacent les modèles comportementaux.
+
+Le second axe concerne l'exploitation hôte. Le protocole v2.7 donne un contrat compact et stable ; il faut maintenant figer le décodeur logiciel associé, versionner explicitement les LUT produites par caractérisation et définir les règles de rejet ou de repli pour les paquets incomplets, anciens ou hors domaine de calibration.
+
+Le dernier axe est expérimental. Une fois le silicium disponible, les mêmes métriques devront être reconstruites à partir de mesures physiques : distribution brute, couverture des codes, sensibilité aux frontières, efficacité de la LUT, bruit résiduel et robustesse aux conditions d'alimentation, température et débit. C'est cette comparaison qui permettra de séparer ce qui relève du RTL, du modèle d'oscillateur et du comportement réel de la macro.
+
+\begin{summaryBox}
+Le \textbf{MPTDC} atteint dans ce travail un état cohérent de fin de conception numérique : architecture RTL stabilisée, protocole v2.7 fixé, campagne VIP large sans échec et calibration externe efficace sur données tenues hors apprentissage. La suite du projet n'est donc plus de changer le format de sortie, mais de porter ce contrat vers la validation physique : CDC, STA, post-layout, macro oscillateur réelle et mesures silicium.
+\end{summaryBox}
+
+\clearpage

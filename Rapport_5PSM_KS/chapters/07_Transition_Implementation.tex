@@ -15,6 +15,8 @@ La continuité entre la thèse et l'implémentation actuelle se situe donc au ni
     \item nécessité d’une calibration adaptée pour transformer les observables brutes en temps exploitable.
 \end{itemize}
 
+La différence majeure est que l'objet étudié ici n'est plus une cellule de référence isolée, mais une version intégrable dans une chaîne de lecture ASIC. L'implémentation active est construite directement autour d'une matrice de détection \mbox{$8\times8$}, d'une capture asynchrone et d'une chaîne de lecture dans \texttt{clk\_sys}. Ces choix fixent le contrat de l'architecture réelle : préserver le principe Vernier tout en obtenant un bloc routable, vérifiable et compatible avec un prototype en \SI{180}{\nano\meter}.
+
 \section{Évolutions nécessaires dans le contexte SPADMIC}
 
 L'architecture actuellement développée s'écarte toutefois du prototype de thèse sur plusieurs aspects structurants. Elle doit en effet répondre à des besoins plus larges de robustesse, d'intégration numérique et de lecture :
@@ -42,8 +44,8 @@ Cette transition doit aussi être lue sous l'angle des domaines temporels. L'arc
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{tdc/clock_domain_diagram.pdf}
-    \caption{Carte des domaines d'horloge et des frontières CDC dans l'architecture active. Les zones colorées séparent les événements asynchrones, le domaine lent, le domaine rapide et le domaine système \texttt{clk\_sys}.}
+    \includegraphics[width=\textwidth]{tdc/clock_domain_diagram.pdf}
+    \caption{Carte des domaines temporels et des frontières CDC dans l'architecture active. Les traversées représentées transportent des commandes compactes, des compteurs Gray ou des images figées, et non des phases analogiques en évolution continue.}
     \label{fig:clock-domain-diagram}
 \end{figure}
 
@@ -57,7 +59,7 @@ La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficul
         \textbf{Contrainte} & \textbf{Risque principal} & \textbf{Choix retenu} \\
         \midrule
         Événements d'entrée asynchrones & Perte de précision ou métastabilité si forçage prématuré dans un domaine synchrone & Interface de capture asynchrone à verrous \textit{set/reset} \\
-        Grille fine plus dense & Explosion du nombre de cellules PD et allongement du scan de drain & Matrice \mbox{$8\times8$} comme compromis surface / richesse de grille \\
+        Matrice de phase active & Surface, charge des taps et durée de scan si la matrice grossit & Matrice \mbox{$8\times8$} régulière, suffisante pour exporter les observables de calibration \\
         Lecture pendant la mesure & Temps mort dicté par le drain et le sérialiseur & Deux contextes, capture et drain découplés \\
         Correction des non-idéalités & Coût silicium élevé si correction embarquée figée & Calibration externe à l'ASIC avec export d'observables riches \\
         Intégration au système & Trop grand nombre de broches ou protocole trop ambigu & Bus \SI{16}{\bit}, mots typés, gestion explicite de la rétropression \\
@@ -67,73 +69,39 @@ La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficul
     \label{tab:transition-tradeoffs}
 \end{table}
 
-\section{Arbitrages de conception structurants}
+\section{Choix d'intégration et compromis d'architecture}
 
-\subsection{Pourquoi une interface de capture asynchrone}
+Le passage du principe Vernier à un bloc ASIC intégrable impose de figer une architecture qui reste suffisamment riche pour la calibration, mais suffisamment compacte pour être routée, vérifiée et intégrée dans le prototype \textbf{SPADMIC}. L'implémentation active retient ainsi une matrice de phase \mbox{$8\times8$}, deux contextes de capture et une sortie numérique étroite. La matrice fournit les couples de phase nécessaires à l'observation fine, tout en limitant la surface, la charge appliquée aux taps d'oscillateur, la complexité de drain et l'effort de fermeture temporelle.
 
-Le premier arbitrage fondamental concerne la capture des événements d'entrée. Dans un \textbf{TDC} Vernier, les signaux \texttt{START} et \texttt{STOP} sont, par nature, des événements asynchrones par rapport à \texttt{clk\_sys} et par rapport aux oscillateurs eux-mêmes. Les forcer artificiellement dans un domaine synchrone unique reviendrait soit à dégrader la précision, soit à compliquer fortement le chemin de capture.
+La capture des événements reste volontairement asynchrone. Les signaux \texttt{START} et \texttt{STOP} ne sont pas d'abord ramenés dans \texttt{clk\_sys}, car cela déplacerait l'incertitude temporelle sur le chemin même que le \textbf{TDC} doit mesurer. Le front-end déclenche donc l'oscillateur lent au plus près de \texttt{START}, puis l'oscillateur rapide au plus près de \texttt{STOP}. Le domaine système intervient ensuite pour protéger l'image de mesure, orchestrer le nettoyage et préparer la lecture, sans transformer les phases analogiques en bus synchrones continus.
 
-Le bloc actif adopte donc une interface de capture asynchrone à base de verrous \textit{set/reset}. Ce choix répond à une logique simple : il faut déclencher l'oscillateur lent au plus près de \texttt{START}, puis déclencher l'oscillateur rapide au plus près de \texttt{STOP}, sans attendre une remise en phase sur une horloge externe. L'architecture reste ainsi fidèle au principe Vernier, tout en rendant explicites les points sensibles de réarmement, de remise à zéro et de rejet des départs.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{tdc/async_capture_timing.pdf}
+    \caption{Capture asynchrone des événements. Les fronts \texttt{START}/\texttt{STOP} arment directement les verrous et les anneaux ; \texttt{clk\_sys} intervient ensuite pour protéger puis nettoyer la fenêtre de mesure.}
+    \label{fig:async-capture-timing}
+\end{figure}
 
-\subsection{Pourquoi une matrice \mbox{$8\times8$} et non une matrice plus grande}
-
-Le second arbitrage porte sur la taille de la matrice de détection. Une matrice plus grande, par exemple \mbox{$16\times16$}, augmenterait mécaniquement le nombre de cellules observées et, en apparence, la richesse de la grille fine. Mais ce choix aurait plusieurs contreparties immédiates :
-\begin{itemize}
-    \item le nombre de cellules passerait de $64$ à $256$, soit un facteur \mbox{$256/64 = 4$} en surface brute sur cette seule brique ;
-    \item le réseau de signaux de phases, de comptage et de capture deviendrait plus lourd à distribuer ;
-    \item le coût de scan côté drain augmenterait dans la même proportion ;
-    \item les chemins de réduction et de fermeture dans le domaine rapide seraient plus difficiles à tenir dans une technologie \SI{180}{\nano\meter}.
-\end{itemize}
-
-Le choix \mbox{$8\times8$} doit donc être lu comme un compromis. Il donne déjà une matrice assez riche pour exploiter le multiphase, tout en gardant une architecture encore compatible avec une logique de lecture et de fermeture réaliste.
-
-\subsection{Pourquoi deux contextes et non un seul}
-
-Le troisième arbitrage concerne le buffering. Un seul contexte simplifierait la conception, mais il placerait directement le drain et la sérialisation sur le chemin critique de réarmement. À l'inverse, un nombre élevé de contextes améliorerait le masquage de latence, mais au prix d'une surface mémoire et d'une logique de gestion supplémentaires.
-
-Le choix de \textbf{deux contextes} permet un recouvrement simple et efficace :
-\begin{itemize}
-    \item un contexte peut être en capture ou en attente de fermeture ;
-    \item l'autre peut être en train d'être drainé vers le FIFO et le sérialiseur.
-\end{itemize}
-
-La figure \ref{fig:context-pipeline} illustre cette logique de double-buffer. C'est un point important du projet, car il explique pourquoi le temps mort pratique n'est pas directement imposé par la longueur des paquets de sortie.
+Le découplage entre capture et lecture repose sur une banque à deux contextes. Ce choix évite de faire dépendre directement le réarmement du temps nécessaire au drain et à la sérialisation. Un contexte peut conserver une conversion fermée pendant que l'autre redevient disponible pour la mesure suivante. Cette organisation reste volontairement limitée : elle masque une partie de la latence de lecture sans introduire une file de contextes coûteuse, difficile à vérifier et peu justifiée pour le prototype visé.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{tdc/context_pipeline.pdf}
-    \caption{Pipeline à deux contextes. La capture d'une conversion et le drain de la conversion précédente peuvent se recouvrir partiellement, ce qui réduit la dépendance directe entre mesure et lecture.}
+    \caption{Pipeline à deux contextes. Le snapshot protège la mesure terminée, puis le drain et la sérialisation d'un contexte peuvent se recouvrir avec la capture du contexte suivant.}
     \label{fig:context-pipeline}
 \end{figure}
 
-\subsection{Pourquoi une calibration externe à l'ASIC}
+La sortie adopte enfin un protocole de sortie compact sur \SI{16}{\bit}, sous forme d'une trame de mesure structurée. Le paquet contient un en-tête, des mots de données associés aux hits et un mot de fin. Il transporte les informations nécessaires à la reconstruction externe : instantané de phase lente (\texttt{phase0\_snap}), classe de frontière temporelle (\texttt{stop\_phase\_disc}) et bit de correction de frontière lente (\texttt{slow\_boundary\_inc}). Les anciens encodages de mode sont conservés uniquement comme compatibilité logicielle. La correction finale est donc déplacée hors ASIC : le silicium exporte une description stable et riche de la mesure, tandis que la LUT et les modèles de calibration restent évolutifs côté hôte.
 
-Le quatrième arbitrage est méthodologique. Une calibration embarquée dans l'ASIC pourrait sembler attractive, car elle donnerait directement un temps corrigé. Mais dans un contexte de développement et de caractérisation, ce choix rigidifie très tôt l'architecture. Il impose de figer :
-\begin{itemize}
-    \item le type de modèle de correction ;
-    \item sa granularité ;
-    \item la place mémoire nécessaire pour le stocker ;
-    \item le coût logique de son application en temps réel.
-\end{itemize}
-
-À l'inverse, une calibration externe à l'ASIC permet de conserver dans le silicium une logique de mesure relativement sobre et de déplacer la complexité vers le traitement hôte, là où les modèles peuvent encore évoluer. Ce choix est particulièrement pertinent ici, car la grille fine Vernier est intrinsèquement non uniforme. Il est donc plus efficace de compenser ce défaut structurel par un traitement de calibration riche que d'essayer de l'effacer par une topologie RTL beaucoup plus coûteuse.
-
-\subsection{Pourquoi une sortie étroite sur \SI{16}{\bit}}
-
-Le cinquième arbitrage concerne l'intégration système. Une sortie parallèle large simplifierait la lecture des données, mais augmenterait fortement le coût en broches et la complexité de l'interface. Le projet retient au contraire une sortie logique étroite sur \SI{16}{\bit} à \SI{160}{\mega\hertz}, accompagnée d'un format de paquets explicitement typé.
-
-Cette décision a plusieurs avantages :
-\begin{itemize}
-    \item la sortie reste compacte ;
-    \item les différents mots du paquet sont distingués par des préfixes simples ;
-    \item le même canal supporte plusieurs modes de sortie ;
-    \item la gestion de la rétropression est localisée dans la logique de sérialisation.
-\end{itemize}
-
-Le prix à payer est une complexité plus élevée dans les automates de drain et de transmission, mais cette complexité reste plus acceptable qu'une explosion du nombre de broches de sortie.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.93\textwidth]{tdc/calibration_export_flow.pdf}
+    \caption{Flux de sortie et calibration externe. L'ASIC exporte une trame compacte contenant les observables de mesure ; le décodage et la correction par LUT restent réalisés hors circuit.}
+    \label{fig:calibration-export-flow}
+\end{figure}
 
 \begin{summaryBox}
-La transition vers l'implémentation n'est pas une simple étape d'encapsulation. C'est le moment où apparaissent les vrais compromis d'ingénierie : accepter des signaux asynchrones, limiter la taille de la matrice, séparer capture et lecture, choisir une stratégie de calibration, puis formaliser un protocole de sortie compatible avec le reste du système.
+La transition vers l'implémentation n'est pas une simple étape d'encapsulation. Elle transforme le principe Vernier en un bloc ASIC complet : capture asynchrone, matrice de phase compacte, double contexte, lecture \texttt{clk\_sys}, paquet \SI{16}{\bit} et calibration externe forment un même compromis d'intégration.
 \end{summaryBox}
 
 \clearpage

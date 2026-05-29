@@ -1,42 +1,64 @@
-\documentclass[tikz,border=5pt]{standalone}
+\documentclass[tikz,border=6pt]{standalone}
 \input{tdc_publication_style.tex}
+
+\definecolor{snapshotfill}{HTML}{FCE8D6}
+\definecolor{txfill}{HTML}{E6F3EA}
+
+\tikzset{
+  stagecap/.style={barreCapture,minimum height=8mm},
+  stagesnap/.style={draw=brunasync,fill=snapshotfill,line width=0.9pt,rounded corners=1.5pt},
+  stagedrain/.style={barreDrain},
+  stagetx/.style={draw=grisligne,fill=txfill,line width=0.9pt,rounded corners=1.5pt},
+  stagefree/.style={barreLibre},
+  labeltag/.style={etiquette,font=\ttfamily\scriptsize}
+}
 
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\draw[axe] (0.8,4.45) -- (18.2,4.45) node[titre, right] {Temps};
-\foreach \x/\lab in {1.0/$t_0$,6.4/$t_1$,8.2/$t_2$,12.0/$t_3$,13.8/$t_4$,16.4/$t_5$,17.8/$t_6$} {
-  \draw[grisligne!32] (\x,0.65) -- (\x,4.25);
-  \node[etiquette, above=1.3mm] at (\x,4.45) {\lab};
+\draw[axe] (0.8,4.95) -- (18.7,4.95) node[titre,right] {Temps};
+\foreach \x/\lab in {1.0/$t_0$,5.0/$t_1$,6.1/$t_2$,9.7/$t_3$,10.8/$t_4$,13.9/$t_5$,16.8/$t_6$} {
+  \draw[grisligne!28] (\x,0.70) -- (\x,4.70);
+  \node[etiquette,above=1.2mm] at (\x,4.95) {\lab};
 }
 
-\node[titre, anchor=east] at (0.65,3.25) {Contexte 0};
-\node[titre, anchor=east] at (0.65,1.85) {Contexte 1};
+\node[titre,anchor=east] at (0.65,3.45) {Contexte 0};
+\node[titre,anchor=east] at (0.65,2.05) {Contexte 1};
 
-\draw[barreCapture] (1.0,2.83) rectangle (6.4,3.67);
-\node[textebarre] at (3.7,3.25) {Capture mesure $k$};
-\draw[barreDrain] (6.4,2.83) rectangle (8.2,3.67);
-\node[textebarre] at (7.3,3.25) {Snapshot};
-\draw[barreDrain] (8.2,2.83) rectangle (13.8,3.67);
-\node[textebarre] at (11.0,3.25) {Drain et sérialisation TX};
-\draw[barreLibre] (13.8,2.83) rectangle (16.4,3.67);
-\node[textebarre] at (15.1,3.25) {Libre};
+\draw[stagecap] (1.0,3.08) rectangle (5.0,3.82);
+\node[textebarre] at (3.0,3.45) {Capture $k$};
+\draw[stagesnap] (5.0,3.08) rectangle (6.1,3.82);
+\node[textebarre,font=\sffamily\scriptsize\bfseries] at (5.55,3.45) {Snapshot};
+\draw[stagedrain] (6.1,3.08) rectangle (9.7,3.82);
+\node[textebarre] at (7.9,3.45) {Drain};
+\draw[stagetx] (9.7,3.08) rectangle (13.9,3.82);
+\node[textebarre] at (11.8,3.45) {Sérialisation TX};
+\draw[stagefree] (13.9,3.08) rectangle (16.8,3.82);
+\node[textebarre] at (15.35,3.45) {Libre};
 
-\draw[barreLibre] (1.0,1.43) rectangle (6.4,2.27);
-\node[textebarre] at (3.7,1.85) {Libre};
-\draw[barreCapture] (6.4,1.43) rectangle (12.0,2.27);
-\node[textebarre] at (9.2,1.85) {Capture mesure $k{+}1$};
-\draw[barreDrain] (12.0,1.43) rectangle (13.8,2.27);
-\node[textebarre] at (12.9,1.85) {Snapshot};
-\draw[barreDrain] (13.8,1.43) rectangle (17.8,2.27);
-\node[textebarre] at (15.8,1.85) {Drain et sérialisation TX};
+\draw[stagefree] (1.0,1.68) rectangle (5.0,2.42);
+\node[textebarre] at (3.0,2.05) {Libre};
+\draw[stagecap] (5.0,1.68) rectangle (9.7,2.42);
+\node[textebarre] at (7.35,2.05) {Capture $k{+}1$};
+\draw[stagesnap] (9.7,1.68) rectangle (10.8,2.42);
+\node[textebarre,font=\sffamily\scriptsize\bfseries] at (10.25,2.05) {Snapshot};
+\draw[stagedrain] (10.8,1.68) rectangle (13.9,2.42);
+\node[textebarre] at (12.35,2.05) {Drain};
+\draw[stagetx] (13.9,1.68) rectangle (16.8,2.42);
+\node[textebarre] at (15.35,2.05) {Sérialisation TX};
 
-\draw[fluxcontrole] (6.4,0.95) -- (6.4,4.05);
-\node[etiquette, right=1.5mm] at (6.4,4.05) {fin mesure $k$};
+\draw[<->,draw=grisligne,line width=0.85pt] (6.1,1.05) -- (9.7,1.05);
+\node[etiquette,align=center] at (7.9,0.62)
+  {recouvrement : drain C0 pendant capture C1};
 
-\draw[<->, line width=0.9pt, draw=grisligne] (8.2,0.92) -- (12.0,0.92)
-  node[etiquette, midway, below=1.7mm, align=center]
-  {recouvrement : drain contexte 0\\pendant capture contexte 1};
+\node[stagecap,minimum width=12mm,minimum height=5mm] at (2.4,-0.20) {};
+\node[anchor=west,font=\sffamily\scriptsize] at (3.1,-0.20) {mesure active};
+\node[stagesnap,minimum width=12mm,minimum height=5mm] at (6.0,-0.20) {};
+\node[anchor=west,font=\sffamily\scriptsize] at (6.7,-0.20) {image protégée};
+\node[stagedrain,minimum width=12mm,minimum height=5mm] at (9.8,-0.20) {};
+\node[anchor=west,font=\sffamily\scriptsize] at (10.5,-0.20) {scan contexte};
+\node[stagetx,minimum width=12mm,minimum height=5mm] at (13.6,-0.20) {};
+\node[anchor=west,font=\sffamily\scriptsize] at (14.3,-0.20) {paquet narrow};
 
 \end{tikzpicture}
 \end{document}
