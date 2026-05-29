@@ -1,22 +1,6 @@
 Rapport__KARIMSABRA_4PSM/
 sources/TH2021ANNAGREBAHAMINA.pdf
 
-Rapport_5PSM_KS/build/
-Rapport_5PSM_KS/dist/
-Rapport_5PSM_KS/*.aux
-Rapport_5PSM_KS/*.bbl
-Rapport_5PSM_KS/*.bcf
-Rapport_5PSM_KS/*.blg
-Rapport_5PSM_KS/*.fdb_latexmk
-Rapport_5PSM_KS/*.fls
-Rapport_5PSM_KS/*.lof
-Rapport_5PSM_KS/*.log
-Rapport_5PSM_KS/*.lot
-Rapport_5PSM_KS/*.out
-Rapport_5PSM_KS/*.pdfsync
-Rapport_5PSM_KS/*.run.xml
-Rapport_5PSM_KS/*.synctex.gz
-Rapport_5PSM_KS/*.toc
 
 __pycache__/
 *.pyc
