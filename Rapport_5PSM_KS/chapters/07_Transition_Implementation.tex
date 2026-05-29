@@ -91,12 +91,12 @@ Le découplage entre capture et lecture repose sur une banque à deux contextes.
     \label{fig:context-pipeline}
 \end{figure}
 
-La sortie adopte enfin un protocole de sortie compact sur \SI{16}{\bit}, sous forme d'une trame de mesure structurée. Le paquet contient un en-tête, des mots de données associés aux hits et un mot de fin. Il transporte les informations nécessaires à la reconstruction externe : instantané de phase lente (\texttt{phase0\_snap}), classe de frontière temporelle (\texttt{stop\_phase\_disc}) et bit de correction de frontière lente (\texttt{slow\_boundary\_inc}). Les anciens encodages de mode sont conservés uniquement comme compatibilité logicielle. La correction finale est donc déplacée hors ASIC : le silicium exporte une description stable et riche de la mesure, tandis que la LUT et les modèles de calibration restent évolutifs côté hôte.
+La sortie adopte enfin un protocole compact sur \SI{16}{\bit}, sous forme d'une trame de mesure structurée. Le paquet contient un en-tête, des mots de données associés aux hits et un mot de fin. Il transporte les informations nécessaires à la reconstruction externe : valeurs de mesure, métadonnées de contexte, indicateurs de frontière et champs de statut. Les anciens encodages de mode sont conservés uniquement comme compatibilité logicielle. La correction finale est donc déplacée hors ASIC : le silicium exporte une description stable et suffisamment riche de la mesure, tandis que la LUT et les modèles de calibration restent évolutifs côté hôte.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.93\textwidth]{tdc/calibration_export_flow.pdf}
-    \caption{Flux de sortie et calibration externe. L'ASIC exporte une trame compacte contenant les observables de mesure ; le décodage et la correction par LUT restent réalisés hors circuit.}
+    \caption{Flux de sortie et calibration externe. L'ASIC exporte une trame compacte contenant les observables de mesure et les informations auxiliaires utiles ; le décodage et la correction par LUT restent réalisés hors circuit.}
     \label{fig:calibration-export-flow}
 \end{figure}
 

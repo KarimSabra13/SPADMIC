@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+exports/server*.log
+exports/frontend*.log
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo

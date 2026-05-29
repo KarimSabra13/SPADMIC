@@ -37,11 +37,11 @@
 \begin{tikzpicture}[x=1cm,y=1cm]
 
 \node[flowblock] (ctx) at (1.35,2.0)
-{Image contexte\\[-0.3mm]\ttfamily ns,nf,nslow};
+{Image contexte\\[-0.3mm]\ttfamily mesure + statut};
 \node[flowblock] (rec) at (4.90,2.0)
-{Records\\[-0.3mm]\ttfamily META / HIT};
+{Enregistrements\\[-0.3mm]\ttfamily mesure};
 \node[flowblock] (pkt) at (8.45,2.0)
-{Trame compacte\\[-0.3mm]\ttfamily 16 bit};
+{Trame compacte\\[-0.3mm]\ttfamily 16 bits};
 \node[flowblock] (host) at (12.85,2.0)
 {Décodeur hôte\\[-0.3mm]\ttfamily observables};
 \node[flowblock] (lut) at (16.40,2.0)
@@ -61,7 +61,7 @@
 \draw[dataarrow] (pkt.east) -- (host.west);
 \node[labeltag] at (10.62,2.34) {flux TX};
 \draw[dataarrow] (host.east) -- (lut.west);
-\node[labeltag] at (14.62,2.58) {observables};
+\node[labeltag] at (14.62,2.58) {observables + métadonnées};
 
 \node[align=center,font=\sffamily\small,text=grisligne] at (8.85,0.55)
 {Le silicium exporte une trame compacte ; le décodage et la correction restent hors circuit.};

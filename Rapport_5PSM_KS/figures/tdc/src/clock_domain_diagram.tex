@@ -72,7 +72,7 @@
 \node[techblock,draw=brunasync,fill=white] (capture) at (3.95,0.0)
 {Capture asynchrone\\[-0.4mm]\ttfamily start/stop};
 \node[techblock,draw=brunasync,fill=white] (boundary) at (3.95,-2.45)
-{Capture frontière\\[-0.4mm]\ttfamily phase0, disc, sbi};
+{Métadonnées\\[-0.4mm]de frontière};
 
 \node[techblock] (slowosc) at (8.35,3.35)
 {Anneau lent\\[-0.4mm]\ttfamily phases lentes};
@@ -101,42 +101,38 @@
   \node[domain=domainslow, fit=(slowosc)(slowcnt),
         label={[titre,anchor=west]above left:Oscillateur lent}] {};
   \node[domain=domainfast, fit=(fastosc)(fastcnt)(pd),
-        label={[titre,anchor=west]below left:Oscillateur rapide / matrice PD}] {};
+        label={[titre,anchor=west]above left:Oscillateur rapide / matrice PD}] {};
   \node[domain=domainsys, fit=(sync)(meas)(ctx)(tx),
         label={[titre,anchor=west]above left:Domaine \texttt{clk\_sys}}] {};
 \end{pgfonlayer}
 
 \draw[datapath] (input.east) -- (capture.west);
 \draw[slowpath] (capture.north) -- ++(0,1.60) -| (slowosc.west);
-\node[labeltag,text=slowred] at (5.25,1.73) {slow\_en};
+\node[labeltag,text=slowred] at (5.25,1.73) {commande lent};
 \draw[fastpath] (capture.south) -- ++(0,-1.60) -| (fastosc.west);
-\node[labeltag,text=fastblue] at (5.25,-1.73) {fast\_en};
+\node[labeltag,text=fastblue] at (5.25,-1.73) {commande rapide};
 
 \draw[slowpath] (slowosc.east) -- (slowcnt.west);
 \draw[slowpath] (slowosc.south east) -- ++(0.70,0) |- (pd.north west);
-\node[labeltag,text=slowred] at (10.15,2.52) {phases lentes};
+\node[labeltag,text=slowred] at (10.15,2.52) {phases locales};
 \draw[fastpath] (fastosc.east) -- (fastcnt.west);
 \draw[fastpath] (fastosc.north east) -- ++(0.70,0) |- (pd.south west);
-\node[labeltag,text=fastblue] at (10.15,-2.52) {phases rapides};
+\node[labeltag,text=fastblue] at (10.15,-2.52) {phases locales};
 
 \draw[graypath] (slowcnt.east) -- ++(1.05,0) |- ([yshift=2.8mm]sync.west);
-\node[labeltag] at (15.10,3.28) {Nslow Gray};
+\node[labeltag] at (15.10,3.28) {compteur Gray};
 \draw[graypath] (fastcnt.east) -- ++(1.05,0) |- ([yshift=-2.8mm]sync.west);
-\node[labeltag] at (15.10,-3.28) {Nfast Gray};
+\node[labeltag] at (15.10,-3.28) {compteur Gray};
 \draw[datapath] (pd.east) -- (ctx.west);
-\node[labeltag] at (17.00,0.40) {hit\_level / nfast\_hit};
+\node[labeltag] at (17.00,0.40) {image figée};
 
 \draw[controlpath] (sync.south) -- (meas.north);
 \draw[controlpath] (meas.east) -- ++(1.10,0) |- (ctx.south west);
-\node[labeltag] at (19.35,-1.05) {capture\_en};
+\node[labeltag] at (19.35,-1.05) {commande capture};
 \draw[datapath] (ctx.east) -- (tx.west);
-\node[labeltag] at (23.62,0.62) {records};
+\node[labeltag] at (23.62,0.62) {lecture};
 \draw[datapath] (tx.east) -- ++(1.85,0);
 \node[labeltag] at (28.35,0.62) {flux TX};
-
-\node[align=center,font=\sffamily\small,text=grisligne] at (13.50,-5.25)
-{Les phases restent locales aux oscillateurs et à la matrice ; \texttt{clk\_sys} ne reçoit que des compteurs Gray,\\
-des commandes compactes et une image déjà figée.};
 
 \end{tikzpicture}
 \end{document}

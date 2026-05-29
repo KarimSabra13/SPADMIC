@@ -1,4 +1,4 @@
-\documentclass[tikz,border=7pt]{standalone}
+\documentclass[tikz,border=8pt]{standalone}
 \input{tdc_publication_style.tex}
 \usetikzlibrary{calc,fit,positioning}
 
@@ -9,76 +9,111 @@
 \tikzset{
   mini/.style={
     bloc,
-    minimum width=24mm,
-    minimum height=8.5mm,
+    minimum width=25mm,
+    minimum height=9.5mm,
     font=\sffamily\scriptsize\bfseries,
     inner sep=2pt
   },
+  latch/.style={
+    bloc,
+    minimum width=28mm,
+    minimum height=18mm,
+    font=\sffamily\scriptsize\bfseries,
+    inner sep=2.5pt
+  },
   labeltag/.style={
     etiquette,
-    font=\ttfamily\scriptsize,
-    inner sep=1.4pt
+    font=\sffamily\scriptsize,
+    inner sep=1.6pt
+  },
+  pinlabel/.style={
+    font=\sffamily\tiny\bfseries,
+    inner sep=0pt
   },
   signal/.style={
-    -{Latex[length=2.1mm,width=1.3mm]},
+    -{Latex[length=2.2mm,width=1.35mm]},
     draw=grisligne,
     line width=0.95pt
   },
   slow/.style={signal,draw=slowred},
   fast/.style={signal,draw=fastblue},
-  wave/.style={draw=grisligne,line width=0.85pt},
+  clearpath/.style={signal,draw=cleargray},
+  wave/.style={draw=grisligne,line width=0.9pt},
   wslow/.style={wave,draw=slowred},
   wfast/.style={wave,draw=fastblue},
   wclear/.style={wave,draw=cleargray}
 }
 
 \newcommand{\pulsewave}[4]{%
-  \draw[#4] (#1,#2) -- ++(0.55,0) -- ++(0,0.38) -- ++(0.36,0) -- ++(0,-0.38) -- (#3,#2);
+  \draw[#4] (#1,#2) -- ++(0.65,0) -- ++(0,0.42) -- ++(0.42,0) -- ++(0,-0.42) -- (#3,#2);
 }
 \newcommand{\latchwave}[5]{%
-  \draw[#5] (#1,#2) -- (#3,#2) -- (#3,{#2+0.38}) -- (#4,{#2+0.38}) -- (#4,#2) -- (16.95,#2);
+  \draw[#5] (#1,#2) -- (#3,#2) -- (#3,{#2+0.42}) -- (#4,{#2+0.42}) -- (#4,#2) -- (20.8,#2);
 }
 
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\node[titre,anchor=west] at (0.0,4.55) {Chemin direct des événements};
-\node[mini] (in) at (1.25,3.35) {START / STOP\\[-0.3mm]\ttfamily pads};
-\node[mini,draw=brunasync] (latch) at (4.10,3.35) {Verrous SR\\[-0.3mm]\ttfamily start/stop};
-\node[mini,draw=slowred] (slowen) at (6.95,4.15) {slow\_en\\[-0.3mm]\ttfamily anneau lent};
-\node[mini,draw=fastblue] (fasten) at (6.95,2.55) {fast\_en\\[-0.3mm]\ttfamily anneau rapide};
+\node[titre,anchor=west] at (0.0,7.28) {Principe matériel de capture};
+\node[mini] (startin) at (1.05,5.95) {Front\\[-0.25mm]START};
+\node[mini] (stopin) at (1.05,3.15) {Front\\[-0.25mm]STOP};
+\node[mini,draw=cleargray] (clear) at (4.35,0.90) {clear\\[-0.25mm]système};
 
-\draw[signal] (in.east) -- node[labeltag,above=2pt] {fronts} (latch.west);
-\draw[slow] (latch.east) |- node[labeltag,above=2pt,pos=0.32,text=slowred] {start\_latched} (slowen.west);
-\draw[fast] (latch.east) |- node[labeltag,below=2pt,pos=0.32,text=fastblue] {stop\_latched} (fasten.west);
-\node[align=center,font=\sffamily\scriptsize,text=grisligne] at (3.95,1.35)
-{La capture ne traverse pas \texttt{clk\_sys} avant de lancer les anneaux.};
+\node[latch,draw=slowred] (startlat) at (4.35,5.95)
+{Latch START\\[-0.2mm]\normalfont\scriptsize événement mémorisé};
+\node[latch,draw=fastblue] (stoplat) at (4.35,3.15)
+{Latch STOP\\[-0.2mm]\normalfont\scriptsize événement mémorisé};
 
-\draw[grisligne!35] (8.4,0.55) -- (8.4,4.65);
-\node[titre,anchor=west] at (9.0,4.55) {Chronogramme simplifié};
+\node[mini,draw=slowred] (slowen) at (8.30,5.95)
+{Activation\\[-0.25mm]anneau lent};
+\node[mini,draw=fastblue] (fasten) at (8.30,3.15)
+{Activation\\[-0.25mm]anneau rapide};
 
-\foreach \y/\name in {4.05/START,3.45/start\_latched,2.85/slow\_en,2.25/STOP,1.65/stop\_latched,1.05/fast\_en,0.45/fe\_clear} {
-  \node[anchor=east,font=\ttfamily\scriptsize,text=grisligne] at (10.25,\y) {\name};
-  \draw[grisligne!25] (10.45,\y) -- (16.95,\y);
+\node[pinlabel,text=slowred] at ([xshift=1.8mm,yshift=5.0mm]startlat.west) {S};
+\node[pinlabel,text=cleargray] at ([yshift=1.8mm]startlat.south) {R};
+\node[pinlabel,text=slowred] at ([xshift=-1.8mm]startlat.east) {Q};
+\node[pinlabel,text=fastblue] at ([xshift=1.8mm,yshift=5.0mm]stoplat.west) {S};
+\node[pinlabel,text=cleargray] at ([yshift=1.8mm]stoplat.south) {R};
+\node[pinlabel,text=fastblue] at ([xshift=-1.8mm]stoplat.east) {Q};
+
+\draw[slow] (startin.east) -- node[labeltag,above=2.2pt,text=slowred] {set} (startlat.west);
+\draw[fast] (stopin.east) -- node[labeltag,above=2.2pt,text=fastblue] {set} (stoplat.west);
+\draw[slow] (startlat.east) -- node[labeltag,above=2.2pt,text=slowred] {Q} (slowen.west);
+\draw[fast] (stoplat.east) -- node[labeltag,above=2.2pt,text=fastblue] {Q} (fasten.west);
+
+\coordinate (clearbus) at (6.05,1.50);
+\draw[draw=cleargray,line width=0.95pt] (clear.east) -- (clearbus);
+\draw[clearpath] (clearbus) |- ([xshift=5.0mm]stoplat.south);
+\draw[clearpath] (clearbus) -- (6.05,4.70) -- ([xshift=5.0mm,yshift=-2.0mm]startlat.south) -- ([xshift=5.0mm]startlat.south);
+
+\node[etiquette,align=center,font=\sffamily\scriptsize,text=grisligne] at (7.10,1.10)
+{Pas d'horloge système\\sur le chemin de lancement};
+
+\draw[grisligne!35] (9.85,0.45) -- (9.85,7.05);
+\node[titre,anchor=west] at (10.55,7.28) {Séquence temporelle};
+
+\foreach \y/\name in {6.10/START,5.25/Latch START,4.40/Anneau lent,3.45/STOP,2.60/Latch STOP,1.75/Anneau rapide,0.90/clear} {
+  \node[anchor=east,font=\sffamily\scriptsize,text=grisligne] at (11.75,\y) {\name};
+  \draw[grisligne!24] (12.00,\y) -- (20.80,\y);
 }
 
-\foreach \x/\lab in {10.9/$t_s$,13.65/$t_p$,15.85/$t_c$} {
-  \draw[grisligne!35] (\x,0.20) -- (\x,4.25);
-  \node[font=\sffamily\tiny,text=grisligne] at (\x,0.02) {\lab};
+\foreach \x/\lab in {12.70/$t_s$,15.80/$t_p$,18.55/$t_c$} {
+  \draw[grisligne!35] (\x,0.50) -- (\x,6.35);
+  \node[font=\sffamily\tiny,text=grisligne] at (\x,0.22) {\lab};
 }
 
-\pulsewave{10.45}{4.05}{16.95}{wslow}
-\latchwave{10.45}{3.45}{10.9}{15.85}{wslow}
-\latchwave{10.45}{2.85}{10.9}{15.85}{wslow}
+\pulsewave{12.00}{6.10}{20.80}{wslow}
+\latchwave{12.00}{5.25}{12.70}{18.55}{wslow}
+\latchwave{12.00}{4.40}{12.70}{18.55}{wslow}
 
-\draw[wfast] (10.45,2.25) -- (13.65,2.25) -- ++(0,0.38) -- ++(0.36,0) -- ++(0,-0.38) -- (16.95,2.25);
-\latchwave{10.45}{1.65}{13.65}{15.85}{wfast}
-\latchwave{10.45}{1.05}{13.65}{15.85}{wfast}
-\draw[wclear] (10.45,0.45) -- (15.85,0.45) -- ++(0,0.38) -- ++(0.45,0) -- ++(0,-0.38) -- (16.95,0.45);
+\draw[wfast] (12.00,3.45) -- (15.80,3.45) -- ++(0,0.42) -- ++(0.42,0) -- ++(0,-0.42) -- (20.80,3.45);
+\latchwave{12.00}{2.60}{15.80}{18.55}{wfast}
+\latchwave{12.00}{1.75}{15.80}{18.55}{wfast}
+\draw[wclear] (12.00,0.90) -- (18.55,0.90) -- ++(0,0.42) -- ++(0.50,0) -- ++(0,-0.42) -- (20.80,0.90);
 
-\node[labeltag] at (12.10,3.78) {START lance le lent};
-\node[labeltag] at (14.55,2.68) {STOP lance le rapide};
-\node[labeltag] at (16.18,0.94) {clear};
+\node[labeltag,text=slowred] at (15.05,5.92) {maintien START};
+\node[labeltag,text=fastblue] at (17.25,3.27) {maintien STOP};
+\node[labeltag,text=cleargray] at (18.95,1.50) {clear};
 
 \end{tikzpicture}
 \end{document}

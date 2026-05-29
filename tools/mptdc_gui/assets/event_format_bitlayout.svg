@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 720" width="1180" height="720" role="img"><title>Format événement MPTDC</title><defs><marker id='arrow-data' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#0f766e'/></marker><marker id='arrow-control' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7c3aed'/></marker><marker id='arrow-clock' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#2563eb'/></marker><marker id='arrow-async' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#be5d00'/></marker><marker id='arrow-reset' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#64748b'/></marker><filter id='glow' x='-20%' y='-20%' width='140%' height='140%'><feGaussianBlur stdDeviation='2.2' result='blur'/><feMerge><feMergeNode in='blur'/><feMergeNode in='SourceGraphic'/></feMerge></filter><filter id='shadow' x='-15%' y='-15%' width='130%' height='145%'><feDropShadow dx='0' dy='3' stdDeviation='3' flood-opacity='0.13'/></filter><style>
+    .domain-label{font:700 15px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .caption{font:12px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .pin{font:10.5px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .symbol-title{font:700 13px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .symbol-sub{font:11px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .block{cursor:pointer}
+    .block:hover .symbol-body{stroke-width:2.4}
+    .active .symbol-body{stroke:#0f766e;stroke-width:2.6}
+    .active-signal{stroke-width:4.5;filter:url(#glow)}
+    .state-dot{fill:#ffffff;stroke:#7c3aed;stroke-width:1.4}
+    .bitlabel{font:10px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .fieldlabel{font:700 11px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    </style></defs><rect width='100%' height='100%' fill='#f7f8fb'/>
+<text x='36' y='44' class='domain-label' text-anchor='start'>Format événement / sortie</text>
+<text x='36' y='68' class='caption' text-anchor='start'>Mots 16-bit en mode standalone ; records META/HIT en mode readout partagé.</text>
+<text x='42' y='153' class='domain-label' text-anchor='start'>HEADER</text>
+<rect x='100' y='125' width='152' height='48' fill='#fee2e2' stroke='#94a3b8'/>
+<text x='176.0' y='143' class='fieldlabel' text-anchor='middle'>marqueur</text>
+<text x='176.0' y='166' class='bitlabel' text-anchor='middle'>15:12</text>
+<rect x='252' y='125' width='54' height='48' fill='#dbeafe' stroke='#94a3b8'/>
+<text x='279.0' y='143' class='fieldlabel' text-anchor='middle'>ctx</text>
+<text x='279.0' y='166' class='bitlabel' text-anchor='middle'>11</text>
+<rect x='306' y='125' width='152' height='48' fill='#dcfce7' stroke='#94a3b8'/>
+<text x='382.0' y='143' class='fieldlabel' text-anchor='middle'>hit_count</text>
+<text x='382.0' y='166' class='bitlabel' text-anchor='middle'>10:7</text>
+<rect x='458' y='125' width='152' height='48' fill='#fef3c7' stroke='#94a3b8'/>
+<text x='534.0' y='143' class='fieldlabel' text-anchor='middle'>flags</text>
+<text x='534.0' y='166' class='bitlabel' text-anchor='middle'>6:3</text>
+<rect x='610' y='125' width='54' height='48' fill='#f5f3ff' stroke='#94a3b8'/>
+<text x='637.0' y='143' class='fieldlabel' text-anchor='middle'>slow_boundary_inc</text>
+<text x='637.0' y='166' class='bitlabel' text-anchor='middle'>2</text>
+<rect x='664' y='125' width='76' height='48' fill='#f8fafc' stroke='#94a3b8'/>
+<text x='702.0' y='143' class='fieldlabel' text-anchor='middle'>rsvd</text>
+<text x='702.0' y='166' class='bitlabel' text-anchor='middle'>1:0</text>
+<text x='42' y='245' class='domain-label' text-anchor='start'>Mot HIT 0</text>
+<rect x='100' y='217' width='152' height='48' fill='#fee2e2' stroke='#94a3b8'/>
+<text x='176.0' y='235' class='fieldlabel' text-anchor='middle'>marqueur</text>
+<text x='176.0' y='258' class='bitlabel' text-anchor='middle'>15:12</text>
+<rect x='252' y='217' width='114' height='48' fill='#dbeafe' stroke='#94a3b8'/>
+<text x='309.0' y='235' class='fieldlabel' text-anchor='middle'>ns</text>
+<text x='309.0' y='258' class='bitlabel' text-anchor='middle'>11:9</text>
+<rect x='366' y='217' width='114' height='48' fill='#dcfce7' stroke='#94a3b8'/>
+<text x='423.0' y='235' class='fieldlabel' text-anchor='middle'>nf</text>
+<text x='423.0' y='258' class='bitlabel' text-anchor='middle'>8:6</text>
+<rect x='480' y='217' width='228' height='48' fill='#ecfdf5' stroke='#94a3b8'/>
+<text x='594.0' y='235' class='fieldlabel' text-anchor='middle'>nfast</text>
+<text x='594.0' y='258' class='bitlabel' text-anchor='middle'>5:0</text>
+<text x='42' y='337' class='domain-label' text-anchor='start'>Mot HIT 1</text>
+<rect x='100' y='309' width='152' height='48' fill='#fee2e2' stroke='#94a3b8'/>
+<text x='176.0' y='327' class='fieldlabel' text-anchor='middle'>marqueur</text>
+<text x='176.0' y='350' class='bitlabel' text-anchor='middle'>15:12</text>
+<rect x='252' y='309' width='342' height='48' fill='#ecfdf5' stroke='#94a3b8'/>
+<text x='423.0' y='327' class='fieldlabel' text-anchor='middle'>nslow</text>
+<text x='423.0' y='350' class='bitlabel' text-anchor='middle'>11:3</text>
+<rect x='594' y='309' width='114' height='48' fill='#f5f3ff' stroke='#94a3b8'/>
+<text x='651.0' y='327' class='fieldlabel' text-anchor='middle'>stop_disc</text>
+<text x='651.0' y='350' class='bitlabel' text-anchor='middle'>2:0</text>
+<text x='42' y='429' class='domain-label' text-anchor='start'>EOC</text>
+<rect x='100' y='401' width='76' height='48' fill='#fee2e2' stroke='#94a3b8'/>
+<text x='138.0' y='419' class='fieldlabel' text-anchor='middle'>marqueur</text>
+<text x='138.0' y='442' class='bitlabel' text-anchor='middle'>15:14</text>
+<rect x='176' y='401' width='532' height='48' fill='#dbeafe' stroke='#94a3b8'/>
+<text x='442.0' y='419' class='fieldlabel' text-anchor='middle'>conv_count</text>
+<text x='442.0' y='442' class='bitlabel' text-anchor='middle'>13:0</text>
+<g class='block' data-module='mptdc_drain_ctrl' data-title='Records internes'>
+<rect class='symbol-body' x='770' y='120' width='260' height='85' rx='8' fill='#ffffff' stroke='#0f766e' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='782' y='143' class='symbol-title' text-anchor='start'>Records internes</text>
+<rect x='792' y='166' width='48' height='30' fill='#dbeafe' stroke='#94a3b8'/>
+<text x='816' y='185' class='fieldlabel' text-anchor='middle'>META</text>
+<rect x='850' y='166' width='48' height='30' fill='#dcfce7' stroke='#94a3b8'/>
+<text x='874' y='185' class='fieldlabel' text-anchor='middle'>HIT</text>
+<rect x='908' y='166' width='48' height='30' fill='#fef3c7' stroke='#94a3b8'/>
+<text x='932' y='185' class='fieldlabel' text-anchor='middle'>EOC</text>
+<line x1='770' y1='182' x2='782' y2='182' stroke='#0f766e' stroke-width='1.4'/><circle cx='782' cy='182' r='2.8' fill='#fff' stroke='#0f766e'/><text x='766' y='185.5' class='pin' text-anchor='end'>acq_*</text>
+<line x1='1018' y1='182' x2='1030' y2='182' stroke='#0f766e' stroke-width='1.4'/><circle cx='1018' cy='182' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1034' y='185.5' class='pin'>TX paquet</text>
+</g>
+<line class='signal-wire' x1='900' y1='205' x2='900' y2='275' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<text x='900.0' y='233.0' class='caption' text-anchor='middle'>META/HIT acquisition records</text>
+<g class='block' data-module='mptdc_sync_fifo' data-title='FIFO'>
+<rect class='symbol-body' x='790' y='285' width='220' height='86' rx='8' fill='#ffffff' stroke='#0f766e' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='802' y='308' class='symbol-title' text-anchor='start'>FIFO</text>
+<rect x='832' y='323' width='136' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='832' y='337' width='136' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='832' y='351' width='136' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='832' y='365' width='136' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='832' y='379' width='136' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<line x1='790' y1='330' x2='802' y2='330' stroke='#7c3aed' stroke-width='1.4'/><circle cx='802' cy='330' r='2.8' fill='#fff' stroke='#7c3aed'/><text x='786' y='333.5' class='pin' text-anchor='end'>wr_en</text>
+<line x1='790' y1='352' x2='802' y2='352' stroke='#7c3aed' stroke-width='1.4'/><circle cx='802' cy='352' r='2.8' fill='#fff' stroke='#7c3aed'/><text x='786' y='355.5' class='pin' text-anchor='end'>rd_en</text>
+<line x1='998' y1='323' x2='1010' y2='323' stroke='#0f766e' stroke-width='1.4'/><circle cx='998' cy='323' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1014' y='326.5' class='pin'>full</text>
+<line x1='998' y1='341' x2='1010' y2='341' stroke='#0f766e' stroke-width='1.4'/><circle cx='998' cy='341' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1014' y='344.5' class='pin'>empty</text>
+<line x1='998' y1='359' x2='1010' y2='359' stroke='#0f766e' stroke-width='1.4'/><circle cx='998' cy='359' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1014' y='362.5' class='pin'>valid</text>
+</g>
+<g class='block' data-module='mptdc_narrow16_tx_v2' data-title='Serializer v2.7 fixe'>
+<rect class='symbol-body' x='770' y='405' width='260' height='80' rx='8' fill='#ffffff' stroke='#0f766e' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='782' y='428' class='symbol-title' text-anchor='start'>Serializer v2.7 fixe</text>
+<rect x='794' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='812' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='830' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='848' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='866' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='884' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='902' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='920' y='453' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<line class='signal-wire' x1='802' y1='489' x2='928' y2='489' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<text x='865.0' y='482.0' class='caption' text-anchor='middle'>décalage 16-bit</text>
+<line x1='770' y1='467' x2='782' y2='467' stroke='#0f766e' stroke-width='1.4'/><circle cx='782' cy='467' r='2.8' fill='#fff' stroke='#0f766e'/><text x='766' y='470.5' class='pin' text-anchor='end'>fifo_rd_data</text>
+<line x1='1018' y1='460' x2='1030' y2='460' stroke='#0f766e' stroke-width='1.4'/><circle cx='1018' cy='460' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1034' y='463.5' class='pin'>narrow_valid_o</text>
+<line x1='1018' y1='480' x2='1030' y2='480' stroke='#0f766e' stroke-width='1.4'/><circle cx='1018' cy='480' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1034' y='483.5' class='pin'>narrow_data_o</text>
+</g>
+<text x='700' y='555' class='caption' text-anchor='start'>Standalone : narrow_valid_o / narrow_ready_i / narrow_data_o[15:0]</text>
+<text x='700' y='580' class='caption' text-anchor='start'>TOP partagé : acq_valid_o / acq_ready_i / acq_data_o vers spadmic_tdc_packet_adapter</text>
+<text x='700' y='618' class='caption' text-anchor='start'>Références : MPTDC/docs/02_OUTPUT_PROTOCOL.md ; mptdc_narrow16_tx_v2.sv:91-121 ; mptdc_drain_ctrl.sv:137-156</text>
+</svg>

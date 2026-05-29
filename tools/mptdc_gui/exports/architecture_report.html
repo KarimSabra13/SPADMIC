@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Rapport architecture MPTDC</title>
+  <style>
+    body { font-family: Inter, Segoe UI, Arial, sans-serif; margin: 32px; color: #1d2430; background: #f7f8fb; }
+    h1, h2 { margin-bottom: .35rem; }
+    .panel { background: white; border: 1px solid #d8dee8; border-radius: 8px; padding: 18px; margin: 18px 0; }
+    code { background: #eef3f8; padding: 2px 5px; border-radius: 4px; }
+    img { max-width: 100%; border: 1px solid #d8dee8; border-radius: 8px; background: white; }
+  </style>
+</head>
+<body>
+  <h1>Rapport architecture MPTDC</h1>
+  <p>Top actif : <code>mptdc_top_asic</code>. Contexte full-chip : <code>spadmic_top_v1</code>.</p>
+  <div class="panel"><img src="../assets/architecture_schematique_mptdc.svg" alt="Schéma architecture MPTDC"></div>
+  <div class="panel">
+    <h2>Points incertains / revue manuelle</h2>
+    <ul><li><strong>moyen</strong> - Nom de top attendu absent : `mptdc_vernier_top_silicon` n&#x27;a pas été trouvé dans les fichiers du dépôt parcourus.</li><li><strong>élevé</strong> - Oscillateur physique non prêt pour la revue de signoff : Le chemin synthèse utilise un bloc de remplacement tant que le contrat macro réel n&#x27;est pas disponible.</li><li><strong>élevé</strong> - Fermeture CDC/STA standard non prouvée : Les verrous asynchrones, la capture STOP, les snapshots Gray et les horloges locales PD exigent une méthodologie et des dérogations contrôlées.</li><li><strong>moyen</strong> - Artefact VIP commité probablement ancien ou échoué : `vip_summary.json` rapporte 4096 échecs, en contradiction avec les statuts README/docs courants.</li></ul>
+  </div>
+</body>
+</html>

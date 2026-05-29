@@ -1,0 +1,235 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" role="img"><title>Étape 8 - Évaluation mesure</title><defs><marker id='arrow-data' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#0f766e'/></marker><marker id='arrow-control' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7c3aed'/></marker><marker id='arrow-clock' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#2563eb'/></marker><marker id='arrow-async' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#be5d00'/></marker><marker id='arrow-reset' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#64748b'/></marker><filter id='glow' x='-20%' y='-20%' width='140%' height='140%'><feGaussianBlur stdDeviation='2.2' result='blur'/><feMerge><feMergeNode in='blur'/><feMergeNode in='SourceGraphic'/></feMerge></filter><filter id='shadow' x='-15%' y='-15%' width='130%' height='145%'><feDropShadow dx='0' dy='3' stdDeviation='3' flood-opacity='0.13'/></filter><style>
+    .domain-label{font:700 15px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .caption{font:12px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .pin{font:10.5px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .symbol-title{font:700 13px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .symbol-sub{font:11px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .block{cursor:pointer}
+    .block:hover .symbol-body{stroke-width:2.4}
+    .active .symbol-body{stroke:#0f766e;stroke-width:2.6}
+    .active-signal{stroke-width:4.5;filter:url(#glow)}
+    .state-dot{fill:#ffffff;stroke:#7c3aed;stroke-width:1.4}
+    .bitlabel{font:10px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .fieldlabel{font:700 11px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    </style></defs><rect width='100%' height='100%' fill='#f7f8fb'/>
+<text x='48' y='54' class='domain-label' text-anchor='start'>Étape 8 - Évaluation mesure</text>
+<text x='48' y='82' class='caption' text-anchor='start'>La FSM compte les hits et décide capture / clear / flags</text>
+<rect class='domain-lane' data-domain='asynchrone' x='50' y='120' width='1180' height='110' rx='12' fill='#fff7ed' stroke='#d8dee8' stroke-width='1'/>
+<text x='64' y='144' class='domain-label' text-anchor='start'>Asynchrone</text>
+<rect class='domain-lane' data-domain='oscillateurs-pd' x='50' y='260' width='1180' height='110' rx='12' fill='#eff6ff' stroke='#d8dee8' stroke-width='1'/>
+<text x='64' y='284' class='domain-label' text-anchor='start'>Oscillateurs / PD</text>
+<rect class='domain-lane' data-domain='clk-sys' x='50' y='400' width='1180' height='110' rx='12' fill='#f5f3ff' stroke='#d8dee8' stroke-width='1'/>
+<text x='64' y='424' class='domain-label' text-anchor='start'>clk_sys</text>
+<rect class='domain-lane' data-domain='readout' x='50' y='540' width='1180' height='80' rx='12' fill='#ecfdf5' stroke='#d8dee8' stroke-width='1'/>
+<text x='64' y='564' class='domain-label' text-anchor='start'>Readout</text>
+<g class='block' data-module='mptdc_input_mux' data-title='MUX'>
+<polygon class='symbol-body' points='123,148 237,157.72 237,192.28 123,202' fill='#fff7ed' stroke='#be5d00' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='175.0' y='172.3' class='symbol-title' text-anchor='middle'>MUX</text>
+<text x='175.0' y='182.02' class='symbol-sub' text-anchor='middle'>MUX</text>
+<line x1='105' y1='166' x2='117' y2='166' stroke='#be5d00' stroke-width='1.4'/><circle cx='117' cy='166' r='2.8' fill='#fff' stroke='#be5d00'/><text x='101' y='169.5' class='pin' text-anchor='end'>SPAD</text>
+<line x1='105' y1='184' x2='117' y2='184' stroke='#be5d00' stroke-width='1.4'/><circle cx='117' cy='184' r='2.8' fill='#fff' stroke='#be5d00'/><text x='101' y='187.5' class='pin' text-anchor='end'>CAL</text>
+<line x1='233' y1='170.68' x2='245' y2='170.68' stroke='#be5d00' stroke-width='1.4'/><circle cx='233' cy='170.68' r='2.8' fill='#fff' stroke='#be5d00'/><text x='249' y='174.18' class='pin'>start/stop</text>
+<line x1='182.0' y1='206' x2='182.0' y2='218' stroke='#7c3aed' stroke-width='1.4'/><circle cx='182.0' cy='206' r='2.8' fill='#fff' stroke='#7c3aed'/><text x='182.0' y='231' class='pin' text-anchor='middle'>sel</text>
+</g>
+<g class='block' data-module='mptdc_async_frontend_v2' data-title='Frontend'>
+<rect class='symbol-body' x='300' y='145' width='175' height='58' rx='7' fill='#ffffff' stroke='#64748b' stroke-width='1.7' filter='url(#shadow)'/>
+<rect x='316' y='181' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='336' y='181' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='356' y='181' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='376' y='181' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='316' y='199' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='336' y='199' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='356' y='199' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='376' y='199' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='316' y='217' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='336' y='217' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='356' y='217' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='376' y='217' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<text x='463' y='169' class='symbol-title' text-anchor='end'>Frontend</text>
+<text x='463' y='188' class='symbol-sub' text-anchor='end'>latch</text>
+</g>
+<g class='block osc-rapide' data-module='mptdc_osc_wrapper' data-title='Oscillateurs'>
+<rect class='symbol-body' x='540' y='285' width='170' height='58' rx='8' fill='#eff6ff' stroke='#2563eb' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='552' y='307' class='symbol-title' text-anchor='start'>Oscillateurs</text>
+<ellipse cx='628.4' cy='316.9' rx='42.5' ry='13.34' fill='none' stroke='#2563eb' stroke-width='2'/>
+<polygon points='658.9499999999999,310.9 658.9499999999999,322.9 671.9499999999999,316.9' fill='#ffffff' stroke='#2563eb' stroke-width='1.2'/>
+<circle cx='673.9499999999999' cy='316.9' r='2.5' fill='#ffffff' stroke='#2563eb'/>
+<polygon points='640.675,320.83538984237657 640.675,332.83538984237657 653.675,326.83538984237657' fill='#ffffff' stroke='#2563eb' stroke-width='1.2'/>
+<polygon points='604.125,320.83538984237657 604.125,332.83538984237657 617.125,326.83538984237657' fill='#ffffff' stroke='#2563eb' stroke-width='1.2'/>
+<circle cx='619.125' cy='326.83538984237657' r='2.5' fill='#ffffff' stroke='#2563eb'/>
+<polygon points='585.85,310.9 585.85,322.9 598.85,316.9' fill='#ffffff' stroke='#2563eb' stroke-width='1.2'/>
+<polygon points='604.125,300.9646101576234 604.125,312.9646101576234 617.125,306.9646101576234' fill='#ffffff' stroke='#2563eb' stroke-width='1.2'/>
+<circle cx='619.125' cy='306.9646101576234' r='2.5' fill='#ffffff' stroke='#2563eb'/>
+<polygon points='640.675,300.9646101576234 640.675,312.9646101576234 653.675,306.9646101576234' fill='#ffffff' stroke='#2563eb' stroke-width='1.2'/>
+<line x1='540' y1='316.9' x2='552' y2='316.9' stroke='#7c3aed' stroke-width='1.4'/><circle cx='552' cy='316.9' r='2.8' fill='#fff' stroke='#7c3aed'/><text x='536' y='320.4' class='pin' text-anchor='end'>osc_en</text>
+<line x1='698' y1='316.9' x2='710' y2='316.9' stroke='#2563eb' stroke-width='1.4'/><circle cx='698' cy='316.9' r='2.8' fill='#fff' stroke='#2563eb'/><text x='714' y='320.4' class='pin'>phase[7:0]</text>
+</g>
+<g class='block' data-module='mptdc_pd_cell' data-title='PD 8x8'>
+<rect class='symbol-body' x='770' y='276' width='230' height='80' rx='8' fill='#ffffff' stroke='#0f766e' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='782' y='299' class='symbol-title' text-anchor='start'>PD 8x8</text>
+<text x='802' y='323.845' class='bitlabel' text-anchor='end'>s0</text>
+<rect x='812.0' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.5' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='324.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='802' y='323.595' class='bitlabel' text-anchor='end'>s1</text>
+<rect x='812.0' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.5' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='323.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='802' y='323.345' class='bitlabel' text-anchor='end'>s2</text>
+<rect x='812.0' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.5' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='323.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='802' y='323.095' class='bitlabel' text-anchor='end'>s3</text>
+<rect x='812.0' y='323.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='323.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='323.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='323.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='323.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='323.25' width='-2.25' height='-2.25' fill='#dcfce7' stroke='#0f766e' stroke-width='1'/>
+<rect x='810.5' y='323.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='323.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='802' y='322.845' class='bitlabel' text-anchor='end'>s4</text>
+<rect x='812.0' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.5' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='323.0' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='802' y='322.595' class='bitlabel' text-anchor='end'>s5</text>
+<rect x='812.0' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.5' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='322.75' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='802' y='322.345' class='bitlabel' text-anchor='end'>s6</text>
+<rect x='812.0' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.5' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='322.5' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='802' y='322.095' class='bitlabel' text-anchor='end'>s7</text>
+<rect x='812.0' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.75' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.5' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.25' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='811.0' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.75' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.5' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<rect x='810.25' y='322.25' width='-2.25' height='-2.25' fill='#f8fafc' stroke='#cbd5e1' stroke-width='1'/>
+<text x='811.9' y='316' class='bitlabel' text-anchor='middle'>f0</text>
+<text x='811.65' y='316' class='bitlabel' text-anchor='middle'>f1</text>
+<text x='811.4' y='316' class='bitlabel' text-anchor='middle'>f2</text>
+<text x='811.15' y='316' class='bitlabel' text-anchor='middle'>f3</text>
+<text x='810.9' y='316' class='bitlabel' text-anchor='middle'>f4</text>
+<text x='810.65' y='316' class='bitlabel' text-anchor='middle'>f5</text>
+<text x='810.4' y='316' class='bitlabel' text-anchor='middle'>f6</text>
+<text x='810.15' y='316' class='bitlabel' text-anchor='middle'>f7</text>
+<text x='811.0' y='338' class='symbol-sub' text-anchor='middle'>64 cellules PD - CELL = ns * NE + nf</text>
+<line x1='770' y1='323.0' x2='782' y2='323.0' stroke='#2563eb' stroke-width='1.4'/><circle cx='782' cy='323.0' r='2.8' fill='#fff' stroke='#2563eb'/><text x='766' y='326.5' class='pin' text-anchor='end'>slow_phase[7:0]</text>
+<line x1='889.6' y1='276' x2='889.6' y2='288' stroke='#2563eb' stroke-width='1.4'/><circle cx='889.6' cy='288' r='2.8' fill='#fff' stroke='#2563eb'/><text x='889.6' y='272' class='pin' text-anchor='middle'>fast_phase[7:0]</text>
+<line x1='988' y1='323.225' x2='1000' y2='323.225' stroke='#0f766e' stroke-width='1.4'/><circle cx='988' cy='323.225' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1004' y='326.725' class='pin'>pd_hit_level[63:0]</text>
+<line x1='988' y1='322.9' x2='1000' y2='322.9' stroke='#0f766e' stroke-width='1.4'/><circle cx='988' cy='322.9' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1004' y='326.4' class='pin'>pd_nfast_hit_packed</text>
+</g>
+<g class='block' data-module='mptdc_meas_ctrl' data-title='FSM mesure'>
+<rect class='symbol-body' x='210' y='420' width='220' height='62' rx='8' fill='#ffffff' stroke='#7c3aed' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='222' y='443' class='symbol-title' text-anchor='start'>FSM mesure</text>
+<circle cx='252' cy='455.96' r='13' class='state-dot'/>
+<text x='252' y='459.96' class='bitlabel' text-anchor='middle'>IDLE</text>
+<line class='signal-wire' x1='266' y1='455.96' x2='276' y2='455.96' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='290' cy='455.96' r='13' class='state-dot'/>
+<text x='290' y='459.96' class='bitlabel' text-anchor='middle'>EVAL</text>
+<line class='signal-wire' x1='304' y1='455.96' x2='314' y2='455.96' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='328' cy='455.96' r='13' class='state-dot'/>
+<text x='328' y='459.96' class='bitlabel' text-anchor='middle'>CLR</text>
+</g>
+<g class='block' data-module='mptdc_context_bank' data-title='Contexte'>
+<rect class='symbol-body' x='500' y='420' width='190' height='62' rx='7' fill='#ffffff' stroke='#64748b' stroke-width='1.7' filter='url(#shadow)'/>
+<rect x='516' y='456' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='536' y='456' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='556' y='456' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='576' y='456' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='516' y='474' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='536' y='474' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='556' y='474' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='576' y='474' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='516' y='492' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='536' y='492' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='556' y='492' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<rect x='576' y='492' width='13' height='11' fill='#eef3f8' stroke='#cbd5e1'/>
+<text x='678' y='444' class='symbol-title' text-anchor='end'>Contexte</text>
+<text x='678' y='463' class='symbol-sub' text-anchor='end'>2 contextes</text>
+</g>
+<g class='block' data-module='mptdc_drain_ctrl' data-title='Drain'>
+<rect class='symbol-body' x='760' y='420' width='190' height='62' rx='8' fill='#ffffff' stroke='#7c3aed' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='772' y='443' class='symbol-title' text-anchor='start'>Drain</text>
+<circle cx='802' cy='455.96' r='13' class='state-dot'/>
+<text x='802' y='459.96' class='bitlabel' text-anchor='middle'>META</text>
+<line class='signal-wire' x1='816' y1='455.96' x2='826' y2='455.96' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='840' cy='455.96' r='13' class='state-dot'/>
+<text x='840' y='459.96' class='bitlabel' text-anchor='middle'>HIT</text>
+</g>
+<g class='block' data-module='mptdc_sync_fifo' data-title='FIFO'>
+<rect class='symbol-body' x='500' y='552' width='180' height='58' rx='8' fill='#ffffff' stroke='#0f766e' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='512' y='575' class='symbol-title' text-anchor='start'>FIFO</text>
+<rect x='542' y='590' width='96' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='542' y='604' width='96' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='542' y='618' width='96' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='542' y='632' width='96' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<rect x='542' y='646' width='96' height='12' fill='#ecfdf5' stroke='#99f6e4'/>
+<line x1='500' y1='597' x2='512' y2='597' stroke='#7c3aed' stroke-width='1.4'/><circle cx='512' cy='597' r='2.8' fill='#fff' stroke='#7c3aed'/><text x='496' y='600.5' class='pin' text-anchor='end'>wr_en</text>
+<line x1='500' y1='619' x2='512' y2='619' stroke='#7c3aed' stroke-width='1.4'/><circle cx='512' cy='619' r='2.8' fill='#fff' stroke='#7c3aed'/><text x='496' y='622.5' class='pin' text-anchor='end'>rd_en</text>
+<line x1='668' y1='590' x2='680' y2='590' stroke='#0f766e' stroke-width='1.4'/><circle cx='668' cy='590' r='2.8' fill='#fff' stroke='#0f766e'/><text x='684' y='593.5' class='pin'>full</text>
+<line x1='668' y1='608' x2='680' y2='608' stroke='#0f766e' stroke-width='1.4'/><circle cx='668' cy='608' r='2.8' fill='#fff' stroke='#0f766e'/><text x='684' y='611.5' class='pin'>empty</text>
+<line x1='668' y1='626' x2='680' y2='626' stroke='#0f766e' stroke-width='1.4'/><circle cx='668' cy='626' r='2.8' fill='#fff' stroke='#0f766e'/><text x='684' y='629.5' class='pin'>valid</text>
+</g>
+<g class='block' data-module='mptdc_narrow16_tx_v2' data-title='Sortie'>
+<rect class='symbol-body' x='760' y='550' width='210' height='60' rx='8' fill='#ffffff' stroke='#0f766e' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='772' y='573' class='symbol-title' text-anchor='start'>Sortie</text>
+<rect x='784' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='802' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='820' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='838' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='856' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='874' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='892' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<rect x='910' y='598' width='15' height='24' fill='#ecfdf5' stroke='#0f766e'/>
+<line class='signal-wire' x1='792' y1='634' x2='918' y2='634' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<text x='855.0' y='627.0' class='caption' text-anchor='middle'>décalage 16-bit</text>
+<line x1='760' y1='612' x2='772' y2='612' stroke='#0f766e' stroke-width='1.4'/><circle cx='772' cy='612' r='2.8' fill='#fff' stroke='#0f766e'/><text x='756' y='615.5' class='pin' text-anchor='end'>fifo_rd_data</text>
+<line x1='958' y1='605' x2='970' y2='605' stroke='#0f766e' stroke-width='1.4'/><circle cx='958' cy='605' r='2.8' fill='#fff' stroke='#0f766e'/><text x='974' y='608.5' class='pin'>narrow_valid_o</text>
+<line x1='958' y1='625' x2='970' y2='625' stroke='#0f766e' stroke-width='1.4'/><circle cx='958' cy='625' r='2.8' fill='#fff' stroke='#0f766e'/><text x='974' y='628.5' class='pin'>narrow_data_o</text>
+</g>
+<line class='signal-wire' x1='245' y1='176' x2='300' y2='176' stroke='#be5d00' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-async)' stroke-dasharray='8 6'/>
+<line class='signal-wire' x1='475' y1='176' x2='540' y2='313' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<line class='signal-wire' x1='710' y1='313' x2='770' y2='313' stroke='#2563eb' stroke-width='2.6' stroke-linecap='round' marker-end='url(#arrow-clock)'/>
+<line class='signal-wire' x1='1000' y1='316' x2='1045' y2='450' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<line class='signal-wire' x1='430' y1='451' x2='500' y2='451' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<line class='signal-wire' x1='690' y1='451' x2='760' y2='451' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<line class='signal-wire' x1='950' y1='451' x2='590' y2='552' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<line class='signal-wire' x1='680' y1='581' x2='760' y2='581' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<text x='64' y='655' class='domain-label' text-anchor='start'>La FSM parcourt SNAPSHOT, COUNT, EVAL, CAPTURE puis CLEAR pour fermer la conversion et préparer la suivante.</text>
+<text x='64' y='682' class='caption' text-anchor='start'>Blocs actifs : mptdc_meas_ctrl</text>
+</svg>

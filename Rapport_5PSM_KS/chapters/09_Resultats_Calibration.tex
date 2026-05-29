@@ -5,133 +5,54 @@
 
 \section{Objectif de la caractérisation}
 
-La caractérisation du \textbf{MPTDC} ne cherche pas seulement à afficher une erreur moyenne faible. Elle doit répondre à une question plus structurante pour un jury : le RTL exporte-t-il assez d'observables pour transformer une grille Vernier non uniforme en mesure temporelle exploitable, traçable et vérifiable ? Le raisonnement suit donc quatre niveaux complémentaires :
-\begin{enumerate}
-    \item la validation fonctionnelle du protocole et des scénarios de robustesse ;
-    \item la structure brute de codes, avant toute correction hors circuit ;
-    \item la calibration par table de correspondance (\textit{Look-Up Table}, LUT) sur des données tenues hors apprentissage ;
-    \item la linéarité et les limites d'interprétation, en distinguant clairement RTL, modèle comportemental et performance silicium future.
-\end{enumerate}
+La caractérisation répond à une question simple : les observables exportées par le \textbf{MPTDC} permettent-elles de transformer une grille Vernier non uniforme en mesure temporelle exploitable ? Les résultats de ce chapitre proviennent de simulations \textbf{RTL}/\textit{Xcelium}. Ils doivent donc être lus comme une preuve numérique pré-silicium, et non comme une mesure physique du circuit fabriqué.
 
-Cette séparation est essentielle. Une erreur quadratique moyenne (RMSE, \textit{Root Mean Square Error}) faible après calibration ne prouve pas à elle seule la robustesse du flux de sortie. À l'inverse, une campagne VIP (\textit{Verification IP}) propre ne constitue pas une preuve de précision temporelle. Les résultats ci-dessous sont donc présentés comme une chaîne de preuves : protocole fonctionnel, volume statistique, observables de calibration, puis précision reconstruite.
+Le flot utilisé sépare trois étapes : une collecte large de conversions, un apprentissage de table de correction hors circuit, puis une validation tenue hors apprentissage. Les figures publiées proviennent des artefacts versionnés du projet ; les CSV bruts de campagne ne sont pas intégrés au rapport.
 
-Les métriques employées sont définies ici pour éviter toute ambiguïté : la MAE (\textit{Mean Absolute Error}) est l'erreur absolue moyenne, la DNL (\textit{Differential Non-Linearity}) mesure la non-linéarité différentielle entre codes adjacents, et l'INL (\textit{Integral Non-Linearity}) mesure l'écart cumulé à une droite de référence. La campagne CDV (\textit{Coverage-Driven Verification}) désigne ici la vérification pilotée par couverture.
+\section{Observables et calibration externe}
 
-\section{Provenance des données finales}
-
-Les résultats numériques de ce chapitre proviennent du flot final exécuté avec \textit{Xcelium} :
-\begin{center}
-\small\texttt{MPTDC/scripts/sim/run\_report\_flow.sh --sim xrun --jobs 24}\\
-\small\texttt{--rebuild --out-dir /sim/ksabra/mptdc\_final\_protocol\_v27\_boundaryfix}
-\end{center}
-Les artefacts sources sont archivés dans le bundle versionné \texttt{MPTDC/report\_artifacts}. Les figures publiées sont les exports finaux du flot \texttt{generate\_report\_plots.py}, réutilisés dans le répertoire \texttt{Rapport\_5PSM\_KS/figures/tdc/final\_mptdc}. Aucun fichier CSV brut lourd de campagne n'est intégré au dépôt.
+L'architecture n'exporte pas un timestamp brut isolé. Elle fournit une image partielle de la conversion : composantes grossières, indices de phase, valeurs locales de hit, informations de contexte, métadonnées de frontière et champs de statut. Ces familles d'observables sont suffisantes pour indexer une LUT de correction moyenne côté hôte. Le détail bit à bit du paquet n'est pas nécessaire ici ; l'important est que les cas ambigus, en particulier près des frontières lentes, restent observables par le décodeur.
 
 \begin{table}[H]
     \centering
     \small
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedleft\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}X}
+    \begin{tabularx}{0.98\textwidth}{>{\raggedright\arraybackslash}Xrrr}
         \toprule
-        \textbf{Bloc d'analyse} & \textbf{Volume final} & \textbf{Rôle dans le rapport} \\
+        \textbf{Étape} & \textbf{Moyenne} & \textbf{RMSE} & \textbf{P99 $|e|$} \\
         \midrule
-        VIP CDV & \num{1024}/\num{1024} exécutions réussies & non-régression des scénarios de protocole, rétropression, watchdog, reset, CSR et matrice \texttt{max\_hits} \\
-        Sweep large RAW\_FEATURES & \num{32} graines $\times$ \num{100000} conversions, \num{48000000} lignes utiles & statistique brute avant calibration et construction des histogrammes de reconstruction \\
-        Apprentissage LUT & \num{24} graines, \num{36000000} lignes & estimation des corrections moyennes par clé observable \\
-        Validation tenue hors apprentissage & \num{8999942} lignes appariées & métriques publiées avant/après LUT, sans réutiliser les graines d'apprentissage \\
-        Délais fixes & \num{10} délais, \num{60} fichiers CSV & diagnostic du biais brut sur délais connus, non utilisé comme métrique finale calibrée \\
-        Linéarité focalisée & \num{800000} lignes mono-hit valides & DNL/INL observables et linéarité de transfert \\
-        Frontières temporelles & \num{8} graines dédiées & stress des classes de frontière utilisées par la calibration \\
+        Reconstruction brute & \SI{-1895.97}{\pico\second} & \SI{1940.32}{\pico\second} & \SI{2624.00}{\pico\second} \\
+        Après LUT externe & \SI{-0.008}{\pico\second} & \SI{18.56}{\pico\second} & \SI{38.99}{\pico\second} \\
         \bottomrule
     \end{tabularx}
-    \caption{Traçabilité des données finales utilisées pour les résultats MPTDC. Les volumes correspondent aux sorties du flot \texttt{run\_report\_flow.sh} et aux fichiers effectivement versionnés sous forme de résumés ou de figures.}
-    \label{tab:char-global-summary}
-\end{table}
-
-\section{Observables utilisés pour la calibration}
-
-L'architecture n'exporte pas uniquement un timestamp brut. Elle fournit une image partielle de la conversion : compteur lent, compteur rapide local, indices de phase et classes de frontière. Ces observables sont nécessaires parce que la matrice \mbox{$8\times8$} ne forme pas une règle uniforme en \SI{10}{\pico\second}. Le tableau \ref{tab:calib-observables} précise le rôle de chaque champ.
-
-\begin{table}[H]
-    \centering
-    \scriptsize
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}X}
-        \toprule
-        \textbf{Champ} & \textbf{Origine} & \textbf{Rôle pour la correction} \\
-        \midrule
-        \texttt{ns\_inf}, \texttt{nf\_inf} & inférés depuis \texttt{t\_raw\_ps} & indices de phase lente et rapide ; les \num{64} combinaisons actives sont distinguables dans l'algèbre Vernier \\
-        \texttt{nslow} & paquet META / W0 & compteur grossier lent à la frontière de mesure \\
-        \texttt{nfast\_hit} & cellule PD active & compteur rapide local capturé au moment du hit de phase \\
-        \texttt{stop\_phase\_disc} & paquet v2.7, \texttt{W1[2:0]} & discriminateur \SI{3}{\bit} de secteur lent au front \texttt{STOP} \\
-        \texttt{phase0\_snap} & en-tête de paquet & classe binaire de frontière grossière/fine \\
-        \texttt{slow\_boundary\_inc} & en-tête v2.7, \texttt{header[2]} & report du cas rare où la frontière lente impose une correction grossière d'un pas \\
-        \texttt{hit\_idx} & ordre d'export CSV & ordre de paquetisation du hit, pas ordre chronologique physique \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Observables exportées ou dérivées pour la correction moyenne. La clé LUT maintenue comporte \num{7} champs ; \texttt{slow\_boundary\_inc} reste indispensable en amont pour reconstruire \texttt{t\_raw\_ps} et inférer correctement les indices de phase.}
-    \label{tab:calib-observables}
-\end{table}
-
-La méthode publiée est donc une LUT de correction moyenne indexée par :
-\[
-\begin{aligned}
-(&\texttt{ns\_inf},\ \texttt{nf\_inf},\ \texttt{nslow},\ \texttt{nfast\_hit},\\
- &\texttt{stop\_phase\_disc},\ \texttt{phase0\_snap},\ \texttt{hit\_idx}).
-\end{aligned}
-\]
-L'entraînement final construit \num{9946} classes de LUT, avec une population médiane de \num{3664} échantillons par classe. Ce point est important : la correction n'est pas une interpolation visuelle sur quelques points, mais une statistique extraite de \num{36000000} lignes d'apprentissage.
-
-La campagne boundary-fix confirme que \texttt{slow\_boundary\_inc} est bien présent dans les paquets maintenus : sur la validation tenue hors apprentissage, \num{11025} lignes portent ce bit à $1$, soit \SI{0.1225}{\percent}. Cette proportion est faible, mais suffisante pour créer des erreurs grossières si le bit n'est pas visible côté hôte. Le protocole v2.7 le conserve donc dans \texttt{header[2]} sans augmenter le nombre de mots transmis.
-
-\section{Structure brute avant correction}
-
-Avant calibration, la reconstruction brute présente un biais systématique important. Sur le sweep large \texttt{RAW\_FEATURES}, l'erreur moyenne vaut \SI{-1895.77}{\pico\second}, l'écart-type vaut \SI{412.49}{\pico\second} et la RMSE atteint \SI{1940.13}{\pico\second}. Le pic de non-linéarité différentielle (DNL, \textit{Differential Non-Linearity}) observable est de \textbf{1.000 LSB} dans cette analyse large, tandis que le pic de non-linéarité intégrale (INL, \textit{Integral Non-Linearity}) atteint \textbf{89.190 LSB}. Ces valeurs ne sont pas la précision finale ; elles justifient le besoin de correction hors ASIC.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.90\textwidth]{tdc/final_mptdc/04_dnl_inl_observable.png}
-    \caption{DNL/INL observables sur la campagne de linéarité focalisée. Sur les codes atteints, le pic DNL vaut \textbf{0.987 LSB} et le pic INL aux extrémités vaut \textbf{1.553 LSB}. Les \num{2696} emplacements non observés reflètent la parcimonie de la grille brute, pas une perte de paquets.}
-    \label{fig:char-dnl-inl}
-\end{figure}
-
-La figure \ref{fig:char-dnl-inl} doit être lue avec précision. La grille complète entre les codes bruts \num{209} et \num{3281} contient \num{3073} emplacements scalaires possibles, mais seulement \num{377} codes sont atteints dans la campagne mono-hit. La métrique DNL/INL publiée s'applique donc aux codes observables ; elle ne transforme pas la matrice Vernier en convertisseur uniforme sans trous.
-
-\section{Résultat principal : correction par LUT}
-
-La validation publiée utilise \num{6} graines tenues hors apprentissage. Après appariement LUT, \num{8999942} lignes sont utilisées pour les métriques finales, soit seulement \num{58} lignes non appariées sur \num{9000000}. La couverture effective de la LUT sur cette validation est donc de \SI{99.9994}{\percent}.
-
-\begin{table}[H]
-    \centering
-    \small
-    \begin{tabularx}{0.98\textwidth}{>{\raggedright\arraybackslash}Xrrrrr}
-        \toprule
-        \textbf{Métrique} & \textbf{Échantillons} & \textbf{Moyenne} & \textbf{MAE} & \textbf{RMSE} & \textbf{p99 $|e|$} \\
-        \midrule
-        Avant LUT & \num{8999942} & \SI{-1895.968}{\pico\second} & \SI{1895.968}{\pico\second} & \SI{1940.325}{\pico\second} & \SI{2624.000}{\pico\second} \\
-        Après LUT & \num{8999942} & \SI{-0.008}{\pico\second} & \SI{15.219}{\pico\second} & \SI{18.555}{\pico\second} & \SI{38.994}{\pico\second} \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Performance avant et après correction LUT sur les graines de validation tenues hors apprentissage. La RMSE baisse de \SI{1940.325}{\pico\second} à \SI{18.555}{\pico\second}, soit une réduction de \SI{99.04}{\percent}.}
+    \caption{Résultat principal de calibration sur validation tenue hors apprentissage. La correction supprime le biais brut de l'ordre de \SI{1.9}{\nano\second} et ramène la RMSE à \SI{18.56}{\pico\second}.}
     \label{tab:calibration-pre-post}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/01_erreur_histogramme_pre_post_lut.png}
-    \caption{Distribution de l'erreur temporelle avant et après correction LUT. La correction supprime le biais de l'ordre de \SI{1.9}{\nano\second} et recentre l'erreur autour de \SI{0}{\pico\second}.}
-    \label{fig:calibration-error-hist}
+    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/01_erreur_histogramme_pre_post_lut.png}
+    \caption{Effet de la calibration externe sur la distribution d'erreur. La LUT supprime le biais principal et concentre l'erreur corrigée autour de zéro.}
+    \label{fig:calibration-pre-post}
 \end{figure}
+
+Le résultat le plus important n'est pas seulement la baisse de RMSE. Le biais moyen résiduel devient pratiquement nul, ce qui montre que la LUT corrige l'erreur systématique de reconstruction. La dispersion restante correspond à l'information réellement disponible dans les observables exportées et au caractère statistique de la correction.
+
+\section{Structure brute et linéarité observable}
+
+Avant correction, la grille fine n'est pas uniforme. La matrice \mbox{$8\times8$} fournit des combinaisons riches, mais certains codes sont absents et d'autres plus denses. Cette structure explique le biais brut et justifie la calibration externe.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/02_cdf_erreur_absolue_post_lut.png}
-    \caption{Fonction de répartition cumulative (CDF, \textit{Cumulative Distribution Function}) de l'erreur absolue après correction. Le percentile 99 publié est \SI{38.994}{\pico\second}.}
-    \label{fig:post-lut-abs-error-cdf}
+    \includegraphics[width=0.88\textwidth]{tdc/final_mptdc/04_dnl_inl_observable.png}
+    \caption{DNL/INL observables sur les codes atteints. La métrique décrit les codes effectivement vus par la campagne ; elle ne prétend pas remplir uniformément tous les emplacements de la grille brute.}
+    \label{fig:char-dnl-inl}
 \end{figure}
 
-Le point fort du résultat n'est pas seulement la RMSE de \SI{18.555}{\pico\second}. Le biais moyen résiduel vaut \SI{-0.008}{\pico\second}, la médiane de l'erreur absolue vaut \SI{13.483}{\pico\second}, et le percentile 95 vaut \SI{35.399}{\pico\second}. La correction agit donc à la fois sur le centrage et sur la dispersion.
+Sur les codes atteints de la campagne focalisée, le pic DNL observable vaut environ \textbf{0.987 LSB} et l'INL aux extrémités environ \textbf{1.553 LSB}. Ces valeurs montrent que les codes observés restent exploitables, mais elles ne contredisent pas la parcimonie de la grille complète. Les analyses plus fines de transfert et de stress de frontière sont conservées dans les artefacts de caractérisation ; le corps principal retient seulement leur conclusion : la structure brute est mesurable et corrigeable, à condition de garder les métadonnées auxiliaires dans le flux hôte.
 
-\section{Gain statistique par moyennage}
+\section{Gain par moyennage statistique}
 
-Le flot final inclut une étude de moyennage réalisée côté analyse sur le bassin d'erreurs post-LUT. Cette étude ne remplace pas un banc de mesure physique répétée à délai strictement constant ; elle quantifie l'effet attendu lorsque plusieurs échantillons indépendants corrigés peuvent être combinés.
+Une fois la correction LUT appliquée, le flot d'analyse permet d'estimer le gain obtenu lorsque plusieurs mesures indépendantes corrigées sont moyennées. Cette étude reste une projection statistique sur données RTL ; elle ne remplace pas un banc de répétabilité silicium à délai fixe.
 
 \begin{table}[H]
     \centering
@@ -140,72 +61,34 @@ Le flot final inclut une étude de moyennage réalisée côté analyse sur le ba
         \toprule
         \textbf{Nombre de mesures $N$} & \textbf{RMSE} & \textbf{MAE} & \textbf{P90} \\
         \midrule
-        \num{1} & \SI{18.823}{\pico\second} & \SI{15.528}{\pico\second} & \SI{31.581}{\pico\second} \\
-        \num{2} & \SI{13.227}{\pico\second} & \SI{10.704}{\pico\second} & \SI{21.616}{\pico\second} \\
-        \num{4} & \SI{9.284}{\pico\second} & \SI{7.448}{\pico\second} & \SI{15.185}{\pico\second} \\
-        \num{10} & \SI{5.920}{\pico\second} & \SI{4.744}{\pico\second} & \SI{9.823}{\pico\second} \\
-        \num{15} & \SI{4.769}{\pico\second} & \SI{3.802}{\pico\second} & \SI{7.882}{\pico\second} \\
-        \num{100} & \SI{1.867}{\pico\second} & \SI{1.494}{\pico\second} & \SI{3.062}{\pico\second} \\
-        \num{400} & \SI{0.928}{\pico\second} & \SI{0.744}{\pico\second} & \SI{1.530}{\pico\second} \\
+        \num{1} & \SI{18.82}{\pico\second} & \SI{15.53}{\pico\second} & \SI{31.58}{\pico\second} \\
+        \num{2} & \SI{13.23}{\pico\second} & \SI{10.70}{\pico\second} & \SI{21.62}{\pico\second} \\
+        \num{4} & \SI{9.28}{\pico\second} & \SI{7.45}{\pico\second} & \SI{15.19}{\pico\second} \\
+        \num{8} & \SI{6.57}{\pico\second} & \SI{5.30}{\pico\second} & \SI{10.71}{\pico\second} \\
+        \num{15} & \SI{4.77}{\pico\second} & \SI{3.80}{\pico\second} & \SI{7.88}{\pico\second} \\
+        \num{30} & \SI{3.39}{\pico\second} & \SI{2.69}{\pico\second} & \SI{5.57}{\pico\second} \\
+        \num{50} & \SI{2.64}{\pico\second} & \SI{2.10}{\pico\second} & \SI{4.34}{\pico\second} \\
         \bottomrule
     \end{tabular}
-    \caption{Étude de moyennage post-LUT. Le seuil \SI{10}{\pico\second} est franchi dès $N=4$, et le seuil \SI{5}{\pico\second} dès $N=15$.}
+    \caption{Étude de moyennage post-LUT limitée à un domaine réaliste pour le corps du rapport. Les seuils de \SI{10}{\pico\second} et \SI{5}{\pico\second} sont franchis respectivement autour de $N=4$ et $N=15$.}
     \label{tab:averaging-study}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/03_rmse_vs_moyennage.png}
-    \caption{Réduction statistique de la RMSE, de la MAE et du P90 par moyennage. Le tracé est en échelle logarithmique sur $N$ afin de rendre visibles les régimes $N=1$ à $N=1000$.}
+    \includegraphics[width=0.80\textwidth]{tdc/final_mptdc/03_rmse_vs_moyennage_limited.png}
+    \caption{Évolution de l'erreur avec le moyennage statistique après LUT, bornée au domaine $N \leq 64$.}
     \label{fig:multihit-averaging}
 \end{figure}
 
-Pour le rapport, la formulation défendable est donc la suivante : la précision mono-échantillon corrigée est de \SI{18.56}{\pico\second} RMSE ; avec moyennage statistique, elle descend à \SI{9.28}{\pico\second} pour $N=4$ et à \SI{4.77}{\pico\second} pour $N=15$. La valeur sub-picoseconde de \SI{0.93}{\pico\second} à $N=400$ est une projection statistique d'analyse, pas une spécification du mode multi-hit RTL courant.
+La formulation défendable est donc la suivante : la précision mono-échantillon corrigée est d'environ \SI{18.56}{\pico\second} RMSE ; le moyennage de plusieurs échantillons corrigés peut descendre sous \SI{10}{\pico\second} autour de $N=4$, puis sous \SI{5}{\pico\second} autour de $N=15$, dans le cadre statistique de cette campagne. Les valeurs à très grand nombre d'échantillons sont conservées dans les artefacts, mais ne sont pas mises en avant comme promesse de performance du prototype.
 
-\section{Linéarité de transfert}
+\section{Portée des chiffres}
 
-La linéarité de transfert complète mesure la relation entre le temps vrai moyen et le temps brut moyen. Sur la campagne focalisée, la pente calculée entre les extrémités vaut \num{1.010825} ps/ps, avec un offset de \SI{1076.27}{\pico\second}. La régression par ajustement aux moindres carrés donne une pente de \num{1.000355} ps/ps et un offset de \SI{1164.38}{\pico\second}. Les pics d'INL de transfert valent \textbf{35.907 LSB} avec la droite d'extrémités et \textbf{30.836 LSB} avec l'ajustement, soit respectivement \SI{359.07}{\pico\second} et \SI{308.36}{\pico\second} avec le pas de \SI{10}{\pico\second}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.92\textwidth]{tdc/final_mptdc/05_linearite_transfert.png}
-    \caption{Linéarité de transfert brute. La pente ajustée proche de \num{1.000355} montre que l'échelle globale est correcte, tandis que l'INL de transfert aux extrémités de \textbf{35.907 LSB} quantifie les résidus de structure avant correction statistique fine.}
-    \label{fig:transfer-linearity}
-\end{figure}
-
-Cette figure complète la lecture DNL/INL. Les codes atteints peuvent avoir une DNL observable bornée, tout en conservant une courbure de transfert sur la reconstruction brute. C'est précisément l'intérêt de publier les deux vues : l'une décrit la densité des codes, l'autre la fidélité temporelle moyenne.
-
-\section{Stress des frontières}
-
-Les frontières temporelles sont le point le plus sensible de l'architecture, car \texttt{STOP} peut couper le compteur lent au voisinage d'une transition. La campagne focalisée isole ces zones afin de vérifier que les classes \texttt{phase0\_snap}, \texttt{slow\_boundary\_inc} et \texttt{stop\_phase\_disc} restent exploitables par la calibration.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.84\textwidth]{tdc/final_mptdc/06_boundary_offset_sweep.png}
-    \caption{Stress des offsets autour de la frontière lente. La figure sépare RMS brut et biais moyen afin de montrer que le problème de frontière est traité comme une classe statistique mesurable, et non comme un cas masqué.}
-    \label{fig:boundary-error-offset}
-\end{figure}
-
-La conclusion à retenir n'est pas que les frontières disparaissent. Elles restent des zones de sensibilité physique et logique. Le résultat défendable est que les champs exportés donnent à l'analyse offline une classe observable pour les corriger statistiquement.
-
-\section{Limite architecturale et portée des chiffres}
-
-Les chiffres précédents ne doivent pas être interprétés comme une promesse de résolution déterministe hit-par-hit à quelques picosecondes. L'analyse Oracle menée pendant la mise au point a montré un plancher d'information d'environ \SI{79}{\pico\second} pour certaines clés packet-visibles : plusieurs événements physiquement distincts peuvent produire la même observation exportée. La LUT peut alors corriger l'erreur moyenne de cette classe, mais elle ne peut pas inventer une information non exportée par le RTL.
-
-Cette limite ne contredit pas le résultat \SI{18.56}{\pico\second} RMSE. Elle précise sa nature : il s'agit d'une performance statistique calibrée sur une distribution de validation, pas d'un identifiant unique de chaque événement individuel. Le choix d'architecture est cohérent avec l'objectif SPADMIC : exporter des observables riches, garder le silicium simple, puis réaliser la reconstruction temporelle et l'amélioration statistique côté hôte.
-
-\section{Synthèse des résultats}
-
-La campagne finale établit quatre résultats quantitatifs :
-\begin{itemize}
-    \item la non-régression VIP est propre : \textbf{\num{1024}/\num{1024} exécutions réussies} ;
-    \item la reconstruction brute est fortement biaisée : \SI{-1895.77}{\pico\second} de moyenne et \SI{1940.13}{\pico\second} RMSE sur \num{48000000} lignes utiles ;
-    \item la LUT ramène la validation tenue hors apprentissage à \SI{18.56}{\pico\second} RMSE, \SI{15.22}{\pico\second} MAE et \SI{38.99}{\pico\second} au percentile 99 ;
-    \item la linéarité observable atteint \textbf{0.987 LSB} de DNL crête et \textbf{1.553 LSB} d'INL aux extrémités sur les codes atteints, tandis que l'INL de transfert brute reste à \textbf{35.907 LSB} avec la droite d'extrémités.
-\end{itemize}
+Ces résultats ne signifient pas que chaque événement individuel est identifié de manière unique à quelques picosecondes. Plusieurs instants physiques peuvent produire des observations proches ou identiques ; la LUT corrige alors la moyenne de la classe observée. Cette limite est normale pour une architecture qui privilégie un paquet compact et une correction externe plutôt qu'un moteur de calibration embarqué.
 
 \begin{summaryBox}
-La caractérisation finale montre que le \textbf{MPTDC} exporte les observables nécessaires à une correction externe robuste. Sur \num{8999942} lignes de validation tenues hors apprentissage, la RMSE passe de \SI{1940.33}{\pico\second} avant LUT à \SI{18.56}{\pico\second} après LUT, avec un percentile 99 de \SI{38.99}{\pico\second}. Ce résultat est fort pour une caractérisation RTL comportementale, mais il doit rester présenté comme une preuve numérique pré-silicium : les oscillateurs réels, le jitter PVT, la revue CDC complète et la STA finale restent des étapes séparées.
+La caractérisation \textbf{RTL}/\textit{Xcelium} montre que le \textbf{MPTDC} exporte assez d'information pour une correction externe efficace : la RMSE passe d'environ \SI{1.94}{\nano\second} avant LUT à \SI{18.56}{\pico\second} après LUT, avec un percentile 99 de \SI{38.99}{\pico\second}. Ces chiffres sont solides pour valider le contrat numérique, mais ils restent pré-silicium.
 \end{summaryBox}
 
 \clearpage

@@ -1,0 +1,5 @@
+# Runtime: Python 3 standard library only.
+#
+# Optional local tools:
+# pyinstaller>=6.0   # for build_exe.sh packaging
+# graphviz           # external command-line tool for rendering DOT exports

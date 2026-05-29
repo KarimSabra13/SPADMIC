@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build SPADMIC report PDF (MiKTeX, no WSL)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$miktex = \"$env:LOCALAPPDATA\\Programs\\MiKTeX\\miktex\\bin\\x64\"; New-Item -ItemType Directory -Force -Path build, dist | Out-Null; & \"$miktex\\pdflatex.exe\" -interaction=nonstopmode -file-line-error -halt-on-error -synctex=1 -output-directory=build main.tex; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \"$miktex\\biber.exe\" --input-directory build --output-directory build main; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \"$miktex\\pdflatex.exe\" -interaction=nonstopmode -file-line-error -halt-on-error -synctex=1 -output-directory=build main.tex; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \"$miktex\\pdflatex.exe\" -interaction=nonstopmode -file-line-error -halt-on-error -synctex=1 -output-directory=build main.tex; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Copy-Item build\\main.pdf dist\\rapport_5psm.pdf -Force"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/Rapport_5PSM_KS"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

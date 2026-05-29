@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1002 300" width="1002" height="300" role="img"><title>FSM de mesure</title><defs><marker id='arrow-data' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#0f766e'/></marker><marker id='arrow-control' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7c3aed'/></marker><marker id='arrow-clock' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#2563eb'/></marker><marker id='arrow-async' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#be5d00'/></marker><marker id='arrow-reset' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#64748b'/></marker><filter id='glow' x='-20%' y='-20%' width='140%' height='140%'><feGaussianBlur stdDeviation='2.2' result='blur'/><feMerge><feMergeNode in='blur'/><feMergeNode in='SourceGraphic'/></feMerge></filter><filter id='shadow' x='-15%' y='-15%' width='130%' height='145%'><feDropShadow dx='0' dy='3' stdDeviation='3' flood-opacity='0.13'/></filter><style>
+    .domain-label{font:700 15px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .caption{font:12px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .pin{font:10.5px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .symbol-title{font:700 13px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .symbol-sub{font:11px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .block{cursor:pointer}
+    .block:hover .symbol-body{stroke-width:2.4}
+    .active .symbol-body{stroke:#0f766e;stroke-width:2.6}
+    .active-signal{stroke-width:4.5;filter:url(#glow)}
+    .state-dot{fill:#ffffff;stroke:#7c3aed;stroke-width:1.4}
+    .bitlabel{font:10px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .fieldlabel{font:700 11px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    </style></defs><rect width='100%' height='100%' fill='#f7f8fb'/>
+<text x='32' y='44' class='domain-label' text-anchor='start'>FSM de mesure</text>
+<circle cx='58' cy='130' r='37' fill='#ffffff' stroke='#7c3aed' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='58' y='134' class='fieldlabel' text-anchor='middle'>IDLE</text>
+<line class='signal-wire' x1='96' y1='130' x2='146' y2='130' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='184' cy='130' r='37' fill='#ffffff' stroke='#7c3aed' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='184' y='134' class='fieldlabel' text-anchor='middle'>MEASURE</text>
+<line class='signal-wire' x1='222' y1='130' x2='272' y2='130' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='310' cy='130' r='37' fill='#ffffff' stroke='#7c3aed' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='310' y='134' class='fieldlabel' text-anchor='middle'>SNAPSHOT</text>
+<line class='signal-wire' x1='348' y1='130' x2='398' y2='130' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='436' cy='130' r='37' fill='#ffffff' stroke='#7c3aed' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='436' y='134' class='fieldlabel' text-anchor='middle'>COUNT</text>
+<line class='signal-wire' x1='474' y1='130' x2='524' y2='130' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='562' cy='130' r='37' fill='#ffffff' stroke='#7c3aed' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='562' y='134' class='fieldlabel' text-anchor='middle'>EVAL</text>
+<line class='signal-wire' x1='600' y1='130' x2='650' y2='130' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='688' cy='130' r='37' fill='#ffffff' stroke='#7c3aed' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='688' y='134' class='fieldlabel' text-anchor='middle'>CAPTURE</text>
+<line class='signal-wire' x1='726' y1='130' x2='776' y2='130' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<circle cx='814' cy='130' r='37' fill='#ffffff' stroke='#7c3aed' stroke-width='1.8' filter='url(#shadow)'/>
+<text x='814' y='134' class='fieldlabel' text-anchor='middle'>CLEAR</text>
+<line class='signal-wire' x1='845' y1='184' x2='58' y2='184' stroke='#7c3aed' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-control)'/>
+<text x='451.5' y='177.0' class='caption' text-anchor='middle'>retour/clear</text>
+</svg>

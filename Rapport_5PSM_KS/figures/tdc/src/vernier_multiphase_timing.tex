@@ -1,0 +1,106 @@
+\documentclass[tikz,border=8pt]{standalone}
+\input{tdc_publication_style.tex}
+\usetikzlibrary{calc,positioning}
+
+\definecolor{slowred}{HTML}{B84A4A}
+\definecolor{fastblue}{HTML}{315F8C}
+\definecolor{pdgreen}{HTML}{3A7A57}
+\definecolor{countgray}{HTML}{626A70}
+
+\tikzset{
+  axisline/.style={draw=grisligne,line width=0.75pt},
+  slowwave/.style={draw=slowred,line width=0.95pt},
+  fastwave/.style={draw=fastblue,line width=0.95pt},
+  pdwave/.style={draw=pdgreen,line width=0.9pt},
+  countwave/.style={draw=countgray,line width=0.9pt},
+  guide/.style={draw=grisligne!35,line width=0.65pt,densely dashed},
+  tag/.style={
+    etiquette,
+    font=\sffamily\tiny,
+    inner sep=1.3pt,
+    fill=white
+  }
+}
+
+\newcommand{\stepwave}[5]{%
+  \draw[#5] (#1,#2) -- (#3,#2) -- (#3,{#2+0.28}) -- (#4,{#2+0.28}) -- (#4,#2) -- (15.8,#2);
+}
+
+\newcommand{\pulse}[4]{%
+  \draw[#4] (2.2,#1) -- (#2,#1) -- ++(0,0.28) -- ++(0.35,0) -- ++(0,-0.28) -- (15.8,#1);
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[titre,anchor=west] at (0.0,7.20) {Chronogramme simplifié du fonctionnement Vernier multiphase};
+\draw[axisline,-{Latex[length=2.0mm,width=1.2mm]}] (2.2,-0.25) -- (16.0,-0.25)
+  node[anchor=west,font=\sffamily\scriptsize] {temps};
+
+% Étiquettes des lignes
+\foreach \y/\name in {
+  6.45/$S_1$,
+  6.05/$S_2$,
+  5.65/$S_3$,
+  5.25/$S_4$,
+  4.85/$S_5$,
+  4.15/$F_1$,
+  3.75/$F_2$,
+  3.35/$F_3$,
+  2.95/$F_4$,
+  2.55/$F_5$,
+  1.85/$N_{slow}$,
+  1.45/$N_{fast}$,
+  0.75/{$n_s,n_f$},
+  0.20/$PD_{ij}$
+} {
+  \node[anchor=east,font=\sffamily\scriptsize,text=grisligne] at (2.0,\y) {\name};
+  \draw[grisligne!18] (2.2,\y) -- (15.8,\y);
+}
+
+% Guides de détection
+\foreach \x/\lab in {6.25/$d_1$,8.35/$d_2$,10.45/$d_3$,12.55/$d_4$} {
+  \draw[guide] (\x,-0.10) -- (\x,6.80);
+  \node[font=\sffamily\tiny,text=grisligne] at (\x,-0.48) {\lab};
+}
+
+% Phases lentes, décalées spatialement
+\foreach \idx/\y/\shift in {1/6.45/0.00,2/6.05/0.26,3/5.65/0.52,4/5.25/0.78,5/4.85/1.04} {
+  \stepwave{2.2}{\y}{4.2+\shift}{7.25+\shift}{slowwave}
+  \stepwave{7.25+\shift}{\y}{9.15+\shift}{12.15+\shift}{slowwave}
+}
+
+% Phases rapides, période légèrement plus courte
+\foreach \idx/\y/\shift in {1/4.15/0.00,2/3.75/0.21,3/3.35/0.42,4/2.95/0.63,5/2.55/0.84} {
+  \stepwave{2.2}{\y}{4.85+\shift}{7.55+\shift}{fastwave}
+  \stepwave{7.55+\shift}{\y}{9.95+\shift}{12.65+\shift}{fastwave}
+}
+
+% Compteurs grossiers
+\stepwave{2.2}{1.85}{5.10}{9.25}{countwave}
+\stepwave{9.25}{1.85}{11.40}{14.40}{countwave}
+\stepwave{2.2}{1.45}{5.70}{8.55}{countwave}
+\stepwave{8.55}{1.45}{10.95}{13.75}{countwave}
+\node[tag,text=countgray] at (4.0,2.20) {0};
+\node[tag,text=countgray] at (7.0,2.20) {1};
+\node[tag,text=countgray] at (10.3,2.20) {2};
+\node[tag,text=countgray] at (4.4,1.10) {0};
+\node[tag,text=countgray] at (7.4,1.10) {1};
+\node[tag,text=countgray] at (10.4,1.10) {2};
+
+% Indices fins et détections PD
+\node[tag,text=grisligne] at (6.25,0.75) {$(S_2,F_3)$};
+\node[tag,text=grisligne] at (8.35,0.75) {$(S_3,F_4)$};
+\node[tag,text=grisligne] at (10.45,0.75) {$(S_4,F_4)$};
+\node[tag,text=grisligne] at (12.55,0.75) {$(S_5,F_5)$};
+\pulse{0.20}{6.25}{0.45}{pdwave}
+\pulse{0.20}{8.35}{0.45}{pdwave}
+\pulse{0.20}{10.45}{0.45}{pdwave}
+\pulse{0.20}{12.55}{0.45}{pdwave}
+
+\node[tag,text=slowred] at (14.25,6.05) {phases lentes};
+\node[tag,text=fastblue] at (14.35,3.35) {phases rapides};
+\node[tag,text=pdgreen] at (14.00,0.55) {couples testés en parallèle};
+
+\end{tikzpicture}
+\end{document}

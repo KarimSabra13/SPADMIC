@@ -3,13 +3,22 @@
 \justifying
 \sloppy
 
-Dans de nombreux systèmes de détection, le premier objectif est simple à formuler : savoir qu'un événement a eu lieu. Cette information binaire est déjà utile, mais elle devient rapidement insuffisante dès que l'on cherche à reconstruire plus finement ce qui s'est passé. Il faut alors connaître non seulement la présence d'un signal, mais aussi son instant d'apparition, sa position et sa relation avec les autres signaux observés.
+Dans de nombreux systèmes de détection, le premier objectif consiste simplement à savoir qu'un événement a eu lieu. Cette information binaire est déjà utile, mais elle devient rapidement insuffisante dès que l'on cherche à reconstruire plus finement ce qui s'est passé. Il faut alors connaître non seulement la présence d'un signal, mais aussi son instant d'apparition, sa position et sa relation avec les autres signaux observés.
 
 Cette idée est particulièrement importante pour les détecteurs rapides. Une impulsion peut être très courte, arriver à un instant imprévisible et devoir être associée à d'autres informations avant d'être exploitable. L'électronique de lecture ne peut donc pas se contenter de compter les événements : elle doit aussi les dater, les organiser et les transmettre dans un format robuste.
 
-Le projet \textbf{SPADMIC} s'inscrit dans ce cadre. Il s'agit d'un prototype d'\textbf{ASIC} (\textit{Application-Specific Integrated Circuit}), c'est-à-dire un circuit intégré conçu pour une application dédiée. Il vise à intégrer une électronique de lecture numérique autour d'une matrice de \textbf{SPAD} (\textit{Single-Photon Avalanche Diode}), des détecteurs capables de produire une impulsion lorsqu'un photon est détecté. Dans ce type de système, la mesure temporelle devient une information centrale.
+Dans ce cadre s'inscrit le projet \textbf{SPADMIC}. Il s'agit d'un prototype d'\textbf{ASIC} (\textit{Application-Specific Integrated Circuit}), c'est-à-dire un circuit intégré conçu pour une application dédiée. Il vise à intégrer une électronique de lecture numérique autour d'une matrice de \textbf{SPAD} (\textit{Single-Photon Avalanche Diode}), des détecteurs capables de produire une impulsion lorsqu'un photon est détecté. Dans ce type de système, la mesure temporelle devient une information centrale.
 
 Pour mesurer un intervalle de temps dans une chaîne numérique, on utilise un convertisseur temps-numérique, ou \textbf{TDC} (\textit{Time-to-Digital Converter}). Le bloc étudié dans ce rapport est une version multiphase de ce type de convertisseur, appelée \textbf{MPTDC} (\textit{Multi-Phase Time-to-Digital Converter}). L'objectif de ce rapport n'est pas de présenter immédiatement tous les détails de ce bloc, mais de construire progressivement le contexte : d'abord le rôle de la puce \textbf{SPADMIC}, puis les besoins de mesure temporelle, ensuite les principes des \textbf{TDC}, et enfin l'implémentation RTL détaillée du \textbf{MPTDC}. Le terme \textbf{RTL} (\textit{Register Transfer Level}) désigne ici la description numérique du circuit avant synthèse matérielle.
+
+La figure \ref{fig:spadmic-mind-model} donne un premier modèle mental de cette organisation. Elle situe la matrice \textbf{SPAD}, les trois voies \textbf{MPTDC}, le bloc de position, l'arbitrage numérique et la calibration hôte avant d'entrer dans les détails techniques des chapitres suivants.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{spadmic/spadmic_mind_model.png}
+    \caption{Vue d'ensemble simplifiée du prototype \textbf{SPADMIC} et de la place du cœur \textbf{MPTDC} dans la chaîne de lecture.}
+    \label{fig:spadmic-mind-model}
+\end{figure}
 
 \section{Contexte et problématique}
 

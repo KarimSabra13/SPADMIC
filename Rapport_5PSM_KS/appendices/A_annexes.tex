@@ -1,0 +1,63 @@
+\chapter{Compléments techniques RTL du MPTDC}
+\label{chap:annexe-rtl}
+\justifying
+\sloppy
+
+Cette annexe regroupe les points de conception trop détaillés pour le fil principal du rapport, mais utiles pour la traçabilité RTL et pour une revue technique du dépôt.
+
+\section{Traversée lent vers rapide et cohérence du compteur lent}
+
+\paragraph{Problème.}
+Le compteur lent évolue dans son propre domaine d'oscillateur, alors que l'instantané de contexte est engagé depuis \texttt{clk\_sys}. Une lecture tardive de cette valeur peut refléter une transition postérieure à la frontière \texttt{STOP}.
+
+\paragraph{Analyse.}
+Au voisinage d'une transition lente, un décalage d'un seul cycle grossier suffit à produire une erreur importante. L'information de frontière doit donc rester observable, sans transporter directement les phases comme des bus synchrones continus.
+
+\paragraph{Solution retenue.}
+Le compteur Gray utilise un instantané asynchrone au voisinage de \texttt{STOP}, puis une synchronisation vers le domaine destination. Des métadonnées de frontière sont conservées dans l'image de mesure afin que le décodeur hôte puisse séparer les cas ambigus.
+
+\section{Capture asynchrone de START/STOP}
+
+\paragraph{Problème.}
+Une capture synchrone classique simplifierait le RTL, mais elle ajouterait une incertitude de \texttt{clk\_sys} sur les événements que le TDC doit mesurer.
+
+\paragraph{Analyse.}
+Le principe Vernier exige de démarrer les oscillateurs au plus près des fronts physiques. L'interface d'entrée doit donc accepter des verrous asynchrones intentionnels.
+
+\paragraph{Solution retenue.}
+Le front \texttt{START} mémorise le départ et active l'anneau lent ; le front \texttt{STOP}, lorsqu'une mesure est déjà active, mémorise la fermeture et active l'anneau rapide. Le nettoyage reste ensuite ordonné par le domaine système.
+
+\section{Ordre de paquetisation et premier hit}
+
+\paragraph{Problème.}
+Un réglage de fermeture précoce peut laisser penser qu'un paquet mono-hit reflète toujours le premier événement physique dans l'ordre temporel.
+
+\paragraph{Analyse.}
+La matrice est parcourue dans un ordre matériel déterministe. Plusieurs cellules peuvent avoir mémorisé une détection au moment où la fermeture est décidée ; le drain exporte ensuite les hits dans l'ordre de scan, pas dans un ordre temporel reconstruit.
+
+\paragraph{Solution retenue.}
+Le rapport principal présente la trame comme un flux déterministe de lecture. Les indices d'ordre exportés doivent être interprétés comme des indices de paquetisation, utiles pour la calibration et non comme une chronologie physique absolue.
+
+\section{Rétropression et libération des contextes}
+
+\paragraph{Problème.}
+L'interface de sortie sur \SI{16}{\bit} peut être temporairement bloquée par le récepteur aval. Si cette situation dure, les contextes disponibles peuvent être occupés.
+
+\paragraph{Analyse.}
+Le risque principal n'est pas la perte d'un mot déjà engagé, mais l'incapacité temporaire à accepter un nouveau \texttt{START}. La libération d'un contexte doit aussi respecter les retombées CDC.
+
+\paragraph{Solution retenue.}
+Le drain et le sérialiseur conservent leur position sous rétropression. Un masque de libération évite de relire prématurément un contexte en cours de retombée, tandis que les indicateurs de rejet rendent l'occupation visible côté système.
+
+\section{Contraintes de synthèse et limites de clôture}
+
+\paragraph{Problème.}
+Les oscillateurs, les chemins asynchrones d'événements et les horloges générées ne peuvent pas être traités comme une logique synchrone classique.
+
+\paragraph{Analyse.}
+Le dépôt contient une intention de contraintes : groupes d'horloges asynchrones, chemins faux sur les entrées d'événements, protection des synchroniseurs et horloges virtuelles sur les modèles d'oscillateur. Cette intention reste toutefois une base de travail, pas une clôture MMMC complète.
+
+\paragraph{Solution retenue.}
+Le corps principal limite donc ses affirmations à la cohérence RTL et à la simulation. La revue CDC formelle, la STA complète, la simulation post-synthèse, puis la simulation post-layout avec macros réelles restent explicitement des étapes de suite.
+
+\clearpage

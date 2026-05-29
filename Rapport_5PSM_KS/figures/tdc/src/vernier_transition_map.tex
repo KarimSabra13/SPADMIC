@@ -23,12 +23,12 @@
   matrice/.style={
     boitetech,
     minimum width=56mm,
-    minimum height=31mm
+    minimum height=32mm
   },
   memoire/.style={
     boitetech,
-    minimum width=38mm,
-    minimum height=46mm
+    minimum width=40mm,
+    minimum height=58mm
   },
   ajoute/.style={
     boitetech,
@@ -37,18 +37,18 @@
   },
   lent/.style={
     draw=red!80!black,
-    line width=1.15pt,
+    line width=1.1pt,
     -{Latex[length=2.4mm,width=1.5mm]}
   },
   rapide/.style={
     draw=blue!80!black,
-    line width=1.15pt,
+    line width=1.1pt,
     -{Latex[length=2.4mm,width=1.5mm]}
   },
   busdata/.style={
     draw=blue!80!black,
-    line width=1.9pt,
-    -{Latex[length=3.0mm,width=2.0mm]}
+    line width=1.55pt,
+    -{Latex[length=2.8mm,width=1.8mm]}
   },
   etiquetteflux/.style={
     fill=white,
@@ -65,51 +65,47 @@
 \node[ajoute, minimum width=36mm, minimum height=20mm] (capture) at (0,0)
 {Capture asynchrone\\[-0.5mm]{\ttfamily\scriptsize START/STOP}\\[-0.5mm]{\ttfamily\scriptsize allocation contexte}};
 
-\node[oscillateur] (slowosc) at (6.2,3.25)
+\node[oscillateur] (slowosc) at (6.2,3.35)
 {Oscillateur lent\\[-0.5mm]{\ttfamily\scriptsize 8 phases utiles}};
 \node[matrice] (matrix) at (6.2,0)
 {Matrice de phase\\[-0.5mm]$8\times8$\\[-0.5mm]{\ttfamily\scriptsize 64 cellules PD}};
-\node[oscillateur] (fastosc) at (6.2,-3.25)
+\node[oscillateur] (fastosc) at (6.2,-3.35)
 {Oscillateur rapide\\[-0.5mm]{\ttfamily\scriptsize 8 phases utiles}};
 
-\node[boitetech, minimum width=30mm] (slowcnt) at (13.2,3.25)
-{Compteur lent\\[-0.5mm]{\ttfamily\scriptsize snapshot STOP}};
-\node[memoire] (ctx) at (13.2,0)
+\node[boitetech, minimum width=30mm] (slowcnt) at (11.05,2.55)
+{Compteur lent\\[-0.5mm]{\ttfamily\scriptsize valeur grossière}};
+\node[memoire] (ctx) at (15.0,0)
 {Banque de contextes\\[-0.5mm]{\ttfamily\scriptsize 2 snapshots}\\[-0.5mm]{\ttfamily\scriptsize image figée}};
-\node[boitetech, minimum width=30mm] (fastcnt) at (13.2,-3.25)
-{Compteur rapide\\[-0.5mm]{\ttfamily\scriptsize nfast\_hit}};
+\node[boitetech, minimum width=30mm] (fastcnt) at (11.05,-2.55)
+{Compteur rapide\\[-0.5mm]{\ttfamily\scriptsize valeur grossière}};
 
-\node[ajoute, minimum width=38mm, minimum height=14mm] (drain) at (19.0,0.95)
-{Drain \texttt{clk\_sys}\\[-0.5mm]{\ttfamily\scriptsize META/SCAN/EOC}};
-\node[ajoute, minimum width=38mm, minimum height=14mm] (tx) at (19.0,-1.25)
+\node[ajoute, minimum width=38mm, minimum height=14mm] (drain) at (20.8,0.95)
+{Drain \texttt{clk\_sys}\\[-0.5mm]{\ttfamily\scriptsize records}};
+\node[ajoute, minimum width=38mm, minimum height=14mm] (tx) at (20.8,-1.25)
 {FIFO + sérialiseur\\[-0.5mm]{\ttfamily\scriptsize sortie 16 bits}};
 
 \coordinate (startin) at ($(capture.west)+(-1.95,0.55)$);
 \coordinate (stopin) at ($(capture.west)+(-1.95,-0.55)$);
-\coordinate (enslowup) at ($(capture.north)+(0,1.00)$);
-\coordinate (enfastdown) at ($(capture.south)+(0,-1.00)$);
-\coordinate (nslowin) at ([xshift=-8pt]ctx.north);
-\coordinate (nfastin) at ([xshift=8pt]ctx.south);
 
 \draw[lent] (startin) -- (capture.west |- startin)
   node[etiquetteflux, midway, above=2pt, text=red!80!black] {START};
 \draw[rapide] (stopin) -- (capture.west |- stopin)
   node[etiquetteflux, midway, below=2pt, text=blue!80!black] {STOP};
 
-\draw[lent] (capture.north) -- (enslowup) -| (slowosc.west)
+\draw[lent] (capture.north) -- ++(0,1.00) -| (slowosc.west)
   node[etiquetteflux, pos=0.34, above=2pt, text=red!80!black] {slow\_en};
-\draw[rapide] (capture.south) -- (enfastdown) -| (fastosc.west)
+\draw[rapide] (capture.south) -- ++(0,-1.00) -| (fastosc.west)
   node[etiquetteflux, pos=0.34, below=2pt, text=blue!80!black] {fast\_en};
 
-\draw[lent] (slowosc.east) -- ++(0.75,0) -- (slowcnt.west)
-  node[etiquetteflux, pos=0.46, above=2pt, text=red!80!black] {Nslow};
-\draw[rapide] (fastosc.east) -- ++(0.75,0) -- (fastcnt.west)
-  node[etiquetteflux, pos=0.46, below=2pt, text=blue!80!black] {Nfast};
+\draw[lent] (slowosc.east) -- ++(0.40,0) |- (slowcnt.west)
+  node[etiquetteflux, pos=0.30, above=2pt, text=red!80!black] {débordement};
+\draw[rapide] (fastosc.east) -- ++(0.40,0) |- (fastcnt.west)
+  node[etiquetteflux, pos=0.30, below=2pt, text=blue!80!black] {débordement};
 
-\draw[busdata] (slowcnt.south) -- ++(0,-0.55) -- (nslowin)
-  node[etiquetteflux, pos=0.32, right=2pt] {Nslow};
-\draw[busdata] (fastcnt.north) -- ++(0,0.55) -- (nfastin)
-  node[etiquetteflux, pos=0.32, right=2pt] {nfast\_hit};
+\draw[busdata] (slowcnt.east) -- ([yshift=18mm]ctx.west)
+  node[etiquetteflux, midway, above=2pt] {$N_{slow}$};
+\draw[busdata] (fastcnt.east) -- ([yshift=-18mm]ctx.west)
+  node[etiquetteflux, midway, below=2pt] {$N_{fast}$};
 
 \foreach \i in {1,...,8} {
   \pgfmathsetmacro{\alpha}{\i/9}
@@ -123,19 +119,21 @@
 
   \draw[lent] (slowtap\i) -- (matrixtop\i);
   \draw[rapide] (fasttap\i) -- (matrixbot\i);
-  \draw[busdata, line width=1.0pt] (matrixout\i) -- (ctxin\i);
+  \draw[busdata, line width=0.95pt] (matrixout\i) -- (ctxin\i);
 }
 
-\draw[busdata, line width=2.2pt] (ctx.east) -- ++(1.0,0) |- (drain.west)
+\node[etiquetteflux] at (10.95,0.48) {faisceau de hits};
+
+\draw[busdata, line width=2.2pt] (ctx.east) -- ++(0.95,0) |- (drain.west)
   node[etiquetteflux, pos=0.30, above=2pt] {contexte prêt};
 \draw[busdata, line width=2.2pt] (drain.south) -- (tx.north)
   node[etiquetteflux, midway, right=2pt] {records};
 \draw[busdata, line width=2.4pt] (tx.east) -- ++(2.2,0)
   node[etiquetteflux, pos=0.62, above=2pt] {flux TX};
 
-\node[etiquetteflux, align=center, font=\sffamily\scriptsize] at (10.0,-4.55)
-{Briques conservées : oscillateurs, matrice de phase, compteurs.\\
-Briques ajoutées : capture asynchrone, banque de contextes, drain, FIFO et sérialiseur.};
+\node[etiquetteflux, align=center, font=\sffamily\scriptsize] at (10.5,-4.85)
+{Flux logique : START/STOP $\rightarrow$ capture $\rightarrow$ oscillateurs $\rightarrow$ matrice + compteurs\\
+$\rightarrow$ banque de contextes $\rightarrow$ drain, FIFO et sortie 16 bits.};
 
 \end{tikzpicture}
 \end{document}

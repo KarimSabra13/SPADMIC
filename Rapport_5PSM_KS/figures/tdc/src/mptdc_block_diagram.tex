@@ -5,7 +5,6 @@
 \definecolor{domainasync}{HTML}{FCE8D6}
 \definecolor{domainosc}{HTML}{E8F0F8}
 \definecolor{domainsys}{HTML}{E6F3EA}
-\definecolor{domaincfg}{HTML}{F4F6F7}
 \definecolor{slowred}{HTML}{B84A4A}
 \definecolor{fastblue}{HTML}{315F8C}
 \definecolor{sysgreen}{HTML}{3A7A57}
@@ -21,7 +20,7 @@
   },
   fblock/.style={
     bloc,
-    minimum width=30mm,
+    minimum width=29mm,
     minimum height=11mm,
     font=\sffamily\small\bfseries,
     inner sep=2.6pt
@@ -30,10 +29,18 @@
     fblock,
     minimum width=38mm
   },
+  matrixblock/.style={
+    wblock,
+    minimum width=40mm,
+    minimum height=21mm,
+    draw=bleuacier,
+    fill=bleupale
+  },
   labeltag/.style={
     etiquette,
     font=\sffamily\footnotesize,
-    inner sep=1.5pt
+    inner sep=1.7pt,
+    fill=white
   },
   asyncpath/.style={
     -{Latex[length=2.2mm,width=1.4mm]},
@@ -51,10 +58,14 @@
     draw=fastblue,
     line width=1.15pt
   },
+  phasepath/.style={
+    -{Latex[length=1.8mm,width=1.05mm]},
+    line width=0.58pt
+  },
   datapath/.style={
     -{Latex[length=2.4mm,width=1.6mm]},
     draw=bleuacier,
-    line width=1.35pt
+    line width=1.30pt
   },
   controlpath/.style={
     -{Latex[length=2.0mm,width=1.2mm]},
@@ -68,32 +79,33 @@
 \begin{tikzpicture}[x=1cm,y=1cm]
 
 \node[fblock] (events) at (0.0,0.0)
-{Événements\\[-0.4mm]\ttfamily START / STOP};
-\node[fblock] (select) at (3.65,0.0)
-{Sélection d'entrée\\[-0.4mm]\ttfamily SPAD / calibration};
-\node[fblock,draw=brunasync,fill=white] (capture) at (7.30,0.0)
-{Capture asynchrone\\[-0.4mm]\ttfamily verrous START/STOP};
+{Événements\\[-0.35mm]\ttfamily START / STOP};
+\node[fblock] (select) at (3.35,0.0)
+{Sélection entrée\\[-0.35mm]\ttfamily SPAD / cal.};
+\node[fblock,draw=brunasync,fill=white] (capture) at (6.70,0.0)
+{Capture asynchrone\\[-0.35mm]\ttfamily verrous};
 
-\node[fblock] (slowosc) at (10.95,2.80)
-{Anneau lent\\[-0.4mm]\ttfamily 8 phases};
-\node[fblock] (slowcnt) at (14.80,2.80)
-{Compteur lent\\[-0.4mm]\ttfamily Gray};
+\node[fblock] (slowosc) at (10.65,3.35)
+{Anneau lent\\[-0.35mm]\ttfamily 8 taps};
+\node[fblock] (slowcnt) at (15.60,3.35)
+{Compteur lent\\[-0.35mm]\ttfamily Gray};
 
-\node[fblock] (fastosc) at (10.95,-2.80)
-{Anneau rapide\\[-0.4mm]\ttfamily 8 phases};
-\node[fblock] (fastcnt) at (14.80,-2.80)
-{Compteur rapide\\[-0.4mm]\ttfamily Gray};
+\node[matrixblock] (pd) at (13.10,0.0)
+{Matrice de phase\\[-0.35mm]\ttfamily 8$\times$8 comparaisons};
 
-\node[wblock,minimum height=18mm,draw=bleuacier,fill=bleupale] (pd) at (14.80,0.0)
-{Matrice de phase\\[-0.4mm]\ttfamily 8$\times$8 cellules};
-\node[wblock] (context) at (20.70,0.0)
-{Image de contexte\\[-0.4mm]\ttfamily bitmap + compteurs};
-\node[fblock] (seq) at (20.70,2.10)
-{Séquenceur mesure\\[-0.4mm]\ttfamily snapshot / clear};
-\node[wblock] (readout) at (25.40,0.0)
-{Chaîne de lecture\\[-0.4mm]\ttfamily drain + FIFO + TX};
-\node[fblock] (host) at (29.70,0.0)
-{Sortie 16 bits\\[-0.4mm]\ttfamily trame de mesure};
+\node[fblock] (fastosc) at (10.65,-3.35)
+{Anneau rapide\\[-0.35mm]\ttfamily 8 taps};
+\node[fblock] (fastcnt) at (15.60,-3.35)
+{Compteur rapide\\[-0.35mm]\ttfamily Gray};
+
+\node[wblock] (context) at (19.35,0.0)
+{Image de mesure\\[-0.35mm]\ttfamily contexte figé};
+\node[fblock] (seq) at (19.35,2.75)
+{Séquenceur\\[-0.35mm]\ttfamily snapshot / clear};
+\node[wblock] (readout) at (23.95,0.0)
+{Lecture\\[-0.35mm]\ttfamily drain + FIFO + TX};
+\node[fblock] (host) at (27.80,0.0)
+{Sortie 16 bits\\[-0.35mm]\ttfamily trame};
 
 \begin{pgfonlayer}{background}
   \node[domain=domainasync,fit=(events)(select)(capture),
@@ -107,35 +119,37 @@
 \draw[asyncpath] (events.east) -- (select.west);
 \draw[asyncpath] (select.east) -- (capture.west);
 
-\draw[slowpath] (capture.north) -- ++(0,1.35) -| (slowosc.west);
-\node[labeltag,text=slowred] at (8.60,1.52) {slow\_en};
-\draw[fastpath] (capture.south) -- ++(0,-1.35) -| (fastosc.west);
-\node[labeltag,text=fastblue] at (8.60,-1.52) {fast\_en};
+\draw[slowpath] (capture.north) -- ++(0,1.75) -| (slowosc.west);
+\node[labeltag,text=slowred] at (8.05,2.18) {commande lent};
+\draw[fastpath] (capture.south) -- ++(0,-1.75) -| (fastosc.west);
+\node[labeltag,text=fastblue] at (8.05,-2.18) {commande rapide};
 
 \draw[slowpath] (slowosc.east) -- (slowcnt.west);
-\draw[slowpath] (slowosc.south east) -- ++(0.70,0) |- (pd.north west);
-\node[labeltag,text=slowred] at (12.85,2.05) {phases lentes};
 \draw[fastpath] (fastosc.east) -- (fastcnt.west);
-\draw[fastpath] (fastosc.north east) -- ++(0.70,0) |- (pd.south west);
-\node[labeltag,text=fastblue] at (12.85,-2.05) {phases rapides};
 
-\draw[datapath] (slowcnt.south) -- ++(0,-0.70) -| (context.north);
-\node[labeltag] at (18.00,1.62) {Nslow Gray};
-\draw[datapath] (fastcnt.north) -- ++(0,0.70) -| (context.south);
-\node[labeltag] at (18.00,-1.62) {Nfast Gray};
+\foreach \i in {0,...,7} {
+  \pgfmathsetmacro{\sx}{-0.98 + 0.28*\i}
+  \pgfmathsetmacro{\tx}{-1.22 + 0.35*\i}
+  \draw[phasepath,draw=slowred] ([xshift=\sx cm]slowosc.south) -- ++(0,-0.48) -- ([xshift=\tx cm]pd.north);
+  \draw[phasepath,draw=fastblue] ([xshift=\sx cm]fastosc.north) -- ++(0,0.48) -- ([xshift=\tx cm]pd.south);
+}
+\node[labeltag,text=slowred] at (13.10,2.48) {faisceau 8 phases lentes};
+\node[labeltag,text=fastblue] at (13.10,-2.48) {faisceau 8 phases rapides};
+
+\draw[datapath] (slowcnt.east) -- ++(0.85,0) |- (context.north);
+\node[labeltag] at (17.45,1.82) {compteur Gray};
+\draw[datapath] (fastcnt.east) -- ++(0.85,0) |- (context.south);
+\node[labeltag] at (17.45,-1.82) {compteur Gray};
+
 \draw[datapath] (pd.east) -- (context.west);
-\node[labeltag] at (18.55,0.42) {hits + image};
+\node[labeltag] at (16.10,0.52) {image figée};
 
 \draw[controlpath] (seq.south) -- (context.north);
-\node[labeltag] at (21.95,1.05) {snapshot};
+\node[labeltag] at (20.55,1.34) {snapshot};
 \draw[datapath] (context.east) -- (readout.west);
-\node[labeltag] at (23.05,0.62) {records};
+\node[labeltag] at (21.65,0.58) {records};
 \draw[datapath] (readout.east) -- (host.west);
-\node[labeltag] at (27.55,0.62) {flux TX};
-
-\node[align=center,font=\sffamily\small,text=grisligne] at (14.0,-4.45)
-{Vue fonctionnelle : les événements arment les anneaux, la matrice fige l'image de mesure,\\
-puis la chaîne système lit et émet une trame compacte sur 16 bit.};
+\node[labeltag] at (25.85,0.58) {flux TX};
 
 \end{tikzpicture}
 \end{document}

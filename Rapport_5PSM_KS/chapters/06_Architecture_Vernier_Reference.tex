@@ -47,14 +47,14 @@ où $n_b$ représente le nombre d’étages exploités dans l’oscillateur en a
 
 Autrement dit, l'approche multiphase ne remplace pas le principe Vernier ; elle le raffine en subdivisant l'intervalle élémentaire $T_{\mathrm{LSB}}$ grâce à l'observation simultanée de plusieurs taps. Là où un Vernier simple attendrait la coïncidence sur une seule paire de phases, une architecture multiphase observe une famille entière de combinaisons et transforme ce rattrapage en une grille 2D.
 
+L'intérêt du multiphase n'est donc pas seulement d'augmenter le nombre de points d'observation ; il est aussi de réduire le temps nécessaire à la décision de mesure. Or, comme le jitter accumulé des oscillateurs croît avec le temps d'observation, cette réduction contribue à limiter la dégradation temporelle de la conversion \cite{annagrebah2021thesis}. Cette idée doit être distinguée du moyennage statistique présenté au chapitre \ref{chap:resultats-calibration} : ici, le gain intervient pendant une conversion unique, par architecture, et non par moyenne de plusieurs mesures corrigées.
+
 La thèse montre également que l'architecture multiphase permet, en première approximation :
 \begin{itemize}
     \item de réduire le temps de conversion par rapport à l’approche monophase ;
     \item d’améliorer la résolution temporelle ;
     \item de limiter l’impact du jitter cumulé, dont la croissance suit une loi en racine du temps d’observation.
 \end{itemize}
-
-Cette propriété est importante, car elle montre qu'un gain de résolution ne provient pas uniquement d'une interpolation plus fine, mais aussi d'une meilleure exploitation du comportement temporel global des oscillateurs \cite{annagrebah2021thesis}. En d'autres termes, l'amélioration n'est pas purement géométrique ; elle agit aussi sur le temps nécessaire pour conclure une mesure et donc sur l'accumulation de jitter.
 
 \section{Architecture de référence}
 
@@ -74,6 +74,15 @@ Après la vue temporelle du rattrapage, la figure \ref{fig:vernier-reference-arc
 \end{figure}
 
 Sur le plan conceptuel, cette structuration est particulièrement intéressante pour un futur passage vers une implémentation numérique plus complète. Elle sépare clairement la génération des phases, leur observation, le comptage grossier et le stockage des résultats. Cette séparation fonctionnelle facilite ensuite les adaptations nécessaires à une intégration plus large dans un système de lecture.
+
+La figure \ref{fig:vernier-multiphase-timing} complète cette vue bloc par une lecture temporelle réduite à cinq phases. Elle montre que la décision ne porte pas sur un seul front lent et un seul front rapide, mais sur plusieurs couples observables en parallèle.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{tdc/vernier_multiphase_timing.pdf}
+    \caption{Chronogramme simplifié du fonctionnement Vernier multiphase. Le schéma est volontairement réduit à cinq phases lentes et cinq phases rapides afin de rendre lisible l'observation parallèle de plusieurs couples de phase.}
+    \label{fig:vernier-multiphase-timing}
+\end{figure}
 
 \section{Lecture explicite de la matrice de phase}
 

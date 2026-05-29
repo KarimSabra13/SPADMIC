@@ -1,0 +1,127 @@
+\documentclass[tikz,border=8pt]{standalone}
+\input{tdc_publication_style.tex}
+\usetikzlibrary{calc,fit,positioning}
+
+\definecolor{fsmfill}{HTML}{F3F6FA}
+\definecolor{measureorange}{HTML}{B86A2B}
+\definecolor{snapshotgreen}{HTML}{3A7A57}
+\definecolor{cleargray}{HTML}{6C737A}
+
+\tikzset{
+  state/.style={
+    bloc,
+    minimum width=38mm,
+    minimum height=9.5mm,
+    font=\sffamily\scriptsize\bfseries,
+    fill=fsmfill
+  },
+  sideblock/.style={
+    bloc,
+    minimum width=34mm,
+    minimum height=9.5mm,
+    font=\sffamily\scriptsize\bfseries,
+    fill=white
+  },
+  arrow/.style={
+    -{Latex[length=2.0mm,width=1.25mm]},
+    draw=grisligne,
+    line width=0.85pt
+  },
+  dataarrow/.style={
+    -{Latex[length=2.1mm,width=1.35mm]},
+    draw=bleuacier,
+    line width=1.05pt
+  },
+  wbase/.style={draw=grisligne,line width=0.75pt},
+  wmeasure/.style={draw=measureorange,line width=0.9pt},
+  wsnap/.style={draw=snapshotgreen,line width=0.9pt},
+  wclear/.style={draw=cleargray,line width=0.9pt},
+  tag/.style={
+    etiquette,
+    font=\sffamily\tiny,
+    inner sep=1.3pt,
+    fill=white
+  }
+}
+
+\newcommand{\pulseat}[3]{%
+  \draw[#3] (7.95,#1) -- (#2,#1) -- ++(0,0.34) -- ++(0.38,0) -- ++(0,-0.34) -- (19.05,#1);
+}
+
+\newcommand{\levelwave}[4]{%
+  \draw[#4] (7.95,#1) -- (#2,#1) -- (#2,{#1+0.34}) -- (#3,{#1+0.34}) -- (#3,#1) -- (19.05,#1);
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+% Partie gauche : FSM simplifiée
+\node[titre,anchor=west] at (0.0,6.80) {FSM de mesure et réarmement};
+
+\node[state] (wait) at (2.60,6.05) {Attente};
+\node[state] (meas) at (2.60,4.95) {Mesure active};
+\node[state,draw=snapshotgreen] (snap) at (2.60,3.85) {Snapshot};
+\node[state,draw=bleuacier] (cap) at (2.60,2.75) {Capture contexte};
+\node[state,draw=cleargray] (clr) at (2.60,1.65) {Clear / réarmement};
+
+\draw[arrow] (wait) -- node[tag,right=2pt] {START : anneau lent} (meas);
+\draw[arrow] (meas) -- node[tag,right=2pt] {mesure complète} (snap);
+\draw[arrow] (snap) -- node[tag,right=2pt] {gel image} (cap);
+\draw[arrow] (cap) -- node[tag,right=2pt] {écriture banque} (clr);
+\draw[arrow] (clr.west) -- ++(-1.35,0) |- node[tag,left=2pt,pos=0.25] {nouvelle fenêtre} (wait.west);
+
+\node[tag,align=center] at (2.60,0.63) {image protégée dans un contexte ;\\lecture FIFO/TX découplée};
+
+% Séparateur
+\draw[grisligne!35] (5.80,0.70) -- (5.80,6.85);
+
+% Partie droite : chronogramme annoté
+\node[titre,anchor=west] at (6.35,6.80) {Chronogramme fonctionnel};
+
+\foreach \y/\name in {
+  6.10/START,
+  5.35/STOP,
+  4.60/Fenêtre de détection,
+  3.85/Hit mémorisé,
+  3.10/Mesure complète,
+  2.35/Gel de l'image,
+  1.60/Écriture contexte,
+  0.85/Nettoyage,
+  0.10/Contexte prêt lecture
+} {
+  \node[anchor=east,font=\sffamily\scriptsize,text=grisligne] at (7.70,\y) {\name};
+  \draw[grisligne!22] (7.95,\y) -- (19.05,\y);
+}
+
+\foreach \x/\lab in {
+  8.75/$t_0$,
+  10.25/$t_1$,
+  12.30/$t_2$,
+  13.55/$t_3$,
+  14.30/$t_4$,
+  15.20/$t_5$
+} {
+  \draw[grisligne!34] (\x,-0.18) -- (\x,6.35);
+  \node[font=\sffamily\tiny,text=grisligne] at (\x,-0.45) {\lab};
+}
+
+\pulseat{6.10}{8.75}{wmeasure}
+\pulseat{5.35}{10.25}{wmeasure}
+\levelwave{4.60}{10.25}{12.30}{wmeasure}
+\levelwave{3.85}{11.05}{15.20}{wmeasure}
+\levelwave{3.10}{12.30}{15.20}{wmeasure}
+\pulseat{2.35}{13.55}{wsnap}
+\pulseat{1.60}{14.30}{wsnap}
+\pulseat{0.85}{15.20}{wclear}
+\levelwave{0.10}{14.30}{19.05}{wsnap}
+
+\node[tag,text=measureorange] at (11.35,5.02) {fenêtre PD active};
+\node[tag,text=measureorange] at (12.20,4.20) {croisement mémorisé};
+\node[tag,text=measureorange] at (13.35,3.47) {conversion à traiter};
+\node[tag,text=snapshotgreen] at (13.55,2.78) {snapshot avant clear};
+\node[tag,text=snapshotgreen] at (14.70,2.04) {écriture contexte};
+\node[tag,text=cleargray] at (15.55,1.28) {matrice nettoyée};
+\node[tag,text=snapshotgreen] at (17.25,0.48) {lecture découplée};
+
+\end{tikzpicture}
+\end{document}

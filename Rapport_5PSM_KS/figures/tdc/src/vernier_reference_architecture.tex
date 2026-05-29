@@ -17,33 +17,33 @@
   },
   oscillateur/.style={
     boitetech,
-    minimum width=66mm,
+    minimum width=72mm,
     minimum height=14mm
   },
   matrice/.style={
     boitetech,
-    minimum width=66mm,
-    minimum height=34mm
+    minimum width=72mm,
+    minimum height=42mm
   },
   memoire/.style={
     boitetech,
-    minimum width=40mm,
-    minimum height=52mm
+    minimum width=42mm,
+    minimum height=60mm
   },
   lent/.style={
     draw=red!80!black,
-    line width=1.15pt,
-    -{Latex[length=2.4mm,width=1.5mm]}
+    line width=1.05pt,
+    -{Latex[length=2.3mm,width=1.45mm]}
   },
   rapide/.style={
     draw=blue!80!black,
-    line width=1.15pt,
-    -{Latex[length=2.4mm,width=1.5mm]}
+    line width=1.05pt,
+    -{Latex[length=2.3mm,width=1.45mm]}
   },
   busdata/.style={
     draw=blue!80!black,
-    line width=1.9pt,
-    -{Latex[length=3.0mm,width=2.0mm]}
+    line width=1.45pt,
+    -{Latex[length=2.6mm,width=1.7mm]}
   },
   etiquetteflux/.style={
     fill=white,
@@ -57,49 +57,45 @@
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\node[boitetech, minimum width=31mm, minimum height=18mm] (prelogic) at (0,0)
+\node[boitetech, minimum width=34mm, minimum height=18mm] (prelogic) at (0,0)
 {Prélogique\\(EN)};
 
-\node[oscillateur] (slowosc) at (7.0,3.45)
-{Oscillateur Lent (9 étages)};
-\node[matrice] (matrix) at (7.0,0)
-{Matrice de Détection de Phase 9x9};
-\node[oscillateur] (fastosc) at (7.0,-3.45)
-{Oscillateur Rapide (9 étages)};
+\node[oscillateur] (slowosc) at (6.4,3.85)
+{Oscillateur lent (9 étages)};
+\node[matrice] (matrix) at (6.4,0)
+{Matrice de détection de phase\\[-0.5mm]$9\times9$};
+\node[oscillateur] (fastosc) at (6.4,-3.85)
+{Oscillateur rapide (9 étages)};
 
-\node[boitetech, minimum width=30mm] (slowcnt) at (15.4,3.45)
-{Compteur Lent};
-\node[memoire] (memory) at (15.4,0)
+\node[boitetech, minimum width=31mm] (slowcnt) at (13.15,3.85)
+{Compteur lent};
+\node[memoire] (memory) at (16.55,0)
 {Mémoire\\d'échantillonnage};
-\node[boitetech, minimum width=30mm] (fastcnt) at (15.4,-3.45)
-{Compteur Rapide};
+\node[boitetech, minimum width=31mm] (fastcnt) at (13.15,-3.85)
+{Compteur rapide};
 
-\coordinate (startin) at ($(prelogic.west)+(-2.35,0.60)$);
-\coordinate (stopin) at ($(prelogic.west)+(-2.35,-0.60)$);
-\coordinate (enslowup) at ($(prelogic.north)+(0,1.05)$);
-\coordinate (enfastdown) at ($(prelogic.south)+(0,-1.05)$);
-\coordinate (nslowin) at ([xshift=-8pt]memory.north);
-\coordinate (nfastin) at ([xshift=8pt]memory.south);
+\coordinate (startin) at ($(prelogic.west)+(-2.35,0.55)$);
+\coordinate (stopin) at ($(prelogic.west)+(-2.35,-0.55)$);
 
 \draw[lent] (startin) -- (prelogic.west |- startin)
   node[etiquetteflux, midway, above=2pt, text=red!80!black] {START};
 \draw[rapide] (stopin) -- (prelogic.west |- stopin)
   node[etiquetteflux, midway, below=2pt, text=blue!80!black] {STOP};
 
-\draw[lent] (prelogic.north) -- (enslowup) -| (slowosc.west)
-  node[etiquetteflux, pos=0.34, above=2pt, text=red!80!black] {$En_{slow}$};
-\draw[rapide] (prelogic.south) -- (enfastdown) -| (fastosc.west)
-  node[etiquetteflux, pos=0.34, below=2pt, text=blue!80!black] {$En_{fast}$};
+\draw[lent] (prelogic.north) -- ++(0,1.05) -| (slowosc.west)
+  node[etiquetteflux, pos=0.25, above=2pt, text=red!80!black] {$En_{slow}$};
+\draw[rapide] (prelogic.south) -- ++(0,-1.05) -| (fastosc.west)
+  node[etiquetteflux, pos=0.25, below=2pt, text=blue!80!black] {$En_{fast}$};
 
-\draw[lent] (slowosc.east) -- ++(1.05,0) -- (slowcnt.west)
-  node[etiquetteflux, pos=0.48, above=2pt, text=red!80!black] {débordement lent};
-\draw[rapide] (fastosc.east) -- ++(1.05,0) -- (fastcnt.west)
-  node[etiquetteflux, pos=0.48, below=2pt, text=blue!80!black] {débordement rapide};
+\draw[lent] (slowosc.east) -- (slowcnt.west)
+  node[etiquetteflux, midway, above=2pt, text=red!80!black] {débordement lent};
+\draw[rapide] (fastosc.east) -- (fastcnt.west)
+  node[etiquetteflux, midway, below=2pt, text=blue!80!black] {débordement rapide};
 
-\draw[busdata] (slowcnt.south) -- ++(0,-0.65) -- (nslowin)
-  node[etiquetteflux, pos=0.32, right=2pt] {$N_{slow}$};
-\draw[busdata] (fastcnt.north) -- ++(0,0.65) -- (nfastin)
-  node[etiquetteflux, pos=0.32, right=2pt] {$N_{fast}$};
+\draw[busdata] (slowcnt.east) -- ++(0.70,0) |- ([yshift=12mm]memory.west)
+  node[etiquetteflux, pos=0.28, above=2pt] {$N_{slow}$};
+\draw[busdata] (fastcnt.east) -- ++(0.70,0) |- ([yshift=-12mm]memory.west)
+  node[etiquetteflux, pos=0.28, below=2pt] {$N_{fast}$};
 
 \foreach \i in {1,...,9} {
   \pgfmathsetmacro{\alpha}{\i/10}
@@ -111,15 +107,21 @@
   \coordinate (matrixout\i) at ($(matrix.north east)!\beta!(matrix.south east)$);
   \coordinate (memoryin\i) at (memory.west |- matrixout\i);
 
-  \draw[lent] (slowtap\i) -- (matrixtop\i)
-    node[etiquetteflux, midway, right=1pt, text=red!80!black] {$S_{\i}$};
-  \draw[rapide] (fasttap\i) -- (matrixbot\i)
-    node[etiquetteflux, midway, right=1pt, text=blue!80!black] {$F_{\i}$};
-  \draw[busdata] (matrixout\i) -- (memoryin\i)
-    node[etiquetteflux, midway, above=1pt] {$PD_{\i}$};
+  \draw[lent] (slowtap\i) -- (matrixtop\i);
+  \draw[rapide] (fasttap\i) -- (matrixbot\i);
+  \draw[busdata, line width=1.05pt] (matrixout\i) -- (memoryin\i);
 }
 
-\draw[busdata, line width=2.6pt] (memory.east) -- ++(3.0,0)
+\foreach \i/\x in {1/3.25,2/4.05,3/4.85,4/5.65,5/6.45,6/7.25,7/8.05,8/8.85,9/9.65} {
+  \node[etiquetteflux,text=red!80!black] at (\x,2.22) {$S_{\i}$};
+  \node[etiquetteflux,text=blue!80!black] at (\x,-2.22) {$F_{\i}$};
+}
+
+\foreach \i/\y in {1/1.87,2/1.40,3/0.93,4/0.47,5/0.00,6/-0.47,7/-0.93,8/-1.40,9/-1.87} {
+  \node[etiquetteflux] at (14.65,\y) {$PD_{\i}$};
+}
+
+\draw[busdata, line width=2.4pt] (memory.east) -- ++(2.35,0)
   node[etiquetteflux, pos=0.64, above=2pt, text=blue!80!black] {DATA};
 
 \end{tikzpicture}

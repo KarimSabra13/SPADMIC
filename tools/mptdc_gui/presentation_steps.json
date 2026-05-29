@@ -1,0 +1,145 @@
+[
+  {
+    "id": "repos_armement",
+    "title": "Repos / armement",
+    "subtitle": "CSR armé, contextes disponibles, oscillateurs arrêtés",
+    "active_modules": ["mptdc_csr_minimal", "mptdc_async_frontend_v2"],
+    "active_domains": ["clk_sys"],
+    "active_signals": ["conv_arm_i", "status_o.ready", "fe_all_ctx_busy"],
+    "explanation": "Le CSR arme la conversion. Le frontend ne peut accepter START que si l'armement est actif et qu'un contexte reste libre.",
+    "evidence": [
+      {"file": "MPTDC/rtl/readout/mptdc_csr_minimal.sv", "line": 102},
+      {"file": "MPTDC/rtl/top/mptdc_core.sv", "line": 617}
+    ]
+  },
+  {
+    "id": "selection_source",
+    "title": "Sélection de source",
+    "subtitle": "Le MUX choisit SPAD ou calibration",
+    "active_modules": ["mptdc_input_mux", "mptdc_csr_minimal"],
+    "active_domains": ["async"],
+    "active_signals": ["input_sel_i", "start_spad_async_i", "cal_start_async_i", "start_async_o", "stop_async_o"],
+    "explanation": "Le MUX combinatoire route la paire START/STOP SPAD ou calibration vers le coeur, sans registre ajouté sur le chemin temporel.",
+    "evidence": [
+      {"file": "MPTDC/rtl/ctrl/mptdc_input_mux.sv", "line": 31},
+      {"file": "MPTDC/rtl/ctrl/mptdc_input_mux.sv", "line": 47}
+    ]
+  },
+  {
+    "id": "arrivee_start",
+    "title": "Arrivée START",
+    "subtitle": "START est verrouillé et un contexte est réservé",
+    "active_modules": ["mptdc_input_mux", "mptdc_async_frontend_v2"],
+    "active_domains": ["async"],
+    "active_signals": ["start_async_i", "start_accept_level", "start_latched_q", "active_ctx_q", "osc_slow_en_async_o"],
+    "explanation": "START est accepté uniquement si le frontend est armé, non occupé, et si la banque de contextes n'est pas pleine.",
+    "evidence": [
+      {"file": "MPTDC/rtl/async/mptdc_async_frontend_v2.sv", "line": 98},
+      {"file": "MPTDC/rtl/async/mptdc_async_frontend_v2.sv", "line": 116}
+    ]
+  },
+  {
+    "id": "comptage_lent",
+    "title": "Comptage lent",
+    "subtitle": "Les phases lentes avancent et le compteur Gray suit slow_phase[0]",
+    "active_modules": ["mptdc_osc_wrapper", "mptdc_gray_cnt_sync"],
+    "active_domains": ["osc_slow"],
+    "active_signals": ["osc_slow_en_async_o", "slow_phase[0]", "nslow_src_count"],
+    "explanation": "L'oscillateur lent fournit les phases Vernier lentes ; slow_phase[0] cadence le compteur coarse Gray et le watchdog START sans STOP.",
+    "evidence": [
+      {"file": "MPTDC/rtl/top/mptdc_core.sv", "line": 381},
+      {"file": "MPTDC/rtl/top/mptdc_core.sv", "line": 438}
+    ]
+  },
+  {
+    "id": "arrivee_stop",
+    "title": "Arrivée STOP",
+    "subtitle": "STOP démarre la partie rapide et capture la frontière",
+    "active_modules": ["mptdc_async_frontend_v2", "mptdc_stop_capture_async", "mptdc_osc_wrapper"],
+    "active_domains": ["async", "osc_fast"],
+    "active_signals": ["stop_async_i", "stop_latched_q", "osc_fast_en_async_o", "phase0_snap", "slow_boundary_inc"],
+    "explanation": "STOP n'est verrouillé qu'après START. Il déclenche l'oscillateur rapide et la capture boundary côté asynchrone.",
+    "evidence": [
+      {"file": "MPTDC/rtl/async/mptdc_async_frontend_v2.sv", "line": 144},
+      {"file": "MPTDC/rtl/async/mptdc_stop_capture_async.sv", "line": 41}
+    ]
+  },
+  {
+    "id": "detection_vernier",
+    "title": "Détection Vernier",
+    "subtitle": "La matrice PD 8x8 échantillonne slow_phase par fast_phase",
+    "active_modules": ["mptdc_pd_cell", "mptdc_osc_wrapper"],
+    "active_domains": ["pd"],
+    "active_signals": ["pd_enable_gated", "fast_phase[nf]", "slow_phase[ns]", "pd_hit_level", "pd_nfast_hit_packed"],
+    "explanation": "Chaque cellule PD échantillonne une phase lente avec une phase rapide et verrouille le premier croisement détecté.",
+    "evidence": [
+      {"file": "MPTDC/rtl/top/mptdc_core.sv", "line": 404},
+      {"file": "MPTDC/rtl/pd/mptdc_pd_cell.sv", "line": 83}
+    ]
+  },
+  {
+    "id": "snapshot",
+    "title": "Snapshot",
+    "subtitle": "Compteurs, boundary et hits sont stabilisés puis transférés",
+    "active_modules": ["mptdc_gray_cnt_sync", "mptdc_hit_capture_bridge", "mptdc_meas_ctrl"],
+    "active_domains": ["cdc", "clk_sys"],
+    "active_signals": ["snapshot_en_o", "hit_capture_snapshot", "nslow_snapshot", "pd_hit_level"],
+    "explanation": "La FSM de mesure capture une image stable des compteurs, des flags boundary et des hits avant le clear destructif.",
+    "evidence": [
+      {"file": "MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv", "line": 119},
+      {"file": "MPTDC/rtl/top/mptdc_core.sv", "line": 501}
+    ]
+  },
+  {
+    "id": "evaluation_mesure",
+    "title": "Évaluation mesure",
+    "subtitle": "La FSM compte les hits et décide capture / clear / flags",
+    "active_modules": ["mptdc_meas_ctrl"],
+    "active_domains": ["clk_sys"],
+    "active_signals": ["hit_count", "flags", "capture_en_o", "frontend_clear_o", "pd_gate_o"],
+    "explanation": "La FSM parcourt SNAPSHOT, COUNT, EVAL, CAPTURE puis CLEAR pour fermer la conversion et préparer la suivante.",
+    "evidence": [
+      {"file": "MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv", "line": 119},
+      {"file": "MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv", "line": 165}
+    ]
+  },
+  {
+    "id": "stockage_contexte",
+    "title": "Stockage contexte",
+    "subtitle": "L'image de mesure est écrite dans le context bank",
+    "active_modules": ["mptdc_context_bank", "mptdc_async_frontend_v2"],
+    "active_domains": ["clk_sys"],
+    "active_signals": ["capture_en_o", "ctx_snapshot_q", "ctx_drain", "ctx_release_async_i"],
+    "explanation": "Le contexte capturé devient à drainer ; la libération revient ensuite vers le frontend pour réutiliser l'emplacement.",
+    "evidence": [
+      {"file": "MPTDC/rtl/async/mptdc_context_bank.sv", "line": 40},
+      {"file": "MPTDC/rtl/top/mptdc_core.sv", "line": 280}
+    ]
+  },
+  {
+    "id": "encodage_evenement",
+    "title": "Encodage événement",
+    "subtitle": "Le drain émet META puis des enregistrements HIT vers la FIFO",
+    "active_modules": ["mptdc_drain_ctrl", "mptdc_sync_fifo"],
+    "active_domains": ["readout"],
+    "active_signals": ["drain_fifo_wr_en", "drain_fifo_wr_data", "ACQ_REC_META", "ACQ_REC_HIT"],
+    "explanation": "La FSM drain sélectionne un contexte, pousse un enregistrement META, puis scanne le bitmap PD pour produire les enregistrements HIT.",
+    "evidence": [
+      {"file": "MPTDC/rtl/ctrl/mptdc_drain_ctrl.sv", "line": 137},
+      {"file": "MPTDC/rtl/ctrl/mptdc_drain_ctrl.sv", "line": 173}
+    ]
+  },
+  {
+    "id": "sortie_locale_partagee",
+    "title": "Sortie locale ou partagée",
+    "subtitle": "Standalone narrow16 ou export acq_* vers TOP",
+    "active_modules": ["mptdc_sync_fifo", "mptdc_narrow16_tx_v2", "spadmic_tdc_packet_adapter"],
+    "active_domains": ["readout", "top"],
+    "active_signals": ["fifo_rd_valid", "fifo_rd_en", "narrow_valid_o", "narrow_data_o", "acq_valid_o", "acq_data_o"],
+    "explanation": "En mode autonome, le sérialiseur produit le paquet v2.7 fixe. En mode TOP, le front FIFO est exposé sous forme d'enregistrements acq_*.",
+    "evidence": [
+      {"file": "MPTDC/rtl/top/mptdc_core.sv", "line": 563},
+      {"file": "MPTDC/rtl/readout/mptdc_narrow16_tx_v2.sv", "line": 91}
+    ]
+  }
+]

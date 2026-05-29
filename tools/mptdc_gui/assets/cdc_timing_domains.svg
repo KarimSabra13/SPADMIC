@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 760" width="1360" height="760" role="img"><title>CDC et timing MPTDC</title><defs><marker id='arrow-data' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#0f766e'/></marker><marker id='arrow-control' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7c3aed'/></marker><marker id='arrow-clock' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#2563eb'/></marker><marker id='arrow-async' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#be5d00'/></marker><marker id='arrow-reset' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#64748b'/></marker><filter id='glow' x='-20%' y='-20%' width='140%' height='140%'><feGaussianBlur stdDeviation='2.2' result='blur'/><feMerge><feMergeNode in='blur'/><feMergeNode in='SourceGraphic'/></feMerge></filter><filter id='shadow' x='-15%' y='-15%' width='130%' height='145%'><feDropShadow dx='0' dy='3' stdDeviation='3' flood-opacity='0.13'/></filter><style>
+    .domain-label{font:700 15px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .caption{font:12px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .pin{font:10.5px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .symbol-title{font:700 13px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    .symbol-sub{font:11px Inter,Segoe UI,Arial,sans-serif;fill:#64748b}
+    .block{cursor:pointer}
+    .block:hover .symbol-body{stroke-width:2.4}
+    .active .symbol-body{stroke:#0f766e;stroke-width:2.6}
+    .active-signal{stroke-width:4.5;filter:url(#glow)}
+    .state-dot{fill:#ffffff;stroke:#7c3aed;stroke-width:1.4}
+    .bitlabel{font:10px Inter,Segoe UI,Arial,sans-serif;fill:#334155}
+    .fieldlabel{font:700 11px Inter,Segoe UI,Arial,sans-serif;fill:#1d2430}
+    </style></defs><rect width='100%' height='100%' fill='#f7f8fb'/>
+<text x='36' y='44' class='domain-label' text-anchor='start'>CDC / timing - domaines et crossings</text>
+<rect class='domain-lane' data-domain='start-stop-asynchrones' x='40' y='88' width='1240' height='105' rx='12' fill='#fff7ed' stroke='#d8dee8' stroke-width='1'/>
+<text x='54' y='112' class='domain-label' text-anchor='start'>START/STOP asynchrones</text>
+<rect class='domain-lane' data-domain='oscillateurs-slow-fast' x='40' y='218' width='1240' height='105' rx='12' fill='#eff6ff' stroke='#d8dee8' stroke-width='1'/>
+<text x='54' y='242' class='domain-label' text-anchor='start'>Oscillateurs slow/fast</text>
+<rect class='domain-lane' data-domain='capture-statique-snapshot' x='40' y='348' width='1240' height='140' rx='12' fill='#ecfdf5' stroke='#d8dee8' stroke-width='1'/>
+<text x='54' y='372' class='domain-label' text-anchor='start'>Capture statique / snapshot</text>
+<rect class='domain-lane' data-domain='clk-sys' x='40' y='518' width='1240' height='125' rx='12' fill='#f5f3ff' stroke='#d8dee8' stroke-width='1'/>
+<text x='54' y='542' class='domain-label' text-anchor='start'>clk_sys</text>
+<g class='block' data-module='mptdc_reset_sync' data-title='Reset synchronizers'>
+<rect class='symbol-body' x='170' y='535' width='205' height='84' rx='8' fill='#ffffff' stroke='#64748b' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='182' y='558' class='symbol-title' text-anchor='start'>Reset synchronizers</text>
+<rect x='206' y='579' width='26' height='36' fill='#f8fafc' stroke='#64748b'/>
+<text x='219' y='601' class='fieldlabel' text-anchor='middle'>D</text>
+<line class='signal-wire' x1='233' y1='597' x2='243' y2='597' stroke='#64748b' stroke-width='2.0' stroke-linecap='round' marker-end='url(#arrow-reset)'/>
+<rect x='244' y='579' width='26' height='36' fill='#f8fafc' stroke='#64748b'/>
+<text x='257' y='601' class='fieldlabel' text-anchor='middle'>D</text>
+<line x1='170' y1='597' x2='182' y2='597' stroke='#be5d00' stroke-width='1.4'/><circle cx='182' cy='597' r='2.8' fill='#fff' stroke='#be5d00'/><text x='166' y='600.5' class='pin' text-anchor='end'>source</text>
+<line x1='363' y1='597' x2='375' y2='597' stroke='#0f766e' stroke-width='1.4'/><circle cx='363' cy='597' r='2.8' fill='#fff' stroke='#0f766e'/><text x='379' y='600.5' class='pin'>destination</text>
+</g>
+<g class='block' data-module='mptdc_hit_capture_bridge' data-title='Bus snapshot tenu'>
+<rect class='symbol-body' x='480' y='360' width='230' height='92' rx='8' fill='#ffffff' stroke='#64748b' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='492' y='383' class='symbol-title' text-anchor='start'>Bus snapshot tenu</text>
+<rect x='516' y='404' width='26' height='36' fill='#f8fafc' stroke='#64748b'/>
+<text x='529' y='426' class='fieldlabel' text-anchor='middle'>D</text>
+<line class='signal-wire' x1='543' y1='422' x2='553' y2='422' stroke='#64748b' stroke-width='2.0' stroke-linecap='round' marker-end='url(#arrow-reset)'/>
+<rect x='554' y='404' width='26' height='36' fill='#f8fafc' stroke='#64748b'/>
+<text x='567' y='426' class='fieldlabel' text-anchor='middle'>D</text>
+<line x1='480' y1='422' x2='492' y2='422' stroke='#be5d00' stroke-width='1.4'/><circle cx='492' cy='422' r='2.8' fill='#fff' stroke='#be5d00'/><text x='476' y='425.5' class='pin' text-anchor='end'>source</text>
+<line x1='698' y1='422' x2='710' y2='422' stroke='#0f766e' stroke-width='1.4'/><circle cx='698' cy='422' r='2.8' fill='#fff' stroke='#0f766e'/><text x='714' y='425.5' class='pin'>destination</text>
+<polygon points='690,372 677,396 703,396' fill='#fff1f2' stroke='#b91c1c' stroke-width='1.6'/>
+<text x='690' y='392' text-anchor='middle' font-family='Inter,Segoe UI,Arial' font-weight='800' font-size='18' fill='#b91c1c'>!</text>
+
+</g>
+<g class='block' data-module='mptdc_gray_cnt_sync' data-title='Gray counter CDC'>
+<rect class='symbol-body' x='770' y='235' width='230' height='74' rx='8' fill='#ffffff' stroke='#2563eb' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='782' y='258' class='symbol-title' text-anchor='start'>Gray counter CDC</text>
+<rect x='792' y='281' width='16' height='28' fill='#eff6ff' stroke='#2563eb'/>
+<text x='800' y='299' class='bitlabel' text-anchor='middle'>0</text>
+<rect x='814' y='281' width='16' height='28' fill='#eff6ff' stroke='#2563eb'/>
+<text x='822' y='299' class='bitlabel' text-anchor='middle'>1</text>
+<rect x='836' y='281' width='16' height='28' fill='#eff6ff' stroke='#2563eb'/>
+<text x='844' y='299' class='bitlabel' text-anchor='middle'>2</text>
+<rect x='858' y='281' width='16' height='28' fill='#eff6ff' stroke='#2563eb'/>
+<text x='866' y='299' class='bitlabel' text-anchor='middle'>3</text>
+<rect x='880' y='281' width='16' height='28' fill='#eff6ff' stroke='#2563eb'/>
+<text x='888' y='299' class='bitlabel' text-anchor='middle'>4</text>
+<rect x='902' y='281' width='16' height='28' fill='#eff6ff' stroke='#2563eb'/>
+<text x='910' y='299' class='bitlabel' text-anchor='middle'>5</text>
+<text x='885.0' y='293' class='symbol-sub' text-anchor='middle'>Compteur Gray + snapshot CDC</text>
+<line x1='770' y1='293' x2='782' y2='293' stroke='#2563eb' stroke-width='1.4'/><circle cx='782' cy='293' r='2.8' fill='#fff' stroke='#2563eb'/><text x='766' y='296.5' class='pin' text-anchor='end'>phase[0]</text>
+<line x1='988' y1='293' x2='1000' y2='293' stroke='#0f766e' stroke-width='1.4'/><circle cx='988' cy='293' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1004' y='296.5' class='pin'>count snapshot</text>
+</g>
+<g class='block' data-module='mptdc_pulse_sync' data-title='Pulse sync support'>
+<rect class='symbol-body' x='1060' y='535' width='180' height='84' rx='8' fill='#ffffff' stroke='#64748b' stroke-width='1.7' filter='url(#shadow)'/>
+<text x='1072' y='558' class='symbol-title' text-anchor='start'>Pulse sync support</text>
+<rect x='1096' y='579' width='26' height='36' fill='#f8fafc' stroke='#64748b'/>
+<text x='1109' y='601' class='fieldlabel' text-anchor='middle'>D</text>
+<line class='signal-wire' x1='1123' y1='597' x2='1133' y2='597' stroke='#64748b' stroke-width='2.0' stroke-linecap='round' marker-end='url(#arrow-reset)'/>
+<rect x='1134' y='579' width='26' height='36' fill='#f8fafc' stroke='#64748b'/>
+<text x='1147' y='601' class='fieldlabel' text-anchor='middle'>D</text>
+<line x1='1060' y1='597' x2='1072' y2='597' stroke='#be5d00' stroke-width='1.4'/><circle cx='1072' cy='597' r='2.8' fill='#fff' stroke='#be5d00'/><text x='1056' y='600.5' class='pin' text-anchor='end'>source</text>
+<line x1='1228' y1='597' x2='1240' y2='597' stroke='#0f766e' stroke-width='1.4'/><circle cx='1228' cy='597' r='2.8' fill='#fff' stroke='#0f766e'/><text x='1244' y='600.5' class='pin'>destination</text>
+<polygon points='1220,547 1207,571 1233,571' fill='#fff1f2' stroke='#b91c1c' stroke-width='1.6'/>
+<text x='1220' y='567' text-anchor='middle' font-family='Inter,Segoe UI,Arial' font-weight='800' font-size='18' fill='#b91c1c'>!</text>
+
+</g>
+<line class='signal-wire' x1='170' y1='140' x2='480' y2='405' stroke='#be5d00' stroke-width='2.4' stroke-linecap='round' marker-end='url(#arrow-async)' stroke-dasharray='8 6'/>
+<text x='325.0' y='265.5' class='caption' text-anchor='middle'>START/STOP -&gt; latch</text>
+<line class='signal-wire' x1='620' y1='270' x2='770' y2='270' stroke='#2563eb' stroke-width='2.6' stroke-linecap='round' marker-end='url(#arrow-clock)'/>
+<text x='695.0' y='263.0' class='caption' text-anchor='middle'>phase[0]</text>
+<line class='signal-wire' x1='1000' y1='272' x2='920' y2='535' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<text x='960.0' y='396.5' class='caption' text-anchor='middle'>gray snapshot</text>
+<line class='signal-wire' x1='710' y1='405' x2='790' y2='535' stroke='#0f766e' stroke-width='3.2' stroke-linecap='round' marker-end='url(#arrow-data)'/>
+<text x='750.0' y='463.0' class='caption' text-anchor='middle'>held bus</text>
+<line class='signal-wire' x1='375' y1='577' x2='480' y2='577' stroke='#64748b' stroke-width='2.0' stroke-linecap='round' marker-end='url(#arrow-reset)'/>
+<text x='427.5' y='570.0' class='caption' text-anchor='middle'>rst_sys_n</text>
+<polygon points='1030,378 1017,402 1043,402' fill='#fff1f2' stroke='#b91c1c' stroke-width='1.6'/>
+<text x='1030' y='398' text-anchor='middle' font-family='Inter,Segoe UI,Arial' font-weight='800' font-size='18' fill='#b91c1c'>!</text>
+<text x='1048' y='395' class='caption' text-anchor='start'>waiver nécessaire</text>
+<polygon points='1170,258 1157,282 1183,282' fill='#fff1f2' stroke='#b91c1c' stroke-width='1.6'/>
+<text x='1170' y='278' text-anchor='middle' font-family='Inter,Segoe UI,Arial' font-weight='800' font-size='18' fill='#b91c1c'>!</text>
+<text x='1188' y='275' class='caption' text-anchor='start'>macro oscillateur</text>
+<text x='76' y='690' class='caption' text-anchor='start'>Alertes : à valider STA/CDC ; dépend du contrat macro oscillateur ; pas une preuve silicium.</text>
+<text x='76' y='715' class='caption' text-anchor='start'>Références : docs/timing_closure/cdc_async_waiver_package.md ; oscillator_macro_contract.md ; MPTDC/docs/07_DESIGN_REVIEW.md</text>
+</svg>
