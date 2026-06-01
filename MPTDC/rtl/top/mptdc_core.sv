@@ -331,7 +331,10 @@ module mptdc_core
   wire start_wdt_limit_reached = (start_wdt_cnt >= (start_wdt_limit - 16'd1));
 
   always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
-    if (!rst_sys_status_n || meas_fe_clear) begin
+    if (!rst_sys_status_n) begin
+      start_wdt_cnt         <= '0;
+      start_timeout_latched <= 1'b0;
+    end else if (meas_fe_clear) begin
       start_wdt_cnt         <= '0;
       start_timeout_latched <= 1'b0;
     end else if (start_timeout_latched) begin
