@@ -84,6 +84,12 @@ TB_COMMON=(
 TB_BUILD="$BUILD_DIR/$TB_NAME"
 mkdir -p "$TB_BUILD"
 
+# Keep ccache writes inside the build tree unless the caller already chose a
+# location. This matters in sandboxed local runs where ~/.cache may be read-only.
+export CCACHE_DIR="${CCACHE_DIR:-$BUILD_DIR/ccache}"
+export CCACHE_TEMPDIR="${CCACHE_TEMPDIR:-$BUILD_DIR/ccache/tmp}"
+mkdir -p "$CCACHE_DIR" "$CCACHE_TEMPDIR"
+
 echo "=== MPTDC v2.7 TB Runner ==="
 echo "  Testbench: $TB_NAME"
 echo "  Simulator: $SIM"

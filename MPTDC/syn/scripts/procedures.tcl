@@ -594,7 +594,9 @@ proc mptdc_report_timing {report_dir} {
 
     mptdc_report_hotspot_timing "$dir/timing_osc_counter_hotspots.rpt" \
         "oscillator support-counter timing report" \
-        [list *u_fast_cnt* *u_slow_cnt* *nfast_src_count* *start_wdt_cnt* *start_timeout_latched*]
+        [list *u_fast_cnt* *u_slow_cnt* *u_slow_epoch* *u_stop_epoch_capture* \
+              *gen_fast_tag_col* *u_fast_tag* *nfast_src_count* \
+              *start_wdt_cnt* *start_timeout_latched*]
 
     mptdc_report_fast_count_capture $dir
 

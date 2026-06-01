@@ -23,8 +23,10 @@
 //
 // On detection:
 //   - hit_latched is set to 1 and stays high until clear_window or reset.
-//   - nfast_hit_latched captures the current local fast-column raw tag.  In
-//     O2_RAW_TAG_SW_DECODE mode, software decodes this packet-visible field.
+//   - nfast_hit_latched is a shadow timestamp register: before a hit, it tracks
+//     the current local fast-column raw tag; once a hit is detected it freezes.
+//     This keeps q1/q2 edge-detect logic out of the 7-bit timestamp D path.
+//     In O2/O3 raw-tag mode, software decodes this packet-visible field.
 //
 // Clock domain: fast_phase (fast oscillator tap, ~1 GHz).
 // clear_window is an asynchronous clear from the system domain — it is
@@ -72,10 +74,11 @@ module mptdc_pd_cell #(
           q1 <= slow_phase;
           q2 <= q1;
           q3 <= q2;
+          if (!hit_latched)
+            nfast_hit_latched <= nfast_tag_i;
           // Confirmed falling edge: q3=1, q2=1 (was high), q1=0 (went low)
           if (!hit_latched && !q1 && q2 && q3) begin
             hit_latched <= 1'b1;
-            nfast_hit_latched <= nfast_tag_i;
           end
         end
       end
@@ -90,10 +93,11 @@ module mptdc_pd_cell #(
         end else if (detect_en_i) begin
           q1 <= slow_phase;
           q2 <= q1;
+          if (!hit_latched)
+            nfast_hit_latched <= nfast_tag_i;
           // Falling edge: q2=1 (was high), q1=0 (went low)
           if (!hit_latched && !q1 && q2) begin
             hit_latched <= 1'b1;
-            nfast_hit_latched <= nfast_tag_i;
           end
         end
       end

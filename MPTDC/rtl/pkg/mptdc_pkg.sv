@@ -67,6 +67,13 @@ package mptdc_pkg;
   parameter int unsigned NFAST_W     = 7;
   parameter int unsigned EVENT_SEQ_W = 4;  // Max 15 hits → 4 bits sufficient
 
+  // O3 raw slow-epoch mode:
+  // A 64-stage Johnson counter in the slow_phase[0] domain produces 128
+  // one-bit-change states. STOP captures the raw state asynchronously; clk_sys
+  // decodes it back to the existing 7-bit nslow field before context storage.
+  localparam int unsigned SLOW_EPOCH_STAGES = 64;
+  localparam int unsigned SLOW_EPOCH_STATES = 2 * SLOW_EPOCH_STAGES;
+
   // O2 local raw-tag mode:
   // Fast-domain PD cells capture a local per-column LFSR tag instead of a
   // global binary counter.  Hardware exports the raw tag in the existing nfast
@@ -366,6 +373,50 @@ package mptdc_pkg;
   );
     // 7-bit Fibonacci LFSR, polynomial x^7 + x^6 + 1.
     fast_tag_next = {tag_i[NFAST_W-2:0], tag_i[NFAST_W-1] ^ tag_i[NFAST_W-2]};
+  endfunction
+
+  function automatic logic [SLOW_EPOCH_STAGES-1:0] slow_johnson_next(
+    input logic [SLOW_EPOCH_STAGES-1:0] johnson_i
+  );
+    slow_johnson_next = {johnson_i[SLOW_EPOCH_STAGES-2:0],
+                         ~johnson_i[SLOW_EPOCH_STAGES-1]};
+  endfunction
+
+  function automatic logic [NSLOW_W-1:0] slow_johnson_to_count(
+    input logic [SLOW_EPOCH_STAGES-1:0] johnson_i
+  );
+    automatic logic [NSLOW_W-1:0] count;
+
+    count = '0;
+    if (johnson_i[SLOW_EPOCH_STAGES-1]) begin
+      count = NSLOW_W'(SLOW_EPOCH_STAGES);
+      for (int i = 0; i < SLOW_EPOCH_STAGES; i++) begin
+        if (!johnson_i[i])
+          count = NSLOW_W'(SLOW_EPOCH_STAGES + i + 1);
+      end
+    end else begin
+      count = '0;
+      for (int i = 0; i < SLOW_EPOCH_STAGES; i++) begin
+        if (johnson_i[i])
+          count = NSLOW_W'(i + 1);
+      end
+    end
+
+    slow_johnson_to_count = count;
+  endfunction
+
+  function automatic logic slow_johnson_valid(
+    input logic [SLOW_EPOCH_STAGES-1:0] johnson_i
+  );
+    automatic int unsigned transitions;
+
+    transitions = 0;
+    for (int i = 1; i < SLOW_EPOCH_STAGES; i++) begin
+      if (johnson_i[i] != johnson_i[i-1])
+        transitions++;
+    end
+
+    slow_johnson_valid = (transitions <= 1);
   endfunction
 
 endpackage

@@ -15,9 +15,11 @@ MPTDC/rtl/osc/mptdc_osc_stub.sv
 MPTDC/rtl/osc/mptdc_osc_wrapper.sv
 
 MPTDC/rtl/pd/mptdc_fast_epoch_tag.sv
+MPTDC/rtl/pd/mptdc_slow_epoch_johnson.sv
 MPTDC/rtl/pd/mptdc_pd_cell.sv
 
 MPTDC/rtl/async/mptdc_stop_capture_async.sv
+MPTDC/rtl/async/mptdc_stop_epoch_capture_async.sv
 MPTDC/rtl/async/mptdc_async_frontend_v2.sv
 MPTDC/rtl/async/mptdc_hit_capture_bridge.sv
 MPTDC/rtl/async/mptdc_context_bank.sv

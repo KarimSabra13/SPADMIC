@@ -108,7 +108,10 @@ module mptdc_core
   // =========================================================================
   //  Internal wires — counter/tag fabric
   // =========================================================================
-  wire [NSLOW_W-1:0] nslow_src_count, nslow_stop_latched;
+  wire [SLOW_EPOCH_STAGES-1:0] slow_epoch_johnson;
+  wire [SLOW_EPOCH_STAGES-1:0] slow_epoch_johnson_stop;
+  wire [NSLOW_W-1:0] nslow_src_count;
+  wire [NSLOW_W-1:0] nslow_stop_latched;
 
   // O2 local-tag mode: this compatibility signal is the phase-0 encoded tag,
   // not a live binary fast counter.  It is exported raw in the existing metadata
@@ -226,38 +229,14 @@ module mptdc_core
   );
 
   // =========================================================================
-  //  Slow-domain START watchdog
-  //  Catches STOP-never-arrives: counter in slow_phase[0] domain.
-  //  When start_latched is high and stop_latched is low, counts slow cycles.
-  //  On saturation, asserts a held synthetic STOP into the frontend.
-  //  Async reset on meas_fe_clear ensures counter resets even if slow osc
-  //  stops before a rising edge (STOP_OSC kills the slow clock).
+  //  START watchdog
+  //  Catches STOP-never-arrives with a held synthetic STOP level. O3 moves this
+  //  recovery counter to clk_sys so no binary +1 counter remains in the
+  //  slow_phase[0] oscillator domain.
   // =========================================================================
-  logic [7:0] start_wdt_cnt;
-  logic       start_timeout_due;
+  logic [15:0] start_wdt_cnt;
   logic       start_timeout_latched;
-
-  always_ff @(posedge slow_phase[0] or negedge rst_sys_n or posedge meas_fe_clear) begin
-    if (!rst_sys_n || meas_fe_clear)
-      start_wdt_cnt <= '0;
-    else if (!fe_start_latched || fe_stop_latched)
-      start_wdt_cnt <= '0;
-    else if (start_wdt_cnt != 8'hFF)
-      start_wdt_cnt <= start_wdt_cnt + 8'd1;
-  end
-
-  assign start_timeout_due = fe_start_latched
-                           & !fe_stop_latched
-                           & (start_wdt_cnt == 8'hFE);
-
-  always_ff @(posedge slow_phase[0] or negedge rst_sys_n or posedge meas_fe_clear) begin
-    if (!rst_sys_n || meas_fe_clear)
-      start_timeout_latched <= 1'b0;
-    else if (!fe_start_latched)
-      start_timeout_latched <= 1'b0;
-    else if (start_timeout_due)
-      start_timeout_latched <= 1'b1;
-  end
+  localparam logic [15:0] START_WDT_DEFAULT_SYS_CYCLES = 16'd64;
 
   // Combined force-clear into frontend (global watchdog only — emergency).
   // start_timeout_latched injects a SYNTHETIC STOP (not a clear) to trigger normal
@@ -332,23 +311,41 @@ module mptdc_core
   logic [1:0] start_sync_pipe;
   (* ASYNC_REG = "TRUE" *)
   logic [1:0] stop_sync_pipe;
-  (* ASYNC_REG = "TRUE" *)
-  logic [1:0] start_timeout_sync_pipe;
   always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
     if (!rst_sys_status_n) begin
-      start_sync_pipe         <= '0;
-      stop_sync_pipe          <= '0;
-      start_timeout_sync_pipe <= '0;
+      start_sync_pipe <= '0;
+      stop_sync_pipe  <= '0;
     end else begin
-      start_sync_pipe         <= {start_sync_pipe[0], fe_start_latched};
-      stop_sync_pipe          <= {stop_sync_pipe[0], fe_stop_latched};
-      start_timeout_sync_pipe <= {start_timeout_sync_pipe[0], start_timeout_latched};
+      start_sync_pipe <= {start_sync_pipe[0], fe_start_latched};
+      stop_sync_pipe  <= {stop_sync_pipe[0], fe_stop_latched};
     end
   end
   wire start_latched_sync = start_sync_pipe[1];
   assign stop_latched_sync = stop_sync_pipe[1];
   assign meas_active_sync  = start_latched_sync & stop_latched_sync;
-  assign start_timeout_sync = start_timeout_sync_pipe[1];
+  assign start_timeout_sync = start_timeout_latched;
+
+  wire [15:0] start_wdt_limit =
+      (cfg_i.wdt_ctx_timeout != 16'd0) ? cfg_i.wdt_ctx_timeout
+                                       : START_WDT_DEFAULT_SYS_CYCLES;
+  wire start_wdt_limit_reached = (start_wdt_cnt >= (start_wdt_limit - 16'd1));
+
+  always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
+    if (!rst_sys_status_n || meas_fe_clear) begin
+      start_wdt_cnt         <= '0;
+      start_timeout_latched <= 1'b0;
+    end else if (start_timeout_latched) begin
+      start_wdt_cnt <= start_wdt_cnt;
+    end else if (start_latched_sync && !stop_latched_sync) begin
+      if (start_wdt_limit_reached) begin
+        start_timeout_latched <= 1'b1;
+      end else begin
+        start_wdt_cnt <= start_wdt_cnt + 16'd1;
+      end
+    end else begin
+      start_wdt_cnt <= '0;
+    end
+  end
 
   // =========================================================================
   //  PD enable gating: combine frontend pd_enable with meas_ctrl pd_gate
@@ -421,6 +418,22 @@ module mptdc_core
   end
 
   assign nfast_src_count = fast_tag_col[0];
+  assign nslow_src_count = slow_johnson_to_count(slow_epoch_johnson);
+  assign nslow_stop_latched = slow_johnson_to_count(slow_epoch_johnson_stop);
+
+  // ── Slow epoch tag ─────────────────────────────────────────────
+  // Johnson encoding removes the slow-domain binary counter/Gray encoder and
+  // gives STOP an asynchronously captured one-bit-change raw epoch state.
+  (* keep_hierarchy = "yes", preserve *)
+  mptdc_slow_epoch_johnson #(
+    .STAGES (SLOW_EPOCH_STAGES)
+  ) u_slow_epoch (
+    .clk_slow     (slow_phase[0]),
+    .rst_n        (rst_sys_n),
+    .clear_window (meas_pd_clear),
+    .enable_i     (fe_osc_slow_en),
+    .johnson_o    (slow_epoch_johnson)
+  );
 
   // ── Phase Detector Matrix (PD_N cells) ─────────────────────────
   // The PD island is the critical physical-performance block.  Keep the 8x8
@@ -460,26 +473,13 @@ module mptdc_core
     .slow_boundary_inc_o  (slow_boundary_inc)
   );
 
-  // ── Gray counter CDC: slow counter (slow → fast) ──────────────
-  mptdc_gray_cnt_sync #(
-    .W                  (NSLOW_W),
-    .USE_ASYNC_SNAPSHOT (1'b1),
-    .CLEAR_ON_ENABLE    (1'b0),
-    .GRAY_ENCODE_NEXT   (1'b1)
-  ) u_slow_cnt (
-    .src_clk              (slow_phase[0]),
-    .src_rst_n            (rst_sys_n),
-    .src_async_clr        (meas_pd_clear),
-    .src_en               (1'b1),
-    .src_clr              (1'b0),
-    .src_latch_p          (1'b0),
-    .src_async_latch_p    (stop_async_i),
-    .src_count            (nslow_src_count),
-    .dst_clk              (osc_fast_ph0),
-    .dst_rst_n            (rst_fast_n),
-    .dst_latch_p          (1'b0),
-    .dst_count_continuous (/* unused */),
-    .dst_count_latched    (nslow_stop_latched)
+  // ── STOP-side raw slow epoch capture ──────────────────────────
+  mptdc_stop_epoch_capture_async u_stop_epoch_capture (
+    .rst_n                       (rst_sys_n),
+    .async_clr_i                 (meas_pd_clear),
+    .stop_async_i                (stop_async_i),
+    .slow_epoch_johnson_i        (slow_epoch_johnson),
+    .slow_epoch_johnson_stop_o   (slow_epoch_johnson_stop)
   );
 
   // ── Measurement FSM (clk_sys domain) ──────────────────────────
@@ -510,7 +510,7 @@ module mptdc_core
     .sample_en_i            (meas_snapshot_en),
     .pd_hit_level_i         (pd_hit_level),
     .pd_nfast_hit_packed_i  (pd_nfast_hit_packed),
-    .nslow_snap_i           (nslow_stop_latched),
+    .slow_epoch_johnson_stop_i (slow_epoch_johnson_stop),
     .nfast_snap_i           (nfast_src_count),
     .nfast_stop_i           (nfast_stop_latched),
     .phase0_snap_i          (phase0_snap),

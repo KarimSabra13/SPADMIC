@@ -16,7 +16,8 @@ module tb_hit_capture_bridge_unit;
   logic                         sample_en;
   logic [PD_N-1:0]              pd_hit_level;
   logic [PD_N*NFAST_W-1:0]      pd_nfast_hit_packed;
-  logic [NSLOW_W-1:0]           nslow_snap;
+  logic [SLOW_EPOCH_STAGES-1:0] slow_epoch_johnson_stop;
+  logic [NSLOW_W-1:0]           expected_nslow_snap;
   logic [NFAST_W-1:0]           nfast_snap;
   logic [NFAST_W-1:0]           nfast_stop;
   logic                         phase0_snap;
@@ -34,7 +35,7 @@ module tb_hit_capture_bridge_unit;
     .sample_en_i            (sample_en),
     .pd_hit_level_i         (pd_hit_level),
     .pd_nfast_hit_packed_i  (pd_nfast_hit_packed),
-    .nslow_snap_i           (nslow_snap),
+    .slow_epoch_johnson_stop_i (slow_epoch_johnson_stop),
     .nfast_snap_i           (nfast_snap),
     .nfast_stop_i           (nfast_stop),
     .phase0_snap_i          (phase0_snap),
@@ -58,6 +59,14 @@ module tb_hit_capture_bridge_unit;
     end
   endtask
 
+  function automatic logic [SLOW_EPOCH_STAGES-1:0] johnson_from_count(input int unsigned count);
+    automatic logic [SLOW_EPOCH_STAGES-1:0] state;
+    state = '0;
+    for (int i = 0; i < count; i++)
+      state = slow_johnson_next(state);
+    johnson_from_count = state;
+  endfunction
+
   task automatic drive_image(input int unsigned seed);
     pd_hit_level         = '0;
     pd_nfast_hit_packed  = '0;
@@ -66,7 +75,8 @@ module tb_hit_capture_bridge_unit;
     pd_hit_level[(seed * 13 + 11) % PD_N] = 1'b1;
     for (int i = 0; i < PD_N; i++)
       pd_nfast_hit_packed[i*NFAST_W +: NFAST_W] = NFAST_W'((seed + i) & 7'h7f);
-    nslow_snap = NSLOW_W'(seed + 3);
+    expected_nslow_snap = NSLOW_W'((seed + 3) & 7'h7f);
+    slow_epoch_johnson_stop = johnson_from_count(expected_nslow_snap);
     nfast_snap = NFAST_W'(seed + 5);
     nfast_stop = NFAST_W'(seed + 7);
     phase0_snap = seed[0];
@@ -78,7 +88,7 @@ module tb_hit_capture_bridge_unit;
     expected = '0;
     expected.hit_level            = pd_hit_level;
     expected.nfast_hit_packed     = pd_nfast_hit_packed;
-    expected.nslow_snap           = nslow_snap;
+    expected.nslow_snap           = expected_nslow_snap;
     expected.nfast_snap           = nfast_snap;
     expected.nfast_stop           = nfast_stop;
     expected.phase0_snap          = phase0_snap;
@@ -146,4 +156,3 @@ module tb_hit_capture_bridge_unit;
 endmodule
 
 `default_nettype wire
-

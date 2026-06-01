@@ -64,11 +64,14 @@ At the logical-word level, the receiver still expects:
 2. payload words
 3. EOC
 
-Cluster-position packets no longer include a position sub-header; they use an
-8-word fixed format with 6-bit `lo`/`hi` cluster coordinates for the 64x64x64 SPAD matrix. Raw bitmap
-position packets are fixed-length 14-word packets with 12 unescaped bitmap
-payload words; a receiver must parse them by raw header and length because raw
-payload words can look like EOC markers.
+Cluster-position packets no longer include a position sub-header. Default
+cluster mode uses an 8-word fixed format with 6-bit `lo`/`hi` cluster
+coordinates for the 64x64x64 SPAD matrix. Compact cluster mode sets header bit
+`[9]` and emits only the valid cluster slots in fixed order `X0, X1, Y0, Y1,
+Z0, Z1`; the valid-slot mask is header bits `[8:3]`. Raw bitmap position packets
+are fixed-length 14-word packets with 12 unescaped bitmap payload words; a
+receiver must parse them by raw header and length because raw payload words can
+look like EOC markers.
 
 For correlated export, the EOC word contains the shared event ID:
 

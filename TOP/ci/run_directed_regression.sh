@@ -16,6 +16,7 @@ BENCHES=(
   tb_spadmic_i2c_control_plane_unit
   tb_spadmic_ref_stop_qualifier_hold_unit
   tb_spadmic_ref_stop_qualifier_unit
+  tb_spadmic_position_deadtime_characterization
   tb_spadmic_stress_cluster_scan
   tb_spadmic_stress_csr
   tb_spadmic_stress_position

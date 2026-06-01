@@ -1,12 +1,11 @@
 // =============================================================================
 // Project  : SPAD_MPTDC — Vernier Time-to-Digital Converter
-// File     : filelist_o2_raw_tag.f
-// Purpose  : Genus file list for O2 raw local fast-tag experiment
+// File     : filelist_o3_raw_epoch_cleanup.f
+// Purpose  : Genus file list for O3 raw epoch / PD capture cleanup
 // =============================================================================
-// O2 keeps the O1C real RO_tune4 macro binding mode and replaces the live
-// global binary nfast counter in the PD capture path with one local LFSR tag
-// generator per fast column.  The raw tag is exported in the existing nfast
-// packet field and decoded by software/calibration.
+// O3 keeps O2 raw local fast tags, replaces the slow binary/Gray counter with
+// a 64-stage Johnson epoch source, moves START timeout counting to clk_sys, and
+// simplifies PD tag capture by shadowing the local tag until hit freeze.
 // =============================================================================
 
 +define+SYNTHESIS

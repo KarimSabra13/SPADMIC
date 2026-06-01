@@ -10,11 +10,17 @@ class spadmic_pos_ref_model;
   endfunction
 
   function automatic logic [2:0] pkt_multi_cluster_mask(input logic [15:0] hdr);
-    return 3'b000;
+    return is_spadmic_pos_compact_header(hdr) ? hdr[2:0] : 3'b000;
   endfunction
 
   function automatic logic pkt_overflow_any(input logic [15:0] hdr);
     return hdr[13];
+  endfunction
+
+  function automatic spadmic_pos_cluster_slot_mask_t pkt_cluster_slot_mask(input logic [15:0] hdr);
+    return is_spadmic_pos_compact_header(hdr)
+         ? spadmic_pos_cluster_slot_mask_t'(hdr[8:3])
+         : '0;
   endfunction
 
   function automatic logic [1:0] axis_summary_id(input logic [15:0] word);
@@ -173,12 +179,9 @@ class spadmic_pos_ref_model;
     logic [SPADMIC_LINE_COUNT_W-1:0] min_span
   );
     spadmic_axis_clusters_t expected_axis[3];
-
-    if (words.size() != SPADMIC_POS_PKT_WORDS) begin
-      $display("[POS_REF] FAIL: packet has %0d words (expected %0d)",
-               words.size(), SPADMIC_POS_PKT_WORDS);
-      return 0;
-    end
+    spadmic_cluster_t expected_slots[SPADMIC_POS_CLUSTER_SLOT_COUNT];
+    spadmic_pos_cluster_slot_mask_t expected_slot_mask;
+    bit compact_packet;
 
     if (!is_spadmic_pos_cluster_header(words[0])) begin
       $display("[POS_REF] FAIL: word[0] is not a cluster position header (0x%04h)", words[0]);
@@ -193,41 +196,103 @@ class spadmic_pos_ref_model;
     scan_axis(x_pattern, gap_threshold, min_span, expected_axis[0]);
     scan_axis(y_pattern, gap_threshold, min_span, expected_axis[1]);
     scan_axis(z_pattern, gap_threshold, min_span, expected_axis[2]);
+    compact_packet = is_spadmic_pos_compact_header(words[0]);
+    expected_slot_mask = spadmic_pos_cluster_slot_mask(
+      expected_axis[0],
+      expected_axis[1],
+      expected_axis[2]
+    );
+    expected_slots[0] = expected_axis[0].cluster0;
+    expected_slots[1] = expected_axis[0].cluster1;
+    expected_slots[2] = expected_axis[1].cluster0;
+    expected_slots[3] = expected_axis[1].cluster1;
+    expected_slots[4] = expected_axis[2].cluster0;
+    expected_slots[5] = expected_axis[2].cluster1;
 
-    for (int axis = 0; axis < 3; axis++) begin
-      automatic int cluster0_idx = 1 + axis * 2;
-      automatic int cluster1_idx = cluster0_idx + 1;
-      logic [1:0] cluster_count;
-      logic       cluster0_valid;
-      logic       cluster1_valid;
-      logic       expect_non_empty;
-      spadmic_axis_clusters_t exp_axis;
+    if (pkt_non_empty_mask(words[0]) != {
+        !expected_axis[2].empty,
+        !expected_axis[1].empty,
+        !expected_axis[0].empty}) begin
+      $display("[POS_REF] FAIL: header non-empty mask mismatch");
+      return 0;
+    }
 
-      exp_axis = expected_axis[axis];
+    if (compact_packet) begin
+      int word_idx;
+      int expected_words;
 
-      cluster_count   = {1'b0, cluster_word_valid(words[cluster0_idx])}
-                      + {1'b0, cluster_word_valid(words[cluster1_idx])};
-      cluster0_valid  = words[cluster0_idx][0];
-      cluster1_valid  = words[cluster1_idx][0];
-      expect_non_empty = pkt_non_empty_mask(words[0])[axis];
-
-      if (expect_non_empty != (cluster0_valid | cluster1_valid)) begin
-        $display("[POS_REF] FAIL: axis %0d header non-empty mask mismatch", axis);
+      expected_words = 1 + int'(spadmic_pos_cluster_slot_count(expected_slot_mask)) + 1;
+      if (words.size() != expected_words) begin
+        $display("[POS_REF] FAIL: compact packet has %0d words (expected %0d)",
+                 words.size(), expected_words);
         return 0;
       end
 
-      if ((cluster_count != exp_axis.cluster_count) ||
-          ((cluster0_valid | cluster1_valid) != !exp_axis.empty)) begin
-        $display("[POS_REF] FAIL: axis %0d cluster valid bits do not match expected filtered clusters", axis);
+      if (pkt_cluster_slot_mask(words[0]) != expected_slot_mask) begin
+        $display("[POS_REF] FAIL: compact slot mask 0x%0h expected 0x%0h",
+                 pkt_cluster_slot_mask(words[0]), expected_slot_mask);
         return 0;
       end
 
-      if (!cluster_word_matches(words[cluster0_idx], exp_axis.cluster0,
-                                $sformatf("axis%0d cluster0", axis)))
+      if (pkt_multi_cluster_mask(words[0]) != {
+          (expected_axis[2].cluster_count > 2'd1),
+          (expected_axis[1].cluster_count > 2'd1),
+          (expected_axis[0].cluster_count > 2'd1)}) begin
+        $display("[POS_REF] FAIL: compact multi-cluster mask mismatch");
         return 0;
-      if (!cluster_word_matches(words[cluster1_idx], exp_axis.cluster1,
-                                $sformatf("axis%0d cluster1", axis)))
-        return 0;
+      end
+
+      word_idx = 1;
+      for (int slot = 0; slot < SPADMIC_POS_CLUSTER_SLOT_COUNT; slot++) begin
+        if (expected_slot_mask[slot]) begin
+          if (!cluster_word_matches(words[word_idx], expected_slots[slot],
+                                    $sformatf("compact slot%0d", slot)))
+            return 0;
+          word_idx++;
+        end
+      end
+    end else if (words.size() != SPADMIC_POS_PKT_WORDS) begin
+      $display("[POS_REF] FAIL: packet has %0d words (expected %0d)",
+               words.size(), SPADMIC_POS_PKT_WORDS);
+      return 0;
+    end
+
+    if (!compact_packet) begin
+      for (int axis = 0; axis < 3; axis++) begin
+        automatic int cluster0_idx = 1 + axis * 2;
+        automatic int cluster1_idx = cluster0_idx + 1;
+        logic [1:0] cluster_count;
+        logic       cluster0_valid;
+        logic       cluster1_valid;
+        logic       expect_non_empty;
+        spadmic_axis_clusters_t exp_axis;
+
+        exp_axis = expected_axis[axis];
+
+        cluster_count   = {1'b0, cluster_word_valid(words[cluster0_idx])}
+                        + {1'b0, cluster_word_valid(words[cluster1_idx])};
+        cluster0_valid  = words[cluster0_idx][0];
+        cluster1_valid  = words[cluster1_idx][0];
+        expect_non_empty = pkt_non_empty_mask(words[0])[axis];
+
+        if (expect_non_empty != (cluster0_valid | cluster1_valid)) begin
+          $display("[POS_REF] FAIL: axis %0d header non-empty mask mismatch", axis);
+          return 0;
+        end
+
+        if ((cluster_count != exp_axis.cluster_count) ||
+            ((cluster0_valid | cluster1_valid) != !exp_axis.empty)) begin
+          $display("[POS_REF] FAIL: axis %0d cluster valid bits do not match expected filtered clusters", axis);
+          return 0;
+        end
+
+        if (!cluster_word_matches(words[cluster0_idx], exp_axis.cluster0,
+                                  $sformatf("axis%0d cluster0", axis)))
+          return 0;
+        if (!cluster_word_matches(words[cluster1_idx], exp_axis.cluster1,
+                                  $sformatf("axis%0d cluster1", axis)))
+          return 0;
+      end
     end
 
     if (pkt_overflow_any(words[0]) !=

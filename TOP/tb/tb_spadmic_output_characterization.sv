@@ -205,6 +205,7 @@ module tb_spadmic_output_characterization;
   endtask
 
   task automatic measure_position_packet(input bit raw_mode,
+                                         input bit compact_mode,
                                          output int first_valid_latency_cycles,
                                          output int packet_words);
     int start_cycle;
@@ -215,7 +216,10 @@ module tb_spadmic_output_characterization;
     pos_ready = 1'b0;
 
     pos_csr_w(SPADMIC_CSR_POS_FILTER_CFG, 32'h0000_0101); // min span 1, settle 1
-    pos_csr_w(SPADMIC_CSR_POS_CTRL, raw_mode ? 32'h0000_0003 : 32'h0000_0001);
+    pos_csr_w(
+      SPADMIC_CSR_POS_CTRL,
+      raw_mode ? 32'h0000_0003 : (compact_mode ? 32'h0000_0041 : 32'h0000_0001)
+    );
 
     repeat (4) @(posedge clk_sys);
     #1;
@@ -249,21 +253,29 @@ module tb_spadmic_output_characterization;
   task automatic measure_position_metrics();
     int cluster_latency;
     int cluster_words;
+    int compact_latency;
+    int compact_words;
     int raw_latency;
     int raw_words;
 
-    measure_position_packet(1'b0, cluster_latency, cluster_words);
-    measure_position_packet(1'b1, raw_latency, raw_words);
+    measure_position_packet(1'b0, 1'b0, cluster_latency, cluster_words);
+    measure_position_packet(1'b0, 1'b1, compact_latency, compact_words);
+    measure_position_packet(1'b1, 1'b0, raw_latency, raw_words);
 
     $display("[CHAR] position.cluster_first_valid_latency_cycles=%0d", cluster_latency);
     $display("[CHAR] position.cluster_first_valid_latency_ns=%.2f",
              real'(cluster_latency * CLK_PERIOD_PS) / 1000.0);
     $display("[CHAR] position.cluster_packet_words_measured=%0d", cluster_words);
+    $display("[CHAR] position.compact_cluster_first_valid_latency_cycles=%0d", compact_latency);
+    $display("[CHAR] position.compact_cluster_first_valid_latency_ns=%.2f",
+             real'(compact_latency * CLK_PERIOD_PS) / 1000.0);
+    $display("[CHAR] position.compact_cluster_packet_words_measured=%0d", compact_words);
     $display("[CHAR] position.raw_first_valid_latency_cycles=%0d", raw_latency);
     $display("[CHAR] position.raw_first_valid_latency_ns=%.2f",
              real'(raw_latency * CLK_PERIOD_PS) / 1000.0);
     $display("[CHAR] position.raw_packet_words_measured=%0d", raw_words);
     check("Position cluster packet is 8 words", cluster_words == SPADMIC_POS_PKT_WORDS);
+    check("Position compact cluster packet is 5 words for XYZ single-cluster event", compact_words == 5);
     check("Position raw packet is 14 words", raw_words == SPADMIC_POS_RAW_PKT_WORDS);
   endtask
 

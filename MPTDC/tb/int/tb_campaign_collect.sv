@@ -252,12 +252,15 @@ module tb_campaign_collect;
       dbg_slow_boundary_inc_live_q    <= u_dut.u_core.slow_boundary_inc;
       dbg_snapshot_slow_phase_q       <= u_dut.u_core.slow_phase;
       dbg_snapshot_fast_phase_q       <= u_dut.u_core.fast_phase;
-      dbg_slow_gray_bin_q             <= u_dut.u_core.u_slow_cnt.bin_q;
-      dbg_slow_gray_bin_snap_q        <= u_dut.u_core.u_slow_cnt.bin_snap_q;
-      dbg_slow_gray_src_cont_q        <= u_dut.u_core.u_slow_cnt.gray_src_cont_q;
-      dbg_slow_gray_src_snap_async_q  <= u_dut.u_core.u_slow_cnt.gray_src_snap_async_q;
-      dbg_slow_gray_snap_ff1_q        <= u_dut.u_core.u_slow_cnt.gray_snap_ff1_async;
-      dbg_slow_gray_snap_ff2_q        <= u_dut.u_core.u_slow_cnt.gray_snap_ff2_async;
+      // O3 replaces the slow Gray counter with a raw Johnson epoch. Keep the
+      // historical debug column names for CSV compatibility, but populate them
+      // with decoded/raw Johnson observability.
+      dbg_slow_gray_bin_q             <= u_dut.u_core.nslow_src_count;
+      dbg_slow_gray_bin_snap_q        <= u_dut.u_core.nslow_stop_latched;
+      dbg_slow_gray_src_cont_q        <= u_dut.u_core.slow_epoch_johnson[NSLOW_W-1:0];
+      dbg_slow_gray_src_snap_async_q  <= u_dut.u_core.slow_epoch_johnson_stop[NSLOW_W-1:0];
+      dbg_slow_gray_snap_ff1_q        <= u_dut.u_core.nslow_stop_latched;
+      dbg_slow_gray_snap_ff2_q        <= u_dut.u_core.hit_capture_snapshot.nslow_snap;
       // O2 removes the phase-0 binary fast counter from the PD capture path.
       // Keep the historical debug columns populated with the phase-0 raw tag so
       // older CSV consumers still have stable columns while metadata identifies

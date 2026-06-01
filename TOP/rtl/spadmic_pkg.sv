@@ -25,6 +25,7 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_TX_PHY_W    = 8;
   localparam logic [6:0] SPADMIC_I2C_ADDR     = 7'h42;
   localparam int unsigned SPADMIC_POS_PKT_WORDS = 8;
+  localparam int unsigned SPADMIC_POS_COMPACT_MIN_PKT_WORDS = 3;
   localparam int unsigned SPADMIC_POS_SCAN_LATENCY_CYCLES = 5;
   localparam int unsigned SPADMIC_POS_QUEUE_DEPTH = 16;
   localparam int unsigned SPADMIC_EVENT_BUNDLE_DEPTH = 16;
@@ -98,6 +99,9 @@ package spadmic_pkg;
     logic [SPADMIC_LINE_IDX_W-1:0]    hi;
   } spadmic_cluster_t;
 
+  localparam int unsigned SPADMIC_POS_CLUSTER_SLOT_COUNT = SPADMIC_AXIS_COUNT * 2;
+  typedef logic [SPADMIC_POS_CLUSTER_SLOT_COUNT-1:0] spadmic_pos_cluster_slot_mask_t;
+
   typedef struct packed {
     logic                 empty;
     logic                 overflow;
@@ -108,9 +112,12 @@ package spadmic_pkg;
 
   typedef struct packed {
     spadmic_pos_mode_e       mode;
+    logic                     compact_cluster;
     logic [2:0]               non_empty_mask;
     logic [2:0]               multi_cluster_mask;
     logic                     overflow_any;
+    spadmic_pos_cluster_slot_mask_t cluster_slot_mask;
+    logic [2:0]               compact_cluster_words;
     spadmic_axis_clusters_t   x_clusters;
     spadmic_axis_clusters_t   y_clusters;
     spadmic_axis_clusters_t   z_clusters;
@@ -133,6 +140,10 @@ package spadmic_pkg;
 
   function automatic logic is_spadmic_pos_cluster_header(input logic [NARROW_W-1:0] word);
     return (word[15:14] == 2'b01);
+  endfunction
+
+  function automatic logic is_spadmic_pos_compact_header(input logic [NARROW_W-1:0] word);
+    return is_spadmic_pos_cluster_header(word) && word[9];
   endfunction
 
   function automatic logic is_tdc_eoc(input logic [NARROW_W-1:0] word);
@@ -225,6 +236,54 @@ package spadmic_pkg;
       non_empty_mask,
       reserved
     };
+  endfunction
+
+  function automatic logic [2:0] spadmic_pos_cluster_slot_count(
+    input spadmic_pos_cluster_slot_mask_t slot_mask
+  );
+    return {2'b0, slot_mask[0]}
+         + {2'b0, slot_mask[1]}
+         + {2'b0, slot_mask[2]}
+         + {2'b0, slot_mask[3]}
+         + {2'b0, slot_mask[4]}
+         + {2'b0, slot_mask[5]};
+  endfunction
+
+  function automatic spadmic_pos_cluster_slot_mask_t spadmic_pos_cluster_slot_mask(
+    input spadmic_axis_clusters_t x_clusters,
+    input spadmic_axis_clusters_t y_clusters,
+    input spadmic_axis_clusters_t z_clusters
+  );
+    return {
+      z_clusters.cluster1.valid,
+      z_clusters.cluster0.valid,
+      y_clusters.cluster1.valid,
+      y_clusters.cluster0.valid,
+      x_clusters.cluster1.valid,
+      x_clusters.cluster0.valid
+    };
+  endfunction
+
+  function automatic logic [NARROW_W-1:0] spadmic_pos_compact_header_word(
+    input logic overflow_any,
+    input logic [2:0] non_empty_mask,
+    input logic [2:0] multi_cluster_mask,
+    input spadmic_pos_cluster_slot_mask_t slot_mask
+  );
+    return {
+      2'b01,
+      overflow_any,
+      non_empty_mask,
+      1'b1,
+      slot_mask,
+      multi_cluster_mask
+    };
+  endfunction
+
+  function automatic logic [2:0] spadmic_pos_compact_payload_words(
+    input logic [NARROW_W-1:0] word
+  );
+    return spadmic_pos_cluster_slot_count(spadmic_pos_cluster_slot_mask_t'(word[8:3]));
   endfunction
 
   function automatic logic [NARROW_W-1:0] spadmic_pos_raw_header_word(

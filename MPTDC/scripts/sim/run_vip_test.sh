@@ -242,6 +242,9 @@ if [[ $DRY_RUN -eq 0 ]]; then
     rm -rf "$TB_BUILD"
   fi
   mkdir -p "$TB_BUILD"
+  export CCACHE_DIR="${CCACHE_DIR:-$BUILD_DIR/ccache}"
+  export CCACHE_TEMPDIR="${CCACHE_TEMPDIR:-$BUILD_DIR/ccache/tmp}"
+  mkdir -p "$CCACHE_DIR" "$CCACHE_TEMPDIR"
 fi
 
 case "$SIM" in

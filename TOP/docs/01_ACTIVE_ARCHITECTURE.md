@@ -203,7 +203,7 @@ they may need to represent the full 64-line width.
 
 ### 6.3 Position packet formats
 
-Cluster mode emits the fixed 8-word position packet:
+Default cluster mode emits the fixed 8-word position packet:
 
 1. header
 2. X cluster 0
@@ -213,6 +213,25 @@ Cluster mode emits the fixed 8-word position packet:
 6. Z cluster 0
 7. Z cluster 1
 8. EOC/tag
+
+If `POS_CTRL.compact_cluster` is enabled, cluster mode emits a variable-length
+compact packet:
+
+1. compact header
+2. only the valid cluster slots, in fixed slot order `X0, X1, Y0, Y1, Z0, Z1`
+3. EOC/tag
+
+The compact header keeps the normal position marker `[15:14] = 2'b01`, sets
+bit `[9] = 1`, and carries the valid slot mask in `[8:3]`:
+
+```text
+[15:14] = 2'b01
+[13]    = overflow_any
+[12:10] = non_empty_mask {Z,Y,X}
+[9]     = compact_cluster
+[8:3]   = slot_valid_mask {Z1,Z0,Y1,Y0,X1,X0}
+[2:0]   = multi_cluster_mask {Z,Y,X}
+```
 
 Each cluster word is a 16-bit logical word:
 
@@ -243,6 +262,7 @@ the `clk_sys` domain. Software controls it through the position CSR block:
 | Mode | Meaning |
 |------|---------|
 | `manual only` | no automatic reset; `POS_CTRL.manual_reset_req` emits one pulse |
+| `reset after capture` | optional `POS_CTRL.reset_after_capture` pulse after the stable line snapshot is already registered |
 | `event-deferred auto-reset` | period expiry waits until the position detector, packetizer, FIFO read port, and synchronized line buses are idle |
 | `periodic auto-reset` | period expiry emits a pulse immediately on schedule, intended for raw characterization |
 

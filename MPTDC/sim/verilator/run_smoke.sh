@@ -66,6 +66,9 @@ TB_RUNNER="$MPTDC_DIR/scripts/sim/run_tb.sh"
 VIP_RUNNER="$MPTDC_DIR/scripts/sim/run_vip_test.sh"
 
 UNIT_TESTS=(
+  tb_slow_epoch_johnson_unit
+  tb_stop_epoch_capture_async_unit
+  tb_johnson_decode_unit
   tb_fast_epoch_tag_unit
   tb_pd_cell_tag_capture_unit
   tb_pd_gate_false_hit_unit

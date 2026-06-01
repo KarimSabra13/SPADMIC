@@ -62,6 +62,7 @@ class spadmic_pkt_cov;
       bins wrap     = {3};
     }
     cp_packet_words:   coverpoint packet_words {
+      bins compact_len = {[SPADMIC_POS_COMPACT_MIN_PKT_WORDS:SPADMIC_POS_PKT_WORDS-1]};
       bins cluster_len = {SPADMIC_POS_PKT_WORDS};
       bins raw_len     = {SPADMIC_POS_RAW_PKT_WORDS};
       illegal_bins short_or_other = default;

@@ -443,7 +443,8 @@ class spadmic_scoreboard;
       exp = expected_pos_q.pop_front();
 `ifdef SPADMIC_ENABLE_FUNC_COV
     if (words.size() > 0)
-      pkt_cov.sample_pos(pos_kind_from_words(words), hdr[13], hdr[12:10], 3'b000,
+      pkt_cov.sample_pos(pos_kind_from_words(words), hdr[13], hdr[12:10],
+                         is_spadmic_pos_compact_header(hdr) ? hdr[2:0] : 3'b000,
                          eoc[13:0], word_count, words);
 `endif
     if ((have_expected && (exp.mode == SPADMIC_POS_MODE_RAW))
@@ -464,7 +465,8 @@ class spadmic_scoreboard;
       end else begin
         check_pass++;
       end
-    end else if (word_count != SPADMIC_POS_PKT_WORDS) begin
+    end else if (!is_spadmic_pos_compact_header(hdr)
+                 && (word_count != SPADMIC_POS_PKT_WORDS)) begin
       check_fail++;
       $display("[SB] FAIL: POS cluster pkt has %0d words (expected %0d)",
                 word_count, SPADMIC_POS_PKT_WORDS);

@@ -699,3 +699,188 @@ Next action:
 - Push this software-pipeline patch.
 - Human runs the analysis-only rerun command from
   `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_ANALYSIS_RERUN.md`.
+
+---
+
+Iteration ID: O2_raw_tag_genus_review_and_report_hygiene
+
+Git HEAD:
+
+- `1e3fb188303e2755de403ac5c3571b27bc2feca8`
+
+Branch:
+
+- `SPADMIC_localtag`
+
+Patch summary:
+
+- Reviewed the committed O2 raw-tag Genus result.
+- Documented that the actual O2 netlist removed `u_fast_cnt`, but stale focused
+  fast-count reports survived from a repeated run ID and contaminated the
+  classifier summary.
+- Patched the O2 Genus wrapper to clean its result directory before each run
+  and to stop counting all `bin_q_reg` names as fast-counter residue.
+- Confirmed the next timing target is the slow coarse counter/watchdog fabric,
+  but a naive async-captured slow LFSR is not safe.
+
+Files changed:
+
+- `MPTDC/syn/scripts/server_run_genus_o2_raw_tag.sh`
+- `docs/timing_closure/O2_raw_tag_genus_review.md`
+- `docs/timing_closure/osc_pd_iteration_log.md`
+
+Tool stage:
+
+- local report review only
+
+Was this actually run by agent locally?
+
+- yes
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- `results/genus_osc_pd/20260601_o2_raw_tag_genus/`
+- `docs/timing_closure/O2_raw_tag_genus_review.md`
+
+Local checks:
+
+- Current netlist check: `mptdc_top_asic.postsyn.v` contains two `RO_tune4`
+  instances and no `u_fast_cnt`.
+- Current actual `timing_violations.rpt` top paths are slow counter/watchdog,
+  slow-count decode, and PD-cell `q1/q2 -> nfast_hit_latched`.
+- Stale focused reports still reference `u_fast_cnt`, so they must not be used
+  as current O2 timing evidence.
+
+Functional result:
+
+- No RTL changed in this iteration.
+
+Timing result:
+
+- O2 removed the old global fast-counter-to-PD path from the actual netlist.
+- O2 does not close oscillator-domain timing; standard-cell logic remains in
+  slow/fast oscillator domains.
+
+Linearity/precision risk:
+
+- none for this report/script hygiene patch.
+- proposed O3 slow raw-tag work is medium/high until STOP-freeze semantics,
+  software decode, Xcelium, and characterization are complete.
+
+Decision:
+
+- Continue with O3 planning/patching before another expensive Genus run.
+- Do not run Innovus yet.
+- Do not run R800 yet.
+- Do not resume H4b yet.
+
+Next action:
+
+- Implement `O3_RAW_SLOW_TAG_SW_DECODE` only after adding local tests and
+  software decode metadata for raw `nslow`.
+
+---
+
+Iteration ID: O3_raw_epoch_and_pd_capture_cleanup
+
+Git HEAD:
+
+- Baseline before patch: `1e3fb188303e2755de403ac5c3571b27bc2feca8`
+
+Branch:
+
+- `SPADMIC_localtag`
+
+Patch summary:
+
+- Replaced the slow binary/Gray coarse source with a 64-stage Johnson epoch
+  generator and STOP-edge raw epoch capture.
+- Moved slow epoch decode to `clk_sys` inside `mptdc_hit_capture_bridge`, keeping
+  packet/context `nslow` as a decoded 7-bit field.
+- Migrated START-only timeout counting from `slow_phase[0]` to `clk_sys`.
+- Simplified PD tag capture so each PD cell shadows the local raw fast tag until
+  hit freeze instead of feeding q1/q2 edge-detect logic into every tag bit.
+- Added O3 Genus filelist, SDC/report overlay, and server wrapper.
+
+Files changed:
+
+- `MPTDC/rtl/pkg/mptdc_pkg.sv`
+- `MPTDC/rtl/pd/mptdc_slow_epoch_johnson.sv`
+- `MPTDC/rtl/pd/mptdc_pd_cell.sv`
+- `MPTDC/rtl/async/mptdc_stop_epoch_capture_async.sv`
+- `MPTDC/rtl/async/mptdc_hit_capture_bridge.sv`
+- `MPTDC/rtl/top/mptdc_core.sv`
+- `MPTDC/rtl/filelist.f`
+- `MPTDC/sim/verilator/filelist_verilator.f`
+- `MPTDC/sim/verilator/run_smoke.sh`
+- `MPTDC/scripts/sim/run_tb.sh`
+- `MPTDC/syn/filelist_synth.f`
+- `MPTDC/syn/filelist_o2_raw_tag.f`
+- `MPTDC/syn/filelist_o3_raw_epoch_cleanup.f`
+- `MPTDC/syn/inputs/mptdc_osc_pd_o3.sdc`
+- `MPTDC/syn/scripts/procedures.tcl`
+- `MPTDC/syn/scripts/server_run_genus_o3_raw_epoch_cleanup.sh`
+- `MPTDC/tb/unit/tb_slow_epoch_johnson_unit.sv`
+- `MPTDC/tb/unit/tb_stop_epoch_capture_async_unit.sv`
+- `MPTDC/tb/unit/tb_johnson_decode_unit.sv`
+- `MPTDC/tb/unit/tb_hit_capture_bridge_unit.sv`
+- `docs/timing_closure/O3_*.md`
+
+Tool stage:
+
+- local Verilator complete; Genus server required
+
+Was this actually run by agent locally?
+
+- yes, for lint and focused unit tests
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- local Verilator result directories under `results/local_verilator/`
+- O3 docs under `docs/timing_closure/`
+
+Local Verilator:
+
+- preliminary lint: PASS (`20260601_o3_lint_prelim`)
+- `tb_slow_epoch_johnson_unit`: PASS
+- `tb_stop_epoch_capture_async_unit`: PASS
+- `tb_johnson_decode_unit`: PASS
+- `tb_pd_cell_tag_capture_unit`: PASS
+- `tb_hit_capture_bridge_unit`: PASS
+- full smoke: PASS (`results/local_verilator/20260601_o3_smoke/`)
+- `tb_start_wdt`: PASS
+- `tb_watchdog_recovery`: PASS
+- VIP `start_watchdog`: PASS
+
+Functional result:
+
+- Packet layout is unchanged.
+- `nslow` remains decoded in RTL.
+- HIT `nfast` remains raw fast LFSR tag in O2/O3 raw-tag mode.
+
+Timing result:
+
+- unknown until Genus O3 run.
+
+Linearity/precision risk:
+
+- medium. The slow epoch source changed, but `nslow` remains decoded into the
+  existing field. STOP raw capture uses one-bit-change Johnson state to reduce
+  async incoherency risk relative to binary/LFSR.
+
+Decision:
+
+- O3 Genus is the next useful server run after committing/pushing the O3 patch.
+
+Next action:
+
+- Ask human to run `server_run_genus_o3_raw_epoch_cleanup.sh` on the lab server
+  after the O3 patch is committed and pushed.

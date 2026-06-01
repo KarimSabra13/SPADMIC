@@ -18,7 +18,7 @@ module mptdc_hit_capture_bridge
 
   input  wire [PD_N-1:0]              pd_hit_level_i,
   input  wire [PD_N*NFAST_W-1:0]      pd_nfast_hit_packed_i,
-  input  wire [NSLOW_W-1:0]           nslow_snap_i,
+  input  wire [SLOW_EPOCH_STAGES-1:0] slow_epoch_johnson_stop_i,
   input  wire [NFAST_W-1:0]           nfast_snap_i,
   input  wire [NFAST_W-1:0]           nfast_stop_i,
   input  wire                         phase0_snap_i,
@@ -36,7 +36,7 @@ module mptdc_hit_capture_bridge
     end else if (sample_en_i) begin
       snapshot_q.hit_level         <= pd_hit_level_i;
       snapshot_q.nfast_hit_packed  <= pd_nfast_hit_packed_i;
-      snapshot_q.nslow_snap        <= nslow_snap_i;
+      snapshot_q.nslow_snap        <= slow_johnson_to_count(slow_epoch_johnson_stop_i);
       snapshot_q.nfast_snap        <= nfast_snap_i;
       snapshot_q.nfast_stop        <= nfast_stop_i;
       snapshot_q.phase0_snap       <= phase0_snap_i;

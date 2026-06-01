@@ -119,6 +119,8 @@ This register holds the **requested** control image, not the live committed imag
 | `[1]` | `pos_mode` | `0 = cluster packet`, `1 = raw bitmap packet` |
 | `[3:2]` | `spad_reset_mode` | `0 = manual only`, `1 = event-deferred auto-reset`, `2 = periodic auto-reset` |
 | `[4]` | `manual_reset_req` | write `1` to emit one active-high `spad_matrix_rst_o` pulse; reads back as `0` |
+| `[5]` | `reset_after_capture` | optional auto-reset pulse immediately after a stable snapshot is captured; disabled by default |
+| `[6]` | `compact_cluster` | in cluster mode, emit only valid cluster slots and encode their slot mask in the header |
 
 The effective enable is `global_enable_i & local_enable`.
 
@@ -141,10 +143,12 @@ The effective enable is `global_enable_i & local_enable`.
 |------|------|---------|
 | `[31:0]` | `auto_reset_period` | auto-reset period in `clk_sys` cycles; `0` disables auto-reset |
 
-`spad_matrix_rst_o` is a one-`clk_sys` active-high pulse. In `event-deferred`
-mode, the period expiry is held pending until the detector, packetizer, FIFO
-read port, and synchronized line buses are idle. In `periodic` mode, the pulse
-fires on schedule even if the matrix is active; this is intended for low-rate raw
+`spad_matrix_rst_o` is a one-`clk_sys` active-high pulse. If
+`reset_after_capture` is enabled, a pulse is emitted only after the stable line
+snapshot has been captured into position-block registers. In `event-deferred`
+mode, the period expiry is held pending until the detector, packetizer, FIFO read
+port, and synchronized line buses are idle. In `periodic` mode, the pulse fires
+on schedule even if the matrix is active; this is intended for low-rate raw
 characterization sweeps.
 
 ### 4.6 `POS_STATUS` (`0x420`)

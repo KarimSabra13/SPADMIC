@@ -135,7 +135,8 @@ Host software should parse packets as:
 3. reconstruct the 16-bit logical word from `{falling_edge_byte, rising_edge_byte}`
 4. parse the logical packet stream as:
    - TDC: header, payload, EOC
-   - position cluster: header, six 6-bit-coordinate cluster words, EOC
+   - position fixed cluster: header, six 6-bit-coordinate cluster words, EOC
+   - position compact cluster: compact header, valid cluster slots in header-mask order, EOC
    - position raw bitmap: raw header, 12 unescaped bitmap payload words, EOC
 
 For both-active mode, the receiver should treat `shared_event_id` as the emitted-packet sequence tag, not as a hardware-aligned physical-event group tag.
@@ -145,8 +146,10 @@ Raw bitmap position packets are fixed length because payload words carry true
 correlator and the off-chip receiver must parse raw bitmap packets by the raw
 header plus 14 total words, not by the first EOC-looking payload word.
 
-The 64x64x64 SPAD geometry does not change packet word counts: cluster packets
-remain 8 logical words and raw bitmap packets remain 14 logical words. The
+The 64x64x64 SPAD geometry does not change fixed packet word counts: default
+cluster packets remain 8 logical words and raw bitmap packets remain 14 logical
+words. Compact cluster packets are variable length: `1 + popcount(slot_mask) +
+1` words, where header bits `[8:3]` encode `{Z1,Z0,Y1,Y0,X1,X0}`. The
 protocol-level geometry change is the cluster bound width inside each cluster
 word:
 

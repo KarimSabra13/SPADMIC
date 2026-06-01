@@ -17,10 +17,12 @@ rtl/osc/mptdc_osc_wrapper.sv
 
 // Phase detector
 rtl/pd/mptdc_fast_epoch_tag.sv
+rtl/pd/mptdc_slow_epoch_johnson.sv
 rtl/pd/mptdc_pd_cell.sv
 
 // Async frontend / capture
 rtl/async/mptdc_stop_capture_async.sv
+rtl/async/mptdc_stop_epoch_capture_async.sv
 rtl/async/mptdc_async_frontend_v2.sv
 rtl/async/mptdc_hit_capture_bridge.sv
 rtl/async/mptdc_context_bank.sv

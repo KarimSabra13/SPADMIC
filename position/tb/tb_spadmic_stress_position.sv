@@ -655,6 +655,67 @@ module tb_spadmic_stress_position;
     end
 
     // ========================================
+    // TEST 13b: Compact cluster mode emits only valid cluster slots
+    // ========================================
+    begin
+      int n;
+      spadmic_axis_clusters_t exp_x;
+      spadmic_axis_clusters_t exp_y;
+      spadmic_axis_clusters_t exp_z;
+
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_0041); // enable + compact cluster
+      repeat (2) @(posedge clk_sys);
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      x_lines[4] = 1; x_lines[5] = 1;
+      y_lines[20] = 1; y_lines[21] = 1;
+      z_lines[60] = 1; z_lines[61] = 1;
+      repeat (6) @(posedge clk_sys);
+      collect_packet(n);
+
+      exp_x = make_axis_clusters(make_cluster(1'b1, 4, 5), make_cluster(1'b0, 0, 0), 1'b0);
+      exp_y = make_axis_clusters(make_cluster(1'b1, 20, 21), make_cluster(1'b0, 0, 0), 1'b0);
+      exp_z = make_axis_clusters(make_cluster(1'b1, 60, 61), make_cluster(1'b0, 0, 0), 1'b0);
+      check("T13b compact XYZ single-cluster length", n === 5);
+      check_word("T13b compact XYZ header", 0,
+                 spadmic_pos_compact_header_word(1'b0, 3'b111, 3'b000, 6'b010101));
+      check_word("T13b compact X cluster0", 1, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T13b compact Y cluster0", 2, spadmic_pos_cluster_word(exp_y.cluster0));
+      check_word("T13b compact Z cluster0", 3, spadmic_pos_cluster_word(exp_z.cluster0));
+      check("T13b compact EOC", pkt_words[n-1][15:14] === 2'b11);
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      x_lines[0] = 1; x_lines[1] = 1;
+      x_lines[8] = 1; x_lines[9] = 1;
+      y_lines[30] = 1; y_lines[31] = 1;
+      repeat (6) @(posedge clk_sys);
+      collect_packet(n);
+
+      exp_x = make_axis_clusters(make_cluster(1'b1, 0, 1), make_cluster(1'b1, 8, 9), 1'b0);
+      exp_y = make_axis_clusters(make_cluster(1'b1, 30, 31), make_cluster(1'b0, 0, 0), 1'b0);
+      check("T13b compact auto-detects second cluster length", n === 5);
+      check_word("T13b compact second-cluster header", 0,
+                 spadmic_pos_compact_header_word(1'b0, 3'b011, 3'b001, 6'b000111));
+      check_word("T13b compact X cluster0 retained", 1, spadmic_pos_cluster_word(exp_x.cluster0));
+      check_word("T13b compact X cluster1 retained", 2, spadmic_pos_cluster_word(exp_x.cluster1));
+      check_word("T13b compact Y cluster0 retained", 3, spadmic_pos_cluster_word(exp_y.cluster0));
+      check("T13b compact second-cluster EOC", pkt_words[n-1][15:14] === 2'b11);
+
+      @(posedge clk_sys);
+      x_lines = '0; y_lines = '0; z_lines = '0;
+      repeat (6) @(posedge clk_sys);
+
+      csr_write_pos(SPADMIC_CSR_POS_CTRL, 32'h0000_0001);
+      repeat (2) @(posedge clk_sys);
+    end
+
+    // ========================================
     // TEST 14: SPAD matrix reset CSR modes
     // ========================================
     begin

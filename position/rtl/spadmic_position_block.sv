@@ -54,6 +54,8 @@ module spadmic_position_block (
   logic local_enable_q;
   spadmic_pos_mode_e pos_mode_q;
   spadmic_spad_reset_mode_e reset_mode_q;
+  logic reset_after_capture_q;
+  logic compact_cluster_q;
   logic [SPADMIC_LINE_COUNT_W-1:0] gap_threshold_q;
   logic [SPADMIC_LINE_COUNT_W-1:0] min_cluster_span_q;
   logic [3:0] settle_cycles_q;
@@ -109,6 +111,8 @@ module spadmic_position_block (
   logic                   overflow_any;
   logic [2:0]             non_empty_mask;
   logic [2:0]             multi_cluster_mask;
+  spadmic_pos_cluster_slot_mask_t cluster_slot_mask;
+  logic [2:0]             compact_cluster_words;
   logic                   meaningful_event;
   logic                   raw_meaningful_event;
   logic [2:0]             raw_non_empty_mask;
@@ -119,6 +123,8 @@ module spadmic_position_block (
   logic [2:0]             status_non_empty_mask;
   logic [2:0]             status_multi_cluster_mask;
   logic                   load_next_frame;
+  logic [4:0]             cluster_last_word;
+  logic [4:0]             compact_cluster_last_word;
   logic                   scan_start;
   logic                   scan_complete;
   logic                   x_scan_busy;
@@ -142,6 +148,48 @@ module spadmic_position_block (
     return filtered;
   endfunction
 
+  function automatic spadmic_cluster_t cluster_slot_from_frame(
+    input spadmic_pos_frame_t frame,
+    input logic [2:0]         slot_idx
+  );
+    spadmic_cluster_t cluster;
+
+    cluster = '0;
+    unique case (slot_idx)
+      3'd0: cluster = frame.x_clusters.cluster0;
+      3'd1: cluster = frame.x_clusters.cluster1;
+      3'd2: cluster = frame.y_clusters.cluster0;
+      3'd3: cluster = frame.y_clusters.cluster1;
+      3'd4: cluster = frame.z_clusters.cluster0;
+      3'd5: cluster = frame.z_clusters.cluster1;
+      default: ;
+    endcase
+    return cluster;
+  endfunction
+
+  function automatic spadmic_cluster_t compact_cluster_from_frame(
+    input spadmic_pos_frame_t frame,
+    input logic [4:0]         packet_word_idx
+  );
+    spadmic_cluster_t cluster;
+    logic [2:0]      target_payload_idx;
+    logic [2:0]      valid_seen;
+
+    cluster = '0;
+    target_payload_idx = 3'(packet_word_idx - 5'd1);
+    valid_seen = '0;
+
+    for (int slot = 0; slot < SPADMIC_POS_CLUSTER_SLOT_COUNT; slot++) begin
+      if (frame.cluster_slot_mask[slot]) begin
+        if (valid_seen == target_payload_idx)
+          cluster = cluster_slot_from_frame(frame, 3'(slot));
+        valid_seen = valid_seen + 3'd1;
+      end
+    end
+
+    return cluster;
+  endfunction
+
   assign csr_ready_o            = 1'b1;
   assign pos_enable             = global_enable_i & local_enable_q;
   assign x_has_activity_sync    = |x_sync_ff2_q;
@@ -156,6 +204,10 @@ module spadmic_position_block (
                                 | y_scan_busy
                                 | z_scan_busy;
   assign load_next_frame        = ~packet_active_q & frame_fifo_rd_valid;
+  assign compact_cluster_last_word = 5'd1 + 5'(frame_active_q.compact_cluster_words);
+  assign cluster_last_word      = frame_active_q.compact_cluster
+                                ? compact_cluster_last_word
+                                : POS_CLUSTER_LAST_WORD;
   assign busy_o                 = detector_busy | packet_active_q | frame_fifo_rd_valid;
   assign packet_pending_o       = packet_active_q | frame_fifo_rd_valid;
   assign drop_sticky_o          = drop_sticky_q;
@@ -250,6 +302,12 @@ module spadmic_position_block (
     (y_clusters_pkt.cluster_count > 2'd1),
     (x_clusters_pkt.cluster_count > 2'd1)
   };
+  assign cluster_slot_mask = spadmic_pos_cluster_slot_mask(
+    x_clusters_pkt,
+    y_clusters_pkt,
+    z_clusters_pkt
+  );
+  assign compact_cluster_words = spadmic_pos_cluster_slot_count(cluster_slot_mask);
   assign meaningful_event = (pos_mode_q == SPADMIC_POS_MODE_RAW)
                            ? raw_meaningful_event
                            : |non_empty_mask;
@@ -257,6 +315,8 @@ module spadmic_position_block (
   always_comb begin
     frame_push_data = '0;
     frame_push_data.mode               = pos_mode_q;
+    frame_push_data.compact_cluster    = (pos_mode_q == SPADMIC_POS_MODE_CLUSTER)
+                                       && compact_cluster_q;
     frame_push_data.non_empty_mask     = (pos_mode_q == SPADMIC_POS_MODE_RAW)
                                        ? raw_non_empty_mask
                                        : non_empty_mask;
@@ -266,6 +326,12 @@ module spadmic_position_block (
     frame_push_data.overflow_any       = (pos_mode_q == SPADMIC_POS_MODE_RAW)
                                        ? 1'b0
                                        : overflow_any;
+    frame_push_data.cluster_slot_mask  = (pos_mode_q == SPADMIC_POS_MODE_RAW)
+                                       ? '0
+                                       : cluster_slot_mask;
+    frame_push_data.compact_cluster_words = (pos_mode_q == SPADMIC_POS_MODE_RAW)
+                                          ? '0
+                                          : compact_cluster_words;
     frame_push_data.x_clusters         = x_clusters_pkt;
     frame_push_data.y_clusters         = y_clusters_pkt;
     frame_push_data.z_clusters         = z_clusters_pkt;
@@ -313,6 +379,8 @@ module spadmic_position_block (
       local_enable_q         <= 1'b1;
       pos_mode_q             <= SPADMIC_POS_MODE_CLUSTER;
       reset_mode_q           <= SPADMIC_SPAD_RST_MANUAL_ONLY;
+      reset_after_capture_q  <= 1'b0;
+      compact_cluster_q      <= 1'b0;
       gap_threshold_q        <= 7'd2;
       min_cluster_span_q     <= 7'd2;
       settle_cycles_q        <= 4'd1;
@@ -361,6 +429,8 @@ module spadmic_position_block (
             local_enable_q <= csr_wdata_i[0];
             pos_mode_q     <= spadmic_pos_mode_e'(csr_wdata_i[1]);
             reset_mode_q   <= spadmic_spad_reset_mode_e'(csr_wdata_i[3:2]);
+            reset_after_capture_q <= csr_wdata_i[5];
+            compact_cluster_q <= csr_wdata_i[6];
             if (spadmic_spad_reset_mode_e'(csr_wdata_i[3:2]) != reset_mode_q) begin
               auto_reset_count_q   <= '0;
               auto_reset_pending_q <= 1'b0;
@@ -460,6 +530,11 @@ module spadmic_position_block (
               x_snapshot_q   <= x_sync_ff2_q;
               y_snapshot_q   <= y_sync_ff2_q;
               z_snapshot_q   <= z_sync_ff2_q;
+              if (reset_after_capture_q) begin
+                spad_matrix_rst_o    <= 1'b1;
+                auto_reset_count_q   <= '0;
+                auto_reset_pending_q <= 1'b0;
+              end
               settle_count_q <= '0;
               det_state_q    <= DET_SCAN;
             end else begin
@@ -496,7 +571,7 @@ module spadmic_position_block (
         packet_active_q <= 1'b1;
         word_idx_q      <= '0;
       end else if (packet_active_q && pos_valid_o && pos_ready_i) begin
-        if (word_idx_q == ((frame_active_q.mode == SPADMIC_POS_MODE_RAW) ? POS_RAW_EOC_WORD : POS_CLUSTER_LAST_WORD)) begin
+        if (word_idx_q == ((frame_active_q.mode == SPADMIC_POS_MODE_RAW) ? POS_RAW_EOC_WORD : cluster_last_word)) begin
           packet_active_q <= 1'b0;
           word_idx_q      <= '0;
         end else begin
@@ -534,11 +609,20 @@ module spadmic_position_block (
       end
     end else begin
       unique case (word_idx_q)
-        5'd0: pos_data_o = spadmic_pos_header_word(
-          frame_active_q.overflow_any,
-          frame_active_q.non_empty_mask,
-          frame_active_q.multi_cluster_mask
-        );
+        5'd0: begin
+          pos_data_o = frame_active_q.compact_cluster
+                     ? spadmic_pos_compact_header_word(
+                         frame_active_q.overflow_any,
+                         frame_active_q.non_empty_mask,
+                         frame_active_q.multi_cluster_mask,
+                         frame_active_q.cluster_slot_mask
+                       )
+                     : spadmic_pos_header_word(
+                         frame_active_q.overflow_any,
+                         frame_active_q.non_empty_mask,
+                         frame_active_q.multi_cluster_mask
+                       );
+        end
         5'd1: pos_data_o = spadmic_pos_cluster_word(frame_active_q.x_clusters.cluster0);
         5'd2: pos_data_o = spadmic_pos_cluster_word(frame_active_q.x_clusters.cluster1);
         5'd3: pos_data_o = spadmic_pos_cluster_word(frame_active_q.y_clusters.cluster0);
@@ -548,6 +632,23 @@ module spadmic_position_block (
         5'd7: pos_data_o = spadmic_pos_eoc_word(event_count_q);
         default: ;
       endcase
+
+      if (frame_active_q.compact_cluster) begin
+        if (word_idx_q == 5'd0) begin
+          pos_data_o = spadmic_pos_compact_header_word(
+            frame_active_q.overflow_any,
+            frame_active_q.non_empty_mask,
+            frame_active_q.multi_cluster_mask,
+            frame_active_q.cluster_slot_mask
+          );
+        end else if (word_idx_q == cluster_last_word) begin
+          pos_data_o = spadmic_pos_eoc_word(event_count_q);
+        end else begin
+          pos_data_o = spadmic_pos_cluster_word(
+            compact_cluster_from_frame(frame_active_q, word_idx_q)
+          );
+        end
+      end
     end
   end
 
@@ -558,6 +659,8 @@ module spadmic_position_block (
         rd_data_next[0] = local_enable_q;
         rd_data_next[1] = pos_mode_q;
         rd_data_next[3:2] = reset_mode_q;
+        rd_data_next[5] = reset_after_capture_q;
+        rd_data_next[6] = compact_cluster_q;
       end
 
       SPADMIC_CSR_POS_GAP_CFG: begin

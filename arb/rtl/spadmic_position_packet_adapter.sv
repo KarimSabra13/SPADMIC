@@ -28,6 +28,8 @@ module spadmic_position_packet_adapter (
 
   logic [4:0] word_idx_q;
   logic       raw_packet_q;
+  logic       compact_packet_q;
+  logic [4:0] compact_last_word_q;
   logic       packet_active_q;
   logic       input_allowed;
   logic       accept_word;
@@ -36,7 +38,9 @@ module spadmic_position_packet_adapter (
   assign input_allowed = enable_i | packet_active_q;
   assign eop_now = raw_packet_q
                  ? (word_idx_q == 5'(SPADMIC_POS_RAW_PKT_WORDS - 1))
-                 : (word_idx_q == 5'(SPADMIC_POS_PKT_WORDS - 1));
+                 : compact_packet_q
+                   ? (word_idx_q == compact_last_word_q)
+                   : (word_idx_q == 5'(SPADMIC_POS_PKT_WORDS - 1));
 
   assign pkt_source_o = SPADMIC_SRC_POSITION;
   assign packet_active_o = packet_active_q;
@@ -54,17 +58,25 @@ module spadmic_position_packet_adapter (
     if (!rst_n) begin
       word_idx_q      <= '0;
       raw_packet_q    <= 1'b0;
+      compact_packet_q <= 1'b0;
+      compact_last_word_q <= 5'(SPADMIC_POS_PKT_WORDS - 1);
       packet_active_q <= 1'b0;
     end else if (accept_word) begin
       if (word_idx_q == '0) begin
-        raw_packet_q    <= is_spadmic_pos_raw_header(pos_data_i);
+        raw_packet_q     <= is_spadmic_pos_raw_header(pos_data_i);
+        compact_packet_q <= is_spadmic_pos_compact_header(pos_data_i);
+        compact_last_word_q <= is_spadmic_pos_compact_header(pos_data_i)
+                             ? 5'(3'd1 + spadmic_pos_compact_payload_words(pos_data_i))
+                             : 5'(SPADMIC_POS_PKT_WORDS - 1);
         packet_active_q <= !eop_now;
       end
 
       if (eop_now) begin
-        word_idx_q      <= '0;
-        raw_packet_q    <= 1'b0;
-        packet_active_q <= 1'b0;
+        word_idx_q          <= '0;
+        raw_packet_q        <= 1'b0;
+        compact_packet_q    <= 1'b0;
+        compact_last_word_q <= 5'(SPADMIC_POS_PKT_WORDS - 1);
+        packet_active_q     <= 1'b0;
       end else begin
         word_idx_q      <= word_idx_q + 5'd1;
         packet_active_q <= 1'b1;
