@@ -42,6 +42,11 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 from plot_style import PALETTE, apply_report_style, save_figure, style_axes
+from analysis.mptdc_char_common import (
+    NFAST_ENCODING_LEGACY,
+    NFAST_ENCODING_RAW_LFSR_TAG,
+    add_o2_raw_tag_decode_columns,
+)
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 # Vernier algebra: t_raw_ps = ((nslow+2+sbi-1)*K_SLOW + nfast*K_FAST
@@ -207,6 +212,23 @@ def read_seed_csv(csv_file):
     return df, None
 
 
+def apply_nfast_encoding(df, nfast_encoding):
+    """Apply legacy or O2 raw-tag nfast semantics before LUT inference."""
+    if nfast_encoding == NFAST_ENCODING_LEGACY:
+        return add_o2_raw_tag_decode_columns(df, nfast_encoding=nfast_encoding)
+
+    out = add_o2_raw_tag_decode_columns(df, nfast_encoding=nfast_encoding)
+    if {"nfast_hit", "nfast_decoded"}.issubset(out.columns):
+        out["nfast_hit_packet_raw_tag"] = out["nfast_hit"]
+        out["nfast_hit"] = out["nfast_decoded"].astype(np.int64)
+    if "t_raw_ps_decoded_nfast" in out.columns:
+        if "t_raw_ps" in out.columns:
+            out["t_raw_ps_packet_raw_tag_interpreted"] = out["t_raw_ps"]
+        out["t_raw_ps"] = out["t_raw_ps_decoded_nfast"]
+    out.attrs["nfast_encoding"] = nfast_encoding
+    return out
+
+
 def print_skipped_csv_summary(skipped, indent=2):
     """Print a concise summary of CSV files skipped for being unusable."""
     if not skipped:
@@ -242,7 +264,8 @@ def print_skipped_csv_summary(skipped, indent=2):
     )
 
 
-def load_and_prepare(csv_files, core_only=True, allow_empty=False):
+def load_and_prepare(csv_files, core_only=True, allow_empty=False,
+                     nfast_encoding=NFAST_ENCODING_LEGACY):
     """Load CSVs, infer ns/nf, optionally filter to core (nslow > 0)."""
     frames = []
     skipped = []
@@ -306,6 +329,7 @@ def load_and_prepare(csv_files, core_only=True, allow_empty=False):
     df.attrs["rows_after_filter"] = int(len(df))
     df.attrs["rows_filtered_out"] = int(n_before - len(df))
     df.attrs["rows_filtered_out_pct"] = float((1 - len(df) / n_before) * 100) if n_before else 0.0
+    df = apply_nfast_encoding(df, nfast_encoding)
     df["offset"] = df["Tref_ps"] - df["t_raw_ps"]
     infer_ns_nf(df)
     bad = df["ns_inf"].isna().sum()
@@ -921,6 +945,9 @@ def main():
                         help="Number of training seeds (first N)")
     parser.add_argument("--chunk-load", action="store_true", default=True,
                         help="Load training data in chunks to save memory")
+    parser.add_argument("--nfast-encoding", default=NFAST_ENCODING_LEGACY,
+                        choices=[NFAST_ENCODING_LEGACY, NFAST_ENCODING_RAW_LFSR_TAG],
+                        help="Interpret packet nfast_hit as legacy binary or O2 raw LFSR tag")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -1016,7 +1043,11 @@ def main():
         print(f"  Total rows loaded : {total_rows:>12,}")
         print(f"  Core rows (nslow>0): {total_core:>12,}")
     else:
-        train_data = load_and_prepare(train_files, core_only=True)
+        train_data = load_and_prepare(
+            train_files,
+            core_only=True,
+            nfast_encoding=args.nfast_encoding,
+        )
         total_rows = len(train_data)
         lut_df = build_lut(train_data)
         train_skipped_csv_files = int(train_data.attrs.get("skipped_csv_files", 0))
@@ -1068,7 +1099,11 @@ def main():
     val_scope_label = ", ".join(val_file_labels) if val_file_labels else "none"
 
     print(f"\n[2/6] Validating on held-out seeds ({len(val_files)} files)...")
-    val_data = load_and_prepare(val_files, core_only=True)
+    val_data = load_and_prepare(
+        val_files,
+        core_only=True,
+        nfast_encoding=args.nfast_encoding,
+    )
     if val_data.empty:
         raise ValueError("Held-out validation produced no usable rows after filtering")
     val_filter = filter_summary(val_data)
@@ -1158,7 +1193,12 @@ def main():
 
         for ci in range(0, len(fresh_files), CHUNK):
             batch = fresh_files[ci:ci+CHUNK]
-            chunk = load_and_prepare(batch, core_only=True, allow_empty=True)
+            chunk = load_and_prepare(
+                batch,
+                core_only=True,
+                allow_empty=True,
+                nfast_encoding=args.nfast_encoding,
+            )
             fresh_rows_before += int(chunk.attrs.get("rows_before_filter", len(chunk)))
             fresh_rows_after_filter += int(chunk.attrs.get("rows_after_filter", len(chunk)))
             fresh_rows_after_inference += int(chunk.attrs.get("rows_after_inference", len(chunk)))

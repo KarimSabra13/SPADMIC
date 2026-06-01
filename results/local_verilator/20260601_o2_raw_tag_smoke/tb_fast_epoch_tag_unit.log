@@ -1,0 +1,284 @@
+=== MPTDC v2.7 TB Runner ===
+  Testbench: tb_fast_epoch_tag_unit
+  Simulator: verilator
+  Build dir: /home/karim/SPADMIC/MPTDC/build/tb_fast_epoch_tag_unit
+
+--- Compiling with Verilator ---
+make: Entering directory '/home/karim/SPADMIC/MPTDC/build/tb_fast_epoch_tag_unit'
+make: Nothing to be done for 'default'.
+make: Leaving directory '/home/karim/SPADMIC/MPTDC/build/tb_fast_epoch_tag_unit'
+- V e r i l a t i o n   R e p o r t: Verilator 5.040 2025-08-30 rev v5.040-50-g0a9d9db5a
+- Verilator: Built from 0.000 MB sources in 0 modules, into 0.000 MB in 0 C++ files needing 0.000 MB
+- Verilator: Walltime 0.005 s (elab=0.000, cvt=0.000, bld=0.005); cpu 0.001 s on 1 threads; alloced 29.262 MB
+
+--- Running simulation ---
+[PASS] reset loads non-zero seed
+[PASS] enable=0 holds seed
+[PASS] enable=1 advances one LFSR step
+[PASS] enable=0 holds advanced state
+[PASS] clear_window asynchronously reloads seed
+[PASS] sequence state 0 is non-zero
+[PASS] sequence state 0 not repeated early
+[PASS] sequence state 1 is non-zero
+[PASS] sequence state 1 not repeated early
+[PASS] sequence state 2 is non-zero
+[PASS] sequence state 2 not repeated early
+[PASS] sequence state 3 is non-zero
+[PASS] sequence state 3 not repeated early
+[PASS] sequence state 4 is non-zero
+[PASS] sequence state 4 not repeated early
+[PASS] sequence state 5 is non-zero
+[PASS] sequence state 5 not repeated early
+[PASS] sequence state 6 is non-zero
+[PASS] sequence state 6 not repeated early
+[PASS] sequence state 7 is non-zero
+[PASS] sequence state 7 not repeated early
+[PASS] sequence state 8 is non-zero
+[PASS] sequence state 8 not repeated early
+[PASS] sequence state 9 is non-zero
+[PASS] sequence state 9 not repeated early
+[PASS] sequence state 10 is non-zero
+[PASS] sequence state 10 not repeated early
+[PASS] sequence state 11 is non-zero
+[PASS] sequence state 11 not repeated early
+[PASS] sequence state 12 is non-zero
+[PASS] sequence state 12 not repeated early
+[PASS] sequence state 13 is non-zero
+[PASS] sequence state 13 not repeated early
+[PASS] sequence state 14 is non-zero
+[PASS] sequence state 14 not repeated early
+[PASS] sequence state 15 is non-zero
+[PASS] sequence state 15 not repeated early
+[PASS] sequence state 16 is non-zero
+[PASS] sequence state 16 not repeated early
+[PASS] sequence state 17 is non-zero
+[PASS] sequence state 17 not repeated early
+[PASS] sequence state 18 is non-zero
+[PASS] sequence state 18 not repeated early
+[PASS] sequence state 19 is non-zero
+[PASS] sequence state 19 not repeated early
+[PASS] sequence state 20 is non-zero
+[PASS] sequence state 20 not repeated early
+[PASS] sequence state 21 is non-zero
+[PASS] sequence state 21 not repeated early
+[PASS] sequence state 22 is non-zero
+[PASS] sequence state 22 not repeated early
+[PASS] sequence state 23 is non-zero
+[PASS] sequence state 23 not repeated early
+[PASS] sequence state 24 is non-zero
+[PASS] sequence state 24 not repeated early
+[PASS] sequence state 25 is non-zero
+[PASS] sequence state 25 not repeated early
+[PASS] sequence state 26 is non-zero
+[PASS] sequence state 26 not repeated early
+[PASS] sequence state 27 is non-zero
+[PASS] sequence state 27 not repeated early
+[PASS] sequence state 28 is non-zero
+[PASS] sequence state 28 not repeated early
+[PASS] sequence state 29 is non-zero
+[PASS] sequence state 29 not repeated early
+[PASS] sequence state 30 is non-zero
+[PASS] sequence state 30 not repeated early
+[PASS] sequence state 31 is non-zero
+[PASS] sequence state 31 not repeated early
+[PASS] sequence state 32 is non-zero
+[PASS] sequence state 32 not repeated early
+[PASS] sequence state 33 is non-zero
+[PASS] sequence state 33 not repeated early
+[PASS] sequence state 34 is non-zero
+[PASS] sequence state 34 not repeated early
+[PASS] sequence state 35 is non-zero
+[PASS] sequence state 35 not repeated early
+[PASS] sequence state 36 is non-zero
+[PASS] sequence state 36 not repeated early
+[PASS] sequence state 37 is non-zero
+[PASS] sequence state 37 not repeated early
+[PASS] sequence state 38 is non-zero
+[PASS] sequence state 38 not repeated early
+[PASS] sequence state 39 is non-zero
+[PASS] sequence state 39 not repeated early
+[PASS] sequence state 40 is non-zero
+[PASS] sequence state 40 not repeated early
+[PASS] sequence state 41 is non-zero
+[PASS] sequence state 41 not repeated early
+[PASS] sequence state 42 is non-zero
+[PASS] sequence state 42 not repeated early
+[PASS] sequence state 43 is non-zero
+[PASS] sequence state 43 not repeated early
+[PASS] sequence state 44 is non-zero
+[PASS] sequence state 44 not repeated early
+[PASS] sequence state 45 is non-zero
+[PASS] sequence state 45 not repeated early
+[PASS] sequence state 46 is non-zero
+[PASS] sequence state 46 not repeated early
+[PASS] sequence state 47 is non-zero
+[PASS] sequence state 47 not repeated early
+[PASS] sequence state 48 is non-zero
+[PASS] sequence state 48 not repeated early
+[PASS] sequence state 49 is non-zero
+[PASS] sequence state 49 not repeated early
+[PASS] sequence state 50 is non-zero
+[PASS] sequence state 50 not repeated early
+[PASS] sequence state 51 is non-zero
+[PASS] sequence state 51 not repeated early
+[PASS] sequence state 52 is non-zero
+[PASS] sequence state 52 not repeated early
+[PASS] sequence state 53 is non-zero
+[PASS] sequence state 53 not repeated early
+[PASS] sequence state 54 is non-zero
+[PASS] sequence state 54 not repeated early
+[PASS] sequence state 55 is non-zero
+[PASS] sequence state 55 not repeated early
+[PASS] sequence state 56 is non-zero
+[PASS] sequence state 56 not repeated early
+[PASS] sequence state 57 is non-zero
+[PASS] sequence state 57 not repeated early
+[PASS] sequence state 58 is non-zero
+[PASS] sequence state 58 not repeated early
+[PASS] sequence state 59 is non-zero
+[PASS] sequence state 59 not repeated early
+[PASS] sequence state 60 is non-zero
+[PASS] sequence state 60 not repeated early
+[PASS] sequence state 61 is non-zero
+[PASS] sequence state 61 not repeated early
+[PASS] sequence state 62 is non-zero
+[PASS] sequence state 62 not repeated early
+[PASS] sequence state 63 is non-zero
+[PASS] sequence state 63 not repeated early
+[PASS] sequence state 64 is non-zero
+[PASS] sequence state 64 not repeated early
+[PASS] sequence state 65 is non-zero
+[PASS] sequence state 65 not repeated early
+[PASS] sequence state 66 is non-zero
+[PASS] sequence state 66 not repeated early
+[PASS] sequence state 67 is non-zero
+[PASS] sequence state 67 not repeated early
+[PASS] sequence state 68 is non-zero
+[PASS] sequence state 68 not repeated early
+[PASS] sequence state 69 is non-zero
+[PASS] sequence state 69 not repeated early
+[PASS] sequence state 70 is non-zero
+[PASS] sequence state 70 not repeated early
+[PASS] sequence state 71 is non-zero
+[PASS] sequence state 71 not repeated early
+[PASS] sequence state 72 is non-zero
+[PASS] sequence state 72 not repeated early
+[PASS] sequence state 73 is non-zero
+[PASS] sequence state 73 not repeated early
+[PASS] sequence state 74 is non-zero
+[PASS] sequence state 74 not repeated early
+[PASS] sequence state 75 is non-zero
+[PASS] sequence state 75 not repeated early
+[PASS] sequence state 76 is non-zero
+[PASS] sequence state 76 not repeated early
+[PASS] sequence state 77 is non-zero
+[PASS] sequence state 77 not repeated early
+[PASS] sequence state 78 is non-zero
+[PASS] sequence state 78 not repeated early
+[PASS] sequence state 79 is non-zero
+[PASS] sequence state 79 not repeated early
+[PASS] sequence state 80 is non-zero
+[PASS] sequence state 80 not repeated early
+[PASS] sequence state 81 is non-zero
+[PASS] sequence state 81 not repeated early
+[PASS] sequence state 82 is non-zero
+[PASS] sequence state 82 not repeated early
+[PASS] sequence state 83 is non-zero
+[PASS] sequence state 83 not repeated early
+[PASS] sequence state 84 is non-zero
+[PASS] sequence state 84 not repeated early
+[PASS] sequence state 85 is non-zero
+[PASS] sequence state 85 not repeated early
+[PASS] sequence state 86 is non-zero
+[PASS] sequence state 86 not repeated early
+[PASS] sequence state 87 is non-zero
+[PASS] sequence state 87 not repeated early
+[PASS] sequence state 88 is non-zero
+[PASS] sequence state 88 not repeated early
+[PASS] sequence state 89 is non-zero
+[PASS] sequence state 89 not repeated early
+[PASS] sequence state 90 is non-zero
+[PASS] sequence state 90 not repeated early
+[PASS] sequence state 91 is non-zero
+[PASS] sequence state 91 not repeated early
+[PASS] sequence state 92 is non-zero
+[PASS] sequence state 92 not repeated early
+[PASS] sequence state 93 is non-zero
+[PASS] sequence state 93 not repeated early
+[PASS] sequence state 94 is non-zero
+[PASS] sequence state 94 not repeated early
+[PASS] sequence state 95 is non-zero
+[PASS] sequence state 95 not repeated early
+[PASS] sequence state 96 is non-zero
+[PASS] sequence state 96 not repeated early
+[PASS] sequence state 97 is non-zero
+[PASS] sequence state 97 not repeated early
+[PASS] sequence state 98 is non-zero
+[PASS] sequence state 98 not repeated early
+[PASS] sequence state 99 is non-zero
+[PASS] sequence state 99 not repeated early
+[PASS] sequence state 100 is non-zero
+[PASS] sequence state 100 not repeated early
+[PASS] sequence state 101 is non-zero
+[PASS] sequence state 101 not repeated early
+[PASS] sequence state 102 is non-zero
+[PASS] sequence state 102 not repeated early
+[PASS] sequence state 103 is non-zero
+[PASS] sequence state 103 not repeated early
+[PASS] sequence state 104 is non-zero
+[PASS] sequence state 104 not repeated early
+[PASS] sequence state 105 is non-zero
+[PASS] sequence state 105 not repeated early
+[PASS] sequence state 106 is non-zero
+[PASS] sequence state 106 not repeated early
+[PASS] sequence state 107 is non-zero
+[PASS] sequence state 107 not repeated early
+[PASS] sequence state 108 is non-zero
+[PASS] sequence state 108 not repeated early
+[PASS] sequence state 109 is non-zero
+[PASS] sequence state 109 not repeated early
+[PASS] sequence state 110 is non-zero
+[PASS] sequence state 110 not repeated early
+[PASS] sequence state 111 is non-zero
+[PASS] sequence state 111 not repeated early
+[PASS] sequence state 112 is non-zero
+[PASS] sequence state 112 not repeated early
+[PASS] sequence state 113 is non-zero
+[PASS] sequence state 113 not repeated early
+[PASS] sequence state 114 is non-zero
+[PASS] sequence state 114 not repeated early
+[PASS] sequence state 115 is non-zero
+[PASS] sequence state 115 not repeated early
+[PASS] sequence state 116 is non-zero
+[PASS] sequence state 116 not repeated early
+[PASS] sequence state 117 is non-zero
+[PASS] sequence state 117 not repeated early
+[PASS] sequence state 118 is non-zero
+[PASS] sequence state 118 not repeated early
+[PASS] sequence state 119 is non-zero
+[PASS] sequence state 119 not repeated early
+[PASS] sequence state 120 is non-zero
+[PASS] sequence state 120 not repeated early
+[PASS] sequence state 121 is non-zero
+[PASS] sequence state 121 not repeated early
+[PASS] sequence state 122 is non-zero
+[PASS] sequence state 122 not repeated early
+[PASS] sequence state 123 is non-zero
+[PASS] sequence state 123 not repeated early
+[PASS] sequence state 124 is non-zero
+[PASS] sequence state 124 not repeated early
+[PASS] sequence state 125 is non-zero
+[PASS] sequence state 125 not repeated early
+[PASS] sequence state 126 is non-zero
+[PASS] sequence state 126 not repeated early
+[PASS] maximal 127-state sequence returns to seed
+===================================
+  Results: 260 PASS, 0 FAIL
+===================================
+TEST PASSED
+- /home/karim/SPADMIC/MPTDC/tb/unit/tb_fast_epoch_tag_unit.sv:92: Verilog $finish
+- S i m u l a t i o n   R e p o r t: Verilator 5.040 2025-08-30
+- Verilator: $finish at 1us; walltime 0.001 s; speed 756.257 us/s
+- Verilator: cpu 0.001 s on 1 threads; alloced 94 MB
+
+=== SIMULATION PASSED ===

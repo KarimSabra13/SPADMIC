@@ -1,0 +1,9 @@
+{
+  "nfast_encoding": "raw_lfsr_tag",
+  "tag_decode_mode": "software",
+  "lfsr_width": 7,
+  "tag_width": 7,
+  "lfsr_seed": 1,
+  "tag_columns": 8,
+  "column_offsets_version": "o2_initial_zero_offsets"
+}

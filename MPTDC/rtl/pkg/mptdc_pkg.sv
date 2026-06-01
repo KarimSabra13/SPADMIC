@@ -67,6 +67,14 @@ package mptdc_pkg;
   parameter int unsigned NFAST_W     = 7;
   parameter int unsigned EVENT_SEQ_W = 4;  // Max 15 hits → 4 bits sufficient
 
+  // O2 local raw-tag mode:
+  // Fast-domain PD cells capture a local per-column LFSR tag instead of a
+  // global binary counter.  Hardware exports the raw tag in the existing nfast
+  // field; software/calibration decodes it using nf and run metadata.
+  localparam logic [NFAST_W-1:0] FAST_TAG_SEED = {{(NFAST_W-1){1'b0}}, 1'b1};
+  localparam int unsigned FAST_TAG_SEQUENCE_LEN = (1 << NFAST_W) - 1;
+  localparam int unsigned FAST_TAG_COLUMNS = NE;
+
   localparam int unsigned DLY_MAX_PS           = 32_000;
   localparam int unsigned SLOW_HALF_PERIOD_PS  = NE * OSC_TS_SLOW_PS;  // 440 ps @ 8 taps, 55 ps/tap
   localparam int unsigned FAST_HALF_PERIOD_PS  = NE * OSC_TS_FAST_PS;  // 400 ps @ 8 taps, 50 ps/tap
@@ -351,6 +359,13 @@ package mptdc_pkg;
     vernier_tconv_ps = 32'(vernier_coef(nslow_i, nfast_i, ns_i, nf_i,
                                         slow_boundary_inc_i)
                            * int'(DELTA_LSB));
+  endfunction
+
+  function automatic logic [NFAST_W-1:0] fast_tag_next(
+    input logic [NFAST_W-1:0] tag_i
+  );
+    // 7-bit Fibonacci LFSR, polynomial x^7 + x^6 + 1.
+    fast_tag_next = {tag_i[NFAST_W-2:0], tag_i[NFAST_W-1] ^ tag_i[NFAST_W-2]};
   endfunction
 
 endpackage

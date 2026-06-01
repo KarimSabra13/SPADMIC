@@ -169,11 +169,14 @@ module mptdc_meas_ctrl
   assign pd_clear_o       = (state_q == ST_M_CLEAR);
   assign osc_keep_alive_o = (state_q == ST_M_MEASURE)
                            || (state_q == ST_M_SNAPSHOT);
-  // Keep the PD fabric open while the sys-domain controller is still waiting
-  // for the synchronized STOP indication. fe_pd_enable still gates real
-  // measurement activity; this control only freezes additional accumulation
-  // once the static-bus snapshot phase begins.
-  assign pd_gate_o        = (state_q == ST_M_IDLE) || (state_q == ST_M_MEASURE);
+  // Keep the PD input path open through the actual bridge-sampling cycle.
+  // Gating the sampled slow input low in ST_M_SNAPSHOT can synthesize a false
+  // falling edge inside mptdc_pd_cell before mptdc_hit_capture_bridge samples
+  // the held fabric.  After the snapshot edge, later false hits are harmless
+  // because the bridge image and row counts are already registered.
+  assign pd_gate_o        = (state_q == ST_M_IDLE)
+                          || (state_q == ST_M_MEASURE)
+                          || (state_q == ST_M_SNAPSHOT);
   assign close_flags_o    = flags_q;
   assign hit_count_o      = hit_count_q;
   assign state_o          = state_q;

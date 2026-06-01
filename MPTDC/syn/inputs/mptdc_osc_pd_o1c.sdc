@@ -11,7 +11,9 @@
 #
 # This file does not hide clk_sys timing and does not false-path the real
 # fast-counter to nfast_hit paths.  It only adds O1C-specific checks/report
-# grouping and physical bounds on the real RO_tune4 phase output nets.
+# grouping.  Genus 22.13 SDC mode rejects net-level set_max_transition and
+# set_max_capacitance on the RO_tune4 phase nets, so phase electrical bounds are
+# reported in O1C and enforced later in Innovus once the timing model is clean.
 # =============================================================================
 
 proc mptdc_o1c_try_get_pins {patterns} {
@@ -100,12 +102,8 @@ if {[llength $mptdc_o1c_phase_nets] == 0} {
     set mptdc_o1c_phase_nets [mptdc_o1c_try_get_nets $mptdc_o1c_phase_net_patterns]
 }
 if {[llength $mptdc_o1c_phase_nets] > 0} {
-    mptdc_o1c_try "set max transition on RO_tune4 phase nets" {
-        set_max_transition 0.150 $mptdc_o1c_phase_nets
-    }
-    mptdc_o1c_try "set provisional max capacitance on RO_tune4 phase nets" {
-        set_max_capacitance 0.050 $mptdc_o1c_phase_nets
-    }
+    puts "MPTDC_O1C_SDC_INFO: RO_tune4 phase nets matched for report-only review = [llength $mptdc_o1c_phase_nets]"
+    puts "MPTDC_O1C_SDC_INFO: phase max transition/cap are not applied in Genus SDC mode"
 } else {
     puts "MPTDC_O1C_SDC_WARN: no RO_tune4 phase nets matched for physical bounds"
 }

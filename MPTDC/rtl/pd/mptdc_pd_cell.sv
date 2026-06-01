@@ -23,8 +23,8 @@
 //
 // On detection:
 //   - hit_latched is set to 1 and stays high until clear_window or reset.
-//   - nfast_hit_latched captures the current fast counter value, providing
-//     the timestamp for this hit.
+//   - nfast_hit_latched captures the current local fast-column raw tag.  In
+//     O2_RAW_TAG_SW_DECODE mode, software decodes this packet-visible field.
 //
 // Clock domain: fast_phase (fast oscillator tap, ~1 GHz).
 // clear_window is an asynchronous clear from the system domain — it is
@@ -44,10 +44,11 @@ module mptdc_pd_cell #(
 
   input  wire      slow_phase,      // Slow oscillator tap (sampled signal)
   input  wire      fast_phase,      // Fast oscillator tap (sampling clock)
-  input  wire [mptdc_pkg::NFAST_W-1:0] nfast_count, // Live fast counter (same domain as fast_phase)
+  input  wire      detect_en_i,     // Detection enable; holds sampler when low
+  input  wire [mptdc_pkg::NFAST_W-1:0] nfast_tag_i, // Local fast-column tag
 
   output wire      hit_level,       // Latched hit indicator
-  output wire [mptdc_pkg::NFAST_W-1:0] nfast_hit // Captured nfast timestamp at hit
+  output wire [mptdc_pkg::NFAST_W-1:0] nfast_hit // Captured local tag at hit
 );
   localparam int unsigned NFAST_W = mptdc_pkg::NFAST_W;
 
@@ -67,14 +68,14 @@ module mptdc_pd_cell #(
           q3          <= 1'b0;
           hit_latched <= 1'b0;
           nfast_hit_latched <= '0;
-        end else begin
+        end else if (detect_en_i) begin
           q1 <= slow_phase;
           q2 <= q1;
           q3 <= q2;
           // Confirmed falling edge: q3=1, q2=1 (was high), q1=0 (went low)
           if (!hit_latched && !q1 && q2 && q3) begin
             hit_latched <= 1'b1;
-            nfast_hit_latched <= nfast_count;
+            nfast_hit_latched <= nfast_tag_i;
           end
         end
       end
@@ -86,13 +87,13 @@ module mptdc_pd_cell #(
           q2          <= 1'b0;
           hit_latched <= 1'b0;
           nfast_hit_latched <= '0;
-        end else begin
+        end else if (detect_en_i) begin
           q1 <= slow_phase;
           q2 <= q1;
           // Falling edge: q2=1 (was high), q1=0 (went low)
           if (!hit_latched && !q1 && q2) begin
             hit_latched <= 1'b1;
-            nfast_hit_latched <= nfast_count;
+            nfast_hit_latched <= nfast_tag_i;
           end
         end
       end

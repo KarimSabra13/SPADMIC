@@ -30,6 +30,11 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 from plot_style import PALETTE, apply_report_style, save_figure, style_axes
+from analysis.mptdc_char_common import (
+    NFAST_ENCODING_LEGACY,
+    NFAST_ENCODING_RAW_LFSR_TAG,
+    add_o2_raw_tag_decode_columns,
+)
 
 # ---------------------------------------------------------------------------
 # Vernier reconstruction constants & function
@@ -170,6 +175,27 @@ def cross_check_vernier(df: pd.DataFrame) -> int:
     )
     mismatches = int(np.sum(py_t != df["t_raw_ps"].values))
     return mismatches
+
+
+def apply_nfast_encoding(df: pd.DataFrame, nfast_encoding: str) -> pd.DataFrame:
+    """Prepare `nfast_hit` for legacy or O2 raw-tag reconstruction.
+
+    In raw-tag mode the packet column is preserved as `nfast_raw_tag`, decoded
+    in software, and then `nfast_hit`/`t_raw_ps` are replaced with decoded values
+    for the existing analysis code paths.
+    """
+    if nfast_encoding == NFAST_ENCODING_LEGACY:
+        return add_o2_raw_tag_decode_columns(df, nfast_encoding=nfast_encoding)
+
+    out = add_o2_raw_tag_decode_columns(df, nfast_encoding=nfast_encoding)
+    if {"nfast_hit", "nfast_decoded"}.issubset(out.columns):
+        out["nfast_hit_packet_raw_tag"] = out["nfast_hit"]
+        out["nfast_hit"] = out["nfast_decoded"].astype(np.int64)
+    if "t_raw_ps_decoded_nfast" in out.columns:
+        if "t_raw_ps" in out.columns:
+            out["t_raw_ps_packet_raw_tag_interpreted"] = out["t_raw_ps"]
+        out["t_raw_ps"] = out["t_raw_ps_decoded_nfast"]
+    return out
 
 
 def basic_stats(series: pd.Series) -> dict:
@@ -778,9 +804,12 @@ def write_summary_report(all_results: dict, out_path: Path, ttest_all: dict):
 # ---------------------------------------------------------------------------
 
 def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
-                   do_plots: bool = True) -> dict:
+                   do_plots: bool = True,
+                   nfast_encoding: str = NFAST_ENCODING_LEGACY) -> dict:
     """Run full analysis on one configuration, return results dict."""
     result: dict = {}
+    result["nfast_encoding"] = nfast_encoding
+    df = apply_nfast_encoding(df, nfast_encoding)
 
     # residual
     df = compute_residual(df)
@@ -955,6 +984,9 @@ def main():
                         help="Max CSV files to load per config (for quick testing)")
     parser.add_argument("--no-plots", action="store_true",
                         help="Skip plot generation")
+    parser.add_argument("--nfast-encoding", default=NFAST_ENCODING_LEGACY,
+                        choices=[NFAST_ENCODING_LEGACY, NFAST_ENCODING_RAW_LFSR_TAG],
+                        help="Interpret packet nfast_hit as legacy binary or O2 raw LFSR tag")
     args = parser.parse_args()
 
     out_dir = Path(args.output_dir)
@@ -984,7 +1016,13 @@ def main():
             print("  [WARN] No data – skipping.\n")
             continue
 
-        result = analyze_config(cfg, df, out_dir, do_plots=not args.no_plots)
+        result = analyze_config(
+            cfg,
+            df,
+            out_dir,
+            do_plots=not args.no_plots,
+            nfast_encoding=args.nfast_encoding,
+        )
         all_results[cfg] = result
         ttest_all[cfg] = result.get("ttest_results", [])
         print()

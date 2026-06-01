@@ -14,6 +14,7 @@ MPTDC/rtl/osc/mptdc_osc_model.sv
 MPTDC/rtl/osc/mptdc_osc_stub.sv
 MPTDC/rtl/osc/mptdc_osc_wrapper.sv
 
+MPTDC/rtl/pd/mptdc_fast_epoch_tag.sv
 MPTDC/rtl/pd/mptdc_pd_cell.sv
 
 MPTDC/rtl/async/mptdc_stop_capture_async.sv
@@ -32,4 +33,3 @@ MPTDC/rtl/readout/mptdc_csr_minimal.sv
 
 MPTDC/rtl/top/mptdc_core.sv
 MPTDC/rtl/top/mptdc_top_asic.sv
-

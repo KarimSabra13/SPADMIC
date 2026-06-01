@@ -1,0 +1,9 @@
+conv_id,hit_idx,nslow,nfast_hit,ns,nf,slow_boundary_inc,Tref_ps,nfast_raw_tag,nfast_decoded,nfast_encoding,tag_decode_mode,lfsr_width,tag_width,lfsr_seed,tag_columns,column_offsets_version,t_raw_ps_decoded
+1,0,17,32,2,0,0,1000,32,5,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16710
+1,1,17,65,2,1,0,1001,65,6,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16690
+1,2,17,3,2,2,0,1002,3,7,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16670
+1,3,17,6,2,3,0,1003,6,8,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16650
+1,4,17,12,2,4,0,1004,12,9,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16630
+1,5,17,24,2,5,0,1005,24,10,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16610
+1,6,17,48,2,6,0,1006,48,11,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16590
+1,7,17,97,2,7,0,1007,97,12,raw_lfsr_tag,software,7,7,1,8,o2_initial_zero_offsets,16570

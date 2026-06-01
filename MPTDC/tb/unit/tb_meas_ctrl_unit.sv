@@ -115,10 +115,12 @@ module tb_meas_ctrl_unit;
     tick();
     check(state == ST_M_SNAPSHOT, {label, ": MEASURE to SNAPSHOT"});
     check(snapshot_en, {label, ": snapshot pulse in SNAPSHOT"});
+    check(pd_gate, {label, ": PD gate remains open for snapshot sample"});
     check(!pd_clear, {label, ": no clear during SNAPSHOT"});
 
     tick();
     check(state == ST_M_COUNT, {label, ": SNAPSHOT to COUNT"});
+    check(!pd_gate, {label, ": PD gate closes after snapshot sample"});
     check(!capture_en, {label, ": no capture while COUNT registers total"});
     check(!fe_clear, {label, ": no frontend clear while COUNT registers total"});
     check(!pd_clear, {label, ": no PD clear during COUNT"});

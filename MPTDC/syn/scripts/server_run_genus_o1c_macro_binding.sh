@@ -105,7 +105,12 @@ if [[ -d "$SNAPSHOT_DIR" ]]; then
 fi
 cp "$GENUS_LOG" "$RESULT_DIR/genus_${RUN_ID}.log" 2>/dev/null || true
 
-for file in report_clock_groups.rpt report_exceptions.rpt; do
+for file in \
+  report_clock_groups.rpt \
+  report_exceptions.rpt \
+  timing_fast_count_to_nfast_hit.rpt \
+  fast_count_capture_endpoint_audit.rpt \
+  fast_domain_feasibility_audit.rpt; do
   if [[ -f "$RESULT_DIR/synthesis_reports/post_synthesis/$file" && ! -f "$RESULT_DIR/$file" ]]; then
     cp "$RESULT_DIR/synthesis_reports/post_synthesis/$file" "$RESULT_DIR/$file"
   fi
@@ -189,8 +194,9 @@ fi
 
 O1C_SDC_WARN_COUNT="$(grep -c 'MPTDC_O1C_SDC_WARN' "$GENUS_LOG" 2>/dev/null || true)"
 TCL_INVALID_COMMAND_COUNT="$(grep -c 'invalid command name' "$GENUS_LOG" 2>/dev/null || true)"
+SDC_ERROR_COUNT="$(grep -Ec 'SDC-202|SDC-204|TUI-61|TIM-234' "$GENUS_LOG" 2>/dev/null || true)"
 O1C_SDC_CLEAN_STATUS="PASS"
-if [[ "$O1C_SDC_WARN_COUNT" != "0" || "$TCL_INVALID_COMMAND_COUNT" != "0" ]]; then
+if [[ "$O1C_SDC_WARN_COUNT" != "0" || "$TCL_INVALID_COMMAND_COUNT" != "0" || "$SDC_ERROR_COUNT" != "0" ]]; then
   O1C_SDC_CLEAN_STATUS="REVIEW_REQUIRED"
 fi
 
@@ -211,6 +217,7 @@ fi
   echo "- report_clocks RO_tune4/S match count: $CLOCKS_ON_RO"
   echo "- O1C SDC warning count: $O1C_SDC_WARN_COUNT"
   echo "- Tcl invalid-command count: $TCL_INVALID_COMMAND_COUNT"
+  echo "- SDC/report error count: $SDC_ERROR_COUNT"
   echo
   echo "O1C_BINDING_STATUS=$O1C_STATUS"
   echo "O1C_SDC_CLEAN_STATUS=$O1C_SDC_CLEAN_STATUS"

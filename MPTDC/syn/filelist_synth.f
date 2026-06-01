@@ -30,6 +30,7 @@
 ../rtl/osc/mptdc_osc_wrapper.sv
 
 // Phase detector cell
+../rtl/pd/mptdc_fast_epoch_tag.sv
 ../rtl/pd/mptdc_pd_cell.sv
 
 // Async frontend / capture logic

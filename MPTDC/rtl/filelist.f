@@ -16,6 +16,7 @@ rtl/osc/mptdc_osc_stub.sv
 rtl/osc/mptdc_osc_wrapper.sv
 
 // Phase detector
+rtl/pd/mptdc_fast_epoch_tag.sv
 rtl/pd/mptdc_pd_cell.sv
 
 // Async frontend / capture

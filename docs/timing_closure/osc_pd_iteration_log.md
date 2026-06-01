@@ -381,3 +381,221 @@ Next action:
 
 - Commit/push this prep patch, then run:
   `bash MPTDC/syn/scripts/server_run_genus_o1c_macro_binding.sh 20260601_o1c2_fast_count_audit_genus`
+
+### O1C3 latest Genus review and PD-gate fix
+
+Iteration ID: O1C3_latest_genus_review_pd_gate_fix
+
+Git HEAD:
+
+- pulled HEAD before O1C3 edits: `226549ca4064d8dcb1f5e06fc3223c2454e1d0b7`
+
+Patch summary:
+
+- Reviewed latest committed O1C2 Genus evidence.
+- Confirmed `RO_tune4` binding remains candidate-valid.
+- Confirmed oscillator-domain standard-cell timing is the dominant conceptual blocker.
+- Confirmed PD input gate can fabricate a hit if it forces the sampled slow input low before the bridge samples.
+- Kept `pd_gate_o` high through `ST_M_SNAPSHOT` so the bridge and row-count sample occur before the digital gate drops.
+- Added a Verilator PD-cell unit test that reproduces forced-low false-hit behavior.
+- Cleaned O1C reporting helpers so focused fast-count reports are copied and Cadence collection iteration is not collapsed into one string.
+- Made O1C phase net electrical limits report-only in Genus because Genus 22.13 rejects the net-level SDC commands used in O1C2.
+
+Files changed:
+
+- `MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv`
+- `MPTDC/tb/unit/tb_meas_ctrl_unit.sv`
+- `MPTDC/tb/unit/tb_pd_gate_false_hit_unit.sv`
+- `MPTDC/syn/inputs/mptdc_osc_pd_o1c.sdc`
+- `MPTDC/syn/scripts/procedures.tcl`
+- `MPTDC/syn/scripts/server_run_genus_o1c_macro_binding.sh`
+- `docs/timing_closure/O1C3_latest_genus_review.md`
+- `docs/timing_closure/O1C3_fast_count_root_cause.md`
+- `docs/timing_closure/O1C3_pd_gate_false_hit_analysis.md`
+- `docs/timing_closure/O1C3_architecture_options.md`
+- `docs/timing_closure/osc_pd_iteration_log.md`
+
+Tool stage:
+
+- local Verilator and parser checks
+- no Genus/Innovus/Xcelium run by agent
+
+Was this actually run by agent locally?
+
+- yes, Verilator unit/lint and Python/Tcl/bash checks
+
+Was this run by human on lab server?
+
+- O1C2 evidence was run by human before this review
+- O1C3 edited RTL/scripts have not been run on the lab server
+
+Evidence location:
+
+- latest server evidence: `results/genus_osc_pd/20260601_o1c2_fast_count_audit_genus/`
+- local lint result: `results/local_verilator/20260601_o1c3_local_lint/`
+- review docs:
+  - `docs/timing_closure/O1C3_latest_genus_review.md`
+  - `docs/timing_closure/O1C3_fast_count_root_cause.md`
+  - `docs/timing_closure/O1C3_pd_gate_false_hit_analysis.md`
+  - `docs/timing_closure/O1C3_architecture_options.md`
+
+Local checks:
+
+- `tb_meas_ctrl_unit` with Verilator: PASS, 132 checks
+- `tb_pd_gate_false_hit_unit` with Verilator: PASS
+- `run_lint.sh 20260601_o1c3_local_lint`: PASS
+- `python3 -m py_compile tools/timing/parse_genus_summary.py tools/timing/classify_mptdc_timing_paths.py tools/timing/analyze_fast_count_capture.py`: PASS
+- `bash -n MPTDC/syn/scripts/server_run_genus_o1c_macro_binding.sh`: PASS
+- O1C SDC dummy Tcl source with stubbed Cadence commands: parses through expected report messages
+
+Functional result:
+
+- PD-gate false-hit hazard fixed locally.
+- Measurement field meanings unchanged.
+
+Timing result:
+
+- O1C2 Genus evidence still shows `OSC_FAST_REAL` as dominant:
+  - fast-count focused worst slack: `-3051 ps`
+  - internal fast-counter worst slack: about `-2706 ps`
+  - clk_sys worst slack: about `-825 ps`
+
+Linearity/precision risk:
+
+- O1C3 PD-gate fix risk: low positive, because it prevents a digital forced-low edge before snapshot.
+- Fast-domain architecture remains unresolved and is medium/high risk until a stable-tag or macro strategy is selected.
+
+Decision:
+
+- Do not run Innovus.
+- Do not run R800.
+- Do not resume H4b yet.
+- Next major decision is hardened measurement-fabric macro/waiver versus stable `nfast_hit` tag redesign.
+
+Next action:
+
+- Commit/push O1C3 low-risk fixes and documentation.
+- Do not spend a Genus run on O1C3 alone unless a clean-report sanity check is explicitly desired; it will still be dominated by the oscillator-domain timing feasibility issue.
+
+### O2 raw local fast tag RTL experiment
+
+Iteration ID: O2_RAW_TAG_SW_DECODE_PREP
+
+Git HEAD:
+
+- branch point before O2 edits: `226549ca4064d8dcb1f5e06fc3223c2454e1d0b7`
+
+Patch summary:
+
+- Created branch `SPADMIC_localtag`.
+- Added one local 7-bit LFSR fast epoch tag generator per fast column.
+- Removed the global live binary fast counter from the PD capture path.
+- Changed PD cells to capture local encoded tags and added `detect_en_i` so
+  the sampled slow phase is no longer forced low by core-level gating.
+- Removed RTL tag decode from `mptdc_drain_ctrl`.
+- Exported the raw local LFSR tag in the existing packet/acquisition `nfast`
+  field.
+- Kept packet/acquisition record bit layout unchanged; changed O2 `nfast`
+  semantics and moved decode to software/calibration.
+- Retained the O1C3 measurement controller change that keeps `pd_gate` open
+  through `ST_M_SNAPSHOT`.
+- Added focused Verilator unit tests and included them in local smoke.
+- Prepared a Genus O2 server wrapper and run request.
+
+Files changed:
+
+- `MPTDC/rtl/pkg/mptdc_pkg.sv`
+- `MPTDC/rtl/pd/mptdc_fast_epoch_tag.sv`
+- `MPTDC/rtl/pd/mptdc_pd_cell.sv`
+- `MPTDC/rtl/top/mptdc_core.sv`
+- `MPTDC/rtl/ctrl/mptdc_drain_ctrl.sv`
+- `MPTDC/rtl/filelist.f`
+- `MPTDC/sim/verilator/filelist_verilator.f`
+- `MPTDC/sim/verilator/run_smoke.sh`
+- `MPTDC/syn/filelist_synth.f`
+- `MPTDC/syn/filelist_o1c_macro_binding.f`
+- `MPTDC/syn/filelist_o2_raw_tag.f`
+- `MPTDC/syn/scripts/server_run_genus_o2_raw_tag.sh`
+- `MPTDC/tb/unit/tb_fast_epoch_tag_unit.sv`
+- `MPTDC/tb/unit/tb_pd_cell_tag_capture_unit.sv`
+- `MPTDC/tb/unit/tb_pd_gate_false_hit_unit.sv`
+- `MPTDC/tb/unit/tb_drain_raw_tag_unit.sv`
+- `MPTDC/tb/unit/tb_drain_ctrl_unit.sv`
+- `docs/timing_closure/O2_local_fast_tag_architecture.md`
+- `docs/timing_closure/O2_raw_tag_software_decode.md`
+- `docs/timing_closure/O2_raw_tag_sta_cdc_asic_review.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_OVERNIGHT_CHARAC.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_GENUS.md`
+- `docs/timing_closure/osc_pd_iteration_log.md`
+
+Tool stage:
+
+- local Verilator
+- no Genus/Innovus/Xcelium run by agent
+
+Was this actually run by agent locally?
+
+- yes
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- local smoke: `results/local_verilator/20260601_o2_raw_tag_smoke/`
+- local lint: `results/local_verilator/20260601_o2_raw_tag_lint/`
+- local software smoke: `results/local_software/20260601_o2_raw_tag_charac_smoke/`
+- architecture note: `docs/timing_closure/O2_local_fast_tag_architecture.md`
+- software decode note: `docs/timing_closure/O2_raw_tag_software_decode.md`
+
+Local checks:
+
+- Python compile: PASS for raw-tag decoder, tests, characterization smoke,
+  shared characterization helpers, campaign analysis, calibration, and VIP
+  schema helpers.
+- `python3 tools/mptdc_decode/test_fast_tag_decode.py`: PASS.
+- `python3 MPTDC/scripts/analysis/o2_raw_tag_charac_smoke.py --run-id 20260601_o2_raw_tag_charac_smoke`: PASS.
+- `run_lint.sh 20260601_o2_raw_tag_lint`: PASS.
+- `run_smoke.sh 20260601_o2_raw_tag_smoke`: PASS, 14/14 steps.
+- O2 synthesis filelist Verilator syntax check with `MPTDC_USE_RO_TUNE4_MACRO`: PASS.
+- Characterization baseline dry-run with `--nfast-encoding raw_lfsr_tag`: PASS.
+- VIP overnight char-stage dry-run with `--char-nfast-encoding raw_lfsr_tag`: PASS.
+
+Functional result:
+
+- Verilator smoke PASS.
+- Packet/acquisition record structure unchanged.
+- `nfast_hit` is internally encoded in the held context and emitted as raw tag
+  in O2 mode; software must decode using `nf` plus the LFSR table.
+
+Timing result:
+
+- unknown until O2 Genus.
+- Expected removed path: `u_fast_cnt/bin_q_reg[] -> u_pd/nfast_hit_latched_reg[*]`.
+- Expected new fast paths: local tag LFSR feedback and same-column tag-to-PD
+  captures with fanout 8 per column.
+- No RTL tag decode should appear in `clk_sys`.
+
+Linearity/precision risk:
+
+- medium/high until software characterization and Xcelium/calibration confirm
+  the raw-tag decode and per-`nf` offset model.
+- no PD dimension, tap ordering, START/STOP, or packet layout change.
+
+Decision:
+
+- Run local Python/Verilator raw-tag validation.
+- Run or at least prepare O2 raw-tag overnight characterization before Genus.
+- Request one O2 Genus run only after raw-tag software/VIP confidence.
+- Do not run Innovus until O2 Genus proves the global fast-count path is gone
+  and remaining fast paths are local/physically meaningful.
+- Keep R800, H4b, and cell sizing blocked.
+
+Next action:
+
+- Commit/push O2 raw-tag branch after local checks pass.
+- Server characterization request:
+  `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_OVERNIGHT_CHARAC.md`
+- Genus request, still blocked until raw-tag validation:
+  `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_GENUS.md`

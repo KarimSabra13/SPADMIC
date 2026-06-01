@@ -26,6 +26,7 @@
 #             --char-config NAME    Campaign config (default multihit_15_cal_nominal)
 #             --char-out-mode NAME  raw_features (default raw_features;
 #                                   legacy full/2 aliases are mapped downstream)
+#             --char-nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag
 #             --char-train-seeds N  Calibration training seeds (default 96)
 #             --char-val-dir DIR    Held-out validation directory
 #             --char-fresh-dir DIR  Fresh validation directory
@@ -67,6 +68,7 @@ CHAR_SEEDS=128
 CHAR_N_CONV=200000
 CHAR_CONFIG="multihit_15_cal_nominal"
 CHAR_OUT_MODE="raw_features"
+CHAR_NFAST_ENCODING="legacy_binary_nfast"
 CHAR_TRAIN_SEEDS=96
 CHAR_VAL_DIR=""
 CHAR_FRESH_DIR=""
@@ -140,6 +142,7 @@ while [[ $# -gt 0 ]]; do
     --char-n-conv) CHAR_N_CONV="$2"; shift 2 ;;
     --char-config) CHAR_CONFIG="$2"; shift 2 ;;
     --char-out-mode) CHAR_OUT_MODE="$2"; shift 2 ;;
+    --char-nfast-encoding) CHAR_NFAST_ENCODING="$2"; shift 2 ;;
     --char-train-seeds) CHAR_TRAIN_SEEDS="$2"; shift 2 ;;
     --char-val-dir) CHAR_VAL_DIR="$2"; shift 2 ;;
     --char-fresh-dir) CHAR_FRESH_DIR="$2"; shift 2 ;;
@@ -169,6 +172,13 @@ if [[ -z "$JITTER_SIGMA" && -n "$JITTER_BOUND" ]]; then
   echo "Error: --jitter-bound requires --jitter-sigma" >&2
   exit 1
 fi
+case "$CHAR_NFAST_ENCODING" in
+  legacy_binary_nfast|raw_lfsr_tag) ;;
+  *)
+    echo "Error: --char-nfast-encoding must be legacy_binary_nfast or raw_lfsr_tag" >&2
+    exit 1
+    ;;
+esac
 
 OUT_DIR="$(to_abs "$OUT_DIR")"
 if [[ -n "$CHAR_VAL_DIR" ]]; then
@@ -261,6 +271,7 @@ if (( RUN_CHAR )); then
       --n-conv "$CHAR_N_CONV"
       --config "$CHAR_CONFIG"
       --out-mode "$CHAR_OUT_MODE"
+      --nfast-encoding "$CHAR_NFAST_ENCODING"
       --out-dir "$CHAR_OUT"
       --analyze
       --calibrate
@@ -300,6 +311,7 @@ JOBS="$JOBS" \
 OUT_DIR="$OUT_DIR" \
 VIP_OUT="$VIP_OUT" \
 CHAR_OUT="$CHAR_OUT" \
+CHAR_NFAST_ENCODING="$CHAR_NFAST_ENCODING" \
 python3 - "$MANIFEST" <<'PY'
 import json
 import os
@@ -316,6 +328,7 @@ data = {
     "out_dir": os.environ["OUT_DIR"],
     "vip_out": os.environ["VIP_OUT"],
     "char_out": os.environ["CHAR_OUT"],
+    "char_nfast_encoding": os.environ["CHAR_NFAST_ENCODING"],
 }
 manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 print(f"[OVERNIGHT] Manifest: {manifest}")

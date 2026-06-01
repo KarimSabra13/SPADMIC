@@ -93,6 +93,19 @@ proc mptdc_collect_names {cmd} {
     if {[catch {set objs [eval $cmd]}]} {
         return $names
     }
+
+    if {[llength [info commands foreach_in_collection]] > 0} {
+        foreach_in_collection obj $objs {
+            if {[catch {set name [get_object_name $obj]}]} {
+                if {[catch {set name [get_db $obj .name]}]} {
+                    set name $obj
+                }
+            }
+            lappend names $name
+        }
+        return $names
+    }
+
     foreach obj $objs {
         if {[catch {set name [get_object_name $obj]}]} {
             if {[catch {set name [get_db $obj .name]}]} {
@@ -143,12 +156,12 @@ proc mptdc_run_timing_to_names {rpt_file title endpoint_names} {
     set errors [list]
     foreach path_type [list full_clock full endpoint {}] {
         if {$path_type ne ""} {
-            if {![catch {report_timing -to $endpoint_names -max_paths 100 -path_type $path_type > $rpt_file} err]} {
+            if {![catch {eval [list report_timing -to $endpoint_names -max_paths 100 -path_type $path_type] > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -to <[llength $endpoint_names] endpoints> -max_paths 100 -path_type $path_type: $err"
         } else {
-            if {![catch {report_timing -to $endpoint_names -max_paths 100 > $rpt_file} err]} {
+            if {![catch {eval [list report_timing -to $endpoint_names -max_paths 100] > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -to <[llength $endpoint_names] endpoints> -max_paths 100: $err"
@@ -173,12 +186,12 @@ proc mptdc_run_fast_clock_to_names {rpt_file title endpoint_names {max_paths 300
     set errors [list]
     foreach path_type [list full_clock full endpoint {}] {
         if {$path_type ne ""} {
-            if {![catch {report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths -path_type $path_type > $rpt_file} err]} {
+            if {![catch {eval [list report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths -path_type $path_type] > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -from clk_osc_fast -to <[llength $endpoint_names] endpoints> -max_paths $max_paths -path_type $path_type: $err"
         } else {
-            if {![catch {report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths > $rpt_file} err]} {
+            if {![catch {eval [list report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths] > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -from clk_osc_fast -to <[llength $endpoint_names] endpoints> -max_paths $max_paths: $err"

@@ -19,6 +19,7 @@
 
 ../rtl/osc/mptdc_osc_wrapper.sv
 
+../rtl/pd/mptdc_fast_epoch_tag.sv
 ../rtl/pd/mptdc_pd_cell.sv
 
 ../rtl/async/mptdc_stop_capture_async.sv

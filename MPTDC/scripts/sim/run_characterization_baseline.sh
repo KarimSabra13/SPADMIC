@@ -10,6 +10,7 @@
 #           --config NAME         Campaign config (default multihit_15_cal_nominal)
 #           --out-mode NAME       raw_features (default raw_features;
 #                                 legacy full/2 aliases are mapped to raw_features)
+#           --nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag
 #           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_raw_features)
 #           --analyze             Run sweep analysis + fine-grid report, including
 #                                 raw tuple histograms/code-density CSVs and plots
@@ -40,6 +41,7 @@ SEEDS=30
 N_CONV=100000
 CONFIG="multihit_15_cal_nominal"
 OUT_MODE="raw_features"
+NFAST_ENCODING="legacy_binary_nfast"
 OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_raw_features"
 ANALYZE=0
 CALIBRATE=0
@@ -110,6 +112,7 @@ while [[ $# -gt 0 ]]; do
     --n-conv) N_CONV="$2"; shift 2 ;;
     --config) CONFIG="$2"; shift 2 ;;
     --out-mode) OUT_MODE="$2"; shift 2 ;;
+    --nfast-encoding) NFAST_ENCODING="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --analyze) ANALYZE=1; shift ;;
     --calibrate) CALIBRATE=1; shift ;;
@@ -163,6 +166,13 @@ case "$OUT_MODE" in
   raw_features|raw|0) OUT_MODE="raw_features" ;;
   *)
     echo "[ERROR] Unknown out mode '$OUT_MODE' (use raw_features)"
+    exit 1
+    ;;
+esac
+case "$NFAST_ENCODING" in
+  legacy_binary_nfast|raw_lfsr_tag) ;;
+  *)
+    echo "[ERROR] Unknown nfast encoding '$NFAST_ENCODING'"
     exit 1
     ;;
 esac
@@ -227,6 +237,7 @@ ANALYZE_CMD=(
   --campaign-dir "$CAMPAIGN_DIR"
   --output-dir "$SWEEP_ANALYSIS_DIR"
   --config-filter "$CONFIG*"
+  --nfast-encoding "$NFAST_ENCODING"
 )
 if (( DRY_RUN )); then
   ANALYZE_CMD+=(--max-files 1)
@@ -242,6 +253,7 @@ CALIBRATE_CMD=(
   --train-dir "$CAMPAIGN_DIR/$CAMPAIGN_CONFIG_DIR"
   --out-dir "$CALIBRATION_DIR"
   --train-seeds "$TRAIN_SEEDS"
+  --nfast-encoding "$NFAST_ENCODING"
 )
 if [[ -n "$VAL_DIR" ]]; then
   CALIBRATE_CMD+=(--val-dir "$VAL_DIR")
@@ -287,6 +299,7 @@ write_manifest() {
   export MANIFEST_N_CONV="$N_CONV"
   export MANIFEST_CONFIG="$CONFIG"
   export MANIFEST_OUT_MODE="$OUT_MODE"
+  export MANIFEST_NFAST_ENCODING="$NFAST_ENCODING"
   export MANIFEST_OUT_DIR="$OUT_DIR"
   export MANIFEST_CAMPAIGN_DIR="$CAMPAIGN_DIR"
   export MANIFEST_CAMPAIGN_CONFIG_DIR="$CAMPAIGN_DIR/$CAMPAIGN_CONFIG_DIR"
@@ -337,6 +350,7 @@ data = {
         "config": os.environ["MANIFEST_CONFIG"],
         "delay_range_ps": [20, 30000],
         "out_mode": os.environ["MANIFEST_OUT_MODE"],
+        "nfast_encoding": os.environ["MANIFEST_NFAST_ENCODING"],
         "smoke": env_bool("MANIFEST_SMOKE"),
     },
     "stages": {

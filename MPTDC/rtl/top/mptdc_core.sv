@@ -103,11 +103,16 @@ module mptdc_core
   // =========================================================================
   wire [PD_N-1:0]          pd_hit_level;
   wire [PD_N*NFAST_W-1:0]  pd_nfast_hit_packed;
+  logic [NFAST_W-1:0]      fast_tag_col [NE];
 
   // =========================================================================
-  //  Internal wires — gray counter CDC
+  //  Internal wires — counter/tag fabric
   // =========================================================================
   wire [NSLOW_W-1:0] nslow_src_count, nslow_stop_latched;
+
+  // O2 local-tag mode: this compatibility signal is the phase-0 encoded tag,
+  // not a live binary fast counter.  It is exported raw in the existing metadata
+  // nfast field; software/calibration decodes raw tags with mode metadata.
   wire [NFAST_W-1:0] nfast_src_count;
 
   // nfast_stop is retained only as an internal compatibility field. In the
@@ -397,12 +402,32 @@ module mptdc_core
     .phase7d_probe_o (/* unused */)
   );
 
+  // ── Local fast epoch tags (one shallow tag generator per fast column) ──────
+  // Each tag is clocked by the same fast tap that samples the corresponding PD
+  // column.  This removes the O1C fast_phase[0] binary counter -> fast_phase[nf]
+  // PD capture path and limits tag fanout to the eight cells in one column.
+  for (genvar nf_tag = 0; nf_tag < NE; nf_tag++) begin : gen_fast_tag_col
+    (* keep_hierarchy = "yes", preserve *)
+    mptdc_fast_epoch_tag #(
+      .W    (NFAST_W),
+      .SEED (FAST_TAG_SEED)
+    ) u_fast_tag (
+      .clk_fast     (fast_phase[nf_tag]),
+      .rst_n        (rst_fast_n),
+      .clear_window (meas_pd_clear),
+      .enable_i     (fe_osc_fast_en),
+      .tag_o        (fast_tag_col[nf_tag])
+    );
+  end
+
+  assign nfast_src_count = fast_tag_col[0];
+
   // ── Phase Detector Matrix (PD_N cells) ─────────────────────────
   // The PD island is the critical physical-performance block.  Keep the 8x8
   // hierarchy regular so backend placement/routing can preserve row/column
   // symmetry, matched phase-tap loading, and reviewable RC/skew assumptions.
-  // slow_phase gating prevents startup/teardown edges from becoming false hits;
-  // it is a functional enable boundary, not a substitute for PD placement review.
+  // detect_en_i freezes the PD samplers outside the valid measurement window
+  // without forcing slow_phase low and fabricating a falling-edge hit.
   for (genvar ns = 0; ns < NE; ns++) begin : gen_pd_row
     for (genvar nf = 0; nf < NE; nf++) begin : gen_pd_col
       localparam int unsigned CELL = ns * NE + nf;
@@ -410,9 +435,10 @@ module mptdc_core
       mptdc_pd_cell #(.SAMPLE_DEPTH(2)) u_pd (
         .rst_n        (rst_sys_n),
         .clear_window (meas_pd_clear),
-        .slow_phase   (pd_enable_gated & slow_phase[ns]),
+        .slow_phase   (slow_phase[ns]),
         .fast_phase   (fast_phase[nf]),
-        .nfast_count  (nfast_src_count),
+        .detect_en_i  (pd_enable_gated),
+        .nfast_tag_i  (fast_tag_col[nf]),
         .hit_level    (pd_hit_level[CELL]),
         .nfast_hit    (pd_nfast_hit_packed[CELL*NFAST_W +: NFAST_W])
       );
@@ -454,26 +480,6 @@ module mptdc_core
     .dst_latch_p          (1'b0),
     .dst_count_continuous (/* unused */),
     .dst_count_latched    (nslow_stop_latched)
-  );
-
-  // ── Fast counter — same domain, no CDC needed ────────────────
-  mptdc_gray_cnt_sync #(
-    .W                  (NFAST_W),
-    .USE_ASYNC_SNAPSHOT (1'b0)
-  ) u_fast_cnt (
-    .src_clk              (osc_fast_ph0),
-    .src_rst_n            (rst_fast_n),
-    .src_async_clr        (meas_pd_clear),
-    .src_en               (1'b1),
-    .src_clr              (1'b0),
-    .src_latch_p          (1'b0),
-    .src_async_latch_p    (1'b0),
-    .src_count            (nfast_src_count),
-    .dst_clk              (osc_fast_ph0),
-    .dst_rst_n            (rst_fast_n),
-    .dst_latch_p          (1'b0),
-    .dst_count_continuous (/* unused — same domain, use src_count */),
-    .dst_count_latched    (/* unused */)
   );
 
   // ── Measurement FSM (clk_sys domain) ──────────────────────────

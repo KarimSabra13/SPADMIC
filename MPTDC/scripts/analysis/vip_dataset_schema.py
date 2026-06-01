@@ -70,6 +70,15 @@ VIP_COLUMNS = [
     "reconstructed_time_post_cal_ps",
     "residual_pre_cal_ps",
     "residual_post_cal_ps",
+    "nfast_encoding",
+    "tag_decode_mode",
+    "lfsr_width",
+    "tag_width",
+    "lfsr_seed",
+    "tag_columns",
+    "column_offsets_version",
+    "nfast_raw_tag",
+    "nfast_decoded",
 ]
 
 

@@ -26,6 +26,10 @@ module tb_drain_ctrl_unit;
 
   int pass_cnt;
   int fail_cnt;
+  logic [NFAST_W-1:0] exp_tag0;
+  logic [NFAST_W-1:0] exp_tag5;
+  logic [NFAST_W-1:0] exp_tag33;
+  logic [NFAST_W-1:0] exp_tag73;
 
   mptdc_drain_ctrl u_dut (
     .clk_sys          (clk_sys),
@@ -89,15 +93,23 @@ module tb_drain_ctrl_unit;
 
   task automatic build_snapshot();
     snapshot = '0;
+    exp_tag0 = FAST_TAG_SEED;
+    exp_tag5 = FAST_TAG_SEED;
+    exp_tag33 = FAST_TAG_SEED;
+    exp_tag73 = FAST_TAG_SEED;
+    repeat (5)  exp_tag5 = fast_tag_next(exp_tag5);
+    repeat (33) exp_tag33 = fast_tag_next(exp_tag33);
+    repeat (73) exp_tag73 = fast_tag_next(exp_tag73);
+
     snapshot.hit_count = 4'd3;
     snapshot.hit_level[0]  = 1'b1;
     snapshot.hit_level[5]  = 1'b1;
     snapshot.hit_level[63] = 1'b1;
-    snapshot.nfast_hit_packed[0*NFAST_W +: NFAST_W]  = 7'd10;
-    snapshot.nfast_hit_packed[5*NFAST_W +: NFAST_W]  = 7'd15;
-    snapshot.nfast_hit_packed[63*NFAST_W +: NFAST_W] = 7'd73;
+    snapshot.nfast_hit_packed[0*NFAST_W +: NFAST_W]  = exp_tag0;
+    snapshot.nfast_hit_packed[5*NFAST_W +: NFAST_W]  = exp_tag5;
+    snapshot.nfast_hit_packed[63*NFAST_W +: NFAST_W] = exp_tag73;
     snapshot.nslow_snap = 7'd42;
-    snapshot.nfast_snap = 7'd33;
+    snapshot.nfast_snap = exp_tag33;
     snapshot.nfast_stop = 7'd0;
     snapshot.phase0_snap = 1'b1;
     snapshot.stop_slow_phase_disc = 3'b101;
@@ -135,6 +147,7 @@ module tb_drain_ctrl_unit;
     wait_write(rec, "META");
     check(rec.kind == ACQ_REC_META, "first record is META");
     check(rec.meta.nslow == snapshot.nslow_snap, "META nslow matches snapshot");
+    check(rec.meta.nfast == exp_tag33, "META nfast exports raw phase0 tag");
     check(rec.meta.hit_count == snapshot.hit_count, "META hit_count matches snapshot");
     check(rec.meta.flags == snapshot.flags, "META flags match snapshot");
     check(rec.meta.phase0_snap == snapshot.phase0_snap, "META phase0 matches snapshot");
@@ -147,21 +160,21 @@ module tb_drain_ctrl_unit;
     check(rec.kind == ACQ_REC_HIT, "second record is HIT");
     check(rec.hit.ns == ph_idx_t'(0), "HIT0 ns");
     check(rec.hit.nf == ph_idx_t'(0), "HIT0 nf");
-    check(rec.hit.nfast == 7'd10, "HIT0 nfast");
+    check(rec.hit.nfast == exp_tag0, "HIT0 nfast exports raw tag");
     check(rec.hit.event_seq == EVENT_SEQ_W'(0), "HIT0 event_seq");
 
     wait_write(rec, "HIT5");
     check(rec.kind == ACQ_REC_HIT, "third record is HIT");
     check(rec.hit.ns == ph_idx_t'(0), "HIT5 ns");
     check(rec.hit.nf == ph_idx_t'(5), "HIT5 nf");
-    check(rec.hit.nfast == 7'd15, "HIT5 nfast");
+    check(rec.hit.nfast == exp_tag5, "HIT5 nfast exports raw tag");
     check(rec.hit.event_seq == EVENT_SEQ_W'(1), "HIT5 event_seq");
 
     wait_write(rec, "HIT63");
     check(rec.kind == ACQ_REC_HIT, "fourth record is HIT");
     check(rec.hit.ns == ph_idx_t'(7), "HIT63 ns");
     check(rec.hit.nf == ph_idx_t'(7), "HIT63 nf");
-    check(rec.hit.nfast == 7'd73, "HIT63 nfast");
+    check(rec.hit.nfast == exp_tag73, "HIT63 nfast exports raw tag");
     check(rec.hit.event_seq == EVENT_SEQ_W'(2), "HIT63 event_seq");
 
     wait_release(ctx_id_t'(0), "ctx0 release");

@@ -16,8 +16,17 @@ SCRIPT_ROOT = Path(__file__).resolve().parents[1]
 import sys
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
+TOOLS_ROOT = SCRIPT_ROOT.parents[1] / "tools"
+if str(TOOLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TOOLS_ROOT))
 
 from plot_style import PALETTE, apply_report_style, save_figure, style_axes
+from mptdc_decode.fast_tag_decode import (
+    LEGACY_BINARY_NFAST,
+    RAW_LFSR_TAG,
+    FastTagMetadata,
+    decode_raw_tag,
+)
 
 NE = 8
 K_VERNIER = 11
@@ -26,6 +35,8 @@ DELTA_LSB_PS = 10
 VERNIER_NSLOW_ORIGIN_BIAS = 2
 VERNIER_NFAST_ORIGIN_BIAS = 1
 VERNIER_COEF_BIAS = 25
+NFAST_ENCODING_LEGACY = LEGACY_BINARY_NFAST
+NFAST_ENCODING_RAW_LFSR_TAG = RAW_LFSR_TAG
 
 FIG_EXTS = ("png", "pdf")
 
@@ -70,6 +81,54 @@ def vernier_tconv_ps(nslow, nfast, ns, nf, slow_boundary_inc):
         + VERNIER_COEF_BIAS
     )
     return coef * DELTA_LSB_PS
+
+
+def add_o2_raw_tag_decode_columns(
+    df: pd.DataFrame,
+    *,
+    nfast_encoding: str = LEGACY_BINARY_NFAST,
+    column_offsets: dict[int, int] | list[int] | None = None,
+    detection_offset: int = 0,
+) -> pd.DataFrame:
+    """Annotate characterization rows with O2 raw-tag decode metadata.
+
+    In `legacy_binary_nfast` mode this preserves old datasets by copying
+    `nfast_hit` to `nfast_decoded`.  In `raw_lfsr_tag` mode the existing
+    `nfast_hit` column is treated as a raw LFSR tag and decoded in software.
+    """
+    out = df.copy()
+    meta = FastTagMetadata(nfast_encoding=nfast_encoding)
+    for key, value in meta.as_dict().items():
+        out[key] = value
+
+    if "nfast_hit" not in out.columns or "nf" not in out.columns:
+        return out
+
+    decoded = []
+    raw_tags = []
+    for _, row in out.iterrows():
+        raw = int(row["nfast_hit"])
+        nf = int(row["nf"])
+        raw_tags.append(raw if nfast_encoding == RAW_LFSR_TAG else np.nan)
+        decoded.append(decode_raw_tag(
+            raw,
+            nf,
+            mode=nfast_encoding,
+            column_offsets=column_offsets,
+            detection_offset=detection_offset,
+        ))
+    out["nfast_raw_tag"] = raw_tags
+    out["nfast_decoded"] = decoded
+
+    required = {"nslow", "ns", "nf", "slow_boundary_inc"}
+    if required.issubset(out.columns):
+        out["t_raw_ps_decoded_nfast"] = [
+            vernier_tconv_ps(int(row["nslow"]), int(row["nfast_decoded"]),
+                             int(row["ns"]), int(row["nf"]),
+                             int(row["slow_boundary_inc"]))
+            for _, row in out.iterrows()
+        ]
+    return out
 
 
 def discover_stage_csvs(root: Path, stage: str | None = None) -> list[Path]:
