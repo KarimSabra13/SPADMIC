@@ -64,3 +64,27 @@ O1C Genus must prove:
 - old `u_stub/phase[0:7]` pins are not used as clock sources
 - `clk_sys` timing remains visible
 - real fast-domain paths remain visible
+
+## O1C2 Cleanup
+
+The first successful O1C Genus run still contained SDC/Tcl noise.  O1C2 makes
+the next run more useful by:
+
+- constructing bracketed phase-net patterns with Tcl `format`, avoiding command
+  substitution on names like `S[0]` and `fast_phase[0]`;
+- deriving phase nets from matched `RO_tune4/S[0:7]` pins first, then falling
+  back to name patterns only if needed;
+- removing report-only `group_path` commands from the SDC overlay because broad
+  cell collections created invalid/no-effect endpoint noise;
+- keeping all real fast-counter to `nfast_hit` timing visible;
+- adding focused report scripts instead of timing exceptions.
+
+O1C2 must report:
+
+```text
+O1C_SDC_CLEAN_STATUS=PASS
+O1C_BINDING_STATUS=O1C_ARCH_VALID_BINDING_CANDIDATE
+```
+
+If `O1C_SDC_CLEAN_STATUS` is not `PASS`, do not use the timing numbers for
+architecture decisions until the log is reviewed.

@@ -163,6 +163,7 @@ if command -v python3 >/dev/null 2>&1; then
       timing_osc_fast_full_clock.rpt \
       timing_pd_capture_hotspots.rpt \
       timing_osc_counter_hotspots.rpt \
+      timing_fast_count_to_nfast_hit.rpt \
       timing_clk_sys_violations.rpt; do
       [[ -f "$RESULT_DIR/$rpt" ]] && reports+=("$RESULT_DIR/$rpt")
     done
@@ -170,6 +171,9 @@ if command -v python3 >/dev/null 2>&1; then
       python3 "$REPO_ROOT/tools/timing/classify_mptdc_timing_paths.py" "${reports[@]}" \
         --out-csv "$RESULT_DIR/timing_path_classification.csv" \
         --out-summary "$RESULT_DIR/timing_path_classification_summary.md" || true
+    fi
+    if [[ -f "$RESULT_DIR/timing_path_classification.csv" && -f "$REPO_ROOT/tools/timing/analyze_fast_count_capture.py" ]]; then
+      python3 "$REPO_ROOT/tools/timing/analyze_fast_count_capture.py" "$RESULT_DIR" || true
     fi
   fi
 fi
@@ -181,6 +185,13 @@ if [[ "$RO_COUNT" == "2" && "$STUB_COUNT" == "0" ]]; then
   else
     O1C_STATUS="O1C_BINDING_ONLY_NOT_FUNCTIONAL"
   fi
+fi
+
+O1C_SDC_WARN_COUNT="$(grep -c 'MPTDC_O1C_SDC_WARN' "$GENUS_LOG" 2>/dev/null || true)"
+TCL_INVALID_COMMAND_COUNT="$(grep -c 'invalid command name' "$GENUS_LOG" 2>/dev/null || true)"
+O1C_SDC_CLEAN_STATUS="PASS"
+if [[ "$O1C_SDC_WARN_COUNT" != "0" || "$TCL_INVALID_COMMAND_COUNT" != "0" ]]; then
+  O1C_SDC_CLEAN_STATUS="REVIEW_REQUIRED"
 fi
 
 {
@@ -198,8 +209,11 @@ fi
   echo "- mptdc_osc_stub residue count: $STUB_COUNT"
   echo "- rstb reset-like connection count: $RSTB_RESET_LIKE_COUNT"
   echo "- report_clocks RO_tune4/S match count: $CLOCKS_ON_RO"
+  echo "- O1C SDC warning count: $O1C_SDC_WARN_COUNT"
+  echo "- Tcl invalid-command count: $TCL_INVALID_COMMAND_COUNT"
   echo
   echo "O1C_BINDING_STATUS=$O1C_STATUS"
+  echo "O1C_SDC_CLEAN_STATUS=$O1C_SDC_CLEAN_STATUS"
   echo "STATUS_LABEL=REAL_PHYSICAL_ABSTRACT_WITH_LIBERTY_SHELL"
   echo "INNOVUS_BLOCKED_UNTIL_O1C_REVIEW=YES"
   echo "R800_BLOCKED_UNTIL_O1C_AND_ANALOG_TUNE_DATA=YES"
@@ -215,6 +229,10 @@ fi
     check_timing_intent.rpt \
     timing_summary.rpt \
     timing_violations.rpt \
+    timing_fast_count_to_nfast_hit.rpt \
+    fast_count_capture_endpoint_audit.rpt \
+    fast_count_capture_paths.csv \
+    fast_count_capture_summary.md \
     timing_path_classification.csv \
     timing_path_classification_summary.md \
     latch_audit.rpt \

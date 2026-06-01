@@ -305,3 +305,79 @@ Fix:
 Server action:
 
 - Pull the quote-fix commit and rerun the same O1C Genus command.
+
+### O1C2 fast-count audit prep
+
+Iteration ID: O1C2_fast_count_audit_prep
+
+Git HEAD:
+
+- local base before this prep: `abe049df9d31cb5899cd3810eb9adf89a1cc0baa`
+
+Patch summary:
+
+- Fixed O1C SDC bracketed phase-net pattern construction.
+- Removed report-only `group_path` commands from the O1C overlay.
+- Added focused Genus report generation for `fast counter -> nfast_hit`.
+- Added local parser `tools/timing/analyze_fast_count_capture.py`.
+- Added O1C result review documentation.
+
+Files changed:
+
+- `MPTDC/syn/inputs/mptdc_osc_pd_o1c.sdc`
+- `MPTDC/syn/scripts/procedures.tcl`
+- `MPTDC/syn/scripts/server_run_genus_o1c_macro_binding.sh`
+- `tools/timing/parse_genus_summary.py`
+- `tools/timing/analyze_fast_count_capture.py`
+- `docs/timing_closure/O1C_result_review.md`
+- `docs/timing_closure/O1C_fast_count_capture_analysis.md`
+- `docs/timing_closure/O1C_sdc_binding_notes.md`
+- `docs/timing_closure/osc_pd_iteration_log.md`
+
+Tool stage:
+
+- local parser checks
+- next required server stage: Genus only
+
+Was this actually run by agent locally?
+
+- yes, Python syntax checks and local parsing of committed O1C reports
+- no Cadence tools run locally
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- local parser output from committed O1C report:
+  `results/genus_osc_pd/20260528_o1c_macro_binding_genus/fast_count_capture_summary.md`
+- updated server run will produce fresh O1C2 evidence under:
+  `results/genus_osc_pd/20260601_o1c2_fast_count_audit_genus/`
+
+Local checks:
+
+- `python3 -m py_compile tools/timing/parse_genus_summary.py tools/timing/classify_mptdc_timing_paths.py tools/timing/analyze_fast_count_capture.py`: pass
+- `python3 tools/timing/analyze_fast_count_capture.py results/genus_osc_pd/20260528_o1c_macro_binding_genus`: pass
+
+Functional result:
+
+- no RTL semantics changed
+
+Timing result:
+
+- unknown until O1C2 Genus run
+
+Linearity/precision risk:
+
+- none for this prep patch
+- it adds reports only and does not touch PD/oscillator behavior
+
+Decision:
+
+- request one O1C2 Genus run before Innovus/R800/H4b
+
+Next action:
+
+- Commit/push this prep patch, then run:
+  `bash MPTDC/syn/scripts/server_run_genus_o1c_macro_binding.sh 20260601_o1c2_fast_count_audit_genus`

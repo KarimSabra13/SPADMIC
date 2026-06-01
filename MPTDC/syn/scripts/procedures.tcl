@@ -158,6 +158,36 @@ proc mptdc_run_timing_to_names {rpt_file title endpoint_names} {
     mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
+proc mptdc_run_fast_clock_to_names {rpt_file title endpoint_names {max_paths 300}} {
+    if {[llength $endpoint_names] == 0} {
+        mptdc_write_report_failure $rpt_file $title "No endpoint names provided."
+        return
+    }
+
+    set fast_clocks [get_clocks -quiet clk_osc_fast]
+    if {[llength $fast_clocks] == 0} {
+        mptdc_write_report_failure $rpt_file $title "Clock clk_osc_fast was not found."
+        return
+    }
+
+    set errors [list]
+    foreach path_type [list full_clock full endpoint {}] {
+        if {$path_type ne ""} {
+            if {![catch {report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths -path_type $path_type > $rpt_file} err]} {
+                return
+            }
+            lappend errors "report_timing -from clk_osc_fast -to <[llength $endpoint_names] endpoints> -max_paths $max_paths -path_type $path_type: $err"
+        } else {
+            if {![catch {report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths > $rpt_file} err]} {
+                return
+            }
+            lappend errors "report_timing -from clk_osc_fast -to <[llength $endpoint_names] endpoints> -max_paths $max_paths: $err"
+        }
+    }
+
+    mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
+}
+
 proc mptdc_try_set_db {objects attr value} {
     if {[llength $objects] == 0} {
         return
@@ -304,6 +334,104 @@ proc mptdc_write_fast_feasibility_audit {rpt_file} {
     puts $fh "  timing_context_bank_hotspots.rpt"
     puts $fh "  Innovus preCTS/postRoute full_clock timing reports"
     close $fh
+}
+
+proc mptdc_write_fast_count_capture_endpoint_audit {rpt_file capture_pins} {
+    global design
+
+    set fh [open $rpt_file w]
+    puts $fh "MPTDC fast-count to nfast_hit endpoint audit"
+    puts $fh "=========================================="
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "Purpose"
+    puts $fh "-------"
+    puts $fh "Count and bucket PD nfast_hit capture endpoints before running focused"
+    puts $fh "timing reports.  These paths remain real timing candidates until the"
+    puts $fh "architecture proves the fast counter value is intentionally sampled as a"
+    puts $fh "stable previous-cycle value."
+    puts $fh ""
+
+    puts $fh "Current oscillator model"
+    puts $fh "------------------------"
+    if {[info exists design(OSC_FAST_PERIOD)]} {
+        puts $fh "  fast period ns: $design(OSC_FAST_PERIOD)"
+    }
+    if {[info exists design(OSC_FAST_TAP_STEP)]} {
+        puts $fh "  fast tap step ns: $design(OSC_FAST_TAP_STEP)"
+    }
+    if {[info exists design(OSC_CLOCK_UNCERTAINTY_SETUP)]} {
+        puts $fh "  oscillator setup uncertainty ns: $design(OSC_CLOCK_UNCERTAINTY_SETUP)"
+    }
+    puts $fh ""
+
+    puts $fh "Endpoint count: [llength $capture_pins]"
+    puts $fh ""
+
+    array set by_tap {}
+    array set by_row {}
+    array set by_bit {}
+    foreach pin $capture_pins {
+        set tap "unknown"
+        set row "unknown"
+        set bit "unknown"
+        regexp {gen_pd_col\[([0-9]+)\]} $pin -> tap
+        regexp {gen_pd_row\[([0-9]+)\]} $pin -> row
+        regexp {nfast_hit_latched_reg\[([0-9]+)\]} $pin -> bit
+        incr by_tap($tap)
+        incr by_row($row)
+        incr by_bit($bit)
+    }
+
+    puts $fh "By fast tap / PD column"
+    puts $fh "-----------------------"
+    foreach tap [lsort -dictionary [array names by_tap]] {
+        puts $fh [format "  tap %-8s %s" $tap $by_tap($tap)]
+    }
+    puts $fh ""
+
+    puts $fh "By PD row / slow tap"
+    puts $fh "--------------------"
+    foreach row [lsort -dictionary [array names by_row]] {
+        puts $fh [format "  row %-8s %s" $row $by_row($row)]
+    }
+    puts $fh ""
+
+    puts $fh "By nfast_hit bit"
+    puts $fh "----------------"
+    foreach bit [lsort -dictionary [array names by_bit]] {
+        puts $fh [format "  bit %-8s %s" $bit $by_bit($bit)]
+    }
+    puts $fh ""
+
+    puts $fh "First 40 endpoint pins"
+    puts $fh "----------------------"
+    set count 0
+    foreach pin [lsort -dictionary $capture_pins] {
+        puts $fh "  $pin"
+        incr count
+        if {$count >= 40} {
+            break
+        }
+    }
+    close $fh
+}
+
+proc mptdc_report_fast_count_capture {dir} {
+    set capture_pins [mptdc_collect_names [list get_pins -quiet -hierarchical *nfast_hit_latched_reg*/D]]
+    if {[llength $capture_pins] == 0} {
+        set capture_pins [mptdc_collect_names [list get_pins -quiet -hierarchical *nfast_hit_latched_reg*/*D*]]
+    }
+
+    mptdc_write_fast_count_capture_endpoint_audit \
+        "$dir/fast_count_capture_endpoint_audit.rpt" \
+        $capture_pins
+
+    mptdc_run_fast_clock_to_names \
+        "$dir/timing_fast_count_to_nfast_hit.rpt" \
+        "fast counter clock to PD nfast_hit capture timing report" \
+        $capture_pins \
+        300
 }
 
 proc mptdc_write_high_fanout_report {rpt_file {limit 100} {threshold 20}} {
@@ -454,6 +582,8 @@ proc mptdc_report_timing {report_dir} {
     mptdc_report_hotspot_timing "$dir/timing_osc_counter_hotspots.rpt" \
         "oscillator support-counter timing report" \
         [list *u_fast_cnt* *u_slow_cnt* *nfast_src_count* *start_wdt_cnt* *start_timeout_latched*]
+
+    mptdc_report_fast_count_capture $dir
 
     mptdc_report_hotspot_timing "$dir/timing_meas_ctrl_hotspots.rpt" \
         "measurement-controller hotspot timing report" \

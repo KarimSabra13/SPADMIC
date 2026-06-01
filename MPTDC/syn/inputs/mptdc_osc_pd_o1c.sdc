@@ -36,6 +36,16 @@ proc mptdc_o1c_try_get_nets {patterns} {
     return $nets
 }
 
+proc mptdc_o1c_get_nets_of_pins {pins} {
+    set nets [list]
+    foreach pin $pins {
+        if {![catch {set found [get_nets -quiet -of_objects $pin]}] && [llength $found] > 0} {
+            set nets [concat $nets $found]
+        }
+    }
+    return $nets
+}
+
 proc mptdc_o1c_try {label body} {
     if {[catch {uplevel 1 $body} err]} {
         puts "MPTDC_O1C_SDC_WARN: $label failed: $err"
@@ -80,12 +90,15 @@ if {[llength $mptdc_o1c_slow_pins] != 8 || [llength $mptdc_o1c_fast_pins] != 8} 
 
 set mptdc_o1c_phase_net_patterns [list]
 for {set i 0} {$i < 8} {incr i} {
-    lappend mptdc_o1c_phase_net_patterns "*slow_phase\\[$i\\]*"
-    lappend mptdc_o1c_phase_net_patterns "*fast_phase\\[$i\\]*"
-    lappend mptdc_o1c_phase_net_patterns "*u_osc_slow*u_ro_tune4*S\\[$i\\]*"
-    lappend mptdc_o1c_phase_net_patterns "*u_osc_fast*u_ro_tune4*S\\[$i\\]*"
+    lappend mptdc_o1c_phase_net_patterns [format {*slow_phase[%d]*} $i]
+    lappend mptdc_o1c_phase_net_patterns [format {*fast_phase[%d]*} $i]
+    lappend mptdc_o1c_phase_net_patterns [format {*u_osc_slow*u_ro_tune4*S[%d]*} $i]
+    lappend mptdc_o1c_phase_net_patterns [format {*u_osc_fast*u_ro_tune4*S[%d]*} $i]
 }
-set mptdc_o1c_phase_nets [mptdc_o1c_try_get_nets $mptdc_o1c_phase_net_patterns]
+set mptdc_o1c_phase_nets [mptdc_o1c_get_nets_of_pins [concat $mptdc_o1c_slow_pins $mptdc_o1c_fast_pins]]
+if {[llength $mptdc_o1c_phase_nets] == 0} {
+    set mptdc_o1c_phase_nets [mptdc_o1c_try_get_nets $mptdc_o1c_phase_net_patterns]
+}
 if {[llength $mptdc_o1c_phase_nets] > 0} {
     mptdc_o1c_try "set max transition on RO_tune4 phase nets" {
         set_max_transition 0.150 $mptdc_o1c_phase_nets
@@ -102,26 +115,11 @@ set mptdc_o1c_fast_cells [get_cells -quiet -hierarchical *u_fast_cnt*]
 set mptdc_o1c_slow_cells [get_cells -quiet -hierarchical *u_slow_cnt*]
 set mptdc_o1c_bridge_cells [get_cells -quiet -hierarchical *u_hit_capture_bridge*]
 
-if {[llength $mptdc_o1c_pd_cells] > 0} {
-    mptdc_o1c_try "group PD capture endpoints for O1C review" {
-        group_path -name O1C_PD_CAPTURE -to $mptdc_o1c_pd_cells
-    }
-}
-if {[llength $mptdc_o1c_fast_cells] > 0} {
-    mptdc_o1c_try "group fast counter endpoints for O1C review" {
-        group_path -name O1C_REAL_FAST -to $mptdc_o1c_fast_cells
-    }
-}
-if {[llength $mptdc_o1c_slow_cells] > 0} {
-    mptdc_o1c_try "group slow counter endpoints for O1C review" {
-        group_path -name O1C_REAL_SLOW -to $mptdc_o1c_slow_cells
-    }
-}
-if {[llength $mptdc_o1c_bridge_cells] > 0} {
-    mptdc_o1c_try "group held-bus bridge endpoints for O1C review" {
-        group_path -name O1C_HELD_BUS_CDC -to $mptdc_o1c_bridge_cells
-    }
-}
+puts "MPTDC_O1C_SDC_INFO: matched PD cells for review = [llength $mptdc_o1c_pd_cells]"
+puts "MPTDC_O1C_SDC_INFO: matched fast counter cells for review = [llength $mptdc_o1c_fast_cells]"
+puts "MPTDC_O1C_SDC_INFO: matched slow counter cells for review = [llength $mptdc_o1c_slow_cells]"
+puts "MPTDC_O1C_SDC_INFO: matched hit-capture bridge cells for review = [llength $mptdc_o1c_bridge_cells]"
+puts "MPTDC_O1C_SDC_INFO: no O1C group_path commands added; report grouping is handled by Genus report scripts"
 
 puts "MPTDC_O1C_SDC_INFO: no clk_sys backend exceptions added"
 puts "MPTDC_O1C_SDC_INFO: fast counter -> nfast_hit remains visible for timing classification"

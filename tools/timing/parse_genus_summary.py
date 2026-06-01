@@ -221,6 +221,7 @@ def summarize_paths(paths: list[dict[str, Any]]) -> dict[str, Any]:
 def parse_run(run_dir: Path) -> dict[str, Any]:
     path_reports = [
         run_dir / "timing_violations.rpt",
+        run_dir / "timing_fast_count_to_nfast_hit.rpt",
         run_dir / "timing_clk_sys_full_clock.rpt",
         run_dir / "timing_clk_sys_violations.rpt",
         run_dir / "timing_meas_ctrl_hotspots.rpt",
