@@ -28,6 +28,15 @@
 #                                   legacy full/2 aliases are mapped downstream)
 #             --char-nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag
 #             --char-train-seeds N  Calibration training seeds (default 96)
+#             --analysis-jobs N     Python analysis worker budget (default 4)
+#             --analysis-chunksize N Rows per CSV chunk for low-memory analysis
+#             --analysis-low-memory Use streaming analysis backend
+#             --analysis-backend B  legacy|streaming (default legacy)
+#             --log-memory          Log Python analysis RSS checkpoints
+#             --train-max-rows-per-seed N
+#                                   Bound calibration training rows per seed
+#             --calibration-val-max-files N
+#                                   Bound held-out validation files
 #             --char-val-dir DIR    Held-out validation directory
 #             --char-fresh-dir DIR  Fresh validation directory
 #             --no-fixed-delay      Skip fixed-delay stage inside characterization
@@ -70,6 +79,13 @@ CHAR_CONFIG="multihit_15_cal_nominal"
 CHAR_OUT_MODE="raw_features"
 CHAR_NFAST_ENCODING="legacy_binary_nfast"
 CHAR_TRAIN_SEEDS=96
+ANALYSIS_JOBS=4
+ANALYSIS_CHUNKSIZE=200000
+ANALYSIS_BACKEND="legacy"
+ANALYSIS_LOW_MEMORY=0
+ANALYSIS_LOG_MEMORY=0
+TRAIN_MAX_ROWS_PER_SEED=""
+CALIBRATION_VAL_MAX_FILES=""
 CHAR_VAL_DIR=""
 CHAR_FRESH_DIR=""
 WITH_FIXED_DELAY=1
@@ -144,6 +160,13 @@ while [[ $# -gt 0 ]]; do
     --char-out-mode) CHAR_OUT_MODE="$2"; shift 2 ;;
     --char-nfast-encoding) CHAR_NFAST_ENCODING="$2"; shift 2 ;;
     --char-train-seeds) CHAR_TRAIN_SEEDS="$2"; shift 2 ;;
+    --analysis-jobs) ANALYSIS_JOBS="$2"; shift 2 ;;
+    --analysis-chunksize|--chunksize) ANALYSIS_CHUNKSIZE="$2"; shift 2 ;;
+    --analysis-low-memory) ANALYSIS_LOW_MEMORY=1; ANALYSIS_BACKEND="streaming"; shift ;;
+    --analysis-backend) ANALYSIS_BACKEND="$2"; shift 2 ;;
+    --log-memory) ANALYSIS_LOG_MEMORY=1; shift ;;
+    --train-max-rows-per-seed) TRAIN_MAX_ROWS_PER_SEED="$2"; shift 2 ;;
+    --calibration-val-max-files) CALIBRATION_VAL_MAX_FILES="$2"; shift 2 ;;
     --char-val-dir) CHAR_VAL_DIR="$2"; shift 2 ;;
     --char-fresh-dir) CHAR_FRESH_DIR="$2"; shift 2 ;;
     --no-fixed-delay) WITH_FIXED_DELAY=0; shift ;;
@@ -179,6 +202,18 @@ case "$CHAR_NFAST_ENCODING" in
     exit 1
     ;;
 esac
+case "$ANALYSIS_BACKEND" in
+  legacy|streaming) ;;
+  *) echo "Error: --analysis-backend must be legacy or streaming" >&2; exit 1 ;;
+esac
+if (( ANALYSIS_JOBS < 1 )); then
+  echo "Error: --analysis-jobs must be >= 1" >&2
+  exit 1
+fi
+if (( ANALYSIS_CHUNKSIZE < 1 )); then
+  echo "Error: --analysis-chunksize must be >= 1" >&2
+  exit 1
+fi
 
 OUT_DIR="$(to_abs "$OUT_DIR")"
 if [[ -n "$CHAR_VAL_DIR" ]]; then
@@ -197,6 +232,8 @@ if (( SMOKE )); then
   CHAR_SEEDS=1
   CHAR_N_CONV=200
   CHAR_TRAIN_SEEDS=1
+  ANALYSIS_JOBS=1
+  ANALYSIS_CHUNKSIZE=50000
   FIXED_DELAY_SEEDS=1
   FIXED_DELAY_N_CONV=200
   FIXED_DELAY_JOBS=1
@@ -276,7 +313,22 @@ if (( RUN_CHAR )); then
       --analyze
       --calibrate
       --train-seeds "$CHAR_TRAIN_SEEDS"
+      --analysis-jobs "$ANALYSIS_JOBS"
+      --analysis-chunksize "$ANALYSIS_CHUNKSIZE"
+      --analysis-backend "$ANALYSIS_BACKEND"
     )
+    if (( ANALYSIS_LOW_MEMORY )); then
+      char_cmd+=(--analysis-low-memory)
+    fi
+    if (( ANALYSIS_LOG_MEMORY )); then
+      char_cmd+=(--log-memory)
+    fi
+    if [[ -n "$TRAIN_MAX_ROWS_PER_SEED" ]]; then
+      char_cmd+=(--train-max-rows-per-seed "$TRAIN_MAX_ROWS_PER_SEED")
+    fi
+    if [[ -n "$CALIBRATION_VAL_MAX_FILES" ]]; then
+      char_cmd+=(--calibration-val-max-files "$CALIBRATION_VAL_MAX_FILES")
+    fi
     if (( WITH_FIXED_DELAY )); then
       char_cmd+=(--with-fixed-delay --fixed-delay-list "$FIXED_DELAY_LIST")
       char_cmd+=(--fixed-delay-seeds "$FIXED_DELAY_SEEDS")
@@ -312,6 +364,10 @@ OUT_DIR="$OUT_DIR" \
 VIP_OUT="$VIP_OUT" \
 CHAR_OUT="$CHAR_OUT" \
 CHAR_NFAST_ENCODING="$CHAR_NFAST_ENCODING" \
+ANALYSIS_JOBS="$ANALYSIS_JOBS" \
+ANALYSIS_CHUNKSIZE="$ANALYSIS_CHUNKSIZE" \
+ANALYSIS_BACKEND="$ANALYSIS_BACKEND" \
+ANALYSIS_LOW_MEMORY="$ANALYSIS_LOW_MEMORY" \
 python3 - "$MANIFEST" <<'PY'
 import json
 import os
@@ -329,6 +385,12 @@ data = {
     "vip_out": os.environ["VIP_OUT"],
     "char_out": os.environ["CHAR_OUT"],
     "char_nfast_encoding": os.environ["CHAR_NFAST_ENCODING"],
+    "analysis": {
+        "jobs": int(os.environ["ANALYSIS_JOBS"]),
+        "chunksize": int(os.environ["ANALYSIS_CHUNKSIZE"]),
+        "backend": os.environ["ANALYSIS_BACKEND"],
+        "low_memory": os.environ["ANALYSIS_LOW_MEMORY"] == "1",
+    },
 }
 manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 print(f"[OVERNIGHT] Manifest: {manifest}")

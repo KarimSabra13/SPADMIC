@@ -13,7 +13,9 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import math
 import os
+import resource
 import sys
 from pathlib import Path
 
@@ -88,6 +90,44 @@ DELAY_REGION_BANDS_PS = [
     ("10-30 ns", 10_000, 30_000),
 ]
 
+STREAM_DEFAULT_CHUNKSIZE = 200_000
+STREAM_ABS_ERR_HIST_BINS = np.linspace(0.0, 200_000.0, 2001)
+STREAM_TRAW_BINS_PS = np.arange(0.0, 200_000.0 + DELTA_LSB, DELTA_LSB)
+STREAM_USECOLS = [
+    "conv_id",
+    "hit_idx",
+    "Tref_ps",
+    "nslow",
+    "nfast_hit",
+    "ns",
+    "nf",
+    "stop_phase_disc",
+    "phase0_snap",
+    "slow_boundary_inc",
+    "hit_count",
+    "flags",
+    "ctx_id",
+    "t_raw_ps",
+    "tuple_code",
+]
+STREAM_DTYPE_MAP = {
+    "conv_id": "int32",
+    "hit_idx": "int16",
+    "Tref_ps": "float32",
+    "nslow": "int16",
+    "nfast_hit": "int16",
+    "ns": "int8",
+    "nf": "int8",
+    "stop_phase_disc": "int8",
+    "phase0_snap": "int8",
+    "slow_boundary_inc": "int8",
+    "hit_count": "int8",
+    "flags": "int16",
+    "ctx_id": "int8",
+    "t_raw_ps": "float32",
+    "tuple_code": "int32",
+}
+
 apply_report_style()
 
 
@@ -147,6 +187,463 @@ def load_config_data(paths: list[Path]) -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
+
+
+def log_memory(label: str, sink: list[str] | None = None) -> None:
+    """Log process RSS without requiring psutil."""
+    rss_gib = None
+    try:
+        import psutil  # type: ignore
+        rss_gib = psutil.Process(os.getpid()).memory_info().rss / 1024**3
+    except Exception:
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        # Linux ru_maxrss is KiB; macOS is bytes. This flow runs on Linux.
+        rss_gib = usage.ru_maxrss / 1024**2
+    line = f"[MEM] {label}: RSS={rss_gib:.2f} GiB"
+    print(line, flush=True)
+    if sink is not None:
+        sink.append(line)
+
+
+def _read_csv_header(path: Path) -> list[str]:
+    try:
+        return list(pd.read_csv(path, nrows=0).columns)
+    except Exception:
+        return []
+
+
+def iter_campaign_chunks(
+    configs: dict[str, list[Path]],
+    *,
+    chunksize: int,
+    max_rows_per_file: int | None,
+    log_memory_enabled: bool,
+    memory_log: list[str],
+):
+    """Yield one campaign chunk at a time with usecols/dtype pruning.
+
+    This function is deliberately sequential. The memory-safe parallel strategy
+    is to run a small number of independent script invocations, not to fork a
+    large in-memory campaign object.
+    """
+    chunk_count = 0
+    for config, paths in sorted(configs.items()):
+        for path in paths:
+            header = _read_csv_header(path)
+            if not header:
+                print(f"  [WARN] Could not read CSV header: {path}")
+                continue
+
+            usecols = [col for col in STREAM_USECOLS if col in header]
+            dtype_map = {col: STREAM_DTYPE_MAP[col] for col in usecols if col in STREAM_DTYPE_MAP}
+            if "slow_boundary_inc" not in usecols:
+                usecols.append("slow_boundary_inc")
+                dtype_map["slow_boundary_inc"] = "int8"
+
+            remaining = max_rows_per_file
+            try:
+                reader = pd.read_csv(
+                    path,
+                    usecols=[col for col in usecols if col in header],
+                    dtype={col: dtype for col, dtype in dtype_map.items() if col in header},
+                    chunksize=chunksize,
+                )
+                for chunk in reader:
+                    if remaining is not None:
+                        if remaining <= 0:
+                            break
+                        chunk = chunk.head(remaining)
+                        remaining -= len(chunk)
+                    if chunk.empty:
+                        continue
+                    if "slow_boundary_inc" not in chunk.columns:
+                        chunk["slow_boundary_inc"] = np.int8(0)
+                    chunk["source_file"] = str(path)
+                    chunk_count += 1
+                    if log_memory_enabled and (chunk_count == 1 or chunk_count % 20 == 0):
+                        log_memory(f"after chunk {chunk_count}", memory_log)
+                    yield config, path, chunk
+            except pd.errors.EmptyDataError:
+                continue
+            except Exception as exc:
+                print(f"  [WARN] Could not stream {path}: {exc}")
+
+
+class OnlineStats:
+    """Chunk-safe scalar error accumulator."""
+
+    def __init__(self) -> None:
+        self.count = 0
+        self.sum = 0.0
+        self.sumsq = 0.0
+        self.abs_sum = 0.0
+        self.min = math.inf
+        self.max = -math.inf
+        self.abs_hist = np.zeros(len(STREAM_ABS_ERR_HIST_BINS) - 1, dtype=np.int64)
+
+    def update(self, values) -> None:
+        if isinstance(values, np.ndarray):
+            arr = values.astype(np.float64, copy=False)
+        else:
+            arr = pd.to_numeric(values, errors="coerce").to_numpy(dtype=np.float64, copy=False)
+        arr = arr[np.isfinite(arr)]
+        if arr.size == 0:
+            return
+        abs_arr = np.abs(arr)
+        self.count += int(arr.size)
+        self.sum += float(arr.sum())
+        self.sumsq += float(np.square(arr).sum())
+        self.abs_sum += float(abs_arr.sum())
+        self.min = min(self.min, float(arr.min()))
+        self.max = max(self.max, float(arr.max()))
+        hist, _ = np.histogram(abs_arr, bins=STREAM_ABS_ERR_HIST_BINS)
+        self.abs_hist += hist.astype(np.int64)
+
+    def _hist_percentile(self, pct: float) -> float:
+        if self.count == 0:
+            return float("nan")
+        cdf = np.cumsum(self.abs_hist)
+        if cdf[-1] == 0:
+            return float("nan")
+        target = pct / 100.0 * cdf[-1]
+        idx = int(np.searchsorted(cdf, target, side="left"))
+        idx = min(idx, len(STREAM_ABS_ERR_HIST_BINS) - 2)
+        return float(STREAM_ABS_ERR_HIST_BINS[idx + 1])
+
+    def to_dict(self) -> dict:
+        if self.count == 0:
+            return basic_stats(pd.Series(dtype=float))
+        mean = self.sum / self.count
+        var = max(0.0, (self.sumsq - self.sum * self.sum / self.count) / max(1, self.count - 1))
+        return {
+            "count": int(self.count),
+            "mean": float(mean),
+            "std": float(math.sqrt(var)),
+            "min": float(self.min),
+            "max": float(self.max),
+            "median": float("nan"),
+            "rmse": float(math.sqrt(self.sumsq / self.count)),
+            "mae": float(self.abs_sum / self.count),
+            "p90_ae": self._hist_percentile(90.0),
+            "p99_ae": self._hist_percentile(99.0),
+        }
+
+
+def _stats_frame_from_dict(stats_by_key: dict, key_cols: list[str]) -> pd.DataFrame:
+    records = []
+    for key, acc in sorted(stats_by_key.items()):
+        key_tuple = key if isinstance(key, tuple) else (key,)
+        row = {col: value for col, value in zip(key_cols, key_tuple)}
+        row.update(acc.to_dict())
+        records.append(row)
+    return pd.DataFrame.from_records(records)
+
+
+def _profile_frame_from_bins(stats_by_idx: dict[int, OnlineStats], edges: np.ndarray) -> pd.DataFrame:
+    records = []
+    for idx, acc in sorted(stats_by_idx.items()):
+        if idx < 0 or idx >= len(edges) - 1:
+            continue
+        row = {
+            "x_lo": float(edges[idx]),
+            "x_hi": float(edges[idx + 1]),
+            "x_mid": float((edges[idx] + edges[idx + 1]) / 2.0),
+        }
+        row.update(acc.to_dict())
+        records.append(row)
+    return pd.DataFrame.from_records(records)
+
+
+def _update_discrete(stats_by_key: dict, df: pd.DataFrame, x_col: str, err_col: str = "offset_ps") -> None:
+    if x_col not in df.columns or err_col not in df.columns:
+        return
+    for key, grp in df[[x_col, err_col]].dropna().groupby(x_col, observed=True):
+        stats_by_key.setdefault(int(key), OnlineStats()).update(grp[err_col])
+
+
+def _update_grouped(stats_by_key: dict, df: pd.DataFrame, key_cols: list[str],
+                    err_col: str = "offset_ps") -> None:
+    if not set(key_cols + [err_col]).issubset(df.columns):
+        return
+    for key, grp in df[key_cols + [err_col]].dropna().groupby(key_cols, observed=True):
+        stats_by_key.setdefault(key, OnlineStats()).update(grp[err_col])
+
+
+def _update_binned(stats_by_idx: dict[int, OnlineStats], x_values, err_values, edges: np.ndarray) -> None:
+    x = pd.to_numeric(x_values, errors="coerce").to_numpy(dtype=np.float64, copy=False)
+    err = pd.to_numeric(err_values, errors="coerce").to_numpy(dtype=np.float64, copy=False)
+    mask = np.isfinite(x) & np.isfinite(err)
+    if not np.any(mask):
+        return
+    idxs = np.searchsorted(edges, x[mask], side="right") - 1
+    valid = (idxs >= 0) & (idxs < len(edges) - 1)
+    idxs = idxs[valid]
+    err = err[mask][valid]
+    for idx in np.unique(idxs):
+        stats_by_idx.setdefault(int(idx), OnlineStats()).update(err[idxs == idx])
+
+
+def _decode_nfast_chunk(df: pd.DataFrame, nfast_encoding: str) -> tuple[pd.DataFrame, int]:
+    """Decode raw LFSR tags chunk-wise without row iterrows."""
+    out = df.copy()
+    if "nfast_hit" not in out.columns:
+        return out, 0
+    if nfast_encoding == NFAST_ENCODING_LEGACY:
+        out["nfast_decoded"] = pd.to_numeric(out["nfast_hit"], errors="coerce").astype("Int16")
+        return out, 0
+
+    from mptdc_decode.fast_tag_decode import build_tag_to_index_table
+
+    tag_table = build_tag_to_index_table(width=7, seed=1)
+    raw = pd.to_numeric(out["nfast_hit"], errors="coerce").astype("Int16")
+    decoded = raw.map(tag_table)
+    invalid = int(decoded.isna().sum())
+    out["nfast_raw_tag"] = raw
+    out["nfast_decoded"] = decoded.astype("Int16")
+    out["nfast_hit_packet_raw_tag"] = raw
+    # Existing analysis equations operate on decoded binary-like fast cycle.
+    out = out.dropna(subset=["nfast_decoded"]).copy()
+    out["nfast_hit"] = out["nfast_decoded"].astype("int16")
+    return out, invalid
+
+
+def _reconstruct_t_raw_chunk(df: pd.DataFrame) -> pd.DataFrame:
+    required = {"nslow", "nfast_hit", "ns", "nf", "slow_boundary_inc"}
+    if not required.issubset(df.columns):
+        return df
+    coef = (
+        (pd.to_numeric(df["nslow"], errors="coerce") + VERNIER_NSLOW_ORIGIN_BIAS
+         + pd.to_numeric(df["slow_boundary_inc"], errors="coerce") - 1) * K_VERNIER * NE
+        + (pd.to_numeric(df["nfast_hit"], errors="coerce") + VERNIER_NFAST_ORIGIN_BIAS - 1) * NE
+        + pd.to_numeric(df["ns"], errors="coerce") * K_VERNIER
+        - pd.to_numeric(df["nf"], errors="coerce") * (K_VERNIER - 1)
+        + VERNIER_COEF_BIAS
+    )
+    if "t_raw_ps" in df.columns:
+        df["t_raw_ps_packet"] = df["t_raw_ps"]
+    df["t_raw_ps"] = coef.astype(np.float64) * DELTA_LSB
+    return df
+
+
+def analyze_campaign_streaming(configs: dict[str, list[Path]], args, out_dir: Path) -> tuple[dict, dict]:
+    """Memory-safe campaign analysis using one CSV chunk at a time."""
+    memory_log: list[str] = []
+    if args.log_memory:
+        log_memory("streaming start", memory_log)
+
+    print(f"[ANALYSIS] backend=streaming")
+    print(f"[ANALYSIS] analysis_jobs={args.analysis_jobs} (streaming backend uses bounded sequential aggregation)")
+    print(f"[ANALYSIS] chunksize={args.analysis_chunksize}")
+    print(f"[ANALYSIS] usecols={','.join(STREAM_USECOLS)}")
+    print(f"[ANALYSIS] dtype_map={json.dumps(STREAM_DTYPE_MAP, sort_keys=True)}")
+
+    states: dict[str, dict] = {}
+    for cfg in configs:
+        states[cfg] = {
+            "offset": OnlineStats(),
+            "delay_bins": {},
+            "traw_bins": {},
+            "delay_regions": {label: OnlineStats() for label, _, _ in DELAY_REGION_BANDS_PS},
+            "nslow": {},
+            "nfast": {},
+            "hit_idx": {},
+            "stop_disc": {},
+            "boundary": {},
+            "phase": {},
+            "flags": {name: 0 for name in FLAG_NAMES.values()},
+            "raw_tuple_counts": {},
+            "traw_hist": np.zeros(len(STREAM_TRAW_BINS_PS) - 1, dtype=np.int64),
+            "rows": 0,
+            "invalid_raw_tags": 0,
+            "mismatches": -1,
+        }
+
+    delay_edges = np.linspace(20.0, 30_000.0, PROFILE_DELAY_BINS + 1)
+    for cfg, path, chunk in iter_campaign_chunks(
+        configs,
+        chunksize=args.analysis_chunksize,
+        max_rows_per_file=args.max_rows_per_file,
+        log_memory_enabled=args.log_memory,
+        memory_log=memory_log,
+    ):
+        state = states[cfg]
+        chunk, invalid = _decode_nfast_chunk(chunk, args.nfast_encoding)
+        state["invalid_raw_tags"] += invalid
+        if chunk.empty:
+            continue
+        chunk = _reconstruct_t_raw_chunk(chunk)
+        if {"Tref_ps", "t_raw_ps"}.issubset(chunk.columns):
+            chunk["offset_ps"] = pd.to_numeric(chunk["Tref_ps"], errors="coerce") - pd.to_numeric(chunk["t_raw_ps"], errors="coerce")
+        else:
+            continue
+
+        state["rows"] += int(len(chunk))
+        state["offset"].update(chunk["offset_ps"])
+        _update_binned(state["delay_bins"], chunk["Tref_ps"], chunk["offset_ps"], delay_edges)
+        _update_binned(state["traw_bins"], chunk["t_raw_ps"], chunk["offset_ps"], STREAM_TRAW_BINS_PS)
+        _update_discrete(state["nslow"], chunk, "nslow")
+        _update_discrete(state["nfast"], chunk, "nfast_hit")
+        _update_discrete(state["hit_idx"], chunk, "hit_idx")
+        _update_discrete(state["stop_disc"], chunk, "stop_phase_disc")
+        _update_grouped(state["boundary"], chunk, ["phase0_snap", "slow_boundary_inc"])
+        _update_grouped(state["phase"], chunk, ["ns", "nf"])
+
+        for label, lo_ps, hi_ps in DELAY_REGION_BANDS_PS:
+            mask = (chunk["Tref_ps"] >= lo_ps) & (chunk["Tref_ps"] < hi_ps)
+            state["delay_regions"][label].update(chunk.loc[mask, "offset_ps"])
+
+        if "flags" in chunk.columns:
+            flags_arr = pd.to_numeric(chunk["flags"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+            for bit, name in FLAG_NAMES.items():
+                state["flags"][name] += int(((flags_arr >> bit) & 1).sum())
+
+        if "tuple_code" in chunk.columns:
+            tuple_counts = chunk["tuple_code"].value_counts(dropna=True)
+            for key, value in tuple_counts.items():
+                if int(key) < 0:
+                    continue
+                state["raw_tuple_counts"][int(key)] = state["raw_tuple_counts"].get(int(key), 0) + int(value)
+
+        hist, _ = np.histogram(pd.to_numeric(chunk["t_raw_ps"], errors="coerce").dropna(), bins=STREAM_TRAW_BINS_PS)
+        state["traw_hist"] += hist.astype(np.int64)
+
+    all_results: dict[str, dict] = {}
+    ttest_all: dict[str, list] = {}
+    summary_rows = []
+    for cfg, state in sorted(states.items()):
+        safe_cfg = _safe_config(cfg)
+        result: dict = {
+            "nfast_encoding": args.nfast_encoding,
+            "offset_stats": state["offset"].to_dict(),
+            "mismatches": int(state["mismatches"]),
+            "flag_dist": state["flags"],
+            "streaming": True,
+            "invalid_raw_tags": int(state["invalid_raw_tags"]),
+        }
+
+        delay_profile = _profile_frame_from_bins(state["delay_bins"], delay_edges)
+        traw_profile = _profile_frame_from_bins(state["traw_bins"], STREAM_TRAW_BINS_PS)
+        nslow_profile = _stats_frame_from_dict(state["nslow"], ["x"])
+        nfast_profile = _stats_frame_from_dict(state["nfast"], ["x"])
+        hit_idx_profile = _stats_frame_from_dict(state["hit_idx"], ["x"])
+        stop_disc_profile = _stats_frame_from_dict(state["stop_disc"], ["x"])
+        boundary_df = _stats_frame_from_dict(state["boundary"], ["phase0_snap", "slow_boundary_inc"])
+        phase_df = _stats_frame_from_dict(state["phase"], ["ns", "nf"])
+        regions = []
+        for label, lo_ps, hi_ps in DELAY_REGION_BANDS_PS:
+            row = {"label": label, "lo_ps": lo_ps, "hi_ps": hi_ps}
+            row.update(state["delay_regions"][label].to_dict())
+            regions.append(row)
+        delay_regions = pd.DataFrame.from_records(regions)
+
+        result["delay_profile"] = delay_profile
+        result["nslow_profile"] = nslow_profile
+        result["nfast_profile"] = nfast_profile
+        result["hit_idx_profile"] = hit_idx_profile
+        result["stop_disc_profile"] = stop_disc_profile
+        result["traw_profile"] = traw_profile
+        result["delay_regions"] = delay_regions
+        result["boundary_classes"] = {}
+        for _, row in boundary_df.iterrows():
+            key = (int(row["phase0_snap"]), int(row["slow_boundary_inc"]))
+            result["boundary_classes"][key] = {k: row[k] for k in row.index if k not in {"phase0_snap", "slow_boundary_inc"}}
+
+        tuple_counts = state["raw_tuple_counts"]
+        if tuple_counts:
+            hist = pd.DataFrame({
+                "tuple_code": list(tuple_counts.keys()),
+                "count": list(tuple_counts.values()),
+            }).sort_values("tuple_code", ignore_index=True)
+            ideal = float(hist["count"].mean())
+            hist["raw_tuple_dnl_est"] = hist["count"] / ideal - 1.0
+            hist["raw_tuple_inl_est"] = hist["raw_tuple_dnl_est"].cumsum()
+            hist.to_csv(out_dir / f"raw_tuple_histogram_{safe_cfg}.csv", index=False)
+            result["raw_tuple_histogram_summary"] = {
+                "occupied_bins": int(len(hist)),
+                "total_samples": int(hist["count"].sum()),
+                "min_count": int(hist["count"].min()),
+                "median_count": float(hist["count"].median()),
+                "max_count": int(hist["count"].max()),
+                "peak_dnl_est": float(hist["raw_tuple_dnl_est"].abs().max()),
+                "peak_inl_est": float(hist["raw_tuple_inl_est"].abs().max()),
+            }
+        else:
+            result["raw_tuple_histogram_summary"] = {}
+
+        counts = state["traw_hist"]
+        occupied = counts[counts > 0]
+        if occupied.size:
+            ideal = float(occupied.mean())
+            dnl = occupied / ideal - 1.0
+            inl = np.cumsum(dnl)
+            result["peak_dnl"] = float(np.max(np.abs(dnl)))
+            result["peak_inl"] = float(np.max(np.abs(inl)))
+        else:
+            result["peak_dnl"] = float("nan")
+            result["peak_inl"] = float("nan")
+
+        if not delay_profile.empty:
+            delay_profile.to_csv(out_dir / f"delay_profile_{safe_cfg}.csv", index=False)
+        if not nslow_profile.empty:
+            nslow_profile.to_csv(out_dir / f"nslow_profile_{safe_cfg}.csv", index=False)
+        if not nfast_profile.empty:
+            nfast_profile.to_csv(out_dir / f"nfast_hit_profile_{safe_cfg}.csv", index=False)
+        if not hit_idx_profile.empty:
+            hit_idx_profile.to_csv(out_dir / f"hit_idx_profile_{safe_cfg}.csv", index=False)
+        if not stop_disc_profile.empty:
+            stop_disc_profile.to_csv(out_dir / f"stop_phase_disc_profile_{safe_cfg}.csv", index=False)
+        if not traw_profile.empty:
+            traw_profile.to_csv(out_dir / f"t_raw_profile_{safe_cfg}.csv", index=False)
+        if not delay_regions.empty:
+            delay_regions.to_csv(out_dir / f"delay_regions_{safe_cfg}.csv", index=False)
+        if not phase_df.empty:
+            count_piv = phase_df.pivot_table(values="count", index="ns", columns="nf", aggfunc="sum")
+            count_piv.to_csv(out_dir / f"phase_count_heatmap_{safe_cfg}.csv")
+
+        if not args.no_plots:
+            try:
+                plot_binned_profile(delay_profile, cfg, out_dir, "delay_error_profile",
+                                    title="Error profile vs Tref",
+                                    x_label="True delay (ns)", x_scale=1000.0)
+                plot_discrete_profile(nslow_profile, cfg, out_dir, "nslow_error_profile",
+                                      title="Error profile vs nslow", x_label="nslow")
+                plot_discrete_profile(nfast_profile, cfg, out_dir, "nfast_hit_error_profile",
+                                      title="Error profile vs nfast_hit", x_label="nfast_hit")
+                plot_discrete_profile(hit_idx_profile, cfg, out_dir, "hit_idx_error_profile",
+                                      title="Error profile vs hit_idx", x_label="hit_idx")
+                plot_binned_profile(traw_profile, cfg, out_dir, "t_raw_error_profile",
+                                    title="Error profile vs t_raw",
+                                    x_label="t_raw (ns)", x_scale=1000.0)
+            except Exception as exc:
+                print(f"  [WARN] Streaming plot generation error for {cfg}: {exc}")
+
+        all_results[cfg] = result
+        ttest_all[cfg] = []
+        row = {"config": cfg, "rows": int(state["rows"]), "invalid_raw_tags": int(state["invalid_raw_tags"])}
+        row.update(result["offset_stats"])
+        summary_rows.append(row)
+
+    pd.DataFrame.from_records(summary_rows).to_csv(out_dir / "chunked_metrics_summary.csv", index=False)
+    streaming_config = {
+        "backend": "streaming",
+        "analysis_jobs": args.analysis_jobs,
+        "chunksize": args.analysis_chunksize,
+        "max_files": args.max_files,
+        "max_rows_per_file": args.max_rows_per_file,
+        "nfast_encoding": args.nfast_encoding,
+        "usecols": STREAM_USECOLS,
+        "dtype_map": STREAM_DTYPE_MAP,
+        "notes": [
+            "Streaming mode never concatenates the full campaign.",
+            "P90/P99 absolute-error tails are histogram approximations.",
+            "Raw scatter plots and pairwise t-tests are intentionally skipped in streaming mode.",
+        ],
+    }
+    (out_dir / "streaming_config.json").write_text(json.dumps(streaming_config, indent=2) + "\n", encoding="utf-8")
+    if args.log_memory:
+        log_memory("streaming end", memory_log)
+    (out_dir / "analysis_memory_report.txt").write_text("\n".join(memory_log) + "\n", encoding="utf-8")
+    return all_results, ttest_all
 
 
 # ---------------------------------------------------------------------------
@@ -982,11 +1479,25 @@ def main():
                         help="Glob pattern to select configurations (e.g. 'multihit_15_*')")
     parser.add_argument("--max-files", type=int, default=None,
                         help="Max CSV files to load per config (for quick testing)")
+    parser.add_argument("--max-rows-per-file", type=int, default=None,
+                        help="Debug cap on rows read from each CSV file")
     parser.add_argument("--no-plots", action="store_true",
                         help="Skip plot generation")
     parser.add_argument("--nfast-encoding", default=NFAST_ENCODING_LEGACY,
                         choices=[NFAST_ENCODING_LEGACY, NFAST_ENCODING_RAW_LFSR_TAG],
                         help="Interpret packet nfast_hit as legacy binary or O2 raw LFSR tag")
+    parser.add_argument("--analysis-backend", default="legacy",
+                        choices=["legacy", "streaming"],
+                        help="Analysis implementation (legacy loads all rows; streaming is chunked)")
+    parser.add_argument("--analysis-low-memory", action="store_true",
+                        help="Alias for --analysis-backend streaming")
+    parser.add_argument("--analysis-jobs", type=int, default=min(4, os.cpu_count() or 1),
+                        help="Reserved analysis worker budget; streaming keeps aggregation bounded")
+    parser.add_argument("--analysis-chunksize", "--chunksize", dest="analysis_chunksize",
+                        type=int, default=STREAM_DEFAULT_CHUNKSIZE,
+                        help=f"CSV rows per streaming chunk (default {STREAM_DEFAULT_CHUNKSIZE})")
+    parser.add_argument("--log-memory", action="store_true",
+                        help="Log process RSS during analysis")
     args = parser.parse_args()
 
     out_dir = Path(args.output_dir)
@@ -1002,6 +1513,28 @@ def main():
     for cfg, paths in configs.items():
         print(f"  {cfg}: {len(paths)} file(s)")
     print()
+
+    if args.analysis_low_memory:
+        args.analysis_backend = "streaming"
+    if args.analysis_jobs < 1:
+        print("[ERROR] --analysis-jobs must be >= 1")
+        sys.exit(1)
+    if args.analysis_chunksize < 1:
+        print("[ERROR] --analysis-chunksize must be >= 1")
+        sys.exit(1)
+
+    if args.analysis_backend == "streaming":
+        all_results, ttest_all = analyze_campaign_streaming(configs, args, out_dir)
+        report_path = out_dir / "summary_report.txt"
+        write_summary_report(all_results, report_path, ttest_all)
+        summary_json = out_dir / "summary_report.json"
+        summary_json.write_text(
+            json.dumps(_json_ready_results(all_results, ttest_all), indent=2, default=str) + "\n",
+            encoding="utf-8",
+        )
+        print(f"[INFO] Summary JSON written to {summary_json}")
+        print("[INFO] Streaming analysis complete.")
+        return
 
     all_results: dict[str, dict] = {}
     ttest_all: dict[str, list] = {}

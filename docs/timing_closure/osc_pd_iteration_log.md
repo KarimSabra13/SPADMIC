@@ -607,3 +607,92 @@ Next action:
   `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_OVERNIGHT_CHARAC.md`
 - Genus request, still blocked until raw-tag validation:
   `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_GENUS.md`
+
+## Iteration: O2_ANALYSIS_MEMORY_STREAMING
+
+Git HEAD at local patch time:
+
+- `3529510a57dd0278bf4155c859f198ec2fcf2ac7`
+
+Branch:
+
+- `SPADMIC_localtag`
+
+Patch summary:
+
+- Added streaming/chunked campaign analysis for O2 raw-tag characterization.
+- Separated simulation parallelism from analysis controls.
+- Added a `--skip-campaign` path so completed Xcelium campaign CSVs can be
+  reused without relaunching simulation.
+- Added bounded calibration training controls for large campaigns.
+
+Files changed:
+
+- `MPTDC/scripts/analysis/analyze_campaign.py`
+- `MPTDC/scripts/sim/run_characterization_baseline.sh`
+- `MPTDC/scripts/sim/run_vip_overnight.sh`
+- `MPTDC/scripts/calibration/calibrate_6d_lut.py`
+- `docs/timing_closure/O2_analysis_memory_diagnosis.md`
+- `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_ANALYSIS_RERUN.md`
+- `docs/timing_closure/osc_pd_iteration_log.md`
+
+Tool stage:
+
+- local Python/shell checks only
+
+Was this actually run by agent locally?
+
+- yes
+
+Was this run by human on lab server?
+
+- no
+
+Evidence location:
+
+- local streaming smoke output: `/tmp/o2_streaming_analysis_smoke/`
+- diagnosis: `docs/timing_closure/O2_analysis_memory_diagnosis.md`
+- rerun request: `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_ANALYSIS_RERUN.md`
+
+Local checks:
+
+- `python3 -m py_compile MPTDC/scripts/analysis/analyze_campaign.py MPTDC/scripts/calibration/calibrate_6d_lut.py`: PASS.
+- `bash -n MPTDC/scripts/sim/run_characterization_baseline.sh MPTDC/scripts/sim/run_vip_overnight.sh`: PASS.
+- Streaming analysis smoke on local Verilator campaign, 1 file / 1500 rows:
+  PASS.
+- Smoke RSS log: start 0.14 GiB, after first chunk 0.15 GiB, end 0.17 GiB.
+- Characterization baseline dry-run with `--skip-campaign`,
+  `--analysis-low-memory`, `--analysis-jobs 2`, and bounded calibration:
+  PASS.
+
+Functional result:
+
+- No RTL changed in this iteration.
+- Existing campaign CSVs can be reused.
+- O2 raw-tag software decode remains enabled in analysis, but is now applied
+  per chunk.
+
+Timing result:
+
+- no Genus/Innovus impact; this is a data-pipeline fix.
+
+Linearity/precision risk:
+
+- low for the software change, but streaming P90/P99 tails are histogram
+  approximations and raw scatter/t-test plots are skipped to keep memory bounded.
+- calibration confidence still depends on rerunning the completed campaign
+  analysis and reviewing outputs.
+
+Decision:
+
+- Stop old high-memory `analyze_campaign.py` processes if still running.
+- Reuse existing Xcelium campaign CSVs.
+- Rerun only streaming analysis/calibration using
+  `SERVER_RUN_REQUEST_O2_RAW_TAG_ANALYSIS_RERUN.md`.
+- Genus remains blocked until this characterization rerun completes cleanly.
+
+Next action:
+
+- Push this software-pipeline patch.
+- Human runs the analysis-only rerun command from
+  `docs/timing_closure/SERVER_RUN_REQUEST_O2_RAW_TAG_ANALYSIS_RERUN.md`.

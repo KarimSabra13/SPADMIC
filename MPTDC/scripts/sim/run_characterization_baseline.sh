@@ -14,9 +14,19 @@
 #           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_raw_features)
 #           --analyze             Run sweep analysis + fine-grid report, including
 #                                 raw tuple histograms/code-density CSVs and plots
+#           --analysis-jobs N     Python analysis worker budget (default 4;
+#                                 streaming uses bounded sequential aggregation)
+#           --analysis-chunksize N Rows per CSV chunk in low-memory analysis
+#           --analysis-low-memory Use streaming analysis backend
+#           --analysis-backend B  legacy|streaming (default legacy)
+#           --log-memory          Log Python analysis RSS checkpoints
 #           --calibrate           Run maintained 6D LUT calibration after collection,
 #                                 including pre/post reconstruction error exports
 #           --train-seeds N       Training seeds for calibration (default 24)
+#           --train-max-rows-per-seed N
+#                                 Bound calibration training rows per seed
+#           --calibration-val-max-files N
+#                                 Bound held-out validation files in calibration
 #           --val-dir DIR         Explicit held-out validation directory for calibration
 #           --fresh-dir DIR       Fresh validation dir for calibration
 #           --with-fixed-delay    Run maintained fixed-delay characterization
@@ -27,6 +37,7 @@
 #           --jitter-sigma N      Override oscillator jitter sigma in ps
 #           --jitter-bound N      Override oscillator jitter bound in ps
 #           --rebuild             Forward --rebuild to the first campaign launch
+#           --skip-campaign       Reuse existing campaign CSVs under --out-dir
 #           --dry-run             Print commands without executing
 #           --smoke               Shape-validation mode (small representative run)
 # -----------------------------------------------------------------------------
@@ -44,8 +55,15 @@ OUT_MODE="raw_features"
 NFAST_ENCODING="legacy_binary_nfast"
 OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_raw_features"
 ANALYZE=0
+ANALYSIS_JOBS=4
+ANALYSIS_CHUNKSIZE=200000
+ANALYSIS_BACKEND="legacy"
+ANALYSIS_LOW_MEMORY=0
+ANALYSIS_LOG_MEMORY=0
 CALIBRATE=0
 TRAIN_SEEDS=24
+TRAIN_MAX_ROWS_PER_SEED=""
+CALIBRATION_VAL_MAX_FILES=""
 VAL_DIR=""
 FRESH_DIR="$REPO_ROOT/results/campaign_validation/multihit_15_cal_nominal"
 FRESH_DIR_EXPLICIT=0
@@ -57,6 +75,7 @@ FIXED_DELAY_JOBS=8
 JITTER_SIGMA=""
 JITTER_BOUND=""
 REBUILD=0
+SKIP_CAMPAIGN=0
 DRY_RUN=0
 SMOKE=0
 
@@ -115,8 +134,15 @@ while [[ $# -gt 0 ]]; do
     --nfast-encoding) NFAST_ENCODING="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --analyze) ANALYZE=1; shift ;;
+    --analysis-jobs) ANALYSIS_JOBS="$2"; shift 2 ;;
+    --analysis-chunksize|--chunksize) ANALYSIS_CHUNKSIZE="$2"; shift 2 ;;
+    --analysis-low-memory) ANALYSIS_LOW_MEMORY=1; ANALYSIS_BACKEND="streaming"; shift ;;
+    --analysis-backend) ANALYSIS_BACKEND="$2"; shift 2 ;;
+    --log-memory) ANALYSIS_LOG_MEMORY=1; shift ;;
     --calibrate) CALIBRATE=1; shift ;;
     --train-seeds) TRAIN_SEEDS="$2"; shift 2 ;;
+    --train-max-rows-per-seed) TRAIN_MAX_ROWS_PER_SEED="$2"; shift 2 ;;
+    --calibration-val-max-files) CALIBRATION_VAL_MAX_FILES="$2"; shift 2 ;;
     --val-dir) VAL_DIR="$2"; shift 2 ;;
     --fresh-dir) FRESH_DIR="$2"; FRESH_DIR_EXPLICIT=1; shift 2 ;;
     --with-fixed-delay) WITH_FIXED_DELAY=1; shift ;;
@@ -127,6 +153,7 @@ while [[ $# -gt 0 ]]; do
     --jitter-sigma) JITTER_SIGMA="$2"; shift 2 ;;
     --jitter-bound) JITTER_BOUND="$2"; shift 2 ;;
     --rebuild) REBUILD=1; shift ;;
+    --skip-campaign) SKIP_CAMPAIGN=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --smoke) SMOKE=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -176,6 +203,21 @@ case "$NFAST_ENCODING" in
     exit 1
     ;;
 esac
+case "$ANALYSIS_BACKEND" in
+  legacy|streaming) ;;
+  *)
+    echo "[ERROR] Unknown analysis backend '$ANALYSIS_BACKEND' (use legacy or streaming)"
+    exit 1
+    ;;
+esac
+if (( ANALYSIS_JOBS < 1 )); then
+  echo "[ERROR] --analysis-jobs must be >= 1"
+  exit 1
+fi
+if (( ANALYSIS_CHUNKSIZE < 1 )); then
+  echo "[ERROR] --analysis-chunksize must be >= 1"
+  exit 1
+fi
 
 # The ECO discriminator is part of the calibration key. Older default fresh
 # validation directories may predate the stop_phase_disc column, so only use a
@@ -194,6 +236,8 @@ if (( SMOKE )); then
   if (( CALIBRATE )) && [[ -z "$VAL_DIR" ]]; then
     TRAIN_SEEDS=1
   fi
+  ANALYSIS_JOBS=1
+  ANALYSIS_CHUNKSIZE=50000
   if (( CALIBRATE )) && (( ! FRESH_DIR_EXPLICIT )); then
     FRESH_DIR=""
   fi
@@ -238,7 +282,16 @@ ANALYZE_CMD=(
   --output-dir "$SWEEP_ANALYSIS_DIR"
   --config-filter "$CONFIG*"
   --nfast-encoding "$NFAST_ENCODING"
+  --analysis-jobs "$ANALYSIS_JOBS"
+  --analysis-chunksize "$ANALYSIS_CHUNKSIZE"
+  --analysis-backend "$ANALYSIS_BACKEND"
 )
+if (( ANALYSIS_LOW_MEMORY )); then
+  ANALYZE_CMD+=(--analysis-low-memory)
+fi
+if (( ANALYSIS_LOG_MEMORY )); then
+  ANALYZE_CMD+=(--log-memory)
+fi
 if (( DRY_RUN )); then
   ANALYZE_CMD+=(--max-files 1)
 fi
@@ -255,6 +308,14 @@ CALIBRATE_CMD=(
   --train-seeds "$TRAIN_SEEDS"
   --nfast-encoding "$NFAST_ENCODING"
 )
+if [[ -n "$TRAIN_MAX_ROWS_PER_SEED" ]]; then
+  CALIBRATE_CMD+=(--train-max-rows-per-seed "$TRAIN_MAX_ROWS_PER_SEED")
+fi
+if [[ -n "$CALIBRATION_VAL_MAX_FILES" ]]; then
+  CALIBRATE_CMD+=(--val-max-files "$CALIBRATION_VAL_MAX_FILES")
+elif (( ANALYSIS_LOW_MEMORY )); then
+  CALIBRATE_CMD+=(--val-max-files 2)
+fi
 if [[ -n "$VAL_DIR" ]]; then
   CALIBRATE_CMD+=(--val-dir "$VAL_DIR")
 elif (( SMOKE )); then
@@ -307,10 +368,18 @@ write_manifest() {
   export MANIFEST_CALIBRATION_DIR="$CALIBRATION_DIR"
   export MANIFEST_FIXED_DELAY_DIR="$FIXED_DELAY_DIR"
   export MANIFEST_ANALYZE="$ANALYZE"
+  export MANIFEST_ANALYSIS_JOBS="$ANALYSIS_JOBS"
+  export MANIFEST_ANALYSIS_CHUNKSIZE="$ANALYSIS_CHUNKSIZE"
+  export MANIFEST_ANALYSIS_BACKEND="$ANALYSIS_BACKEND"
+  export MANIFEST_ANALYSIS_LOW_MEMORY="$ANALYSIS_LOW_MEMORY"
+  export MANIFEST_ANALYSIS_LOG_MEMORY="$ANALYSIS_LOG_MEMORY"
   export MANIFEST_CALIBRATE="$CALIBRATE"
   export MANIFEST_WITH_FIXED_DELAY="$WITH_FIXED_DELAY"
   export MANIFEST_SMOKE="$SMOKE"
+  export MANIFEST_SKIP_CAMPAIGN="$SKIP_CAMPAIGN"
   export MANIFEST_TRAIN_SEEDS="$TRAIN_SEEDS"
+  export MANIFEST_TRAIN_MAX_ROWS_PER_SEED="$TRAIN_MAX_ROWS_PER_SEED"
+  export MANIFEST_CALIBRATION_VAL_MAX_FILES="$CALIBRATION_VAL_MAX_FILES"
   export MANIFEST_VAL_DIR="$VAL_DIR"
   export MANIFEST_FRESH_DIR="$FRESH_DIR"
   export MANIFEST_FIXED_DELAY_LIST="$FIXED_DELAY_LIST"
@@ -352,14 +421,24 @@ data = {
         "out_mode": os.environ["MANIFEST_OUT_MODE"],
         "nfast_encoding": os.environ["MANIFEST_NFAST_ENCODING"],
         "smoke": env_bool("MANIFEST_SMOKE"),
+        "skip_campaign": env_bool("MANIFEST_SKIP_CAMPAIGN"),
     },
     "stages": {
         "analyze": env_bool("MANIFEST_ANALYZE"),
         "calibrate": env_bool("MANIFEST_CALIBRATE"),
         "with_fixed_delay": env_bool("MANIFEST_WITH_FIXED_DELAY"),
     },
+    "analysis": {
+        "jobs": int(os.environ["MANIFEST_ANALYSIS_JOBS"]),
+        "chunksize": int(os.environ["MANIFEST_ANALYSIS_CHUNKSIZE"]),
+        "backend": os.environ["MANIFEST_ANALYSIS_BACKEND"],
+        "low_memory": env_bool("MANIFEST_ANALYSIS_LOW_MEMORY"),
+        "log_memory": env_bool("MANIFEST_ANALYSIS_LOG_MEMORY"),
+    },
     "calibration": {
         "train_seeds": int(os.environ["MANIFEST_TRAIN_SEEDS"]),
+        "train_max_rows_per_seed": os.environ.get("MANIFEST_TRAIN_MAX_ROWS_PER_SEED", ""),
+        "val_max_files": os.environ.get("MANIFEST_CALIBRATION_VAL_MAX_FILES", ""),
         "val_dir": os.environ.get("MANIFEST_VAL_DIR", ""),
         "fresh_dir": os.environ.get("MANIFEST_FRESH_DIR", ""),
     },
@@ -413,12 +492,15 @@ PY
 echo "[BASELINE] Output root: $OUT_DIR"
 echo "[BASELINE] Config: $CONFIG"
 echo "[BASELINE] Sweep campaign: $SEEDS seed(s) × $N_CONV conv/seed, $JOBS job(s) in parallel"
+echo "[BASELINE] Analysis: backend=$ANALYSIS_BACKEND jobs=$ANALYSIS_JOBS chunksize=$ANALYSIS_CHUNKSIZE low_memory=$ANALYSIS_LOW_MEMORY"
 echo "[BASELINE] Manifest: $MANIFEST_PATH"
 
 write_manifest "planned" 0 0 0
 
 print_cmd "[RUN]" "${CAMPAIGN_CMD[@]}"
-if (( ! DRY_RUN )); then
+if (( SKIP_CAMPAIGN )); then
+  echo "[BASELINE] Skipping campaign collection; reusing $CAMPAIGN_DIR"
+elif (( ! DRY_RUN )); then
   "${CAMPAIGN_CMD[@]}"
 fi
 

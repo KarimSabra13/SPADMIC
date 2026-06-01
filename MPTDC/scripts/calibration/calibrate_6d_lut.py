@@ -943,6 +943,8 @@ def main():
                         help="Output directory for LUT, plots, reports")
     parser.add_argument("--train-seeds", type=int, default=24,
                         help="Number of training seeds (first N)")
+    parser.add_argument("--train-max-rows-per-seed", type=int, default=None,
+                        help="Deterministically sample at most N core rows from each training seed")
     parser.add_argument("--chunk-load", action="store_true", default=True,
                         help="Load training data in chunks to save memory")
     parser.add_argument("--nfast-encoding", default=NFAST_ENCODING_LEGACY,
@@ -994,7 +996,10 @@ def main():
             )
             total_rows += len(chunk)
             chunk = chunk[chunk["nslow"] > 0].copy()
+            if args.train_max_rows_per_seed is not None and len(chunk) > args.train_max_rows_per_seed:
+                chunk = chunk.sample(n=args.train_max_rows_per_seed, random_state=i).sort_index()
             total_core += len(chunk)
+            chunk = apply_nfast_encoding(chunk, args.nfast_encoding)
             chunk["offset"] = chunk["Tref_ps"] - chunk["t_raw_ps"]
             infer_ns_nf(chunk)
             chunk = chunk.dropna(subset=["ns_inf", "nf_inf"])
