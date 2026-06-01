@@ -258,10 +258,14 @@ module tb_campaign_collect;
       dbg_slow_gray_src_snap_async_q  <= u_dut.u_core.u_slow_cnt.gray_src_snap_async_q;
       dbg_slow_gray_snap_ff1_q        <= u_dut.u_core.u_slow_cnt.gray_snap_ff1_async;
       dbg_slow_gray_snap_ff2_q        <= u_dut.u_core.u_slow_cnt.gray_snap_ff2_async;
-      dbg_fast_gray_bin_q             <= u_dut.u_core.u_fast_cnt.bin_q;
-      dbg_fast_gray_src_cont_q        <= u_dut.u_core.u_fast_cnt.gray_src_cont_q;
-      dbg_fast_gray_cont_ff1_q        <= u_dut.u_core.u_fast_cnt.gray_cont_ff1_async;
-      dbg_fast_gray_cont_ff2_q        <= u_dut.u_core.u_fast_cnt.gray_cont_ff2_async;
+      // O2 removes the phase-0 binary fast counter from the PD capture path.
+      // Keep the historical debug columns populated with the phase-0 raw tag so
+      // older CSV consumers still have stable columns while metadata identifies
+      // the run as raw_lfsr_tag.
+      dbg_fast_gray_bin_q             <= u_dut.u_core.nfast_src_count;
+      dbg_fast_gray_src_cont_q        <= u_dut.u_core.nfast_src_count;
+      dbg_fast_gray_cont_ff1_q        <= u_dut.u_core.nfast_src_count;
+      dbg_fast_gray_cont_ff2_q        <= u_dut.u_core.nfast_src_count;
       dbg_start_latched_q             <= u_dut.u_core.fe_start_latched;
       dbg_stop_latched_q              <= u_dut.u_core.fe_stop_latched;
       dbg_start_sync_pipe_q           <= u_dut.u_core.start_sync_pipe;

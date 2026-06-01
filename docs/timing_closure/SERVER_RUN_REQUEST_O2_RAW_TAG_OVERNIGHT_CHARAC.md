@@ -31,13 +31,24 @@ Commands:
   python3 tools/mptdc_decode/test_fast_tag_decode.py
   python3 MPTDC/scripts/analysis/o2_raw_tag_charac_smoke.py --run-id 20260601_o2_raw_tag_charac_smoke_server
 
+  # Step 1: cheap characterization smoke after the campaign-collector O2 fix.
   bash MPTDC/scripts/sim/run_vip_overnight.sh \
     --sim xcelium \
-    --stages all \
+    --stages char \
+    --smoke \
+    --jobs 8 \
+    --out-dir results/o2_raw_tag/20260601_o2_raw_tag_char_smoke_retry \
+    --char-nfast-encoding raw_lfsr_tag \
+    --rerun-char \
+    --clean
+
+  # Step 2: full run. If the earlier VIP stage already passed, run char only
+  # against the original output root so the completed VIP evidence is retained.
+  bash MPTDC/scripts/sim/run_vip_overnight.sh \
+    --sim xcelium \
+    --stages char \
     --jobs 32 \
     --out-dir results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac \
-    --vip-seed-start 20000 \
-    --vip-seeds 32 \
     --char-seeds 64 \
     --char-n-conv 100000 \
     --char-train-seeds 48 \
@@ -45,18 +56,20 @@ Commands:
     --char-nfast-encoding raw_lfsr_tag \
     --fixed-delay-seeds 8 \
     --fixed-delay-n-conv 5000 \
-    --rerun-vip \
     --rerun-char
 
 Expected output directories:
 
   results/local_software/20260601_o2_raw_tag_charac_smoke_server/
+  MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_char_smoke_retry/
   MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/
 
 Expected key files:
 
   results/local_software/20260601_o2_raw_tag_charac_smoke_server/SUMMARY.md
   results/local_software/20260601_o2_raw_tag_charac_smoke_server/metadata.json
+  MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_char_smoke_retry/overnight_manifest.json
+  MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_char_smoke_retry/characterization/characterization_manifest.json
   MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/overnight_manifest.json
   MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/vip/vip_summary.json
   MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/characterization_manifest.json
@@ -74,6 +87,7 @@ Files to commit/push after run:
 
   git add -f \
     results/local_software/20260601_o2_raw_tag_charac_smoke_server \
+    MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_char_smoke_retry \
     MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac \
     docs/timing_closure/osc_pd_iteration_log.md
 

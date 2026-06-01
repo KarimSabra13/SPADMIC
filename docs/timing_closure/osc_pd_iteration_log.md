@@ -561,6 +561,14 @@ Local checks:
 - O2 synthesis filelist Verilator syntax check with `MPTDC_USE_RO_TUNE4_MACRO`: PASS.
 - Characterization baseline dry-run with `--nfast-encoding raw_lfsr_tag`: PASS.
 - VIP overnight char-stage dry-run with `--char-nfast-encoding raw_lfsr_tag`: PASS.
+- After the first server O2 overnight attempt, VIP passed 512/512 but all
+  campaign characterization seeds failed at `rc=1`.  Root cause identified
+  locally: `tb_campaign_collect.sv` still had debug-only hierarchical probes
+  into removed `u_core.u_fast_cnt.*`.
+- Fixed campaign collector debug probes to populate historical fast-gray debug
+  columns with the phase-0 raw tag (`u_core.nfast_src_count`) in O2.
+- Verilator campaign smoke from the repository top-level command path: PASS,
+  1 seed, 100 conversions, 1500 data rows.
 
 Functional result:
 

@@ -189,7 +189,7 @@ build_tb() {
 
   echo "[CAMPAIGN] Building collection testbench with Verilator..."
   mkdir -p "$BUILD_DIR"
-  "${cmd[@]}" 2>&1 | tail -5
+  (cd "$REPO_ROOT" && "${cmd[@]}") 2>&1 | tail -5
   echo "[CAMPAIGN] Build complete: $BINARY"
 }
 
