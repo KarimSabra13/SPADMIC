@@ -25,7 +25,7 @@ from mptdc_decode.fast_tag_decode import (
     LEGACY_BINARY_NFAST,
     RAW_LFSR_TAG,
     FastTagMetadata,
-    decode_raw_tag,
+    build_tag_to_index_table,
 )
 
 NE = 8
@@ -104,30 +104,41 @@ def add_o2_raw_tag_decode_columns(
     if "nfast_hit" not in out.columns or "nf" not in out.columns:
         return out
 
-    decoded = []
-    raw_tags = []
-    for _, row in out.iterrows():
-        raw = int(row["nfast_hit"])
-        nf = int(row["nf"])
-        raw_tags.append(raw if nfast_encoding == RAW_LFSR_TAG else np.nan)
-        decoded.append(decode_raw_tag(
-            raw,
-            nf,
-            mode=nfast_encoding,
-            column_offsets=column_offsets,
-            detection_offset=detection_offset,
-        ))
-    out["nfast_raw_tag"] = raw_tags
+    nfast = pd.to_numeric(out["nfast_hit"], errors="coerce").astype("Int64")
+    nf = pd.to_numeric(out["nf"], errors="coerce").astype("Int64")
+    if nfast_encoding == RAW_LFSR_TAG:
+        table = build_tag_to_index_table()
+        decoded = nfast.map(table).astype("Int64")
+        out["nfast_raw_tag"] = nfast
+    else:
+        decoded = nfast
+        out["nfast_raw_tag"] = pd.Series(np.nan, index=out.index)
+
+    if column_offsets is not None:
+        if isinstance(column_offsets, dict):
+            offset_map = {int(k): int(v) for k, v in column_offsets.items()}
+        else:
+            offset_map = {idx: int(value) for idx, value in enumerate(column_offsets)}
+        decoded = decoded + nf.map(offset_map).fillna(0).astype("Int64")
+    if detection_offset:
+        decoded = decoded + int(detection_offset)
     out["nfast_decoded"] = decoded
 
     required = {"nslow", "ns", "nf", "slow_boundary_inc"}
     if required.issubset(out.columns):
-        out["t_raw_ps_decoded_nfast"] = [
-            vernier_tconv_ps(int(row["nslow"]), int(row["nfast_decoded"]),
-                             int(row["ns"]), int(row["nf"]),
-                             int(row["slow_boundary_inc"]))
-            for _, row in out.iterrows()
-        ]
+        coef = (
+            (pd.to_numeric(out["nslow"], errors="coerce")
+             + VERNIER_NSLOW_ORIGIN_BIAS
+             + pd.to_numeric(out["slow_boundary_inc"], errors="coerce")
+             - 1) * K_VERNIER * NE
+            + (pd.to_numeric(out["nfast_decoded"], errors="coerce")
+               + VERNIER_NFAST_ORIGIN_BIAS
+               - 1) * NE
+            + pd.to_numeric(out["ns"], errors="coerce") * K_VERNIER
+            - pd.to_numeric(out["nf"], errors="coerce") * (K_VERNIER - 1)
+            + VERNIER_COEF_BIAS
+        )
+        out["t_raw_ps_decoded_nfast"] = coef * DELTA_LSB_PS
     return out
 
 

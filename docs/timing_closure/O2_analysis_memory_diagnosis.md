@@ -55,6 +55,15 @@ incrementally in its chunk-load training path, but it still read one seed at a
 time as a full DataFrame and validation could load multiple held-out seed files.
 For large O2 sweeps this needs explicit row/file bounds.
 
+Follow-up finding after the first streaming rerun:
+
+- the sweep analysis held RSS at about 0.26 GiB across about 500 chunks
+- the next bottleneck was calibration runtime, not memory
+- the shared O2 raw-tag decode helper still used pandas `iterrows()` and was
+  called from calibration training
+- this made the bounded 48 seed x 200k row sampled calibration path effectively
+  Python-row-iteration bound
+
 ## Fix Plan Implemented
 
 1. Add a streaming backend to `analyze_campaign.py`.
@@ -73,6 +82,9 @@ For large O2 sweeps this needs explicit row/file bounds.
 7. Bound calibration training/validation with:
    - `--train-max-rows-per-seed`
    - `--calibration-val-max-files`
+8. Vectorize the shared O2 raw-tag decode helper used by calibration.
+9. Vectorize `ns_inf`/`nf_inf` recovery in the LUT calibrator.
+10. Print per-seed calibration progress so server stalls are visible.
 
 ## Streaming Output Differences
 

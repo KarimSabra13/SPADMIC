@@ -664,6 +664,9 @@ Local checks:
 - Characterization baseline dry-run with `--skip-campaign`,
   `--analysis-low-memory`, `--analysis-jobs 2`, and bounded calibration:
   PASS.
+- Follow-up calibration vectorization smoke:
+  `python3 MPTDC/scripts/calibration/calibrate_6d_lut.py --train-dir /tmp/o2_campaign_smoke_root/multihit_15_cal_nominal --out-dir /tmp/o2_calibration_vector_smoke --train-seeds 1 --nfast-encoding raw_lfsr_tag --train-max-rows-per-seed 1000 --val-max-files 1`
+  PASS in 4.5 seconds.
 
 Functional result:
 

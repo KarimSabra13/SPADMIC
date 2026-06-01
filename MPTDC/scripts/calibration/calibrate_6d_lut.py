@@ -113,8 +113,10 @@ def infer_ns_nf(df):
              - (df["nslow"] + 2 + df["slow_boundary_inc"] - 1) * K_SLOW
              - df["nfast_hit"] * K_FAST
              - OFFSET)
-    df["ns_inf"] = resid.map(lambda r: NSNF_REV.get(r, (None, None))[0]).astype("Int64")
-    df["nf_inf"] = resid.map(lambda r: NSNF_REV.get(r, (None, None))[1]).astype("Int64")
+    ns_map = {key: value[0] for key, value in NSNF_REV.items()}
+    nf_map = {key: value[1] for key, value in NSNF_REV.items()}
+    df["ns_inf"] = resid.map(ns_map).astype("Int64")
+    df["nf_inf"] = resid.map(nf_map).astype("Int64")
     return df
 
 
@@ -593,7 +595,8 @@ def _phase_pivot(df, error_col, aggfunc):
     if not set(key_cols + [error_col]).issubset(df.columns):
         return None
     piv = df.pivot_table(values=error_col, index="ns_inf", columns="nf_inf", aggfunc=aggfunc)
-    return piv.sort_index().sort_index(axis=1)
+    piv = piv.sort_index().sort_index(axis=1)
+    return piv.apply(pd.to_numeric, errors="coerce").astype(float)
 
 
 def _annotate_heatmap(ax, values, fmt):
@@ -1003,6 +1006,7 @@ def main():
             chunk["offset"] = chunk["Tref_ps"] - chunk["t_raw_ps"]
             infer_ns_nf(chunk)
             chunk = chunk.dropna(subset=["ns_inf", "nf_inf"])
+            sampled_core = len(chunk)
             for keys, grp in chunk.groupby(LUT_KEY)["offset"]:
                 s, sq, c = grp.sum(), (grp**2).sum(), len(grp)
                 if keys in bin_sum:
@@ -1014,9 +1018,8 @@ def main():
                     bin_sumsq[keys] = sq
                     bin_count[keys] = c
             del chunk; gc.collect()
-            if (i + 1) % 6 == 0:
-                print(f"    ... scanned {i+1}/{len(train_files)} seeds "
-                      f"({usable_train_files} usable)")
+            print(f"    ... scanned {i+1}/{len(train_files)} seeds "
+                  f"({usable_train_files} usable, sampled_core={sampled_core:,})")
 
         print_skipped_csv_summary(train_skipped)
         if not bin_count:
