@@ -1,0 +1,42 @@
+================================================================================
+MPTDC Campaign Analysis – Summary Report
+================================================================================
+
+Config                                      Count       Mean        Std       RMSE    PkDNL    PkINL  RawBins   XChk
+--------------------------------------------------------------------------------------------------------------------
+multihit_15_cal_nominal                  96000000   -1975.75     412.51    2018.36    1.000   35.585        0     -1
+
+--------------------------------------------------------------------------------
+Boundary-class t-test results
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Delay / counter dependent summaries
+--------------------------------------------------------------------------------
+
+  Config: multihit_15_cal_nominal
+    Worst delay bin : 2518..3018 ps  RMSE=2170.83 ps  P99=3100.00 ps
+    20-200 ps   count=  577380  RMSE=2187.62 ps  P99=2700.00 ps
+    0.2-1 ns    count= 2565120  RMSE=2005.18 ps  P99=3100.00 ps
+    1-10 ns     count=28784865  RMSE=2018.93 ps  P99=2800.00 ps
+    10-30 ns    count=64069035  RMSE=2017.02 ps  P99=2800.00 ps
+    Worst nslow     :  35  RMSE=2330.79 ps  P99=3100.00 ps
+    Worst nfast_hit :  12  RMSE=2413.88 ps  P99=3100.00 ps
+
+--------------------------------------------------------------------------------
+Cross-config comparison
+--------------------------------------------------------------------------------
+  Best  RMSE : multihit_15_cal_nominal (2018.36 ps)
+  Worst RMSE : multihit_15_cal_nominal (2018.36 ps)
+
+--------------------------------------------------------------------------------
+Calibration recommendations
+--------------------------------------------------------------------------------
+  1. Apply per-boundary-class offset correction to reduce systematic bias.
+  2. Use ns×nf phase-map LUT for residual INL compensation.
+  3. Increase hit statistics in under-represented phase bins.
+  4. Re-run with jitter sweep to validate robustness of correction.
+
+================================================================================
+End of report
+================================================================================

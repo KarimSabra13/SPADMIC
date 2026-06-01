@@ -1,0 +1,3 @@
+schema_version,test_name,seed,attempt_id,event_id,label,source,stop_model,accepted,rejected,reject_reason,start_time_ps,stop_time_ps,true_dt_ps,start_phase_sys_ps,start_phase_ref_ps,ref_phase_offset_ps,max_hits,out_mode,bp_mode,start_only,expect_packet
+1,csr_readback_control,20028,0,-1,csr_fifo_fill_0,1,qualified_ref,1,0,none,359375,375078,15703,3125,9453,78,3,0,always_stall,0,0
+1,csr_readback_control,20028,1,-1,csr_fifo_fill_1,1,qualified_ref,1,0,none,1434375,1450078,15703,3125,9453,78,3,0,always_stall,0,0

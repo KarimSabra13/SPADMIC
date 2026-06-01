@@ -1,0 +1,3 @@
+schema_version,test_name,seed,attempt_id,event_id,label,source,stop_model,accepted,rejected,reject_reason,start_time_ps,stop_time_ps,true_dt_ps,start_phase_sys_ps,start_phase_ref_ps,ref_phase_offset_ps,max_hits,out_mode,bp_mode,start_only,expect_packet
+1,start_watchdog,20009,0,0,start_only_wdt,0,qualified_ref,1,0,none,359375,-1,-1,3125,9466,91,0,0,always_ready,1,1
+1,start_watchdog,20009,1,1,recovery_conv,0,qualified_ref,1,0,none,5521875,5525091,3216,3125,21966,91,15,0,always_ready,0,1

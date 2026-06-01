@@ -1,0 +1,102 @@
+[BASELINE] Output root: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization
+[BASELINE] Config: multihit_15_cal_nominal
+[BASELINE] Sweep campaign: 64 seed(s) × 100000 conv/seed, 32 job(s) in parallel
+[BASELINE] Analysis: backend=streaming jobs=2 chunksize=200000 low_memory=1
+[BASELINE] Manifest: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/characterization_manifest.json
+[RUN] bash /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/sim/run_campaign.sh --sim xcelium --jobs 32 --seeds 64 --n-conv 100000 --delay-min 20 --delay-max 30000 --configs multihit_15_cal_nominal --out-mode raw_features --out-dir /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/campaign
+[BASELINE] Skipping campaign collection; reusing /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/campaign
+[RUN] python3 /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/analysis/analyze_campaign.py --campaign-dir /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/campaign --output-dir /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/sweep --config-filter multihit_15_cal_nominal\* --nfast-encoding raw_lfsr_tag --analysis-jobs 2 --analysis-chunksize 200000 --analysis-backend streaming --analysis-low-memory --log-memory
+[INFO] Found 1 configuration(s) in /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/campaign
+  multihit_15_cal_nominal: 64 file(s)
+
+[MEM] streaming start: RSS=0.14 GiB
+[ANALYSIS] backend=streaming
+[ANALYSIS] analysis_jobs=2 (streaming backend uses bounded sequential aggregation)
+[ANALYSIS] chunksize=200000
+[ANALYSIS] usecols=conv_id,hit_idx,Tref_ps,nslow,nfast_hit,ns,nf,stop_phase_disc,phase0_snap,slow_boundary_inc,hit_count,flags,ctx_id,t_raw_ps,tuple_code
+[ANALYSIS] dtype_map={"Tref_ps": "float32", "conv_id": "int32", "ctx_id": "int8", "flags": "int16", "hit_count": "int8", "hit_idx": "int16", "nf": "int8", "nfast_hit": "int16", "ns": "int8", "nslow": "int16", "phase0_snap": "int8", "slow_boundary_inc": "int8", "stop_phase_disc": "int8", "t_raw_ps": "float32", "tuple_code": "int32"}
+[MEM] after chunk 1: RSS=0.16 GiB
+[MEM] after chunk 20: RSS=0.25 GiB
+[MEM] after chunk 40: RSS=0.25 GiB
+[MEM] after chunk 60: RSS=0.25 GiB
+[MEM] after chunk 80: RSS=0.25 GiB
+[MEM] after chunk 100: RSS=0.26 GiB
+[MEM] after chunk 120: RSS=0.26 GiB
+[MEM] after chunk 140: RSS=0.26 GiB
+[MEM] after chunk 160: RSS=0.26 GiB
+[MEM] after chunk 180: RSS=0.26 GiB
+[MEM] after chunk 200: RSS=0.26 GiB
+[MEM] after chunk 220: RSS=0.26 GiB
+[MEM] after chunk 240: RSS=0.26 GiB
+[MEM] after chunk 260: RSS=0.26 GiB
+[MEM] after chunk 280: RSS=0.26 GiB
+[MEM] after chunk 300: RSS=0.26 GiB
+[MEM] after chunk 320: RSS=0.26 GiB
+[MEM] after chunk 340: RSS=0.26 GiB
+[MEM] after chunk 360: RSS=0.26 GiB
+[MEM] after chunk 380: RSS=0.26 GiB
+[MEM] after chunk 400: RSS=0.26 GiB
+[MEM] after chunk 420: RSS=0.26 GiB
+[MEM] after chunk 440: RSS=0.26 GiB
+[MEM] after chunk 460: RSS=0.26 GiB
+[MEM] after chunk 480: RSS=0.26 GiB
+[MEM] after chunk 500: RSS=0.26 GiB
+[MEM] streaming end: RSS=0.26 GiB
+[INFO] Summary report written to /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/sweep/summary_report.txt
+[INFO] Summary JSON written to /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/sweep/summary_report.json
+[INFO] Streaming analysis complete.
+[RUN] python3 /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/calibration/analyze_fine_grid.py --output /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/sweep/fine_grid_analysis.pdf
+
+Fine Grid Analysis — MPTDC Vernier TDC (NE=8, K_VERNIER=11)
+===========================================================
+Achievable values : 64 / 148 (43.2%)
+Range             : -70 to 77
+Missing values    : 84
+Ideal bin width   : 2.3333 codes (23.33 ps)
+
+Gap statistics (between consecutive achievable codes):
+  Min gap  : 1 (10 ps)
+  Max gap  : 10 (100 ps)
+  Mean gap : 2.33 (23.3 ps)
+
+DNL / INL (theoretical, uniform-density model):
+  Worst DNL : +3.2857 / -0.5714 LSB
+  Worst INL : +7.1429 / -7.1429 LSB
+
+Per-diagonal statistics (d = ns − nf):
+    d  count    min    max   span  achievable values
+  ---  -----  -----  -----  -----  ------------------------------
+   -7      1    -70    -70      0  [-70]
+   -6      2    -60    -59      1  [-60, -59]
+   -5      3    -50    -48      2  [-50, -49, -48]
+   -4      4    -40    -37      3  [-40, -39, -38, -37]
+   -3      5    -30    -26      4  [-30, -29, -28, -27, -26]
+   -2      6    -20    -15      5  [-20, -19, -18, -17, -16, -15]
+   -1      7    -10     -4      6  [-10, -9, -8, -7, -6, -5, -4]
+    0      8      0      7      7  [0, 1, 2, 3, 4, 5, 6, 7]
+    1      7     11     17      6  [11, 12, 13, 14, 15, 16, 17]
+    2      6     22     27      5  [22, 23, 24, 25, 26, 27]
+    3      5     33     37      4  [33, 34, 35, 36, 37]
+    4      4     44     47      3  [44, 45, 46, 47]
+    5      3     55     57      2  [55, 56, 57]
+    6      2     66     67      1  [66, 67]
+    7      1     77     77      0  [77]
+
+Inter-diagonal gaps (last value of d → first value of d+1):
+  d= -7 → d= -6 : gap =  10 ( 100 ps)
+  d= -6 → d= -5 : gap =   9 (  90 ps)
+  d= -5 → d= -4 : gap =   8 (  80 ps)
+  d= -4 → d= -3 : gap =   7 (  70 ps)
+  d= -3 → d= -2 : gap =   6 (  60 ps)
+  d= -2 → d= -1 : gap =   5 (  50 ps)
+  d= -1 → d=  0 : gap =   4 (  40 ps)
+  d=  0 → d=  1 : gap =   4 (  40 ps)
+  d=  1 → d=  2 : gap =   5 (  50 ps)
+  d=  2 → d=  3 : gap =   6 (  60 ps)
+  d=  3 → d=  4 : gap =   7 (  70 ps)
+  d=  4 → d=  5 : gap =   8 (  80 ps)
+  d=  5 → d=  6 : gap =   9 (  90 ps)
+  d=  6 → d=  7 : gap =  10 ( 100 ps)
+
+Plots saved to: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/sweep/fine_grid_analysis.pdf
+[RUN] python3 /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/calibration/calibrate_6d_lut.py --train-dir /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/campaign/multihit_15_cal_nominal --out-dir /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration --train-seeds 48 --nfast-encoding raw_lfsr_tag --train-max-rows-per-seed 200000 --val-max-files 2

@@ -1,0 +1,76 @@
+======================================================================
+  MPTDC STOP-DISCRIMINATOR LUT CALIBRATION REPORT
+======================================================================
+
+Method: Mean-correction Look-Up Table
+Key:    (ns_inf, nf_inf, nslow, nfast_hit, stop_phase_disc, phase0_snap, hit_idx)
+Bins:   9,548
+Mode compatibility: fixed RAW_FEATURES packet; legacy RAW_TIMESTAMP/FULL CSR codes ignored
+
+Training skipped CSVs: 0
+
+──────────────────────────────────────────────────────────────────────
+HELD-OUT VALIDATION (core subset: nslow > 0, files: seed_0.csv, seed_1.csv)
+──────────────────────────────────────────────────────────────────────
+  Rows before filter     : 3,000,000
+  Rows after filter      : 3,000,000
+  Rows after ns/nf infer : 3,000,000
+  Excluded nslow=0 rows  :        0 (0.0%)
+
+  Skipped CSVs           :        0
+
+  Pre-calibration  RMSE:  2018.41 ps
+  Post-calibration RMSE:    18.58 ps
+  Improvement:              99.1%
+
+  Pre-cal  MAE / P50 / P90 / P99: 1975.8 / 2049.0 / 2549.0 / 2704.0 ps
+  Post-cal MAE / P50 / P90 / P99: 15.2 / 13.5 / 31.4 / 39.0 ps
+
+──────────────────────────────────────────────────────────────────────
+ANALYSIS-SIDE RESAMPLED AVERAGING STUDY
+──────────────────────────────────────────────────────────────────────
+  Scope  : post-calibration core subset (nslow > 0)
+  Method : resamples independent error draws from the calibrated pool;
+           this is not a fixed-delay repeated-measurement TB proof.
+
+       N   RMSE (ps)    MAE (ps)    P90 (ps)    vs N=1
+       1      18.502      15.214      31.112      0.0%
+       2      13.108      10.617      21.741     29.2%
+       3      10.608       8.550      17.500     42.7%
+       4       9.314       7.459      15.515     49.7%
+       5       8.327       6.682      13.567     55.0%
+       8       6.532       5.233      10.841     64.7%
+      10       5.806       4.642       9.631     68.6%
+      15       4.816       3.863       7.974     74.0%
+      20       4.142       3.302       6.803     77.6%
+      25       3.772       3.014       6.196     79.6%
+      30       3.358       2.690       5.460     81.9%
+      40       2.964       2.366       4.843     84.0%
+      50       2.598       2.065       4.309     86.0%
+      75       2.171       1.737       3.599     88.3%
+     100       1.857       1.475       3.099     90.0%
+     150       1.538       1.232       2.507     91.7%
+     200       1.313       1.047       2.148     92.9%
+     250       1.192       0.955       1.950     93.6%
+     300       1.077       0.864       1.765     94.2%
+     400       0.937       0.746       1.537     94.9%
+     500       0.849       0.669       1.388     95.4%
+     750       0.669       0.532       1.098     96.4%
+    1000       0.597       0.479       0.973     96.8%
+
+──────────────────────────────────────────────────────────────────────
+LUT KEY FIELD AVAILABILITY IN THE MAINTAINED V2.7 PACKET
+──────────────────────────────────────────────────────────────────────
+  Field           Packet location
+  ─────           ───────────────
+  nslow           W0[14:8]
+  nfast_hit       W0[7:1]
+  ns_inf          W1[14:11]
+  nf_inf          W1[10:7]
+  stop_phase_disc W1[2:0]
+  phase0_snap     Header[11]
+  slow_bound_inc  Header[2]
+  hit_idx         implicit packet order
+  t_raw_ps        recomputed from packet-visible fields
+
+  Legacy RAW_TIMESTAMP/FULL CSR codes are ignored by maintained RTL.

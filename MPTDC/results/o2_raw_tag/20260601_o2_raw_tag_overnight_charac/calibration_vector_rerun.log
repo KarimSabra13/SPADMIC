@@ -1,0 +1,154 @@
+======================================================================
+  MPTDC STOP-discriminator LUT Calibrator
+======================================================================
+
+[1/6] Building LUT from training data (48 seeds)...
+  Training files: 48
+    ... scanned 1/48 seeds (1 usable, sampled_core=200,000)
+    ... scanned 2/48 seeds (2 usable, sampled_core=200,000)
+    ... scanned 3/48 seeds (3 usable, sampled_core=200,000)
+    ... scanned 4/48 seeds (4 usable, sampled_core=200,000)
+    ... scanned 5/48 seeds (5 usable, sampled_core=200,000)
+    ... scanned 6/48 seeds (6 usable, sampled_core=200,000)
+    ... scanned 7/48 seeds (7 usable, sampled_core=200,000)
+    ... scanned 8/48 seeds (8 usable, sampled_core=200,000)
+    ... scanned 9/48 seeds (9 usable, sampled_core=200,000)
+    ... scanned 10/48 seeds (10 usable, sampled_core=200,000)
+    ... scanned 11/48 seeds (11 usable, sampled_core=200,000)
+    ... scanned 12/48 seeds (12 usable, sampled_core=200,000)
+    ... scanned 13/48 seeds (13 usable, sampled_core=200,000)
+    ... scanned 14/48 seeds (14 usable, sampled_core=200,000)
+    ... scanned 15/48 seeds (15 usable, sampled_core=200,000)
+    ... scanned 16/48 seeds (16 usable, sampled_core=200,000)
+    ... scanned 17/48 seeds (17 usable, sampled_core=200,000)
+    ... scanned 18/48 seeds (18 usable, sampled_core=200,000)
+    ... scanned 19/48 seeds (19 usable, sampled_core=200,000)
+    ... scanned 20/48 seeds (20 usable, sampled_core=200,000)
+    ... scanned 21/48 seeds (21 usable, sampled_core=200,000)
+    ... scanned 22/48 seeds (22 usable, sampled_core=200,000)
+    ... scanned 23/48 seeds (23 usable, sampled_core=200,000)
+    ... scanned 24/48 seeds (24 usable, sampled_core=200,000)
+    ... scanned 25/48 seeds (25 usable, sampled_core=200,000)
+    ... scanned 26/48 seeds (26 usable, sampled_core=200,000)
+    ... scanned 27/48 seeds (27 usable, sampled_core=200,000)
+    ... scanned 28/48 seeds (28 usable, sampled_core=200,000)
+    ... scanned 29/48 seeds (29 usable, sampled_core=200,000)
+    ... scanned 30/48 seeds (30 usable, sampled_core=200,000)
+    ... scanned 31/48 seeds (31 usable, sampled_core=200,000)
+    ... scanned 32/48 seeds (32 usable, sampled_core=200,000)
+    ... scanned 33/48 seeds (33 usable, sampled_core=200,000)
+    ... scanned 34/48 seeds (34 usable, sampled_core=200,000)
+    ... scanned 35/48 seeds (35 usable, sampled_core=200,000)
+    ... scanned 36/48 seeds (36 usable, sampled_core=200,000)
+    ... scanned 37/48 seeds (37 usable, sampled_core=200,000)
+    ... scanned 38/48 seeds (38 usable, sampled_core=200,000)
+    ... scanned 39/48 seeds (39 usable, sampled_core=200,000)
+    ... scanned 40/48 seeds (40 usable, sampled_core=200,000)
+    ... scanned 41/48 seeds (41 usable, sampled_core=200,000)
+    ... scanned 42/48 seeds (42 usable, sampled_core=200,000)
+    ... scanned 43/48 seeds (43 usable, sampled_core=200,000)
+    ... scanned 44/48 seeds (44 usable, sampled_core=200,000)
+    ... scanned 45/48 seeds (45 usable, sampled_core=200,000)
+    ... scanned 46/48 seeds (46 usable, sampled_core=200,000)
+    ... scanned 47/48 seeds (47 usable, sampled_core=200,000)
+    ... scanned 48/48 seeds (48 usable, sampled_core=200,000)
+  Total rows loaded :   72,000,000
+  Core rows (nslow>0):    9,600,000
+  LUT bins          :        9,548
+  Min bin population:            1
+  Median bin pop.   :        1,032
+  Max bin population:        1,842
+  LUT saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/lut_6d.csv
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/lut_bin_quality.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/lut_inl_dnl.png
+  WARNING: no held-out seeds remain after the training split; reusing the available validation directory for a shape check.
+
+[2/6] Validating on held-out seeds (2 files)...
+  Core filter: removed 0 rows (0.0%) with nslow=0
+  Validation rows (core subset): 3,000,000
+  LUT coverage: 100.00% (27 unmatched)
+  Pre-calibration (held-out, core subset):
+    Count      :    2,999,973
+    RMSE       :      2018.41 ps
+    MAE        :      1975.80 ps
+    Mean error :    -1975.803 ps
+    Std        :      412.522 ps
+    |err| P50  :      2049.00 ps
+    |err| P90  :      2549.00 ps
+    |err| P95  :      2634.00 ps
+    |err| P99  :      2704.00 ps
+    Min / Max  : -3100.00 / -1046.00 ps
+  Post-calibration (held-out, core subset):
+    Count      :    2,999,973
+    RMSE       :        18.58 ps
+    MAE        :        15.24 ps
+    Mean error :       -0.013 ps
+    Std        :       18.579 ps
+    |err| P50  :        13.52 ps
+    |err| P90  :        31.45 ps
+    |err| P95  :        35.38 ps
+    |err| P99  :        39.02 ps
+    Min / Max  : -41.64 / +41.64 ps
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/val_reconstruction_errors_pre_post.csv
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_error_histogram.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_error_vs_delay.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_comparison_bar.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_rmse_by_hit_idx.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_rmse_by_hit_idx_raw.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_rmse_by_nslow.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_error_vs_traw.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_qq_plot.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_delay_profile_pre_post.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_phase_heatmaps_pre_post.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/val_rmse_by_hit_idx_pre_post.png
+
+[3/6] No fresh validation data found – skipping.
+
+[4/6] Averaging study...
+
+       N        RMSE         MAE         P90   Improvement
+  ──────  ──────────  ──────────  ──────────  ────────────
+       1      18.502      15.214      31.112          0.0%
+       2      13.108      10.617      21.741         29.2%
+       3      10.608       8.550      17.500         42.7%
+       4       9.314       7.459      15.515         49.7%
+       5       8.327       6.682      13.567         55.0%
+       8       6.532       5.233      10.841         64.7%
+      10       5.806       4.642       9.631         68.6%
+      15       4.816       3.863       7.974         74.0%
+      20       4.142       3.302       6.803         77.6%
+      25       3.772       3.014       6.196         79.6%
+      30       3.358       2.690       5.460         81.9%
+      40       2.964       2.366       4.843         84.0%
+      50       2.598       2.065       4.309         86.0%
+      75       2.171       1.737       3.599         88.3%
+     100       1.857       1.475       3.099         90.0%
+     150       1.538       1.232       2.507         91.7%
+     200       1.313       1.047       2.148         92.9%
+     250       1.192       0.955       1.950         93.6%
+     300       1.077       0.864       1.765         94.2%
+     400       0.937       0.746       1.537         94.9%
+     500       0.849       0.669       1.388         95.4%
+     750       0.669       0.532       1.098         96.4%
+    1000       0.597       0.479       0.973         96.8%
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/averaging_rmse_curve.png
+  Saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/plots/averaging_table.png
+
+[5/6] Writing report...
+  Report saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/calibration_report.json
+  Text report saved: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/calibration_report.txt
+
+[6/6] Done in 448.3s
+
+======================================================================
+  FINAL RESULTS
+======================================================================
+  Held-out core subset:  2018.41 ps → 18.58 ps (99.1% improvement)
+  Sub-15 ps: N ≥ 2 averages (RMSE = 13.11 ps)
+  Sub-10 ps: N ≥ 4 averages (RMSE = 9.31 ps)
+  Sub- 5 ps: N ≥ 15 averages (RMSE = 4.82 ps)
+  Sub- 2 ps: N ≥ 100 averages (RMSE = 1.86 ps)
+  Sub- 1 ps: N ≥ 400 averages (RMSE = 0.94 ps)
+======================================================================
+
+Outputs in: MPTDC/results/o2_raw_tag/20260601_o2_raw_tag_overnight_charac/characterization/analysis/calibration/
