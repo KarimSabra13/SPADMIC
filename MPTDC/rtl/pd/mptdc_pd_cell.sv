@@ -115,10 +115,6 @@ module mptdc_pd_cell #(
   // synthesis translate_off
   logic hit_seen_q;
 
-  initial begin
-    nfast_hit_latched = '0;
-  end
-
   always @(posedge fast_phase or negedge rst_n or posedge clear_window) begin
     if (!rst_n || clear_window) begin
       hit_seen_q <= 1'b0;
