@@ -470,7 +470,7 @@ module mptdc_core
   for (genvar ns = 0; ns < NE; ns++) begin : gen_pd_row
     for (genvar nf = 0; nf < NE; nf++) begin : gen_pd_col
       localparam int unsigned CELL = ns * NE + nf;
-      (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
+      (* keep_hierarchy = "yes" *)
       mptdc_pd_cell #(.SAMPLE_DEPTH(2)) u_pd (
         .rst_n        (rst_sys_n),
         .clear_window (meas_pd_clear),

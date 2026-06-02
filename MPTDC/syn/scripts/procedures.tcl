@@ -221,6 +221,49 @@ proc mptdc_try_preserve_cells {cells} {
     catch {set_db $cells .ungroup_ok false}
 }
 
+proc mptdc_bool_env {name default_value} {
+    if {![info exists ::env($name)]} {
+        return $default_value
+    }
+    set value [string tolower $::env($name)]
+    return [expr {$value eq "1" || $value eq "true" || $value eq "yes" || $value eq "on"}]
+}
+
+proc mptdc_try_keep_hierarchy_cells {cells} {
+    if {[llength $cells] == 0} {
+        return
+    }
+    catch {set_db $cells .ungroup_ok false}
+}
+
+proc mptdc_collect_icg_lib_cells {} {
+    set cells [list]
+    foreach pattern {
+        LGCNHDX* LGCPHDX*
+        LSGCNHDX* LSGCPHDX*
+        LSOGCNHDX* LSOGCPHDX*
+    } {
+        set matches [list]
+        catch {set matches [get_db lib_cells $pattern]}
+        if {[llength $matches] > 0} {
+            set cells [concat $cells $matches]
+        }
+    }
+    return $cells
+}
+
+proc mptdc_allow_icg_lib_cells {} {
+    set icg_cells [mptdc_collect_icg_lib_cells]
+    mptdc_message "O5 ICG audit: matched [llength $icg_cells] candidate clock-gating lib cells"
+    if {[llength $icg_cells] == 0} {
+        return
+    }
+    foreach cell $icg_cells {
+        catch {set_db $cell .dont_use false}
+        catch {set_db $cell .avoid false}
+    }
+}
+
 proc mptdc_report_hotspot_timing {rpt_file title patterns} {
     set endpoint_names [mptdc_collect_pin_names $patterns]
     if {[llength $endpoint_names] > 0} {
@@ -508,12 +551,15 @@ proc mptdc_write_high_fanout_report {rpt_file {limit 100} {threshold 20}} {
 }
 
 proc mptdc_preserve_physical_hierarchy {} {
-    mptdc_message "Preserving reset synchronizer and PD matrix hierarchy"
+    set relax_pd [mptdc_bool_env MPTDC_RELAX_PD_PRESERVE false]
+    if {$relax_pd} {
+        mptdc_message "Preserving reset synchronizer hierarchy; O5 relaxes PD dont_touch for internal optimization"
+    } else {
+        mptdc_message "Preserving reset synchronizer and PD matrix hierarchy"
+    }
 
     foreach pattern {
         *u_rst*sync*
-        *gen_pd_row*gen_pd_col*u_pd*
-        *u_pd*
     } {
         set cells [list]
         catch {set cells [get_cells -quiet -hierarchical $pattern]}
@@ -522,14 +568,37 @@ proc mptdc_preserve_physical_hierarchy {} {
         }
     }
 
+    foreach pattern {
+        *gen_pd_row*gen_pd_col*u_pd*
+        *u_pd*
+    } {
+        set cells [list]
+        catch {set cells [get_cells -quiet -hierarchical $pattern]}
+        if {[llength $cells] > 0} {
+            if {$relax_pd} {
+                mptdc_try_keep_hierarchy_cells $cells
+            } else {
+                mptdc_try_preserve_cells $cells
+            }
+        }
+    }
+
     foreach module_pattern {
         *mptdc_reset_sync*
-        *mptdc_pd_cell*
     } {
         set modules [list]
         catch {set modules [get_db modules $module_pattern]}
         mptdc_try_set_db $modules .dont_touch true
         mptdc_try_set_db $modules .ungroup_ok false
+    }
+
+    set pd_modules [list]
+    catch {set pd_modules [get_db modules *mptdc_pd_cell*]}
+    if {$relax_pd} {
+        mptdc_try_set_db $pd_modules .ungroup_ok false
+    } else {
+        mptdc_try_set_db $pd_modules .dont_touch true
+        mptdc_try_set_db $pd_modules .ungroup_ok false
     }
 }
 

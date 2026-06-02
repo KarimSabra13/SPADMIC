@@ -43,11 +43,25 @@ if {[catch {set_db syn_ramstyle registers} ramstyle_err]} {
 #############################################
 #       Clock Gating
 #############################################
-# Disabled for initial bring-up: the checked-in XFAB HD liberty marks the
-# integrated clock-gating cells as dont_use, so automatic insertion is not
-# reliable yet on the current lab-server setup.
-set mptdc_enable_clock_gating false
-set clock_gating_note "clock gating disabled (library ICG cells are dont_use)"
+# Disabled by default: the checked-in XFAB HD liberty marks the integrated
+# clock-gating cells as dont_use. O5 can enable this only as an explicit
+# feasibility experiment after the server script records the ICG audit.
+if {[info exists ::env(MPTDC_ENABLE_CLOCK_GATING)]} {
+    set mptdc_enable_clock_gating [mptdc_bool_env MPTDC_ENABLE_CLOCK_GATING false]
+} else {
+    set mptdc_enable_clock_gating false
+}
+if {[info exists ::env(MPTDC_CLOCK_GATING_MIN_FLOPS)]} {
+    set mptdc_clock_gating_min_flops $::env(MPTDC_CLOCK_GATING_MIN_FLOPS)
+} else {
+    set mptdc_clock_gating_min_flops 8
+}
+set mptdc_allow_icg_dont_use_override [mptdc_bool_env MPTDC_ALLOW_ICG_DONT_USE_OVERRIDE false]
+if {$mptdc_enable_clock_gating} {
+    set clock_gating_note "clock gating enabled experimentally (min_flops=$mptdc_clock_gating_min_flops, icg_dont_use_override=$mptdc_allow_icg_dont_use_override)"
+} else {
+    set clock_gating_note "clock gating disabled (library ICG cells are dont_use)"
+}
 set_db lp_insert_clock_gating $mptdc_enable_clock_gating
 
 #############################################

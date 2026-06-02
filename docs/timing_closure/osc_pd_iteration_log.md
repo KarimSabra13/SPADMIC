@@ -938,3 +938,77 @@ Local Verilator:
 Next action:
 
 - Commit/push O4 patch, then run `server_run_genus_o4_muxless_tags_r600.sh` on the lab server.
+
+## 2026-06-02 - O5_STANDARD_CELL_PD_CLOSURE_NO_FREQ_REDUCTION prepared
+
+Branch: `SPADMIC_localtag`
+
+Base HEAD before O5 edits: `53ddfffeac333ae1e293bed4327169960b660c3a`
+
+Latest evidence:
+
+- O4 structurally succeeded but R600 closure still failed.
+- Dominant O4 R600 closure family: PD `hit_latched_reg` -> `nfast_hit_latched_reg[*]`.
+- R600 closure `OSC_FAST_REAL` WNS remained about `-1316 ps`.
+- The old global fast counter and old slow counter paths were absent.
+
+Purpose:
+
+- Keep oscillator frequency unchanged for O5.
+- Keep PD in standard cells.
+- Preserve same-edge PD detection and raw-tag packet semantics.
+- Remove unnecessary reset/clear from PD timestamp shadow flops.
+- Relax PD `dont_touch` while keeping hierarchy visible.
+- Prepare a controlled Genus clock-gating feasibility mode for timestamp freeze.
+
+Files changed:
+
+- `MPTDC/rtl/pd/mptdc_pd_cell.sv`
+- `MPTDC/rtl/top/mptdc_core.sv`
+- `MPTDC/tb/unit/tb_pd_cell_tag_capture_unit.sv`
+- `MPTDC/syn/scripts/procedures.tcl`
+- `MPTDC/syn/scripts/settings.tcl`
+- `MPTDC/syn/scripts/genus.tcl`
+- `MPTDC/syn/scripts/server_run_genus_o4_muxless_tags_r600.sh`
+- `MPTDC/syn/filelist_o5_pd_stdcell_closure.f`
+- `MPTDC/syn/inputs/mptdc_osc_pd_o5.sdc`
+- `MPTDC/syn/scripts/server_run_genus_o5_pd_stdcell_closure.sh`
+- `docs/timing_closure/O5_*.md`
+
+Functional result expected:
+
+- Packet layout unchanged.
+- HIT `nfast` remains a raw fast LFSR tag in raw-tag mode.
+- `nslow` remains decoded from STOP-captured Johnson state.
+- `hit_latched`, q1/q2, and detect_en behavior are unchanged.
+- `nfast_hit_latched` is ignored for no-hit cells and overwritten before the next valid hit.
+
+Timing intent:
+
+- `O5_NORESET_TS`: test whether plain no-reset timestamp flops reduce the PD path.
+- `O5_CLOCK_GATED_TS`: test whether Genus can turn the timestamp freeze into local ICG-based hold.
+- No PD timestamp false paths are added.
+- No lower-frequency R500/R400 run is requested in O5.
+
+Server result:
+
+- pending O5 Genus run after local tests and commit/push.
+
+Local verification:
+
+- `bash -n MPTDC/syn/scripts/server_run_genus_o5_pd_stdcell_closure.sh`: PASS
+- `bash -n MPTDC/syn/scripts/server_run_genus_o4_muxless_tags_r600.sh`: PASS
+- `git diff --check`: PASS
+- `tb_pd_cell_tag_capture_unit`: PASS
+- `tb_pd_gate_false_hit_unit`: PASS
+- `tb_fast_epoch_tag_unit`: PASS
+- `tb_slow_epoch_johnson_unit`: PASS
+- `tb_drain_raw_tag_unit`: PASS
+- `tb_drain_ctrl_unit`: PASS
+- `bash MPTDC/ci/run_smoke.sh`: PASS
+
+Next action:
+
+- Commit/push the O5 patch, fill `EXPECTED_HEAD` in
+  `SERVER_RUN_REQUEST_O5_PD_STDCELL_CLOSURE.md`, then run the O5 Genus
+  fast-feasibility matrix on the lab server.

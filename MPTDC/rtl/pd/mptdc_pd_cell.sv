@@ -25,8 +25,10 @@
 //   - hit_latched is set to 1 and stays high until clear_window or reset.
 //   - nfast_hit_latched is a shadow timestamp register: before a hit, it tracks
 //     the current local fast-column raw tag; once a hit is detected it freezes.
-//     This keeps q1/q2 edge-detect logic out of the 7-bit timestamp D path.
-//     In O2/O3 raw-tag mode, software decodes this packet-visible field.
+//     The timestamp flops intentionally have no hardware reset/clear in O5:
+//     nfast_hit is only meaningful when hit_latched=1, and no-hit cells are
+//     ignored by the snapshot/drain path.
+//     In O2/O3/O4/O5 raw-tag mode, software decodes this packet-visible field.
 //
 // Clock domain: fast_phase (fast oscillator tap, ~1 GHz).
 // clear_window is an asynchronous clear from the system domain — it is
@@ -37,7 +39,7 @@
 // hierarchy and pin structure reviewable so backend can match slow/fast tap
 // loading, routing RC, and PVT-sensitive skew across the full matrix.
 // =============================================================================
-(* keep_hierarchy = "yes", dont_touch = "true", preserve *)
+(* keep_hierarchy = "yes" *)
 module mptdc_pd_cell #(
   parameter int unsigned SAMPLE_DEPTH = 2  // Edge detection pipeline depth (2 or 3)
 )(
@@ -69,13 +71,10 @@ module mptdc_pd_cell #(
           q2          <= 1'b0;
           q3          <= 1'b0;
           hit_latched <= 1'b0;
-          nfast_hit_latched <= '0;
         end else if (detect_en_i) begin
           q1 <= slow_phase;
           q2 <= q1;
           q3 <= q2;
-          if (!hit_latched)
-            nfast_hit_latched <= nfast_tag_i;
           // Confirmed falling edge: q3=1, q2=1 (was high), q1=0 (went low)
           if (!hit_latched && !q1 && q2 && q3) begin
             hit_latched <= 1'b1;
@@ -89,12 +88,9 @@ module mptdc_pd_cell #(
           q1          <= 1'b0;
           q2          <= 1'b0;
           hit_latched <= 1'b0;
-          nfast_hit_latched <= '0;
         end else if (detect_en_i) begin
           q1 <= slow_phase;
           q2 <= q1;
-          if (!hit_latched)
-            nfast_hit_latched <= nfast_tag_i;
           // Falling edge: q2=1 (was high), q1=0 (went low)
           if (!hit_latched && !q1 && q2) begin
             hit_latched <= 1'b1;
@@ -102,13 +98,26 @@ module mptdc_pd_cell #(
         end
       end
     end
-  endgenerate
+	  endgenerate
+
+  // Timestamp shadow flops are deliberately separate from q1/q2/hit_latched so
+  // O5 can test no-reset flops and clock-gating inference without changing the
+  // PD edge-detection principle. They track the local tag until hit_latched is
+  // set on the same fast edge, then freeze for snapshot/readout.
+  always_ff @(posedge fast_phase) begin
+    if (!hit_latched)
+      nfast_hit_latched <= nfast_tag_i;
+  end
 
   assign hit_level = hit_latched;
   assign nfast_hit = nfast_hit_latched;
 
   // synthesis translate_off
   logic hit_seen_q;
+
+  initial begin
+    nfast_hit_latched = '0;
+  end
 
   always @(posedge fast_phase or negedge rst_n or posedge clear_window) begin
     if (!rst_n || clear_window) begin

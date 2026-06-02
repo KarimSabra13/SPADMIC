@@ -178,7 +178,13 @@ mptdc_report_timing $design(synthesis_reports)
 
 # Clock gating configuration
 if {[info exists mptdc_enable_clock_gating] && $mptdc_enable_clock_gating} {
-    set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_min_flops 8
+    if {[info exists mptdc_allow_icg_dont_use_override] && $mptdc_allow_icg_dont_use_override} {
+        mptdc_allow_icg_lib_cells
+    }
+    if {![info exists mptdc_clock_gating_min_flops]} {
+        set mptdc_clock_gating_min_flops 8
+    }
+    set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_min_flops $mptdc_clock_gating_min_flops
     set_db [get_db design:$design(TOPLEVEL)] .lp_clock_gating_style latch
 } else {
     mptdc_message "Clock gating insertion disabled for current synthesis bring-up"

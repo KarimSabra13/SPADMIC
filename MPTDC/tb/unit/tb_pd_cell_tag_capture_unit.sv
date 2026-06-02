@@ -104,7 +104,24 @@ module tb_pd_cell_tag_capture_unit;
 
     async_clear();
     check(hit_level == 1'b0, "clear_window clears hit");
-    check(nfast_hit == '0, "clear_window clears captured tag");
+
+    // O5 intentionally removes hardware reset/clear from the timestamp shadow
+    // flops.  The field is ignored while hit_level=0, then overwritten by the
+    // local tag before the next valid hit.
+    detect_en = 1'b0;
+    nfast_tag = 7'd99;
+    fast_tick(7'd99);
+    check(hit_level == 1'b0, "no-hit cell keeps nfast ignored after clear");
+
+    detect_en = 1'b1;
+    slow_phase = 1'b1;
+    fast_tick(7'd20);
+    fast_tick(7'd21);
+    slow_phase = 1'b0;
+    fast_tick(7'd22);
+    fast_tick(7'd23);
+    check(hit_level == 1'b1, "post-clear falling edge latches hit");
+    check(nfast_hit == 7'd23, "post-clear hit overwrites stale timestamp");
 
     $display("===================================");
     $display("  Results: %0d PASS, %0d FAIL", pass_cnt, fail_cnt);
