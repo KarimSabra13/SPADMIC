@@ -10,7 +10,7 @@
 #           --config NAME         Campaign config (default multihit_15_cal_nominal)
 #           --out-mode NAME       raw_features (default raw_features;
 #                                 legacy full/2 aliases are mapped to raw_features)
-#           --nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag
+#           --nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag
 #           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_raw_features)
 #           --analyze             Run sweep analysis + fine-grid report, including
 #                                 raw tuple histograms/code-density CSVs and plots
@@ -197,7 +197,7 @@ case "$OUT_MODE" in
     ;;
 esac
 case "$NFAST_ENCODING" in
-  legacy_binary_nfast|raw_lfsr_tag) ;;
+  legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag) ;;
   *)
     echo "[ERROR] Unknown nfast encoding '$NFAST_ENCODING'"
     exit 1
@@ -361,6 +361,11 @@ write_manifest() {
   export MANIFEST_CONFIG="$CONFIG"
   export MANIFEST_OUT_MODE="$OUT_MODE"
   export MANIFEST_NFAST_ENCODING="$NFAST_ENCODING"
+  export MANIFEST_RTL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
+  export MANIFEST_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  export MANIFEST_MPTDC_ROOT="$REPO_ROOT"
+  export MANIFEST_PACKET_FORMAT_VERSION="fixed_raw_features_v2_7"
+  export MANIFEST_CALIBRATION_MODEL_VERSION="6d_lut_v2_7"
   export MANIFEST_OUT_DIR="$OUT_DIR"
   export MANIFEST_CAMPAIGN_DIR="$CAMPAIGN_DIR"
   export MANIFEST_CAMPAIGN_CONFIG_DIR="$CAMPAIGN_DIR/$CAMPAIGN_CONFIG_DIR"
@@ -403,18 +408,45 @@ write_manifest() {
   python3 - <<'PY'
 import json
 import os
+import sys
 from pathlib import Path
+
+tools_root = Path(os.environ["MANIFEST_MPTDC_ROOT"]).parent / "tools"
+if str(tools_root) not in sys.path:
+    sys.path.insert(0, str(tools_root))
+
+from mptdc_decode.fast_tag_decode import FastTagMetadata
 
 def env_bool(name: str) -> bool:
     return os.environ.get(name, "0") == "1"
 
+tag_metadata = FastTagMetadata(nfast_encoding=os.environ["MANIFEST_NFAST_ENCODING"]).as_dict()
+seed_list = list(range(int(os.environ["MANIFEST_SEEDS"])))
+
 data = {
     "name": "mptdc-characterization-baseline",
     "status": os.environ["MANIFEST_STATUS"],
+    "rtl": {
+        "branch": os.environ["MANIFEST_BRANCH"],
+        "head": os.environ["MANIFEST_RTL_HEAD"],
+    },
+    "packet": {
+        "format_version": os.environ["MANIFEST_PACKET_FORMAT_VERSION"],
+        "word_width": 16,
+        "layout": "header + 2*hit_count hit words + eoc",
+        "production_packet_unchanged": True,
+        "nslow_width": 7,
+        "nfast_width": 7,
+        "ns_width": 4,
+        "nf_width": 4,
+    },
+    "tag_encoding": tag_metadata,
+    "calibration_model_version": os.environ["MANIFEST_CALIBRATION_MODEL_VERSION"],
     "baseline": {
         "sim": os.environ["MANIFEST_SIM"],
         "jobs": int(os.environ["MANIFEST_JOBS"]),
         "seeds": int(os.environ["MANIFEST_SEEDS"]),
+        "seed_list": seed_list,
         "n_conv_per_seed": int(os.environ["MANIFEST_N_CONV"]),
         "config": os.environ["MANIFEST_CONFIG"],
         "delay_range_ps": [20, 30000],

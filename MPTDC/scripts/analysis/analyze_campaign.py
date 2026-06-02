@@ -33,8 +33,8 @@ if str(SCRIPT_ROOT) not in sys.path:
 
 from plot_style import PALETTE, apply_report_style, save_figure, style_axes
 from analysis.mptdc_char_common import (
+    NFAST_ENCODING_CHOICES,
     NFAST_ENCODING_LEGACY,
-    NFAST_ENCODING_RAW_LFSR_TAG,
     add_o2_raw_tag_decode_columns,
 )
 
@@ -384,7 +384,7 @@ def _update_binned(stats_by_idx: dict[int, OnlineStats], x_values, err_values, e
 
 
 def _decode_nfast_chunk(df: pd.DataFrame, nfast_encoding: str) -> tuple[pd.DataFrame, int]:
-    """Decode raw LFSR tags chunk-wise without row iterrows."""
+    """Decode raw tag encodings chunk-wise without row iterrows."""
     out = df.copy()
     if "nfast_hit" not in out.columns:
         return out, 0
@@ -394,7 +394,7 @@ def _decode_nfast_chunk(df: pd.DataFrame, nfast_encoding: str) -> tuple[pd.DataF
 
     from mptdc_decode.fast_tag_decode import build_tag_to_index_table
 
-    tag_table = build_tag_to_index_table(width=7, seed=1)
+    tag_table = build_tag_to_index_table(width=7, seed=1, mode=nfast_encoding)
     raw = pd.to_numeric(out["nfast_hit"], errors="coerce").astype("Int16")
     decoded = raw.map(tag_table)
     invalid = int(decoded.isna().sum())
@@ -1484,8 +1484,8 @@ def main():
     parser.add_argument("--no-plots", action="store_true",
                         help="Skip plot generation")
     parser.add_argument("--nfast-encoding", default=NFAST_ENCODING_LEGACY,
-                        choices=[NFAST_ENCODING_LEGACY, NFAST_ENCODING_RAW_LFSR_TAG],
-                        help="Interpret packet nfast_hit as legacy binary or O2 raw LFSR tag")
+                        choices=NFAST_ENCODING_CHOICES,
+                        help="Interpret packet nfast_hit according to the declared tag encoding")
     parser.add_argument("--analysis-backend", default="legacy",
                         choices=["legacy", "streaming"],
                         help="Analysis implementation (legacy loads all rows; streaming is chunked)")

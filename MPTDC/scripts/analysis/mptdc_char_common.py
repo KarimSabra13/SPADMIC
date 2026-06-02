@@ -23,6 +23,7 @@ if str(TOOLS_ROOT) not in sys.path:
 from plot_style import PALETTE, apply_report_style, save_figure, style_axes
 from mptdc_decode.fast_tag_decode import (
     LEGACY_BINARY_NFAST,
+    RAW_GALOIS_TAG,
     RAW_LFSR_TAG,
     FastTagMetadata,
     build_tag_to_index_table,
@@ -37,6 +38,12 @@ VERNIER_NFAST_ORIGIN_BIAS = 1
 VERNIER_COEF_BIAS = 25
 NFAST_ENCODING_LEGACY = LEGACY_BINARY_NFAST
 NFAST_ENCODING_RAW_LFSR_TAG = RAW_LFSR_TAG
+NFAST_ENCODING_RAW_GALOIS_TAG = RAW_GALOIS_TAG
+NFAST_ENCODING_CHOICES = (
+    NFAST_ENCODING_LEGACY,
+    NFAST_ENCODING_RAW_LFSR_TAG,
+    NFAST_ENCODING_RAW_GALOIS_TAG,
+)
 
 FIG_EXTS = ("png", "pdf")
 
@@ -106,13 +113,15 @@ def add_o2_raw_tag_decode_columns(
 
     nfast = pd.to_numeric(out["nfast_hit"], errors="coerce").astype("Int64")
     nf = pd.to_numeric(out["nf"], errors="coerce").astype("Int64")
-    if nfast_encoding == RAW_LFSR_TAG:
-        table = build_tag_to_index_table()
+    if nfast_encoding in (RAW_LFSR_TAG, RAW_GALOIS_TAG):
+        table = build_tag_to_index_table(mode=nfast_encoding)
         decoded = nfast.map(table).astype("Int64")
         out["nfast_raw_tag"] = nfast
-    else:
+    elif nfast_encoding == LEGACY_BINARY_NFAST:
         decoded = nfast
         out["nfast_raw_tag"] = pd.Series(np.nan, index=out.index)
+    else:
+        raise ValueError(f"Unsupported nfast encoding mode: {nfast_encoding}")
 
     if column_offsets is not None:
         if isinstance(column_offsets, dict):

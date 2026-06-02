@@ -26,7 +26,7 @@
 #             --char-config NAME    Campaign config (default multihit_15_cal_nominal)
 #             --char-out-mode NAME  raw_features (default raw_features;
 #                                   legacy full/2 aliases are mapped downstream)
-#             --char-nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag
+#             --char-nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag
 #             --char-train-seeds N  Calibration training seeds (default 96)
 #             --analysis-jobs N     Python analysis worker budget (default 4)
 #             --analysis-chunksize N Rows per CSV chunk for low-memory analysis
@@ -196,9 +196,9 @@ if [[ -z "$JITTER_SIGMA" && -n "$JITTER_BOUND" ]]; then
   exit 1
 fi
 case "$CHAR_NFAST_ENCODING" in
-  legacy_binary_nfast|raw_lfsr_tag) ;;
+  legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag) ;;
   *)
-    echo "Error: --char-nfast-encoding must be legacy_binary_nfast or raw_lfsr_tag" >&2
+    echo "Error: --char-nfast-encoding must be legacy_binary_nfast, raw_lfsr_tag, or raw_galois_tag" >&2
     exit 1
     ;;
 esac
@@ -364,6 +364,9 @@ OUT_DIR="$OUT_DIR" \
 VIP_OUT="$VIP_OUT" \
 CHAR_OUT="$CHAR_OUT" \
 CHAR_NFAST_ENCODING="$CHAR_NFAST_ENCODING" \
+MPTDC_ROOT="$REPO_ROOT" \
+RTL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" \
+RTL_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)" \
 ANALYSIS_JOBS="$ANALYSIS_JOBS" \
 ANALYSIS_CHUNKSIZE="$ANALYSIS_CHUNKSIZE" \
 ANALYSIS_BACKEND="$ANALYSIS_BACKEND" \
@@ -374,9 +377,23 @@ import os
 import sys
 from pathlib import Path
 
+tools_root = Path(os.environ["MPTDC_ROOT"]).parent / "tools"
+if str(tools_root) not in sys.path:
+    sys.path.insert(0, str(tools_root))
+
+from mptdc_decode.fast_tag_decode import FastTagMetadata
+
 manifest = Path(sys.argv[1])
 data = {
     "name": "mptdc-vip-overnight",
+    "rtl": {
+        "branch": os.environ["RTL_BRANCH"],
+        "head": os.environ["RTL_HEAD"],
+    },
+    "packet": {
+        "format_version": "fixed_raw_features_v2_7",
+        "production_packet_unchanged": True,
+    },
     "vip_status": os.environ["VIP_STATUS"],
     "char_status": os.environ["CHAR_STATUS"],
     "sim": os.environ["SIM"],
@@ -385,6 +402,7 @@ data = {
     "vip_out": os.environ["VIP_OUT"],
     "char_out": os.environ["CHAR_OUT"],
     "char_nfast_encoding": os.environ["CHAR_NFAST_ENCODING"],
+    "tag_encoding": FastTagMetadata(nfast_encoding=os.environ["CHAR_NFAST_ENCODING"]).as_dict(),
     "analysis": {
         "jobs": int(os.environ["ANALYSIS_JOBS"]),
         "chunksize": int(os.environ["ANALYSIS_CHUNKSIZE"]),

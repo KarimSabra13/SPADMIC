@@ -1053,3 +1053,57 @@ Next action:
 - Commit/push the O5b flow patch.
 - Run `server_run_genus_o5_pd_stdcell_closure.sh 20260602_o5b_pd_stdcell_discrete_cg` with `O5_RUN_NORESET=0`.
 - Treat any discrete-CG improvement as structural evidence only, not signoff.
+
+## 2026-06-02 - O6 characterization gate and Solution C packet contract prep
+
+Branch: `SPADMIC_localtag`
+
+Reviewed HEAD: `1506b050db1f0a86c5c7b912b3364f885fcaff29`
+
+Designer instruction:
+
+- Do not run another Genus iteration until characterization/simulation proves
+  the current implementation has not broken TDC behavior, packet format,
+  precision, linearity, calibration, raw-feature compatibility, or drain/readout.
+- Do not change the production output packet format while evaluating Solution C.
+
+O6 prep completed:
+
+- Documented the fixed production packet contract in
+  `docs/timing_closure/O6_packet_contract_before_char.md`.
+- Documented Solution C state-count feasibility in
+  `docs/timing_closure/O6C_fast_tag_encoding_feasibility.md`.
+- Added a staged characterization gate plan in
+  `docs/timing_closure/O6_characterization_gate_plan.md`.
+- Added the placeholder comparison report
+  `docs/timing_closure/O6C_characterization_results.md`.
+- Added software decode support for an explicit `raw_galois_tag` candidate mode,
+  keeping current `raw_lfsr_tag` behavior unchanged.
+- Generated stable decode table artifacts for `raw_lfsr_tag` and
+  `raw_galois_tag`.
+- Updated characterization manifests to record branch, RTL HEAD, packet format,
+  tag type, decode mode, tag width, tag columns, and decode table hash.
+
+Current interpretation:
+
+- The best current implementation remains the raw local Fibonacci LFSR tag mode.
+- Solution C first candidate is a 7-bit Galois/shift-mostly tag because it keeps
+  the 7-bit `nfast` packet field and provides 127 states.
+- A 7-bit Johnson tag is rejected for production because it has only 14 states.
+- A wider fast Johnson option would need clk_sys decode before the normal packet
+  and is not the first O6 candidate.
+
+Next action:
+
+- Run Stage 0 local Verilator regression.
+- Run Stage 1 Xcelium characterization smoke for
+  `O6A_best_current_raw_lfsr_tag`.
+- Run Stage 2 medium characterization if Stage 1 passes.
+- Keep Genus blocked until those characterization gates pass.
+
+Stage 0 result:
+
+- `bash MPTDC/sim/verilator/run_smoke.sh 20260602_o6_stage0_current_raw_lfsr_tag`: PASS
+- Passed steps: 17
+- Failed steps: 0
+- Summary: `results/local_verilator/20260602_o6_stage0_current_raw_lfsr_tag/SUMMARY.md`
