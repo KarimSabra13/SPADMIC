@@ -60,14 +60,26 @@ module tb_slow_epoch_johnson_unit;
 
     repeat (2) tick();
     rst_n = 1'b1;
-    tick();
+    #1;
     check(johnson == '0, "reset gives all-zero Johnson state");
 
     enable = 1'b0;
-    repeat (4) tick();
-    check(johnson == '0, "enable=0 holds state");
+    tick();
+    check(johnson == {{(SLOW_EPOCH_STAGES-1){1'b0}}, 1'b1},
+          "Johnson advances with enable=0 ignored");
 
     enable = 1'b1;
+    clear_window = 1'b1;
+    #1;
+    clear_window = 1'b0;
+    tick();
+    check(johnson == {{(SLOW_EPOCH_STAGES-1){1'b0}}, 1'b1},
+          "Johnson advances after clear with enable=1");
+
+    clear_window = 1'b1;
+    #1;
+    clear_window = 1'b0;
+    #1;
     for (int i = 0; i < SLOW_EPOCH_STATES; i++) begin
       decoded = slow_johnson_to_count(johnson);
       check(slow_johnson_valid(johnson), $sformatf("state %0d is valid", i));

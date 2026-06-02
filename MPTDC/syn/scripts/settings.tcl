@@ -54,22 +54,56 @@ set_db lp_insert_clock_gating $mptdc_enable_clock_gating
 #       Synthesis Effort
 #############################################
 # Signoff-oriented front-end runs: spend maximum effort on area/timing/power
-# exploration before handoff to physical implementation. Override the label
-# with MPTDC_OPT_GOAL if a future run intentionally trades area for timing.
+# exploration before handoff to physical implementation. O4 adds an explicit
+# fast-feasibility mode for architecture screening. It lowers optimization
+# effort only; constraints, clocks, reports, and path classification are
+# unchanged, so it must not be used as final closure evidence.
 if {[info exists ::env(MPTDC_OPT_GOAL)]} {
     set mptdc_optimization_goal $::env(MPTDC_OPT_GOAL)
 } else {
     set mptdc_optimization_goal "area_first"
 }
 
-set_db syn_generic_effort  high           ;# low|medium|high|express
-set_db syn_map_effort      high           ;# low|medium|high
-set_db syn_opt_effort      extreme        ;# low|medium|high|extreme
-set_db design_power_effort high           ;# none|low|high
+if {[info exists ::env(GENUS_EFFORT)]} {
+    set mptdc_genus_effort $::env(GENUS_EFFORT)
+} else {
+    set mptdc_genus_effort "closure"
+}
+
+switch -- $mptdc_genus_effort {
+    fast {
+        set mptdc_syn_generic_effort medium
+        set mptdc_syn_map_effort     medium
+        set mptdc_syn_opt_effort     medium
+        set mptdc_design_power_effort low
+        set mptdc_effort_note "FAST_FEASIBILITY effort"
+    }
+    closure {
+        set mptdc_syn_generic_effort high
+        set mptdc_syn_map_effort     high
+        set mptdc_syn_opt_effort     extreme
+        set mptdc_design_power_effort high
+        set mptdc_effort_note "CLOSURE effort"
+    }
+    default {
+        puts "MPTDC_SETTINGS_WARN: unsupported GENUS_EFFORT=$mptdc_genus_effort; using closure"
+        set mptdc_genus_effort       "closure"
+        set mptdc_syn_generic_effort high
+        set mptdc_syn_map_effort     high
+        set mptdc_syn_opt_effort     extreme
+        set mptdc_design_power_effort high
+        set mptdc_effort_note "CLOSURE effort"
+    }
+}
+
+set_db syn_generic_effort  $mptdc_syn_generic_effort   ;# low|medium|high|express
+set_db syn_map_effort      $mptdc_syn_map_effort       ;# low|medium|high
+set_db syn_opt_effort      $mptdc_syn_opt_effort       ;# low|medium|high|extreme
+set_db design_power_effort $mptdc_design_power_effort  ;# none|low|high
 
 #############################################
 #       Verbosity
 #############################################
 set_db information_level 7                ;# 1 (quiet) to 9 (verbose)
 
-mptdc_message "Genus settings loaded ($mptdc_optimization_goal, high/extreme effort, $ramstyle_note, $clock_gating_note)"
+mptdc_message "Genus settings loaded ($mptdc_optimization_goal, $mptdc_effort_note, generic=$mptdc_syn_generic_effort map=$mptdc_syn_map_effort opt=$mptdc_syn_opt_effort, $ramstyle_note, $clock_gating_note)"

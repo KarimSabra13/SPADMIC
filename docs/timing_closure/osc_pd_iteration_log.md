@@ -884,3 +884,57 @@ Next action:
 
 - Ask human to run `server_run_genus_o3_raw_epoch_cleanup.sh` on the lab server
   after the O3 patch is committed and pushed.
+
+## 2026-06-02 - O4_MUXLESS_TAGS_AND_R600_PD_LOCKED prepared
+
+Branch: `SPADMIC_localtag`
+
+Base HEAD before O4 edits: `fb8210c55c01f95ec5fc795d4da39d8b543e9a5a`
+
+Purpose:
+
+- Keep the local raw fast-tag architecture and slow Johnson epoch.
+- Keep PD behavior locked per designer instruction.
+- Remove oscillator-domain enable/hold muxes from fast and slow tag generators.
+- Convert the clk_sys START watchdog to a countdown.
+- Prepare nominal and R600 Genus fast-feasibility runs with optional closure rerun only for a promising mode.
+
+Files changed:
+
+- `MPTDC/rtl/pd/mptdc_fast_epoch_tag.sv`
+- `MPTDC/rtl/pd/mptdc_slow_epoch_johnson.sv`
+- `MPTDC/rtl/top/mptdc_core.sv`
+- `MPTDC/tb/unit/tb_fast_epoch_tag_unit.sv`
+- `MPTDC/tb/unit/tb_slow_epoch_johnson_unit.sv`
+- `MPTDC/syn/inputs/mptdc.defines`
+- `MPTDC/syn/scripts/settings.tcl`
+- `MPTDC/syn/filelist_o4_muxless_tags_r600.f`
+- `MPTDC/syn/inputs/mptdc_osc_pd_o4.sdc`
+- `MPTDC/syn/scripts/server_run_genus_o4_muxless_tags_r600.sh`
+- `docs/timing_closure/O4_*.md`
+
+Functional result:
+
+- Packet layout unchanged.
+- HIT `nfast` remains raw LFSR tag in raw-tag mode.
+- `nslow` remains decoded from STOP-captured Johnson state in clk_sys.
+- PD detection/freeze behavior is not redesigned.
+
+Server result:
+
+- pending O4 Genus run.
+
+Local Verilator:
+
+- `tb_fast_epoch_tag_unit`: PASS
+- `tb_slow_epoch_johnson_unit`: PASS
+- `tb_pd_cell_tag_capture_unit`: PASS
+- `tb_pd_gate_false_hit_unit`: PASS
+- `tb_drain_raw_tag_unit`: PASS
+- `tb_start_wdt`: PASS
+- `tb_drain_ctrl_unit`: PASS
+- full local smoke `20260602_o4_muxless_tags_smoke`: PASS, 17 steps passed, 0 failed
+
+Next action:
+
+- Commit/push O4 patch, then run `server_run_genus_o4_muxless_tags_r600.sh` on the lab server.

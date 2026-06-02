@@ -76,6 +76,20 @@ set design(OSC_FAST_TAP_PINS) [list \
     {u_core/u_osc_fast/u_stub/phase[7]} \
 ]
 
+# Optional oscillator timing what-if overrides for controlled Genus experiments.
+# These alter only the SDC clock/tap model, not RTL constants or packet layout.
+foreach {env_name design_key label} [list \
+    MPTDC_OSC_SLOW_PERIOD_NS OSC_SLOW_PERIOD slow_period \
+    MPTDC_OSC_FAST_PERIOD_NS OSC_FAST_PERIOD fast_period \
+    MPTDC_OSC_SLOW_TAP_STEP_NS OSC_SLOW_TAP_STEP slow_tap_step \
+    MPTDC_OSC_FAST_TAP_STEP_NS OSC_FAST_TAP_STEP fast_tap_step \
+] {
+    if {[info exists ::env($env_name)] && $::env($env_name) ne ""} {
+        set design($design_key) $::env($env_name)
+        puts "MPTDC_DEFINES_INFO: overriding oscillator $label with $::env($env_name) ns from $env_name"
+    }
+}
+
 set design(OSC_SLOW_ANALOG_PINS) [list start_i {ctrl_i[7:0]} {phase_o[7:0]} VDDA VSSA]
 set design(OSC_FAST_ANALOG_PINS) [list stop_i  {ctrl_i[7:0]} {phase_o[7:0]} VDDA VSSA]
 set design(OSC_TOPOLOGY) "slow_north_pd_center_fast_south"

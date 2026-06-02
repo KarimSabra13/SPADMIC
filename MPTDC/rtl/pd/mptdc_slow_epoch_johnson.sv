@@ -10,6 +10,11 @@
 // Compared with the previous binary counter + Gray encoder, this removes the
 // oscillator-domain carry chain and keeps each transition to one changing bit,
 // which is safer for asynchronous STOP-edge capture.
+//
+// O4 muxless-tag mode advances on every slow_phase[0] edge after reset/clear.
+// The slow RO_tune4 rstb/run control stops the clock outside an active window,
+// so a synchronous enable/hold mux only adds oscillator-domain delay.
+// enable_i is retained as a compatibility port for existing wrappers/tests.
 // =============================================================================
 module mptdc_slow_epoch_johnson
   import mptdc_pkg::*;
@@ -19,14 +24,16 @@ module mptdc_slow_epoch_johnson
   input  wire                     clk_slow,
   input  wire                     rst_n,
   input  wire                     clear_window,
-  input  wire                     enable_i,
+  input  wire                     enable_i,       // compatibility only; ignored in O4
   output logic [STAGES-1:0]       johnson_o
 );
+
+  wire unused_enable = enable_i;
 
   always_ff @(posedge clk_slow or negedge rst_n or posedge clear_window) begin
     if (!rst_n || clear_window) begin
       johnson_o <= '0;
-    end else if (enable_i) begin
+    end else begin
       johnson_o <= {johnson_o[STAGES-2:0], ~johnson_o[STAGES-1]};
     end
   end
@@ -49,7 +56,7 @@ module mptdc_slow_epoch_johnson
       prev_johnson_q <= '0;
       prev_valid_q   <= 1'b0;
     end else begin
-      if (prev_valid_q && enable_i) begin
+      if (prev_valid_q) begin
         assert (diff_count <= 1)
           else $error("mptdc_slow_epoch_johnson: more than one bit changed");
       end

@@ -230,9 +230,10 @@ module mptdc_core
 
   // =========================================================================
   //  START watchdog
-  //  Catches STOP-never-arrives with a held synthetic STOP level. O3 moves this
+  //  Catches STOP-never-arrives with a held synthetic STOP level. O3 moved this
   //  recovery counter to clk_sys so no binary +1 counter remains in the
-  //  slow_phase[0] oscillator domain.
+  //  slow_phase[0] oscillator domain. O4 uses a countdown so the update path is
+  //  zero-detect/decrement instead of programmable compare/subtract/increment.
   // =========================================================================
   logic [15:0] start_wdt_cnt;
   logic       start_timeout_latched;
@@ -328,27 +329,49 @@ module mptdc_core
   wire [15:0] start_wdt_limit =
       (cfg_i.wdt_ctx_timeout != 16'd0) ? cfg_i.wdt_ctx_timeout
                                        : START_WDT_DEFAULT_SYS_CYCLES;
-  wire start_wdt_limit_reached = (start_wdt_cnt >= (start_wdt_limit - 16'd1));
+  wire start_window_active = start_latched_sync && !stop_latched_sync;
+  logic start_window_active_q;
+  wire start_window_open = start_window_active && !start_window_active_q;
+  wire [15:0] start_wdt_reload = (start_wdt_limit == 16'd0) ? 16'd0
+                                                            : (start_wdt_limit - 16'd1);
 
   always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
     if (!rst_sys_status_n) begin
       start_wdt_cnt         <= '0;
       start_timeout_latched <= 1'b0;
+      start_window_active_q <= 1'b0;
     end else if (meas_fe_clear) begin
       start_wdt_cnt         <= '0;
       start_timeout_latched <= 1'b0;
+      start_window_active_q <= 1'b0;
     end else if (start_timeout_latched) begin
-      start_wdt_cnt <= start_wdt_cnt;
-    end else if (start_latched_sync && !stop_latched_sync) begin
-      if (start_wdt_limit_reached) begin
-        start_timeout_latched <= 1'b1;
-      end else begin
-        start_wdt_cnt <= start_wdt_cnt + 16'd1;
-      end
+      start_window_active_q <= start_window_active;
     end else begin
-      start_wdt_cnt <= '0;
+      start_window_active_q <= start_window_active;
+      if (start_window_open) begin
+        start_wdt_cnt <= start_wdt_reload;
+      end else if (start_window_active) begin
+        if (start_wdt_cnt == 16'd0) begin
+          start_timeout_latched <= 1'b1;
+        end else begin
+          start_wdt_cnt <= start_wdt_cnt - 16'd1;
+        end
+      end else begin
+        start_wdt_cnt <= '0;
+      end
     end
   end
+
+  // synthesis translate_off
+  always_ff @(posedge clk_sys or negedge rst_sys_status_n) begin
+    if (rst_sys_status_n && !meas_fe_clear && !start_timeout_latched) begin
+      if (start_window_active && !start_window_open && start_wdt_cnt == 16'd0) begin
+        assert (!stop_latched_sync)
+          else $error("mptdc_core: watchdog timeout and STOP observed together");
+      end
+    end
+  end
+  // synthesis translate_on
 
   // =========================================================================
   //  PD enable gating: combine frontend pd_enable with meas_ctrl pd_gate

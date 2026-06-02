@@ -55,17 +55,19 @@ module tb_fast_epoch_tag_unit;
     #1;
     check(tag == FAST_TAG_SEED, "reset loads non-zero seed");
 
-    tick();
-    check(tag == FAST_TAG_SEED, "enable=0 holds seed");
-
-    enable_i = 1'b1;
     expected = fast_tag_next(FAST_TAG_SEED);
     tick();
-    check(tag == expected, "enable=1 advances one LFSR step");
+    check(tag == expected, "tag advances every clock edge with enable=0 ignored");
+
+    enable_i = 1'b1;
+    expected = fast_tag_next(expected);
+    tick();
+    check(tag == expected, "tag also advances with enable=1");
 
     enable_i = 1'b0;
+    expected = fast_tag_next(expected);
     tick();
-    check(tag == expected, "enable=0 holds advanced state");
+    check(tag == expected, "enable input does not gate the muxless tag");
 
     clear_window = 1'b1;
     #1;

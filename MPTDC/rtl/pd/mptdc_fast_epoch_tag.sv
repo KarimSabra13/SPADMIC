@@ -13,6 +13,12 @@
 //
 // The 7-bit sequence uses x^7 + x^6 + 1, reset seed 7'b0000001, and excludes
 // the all-zero state.  For NFAST_W=7 the sequence length is 127 states.
+//
+// O4 muxless-tag mode intentionally advances on every fast tap edge after
+// reset/clear.  The RO_tune4 rstb/run control already stops the clock when the
+// fast oscillator is off, so a synchronous enable/hold mux only adds critical
+// oscillator-domain delay.  enable_i is retained as a compatibility port for
+// existing wrappers/tests but is not used by this timing experiment.
 // =============================================================================
 module mptdc_fast_epoch_tag
   import mptdc_pkg::*;
@@ -23,9 +29,11 @@ module mptdc_fast_epoch_tag
   input  wire              clk_fast,
   input  wire              rst_n,
   input  wire              clear_window,
-  input  wire              enable_i,
+  input  wire              enable_i,      // compatibility only; ignored in O4
   output logic [W-1:0]     tag_o
 );
+
+  wire unused_enable = enable_i;
 
   function automatic logic [W-1:0] lfsr_next(input logic [W-1:0] state_i);
     logic feedback;
@@ -38,7 +46,7 @@ module mptdc_fast_epoch_tag
   always_ff @(posedge clk_fast or negedge rst_n or posedge clear_window) begin
     if (!rst_n || clear_window) begin
       tag_o <= SEED;
-    end else if (enable_i) begin
+    end else begin
       tag_o <= lfsr_next(tag_o);
     end
   end
