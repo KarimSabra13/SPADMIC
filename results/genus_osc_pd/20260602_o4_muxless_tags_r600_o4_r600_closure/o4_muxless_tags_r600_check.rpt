@@ -1,0 +1,332 @@
+# O4 Muxless Tags / R600 Check
+
+post_synth_netlist=/home/validmgr/ksabra/2026_SPAD/SPADMIC/results/genus_osc_pd/20260602_o4_muxless_tags_r600_o4_r600_closure/mptdc_top_asic.postsyn.v
+
+## RO_tune4 instance lines
+9032:  RO_tune4 u_core_u_osc_fast_u_ro_tune4(.code (8'b0), .rstb (n_45166),
+9034:  RO_tune4 u_core_u_osc_slow_u_ro_tune4(.code (8'b0), .rstb
+
+## O4 tag/epoch references
+6906:       \u_core_gen_fast_tag_col[7].u_fast_tag_n_39 ;
+8503:       u_core_u_stop_epoch_capture_n_392_BAR, u_core_u_wdt_n_67;
+9096:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[1] (.RN
+9099:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] (.RN
+9101:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] (.RN
+9103:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] (.RN
+9105:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] (.RN
+9108:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] (.RN
+9111:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] (.RN
+9114:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] (.RN
+9116:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] (.RN
+9118:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[4] (.RN
+9120:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] (.RN
+9123:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] (.RN
+9126:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] (.RN
+9129:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[2] (.RN
+9131:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[3] (.RN
+9133:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] (.RN
+9135:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] (.RN
+9138:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] (.RN
+9141:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[1] (.RN
+9144:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[2] (.RN
+9146:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[3] (.RN
+9148:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[4] (.RN
+9150:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] (.RN
+9153:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] (.RN
+9156:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] (.RN
+9159:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] (.RN
+9161:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] (.RN
+9163:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] (.RN
+9165:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] (.RN
+9168:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] (.RN
+9171:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[1] (.RN
+9174:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[2] (.RN
+9176:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[3] (.RN
+9178:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] (.RN
+9180:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] (.RN
+9183:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] (.RN
+9186:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[1] (.RN
+9189:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] (.RN
+9191:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] (.RN
+9193:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] (.RN
+9195:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] (.RN
+9198:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] (.RN
+9201:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[1] (.RN
+9204:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[2] (.RN
+9206:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[3] (.RN
+9208:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[4] (.RN
+9210:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5] (.RN
+9213:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] (.RN
+9238:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[0] (.RN
+9239:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9242:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[2] (.RN
+9243:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9246:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[3] (.RN
+9247:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9250:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[4] (.RN
+9251:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9254:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[5] (.RN
+9255:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9258:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[6] (.RN
+9259:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9262:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[7] (.RN
+9263:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9266:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[8] (.RN
+9267:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9270:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[9] (.RN
+9271:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9274:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[10] (.RN
+9275:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9278:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[11] (.RN
+9279:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9282:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[12] (.RN
+9283:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9286:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[13] (.RN
+9287:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9290:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[14] (.RN
+9291:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9294:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[15] (.RN
+9295:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9298:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[16] (.RN
+9299:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9302:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[17] (.RN
+9303:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9306:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[18] (.RN
+9307:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9310:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[19] (.RN
+9311:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9314:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[20] (.RN
+9315:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9318:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[21] (.RN
+9319:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9322:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[22] (.RN
+9323:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9326:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[23] (.RN
+9327:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9330:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[24] (.RN
+9331:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9334:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[25] (.RN
+9335:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9338:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[26] (.RN
+9339:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9342:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[27] (.RN
+9343:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9346:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[28] (.RN
+9347:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9350:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[29] (.RN
+9351:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9354:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[30] (.RN
+9355:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9358:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[31] (.RN
+9359:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9362:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[32] (.RN
+9363:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9366:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[33] (.RN
+9367:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9370:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[34] (.RN
+9371:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9374:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[35] (.RN
+9375:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9378:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[36] (.RN
+9379:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9382:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[37] (.RN
+9383:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9386:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[38] (.RN
+9387:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9390:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[39] (.RN
+9391:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9394:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[40] (.RN
+9395:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9398:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[41] (.RN
+9399:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9402:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[42] (.RN
+9403:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9406:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[43] (.RN
+9407:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9410:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[44] (.RN
+9411:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9414:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[45] (.RN
+9415:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9418:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[46] (.RN
+9419:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9422:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[47] (.RN
+9423:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9426:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[48] (.RN
+9427:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9430:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[49] (.RN
+9431:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9434:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[50] (.RN
+9435:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9438:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[51] (.RN
+9439:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9442:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[52] (.RN
+9443:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9446:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[53] (.RN
+9447:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9450:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[54] (.RN
+9451:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9454:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[55] (.RN
+9455:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9458:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[56] (.RN
+9459:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9462:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[57] (.RN
+9463:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9466:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[58] (.RN
+9467:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9470:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[59] (.RN
+9471:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9474:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[60] (.RN
+9475:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9478:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[61] (.RN
+9479:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9482:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[62] (.RN
+9483:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+9487:       (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9490:       (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9493:       (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9496:       (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9499:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[0]
+9500:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9503:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[2]
+9504:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9507:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[3]
+9508:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9511:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[5]
+9512:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9515:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[9]
+9516:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9519:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[11]
+9520:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9523:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[12]
+9524:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9527:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[13]
+9528:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9531:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[16]
+9532:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9535:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[17]
+9536:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9539:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[25]
+9540:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9543:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[28]
+9544:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9547:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[29]
+9548:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9551:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[30]
+9552:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9555:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[33]
+9556:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9559:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[36]
+9560:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9563:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[37]
+9564:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9567:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[40]
+9568:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9571:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[41]
+9572:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9575:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[42]
+9576:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9579:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[43]
+9580:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9583:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[44]
+9584:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9587:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[48]
+9588:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9591:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[57]
+9592:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9595:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[58]
+9596:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9599:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[60]
+9600:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9603:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[63]
+9604:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+9985:       (u_core_u_stop_epoch_capture_n_392_BAR));
+9986:  INHDX0 g123339(.A (\u_core_gen_fast_tag_col[7].u_fast_tag_n_39 ), .Q
+9991:       (\u_core_gen_fast_tag_col[7].u_fast_tag_n_39 ));
+11135:  DFRSQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] (.SN
+11138:  DFRSQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] (.SN
+11141:  DFRSQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[0] (.SN
+11144:  DFRSQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[0] (.SN
+11147:  DFRSQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] (.SN
+11150:  DFRSQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0] (.SN
+11153:  DFRSQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[0] (.SN
+11156:  DFRSQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] (.SN
+18579:  DFRRQHDX1 \u_core_u_slow_epoch_johnson_o_reg[1] (.RN
+18580:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+39578:  DFRRHDX1 \u_core_u_slow_epoch_johnson_o_reg[63] (.RN
+39579:       (u_core_u_stop_epoch_capture_n_392_BAR), .C
+46768:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[1]
+46769:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46773:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[56]
+46774:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46778:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[31]
+46779:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46783:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[23]
+46784:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46788:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[32]
+46789:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46793:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[19]
+46794:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46798:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[14]
+46799:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46803:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[15]
+46804:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46808:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[21]
+46809:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46813:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[27]
+46814:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46818:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[24]
+46819:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46823:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[10]
+46824:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46828:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[20]
+46829:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46833:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[18]
+46834:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46838:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[55]
+46839:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46843:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[47]
+46844:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46848:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[59]
+46849:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46853:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[6]
+46854:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46858:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[35]
+46859:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46863:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[53]
+46864:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46868:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[49]
+46869:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46873:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[7]
+46874:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46878:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[46]
+46879:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46883:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[34]
+46884:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46888:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[8]
+46889:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46893:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[54]
+46894:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46898:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[50]
+46899:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46903:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[62]
+46904:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46908:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[38]
+46909:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46913:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[22]
+46914:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46918:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[4]
+46919:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46923:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[26]
+46924:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46928:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[52]
+46929:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46933:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[45]
+46934:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46938:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[51]
+46939:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46943:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[39]
+46944:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+46948:       \u_core_u_stop_epoch_capture_slow_epoch_johnson_stop_o_reg[61]
+46949:       (.RN (u_core_u_stop_epoch_capture_n_392_BAR), .C (n_6768), .D
+
+## old counter residue

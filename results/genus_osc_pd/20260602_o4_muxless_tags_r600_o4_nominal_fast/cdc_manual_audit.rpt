@@ -1,0 +1,156 @@
+MPTDC manual CDC/signoff audit
+==============================
+Generated: 2026-06-02 10:49:14 CEST
+
+Purpose
+-------
+First-cleanup evidence because no dedicated CDC signoff tool is assumed.
+Review this alongside check_timing_intent and timing reports.
+
+Reset synchronizers
+-------------------
+Contract: async assertion / sync deassertion per local clock domain
+Required evidence: manual waiver if only the first stage sees async reset crossing
+Pattern *u_rst*sync* matched 8 cells
+  u_core_u_rst_drain_sync
+  u_core_u_rst_fast_sync
+  u_core_u_rst_fifo_sync
+  u_core_u_rst_status_sync
+  u_core_u_rst_tx_sync
+  u_core_u_rst_wdt_sync
+  u_rst_core_sync
+  u_rst_csr_sync
+
+Gray counter synchronizers
+--------------------------
+Contract: oscillator counter snapshot/continuous CDC
+Required evidence: manual waiver plus bounded source-to-first-stage and async-clear review
+Pattern *gray*ff* matched 0 cells
+Pattern *u_slow_cnt* matched 0 cells
+Pattern *u_fast_cnt* matched 0 cells
+
+Context drain synchronizers
+---------------------------
+Contract: async drain flag into clk_sys before static context-bus read
+Required evidence: 2FF sync plus static-bus-after-handshake waiver
+Pattern *ctx_drain_sync_ff* matched 4 cells
+  u_core_ctx_drain_sync_ff1_reg[0]
+  u_core_ctx_drain_sync_ff1_reg[1]
+  u_core_ctx_drain_sync_ff2_reg[0]
+  u_core_ctx_drain_sync_ff2_reg[1]
+
+Rejected START event latch
+--------------------------
+Contract: async rejected START pulse is held until clk_sys counts overflow
+Required evidence: pending-latch plus 2FF sync/ack; verify rejected pulses are not silently dropped
+Pattern *start_rejected_pending* matched 1 cells
+  u_core_start_rejected_pending_reg
+Pattern *rejected_sync_pipe* matched 2 cells
+  u_core_rejected_sync_pipe_reg[0]
+  u_core_rejected_sync_pipe_reg[1]
+
+Async frontend latches
+----------------------
+Contract: START/STOP event ownership and context allocation
+Required evidence: intentional latch waiver; no setup/hold relation to clk_sys
+Pattern *u_frontend* matched 7 cells
+  u_core_u_frontend_active_ctx_q_reg[0]
+  u_core_u_frontend_ctx_drain_q_reg[0]
+  u_core_u_frontend_ctx_drain_q_reg[1]
+  u_core_u_frontend_start_accept_seen_q_reg
+  u_core_u_frontend_start_latched_q_reg
+  u_core_u_frontend_start_reject_seen_q_reg
+  u_core_u_frontend_stop_latched_q_reg
+
+STOP boundary capture
+---------------------
+Contract: STOP-edge measurement metadata capture
+Required evidence: intentional event-boundary waiver; verify no accidental normal sync path
+Pattern *u_stop_capture* matched 1 cells
+  u_core_u_stop_capture
+
+PD measurement fabric
+---------------------
+Contract: fast tap clocks sample slow tap signals for Vernier measurement
+Required evidence: intentional clock-as-data structure; verify all taps are modeled
+Pattern *gen_pd_row*gen_pd_col*u_pd* matched 64 cells
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[0].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[0].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[0].gen_pd_col[7].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[1].gen_pd_col[7].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[2].gen_pd_col[7].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[3].gen_pd_col[7].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[4].gen_pd_col[7].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[5].gen_pd_col[7].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[6].gen_pd_col[7].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[0].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[1].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[2].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[3].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[4].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[5].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[6].u_pd
+  u_core_gen_pd_row[7].gen_pd_col[7].u_pd
+
+Hit capture bridge
+------------------
+Contract: held PD/counter levels sampled into clk_sys after STOP/PD latch
+Required evidence: static-bus-after-handshake waiver; pd_clear must occur only after bridge sample and context commit
+Pattern *u_hit_capture_bridge* matched 1 cells
+  u_core_u_hit_capture_bridge
+
+Reviewer checklist
+------------------
+   Every async-looking endpoint in check_timing_intent is in one class above.
+   No ordinary clk_sys logic appears only because of a broad false path.
+   Held PD/counter bus is sampled only after STOP visibility and before pd_clear.
+   Context-bank readout occurs only after capture commit and drain synchronization.
+   Gray-counter async clears are covered by the teardown-ordering waiver.
+   PD cell clock/data warnings are limited to intentional Vernier sampling.
