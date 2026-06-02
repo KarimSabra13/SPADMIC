@@ -386,8 +386,8 @@ package mptdc_pkg;
   function automatic logic [NFAST_W-1:0] fast_tag_galois_next(
     input logic [NFAST_W-1:0] tag_i
   );
-    automatic logic feedback;
-    automatic logic [NFAST_W-1:0] next_tag;
+    logic feedback;
+    logic [NFAST_W-1:0] next_tag;
 
     feedback = tag_i[NFAST_W-1];
     next_tag = {tag_i[NFAST_W-2:0], 1'b0};

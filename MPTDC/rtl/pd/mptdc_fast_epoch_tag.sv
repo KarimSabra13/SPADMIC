@@ -44,13 +44,13 @@ module mptdc_fast_epoch_tag
   endfunction
 
   function automatic logic [W-1:0] galois_next(input logic [W-1:0] state_i);
-    automatic logic feedback;
-    automatic logic [W-1:0] next_tag;
+    logic feedback;
+    logic [W-1:0] next_tag;
 
     feedback = state_i[W-1];
     next_tag = {state_i[W-2:0], 1'b0};
     if (feedback)
-      next_tag = next_tag ^ W'(FAST_TAG_GALOIS_MASK);
+      next_tag[1:0] = next_tag[1:0] ^ 2'b11;
     galois_next = next_tag;
   endfunction
 
