@@ -1012,3 +1012,44 @@ Next action:
 - Commit/push the O5 patch, fill `EXPECTED_HEAD` in
   `SERVER_RUN_REQUEST_O5_PD_STDCELL_CLOSURE.md`, then run the O5 Genus
   fast-feasibility matrix on the lab server.
+
+## 2026-06-02 - O5 first Genus result review and O5b discrete-CG rerun prep
+
+Branch: `SPADMIC_localtag`
+
+Reviewed HEAD: `9f71d780cc7b733165f4e1ee6261dd447dfe33fa`
+
+Evidence:
+
+- `results/genus_osc_pd/20260602_o5_pd_stdcell_closure_SUMMARY.md`
+- `results/genus_osc_pd/20260602_o5_pd_stdcell_closure_o5_noreset_ts_fast/`
+- `results/genus_osc_pd/20260602_o5_pd_stdcell_closure_o5_clock_gated_ts_fast/`
+
+Result:
+
+- O5 no-reset timestamp mode completed but was not promising.
+- `OSC_FAST_REAL`: WNS about `-1786 ps`, TNS about `-592909 ps`, 344 classified paths.
+- Dominant family remained `PD_HIT_TO_TS_FREEZE`: WNS about `-1786 ps`, 264 paths.
+- `FAST_TAG_TO_PD_TS`: WNS about `-1736 ps`, 48 paths.
+- `LOCAL_FAST_TAG_SELF`: WNS about `-1742 ps`, 7 paths.
+- `CLK_SYS_REAL`: WNS about `-1130 ps`, 100 classified paths.
+- `UNKNOWN_REVIEW_REQUIRED`: 0.
+
+Interpretation:
+
+- The old global fast counter path remains gone.
+- Removing timestamp reset/clear alone did not help enough and made the fast-mode result worse than O4/R600.
+- The timestamp D mux is still present in the mapped netlist, so `hit_latched` still drives a multi-bit timestamp freeze path.
+- The first clock-gated run is inconclusive: Genus stopped with `POPT-78` because no usable integrated clock-gating cell was available.
+
+O5b flow patch:
+
+- Added `MPTDC_ALLOW_DISCRETE_CLOCK_GATING`.
+- Improved the ICG lib-cell audit to scan loaded lib-cell names if direct glob queries fail.
+- The O5 clock-gated mode now requests discrete clock gating for feasibility only.
+
+Next action:
+
+- Commit/push the O5b flow patch.
+- Run `server_run_genus_o5_pd_stdcell_closure.sh 20260602_o5b_pd_stdcell_discrete_cg` with `O5_RUN_NORESET=0`.
+- Treat any discrete-CG improvement as structural evidence only, not signoff.

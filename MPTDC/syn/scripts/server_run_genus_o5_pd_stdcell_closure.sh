@@ -14,6 +14,7 @@ REAL_LIB="${O1_RO_LIBERTY_PATH:-$SYN_DIR/macros/RO_tune4_real_abstract_shell.lib
 O5_SDC="${O5_SDC_PATH:-$SYN_DIR/inputs/mptdc_osc_pd_o5.sdc}"
 O5_FILELIST="${O5_FILELIST_PATH:-$SYN_DIR/filelist_o5_pd_stdcell_closure.f}"
 O5_RUN_BASE="${O5_RUN_BASE:-0}"
+O5_RUN_NORESET="${O5_RUN_NORESET:-1}"
 O5_RUN_PVT_AWARE="${O5_RUN_PVT_AWARE:-0}"
 O5_RUN_CLOSURE="${O5_RUN_CLOSURE:-auto}"
 
@@ -117,10 +118,11 @@ run_one() {
   local enable_cg="$4"
   local icg_override="$5"
   local relax_pd="$6"
-  local slow_period="$7"
-  local fast_period="$8"
-  local slow_tap="$9"
-  local fast_tap="${10}"
+  local discrete_cg="$7"
+  local slow_period="$8"
+  local fast_period="$9"
+  local slow_tap="${10}"
+  local fast_tap="${11}"
 
   local result_dir="$REPO_ROOT/results/genus_osc_pd/$run_id"
   local snapshot_tag="genus_osc_pd_${run_id}"
@@ -141,6 +143,7 @@ run_one() {
     echo "genus_effort: $effort"
     echo "enable_clock_gating: $enable_cg"
     echo "icg_dont_use_override: $icg_override"
+    echo "discrete_clock_gating: $discrete_cg"
     echo "relax_pd_preserve: $relax_pd"
     echo "slow_period_ns: $slow_period"
     echo "fast_period_ns: $fast_period"
@@ -166,6 +169,7 @@ run_one() {
   export MPTDC_OPT_GOAL="o5_${experiment}_${effort}"
   export MPTDC_ENABLE_CLOCK_GATING="$enable_cg"
   export MPTDC_ALLOW_ICG_DONT_USE_OVERRIDE="$icg_override"
+  export MPTDC_ALLOW_DISCRETE_CLOCK_GATING="$discrete_cg"
   export MPTDC_CLOCK_GATING_MIN_FLOPS="${MPTDC_CLOCK_GATING_MIN_FLOPS:-2}"
   export MPTDC_RELAX_PD_PRESERVE="$relax_pd"
 
@@ -321,6 +325,7 @@ run_one() {
     echo "- HDL filelist: \`$O5_FILELIST\`"
     echo "- Clock gating requested: \`$enable_cg\`"
     echo "- ICG dont_use override requested: \`$icg_override\`"
+    echo "- Discrete clock gating requested: \`$discrete_cg\`"
     echo "- PD preserve relaxed: \`$relax_pd\`"
     echo "- RO_tune4 instance count: $ro_count"
     echo "- mptdc_osc_stub residue count: $stub_count"
@@ -424,20 +429,22 @@ declare -a RUN_PROMISING=()
 
 if [[ "$O5_RUN_BASE" == "1" ]]; then
   BASE_ID="${BASE_RUN_ID}_o5_base_fast"
-  run_one "base_o4_reference_rerun" "fast" "$BASE_ID" "0" "0" "0" "-" "-" "-" "-"
+  run_one "base_o4_reference_rerun" "fast" "$BASE_ID" "0" "0" "0" "0" "-" "-" "-" "-"
   rc=$?
   RUN_IDS+=("$BASE_ID"); RUN_RCS+=("$rc")
   if [[ "$rc" == "0" ]] && is_promising "$REPO_ROOT/results/genus_osc_pd/$BASE_ID" >/dev/null 2>&1; then RUN_PROMISING+=("YES"); else RUN_PROMISING+=("NO"); fi
 fi
 
-NORESET_ID="${BASE_RUN_ID}_o5_noreset_ts_fast"
-run_one "noreset_timestamp" "fast" "$NORESET_ID" "0" "0" "1" "-" "-" "-" "-"
-rc=$?
-RUN_IDS+=("$NORESET_ID"); RUN_RCS+=("$rc")
-if [[ "$rc" == "0" ]] && is_promising "$REPO_ROOT/results/genus_osc_pd/$NORESET_ID" >/dev/null 2>&1; then RUN_PROMISING+=("YES"); else RUN_PROMISING+=("NO"); fi
+if [[ "$O5_RUN_NORESET" == "1" ]]; then
+  NORESET_ID="${BASE_RUN_ID}_o5_noreset_ts_fast"
+  run_one "noreset_timestamp" "fast" "$NORESET_ID" "0" "0" "1" "0" "-" "-" "-" "-"
+  rc=$?
+  RUN_IDS+=("$NORESET_ID"); RUN_RCS+=("$rc")
+  if [[ "$rc" == "0" ]] && is_promising "$REPO_ROOT/results/genus_osc_pd/$NORESET_ID" >/dev/null 2>&1; then RUN_PROMISING+=("YES"); else RUN_PROMISING+=("NO"); fi
+fi
 
 CG_ID="${BASE_RUN_ID}_o5_clock_gated_ts_fast"
-run_one "clock_gated_timestamp" "fast" "$CG_ID" "1" "1" "1" "-" "-" "-" "-"
+run_one "clock_gated_timestamp_discrete" "fast" "$CG_ID" "1" "1" "1" "1" "-" "-" "-" "-"
 rc=$?
 RUN_IDS+=("$CG_ID"); RUN_RCS+=("$rc")
 if [[ "$rc" == "0" ]] && is_promising "$REPO_ROOT/results/genus_osc_pd/$CG_ID" >/dev/null 2>&1; then RUN_PROMISING+=("YES"); else RUN_PROMISING+=("NO"); fi
@@ -448,7 +455,7 @@ if [[ "$O5_RUN_PVT_AWARE" == "1" ]]; then
     exit 2
   fi
   PVT_ID="${BASE_RUN_ID}_o5_clock_gated_ts_pvtaware_fast"
-  run_one "clock_gated_timestamp_pvt_aware" "fast" "$PVT_ID" "1" "1" "1" \
+  run_one "clock_gated_timestamp_pvt_aware_discrete" "fast" "$PVT_ID" "1" "1" "1" "1" \
     "$O5_PVT_SLOW_PERIOD_NS" "$O5_PVT_FAST_PERIOD_NS" "$O5_PVT_SLOW_TAP_STEP_NS" "$O5_PVT_FAST_TAP_STEP_NS"
   rc=$?
   RUN_IDS+=("$PVT_ID"); RUN_RCS+=("$rc")
@@ -468,16 +475,16 @@ if [[ "$O5_RUN_CLOSURE" == "1" || "$O5_RUN_CLOSURE" == "auto" ]]; then
     case "${RUN_IDS[$best_index]}" in
       *pvtaware*)
         CLOSURE_ID="${BASE_RUN_ID}_o5_clock_gated_ts_pvtaware_closure"
-        run_one "clock_gated_timestamp_pvt_aware" "closure" "$CLOSURE_ID" "1" "1" "1" \
+        run_one "clock_gated_timestamp_pvt_aware_discrete" "closure" "$CLOSURE_ID" "1" "1" "1" "1" \
           "$O5_PVT_SLOW_PERIOD_NS" "$O5_PVT_FAST_PERIOD_NS" "$O5_PVT_SLOW_TAP_STEP_NS" "$O5_PVT_FAST_TAP_STEP_NS"
         ;;
       *clock_gated*)
         CLOSURE_ID="${BASE_RUN_ID}_o5_clock_gated_ts_closure"
-        run_one "clock_gated_timestamp" "closure" "$CLOSURE_ID" "1" "1" "1" "-" "-" "-" "-"
+        run_one "clock_gated_timestamp_discrete" "closure" "$CLOSURE_ID" "1" "1" "1" "1" "-" "-" "-" "-"
         ;;
       *)
         CLOSURE_ID="${BASE_RUN_ID}_o5_noreset_ts_closure"
-        run_one "noreset_timestamp" "closure" "$CLOSURE_ID" "0" "0" "1" "-" "-" "-" "-"
+        run_one "noreset_timestamp" "closure" "$CLOSURE_ID" "0" "0" "1" "0" "-" "-" "-" "-"
         ;;
     esac
     CLOSURE_RC=$?

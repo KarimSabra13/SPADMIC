@@ -181,6 +181,13 @@ if {[info exists mptdc_enable_clock_gating] && $mptdc_enable_clock_gating} {
     if {[info exists mptdc_allow_icg_dont_use_override] && $mptdc_allow_icg_dont_use_override} {
         mptdc_allow_icg_lib_cells
     }
+    if {[info exists mptdc_allow_discrete_clock_gating] && $mptdc_allow_discrete_clock_gating} {
+        if {[catch {set_db lp_insert_discrete_clock_gating_logic true} discrete_cg_err]} {
+            mptdc_message "Discrete clock-gating logic request was not accepted by this Genus build: $discrete_cg_err" high
+        } else {
+            mptdc_message "Discrete clock-gating logic enabled for O5 feasibility only" high
+        }
+    }
     if {![info exists mptdc_clock_gating_min_flops]} {
         set mptdc_clock_gating_min_flops 8
     }

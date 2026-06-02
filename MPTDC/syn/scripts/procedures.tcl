@@ -249,7 +249,30 @@ proc mptdc_collect_icg_lib_cells {} {
             set cells [concat $cells $matches]
         }
     }
-    return $cells
+
+    # Some Genus builds do not match lib-cell glob patterns directly with
+    # get_db.  Fall back to scanning all lib-cell names so the audit reflects
+    # what the loaded Liberty actually contains.
+    set all_cells [list]
+    catch {set all_cells [get_db lib_cells]}
+    foreach cell $all_cells {
+        set name ""
+        catch {set name [get_db $cell .base_name]}
+        if {$name eq ""} {
+            catch {set name [get_db $cell .name]}
+        }
+        foreach pattern {
+            LGCNHDX* LGCPHDX*
+            LSGCNHDX* LSGCPHDX*
+            LSOGCNHDX* LSOGCPHDX*
+        } {
+            if {[string match $pattern $name]} {
+                lappend cells $cell
+                break
+            }
+        }
+    }
+    return [mptdc_unique_list $cells]
 }
 
 proc mptdc_allow_icg_lib_cells {} {

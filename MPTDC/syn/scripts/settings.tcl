@@ -57,8 +57,9 @@ if {[info exists ::env(MPTDC_CLOCK_GATING_MIN_FLOPS)]} {
     set mptdc_clock_gating_min_flops 8
 }
 set mptdc_allow_icg_dont_use_override [mptdc_bool_env MPTDC_ALLOW_ICG_DONT_USE_OVERRIDE false]
+set mptdc_allow_discrete_clock_gating [mptdc_bool_env MPTDC_ALLOW_DISCRETE_CLOCK_GATING false]
 if {$mptdc_enable_clock_gating} {
-    set clock_gating_note "clock gating enabled experimentally (min_flops=$mptdc_clock_gating_min_flops, icg_dont_use_override=$mptdc_allow_icg_dont_use_override)"
+    set clock_gating_note "clock gating enabled experimentally (min_flops=$mptdc_clock_gating_min_flops, icg_dont_use_override=$mptdc_allow_icg_dont_use_override, discrete=$mptdc_allow_discrete_clock_gating)"
 } else {
     set clock_gating_note "clock gating disabled (library ICG cells are dont_use)"
 }

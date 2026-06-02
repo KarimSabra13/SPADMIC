@@ -6,7 +6,22 @@ Run one low-cost Genus feasibility matrix for O5. The run must not use Innovus, 
 
 Run ID:
 
-`20260602_o5_pd_stdcell_closure`
+`20260602_o5b_pd_stdcell_discrete_cg`
+
+## O5 First Run Summary
+
+The first run `20260602_o5_pd_stdcell_closure` produced:
+
+- `o5_noreset_ts_fast`: completed, but not promising.
+  - `OSC_FAST_REAL` WNS about `-1786 ps`
+  - dominant family still `PD_HIT_TO_TS_FREEZE`
+  - `CLK_SYS_REAL` WNS about `-1130 ps`
+- `o5_clock_gated_ts_fast`: inconclusive.
+  - Genus stopped with `POPT-78 Cannot find any usable integrated clock-gating cell`
+  - no post-synthesis netlist
+  - no timing reports
+
+Do not rerun the original O5 command unchanged. The follow-up command below uses the same RTL but enables discrete clock-gating logic as a feasibility-only test.
 
 ## Command
 
@@ -25,9 +40,11 @@ git status --short
 git log --oneline -5
 
 O5_RUN_BASE=0 \
+O5_RUN_NORESET=0 \
 O5_RUN_PVT_AWARE=0 \
 O5_RUN_CLOSURE=auto \
-bash MPTDC/syn/scripts/server_run_genus_o5_pd_stdcell_closure.sh 20260602_o5_pd_stdcell_closure
+MPTDC_CLOCK_GATING_MIN_FLOPS=2 \
+bash MPTDC/syn/scripts/server_run_genus_o5_pd_stdcell_closure.sh 20260602_o5b_pd_stdcell_discrete_cg
 ```
 
 ## What The Script Runs
@@ -38,6 +55,7 @@ FAST_FEASIBILITY:
    - timestamp flops have no reset/clear in RTL
    - PD `dont_touch` relaxed
    - automatic clock gating disabled
+   - skipped in the O5b rerun when `O5_RUN_NORESET=0`, because the first O5 run already completed this mode and it was not promising
 
 2. `20260602_o5_pd_stdcell_closure_o5_clock_gated_ts_fast`
    - same RTL
@@ -45,6 +63,7 @@ FAST_FEASIBILITY:
    - automatic clock gating enabled experimentally
    - ICG `dont_use` override requested
    - clock-gating min flops set to 2
+   - discrete clock-gating logic enabled for feasibility because usable ICG cells were not found in the first O5 run
 
 Optional:
 
@@ -87,15 +106,13 @@ cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
 git status --short
 
 git add -f \
-  results/genus_osc_pd/20260602_o5_pd_stdcell_closure_SUMMARY.md \
-  results/genus_osc_pd/20260602_o5_pd_stdcell_closure_o5_noreset_ts_fast \
-  results/genus_osc_pd/20260602_o5_pd_stdcell_closure_o5_clock_gated_ts_fast \
-  results/genus_osc_pd/20260602_o5_pd_stdcell_closure_o5_clock_gated_ts_closure \
-  MPTDC/lab_snapshots/genus_osc_pd_20260602_o5_pd_stdcell_closure_o5_noreset_ts_fast \
-  MPTDC/lab_snapshots/genus_osc_pd_20260602_o5_pd_stdcell_closure_o5_clock_gated_ts_fast \
-  MPTDC/lab_snapshots/genus_osc_pd_20260602_o5_pd_stdcell_closure_o5_clock_gated_ts_closure
+  results/genus_osc_pd/20260602_o5b_pd_stdcell_discrete_cg_SUMMARY.md \
+  results/genus_osc_pd/20260602_o5b_pd_stdcell_discrete_cg_o5_clock_gated_ts_fast \
+  results/genus_osc_pd/20260602_o5b_pd_stdcell_discrete_cg_o5_clock_gated_ts_closure \
+  MPTDC/lab_snapshots/genus_osc_pd_20260602_o5b_pd_stdcell_discrete_cg_o5_clock_gated_ts_fast \
+  MPTDC/lab_snapshots/genus_osc_pd_20260602_o5b_pd_stdcell_discrete_cg_o5_clock_gated_ts_closure
 
-git commit -m "server-results: 20260602 O5 standard-cell PD Genus"
+git commit -m "server-results: 20260602 O5b discrete clock-gating Genus"
 git push
 ```
 
