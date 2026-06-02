@@ -7,6 +7,16 @@ REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_lint_current_head}"
 RESULT_DIR="$REPO_ROOT/results/local_verilator/$RUN_ID"
+FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
+
+case "$FAST_TAG_ENCODING" in
+  raw_lfsr_tag) FAST_TAG_DEFINE_ARGS=() ;;
+  raw_galois_tag) FAST_TAG_DEFINE_ARGS=(+define+MPTDC_FAST_TAG_GALOIS) ;;
+  *)
+    echo "[LINT] Invalid MPTDC_FAST_TAG_ENCODING=$FAST_TAG_ENCODING" >&2
+    exit 1
+    ;;
+esac
 
 mkdir -p "$RESULT_DIR"
 mkdir -p "$RESULT_DIR/ccache/tmp"
@@ -40,12 +50,14 @@ CMD=(
   -Wno-UNOPTFLAT
   -Wno-DECLFILENAME
   -Wno-VARHIDDEN
+  "${FAST_TAG_DEFINE_ARGS[@]}"
   -f "$MPTDC_DIR/sim/verilator/filelist_verilator.f"
   --top-module mptdc_top_asic
 )
 
 {
   echo "Run ID: $RUN_ID"
+  echo "Fast tag encoding: $FAST_TAG_ENCODING"
   echo "Working directory: $REPO_ROOT"
   echo "Command:"
   printf '  %q' "${CMD[@]}"
@@ -65,6 +77,7 @@ RC=$?
   echo "- Run ID: \`$RUN_ID\`"
   echo "- Git HEAD: \`$(cat "$RESULT_DIR/git_head.txt")\`"
   echo "- Verilator: \`$(cat "$RESULT_DIR/verilator_version.txt")\`"
+  echo "- Fast tag encoding: \`$FAST_TAG_ENCODING\`"
   echo "- Command log: \`command_transcript.log\`"
   echo "- Lint log: \`lint.log\`"
   if [[ $RC -eq 0 ]]; then

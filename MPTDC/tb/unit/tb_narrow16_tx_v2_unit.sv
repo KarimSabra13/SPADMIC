@@ -193,8 +193,12 @@ module tb_narrow16_tx_v2_unit;
   // ── Main test sequence ────────────────────────────────────────────
   initial begin
     logic [NARROW_W-1:0] pkt [$];
+    logic [NARROW_W-1:0] pkt_lfsr [$];
+    logic [NARROW_W-1:0] pkt_galois [$];
     logic [NARROW_W-1:0] w;
     logic signed [31:0] t_raw_exp;
+    logic [NFAST_W-1:0] raw_lfsr_tag;
+    logic [NFAST_W-1:0] raw_galois_tag;
     int n;
 
     pass_count = 0;
@@ -483,6 +487,48 @@ module tb_narrow16_tx_v2_unit;
       w = pkt[1];
       check("T8 EOC [15:14]==11", w[15:14] == 2'b11);
       check("T8 EOC count==0",    w[13:0]  == 14'd0);
+    end
+
+    // ────────────────────────────────────────────────────────────────
+    // TEST 9: Packet layout is unchanged by fast-tag encoding choice.
+    // The serializer only sees a 7-bit nfast field. raw_lfsr_tag and
+    // raw_galois_tag may carry different values, but they occupy the same
+    // HIT W0[7:1] packet bits and do not change word count or W1 layout.
+    // ────────────────────────────────────────────────────────────────
+    $display("\n--- Test 9: raw tag packet layout compatibility ---");
+    do_reset();
+    out_mode = OUT_MODE_RAW_FEATURES;
+    narrow_ready = 1'b1;
+    raw_lfsr_tag = FAST_TAG_SEED;
+    raw_galois_tag = FAST_TAG_SEED;
+    repeat (6) begin
+      raw_lfsr_tag = fast_tag_next(raw_lfsr_tag);
+      raw_galois_tag = fast_tag_galois_next(raw_galois_tag);
+    end
+    check("T9 selected raw tags differ", raw_lfsr_tag != raw_galois_tag);
+
+    push_meta(.nslow(7'd42), .hit_count(4'd1), .ctx_id(1'd0),
+              .phase0(1'b1), .flags(4'b0011), .stop_phase_disc(3'd4));
+    push_hit(.ns(4'd6), .nf(4'd4), .nfast(raw_lfsr_tag), .event_seq(4'd0));
+    collect_pkt(pkt_lfsr);
+
+    push_meta(.nslow(7'd42), .hit_count(4'd1), .ctx_id(1'd0),
+              .phase0(1'b1), .flags(4'b0011), .stop_phase_disc(3'd4));
+    push_hit(.ns(4'd6), .nf(4'd4), .nfast(raw_galois_tag), .event_seq(4'd0));
+    collect_pkt(pkt_galois);
+
+    check("T9 LFSR packet word_count==4", pkt_lfsr.size() == 4);
+    check("T9 Galois packet word_count==4", pkt_galois.size() == 4);
+    if (pkt_lfsr.size() >= 4 && pkt_galois.size() >= 4) begin
+      check("T9 headers identical", pkt_lfsr[0] == pkt_galois[0]);
+      check("T9 W0 marker/bounds identical",
+            {pkt_lfsr[1][15], pkt_lfsr[1][14:8], pkt_lfsr[1][0]} ==
+            {pkt_galois[1][15], pkt_galois[1][14:8], pkt_galois[1][0]});
+      check("T9 LFSR W0 nfast field", pkt_lfsr[1][7:1] == raw_lfsr_tag);
+      check("T9 Galois W0 nfast field", pkt_galois[1][7:1] == raw_galois_tag);
+      check("T9 W1 layout identical", pkt_lfsr[2] == pkt_galois[2]);
+      check("T9 EOC marker unchanged", pkt_lfsr[3][15:14] == 2'b11 &&
+                                      pkt_galois[3][15:14] == 2'b11);
     end
 
     // ────────────────────────────────────────────────────────────────

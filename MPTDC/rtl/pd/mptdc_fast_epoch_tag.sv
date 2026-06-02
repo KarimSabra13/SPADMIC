@@ -11,8 +11,11 @@
 // that column's fast phase.  PD cells capture the local raw tag; software and
 // calibration decode it after readout using nf and run metadata.
 //
-// The 7-bit sequence uses x^7 + x^6 + 1, reset seed 7'b0000001, and excludes
-// the all-zero state.  For NFAST_W=7 the sequence length is 127 states.
+// The default 7-bit sequence uses x^7 + x^6 + 1, reset seed 7'b0000001, and
+// excludes the all-zero state.  For NFAST_W=7 the sequence length is 127 states.
+// O6C can select a shift-mostly 7-bit Galois sequence with the same width and
+// packet field position; software/calibration distinguish the interpretation
+// through the nfast_encoding manifest field.
 //
 // O4 muxless-tag mode intentionally advances on every fast tap edge after
 // reset/clear.  The RO_tune4 rstb/run control already stops the clock when the
@@ -24,7 +27,8 @@ module mptdc_fast_epoch_tag
   import mptdc_pkg::*;
 #(
   parameter int unsigned W = NFAST_W,
-  parameter logic [W-1:0] SEED = {{(W-1){1'b0}}, 1'b1}
+  parameter logic [W-1:0] SEED = {{(W-1){1'b0}}, 1'b1},
+  parameter int unsigned TAG_ENCODING_SEL = TAG_ENC_LFSR_FIBONACCI
 )(
   input  wire              clk_fast,
   input  wire              rst_n,
@@ -35,19 +39,34 @@ module mptdc_fast_epoch_tag
 
   wire unused_enable = enable_i;
 
-  function automatic logic [W-1:0] lfsr_next(input logic [W-1:0] state_i);
-    logic feedback;
-    begin
-      feedback = state_i[W-1] ^ state_i[W-2];
-      lfsr_next = {state_i[W-2:0], feedback};
-    end
+  function automatic logic [W-1:0] fibonacci_next(input logic [W-1:0] state_i);
+    fibonacci_next = {state_i[W-2:0], state_i[W-1] ^ state_i[W-2]};
+  endfunction
+
+  function automatic logic [W-1:0] galois_next(input logic [W-1:0] state_i);
+    automatic logic feedback;
+    automatic logic [W-1:0] next_tag;
+
+    feedback = state_i[W-1];
+    next_tag = {state_i[W-2:0], 1'b0};
+    if (feedback)
+      next_tag = next_tag ^ W'(FAST_TAG_GALOIS_MASK);
+    galois_next = next_tag;
+  endfunction
+
+  function automatic logic [W-1:0] tag_next(input logic [W-1:0] state_i);
+    case (TAG_ENCODING_SEL)
+      TAG_ENC_GALOIS:         tag_next = galois_next(state_i);
+      TAG_ENC_LFSR_FIBONACCI: tag_next = fibonacci_next(state_i);
+      default:                tag_next = fibonacci_next(state_i);
+    endcase
   endfunction
 
   always_ff @(posedge clk_fast or negedge rst_n or posedge clear_window) begin
     if (!rst_n || clear_window) begin
       tag_o <= SEED;
     end else begin
-      tag_o <= lfsr_next(tag_o);
+      tag_o <= tag_next(tag_o);
     end
   end
 
@@ -59,6 +78,10 @@ module mptdc_fast_epoch_tag
       else $fatal(1, "mptdc_fast_epoch_tag: only the verified 7-bit polynomial is supported");
     assert (SEED != '0)
       else $fatal(1, "mptdc_fast_epoch_tag: SEED must be non-zero");
+    assert (TAG_ENCODING_SEL == TAG_ENC_LFSR_FIBONACCI ||
+            TAG_ENCODING_SEL == TAG_ENC_GALOIS)
+      else $fatal(1, "mptdc_fast_epoch_tag: unsupported TAG_ENCODING_SEL=%0d",
+                  TAG_ENCODING_SEL);
   end
 
   always_ff @(posedge clk_fast or negedge rst_n or posedge clear_window) begin

@@ -161,6 +161,8 @@ Every characterization manifest must include:
 
 ```text
 nfast_encoding
+fast_tag_encoding
+rtl_tag_define_or_parameter
 tag_type
 tag_decode_mode
 tag_width
@@ -183,3 +185,22 @@ Before any O6C Genus run:
 
 Do not run Genus for C1 if packet parsing, tag decode, monotonic reconstruction,
 fixed-delay RMS, or calibration smoke regresses unexpectedly.
+
+## O6C RTL Selection
+
+The C1 RTL candidate remains packet-compatible:
+
+```text
+MPTDC_FAST_TAG_GALOIS unset:
+  mptdc_fast_epoch_tag TAG_ENCODING_SEL = TAG_ENC_LFSR_FIBONACCI
+  packet HIT W0[7:1] = raw_lfsr_tag[6:0]
+
+MPTDC_FAST_TAG_GALOIS set:
+  mptdc_fast_epoch_tag TAG_ENCODING_SEL = TAG_ENC_GALOIS
+  packet HIT W0[7:1] = raw_galois_tag[6:0]
+```
+
+No packet words, widths, or HIT/META/EOC bit positions change. The
+characterization scripts select the RTL define from `--nfast-encoding`, and the
+manifest records the resulting RTL define so software metadata and hardware mode
+can be audited together.

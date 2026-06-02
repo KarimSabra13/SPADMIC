@@ -3,6 +3,7 @@
 # Purpose : Build and run one unit or integration SystemVerilog testbench.
 # Usage   : bash scripts/sim/run_tb.sh <tb_name>
 #           [--sim verilator|xcelium|vcs] [--waves] [--seed N]
+#           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
 # Context : Primary filelist-driven runner for benches under tb/unit and
 #           tb/int.
 # Author  : Karim Sabra
@@ -20,6 +21,7 @@ SIM="verilator"
 WAVES=0
 SEED=""
 TB_NAME=""
+FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -27,8 +29,9 @@ while [[ $# -gt 0 ]]; do
     --sim)     SIM="$2"; shift 2 ;;
     --waves)   WAVES=1; shift ;;
     --seed)    SEED="$2"; shift 2 ;;
+    --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: $0 <tb_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N]"
+      echo "Usage: $0 <tb_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N] [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]"
       exit 0
       ;;
     *)
@@ -48,6 +51,15 @@ if [[ -z "$TB_NAME" ]]; then
   echo "Usage: $0 <tb_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N]"
   exit 1
 fi
+
+case "$FAST_TAG_ENCODING" in
+  raw_lfsr_tag) FAST_TAG_DEFINE_ARGS=() ;;
+  raw_galois_tag) FAST_TAG_DEFINE_ARGS=(+define+MPTDC_FAST_TAG_GALOIS) ;;
+  *)
+    echo "Error: --fast-tag-encoding must be raw_lfsr_tag or raw_galois_tag" >&2
+    exit 1
+    ;;
+esac
 
 # Find TB file
 TB_FILE=""
@@ -81,7 +93,7 @@ TB_COMMON=(
 )
 
 # Build directory
-TB_BUILD="$BUILD_DIR/$TB_NAME"
+TB_BUILD="$BUILD_DIR/${TB_NAME}_${FAST_TAG_ENCODING}"
 mkdir -p "$TB_BUILD"
 
 # Keep ccache writes inside the build tree unless the caller already chose a
@@ -93,6 +105,7 @@ mkdir -p "$CCACHE_DIR" "$CCACHE_TEMPDIR"
 echo "=== MPTDC v2.7 TB Runner ==="
 echo "  Testbench: $TB_NAME"
 echo "  Simulator: $SIM"
+echo "  Fast tag encoding: $FAST_TAG_ENCODING"
 echo "  Build dir: $TB_BUILD"
 echo ""
 
@@ -110,6 +123,7 @@ case "$SIM" in
       -Wno-MULTITOP -Wno-SYNCASYNCNET -Wno-UNOPTFLAT -Wno-PINCONNECTEMPTY
       -Wno-VARHIDDEN
       +define+MPTDC_USE_OSC_MODEL
+      "${FAST_TAG_DEFINE_ARGS[@]}"
       --Mdir "$TB_BUILD"
       --top-module "$TB_NAME"
       -o "$TB_NAME"
@@ -153,6 +167,7 @@ case "$SIM" in
       -nowarn DLCVAR
       -top "$TB_NAME"
       +define+MPTDC_USE_OSC_MODEL
+      "${FAST_TAG_DEFINE_ARGS[@]}"
     )
 
     if [[ -n "$SEED" ]]; then
@@ -176,6 +191,7 @@ case "$SIM" in
       -timescale=1ps/1ps
       +lint=all
       +define+MPTDC_USE_OSC_MODEL
+      "${FAST_TAG_DEFINE_ARGS[@]}"
       -top "$TB_NAME"
       -o "$TB_BUILD/$TB_NAME"
     )

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import tempfile
+import json
 from pathlib import Path
 
 from fast_tag_decode import (
@@ -30,6 +31,8 @@ def check(cond: bool, label: str) -> None:
 
 
 def main() -> int:
+    table_dir = Path(__file__).resolve().parents[2] / "MPTDC/scripts/analysis/tag_decode_tables"
+
     seq = generate_lfsr_sequence(DEFAULT_WIDTH, DEFAULT_SEED)
     check(len(seq) == 127, "7-bit LFSR has 127 states")
     check(len(set(seq)) == 127, "7-bit LFSR has no early repeat")
@@ -57,6 +60,18 @@ def main() -> int:
           "raw Galois tag decode uses table")
     check(decode_table_hash(RAW_LFSR_TAG) != decode_table_hash(RAW_GALOIS_TAG),
           "decode table hashes distinguish encodings")
+
+    for mode, expected_seq in ((RAW_LFSR_TAG, seq), (RAW_GALOIS_TAG, gseq)):
+        table_path = table_dir / f"{mode}.json"
+        payload = json.loads(table_path.read_text(encoding="utf-8"))
+        expected_hash = decode_table_hash(mode)
+        check(payload["decode_table_hash"] == expected_hash,
+              f"{mode} JSON hash matches golden generator")
+        json_table = {int(k): int(v) for k, v in payload["tag_to_index"].items()}
+        check(json_table == build_tag_to_index_table(mode=mode),
+              f"{mode} JSON decode table matches golden sequence")
+        check([tag for tag, _ in sorted(json_table.items(), key=lambda item: item[1])] == expected_seq,
+              f"{mode} JSON sequence order matches golden generator")
 
     rows = annotate_rows([
         {"conv_id": 1, "hit_idx": 0, "nf": 5, "nfast_hit": seq[5]},

@@ -2,16 +2,31 @@
 
 Date: 2026-06-02
 
-Status: not run
+Status: RTL implemented, characterization not run
 
 ## Summary
 
-Solution C characterization has not started. The C1 Galois/shift-mostly
-software decode mode and decode table artifacts are prepared, but matching RTL
-has not been enabled.
+Solution C characterization has not started. The C1 Galois/shift-mostly decode
+mode, decode table artifacts, and selectable RTL fast-tag mode are prepared.
+The production packet format is unchanged: HIT W0[7:1] still carries the
+existing 7-bit `nfast` field, with interpretation selected by manifest
+`nfast_encoding`.
 
 Do not proceed to Genus for Solution C until this file is populated with Stage 1
 and Stage 2 results.
+
+## RTL/Manifest Contract
+
+```text
+raw_lfsr_tag:
+  RTL selector = default TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI
+
+raw_galois_tag:
+  RTL selector = +define+MPTDC_FAST_TAG_GALOIS
+```
+
+Every O6C characterization manifest must include `nfast_encoding`,
+`fast_tag_encoding`, `rtl_tag_define_or_parameter`, and decode-table hash.
 
 ## Comparison Table
 

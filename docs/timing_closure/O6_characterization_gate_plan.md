@@ -30,11 +30,13 @@ Mode B:
 name = O6C_shift_mostly_galois_tag_candidate
 nfast_encoding = raw_galois_tag
 packet = fixed_raw_features_v2_7
-rtl = pending explicit C1 RTL experiment
+rtl = selectable C1 RTL experiment, enabled by +define+MPTDC_FAST_TAG_GALOIS
 ```
 
-Do not run Mode B until the C1 RTL mode is actually implemented. Do not label
-current Fibonacci-LFSR RTL data as `raw_galois_tag`.
+Do not label default Fibonacci-LFSR RTL data as `raw_galois_tag`. The
+characterization wrapper must compile with `+define+MPTDC_FAST_TAG_GALOIS` when
+`--char-nfast-encoding raw_galois_tag` is requested, and the manifest must
+record `rtl_tag_define_or_parameter`.
 
 ## Stage 0: Local Regression
 
@@ -42,6 +44,8 @@ Recommended command:
 
 ```bash
 bash MPTDC/sim/verilator/run_smoke.sh 20260602_o6_stage0_current_raw_lfsr_tag
+MPTDC_FAST_TAG_ENCODING=raw_galois_tag \
+  bash MPTDC/sim/verilator/run_smoke.sh 20260602_o6_stage0_raw_galois_tag
 ```
 
 Required checks:

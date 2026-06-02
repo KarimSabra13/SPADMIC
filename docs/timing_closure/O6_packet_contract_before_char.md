@@ -219,14 +219,26 @@ raw_lfsr_tag:
   table = tools/mptdc_decode/fast_tag_decode.py, raw_lfsr_tag
 
 raw_galois_tag:
-  packet nfast field = raw 7-bit Galois LFSR tag candidate
+  packet nfast field = raw 7-bit Galois LFSR tag
   decode mode = software
   table = tools/mptdc_decode/fast_tag_decode.py, raw_galois_tag
 ```
 
-`raw_galois_tag` is a candidate software/manifest mode only until matching RTL
-is intentionally enabled. Do not label current Fibonacci-LFSR RTL data as
-`raw_galois_tag`.
+Packet format unchanged. `nfast` field encoding is selected by the
+`nfast_encoding` manifest field. `raw_galois_tag` uses the same 7-bit HIT
+W0[7:1] field as `raw_lfsr_tag`; only the interpretation/decode table changes.
+
+O6C RTL selection:
+
+```text
+raw_lfsr_tag:
+  RTL fast tag = default TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI
+
+raw_galois_tag:
+  RTL fast tag = +define+MPTDC_FAST_TAG_GALOIS
+```
+
+Do not label Fibonacci-LFSR RTL data as `raw_galois_tag`.
 
 ## Allowed Internal Changes
 
@@ -257,8 +269,8 @@ Genus remains blocked until at least:
 - Stage 2 medium characterization passes
 - packet parser confirms the same production format
 - analysis manifest records branch, RTL HEAD, packet format version,
-  `nfast_encoding`, tag type, tag width, tag columns, decode mode, and decode
-  table hash
+  `nfast_encoding`, `fast_tag_encoding`, `rtl_tag_define_or_parameter`, tag
+  type, tag width, tag columns, decode mode, and decode table hash
 
 Do not mix `legacy_binary_nfast`, `raw_lfsr_tag`, and `raw_galois_tag` datasets
 without explicit manifest metadata.

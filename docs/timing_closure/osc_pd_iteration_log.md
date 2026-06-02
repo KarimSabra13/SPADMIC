@@ -1103,6 +1103,18 @@ Next action:
 
 Stage 0 result:
 
+O6C RTL raw_galois_tag implementation:
+
+- Added selectable fast-tag RTL encoding in `mptdc_fast_epoch_tag`.
+- Kept default RTL mode as `raw_lfsr_tag` / Fibonacci LFSR.
+- Added `+define+MPTDC_FAST_TAG_GALOIS` selection for the 7-bit Galois
+  candidate.
+- Kept production packet format unchanged; HIT W0[7:1] remains the 7-bit
+  `nfast` field.
+- Updated simulation and characterization runners so `raw_galois_tag` selects
+  the matching RTL define and records the selector in manifests.
+- Added unit checks for both tag sequences and packet-layout compatibility.
+
 - `bash MPTDC/sim/verilator/run_smoke.sh 20260602_o6_stage0_current_raw_lfsr_tag`: PASS
 - Passed steps: 17
 - Failed steps: 0

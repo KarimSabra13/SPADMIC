@@ -12,6 +12,7 @@
 #           --configs GLOB     Config filter passed to run_campaign.sh
 #           --out-mode NAME    Serializer mode: raw_features (default raw_features;
 #                              legacy full/2 aliases are mapped downstream)
+#           --fast-tag-encoding NAME raw_lfsr_tag|raw_galois_tag RTL tag generator
 #           --delay-list LIST  Comma/space-separated delays in ps
 #           --out-dir DIR      Output directory (default results/fixed_delay_campaign)
 #           --jitter-sigma N   Override oscillator jitter sigma in ps
@@ -33,6 +34,7 @@ N_CONV=2000
 SEED_START=0
 CONFIG_FILTER="multihit_15_cal_nominal"
 OUT_MODE="raw_features"
+FAST_TAG_ENCODING="raw_lfsr_tag"
 OUT_DIR="$REPO_ROOT/results/fixed_delay_campaign"
 DELAY_LIST="20,50,100,200,500,1000,2000,5000,10000,30000"
 JITTER_SIGMA_OVERRIDE=""
@@ -66,6 +68,7 @@ while [[ $# -gt 0 ]]; do
     --seed-start) SEED_START="$2"; shift 2 ;;
     --configs) CONFIG_FILTER="$2"; shift 2 ;;
     --out-mode) OUT_MODE="$2"; shift 2 ;;
+    --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
     --delay-list) DELAY_LIST="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --jitter-sigma) JITTER_SIGMA_OVERRIDE="$2"; shift 2 ;;
@@ -87,6 +90,14 @@ if [[ -z "$JITTER_SIGMA_OVERRIDE" && -n "$JITTER_BOUND_OVERRIDE" ]]; then
   echo "[ERROR] --jitter-bound requires --jitter-sigma"
   exit 1
 fi
+
+case "$FAST_TAG_ENCODING" in
+  raw_lfsr_tag|raw_galois_tag) ;;
+  *)
+    echo "[ERROR] --fast-tag-encoding must be raw_lfsr_tag or raw_galois_tag"
+    exit 1
+    ;;
+esac
 
 case "$OUT_DIR" in
   /*) ;;
@@ -133,6 +144,7 @@ fi
 mkdir -p "$OUT_DIR"
 echo "[FIXED-DELAY] Output root: $OUT_DIR"
 echo "[FIXED-DELAY] Delays (ps): ${DELAYS[*]}"
+echo "[FIXED-DELAY] Fast tag RTL: $FAST_TAG_ENCODING"
 
 first_run=1
 for delay_ps in "${DELAYS[@]}"; do
@@ -150,6 +162,7 @@ for delay_ps in "${DELAYS[@]}"; do
     --seed-start "$SEED_START"
     --configs "$CONFIG_FILTER"
     --out-mode "$OUT_MODE"
+    --fast-tag-encoding "$FAST_TAG_ENCODING"
     --out-dir "$delay_out"
   )
 

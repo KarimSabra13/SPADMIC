@@ -7,6 +7,16 @@ REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_smoke_current_head}"
 RESULT_DIR="$REPO_ROOT/results/local_verilator/$RUN_ID"
+FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
+
+case "$FAST_TAG_ENCODING" in
+  raw_lfsr_tag|raw_galois_tag) ;;
+  *)
+    echo "[SMOKE] Invalid MPTDC_FAST_TAG_ENCODING=$FAST_TAG_ENCODING" >&2
+    exit 1
+    ;;
+esac
+
 mkdir -p "$RESULT_DIR"
 mkdir -p "$RESULT_DIR/ccache/tmp"
 
@@ -59,6 +69,7 @@ run_step() {
 }
 
 echo "[SMOKE] Writing results to $RESULT_DIR"
+echo "[SMOKE] Fast tag encoding: $FAST_TAG_ENCODING"
 
 run_step lint bash "$MPTDC_DIR/sim/verilator/run_lint.sh" "$RUN_ID"
 
@@ -70,6 +81,7 @@ UNIT_TESTS=(
   tb_stop_epoch_capture_async_unit
   tb_johnson_decode_unit
   tb_fast_epoch_tag_unit
+  tb_narrow16_tx_v2_unit
   tb_pd_cell_tag_capture_unit
   tb_pd_gate_false_hit_unit
   tb_drain_raw_tag_unit
@@ -91,15 +103,15 @@ VIP_TESTS=(
 )
 
 for tb in "${UNIT_TESTS[@]}"; do
-  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator
+  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING"
 done
 
 for tb in "${INT_TESTS[@]}"; do
-  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator
+  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING"
 done
 
 for test_name in "${VIP_TESTS[@]}"; do
-  run_step "vip_${test_name}" bash "$VIP_RUNNER" "$test_name" --sim verilator
+  run_step "vip_${test_name}" bash "$VIP_RUNNER" "$test_name" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING"
 done
 
 if [[ "${MPTDC_VERILATOR_SMOKE_FULL:-0}" == "1" ]]; then
@@ -112,6 +124,7 @@ fi
   echo "- Run ID: \`$RUN_ID\`"
   echo "- Git HEAD: \`$(cat "$RESULT_DIR/git_head.txt")\`"
   echo "- Verilator: \`$(cat "$RESULT_DIR/verilator_version.txt")\`"
+  echo "- Fast tag encoding: \`$FAST_TAG_ENCODING\`"
   echo "- Passed steps: $pass"
   echo "- Failed steps: $fail"
   echo "- Command transcript: \`command_transcript.log\`"

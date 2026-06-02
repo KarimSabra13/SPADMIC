@@ -8,17 +8,30 @@ module tb_fast_epoch_tag_unit;
   logic rst_n;
   logic clear_window;
   logic enable_i;
-  logic [NFAST_W-1:0] tag;
+  logic [NFAST_W-1:0] tag_lfsr;
+  logic [NFAST_W-1:0] tag_galois;
 
   int pass_cnt;
   int fail_cnt;
 
-  mptdc_fast_epoch_tag u_dut (
+  mptdc_fast_epoch_tag #(
+    .TAG_ENCODING_SEL(TAG_ENC_LFSR_FIBONACCI)
+  ) u_lfsr (
     .clk_fast     (clk_fast),
     .rst_n        (rst_n),
     .clear_window (clear_window),
     .enable_i     (enable_i),
-    .tag_o        (tag)
+    .tag_o        (tag_lfsr)
+  );
+
+  mptdc_fast_epoch_tag #(
+    .TAG_ENCODING_SEL(TAG_ENC_GALOIS)
+  ) u_galois (
+    .clk_fast     (clk_fast),
+    .rst_n        (rst_n),
+    .clear_window (clear_window),
+    .enable_i     (enable_i),
+    .tag_o        (tag_galois)
   );
 
   task automatic tick();
@@ -39,9 +52,36 @@ module tb_fast_epoch_tag_unit;
     end
   endtask
 
-  initial begin
+  function automatic logic [NFAST_W-1:0] expected_next(
+    input logic [NFAST_W-1:0] state_i,
+    input int unsigned        tag_encoding_sel_i
+  );
+    expected_next = fast_tag_next_sel(state_i, tag_encoding_sel_i);
+  endfunction
+
+  task automatic check_full_sequence(
+    input string       label,
+    input int unsigned tag_encoding_sel_i
+  );
     logic [NFAST_W-1:0] expected;
     logic [127:0] seen;
+    begin
+      seen = '0;
+      expected = FAST_TAG_SEED;
+      for (int i = 0; i < FAST_TAG_SEQUENCE_LEN; i++) begin
+        check(expected != '0, $sformatf("%s state %0d is non-zero", label, i));
+        check(!seen[int'(expected)], $sformatf("%s state %0d not repeated early", label, i));
+        seen[int'(expected)] = 1'b1;
+        expected = expected_next(expected, tag_encoding_sel_i);
+      end
+      check(expected == FAST_TAG_SEED,
+            $sformatf("%s maximal 127-state sequence returns to seed", label));
+    end
+  endtask
+
+  initial begin
+    logic [NFAST_W-1:0] expected_lfsr;
+    logic [NFAST_W-1:0] expected_galois;
 
     pass_cnt = 0;
     fail_cnt = 0;
@@ -53,37 +93,41 @@ module tb_fast_epoch_tag_unit;
     tick();
     #20 rst_n = 1'b1;
     #1;
-    check(tag == FAST_TAG_SEED, "reset loads non-zero seed");
+    check(tag_lfsr == FAST_TAG_SEED, "LFSR reset loads non-zero seed");
+    check(tag_galois == FAST_TAG_SEED, "Galois reset loads non-zero seed");
 
-    expected = fast_tag_next(FAST_TAG_SEED);
+    expected_lfsr = fast_tag_next(FAST_TAG_SEED);
+    expected_galois = fast_tag_galois_next(FAST_TAG_SEED);
     tick();
-    check(tag == expected, "tag advances every clock edge with enable=0 ignored");
+    check(tag_lfsr == expected_lfsr, "LFSR tag advances every clock edge with enable=0 ignored");
+    check(tag_galois == expected_galois, "Galois tag advances every clock edge with enable=0 ignored");
 
     enable_i = 1'b1;
-    expected = fast_tag_next(expected);
+    expected_lfsr = fast_tag_next(expected_lfsr);
+    expected_galois = fast_tag_galois_next(expected_galois);
     tick();
-    check(tag == expected, "tag also advances with enable=1");
+    check(tag_lfsr == expected_lfsr, "LFSR tag also advances with enable=1");
+    check(tag_galois == expected_galois, "Galois tag also advances with enable=1");
 
     enable_i = 1'b0;
-    expected = fast_tag_next(expected);
+    expected_lfsr = fast_tag_next(expected_lfsr);
+    expected_galois = fast_tag_galois_next(expected_galois);
     tick();
-    check(tag == expected, "enable input does not gate the muxless tag");
+    check(tag_lfsr == expected_lfsr, "LFSR enable input does not gate the muxless tag");
+    check(tag_galois == expected_galois, "Galois enable input does not gate the muxless tag");
+
+    check(fast_tag_galois_next(7'd64) == 7'd3,
+          "Galois prefix matches software mask 0x03 after state 64");
 
     clear_window = 1'b1;
     #1;
-    check(tag == FAST_TAG_SEED, "clear_window asynchronously reloads seed");
+    check(tag_lfsr == FAST_TAG_SEED, "LFSR clear_window asynchronously reloads seed");
+    check(tag_galois == FAST_TAG_SEED, "Galois clear_window asynchronously reloads seed");
     clear_window = 1'b0;
     #1;
 
-    seen = '0;
-    expected = FAST_TAG_SEED;
-    for (int i = 0; i < FAST_TAG_SEQUENCE_LEN; i++) begin
-      check(expected != '0, $sformatf("sequence state %0d is non-zero", i));
-      check(!seen[int'(expected)], $sformatf("sequence state %0d not repeated early", i));
-      seen[int'(expected)] = 1'b1;
-      expected = fast_tag_next(expected);
-    end
-    check(expected == FAST_TAG_SEED, "maximal 127-state sequence returns to seed");
+    check_full_sequence("LFSR", TAG_ENC_LFSR_FIBONACCI);
+    check_full_sequence("Galois", TAG_ENC_GALOIS);
 
     $display("===================================");
     $display("  Results: %0d PASS, %0d FAIL", pass_cnt, fail_cnt);

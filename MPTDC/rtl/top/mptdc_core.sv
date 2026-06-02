@@ -432,8 +432,9 @@ module mptdc_core
   for (genvar nf_tag = 0; nf_tag < NE; nf_tag++) begin : gen_fast_tag_col
     (* keep_hierarchy = "yes", preserve *)
     mptdc_fast_epoch_tag #(
-      .W    (NFAST_W),
-      .SEED (FAST_TAG_SEED)
+      .W                (NFAST_W),
+      .SEED             (FAST_TAG_SEED),
+      .TAG_ENCODING_SEL (FAST_TAG_ENCODING_SEL)
     ) u_fast_tag (
       .clk_fast     (fast_phase[nf_tag]),
       .rst_n        (rst_fast_n),

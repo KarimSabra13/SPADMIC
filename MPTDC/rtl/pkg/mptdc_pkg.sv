@@ -81,6 +81,14 @@ package mptdc_pkg;
   localparam logic [NFAST_W-1:0] FAST_TAG_SEED = {{(NFAST_W-1){1'b0}}, 1'b1};
   localparam int unsigned FAST_TAG_SEQUENCE_LEN = (1 << NFAST_W) - 1;
   localparam int unsigned FAST_TAG_COLUMNS = NE;
+  localparam int unsigned TAG_ENC_LFSR_FIBONACCI = 0;
+  localparam int unsigned TAG_ENC_GALOIS         = 1;
+  localparam logic [NFAST_W-1:0] FAST_TAG_GALOIS_MASK = {{(NFAST_W-2){1'b0}}, 2'b11};
+`ifdef MPTDC_FAST_TAG_GALOIS
+  localparam int unsigned FAST_TAG_ENCODING_SEL = TAG_ENC_GALOIS;
+`else
+  localparam int unsigned FAST_TAG_ENCODING_SEL = TAG_ENC_LFSR_FIBONACCI;
+`endif
 
   localparam int unsigned DLY_MAX_PS           = 32_000;
   localparam int unsigned SLOW_HALF_PERIOD_PS  = NE * OSC_TS_SLOW_PS;  // 440 ps @ 8 taps, 55 ps/tap
@@ -373,6 +381,30 @@ package mptdc_pkg;
   );
     // 7-bit Fibonacci LFSR, polynomial x^7 + x^6 + 1.
     fast_tag_next = {tag_i[NFAST_W-2:0], tag_i[NFAST_W-1] ^ tag_i[NFAST_W-2]};
+  endfunction
+
+  function automatic logic [NFAST_W-1:0] fast_tag_galois_next(
+    input logic [NFAST_W-1:0] tag_i
+  );
+    automatic logic feedback;
+    automatic logic [NFAST_W-1:0] next_tag;
+
+    feedback = tag_i[NFAST_W-1];
+    next_tag = {tag_i[NFAST_W-2:0], 1'b0};
+    if (feedback)
+      next_tag = next_tag ^ FAST_TAG_GALOIS_MASK;
+    fast_tag_galois_next = next_tag;
+  endfunction
+
+  function automatic logic [NFAST_W-1:0] fast_tag_next_sel(
+    input logic [NFAST_W-1:0] tag_i,
+    input int unsigned        tag_encoding_sel_i
+  );
+    case (tag_encoding_sel_i)
+      TAG_ENC_GALOIS:         fast_tag_next_sel = fast_tag_galois_next(tag_i);
+      TAG_ENC_LFSR_FIBONACCI: fast_tag_next_sel = fast_tag_next(tag_i);
+      default:                fast_tag_next_sel = fast_tag_next(tag_i);
+    endcase
   endfunction
 
   function automatic logic [SLOW_EPOCH_STAGES-1:0] slow_johnson_next(

@@ -53,6 +53,8 @@ N_CONV=100000
 CONFIG="multihit_15_cal_nominal"
 OUT_MODE="raw_features"
 NFAST_ENCODING="legacy_binary_nfast"
+FAST_TAG_ENCODING="raw_lfsr_tag"
+RTL_TAG_DEFINE_OR_PARAMETER="default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI"
 OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_raw_features"
 ANALYZE=0
 ANALYSIS_JOBS=4
@@ -203,6 +205,16 @@ case "$NFAST_ENCODING" in
     exit 1
     ;;
 esac
+case "$NFAST_ENCODING" in
+  raw_galois_tag)
+    FAST_TAG_ENCODING="raw_galois_tag"
+    RTL_TAG_DEFINE_OR_PARAMETER="+define+MPTDC_FAST_TAG_GALOIS"
+    ;;
+  legacy_binary_nfast|raw_lfsr_tag)
+    FAST_TAG_ENCODING="raw_lfsr_tag"
+    RTL_TAG_DEFINE_OR_PARAMETER="default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI"
+    ;;
+esac
 case "$ANALYSIS_BACKEND" in
   legacy|streaming) ;;
   *)
@@ -264,6 +276,7 @@ CAMPAIGN_CMD=(
   --delay-max 30000
   --configs "$CONFIG"
   --out-mode "$OUT_MODE"
+  --fast-tag-encoding "$FAST_TAG_ENCODING"
   --out-dir "$CAMPAIGN_DIR"
 )
 if [[ -n "$JITTER_SIGMA" ]]; then
@@ -333,6 +346,7 @@ FIXED_DELAY_CMD=(
   --n-conv "$FIXED_DELAY_N_CONV"
   --configs "$CONFIG"
   --out-mode "$OUT_MODE"
+  --fast-tag-encoding "$FAST_TAG_ENCODING"
   --delay-list "$FIXED_DELAY_LIST"
   --out-dir "$FIXED_DELAY_DIR"
   --analyze
@@ -361,6 +375,8 @@ write_manifest() {
   export MANIFEST_CONFIG="$CONFIG"
   export MANIFEST_OUT_MODE="$OUT_MODE"
   export MANIFEST_NFAST_ENCODING="$NFAST_ENCODING"
+  export MANIFEST_FAST_TAG_ENCODING="$FAST_TAG_ENCODING"
+  export MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER="$RTL_TAG_DEFINE_OR_PARAMETER"
   export MANIFEST_RTL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   export MANIFEST_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   export MANIFEST_MPTDC_ROOT="$REPO_ROOT"
@@ -429,6 +445,8 @@ data = {
     "rtl": {
         "branch": os.environ["MANIFEST_BRANCH"],
         "head": os.environ["MANIFEST_RTL_HEAD"],
+        "fast_tag_encoding": os.environ["MANIFEST_FAST_TAG_ENCODING"],
+        "rtl_tag_define_or_parameter": os.environ["MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER"],
     },
     "packet": {
         "format_version": os.environ["MANIFEST_PACKET_FORMAT_VERSION"],
@@ -452,6 +470,8 @@ data = {
         "delay_range_ps": [20, 30000],
         "out_mode": os.environ["MANIFEST_OUT_MODE"],
         "nfast_encoding": os.environ["MANIFEST_NFAST_ENCODING"],
+        "fast_tag_encoding": os.environ["MANIFEST_FAST_TAG_ENCODING"],
+        "rtl_tag_define_or_parameter": os.environ["MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER"],
         "smoke": env_bool("MANIFEST_SMOKE"),
         "skip_campaign": env_bool("MANIFEST_SKIP_CAMPAIGN"),
     },
@@ -524,6 +544,7 @@ PY
 echo "[BASELINE] Output root: $OUT_DIR"
 echo "[BASELINE] Config: $CONFIG"
 echo "[BASELINE] Sweep campaign: $SEEDS seed(s) × $N_CONV conv/seed, $JOBS job(s) in parallel"
+echo "[BASELINE] Fast tag RTL: nfast_encoding=$NFAST_ENCODING fast_tag_encoding=$FAST_TAG_ENCODING"
 echo "[BASELINE] Analysis: backend=$ANALYSIS_BACKEND jobs=$ANALYSIS_JOBS chunksize=$ANALYSIS_CHUNKSIZE low_memory=$ANALYSIS_LOW_MEMORY"
 echo "[BASELINE] Manifest: $MANIFEST_PATH"
 

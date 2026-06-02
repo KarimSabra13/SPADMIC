@@ -7,6 +7,7 @@
 #           [--cov-test-name NAME] [--osc-jitter-sigma ps]
 #           [--osc-jitter-bound ps] [--stop-model direct|qualified-ref]
 #           [--ref-phase-ps N] [--artifact-dir DIR] [--vip-asserts] [--dry-run]
+#           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
 # Context : Verilator is intended for smoke runs; xrun/xcelium/VCS enable
 #           broader simulator and coverage flows.
 # Author  : Karim Sabra
@@ -32,6 +33,7 @@ REF_PHASE_PS=""
 ARTIFACT_DIR=""
 VIP_ASSERTS=0
 DRY_RUN=0
+FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -65,6 +67,8 @@ while [[ $# -gt 0 ]]; do
       VIP_ASSERTS=1; shift ;;
     --dry-run)
       DRY_RUN=1; shift ;;
+    --fast-tag-encoding)
+      FAST_TAG_ENCODING="$2"; shift 2 ;;
     -h|--help)
       cat <<EOF
 Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
@@ -72,6 +76,7 @@ Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
           [--osc-jitter-sigma ps] [--osc-jitter-bound ps] [--num-conv N]
           [--stop-model direct|qualified-ref] [--ref-phase-ps N]
           [--artifact-dir DIR] [--vip-asserts] [--dry-run]
+          [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
 
 Notes:
   --func-cov/--code-cov require xrun/xcelium or vcs.
@@ -93,6 +98,15 @@ if [[ -z "$TEST_NAME" ]]; then
   echo "Error: no VIP test name specified" >&2
   exit 1
 fi
+
+case "$FAST_TAG_ENCODING" in
+  raw_lfsr_tag) FAST_TAG_DEFINE_ARGS=() ;;
+  raw_galois_tag) FAST_TAG_DEFINE_ARGS=(+define+MPTDC_FAST_TAG_GALOIS) ;;
+  *)
+    echo "Error: --fast-tag-encoding must be raw_lfsr_tag or raw_galois_tag" >&2
+    exit 1
+    ;;
+esac
 
 normalize_repo_path() {
   local raw_path="$1"
@@ -225,7 +239,7 @@ if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
   COV_TEST="${COV_TEST_NAME:-$TEST_NAME}"
 fi
 
-TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}"
+TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}_${FAST_TAG_ENCODING}"
 if [[ -n "$COV_TEST_NAME" ]]; then
   # Parallel xrun campaign jobs must not share one xcelium.d library.
   TB_BUILD+="_$(sanitize_path_token "$COV_TEST_NAME")"
@@ -259,6 +273,7 @@ case "$SIM" in
       -Wno-MULTITOP -Wno-SYNCASYNCNET -Wno-UNOPTFLAT -Wno-PINCONNECTEMPTY
       -Wno-VARHIDDEN -Wno-DECLFILENAME
       +define+MPTDC_USE_OSC_MODEL
+      "${FAST_TAG_DEFINE_ARGS[@]}"
       --Mdir "$TB_BUILD"
       --top-module mptdc_vip_tb
       -o mptdc_vip_tb
@@ -283,6 +298,7 @@ case "$SIM" in
       -nowarn DLCVAR
       -top mptdc_vip_tb
       +define+MPTDC_USE_OSC_MODEL
+      "${FAST_TAG_DEFINE_ARGS[@]}"
       -f "$REPO_ROOT/rtl/filelist.f"
       -f "$REPO_ROOT/tb/vip/filelist.f"
       -xmlibdirname "$TB_BUILD/xcelium.d"
@@ -315,6 +331,7 @@ case "$SIM" in
       -full64 -sverilog -timescale=1ps/1ps
       +lint=all
       +define+MPTDC_USE_OSC_MODEL
+      "${FAST_TAG_DEFINE_ARGS[@]}"
       -f "$REPO_ROOT/rtl/filelist.f"
       -f "$REPO_ROOT/tb/vip/filelist.f"
       -top mptdc_vip_tb

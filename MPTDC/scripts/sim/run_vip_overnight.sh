@@ -78,6 +78,8 @@ CHAR_N_CONV=200000
 CHAR_CONFIG="multihit_15_cal_nominal"
 CHAR_OUT_MODE="raw_features"
 CHAR_NFAST_ENCODING="legacy_binary_nfast"
+CHAR_FAST_TAG_ENCODING="raw_lfsr_tag"
+CHAR_RTL_TAG_DEFINE_OR_PARAMETER="default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI"
 CHAR_TRAIN_SEEDS=96
 ANALYSIS_JOBS=4
 ANALYSIS_CHUNKSIZE=200000
@@ -200,6 +202,16 @@ case "$CHAR_NFAST_ENCODING" in
   *)
     echo "Error: --char-nfast-encoding must be legacy_binary_nfast, raw_lfsr_tag, or raw_galois_tag" >&2
     exit 1
+    ;;
+esac
+case "$CHAR_NFAST_ENCODING" in
+  raw_galois_tag)
+    CHAR_FAST_TAG_ENCODING="raw_galois_tag"
+    CHAR_RTL_TAG_DEFINE_OR_PARAMETER="+define+MPTDC_FAST_TAG_GALOIS"
+    ;;
+  legacy_binary_nfast|raw_lfsr_tag)
+    CHAR_FAST_TAG_ENCODING="raw_lfsr_tag"
+    CHAR_RTL_TAG_DEFINE_OR_PARAMETER="default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI"
     ;;
 esac
 case "$ANALYSIS_BACKEND" in
@@ -364,6 +376,8 @@ OUT_DIR="$OUT_DIR" \
 VIP_OUT="$VIP_OUT" \
 CHAR_OUT="$CHAR_OUT" \
 CHAR_NFAST_ENCODING="$CHAR_NFAST_ENCODING" \
+CHAR_FAST_TAG_ENCODING="$CHAR_FAST_TAG_ENCODING" \
+CHAR_RTL_TAG_DEFINE_OR_PARAMETER="$CHAR_RTL_TAG_DEFINE_OR_PARAMETER" \
 MPTDC_ROOT="$REPO_ROOT" \
 RTL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" \
 RTL_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)" \
@@ -402,6 +416,8 @@ data = {
     "vip_out": os.environ["VIP_OUT"],
     "char_out": os.environ["CHAR_OUT"],
     "char_nfast_encoding": os.environ["CHAR_NFAST_ENCODING"],
+    "char_fast_tag_encoding": os.environ["CHAR_FAST_TAG_ENCODING"],
+    "rtl_tag_define_or_parameter": os.environ["CHAR_RTL_TAG_DEFINE_OR_PARAMETER"],
     "tag_encoding": FastTagMetadata(nfast_encoding=os.environ["CHAR_NFAST_ENCODING"]).as_dict(),
     "analysis": {
         "jobs": int(os.environ["ANALYSIS_JOBS"]),
