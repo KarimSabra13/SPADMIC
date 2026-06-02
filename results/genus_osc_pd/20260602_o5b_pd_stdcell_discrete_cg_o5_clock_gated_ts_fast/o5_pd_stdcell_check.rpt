@@ -1,0 +1,692 @@
+# O5 Standard-Cell PD Check
+
+post_synth_netlist=/home/validmgr/ksabra/2026_SPAD/SPADMIC/results/genus_osc_pd/20260602_o5b_pd_stdcell_discrete_cg_o5_clock_gated_ts_fast/mptdc_top_asic.postsyn.v
+
+## RO_tune4 instance lines
+18711:  RO_tune4 u_ro_tune4(.code (8'b0), .rstb (en), .S (phase));
+18725:  RO_tune4 u_ro_tune4(.code (8'b0), .rstb (en), .S ({n_1, n_2, n_3,
+
+## O5 tag/epoch references
+18837:module mptdc_slow_epoch_johnson_STAGES64(clk_slow, rst_n, clear_window,
+19047:module mptdc_stop_epoch_capture_async(rst_n, async_clr_i, stop_async_i,
+19933:  wire u_core_fifo_rd_valid, \u_core_gen_fast_tag_col[7].u_fast_tag_n_8
+20795:  mptdc_slow_epoch_johnson_STAGES64 u_core_u_slow_epoch(.clk_slow
+20799:  mptdc_stop_epoch_capture_async u_core_u_stop_epoch_capture(.rst_n
+31032:       (\u_core_gen_fast_tag_col[7].u_fast_tag_n_8 ));
+31844:  INHDX0 g17442(.A (\u_core_gen_fast_tag_col[7].u_fast_tag_n_8 ), .Q
+31895:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[1] (.RN
+31898:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] (.RN
+31901:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] (.RN
+31904:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] (.RN
+31907:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] (.RN
+31910:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] (.RN
+31912:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] (.RN
+31915:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] (.RN
+31918:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] (.RN
+31921:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[4] (.RN
+31924:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] (.RN
+31927:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] (.RN
+31930:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[2] (.RN
+31933:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[3] (.RN
+31936:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] (.RN
+31939:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] (.RN
+31942:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[1] (.RN
+31945:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[2] (.RN
+31948:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[3] (.RN
+31951:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[4] (.RN
+31954:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] (.RN
+31957:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] (.RN
+31960:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] (.RN
+31963:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] (.RN
+31966:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] (.RN
+31969:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] (.RN
+31972:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[1] (.RN
+31975:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[2] (.RN
+31978:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[3] (.RN
+31981:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] (.RN
+31984:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] (.RN
+31987:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] (.RN
+31990:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[1] (.RN
+31993:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] (.RN
+31996:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] (.RN
+31999:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] (.RN
+32002:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] (.RN
+32005:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[1] (.RN
+32008:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[2] (.RN
+32011:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[3] (.RN
+32014:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[4] (.RN
+32017:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5] (.RN
+32950:  DFRSHDX4 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] (.SN
+32953:  DFRSHDX4 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] (.SN
+32956:  DFRSHDX2 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[0] (.SN
+32959:  DFRSHDX4 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[0] (.SN
+32962:  DFRSHDX4 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] (.SN
+32965:  DFRSHDX4 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[0] (.SN
+32968:  DFRSHDX4 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] (.SN
+34087:  DFRSHDX4 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0] (.SN
+34374:  DFRRHDX0 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] (.RN
+34377:  DFRRHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] (.RN
+34380:  DFRRHDX0 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] (.RN
+34383:  DFRRHDX0 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] (.RN
+34386:  DFRRHDX0 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] (.RN
+34389:  DFRRHDX0 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] (.RN
+
+## timestamp flop/reset and clock-gating references
+12:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+21:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+30:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+39:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+48:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+57:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+66:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+75:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+98:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+101:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+105:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+107:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+109:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+111:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+113:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+127:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+150:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+153:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+157:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+159:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+161:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+163:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+165:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+179:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+205:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+208:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+212:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+214:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+216:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+218:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+220:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+233:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+256:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+259:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+263:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+265:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+267:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+269:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+271:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+285:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+308:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+311:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+315:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+317:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+319:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+321:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+323:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+337:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+360:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+363:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+367:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+369:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+371:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+373:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+375:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+389:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+412:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+415:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+419:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+421:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+423:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+425:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+427:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+441:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+464:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+467:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+471:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+473:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+475:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+477:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+479:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+493:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+516:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+519:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+523:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+525:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+527:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+529:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+531:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+545:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+568:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+571:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+575:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+577:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+579:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+581:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+583:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+597:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+623:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+626:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+630:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+632:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+634:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+636:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+638:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+651:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+674:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+677:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+681:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+683:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+685:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+687:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+689:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+703:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+726:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+729:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+733:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+735:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+737:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+739:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+741:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+755:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+783:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+786:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+790:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+792:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+794:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+796:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+798:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+809:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+832:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+835:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+839:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+841:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+843:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+845:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+847:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+861:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+884:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+887:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+891:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+893:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+895:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+897:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+899:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+913:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+936:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+939:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+943:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+945:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+947:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+949:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+951:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+965:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+988:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+991:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+995:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+997:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+999:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1001:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1003:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1017:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1043:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1046:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1050:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1052:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1054:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1056:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1058:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1071:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1094:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1097:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1101:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1103:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1105:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1107:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1109:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1123:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1146:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1149:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1153:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1155:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1157:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1159:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1161:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1175:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1198:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1201:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1205:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1207:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1209:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1211:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1213:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1227:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1250:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1253:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1257:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1259:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1261:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1263:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1265:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1279:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1302:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1305:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1309:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1311:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1313:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1315:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1317:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1331:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1354:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1357:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1361:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1363:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1365:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1367:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1369:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1383:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1406:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1409:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1413:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1415:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1417:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1419:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1421:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1435:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1461:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1464:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1468:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1470:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1472:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1474:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1476:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1489:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1512:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1515:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1519:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1521:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1523:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1525:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1527:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1541:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1564:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1567:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1571:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1573:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1575:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1577:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1579:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1593:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1621:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1624:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1628:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1630:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1632:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1634:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1636:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1647:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1670:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1673:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1677:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1679:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1681:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1683:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1685:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1699:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1722:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1725:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1729:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1731:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1733:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1735:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1737:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1751:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1774:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1777:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1781:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1783:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1785:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1787:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1789:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1803:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1826:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1829:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1833:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1835:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1837:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1839:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1841:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1855:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1881:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1884:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1888:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1890:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1892:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1894:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1896:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1909:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1932:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1935:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1939:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1941:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1943:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1945:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1947:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+1961:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+1984:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+1987:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+1991:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+1993:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+1995:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+1997:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+1999:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2013:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2041:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2044:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2048:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2050:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2052:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2054:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2056:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2067:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2090:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2093:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2097:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2099:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2101:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2103:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2105:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2119:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2142:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2145:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2149:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2151:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2153:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2155:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2157:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2171:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2194:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2197:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2201:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2203:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2205:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2207:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2209:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2223:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2246:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2249:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2253:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2255:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2257:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2259:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2261:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2275:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2301:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2304:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2308:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2310:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2312:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2314:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2316:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2329:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2352:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2355:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2359:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2361:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2363:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2365:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2367:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2381:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2404:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2407:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2411:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2413:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2415:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2417:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2419:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2433:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2461:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2464:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2468:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2470:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2472:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2474:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2476:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2487:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2510:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2513:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2517:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2519:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2521:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2523:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2525:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2539:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2562:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2565:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2569:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2571:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2573:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2575:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2577:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2591:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2614:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2617:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2621:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2623:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2625:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2627:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2629:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2643:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2666:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2669:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2673:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2675:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2677:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2679:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2681:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2695:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2721:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2724:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2728:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2730:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2732:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2734:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2736:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2749:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2772:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2775:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2779:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2781:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2783:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2785:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2787:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2801:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2824:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2827:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2831:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2833:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2835:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2837:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2839:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2853:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2876:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2879:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2883:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2885:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2887:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2889:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2891:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2905:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2928:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2931:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2935:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2937:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2939:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2941:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2943:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+2957:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+2980:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+2983:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+2987:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+2989:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+2991:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+2993:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+2995:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3009:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3032:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3035:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3039:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3041:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3043:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3045:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3047:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3061:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3084:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3087:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3091:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3093:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3095:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3097:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3099:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3113:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3139:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3142:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3146:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3148:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3150:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3152:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3154:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3167:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3190:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3193:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3197:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3199:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3201:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3203:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3205:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3219:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3242:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3245:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3249:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3251:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3253:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3255:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3257:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3271:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3294:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3297:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3301:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3303:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3305:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3307:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3309:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3323:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3346:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3349:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3353:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3355:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3357:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3359:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3361:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3375:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3398:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (rc_gclk_58), .D
+3401:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (rc_gclk_58), .D
+3405:  DFRQHDX2 \nfast_hit_latched_reg[0] (.C (rc_gclk_58), .D
+3407:  DFRQHDX4 \nfast_hit_latched_reg[5] (.C (rc_gclk_58), .D
+3409:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (rc_gclk_58), .D
+3411:  DFRQHDX4 \nfast_hit_latched_reg[6] (.C (rc_gclk_58), .D
+3413:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (rc_gclk_58), .D
+3427:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3436:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3445:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3454:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3463:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3472:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3481:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3490:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3499:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3508:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3517:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3526:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3535:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3544:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3553:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3562:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3571:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3580:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3589:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3598:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3607:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3616:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3625:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3634:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3643:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3652:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3661:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3670:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3679:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3688:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3697:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3706:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3715:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3724:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3733:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3742:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3751:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3760:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3769:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3778:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3787:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3796:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3805:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3814:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3823:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3832:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3841:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3850:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3859:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3868:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3877:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3886:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3895:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3904:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3913:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3922:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3931:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3940:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3949:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3958:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3967:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3976:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3985:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+3994:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4003:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4012:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4021:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4030:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4039:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4048:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4057:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4066:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4075:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4084:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+4093:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+14828:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+17510:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+17519:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+17528:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+17537:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+18254:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+18263:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+18272:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+18281:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+18290:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19264:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19273:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19282:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19291:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19334:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19343:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19352:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19361:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19370:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19379:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19388:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+19397:  LSGCPHDX0 RC_CGIC_INST(.E (enable), .CLK (ck_in), .SE (test), .GCLK
+
+## old counter residue
