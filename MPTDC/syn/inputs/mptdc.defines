@@ -226,6 +226,16 @@ set design(postsyn_db)        "$design(export_dir)/$design(TOPLEVEL).genus_db"
 #############################################
 set design(selected_setup_analysis_views) "wc_view"
 set design(selected_hold_analysis_views)  "bc_view"
+if {[info exists ::env(MPTDC_TIMING_VIEW)] && $::env(MPTDC_TIMING_VIEW) eq "tc_only"} {
+    set design(selected_setup_analysis_views) "tc_view"
+    set design(selected_hold_analysis_views)  "tc_view"
+    puts "MPTDC_DEFINES_INFO: selecting TC-only analysis view from MPTDC_TIMING_VIEW=tc_only"
+}
+if {[info exists ::env(MPTDC_TC_ONLY_VIEW)] && $::env(MPTDC_TC_ONLY_VIEW)} {
+    set design(selected_setup_analysis_views) "tc_view"
+    set design(selected_hold_analysis_views)  "tc_view"
+    puts "MPTDC_DEFINES_INFO: selecting TC-only analysis view from MPTDC_TC_ONLY_VIEW"
+}
 
 #############################################
 #       Message Suppression

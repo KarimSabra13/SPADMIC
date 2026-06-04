@@ -1,0 +1,64 @@
+source: "manual extraction from Virtuoso screenshots"
+source_warning: "screenshots appear labeled RO_tune3 / SPADMIC_RO_tune3_sim2_maestro; digital macro is RO_tune4; equivalence not confirmed"
+signoff_status: "PROVISIONAL_FROM_SCREENSHOT_NOT_FOR_SIGNOFF"
+purpose: "O7 typical-only Genus feasibility"
+vdd_v: 1.8
+vss_v: 0.0
+threshold_v: 0.9
+observed_startup:
+  rstb_crossing_time_ps: 432.843
+  rstb_crossing_voltage_mv: 869.598
+  observed_s5_crossing_time_ps: 800.750
+  observed_s5_crossing_voltage_mv: 945.803
+  rstb_to_s5_crossing_delay_ps: 367.907
+  measured_slope_mv_per_ps: 207.13
+observed_eye:
+  tap: "S<5>"
+  start_stop_count: 45
+  jitter_rms_fs: 613.561
+  jitter_rms_ps: 0.613561
+  threshold_mv: 900.0
+  marker_a_time_ns: 2.467601
+  marker_a_voltage_mv: 900.02458
+  marker_b_time_ns: 2.4682145
+  marker_b_voltage_mv: 900.19908
+  dx_fs: 613.561
+  dy_uv: 174.508
+  measured_slope_mv_per_ns: 284418.89
+observed_cursor:
+  time_ns: 1.02863
+  voltages_mv:
+    rstb: 1801.0
+    S5: 1787.5
+    S6: 1741.8
+    S7: 898.34
+    S0: -2.01
+    S1: 1.284
+    S2: 19.11
+    S3: 966.94
+    S4: 1792.6
+provisional_o7_constraints:
+  slow_period_typ_ns: 1.000
+  fast_period_typ_ns: 0.900
+  slow_tap_step_typ_ns: 0.055
+  fast_tap_step_typ_ns: 0.050
+  jitter_rms_ps: 0.614
+  setup_uncertainty_ps: 10.0
+  hold_uncertainty_ps: 5.0
+  startup_rstb_to_s5_ps: 367.907
+  threshold_v: 0.9
+  vdd_typ_v: 1.8
+modeling_notes:
+  - "period and tap step remain nominal digital values because the screenshots do not show one clear full cycle of the same tap"
+  - "uncertainty is a guarded typical value derived from the visible 0.614 ps RMS S<5> crossing jitter"
+  - "screenshot slope markers are local cursor measurements and are not used as final 10-90 percent slew"
+  - "do not assume S<5> jitter applies identically to every tap without real data"
+missing_data:
+  - exact period per tap
+  - exact tap-to-tap threshold crossing times
+  - per-tap slew
+  - per-tap jitter
+  - extracted load per tap
+  - RO_tune3 vs RO_tune4 equivalence
+  - PVT/corner behavior
+  - real Liberty timing model
