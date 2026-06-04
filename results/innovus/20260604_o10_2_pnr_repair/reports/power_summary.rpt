@@ -1,0 +1,228 @@
+
+Power Net Detected:
+        Voltage	    Name
+             0V	    VSS
+           1.8V	    VDD
+Using Power View: tc_view.
+Load RC corner of view tc_view
+
+Begin Power Analysis
+
+             0V	    VSS
+           1.8V	    VDD
+
+Begin Processing Timing Library for Power Calculation
+
+Ended Processing Timing Library for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=2576.41MB/4454.34MB/2576.41MB)
+
+
+
+Begin Processing Power Net/Grid for Power Calculation
+
+Ended Processing Power Net/Grid for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=2576.41MB/4454.34MB/2576.41MB)
+
+Begin Processing Timing Window Data for Power Calculation
+
+clk_osc_fast_tap7(750.188MHz) CK: assigning clock clk_osc_fast_tap7 to net u_core_fast_phase[7]
+clk_osc_fast_tap6(750.188MHz) CK: assigning clock clk_osc_fast_tap6 to net u_core_fast_phase[6]
+clk_osc_fast_tap5(750.188MHz) CK: assigning clock clk_osc_fast_tap5 to net u_core_fast_phase[5]
+clk_osc_fast_tap4(750.188MHz) CK: assigning clock clk_osc_fast_tap4 to net u_core_fast_phase[4]
+clk_osc_fast_tap3(750.188MHz) CK: assigning clock clk_osc_fast_tap3 to net u_core_fast_phase[3]
+clk_osc_fast_tap2(750.188MHz) CK: assigning clock clk_osc_fast_tap2 to net u_core_fast_phase[2]
+clk_osc_fast_tap1(750.188MHz) CK: assigning clock clk_osc_fast_tap1 to net u_core_fast_phase[1]
+clk_osc_fast(750.188MHz) CK: assigning clock clk_osc_fast to net u_core_fast_phase[0]
+clk_osc_slow_tap7(699.301MHz) CK: assigning clock clk_osc_slow_tap7 to net u_core_slow_phase[7]
+clk_osc_slow_tap6(699.301MHz) CK: assigning clock clk_osc_slow_tap6 to net u_core_slow_phase[6]
+clk_osc_slow_tap5(699.301MHz) CK: assigning clock clk_osc_slow_tap5 to net u_core_slow_phase[5]
+clk_osc_slow_tap4(699.301MHz) CK: assigning clock clk_osc_slow_tap4 to net u_core_slow_phase[4]
+clk_osc_slow_tap3(699.301MHz) CK: assigning clock clk_osc_slow_tap3 to net u_core_slow_phase[3]
+clk_osc_slow_tap2(699.301MHz) CK: assigning clock clk_osc_slow_tap2 to net u_core_slow_phase[2]
+clk_osc_slow_tap1(699.301MHz) CK: assigning clock clk_osc_slow_tap1 to net u_core_slow_phase[1]
+clk_osc_slow(699.301MHz) CK: assigning clock clk_osc_slow to net u_core_slow_phase[0]
+clk_sys(160MHz) CK: assigning clock clk_sys to net clk_sys
+** INFO:  (VOLTUS_POWR-2054): Setting default frequency to the dominant frequency 160MHz.
+
+	To force set default frequency/period. Use either of the following command options:
+		set_power_analysis_mode        -default_frequency <frequency value>
+		set_default_switching_activity -period            <period value>.
+
+Ended Processing Timing Window Data for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=2577.41MB/4454.34MB/2577.41MB)
+
+Begin Processing User Attributes
+
+Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=2577.56MB/4454.34MB/2577.56MB)
+
+Begin Processing Signal Activity
+
+
+Starting Levelizing
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT)
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 10%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 20%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 30%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 40%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 50%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 60%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 70%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 80%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 90%
+
+Finished Levelizing
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT)
+
+Starting Activity Propagation
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT)
+** INFO:  (VOLTUS_POWR-1356): No default input activity has been set. Defaulting to 0.2.
+Use 'set_default_switching_activity -input_activity' command to change the default activity value.
+
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 10%
+2026-Jun-04 17:14:22 (2026-Jun-04 15:14:22 GMT): 20%
+
+Finished Activity Propagation
+2026-Jun-04 17:14:23 (2026-Jun-04 15:14:23 GMT)
+Ended Processing Signal Activity: (cpu=0:00:01, real=0:00:01, mem(process/total/peak)=2579.06MB/4454.34MB/2579.06MB)
+
+Begin Power Computation
+
+      ----------------------------------------------------------
+      # of cell(s) missing both power/leakage table: 0
+      # of cell(s) missing power table: 1
+      # of cell(s) missing leakage table: 0
+      ----------------------------------------------------------
+CellName                                  Missing Table(s)
+RO_tune4                                  internal power, 
+
+
+
+Starting Calculating power
+2026-Jun-04 17:14:23 (2026-Jun-04 15:14:23 GMT)
+ ... Calculating switching power
+2026-Jun-04 17:14:23 (2026-Jun-04 15:14:23 GMT): 10%
+2026-Jun-04 17:14:23 (2026-Jun-04 15:14:23 GMT): 20%
+2026-Jun-04 17:14:23 (2026-Jun-04 15:14:23 GMT): 30%
+2026-Jun-04 17:14:23 (2026-Jun-04 15:14:23 GMT): 40%
+2026-Jun-04 17:14:23 (2026-Jun-04 15:14:23 GMT): 50%
+ ... Calculating internal and leakage power
+2026-Jun-04 17:14:24 (2026-Jun-04 15:14:24 GMT): 60%
+2026-Jun-04 17:14:24 (2026-Jun-04 15:14:24 GMT): 70%
+2026-Jun-04 17:14:24 (2026-Jun-04 15:14:24 GMT): 80%
+2026-Jun-04 17:14:25 (2026-Jun-04 15:14:25 GMT): 90%
+
+Finished Calculating power
+2026-Jun-04 17:14:25 (2026-Jun-04 15:14:25 GMT)
+      # of MSMV cell(s) missing power_level: 0
+Ended Power Computation: (cpu=0:00:02, real=0:00:02, mem(process/total/peak)=2581.78MB/4454.34MB/2581.78MB)
+
+Begin Processing User Attributes
+
+Begin Processing set_power
+Ended Processing set_power: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2581.84MB/4454.34MB/2581.84MB)
+Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=2581.84MB/4454.34MB/2581.84MB)
+
+Ended Power Analysis: (cpu=0:00:03, real=0:00:03, mem(process/total/peak)=2581.84MB/4454.34MB/2581.84MB)
+
+Begin Boundary Leakage Calculation
+Ended Boundary Leakage Calculation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2581.91MB/4454.34MB/2581.91MB)
+Begin Static Power Report Generation
+*----------------------------------------------------------------------------------------
+*	Innovus 22.33-s094_1 (64bit) 08/25/2023 16:48 (Linux 3.10.0-693.el7.x86_64)
+*	
+*
+* 	Date & Time:	2026-Jun-04 17:14:25 (2026-Jun-04 15:14:25 GMT)
+*
+*----------------------------------------------------------------------------------------
+*
+*	Design: mptdc_top_asic
+*
+*	Liberty Libraries used:
+*	        tc_view: /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib
+*	        tc_view: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune4_real_abstract_shell.lib
+*
+*	Parasitic Files used:
+*
+*       Power View : tc_view
+*
+*       User-Defined Activity : N.A.
+*
+*       Activity File: N.A.
+*
+*       Hierarchical Global Activity: N.A.
+*
+*       Global Activity: N.A.
+*
+*       Sequential Element Activity: 0.200000
+*
+*       Primary Input Activity: 0.200000
+*
+*       Default icg ratio: N.A.
+*
+*       Global Comb ClockGate Ratio: N.A.
+*
+*	Power Units = 1mW
+*
+*	Time Units = 1e-09 secs
+*
+*       report_power
+*
+-----------------------------------------------------------------------------------------
+  2 instances have no static power
+** WARN:  (VOLTUS_POWR-2152): Instance u_core_u_osc_fast_u_ro_tune4 (RO_tune4) has no static power. This might be because either the duty cycle and activity of all the connected nets
+is 0 or the instance is connected to power off rails. If this is not the expected behaviour and static power is required, ensure that the instance is connected
+to power on rails and that the duty cycle and activity of at least one net is not 0.
+
+** WARN:  (VOLTUS_POWR-2152): Instance u_core_u_osc_slow_u_ro_tune4 (RO_tune4) has no static power. This might be because either the duty cycle and activity of all the connected nets
+is 0 or the instance is connected to power off rails. If this is not the expected behaviour and static power is required, ensure that the instance is connected
+to power on rails and that the duty cycle and activity of at least one net is not 0.
+
+*
+
+
+
+Total Power
+-----------------------------------------------------------------------------------------
+Total Internal Power:      135.82577155 	   82.6407%
+Total Switching Power:      28.53114312 	   17.3592%
+Total Leakage Power:         0.00010628 	    0.0001%
+Total Power:               164.35702095
+-----------------------------------------------------------------------------------------
+
+
+Group                           Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+Sequential                         124.8       9.955   6.527e-05       134.7       81.97
+Macro                                  0           0           0           0           0
+IO                                     0           0           0           0           0
+Combinational                      11.05       18.58   4.101e-05       29.63       18.03
+Clock (Combinational)                  0           0           0           0           0
+Clock (Sequential)                     0           0           0           0           0
+-----------------------------------------------------------------------------------------
+Total                              135.8       28.53   0.0001063       164.4         100
+-----------------------------------------------------------------------------------------
+
+
+Rail                  Voltage   Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+VDD                       1.8      135.8       28.53   0.0001063       164.4         100
+ 
+ 
+-----------------------------------------------------------------------------------------
+*	Power Distribution Summary: 
+*              Highest Average Power:             drc_bufs83432 (INHDX4):           0.4809
+*              Highest Leakage Power: FE_OFC2682_u_core_drain_fifo_wr_data_hit__event_seq__0 (BUHDX12):        2.216e-08
+*                Total Cap:      4.17984e-10 F
+*                Total instances in design: 17544
+*                Total instances in design with no power:     2
+*                Total instances in design with no activty:     0
+
+*                Total Fillers and Decap:     0
+-----------------------------------------------------------------------------------------
+ 
+** INFO:  (VOLTUS_POWR-3465): There are 0 decaps and 0 fillers in the design
+
+Ended Static Power Report Generation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=2585.34MB/4454.34MB/2585.34MB)
+

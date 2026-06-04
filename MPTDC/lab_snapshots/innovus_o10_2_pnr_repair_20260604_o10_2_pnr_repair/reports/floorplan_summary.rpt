@@ -1,0 +1,18 @@
+O10 RO/PD sandwich floorplan
+============================
+Generated: 2026-06-04 16:58:38 CEST
+Labels: O10_INNOVUS_TYPICAL_FEASIBILITY NOT_FINAL_SIGNOFF
+
+core box: 35.28 35.28 885.92 1007.44
+slow box: 372.4 691.6 548.8 758.8
+pd box: 310.8 371.28 610.4 671.44
+fast box: 372.4 283.92 548.8 351.12
+backend box: 630.4 35.28 885.92 1007.44
+
+slow RO matches: 1
+  u_core_u_osc_slow_u_ro_tune4
+fast RO matches: 1
+  u_core_u_osc_fast_u_ro_tune4
+PD cells: 64 expected 64
+Placed macro u_core_u_osc_slow_u_ro_tune4 with placeInstance u_core_u_osc_slow_u_ro_tune4 372.4 691.6 R0 -fixed
+Placed macro u_core_u_osc_fast_u_ro_tune4 with placeInstance u_core_u_osc_fast_u_ro_tune4 372.4 283.92 MX -fixed

@@ -1,0 +1,2 @@
+CTS_SKIPPED_CLEANLY_FOR_FEASIBILITY
+No verified clk_sys-only CTS spec was available; generic CCOpt was not run.

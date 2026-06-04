@@ -1,0 +1,6 @@
+create_constraint_mode -name functional_mode -sdc_files [list /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.sdc /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/constraints/mptdc_osc_typical_r750_delta5_innovus.sdc]
+create_rc_corner -name tc_rc -temperature 25 -cap_table /data/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx41_MET4_METMID_typ.capTbl
+create_library_set -name tc_libset -timing [list /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune4_real_abstract_shell.lib]
+create_delay_corner -name tc_corner -library_set tc_libset -rc_corner tc_rc
+create_analysis_view -name tc_view -constraint_mode functional_mode -delay_corner tc_corner
+set_analysis_view -setup tc_view -hold tc_view

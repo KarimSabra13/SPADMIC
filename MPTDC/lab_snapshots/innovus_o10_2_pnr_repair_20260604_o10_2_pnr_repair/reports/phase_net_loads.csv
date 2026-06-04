@@ -1,0 +1,17 @@
+family,tap,net,fanout,total_cap,wire_cap,pin_cap,transition,route_length,pd_load_count,tag_load_count,ro_load_count,other_load_count,sinks,notes
+slow,0,,0,,,,,,,,,,NO_NET_MATCH
+slow,1,,0,,,,,,,,,,NO_NET_MATCH
+slow,2,,0,,,,,,,,,,NO_NET_MATCH
+slow,3,,0,,,,,,,,,,NO_NET_MATCH
+slow,4,,0,,,,,,,,,,NO_NET_MATCH
+slow,5,,0,,,,,,,,,,NO_NET_MATCH
+slow,6,,0,,,,,,,,,,NO_NET_MATCH
+slow,7,,0,,,,,,,,,,NO_NET_MATCH
+fast,0,,0,,,,,,,,,,NO_NET_MATCH
+fast,1,,0,,,,,,,,,,NO_NET_MATCH
+fast,2,,0,,,,,,,,,,NO_NET_MATCH
+fast,3,,0,,,,,,,,,,NO_NET_MATCH
+fast,4,,0,,,,,,,,,,NO_NET_MATCH
+fast,5,,0,,,,,,,,,,NO_NET_MATCH
+fast,6,,0,,,,,,,,,,NO_NET_MATCH
+fast,7,,0,,,,,,,,,,NO_NET_MATCH

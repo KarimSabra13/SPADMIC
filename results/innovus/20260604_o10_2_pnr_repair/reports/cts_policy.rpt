@@ -1,0 +1,6 @@
+O10.2 CTS policy
+=================
+Run CTS for clk_sys only.
+Do not run CTS on RO_tune4/S[0:7] phase clocks.
+clk_sys clock objects: 1
+RO clock objects found: 16
