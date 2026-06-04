@@ -1,0 +1,518 @@
+# O8 Typical Closure Check
+
+post_synth_netlist=/home/validmgr/ksabra/2026_SPAD/SPADMIC/results/genus_osc_pd/20260604_o8_typical_closure/mptdc_top_asic.postsyn.v
+
+## RO_tune4 instance lines
+7136:  RO_tune4 u_core_u_osc_fast_u_ro_tune4(.code (8'b0), .rstb
+7138:  RO_tune4 u_core_u_osc_slow_u_ro_tune4(.code (8'b0), .rstb
+
+## tag/PD references
+25:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_32), .Q
+28:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_27), .Q
+30:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+32:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_29), .Q
+34:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_28), .Q
+77:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_58), .Q
+79:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_55), .Q
+102:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_50), .Q
+105:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_52), .Q
+107:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_51), .Q
+109:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_48), .Q
+121:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_66), .Q
+141:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_74), .Q
+154:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+177:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_50), .Q
+180:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_52), .Q
+182:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_51), .Q
+184:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_48), .Q
+196:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_66), .Q
+216:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_74), .Q
+229:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+253:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_89), .Q
+265:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_86), .Q
+276:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_87), .Q
+297:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_69), .Q
+299:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_90), .Q
+301:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_68), .Q
+303:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_78), .Q
+327:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_89), .Q
+339:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_86), .Q
+350:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_87), .Q
+371:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_69), .Q
+373:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_90), .Q
+375:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_68), .Q
+377:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_78), .Q
+401:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_89), .Q
+413:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_86), .Q
+424:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_87), .Q
+445:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_69), .Q
+447:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_90), .Q
+449:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_68), .Q
+451:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_78), .Q
+474:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_134), .Q
+477:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_135), .Q
+479:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_136), .Q
+481:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_127), .Q
+483:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_131), .Q
+485:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_132), .Q
+505:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_130), .Q
+552:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_50), .Q
+555:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_52), .Q
+557:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_51), .Q
+559:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_48), .Q
+571:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_66), .Q
+591:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_74), .Q
+604:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+627:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_32), .Q
+630:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_27), .Q
+632:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+634:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_29), .Q
+636:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_28), .Q
+679:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_51), .Q
+681:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_49), .Q
+704:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+707:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+709:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+711:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+723:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+743:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+756:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+779:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+782:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+784:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+786:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+798:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+818:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+831:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+855:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+867:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+878:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+899:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+901:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+903:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+905:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+929:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+941:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+952:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+973:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+975:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+977:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+979:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+1003:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+1015:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+1026:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+1047:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+1049:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+1051:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+1053:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+1076:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_140), .Q
+1079:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_141), .Q
+1081:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_142), .Q
+1083:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_133), .Q
+1085:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_137), .Q
+1087:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_138), .Q
+1107:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_136), .Q
+1154:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+1157:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+1159:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+1161:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+1173:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+1193:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+1206:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+1229:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_32), .Q
+1232:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_27), .Q
+1234:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+1236:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_29), .Q
+1238:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_28), .Q
+1281:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_51), .Q
+1283:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_49), .Q
+1306:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+1309:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+1311:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+1313:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+1325:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+1345:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+1358:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+1381:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+1384:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+1386:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+1388:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+1400:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+1420:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+1433:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+1457:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+1469:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+1480:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+1501:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+1503:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+1505:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+1507:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+1531:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+1543:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+1554:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+1575:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+1577:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+1579:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+1581:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+1605:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+1617:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+1628:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+1649:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+1651:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+1653:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+1655:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+1678:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_140), .Q
+1681:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_141), .Q
+1683:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_142), .Q
+1685:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_133), .Q
+1687:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_137), .Q
+1689:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_138), .Q
+1709:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_136), .Q
+1756:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+1759:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+1761:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+1763:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+1775:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+1795:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+1808:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+1831:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_63), .Q
+1834:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_64), .Q
+1836:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_76), .Q
+1838:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_77), .Q
+1854:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_60), .Q
+1882:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_78), .Q
+1884:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_61), .Q
+1907:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+1910:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+1912:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+1914:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+1926:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+1946:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+1959:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+1982:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+1985:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+1987:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+1989:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+2001:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+2021:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+2034:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+2058:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+2070:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+2081:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+2102:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+2104:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+2106:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+2108:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+2132:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+2144:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+2155:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+2176:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+2178:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+2180:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+2182:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+2206:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+2218:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+2229:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+2250:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+2252:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+2254:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+2256:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+2280:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+2282:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_76), .Q
+2284:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_101), .Q
+2286:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_77), .Q
+2300:  DFRHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_75), .Q
+2302:  DFRHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_46), .Q
+2311:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_74), .Q
+2353:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+2356:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+2358:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+2360:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+2372:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+2392:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+2405:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+2428:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_32), .Q
+2431:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_27), .Q
+2433:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+2435:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_29), .Q
+2437:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_28), .Q
+2480:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_51), .Q
+2482:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_49), .Q
+2505:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+2508:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+2510:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+2512:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+2524:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+2544:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+2557:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+2580:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+2583:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+2585:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+2587:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+2599:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+2619:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+2632:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+2656:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+2668:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+2679:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+2700:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+2702:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+2704:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+2706:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+2730:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+2742:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+2753:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+2774:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+2776:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+2778:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+2780:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+2804:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+2816:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+2827:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+2848:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+2850:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+2852:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+2854:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+2877:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_136), .Q
+2880:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_137), .Q
+2882:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_138), .Q
+2884:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_129), .Q
+2886:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_133), .Q
+2888:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_134), .Q
+2908:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_132), .Q
+2955:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+2958:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+2960:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+2962:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+2974:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+2994:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+3007:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+3030:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_32), .Q
+3033:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_27), .Q
+3035:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+3037:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_29), .Q
+3039:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_28), .Q
+3082:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_51), .Q
+3084:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_49), .Q
+3107:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+3110:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+3112:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+3114:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+3126:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+3146:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+3159:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+3182:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+3185:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+3187:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+3189:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+3201:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+3221:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+3234:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+3258:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+3270:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+3281:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+3302:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+3304:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+3306:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+3308:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+3332:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+3344:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+3355:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+3376:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+3378:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+3380:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+3382:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+3406:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+3418:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+3429:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+3450:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+3452:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+3454:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+3456:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+3479:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_135), .Q
+3482:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_136), .Q
+3484:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_137), .Q
+3486:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_128), .Q
+3488:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_132), .Q
+3490:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_133), .Q
+3510:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_131), .Q
+3557:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+3560:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+3562:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+3564:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+3576:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+3596:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+3609:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+3632:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_32), .Q
+3635:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_27), .Q
+3637:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+3639:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_29), .Q
+3641:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_28), .Q
+3684:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_51), .Q
+3686:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_49), .Q
+3709:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+3712:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+3714:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+3716:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+3728:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+3748:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+3761:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+3784:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+3787:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+3789:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+3791:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+3803:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+3823:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+3836:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+3860:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+3872:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+3883:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+3904:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+3906:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+3908:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+3910:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+3934:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+3946:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+3957:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+3978:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+3980:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+3982:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+3984:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+4008:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+4020:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+4031:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+4052:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+4054:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+4056:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+4058:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+4081:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_135), .Q
+4084:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_136), .Q
+4086:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_137), .Q
+4088:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_128), .Q
+4090:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_132), .Q
+4092:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_133), .Q
+4112:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_131), .Q
+4159:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+4162:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+4164:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+4166:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+4178:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+4198:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+4211:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+4234:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_32), .Q
+4237:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_27), .Q
+4239:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_26), .Q
+4241:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_29), .Q
+4243:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_28), .Q
+4286:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_51), .Q
+4288:  DFRQHDX2 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_49), .Q
+4311:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+4314:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+4316:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+4318:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+4330:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+4350:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+4363:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+4386:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+4389:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+4391:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+4393:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+4405:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+4425:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+4438:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+4462:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+4474:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+4485:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+4506:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+4508:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+4510:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+4512:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+4536:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+4548:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+4559:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+4580:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+4582:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+4584:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+4586:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+4610:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_90), .Q
+4622:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_87), .Q
+4633:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_88), .Q
+4654:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_70), .Q
+4656:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_91), .Q
+4658:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_69), .Q
+4660:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_79), .Q
+4683:  DFRQHDX1 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_140), .Q
+4686:  DFRQHDX1 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_141), .Q
+4688:  DFRQHDX1 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_142), .Q
+4690:  DFRQHDX1 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_133), .Q
+4692:  DFRQHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_137), .Q
+4694:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_138), .Q
+4714:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_136), .Q
+4761:  DFRQHDX2 \nfast_hit_latched_reg[1] (.C (fast_phase), .D (n_51), .Q
+4764:  DFRQHDX2 \nfast_hit_latched_reg[4] (.C (fast_phase), .D (n_53), .Q
+4766:  DFRQHDX2 \nfast_hit_latched_reg[3] (.C (fast_phase), .D (n_52), .Q
+4768:  DFRQHDX2 \nfast_hit_latched_reg[2] (.C (fast_phase), .D (n_49), .Q
+4780:  DFRHDX2 \nfast_hit_latched_reg[5] (.C (fast_phase), .D (n_67), .Q
+4800:  DFRQHDX1 \nfast_hit_latched_reg[0] (.C (fast_phase), .D (n_75), .Q
+4813:  DFRQHDX1 \nfast_hit_latched_reg[6] (.C (fast_phase), .D (n_80), .Q
+6461:       \u_core_gen_fast_tag_col[7].u_fast_tag_n_41 ,
+7163:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[1] (.RN
+7166:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] (.RN
+7168:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] (.RN
+7170:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] (.RN
+7172:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] (.RN
+7174:  DFRRQHDX1 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] (.RN
+7176:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] (.RN
+7179:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] (.RN
+7181:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] (.RN
+7183:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[4] (.RN
+7185:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] (.RN
+7187:  DFRRQHDX1 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] (.RN
+7189:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] (.RN
+7192:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[2] (.RN
+7194:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[3] (.RN
+7196:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] (.RN
+7198:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] (.RN
+7200:  DFRRQHDX1 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] (.RN
+7202:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[1] (.RN
+7205:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[2] (.RN
+7207:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[3] (.RN
+7209:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[4] (.RN
+7211:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] (.RN
+7213:  DFRRQHDX1 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] (.RN
+7215:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] (.RN
+7218:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] (.RN
+7220:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] (.RN
+7222:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] (.RN
+7224:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] (.RN
+7226:  DFRRQHDX1 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] (.RN
+7228:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[1] (.RN
+7231:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[2] (.RN
+7233:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[3] (.RN
+7235:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] (.RN
+7237:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] (.RN
+7239:  DFRRQHDX1 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] (.RN
+7241:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[1] (.RN
+7244:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] (.RN
+7246:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] (.RN
+7248:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] (.RN
+7250:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] (.RN
+7252:  DFRRQHDX1 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] (.RN
+7254:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[1] (.RN
+7257:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[2] (.RN
+7259:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[3] (.RN
+7261:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[4] (.RN
+7263:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5] (.RN
+7265:  DFRRQHDX1 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] (.RN
+8079:  INHDX0 g67828(.A (\u_core_gen_fast_tag_col[7].u_fast_tag_n_41 ), .Q
+8082:       (\u_core_gen_fast_tag_col[7].u_fast_tag_n_41 ));
+10825:  DFRSHDX2 \u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] (.SN
+10828:  DFRSHDX2 \u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] (.SN
+10831:  DFRSHDX2 \u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[0] (.SN
+10834:  DFRSHDX2 \u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[0] (.SN
+10837:  DFRSHDX2 \u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] (.SN
+10840:  DFRSHDX2 \u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0] (.SN
+10843:  DFRSHDX2 \u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[0] (.SN
+10846:  DFRSHDX2 \u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] (.SN
+
+## old oscillator/counter residue
