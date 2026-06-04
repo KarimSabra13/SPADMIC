@@ -1,0 +1,15 @@
+O10 Innovus manifest
+====================
+Generated: 2026-06-04 14:52:41 CEST
+Stage: cts
+Run ID: 20260604_o10_typical_feasibility
+Top: mptdc_top_asic
+Netlist: /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.v
+Post-synth SDC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.sdc
+O9 overlay SDC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/inputs/mptdc_osc_typical_r750_delta5.sdc
+MMMC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/work/o10_typical_only.mmmc
+LEFs: /data/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/LEF/v6_0_0/xh018_D_CELLS_HD.lef /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef
+Liberty: /data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune4_real_abstract_shell.lib
+Core util: 0.60
+Max density: 0.70
+Labels: O10_INNOVUS_TYPICAL_FEASIBILITY NOT_MMMC_SIGNOFF NOT_FINAL_SIGNOFF NOT_TAPEOUT_READY

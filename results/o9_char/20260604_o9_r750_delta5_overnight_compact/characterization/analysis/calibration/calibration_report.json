@@ -1,0 +1,266 @@
+{
+  "frequency_mode": {
+    "osc_ts_slow_ps": 79,
+    "osc_ts_fast_ps": 74,
+    "slow_period_ns": 1.43,
+    "fast_period_ns": 1.333,
+    "status": "typical_characterization_candidate_not_signoff",
+    "freq_mode": "r750_delta5",
+    "OSC_TS_SLOW_PS": 79,
+    "OSC_TS_FAST_PS": 74,
+    "DELTA_STEP": 5,
+    "DELTA_LSB": 10,
+    "K_VERNIER": 15
+  },
+  "method": "STOP-discriminator Mean-Correction LUT",
+  "lut_key": [
+    "ns_inf",
+    "nf_inf",
+    "nslow",
+    "nfast_hit",
+    "stop_phase_disc",
+    "phase0_snap",
+    "hit_idx"
+  ],
+  "lut_key_description": {
+    "ns_inf": "Slow phase index (0-7), inferred from t_raw_ps via Vernier algebra",
+    "nf_inf": "Fast phase index (0-7), inferred from t_raw_ps via Vernier algebra",
+    "nslow": "Slow oscillator hit count (coarse counter)",
+    "nfast_hit": "Fast oscillator hit count at measurement time",
+    "stop_phase_disc": "STOP-edge slow_phase[5:3] discriminator from Hit W1[2:0]",
+    "phase0_snap": "Phase-0 snapshot (oscillator alignment at conversion start)",
+    "hit_idx": "Sequential hit index within conversion (0-based)"
+  },
+  "output_mode_compatibility": {
+    "RAW_FEATURES (mode 0)": "Maintained fixed packet \u2013 discriminator, phase0_snap, and slow_boundary_inc are packet-visible",
+    "RAW_TIMESTAMP (mode 1)": "Legacy CSR code ignored by maintained RTL",
+    "FULL (mode 2)": "Legacy CSR code ignored by maintained RTL"
+  },
+  "ns_nf_inference": {
+    "formula": "diff = t_raw_ps/10 - (nslow+2+sbi-1)*120 - nfast*8 - 25 -> unique (ns,nf)",
+    "accuracy": "100% \u2013 all 64 active 8\u00d78 (ns,nf) combinations map to unique diff values"
+  },
+  "training": {
+    "n_seeds": 48,
+    "n_bins": 8422,
+    "median_bin_pop": 354,
+    "core_filter": "nslow > 0 (removes ~6.6% boundary-ambiguous hits)",
+    "rows_before_filter": 72000000,
+    "rows_after_filter": 2400000,
+    "rows_filtered_out": 69600000,
+    "rows_filtered_out_pct": 96.66666666666667,
+    "skipped_csv_files": 0,
+    "skipped_empty_csv_files": 0,
+    "skipped_header_only_csv_files": 0,
+    "skipped_missing_required_columns_csv_files": 0,
+    "recovered_csv_files": 0,
+    "recovered_malformed_rows": 0
+  },
+  "held_out_validation": {
+    "scope": "Core subset only (nslow > 0); nslow=0 rows excluded for published calibration metrics.",
+    "files": [
+      "seed_0.csv",
+      "seed_1.csv",
+      "seed_10.csv",
+      "seed_11.csv"
+    ],
+    "filter_summary": {
+      "filter": "nslow > 0",
+      "applied": true,
+      "rows_before_filter": 6000000,
+      "rows_after_filter": 5950395,
+      "rows_after_inference": 5950395,
+      "rows_filtered_out": 49605,
+      "rows_filtered_out_pct": 0.8267499999999983,
+      "skipped_csv_files": 0,
+      "skipped_empty_csv_files": 0,
+      "skipped_header_only_csv_files": 0,
+      "skipped_missing_required_columns_csv_files": 0,
+      "recovered_csv_files": 0,
+      "recovered_malformed_rows": 0,
+      "defaulted_slow_boundary_inc_files": 0
+    },
+    "slow_boundary_inc": {
+      "present": true,
+      "counts": {
+        "0": 5945600,
+        "1": 4755
+      },
+      "nonzero_rows": 4755,
+      "nonzero_pct": 0.07991119857554717
+    },
+    "pre_cal": {
+      "label": "Pre-calibration (held-out, core subset)",
+      "count": 5950355,
+      "mean": -1403.940611946682,
+      "std": 725.0511051423152,
+      "rmse": 1580.1102325285146,
+      "mae": 1411.8308104306382,
+      "p50_ae": 1399.0,
+      "p90_ae": 2338.0,
+      "p95_ae": 2600.0,
+      "p99_ae": 2987.0,
+      "min": -3755.0,
+      "max": 570.0
+    },
+    "post_cal": {
+      "label": "Post-calibration (held-out, core subset)",
+      "count": 5950355,
+      "mean": 0.029430149205855,
+      "std": 20.665489074895056,
+      "rmse": 20.665510030925667,
+      "mae": 17.361399667079954,
+      "p50_ae": 16.55922865013781,
+      "p90_ae": 33.40195128899069,
+      "p95_ae": 36.36385542168682,
+      "p99_ae": 39.4196428571413,
+      "min": -43.50229357798162,
+      "max": 156.95390070921985
+    },
+    "error_table": "val_reconstruction_errors_pre_post.csv"
+  },
+  "averaging_study": {
+    "scope": "Post-calibration core-subset error pool",
+    "method": "Analysis-side resampling of independent error draws; not a fixed-delay repeated-measurement TB proof.",
+    "results": [
+      {
+        "N": 1,
+        "rmse_ps": 20.638,
+        "mae_ps": 17.393,
+        "p90_ps": 33.221
+      },
+      {
+        "N": 2,
+        "rmse_ps": 14.643,
+        "mae_ps": 11.976,
+        "p90_ps": 24.438
+      },
+      {
+        "N": 3,
+        "rmse_ps": 11.978,
+        "mae_ps": 9.699,
+        "p90_ps": 19.646
+      },
+      {
+        "N": 4,
+        "rmse_ps": 10.241,
+        "mae_ps": 8.214,
+        "p90_ps": 17.003
+      },
+      {
+        "N": 5,
+        "rmse_ps": 9.389,
+        "mae_ps": 7.593,
+        "p90_ps": 15.416
+      },
+      {
+        "N": 8,
+        "rmse_ps": 7.27,
+        "mae_ps": 5.889,
+        "p90_ps": 11.835
+      },
+      {
+        "N": 10,
+        "rmse_ps": 6.6,
+        "mae_ps": 5.249,
+        "p90_ps": 11.002
+      },
+      {
+        "N": 15,
+        "rmse_ps": 5.418,
+        "mae_ps": 4.372,
+        "p90_ps": 8.911
+      },
+      {
+        "N": 20,
+        "rmse_ps": 4.621,
+        "mae_ps": 3.691,
+        "p90_ps": 7.566
+      },
+      {
+        "N": 25,
+        "rmse_ps": 4.187,
+        "mae_ps": 3.335,
+        "p90_ps": 6.941
+      },
+      {
+        "N": 30,
+        "rmse_ps": 3.825,
+        "mae_ps": 3.068,
+        "p90_ps": 6.307
+      },
+      {
+        "N": 40,
+        "rmse_ps": 3.258,
+        "mae_ps": 2.591,
+        "p90_ps": 5.321
+      },
+      {
+        "N": 50,
+        "rmse_ps": 2.862,
+        "mae_ps": 2.279,
+        "p90_ps": 4.728
+      },
+      {
+        "N": 75,
+        "rmse_ps": 2.396,
+        "mae_ps": 1.903,
+        "p90_ps": 3.973
+      },
+      {
+        "N": 100,
+        "rmse_ps": 2.059,
+        "mae_ps": 1.645,
+        "p90_ps": 3.391
+      },
+      {
+        "N": 150,
+        "rmse_ps": 1.689,
+        "mae_ps": 1.344,
+        "p90_ps": 2.779
+      },
+      {
+        "N": 200,
+        "rmse_ps": 1.44,
+        "mae_ps": 1.145,
+        "p90_ps": 2.379
+      },
+      {
+        "N": 250,
+        "rmse_ps": 1.292,
+        "mae_ps": 1.027,
+        "p90_ps": 2.11
+      },
+      {
+        "N": 300,
+        "rmse_ps": 1.186,
+        "mae_ps": 0.945,
+        "p90_ps": 1.986
+      },
+      {
+        "N": 400,
+        "rmse_ps": 1.039,
+        "mae_ps": 0.822,
+        "p90_ps": 1.694
+      },
+      {
+        "N": 500,
+        "rmse_ps": 0.931,
+        "mae_ps": 0.741,
+        "p90_ps": 1.534
+      },
+      {
+        "N": 750,
+        "rmse_ps": 0.748,
+        "mae_ps": 0.595,
+        "p90_ps": 1.23
+      },
+      {
+        "N": 1000,
+        "rmse_ps": 0.66,
+        "mae_ps": 0.523,
+        "p90_ps": 1.112
+      }
+    ]
+  }
+}

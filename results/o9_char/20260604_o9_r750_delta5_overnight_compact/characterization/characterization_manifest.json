@@ -1,0 +1,198 @@
+{
+  "name": "mptdc-characterization-baseline",
+  "status": "completed",
+  "rtl": {
+    "branch": "SPADMIC_localtag",
+    "head": "a6583c799cd604c07e5d2e7065f846551fa7abdc",
+    "fast_tag_encoding": "raw_lfsr_tag",
+    "rtl_tag_define_or_parameter": "default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI",
+    "freq_mode": "r750_delta5",
+    "freq_rtl_define_or_parameter": "+define+MPTDC_FREQ_R750_DELTA5"
+  },
+  "frequency_mode": {
+    "freq_mode": "r750_delta5",
+    "OSC_TS_SLOW_PS": 79,
+    "OSC_TS_FAST_PS": 74,
+    "DELTA_STEP": 5,
+    "DELTA_LSB": 10,
+    "K_VERNIER": 15
+  },
+  "packet": {
+    "format_version": "fixed_raw_features_v2_7",
+    "word_width": 16,
+    "layout": "header + 2*hit_count hit words + eoc",
+    "production_packet_unchanged": true,
+    "nslow_width": 7,
+    "nfast_width": 7,
+    "ns_width": 4,
+    "nf_width": 4
+  },
+  "tag_encoding": {
+    "nfast_encoding": "raw_lfsr_tag",
+    "tag_decode_mode": "software",
+    "tag_type": "fibonacci_lfsr",
+    "lfsr_width": 7,
+    "tag_width": 7,
+    "lfsr_seed": 1,
+    "tag_columns": 8,
+    "column_offsets_version": "o2_initial_zero_offsets",
+    "decode_table_hash": "d006ac2ab9ae92ec739a9e08370d09a36a3f20b0383525712b04b0949e5d8bd6"
+  },
+  "calibration_model_version": "6d_lut_v2_7",
+  "baseline": {
+    "sim": "xcelium",
+    "jobs": 32,
+    "seeds": 64,
+    "seed_list": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+    ],
+    "n_conv_per_seed": 100000,
+    "config": "multihit_15_cal_nominal",
+    "delay_range_ps": [
+      20,
+      30000
+    ],
+    "out_mode": "raw_features",
+    "nfast_encoding": "raw_lfsr_tag",
+    "fast_tag_encoding": "raw_lfsr_tag",
+    "rtl_tag_define_or_parameter": "default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI",
+    "freq_mode": "r750_delta5",
+    "smoke": false,
+    "skip_campaign": false
+  },
+  "stages": {
+    "analyze": true,
+    "calibrate": true,
+    "with_fixed_delay": true
+  },
+  "analysis": {
+    "jobs": 2,
+    "chunksize": 200000,
+    "backend": "streaming",
+    "low_memory": true,
+    "log_memory": true
+  },
+  "calibration": {
+    "train_seeds": 48,
+    "train_max_rows_per_seed": "50000",
+    "val_max_files": "4",
+    "val_dir": "",
+    "fresh_dir": ""
+  },
+  "fixed_delay": {
+    "delay_list_ps": [
+      20,
+      50,
+      100,
+      200,
+      500,
+      1000,
+      2000,
+      5000,
+      10000,
+      30000
+    ],
+    "seeds": 8,
+    "n_conv_per_seed": 5000,
+    "jobs": 32
+  },
+  "jitter_override_ps": {
+    "sigma": "",
+    "bound": ""
+  },
+  "paths": {
+    "root": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization",
+    "scratch_root": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/scratch",
+    "campaign": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/campaign",
+    "campaign_config": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/campaign/multihit_15_cal_nominal",
+    "sweep_analysis": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/sweep",
+    "calibration": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/calibration",
+    "fixed_delay": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/fixed_delay"
+  },
+  "commands": {
+    "top_level": "/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/sim/run_characterization_baseline.sh --sim xcelium --jobs 32 --seeds 64 --n-conv 100000 --config multihit_15_cal_nominal --out-mode raw_features --nfast-encoding raw_lfsr_tag --freq-mode r750_delta5 --out-dir /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization --analyze --calibrate --train-seeds 48 --analysis-jobs 2 --analysis-chunksize 200000 --analysis-backend streaming --scratch-root /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/scratch --analysis-low-memory --log-memory --train-max-rows-per-seed 50000 --calibration-val-max-files 4 --with-fixed-delay --fixed-delay-list 20\\,50\\,100\\,200\\,500\\,1000\\,2000\\,5000\\,10000\\,30000 --fixed-delay-seeds 8 --fixed-delay-n-conv 5000 --fixed-delay-jobs 32",
+    "campaign": "bash /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/sim/run_campaign.sh --sim xcelium --jobs 32 --seeds 64 --n-conv 100000 --delay-min 20 --delay-max 30000 --configs multihit_15_cal_nominal --out-mode raw_features --fast-tag-encoding raw_lfsr_tag --freq-mode r750_delta5 --out-dir /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/campaign --scratch-root /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/scratch",
+    "analyze": "python3 /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/analysis/analyze_campaign.py --campaign-dir /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/campaign --output-dir /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/sweep --config-filter multihit_15_cal_nominal\\* --nfast-encoding raw_lfsr_tag --freq-mode r750_delta5 --analysis-jobs 2 --analysis-chunksize 200000 --analysis-backend streaming --analysis-low-memory --log-memory",
+    "fine_grid": "python3 /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/calibration/analyze_fine_grid.py --output /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/sweep/fine_grid_analysis.pdf --freq-mode r750_delta5",
+    "calibrate": "python3 /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/calibration/calibrate_6d_lut.py --train-dir /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/campaign/multihit_15_cal_nominal --out-dir /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/calibration --train-seeds 48 --nfast-encoding raw_lfsr_tag --freq-mode r750_delta5 --train-max-rows-per-seed 50000 --val-max-files 4",
+    "fixed_delay": "bash /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/scripts/sim/run_fixed_delay_campaign.sh --sim xcelium --jobs 32 --seeds 8 --n-conv 5000 --configs multihit_15_cal_nominal --out-mode raw_features --fast-tag-encoding raw_lfsr_tag --freq-mode r750_delta5 --delay-list 20\\,50\\,100\\,200\\,500\\,1000\\,2000\\,5000\\,10000\\,30000 --out-dir /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/fixed_delay --analyze --scratch-root /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/scratch"
+  },
+  "precision_evidence": {
+    "raw_tuple_histogram_csv_glob": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/sweep/raw_tuple_histogram_*.csv",
+    "raw_tuple_histogram_plot_glob": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/sweep/raw_tuple_histogram_*.png",
+    "post_reconstruction_error_table": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/calibration/val_reconstruction_errors_pre_post.csv",
+    "post_reconstruction_error_plots_dir": "/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results/characterization/analysis/calibration/plots",
+    "requires": {
+      "raw_tuple_histograms": "--analyze",
+      "post_reconstruction_error_exports": "--calibrate"
+    }
+  },
+  "summary": {
+    "campaign_csv_count": 64,
+    "campaign_row_count": 96000127,
+    "fixed_delay_csv_count": 80
+  }
+}

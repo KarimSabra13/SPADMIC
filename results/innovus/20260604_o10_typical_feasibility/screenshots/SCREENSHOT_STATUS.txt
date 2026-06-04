@@ -1,0 +1,7 @@
+01_floorplan_overview.png: ok: dumpToGIF /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/screenshots/01_floorplan_overview.png
+02_macros_pd_matrix.png: ok: dumpToGIF /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/screenshots/02_macros_pd_matrix.png
+03_placed_design.png: ok: dumpToGIF /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/screenshots/03_placed_design.png
+04_clk_sys_cts.png: ok: dumpToGIF /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/screenshots/04_clk_sys_cts.png
+05_routed_design.png: ok: dumpToGIF /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/screenshots/05_routed_design.png
+06_congestion.png: ok: dumpToGIF /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/screenshots/06_congestion.png
+08_final_manager_view.png: ok: dumpToGIF /home/validmgr/ksabra/2026_SPAD/SPADMIC/results/innovus/20260604_o10_typical_feasibility/screenshots/08_final_manager_view.png

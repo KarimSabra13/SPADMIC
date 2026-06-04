@@ -1,0 +1,5 @@
+O10 CTS policy
+==============
+Run CTS for clk_sys only.
+RO_tune4/S[0:7] clocks are source-clock phase nets and must not be CTS trees.
+The script applies best-effort ignore/dont-touch guards to RO clocks and reports the result.
