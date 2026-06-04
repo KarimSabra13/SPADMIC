@@ -1,0 +1,2 @@
+CTS_SKIPPED_FOR_FIRST_FEASIBILITY
+No clk_sys-only CTS command was accepted; generic CCOpt was not run.
