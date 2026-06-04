@@ -1,0 +1,93 @@
+MPTDC fast-count to nfast_hit endpoint audit
+==========================================
+Generated: 2026-06-04 13:45:40 CEST
+
+Purpose
+-------
+Count and bucket PD nfast_hit capture endpoints before running focused
+timing reports.  These paths remain real timing candidates until the
+architecture proves the fast counter value is intentionally sampled as a
+stable previous-cycle value.
+
+Current oscillator model
+------------------------
+  fast period ns: 1.333
+  fast tap step ns: 0.074
+  oscillator setup uncertainty ns: 0.050
+
+Endpoint count: 448
+
+By fast tap / PD column
+-----------------------
+  tap 0        56
+  tap 1        56
+  tap 2        56
+  tap 3        56
+  tap 4        56
+  tap 5        56
+  tap 6        56
+  tap 7        56
+
+By PD row / slow tap
+--------------------
+  row 0        56
+  row 1        56
+  row 2        56
+  row 3        56
+  row 4        56
+  row 5        56
+  row 6        56
+  row 7        56
+
+By nfast_hit bit
+----------------
+  bit 0        64
+  bit 1        64
+  bit 2        64
+  bit 3        64
+  bit 4        64
+  bit 5        64
+  bit 6        64
+
+First 40 endpoint pins
+----------------------
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]/D
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]/D
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]/D
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]/D
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]/D
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]/D
+  u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]/D
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]/D
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]/D
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]/D
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]/D
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]/D
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]/D
+  u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]/D
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]/D
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]/D
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]/D
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]/D
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]/D
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]/D
+  u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]/D
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]/D
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]/D
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]/D
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]/D
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]/D
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]/D
+  u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]/D
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]/D
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]/D
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]/D
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]/D
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]/D
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]/D
+  u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]/D
+  u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]/D
+  u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]/D
+  u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]/D
+  u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]/D
+  u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]/D
