@@ -1,0 +1,3 @@
+external_result_dir: /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results
+external_scratch_root: /sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/scratch
+note: raw simulation CSVs and xrun work libraries are kept under /sim/ksabra to avoid home quota pressure.
