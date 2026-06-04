@@ -16,6 +16,7 @@
 #                            legacy full/2 aliases are accepted and mapped to raw_features)
 #           --fast-tag-encoding NAME raw_lfsr_tag|raw_galois_tag RTL tag generator
 #                            selected for the existing 7-bit packet nfast field
+#           --freq-mode NAME  nominal|r750_delta5 RTL timing constants
 #           --jitter-sigma N Override oscillator jitter sigma in ps
 #           --jitter-bound N Override oscillator jitter bound in ps
 #           --out-dir DIR    Output directory (default results/campaign)
@@ -47,6 +48,7 @@ CONFIG_FILTER="*"
 OUT_MODE="raw_features"
 OUT_MODE_ENUM=0
 FAST_TAG_ENCODING="raw_lfsr_tag"
+FREQ_MODE="nominal"
 JITTER_SIGMA_OVERRIDE=""
 JITTER_BOUND_OVERRIDE=""
 OUT_DIR="$REPO_ROOT/results/campaign"
@@ -115,6 +117,7 @@ while [[ $# -gt 0 ]]; do
     --configs)    CONFIG_FILTER="$2";    shift 2 ;;
     --out-mode)   OUT_MODE="$2";         shift 2 ;;
     --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
+    --freq-mode) FREQ_MODE="$2"; shift 2 ;;
     --jitter-sigma) JITTER_SIGMA_OVERRIDE="$2"; shift 2 ;;
     --jitter-bound) JITTER_BOUND_OVERRIDE="$2"; shift 2 ;;
     --out-dir)    OUT_DIR="$2";          shift 2 ;;
@@ -158,9 +161,18 @@ case "$FAST_TAG_ENCODING" in
     ;;
 esac
 
-OBJ_DIR="$BUILD_DIR/obj_dir_campaign_${FAST_TAG_ENCODING}"
+case "$FREQ_MODE" in
+  nominal) FREQ_MODE_DEFINE_ARGS=() ;;
+  r750_delta5) FREQ_MODE_DEFINE_ARGS=(+define+MPTDC_FREQ_R750_DELTA5) ;;
+  *)
+    echo "[ERROR] Unknown frequency mode '$FREQ_MODE' (use nominal or r750_delta5)"
+    exit 1
+    ;;
+esac
+
+OBJ_DIR="$BUILD_DIR/obj_dir_campaign_${FAST_TAG_ENCODING}_${FREQ_MODE}"
 BINARY="$OBJ_DIR/tb_campaign_collect"
-XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun_${FAST_TAG_ENCODING}"
+XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun_${FAST_TAG_ENCODING}_${FREQ_MODE}"
 
 if [[ -n "$JITTER_SIGMA_OVERRIDE" && -z "$JITTER_BOUND_OVERRIDE" ]]; then
   echo "[ERROR] --jitter-sigma requires --jitter-bound"
@@ -190,6 +202,7 @@ build_tb() {
     verilator --binary --timing -j 4
     +define+MPTDC_USE_OSC_MODEL
     "${FAST_TAG_DEFINE_ARGS[@]}"
+    "${FREQ_MODE_DEFINE_ARGS[@]}"
     -f "$REPO_ROOT/rtl/filelist.f"
     "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv"
     "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
@@ -299,6 +312,7 @@ echo "[CAMPAIGN] Matched ${#FILTERED[@]} config(s), ${SEEDS_PER_CONFIG} seeds ea
 echo "[CAMPAIGN] Simulator: ${SIM}"
 echo "[CAMPAIGN] Out mode: ${OUT_MODE}"
 echo "[CAMPAIGN] Fast tag RTL: ${FAST_TAG_ENCODING}"
+echo "[CAMPAIGN] Frequency mode: ${FREQ_MODE}"
 if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
   echo "[CAMPAIGN] Jitter override: sigma=${JITTER_SIGMA_OVERRIDE} ps, bound=${JITTER_BOUND_OVERRIDE} ps"
 fi
@@ -340,8 +354,12 @@ worker() {
   local rc=0
   local -a cmd
   local -a fast_tag_define_args=()
+  local -a freq_mode_define_args=()
   if [[ "$FAST_TAG_ENCODING" == "raw_galois_tag" ]]; then
     fast_tag_define_args=(+define+MPTDC_FAST_TAG_GALOIS)
+  fi
+  if [[ "$FREQ_MODE" == "r750_delta5" ]]; then
+    freq_mode_define_args=(+define+MPTDC_FREQ_R750_DELTA5)
   fi
 
   case "$SIM" in
@@ -379,6 +397,7 @@ worker() {
         -top tb_campaign_collect
         +define+MPTDC_USE_OSC_MODEL
         "${fast_tag_define_args[@]}"
+        "${freq_mode_define_args[@]}"
         -f "$REPO_ROOT/rtl/filelist.f"
         "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv"
         "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
@@ -421,7 +440,7 @@ worker() {
 }
 
 export -f worker print_cmd print_cd_cmd sanitize_path_token config_output_name
-export REPO_ROOT BINARY XRUN_BUILD_ROOT OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN SIM OUT_MODE OUT_MODE_ENUM FAST_TAG_ENCODING JITTER_SIGMA_OVERRIDE JITTER_BOUND_OVERRIDE
+export REPO_ROOT BINARY XRUN_BUILD_ROOT OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN SIM OUT_MODE OUT_MODE_ENUM FAST_TAG_ENCODING FREQ_MODE JITTER_SIGMA_OVERRIDE JITTER_BOUND_OVERRIDE
 
 # ── launch all seeds ────────────────────────────────────────────────────────
 TOTAL_SEEDS=$(( ${#FILTERED[@]} * SEEDS_PER_CONFIG ))

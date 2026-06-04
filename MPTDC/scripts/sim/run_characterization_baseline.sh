@@ -11,6 +11,7 @@
 #           --out-mode NAME       raw_features (default raw_features;
 #                                 legacy full/2 aliases are mapped to raw_features)
 #           --nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag
+#           --freq-mode NAME      nominal|r750_delta5 RTL timing constants
 #           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_raw_features)
 #           --analyze             Run sweep analysis + fine-grid report, including
 #                                 raw tuple histograms/code-density CSVs and plots
@@ -45,6 +46,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ORIGINAL_ARGS=("$@")
 
 SIM="verilator"
 JOBS=12
@@ -55,6 +57,13 @@ OUT_MODE="raw_features"
 NFAST_ENCODING="legacy_binary_nfast"
 FAST_TAG_ENCODING="raw_lfsr_tag"
 RTL_TAG_DEFINE_OR_PARAMETER="default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI"
+FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
+FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"
+OSC_TS_SLOW_PS=55
+OSC_TS_FAST_PS=50
+DELTA_STEP=5
+DELTA_LSB=10
+K_VERNIER=11
 OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_raw_features"
 ANALYZE=0
 ANALYSIS_JOBS=4
@@ -134,6 +143,7 @@ while [[ $# -gt 0 ]]; do
     --config) CONFIG="$2"; shift 2 ;;
     --out-mode) OUT_MODE="$2"; shift 2 ;;
     --nfast-encoding) NFAST_ENCODING="$2"; shift 2 ;;
+    --freq-mode) FREQ_MODE="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --analyze) ANALYZE=1; shift ;;
     --analysis-jobs) ANALYSIS_JOBS="$2"; shift 2 ;;
@@ -215,6 +225,29 @@ case "$NFAST_ENCODING" in
     RTL_TAG_DEFINE_OR_PARAMETER="default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI"
     ;;
 esac
+case "$FREQ_MODE" in
+  nominal)
+    FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"
+    OSC_TS_SLOW_PS=55
+    OSC_TS_FAST_PS=50
+    ;;
+  r750_delta5)
+    FREQ_RTL_DEFINE_OR_PARAMETER="+define+MPTDC_FREQ_R750_DELTA5"
+    OSC_TS_SLOW_PS=79
+    OSC_TS_FAST_PS=74
+    ;;
+  *)
+    echo "[ERROR] Unknown freq mode '$FREQ_MODE' (use nominal or r750_delta5)"
+    exit 1
+    ;;
+esac
+DELTA_STEP=$((OSC_TS_SLOW_PS - OSC_TS_FAST_PS))
+if (( DELTA_STEP <= 0 )); then
+  echo "[ERROR] Invalid frequency mode $FREQ_MODE: OSC_TS_SLOW_PS must exceed OSC_TS_FAST_PS"
+  exit 1
+fi
+DELTA_LSB=$((2 * DELTA_STEP))
+K_VERNIER=$((OSC_TS_SLOW_PS / DELTA_STEP))
 case "$ANALYSIS_BACKEND" in
   legacy|streaming) ;;
   *)
@@ -277,6 +310,7 @@ CAMPAIGN_CMD=(
   --configs "$CONFIG"
   --out-mode "$OUT_MODE"
   --fast-tag-encoding "$FAST_TAG_ENCODING"
+  --freq-mode "$FREQ_MODE"
   --out-dir "$CAMPAIGN_DIR"
 )
 if [[ -n "$JITTER_SIGMA" ]]; then
@@ -295,6 +329,7 @@ ANALYZE_CMD=(
   --output-dir "$SWEEP_ANALYSIS_DIR"
   --config-filter "$CONFIG*"
   --nfast-encoding "$NFAST_ENCODING"
+  --freq-mode "$FREQ_MODE"
   --analysis-jobs "$ANALYSIS_JOBS"
   --analysis-chunksize "$ANALYSIS_CHUNKSIZE"
   --analysis-backend "$ANALYSIS_BACKEND"
@@ -312,6 +347,7 @@ fi
 FINE_GRID_CMD=(
   python3 "$REPO_ROOT/scripts/calibration/analyze_fine_grid.py"
   --output "$SWEEP_ANALYSIS_DIR/fine_grid_analysis.pdf"
+  --freq-mode "$FREQ_MODE"
 )
 
 CALIBRATE_CMD=(
@@ -320,6 +356,7 @@ CALIBRATE_CMD=(
   --out-dir "$CALIBRATION_DIR"
   --train-seeds "$TRAIN_SEEDS"
   --nfast-encoding "$NFAST_ENCODING"
+  --freq-mode "$FREQ_MODE"
 )
 if [[ -n "$TRAIN_MAX_ROWS_PER_SEED" ]]; then
   CALIBRATE_CMD+=(--train-max-rows-per-seed "$TRAIN_MAX_ROWS_PER_SEED")
@@ -347,6 +384,7 @@ FIXED_DELAY_CMD=(
   --configs "$CONFIG"
   --out-mode "$OUT_MODE"
   --fast-tag-encoding "$FAST_TAG_ENCODING"
+  --freq-mode "$FREQ_MODE"
   --delay-list "$FIXED_DELAY_LIST"
   --out-dir "$FIXED_DELAY_DIR"
   --analyze
@@ -377,6 +415,14 @@ write_manifest() {
   export MANIFEST_NFAST_ENCODING="$NFAST_ENCODING"
   export MANIFEST_FAST_TAG_ENCODING="$FAST_TAG_ENCODING"
   export MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER="$RTL_TAG_DEFINE_OR_PARAMETER"
+  export MANIFEST_FREQ_MODE="$FREQ_MODE"
+  export MANIFEST_FREQ_RTL_DEFINE_OR_PARAMETER="$FREQ_RTL_DEFINE_OR_PARAMETER"
+  export MANIFEST_OSC_TS_SLOW_PS="$OSC_TS_SLOW_PS"
+  export MANIFEST_OSC_TS_FAST_PS="$OSC_TS_FAST_PS"
+  export MANIFEST_DELTA_STEP="$DELTA_STEP"
+  export MANIFEST_DELTA_LSB="$DELTA_LSB"
+  export MANIFEST_K_VERNIER="$K_VERNIER"
+  export MANIFEST_COMMAND_LINE="$(render_cmd "$0" "${ORIGINAL_ARGS[@]}")"
   export MANIFEST_RTL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   export MANIFEST_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   export MANIFEST_MPTDC_ROOT="$REPO_ROOT"
@@ -447,6 +493,16 @@ data = {
         "head": os.environ["MANIFEST_RTL_HEAD"],
         "fast_tag_encoding": os.environ["MANIFEST_FAST_TAG_ENCODING"],
         "rtl_tag_define_or_parameter": os.environ["MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER"],
+        "freq_mode": os.environ["MANIFEST_FREQ_MODE"],
+        "freq_rtl_define_or_parameter": os.environ["MANIFEST_FREQ_RTL_DEFINE_OR_PARAMETER"],
+    },
+    "frequency_mode": {
+        "freq_mode": os.environ["MANIFEST_FREQ_MODE"],
+        "OSC_TS_SLOW_PS": int(os.environ["MANIFEST_OSC_TS_SLOW_PS"]),
+        "OSC_TS_FAST_PS": int(os.environ["MANIFEST_OSC_TS_FAST_PS"]),
+        "DELTA_STEP": int(os.environ["MANIFEST_DELTA_STEP"]),
+        "DELTA_LSB": int(os.environ["MANIFEST_DELTA_LSB"]),
+        "K_VERNIER": int(os.environ["MANIFEST_K_VERNIER"]),
     },
     "packet": {
         "format_version": os.environ["MANIFEST_PACKET_FORMAT_VERSION"],
@@ -472,6 +528,7 @@ data = {
         "nfast_encoding": os.environ["MANIFEST_NFAST_ENCODING"],
         "fast_tag_encoding": os.environ["MANIFEST_FAST_TAG_ENCODING"],
         "rtl_tag_define_or_parameter": os.environ["MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER"],
+        "freq_mode": os.environ["MANIFEST_FREQ_MODE"],
         "smoke": env_bool("MANIFEST_SMOKE"),
         "skip_campaign": env_bool("MANIFEST_SKIP_CAMPAIGN"),
     },
@@ -513,6 +570,7 @@ data = {
         "fixed_delay": os.environ["MANIFEST_FIXED_DELAY_DIR"],
     },
     "commands": {
+        "top_level": os.environ["MANIFEST_COMMAND_LINE"],
         "campaign": os.environ["MANIFEST_CAMPAIGN_CMD"],
         "analyze": os.environ["MANIFEST_ANALYZE_CMD"],
         "fine_grid": os.environ["MANIFEST_FINE_GRID_CMD"],
@@ -545,6 +603,7 @@ echo "[BASELINE] Output root: $OUT_DIR"
 echo "[BASELINE] Config: $CONFIG"
 echo "[BASELINE] Sweep campaign: $SEEDS seed(s) × $N_CONV conv/seed, $JOBS job(s) in parallel"
 echo "[BASELINE] Fast tag RTL: nfast_encoding=$NFAST_ENCODING fast_tag_encoding=$FAST_TAG_ENCODING"
+echo "[BASELINE] Frequency mode: $FREQ_MODE OSC_TS_SLOW_PS=$OSC_TS_SLOW_PS OSC_TS_FAST_PS=$OSC_TS_FAST_PS DELTA_STEP=$DELTA_STEP DELTA_LSB=$DELTA_LSB K_VERNIER=$K_VERNIER"
 echo "[BASELINE] Analysis: backend=$ANALYSIS_BACKEND jobs=$ANALYSIS_JOBS chunksize=$ANALYSIS_CHUNKSIZE low_memory=$ANALYSIS_LOW_MEMORY"
 echo "[BASELINE] Manifest: $MANIFEST_PATH"
 

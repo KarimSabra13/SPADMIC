@@ -32,18 +32,22 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 from plot_style import PALETTE, apply_report_style, save_figure, style_axes
+from analysis import mptdc_char_common as char_common
 from analysis.mptdc_char_common import (
+    FREQ_MODE_CHOICES,
+    FREQ_MODE_NOMINAL,
     NFAST_ENCODING_CHOICES,
     NFAST_ENCODING_LEGACY,
     add_o2_raw_tag_decode_columns,
+    frequency_mode_metadata,
 )
 
 # ---------------------------------------------------------------------------
 # Vernier reconstruction constants & function
 # ---------------------------------------------------------------------------
-NE = 8
-K_VERNIER = 11
-DELTA_LSB = 10
+NE = char_common.NE
+K_VERNIER = char_common.K_VERNIER
+DELTA_LSB = char_common.DELTA_LSB_PS
 VERNIER_NSLOW_ORIGIN_BIAS = 2
 VERNIER_NFAST_ORIGIN_BIAS = 1
 VERNIER_COEF_BIAS = 25
@@ -127,6 +131,16 @@ STREAM_DTYPE_MAP = {
     "t_raw_ps": "float32",
     "tuple_code": "int32",
 }
+
+
+def set_frequency_mode(mode: str) -> dict[str, object]:
+    global K_VERNIER, DELTA_LSB, STREAM_TRAW_BINS_PS
+
+    cfg = char_common.configure_frequency_mode(mode)
+    K_VERNIER = int(cfg["K_VERNIER"])
+    DELTA_LSB = int(cfg["DELTA_LSB"])
+    STREAM_TRAW_BINS_PS = np.arange(0.0, 200_000.0 + DELTA_LSB, DELTA_LSB)
+    return cfg
 
 apply_report_style()
 
@@ -631,6 +645,7 @@ def analyze_campaign_streaming(configs: dict[str, list[Path]], args, out_dir: Pa
         "max_files": args.max_files,
         "max_rows_per_file": args.max_rows_per_file,
         "nfast_encoding": args.nfast_encoding,
+        "frequency_mode": frequency_mode_metadata(args.freq_mode),
         "usecols": STREAM_USECOLS,
         "dtype_map": STREAM_DTYPE_MAP,
         "notes": [
@@ -1154,6 +1169,7 @@ def _json_ready_results(all_results: dict, ttest_all: dict) -> dict:
     ready: dict[str, dict] = {}
     for cfg, res in sorted(all_results.items()):
         cfg_ready: dict[str, object] = {
+            "frequency_mode": res.get("frequency_mode", {}),
             "offset_stats": res.get("offset_stats", {}),
             "peak_dnl": res.get("peak_dnl"),
             "peak_inl": res.get("peak_inl"),
@@ -1306,6 +1322,7 @@ def analyze_config(config: str, df: pd.DataFrame, out_dir: Path, *,
     """Run full analysis on one configuration, return results dict."""
     result: dict = {}
     result["nfast_encoding"] = nfast_encoding
+    result["frequency_mode"] = frequency_mode_metadata()
     df = apply_nfast_encoding(df, nfast_encoding)
 
     # residual
@@ -1486,6 +1503,9 @@ def main():
     parser.add_argument("--nfast-encoding", default=NFAST_ENCODING_LEGACY,
                         choices=NFAST_ENCODING_CHOICES,
                         help="Interpret packet nfast_hit according to the declared tag encoding")
+    parser.add_argument("--freq-mode", default=FREQ_MODE_NOMINAL,
+                        choices=FREQ_MODE_CHOICES,
+                        help="Frequency/tap mode used by the RTL that produced the CSVs")
     parser.add_argument("--analysis-backend", default="legacy",
                         choices=["legacy", "streaming"],
                         help="Analysis implementation (legacy loads all rows; streaming is chunked)")
@@ -1502,6 +1522,16 @@ def main():
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    freq_cfg = set_frequency_mode(args.freq_mode)
+    print(
+        "[INFO] Frequency mode: "
+        f"{freq_cfg['freq_mode']} "
+        f"OSC_TS_SLOW_PS={freq_cfg['OSC_TS_SLOW_PS']} "
+        f"OSC_TS_FAST_PS={freq_cfg['OSC_TS_FAST_PS']} "
+        f"DELTA_STEP={freq_cfg['DELTA_STEP']} "
+        f"DELTA_LSB={freq_cfg['DELTA_LSB']} "
+        f"K_VERNIER={freq_cfg['K_VERNIER']}"
+    )
 
     # discover
     configs = discover_csv_files(args.campaign_dir, args.config_filter, args.max_files)

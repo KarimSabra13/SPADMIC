@@ -42,21 +42,25 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 from plot_style import PALETTE, apply_report_style, save_figure, style_axes
+from analysis import mptdc_char_common as char_common
 from analysis.mptdc_char_common import (
+    FREQ_MODE_CHOICES,
+    FREQ_MODE_NOMINAL,
     NFAST_ENCODING_CHOICES,
     NFAST_ENCODING_LEGACY,
     add_o2_raw_tag_decode_columns,
+    frequency_mode_metadata,
 )
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 # Vernier algebra: t_raw_ps = ((nslow+2+sbi-1)*K_SLOW + nfast*K_FAST
 #                               + ns*K_VERNIER - nf*(K_VERNIER-1) + OFFSET) * QUANT
-NE        = 8
-K_VERNIER = 11
+NE        = char_common.NE
+K_VERNIER = char_common.K_VERNIER
 K_SLOW    = K_VERNIER * NE
 K_FAST    = NE
 OFFSET    = 25
-QUANT     = 10  # ps per LSB
+QUANT     = char_common.DELTA_LSB_PS  # ps per LSB
 
 # LUT key columns. stop_phase_disc is the packet-visible Hit W1[2:0] field
 # that carries STOP-edge slow_phase[5:3] in the fixed RAW_FEATURES packet.
@@ -104,6 +108,17 @@ def build_nsnf_reverse_lut():
     return lut
 
 NSNF_REV = build_nsnf_reverse_lut()
+
+
+def set_frequency_mode(mode):
+    global K_VERNIER, K_SLOW, QUANT, NSNF_REV
+
+    cfg = char_common.configure_frequency_mode(mode)
+    K_VERNIER = int(cfg["K_VERNIER"])
+    K_SLOW = K_VERNIER * NE
+    QUANT = int(cfg["DELTA_LSB"])
+    NSNF_REV = build_nsnf_reverse_lut()
+    return cfg
 
 
 def infer_ns_nf(df):
@@ -953,7 +968,11 @@ def main():
     parser.add_argument("--nfast-encoding", default=NFAST_ENCODING_LEGACY,
                         choices=NFAST_ENCODING_CHOICES,
                         help="Interpret packet nfast_hit according to the declared tag encoding")
+    parser.add_argument("--freq-mode", default=FREQ_MODE_NOMINAL,
+                        choices=FREQ_MODE_CHOICES,
+                        help="Frequency/tap mode used by the RTL that produced the CSVs")
     args = parser.parse_args()
+    freq_cfg = set_frequency_mode(args.freq_mode)
 
     os.makedirs(args.out_dir, exist_ok=True)
     plots_dir = os.path.join(args.out_dir, "plots")
@@ -963,6 +982,14 @@ def main():
     print("=" * 70)
     print("  MPTDC STOP-discriminator LUT Calibrator")
     print("=" * 70)
+    print(
+        f"  Frequency mode: {freq_cfg['freq_mode']} "
+        f"OSC_TS_SLOW_PS={freq_cfg['OSC_TS_SLOW_PS']} "
+        f"OSC_TS_FAST_PS={freq_cfg['OSC_TS_FAST_PS']} "
+        f"DELTA_STEP={freq_cfg['DELTA_STEP']} "
+        f"DELTA_LSB={freq_cfg['DELTA_LSB']} "
+        f"K_VERNIER={freq_cfg['K_VERNIER']}"
+    )
 
     # ── 1) Build LUT from training data ───────────────────────────────────
     print(f"\n[1/6] Building LUT from training data ({args.train_seeds} seeds)...")
@@ -1397,6 +1424,7 @@ def main():
     # ── 5) Save comprehensive report ─────────────────────────────────────
     print(f"\n[5/6] Writing report...")
     report = {
+        "frequency_mode": frequency_mode_metadata(args.freq_mode),
         "method": "STOP-discriminator Mean-Correction LUT",
         "lut_key": LUT_KEY,
         "lut_key_description": {
@@ -1414,7 +1442,7 @@ def main():
             "FULL (mode 2)": "Legacy CSR code ignored by maintained RTL",
         },
         "ns_nf_inference": {
-            "formula": f"diff = t_raw_ps/10 - (nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET} → unique (ns,nf)",
+            "formula": f"diff = t_raw_ps/{QUANT} - (nslow+2+sbi-1)*{K_SLOW} - nfast*{K_FAST} - {OFFSET} -> unique (ns,nf)",
             "accuracy": f"100% – all {NE * NE} active 8×8 (ns,nf) combinations map to unique diff values",
         },
         "training": {
@@ -1477,6 +1505,9 @@ def main():
         f.write("  MPTDC STOP-DISCRIMINATOR LUT CALIBRATION REPORT\n")
         f.write("=" * 70 + "\n\n")
         f.write(f"Method: Mean-correction Look-Up Table\n")
+        f.write(f"Frequency mode: {args.freq_mode}\n")
+        f.write(f"OSC_TS_SLOW_PS / OSC_TS_FAST_PS: {char_common.OSC_TS_SLOW_PS} / {char_common.OSC_TS_FAST_PS}\n")
+        f.write(f"DELTA_STEP / DELTA_LSB / K_VERNIER: {char_common.DELTA_STEP_PS} / {char_common.DELTA_LSB_PS} / {char_common.K_VERNIER}\n")
         f.write(f"Key:    ({', '.join(LUT_KEY)})\n")
         f.write(f"Bins:   {len(lut_df):,}\n")
         f.write("Mode compatibility: fixed RAW_FEATURES packet; legacy RAW_TIMESTAMP/FULL CSR codes ignored\n\n")

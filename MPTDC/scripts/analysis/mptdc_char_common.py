@@ -30,9 +30,33 @@ from mptdc_decode.fast_tag_decode import (
 )
 
 NE = 8
-K_VERNIER = 11
+FREQ_MODE_NOMINAL = "nominal"
+FREQ_MODE_R750_DELTA5 = "r750_delta5"
+FREQ_MODE_CHOICES = (FREQ_MODE_NOMINAL, FREQ_MODE_R750_DELTA5)
+
+FREQ_MODE_TABLE = {
+    FREQ_MODE_NOMINAL: {
+        "osc_ts_slow_ps": 55,
+        "osc_ts_fast_ps": 50,
+        "slow_period_ns": 1.000,
+        "fast_period_ns": 0.900,
+        "status": "current_nominal",
+    },
+    FREQ_MODE_R750_DELTA5: {
+        "osc_ts_slow_ps": 79,
+        "osc_ts_fast_ps": 74,
+        "slow_period_ns": 1.430,
+        "fast_period_ns": 1.333,
+        "status": "typical_characterization_candidate_not_signoff",
+    },
+}
+
+FREQ_MODE = FREQ_MODE_NOMINAL
+OSC_TS_SLOW_PS = 55
+OSC_TS_FAST_PS = 50
 DELTA_STEP_PS = 5
 DELTA_LSB_PS = 10
+K_VERNIER = 11
 VERNIER_NSLOW_ORIGIN_BIAS = 2
 VERNIER_NFAST_ORIGIN_BIAS = 1
 VERNIER_COEF_BIAS = 25
@@ -62,6 +86,47 @@ LABELS_FR = {
     "ready_duty": "Rapport ready (%)",
     "throughput": "Debit (evenements/s)",
 }
+
+
+def resolve_frequency_mode(mode: str = FREQ_MODE_NOMINAL) -> dict[str, object]:
+    if mode not in FREQ_MODE_TABLE:
+        raise ValueError(f"Unsupported frequency mode: {mode}")
+    cfg = dict(FREQ_MODE_TABLE[mode])
+    slow_ps = int(cfg["osc_ts_slow_ps"])
+    fast_ps = int(cfg["osc_ts_fast_ps"])
+    delta_step_ps = slow_ps - fast_ps
+    if delta_step_ps <= 0:
+        raise ValueError(
+            f"Frequency mode {mode} has non-positive Vernier delta: "
+            f"slow={slow_ps} fast={fast_ps}"
+        )
+    cfg.update({
+        "freq_mode": mode,
+        "OSC_TS_SLOW_PS": slow_ps,
+        "OSC_TS_FAST_PS": fast_ps,
+        "DELTA_STEP": delta_step_ps,
+        "DELTA_LSB": 2 * delta_step_ps,
+        "K_VERNIER": slow_ps // delta_step_ps,
+    })
+    return cfg
+
+
+def configure_frequency_mode(mode: str = FREQ_MODE_NOMINAL) -> dict[str, object]:
+    global FREQ_MODE, OSC_TS_SLOW_PS, OSC_TS_FAST_PS
+    global DELTA_STEP_PS, DELTA_LSB_PS, K_VERNIER
+
+    cfg = resolve_frequency_mode(mode)
+    FREQ_MODE = mode
+    OSC_TS_SLOW_PS = int(cfg["OSC_TS_SLOW_PS"])
+    OSC_TS_FAST_PS = int(cfg["OSC_TS_FAST_PS"])
+    DELTA_STEP_PS = int(cfg["DELTA_STEP"])
+    DELTA_LSB_PS = int(cfg["DELTA_LSB"])
+    K_VERNIER = int(cfg["K_VERNIER"])
+    return cfg
+
+
+def frequency_mode_metadata(mode: str | None = None) -> dict[str, object]:
+    return resolve_frequency_mode(FREQ_MODE if mode is None else mode)
 
 
 def apply_char_style() -> None:

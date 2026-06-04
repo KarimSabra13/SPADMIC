@@ -30,8 +30,13 @@ package mptdc_pkg;
   // =========================================================================
   parameter int unsigned CLK_SYS_HZ     = 160_000_000;
   parameter int unsigned NE              = 8;
+`ifdef MPTDC_FREQ_R750_DELTA5
+  parameter int unsigned OSC_TS_SLOW_PS  = 79;
+  parameter int unsigned OSC_TS_FAST_PS  = 74;
+`else
   parameter int unsigned OSC_TS_SLOW_PS  = 55;
   parameter int unsigned OSC_TS_FAST_PS  = 50;
+`endif
 
   // Phase-detector matrix: NE x NE.  The active macro is intentionally fixed at
   // 8 taps per ring.  Keep NE as the single source of truth for widths and
@@ -45,9 +50,9 @@ package mptdc_pkg;
 
   // Vernier parameters
   localparam integer DELTA_STEP_SIGNED = OSC_TS_SLOW_PS - OSC_TS_FAST_PS;
-  localparam integer DELTA_STEP = (DELTA_STEP_SIGNED > 0) ? DELTA_STEP_SIGNED : 1; // 5 ps
-  localparam int unsigned DELTA_LSB  = 2 * DELTA_STEP;     // 10 ps
-  localparam int unsigned K_VERNIER  = OSC_TS_SLOW_PS / DELTA_STEP; // 11
+  localparam integer DELTA_STEP = (DELTA_STEP_SIGNED > 0) ? DELTA_STEP_SIGNED : 1;
+  localparam int unsigned DELTA_LSB  = 2 * DELTA_STEP;
+  localparam int unsigned K_VERNIER  = OSC_TS_SLOW_PS / DELTA_STEP;
   localparam integer OSC_TRIM_DELTA_PS = 0;  // Trim offset (reserved for silicon tuning)
   // Raw timestamp reconstruction keeps the original Vernier topology but adds
   // fixed geometry-origin corrections for the live counter semantics:
@@ -91,8 +96,8 @@ package mptdc_pkg;
 `endif
 
   localparam int unsigned DLY_MAX_PS           = 32_000;
-  localparam int unsigned SLOW_HALF_PERIOD_PS  = NE * OSC_TS_SLOW_PS;  // 440 ps @ 8 taps, 55 ps/tap
-  localparam int unsigned FAST_HALF_PERIOD_PS  = NE * OSC_TS_FAST_PS;  // 400 ps @ 8 taps, 50 ps/tap
+  localparam int unsigned SLOW_HALF_PERIOD_PS  = NE * OSC_TS_SLOW_PS;
+  localparam int unsigned FAST_HALF_PERIOD_PS  = NE * OSC_TS_FAST_PS;
 
   localparam int unsigned NSLOW_CAPTURE_MAX =
       1 + ((DLY_MAX_PS + SLOW_HALF_PERIOD_PS - 1) / SLOW_HALF_PERIOD_PS);

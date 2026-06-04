@@ -8,12 +8,22 @@ REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_lint_current_head}"
 RESULT_DIR="$REPO_ROOT/results/local_verilator/$RUN_ID"
 FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
+FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 
 case "$FAST_TAG_ENCODING" in
   raw_lfsr_tag) FAST_TAG_DEFINE_ARGS=() ;;
   raw_galois_tag) FAST_TAG_DEFINE_ARGS=(+define+MPTDC_FAST_TAG_GALOIS) ;;
   *)
     echo "[LINT] Invalid MPTDC_FAST_TAG_ENCODING=$FAST_TAG_ENCODING" >&2
+    exit 1
+    ;;
+esac
+
+case "$FREQ_MODE" in
+  nominal) FREQ_MODE_DEFINE_ARGS=() ;;
+  r750_delta5) FREQ_MODE_DEFINE_ARGS=(+define+MPTDC_FREQ_R750_DELTA5) ;;
+  *)
+    echo "[LINT] Invalid MPTDC_FREQ_MODE=$FREQ_MODE" >&2
     exit 1
     ;;
 esac
@@ -51,6 +61,7 @@ CMD=(
   -Wno-DECLFILENAME
   -Wno-VARHIDDEN
   "${FAST_TAG_DEFINE_ARGS[@]}"
+  "${FREQ_MODE_DEFINE_ARGS[@]}"
   -f "$MPTDC_DIR/sim/verilator/filelist_verilator.f"
   --top-module mptdc_top_asic
 )
@@ -58,6 +69,7 @@ CMD=(
 {
   echo "Run ID: $RUN_ID"
   echo "Fast tag encoding: $FAST_TAG_ENCODING"
+  echo "Frequency mode: $FREQ_MODE"
   echo "Working directory: $REPO_ROOT"
   echo "Command:"
   printf '  %q' "${CMD[@]}"
@@ -78,6 +90,7 @@ RC=$?
   echo "- Git HEAD: \`$(cat "$RESULT_DIR/git_head.txt")\`"
   echo "- Verilator: \`$(cat "$RESULT_DIR/verilator_version.txt")\`"
   echo "- Fast tag encoding: \`$FAST_TAG_ENCODING\`"
+  echo "- Frequency mode: \`$FREQ_MODE\`"
   echo "- Command log: \`command_transcript.log\`"
   echo "- Lint log: \`lint.log\`"
   if [[ $RC -eq 0 ]]; then

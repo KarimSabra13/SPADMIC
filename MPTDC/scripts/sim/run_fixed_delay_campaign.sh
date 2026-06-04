@@ -13,6 +13,7 @@
 #           --out-mode NAME    Serializer mode: raw_features (default raw_features;
 #                              legacy full/2 aliases are mapped downstream)
 #           --fast-tag-encoding NAME raw_lfsr_tag|raw_galois_tag RTL tag generator
+#           --freq-mode NAME    nominal|r750_delta5 RTL timing constants
 #           --delay-list LIST  Comma/space-separated delays in ps
 #           --out-dir DIR      Output directory (default results/fixed_delay_campaign)
 #           --jitter-sigma N   Override oscillator jitter sigma in ps
@@ -35,6 +36,7 @@ SEED_START=0
 CONFIG_FILTER="multihit_15_cal_nominal"
 OUT_MODE="raw_features"
 FAST_TAG_ENCODING="raw_lfsr_tag"
+FREQ_MODE="nominal"
 OUT_DIR="$REPO_ROOT/results/fixed_delay_campaign"
 DELAY_LIST="20,50,100,200,500,1000,2000,5000,10000,30000"
 JITTER_SIGMA_OVERRIDE=""
@@ -69,6 +71,7 @@ while [[ $# -gt 0 ]]; do
     --configs) CONFIG_FILTER="$2"; shift 2 ;;
     --out-mode) OUT_MODE="$2"; shift 2 ;;
     --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
+    --freq-mode) FREQ_MODE="$2"; shift 2 ;;
     --delay-list) DELAY_LIST="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --jitter-sigma) JITTER_SIGMA_OVERRIDE="$2"; shift 2 ;;
@@ -95,6 +98,14 @@ case "$FAST_TAG_ENCODING" in
   raw_lfsr_tag|raw_galois_tag) ;;
   *)
     echo "[ERROR] --fast-tag-encoding must be raw_lfsr_tag or raw_galois_tag"
+    exit 1
+    ;;
+esac
+
+case "$FREQ_MODE" in
+  nominal|r750_delta5) ;;
+  *)
+    echo "[ERROR] --freq-mode must be nominal or r750_delta5"
     exit 1
     ;;
 esac
@@ -145,6 +156,7 @@ mkdir -p "$OUT_DIR"
 echo "[FIXED-DELAY] Output root: $OUT_DIR"
 echo "[FIXED-DELAY] Delays (ps): ${DELAYS[*]}"
 echo "[FIXED-DELAY] Fast tag RTL: $FAST_TAG_ENCODING"
+echo "[FIXED-DELAY] Frequency mode: $FREQ_MODE"
 
 first_run=1
 for delay_ps in "${DELAYS[@]}"; do
@@ -163,6 +175,7 @@ for delay_ps in "${DELAYS[@]}"; do
     --configs "$CONFIG_FILTER"
     --out-mode "$OUT_MODE"
     --fast-tag-encoding "$FAST_TAG_ENCODING"
+    --freq-mode "$FREQ_MODE"
     --out-dir "$delay_out"
   )
 

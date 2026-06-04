@@ -8,11 +8,20 @@ REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_smoke_current_head}"
 RESULT_DIR="$REPO_ROOT/results/local_verilator/$RUN_ID"
 FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
+FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 
 case "$FAST_TAG_ENCODING" in
   raw_lfsr_tag|raw_galois_tag) ;;
   *)
     echo "[SMOKE] Invalid MPTDC_FAST_TAG_ENCODING=$FAST_TAG_ENCODING" >&2
+    exit 1
+    ;;
+esac
+
+case "$FREQ_MODE" in
+  nominal|r750_delta5) ;;
+  *)
+    echo "[SMOKE] Invalid MPTDC_FREQ_MODE=$FREQ_MODE" >&2
     exit 1
     ;;
 esac
@@ -70,6 +79,9 @@ run_step() {
 
 echo "[SMOKE] Writing results to $RESULT_DIR"
 echo "[SMOKE] Fast tag encoding: $FAST_TAG_ENCODING"
+echo "[SMOKE] Frequency mode: $FREQ_MODE"
+export MPTDC_FAST_TAG_ENCODING="$FAST_TAG_ENCODING"
+export MPTDC_FREQ_MODE="$FREQ_MODE"
 
 run_step lint bash "$MPTDC_DIR/sim/verilator/run_lint.sh" "$RUN_ID"
 
@@ -103,15 +115,15 @@ VIP_TESTS=(
 )
 
 for tb in "${UNIT_TESTS[@]}"; do
-  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING"
+  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING" --freq-mode "$FREQ_MODE"
 done
 
 for tb in "${INT_TESTS[@]}"; do
-  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING"
+  run_step "$tb" bash "$TB_RUNNER" "$tb" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING" --freq-mode "$FREQ_MODE"
 done
 
 for test_name in "${VIP_TESTS[@]}"; do
-  run_step "vip_${test_name}" bash "$VIP_RUNNER" "$test_name" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING"
+  run_step "vip_${test_name}" bash "$VIP_RUNNER" "$test_name" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING" --freq-mode "$FREQ_MODE"
 done
 
 if [[ "${MPTDC_VERILATOR_SMOKE_FULL:-0}" == "1" ]]; then
@@ -125,6 +137,7 @@ fi
   echo "- Git HEAD: \`$(cat "$RESULT_DIR/git_head.txt")\`"
   echo "- Verilator: \`$(cat "$RESULT_DIR/verilator_version.txt")\`"
   echo "- Fast tag encoding: \`$FAST_TAG_ENCODING\`"
+  echo "- Frequency mode: \`$FREQ_MODE\`"
   echo "- Passed steps: $pass"
   echo "- Failed steps: $fail"
   echo "- Command transcript: \`command_transcript.log\`"

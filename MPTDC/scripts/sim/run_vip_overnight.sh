@@ -11,6 +11,7 @@
 #             --sim NAME            xrun|xcelium (default xrun)
 #             --jobs N              Parallel jobs (default 32)
 #             --out-dir DIR         Root output dir (default results/vip_overnight)
+#             --freq-mode NAME      nominal|r750_delta5 RTL timing constants
 #             --dry-run             Print downstream commands without executing
 #             --smoke               Tiny shape-check run for both stages
 #             --rebuild             Forward --rebuild to characterization stage
@@ -51,12 +52,20 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ORIGINAL_ARGS=("$@")
 VIP_RUNNER="$REPO_ROOT/ci/run_vip_xcelium_regression.sh"
 CHAR_RUNNER="$REPO_ROOT/scripts/sim/run_characterization_baseline.sh"
 
 SIM="xrun"
 JOBS=32
 OUT_DIR="$REPO_ROOT/results/vip_overnight"
+FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
+FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"
+OSC_TS_SLOW_PS=55
+OSC_TS_FAST_PS=50
+DELTA_STEP=5
+DELTA_LSB=10
+K_VERNIER=11
 DRY_RUN=0
 SMOKE=0
 CLEAN=0
@@ -128,6 +137,7 @@ while [[ $# -gt 0 ]]; do
     --sim) SIM="$2"; shift 2 ;;
     --jobs) JOBS="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
+    --freq-mode) FREQ_MODE="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --smoke) SMOKE=1; shift ;;
     --clean) CLEAN=1; shift ;;
@@ -188,6 +198,30 @@ case "$SIM" in
   xrun|xcelium) ;;
   *) echo "Error: --sim must be xrun or xcelium" >&2; exit 1 ;;
 esac
+
+case "$FREQ_MODE" in
+  nominal)
+    FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"
+    OSC_TS_SLOW_PS=55
+    OSC_TS_FAST_PS=50
+    ;;
+  r750_delta5)
+    FREQ_RTL_DEFINE_OR_PARAMETER="+define+MPTDC_FREQ_R750_DELTA5"
+    OSC_TS_SLOW_PS=79
+    OSC_TS_FAST_PS=74
+    ;;
+  *)
+    echo "Error: --freq-mode must be nominal or r750_delta5" >&2
+    exit 1
+    ;;
+esac
+DELTA_STEP=$((OSC_TS_SLOW_PS - OSC_TS_FAST_PS))
+if (( DELTA_STEP <= 0 )); then
+  echo "Error: invalid frequency mode $FREQ_MODE" >&2
+  exit 1
+fi
+DELTA_LSB=$((2 * DELTA_STEP))
+K_VERNIER=$((OSC_TS_SLOW_PS / DELTA_STEP))
 
 if [[ -n "$JITTER_SIGMA" && -z "$JITTER_BOUND" ]]; then
   echo "Error: --jitter-sigma requires --jitter-bound" >&2
@@ -256,6 +290,8 @@ CHAR_OUT="$OUT_DIR/characterization"
 MANIFEST="$OUT_DIR/overnight_manifest.json"
 mkdir -p "$OUT_DIR"
 
+echo "[OVERNIGHT] Frequency mode: $FREQ_MODE OSC_TS_SLOW_PS=$OSC_TS_SLOW_PS OSC_TS_FAST_PS=$OSC_TS_FAST_PS DELTA_STEP=$DELTA_STEP DELTA_LSB=$DELTA_LSB K_VERNIER=$K_VERNIER"
+
 vip_completed() {
   [[ -f "$VIP_OUT/vip_summary.json" ]]
 }
@@ -299,7 +335,7 @@ if (( RUN_VIP )); then
       vip_cmd+=("${VIP_TESTS[@]}")
     fi
     print_cmd "[RUN][VIP]" "${vip_cmd[@]}"
-    "${vip_cmd[@]}"
+    MPTDC_FREQ_MODE="$FREQ_MODE" "${vip_cmd[@]}"
     VIP_STATUS="completed"
   fi
 fi
@@ -321,6 +357,7 @@ if (( RUN_CHAR )); then
       --config "$CHAR_CONFIG"
       --out-mode "$CHAR_OUT_MODE"
       --nfast-encoding "$CHAR_NFAST_ENCODING"
+      --freq-mode "$FREQ_MODE"
       --out-dir "$CHAR_OUT"
       --analyze
       --calibrate
@@ -378,6 +415,13 @@ CHAR_OUT="$CHAR_OUT" \
 CHAR_NFAST_ENCODING="$CHAR_NFAST_ENCODING" \
 CHAR_FAST_TAG_ENCODING="$CHAR_FAST_TAG_ENCODING" \
 CHAR_RTL_TAG_DEFINE_OR_PARAMETER="$CHAR_RTL_TAG_DEFINE_OR_PARAMETER" \
+FREQ_MODE="$FREQ_MODE" \
+FREQ_RTL_DEFINE_OR_PARAMETER="$FREQ_RTL_DEFINE_OR_PARAMETER" \
+OSC_TS_SLOW_PS="$OSC_TS_SLOW_PS" \
+OSC_TS_FAST_PS="$OSC_TS_FAST_PS" \
+DELTA_STEP="$DELTA_STEP" \
+DELTA_LSB="$DELTA_LSB" \
+K_VERNIER="$K_VERNIER" \
 MPTDC_ROOT="$REPO_ROOT" \
 RTL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" \
 RTL_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)" \
@@ -385,6 +429,7 @@ ANALYSIS_JOBS="$ANALYSIS_JOBS" \
 ANALYSIS_CHUNKSIZE="$ANALYSIS_CHUNKSIZE" \
 ANALYSIS_BACKEND="$ANALYSIS_BACKEND" \
 ANALYSIS_LOW_MEMORY="$ANALYSIS_LOW_MEMORY" \
+COMMAND_LINE="$(printf '%q ' "$0" "${ORIGINAL_ARGS[@]}")" \
 python3 - "$MANIFEST" <<'PY'
 import json
 import os
@@ -403,6 +448,16 @@ data = {
     "rtl": {
         "branch": os.environ["RTL_BRANCH"],
         "head": os.environ["RTL_HEAD"],
+        "freq_mode": os.environ["FREQ_MODE"],
+        "freq_rtl_define_or_parameter": os.environ["FREQ_RTL_DEFINE_OR_PARAMETER"],
+    },
+    "frequency_mode": {
+        "freq_mode": os.environ["FREQ_MODE"],
+        "OSC_TS_SLOW_PS": int(os.environ["OSC_TS_SLOW_PS"]),
+        "OSC_TS_FAST_PS": int(os.environ["OSC_TS_FAST_PS"]),
+        "DELTA_STEP": int(os.environ["DELTA_STEP"]),
+        "DELTA_LSB": int(os.environ["DELTA_LSB"]),
+        "K_VERNIER": int(os.environ["K_VERNIER"]),
     },
     "packet": {
         "format_version": "fixed_raw_features_v2_7",
@@ -418,6 +473,7 @@ data = {
     "char_nfast_encoding": os.environ["CHAR_NFAST_ENCODING"],
     "char_fast_tag_encoding": os.environ["CHAR_FAST_TAG_ENCODING"],
     "rtl_tag_define_or_parameter": os.environ["CHAR_RTL_TAG_DEFINE_OR_PARAMETER"],
+    "command_line": os.environ["COMMAND_LINE"].strip(),
     "tag_encoding": FastTagMetadata(nfast_encoding=os.environ["CHAR_NFAST_ENCODING"]).as_dict(),
     "analysis": {
         "jobs": int(os.environ["ANALYSIS_JOBS"]),

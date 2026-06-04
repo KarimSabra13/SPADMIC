@@ -16,10 +16,15 @@ from pathlib import Path
 
 SCRIPT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = SCRIPT_ROOT.parent
+SCRIPTS_ROOT = SCRIPT_ROOT / "scripts"
 TOOLS_ROOT = REPO_ROOT / "tools"
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
+from analysis import mptdc_char_common as char_common  # noqa: E402
+from analysis.mptdc_char_common import FREQ_MODE_CHOICES, FREQ_MODE_NOMINAL  # noqa: E402
 from mptdc_decode.fast_tag_decode import (  # noqa: E402
     RAW_LFSR_TAG,
     FastTagMetadata,
@@ -27,12 +32,20 @@ from mptdc_decode.fast_tag_decode import (  # noqa: E402
     generate_lfsr_sequence,
 )
 
-NE = 8
-K_VERNIER = 11
-DELTA_LSB_PS = 10
+NE = char_common.NE
+K_VERNIER = char_common.K_VERNIER
+DELTA_LSB_PS = char_common.DELTA_LSB_PS
 VERNIER_NSLOW_ORIGIN_BIAS = 2
 VERNIER_NFAST_ORIGIN_BIAS = 1
 VERNIER_COEF_BIAS = 25
+
+
+def set_frequency_mode(mode: str) -> dict[str, object]:
+    global K_VERNIER, DELTA_LSB_PS
+    cfg = char_common.configure_frequency_mode(mode)
+    K_VERNIER = int(cfg["K_VERNIER"])
+    DELTA_LSB_PS = int(cfg["DELTA_LSB"])
+    return cfg
 
 
 def vernier_tconv_ps(nslow: int, nfast: int, ns: int, nf: int, slow_boundary_inc: int) -> int:
@@ -63,7 +76,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-id", default="20260601_o2_raw_tag_charac_smoke")
     parser.add_argument("--output-root", type=Path, default=Path("results/local_software"))
+    parser.add_argument("--freq-mode", default=FREQ_MODE_NOMINAL,
+                        choices=FREQ_MODE_CHOICES,
+                        help="Frequency/tap mode used for synthetic reconstruction")
     args = parser.parse_args()
+    freq_cfg = set_frequency_mode(args.freq_mode)
 
     out_dir = args.output_root / args.run_id
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -112,6 +129,8 @@ def main() -> int:
             f"- Run ID: `{args.run_id}`",
             "- Rows: 8",
             "- nfast_encoding: `raw_lfsr_tag`",
+            f"- freq_mode: `{freq_cfg['freq_mode']}`",
+            f"- K_VERNIER: `{freq_cfg['K_VERNIER']}`",
             "- tag_decode_mode: `software`",
             "- tag_width: 7",
             "- tag_columns: 8",
@@ -127,4 +146,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

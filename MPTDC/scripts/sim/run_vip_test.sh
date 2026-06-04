@@ -8,6 +8,7 @@
 #           [--osc-jitter-bound ps] [--stop-model direct|qualified-ref]
 #           [--ref-phase-ps N] [--artifact-dir DIR] [--vip-asserts] [--dry-run]
 #           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
+#           [--freq-mode nominal|r750_delta5]
 # Context : Verilator is intended for smoke runs; xrun/xcelium/VCS enable
 #           broader simulator and coverage flows.
 # Author  : Karim Sabra
@@ -34,6 +35,7 @@ ARTIFACT_DIR=""
 VIP_ASSERTS=0
 DRY_RUN=0
 FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
+FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -69,6 +71,8 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=1; shift ;;
     --fast-tag-encoding)
       FAST_TAG_ENCODING="$2"; shift 2 ;;
+    --freq-mode)
+      FREQ_MODE="$2"; shift 2 ;;
     -h|--help)
       cat <<EOF
 Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
@@ -77,6 +81,7 @@ Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
           [--stop-model direct|qualified-ref] [--ref-phase-ps N]
           [--artifact-dir DIR] [--vip-asserts] [--dry-run]
           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
+          [--freq-mode nominal|r750_delta5]
 
 Notes:
   --func-cov/--code-cov require xrun/xcelium or vcs.
@@ -104,6 +109,15 @@ case "$FAST_TAG_ENCODING" in
   raw_galois_tag) FAST_TAG_DEFINE_ARGS=(+define+MPTDC_FAST_TAG_GALOIS) ;;
   *)
     echo "Error: --fast-tag-encoding must be raw_lfsr_tag or raw_galois_tag" >&2
+    exit 1
+    ;;
+esac
+
+case "$FREQ_MODE" in
+  nominal) FREQ_MODE_DEFINE_ARGS=() ;;
+  r750_delta5) FREQ_MODE_DEFINE_ARGS=(+define+MPTDC_FREQ_R750_DELTA5) ;;
+  *)
+    echo "Error: --freq-mode must be nominal or r750_delta5" >&2
     exit 1
     ;;
 esac
@@ -239,7 +253,7 @@ if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
   COV_TEST="${COV_TEST_NAME:-$TEST_NAME}"
 fi
 
-TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}_${FAST_TAG_ENCODING}"
+TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}_${FAST_TAG_ENCODING}_${FREQ_MODE}"
 if [[ -n "$COV_TEST_NAME" ]]; then
   # Parallel xrun campaign jobs must not share one xcelium.d library.
   TB_BUILD+="_$(sanitize_path_token "$COV_TEST_NAME")"
@@ -274,6 +288,7 @@ case "$SIM" in
       -Wno-VARHIDDEN -Wno-DECLFILENAME
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
+      "${FREQ_MODE_DEFINE_ARGS[@]}"
       --Mdir "$TB_BUILD"
       --top-module mptdc_vip_tb
       -o mptdc_vip_tb
@@ -299,6 +314,7 @@ case "$SIM" in
       -top mptdc_vip_tb
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
+      "${FREQ_MODE_DEFINE_ARGS[@]}"
       -f "$REPO_ROOT/rtl/filelist.f"
       -f "$REPO_ROOT/tb/vip/filelist.f"
       -xmlibdirname "$TB_BUILD/xcelium.d"
@@ -332,6 +348,7 @@ case "$SIM" in
       +lint=all
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
+      "${FREQ_MODE_DEFINE_ARGS[@]}"
       -f "$REPO_ROOT/rtl/filelist.f"
       -f "$REPO_ROOT/tb/vip/filelist.f"
       -top mptdc_vip_tb

@@ -17,8 +17,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import mptdc_char_common as char_common
 from mptdc_char_common import (
-    DELTA_LSB_PS,
+    FREQ_MODE_CHOICES,
+    FREQ_MODE_NOMINAL,
     LABELS_FR,
     add_error_columns,
     apply_char_style,
@@ -31,14 +33,14 @@ from mptdc_char_common import (
 
 
 CHUNK_ROWS = 500_000
-ABS_ERR_BINS_PS = np.arange(0.0, 5000.0 + DELTA_LSB_PS, DELTA_LSB_PS)
-SIGNED_ERR_BINS_PS = np.arange(-5000.0, 5000.0 + DELTA_LSB_PS, DELTA_LSB_PS)
-NE = 8
-K_VERNIER = 11
+NE = char_common.NE
+K_VERNIER = char_common.K_VERNIER
 K_SLOW = K_VERNIER * NE
 K_FAST = NE
 VERNIER_COEF_BIAS = 25
-VERNIER_QUANT_PS = 10
+VERNIER_QUANT_PS = char_common.DELTA_LSB_PS
+ABS_ERR_BINS_PS = np.arange(0.0, 5000.0 + VERNIER_QUANT_PS, VERNIER_QUANT_PS)
+SIGNED_ERR_BINS_PS = np.arange(-5000.0, 5000.0 + VERNIER_QUANT_PS, VERNIER_QUANT_PS)
 
 # Match scripts/calibration/calibrate_6d_lut.py:
 # discriminator-aware LUT = (ns_inf, nf_inf, nslow, nfast_hit,
@@ -57,6 +59,23 @@ NSNF_REV = {
     for ns in range(NE)
     for nf in range(NE)
 }
+
+
+def set_frequency_mode(mode: str) -> dict[str, object]:
+    global K_VERNIER, K_SLOW, VERNIER_QUANT_PS, ABS_ERR_BINS_PS, SIGNED_ERR_BINS_PS, NSNF_REV
+
+    cfg = char_common.configure_frequency_mode(mode)
+    K_VERNIER = int(cfg["K_VERNIER"])
+    K_SLOW = K_VERNIER * NE
+    VERNIER_QUANT_PS = int(cfg["DELTA_LSB"])
+    ABS_ERR_BINS_PS = np.arange(0.0, 5000.0 + VERNIER_QUANT_PS, VERNIER_QUANT_PS)
+    SIGNED_ERR_BINS_PS = np.arange(-5000.0, 5000.0 + VERNIER_QUANT_PS, VERNIER_QUANT_PS)
+    NSNF_REV = {
+        ns * K_VERNIER - nf * (K_VERNIER - 1): (ns, nf)
+        for ns in range(NE)
+        for nf in range(NE)
+    }
+    return cfg
 
 
 @dataclass
@@ -605,6 +624,9 @@ def main() -> None:
     parser.add_argument("--output-dir", default=None, help="Analysis output directory.")
     parser.add_argument("--max-rows", type=int, default=None, help="Optional row cap for small loaded stages.")
     parser.add_argument("--chunksize", type=int, default=CHUNK_ROWS, help="CSV chunk size.")
+    parser.add_argument("--freq-mode", default=FREQ_MODE_NOMINAL,
+                        choices=FREQ_MODE_CHOICES,
+                        help="Frequency/tap mode used by the RTL")
     parser.add_argument(
         "--train-seeds",
         type=int,
@@ -612,6 +634,16 @@ def main() -> None:
         help="Number of code-density seed files used to train the maintained 6D LUT.",
     )
     args = parser.parse_args()
+    freq_cfg = set_frequency_mode(args.freq_mode)
+    print(
+        "[INFO] Frequency mode: "
+        f"{freq_cfg['freq_mode']} "
+        f"OSC_TS_SLOW_PS={freq_cfg['OSC_TS_SLOW_PS']} "
+        f"OSC_TS_FAST_PS={freq_cfg['OSC_TS_FAST_PS']} "
+        f"DELTA_STEP={freq_cfg['DELTA_STEP']} "
+        f"DELTA_LSB={freq_cfg['DELTA_LSB']} "
+        f"K_VERNIER={freq_cfg['K_VERNIER']}"
+    )
 
     root = Path(args.root)
     out_dir = Path(args.output_dir) if args.output_dir else root / "analysis"

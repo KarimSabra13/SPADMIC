@@ -7,7 +7,6 @@ Characterizes the Vernier fine-phase grid for an 8×8 MPTDC TDC.
 
 For each hit the fine-value coefficient is:
     fine_coef = ns * K_VERNIER - nf * (K_VERNIER - 1)
-              = ns * 11 - nf * 10
 
 where (ns, nf) ∈ {0, …, 7}².  Not all integers in [min, max] are
 reachable — this script identifies the gaps, computes theoretical
@@ -15,6 +14,7 @@ DNL / INL, and produces diagnostic plots.
 """
 
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -24,16 +24,33 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import TwoSlopeNorm
 
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from analysis import mptdc_char_common as char_common
+from analysis.mptdc_char_common import FREQ_MODE_CHOICES, FREQ_MODE_NOMINAL
+
 # ── Physical / design constants ──────────────────────────────────────
-NE = 8                       # number of phases (slow & fast)
-K_VERNIER = 11               # Vernier ratio
-DELTA_LSB = 10               # ps per fine_coef unit
+NE = char_common.NE          # number of phases (slow & fast)
+K_VERNIER = char_common.K_VERNIER
+DELTA_LSB = char_common.DELTA_LSB_PS
+
+
+def set_frequency_mode(mode):
+    global K_VERNIER, DELTA_LSB
+    cfg = char_common.configure_frequency_mode(mode)
+    K_VERNIER = int(cfg["K_VERNIER"])
+    DELTA_LSB = int(cfg["DELTA_LSB"])
+    return cfg
 
 
 # ── Core computation ─────────────────────────────────────────────────
 
-def build_fine_grid(ne=NE, k=K_VERNIER):
+def build_fine_grid(ne=NE, k=None):
     """Return (ns_arr, nf_arr, coef_grid) for all (ns, nf) pairs."""
+    if k is None:
+        k = K_VERNIER
     ns = np.arange(ne)
     nf = np.arange(ne)
     NS, NF = np.meshgrid(ns, nf, indexing="ij")  # NS[i,j]=i, NF[i,j]=j
@@ -52,7 +69,7 @@ def find_gaps(achievable):
     return np.setdiff1d(full, achievable)
 
 
-def diagonal_groups(ne=NE, k=K_VERNIER):
+def diagonal_groups(ne=NE, k=None):
     """Per-diagonal (d = ns − nf) statistics.
 
     Returns a list of dicts sorted by d, each containing:
@@ -60,6 +77,8 @@ def diagonal_groups(ne=NE, k=K_VERNIER):
         coefs    : sorted achievable values on this diagonal
         count    : number of values
     """
+    if k is None:
+        k = K_VERNIER
     groups = []
     for d in range(-(ne - 1), ne):
         coefs = []
@@ -109,7 +128,7 @@ def plot_heatmap(ax, coef_grid, ne):
     ax.set_yticks(range(ne))
     ax.set_xlabel("$n_f$ (fast phase index)")
     ax.set_ylabel("$n_s$ (slow phase index)")
-    ax.set_title("fine_coef = $n_s \\cdot 11 - n_f \\cdot 10$")
+    ax.set_title(f"fine_coef = $n_s \\cdot {K_VERNIER} - n_f \\cdot {K_VERNIER - 1}$")
     for i in range(ne):
         for j in range(ne):
             ax.text(j, i, str(coef_grid[i, j]), ha="center", va="center",
@@ -258,11 +277,24 @@ def parse_args():
                    help="Output PDF path (default: fine_grid_analysis.pdf)")
     p.add_argument("--no-plot", action="store_true",
                    help="Skip PDF generation (text report only)")
+    p.add_argument("--freq-mode", default=FREQ_MODE_NOMINAL,
+                   choices=FREQ_MODE_CHOICES,
+                   help="Frequency/tap mode used by the RTL")
     return p.parse_args()
 
 
 def main():
     args = parse_args()
+    freq_cfg = set_frequency_mode(args.freq_mode)
+    print(
+        "Frequency mode: "
+        f"{freq_cfg['freq_mode']} "
+        f"OSC_TS_SLOW_PS={freq_cfg['OSC_TS_SLOW_PS']} "
+        f"OSC_TS_FAST_PS={freq_cfg['OSC_TS_FAST_PS']} "
+        f"DELTA_STEP={freq_cfg['DELTA_STEP']} "
+        f"DELTA_LSB={freq_cfg['DELTA_LSB']} "
+        f"K_VERNIER={freq_cfg['K_VERNIER']}"
+    )
 
     # 1–2. Build grid, unique values
     NS, NF, coef_grid = build_fine_grid()
