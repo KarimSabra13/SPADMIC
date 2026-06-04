@@ -1,5 +1,51 @@
 # Oscillator/PD Iteration Log
 
+## O10_1_INNOVUS_FLOW_REPAIR
+
+Iteration ID: O10_1_INNOVUS_FLOW_REPAIR
+
+Git HEAD: pending local commit
+
+Branch: SPADMIC_localtag
+
+Patch summary:
+
+- Added O10.1 Innovus wrapper with required-output validation and nonzero exit on missing required outputs.
+- Added Innovus-safe O9 R750_delta5 SDC overlay without Genus-only `design(...)` variables.
+- Added repaired screenshot handling with batch-mode fallback and manual GUI restore instructions.
+- Added clk_sys-only CTS policy that skips CTS rather than running generic CCOpt on RO phase clocks.
+- Added robust phase-net, fast-tag, PD placement, summary, manager, and checkpoint reporting.
+- Documented the O10 failure modes and O10.1 runbook.
+
+Tool stage:
+
+- local shell syntax and Tcl source checks only
+- no Innovus run locally
+- no RTL, Genus, architecture, packet, or frequency changes
+
+Was this run by agent locally?
+
+- yes, `bash -n` on the O10.1 wrapper
+- yes, `tclsh` source check for O10.1 Tcl files
+- no, Innovus is lab-server only
+
+Was this run by human on lab server?
+
+- pending
+
+Evidence location:
+
+- pending server run `results/innovus/202606xx_o10_1_innovus_repair`
+
+Decision:
+
+- request O10.1 server validation and full repaired feasibility run after commit/push
+
+Next action:
+
+- Run `MPTDC_O10_VALIDATE_ONLY=1 bash MPTDC/pnr/scripts/server_run_innovus_o10_1_repair.sh 202606xx_o10_1_validate`
+- Then run `bash MPTDC/pnr/scripts/server_run_innovus_o10_1_repair.sh 202606xx_o10_1_innovus_repair`
+
 ## O0_osc_pd_signoff_infra
 
 Iteration ID: O0_osc_pd_signoff_infra
