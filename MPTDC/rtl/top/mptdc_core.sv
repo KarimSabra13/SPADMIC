@@ -430,7 +430,11 @@ module mptdc_core
   // column.  This removes the O1C fast_phase[0] binary counter -> fast_phase[nf]
   // PD capture path and limits tag fanout to the eight cells in one column.
   for (genvar nf_tag = 0; nf_tag < NE; nf_tag++) begin : gen_fast_tag_col
+`ifdef MPTDC_RELAX_FAST_TAG_PRESERVE
+    (* keep_hierarchy = "yes" *)
+`else
     (* keep_hierarchy = "yes", preserve *)
+`endif
     mptdc_fast_epoch_tag #(
       .W                (NFAST_W),
       .SEED             (FAST_TAG_SEED),
