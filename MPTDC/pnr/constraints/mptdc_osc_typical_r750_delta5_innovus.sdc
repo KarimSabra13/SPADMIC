@@ -1,13 +1,13 @@
 # =============================================================================
-# O10.1 Innovus-safe O9 R750/R700 delta-preserving oscillator overlay
+# O10.2 Innovus-safe O9 R750/R700 delta-preserving oscillator overlay
 # =============================================================================
 # Typical feasibility only. Not MMMC signoff, not final silicon signoff, and
 # not tapeout-ready. This overlay is self-contained for Innovus and must not
 # rely on Genus-side design(...) Tcl variables.
 # =============================================================================
 
-puts "MPTDC_O10_1_SDC_INFO: loading Innovus-safe O9_R750_DELTA5 overlay"
-puts "MPTDC_O10_1_SDC_INFO: labels = O10_INNOVUS_TYPICAL_FEASIBILITY NOT_MMMC_SIGNOFF NOT_FINAL_SIGNOFF"
+puts "MPTDC_O10_2_SDC_INFO: loading Innovus-safe O9_R750_DELTA5 overlay"
+puts "MPTDC_O10_2_SDC_INFO: labels = O10_INNOVUS_TYPICAL_FEASIBILITY NOT_MMMC_SIGNOFF NOT_FINAL_SIGNOFF"
 
 set mptdc_o10_fast_period_typ_ns 1.333
 set mptdc_o10_slow_period_typ_ns 1.430
@@ -43,7 +43,7 @@ proc mptdc_o10_sdc_apply_uncertainty {clock_name} {
     global mptdc_o10_setup_uncertainty_ns mptdc_o10_hold_uncertainty_ns
     set clocks [mptdc_o10_sdc_get_clock $clock_name]
     if {[llength $clocks] == 0} {
-        puts "MPTDC_O10_1_SDC_WARN: clock $clock_name not found for uncertainty"
+        puts "MPTDC_O10_2_SDC_WARN: clock $clock_name not found for uncertainty"
         return 0
     }
     catch {set_clock_uncertainty -setup $mptdc_o10_setup_uncertainty_ns $clocks}
@@ -54,18 +54,18 @@ proc mptdc_o10_sdc_apply_uncertainty {clock_name} {
 proc mptdc_o10_sdc_create_clock_if_missing {clock_name period pins} {
     set clocks [mptdc_o10_sdc_get_clock $clock_name]
     if {[llength $clocks] > 0} {
-        puts "MPTDC_O10_1_SDC_INFO: existing clock $clock_name count = [llength $clocks]"
+        puts "MPTDC_O10_2_SDC_INFO: existing clock $clock_name count = [llength $clocks]"
         return [llength $clocks]
     }
     if {[llength $pins] == 0} {
-        puts "MPTDC_O10_1_SDC_WARN: cannot create $clock_name; no pins matched"
+        puts "MPTDC_O10_2_SDC_WARN: cannot create $clock_name; no pins matched"
         return 0
     }
     if {[catch {create_clock -name $clock_name -period $period [lindex $pins 0]} err]} {
-        puts "MPTDC_O10_1_SDC_WARN: create_clock $clock_name failed: $err"
+        puts "MPTDC_O10_2_SDC_WARN: create_clock $clock_name failed: $err"
         return 0
     }
-    puts "MPTDC_O10_1_SDC_INFO: created clock $clock_name on [lindex $pins 0] period=$period"
+    puts "MPTDC_O10_2_SDC_INFO: created clock $clock_name on [lindex $pins 0] period=$period"
     return 1
 }
 
@@ -117,8 +117,8 @@ set mptdc_o10_fast_pin_patterns [list \
 set mptdc_o10_slow_pins [mptdc_o10_sdc_get_pins $mptdc_o10_slow_pin_patterns]
 set mptdc_o10_fast_pins [mptdc_o10_sdc_get_pins $mptdc_o10_fast_pin_patterns]
 
-puts "MPTDC_O10_1_SDC_INFO: matched slow RO_tune4 S pins = [llength $mptdc_o10_slow_pins]"
-puts "MPTDC_O10_1_SDC_INFO: matched fast RO_tune4 S pins = [llength $mptdc_o10_fast_pins]"
+puts "MPTDC_O10_2_SDC_INFO: matched slow RO_tune4 S pins = [llength $mptdc_o10_slow_pins]"
+puts "MPTDC_O10_2_SDC_INFO: matched fast RO_tune4 S pins = [llength $mptdc_o10_fast_pins]"
 
 for {set i 0} {$i < 8} {incr i} {
     set slow_clk [lindex $mptdc_o10_slow_clock_names $i]
@@ -139,14 +139,14 @@ foreach clk [concat $mptdc_o10_slow_clock_names $mptdc_o10_fast_clock_names] {
         incr mptdc_o10_ro_clock_count
     }
 }
-puts "MPTDC_O10_1_SDC_INFO: RO clock count after overlay = $mptdc_o10_ro_clock_count"
+puts "MPTDC_O10_2_SDC_INFO: RO clock count after overlay = $mptdc_o10_ro_clock_count"
 if {$mptdc_o10_ro_clock_count != 16} {
-    puts "MPTDC_O10_1_SDC_WARN: expected 16 RO clocks in O9 R750_delta5 Innovus view"
+    puts "MPTDC_O10_2_SDC_WARN: expected 16 RO clocks in O9 R750_delta5 Innovus view"
 }
 
-puts "MPTDC_O10_1_SDC_INFO: fast period ns = $mptdc_o10_fast_period_typ_ns"
-puts "MPTDC_O10_1_SDC_INFO: slow period ns = $mptdc_o10_slow_period_typ_ns"
-puts "MPTDC_O10_1_SDC_INFO: fast tap step ns = $mptdc_o10_fast_tap_step_typ_ns"
-puts "MPTDC_O10_1_SDC_INFO: slow tap step ns = $mptdc_o10_slow_tap_step_typ_ns"
-puts "MPTDC_O10_1_SDC_INFO: setup uncertainty ns = $mptdc_o10_setup_uncertainty_ns"
-puts "MPTDC_O10_1_SDC_INFO: hold uncertainty ns = $mptdc_o10_hold_uncertainty_ns"
+puts "MPTDC_O10_2_SDC_INFO: fast period ns = $mptdc_o10_fast_period_typ_ns"
+puts "MPTDC_O10_2_SDC_INFO: slow period ns = $mptdc_o10_slow_period_typ_ns"
+puts "MPTDC_O10_2_SDC_INFO: fast tap step ns = $mptdc_o10_fast_tap_step_typ_ns"
+puts "MPTDC_O10_2_SDC_INFO: slow tap step ns = $mptdc_o10_slow_tap_step_typ_ns"
+puts "MPTDC_O10_2_SDC_INFO: setup uncertainty ns = $mptdc_o10_setup_uncertainty_ns"
+puts "MPTDC_O10_2_SDC_INFO: hold uncertainty ns = $mptdc_o10_hold_uncertainty_ns"
