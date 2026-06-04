@@ -11,6 +11,8 @@
 #             --sim NAME            xrun|xcelium (default xrun)
 #             --jobs N              Parallel jobs (default 32)
 #             --out-dir DIR         Root output dir (default results/vip_overnight)
+#             --scratch-root DIR    Simulator build/work root for xrun/Verilator
+#                                   (default $MPTDC_SIM_SCRATCH_ROOT when set)
 #             --freq-mode NAME      nominal|r750_delta5 RTL timing constants
 #             --dry-run             Print downstream commands without executing
 #             --smoke               Tiny shape-check run for both stages
@@ -59,6 +61,7 @@ CHAR_RUNNER="$REPO_ROOT/scripts/sim/run_characterization_baseline.sh"
 SIM="xrun"
 JOBS=32
 OUT_DIR="$REPO_ROOT/results/vip_overnight"
+SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"
 OSC_TS_SLOW_PS=55
@@ -137,6 +140,7 @@ while [[ $# -gt 0 ]]; do
     --sim) SIM="$2"; shift 2 ;;
     --jobs) JOBS="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
+    --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --smoke) SMOKE=1; shift ;;
@@ -262,6 +266,9 @@ if (( ANALYSIS_CHUNKSIZE < 1 )); then
 fi
 
 OUT_DIR="$(to_abs "$OUT_DIR")"
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  SCRATCH_ROOT="$(to_abs "$SCRATCH_ROOT")"
+fi
 if [[ -n "$CHAR_VAL_DIR" ]]; then
   CHAR_VAL_DIR="$(to_abs "$CHAR_VAL_DIR")"
 fi
@@ -291,6 +298,9 @@ MANIFEST="$OUT_DIR/overnight_manifest.json"
 mkdir -p "$OUT_DIR"
 
 echo "[OVERNIGHT] Frequency mode: $FREQ_MODE OSC_TS_SLOW_PS=$OSC_TS_SLOW_PS OSC_TS_FAST_PS=$OSC_TS_FAST_PS DELTA_STEP=$DELTA_STEP DELTA_LSB=$DELTA_LSB K_VERNIER=$K_VERNIER"
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  echo "[OVERNIGHT] Scratch/build root: $SCRATCH_ROOT"
+fi
 
 vip_completed() {
   [[ -f "$VIP_OUT/vip_summary.json" ]]
@@ -331,11 +341,14 @@ if (( RUN_VIP )); then
     if (( CLEAN )); then
       vip_cmd+=(--clean)
     fi
+    if [[ -n "$SCRATCH_ROOT" ]]; then
+      vip_cmd+=(--scratch-root "$SCRATCH_ROOT")
+    fi
     if (( ${#VIP_TESTS[@]} > 0 )); then
       vip_cmd+=("${VIP_TESTS[@]}")
     fi
     print_cmd "[RUN][VIP]" "${vip_cmd[@]}"
-    MPTDC_FREQ_MODE="$FREQ_MODE" "${vip_cmd[@]}"
+    MPTDC_FREQ_MODE="$FREQ_MODE" MPTDC_SIM_SCRATCH_ROOT="$SCRATCH_ROOT" "${vip_cmd[@]}"
     VIP_STATUS="completed"
   fi
 fi
@@ -366,6 +379,9 @@ if (( RUN_CHAR )); then
       --analysis-chunksize "$ANALYSIS_CHUNKSIZE"
       --analysis-backend "$ANALYSIS_BACKEND"
     )
+    if [[ -n "$SCRATCH_ROOT" ]]; then
+      char_cmd+=(--scratch-root "$SCRATCH_ROOT")
+    fi
     if (( ANALYSIS_LOW_MEMORY )); then
       char_cmd+=(--analysis-low-memory)
     fi
@@ -422,6 +438,7 @@ OSC_TS_FAST_PS="$OSC_TS_FAST_PS" \
 DELTA_STEP="$DELTA_STEP" \
 DELTA_LSB="$DELTA_LSB" \
 K_VERNIER="$K_VERNIER" \
+SCRATCH_ROOT="$SCRATCH_ROOT" \
 MPTDC_ROOT="$REPO_ROOT" \
 RTL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" \
 RTL_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)" \
@@ -468,6 +485,7 @@ data = {
     "sim": os.environ["SIM"],
     "jobs": int(os.environ["JOBS"]),
     "out_dir": os.environ["OUT_DIR"],
+    "scratch_root": os.environ["SCRATCH_ROOT"],
     "vip_out": os.environ["VIP_OUT"],
     "char_out": os.environ["CHAR_OUT"],
     "char_nfast_encoding": os.environ["CHAR_NFAST_ENCODING"],

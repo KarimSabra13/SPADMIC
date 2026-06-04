@@ -13,6 +13,8 @@
 #           --nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag
 #           --freq-mode NAME      nominal|r750_delta5 RTL timing constants
 #           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_raw_features)
+#           --scratch-root DIR    Simulator build/work root for xrun/Verilator
+#                                 (default $MPTDC_SIM_SCRATCH_ROOT when set)
 #           --analyze             Run sweep analysis + fine-grid report, including
 #                                 raw tuple histograms/code-density CSVs and plots
 #           --analysis-jobs N     Python analysis worker budget (default 4;
@@ -64,6 +66,7 @@ OSC_TS_FAST_PS=50
 DELTA_STEP=5
 DELTA_LSB=10
 K_VERNIER=11
+SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_raw_features"
 ANALYZE=0
 ANALYSIS_JOBS=4
@@ -145,6 +148,7 @@ while [[ $# -gt 0 ]]; do
     --nfast-encoding) NFAST_ENCODING="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
+    --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     --analyze) ANALYZE=1; shift ;;
     --analysis-jobs) ANALYSIS_JOBS="$2"; shift 2 ;;
     --analysis-chunksize|--chunksize) ANALYSIS_CHUNKSIZE="$2"; shift 2 ;;
@@ -177,6 +181,12 @@ case "$OUT_DIR" in
   /*) ;;
   *) OUT_DIR="$(pwd)/$OUT_DIR" ;;
 esac
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  case "$SCRATCH_ROOT" in
+    /*) ;;
+    *) SCRATCH_ROOT="$REPO_ROOT/$SCRATCH_ROOT" ;;
+  esac
+fi
 case "$FRESH_DIR" in
   "") ;;
   /*) ;;
@@ -313,6 +323,9 @@ CAMPAIGN_CMD=(
   --freq-mode "$FREQ_MODE"
   --out-dir "$CAMPAIGN_DIR"
 )
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  CAMPAIGN_CMD+=(--scratch-root "$SCRATCH_ROOT")
+fi
 if [[ -n "$JITTER_SIGMA" ]]; then
   CAMPAIGN_CMD+=(--jitter-sigma "$JITTER_SIGMA" --jitter-bound "$JITTER_BOUND")
 fi
@@ -389,6 +402,9 @@ FIXED_DELAY_CMD=(
   --out-dir "$FIXED_DELAY_DIR"
   --analyze
 )
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  FIXED_DELAY_CMD+=(--scratch-root "$SCRATCH_ROOT")
+fi
 if [[ -n "$JITTER_SIGMA" ]]; then
   FIXED_DELAY_CMD+=(--jitter-sigma "$JITTER_SIGMA" --jitter-bound "$JITTER_BOUND")
 fi
@@ -453,6 +469,7 @@ write_manifest() {
   export MANIFEST_FIXED_DELAY_SEEDS="$FIXED_DELAY_SEEDS"
   export MANIFEST_FIXED_DELAY_N_CONV="$FIXED_DELAY_N_CONV"
   export MANIFEST_FIXED_DELAY_JOBS="$FIXED_DELAY_JOBS"
+  export MANIFEST_SCRATCH_ROOT="$SCRATCH_ROOT"
   export MANIFEST_JITTER_SIGMA="$JITTER_SIGMA"
   export MANIFEST_JITTER_BOUND="$JITTER_BOUND"
   export MANIFEST_CAMPAIGN_CMD="$(render_cmd "${CAMPAIGN_CMD[@]}")"
@@ -563,6 +580,7 @@ data = {
     },
     "paths": {
         "root": os.environ["MANIFEST_OUT_DIR"],
+        "scratch_root": os.environ["MANIFEST_SCRATCH_ROOT"],
         "campaign": os.environ["MANIFEST_CAMPAIGN_DIR"],
         "campaign_config": os.environ["MANIFEST_CAMPAIGN_CONFIG_DIR"],
         "sweep_analysis": os.environ["MANIFEST_SWEEP_ANALYSIS_DIR"],
@@ -604,6 +622,9 @@ echo "[BASELINE] Config: $CONFIG"
 echo "[BASELINE] Sweep campaign: $SEEDS seed(s) × $N_CONV conv/seed, $JOBS job(s) in parallel"
 echo "[BASELINE] Fast tag RTL: nfast_encoding=$NFAST_ENCODING fast_tag_encoding=$FAST_TAG_ENCODING"
 echo "[BASELINE] Frequency mode: $FREQ_MODE OSC_TS_SLOW_PS=$OSC_TS_SLOW_PS OSC_TS_FAST_PS=$OSC_TS_FAST_PS DELTA_STEP=$DELTA_STEP DELTA_LSB=$DELTA_LSB K_VERNIER=$K_VERNIER"
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  echo "[BASELINE] Scratch/build root: $SCRATCH_ROOT"
+fi
 echo "[BASELINE] Analysis: backend=$ANALYSIS_BACKEND jobs=$ANALYSIS_JOBS chunksize=$ANALYSIS_CHUNKSIZE low_memory=$ANALYSIS_LOW_MEMORY"
 echo "[BASELINE] Manifest: $MANIFEST_PATH"
 

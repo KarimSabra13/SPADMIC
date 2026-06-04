@@ -14,6 +14,7 @@ test "$ACTUAL_HEAD" = "$EXPECTED_HEAD"
 git status --short
 git log --oneline -5
 
+export O9_CHARACTERIZATION_RESULT_DIR=/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results
 bash MPTDC/syn/scripts/server_run_genus_o9_final_typical_r750_delta5.sh 20260604_o9_final_typical_r750_delta5
 ```
 
@@ -26,6 +27,7 @@ The script uses:
 - RO_tune4 real LEF
 - RO_tune4 Liberty shell
 - `MPTDC/syn/inputs/mptdc_osc_typical_r750_delta5.sdc`
+- O9 characterization evidence from `$O9_CHARACTERIZATION_RESULT_DIR`
 - no MMMC
 - Genus closure effort
 

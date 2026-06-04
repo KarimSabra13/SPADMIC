@@ -20,6 +20,8 @@
 #           --jitter-sigma N Override oscillator jitter sigma in ps
 #           --jitter-bound N Override oscillator jitter bound in ps
 #           --out-dir DIR    Output directory (default results/campaign)
+#           --scratch-root DIR Simulator build/work root (default MPTDC/build,
+#                            or $MPTDC_SIM_SCRATCH_ROOT when set)
 #           --rebuild        Force rebuild / clean simulator workdir
 #           --dry-run        Print what would run without executing
 #           --smoke          Quick smoke: 1 config, 1 seed, 100 conv
@@ -31,6 +33,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 BUILD_DIR="$REPO_ROOT/build"
 OBJ_DIR="$BUILD_DIR/obj_dir_campaign"
 BINARY="$OBJ_DIR/tb_campaign_collect"
@@ -121,6 +124,7 @@ while [[ $# -gt 0 ]]; do
     --jitter-sigma) JITTER_SIGMA_OVERRIDE="$2"; shift 2 ;;
     --jitter-bound) JITTER_BOUND_OVERRIDE="$2"; shift 2 ;;
     --out-dir)    OUT_DIR="$2";          shift 2 ;;
+    --scratch-root) SCRATCH_ROOT="$2";    shift 2 ;;
     --rebuild)    REBUILD=1;              shift ;;
     --dry-run)    DRY_RUN=1;              shift ;;
     --smoke)      SMOKE=1;                shift ;;
@@ -170,10 +174,6 @@ case "$FREQ_MODE" in
     ;;
 esac
 
-OBJ_DIR="$BUILD_DIR/obj_dir_campaign_${FAST_TAG_ENCODING}_${FREQ_MODE}"
-BINARY="$OBJ_DIR/tb_campaign_collect"
-XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun_${FAST_TAG_ENCODING}_${FREQ_MODE}"
-
 if [[ -n "$JITTER_SIGMA_OVERRIDE" && -z "$JITTER_BOUND_OVERRIDE" ]]; then
   echo "[ERROR] --jitter-sigma requires --jitter-bound"
   exit 1
@@ -187,6 +187,18 @@ case "$OUT_DIR" in
   /*) ;;
   *) OUT_DIR="$(pwd)/$OUT_DIR" ;;
 esac
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  case "$SCRATCH_ROOT" in
+    /*) ;;
+    *) SCRATCH_ROOT="$REPO_ROOT/$SCRATCH_ROOT" ;;
+  esac
+  BUILD_DIR="$SCRATCH_ROOT"
+else
+  BUILD_DIR="$REPO_ROOT/build"
+fi
+OBJ_DIR="$BUILD_DIR/obj_dir_campaign_${FAST_TAG_ENCODING}_${FREQ_MODE}"
+BINARY="$OBJ_DIR/tb_campaign_collect"
+XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun_${FAST_TAG_ENCODING}_${FREQ_MODE}"
 
 # ── smoke mode overrides ───────────────────────────────────────────────────
 if (( SMOKE )); then
@@ -313,6 +325,7 @@ echo "[CAMPAIGN] Simulator: ${SIM}"
 echo "[CAMPAIGN] Out mode: ${OUT_MODE}"
 echo "[CAMPAIGN] Fast tag RTL: ${FAST_TAG_ENCODING}"
 echo "[CAMPAIGN] Frequency mode: ${FREQ_MODE}"
+echo "[CAMPAIGN] Scratch/build root: ${BUILD_DIR}"
 if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
   echo "[CAMPAIGN] Jitter override: sigma=${JITTER_SIGMA_OVERRIDE} ps, bound=${JITTER_BOUND_OVERRIDE} ps"
 fi

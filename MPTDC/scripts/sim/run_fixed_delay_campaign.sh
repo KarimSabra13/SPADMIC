@@ -16,6 +16,8 @@
 #           --freq-mode NAME    nominal|r750_delta5 RTL timing constants
 #           --delay-list LIST  Comma/space-separated delays in ps
 #           --out-dir DIR      Output directory (default results/fixed_delay_campaign)
+#           --scratch-root DIR Simulator build/work root passed to run_campaign.sh
+#                              (default $MPTDC_SIM_SCRATCH_ROOT when set)
 #           --jitter-sigma N   Override oscillator jitter sigma in ps
 #           --jitter-bound N   Override oscillator jitter bound in ps
 #           --analyze          Run analyze_fixed_delay_campaign.py after collection
@@ -37,6 +39,7 @@ CONFIG_FILTER="multihit_15_cal_nominal"
 OUT_MODE="raw_features"
 FAST_TAG_ENCODING="raw_lfsr_tag"
 FREQ_MODE="nominal"
+SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 OUT_DIR="$REPO_ROOT/results/fixed_delay_campaign"
 DELAY_LIST="20,50,100,200,500,1000,2000,5000,10000,30000"
 JITTER_SIGMA_OVERRIDE=""
@@ -74,6 +77,7 @@ while [[ $# -gt 0 ]]; do
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
     --delay-list) DELAY_LIST="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
+    --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     --jitter-sigma) JITTER_SIGMA_OVERRIDE="$2"; shift 2 ;;
     --jitter-bound) JITTER_BOUND_OVERRIDE="$2"; shift 2 ;;
     --analyze) ANALYZE=1; shift ;;
@@ -157,6 +161,9 @@ echo "[FIXED-DELAY] Output root: $OUT_DIR"
 echo "[FIXED-DELAY] Delays (ps): ${DELAYS[*]}"
 echo "[FIXED-DELAY] Fast tag RTL: $FAST_TAG_ENCODING"
 echo "[FIXED-DELAY] Frequency mode: $FREQ_MODE"
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  echo "[FIXED-DELAY] Scratch/build root: $SCRATCH_ROOT"
+fi
 
 first_run=1
 for delay_ps in "${DELAYS[@]}"; do
@@ -178,6 +185,9 @@ for delay_ps in "${DELAYS[@]}"; do
     --freq-mode "$FREQ_MODE"
     --out-dir "$delay_out"
   )
+  if [[ -n "$SCRATCH_ROOT" ]]; then
+    cmd+=(--scratch-root "$SCRATCH_ROOT")
+  fi
 
   if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
     cmd+=(--jitter-sigma "$JITTER_SIGMA_OVERRIDE" --jitter-bound "$JITTER_BOUND_OVERRIDE")

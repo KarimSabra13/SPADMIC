@@ -5,6 +5,7 @@
 #           [--sim verilator|xcelium|vcs] [--waves] [--seed N]
 #           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
 #           [--freq-mode nominal|r750_delta5]
+#           [--scratch-root DIR]
 # Context : Primary filelist-driven runner for benches under tb/unit and
 #           tb/int.
 # Author  : Karim Sabra
@@ -16,6 +17,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RTL_DIR="$REPO_ROOT/rtl"
 TB_DIR="$REPO_ROOT/tb"
 BUILD_DIR="$REPO_ROOT/build"
+SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 
 # Defaults
 SIM="verilator"
@@ -33,8 +35,9 @@ while [[ $# -gt 0 ]]; do
     --seed)    SEED="$2"; shift 2 ;;
     --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
+    --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: $0 <tb_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N] [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag] [--freq-mode nominal|r750_delta5]"
+      echo "Usage: $0 <tb_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N] [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag] [--freq-mode nominal|r750_delta5] [--scratch-root DIR]"
       exit 0
       ;;
     *)
@@ -72,6 +75,14 @@ case "$FREQ_MODE" in
     exit 1
     ;;
 esac
+
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  case "$SCRATCH_ROOT" in
+    /*) ;;
+    *) SCRATCH_ROOT="$REPO_ROOT/$SCRATCH_ROOT" ;;
+  esac
+  BUILD_DIR="$SCRATCH_ROOT"
+fi
 
 # Find TB file
 TB_FILE=""

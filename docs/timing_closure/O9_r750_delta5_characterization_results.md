@@ -3,14 +3,31 @@
 Status: pending server Xcelium run.
 
 This document must be completed only after the O9 R750 delta5 overnight
-characterization finishes and the result directory is committed. O9 remains a
-typical characterization candidate until then.
+characterization finishes. O9 remains a typical characterization candidate
+until then.
 
-Expected result root:
+Expected server result root:
+
+```text
+/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/results
+```
+
+Expected server scratch root:
+
+```text
+/sim/ksabra/Sim/20260604_o9_r750_delta5_overnight/scratch
+```
+
+Expected repo evidence stub:
 
 ```text
 results/o9_char/20260604_o9_r750_delta5_overnight
 ```
+
+Raw simulation CSVs and xrun work libraries should stay under `/sim/ksabra` to
+avoid home-directory quota pressure. Commit only curated manifests, indexes,
+summaries, and this completed document unless a specific raw artifact is needed
+for review.
 
 Required comparison table:
 

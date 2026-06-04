@@ -9,6 +9,7 @@
 #           [--ref-phase-ps N] [--artifact-dir DIR] [--vip-asserts] [--dry-run]
 #           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
 #           [--freq-mode nominal|r750_delta5]
+#           [--scratch-root DIR]
 # Context : Verilator is intended for smoke runs; xrun/xcelium/VCS enable
 #           broader simulator and coverage flows.
 # Author  : Karim Sabra
@@ -18,6 +19,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD_DIR="$REPO_ROOT/build"
+SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 SIM="verilator"
 TEST_NAME=""
 WAVES=0
@@ -73,6 +75,8 @@ while [[ $# -gt 0 ]]; do
       FAST_TAG_ENCODING="$2"; shift 2 ;;
     --freq-mode)
       FREQ_MODE="$2"; shift 2 ;;
+    --scratch-root)
+      SCRATCH_ROOT="$2"; shift 2 ;;
     -h|--help)
       cat <<EOF
 Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
@@ -82,6 +86,7 @@ Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
           [--artifact-dir DIR] [--vip-asserts] [--dry-run]
           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
           [--freq-mode nominal|r750_delta5]
+          [--scratch-root DIR]
 
 Notes:
   --func-cov/--code-cov require xrun/xcelium or vcs.
@@ -121,6 +126,14 @@ case "$FREQ_MODE" in
     exit 1
     ;;
 esac
+
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  case "$SCRATCH_ROOT" in
+    /*) ;;
+    *) SCRATCH_ROOT="$REPO_ROOT/$SCRATCH_ROOT" ;;
+  esac
+  BUILD_DIR="$SCRATCH_ROOT"
+fi
 
 normalize_repo_path() {
   local raw_path="$1"

@@ -2,7 +2,8 @@
 # -----------------------------------------------------------------------------
 # Purpose : VIP Xcelium CDV regression manager.
 # Usage   : bash ci/run_vip_xcelium_regression.sh [options] [test ...]
-#           --jobs N --seed-start N --seeds N --out-dir DIR --dry-run
+#           --jobs N --seed-start N --seeds N --out-dir DIR
+#           [--scratch-root DIR] --dry-run
 # Notes   : Primary runs are wave-light. Failing seeds are rerun with deep waves
 #           into an isolated failures/ directory for morning debug.
 # -----------------------------------------------------------------------------
@@ -18,6 +19,7 @@ SEED_START=1000
 SEEDS=32
 NUM_CONV=0
 OUT_DIR="$ROOT/build/vip_xcelium"
+SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 DRY_RUN=0
 CLEAN=0
 RERUN_FAILURES=1
@@ -58,6 +60,7 @@ while [[ $# -gt 0 ]]; do
     --seeds) SEEDS="$2"; shift 2 ;;
     --num-conv) NUM_CONV="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
+    --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     --clean) CLEAN=1; shift ;;
     --no-rerun) RERUN_FAILURES=0; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -75,6 +78,12 @@ case "$OUT_DIR" in
   /*) ;;
   *) OUT_DIR="$ROOT/$OUT_DIR" ;;
 esac
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  case "$SCRATCH_ROOT" in
+    /*) ;;
+    *) SCRATCH_ROOT="$ROOT/$SCRATCH_ROOT" ;;
+  esac
+fi
 
 TESTS=("${DEFAULT_TESTS[@]}")
 if (( ${#SELECTED_TESTS[@]} > 0 )); then
@@ -115,6 +124,7 @@ run_one() {
   local num_conv="$5"
   local dry_run="$6"
   local runner="$7"
+  local scratch_root="$8"
 
   local run_id="${test_name}__seed_${seed}"
   local log_dir="$root/logs"
@@ -135,6 +145,9 @@ run_one() {
 
   if [[ "$num_conv" != "0" ]]; then
     cmd+=(--num-conv "$num_conv")
+  fi
+  if [[ -n "$scratch_root" ]]; then
+    cmd+=(--scratch-root "$scratch_root")
   fi
 
   mkdir -p "$artifact_dir" "$log_dir"
@@ -158,19 +171,22 @@ run_one() {
 }
 
 export -f run_one
-export ROOT RUNNER OUT_DIR SIM NUM_CONV DRY_RUN
+export ROOT RUNNER OUT_DIR SIM NUM_CONV DRY_RUN SCRATCH_ROOT
 
 echo "[VIP-CDV] Tests: ${TESTS[*]}"
 echo "[VIP-CDV] Seeds: $SEEDS from $SEED_START"
 echo "[VIP-CDV] Jobs:  $JOBS"
 echo "[VIP-CDV] Out:   $OUT_DIR"
+if [[ -n "$SCRATCH_ROOT" ]]; then
+  echo "[VIP-CDV] Scratch/build root: $SCRATCH_ROOT"
+fi
 
 set +e
 if command -v parallel >/dev/null 2>&1 && parallel --version 2>/dev/null | grep -q '^GNU parallel'; then
-  parallel --jobs "$JOBS" --colsep ' ' run_one {1} {2} "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER" < "$JOB_LIST"
+  parallel --jobs "$JOBS" --colsep ' ' run_one {1} {2} "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER" "$SCRATCH_ROOT" < "$JOB_LIST"
   RC=$?
 else
-  xargs -r -P "$JOBS" -L 1 bash -c 'run_one "$1" "$2" "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER"' _ < "$JOB_LIST"
+  xargs -r -P "$JOBS" -L 1 bash -c 'run_one "$1" "$2" "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER" "$SCRATCH_ROOT"' _ < "$JOB_LIST"
   RC=$?
 fi
 set -e
@@ -180,18 +196,23 @@ if (( RERUN_FAILURES )) && (( DRY_RUN == 0 )) && [[ -s "$FAIL_LIST" ]]; then
     run_id="${test_name}__seed_${seed}"
     fail_dir="$OUT_DIR/failures/$run_id"
     mkdir -p "$fail_dir"
-    bash "$RUNNER" "$test_name" \
-      --sim "$SIM" \
-      --seed "$seed" \
-      --stop-model qualified-ref \
-      --waves \
-      --func-cov \
-      --code-cov \
-      --cov-workdir "$OUT_DIR/cov_work" \
-      --cov-test-name "${run_id}__debug" \
-      --artifact-dir "$fail_dir" \
-      --vip-asserts \
-      > "$fail_dir/rerun.log" 2>&1 </dev/null || true
+    rerun_cmd=(
+      bash "$RUNNER" "$test_name"
+      --sim "$SIM"
+      --seed "$seed"
+      --stop-model qualified-ref
+      --waves
+      --func-cov
+      --code-cov
+      --cov-workdir "$OUT_DIR/cov_work"
+      --cov-test-name "${run_id}__debug"
+      --artifact-dir "$fail_dir"
+      --vip-asserts
+    )
+    if [[ -n "$SCRATCH_ROOT" ]]; then
+      rerun_cmd+=(--scratch-root "$SCRATCH_ROOT")
+    fi
+    "${rerun_cmd[@]}" > "$fail_dir/rerun.log" 2>&1 </dev/null || true
     tail -200 "$fail_dir/rerun.log" > "$fail_dir/transcript_tail.log" || true
   done < "$FAIL_LIST"
 fi
