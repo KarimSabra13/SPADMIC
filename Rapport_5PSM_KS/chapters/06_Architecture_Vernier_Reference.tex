@@ -22,9 +22,11 @@ Cette écriture met en évidence deux idées majeures. D'une part, le temps mesu
 
 Dans une écriture plus proche d'une implémentation multiphase, la mesure peut être lue comme :
 \begin{equation}
-    T_{\mathrm{mes}} \approx N_{\mathrm{slow}}\,T_{\mathrm{slow}} + N_{\mathrm{fast}}\,(T_{\mathrm{slow}}-T_{\mathrm{fast}}) + t_{\mathrm{fine}}(n_s,n_f)
+    T_{\mathrm{mes}} = N_{\mathrm{slow}}\,T_{\mathrm{slow}} + N_{\mathrm{fast}}\,(T_{\mathrm{slow}}-T_{\mathrm{fast}}) + t_{\mathrm{fine}}(n_s,n_f)
 \end{equation}
 où $N_{\mathrm{slow}}$ et $N_{\mathrm{fast}}$ correspondent aux compteurs grossiers, tandis que $t_{\mathrm{fine}}(n_s,n_f)$ représente la correction associée à la cellule de phase effectivement activée. Dans un montage multiphase, cette dernière contribution n'est plus un simple résidu abstrait : elle est directement portée par l'indice de phase lent $n_s$ et l'indice de phase rapide $n_f$.
+
+Cette égalité décrit la grandeur reconstruite par le modèle de mesure. Le temps physique réel $T_{\mathrm{hit}}$ peut ensuite s'écrire comme $T_{\mathrm{hit}} = T_{\mathrm{mes}} + \varepsilon$, où $\varepsilon$ regroupe l'erreur de quantification, les offsets, le jitter et les résidus de calibration.
 
 La figure \ref{fig:vernier-principle-detailed} met ce mécanisme en scène sous forme temporelle détaillée. Le rattrapage progressif du chemin rapide par rapport au chemin lent illustre directement la séparation entre l'information grossière, liée au nombre de cycles accumulés avant coïncidence, et l'information fine, portée par la position de la coïncidence elle-même.
 
@@ -45,7 +47,7 @@ Dans cette approche, la résolution temporelle multiphase $\Delta$ est reliée �
 \end{equation}
 où $n_b$ représente le nombre d’étages exploités dans l’oscillateur en anneau.
 
-Autrement dit, l'approche multiphase ne remplace pas le principe Vernier ; elle le raffine en subdivisant l'intervalle élémentaire $T_{\mathrm{LSB}}$ grâce à l'observation simultanée de plusieurs taps. Là où un Vernier simple attendrait la coïncidence sur une seule paire de phases, une architecture multiphase observe une famille entière de combinaisons et transforme ce rattrapage en une grille 2D.
+Autrement dit, l'approche multiphase ne remplace pas le principe Vernier ; elle le raffine en subdivisant l'intervalle élémentaire $T_{\mathrm{LSB}}$ grâce à l'observation simultanée de plusieurs nœuds de phase des oscillateurs. Là où un Vernier simple attendrait la coïncidence sur une seule paire de phases, une architecture multiphase observe une famille entière de combinaisons et transforme ce rattrapage en une grille 2D.
 
 L'intérêt du multiphase n'est donc pas seulement d'augmenter le nombre de points d'observation ; il est aussi de réduire le temps nécessaire à la décision de mesure. Or, comme le jitter accumulé des oscillateurs croît avec le temps d'observation, cette réduction contribue à limiter la dégradation temporelle de la conversion \cite{annagrebah2021thesis}. Cette idée doit être distinguée du moyennage statistique présenté au chapitre \ref{chap:resultats-calibration} : ici, le gain intervient pendant une conversion unique, par architecture, et non par moyenne de plusieurs mesures corrigées.
 

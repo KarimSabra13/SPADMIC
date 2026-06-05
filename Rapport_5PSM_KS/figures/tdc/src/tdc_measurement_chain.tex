@@ -1,28 +1,49 @@
-\documentclass[tikz,border=5pt]{standalone}
+\documentclass[tikz,border=8pt]{standalone}
 \input{tdc_publication_style.tex}
 
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\node[bloc, minimum width=28mm, minimum height=13mm] (det) at (0.0,0.0)
-{Détecteur\\[-0.6mm]{\ttfamily\scriptsize Événement SPAD}};
-\node[bloc, minimum width=33mm, minimum height=13mm, right=20mm of det] (fe)
-{Front-end d'entrée\\[-0.6mm]{\ttfamily\scriptsize Mise en forme / Latch}};
-\node[blocaccent, minimum width=28mm, minimum height=13mm, right=21mm of fe] (tdc)
-{Cœur TDC\\[-0.6mm]{\ttfamily\scriptsize Temps -> Code}};
-\node[bloc, minimum width=28mm, minimum height=13mm, right=21mm of tdc] (ro)
-{Lecture\\[-0.6mm]{\ttfamily\scriptsize Paquet / FIFO}};
-\node[bloc, minimum width=24mm, minimum height=13mm, right=20mm of ro] (host)
-{Hôte\\[-0.6mm]{\ttfamily\scriptsize Calibration}};
+\tikzset{
+  chaineBloc/.style={
+    bloc,
+    minimum width=45mm,
+    minimum height=18mm,
+    inner sep=5pt,
+    font=\sffamily\large\bfseries
+  },
+  chaineAccent/.style={
+    chaineBloc,
+    draw=bleuacier,
+    fill=bleupale
+  },
+  fluxLabel/.style={
+    etiquette,
+    font=\sffamily\small\bfseries,
+    inner xsep=3pt,
+    inner ysep=2pt
+  }
+}
 
-\draw[fluxasync] (det.east) -- (fe.west)
-  node[etiquette, midway, above=2.0mm] {impulsion asynchrone};
-\draw[fluxasync] (fe.east) -- (tdc.west)
-  node[etiquette, midway, above=2.0mm] {START / STOP};
-\draw[fluxdonnees] (tdc.east) -- (ro.west)
-  node[etiquette, midway, above=2.0mm] {données};
-\draw[fluxdonnees] (ro.east) -- (host.west)
-  node[etiquette, midway, above=2.0mm] {flux};
+\node[chaineBloc] (det) at (0.0,2.35)
+{Détecteur\\[-0.4mm]{\sffamily\normalsize événement SPAD}};
+\node[chaineBloc] (fe) at (6.2,2.35)
+{Front-end d'entrée\\[-0.4mm]{\sffamily\normalsize mise en forme}};
+\node[chaineAccent] (tdc) at (6.2,-0.55)
+{Cœur TDC\\[-0.4mm]{\sffamily\normalsize intervalle $\rightarrow$ code}};
+\node[chaineBloc] (lecture) at (12.4,-0.55)
+{Lecture\\[-0.4mm]{\sffamily\normalsize paquet / FIFO}};
+\node[chaineBloc] (host) at (12.4,-3.45)
+{Hôte\\[-0.4mm]{\sffamily\normalsize calibration}};
+
+\draw[fluxasync] (det.east) -- (fe.west);
+\node[fluxLabel] at ($(det.east)!0.5!(fe.west)+(0,-1.20)$) {impulsion asynchrone};
+\draw[fluxasync] (fe.south) -- (tdc.north)
+  node[fluxLabel, midway, right=3.0mm] {START / STOP};
+\draw[fluxdonnees] (tdc.east) -- (lecture.west)
+  node[fluxLabel, midway, above=3.0mm] {données};
+\draw[fluxdonnees] (lecture.south) -- (host.north)
+  node[fluxLabel, midway, right=3.0mm] {flux};
 
 \end{tikzpicture}
 \end{document}

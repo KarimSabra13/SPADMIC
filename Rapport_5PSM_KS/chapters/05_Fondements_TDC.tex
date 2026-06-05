@@ -28,7 +28,15 @@ L'analyse d'un \textbf{TDC} ne se limite pas à sa seule résolution nominale. P
 
 La première métrique est la résolution temporelle, souvent notée $T_{\mathrm{LSB}}$. Elle correspond au plus petit intervalle de temps que le convertisseur peut discriminer. Dans un convertisseur idéal, cette grandeur joue un rôle analogue au bit de poids faible d'un convertisseur amplitude-numérique. Dans la pratique, cette grandeur ne doit pas être confondue avec la précision mesurée en \textbf{RMS} : une résolution nominale très fine ne garantit pas, à elle seule, une dispersion faible.
 
-La seconde métrique est la plage dynamique. Elle désigne l'intervalle maximal que le convertisseur peut mesurer tout en conservant un codage exploitable. En pratique, une architecture très précise mais de faible dynamique devient rapidement difficile à utiliser si elle ne couvre pas les délais réellement rencontrés dans le système. Dans un \textbf{Vernier} à oscillateurs en anneau, cette dynamique dépend non seulement du nombre de comptes grossiers disponibles, mais aussi du temps nécessaire au rattrapage entre oscillateur lent et oscillateur rapide.
+La seconde métrique est la plage dynamique. Elle désigne l'intervalle maximal que le convertisseur peut mesurer tout en conservant un codage exploitable. En pratique, une architecture très précise mais de faible dynamique devient rapidement difficile à utiliser si elle ne couvre pas les délais réellement rencontrés dans le système. Dans un \textbf{Vernier} à oscillateurs en anneau, cette dynamique dépend non seulement de la profondeur disponible du compteur grossier, mais aussi du temps nécessaire au rattrapage entre oscillateur lent et oscillateur rapide.
+
+\subsection{Résolution effective temporelle}
+
+Par analogie avec un convertisseur amplitude-numérique, on peut également définir une résolution effective, ou \textbf{ENOB} temporel. Dans un \textbf{TDC}, cette grandeur ne remplace pas les métriques de résolution, de \textbf{DNL}, d'\textbf{INL} ou d'erreur \textbf{RMS}, mais elle permet de résumer le nombre de bits réellement exploitables sur une plage temporelle donnée. Si $T_{\mathrm{FS}}$ désigne la plage temporelle couverte et $\sigma_e$ l'erreur temporelle \textbf{RMS} effective, une écriture usuelle consiste à poser :
+\[
+    ENOB_{\mathrm{TDC}} = \log_2\left(\frac{T_{\mathrm{FS}}}{\sqrt{12}\,\sigma_e}\right).
+\]
+La plage $T_{\mathrm{FS}}$ dépend notamment de la profondeur disponible du compteur grossier, tandis que $\sigma_e$ regroupe les contributions de quantification, de non-linéarité, de jitter et de calibration résiduelle. Cette métrique doit donc être interprétée comme un indicateur synthétique, et non comme une preuve suffisante de performance.
 
 \subsection{Linéarité}
 

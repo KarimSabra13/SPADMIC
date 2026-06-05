@@ -52,10 +52,11 @@
   },
   etiquette/.style={
     fill=white,
-    inner xsep=2pt,
-    inner ysep=1.5pt,
-    font=\ttfamily\scriptsize,
-    text=grisligne
+    inner xsep=3pt,
+    inner ysep=1.8pt,
+    font=\sffamily\small\bfseries,
+    text=grisligne,
+    align=center
   },
   titre/.style={
     font=\sffamily\small\bfseries,
@@ -87,66 +88,62 @@
   \node[domaine, fit=(tsc)(arbitrage), label={[titre]above:Sortie numérique partagée}] (domsortie) {};
 \end{pgfonlayer}
 
-\coordinate (positionx) at ([yshift=8pt]position.west);
-\coordinate (positiony) at (position.west);
-\coordinate (positionz) at ([yshift=-8pt]position.west);
+\coordinate (a0tdc) at ([yshift=6pt]axezero.east);
+\coordinate (aptdc) at ([yshift=6pt]axeplus.east);
+\coordinate (amtdc) at ([yshift=6pt]axemoins.east);
+\coordinate (a0pos) at ([yshift=-7pt]axezero.east);
+\coordinate (appos) at ([yshift=-7pt]axeplus.east);
+\coordinate (ampos) at ([yshift=-7pt]axemoins.east);
 
-\coordinate (arbtdc0) at ([yshift=15pt]arbitrage.west);
-\coordinate (arbtdcp) at ([yshift=5pt]arbitrage.west);
-\coordinate (arbtdcm) at ([yshift=-5pt]arbitrage.west);
-\coordinate (arbpos) at ([yshift=-14pt]arbitrage.west);
+\coordinate (tdc0turn) at ($(a0tdc)+(3.00,0)$);
+\coordinate (tdcpturn) at ($(aptdc)+(3.35,0)$);
+\coordinate (tdcmturn) at ($(amtdc)+(3.70,0)$);
+
+\coordinate (posxturn) at ($(a0pos)+(0.95,0)$);
+\coordinate (posyturn) at ($(appos)+(1.30,0)$);
+\coordinate (poszturn) at ($(ampos)+(1.65,0)$);
+\coordinate (positionx) at ([yshift=10pt]position.west);
+\coordinate (positiony) at (position.west);
+\coordinate (positionz) at ([yshift=-10pt]position.west);
+
+\coordinate (arbtdc0) at ([yshift=18pt]arbitrage.west);
+\coordinate (arbtdcp) at ([yshift=6pt]arbitrage.west);
+\coordinate (arbtdcm) at ([yshift=-6pt]arbitrage.west);
+\coordinate (arbpos) at ([yshift=-18pt]arbitrage.west);
+\coordinate (collecteTdc) at ($(arbitrage.west)+(-2.15,0)$);
+\coordinate (departPosition) at ($(position.east)+(3.70,0)$);
 
 \coordinate (ctrltdc0) at ([yshift=11pt]tdczero.east);
 \coordinate (ctrltdcp) at ([yshift=4pt]tdcplus.east);
 \coordinate (ctrltdcm) at ([yshift=-3pt]tdcmoins.east);
 \coordinate (ctrlpos) at ([yshift=-11pt]position.east);
-
-\coordinate (busA0) at ($(axezero.east)+(2.70,0)$);
-\coordinate (busAp) at ($(axeplus.east)+(3.10,0)$);
-\coordinate (busAm) at ($(axemoins.east)+(3.50,0)$);
-
-\coordinate (busPX) at ($(axezero.east)+(0.85,0)$);
-\coordinate (busPY) at ($(axeplus.east)+(1.25,0)$);
-\coordinate (busPZ) at ($(axemoins.east)+(1.65,0)$);
-\coordinate (posxturn) at (busPX |- positionx);
-\coordinate (posyturn) at (busPY |- positiony);
-\coordinate (poszturn) at (busPZ |- positionz);
-
-\coordinate (collecteTdcHaut) at ($(tdczero.east)+(3.65,0)$);
-\coordinate (collecteTdcBas) at ($(collecteTdcHaut |- arbtdcm)+(0,0)$);
-\coordinate (departPosition) at ($(position.east)+(4.45,0)$);
-
-\coordinate (busControleHaut) at ($(tsc.west)+(-1.70,0)$);
+\coordinate (busControleHaut) at ($(tsc.west)+(-1.55,0)$);
 \coordinate (busControleBas) at ($(busControleHaut |- ctrlpos)+(0,0)$);
 
-\draw[donnees] (axezero.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busA0) |- (tdczero.west);
-\draw[donnees] (axeplus.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busAp) |- (tdcplus.west);
-\draw[donnees] (axemoins.east) -- node[etiquette, above=2pt, pos=0.50] {START / STOP} (busAm) |- (tdcmoins.west);
+\draw[donnees] (a0tdc) -- node[etiquette, above=3pt, pos=0.48] {START / STOP} (tdc0turn) |- (tdczero.west);
+\draw[donnees] (aptdc) -- node[etiquette, above=3pt, pos=0.50] {START / STOP} (tdcpturn) |- (tdcplus.west);
+\draw[donnees] (amtdc) -- node[etiquette, above=3pt, pos=0.52] {START / STOP} (tdcmturn) |- (tdcmoins.west);
 
-\draw[donnees] (axezero.east) -- node[etiquette, above=2pt, pos=0.55] {lignes X} (busPX) -- (posxturn) -- (positionx);
-\draw[donnees] (axeplus.east) -- node[etiquette, above=2pt, pos=0.55] {lignes Y} (busPY) -- (posyturn) -- (positiony);
-\draw[donnees] (axemoins.east) -- node[etiquette, below=2pt, pos=0.55] {lignes Z} (busPZ) -- (poszturn) -- (positionz);
+\draw[donnees] (a0pos) -- node[etiquette, below=3pt, pos=0.62] {lignes X} (posxturn) |- (positionx);
+\draw[donnees] (appos) -- node[etiquette, below=3pt, pos=0.62] {lignes Y} (posyturn) |- (positiony);
+\draw[donnees] (ampos) -- node[etiquette, below=3pt, pos=0.62] {lignes Z} (poszturn) |- (positionz);
 
-\draw[donnees] (tdczero.east) -- node[etiquette, above=2pt, pos=0.58] {enregistrements TDC} (collecteTdcHaut);
-\draw[donnees] (tdcplus.east) -- ($(collecteTdcHaut |- tdcplus.east)$);
-\draw[donnees] (tdcmoins.east) -- ($(collecteTdcHaut |- tdcmoins.east)$);
-\draw[donnees] (collecteTdcHaut) -- (collecteTdcBas) |- (arbtdcp);
-\draw[donnees] (position.east) -- node[etiquette, below=2pt, pos=0.56] {paquets spatiaux} (departPosition) |- (arbpos);
+\draw[donnees] (tdczero.east) -- node[etiquette, below=3pt, pos=0.48] {enreg. TDC} ($(collecteTdc |- tdczero.east)$) |- (arbtdc0);
+\draw[donnees] (tdcplus.east) -- ($(collecteTdc |- tdcplus.east)$) |- (arbtdcp);
+\draw[donnees] (tdcmoins.east) -- ($(collecteTdc |- tdcmoins.east)$) |- (arbtdcm);
+\draw[donnees] (position.east) -- node[etiquette, above=3pt, pos=0.54] {paquets spatiaux} (departPosition) |- (arbpos);
 
-\draw[controle] (tsc.west) -- node[etiquette, above=2pt, pos=0.52] {mode / statut} (busControleHaut);
+\draw[controle] (tsc.west) -- (busControleHaut);
+\node[etiquette] at ($(tsc.west)!0.52!(busControleHaut)+(0,0.38)$) {mode / statut};
 \draw[controle] (busControleHaut) -- (busControleBas);
 \draw[controle] ($(busControleHaut |- ctrltdc0)$) -- (ctrltdc0);
 \draw[controle] ($(busControleHaut |- ctrltdcp)$) -- (ctrltdcp);
 \draw[controle] ($(busControleHaut |- ctrltdcm)$) -- (ctrltdcm);
 \draw[controle] ($(busControleHaut |- ctrlpos)$) -- (ctrlpos);
-\draw[controle] (tsc.south) -- node[etiquette, right=3pt, pos=0.50] {TDC seul / position seule / mixte} (arbitrage.north);
+\draw[controle] (tsc.south) -- node[etiquette, right=4pt, pos=0.54] {mode d'export} (arbitrage.north);
 
-\draw[donnees] (arbitrage.east) -- ++(2.40,0)
-  node[etiquette, above=2pt, pos=0.58] {Flux TX partagé};
-
-\node[font=\sffamily\footnotesize, text=grisligne, align=center] at (8.50,-3.65)
-{Le chemin temporel et le chemin spatial reçoivent directement les projections SPAD ;\\
-le bloc de position ne dépend pas des sorties MPTDC.};
+\draw[donnees] (arbitrage.east) -- ++(2.65,0)
+  node[etiquette, above=3pt, pos=0.58] {Flux TX partagé};
 
 \end{tikzpicture}
 \end{document}
