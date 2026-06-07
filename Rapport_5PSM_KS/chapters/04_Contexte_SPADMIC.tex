@@ -5,7 +5,7 @@
 
 Le projet \textbf{SPADMIC} s'inscrit dans une démarche d'intégration d'une électronique de lecture dédiée à une matrice de \textbf{SPAD} (\textit{Single-Photon Avalanche Diode})~\cite{cova1996spad,becker2005tcspc}. Dans un tel système, l'information utile n'est pas limitée à la simple détection d'un événement : l'instant précis auquel cet événement se produit devient lui aussi une grandeur à exploiter. La mesure temporelle fine n'est donc pas un simple complément fonctionnel ; elle conditionne directement la valeur scientifique du système complet, la qualité de la discrimination des événements et la pertinence des traitements numériques réalisés en aval.
 
-Dans le contexte de cette alternance, \textbf{SPADMIC} doit être considéré comme un ASIC prototype. Il ne représente pas encore une version finale complètement figée, mais un véhicule de validation à deux niveaux : validation du comportement visé pour la matrice de SPAD dans le procédé choisi, et validation de l'architecture numérique de lecture qui devra ensuite évoluer vers une version plus avancée. Dans cet ensemble, le bloc de conversion temps-numérique développé autour du projet \textbf{MPTDC} apparaît comme l'une des briques les plus structurées et les plus documentées. Il dispose déjà d'un socle théorique clair, d'une implémentation RTL complète, d'une stratégie de calibration identifiée et d'un environnement de vérification cohérent. Cette maturité relative justifie qu'il constitue le cœur technique du présent rapport, sans être isolé artificiellement du reste de l'ASIC.
+\textbf{SPADMIC} doit être considéré comme un ASIC prototype. Il ne représente pas encore une version finale complètement figée, mais un véhicule de validation à deux niveaux : validation du comportement visé pour la matrice de SPAD dans le procédé choisi, et validation de l'architecture numérique de lecture qui devra ensuite évoluer vers une version plus avancée. Dans cet ensemble, le bloc de conversion temps-numérique développé autour du projet \textbf{MPTDC} apparaît comme l'une des briques les plus structurées et les plus documentées. Il dispose déjà d'un socle théorique clair, d'une implémentation RTL complète, d'une stratégie de calibration identifiée et d'un environnement de vérification cohérent. Cette maturité relative justifie de centrer l'analyse technique sur ce bloc, sans l'isoler artificiellement du reste de l'ASIC.
 
 \section{Place du TDC dans l'ASIC SPADMIC}
 
@@ -19,7 +19,7 @@ Une matrice de \textbf{SPAD} produit des impulsions brèves, asynchrones et pote
 
 Cette combinaison de contraintes explique pourquoi un \textbf{TDC} destiné à \textbf{SPADMIC} ne peut pas être conçu comme un bloc isolé, uniquement optimisé pour la résolution. Il doit être pensé comme une brique mixte, à l'interface entre une capture asynchrone, une logique de mesure rapide, des mécanismes de stockage temporaires et une chaîne de lecture numérique cadencée par une horloge système bien plus lente.
 
-Dans l'architecture active de l'ASIC, ce besoin ne se traduit pas par un seul TDC central. La matrice de SPAD reprend le principe de lecture projective tri-axis introduit par \textbf{PICMIC} (\textit{PICosecond-MICrometer sensor})~\cite{abreu2024picmic0} : un événement local produit trois informations projetées suivant des directions géométriques autour de \SI{-120}{\degree}, \SI{0}{\degree} et \SI{120}{\degree}. Les trois voies TDC ne sont donc pas seulement trois canaux indépendants ajoutés pour augmenter le débit ; elles correspondent aux trois axes temporels nécessaires pour reconstruire ensuite la position du cluster détecté par croisement géométrique et estimation de centroïde. La lecture numérique est mutualisée afin de conserver ce principe sans multiplier inutilement les sorties de l'ASIC.
+Le principe tri-axis déjà introduit au chapitre \ref{chap:introduction} impose de conserver trois voies temporelles cohérentes avec les trois projections de la matrice. Les \textbf{MPTDC} ne constituent donc pas seulement trois canaux indépendants : ils participent à une lecture coordonnée du même événement physique. La sortie numérique est ensuite mutualisée afin de limiter le nombre de broches et de conserver un flux exploitable côté hôte.
 
 \begin{figure}[H]
     \centering
@@ -32,9 +32,7 @@ La figure \ref{fig:mptdc-overview-context} montre bien cette dualité. Le chemin
 
 \section{Contribution numérique dans la puce}
 
-Le travail réalisé ne se limite pas à l'écriture isolée du cœur \textbf{MPTDC}. Il s'inscrit dans une contribution numérique plus large à la chaîne \textbf{SPADMIC}. Cette contribution couvre notamment la définition des registres de contrôle et de statut, l'intégration avec le bus \textbf{I2C}, l'organisation de la lecture des événements, les mémoires \textbf{FIFO} (\textit{First In, First Out}), la sérialisation de sortie et la définition des formats de paquets.
-
-Cette vue système est importante pour la cohérence du rapport. Elle montre que le \textbf{MPTDC} n'est pas seulement un bloc de mesure, mais une brique qui doit dialoguer avec une infrastructure numérique complète. Les choix de protocole, de largeur de bus, de buffering et de mutualisation de sortie conditionnent directement la manière dont les données temporelles peuvent être exploitées hors de l'ASIC.
+Le travail réalisé ne s'est pas limité à l'écriture isolée du cœur \textbf{MPTDC}. Pour que le bloc soit exploitable dans \textbf{SPADMIC}, il a fallu prendre en compte les blocs qui l'entourent : registres de contrôle et de statut, interface \textbf{I2C}, organisation des événements, files \textbf{FIFO} (\textit{First In, First Out}), arbitrage de sortie, sérialisation et format des paquets. Ces éléments conditionnent directement la manière dont une mesure temporelle locale devient une donnée exploitable hors de l'ASIC.
 
 \section{Contraintes fonctionnelles et technologiques}
 
@@ -68,26 +66,25 @@ Autrement dit, une bonne architecture n'est pas seulement celle qui donne la mei
 
 L'architecture globale de \textbf{SPADMIC} n'est pas encore entièrement figée, mais le bloc de conversion temps-numérique dispose déjà :
 \begin{itemize}
-    \item d'un socle théorique solidement documenté dans la littérature et dans la thèse de référence \cite{annagrebah2021thesis} ;
+    \item d'un socle théorique solidement documenté dans la littérature, notamment par les travaux de référence sur les TDC Vernier multiphases \cite{annagrebah2021thesis} ;
     \item d'une implémentation active suffisamment riche pour révéler de vraies contraintes d'ingénierie ;
     \item d'une infrastructure de simulation, de collecte et de calibration permettant d'aller au-delà d'une simple description conceptuelle.
 \end{itemize}
 
-Cette maturité se traduit par des objets vérifiables : une hiérarchie RTL complète, des bancs d'intégration, un environnement VIP, des scripts de collecte lourde et une calibration hors ASIC. Le \textbf{MPTDC} constitue donc le point où les contraintes de l'ASIC deviennent concrètes : capture asynchrone, domaines d'horloge multiples, stockage temporaire, flux de lecture partagé, non-uniformité de la grille temporelle et besoin de caractérisation statistique.
+Cette maturité se traduit par des objets vérifiables : une hiérarchie RTL complète, des bancs d'intégration, un environnement de vérification, des scripts de collecte lourde et une calibration hors ASIC. Le \textbf{MPTDC} constitue donc le point où les contraintes de l'ASIC deviennent concrètes : capture asynchrone, domaines d'horloge multiples, stockage temporaire, flux de lecture partagé, non-uniformité de la grille temporelle et besoin de caractérisation statistique.
 
 \section{Objectifs techniques retenus pour le bloc étudié}
 
-À ce niveau du document, les objectifs doivent rester formulés comme des exigences système, avant d'introduire les détails Vernier et RTL dans les chapitres suivants :
+Les objectifs retenus pour le bloc \textbf{MPTDC} doivent rester formulés comme des exigences système avant de descendre vers les détails Vernier et RTL. Ils fixent le contrat d'architecture suivant :
 \begin{itemize}
-    \item accroître la granularité de la quantification fine par une interpolation spatio-temporelle à haute densité ;
-    \item accepter des impulsions de mesure réellement asynchrones, cohérentes avec la nature des événements détectés ;
-    \item découpler la dynamique temporelle de la mesure immédiate du débit de lecture de l'ASIC ;
-    \item exporter des observables suffisamment riches pour permettre une calibration externe évolutive ;
-    \item limiter le coût d'intégration en broches, en bande passante et en logique de sortie ;
-    \item maintenir une architecture vérifiable, caractérisable et compatible avec les contraintes d'un prototype en \SI{180}{\nano\meter}.
+    \item obtenir une mesure temporelle fine compatible avec l'approche Vernier multiphase ;
+    \item accepter une capture réellement asynchrone des événements \texttt{START}/\texttt{STOP} ;
+    \item découpler la capture immédiate de la lecture afin de limiter le temps mort ;
+    \item exporter une observabilité suffisante pour une calibration externe ;
+    \item conserver une intégration réaliste en technologie \SI{180}{\nano\meter}.
 \end{itemize}
 
-Ces objectifs montrent déjà que la question centrale n'est pas seulement : \og comment obtenir quelques picosecondes de résolution ? \fg{} La vraie question est plus large : \og comment construire un \textbf{TDC} de haute précision qui reste cohérent avec une implémentation \textit{ASIC}, une stratégie de vérification, un ASIC prototype à plusieurs voies TDC et un budget d'intégration réaliste ? \fg{}
+Ces objectifs ramènent la question centrale à un compromis d'ingénierie : construire un \textbf{TDC} précis, mais aussi réarmable, observable, routable et compatible avec une chaîne ASIC à plusieurs voies temporelles.
 
 \begin{summaryBox}
 Le cœur \textbf{MPTDC} est une brique d'architecture réelle, soumise à des contraintes de technologie, de domaines d'horloge, de lecture, de surface et de calibration. Son intérêt technique vient de cette articulation entre exigence temporelle, intégration ASIC et vérification numérique.

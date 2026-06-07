@@ -9,6 +9,28 @@
   bottom=6pt
 }
 
+\lstdefinestyle{rtlSnippetStyle}{
+  basicstyle=\ttfamily\scriptsize,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  showstringspaces=false,
+  tabsize=2
+}
+
+\newtcblisting{rtlSnippet}[1]{
+  breakable,
+  colback=gray!6,
+  colframe=gray!45,
+  title=\textbf{#1},
+  left=4pt,
+  right=4pt,
+  top=4pt,
+  bottom=4pt,
+  listing only,
+  listing options={style=rtlSnippetStyle}
+}
+
 \newcommand{\HRule}{\rule{\linewidth}{0.4pt}}
 
 \newcommand{\blankpage}{%

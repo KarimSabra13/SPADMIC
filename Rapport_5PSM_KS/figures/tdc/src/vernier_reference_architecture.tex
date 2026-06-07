@@ -13,7 +13,7 @@
     minimum width=28mm,
     inner sep=3pt,
     align=center,
-    font=\sffamily\small\bfseries
+    font=\sffamily\normalsize\bfseries
   },
   oscillateur/.style={
     boitetech,
@@ -28,7 +28,7 @@
   memoire/.style={
     boitetech,
     minimum width=42mm,
-    minimum height=60mm
+    minimum height=76mm
   },
   lent/.style={
     draw=red!80!black,
@@ -45,11 +45,15 @@
     line width=1.45pt,
     -{Latex[length=2.6mm,width=1.7mm]}
   },
+  busdataflow/.style={
+    busdata,
+    rounded corners=7pt
+  },
   etiquetteflux/.style={
     fill=white,
     inner xsep=1.8pt,
     inner ysep=1.0pt,
-    font=\ttfamily\scriptsize,
+    font=\sffamily\footnotesize\bfseries,
     text=grisligne
   }
 }
@@ -57,7 +61,7 @@
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\node[boitetech, minimum width=34mm, minimum height=18mm] (prelogic) at (0,0)
+\node[boitetech, minimum width=36mm, minimum height=18mm] (prelogic) at (0,0)
 {Prélogique\\(EN)};
 
 \node[oscillateur] (slowosc) at (6.4,3.85)
@@ -69,7 +73,7 @@
 
 \node[boitetech, minimum width=31mm] (slowcnt) at (13.15,3.85)
 {Compteur lent};
-\node[memoire] (memory) at (16.55,0)
+\node[memoire] (memory) at (17.10,0)
 {Mémoire\\d'échantillonnage};
 \node[boitetech, minimum width=31mm] (fastcnt) at (13.15,-3.85)
 {Compteur rapide};
@@ -82,20 +86,20 @@
 \draw[rapide] (stopin) -- (prelogic.west |- stopin)
   node[etiquetteflux, midway, below=2pt, text=blue!80!black] {STOP};
 
-\draw[lent] (prelogic.north) -- ++(0,1.05) -| (slowosc.west)
-  node[etiquetteflux, pos=0.25, above=2pt, text=red!80!black] {$En_{slow}$};
-\draw[rapide] (prelogic.south) -- ++(0,-1.05) -| (fastosc.west)
-  node[etiquetteflux, pos=0.25, below=2pt, text=blue!80!black] {$En_{fast}$};
+\draw[lent] (prelogic.north) -- (prelogic.north |- slowosc.west) -- (slowosc.west);
+\node[etiquetteflux, text=red!80!black] at (2.35,3.98) {$En_{slow}$};
+\draw[rapide] (prelogic.south) -- (prelogic.south |- fastosc.west) -- (fastosc.west);
+\node[etiquetteflux, text=blue!80!black] at (2.35,-3.98) {$En_{fast}$};
 
 \draw[lent] (slowosc.east) -- (slowcnt.west)
   node[etiquetteflux, midway, above=2pt, text=red!80!black] {débordement lent};
 \draw[rapide] (fastosc.east) -- (fastcnt.west)
   node[etiquetteflux, midway, below=2pt, text=blue!80!black] {débordement rapide};
 
-\draw[busdata] (slowcnt.east) -- ++(0.70,0) |- ([yshift=12mm]memory.west)
-  node[etiquetteflux, pos=0.28, above=2pt] {$N_{slow}$};
-\draw[busdata] (fastcnt.east) -- ++(0.70,0) |- ([yshift=-12mm]memory.west)
-  node[etiquetteflux, pos=0.28, below=2pt] {$N_{fast}$};
+\draw[busdata] (slowcnt.east) -- (memory.west |- slowcnt.east);
+\node[etiquetteflux] at (15.12,4.15) {$N_{slow}$};
+\draw[busdata] (fastcnt.east) -- (memory.west |- fastcnt.east);
+\node[etiquetteflux] at (15.12,-4.15) {$N_{fast}$};
 
 \foreach \i in {1,...,9} {
   \pgfmathsetmacro{\alpha}{\i/10}

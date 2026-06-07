@@ -30,7 +30,7 @@
 \draw[stagesnap] (5.0,3.08) rectangle (6.1,3.82);
 \node[textebarre,font=\sffamily\scriptsize\bfseries] at (5.55,3.45) {Snapshot};
 \draw[stagedrain] (6.1,3.08) rectangle (9.7,3.82);
-\node[textebarre] at (7.9,3.45) {Drain};
+\node[textebarre] at (7.9,3.45) {Lecture};
 \draw[stagetx] (9.7,3.08) rectangle (13.9,3.82);
 \node[textebarre] at (11.8,3.45) {Sérialisation TX};
 \draw[stagefree] (13.9,3.08) rectangle (16.8,3.82);
@@ -43,20 +43,20 @@
 \draw[stagesnap] (9.7,1.68) rectangle (10.8,2.42);
 \node[textebarre,font=\sffamily\scriptsize\bfseries] at (10.25,2.05) {Snapshot};
 \draw[stagedrain] (10.8,1.68) rectangle (13.9,2.42);
-\node[textebarre] at (12.35,2.05) {Drain};
+\node[textebarre] at (12.35,2.05) {Lecture};
 \draw[stagetx] (13.9,1.68) rectangle (16.8,2.42);
 \node[textebarre] at (15.35,2.05) {Sérialisation TX};
 
 \draw[<->,draw=grisligne,line width=0.85pt] (6.1,1.05) -- (9.7,1.05);
 \node[etiquette,align=center] at (7.9,0.62)
-  {recouvrement : drain C0 pendant capture C1};
+  {recouvrement : lecture C0 pendant capture C1};
 
 \node[stagecap,minimum width=12mm,minimum height=5mm] at (2.4,-0.20) {};
 \node[anchor=west,font=\sffamily\scriptsize] at (3.1,-0.20) {mesure active};
 \node[stagesnap,minimum width=12mm,minimum height=5mm] at (6.0,-0.20) {};
 \node[anchor=west,font=\sffamily\scriptsize] at (6.7,-0.20) {image protégée};
 \node[stagedrain,minimum width=12mm,minimum height=5mm] at (9.8,-0.20) {};
-\node[anchor=west,font=\sffamily\scriptsize] at (10.5,-0.20) {scan contexte};
+\node[anchor=west,font=\sffamily\scriptsize] at (10.5,-0.20) {lecture contexte};
 \node[stagetx,minimum width=12mm,minimum height=5mm] at (13.6,-0.20) {};
 \node[anchor=west,font=\sffamily\scriptsize] at (14.3,-0.20) {paquet narrow};
 

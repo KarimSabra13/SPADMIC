@@ -3,13 +3,13 @@
 \justifying
 \sloppy
 
-\section{Synthèse du rapport}
+\section{Synthèse technique}
 
-Ce rapport a présenté le projet \textbf{SPADMIC} comme un prototype ASIC de lecture pour matrice de \textbf{SPAD}, dans lequel la mesure temporelle constitue une brique essentielle de la reconstruction. Le document a d'abord replacé ce besoin dans le contexte du système complet : plusieurs axes de lecture doivent fournir une information temporelle exploitable, compacte et suffisamment robuste pour être transmise vers l'hôte, où une calibration externe peut compléter le traitement embarqué.
+Le projet \textbf{SPADMIC} est structuré comme un prototype ASIC de lecture pour matrice de \textbf{SPAD}, dans lequel la mesure temporelle constitue une brique essentielle de la reconstruction. Le besoin système impose plusieurs axes de lecture, un flux de sortie compact et une observabilité suffisante pour permettre une calibration externe côté hôte.
 
-À partir de ce besoin, le rapport a introduit les fondements des \textbf{TDC} puis le principe Vernier. Le choix d'une architecture Vernier multiphase, inspirée de la thèse de référence, répond à une contrainte centrale : obtenir une finesse temporelle élevée sans supposer qu'un délai élémentaire unique suffise à porter toute la résolution. L'observation parallèle de plusieurs phases permet de réduire le temps nécessaire à la décision de mesure et prépare naturellement une lecture sous forme de matrice de phase.
+Le choix d'une architecture Vernier multiphase répond à une contrainte centrale : obtenir une finesse temporelle élevée sans supposer qu'un délai élémentaire unique suffise à porter toute la résolution. L'observation parallèle de plusieurs phases réduit le temps nécessaire à la décision de mesure et prépare naturellement une lecture sous forme de matrice de phase.
 
-Le travail présenté a ensuite montré le passage de ce principe vers une implémentation \textbf{RTL} intégrable. Le cœur \textbf{MPTDC} associe une capture asynchrone des événements, deux familles de phases Vernier, une matrice de détection, une protection de l'image de mesure, une banque de contextes, une lecture en domaine système et une trame de sortie compacte sur \SI{16}{\bit}. L'objectif du bloc n'est donc pas seulement de produire un temps brut : il est de fournir, pour les trois axes de lecture \textbf{SPADMIC}, une mesure temporelle exploitable, vérifiable et compatible avec une correction hors ASIC.
+L'implémentation \textbf{RTL} active transforme ce principe en bloc intégrable. Le cœur \textbf{MPTDC} associe une capture asynchrone des événements, deux familles de phases Vernier, une matrice de détection, un snapshot de l'image de mesure, une banque à deux contextes, une lecture en domaine système et une trame de sortie compacte sur \SI{16}{\bit}. L'objectif du bloc n'est donc pas seulement de produire un temps brut : il est de fournir, pour les trois axes de lecture \textbf{SPADMIC}, une mesure temporelle exploitable et compatible avec une correction hors ASIC.
 
 La vérification fonctionnelle a consolidé cette architecture. Le bloc a été exercé avec une démarche proche de l'industrie : bancs unitaires, bancs d'intégration, scénarios dirigés et aléatoires, comparaison systématique avec un modèle de référence, contrôle de la cohérence des paquets, de la rétropression, des resets, des timeouts et des cas limites. Cette étape a permis de vérifier le contrat numérique du bloc avant de s'appuyer sur ses sorties pour la caractérisation.
 
@@ -29,7 +29,7 @@ La suite devra également consolider les modèles d'oscillateurs, rejouer la car
 
 \section{Apport méthodologique}
 
-Au-delà du fonctionnement du bloc, ce travail a permis de parcourir une démarche complète d'ingénierie numérique ASIC. Les choix d'architecture, la micro-architecture, l'écriture \textbf{RTL}, la vérification, la caractérisation, le timing et l'intégration physique ne sont pas des étapes indépendantes : chacune impose des contraintes qui peuvent remettre en question les hypothèses prises aux étapes précédentes.
+Au-delà du fonctionnement du bloc, la démarche suivie couvre une chaîne complète d'ingénierie numérique ASIC. Les choix d'architecture, la micro-architecture, l'écriture \textbf{RTL}, la vérification, la caractérisation, le timing et l'intégration physique ne sont pas des étapes indépendantes : chacune impose des contraintes qui peuvent remettre en question les hypothèses prises aux étapes précédentes.
 
 L'expérience montre ainsi que concevoir un bloc ne revient pas seulement à obtenir une simulation fonctionnelle correcte. Il faut raisonner en boucle entre le besoin système, la structure matérielle, les observables disponibles, la vérifiabilité, la profondeur logique, les chemins critiques et les contraintes d'intégration. Cette approche donne une base plus solide pour aborder de futurs blocs ASIC, avec une meilleure anticipation des risques liés au timing, à la validation et au passage du modèle RTL vers un circuit physique.
 

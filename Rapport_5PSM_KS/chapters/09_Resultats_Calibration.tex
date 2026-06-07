@@ -7,7 +7,7 @@
 
 La caractérisation répond à une question simple : les observables exportées par le \textbf{MPTDC} permettent-elles de transformer une grille Vernier non uniforme en mesure temporelle exploitable ? Les résultats de ce chapitre proviennent de simulations \textbf{RTL}/\textit{Xcelium}. Ils doivent donc être lus comme une preuve numérique pré-silicium, et non comme une mesure physique du circuit fabriqué.
 
-Le flot utilisé sépare trois étapes : une collecte large de conversions, un apprentissage de table de correction hors circuit, puis une validation tenue hors apprentissage. Les figures publiées proviennent des artefacts versionnés du projet ; les CSV bruts de campagne ne sont pas intégrés au rapport.
+Le flot utilisé sépare trois étapes : une collecte large de conversions, un apprentissage de table de correction hors circuit, puis une validation tenue hors apprentissage. Les figures publiées proviennent des artefacts versionnés du projet ; les CSV bruts de campagne restent dans les artefacts de caractérisation.
 
 \section{Observables et calibration externe}
 
@@ -27,6 +27,8 @@ L'architecture n'exporte pas un timestamp brut isolé. Elle fournit une image pa
     \caption{Résultat principal de calibration sur validation tenue hors apprentissage. La correction supprime le biais brut de l'ordre de \SI{1.9}{\nano\second} et ramène la RMSE à \SI{18.56}{\pico\second}.}
     \label{tab:calibration-pre-post}
 \end{table}
+
+La colonne \textbf{P99 $|e|$} donne le 99e percentile de l'erreur absolue : \SI{99}{\percent} des conversions de validation présentent une erreur inférieure à ce seuil. La moyenne résiduelle de \SI{-0.008}{\pico\second} ne doit pas être lue comme une précision absolue à la femtoseconde près ; elle indique surtout que le biais moyen est annulé à l'échelle numérique de la campagne et devient négligeable devant la dispersion corrigée.
 
 \begin{figure}[H]
     \centering
@@ -48,11 +50,13 @@ Avant correction, la grille fine n'est pas uniforme. La matrice \mbox{$8\times8$
     \label{fig:char-dnl-inl}
 \end{figure}
 
-Sur les codes atteints de la campagne focalisée, le pic DNL observable vaut environ \textbf{0.987 LSB} et l'INL aux extrémités environ \textbf{1.553 LSB}. Ces valeurs montrent que les codes observés restent exploitables, mais elles ne contredisent pas la parcimonie de la grille complète. Les analyses plus fines de transfert et de stress de frontière sont conservées dans les artefacts de caractérisation ; le corps principal retient seulement leur conclusion : la structure brute est mesurable et corrigeable, à condition de garder les métadonnées auxiliaires dans le flux hôte.
+Sur les codes atteints de la campagne focalisée, le pic DNL observable vaut environ \textbf{0.987 LSB} et l'INL aux extrémités environ \textbf{1.553 LSB}. Ces valeurs montrent que les codes observés restent exploitables, mais elles ne contredisent pas la parcimonie de la grille complète. Les analyses plus fines de transfert et de stress de frontière sont conservées dans les artefacts de caractérisation ; la synthèse des résultats retient seulement leur conclusion : la structure brute est mesurable et corrigeable, à condition de garder les métadonnées auxiliaires dans le flux hôte.
 
 \section{Gain par moyennage statistique}
 
 Une fois la correction LUT appliquée, le flot d'analyse permet d'estimer le gain obtenu lorsque plusieurs mesures indépendantes corrigées sont moyennées. Cette étude reste une projection statistique sur données RTL ; elle ne remplace pas un banc de répétabilité silicium à délai fixe.
+
+La colonne \textbf{P90} correspond au 90e percentile de l'erreur absolue après moyennage : $90\,\%$ des groupes simulés restent sous ce seuil. Elle complète la RMSE par une lecture robuste de la queue de distribution, moins extrême que le percentile 99 utilisé pour la validation mono-échantillon.
 
 \begin{table}[H]
     \centering
@@ -70,7 +74,7 @@ Une fois la correction LUT appliquée, le flot d'analyse permet d'estimer le gai
         \num{50} & \SI{2.64}{\pico\second} & \SI{2.10}{\pico\second} & \SI{4.34}{\pico\second} \\
         \bottomrule
     \end{tabular}
-    \caption{Étude de moyennage post-LUT limitée à un domaine réaliste pour le corps du rapport. Les seuils de \SI{10}{\pico\second} et \SI{5}{\pico\second} sont franchis respectivement autour de $N=4$ et $N=15$.}
+    \caption{Étude de moyennage post-LUT sur le domaine statistique retenu. Les seuils de \SI{10}{\pico\second} et \SI{5}{\pico\second} sont franchis respectivement autour de $N=4$ et $N=15$.}
     \label{tab:averaging-study}
 \end{table}
 

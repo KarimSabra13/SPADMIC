@@ -46,7 +46,7 @@ ax.set_ylim(0, 34)
 ax.set_xticks([1, 2, 4, 8, 15, 30, 50, 64])
 ax.set_xlabel("Nombre de mesures moyennées N")
 ax.set_ylabel("Erreur (ps)")
-ax.set_title("Moyennage post-LUT borné au domaine réaliste du rapport")
+ax.set_title("Moyennage post-LUT sur le domaine statistique retenu")
 ax.grid(True, which="major", color="#D6DCE2", linewidth=0.7)
 ax.legend(loc="upper right", frameon=True)
 

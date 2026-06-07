@@ -13,7 +13,7 @@
     minimum width=30mm,
     inner sep=3pt,
     align=center,
-    font=\sffamily\small\bfseries
+    font=\sffamily\normalsize\bfseries
   },
   oscillateur/.style={
     boitetech,
@@ -52,9 +52,9 @@
   },
   etiquetteflux/.style={
     fill=white,
-    inner xsep=1.8pt,
-    inner ysep=1.0pt,
-    font=\ttfamily\scriptsize,
+    inner xsep=2.4pt,
+    inner ysep=1.2pt,
+    font=\ttfamily\small\bfseries,
     text=grisligne
   }
 }
@@ -63,26 +63,26 @@
 \begin{tikzpicture}[x=1cm,y=1cm]
 
 \node[ajoute, minimum width=36mm, minimum height=20mm] (capture) at (0,0)
-{Capture asynchrone\\[-0.5mm]{\ttfamily\scriptsize START/STOP}\\[-0.5mm]{\ttfamily\scriptsize allocation contexte}};
+{Capture asynchrone\\[-0.5mm]{\ttfamily\footnotesize START/STOP}\\[-0.5mm]{\ttfamily\footnotesize alloc. contexte}};
 
 \node[oscillateur] (slowosc) at (6.2,3.35)
-{Oscillateur lent\\[-0.5mm]{\ttfamily\scriptsize 8 phases utiles}};
+{Oscillateur lent\\[-0.5mm]{\ttfamily\footnotesize 8 phases utiles}};
 \node[matrice] (matrix) at (6.2,0)
-{Matrice de phase\\[-0.5mm]$8\times8$\\[-0.5mm]{\ttfamily\scriptsize 64 cellules PD}};
+{Matrice de phase\\[-0.5mm]$8\times8$\\[-0.5mm]{\ttfamily\footnotesize 64 cellules PD}};
 \node[oscillateur] (fastosc) at (6.2,-3.35)
-{Oscillateur rapide\\[-0.5mm]{\ttfamily\scriptsize 8 phases utiles}};
+{Oscillateur rapide\\[-0.5mm]{\ttfamily\footnotesize 8 phases utiles}};
 
-\node[boitetech, minimum width=30mm] (slowcnt) at (11.05,2.55)
-{Compteur lent\\[-0.5mm]{\ttfamily\scriptsize valeur grossière}};
+\node[boitetech, minimum width=34mm] (slowcnt) at (11.05,2.55)
+{Compteur lent\\[-0.5mm]{\ttfamily\footnotesize valeur grossière}};
 \node[memoire] (ctx) at (15.0,0)
-{Banque de contextes\\[-0.5mm]{\ttfamily\scriptsize 2 snapshots}\\[-0.5mm]{\ttfamily\scriptsize image figée}};
-\node[boitetech, minimum width=30mm] (fastcnt) at (11.05,-2.55)
-{Compteur rapide\\[-0.5mm]{\ttfamily\scriptsize valeur grossière}};
+{Banque de contextes\\[-0.5mm]{\ttfamily\footnotesize 2 images}\\[-0.5mm]{\ttfamily\footnotesize contexte figé}};
+\node[boitetech, minimum width=34mm] (fastcnt) at (11.05,-2.55)
+{Compteur rapide\\[-0.5mm]{\ttfamily\footnotesize valeur grossière}};
 
 \node[ajoute, minimum width=38mm, minimum height=14mm] (drain) at (20.8,0.95)
-{Drain \texttt{clk\_sys}\\[-0.5mm]{\ttfamily\scriptsize records}};
+{Lecture contexte\\[-0.5mm]{\ttfamily\footnotesize clk\_sys}};
 \node[ajoute, minimum width=38mm, minimum height=14mm] (tx) at (20.8,-1.25)
-{FIFO + sérialiseur\\[-0.5mm]{\ttfamily\scriptsize sortie 16 bits}};
+{FIFO + sérialiseur\\[-0.5mm]{\ttfamily\footnotesize sortie 16 bits}};
 
 \coordinate (startin) at ($(capture.west)+(-1.95,0.55)$);
 \coordinate (stopin) at ($(capture.west)+(-1.95,-0.55)$);
@@ -102,9 +102,9 @@
 \draw[rapide] (fastosc.east) -- ++(0.40,0) |- (fastcnt.west)
   node[etiquetteflux, pos=0.30, below=2pt, text=blue!80!black] {débordement};
 
-\draw[busdata] (slowcnt.east) -- ([yshift=18mm]ctx.west)
+\draw[busdata] (slowcnt.east) -- (ctx.west |- slowcnt.east)
   node[etiquetteflux, midway, above=2pt] {$N_{slow}$};
-\draw[busdata] (fastcnt.east) -- ([yshift=-18mm]ctx.west)
+\draw[busdata] (fastcnt.east) -- (ctx.west |- fastcnt.east)
   node[etiquetteflux, midway, below=2pt] {$N_{fast}$};
 
 \foreach \i in {1,...,8} {
@@ -122,18 +122,14 @@
   \draw[busdata, line width=0.95pt] (matrixout\i) -- (ctxin\i);
 }
 
-\node[etiquetteflux] at (10.95,0.48) {faisceau de hits};
+\node[etiquetteflux] at (10.95,0.48) {image figée};
 
 \draw[busdata, line width=2.2pt] (ctx.east) -- ++(0.95,0) |- (drain.west)
-  node[etiquetteflux, pos=0.30, above=2pt] {contexte prêt};
+  node[etiquetteflux, pos=0.27, above=4pt] {contexte prêt};
 \draw[busdata, line width=2.2pt] (drain.south) -- (tx.north)
   node[etiquetteflux, midway, right=2pt] {records};
 \draw[busdata, line width=2.4pt] (tx.east) -- ++(2.2,0)
   node[etiquetteflux, pos=0.62, above=2pt] {flux TX};
-
-\node[etiquetteflux, align=center, font=\sffamily\scriptsize] at (10.5,-4.85)
-{Flux logique : START/STOP $\rightarrow$ capture $\rightarrow$ oscillateurs $\rightarrow$ matrice + compteurs\\
-$\rightarrow$ banque de contextes $\rightarrow$ drain, FIFO et sortie 16 bits.};
 
 \end{tikzpicture}
 \end{document}

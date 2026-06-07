@@ -52,7 +52,5 @@
     "E~>F T_{ver,2}",
     "H-|>J"
   ],
-  "foot": {
-    "text": "Rattrapage progressif jusqu'à la première coïncidence utile."
-  }
+  "foot": {}
 }

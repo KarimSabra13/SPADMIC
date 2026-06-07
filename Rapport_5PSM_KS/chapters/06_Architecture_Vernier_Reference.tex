@@ -1,4 +1,4 @@
-\chapter{Principe Vernier et architecture de référence issue de la thèse}
+\chapter{Principe Vernier et architecture de référence}
 \label{chap:vernier-reference}
 \justifying
 \sloppy
@@ -9,7 +9,7 @@ Le principe Vernier consiste à comparer deux évolutions temporelles voisines m
 
 Dans le cas d'un Vernier à oscillateurs en anneau, un oscillateur lent est déclenché par l'événement de départ, tandis qu'un oscillateur rapide est déclenché par l'événement d'arrêt. Comme la période de l'oscillateur rapide est plus faible, ce dernier rattrape progressivement l'oscillateur lent. La première coïncidence utile permet de localiser l'intervalle mesuré avec une finesse déterminée par l'écart entre les deux périodes.
 
-La formulation de base rappelée dans la thèse s'écrit sous la forme \cite{annagrebah2021thesis} :
+La formulation de base associée au Vernier à oscillateurs s'écrit sous la forme \cite{annagrebah2021thesis} :
 \begin{equation}
     T_{\mathrm{in}} = N_{\mathrm{slow}}\,T_{\mathrm{slow}} + N_{\mathrm{fast}}\,T_{\mathrm{LSB}}
 \end{equation}
@@ -32,14 +32,74 @@ La figure \ref{fig:vernier-principle-detailed} met ce mécanisme en scène sous 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{tdc/vernier_principle_detailed.png}
+    \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[x=0.78cm,y=0.82cm,>=latex]
+        \tikzset{
+            wave/.style={draw=black,line width=0.85pt},
+            grid/.style={draw=gray!32,line width=0.35pt,densely dotted},
+            siglabel/.style={font=\sffamily\small,anchor=east,text=blue!65!black},
+            count/.style={draw=black,line width=0.6pt,minimum width=2.15cm,minimum height=0.34cm,
+                          inner sep=0pt,font=\sffamily\small},
+            note/.style={font=\sffamily\small,align=center,fill=white,inner sep=1pt}
+        }
+
+        \foreach \x in {0,1,...,18} {
+            \draw[grid] (\x,0.35) -- (\x,6.45);
+            \node[font=\sffamily\tiny,text=gray!70] at (\x,6.68) {\x};
+        }
+
+        \node[siglabel] at (-0.35,5.95) {Départ (START)};
+        \node[siglabel] at (-0.35,5.10) {Oscillateur lent ($S_i$)};
+        \node[siglabel] at (-0.35,4.25) {Compteur lent};
+        \node[siglabel] at (-0.35,3.40) {Arrêt (STOP)};
+        \node[siglabel] at (-0.35,2.55) {Oscillateur rapide ($F_i$)};
+        \node[siglabel] at (-0.35,1.70) {Compteur rapide};
+        \node[siglabel] at (-0.35,0.85) {Circuit de coïncidence};
+
+        \draw[wave] (0,5.82) -- (0.82,5.82) -- (0.82,6.18) -- (1.28,6.18) -- (1.28,5.82) -- (18,5.82);
+        \draw[wave] (0,5.00) -- (0.92,5.00) -- (0.92,5.34) -- (3.15,5.34) -- (3.15,5.00)
+            -- (4.95,5.00) -- (4.95,5.34) -- (7.18,5.34) -- (7.18,5.00)
+            -- (8.98,5.00) -- (8.98,5.34) -- (11.21,5.34) -- (11.21,5.00)
+            -- (13.01,5.00) -- (13.01,5.34) -- (15.24,5.34) -- (15.24,5.00) -- (18,5.00);
+
+        \draw[wave] (0,4.25) -- (0.92,4.25);
+        \foreach \x/\txt in {1.96/0,4.98/1,8.00/2,11.02/3,14.04/4} {
+            \node[count] at (\x,4.25) {\txt};
+        }
+        \draw[wave] (16.02,4.25) -- (18,4.25);
+
+        \draw[wave] (0,3.28) -- (3.70,3.28) -- (3.70,3.64) -- (4.18,3.64) -- (4.18,3.28) -- (18,3.28);
+        \draw[wave] (0,2.45) -- (3.86,2.45) -- (3.86,2.79) -- (4.92,2.79) -- (4.92,2.45)
+            -- (5.95,2.45) -- (5.95,2.79) -- (7.01,2.79) -- (7.01,2.45)
+            -- (8.04,2.45) -- (8.04,2.79) -- (9.10,2.79) -- (9.10,2.45)
+            -- (10.13,2.45) -- (10.13,2.79) -- (11.19,2.79) -- (11.19,2.45)
+            -- (12.22,2.45) -- (12.22,2.79) -- (13.28,2.79) -- (13.28,2.45)
+            -- (14.31,2.45) -- (14.31,2.79) -- (15.37,2.79) -- (15.37,2.45)
+            -- (16.40,2.45) -- (16.40,2.79) -- (17.46,2.79) -- (17.46,2.45) -- (18,2.45);
+
+        \draw[wave] (0,1.70) -- (3.86,1.70);
+        \foreach \x/\txt in {4.88/0,6.93/1,8.98/2,11.03/3,13.08/4,15.13/5} {
+            \node[count,minimum width=1.45cm] at (\x,1.70) {\txt};
+        }
+        \draw[wave] (15.86,1.70) -- (18,1.70);
+
+        \draw[wave] (0,0.78) -- (10.12,0.78) -- (10.12,1.12) -- (10.92,1.12) -- (10.92,0.78) -- (18,0.78);
+
+        \draw[blue!70!black,->,line width=0.85pt] (0.92,5.34) .. controls (1.65,4.95) and (2.85,3.10) .. (3.86,2.79);
+        \draw[blue!70!black,->,line width=0.85pt] (4.95,5.34) .. controls (5.50,4.72) and (5.72,3.15) .. (5.95,2.79);
+        \draw[->,line width=0.75pt] (0.82,6.28) -- (0.92,5.38);
+        \draw[->,line width=0.75pt] (3.70,3.76) -- (3.86,2.82);
+        \draw[->,line width=0.8pt] (11.65,5.78) -- (10.52,1.15);
+        \node[note,anchor=west] at (11.75,5.78) {première coïncidence\\utile};
+    \end{tikzpicture}%
+    }
     \caption{Schéma temporel de synthèse du principe Vernier détaillé. Le rattrapage progressif du chemin rapide structure la mesure grossière, tandis que l'observation multiphase raffine la position de la première coïncidence dans l'intervalle $T_{\mathrm{LSB}}$.}
     \label{fig:vernier-principle-detailed}
 \end{figure}
 
 \section{Pourquoi passer à une architecture multiphase}
 
-La thèse ne s'arrête pas à une architecture Vernier monophase classique. Elle étudie une adaptation multiphase inspirée de l'approche 2D Vernier, de manière à exploiter simultanément plusieurs sorties de phase des oscillateurs en anneau \cite{annagrebah2021thesis}. Cette extension augmente le nombre de points d'observation et améliore l'efficacité de la quantification temporelle.
+L'architecture multiphase prolonge le principe Vernier en exploitant plusieurs sorties de phase des oscillateurs en parallèle. Cette extension augmente le nombre de couples observables et améliore l'efficacité de la quantification temporelle \cite{annagrebah2021thesis}.
 
 Dans cette approche, la résolution temporelle multiphase $\Delta$ est reliée à la résolution monophase $T_{\mathrm{LSB}}$ par la relation :
 \begin{equation}
@@ -51,16 +111,16 @@ Autrement dit, l'approche multiphase ne remplace pas le principe Vernier ; elle 
 
 L'intérêt du multiphase n'est donc pas seulement d'augmenter le nombre de points d'observation ; il est aussi de réduire le temps nécessaire à la décision de mesure. Or, comme le jitter accumulé des oscillateurs croît avec le temps d'observation, cette réduction contribue à limiter la dégradation temporelle de la conversion \cite{annagrebah2021thesis}. Cette idée doit être distinguée du moyennage statistique présenté au chapitre \ref{chap:resultats-calibration} : ici, le gain intervient pendant une conversion unique, par architecture, et non par moyenne de plusieurs mesures corrigées.
 
-La thèse montre également que l'architecture multiphase permet, en première approximation :
+L'approche multiphase permet également, en première approximation :
 \begin{itemize}
     \item de réduire le temps de conversion par rapport à l’approche monophase ;
     \item d’améliorer la résolution temporelle ;
-    \item de limiter l’impact du jitter cumulé, dont la croissance suit une loi en racine du temps d’observation.
+    \item de limiter l'impact du jitter cumulé, qui s'apparente à une accumulation quadratique de contributions de bruit non corrélées sur le temps d'observation \cite{annagrebah2021thesis}.
 \end{itemize}
 
 \section{Architecture de référence}
 
-Après la vue temporelle du rattrapage, la figure \ref{fig:vernier-reference-architecture} synthétise l'architecture de référence retenue dans la thèse. Celle-ci s'organise autour de quatre briques principales :
+Après la vue temporelle du rattrapage, la figure \ref{fig:vernier-reference-architecture} synthétise une architecture Vernier multiphase de référence, organisée autour de quatre briques principales :
 \begin{itemize}
     \item les deux oscillateurs en anneau, lent et rapide ;
     \item une matrice de détection de phase chargée d’observer la coïncidence entre les phases ;
@@ -70,19 +130,19 @@ Après la vue temporelle du rattrapage, la figure \ref{fig:vernier-reference-arc
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\textwidth]{tdc/vernier_reference_architecture.pdf}
-    \caption{Schéma de synthèse de l'architecture Vernier multiphase de référence, inspiré des principes décrits dans la thèse \cite{annagrebah2021thesis}.}
+    \includegraphics[width=\linewidth]{tdc/vernier_reference_architecture.pdf}
+    \caption{Schéma de synthèse de l'architecture Vernier multiphase de référence, selon les principes décrits dans \cite{annagrebah2021thesis}.}
     \label{fig:vernier-reference-architecture}
 \end{figure}
 
 Sur le plan conceptuel, cette structuration est particulièrement intéressante pour un futur passage vers une implémentation numérique plus complète. Elle sépare clairement la génération des phases, leur observation, le comptage grossier et le stockage des résultats. Cette séparation fonctionnelle facilite ensuite les adaptations nécessaires à une intégration plus large dans un système de lecture.
 
-La figure \ref{fig:vernier-multiphase-timing} complète cette vue bloc par une lecture temporelle réduite à cinq phases. Elle montre que la décision ne porte pas sur un seul front lent et un seul front rapide, mais sur plusieurs couples observables en parallèle.
+La figure \ref{fig:vernier-multiphase-timing} donne un chronogramme de fronts de phase volontairement réduit à cinq sorties lentes et cinq sorties rapides. Les fronts sont construits à partir d'un même exemple temporel simplifié, afin de rendre visible le rattrapage Vernier et l'observation parallèle des couples $(S_i,F_j)$. La figure n'a pas vocation à reproduire un chronogramme transistor complet.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.96\textwidth]{tdc/vernier_multiphase_timing.pdf}
-    \caption{Chronogramme simplifié du fonctionnement Vernier multiphase. Le schéma est volontairement réduit à cinq phases lentes et cinq phases rapides afin de rendre lisible l'observation parallèle de plusieurs couples de phase.}
+    \caption{Chronogramme de principe du fonctionnement Vernier multiphase. Les fronts lents et rapides sont construits à partir d'un exemple cohérent avec $\tau_f < \tau_s$. La matrice de phase observe plusieurs couples $(S_i,F_j)$ en parallèle ; le couple surligné illustre la première coïncidence utile dans cet exemple simplifié.}
     \label{fig:vernier-multiphase-timing}
 \end{figure}
 
@@ -94,11 +154,25 @@ Dans l'implémentation active du projet, la matrice de détection de phase utili
     \item $n_f \in \{0,\dots,7\}$ pour l'indice de phase rapide.
 \end{itemize}
 
-Le coefficient fin nominal utilisé dans le RTL est alors gouverné par la relation :
-\begin{equation}
-    \mathrm{fine\_coef}(n_s,n_f) = 11\,n_s - 10\,n_f
-\end{equation}
-qui provient directement du rapport entre le pas lent (\SI{55}{\pico\second}) et la différence Vernier élémentaire (\SI{5}{\pico\second}), soit $K_{\mathrm{Vernier}} = 11$.
+Pour éviter toute ambiguïté avec les périodes complètes des anneaux, on note ici $\tau_s$ et $\tau_f$ les espacements temporels entre deux sorties de phase successives des oscillateurs lent et rapide. Dans l'implémentation considérée, $\tau_s=\SI{55}{\pico\second}$ et $\tau_f=\SI{50}{\pico\second}$, d'où une différence Vernier élémentaire :
+\[
+    \Delta_\mathrm{V} = \tau_s - \tau_f = \SI{5}{\pico\second}.
+\]
+La contribution fine portée par une cellule $(n_s,n_f)$ peut alors être lue comme une différence de positions de phase, complétée ensuite par la partie grossière de la conversion :
+\[
+    T_{\mathrm{conv,fine}}(n_s,n_f) = n_s\,\tau_s - n_f\,\tau_f.
+\]
+Le coefficient fin nominal utilisé dans le RTL correspond à cette contribution exprimée en unités de $\Delta_\mathrm{V}$ :
+\[
+    \mathrm{fine\_coef}(n_s,n_f)
+    =
+    \frac{\tau_s}{\Delta_\mathrm{V}}\,n_s
+    -
+    \frac{\tau_f}{\Delta_\mathrm{V}}\,n_f
+    =
+    11\,n_s - 10\,n_f.
+\]
+Le coefficient $11$ provient donc du pas de phase lent normalisé par $\Delta_\mathrm{V}$, tandis que le coefficient $10$ provient du pas de phase rapide normalisé par la même unité. Le signe négatif traduit le rattrapage de la phase lente par la phase rapide. Cette écriture rend explicite l'origine des deux coefficients numériques sans confondre les pas entre sorties de phase avec les périodes complètes des oscillateurs.
 
 Ce point est fondamental, car il montre que l'information fine n'est pas issue d'une simple énumération régulière. Elle dépend d'une combinaison linéaire d'indices de phase. La figure \ref{fig:pd-matrix-heatmap} représente cette structure sur la matrice complète.
 
@@ -113,7 +187,7 @@ Cette représentation permet de lire immédiatement deux phénomènes. D'une par
 
 \section{Points de vigilance}
 
-Les bénéfices de l'approche Vernier ne doivent pas masquer ses contraintes. La thèse souligne en particulier plusieurs points de vigilance \cite{annagrebah2021thesis} :
+Les bénéfices de l'approche Vernier ne doivent pas masquer ses contraintes. Plusieurs points de vigilance sont structurants \cite{annagrebah2021thesis} :
 \begin{itemize}
     \item la sensibilité au \textit{mismatch} lorsque la différence de délai devient très faible ;
     \item l’influence du bruit de premier ordre lié aux variations de procédé, de tension et de température ;

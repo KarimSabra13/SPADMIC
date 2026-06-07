@@ -5,42 +5,42 @@
 
 \section{De la structure de référence à une architecture exploitable}
 
-La structure décrite dans la thèse constitue une base théorique et architecturale solide, mais elle ne peut pas être reprise telle quelle dans un projet de lecture numérique complet sans adaptation. Dans le cadre du projet \textbf{SPADMIC}, la problématique ne consiste pas uniquement à démontrer le potentiel d'un \textbf{TDC} Vernier multiphase. Il faut également organiser la capture des événements, le stockage des résultats, leur transmission et leur exploitation à l'extérieur de l'ASIC dans un prototype complet.
+L'architecture Vernier multiphase de référence constitue une base théorique et architecturale solide pour obtenir une résolution temporelle fine \cite{annagrebah2021thesis}. Elle ne peut toutefois pas être reprise telle quelle dans une chaîne de lecture numérique complète. Dans \textbf{SPADMIC}, le problème ne consiste pas seulement à démontrer le potentiel d'un \textbf{TDC} Vernier multiphase : il faut organiser la capture des événements, le stockage des résultats, leur transmission et leur exploitation hors ASIC dans un prototype complet.
 
-La continuité entre la thèse et l'implémentation actuelle se situe donc au niveau des principes fondamentaux :
+La continuité avec l'architecture Vernier multiphase de référence se situe au niveau des principes fondamentaux :
 \begin{itemize}
-    \item utilisation de deux oscillateurs proches pour définir une résolution issue d’une différence de délai ;
+    \item utilisation de deux oscillateurs proches pour définir une résolution issue d'une différence de délai ;
     \item séparation entre information grossière et information fine ;
     \item observation multiphase par matrice de détection ;
-    \item nécessité d’une calibration adaptée pour transformer les observables brutes en temps exploitable.
+    \item nécessité d'une calibration adaptée pour transformer les observables brutes en temps exploitable.
 \end{itemize}
 
-La différence majeure est que l'objet étudié ici n'est plus une cellule de référence isolée, mais une version intégrable dans une chaîne de lecture ASIC. L'implémentation active est construite directement autour d'une matrice de détection \mbox{$8\times8$}, d'une capture asynchrone et d'une chaîne de lecture dans \texttt{clk\_sys}. Ces choix fixent le contrat de l'architecture réelle : préserver le principe Vernier tout en obtenant un bloc routable, vérifiable et compatible avec un prototype en \SI{180}{\nano\meter}.
+La différence majeure vient du contrat d'intégration. Le bloc \textbf{MPTDC} n'est pas une cellule isolée : l'implémentation active est construite autour d'une matrice de détection \mbox{$8\times8$}, d'une capture asynchrone, d'une banque de contextes et d'une chaîne de lecture dans \texttt{clk\_sys}. Ces choix préservent le principe Vernier tout en imposant une architecture routable, réarmable et compatible avec un prototype en \SI{180}{\nano\meter}.
 
 \section{Évolutions nécessaires dans le contexte SPADMIC}
 
-L'architecture actuellement développée s'écarte toutefois du prototype de thèse sur plusieurs aspects structurants. Elle doit en effet répondre à des besoins plus larges de robustesse, d'intégration numérique et de lecture :
+L'architecture développée s'écarte d'une simple preuve de concept sur plusieurs aspects structurants. Elle doit répondre simultanément à des besoins de robustesse, d'intégration numérique et de lecture :
 \begin{itemize}
-    \item prise en charge d’événements \texttt{START}/\texttt{STOP} avec une logique asynchrone explicite ;
+    \item prise en charge d'événements \texttt{START}/\texttt{STOP} avec une logique asynchrone explicite ;
     \item séparation entre la capture rapide et la lecture système ;
     \item format de sortie numérique compatible avec une chaîne de lecture externe ;
     \item calibration pensée comme une opération externe à l'ASIC, et non comme une correction embarquée figée dans le silicium.
 \end{itemize}
 
-Ces choix traduisent un déplacement du centre de gravité du problème. Dans la thèse, l'accent est mis sur la démonstration et la compréhension approfondie de l'architecture Vernier multiphase. Dans l'implémentation actuelle, l'objectif devient plus systémique : il faut préserver les bénéfices du principe Vernier tout en construisant une architecture de lecture cohérente, réarmable, vérifiable et intégrable.
+Ces choix déplacent le centre de gravité du problème. Le principe Vernier fournit le mécanisme de résolution fine ; l'implémentation active doit ensuite garantir que cette information reste cohérente lorsqu'elle traverse des domaines temporels différents, qu'elle est figée dans un contexte, puis qu'elle est sérialisée vers une sortie compacte.
 
 \section{Vision globale de l'architecture active}
 
-Avant d'isoler les arbitrages de conception, il faut d'abord placer les blocs dans leur topologie numérique globale. La figure \ref{fig:vernier-transition-map} reprend le formalisme matériel de l'architecture de référence et montre les transformations essentielles : la prélogique devient un front-end de capture asynchrone, la matrice de phase est ramenée à \mbox{$8\times8$}, la mémoire d'échantillonnage devient une banque de contextes, et une chaîne de lecture système est ajoutée en sortie.
+Avant d'isoler les arbitrages de conception, il faut placer les blocs dans leur topologie numérique globale. La figure \ref{fig:vernier-transition-map} reprend le formalisme matériel de l'architecture de référence et montre les transformations essentielles : la prélogique devient un front-end de capture asynchrone, la matrice de phase est ramenée à \mbox{$8\times8$}, la mémoire d'échantillonnage devient une banque de contextes, et une chaîne de lecture système est ajoutée en sortie.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{tdc/vernier_transition_map.pdf}
-    \caption{Transition matérielle entre l'architecture Vernier de référence et l'implémentation active \textbf{MPTDC}. Le style reprend celui du modèle de référence afin de rendre visibles les briques conservées, modifiées et ajoutées.}
+    \includegraphics[width=\textwidth]{tdc/vernier_transition_map.pdf}
+    \caption{Transition matérielle entre l'architecture Vernier de référence et l'implémentation active \textbf{MPTDC}. Le style rend visibles les briques conservées, modifiées et ajoutées.}
     \label{fig:vernier-transition-map}
 \end{figure}
 
-Cette transition doit aussi être lue sous l'angle des domaines temporels. L'architecture réelle superpose une zone d'événements asynchrones, deux familles de signaux issues des oscillateurs lent et rapide, puis un domaine système \texttt{clk\_sys} chargé du séquençage de capture, du drain et de la sérialisation. La figure \ref{fig:clock-domain-diagram} fournit cette carte de lecture avant l'analyse détaillée des compromis.
+Cette transition doit aussi être lue sous l'angle des domaines temporels. L'architecture réelle superpose une zone d'événements asynchrones, deux familles de signaux issues des oscillateurs lent et rapide, puis un domaine système \texttt{clk\_sys} chargé du séquençage de capture, de la lecture du contexte et de la sérialisation. La figure \ref{fig:clock-domain-diagram} fournit cette carte avant l'analyse des compromis.
 
 \begin{figure}[H]
     \centering
@@ -49,29 +49,97 @@ Cette transition doit aussi être lue sous l'angle des domaines temporels. L'arc
     \label{fig:clock-domain-diagram}
 \end{figure}
 
-La carte de la figure \ref{fig:clock-domain-diagram} annonce déjà les difficultés qui seront détaillées au chapitre suivant : la logique de mesure ne se résume pas à un automate unique. Elle s'appuie sur des traversées asynchrones, des compteurs Gray pour transporter les informations d'oscillateurs, puis une séparation stricte entre capture des événements, gel de l'image de mesure et lecture dans \texttt{clk\_sys} \cite{ginosar2011metastability,cummings2002fifo}.
+Un \textbf{TDC} Vernier actif ne possède pas un seul domaine synchrone. Les fronts \texttt{START} et \texttt{STOP} arrivent sans relation de phase garantie avec \texttt{clk\_sys}. Les anneaux lent et rapide créent ensuite leurs propres domaines temporels, directement liés aux oscillateurs. Le domaine \texttt{clk\_sys}, beaucoup plus lent, sert à séquencer la fermeture de mesure, figer l'image utile, écrire le contexte et lire la trame de sortie. Cette structure interdit de traiter la conception comme une FSM unique entourée de registres synchrones ordinaires.
 
-\begin{table}[H]
+Le transport direct d'un bus multi-bit entre domaines serait dangereux. Chaque bit peut être routé différemment, subir un délai de propagation distinct et atteindre le registre de destination à un instant légèrement différent. Au moment de l'échantillonnage, certains bits peuvent donc appartenir à l'ancienne valeur et d'autres à la nouvelle. La valeur obtenue peut être incohérente même si chaque bit traverse individuellement une chaîne de synchronisation. Ce risque est particulièrement critique pour un compteur binaire, car plusieurs bits peuvent changer sur une même transition.
+
+Pour les compteurs grossiers, le choix retenu consiste à transporter des codes Gray. Un code Gray limite la transition logique à un seul bit à la fois ; l'ambiguïté résiduelle est alors bornée à la valeur précédente ou suivante, au lieu de produire une combinaison binaire impossible. Les phases rapides et lentes ne sont pas transportées comme des bus synchrones continus vers \texttt{clk\_sys}. L'architecture transporte plutôt des commandes compactes, des compteurs Gray, des snapshots, des images figées et des impulsions synchronisées.
+
+La figure \ref{fig:gray-cdc-principle} illustre le risque associé au transfert direct d'un compteur multi-bit entre deux domaines d'horloge, puis l'intérêt du codage Gray pour borner cette ambiguïté.
+
+\begin{figure}[H]
     \centering
-    \small
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.1cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
-        \toprule
-        \textbf{Contrainte} & \textbf{Risque principal} & \textbf{Choix retenu} \\
-        \midrule
-        Événements d'entrée asynchrones & Perte de précision ou métastabilité si forçage prématuré dans un domaine synchrone & Interface de capture asynchrone à verrous \textit{set/reset} \\
-        Matrice de phase active & Surface, charge des taps et durée de scan si la matrice grossit & Matrice \mbox{$8\times8$} régulière, suffisante pour exporter les observables de calibration \\
-        Lecture pendant la mesure & Temps mort dicté par le drain et le sérialiseur & Deux contextes, capture et drain découplés \\
-        Correction des non-idéalités & Coût silicium élevé si correction embarquée figée & Calibration externe à l'ASIC avec export d'observables riches \\
-        Intégration au système & Trop grand nombre de broches ou protocole trop ambigu & Bus \SI{16}{\bit}, mots typés, gestion explicite de la rétropression \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Arbitrages structurants qui font passer l'architecture Vernier de référence à un bloc réellement intégrable dans \textbf{SPADMIC}.}
-    \label{tab:transition-tradeoffs}
-\end{table}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[x=1cm,y=1cm,>=latex]
+        \tikzset{
+            panel/.style={draw=black!25,rounded corners=2pt,fill=black!2,line width=0.7pt},
+            title/.style={font=\sffamily\bfseries\large},
+            bitlabel/.style={font=\ttfamily\small,anchor=east},
+            wave/.style={line width=0.85pt,draw=black},
+            sample/.style={draw=black!65,densely dashed,line width=0.85pt},
+            note/.style={font=\sffamily\small,align=center},
+            warn/.style={note,text=red!70!black},
+            oknote/.style={note,text=blue!65!black},
+            ff/.style={draw=blue!60!black,fill=blue!6,rounded corners=1pt,
+                       minimum width=0.74cm,minimum height=0.46cm,font=\sffamily\small}
+        }
+
+        \node[panel,minimum width=7.05cm,minimum height=5.95cm,anchor=south west] at (0,0) {};
+        \node[panel,minimum width=7.05cm,minimum height=5.95cm,anchor=south west] at (7.55,0) {};
+
+        \begin{scope}[shift={(0,0)}]
+            \node[title] at (3.52,5.55) {Compteur binaire};
+            \node[font=\ttfamily\large] at (1.25,4.92) {011};
+            \draw[->,red!70!black,line width=1pt] (1.78,4.92) -- (2.82,4.92);
+            \node[font=\ttfamily\large] at (3.35,4.92) {100};
+            \node[warn,anchor=center] at (5.35,4.62) {plusieurs bits\\changent};
+
+            \node[bitlabel] at (0.86,4.02) {b2};
+            \node[bitlabel] at (0.86,3.25) {b1};
+            \node[bitlabel] at (0.86,2.48) {b0};
+            \draw[wave] (1.05,4.02) -- (4.68,4.02) -- (4.68,4.34) -- (6.0,4.34);
+            \draw[wave] (1.05,3.57) -- (3.82,3.57) -- (3.82,3.25) -- (6.0,3.25);
+            \draw[wave] (1.05,2.80) -- (4.92,2.80) -- (4.92,2.48) -- (6.0,2.48);
+            \foreach \x/\yA/\yB in {4.68/4.02/4.34,3.82/3.57/3.25,4.92/2.80/2.48} {
+                \draw[red!70!black,line width=1.05pt] (\x,\yA) -- (\x,\yB);
+            }
+            \draw[sample] (4.35,2.20) -- (4.35,4.48);
+            \node[note,anchor=north,text=black!65] at (4.35,2.08) {échantillon\\\texttt{clk\_sys}};
+            \node[draw=red!55!black,fill=red!5,rounded corners=1pt,
+                  font=\ttfamily\large,minimum width=1.12cm,minimum height=0.52cm] at (5.78,3.24) {001?};
+            \node[warn,text width=5.85cm] at (3.52,0.82)
+            {risque : mot incohérent si les bits n'arrivent pas ensemble};
+        \end{scope}
+
+        \begin{scope}[shift={(7.55,0)}]
+            \node[title] at (3.52,5.55) {Compteur Gray};
+            \node[font=\ttfamily\large] at (1.25,4.92) {010};
+            \draw[->,blue!65!black,line width=1pt] (1.78,4.92) -- (2.82,4.92);
+            \node[font=\ttfamily\large] at (3.35,4.92) {110};
+            \node[oknote,anchor=center] at (5.35,4.62) {un seul bit\\change};
+
+            \node[bitlabel] at (0.86,4.02) {g2};
+            \node[bitlabel] at (0.86,3.25) {g1};
+            \node[bitlabel] at (0.86,2.48) {g0};
+            \draw[wave] (1.05,4.02) -- (3.68,4.02) -- (3.68,4.34) -- (4.55,4.34);
+            \draw[wave] (1.05,3.57) -- (4.55,3.57);
+            \draw[wave] (1.05,2.48) -- (4.55,2.48);
+            \draw[blue!65!black,line width=1.05pt] (3.68,4.02) -- (3.68,4.34);
+            \draw[sample] (3.88,2.20) -- (3.88,4.48);
+            \node[note,anchor=north,text=black!65] at (3.88,2.08) {échantillon\\\texttt{clk\_sys}};
+
+            \node[ff] (ff1) at (4.90,3.22) {FF1};
+            \node[ff] (ff2) at (5.78,3.22) {FF2};
+            \draw[->,blue!65!black,line width=0.85pt] (4.25,3.22) -- (ff1.west);
+            \draw[->,blue!65!black,line width=0.85pt] (ff1.east) -- (ff2.west);
+            \draw[->,blue!65!black,line width=0.85pt] (ff2.east) -- (6.52,3.22);
+            \node[note,anchor=north,text=blue!65!black] at (5.34,2.86) {sync 2 FF};
+            \node[oknote] at (3.52,0.82)
+            {ancienne ou nouvelle valeur\\ambiguïté bornée};
+        \end{scope}
+    \end{tikzpicture}%
+    }
+    \caption{Principe d'une traversée CDC de compteur. Une transition binaire peut modifier plusieurs bits simultanément et produire une valeur incohérente si les délais de routage diffèrent. Le codage Gray limite la transition à un seul bit, ce qui réduit l'ambiguïté après synchronisation dans \texttt{clk\_sys}.}
+    \label{fig:gray-cdc-principle}
+\end{figure}
+
+Le codage Gray ne supprime pas la métastabilité d'un bit isolé ; il évite surtout qu'un échantillonnage intermédiaire combine plusieurs bits appartenant à deux valeurs différentes. La synchronisation 2 FF reste donc nécessaire, mais elle s'applique à une représentation dont les transitions sont mieux contrôlées.
+
+La méthode RTL appliquée combine donc plusieurs mécanismes complémentaires. Les compteurs traversent la frontière sous forme Gray et sont resynchronisés dans le domaine de destination. Les fronts \texttt{START}/\texttt{STOP} déclenchent des verrous asynchrones intentionnels afin de ne pas injecter \texttt{clk\_sys} sur le chemin temporel mesuré. La fin de conversion ne lance pas immédiatement la lecture : elle déclenche d'abord un snapshot de l'image de mesure, puis une écriture dans un contexte. Le clear est ordonné après cette protection, ce qui évite de détruire la matrice source avant que l'image stable soit disponible pour la lecture.
 
 \section{Choix d'intégration et compromis d'architecture}
 
-Le passage du principe Vernier à un bloc ASIC intégrable impose de figer une architecture qui reste suffisamment riche pour la calibration, mais suffisamment compacte pour être routée, vérifiée et intégrée dans le prototype \textbf{SPADMIC}. L'implémentation active retient ainsi une matrice de phase \mbox{$8\times8$}, deux contextes de capture et une sortie numérique étroite. La matrice fournit les couples de phase nécessaires à l'observation fine, tout en limitant la surface, la charge appliquée aux taps d'oscillateur, la complexité de drain et l'effort de fermeture temporelle.
+Le passage du principe Vernier à un bloc ASIC intégrable impose de figer une architecture qui reste suffisamment riche pour la calibration, mais suffisamment compacte pour être routée et intégrée dans le prototype \textbf{SPADMIC}. L'implémentation active retient ainsi une matrice de phase \mbox{$8\times8$}, deux contextes de capture et une sortie numérique étroite. La matrice fournit les couples de phase nécessaires à l'observation fine, tout en limitant la surface, la charge appliquée aux sorties de phase des oscillateurs, la complexité de lecture du contexte et l'effort de fermeture temporelle.
 
 La capture des événements reste volontairement asynchrone. Les signaux \texttt{START} et \texttt{STOP} ne sont pas d'abord ramenés dans \texttt{clk\_sys}, car cela déplacerait l'incertitude temporelle sur le chemin même que le \textbf{TDC} doit mesurer. Le front-end déclenche donc l'oscillateur lent au plus près de \texttt{START}, puis l'oscillateur rapide au plus près de \texttt{STOP}. Le domaine système intervient ensuite pour protéger l'image de mesure, orchestrer le nettoyage et préparer la lecture, sans transformer les phases analogiques en bus synchrones continus.
 
@@ -82,16 +150,22 @@ La capture des événements reste volontairement asynchrone. Les signaux \texttt
     \label{fig:async-capture-timing}
 \end{figure}
 
-Le découplage entre capture et lecture repose sur une banque à deux contextes. Ce choix évite de faire dépendre directement le réarmement du temps nécessaire au drain et à la sérialisation. Un contexte peut conserver une conversion fermée pendant que l'autre redevient disponible pour la mesure suivante. Cette organisation reste volontairement limitée : elle masque une partie de la latence de lecture sans introduire une file de contextes coûteuse, difficile à vérifier et peu justifiée pour le prototype visé.
+Un point d'attention concerne la logique placée avant le déclenchement effectif des anneaux. Toute combinatoire sur le chemin \texttt{START}/\texttt{STOP} peut introduire un délai systématique et une contribution de jitter avant \texttt{slow\_en} et \texttt{fast\_en}. Cet effet reste peu visible sur une conversion isolée, mais il devient critique lors de mesures répétées ou d'une caractérisation fine. Il devra donc être évalué avec les blocs réels, puis en simulation post-layout, afin de quantifier la contribution ajoutée par le front-end de capture.
+
+Le compromis le plus structurant concerne le découplage capture/lecture. Si la capture et la lecture restent couplées, le temps mort dépend directement du temps nécessaire à parcourir la matrice, construire les enregistrements et sérialiser la trame de sortie. Le choix RTL retenu consiste à figer la mesure par snapshot dans un contexte disponible, puis à nettoyer la matrice pour autoriser un nouvel événement. La lecture du contexte peut ensuite progresser dans \texttt{clk\_sys}, à un rythme compatible avec la FIFO et la sortie \SI{16}{\bit}.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{tdc/context_pipeline.pdf}
-    \caption{Pipeline à deux contextes. Le snapshot protège la mesure terminée, puis le drain et la sérialisation d'un contexte peuvent se recouvrir avec la capture du contexte suivant.}
+    \caption{Pipeline à deux contextes. Le snapshot protège la mesure terminée, puis la lecture et la sérialisation d'un contexte peuvent se recouvrir avec la capture du contexte suivant.}
     \label{fig:context-pipeline}
 \end{figure}
 
-La sortie adopte enfin un protocole compact sur \SI{16}{\bit}, sous forme d'une trame de mesure structurée. Le paquet contient un en-tête, des mots de données associés aux hits et un mot de fin. Il transporte les informations nécessaires à la reconstruction externe : valeurs de mesure, métadonnées de contexte, indicateurs de frontière et champs de statut. Les anciens encodages de mode sont conservés uniquement comme compatibilité logicielle. La correction finale est donc déplacée hors ASIC : le silicium exporte une description stable et suffisamment riche de la mesure, tandis que la LUT et les modèles de calibration restent évolutifs côté hôte.
+Le double contexte ne signifie pas que la matrice physique de détecteurs de phase est dupliquée. Il correspond à deux zones de stockage d'images de mesure. Lors du snapshot, les informations utiles d'une conversion terminée, bitmap de matrice, compteurs, métadonnées et statut, sont figées dans un contexte disponible. Le gain PPA attendu se situe d'abord sur le temps mort : la capture n'attend plus la fin de la sérialisation. Le coût associé est une surface mémoire supplémentaire pour deux images de contexte, acceptée ici parce qu'elle reste bornée et qu'elle évite une file profonde plus coûteuse.
+
+Le goulot est déplacé vers l'occupation des deux contextes lorsque la sortie aval ralentit. Si le drain ou le \textbf{TX} reste bloqué trop longtemps, les deux contextes peuvent devenir indisponibles et un nouveau \texttt{START} doit être rejeté de manière contrôlée. Le risque est maîtrisé par les états d'occupation, les statuts de contexte, la rétropression, le rejet explicite des nouvelles captures et le dimensionnement de la sortie. Le compromis retenu garde donc une surface de stockage limitée tout en rendant visible la saturation éventuelle.
+
+La sortie adopte enfin un protocole compact sur \SI{16}{\bit}, sous forme d'une trame de mesure structurée. Le paquet contient un en-tête, des mots de données associés aux enregistrements de détection et un mot de fin. Il transporte les informations nécessaires à la reconstruction externe : valeurs de mesure, métadonnées de contexte, indicateurs de frontière et champs de statut. Le contrat de sortie reste unique et compact, sans introduire plusieurs chemins concurrents. La correction finale est déplacée hors ASIC : le silicium exporte une description stable et suffisamment riche de la mesure, tandis que la LUT et les modèles de calibration restent évolutifs côté hôte.
 
 \begin{figure}[H]
     \centering
@@ -101,7 +175,7 @@ La sortie adopte enfin un protocole compact sur \SI{16}{\bit}, sous forme d'une 
 \end{figure}
 
 \begin{summaryBox}
-La transition vers l'implémentation n'est pas une simple étape d'encapsulation. Elle transforme le principe Vernier en un bloc ASIC complet : capture asynchrone, matrice de phase compacte, double contexte, lecture \texttt{clk\_sys}, paquet \SI{16}{\bit} et calibration externe forment un même compromis d'intégration.
+La transition vers l'implémentation transforme le principe Vernier en un bloc ASIC complet : capture asynchrone, matrice de phase compacte, frontières CDC explicites, double contexte, lecture \texttt{clk\_sys}, paquet \SI{16}{\bit} et calibration externe forment un même compromis d'intégration.
 \end{summaryBox}
 
 \clearpage

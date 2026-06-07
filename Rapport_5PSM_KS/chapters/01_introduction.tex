@@ -9,13 +9,13 @@ Cette idée est particulièrement importante pour les détecteurs rapides. Une i
 
 Dans ce cadre s'inscrit le projet \textbf{SPADMIC}. Il s'agit d'un prototype d'\textbf{ASIC} (\textit{Application-Specific Integrated Circuit}), c'est-à-dire un circuit intégré conçu pour une application dédiée. Il vise à intégrer une électronique de lecture numérique autour d'une matrice de \textbf{SPAD} (\textit{Single-Photon Avalanche Diode}), des détecteurs capables de produire une impulsion lorsqu'un photon est détecté. Dans ce type de système, la mesure temporelle devient une information centrale.
 
-Pour mesurer un intervalle de temps dans une chaîne numérique, on utilise un convertisseur temps-numérique, ou \textbf{TDC} (\textit{Time-to-Digital Converter}). Le bloc étudié dans ce rapport est une version multiphase de ce type de convertisseur, appelée \textbf{MPTDC} (\textit{Multi-Phase Time-to-Digital Converter}). L'objectif de ce rapport n'est pas de présenter immédiatement tous les détails de ce bloc, mais de construire progressivement le contexte : d'abord le rôle de la puce \textbf{SPADMIC}, puis les besoins de mesure temporelle, ensuite les principes des \textbf{TDC}, et enfin l'implémentation RTL détaillée du \textbf{MPTDC}. Le terme \textbf{RTL} (\textit{Register Transfer Level}) désigne ici la description numérique du circuit avant synthèse matérielle.
+Pour mesurer un intervalle de temps dans une chaîne numérique, on utilise un convertisseur temps-numérique, ou \textbf{TDC} (\textit{Time-to-Digital Converter}). Le bloc étudié est une version multiphase de ce type de convertisseur, appelée \textbf{MPTDC} (\textit{Multi-Phase Time-to-Digital Converter}). La progression retenue construit d'abord le contexte : rôle de la puce \textbf{SPADMIC}, besoins de mesure temporelle, principes des \textbf{TDC}, puis implémentation RTL détaillée du \textbf{MPTDC}. Le terme \textbf{RTL} (\textit{Register Transfer Level}) désigne ici la description numérique du circuit avant synthèse matérielle.
 
 La figure \ref{fig:spadmic-mind-model} donne un premier modèle mental de cette organisation. Elle situe la matrice \textbf{SPAD}, les trois voies \textbf{MPTDC}, le bloc de position, l'arbitrage numérique et la calibration hôte avant d'entrer dans les détails techniques des chapitres suivants.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.92\textwidth]{spadmic/spadmic_mind_model.png}
+  \includegraphics[width=0.92\textwidth,trim=0 105 0 0,clip]{spadmic/spadmic_mind_model.png}
     \caption{Vue d'ensemble simplifiée du prototype \textbf{SPADMIC} et de la place du cœur \textbf{MPTDC} dans la chaîne de lecture.}
     \label{fig:spadmic-mind-model}
 \end{figure}
@@ -30,8 +30,8 @@ La thèse d’Amina Annagrebah, utilisée ici comme référence théorique princ
 
 \section{Périmètre et organisation du document}
 
-Le présent rapport adopte volontairement un périmètre maîtrisé. Au moment de la rédaction initiale, l’architecture globale de \textbf{SPADMIC} n’était pas encore totalement figée, même si elle s’est depuis davantage stabilisée. Il ne s’agit donc pas de décrire tout l’ASIC comme un objet déjà définitivement arrêté, mais de présenter de manière cohérente ce qui est déjà structuré, justifiable et techniquement défendable.
+Le périmètre retenu reste volontairement maîtrisé. Au moment de la rédaction initiale, l’architecture globale de \textbf{SPADMIC} n’était pas encore totalement figée, même si elle s’est depuis davantage stabilisée. Il ne s’agit donc pas de décrire tout l’ASIC comme un objet déjà définitivement arrêté, mais de présenter de manière cohérente ce qui est déjà structuré, justifiable et techniquement défendable.
 
-Le rapport s’ouvre sur la présentation du cadre scientifique et institutionnel au sein duquel s’inscrit l’alternance. Il introduit ensuite le contexte général du projet \textbf{SPADMIC}, les contributions numériques réalisées et la place du \textbf{MPTDC} dans la chaîne de lecture de l’ASIC. La partie suivante développe les fondements théoriques des \textbf{TDC}, leurs métriques de performance et les architectures de type Vernier. Sur cette base, l’étude se prolonge par la description de l’architecture de référence extraite de la thèse, puis par une transition vers l’implémentation effectivement retenue. Enfin, le rapport détaille l’architecture active de \textbf{MPTDC}, puis présente la méthodologie de caractérisation, les résultats de calibration et les limites encore ouvertes vers une future intégration plus aboutie.
+La progression commence par le cadre scientifique et institutionnel au sein duquel s’inscrit l’alternance. Elle introduit ensuite le contexte général du projet \textbf{SPADMIC}, les contributions numériques réalisées et la place du \textbf{MPTDC} dans la chaîne de lecture de l’ASIC. La partie suivante développe les fondements théoriques des \textbf{TDC}, leurs métriques de performance et les architectures de type Vernier. Sur cette base, l’étude se prolonge par la description de l’architecture de référence extraite de la thèse, puis par une transition vers l’implémentation effectivement retenue. Enfin, l'analyse détaille l’architecture active de \textbf{MPTDC}, puis présente la méthodologie de caractérisation, les résultats de calibration et les limites encore ouvertes vers une future intégration plus aboutie.
 
 \clearpage

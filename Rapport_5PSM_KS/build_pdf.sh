@@ -132,13 +132,36 @@ fi
 
 echo "Starting LaTeX build..."
 
+for artifact_dir in "$REPORT_DIR" "$BUILD_DIR"; do
+  rm -f \
+    "$artifact_dir/${MAIN_NAME}.aux" \
+    "$artifact_dir/${MAIN_NAME}.bbl" \
+    "$artifact_dir/${MAIN_NAME}.bcf" \
+    "$artifact_dir/${MAIN_NAME}.blg" \
+    "$artifact_dir/${MAIN_NAME}.fdb_latexmk" \
+    "$artifact_dir/${MAIN_NAME}.fls" \
+    "$artifact_dir/${MAIN_NAME}.log" \
+    "$artifact_dir/${MAIN_NAME}.out" \
+    "$artifact_dir/${MAIN_NAME}.run.xml" \
+    "$artifact_dir/${MAIN_NAME}.toc" \
+    "$artifact_dir/${MAIN_NAME}.lof" \
+    "$artifact_dir/${MAIN_NAME}.lot" \
+    "$artifact_dir/${MAIN_NAME}.synctex.gz" \
+    "$artifact_dir/${MAIN_NAME}.pdf"
+done
+
 PDFLATEX_FLAGS=(
   -interaction=nonstopmode
   -file-line-error
   -halt-on-error
   -synctex=1
-  -output-directory="$BUILD_DIR"
 )
+
+if pdflatex --version 2>/dev/null | head -n 1 | grep -qi 'MiKTeX'; then
+  PDFLATEX_FLAGS+=(-include-directory="$BUILD_DIR")
+fi
+
+PDFLATEX_FLAGS+=(-output-directory="$BUILD_DIR")
 
 cd "$REPORT_DIR"
 

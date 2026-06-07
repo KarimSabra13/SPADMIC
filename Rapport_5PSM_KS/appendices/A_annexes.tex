@@ -3,7 +3,7 @@
 \justifying
 \sloppy
 
-Cette annexe regroupe les points de conception trop détaillés pour le fil principal du rapport, mais utiles pour la traçabilité RTL et pour une revue technique du dépôt.
+Cette annexe regroupe les points de conception plus détaillés que le fil d'analyse principal, mais utiles pour la traçabilité RTL et pour une revue technique du dépôt.
 
 \section{Traversée lent vers rapide et cohérence du compteur lent}
 
@@ -36,7 +36,7 @@ Un réglage de fermeture précoce peut laisser penser qu'un paquet mono-hit refl
 La matrice est parcourue dans un ordre matériel déterministe. Plusieurs cellules peuvent avoir mémorisé une détection au moment où la fermeture est décidée ; le drain exporte ensuite les hits dans l'ordre de scan, pas dans un ordre temporel reconstruit.
 
 \paragraph{Solution retenue.}
-Le rapport principal présente la trame comme un flux déterministe de lecture. Les indices d'ordre exportés doivent être interprétés comme des indices de paquetisation, utiles pour la calibration et non comme une chronologie physique absolue.
+La synthèse principale présente la trame comme un flux déterministe de lecture. Les indices d'ordre exportés doivent être interprétés comme des indices de paquetisation, utiles pour la calibration et non comme une chronologie physique absolue.
 
 \section{Rétropression et libération des contextes}
 
@@ -58,6 +58,6 @@ Les oscillateurs, les chemins asynchrones d'événements et les horloges génér
 Le dépôt contient une intention de contraintes : groupes d'horloges asynchrones, chemins faux sur les entrées d'événements, protection des synchroniseurs et horloges virtuelles sur les modèles d'oscillateur. Cette intention reste toutefois une base de travail, pas une clôture MMMC complète.
 
 \paragraph{Solution retenue.}
-Le corps principal limite donc ses affirmations à la cohérence RTL et à la simulation. La revue CDC formelle, la STA complète, la simulation post-synthèse, puis la simulation post-layout avec macros réelles restent explicitement des étapes de suite.
+L'analyse principale limite donc ses affirmations à la cohérence RTL et à la simulation. La revue CDC formelle, la STA complète, la simulation post-synthèse, puis la simulation post-layout avec macros réelles restent explicitement des étapes de suite.
 
 \clearpage

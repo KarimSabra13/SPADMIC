@@ -17,49 +17,49 @@
     line width=0.65pt,
     fill=#1,
     fill opacity=0.45,
-    inner sep=8mm
+    inner sep=6mm
   },
   techblock/.style={
     bloc,
-    minimum width=30mm,
-    minimum height=11mm,
-    font=\sffamily\small\bfseries,
-    inner sep=2.5pt
+    minimum width=32mm,
+    minimum height=12mm,
+    font=\sffamily\normalsize\bfseries,
+    inner sep=3pt
   },
   wideblock/.style={
     techblock,
-    minimum width=36mm
+    minimum width=42mm
   },
   labeltag/.style={
     etiquette,
     font=\sffamily\footnotesize,
-    inner sep=1.6pt
+    inner sep=1.8pt
   },
   slowpath/.style={
-    -{Latex[length=2.2mm,width=1.4mm]},
+    -{Latex[length=2.3mm,width=1.4mm]},
     draw=slowred,
-    line width=1.0pt
+    line width=1.05pt
   },
   fastpath/.style={
-    -{Latex[length=2.2mm,width=1.4mm]},
+    -{Latex[length=2.3mm,width=1.4mm]},
     draw=fastblue,
-    line width=1.0pt
+    line width=1.05pt
   },
   graypath/.style={
-    -{Latex[length=2.0mm,width=1.2mm]},
+    -{Latex[length=2.1mm,width=1.3mm]},
     draw=grisligne,
-    line width=0.95pt,
+    line width=1.0pt,
     densely dashed
   },
   datapath/.style={
-    -{Latex[length=2.3mm,width=1.5mm]},
+    -{Latex[length=2.4mm,width=1.6mm]},
     draw=fastblue,
-    line width=1.25pt
+    line width=1.30pt
   },
   controlpath/.style={
-    -{Latex[length=2.0mm,width=1.2mm]},
+    -{Latex[length=2.1mm,width=1.3mm]},
     draw=sysgreen,
-    line width=0.95pt,
+    line width=1.0pt,
     densely dashed
   }
 }
@@ -67,72 +67,77 @@
 \begin{document}
 \begin{tikzpicture}[x=1cm,y=1cm]
 
-\node[techblock] (input) at (0.0,0.0)
-{START / STOP\\[-0.4mm]\ttfamily événements};
-\node[techblock,draw=brunasync,fill=white] (capture) at (3.95,0.0)
-{Capture asynchrone\\[-0.4mm]\ttfamily start/stop};
-\node[techblock,draw=brunasync,fill=white] (boundary) at (3.95,-2.45)
-{Métadonnées\\[-0.4mm]de frontière};
+\node[techblock] (input) at (0.0,0.15)
+{START / STOP\\[-0.5mm]\ttfamily événements};
+\node[techblock,draw=brunasync,fill=white] (capture) at (3.55,0.15)
+{Capture asynchrone\\[-0.5mm]\ttfamily verrous};
+\node[techblock,draw=brunasync,fill=white] (boundary) at (3.55,-2.05)
+{Métadonnées\\[-0.5mm]de frontière};
 
-\node[techblock] (slowosc) at (8.35,3.35)
-{Anneau lent\\[-0.4mm]\ttfamily phases lentes};
-\node[techblock] (slowcnt) at (12.45,3.35)
-{Compteur lent\\[-0.4mm]\ttfamily Nslow Gray};
+\node[techblock] (slowosc) at (7.60,3.15)
+{Anneau lent\\[-0.5mm]\ttfamily phases};
+\node[techblock] (slowcnt) at (11.15,3.15)
+{Compteur lent\\[-0.5mm]\ttfamily Gray};
 
-\node[techblock] (fastosc) at (8.35,-3.35)
-{Anneau rapide\\[-0.4mm]\ttfamily phases rapides};
-\node[techblock] (fastcnt) at (12.45,-3.35)
-{Compteur rapide\\[-0.4mm]\ttfamily Nfast Gray};
-\node[wideblock,minimum height=18mm] (pd) at (12.45,0.0)
-{Matrice PD\\[-0.4mm]\ttfamily 8$\times$8};
+\node[techblock] (fastosc) at (7.60,-3.15)
+{Anneau rapide\\[-0.5mm]\ttfamily phases};
+\node[techblock] (fastcnt) at (11.15,-3.15)
+{Compteur rapide\\[-0.5mm]\ttfamily Gray};
+\node[wideblock,minimum height=18mm] (pd) at (11.15,0.0)
+{Matrice PD\\[-0.5mm]\ttfamily 8$\times$8};
 
-\node[wideblock,draw=bleuacier,fill=bleupale] (sync) at (17.65,1.65)
-{Synchronisation\\[-0.4mm]\ttfamily Gray + snapshot};
-\node[techblock] (meas) at (17.65,-1.25)
-{FSM mesure\\[-0.4mm]\ttfamily clk\_sys};
-\node[techblock] (ctx) at (21.70,0.0)
-{Contextes\\[-0.4mm]\ttfamily image figée};
-\node[wideblock] (tx) at (25.85,0.0)
-{Drain / FIFO / TX\\[-0.4mm]\ttfamily records};
+\node[wideblock,draw=bleuacier,fill=bleupale,minimum width=49mm] (sync) at (15.60,2.35)
+{Synchronisation\\[-0.5mm]{\ttfamily\footnotesize Gray + snapshot}};
+\node[techblock] (meas) at (15.60,-1.35)
+{FSM mesure\\[-0.5mm]\ttfamily clk\_sys};
+\node[techblock] (ctx) at (19.35,0.55)
+{Contextes\\[-0.5mm]\ttfamily image figée};
+\node[wideblock] (tx) at (23.35,0.55)
+{Drain / FIFO / TX\\[-0.5mm]\ttfamily records};
 
 \begin{pgfonlayer}{background}
-  \node[domain=domainasync, fit=(input)(capture)(boundary),
-        label={[titre,anchor=west]above left:Événements asynchrones}] {};
-  \node[domain=domainslow, fit=(slowosc)(slowcnt),
-        label={[titre,anchor=west]above left:Oscillateur lent}] {};
-  \node[domain=domainfast, fit=(fastosc)(fastcnt)(pd),
-        label={[titre,anchor=west]above left:Oscillateur rapide / matrice PD}] {};
-  \node[domain=domainsys, fit=(sync)(meas)(ctx)(tx),
-        label={[titre,anchor=west]above left:Domaine \texttt{clk\_sys}}] {};
+  \node[domain=domainasync, fit=(input)(capture)(boundary)] (domasync) {};
+  \node[domain=domainslow, fit=(slowosc)(slowcnt)] (domslow) {};
+  \node[domain=domainfast, fit=(fastosc)(fastcnt)(pd)] (domfast) {};
+  \node[domain=domainsys, fit=(sync)(meas)(ctx)(tx)] (domsys) {};
 \end{pgfonlayer}
 
+\node[titre,anchor=west] at ([xshift=-1mm,yshift=2mm]domasync.north west) {Événements asynchrones};
+\node[titre,anchor=west] at ([xshift=-1mm,yshift=2mm]domslow.north west) {Domaine oscillateur lent};
+\node[titre,anchor=west] at ([xshift=-1mm,yshift=2mm]domfast.north west) {Domaine oscillateur rapide / matrice};
+\node[titre,anchor=west] at ([xshift=-1mm,yshift=2mm]domsys.north west) {Domaine \texttt{clk\_sys}};
+
 \draw[datapath] (input.east) -- (capture.west);
-\draw[slowpath] (capture.north) -- ++(0,1.60) -| (slowosc.west);
-\node[labeltag,text=slowred] at (5.25,1.73) {commande lent};
-\draw[fastpath] (capture.south) -- ++(0,-1.60) -| (fastosc.west);
-\node[labeltag,text=fastblue] at (5.25,-1.73) {commande rapide};
+\draw[slowpath] (capture.north) -- (capture.north |- slowosc.west) -- (slowosc.west);
+\node[labeltag,text=slowred] at (5.45,2.90) {commande};
+\draw[fastpath] (capture.south) -- (capture.south |- fastosc.west) -- (fastosc.west);
+\node[labeltag,text=fastblue] at (5.45,-2.90) {commande};
 
 \draw[slowpath] (slowosc.east) -- (slowcnt.west);
-\draw[slowpath] (slowosc.south east) -- ++(0.70,0) |- (pd.north west);
-\node[labeltag,text=slowred] at (10.15,2.52) {phases locales};
+\draw[slowpath] (slowosc.south) -- ++(0,-0.70) -| (pd.north);
+\node[labeltag,text=slowred] at (8.65,1.95) {phases locales};
 \draw[fastpath] (fastosc.east) -- (fastcnt.west);
-\draw[fastpath] (fastosc.north east) -- ++(0.70,0) |- (pd.south west);
-\node[labeltag,text=fastblue] at (10.15,-2.52) {phases locales};
+\draw[fastpath] (fastosc.north) -- ++(0,0.70) -| (pd.south);
+\node[labeltag,text=fastblue] at (8.65,-1.95) {phases locales};
 
-\draw[graypath] (slowcnt.east) -- ++(1.05,0) |- ([yshift=2.8mm]sync.west);
-\node[labeltag] at (15.10,3.28) {compteur Gray};
-\draw[graypath] (fastcnt.east) -- ++(1.05,0) |- ([yshift=-2.8mm]sync.west);
-\node[labeltag] at (15.10,-3.28) {compteur Gray};
-\draw[datapath] (pd.east) -- (ctx.west);
-\node[labeltag] at (17.00,0.40) {image figée};
+\coordinate (slowgraybend) at ($(slowcnt.east)+(0.55,0)$);
+\draw[graypath] (slowcnt.east) -- (slowgraybend) -- (slowgraybend |- sync.west) -- (sync.west);
+\node[labeltag] at (13.35,3.02) {Gray};
+\coordinate (fastgraybend) at ($(fastcnt.east)+(0.55,0)$);
+\draw[graypath] (fastcnt.east) -- (fastgraybend) -- (fastgraybend |- sync.south west) -- (sync.south west);
+\node[labeltag] at (13.35,-2.95) {Gray};
 
+\draw[datapath] (pd.east) -- ++(0.75,0) |- (sync.south west);
+\node[labeltag] at (14.15,0.38) {snapshot};
 \draw[controlpath] (sync.south) -- (meas.north);
-\draw[controlpath] (meas.east) -- ++(1.10,0) |- (ctx.south west);
-\node[labeltag] at (19.35,-1.05) {commande capture};
+\draw[datapath] (sync.east) -- ++(0.55,0) |- (ctx.north);
+\node[labeltag] at (17.60,2.35) {image figée};
+\draw[controlpath] (meas.east) -- ++(0.70,0) |- (ctx.south);
+\node[labeltag] at (17.55,-0.88) {capture / clear};
 \draw[datapath] (ctx.east) -- (tx.west);
-\node[labeltag] at (23.62,0.62) {lecture};
-\draw[datapath] (tx.east) -- ++(1.85,0);
-\node[labeltag] at (28.35,0.62) {flux TX};
+\node[labeltag] at (21.35,1.12) {lecture};
+\draw[datapath] (tx.east) -- ++(1.55,0);
+\node[labeltag] at (25.00,1.12) {flux TX};
 
 \end{tikzpicture}
 \end{document}
