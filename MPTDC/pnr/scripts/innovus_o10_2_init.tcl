@@ -40,6 +40,37 @@ proc mptdc_o10_mkdirs {} {
     }
 }
 
+proc mptdc_o10_stage_mark {stage status} {
+    global o10
+    if {![info exists o10(manifests_dir)]} { return }
+    file mkdir $o10(manifests_dir)
+    set trace "$o10(manifests_dir)/stage_trace.csv"
+    set new_file [expr {![file exists $trace]}]
+    set timestamp [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]
+    set fh [open $trace a]
+    if {$new_file} {
+        puts $fh "timestamp,stage,status"
+    }
+    puts $fh "[mptdc_o10_csv_safe $timestamp],[mptdc_o10_csv_safe $stage],[mptdc_o10_csv_safe $status]"
+    close $fh
+
+    set cfh [open "$o10(manifests_dir)/current_stage.txt" w]
+    puts $cfh "stage=$stage"
+    puts $cfh "status=$status"
+    puts $cfh "timestamp=$timestamp"
+    close $cfh
+}
+
+proc mptdc_o10_csv_safe {value} {
+    set text "$value"
+    regsub -all {"} $text {""} text
+    if {[regexp {[,"
+]} $text]} {
+        return "\"$text\""
+    }
+    return $text
+}
+
 proc mptdc_o10_capture {path title body} {
     set dir [file dirname $path]
     file mkdir $dir
@@ -394,9 +425,11 @@ proc mptdc_o10_checkpoint_status {} {
 proc mptdc_o10_main {} {
     global o10
     mptdc_o10_setup_globals
+    mptdc_o10_stage_mark setup start
     mptdc_o10_verify_inputs
     mptdc_o10_write_mmmc
     mptdc_o10_write_manifest init
+    mptdc_o10_stage_mark setup done
 
     source "$o10(script_dir)/innovus_o10_2_screenshots.tcl"
     source "$o10(script_dir)/innovus_o10_2_reports.tcl"
@@ -407,28 +440,46 @@ proc mptdc_o10_main {} {
     source "$o10(script_dir)/innovus_o10_route.tcl"
     source "$o10(script_dir)/innovus_o10_2_phase_net_reports.tcl"
 
+    mptdc_o10_stage_mark init_design start
     mptdc_o10_init_design
+    mptdc_o10_stage_mark init_design done
+    mptdc_o10_stage_mark pre_place_reports start
     mptdc_o10_report_stage pre_place
+    mptdc_o10_stage_mark pre_place_reports done
+    mptdc_o10_stage_mark floorplan start
     mptdc_o10_floorplan
+    mptdc_o10_stage_mark floorplan done
     if {[mptdc_o10_env MPTDC_O10_STOP_AFTER ""] eq "floorplan"} {
+        mptdc_o10_stage_mark final_reports start
         mptdc_o10_phase_net_reports
         mptdc_o10_final_reports
         mptdc_o10_manager_summary
+        mptdc_o10_stage_mark final_reports done
         return
     }
+    mptdc_o10_stage_mark place start
     mptdc_o10_place
+    mptdc_o10_stage_mark place done
     if {$o10(run_mode) eq "place_only" || [mptdc_o10_env MPTDC_O10_STOP_AFTER ""] eq "place"} {
+        mptdc_o10_stage_mark final_reports start
         mptdc_o10_phase_net_reports
         mptdc_o10_final_reports
         mptdc_o10_manager_summary
+        mptdc_o10_stage_mark final_reports done
         return
     }
+    mptdc_o10_stage_mark cts start
     mptdc_o10_cts
+    mptdc_o10_stage_mark cts done
+    mptdc_o10_stage_mark route start
     mptdc_o10_route
+    mptdc_o10_stage_mark route done
+    mptdc_o10_stage_mark final_reports start
     mptdc_o10_phase_net_reports
     mptdc_o10_final_reports
     mptdc_o10_manager_summary
     mptdc_o10_checkpoint_status
+    mptdc_o10_stage_mark final_reports done
     mptdc_o10_msg "O10.2 Innovus PNR constraint/report/CTS repair complete"
 }
 

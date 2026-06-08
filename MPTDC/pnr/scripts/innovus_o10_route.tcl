@@ -5,18 +5,44 @@
 proc mptdc_o10_route {} {
     global o10
     mptdc_o10_msg "Running route feasibility"
+    mptdc_o10_stage_mark route.routeDesign start
     if {[catch {routeDesign} err]} {
         mptdc_o10_msg "routeDesign failed: $err"
+        mptdc_o10_stage_mark route.routeDesign failed
+    } else {
+        mptdc_o10_stage_mark route.routeDesign done
     }
-    catch {optDesign -postRoute}
+    mptdc_o10_stage_mark route.optDesign_postRoute start
+    if {[catch {optDesign -postRoute} err]} {
+        mptdc_o10_msg "optDesign -postRoute failed: $err"
+        mptdc_o10_stage_mark route.optDesign_postRoute failed
+    } else {
+        mptdc_o10_stage_mark route.optDesign_postRoute done
+    }
+    mptdc_o10_stage_mark route.reports start
     mptdc_o10_report_stage post_route
     mptdc_o10_capture_candidates "$o10(reports_dir)/hold_post_route.rpt" \
         "O10 hold post route" [list {report_timing -check_type hold -max_paths 100} {timeDesign -postRoute -hold}]
+    mptdc_o10_stage_mark route.reports done
+    mptdc_o10_stage_mark route.defOut start
     catch {defOut "$o10(def_dir)/04_route.def"}
+    mptdc_o10_stage_mark route.defOut done
+    mptdc_o10_stage_mark route.saveDesign start
     catch {saveDesign "$o10(checkpoints_dir)/04_route.enc"}
+    mptdc_o10_stage_mark route.saveDesign done
+    mptdc_o10_stage_mark route.restore_script start
     mptdc_o10_restore_script 04_route
+    mptdc_o10_stage_mark route.restore_script done
+    mptdc_o10_stage_mark route.screenshot_routed start
     mptdc_o10_screenshot "05_routed_design.png" "routed design"
+    mptdc_o10_stage_mark route.screenshot_routed done
+    mptdc_o10_stage_mark route.screenshot_congestion start
     mptdc_o10_screenshot "06_congestion.png" "congestion"
+    mptdc_o10_stage_mark route.screenshot_congestion done
+    mptdc_o10_stage_mark route.screenshot_final_manager start
     mptdc_o10_screenshot "08_final_manager_view.png" "final manager view"
+    mptdc_o10_stage_mark route.screenshot_final_manager done
+    mptdc_o10_stage_mark route.manifest start
     mptdc_o10_write_manifest route
+    mptdc_o10_stage_mark route.manifest done
 }

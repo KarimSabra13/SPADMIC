@@ -277,7 +277,7 @@ validate_required_outputs() {
   fi
 }
 
-if [[ "$INNOVUS_RC" == "0" ]]; then
+if [[ "$INNOVUS_RC" == "0" || "$INNOVUS_RC" == "139" ]]; then
   case "$RUN_MODE" in
     route_feasibility) validate_required_outputs 1 ;;
     place_only) validate_required_outputs 0 ;;
@@ -290,6 +290,25 @@ if [[ "$INNOVUS_RC" == "0" ]]; then
       ;;
     validate_only) ;;
   esac
+fi
+
+CRASH_STAGE="not_applicable"
+INNOVUS_EXIT_CLASS="CLEAN_OR_NON_139"
+if [[ -s "$RESULT_DIR/manifests/current_stage.txt" ]]; then
+  CRASH_STAGE="$(tr '\n' ';' < "$RESULT_DIR/manifests/current_stage.txt")"
+fi
+if [[ "$INNOVUS_RC" == "139" ]]; then
+  if [[ "$REQUIRED_RC" == "0" ]]; then
+    INNOVUS_EXIT_CLASS="POST_REPORT_TOOL_EXIT_139"
+  else
+    INNOVUS_EXIT_CLASS="INNOVUS_EXIT_139_BEFORE_REQUIRED_OUTPUTS"
+  fi
+  {
+    echo "INNOVUS_EXIT_139"
+    echo "exit_class=$INNOVUS_EXIT_CLASS"
+    echo "last_stage=$CRASH_STAGE"
+    echo "required_outputs_exit_code=$REQUIRED_RC"
+  } > "$RESULT_DIR/manifests/innovus_exit_classification.txt"
 fi
 
 if [[ "$REQUIRED_RC" != "0" ]]; then
@@ -324,6 +343,8 @@ fi
   echo "- Run mode: \`$RUN_MODE\`"
   echo "- Git HEAD: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)\`"
   echo "- Innovus exit code: $INNOVUS_RC"
+  echo "- Innovus exit class: \`$INNOVUS_EXIT_CLASS\`"
+  echo "- Last recorded Innovus stage: \`$CRASH_STAGE\`"
   echo "- Required outputs exit code: $REQUIRED_RC"
   echo "- Wrapper exit code: $WRAPPER_RC"
   echo "- REPORT_COMPLETE: \`$REPORT_COMPLETE\`"
