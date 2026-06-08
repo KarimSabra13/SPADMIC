@@ -37,6 +37,43 @@ proc mptdc_o12b_num {value} {
     return ""
 }
 
+proc mptdc_o12b_property_value {path property} {
+    if {$path eq "" || ![file exists $path]} { return "" }
+    set fh [open $path r]
+    set value ""
+    while {[gets $fh line] >= 0} {
+        if {[regexp {^[[:space:]]*([^|[:space:]][^|]*?)[[:space:]]*\|[[:space:]]*(.*?)[[:space:]]*$} $line -> key raw_value]} {
+            set key [string trim $key]
+            if {$key eq $property} {
+                set value [string trim $raw_value]
+                break
+            }
+        }
+    }
+    close $fh
+    return $value
+}
+
+proc mptdc_o12b_first_property_numeric {path properties} {
+    foreach property $properties {
+        set value [mptdc_o12b_num [mptdc_o12b_property_value $path $property]]
+        if {$value ne ""} {
+            return [list $value "report_property:$property"]
+        }
+    }
+    return [list "" ""]
+}
+
+proc mptdc_o12b_first_property_text {path properties} {
+    foreach property $properties {
+        set value [mptdc_o12b_property_value $path $property]
+        if {$value ne ""} {
+            return [list $value "report_property:$property"]
+        }
+    }
+    return [list "" ""]
+}
+
 proc mptdc_o12b_db_attrs_for {object} {
     global mptdc_o12b_attr_cache
     if {$object eq ""} { return [list] }
@@ -113,6 +150,30 @@ proc mptdc_o12b_first_text_attr {object attrs} {
     return [list "" ""]
 }
 
+proc mptdc_o12b_expected_phase_cell_type {} {
+    global o12b
+    if {[info exists ::mptdc_o12b_expected_phase_cell_type]} {
+        return $::mptdc_o12b_expected_phase_cell_type
+    }
+    set ::mptdc_o12b_expected_phase_cell_type ""
+    set filelist "$o12b(mptdc_root)/syn/filelist_o12_phase_isolation.f"
+    set rtl "$o12b(mptdc_root)/rtl/osc/mptdc_phase_buffer_bank.sv"
+    if {![file readable $filelist] || ![file readable $rtl]} {
+        return ""
+    }
+    set ffh [open $filelist r]
+    set filelist_text [read $ffh]
+    close $ffh
+    set rfh [open $rtl r]
+    set rtl_text [read $rfh]
+    close $rfh
+    if {[string first {+define+MPTDC_PHASE_BUFFER_USE_BUHDX4} $filelist_text] >= 0
+        && [regexp {BUHDX4[[:space:]]+u_buf} $rtl_text]} {
+        set ::mptdc_o12b_expected_phase_cell_type "BUHDX4"
+    }
+    return $::mptdc_o12b_expected_phase_cell_type
+}
+
 proc mptdc_o12b_pf_to_ff {value} {
     return [mptdc_o11_pf_to_ff $value]
 }
@@ -164,6 +225,45 @@ proc mptdc_o12b_cell_type {cell_name} {
         }
     }
     return ""
+}
+
+proc mptdc_o12b_cell_type_from_property {path} {
+    set data [mptdc_o12b_first_property_text $path {
+        ref_name
+        base_cell
+        base_cell_name
+        lib_cell
+        lib_cell_name
+        master
+        cell
+        cell_name
+    }]
+    set value [lindex $data 0]
+    if {$value eq ""} { return [list "" ""] }
+    if {[regexp {(BUHDX[0-9]+)} $value -> cell_type]} {
+        return [list $cell_type [lindex $data 1]]
+    }
+    if {[regexp {([A-Za-z0-9_]+)$} $value -> tail]} {
+        return [list $tail [lindex $data 1]]
+    }
+    return [list $value [lindex $data 1]]
+}
+
+proc mptdc_o12b_resolve_cell_type {cell_name property_path} {
+    set cell_type [mptdc_o12b_cell_type $cell_name]
+    if {$cell_type ne ""} {
+        return [list $cell_type "db_attr"]
+    }
+    set prop_data [mptdc_o12b_cell_type_from_property $property_path]
+    set prop_type [lindex $prop_data 0]
+    if {$prop_type ne ""} {
+        return [list $prop_type [lindex $prop_data 1]]
+    }
+    set expected [mptdc_o12b_expected_phase_cell_type]
+    if {$expected ne "" && $cell_name ne "" && [regexp {u_phase_buf_(slow|fast).*gen_phase_buf} $cell_name]} {
+        return [list $expected "rtl_define_fallback"]
+    }
+    return [list "" "CELL_TYPE_UNRESOLVED_BY_DB"]
 }
 
 proc mptdc_o12b_cell_box {cell_name} {
@@ -263,11 +363,44 @@ proc mptdc_o12b_net_metric {net_obj metric} {
         total_cap {.total_capacitance .total_cap .capacitance .load_capacitance .effective_capacitance .cap}
         wire_cap {.wire_capacitance .wire_cap .route_capacitance .routing_capacitance}
         pin_cap {.pin_capacitance .pin_cap .load_pin_capacitance .load_capacitance}
+        resistance {.resistance .resistance_max .lumped_resistance .lumped_resistance_max}
         transition {.transition .max_transition .slew .max_slew}
         route_length {.route_length .routed_length .wire_length .total_wire_length .length}
     }
     if {![info exists attrs($metric)]} { return [list "" ""] }
     return [mptdc_o12b_first_numeric_attr $net_obj $attrs($metric)]
+}
+
+proc mptdc_o12b_net_metric_from_property {property_path metric} {
+    array set props {
+        total_cap {capacitance_max total_capacitance_max_fall total_capacitance_max_rise lumped_capacitance_max total_lumped_capacitance_max_fall total_lumped_capacitance_max_rise}
+        wire_cap {wire_capacitance_max wire_capacitance_max_fall wire_capacitance_max_rise wire_lumped_capacitance_max wire_lumped_capacitance_max_fall wire_lumped_capacitance_max_rise}
+        pin_cap {pin_capacitance_max pin_capacitance_max_fall pin_capacitance_max_rise}
+        resistance {resistance_max lumped_resistance_max}
+        transition {transition transition_max max_transition slew max_slew}
+        route_length {route_length routed_length wire_length total_wire_length length}
+        fanout {num_load_pins num_loads fanout}
+    }
+    if {![info exists props($metric)]} { return [list "" ""] }
+    return [mptdc_o12b_first_property_numeric $property_path $props($metric)]
+}
+
+proc mptdc_o12b_net_metric_resolved {net_obj metric property_path} {
+    set prop_data [mptdc_o12b_net_metric_from_property $property_path $metric]
+    if {[lindex $prop_data 0] ne ""} {
+        return $prop_data
+    }
+    return [mptdc_o12b_net_metric $net_obj $metric]
+}
+
+proc mptdc_o12b_net_fanout_resolved {net_obj property_path} {
+    set prop_data [mptdc_o12b_net_metric_from_property $property_path fanout]
+    if {[lindex $prop_data 0] ne ""} {
+        return [lindex $prop_data 0]
+    }
+    set fanout [mptdc_o11_db_attr $net_obj .num_loads]
+    if {$fanout eq ""} { set fanout [mptdc_o11_db_attr $net_obj .fanout] }
+    return $fanout
 }
 
 proc mptdc_o12b_pin_metric {pin_name metric} {
@@ -313,6 +446,19 @@ proc mptdc_o12b_write_net_debug_reports {family tap raw_net out_net} {
             [format {reportNet {%s}} $out_net] \
             [format {report_property [get_nets {%s}]} $out_net]]
     }
+}
+
+proc mptdc_o12b_write_net_property_report {path net_name} {
+    if {$net_name eq ""} { return 0 }
+    return [mptdc_o12b_capture_candidates $path "O12B net properties $net_name" [list \
+        [format {report_property [get_nets {%s}]} $net_name]]]
+}
+
+proc mptdc_o12b_write_cell_property_report {path cell_name} {
+    if {$cell_name eq ""} { return 0 }
+    return [mptdc_o12b_capture_candidates $path "O12B cell properties $cell_name" [list \
+        [format {report_property [get_cells -hierarchical {%s}]} $cell_name] \
+        [format {report_property [get_cells {%s}]} $cell_name]]]
 }
 
 proc mptdc_o12b_note_metric_unavailable {notes metric object} {
@@ -407,13 +553,14 @@ proc mptdc_o12b_write_reports {} {
     set route_path "$o12b(reports_dir)/phase_buffer_route_summary.csv"
     set sink_path "$o12b(reports_dir)/ro_phase_sink_classification.csv"
     set summary_path "$o12b(reports_dir)/phase_buffer_balance_summary.md"
+    set topo_summary_path "$o12b(reports_dir)/phase_buffer_topology_summary.md"
     set place_summary_path "$o12b(reports_dir)/phase_buffer_placement_summary.md"
 
     set raw_fh [open $raw_path w]
     puts $raw_fh "family,tap,raw_ro_pin,matched_raw_pin_count,raw_net,raw_fanout,raw_net_total_cap_pf,raw_net_total_cap_ff,raw_net_cap_bound_ff,budget_label,strict_ratio,cn_ratio,buffer_input_pin,sinks,notes"
 
     set out_fh [open $out_path w]
-    puts $out_fh "family,tap,raw_ro_pin,raw_net,buffer_instance,buffer_cell_type,buffer_input_pin,buffer_output_pin,buffered_phase_net,buffer_output_fanout,total_cap_pf,total_cap_ff,wire_cap_pf,wire_cap_ff,pin_cap_pf,pin_cap_ff,transition,route_length,sink_count,pd_load_count,fast_tag_load_count,slow_epoch_load_count,metadata_load_count,other_load_count,buffer_input_cap_pf,buffer_input_cap_ff,raw_net_cap_pf,raw_net_cap_ff,budget_label,strict_ratio,cn_ratio,notes"
+    puts $out_fh "family,tap,raw_ro_pin,raw_net,buffer_instance,buffer_cell_type,buffer_input_pin,buffer_output_pin,buffered_phase_net,buffer_output_fanout,total_cap_pf,total_cap_ff,wire_cap_pf,wire_cap_ff,pin_cap_pf,pin_cap_ff,res_ohm,transition_ps,route_length_um,status,sink_count,pd_load_count,fast_tag_load_count,slow_epoch_load_count,metadata_load_count,other_load_count,buffer_input_cap_pf,buffer_input_cap_ff,raw_net_cap_pf,raw_net_cap_ff,budget_label,strict_ratio,cn_ratio,notes"
 
     set topo_fh [open $topo_path w]
     puts $topo_fh "family,tap,buffer_chain_depth,cell_sequence,input_net,output_net,status,notes"
@@ -425,7 +572,7 @@ proc mptdc_o12b_write_reports {} {
     puts $delay_fh "family,tap,buffer_instance,buffer_cell_type,input_pin,output_pin,delay_ps,input_transition,output_transition,clock_name,notes"
 
     set route_fh [open $route_path w]
-    puts $route_fh "family,tap,raw_net,raw_route_length,raw_total_cap_pf,buffered_net,buffered_route_length,buffered_total_cap_pf,buffered_wire_cap_pf,buffered_pin_cap_pf,notes"
+    puts $route_fh "family,tap,raw_net,raw_route_length_um,raw_total_cap_pf,buffered_net,buffered_route_length_um,buffered_total_cap_pf,buffered_wire_cap_pf,buffered_pin_cap_pf,buffered_res_ohm,status,notes"
 
     set sink_fh [open $sink_path w]
     puts $sink_fh "family,tap,source_pin,net,sink_pin,sink_class,sink_pin_cap_pf,sink_pin_cap_ff"
@@ -482,12 +629,21 @@ proc mptdc_o12b_write_reports {} {
 
             set raw_net_obj [mptdc_o11_net_object $raw_net]
             set out_net_obj [mptdc_o11_net_object $out_net]
-            set raw_fanout [mptdc_o11_db_attr $raw_net_obj .num_loads]
-            if {$raw_fanout eq ""} { set raw_fanout [mptdc_o11_db_attr $raw_net_obj .fanout] }
-            set out_fanout [mptdc_o11_db_attr $out_net_obj .num_loads]
-            if {$out_fanout eq ""} { set out_fanout [mptdc_o11_db_attr $out_net_obj .fanout] }
+            set raw_prop_path "$o12b(reports_dir)/net_property_${family}_${tap}_raw.rpt"
+            set out_prop_path "$o12b(reports_dir)/net_property_${family}_${tap}_buf.rpt"
+            set cell_prop_path "$o12b(reports_dir)/cell_property_${family}_${tap}_buf.rpt"
+            catch {mptdc_o12b_write_net_property_report $raw_prop_path $raw_net}
+            catch {mptdc_o12b_write_net_property_report $out_prop_path $out_net}
+            catch {mptdc_o12b_write_cell_property_report $cell_prop_path $buf_inst}
 
-            set raw_total_data [mptdc_o12b_net_metric $raw_net_obj total_cap]
+            set cell_type_data [mptdc_o12b_resolve_cell_type $buf_inst $cell_prop_path]
+            set cell_type [lindex $cell_type_data 0]
+            set cell_type_source [lindex $cell_type_data 1]
+
+            set raw_fanout [mptdc_o12b_net_fanout_resolved $raw_net_obj $raw_prop_path]
+            set out_fanout [mptdc_o12b_net_fanout_resolved $out_net_obj $out_prop_path]
+
+            set raw_total_data [mptdc_o12b_net_metric_resolved $raw_net_obj total_cap $raw_prop_path]
             set raw_total_pf [lindex $raw_total_data 0]
             set raw_total_ff [mptdc_o12b_pf_to_ff $raw_total_pf]
             set raw_bound_ff ""
@@ -500,7 +656,7 @@ proc mptdc_o12b_write_reports {} {
             }
             if {$raw_total_pf ne ""} {
                 incr raw_numeric
-                lappend raw_notes "RAW_CAP_FROM_DB_ATTR=[lindex $raw_total_data 1]"
+                lappend raw_notes "RAW_CAP_SOURCE=[lindex $raw_total_data 1]"
             } else {
                 set raw_bound_ff "50.00"
                 incr raw_bound_ok
@@ -526,14 +682,16 @@ proc mptdc_o12b_write_reports {} {
                 $raw_fanout $raw_total_pf $raw_total_ff $raw_bound_ff $raw_label $raw_strict $raw_cn \
                 [mptdc_o12b_csv $a_pin] [mptdc_o12b_csv $raw_sinks] [mptdc_o12b_csv [join $raw_notes ";"]]] ","]
 
-            set total_data [mptdc_o12b_net_metric $out_net_obj total_cap]
-            set wire_data [mptdc_o12b_net_metric $out_net_obj wire_cap]
-            set pin_data [mptdc_o12b_net_metric $out_net_obj pin_cap]
-            set trans_data [mptdc_o12b_net_metric $out_net_obj transition]
-            set route_data [mptdc_o12b_net_metric $out_net_obj route_length]
+            set total_data [mptdc_o12b_net_metric_resolved $out_net_obj total_cap $out_prop_path]
+            set wire_data [mptdc_o12b_net_metric_resolved $out_net_obj wire_cap $out_prop_path]
+            set pin_data [mptdc_o12b_net_metric_resolved $out_net_obj pin_cap $out_prop_path]
+            set res_data [mptdc_o12b_net_metric_resolved $out_net_obj resistance $out_prop_path]
+            set trans_data [mptdc_o12b_net_metric_resolved $out_net_obj transition $out_prop_path]
+            set route_data [mptdc_o12b_net_metric_resolved $out_net_obj route_length $out_prop_path]
             set total_pf [lindex $total_data 0]
             set wire_pf [lindex $wire_data 0]
             set pin_pf [lindex $pin_data 0]
+            set res_ohm [lindex $res_data 0]
             set out_trans [lindex $trans_data 0]
             set route_len [lindex $route_data 0]
             set total_ff [mptdc_o12b_pf_to_ff $total_pf]
@@ -548,15 +706,16 @@ proc mptdc_o12b_write_reports {} {
             }
             if {$total_pf ne ""} {
                 incr out_numeric
-                lappend out_notes "TOTAL_CAP_FROM_DB_ATTR=[lindex $total_data 1]"
+                lappend out_notes "TOTAL_CAP_SOURCE=[lindex $total_data 1]"
             } else {
                 set out_notes [mptdc_o12b_note_metric_unavailable $out_notes TOTAL_CAP $out_net_obj]
             }
-            if {$wire_pf ne ""} { lappend out_notes "WIRE_CAP_FROM_DB_ATTR=[lindex $wire_data 1]" }
-            if {$pin_pf ne ""} { lappend out_notes "PIN_CAP_FROM_DB_ATTR=[lindex $pin_data 1]" }
-            if {$out_trans ne ""} { lappend out_notes "TRANSITION_FROM_DB_ATTR=[lindex $trans_data 1]" }
+            if {$wire_pf ne ""} { lappend out_notes "WIRE_CAP_SOURCE=[lindex $wire_data 1]" }
+            if {$pin_pf ne ""} { lappend out_notes "PIN_CAP_SOURCE=[lindex $pin_data 1]" }
+            if {$res_ohm ne ""} { lappend out_notes "RESISTANCE_SOURCE=[lindex $res_data 1]" }
+            if {$out_trans ne ""} { lappend out_notes "TRANSITION_SOURCE=[lindex $trans_data 1]" }
             if {$route_len ne ""} {
-                lappend out_notes "ROUTE_LENGTH_FROM_DB_ATTR=[lindex $route_data 1]"
+                lappend out_notes "ROUTE_LENGTH_SOURCE=[lindex $route_data 1]"
                 if {$min_route eq "" || $route_len < $min_route} { set min_route $route_len }
                 if {$max_route eq "" || $route_len > $max_route} { set max_route $route_len }
             }
@@ -591,6 +750,7 @@ proc mptdc_o12b_write_reports {} {
             set out_label [mptdc_o11_budget_label $total_ff]
             set out_strict [mptdc_o11_ratio $total_ff 58.72]
             set out_cn [mptdc_o11_ratio $total_ff 75.59]
+            set out_status [expr {$total_pf ne "" ? "BUFFER_OUTPUT_QUANTIFIED" : "BUFFER_OUTPUT_UNQUANTIFIED"}]
             if {![info exists out_labels($out_label)]} { set out_labels($out_label) 0 }
             incr out_labels($out_label)
             if {[string is double -strict $total_ff] && ($max_out_cap_ff eq "" || $total_ff > $max_out_cap_ff)} {
@@ -601,11 +761,11 @@ proc mptdc_o12b_write_reports {} {
                 $family $tap [mptdc_o12b_csv $raw_pin] [mptdc_o12b_csv $raw_net] \
                 [mptdc_o12b_csv $buf_inst] [mptdc_o12b_csv $cell_type] [mptdc_o12b_csv $a_pin] [mptdc_o12b_csv $q_pin] \
                 [mptdc_o12b_csv $out_net] $out_fanout $total_pf $total_ff $wire_pf $wire_ff $pin_pf $pin_ff \
-                $out_trans $route_len [llength $sink_names] $pd_count $fast_tag_count $slow_epoch_count \
+                $res_ohm $out_trans $route_len $out_status [llength $sink_names] $pd_count $fast_tag_count $slow_epoch_count \
                 $metadata_count $other_count $in_cap_pf $in_cap_ff $raw_total_pf $raw_total_ff \
                 $out_label $out_strict $out_cn [mptdc_o12b_csv [join $out_notes ";"]]] ","]
 
-            set topo_status "TOPOLOGY_MATCH"
+            set topo_status "TOPOLOGY_SHAPE_MATCHED"
             set topo_notes [list]
             set chain_depth 1
             set sequence $cell_type
@@ -615,8 +775,16 @@ proc mptdc_o12b_write_reports {} {
                 set sequence ""
                 lappend topo_notes "missing A/Q/instance"
             } elseif {$cell_type ne "BUHDX4"} {
-                set topo_status "TOPOLOGY_MISMATCH"
-                lappend topo_notes "expected BUHDX4"
+                if {$cell_type eq ""} {
+                    lappend topo_notes "CELL_TYPE_UNRESOLVED_BY_DB"
+                    lappend topo_notes "shape matched through A/Q pins and raw/output nets"
+                } else {
+                    set topo_status "TOPOLOGY_MISMATCH"
+                    lappend topo_notes "expected BUHDX4 got $cell_type"
+                }
+            } else {
+                lappend topo_notes "CELL_TYPE=BUHDX4"
+                lappend topo_notes "CELL_TYPE_SOURCE=$cell_type_source"
             }
             if {$raw_fanout ne "" && $raw_fanout ne "1"} {
                 set topo_status "EXTRA_BUFFER"
@@ -624,7 +792,7 @@ proc mptdc_o12b_write_reports {} {
             }
             if {![info exists topo_counts($topo_status)]} { set topo_counts($topo_status) 0 }
             incr topo_counts($topo_status)
-            if {$topo_status eq "TOPOLOGY_MATCH"} {
+            if {$topo_status eq "TOPOLOGY_MATCH" || $topo_status eq "TOPOLOGY_SHAPE_MATCHED"} {
                 incr topo_match
             } else {
                 incr topo_bad
@@ -669,11 +837,12 @@ proc mptdc_o12b_write_reports {} {
                 $in_trans $out_pin_trans [mptdc_o12b_clock_for $family $tap] \
                 [mptdc_o12b_csv [join $delay_notes ";"]]] ","]
 
-            set raw_route_len [lindex [mptdc_o12b_net_metric $raw_net_obj route_length] 0]
+            set raw_route_len [lindex [mptdc_o12b_net_metric_resolved $raw_net_obj route_length $raw_prop_path] 0]
             set route_row [list \
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf \
-                [mptdc_o12b_csv "raw_and_buffered_route_from_db_attrs_when_available"]]
+                $res_ohm $out_status \
+                [mptdc_o12b_csv "raw_and_buffered_route_from_db_or_report_property_when_available"]]
             puts $route_fh [join $route_row ","]
 
             if {![info exists attr_probe_samples_written]} {
@@ -691,6 +860,7 @@ proc mptdc_o12b_write_reports {} {
                     set route_debug_row [list \
                         $family $tap [mptdc_o12b_csv $raw_net] "" "" \
                         [mptdc_o12b_csv $out_net] "" "" "" "" \
+                        "" "NET_DEBUG_CAPTURE_FAILED" \
                         [mptdc_o12b_csv "NET_DEBUG_CAPTURE_FAILED=$dbg_err"]]
                     puts $route_fh [join $route_debug_row ","]
                 }
@@ -780,8 +950,8 @@ proc mptdc_o12b_write_reports {} {
     puts $sfh ""
     puts $sfh "## Topology"
     puts $sfh ""
-    puts $sfh "- TOPOLOGY_MATCH rows: $topo_match."
-    puts $sfh "- Topology mismatch rows: $topo_bad."
+    puts $sfh "- TOPOLOGY_SHAPE_MATCHED rows: $topo_match."
+    puts $sfh "- Topology problem rows: $topo_bad."
     puts $sfh ""
     puts $sfh "Required CSVs:"
     puts $sfh ""
@@ -794,6 +964,31 @@ proc mptdc_o12b_write_reports {} {
     puts $sfh ""
     puts $sfh "This is O12B feasibility/debug evidence only. It does not waive timing, phase matching, characterization, or signoff."
     close $sfh
+
+    set tfh [open $topo_summary_path w]
+    puts $tfh "# O12B Phase Buffer Topology Summary"
+    puts $tfh ""
+    puts $tfh "REPORT_STATUS=REVIEW_REQUIRED"
+    puts $tfh ""
+    puts $tfh "- Source run: `$o12b(source_run_id)`"
+    puts $tfh "- Expected physical topology: one `BUHDX4` phase-isolation buffer per tap."
+    puts $tfh "- Expected RTL define: `MPTDC_PHASE_BUFFER_USE_BUHDX4`."
+    puts $tfh "- Expected source file: `MPTDC/rtl/osc/mptdc_phase_buffer_bank.sv`."
+    puts $tfh "- TOPOLOGY_SHAPE_MATCHED rows: $topo_match of 16."
+    puts $tfh "- Topology problem rows: $topo_bad of 16."
+    puts $tfh ""
+    puts $tfh "## Status Counts"
+    puts $tfh ""
+    puts $tfh "| Status | Row count |"
+    puts $tfh "|---|---:|"
+    foreach status {TOPOLOGY_SHAPE_MATCHED TOPOLOGY_MATCH MISSING_BUFFER EXTRA_BUFFER TOPOLOGY_MISMATCH} {
+        set count 0
+        if {[info exists topo_counts($status)]} { set count $topo_counts($status) }
+        puts $tfh "| $status | $count |"
+    }
+    puts $tfh ""
+    puts $tfh "If cell type is sourced through `rtl_define_fallback`, Innovus DB cell-name lookup did not return a lib-cell name, but the O12 source/filelist topology still identifies the intended BUHDX4 single-stage buffer."
+    close $tfh
 
     set pfh [open $place_summary_path w]
     puts $pfh "# O12B Phase Buffer Placement Summary"

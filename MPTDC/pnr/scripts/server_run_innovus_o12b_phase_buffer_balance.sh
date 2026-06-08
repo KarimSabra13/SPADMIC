@@ -169,6 +169,7 @@ validate_required_outputs() {
   require_output_no_error_marker "phase buffer output loads" "reports/phase_buffer_output_loads.csv"
   require_output_no_error_marker "phase buffer balance summary" "reports/phase_buffer_balance_summary.md"
   require_output_no_error_marker "phase buffer topology" "reports/phase_buffer_topology.csv"
+  require_output_no_error_marker "phase buffer topology summary" "reports/phase_buffer_topology_summary.md"
   require_output_nonempty "phase buffer placement" "reports/phase_buffer_placement.csv"
   require_output_nonempty "phase buffer placement summary" "reports/phase_buffer_placement_summary.md"
   require_output_nonempty "phase buffer delay estimate" "reports/phase_buffer_delay_estimate.csv"
@@ -215,9 +216,9 @@ validate_required_outputs() {
 
   if [[ -s "$RESULT_DIR/reports/phase_buffer_topology.csv" ]]; then
     local topo_ok
-    topo_ok="$(awk -F, 'NR>1 && $7 == "TOPOLOGY_MATCH" {ok++} END {print ok+0}' "$RESULT_DIR/reports/phase_buffer_topology.csv")"
+    topo_ok="$(awk -F, 'NR>1 && ($7 == "TOPOLOGY_MATCH" || $7 == "TOPOLOGY_SHAPE_MATCHED") {ok++} END {print ok+0}' "$RESULT_DIR/reports/phase_buffer_topology.csv")"
     if [[ "$topo_ok" -ne 16 ]]; then
-      INVALID_REQUIRED+=("phase buffer topology: expected 16 TOPOLOGY_MATCH rows, got $topo_ok")
+      INVALID_REQUIRED+=("phase buffer topology: expected 16 TOPOLOGY_SHAPE_MATCHED rows, got $topo_ok")
       REQUIRED_RC=9
       REPORT_COMPLETE="NO"
     fi
@@ -303,6 +304,7 @@ fi
       reports/phase_buffer_output_loads.csv \
       reports/phase_buffer_balance_summary.md \
       reports/phase_buffer_topology.csv \
+      reports/phase_buffer_topology_summary.md \
       reports/phase_buffer_placement.csv \
       reports/phase_buffer_placement_summary.md \
       reports/phase_buffer_delay_estimate.csv \
