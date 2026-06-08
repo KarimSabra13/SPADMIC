@@ -137,13 +137,15 @@ Après la vue temporelle du rattrapage, la figure \ref{fig:vernier-reference-arc
 
 Sur le plan conceptuel, cette structuration est particulièrement intéressante pour un futur passage vers une implémentation numérique plus complète. Elle sépare clairement la génération des phases, leur observation, le comptage grossier et le stockage des résultats. Cette séparation fonctionnelle facilite ensuite les adaptations nécessaires à une intégration plus large dans un système de lecture.
 
-La figure \ref{fig:vernier-multiphase-timing} donne un chronogramme de fronts de phase volontairement réduit à cinq sorties lentes et cinq sorties rapides. Les fronts sont construits à partir d'un même exemple temporel simplifié, afin de rendre visible le rattrapage Vernier et l'observation parallèle des couples $(S_i,F_j)$. La figure n'a pas vocation à reproduire un chronogramme transistor complet.
+La figure~\ref{fig:vernier-multiphase-chrono} complète cette vue bloc par un chronogramme de principe réduit à cinq phases. Les temps affichés sont construits à partir d'un exemple cohérent avec \(\tau_f < \tau_s\). La représentation montre le lancement différé des phases rapides par le STOP, le rapprochement progressif des fronts rapides et l'observation parallèle de plusieurs couples de phase.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.96\textwidth]{tdc/vernier_multiphase_timing.pdf}
-    \caption{Chronogramme de principe du fonctionnement Vernier multiphase. Les fronts lents et rapides sont construits à partir d'un exemple cohérent avec $\tau_f < \tau_s$. La matrice de phase observe plusieurs couples $(S_i,F_j)$ en parallèle ; le couple surligné illustre la première coïncidence utile dans cet exemple simplifié.}
-    \label{fig:vernier-multiphase-timing}
+    \makebox[\textwidth][c]{%
+        \includegraphics[width=1.05\textwidth]{figures/generated/vernier_multiphase_chronogram.pdf}%
+    }
+    \caption{Chronogramme de principe du fonctionnement Vernier multiphase. Les phases lentes et rapides sont représentées avec \(\tau_s = 55\,\mathrm{ps}\), \(\tau_f = 50\,\mathrm{ps}\) et \(T_{\mathrm{hit}} = 70\,\mathrm{ps}\). Plusieurs couples sont observés pendant le rattrapage ; le couple \((S_5,F_4)\) illustre la première coïncidence utile de cet exemple.}
+    \label{fig:vernier-multiphase-chrono}
 \end{figure}
 
 \section{Lecture explicite de la matrice de phase}

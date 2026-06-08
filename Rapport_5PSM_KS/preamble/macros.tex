@@ -9,13 +9,42 @@
   bottom=6pt
 }
 
-\lstdefinestyle{rtlSnippetStyle}{
-  basicstyle=\ttfamily\scriptsize,
+\definecolor{svkeyword}{RGB}{0,62,120}
+\definecolor{svcomment}{RGB}{0,110,60}
+\definecolor{svstring}{RGB}{120,70,0}
+\definecolor{svback}{RGB}{248,248,248}
+\definecolor{svframe}{RGB}{210,210,210}
+
+\lstdefinelanguage{SystemVerilog}{
+  morekeywords={
+    always_ff,always_comb,assign,begin,end,if,else,case,endcase,unique,
+    logic,wire,reg,localparam,typedef,enum,struct,packed,module,endmodule,
+    input,output,inout,posedge,negedge,parameter,default
+  },
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]"
+}
+
+\lstdefinestyle{svrtl}{
+  language=SystemVerilog,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{svkeyword}\bfseries,
+  commentstyle=\color{svcomment},
+  stringstyle=\color{svstring},
+  backgroundcolor=\color{svback},
+  frame=single,
+  rulecolor=\color{svframe},
   columns=fullflexible,
   keepspaces=true,
-  breaklines=true,
   showstringspaces=false,
-  tabsize=2
+  tabsize=2,
+  breaklines=true,
+  xleftmargin=0.5em,
+  xrightmargin=0.5em,
+  aboveskip=0.7em,
+  belowskip=0.7em
 }
 
 \newtcblisting{rtlSnippet}[1]{
@@ -28,7 +57,7 @@
   top=4pt,
   bottom=4pt,
   listing only,
-  listing options={style=rtlSnippetStyle}
+  listing options={style=svrtl}
 }
 
 \newcommand{\HRule}{\rule{\linewidth}{0.4pt}}

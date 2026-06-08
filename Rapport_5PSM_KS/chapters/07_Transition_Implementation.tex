@@ -44,7 +44,9 @@ Cette transition doit aussi être lue sous l'angle des domaines temporels. L'arc
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{tdc/clock_domain_diagram.pdf}
+    \makebox[\textwidth][c]{%
+        \includegraphics[width=1.05\textwidth]{tdc/clock_domain_diagram.pdf}%
+    }
     \caption{Carte des domaines temporels et des frontières CDC dans l'architecture active. Les traversées représentées transportent des commandes compactes, des compteurs Gray ou des images figées, et non des phases analogiques en évolution continue.}
     \label{fig:clock-domain-diagram}
 \end{figure}
@@ -55,85 +57,109 @@ Le transport direct d'un bus multi-bit entre domaines serait dangereux. Chaque b
 
 Pour les compteurs grossiers, le choix retenu consiste à transporter des codes Gray. Un code Gray limite la transition logique à un seul bit à la fois ; l'ambiguïté résiduelle est alors bornée à la valeur précédente ou suivante, au lieu de produire une combinaison binaire impossible. Les phases rapides et lentes ne sont pas transportées comme des bus synchrones continus vers \texttt{clk\_sys}. L'architecture transporte plutôt des commandes compactes, des compteurs Gray, des snapshots, des images figées et des impulsions synchronisées.
 
-La figure \ref{fig:gray-cdc-principle} illustre le risque associé au transfert direct d'un compteur multi-bit entre deux domaines d'horloge, puis l'intérêt du codage Gray pour borner cette ambiguïté.
+La figure~\ref{fig:gray-cdc-principle} illustre pourquoi le transfert direct d'un compteur multi-bit entre domaines d'horloge est dangereux, puis comment le codage Gray et la synchronisation par deux flip-flops limitent ce risque.
 
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}[x=1cm,y=1cm,>=latex]
+    \makebox[\textwidth][c]{\resizebox{1.00\textwidth}{!}{%
+    \begin{tikzpicture}[x=1cm,y=1cm,>=Latex]
         \tikzset{
-            panel/.style={draw=black!25,rounded corners=2pt,fill=black!2,line width=0.7pt},
-            title/.style={font=\sffamily\bfseries\large},
+            panel/.style={draw=black!28,rounded corners=2pt,fill=black!2,line width=0.85pt},
+            title/.style={font=\sffamily\bfseries\normalsize},
             bitlabel/.style={font=\ttfamily\small,anchor=east},
-            wave/.style={line width=0.85pt,draw=black},
-            sample/.style={draw=black!65,densely dashed,line width=0.85pt},
-            note/.style={font=\sffamily\small,align=center},
-            warn/.style={note,text=red!70!black},
-            oknote/.style={note,text=blue!65!black},
-            ff/.style={draw=blue!60!black,fill=blue!6,rounded corners=1pt,
-                       minimum width=0.74cm,minimum height=0.46cm,font=\sffamily\small}
+            wave/.style={line width=1.25pt,draw=black},
+            sample/.style={draw=black!70,densely dashed,line width=1.05pt},
+            note/.style={font=\sffamily\footnotesize,align=center},
+            noteBox/.style={font=\sffamily\scriptsize,align=center,fill=white,inner sep=1.6pt,rounded corners=1pt},
+            warn/.style={noteBox,text=red!85!black},
+            oknote/.style={noteBox,text=blue!75!black},
+            good/.style={noteBox,text=green!45!black},
+            ff/.style={draw=blue!70!black,fill=blue!7,rounded corners=1pt,
+                       minimum width=1.16cm,minimum height=0.78cm,font=\sffamily\small\bfseries},
+            arr/.style={-{Latex[length=2.1mm]},line width=1.15pt,draw=blue!75!black},
+            clkline/.style={draw=black!65,line width=0.95pt}
         }
 
-        \node[panel,minimum width=7.05cm,minimum height=5.95cm,anchor=south west] at (0,0) {};
-        \node[panel,minimum width=7.05cm,minimum height=5.95cm,anchor=south west] at (7.55,0) {};
+        \node[panel,minimum width=4.90cm,minimum height=4.65cm,anchor=south west] at (0,0) {};
+        \node[panel,minimum width=4.90cm,minimum height=4.65cm,anchor=south west] at (5.45,0) {};
+        \node[panel,minimum width=4.90cm,minimum height=4.65cm,anchor=south west] at (10.90,0) {};
 
         \begin{scope}[shift={(0,0)}]
-            \node[title] at (3.52,5.55) {Compteur binaire};
-            \node[font=\ttfamily\large] at (1.25,4.92) {011};
-            \draw[->,red!70!black,line width=1pt] (1.78,4.92) -- (2.82,4.92);
-            \node[font=\ttfamily\large] at (3.35,4.92) {100};
-            \node[warn,anchor=center] at (5.35,4.62) {plusieurs bits\\changent};
+            \node[title] at (2.45,4.32) {Compteur binaire};
+            \node[font=\ttfamily\Large] at (1.24,3.78) {011};
+            \draw[-{Latex[length=2.1mm]},red!85!black,line width=1.25pt] (1.76,3.78) -- (2.42,3.78);
+            \node[font=\ttfamily\Large] at (2.95,3.78) {100};
+            \node[warn] at (2.45,3.34) {plusieurs bits changent};
 
-            \node[bitlabel] at (0.86,4.02) {b2};
-            \node[bitlabel] at (0.86,3.25) {b1};
-            \node[bitlabel] at (0.86,2.48) {b0};
-            \draw[wave] (1.05,4.02) -- (4.68,4.02) -- (4.68,4.34) -- (6.0,4.34);
-            \draw[wave] (1.05,3.57) -- (3.82,3.57) -- (3.82,3.25) -- (6.0,3.25);
-            \draw[wave] (1.05,2.80) -- (4.92,2.80) -- (4.92,2.48) -- (6.0,2.48);
-            \foreach \x/\yA/\yB in {4.68/4.02/4.34,3.82/3.57/3.25,4.92/2.80/2.48} {
-                \draw[red!70!black,line width=1.05pt] (\x,\yA) -- (\x,\yB);
+            \node[bitlabel] at (0.72,2.78) {b2};
+            \node[bitlabel] at (0.72,2.18) {b1};
+            \node[bitlabel] at (0.72,1.58) {b0};
+            \draw[wave] (0.98,2.78) -- (1.60,2.78) -- (1.60,3.08) -- (4.35,3.08);
+            \draw[wave] (0.98,2.48) -- (1.94,2.48) -- (1.94,2.18) -- (4.35,2.18);
+            \draw[wave] (0.98,1.88) -- (2.28,1.88) -- (2.28,1.58) -- (4.35,1.58);
+            \foreach \x/\yA/\yB in {1.60/2.78/3.08,1.94/2.48/2.18,2.28/1.88/1.58} {
+                \draw[red!85!black,line width=1.45pt] (\x,\yA) -- (\x,\yB);
             }
-            \draw[sample] (4.35,2.20) -- (4.35,4.48);
-            \node[note,anchor=north,text=black!65] at (4.35,2.08) {échantillon\\\texttt{clk\_sys}};
-            \node[draw=red!55!black,fill=red!5,rounded corners=1pt,
-                  font=\ttfamily\large,minimum width=1.12cm,minimum height=0.52cm] at (5.78,3.24) {001?};
-            \node[warn,text width=5.85cm] at (3.52,0.82)
-            {risque : mot incohérent si les bits n'arrivent pas ensemble};
+            \draw[sample] (2.10,1.28) -- (2.10,3.16);
+            \node[note,anchor=north,text=black!65,fill=white,inner sep=1.2pt] at (2.10,1.18) {front\\\texttt{clk\_sys}};
+            \node[draw=red!65!black,fill=red!5,rounded corners=1pt,
+                  font=\ttfamily\small,minimum width=0.90cm,minimum height=0.44cm] at (3.55,2.18) {001?};
+            \node[warn] at (2.45,0.34) {risque : mot incoh\'erent};
         \end{scope}
 
-        \begin{scope}[shift={(7.55,0)}]
-            \node[title] at (3.52,5.55) {Compteur Gray};
-            \node[font=\ttfamily\large] at (1.25,4.92) {010};
-            \draw[->,blue!65!black,line width=1pt] (1.78,4.92) -- (2.82,4.92);
-            \node[font=\ttfamily\large] at (3.35,4.92) {110};
-            \node[oknote,anchor=center] at (5.35,4.62) {un seul bit\\change};
+        \begin{scope}[shift={(5.45,0)}]
+            \node[title] at (2.45,4.32) {Compteur Gray};
+            \node[font=\ttfamily\Large] at (1.24,3.78) {010};
+            \draw[-{Latex[length=2.1mm]},blue!75!black,line width=1.25pt] (1.76,3.78) -- (2.42,3.78);
+            \node[font=\ttfamily\Large] at (2.95,3.78) {110};
+            \node[oknote] at (2.45,3.34) {un seul bit change};
 
-            \node[bitlabel] at (0.86,4.02) {g2};
-            \node[bitlabel] at (0.86,3.25) {g1};
-            \node[bitlabel] at (0.86,2.48) {g0};
-            \draw[wave] (1.05,4.02) -- (3.68,4.02) -- (3.68,4.34) -- (4.55,4.34);
-            \draw[wave] (1.05,3.57) -- (4.55,3.57);
-            \draw[wave] (1.05,2.48) -- (4.55,2.48);
-            \draw[blue!65!black,line width=1.05pt] (3.68,4.02) -- (3.68,4.34);
-            \draw[sample] (3.88,2.20) -- (3.88,4.48);
-            \node[note,anchor=north,text=black!65] at (3.88,2.08) {échantillon\\\texttt{clk\_sys}};
+            \node[bitlabel] at (0.72,2.78) {g2};
+            \node[bitlabel] at (0.72,2.18) {g1};
+            \node[bitlabel] at (0.72,1.58) {g0};
+            \draw[wave] (0.98,2.78) -- (1.88,2.78) -- (1.88,3.08) -- (4.35,3.08);
+            \draw[wave] (0.98,2.48) -- (4.35,2.48);
+            \draw[wave] (0.98,1.58) -- (4.35,1.58);
+            \draw[blue!75!black,line width=1.45pt] (1.88,2.78) -- (1.88,3.08);
+            \draw[sample] (2.10,1.28) -- (2.10,3.16);
+            \node[note,anchor=north,text=black!65,fill=white,inner sep=1.2pt] at (2.10,1.18) {front\\\texttt{clk\_sys}};
 
-            \node[ff] (ff1) at (4.90,3.22) {FF1};
-            \node[ff] (ff2) at (5.78,3.22) {FF2};
-            \draw[->,blue!65!black,line width=0.85pt] (4.25,3.22) -- (ff1.west);
-            \draw[->,blue!65!black,line width=0.85pt] (ff1.east) -- (ff2.west);
-            \draw[->,blue!65!black,line width=0.85pt] (ff2.east) -- (6.52,3.22);
-            \node[note,anchor=north,text=blue!65!black] at (5.34,2.86) {sync 2 FF};
-            \node[oknote] at (3.52,0.82)
-            {ancienne ou nouvelle valeur\\ambiguïté bornée};
+            \node[good] at (2.45,0.34) {ancienne ou nouvelle valeur};
+        \end{scope}
+
+        \begin{scope}[shift={(10.90,0)}]
+            \node[title] at (2.45,4.32) {Synchroniseur 2 flip-flops};
+            \node[font=\sffamily\scriptsize,anchor=east,text=black!70] at (1.02,3.20) {bit Gray};
+            \node[font=\sffamily\scriptsize,anchor=east,text=black!70] at (1.02,2.98) {asynchrone};
+            \node[ff] (ff1) at (1.70,2.62) {DFF1};
+            \node[ff] (ff2) at (3.08,2.62) {DFF2};
+            \node[font=\sffamily\tiny,text=blue!70!black] at ([xshift=-0.38cm,yshift=0.25cm]ff1.center) {D};
+            \node[font=\sffamily\tiny,text=blue!70!black] at ([xshift=0.38cm,yshift=0.25cm]ff1.center) {Q};
+            \node[font=\sffamily\tiny,text=blue!70!black] at ([xshift=-0.38cm,yshift=0.25cm]ff2.center) {D};
+            \node[font=\sffamily\tiny,text=blue!70!black] at ([xshift=0.38cm,yshift=0.25cm]ff2.center) {Q};
+
+            \draw[arr] (0.72,2.62) -- (ff1.west);
+            \draw[arr] (ff1.east) -- (ff2.west);
+            \draw[arr] (ff2.east) -- (4.48,2.62);
+            \node[font=\sffamily\scriptsize,anchor=west,text=black!70] at (3.82,2.94) {bit stable};
+
+            \draw[-{Latex[length=2.0mm]},clkline]
+                (0.76,1.45) -- node[below,font=\sffamily\scriptsize] {\texttt{clk\_sys}} (4.18,1.45);
+            \draw[clkline] (1.70,1.45) -- (1.70,2.20);
+            \draw[clkline] (3.08,1.45) -- (3.08,2.20);
+            \draw[clkline] (1.56,2.20) -- (1.70,2.35) -- (1.84,2.20);
+            \draw[clkline] (2.94,2.20) -- (3.08,2.35) -- (3.22,2.20);
+
+            \node[oknote] at (2.45,0.76) {appliqu\'e bit par bit};
+            \node[good] at (2.45,0.34) {stabilisation avant usage};
         \end{scope}
     \end{tikzpicture}%
-    }
-    \caption{Principe d'une traversée CDC de compteur. Une transition binaire peut modifier plusieurs bits simultanément et produire une valeur incohérente si les délais de routage diffèrent. Le codage Gray limite la transition à un seul bit, ce qui réduit l'ambiguïté après synchronisation dans \texttt{clk\_sys}.}
+    }}
+    \caption{Principe d'une traversée CDC de compteur. Le codage binaire peut produire une valeur incohérente si plusieurs bits changent avec des délais différents. Le codage Gray limite la transition à un seul bit ; chaque bit est ensuite synchronisé par deux flip-flops dans \(clk\_sys\).}
     \label{fig:gray-cdc-principle}
 \end{figure}
 
-Le codage Gray ne supprime pas la métastabilité d'un bit isolé ; il évite surtout qu'un échantillonnage intermédiaire combine plusieurs bits appartenant à deux valeurs différentes. La synchronisation 2 FF reste donc nécessaire, mais elle s'applique à une représentation dont les transitions sont mieux contrôlées.
+La synchronisation à deux flip-flops consiste à faire traverser chaque bit par deux bascules cadencées par le domaine de destination. La première bascule peut devenir métastable si le bit change trop près du front d'horloge ; la seconde laisse un cycle supplémentaire pour stabiliser le signal avant son utilisation par la logique \(clk\_sys\). Ce mécanisme ne rend pas la traversée instantanée et ne permet pas de transporter arbitrairement un bus binaire multi-bit. Il devient robuste lorsqu'il est associé à un codage Gray, car une seule transition logique est possible entre deux valeurs successives.
 
 La méthode RTL appliquée combine donc plusieurs mécanismes complémentaires. Les compteurs traversent la frontière sous forme Gray et sont resynchronisés dans le domaine de destination. Les fronts \texttt{START}/\texttt{STOP} déclenchent des verrous asynchrones intentionnels afin de ne pas injecter \texttt{clk\_sys} sur le chemin temporel mesuré. La fin de conversion ne lance pas immédiatement la lecture : elle déclenche d'abord un snapshot de l'image de mesure, puis une écriture dans un contexte. Le clear est ordonné après cette protection, ce qui évite de détruire la matrice source avant que l'image stable soit disponible pour la lecture.
 

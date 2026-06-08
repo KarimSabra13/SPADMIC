@@ -54,7 +54,9 @@ Sur les codes atteints de la campagne focalisée, le pic DNL observable vaut env
 
 \section{Gain par moyennage statistique}
 
-Une fois la correction LUT appliquée, le flot d'analyse permet d'estimer le gain obtenu lorsque plusieurs mesures indépendantes corrigées sont moyennées. Cette étude reste une projection statistique sur données RTL ; elle ne remplace pas un banc de répétabilité silicium à délai fixe.
+Une fois la correction LUT appliquée, le flot d'analyse permet d'estimer le gain obtenu lorsque plusieurs estimations corrigées sont moyennées. Cette étude reste une projection statistique sur données RTL ; elle ne remplace pas un banc de répétabilité silicium à délai fixe.
+
+Le moyennage post-LUT exploite directement le caractère multiphase de l'architecture. Une même conversion START/STOP ne se réduit pas nécessairement à une seule observation fine : la matrice de phase peut mémoriser plusieurs couples \((n_s,n_f)\) exploitables, ensuite exportés sous forme d'enregistrements de détection. Après décodage et correction par LUT, ces observations fournissent plusieurs estimations temporelles associées à la même fenêtre de mesure. Le moyennage agit alors sur la dispersion résiduelle des estimations corrigées. Le gain observé ne suppose pas que toutes les observations soient parfaitement indépendantes ; il traduit plutôt le fait que l'information multiphase exportée conserve assez de diversité pour réduire l'erreur moyenne après correction. Dans la configuration étudiée, le tableau~\ref{tab:mptdc-params} indique que jusqu'à \(15\) enregistrements peuvent être exportés pour une conversion, ce qui explique l'intérêt des points de moyennage autour de \(N=4\) puis \(N=15\).
 
 La colonne \textbf{P90} correspond au 90e percentile de l'erreur absolue après moyennage : $90\,\%$ des groupes simulés restent sous ce seuil. Elle complète la RMSE par une lecture robuste de la queue de distribution, moins extrême que le percentile 99 utilisé pour la validation mono-échantillon.
 

@@ -67,7 +67,7 @@ La figure \ref{fig:mptdc-block-diagram} met en évidence la séparation des resp
 
 \section{Capture et cœur Vernier}
 
-La capture de \texttt{START}/\texttt{STOP} reste volontairement asynchrone. Un échantillonnage préalable par \texttt{clk\_sys} simplifierait le RTL, mais il déplacerait l'incertitude temporelle sur le chemin même que le TDC cherche à mesurer. Le choix retenu consiste donc à déclencher directement l'anneau lent au front \texttt{START}, puis l'anneau rapide au front \texttt{STOP}. Le chronogramme de la figure \ref{fig:async-capture-timing}, introduit au chapitre précédent, résume cette logique par deux latches \textit{set/reset} et un nettoyage ultérieur par le domaine système.
+Le chapitre~\ref{chap:transition-implementation} a motivé le choix d'une capture asynchrone afin de préserver l'information temporelle portée par START/STOP. La présente section se concentre donc sur le contrat RTL associé : démarrage des anneaux, mémorisation des croisements dans la matrice et préparation d'une image exploitable par le domaine système.
 
 Une fois les deux anneaux actifs, la matrice \mbox{$8\times8$} compare les huit sorties de phase lentes aux huit sorties de phase rapides. Chaque cellule mémorise le passage utile et fournit une information fine locale. En parallèle, les compteurs grossiers donnent la position large de la conversion. L'architecture exporte aussi des métadonnées de contexte et de frontière ; elles ne sont pas destinées à être interprétées bit par bit dans cette description fonctionnelle, mais elles rendent observables les cas ambigus au voisinage des transitions lentes.
 
@@ -88,7 +88,25 @@ Les noms internes ne sont utiles ici que comme repères : la fenêtre de détect
     \label{fig:timing-diagram-conversion}
 \end{figure}
 
-Le snapshot protège donc les données avant tout nettoyage, ce qui évite de perdre l'image de mesure pendant que la chaîne de lecture travaille à un rythme plus lent.
+\paragraph{Extrait RTL : snapshot avant nettoyage.}
+\begin{rtlSnippet}{Extrait RTL simplifié : snapshot avant nettoyage}
+unique case (state_q)
+  ST_M_IDLE:     if (meas_active_i) state_d = ST_M_MEASURE;
+  ST_M_MEASURE:  state_d = ST_M_SNAPSHOT;
+  ST_M_SNAPSHOT: state_d = ST_M_COUNT;   // image protegee avant nettoyage
+  ST_M_COUNT:    state_d = ST_M_EVAL;    // decoupe du chemin de comptage
+  ST_M_EVAL:     state_d = ST_M_CAPTURE; // preparation du contexte
+  ST_M_CAPTURE:  state_d = ST_M_CLEAR;   // contexte ecrit avant nettoyage
+  ST_M_CLEAR:    state_d = ST_M_IDLE;
+endcase
+
+assign snapshot_en_o = (state_q == ST_M_SNAPSHOT); // gel de l'image PD
+assign capture_en_o  = (state_q == ST_M_CAPTURE);  // ecriture du contexte
+assign fe_clear_o    = (state_q == ST_M_CAPTURE);  // liberation front-end
+assign pd_clear_o    = (state_q == ST_M_CLEAR);    // clear seulement apres capture
+\end{rtlSnippet}
+
+Le snapshot protège donc les données avant tout nettoyage, ce qui évite de perdre l'image de mesure pendant que la chaîne de lecture travaille à un rythme plus lent. Les états \texttt{COUNT} et \texttt{EVAL} découpent les chemins combinatoires de comptage et d'évaluation ; \texttt{CAPTURE} écrit le contexte et libère le front-end ; \texttt{CLEAR} nettoie ensuite la matrice. Le gain attendu se situe sur le temps mort et sur la tenue du timing système, au prix de quelques cycles \texttt{clk\_sys}. Le risque se déplace vers la cohérence entre snapshot, capture et clear, ainsi que vers l'occupation des contextes.
 
 Il faut distinguer ce protocole de mesure du protocole de lecture. Le premier a pour rôle de produire une image atomique et stable ; le second parcourt ensuite le contexte figé, construit les enregistrements, les amortit par une file FIFO synchrone et les transmet vers la sortie \SI{16}{\bit}. Le format maintenu reste volontairement compact : un en-tête, deux mots par enregistrement de détection, nommé \texttt{HIT} dans le protocole RTL, et un mot de fin de conversion,
 \[
@@ -141,68 +159,75 @@ Chaque ligne de la trame correspond à un mot de \SI{16}{\bit}. Les bits hauts i
 \end{figure}
 Les informations auxiliaires de calibration sont intégrées à cette trame sans introduire de mode de sortie concurrent. Le réarmement est ainsi amélioré : dès qu'une conversion est protégée dans un contexte, le cœur peut préparer une nouvelle fenêtre de mesure sans attendre que tout le paquet précédent soit transmis. Si la lecture aval est suspendue, le parcours du contexte conserve sa position ; si les deux contextes restent occupés trop longtemps, le bloc rend cette situation observable par ses champs de statut.
 
-\clearpage
+\paragraph{Extrait RTL : maintien d'un mot sous rétropression.}
+\begin{rtlSnippet}{Extrait RTL simplifié : maintien d'un mot sous rétropression}
+wire pending_wr_accept = pending_wr_valid_q && !fifo_wr_full_i;
+wire pending_wr_ready  = !pending_wr_valid_q || pending_wr_accept;
 
-\section{Extraits RTL représentatifs des choix d'architecture}
+ST_D_META: begin
+  stage_emit_wr = 1'b1;       // construit le mot a emettre
+  state_d       = ST_D_EMIT;
+end
 
-Les extraits suivants ne recopient pas des modules complets. Ils isolent deux décisions d'architecture présentes dans le RTL actif : la protection de l'image de mesure avant nettoyage, puis le transfert de compteurs par code Gray et synchronisation. Les exemples sont volontairement courts ; ils montrent le contrat matériel retenu plutôt que tous les détails de typage, de reset ou d'observabilité.
-
-\begin{rtlSnippet}{Extrait simplifié fidèle : snapshot avant clear}
-unique case (state_q)
-  ST_M_IDLE:     if (meas_active_i) state_d = ST_M_MEASURE;
-  ST_M_MEASURE:  state_d = ST_M_SNAPSHOT;
-  ST_M_SNAPSHOT: state_d = ST_M_COUNT;
-  ST_M_COUNT:    state_d = ST_M_EVAL;
-  ST_M_EVAL:     state_d = ST_M_CAPTURE;
-  ST_M_CAPTURE:  state_d = ST_M_CLEAR;
-  ST_M_CLEAR:    state_d = ST_M_IDLE;
-endcase
-
-assign snapshot_en_o = (state_q == ST_M_SNAPSHOT);
-assign capture_en_o  = (state_q == ST_M_CAPTURE);
-assign fe_clear_o    = (state_q == ST_M_CAPTURE);
-assign pd_clear_o    = (state_q == ST_M_CLEAR);
-\end{rtlSnippet}
-
-Le choix retenu protège l'image de mesure avant toute remise à zéro de la matrice. L'état \texttt{SNAPSHOT} échantillonne le bus statique de détections et de tags ; les états \texttt{COUNT} et \texttt{EVAL} découpent la réduction des détections et l'évaluation des flags ; l'état \texttt{CAPTURE} écrit le contexte et libère le front-end ; l'état \texttt{CLEAR} nettoie ensuite la matrice source. L'effet PPA attendu est une réduction du temps mort côté capture, car le front-end n'attend pas la fin de la sérialisation. Le coût est une image de contexte supplémentaire et quelques cycles \texttt{clk\_sys}. Le goulot se déplace vers l'occupation des deux contextes sous rétropression aval ; il est traité par les statuts d'occupation, le rejet contrôlé de nouveaux \texttt{START} et la libération explicite du contexte par le drain.
-
-\begin{rtlSnippet}{Extrait simplifié fidèle : compteur Gray synchronisé}
-always_ff @(posedge src_clk or negedge src_rst_n or posedge src_async_clr) begin
-  if (!src_rst_n || src_async_clr) begin
-    gray_src_cont_q      <= '0;
-    gray_src_snap_sync_q <= '0;
-  end else begin
-    // Un seul bit change entre deux valeurs Gray adjacentes.
-    gray_src_cont_q      <= gray_encode_value ^ (gray_encode_value >> 1);
-    gray_src_snap_sync_q <= bin_snap_q ^ (bin_snap_q >> 1);
+ST_D_EMIT: begin
+  if (pending_wr_ready) begin
+    load_pending_wr   = 1'b1; // charge seulement si la sortie locale avance
+    pending_wr_data_d = emit_wr_data_q;
+    state_d           = ST_D_SCAN;
   end
 end
 
-assign gray_src_snap_sel = USE_ASYNC_SNAPSHOT ? gray_src_snap_async_q
-                                              : gray_src_snap_sync_q;
-
-always_ff @(posedge dst_clk or negedge dst_rst_n) begin
-  if (!dst_rst_n) begin
-    gray_cont_ff1_async <= '0;
-    gray_cont_ff2_async <= '0;
-    gray_snap_ff1_async <= '0;
-    gray_snap_ff2_async <= '0;
-  end else begin
-    gray_cont_ff1_async <= gray_src_cont_q;
-    gray_cont_ff2_async <= gray_cont_ff1_async;
-    gray_snap_ff1_async <= gray_src_snap_sel;
-    gray_snap_ff2_async <= gray_snap_ff1_async;
-  end
-end
+assign fifo_wr_en_o   = pending_wr_accept;
+assign fifo_wr_data_o = pending_wr_data_q; // conserve tant que FIFO pleine
 \end{rtlSnippet}
 
-Le deuxième extrait montre le principe utilisé pour les compteurs grossiers : la valeur source est convertie en Gray, puis traversée par une chaîne de synchronisation dans le domaine de destination. Le choix RTL réduit le risque d'image incohérente lors du passage entre domaines, car une transition Gray ne modifie qu'un bit logique à la fois. L'impact PPA est le coût de quelques bascules de synchronisation et d'une conversion Gray/binaire, très inférieur au risque d'un bus binaire multi-bit directement échantillonné. Le goulot déplacé est la latence de synchronisation, acceptable ici car les compteurs servent à reconstruire une image de mesure déjà figée, et non à piloter en temps réel les phases rapides.
+La construction de l'enregistrement est découpée dans \texttt{emit\_wr\_data\_q}, puis \texttt{pending\_wr\_data\_q} conserve le mot tant que la FIFO est pleine. Ce registre local raccourcit le chemin combinatoire vers la sortie et améliore la tenue temporelle, au prix de quelques bascules. Le risque se déplace vers le débit aval et le protocole ready-valid ; il est maîtrisé par la conservation explicite de la donnée sous rétropression.
 
 \section{Robustesse et vérification}
 
 La robustesse repose sur plusieurs niveaux complémentaires. Une surveillance lente ferme les conversions dont le \texttt{STOP} n'arrive pas, une surveillance de mesure évite qu'une fenêtre reste active trop longtemps, et une surveillance système protège le bloc contre les absences globales de progression. Dans le RTL actuel, les fenêtres de surveillance sont exposées par les registres de contrôle lents : le timeout par contexte et le timeout global sont programmables sur \SI{16}{\bit}. Une valeur non nulle fixe le seuil utilisé ; une valeur nulle sélectionne le repli interne de \num{64} cycles \texttt{clk\_sys} pour la fermeture \texttt{START} sans \texttt{STOP}, tandis qu'elle désactive la surveillance globale. Les champs de statut rendent ensuite observable une fermeture par watchdog ou une absence globale de progression. Ces mécanismes ne remplacent pas la validation physique finale, mais ils rendent le RTL testable et récupérable dans les scénarios de blocage.
 
 La vérification a été conduite avec une méthodologie proche de l'industrie, sans dépendre d'un seul banc monolithique. Des bancs unitaires vérifient les briques isolées ; des bancs d'intégration vérifient les chemins complets de conversion ; des scénarios dirigés et aléatoires explorent les cas nominaux et limites ; un modèle de référence permet de comparer systématiquement les paquets attendus aux paquets observés. Les points vérifiés couvrent notamment la cohérence de la trame, la rétropression, les resets, les timeouts, les rejets d'événements et les transitions proches des frontières de mesure.
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[x=1cm,y=1cm,>=Latex]
+        \tikzset{
+            vblock/.style={draw=black!35,rounded corners=2pt,minimum width=2.55cm,minimum height=0.74cm,
+                           align=center,font=\sffamily,line width=0.6pt,inner sep=3pt},
+            stim/.style={vblock,fill=blue!7,draw=blue!35!black},
+            dutb/.style={vblock,fill=black!7,draw=black!45},
+            obs/.style={vblock,fill=green!7,draw=green!35!black},
+            asrt/.style={vblock,fill=orange!12,draw=orange!45!black},
+            arr/.style={-{Latex[length=2.1mm]},line width=0.75pt,draw=black!68}
+        }
+        \node[stim,minimum width=2.85cm] (gen) at (0,2.60)
+            {{\small Générateur de scénarios}\\[-1pt]{\scriptsize dirigé / contraint aléatoire}};
+        \node[stim,minimum width=2.25cm] (drv) at (0,1.30) {{\small Driver}};
+        \node[stim,minimum width=3.10cm] (ifc) at (0,0)
+            {{\small Interfaces DUT}\\[-1pt]{\scriptsize START/STOP, CSR/I2C, TX ready}};
+        \node[dutb,minimum width=2.55cm] (dut) at (4.00,0) {{\small DUT MPTDC}};
+        \node[obs,minimum width=2.45cm] (mon) at (8.00,0) {{\small Monitor TX}};
+        \node[obs,minimum width=2.65cm] (sco) at (12.00,0) {{\small Scoreboard}};
+        \node[obs,minimum width=2.90cm] (ref) at (8.00,1.85) {{\small Modèle de référence}};
+        \node[asrt,minimum width=2.55cm] (sva) at (4.00,-1.35) {{\small Assertions SVA}};
+
+        \draw[arr] (gen) -- (drv);
+        \draw[arr] (drv) -- (ifc);
+        \draw[arr] (ifc) -- (dut);
+        \draw[arr] (dut) -- (mon);
+        \draw[arr] (mon) -- (sco);
+        \draw[arr] (gen.east) -- ++(1.0,0) |- (ref.west);
+        \draw[arr] (ref.east) -- ++(1.0,0) |- (sco.north);
+        \draw[arr] (sva.north) -- (dut.south);
+    \end{tikzpicture}%
+    }
+    \caption{Vue simplifiée de l'environnement de vérification. Les scénarios dirigés ou contraints aléatoires sont appliqués au DUT par les drivers ; les monitors reconstruisent les transactions observées, puis le scoreboard les compare au modèle de référence.}
+    \label{fig:mptdc-verification-env}
+\end{figure}
+
+Cette organisation sépare la génération des stimuli, l'application sur les interfaces, l'observation des sorties et la comparaison fonctionnelle. Le bloc n'est donc pas validé uniquement par inspection de traces : les paquets produits sont reconstruits, interprétés et comparés à un comportement attendu.
 
 Cette validation reste une validation RTL. Elle donne une confiance forte dans le comportement fonctionnel, dans l'ordre de lecture et dans le contrat de paquetisation, mais elle ne remplace ni la revue CDC complète, ni la STA, ni la simulation post-layout avec les oscillateurs réels.
 
