@@ -118,6 +118,29 @@ proc mptdc_o11_num_or_blank {value} {
     return ""
 }
 
+proc mptdc_o11_read_drv_max_cap {path} {
+    set caps [dict create]
+    if {![file exists $path]} { return $caps }
+
+    set fh [open $path r]
+    set text [read $fh]
+    close $fh
+
+    foreach line [split $text "\n"] {
+        if {[string first "|" $line] < 0} { continue }
+        set fields [split $line "|"]
+        if {[llength $fields] < 4} { continue }
+        set pin [string trim [lindex $fields 1]]
+        set required [string trim [lindex $fields 2]]
+        set actual [string trim [lindex $fields 3]]
+        if {$pin eq "" || ![string is double -strict $required] || ![string is double -strict $actual]} {
+            continue
+        }
+        dict set caps $pin [list $required $actual]
+    }
+    return $caps
+}
+
 proc mptdc_o11_pf_to_ff {value} {
     if {![string is double -strict $value]} { return "" }
     return [format "%.2f" [expr {$value * 1000.0}]]
@@ -138,6 +161,15 @@ proc mptdc_o11_budget_label {cap_ff} {
 }
 
 proc mptdc_o11_sink_class {family sink_name} {
+    if {$family eq "fast" && [regexp {gen_pd_row(\[[0-9]+\]|_[0-9]+).*gen_pd_col(\[[0-9]+\]|_[0-9]+).*u_pd.*/(C|CK|CLK)$} $sink_name]} {
+        return "PD_FAST_CLOCK"
+    }
+    if {$family eq "fast" && [regexp {gen_fast_tag_col(\[[0-9]+\]|_[0-9]+).*u_fast_tag.*_reg(\[[0-9]+\])?/(C|CK|CLK)$} $sink_name]} {
+        return "FAST_TAG_CLOCK"
+    }
+    if {$family eq "slow" && [regexp {slow_epoch.*_reg(\[[0-9]+\])?/(C|CK|CLK)$} $sink_name]} {
+        return "SLOW_EPOCH_CLOCK"
+    }
     if {[regexp {u_pd/(slow_phase|\.slow_phase|slow_phase$)} $sink_name] || [string match *u_pd*slow_phase* $sink_name]} {
         return "PD_SLOW_DATA"
     }
@@ -164,11 +196,8 @@ proc mptdc_o11_sink_class {family sink_name} {
 }
 
 proc mptdc_o11_load_pin_cap {sink_name} {
-    set pin [mptdc_o11_pin_object $sink_name]
-    foreach attr {.capacitance .pin_capacitance .input_capacitance} {
-        set val [mptdc_o11_db_attr $pin $attr]
-        if {[string is double -strict $val]} { return $val }
-    }
+    # Innovus 22.33 does not expose portable pin-cap attributes through get_db
+    # on restored designs.  Keep the sink row useful without spamming db errors.
     return ""
 }
 
@@ -218,6 +247,7 @@ proc mptdc_o11_write_ro_load_reports {} {
     set fast_path "$o11(reports_dir)/fast_tag_loads.csv"
     set sink_path "$o11(reports_dir)/ro_phase_sink_classification.csv"
     set summary_path "$o11(reports_dir)/phase_net_load_budget_summary.md"
+    set drv_caps [mptdc_o11_read_drv_max_cap "$o11(reports_dir)/drv_max_cap.rpt"]
 
     set phase_fh [open $phase_path w]
     puts $phase_fh "family,tap,source_pin,matched_source_pin_count,net,fanout,total_cap_pf,total_cap_ff,wire_cap_pf,wire_cap_ff,pin_cap_pf,pin_cap_ff,transition,route_length,pd_slow_data_load_count,pd_fast_clock_load_count,fast_tag_clock_load_count,slow_epoch_clock_load_count,boundary_metadata_load_count,fast_tag_data_load_count,other_clock_like_load_count,other_load_count,budget_label,strict_ratio,cn_ratio,sinks,notes"
@@ -267,11 +297,17 @@ proc mptdc_o11_write_ro_load_reports {} {
             set net_obj [mptdc_o11_net_object $net_name]
             set fanout [mptdc_o11_db_attr $net_obj .num_loads]
             if {$fanout eq ""} { set fanout [mptdc_o11_db_attr $net_obj .fanout] }
-            set total_cap [mptdc_o11_num_or_blank [mptdc_o11_db_attr $net_obj .total_capacitance]]
-            set wire_cap [mptdc_o11_num_or_blank [mptdc_o11_db_attr $net_obj .wire_capacitance]]
-            set pin_cap [mptdc_o11_num_or_blank [mptdc_o11_db_attr $net_obj .pin_capacitance]]
-            set trans [mptdc_o11_db_attr $net_obj .transition]
-            set length [mptdc_o11_db_attr $net_obj .route_length]
+            set total_cap ""
+            set wire_cap ""
+            set pin_cap ""
+            set trans ""
+            set length ""
+            set notes [list]
+            if {[dict exists $drv_caps $source_pin]} {
+                set cap_row [dict get $drv_caps $source_pin]
+                set total_cap [lindex $cap_row 1]
+                lappend notes "CAP_FROM_DRV_MAX_CAP_RPT"
+            }
             set total_cap_ff [mptdc_o11_pf_to_ff $total_cap]
             set wire_cap_ff [mptdc_o11_pf_to_ff $wire_cap]
             set pin_cap_ff [mptdc_o11_pf_to_ff $pin_cap]
@@ -309,14 +345,14 @@ proc mptdc_o11_write_ro_load_reports {} {
                 $fanout $total_cap $total_cap_ff $wire_cap $wire_cap_ff $pin_cap $pin_cap_ff $trans $length \
                 $counts(PD_SLOW_DATA) $counts(PD_FAST_CLOCK) $counts(FAST_TAG_CLOCK) $counts(SLOW_EPOCH_CLOCK) \
                 $counts(BOUNDARY_METADATA) $counts(FAST_TAG_DATA) $other_clock_like_count $other_count \
-                $label $strict_ratio $cn_ratio [mptdc_o11_csv $sinks_text] ""] ","]
+                $label $strict_ratio $cn_ratio [mptdc_o11_csv $sinks_text] [mptdc_o11_csv [join $notes ";"]]] ","]
 
             if {$family eq "fast"} {
                 puts $fast_fh [join [list \
                     $tap [mptdc_o11_csv $source_pin] [mptdc_o11_csv $net_name] $fanout \
                     $total_cap $total_cap_ff $counts(FAST_TAG_CLOCK) $counts(PD_FAST_CLOCK) \
                     $other_clock_like_count $label $strict_ratio $cn_ratio \
-                    [mptdc_o11_csv [join $fast_tag_sinks ";"]] ""] ","]
+                    [mptdc_o11_csv [join $fast_tag_sinks ";"]] [mptdc_o11_csv [join $notes ";"]]] ","]
             }
         }
     }
