@@ -19,6 +19,7 @@
 ../rtl/cdc/mptdc_sync_fifo.sv
 
 ../rtl/osc/mptdc_osc_wrapper.sv
+../rtl/osc/mptdc_phase_buffer_bank.sv
 
 ../rtl/pd/mptdc_fast_epoch_tag.sv
 ../rtl/pd/mptdc_slow_epoch_johnson.sv

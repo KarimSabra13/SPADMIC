@@ -1,16 +1,18 @@
 // =============================================================================
 // Project  : SPAD_MPTDC -- Vernier Time-to-Digital Converter
-// File     : filelist_o5_pd_stdcell_closure.f
-// Purpose  : Genus file list for O5 standard-cell PD timing experiments
+// File     : filelist_o12_phase_isolation.f
+// Purpose  : Genus file list for O12 phase-isolation buffer experiment
 // =============================================================================
-// O5 keeps the O2/O3/O4 local raw fast-tag and slow Johnson architecture,
-// preserves packet layout and raw-tag software decode, and experiments with
-// standard-cell PD timestamp implementation style: no-reset timestamp flops and
-// optional clock-gating inference.
+// O12 preserves packet layout, raw_lfsr_tag decode, R750_delta5 frequency mode,
+// and PD RTL behavior.  The only architecture change is a matched phase buffer
+// bank between RO_tune4/S[0:7] and the existing phase fabric.
 // =============================================================================
 
 +define+SYNTHESIS
 +define+MPTDC_USE_RO_TUNE4_MACRO
++define+MPTDC_FREQ_R750_DELTA5
++define+MPTDC_O12_PHASE_ISOLATION
++define+MPTDC_PHASE_BUFFER_USE_BUHDX4
 
 ../rtl/pkg/mptdc_pkg.sv
 

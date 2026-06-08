@@ -583,6 +583,9 @@ proc mptdc_preserve_physical_hierarchy {} {
 
     foreach pattern {
         *u_rst*sync*
+        *u_phase_buf_slow*
+        *u_phase_buf_fast*
+        *u_phase_buf*
     } {
         set cells [list]
         catch {set cells [get_cells -quiet -hierarchical $pattern]}
@@ -608,6 +611,7 @@ proc mptdc_preserve_physical_hierarchy {} {
 
     foreach module_pattern {
         *mptdc_reset_sync*
+        *mptdc_phase_buffer_bank*
     } {
         set modules [list]
         catch {set modules [get_db modules $module_pattern]}

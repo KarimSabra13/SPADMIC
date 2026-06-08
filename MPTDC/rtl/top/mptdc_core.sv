@@ -77,6 +77,7 @@ module mptdc_core
   // =========================================================================
   //  Internal wires — oscillators
   // =========================================================================
+  wire [NE-1:0] slow_phase_raw, fast_phase_raw;
   wire [NE-1:0] slow_phase, fast_phase;
   wire           slow_phase0_guard, slow_phase7d_probe;
   wire           osc_fast_ph0 = fast_phase[0];
@@ -410,9 +411,9 @@ module mptdc_core
     .en              (fe_osc_slow_en),
     .rst_n           (rst_sys_n),
     .trim_i          (8'h00),
-    .phase           (slow_phase),
-    .phase0_guard_o  (slow_phase0_guard),
-    .phase7d_probe_o (slow_phase7d_probe)
+    .phase           (slow_phase_raw),
+    .phase0_guard_o  (/* buffered below */),
+    .phase7d_probe_o (/* buffered below */)
   );
 
   // ── Fast oscillator ────────────────────────────────────────────
@@ -420,10 +421,26 @@ module mptdc_core
     .en              (fe_osc_fast_en),
     .rst_n           (rst_sys_n),
     .trim_i          (8'h00),
-    .phase           (fast_phase),
+    .phase           (fast_phase_raw),
     .phase0_guard_o  (/* unused */),
     .phase7d_probe_o (/* unused */)
   );
+
+  // ── O12 phase isolation buffers ────────────────────────────────
+  // The RO outputs drive only one matched buffer input per tap.  All downstream
+  // phase consumers remain connected to slow_phase/fast_phase.
+  mptdc_phase_buffer_bank u_phase_buf_slow (
+    .phase_raw_i (slow_phase_raw[7:0]),
+    .phase_buf_o (slow_phase[7:0])
+  );
+
+  mptdc_phase_buffer_bank u_phase_buf_fast (
+    .phase_raw_i (fast_phase_raw[7:0]),
+    .phase_buf_o (fast_phase[7:0])
+  );
+
+  assign slow_phase0_guard  = slow_phase[0];
+  assign slow_phase7d_probe = slow_phase[7];
 
   // ── Local fast epoch tags (one shallow tag generator per fast column) ──────
   // Each tag is clocked by the same fast tap that samples the corresponding PD

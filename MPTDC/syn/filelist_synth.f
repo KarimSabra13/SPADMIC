@@ -28,6 +28,7 @@
 // NOTE: mptdc_osc_model.sv is EXCLUDED (non-synthesizable behavioural model)
 ../rtl/osc/mptdc_osc_stub.sv
 ../rtl/osc/mptdc_osc_wrapper.sv
+../rtl/osc/mptdc_phase_buffer_bank.sv
 
 // Phase detector cell
 ../rtl/pd/mptdc_fast_epoch_tag.sv

@@ -14,6 +14,7 @@ rtl/cdc/mptdc_sync_fifo.sv
 rtl/osc/mptdc_osc_model.sv
 rtl/osc/mptdc_osc_stub.sv
 rtl/osc/mptdc_osc_wrapper.sv
+rtl/osc/mptdc_phase_buffer_bank.sv
 
 // Phase detector
 rtl/pd/mptdc_fast_epoch_tag.sv
