@@ -670,10 +670,11 @@ proc mptdc_o12b_write_reports {} {
                 [mptdc_o12b_csv [join $delay_notes ";"]]] ","]
 
             set raw_route_len [lindex [mptdc_o12b_net_metric $raw_net_obj route_length] 0]
-            puts $route_fh [join [list \
+            set route_row [list \
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf \
-                [mptdc_o12b_csv "raw_and_buffered_route_from_db_attrs_when_available"]]] ","]
+                [mptdc_o12b_csv "raw_and_buffered_route_from_db_attrs_when_available"]]
+            puts $route_fh [join $route_row ","]
 
             if {![info exists attr_probe_samples_written]} {
                 set attr_probe_samples_written 1
@@ -687,10 +688,11 @@ proc mptdc_o12b_write_reports {} {
 
             if {![info exists ::env(MPTDC_O12B_NET_DEBUG)] || $::env(MPTDC_O12B_NET_DEBUG) ne "0"} {
                 if {[catch {mptdc_o12b_write_net_debug_reports $family $tap $raw_net $out_net} dbg_err]} {
-                    puts $route_fh [join [list \
+                    set route_debug_row [list \
                         $family $tap [mptdc_o12b_csv $raw_net] "" "" \
                         [mptdc_o12b_csv $out_net] "" "" "" "" \
-                        [mptdc_o12b_csv "NET_DEBUG_CAPTURE_FAILED=$dbg_err"]]] ","]
+                        [mptdc_o12b_csv "NET_DEBUG_CAPTURE_FAILED=$dbg_err"]]
+                    puts $route_fh [join $route_debug_row ","]
                 }
             }
         }
