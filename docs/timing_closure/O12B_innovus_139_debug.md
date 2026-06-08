@@ -48,6 +48,38 @@ reporter.  The fix is to query supported attributes first, remove the `dbGet`
 fallback for unknown net attributes, and write attribute/debug reports for the
 next exact numeric-cap query.
 
+## O12B abs2 Failure
+
+The second O12B report-only run, `20260608_o12b_phase_buffer_balance_abs2`, did
+not segfault.  Innovus exited `1` after O12B Tcl reported:
+
+```text
+MPTDC_O12B_ERROR: phase-buffer balance report generation failed:
+extra characters after close-quote
+```
+
+The stage breadcrumb was:
+
+```text
+stage=phase_buffer_reports
+status=failed
+```
+
+Partial CSVs were written, but required summaries were missing, including
+`reports/SUMMARY.md`, `phase_buffer_balance_summary.md`,
+`phase_buffer_placement_summary.md`, and
+`timing_post_route_summary_by_class.md`.
+
+Classification for abs2:
+
+- `INNOVUS_RUN_CLEAN=NO`
+- `INNOVUS_EXIT_1_BEFORE_REQUIRED_OUTPUTS`
+- crash stage: `phase_buffer_reports`
+
+The follow-up fix makes Tcl-list handling robust for Innovus object strings,
+makes attribute/debug probe failures nonfatal, records full Tcl `errorInfo`, and
+validates required reports for any nonzero report-only Innovus exit.
+
 ## O12B Wrapper Fix
 
 The O12B wrapper now writes:

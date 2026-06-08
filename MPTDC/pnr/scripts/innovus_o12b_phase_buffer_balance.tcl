@@ -236,6 +236,14 @@ proc mptdc_o12b_main {} {
     mptdc_o12b_stage_mark phase_buffer_reports start
     if {[catch {mptdc_o12b_write_reports} err]} {
         mptdc_o12b_stage_mark phase_buffer_reports failed
+        set efh [open "$o12b(manifests_dir)/phase_buffer_reports_error.txt" w]
+        puts $efh "error: $err"
+        if {[info exists ::errorInfo]} {
+            puts $efh ""
+            puts $efh "errorInfo:"
+            puts $efh $::errorInfo
+        }
+        close $efh
         mptdc_o11_write_error_csv "$o12b(reports_dir)/phase_buffer_output_loads.csv" \
             "status,message" $err
         mptdc_o11_write_error_csv "$o12b(reports_dir)/phase_buffer_topology.csv" \

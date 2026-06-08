@@ -224,7 +224,7 @@ validate_required_outputs() {
   fi
 }
 
-if [[ "$RUN_MODE" == "report_only" && ( "$INNOVUS_RC" == "0" || "$INNOVUS_RC" == "139" ) ]]; then
+if [[ "$RUN_MODE" == "report_only" ]]; then
   validate_required_outputs
 fi
 
@@ -241,6 +241,19 @@ if [[ "$INNOVUS_RC" == "139" ]]; then
   fi
   {
     echo "INNOVUS_EXIT_139"
+    echo "exit_class=$INNOVUS_EXIT_CLASS"
+    echo "last_stage=$CRASH_STAGE"
+    echo "required_outputs_exit_code=$REQUIRED_RC"
+  } > "$RESULT_DIR/manifests/innovus_exit_classification.txt"
+elif [[ "$INNOVUS_RC" != "0" ]]; then
+  if [[ "$REQUIRED_RC" == "0" ]]; then
+    INNOVUS_EXIT_CLASS="POST_REPORT_TOOL_EXIT_${INNOVUS_RC}"
+  else
+    INNOVUS_EXIT_CLASS="INNOVUS_EXIT_${INNOVUS_RC}_BEFORE_REQUIRED_OUTPUTS"
+  fi
+  {
+    echo "INNOVUS_EXIT_NONZERO"
+    echo "exit_code=$INNOVUS_RC"
     echo "exit_class=$INNOVUS_EXIT_CLASS"
     echo "last_stage=$CRASH_STAGE"
     echo "required_outputs_exit_code=$REQUIRED_RC"

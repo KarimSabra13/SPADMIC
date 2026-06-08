@@ -15,8 +15,13 @@ proc mptdc_o12b_csv {value} {
 }
 
 proc mptdc_o12b_scalar {value} {
-    if {[llength $value] == 1} {
-        return [lindex $value 0]
+    if {[catch {set len [llength $value]}]} {
+        return "$value"
+    }
+    if {$len == 1} {
+        if {![catch {set item [lindex $value 0]}]} {
+            return $item
+        }
     }
     return $value
 }
@@ -42,10 +47,18 @@ proc mptdc_o12b_db_attrs_for {object} {
 
     set attrs [list]
     if {![catch {set raw_attrs [get_db $object .?]}]} {
-        foreach raw $raw_attrs {
-            set token [string trim [lindex $raw 0]]
-            if {$token eq ""} { continue }
-            lappend attrs $token
+        if {[catch {
+            foreach raw $raw_attrs {
+                set token [string trim [lindex $raw 0]]
+                if {$token eq ""} { continue }
+                lappend attrs $token
+            }
+        }]} {
+            foreach raw [split "$raw_attrs" "\n"] {
+                set token [string trim $raw]
+                if {$token eq ""} { continue }
+                lappend attrs $token
+            }
         }
     }
     set mptdc_o12b_attr_cache($key) $attrs
@@ -326,12 +339,22 @@ proc mptdc_o12b_write_attr_probe {samples} {
         puts $fh ""
         puts $fh "object: $object"
         puts $fh "attributes:"
-        set attrs [mptdc_o12b_db_attrs_for $object]
+        set attrs [list]
+        if {[catch {set attrs [mptdc_o12b_db_attrs_for $object]} err]} {
+            puts $fh "- ATTR_PROBE_FAILED: $err"
+            puts $fh ""
+            continue
+        }
         if {[llength $attrs] == 0} {
             puts $fh "- <none or unavailable>"
         } else {
-            foreach attr $attrs {
-                puts $fh "- $attr"
+            if {[catch {
+                foreach attr $attrs {
+                    puts $fh "- $attr"
+                }
+            } err]} {
+                puts $fh "- ATTR_LIST_PARSE_FAILED: $err"
+                puts $fh "- raw_attrs: [mptdc_o12b_csv $attrs]"
             }
         }
         puts $fh ""
@@ -663,7 +686,12 @@ proc mptdc_o12b_write_reports {} {
             }
 
             if {![info exists ::env(MPTDC_O12B_NET_DEBUG)] || $::env(MPTDC_O12B_NET_DEBUG) ne "0"} {
-                mptdc_o12b_write_net_debug_reports $family $tap $raw_net $out_net
+                if {[catch {mptdc_o12b_write_net_debug_reports $family $tap $raw_net $out_net} dbg_err]} {
+                    puts $route_fh [join [list \
+                        $family $tap [mptdc_o12b_csv $raw_net] "" "" \
+                        [mptdc_o12b_csv $out_net] "" "" "" "" \
+                        [mptdc_o12b_csv "NET_DEBUG_CAPTURE_FAILED=$dbg_err"]]] ","]
+                }
             }
         }
     }
@@ -677,7 +705,14 @@ proc mptdc_o12b_write_reports {} {
     close $sink_fh
 
     if {[info exists attr_probe_samples]} {
-        mptdc_o12b_write_attr_probe $attr_probe_samples
+        if {[catch {mptdc_o12b_write_attr_probe $attr_probe_samples} probe_err]} {
+            set probe_path "$o12b(reports_dir)/phase_buffer_db_attribute_probe.rpt"
+            set pfh [open $probe_path w]
+            puts $pfh "# O12B Innovus DB Attribute Probe"
+            puts $pfh ""
+            puts $pfh "ATTR_PROBE_FAILED=$probe_err"
+            close $pfh
+        }
     }
 
     set raw_fixed [expr {$raw_matched == 16 && $raw_missing == 0 && $raw_fanout1 == 16 ? "YES" : "NO"}]
