@@ -436,13 +436,13 @@ proc mptdc_o12b_write_net_debug_reports {family tap raw_net out_net} {
     set out_path "$o12b(reports_dir)/net_debug_${family}_${tap}_buf.rpt"
     if {$raw_net ne ""} {
         mptdc_o12b_capture_candidates $raw_path "O12B raw net debug $family $tap" [list \
-            [format {report_net -connections {%s}} $raw_net] \
+            [format {report_net -net {%s}} $raw_net] \
             [format {reportNet {%s}} $raw_net] \
             [format {report_property [get_nets {%s}]} $raw_net]]
     }
     if {$out_net ne ""} {
         mptdc_o12b_capture_candidates $out_path "O12B buffered net debug $family $tap" [list \
-            [format {report_net -connections {%s}} $out_net] \
+            [format {report_net -net {%s}} $out_net] \
             [format {reportNet {%s}} $out_net] \
             [format {report_property [get_nets {%s}]} $out_net]]
     }

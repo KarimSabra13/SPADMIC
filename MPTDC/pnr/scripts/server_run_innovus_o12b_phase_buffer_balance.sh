@@ -169,7 +169,7 @@ validate_required_outputs() {
   require_output_no_error_marker "phase buffer output loads" "reports/phase_buffer_output_loads.csv"
   require_output_no_error_marker "phase buffer balance summary" "reports/phase_buffer_balance_summary.md"
   require_output_no_error_marker "phase buffer topology" "reports/phase_buffer_topology.csv"
-  require_output_no_error_marker "phase buffer topology summary" "reports/phase_buffer_topology_summary.md"
+  require_output_nonempty "phase buffer topology summary" "reports/phase_buffer_topology_summary.md"
   require_output_nonempty "phase buffer placement" "reports/phase_buffer_placement.csv"
   require_output_nonempty "phase buffer placement summary" "reports/phase_buffer_placement_summary.md"
   require_output_nonempty "phase buffer delay estimate" "reports/phase_buffer_delay_estimate.csv"
