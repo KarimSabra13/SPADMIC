@@ -37,13 +37,13 @@ O12_PNR_RUN=20260608_o12_phase_buffer_pnr_abs1
 EXPECTED_HEAD=$EXPECTED_HEAD \
 MPTDC_O12B_SOURCE_RUN_ID=$O12_PNR_RUN \
 bash MPTDC/pnr/scripts/server_run_innovus_o12b_phase_buffer_balance.sh \
-  20260608_o12b_phase_buffer_balance_abs1
+  20260608_o12b_phase_buffer_balance_abs2
 ```
 
 ## Review Commands
 
 ```bash
-RUN=20260608_o12b_phase_buffer_balance_abs1
+RUN=20260608_o12b_phase_buffer_balance_abs2
 R=results/innovus/$RUN/reports
 
 sed -n '1,180p' results/innovus/$RUN/SUMMARY.md
@@ -54,6 +54,8 @@ column -s, -t < $R/phase_buffer_output_loads.csv | sed -n '1,24p'
 column -s, -t < $R/phase_buffer_topology.csv | sed -n '1,24p'
 column -s, -t < $R/phase_buffer_placement.csv | sed -n '1,24p'
 column -s, -t < $R/phase_buffer_route_summary.csv | sed -n '1,24p'
+sed -n '1,220p' $R/phase_buffer_db_attribute_probe.rpt
+ls -1 $R/net_debug_*_buf.rpt | sed -n '1,20p'
 ```
 
 ## Pass Indicators
@@ -72,3 +74,11 @@ Expected O12B indicators:
 If `BUFFER_OUTPUT_LOAD_QUANTIFIED=NO`, keep O12 as promising but do not make a
 BUHDX4/BUHDX6/BUHDX8 decision until numeric buffer-output cap/transition data is
 available.
+
+If Innovus returns `139`, check:
+
+```bash
+cat results/innovus/$RUN/manifests/current_stage.txt
+cat results/innovus/$RUN/manifests/innovus_exit_classification.txt
+sed -n '1,220p' results/innovus/$RUN/REQUIRED_OUTPUTS_CHECK_FAILED.txt
+```

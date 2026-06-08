@@ -32,17 +32,49 @@ proc mptdc_o12b_num {value} {
     return ""
 }
 
+proc mptdc_o12b_db_attrs_for {object} {
+    global mptdc_o12b_attr_cache
+    if {$object eq ""} { return [list] }
+    set key "$object"
+    if {[info exists mptdc_o12b_attr_cache($key)]} {
+        return $mptdc_o12b_attr_cache($key)
+    }
+
+    set attrs [list]
+    if {![catch {set raw_attrs [get_db $object .?]}]} {
+        foreach raw $raw_attrs {
+            set token [string trim [lindex $raw 0]]
+            if {$token eq ""} { continue }
+            lappend attrs $token
+        }
+    }
+    set mptdc_o12b_attr_cache($key) $attrs
+    return $attrs
+}
+
+proc mptdc_o12b_db_attr_supported {object attr} {
+    set attr_name [string trimleft $attr .]
+    if {$attr_name eq ""} { return 0 }
+    set first [lindex [split $attr_name "."] 0]
+    foreach raw_attr [mptdc_o12b_db_attrs_for $object] {
+        set norm [string trimleft $raw_attr .]
+        if {$norm eq $attr_name || $norm eq $first} {
+            return 1
+        }
+        if {[string first "${first}." $norm] == 0} {
+            return 1
+        }
+    }
+    return 0
+}
+
 proc mptdc_o12b_db_attr {object attr} {
     if {$object eq ""} { return "" }
+    if {![mptdc_o12b_db_attr_supported $object $attr]} {
+        return ""
+    }
     set val ""
     if {![catch {set val [get_db $object $attr]}] && $val ne ""} {
-        return [mptdc_o12b_scalar $val]
-    }
-    set attr_name $attr
-    if {[string index $attr_name 0] eq "."} {
-        set attr_name [string range $attr_name 1 end]
-    }
-    if {![catch {set val [dbGet ${object}.${attr_name}]}] && $val ne ""} {
         return [mptdc_o12b_scalar $val]
     }
     return ""
@@ -258,16 +290,53 @@ proc mptdc_o12b_write_net_debug_reports {family tap raw_net out_net} {
     set out_path "$o12b(reports_dir)/net_debug_${family}_${tap}_buf.rpt"
     if {$raw_net ne ""} {
         mptdc_o12b_capture_candidates $raw_path "O12B raw net debug $family $tap" [list \
-            [format {report_net -connections %s} $raw_net] \
-            [format {reportNet %s} $raw_net] \
-            [format {report_property [get_nets %s]} $raw_net]]
+            [format {report_net -connections {%s}} $raw_net] \
+            [format {reportNet {%s}} $raw_net] \
+            [format {report_property [get_nets {%s}]} $raw_net]]
     }
     if {$out_net ne ""} {
         mptdc_o12b_capture_candidates $out_path "O12B buffered net debug $family $tap" [list \
-            [format {report_net -connections %s} $out_net] \
-            [format {reportNet %s} $out_net] \
-            [format {report_property [get_nets %s]} $out_net]]
+            [format {report_net -connections {%s}} $out_net] \
+            [format {reportNet {%s}} $out_net] \
+            [format {report_property [get_nets {%s}]} $out_net]]
     }
+}
+
+proc mptdc_o12b_note_metric_unavailable {notes metric object} {
+    if {$object eq ""} {
+        lappend notes "${metric}_OBJECT_UNAVAILABLE"
+    } else {
+        lappend notes "${metric}_DB_ATTR_UNAVAILABLE"
+    }
+    return $notes
+}
+
+proc mptdc_o12b_write_attr_probe {samples} {
+    global o12b
+    set path "$o12b(reports_dir)/phase_buffer_db_attribute_probe.rpt"
+    set fh [open $path w]
+    puts $fh "# O12B Innovus DB Attribute Probe"
+    puts $fh ""
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    foreach item $samples {
+        set label [lindex $item 0]
+        set object [lindex $item 1]
+        puts $fh "## $label"
+        puts $fh ""
+        puts $fh "object: $object"
+        puts $fh "attributes:"
+        set attrs [mptdc_o12b_db_attrs_for $object]
+        if {[llength $attrs] == 0} {
+            puts $fh "- <none or unavailable>"
+        } else {
+            foreach attr $attrs {
+                puts $fh "- $attr"
+            }
+        }
+        puts $fh ""
+    }
+    close $fh
 }
 
 proc mptdc_o12b_capture_candidates {path title bodies} {
@@ -458,7 +527,7 @@ proc mptdc_o12b_write_reports {} {
                 incr out_numeric
                 lappend out_notes "TOTAL_CAP_FROM_DB_ATTR=[lindex $total_data 1]"
             } else {
-                lappend out_notes "TOTAL_CAP_DB_ATTR_UNAVAILABLE"
+                set out_notes [mptdc_o12b_note_metric_unavailable $out_notes TOTAL_CAP $out_net_obj]
             }
             if {$wire_pf ne ""} { lappend out_notes "WIRE_CAP_FROM_DB_ATTR=[lindex $wire_data 1]" }
             if {$pin_pf ne ""} { lappend out_notes "PIN_CAP_FROM_DB_ATTR=[lindex $pin_data 1]" }
@@ -582,6 +651,20 @@ proc mptdc_o12b_write_reports {} {
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf \
                 [mptdc_o12b_csv "raw_and_buffered_route_from_db_attrs_when_available"]]] ","]
+
+            if {![info exists attr_probe_samples_written]} {
+                set attr_probe_samples_written 1
+                set attr_probe_samples [list \
+                    [list "${family}_${tap}_raw_net" $raw_net_obj] \
+                    [list "${family}_${tap}_buffered_net" $out_net_obj] \
+                    [list "${family}_${tap}_buffer_cell" [mptdc_o12b_get_cell $buf_inst]] \
+                    [list "${family}_${tap}_buffer_input_pin" [mptdc_o11_pin_object $a_pin]] \
+                    [list "${family}_${tap}_buffer_output_pin" [mptdc_o11_pin_object $q_pin]]]
+            }
+
+            if {![info exists ::env(MPTDC_O12B_NET_DEBUG)] || $::env(MPTDC_O12B_NET_DEBUG) ne "0"} {
+                mptdc_o12b_write_net_debug_reports $family $tap $raw_net $out_net
+            }
         }
     }
 
@@ -592,6 +675,10 @@ proc mptdc_o12b_write_reports {} {
     close $delay_fh
     close $route_fh
     close $sink_fh
+
+    if {[info exists attr_probe_samples]} {
+        mptdc_o12b_write_attr_probe $attr_probe_samples
+    }
 
     set raw_fixed [expr {$raw_matched == 16 && $raw_missing == 0 && $raw_fanout1 == 16 ? "YES" : "NO"}]
     set out_quantified [expr {$out_matched == 16 && $out_numeric == 16 ? "YES" : "NO"}]

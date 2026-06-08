@@ -64,6 +64,16 @@ The large digital fanout moved to BUHDX4 outputs, which is expected.  The open
 question is whether the buffer output load, delay, transition, placement, route
 length, and tap-to-tap mismatch are acceptable and calibratable.
 
+The first O12B run, `20260608_o12b_phase_buffer_balance_abs1`, did not answer
+that question.  It crashed during detailed report generation after unsupported
+Innovus DB net-attribute probes, before the required O12B CSVs were written.
+Treat that run as debug evidence only:
+
+- `RAW_RO_LOAD_FIXED` remains supported by the prior O12 analysis evidence.
+- `BUFFER_OUTPUT_LOAD_QUANTIFIED=NO` for abs1.
+- `INNOVUS_RUN_CLEAN=NO` for abs1.
+- `TIMING_DECISION_QUALITY=NO` for abs1.
+
 O12B must quantify:
 
 - `BUFFER_OUTPUT_LOAD_QUANTIFIED`;

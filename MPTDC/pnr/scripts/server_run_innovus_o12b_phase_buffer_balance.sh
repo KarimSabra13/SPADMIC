@@ -47,8 +47,8 @@ esac
   echo "source_restore_tcl: $SOURCE_RESTORE_TCL"
   echo "labels: O12B_PHASE_BUFFER_BALANCE REPORT_ONLY NOT_FINAL_SIGNOFF"
   echo
-  echo "git status --short:"
-  git -C "$REPO_ROOT" status --short 2>/dev/null || true
+  echo "git status --short --untracked-files=no:"
+  git -C "$REPO_ROOT" status --short --untracked-files=no 2>/dev/null || true
 } | tee "$MANIFEST_DIR/run_manifest.txt" | tee "$RUN_LOG"
 
 INPUT_RC=0
@@ -192,13 +192,25 @@ validate_required_outputs() {
   fi
 
   if [[ -s "$RESULT_DIR/reports/phase_buffer_output_loads.csv" ]]; then
-    local out_rows
+    local out_rows out_numeric
     out_rows="$(awk 'NR>1 {count++} END {print count+0}' "$RESULT_DIR/reports/phase_buffer_output_loads.csv")"
+    out_numeric="$(awk -F, 'NR>1 && $11 != "" {count++} END {print count+0}' "$RESULT_DIR/reports/phase_buffer_output_loads.csv")"
     if [[ "$out_rows" -lt 16 ]]; then
       INVALID_REQUIRED+=("phase buffer output loads: expected at least 16 rows, got $out_rows")
       REQUIRED_RC=9
       REPORT_COMPLETE="NO"
     fi
+    if [[ "$out_numeric" -ne 16 ]]; then
+      INVALID_REQUIRED+=("phase buffer output loads: expected 16 numeric total_cap_pf rows, got $out_numeric")
+      REQUIRED_RC=9
+      REPORT_COMPLETE="NO"
+    fi
+  fi
+
+  if [[ -s "$RESULT_DIR/reports/phase_buffer_balance_summary.md" ]] && grep -q 'BUFFER_OUTPUT_LOAD_QUANTIFIED=NO' "$RESULT_DIR/reports/phase_buffer_balance_summary.md"; then
+    INVALID_REQUIRED+=("phase buffer balance summary: BUFFER_OUTPUT_LOAD_QUANTIFIED=NO")
+    REQUIRED_RC=9
+    REPORT_COMPLETE="NO"
   fi
 
   if [[ -s "$RESULT_DIR/reports/phase_buffer_topology.csv" ]]; then
@@ -212,8 +224,27 @@ validate_required_outputs() {
   fi
 }
 
-if [[ "$INNOVUS_RC" == "0" && "$RUN_MODE" == "report_only" ]]; then
+if [[ "$RUN_MODE" == "report_only" && ( "$INNOVUS_RC" == "0" || "$INNOVUS_RC" == "139" ) ]]; then
   validate_required_outputs
+fi
+
+CRASH_STAGE="not_applicable"
+INNOVUS_EXIT_CLASS="CLEAN_OR_NON_139"
+if [[ -s "$RESULT_DIR/manifests/current_stage.txt" ]]; then
+  CRASH_STAGE="$(tr '\n' ';' < "$RESULT_DIR/manifests/current_stage.txt")"
+fi
+if [[ "$INNOVUS_RC" == "139" ]]; then
+  if [[ "$REQUIRED_RC" == "0" ]]; then
+    INNOVUS_EXIT_CLASS="POST_REPORT_TOOL_EXIT_139"
+  else
+    INNOVUS_EXIT_CLASS="INNOVUS_EXIT_139_BEFORE_REQUIRED_OUTPUTS"
+  fi
+  {
+    echo "INNOVUS_EXIT_139"
+    echo "exit_class=$INNOVUS_EXIT_CLASS"
+    echo "last_stage=$CRASH_STAGE"
+    echo "required_outputs_exit_code=$REQUIRED_RC"
+  } > "$RESULT_DIR/manifests/innovus_exit_classification.txt"
 fi
 
 if [[ "$REQUIRED_RC" != "0" ]]; then
@@ -238,6 +269,8 @@ fi
   echo "- Source run ID: \`$SOURCE_RUN_ID\`"
   echo "- Git HEAD: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)\`"
   echo "- Innovus exit code: $INNOVUS_RC"
+  echo "- Innovus exit class: \`$INNOVUS_EXIT_CLASS\`"
+  echo "- Last recorded Innovus stage: \`$CRASH_STAGE\`"
   echo "- Required outputs exit code: $REQUIRED_RC"
   echo "- Wrapper exit code: $WRAPPER_RC"
   echo "- REPORT_COMPLETE: \`$REPORT_COMPLETE\`"

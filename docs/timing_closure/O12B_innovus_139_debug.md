@@ -20,15 +20,45 @@ Current interpretation:
 - Therefore the PNR run must stay non-clean until O12B or a rerun proves the
   crash stage.
 
+## O12B abs1 Failure
+
+The first O12B report-only run, `20260608_o12b_phase_buffer_balance_abs1`, also
+returned Innovus exit code `139`, but this crash is now isolated to the O12B
+reporting helper rather than route optimization:
+
+- restore, RC extraction, DRV reporting, and initial timing reporting completed;
+- the last useful log section was O12B detailed phase-buffer report generation;
+- Innovus printed repeated `IMPDBTCL-248`, `IMPDBTCL-206`, and
+  `IMPDBTCL-210` errors for unsupported net attributes such as
+  `total_capacitance`, `total_cap`, `capacitance`, `load_capacitance`,
+  `wire_capacitance`, `pin_capacitance`, and `transition`;
+- the stack trace entered `dbProcessWalkListGet` / `dbtcliGetCmd`;
+- the reported tool message was `Crashed in AAE on net Unknown net`;
+- required O12B files such as `phase_buffer_output_loads.csv`,
+  `phase_buffer_topology.csv`, and `phase_buffer_placement.csv` were missing.
+
+Classification for abs1:
+
+- `INNOVUS_RUN_CLEAN=NO`
+- `INNOVUS_EXIT_139_BEFORE_REQUIRED_OUTPUTS`
+- crash stage: `phase_buffer_reports`
+
+The root cause is unsafe speculative DB attribute probing in the new O12B
+reporter.  The fix is to query supported attributes first, remove the `dbGet`
+fallback for unknown net attributes, and write attribute/debug reports for the
+next exact numeric-cap query.
+
 ## O12B Wrapper Fix
 
-The O10.2 route wrapper now writes:
+The O12B wrapper now writes:
 
 - `manifests/stage_trace.csv`
 - `manifests/current_stage.txt`
 - `manifests/innovus_exit_classification.txt` when Innovus exits `139`
 
 The wrapper now validates required reports even when Innovus returns `139`.
+It also requires all 16 `phase_buffer_output_loads.csv` rows to contain numeric
+`total_cap_pf` before declaring the run report-complete.
 
 Exit classification:
 

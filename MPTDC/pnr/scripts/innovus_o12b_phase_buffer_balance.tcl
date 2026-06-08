@@ -29,6 +29,37 @@ proc mptdc_o12b_mkdirs {} {
     }
 }
 
+proc mptdc_o12b_csv_safe {value} {
+    set text "$value"
+    regsub -all {"} $text {""} text
+    if {[regexp {[,"
+]} $text]} {
+        return "\"$text\""
+    }
+    return $text
+}
+
+proc mptdc_o12b_stage_mark {stage status} {
+    global o12b
+    if {![info exists o12b(manifests_dir)]} { return }
+    file mkdir $o12b(manifests_dir)
+    set trace "$o12b(manifests_dir)/stage_trace.csv"
+    set new_file [expr {![file exists $trace]}]
+    set timestamp [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]
+    set fh [open $trace a]
+    if {$new_file} {
+        puts $fh "timestamp,stage,status"
+    }
+    puts $fh "[mptdc_o12b_csv_safe $timestamp],[mptdc_o12b_csv_safe $stage],[mptdc_o12b_csv_safe $status]"
+    close $fh
+
+    set cfh [open "$o12b(manifests_dir)/current_stage.txt" w]
+    puts $cfh "stage=$stage"
+    puts $cfh "status=$status"
+    puts $cfh "timestamp=$timestamp"
+    close $cfh
+}
+
 proc mptdc_o12b_capture_candidates {path title bodies} {
     set dir [file dirname $path]
     file mkdir $dir
@@ -144,53 +175,78 @@ proc mptdc_o12b_write_summary {} {
 proc mptdc_o12b_main {} {
     global o12b
     mptdc_o12b_setup_globals
+    mptdc_o12b_stage_mark setup start
     mptdc_o12b_write_manifest
     source "$o12b(script_dir)/innovus_o12b_phase_buffer_reports.tcl"
+    mptdc_o12b_stage_mark setup done
 
+    mptdc_o12b_stage_mark restore_checkpoint start
     mptdc_o12b_restore_source_checkpoint
+    mptdc_o12b_stage_mark restore_checkpoint done
+    mptdc_o12b_stage_mark report_clocks start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/report_clocks.rpt" \
         "O12B restored checkpoint clocks" [list {report_clocks}]
+    mptdc_o12b_stage_mark report_clocks done
+    mptdc_o12b_stage_mark drv_max_cap start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/drv_max_cap.rpt" \
         "O12B restored checkpoint max capacitance" [list \
             {report_constraint -max_capacitance -all_violators} \
             {report_constraint -all_violators}]
+    mptdc_o12b_stage_mark drv_max_cap done
+    mptdc_o12b_stage_mark drv_max_transition start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/drv_max_transition.rpt" \
         "O12B restored checkpoint max transition" [list \
             {report_constraint -max_transition -all_violators} \
             {report_constraint -all_violators}]
+    mptdc_o12b_stage_mark drv_max_transition done
+    mptdc_o12b_stage_mark drv_max_fanout start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/drv_max_fanout.rpt" \
         "O12B restored checkpoint max fanout" [list \
             {report_constraint -max_fanout -all_violators} \
             {report_constraint -all_violators}]
+    mptdc_o12b_stage_mark drv_max_fanout done
+    mptdc_o12b_stage_mark timing_ro_osc_domain start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/timing_post_route_ro_osc_domain.rpt" \
         "O12B RO oscillator-domain timing" [list \
             {report_timing -path_group clk_osc_fast_buf_tap0 -max_paths 100} \
             {report_timing -path_group clk_osc_fast -max_paths 100} \
             {report_timing -max_paths 100}]
+    mptdc_o12b_stage_mark timing_ro_osc_domain done
+    mptdc_o12b_stage_mark timing_clk_sys start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/timing_post_route_clk_sys_internal.rpt" \
         "O12B clk_sys internal timing" [list \
             {report_timing -path_group clk_sys -max_paths 100} \
             {report_timing -from [get_clocks clk_sys] -to [get_clocks clk_sys] -max_paths 100} \
             {report_timing -max_paths 100}]
+    mptdc_o12b_stage_mark timing_clk_sys done
+    mptdc_o12b_stage_mark timing_io_output start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/timing_post_route_io_output.rpt" \
         "O12B IO output timing" [list \
             {report_timing -to [all_outputs] -max_paths 100} \
             {report_timing -max_paths 100}]
+    mptdc_o12b_stage_mark timing_io_output done
+    mptdc_o12b_stage_mark timing_reset_recovery start
     mptdc_o12b_capture_candidates "$o12b(reports_dir)/timing_post_route_reset_recovery.rpt" \
         "O12B reset/recovery timing" [list \
             {report_timing -check_type recovery -max_paths 100} \
             {report_timing -check_type removal -max_paths 100} \
             {report_timing -max_paths 100}]
+    mptdc_o12b_stage_mark timing_reset_recovery done
 
+    mptdc_o12b_stage_mark phase_buffer_reports start
     if {[catch {mptdc_o12b_write_reports} err]} {
+        mptdc_o12b_stage_mark phase_buffer_reports failed
         mptdc_o11_write_error_csv "$o12b(reports_dir)/phase_buffer_output_loads.csv" \
             "status,message" $err
         mptdc_o11_write_error_csv "$o12b(reports_dir)/phase_buffer_topology.csv" \
             "status,message" $err
         mptdc_o12b_fail "phase-buffer balance report generation failed: $err"
     }
+    mptdc_o12b_stage_mark phase_buffer_reports done
+    mptdc_o12b_stage_mark summary start
     mptdc_o12b_write_timing_summary
     mptdc_o12b_write_summary
+    mptdc_o12b_stage_mark summary done
     mptdc_o12b_msg "O12B phase-buffer balance analysis complete"
 }
 
