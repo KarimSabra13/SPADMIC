@@ -107,6 +107,7 @@ set raw [mptdc_o12_pin_candidates fast 7 raw]
 set qpin [mptdc_o12_pin_candidates slow 0 Q]
 if {[lsearch -exact $raw {u_core/u_osc_fast/u_ro_tune4/S[7]}] < 0} { error "missing raw fast candidate" }
 if {[lsearch -exact $qpin {u_core/u_phase_buf_slow/gen_phase_buf[0]/u_buf/Q}] < 0} { error "missing buffer Q candidate" }
+if {[lsearch -exact $qpin {u_core_u_phase_buf_slow/gen_phase_buf[0].u_buf/Q}] < 0} { error "missing restored Innovus buffer Q candidate" }
 puts "O12 Tcl source/budget/pin-candidate check passed"
 EOF
   ) 2>&1 | tee -a "$RUN_LOG"

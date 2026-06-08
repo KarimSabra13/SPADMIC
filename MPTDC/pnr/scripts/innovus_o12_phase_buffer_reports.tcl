@@ -17,6 +17,8 @@ proc mptdc_o12_pin_candidates {family tap role} {
     set pin $role
     return [list \
         [format {u_core/u_phase_buf_%s/gen_phase_buf[%d]/u_buf/%s} $family $tap $pin] \
+        [format {u_core/u_phase_buf_%s/gen_phase_buf[%d].u_buf/%s} $family $tap $pin] \
+        [format {u_core_u_phase_buf_%s/gen_phase_buf[%d].u_buf/%s} $family $tap $pin] \
         [format {u_core_u_phase_buf_%s_gen_phase_buf_%d__u_buf/%s} $family $tap $pin] \
         [format {*u_phase_buf_%s*gen_phase_buf*%d*u_buf/%s} $family $tap $pin]]
 }

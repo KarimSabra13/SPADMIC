@@ -18,6 +18,14 @@ proc mptdc_o10_env {name default_value} {
     return $default_value
 }
 
+proc mptdc_o10_repo_abs_path {path} {
+    global o10
+    if {$path eq "" || [file pathtype $path] eq "absolute"} {
+        return $path
+    }
+    return [file normalize [file join $o10(repo_root) $path]]
+}
+
 proc mptdc_o10_required_file {label path} {
     if {![file exists $path]} {
         mptdc_o10_fail "missing $label: $path"
@@ -224,11 +232,11 @@ proc mptdc_o10_setup_globals {} {
     set design(TOPLEVEL) "mptdc_top_asic"
     set design(project_root) $mptdc_root
     set design(syn_root) "$mptdc_root/syn"
-    set design(postsyn_netlist) [mptdc_o10_env MPTDC_O10_NETLIST "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.v"]
-    set design(postsyn_sdc) [mptdc_o10_env MPTDC_O10_POSTSYN_SDC "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.sdc"]
-    set o10(sdc_overlay) [mptdc_o10_env MPTDC_O10_SDC_OVERLAY "$mptdc_root/pnr/constraints/mptdc_osc_typical_r750_delta5_innovus.sdc"]
-    set o10(ro_lef) [mptdc_o10_env O1_RO_LEF_PATH "$repo_root/results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef"]
-    set o10(ro_lib) [mptdc_o10_env O1_RO_LIBERTY_PATH "$mptdc_root/syn/macros/RO_tune4_real_abstract_shell.lib"]
+    set design(postsyn_netlist) [mptdc_o10_repo_abs_path [mptdc_o10_env MPTDC_O10_NETLIST "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.v"]]
+    set design(postsyn_sdc) [mptdc_o10_repo_abs_path [mptdc_o10_env MPTDC_O10_POSTSYN_SDC "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.sdc"]]
+    set o10(sdc_overlay) [mptdc_o10_repo_abs_path [mptdc_o10_env MPTDC_O10_SDC_OVERLAY "$mptdc_root/pnr/constraints/mptdc_osc_typical_r750_delta5_innovus.sdc"]]
+    set o10(ro_lef) [mptdc_o10_repo_abs_path [mptdc_o10_env O1_RO_LEF_PATH "$repo_root/results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef"]]
+    set o10(ro_lib) [mptdc_o10_repo_abs_path [mptdc_o10_env O1_RO_LIBERTY_PATH "$mptdc_root/syn/macros/RO_tune4_real_abstract_shell.lib"]]
 
     set paths(PDK_ROOT) [mptdc_o10_env PDK_ROOT /data/pdk/xfab/xh018]
     set paths(SC_ROOT) [mptdc_o10_env SC_ROOT "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v6_0"]
@@ -297,9 +305,9 @@ proc mptdc_o10_write_mmmc {} {
 
 proc mptdc_o10_verify_inputs {} {
     global o10 design tech_files
-    mptdc_o10_required_file "O9 netlist" $design(postsyn_netlist)
-    mptdc_o10_required_file "O9 post-synth SDC" $design(postsyn_sdc)
-    mptdc_o10_required_file "O10.2 R750 Innovus SDC overlay" $o10(sdc_overlay)
+    mptdc_o10_required_file "post-synthesis netlist" $design(postsyn_netlist)
+    mptdc_o10_required_file "post-synthesis SDC" $design(postsyn_sdc)
+    mptdc_o10_required_file "O10.2 Innovus SDC overlay" $o10(sdc_overlay)
     mptdc_o10_required_file "technology LEF" $tech_files(TECHNOLOGY_LEF)
     mptdc_o10_required_file "standard-cell LEF" $tech_files(STDCELLS_LEF)
     mptdc_o10_required_file "typical Liberty" $tech_files(STDCELLS_TC_LIB)

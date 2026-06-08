@@ -31,6 +31,20 @@ STD_LEF="${MPTDC_O10_STDCELL_LEF:-$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_HD.lef}"
 STD_TC_LIB="${MPTDC_O10_STDCELL_TYP_LIB:-$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib}"
 POWER_NETS="${MPTDC_O10_POWER_NETS:-VDD VSS}"
 
+repo_abs_path() {
+  local path="$1"
+  case "$path" in
+    ""|/*) printf '%s\n' "$path" ;;
+    *) printf '%s/%s\n' "$REPO_ROOT" "$path" ;;
+  esac
+}
+
+NETLIST="$(repo_abs_path "$NETLIST")"
+POSTSYN_SDC="$(repo_abs_path "$POSTSYN_SDC")"
+OVERLAY_SDC="$(repo_abs_path "$OVERLAY_SDC")"
+RO_LEF="$(repo_abs_path "$RO_LEF")"
+RO_LIB="$(repo_abs_path "$RO_LIB")"
+
 mkdir -p "$LOG_DIR" "$RESULT_DIR/manifests" "$RESULT_DIR/reports" "$RESULT_DIR/screenshots" "$RESULT_DIR/manager"
 
 case "$RUN_MODE" in
@@ -86,9 +100,9 @@ if [[ -n "${EXPECTED_HEAD:-}" && "$ACTUAL_HEAD" != "$EXPECTED_HEAD" ]]; then
   INPUT_RC=5
 fi
 
-require_file "O9 netlist" "$NETLIST"
-require_file "O9 post-synth SDC" "$POSTSYN_SDC"
-require_file "O10.2 Innovus-safe R750 overlay SDC" "$OVERLAY_SDC"
+require_file "post-synthesis netlist" "$NETLIST"
+require_file "post-synthesis SDC" "$POSTSYN_SDC"
+require_file "O10.2 Innovus-safe overlay SDC" "$OVERLAY_SDC"
 require_file "RO_tune4 real LEF" "$RO_LEF"
 require_file "RO_tune4 Liberty shell" "$RO_LIB"
 require_file "technology LEF" "$TECH_LEF"

@@ -54,13 +54,14 @@ Use the existing O10.2 route wrapper with O12 netlist and O12 Innovus SDC
 overlay:
 
 ```bash
+REPO_ROOT=$(pwd)
 O12_GENUS_RUN=20260608_o12_phase_isolation_genus
 O12_PNR_RUN=20260608_o12_phase_buffer_pnr
 
 EXPECTED_HEAD=$(git rev-parse HEAD) \
-MPTDC_O10_NETLIST=results/genus_osc_pd/${O12_GENUS_RUN}/mptdc_top_asic.postsyn.v \
-MPTDC_O10_POSTSYN_SDC=results/genus_osc_pd/${O12_GENUS_RUN}/mptdc_top_asic.postsyn.sdc \
-MPTDC_O10_SDC_OVERLAY=MPTDC/pnr/constraints/mptdc_osc_typical_r750_delta5_o12_phase_buffers_innovus.sdc \
+MPTDC_O10_NETLIST=${REPO_ROOT}/results/genus_osc_pd/${O12_GENUS_RUN}/mptdc_top_asic.postsyn.v \
+MPTDC_O10_POSTSYN_SDC=${REPO_ROOT}/results/genus_osc_pd/${O12_GENUS_RUN}/mptdc_top_asic.postsyn.sdc \
+MPTDC_O10_SDC_OVERLAY=${REPO_ROOT}/MPTDC/pnr/constraints/mptdc_osc_typical_r750_delta5_o12_phase_buffers_innovus.sdc \
 MPTDC_O10_2_MODE=route_feasibility \
 bash MPTDC/pnr/scripts/server_run_innovus_o10_2_pnr_repair.sh \
   ${O12_PNR_RUN}
@@ -95,6 +96,11 @@ sed -n '1,180p' $R/phase_buffer_balance_summary.md
 sed -n '1,40p' $R/ro_phase_raw_pin_loads.csv
 sed -n '1,40p' $R/phase_buffer_output_loads.csv
 ```
+
+If a route-feasibility run already produced
+`checkpoints/04_route.enc.dat`, but the load report failed only with
+`NO_BUFFER_OUTPUT_PIN_MATCH`, do not reroute.  Pull the matcher fix and rerun
+only Step 4 using the existing PNR run ID.
 
 ## Expected O12 Outcome
 
