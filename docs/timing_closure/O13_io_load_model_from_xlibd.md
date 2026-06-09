@@ -8,6 +8,8 @@ O10/O12 Innovus timing has repeatedly shown top-level output paths dominating ag
 
 Use `DFRRQHDX2 D_CAP = 3.20 fF` as the first simple output load unit.
 
+The new XLIBD extraction also gives `DFRQHDX2 D_CAP = 2.70 fF`, which is useful as a lighter no-reset DFF reference. The configured IO load classes intentionally keep `DFRRQHDX2` as the default reference for continuity and conservatism.
+
 ## Load Classes
 
 | Class | Equivalent D inputs | Load fF | Load pF |
@@ -34,6 +36,14 @@ reports/io_load_model.rpt
 ```
 
 The report records the selected load class, fF/pF value, and the top-level outputs being modeled.
+
+The compact source of truth is:
+
+```text
+MPTDC/pnr/config/xlibd_spadmic_typical_cell_values.tcl
+```
+
+Do not use arbitrary output loads in the O13 feasibility flow unless a real pad or parent-block load model is supplied.
 
 ## Outputs Of Interest
 

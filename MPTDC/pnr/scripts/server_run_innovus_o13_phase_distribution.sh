@@ -116,6 +116,8 @@ if {[lsearch -exact $ipin {u_core_u_phase_buf_slow/gen_phase_buf[0].u_iso/A}] < 
 if {[mptdc_o13_expected_cell_type_for_inst {u_core_u_phase_buf_fast/gen_phase_buf[7].u_drv}] ne "BUHDX12"} { error "driver cell fallback failed" }
 if {[mptdc_o13_clock_for slow 7] ne "clk_osc_slow_buf_tap7"} { error "clock helper failed" }
 if {[mptdc_xlibd_cell BUHDX12 input_cap_ff] ne "32.24"} { error "XLIBD config failed" }
+if {[mptdc_xlibd_cell BUHDX2 input_cap_ff] ne "5.72"} { error "XLIBD BUHDX2 config failed" }
+if {[mptdc_xlibd_cell DFRSHDX1 sn_cap_ff] ne "8.61"} { error "XLIBD DFRSHDX1 config failed" }
 puts "O13 Tcl source/pin-helper check passed"
 EOF
   ) 2>&1 | tee -a "$RUN_LOG"
@@ -180,6 +182,9 @@ validate_required_outputs() {
   require_output_no_error_marker "raw RO pin loads" "reports/ro_phase_raw_pin_loads.csv"
   require_output_no_error_marker "phase buffer output loads" "reports/phase_buffer_output_loads.csv"
   require_output_no_error_marker "XLIBD enhanced phase loads" "reports/phase_net_loads_xlibd_enhanced.csv"
+  require_output_no_error_marker "XLIBD raw RO pin loads" "reports/ro_phase_raw_pin_loads_xlibd.csv"
+  require_output_no_error_marker "XLIBD phase buffer output loads" "reports/phase_buffer_output_loads_xlibd.csv"
+  require_output_nonempty "XLIBD fast tag loads" "reports/fast_tag_loads_xlibd.csv"
   require_output_nonempty "XLIBD phase load budget summary" "reports/phase_net_load_budget_summary.md"
   require_output_nonempty "XLIBD phase buffer interpretation" "reports/phase_buffer_xlibd_interpretation.md"
   require_output_nonempty "XLIBD IO load model" "reports/io_load_model.rpt"
@@ -316,6 +321,9 @@ fi
     reports/ro_phase_raw_pin_loads.csv \
     reports/phase_buffer_output_loads.csv \
     reports/phase_net_loads_xlibd_enhanced.csv \
+    reports/ro_phase_raw_pin_loads_xlibd.csv \
+    reports/phase_buffer_output_loads_xlibd.csv \
+    reports/fast_tag_loads_xlibd.csv \
     reports/phase_net_load_budget_summary.md \
     reports/phase_buffer_xlibd_interpretation.md \
     reports/io_load_model.rpt \

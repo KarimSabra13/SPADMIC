@@ -27,7 +27,11 @@ The selected values used by report scripts live in:
 
 - [xlibd_spadmic_typical_cell_values.tcl](../../MPTDC/pnr/config/xlibd_spadmic_typical_cell_values.tcl)
 
-The large raw extraction stays in:
+The current superseding raw extraction stays in:
+
+- [xlibd_cell_values_spadmic_with_dfrshdx1_buhdx2_buhdx3.txt](../../MPTDC/tech/xlibd/xlibd_cell_values_spadmic_with_dfrshdx1_buhdx2_buhdx3.txt)
+
+The previous partial extraction is retained only for traceability:
 
 - [xlibd_cell_values_spadmic_with_sdffq4.txt](../../MPTDC/tech/xlibd/xlibd_cell_values_spadmic_with_sdffq4.txt)
 
@@ -52,9 +56,33 @@ XLIBD-aware reports should include:
 
 - Actual cap in fF.
 - Ratio to strict RO budget and CN-like budget.
-- Equivalent `DFRRQHDX2` D, C, and RN input counts.
+- Equivalent `DFRRQHDX1`, `DFRRQHDX2`, `DFRQHDX2`, and `DFRHDX1` clock-load counts where useful.
+- Equivalent `DFRRQHDX2` D, C, and RN input counts for continuity with older reports.
 - Driver cell type and XLIBD driver limits where known.
 - Clear labels separating raw RO source load from final digital phase-driver output load.
+
+O13 Innovus reports should produce:
+
+- `ro_phase_raw_pin_loads_xlibd.csv`
+- `phase_buffer_output_loads_xlibd.csv`
+- `fast_tag_loads_xlibd.csv`
+- `phase_net_load_budget_summary.md`
+
+If Innovus DB capacitance is unavailable, reports must say `ERROR` or `UNKNOWN`; they must not backfill an inferred numeric load from XLIBD pin caps.
+
+## Remaining Useful Extractions
+
+The new file covers the previously missing `BUHDX2`, `BUHDX3`, `INHDX0`, `INHDX1`, `EO2HDX0`, `DFRRQHDX1`, `DFRQHDX2`, `DFRHDX1`, and `DFRSHDX1` values.
+
+Still useful later:
+
+- `INHDX2`
+- `ON22HDX0`
+- `ON22HDX1`
+- `BUHDX0`
+- `BUHDX1`
+- any dedicated clock buffer or clock inverter cells if they exist
+- any integrated clock-gating cells if later CTS or low-power analysis needs them
 
 ## Relationship To O13 abs3
 
