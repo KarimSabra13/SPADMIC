@@ -160,12 +160,22 @@ proc mptdc_o13_abs3_clock_collection {clock_names} {
 }
 
 proc mptdc_o13_abs3_pin_collection {patterns} {
+    if {[llength [info commands mptdc_o13_pin_object_list]] > 0} {
+        return [mptdc_o13_pin_object_list $patterns]
+    }
+
     set pins [list]
+    array set seen {}
     foreach pattern $patterns {
         set found [get_pins -quiet -hierarchical $pattern]
         foreach pin $found {
-            if {[lsearch -exact $pins $pin] < 0} {
-                lappend pins $pin
+            set name $pin
+            catch {set name [get_object_name $pin]}
+            foreach item $name {
+                if {![info exists seen($item)]} {
+                    set seen($item) 1
+                    lappend pins $pin
+                }
             }
         }
     }
@@ -329,10 +339,11 @@ proc mptdc_o13_abs4_q1_patterns {tap} {
 proc mptdc_o13_pd_match_q1_name {name ns_var nf_var} {
     upvar $ns_var ns
     upvar $nf_var nf
-    if {[regexp {gen_pd_row\[([0-7])\].*gen_pd_col\[([0-7])\].*u_pd.*q1_reg[^/]*/D$} $name -> ns nf]} {
+    set lname [string tolower $name]
+    if {[regexp {gen_pd_row\[([0-7])\].*gen_pd_col\[([0-7])\].*u_pd.*q1_reg[^/]*/d$} $lname -> ns nf]} {
         return 1
     }
-    if {[regexp {gen_pd_row_?([0-7]).*gen_pd_col_?([0-7]).*u_pd.*q1[^/]*/D$} $name -> ns nf]} {
+    if {[regexp {gen_pd_row_?([0-7]).*gen_pd_col_?([0-7]).*u_pd.*q1[^/]*/d$} $lname -> ns nf]} {
         return 1
     }
     return 0
@@ -340,10 +351,11 @@ proc mptdc_o13_pd_match_q1_name {name ns_var nf_var} {
 
 proc mptdc_o13_pd_match_slow_source_name {name tap_var} {
     upvar $tap_var tap
-    if {[regexp {u_phase_buf_slow.*gen_phase_buf\[([0-7])\].*u_drv/Q$} $name -> tap]} {
+    set lname [string tolower $name]
+    if {[regexp {u_phase_buf_slow.*gen_phase_buf\[([0-7])\].*u_drv/q$} $lname -> tap]} {
         return 1
     }
-    if {[regexp {u_phase_buf_slow.*gen_phase_buf_?([0-7]).*u_drv/Q$} $name -> tap]} {
+    if {[regexp {u_phase_buf_slow.*gen_phase_buf_?([0-7]).*u_drv/q$} $lname -> tap]} {
         return 1
     }
     return 0
@@ -359,6 +371,8 @@ proc mptdc_o13_pd_q1_endpoint_matrix {} {
     }
 
     set candidates [mptdc_collect_names [list get_pins -quiet -hierarchical *q1_reg*/D]]
+    set candidates [concat $candidates [mptdc_collect_names [list get_pins -quiet -hierarchical *q1_reg*/d]]]
+    set candidates [mptdc_unique_list $candidates]
     set matched 0
     set duplicates 0
     set unmatched [list]
@@ -466,6 +480,20 @@ proc mptdc_o13_pin_object_name {obj} {
     return $obj
 }
 
+proc mptdc_append_unique_names {raw_names names_var seen_var} {
+    upvar $names_var names
+    upvar $seen_var seen
+    foreach name $raw_names {
+        if {$name eq ""} {
+            continue
+        }
+        if {![info exists seen($name)]} {
+            set seen($name) 1
+            lappend names $name
+        }
+    }
+}
+
 proc mptdc_o13_pin_object_list {patterns} {
     set pins [list]
     array set seen {}
@@ -474,18 +502,28 @@ proc mptdc_o13_pin_object_list {patterns} {
         set found [get_pins -quiet -hierarchical $pattern]
         if {[llength [info commands foreach_in_collection]] > 0} {
             foreach_in_collection pin $found {
-                set name [mptdc_o13_pin_object_name $pin]
-                if {![info exists seen($name)]} {
+                set raw_names [mptdc_o13_pin_object_name $pin]
+                foreach name $raw_names {
+                    if {$name eq "" || [info exists seen($name)]} {
+                        continue
+                    }
                     set seen($name) 1
-                    lappend pins $pin
+                    set pin_obj $pin
+                    catch {set pin_obj [get_pins -quiet [list $name]]}
+                    lappend pins $pin_obj
                 }
             }
         } else {
             foreach pin $found {
-                set name [mptdc_o13_pin_object_name $pin]
-                if {![info exists seen($name)]} {
+                set raw_names [mptdc_o13_pin_object_name $pin]
+                foreach name $raw_names {
+                    if {$name eq "" || [info exists seen($name)]} {
+                        continue
+                    }
                     set seen($name) 1
-                    lappend pins $pin
+                    set pin_obj $pin
+                    catch {set pin_obj [get_pins -quiet [list $name]]}
+                    lappend pins $pin_obj
                 }
             }
         }
@@ -507,7 +545,10 @@ proc mptdc_o13_abs5_q1_pin_object_matrix {} {
     set candidates [mptdc_o13_pin_object_list [list \
         *gen_pd_row*gen_pd_col*u_pd*/q1_reg*/D \
         *gen_pd_row*gen_pd_col*u_pd*q1*/D \
-        *q1_reg*/D]]
+        *q1_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*/q1_reg*/d \
+        *gen_pd_row*gen_pd_col*u_pd*q1*/d \
+        *q1_reg*/d]]
 
     set matched 0
     set duplicates 0
@@ -608,7 +649,9 @@ proc mptdc_o13_abs5_slow_source_object_matrix {} {
         tap_count [array get tap_count]]
 }
 
-proc mptdc_o13_abs5_write_exception_report {rpt_file stage endpoints sources apply_rows applied_endpoint_count exception_applied exception_failures overmatch undermatch} {
+proc mptdc_o13_abs5_write_exception_report {rpt_file stage endpoints_list sources_list apply_rows applied_endpoint_count exception_applied exception_failures overmatch undermatch mode_status mode_detail} {
+    array set endpoints $endpoints_list
+    array set sources $sources_list
     array set row_count $endpoints(row_count)
     array set name_by_pair $endpoints(name_by_pair)
     array set name_by_tap $sources(name_by_tap)
@@ -626,6 +669,8 @@ proc mptdc_o13_abs5_write_exception_report {rpt_file stage endpoints sources app
     puts $fh "PD_VERNIER_APPLIED_ENDPOINTS=$applied_endpoint_count"
     puts $fh "PD_VERNIER_APPLICATION_STAGE=$stage"
     puts $fh "PD_VERNIER_APPLICATION_METHOD=POST_ELAB_EXACT_PIN_OBJECTS"
+    puts $fh "PD_VERNIER_CONSTRAINT_MODE_STATUS=$mode_status"
+    puts $fh "PD_VERNIER_CONSTRAINT_MODE_DETAIL=$mode_detail"
     puts $fh ""
     puts $fh "PD_VERNIER_EXCEPTION_ENDPOINTS_FOUND=$endpoints(matched)"
     puts $fh "PD_VERNIER_EXCEPTION_EXPECTED=64"
@@ -666,6 +711,37 @@ proc mptdc_o13_abs5_write_exception_report {rpt_file stage endpoints sources app
     close $fh
 }
 
+proc mptdc_o13_abs5_select_constraint_mode {} {
+    if {[llength [info commands set_interactive_constraint_modes]] == 0} {
+        return [list NOT_AVAILABLE "set_interactive_constraint_modes command not present"]
+    }
+
+    set candidates [list functional_mode]
+    foreach query {
+        {get_db constraint_modes functional_mode}
+        {get_db constraint_modes *functional_mode*}
+        {all_constraint_modes}
+    } {
+        set found [list]
+        catch {set found [eval $query]}
+        foreach item $found {
+            if {$item ne "" && [lsearch -exact $candidates $item] < 0} {
+                lappend candidates $item
+            }
+        }
+    }
+
+    set errors [list]
+    foreach mode $candidates {
+        if {![catch {set_interactive_constraint_modes $mode} err]} {
+            return [list OK $mode]
+        }
+        lappend errors "$mode: $err"
+    }
+
+    return [list FAIL [join $errors " | "]]
+}
+
 proc mptdc_o13_abs5_apply_exact_q1_exception {{rpt_file ""}} {
     global this_run
 
@@ -693,6 +769,9 @@ proc mptdc_o13_abs5_apply_exact_q1_exception {{rpt_file ""}} {
     set exception_failures 0
     set applied_endpoint_count 0
     set apply_rows [list]
+    set mode_result [mptdc_o13_abs5_select_constraint_mode]
+    set mode_status [lindex $mode_result 0]
+    set mode_detail [lindex $mode_result 1]
 
     if {$endpoints(matched) == 64 && $sources(matched) == 8 && \
         $endpoints(duplicates) == 0 && $sources(duplicates) == 0 && \
@@ -724,7 +803,7 @@ proc mptdc_o13_abs5_apply_exact_q1_exception {{rpt_file ""}} {
     set ::mptdc_o13_abs5_last_exception_source_count $sources(matched)
     set ::mptdc_o13_abs5_last_exception_applied_endpoints $applied_endpoint_count
 
-    mptdc_message "O13 abs5 PD Vernier exact exception stage=$this_run(stage) endpoints=$endpoints(matched) sources=$sources(matched) applied=$exception_applied"
+    mptdc_message "O13 abs5 PD Vernier exact exception stage=$this_run(stage) endpoints=$endpoints(matched) sources=$sources(matched) applied=$exception_applied constraint_mode=$mode_status:$mode_detail"
 
     if {$rpt_file ne ""} {
         mptdc_o13_abs5_write_exception_report \
@@ -737,7 +816,9 @@ proc mptdc_o13_abs5_apply_exact_q1_exception {{rpt_file ""}} {
             $exception_applied \
             $exception_failures \
             $overmatch \
-            $undermatch
+            $undermatch \
+            $mode_status \
+            $mode_detail
     }
 
     return [expr {$exception_applied eq "YES"}]
@@ -979,9 +1060,13 @@ proc mptdc_report_o13_abs3_timing {dir} {
 
     set pd_endpoints [mptdc_o13_abs3_pin_collection [list \
         *gen_pd_row*gen_pd_col*u_pd*/q1_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*/q1_reg*/d \
         *gen_pd_row*gen_pd_col*u_pd*/q2_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*/q2_reg*/d \
         *gen_pd_row*gen_pd_col*u_pd*/hit_latched_reg*/D \
-        *gen_pd_row*gen_pd_col*u_pd*/nfast_hit_latched_reg*/D]]
+        *gen_pd_row*gen_pd_col*u_pd*/hit_latched_reg*/d \
+        *gen_pd_row*gen_pd_col*u_pd*/nfast_hit_latched_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*/nfast_hit_latched_reg*/d]]
     mptdc_o13_abs3_run_timing_report \
         "$dir/timing_pd_capture_hotspots.rpt" \
         "O13 abs3 local PD capture timing report" \
@@ -1016,6 +1101,7 @@ proc mptdc_report_o13_abs3_timing {dir} {
 
 proc mptdc_collect_names {cmd} {
     set names [list]
+    array set seen {}
     if {[catch {set objs [eval $cmd]}]} {
         return $names
     }
@@ -1027,7 +1113,7 @@ proc mptdc_collect_names {cmd} {
                     set name $obj
                 }
             }
-            lappend names $name
+            mptdc_append_unique_names $name names seen
         }
         return $names
     }
@@ -1038,7 +1124,7 @@ proc mptdc_collect_names {cmd} {
                 set name $obj
             }
         }
-        lappend names $name
+        mptdc_append_unique_names $name names seen
     }
     return $names
 }
@@ -1061,8 +1147,6 @@ proc mptdc_collect_pin_names {patterns} {
         foreach pin_pattern [list \
             "${pattern}*/D" \
             "${pattern}*/d" \
-            "${pattern}*/*D*" \
-            "${pattern}*/*d*" \
         ] {
             set matches [mptdc_collect_names "get_pins -quiet -hierarchical $pin_pattern"]
             if {[llength $matches] > 0} {
