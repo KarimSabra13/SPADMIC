@@ -1,0 +1,9 @@
+# Cadence Genus(TM) Synthesis Solution, Version 22.13-s093_1, built Sep  5 2023 17:56:02
+
+# Date: Tue Jun 09 14:05:25 2026
+# Host: lyoelectrosrv01.in2p3.fr (x86_64 w/Linux 4.18.0-553.120.1.el8_10.x86_64) (16cores*64cpus*2physical cpus*Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz 22528KB)
+# OS:   Rocky Linux release 8.10 (Green Obsidian)
+
+source genus.tcl
+a
+exit
