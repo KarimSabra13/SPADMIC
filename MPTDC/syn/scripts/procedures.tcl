@@ -114,6 +114,34 @@ proc mptdc_write_report_substitute {rpt_file title unavailable_cmds evidence_fil
     close $fh
 }
 
+proc mptdc_collection_to_list {collection} {
+    set out [list]
+    if {[llength [info commands foreach_in_collection]] > 0} {
+        if {![catch {
+            foreach_in_collection obj $collection {
+                lappend out $obj
+            }
+        }]} {
+            return $out
+        }
+        set out [list]
+    }
+    foreach obj $collection {
+        lappend out $obj
+    }
+    return $out
+}
+
+proc mptdc_object_name {obj} {
+    if {![catch {set name [get_object_name $obj]}]} {
+        return $name
+    }
+    if {![catch {set name [get_db $obj .name]}]} {
+        return $name
+    }
+    return $obj
+}
+
 proc mptdc_o13_abs3_enabled {} {
     return [expr {[info exists ::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR)] && \
         $::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR) ne "0" || \
@@ -176,7 +204,7 @@ proc mptdc_o13_abs3_clock_collection {clock_names} {
     set clocks [list]
     foreach clock_name $clock_names {
         set found [get_clocks -quiet $clock_name]
-        foreach clk $found {
+        foreach clk [mptdc_collection_to_list $found] {
             if {[lsearch -exact $clocks $clk] < 0} {
                 lappend clocks $clk
             }
@@ -194,9 +222,8 @@ proc mptdc_o13_abs3_pin_collection {patterns} {
     array set seen {}
     foreach pattern $patterns {
         set found [get_pins -quiet -hierarchical $pattern]
-        foreach pin $found {
-            set name $pin
-            catch {set name [get_object_name $pin]}
+        foreach pin [mptdc_collection_to_list $found] {
+            set name [mptdc_object_name $pin]
             foreach item $name {
                 if {![info exists seen($item)]} {
                     set seen($item) 1
@@ -497,13 +524,7 @@ proc mptdc_o13_pd_slow_source_matrix {} {
 }
 
 proc mptdc_o13_pin_object_name {obj} {
-    if {![catch {set name [get_object_name $obj]}]} {
-        return $name
-    }
-    if {![catch {set name [get_db $obj .name]}]} {
-        return $name
-    }
-    return $obj
+    return [mptdc_object_name $obj]
 }
 
 proc mptdc_append_unique_names {raw_names names_var seen_var} {
@@ -526,31 +547,16 @@ proc mptdc_o13_pin_object_list {patterns} {
 
     foreach pattern $patterns {
         set found [get_pins -quiet -hierarchical $pattern]
-        if {[llength [info commands foreach_in_collection]] > 0} {
-            foreach_in_collection pin $found {
-                set raw_names [mptdc_o13_pin_object_name $pin]
-                foreach name $raw_names {
-                    if {$name eq "" || [info exists seen($name)]} {
-                        continue
-                    }
-                    set seen($name) 1
-                    set pin_obj $pin
-                    catch {set pin_obj [get_pins -quiet [list $name]]}
-                    lappend pins $pin_obj
+        foreach pin [mptdc_collection_to_list $found] {
+            set raw_names [mptdc_o13_pin_object_name $pin]
+            foreach name $raw_names {
+                if {$name eq "" || [info exists seen($name)]} {
+                    continue
                 }
-            }
-        } else {
-            foreach pin $found {
-                set raw_names [mptdc_o13_pin_object_name $pin]
-                foreach name $raw_names {
-                    if {$name eq "" || [info exists seen($name)]} {
-                        continue
-                    }
-                    set seen($name) 1
-                    set pin_obj $pin
-                    catch {set pin_obj [get_pins -quiet [list $name]]}
-                    lappend pins $pin_obj
-                }
+                set seen($name) 1
+                set pin_obj $pin
+                catch {set pin_obj [get_pins -quiet [list $name]]}
+                lappend pins $pin_obj
             }
         }
     }
@@ -1132,24 +1138,8 @@ proc mptdc_collect_names {cmd} {
         return $names
     }
 
-    if {[llength [info commands foreach_in_collection]] > 0} {
-        foreach_in_collection obj $objs {
-            if {[catch {set name [get_object_name $obj]}]} {
-                if {[catch {set name [get_db $obj .name]}]} {
-                    set name $obj
-                }
-            }
-            mptdc_append_unique_names $name names seen
-        }
-        return $names
-    }
-
-    foreach obj $objs {
-        if {[catch {set name [get_object_name $obj]}]} {
-            if {[catch {set name [get_db $obj .name]}]} {
-                set name $obj
-            }
-        }
+    foreach obj [mptdc_collection_to_list $objs] {
+        set name [mptdc_object_name $obj]
         mptdc_append_unique_names $name names seen
     }
     return $names
@@ -1198,9 +1188,8 @@ proc mptdc_collect_pin_objects_from_names {pin_names} {
         if {[llength $matches] == 0} {
             catch {set matches [get_pins -quiet -hierarchical $escaped]}
         }
-        foreach pin $matches {
-            set pin_name $pin
-            catch {set pin_name [get_object_name $pin]}
+        foreach pin [mptdc_collection_to_list $matches] {
+            set pin_name [mptdc_object_name $pin]
             if {![info exists seen($pin_name)]} {
                 set seen($pin_name) 1
                 lappend pins $pin
@@ -1668,6 +1657,15 @@ proc mptdc_preserve_physical_hierarchy {} {
 
     foreach pattern {
         *u_rst*sync*
+    } {
+        set cells [list]
+        catch {set cells [get_cells -quiet -hierarchical $pattern]}
+        if {[llength $cells] > 0} {
+            mptdc_try_keep_hierarchy_cells $cells
+        }
+    }
+
+    foreach pattern {
         *u_phase_buf_slow*
         *u_phase_buf_fast*
         *u_phase_buf*
@@ -1696,6 +1694,13 @@ proc mptdc_preserve_physical_hierarchy {} {
 
     foreach module_pattern {
         *mptdc_reset_sync*
+    } {
+        set modules [list]
+        catch {set modules [get_db modules $module_pattern]}
+        mptdc_try_set_db $modules .ungroup_ok false
+    }
+
+    foreach module_pattern {
         *mptdc_phase_buffer_bank*
     } {
         set modules [list]
