@@ -7,16 +7,21 @@ MPTDC_DIR="$(cd "$SYN_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_o13_phase_distribution_genus}"
-RUN_MODE="${MPTDC_O13_MODE:-typical_synth}"
+REQUESTED_RUN_MODE="${MPTDC_O13_MODE:-typical_synth}"
+RUN_MODE="$REQUESTED_RUN_MODE"
 if [[ "${MPTDC_O13_VALIDATE_ONLY:-0}" == "1" ]]; then
   RUN_MODE="validate_only"
 fi
-if [[ "$RUN_MODE" == "O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR" ]]; then
+if [[ "$REQUESTED_RUN_MODE" == "O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR" ]]; then
   export MPTDC_O13_ABS3_CLOCK_CDC_REPAIR=1
 fi
-if [[ "$RUN_MODE" == "O13_ABS4_PD_VERNIER_CLASSIFICATION" ]]; then
+if [[ "$REQUESTED_RUN_MODE" == "O13_ABS4_PD_VERNIER_CLASSIFICATION" ]]; then
   export MPTDC_O13_ABS3_CLOCK_CDC_REPAIR=1
   export MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION=1
+fi
+if [[ "$REQUESTED_RUN_MODE" == "O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH" ]]; then
+  export MPTDC_O13_ABS3_CLOCK_CDC_REPAIR=1
+  export MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT=1
 fi
 
 RESULT_DIR="$REPO_ROOT/results/genus_osc_pd/$RUN_ID"
@@ -25,7 +30,9 @@ SNAPSHOT_DIR="$MPTDC_DIR/lab_snapshots/$SNAPSHOT_TAG"
 GENUS_LOG="$RESULT_DIR/genus_${RUN_ID}.log"
 ENV_FILE="$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
 FREQ_DEFINES="$SYN_DIR/inputs/mptdc_freq_modes.defines"
-if [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
+if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
+  O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs5.sdc"
+elif [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
   O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs4.sdc"
 elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
   O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs3.sdc"
@@ -51,10 +58,10 @@ case "$RUN_ID" in
 esac
 
 case "$RUN_MODE" in
-  validate_only|typical_synth|O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR|O13_ABS4_PD_VERNIER_CLASSIFICATION) ;;
+  validate_only|typical_synth|O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR|O13_ABS4_PD_VERNIER_CLASSIFICATION|O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH) ;;
   *)
     echo "ERROR: unsupported MPTDC_O13_MODE=$RUN_MODE" >&2
-    echo "Supported: validate_only, typical_synth, O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR, O13_ABS4_PD_VERNIER_CLASSIFICATION" >&2
+    echo "Supported: validate_only, typical_synth, O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR, O13_ABS4_PD_VERNIER_CLASSIFICATION, O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH" >&2
     exit 2
     ;;
 esac
@@ -72,6 +79,7 @@ mkdir -p "$RESULT_DIR" "$SYN_DIR/logs"
   echo "expected_head: ${EXPECTED_HEAD:-unset}"
   echo "run_id: $RUN_ID"
   echo "run_mode: $RUN_MODE"
+  echo "requested_run_mode: $REQUESTED_RUN_MODE"
   echo "snapshot_tag: $SNAPSHOT_TAG"
   echo "labels: O13_PHASE_DISTRIBUTION_TREE_CLEANUP TYPICAL_ONLY NOT_MMMC NOT_FINAL_SIGNOFF"
   echo "packet_format: unchanged"
@@ -156,6 +164,9 @@ export MPTDC_OSC_PD_USE_PROVISIONAL_LIBERTY=0
 export MPTDC_OSC_PD_SDC_OVERLAY="$O13_SDC"
 export MPTDC_O13_CLOCK_MODEL_RPT="$RESULT_DIR/o13_clock_model_check.sdc.rpt"
 export MPTDC_O13_PD_VERNIER_RPT="$RESULT_DIR/pd_vernier_exception_check.rpt"
+export MPTDC_O13_PD_VERNIER_ENDPOINT_DISCOVERY_RPT="$RESULT_DIR/pd_vernier_endpoint_discovery.rpt"
+export MPTDC_O13_PD_VERNIER_SOURCE_DISCOVERY_RPT="$RESULT_DIR/pd_vernier_source_discovery.rpt"
+export MPTDC_O13_PD_VERNIER_INTENT_RPT="$RESULT_DIR/timing_pd_intentional_vernier.rpt"
 export O1_RUN_FLAVOR="O13_PHASE_DISTRIBUTION_TREE_CLEANUP"
 export GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
 export MPTDC_OPT_GOAL="o13_phase_distribution_tree_cleanup"
@@ -249,7 +260,7 @@ write_sdc_failure_report() {
     echo "## Extracted SDC/Timing-Intent Diagnostics"
     echo
     if [[ -f "$GENUS_LOG" ]]; then
-      grep -nE 'SDC-|MPTDC_SDC_(WARN|INFO)|MPTDC_O13_ABS3_SDC_|MPTDC_O13_ABS4_SDC_|MPTDC_O13_SDC_|set_false_path|set_max_delay|set_max_transition|set_clock_groups|TUI-61|TIM-234|report_timing' "$GENUS_LOG" || true
+      grep -nE 'SDC-|MPTDC_SDC_(WARN|INFO)|MPTDC_O13_ABS3_SDC_|MPTDC_O13_ABS4_SDC_|MPTDC_O13_ABS5_SDC_|MPTDC_O13_SDC_|set_false_path|set_max_delay|set_max_transition|set_clock_groups|TUI-61|TIM-234|report_timing' "$GENUS_LOG" || true
     else
       echo "FAILED: Genus log not found."
     fi
@@ -271,6 +282,8 @@ run_timing_classification() {
     timing_clk_sys_internal_top100.rpt \
     timing_cdc_async_review.rpt \
     timing_pd_intentional_vernier.rpt \
+    pd_vernier_endpoint_discovery.rpt \
+    pd_vernier_source_discovery.rpt \
     timing_o13_phase_buffer_paths.rpt; do
     if [[ -f "$RESULT_DIR/$file" ]]; then
       reports+=("$RESULT_DIR/$file")
@@ -309,8 +322,10 @@ CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=NO
 UNKNOWN_REVIEW_REQUIRED_COUNT=NA
 PD_VERNIER_EXCEPTION_EXPECTED=64
 PD_VERNIER_EXCEPTION_MATCHED=NA
+PD_VERNIER_SOURCE_MATCHED=NA
 PD_VERNIER_EXCEPTION_APPLIED=NA
 PD_VERNIER_EXCEPTION_OVERMATCH=NA
+PD_VERNIER_EXCEPTION_UNDERMATCH=NA
 SDC_COMMAND_FAILURE_COUNT=NA
 RAW_CLOCK_NAMES=(clk_osc_slow)
 BUFFER_CLOCK_NAMES=()
@@ -350,15 +365,19 @@ if [[ -f "$RESULT_DIR/timing_path_classification_summary.md" ]]; then
   UNKNOWN_REVIEW_REQUIRED_COUNT="${UNKNOWN_REVIEW_REQUIRED_COUNT:-NA}"
 fi
 if [[ -f "$RESULT_DIR/pd_vernier_exception_check.rpt" ]]; then
-  PD_VERNIER_EXCEPTION_MATCHED="$(awk -F= '/^PD_VERNIER_EXCEPTION_ENDPOINTS_FOUND=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
+  PD_VERNIER_EXCEPTION_MATCHED="$(awk -F= '/^PD_VERNIER_FOUND_ENDPOINTS=/ {print $2; exit} /^PD_VERNIER_EXCEPTION_ENDPOINTS_FOUND=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
   PD_VERNIER_EXCEPTION_MATCHED="${PD_VERNIER_EXCEPTION_MATCHED:-NA}"
+  PD_VERNIER_SOURCE_MATCHED="$(awk -F= '/^PD_VERNIER_FOUND_SOURCES=/ {print $2; exit} /^PD_VERNIER_SOURCE_CLOCKS_FOUND=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
+  PD_VERNIER_SOURCE_MATCHED="${PD_VERNIER_SOURCE_MATCHED:-NA}"
   PD_VERNIER_EXCEPTION_APPLIED="$(awk -F= '/^PD_VERNIER_EXCEPTION_APPLIED=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
   PD_VERNIER_EXCEPTION_APPLIED="${PD_VERNIER_EXCEPTION_APPLIED:-NA}"
-  PD_VERNIER_EXCEPTION_OVERMATCH="$(awk -F= '/^PD_VERNIER_EXCEPTION_OVERMATCH=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
+  PD_VERNIER_EXCEPTION_OVERMATCH="$(awk -F= '/^PD_VERNIER_OVERMATCH=/ {print $2; exit} /^PD_VERNIER_EXCEPTION_OVERMATCH=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
   PD_VERNIER_EXCEPTION_OVERMATCH="${PD_VERNIER_EXCEPTION_OVERMATCH:-NA}"
+  PD_VERNIER_EXCEPTION_UNDERMATCH="$(awk -F= '/^PD_VERNIER_UNDERMATCH=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
+  PD_VERNIER_EXCEPTION_UNDERMATCH="${PD_VERNIER_EXCEPTION_UNDERMATCH:-NA}"
 fi
 if [[ -f "$RESULT_DIR/sdc_command_failures.md" ]]; then
-  SDC_COMMAND_FAILURE_COUNT="$(grep -Ec 'Error[[:space:]]+:|\[TUI-61\]|\[SDC-202\]|\[SDC-209\]' "$RESULT_DIR/sdc_command_failures.md" || true)"
+  SDC_COMMAND_FAILURE_COUNT="$(grep -Ec 'failed[[:space:]]+[1-9]|MPTDC_O13_.*FATAL|MPTDC_SDC_.*ERROR|\[SDC-202\]|\[SDC-209\]' "$RESULT_DIR/sdc_command_failures.md" || true)"
 fi
 
 CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
@@ -382,8 +401,10 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=$CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS"
   echo "PD_VERNIER_EXCEPTION_EXPECTED=$PD_VERNIER_EXCEPTION_EXPECTED"
   echo "PD_VERNIER_EXCEPTION_MATCHED=$PD_VERNIER_EXCEPTION_MATCHED"
+  echo "PD_VERNIER_SOURCE_MATCHED=$PD_VERNIER_SOURCE_MATCHED"
   echo "PD_VERNIER_EXCEPTION_APPLIED=$PD_VERNIER_EXCEPTION_APPLIED"
   echo "PD_VERNIER_EXCEPTION_OVERMATCH=$PD_VERNIER_EXCEPTION_OVERMATCH"
+  echo "PD_VERNIER_EXCEPTION_UNDERMATCH=$PD_VERNIER_EXCEPTION_UNDERMATCH"
   echo "UNKNOWN_REVIEW_REQUIRED_COUNT=$UNKNOWN_REVIEW_REQUIRED_COUNT"
   echo "SDC_COMMAND_FAILURE_COUNT=$SDC_COMMAND_FAILURE_COUNT"
   echo
@@ -405,7 +426,9 @@ STATUS="O13_SERVER_REVIEW_REQUIRED"
 if [[ "$RUN_MODE" == "validate_only" ]]; then
   STATUS="O13_VALIDATE_ONLY_OK"
 elif [[ "$RO_COUNT" == "2" && "$STUB_COUNT" == "0" && "$BUHDX4_COUNT" -ge 16 && "$BUHDX12_COUNT" -ge 16 ]]; then
-  if [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
+  if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" ]]; then
+    STATUS="O13_ABS5_PD_Q1_EXCEPTION_EXACT_REVIEW_CANDIDATE"
+  elif [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
     STATUS="O13_ABS4_PD_VERNIER_CLASSIFICATION_REVIEW_CANDIDATE"
   elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
     STATUS="O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE"
@@ -445,14 +468,18 @@ fi
   echo "- CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS: $CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS"
   echo "- PD intentional Vernier paths expected: $PD_VERNIER_EXCEPTION_EXPECTED"
   echo "- PD intentional Vernier paths matched: $PD_VERNIER_EXCEPTION_MATCHED"
+  echo "- PD intentional Vernier sources matched: $PD_VERNIER_SOURCE_MATCHED"
   echo "- PD intentional Vernier exception applied: $PD_VERNIER_EXCEPTION_APPLIED"
   echo "- PD intentional Vernier overmatch: $PD_VERNIER_EXCEPTION_OVERMATCH"
+  echo "- PD intentional Vernier undermatch: $PD_VERNIER_EXCEPTION_UNDERMATCH"
   echo "- UNKNOWN_REVIEW_REQUIRED count: $UNKNOWN_REVIEW_REQUIRED_COUNT"
   echo "- SDC command failure count: $SDC_COMMAND_FAILURE_COUNT"
   echo
   echo "O13_STATUS=$STATUS"
   echo "FINAL_SIGNOFF=NO"
-  if [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
+  if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" ]]; then
+    echo "INNOVUS_READY=NO_REVIEW_O13_ABS5_GENUS_FIRST"
+  elif [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
     echo "INNOVUS_READY=NO_REVIEW_O13_ABS4_GENUS_FIRST"
   elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
     echo "INNOVUS_READY=NO_REVIEW_O13_ABS3_GENUS_FIRST"
@@ -486,6 +513,8 @@ fi
     timing_cdc_async_review.rpt \
     timing_pd_intentional_vernier.rpt \
     pd_vernier_exception_check.rpt \
+    pd_vernier_endpoint_discovery.rpt \
+    pd_vernier_source_discovery.rpt \
     timing_o13_phase_buffer_paths.rpt \
     o13_clock_model_check.rpt \
     o13_clock_model_check.sdc.rpt \
@@ -508,4 +537,4 @@ fi
 if [[ "$SNAPSHOT_RC" != "0" ]]; then
   exit "$SNAPSHOT_RC"
 fi
-[[ "$STATUS" == "O13_NETLIST_CANDIDATE" || "$STATUS" == "O13_VALIDATE_ONLY_OK" || "$STATUS" == "O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE" || "$STATUS" == "O13_ABS4_PD_VERNIER_CLASSIFICATION_REVIEW_CANDIDATE" ]]
+[[ "$STATUS" == "O13_NETLIST_CANDIDATE" || "$STATUS" == "O13_VALIDATE_ONLY_OK" || "$STATUS" == "O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE" || "$STATUS" == "O13_ABS4_PD_VERNIER_CLASSIFICATION_REVIEW_CANDIDATE" || "$STATUS" == "O13_ABS5_PD_Q1_EXCEPTION_EXACT_REVIEW_CANDIDATE" ]]

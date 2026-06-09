@@ -92,12 +92,23 @@ proc mptdc_o13_abs3_enabled {} {
     return [expr {[info exists ::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR)] && \
         $::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR) ne "0" || \
         [info exists ::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION)] && \
-        $::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION) ne "0"}]
+        $::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION) ne "0" || \
+        [info exists ::env(MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT)] && \
+        $::env(MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT) ne "0"}]
+}
+
+proc mptdc_o13_abs5_enabled {} {
+    return [expr {[info exists ::env(MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT)] && \
+        $::env(MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT) ne "0"}]
 }
 
 proc mptdc_o13_abs4_enabled {} {
     return [expr {[info exists ::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION)] && \
         $::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION) ne "0"}]
+}
+
+proc mptdc_o13_abs4_or_abs5_enabled {} {
+    return [expr {[mptdc_o13_abs4_enabled] || [mptdc_o13_abs5_enabled]}]
 }
 
 proc mptdc_o13_abs3_expected_clock_names {kind} {
@@ -315,6 +326,203 @@ proc mptdc_o13_abs4_q1_patterns {tap} {
         [format {*gen_pd_row_%d__gen_pd_col*u_pd*/q1_reg*/D} $tap]]
 }
 
+proc mptdc_o13_pd_match_q1_name {name ns_var nf_var} {
+    upvar $ns_var ns
+    upvar $nf_var nf
+    if {[regexp {gen_pd_row\[([0-7])\].*gen_pd_col\[([0-7])\].*u_pd.*q1_reg[^/]*/D$} $name -> ns nf]} {
+        return 1
+    }
+    if {[regexp {gen_pd_row_?([0-7]).*gen_pd_col_?([0-7]).*u_pd.*q1[^/]*/D$} $name -> ns nf]} {
+        return 1
+    }
+    return 0
+}
+
+proc mptdc_o13_pd_match_slow_source_name {name tap_var} {
+    upvar $tap_var tap
+    if {[regexp {u_phase_buf_slow.*gen_phase_buf\[([0-7])\].*u_drv/Q$} $name -> tap]} {
+        return 1
+    }
+    if {[regexp {u_phase_buf_slow.*gen_phase_buf_?([0-7]).*u_drv/Q$} $name -> tap]} {
+        return 1
+    }
+    return 0
+}
+
+proc mptdc_o13_pd_q1_endpoint_matrix {} {
+    array set by_pair {}
+    array set row_count {}
+    array set col_count {}
+    for {set idx 0} {$idx < 8} {incr idx} {
+        set row_count($idx) 0
+        set col_count($idx) 0
+    }
+
+    set candidates [mptdc_collect_names [list get_pins -quiet -hierarchical *q1_reg*/D]]
+    set matched 0
+    set duplicates 0
+    set unmatched [list]
+    foreach name $candidates {
+        set ns ""
+        set nf ""
+        if {[mptdc_o13_pd_match_q1_name $name ns nf]} {
+            set key "${ns},${nf}"
+            if {[info exists by_pair($key)]} {
+                incr duplicates
+                continue
+            }
+            set by_pair($key) $name
+            incr matched
+            incr row_count($ns)
+            incr col_count($nf)
+        } else {
+            lappend unmatched $name
+        }
+    }
+
+    set missing [list]
+    for {set ns 0} {$ns < 8} {incr ns} {
+        for {set nf 0} {$nf < 8} {incr nf} {
+            set key "${ns},${nf}"
+            if {![info exists by_pair($key)]} {
+                lappend missing $key
+            }
+        }
+    }
+
+    return [list \
+        candidates [llength $candidates] \
+        matched $matched \
+        duplicates $duplicates \
+        missing $missing \
+        unmatched $unmatched \
+        by_pair [array get by_pair] \
+        row_count [array get row_count] \
+        col_count [array get col_count]]
+}
+
+proc mptdc_o13_pd_slow_source_matrix {} {
+    array set by_tap {}
+    array set tap_count {}
+    for {set tap 0} {$tap < 8} {incr tap} {
+        set tap_count($tap) 0
+    }
+
+    set candidates [mptdc_collect_names [list get_pins -quiet -hierarchical *u_phase_buf_slow*gen_phase_buf*u_drv/Q]]
+    set matched 0
+    set duplicates 0
+    set unmatched [list]
+    foreach name $candidates {
+        set tap ""
+        if {[mptdc_o13_pd_match_slow_source_name $name tap]} {
+            if {[info exists by_tap($tap)]} {
+                incr duplicates
+                continue
+            }
+            set by_tap($tap) $name
+            incr tap_count($tap)
+            incr matched
+        } else {
+            lappend unmatched $name
+        }
+    }
+
+    set missing [list]
+    for {set tap 0} {$tap < 8} {incr tap} {
+        if {![info exists by_tap($tap)]} {
+            lappend missing $tap
+        }
+    }
+
+    return [list \
+        candidates [llength $candidates] \
+        matched $matched \
+        duplicates $duplicates \
+        missing $missing \
+        unmatched $unmatched \
+        by_tap [array get by_tap] \
+        tap_count [array get tap_count]]
+}
+
+proc mptdc_o13_join_or_none {items} {
+    if {[llength $items] == 0} {
+        return "none"
+    }
+    return [join $items ", "]
+}
+
+proc mptdc_o13_write_pd_vernier_discovery_reports {dir} {
+    array set endpoints [mptdc_o13_pd_q1_endpoint_matrix]
+    array set sources [mptdc_o13_pd_slow_source_matrix]
+    array set by_pair $endpoints(by_pair)
+    array set row_count $endpoints(row_count)
+    array set col_count $endpoints(col_count)
+    array set by_tap $sources(by_tap)
+    array set tap_count $sources(tap_count)
+
+    set endpoint_status "FAIL_ENDPOINT_DISCOVERY"
+    if {$endpoints(matched) == 64 && $endpoints(duplicates) == 0 && [llength $endpoints(missing)] == 0} {
+        set endpoint_status "PASS_64_ENDPOINTS"
+    }
+    set source_status "FAIL_SOURCE_DISCOVERY"
+    if {$sources(matched) == 8 && $sources(duplicates) == 0 && [llength $sources(missing)] == 0} {
+        set source_status "PASS_8_SLOW_SOURCES"
+    }
+
+    set fh [open "$dir/pd_vernier_endpoint_discovery.rpt" w]
+    puts $fh "# O13 PD q1 Endpoint Discovery"
+    puts $fh ""
+    puts $fh "TOTAL_CANDIDATES=$endpoints(candidates)"
+    puts $fh "TOTAL_MATCHED=$endpoints(matched)"
+    puts $fh "EXPECTED_MATCHED=64"
+    puts $fh "DUPLICATES=$endpoints(duplicates)"
+    puts $fh "MISSING_PAIRS=[mptdc_o13_join_or_none $endpoints(missing)]"
+    puts $fh "FINAL_STATUS=$endpoint_status"
+    puts $fh ""
+    puts $fh "## Per-row count"
+    for {set ns 0} {$ns < 8} {incr ns} {
+        puts $fh "row_${ns}=$row_count($ns)"
+    }
+    puts $fh ""
+    puts $fh "## Per-column count"
+    for {set nf 0} {$nf < 8} {incr nf} {
+        puts $fh "col_${nf}=$col_count($nf)"
+    }
+    puts $fh ""
+    puts $fh "## Endpoints"
+    for {set ns 0} {$ns < 8} {incr ns} {
+        for {set nf 0} {$nf < 8} {incr nf} {
+            set key "${ns},${nf}"
+            if {[info exists by_pair($key)]} {
+                puts $fh "q1_endpoint($key)=$by_pair($key)"
+            } else {
+                puts $fh "q1_endpoint($key)=MISSING"
+            }
+        }
+    }
+    close $fh
+
+    set fh [open "$dir/pd_vernier_source_discovery.rpt" w]
+    puts $fh "# O13 PD slow-source Discovery"
+    puts $fh ""
+    puts $fh "TOTAL_CANDIDATES=$sources(candidates)"
+    puts $fh "MATCHED_SLOW_BUFFER_OUTPUTS=$sources(matched)"
+    puts $fh "EXPECTED_SLOW_BUFFER_OUTPUTS=8"
+    puts $fh "DUPLICATES=$sources(duplicates)"
+    puts $fh "MISSING_TAPS=[mptdc_o13_join_or_none $sources(missing)]"
+    puts $fh "FINAL_STATUS=$source_status"
+    puts $fh ""
+    puts $fh "## Per-tap source"
+    for {set tap 0} {$tap < 8} {incr tap} {
+        if {[info exists by_tap($tap)]} {
+            puts $fh "slow_source($tap)=$by_tap($tap)"
+        } else {
+            puts $fh "slow_source($tap)=MISSING"
+        }
+    }
+    close $fh
+}
+
 proc mptdc_o13_abs4_write_phase_buffer_paths {rpt_file} {
     set fh [open $rpt_file w]
     puts $fh "# O13 Phase Buffer Topology Report"
@@ -363,30 +571,52 @@ proc mptdc_o13_abs4_write_phase_buffer_paths {rpt_file} {
 }
 
 proc mptdc_o13_abs4_write_pd_vernier_report {rpt_file} {
+    array set endpoints [mptdc_o13_pd_q1_endpoint_matrix]
+    array set sources [mptdc_o13_pd_slow_source_matrix]
+    array set row_count $endpoints(row_count)
+    array set by_pair $endpoints(by_pair)
+    array set by_tap $sources(by_tap)
+
+    set exception_applied "UNKNOWN"
+    if {[mptdc_o13_abs5_enabled]} {
+        set exception_applied "SEE_PD_VERNIER_EXCEPTION_CHECK"
+    }
+
     set fh [open $rpt_file w]
     puts $fh "# O13 PD Intentional Vernier Paths"
     puts $fh ""
     puts $fh "These are the intended slow buffered phase samples into PD q1 sampler flops. They are measurement crossings, not ordinary synchronous setup paths."
     puts $fh ""
-    puts $fh "| slow_tap | slow_clock | q1_endpoint_count | status |"
-    puts $fh "|---:|---|---:|---|"
-    set total 0
+    puts $fh "PD_INTENTIONAL_VERNIER_EXPECTED=64"
+    puts $fh "PD_INTENTIONAL_VERNIER_MATCHED=$endpoints(matched)"
+    puts $fh "PD_INTENTIONAL_VERNIER_SOURCES=$sources(matched)"
+    puts $fh "PD_INTENTIONAL_VERNIER_EXCEPTION_APPLIED=$exception_applied"
+    set vernier_status [expr {$endpoints(matched) == 64 && $sources(matched) == 8 ? "OK_INTENTIONAL_MEASUREMENT_CROSSING" : "REVIEW_REQUIRED"}]
+    puts $fh "PD_INTENTIONAL_VERNIER_STATUS=$vernier_status"
+    puts $fh ""
+    puts $fh "| slow_tap | slow_clock | source_pin | q1_endpoint_count | status |"
+    puts $fh "|---:|---|---|---:|---|"
     foreach tap {0 1 2 3 4 5 6 7} {
         set slow_clock [format {clk_osc_slow_buf_tap%d} $tap]
-        set pattern_and_count [mptdc_o13_abs4_first_pin_pattern [mptdc_o13_abs4_q1_patterns $tap]]
-        set q1_count [lindex $pattern_and_count 1]
-        incr total $q1_count
+        set q1_count $row_count($tap)
+        set source_name "MISSING"
+        if {[info exists by_tap($tap)]} {
+            set source_name $by_tap($tap)
+        }
         set status "OK_INTENTIONAL_MEASUREMENT_CROSSING"
-        if {[llength [get_clocks -quiet $slow_clock]] != 1 || $q1_count != 8} {
+        if {[llength [get_clocks -quiet $slow_clock]] != 1 || $q1_count != 8 || $source_name eq "MISSING"} {
             set status "REVIEW_REQUIRED"
         }
-        puts $fh "| $tap | `$slow_clock` | $q1_count | $status |"
+        puts $fh "| $tap | `$slow_clock` | `$source_name` | $q1_count | $status |"
+        for {set nf 0} {$nf < 8} {incr nf} {
+            set key "${tap},${nf}"
+            if {[info exists by_pair($key)]} {
+                puts $fh "  - endpoint($key): `$by_pair($key)`"
+            } else {
+                puts $fh "  - endpoint($key): `MISSING`"
+            }
+        }
     }
-    puts $fh ""
-    puts $fh "PD_INTENTIONAL_VERNIER_EXPECTED=64"
-    puts $fh "PD_INTENTIONAL_VERNIER_MATCHED=$total"
-    set vernier_status [expr {$total == 64 ? "OK" : "REVIEW_REQUIRED"}]
-    puts $fh "PD_INTENTIONAL_VERNIER_STATUS=$vernier_status"
     close $fh
 }
 
@@ -433,7 +663,8 @@ proc mptdc_report_o13_abs3_timing {dir} {
 
     mptdc_o13_abs3_write_clock_model_check "$dir/o13_clock_model_check.rpt"
     mptdc_o13_abs3_write_cdc_async_review "$dir/timing_cdc_async_review.rpt"
-    if {[mptdc_o13_abs4_enabled]} {
+    if {[mptdc_o13_abs4_or_abs5_enabled]} {
+        mptdc_o13_write_pd_vernier_discovery_reports $dir
         mptdc_o13_abs4_write_pd_vernier_report "$dir/timing_pd_intentional_vernier.rpt"
     }
 
@@ -449,7 +680,7 @@ proc mptdc_report_o13_abs3_timing {dir} {
         $pd_endpoints \
         200
 
-    if {[mptdc_o13_abs4_enabled]} {
+    if {[mptdc_o13_abs4_or_abs5_enabled]} {
         mptdc_o13_abs4_write_clk_sys_reports \
             "$dir/timing_clk_sys_violations.rpt" \
             "$dir/timing_clk_sys_internal_top100.rpt"
@@ -462,7 +693,7 @@ proc mptdc_report_o13_abs3_timing {dir} {
             200
     }
 
-    if {[mptdc_o13_abs4_enabled]} {
+    if {[mptdc_o13_abs4_or_abs5_enabled]} {
         mptdc_o13_abs4_write_phase_buffer_paths "$dir/timing_o13_phase_buffer_paths.rpt"
     } else {
         mptdc_o13_abs3_run_timing_report \
@@ -539,15 +770,24 @@ proc mptdc_run_timing_to_names {rpt_file title endpoint_names} {
         return
     }
 
+    set endpoint_objs [list]
+    catch {set endpoint_objs [get_pins -quiet $endpoint_names]}
+    if {[llength $endpoint_objs] == 0} {
+        catch {set endpoint_objs [get_cells -quiet $endpoint_names]}
+    }
+    if {[llength $endpoint_objs] == 0} {
+        set endpoint_objs $endpoint_names
+    }
+
     set errors [list]
     foreach path_type [list full_clock full endpoint {}] {
         if {$path_type ne ""} {
-            if {![catch {eval [list report_timing -to $endpoint_names -max_paths 100 -path_type $path_type] > $rpt_file} err]} {
+            if {![catch {report_timing -to $endpoint_objs -max_paths 100 -path_type $path_type > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -to <[llength $endpoint_names] endpoints> -max_paths 100 -path_type $path_type: $err"
         } else {
-            if {![catch {eval [list report_timing -to $endpoint_names -max_paths 100] > $rpt_file} err]} {
+            if {![catch {report_timing -to $endpoint_objs -max_paths 100 > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -to <[llength $endpoint_names] endpoints> -max_paths 100: $err"
@@ -569,15 +809,24 @@ proc mptdc_run_fast_clock_to_names {rpt_file title endpoint_names {max_paths 300
         return
     }
 
+    set endpoint_objs [list]
+    catch {set endpoint_objs [get_pins -quiet $endpoint_names]}
+    if {[llength $endpoint_objs] == 0} {
+        catch {set endpoint_objs [get_cells -quiet $endpoint_names]}
+    }
+    if {[llength $endpoint_objs] == 0} {
+        set endpoint_objs $endpoint_names
+    }
+
     set errors [list]
     foreach path_type [list full_clock full endpoint {}] {
         if {$path_type ne ""} {
-            if {![catch {eval [list report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths -path_type $path_type] > $rpt_file} err]} {
+            if {![catch {report_timing -from $fast_clocks -to $endpoint_objs -max_paths $max_paths -path_type $path_type > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -from clk_osc_fast -to <[llength $endpoint_names] endpoints> -max_paths $max_paths -path_type $path_type: $err"
         } else {
-            if {![catch {eval [list report_timing -from $fast_clocks -to $endpoint_names -max_paths $max_paths] > $rpt_file} err]} {
+            if {![catch {report_timing -from $fast_clocks -to $endpoint_objs -max_paths $max_paths > $rpt_file} err]} {
                 return
             }
             lappend errors "report_timing -from clk_osc_fast -to <[llength $endpoint_names] endpoints> -max_paths $max_paths: $err"
@@ -1103,7 +1352,9 @@ proc mptdc_report_timing {report_dir} {
         [list *u_fifo* *u_sync_fifo* *u_narrow_tx* *u_tconv*]
 
     if {[mptdc_o13_abs3_enabled] && $stage eq "post_synthesis"} {
-        if {[mptdc_o13_abs4_enabled]} {
+        if {[mptdc_o13_abs5_enabled]} {
+            mptdc_message "Generating O13 abs5 exact PD q1 Vernier exception timing reports"
+        } elseif {[mptdc_o13_abs4_enabled]} {
             mptdc_message "Generating O13 abs4 PD Vernier classification timing reports"
         } else {
             mptdc_message "Generating O13 abs3 clock/CDC repair timing reports"
