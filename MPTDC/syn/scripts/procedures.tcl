@@ -88,6 +88,32 @@ proc mptdc_run_report_candidates {cmds rpt_file title} {
     mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
+proc mptdc_write_report_substitute {rpt_file title unavailable_cmds evidence_files note} {
+    set fh [open $rpt_file w]
+    puts $fh "# $title"
+    puts $fh ""
+    puts $fh "REPORT_STATUS=UNSUPPORTED_NATIVE_COMMAND_SUBSTITUTED"
+    puts $fh ""
+    puts $fh "The active Genus build does not provide the native command(s) this"
+    puts $fh "report previously tried to call. This file is written deliberately"
+    puts $fh "instead of emitting an invalid-command failure."
+    puts $fh ""
+    puts $fh "Unavailable commands:"
+    foreach cmd $unavailable_cmds {
+        puts $fh "  - $cmd"
+    }
+    puts $fh ""
+    puts $fh "Substitute evidence to review:"
+    foreach file $evidence_files {
+        puts $fh "  - $file"
+    }
+    if {$note ne ""} {
+        puts $fh ""
+        puts $fh $note
+    }
+    close $fh
+}
+
 proc mptdc_o13_abs3_enabled {} {
     return [expr {[info exists ::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR)] && \
         $::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR) ne "0" || \
@@ -1157,19 +1183,44 @@ proc mptdc_collect_pin_names {patterns} {
     return [mptdc_unique_list $names]
 }
 
+proc mptdc_glob_escape {text} {
+    set map [list "\\" "\\\\" "*" "\\*" "?" "\\?" "\[" "\\[" "\]" "\\]"]
+    return [string map $map $text]
+}
+
+proc mptdc_collect_pin_objects_from_names {pin_names} {
+    set pins [list]
+    array set seen {}
+    foreach name $pin_names {
+        set matches [list]
+        set escaped [mptdc_glob_escape $name]
+        catch {set matches [get_pins -quiet $escaped]}
+        if {[llength $matches] == 0} {
+            catch {set matches [get_pins -quiet -hierarchical $escaped]}
+        }
+        foreach pin $matches {
+            set pin_name $pin
+            catch {set pin_name [get_object_name $pin]}
+            if {![info exists seen($pin_name)]} {
+                set seen($pin_name) 1
+                lappend pins $pin
+            }
+        }
+    }
+    return $pins
+}
+
 proc mptdc_run_timing_to_names {rpt_file title endpoint_names} {
     if {[llength $endpoint_names] == 0} {
         mptdc_write_report_failure $rpt_file $title "No endpoint names provided."
         return
     }
 
-    set endpoint_objs [list]
-    catch {set endpoint_objs [get_pins -quiet $endpoint_names]}
+    set endpoint_objs [mptdc_collect_pin_objects_from_names $endpoint_names]
     if {[llength $endpoint_objs] == 0} {
-        catch {set endpoint_objs [get_cells -quiet $endpoint_names]}
-    }
-    if {[llength $endpoint_objs] == 0} {
-        set endpoint_objs $endpoint_names
+        mptdc_write_report_failure $rpt_file $title \
+            "No valid timing endpoint pins resolved from [llength $endpoint_names] candidate name(s). report_timing was not run with cell names or raw strings because Genus rejects those objects for -to in this flow."
+        return
     }
 
     set errors [list]
@@ -1198,17 +1249,22 @@ proc mptdc_run_fast_clock_to_names {rpt_file title endpoint_names {max_paths 300
 
     set fast_clocks [get_clocks -quiet clk_osc_fast]
     if {[llength $fast_clocks] == 0} {
-        mptdc_write_report_failure $rpt_file $title "Clock clk_osc_fast was not found."
+        catch {set fast_clocks [get_clocks -quiet clk_osc_fast_buf_tap*]}
+    }
+    if {[llength $fast_clocks] == 0} {
+        catch {set fast_clocks [get_clocks -quiet clk_osc_fast_raw_tap*]}
+    }
+    if {[llength $fast_clocks] == 0} {
+        mptdc_write_report_failure $rpt_file $title \
+            "No fast oscillator clocks were found. Tried clk_osc_fast, clk_osc_fast_buf_tap*, and clk_osc_fast_raw_tap*."
         return
     }
 
-    set endpoint_objs [list]
-    catch {set endpoint_objs [get_pins -quiet $endpoint_names]}
+    set endpoint_objs [mptdc_collect_pin_objects_from_names $endpoint_names]
     if {[llength $endpoint_objs] == 0} {
-        catch {set endpoint_objs [get_cells -quiet $endpoint_names]}
-    }
-    if {[llength $endpoint_objs] == 0} {
-        set endpoint_objs $endpoint_names
+        mptdc_write_report_failure $rpt_file $title \
+            "No valid timing endpoint pins resolved from [llength $endpoint_names] candidate name(s). report_timing was not run with cell names or raw strings because Genus rejects those objects for -to in this flow."
+        return
     }
 
     set errors [list]
@@ -1346,7 +1402,8 @@ proc mptdc_report_hotspot_timing {rpt_file title patterns} {
         }
     }
 
-    mptdc_run_timing_to_names $rpt_file $title [mptdc_unique_list $cell_names]
+    mptdc_write_report_failure $rpt_file $title \
+        "Matched [llength [mptdc_unique_list $cell_names]] cell(s), but no D/d endpoint pins matched the report patterns. report_timing was not run with cell names because this Genus flow rejects non-endpoint objects for -to. Patterns: $patterns"
 }
 
 proc mptdc_collect_cell_objects {patterns} {
@@ -1901,19 +1958,45 @@ proc mptdc_full_reports {report_dir} {
 
     mptdc_run_report "report_clocks" \
         "$dir/report_clocks.rpt" "report_clocks"
-    mptdc_run_report "report_constraints" \
-        "$dir/report_constraints.rpt" "report_constraints"
+    if {[llength [info commands report_constraints]] > 0} {
+        mptdc_run_report "report_constraints" \
+            "$dir/report_constraints.rpt" "report_constraints"
+    } else {
+        mptdc_write_report_substitute \
+            "$dir/report_constraints.rpt" \
+            "Constraint Report Substitute" \
+            [list "report_constraints"] \
+            [list \
+                "mptdc_top_asic.postsyn.sdc" \
+                "final_sdc_overlay_used.sdc" \
+                "check_timing_intent_post_synth.rpt" \
+                "sdc_command_failures.md" \
+            ] \
+            "Native constraint reporting is unavailable in this Genus build. The exported post-synthesis SDC and timing-intent report are the authoritative constraint evidence for this run."
+    }
     mptdc_run_report_candidates [list \
         "report_clock_groups" \
         "report_clock_groups -verbose" \
         "report_clocks" \
     ] "$dir/report_clock_groups.rpt" "clock-group report"
-    mptdc_run_report_candidates [list \
-        "report_exceptions" \
-        "report_exceptions -verbose" \
-        "report_constraints -exceptions" \
-        "report_constraints" \
-    ] "$dir/report_exceptions.rpt" "timing-exception report"
+    if {[llength [info commands report_exceptions]] > 0} {
+        mptdc_run_report_candidates [list \
+            "report_exceptions" \
+            "report_exceptions -verbose" \
+        ] "$dir/report_exceptions.rpt" "timing-exception report"
+    } else {
+        mptdc_write_report_substitute \
+            "$dir/report_exceptions.rpt" \
+            "Timing Exception Report Substitute" \
+            [list "report_exceptions" "report_constraints -exceptions"] \
+            [list \
+                "mptdc_top_asic.postsyn.sdc" \
+                "pd_vernier_exception_check.rpt" \
+                "timing_pd_intentional_vernier.rpt" \
+                "check_timing_intent_post_synth.rpt" \
+            ] \
+            "Native exception reporting is unavailable in this Genus build. For O13 abs5, pd_vernier_exception_check.rpt is the exact count-checked proof for the intentional slow-phase-to-q1 exception."
+    }
     mptdc_run_report_candidates [list \
         "report_clocks -generated" \
         "report_clocks" \
