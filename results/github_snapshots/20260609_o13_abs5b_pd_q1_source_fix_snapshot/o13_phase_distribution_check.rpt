@@ -1,0 +1,79 @@
+# O13 Phase Distribution Check
+
+post_synth_netlist=/home/validmgr/ksabra/2026_SPAD/SPADMIC/results/genus_osc_pd/20260609_o13_abs5b_pd_q1_source_fix/mptdc_top_asic.postsyn.v
+ro_tune4_count=2
+mptdc_osc_stub_count=0
+buhdx4_count=26
+buhdx12_count=17
+phase_buffer_text_count=3
+u_iso_text_count=8
+u_drv_text_count=8
+report_clocks_ro_pin_count=16
+report_clocks_buffer_clock_count=0
+RAW_RO_CLOCKS_FOUND=16
+BUFFER_PHASE_CLOCKS_FOUND=16
+BUFFER_PHASE_CLOCKS_EXPECTED=16
+BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=YES
+CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=YES
+PD_VERNIER_EXCEPTION_EXPECTED=64
+PD_VERNIER_EXCEPTION_MATCHED=0
+PD_VERNIER_SOURCE_MATCHED=8
+PD_VERNIER_EXCEPTION_APPLIED=NO
+PD_VERNIER_EXCEPTION_OVERMATCH=NO
+PD_VERNIER_EXCEPTION_UNDERMATCH=YES
+UNKNOWN_REVIEW_REQUIRED_COUNT=0
+SDC_COMMAND_FAILURE_COUNT=6
+
+## RO_tune4 instances
+6731:  RO_tune4 u_core_u_osc_fast_u_ro_tune4(.code (8'b0), .rstb (n_10225),
+6733:  RO_tune4 u_core_u_osc_slow_u_ro_tune4(.code (8'b0), .rstb
+
+## O13 phase-distribution cells
+1740:  BUHDX4 g1(.A (hit_latched_41), .Q (n_41));
+2167:  BUHDX4 g434(.A (hit_latched_41), .Q (n_48));
+4437:module mptdc_phase_buffer_bank(phase_raw_i, phase_buf_o);
+4446:  BUHDX12 \gen_phase_buf[0].u_drv (.A (\gen_phase_buf[0].iso_tap ), .Q
+4448:  BUHDX4 \gen_phase_buf[0].u_iso (.A (phase_raw_i[0]), .Q
+4450:  BUHDX12 \gen_phase_buf[1].u_drv (.A (\gen_phase_buf[1].iso_tap ), .Q
+4452:  BUHDX4 \gen_phase_buf[1].u_iso (.A (phase_raw_i[1]), .Q
+4454:  BUHDX12 \gen_phase_buf[2].u_drv (.A (\gen_phase_buf[2].iso_tap ), .Q
+4456:  BUHDX4 \gen_phase_buf[2].u_iso (.A (phase_raw_i[2]), .Q
+4458:  BUHDX12 \gen_phase_buf[3].u_drv (.A (\gen_phase_buf[3].iso_tap ), .Q
+4460:  BUHDX4 \gen_phase_buf[3].u_iso (.A (phase_raw_i[3]), .Q
+4462:  BUHDX12 \gen_phase_buf[4].u_drv (.A (\gen_phase_buf[4].iso_tap ), .Q
+4464:  BUHDX4 \gen_phase_buf[4].u_iso (.A (phase_raw_i[4]), .Q
+4466:  BUHDX12 \gen_phase_buf[5].u_drv (.A (\gen_phase_buf[5].iso_tap ), .Q
+4468:  BUHDX4 \gen_phase_buf[5].u_iso (.A (phase_raw_i[5]), .Q
+4470:  BUHDX12 \gen_phase_buf[6].u_drv (.A (\gen_phase_buf[6].iso_tap ), .Q
+4472:  BUHDX4 \gen_phase_buf[6].u_iso (.A (phase_raw_i[6]), .Q
+4474:  BUHDX12 \gen_phase_buf[7].u_drv (.A (\gen_phase_buf[7].iso_tap ), .Q
+4476:  BUHDX4 \gen_phase_buf[7].u_iso (.A (phase_raw_i[7]), .Q
+6710:  mptdc_phase_buffer_bank u_core_u_phase_buf_fast(.phase_raw_i
+6712:  mptdc_phase_buffer_bank u_core_u_phase_buf_slow(.phase_raw_i
+7550:  BUHDX4 g44799(.A (n_6951), .Q (\u_core_fast_tag_col[7] [5]));
+7551:  BUHDX4 g44801(.A (n_6953), .Q (\u_core_fast_tag_col[5] [5]));
+7552:  BUHDX4 g44802(.A (n_6954), .Q (\u_core_fast_tag_col[4] [5]));
+7553:  BUHDX4 g44803(.A (n_6955), .Q (\u_core_fast_tag_col[3] [5]));
+7554:  BUHDX4 g44804(.A (n_6956), .Q (\u_core_fast_tag_col[2] [5]));
+7555:  BUHDX4 g44805(.A (n_6957), .Q (\u_core_fast_tag_col[1] [5]));
+37293:  BUHDX12 g80842(.A (n_265), .Q (n_263));
+37296:  BUHDX12 g80844(.A (n_264), .Q (n_259));
+37983:  BUHDX4 g82070(.A (n_184), .Q (n_1510));
+37996:  BUHDX4 g82098(.A (n_254), .Q (n_1505));
+38021:  BUHDX4 g82085(.A (n_183), .Q (n_1496));
+38034:  BUHDX4 g82081(.A (n_255), .Q (n_1491));
+39735:  BUHDX4 g80817(.A (n_17), .Q (n_166));
+39736:  BUHDX4 g80743(.A (n_549), .Q (n_167));
+39778:  BUHDX12 g82084(.A (n_183), .Q (n_255));
+39779:  BUHDX12 g82099(.A (n_183), .Q (n_254));
+40175:  BUHDX12 g81912(.A (n_417), .Q (n_518));
+40176:  BUHDX12 g81873(.A (n_417), .Q (n_157));
+40177:  BUHDX12 g81856(.A (n_417), .Q (n_517));
+40332:  BUHDX12 g81913(.A (n_134), .Q (n_417));
+40427:  BUHDX12 g81967(.A (n_10223), .Q (n_134));
+46432:  BUHDX4 g83446(.A (n_6959), .Q (n_9430));
+46433:  BUHDX4 fopt83447(.A (n_6958), .Q (n_9431));
+46447:  BUHDX4 g83509(.A (n_6952), .Q (n_9485));
+46711:  BUHDX4 fopt31(.A (n_9758), .Q (n_9718));
+
+## forbidden structure residues

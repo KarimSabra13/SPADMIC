@@ -1,0 +1,45 @@
+# O13 abs3 Clock Model Check
+
+RAW_RO_CLOCKS_FOUND=16
+BUFFER_PHASE_CLOCKS_FOUND=16
+BUFFER_PHASE_CLOCKS_EXPECTED=16
+BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=YES
+CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=YES
+OSCILLATOR_CLOCKS_IN_ASYNC_GROUP=32
+CLK_SYS_CLOCKS_FOUND=1
+
+## Raw RO clocks
+- clk_osc_slow
+- clk_osc_slow_tap1
+- clk_osc_slow_tap2
+- clk_osc_slow_tap3
+- clk_osc_slow_tap4
+- clk_osc_slow_tap5
+- clk_osc_slow_tap6
+- clk_osc_slow_tap7
+- clk_osc_fast
+- clk_osc_fast_tap1
+- clk_osc_fast_tap2
+- clk_osc_fast_tap3
+- clk_osc_fast_tap4
+- clk_osc_fast_tap5
+- clk_osc_fast_tap6
+- clk_osc_fast_tap7
+
+## Final buffer phase clocks
+- clk_osc_slow_buf_tap0
+- clk_osc_slow_buf_tap1
+- clk_osc_slow_buf_tap2
+- clk_osc_slow_buf_tap3
+- clk_osc_slow_buf_tap4
+- clk_osc_slow_buf_tap5
+- clk_osc_slow_buf_tap6
+- clk_osc_slow_buf_tap7
+- clk_osc_fast_buf_tap0
+- clk_osc_fast_buf_tap1
+- clk_osc_fast_buf_tap2
+- clk_osc_fast_buf_tap3
+- clk_osc_fast_buf_tap4
+- clk_osc_fast_buf_tap5
+- clk_osc_fast_buf_tap6
+- clk_osc_fast_buf_tap7
