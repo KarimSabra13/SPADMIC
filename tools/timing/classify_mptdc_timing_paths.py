@@ -25,11 +25,19 @@ def classify(row: dict[str, str]) -> str:
     group = row.get("group", "")
     start_clock = row.get("start_clock", "")
     end_clock = row.get("end_clock", "")
+    start_is_sys = start_clock == "clk_sys"
+    end_is_sys = end_clock == "clk_sys"
+    start_is_osc = start_clock.startswith("clk_osc_")
+    end_is_osc = end_clock.startswith("clk_osc_")
+    if (start_is_sys and end_is_osc) or (start_is_osc and end_is_sys):
+        if "u_hit_capture_bridge" in text or "snapshot" in text or "held" in text:
+            return "HELD_BUS_CDC"
+        return "UNKNOWN_REVIEW_REQUIRED"
     if group == "clk_sys" and start_clock == "clk_sys" and end_clock == "clk_sys":
         return "CLK_SYS_REAL"
     if "u_pd" in text or "gen_pd_row" in text:
         if "slow_phase" in text and "fast_phase" in text:
-            return "PD_INTENTIONAL_VERN"
+            return "PD_INTENTIONAL_VERNIER"
         if start_clock.startswith("clk_osc_fast") and end_clock.startswith("clk_osc_fast"):
             return "OSC_FAST_REAL"
         return "UNKNOWN_REVIEW_REQUIRED"
@@ -54,6 +62,54 @@ def classify(row: dict[str, str]) -> str:
     return "UNKNOWN_REVIEW_REQUIRED"
 
 
+def classify_family(row: dict[str, str]) -> str:
+    text = " ".join(row.values()).lower()
+    start_clock = row.get("start_clock", "")
+    end_clock = row.get("end_clock", "")
+    if "u_phase_buf" in text or "phase_buffer" in text:
+        if start_clock.startswith("clk_osc_") and end_clock.startswith("clk_osc_"):
+            return "PHASE_BUFFER_CHAIN"
+    if "nfast_hit_latched" in text:
+        return "FAST_TAG_TO_PD_TS"
+    if "hit_latched" in text and ("q1_reg" in text or "q2_reg" in text):
+        return "PD_HIT_TO_TS_FREEZE"
+    if "u_fast_tag" in text or "gen_fast_tag_col" in text:
+        return "LOCAL_FAST_TAG_SELF"
+    if start_clock == "clk_sys" and end_clock == "clk_sys":
+        if "u_drain_ctrl" in text or "drain" in text or "fifo" in text:
+            return "CLK_SYS_DRAIN"
+        if "watchdog" in text or "wdt" in text:
+            return "CLK_SYS_WATCHDOG"
+        return "CLK_SYS_OTHER"
+    if row.get("classification") == "HELD_BUS_CDC":
+        return "HELD_BUS_CDC"
+    if row.get("classification") == "PD_INTENTIONAL_VERNIER":
+        return "PD_INTENTIONAL_VERNIER"
+    return "OTHER"
+
+
+def slack_ps(row: dict[str, str]) -> float:
+    try:
+        return float(row.get("slack_ps", "0"))
+    except ValueError:
+        return 0.0
+
+
+def summarize_metric(rows: list[dict[str, str]], key: str) -> list[tuple[str, int, float, float]]:
+    groups: dict[str, list[float]] = {}
+    for row in rows:
+        groups.setdefault(row.get(key, "UNKNOWN"), []).append(slack_ps(row))
+    out: list[tuple[str, int, float, float]] = []
+    for name, slacks in groups.items():
+        if not slacks:
+            continue
+        wns = min(slacks)
+        tns = sum(slack for slack in slacks if slack < 0)
+        out.append((name, len(slacks), wns, tns))
+    out.sort(key=lambda item: (item[2], item[0]))
+    return out
+
+
 def parse_report(path: Path) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     current: dict[str, str] | None = None
@@ -64,6 +120,7 @@ def parse_report(path: Path) -> list[dict[str, str]]:
         if match:
             if current:
                 current["classification"] = classify(current)
+                current["family"] = classify_family(current)
                 rows.append(current)
             current = {
                 "report": str(path),
@@ -95,6 +152,7 @@ def parse_report(path: Path) -> list[dict[str, str]]:
             clock_seen += 1
     if current:
         current["classification"] = classify(current)
+        current["family"] = classify_family(current)
         rows.append(current)
     return rows
 
@@ -107,11 +165,22 @@ def write_summary(rows: list[dict[str, str]], path: Path) -> None:
         f"- Parsed paths: {len(rows)}",
         f"- UNKNOWN_REVIEW_REQUIRED paths: {counts.get('UNKNOWN_REVIEW_REQUIRED', 0)}",
         "",
-        "| Classification | Paths |",
-        "|---|---:|",
+        "## WNS/TNS By Class",
+        "",
+        "| Classification | Paths | WNS ps | TNS ps |",
+        "|---|---:|---:|---:|",
     ]
-    for key, count in counts.most_common():
-        lines.append(f"| `{key}` | {count} |")
+    for key, count, wns, tns in summarize_metric(rows, "classification"):
+        lines.append(f"| `{key}` | {count} | {wns:.1f} | {tns:.1f} |")
+    lines.extend([
+        "",
+        "## WNS/TNS By Family",
+        "",
+        "| Family | Paths | WNS ps | TNS ps |",
+        "|---|---:|---:|---:|",
+    ])
+    for key, count, wns, tns in summarize_metric(rows, "family"):
+        lines.append(f"| `{key}` | {count} | {wns:.1f} | {tns:.1f} |")
     lines.extend(["", "## Top Unknown Paths", ""])
     unknown = [r for r in rows if r["classification"] == "UNKNOWN_REVIEW_REQUIRED"]
     if not unknown:
@@ -136,7 +205,7 @@ def main() -> int:
     for report in args.reports:
         rows.extend(parse_report(report))
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["classification", "report", "path", "status", "slack_ps", "group", "start_clock", "end_clock", "startpoint", "endpoint"]
+    fields = ["classification", "family", "report", "path", "status", "slack_ps", "group", "start_clock", "end_clock", "startpoint", "endpoint"]
     with args.out_csv.open("w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()

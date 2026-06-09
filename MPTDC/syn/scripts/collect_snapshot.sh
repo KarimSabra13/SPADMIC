@@ -60,12 +60,17 @@ for file in \
   "${syn_dir}/reports/synthesis/post_synthesis/report_high_fanout.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_clocks.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_clocks_generated.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/report_clock_groups.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/report_exceptions.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/report_constraints.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/check_timing_intent_post_synth.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_osc_fast_full_clock.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_clk_sys_full_clock.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_clk_sys_violations.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_pd_capture_hotspots.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_cdc_async_review.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_o13_phase_buffer_paths.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/o13_clock_model_check.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_osc_counter_hotspots.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_meas_ctrl_hotspots.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_context_bank_hotspots.rpt" \

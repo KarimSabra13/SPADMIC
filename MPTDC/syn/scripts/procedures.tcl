@@ -88,6 +88,221 @@ proc mptdc_run_report_candidates {cmds rpt_file title} {
     mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
+proc mptdc_o13_abs3_enabled {} {
+    return [expr {[info exists ::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR)] && \
+        $::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR) ne "0"}]
+}
+
+proc mptdc_o13_abs3_expected_clock_names {kind} {
+    set names [list]
+    switch -- $kind {
+        raw {
+            foreach family {slow fast} {
+                lappend names "clk_osc_${family}"
+                for {set tap 1} {$tap < 8} {incr tap} {
+                    lappend names "clk_osc_${family}_tap${tap}"
+                }
+            }
+        }
+        buffer {
+            foreach family {slow fast} {
+                for {set tap 0} {$tap < 8} {incr tap} {
+                    lappend names "clk_osc_${family}_buf_tap${tap}"
+                }
+            }
+        }
+        fast_buffer {
+            for {set tap 0} {$tap < 8} {incr tap} {
+                lappend names "clk_osc_fast_buf_tap${tap}"
+            }
+        }
+        slow_buffer {
+            for {set tap 0} {$tap < 8} {incr tap} {
+                lappend names "clk_osc_slow_buf_tap${tap}"
+            }
+        }
+        default {
+            return [list]
+        }
+    }
+    return $names
+}
+
+proc mptdc_o13_abs3_clock_collection {clock_names} {
+    set clocks [list]
+    foreach clock_name $clock_names {
+        set found [get_clocks -quiet $clock_name]
+        foreach clk $found {
+            if {[lsearch -exact $clocks $clk] < 0} {
+                lappend clocks $clk
+            }
+        }
+    }
+    return $clocks
+}
+
+proc mptdc_o13_abs3_pin_collection {patterns} {
+    set pins [list]
+    foreach pattern $patterns {
+        set found [get_pins -quiet -hierarchical $pattern]
+        foreach pin $found {
+            if {[lsearch -exact $pins $pin] < 0} {
+                lappend pins $pin
+            }
+        }
+    }
+    return $pins
+}
+
+proc mptdc_o13_abs3_append_file {fh path} {
+    if {[file exists $path]} {
+        set in [open $path r]
+        puts $fh [read $in]
+        close $in
+    } else {
+        puts $fh "FAILED: expected temporary report was not written: $path"
+    }
+}
+
+proc mptdc_o13_abs3_run_timing_report {rpt_file title from_objs to_objs {max_paths 100}} {
+    if {[llength $from_objs] == 0} {
+        mptdc_write_report_failure $rpt_file $title "No launch/source objects matched."
+        return
+    }
+    if {[llength $to_objs] == 0} {
+        mptdc_write_report_failure $rpt_file $title "No endpoint objects matched."
+        return
+    }
+    set errors [list]
+    foreach path_type [list full_clock full {}] {
+        if {$path_type eq ""} {
+            if {![catch {report_timing -from $from_objs -to $to_objs -max_paths $max_paths > $rpt_file} err]} {
+                return
+            }
+            lappend errors "report_timing -max_paths $max_paths: $err"
+        } else {
+            if {![catch {report_timing -from $from_objs -to $to_objs -max_paths $max_paths -path_type $path_type > $rpt_file} err]} {
+                return
+            }
+            lappend errors "report_timing -max_paths $max_paths -path_type $path_type: $err"
+        }
+    }
+    mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
+}
+
+proc mptdc_o13_abs3_write_clock_model_check {rpt_file} {
+    set raw_names [mptdc_o13_abs3_expected_clock_names raw]
+    set buf_names [mptdc_o13_abs3_expected_clock_names buffer]
+    set raw_clocks [mptdc_o13_abs3_clock_collection $raw_names]
+    set buf_clocks [mptdc_o13_abs3_clock_collection $buf_names]
+    set clk_sys [get_clocks -quiet clk_sys]
+
+    set fh [open $rpt_file w]
+    puts $fh "# O13 abs3 Clock Model Check"
+    puts $fh ""
+    puts $fh "RAW_RO_CLOCKS_FOUND=[llength $raw_clocks]"
+    puts $fh "BUFFER_PHASE_CLOCKS_FOUND=[llength $buf_clocks]"
+    puts $fh "BUFFER_PHASE_CLOCKS_EXPECTED=16"
+    puts $fh "CLK_SYS_CLOCKS_FOUND=[llength $clk_sys]"
+    puts $fh "OSCILLATOR_CLOCKS_TOTAL=[expr {[llength $raw_clocks] + [llength $buf_clocks]}]"
+    puts $fh "BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=SEE_REPORT_CLOCK_GROUPS"
+    puts $fh "CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=SEE_REPORT_CLOCK_GROUPS"
+    puts $fh ""
+    puts $fh "## Raw RO clocks"
+    foreach name $raw_names {
+        puts $fh "- $name: [llength [get_clocks -quiet $name]]"
+    }
+    puts $fh ""
+    puts $fh "## Final buffer phase clocks"
+    foreach name $buf_names {
+        puts $fh "- $name: [llength [get_clocks -quiet $name]]"
+    }
+    puts $fh ""
+    puts $fh "Intent:"
+    puts $fh "- clk_sys is asynchronous to raw RO clocks and final buffer phase clocks."
+    puts $fh "- Raw RO clocks and final buffer phase clocks are in one oscillator group, so phase-buffer/generator relationships remain visible."
+    puts $fh "- This is typical-only feasibility evidence, not final signoff."
+    close $fh
+}
+
+proc mptdc_o13_abs3_write_cdc_async_review {rpt_file} {
+    set sys_clocks [get_clocks -quiet clk_sys]
+    set raw_clocks [mptdc_o13_abs3_clock_collection [mptdc_o13_abs3_expected_clock_names raw]]
+    set buf_clocks [mptdc_o13_abs3_clock_collection [mptdc_o13_abs3_expected_clock_names buffer]]
+    set osc_clocks [concat $raw_clocks $buf_clocks]
+
+    set fh [open $rpt_file w]
+    puts $fh "# O13 abs3 CDC Async Review"
+    puts $fh ""
+    puts $fh "Expected: report_timing from clk_sys to oscillator clocks and back should show no ordinary synchronous timing paths after clock grouping."
+    puts $fh ""
+    puts $fh "clk_sys clocks: [llength $sys_clocks]"
+    puts $fh "raw oscillator clocks: [llength $raw_clocks]"
+    puts $fh "buffer oscillator clocks: [llength $buf_clocks]"
+    puts $fh ""
+
+    foreach item [list \
+        [list "clk_sys_to_osc" $sys_clocks $osc_clocks] \
+        [list "osc_to_clk_sys" $osc_clocks $sys_clocks] \
+    ] {
+        set label [lindex $item 0]
+        set from_objs [lindex $item 1]
+        set to_objs [lindex $item 2]
+        puts $fh "## $label"
+        if {[llength $from_objs] == 0 || [llength $to_objs] == 0} {
+            puts $fh "FAILED: empty from/to clock collection"
+            puts $fh ""
+            continue
+        }
+        set tmp "${rpt_file}.${label}.tmp"
+        if {[catch {report_timing -from $from_objs -to $to_objs -max_paths 20 > $tmp} err]} {
+            puts $fh "FAILED: report_timing -from <[llength $from_objs]> -to <[llength $to_objs]> -max_paths 20"
+            puts $fh $err
+        } else {
+            mptdc_o13_abs3_append_file $fh $tmp
+        }
+        catch {file delete $tmp}
+        puts $fh ""
+    }
+    close $fh
+}
+
+proc mptdc_report_o13_abs3_timing {dir} {
+    set raw_clocks [mptdc_o13_abs3_clock_collection [mptdc_o13_abs3_expected_clock_names raw]]
+    set buf_clocks [mptdc_o13_abs3_clock_collection [mptdc_o13_abs3_expected_clock_names buffer]]
+    set fast_buf_clocks [mptdc_o13_abs3_clock_collection [mptdc_o13_abs3_expected_clock_names fast_buffer]]
+    set clk_sys [get_clocks -quiet clk_sys]
+
+    mptdc_o13_abs3_write_clock_model_check "$dir/o13_clock_model_check.rpt"
+    mptdc_o13_abs3_write_cdc_async_review "$dir/timing_cdc_async_review.rpt"
+
+    set pd_endpoints [mptdc_o13_abs3_pin_collection [list \
+        *gen_pd_row*gen_pd_col*u_pd*/q1_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*/q2_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*/hit_latched_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*/nfast_hit_latched_reg*/D]]
+    mptdc_o13_abs3_run_timing_report \
+        "$dir/timing_pd_capture_hotspots.rpt" \
+        "O13 abs3 local PD capture timing report" \
+        $fast_buf_clocks \
+        $pd_endpoints \
+        200
+
+    mptdc_o13_abs3_run_timing_report \
+        "$dir/timing_clk_sys_violations.rpt" \
+        "O13 abs3 real clk_sys internal timing report" \
+        $clk_sys \
+        $clk_sys \
+        200
+
+    mptdc_o13_abs3_run_timing_report \
+        "$dir/timing_o13_phase_buffer_paths.rpt" \
+        "O13 abs3 phase-buffer clock propagation timing report" \
+        $raw_clocks \
+        $buf_clocks \
+        64
+}
+
 proc mptdc_collect_names {cmd} {
     set names [list]
     if {[catch {set objs [eval $cmd]}]} {
@@ -715,6 +930,11 @@ proc mptdc_report_timing {report_dir} {
     mptdc_report_hotspot_timing "$dir/timing_fifo_hotspots.rpt" \
         "FIFO/readout hotspot timing report" \
         [list *u_fifo* *u_sync_fifo* *u_narrow_tx* *u_tconv*]
+
+    if {[mptdc_o13_abs3_enabled] && $stage eq "post_synthesis"} {
+        mptdc_message "Generating O13 abs3 clock/CDC repair timing reports"
+        mptdc_report_o13_abs3_timing $dir
+    }
 
     mptdc_write_fast_feasibility_audit "$dir/fast_domain_feasibility_audit.rpt"
 }

@@ -11,6 +11,9 @@ RUN_MODE="${MPTDC_O13_MODE:-typical_synth}"
 if [[ "${MPTDC_O13_VALIDATE_ONLY:-0}" == "1" ]]; then
   RUN_MODE="validate_only"
 fi
+if [[ "$RUN_MODE" == "O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR" ]]; then
+  export MPTDC_O13_ABS3_CLOCK_CDC_REPAIR=1
+fi
 
 RESULT_DIR="$REPO_ROOT/results/genus_osc_pd/$RUN_ID"
 SNAPSHOT_TAG="genus_osc_pd_${RUN_ID}"
@@ -18,7 +21,11 @@ SNAPSHOT_DIR="$MPTDC_DIR/lab_snapshots/$SNAPSHOT_TAG"
 GENUS_LOG="$RESULT_DIR/genus_${RUN_ID}.log"
 ENV_FILE="$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
 FREQ_DEFINES="$SYN_DIR/inputs/mptdc_freq_modes.defines"
-O13_SDC="${O13_SDC_PATH:-$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_phase_distribution.sdc}"
+if [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
+  O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs3.sdc"
+else
+  O13_SDC="${O13_SDC_PATH:-$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_phase_distribution.sdc}"
+fi
 O13_FILELIST="${O13_FILELIST_PATH:-$SYN_DIR/filelist_o13_phase_distribution.f}"
 DEFAULT_EXPORT_RUN_ID="${O1_RO_EXPORT_RUN_ID:-20260528_o1_export_ro_tune4_lef}"
 DEFAULT_REAL_LEF="$REPO_ROOT/results/osc_pd/$DEFAULT_EXPORT_RUN_ID/real_abstract_lef/RO_tune4_real_abstract.lef"
@@ -38,10 +45,10 @@ case "$RUN_ID" in
 esac
 
 case "$RUN_MODE" in
-  validate_only|typical_synth) ;;
+  validate_only|typical_synth|O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR) ;;
   *)
     echo "ERROR: unsupported MPTDC_O13_MODE=$RUN_MODE" >&2
-    echo "Supported: validate_only, typical_synth" >&2
+    echo "Supported: validate_only, typical_synth, O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR" >&2
     exit 2
     ;;
 esac
@@ -141,6 +148,7 @@ export MPTDC_READ_HDL_LIST="$O13_FILELIST"
 export MPTDC_OSC_PD_USE_PROVISIONAL=0
 export MPTDC_OSC_PD_USE_PROVISIONAL_LIBERTY=0
 export MPTDC_OSC_PD_SDC_OVERLAY="$O13_SDC"
+export MPTDC_O13_CLOCK_MODEL_RPT="$RESULT_DIR/o13_clock_model_check.sdc.rpt"
 export O1_RUN_FLAVOR="O13_PHASE_DISTRIBUTION_TREE_CLEANUP"
 export GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
 export MPTDC_OPT_GOAL="o13_phase_distribution_tree_cleanup"
@@ -203,6 +211,73 @@ cp "$GENUS_LOG" "$RESULT_DIR/genus_${RUN_ID}.log" 2>/dev/null || true
 cp "$O13_SDC" "$RESULT_DIR/final_sdc_overlay_used.sdc" 2>/dev/null || true
 cp "$O13_FILELIST" "$RESULT_DIR/final_filelist_used.f" 2>/dev/null || true
 
+count_expected_clock_names() {
+  local count=0
+  local name
+  local sources=(
+    "$RESULT_DIR/report_clocks.rpt"
+    "$RESULT_DIR/report_clocks_generated.rpt"
+    "$RESULT_DIR/timing_summary.rpt"
+    "$RESULT_DIR/o13_clock_model_check.rpt"
+    "$RESULT_DIR/o13_clock_model_check.sdc.rpt"
+    "$GENUS_LOG"
+  )
+  for name in "$@"; do
+    if grep -E -q "(^|[^[:alnum:]_])${name}([^[:alnum:]_]|$)" "${sources[@]}" 2>/dev/null; then
+      count=$((count + 1))
+    fi
+  done
+  echo "$count"
+}
+
+write_sdc_failure_report() {
+  local out="$RESULT_DIR/sdc_command_failures.md"
+  {
+    echo "# O13 abs3 SDC Command Failure Review"
+    echo
+    echo "- Run ID: \`$RUN_ID\`"
+    echo "- SDC overlay: \`$O13_SDC\`"
+    echo "- Genus log: \`genus_${RUN_ID}.log\`"
+    echo
+    echo "## Extracted SDC/Timing-Intent Diagnostics"
+    echo
+    if [[ -f "$GENUS_LOG" ]]; then
+      grep -nE 'SDC-|MPTDC_SDC_(WARN|INFO)|MPTDC_O13_ABS3_SDC_|MPTDC_O13_SDC_|set_false_path|set_max_delay|set_max_transition|set_clock_groups|TUI-61|TIM-234|report_timing' "$GENUS_LOG" || true
+    else
+      echo "FAILED: Genus log not found."
+    fi
+    echo
+    echo "## Interpretation"
+    echo
+    echo "- Object-handle SDC failures are expected to disappear after the abs3 helper repair."
+    echo "- Final buffer clocks must be grouped asynchronously against clk_sys."
+    echo "- Any remaining failed false-path, max-delay, clock-group, or generated-clock command requires review before Innovus."
+  } > "$out"
+}
+
+run_timing_classification() {
+  local reports=()
+  for file in \
+    timing_violations.rpt \
+    timing_pd_capture_hotspots.rpt \
+    timing_clk_sys_violations.rpt \
+    timing_cdc_async_review.rpt \
+    timing_o13_phase_buffer_paths.rpt; do
+    if [[ -f "$RESULT_DIR/$file" ]]; then
+      reports+=("$RESULT_DIR/$file")
+    fi
+  done
+  if [[ "${#reports[@]}" -gt 0 && -f "$REPO_ROOT/tools/timing/classify_mptdc_timing_paths.py" ]]; then
+    python3 "$REPO_ROOT/tools/timing/classify_mptdc_timing_paths.py" \
+      "${reports[@]}" \
+      --out-csv "$RESULT_DIR/timing_path_classification.csv" \
+      --out-summary "$RESULT_DIR/timing_path_classification_summary.md" || true
+  fi
+}
+
+write_sdc_failure_report
+run_timing_classification
+
 POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
   POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
@@ -217,6 +292,26 @@ ISO_TEXT_COUNT=0
 DRV_TEXT_COUNT=0
 CLOCKS_ON_RO=0
 BUFFER_CLOCKS=0
+RAW_RO_CLOCKS_FOUND=0
+BUFFER_PHASE_CLOCKS_FOUND=0
+BUFFER_PHASE_CLOCKS_EXPECTED=16
+BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=NO
+CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=NO
+UNKNOWN_REVIEW_REQUIRED_COUNT=NA
+RAW_CLOCK_NAMES=(clk_osc_slow)
+BUFFER_CLOCK_NAMES=()
+for tap in 1 2 3 4 5 6 7; do
+  RAW_CLOCK_NAMES+=("clk_osc_slow_tap${tap}")
+done
+RAW_CLOCK_NAMES+=(clk_osc_fast)
+for tap in 1 2 3 4 5 6 7; do
+  RAW_CLOCK_NAMES+=("clk_osc_fast_tap${tap}")
+done
+for family in slow fast; do
+  for tap in 0 1 2 3 4 5 6 7; do
+    BUFFER_CLOCK_NAMES+=("clk_osc_${family}_buf_tap${tap}")
+  done
+done
 if [[ -f "$POSTSYN_NETLIST" ]]; then
   RO_COUNT="$(grep -cE '^[[:space:]]*RO_tune4[[:space:]]+' "$POSTSYN_NETLIST" || true)"
   STUB_COUNT="$(grep -cE 'mptdc_osc_stub' "$POSTSYN_NETLIST" || true)"
@@ -229,6 +324,16 @@ fi
 if [[ -f "$RESULT_DIR/report_clocks.rpt" ]]; then
   CLOCKS_ON_RO="$(grep -cE 'u_ro_tune4.*/?S\[[0-7]\]|u_ro_tune4.*S\[[0-7]\]' "$RESULT_DIR/report_clocks.rpt" || true)"
   BUFFER_CLOCKS="$(grep -cE 'clk_osc_(slow|fast)_buf_tap[0-7]' "$RESULT_DIR/report_clocks.rpt" || true)"
+fi
+RAW_RO_CLOCKS_FOUND="$(count_expected_clock_names "${RAW_CLOCK_NAMES[@]}")"
+BUFFER_PHASE_CLOCKS_FOUND="$(count_expected_clock_names "${BUFFER_CLOCK_NAMES[@]}")"
+if grep -q 'CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=YES' "$RESULT_DIR/o13_clock_model_check.sdc.rpt" "$RESULT_DIR/o13_clock_model_check.rpt" "$GENUS_LOG" 2>/dev/null; then
+  CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=YES
+  BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=YES
+fi
+if [[ -f "$RESULT_DIR/timing_path_classification_summary.md" ]]; then
+  UNKNOWN_REVIEW_REQUIRED_COUNT="$(awk -F': ' '/UNKNOWN_REVIEW_REQUIRED paths/ {print $2; exit}' "$RESULT_DIR/timing_path_classification_summary.md" | tr -d '`' || true)"
+  UNKNOWN_REVIEW_REQUIRED_COUNT="${UNKNOWN_REVIEW_REQUIRED_COUNT:-NA}"
 fi
 
 CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
@@ -245,6 +350,12 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "u_drv_text_count=$DRV_TEXT_COUNT"
   echo "report_clocks_ro_pin_count=$CLOCKS_ON_RO"
   echo "report_clocks_buffer_clock_count=$BUFFER_CLOCKS"
+  echo "RAW_RO_CLOCKS_FOUND=$RAW_RO_CLOCKS_FOUND"
+  echo "BUFFER_PHASE_CLOCKS_FOUND=$BUFFER_PHASE_CLOCKS_FOUND"
+  echo "BUFFER_PHASE_CLOCKS_EXPECTED=$BUFFER_PHASE_CLOCKS_EXPECTED"
+  echo "BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=$BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP"
+  echo "CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=$CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS"
+  echo "UNKNOWN_REVIEW_REQUIRED_COUNT=$UNKNOWN_REVIEW_REQUIRED_COUNT"
   echo
   if [[ -f "$POSTSYN_NETLIST" ]]; then
     echo "## RO_tune4 instances"
@@ -264,7 +375,11 @@ STATUS="O13_SERVER_REVIEW_REQUIRED"
 if [[ "$RUN_MODE" == "validate_only" ]]; then
   STATUS="O13_VALIDATE_ONLY_OK"
 elif [[ "$RO_COUNT" == "2" && "$STUB_COUNT" == "0" && "$BUHDX4_COUNT" -ge 16 && "$BUHDX12_COUNT" -ge 16 ]]; then
-  STATUS="O13_NETLIST_CANDIDATE"
+  if [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
+    STATUS="O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE"
+  else
+    STATUS="O13_NETLIST_CANDIDATE"
+  fi
 fi
 
 {
@@ -291,10 +406,20 @@ fi
   echo "- u_drv text count: $DRV_TEXT_COUNT"
   echo "- report_clocks RO_tune4/S match count: $CLOCKS_ON_RO"
   echo "- report_clocks final-driver generated-clock count: $BUFFER_CLOCKS"
+  echo "- RAW_RO_CLOCKS_FOUND: $RAW_RO_CLOCKS_FOUND"
+  echo "- BUFFER_PHASE_CLOCKS_FOUND: $BUFFER_PHASE_CLOCKS_FOUND"
+  echo "- BUFFER_PHASE_CLOCKS_EXPECTED: $BUFFER_PHASE_CLOCKS_EXPECTED"
+  echo "- BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP: $BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP"
+  echo "- CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS: $CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS"
+  echo "- UNKNOWN_REVIEW_REQUIRED count: $UNKNOWN_REVIEW_REQUIRED_COUNT"
   echo
   echo "O13_STATUS=$STATUS"
   echo "FINAL_SIGNOFF=NO"
-  echo "INNOVUS_READY=RUN_O13_PHASE_DISTRIBUTION_FEASIBILITY_AFTER_REVIEW"
+  if [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
+    echo "INNOVUS_READY=NO_REVIEW_O13_ABS3_GENUS_FIRST"
+  else
+    echo "INNOVUS_READY=RUN_O13_PHASE_DISTRIBUTION_FEASIBILITY_AFTER_REVIEW"
+  fi
   echo
   echo "## Key Files"
   for file in \
@@ -306,12 +431,25 @@ fi
     o13_phase_distribution_check.rpt \
     run_manifest.txt \
     report_clocks.rpt \
+    report_clocks_generated.rpt \
+    report_clock_groups.rpt \
+    report_exceptions.rpt \
+    check_timing_intent_post_synth.rpt \
     report_design_rules.rpt \
     report_high_fanout.rpt \
+    report_area.rpt \
+    report_qor.rpt \
     timing_summary.rpt \
     timing_violations.rpt \
     timing_pd_capture_hotspots.rpt \
-    timing_clk_sys_violations.rpt; do
+    timing_clk_sys_violations.rpt \
+    timing_cdc_async_review.rpt \
+    timing_o13_phase_buffer_paths.rpt \
+    o13_clock_model_check.rpt \
+    o13_clock_model_check.sdc.rpt \
+    sdc_command_failures.md \
+    timing_path_classification.csv \
+    timing_path_classification_summary.md; do
     if [[ -f "$RESULT_DIR/$file" ]]; then
       echo "- present: \`$file\`"
     else
@@ -328,4 +466,4 @@ fi
 if [[ "$SNAPSHOT_RC" != "0" ]]; then
   exit "$SNAPSHOT_RC"
 fi
-[[ "$STATUS" == "O13_NETLIST_CANDIDATE" || "$STATUS" == "O13_VALIDATE_ONLY_OK" ]]
+[[ "$STATUS" == "O13_NETLIST_CANDIDATE" || "$STATUS" == "O13_VALIDATE_ONLY_OK" || "$STATUS" == "O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE" ]]

@@ -25,6 +25,19 @@ proc mptdc_try_async_max_delay {delay from_obj to_obj} {
     set_max_delay $delay -from $from_obj -to $to_obj
 }
 
+proc mptdc_sdc_object_names {objects} {
+    set names [list]
+    foreach obj $objects {
+        if {[catch {set name [get_object_name $obj]}]} {
+            set name $obj
+        }
+        if {[lsearch -exact $names $name] < 0} {
+            lappend names $name
+        }
+    }
+    return $names
+}
+
 proc mptdc_try_false_path_pins {label patterns} {
     set matched [list]
     foreach pattern $patterns {
@@ -39,12 +52,25 @@ proc mptdc_try_false_path_pins {label patterns} {
         return
     }
 
-    puts "MPTDC_SDC_INFO: false-pathing $label ([llength $matched] pins)"
-    if {[catch {set_false_path -to $matched} err]} {
-        puts "MPTDC_SDC_WARN: set_false_path -to failed for $label: $err"
+    set pin_names [mptdc_sdc_object_names $matched]
+    puts "MPTDC_SDC_INFO: false-pathing $label ([llength $pin_names] pins)"
+
+    set to_failures 0
+    set through_failures 0
+    foreach pin_name $pin_names {
+        if {[catch {set_false_path -to $pin_name} err]} {
+            incr to_failures
+            puts "MPTDC_SDC_WARN: set_false_path -to failed for $label pin $pin_name: $err"
+        }
+        if {[catch {set_false_path -through $pin_name} err]} {
+            incr through_failures
+            puts "MPTDC_SDC_WARN: set_false_path -through failed for $label pin $pin_name: $err"
+        }
     }
-    if {[catch {set_false_path -through $matched} err]} {
-        puts "MPTDC_SDC_WARN: set_false_path -through failed for $label: $err"
+    if {$to_failures == 0 && $through_failures == 0} {
+        puts "MPTDC_SDC_INFO: false-pathing $label applied without per-pin failures"
+    } else {
+        puts "MPTDC_SDC_WARN: false-pathing $label had to_failures=$to_failures through_failures=$through_failures"
     }
 }
 
@@ -69,9 +95,23 @@ proc mptdc_try_set_max_delay_pins {label delay from_patterns to_patterns} {
         return
     }
 
-    puts "MPTDC_SDC_INFO: max-delaying $label from [llength $from_pins] pin(s) to [llength $to_pins] pin(s)"
-    if {[catch {set_max_delay $delay -from $from_pins -to $to_pins} err]} {
-        puts "MPTDC_SDC_WARN: set_max_delay failed for $label: $err"
+    set from_names [mptdc_sdc_object_names $from_pins]
+    set to_names [mptdc_sdc_object_names $to_pins]
+    puts "MPTDC_SDC_INFO: max-delaying $label from [llength $from_names] pin(s) to [llength $to_names] pin(s)"
+    if {[catch {set_max_delay $delay -from $from_names -to $to_names} err]} {
+        puts "MPTDC_SDC_WARN: set_max_delay failed for $label with aggregate pin names: $err"
+        set failures 0
+        foreach from_name $from_names {
+            foreach to_name $to_names {
+                if {[catch {set_max_delay $delay -from $from_name -to $to_name} per_err]} {
+                    incr failures
+                    puts "MPTDC_SDC_WARN: set_max_delay failed for $label from $from_name to $to_name: $per_err"
+                }
+            }
+        }
+        if {$failures == 0} {
+            puts "MPTDC_SDC_INFO: max-delay $label applied with per-pin fallback"
+        }
     }
 }
 
@@ -400,6 +440,6 @@ foreach reset_pattern {
     set reset_nets [get_nets -quiet -hierarchical $reset_pattern]
     if {[llength $reset_nets] > 0} {
         catch {set_max_fanout $design(RESET_MAX_FANOUT) $reset_nets}
-        catch {set_max_transition $design(RESET_MAX_TRANSITION) $reset_nets}
+        puts "MPTDC_SDC_INFO: reset net max-transition target $design(RESET_MAX_TRANSITION) ns for $reset_pattern is checked by DRV reports; direct set_max_transition on nets is skipped because this Genus SDC mode rejects net objects"
     }
 }
