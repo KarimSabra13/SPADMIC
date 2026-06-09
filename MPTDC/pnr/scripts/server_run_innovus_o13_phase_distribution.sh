@@ -45,6 +45,7 @@ esac
   echo "source_run_id: $SOURCE_RUN_ID"
   echo "source_checkpoint_dat: $SOURCE_CHECKPOINT_DAT"
   echo "source_restore_tcl: $SOURCE_RESTORE_TCL"
+  echo "io_load_class: ${MPTDC_PNR_IO_LOAD_CLASS:-medium}"
   echo "labels: O13_PHASE_DISTRIBUTION_TREE_CLEANUP REPORT_ONLY NOT_FINAL_SIGNOFF"
   echo
   echo "git status --short --untracked-files=no:"
@@ -79,6 +80,7 @@ fi
 require_file "O13 Innovus entry Tcl" "$SCRIPT_DIR/innovus_o13_phase_distribution.tcl"
 require_file "O13 report Tcl" "$SCRIPT_DIR/innovus_o13_phase_buffer_reports.tcl"
 require_file "O13 placement Tcl" "$SCRIPT_DIR/innovus_o13_phase_buffer_place.tcl"
+require_file "XLIBD typical config Tcl" "$PNR_DIR/config/xlibd_spadmic_typical_cell_values.tcl"
 require_file "O12B helper entry Tcl" "$SCRIPT_DIR/innovus_o12b_phase_buffer_balance.tcl"
 require_file "O12B helper report Tcl" "$SCRIPT_DIR/innovus_o12b_phase_buffer_reports.tcl"
 require_file "O12 helper report Tcl" "$SCRIPT_DIR/innovus_o12_phase_buffer_reports.tcl"
@@ -95,6 +97,7 @@ export MPTDC_O13_RESULT_DIR="$RESULT_DIR"
 export MPTDC_O13_SOURCE_RUN_ID="$SOURCE_RUN_ID"
 export MPTDC_O13_SOURCE_CHECKPOINT_DAT="$SOURCE_CHECKPOINT_DAT"
 export MPTDC_O13_SOURCE_RESTORE_TCL="$SOURCE_RESTORE_TCL"
+export MPTDC_PNR_IO_LOAD_CLASS="${MPTDC_PNR_IO_LOAD_CLASS:-medium}"
 
 run_tcl_source_check() {
   if ! command -v tclsh >/dev/null 2>&1; then
@@ -112,6 +115,7 @@ if {[lsearch -exact $qpin {u_core_u_phase_buf_fast/gen_phase_buf[4].u_drv/Q}] < 
 if {[lsearch -exact $ipin {u_core_u_phase_buf_slow/gen_phase_buf[0].u_iso/A}] < 0} { error "missing restored slow u_iso/A candidate" }
 if {[mptdc_o13_expected_cell_type_for_inst {u_core_u_phase_buf_fast/gen_phase_buf[7].u_drv}] ne "BUHDX12"} { error "driver cell fallback failed" }
 if {[mptdc_o13_clock_for slow 7] ne "clk_osc_slow_buf_tap7"} { error "clock helper failed" }
+if {[mptdc_xlibd_cell BUHDX12 input_cap_ff] ne "32.24"} { error "XLIBD config failed" }
 puts "O13 Tcl source/pin-helper check passed"
 EOF
   ) 2>&1 | tee -a "$RUN_LOG"
@@ -175,6 +179,10 @@ validate_required_outputs() {
   require_output_no_error_marker "O13 report summary" "reports/SUMMARY.md"
   require_output_no_error_marker "raw RO pin loads" "reports/ro_phase_raw_pin_loads.csv"
   require_output_no_error_marker "phase buffer output loads" "reports/phase_buffer_output_loads.csv"
+  require_output_no_error_marker "XLIBD enhanced phase loads" "reports/phase_net_loads_xlibd_enhanced.csv"
+  require_output_nonempty "XLIBD phase load budget summary" "reports/phase_net_load_budget_summary.md"
+  require_output_nonempty "XLIBD phase buffer interpretation" "reports/phase_buffer_xlibd_interpretation.md"
+  require_output_nonempty "XLIBD IO load model" "reports/io_load_model.rpt"
   require_output_no_error_marker "phase buffer balance summary" "reports/phase_buffer_balance_summary.md"
   require_output_no_error_marker "phase buffer topology" "reports/phase_buffer_topology.csv"
   require_output_nonempty "phase buffer topology summary" "reports/phase_buffer_topology_summary.md"
@@ -307,6 +315,10 @@ fi
     reports/drv_max_transition.rpt \
     reports/ro_phase_raw_pin_loads.csv \
     reports/phase_buffer_output_loads.csv \
+    reports/phase_net_loads_xlibd_enhanced.csv \
+    reports/phase_net_load_budget_summary.md \
+    reports/phase_buffer_xlibd_interpretation.md \
+    reports/io_load_model.rpt \
     reports/phase_buffer_balance_summary.md \
     reports/phase_buffer_topology.csv \
     reports/phase_buffer_topology_summary.md \

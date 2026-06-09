@@ -1,0 +1,820 @@
+XLIBD_CELL_VALUES_SPADMIC
+LIB: D_CELLS_HD_LPMOS_typ_1.80V_25C
+VDD: 1.8 V
+TEMP: 25 C
+UNIT_CAP: pF / fF
+UNIT_TIME: ns
+UNIT_AREA: um2
+UNIT_POWER_STATIC: pW
+UNIT_ENERGY_DYNAMIC: uW/MHz
+INPUT_SLOPE_REF_FOR_SELECTED_TIMING: 0.6210 ns
+
+============================================================
+CELL_SUMMARY
+============================================================
+
+CELL    TYPE      AREA_UM2    A_CAP_PF    A_CAP_FF    A_MAX_TRAN_NS    Q_MAX_CAP_PF    Q_MAX_CAP_FF    Q_MAX_FANOUT    STATIC_DEFAULT_PW    STATIC_COND1_PW    STATIC_COND2_PW    DYN_ENERGY_FORMULA
+BUHDX4  BUFFER    20.07       0.01056     10.56       4.8954          3.22700         3227.00         1357            8.00000              8.81503            7.18407            E_d=0.14355+3.24053*L
+BUHDX6  BUFFER    27.60       0.01623     16.23       4.8954          4.76900         4769.00         2006            11.12000             11.45910           10.77620           E_d=0.21606+3.24089*L
+BUHDX8  BUFFER    35.12       0.02170     21.70       4.8954          6.45200         6452.00         2714            15.85000             17.33900           14.36800           E_d=0.28761+3.24069*L
+BUHDX12 BUFFER    50.18       0.03224     32.24       4.8954          9.67800         9678.00         4071            22.16000             22.76580           21.55190           E_d=0.42723+3.24024*L
+
+INHDX4  INVERTER  15.05       0.01870     18.70       4.8954          2.87700         2877.00         1210            4.95100              7.38324            2.51954            E_d=0.05754+3.23528*L
+INHDX6  INVERTER  20.07       0.02789     27.89       4.8954          4.48300         4483.00         1885            6.61800              9.59190            3.64473            E_d=0.08342+3.23549*L
+INHDX12 INVERTER  35.12       0.05564     55.64       4.8954          8.67900         8679.00         3651            13.17000             19.18360           7.16442            E_d=0.16651+3.23528*L
+
+STATIC_COND_NOTES:
+BUHDX*: COND1=A*Q, COND2=!A*!Q
+INHDX*: COND1=!A*Q, COND2=A*!Q
+L in dynamic formula = output load in pF
+
+============================================================
+SELECTED_TIMING_AT_INPUT_SLOPE_0.6210_NS
+============================================================
+
+CELL    LOAD_PF    TPLH_NS    TPHL_NS    TR_LH_NS    TF_HL_NS
+BUHDX4  0.4042     0.5784     0.6226     0.5971     0.4332
+BUHDX4  0.8075     0.9944     0.9437     1.1716     0.8442
+BUHDX4  1.6140     1.8260     1.5853     2.3219     1.6645
+BUHDX4  3.2270     3.4908     2.8682     4.6201     3.3091
+
+BUHDX6  0.5970     0.5740     0.6266     0.5880     0.4338
+BUHDX6  1.1930     0.9839     0.9485     1.1540     0.8452
+BUHDX6  2.3850     1.8034     1.5913     2.2882     1.6683
+BUHDX6  4.7690     3.4433     2.8770     4.5438     3.3171
+
+BUHDX8  0.4042     0.3699     0.4596     0.3085     0.2239
+BUHDX8  0.8074     0.5784     0.6192     0.5964     0.4280
+BUHDX8  1.6137     0.9946     0.9368     1.1706     0.8343
+BUHDX8  3.2265     1.8261     1.5709     2.3206     1.6461
+BUHDX8  6.4520     3.4909     2.8389     4.6194     3.2756
+
+BUHDX12 0.3034     0.2638     0.3791     0.1644     0.1278
+BUHDX12 0.6058     0.3683     0.4630     0.3080     0.2295
+BUHDX12 1.2106     0.5768     0.6272     0.5955     0.4391
+BUHDX12 2.4202     0.9930     0.9537     1.1705     0.8571
+BUHDX12 4.8395     1.8246     1.6060     2.3213     1.6914
+BUHDX12 9.6780     3.4898     2.9106     4.6164     3.3608
+
+INHDX4  0.3605     0.6852     0.5588     0.5944     0.4696
+INHDX4  0.7200     1.0803     0.8774     1.0877     0.8096
+INHDX4  1.4390     1.8346     1.4695     2.0899     1.5035
+INHDX4  2.8770     3.3237     2.6136     4.1523     2.9513
+
+INHDX6  0.5612     0.6994     0.5787     0.6098     0.4877
+INHDX6  1.1215     1.1082     0.9123     1.1239     0.8474
+INHDX6  2.2420     1.8884     1.5348     2.1617     1.5814
+INHDX6  4.4830     3.4332     2.7438     4.3040     3.1171
+
+INHDX12 0.5434     0.4664     0.3747     0.3599     0.3051
+INHDX12 1.0857     0.6851     0.5669     0.5939     0.4764
+INHDX12 2.1705     1.0812     0.8915     1.0882     0.8236
+INHDX12 4.3400     1.8373     1.4958     2.0922     1.5351
+INHDX12 8.6790     3.3299     2.6656     4.1570     3.0173
+
+NOTES:
+TPLH_NS = Delay A->Q low-to-high
+TPHL_NS = Delay A->Q high-to-low
+TR_LH_NS = Output slope low-to-high
+TF_HL_NS = Output slope high-to-low
+
+============================================================
+FULL_AXIS_ROWS
+============================================================
+
+BUHDX4_LOAD_AXIS_PF: 0.0010 0.1018 0.2026 0.4042 0.8075 1.6140 3.2270
+BUHDX4_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+BUHDX6_LOAD_AXIS_PF: 0.0010 0.1500 0.2990 0.5970 1.1930 2.3850 4.7690
+BUHDX6_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+BUHDX8_LOAD_AXIS_PF: 0.0010 0.2026 0.4042 0.8074 1.6137 3.2265 6.4520
+BUHDX8_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+BUHDX12_LOAD_AXIS_PF: 0.0010 0.3034 0.6058 1.2106 2.4202 4.8395 9.6780
+BUHDX12_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+INHDX4_LOAD_AXIS_PF: 0.0010 0.0909 0.1807 0.3605 0.7200 1.4390 2.8770
+INHDX4_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+INHDX6_LOAD_AXIS_PF: 0.0010 0.1411 0.2811 0.5612 1.1215 2.2420 4.4830
+INHDX6_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+INHDX12_LOAD_AXIS_PF: 0.0010 0.2722 0.5434 1.0857 2.1705 4.3400 8.6790
+INHDX12_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+============================================================
+O13_PHASE_DRIVER_DECISION_VALUES
+============================================================
+
+ANALOG_STRICT_D_LOAD_BUDGET_FF: 58.72
+ANALOG_CN_LIKE_LOAD_BUDGET_FF: 75.59
+
+CURRENT_RAW_RO_LOAD_AFTER_O12_MAX_FF: 38.00
+CURRENT_RAW_RO_STATUS: OK_STRICT
+
+CURRENT_BUFFER_OUTPUT_LOAD_RANGE_FAST_PF: 0.584 to 0.707
+CURRENT_BUFFER_OUTPUT_LOAD_RANGE_FAST_FF: 584 to 707
+CURRENT_BUFFER_OUTPUT_LOAD_SLOW0_PF: 0.520
+CURRENT_BUFFER_OUTPUT_LOAD_SLOW0_FF: 520
+
+CURRENT_BUHDX4_TRANSITION_FAST_RANGE_NS: 0.851 to 1.049
+CURRENT_BUHDX4_TRANSITION_SLOW0_NS: 0.814
+
+TARGET_TRANSITION_NS: 0.500
+WARNING_TRANSITION_NS: 0.750
+
+INTERPRETATION_FROM_AVAILABLE_VALUES:
+- BUHDX4 is good as first RO isolation buffer due to low input cap = 10.56 fF.
+- BUHDX4 is too weak as final phase driver for 0.5 to 0.7 pF loads.
+- BUHDX8 is close but still has rise transition around 0.596 ns at 0.8074 pF.
+- BUHDX12 gives rise transition around 0.5955 ns at 1.2106 pF and 0.3080 ns at 0.6058 pF.
+- BUHDX12 is the best current final-driver candidate among extracted BU cells.
+- INHDX12 has high input cap = 55.64 fF, close to analog strict budget, so do not put INHDX12 directly on RO output.
+- Current preferred topology remains: RO -> BUHDX4 -> BUHDX12 -> phase_fabric.
+- If BUHDX12 final output still violates transition after Innovus RC, consider: RO -> BUHDX4 -> BUHDX12 -> BUHDX12 -> phase_fabric, with identical topology on all taps.
+============================================================
+DFF_CELL_SUMMARY
+============================================================
+
+CELL        TYPE                  AREA_UM2    C_CAP_PF    C_CAP_FF    D_CAP_PF    D_CAP_FF    RN_CAP_PF    RN_CAP_FF    INPUT_MAX_TRAN_NS    Q_MAX_CAP_PF    Q_MAX_CAP_FF    Q_MAX_FANOUT    STATIC_DEFAULT_PW    DYN_ENERGY_FORMULA          DYN_INPUT_ENERGY
+DFRRQHDX2   POSEDGE_DFF_RESET     60.21       0.00345     3.45        0.00320     3.20        0.00651      6.51        4.8954               1.58700         1587.00         667             10.28000             E_d=0.15778+3.23893*L    E_inp=0.08293
+
+DFRRQHDX2_STATIC_POWER_CONDITIONS_PW:
+default: 10.28000
+D*Q*RN: 14.85110
+!C*D*!Q*RN: 13.60060
+!D*!Q*RN: 10.96925
+!C*D*!Q*!RN: 8.18328
+!D*!Q*!RN: 6.43642
+C*D*!Q*!RN: 6.21333
+
+============================================================
+DFRRQHDX2_SELECTED_TIMING_AT_INPUT_SLOPE_0.6210_NS
+============================================================
+
+DFRRQHDX2_C_TO_Q:
+CELL        PATH    LOAD_PF    TPLH_NS    TPHL_NS    TR_LH_NS    TF_HL_NS
+DFRRQHDX2   C->Q    0.0010     0.5460     0.6110     0.0549     0.0803
+DFRRQHDX2   C->Q    0.0506     0.7045     0.7655     0.2049     0.1835
+DFRRQHDX2   C->Q    0.1001     0.8182     0.8538     0.3328     0.2428
+DFRRQHDX2   C->Q    0.1992     1.0273     0.9897     0.5992     0.3600
+DFRRQHDX2   C->Q    0.3975     1.4377     1.2197     1.1652     0.6040
+DFRRQHDX2   C->Q    0.7940     2.2567     1.6481     2.3043     1.1223
+DFRRQHDX2   C->Q    1.5870     3.8927     2.4931     4.5702     2.1999
+
+DFRRQHDX2_RN_TO_Q_CLEAR:
+CELL        PATH     LOAD_PF    TPHL_NS    TF_HL_NS
+DFRRQHDX2   RN->Q    0.0010     0.6973     0.0671
+DFRRQHDX2   RN->Q    0.0506     0.8331     0.1525
+DFRRQHDX2   RN->Q    0.1001     0.9075     0.2058
+DFRRQHDX2   RN->Q    0.1992     1.0276     0.3219
+DFRRQHDX2   RN->Q    0.3975     1.2447     0.5760
+DFRRQHDX2   RN->Q    0.7940     1.6677     1.1093
+DFRRQHDX2   RN->Q    1.5870     2.5115     2.1931
+
+============================================================
+DFRRQHDX2_MAXIMUM_CELL_CONSTRAINTS_SUMMARY
+============================================================
+
+CELL        CONSTRAINT                 EDGE/SENSE    VALUE_NS
+DFRRQHDX2   MIN_WIDTH_C_HIGH            high          0.4684
+DFRRQHDX2   MIN_WIDTH_C_LOW             low           0.5096
+DFRRQHDX2   SETUP_D_TO_C_RISE           rise          0.4316
+DFRRQHDX2   SETUP_D_TO_C_FALL           fall          1.3358
+DFRRQHDX2   HOLD_D_TO_C_RISE            rise          0.3846
+DFRRQHDX2   HOLD_D_TO_C_FALL            fall          0.1310
+DFRRQHDX2   RECOVERY_RN_TO_C_RISE       rise          2.5845
+DFRRQHDX2   REMOVAL_RN_TO_C_RISE        rise          0.2017
+DFRRQHDX2   MIN_WIDTH_RN_LOW            low           0.5535
+
+============================================================
+DFRRQHDX2_CONSTRAINT_TABLES
+============================================================
+
+DFRRQHDX2_MIN_PULSE_WIDTH_C:
+C_SLOPE_NS              0.0102    0.9872    2.4528    4.8954
+MIN_WIDTH_HIGH_NS       0.468     1.673     4.140     8.252
+MIN_WIDTH_LOW_NS        0.510     1.673     4.140     8.252
+
+DFRRQHDX2_MIN_PULSE_WIDTH_RN:
+RN_SLOPE_NS             0.0102    0.9872    2.4528    4.8954
+MIN_WIDTH_LOW_NS        0.553     1.673     4.140     8.252
+
+DFRRQHDX2_SETUP_D_RISING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                    0.126     0.098     0.192     0.394
+0.9872                    0.229     0.159     0.237     0.432
+2.4528                    0.216     0.124     0.193     0.379
+4.8954                    0.094    -0.011     0.054     0.240
+
+DFRRQHDX2_HOLD_D_RISING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.036     0.022     0.002    -0.077
+0.9872                   -0.078     0.013     0.006    -0.065
+2.4528                    0.021     0.123     0.123     0.059
+4.8954                    0.279     0.383     0.385     0.322
+
+DFRRQHDX2_SETUP_D_FALLING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                    0.316     0.133     0.083     0.180
+0.9872                    0.571     0.393     0.341     0.422
+2.4528                    0.883     0.707     0.653     0.723
+4.8954                    1.336     1.155     1.097     1.161
+
+DFRRQHDX2_HOLD_D_FALLING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.117     0.058     0.126     0.131
+0.9872                   -0.325    -0.152    -0.078    -0.062
+2.4528                   -0.563    -0.390    -0.314    -0.288
+4.8954                   -0.886    -0.710    -0.633    -0.604
+
+DFRRQHDX2_RECOVERY_RN_RISING_TO_C_RISING:
+RN_SLOPE_NS \ C_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.152     0.125     0.221     0.426
+0.9872                    0.343     0.209     0.297     0.500
+2.4528                    1.156     0.292     0.292     0.485
+4.8954                    2.585     1.080     0.727     0.842
+
+DFRRQHDX2_REMOVAL_RN_RISING_TO_C_RISING:
+RN_SLOPE_NS \ C_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.065    -0.011    -0.035    -0.119
+0.9872                   -0.121    -0.044    -0.062    -0.144
+2.4528                   -0.064     0.028     0.018    -0.055
+4.8954                    0.107     0.202     0.193     0.120
+
+============================================================
+DFRRQHDX2_FULL_AXIS_ROWS
+============================================================
+
+DFRRQHDX2_C_TO_Q_LOAD_AXIS_PF: 0.0010 0.0506 0.1001 0.1992 0.3975 0.7940 1.5870
+DFRRQHDX2_C_TO_Q_INPUT_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+DFRRQHDX2_CONSTRAINT_SLOPE_AXIS_NS: 0.0102 0.9872 2.4528 4.8954
+
+============================================================
+DFRRQHDX2_NOTES_FOR_SPADMIC
+============================================================
+
+DFRRQHDX2_D_CAP_FF: 3.20
+DFRRQHDX2_CLK_C_CAP_FF: 3.45
+DFRRQHDX2_RN_CAP_FF: 6.51
+CLK_CAP_OVER_D_CAP_RATIO: 1.078
+RN_CAP_OVER_D_CAP_RATIO: 2.034
+
+1DFF_D_LOAD_PF: 0.00320
+2DFF_D_LOAD_PF: 0.00640
+4DFF_D_LOAD_PF: 0.01280
+8DFF_D_LOAD_PF: 0.02560
+16DFF_D_LOAD_PF: 0.05120
+32DFF_D_LOAD_PF: 0.10240
+
+1DFF_CLK_LOAD_PF: 0.00345
+2DFF_CLK_LOAD_PF: 0.00690
+4DFF_CLK_LOAD_PF: 0.01380
+8DFF_CLK_LOAD_PF: 0.02760
+16DFF_CLK_LOAD_PF: 0.05520
+32DFF_CLK_LOAD_PF: 0.11040
+
+NOTE:
+- The XLIBD DFRRQHDX2 single-cell C pin cap is 3.45 fF and D pin cap is 3.20 fF.
+- This does not directly explain a 58.72 fF / 75.59 fF analog estimate unless the analog-side transistor-level input capacitance includes different cells, parasitics, internal clock structure, or a different effective load definition.
+- Keep Edouard's 58.72 fF / 75.59 fF analog budget as the authoritative RO macro load budget.
+- Use DFRRQHDX2 D cap only for provisional block IO set_load estimates.
+============================================================
+DFF_CELL_SUMMARY_ADD
+============================================================
+
+CELL        TYPE                  AREA_UM2    C_CAP_PF    C_CAP_FF    D_CAP_PF    D_CAP_FF    RN_CAP_PF    RN_CAP_FF    INPUT_MAX_TRAN_NS    Q_MAX_CAP_PF    Q_MAX_CAP_FF    Q_MAX_FANOUT    STATIC_DEFAULT_PW    DYN_ENERGY_FORMULA          DYN_INPUT_ENERGY
+DFRRQHDX4   POSEDGE_DFF_RESET     65.23       0.00360     3.60        0.00319     3.19        0.00637      6.37        4.8954               3.02500         3025.00         1272            12.05000             E_d=0.19072+3.23724*L    E_inp=0.08279
+
+DFRRQHDX4_STATIC_POWER_CONDITIONS_PW:
+default: 12.05000
+D*Q*RN: 19.28185
+!C*D*!Q*RN: 14.61590
+!D*!Q*RN: 11.98470
+!C*D*!Q*!RN: 9.19764
+!D*!Q*!RN: 7.45272
+C*D*!Q*!RN: 7.23167
+
+============================================================
+DFRRQHDX4_SELECTED_TIMING_AT_INPUT_SLOPE_0.6210_NS
+============================================================
+
+DFRRQHDX4_C_TO_Q:
+CELL        PATH    LOAD_PF    TPLH_NS    TPHL_NS    TR_LH_NS    TF_HL_NS
+DFRRQHDX4   C->Q    0.0010     0.6170     0.7614     0.0662     0.1115
+DFRRQHDX4   C->Q    0.0955     0.7896     0.9343     0.2223     0.2227
+DFRRQHDX4   C->Q    0.1900     0.9094     1.0330     0.3487     0.2835
+DFRRQHDX4   C->Q    0.3790     1.1221     1.1792     0.6122     0.3946
+DFRRQHDX4   C->Q    0.7570     1.5325     1.4154     1.1678     0.6236
+DFRRQHDX4   C->Q    1.5130     2.3497     1.8348     2.3049     1.1045
+DFRRQHDX4   C->Q    3.0250     3.9811     2.6427     4.5629     2.1106
+
+DFRRQHDX4_RN_TO_Q_CLEAR:
+CELL        PATH     LOAD_PF    TPHL_NS    TF_HL_NS
+DFRRQHDX4   RN->Q    0.0010     0.8108     0.0903
+DFRRQHDX4   RN->Q    0.0955     0.9609     0.1790
+DFRRQHDX4   RN->Q    0.1900     1.0412     0.2292
+DFRRQHDX4   RN->Q    0.3790     1.1655     0.3372
+DFRRQHDX4   RN->Q    0.7570     1.3801     0.5708
+DFRRQHDX4   RN->Q    1.5130     1.7858     1.0683
+DFRRQHDX4   RN->Q    3.0250     2.5901     2.0993
+
+============================================================
+DFRRQHDX4_MAXIMUM_CELL_CONSTRAINTS_SUMMARY
+============================================================
+
+CELL        CONSTRAINT                 EDGE/SENSE    VALUE_NS
+DFRRQHDX4   MIN_WIDTH_C_HIGH            high          0.6335
+DFRRQHDX4   MIN_WIDTH_C_LOW             low           0.4978
+DFRRQHDX4   SETUP_D_TO_C_RISE           rise          0.4254
+DFRRQHDX4   SETUP_D_TO_C_FALL           fall          1.3219
+DFRRQHDX4   HOLD_D_TO_C_RISE            rise          0.3895
+DFRRQHDX4   HOLD_D_TO_C_FALL            fall          0.1344
+DFRRQHDX4   RECOVERY_RN_TO_C_RISE       rise          2.9060
+DFRRQHDX4   REMOVAL_RN_TO_C_RISE        rise          0.2062
+DFRRQHDX4   MIN_WIDTH_RN_LOW            low           0.7096
+
+============================================================
+DFRRQHDX4_CONSTRAINT_TABLES
+============================================================
+
+DFRRQHDX4_MIN_PULSE_WIDTH_C:
+C_SLOPE_NS              0.0102    0.9872    2.4528    4.8954
+MIN_WIDTH_HIGH_NS       0.633     1.673     4.140     8.252
+MIN_WIDTH_LOW_NS        0.498     1.673     4.140     8.252
+
+DFRRQHDX4_MIN_PULSE_WIDTH_RN:
+RN_SLOPE_NS             0.0102    0.9872    2.4528    4.8954
+MIN_WIDTH_LOW_NS        0.710     1.715     4.140     8.252
+
+DFRRQHDX4_SETUP_D_RISING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                    0.121     0.095     0.188     0.390
+0.9872                    0.222     0.155     0.232     0.425
+2.4528                    0.207     0.120     0.188     0.374
+4.8954                    0.083    -0.017     0.049     0.234
+
+DFRRQHDX4_HOLD_D_RISING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.035     0.024     0.005    -0.072
+0.9872                   -0.077     0.016     0.010    -0.060
+2.4528                    0.021     0.127     0.128     0.065
+4.8954                    0.278     0.387     0.389     0.327
+
+DFRRQHDX4_SETUP_D_FALLING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                    0.303     0.120     0.075     0.174
+0.9872                    0.557     0.379     0.331     0.418
+2.4528                    0.869     0.695     0.644     0.718
+4.8954                    1.322     1.141     1.087     1.155
+
+DFRRQHDX4_HOLD_D_FALLING_TO_C_RISING:
+D_SLOPE_NS \ C_SLOPE_NS    0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.117     0.060     0.130     0.134
+0.9872                   -0.325    -0.150    -0.075    -0.058
+2.4528                   -0.563    -0.387    -0.311    -0.284
+4.8954                   -0.888    -0.708    -0.628    -0.599
+
+DFRRQHDX4_RECOVERY_RN_RISING_TO_C_RISING:
+RN_SLOPE_NS \ C_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.144     0.121     0.216     0.419
+0.9872                    0.357     0.206     0.292     0.493
+2.4528                    1.298     0.448     0.290     0.479
+4.8954                    2.906     1.419     0.739     0.795
+
+DFRRQHDX4_REMOVAL_RN_RISING_TO_C_RISING:
+RN_SLOPE_NS \ C_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.062    -0.006    -0.030    -0.113
+0.9872                   -0.119    -0.040    -0.058    -0.139
+2.4528                   -0.059     0.032     0.023    -0.050
+4.8954                    0.112     0.206     0.198     0.125
+
+============================================================
+DFRRQHDX4_FULL_AXIS_ROWS
+============================================================
+
+DFRRQHDX4_C_TO_Q_LOAD_AXIS_PF: 0.0010 0.0955 0.1900 0.3790 0.7570 1.5130 3.0250
+DFRRQHDX4_C_TO_Q_INPUT_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+DFRRQHDX4_CONSTRAINT_SLOPE_AXIS_NS: 0.0102 0.9872 2.4528 4.8954
+
+============================================================
+DFRRQHDX4_NOTES_FOR_SPADMIC
+============================================================
+
+DFRRQHDX4_D_CAP_FF: 3.19
+DFRRQHDX4_CLK_C_CAP_FF: 3.60
+DFRRQHDX4_RN_CAP_FF: 6.37
+CLK_CAP_OVER_D_CAP_RATIO: 1.129
+RN_CAP_OVER_D_CAP_RATIO: 1.997
+
+1DFF_D_LOAD_PF: 0.00319
+2DFF_D_LOAD_PF: 0.00638
+4DFF_D_LOAD_PF: 0.01276
+8DFF_D_LOAD_PF: 0.02552
+16DFF_D_LOAD_PF: 0.05104
+32DFF_D_LOAD_PF: 0.10208
+
+1DFF_CLK_LOAD_PF: 0.00360
+2DFF_CLK_LOAD_PF: 0.00720
+4DFF_CLK_LOAD_PF: 0.01440
+8DFF_CLK_LOAD_PF: 0.02880
+16DFF_CLK_LOAD_PF: 0.05760
+32DFF_CLK_LOAD_PF: 0.11520
+============================================================
+SCAN_DFF_CELL_SUMMARY_ADD
+============================================================
+
+CELL        TYPE                        DONT_USE    AREA_UM2    CN_CAP_PF    CN_CAP_FF    D_CAP_PF    D_CAP_FF    SD_CAP_PF    SD_CAP_FF    SE_CAP_PF    SE_CAP_FF    INPUT_MAX_TRAN_NS    Q_MAX_CAP_PF    Q_MAX_CAP_FF    Q_MAX_FANOUT    STATIC_DEFAULT_PW    DYN_ENERGY_FORMULA          DYN_INPUT_ENERGY
+SDFFQHDX2   NEGEDGE_DFF_SCAN_SINGLE_Q   true        65.23       0.00380      3.80        0.00333     3.33        0.00298      2.98        0.00589      5.89        4.8954               1.58700         1587.00         667             15.21000             E_d=0.15465+3.23896*L    E_inp=0.07390
+
+SDFFQHDX2_STATIC_POWER_CONDITIONS_PW:
+default: 15.21000
+CN*!D*Q*SD*!SE: 19.66440
+!CN*Q*SD*!SE: 17.55365
+CN*D*SD*!SE: 16.95875
+D*!SD*!SE: 16.92955
+!CN*D*!Q*SD*!SE: 16.00800
+CN*!D*!Q*!SE: 15.41520
+!D*Q*SE: 15.08445
+D*Q*SD*SE: 14.68955
+!CN*!D*!Q*!SE: 13.76315
+!D*!Q*SD*SE: 13.64675
+CN*D*!Q*!SD*SE: 13.43820
+!D*!Q*!SD*SE: 11.50975
+!CN*D*!Q*!SD*SE: 11.11600
+
+============================================================
+SDFFQHDX2_SELECTED_TIMING_AT_INPUT_SLOPE_0.6210_NS
+============================================================
+
+SDFFQHDX2_CN_TO_Q:
+CELL        PATH     LOAD_PF    TPLH_NS    TPHL_NS    TR_LH_NS    TF_HL_NS
+SDFFQHDX2   CN->Q    0.0010     0.5337     0.8474     0.0466     0.0862
+SDFFQHDX2   CN->Q    0.0506     0.6674     1.0045     0.1827     0.1882
+SDFFQHDX2   CN->Q    0.1001     0.7739     1.0933     0.3170     0.2477
+SDFFQHDX2   CN->Q    0.1992     0.9805     1.2309     0.5969     0.3668
+SDFFQHDX2   CN->Q    0.3975     1.3914     1.4638     1.1676     0.6132
+SDFFQHDX2   CN->Q    0.7940     2.2112     1.8961     2.3033     1.1341
+SDFFQHDX2   CN->Q    1.5870     3.8499     2.7478     4.5696     2.2204
+
+============================================================
+SDFFQHDX2_MAXIMUM_CELL_CONSTRAINTS_SUMMARY
+============================================================
+
+CELL        CONSTRAINT                 EDGE/SENSE    VALUE_NS
+SDFFQHDX2   MIN_WIDTH_CN_HIGH           high          0.3173
+SDFFQHDX2   MIN_WIDTH_CN_LOW            low           0.5600
+SDFFQHDX2   SETUP_D_TO_CN_RISE          rise          0.2647
+SDFFQHDX2   SETUP_D_TO_CN_FALL          fall          1.5174
+SDFFQHDX2   HOLD_D_TO_CN_RISE           rise          1.6195
+SDFFQHDX2   HOLD_D_TO_CN_FALL           fall          0.4750
+SDFFQHDX2   SETUP_SD_TO_CN_RISE         rise          0.2602
+SDFFQHDX2   SETUP_SD_TO_CN_FALL         fall          1.8339
+SDFFQHDX2   HOLD_SD_TO_CN_RISE          rise          1.6178
+SDFFQHDX2   HOLD_SD_TO_CN_FALL          fall          0.3536
+SDFFQHDX2   SETUP_SE_TO_CN_RISE         rise          0.6774
+SDFFQHDX2   SETUP_SE_TO_CN_FALL         fall          1.4072
+SDFFQHDX2   HOLD_SE_TO_CN_RISE          rise          1.7081
+SDFFQHDX2   HOLD_SE_TO_CN_FALL          fall          1.1197
+
+============================================================
+SDFFQHDX2_CONSTRAINT_TABLES
+============================================================
+
+SDFFQHDX2_MIN_PULSE_WIDTH_CN:
+CN_SLOPE_NS             0.0102    0.9872    2.4528    4.8954
+MIN_WIDTH_HIGH_NS       0.317     1.673     4.140     8.252
+MIN_WIDTH_LOW_NS        0.560     1.673     4.140     8.252
+
+SDFFQHDX2_SETUP_D_RISING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.128    -0.276    -0.581    -0.938
+0.9872                    0.260    -0.143    -0.493    -0.874
+2.4528                    0.265    -0.149    -0.514    -0.916
+4.8954                    0.146    -0.282    -0.655    -1.068
+
+SDFFQHDX2_HOLD_D_RISING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.089     0.432     0.769     1.241
+0.9872                    0.007     0.383     0.740     1.229
+2.4528                    0.077     0.469     0.840     1.344
+4.8954                    0.322     0.726     1.105     1.620
+
+SDFFQHDX2_SETUP_D_FALLING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.453     0.260     0.092    -0.158
+0.9872                    0.730     0.531     0.351     0.091
+2.4528                    1.043     0.835     0.645     0.371
+4.8954                    1.517     1.307     1.111     0.832
+
+SDFFQHDX2_HOLD_D_FALLING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.368    -0.143     0.099     0.475
+0.9872                   -0.594    -0.364    -0.111     0.275
+2.4528                   -0.829    -0.595    -0.331     0.068
+4.8954                   -1.173    -0.943    -0.676    -0.270
+
+SDFFQHDX2_SETUP_SD_RISING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.130    -0.265    -0.576    -0.936
+0.9872                    0.260    -0.131    -0.474    -0.854
+2.4528                    0.245    -0.151    -0.500    -0.893
+4.8954                    0.086    -0.320    -0.670    -1.068
+
+SDFFQHDX2_HOLD_SD_RISING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.079     0.426     0.764     1.240
+0.9872                   -0.003     0.365     0.718     1.206
+2.4528                    0.083     0.460     0.823     1.320
+4.8954                    0.372     0.753     1.116     1.618
+
+SDFFQHDX2_SETUP_SD_FALLING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.590     0.386     0.212    -0.038
+0.9872                    0.886     0.677     0.495     0.232
+2.4528                    1.259     1.041     0.849     0.573
+4.8954                    1.834     1.609     1.407     1.124
+
+SDFFQHDX2_HOLD_SD_FALLING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.500    -0.268    -0.021     0.354
+0.9872                   -0.745    -0.511    -0.254     0.133
+2.4528                   -1.041    -0.801    -0.535    -0.133
+4.8954                   -1.486    -1.246    -0.971    -0.562
+
+SDFFQHDX2_SETUP_SE_RISING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.643     0.439     0.265     0.014
+0.9872                    0.677     0.473     0.299     0.048
+2.4528                    0.567     0.363     0.188    -0.063
+4.8954                    0.308     0.104    -0.070    -0.321
+
+SDFFQHDX2_HOLD_SE_RISING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.089     0.436     0.774     1.251
+0.9872                    0.052     0.420     0.773     1.257
+2.4528                    0.146     0.534     0.901     1.401
+4.8954                    0.415     0.818     1.195     1.708
+
+SDFFQHDX2_SETUP_SE_FALLING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.478     0.278     0.109    -0.138
+0.9872                    0.704     0.502     0.326     0.074
+2.4528                    0.946     0.742     0.559     0.295
+4.8954                    1.407     1.152     0.968     0.701
+
+SDFFQHDX2_HOLD_SE_FALLING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.042     0.305     0.645     1.120
+0.9872                   -0.317     0.032     0.372     0.847
+2.4528                   -0.579    -0.226     0.115     0.592
+4.8954                   -0.942    -0.585    -0.242     0.236
+
+============================================================
+SDFFQHDX2_FULL_AXIS_ROWS
+============================================================
+
+SDFFQHDX2_CN_TO_Q_LOAD_AXIS_PF: 0.0010 0.0506 0.1001 0.1992 0.3975 0.7940 1.5870
+SDFFQHDX2_CN_TO_Q_INPUT_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+SDFFQHDX2_CONSTRAINT_SLOPE_AXIS_NS: 0.0102 0.9872 2.4528 4.8954
+
+============================================================
+SDFFQHDX2_NOTES_FOR_SPADMIC
+============================================================
+
+SDFFQHDX2_DONT_USE: true
+SDFFQHDX2_D_CAP_FF: 3.33
+SDFFQHDX2_CN_CAP_FF: 3.80
+SDFFQHDX2_SD_CAP_FF: 2.98
+SDFFQHDX2_SE_CAP_FF: 5.89
+CN_CAP_OVER_D_CAP_RATIO: 1.141
+SE_CAP_OVER_D_CAP_RATIO: 1.769
+
+1SDFF_D_LOAD_PF: 0.00333
+2SDFF_D_LOAD_PF: 0.00666
+4SDFF_D_LOAD_PF: 0.01332
+8SDFF_D_LOAD_PF: 0.02664
+16SDFF_D_LOAD_PF: 0.05328
+32SDFF_D_LOAD_PF: 0.10656
+
+1SDFF_CN_LOAD_PF: 0.00380
+2SDFF_CN_LOAD_PF: 0.00760
+4SDFF_CN_LOAD_PF: 0.01520
+8SDFF_CN_LOAD_PF: 0.03040
+16SDFF_CN_LOAD_PF: 0.06080
+32SDFF_CN_LOAD_PF: 0.12160
+
+NOTE:
+- SDFFQHDX2 is marked dont_use=true in XLIBD.
+- Do not select this cell for normal synthesis unless there is an explicit scan/DFT reason.
+- Its CN cap is 3.80 fF, slightly heavier than DFRRQHDX2/DFRRQHDX4 clock caps.
+- SE cap is high at 5.89 fF and should not be left floating without proper scan tie-off strategy.
+============================================================
+SCAN_DFF_CELL_SUMMARY_ADD
+============================================================
+
+CELL        TYPE                        DONT_USE    AREA_UM2    CN_CAP_PF    CN_CAP_FF    D_CAP_PF    D_CAP_FF    SD_CAP_PF    SD_CAP_FF    SE_CAP_PF    SE_CAP_FF    INPUT_MAX_TRAN_NS    Q_MAX_CAP_PF    Q_MAX_CAP_FF    Q_MAX_FANOUT    STATIC_DEFAULT_PW    DYN_ENERGY_FORMULA          DYN_INPUT_ENERGY
+SDFFQHDX4   NEGEDGE_DFF_SCAN_SINGLE_Q   true        70.25       0.00380      3.80        0.00333     3.33        0.00299      2.99        0.00589      5.89        4.8954               3.16300         3163.00         1330            17.99000             E_d=0.19219+3.23671*L    E_inp=0.07391
+
+SDFFQHDX4_STATIC_POWER_CONDITIONS_PW:
+default: 17.99000
+Q*SD*!SE: 22.66783
+D*Q*!SD*!SE: 22.15020
+!D*Q*SE: 19.69850
+D*Q*SD*SE: 19.30340
+!CN*D*!Q*!SE: 17.23005
+CN*!Q*!SE: 17.20755
+!CN*D*!Q*!SD*SE: 14.98375
+!D*Q*SD*SE: 14.86885
+CN*D*!Q*!SD*SE: 14.66030
+!D*!Q*!SD*SE: 12.73185
+!CN*D*!Q*!SD*SE: 12.33970
+
+============================================================
+SDFFQHDX4_SELECTED_TIMING_AT_INPUT_SLOPE_0.6210_NS
+============================================================
+
+SDFFQHDX4_CN_TO_Q:
+CELL        PATH     LOAD_PF    TPLH_NS    TPHL_NS    TR_LH_NS    TF_HL_NS
+SDFFQHDX4   CN->Q    0.0010     0.6020     1.0463     0.0556     0.1264
+SDFFQHDX4   CN->Q    0.0998     0.7515     1.2333     0.1958     0.2441
+SDFFQHDX4   CN->Q    0.1986     0.8614     1.3388     0.3269     0.3081
+SDFFQHDX4   CN->Q    0.3963     1.0686     1.4955     0.5992     0.4265
+SDFFQHDX4   CN->Q    0.7915     1.4781     1.7478     1.1652     0.6676
+SDFFQHDX4   CN->Q    1.5820     2.2957     2.1927     2.3026     1.1722
+SDFFQHDX4   CN->Q    3.1630     3.9288     3.0455     4.5599     2.2306
+
+============================================================
+SDFFQHDX4_MAXIMUM_CELL_CONSTRAINTS_SUMMARY
+============================================================
+
+CELL        CONSTRAINT                 EDGE/SENSE    VALUE_NS
+SDFFQHDX4   MIN_WIDTH_CN_HIGH           high          0.3146
+SDFFQHDX4   MIN_WIDTH_CN_LOW            low           0.7715
+SDFFQHDX4   SETUP_D_TO_CN_RISE          rise          0.2547
+SDFFQHDX4   SETUP_D_TO_CN_FALL          fall          1.5149
+SDFFQHDX4   HOLD_D_TO_CN_RISE           rise          1.6190
+SDFFQHDX4   HOLD_D_TO_CN_FALL           fall          0.4736
+SDFFQHDX4   SETUP_SD_TO_CN_RISE         rise          0.2504
+SDFFQHDX4   SETUP_SD_TO_CN_FALL         fall          1.8326
+SDFFQHDX4   HOLD_SD_TO_CN_RISE          rise          1.6180
+SDFFQHDX4   HOLD_SD_TO_CN_FALL          fall          0.3537
+SDFFQHDX4   SETUP_SE_TO_CN_RISE         rise          0.6748
+SDFFQHDX4   SETUP_SE_TO_CN_FALL         fall          1.3981
+SDFFQHDX4   HOLD_SE_TO_CN_RISE          rise          1.7081
+SDFFQHDX4   HOLD_SE_TO_CN_FALL          fall          1.1200
+
+============================================================
+SDFFQHDX4_CONSTRAINT_TABLES
+============================================================
+
+SDFFQHDX4_MIN_PULSE_WIDTH_CN:
+CN_SLOPE_NS             0.0102    0.9872    2.4528    4.8954
+MIN_WIDTH_HIGH_NS       0.315     1.673     4.140     8.252
+MIN_WIDTH_LOW_NS        0.771     1.673     4.140     8.252
+
+SDFFQHDX4_SETUP_D_RISING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.118    -0.286    -0.582    -0.938
+0.9872                    0.252    -0.155    -0.498    -0.875
+2.4528                    0.255    -0.160    -0.518    -0.916
+4.8954                    0.137    -0.293    -0.660    -1.068
+
+SDFFQHDX4_HOLD_D_RISING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.088     0.433     0.768     1.241
+0.9872                    0.005     0.384     0.740     1.229
+2.4528                    0.074     0.469     0.840     1.343
+4.8954                    0.318     0.726     1.105     1.619
+
+SDFFQHDX4_SETUP_D_FALLING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                    0.452     0.261     0.092    -0.158
+0.9872                    0.727     0.530     0.351     0.091
+2.4528                    1.041     0.835     0.646     0.371
+4.8954                    1.515     1.306     1.111     0.832
+
+SDFFQHDX4_HOLD_D_FALLING_TO_CN_FALLING:
+D_SLOPE_NS \ CN_SLOPE_NS   0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.372    -0.143     0.099     0.474
+0.9872                   -0.597    -0.364    -0.111     0.274
+2.4528                   -0.833    -0.595    -0.332     0.068
+4.8954                   -1.178    -0.944    -0.675    -0.271
+
+SDFFQHDX4_SETUP_SD_RISING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.120    -0.275    -0.578    -0.936
+0.9872                    0.250    -0.142    -0.477    -0.854
+2.4528                    0.237    -0.160    -0.504    -0.893
+4.8954                    0.077    -0.329    -0.675    -1.069
+
+SDFFQHDX4_HOLD_SD_RISING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.078     0.426     0.764     1.240
+0.9872                   -0.005     0.364     0.719     1.206
+2.4528                    0.080     0.460     0.822     1.320
+4.8954                    0.368     0.751     1.116     1.618
+
+SDFFQHDX4_SETUP_SD_FALLING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.589     0.386     0.212    -0.038
+0.9872                    0.883     0.678     0.495     0.233
+2.4528                    1.257     1.042     0.847     0.573
+4.8954                    1.833     1.609     1.406     1.122
+
+SDFFQHDX4_HOLD_SD_FALLING_TO_CN_FALLING:
+SD_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.504    -0.269    -0.021     0.354
+0.9872                   -0.749    -0.511    -0.255     0.133
+2.4528                   -1.046    -0.802    -0.534    -0.135
+4.8954                   -1.493    -1.245    -0.970    -0.562
+
+SDFFQHDX4_SETUP_SE_RISING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.641     0.439     0.265     0.015
+0.9872                    0.675     0.472     0.298     0.049
+2.4528                    0.566     0.362     0.187    -0.063
+4.8954                    0.307     0.105    -0.070    -0.321
+
+SDFFQHDX4_HOLD_SE_RISING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.088     0.436     0.775     1.251
+0.9872                    0.050     0.420     0.773     1.258
+2.4528                    0.143     0.534     0.902     1.400
+4.8954                    0.411     0.818     1.194     1.708
+
+SDFFQHDX4_SETUP_SE_FALLING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                    0.477     0.279     0.108    -0.137
+0.9872                    0.703     0.503     0.327     0.073
+2.4528                    0.946     0.741     0.559     0.295
+4.8954                    1.398     1.153     0.968     0.700
+
+SDFFQHDX4_HOLD_SE_FALLING_TO_CN_FALLING:
+SE_SLOPE_NS \ CN_SLOPE_NS  0.0102    0.9872    2.4528    4.8954
+0.0102                   -0.042     0.305     0.644     1.120
+0.9872                   -0.318     0.032     0.371     0.847
+2.4528                   -0.579    -0.226     0.115     0.591
+4.8954                   -0.944    -0.585    -0.243     0.237
+
+============================================================
+SDFFQHDX4_FULL_AXIS_ROWS
+============================================================
+
+SDFFQHDX4_CN_TO_Q_LOAD_AXIS_PF: 0.0010 0.0998 0.1986 0.3963 0.7915 1.5820 3.1630
+SDFFQHDX4_CN_TO_Q_INPUT_SLOPE_AXIS_NS: 0.0102 0.1632 0.3156 0.6210 1.2318 2.4528 4.8954
+
+SDFFQHDX4_CONSTRAINT_SLOPE_AXIS_NS: 0.0102 0.9872 2.4528 4.8954
+
+============================================================
+SDFFQHDX4_NOTES_FOR_SPADMIC
+============================================================
+
+SDFFQHDX4_DONT_USE: true
+SDFFQHDX4_D_CAP_FF: 3.33
+SDFFQHDX4_CN_CAP_FF: 3.80
+SDFFQHDX4_SD_CAP_FF: 2.99
+SDFFQHDX4_SE_CAP_FF: 5.89
+CN_CAP_OVER_D_CAP_RATIO: 1.141
+SE_CAP_OVER_D_CAP_RATIO: 1.769
+
+1SDFF_D_LOAD_PF: 0.00333
+2SDFF_D_LOAD_PF: 0.00666
+4SDFF_D_LOAD_PF: 0.01332
+8SDFF_D_LOAD_PF: 0.02664
+16SDFF_D_LOAD_PF: 0.05328
+32SDFF_D_LOAD_PF: 0.10656
+
+1SDFF_CN_LOAD_PF: 0.00380
+2SDFF_CN_LOAD_PF: 0.00760
+4SDFF_CN_LOAD_PF: 0.01520
+8SDFF_CN_LOAD_PF: 0.03040
+16SDFF_CN_LOAD_PF: 0.06080
+32SDFF_CN_LOAD_PF: 0.12160
+
+NOTE:
+- SDFFQHDX4 is marked dont_use=true in XLIBD.
+- Do not select this cell for normal synthesis unless there is an explicit scan/DFT reason.
+- Capacitances are nearly identical to SDFFQHDX2, but Q drive and Q max cap are larger.
+- SE cap is high at 5.89 fF and should not be left floating without proper scan tie-off strategy.
+
+============================================================
+TO_ADD_NEXT_CELL_TEMPLATE
+============================================================
+
+CELL_SUMMARY_ROW:
+CELL    TYPE    AREA_UM2    A_CAP_PF/C_CAP_PF/D_CAP_PF/RN_CAP_PF    Q_MAX_CAP_PF    Q_MAX_FANOUT    STATIC_DEFAULT_PW    DYN_ENERGY_FORMULA
+
+SELECTED_TIMING_ROWS:
+CELL    PATH    LOAD_PF    TPLH_NS    TPHL_NS    TR_LH_NS    TF_HL_NS
+
+CONSTRAINT_ROWS:
+CELL    CONSTRAINT    VALUE_NS
+
+FULL_AXIS_ROWS:
+CELL_LOAD_AXIS_PF:
+CELL_SLOPE_AXIS_NS:

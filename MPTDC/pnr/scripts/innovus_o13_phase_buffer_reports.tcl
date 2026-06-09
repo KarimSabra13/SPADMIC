@@ -13,6 +13,19 @@
 set ::env(MPTDC_O12B_SOURCE_ONLY) 1
 source [file join [file dirname [file normalize [info script]]] innovus_o12b_phase_buffer_reports.tcl]
 
+proc mptdc_o13_source_xlibd_config {} {
+    set script_dir [file dirname [file normalize [info script]]]
+    set cfg [file normalize [file join $script_dir .. config xlibd_spadmic_typical_cell_values.tcl]]
+    if {[file readable $cfg]} {
+        source $cfg
+        return $cfg
+    }
+    puts "MPTDC_O13_WARN: XLIBD config not readable: $cfg"
+    return ""
+}
+
+mptdc_o13_source_xlibd_config
+
 proc mptdc_o13_reports_dir {} {
     if {[info exists ::o13(reports_dir)]} {
         return $::o13(reports_dir)
@@ -124,6 +137,91 @@ proc mptdc_o13_delay_ps {a_pin q_pin} {
     return [mptdc_o12b_delay_ps $a_pin $q_pin]
 }
 
+proc mptdc_o13_xlibd_get {key default_value} {
+    if {[llength [info commands mptdc_xlibd_get]] > 0} {
+        return [mptdc_xlibd_get $key $default_value]
+    }
+    return $default_value
+}
+
+proc mptdc_o13_xlibd_cell {cell field default_value} {
+    if {[llength [info commands mptdc_xlibd_cell]] > 0} {
+        return [mptdc_xlibd_cell $cell $field $default_value]
+    }
+    return $default_value
+}
+
+proc mptdc_o13_xlibd_budget_ff {kind} {
+    if {[llength [info commands mptdc_xlibd_analog_budget_ff]] > 0} {
+        return [mptdc_xlibd_analog_budget_ff $kind]
+    }
+    if {$kind eq "strict"} { return 58.72 }
+    if {$kind eq "cn"} { return 75.59 }
+    return ""
+}
+
+proc mptdc_o13_xlibd_ratio_or_bound {cap_ff bound_ff kind} {
+    set budget [mptdc_o13_xlibd_budget_ff $kind]
+    if {[llength [info commands mptdc_xlibd_ratio]] > 0} {
+        set ratio [mptdc_xlibd_ratio $cap_ff $budget]
+    } else {
+        set ratio [mptdc_o11_ratio $cap_ff $budget]
+    }
+    if {$ratio ne ""} { return $ratio }
+    if {[string is double -strict $bound_ff] && [string is double -strict $budget] && $budget > 0.0} {
+        return [format "<=%.2f" [expr {$bound_ff / $budget}]]
+    }
+    return ""
+}
+
+proc mptdc_o13_xlibd_equiv_or_bound {cap_ff bound_ff kind} {
+    set value ""
+    if {[llength [info commands mptdc_xlibd_equivalent_loads]] > 0} {
+        set value [mptdc_xlibd_equivalent_loads $cap_ff $kind]
+    }
+    if {$value ne ""} { return $value }
+    if {[llength [info commands mptdc_xlibd_equivalent_loads]] > 0 && [string is double -strict $bound_ff]} {
+        set bound_value [mptdc_xlibd_equivalent_loads $bound_ff $kind]
+        if {$bound_value ne ""} { return "<=$bound_value" }
+    }
+    return ""
+}
+
+proc mptdc_o13_xlibd_driver_suitability {cell_type cap_ff fanout transition_ps} {
+    set max_cap [mptdc_o13_xlibd_cell $cell_type output_max_cap_ff ""]
+    set max_fanout [mptdc_o13_xlibd_cell $cell_type output_max_fanout ""]
+    if {$cell_type eq ""} { return "DRIVER_CELL_UNKNOWN" }
+    if {[string is double -strict $cap_ff] && [string is double -strict $max_cap] && $cap_ff > $max_cap} {
+        return "OVER_XLIBD_OUTPUT_MAX_CAP"
+    }
+    if {[string is double -strict $fanout] && [string is double -strict $max_fanout] && $fanout > $max_fanout} {
+        return "OVER_XLIBD_OUTPUT_MAX_FANOUT"
+    }
+    if {[string is double -strict $transition_ps] && $transition_ps > 750.0} {
+        return "TRANSITION_FAIL_REVIEW_DRIVER_OR_ROUTE"
+    }
+    if {[string is double -strict $transition_ps] && $transition_ps > 500.0} {
+        return "TRANSITION_WARNING_REVIEW_ROUTE"
+    }
+    if {$cell_type eq "BUHDX12"} {
+        return "BUHDX12_SUITABLE_FOR_O13_REVIEW"
+    }
+    return "UNDER_XLIBD_LIMITS_REVIEW_TRANSITION"
+}
+
+proc mptdc_o13_write_xlibd_load_row {fh family tap stage source_pin net cap_pf cap_ff bound_ff driver_cell_type driver_input_cap_ff driver_output_max_cap_ff driver_output_max_fanout suitability notes} {
+    set strict_ratio [mptdc_o13_xlibd_ratio_or_bound $cap_ff $bound_ff strict]
+    set cn_ratio [mptdc_o13_xlibd_ratio_or_bound $cap_ff $bound_ff cn]
+    set equiv_d [mptdc_o13_xlibd_equiv_or_bound $cap_ff $bound_ff d]
+    set equiv_c [mptdc_o13_xlibd_equiv_or_bound $cap_ff $bound_ff c]
+    set equiv_rn [mptdc_o13_xlibd_equiv_or_bound $cap_ff $bound_ff rn]
+    puts $fh [join [list \
+        $family $tap $stage [mptdc_o12b_csv $source_pin] [mptdc_o12b_csv $net] \
+        $cap_pf $cap_ff $bound_ff $strict_ratio $cn_ratio $equiv_d $equiv_c $equiv_rn \
+        [mptdc_o12b_csv $driver_cell_type] $driver_input_cap_ff $driver_output_max_cap_ff \
+        $driver_output_max_fanout $suitability [mptdc_o12b_csv $notes]] ","]
+}
+
 proc mptdc_o13_write_stage_placement {fh family tap stage inst cell_type ro_inst ro_x ro_y pd_x pd_y placement_numeric_var min_ro_dist_var max_ro_dist_var} {
     upvar $placement_numeric_var placement_numeric
     upvar $min_ro_dist_var min_ro_dist
@@ -169,6 +267,9 @@ proc mptdc_o13_write_reports {} {
     set route_path "$reports_dir/phase_buffer_route_summary.csv"
     set sink_path "$reports_dir/ro_phase_sink_classification.csv"
     set summary_path "$reports_dir/phase_buffer_balance_summary.md"
+    set xlibd_path "$reports_dir/phase_net_loads_xlibd_enhanced.csv"
+    set xlibd_budget_path "$reports_dir/phase_net_load_budget_summary.md"
+    set xlibd_interp_path "$reports_dir/phase_buffer_xlibd_interpretation.md"
 
     set raw_fh [open $raw_path w]
     puts $raw_fh "family,tap,raw_ro_pin,matched_raw_pin_count,raw_net,raw_fanout,raw_net_total_cap_pf,raw_net_total_cap_ff,raw_net_cap_bound_ff,budget_label,strict_ratio,cn_ratio,isolation_input_pin,sinks,notes"
@@ -190,6 +291,9 @@ proc mptdc_o13_write_reports {} {
 
     set sink_fh [open $sink_path w]
     puts $sink_fh "family,tap,source_pin,net,sink_pin,sink_class,sink_pin_cap_pf,sink_pin_cap_ff"
+
+    set xlibd_fh [open $xlibd_path w]
+    puts $xlibd_fh "family,tap,stage,source_pin,net,actual_cap_pf,actual_cap_fF,cap_bound_fF,analog_budget_ratio_strict,analog_budget_ratio_cn,equivalent_DFRRQHDX2_D_inputs,equivalent_DFRRQHDX2_C_inputs,equivalent_DFRRQHDX2_RN_inputs,driver_cell_type,driver_input_cap_fF,driver_output_max_cap_fF,driver_output_max_fanout,phase_driver_suitability,notes"
 
     array set raw_labels {}
     array set out_labels {}
@@ -293,11 +397,11 @@ proc mptdc_o13_write_reports {} {
             set raw_label [mptdc_o12_budget_label_from_source $raw_total_ff $raw_bound_ff 1]
             if {![info exists raw_labels($raw_label)]} { set raw_labels($raw_label) 0 }
             incr raw_labels($raw_label)
-            set raw_strict [mptdc_o11_ratio $raw_total_ff 58.72]
-            set raw_cn [mptdc_o11_ratio $raw_total_ff 75.59]
+            set raw_strict [mptdc_o13_xlibd_ratio_or_bound $raw_total_ff "" strict]
+            set raw_cn [mptdc_o13_xlibd_ratio_or_bound $raw_total_ff "" cn]
             if {$raw_strict eq "" && $raw_bound_ff ne ""} {
-                set raw_strict [format "<=%.2f" [expr {$raw_bound_ff / 58.72}]]
-                set raw_cn [format "<=%.2f" [expr {$raw_bound_ff / 75.59}]]
+                set raw_strict [mptdc_o13_xlibd_ratio_or_bound "" $raw_bound_ff strict]
+                set raw_cn [mptdc_o13_xlibd_ratio_or_bound "" $raw_bound_ff cn]
             }
             if {[string is double -strict $raw_total_ff] && ($max_raw_cap_ff eq "" || $raw_total_ff > $max_raw_cap_ff)} {
                 set max_raw_cap_ff $raw_total_ff
@@ -308,6 +412,11 @@ proc mptdc_o13_write_reports {} {
                 $family $tap [mptdc_o12b_csv $raw_pin] [llength $raw_pins] [mptdc_o12b_csv $raw_net] \
                 $raw_fanout $raw_total_pf $raw_total_ff $raw_bound_ff $raw_label $raw_strict $raw_cn \
                 [mptdc_o12b_csv $iso_a_pin] [mptdc_o12b_csv $raw_sinks] [mptdc_o12b_csv [join $raw_notes ";"]]] ","]
+
+            set xlibd_iso_input_cap [mptdc_o13_xlibd_cell BUHDX4 input_cap_ff 10.56]
+            set raw_xlibd_note "receiver_cell=BUHDX4;receiver_input_cap_ff=$xlibd_iso_input_cap;raw_ro_load_budget_is_analog_authoritative"
+            mptdc_o13_write_xlibd_load_row $xlibd_fh $family $tap raw_ro_source $raw_pin $raw_net \
+                $raw_total_pf $raw_total_ff $raw_bound_ff RO_tune4 "" "" "" $raw_label $raw_xlibd_note
 
             set iso_total_data [mptdc_o12b_net_metric_resolved $iso_net_obj total_cap $iso_prop_path]
             set iso_route_data [mptdc_o12b_net_metric_resolved $iso_net_obj route_length $iso_prop_path]
@@ -388,8 +497,8 @@ proc mptdc_o13_write_reports {} {
             set drv_in_cap_pf [lindex [mptdc_o12b_pin_metric $drv_a_pin cap] 0]
             set drv_in_cap_ff [mptdc_o12b_pf_to_ff $drv_in_cap_pf]
             set out_label [mptdc_o11_budget_label $total_ff]
-            set out_strict [mptdc_o11_ratio $total_ff 58.72]
-            set out_cn [mptdc_o11_ratio $total_ff 75.59]
+            set out_strict [mptdc_o13_xlibd_ratio_or_bound $total_ff "" strict]
+            set out_cn [mptdc_o13_xlibd_ratio_or_bound $total_ff "" cn]
             set out_status [expr {$total_pf ne "" ? "FINAL_DRIVER_OUTPUT_QUANTIFIED" : "FINAL_DRIVER_OUTPUT_UNQUANTIFIED"}]
             if {![info exists out_labels($out_label)]} { set out_labels($out_label) 0 }
             incr out_labels($out_label)
@@ -406,6 +515,15 @@ proc mptdc_o13_write_reports {} {
                 [llength $sink_names] $pd_count $fast_tag_count $slow_epoch_count $metadata_count $other_count \
                 $iso_in_cap_pf $iso_in_cap_ff $drv_in_cap_pf $drv_in_cap_ff $raw_total_pf $raw_total_ff \
                 $out_label $out_strict $out_cn [mptdc_o12b_csv [join $out_notes ";"]]] ","]
+
+            set xlibd_drv_in_cap [mptdc_o13_xlibd_cell $drv_cell_type input_cap_ff ""]
+            set xlibd_drv_out_max_cap [mptdc_o13_xlibd_cell $drv_cell_type output_max_cap_ff ""]
+            set xlibd_drv_out_max_fanout [mptdc_o13_xlibd_cell $drv_cell_type output_max_fanout ""]
+            set xlibd_drv_suitability [mptdc_o13_xlibd_driver_suitability $drv_cell_type $total_ff $out_fanout $out_trans]
+            set out_xlibd_note "wire_cap_ff=$wire_ff;pin_cap_ff=$pin_ff;pd_load_count=$pd_count;fast_tag_load_count=$fast_tag_count;slow_epoch_load_count=$slow_epoch_count;metadata_load_count=$metadata_count;other_load_count=$other_count"
+            mptdc_o13_write_xlibd_load_row $xlibd_fh $family $tap final_phase_driver_output $drv_q_pin $out_net \
+                $total_pf $total_ff "" $drv_cell_type $xlibd_drv_in_cap $xlibd_drv_out_max_cap \
+                $xlibd_drv_out_max_fanout $xlibd_drv_suitability $out_xlibd_note
 
             set topo_status "TOPOLOGY_MATCH"
             set topo_notes [list]
@@ -479,6 +597,7 @@ proc mptdc_o13_write_reports {} {
     close $delay_fh
     close $route_fh
     close $sink_fh
+    close $xlibd_fh
 
     set raw_fixed [expr {$raw_matched == 16 && $raw_missing == 0 && $raw_fanout1 == 16 ? "YES" : "NO"}]
     set out_quantified [expr {$out_matched == 16 && $out_numeric == 16 ? "YES" : "NO"}]
@@ -486,15 +605,64 @@ proc mptdc_o13_write_reports {} {
     set placement_quantified [expr {$placement_numeric == 32 ? "YES" : "NO"}]
     set timing_quality [expr {$out_quantified eq "YES" && $topology_ok eq "YES" && $placement_quantified eq "YES" ? "YES" : "NO"}]
 
+    set bfh [open $xlibd_budget_path w]
+    puts $bfh "# O13 Phase Net XLIBD Load Budget Summary"
+    puts $bfh ""
+    puts $bfh "REPORT_STATUS=REVIEW_REQUIRED"
+    puts $bfh ""
+    puts $bfh "- Source run: `[mptdc_o13_source_run_id]`"
+    puts $bfh "- XLIBD library: `[mptdc_o13_xlibd_get source.library D_CELLS_HD_LPMOS_typ_1.80V_25C]`"
+    puts $bfh "- Strict analog RO D-load budget: `[mptdc_o13_xlibd_budget_ff strict] fF`."
+    puts $bfh "- CN/clock-like analog estimate: `[mptdc_o13_xlibd_budget_ff cn] fF`."
+    puts $bfh "- DFRRQHDX2 D/C/RN caps: `[mptdc_o13_xlibd_cell DFRRQHDX2 d_cap_ff 3.20]` / `[mptdc_o13_xlibd_cell DFRRQHDX2 clock_cap_ff 3.45]` / `[mptdc_o13_xlibd_cell DFRRQHDX2 reset_cap_ff 6.51]` fF."
+    puts $bfh "- BUHDX4 input cap: `[mptdc_o13_xlibd_cell BUHDX4 input_cap_ff 10.56] fF`."
+    puts $bfh "- BUHDX12 input cap: `[mptdc_o13_xlibd_cell BUHDX12 input_cap_ff 32.24] fF`."
+    if {$max_raw_cap_ff ne ""} {
+        puts $bfh "- Max measured raw RO source load: `$max_raw_cap_ff fF` at `$max_raw_desc`."
+        puts $bfh "- Max raw equivalent DFRRQHDX2 D/C/RN inputs: `[mptdc_o13_xlibd_equiv_or_bound $max_raw_cap_ff "" d]` / `[mptdc_o13_xlibd_equiv_or_bound $max_raw_cap_ff "" c]` / `[mptdc_o13_xlibd_equiv_or_bound $max_raw_cap_ff "" rn]`."
+    } else {
+        puts $bfh "- Max measured raw RO source load: `UNKNOWN`."
+    }
+    if {$max_out_cap_ff ne ""} {
+        puts $bfh "- Max measured final driver output load: `$max_out_cap_ff fF` at `$max_out_desc`."
+        puts $bfh "- Max final-output equivalent DFRRQHDX2 D/C/RN inputs: `[mptdc_o13_xlibd_equiv_or_bound $max_out_cap_ff "" d]` / `[mptdc_o13_xlibd_equiv_or_bound $max_out_cap_ff "" c]` / `[mptdc_o13_xlibd_equiv_or_bound $max_out_cap_ff "" rn]`."
+    } else {
+        puts $bfh "- Max measured final driver output load: `UNKNOWN`."
+    }
+    puts $bfh ""
+    puts $bfh "Required companion CSV: `phase_net_loads_xlibd_enhanced.csv`."
+    puts $bfh ""
+    puts $bfh "This summary does not waive analog RO budgets or Liberty design-rule checks."
+    close $bfh
+
+    set ifh [open $xlibd_interp_path w]
+    puts $ifh "# O13 Phase Buffer XLIBD Interpretation"
+    puts $ifh ""
+    puts $ifh "REPORT_STATUS=REVIEW_REQUIRED"
+    puts $ifh ""
+    puts $ifh "- Preferred topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`."
+    puts $ifh "- BUHDX4 input cap: `[mptdc_o13_xlibd_cell BUHDX4 input_cap_ff 10.56] fF`, safely below the strict `[mptdc_o13_xlibd_budget_ff strict] fF` analog budget."
+    puts $ifh "- BUHDX12 input cap: `[mptdc_o13_xlibd_cell BUHDX12 input_cap_ff 32.24] fF`, also under strict budget but less isolated than BUHDX4."
+    puts $ifh "- INHDX12 input cap: `[mptdc_o13_xlibd_cell INHDX12 input_cap_ff 55.64] fF`, close to strict budget; do not place directly on RO without analog review."
+    puts $ifh "- BUHDX4 at `0.8075 pF`: rise/fall transition `[mptdc_o13_xlibd_cell BUHDX4 timing.load_0p8075_pf.rise_transition_ns 1.1716]` / `[mptdc_o13_xlibd_cell BUHDX4 timing.load_0p8075_pf.fall_transition_ns 0.8442] ns`."
+    puts $ifh "- BUHDX12 at `0.6058 pF`: rise/fall transition `[mptdc_o13_xlibd_cell BUHDX12 timing.load_0p6058_pf.rise_transition_ns 0.3080]` / `[mptdc_o13_xlibd_cell BUHDX12 timing.load_0p6058_pf.fall_transition_ns 0.2295] ns`."
+    puts $ifh "- BUHDX12 at `1.2106 pF`: rise/fall transition `[mptdc_o13_xlibd_cell BUHDX12 timing.load_1p2106_pf.rise_transition_ns 0.5955]` / `[mptdc_o13_xlibd_cell BUHDX12 timing.load_1p2106_pf.fall_transition_ns 0.4391] ns`."
+    puts $ifh ""
+    puts $ifh "Decision: `BUHDX4 -> BUHDX12` remains the preferred O13 topology. If routed transition still fails, evaluate matched `BUHDX4 -> BUHDX12 -> BUHDX12` next."
+    puts $ifh ""
+    puts $ifh "This report is interpretation only. The timing engine remains the full Liberty view used by Genus/Innovus."
+    close $ifh
+
     set sfh [open $summary_path w]
     puts $sfh "# O13 Phase Distribution Balance Summary"
     puts $sfh ""
     puts $sfh "REPORT_STATUS=REVIEW_REQUIRED"
     puts $sfh ""
     puts $sfh "- Source run: `[mptdc_o13_source_run_id]`"
-    puts $sfh "- Strict analog D-load budget: `58.72 fF` (`0.05872 pF`)."
-    puts $sfh "- CN/clock-like estimate: `75.59 fF` (`0.07559 pF`)."
+    puts $sfh "- Strict analog D-load budget: `[mptdc_o13_xlibd_budget_ff strict] fF`."
+    puts $sfh "- CN/clock-like estimate: `[mptdc_o13_xlibd_budget_ff cn] fF`."
     puts $sfh "- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`."
+    puts $sfh "- XLIBD reference: `phase_net_loads_xlibd_enhanced.csv`, `phase_net_load_budget_summary.md`, `phase_buffer_xlibd_interpretation.md`."
     puts $sfh "- RAW_RO_LOAD_FIXED=$raw_fixed"
     puts $sfh "- FINAL_DRIVER_OUTPUT_LOAD_QUANTIFIED=$out_quantified"
     puts $sfh "- TOPOLOGY_MATCHED=$topology_ok"

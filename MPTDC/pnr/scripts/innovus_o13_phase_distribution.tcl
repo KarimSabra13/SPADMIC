@@ -5,8 +5,9 @@
 #
 #   RO_tune4/S[n] -> BUHDX4 u_iso -> BUHDX12 u_drv -> phase fabric
 #
-# No route, CTS, RTL, SDC, Liberty, packet, or calibration behavior is modified
-# by this script.
+# No route, CTS, RTL, Liberty, packet, or calibration behavior is modified by
+# this script.  It may apply a documented in-memory provisional IO set_load for
+# block-level timing reports.
 # =============================================================================
 
 set ::env(MPTDC_O12B_SOURCE_ONLY) 1
@@ -66,6 +67,7 @@ proc mptdc_o13_write_manifest {} {
     puts $fh "source_result_dir: $o13(source_result_dir)"
     puts $fh "source_checkpoint_dat: $o13(source_checkpoint_dat)"
     puts $fh "source_restore_tcl: $o13(source_restore_tcl)"
+    puts $fh "io_load_class: [mptdc_o13_env MPTDC_PNR_IO_LOAD_CLASS medium]"
     puts $fh "labels: O13_PHASE_DISTRIBUTION_TREE_CLEANUP REPORT_ONLY NOT_FINAL_SIGNOFF"
     close $fh
 }
@@ -103,6 +105,74 @@ proc mptdc_o13_write_timing_summary {} {
     close $fh
 }
 
+proc mptdc_o13_apply_io_load_model {} {
+    global o13
+
+    set class [mptdc_o13_env MPTDC_PNR_IO_LOAD_CLASS medium]
+    if {[llength [info commands mptdc_xlibd_normalize_io_load_class]] > 0} {
+        set class [mptdc_xlibd_normalize_io_load_class $class]
+    }
+    set load_pf ""
+    set load_ff ""
+    set d_inputs ""
+    if {[llength [info commands mptdc_xlibd_io_load_class_value]] > 0} {
+        set load_pf [mptdc_xlibd_io_load_class_value $class load_pf]
+        set load_ff [mptdc_xlibd_io_load_class_value $class load_ff]
+        set d_inputs [mptdc_xlibd_io_load_class_value $class d_inputs]
+    }
+    if {$load_pf eq ""} {
+        set class medium
+        set load_pf 0.0256
+        set load_ff 25.6
+        set d_inputs 8
+    }
+
+    set outputs [list]
+    set output_names [list]
+    set apply_status "NOT_APPLIED"
+    set apply_error ""
+    if {[catch {set outputs [all_outputs]} apply_error]} {
+        set outputs [list]
+        set apply_status "FAILED_ALL_OUTPUTS"
+    } elseif {[llength $outputs] == 0} {
+        set apply_status "FAILED_NO_OUTPUTS"
+    } elseif {[catch {set_load $load_pf $outputs} apply_error]} {
+        set apply_status "FAILED_SET_LOAD"
+    } else {
+        set apply_status "APPLIED_TO_ALL_OUTPUTS"
+    }
+    if {[llength $outputs] > 0 && [llength [info commands mptdc_o11_object_names]] > 0} {
+        set output_names [mptdc_o11_object_names $outputs]
+    }
+
+    set fh [open "$o13(reports_dir)/io_load_model.rpt" w]
+    puts $fh "# O13 XLIBD IO Load Model"
+    puts $fh ""
+    puts $fh "REPORT_STATUS=PROVISIONAL_BLOCK_IO_MODEL_NOT_PAD_SIGNOFF"
+    puts $fh ""
+    puts $fh "MPTDC_PNR_IO_LOAD_CLASS=$class"
+    puts $fh "DFRRQHDX2_D_INPUTS_EQUIVALENT=$d_inputs"
+    puts $fh "OUTPUT_LOAD_PF=$load_pf"
+    puts $fh "OUTPUT_LOAD_FF=$load_ff"
+    puts $fh "APPLY_STATUS=$apply_status"
+    if {$apply_error ne "" && $apply_status ne "APPLIED_TO_ALL_OUTPUTS"} {
+        puts $fh "APPLY_ERROR=$apply_error"
+    }
+    puts $fh ""
+    puts $fh "Important outputs to review:"
+    foreach pattern {acq_data_o narrow_data_o csr_rdata_o csr_rvalid_o acq_valid_o} {
+        puts $fh "- $pattern"
+    }
+    puts $fh ""
+    puts $fh "All outputs matched: [llength $output_names]"
+    foreach name [lrange $output_names 0 127] {
+        puts $fh "- $name"
+    }
+    puts $fh ""
+    puts $fh "This load model is only for block-level feasibility. It is not pad-level signoff."
+    close $fh
+}
+
 proc mptdc_o13_write_summary {} {
     global o13
     set fh [open "$o13(reports_dir)/SUMMARY.md" w]
@@ -114,7 +184,9 @@ proc mptdc_o13_write_summary {} {
     puts $fh "- Source run: `$o13(source_run_id)`"
     puts $fh "- Mode: report-only restore of an O13 routed checkpoint."
     puts $fh "- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`."
-    puts $fh "- No routing, CTS, RTL, SDC, Liberty, packet, or calibration behavior is modified."
+    puts $fh "- Provisional IO load report: `io_load_model.rpt`."
+    puts $fh "- No routing, CTS, RTL, Liberty, packet, or calibration behavior is modified."
+    puts $fh "- IO timing uses the documented in-memory provisional load model from `io_load_model.rpt`."
     puts $fh "- Labels: `O13_PHASE_DISTRIBUTION_TREE_CLEANUP`, `REPORT_ONLY`, `NOT_FINAL_SIGNOFF`."
     puts $fh "- Main decision report: `phase_buffer_balance_summary.md`."
     close $fh
@@ -136,6 +208,10 @@ proc mptdc_o13_main {} {
     mptdc_o12b_capture_candidates "$o13(reports_dir)/report_clocks.rpt" \
         "O13 restored checkpoint clocks" [list {report_clocks}]
     mptdc_o12b_stage_mark report_clocks done
+
+    mptdc_o12b_stage_mark io_load_model start
+    mptdc_o13_apply_io_load_model
+    mptdc_o12b_stage_mark io_load_model done
 
     mptdc_o12b_stage_mark drv_max_cap start
     mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_cap.rpt" \
