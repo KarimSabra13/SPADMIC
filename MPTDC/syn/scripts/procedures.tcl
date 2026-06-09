@@ -90,7 +90,14 @@ proc mptdc_run_report_candidates {cmds rpt_file title} {
 
 proc mptdc_o13_abs3_enabled {} {
     return [expr {[info exists ::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR)] && \
-        $::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR) ne "0"}]
+        $::env(MPTDC_O13_ABS3_CLOCK_CDC_REPAIR) ne "0" || \
+        [info exists ::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION)] && \
+        $::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION) ne "0"}]
+}
+
+proc mptdc_o13_abs4_enabled {} {
+    return [expr {[info exists ::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION)] && \
+        $::env(MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION) ne "0"}]
 }
 
 proc mptdc_o13_abs3_expected_clock_names {kind} {
@@ -267,6 +274,157 @@ proc mptdc_o13_abs3_write_cdc_async_review {rpt_file} {
     close $fh
 }
 
+proc mptdc_o13_abs4_first_name {cmd} {
+    set names [mptdc_collect_names $cmd]
+    if {[llength $names] == 0} {
+        return "UNKNOWN"
+    }
+    return [lindex $names 0]
+}
+
+proc mptdc_o13_abs4_first_pin_pattern {patterns} {
+    foreach pattern $patterns {
+        set count [llength [get_pins -quiet -hierarchical $pattern]]
+        if {$count > 0} {
+            return [list $pattern $count]
+        }
+    }
+    return [list "" 0]
+}
+
+proc mptdc_o13_abs4_stage_pin_patterns {family tap inst pin} {
+    return [list \
+        [format {u_core/u_phase_buf_%s/gen_phase_buf[%d]/%s/%s} $family $tap $inst $pin] \
+        [format {u_core/u_phase_buf_%s/gen_phase_buf[%d].%s/%s} $family $tap $inst $pin] \
+        [format {u_core_u_phase_buf_%s/gen_phase_buf[%d].%s/%s} $family $tap $inst $pin] \
+        [format {u_core_u_phase_buf_%s_gen_phase_buf_%d__%s/%s} $family $tap $inst $pin] \
+        [format {*u_phase_buf_%s*gen_phase_buf*%d*%s/%s} $family $tap $inst $pin]]
+}
+
+proc mptdc_o13_abs4_raw_pin_patterns {family tap} {
+    return [list \
+        [format {u_core/u_osc_%s/u_ro_tune4/S[%d]} $family $tap] \
+        [format {u_core_u_osc_%s_u_ro_tune4/S[%d]} $family $tap] \
+        [format {*u_osc_%s*u_ro_tune4/S[%d]} $family $tap]]
+}
+
+proc mptdc_o13_abs4_q1_patterns {tap} {
+    return [list \
+        [format {*gen_pd_row[%d].gen_pd_col*.u_pd/q1_reg*/D} $tap] \
+        [format {*gen_pd_row[%d]*gen_pd_col*u_pd*/q1_reg*/D} $tap] \
+        [format {*gen_pd_row_%d__gen_pd_col*u_pd*/q1_reg*/D} $tap]]
+}
+
+proc mptdc_o13_abs4_write_phase_buffer_paths {rpt_file} {
+    set fh [open $rpt_file w]
+    puts $fh "# O13 Phase Buffer Topology Report"
+    puts $fh ""
+    puts $fh "This report is structural. Generated clocks can make RO->BUHDX4->BUHDX12 invisible as an ordinary data path, so the report traverses expected pins and clocks directly."
+    puts $fh ""
+    puts $fh "| family | tap | raw_ro_pin | buhdx4_a | buhdx4_q | buhdx12_a | buhdx12_q | raw_clock | buffer_clock | status |"
+    puts $fh "|---|---:|---|---|---|---|---|---|---|---|"
+
+    foreach family {slow fast} {
+        for {set tap 0} {$tap < 8} {incr tap} {
+            set raw_clock [expr {$tap == 0 ? "clk_osc_${family}" : "clk_osc_${family}_tap${tap}"}]
+            set buffer_clock [format {clk_osc_%s_buf_tap%d} $family $tap]
+            set raw_pin [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_raw_pin_patterns $family $tap] 0]]]
+            if {$raw_pin eq "UNKNOWN"} {
+                set raw_pin [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_raw_pin_patterns $family $tap] 1]]]
+            }
+            set iso_a [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_iso A] 0]]]
+            if {$iso_a eq "UNKNOWN"} {
+                set iso_a [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_iso A] 2]]]
+            }
+            set iso_q [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_iso Q] 0]]]
+            if {$iso_q eq "UNKNOWN"} {
+                set iso_q [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_iso Q] 2]]]
+            }
+            set drv_a [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_drv A] 0]]]
+            if {$drv_a eq "UNKNOWN"} {
+                set drv_a [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_drv A] 2]]]
+            }
+            set drv_q [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_drv Q] 0]]]
+            if {$drv_q eq "UNKNOWN"} {
+                set drv_q [mptdc_o13_abs4_first_name [list get_pins -quiet -hierarchical [lindex [mptdc_o13_abs4_stage_pin_patterns $family $tap u_drv Q] 2]]]
+            }
+
+            set status "OK_CHAIN_FOUND"
+            if {$raw_pin eq "UNKNOWN"} { set status "MISSING_RAW_PIN" }
+            if {$iso_a eq "UNKNOWN" || $iso_q eq "UNKNOWN"} { set status "MISSING_ISO_BUFFER" }
+            if {$drv_a eq "UNKNOWN" || $drv_q eq "UNKNOWN"} { set status "MISSING_DRIVER_BUFFER" }
+            if {[llength [get_clocks -quiet $buffer_clock]] == 0} { set status "MISSING_GENERATED_CLOCK" }
+            puts $fh "| $family | $tap | `$raw_pin` | `$iso_a` | `$iso_q` | `$drv_a` | `$drv_q` | `$raw_clock` | `$buffer_clock` | $status |"
+        }
+    }
+    puts $fh ""
+    puts $fh "Required status for abs4: every row should be OK_CHAIN_FOUND."
+    close $fh
+}
+
+proc mptdc_o13_abs4_write_pd_vernier_report {rpt_file} {
+    set fh [open $rpt_file w]
+    puts $fh "# O13 PD Intentional Vernier Paths"
+    puts $fh ""
+    puts $fh "These are the intended slow buffered phase samples into PD q1 sampler flops. They are measurement crossings, not ordinary synchronous setup paths."
+    puts $fh ""
+    puts $fh "| slow_tap | slow_clock | q1_endpoint_count | status |"
+    puts $fh "|---:|---|---:|---|"
+    set total 0
+    foreach tap {0 1 2 3 4 5 6 7} {
+        set slow_clock [format {clk_osc_slow_buf_tap%d} $tap]
+        set pattern_and_count [mptdc_o13_abs4_first_pin_pattern [mptdc_o13_abs4_q1_patterns $tap]]
+        set q1_count [lindex $pattern_and_count 1]
+        incr total $q1_count
+        set status "OK_INTENTIONAL_MEASUREMENT_CROSSING"
+        if {[llength [get_clocks -quiet $slow_clock]] != 1 || $q1_count != 8} {
+            set status "REVIEW_REQUIRED"
+        }
+        puts $fh "| $tap | `$slow_clock` | $q1_count | $status |"
+    }
+    puts $fh ""
+    puts $fh "PD_INTENTIONAL_VERNIER_EXPECTED=64"
+    puts $fh "PD_INTENTIONAL_VERNIER_MATCHED=$total"
+    set vernier_status [expr {$total == 64 ? "OK" : "REVIEW_REQUIRED"}]
+    puts $fh "PD_INTENTIONAL_VERNIER_STATUS=$vernier_status"
+    close $fh
+}
+
+proc mptdc_o13_abs4_write_clk_sys_reports {viol_rpt top_rpt} {
+    set clk_sys [get_clocks -quiet clk_sys]
+    if {[llength $clk_sys] == 0} {
+        mptdc_write_report_failure $viol_rpt "O13 abs4 clk_sys internal violations" "clk_sys clock not found."
+        mptdc_write_report_failure $top_rpt "O13 abs4 clk_sys internal top paths" "clk_sys clock not found."
+        return
+    }
+
+    set tmp "${viol_rpt}.tmp"
+    set fh [open $viol_rpt w]
+    puts $fh "# O13 abs4 clk_sys Internal Violations"
+    puts $fh ""
+    if {[catch {report_timing -from $clk_sys -to $clk_sys -max_paths 100 -max_slack 0.0 -path_type full_clock > $tmp} err]} {
+        puts $fh "FAILED: report_timing -from clk_sys -to clk_sys -max_paths 100 -max_slack 0.0 -path_type full_clock"
+        puts $fh $err
+    } else {
+        set in [open $tmp r]
+        set text [read $in]
+        close $in
+        if {[string match "*No paths found*" $text]} {
+            puts $fh "CLK_SYS_INTERNAL_STATUS=NO_VIOLATIONS_FOUND"
+            puts $fh ""
+            puts $fh "No negative-slack clk_sys internal setup paths were reported with -max_slack 0.0."
+        } else {
+            puts $fh $text
+        }
+    }
+    catch {file delete $tmp}
+    close $fh
+
+    if {[catch {report_timing -from $clk_sys -to $clk_sys -max_paths 100 -path_type full_clock > $top_rpt} err2]} {
+        mptdc_write_report_failure $top_rpt "O13 abs4 clk_sys internal top paths" $err2
+    }
+}
+
 proc mptdc_report_o13_abs3_timing {dir} {
     set raw_clocks [mptdc_o13_abs3_clock_collection [mptdc_o13_abs3_expected_clock_names raw]]
     set buf_clocks [mptdc_o13_abs3_clock_collection [mptdc_o13_abs3_expected_clock_names buffer]]
@@ -275,6 +433,9 @@ proc mptdc_report_o13_abs3_timing {dir} {
 
     mptdc_o13_abs3_write_clock_model_check "$dir/o13_clock_model_check.rpt"
     mptdc_o13_abs3_write_cdc_async_review "$dir/timing_cdc_async_review.rpt"
+    if {[mptdc_o13_abs4_enabled]} {
+        mptdc_o13_abs4_write_pd_vernier_report "$dir/timing_pd_intentional_vernier.rpt"
+    }
 
     set pd_endpoints [mptdc_o13_abs3_pin_collection [list \
         *gen_pd_row*gen_pd_col*u_pd*/q1_reg*/D \
@@ -288,19 +449,29 @@ proc mptdc_report_o13_abs3_timing {dir} {
         $pd_endpoints \
         200
 
-    mptdc_o13_abs3_run_timing_report \
-        "$dir/timing_clk_sys_violations.rpt" \
-        "O13 abs3 real clk_sys internal timing report" \
-        $clk_sys \
-        $clk_sys \
-        200
+    if {[mptdc_o13_abs4_enabled]} {
+        mptdc_o13_abs4_write_clk_sys_reports \
+            "$dir/timing_clk_sys_violations.rpt" \
+            "$dir/timing_clk_sys_internal_top100.rpt"
+    } else {
+        mptdc_o13_abs3_run_timing_report \
+            "$dir/timing_clk_sys_violations.rpt" \
+            "O13 abs3 real clk_sys internal timing report" \
+            $clk_sys \
+            $clk_sys \
+            200
+    }
 
-    mptdc_o13_abs3_run_timing_report \
-        "$dir/timing_o13_phase_buffer_paths.rpt" \
-        "O13 abs3 phase-buffer clock propagation timing report" \
-        $raw_clocks \
-        $buf_clocks \
-        64
+    if {[mptdc_o13_abs4_enabled]} {
+        mptdc_o13_abs4_write_phase_buffer_paths "$dir/timing_o13_phase_buffer_paths.rpt"
+    } else {
+        mptdc_o13_abs3_run_timing_report \
+            "$dir/timing_o13_phase_buffer_paths.rpt" \
+            "O13 abs3 phase-buffer clock propagation timing report" \
+            $raw_clocks \
+            $buf_clocks \
+            64
+    }
 }
 
 proc mptdc_collect_names {cmd} {
@@ -932,7 +1103,11 @@ proc mptdc_report_timing {report_dir} {
         [list *u_fifo* *u_sync_fifo* *u_narrow_tx* *u_tconv*]
 
     if {[mptdc_o13_abs3_enabled] && $stage eq "post_synthesis"} {
-        mptdc_message "Generating O13 abs3 clock/CDC repair timing reports"
+        if {[mptdc_o13_abs4_enabled]} {
+            mptdc_message "Generating O13 abs4 PD Vernier classification timing reports"
+        } else {
+            mptdc_message "Generating O13 abs3 clock/CDC repair timing reports"
+        }
         mptdc_report_o13_abs3_timing $dir
     }
 

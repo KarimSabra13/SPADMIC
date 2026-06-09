@@ -67,7 +67,10 @@ for file in \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_osc_fast_full_clock.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_clk_sys_full_clock.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_clk_sys_violations.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_clk_sys_internal_top100.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_pd_capture_hotspots.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/timing_pd_intentional_vernier.rpt" \
+  "${syn_dir}/reports/synthesis/post_synthesis/pd_vernier_exception_check.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_cdc_async_review.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/timing_o13_phase_buffer_paths.rpt" \
   "${syn_dir}/reports/synthesis/post_synthesis/o13_clock_model_check.rpt" \

@@ -13,11 +13,39 @@ from pathlib import Path
 PATH_RE = re.compile(r"^Path\s+(\d+):\s+(\S+)\s+\((-?\d+(?:\.\d+)?)\s+ps\)")
 
 
+def norm(value: str) -> str:
+    return value.lower()
+
+
 def read_text(path: Path) -> str:
     try:
         return path.read_text(errors="replace")
     except FileNotFoundError:
         return ""
+
+
+def is_pd_vernier_sampler(row: dict[str, str]) -> bool:
+    start_clock = row.get("start_clock", "")
+    end_clock = row.get("end_clock", "")
+    startpoint = norm(row.get("startpoint", ""))
+    endpoint = norm(row.get("endpoint", ""))
+    group = row.get("group", "")
+
+    source_is_slow_phase = (
+        start_clock.startswith("clk_osc_slow_buf_tap")
+        or "u_phase_buf_slow" in startpoint
+        or "slow_phase" in startpoint
+    )
+    dest_is_fast_pd_q1 = (
+        end_clock.startswith("clk_osc_fast_buf_tap")
+        and group.startswith("clk_osc_fast_buf_tap")
+        and "gen_pd_row" in endpoint
+        and "gen_pd_col" in endpoint
+        and "u_pd" in endpoint
+        and "q1_reg" in endpoint
+        and endpoint.endswith("/d")
+    )
+    return source_is_slow_phase and dest_is_fast_pd_q1
 
 
 def classify(row: dict[str, str]) -> str:
@@ -29,6 +57,8 @@ def classify(row: dict[str, str]) -> str:
     end_is_sys = end_clock == "clk_sys"
     start_is_osc = start_clock.startswith("clk_osc_")
     end_is_osc = end_clock.startswith("clk_osc_")
+    if is_pd_vernier_sampler(row):
+        return "PD_INTENTIONAL_VERNIER"
     if (start_is_sys and end_is_osc) or (start_is_osc and end_is_sys):
         if "u_hit_capture_bridge" in text or "snapshot" in text or "held" in text:
             return "HELD_BUS_CDC"
@@ -66,9 +96,17 @@ def classify_family(row: dict[str, str]) -> str:
     text = " ".join(row.values()).lower()
     start_clock = row.get("start_clock", "")
     end_clock = row.get("end_clock", "")
+    if row.get("classification") == "PD_INTENTIONAL_VERNIER":
+        return "PD_SLOW_PHASE_SAMPLED_BY_FAST_PD"
     if "u_phase_buf" in text or "phase_buffer" in text:
         if start_clock.startswith("clk_osc_") and end_clock.startswith("clk_osc_"):
             return "PHASE_BUFFER_CHAIN"
+    if "q1_reg" in text and "q2_reg" in text:
+        return "PD_Q1_TO_Q2_LOCAL_FAST"
+    if "q1_reg" in text and row.get("endpoint", "").lower().endswith("q1_reg/d"):
+        return "PD_Q1_LOCAL_FAST_CONTROL"
+    if "hit_latched_reg" in text and row.get("endpoint", "").lower().endswith("hit_latched_reg/d"):
+        return "PD_HIT_LATCH_LOCAL_FAST"
     if "nfast_hit_latched" in text:
         return "FAST_TAG_TO_PD_TS"
     if "hit_latched" in text and ("q1_reg" in text or "q2_reg" in text):
@@ -83,9 +121,20 @@ def classify_family(row: dict[str, str]) -> str:
         return "CLK_SYS_OTHER"
     if row.get("classification") == "HELD_BUS_CDC":
         return "HELD_BUS_CDC"
-    if row.get("classification") == "PD_INTENTIONAL_VERNIER":
-        return "PD_INTENTIONAL_VERNIER"
     return "OTHER"
+
+
+def review_status(row: dict[str, str]) -> str:
+    classification = row.get("classification", "UNKNOWN_REVIEW_REQUIRED")
+    if classification == "PD_INTENTIONAL_VERNIER":
+        return "INTENTIONAL_MEASUREMENT_CROSSING"
+    if classification == "UNKNOWN_REVIEW_REQUIRED":
+        return "REVIEW_REQUIRED"
+    if classification in {"HELD_BUS_CDC", "OSC_TO_SYS_HELD_BUS_CDC"}:
+        return "CDC_CONTRACT_REVIEW"
+    if classification in {"OSC_FAST_REAL", "OSC_SLOW_REAL", "CLK_SYS_REAL"}:
+        return "REAL_TIMING"
+    return "CLASSIFIED"
 
 
 def slack_ps(row: dict[str, str]) -> float:
@@ -121,6 +170,7 @@ def parse_report(path: Path) -> list[dict[str, str]]:
             if current:
                 current["classification"] = classify(current)
                 current["family"] = classify_family(current)
+                current["review_status"] = review_status(current)
                 rows.append(current)
             current = {
                 "report": str(path),
@@ -153,6 +203,7 @@ def parse_report(path: Path) -> list[dict[str, str]]:
     if current:
         current["classification"] = classify(current)
         current["family"] = classify_family(current)
+        current["review_status"] = review_status(current)
         rows.append(current)
     return rows
 
@@ -205,7 +256,7 @@ def main() -> int:
     for report in args.reports:
         rows.extend(parse_report(report))
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["classification", "family", "report", "path", "status", "slack_ps", "group", "start_clock", "end_clock", "startpoint", "endpoint"]
+    fields = ["classification", "family", "review_status", "report", "path", "status", "slack_ps", "group", "start_clock", "end_clock", "startpoint", "endpoint"]
     with args.out_csv.open("w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()

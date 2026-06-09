@@ -39,82 +39,84 @@ proc mptdc_sdc_object_names {objects} {
 }
 
 proc mptdc_try_false_path_pins {label patterns} {
-    set matched [list]
+    set matched_count 0
+    set to_failures 0
+    set through_failures 0
     foreach pattern $patterns {
-        set pins [get_pins -quiet -hierarchical $pattern]
-        if {[llength $pins] > 0} {
-            set matched [concat $matched $pins]
+        set pin_count [llength [get_pins -quiet -hierarchical $pattern]]
+        if {$pin_count == 0} {
+            continue
+        }
+        incr matched_count $pin_count
+
+        # Keep the get_pins command directly inside the SDC command.  Genus SDC
+        # mode can reject stringified Tcl collection handles when they are
+        # stored in variables and later interpolated.
+        if {[catch {set_false_path -to [get_pins -quiet -hierarchical $pattern]} err]} {
+            incr to_failures
+            puts "MPTDC_SDC_WARN: set_false_path -to failed for $label pattern $pattern: $err"
+        }
+        if {[catch {set_false_path -through [get_pins -quiet -hierarchical $pattern]} err]} {
+            incr through_failures
+            puts "MPTDC_SDC_WARN: set_false_path -through failed for $label pattern $pattern: $err"
         }
     }
 
-    if {[llength $matched] == 0} {
+    if {$matched_count == 0} {
         puts "MPTDC_SDC_WARN: no pins matched for $label"
         return
     }
 
-    set pin_names [mptdc_sdc_object_names $matched]
-    puts "MPTDC_SDC_INFO: false-pathing $label ([llength $pin_names] pins)"
-
-    set to_failures 0
-    set through_failures 0
-    foreach pin_name $pin_names {
-        if {[catch {set_false_path -to $pin_name} err]} {
-            incr to_failures
-            puts "MPTDC_SDC_WARN: set_false_path -to failed for $label pin $pin_name: $err"
-        }
-        if {[catch {set_false_path -through $pin_name} err]} {
-            incr through_failures
-            puts "MPTDC_SDC_WARN: set_false_path -through failed for $label pin $pin_name: $err"
-        }
-    }
+    puts "MPTDC_SDC_INFO: false-pathing $label ($matched_count pattern-expanded pins)"
     if {$to_failures == 0 && $through_failures == 0} {
-        puts "MPTDC_SDC_INFO: false-pathing $label applied without per-pin failures"
+        puts "MPTDC_SDC_INFO: false-pathing $label applied without pattern failures"
     } else {
         puts "MPTDC_SDC_WARN: false-pathing $label had to_failures=$to_failures through_failures=$through_failures"
     }
 }
 
 proc mptdc_try_set_max_delay_pins {label delay from_patterns to_patterns} {
-    set from_pins [list]
-    set to_pins [list]
+    set from_count 0
+    set to_count 0
     foreach pattern $from_patterns {
-        set pins [get_pins -quiet -hierarchical $pattern]
-        if {[llength $pins] > 0} {
-            set from_pins [concat $from_pins $pins]
-        }
+        incr from_count [llength [get_pins -quiet -hierarchical $pattern]]
     }
     foreach pattern $to_patterns {
-        set pins [get_pins -quiet -hierarchical $pattern]
-        if {[llength $pins] > 0} {
-            set to_pins [concat $to_pins $pins]
-        }
+        incr to_count [llength [get_pins -quiet -hierarchical $pattern]]
     }
 
-    if {[llength $from_pins] == 0 || [llength $to_pins] == 0} {
+    if {$from_count == 0 || $to_count == 0} {
         puts "MPTDC_SDC_WARN: max-delay pins not found for $label"
         return
     }
 
-    set from_names [mptdc_sdc_object_names $from_pins]
-    set to_names [mptdc_sdc_object_names $to_pins]
-    puts "MPTDC_SDC_INFO: max-delaying $label from [llength $from_names] pin(s) to [llength $to_names] pin(s)"
-    if {[catch {set_max_delay $delay -from $from_names -to $to_names} err]} {
-        puts "MPTDC_SDC_WARN: set_max_delay failed for $label with aggregate pin names: $err"
-        set failures 0
-        foreach from_name $from_names {
-            foreach to_name $to_names {
-                if {[catch {set_max_delay $delay -from $from_name -to $to_name} per_err]} {
-                    incr failures
-                    puts "MPTDC_SDC_WARN: set_max_delay failed for $label from $from_name to $to_name: $per_err"
-                }
+    puts "MPTDC_SDC_INFO: max-delaying $label from $from_count pattern-expanded pin(s) to $to_count pattern-expanded pin(s)"
+    set failures 0
+    set applied 0
+    foreach from_pattern $from_patterns {
+        set this_from_count [llength [get_pins -quiet -hierarchical $from_pattern]]
+        if {$this_from_count == 0} {
+            continue
+        }
+        foreach to_pattern $to_patterns {
+            set this_to_count [llength [get_pins -quiet -hierarchical $to_pattern]]
+            if {$this_to_count == 0} {
+                continue
+            }
+            if {[catch {set_max_delay $delay -from [get_pins -quiet -hierarchical $from_pattern] -to [get_pins -quiet -hierarchical $to_pattern]} per_err]} {
+                incr failures
+                puts "MPTDC_SDC_WARN: set_max_delay failed for $label from pattern $from_pattern to pattern $to_pattern: $per_err"
+            } else {
+                incr applied
             }
         }
-        if {$failures == 0} {
-            puts "MPTDC_SDC_INFO: max-delay $label applied with per-pin fallback"
-        }
+    }
+    if {$failures == 0} {
+        puts "MPTDC_SDC_INFO: max-delay $label applied across $applied pattern pair(s)"
+    } else {
+        puts "MPTDC_SDC_WARN: max-delay $label had failures=$failures applied=$applied"
     }
 }
-
 proc mptdc_try_case_analysis_port {value port_name} {
     set ports [get_ports -quiet $port_name]
     if {[llength $ports] == 0} {

@@ -14,6 +14,10 @@ fi
 if [[ "$RUN_MODE" == "O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR" ]]; then
   export MPTDC_O13_ABS3_CLOCK_CDC_REPAIR=1
 fi
+if [[ "$RUN_MODE" == "O13_ABS4_PD_VERNIER_CLASSIFICATION" ]]; then
+  export MPTDC_O13_ABS3_CLOCK_CDC_REPAIR=1
+  export MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION=1
+fi
 
 RESULT_DIR="$REPO_ROOT/results/genus_osc_pd/$RUN_ID"
 SNAPSHOT_TAG="genus_osc_pd_${RUN_ID}"
@@ -21,7 +25,9 @@ SNAPSHOT_DIR="$MPTDC_DIR/lab_snapshots/$SNAPSHOT_TAG"
 GENUS_LOG="$RESULT_DIR/genus_${RUN_ID}.log"
 ENV_FILE="$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
 FREQ_DEFINES="$SYN_DIR/inputs/mptdc_freq_modes.defines"
-if [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
+if [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
+  O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs4.sdc"
+elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
   O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs3.sdc"
 else
   O13_SDC="${O13_SDC_PATH:-$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_phase_distribution.sdc}"
@@ -45,10 +51,10 @@ case "$RUN_ID" in
 esac
 
 case "$RUN_MODE" in
-  validate_only|typical_synth|O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR) ;;
+  validate_only|typical_synth|O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR|O13_ABS4_PD_VERNIER_CLASSIFICATION) ;;
   *)
     echo "ERROR: unsupported MPTDC_O13_MODE=$RUN_MODE" >&2
-    echo "Supported: validate_only, typical_synth, O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR" >&2
+    echo "Supported: validate_only, typical_synth, O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR, O13_ABS4_PD_VERNIER_CLASSIFICATION" >&2
     exit 2
     ;;
 esac
@@ -149,6 +155,7 @@ export MPTDC_OSC_PD_USE_PROVISIONAL=0
 export MPTDC_OSC_PD_USE_PROVISIONAL_LIBERTY=0
 export MPTDC_OSC_PD_SDC_OVERLAY="$O13_SDC"
 export MPTDC_O13_CLOCK_MODEL_RPT="$RESULT_DIR/o13_clock_model_check.sdc.rpt"
+export MPTDC_O13_PD_VERNIER_RPT="$RESULT_DIR/pd_vernier_exception_check.rpt"
 export O1_RUN_FLAVOR="O13_PHASE_DISTRIBUTION_TREE_CLEANUP"
 export GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
 export MPTDC_OPT_GOAL="o13_phase_distribution_tree_cleanup"
@@ -242,7 +249,7 @@ write_sdc_failure_report() {
     echo "## Extracted SDC/Timing-Intent Diagnostics"
     echo
     if [[ -f "$GENUS_LOG" ]]; then
-      grep -nE 'SDC-|MPTDC_SDC_(WARN|INFO)|MPTDC_O13_ABS3_SDC_|MPTDC_O13_SDC_|set_false_path|set_max_delay|set_max_transition|set_clock_groups|TUI-61|TIM-234|report_timing' "$GENUS_LOG" || true
+      grep -nE 'SDC-|MPTDC_SDC_(WARN|INFO)|MPTDC_O13_ABS3_SDC_|MPTDC_O13_ABS4_SDC_|MPTDC_O13_SDC_|set_false_path|set_max_delay|set_max_transition|set_clock_groups|TUI-61|TIM-234|report_timing' "$GENUS_LOG" || true
     else
       echo "FAILED: Genus log not found."
     fi
@@ -261,7 +268,9 @@ run_timing_classification() {
     timing_violations.rpt \
     timing_pd_capture_hotspots.rpt \
     timing_clk_sys_violations.rpt \
+    timing_clk_sys_internal_top100.rpt \
     timing_cdc_async_review.rpt \
+    timing_pd_intentional_vernier.rpt \
     timing_o13_phase_buffer_paths.rpt; do
     if [[ -f "$RESULT_DIR/$file" ]]; then
       reports+=("$RESULT_DIR/$file")
@@ -298,6 +307,11 @@ BUFFER_PHASE_CLOCKS_EXPECTED=16
 BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=NO
 CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=NO
 UNKNOWN_REVIEW_REQUIRED_COUNT=NA
+PD_VERNIER_EXCEPTION_EXPECTED=64
+PD_VERNIER_EXCEPTION_MATCHED=NA
+PD_VERNIER_EXCEPTION_APPLIED=NA
+PD_VERNIER_EXCEPTION_OVERMATCH=NA
+SDC_COMMAND_FAILURE_COUNT=NA
 RAW_CLOCK_NAMES=(clk_osc_slow)
 BUFFER_CLOCK_NAMES=()
 for tap in 1 2 3 4 5 6 7; do
@@ -335,6 +349,17 @@ if [[ -f "$RESULT_DIR/timing_path_classification_summary.md" ]]; then
   UNKNOWN_REVIEW_REQUIRED_COUNT="$(awk -F': ' '/UNKNOWN_REVIEW_REQUIRED paths/ {print $2; exit}' "$RESULT_DIR/timing_path_classification_summary.md" | tr -d '`' || true)"
   UNKNOWN_REVIEW_REQUIRED_COUNT="${UNKNOWN_REVIEW_REQUIRED_COUNT:-NA}"
 fi
+if [[ -f "$RESULT_DIR/pd_vernier_exception_check.rpt" ]]; then
+  PD_VERNIER_EXCEPTION_MATCHED="$(awk -F= '/^PD_VERNIER_EXCEPTION_ENDPOINTS_FOUND=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
+  PD_VERNIER_EXCEPTION_MATCHED="${PD_VERNIER_EXCEPTION_MATCHED:-NA}"
+  PD_VERNIER_EXCEPTION_APPLIED="$(awk -F= '/^PD_VERNIER_EXCEPTION_APPLIED=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
+  PD_VERNIER_EXCEPTION_APPLIED="${PD_VERNIER_EXCEPTION_APPLIED:-NA}"
+  PD_VERNIER_EXCEPTION_OVERMATCH="$(awk -F= '/^PD_VERNIER_EXCEPTION_OVERMATCH=/ {print $2; exit}' "$RESULT_DIR/pd_vernier_exception_check.rpt" || true)"
+  PD_VERNIER_EXCEPTION_OVERMATCH="${PD_VERNIER_EXCEPTION_OVERMATCH:-NA}"
+fi
+if [[ -f "$RESULT_DIR/sdc_command_failures.md" ]]; then
+  SDC_COMMAND_FAILURE_COUNT="$(grep -Ec 'Error[[:space:]]+:|\[TUI-61\]|\[SDC-202\]|\[SDC-209\]' "$RESULT_DIR/sdc_command_failures.md" || true)"
+fi
 
 CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
 {
@@ -355,7 +380,12 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "BUFFER_PHASE_CLOCKS_EXPECTED=$BUFFER_PHASE_CLOCKS_EXPECTED"
   echo "BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=$BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP"
   echo "CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=$CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS"
+  echo "PD_VERNIER_EXCEPTION_EXPECTED=$PD_VERNIER_EXCEPTION_EXPECTED"
+  echo "PD_VERNIER_EXCEPTION_MATCHED=$PD_VERNIER_EXCEPTION_MATCHED"
+  echo "PD_VERNIER_EXCEPTION_APPLIED=$PD_VERNIER_EXCEPTION_APPLIED"
+  echo "PD_VERNIER_EXCEPTION_OVERMATCH=$PD_VERNIER_EXCEPTION_OVERMATCH"
   echo "UNKNOWN_REVIEW_REQUIRED_COUNT=$UNKNOWN_REVIEW_REQUIRED_COUNT"
+  echo "SDC_COMMAND_FAILURE_COUNT=$SDC_COMMAND_FAILURE_COUNT"
   echo
   if [[ -f "$POSTSYN_NETLIST" ]]; then
     echo "## RO_tune4 instances"
@@ -375,7 +405,9 @@ STATUS="O13_SERVER_REVIEW_REQUIRED"
 if [[ "$RUN_MODE" == "validate_only" ]]; then
   STATUS="O13_VALIDATE_ONLY_OK"
 elif [[ "$RO_COUNT" == "2" && "$STUB_COUNT" == "0" && "$BUHDX4_COUNT" -ge 16 && "$BUHDX12_COUNT" -ge 16 ]]; then
-  if [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
+  if [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
+    STATUS="O13_ABS4_PD_VERNIER_CLASSIFICATION_REVIEW_CANDIDATE"
+  elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
     STATUS="O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE"
   else
     STATUS="O13_NETLIST_CANDIDATE"
@@ -411,11 +443,18 @@ fi
   echo "- BUFFER_PHASE_CLOCKS_EXPECTED: $BUFFER_PHASE_CLOCKS_EXPECTED"
   echo "- BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP: $BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP"
   echo "- CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS: $CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS"
+  echo "- PD intentional Vernier paths expected: $PD_VERNIER_EXCEPTION_EXPECTED"
+  echo "- PD intentional Vernier paths matched: $PD_VERNIER_EXCEPTION_MATCHED"
+  echo "- PD intentional Vernier exception applied: $PD_VERNIER_EXCEPTION_APPLIED"
+  echo "- PD intentional Vernier overmatch: $PD_VERNIER_EXCEPTION_OVERMATCH"
   echo "- UNKNOWN_REVIEW_REQUIRED count: $UNKNOWN_REVIEW_REQUIRED_COUNT"
+  echo "- SDC command failure count: $SDC_COMMAND_FAILURE_COUNT"
   echo
   echo "O13_STATUS=$STATUS"
   echo "FINAL_SIGNOFF=NO"
-  if [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
+  if [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
+    echo "INNOVUS_READY=NO_REVIEW_O13_ABS4_GENUS_FIRST"
+  elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
     echo "INNOVUS_READY=NO_REVIEW_O13_ABS3_GENUS_FIRST"
   else
     echo "INNOVUS_READY=RUN_O13_PHASE_DISTRIBUTION_FEASIBILITY_AFTER_REVIEW"
@@ -443,7 +482,10 @@ fi
     timing_violations.rpt \
     timing_pd_capture_hotspots.rpt \
     timing_clk_sys_violations.rpt \
+    timing_clk_sys_internal_top100.rpt \
     timing_cdc_async_review.rpt \
+    timing_pd_intentional_vernier.rpt \
+    pd_vernier_exception_check.rpt \
     timing_o13_phase_buffer_paths.rpt \
     o13_clock_model_check.rpt \
     o13_clock_model_check.sdc.rpt \
@@ -466,4 +508,4 @@ fi
 if [[ "$SNAPSHOT_RC" != "0" ]]; then
   exit "$SNAPSHOT_RC"
 fi
-[[ "$STATUS" == "O13_NETLIST_CANDIDATE" || "$STATUS" == "O13_VALIDATE_ONLY_OK" || "$STATUS" == "O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE" ]]
+[[ "$STATUS" == "O13_NETLIST_CANDIDATE" || "$STATUS" == "O13_VALIDATE_ONLY_OK" || "$STATUS" == "O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE" || "$STATUS" == "O13_ABS4_PD_VERNIER_CLASSIFICATION_REVIEW_CANDIDATE" ]]
