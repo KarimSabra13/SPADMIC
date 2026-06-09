@@ -1,6 +1,6 @@
 # Server Run Request: O13 Abs5 Exact PD q1 Exception
 
-Status: `READY_FOR_SERVER_RUN`
+Status: `READY_FOR_SERVER_RERUN_AFTER_SOURCE_DISCOVERY_FIX`
 
 Run mode:
 
@@ -14,7 +14,7 @@ Purpose:
 - keep raw RO and final buffered phase clocks from abs3
 - keep `clk_sys` async to raw/buffer oscillator clocks
 - discover exactly 64 PD q1 sampler endpoints
-- discover exactly 8 slow buffered phase source pins
+- discover exactly 8 slow buffered phase source pins using the same per-tap BUHDX12 `u_drv/Q` resolver that abs3 used to create the buffered clocks
 - apply a narrow intentional Vernier exception
 - keep real local fast-domain timing visible
 
@@ -35,13 +35,13 @@ git status --short
 git log --oneline -5
 
 bash MPTDC/syn/scripts/server_run_genus_o13_abs5_pd_q1_exception_exact.sh \
-  20260609_o13_abs5_pd_q1_exception_exact
+  20260609_o13_abs5b_pd_q1_source_fix
 ```
 
 ## Review After Run
 
 ```bash
-RUN=20260609_o13_abs5_pd_q1_exception_exact
+RUN=20260609_o13_abs5b_pd_q1_source_fix
 
 cat results/genus_osc_pd/$RUN/SUMMARY.md
 cat results/genus_osc_pd/$RUN/pd_vernier_endpoint_discovery.rpt
@@ -68,7 +68,7 @@ The previous -422 ps Vernier setup paths should disappear from ordinary violatin
 ## Preserve Evidence
 
 ```bash
-RUN=20260609_o13_abs5_pd_q1_exception_exact
+RUN=20260609_o13_abs5b_pd_q1_source_fix
 SNAP=results/github_snapshots/${RUN}_snapshot
 
 rm -rf "$SNAP"

@@ -408,7 +408,19 @@ proc mptdc_o13_pd_slow_source_matrix {} {
         set tap_count($tap) 0
     }
 
-    set candidates [mptdc_collect_names [list get_pins -quiet -hierarchical *u_phase_buf_slow*gen_phase_buf*u_drv/Q]]
+    set candidates [list]
+    array set seen {}
+    for {set tap 0} {$tap < 8} {incr tap} {
+        foreach pattern [mptdc_o13_abs4_stage_pin_patterns slow $tap u_drv Q] {
+            foreach name [mptdc_collect_names [list get_pins -quiet -hierarchical $pattern]] {
+                if {![info exists seen($name)]} {
+                    set seen($name) 1
+                    lappend candidates $name
+                }
+            }
+        }
+    }
+
     set matched 0
     set duplicates 0
     set unmatched [list]

@@ -77,6 +77,49 @@ proc mptdc_o13_abs5_collect_pins {patterns} {
     return $pins
 }
 
+proc mptdc_o13_abs5_add_unique_pin {pin pins_var seen_var} {
+    upvar $pins_var pins
+    upvar $seen_var seen
+    set name [mptdc_o13_abs5_object_name $pin]
+    if {![info exists seen($name)]} {
+        set seen($name) 1
+        lappend pins $pin
+    }
+}
+
+proc mptdc_o13_abs5_collect_slow_source_pins {} {
+    set pins [list]
+    array set seen {}
+
+    # Use the exact per-tap resolver from abs3.  Abs3 has already proven these
+    # BUHDX12 Q pins exist by creating clk_osc_slow_buf_tap0..7 on them.
+    for {set tap 0} {$tap < 8} {incr tap} {
+        set found [list]
+        if {[llength [info commands mptdc_o13_abs3_try_get_pins]] > 0 &&
+            [llength [info commands mptdc_o13_abs3_stage_pin_patterns]] > 0} {
+            catch {
+                set found [mptdc_o13_abs3_try_get_pins \
+                    [mptdc_o13_abs3_stage_pin_patterns slow $tap u_drv Q]]
+            }
+        }
+
+        if {[llength $found] == 0} {
+            set found [mptdc_o13_abs5_collect_pins [list \
+                [format {u_core/u_phase_buf_slow/gen_phase_buf[%d]/u_drv/Q} $tap] \
+                [format {u_core/u_phase_buf_slow/gen_phase_buf[%d].u_drv/Q} $tap] \
+                [format {u_core_u_phase_buf_slow/gen_phase_buf[%d].u_drv/Q} $tap] \
+                [format {u_core_u_phase_buf_slow_gen_phase_buf_%d__u_drv/Q} $tap] \
+                [format {*u_phase_buf_slow*gen_phase_buf*%d*u_drv/Q} $tap]]]
+        }
+
+        foreach pin [mptdc_o13_abs5_collection_to_list $found] {
+            mptdc_o13_abs5_add_unique_pin $pin pins seen
+        }
+    }
+
+    return $pins
+}
+
 proc mptdc_o13_abs5_match_q1_endpoint {name ns_var nf_var} {
     upvar $ns_var ns
     upvar $nf_var nf
@@ -170,10 +213,7 @@ for {set ns 0} {$ns < 8} {incr ns} {
     }
 }
 
-set mptdc_o13_abs5_source_candidates [mptdc_o13_abs5_collect_pins [list \
-    *u_phase_buf_slow*gen_phase_buf*u_drv/Q \
-    *u_phase_buf_slow*gen_phase_buf*u_drv*/Q \
-    *phase_buf_slow*drv*/Q]]
+set mptdc_o13_abs5_source_candidates [mptdc_o13_abs5_collect_slow_source_pins]
 set mptdc_o13_abs5_source_candidate_count [llength $mptdc_o13_abs5_source_candidates]
 set mptdc_o13_abs5_source_matched_count 0
 set mptdc_o13_abs5_source_duplicate_count 0
