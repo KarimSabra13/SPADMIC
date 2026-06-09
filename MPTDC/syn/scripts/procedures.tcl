@@ -456,6 +456,293 @@ proc mptdc_o13_pd_slow_source_matrix {} {
         tap_count [array get tap_count]]
 }
 
+proc mptdc_o13_pin_object_name {obj} {
+    if {![catch {set name [get_object_name $obj]}]} {
+        return $name
+    }
+    if {![catch {set name [get_db $obj .name]}]} {
+        return $name
+    }
+    return $obj
+}
+
+proc mptdc_o13_pin_object_list {patterns} {
+    set pins [list]
+    array set seen {}
+
+    foreach pattern $patterns {
+        set found [get_pins -quiet -hierarchical $pattern]
+        if {[llength [info commands foreach_in_collection]] > 0} {
+            foreach_in_collection pin $found {
+                set name [mptdc_o13_pin_object_name $pin]
+                if {![info exists seen($name)]} {
+                    set seen($name) 1
+                    lappend pins $pin
+                }
+            }
+        } else {
+            foreach pin $found {
+                set name [mptdc_o13_pin_object_name $pin]
+                if {![info exists seen($name)]} {
+                    set seen($name) 1
+                    lappend pins $pin
+                }
+            }
+        }
+    }
+
+    return $pins
+}
+
+proc mptdc_o13_abs5_q1_pin_object_matrix {} {
+    array set by_pair {}
+    array set name_by_pair {}
+    array set row_count {}
+    array set col_count {}
+    for {set idx 0} {$idx < 8} {incr idx} {
+        set row_count($idx) 0
+        set col_count($idx) 0
+    }
+
+    set candidates [mptdc_o13_pin_object_list [list \
+        *gen_pd_row*gen_pd_col*u_pd*/q1_reg*/D \
+        *gen_pd_row*gen_pd_col*u_pd*q1*/D \
+        *q1_reg*/D]]
+
+    set matched 0
+    set duplicates 0
+    set unmatched [list]
+    foreach pin $candidates {
+        set name [mptdc_o13_pin_object_name $pin]
+        set ns ""
+        set nf ""
+        if {[mptdc_o13_pd_match_q1_name $name ns nf]} {
+            set key "${ns},${nf}"
+            if {[info exists by_pair($key)]} {
+                incr duplicates
+                continue
+            }
+            set by_pair($key) $pin
+            set name_by_pair($key) $name
+            incr matched
+            incr row_count($ns)
+            incr col_count($nf)
+        } else {
+            lappend unmatched $name
+        }
+    }
+
+    set missing [list]
+    for {set ns 0} {$ns < 8} {incr ns} {
+        for {set nf 0} {$nf < 8} {incr nf} {
+            set key "${ns},${nf}"
+            if {![info exists by_pair($key)]} {
+                lappend missing $key
+            }
+        }
+    }
+
+    return [list \
+        candidates [llength $candidates] \
+        matched $matched \
+        duplicates $duplicates \
+        missing $missing \
+        unmatched $unmatched \
+        by_pair [array get by_pair] \
+        name_by_pair [array get name_by_pair] \
+        row_count [array get row_count] \
+        col_count [array get col_count]]
+}
+
+proc mptdc_o13_abs5_slow_source_object_matrix {} {
+    array set by_tap {}
+    array set name_by_tap {}
+    array set tap_count {}
+    for {set tap 0} {$tap < 8} {incr tap} {
+        set tap_count($tap) 0
+    }
+
+    set patterns [list]
+    for {set tap 0} {$tap < 8} {incr tap} {
+        foreach pattern [mptdc_o13_abs4_stage_pin_patterns slow $tap u_drv Q] {
+            lappend patterns $pattern
+        }
+    }
+    set candidates [mptdc_o13_pin_object_list $patterns]
+
+    set matched 0
+    set duplicates 0
+    set unmatched [list]
+    foreach pin $candidates {
+        set name [mptdc_o13_pin_object_name $pin]
+        set tap ""
+        if {[mptdc_o13_pd_match_slow_source_name $name tap]} {
+            if {[info exists by_tap($tap)]} {
+                incr duplicates
+                continue
+            }
+            set by_tap($tap) $pin
+            set name_by_tap($tap) $name
+            incr tap_count($tap)
+            incr matched
+        } else {
+            lappend unmatched $name
+        }
+    }
+
+    set missing [list]
+    for {set tap 0} {$tap < 8} {incr tap} {
+        if {![info exists by_tap($tap)]} {
+            lappend missing $tap
+        }
+    }
+
+    return [list \
+        candidates [llength $candidates] \
+        matched $matched \
+        duplicates $duplicates \
+        missing $missing \
+        unmatched $unmatched \
+        by_tap [array get by_tap] \
+        name_by_tap [array get name_by_tap] \
+        tap_count [array get tap_count]]
+}
+
+proc mptdc_o13_abs5_write_exception_report {rpt_file stage endpoints sources apply_rows applied_endpoint_count exception_applied exception_failures overmatch undermatch} {
+    array set row_count $endpoints(row_count)
+    array set name_by_pair $endpoints(name_by_pair)
+    array set name_by_tap $sources(name_by_tap)
+
+    set fh [open $rpt_file w]
+    puts $fh "# O13 abs5 PD Vernier Exception Check"
+    puts $fh ""
+    puts $fh "PD_VERNIER_EXPECTED_ENDPOINTS=64"
+    puts $fh "PD_VERNIER_FOUND_ENDPOINTS=$endpoints(matched)"
+    puts $fh "PD_VERNIER_FOUND_SOURCES=$sources(matched)"
+    puts $fh "PD_VERNIER_EXCEPTION_APPLIED=$exception_applied"
+    puts $fh "PD_VERNIER_OVERMATCH=$overmatch"
+    puts $fh "PD_VERNIER_UNDERMATCH=$undermatch"
+    puts $fh "PD_VERNIER_EXCEPTION_FAILURES=$exception_failures"
+    puts $fh "PD_VERNIER_APPLIED_ENDPOINTS=$applied_endpoint_count"
+    puts $fh "PD_VERNIER_APPLICATION_STAGE=$stage"
+    puts $fh "PD_VERNIER_APPLICATION_METHOD=POST_ELAB_EXACT_PIN_OBJECTS"
+    puts $fh ""
+    puts $fh "PD_VERNIER_EXCEPTION_ENDPOINTS_FOUND=$endpoints(matched)"
+    puts $fh "PD_VERNIER_EXCEPTION_EXPECTED=64"
+    puts $fh "PD_VERNIER_SOURCE_CLOCKS_FOUND=$sources(matched)"
+    puts $fh "PD_VERNIER_EXCEPTION_OVERMATCH=$overmatch"
+    puts $fh ""
+    puts $fh "## Per-row exception"
+    puts $fh "| slow_tap | source_pin | endpoint_count | exception_status | detail |"
+    puts $fh "|---:|---|---:|---|---|"
+    for {set tap 0} {$tap < 8} {incr tap} {
+        set source_name "MISSING"
+        if {[info exists name_by_tap($tap)]} {
+            set source_name $name_by_tap($tap)
+        }
+        set row_status "NOT_APPLIED"
+        set row_detail "endpoint/source discovery failed"
+        foreach row $apply_rows {
+            if {[lindex $row 0] == $tap} {
+                set row_status [lindex $row 1]
+                set row_detail [lindex $row 2]
+            }
+        }
+        puts $fh "| $tap | `$source_name` | $row_count($tap) | $row_status | $row_detail |"
+        for {set nf 0} {$nf < 8} {incr nf} {
+            set key "${tap},${nf}"
+            if {[info exists name_by_pair($key)]} {
+                puts $fh "  - endpoint($key): `$name_by_pair($key)`"
+            } else {
+                puts $fh "  - endpoint($key): `MISSING`"
+            }
+        }
+    }
+    puts $fh ""
+    puts $fh "## Scope"
+    puts $fh "- Cuts only buffered slow phase final-driver output pins into same-row PD q1 sampler D pins."
+    puts $fh "- Does not cut q1->q2, q1/q2->hit_latched, nfast_tag->timestamp, slow Johnson, clk_sys, reset/recovery, or phase-buffer topology paths."
+    puts $fh "- This is a measurement classification exception, not final signoff."
+    close $fh
+}
+
+proc mptdc_o13_abs5_apply_exact_q1_exception {{rpt_file ""}} {
+    global this_run
+
+    if {![mptdc_o13_abs5_enabled]} {
+        return 0
+    }
+
+    array set endpoints [mptdc_o13_abs5_q1_pin_object_matrix]
+    array set sources [mptdc_o13_abs5_slow_source_object_matrix]
+    array set endpoint_by_pair $endpoints(by_pair)
+    array set source_by_tap $sources(by_tap)
+
+    set overmatch NO
+    set undermatch NO
+    if {$endpoints(duplicates) > 0 || $sources(duplicates) > 0 || \
+        $endpoints(matched) > 64 || $sources(matched) > 8} {
+        set overmatch YES
+    }
+    if {$endpoints(matched) < 64 || $sources(matched) < 8 || \
+        [llength $endpoints(missing)] > 0 || [llength $sources(missing)] > 0} {
+        set undermatch YES
+    }
+
+    set exception_applied NO
+    set exception_failures 0
+    set applied_endpoint_count 0
+    set apply_rows [list]
+
+    if {$endpoints(matched) == 64 && $sources(matched) == 8 && \
+        $endpoints(duplicates) == 0 && $sources(duplicates) == 0 && \
+        [llength $endpoints(missing)] == 0 && [llength $sources(missing)] == 0} {
+        for {set tap 0} {$tap < 8} {incr tap} {
+            set to_pins [list]
+            for {set nf 0} {$nf < 8} {incr nf} {
+                lappend to_pins $endpoint_by_pair(${tap},${nf})
+            }
+            set source_pin $source_by_tap($tap)
+            if {[catch {set_false_path -from $source_pin -to $to_pins} err]} {
+                incr exception_failures
+                lappend apply_rows [list $tap FAIL $err]
+                mptdc_message "O13 abs5 exact PD Vernier false path failed for slow tap $tap: $err" high
+            } else {
+                incr applied_endpoint_count 8
+                lappend apply_rows [list $tap OK "applied to 8 q1 endpoints"]
+            }
+        }
+    }
+
+    if {$exception_failures == 0 && $applied_endpoint_count == 64} {
+        set exception_applied YES
+    }
+
+    set ::mptdc_o13_abs5_last_exception_applied $exception_applied
+    set ::mptdc_o13_abs5_last_exception_stage $this_run(stage)
+    set ::mptdc_o13_abs5_last_exception_endpoint_count $endpoints(matched)
+    set ::mptdc_o13_abs5_last_exception_source_count $sources(matched)
+    set ::mptdc_o13_abs5_last_exception_applied_endpoints $applied_endpoint_count
+
+    mptdc_message "O13 abs5 PD Vernier exact exception stage=$this_run(stage) endpoints=$endpoints(matched) sources=$sources(matched) applied=$exception_applied"
+
+    if {$rpt_file ne ""} {
+        mptdc_o13_abs5_write_exception_report \
+            $rpt_file \
+            $this_run(stage) \
+            [array get endpoints] \
+            [array get sources] \
+            $apply_rows \
+            $applied_endpoint_count \
+            $exception_applied \
+            $exception_failures \
+            $overmatch \
+            $undermatch
+    }
+
+    return [expr {$exception_applied eq "YES"}]
+}
+
 proc mptdc_o13_join_or_none {items} {
     if {[llength $items] == 0} {
         return "none"
@@ -591,7 +878,9 @@ proc mptdc_o13_abs4_write_pd_vernier_report {rpt_file} {
 
     set exception_applied "UNKNOWN"
     if {[mptdc_o13_abs5_enabled]} {
-        set exception_applied "SEE_PD_VERNIER_EXCEPTION_CHECK"
+        if {[info exists ::mptdc_o13_abs5_last_exception_applied]} {
+            set exception_applied $::mptdc_o13_abs5_last_exception_applied
+        }
     }
 
     set fh [open $rpt_file w]
@@ -603,7 +892,12 @@ proc mptdc_o13_abs4_write_pd_vernier_report {rpt_file} {
     puts $fh "PD_INTENTIONAL_VERNIER_MATCHED=$endpoints(matched)"
     puts $fh "PD_INTENTIONAL_VERNIER_SOURCES=$sources(matched)"
     puts $fh "PD_INTENTIONAL_VERNIER_EXCEPTION_APPLIED=$exception_applied"
-    set vernier_status [expr {$endpoints(matched) == 64 && $sources(matched) == 8 ? "OK_INTENTIONAL_MEASUREMENT_CROSSING" : "REVIEW_REQUIRED"}]
+    set vernier_status REVIEW_REQUIRED
+    if {$endpoints(matched) == 64 && $sources(matched) == 8} {
+        if {![mptdc_o13_abs5_enabled] || $exception_applied eq "YES"} {
+            set vernier_status OK_INTENTIONAL_MEASUREMENT_CROSSING
+        }
+    }
     puts $fh "PD_INTENTIONAL_VERNIER_STATUS=$vernier_status"
     puts $fh ""
     puts $fh "| slow_tap | slow_clock | source_pin | q1_endpoint_count | status |"
@@ -615,7 +909,7 @@ proc mptdc_o13_abs4_write_pd_vernier_report {rpt_file} {
         if {[info exists by_tap($tap)]} {
             set source_name $by_tap($tap)
         }
-        set status "OK_INTENTIONAL_MEASUREMENT_CROSSING"
+        set status $vernier_status
         if {[llength [get_clocks -quiet $slow_clock]] != 1 || $q1_count != 8 || $source_name eq "MISSING"} {
             set status "REVIEW_REQUIRED"
         }
@@ -676,6 +970,9 @@ proc mptdc_report_o13_abs3_timing {dir} {
     mptdc_o13_abs3_write_clock_model_check "$dir/o13_clock_model_check.rpt"
     mptdc_o13_abs3_write_cdc_async_review "$dir/timing_cdc_async_review.rpt"
     if {[mptdc_o13_abs4_or_abs5_enabled]} {
+        if {[mptdc_o13_abs5_enabled]} {
+            mptdc_o13_abs5_apply_exact_q1_exception "$dir/pd_vernier_exception_check.rpt"
+        }
         mptdc_o13_write_pd_vernier_discovery_reports $dir
         mptdc_o13_abs4_write_pd_vernier_report "$dir/timing_pd_intentional_vernier.rpt"
     }
@@ -1289,6 +1586,14 @@ proc mptdc_report_timing {report_dir} {
     file mkdir $dir
 
     mptdc_message "Generating timing reports → $dir"
+
+    if {[mptdc_o13_abs5_enabled]} {
+        # The MMMC SDC overlay is read before mapped q1_reg/D pins exist.  Re-apply
+        # the exact row-scoped Vernier exception as soon as those pins are visible
+        # so later synthesis stages and final reports do not chase the measurement
+        # crossing as normal setup timing.
+        mptdc_o13_abs5_apply_exact_q1_exception
+    }
 
     # Worst paths in the active view (setup-oriented in the current MMMC setup).
     if {[catch { report_timing -max_paths 20 > "$dir/timing_setup.rpt" } err]} {
