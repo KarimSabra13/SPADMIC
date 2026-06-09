@@ -1,6 +1,6 @@
 # Server Run Request: O13 Abs5 Exact PD q1 Exception
 
-Status: `READY_FOR_SERVER_RERUN_AFTER_POST_SYNTH_EXCEPTION_APPLICATION_FIX`
+Status: `READY_FOR_SERVER_RERUN_AFTER_MMMC_INTERACTIVE_CONSTRAINT_MODE_FIX`
 
 Run mode:
 
@@ -16,8 +16,10 @@ Purpose:
 - discover exactly 64 PD q1 sampler endpoints
 - discover exactly 8 slow buffered phase source pins using the same per-tap BUHDX12 `u_drv/Q` resolver that abs3 used to create the buffered clocks
 - apply the narrow intentional Vernier exception after mapped `q1_reg/D` pins are visible
+- select the `functional_mode` interactive constraint mode before applying the post-map false path in the single-view MMMC shell
 - write `pd_vernier_exception_check.rpt` from the same post-synthesis context as the endpoint/source discovery reports
 - make `timing_pd_intentional_vernier.rpt` require actual exception application before reporting OK status
+- avoid overmatching non-endpoint hierarchical pins in hotspot timing reports
 - keep real local fast-domain timing visible
 
 Do not run Innovus from this request.
@@ -29,7 +31,7 @@ cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
 git checkout SPADMIC_localtag
 git pull --ff-only
 
-EXPECTED_HEAD=<agent_provided_sha>
+EXPECTED_HEAD=758df1f493797998a4cb67e69cbb18ae35ac062d
 ACTUAL_HEAD="$(git rev-parse HEAD)"
 test "$ACTUAL_HEAD" = "$EXPECTED_HEAD"
 
@@ -37,13 +39,13 @@ git status --short
 git log --oneline -5
 
 bash MPTDC/syn/scripts/server_run_genus_o13_abs5_pd_q1_exception_exact.sh \
-  20260609_o13_abs5d_pd_q1_post_synth_exception
+  20260609_o13_abs5e_pd_q1_constraint_mode_fix
 ```
 
 ## Review After Run
 
 ```bash
-RUN=20260609_o13_abs5d_pd_q1_post_synth_exception
+RUN=20260609_o13_abs5e_pd_q1_constraint_mode_fix
 
 cat results/genus_osc_pd/$RUN/SUMMARY.md
 cat results/genus_osc_pd/$RUN/pd_vernier_endpoint_discovery.rpt
@@ -60,6 +62,7 @@ cat results/genus_osc_pd/$RUN/sdc_command_failures.md
 PD_VERNIER_FOUND_ENDPOINTS=64
 PD_VERNIER_FOUND_SOURCES=8
 PD_VERNIER_EXCEPTION_APPLIED=YES
+PD_VERNIER_CONSTRAINT_MODE_STATUS=OK
 PD_VERNIER_OVERMATCH=NO
 PD_VERNIER_UNDERMATCH=NO
 UNKNOWN_REVIEW_REQUIRED=0
@@ -70,7 +73,7 @@ The previous -422 ps Vernier setup paths should disappear from ordinary violatin
 ## Preserve Evidence
 
 ```bash
-RUN=20260609_o13_abs5d_pd_q1_post_synth_exception
+RUN=20260609_o13_abs5e_pd_q1_constraint_mode_fix
 SNAP=results/github_snapshots/${RUN}_snapshot
 
 rm -rf "$SNAP"
