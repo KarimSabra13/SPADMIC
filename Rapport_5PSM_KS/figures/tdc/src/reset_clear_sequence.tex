@@ -1,0 +1,84 @@
+\documentclass[tikz,border=8pt]{standalone}
+\input{tdc_publication_style.tex}
+\usetikzlibrary{arrows.meta,calc,positioning}
+
+\definecolor{resetblue}{HTML}{315F8C}
+\definecolor{clearorange}{HTML}{B86A2B}
+\definecolor{softgreen}{HTML}{3A7A57}
+
+\tikzset{
+  clock/.style={draw=grisligne,line width=0.85pt},
+  resetwave/.style={draw=resetblue,line width=1.0pt},
+  clearwave/.style={draw=clearorange,line width=1.0pt},
+  eventline/.style={draw=grisligne!38,line width=0.50pt},
+  baseline/.style={draw=grisligne!22,line width=0.45pt},
+  siglabel/.style={font=\sffamily\small,text=grisligne,anchor=east,align=right},
+  note/.style={etiquette,font=\sffamily\scriptsize,align=center,inner sep=1.6pt},
+  title/.style={font=\sffamily\small\bfseries,text=grisligne,anchor=west}
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\node[title] at (0.0,6.10) {Reset global};
+\node[title] at (0.0,3.00) {Clear fonctionnel de conversion};
+\draw[grisligne!28] (0.0,3.40) -- (15.15,3.40);
+
+% Reset global.
+\node[siglabel] at (3.45,5.55) {\texttt{clk\_sys}};
+\draw[clock] (3.85,5.55) -- (4.10,5.55);
+\foreach \i in {0,...,16} {
+  \pgfmathsetmacro{\xa}{4.10+0.64*\i}
+  \pgfmathsetmacro{\xb}{\xa+0.32}
+  \pgfmathsetmacro{\xc}{\xa+0.64}
+  \draw[clock] (\xa,5.55) -- (\xa,5.85) -- (\xb,5.85) -- (\xb,5.55) -- (\xc,5.55);
+}
+
+\node[siglabel] at (3.45,4.82) {reset externe\\(\texttt{async\_rst\_n})};
+\draw[resetwave] (3.85,4.98) -- (5.00,4.98) -- (5.00,4.68) -- (6.88,4.68) -- (6.88,4.98) -- (14.95,4.98);
+
+\node[siglabel] at (3.45,4.04) {reset local\\synchronis\'e};
+\draw[resetwave] (3.85,4.20) -- (5.00,4.20) -- (5.00,3.90) -- (8.58,3.90) -- (8.58,4.20) -- (14.95,4.20);
+
+\foreach \x in {5.00,6.88,7.30,7.94,8.58} {
+  \draw[eventline] (\x,3.74) -- (\x,5.98);
+}
+
+\draw[-{Latex[length=1.9mm]},draw=resetblue,line width=0.70pt]
+  (5.24,4.46) -- (5.02,4.68);
+\node[note,text=resetblue,anchor=west] at (5.28,4.45) {assertion\\asynchrone};
+
+\draw[-{Latex[length=1.9mm]},draw=resetblue,line width=0.70pt]
+  (8.92,4.33) -- (8.60,4.20);
+\node[note,text=resetblue,anchor=west] at (8.96,4.34) {d\'esassertion\\synchronis\'ee};
+
+% Clear fonctionnel.
+\foreach \y in {2.20,1.60,1.00,0.40} {
+  \draw[baseline] (3.85,\y) -- (14.95,\y);
+}
+
+\node[siglabel] at (3.45,2.20) {snapshot};
+\node[siglabel] at (3.45,1.60) {\'ecriture\\contexte};
+\node[siglabel] at (3.45,1.00) {clear\\front-end};
+\node[siglabel] at (3.45,0.40) {clear\\matrice};
+
+\draw[clearwave] (3.85,2.20) -- (5.30,2.20) -- (5.30,2.50) -- (5.92,2.50) -- (5.92,2.20) -- (14.95,2.20);
+\draw[clearwave] (3.85,1.60) -- (7.25,1.60) -- (7.25,1.90) -- (7.87,1.90) -- (7.87,1.60) -- (14.95,1.60);
+\draw[clearwave] (3.85,1.00) -- (7.25,1.00) -- (7.25,1.30) -- (7.87,1.30) -- (7.87,1.00) -- (14.95,1.00);
+\draw[clearwave] (3.85,0.40) -- (9.18,0.40) -- (9.18,0.70) -- (9.80,0.70) -- (9.80,0.40) -- (14.95,0.40);
+
+\foreach \x in {5.61,7.56,9.49} {
+  \draw[eventline] (\x,0.18) -- (\x,2.58);
+}
+
+\node[note,text=softgreen] at (5.58,2.56) {image fig\'ee};
+\node[note,text=softgreen] at (7.78,2.12) {contexte \'ecrit};
+\node[note,text=softgreen] at (8.40,0.92) {front-end lib\'er\'e};
+\node[note,text=clearorange] at (10.25,0.76) {matrice nettoy\'ee};
+
+\draw[-{Latex[length=2.0mm,width=1.2mm]},draw=softgreen,line width=0.75pt]
+  (6.16,2.86) -- (9.08,2.86);
+\node[note,text=softgreen,anchor=south] at (7.62,2.91) {donn\'ees prot\'eg\'ees avant clear};
+
+\end{tikzpicture}
+\end{document}

@@ -36,7 +36,7 @@ Avant d'isoler les arbitrages de conception, il faut placer les blocs dans leur 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{tdc/vernier_transition_map.pdf}
-    \caption{Transition matérielle entre l'architecture Vernier de référence et l'implémentation active \textbf{MPTDC}. Le style rend visibles les briques conservées, modifiées et ajoutées.}
+    \caption{Transformation de l'architecture Vernier de référence vers l'implémentation active \textbf{MPTDC}.}
     \label{fig:vernier-transition-map}
 \end{figure}
 
@@ -47,7 +47,7 @@ Cette transition doit aussi être lue sous l'angle des domaines temporels. L'arc
     \makebox[\textwidth][c]{%
         \includegraphics[width=1.05\textwidth]{tdc/clock_domain_diagram.pdf}%
     }
-    \caption{Carte des domaines temporels et des frontières CDC dans l'architecture active. Les traversées représentées transportent des commandes compactes, des compteurs Gray ou des images figées, et non des phases analogiques en évolution continue.}
+    \caption{Carte des domaines temporels et des traversées CDC de l'architecture MPTDC active.}
     \label{fig:clock-domain-diagram}
 \end{figure}
 
@@ -155,7 +155,7 @@ La figure~\ref{fig:gray-cdc-principle} illustre pourquoi le transfert direct d'u
         \end{scope}
     \end{tikzpicture}%
     }}
-    \caption{Principe d'une traversée CDC de compteur. Le codage binaire peut produire une valeur incohérente si plusieurs bits changent avec des délais différents. Le codage Gray limite la transition à un seul bit ; chaque bit est ensuite synchronisé par deux flip-flops dans \(clk\_sys\).}
+    \caption{Principe de traversée CDC d'un compteur : risque du codage binaire, intérêt du Gray et synchronisation par deux flip-flops.}
     \label{fig:gray-cdc-principle}
 \end{figure}
 
@@ -172,7 +172,7 @@ La capture des événements reste volontairement asynchrone. Les signaux \texttt
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.96\textwidth]{tdc/async_capture_timing.pdf}
-    \caption{Capture asynchrone des événements. Les fronts \texttt{START}/\texttt{STOP} arment directement les verrous et les anneaux ; \texttt{clk\_sys} intervient ensuite pour protéger puis nettoyer la fenêtre de mesure.}
+    \caption{Capture asynchrone des événements \texttt{START}/\texttt{STOP} et protection de la fenêtre de mesure par \texttt{clk\_sys}.}
     \label{fig:async-capture-timing}
 \end{figure}
 
@@ -183,7 +183,7 @@ Le compromis le plus structurant concerne le découplage capture/lecture. Si la 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{tdc/context_pipeline.pdf}
-    \caption{Pipeline à deux contextes. Le snapshot protège la mesure terminée, puis la lecture et la sérialisation d'un contexte peuvent se recouvrir avec la capture du contexte suivant.}
+    \caption{Pipeline à deux contextes permettant de recouvrir capture, lecture et sérialisation.}
     \label{fig:context-pipeline}
 \end{figure}
 
@@ -196,7 +196,7 @@ La sortie adopte enfin un protocole compact sur \SI{16}{\bit}, sous forme d'une 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.93\textwidth]{tdc/calibration_export_flow.pdf}
-    \caption{Flux de sortie et calibration externe. L'ASIC exporte une trame compacte contenant les observables de mesure et les informations auxiliaires utiles ; le décodage et la correction par LUT restent réalisés hors circuit.}
+    \caption{Flux de sortie compact et calibration externe par décodage hôte et LUT.}
     \label{fig:calibration-export-flow}
 \end{figure}
 

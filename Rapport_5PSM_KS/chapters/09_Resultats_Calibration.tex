@@ -33,7 +33,7 @@ La colonne \textbf{P99 $|e|$} donne le 99e percentile de l'erreur absolue : \SI{
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.82\textwidth]{tdc/final_mptdc/01_erreur_histogramme_pre_post_lut.png}
-    \caption{Effet de la calibration externe sur la distribution d'erreur. La LUT supprime le biais principal et concentre l'erreur corrigée autour de zéro.}
+    \caption{Distribution d'erreur avant et après correction LUT externe.}
     \label{fig:calibration-pre-post}
 \end{figure}
 
@@ -46,7 +46,7 @@ Avant correction, la grille fine n'est pas uniforme. La matrice \mbox{$8\times8$
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.88\textwidth]{tdc/final_mptdc/04_dnl_inl_observable.png}
-    \caption{DNL/INL observables sur les codes atteints. La métrique décrit les codes effectivement vus par la campagne ; elle ne prétend pas remplir uniformément tous les emplacements de la grille brute.}
+    \caption{DNL et INL observables sur les codes effectivement atteints pendant la campagne.}
     \label{fig:char-dnl-inl}
 \end{figure}
 
@@ -83,7 +83,7 @@ La colonne \textbf{P90} correspond au 90e percentile de l'erreur absolue après 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.80\textwidth]{tdc/final_mptdc/03_rmse_vs_moyennage_limited.png}
-    \caption{Évolution de l'erreur avec le moyennage statistique après LUT, bornée au domaine $N \leq 64$.}
+    \caption{Évolution de l'erreur après LUT en fonction du nombre de mesures moyennées.}
     \label{fig:multihit-averaging}
 \end{figure}
 

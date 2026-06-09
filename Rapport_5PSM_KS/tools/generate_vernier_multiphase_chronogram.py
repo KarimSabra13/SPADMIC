@@ -12,11 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-PAGE_W = 940.0
+PAGE_W = 1040.0
 PAGE_H = 780.0
 LEFT = 170.0
-RIGHT = 900.0
-T_END = 340.0
+RIGHT = 1000.0
+T_END = 540.0
 SCALE = (RIGHT - LEFT) / T_END
 
 
@@ -27,7 +27,7 @@ GRAY: Color = (0.72, 0.72, 0.72)
 LIGHT_GRAY: Color = (0.88, 0.88, 0.88)
 RED: Color = (0.69, 0.00, 0.00)
 BLUE: Color = (0.00, 0.24, 0.62)
-GREEN: Color = (0.00, 0.42, 0.18)
+GREEN: Color = (0.00, 0.34, 0.13)
 GREEN_LIGHT: Color = (0.82, 0.92, 0.85)
 BUS_STROKE: Color = (0.33, 0.33, 0.33)
 BUS_FILL: Color = (0.96, 0.96, 0.94)
@@ -36,22 +36,20 @@ EMPTY_FILL: Color = (0.985, 0.985, 0.985)
 
 ROWS = [
     ("Départ / START", 700.0),
-    ("Arrêt / STOP", 660.0),
-    ("S_1", 620.0),
-    ("S_2", 590.0),
-    ("S_3", 560.0),
-    ("S_4", 530.0),
-    ("S_5", 500.0),
-    ("N_slow", 455.0),
-    ("n_s", 420.0),
-    ("F_1", 380.0),
-    ("F_2", 350.0),
-    ("F_3", 320.0),
-    ("F_4", 290.0),
-    ("F_5", 260.0),
-    ("N_fast", 220.0),
-    ("n_f", 185.0),
-    ("Couples / PD", 105.0),
+    ("Arrêt / STOP", 655.0),
+    ("S_1", 605.0),
+    ("S_2", 570.0),
+    ("S_3", 535.0),
+    ("S_4", 500.0),
+    ("S_5", 465.0),
+    ("N_slow", 415.0),
+    ("F_1", 355.0),
+    ("F_2", 320.0),
+    ("F_3", 285.0),
+    ("F_4", 250.0),
+    ("F_5", 215.0),
+    ("N_fast", 175.0),
+    ("Couples / PD", 82.0),
 ]
 
 Y = {name: value for name, value in ROWS}
@@ -186,7 +184,7 @@ def draw_bus(
     segments: list[tuple[float, float, str]],
     hatch: tuple[float, float] | None = None,
 ) -> None:
-    h = 23.0
+    h = 26.0
     if hatch is not None:
         x0 = ps_to_x(hatch[0])
         x1 = ps_to_x(hatch[1])
@@ -200,7 +198,7 @@ def draw_bus(
         x0 = ps_to_x(start)
         x1 = ps_to_x(end)
         canvas.rect(x0, y - h / 2, x1 - x0, h, stroke=BUS_STROKE, fill=BUS_FILL, width=1.45)
-        canvas.text((x0 + x1) / 2, y - 5.0, label, size=15.0, color=BLACK, align="center")
+        canvas.text((x0 + x1) / 2, y - 5.5, label, size=16.5, color=BLACK, align="center")
 
 
 def add_event_line(
@@ -260,11 +258,14 @@ def draw_pair(
 ) -> None:
     pd_y = Y["Couples / PD"]
     event_bottom = pd_y + 24.0
-    add_event_line(canvas, slow_t, Y[slow_row] + 20.0, event_bottom, GREEN, 1.05)
-    add_event_line(canvas, fast_t, Y[fast_row] + 20.0, event_bottom, GREEN, 1.05)
+    add_event_line(canvas, slow_t, Y[slow_row] + 20.0, event_bottom, GREEN, 0.85)
+    add_event_line(canvas, fast_t, Y[fast_row] + 20.0, event_bottom, GREEN, 0.85)
     canvas.line(ps_to_x(slow_t), pd_y + 10.0, ps_to_x(fast_t), pd_y + 10.0, GREEN, 1.20)
-    draw_pulse(canvas, pd_y, fast_t - 3.0, 11.0, GREEN, 2.65)
-    text_box(canvas, ps_to_x(label_x_ps), label_y, label, size=15.0, color=GREEN, align=label_align)
+    overlap_start = max(slow_t, fast_t)
+    overlap_stop = min(slow_t + 20.0, fast_t + 20.0)
+    overlap_width = min(12.0, max(5.0, overlap_stop - overlap_start))
+    draw_pulse(canvas, pd_y, overlap_start, overlap_width, GREEN, 2.75)
+    text_box(canvas, ps_to_x(label_x_ps), label_y, label, size=17.0, color=GREEN, align=label_align)
 
 
 def build() -> Canvas:
@@ -272,43 +273,59 @@ def build() -> Canvas:
     c.ops.append("1 J 1 j")
 
     for label, y in ROWS:
-        c.text(LEFT - 14.0, y - 5.0, label, size=18.0, color=BLACK, align="right")
+        c.text(LEFT - 14.0, y - 5.5, label, size=20.0, color=BLACK, align="right")
         c.line(LEFT, y, RIGHT, y, color=LIGHT_GRAY, width=0.70)
 
     # START/STOP and phase pulses.
     draw_pulse(c, Y["Départ / START"], 0.0, 18.0, BLACK, 2.30)
-    draw_pulse(c, Y["Arrêt / STOP"], 70.0, 18.0, BLACK, 2.30)
+    draw_pulse(c, Y["Arrêt / STOP"], 80.0, 18.0, BLACK, 2.30)
 
-    slow_events = [(0.0, 1), (55.0, 2), (110.0, 3), (165.0, 4), (220.0, 5)]
-    fast_events = [(70.0, 1), (120.0, 2), (170.0, 3), (220.0, 4), (270.0, 5)]
+    slow_events = [
+        (0.0, 1),
+        (55.0, 2),
+        (110.0, 3),
+        (165.0, 4),
+        (220.0, 5),
+        (275.0, 1),
+        (330.0, 2),
+        (385.0, 3),
+        (440.0, 4),
+        (495.0, 5),
+    ]
+    fast_events = [
+        (80.0, 1),
+        (130.0, 2),
+        (180.0, 3),
+        (230.0, 4),
+        (280.0, 5),
+        (330.0, 1),
+        (380.0, 2),
+        (430.0, 3),
+        (480.0, 4),
+    ]
     for t_ps, idx in slow_events:
         draw_pulse(c, Y[f"S_{idx}"], t_ps, 20.0, RED, 2.65)
     for t_ps, idx in fast_events:
         draw_pulse(c, Y[f"F_{idx}"], t_ps, 20.0, BLUE, 2.65)
 
-    # Coarse counters and phase indices.
-    draw_bus(c, Y["N_slow"], [(0.0, 275.0, "0"), (275.0, 340.0, "1")])
-    draw_phase_index(c, Y["n_s"], slow_events, RED)
-    draw_bus(c, Y["N_fast"], [(70.0, 320.0, "0"), (320.0, 340.0, "1")], hatch=(0.0, 70.0))
-    draw_phase_index(c, Y["n_f"], fast_events, BLUE)
+    # Coarse counters.
+    draw_bus(c, Y["N_slow"], [(0.0, 275.0, "1"), (275.0, T_END, "2")])
+    draw_bus(c, Y["N_fast"], [(80.0, 330.0, "1"), (330.0, T_END, "2")], hatch=(0.0, 80.0))
 
     # Timing interval between START and STOP.
     y_arrow = 740.0
-    c.arrow(ps_to_x(0.0), y_arrow, ps_to_x(70.0), y_arrow, color=BLACK)
-    c.text((ps_to_x(0.0) + ps_to_x(70.0)) / 2 + 22.0, y_arrow - 26.0, "T_hit = 70 ps", size=15.0, color=BLACK, align="center")
+    c.arrow(ps_to_x(0.0), y_arrow, ps_to_x(80.0), y_arrow, color=BLACK)
+    c.text((ps_to_x(0.0) + ps_to_x(80.0)) / 2 + 22.0, y_arrow - 26.0, "T_hit = 80 ps", size=15.0, color=BLACK, align="center")
 
-    # Observed phase pairs and first useful coincidence.
-    draw_pair(c, 110.0, 120.0, "S_3", "F_2", "(S_3,F_2)", label_x_ps=98.0, label_y=126.0)
-    draw_pair(c, 165.0, 170.0, "S_4", "F_3", "(S_4,F_3)", label_x_ps=152.0, label_y=126.0)
-
-    pd_y = Y["Couples / PD"]
-    add_event_line(c, 220.0, Y["S_5"] + 20.0, pd_y + 16.0, GREEN, 1.80, "4 2")
-    add_event_line(c, 220.0, Y["F_4"] + 20.0, pd_y + 16.0, GREEN, 1.80, "4 2")
-    draw_pulse(c, pd_y, 217.0, 12.0, GREEN, 2.90)
-    x_coinc = ps_to_x(224.0)
-    c.rect(x_coinc + 10.0, 116.0, 145.0, 38.0, stroke=GREEN, fill=GREEN_LIGHT, width=1.30)
-    c.text(x_coinc + 82.5, 138.0, "coïncidence utile", size=13.5, color=GREEN, align="center")
-    c.text(x_coinc + 82.5, 122.0, "(S_5,F_4)", size=14.5, color=GREEN, align="center")
+    # Coincident phase pairs observed during the same slow-counter window.
+    pairs = [
+        (330.0, 330.0, "S_2", "F_1", "(S2,F1)", 324.0, 132.0, "right"),
+        (385.0, 380.0, "S_3", "F_2", "(S3,F2)", 374.0, 107.0, "right"),
+        (440.0, 430.0, "S_4", "F_3", "(S4,F3)", 424.0, 132.0, "right"),
+        (495.0, 480.0, "S_5", "F_4", "(S5,F4)", 474.0, 107.0, "right"),
+    ]
+    for pair in pairs:
+        draw_pair(c, *pair)
 
     return c
 

@@ -28,10 +28,19 @@ Le cœur \textbf{MPTDC} transforme le principe Vernier multiphase étudié préc
     \label{tab:mptdc-params}
 \end{table}
 
+Avant de détailler le cœur de mesure, il est utile d'isoler le contrat d'interface du wrapper ASIC. Le module \texttt{mptdc\_top\_asic} constitue la frontière proche des pads : il reçoit l'horloge système, le reset externe, les entrées asynchrones issues soit de la matrice SPAD soit de l'injection de calibration, le bus CSR de configuration et les interfaces de sortie. Le cœur \texttt{mptdc\_core} reste responsable du timing de mesure, des traversées CDC, de la gestion des contextes, du watchdog et de la paquetisation.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{tdc/mptdc_top_io_chatgpt.png}
+    \caption{Vue top-level du wrapper ASIC MPTDC et de ses interfaces fonctionnelles principales.}
+    \label{fig:mptdc-top-io-diagram}
+\end{figure}
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{tdc/mptdc_block_diagram.pdf}
-    \caption{Vue fonctionnelle du cœur MPTDC. Les événements arment les oscillateurs ; les faisceaux de phases alimentent la matrice Vernier ; le domaine système récupère ensuite des compteurs synchronisés, une image de mesure figée et un flux de lecture compact.}
+    \caption{Vue fonctionnelle du cœur MPTDC, de la capture START/STOP jusqu'à la lecture compacte en domaine système.}
     \label{fig:mptdc-block-diagram}
 \end{figure}
 
@@ -61,7 +70,7 @@ La figure \ref{fig:mptdc-block-diagram} met en évidence la séparation des resp
         Surveillance & Mixte & Fermeture contrôlée en cas d'événement manquant, de blocage ou de timeout \\
         \bottomrule
     \end{tabularx}
-    \caption{Répartition fonctionnelle des principales briques matérielles. Les noms exacts des modules RTL restent propres à l'implémentation ; la description conserve ici une lecture système.}
+    \caption{Répartition fonctionnelle des principales briques matérielles du MPTDC.}
     \label{tab:mptdc-module-map}
 \end{table}
 
@@ -79,14 +88,30 @@ La fin d'une conversion n'est pas simplement un ordre de lecture. Elle forme un 
 
 La figure \ref{fig:timing-diagram-conversion} explicite cette transition entre le domaine Vernier et le domaine système. La fenêtre de détection active la matrice de phase. Lorsqu'au moins une cellule a mémorisé un croisement et que la conversion est complète, la logique de contrôle déclenche d'abord le gel de l'image, puis l'écriture dans la banque de contextes. Le nettoyage intervient seulement après cette protection : il réarme la matrice sans détruire la conversion déjà capturée.
 
-Les noms internes ne sont utiles ici que comme repères : la fenêtre de détection (\texttt{pd\_gate}) autorise les cellules de la matrice ; le niveau de détection (\texttt{hit\_level}) indique qu'un croisement a été mémorisé ; l'état de mesure complète (\texttt{meas\_active}) demande la prise en charge par le domaine système ; puis \texttt{snapshot\_en}, \texttt{capture\_en} et \texttt{clear} figent, écrivent et nettoient la conversion.
+Les noms internes ne sont utiles ici que comme repères : la fenêtre de détection (\texttt{pd\_gate}) autorise les cellules de la matrice ; le niveau de détection (\texttt{hit\_level}) indique qu'un croisement a été mémorisé ; l'état de mesure complète (\texttt{meas\_active}) demande la prise en charge par le domaine système ; puis \texttt{snapshot\_en}, \texttt{capture\_en}, \texttt{fe\_clear} et \texttt{pd\_clear} figent, écrivent, libèrent le front-end et nettoient la conversion.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{tdc/timing_diagram_conversion.pdf}
-    \caption{Protocole de fermeture d'une mesure. La FSM système observe la fin de conversion, fige l'image de la matrice, écrit le contexte, nettoie la fenêtre de détection puis autorise la lecture.}
+    \caption{Protocole de fermeture d'une mesure, du gel de l'image au nettoyage de la fenêtre de détection.}
     \label{fig:timing-diagram-conversion}
 \end{figure}
+
+\paragraph{Reset global et clear fonctionnel.}
+Le reset global et le clear de conversion ne jouent pas le même rôle. Le reset externe place le bloc dans un état connu, indépendamment de la conversion en cours. Son assertion est asynchrone afin de remettre immédiatement les bascules locales à zéro. Sa désassertion est en revanche synchronisée dans le domaine concerné, ce qui évite de relâcher plusieurs registres sur des fronts incertains.
+
+Le clear fonctionnel intervient plus tard, dans le protocole de mesure. Il ne remet pas tout le bloc à zéro : il sert à réarmer la fenêtre de conversion après protection de l'image. La séquence retenue est volontairement conservatrice : l'image de mesure est d'abord figée, le contexte est écrit, le front-end est libéré, puis la matrice est nettoyée. Ainsi, aucune information utile n'est détruite avant d'être disponible pour la lecture.
+
+Dans le RTL, le reset externe correspond à \texttt{async\_rst\_n}. Les resets locaux sont produits par \texttt{mptdc\_reset\_sync}, avec assertion asynchrone et désassertion synchronisée. Le wrapper crée plusieurs feuilles locales pour limiter le fanout, et le reset logiciel est étiré avant d'être combiné au reset externe. Ces mécanismes relèvent du reset global ; ils restent distincts du clear de conversion.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{tdc/reset_clear_sequence.pdf}
+    \caption{Reset global et clear de conversion. Le reset est asserté immédiatement puis relâché de façon synchronisée ; le clear intervient seulement après snapshot et écriture du contexte.}
+    \label{fig:reset-clear-sequence}
+\end{figure}
+
+Dans la FSM de mesure, cette séquence correspond aux impulsions de snapshot, d'écriture contexte, de clear front-end et de clear matrice. Les noms RTL associés sont \texttt{snapshot\_en\_o}, \texttt{capture\_en\_o}, \texttt{fe\_clear\_o} et \texttt{pd\_clear\_o}. L'ordre reste volontairement conservateur : aucune information de mesure n'est détruite avant d'avoir été protégée dans un contexte exploitable par la lecture.
 
 \paragraph{Extrait RTL : snapshot avant nettoyage.}
 \begin{rtlSnippet}{Extrait RTL simplifié : snapshot avant nettoyage}
@@ -154,7 +179,7 @@ Chaque ligne de la trame correspond à un mot de \SI{16}{\bit}. Les bits hauts i
         \draw[champ,fill=black!8] (0,0.3) rectangle (2,0.8); \node[champ,draw=none] at (1,0.55) {type};
         \draw[champ,fill=black!3] (2,0.3) rectangle (16,0.8); \node[champ,draw=none] at (9,0.55) {identifiant de conversion};
     \end{tikzpicture}
-    \caption{Schéma synthétique du format de sortie \SI{16}{\bit}. Le paquet commence par un en-tête, encode chaque enregistrement de détection sur deux mots \texttt{HIT}, puis se termine par un mot de fin de conversion. Les champs de métadonnées regroupent les informations auxiliaires nécessaires au décodage et à la calibration externe, sans détailler ici les signaux RTL internes.}
+    \caption{Format synthétique de la trame de sortie \SI{16}{\bit} utilisée pour exporter les enregistrements de détection.}
     \label{fig:mptdc-output-frame}
 \end{figure}
 Les informations auxiliaires de calibration sont intégrées à cette trame sans introduire de mode de sortie concurrent. Le réarmement est ainsi amélioré : dès qu'une conversion est protégée dans un contexte, le cœur peut préparer une nouvelle fenêtre de mesure sans attendre que tout le paquet précédent soit transmis. Si la lecture aval est suspendue, le parcours du contexte conserve sa position ; si les deux contextes restent occupés trop longtemps, le bloc rend cette situation observable par ses champs de statut.
@@ -223,7 +248,7 @@ La vérification a été conduite avec une méthodologie proche de l'industrie, 
         \draw[arr] (sva.north) -- (dut.south);
     \end{tikzpicture}%
     }
-    \caption{Vue simplifiée de l'environnement de vérification. Les scénarios dirigés ou contraints aléatoires sont appliqués au DUT par les drivers ; les monitors reconstruisent les transactions observées, puis le scoreboard les compare au modèle de référence.}
+    \caption{Vue simplifiée de l'environnement de vérification fonctionnelle du MPTDC.}
     \label{fig:mptdc-verification-env}
 \end{figure}
 
