@@ -184,10 +184,10 @@ set mptdc_o13_abs5_q1_unmatched [list]
 
 foreach pin $mptdc_o13_abs5_q1_candidates {
     set name [mptdc_o13_abs5_object_name $pin]
-    set ns ""
-    set nf ""
-    if {[mptdc_o13_abs5_match_q1_endpoint $name ns nf]} {
-        set key "${ns},${nf}"
+    set mptdc_o13_abs5_ns ""
+    set mptdc_o13_abs5_nf ""
+    if {[mptdc_o13_abs5_match_q1_endpoint $name mptdc_o13_abs5_ns mptdc_o13_abs5_nf]} {
+        set key "${mptdc_o13_abs5_ns},${mptdc_o13_abs5_nf}"
         if {[info exists mptdc_o13_abs5_q1_pin_by_pair($key)]} {
             incr mptdc_o13_abs5_q1_duplicate_count
             lappend mptdc_o13_abs5_q1_duplicates $name
@@ -196,17 +196,17 @@ foreach pin $mptdc_o13_abs5_q1_candidates {
         set mptdc_o13_abs5_q1_pin_by_pair($key) $pin
         set mptdc_o13_abs5_q1_name_by_pair($key) $name
         incr mptdc_o13_abs5_q1_matched_count
-        incr mptdc_o13_abs5_row_count($ns)
-        incr mptdc_o13_abs5_col_count($nf)
+        incr mptdc_o13_abs5_row_count($mptdc_o13_abs5_ns)
+        incr mptdc_o13_abs5_col_count($mptdc_o13_abs5_nf)
     } else {
         lappend mptdc_o13_abs5_q1_unmatched $name
     }
 }
 
 set mptdc_o13_abs5_missing_pairs [list]
-for {set ns 0} {$ns < 8} {incr ns} {
-    for {set nf 0} {$nf < 8} {incr nf} {
-        set key "${ns},${nf}"
+for {set mptdc_o13_abs5_ns 0} {$mptdc_o13_abs5_ns < 8} {incr mptdc_o13_abs5_ns} {
+    for {set mptdc_o13_abs5_nf 0} {$mptdc_o13_abs5_nf < 8} {incr mptdc_o13_abs5_nf} {
+        set key "${mptdc_o13_abs5_ns},${mptdc_o13_abs5_nf}"
         if {![info exists mptdc_o13_abs5_q1_pin_by_pair($key)]} {
             lappend mptdc_o13_abs5_missing_pairs $key
         }
@@ -280,19 +280,19 @@ set mptdc_o13_abs5_apply_rows [list]
 
 if {$mptdc_o13_abs5_endpoint_status eq "PASS_64_ENDPOINTS" && \
     $mptdc_o13_abs5_source_status eq "PASS_8_SLOW_SOURCES"} {
-    for {set ns 0} {$ns < 8} {incr ns} {
+    for {set mptdc_o13_abs5_ns 0} {$mptdc_o13_abs5_ns < 8} {incr mptdc_o13_abs5_ns} {
         set to_pins [list]
-        for {set nf 0} {$nf < 8} {incr nf} {
-            lappend to_pins $mptdc_o13_abs5_q1_pin_by_pair(${ns},${nf})
+        for {set mptdc_o13_abs5_nf 0} {$mptdc_o13_abs5_nf < 8} {incr mptdc_o13_abs5_nf} {
+            lappend to_pins $mptdc_o13_abs5_q1_pin_by_pair(${mptdc_o13_abs5_ns},${mptdc_o13_abs5_nf})
         }
-        set source_pin $mptdc_o13_abs5_slow_source_by_tap($ns)
+        set source_pin $mptdc_o13_abs5_slow_source_by_tap($mptdc_o13_abs5_ns)
         if {[catch {set_false_path -from $source_pin -to $to_pins} err]} {
             incr mptdc_o13_abs5_exception_failures
-            lappend mptdc_o13_abs5_apply_rows [list $ns FAIL $err]
-            puts "MPTDC_O13_ABS5_SDC_WARN: failed exact PD Vernier false path for slow tap $ns: $err"
+            lappend mptdc_o13_abs5_apply_rows [list $mptdc_o13_abs5_ns FAIL $err]
+            puts "MPTDC_O13_ABS5_SDC_WARN: failed exact PD Vernier false path for slow tap $mptdc_o13_abs5_ns: $err"
         } else {
             incr mptdc_o13_abs5_applied_endpoint_count 8
-            lappend mptdc_o13_abs5_apply_rows [list $ns OK "applied to 8 q1 endpoints"]
+            lappend mptdc_o13_abs5_apply_rows [list $mptdc_o13_abs5_ns OK "applied to 8 q1 endpoints"]
         }
     }
 }
@@ -323,19 +323,19 @@ if {[info exists ::env(MPTDC_O13_PD_VERNIER_ENDPOINT_DISCOVERY_RPT)] && $::env(M
     puts $fh "FINAL_STATUS=$mptdc_o13_abs5_endpoint_status"
     puts $fh ""
     puts $fh "## Per-row count"
-    for {set ns 0} {$ns < 8} {incr ns} {
-        puts $fh "row_${ns}=$mptdc_o13_abs5_row_count($ns)"
+    for {set mptdc_o13_abs5_ns 0} {$mptdc_o13_abs5_ns < 8} {incr mptdc_o13_abs5_ns} {
+        puts $fh "row_${mptdc_o13_abs5_ns}=$mptdc_o13_abs5_row_count($mptdc_o13_abs5_ns)"
     }
     puts $fh ""
     puts $fh "## Per-column count"
-    for {set nf 0} {$nf < 8} {incr nf} {
-        puts $fh "col_${nf}=$mptdc_o13_abs5_col_count($nf)"
+    for {set mptdc_o13_abs5_nf 0} {$mptdc_o13_abs5_nf < 8} {incr mptdc_o13_abs5_nf} {
+        puts $fh "col_${mptdc_o13_abs5_nf}=$mptdc_o13_abs5_col_count($mptdc_o13_abs5_nf)"
     }
     puts $fh ""
     puts $fh "## Endpoints"
-    for {set ns 0} {$ns < 8} {incr ns} {
-        for {set nf 0} {$nf < 8} {incr nf} {
-            set key "${ns},${nf}"
+    for {set mptdc_o13_abs5_ns 0} {$mptdc_o13_abs5_ns < 8} {incr mptdc_o13_abs5_ns} {
+        for {set mptdc_o13_abs5_nf 0} {$mptdc_o13_abs5_nf < 8} {incr mptdc_o13_abs5_nf} {
+            set key "${mptdc_o13_abs5_ns},${mptdc_o13_abs5_nf}"
             if {[info exists mptdc_o13_abs5_q1_name_by_pair($key)]} {
                 puts $fh "q1_endpoint($key)=$mptdc_o13_abs5_q1_name_by_pair($key)"
             } else {
@@ -409,22 +409,22 @@ if {[info exists ::env(MPTDC_O13_PD_VERNIER_RPT)] && $::env(MPTDC_O13_PD_VERNIER
     puts $fh "## Per-row exception"
     puts $fh "| slow_tap | source_pin | endpoint_count | exception_status | detail |"
     puts $fh "|---:|---|---:|---|---|"
-    for {set ns 0} {$ns < 8} {incr ns} {
+    for {set mptdc_o13_abs5_ns 0} {$mptdc_o13_abs5_ns < 8} {incr mptdc_o13_abs5_ns} {
         set source_name "MISSING"
-        if {[info exists mptdc_o13_abs5_slow_source_name_by_tap($ns)]} {
-            set source_name $mptdc_o13_abs5_slow_source_name_by_tap($ns)
+        if {[info exists mptdc_o13_abs5_slow_source_name_by_tap($mptdc_o13_abs5_ns)]} {
+            set source_name $mptdc_o13_abs5_slow_source_name_by_tap($mptdc_o13_abs5_ns)
         }
         set row_status "NOT_APPLIED"
         set row_detail "endpoint/source discovery failed"
         foreach row $mptdc_o13_abs5_apply_rows {
-            if {[lindex $row 0] == $ns} {
+            if {[lindex $row 0] == $mptdc_o13_abs5_ns} {
                 set row_status [lindex $row 1]
                 set row_detail [lindex $row 2]
             }
         }
-        puts $fh "| $ns | `$source_name` | $mptdc_o13_abs5_row_count($ns) | $row_status | $row_detail |"
-        for {set nf 0} {$nf < 8} {incr nf} {
-            set key "${ns},${nf}"
+        puts $fh "| $mptdc_o13_abs5_ns | `$source_name` | $mptdc_o13_abs5_row_count($mptdc_o13_abs5_ns) | $row_status | $row_detail |"
+        for {set mptdc_o13_abs5_nf 0} {$mptdc_o13_abs5_nf < 8} {incr mptdc_o13_abs5_nf} {
+            set key "${mptdc_o13_abs5_ns},${mptdc_o13_abs5_nf}"
             if {[info exists mptdc_o13_abs5_q1_name_by_pair($key)]} {
                 puts $fh "  - endpoint($key): `$mptdc_o13_abs5_q1_name_by_pair($key)`"
             } else {
@@ -457,18 +457,18 @@ if {[info exists ::env(MPTDC_O13_PD_VERNIER_INTENT_RPT)] && $::env(MPTDC_O13_PD_
     puts $fh "PD_INTENTIONAL_VERNIER_STATUS=$mptdc_o13_abs5_intent_status"
     puts $fh ""
     puts $fh "## Matrix"
-    for {set ns 0} {$ns < 8} {incr ns} {
+    for {set mptdc_o13_abs5_ns 0} {$mptdc_o13_abs5_ns < 8} {incr mptdc_o13_abs5_ns} {
         set source_name "MISSING"
-        if {[info exists mptdc_o13_abs5_slow_source_name_by_tap($ns)]} {
-            set source_name $mptdc_o13_abs5_slow_source_name_by_tap($ns)
+        if {[info exists mptdc_o13_abs5_slow_source_name_by_tap($mptdc_o13_abs5_ns)]} {
+            set source_name $mptdc_o13_abs5_slow_source_name_by_tap($mptdc_o13_abs5_ns)
         }
-        puts $fh "slow_tap=$ns source=$source_name"
-        for {set nf 0} {$nf < 8} {incr nf} {
-            set key "${ns},${nf}"
+        puts $fh "slow_tap=$mptdc_o13_abs5_ns source=$source_name"
+        for {set mptdc_o13_abs5_nf 0} {$mptdc_o13_abs5_nf < 8} {incr mptdc_o13_abs5_nf} {
+            set key "${mptdc_o13_abs5_ns},${mptdc_o13_abs5_nf}"
             if {[info exists mptdc_o13_abs5_q1_name_by_pair($key)]} {
-                puts $fh "  fast_col=$nf endpoint=$mptdc_o13_abs5_q1_name_by_pair($key)"
+                puts $fh "  fast_col=$mptdc_o13_abs5_nf endpoint=$mptdc_o13_abs5_q1_name_by_pair($key)"
             } else {
-                puts $fh "  fast_col=$nf endpoint=MISSING"
+                puts $fh "  fast_col=$mptdc_o13_abs5_nf endpoint=MISSING"
             }
         }
     }
