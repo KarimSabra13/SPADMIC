@@ -1,0 +1,5 @@
+O13 abs5c PD q1 ns/nf Tcl variable collision fix Genus snapshot
+RUN_ID=20260609_o13_abs5c_pd_q1_ns_var_fix
+FINAL_SIGNOFF=NO
+FORMAT=directory_snapshot_no_tar
+PURPOSE=Analyze exact PD Vernier exception application and remaining real timing
