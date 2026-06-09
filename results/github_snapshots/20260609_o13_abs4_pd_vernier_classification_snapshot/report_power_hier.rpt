@@ -1,0 +1,81 @@
+Power Unit: W
+PDB Frame : /stim#0/frame#0
+---------------------------------------------------------------------------------------------------------------------------
+Cells Pct_cells     Leakage    Internal   Switching       Total Lvl Instance                                               
+---------------------------------------------------------------------------------------------------------------------------
+17396   100.00% 1.03514e-07 1.42898e-01 4.25689e-02 1.85467e-01   0 /mptdc_top_asic                                        
+   16     0.09% 2.41272e-10 3.06258e-03 1.17003e-02 1.47628e-02   1 /mptdc_top_asic/u_core_u_phase_buf_slow                
+   16     0.09% 2.41272e-10 3.27070e-03 8.53095e-03 1.18016e-02   1 /mptdc_top_asic/u_core_u_phase_buf_fast                
+   35     0.20% 2.68746e-10 1.02975e-03 1.98673e-04 1.22843e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[0].u_pd
+   35     0.20% 2.41843e-10 9.80098e-04 1.99896e-04 1.17999e-03   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[5].u_pd
+   34     0.20% 2.41401e-10 9.80618e-04 1.99369e-04 1.17999e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[5].u_pd
+   34     0.20% 2.41622e-10 9.80481e-04 1.99369e-04 1.17985e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[5].u_pd
+   34     0.20% 2.40170e-10 9.78934e-04 1.98672e-04 1.17761e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[4].u_pd
+   35     0.20% 2.39525e-10 9.77898e-04 1.99171e-04 1.17707e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[3].u_pd
+   35     0.20% 2.39699e-10 9.77694e-04 1.99230e-04 1.17692e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[3].u_pd
+   35     0.20% 2.40107e-10 9.77605e-04 1.99092e-04 1.17670e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[3].u_pd
+   35     0.20% 2.40281e-10 9.77395e-04 1.99088e-04 1.17648e-03   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[3].u_pd
+   35     0.20% 2.41741e-10 9.76502e-04 1.99754e-04 1.17626e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[2].u_pd
+   34     0.20% 2.41196e-10 9.75835e-04 1.99306e-04 1.17514e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[1].u_pd
+   41     0.24% 2.63937e-10 9.90335e-04 1.80295e-04 1.17063e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[6].u_pd
+   35     0.20% 2.35492e-10 9.57443e-04 2.09521e-04 1.16696e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[0].u_pd
+   33     0.19% 2.37138e-10 9.68322e-04 1.96052e-04 1.16437e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[3].u_pd
+   35     0.20% 2.36143e-10 9.51987e-04 2.05439e-04 1.15743e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[4].u_pd
+   35     0.20% 2.35679e-10 9.50984e-04 2.05391e-04 1.15638e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[3].u_pd
+   35     0.20% 2.36027e-10 9.51828e-04 2.02663e-04 1.15449e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[5].u_pd
+   35     0.20% 2.35701e-10 9.48532e-04 2.05249e-04 1.15378e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[1].u_pd
+   35     0.20% 2.35808e-10 9.48235e-04 2.02458e-04 1.15069e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[2].u_pd
+   35     0.20% 2.30489e-10 9.46236e-04 1.97842e-04 1.14408e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[7].u_pd
+   35     0.20% 2.30489e-10 9.46230e-04 1.97842e-04 1.14407e-03   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[7].u_pd
+   35     0.20% 2.29752e-10 9.41418e-04 1.97747e-04 1.13917e-03   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[2].u_pd
+   32     0.18% 2.26858e-10 9.33901e-04 1.91987e-04 1.12589e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[7].u_pd
+   36     0.21% 2.34301e-10 9.38691e-04 1.65885e-04 1.10458e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[0].u_pd
+   36     0.21% 2.37634e-10 9.33508e-04 1.66710e-04 1.10022e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[3].u_pd
+   36     0.21% 2.28885e-10 9.34964e-04 1.65033e-04 1.10000e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[6].u_pd
+   35     0.20% 2.29197e-10 9.34973e-04 1.64566e-04 1.09954e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[6].u_pd
+   35     0.20% 2.26554e-10 9.34948e-04 1.64440e-04 1.09939e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[6].u_pd
+   37     0.21% 2.26658e-10 9.29787e-04 1.68997e-04 1.09878e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[6].u_pd
+   34     0.20% 2.31430e-10 9.34129e-04 1.61166e-04 1.09530e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[0].u_pd
+   34     0.20% 2.31791e-10 9.33959e-04 1.61166e-04 1.09513e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[0].u_pd
+   34     0.20% 2.38166e-10 9.31257e-04 1.63297e-04 1.09455e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[3].u_pd
+   36     0.21% 2.33423e-10 9.31091e-04 1.60594e-04 1.09168e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[4].u_pd
+   35     0.20% 2.33200e-10 9.31464e-04 1.60069e-04 1.09153e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[4].u_pd
+   35     0.20% 2.32286e-10 9.28655e-04 1.62158e-04 1.09081e-03   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[1].u_pd
+   34     0.20% 2.35131e-10 9.31090e-04 1.59576e-04 1.09067e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[5].u_pd
+   35     0.20% 2.32869e-10 9.28351e-04 1.62080e-04 1.09043e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[1].u_pd
+   35     0.20% 2.32221e-10 9.30918e-04 1.59335e-04 1.09025e-03   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[4].u_pd
+   36     0.21% 2.32089e-10 9.28513e-04 1.61423e-04 1.08994e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[1].u_pd
+   34     0.20% 2.33290e-10 9.30962e-04 1.58866e-04 1.08983e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[5].u_pd
+   34     0.20% 2.33511e-10 9.30805e-04 1.58866e-04 1.08967e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[5].u_pd
+   34     0.20% 2.33651e-10 9.30794e-04 1.58866e-04 1.08966e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[5].u_pd
+   34     0.20% 2.30598e-10 9.31545e-04 1.56992e-04 1.08854e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[7].u_pd
+   34     0.20% 2.30598e-10 9.31546e-04 1.56929e-04 1.08848e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[7].u_pd
+   34     0.20% 2.30673e-10 9.29596e-04 1.58574e-04 1.08817e-03   1 /mptdc_top_asic/u_core_gen_pd_row[0].gen_pd_col[7].u_pd
+   36     0.21% 2.31364e-10 9.27690e-04 1.59834e-04 1.08752e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[1].u_pd
+   34     0.20% 2.33419e-10 9.28941e-04 1.57828e-04 1.08677e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[4].u_pd
+   34     0.20% 2.29537e-10 9.28534e-04 1.57118e-04 1.08565e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[4].u_pd
+   34     0.20% 2.32160e-10 9.28524e-04 1.57118e-04 1.08564e-03   1 /mptdc_top_asic/u_core_gen_pd_row[3].gen_pd_col[4].u_pd
+   34     0.20% 2.31819e-10 9.27009e-04 1.56551e-04 1.08356e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[2].u_pd
+   34     0.20% 2.31819e-10 9.27020e-04 1.56441e-04 1.08346e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[2].u_pd
+   34     0.20% 2.31819e-10 9.27015e-04 1.56441e-04 1.08346e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[2].u_pd
+   34     0.20% 2.31819e-10 9.27015e-04 1.56441e-04 1.08346e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[2].u_pd
+   34     0.20% 2.31819e-10 9.27010e-04 1.56441e-04 1.08345e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[2].u_pd
+   34     0.20% 2.29217e-10 9.25189e-04 1.57071e-04 1.08226e-03   1 /mptdc_top_asic/u_core_gen_pd_row[6].gen_pd_col[1].u_pd
+   34     0.20% 2.29217e-10 9.25190e-04 1.57008e-04 1.08220e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[1].u_pd
+   35     0.20% 2.18742e-10 9.12498e-04 1.59561e-04 1.07206e-03   1 /mptdc_top_asic/u_core_gen_pd_row[4].gen_pd_col[7].u_pd
+   35     0.20% 2.20331e-10 9.11197e-04 1.60046e-04 1.07124e-03   1 /mptdc_top_asic/u_core_gen_pd_row[7].gen_pd_col[7].u_pd
+   35     0.20% 2.29059e-10 8.71405e-04 1.46639e-04 1.01804e-03   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[6].u_pd
+   34     0.20% 2.28836e-10 8.71781e-04 1.46114e-04 1.01789e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[6].u_pd
+   34     0.20% 2.32578e-10 8.60890e-04 1.46987e-04 1.00788e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[0].u_pd
+   34     0.20% 2.24677e-10 8.54803e-04 1.49097e-04 1.00390e-03   1 /mptdc_top_asic/u_core_gen_pd_row[5].gen_pd_col[6].u_pd
+   35     0.20% 2.24672e-10 8.53635e-04 1.47966e-04 1.00160e-03   1 /mptdc_top_asic/u_core_gen_pd_row[1].gen_pd_col[0].u_pd
+   33     0.19% 2.16207e-10 8.37695e-04 1.42838e-04 9.80533e-04   1 /mptdc_top_asic/u_core_gen_pd_row[2].gen_pd_col[0].u_pd
+    2     0.01% 2.26280e-11 1.08985e-04 0.00000e+00 1.08985e-04   1 /mptdc_top_asic/u_core_u_rst_fast_sync                 
+    6     0.03% 6.02120e-11 7.39519e-05 1.50543e-06 7.54574e-05   1 /mptdc_top_asic/u_core_u_rst_wdt_sync                  
+    5     0.03% 5.08280e-11 5.09521e-05 2.14369e-05 7.23891e-05   1 /mptdc_top_asic/u_rst_core_sync                        
+    5     0.03% 5.11580e-11 6.17440e-05 1.93778e-06 6.36818e-05   1 /mptdc_top_asic/u_core_u_rst_tx_sync                   
+    4     0.02% 4.17860e-11 4.85946e-05 9.85997e-07 4.95806e-05   1 /mptdc_top_asic/u_core_u_rst_drain_sync                
+    3     0.02% 3.20330e-11 3.69318e-05 3.39034e-06 4.03221e-05   1 /mptdc_top_asic/u_rst_csr_sync                         
+    3     0.02% 3.25730e-11 3.59142e-05 3.91910e-07 3.63062e-05   1 /mptdc_top_asic/u_core_u_rst_fifo_sync                 
+    2     0.01% 2.24830e-11 2.35953e-05 0.00000e+00 2.35953e-05   1 /mptdc_top_asic/u_core_u_rst_status_sync               
+---------------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,18 @@
+# O13 PD Intentional Vernier Paths
+
+These are the intended slow buffered phase samples into PD q1 sampler flops. They are measurement crossings, not ordinary synchronous setup paths.
+
+| slow_tap | slow_clock | q1_endpoint_count | status |
+|---:|---|---:|---|
+| 0 | `clk_osc_slow_buf_tap0` | 1 | REVIEW_REQUIRED |
+| 1 | `clk_osc_slow_buf_tap1` | 1 | REVIEW_REQUIRED |
+| 2 | `clk_osc_slow_buf_tap2` | 1 | REVIEW_REQUIRED |
+| 3 | `clk_osc_slow_buf_tap3` | 1 | REVIEW_REQUIRED |
+| 4 | `clk_osc_slow_buf_tap4` | 1 | REVIEW_REQUIRED |
+| 5 | `clk_osc_slow_buf_tap5` | 1 | REVIEW_REQUIRED |
+| 6 | `clk_osc_slow_buf_tap6` | 1 | REVIEW_REQUIRED |
+| 7 | `clk_osc_slow_buf_tap7` | 1 | REVIEW_REQUIRED |
+
+PD_INTENTIONAL_VERNIER_EXPECTED=64
+PD_INTENTIONAL_VERNIER_MATCHED=8
+PD_INTENTIONAL_VERNIER_STATUS=REVIEW_REQUIRED
