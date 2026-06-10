@@ -22,6 +22,8 @@ Outputs are written to `work/innovus/<run_id>/`.
 The active PnR model preserves:
 
 - `RO_tune4/S[0:7]` as raw analog source/load-check pins.
+- `RO_tune4/rstb` as the active-high run/stop control.
+- `RO_tune4/code[7:0]` as routable tuning inputs.
 - BUHDX4 isolation followed by BUHDX12 final phase drivers.
 - Matched slow and fast phase-buffer topology.
 - No CTS on RO or buffered phase clocks.
@@ -30,6 +32,10 @@ The active PnR model preserves:
 
 The `RO_tune4` macro abstracts, analog handoff files, and XLIBD references are
 protected source inputs and must not be removed during cleanup.
+
+Before a real implementation run, the RO interface audit must pass for the
+source and copied LEF.  The audit checks the real `MACRO RO_tune4` block, not
+`PROPERTYDEFINITIONS` entries such as `MACRO CatenaDesignType STRING ;`.
 
 ## Constraints
 

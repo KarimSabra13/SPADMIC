@@ -104,7 +104,12 @@ require_file "O12 HDL filelist" "$O12_FILELIST"
 require_file "frequency-mode defines" "$FREQ_DEFINES"
 
 if [[ -f "$REAL_LEF" ]]; then
-  MACRO_NAME="$(awk '/^[[:space:]]*MACRO[[:space:]]+/ {print $2; exit}' "$REAL_LEF")"
+  MACRO_NAME="$(awk '
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {print $2; exit}
+  ' "$REAL_LEF")"
   echo "O12 real LEF: $REAL_LEF" | tee -a "$GENUS_LOG"
   echo "O12 real LEF macro: ${MACRO_NAME:-unknown}" | tee -a "$GENUS_LOG"
   if [[ "${MACRO_NAME:-}" != "RO_tune4" ]]; then

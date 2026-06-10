@@ -30,6 +30,7 @@ The active flow uses:
 - Typical-only timing view.
 - R750_delta5 frequency mode.
 - Real `RO_tune4` macro binding.
+- RO interface audit before Genus launch.
 - Raw RO phase clocks at `RO_tune4/S[0:7]`.
 - Buffered phase clocks at the final `BUHDX12` phase drivers.
 - A narrow, count-checked PD intentional Vernier exception.
@@ -50,9 +51,16 @@ Protected inputs include:
 - `syn/inputs/mptdc_phase_distribution.sdc`.
 - `syn/macros/RO_tune4_real_abstract_shell.lib`.
 - `analog_handoff/real_ro_tune4_abstract.env`.
+- `analog_handoff/audit_ro_tune4_abstract.py`.
 
 The stable SDC names are aliases first.  Legacy SDC files remain until all
 references are updated and validated.
+
+The `RO_tune4` audit verifies that the real LEF parser ignores
+`PROPERTYDEFINITIONS`, finds the real `MACRO RO_tune4` block, and sees `rstb`,
+`code[0:7]`, `S[0:7]`, `VDD`, `VSS`, and `vdd!`.  In the macro, `rstb=1`
+means run and `rstb=0` means stop.  `code[7:0]` is the tuning bus and must
+remain routable even if a timing experiment uses fixed tuning.
 
 ## Output Policy
 

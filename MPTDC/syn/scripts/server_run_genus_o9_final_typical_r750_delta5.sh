@@ -98,7 +98,12 @@ fi
 
 MACRO_NAME="unknown"
 if [[ "$INPUT_RC" == "0" ]]; then
-  MACRO_NAME="$(awk '/^[[:space:]]*MACRO[[:space:]]+/ {print $2; exit}' "$REAL_LEF")"
+  MACRO_NAME="$(awk '
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {print $2; exit}
+  ' "$REAL_LEF")"
   echo "O9 real LEF: $REAL_LEF" | tee -a "$GENUS_LOG"
   echo "O9 real LEF macro: $MACRO_NAME" | tee -a "$GENUS_LOG"
   if [[ "$MACRO_NAME" != "RO_tune4" ]]; then

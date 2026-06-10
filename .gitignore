@@ -22,6 +22,10 @@ MPTDC/results/**
 MPTDC/lab_snapshots/**
 MPTDC/artifacts/**
 MPTDC/report_artifacts/**
+MPTDC/syn/outputs/**
+MPTDC/syn/reports/**
+MPTDC/syn/logs/**
+MPTDC/syn/work/**
 position/syn/logs/**
 position/syn/reports/**
 position/syn/reports_pushed/**

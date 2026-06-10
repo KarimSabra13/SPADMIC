@@ -203,6 +203,19 @@ set design(reports_dir)       "$design(syn_root)/reports"
 set design(logs_dir)          "$design(syn_root)/logs"
 set design(synthesis_reports) "$design(reports_dir)/synthesis"
 
+# Stable work/ flow override.
+# When set by the server wrapper, all Genus-generated products are written
+# below work/genus/<RUN_ID>/ instead of the checked-in source tree.
+if {[info exists ::env(MPTDC_GENUS_RUN_DIR)] && $::env(MPTDC_GENUS_RUN_DIR) ne ""} {
+    set mptdc_genus_run_dir [file normalize $::env(MPTDC_GENUS_RUN_DIR)]
+    set design(work_dir)          "$mptdc_genus_run_dir/internal/work"
+    set design(export_dir)        "$mptdc_genus_run_dir/outputs"
+    set design(reports_dir)       "$mptdc_genus_run_dir/reports"
+    set design(logs_dir)          "$mptdc_genus_run_dir/logs"
+    set design(synthesis_reports) "$design(reports_dir)/synthesis"
+    puts "MPTDC_DEFINES_INFO: using MPTDC_GENUS_RUN_DIR=$mptdc_genus_run_dir for Genus outputs"
+}
+
 # HDL source paths
 set design(hdl_search_paths)  [list $design(rtl_dir)]
 set design(read_hdl_list)     "$design(syn_root)/filelist_synth.f"

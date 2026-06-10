@@ -81,7 +81,12 @@ require_file "standard-cell LEF" "$STD_LEF"
 require_file "standard-cell typical Liberty" "$STD_TC_LIB"
 
 if [[ -f "$RO_LEF" ]]; then
-  macro_name="$(grep -m1 '^[[:space:]]*MACRO[[:space:]]' "$RO_LEF" | awk '{print $2}')"
+  macro_name="$(awk '
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {print $2; exit}
+  ' "$RO_LEF")"
   echo "RO LEF macro: ${macro_name:-unknown}" | tee -a "$RUN_LOG"
   if [[ "${macro_name:-}" != "RO_tune4" ]]; then
     echo "ERROR: RO LEF macro is not RO_tune4" | tee -a "$RUN_LOG"

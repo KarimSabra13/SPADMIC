@@ -14,6 +14,11 @@ MPTDC_GENUS_WORK="${MPTDC_GENUS_WORK:-$MPTDC_WORK_ROOT/genus}"
 MPTDC_EVIDENCE_WORK="${MPTDC_EVIDENCE_WORK:-$MPTDC_WORK_ROOT/evidence}"
 export MPTDC_WORK_ROOT MPTDC_GENUS_WORK MPTDC_EVIDENCE_WORK
 export MPTDC_SNAPSHOT_ROOT="${MPTDC_SNAPSHOT_ROOT:-$MPTDC_EVIDENCE_WORK}"
+FLOW_LABEL="${MPTDC_STABLE_FLOW_LABEL:-MPTDC_GENUS_TYPICAL}"
+CLOSURE_LABEL="${MPTDC_STABLE_CLOSURE_LABEL:-MPTDC_TYPICAL_TIMING_CLOSURE}"
+PACKAGE_LABEL="${MPTDC_FINAL_PACKAGE_LABEL:-TYPICAL_ONLY_TAPEOUT_PACKAGE}"
+SIGNOFF_BOUNDARY="${MPTDC_SIGNOFF_BOUNDARY:-TYPICAL_ONLY_NOT_MMMC}"
+LEGACY_TRACE_LABEL="O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_o13_phase_distribution_genus}"
 REQUESTED_RUN_MODE="${MPTDC_O13_MODE:-typical_synth}"
@@ -33,14 +38,16 @@ if [[ "$REQUESTED_RUN_MODE" == "O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH" ]]; then
   export MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT=1
 fi
 
-RESULT_DIR="$MPTDC_GENUS_WORK/$RUN_ID"
+RESULT_DIR="${MPTDC_GENUS_RUN_DIR:-$MPTDC_GENUS_WORK/$RUN_ID}"
 SNAPSHOT_TAG="genus_osc_pd_${RUN_ID}"
 SNAPSHOT_DIR="$MPTDC_SNAPSHOT_ROOT/$SNAPSHOT_TAG"
 GENUS_LOG="$RESULT_DIR/genus_${RUN_ID}.log"
+GENUS_TOOL_LOG="$RESULT_DIR/logs/genus_o13_phase_distribution.log"
 ENV_FILE="$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
+RO_AUDIT_SCRIPT="$MPTDC_DIR/analog_handoff/audit_ro_tune4_abstract.py"
 FREQ_DEFINES="$SYN_DIR/inputs/mptdc_freq_modes.defines"
 if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
-  O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs5.sdc"
+  O13_SDC="$SYN_DIR/inputs/mptdc_pd_vernier_exceptions.sdc"
 elif [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
   O13_SDC="$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_abs4.sdc"
 elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
@@ -76,10 +83,12 @@ case "$RUN_MODE" in
 esac
 
 rm -rf "$RESULT_DIR"
-mkdir -p "$RESULT_DIR" "$SYN_DIR/logs"
+mkdir -p "$RESULT_DIR/logs" "$RESULT_DIR/outputs" "$RESULT_DIR/reports" "$RESULT_DIR/internal/run" "$RESULT_DIR/internal/work"
+export MPTDC_GENUS_RUN_DIR="$RESULT_DIR"
+export MPTDC_GENUS_TOOL_LOG="$GENUS_TOOL_LOG"
 
 {
-  echo "# O13 Phase Distribution Genus Run"
+  echo "# MPTDC Typical Genus Run"
   echo "date: $(date -Iseconds)"
   echo "hostname: $(hostname)"
   echo "repo: $REPO_ROOT"
@@ -93,7 +102,12 @@ mkdir -p "$RESULT_DIR" "$SYN_DIR/logs"
   echo "result_dir: $RESULT_DIR"
   echo "snapshot_dir: $SNAPSHOT_DIR"
   echo "snapshot_tag: $SNAPSHOT_TAG"
-  echo "labels: O13_PHASE_DISTRIBUTION_TREE_CLEANUP TYPICAL_ONLY NOT_MMMC NOT_FINAL_SIGNOFF"
+  echo "flow: $FLOW_LABEL"
+  echo "mode: $CLOSURE_LABEL"
+  echo "package_label: $PACKAGE_LABEL"
+  echo "signoff_boundary: $SIGNOFF_BOUNDARY"
+  echo "labels: $FLOW_LABEL $CLOSURE_LABEL $PACKAGE_LABEL NOT_MMMC_SIGNOFF FINAL_SIGNOFF_NO"
+  echo "legacy_trace: $LEGACY_TRACE_LABEL"
   echo "packet_format: unchanged"
   echo "nfast_encoding: raw_lfsr_tag"
   echo "frequency_mode: r750_delta5"
@@ -132,17 +146,28 @@ REAL_LIB="${O1_RO_LIBERTY_PATH:-$DEFAULT_REAL_LIB}"
 
 require_file "RO_tune4 real LEF" "$REAL_LEF"
 require_file "RO_tune4 Liberty shell" "$REAL_LIB"
+require_file "RO_tune4 interface audit" "$RO_AUDIT_SCRIPT"
 require_file "O13 SDC overlay" "$O13_SDC"
 require_file "O13 HDL filelist" "$O13_FILELIST"
 require_file "frequency-mode defines" "$FREQ_DEFINES"
 
-if [[ -f "$REAL_LEF" ]]; then
-  MACRO_NAME="$(awk '/^[[:space:]]*MACRO[[:space:]]+/ {print $2; exit}' "$REAL_LEF")"
+RO_AUDIT_REPORT="$RESULT_DIR/reports/ro_tune4_lef_audit.rpt"
+if [[ -f "$REAL_LEF" && -f "$REAL_LIB" && -f "$RO_AUDIT_SCRIPT" ]]; then
+  RO_AUDIT_SOURCE_LEF="${MPTDC_RO_SOURCE_LEF_PATH:-${O1_RO_SOURCE_LEF_PATH:-}}"
   echo "O13 real LEF: $REAL_LEF" | tee -a "$GENUS_LOG"
-  echo "O13 real LEF macro: ${MACRO_NAME:-unknown}" | tee -a "$GENUS_LOG"
-  if [[ "${MACRO_NAME:-}" != "RO_tune4" ]]; then
-    echo "ERROR: LEF macro '${MACRO_NAME:-unknown}' does not match expected RO_tune4" | tee -a "$GENUS_LOG"
+  echo "O13 source LEF for audit: ${RO_AUDIT_SOURCE_LEF:-unset}" | tee -a "$GENUS_LOG"
+  echo "[RO_AUDIT] Checking RO_tune4 LEF/Liberty/RTL interface" | tee -a "$GENUS_LOG"
+  if ! python3 "$RO_AUDIT_SCRIPT" \
+    --source-lef "$RO_AUDIT_SOURCE_LEF" \
+    --copied-lef "$REAL_LEF" \
+    --liberty "$REAL_LIB" \
+    --rtl "$MPTDC_DIR/rtl/osc/mptdc_osc_wrapper.sv" \
+    --report "$RO_AUDIT_REPORT" >> "$GENUS_LOG" 2>&1; then
+    echo "ERROR: RO_tune4 interface audit failed: $RO_AUDIT_REPORT" | tee -a "$GENUS_LOG"
     INPUT_RC=3
+  fi
+  if [[ -f "$RO_AUDIT_REPORT" ]]; then
+    awk -F= '/^(SOURCE_MACRO_NAME|COPIED_MACRO_NAME|REQUIRED_PINS_FOUND|MISSING_PINS|PIN_GEOMETRY_PRESENT|LIBERTY_REQUIRED_PINS_FOUND|RTL_LOGICAL_PINS_FOUND|AUDIT_STATUS)=/ {print "RO_AUDIT_" $0}' "$RO_AUDIT_REPORT" | tee -a "$GENUS_LOG"
   fi
 fi
 
@@ -179,9 +204,9 @@ export MPTDC_O13_PD_VERNIER_RPT="$RESULT_DIR/pd_vernier_exception_check.rpt"
 export MPTDC_O13_PD_VERNIER_ENDPOINT_DISCOVERY_RPT="$RESULT_DIR/pd_vernier_endpoint_discovery.rpt"
 export MPTDC_O13_PD_VERNIER_SOURCE_DISCOVERY_RPT="$RESULT_DIR/pd_vernier_source_discovery.rpt"
 export MPTDC_O13_PD_VERNIER_INTENT_RPT="$RESULT_DIR/timing_pd_intentional_vernier.rpt"
-export O1_RUN_FLAVOR="O13_PHASE_DISTRIBUTION_TREE_CLEANUP"
+export O1_RUN_FLAVOR="$FLOW_LABEL"
 export GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
-export MPTDC_OPT_GOAL="o13_phase_distribution_tree_cleanup"
+export MPTDC_OPT_GOAL="mptdc_typical_timing_closure"
 export MPTDC_OSC_SLOW_PERIOD_NS="${O13_OSC_SLOW_PERIOD_NS:-1.430}"
 export MPTDC_OSC_FAST_PERIOD_NS="${O13_OSC_FAST_PERIOD_NS:-1.333}"
 export MPTDC_OSC_SLOW_TAP_STEP_NS="${O13_OSC_SLOW_TAP_STEP_NS:-0.079}"
@@ -202,6 +227,12 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  MPTDC_FREQ_MODE=$MPTDC_FREQ_MODE"
   echo "  GENUS_EFFORT=$GENUS_EFFORT"
   echo "  MPTDC_TIMING_VIEW=$MPTDC_TIMING_VIEW"
+  echo "  FLOW_LABEL=$FLOW_LABEL"
+  echo "  CLOSURE_LABEL=$CLOSURE_LABEL"
+  echo "  PACKAGE_LABEL=$PACKAGE_LABEL"
+  echo "  SIGNOFF_BOUNDARY=$SIGNOFF_BOUNDARY"
+  echo "  LEGACY_TRACE=$LEGACY_TRACE_LABEL"
+  echo "  MPTDC_GENUS_RUN_DIR=$MPTDC_GENUS_RUN_DIR"
   echo "  PHASE_BUFFER_TOPOLOGY=BUHDX4 isolation + BUHDX12 digital driver per tap"
   echo "  PHASE_BUFFER_DEFINE=MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12"
   echo
@@ -212,14 +243,10 @@ if [[ "$INPUT_RC" == "0" && "$RUN_MODE" == "validate_only" ]]; then
   echo "MPTDC_O13_VALIDATE_ONLY=1: input validation passed; Genus not launched." | tee -a "$GENUS_LOG"
   GENUS_RC=0
 elif [[ "$INPUT_RC" == "0" ]]; then
-  echo "[GENUS_O13] Cleaning generated synthesis outputs/reports for a non-stale run" | tee -a "$GENUS_LOG"
-  rm -rf "$SYN_DIR/reports/synthesis" "$SYN_DIR/outputs"
-  mkdir -p "$SYN_DIR/reports" "$SYN_DIR/outputs" "$SYN_DIR/logs"
-
-  echo "[GENUS_O13] Starting TC-only O13 phase-distribution synthesis" | tee -a "$GENUS_LOG"
+  echo "[GENUS_TYPICAL] Starting TC-only MPTDC Genus synthesis" | tee -a "$GENUS_LOG"
   (
-    cd "$SCRIPT_DIR"
-    genus -files genus.tcl -log "../logs/genus_o13_phase_distribution.log"
+    cd "$RESULT_DIR/internal/run"
+    genus -files "$SCRIPT_DIR/genus.tcl" -log "$GENUS_TOOL_LOG"
   ) 2>&1 | tee -a "$GENUS_LOG"
   GENUS_RC=${PIPESTATUS[0]}
 fi
@@ -240,6 +267,9 @@ fi
 cp "$GENUS_LOG" "$RESULT_DIR/genus_${RUN_ID}.log" 2>/dev/null || true
 cp "$O13_SDC" "$RESULT_DIR/final_sdc_overlay_used.sdc" 2>/dev/null || true
 cp "$O13_FILELIST" "$RESULT_DIR/final_filelist_used.f" 2>/dev/null || true
+if [[ -f "$RESULT_DIR/o13_clock_model_check.sdc.rpt" && ! -f "$RESULT_DIR/o13_clock_model_check.rpt" ]]; then
+  cp "$RESULT_DIR/o13_clock_model_check.sdc.rpt" "$RESULT_DIR/o13_clock_model_check.rpt" 2>/dev/null || true
+fi
 
 count_expected_clock_names() {
   local count=0
@@ -314,6 +344,9 @@ run_timing_classification
 
 POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
+  POSTSYN_NETLIST="$RESULT_DIR/outputs/mptdc_top_asic.postsyn.v"
+fi
+if [[ ! -f "$POSTSYN_NETLIST" ]]; then
   POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
 fi
 
@@ -339,6 +372,13 @@ PD_VERNIER_EXCEPTION_APPLIED=NA
 PD_VERNIER_EXCEPTION_OVERMATCH=NA
 PD_VERNIER_EXCEPTION_UNDERMATCH=NA
 SDC_COMMAND_FAILURE_COUNT=NA
+MAX_TRANSITION_VIOLATIONS=NA
+MAX_CAPACITANCE_VIOLATIONS=NA
+MAX_FANOUT_VIOLATIONS=NA
+REAL_TIMED_WNS_PS=NA
+REAL_TIMED_TNS_PS=NA
+WORST_REAL_PATH_FAMILY=NA
+FINAL_DECISION="GENUS_TYPICAL_REVIEW_REQUIRED"
 RAW_CLOCK_NAMES=(clk_osc_slow)
 BUFFER_CLOCK_NAMES=()
 for tap in 1 2 3 4 5 6 7; do
@@ -391,6 +431,138 @@ fi
 if [[ -f "$RESULT_DIR/sdc_command_failures.md" ]]; then
   SDC_COMMAND_FAILURE_COUNT="$(grep -Ec 'failed[[:space:]]+[1-9]|MPTDC_O13_.*FATAL|MPTDC_SDC_.*ERROR|\[SDC-202\]|\[SDC-209\]' "$RESULT_DIR/sdc_command_failures.md" || true)"
 fi
+if [[ -f "$RESULT_DIR/report_design_rules.rpt" ]]; then
+  MAX_TRANSITION_VIOLATIONS="$(awk '/Max_transition design rule/ {if (match($0, /violation total = [0-9]+/)) {v=substr($0, RSTART+18, RLENGTH-18); print v; found=1; exit}} END {if (!found) print "0"}' "$RESULT_DIR/report_design_rules.rpt")"
+  if grep -qi 'Max_capacitance design rule: no violations' "$RESULT_DIR/report_design_rules.rpt"; then
+    MAX_CAPACITANCE_VIOLATIONS=0
+  else
+    MAX_CAPACITANCE_VIOLATIONS="$(awk '/Max_capacitance design rule/ {if (match($0, /violation total = [0-9]+/)) {v=substr($0, RSTART+18, RLENGTH-18); print v; found=1; exit}} END {if (!found) print "UNKNOWN"}' "$RESULT_DIR/report_design_rules.rpt")"
+  fi
+  if grep -qi 'Max_fanout design rule: no violations' "$RESULT_DIR/report_design_rules.rpt"; then
+    MAX_FANOUT_VIOLATIONS=0
+  else
+    MAX_FANOUT_VIOLATIONS="$(awk '/Max_fanout design rule/ {if (match($0, /violation total = [0-9]+/)) {v=substr($0, RSTART+18, RLENGTH-18); print v; found=1; exit}} END {if (!found) print "UNKNOWN"}' "$RESULT_DIR/report_design_rules.rpt")"
+  fi
+fi
+if [[ -f "$RESULT_DIR/timing_path_classification.csv" ]]; then
+  REAL_TIMED_WNS_PS="$(awk -F, 'NR>1 && $1!="PD_INTENTIONAL_VERNIER" {if ($5 != "" && (found == 0 || $5+0 < min)) {min=$5+0; found=1}} END {if (found) printf "%.1f", min; else print "NA"}' "$RESULT_DIR/timing_path_classification.csv")"
+  REAL_TIMED_TNS_PS="$(awk -F, 'NR>1 && $1!="PD_INTENTIONAL_VERNIER" && $5+0 < 0 {sum += $5+0; found=1} END {if (found) printf "%.1f", sum; else print "0.0"}' "$RESULT_DIR/timing_path_classification.csv")"
+  WORST_REAL_PATH_FAMILY="$(awk -F, 'NR>1 && $1!="PD_INTENTIONAL_VERNIER" {if ($5 != "" && (found == 0 || $5+0 < min)) {min=$5+0; fam=$2; found=1}} END {if (found) print fam; else print "NA"}' "$RESULT_DIR/timing_path_classification.csv")"
+fi
+
+write_macro_binding_check() {
+  local out="$RESULT_DIR/macro_binding_check.rpt"
+  {
+    echo "# MPTDC Macro Binding Check"
+    echo "FLOW_LABEL=$FLOW_LABEL"
+    echo "LEGACY_TRACE=$LEGACY_TRACE_LABEL"
+    echo "RO_TUNE4_COUNT=$RO_COUNT"
+    echo "MPTDC_OSC_STUB_COUNT=$STUB_COUNT"
+    echo "BUHDX4_COUNT=$BUHDX4_COUNT"
+    echo "BUHDX12_COUNT=$BUHDX12_COUNT"
+    echo "RAW_RO_CLOCKS_FOUND=$RAW_RO_CLOCKS_FOUND"
+    echo "BUFFER_PHASE_CLOCKS_FOUND=$BUFFER_PHASE_CLOCKS_FOUND"
+    echo "RO_TUNE4_LIB=$REAL_LIB"
+    echo "RO_TUNE4_LEF=$REAL_LEF"
+    echo "XLIBD_RO_STRICT_D_LOAD_BUDGET_FF=58.72"
+    echo "XLIBD_BUHDX4_INPUT_CAP_FF=10.56"
+    echo "XLIBD_BUHDX12_INPUT_CAP_FF=32.24"
+    echo "XLIBD_USAGE=REFERENCE_ONLY_NOT_TIMING_ENGINE"
+    echo
+    if [[ "$RO_COUNT" == "2" && "$STUB_COUNT" == "0" ]]; then
+      echo "MACRO_BINDING_STATUS=PASS"
+    else
+      echo "MACRO_BINDING_STATUS=REVIEW_REQUIRED"
+    fi
+  } > "$out"
+}
+
+write_packet_contract_check() {
+  local out="$RESULT_DIR/packet_contract_check.rpt"
+  local pkg="$MPTDC_DIR/rtl/pkg/mptdc_pkg.sv"
+  local tx="$MPTDC_DIR/rtl/readout/mptdc_narrow16_tx_v2.sv"
+  {
+    echo "# MPTDC Packet Contract Check"
+    echo "FLOW_LABEL=$FLOW_LABEL"
+    echo "PACKET_FORMAT_UNCHANGED=YES"
+    echo "RAW_LFSR_TAG_UNCHANGED=YES"
+    echo "RTL_PKG=$pkg"
+    echo "RTL_TX=$tx"
+    echo
+    grep -nE 'parameter int unsigned NFAST_W[[:space:]]*=[[:space:]]*7|parameter int unsigned NSLOW_W[[:space:]]*=[[:space:]]*7|localparam int unsigned MAX_HITS[[:space:]]*=|localparam int unsigned NARROW_W[[:space:]]*=[[:space:]]*16|OUT_MODE_RAW_FEATURES|FAST_TAG_SEQUENCE_LEN|FAST_TAG_SEED' "$pkg" || true
+    grep -nE 'fixed calibrated-feature packet|frozen|Hit W1|Hit W2|raw key|nfast' "$tx" || true
+  } > "$out"
+}
+
+write_final_readiness() {
+  local out="$RESULT_DIR/final_typical_genus_readiness.md"
+  {
+    echo "# MPTDC Final Typical Genus Readiness"
+    echo
+    echo "- Flow: \`$FLOW_LABEL\`"
+    echo "- Mode: \`$CLOSURE_LABEL\`"
+    echo "- Package label: \`$PACKAGE_LABEL\`"
+    echo "- Signoff boundary: \`$SIGNOFF_BOUNDARY\`"
+    echo "- Legacy trace: \`$LEGACY_TRACE_LABEL\`"
+    echo "- Run ID: \`$RUN_ID\`"
+    echo "- Result directory: \`$RESULT_DIR\`"
+    echo "- Genus exit code: \`$GENUS_RC\`"
+    echo "- Final decision: \`$FINAL_DECISION\`"
+    echo
+    echo "## Required Checks"
+    echo
+    echo "| Check | Expected | Actual | Status |"
+    echo "|---|---:|---:|---|"
+    emit_check "RO_tune4 count" 2 "$RO_COUNT"
+    emit_check "mptdc_osc_stub count" 0 "$STUB_COUNT"
+    emit_check "raw RO clocks found" 16 "$RAW_RO_CLOCKS_FOUND"
+    emit_check "buffer phase clocks found" 16 "$BUFFER_PHASE_CLOCKS_FOUND"
+    emit_check_text "clk_sys async to buffer phase clocks" YES "$CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS"
+    emit_check "PD Vernier endpoints" 64 "$PD_VERNIER_EXCEPTION_MATCHED"
+    emit_check "PD Vernier sources" 8 "$PD_VERNIER_SOURCE_MATCHED"
+    emit_check_text "PD Vernier exception applied" YES "$PD_VERNIER_EXCEPTION_APPLIED"
+    emit_check_text "PD Vernier overmatch" NO "$PD_VERNIER_EXCEPTION_OVERMATCH"
+    emit_check_text "PD Vernier undermatch" NO "$PD_VERNIER_EXCEPTION_UNDERMATCH"
+    emit_check "UNKNOWN_REVIEW_REQUIRED" 0 "$UNKNOWN_REVIEW_REQUIRED_COUNT"
+    emit_check "SDC command failures" 0 "$SDC_COMMAND_FAILURE_COUNT"
+    emit_check "max capacitance violations" 0 "$MAX_CAPACITANCE_VIOLATIONS"
+    emit_check "max fanout violations" 0 "$MAX_FANOUT_VIOLATIONS"
+    echo
+    echo "## Timing And DRV"
+    echo
+    echo "- Real timed WNS ps: \`$REAL_TIMED_WNS_PS\`"
+    echo "- Real timed TNS ps: \`$REAL_TIMED_TNS_PS\`"
+    echo "- Worst real path family: \`$WORST_REAL_PATH_FAMILY\`"
+    echo "- Max transition violations: \`$MAX_TRANSITION_VIOLATIONS\`"
+    echo
+    if [[ -f "$RESULT_DIR/timing_path_classification_summary.md" ]]; then
+      echo "## Classification Summary"
+      echo
+      sed -n '1,80p' "$RESULT_DIR/timing_path_classification_summary.md"
+    fi
+    echo
+    echo "## Interpretation"
+    echo
+    if [[ "$FINAL_DECISION" == "GENUS_TYPICAL_CLOSED" ]]; then
+      echo "Typical-only Genus timing is clean for the checked criteria. This is still not MMMC signoff."
+    else
+      echo "Do not call closure yet. Review the failing criteria and the worst real path family before running Innovus implementation."
+    fi
+  } > "$out"
+}
+
+emit_check() {
+  local label="$1"
+  local expected="$2"
+  local actual="$3"
+  local status="FAIL"
+  [[ "$actual" == "$expected" ]] && status="PASS"
+  echo "| $label | \`$expected\` | \`$actual\` | $status |"
+}
+
+emit_check_text() {
+  emit_check "$@"
+}
 
 CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
 {
@@ -419,6 +591,12 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "PD_VERNIER_EXCEPTION_UNDERMATCH=$PD_VERNIER_EXCEPTION_UNDERMATCH"
   echo "UNKNOWN_REVIEW_REQUIRED_COUNT=$UNKNOWN_REVIEW_REQUIRED_COUNT"
   echo "SDC_COMMAND_FAILURE_COUNT=$SDC_COMMAND_FAILURE_COUNT"
+  echo "MAX_TRANSITION_VIOLATIONS=$MAX_TRANSITION_VIOLATIONS"
+  echo "MAX_CAPACITANCE_VIOLATIONS=$MAX_CAPACITANCE_VIOLATIONS"
+  echo "MAX_FANOUT_VIOLATIONS=$MAX_FANOUT_VIOLATIONS"
+  echo "REAL_TIMED_WNS_PS=$REAL_TIMED_WNS_PS"
+  echo "REAL_TIMED_TNS_PS=$REAL_TIMED_TNS_PS"
+  echo "WORST_REAL_PATH_FAMILY=$WORST_REAL_PATH_FAMILY"
   echo
   if [[ -f "$POSTSYN_NETLIST" ]]; then
     echo "## RO_tune4 instances"
@@ -433,33 +611,60 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
     echo "ERROR: post-synthesis netlist not found"
   fi
 } > "$CHECK_REPORT"
+write_macro_binding_check
+write_packet_contract_check
 
-STATUS="O13_SERVER_REVIEW_REQUIRED"
-if [[ "$RUN_MODE" == "validate_only" ]]; then
-  STATUS="O13_VALIDATE_ONLY_OK"
-elif [[ "$RO_COUNT" == "2" && "$STUB_COUNT" == "0" && "$BUHDX4_COUNT" -ge 16 && "$BUHDX12_COUNT" -ge 16 ]]; then
-  if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" ]]; then
-    STATUS="O13_ABS5_PD_Q1_EXCEPTION_EXACT_REVIEW_CANDIDATE"
-  elif [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
-    STATUS="O13_ABS4_PD_VERNIER_CLASSIFICATION_REVIEW_CANDIDATE"
-  elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
-    STATUS="O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE"
-  else
-    STATUS="O13_NETLIST_CANDIDATE"
+STATUS="GENUS_TYPICAL_REVIEW_REQUIRED"
+if [[ "$RUN_MODE" == "validate_only" && "$GENUS_RC" == "0" ]]; then
+  STATUS="GENUS_TYPICAL_VALIDATE_ONLY_OK"
+elif [[ "$RUN_MODE" == "validate_only" ]]; then
+  STATUS="GENUS_TYPICAL_VALIDATE_ONLY_FAILED"
+elif [[ "$GENUS_RC" == "0" \
+    && "$RO_COUNT" == "2" \
+    && "$STUB_COUNT" == "0" \
+    && "$RAW_RO_CLOCKS_FOUND" == "16" \
+    && "$BUFFER_PHASE_CLOCKS_FOUND" == "16" \
+    && "$CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS" == "YES" \
+    && "$PD_VERNIER_EXCEPTION_MATCHED" == "64" \
+    && "$PD_VERNIER_SOURCE_MATCHED" == "8" \
+    && "$PD_VERNIER_EXCEPTION_APPLIED" == "YES" \
+    && "$PD_VERNIER_EXCEPTION_OVERMATCH" == "NO" \
+    && "$PD_VERNIER_EXCEPTION_UNDERMATCH" == "NO" \
+    && "$UNKNOWN_REVIEW_REQUIRED_COUNT" == "0" \
+    && "$SDC_COMMAND_FAILURE_COUNT" == "0" \
+    && "$MAX_CAPACITANCE_VIOLATIONS" == "0" \
+    && "$MAX_FANOUT_VIOLATIONS" == "0" \
+    && "$REAL_TIMED_WNS_PS" != "NA" ]]; then
+  if awk "BEGIN {exit !($REAL_TIMED_WNS_PS >= 0.0)}"; then
+    STATUS="GENUS_TYPICAL_CLOSED"
   fi
 fi
+FINAL_DECISION="$STATUS"
+write_final_readiness
 
 {
-  echo "# Genus O13 Phase Distribution Summary"
+  echo "# MPTDC Genus Typical Summary"
   echo
+  echo "- Flow: \`$FLOW_LABEL\`"
+  echo "- Mode: \`$CLOSURE_LABEL\`"
+  echo "- Package label: \`$PACKAGE_LABEL\`"
+  echo "- Signoff boundary: \`$SIGNOFF_BOUNDARY\`"
+  echo "- Legacy trace: \`$LEGACY_TRACE_LABEL\`"
   echo "- Run ID: \`$RUN_ID\`"
   echo "- Run mode: \`$RUN_MODE\`"
+  echo "- Branch: \`$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || true)\`"
   echo "- Git HEAD: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)\`"
   echo "- Genus exit code: $GENUS_RC"
   echo "- Snapshot exit code: $SNAPSHOT_RC"
-  echo "- Signoff status: \`TYPICAL_ONLY_NOT_MMMC_NOT_FINAL_SIGNOFF\`"
+  echo "- Result directory: \`$RESULT_DIR\`"
+  echo "- TYPICAL_ONLY_TAPEOUT_PACKAGE: YES"
+  echo "- NOT_MMMC_SIGNOFF: YES"
+  echo "- FINAL_SIGNOFF: NO"
+  echo "- Signoff status: \`TYPICAL_ONLY_TAPEOUT_PACKAGE_NOT_MMMC_SIGNOFF_NOT_FINAL_SIGNOFF\`"
   echo "- Frequency mode: \`r750_delta5\`"
+  echo "- Phase distribution: \`BUHDX4 -> BUHDX12\`"
   echo "- Packet format: unchanged"
+  echo "- raw_lfsr_tag: unchanged"
   echo "- NFAST encoding: \`raw_lfsr_tag\`"
   echo "- Phase buffer topology: \`BUHDX4 -> BUHDX12 per tap\`"
   echo "- HDL filelist: \`$O13_FILELIST\`"
@@ -486,9 +691,19 @@ fi
   echo "- PD intentional Vernier undermatch: $PD_VERNIER_EXCEPTION_UNDERMATCH"
   echo "- UNKNOWN_REVIEW_REQUIRED count: $UNKNOWN_REVIEW_REQUIRED_COUNT"
   echo "- SDC command failure count: $SDC_COMMAND_FAILURE_COUNT"
+  echo "- Max transition violations: $MAX_TRANSITION_VIOLATIONS"
+  echo "- Max capacitance violations: $MAX_CAPACITANCE_VIOLATIONS"
+  echo "- Max fanout violations: $MAX_FANOUT_VIOLATIONS"
+  echo "- Real timed WNS ps: $REAL_TIMED_WNS_PS"
+  echo "- Real timed TNS ps: $REAL_TIMED_TNS_PS"
+  echo "- Worst real path family: $WORST_REAL_PATH_FAMILY"
   echo
-  echo "O13_STATUS=$STATUS"
+  echo "FINAL_DECISION=$FINAL_DECISION"
+  echo "GENUS_TYPICAL_STATUS=$STATUS"
+  echo "LEGACY_TRACE=$LEGACY_TRACE_LABEL"
   echo "FINAL_SIGNOFF=NO"
+  echo "TYPICAL_ONLY_TAPEOUT_PACKAGE=YES"
+  echo "NOT_MMMC_SIGNOFF=YES"
   if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" ]]; then
     echo "INNOVUS_READY=NO_REVIEW_O13_ABS5_GENUS_FIRST"
   elif [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
@@ -531,6 +746,9 @@ fi
     o13_clock_model_check.rpt \
     o13_clock_model_check.sdc.rpt \
     sdc_command_failures.md \
+    macro_binding_check.rpt \
+    packet_contract_check.rpt \
+    final_typical_genus_readiness.md \
     timing_path_classification.csv \
     timing_path_classification_summary.md; do
     if [[ -f "$RESULT_DIR/$file" ]]; then
@@ -549,4 +767,7 @@ fi
 if [[ "$SNAPSHOT_RC" != "0" ]]; then
   exit "$SNAPSHOT_RC"
 fi
-[[ "$STATUS" == "O13_NETLIST_CANDIDATE" || "$STATUS" == "O13_VALIDATE_ONLY_OK" || "$STATUS" == "O13_ABS3_CLOCK_CDC_REPAIR_REVIEW_CANDIDATE" || "$STATUS" == "O13_ABS4_PD_VERNIER_CLASSIFICATION_REVIEW_CANDIDATE" || "$STATUS" == "O13_ABS5_PD_Q1_EXCEPTION_EXACT_REVIEW_CANDIDATE" ]]
+if [[ "$STATUS" == "GENUS_TYPICAL_VALIDATE_ONLY_OK" || "$STATUS" == "GENUS_TYPICAL_CLOSED" ]]; then
+  exit 0
+fi
+exit 1

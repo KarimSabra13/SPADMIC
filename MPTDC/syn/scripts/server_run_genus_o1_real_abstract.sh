@@ -49,7 +49,12 @@ if [[ ${INPUT_RC:-0} -eq 0 ]]; then
     echo "ERROR: missing real RO_tune4 LEF: $O1_RO_LEF_PATH" | tee -a "$GENUS_LOG"
     INPUT_RC=2
   else
-    macro_name="$(awk '/^[[:space:]]*MACRO[[:space:]]+/ {print $2; exit}' "$O1_RO_LEF_PATH")"
+    macro_name="$(awk '
+      /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+      inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+      inprop {next}
+      /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {print $2; exit}
+    ' "$O1_RO_LEF_PATH")"
     echo "O1 real LEF: $O1_RO_LEF_PATH" | tee -a "$GENUS_LOG"
     echo "O1 real LEF macro: $macro_name" | tee -a "$GENUS_LOG"
     if [[ "$macro_name" != "$O1_RO_CELL_NAME" ]]; then

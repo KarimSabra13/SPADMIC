@@ -25,6 +25,8 @@
 # =============================================================================
 
 set runtype "synthesis"
+set script_dir [file dirname [file normalize [info script]]]
+set syn_dir [file dirname $script_dir]
 
 puts "================================================================"
 puts " MPTDC — Cadence Genus Logic Synthesis"
@@ -32,28 +34,28 @@ puts " Target: XFAB XH018 (180 nm)"
 puts " Design: mptdc_top_asic"
 puts "================================================================"
 
-set debug_file "debug.txt"
+set debug_file [file join [pwd] "debug.txt"]
 
 #############################################
 # 1. LOAD DEFINITIONS AND LIBRARIES
 #############################################
 
 # Helper procedures (must be loaded first — defines mptdc_message, etc.)
-source ../scripts/procedures.tcl -quiet
+source "$script_dir/procedures.tcl"
 
 mptdc_start_stage "init"
 
 # Design-specific variables (ports, clocks, paths, SDC params)
 mptdc_message "Loading design definitions"
-source ../inputs/mptdc.defines -quiet
+source "$syn_dir/inputs/mptdc.defines"
 
 # Technology and standard cell library paths
 mptdc_message "Loading XFAB XH018 PDK definitions"
-source ../libraries/libraries.$TECHNOLOGY.tcl -quiet
-source ../libraries/libraries.$SC_TECHNOLOGY.tcl -quiet
+source "$syn_dir/libraries/libraries.$TECHNOLOGY.tcl"
+source "$syn_dir/libraries/libraries.$SC_TECHNOLOGY.tcl"
 
 # General Genus settings (effort, ramstyle, clock gating)
-source ../scripts/settings.tcl -quiet
+source "$script_dir/settings.tcl"
 
 # Create output directories
 foreach dir [list $design(work_dir) $design(export_dir) \
@@ -61,6 +63,8 @@ foreach dir [list $design(work_dir) $design(export_dir) \
              $design(synthesis_reports)] {
     file mkdir $dir
 }
+mptdc_message "Using Genus work directory $design(work_dir)"
+cd $design(work_dir)
 
 # Suppress known benign messages
 if {[llength $design(SUPPRESS_MESSAGES_GENUS)] > 0} {
@@ -116,6 +120,7 @@ set_db init_hdl_search_path $design(hdl_search_paths)
 mptdc_message "Reading RTL from [file tail $design(read_hdl_list)]"
 mptdc_message "  Filelist: $design(read_hdl_list)"
 read_hdl -sv -f $design(read_hdl_list)
+cd $design(work_dir)
 
 #############################################
 # 5. ELABORATE
