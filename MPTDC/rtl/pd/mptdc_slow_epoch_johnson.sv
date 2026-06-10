@@ -5,16 +5,17 @@
 // Project  : SPAD_MPTDC — Vernier Time-to-Digital Converter
 // File     : mptdc_slow_epoch_johnson.sv
 // Purpose  : Timing-safe slow epoch source for STOP-side coarse timestamp.
+// Author   : Karim Sabra
 // =============================================================================
 // The slow epoch is a 64-stage Johnson counter clocked by slow_phase[0].
 // Compared with the previous binary counter + Gray encoder, this removes the
 // oscillator-domain carry chain and keeps each transition to one changing bit,
 // which is safer for asynchronous STOP-edge capture.
 //
-// O4 muxless-tag mode advances on every slow_phase[0] edge after reset/clear.
-// The slow RO_tune4 rstb/run control stops the clock outside an active window,
-// so a synchronous enable/hold mux only adds oscillator-domain delay.
-// enable_i is retained as a compatibility port for existing wrappers/tests.
+// The counter advances on every slow_phase[0] edge after reset/clear.  The slow
+// RO_tune4 rstb/run control stops the clock outside an active window, so a
+// synchronous enable/hold mux would add oscillator-domain delay.  enable_i is
+// retained as a compatibility port for existing wrappers/tests.
 // =============================================================================
 module mptdc_slow_epoch_johnson
   import mptdc_pkg::*;
@@ -24,7 +25,7 @@ module mptdc_slow_epoch_johnson
   input  wire                     clk_slow,
   input  wire                     rst_n,
   input  wire                     clear_window,
-  input  wire                     enable_i,       // compatibility only; ignored in O4
+  input  wire                     enable_i,       // compatibility only; ignored by design
   output logic [STAGES-1:0]       johnson_o
 );
 

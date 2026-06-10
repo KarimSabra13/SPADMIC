@@ -2,10 +2,11 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.5
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_context_bank.sv
 // Purpose  : Fixed two-entry system-clock context store for completed Vernier
 //            measurements.
+// Author   : Karim Sabra
 // Domain   : clk_sys only.
 // Why      : The bank protects a complete raw measurement image before PD/counter
 //            clear, then lets readout drain one context while the frontend can

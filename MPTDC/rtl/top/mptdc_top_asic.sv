@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_top_asic.sv
 // Purpose  : Pad-facing ASIC top wrapper — reset entry, input selection, CSR,
 //            and core integration boundary.
@@ -79,7 +79,7 @@ module mptdc_top_asic
   mptdc_cfg_t      cfg;               // CSR → core  (quasi-static config)
   mptdc_cfg_t      cfg_eff;           // effective config after top-level overrides
   mptdc_status_t   status;            // core → CSR  (live status)
-  logic            conv_arm;          // latched level from CSR (v2.1)
+  logic            conv_arm;          // latched level from CSR
   logic            fifo_clr_pulse;
   logic            soft_rst_pulse;
   logic [1:0]      soft_rst_hold_q;

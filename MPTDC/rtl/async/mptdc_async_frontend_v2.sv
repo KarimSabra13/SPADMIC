@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_async_frontend_v2.sv
 // Purpose  : Asynchronous frontend — classic Vernier oscillator control
 //            with double-buffered context management
@@ -15,7 +15,7 @@
 //     watchdog fires (STOP never arrived). Triggers normal measurement
 //     close → capture → drain → packet with watchdog flag.
 //   - overflow flag removed from conv_flags (was misused as hit-saturation).
-//   - Comments corrected: double-buffer (N_CTX=2), not triple-buffer.
+//   - Context storage is double-buffered (N_CTX=2).
 // =============================================================================
 module mptdc_async_frontend_v2
   import mptdc_pkg::*;

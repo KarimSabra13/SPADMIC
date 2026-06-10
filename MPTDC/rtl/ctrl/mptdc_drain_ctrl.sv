@@ -2,12 +2,12 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_drain_ctrl.sv
 // Purpose  : System-clock drain/readout controller — reads static context bank
 //            data, generates acquisition records, and manages context release.
-//            Replaces both ctrl_fsm_v2 and writer_scan from v2.0.
 // Author   : Karim Sabra
+// Domain   : clk_sys only.
 // =============================================================================
 // State machine (sys_clk domain):
 //   ST_D_IDLE — monitor ctx_drain_sync for ready contexts

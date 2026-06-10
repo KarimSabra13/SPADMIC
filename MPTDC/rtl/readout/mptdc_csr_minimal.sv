@@ -2,12 +2,12 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_csr_minimal.sv
 // Purpose  : Minimal CSR register file — offline calibration, no LUTs
 // Author   : Karim Sabra
 // =============================================================================
-// Register map (v2.4):
+// Register map:
 //   0x00  CSR_CTRL        RW  conv_arm[0], fifo_clr[1](SC), soft_rst[2](SC)
 //   0x04  CSR_MODE        RW  [0]=reserved, input_sel[1], [3:2]=reserved/read-zero
 //   0x08  CSR_MAX_HITS    RW  max_hits[3:0]

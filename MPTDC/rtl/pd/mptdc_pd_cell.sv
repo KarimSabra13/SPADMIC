@@ -25,10 +25,10 @@
 //   - hit_latched is set to 1 and stays high until clear_window or reset.
 //   - nfast_hit_latched is a shadow timestamp register: before a hit, it tracks
 //     the current local fast-column raw tag; once a hit is detected it freezes.
-//     The timestamp flops intentionally have no hardware reset/clear in O5:
+//     The timestamp flops intentionally have no hardware reset/clear:
 //     nfast_hit is only meaningful when hit_latched=1, and no-hit cells are
-//     ignored by the snapshot/drain path.
-//     In O2/O3/O4/O5 raw-tag mode, software decodes this packet-visible field.
+//     ignored by the snapshot/drain path.  Software decodes this packet-visible
+//     raw-tag field with the run metadata.
 //
 // Clock domain: fast_phase (fast oscillator tap, ~1 GHz).
 // clear_window is an asynchronous clear from the system domain — it is
@@ -82,7 +82,7 @@ module mptdc_pd_cell #(
         end
       end
     end else begin : gen_double_sample
-      // Default two-stage pipeline (original behaviour)
+      // Default two-stage pipeline.
       always @(posedge fast_phase or negedge rst_n or posedge clear_window) begin
         if (!rst_n || clear_window) begin
           q1          <= 1'b0;
@@ -100,10 +100,9 @@ module mptdc_pd_cell #(
     end
 	  endgenerate
 
-  // Timestamp shadow flops are deliberately separate from q1/q2/hit_latched so
-  // O5 can test no-reset flops and clock-gating inference without changing the
-  // PD edge-detection principle. They track the local tag until hit_latched is
-  // set on the same fast edge, then freeze for snapshot/readout.
+  // Timestamp shadow flops are deliberately separate from q1/q2/hit_latched.
+  // They track the local tag until hit_latched is set on the same fast edge,
+  // then freeze for snapshot/readout.
   always_ff @(posedge fast_phase) begin
     if (!hit_latched)
       nfast_hit_latched <= nfast_tag_i;

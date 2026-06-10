@@ -2,13 +2,14 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_watchdog.sv
 // Purpose  : System-domain watchdog — raises a one-cycle force-clear pulse if
 //            conversions stop completing within the programmed timeout window.
 // Author   : Karim Sabra
+// Domain   : clk_sys only.
 // =============================================================================
-// Review-era watchdog split:
+// Active watchdog split:
 //   - per-context timeout metadata lives in mptdc_meas_ctrl (clk_sys domain)
 //   - this block keeps only the global completion watchdog, reset by conv_done_i
 //   - wdt_global_timeout_i == 0 disables monitoring

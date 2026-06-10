@@ -4,7 +4,8 @@
 // =============================================================================
 // Project  : SPAD_MPTDC — Vernier Time-to-Digital Converter
 // File     : mptdc_fast_epoch_tag.sv
-// Purpose  : Local fast-column epoch tag generator for O2 local-tag timing fix
+// Purpose  : Local fast-column epoch tag generator for raw fast timestamps
+// Author   : Karim Sabra
 // =============================================================================
 // This leaf replaces the global live binary fast counter on the PD timestamp
 // capture path.  Each fast column owns one shallow LFSR tag generator clocked by
@@ -13,15 +14,14 @@
 //
 // The default 7-bit sequence uses x^7 + x^6 + 1, reset seed 7'b0000001, and
 // excludes the all-zero state.  For NFAST_W=7 the sequence length is 127 states.
-// O6C can select a shift-mostly 7-bit Galois sequence with the same width and
-// packet field position; software/calibration distinguish the interpretation
+// A shift-mostly 7-bit Galois sequence can be selected with the same width and
+// packet field position.  Software/calibration distinguish the interpretation
 // through the nfast_encoding manifest field.
 //
-// O4 muxless-tag mode intentionally advances on every fast tap edge after
-// reset/clear.  The RO_tune4 rstb/run control already stops the clock when the
-// fast oscillator is off, so a synchronous enable/hold mux only adds critical
-// oscillator-domain delay.  enable_i is retained as a compatibility port for
-// existing wrappers/tests but is not used by this timing experiment.
+// The tag intentionally advances on every fast tap edge after reset/clear.  The
+// RO_tune4 rstb/run control already stops the clock when the fast oscillator is
+// off, so a synchronous enable/hold mux would add oscillator-domain delay.
+// enable_i is retained as a compatibility port for existing wrappers/tests.
 // =============================================================================
 module mptdc_fast_epoch_tag
   import mptdc_pkg::*;
@@ -33,7 +33,7 @@ module mptdc_fast_epoch_tag
   input  wire              clk_fast,
   input  wire              rst_n,
   input  wire              clear_window,
-  input  wire              enable_i,      // compatibility only; ignored in O4
+  input  wire              enable_i,      // compatibility only; ignored by design
   output logic [W-1:0]     tag_o
 );
 

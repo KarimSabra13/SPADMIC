@@ -2,11 +2,13 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.5
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_hit_capture_bridge.sv
 // Purpose  : Static-bus CDC bridge from held Vernier measurement fabric into
 //            clk_sys. The source-side PD/counter values are levels that remain
 //            stable until pd_clear_o, not one-cycle pulses.
+// Author   : Karim Sabra
+// Domain   : source values are held async levels; destination is clk_sys.
 // =============================================================================
 module mptdc_hit_capture_bridge
   import mptdc_pkg::*;

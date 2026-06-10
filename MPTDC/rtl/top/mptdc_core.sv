@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_core.sv
 // Purpose  : Measurement/readout integration core — ties together the async
 //            frontend, Vernier oscillators, capture path, drain path, FIFO,
@@ -24,7 +24,7 @@
 //   - Status.ready/busy reflect active measurement state
 //   - pd_gate from meas_ctrl gates PD enable on fast-close (max_hits=1)
 //   - slow_boundary_inc wired into context bank for offline calibration
-//   - meas_state_e is now 3-bit (7 live states)
+//   - meas_state_e is 3-bit and covers the live measurement states
 // =============================================================================
 
 `timescale 1ps/1ps
@@ -63,7 +63,7 @@ module mptdc_core
   // synthesis translate_off
   initial begin
     if (NE != 8) begin
-      $fatal(1, "mptdc_core: active tapeout target requires fixed NE=8 (got %0d)", NE);
+      $fatal(1, "mptdc_core: active integration target requires fixed NE=8 (got %0d)", NE);
     end
     if (N_CTX != 2) begin
       $fatal(1, "mptdc_core: retained context bank requires fixed N_CTX=2 (got %0d)", N_CTX);
@@ -114,9 +114,9 @@ module mptdc_core
   wire [NSLOW_W-1:0] nslow_src_count;
   wire [NSLOW_W-1:0] nslow_stop_latched;
 
-  // O2 local-tag mode: this compatibility signal is the phase-0 encoded tag,
-  // not a live binary fast counter.  It is exported raw in the existing metadata
-  // nfast field; software/calibration decodes raw tags with mode metadata.
+  // Local-tag compatibility signal: this is the phase-0 encoded raw tag, not a
+  // live binary fast counter.  It is exported in the existing nfast metadata
+  // field; software and calibration decode it using mode metadata.
   wire [NFAST_W-1:0] nfast_src_count;
 
   // nfast_stop is retained only as an internal compatibility field. In the
@@ -231,10 +231,10 @@ module mptdc_core
 
   // =========================================================================
   //  START watchdog
-  //  Catches STOP-never-arrives with a held synthetic STOP level. O3 moved this
-  //  recovery counter to clk_sys so no binary +1 counter remains in the
-  //  slow_phase[0] oscillator domain. O4 uses a countdown so the update path is
-  //  zero-detect/decrement instead of programmable compare/subtract/increment.
+  //  Catches STOP-never-arrives with a held synthetic STOP level. The recovery
+  //  counter is in clk_sys so no binary incrementer remains in the
+  //  slow_phase[0] oscillator domain. The countdown update path is limited to
+  //  zero-detect/decrement logic.
   // =========================================================================
   logic [15:0] start_wdt_cnt;
   logic       start_timeout_latched;
@@ -426,7 +426,7 @@ module mptdc_core
     .phase7d_probe_o (/* unused */)
   );
 
-  // ── O12 phase isolation buffers ────────────────────────────────
+  // ── Phase isolation buffers ────────────────────────────────────
   // The RO outputs drive only one matched buffer input per tap.  All downstream
   // phase consumers remain connected to slow_phase/fast_phase.
   mptdc_phase_buffer_bank u_phase_buf_slow (
@@ -444,8 +444,8 @@ module mptdc_core
 
   // ── Local fast epoch tags (one shallow tag generator per fast column) ──────
   // Each tag is clocked by the same fast tap that samples the corresponding PD
-  // column.  This removes the O1C fast_phase[0] binary counter -> fast_phase[nf]
-  // PD capture path and limits tag fanout to the eight cells in one column.
+  // column.  This avoids a shared phase-0 binary counter crossing into every
+  // fast column and limits tag fanout to the eight cells in one column.
   for (genvar nf_tag = 0; nf_tag < NE; nf_tag++) begin : gen_fast_tag_col
 `ifdef MPTDC_RELAX_FAST_TAG_PRESERVE
     (* keep_hierarchy = "yes" *)

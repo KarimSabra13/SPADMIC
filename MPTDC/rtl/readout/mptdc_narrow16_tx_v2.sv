@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_narrow16_tx_v2.sv
 // Purpose  : 16-bit ready/valid serializer — reads from sync FIFO and emits
 //            the fixed calibrated-feature packet.
@@ -16,10 +16,10 @@
 //   N × Hit words — two words per hit
 //   1 × EOC       — end-of-conversion marker with 14-bit running counter
 //
-// v2.7: output mode selection is removed from the packet. Header[2] carries
-// slow_boundary_inc so offline reconstruction does not lose the rare coarse
-// boundary correction. Hit W1[2:0] carries stop_slow_phase_disc for the
-// calibrated LUT key.
+// Output mode selection is not part of the packet. Header[2] carries
+// slow_boundary_inc so offline reconstruction keeps the rare coarse-boundary
+// correction. Hit W1[2:0] carries stop_slow_phase_disc for the calibrated LUT
+// key.
 // =============================================================================
 module mptdc_narrow16_tx_v2
   import mptdc_pkg::*;

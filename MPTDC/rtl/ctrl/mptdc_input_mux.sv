@@ -2,7 +2,7 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.7 — Fixed-Packet Vernier TDC
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_input_mux.sv
 // Purpose  : Route either the SPAD async pair or the calibration async pair
 //            into the active TDC core

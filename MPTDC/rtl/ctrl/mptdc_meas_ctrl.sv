@@ -2,10 +2,12 @@
 `default_nettype none
 
 // =============================================================================
-// Project  : SPAD_MPTDC v2.5 — system-domain measurement controller
+// Project  : SPAD_MPTDC - Fixed-Packet Vernier TDC
 // File     : mptdc_meas_ctrl.sv
 // Purpose  : Measurement teardown/context sequencing after the Vernier fabric
 //            has latched STOP-side PD/counter state.
+// Author   : Karim Sabra
+// Domain   : clk_sys only.
 // =============================================================================
 module mptdc_meas_ctrl
   import mptdc_pkg::*;

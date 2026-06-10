@@ -5,24 +5,24 @@
 // Project  : SPAD_MPTDC -- Vernier Time-to-Digital Converter
 // File     : mptdc_phase_buffer_bank.sv
 // Purpose  : Matched phase-isolation buffer bank for RO_tune4 output taps
+// Author   : Karim Sabra
 // =============================================================================
-// O12/O13 experiment intent:
-//   RO_tune4/S[0:7] drives only this local, symmetric buffer bank.  The buffered
-//   phase bus then drives the PD matrix, tag generators, and metadata logic.
+// Active physical intent:
+//   RO_tune4/S[0:7] drives only this local, symmetric buffer bank.  The
+//   buffered phase bus then drives the PD matrix, tag generators, and metadata
+//   logic.
 //
 // Simulation keeps this as a transparent assign so packet format, raw_lfsr_tag
 // semantics, R750_delta5 mode, and PD behavior remain bit-identical.
 //
-// For the physical experiment, define MPTDC_PHASE_BUFFER_USE_BUHDX4 in the
-// synthesis filelist to instantiate one BUHDX4 per tap.  BUHDX4 is the buffer
-// cell already referenced by the XH018 flow as a verified lab-server buffer.
-// Every tap uses the same single-cell topology.
+// For the single-stage physical topology, define MPTDC_PHASE_BUFFER_USE_BUHDX4
+// in the synthesis filelist to instantiate one BUHDX4 per tap.  Every tap uses
+// the same single-cell topology.
 //
-// For the O13 phase-distribution experiment, define
-// MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12 instead.  This keeps the first-stage
-// BUHDX4 input load on RO_tune4/S[n], then uses a BUHDX12 second-stage digital
-// driver for the larger phase-fabric load.  Every tap uses the same two-stage
-// topology.
+// For the active two-stage phase-distribution topology, define
+// MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12.  This keeps the first-stage BUHDX4
+// input load on RO_tune4/S[n], then uses a BUHDX12 second-stage digital driver
+// for the larger phase-fabric load.  Every tap uses the same two-stage topology.
 // =============================================================================
 
 `ifdef MPTDC_PHASE_BUFFER_USE_BUHDX4
