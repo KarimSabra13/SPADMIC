@@ -81,8 +81,9 @@ timing shape with the corrected parser:
 - affected buffered fast taps: mainly `1`, `3`, `5`, `6`, and `7`
 
 Because the source cells are still reported as `DFRRQHDX2` and the path is
-source C->Q dominated, the next repair pressure is to compile the final-typical
-repair filelist with `MPTDC_RELAX_FAST_TAG_PRESERVE`, bias the source tag flops
-toward `DFRRQHDX4`, and constrain the fast-tag Q distribution to lower fanout
-and transition. This remains a real timing repair, not a false-path or
-multicycle change.
+source C->Q dominated, the repair should stay narrowly focused on the fast-tag
+source instances and their local nfast distribution. A later pressure run that
+also relaxed fast-tag preserve and released broad PD/nfast capture hierarchy
+regressed to `PD_HIT_LATCH_LOCAL_FAST` with about `-91.7 ps` WNS. Do not make
+that broad preserve release the default. Keep any stronger flop or preserve
+experiment opt-in and compare it against this `-3.5 ps` baseline.

@@ -60,29 +60,28 @@ parser and O13 checks but still had:
 - report helper failures: `1`, caused by a generic PD hotspot helper using
   broad `u_pd` cell patterns instead of endpoint-register patterns
 
-The wrapper now applies stronger non-relaxing pressure when repair mode is on:
+The first stronger pressure run, `final_typical_genus_repair_pressure_20260610_141642`,
+regressed badly:
 
-- adds `MPTDC_RELAX_FAST_TAG_PRESERVE` to a run-local filelist so fast tag
-  source flops can be resized/remapped;
-- biases `DFRRQHDX4` over weak `DFRRQHDX1/2` fast-tag reset flops;
-- targets fast-tag Q distribution to max fanout `4` and max transition
-  `0.35 ns`;
-- biases high-fanout control repair to max fanout `16` and max transition
-  `0.45 ns`;
-- allows `INHDX12`/buffer candidates and avoids weak inverter choices in this
-  repair experiment;
-- keeps phase buffers and RO hierarchy preserved.
+- setup WNS/TNS became `-91.7 ps` / `-37024.9 ps`;
+- setup violating paths became `512`;
+- worst family moved to `PD_HIT_LATCH_LOCAL_FAST`;
+- max-transition violations became `3505`.
 
-For an aggressive one-shot pressure run, add:
+Root cause: the pressure mode was too broad. It injected
+`MPTDC_RELAX_FAST_TAG_PRESERVE`, released 512 PD/nfast capture cells, applied a
+design-level `0.45 ns` max-transition target, and avoided strong inverter
+candidates together with weak ones. That changed the local PD fast-domain
+implementation instead of only nudging the original fast-tag source path.
 
-```bash
-MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS=1.80 \
-```
+The corrected wrapper is conservative again:
 
-to the environment before the wrapper command. This is a stricter optimization
-target for the fast-tag Q to `nfast_hit_latched/D` path, not a relaxation. If it
-causes new max-delay violations, review them separately and do not call the run
-closed unless ordinary setup WNS/TNS are also clean.
+- no automatic `MPTDC_RELAX_FAST_TAG_PRESERVE` filelist define;
+- no broad PD capture fabric preserve release;
+- no design-wide DRV pressure by default;
+- fast-tag Q pressure defaults to fanout `16` and transition `0.50 ns`;
+- control-net pressure defaults to fanout `16` and transition `0.50 ns`;
+- strong flop/inverter avoidance is opt-in, not default.
 
 ## Expected Good Result
 

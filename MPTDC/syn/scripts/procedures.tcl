@@ -1536,12 +1536,13 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     global design
     set fast_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_FAST_TAG_PD false]
     set drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_DRV_TRANSITION false]
-    set strong_fast_flops [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS true]
-    set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV true]
-    set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 4]
-    set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.35]
+    set strong_fast_flops [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS false]
+    set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV false]
+    set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 16]
+    set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.50]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
-    set control_max_transition [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS 0.45]
+    set control_max_transition [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS 0.50]
+    set design_drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV false]
     if {!$fast_repair && !$drv_repair} {
         return
     }
@@ -1559,6 +1560,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "FAST_TAG_MAX_TRANSITION_NS=$fast_tag_max_transition"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
     puts $fh "CONTROL_MAX_TRANSITION_NS=$control_max_transition"
+    puts $fh "APPLY_DESIGN_DRV_REPAIR=$design_drv_repair"
     puts $fh "TIMESTAMP=[clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
 
     if {$fast_repair} {
@@ -1567,10 +1569,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             *gen_fast_tag_col*
             *u_fast_tag*
         } $fh
-        mptdc_try_release_cells_for_repair NFAST_CAPTURE_PATH {
-            *gen_pd_row*gen_pd_col*u_pd*
-            *nfast_hit_latched*
-        } $fh
+        puts $fh "NFAST_CAPTURE_PATH_DONT_TOUCH_RELEASE=SKIPPED_PRESERVE_PD_FABRIC"
         mptdc_try_unavoid_lib_cells FAST_TAG_SOURCE_FLOP_CANDIDATES {
             *DFRRQHDX4*
             *DFRRQHDX2*
@@ -1638,20 +1637,16 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         } $fh
         if {$strong_control_drv} {
             mptdc_try_avoid_lib_cells CONTROL_WEAK_INVERTERS {
+                *INHDX0*
                 *INHDX1*
                 *INHDX2*
                 *INHDX3*
                 *INHDX4*
-                *INHDX6*
-                *INHDX8*
             } $fh
         }
         set control_nets [list]
         foreach pattern {
             *meas_pd_clear*
-            *pd_clear*
-            *pd_enable*
-            *pd_gate*
             *detect_en*
             *clear_window*
             *rst_core_n*
@@ -1669,10 +1664,15 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             puts $fh "CONTROL_SET_MAX_FANOUT=$err_ctrl_fanout"
             puts $fh "CONTROL_SET_MAX_TRANSITION=$err_ctrl_trans"
         }
-        catch {set_max_fanout $control_max_fanout [current_design]} err_design_fanout
-        catch {set_max_transition $control_max_transition [current_design]} err_design_trans
-        puts $fh "DESIGN_SET_MAX_FANOUT_FOR_DRV_REPAIR=$err_design_fanout"
-        puts $fh "DESIGN_SET_MAX_TRANSITION_FOR_DRV_REPAIR=$err_design_trans"
+        if {$design_drv_repair} {
+            catch {set_max_fanout $control_max_fanout [current_design]} err_design_fanout
+            catch {set_max_transition $control_max_transition [current_design]} err_design_trans
+            puts $fh "DESIGN_SET_MAX_FANOUT_FOR_DRV_REPAIR=$err_design_fanout"
+            puts $fh "DESIGN_SET_MAX_TRANSITION_FOR_DRV_REPAIR=$err_design_trans"
+        } else {
+            puts $fh "DESIGN_SET_MAX_FANOUT_FOR_DRV_REPAIR=SKIPPED_TARGETED_NETS_ONLY"
+            puts $fh "DESIGN_SET_MAX_TRANSITION_FOR_DRV_REPAIR=SKIPPED_TARGETED_NETS_ONLY"
+        }
     }
     puts $fh ""
     close $fh
@@ -2183,14 +2183,16 @@ proc mptdc_report_timing {report_dir} {
         return
     }
 
-    mptdc_run_nonfatal_report_step "PD capture hotspot timing" \
-        [list mptdc_report_hotspot_timing "$dir/timing_pd_capture_hotspots.rpt" \
-            "phase-detector capture timing report" \
-            [list \
-                *gen_pd_row*gen_pd_col*u_pd*q1_reg* \
-                *gen_pd_row*gen_pd_col*u_pd*q2_reg* \
-                *gen_pd_row*gen_pd_col*u_pd*hit_latched_reg* \
-                *gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*]] $dir
+    if {![mptdc_o13_abs3_enabled]} {
+        mptdc_run_nonfatal_report_step "PD capture hotspot timing" \
+            [list mptdc_report_hotspot_timing "$dir/timing_pd_capture_hotspots.rpt" \
+                "phase-detector capture timing report" \
+                [list \
+                    *gen_pd_row*gen_pd_col*u_pd*q1_reg* \
+                    *gen_pd_row*gen_pd_col*u_pd*q2_reg* \
+                    *gen_pd_row*gen_pd_col*u_pd*hit_latched_reg* \
+                    *gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*]] $dir
+    }
 
     mptdc_run_nonfatal_report_step "oscillator support-counter hotspot timing" \
         [list mptdc_report_hotspot_timing "$dir/timing_osc_counter_hotspots.rpt" \

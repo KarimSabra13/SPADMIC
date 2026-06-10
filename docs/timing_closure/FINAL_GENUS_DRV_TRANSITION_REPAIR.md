@@ -49,7 +49,7 @@ Allowed in `FINAL_TYPICAL_GENUS_REPAIR_1`:
 - permit stronger local inverter/buffer candidates such as `INHDX12`, `BUHDX12`,
   `BUHDX8`, and `BUHDX6`;
 - bias high-fanout PD control nets toward local `set_max_fanout 16`;
-- bias the same nets toward `set_max_transition 0.45 ns`;
+- bias the same nets toward the real `set_max_transition 0.50 ns` requirement;
 - allow the optimizer to insert a local buffer tree on non-phase control nets.
 
 Not allowed:
@@ -89,8 +89,9 @@ net,logical_name,driver_inst,driver_cell,fanout,worst_transition_ps,limit_ps,vio
 n_6984,PD_detect_enable_or_clear_derived_control,g33116,INHDX8,88,511,500,11,89,PD_DETECT_ENABLE_OR_CLEAR_LOCAL_LOGIC,TARGETED_BUFFER_TREE_OR_STRONGER_INVERTER_DRIVER_LOCAL_MAX_FANOUT_16_OR_32
 ```
 
-The next repair-pressure update therefore avoids weak inverter choices in the
-repair experiment, permits `INHDX12`, and applies a non-relaxing design-rule
-target of `0.45 ns` max transition and fanout `16`. This is intentionally
-stricter than the `0.5 ns` pass limit so Genus has room to fix the 11 ps
-residual instead of landing exactly on the edge.
+The later pressure run that applied broad `0.45 ns` transition pressure
+regressed to `3505` max-transition violations. That result is not a useful DRV
+repair; it changed the optimization problem and checked many paths against a
+new 450 ps target. The guarded default is now targeted control-net repair only,
+fanout `16`, and max transition `0.50 ns`. A stricter 450 ps target should be
+used only as an explicit experiment after timing is stable.
