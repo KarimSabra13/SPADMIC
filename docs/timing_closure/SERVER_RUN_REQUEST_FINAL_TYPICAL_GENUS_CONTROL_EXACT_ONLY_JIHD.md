@@ -1,4 +1,4 @@
-# Server Run Request - Final Typical Genus Control Exact Only
+# Server Run Request - Final Typical Genus Control Exact Only JIHD
 
 Run this on the lab server from:
 
@@ -8,22 +8,28 @@ Branch:
 
 `SPADMIC_FINAL`
 
-Expected HEAD after pull should include:
+Expected HEAD after pull should include this change:
 
-`0e32ed1b5d9240084f385122aff74cecc2e0fb62`
+`MPTDC/syn/scripts/server_run_genus_mptdc_final_typical_control_exact_only_jihd.sh`
 
 ## Purpose
 
-Run `MPTDC_FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY`.
+Run a fresh typical-only Genus experiment with the `D_CELLS_JIHD` 1.8 V
+standard-cell sublibrary.
 
-This is the true isolation run after
-`final_typical_genus_control_single_root_20260610_161411`. The single-root
-selector worked, but that run still applied broad control-net constraints to
-`130` nets and applied fast-tag Q fanout/transition constraints. This wrapper
-disables both of those pressures.
+This keeps the latest exact-only DRV isolation knobs and changes only the
+digital standard-cell library selection:
+
+- `D_CELLS_HD` -> `D_CELLS_JIHD`
+- typical Liberty -> `D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib`
+- standard-cell LEF -> `xh018_D_CELLS_JIHD.lef`
+
+This is not MMMC signoff and not final silicon signoff.
 
 ## Expected Knobs
 
+- `MPTDC_STDCELL_FAMILY=JIHD`
+- `SC_ROOT=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0`
 - `MPTDC_GENUS_REPAIR_EXACT_CONTROL_ROOTS=1`
 - `MPTDC_CONTROL_REPAIR_EXACT_REQUIRE_PD_SINKS=1`
 - `MPTDC_CONTROL_REPAIR_EXACT_ALLOW_RESET_ROOTS=0`
@@ -57,6 +63,18 @@ unset MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS
 unset MPTDC_CONTROL_REPAIR_EXACT_DRIVER_REGEX
 unset MPTDC_CONTROL_REPAIR_EXACT_NET_REGEX
 
+export PDK_ROOT=/eda/pdk/xfab/xh018
+export MPTDC_STDCELL_FAMILY=JIHD
+export SC_ROOT="$PDK_ROOT/diglibs/D_CELLS_JIHD/v6_0"
+export MPTDC_STDCELL_LEF="$SC_ROOT/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"
+export MPTDC_STDCELL_TC_LIB="$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib"
+
+test -f "$MPTDC_STDCELL_LEF" || { echo "MISSING JIHD LEF: $MPTDC_STDCELL_LEF"; exit 2; }
+test -f "$MPTDC_STDCELL_TC_LIB" || { echo "MISSING JIHD Liberty: $MPTDC_STDCELL_TC_LIB"; exit 2; }
+
+grep -n '^SITE\|^MACRO' "$MPTDC_STDCELL_LEF" | head -40
+grep -En 'library *\(|cell *\(BUHDX4|cell *\(BUHDX12|cell *\(INHDX8|cell *\(INHDX12|cell *\(DFRRQHDX' "$MPTDC_STDCELL_TC_LIB" | head -80
+
 source MPTDC/analog_handoff/real_ro_tune4_abstract.env
 
 SRC_LEF="$O1_RO_SOURCE_LEF_PATH"
@@ -73,18 +91,20 @@ python3 MPTDC/analog_handoff/audit_ro_tune4_abstract.py \
   --copied-lef "$DST_LEF" \
   --report work/evidence/ro_tune4_lef_audit.rpt
 
-RUN_ID=final_typical_genus_control_exact_only_$(date +%Y%m%d_%H%M%S)
+RUN_ID=final_typical_genus_control_exact_only_jihd_$(date +%Y%m%d_%H%M%S)
 
 MPTDC_WORK_ROOT=work \
 MPTDC_RO_SOURCE_LEF_PATH="$SRC_LEF" \
 O1_RO_LEF_PATH="$DST_LEF" \
 O1_RO_LIBERTY_PATH="$PWD/MPTDC/syn/macros/RO_tune4_real_abstract_shell.lib" \
-bash MPTDC/syn/scripts/server_run_genus_mptdc_final_typical_control_exact_only.sh "$RUN_ID" \
+bash MPTDC/syn/scripts/server_run_genus_mptdc_final_typical_control_exact_only_jihd.sh "$RUN_ID" \
   2>&1 | tee "work/logs/${RUN_ID}.console.log"
 
 RUN_DIR="work/genus/$RUN_ID"
 
-sed -n '1,380p' "$RUN_DIR/SUMMARY.md"
+sed -n '1,400p' "$RUN_DIR/SUMMARY.md"
+cat "$RUN_DIR/run_manifest.txt"
+cat "$RUN_DIR/reports/synthesis/post_synthesis/run_manifest.rpt" 2>/dev/null || true
 cat "$RUN_DIR/final_typical_genus_repair_1.rpt"
 cat "$RUN_DIR/report_helpers_status.rpt"
 cat "$RUN_DIR/summary_parser_check.rpt"
@@ -94,48 +114,32 @@ cat "$RUN_DIR/reports/control_drv_root_causes.csv" 2>/dev/null || true
 cat "$RUN_DIR/reports/drv_transition_root_causes.csv" 2>/dev/null || true
 ```
 
-## Expected Result
+## Required Evidence
 
-The key repair report signatures should be:
+The run manifest must show:
+
+```text
+STDCELL_FAMILY=JIHD
+STDCELL_LEF=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef
+STDCELL_TC_LIB=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib
+```
+
+The repair report should still show:
 
 ```text
 EXACT_CONTROL_ROOT_NETS=1
-EXACT_CONTROL_ROOT_NET=n_6899 fanout=64 driver=g33116/Q pd_sinks=64 reset_sinks=0
 FAST_TAG_Q_SET_MAX_FANOUT=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
 FAST_TAG_Q_SET_MAX_TRANSITION=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
 CONTROL_REPAIR_NETS=SKIPPED_BROAD_CONTROL_NETS_DISABLED
-CONTROL_SET_MAX_FANOUT=SKIPPED_BROAD_CONTROL_NETS_DISABLED
-CONTROL_SET_MAX_TRANSITION=SKIPPED_BROAD_CONTROL_NETS_DISABLED
 ```
 
-Target outcome:
+## Decision
 
-- setup WNS returns near the guarded baseline, around `-3.5 ps`
-- setup TNS returns near `-77 ps`
-- setup path count remains around `42`
-- DRV remains `0 / 0 / 0`
-- report helpers remain `PASS`
-- SDC failures remain `0`
+If JIHD keeps O13/RO/PD checks clean and improves setup timing, continue from
+the JIHD result.
 
-If timing returns near baseline but DRV returns, add only the new reported DRV
-root from `reports/control_drv_root_causes.csv`. If timing remains near
-`-14.5 ps`, the exact control constraint itself is perturbing fast mapping and
-the next DRV repair should be an ECO-style buffer/source-strength experiment
-rather than more synthesis pressure.
+If JIHD keeps DRV clean but setup remains negative, re-plan the narrow
+`FAST_TAG_TO_PD_TS` repair using JIHD mapping evidence.
 
-## Observed Result
-
-`final_typical_genus_control_exact_only_20260610_162758` matched the expected
-isolation signatures and kept DRV clean:
-
-- setup WNS `-14.5 ps`
-- setup TNS `-238.0 ps`
-- setup violating paths `42`
-- DRV `0 / 0 / 0`
-- report helpers `PASS`
-
-Because timing did not return to the guarded `-3.5 ps` baseline, this run is
-not a closure win. The next required experiment is the JIHD standard-cell
-library pivot documented in:
-
-`docs/timing_closure/SERVER_RUN_REQUEST_FINAL_TYPICAL_GENUS_CONTROL_EXACT_ONLY_JIHD.md`
+If JIHD breaks DRV, repair only the reported JIHD root from
+`control_drv_root_causes.csv`; do not re-enable broad control-cell bias.

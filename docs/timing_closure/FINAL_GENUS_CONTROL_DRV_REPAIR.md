@@ -219,6 +219,43 @@ The next experiment is:
 
 `MPTDC_FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY`
 
+Observed result:
+
+- `final_typical_genus_control_exact_only_20260610_162758`
+- setup WNS `-14.5 ps`
+- setup TNS `-238.0 ps`
+- setup violating paths `42`
+- DRV `0 / 0 / 0`
+
+The isolation signatures were correct:
+
+```text
+EXACT_CONTROL_ROOT_NETS=1
+EXACT_CONTROL_ROOT_NET=n_6899 fanout=64 driver=g33116/Q pd_sinks=64 reset_sinks=0
+FAST_TAG_Q_SET_MAX_FANOUT=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
+FAST_TAG_Q_SET_MAX_TRANSITION=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
+CONTROL_REPAIR_NETS=SKIPPED_BROAD_CONTROL_NETS_DISABLED
+CONTROL_SET_MAX_FANOUT=SKIPPED_BROAD_CONTROL_NETS_DISABLED
+CONTROL_SET_MAX_TRANSITION=SKIPPED_BROAD_CONTROL_NETS_DISABLED
+```
+
+This proves the exact-root selector is clean, but it also proves the exact
+control-root `set_max_fanout`/`set_max_transition` pressure itself is enough
+to move the fast-domain mapping from the guarded timing baseline. Under the HD
+library, this is not the final setup repair path.
+
+## JIHD Library Pivot
+
+The next required experiment changes the digital standard-cell sublibrary from
+`D_CELLS_HD` to `D_CELLS_JIHD` while preserving the O13/RO/PD exception setup
+and exact-only DRV knobs:
+
+`MPTDC_FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY_JIHD`
+
+This must be treated as a fresh typical-only Genus baseline. Compare timing and
+DRV against the HD results, but do not assume cell mapping, delay, or area are
+identical.
+
 Expected knobs:
 
 - `MPTDC_GENUS_REPAIR_EXACT_CONTROL_ROOTS=1`

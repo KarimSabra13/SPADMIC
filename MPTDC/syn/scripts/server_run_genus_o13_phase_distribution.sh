@@ -61,8 +61,29 @@ export MPTDC_GENUS_REPAIR_DRV_TRANSITION="${MPTDC_GENUS_REPAIR_DRV_TRANSITION:-0
 DEFAULT_EXPORT_RUN_ID="${O1_RO_EXPORT_RUN_ID:-20260528_o1_export_ro_tune4_lef}"
 DEFAULT_REAL_LEF="$REPO_ROOT/results/osc_pd/$DEFAULT_EXPORT_RUN_ID/real_abstract_lef/RO_tune4_real_abstract.lef"
 DEFAULT_REAL_LIB="$SYN_DIR/macros/RO_tune4_real_abstract_shell.lib"
-SC_ROOT_PATH="${SC_ROOT:-/data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0}"
-STDCELL_TC_LIB="${SC_ROOT_PATH}/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+STDCELL_FAMILY="$(printf '%s' "${MPTDC_STDCELL_FAMILY:-HD}" | tr '[:lower:]' '[:upper:]')"
+case "$STDCELL_FAMILY" in
+  HD)
+    DEFAULT_PDK_ROOT="${PDK_ROOT:-/data/pdk/xfab/xh018}"
+    STDCELL_LIB_NAME="D_CELLS_HD"
+    STDCELL_LEF_REL="LEF/v6_0_0/xh018_D_CELLS_HD.lef"
+    STDCELL_SITE="${MPTDC_STDCELL_SITE:-core_hd}"
+    ;;
+  JIHD)
+    DEFAULT_PDK_ROOT="${PDK_ROOT:-/eda/pdk/xfab/xh018}"
+    STDCELL_LIB_NAME="D_CELLS_JIHD"
+    STDCELL_LEF_REL="LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"
+    STDCELL_SITE="${MPTDC_STDCELL_SITE:-core_jihd}"
+    ;;
+  *)
+    echo "ERROR: unsupported MPTDC_STDCELL_FAMILY=$STDCELL_FAMILY; expected HD or JIHD" >&2
+    exit 2
+    ;;
+esac
+SC_ROOT_PATH="${SC_ROOT:-$DEFAULT_PDK_ROOT/diglibs/$STDCELL_LIB_NAME/v6_0}"
+STDCELL_LIB_DIR="${SC_ROOT_PATH}/liberty_LPMOS/v6_0_0/PVT_1_80V_range"
+STDCELL_LEF="${MPTDC_STDCELL_LEF:-$SC_ROOT_PATH/$STDCELL_LEF_REL}"
+STDCELL_TC_LIB="${MPTDC_STDCELL_TC_LIB:-$STDCELL_LIB_DIR/${STDCELL_LIB_NAME}_LPMOS_typ_1_80V_25C.lib}"
 
 case "$RUN_ID" in
   ""|"/"|".")
@@ -149,6 +170,8 @@ REAL_LIB="${O1_RO_LIBERTY_PATH:-$DEFAULT_REAL_LIB}"
 require_file "RO_tune4 real LEF" "$REAL_LEF"
 require_file "RO_tune4 Liberty shell" "$REAL_LIB"
 require_file "RO_tune4 interface audit" "$RO_AUDIT_SCRIPT"
+require_file "standard-cell LEF" "$STDCELL_LEF"
+require_file "standard-cell typical Liberty" "$STDCELL_TC_LIB"
 require_file "O13 SDC overlay" "$O13_SDC"
 require_file "O13 HDL filelist" "$O13_FILELIST"
 require_file "frequency-mode defines" "$FREQ_DEFINES"
@@ -213,6 +236,12 @@ export MPTDC_TIMING_VIEW=tc_only
 export MPTDC_TC_ONLY_VIEW=1
 export MPTDC_FREQ_MODE=r750_delta5
 export MPTDC_FREQ_MODE_DEFINES="$FREQ_DEFINES"
+export PDK_ROOT="${PDK_ROOT:-$DEFAULT_PDK_ROOT}"
+export SC_ROOT="$SC_ROOT_PATH"
+export MPTDC_STDCELL_FAMILY="$STDCELL_FAMILY"
+export MPTDC_STDCELL_SITE="$STDCELL_SITE"
+export MPTDC_STDCELL_LEF="$STDCELL_LEF"
+export MPTDC_STDCELL_TC_LIB="$STDCELL_TC_LIB"
 export MPTDC_SYN_INPUTS_DIR="$SYN_DIR/inputs"
 export O1_USE_REAL_RO_ABSTRACT=1
 export O1_RO_LEF_PATH="$REAL_LEF"
@@ -242,6 +271,11 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
 {
   echo
   echo "O13 inputs:"
+  echo "  STDCELL_FAMILY=$STDCELL_FAMILY"
+  echo "  STDCELL_LIB_NAME=$STDCELL_LIB_NAME"
+  echo "  STDCELL_SITE=$STDCELL_SITE"
+  echo "  SC_ROOT=$SC_ROOT_PATH"
+  echo "  STDCELL_LEF=$STDCELL_LEF"
   echo "  STDCELL_TC_LIB=$STDCELL_TC_LIB"
   echo "  REAL_LEF=$REAL_LEF"
   echo "  REAL_LIB=$REAL_LIB"
@@ -599,6 +633,10 @@ write_macro_binding_check() {
     echo "BUFFER_PHASE_CLOCKS_FOUND=$BUFFER_PHASE_CLOCKS_FOUND"
     echo "RO_TUNE4_LIB=$REAL_LIB"
     echo "RO_TUNE4_LEF=$REAL_LEF"
+    echo "STDCELL_FAMILY=$STDCELL_FAMILY"
+    echo "STDCELL_SITE=$STDCELL_SITE"
+    echo "STDCELL_LEF=$STDCELL_LEF"
+    echo "STDCELL_TC_LIB=$STDCELL_TC_LIB"
     echo "XLIBD_RO_STRICT_D_LOAD_BUDGET_FF=58.72"
     echo "XLIBD_BUHDX4_INPUT_CAP_FF=10.56"
     echo "XLIBD_BUHDX12_INPUT_CAP_FF=32.24"

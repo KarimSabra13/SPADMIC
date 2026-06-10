@@ -15,6 +15,7 @@ and not final silicon signoff.
 | `final_typical_genus_control_late_20260610_154404` | -20.4 | -5782.7 | 378 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but late control-cell bias still perturbed fast timing. |
 | `final_typical_genus_control_root_20260610_160143` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed and path count restored, but six exact roots still cost about 11 ps WNS versus guarded. |
 | `final_typical_genus_control_single_root_20260610_161411` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Selected only `n_6899`/`g33116/Q`, but broad control-net and fast-tag Q constraints were still active. |
+| `final_typical_genus_control_exact_only_20260610_162758` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Pure single-root constraint confirmed; broad control-net and fast-tag Q constraints were skipped, but timing stayed at the control-root result. |
 
 ## Interpretation
 
@@ -45,16 +46,44 @@ the shared repair procedure still applied broad control-net constraints to
 `130` nets afterward, and it also applied fast-tag Q fanout/transition
 constraints. Therefore this run is not a pure single-root test.
 
+The control-exact-only run was the pure single-root test. It selected only
+`n_6899`, skipped broad control-net constraints, and skipped fast-tag Q
+fanout/transition constraints:
+
+```text
+EXACT_CONTROL_ROOT_NETS=1
+EXACT_CONTROL_ROOT_NET=n_6899 fanout=64 driver=g33116/Q pd_sinks=64 reset_sinks=0
+FAST_TAG_Q_SET_MAX_FANOUT=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
+FAST_TAG_Q_SET_MAX_TRANSITION=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
+CONTROL_REPAIR_NETS=SKIPPED_BROAD_CONTROL_NETS_DISABLED
+```
+
+Timing still stayed at `-14.5 ps` WNS / `-238.0 ps` TNS with `42` setup
+violations. That means the exact control-root `set_max_*` constraint itself is
+enough to perturb the fast-domain mapping, even though it also cleans DRV.
+
 ## Next Decision
 
-Run `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY`.
+Run a fresh JIHD-library baseline:
 
-The exact-only experiment keeps the solved O13/RO/PD/report behavior, keeps
-fast-tag preserve relaxation disabled, disables broad control-cell bias,
-excludes reset/epoch roots, disables broad control-net constraints, and skips
-the fast-tag Q fanout/transition constraints that were active in the mixed
-single-root run. It targets only the known local PD-control root driver class
-seen in the guarded baseline and control-root evidence:
+`FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY_JIHD`
+
+This is not a continuation from the HD closure numbers. It is a required
+standard-cell-library migration experiment using the `D_CELLS_JIHD` 1.8 V
+typical Liberty/LEF views. Keep the same O13/RO/PD exception/report behavior
+and the same exact-only knobs so the only intended technology change is the
+standard-cell sublibrary.
+
+Required JIHD inputs:
+
+- standard-cell family `JIHD`
+- standard-cell root `/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0`
+- standard-cell LEF
+  `/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef`
+- typical Liberty
+  `/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib`
+
+Retained exact-only knobs:
 
 - `STRONG_CONTROL_DRV=0`
 - `CONTROL_CELL_BIAS_STAGE=none`
@@ -70,13 +99,11 @@ seen in the guarded baseline and control-root evidence:
 - `MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE=0`
 - `MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=0`
 
-Expected useful outcome:
+First JIHD outcome to evaluate:
 
-- timing returns near the guarded baseline, around `-3.5 ps` WNS and `-77 ps`
-  TNS;
-- DRV stays at `0 / 0 / 0`.
-
-If that happens, the root-only control repair is good and the remaining work is
-a separate narrow `FAST_TAG_TO_PD_TS` setup repair. If timing returns to the
-guarded baseline but DRV returns, the exact-root selector is missing the real
-root and the repair must be driven from `control_drv_root_causes.csv`.
+- O13/RO/clock/PD exception checks remain unchanged and clean;
+- report helpers remain `PASS`;
+- SDC command failures remain `0`;
+- DRV remains `0 / 0 / 0`;
+- setup timing is re-baselined under JIHD, with special attention to
+  `FAST_TAG_TO_PD_TS` and fast-tag source-cell mapping.

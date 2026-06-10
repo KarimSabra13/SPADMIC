@@ -2772,7 +2772,8 @@ proc mptdc_write_qor_manifest {dir} {
         }
     }
     foreach key {
-        STANDARD_CELL_SITE STANDARD_CELL_VDD STANDARD_CELL_GND row_height
+        STANDARD_CELL_FAMILY STANDARD_CELL_LIBRARY STANDARD_CELL_SITE
+        STANDARD_CELL_VDD STANDARD_CELL_GND row_height
         grid_unit HAS_QRC_TECH cts_top_routing_layer_top
         cts_bottom_routing_layer_top OSC_SLOW_MACRO OSC_FAST_MACRO OSC_VDD OSC_GND
         PD_DECAP

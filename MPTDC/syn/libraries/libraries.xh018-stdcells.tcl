@@ -7,7 +7,10 @@
 # INSTRUCTIONS:
 #   1. Defaults below target the verified lab-server D_CELLS_HD v6.0 install
 #   2. Override with environment variables when needed:
-#        SC_ROOT -> full standard-cell library root
+#        MPTDC_STDCELL_FAMILY -> HD or JIHD
+#        SC_ROOT              -> full standard-cell library root
+#        MPTDC_STDCELL_LEF    -> explicit standard-cell LEF
+#        MPTDC_STDCELL_*_LIB  -> explicit BC/TC/WC Liberty files
 #   3. Verify the .lib file names if your PDK revision differs
 #   4. Update SDC driving/load pin details only when enabling set_driving_cell
 #
@@ -19,22 +22,56 @@
 #############################################
 #       Standard Cell Root
 #############################################
-if {[info exists ::env(SC_ROOT)]} {
+set mptdc_stdcell_family "HD"
+if {[info exists ::env(MPTDC_STDCELL_FAMILY)] && $::env(MPTDC_STDCELL_FAMILY) ne ""} {
+    set mptdc_stdcell_family [string toupper $::env(MPTDC_STDCELL_FAMILY)]
+} elseif {[info exists ::env(SC_ROOT)] && [string match -nocase "*D_CELLS_JIHD*" $::env(SC_ROOT)]} {
+    set mptdc_stdcell_family "JIHD"
+}
+
+switch -- $mptdc_stdcell_family {
+    HD {
+        set mptdc_stdcell_lib_name "D_CELLS_HD"
+        set mptdc_stdcell_default_lef_rel "LEF/v6_0_0/xh018_D_CELLS_HD.lef"
+        set mptdc_stdcell_default_site "core_hd"
+    }
+    JIHD {
+        set mptdc_stdcell_lib_name "D_CELLS_JIHD"
+        set mptdc_stdcell_default_lef_rel "LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"
+        set mptdc_stdcell_default_site "core_jihd"
+    }
+    default {
+        error "Unsupported MPTDC_STDCELL_FAMILY=$mptdc_stdcell_family; expected HD or JIHD"
+    }
+}
+
+if {[info exists ::env(SC_ROOT)] && $::env(SC_ROOT) ne ""} {
     set paths(SC_ROOT) $::env(SC_ROOT)
 } else {
-    set paths(SC_ROOT) "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v6_0"
+    set paths(SC_ROOT) "$paths(PDK_ROOT)/diglibs/$mptdc_stdcell_lib_name/v6_0"
 }
+set paths(STDCELL_FAMILY) $mptdc_stdcell_family
+set tech(STANDARD_CELL_FAMILY) $mptdc_stdcell_family
+set tech(STANDARD_CELL_LIBRARY) $mptdc_stdcell_lib_name
 
 #############################################
 #       LEF (Library Exchange Format)
 #############################################
-set tech_files(STDCELLS_LEF) "$paths(SC_ROOT)/LEF/v6_0_0/xh018_D_CELLS_HD.lef"
+if {[info exists ::env(MPTDC_STDCELL_LEF)] && $::env(MPTDC_STDCELL_LEF) ne ""} {
+    set tech_files(STDCELLS_LEF) $::env(MPTDC_STDCELL_LEF)
+} else {
+    set tech_files(STDCELLS_LEF) "$paths(SC_ROOT)/$mptdc_stdcell_default_lef_rel"
+}
 lappend tech_files(ALL_LEFS) $tech_files(STDCELLS_LEF)
 
 #############################################
 #       Standard Cell Site
 #############################################
-set tech(STANDARD_CELL_SITE) "core_hd"    ;# Verified from xh018_D_CELLS_HD.lef
+if {[info exists ::env(MPTDC_STDCELL_SITE)] && $::env(MPTDC_STDCELL_SITE) ne ""} {
+    set tech(STANDARD_CELL_SITE) $::env(MPTDC_STDCELL_SITE)
+} else {
+    set tech(STANDARD_CELL_SITE) $mptdc_stdcell_default_site
+}
 set tech(STANDARD_CELL_VDD)  "VDD"
 set tech(STANDARD_CELL_GND)  "VSS"
 # Lab Innovus/Voltus reports power-level names as lower-case for this library,
@@ -46,24 +83,42 @@ set tech(STANDARD_CELL_GND_PINS) [list gnd]
 #############################################
 #       Liberty Timing Libraries (.lib)
 #############################################
-# Verified XFAB XH018 D_CELLS_HD v6.0 naming convention:
-#   D_CELLS_HD_LPMOS_typ_1_80V_25C.lib   (typical: 1.8V, 25°C)
-#   D_CELLS_HD_LPMOS_slow_1_62V_125C.lib (worst case: 1.62V, 125°C)
-#   D_CELLS_HD_LPMOS_fast_1_98V_m40C.lib (best case: 1.98V, -40°C)
+# Verified XFAB XH018 naming convention:
+#   D_CELLS_<family>_LPMOS_typ_1_80V_25C.lib   (typical: 1.8V, 25°C)
+#   D_CELLS_<family>_LPMOS_slow_1_62V_125C.lib (worst case: 1.62V, 125°C)
+#   D_CELLS_<family>_LPMOS_fast_1_98V_m40C.lib (best case: 1.98V, -40°C)
 
 set paths(LIB_DIR) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range"
+set mptdc_stdcell_lib_prefix "${mptdc_stdcell_lib_name}_LPMOS"
 
 # ── Typical Corner (TT, 1.80V, 25°C) ──────────────────────────────
-set tech_files(STDCELLS_TC_LIB) "$paths(LIB_DIR)/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+if {[info exists ::env(MPTDC_STDCELL_TC_LIB)] && $::env(MPTDC_STDCELL_TC_LIB) ne ""} {
+    set tech_files(STDCELLS_TC_LIB) $::env(MPTDC_STDCELL_TC_LIB)
+} else {
+    set tech_files(STDCELLS_TC_LIB) "$paths(LIB_DIR)/${mptdc_stdcell_lib_prefix}_typ_1_80V_25C.lib"
+}
 set tech_files(ALL_TC_LIBS) [list $tech_files(STDCELLS_TC_LIB)]
 
 # ── Worst Case (SS, 1.62V, 125°C) ─────────────────────────────────
-set tech_files(STDCELLS_WC_LIB) "$paths(LIB_DIR)/D_CELLS_HD_LPMOS_slow_1_62V_125C.lib"
+if {[info exists ::env(MPTDC_STDCELL_WC_LIB)] && $::env(MPTDC_STDCELL_WC_LIB) ne ""} {
+    set tech_files(STDCELLS_WC_LIB) $::env(MPTDC_STDCELL_WC_LIB)
+} else {
+    set tech_files(STDCELLS_WC_LIB) "$paths(LIB_DIR)/${mptdc_stdcell_lib_prefix}_slow_1_62V_125C.lib"
+}
 set tech_files(ALL_WC_LIBS) [list $tech_files(STDCELLS_WC_LIB)]
 
 # ── Best Case (FF, 1.98V, −40°C) ──────────────────────────────────
-set tech_files(STDCELLS_BC_LIB) "$paths(LIB_DIR)/D_CELLS_HD_LPMOS_fast_1_98V_m40C.lib"
+if {[info exists ::env(MPTDC_STDCELL_BC_LIB)] && $::env(MPTDC_STDCELL_BC_LIB) ne ""} {
+    set tech_files(STDCELLS_BC_LIB) $::env(MPTDC_STDCELL_BC_LIB)
+} else {
+    set tech_files(STDCELLS_BC_LIB) "$paths(LIB_DIR)/${mptdc_stdcell_lib_prefix}_fast_1_98V_m40C.lib"
+}
 set tech_files(ALL_BC_LIBS) [list $tech_files(STDCELLS_BC_LIB)]
+
+puts "MPTDC_LIB_INFO: standard-cell family=$tech(STANDARD_CELL_FAMILY) library=$tech(STANDARD_CELL_LIBRARY)"
+puts "MPTDC_LIB_INFO: standard-cell root=$paths(SC_ROOT)"
+puts "MPTDC_LIB_INFO: standard-cell LEF=$tech_files(STDCELLS_LEF)"
+puts "MPTDC_LIB_INFO: standard-cell TC Liberty=$tech_files(STDCELLS_TC_LIB)"
 
 #############################################
 #       Provisional MPTDC Analog Macros
