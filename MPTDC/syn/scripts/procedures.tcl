@@ -1476,6 +1476,7 @@ proc mptdc_try_release_cells_for_repair {label patterns fh} {
 proc mptdc_try_unavoid_lib_cells {label patterns fh} {
     set cells [list]
     foreach pattern $patterns {
+        set matches [list]
         catch {set matches [get_db lib_cells $pattern]}
         foreach cell [mptdc_collection_to_list $matches] {
             lappend cells $cell
@@ -1490,10 +1491,57 @@ proc mptdc_try_unavoid_lib_cells {label patterns fh} {
     }
 }
 
+proc mptdc_try_avoid_lib_cells {label patterns fh} {
+    set cells [list]
+    foreach pattern $patterns {
+        set matches [list]
+        catch {set matches [get_db lib_cells $pattern]}
+        foreach cell [mptdc_collection_to_list $matches] {
+            lappend cells $cell
+        }
+    }
+    set cells [mptdc_unique_list $cells]
+    puts $fh "${label}_AVOID_LIB_CELLS=[llength $cells]"
+    foreach cell $cells {
+        catch {set_db $cell .avoid true} err1
+        puts $fh "${label}_AVOID_LIB_CELL=[mptdc_object_name $cell] avoid:$err1"
+    }
+}
+
+proc mptdc_repair_collect_pins {patterns} {
+    set pins [list]
+    array set seen {}
+    foreach pattern $patterns {
+        set matches [list]
+        catch {set matches [get_pins -quiet -hierarchical $pattern]}
+        foreach pin [mptdc_collection_to_list $matches] {
+            set name [mptdc_object_name $pin]
+            if {$name ne "" && ![info exists seen($name)]} {
+                set seen($name) 1
+                lappend pins $pin
+            }
+        }
+    }
+    return $pins
+}
+
+proc mptdc_repair_set_numeric_env {name default_value} {
+    if {[info exists ::env($name)] && $::env($name) ne ""} {
+        return $::env($name)
+    }
+    return $default_value
+}
+
 proc mptdc_apply_final_typical_repair_1 {stage} {
     global design
     set fast_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_FAST_TAG_PD false]
     set drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_DRV_TRANSITION false]
+    set strong_fast_flops [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS true]
+    set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV true]
+    set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 4]
+    set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.35]
+    set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
+    set control_max_transition [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS 0.45]
     if {!$fast_repair && !$drv_repair} {
         return
     }
@@ -1505,6 +1553,12 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "STAGE=$stage"
     puts $fh "FAST_TAG_PD_REPAIR=$fast_repair"
     puts $fh "DRV_TRANSITION_REPAIR=$drv_repair"
+    puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
+    puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
+    puts $fh "FAST_TAG_MAX_FANOUT=$fast_tag_max_fanout"
+    puts $fh "FAST_TAG_MAX_TRANSITION_NS=$fast_tag_max_transition"
+    puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
+    puts $fh "CONTROL_MAX_TRANSITION_NS=$control_max_transition"
     puts $fh "TIMESTAMP=[clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
 
     if {$fast_repair} {
@@ -1523,13 +1577,54 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             *DFRHDX2*
             *DFRQHDX2*
         } $fh
-        set fast_tag_q_pins [list]
-        catch {set fast_tag_q_pins [get_pins -quiet -hierarchical *u_fast_tag_tag_o_reg*/Q]}
+        if {$strong_fast_flops} {
+            mptdc_try_avoid_lib_cells FAST_TAG_WEAK_RESET_FLOPS {
+                *DFRRQHDX1*
+                *DFRRQHDX2*
+            } $fh
+            mptdc_try_unavoid_lib_cells FAST_TAG_PREFERRED_RESET_FLOPS {
+                *DFRRQHDX4*
+            } $fh
+        }
+
+        set fast_tag_q_pins [mptdc_repair_collect_pins {
+            *gen_fast_tag_col*u_fast_tag*tag_o_reg*/Q
+            *u_fast_tag_tag_o_reg*/Q
+            *u_fast_tag*tag_o_reg*/Q
+        }]
+        set fast_tag_c_pins [mptdc_repair_collect_pins {
+            *gen_fast_tag_col*u_fast_tag*tag_o_reg*/C
+            *u_fast_tag_tag_o_reg*/C
+            *u_fast_tag*tag_o_reg*/C
+        }]
+        set nfast_capture_d_pins [mptdc_repair_collect_pins {
+            *gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*/D
+            *nfast_hit_latched_reg*/D
+        }]
         puts $fh "FAST_TAG_Q_PINS=[llength [mptdc_collection_to_list $fast_tag_q_pins]]"
-        catch {set_max_fanout 16 $fast_tag_q_pins} err_fanout
-        catch {set_max_transition 0.45 $fast_tag_q_pins} err_trans
-        puts $fh "FAST_TAG_Q_SET_MAX_FANOUT_16=$err_fanout"
-        puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION_0P45=$err_trans"
+        puts $fh "FAST_TAG_C_PINS=[llength [mptdc_collection_to_list $fast_tag_c_pins]]"
+        puts $fh "NFAST_CAPTURE_D_PINS=[llength [mptdc_collection_to_list $nfast_capture_d_pins]]"
+        if {[llength $fast_tag_q_pins] > 0} {
+            catch {set_max_fanout $fast_tag_max_fanout $fast_tag_q_pins} err_fanout
+            catch {set_max_transition $fast_tag_max_transition $fast_tag_q_pins} err_trans
+            puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=$err_fanout"
+            puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=$err_trans"
+        }
+        if {[llength $fast_tag_c_pins] > 0} {
+            catch {set_critical_range 0.050 $fast_tag_c_pins} err_crit
+            puts $fh "FAST_TAG_C_SET_CRITICAL_RANGE_0P050=$err_crit"
+        }
+        if {[llength $fast_tag_q_pins] > 0 && [llength $nfast_capture_d_pins] > 0 && \
+            [info exists ::env(MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS)] && \
+            $::env(MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS) ne ""} {
+            catch {
+                set_max_delay $::env(MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS) \
+                    -from $fast_tag_q_pins \
+                    -to $nfast_capture_d_pins
+            } err_delay
+            puts $fh "FAST_TAG_TO_NFAST_CAPTURE_SET_MAX_DELAY_NS=$::env(MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS)"
+            puts $fh "FAST_TAG_TO_NFAST_CAPTURE_SET_MAX_DELAY_RESULT=$err_delay"
+        }
     }
 
     if {$drv_repair} {
@@ -1541,9 +1636,22 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             *BUHDX8*
             *BUHDX6*
         } $fh
+        if {$strong_control_drv} {
+            mptdc_try_avoid_lib_cells CONTROL_WEAK_INVERTERS {
+                *INHDX1*
+                *INHDX2*
+                *INHDX3*
+                *INHDX4*
+                *INHDX6*
+                *INHDX8*
+            } $fh
+        }
         set control_nets [list]
         foreach pattern {
             *meas_pd_clear*
+            *pd_clear*
+            *pd_enable*
+            *pd_gate*
             *detect_en*
             *clear_window*
             *rst_core_n*
@@ -1555,10 +1663,16 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         }
         set control_nets [mptdc_unique_list $control_nets]
         puts $fh "CONTROL_REPAIR_NETS=[llength $control_nets]"
-        catch {set_max_fanout 16 $control_nets} err_ctrl_fanout
-        catch {set_max_transition 0.45 $control_nets} err_ctrl_trans
-        puts $fh "CONTROL_SET_MAX_FANOUT_16=$err_ctrl_fanout"
-        puts $fh "CONTROL_SET_MAX_TRANSITION_0P45=$err_ctrl_trans"
+        if {[llength $control_nets] > 0} {
+            catch {set_max_fanout $control_max_fanout $control_nets} err_ctrl_fanout
+            catch {set_max_transition $control_max_transition $control_nets} err_ctrl_trans
+            puts $fh "CONTROL_SET_MAX_FANOUT=$err_ctrl_fanout"
+            puts $fh "CONTROL_SET_MAX_TRANSITION=$err_ctrl_trans"
+        }
+        catch {set_max_fanout $control_max_fanout [current_design]} err_design_fanout
+        catch {set_max_transition $control_max_transition [current_design]} err_design_trans
+        puts $fh "DESIGN_SET_MAX_FANOUT_FOR_DRV_REPAIR=$err_design_fanout"
+        puts $fh "DESIGN_SET_MAX_TRANSITION_FOR_DRV_REPAIR=$err_design_trans"
     }
     puts $fh ""
     close $fh
@@ -2072,7 +2186,11 @@ proc mptdc_report_timing {report_dir} {
     mptdc_run_nonfatal_report_step "PD capture hotspot timing" \
         [list mptdc_report_hotspot_timing "$dir/timing_pd_capture_hotspots.rpt" \
             "phase-detector capture timing report" \
-            [list *gen_pd_row*gen_pd_col*u_pd* *u_pd*]] $dir
+            [list \
+                *gen_pd_row*gen_pd_col*u_pd*q1_reg* \
+                *gen_pd_row*gen_pd_col*u_pd*q2_reg* \
+                *gen_pd_row*gen_pd_col*u_pd*hit_latched_reg* \
+                *gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*]] $dir
 
     mptdc_run_nonfatal_report_step "oscillator support-counter hotspot timing" \
         [list mptdc_report_hotspot_timing "$dir/timing_osc_counter_hotspots.rpt" \

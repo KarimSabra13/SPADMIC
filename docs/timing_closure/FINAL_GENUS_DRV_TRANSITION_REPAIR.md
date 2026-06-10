@@ -79,3 +79,18 @@ Pass criteria:
 - max capacitance violations: `0`
 - max fanout violations: `0`
 - no raw RO or phase-clock overbuffering introduced by the DRV repair.
+
+## 134332 Residual Update
+
+Run `final_typical_genus_repair_1_20260610_134332` kept the same DRV root:
+
+```csv
+net,logical_name,driver_inst,driver_cell,fanout,worst_transition_ps,limit_ps,violation_ps,sink_count,sink_family,proposed_fix
+n_6984,PD_detect_enable_or_clear_derived_control,g33116,INHDX8,88,511,500,11,89,PD_DETECT_ENABLE_OR_CLEAR_LOCAL_LOGIC,TARGETED_BUFFER_TREE_OR_STRONGER_INVERTER_DRIVER_LOCAL_MAX_FANOUT_16_OR_32
+```
+
+The next repair-pressure update therefore avoids weak inverter choices in the
+repair experiment, permits `INHDX12`, and applies a non-relaxing design-rule
+target of `0.45 ns` max transition and fanout `16`. This is intentionally
+stricter than the `0.5 ns` pass limit so Genus has room to fix the 11 ps
+residual instead of landing exactly on the edge.

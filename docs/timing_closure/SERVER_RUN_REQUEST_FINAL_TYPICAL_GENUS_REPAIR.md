@@ -47,6 +47,43 @@ cat "$RUN_DIR/report_helpers_status.rpt" 2>/dev/null || true
 cat "$RUN_DIR/helper_tcl_selftest.rpt" 2>/dev/null || true
 ```
 
+## Residual-Pressure Update
+
+The first repair run `final_typical_genus_repair_1_20260610_134332` proved the
+parser and O13 checks but still had:
+
+- setup WNS/TNS: `-3.5 ps` / `-77.1 ps`
+- setup violating paths: `42`
+- worst family: `FAST_TAG_TO_PD_TS`
+- max transition violations: `1015`, rooted at one `INHDX8`-driven PD control
+  net with `511 ps` transition against the `500 ps` limit
+- report helper failures: `1`, caused by a generic PD hotspot helper using
+  broad `u_pd` cell patterns instead of endpoint-register patterns
+
+The wrapper now applies stronger non-relaxing pressure when repair mode is on:
+
+- adds `MPTDC_RELAX_FAST_TAG_PRESERVE` to a run-local filelist so fast tag
+  source flops can be resized/remapped;
+- biases `DFRRQHDX4` over weak `DFRRQHDX1/2` fast-tag reset flops;
+- targets fast-tag Q distribution to max fanout `4` and max transition
+  `0.35 ns`;
+- biases high-fanout control repair to max fanout `16` and max transition
+  `0.45 ns`;
+- allows `INHDX12`/buffer candidates and avoids weak inverter choices in this
+  repair experiment;
+- keeps phase buffers and RO hierarchy preserved.
+
+For an aggressive one-shot pressure run, add:
+
+```bash
+MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS=1.80 \
+```
+
+to the environment before the wrapper command. This is a stricter optimization
+target for the fast-tag Q to `nfast_hit_latched/D` path, not a relaxation. If it
+causes new max-delay violations, review them separately and do not call the run
+closed unless ordinary setup WNS/TNS are also clean.
+
 ## Expected Good Result
 
 Functional and structural:

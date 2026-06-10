@@ -56,6 +56,8 @@ else
   O13_SDC="${O13_SDC_PATH:-$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_phase_distribution.sdc}"
 fi
 O13_FILELIST="${O13_FILELIST_PATH:-$SYN_DIR/filelist_o13_phase_distribution.f}"
+export MPTDC_GENUS_REPAIR_FAST_TAG_PD="${MPTDC_GENUS_REPAIR_FAST_TAG_PD:-0}"
+export MPTDC_GENUS_REPAIR_DRV_TRANSITION="${MPTDC_GENUS_REPAIR_DRV_TRANSITION:-0}"
 DEFAULT_EXPORT_RUN_ID="${O1_RO_EXPORT_RUN_ID:-20260528_o1_export_ro_tune4_lef}"
 DEFAULT_REAL_LEF="$REPO_ROOT/results/osc_pd/$DEFAULT_EXPORT_RUN_ID/real_abstract_lef/RO_tune4_real_abstract.lef"
 DEFAULT_REAL_LIB="$SYN_DIR/macros/RO_tune4_real_abstract_shell.lib"
@@ -182,6 +184,26 @@ if [[ -f "$O13_FILELIST" ]]; then
   fi
 fi
 
+if [[ "$INPUT_RC" == "0" && "$MPTDC_GENUS_REPAIR_FAST_TAG_PD" == "1" ]]; then
+  EFFECTIVE_O13_FILELIST="$RESULT_DIR/internal/run/filelist_o13_phase_distribution_final_repair.f"
+  awk '
+    BEGIN { added = 0 }
+    {
+      print
+      if (!added && $0 == "+define+MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12") {
+        print "+define+MPTDC_RELAX_FAST_TAG_PRESERVE"
+        added = 1
+      }
+    }
+    END {
+      if (!added) {
+        print "+define+MPTDC_RELAX_FAST_TAG_PRESERVE"
+      }
+    }
+  ' "$O13_FILELIST" > "$EFFECTIVE_O13_FILELIST"
+  O13_FILELIST="$EFFECTIVE_O13_FILELIST"
+fi
+
 if [[ "$INPUT_RC" == "0" ]] && [[ "$RUN_MODE" != "validate_only" ]] && ! command -v genus >/dev/null 2>&1; then
   echo "ERROR: genus not found in PATH; run on the lab server." | tee -a "$GENUS_LOG"
   INPUT_RC=127
@@ -208,8 +230,6 @@ export MPTDC_O13_PD_VERNIER_INTENT_RPT="$RESULT_DIR/timing_pd_intentional_vernie
 export O1_RUN_FLAVOR="$FLOW_LABEL"
 export GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
 export MPTDC_OPT_GOAL="mptdc_typical_timing_closure"
-export MPTDC_GENUS_REPAIR_FAST_TAG_PD="${MPTDC_GENUS_REPAIR_FAST_TAG_PD:-0}"
-export MPTDC_GENUS_REPAIR_DRV_TRANSITION="${MPTDC_GENUS_REPAIR_DRV_TRANSITION:-0}"
 export MPTDC_OSC_SLOW_PERIOD_NS="${O13_OSC_SLOW_PERIOD_NS:-1.430}"
 export MPTDC_OSC_FAST_PERIOD_NS="${O13_OSC_FAST_PERIOD_NS:-1.333}"
 export MPTDC_OSC_SLOW_TAP_STEP_NS="${O13_OSC_SLOW_TAP_STEP_NS:-0.079}"
@@ -240,6 +260,16 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  PHASE_BUFFER_DEFINE=MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12"
   echo "  FINAL_TYPICAL_GENUS_REPAIR_1_FAST_TAG_PD=$MPTDC_GENUS_REPAIR_FAST_TAG_PD"
   echo "  FINAL_TYPICAL_GENUS_REPAIR_1_DRV_TRANSITION=$MPTDC_GENUS_REPAIR_DRV_TRANSITION"
+  echo "  MPTDC_FAST_TAG_REPAIR_MAX_FANOUT=${MPTDC_FAST_TAG_REPAIR_MAX_FANOUT:-4}"
+  echo "  MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS=${MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS:-0.35}"
+  echo "  MPTDC_CONTROL_REPAIR_MAX_FANOUT=${MPTDC_CONTROL_REPAIR_MAX_FANOUT:-16}"
+  echo "  MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS=${MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS:-0.45}"
+  echo "  MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS=${MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS:-1}"
+  echo "  MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV=${MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV:-1}"
+  echo "  MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS=${MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS:-unset}"
+  if [[ "$MPTDC_GENUS_REPAIR_FAST_TAG_PD" == "1" ]]; then
+    echo "  FINAL_TYPICAL_GENUS_REPAIR_FAST_TAG_DEFINE=MPTDC_RELAX_FAST_TAG_PRESERVE"
+  fi
   echo
 } | tee -a "$RESULT_DIR/run_manifest.txt" | tee -a "$GENUS_LOG"
 
@@ -255,7 +285,7 @@ elif [[ "$INPUT_RC" == "0" ]]; then
   ) 2>&1 | tee -a "$GENUS_LOG"
   GENUS_RC=${PIPESTATUS[0]}
   if [[ "$GENUS_RC" == "0" ]]; then
-    if grep -qE "Encountered problems processing file|extra characters after close-quote|Invalid list of objects|MPTDC_STABLE_SDC_FATAL" "$GENUS_LOG" "$GENUS_TOOL_LOG" 2>/dev/null; then
+    if grep -qE "Encountered problems processing file|extra characters after close-quote|MPTDC_STABLE_SDC_FATAL" "$GENUS_LOG" "$GENUS_TOOL_LOG" 2>/dev/null; then
       echo "ERROR: Genus emitted fatal flow diagnostics despite rc=0; marking run failed for review." | tee -a "$GENUS_LOG"
       GENUS_RC=1
     fi

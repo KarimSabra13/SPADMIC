@@ -69,3 +69,20 @@ phase clock group.
 - Keep these paths timed in the fast buffered phase clock domains.
 - First try targeted source-register drive and local nfast distribution buffering.
 - Do not alter the O13 PD Vernier exception; it applies to slow buffered phase sources into q1 endpoints, not these nfast tag paths.
+
+## 134332 Residual Update
+
+Run `final_typical_genus_repair_1_20260610_134332` reproduced the same real
+timing shape with the corrected parser:
+
+- setup WNS/TNS: `-3.5 ps` / `-77.1 ps`
+- setup violating paths: `42`
+- worst real family: `FAST_TAG_TO_PD_TS`
+- affected buffered fast taps: mainly `1`, `3`, `5`, `6`, and `7`
+
+Because the source cells are still reported as `DFRRQHDX2` and the path is
+source C->Q dominated, the next repair pressure is to compile the final-typical
+repair filelist with `MPTDC_RELAX_FAST_TAG_PRESERVE`, bias the source tag flops
+toward `DFRRQHDX4`, and constrain the fast-tag Q distribution to lower fanout
+and transition. This remains a real timing repair, not a false-path or
+multicycle change.
