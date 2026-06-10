@@ -10,6 +10,14 @@ export MPTDC_STDCELL_FAMILY=JIHD
 export PDK_ROOT="${PDK_ROOT:-/eda/pdk/xfab/xh018}"
 export SC_ROOT="${SC_ROOT:-$PDK_ROOT/diglibs/D_CELLS_JIHD/v6_0}"
 export MPTDC_STDCELL_SITE="${MPTDC_STDCELL_SITE:-core_jihd}"
+if [[ -n "${MPTDC_STDCELL_LEF:-}" && ! -f "$MPTDC_STDCELL_LEF" ]]; then
+  echo "WARN: ignoring nonexistent MPTDC_STDCELL_LEF=$MPTDC_STDCELL_LEF"
+  unset MPTDC_STDCELL_LEF
+fi
+if [[ -n "${MPTDC_STDCELL_TC_LIB:-}" && ! -f "$MPTDC_STDCELL_TC_LIB" ]]; then
+  echo "WARN: ignoring nonexistent MPTDC_STDCELL_TC_LIB=$MPTDC_STDCELL_TC_LIB"
+  unset MPTDC_STDCELL_TC_LIB
+fi
 if [[ -z "${MPTDC_STDCELL_LEF:-}" ]]; then
   for candidate in \
     "$SC_ROOT/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef" \
