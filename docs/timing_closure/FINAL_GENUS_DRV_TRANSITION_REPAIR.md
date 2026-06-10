@@ -95,3 +95,18 @@ repair; it changed the optimization problem and checked many paths against a
 new 450 ps target. The guarded default is now targeted control-net repair only,
 fanout `16`, and max transition `0.50 ns`. A stricter 450 ps target should be
 used only as an explicit experiment after timing is stable.
+
+## 143941 Guarded Update
+
+Run `final_typical_genus_repair_guarded_20260610_143941` kept the wrapper sane:
+
+- transition target: `0.50 ns`, not `0.45 ns`
+- design-wide DRV repair: disabled
+- report helper failures: `0`
+- remaining DRV root: still `n_6984`, `INHDX8`, fanout `88`, `511 ps`
+
+Since the remaining violation is only `11 ps` beyond the real `500 ps` limit,
+the next checked-in repair enables exact strong-control bias by default:
+`INHDX12` is preferred, and `INHDX0/1/2/3/4/6/8` are avoided.  This is still
+not a global transition relaxation and does not touch raw RO or phase-buffer
+clock nets.

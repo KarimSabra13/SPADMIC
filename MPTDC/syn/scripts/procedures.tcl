@@ -186,6 +186,16 @@ proc mptdc_collection_to_list {collection} {
     if {$collection eq ""} {
         return $out
     }
+    # Genus commands can return either a native collection handle or an already
+    # expanded Tcl list of object handles.  foreach_in_collection emits noisy
+    # "Invalid list of objects" diagnostics on Tcl lists even when wrapped in
+    # catch, so use Tcl iteration first when the value is visibly a list.
+    if {![catch {set token_count [llength $collection]}] && $token_count > 1} {
+        foreach obj $collection {
+            lappend out $obj
+        }
+        return $out
+    }
     if {[llength [info commands foreach_in_collection]] > 0} {
         if {![catch {
             foreach_in_collection obj $collection {
@@ -1608,12 +1618,16 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         if {[llength $fast_tag_q_pins] > 0} {
             catch {set_max_fanout $fast_tag_max_fanout $fast_tag_q_pins} err_fanout
             catch {set_max_transition $fast_tag_max_transition $fast_tag_q_pins} err_trans
-            puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=$err_fanout"
-            puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=$err_trans"
+            puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=[expr {$err_fanout eq {} ? {OK} : $err_fanout}]"
+            puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=[expr {$err_trans eq {} ? {OK} : $err_trans}]"
         }
         if {[llength $fast_tag_c_pins] > 0} {
-            catch {set_critical_range 0.050 $fast_tag_c_pins} err_crit
-            puts $fh "FAST_TAG_C_SET_CRITICAL_RANGE_0P050=$err_crit"
+            if {[llength [info commands set_critical_range]] > 0} {
+                catch {set_critical_range 0.050 $fast_tag_c_pins} err_crit
+                puts $fh "FAST_TAG_C_SET_CRITICAL_RANGE_0P050=[expr {$err_crit eq {} ? {OK} : $err_crit}]"
+            } else {
+                puts $fh "FAST_TAG_C_SET_CRITICAL_RANGE_0P050=NOT_SUPPORTED_BY_THIS_GENUS_VERSION"
+            }
         }
         if {[llength $fast_tag_q_pins] > 0 && [llength $nfast_capture_d_pins] > 0 && \
             [info exists ::env(MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS)] && \
@@ -1644,6 +1658,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 */INHDX2
                 */INHDX3
                 */INHDX4
+                */INHDX6
+                */INHDX8
+            } $fh
+            mptdc_try_unavoid_lib_cells CONTROL_PREFERRED_INVERTERS {
+                */INHDX12
             } $fh
         }
         set control_nets [list]
@@ -1663,8 +1682,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         if {[llength $control_nets] > 0} {
             catch {set_max_fanout $control_max_fanout $control_nets} err_ctrl_fanout
             catch {set_max_transition $control_max_transition $control_nets} err_ctrl_trans
-            puts $fh "CONTROL_SET_MAX_FANOUT=$err_ctrl_fanout"
-            puts $fh "CONTROL_SET_MAX_TRANSITION=$err_ctrl_trans"
+            puts $fh "CONTROL_SET_MAX_FANOUT=[expr {$err_ctrl_fanout eq {} ? {OK} : $err_ctrl_fanout}]"
+            puts $fh "CONTROL_SET_MAX_TRANSITION=[expr {$err_ctrl_trans eq {} ? {OK} : $err_ctrl_trans}]"
         }
         if {$design_drv_repair} {
             catch {set_max_fanout $control_max_fanout [current_design]} err_design_fanout
@@ -2630,7 +2649,7 @@ proc mptdc_print_summary {} {
     puts "================================================================"
     puts ""
     puts " Post-synthesis checklist:"
-    puts "   [ ] timing_violations.rpt is empty"
+    puts "   [ ] timing_violations.rpt has no real setup violations"
     puts "   [ ] Latch audit: exactly $design(EXPECTED_LATCH_COUNT) latches"
     puts "   [ ] report_area_hier.rpt identifies the first area targets"
     puts "   [ ] run_manifest.rpt captures the exact PDK/MMMC/settings baseline"

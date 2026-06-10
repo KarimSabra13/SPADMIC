@@ -75,7 +75,10 @@ the high-fanout non-phase control-net repair experiment.
 
 The repair package may:
 
-- allow `DFRRQHDX4` for fast-tag source flops;
+- prefer `DFRRQHDX4` for fast-tag source flops after the guarded run confirms
+  the source cells remain `DFRRQHDX2`;
+- prefer `INHDX12` over `INHDX8` on high-fanout non-phase control nets after
+  the guarded run confirms the remaining root is `n_6984`;
 - allow stronger local buffers/inverters on high-fanout PD control nets;
 - set local max-fanout and max-transition targets on those nets/pins.
 

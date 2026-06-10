@@ -87,3 +87,19 @@ also relaxed fast-tag preserve and released broad PD/nfast capture hierarchy
 regressed to `PD_HIT_LATCH_LOCAL_FAST` with about `-91.7 ps` WNS. Do not make
 that broad preserve release the default. Keep any stronger flop or preserve
 experiment opt-in and compare it against this `-3.5 ps` baseline.
+
+## 143941 Guarded Update
+
+Run `final_typical_genus_repair_guarded_20260610_143941` removed the unsafe
+pressure knobs and returned exactly to the real residual:
+
+- setup WNS/TNS: `-3.5 ps` / `-77.1 ps`
+- setup violating paths: `42`
+- worst real family: `FAST_TAG_TO_PD_TS`
+- report helper failures: `0`
+- `MPTDC_RELAX_FAST_TAG_PRESERVE`: not active
+
+The top rows are still source C->Q dominated and still launch from
+`DFRRQHDX2`.  The next checked-in repair enables only the exact strong source
+flop bias (`DFRRQHDX4` preferred, `DFRRQHDX1/2` avoided) while preserving the
+fast-tag hierarchy and keeping broad PD/nfast capture release disabled.

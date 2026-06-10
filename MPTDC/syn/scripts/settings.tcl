@@ -111,6 +111,11 @@ switch -- $mptdc_genus_effort {
     }
 }
 
+if {[info exists ::env(MPTDC_DESIGN_POWER_EFFORT)] && $::env(MPTDC_DESIGN_POWER_EFFORT) ne ""} {
+    set mptdc_design_power_effort $::env(MPTDC_DESIGN_POWER_EFFORT)
+    append mptdc_effort_note ", design_power_effort override=$mptdc_design_power_effort"
+}
+
 set_db syn_generic_effort  $mptdc_syn_generic_effort   ;# low|medium|high|express
 set_db syn_map_effort      $mptdc_syn_map_effort       ;# low|medium|high
 set_db syn_opt_effort      $mptdc_syn_opt_effort       ;# low|medium|high|extreme
@@ -121,4 +126,4 @@ set_db design_power_effort $mptdc_design_power_effort  ;# none|low|high
 #############################################
 set_db information_level 7                ;# 1 (quiet) to 9 (verbose)
 
-mptdc_message "Genus settings loaded ($mptdc_optimization_goal, $mptdc_effort_note, generic=$mptdc_syn_generic_effort map=$mptdc_syn_map_effort opt=$mptdc_syn_opt_effort, $ramstyle_note, $clock_gating_note)"
+mptdc_message "Genus settings loaded ($mptdc_optimization_goal, $mptdc_effort_note, generic=$mptdc_syn_generic_effort map=$mptdc_syn_map_effort opt=$mptdc_syn_opt_effort power=$mptdc_design_power_effort, $ramstyle_note, $clock_gating_note)"
