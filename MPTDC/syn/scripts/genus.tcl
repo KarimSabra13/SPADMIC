@@ -179,7 +179,9 @@ mptdc_start_stage "synthesis"
 mptdc_default_cost_groups
 
 # Pre-synthesis timing snapshot
-mptdc_report_timing $design(synthesis_reports)
+mptdc_run_nonfatal_report_step "pre-synthesis timing snapshot" \
+    {mptdc_report_timing $design(synthesis_reports)} \
+    "$design(synthesis_reports)/$this_run(stage)"
 
 # Clock gating configuration
 if {[info exists mptdc_enable_clock_gating] && $mptdc_enable_clock_gating} {
@@ -213,14 +215,18 @@ foreach cell [get_db lib_cells -if {.scan_enable_pins!=""}] {
 mptdc_start_stage "syn_generic"
 mptdc_message "Phase 1: Generic optimization"
 syn_generic
-mptdc_report_timing $design(synthesis_reports)
+mptdc_run_nonfatal_report_step "post-generic timing snapshot" \
+    {mptdc_report_timing $design(synthesis_reports)} \
+    "$design(synthesis_reports)/$this_run(stage)"
 
 # ── Phase 2: Technology Mapping ───────────────────────────────────
 # Maps to XFAB XH018 standard cells, selects drive strengths
 mptdc_start_stage "syn_map"
 mptdc_message "Phase 2: Technology mapping to XFAB XH018"
 syn_map
-mptdc_report_timing $design(synthesis_reports)
+mptdc_run_nonfatal_report_step "post-map timing snapshot" \
+    {mptdc_report_timing $design(synthesis_reports)} \
+    "$design(synthesis_reports)/$this_run(stage)"
 
 # ── Phase 3: Incremental Optimization ─────────────────────────────
 # Gate sizing, buffer insertion, hold fixing, power optimization
@@ -237,10 +243,14 @@ mptdc_start_stage "post_synthesis"
 mptdc_default_cost_groups
 
 # Timing reports
-mptdc_report_timing $design(synthesis_reports)
+mptdc_run_nonfatal_report_step "post-synthesis timing reports" \
+    {mptdc_report_timing $design(synthesis_reports)} \
+    "$design(synthesis_reports)/$this_run(stage)"
 
 # Full report suite (area, gates, power, hierarchy, DRV, QoR, latches)
-mptdc_full_reports $design(synthesis_reports)
+mptdc_run_nonfatal_report_step "post-synthesis full reports" \
+    {mptdc_full_reports $design(synthesis_reports)} \
+    "$design(synthesis_reports)/$this_run(stage)"
 
 #############################################
 # 8. EXPORT DESIGN

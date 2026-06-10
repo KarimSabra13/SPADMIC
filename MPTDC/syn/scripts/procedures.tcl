@@ -88,6 +88,26 @@ proc mptdc_run_report_candidates {cmds rpt_file title} {
     mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
+proc mptdc_run_nonfatal_report_step {label cmd report_dir} {
+    if {[catch {uplevel 1 $cmd} err opts]} {
+        mptdc_message "$label failed; continuing so synthesis can reach export: $err" high
+        file mkdir $report_dir
+        set safe_label [string map {" " "_" "/" "_" ":" "_"} [string tolower $label]]
+        set fh [open "$report_dir/${safe_label}_failure.rpt" w]
+        puts $fh "$label failed."
+        puts $fh ""
+        puts $fh $err
+        if {[dict exists $opts -errorinfo]} {
+            puts $fh ""
+            puts $fh "Tcl error info:"
+            puts $fh [dict get $opts -errorinfo]
+        }
+        close $fh
+        return 0
+    }
+    return 1
+}
+
 proc mptdc_write_report_substitute {rpt_file title unavailable_cmds evidence_files note} {
     set fh [open $rpt_file w]
     puts $fh "# $title"
@@ -116,6 +136,9 @@ proc mptdc_write_report_substitute {rpt_file title unavailable_cmds evidence_fil
 
 proc mptdc_collection_to_list {collection} {
     set out [list]
+    if {$collection eq ""} {
+        return $out
+    }
     if {[llength [info commands foreach_in_collection]] > 0} {
         if {![catch {
             foreach_in_collection obj $collection {
@@ -126,15 +149,25 @@ proc mptdc_collection_to_list {collection} {
         }
         set out [list]
     }
-    foreach obj $collection {
-        lappend out $obj
+    if {![catch {
+        foreach obj $collection {
+            lappend out $obj
+        }
+    }]} {
+        return $out
     }
-    return $out
+    return [list]
 }
 
 proc mptdc_object_name {obj} {
+    if {$obj eq ""} {
+        return ""
+    }
     if {![catch {set name [get_object_name $obj]}]} {
         return $name
+    }
+    if {[regexp {^0x[0-9a-fA-F]+$} $obj]} {
+        return $obj
     }
     if {![catch {set name [get_db $obj .name]}]} {
         return $name
@@ -554,9 +587,7 @@ proc mptdc_o13_pin_object_list {patterns} {
                     continue
                 }
                 set seen($name) 1
-                set pin_obj $pin
-                catch {set pin_obj [get_pins -quiet [list $name]]}
-                lappend pins $pin_obj
+                lappend pins $pin
             }
         }
     }
@@ -756,7 +787,7 @@ proc mptdc_o13_abs5_select_constraint_mode {} {
     } {
         set found [list]
         catch {set found [eval $query]}
-        foreach item $found {
+        foreach item [mptdc_collection_to_list $found] {
             if {$item ne "" && [lsearch -exact $candidates $item] < 0} {
                 lappend candidates $item
             }
@@ -1397,11 +1428,16 @@ proc mptdc_report_hotspot_timing {rpt_file title patterns} {
 
 proc mptdc_collect_cell_objects {patterns} {
     set cells [list]
+    array set seen {}
     foreach pattern $patterns {
         set matches [list]
         catch {set matches [get_cells -quiet -hierarchical $pattern]}
-        if {[llength $matches] > 0} {
-            set cells [concat $cells $matches]
+        foreach cell [mptdc_collection_to_list $matches] {
+            set name [mptdc_object_name $cell]
+            if {$name ne "" && ![info exists seen($name)]} {
+                set seen($name) 1
+                lappend cells $cell
+            }
         }
     }
     return $cells
@@ -1602,9 +1638,12 @@ proc mptdc_write_high_fanout_report {rpt_file {limit 100} {threshold 20}} {
     }
 
     set rows [list]
-    foreach net $nets {
+    foreach net [mptdc_collection_to_list $nets] {
         set name "<unknown>"
-        catch {set name [get_db $net .name]}
+        set obj_name [mptdc_object_name $net]
+        if {$obj_name ne ""} {
+            set name $obj_name
+        }
 
         set fanout -1
         foreach attr {.num_loads .fanout} {
@@ -1782,37 +1821,69 @@ proc mptdc_report_timing {report_dir} {
         "report_timing -from \[get_clocks clk_sys\] -to \[get_clocks clk_sys\] -max_paths 100" \
     ] "$dir/timing_clk_sys_full_clock.rpt" "clk_sys full-clock timing report"
 
-    mptdc_report_hotspot_timing "$dir/timing_pd_capture_hotspots.rpt" \
-        "phase-detector capture timing report" \
-        [list *gen_pd_row*gen_pd_col*u_pd* *u_pd*]
+    if {$stage ne "post_synthesis"} {
+        foreach file {
+            timing_pd_capture_hotspots.rpt
+            timing_osc_counter_hotspots.rpt
+            timing_meas_ctrl_hotspots.rpt
+            timing_context_bank_hotspots.rpt
+            timing_hit_capture_bridge_hotspots.rpt
+            timing_drain_ctrl_hotspots.rpt
+            timing_fifo_hotspots.rpt
+            timing_fast_count_to_nfast_hit.rpt
+            timing_cdc_async_review.rpt
+            timing_o13_phase_buffer_paths.rpt
+            pd_vernier_endpoint_discovery.rpt
+            pd_vernier_source_discovery.rpt
+            pd_vernier_exception_check.rpt
+            timing_pd_intentional_vernier.rpt
+        } {
+            mptdc_write_report_failure "$dir/$file" "Deferred detailed report" \
+                "Detailed focused timing reports are generated at post_synthesis only. Stage $stage keeps a lightweight timing snapshot so reporting cannot block optimization."
+        }
+        mptdc_write_fast_feasibility_audit "$dir/fast_domain_feasibility_audit.rpt"
+        return
+    }
 
-    mptdc_report_hotspot_timing "$dir/timing_osc_counter_hotspots.rpt" \
-        "oscillator support-counter timing report" \
-        [list *u_fast_cnt* *u_slow_cnt* *u_slow_epoch* *u_stop_epoch_capture* \
-              *gen_fast_tag_col* *u_fast_tag* *nfast_src_count* \
-              *start_wdt_cnt* *start_timeout_latched*]
+    mptdc_run_nonfatal_report_step "PD capture hotspot timing" \
+        [list mptdc_report_hotspot_timing "$dir/timing_pd_capture_hotspots.rpt" \
+            "phase-detector capture timing report" \
+            [list *gen_pd_row*gen_pd_col*u_pd* *u_pd*]] $dir
 
-    mptdc_report_fast_count_capture $dir
+    mptdc_run_nonfatal_report_step "oscillator support-counter hotspot timing" \
+        [list mptdc_report_hotspot_timing "$dir/timing_osc_counter_hotspots.rpt" \
+            "oscillator support-counter timing report" \
+            [list *u_fast_cnt* *u_slow_cnt* *u_slow_epoch* *u_stop_epoch_capture* \
+                  *gen_fast_tag_col* *u_fast_tag* *nfast_src_count* \
+                  *start_wdt_cnt* *start_timeout_latched*]] $dir
 
-    mptdc_report_hotspot_timing "$dir/timing_meas_ctrl_hotspots.rpt" \
-        "measurement-controller hotspot timing report" \
-        [list *u_meas_ctrl* *u_meas_ctrl*/*]
+    mptdc_run_nonfatal_report_step "fast-count capture timing" \
+        [list mptdc_report_fast_count_capture $dir] $dir
 
-    mptdc_report_hotspot_timing "$dir/timing_context_bank_hotspots.rpt" \
-        "context-bank hotspot timing report" \
-        [list *u_ctx_bank* *u_ctx_bank*/*]
+    mptdc_run_nonfatal_report_step "measurement-controller hotspot timing" \
+        [list mptdc_report_hotspot_timing "$dir/timing_meas_ctrl_hotspots.rpt" \
+            "measurement-controller hotspot timing report" \
+            [list *u_meas_ctrl* *u_meas_ctrl*/*]] $dir
 
-    mptdc_report_hotspot_timing "$dir/timing_hit_capture_bridge_hotspots.rpt" \
-        "hit-capture bridge hotspot timing report" \
-        [list *u_hit_capture_bridge* *u_hit_capture_bridge*/*]
+    mptdc_run_nonfatal_report_step "context-bank hotspot timing" \
+        [list mptdc_report_hotspot_timing "$dir/timing_context_bank_hotspots.rpt" \
+            "context-bank hotspot timing report" \
+            [list *u_ctx_bank* *u_ctx_bank*/*]] $dir
 
-    mptdc_report_hotspot_timing "$dir/timing_drain_ctrl_hotspots.rpt" \
-        "drain controller hotspot timing report" \
-        [list *u_drain_ctrl* *u_drain_ctrl*/*]
+    mptdc_run_nonfatal_report_step "hit-capture bridge hotspot timing" \
+        [list mptdc_report_hotspot_timing "$dir/timing_hit_capture_bridge_hotspots.rpt" \
+            "hit-capture bridge hotspot timing report" \
+            [list *u_hit_capture_bridge* *u_hit_capture_bridge*/*]] $dir
 
-    mptdc_report_hotspot_timing "$dir/timing_fifo_hotspots.rpt" \
-        "FIFO/readout hotspot timing report" \
-        [list *u_fifo* *u_sync_fifo* *u_narrow_tx* *u_tconv*]
+    mptdc_run_nonfatal_report_step "drain-controller hotspot timing" \
+        [list mptdc_report_hotspot_timing "$dir/timing_drain_ctrl_hotspots.rpt" \
+            "drain controller hotspot timing report" \
+            [list *u_drain_ctrl* *u_drain_ctrl*/*]] $dir
+
+    mptdc_run_nonfatal_report_step "FIFO/readout hotspot timing" \
+        [list mptdc_report_hotspot_timing "$dir/timing_fifo_hotspots.rpt" \
+            "FIFO/readout hotspot timing report" \
+            [list *u_fifo* *u_sync_fifo* *u_narrow_tx* *u_tconv*]] $dir
 
     if {[mptdc_o13_abs3_enabled] && $stage eq "post_synthesis"} {
         if {[mptdc_o13_abs5_enabled]} {
@@ -1822,10 +1893,12 @@ proc mptdc_report_timing {report_dir} {
         } else {
             mptdc_message "Generating O13 abs3 clock/CDC repair timing reports"
         }
-        mptdc_report_o13_abs3_timing $dir
+        mptdc_run_nonfatal_report_step "O13 stable clock and PD timing reports" \
+            [list mptdc_report_o13_abs3_timing $dir] $dir
     }
 
-    mptdc_write_fast_feasibility_audit "$dir/fast_domain_feasibility_audit.rpt"
+    mptdc_run_nonfatal_report_step "fast-domain feasibility audit" \
+        [list mptdc_write_fast_feasibility_audit "$dir/fast_domain_feasibility_audit.rpt"] $dir
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1876,22 +1949,23 @@ proc mptdc_default_cost_groups {} {
 proc mptdc_write_latch_report {rpt_file} {
     set fh [open $rpt_file w]
     set latches [get_db insts -if {.base_cell.is_latch==true}]
+    set latch_list [mptdc_collection_to_list $latches]
 
     puts $fh "MPTDC latch report"
     puts $fh "=================="
-    puts $fh "Count: [llength $latches]"
+    puts $fh "Count: [llength $latch_list]"
     puts $fh ""
     puts $fh [format "%-80s %s" "Instance" "Base cell"]
     puts $fh [string repeat "-" 120]
 
-    foreach inst $latches {
+    foreach inst $latch_list {
         set inst_name [get_db $inst .name]
         set base_name [get_db $inst .base_cell.name]
         puts $fh [format "%-80s %s" $inst_name $base_name]
     }
 
     close $fh
-    return [llength $latches]
+    return [llength $latch_list]
 }
 
 proc mptdc_latch_audit {report_dir} {

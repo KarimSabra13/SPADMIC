@@ -191,6 +191,7 @@ export MPTDC_TIMING_VIEW=tc_only
 export MPTDC_TC_ONLY_VIEW=1
 export MPTDC_FREQ_MODE=r750_delta5
 export MPTDC_FREQ_MODE_DEFINES="$FREQ_DEFINES"
+export MPTDC_SYN_INPUTS_DIR="$SYN_DIR/inputs"
 export O1_USE_REAL_RO_ABSTRACT=1
 export O1_RO_LEF_PATH="$REAL_LEF"
 export O1_RO_LIBERTY_PATH="$REAL_LIB"
@@ -249,6 +250,12 @@ elif [[ "$INPUT_RC" == "0" ]]; then
     genus -files "$SCRIPT_DIR/genus.tcl" -log "$GENUS_TOOL_LOG"
   ) 2>&1 | tee -a "$GENUS_LOG"
   GENUS_RC=${PIPESTATUS[0]}
+  if [[ "$GENUS_RC" == "0" ]]; then
+    if grep -qE "Encountered problems processing file|extra characters after close-quote|Invalid list of objects|MPTDC_STABLE_SDC_FATAL" "$GENUS_LOG" "$GENUS_TOOL_LOG" 2>/dev/null; then
+      echo "ERROR: Genus emitted fatal flow diagnostics despite rc=0; marking run failed for review." | tee -a "$GENUS_LOG"
+      GENUS_RC=1
+    fi
+  fi
 fi
 
 SNAPSHOT_RC=0
