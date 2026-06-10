@@ -1,7 +1,0 @@
-schema_version,test_name,seed,attempt_id,event_id,label,source,stop_model,accepted,rejected,reject_reason,start_time_ps,stop_time_ps,true_dt_ps,start_phase_sys_ps,start_phase_ref_ps,ref_phase_offset_ps,max_hits,out_mode,bp_mode,start_only,expect_packet
-1,vip_ref_stop_cdv,20015,0,0,vip_ref_0,0,qualified_ref,1,0,none,309375,325097,15722,3125,9472,97,15,0,always_ready,0,1
-1,vip_ref_stop_cdv,20015,1,1,vip_ref_1,0,qualified_ref,1,0,none,1834375,1850097,15722,3125,9472,97,15,0,always_ready,0,1
-1,vip_ref_stop_cdv,20015,2,2,vip_ref_2,0,qualified_ref,1,0,none,3359375,3375097,15722,3125,9472,97,15,0,always_ready,0,1
-1,vip_ref_stop_cdv,20015,3,3,vip_ref_3,0,qualified_ref,1,0,none,4884375,4900097,15722,3125,9472,97,15,0,always_ready,0,1
-1,vip_ref_stop_cdv,20015,4,4,vip_ref_4,0,qualified_ref,1,0,none,6409375,6425097,15722,3125,9472,97,15,0,always_ready,0,1
-1,vip_ref_stop_cdv,20015,5,5,vip_ref_5,0,qualified_ref,1,0,none,7934375,7950097,15722,3125,9472,97,15,0,always_ready,0,1

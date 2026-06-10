@@ -1,8 +1,0 @@
-branch=SPADMIC_TOP
-commit=80600f401ef1b713445c1f8324297ca86fcba337
-date=2026-04-21T11:37:59+02:00
-TMPDIR is being set to /tmp/genus_temp_324641_lyoelectrosrv01.in2p3.fr_ksabra_mFiTWQ
-PDK_ROOT=/data/pdk/xfab/xh018
-SC_ROOT=/data/pdk/xfab/xh018/diglibs/D_CELLS_HD/v6_0
-TECHNOLOGY_LEF=/data/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef
-QRC_ROOT=/data/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141

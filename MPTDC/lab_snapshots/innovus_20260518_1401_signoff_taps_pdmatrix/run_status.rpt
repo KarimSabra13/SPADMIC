@@ -1,9 +1,0 @@
-MPTDC Innovus estimate status
-============================
-Status: COMPLETE
-Completed: 2026-05-18 13:51:15 CEST
-Script: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/scripts/innovus_estimate.tcl
-Top: mptdc_top_asic
-Netlist: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/outputs/mptdc_top_asic.postsyn.v
-MMMC: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/inputs/mptdc_innovus.mmmc
-Pre-CTS summary: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/reports/prects/mptdc_top_asic_preCTS.summary.gz

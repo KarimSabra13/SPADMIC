@@ -1,9 +1,0 @@
-schema_version,test_name,seed,attempt_id,event_id,label,source,stop_model,accepted,rejected,reject_reason,start_time_ps,stop_time_ps,true_dt_ps,start_phase_sys_ps,start_phase_ref_ps,ref_phase_offset_ps,max_hits,out_mode,bp_mode,start_only,expect_packet
-1,long_random,20006,0,0,rand_conv_0,0,qualified_ref,1,0,none,359375,375088,15713,3125,9463,88,15,0,random_50,0,1
-1,long_random,20006,1,1,rand_conv_1,0,qualified_ref,1,0,none,5434375,5450088,15713,3125,9463,88,15,0,random_50,0,1
-1,long_random,20006,2,2,rand_conv_2,0,qualified_ref,1,0,none,10509375,10525088,15713,3125,9463,88,15,0,random_50,0,1
-1,long_random,20006,3,3,rand_conv_3,0,qualified_ref,1,0,none,15584375,15600088,15713,3125,9463,88,15,0,random_50,0,1
-1,long_random,20006,4,4,rand_conv_4,0,qualified_ref,1,0,none,20659375,20675088,15713,3125,9463,88,15,0,random_50,0,1
-1,long_random,20006,5,5,rand_conv_5,0,qualified_ref,1,0,none,25734375,25750088,15713,3125,9463,88,15,0,random_50,0,1
-1,long_random,20006,6,6,rand_conv_6,0,qualified_ref,1,0,none,30809375,30825088,15713,3125,9463,88,15,0,random_50,0,1
-1,long_random,20006,7,7,rand_conv_7,0,qualified_ref,1,0,none,35884375,35900088,15713,3125,9463,88,15,0,random_50,0,1

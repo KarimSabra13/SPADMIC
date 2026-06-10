@@ -1,7 +1,0 @@
-hierarchical gate report could not be generated.
-
-report_gates -depth 20: Failed on report gates
-
-report_gates -hier: Failed on report gates
-
-report_gates -hierarchy: Failed on report gates

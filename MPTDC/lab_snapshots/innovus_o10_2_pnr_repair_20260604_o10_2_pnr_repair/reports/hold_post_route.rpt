@@ -1,3 +1,0 @@
-
-**ERROR: (IMPOPT-7027):	The analysis mode needs to be set to 'OCV' in post route stage for post route timing & optimization. To avoid this message & allow post route steps to proceed set 'setAnalysisMode -analysisType onChipVariation'. It is also recommended to set '-cppr both' alongside this to remove clock re-convergence pessimism for both setup and hold modes.
-

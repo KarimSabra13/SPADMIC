@@ -1,7 +1,0 @@
-O13 abs5d post-synthesis PD q1 Vernier exception Genus snapshot
-RUN_ID=20260609_o13_abs5d_pd_q1_post_synth_exception
-SOURCE_RESULT=results/genus_osc_pd/20260609_o13_abs5d_pd_q1_post_synth_exception
-SNAPSHOT_DIR=results/github_snapshots/20260609_o13_abs5d_pd_q1_post_synth_exception_snapshot
-FINAL_SIGNOFF=NO
-FORMAT=directory_snapshot_no_tar
-PURPOSE=Analyze exact post-synth PD Vernier exception and remaining real local timing

@@ -1,7 +1,0 @@
-O13 abs5e PD q1 constraint-mode Genus snapshot
-RUN_ID=20260609_o13_abs5e_pd_q1_constraint_mode_fix
-SOURCE_RESULT=results/genus_osc_pd/20260609_o13_abs5e_pd_q1_constraint_mode_fix
-SNAPSHOT_DIR=results/github_snapshots/20260609_o13_abs5e_pd_q1_constraint_mode_fix_snapshot
-FINAL_SIGNOFF=NO
-FORMAT=directory_snapshot_no_tar
-PURPOSE=Deep review of improved O13 PD Vernier exception, remaining real timing, DRV, and reports

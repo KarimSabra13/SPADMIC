@@ -1,7 +1,0 @@
-PASS directed tb_meas_ctrl_unit
-PASS directed tb_hit_capture_bridge_unit
-PASS directed tb_context_bank_unit
-PASS directed tb_drain_ctrl_unit
-PASS directed tb_single_conv
-PASS directed tb_backpressure
-FAIL vip_regression selected_tests rc=123

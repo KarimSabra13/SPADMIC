@@ -1,8 +1,0 @@
-snapshot: 20260608_o12_phase_isolation_snapshot
-date: 2026-06-08T14:42:31+02:00
-branch: SPADMIC_localtag
-head: 105c531f8818865f30b0f93f4ffdcea34e710024
-genus_run: 20260608_o12_phase_isolation_genus
-o11_run: 20260608_o11_ro_load_analysis2
-o12_pnr_run: 20260608_o12_phase_buffer_pnr_abs1
-o12_analysis_run: 20260608_o12_phase_buffer_analysis_abs2

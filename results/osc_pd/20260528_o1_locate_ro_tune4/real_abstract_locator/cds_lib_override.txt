@@ -1,1 +1,0 @@
-DEFINE SPADMIC /group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL

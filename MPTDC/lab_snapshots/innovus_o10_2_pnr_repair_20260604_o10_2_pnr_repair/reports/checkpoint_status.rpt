@@ -1,9 +1,0 @@
-O10.2 checkpoint status
-=======================
-present: checkpoints/01_floorplan.enc
-present: checkpoints/02_place.enc
-present: checkpoints/03_cts.enc
-present: checkpoints/04_route.enc
-present: checkpoints/restore_latest.tcl
-present: checkpoints/restore_place.tcl
-present: checkpoints/restore_route.tcl

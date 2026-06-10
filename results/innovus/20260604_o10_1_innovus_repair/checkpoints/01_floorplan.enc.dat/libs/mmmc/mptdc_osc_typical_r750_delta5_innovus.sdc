@@ -1,1 +1,0 @@
-/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/constraints/mptdc_osc_typical_r750_delta5_innovus.sdc

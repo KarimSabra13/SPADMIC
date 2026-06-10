@@ -1,6 +1,0 @@
-MPTDC phase-detector matrix symmetry prep
-========================================
-Rows x cols target: 8 x 8
-Instance patterns: *gen_pd_row*gen_pd_col*u_pd*
-Matched instances found: 0
-Status: no PD instances matched after synthesis; no group/region created.

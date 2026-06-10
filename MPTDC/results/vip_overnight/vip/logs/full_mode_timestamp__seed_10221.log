@@ -1,8 +1,0 @@
---- Compiling/running VIP test with xrun ---
-TOOL:	xrun(64)	23.03-s007: Started on May 20, 2026 at 11:57:47 CEST
-xrun(64): 23.03-s007: (c) Copyright 1995-2023 Cadence Design Systems, Inc.
-file: rtl/pkg/mptdc_pkg.sv
-xmvlog: *F,DLPAKC: Packed library for worklib is corrupt, please remove ./build/vip_full_mode_timestamp_xrun_full_mode_timestamp__seed_10221/xcelium.d/worklib/xm.lnx8664.074.pak (8 at Wed May 20 11:57:47 2026
-).
-xrun: *E,VLGERR: An error occurred during parsing.  Review the log file for errors with the code *E and fix those identified problems to proceed.  Exiting with code (status 2).
-TOOL:	xrun(64)	23.03-s007: Exiting on May 20, 2026 at 11:57:47 CEST  (total: 00:00:00)

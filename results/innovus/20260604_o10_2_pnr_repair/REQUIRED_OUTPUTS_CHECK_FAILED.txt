@@ -1,3 +1,0 @@
-O10.2 required outputs/content check failed
-==========================================
-gui screenshots: no nonempty PNG exported

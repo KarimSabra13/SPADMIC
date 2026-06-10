@@ -1,4 +1,0 @@
-schema_version,test_name,seed,attempt_id,event_id,label,source,stop_model,accepted,rejected,reject_reason,start_time_ps,stop_time_ps,true_dt_ps,start_phase_sys_ps,start_phase_ref_ps,ref_phase_offset_ps,max_hits,out_mode,bp_mode,start_only,expect_packet
-1,global_watchdog_recovery,20016,0,-1,global_trip_start_only,0,qualified_ref,1,0,none,309375,-1,-1,3125,9441,66,0,0,always_ready,1,0
-1,global_watchdog_recovery,20016,1,0,global_wdt_recovery_probe,0,qualified_ref,1,0,none,5621875,5625066,3191,3125,21941,66,15,0,always_ready,0,1
-1,global_watchdog_recovery,20016,2,1,global_wdt_recovery_confirm,0,qualified_ref,1,0,none,5884375,5900066,15691,3125,9441,66,15,0,always_ready,0,1

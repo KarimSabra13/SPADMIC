@@ -1,8 +1,0 @@
-MPTDC phase mesh route intent
-============================
-Generated: 2026-05-27 15:05:14 CEST
-
-Intent: keep global routing on MET1-MET3,
-but mark phase-like nets as candidates for localized METTP
-routing/shielding over mptdc_pd_matrix.
-

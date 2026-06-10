@@ -1,4 +1,0 @@
-O13 abs4 PD Vernier classification Genus snapshot
-RUN_ID=20260609_o13_abs4_pd_vernier_classification
-FINAL_SIGNOFF=NO
-FORMAT=directory_snapshot_no_tar

@@ -1,2 +1,0 @@
-config,rows,invalid_raw_tags,count,mean,std,min,max,median,rmse,mae,p90_ae,p99_ae
-multihit_15_cal_nominal,96000000,0,96000000,-1406.40666796875,723.9751781697375,-3756.0,570.0,,1581.809017818862,1414.24217928125,2400.0,3000.0
