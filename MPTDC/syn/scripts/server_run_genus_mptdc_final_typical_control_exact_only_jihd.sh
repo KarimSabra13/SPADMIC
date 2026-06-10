@@ -10,8 +10,31 @@ export MPTDC_STDCELL_FAMILY=JIHD
 export PDK_ROOT="${PDK_ROOT:-/eda/pdk/xfab/xh018}"
 export SC_ROOT="${SC_ROOT:-$PDK_ROOT/diglibs/D_CELLS_JIHD/v6_0}"
 export MPTDC_STDCELL_SITE="${MPTDC_STDCELL_SITE:-core_jihd}"
-export MPTDC_STDCELL_LEF="${MPTDC_STDCELL_LEF:-$SC_ROOT/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef}"
-export MPTDC_STDCELL_TC_LIB="${MPTDC_STDCELL_TC_LIB:-$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib}"
+if [[ -z "${MPTDC_STDCELL_LEF:-}" ]]; then
+  for candidate in \
+    "$SC_ROOT/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef" \
+    "$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef"; do
+    if [[ -f "$candidate" ]]; then
+      export MPTDC_STDCELL_LEF="$candidate"
+      break
+    fi
+  done
+fi
+if [[ -z "${MPTDC_STDCELL_LEF:-}" && -d "$SC_ROOT/LEF/v6_0_0" ]]; then
+  found_lef="$(
+    find "$SC_ROOT/LEF/v6_0_0" -maxdepth 3 -type f \
+      \( -name 'xh018_D_CELLS_JIHD.lef' -o -name '*D_CELLS_JIHD*.lef' \) \
+      ! -name '*mprobe*' 2>/dev/null | sort | head -n 1 || true
+  )"
+  if [[ -n "$found_lef" ]]; then
+    export MPTDC_STDCELL_LEF="$found_lef"
+  fi
+fi
+export MPTDC_STDCELL_LEF="${MPTDC_STDCELL_LEF:-$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef}"
+
+if [[ -z "${MPTDC_STDCELL_TC_LIB:-}" ]]; then
+  export MPTDC_STDCELL_TC_LIB="$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib"
+fi
 
 echo "# MPTDC Final Typical Genus Exact Control Root Only Repair - JIHD"
 echo "Run mode: FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY_JIHD"

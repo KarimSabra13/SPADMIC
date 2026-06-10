@@ -63,17 +63,10 @@ unset MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS
 unset MPTDC_CONTROL_REPAIR_EXACT_DRIVER_REGEX
 unset MPTDC_CONTROL_REPAIR_EXACT_NET_REGEX
 
-export PDK_ROOT=/eda/pdk/xfab/xh018
-export MPTDC_STDCELL_FAMILY=JIHD
-export SC_ROOT="$PDK_ROOT/diglibs/D_CELLS_JIHD/v6_0"
-export MPTDC_STDCELL_LEF="$SC_ROOT/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"
-export MPTDC_STDCELL_TC_LIB="$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib"
-
-test -f "$MPTDC_STDCELL_LEF" || { echo "MISSING JIHD LEF: $MPTDC_STDCELL_LEF"; exit 2; }
-test -f "$MPTDC_STDCELL_TC_LIB" || { echo "MISSING JIHD Liberty: $MPTDC_STDCELL_TC_LIB"; exit 2; }
-
-grep -n '^SITE\|^MACRO' "$MPTDC_STDCELL_LEF" | head -40
-grep -En 'library *\(|cell *\(BUHDX4|cell *\(BUHDX12|cell *\(INHDX8|cell *\(INHDX12|cell *\(DFRRQHDX' "$MPTDC_STDCELL_TC_LIB" | head -80
+unset MPTDC_STDCELL_FAMILY
+unset SC_ROOT
+unset MPTDC_STDCELL_LEF
+unset MPTDC_STDCELL_TC_LIB
 
 source MPTDC/analog_handoff/real_ro_tune4_abstract.env
 
@@ -116,11 +109,12 @@ cat "$RUN_DIR/reports/drv_transition_root_causes.csv" 2>/dev/null || true
 
 ## Required Evidence
 
-The run manifest must show:
+The JIHD wrapper owns the standard-cell environment. The run manifest must
+show:
 
 ```text
 STDCELL_FAMILY=JIHD
-STDCELL_LEF=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef
+STDCELL_LEF=<real xh018_D_CELLS_JIHD.lef path discovered by the wrapper>
 STDCELL_TC_LIB=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib
 ```
 

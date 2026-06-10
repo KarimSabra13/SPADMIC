@@ -82,7 +82,21 @@ case "$STDCELL_FAMILY" in
 esac
 SC_ROOT_PATH="${SC_ROOT:-$DEFAULT_PDK_ROOT/diglibs/$STDCELL_LIB_NAME/v6_0}"
 STDCELL_LIB_DIR="${SC_ROOT_PATH}/liberty_LPMOS/v6_0_0/PVT_1_80V_range"
-STDCELL_LEF="${MPTDC_STDCELL_LEF:-$SC_ROOT_PATH/$STDCELL_LEF_REL}"
+if [[ -n "${MPTDC_STDCELL_LEF:-}" ]]; then
+  STDCELL_LEF="$MPTDC_STDCELL_LEF"
+else
+  STDCELL_LEF="$SC_ROOT_PATH/$STDCELL_LEF_REL"
+  if [[ ! -f "$STDCELL_LEF" && "$STDCELL_FAMILY" == "JIHD" ]]; then
+    for candidate in \
+      "$SC_ROOT_PATH/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef" \
+      "$SC_ROOT_PATH/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"; do
+      if [[ -f "$candidate" ]]; then
+        STDCELL_LEF="$candidate"
+        break
+      fi
+    done
+  fi
+fi
 STDCELL_TC_LIB="${MPTDC_STDCELL_TC_LIB:-$STDCELL_LIB_DIR/${STDCELL_LIB_NAME}_LPMOS_typ_1_80V_25C.lib}"
 
 case "$RUN_ID" in

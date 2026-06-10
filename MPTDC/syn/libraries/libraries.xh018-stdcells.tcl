@@ -32,12 +32,17 @@ if {[info exists ::env(MPTDC_STDCELL_FAMILY)] && $::env(MPTDC_STDCELL_FAMILY) ne
 switch -- $mptdc_stdcell_family {
     HD {
         set mptdc_stdcell_lib_name "D_CELLS_HD"
-        set mptdc_stdcell_default_lef_rel "LEF/v6_0_0/xh018_D_CELLS_HD.lef"
+        set mptdc_stdcell_default_lef_candidates [list \
+            "LEF/v6_0_0/xh018_D_CELLS_HD.lef" \
+        ]
         set mptdc_stdcell_default_site "core_hd"
     }
     JIHD {
         set mptdc_stdcell_lib_name "D_CELLS_JIHD"
-        set mptdc_stdcell_default_lef_rel "LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"
+        set mptdc_stdcell_default_lef_candidates [list \
+            "LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef" \
+            "LEF/v6_0_0/xh018_D_CELLS_JIHD.lef" \
+        ]
         set mptdc_stdcell_default_site "core_jihd"
     }
     default {
@@ -60,7 +65,14 @@ set tech(STANDARD_CELL_LIBRARY) $mptdc_stdcell_lib_name
 if {[info exists ::env(MPTDC_STDCELL_LEF)] && $::env(MPTDC_STDCELL_LEF) ne ""} {
     set tech_files(STDCELLS_LEF) $::env(MPTDC_STDCELL_LEF)
 } else {
-    set tech_files(STDCELLS_LEF) "$paths(SC_ROOT)/$mptdc_stdcell_default_lef_rel"
+    set tech_files(STDCELLS_LEF) "$paths(SC_ROOT)/[lindex $mptdc_stdcell_default_lef_candidates 0]"
+    foreach lef_rel $mptdc_stdcell_default_lef_candidates {
+        set lef_candidate "$paths(SC_ROOT)/$lef_rel"
+        if {[file exists $lef_candidate]} {
+            set tech_files(STDCELLS_LEF) $lef_candidate
+            break
+        }
+    }
 }
 lappend tech_files(ALL_LEFS) $tech_files(STDCELLS_LEF)
 
