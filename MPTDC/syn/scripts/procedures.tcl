@@ -1578,8 +1578,10 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         } $fh
         if {$strong_fast_flops} {
             mptdc_try_avoid_lib_cells FAST_TAG_WEAK_RESET_FLOPS {
-                *DFRRQHDX1*
-                *DFRRQHDX2*
+                */DFRRQHDX1
+                */SDFRRQHDX1
+                */DFRRQHDX2
+                */SDFRRQHDX2
             } $fh
             mptdc_try_unavoid_lib_cells FAST_TAG_PREFERRED_RESET_FLOPS {
                 *DFRRQHDX4*
@@ -1637,11 +1639,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         } $fh
         if {$strong_control_drv} {
             mptdc_try_avoid_lib_cells CONTROL_WEAK_INVERTERS {
-                *INHDX0*
-                *INHDX1*
-                *INHDX2*
-                *INHDX3*
-                *INHDX4*
+                */INHDX0
+                */INHDX1
+                */INHDX2
+                */INHDX3
+                */INHDX4
             } $fh
         }
         set control_nets [list]
