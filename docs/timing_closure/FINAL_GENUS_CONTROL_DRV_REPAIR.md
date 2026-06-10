@@ -144,3 +144,39 @@ If timing is good and DRV is clean, proceed to narrow `FAST_TAG_TO_PD_TS`
 repair. If timing is good but DRV returns, the exact-root selector needs one
 more refinement. If timing remains near `-20 ps`, another non-obvious knob is
 still changing fast-domain mapping and must be isolated before timing repair.
+
+## Exact Root Result
+
+Observed result:
+
+- `final_typical_genus_control_root_20260610_160143`
+- setup WNS `-14.5 ps`
+- setup TNS `-238.0 ps`
+- setup violating paths `42`
+- DRV `0 / 0 / 0`
+
+This is a useful improvement over the control-cell-bias runs, but it is still
+not good enough. The selected root list was:
+
+```text
+u_core_u_stop_epoch_capture_n_392_BAR fanout=132 driver=g44974/Q pd_sinks=0 reset_sinks=132
+rst_core_n fanout=88 driver=u_rst_core_sync/drc_bufs/Q pd_sinks=64 reset_sinks=22
+u_core_meas_pd_clear fanout=64 driver=drc_bufs45685/Q pd_sinks=64 reset_sinks=0
+n_6894 fanout=64 driver=g33118/Q pd_sinks=64 reset_sinks=0
+n_6899 fanout=64 driver=g33116/Q pd_sinks=64 reset_sinks=0
+n_6902 fanout=64 driver=g33117/Q pd_sinks=64 reset_sinks=0
+```
+
+The reset and epoch roots are not supported by the original guarded DRV
+evidence, and the original dominant root maps to the `g33116/Q` local
+PD-control driver class. The next experiment should therefore constrain only
+that one root class:
+
+- require PD sinks;
+- reject reset roots;
+- match driver regex `(^|/)g33116/Q$`;
+- cap selected exact roots at one.
+
+This experiment is named:
+
+`MPTDC_FINAL_TYPICAL_GENUS_REPAIR_CONTROL_SINGLE_ROOT`

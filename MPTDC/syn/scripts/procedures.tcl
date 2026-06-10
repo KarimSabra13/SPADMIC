@@ -1575,9 +1575,25 @@ proc mptdc_repair_net_load_names {net} {
     return $out
 }
 
-proc mptdc_collect_exact_control_root_nets {min_fanout fh} {
+proc mptdc_collect_exact_control_root_nets {
+    min_fanout
+    fh
+    {require_pd_sinks false}
+    {allow_reset_roots true}
+    {driver_regex ""}
+    {net_regex ""}
+    {max_roots 0}
+} {
     set selected [list]
     set rows [list]
+    if {![string is integer -strict $max_roots]} {
+        set max_roots 0
+    }
+    puts $fh "EXACT_CONTROL_ROOT_REQUIRE_PD_SINKS=$require_pd_sinks"
+    puts $fh "EXACT_CONTROL_ROOT_ALLOW_RESET_ROOTS=$allow_reset_roots"
+    puts $fh "EXACT_CONTROL_ROOT_DRIVER_REGEX=$driver_regex"
+    puts $fh "EXACT_CONTROL_ROOT_NET_REGEX=$net_regex"
+    puts $fh "EXACT_CONTROL_ROOT_MAX_ROOTS=$max_roots"
     if {[catch {set nets [get_db nets]} err]} {
         puts $fh "EXACT_CONTROL_ROOT_QUERY_ERROR=$err"
         return $selected
@@ -1612,18 +1628,42 @@ proc mptdc_collect_exact_control_root_nets {min_fanout fh} {
         if {$pd_sink_count == 0 && $reset_sink_count == 0} {
             continue
         }
+        if {$require_pd_sinks && $pd_sink_count == 0} {
+            continue
+        }
+        if {!$allow_reset_roots && $reset_sink_count > 0} {
+            continue
+        }
         set driver ""
         if {![catch {set drv [get_db $net .driver]}] && [llength $drv] > 0} {
             set driver [mptdc_object_name $drv]
         }
-        lappend selected $net
-        lappend rows [list $fanout $net_name $driver $pd_sink_count $reset_sink_count]
+        if {$driver_regex ne "" && ![regexp -- $driver_regex $driver]} {
+            continue
+        }
+        if {$net_regex ne "" && ![regexp -- $net_regex $net_name]} {
+            continue
+        }
+        lappend rows [list $fanout $net_name $driver $pd_sink_count $reset_sink_count $net]
+    }
+    set rows [lsort -integer -decreasing -index 0 $rows]
+    set emitted 0
+    foreach row $rows {
+        if {$max_roots > 0 && $emitted >= $max_roots} {
+            break
+        }
+        lappend selected [lindex $row 5]
+        incr emitted
     }
     set selected [mptdc_unique_list $selected]
-    set rows [lsort -integer -decreasing -index 0 $rows]
     puts $fh "EXACT_CONTROL_ROOT_NETS=[llength $selected]"
+    set emitted 0
     foreach row $rows {
+        if {$max_roots > 0 && $emitted >= $max_roots} {
+            break
+        }
         puts $fh "EXACT_CONTROL_ROOT_NET=[lindex $row 1] fanout=[lindex $row 0] driver=[lindex $row 2] pd_sinks=[lindex $row 3] reset_sinks=[lindex $row 4]"
+        incr emitted
     }
     return $selected
 }
@@ -1638,6 +1678,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set control_avoid_inhdx8 [mptdc_bool_env MPTDC_GENUS_REPAIR_CONTROL_AVOID_INHDX8 true]
     set exact_control_roots [mptdc_bool_env MPTDC_GENUS_REPAIR_EXACT_CONTROL_ROOTS false]
     set exact_control_min_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_MIN_FANOUT 64]
+    set exact_control_require_pd_sinks [mptdc_bool_env MPTDC_CONTROL_REPAIR_EXACT_REQUIRE_PD_SINKS false]
+    set exact_control_allow_reset_roots [mptdc_bool_env MPTDC_CONTROL_REPAIR_EXACT_ALLOW_RESET_ROOTS true]
+    set exact_control_driver_regex [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_DRIVER_REGEX ""]
+    set exact_control_net_regex [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_NET_REGEX ""]
+    set exact_control_max_roots [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_MAX_ROOTS 0]
     set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 16]
     set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.50]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
@@ -1660,6 +1705,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "CONTROL_AVOID_INHDX8=$control_avoid_inhdx8"
     puts $fh "EXACT_CONTROL_ROOT_REPAIR=$exact_control_roots"
     puts $fh "EXACT_CONTROL_ROOT_MIN_FANOUT=$exact_control_min_fanout"
+    puts $fh "EXACT_CONTROL_ROOT_REQUIRE_PD_SINKS=$exact_control_require_pd_sinks"
+    puts $fh "EXACT_CONTROL_ROOT_ALLOW_RESET_ROOTS=$exact_control_allow_reset_roots"
+    puts $fh "EXACT_CONTROL_ROOT_DRIVER_REGEX=$exact_control_driver_regex"
+    puts $fh "EXACT_CONTROL_ROOT_NET_REGEX=$exact_control_net_regex"
+    puts $fh "EXACT_CONTROL_ROOT_MAX_ROOTS=$exact_control_max_roots"
     puts $fh "FAST_TAG_MAX_FANOUT=$fast_tag_max_fanout"
     puts $fh "FAST_TAG_MAX_TRANSITION_NS=$fast_tag_max_transition"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
@@ -1770,7 +1820,14 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             } $fh
         }
         if {$exact_control_roots && $stage eq "post_map_pre_opt"} {
-            set exact_control_nets [mptdc_collect_exact_control_root_nets $exact_control_min_fanout $fh]
+            set exact_control_nets [mptdc_collect_exact_control_root_nets \
+                $exact_control_min_fanout \
+                $fh \
+                $exact_control_require_pd_sinks \
+                $exact_control_allow_reset_roots \
+                $exact_control_driver_regex \
+                $exact_control_net_regex \
+                $exact_control_max_roots]
             if {[llength $exact_control_nets] > 0} {
                 set exact_fanout_rc [catch {set_max_fanout $control_max_fanout $exact_control_nets} err_exact_fanout]
                 set exact_trans_rc [catch {set_max_transition $control_max_transition $exact_control_nets} err_exact_trans]
