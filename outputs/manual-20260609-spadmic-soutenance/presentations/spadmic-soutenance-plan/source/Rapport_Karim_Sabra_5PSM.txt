@@ -1,0 +1,2300 @@
+            CPE Lyon
+
+Rapport d’alternance (PFE) – 5PSM
+               IP2I – CNRS
+
+SPADMIC : étude d’un ASIC prototype et de son
+                          cœur MPTDC
+
+   De l’architecture de référence aux choix RTL, de vérification et de calibration
+
+Karim SABRA
+
+Encadrant IP2I  Edouard Bechetoille
+
+Encadrant école Abdelbassat Massouri
+
+Année académique 2025–2026
+Remerciements
+
+Au terme de cette troisième année d’alternance, ce rapport marque l’aboutissement d’une
+étape importante de formation, à la fois sur le plan scientifique, technique et humain. Mes
+remerciements s’adressent à celles et ceux qui ont contribué à rendre ce travail possible
+dans un environnement exigeant et formateur.
+Ils vont d’abord à M. Edouard Bechetoille, pour la qualité de son encadrement, sa disponi-
+bilité et la confiance accordée tout au long de cette période. Les échanges techniques menés
+autour de l’architecture numérique, de sa structuration et des contraintes d’intégration
+ont constitué un appui déterminant dans la progression de ce travail.
+Des remerciements sincères sont également adressés à l’ensemble de l’équipe de microélec-
+tronique de l’IP2I. Le cadre de travail, la richesse des discussions et le niveau d’exigence
+scientifique rencontré au sein du laboratoire ont permis d’aborder ce sujet avec une vision
+plus large, à l’interface entre instrumentation et conception de circuits intégrés.
+Une reconnaissance particulière est adressée au Dr. Imad Laktineh pour la dynamique de
+recherche dans laquelle s’inscrivent les travaux menés autour de SPADMIC. Son soutien
+et sa confiance ont contribué à donner à ce sujet un cadre scientifique stimulant, cohérent
+avec les enjeux actuels de l’instrumentation de détection.
+Mes remerciements vont également à M. Labrak, responsable de la formation PSM, pour
+son accompagnement constant et l’attention portée au suivi des élèves tout au long de
+l’année.
+Enfin, mes remerciements s’adressent à M. Abdelbassat Massouri, tuteur académique,
+ainsi qu’à l’ensemble des enseignants de la formation PSM et à la direction de CPE Lyon.
+Son accompagnement a compté bien au-delà du suivi académique formel : ses remarques,
+ses questions souvent directes et sa manière de pousser systématiquement le raisonnement
+plus loin ont aidé à dépasser une première solution simplement acceptable, pour chercher
+une version plus solide, plus cohérente et plus juste techniquement du travail réalisé. Cette
+exigence intellectuelle, relayée plus largement par la qualité du suivi pédagogique et de la
+formation, a joué un rôle essentiel dans la conduite de cette alternance.
+
+                                                              ii
+Résumé
+
+Ce rapport présente l’architecture numérique de l’ASIC prototype SPADMIC, avec
+un accent volontairement placé sur son cœur de conversion temps-numérique MPTDC.
+L’objectif n’est pas de décrire un circuit totalement figé, mais de documenter de manière
+rigoureuse la brique la plus structurée du système, tout en la replaçant dans l’architecture
+générale de l’ASIC. L’analyse rappelle d’abord les fondements théoriques des convertisseurs
+temps-numérique, puis la logique de l’approche Vernier multiphase retenue comme référence.
+Elle détaille ensuite la transition vers l’implémentation active de MPTDC, organisée
+autour de deux oscillateurs en anneau, d’une matrice de détection de phase 8 × 8, d’une
+gestion à deux contextes, d’une chaîne de lecture paquetisée et d’une calibration externe à
+l’ASIC. L’ensemble est replacé dans le contexte plus large de SPADMIC, aujourd’hui
+considéré comme un ASIC prototype de validation technologique et architecturale en vue
+d’une version future plus aboutie.
+Mots-clés : convertisseur temps-numérique, Vernier multiphase, SPADMIC, MPTDC,
+architecture numérique, calibration externe à l’ASIC.
+
+                                                             iv
+Karim SABRA                                                SPADMIC et cœur MPTDC
+
+Liste des acronymes
+
+ASIC  circuit intégré spécifique à une application (Application-Specific Integrated
+      Circuit)
+
+CDC traversée de domaines d’horloge (Clock Domain Crossing)
+
+CDV vérification pilotée par couverture (Coverage-Driven Verification)
+
+CMS Compact Muon Solenoid
+
+CNRS Centre National de la Recherche Scientifique
+
+CSR   registre de contrôle et statut (Control and Status Register)
+
+DFT conception pour le test (Design for Test)
+
+DNL non-linéarité différentielle (Differential Non-Linearity)
+
+FIFO file premier entré, premier sorti (First-In, First-Out)
+
+IMC   outil Cadence de fusion et d’analyse de couverture (Integrated Metrics Center)
+
+INL   non-linéarité intégrale (Integral Non-Linearity)
+
+I2C   bus série inter-circuits (Inter-Integrated Circuit)
+
+IP2I  Institut de Physique des 2 Infinis
+
+LSB   bit de poids faible (Least Significant Bit)
+
+LUT   table de correspondance (Look-Up Table)
+
+MAE erreur absolue moyenne (Mean Absolute Error)
+
+MMMC analyse multi-mode multi-coin (Multi-Mode Multi-Corner)
+
+PD    détecteur de phase (Phase Detector)
+
+PDK kit de conception procédé (Process Design Kit)
+
+PICMIC capteur picoseconde-micromètre (PICosecond-MICrometer sensor)
+
+PnR   placement-routage (Place and Route)
+
+PVT procédé, tension, température
+
+RMSE racine de l’erreur quadratique moyenne (Root Mean Square Error)
+
+RMS écart quadratique moyen (Root Mean Square)
+
+RO    oscillateur en anneau (Ring Oscillator)
+
+RPC chambre à plaques résistives (Resistive Plate Chamber)
+
+RTL   niveau transfert de registres (Register Transfer Level)
+
+SPAD diode à avalanche monophotonique (Single-Photon Avalanche Diode)
+
+STA   analyse temporelle statique (Static Timing Analysis)
+
+SVA   assertions SystemVerilog (SystemVerilog Assertions)
+
+TDC convertisseur temps-numérique (Time-to-Digital Converter)
+
+TDoA différence de temps d’arrivée (Time Difference of Arrival)
+
+UVM méthodologie universelle de vérification (Universal Verification Methodology)
+
+VIP   composant de propriété intellectuelle de vérification (Verification IP)
+
+VRO oscillateur Vernier en anneau (Vernier Ring Oscillator)
+
+                                   v
+Table des matières
+
+1 Introduction générale                                       1
+
+1.1 Contexte et problématique . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+
+1.2 Périmètre et organisation du document . . . . . . . . . . . . . . . . . . . . 3
+
+2 Présentation du CNRS et de l’IN2P3                          4
+
+2.1 L’IN2P3 : un institut tourné vers la physique subatomique et l’instrumentation 4
+
+3 Présentation de l’IP2I et de l’équipe de microélectronique  6
+
+3.1 Présentation de l’équipe de microélectronique . . . . . . . . . . . . . . . . 6
+
+3.2 Inscription du travail réalisé dans l’équipe . . . . . . . . . . . . . . . . . . 7
+
+4 Contexte de l’ASIC SPADMIC                                  8
+
+4.1 Place du TDC dans l’ASIC SPADMIC . . . . . . . . . . . . . . . . . . . . 8
+
+4.2 Contribution numérique dans la puce . . . . . . . . . . . . . . . . . . . . . 9
+
+4.3 Contraintes fonctionnelles et technologiques . . . . . . . . . . . . . . . . . 9
+
+4.3.1 Contraintes liées à la mesure . . . . . . . . . . . . . . . . . . . . . . 9
+
+4.3.2 Contraintes d’intégration dans un circuit en ASIC . . . . . . . . . . 10
+
+4.4 Maturité technique du cœur MPTDC . . . . . . . . . . . . . . . . . . . . . 10
+
+4.5 Objectifs techniques retenus pour le bloc étudié . . . . . . . . . . . . . . . 10
+
+5 Fondements théoriques des convertisseurs temps-numérique    12
+
+5.1 Rôle d’un TDC dans une chaîne de détection . . . . . . . . . . . . . . . . . 12
+
+5.2 Grandeurs de performance à considérer . . . . . . . . . . . . . . . . . . . . 13
+
+5.2.1 Résolution temporelle et plage dynamique . . . . . . . . . . . . . . 13
+
+5.2.2 Résolution effective temporelle . . . . . . . . . . . . . . . . . . . . . 14
+
+5.2.3 Linéarité . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+
+5.2.4 Précision temporelle RMS . . . . . . . . . . . . . . . . . . . . . . . 15
+
+5.2.5 Temps mort, débit et observabilité . . . . . . . . . . . . . . . . . . 15
+
+5.3 Panorama des grandes familles d’architectures . . . . . . . . . . . . . . . . 15
+
+                              vi
+Karim SABRA                                      SPADMIC et cœur MPTDC
+
+5.4 Pourquoi l’approche Vernier a été retenue . . . . . . . . . . . . . . . . . . . 16
+5.5 Limites structurelles d’un Vernier multiphase . . . . . . . . . . . . . . . . . 17
+
+6 Principe Vernier et architecture de référence    18
+
+6.1 Principe Vernier appliqué à la mesure du temps . . . . . . . . . . . . . . . 18
+
+6.2 Pourquoi passer à une architecture multiphase . . . . . . . . . . . . . . . . 19
+
+6.3 Architecture de référence . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+
+6.4 Lecture explicite de la matrice de phase . . . . . . . . . . . . . . . . . . . . 21
+
+6.5 Points de vigilance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+
+7 Transition vers l’implémentation retenue         24
+
+7.1 De la structure de référence à une architecture exploitable . . . . . . . . . 24
+
+7.2 Évolutions nécessaires dans le contexte SPADMIC . . . . . . . . . . . . . . 24
+
+7.3 Vision globale de l’architecture active . . . . . . . . . . . . . . . . . . . . . 25
+
+7.4 Choix d’intégration et compromis d’architecture . . . . . . . . . . . . . . . 27
+
+8 Architecture du cœur MPTDC intégré dans SPADMIC  29
+
+8.1 Vue fonctionnelle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+
+8.2 Capture et cœur Vernier . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+
+8.3 Protocole de mesure, gel de l’image et réarmement . . . . . . . . . . . . . . 31
+
+8.4 Robustesse et vérification . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+
+8.5 Lien avec la caractérisation . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+
+9 Méthodologie de caractérisation et résultats     37
+
+9.1 Objectif de la caractérisation . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+
+9.2 Observables et calibration externe . . . . . . . . . . . . . . . . . . . . . . . 37
+
+9.3 Structure brute et linéarité observable . . . . . . . . . . . . . . . . . . . . 38
+
+9.4 Gain par moyennage statistique . . . . . . . . . . . . . . . . . . . . . . . . 39
+
+9.5 Portée des chiffres . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+
+10 Conclusion et perspectives                      42
+
+10.1 Synthèse technique . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 42
+
+10.2 Résultats principaux . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 42
+
+10.3 Perspectives . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+
+10.4 Apport méthodologique . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+
+                               vii
+Chapitre 1
+
+Introduction générale
+
+    Dans de nombreux systèmes de détection, le premier objectif consiste simplement à
+savoir qu’un événement a eu lieu. Cette information binaire est déjà utile, mais elle devient
+rapidement insuffisante dès que l’on cherche à reconstruire plus finement ce qui s’est
+passé. Il faut alors connaître non seulement la présence d’un signal, mais aussi son instant
+d’apparition, sa position et sa relation avec les autres signaux observés.
+
+    Cette idée est particulièrement importante pour les détecteurs rapides. Une impulsion
+peut être très courte, arriver à un instant imprévisible et devoir être associée à d’autres
+informations avant d’être exploitable. L’électronique de lecture ne peut donc pas se
+contenter de compter les événements : elle doit aussi les dater, les organiser et les transmettre
+dans un format robuste.
+
+    Dans ce cadre s’inscrit le projet SPADMIC. Il s’agit d’un prototype d’ASIC
+(Application-Specific Integrated Circuit), c’est-à-dire un circuit intégré conçu pour une
+application dédiée. Il vise à intégrer une électronique de lecture numérique autour d’une
+matrice de SPAD (Single-Photon Avalanche Diode), des détecteurs capables de produire
+une impulsion lorsqu’un photon est détecté. Dans ce type de système, la mesure temporelle
+devient une information centrale.
+
+    Pour mesurer un intervalle de temps dans une chaîne numérique, on utilise un conver-
+tisseur temps-numérique, ou TDC (Time-to-Digital Converter). Le bloc étudié est une
+version multiphase de ce type de convertisseur, appelée MPTDC (Multi-Phase Time-to-
+Digital Converter). La progression retenue construit d’abord le contexte : rôle de la puce
+SPADMIC, besoins de mesure temporelle, principes des TDC, puis implémentation RTL
+détaillée du MPTDC. Le terme RTL (Register Transfer Level) désigne ici la description
+numérique du circuit avant synthèse matérielle.
+
+    La figure 1.1 donne un premier modèle mental de cette organisation. Elle situe la
+matrice SPAD, les trois voies MPTDC, le bloc de position, l’arbitrage numérique et la
+calibration hôte avant d’entrer dans les détails techniques des chapitres suivants.
+
+                                                              1
+Karim SABRA  SPADMIC et cœur MPTDC
+
+  Figure 1.1 – Vue d’ensemble du prototype SPADMIC et de la place du cœur MPTDC.
+
+1.1 Contexte et problématique
+
+    La conception d’un TDC de haute précision impose de concilier plusieurs exigences
+souvent difficiles à satisfaire simultanément. Il faut réduire le pas de quantification, conserver
+une plage dynamique utile, limiter le bruit et le jitter, et maintenir une architecture
+compatible avec une intégration dans un ASIC. Dans ce cadre, les architectures de
+type Vernier occupent une place particulièrement intéressante, car elles permettent de
+s’affranchir partiellement de la limite imposée par le délai élémentaire d’une cellule logique
+en exploitant la différence entre deux délais voisins.
+
+    Dans SPADMIC, la présence de trois voies TDC ne vient pas d’un simple besoin de
+paralléliser trois événements indépendants. Elle est liée à l’organisation tri-axis déjà validée
+dans le cadre de PICMIC (PICosecond-MICrometer sensor) [1]. Ce concept repose sur
+une matrice de pixels hexagonaux interconnectés : la charge ou l’impulsion générée par
+un impact est projetée sur trois familles de lignes orientées selon −120◦, 0◦ et 120◦. Cette
+lecture projective réduit fortement le nombre de canaux électroniques actifs par rapport
+à une lecture pixel par pixel, tout en conservant assez d’information géométrique pour
+reconstruire la position par croisement des projections et calcul de centroïde. Les trois
+TDC correspondent donc aux trois axes de lecture d’un même événement physique, avant
+mutualisation de la sortie numérique.
+
+    La thèse d’Amina Annagrebah, utilisée ici comme référence théorique principale, propose
+une étude approfondie de ces architectures et, plus précisément, d’une approche Vernier à
+oscillateurs en anneau multiphase appliquée à des besoins de mesure temporelle de très
+haute précision [2]. Ce travail constitue une base particulièrement solide pour introduire
+les notions nécessaires avant d’aborder l’architecture développée dans le cadre du projet
+SPADMIC et son cœur MPTDC.
+
+                                                              2
+Karim SABRA     SPADMIC et cœur MPTDC
+
+1.2 Périmètre et organisation du document
+
+    Le périmètre retenu reste volontairement maîtrisé. Au moment de la rédaction initiale,
+l’architecture globale de SPADMIC n’était pas encore totalement figée, même si elle
+s’est depuis davantage stabilisée. Il ne s’agit donc pas de décrire tout l’ASIC comme un
+objet déjà définitivement arrêté, mais de présenter de manière cohérente ce qui est déjà
+structuré, justifiable et techniquement défendable.
+
+    La progression commence par le cadre scientifique et institutionnel au sein duquel
+s’inscrit l’alternance. Elle introduit ensuite le contexte général du projet SPADMIC, les
+contributions numériques réalisées et la place du MPTDC dans la chaîne de lecture de
+l’ASIC. La partie suivante développe les fondements théoriques des TDC, leurs métriques
+de performance et les architectures de type Vernier. Sur cette base, l’étude se prolonge par
+la description de l’architecture de référence extraite de la thèse, puis par une transition
+vers l’implémentation effectivement retenue. Enfin, l’analyse détaille l’architecture active
+de MPTDC, puis présente la méthodologie de caractérisation, les résultats de calibration
+et les limites encore ouvertes vers une future intégration plus aboutie.
+
+             3
+Chapitre 2
+
+Présentation du CNRS et de l’IN2P3
+
+    Le Centre National de la Recherche Scientifique (CNRS) occupe une place
+centrale dans le paysage de la recherche publique française. Organisme pluridisciplinaire,
+il a pour mission de produire des connaissances, de mobiliser les différentes disciplines
+scientifiques et d’éclairer les grands défis contemporains, en lien avec les autres acteurs de
+la recherche [3]. Cette organisation permet d’articuler recherche fondamentale, ingénierie et
+coopération avec les universités, les laboratoires et les grandes infrastructures scientifiques.
+
+    Dans les domaines relevant de la physique et de l’instrumentation, le CNRS joue un
+rôle déterminant non seulement par ses contributions scientifiques, mais aussi par sa
+capacité à fédérer des moyens humains et techniques autour de projets de long terme. Cette
+dimension est particulièrement visible dans les activités liées à la conception de détecteurs,
+à l’électronique associée, au traitement du signal et au développement de circuits intégrés
+spécialisés pour des environnements expérimentaux exigeants.
+
+2.1 L’IN2P3 : un institut tourné vers la physique subatomique
+       et l’instrumentation
+
+    Parmi les instituts du CNRS, l’IN2P3 (Institut National de Physique Nucléaire
+et de Physique des Particules) joue un rôle majeur dans la coordination de la
+recherche française en physique subatomique. Son champ d’action couvre notamment la
+physique des particules, la physique nucléaire, l’astrophysique et la cosmologie, ainsi que le
+développement des moyens expérimentaux nécessaires à ces disciplines. À ce titre, l’IN2P3
+ne se limite pas à une activité purement théorique : il contribue également à la conception
+d’instrumentations complexes, de chaînes d’acquisition et de systèmes électroniques adaptés
+à des besoins de mesure de très haute précision [4].
+
+    L’activité de l’IN2P3 s’appuie sur un réseau de laboratoires, de plateformes technolo-
+giques et de collaborations nationales et internationales. Cette structuration favorise la
+conduite de projets ambitieux, dans lesquels les performances des détecteurs dépendent
+directement de la qualité de l’électronique développée en amont. Les problématiques de
+chronométrie fine, de lecture rapide, de robustesse et d’intégration sur ASIC occupent
+ainsi une place importante dans plusieurs thématiques de recherche portées par l’institut
+[4].
+
+    L’alternance présentée ici s’inscrit dans cet environnement scientifique et technologique.
+Réalisée au sein de l’IP2I, elle prend place dans un contexte où l’électronique de détection
+
+                                                              4
+Karim SABRA     SPADMIC et cœur MPTDC
+
+constitue une brique essentielle de la chaîne instrumentale. Le travail mené autour du
+TDC destiné au projet SPADMIC relève précisément de cette logique : traduire un
+besoin de mesure temporelle fine en une architecture intégrable sur circuit, compatible
+avec des contraintes élevées de précision, de lecture et de fiabilité.
+
+             5
+Chapitre 3
+
+Présentation de l’IP2I et de l’équipe
+de microélectronique
+
+    L’Institut de Physique des 2 Infinis de Lyon (IP2I) est une unité mixte de
+recherche placée sous la tutelle du CNRS et de l’Université Claude Bernard Lyon
+1. L’institut développe des activités de recherche couvrant notamment la physique des
+particules, la physique nucléaire, l’astrophysique, la cosmologie, ainsi que les applications
+des rayonnements ionisants. Cette diversité scientifique s’accompagne d’un fort volet
+instrumental, au sein duquel la conception de détecteurs, de systèmes électroniques et de
+chaînes de lecture occupe une place structurante [5].
+
+    L’IP2I se distingue par un fonctionnement fortement interdisciplinaire. Chercheurs,
+enseignants-chercheurs, ingénieurs, techniciens et doctorants y collaborent autour de projets
+dans lesquels la qualité des dispositifs expérimentaux conditionne directement la pertinence
+des résultats scientifiques. Dans ce cadre, l’ingénierie n’intervient pas comme un simple
+support, mais comme une composante essentielle de la démarche de recherche, depuis
+l’expression du besoin jusqu’à la validation des solutions mises en œuvre [5].
+
+3.1 Présentation de l’équipe de microélectronique
+
+    Au sein de cet environnement, l’équipe de microélectronique contribue au dévelop-
+pement de circuits intégrés dédiés à l’instrumentation scientifique, en particulier pour les
+détecteurs nécessitant des performances élevées en précision temporelle, en compacité et en
+robustesse. Son activité couvre l’ensemble du cycle de développement, depuis la discussion
+avec les responsables scientifiques et la définition des contraintes jusqu’au prototypage,
+aux tests et à l’intégration dans des systèmes plus complets [6].
+
+    L’organisation de l’équipe repose sur deux pôles complémentaires :
+    — le pôle conception analogique et mixte, chargé de l’étude et de la conception
+
+        des interfaces d’entrée, des circuits de polarisation, des fonctions de synchronisation
+        et, plus largement, des éléments analogiques ou mixtes nécessaires au traitement fin
+        du signal ;
+    — le pôle conception et vérification numérique, dédié à la définition des archi-
+        tectures numériques, au développement RTL, à la vérification fonctionnelle et à
+        l’intégration des interfaces de lecture, en s’appuyant notamment sur des méthodo-
+        logies telles que le Digital on Top (DoT) et l’Universal Verification Methodology
+        (UVM).
+
+                                                              6
+Karim SABRA     SPADMIC et cœur MPTDC
+
+    Cette structuration favorise une approche transversale des projets. Les interactions entre
+analogique, mixte et numérique sont en effet constantes dès lors qu’il s’agit de concevoir
+des ASIC de détection à haute performance. L’équipe de microélectronique collabore ainsi
+étroitement avec les physiciens expérimentaux, qui définissent les besoins scientifiques,
+mais aussi avec les autres groupes techniques impliqués dans la lecture, l’acquisition et
+l’exploitation des données.
+
+3.2 Inscription du travail réalisé dans l’équipe
+
+    Le travail réalisé s’inscrit pleinement dans cette dynamique collective. Il porte sur l’étude
+et l’implémentation d’un bloc de conversion temps-numérique destiné à être intégré
+dans l’ASIC SPADMIC. Ce sujet se situe à l’interface entre plusieurs problématiques :
+compréhension théorique de la mesure temporelle fine, choix d’architecture, organisation
+de la lecture des données et prise en compte des contraintes d’intégration dans un système
+complet.
+
+    Dans ce contexte, l’environnement offert par l’IP2I et par son équipe de microélec-
+tronique constitue un cadre particulièrement pertinent. Il permet d’aborder le sujet avec
+une vision à la fois scientifique, technologique et méthodologique, en reliant les besoins de
+la détection aux choix de conception retenus pour l’architecture étudiée dans la suite de
+l’analyse.
+
+             7
+Chapitre 4
+
+Contexte de l’ASIC SPADMIC
+
+    Le projet SPADMIC s’inscrit dans une démarche d’intégration d’une électronique de
+lecture dédiée à une matrice de SPAD (Single-Photon Avalanche Diode) [7], [8]. Dans un tel
+système, l’information utile n’est pas limitée à la simple détection d’un événement : l’instant
+précis auquel cet événement se produit devient lui aussi une grandeur à exploiter. La
+mesure temporelle fine n’est donc pas un simple complément fonctionnel ; elle conditionne
+directement la valeur scientifique du système complet, la qualité de la discrimination des
+événements et la pertinence des traitements numériques réalisés en aval.
+
+    SPADMIC doit être considéré comme un ASIC prototype. Il ne représente pas encore
+une version finale complètement figée, mais un véhicule de validation à deux niveaux :
+validation du comportement visé pour la matrice de SPAD dans le procédé choisi, et
+validation de l’architecture numérique de lecture qui devra ensuite évoluer vers une
+version plus avancée. Dans cet ensemble, le bloc de conversion temps-numérique développé
+autour du projet MPTDC apparaît comme l’une des briques les plus structurées et les
+plus documentées. Il dispose déjà d’un socle théorique clair, d’une implémentation RTL
+complète, d’une stratégie de calibration identifiée et d’un environnement de vérification
+cohérent. Cette maturité relative justifie de centrer l’analyse technique sur ce bloc, sans
+l’isoler artificiellement du reste de l’ASIC.
+
+4.1 Place du TDC dans l’ASIC SPADMIC
+
+    Une matrice de SPAD produit des impulsions brèves, asynchrones et potentiellement
+nombreuses. Pour rendre ces impulsions exploitables, l’électronique de lecture doit remplir
+plusieurs rôles simultanément :
+
+    — détecter l’événement et le convertir en information numérique ;
+    — l’associer à un instant de référence avec une finesse compatible avec l’application
+
+        visée ;
+    — conserver une plage dynamique suffisante pour couvrir des délais utiles allant bien
+
+        au-delà du seul pas de quantification ;
+    — transmettre les données sans imposer un volume de sortie ou un nombre de broches
+
+        irréaliste.
+    Cette combinaison de contraintes explique pourquoi un TDC destiné à SPADMIC
+ne peut pas être conçu comme un bloc isolé, uniquement optimisé pour la résolution. Il
+doit être pensé comme une brique mixte, à l’interface entre une capture asynchrone, une
+logique de mesure rapide, des mécanismes de stockage temporaires et une chaîne de lecture
+
+                                                              8
+Karim SABRA                                                               SPADMIC et cœur MPTDC
+
+numérique cadencée par une horloge système bien plus lente.
+
+    Le principe tri-axis déjà introduit au chapitre 1 impose de conserver trois voies tem-
+porelles cohérentes avec les trois projections de la matrice. Les MPTDC ne constituent
+donc pas seulement trois canaux indépendants : ils participent à une lecture coordonnée
+du même événement physique. La sortie numérique est ensuite mutualisée afin de limiter
+le nombre de broches et de conserver un flux exploitable côté hôte.
+
+Projections de la matrice SPAD     Chemins parallèles                                         Sortie numérique partagée
+                                      MPTDC Axe 0◦                        mode / statut Arbitrage voies MPTDC
+  Axe 0◦        START / STOP               Vernier 8x8  enreg. TDC
+Axe +120◦                                                                                       et contrôle mode (TSC)
+Axe −120◦    lignes X              MPTDC Axe +120◦
+                   START / STOP    MPTDC Axe −120◦                                                 mode d’export
+                                                                          PaquetisMatiisoene/nSféorriamliesation TX Flux TX partagé
+               lignes Y            Calcul de position
+                     START / STOP       / Centroïde
+
+                 lignes Z
+
+                                                        paquets spatiaux
+
+Figure 4.1 – Architecture de lecture de SPADMIC et place du chemin temporel MPTDC.
+
+    La figure 4.1 montre bien cette dualité. Le chemin temporel reste fondé sur le principe
+Vernier et produit des enregistrements issus des trois axes MPTDC. En parallèle, le bloc
+de position reçoit directement les lignes projetées de la matrice et produit ses propres
+paquets spatiaux. Cette séparation est importante : le calcul de position ne dépend pas
+des sorties des MPTDC. Le contrôleur supérieur détermine seulement quel chemin est
+activé ou exporté : TDC seul, position seule ou fonctionnement mixte.
+
+4.2 Contribution numérique dans la puce
+
+    Le travail réalisé ne s’est pas limité à l’écriture isolée du cœur MPTDC. Pour que
+le bloc soit exploitable dans SPADMIC, il a fallu prendre en compte les blocs qui
+l’entourent : registres de contrôle et de statut, interface I2C, organisation des événements,
+files FIFO (First In, First Out), arbitrage de sortie, sérialisation et format des paquets.
+Ces éléments conditionnent directement la manière dont une mesure temporelle locale
+devient une donnée exploitable hors de l’ASIC.
+
+4.3 Contraintes fonctionnelles et technologiques
+
+4.3.1 Contraintes liées à la mesure
+
+    Le premier niveau de contrainte est directement lié à la mesure elle-même. Un TDC
+intégré dans SPADMIC doit combiner :
+
+   — une résolution suffisamment fine pour rester pertinente dans un contexte de photon
+        timing ;
+
+   — une plage dynamique utile, bien supérieure à quelques pas élémentaires ;
+   — une latence de réarmement courte, afin de ne pas transformer la chaîne de lecture
+
+        en goulet d’étranglement ;
+
+                                                              9
+Karim SABRA  SPADMIC et cœur MPTDC
+
+   — une capacité à gérer plusieurs événements ou plusieurs détections associées à une
+        même conversion ;
+
+   — une forme de robustesse face aux variations de procédé, de tension et de température.
+    Ces exigences ne peuvent pas être satisfaites par une architecture purement idéale. Dès
+que l’on passe à une implémentation réelle, il faut tenir compte du jitter des oscillateurs,
+de la non-uniformité de la grille fine, des frontières de comptage, des contraintes de
+communication entre domaines d’horloge et des limites imposées par la lecture des données.
+
+4.3.2 Contraintes d’intégration dans un circuit en ASIC
+
+    Le second niveau de contrainte provient de l’intégration elle-même. Le projet vise
+une implémentation en technologie XFAB XH018 (180 nm CMOS), ce qui impose de
+conserver un regard réaliste sur la complexité numérique embarquée. Dans un tel contexte,
+chaque choix architectural a un impact direct sur :
+
+   — la surface occupée par la matrice de détection de phase ;
+   — la profondeur des pipelines nécessaires à la fermeture temporelle ;
+   — la consommation associée aux oscillateurs, aux compteurs et à la lecture ;
+   — la difficulté de synthèse, de contraintes STA (Static Timing Analysis) et de revue
+
+        CDC (Clock Domain Crossing) ;
+   — le coût en broches et en bande passante de la sortie numérique, d’autant plus sensible
+
+        que l’ASIC doit agréger plusieurs voies temporelles avant l’export.
+    Autrement dit, une bonne architecture n’est pas seulement celle qui donne la meilleure
+formule de conversion. C’est aussi celle qui reste implémentable, vérifiable et intégrable
+sans déplacer les difficultés vers un autre niveau du système.
+
+4.4 Maturité technique du cœur MPTDC
+
+    L’architecture globale de SPADMIC n’est pas encore entièrement figée, mais le bloc
+de conversion temps-numérique dispose déjà :
+
+   — d’un socle théorique solidement documenté dans la littérature, notamment par les
+        travaux de référence sur les TDC Vernier multiphases [2] ;
+
+   — d’une implémentation active suffisamment riche pour révéler de vraies contraintes
+        d’ingénierie ;
+
+   — d’une infrastructure de simulation, de collecte et de calibration permettant d’aller
+        au-delà d’une simple description conceptuelle.
+
+    Cette maturité se traduit par des objets vérifiables : une hiérarchie RTL complète, des
+bancs d’intégration, un environnement de vérification, des scripts de collecte lourde et
+une calibration hors ASIC. Le MPTDC constitue donc le point où les contraintes de
+l’ASIC deviennent concrètes : capture asynchrone, domaines d’horloge multiples, stockage
+temporaire, flux de lecture partagé, non-uniformité de la grille temporelle et besoin de
+caractérisation statistique.
+
+4.5 Objectifs techniques retenus pour le bloc étudié
+
+    Les objectifs retenus pour le bloc MPTDC doivent rester formulés comme des exigences
+système avant de descendre vers les détails Vernier et RTL. Ils fixent le contrat d’architecture
+suivant :
+
+                                                             10
+Karim SABRA      SPADMIC et cœur MPTDC
+
+    — obtenir une mesure temporelle fine compatible avec l’approche Vernier multiphase ;
+    — accepter une capture réellement asynchrone des événements START/STOP ;
+    — découpler la capture immédiate de la lecture afin de limiter le temps mort ;
+    — exporter une observabilité suffisante pour une calibration externe ;
+    — conserver une intégration réaliste en technologie 180 nm.
+    Ces objectifs ramènent la question centrale à un compromis d’ingénierie : construire un
+TDC précis, mais aussi réarmable, observable, routable et compatible avec une chaîne
+ASIC à plusieurs voies temporelles.
+
+  À retenir
+
+  Le cœur MPTDC est une brique d’architecture réelle, soumise à des contraintes de
+  technologie, de domaines d’horloge, de lecture, de surface et de calibration. Son intérêt
+  technique vient de cette articulation entre exigence temporelle, intégration ASIC et
+  vérification numérique.
+
+             11
+Chapitre 5
+
+Fondements théoriques des
+convertisseurs temps-numérique
+
+5.1 Rôle d’un TDC dans une chaîne de détection
+
+    Un convertisseur temps-numérique a pour fonction de transformer un intervalle de
+temps en un mot binaire exploitable par une chaîne numérique. Cette opération est
+indispensable dès lors que l’information utile n’est pas portée uniquement par l’amplitude
+d’un signal, mais aussi par son instant d’apparition, sa durée, ou le décalage temporel
+entre deux événements. Dans le domaine de l’instrumentation scientifique, cette capacité
+intervient notamment pour la chronométrie fine, la localisation temporelle d’un événement
+et l’amélioration de la reconstruction globale d’un système de détection [2], [9].
+
+    Dans sa forme la plus générale, un TDC reçoit deux événements : un événement de
+départ, qui initialise l’observation, puis un événement d’arrêt, qui ferme l’intervalle à
+mesurer. Dans une architecture intégrée réelle, cette vision simplifiée doit être enrichie : les
+événements sont asynchrones, la conversion peut produire plusieurs détections associées
+à un même intervalle, la fermeture peut aussi être déclenchée par un watchdog, et la
+valeur exportée n’est pas toujours un horodatage final prêt à l’emploi. Dans de nombreuses
+architectures modernes, le TDC fournit plutôt un ensemble d’observables qui devront
+ensuite être interprétées, corrigées et parfois recalibrées.
+
+    La figure 5.1 résume cette idée à l’échelle système. Elle donne volontairement une vue
+d’ensemble avant de zoomer, dans les chapitres suivants, sur le mécanisme Vernier puis sur
+l’architecture qui l’exploite. Une chaîne de lecture dédiée à la mesure du temps comprend
+généralement un détecteur ou une source d’événement, une interface d’entrée chargée de
+mettre le signal en forme, puis un TDC responsable de la conversion de l’information
+temporelle en données numériques.
+
+                                                             12
+Karim SABRA                                          SPADMIC et cœur MPTDC
+
+   Détecteur    Front-end d’entrée
+
+événement SPAD       mise en forme
+
+             impulsion asynchrone      START / STOP
+
+                  Cœur TDC             données         Lecture
+
+                intervalle → code                    paquet / FIFO
+                                                                   flux
+
+                                                         Hôte
+
+                                                       calibration
+
+Figure 5.1 – Schéma de synthèse d’une chaîne de mesure temporelle, du détecteur au codage
+binaire.
+
+    Dans SPADMIC, cette chaîne de mesure doit rester compatible avec des événements
+asynchrones, un format de sortie compact et une correction externe. Les contraintes
+fondamentales sont donc moins celles d’un TDC isolé que celles d’un bloc de mesure
+intégré dans une chaîne de lecture complète.
+
+5.2 Grandeurs de performance à considérer
+
+    L’analyse d’un TDC ne se limite pas à sa seule résolution nominale. Plusieurs métriques
+complémentaires sont nécessaires pour caractériser son comportement [2]. Dans un projet
+comme SPADMIC, cette lecture multi-critère est indispensable, car une amélioration
+d’une grandeur peut dégrader fortement une autre.
+
+5.2.1 Résolution temporelle et plage dynamique
+
+    La première métrique est la résolution temporelle, souvent notée TLSB. Elle correspond
+au plus petit intervalle de temps que le convertisseur peut discriminer. Dans un convertisseur
+idéal, cette grandeur joue un rôle analogue au bit de poids faible d’un convertisseur
+analogique-numérique. Dans la pratique, cette grandeur ne doit pas être confondue avec la
+précision mesurée en RMS : une résolution nominale très fine ne garantit pas, à elle seule,
+une dispersion faible.
+
+    La seconde métrique est la plage dynamique. Elle désigne l’intervalle maximal que le
+convertisseur peut mesurer tout en conservant un codage exploitable. En pratique, une
+architecture très précise mais de faible dynamique devient rapidement difficile à utiliser si
+elle ne couvre pas les délais réellement rencontrés dans le système. Dans un Vernier à
+oscillateurs en anneau, cette dynamique dépend non seulement de la profondeur disponible
+du compteur grossier, mais aussi du temps nécessaire au rattrapage entre oscillateur lent
+et oscillateur rapide.
+
+                                   13
+Karim SABRA                                                    SPADMIC et cœur MPTDC
+
+5.2.2 Résolution effective temporelle
+
+    Par analogie avec la définition de l’ENOB utilisée pour les convertisseurs analogique-
+numérique, on peut définir un indicateur temporel effectif adapté au TDC [10]. Cette
+grandeur ne remplace pas les métriques de résolution, de DNL, d’INL ou d’erreur RMS,
+mais elle permet de résumer le nombre de bits réellement exploitables sur une plage
+temporelle donnée. Si TFS désigne la plage temporelle couverte et σe l’erreur temporelle
+RMS effective, une écriture usuelle consiste à poser :
+
+                       EN OBTDC = log2           √TFS       .
+                                                   12 σe
+
+La plage TFS dépend notamment de la profondeur disponible du compteur grossier, tandis
+que σe regroupe les contributions de quantification, de non-linéarité, de jitter et de
+calibration résiduelle. Cette métrique doit donc être interprétée comme un indicateur
+
+synthétique, et non comme une preuve suffisante de performance.
+
+5.2.3 Linéarité
+
+    La linéarité traduit l’écart entre la caractéristique réelle du convertisseur et sa caracté-
+ristique idéale. Deux indicateurs sont classiquement utilisés [2], [11] :
+
+   — la non-linéarité différentielle (DNL), qui mesure l’écart de largeur d’un palier par
+        rapport à 1 LSB ;
+
+   — la non-linéarité intégrale (INL), qui cumule ces écarts le long de la fonction de
+        transfert.
+
+    La DNL peut être comprise visuellement comme l’écart entre la largeur réelle d’un
+palier de la fonction de transfert et la largeur idéale de 1 LSB.
+
+             code TDC  palier idéal : 1 LSB
+
+                                    écart de largeur → DNL
+
+                       palier réel
+
+                                                            temps d’entrée
+
+Figure 5.2 – Illustration qualitative de la DNL sur une fonction de transfert de TDC.
+
+Les expressions usuelles de la DNL et de l’INL s’écrivent alors :           (5.1)
+                                   DNL(n) = ∆Tn+1,n − TLSB
+                                                         TLSB
+
+                                            i                               (5.2)
+
+                       INL(i) = DNL(n)
+
+                                         n=1
+
+    Une bonne résolution ne suffit donc pas. Un convertisseur réellement exploitable doit
+également conserver une linéarité compatible avec la précision recherchée.
+
+                                             14
+Karim SABRA      SPADMIC et cœur MPTDC
+
+5.2.4 Précision temporelle RMS
+
+    Une autre métrique essentielle est l’erreur de conversion exprimée sous forme RMS. Elle
+reflète la dispersion de l’erreur lorsque le convertisseur est soumis aux différentes sources
+d’aléas : bruit électronique, jitter, bruit de quantification ou variations des conditions
+opératoires. Pour un TDC Vernier, cette grandeur constitue un indicateur central de la
+précision temporelle effective [2], particulièrement sensible au jitter cumulé des oscillateurs
+et à la façon dont la frontière grossière/fine est reconstruite.
+
+5.2.5 Temps mort, débit et observabilité
+
+    Dans une architecture embarquée, il faut également considérer le temps mort et le débit.
+Le temps mort représente l’intervalle minimal entre deux mesures acceptées. Il dépend de
+la fermeture de la conversion, du nettoyage interne des détecteurs de phase, de la remise à
+zéro des compteurs et du mécanisme de réarmement. Le débit, lui, dépend en plus de la
+lecture, de la profondeur des files FIFO et de la présence éventuelle de rétropression sur la
+sortie numérique.
+
+    Enfin, l’observabilité constitue une métrique moins classique mais essentielle pour
+l’architecture visée. Un TDC qui n’exporte qu’un code final compact peut être suffisant
+dans un cas d’usage simple, mais il devient difficile à recalibrer, à diagnostiquer ou à
+caractériser finement. À l’inverse, un bloc qui exporte des observables riches permet un
+traitement externe à l’ASIC plus puissant, au prix d’un format de sortie plus élaboré.
+
+5.3 Panorama des grandes familles d’architectures
+
+    La littérature distingue plusieurs familles d’architectures pour la mesure d’intervalles
+de temps [2], [9]. Parmi les plus importantes, on retrouve :
+
+   — les architectures analogiques de type TAC, qui convertissent le temps en tension
+        avant numérisation ;
+
+   — les architectures numériques à compteur, très intégrables mais limitées par la
+        fréquence d’horloge requise pour atteindre de très fines résolutions ;
+
+   — les structures à ligne à délais, qui exploitent les retards élémentaires des cellules
+        logiques ;
+
+   — les architectures à oscillateurs en anneau, intéressantes pour combiner compacité
+        et dynamique ;
+
+   — les architectures Vernier, qui exploitent la différence entre deux délais ou deux
+        périodes proches pour descendre sous le seuil technologique imposé par un seul
+        élément de retard.
+
+    Le tableau 5.1 synthétise les compromis les plus importants. Les ordres de grandeur
+indiqués sont volontairement donnés à titre comparatif : ils dépendent fortement de la
+technologie, du niveau d’intégration et des choix d’implémentation. Ils restent néanmoins
+suffisants pour motiver le choix architectural retenu dans SPADMIC.
+
+             15
+Karim SABRA                                                SPADMIC et cœur MPTDC
+
+Architecture Principe                       Résolution Plage dy-       Surface Puissance
+
+                                            typique        namique
+
+TAC analogique   Intégration d’un courant   10 ps à        Moyenne     Moyenne Moyenne
+                 sur condensateur puis      100 ps         Très large                   à élevée
+Compteur         conversion ADC
+numérique                                   > 100 ps sauf              Faible     Forte si
+                 Horloge de référence       horloge très                          l’horloge
+                 échantillonnée au          rapide                     Élevée si  monte en
+                 START/STOP                                            la plage   fréquence
+                                                                       augmente   Faible à
+Ligne à délais   Propagation d’une          10 ps à        Courte à    Moyenne    moyenne
+                 impulsion le long d’une    100 ps         moyenne     à élevée
+DLL / PLL /      chaîne de retard                                                 Moyenne
+interpolation                               5 ps à 20 ps   Moyenne                à élevée
+                 Phases verrouillées ou
+Oscillateur en   interpolation              20 ps à        Moyenne à   Faible à   Moyenne
+anneau           fractionnaire              100 ps         large       moyenne    Moyenne
+Vernier ligne à                             1 ps à 20 ps   Moyenne
+délais           Comptage sur oscillateur                              Élevée
+Vernier RO       local et capture de phase  5 ps à 20 ps   Moyenne à
+multiphase                                  nominal brut   large       Moyenne Moyenne
+                 Deux chaînes à retards
+                 légèrement différents
+
+                 Deux oscillateurs +
+                 observation multiphase
+                 des croisements
+
+Table 5.1 – Comparaison synthétique des principales familles de TDC.
+
+5.4 Pourquoi l’approche Vernier a été retenue
+
+    Pour SPADMIC, l’approche Vernier est pertinente car elle permet d’obtenir une
+résolution fine à partir de la différence entre deux délais proches, tout en restant compatible
+avec une implémentation numérique intégrable [2], [9], [12]. Cet intérêt tient à un point
+fondamental : la résolution n’est plus fixée par le délai absolu d’une seule cellule, mais par
+la différence entre deux délais voisins. Il devient alors possible de descendre sous le seuil
+technologique apparent d’un simple inverseur.
+
+    Dans le contexte SPADMIC, plusieurs arguments renforcent ce choix :
+   — les événements START/STOP sont asynchrones, ce qui se prête naturellement à une
+
+        architecture déclenchée par événements plutôt qu’à une simple logique synchrone à
+        horloge unique ;
+   — les oscillateurs en anneau permettent de construire une architecture compacte,
+        réplicable et compatible avec une logique purement numérique ;
+   — l’observation multiphase améliore la granularité fine sans imposer une ligne à délais
+        extrêmement longue ;
+   — l’export d’observables riches autorise une calibration externe à l’ASIC, ce qui détend
+        fortement les contraintes de correction embarquée.
+    Le choix Vernier ne signifie toutefois pas que l’architecture devient simple. Il déplace
+au contraire la difficulté : au lieu de subir surtout la limite de l’horloge de référence, le
+concepteur doit désormais gérer le jitter des oscillateurs, la non-uniformité de la grille fine,
+les ambiguïtés de frontière et les contraintes de traversée entre domaines d’horloge.
+
+                                            16
+Karim SABRA      SPADMIC et cœur MPTDC
+
+5.5 Limites structurelles d’un Vernier multiphase
+
+    Une architecture Vernier multiphase apporte donc un gain réel, mais ce gain n’est pas
+gratuit. Les limites les plus importantes sont les suivantes :
+
+   — la grille fine n’est pas uniformément couverte ; toutes les valeurs intermédiaires ne
+        sont pas atteignables ;
+
+   — les oscillateurs introduisent du jitter cumulé, qui augmente avec le temps de conver-
+        sion ;
+
+   — la cohérence entre comptage grossier et détection fine dépend fortement de la gestion
+        correcte des frontières temporelles ;
+
+   — l’architecture fait intervenir plusieurs domaines d’horloge et des signaux asynchrones,
+        ce qui impose une discipline RTL et CDC beaucoup plus stricte qu’un simple schéma
+        de principe.
+
+  À retenir
+
+  Le choix d’un Vernier multiphase dans SPADMIC vient d’un compromis clair :
+  cette architecture donne un chemin réaliste vers une résolution fine dans une implé-
+  mentation numérique intégrable, mais elle impose en échange une forte maîtrise des
+  effets de frontière, du jitter, du format de données exporté et de la calibration externe
+  à l’ASIC.
+
+    L’analyse privilégie donc une progression ciblée : principe Vernier, architecture de
+référence, contraintes d’implémentation, puis description détaillée du bloc MPTDC. Ce
+fil conducteur permet de relier les limites physiques du TDC aux choix d’architecture
+retenus pour SPADMIC.
+
+             17
+Chapitre 6
+
+Principe Vernier et architecture de
+référence
+
+6.1 Principe Vernier appliqué à la mesure du temps
+
+    Le principe Vernier consiste à comparer deux évolutions temporelles voisines mais
+non identiques. Dans un TDC Vernier, cette idée se traduit par l’utilisation de deux
+chemins de propagation, ou de deux oscillateurs, dont les délais élémentaires diffèrent
+légèrement. L’information temporelle n’est alors plus codée par une période unique, mais
+par la différence entre deux périodes proches [2], [9], [12].
+
+    Dans le cas d’un Vernier à oscillateurs en anneau, un oscillateur lent est déclenché par
+l’événement de départ, tandis qu’un oscillateur rapide est déclenché par l’événement d’arrêt.
+Comme la période de l’oscillateur rapide est plus faible, ce dernier rattrape progressivement
+l’oscillateur lent. La première coïncidence utile permet de localiser l’intervalle mesuré avec
+une finesse déterminée par l’écart entre les deux périodes.
+
+    La formulation de base associée au Vernier à oscillateurs s’écrit sous la forme [2] :
+
+             Tin = Nslow Tslow + Nfast TLSB                               (6.1)
+
+             TLSB = Tslow − Tfast                                         (6.2)
+
+    Cette écriture met en évidence deux idées majeures. D’une part, le temps mesuré repose
+sur une décomposition en composantes grossière et fine. D’autre part, la résolution n’est
+pas fixée par une période absolue mais par la différence entre deux périodes voisines. Cette
+propriété est à l’origine de l’intérêt de l’approche Vernier pour les mesures de très haute
+précision.
+
+Dans une écriture plus proche d’une implémentation multiphase, la mesure peut être
+
+lue comme :
+
+             Tmes = Nslow Tslow + Nfast (Tslow − Tfast) + tfine(ns, nf )  (6.3)
+
+où Nslow et Nfast correspondent aux compteurs grossiers, tandis que tfine(ns, nf ) représente la
+correction associée à la cellule de phase effectivement activée. Dans un montage multiphase,
+cette dernière contribution n’est plus un simple résidu abstrait : elle est directement portée
+par l’indice de phase lent ns et l’indice de phase rapide nf .
+
+             18
+Karim SABRA                                                          SPADMIC et cœur MPTDC
+
+    Cette égalité décrit la grandeur reconstruite par le modèle de mesure. Le temps physique
+réel Thit peut ensuite s’écrire comme Thit = Tmes +ε, où ε regroupe l’erreur de quantification,
+les offsets, le jitter et les résidus de calibration.
+
+    La figure 6.1 met ce mécanisme en scène sous forme temporelle détaillée. Le rattrapage
+progressif du chemin rapide par rapport au chemin lent illustre directement la séparation
+entre l’information grossière, liée au nombre de cycles accumulés avant coïncidence, et
+l’information fine, portée par la position de la coïncidence elle-même.
+
+                         0  1  2  3  4  5  6  7        8  9  10  11  12  13  14  15        16  17  18
+
+   Départ (START)                                                    première coïncidence
+Oscillateur lent (Si)                                                          utile
+
+Compteur lent                  0        1         2              3           4
+
+Arrêt (STOP)
+
+Oscillateur rapide (Fi)                 0     1           2      3       4       5
+       Compteur rapide
+
+Circuit de coïncidence
+
+Figure 6.1 – Principe Vernier détaillé : rattrapage du chemin rapide, mesure grossière et
+raffinement multiphase de la coïncidence.
+
+6.2 Pourquoi passer à une architecture multiphase
+
+    L’architecture multiphase prolonge le principe Vernier en exploitant plusieurs sorties
+de phase des oscillateurs en parallèle. Cette extension augmente le nombre de couples
+observables et améliore l’efficacité de la quantification temporelle [2].
+
+Dans cette approche, la résolution temporelle multiphase ∆ est reliée à la résolution
+
+monophase TLSB par la relation :           ∆ = TLSB
+                                                   nb
+                                                                                                   (6.4)
+
+où nb représente le nombre d’étages exploités dans l’oscillateur en anneau.
+
+    Autrement dit, l’approche multiphase ne remplace pas le principe Vernier ; elle le raffine
+en subdivisant l’intervalle élémentaire TLSB grâce à l’observation simultanée de plusieurs
+nœuds de phase des oscillateurs. Là où un Vernier simple attendrait la coïncidence sur
+une seule paire de phases, une architecture multiphase observe une famille entière de
+combinaisons et transforme ce rattrapage en une grille 2D.
+
+    L’intérêt du multiphase n’est donc pas seulement d’augmenter le nombre de points
+d’observation ; il est aussi de réduire le temps nécessaire à la décision de mesure. Or,
+comme le jitter accumulé des oscillateurs croît avec le temps d’observation, cette réduction
+contribue à limiter la dégradation temporelle de la conversion [2]. Cette idée doit être
+distinguée du moyennage statistique présenté au chapitre 9 : ici, le gain intervient pendant
+une conversion unique, par architecture, et non par moyenne de plusieurs mesures corrigées.
+
+L’approche multiphase permet également, en première approximation :
+— de réduire le temps de conversion par rapport à l’approche monophase ;
+— d’améliorer la résolution temporelle ;
+
+                                              19
+Karim SABRA                                                                    SPADMIC et cœur MPTDC
+
+— de limiter l’impact du jitter cumulé, qui s’apparente à une accumulation quadratique
+    de contributions de bruit non corrélées sur le temps d’observation [2].
+
+6.3 Architecture de référence
+
+    Après la vue temporelle du rattrapage, la figure 6.2 synthétise une architecture Vernier
+multiphase de référence, organisée autour de quatre briques principales :
+
+   — les deux oscillateurs en anneau, lent et rapide ;
+   — une matrice de détection de phase chargée d’observer la coïncidence entre les phases ;
+   — les compteurs, qui assurent la partie grossière de la mesure ;
+   — une mémoire ou structure de stockage, qui fige les informations utiles au moment
+
+        de la conversion.
+
+                   Enslow   Oscillateur lent (9 étages)    débordement lentCompteur lent Nslow
+
+START  Prélogique           S1 S2 S3 S4 S5 S6 S7 S8 S9                         P D1                   Mémoire      DATA
+STOP       (EN)                                                                P D2             d’échantillonnage
+                                  Matrice de détection de phase                P D3
+                                                     9×9                       P D4
+                                                                               P D5
+                            F1 F2 F3 F4 F5 F6 F7 F8 F9                         P D6
+                                                                               P D7
+                                                                               P D8
+                                                                               P D9
+
+                   Enf ast  Oscillateur rapide (9 étages)        Compteur rapide
+                                                           débordement rapide     Nf ast
+
+Figure 6.2 – Architecture Vernier multiphase de référence, selon les principes décrits dans [2].
+
+    Sur le plan conceptuel, cette structuration est particulièrement intéressante pour un
+futur passage vers une implémentation numérique plus complète. Elle sépare clairement la
+génération des phases, leur observation, le comptage grossier et le stockage des résultats.
+Cette séparation fonctionnelle facilite ensuite les adaptations nécessaires à une intégration
+plus large dans un système de lecture.
+
+    La figure 6.3 complète cette vue bloc par un chronogramme de principe réduit à
+cinq phases. Les temps affichés sont construits à partir d’un exemple cohérent avec
+τf < τs. La représentation montre le lancement différé des phases rapides par le STOP, le
+rapprochement progressif des fronts rapides et l’observation parallèle de plusieurs couples
+de phase.
+
+                               20
+Karim SABRA                                        SPADMIC et cœur MPTDC
+
+                 T_hit = 80 ps
+
+Départ / START
+   Arrêt / STOP
+
+S_1
+S_2
+S_3
+S_4
+S_5
+
+N_slow                          1                           2
+
+F_1
+F_2
+F_3
+F_4
+F_5
+
+N_fast                             1                                 2
+
+                                          (S2,F1)           (S4,F3)
+
+                                                   (S3,F2)           (S5,F4)
+
+Couples / PD
+
+Figure 6.3 – Chronogramme Vernier multiphase illustrant le lancement différé des phases
+rapides et l’observation parallèle de plusieurs couples de phase.
+
+6.4 Lecture explicite de la matrice de phase
+
+    Dans l’implémentation active du projet, la matrice de détection de phase utilise 8
+phases lentes et 8 phases rapides, soit 8 × 8 = 64 cellules. Chaque cellule correspond à une
+paire (ns, nf ), avec :
+
+    — ns ∈ {0, . . . , 7} pour l’indice de phase lente ;
+    — nf ∈ {0, . . . , 7} pour l’indice de phase rapide.
+    Pour éviter toute ambiguïté avec les périodes complètes des anneaux, on note ici τs et
+τf les espacements temporels entre deux sorties de phase successives des oscillateurs lent
+et rapide. Dans l’implémentation considérée, τs = 55 ps et τf = 50 ps, d’où une différence
+Vernier élémentaire :
+
+                                            ∆V = τs − τf = 5 ps.
+La contribution fine portée par une cellule (ns, nf ) peut alors être lue comme une différence
+de positions de phase, complétée ensuite par la partie grossière de la conversion :
+
+                                     Tconv,fine(ns, nf ) = ns τs − nf τf .
+
+Le coefficient fin nominal utilisé dans le RTL correspond à cette contribution exprimée en
+
+                                      21
+Karim SABRA                                                            SPADMIC et cœur MPTDC
+
+unités de ∆V :
+
+                fine_coef(ns, nf )  =     τs  ns  −  τf  nf  =  11 ns  −  10 nf .
+                                          ∆V         ∆V
+
+Le coefficient 11 provient donc du pas de phase lent normalisé par ∆V, tandis que le
+coefficient 10 provient du pas de phase rapide normalisé par la même unité. Le signe
+négatif traduit le rattrapage de la phase lente par la phase rapide. Cette écriture rend
+explicite l’origine des deux coefficients numériques sans confondre les pas entre sorties de
+phase avec les périodes complètes des oscillateurs.
+
+    Ce point est fondamental, car il montre que l’information fine n’est pas issue d’une
+simple énumération régulière. Elle dépend d’une combinaison linéaire d’indices de phase.
+La figure 6.4 représente cette structure sur la matrice complète.
+
+                Carte thermique de la matrice de phases 8x8
+
+7  7, 0         7, 1  7, 2          7, 3      7, 4   7, 5       7, 6      7, 7
+   +77          +67   +57           +47       +37    +27        +17       +7
+
+6  6, 0         6, 1  6, 2          6, 3      6, 4   6, 5       6, 6      6, 7                                                                                 60
+   +66          +56   +46           +36       +26    +16        +6         -4                                                                                  40
+                                                                                                                                                               20
+   5, 0         5, 1  5, 2          5, 3      5, 4   5, 5       5, 6      5, 7                                                                                 0
+   +55          +45   +35           +25       +15    +5          -5       -15                                                                                  −20
+Indice de phase lente ns5                                                                                                                                      −40
+                                                                                                                                    Valeur nominale 11ns − 10nf−60
+4  4, 0         4, 1  4, 2          4, 3      4, 4   4, 5       4, 6      4, 7
+   +44          +34   +24           +14       +4      -6        -16       -26
+
+3  3, 0         3, 1  3, 2          3, 3      3, 4   3, 5       3, 6      3, 7
+   +33          +23   +13           +3         -7    -17        -27       -37
+
+2  2, 0         2, 1  2, 2          2, 3      2, 4   2, 5       2, 6      2, 7
+   +22          +12   +2             -8       -18    -28        -38       -48
+
+1  1, 0         1, 1  1, 2          1, 3      1, 4   1, 5       1, 6      1, 7
+   +11          +1     -9           -19       -29    -39        -49       -59
+
+0  0, 0         0, 1  0, 2          0, 3      0, 4   0, 5       0, 6      0, 7
+   +0           -10   -20           -30       -40    -50        -60       -70
+
+             0  1     2             3         4          5      6         7
+
+                      Indice de phase rapide nf
+
+Figure 6.4 – Matrice 8 × 8 des détecteurs de phase et coefficients fins nominaux associés.
+
+    Cette représentation permet de lire immédiatement deux phénomènes. D’une part,
+les diagonales traduisent la progression régulière du rattrapage Vernier. D’autre part, la
+matrice 8 × 8 ne projette pas ses cellules de manière uniforme sur l’axe temporel fin :
+plusieurs couples distincts produisent des coefficients voisins, alors que certains coefficients
+ne sont pas représentés. Cette propriété suffit ici comme point de vigilance théorique. Elle
+expliquera plus loin le choix d’exporter des observables riches et de confier la correction
+fine à une calibration externe, plutôt que d’introduire une correction matérielle prématurée
+dans le coeur ASIC.
+
+                                              22
+Karim SABRA      SPADMIC et cœur MPTDC
+
+6.5 Points de vigilance
+
+    Les bénéfices de l’approche Vernier ne doivent pas masquer ses contraintes. Plusieurs
+points de vigilance sont structurants [2] :
+
+   — la sensibilité au mismatch lorsque la différence de délai devient très faible ;
+   — l’influence du bruit de premier ordre lié aux variations de procédé, de tension et de
+
+        température ;
+   — le rôle du jitter cumulé dans les oscillateurs en anneau ;
+   — la nécessité d’une stratégie de calibration adaptée.
+    Dans le cas du projet SPADMIC, il faut y ajouter des points plus directement liés à
+l’implémentation :
+   — la cohérence entre comptages grossiers et détection fine lorsque l’événement STOP
+
+        tombe sur une frontière de phase ;
+   — la maîtrise des traversées entre domaines d’horloge, car les oscillateurs ne sont
+
+        asservis ni à clk_sys ni entre eux ;
+   — la nécessité d’un format de sortie qui reste exploitable malgré la complexité des
+
+        données brutes.
+
+  À retenir
+
+  L’architecture Vernier de référence explique pourquoi la résolution fine est théori-
+  quement accessible. L’architecture active du projet devra ensuite résoudre un second
+  problème : comment capturer cette information sans perdre la cohérence du comptage
+  grossier, sans allonger excessivement le temps mort, et sans rendre la lecture ou la
+  calibration impraticables.
+
+             23
+Chapitre 7
+
+Transition vers l’implémentation
+retenue
+
+7.1 De la structure de référence à une architecture exploitable
+
+    L’architecture Vernier multiphase de référence constitue une base théorique et architec-
+turale solide pour obtenir une résolution temporelle fine [2]. Elle ne peut toutefois pas être
+reprise telle quelle dans une chaîne de lecture numérique complète. Dans SPADMIC, le
+problème ne consiste pas seulement à démontrer le potentiel d’un TDC Vernier multiphase :
+il faut organiser la capture des événements, le stockage des résultats, leur transmission et
+leur exploitation hors ASIC dans un prototype complet.
+
+    La continuité avec l’architecture Vernier multiphase de référence se situe au niveau des
+principes fondamentaux :
+
+    — utilisation de deux oscillateurs proches pour définir une résolution issue d’une
+        différence de délai ;
+
+    — séparation entre information grossière et information fine ;
+    — observation multiphase par matrice de détection ;
+    — nécessité d’une calibration adaptée pour transformer les observables brutes en temps
+
+        exploitable.
+    La différence majeure vient du contrat d’intégration. Le bloc MPTDC n’est pas une
+cellule isolée : l’implémentation active est construite autour d’une matrice de détection
+8 × 8, d’une capture asynchrone, d’une banque de contextes et d’une chaîne de lecture
+dans clk_sys. Ces choix préservent le principe Vernier tout en imposant une architecture
+routable, réarmable et compatible avec un prototype en 180 nm.
+
+7.2 Évolutions nécessaires dans le contexte SPADMIC
+
+    L’architecture développée s’écarte d’une simple preuve de concept sur plusieurs aspects
+structurants. Elle doit répondre simultanément à des besoins de robustesse, d’intégration
+numérique et de lecture :
+
+    — prise en charge d’événements START/STOP avec une logique asynchrone explicite ;
+    — séparation entre la capture rapide et la lecture système ;
+    — format de sortie numérique compatible avec une chaîne de lecture externe ;
+    — calibration pensée comme une opération externe à l’ASIC, et non comme une
+
+                                                             24
+Karim SABRA                                                                                                                    SPADMIC et cœur MPTDC
+
+        correction embarquée figée dans le silicium.
+    Ces choix déplacent le centre de gravité du problème. Le principe Vernier fournit le
+mécanisme de résolution fine ; l’implémentation active doit ensuite garantir que cette
+information reste cohérente lorsqu’elle traverse des domaines temporels différents, qu’elle
+est figée dans un contexte, puis qu’elle est sérialisée vers une sortie compacte.
+
+7.3 Vision globale de l’architecture active
+
+    Avant d’isoler les arbitrages de conception, il faut placer les blocs dans leur topologie
+numérique globale. La figure 7.1 reprend le formalisme matériel de l’architecture de
+référence et montre les transformations essentielles : la prélogique devient un front-end de
+capture asynchrone, la matrice de phase est ramenée à 8 × 8, la mémoire d’échantillonnage
+devient une banque de contextes, et une chaîne de lecture système est ajoutée en sortie.
+
+                                              Oscillateur lent               débordement
+                                               8 phases utiles                          Compteur lent Nslow
+                                                                                          valeur grossière
+                             slow_en
+
+START  Capture asynchrone                     Matrice de phase                              image figée                                   contexte prêt  Lecture contexte
+STOP            START/STOP                             8×8                                                                                                       clk_sys
+                                                                                                         Banque de contextes
+            alloc. contexte                       64 cellules PD                                                    2 images                                           records
+
+                                              Oscillateur rapide                                                 contexte figé
+                                                 8 phases utiles
+                                                                                                                                                         FIFO + sérialiseur          flux TX
+                                                                                                                                                             sortie 16 bits
+
+                             fast_en                                                  Compteur rapide
+                                                                                         valeur grossière Nfast
+
+                                                                             débordement
+
+Figure 7.1 – Transformation de l’architecture Vernier de référence vers l’implémentation active
+MPTDC.
+
+    Cette transition doit aussi être lue sous l’angle des domaines temporels. L’architecture
+réelle superpose une zone d’événements asynchrones, deux familles de signaux issues des
+oscillateurs lent et rapide, puis un domaine système clk_sys chargé du séquençage de
+capture, de la lecture du contexte et de la sérialisation. La figure 7.2 fournit cette carte
+avant l’analyse des compromis.
+
+                                            Oscillateurs et matrice Vernier                 Domaine clk_sys
+
+                                                            domaine lent                     Nslow Gray
+                                                                                                            Sync. compteurs
+                             commande lente Anneau lent                      Compteur lent                    Gray + snapshot  image figée
+                                                        phases                     Gray
+
+Événements asynchrones                        phases lentes
+
+                                                                                                                                                         lecture                     flux TX
+
+                                                                                            image PD             capture        Contextes                         Drain / FIFO / TX
+                                                                                                                               image figée                             records
+START / STOP            Capture asynchrone                      Matrice PD
+  événements                    verrous                             8×8
+
+                                              phases rapides                                   clear     FSM mesure
+                                                                                            Nfast Gray      clk_sys
+
+                        Métadonnées
+                        de frontière
+                                              Anneau rapide     Compteur rapide
+                                              phases                         Gray
+                             commande rapide
+
+                                              domaine rapide
+
+Figure 7.2 – Carte des domaines temporels et des traversées CDC de l’architecture MPTDC
+active.
+
+    Un TDC Vernier actif ne possède pas un seul domaine synchrone. Les fronts START et
+STOP arrivent sans relation de phase garantie avec clk_sys. Les anneaux lent et rapide
+
+                                                             25
+Karim SABRA                                                     SPADMIC et cœur MPTDC
+
+créent ensuite leurs propres domaines temporels, directement liés aux oscillateurs. Le
+domaine clk_sys, beaucoup plus lent, sert à séquencer la fermeture de mesure, figer
+l’image utile, écrire le contexte et lire la trame de sortie. Cette structure interdit de traiter
+la conception comme une FSM unique entourée de registres synchrones ordinaires.
+
+    Le transport direct d’un bus multi-bit entre domaines serait dangereux. Chaque bit
+peut être routé différemment, subir un délai de propagation distinct et atteindre le registre
+de destination à un instant légèrement différent. Au moment de l’échantillonnage, certains
+bits peuvent donc appartenir à l’ancienne valeur et d’autres à la nouvelle. La valeur
+obtenue peut être incohérente même si chaque bit traverse individuellement une chaîne
+de synchronisation. Ce risque est particulièrement critique pour un compteur binaire, car
+plusieurs bits peuvent changer sur une même transition.
+
+    Pour les compteurs grossiers, le choix retenu consiste à transporter des codes Gray. Un
+code Gray limite la transition logique à un seul bit à la fois ; l’ambiguïté résiduelle est alors
+bornée à la valeur précédente ou suivante, au lieu de produire une combinaison binaire
+impossible. Les phases rapides et lentes ne sont pas transportées comme des bus synchrones
+continus vers clk_sys. L’architecture transporte plutôt des commandes compactes, des
+compteurs Gray, des snapshots, des images figées et des impulsions synchronisées.
+
+    La figure 7.3 illustre pourquoi le transfert direct d’un compteur multi-bit entre domaines
+d’horloge est dangereux, puis comment le codage Gray et la synchronisation par deux
+flip-flops limitent ce risque.
+
+    Compteur binaire                Compteur Gray               Synchroniseur 2 flip-flops
+
+    011 100                      010 110                           bit Gray
+                                                                asynchrone D Q
+     plusieurs bits changent             un seul bit change
+                                                                              DFF1
+b2                            g2                                                    D  Q  bit stable
+
+                              g1                                                    DFF2
+
+b1           001?             g0
+
+b0                                          front
+                                          clk_sys
+           front                   ancienne ou nouvelle valeur             clk_sys
+        clk_sys                                                    appliqué bit par bit
+    risque : mot incohérent                                     stabilisation avant usage
+
+Figure 7.3 – Principe de traversée CDC d’un compteur : risque du codage binaire, intérêt du
+Gray et synchronisation par deux flip-flops.
+
+    La synchronisation à deux flip-flops consiste à faire traverser chaque bit par deux
+bascules cadencées par le domaine de destination. La première bascule peut devenir
+métastable si le bit change trop près du front d’horloge ; la seconde laisse un cycle
+supplémentaire pour stabiliser le signal avant son utilisation par la logique clk_sys.
+Ce mécanisme ne rend pas la traversée instantanée et ne permet pas de transporter
+arbitrairement un bus binaire multi-bit. Il devient robuste lorsqu’il est associé à un codage
+Gray, car une seule transition logique est possible entre deux valeurs successives.
+
+    La méthode RTL appliquée combine donc plusieurs mécanismes complémentaires. Les
+compteurs traversent la frontière sous forme Gray et sont resynchronisés dans le domaine
+de destination. Les fronts START/STOP déclenchent des verrous asynchrones intentionnels
+afin de ne pas injecter clk_sys sur le chemin temporel mesuré. La fin de conversion ne
+lance pas immédiatement la lecture : elle déclenche d’abord un snapshot de l’image de
+mesure, puis une écriture dans un contexte. Le clear est ordonné après cette protection, ce
+qui évite de détruire la matrice source avant que l’image stable soit disponible pour la
+
+                                                             26
+Karim SABRA                                                                                                   SPADMIC et cœur MPTDC
+
+lecture.
+
+7.4 Choix d’intégration et compromis d’architecture
+
+    Le passage du principe Vernier à un bloc ASIC intégrable impose de figer une architec-
+ture qui reste suffisamment riche pour la calibration, mais suffisamment compacte pour
+être routée et intégrée dans le prototype SPADMIC. L’implémentation active retient
+ainsi une matrice de phase 8 × 8, deux contextes de capture et une sortie numérique étroite.
+La matrice fournit les couples de phase nécessaires à l’observation fine, tout en limitant la
+surface, la charge appliquée aux sorties de phase des oscillateurs, la complexité de lecture
+du contexte et l’effort de fermeture temporelle.
+
+    La capture des événements reste volontairement asynchrone. Les signaux START et STOP
+ne sont pas d’abord ramenés dans clk_sys, car cela déplacerait l’incertitude temporelle
+sur le chemin même que le TDC doit mesurer. Le front-end déclenche donc l’oscillateur
+lent au plus près de START, puis l’oscillateur rapide au plus près de STOP. Le domaine
+système intervient ensuite pour protéger l’image de mesure, orchestrer le nettoyage et
+préparer la lecture, sans transformer les phases analogiques en bus synchrones continus.
+
+Principe matériel de capture                                      Séquence temporelle
+
+             S                              Q
+          set événLeamtcehntSmTAéRmToriséQ
+ Front                                          Activation              START                                 maintien START
+START                                          anneau lent     Latch START
+
+                R                                                Anneau lent
+                                                                         STOP
+             S                              Q
+          set événLeamtcehntSmTéOmPoriséQ                        Latch STOP
+Front                                            Activation   Anneau rapide                                                   maintien STOP
+STOP                                           anneau rapide
+                                                                           clear
+                R
+                                                                                                          ts
+                                 Pas d’horloge système                                                                                           clear
+                              sur le chemin de lancement
+                  clear
+                système
+
+                                                                                                              tp                             tc
+
+Figure 7.4 – Capture asynchrone des événements START/STOP et protection de la fenêtre de
+mesure par clk_sys.
+
+    Un point d’attention concerne la logique placée avant le déclenchement effectif des an-
+neaux. Toute combinatoire sur le chemin START/STOP peut introduire un délai systématique
+et une contribution de jitter avant slow_en et fast_en. Cet effet reste peu visible sur une
+conversion isolée, mais il devient critique lors de mesures répétées ou d’une caractérisation
+fine. Il devra donc être évalué avec les blocs réels, puis en simulation post-layout, afin de
+quantifier la contribution ajoutée par le front-end de capture.
+
+    Le compromis le plus structurant concerne le découplage capture/lecture. Si la capture
+et la lecture restent couplées, le temps mort dépend directement du temps nécessaire à
+parcourir la matrice, construire les enregistrements et sérialiser la trame de sortie. Le choix
+RTL retenu consiste à figer la mesure par snapshot dans un contexte disponible, puis
+à nettoyer la matrice pour autoriser un nouvel événement. La lecture du contexte peut
+ensuite progresser dans clk_sys, à un rythme compatible avec la FIFO et la sortie 16 bit.
+
+                                                              27
+Karim SABRA                                                                            SPADMIC et cœur MPTDC
+
+            t0                  t1  t2                          t3  t4                 t5                     t6             Temps
+
+Contexte 0      Capture k       Snapshot    Lecture                 Sérialisation TX              Libre
+Contexte 1         Libre                                                                   Sérialisation TX
+                                          Capture k+1           Snapshot      Lecture
+
+                                recouvrement : lecture C0 pendant capture C1
+
+                 mesure active              image protégée          lecture contexte       paquet narrow
+
+Figure 7.5 – Pipeline à deux contextes permettant de recouvrir capture, lecture et sérialisation.
+
+    Le double contexte ne signifie pas que la matrice physique de détecteurs de phase est
+dupliquée. Il correspond à deux zones de stockage d’images de mesure. Lors du snapshot, les
+informations utiles d’une conversion terminée, bitmap de matrice, compteurs, métadonnées
+et statut, sont figées dans un contexte disponible. Le gain PPA attendu se situe d’abord
+sur le temps mort : la capture n’attend plus la fin de la sérialisation. Le coût associé est
+une surface mémoire supplémentaire pour deux images de contexte, acceptée ici parce
+qu’elle reste bornée et qu’elle évite une file profonde plus coûteuse.
+
+    Le goulot est déplacé vers l’occupation des deux contextes lorsque la sortie aval ralentit.
+Si le drain ou le TX reste bloqué trop longtemps, les deux contextes peuvent devenir
+indisponibles et un nouveau START doit être rejeté de manière contrôlée. Le risque est
+maîtrisé par les états d’occupation, les statuts de contexte, la rétropression, le rejet explicite
+des nouvelles captures et le dimensionnement de la sortie. Le compromis retenu garde
+donc une surface de stockage limitée tout en rendant visible la saturation éventuelle.
+
+    La sortie adopte enfin un protocole compact sur 16 bit, sous forme d’une trame de
+mesure structurée. Le paquet contient un en-tête, des mots de données associés aux
+enregistrements de détection et un mot de fin. Il transporte les informations nécessaires à
+la reconstruction externe : valeurs de mesure, métadonnées de contexte, indicateurs de
+frontière et champs de statut. Le contrat de sortie reste unique et compact, sans introduire
+plusieurs chemins concurrents. La correction finale est déplacée hors ASIC : le silicium
+exporte une description stable et suffisamment riche de la mesure, tandis que la LUT et
+les modèles de calibration restent évolutifs côté hôte.
+
+                           Dans l’ASIC                                                             Hors ASIC
+
+                 scan               mise en paquet                  flux TX            observables + métadonnées
+
+Image contexte             Enregistrements  Trame compacte                            Décodeur hôte           LUT externe
+
+mesure + statut            mesure                      16 bits                        observables             temps corrigé
+
+                 Le silicium exporte une trame compacte ; le décodage et la correction restent hors circuit.
+
+Figure 7.6 – Flux de sortie compact et calibration externe par décodage hôte et LUT.
+
+À retenir
+
+La transition vers l’implémentation transforme le principe Vernier en un bloc ASIC
+complet : capture asynchrone, matrice de phase compacte, frontières CDC explicites,
+double contexte, lecture clk_sys, paquet 16 bit et calibration externe forment un
+même compromis d’intégration.
+
+                                                            28
+Chapitre 8
+
+Architecture du cœur MPTDC
+intégré dans SPADMIC
+
+8.1 Vue fonctionnelle
+
+    Le cœur MPTDC transforme le principe Vernier multiphase étudié précédemment en
+une brique RTL intégrable dans la chaîne SPADMIC. L’architecture ne se limite pas à
+deux oscillateurs : elle associe la capture des événements START/STOP, la génération de
+phases lentes et rapides, une matrice de comparaison 8 × 8, une image de mesure figée,
+puis une lecture dans le domaine système. Les principaux paramètres architecturaux sont
+résumés dans le tableau 8.1.
+
+Paramètre                              Valeur
+
+Géométrie Vernier                      8 × 8 phases
+Pas de phase lent / rapide             55 ps / 50 ps
+Différence élémentaire                 5 ps
+Pas brut de reconstruction             10 ps
+Nombre de contextes                    2
+Détections exportables par conversion  jusqu’à 15
+Horloge système                        160 MHz
+Interface de sortie                    trame compacte sur bus 16 bit
+
+Table 8.1 – Paramètres architecturaux principaux de l’implémentation MPTDC.
+
+    Avant de détailler le cœur de mesure, il est utile d’isoler le contrat d’interface du
+wrapper ASIC. Le module mptdc_top_asic constitue la frontière proche des pads : il
+reçoit l’horloge système, le reset externe, les entrées asynchrones issues soit de la matrice
+SPAD soit de l’injection de calibration, le bus CSR de configuration et les interfaces de
+sortie. Le cœur mptdc_core reste responsable du timing de mesure, des traversées CDC,
+de la gestion des contextes, du watchdog et de la paquetisation.
+
+                       29
+Karim SABRA                                                                                                 SPADMIC et cœur MPTDC
+
+Figure 8.1 – Vue top-level du wrapper ASIC MPTDC et de ses interfaces fonctionnelles
+principales.
+
+                                                    Oscillateurs et matrice Vernier
+
+                                                                                                                            Domaine système clk_sys
+
+                                                      Anneau lent                        Compteur lent        Séquenceur
+                                                        8 phases                               Gray       snapshot / clear
+
+                                     commande lent                 faisceau 8 phases lentes
+
+                                                                                             compteur Gray
+
+              Événements et capture                                                                         snapshot
+
+                                                                                             image figée                    records                                flux TX
+
+Événements    Sélection entrée  Capture asynchrone                 Matrice de phase                       Image de mesure                    Lecture                        Sortie 16 bits
+START / STOP    SPAD / cal.             verrous                    8×8 comparaisons                        contexte figé             drain + FIFO + TX                           trame
+
+                                                                                             compteur Gray
+
+                                     commande rapide  faisceau 8 phases rapides
+
+                                                      Anneau rapide                      Compteur rapide
+                                                         8 phases                                Gray
+
+Figure 8.2 – Vue fonctionnelle du cœur MPTDC, de la capture START/STOP jusqu’à la lecture
+compacte en domaine système.
+
+    La figure 8.2 met en évidence la séparation des responsabilités. Les phases lentes et
+rapides restent locales aux oscillateurs et à la matrice ; elles ne deviennent pas un bus
+synchrone continu dans clk_sys. Le domaine système reçoit seulement des informations
+stabilisées : compteurs Gray synchronisés, commandes de capture, image de contexte et
+flux de lecture. C’est cette séparation qui rend le bloc à la fois mesurable et intégrable.
+
+                                                                                     30
+Karim SABRA                                       SPADMIC et cœur MPTDC
+
+Fonction matérielle            Domaine        Rôle
+                               Asynchrone     Mémorisation de START/STOP, acceptation de la conversion et
+Interface de capture                          démarrage des anneaux
+asynchrone                     Oscillateurs   Production locale des huit sorties de phase utilisées par la
+                                              comparaison Vernier
+Générateurs de phases lent et  Lent / rapide  Comptage large et transfert sécurisé vers le domaine système
+rapide                         Rapide         Détection des croisements entre phases lentes et rapides
+                               Asynchrone     Conservation d’informations auxiliaires utiles aux cas de frontière
+Compteurs grossiers Gray
+                               Image figée    Conservation atomique d’une conversion terminée
+Matrice de phase               clk_sys        Lecture du contexte, file FIFO et émission de la trame 16 bit
+                               Mixte          Fermeture contrôlée en cas d’événement manquant, de blocage
+Capture de métadonnées                        ou de timeout
+temporelles
+
+Banque de contextes
+
+Lecture et sérialisation
+
+Surveillance
+
+Table 8.2 – Répartition fonctionnelle des principales briques matérielles du MPTDC.
+
+8.2 Capture et cœur Vernier
+
+    Le chapitre 7 a motivé le choix d’une capture asynchrone afin de préserver l’information
+temporelle portée par START/STOP. La présente section se concentre donc sur le contrat
+RTL associé : démarrage des anneaux, mémorisation des croisements dans la matrice et
+préparation d’une image exploitable par le domaine système.
+
+    Une fois les deux anneaux actifs, la matrice 8 × 8 compare les huit sorties de phase
+lentes aux huit sorties de phase rapides. Chaque cellule mémorise le passage utile et fournit
+une information fine locale. En parallèle, les compteurs grossiers donnent la position large
+de la conversion. L’architecture exporte aussi des métadonnées de contexte et de frontière ;
+elles ne sont pas destinées à être interprétées bit par bit dans cette description fonctionnelle,
+mais elles rendent observables les cas ambigus au voisinage des transitions lentes.
+
+    Ce point explique un compromis central. La grille fine issue de la matrice n’est pas
+uniformément remplie : certains codes sont absents ou moins denses. Le bloc ne tente pas
+de corriger cette non-uniformité dans le silicium. Il exporte plutôt une image de mesure
+suffisamment riche pour que la calibration externe reconstruise ensuite un temps corrigé.
+
+8.3 Protocole de mesure, gel de l’image et réarmement
+
+    La fin d’une conversion n’est pas simplement un ordre de lecture. Elle forme un court
+protocole de mesure qui protège l’information temporelle avant toute remise à zéro de la
+matrice. La séquence peut se lire en cinq étapes : START lance l’anneau lent ; STOP lance
+l’anneau rapide et ouvre la fenêtre de détection ; la matrice mémorise les croisements utiles ;
+la logique système fige une image cohérente de la conversion ; puis elle nettoie la fenêtre
+de mesure pour rendre le bloc disponible à l’événement suivant.
+
+    La figure 8.3 explicite cette transition entre le domaine Vernier et le domaine système.
+La fenêtre de détection active la matrice de phase. Lorsqu’au moins une cellule a mémorisé
+un croisement et que la conversion est complète, la logique de contrôle déclenche d’abord
+le gel de l’image, puis l’écriture dans la banque de contextes. Le nettoyage intervient
+
+                                              31
+Karim SABRA                                                                                                                                             SPADMIC et cœur MPTDC
+
+seulement après cette protection : il réarme la matrice sans détruire la conversion déjà
+capturée.
+
+    Les noms internes ne sont utiles ici que comme repères : la fenêtre de détection
+(pd_gate) autorise les cellules de la matrice ; le niveau de détection (hit_level) indique
+qu’un croisement a été mémorisé ; l’état de mesure complète (meas_active) demande la
+prise en charge par le domaine système ; puis snapshot_en, capture_en, fe_clear et
+pd_clear figent, écrivent, libèrent le front-end et nettoient la conversion.
+
+                  FSM de mesure et réarmement                                      Chronogramme fonctionnel
+
+                                           Attente                                 START
+
+nouvelle fenêtre                                              START : anneau lent                     STOP                                          fenêtre PD active
+                                                                                   Fenêtre de détection                                                        croisement mémorisé
+                                      Mesure active                                                                                                                                  conversion à traiter
+                                                                                             Hit mémorisé                                                                              snapshot avant clear
+                                                              mesure complète          Mesure complète                                                                                                        écriture contexte
+                                                                                                                                                                                                                            matrice nettoyée
+                                         Snapshot                                          Gel de l’image                                                                                                                                                lecture découplée
+                                                                                        Écriture contexte
+                                                              gel image
+                                                                                                 Nettoyage
+                                    Capture contexte                               Contexte prêt lecture
+
+                                                              écriture banque                                                               t0
+
+                                  Clear / réarmement
+
+                                     image protégée dans un contexte ;
+                                          lecture FIFO/TX découplée
+
+                                                                                                                                                t1  t2  t3  t4  t5
+
+Figure 8.3 – Protocole de fermeture d’une mesure, du gel de l’image au nettoyage de la fenêtre
+de détection.
+
+Reset global et clear fonctionnel. Le reset global et le clear de conversion ne jouent
+pas le même rôle. Le reset externe place le bloc dans un état connu, indépendamment
+de la conversion en cours. Son assertion est asynchrone afin de remettre immédiatement
+les bascules locales à zéro. Sa désassertion est en revanche synchronisée dans le domaine
+concerné, ce qui évite de relâcher plusieurs registres sur des fronts incertains.
+
+    Le clear fonctionnel intervient plus tard, dans le protocole de mesure. Il ne remet pas
+tout le bloc à zéro : il sert à réarmer la fenêtre de conversion après protection de l’image.
+La séquence retenue est volontairement conservatrice : l’image de mesure est d’abord figée,
+le contexte est écrit, le front-end est libéré, puis la matrice est nettoyée. Ainsi, aucune
+information utile n’est détruite avant d’être disponible pour la lecture.
+
+    Dans le RTL, le reset externe correspond à async_rst_n. Les resets locaux sont
+produits par mptdc_reset_sync, avec assertion asynchrone et désassertion synchronisée.
+Le wrapper crée plusieurs feuilles locales pour limiter le fanout, et le reset logiciel est étiré
+avant d’être combiné au reset externe. Ces mécanismes relèvent du reset global ; ils restent
+distincts du clear de conversion.
+
+                                                                                          32
+Karim SABRA                                                                 SPADMIC et cœur MPTDC
+
+Reset global                      assertion                   désassertion
+                                 asynchrone                   synchronisée
+                  clk_sys
+
+             reset externe
+          (async_rst_n)
+
+                reset local
+              synchronisé
+
+Clear fonctionnel de conversion  données protégées avant clear
+
+                                 image figée
+
+             snapshot                         contexte écrit
+               écriture
+             conctelexater                    front-end libéré matrice nettoyée
+
+             frontc-elenadr
+               matrice
+
+Figure 8.4 – Reset global et clear de conversion. Le reset est asserté immédiatement puis relâché
+de façon synchronisée ; le clear intervient seulement après snapshot et écriture du contexte.
+
+    Dans la FSM de mesure, cette séquence correspond aux impulsions de snapshot,
+d’écriture contexte, de clear front-end et de clear matrice. Les noms RTL associés sont
+snapshot_en_o, capture_en_o, fe_clear_o et pd_clear_o. L’ordre reste volontairement
+conservateur : aucune information de mesure n’est détruite avant d’avoir été protégée dans
+un contexte exploitable par la lecture.
+
+Extrait RTL : snapshot avant nettoyage. Cet extrait correspond à la logique de
+séquencement du module mptdc_meas_ctrl.sv : il montre que l’image de mesure est
+protégée avant tout clear de conversion.
+
+  Extrait RTL simplifié : snapshot avant nettoyage
+
+unique case (state_q)
+
+ST_M_IDLE:   if (meas_active_i) state_d = ST_M_MEASURE;
+
+ST_M_MEASURE: state_d = ST_M_SNAPSHOT;
+
+ST_M_SNAPSHOT: state_d = ST_M_COUNT; // image protegee avant nettoyage
+
+ST_M_COUNT: state_d = ST_M_EVAL; // decoupe du chemin de comptage
+
+ST_M_EVAL:   state_d = ST_M_CAPTURE; // preparation du contexte
+
+ST_M_CAPTURE: state_d = ST_M_CLEAR; // contexte ecrit avant clear
+
+ST_M_CLEAR: state_d = ST_M_IDLE;
+
+endcase
+
+assign snapshot_en_o = (state_q == ST_M_SNAPSHOT); // gel de l’image PD
+assign capture_en_o = (state_q == ST_M_CAPTURE); // ecriture du contexte
+assign fe_clear_o = (state_q == ST_M_CAPTURE); // liberation front-end
+assign pd_clear_o = (state_q == ST_M_CLEAR); // clear matrice apres capture
+
+    Le snapshot protège donc les données avant tout nettoyage, ce qui évite de perdre
+l’image de mesure pendant que la chaîne de lecture travaille à un rythme plus lent. Les
+états COUNT et EVAL découpent les chemins combinatoires de comptage et d’évaluation ;
+CAPTURE écrit le contexte et libère le front-end ; CLEAR nettoie ensuite la matrice. Le gain
+attendu se situe sur le temps mort et sur la tenue du timing système, au prix de quelques
+cycles clk_sys. Le risque se déplace vers la cohérence entre snapshot, capture et clear,
+ainsi que vers l’occupation des contextes.
+
+                                                             33
+Karim SABRA                                                           SPADMIC et cœur MPTDC
+
+    Il faut distinguer ce protocole de mesure du protocole de lecture. Le premier a pour
+rôle de produire une image atomique et stable ; le second parcourt ensuite le contexte figé,
+construit les enregistrements, les amortit par une file FIFO synchrone et les transmet vers
+la sortie 16 bit. Le format maintenu reste volontairement compact : un en-tête, deux mots
+par enregistrement de détection, nommé HIT dans le protocole RTL, et un mot de fin de
+conversion,
+
+                                             Nmots = 2 Ndet + 2.
+
+Chaque ligne de la trame correspond à un mot de 16 bit. Les bits hauts identifient la
+classe du mot, tandis que la charge utile transporte soit le contexte de conversion, soit
+les composantes de l’enregistrement de détection, soit l’information de fin de paquet.
+Les positions de bits sont celles du protocole maintenu ; les informations auxiliaires de
+calibration sont regroupées sous des champs de statut ou de métadonnées afin de conserver
+une lecture système.
+
+              HEADER   mot 16 bit                    [11 :7]          [6 :2]    [1 :0]
+
+                        [15 :14] [13 :12]  statut / nb. dét.  flags / statut  réservé
+
+                         type contexte
+
+              HIT word 0 0          Nslow                      Nfast                0
+              HIT word 1 0
+                                ns             nf             métadonnées / statut
+
+                  EOC type                 identifiant de conversion
+
+Figure 8.5 – Format synthétique de la trame de sortie 16 bit utilisée pour exporter les enregis-
+trements de détection.
+
+    Les informations auxiliaires de calibration sont intégrées à cette trame sans introduire
+de mode de sortie concurrent. Le réarmement est ainsi amélioré : dès qu’une conversion
+est protégée dans un contexte, le cœur peut préparer une nouvelle fenêtre de mesure sans
+attendre que tout le paquet précédent soit transmis. Si la lecture aval est suspendue, le
+parcours du contexte conserve sa position ; si les deux contextes restent occupés trop
+longtemps, le bloc rend cette situation observable par ses champs de statut.
+
+Extrait RTL : maintien d’un mot sous rétropression. Cet extrait correspond au drain
+mptdc_drain_ctrl.sv : il illustre le registre local qui conserve un mot prêt à émettre
+lorsque la FIFO aval applique une rétropression.
+
+  Extrait RTL simplifié : maintien d’un mot sous rétropression
+
+wire pending_wr_accept = pending_wr_valid_q && !fifo_wr_full_i; // acceptation FIFO
+      effective
+
+wire pending_wr_ready = !pending_wr_valid_q || pending_wr_accept; // registre local
+      disponible
+
+ST_D_META: begin
+
+stage_emit_wr = 1’b1;           // construit le mot a emettre
+
+state_d           = ST_D_EMIT;
+
+end
+
+ST_D_EMIT: begin
+
+if (pending_wr_ready) begin
+
+     load_pending_wr = 1’b1; // charge si le registre local peut avancer
+
+     pending_wr_data_d = emit_wr_data_q;
+
+     state_d          = ST_D_SCAN;
+
+                                           34
+Karim SABRA                                   SPADMIC et cœur MPTDC
+
+       end
+    end
+
+    assign fifo_wr_en_o = pending_wr_accept;
+    assign fifo_wr_data_o = pending_wr_data_q; // mot conserve tant que la FIFO est pleine
+
+    La construction de l’enregistrement est découpée dans emit_wr_data_q, puis
+pending_wr_data_q conserve le mot tant que la FIFO est pleine. Ce registre local rac-
+courcit le chemin combinatoire vers la sortie et améliore la tenue temporelle, au prix de
+quelques bascules. Le risque se déplace vers le débit aval et le protocole ready-valid ; il est
+maîtrisé par la conservation explicite de la donnée sous rétropression.
+
+8.4 Robustesse et vérification
+
+    La robustesse repose sur plusieurs niveaux complémentaires. Une surveillance lente
+ferme les conversions dont le STOP n’arrive pas, une surveillance de mesure évite qu’une
+fenêtre reste active trop longtemps, et une surveillance système protège le bloc contre les
+absences globales de progression. Dans le RTL actuel, les fenêtres de surveillance sont
+exposées par les registres de contrôle lents : le timeout par contexte et le timeout global
+sont programmables sur 16 bit. Une valeur non nulle fixe le seuil utilisé ; une valeur nulle
+sélectionne le repli interne de 64 cycles clk_sys pour la fermeture START sans STOP, tandis
+qu’elle désactive la surveillance globale. Les champs de statut rendent ensuite observable
+une fermeture par watchdog ou une absence globale de progression. Ces mécanismes ne
+remplacent pas la validation physique finale, mais ils rendent le RTL testable et récupérable
+dans les scénarios de blocage.
+
+    La vérification a été conduite avec une méthodologie proche de l’industrie, sans dépendre
+d’un seul banc monolithique. Des bancs unitaires vérifient les briques isolées ; des bancs
+d’intégration vérifient les chemins complets de conversion ; des scénarios dirigés et aléatoires
+explorent les cas nominaux et limites ; un modèle de référence permet de comparer
+systématiquement les paquets attendus aux paquets observés. Les points vérifiés couvrent
+notamment la cohérence de la trame, la rétropression, les resets, les timeouts, les rejets
+d’événements et les transitions proches des frontières de mesure.
+
+Générateur de scénarios                       Modèle de référence
+
+dirigé / contraint aléatoire
+
+           Driver
+
+         Interfaces DUT        DUT MPTDC      Monitor TX           Scoreboard
+
+START/STOP, CSR/I2C, TX ready
+
+                                         Assertions SVA
+Figure 8.6 – Vue simplifiée de l’environnement de vérification fonctionnelle du MPTDC.
+
+    Cette organisation sépare la génération des stimuli, l’application sur les interfaces,
+l’observation des sorties et la comparaison fonctionnelle. Le bloc n’est donc pas validé
+
+                                          35
+Karim SABRA      SPADMIC et cœur MPTDC
+
+uniquement par inspection de traces : les paquets produits sont reconstruits, interprétés et
+comparés à un comportement attendu.
+
+    Cette validation reste une validation RTL. Elle donne une confiance forte dans le
+comportement fonctionnel, dans l’ordre de lecture et dans le contrat de paquetisation,
+mais elle ne remplace ni la revue CDC complète, ni la STA, ni la simulation post-layout
+avec les oscillateurs réels.
+
+8.5 Lien avec la caractérisation
+
+    L’architecture est conçue pour déplacer la correction temporelle hors ASIC. Le silicium
+exporte une description stable de la conversion ; le décodeur hôte et la LUT de calibration
+transforment ensuite ces observables en temps corrigé. Le chapitre 9 se concentre donc sur la
+question quantitative : les informations exportées suffisent-elles à corriger la non-uniformité
+du codage brut dans une campagne RTL/Xcelium tenue hors apprentissage ?
+
+  À retenir
+
+  Le cœur MPTDC réalise le compromis attendu pour SPADMIC : capture asyn-
+  chrone au plus près des événements, matrice Vernier compacte, image de mesure
+  protégée, double contexte, lecture clk_sys et trame 16 bit. Les détails RTL fins restent
+  subordonnés au contrat système et aux choix qui conditionnent la caractérisation.
+
+             36
+Chapitre 9
+
+Méthodologie de caractérisation et
+résultats
+
+9.1 Objectif de la caractérisation
+
+    La caractérisation répond à une question simple : les observables exportées par le
+MPTDC permettent-elles de transformer une grille Vernier non uniforme en mesure tem-
+porelle exploitable ? Les résultats de ce chapitre proviennent de simulations RTL/Xcelium.
+Ils doivent donc être lus comme une preuve numérique pré-silicium, et non comme une
+mesure physique du circuit fabriqué.
+
+    Le flot utilisé sépare trois étapes : une collecte large de conversions, un apprentissage de
+table de correction hors circuit, puis une validation tenue hors apprentissage. Les figures
+publiées proviennent des artefacts versionnés du projet ; les CSV bruts de campagne restent
+dans les artefacts de caractérisation.
+
+9.2 Observables et calibration externe
+
+    L’architecture n’exporte pas un timestamp brut isolé. Elle fournit une image partielle de
+la conversion : composantes grossières, indices de phase, valeurs locales de hit, informations
+de contexte, métadonnées de frontière et champs de statut. Ces familles d’observables sont
+suffisantes pour indexer une LUT de correction moyenne côté hôte. Le détail bit à bit du
+paquet n’est pas nécessaire ici ; l’important est que les cas ambigus, en particulier près des
+frontières lentes, restent observables par le décodeur.
+
+Étape                                    Moyenne RMSE P99 |e|
+
+Reconstruction brute                    −1895.97 ps 1940.32 ps 2624.00 ps
+Après LUT externe                          −0.008 ps 18.56 ps 38.99 ps
+
+Table 9.1 – Résultat principal de calibration sur validation tenue hors apprentissage. La
+correction supprime le biais brut de l’ordre de 1.9 ns et ramène la RMSE à 18.56 ps.
+
+    La colonne P99 |e| donne le 99e percentile de l’erreur absolue : 99 % des conversions de
+validation présentent une erreur inférieure à ce seuil. La moyenne résiduelle de −0.008 ps
+ne doit pas être lue comme une précision absolue à la femtoseconde près ; elle indique
+
+                                                             37
+Karim SABRA  SPADMIC et cœur MPTDC
+
+surtout que le biais moyen est annulé à l’échelle numérique de la campagne et devient
+négligeable devant la dispersion corrigée.
+
+             Figure 9.1 – Distribution d’erreur avant et après correction LUT externe.
+
+    Le résultat le plus important n’est pas seulement la baisse de RMSE. Le biais moyen
+résiduel devient pratiquement nul, ce qui montre que la LUT corrige l’erreur systématique
+de reconstruction. La dispersion restante correspond à l’information réellement disponible
+dans les observables exportées et au caractère statistique de la correction.
+
+9.3 Structure brute et linéarité observable
+
+    Avant correction, la grille fine n’est pas uniforme. La matrice 8 × 8 fournit des combi-
+naisons riches, mais certains codes sont absents et d’autres plus denses. Cette structure
+explique le biais brut et justifie la calibration externe.
+
+                                                             38
+Karim SABRA  SPADMIC et cœur MPTDC
+
+Figure 9.2 – DNL et INL observables sur les codes effectivement atteints pendant la campagne.
+
+    Sur les codes atteints de la campagne focalisée, le pic DNL observable vaut environ
+0.987 LSB et l’INL aux extrémités environ 1.553 LSB. Ces valeurs montrent que les
+codes observés restent exploitables, mais elles ne contredisent pas la parcimonie de la grille
+complète. Les analyses plus fines de transfert et de stress de frontière sont conservées dans
+les artefacts de caractérisation ; la synthèse des résultats retient seulement leur conclusion :
+la structure brute est mesurable et corrigeable, à condition de garder les métadonnées
+auxiliaires dans le flux hôte.
+
+9.4 Gain par moyennage statistique
+
+    Une fois la correction LUT appliquée, le flot d’analyse permet d’estimer le gain obtenu
+lorsque plusieurs estimations corrigées sont moyennées. Cette étude reste une projection
+statistique sur données RTL ; elle ne remplace pas un banc de répétabilité silicium à délai
+fixe.
+
+    Le moyennage post-LUT exploite directement le caractère multiphase de l’architecture.
+Une même conversion START/STOP ne se réduit pas nécessairement à une seule obser-
+vation fine : la matrice de phase peut mémoriser plusieurs couples (ns, nf ) exploitables,
+ensuite exportés sous forme d’enregistrements de détection. Après décodage et correction
+par LUT, ces observations fournissent plusieurs estimations temporelles associées à la même
+fenêtre de mesure. Le moyennage agit alors sur la dispersion résiduelle des estimations
+corrigées. Le gain observé ne suppose pas que toutes les observations soient parfaitement
+indépendantes ; il traduit plutôt le fait que l’information multiphase exportée conserve
+assez de diversité pour réduire l’erreur moyenne après correction. Dans la configuration
+
+                                                             39
+Karim SABRA                                SPADMIC et cœur MPTDC
+
+étudiée, le tableau 8.1 indique que jusqu’à 15 enregistrements peuvent être exportés pour
+une conversion, ce qui explique l’intérêt des points de moyennage autour de N = 4 puis
+N = 15.
+
+    La colonne P90 correspond au 90e percentile de l’erreur absolue après moyennage :
+90 % des groupes simulés restent sous ce seuil. Elle complète la RMSE par une lecture
+robuste de la queue de distribution, moins extrême que le percentile 99 utilisé pour la
+validation mono-échantillon.
+
+             Nombre de mesures N RMSE MAE  P90
+
+              1 18.82 ps 15.53 ps 31.58 ps
+              2 13.23 ps 10.70 ps 21.62 ps
+              4 9.28 ps 7.45 ps 15.19 ps
+              8 6.57 ps 5.30 ps 10.71 ps
+             15 4.77 ps 3.80 ps 7.88 ps
+             30 3.39 ps 2.69 ps 5.57 ps
+             50 2.64 ps 2.10 ps 4.34 ps
+
+Table 9.2 – Étude de moyennage post-LUT sur le domaine statistique retenu. Les seuils de
+10 ps et 5 ps sont franchis respectivement autour de N = 4 et N = 15.
+
+Figure 9.3 – Évolution de l’erreur après LUT en fonction du nombre de mesures moyennées.
+
+    La formulation défendable est donc la suivante : la précision mono-échantillon corri-
+gée est d’environ 18.56 ps RMSE ; le moyennage de plusieurs échantillons corrigés peut
+descendre sous 10 ps autour de N = 4, puis sous 5 ps autour de N = 15, dans le cadre sta-
+tistique de cette campagne. Les valeurs à très grand nombre d’échantillons sont conservées
+dans les artefacts, mais ne sont pas mises en avant comme promesse de performance du
+prototype.
+
+                                                             40
+Karim SABRA      SPADMIC et cœur MPTDC
+
+9.5 Portée des chiffres
+
+    Ces résultats ne signifient pas que chaque événement individuel est identifié de ma-
+nière unique à quelques picosecondes. Plusieurs instants physiques peuvent produire des
+observations proches ou identiques ; la LUT corrige alors la moyenne de la classe observée.
+Cette limite est normale pour une architecture qui privilégie un paquet compact et une
+correction externe plutôt qu’un moteur de calibration embarqué.
+
+  À retenir
+
+  La caractérisation RTL/Xcelium montre que le MPTDC exporte assez d’information
+  pour une correction externe efficace : la RMSE passe d’environ 1.94 ns avant LUT à
+  18.56 ps après LUT, avec un percentile 99 de 38.99 ps. Ces chiffres sont solides pour
+  valider le contrat numérique, mais ils restent pré-silicium.
+
+             41
+Chapitre 10
+
+Conclusion et perspectives
+
+10.1 Synthèse technique
+
+    Le projet SPADMIC est structuré comme un prototype ASIC de lecture pour matrice
+de SPAD, dans lequel la mesure temporelle constitue une brique essentielle de la recons-
+truction. Le besoin système impose plusieurs axes de lecture, un flux de sortie compact et
+une observabilité suffisante pour permettre une calibration externe côté hôte.
+
+    Le choix d’une architecture Vernier multiphase répond à une contrainte centrale :
+obtenir une finesse temporelle élevée sans supposer qu’un délai élémentaire unique suffise
+à porter toute la résolution. L’observation parallèle de plusieurs phases réduit le temps
+nécessaire à la décision de mesure et prépare naturellement une lecture sous forme de
+matrice de phase.
+
+    L’implémentation RTL active transforme ce principe en bloc intégrable. Le cœur
+MPTDC associe une capture asynchrone des événements, deux familles de phases Vernier,
+une matrice de détection, un snapshot de l’image de mesure, une banque à deux contextes,
+une lecture en domaine système et une trame de sortie compacte sur 16 bit. L’objectif du
+bloc n’est donc pas seulement de produire un temps brut : il est de fournir, pour les trois
+axes de lecture SPADMIC, une mesure temporelle exploitable et compatible avec une
+correction hors ASIC.
+
+    La vérification fonctionnelle a consolidé cette architecture. Le bloc a été exercé avec une
+démarche proche de l’industrie : bancs unitaires, bancs d’intégration, scénarios dirigés et
+aléatoires, comparaison systématique avec un modèle de référence, contrôle de la cohérence
+des paquets, de la rétropression, des resets, des timeouts et des cas limites. Cette étape a
+permis de vérifier le contrat numérique du bloc avant de s’appuyer sur ses sorties pour la
+caractérisation.
+
+10.2 Résultats principaux
+
+    La caractérisation RTL/Xcelium confirme que la structure brute du Vernier multiphase
+ne doit pas être interprétée comme une échelle temporelle directement uniforme. Avant
+calibration, l’erreur présente un biais important, avec une RMSE autour de 1.94 ns. Ce
+comportement est cohérent avec la non-uniformité de la grille fine et justifie le choix de
+transmettre une trame suffisamment riche pour une correction externe.
+
+                                                             42
+Karim SABRA      SPADMIC et cœur MPTDC
+
+    Après application de la LUT hôte, la validation tenue hors apprentissage atteint une
+RMSE de 18.56 ps, avec un percentile 99 de 38.99 ps. Ces valeurs ne constituent pas une
+mesure silicium, mais elles montrent qu’en simulation RTL les informations exportées par
+le protocole compact suffisent à supprimer le biais principal et à recentrer l’erreur autour
+de zéro. Le moyennage statistique peut ensuite améliorer la précision dans un domaine
+réaliste, notamment autour des seuils de 10 ps et 5 ps, sans que cela soit présenté comme
+une promesse de performance à très grand nombre d’échantillons.
+
+10.3 Perspectives
+
+    La portée des résultats doit rester sobrement délimitée. Le bloc atteint un état cohérent
+de fin de conception numérique pré-silicium : l’architecture est structurée, le protocole est
+stabilisé, la vérification fonctionnelle est avancée et la calibration externe est démontrée
+en simulation. Les étapes structurantes restantes concernent la validation physique, la
+fermeture temporelle et, à terme, la confrontation aux mesures silicium.
+
+    Les travaux en cours portent donc sur l’implémentation physique et le timing closure.
+Cette phase ne consiste pas seulement à lancer une synthèse ; elle implique une réorganisa-
+tion progressive de la profondeur logique, la réduction des chemins critiques, la correction
+des violations setup/hold, la maîtrise du skew, l’affinage des contraintes de synthèse et
+de STA, puis l’adaptation du RTL aux réalités du placement-routage (Place and Route,
+PnR). Ces ajustements permettront de vérifier si les choix numériques retenus restent
+robustes une fois soumis aux contraintes de placement, de routage et d’horlogerie.
+
+    La suite devra également consolider les modèles d’oscillateurs, rejouer la caractérisation
+après synthèse puis après layout, formaliser le flot de génération des LUT et préciser les
+règles de rejet ou de repli pour les paquets hors domaine de calibration. La comparaison avec
+les mesures silicium restera l’étape décisive pour transformer les résultats RTL/Xcelium
+en performance expérimentale.
+
+10.4 Apport méthodologique
+
+    Au-delà du fonctionnement du bloc, la démarche suivie couvre une chaîne complète
+d’ingénierie numérique ASIC. Les choix d’architecture, la micro-architecture, l’écriture
+RTL, la vérification, la caractérisation, le timing et l’intégration physique ne sont pas des
+étapes indépendantes : chacune impose des contraintes qui peuvent remettre en question
+les hypothèses prises aux étapes précédentes.
+
+    L’expérience montre ainsi que concevoir un bloc ne revient pas seulement à obtenir
+une simulation fonctionnelle correcte. Il faut raisonner en boucle entre le besoin système,
+la structure matérielle, les observables disponibles, la vérifiabilité, la profondeur logique,
+les chemins critiques et les contraintes d’intégration. Cette approche donne une base plus
+solide pour aborder de futurs blocs ASIC, avec une meilleure anticipation des risques liés
+au timing, à la validation et au passage du modèle RTL vers un circuit physique.
+
+             43
+Table des figures
+
+    1.1 Vue d’ensemble du prototype SPADMIC et de la place du cœur MPTDC. 2
+
+    4.1 Architecture de lecture de SPADMIC et place du chemin temporel MPTDC. 9
+
+    5.1 Schéma de synthèse d’une chaîne de mesure temporelle, du détecteur au
+           codage binaire. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+
+    5.2 Illustration qualitative de la DNL sur une fonction de transfert de TDC. . 14
+
+    6.1 Principe Vernier détaillé : rattrapage du chemin rapide, mesure grossière et
+           raffinement multiphase de la coïncidence. . . . . . . . . . . . . . . . . . . . 19
+
+    6.2 Architecture Vernier multiphase de référence, selon les principes décrits
+           dans [2]. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+
+    6.3 Chronogramme Vernier multiphase illustrant le lancement différé des phases
+           rapides et l’observation parallèle de plusieurs couples de phase. . . . . . . . 21
+
+    6.4 Matrice 8 × 8 des détecteurs de phase et coefficients fins nominaux associés. 22
+
+    7.1 Transformation de l’architecture Vernier de référence vers l’implémentation
+           active MPTDC. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+
+    7.2 Carte des domaines temporels et des traversées CDC de l’architecture
+           MPTDC active. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+
+    7.3 Principe de traversée CDC d’un compteur : risque du codage binaire, intérêt
+           du Gray et synchronisation par deux flip-flops. . . . . . . . . . . . . . . . . 26
+
+    7.4 Capture asynchrone des événements START/STOP et protection de la fenêtre
+           de mesure par clk_sys. . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+
+    7.5 Pipeline à deux contextes permettant de recouvrir capture, lecture et séria-
+           lisation. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+
+    7.6 Flux de sortie compact et calibration externe par décodage hôte et LUT. . 28
+
+    8.1 Vue top-level du wrapper ASIC MPTDC et de ses interfaces fonctionnelles
+           principales. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+
+    8.2 Vue fonctionnelle du cœur MPTDC, de la capture START/STOP jusqu’à
+           la lecture compacte en domaine système. . . . . . . . . . . . . . . . . . . . 30
+
+                                                             45
+Karim SABRA      SPADMIC et cœur MPTDC
+
+8.3 Protocole de fermeture d’une mesure, du gel de l’image au nettoyage de la
+      fenêtre de détection. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+
+8.4 Reset global et clear de conversion. Le reset est asserté immédiatement puis
+      relâché de façon synchronisée ; le clear intervient seulement après snapshot
+      et écriture du contexte. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 33
+
+8.5 Format synthétique de la trame de sortie 16 bit utilisée pour exporter les
+      enregistrements de détection. . . . . . . . . . . . . . . . . . . . . . . . . . 34
+
+8.6 Vue simplifiée de l’environnement de vérification fonctionnelle du MPTDC. 35
+
+9.1 Distribution d’erreur avant et après correction LUT externe. . . . . . . . . 38
+9.2 DNL et INL observables sur les codes effectivement atteints pendant la
+
+      campagne. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+9.3 Évolution de l’erreur après LUT en fonction du nombre de mesures moyennées. 40
+
+             46
+Liste des tableaux
+
+    5.1 Comparaison synthétique des principales familles de TDC. . . . . . . . . . 16
+    8.1 Paramètres architecturaux principaux de l’implémentation MPTDC. . . . 29
+    8.2 Répartition fonctionnelle des principales briques matérielles du MPTDC. . 31
+    9.1 Résultat principal de calibration sur validation tenue hors apprentissage.
+
+           La correction supprime le biais brut de l’ordre de 1.9 ns et ramène la RMSE
+           à 18.56 ps. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+    9.2 Étude de moyennage post-LUT sur le domaine statistique retenu. Les seuils
+           de 10 ps et 5 ps sont franchis respectivement autour de N = 4 et N = 15. . 40
+
+                                                             47
+Bibliographie
+
+ [1] H. Abreu et al., « PICMIC-0 : a 5 µm pitch hexagonal pixel sensor with an original tri-axis
+       readout, » Journal of Instrumentation, t. 19, no 05, p. C05015, 2024, Topical Workshop on
+       Electronics for Particle Physics 2023. doi : 10.1088/1748-0221/19/05/C05015 adresse :
+       https://hal.science/hal-04578170
+
+ [2] A. Annagrebah, « Etude du Convertisseur Temps-Numérique de très haute précision
+       pour des applications en Physique des particules pour les mises à jour du détecteur CMS
+       auprès du LHC, » Spécialité Microélectronique, Thèse de doctorat, Université de Lyon,
+       2021. adresse : https://theses.hal.science/tel-03690502v1
+
+ [3] CNRS. « Le CNRS, » visité le 29 mars 2026. adresse : https://www.cnrs.fr/fr/le-cnrs
+ [4] IN2P3. « Presentation of the institute, » visité le 29 mars 2026. adresse : https://www.
+
+       in2p3.cnrs.fr/en/presentation-institute
+ [5] Institut de Physique des 2 Infinis de Lyon. « Présentation du laboratoire, » visité le
+
+       29 mars 2026. adresse : https://www.ip2i.in2p3.fr/institut/
+ [6] Institut de Physique des 2 Infinis de Lyon. « Micro-électronique, » visité le 29 mars
+
+       2026. adresse : https://www.ip2i.in2p3.fr/support-a-la-recherche/electronique/
+ [7] S. Cova, M. Ghioni, A. Lacaita, C. Samori et F. Zappa, « Avalanche photodiodes and
+
+       quenching circuits for single-photon detection, » Applied Optics, t. 35, no 12, p. 1956-1976,
+       1996. doi : 10.1364/AO.35.001956
+ [8] W. Becker, Advanced Time-Correlated Single Photon Counting Techniques (Springer
+       Series in Chemical Physics). Berlin : Springer, 2005, t. 81, isbn : 978-3-540-26047-9. doi :
+       10.1007/3-540-28882-1
+ [9] S. Henzler, Time-to-Digital Converters (Springer Series in Advanced Microelectronics).
+       Dordrecht : Springer, 2010, t. 29, isbn : 978-90-481-8627-3. doi : 10.1007/978-90-481-
+       8628-0
+[10] IEEE, IEEE Standard for Terminology and Test Methods for Analog-to-Digital Converters,
+       IEEE Std 1241-2010, IEEE, 2011. doi : 10.1109/IEEESTD.2011.5692956
+[11] J. Kalisz, « Review of methods for time interval measurements with picosecond resolution, »
+       Metrologia, t. 41, no 1, p. 17-32, 2004. doi : 10.1088/0026-1394/41/1/004
+[12] P. Dudek, S. Szczepański et J. V. Hatfield, « A high-resolution CMOS time-to-digital
+       converter utilizing a Vernier delay line, » IEEE Journal of Solid-State Circuits, t. 35, no 2,
+       p. 240-247, fév. 2000. doi : 10.1109/4.823448
+
+                                                             48
+

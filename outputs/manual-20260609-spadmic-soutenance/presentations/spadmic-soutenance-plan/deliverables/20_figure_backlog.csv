@@ -1,0 +1,25 @@
+id,visuel,classe,objectif,entrees_requises,outil_recommande,sortie,priorite
+F01,Entonnoir institutionnel,generer,Compresser le contexte CNRS/IP2I/equipe en une diapositive de legitimite,"logos, noms labo/equipe",PowerPoint ou TikZ,SVG/forme PPT,P2
+F02,Chaine de mesure SPADMIC,simplifier,Montrer detecteur evenement vers TDC vers lecture vers calibration hote,Rapport_5PSM_KS/figures/tdc/src/tdc_measurement_chain.tex,TikZ ou draw.io,SVG/PDF,P1
+F03,Architecture systeme SPADMIC simplifiee,simplifier,Installer les trois axes MPTDC le chemin position le TX partage et la calibration hote,"spadmic_mind_model.png, DOT floorplan TOP",draw.io,SVG + PNG,P0
+F04,Carte des contraintes de conception,generer,Expliquer resolution plage rearmement lecture et contraintes ASIC avant le choix d'architecture,Chapitres 5-7 du rapport,Mermaid brouillon puis TikZ final,SVG,P1
+F05,Panorama des familles de TDC,generer,Comparer compteur ligne a delais DLL et Vernier a haut niveau,Section theorie TDC du rapport,draw.io ou TikZ,SVG,P1
+F06,Chronogramme du principe Vernier,simplifier,Expliquer START STOP et rattrapage lent-rapide,Rapport_5PSM_KS/figures/tdc/src/vernier_principle_detailed.wavedrom.json,WaveDrom,SVG,P0
+F07,Intuition Vernier multiphase,simplifier,Montrer pourquoi plusieurs couples de phase ameliorent l'observabilite,"vernier_multiphase_timing.pdf, idee matrice 8x8",TikZ ou WaveDrom,SVG/PDF,P1
+F08,Architecture de reference,redessiner,Presenter l'architecture de reference sans surcharge de labels bas niveau,Rapport_5PSM_KS/figures/tdc/src/vernier_reference_architecture.tex,TikZ,SVG/PDF,P1
+F09,Reference versus implementation retenue,redessiner,Rendre explicite la transition theorie vers RTL actif,Rapport_5PSM_KS/figures/tdc/src/vernier_transition_map.tex,TikZ ou draw.io,SVG/PDF,P0
+F10,Carte des domaines temporels,simplifier,Montrer evenements asynchrones oscillateurs lent/rapide et lecture clk_sys,Rapport_5PSM_KS/figures/tdc/src/clock_domain_diagram.tex,draw.io ou TikZ,SVG,P1
+F11,Wrapper MPTDC/ASIC top-level avec IO,redessiner,Expliquer la frontiere d'integration sans surcharge de pins,"mptdc_top_io_chatgpt.png, DOT wrapper axe TOP",draw.io,SVG + PNG,P0
+F12,Diagramme fonctionnel du coeur MPTDC,simplifier,Montrer capture asynchrone anneaux matrice PD compteurs contexte et TX,Rapport_5PSM_KS/figures/tdc/src/mptdc_block_diagram.tex,TikZ,SVG/PDF,P0
+F13,Timing de capture asynchrone,simplifier,Expliquer pourquoi START/STOP sont captures avant clk_sys,Rapport_5PSM_KS/figures/tdc/src/async_capture_timing.tex,WaveDrom ou TikZ,SVG,P2
+F14,Chronogramme reset versus clear,redessiner,Distinguer reset global et clear fonctionnel,Rapport_5PSM_KS/figures/tdc/src/reset_clear_sequence.tex,WaveDrom,SVG,P0
+F15,Chronogramme du protocole de mesure,redessiner,Montrer START STOP fenetre PD snapshot ecriture contexte et clear,Rapport_5PSM_KS/figures/tdc/src/timing_diagram_conversion.tex,WaveDrom,SVG,P0
+F16,Flux double contexte et export,simplifier,Montrer le recouvrement capture lecture export,Rapport_5PSM_KS/figures/tdc/src/context_pipeline.tex,TikZ,SVG/PDF,P0
+F17,Arbitrage de sortie partage,simplifier,Expliquer trois axes TDC plus flux position vers un seul TX,DOT correlated TX TOP,draw.io,SVG,P1
+F18,Couches de verification,generer,Synthetiser verification unitaire integration aleatoire assertions et cas limites,Texte verification du rapport et diapositive existante,draw.io ou Mermaid,SVG,P1
+F19,Pipeline de calibration,simplifier,Montrer export des observables par l'ASIC puis correction LUT hote,"calibration_export_flow.tex, JSON cle LUT",TikZ ou draw.io,SVG/PDF,P0
+F20,Figure de synthese resultats,redessiner,Construire une diapositive orale avec RMSE avant/apres P99 et graphe compact,"calibration_report.json, final_mptdc/01_erreur_histogramme_pre_post_lut.png",Trace Python ou graphique PPT editable,SVG/PNG,P0
+F21,Courbe de gain par moyennage,reutiliser,Soutenir le gain statistique sous 10 ps vers N=4 et sous 5 ps vers N=15,final_mptdc/03_rmse_vs_moyennage_limited.png,Figure existante recadree,PNG/SVG,P1
+F22,Roadmap limites et pre-silicium,generer,Garder les claims honnetes entre RTL aujourd'hui et post-layout/silicium demain,Conclusion et perspectives,draw.io,SVG,P1
+F23,Backup DNL/INL,reutiliser,Repondre aux questions de linearite et code-density,final_mptdc/04_dnl_inl_observable.png,Figure existante,PNG,P2
+F24,Backup format de paquet,reutiliser/simplifier,Repondre aux questions sur la trame exportee,packet_format_v27.pdf,draw.io ou TikZ,SVG/PDF,P2
