@@ -53,6 +53,11 @@ The wrapper also writes:
 - `FAST_TAG_SOURCE_DFRRQHDX1_COUNT`
 - `FAST_TAG_SOURCE_DFRRQHDX2_COUNT`
 - `FAST_TAG_SOURCE_DFRRQHDX4_COUNT`
+- `FAST_TAG_SOURCE_DFRJIHDX0_COUNT`
+- `FAST_TAG_SOURCE_DFRJIHDX1_COUNT`
+- `FAST_TAG_SOURCE_DFRJIHDX2_COUNT`
+- `FAST_TAG_SOURCE_DFRJIHDX4_COUNT`
+- `FAST_TAG_SOURCE_DFRSJIHDX2_COUNT`
 - `FAST_TAG_SOURCE_UNKNOWN_COUNT`
 - `FAST_TAG_MAPPED_SOURCE_COUNT`
 - `FAST_TAG_MAPPED_ENDPOINT_COUNT`
@@ -78,10 +83,15 @@ Mark the run `REVIEW_REQUIRED` if either appears on top negative
 `FAST_TAG_TO_PD_TS` startpoints:
 
 - `DFRRQHDX0`
+- `DFRJIHDX0`
 - `UNKNOWN`
 
 `DFRRQHDX2` is allowed. It is not globally harmful; it was the near-clean
 guarded baseline mapping.
+
+For JIHD runs, `DFRJIHDX1`, `DFRJIHDX2`, `DFRJIHDX4`, and `DFRSJIHDX2`
+are reported explicitly. They are not rejected by this guardrail unless the
+top startpoint cannot be resolved or maps to an X0 source.
 
 ## Unsafe Mode Marker
 

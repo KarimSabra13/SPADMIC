@@ -1535,6 +1535,42 @@ proc mptdc_repair_collect_pins {patterns} {
     return $pins
 }
 
+proc mptdc_repair_parse_index_list {value default_value} {
+    set raw $value
+    if {$raw eq ""} {
+        set raw $default_value
+    }
+    set raw [string map [list "," " "] $raw]
+    set out [list]
+    foreach item [split $raw] {
+        set item [string trim $item]
+        if {$item eq ""} {
+            continue
+        }
+        if {![regexp {^[0-9]+$} $item]} {
+            continue
+        }
+        lappend out $item
+    }
+    return [mptdc_unique_list $out]
+}
+
+proc mptdc_repair_collect_exact_fast_tag_pins {role taps bits pin_name} {
+    set patterns [list]
+    foreach tap $taps {
+        foreach bit $bits {
+            if {$role eq "source"} {
+                lappend patterns [format {*gen_fast_tag_col\[%s\]*u_fast_tag*tag_o_reg\[%s\]/%s} $tap $bit $pin_name]
+                lappend patterns [format {*gen_fast_tag_col\[%s\]*tag_o_reg\[%s\]/%s} $tap $bit $pin_name]
+            } elseif {$role eq "endpoint"} {
+                lappend patterns [format {*gen_pd_row*gen_pd_col\[%s\]*u_pd*nfast_hit_latched_reg\[%s\]/%s} $tap $bit $pin_name]
+                lappend patterns [format {*gen_pd_col\[%s\]*u_pd*nfast_hit_latched_reg\[%s\]/%s} $tap $bit $pin_name]
+            }
+        }
+    }
+    return [mptdc_repair_collect_pins $patterns]
+}
+
 proc mptdc_repair_set_numeric_env {name default_value} {
     if {[info exists ::env($name)] && $::env($name) ne ""} {
         return $::env($name)
@@ -1687,6 +1723,12 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set apply_broad_control_nets [mptdc_bool_env MPTDC_GENUS_REPAIR_APPLY_BROAD_CONTROL_NETS true]
     set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 16]
     set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.50]
+    set exact_fast_tag_data_paths [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_EXACT_DATA_PATHS false]
+    set exact_fast_tag_taps [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_TAPS ""] ""]
+    set exact_fast_tag_bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_BITS ""] ""]
+    set exact_fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_FANOUT 4]
+    set exact_fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_TRANSITION_NS 0.35]
+    set exact_fast_tag_max_delay [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS ""]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
     set control_max_transition [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS 0.50]
     set design_drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV false]
@@ -1716,6 +1758,12 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "CONTROL_APPLY_BROAD_NETS=$apply_broad_control_nets"
     puts $fh "FAST_TAG_MAX_FANOUT=$fast_tag_max_fanout"
     puts $fh "FAST_TAG_MAX_TRANSITION_NS=$fast_tag_max_transition"
+    puts $fh "FAST_TAG_EXACT_DATA_PATHS=$exact_fast_tag_data_paths"
+    puts $fh "FAST_TAG_EXACT_TAPS=[join $exact_fast_tag_taps {,}]"
+    puts $fh "FAST_TAG_EXACT_BITS=[join $exact_fast_tag_bits {,}]"
+    puts $fh "FAST_TAG_EXACT_MAX_FANOUT=$exact_fast_tag_max_fanout"
+    puts $fh "FAST_TAG_EXACT_MAX_TRANSITION_NS=$exact_fast_tag_max_transition"
+    puts $fh "FAST_TAG_EXACT_MAX_DELAY_NS=$exact_fast_tag_max_delay"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
     puts $fh "CONTROL_MAX_TRANSITION_NS=$control_max_transition"
     puts $fh "APPLY_DESIGN_DRV_REPAIR=$design_drv_repair"
@@ -1733,6 +1781,9 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             *DFRRQHDX2*
             *DFRHDX2*
             *DFRQHDX2*
+            *DFRJIHDX4*
+            *DFRJIHDX2*
+            *DFRSJIHDX2*
         } $fh
         if {$strong_fast_flops} {
             mptdc_try_avoid_lib_cells FAST_TAG_WEAK_RESET_FLOPS {
@@ -1792,6 +1843,45 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             } err_delay
             puts $fh "FAST_TAG_TO_NFAST_CAPTURE_SET_MAX_DELAY_NS=$::env(MPTDC_FAST_TAG_REPAIR_MAX_DELAY_NS)"
             puts $fh "FAST_TAG_TO_NFAST_CAPTURE_SET_MAX_DELAY_RESULT=$err_delay"
+        }
+        if {$exact_fast_tag_data_paths} {
+            if {[llength $exact_fast_tag_taps] == 0 || [llength $exact_fast_tag_bits] == 0} {
+                puts $fh "FAST_TAG_EXACT_STATUS=SKIPPED_EMPTY_TAPS_OR_BITS"
+            } else {
+                set exact_source_q_pins [mptdc_repair_collect_exact_fast_tag_pins source $exact_fast_tag_taps $exact_fast_tag_bits Q]
+                set exact_source_c_pins [mptdc_repair_collect_exact_fast_tag_pins source $exact_fast_tag_taps $exact_fast_tag_bits C]
+                set exact_endpoint_d_pins [mptdc_repair_collect_exact_fast_tag_pins endpoint $exact_fast_tag_taps $exact_fast_tag_bits D]
+                puts $fh "FAST_TAG_EXACT_SOURCE_Q_PINS=[llength [mptdc_collection_to_list $exact_source_q_pins]]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_C_PINS=[llength [mptdc_collection_to_list $exact_source_c_pins]]"
+                puts $fh "FAST_TAG_EXACT_ENDPOINT_D_PINS=[llength [mptdc_collection_to_list $exact_endpoint_d_pins]]"
+                if {[llength $exact_source_q_pins] > 0} {
+                    set exact_fanout_rc [catch {set_max_fanout $exact_fast_tag_max_fanout $exact_source_q_pins} exact_fanout_err]
+                    set exact_trans_rc [catch {set_max_transition $exact_fast_tag_max_transition $exact_source_q_pins} exact_trans_err]
+                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=[expr {$exact_fanout_rc == 0 ? {OK} : $exact_fanout_err}]"
+                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=[expr {$exact_trans_rc == 0 ? {OK} : $exact_trans_err}]"
+                } else {
+                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=SKIPPED_NO_SOURCE_Q_PINS"
+                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=SKIPPED_NO_SOURCE_Q_PINS"
+                }
+                if {[llength $exact_endpoint_d_pins] > 0} {
+                    set exact_endpoint_trans_rc [catch {set_max_transition $exact_fast_tag_max_transition $exact_endpoint_d_pins} exact_endpoint_trans_err]
+                    puts $fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=[expr {$exact_endpoint_trans_rc == 0 ? {OK} : $exact_endpoint_trans_err}]"
+                } else {
+                    puts $fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=SKIPPED_NO_ENDPOINT_D_PINS"
+                }
+                if {[llength $exact_source_q_pins] > 0 && [llength $exact_endpoint_d_pins] > 0 && $exact_fast_tag_max_delay ne ""} {
+                    set exact_delay_rc [catch {
+                        set_max_delay $exact_fast_tag_max_delay \
+                            -from $exact_source_q_pins \
+                            -to $exact_endpoint_d_pins
+                    } exact_delay_err]
+                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
+                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=[expr {$exact_delay_rc == 0 ? {OK} : $exact_delay_err}]"
+                } else {
+                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
+                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=SKIPPED"
+                }
+            }
         }
     }
 

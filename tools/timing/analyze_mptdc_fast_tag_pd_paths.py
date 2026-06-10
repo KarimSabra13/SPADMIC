@@ -19,6 +19,7 @@ POINT_RE = re.compile(
     r"(?P<trans>-|\d+(?:\.\d+)?)\s+(?P<delay>-?\d+(?:\.\d+)?)\s+"
     r"(?P<arrival>-?\d+(?:\.\d+)?)\s*$"
 )
+INST_RE = re.compile(r"^\s*(?P<cell>\S+)\s+(?P<inst>\\?\S+)\s*\(")
 
 
 def read_text(path: Path) -> str:
@@ -49,6 +50,71 @@ def parse_point_rows(block: str) -> list[dict[str, str]]:
         if match:
             rows.append(match.groupdict())
     return rows
+
+
+def canonical(value: str) -> str:
+    return re.sub(r"[^a-z0-9\[\]]+", "", value.lower().replace("\\", ""))
+
+
+def cell_basename(cell: str) -> str:
+    return cell.rsplit("/", 1)[-1]
+
+
+def infer_role(inst: str) -> str:
+    low = inst.lower()
+    if "nfast_hit_latched_reg" in low:
+        return "nfast_hit_endpoint"
+    if "fast_tag" in low and "tag_o_reg" in low:
+        return "fast_tag_source"
+    if "fast_tag" in low and "_reg" in low:
+        return "local_tag_feedback"
+    return ""
+
+
+def parse_netlist_instances(path: Path) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for raw in read_text(path).splitlines():
+        match = INST_RE.match(raw)
+        if not match:
+            continue
+        inst = match.group("inst").lstrip("\\")
+        role = infer_role(inst)
+        if not role:
+            continue
+        rows.append(
+            {
+                "instance": inst,
+                "mapped_cell": cell_basename(match.group("cell")),
+                "tap_index": infer_tap(inst),
+                "bit_index": infer_tag_bit(inst),
+                "role": role,
+            }
+        )
+    return rows
+
+
+def inst_from_pin(value: str) -> str:
+    text = value.strip().lstrip("\\")
+    if "/" not in text:
+        return text
+    return text.rsplit("/", 1)[0].lstrip("\\")
+
+
+def cell_from_mapping(pin: str, role: str, mapping_rows: list[dict[str, str]]) -> str:
+    inst = canonical(inst_from_pin(pin))
+    for row in mapping_rows:
+        if row.get("role") != role:
+            continue
+        mapped_inst = canonical(row.get("instance", ""))
+        if mapped_inst and (mapped_inst == inst or mapped_inst in inst or inst in mapped_inst):
+            return row.get("mapped_cell", "")
+    tap = infer_tap(pin)
+    bit = infer_tag_bit(pin)
+    if tap != "unknown" and bit != "unknown":
+        for row in mapping_rows:
+            if row.get("role") == role and row.get("tap_index") == tap and row.get("bit_index") == bit:
+                return row.get("mapped_cell", "")
+    return ""
 
 
 def infer_tap(*names: str) -> str:
@@ -117,6 +183,10 @@ def main() -> int:
             rows.append(row)
     rows = rows[: args.limit]
     blocks = parse_blocks(timing_path)
+    netlist = args.run_dir / "mptdc_top_asic.postsyn.v"
+    if not netlist.exists():
+        netlist = args.run_dir / "outputs" / "mptdc_top_asic.postsyn.v"
+    mapping_rows = parse_netlist_instances(netlist)
 
     lines = [
         "# Final Genus FAST_TAG_TO_PD_TS Analysis",
@@ -151,8 +221,12 @@ def main() -> int:
         tap = infer_tap(start, endpoint, row.get("group", ""))
         bit = infer_tag_bit(start, endpoint)
         row_idx, col_idx = infer_row_col(endpoint)
-        start_cell = source_q["cell"] if source_q else "UNKNOWN"
-        endpoint_cell = endpoint_point["cell"] if endpoint_point else "UNKNOWN"
+        start_cell = source_q["cell"] if source_q else cell_from_mapping(start, "fast_tag_source", mapping_rows)
+        endpoint_cell = endpoint_point["cell"] if endpoint_point else cell_from_mapping(endpoint, "nfast_hit_endpoint", mapping_rows)
+        if not start_cell:
+            start_cell = "UNKNOWN"
+        if not endpoint_cell:
+            endpoint_cell = "UNKNOWN"
         fanout = source_q["fanout"] if source_q else "NA"
         load = source_q["load"] if source_q else "NA"
         trans = source_q["trans"] if source_q else "NA"

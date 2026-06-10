@@ -16,6 +16,7 @@ and not final silicon signoff.
 | `final_typical_genus_control_root_20260610_160143` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed and path count restored, but six exact roots still cost about 11 ps WNS versus guarded. |
 | `final_typical_genus_control_single_root_20260610_161411` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Selected only `n_6899`/`g33116/Q`, but broad control-net and fast-tag Q constraints were still active. |
 | `final_typical_genus_control_exact_only_20260610_162758` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Pure single-root constraint confirmed; broad control-net and fast-tag Q constraints were skipped, but timing stayed at the control-root result. |
+| `final_typical_genus_control_exact_only_jihd_20260610_165235` | -1.4 | -15.6 | 12 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Best result so far. JIHD fixed DRV without selecting exact control roots; only tap0 bit5/6 fast-tag paths remain. |
 
 ## Interpretation
 
@@ -107,3 +108,44 @@ First JIHD outcome to evaluate:
 - DRV remains `0 / 0 / 0`;
 - setup timing is re-baselined under JIHD, with special attention to
   `FAST_TAG_TO_PD_TS` and fast-tag source-cell mapping.
+
+## JIHD Tap0 Micro Closure
+
+Run `final_typical_genus_control_exact_only_jihd_20260610_165235` is the new
+baseline. It preserves the O13/RO/PD exception contract, has clean DRV, and
+reduces real setup to a small tap0 residue:
+
+- setup WNS/TNS: `-1.4 ps` / `-15.6 ps`
+- setup violating paths: `12`
+- worst family: `FAST_TAG_TO_PD_TS`
+- affected group: `clk_osc_fast_buf_tap0`
+- affected fast-tag bits: `5` and `6`
+- affected PD column: `0`
+- DRV: `0 / 0 / 0`
+- `FAST_TAG_MAPPING_STATUS=PASS`
+- `FAST_TAG_SOURCE_UNKNOWN_COUNT=0`
+
+The next run is:
+
+`FINAL_TYPICAL_GENUS_REPAIR_JIHD_TAP0_MICRO`
+
+It keeps JIHD and disables all broad repair pressure. It applies only exact
+data-path optimization pressure to:
+
+- source tap: `gen_fast_tag_col[0]`
+- source bits: `tag_o_reg[5]`, `tag_o_reg[6]`
+- endpoint column: `gen_pd_col[0]`
+- endpoint bits: `nfast_hit_latched_reg[5]`, `nfast_hit_latched_reg[6]`
+
+Pass criteria:
+
+- setup WNS `>= 0 ps`
+- setup TNS `0 ps`
+- setup violating paths `0`
+- max transition/cap/fanout `0 / 0 / 0`
+- report helpers `PASS`
+- SDC failures `0`
+- `UNKNOWN_REVIEW_REQUIRED=0`
+- `FAST_TAG_MAPPING_STATUS=PASS`
+
+If this passes, the next stage is `MPTDC_FINAL_TYPICAL_INNOVUS_FEASIBILITY`.
