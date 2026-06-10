@@ -77,6 +77,7 @@ for file in \
   "${source_synthesis_dir}/post_synthesis/report_area_hier.rpt" \
   "${source_synthesis_dir}/post_synthesis/report_gates.rpt" \
   "${source_synthesis_dir}/post_synthesis/report_gates_hier.rpt" \
+  "${source_synthesis_dir}/post_synthesis/report_helpers_status.rpt" \
   "${source_synthesis_dir}/post_synthesis/report_power.rpt" \
   "${source_synthesis_dir}/post_synthesis/report_power_hier.rpt" \
   "${source_synthesis_dir}/post_synthesis/report_qor.rpt" \
@@ -113,6 +114,9 @@ for file in \
   "${source_synthesis_dir}/post_synthesis/run_manifest.rpt"; do
   copy_if_present "$file"
 done
+
+copy_if_present "${source_reports_dir}/helper_tcl_selftest.rpt"
+copy_if_present "${source_reports_dir}/final_typical_genus_repair_1.rpt"
 
 {
   echo "Snapshot: ${tag}"

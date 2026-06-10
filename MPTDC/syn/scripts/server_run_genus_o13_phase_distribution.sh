@@ -208,6 +208,8 @@ export MPTDC_O13_PD_VERNIER_INTENT_RPT="$RESULT_DIR/timing_pd_intentional_vernie
 export O1_RUN_FLAVOR="$FLOW_LABEL"
 export GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
 export MPTDC_OPT_GOAL="mptdc_typical_timing_closure"
+export MPTDC_GENUS_REPAIR_FAST_TAG_PD="${MPTDC_GENUS_REPAIR_FAST_TAG_PD:-0}"
+export MPTDC_GENUS_REPAIR_DRV_TRANSITION="${MPTDC_GENUS_REPAIR_DRV_TRANSITION:-0}"
 export MPTDC_OSC_SLOW_PERIOD_NS="${O13_OSC_SLOW_PERIOD_NS:-1.430}"
 export MPTDC_OSC_FAST_PERIOD_NS="${O13_OSC_FAST_PERIOD_NS:-1.333}"
 export MPTDC_OSC_SLOW_TAP_STEP_NS="${O13_OSC_SLOW_TAP_STEP_NS:-0.079}"
@@ -236,6 +238,8 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  MPTDC_GENUS_RUN_DIR=$MPTDC_GENUS_RUN_DIR"
   echo "  PHASE_BUFFER_TOPOLOGY=BUHDX4 isolation + BUHDX12 digital driver per tap"
   echo "  PHASE_BUFFER_DEFINE=MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12"
+  echo "  FINAL_TYPICAL_GENUS_REPAIR_1_FAST_TAG_PD=$MPTDC_GENUS_REPAIR_FAST_TAG_PD"
+  echo "  FINAL_TYPICAL_GENUS_REPAIR_1_DRV_TRANSITION=$MPTDC_GENUS_REPAIR_DRV_TRANSITION"
   echo
 } | tee -a "$RESULT_DIR/run_manifest.txt" | tee -a "$GENUS_LOG"
 
@@ -346,8 +350,51 @@ run_timing_classification() {
   fi
 }
 
+run_corrected_summary_parser() {
+  local parser="$REPO_ROOT/tools/timing/summarize_mptdc_genus_run.py"
+  local env_out="$RESULT_DIR/summary_metrics.env"
+  local rpt_out="$RESULT_DIR/summary_parser_check.rpt"
+  if [[ -f "$parser" ]]; then
+    if python3 "$parser" --run-dir "$RESULT_DIR" --out-env "$env_out" --out-report "$rpt_out"; then
+      # shellcheck source=/dev/null
+      source "$env_out"
+    else
+      if [[ -f "$env_out" ]]; then
+        # shellcheck source=/dev/null
+        source "$env_out"
+      fi
+      SUMMARY_RAW_AGREEMENT_STATUS="${SUMMARY_RAW_AGREEMENT_STATUS:-FAIL}"
+      TIMING_SUMMARY_PARSE_STATUS="${TIMING_SUMMARY_PARSE_STATUS:-FAIL}"
+      TIMING_CLASSIFICATION_PARSE_STATUS="${TIMING_CLASSIFICATION_PARSE_STATUS:-FAIL}"
+    fi
+  else
+    SUMMARY_RAW_AGREEMENT_STATUS=FAIL
+    TIMING_SUMMARY_PARSE_STATUS=FAIL
+    TIMING_CLASSIFICATION_PARSE_STATUS=FAIL
+  fi
+}
+
+run_final_diagnostic_reports() {
+  local fast_analyzer="$REPO_ROOT/tools/timing/analyze_mptdc_fast_tag_pd_paths.py"
+  local drv_analyzer="$REPO_ROOT/tools/timing/analyze_mptdc_drv_transition_roots.py"
+  if [[ -f "$fast_analyzer" && -f "$RESULT_DIR/timing_path_classification.csv" && -f "$RESULT_DIR/timing_violations.rpt" ]]; then
+    python3 "$fast_analyzer" \
+      --run-dir "$RESULT_DIR" \
+      --out-md "$RESULT_DIR/final_genus_fast_tag_to_pd_ts_analysis.md" \
+      --limit 50 || true
+  fi
+  if [[ -f "$drv_analyzer" && -f "$RESULT_DIR/report_design_rules.rpt" ]]; then
+    mkdir -p "$RESULT_DIR/reports"
+    python3 "$drv_analyzer" \
+      --run-dir "$RESULT_DIR" \
+      --out-csv "$RESULT_DIR/reports/drv_transition_root_causes.csv" || true
+  fi
+}
+
 write_sdc_failure_report
 run_timing_classification
+run_corrected_summary_parser
+run_final_diagnostic_reports
 
 POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
@@ -382,9 +429,20 @@ SDC_COMMAND_FAILURE_COUNT=NA
 MAX_TRANSITION_VIOLATIONS=NA
 MAX_CAPACITANCE_VIOLATIONS=NA
 MAX_FANOUT_VIOLATIONS=NA
+SETUP_WNS_PS="${SETUP_WNS_PS:-NA}"
+SETUP_TNS_PS="${SETUP_TNS_PS:-NA}"
+SETUP_VIOLATING_PATHS="${SETUP_VIOLATING_PATHS:-NA}"
+HOLD_WNS_PS="${HOLD_WNS_PS:-NA}"
+HOLD_TNS_PS="${HOLD_TNS_PS:-NA}"
 REAL_TIMED_WNS_PS=NA
 REAL_TIMED_TNS_PS=NA
+REAL_TIMED_VIOLATING_PATHS="${REAL_TIMED_VIOLATING_PATHS:-NA}"
 WORST_REAL_PATH_FAMILY=NA
+REPORT_HELPER_FAILURE_COUNT="${REPORT_HELPER_FAILURE_COUNT:-NA}"
+REPORT_HELPERS_STATUS="${REPORT_HELPERS_STATUS:-NA}"
+TIMING_SUMMARY_PARSE_STATUS="${TIMING_SUMMARY_PARSE_STATUS:-NA}"
+TIMING_CLASSIFICATION_PARSE_STATUS="${TIMING_CLASSIFICATION_PARSE_STATUS:-NA}"
+SUMMARY_RAW_AGREEMENT_STATUS="${SUMMARY_RAW_AGREEMENT_STATUS:-NA}"
 FINAL_DECISION="GENUS_TYPICAL_REVIEW_REQUIRED"
 RAW_CLOCK_NAMES=(clk_osc_slow)
 BUFFER_CLOCK_NAMES=()
@@ -451,11 +509,7 @@ if [[ -f "$RESULT_DIR/report_design_rules.rpt" ]]; then
     MAX_FANOUT_VIOLATIONS="$(awk '/Max_fanout design rule/ {if (match($0, /violation total = [0-9]+/)) {v=substr($0, RSTART+18, RLENGTH-18); print v; found=1; exit}} END {if (!found) print "UNKNOWN"}' "$RESULT_DIR/report_design_rules.rpt")"
   fi
 fi
-if [[ -f "$RESULT_DIR/timing_path_classification.csv" ]]; then
-  REAL_TIMED_WNS_PS="$(awk -F, 'NR>1 && $1!="PD_INTENTIONAL_VERNIER" {if ($5 != "" && (found == 0 || $5+0 < min)) {min=$5+0; found=1}} END {if (found) printf "%.1f", min; else print "NA"}' "$RESULT_DIR/timing_path_classification.csv")"
-  REAL_TIMED_TNS_PS="$(awk -F, 'NR>1 && $1!="PD_INTENTIONAL_VERNIER" && $5+0 < 0 {sum += $5+0; found=1} END {if (found) printf "%.1f", sum; else print "0.0"}' "$RESULT_DIR/timing_path_classification.csv")"
-  WORST_REAL_PATH_FAMILY="$(awk -F, 'NR>1 && $1!="PD_INTENTIONAL_VERNIER" {if ($5 != "" && (found == 0 || $5+0 < min)) {min=$5+0; fam=$2; found=1}} END {if (found) print fam; else print "NA"}' "$RESULT_DIR/timing_path_classification.csv")"
-fi
+run_corrected_summary_parser
 
 write_macro_binding_check() {
   local out="$RESULT_DIR/macro_binding_check.rpt"
@@ -532,15 +586,28 @@ write_final_readiness() {
     emit_check_text "PD Vernier undermatch" NO "$PD_VERNIER_EXCEPTION_UNDERMATCH"
     emit_check "UNKNOWN_REVIEW_REQUIRED" 0 "$UNKNOWN_REVIEW_REQUIRED_COUNT"
     emit_check "SDC command failures" 0 "$SDC_COMMAND_FAILURE_COUNT"
+    emit_check "report helper failures" 0 "$REPORT_HELPER_FAILURE_COUNT"
+    emit_check_text "summary/raw agreement" PASS "$SUMMARY_RAW_AGREEMENT_STATUS"
+    emit_check "setup violating paths" 0 "$SETUP_VIOLATING_PATHS"
+    emit_check "setup TNS ps" 0.0 "$SETUP_TNS_PS"
+    emit_check "max transition violations" 0 "$MAX_TRANSITION_VIOLATIONS"
     emit_check "max capacitance violations" 0 "$MAX_CAPACITANCE_VIOLATIONS"
     emit_check "max fanout violations" 0 "$MAX_FANOUT_VIOLATIONS"
     echo
     echo "## Timing And DRV"
     echo
+    echo "- Setup WNS ps: \`$SETUP_WNS_PS\`"
+    echo "- Setup TNS ps: \`$SETUP_TNS_PS\`"
+    echo "- Setup violating paths: \`$SETUP_VIOLATING_PATHS\`"
+    echo "- Hold WNS ps: \`$HOLD_WNS_PS\`"
+    echo "- Hold TNS ps: \`$HOLD_TNS_PS\`"
     echo "- Real timed WNS ps: \`$REAL_TIMED_WNS_PS\`"
     echo "- Real timed TNS ps: \`$REAL_TIMED_TNS_PS\`"
+    echo "- Real timed violating paths: \`$REAL_TIMED_VIOLATING_PATHS\`"
     echo "- Worst real path family: \`$WORST_REAL_PATH_FAMILY\`"
     echo "- Max transition violations: \`$MAX_TRANSITION_VIOLATIONS\`"
+    echo "- Report helper failures: \`$REPORT_HELPER_FAILURE_COUNT\`"
+    echo "- Report helpers status: \`$REPORT_HELPERS_STATUS\`"
     echo
     if [[ -f "$RESULT_DIR/timing_path_classification_summary.md" ]]; then
       echo "## Classification Summary"
@@ -601,9 +668,20 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "MAX_TRANSITION_VIOLATIONS=$MAX_TRANSITION_VIOLATIONS"
   echo "MAX_CAPACITANCE_VIOLATIONS=$MAX_CAPACITANCE_VIOLATIONS"
   echo "MAX_FANOUT_VIOLATIONS=$MAX_FANOUT_VIOLATIONS"
+  echo "SETUP_WNS_PS=$SETUP_WNS_PS"
+  echo "SETUP_TNS_PS=$SETUP_TNS_PS"
+  echo "SETUP_VIOLATING_PATHS=$SETUP_VIOLATING_PATHS"
+  echo "HOLD_WNS_PS=$HOLD_WNS_PS"
+  echo "HOLD_TNS_PS=$HOLD_TNS_PS"
   echo "REAL_TIMED_WNS_PS=$REAL_TIMED_WNS_PS"
   echo "REAL_TIMED_TNS_PS=$REAL_TIMED_TNS_PS"
+  echo "REAL_TIMED_VIOLATING_PATHS=$REAL_TIMED_VIOLATING_PATHS"
   echo "WORST_REAL_PATH_FAMILY=$WORST_REAL_PATH_FAMILY"
+  echo "REPORT_HELPER_FAILURE_COUNT=$REPORT_HELPER_FAILURE_COUNT"
+  echo "REPORT_HELPERS_STATUS=$REPORT_HELPERS_STATUS"
+  echo "TIMING_SUMMARY_PARSE_STATUS=$TIMING_SUMMARY_PARSE_STATUS"
+  echo "TIMING_CLASSIFICATION_PARSE_STATUS=$TIMING_CLASSIFICATION_PARSE_STATUS"
+  echo "SUMMARY_RAW_AGREEMENT_STATUS=$SUMMARY_RAW_AGREEMENT_STATUS"
   echo
   if [[ -f "$POSTSYN_NETLIST" ]]; then
     echo "## RO_tune4 instances"
@@ -622,6 +700,16 @@ write_macro_binding_check
 write_packet_contract_check
 
 STATUS="GENUS_TYPICAL_REVIEW_REQUIRED"
+is_zero_metric() {
+  [[ "$1" == "0" || "$1" == "0.0" || "$1" == "-0.0" ]]
+}
+
+float_ge() {
+  local lhs="$1"
+  local rhs="$2"
+  [[ "$lhs" != "NA" ]] && awk "BEGIN {exit !($lhs >= $rhs)}"
+}
+
 if [[ "$RUN_MODE" == "validate_only" && "$GENUS_RC" == "0" ]]; then
   STATUS="GENUS_TYPICAL_VALIDATE_ONLY_OK"
 elif [[ "$RUN_MODE" == "validate_only" ]]; then
@@ -639,11 +727,18 @@ elif [[ "$GENUS_RC" == "0" \
     && "$PD_VERNIER_EXCEPTION_UNDERMATCH" == "NO" \
     && "$UNKNOWN_REVIEW_REQUIRED_COUNT" == "0" \
     && "$SDC_COMMAND_FAILURE_COUNT" == "0" \
+    && "$REPORT_HELPER_FAILURE_COUNT" == "0" \
+    && "$SUMMARY_RAW_AGREEMENT_STATUS" == "PASS" \
+    && "$TIMING_SUMMARY_PARSE_STATUS" == "PASS" \
+    && "$TIMING_CLASSIFICATION_PARSE_STATUS" == "PASS" \
+    && "$MAX_TRANSITION_VIOLATIONS" == "0" \
     && "$MAX_CAPACITANCE_VIOLATIONS" == "0" \
     && "$MAX_FANOUT_VIOLATIONS" == "0" \
     && "$REAL_TIMED_WNS_PS" != "NA" ]]; then
-  if awk "BEGIN {exit !($REAL_TIMED_WNS_PS >= 0.0)}"; then
+  if float_ge "$SETUP_WNS_PS" 0.0 && is_zero_metric "$SETUP_TNS_PS" && is_zero_metric "$SETUP_VIOLATING_PATHS"; then
     STATUS="GENUS_TYPICAL_CLOSED"
+  elif float_ge "$SETUP_WNS_PS" -10.0 && ! float_ge "$SETUP_WNS_PS" 0.0; then
+    STATUS="GENUS_TYPICAL_NEAR_CLEAN"
   fi
 fi
 FINAL_DECISION="$STATUS"
@@ -701,9 +796,20 @@ write_final_readiness
   echo "- Max transition violations: $MAX_TRANSITION_VIOLATIONS"
   echo "- Max capacitance violations: $MAX_CAPACITANCE_VIOLATIONS"
   echo "- Max fanout violations: $MAX_FANOUT_VIOLATIONS"
+  echo "- Setup WNS ps: $SETUP_WNS_PS"
+  echo "- Setup TNS ps: $SETUP_TNS_PS"
+  echo "- Setup violating path count: $SETUP_VIOLATING_PATHS"
+  echo "- Hold WNS ps: $HOLD_WNS_PS"
+  echo "- Hold TNS ps: $HOLD_TNS_PS"
   echo "- Real timed WNS ps: $REAL_TIMED_WNS_PS"
   echo "- Real timed TNS ps: $REAL_TIMED_TNS_PS"
+  echo "- Real timed violating path count: $REAL_TIMED_VIOLATING_PATHS"
   echo "- Worst real path family: $WORST_REAL_PATH_FAMILY"
+  echo "- Report helper failure count: $REPORT_HELPER_FAILURE_COUNT"
+  echo "- Report helpers status: $REPORT_HELPERS_STATUS"
+  echo "- Timing summary parse status: $TIMING_SUMMARY_PARSE_STATUS"
+  echo "- Timing classification parse status: $TIMING_CLASSIFICATION_PARSE_STATUS"
+  echo "- Summary/raw agreement status: $SUMMARY_RAW_AGREEMENT_STATUS"
   echo
   echo "FINAL_DECISION=$FINAL_DECISION"
   echo "GENUS_TYPICAL_STATUS=$STATUS"
@@ -711,14 +817,15 @@ write_final_readiness
   echo "FINAL_SIGNOFF=NO"
   echo "TYPICAL_ONLY_TAPEOUT_PACKAGE=YES"
   echo "NOT_MMMC_SIGNOFF=YES"
-  if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" ]]; then
-    echo "INNOVUS_READY=NO_REVIEW_O13_ABS5_GENUS_FIRST"
-  elif [[ "${MPTDC_O13_ABS4_PD_VERNIER_CLASSIFICATION:-0}" == "1" ]]; then
-    echo "INNOVUS_READY=NO_REVIEW_O13_ABS4_GENUS_FIRST"
-  elif [[ "${MPTDC_O13_ABS3_CLOCK_CDC_REPAIR:-0}" == "1" ]]; then
-    echo "INNOVUS_READY=NO_REVIEW_O13_ABS3_GENUS_FIRST"
+  if [[ "$STATUS" == "GENUS_TYPICAL_CLOSED" ]]; then
+    echo "READY_FOR_O13_INNOVUS_FEASIBILITY=YES"
+    echo "INNOVUS_READY=READY_FOR_O13_INNOVUS_FEASIBILITY"
+  elif [[ "$STATUS" == "GENUS_TYPICAL_NEAR_CLEAN" ]]; then
+    echo "READY_FOR_O13_INNOVUS_FEASIBILITY=NO_NEAR_CLEAN_GENUS_REVIEW_FIRST"
+    echo "INNOVUS_READY=NO_NEAR_CLEAN_GENUS_REVIEW_FIRST"
   else
-    echo "INNOVUS_READY=RUN_O13_PHASE_DISTRIBUTION_FEASIBILITY_AFTER_REVIEW"
+    echo "READY_FOR_O13_INNOVUS_FEASIBILITY=NO_REVIEW_FINAL_TYPICAL_GENUS_FIRST"
+    echo "INNOVUS_READY=NO_REVIEW_FINAL_TYPICAL_GENUS_FIRST"
   fi
   echo
   echo "## Key Files"
@@ -756,6 +863,11 @@ write_final_readiness
     macro_binding_check.rpt \
     packet_contract_check.rpt \
     final_typical_genus_readiness.md \
+    summary_parser_check.rpt \
+    report_helpers_status.rpt \
+    helper_tcl_selftest.rpt \
+    final_genus_fast_tag_to_pd_ts_analysis.md \
+    reports/drv_transition_root_causes.csv \
     timing_path_classification.csv \
     timing_path_classification_summary.md; do
     if [[ -f "$RESULT_DIR/$file" ]]; then

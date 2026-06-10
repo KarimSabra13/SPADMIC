@@ -63,6 +63,7 @@ foreach dir [list $design(work_dir) $design(export_dir) \
              $design(synthesis_reports)] {
     file mkdir $dir
 }
+mptdc_write_helper_tcl_selftest "$design(reports_dir)/helper_tcl_selftest.rpt"
 mptdc_message "Using Genus work directory $design(work_dir)"
 cd $design(work_dir)
 
@@ -177,6 +178,7 @@ mptdc_start_stage "synthesis"
 
 # Define cost groups for targeted optimization
 mptdc_default_cost_groups
+mptdc_apply_final_typical_repair_1 "pre_generic"
 
 # Pre-synthesis timing snapshot
 mptdc_run_nonfatal_report_step "pre-synthesis timing snapshot" \
@@ -224,6 +226,7 @@ mptdc_run_nonfatal_report_step "post-generic timing snapshot" \
 mptdc_start_stage "syn_map"
 mptdc_message "Phase 2: Technology mapping to XFAB XH018"
 syn_map
+mptdc_apply_final_typical_repair_1 "post_map_pre_opt"
 mptdc_run_nonfatal_report_step "post-map timing snapshot" \
     {mptdc_report_timing $design(synthesis_reports)} \
     "$design(synthesis_reports)/$this_run(stage)"
@@ -238,6 +241,7 @@ syn_opt
 # 7. POST-SYNTHESIS REPORTS
 #############################################
 mptdc_start_stage "post_synthesis"
+mptdc_reset_report_helper_failures
 
 # Refresh cost groups (may be lost during optimization)
 mptdc_default_cost_groups

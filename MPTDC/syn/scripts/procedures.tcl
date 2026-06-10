@@ -62,6 +62,45 @@ proc mptdc_message {msg {level "medium"}} {
     puts "$prefix: $msg"
 }
 
+if {![info exists mptdc_report_helper_failures]} {
+    set mptdc_report_helper_failures [list]
+}
+
+proc mptdc_record_report_helper_failure {label rpt_file err} {
+    global mptdc_report_helper_failures
+    lappend mptdc_report_helper_failures [list $label $rpt_file $err]
+}
+
+proc mptdc_reset_report_helper_failures {} {
+    global mptdc_report_helper_failures
+    set mptdc_report_helper_failures [list]
+}
+
+proc mptdc_write_report_helper_status {rpt_file} {
+    global mptdc_report_helper_failures
+    set fh [open $rpt_file w]
+    puts $fh "# MPTDC Report Helper Status"
+    puts $fh ""
+    puts $fh "REPORT_HELPER_FAILURE_COUNT=[llength $mptdc_report_helper_failures]"
+    if {[llength $mptdc_report_helper_failures] == 0} {
+        puts $fh "REPORT_HELPERS_STATUS=PASS"
+    } else {
+        puts $fh "REPORT_HELPERS_STATUS=REVIEW_REQUIRED"
+        puts $fh ""
+        puts $fh "## Failing Reports"
+        foreach failure $mptdc_report_helper_failures {
+            set label [lindex $failure 0]
+            set rpt_file [lindex $failure 1]
+            set err [lindex $failure 2]
+            puts $fh ""
+            puts $fh "REPORT_HELPER_FAILURE=$label"
+            puts $fh "REPORT_FILE=$rpt_file"
+            puts $fh "ERROR=$err"
+        }
+    }
+    close $fh
+}
+
 proc mptdc_write_report_failure {rpt_file title err} {
     set fh [open $rpt_file w]
     puts $fh "$title could not be generated."
@@ -70,8 +109,14 @@ proc mptdc_write_report_failure {rpt_file title err} {
     close $fh
 }
 
+proc mptdc_write_recorded_report_failure {rpt_file title err} {
+    mptdc_record_report_helper_failure $title $rpt_file $err
+    mptdc_write_report_failure $rpt_file $title $err
+}
+
 proc mptdc_run_report {cmd rpt_file title} {
     if {[catch {eval $cmd > $rpt_file} err]} {
+        mptdc_record_report_helper_failure $title $rpt_file $err
         mptdc_write_report_failure $rpt_file $title $err
     }
 }
@@ -85,6 +130,7 @@ proc mptdc_run_report_candidates {cmds rpt_file title} {
         lappend errors "$cmd: $err"
     }
 
+    mptdc_record_report_helper_failure $title $rpt_file [join $errors "\n\n"]
     mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
@@ -103,6 +149,7 @@ proc mptdc_run_nonfatal_report_step {label cmd report_dir} {
             puts $fh [dict get $opts -errorinfo]
         }
         close $fh
+        mptdc_record_report_helper_failure $label "$report_dir/${safe_label}_failure.rpt" $err
         return 0
     }
     return 1
@@ -280,11 +327,11 @@ proc mptdc_o13_abs3_append_file {fh path} {
 
 proc mptdc_o13_abs3_run_timing_report {rpt_file title from_objs to_objs {max_paths 100}} {
     if {[llength $from_objs] == 0} {
-        mptdc_write_report_failure $rpt_file $title "No launch/source objects matched."
+        mptdc_write_recorded_report_failure $rpt_file $title "No launch/source objects matched."
         return
     }
     if {[llength $to_objs] == 0} {
-        mptdc_write_report_failure $rpt_file $title "No endpoint objects matched."
+        mptdc_write_recorded_report_failure $rpt_file $title "No endpoint objects matched."
         return
     }
     set errors [list]
@@ -301,7 +348,7 @@ proc mptdc_o13_abs3_run_timing_report {rpt_file title from_objs to_objs {max_pat
             lappend errors "report_timing -max_paths $max_paths -path_type $path_type: $err"
         }
     }
-    mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
+    mptdc_write_recorded_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
 proc mptdc_o13_abs3_write_clock_model_check {rpt_file} {
@@ -1205,40 +1252,114 @@ proc mptdc_collect_pin_names {patterns} {
 }
 
 proc mptdc_glob_escape {text} {
-    set map [list "\\" "\\\\" "*" "\\*" "?" "\\?" "\[" "\\[" "\]" "\\]"]
+    set map [list {\\} {\\\\} {[} {\[} {]} {\]} {*} {\*} {?} {\?}]
     return [string map $map $text]
+}
+
+proc mptdc_normalize_timing_pin_name {text} {
+    set out $text
+    regsub {^\([RF]\)[[:space:]]+} $out {} out
+    return $out
+}
+
+proc mptdc_append_pin_matches {matches pins_var seen_var} {
+    upvar 1 $pins_var pins
+    upvar 1 $seen_var seen
+    foreach pin [mptdc_collection_to_list $matches] {
+        set pin_name [mptdc_object_name $pin]
+        if {$pin_name ne "" && ![info exists seen($pin_name)]} {
+            set seen($pin_name) 1
+            lappend pins $pin
+        }
+    }
 }
 
 proc mptdc_collect_pin_objects_from_names {pin_names} {
     set pins [list]
     array set seen {}
+    set unresolved [list]
     foreach name $pin_names {
+        set name [mptdc_normalize_timing_pin_name $name]
         set matches [list]
-        set escaped [mptdc_glob_escape $name]
-        catch {set matches [get_pins -quiet $escaped]}
-        if {[llength $matches] == 0} {
-            catch {set matches [get_pins -quiet -hierarchical $escaped]}
+        foreach query [list $name [mptdc_glob_escape $name]] {
+            catch {set matches [get_pins -quiet $query]}
+            mptdc_append_pin_matches $matches pins seen
+            catch {set matches [get_pins -quiet -hierarchical $query]}
+            mptdc_append_pin_matches $matches pins seen
         }
-        foreach pin [mptdc_collection_to_list $matches] {
-            set pin_name [mptdc_object_name $pin]
-            if {![info exists seen($pin_name)]} {
-                set seen($pin_name) 1
-                lappend pins $pin
+        if {![info exists seen($name)]} {
+            lappend unresolved $name
+        }
+    }
+
+    if {[llength $unresolved] > 0} {
+        array set wanted {}
+        foreach name $unresolved {
+            set wanted($name) 1
+        }
+        set all_pins [list]
+        if {![catch {set all_pins [get_pins -quiet -hierarchical *]}]} {
+            foreach pin [mptdc_collection_to_list $all_pins] {
+                set pin_name [mptdc_object_name $pin]
+                if {[info exists wanted($pin_name)] && ![info exists seen($pin_name)]} {
+                    set seen($pin_name) 1
+                    lappend pins $pin
+                }
             }
         }
     }
     return $pins
 }
 
+proc mptdc_write_helper_tcl_selftest {rpt_file} {
+    set fh [open $rpt_file w]
+    puts $fh "# MPTDC Helper Tcl Selftest"
+    puts $fh ""
+    puts $fh "Purpose: validate bracket-safe helper string handling inside the active Tcl interpreter."
+    puts $fh ""
+    set status PASS
+    foreach name {
+        gen_pd_row[0].gen_pd_col[7].u_pd/q1_reg/D
+        gen_phase_buf[7].u_drv/Q
+        u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5]/C
+    } {
+        if {[catch {set escaped [mptdc_glob_escape $name]} err]} {
+            set status FAIL
+            puts $fh "NAME=$name"
+            puts $fh "ERROR=$err"
+            continue
+        }
+        set normalized [mptdc_normalize_timing_pin_name "(R) $name"]
+        puts $fh "NAME=$name"
+        puts $fh "ESCAPED=$escaped"
+        puts $fh "NORMALIZED=$normalized"
+        if {$normalized ne $name} {
+            set status FAIL
+            puts $fh "NORMALIZE_STATUS=FAIL"
+        } else {
+            puts $fh "NORMALIZE_STATUS=PASS"
+        }
+        if {[string first {\[} $escaped] < 0 || [string first {\]} $escaped] < 0} {
+            set status FAIL
+            puts $fh "BRACKET_ESCAPE_STATUS=FAIL"
+        } else {
+            puts $fh "BRACKET_ESCAPE_STATUS=PASS"
+        }
+        puts $fh ""
+    }
+    puts $fh "HELPER_TCL_SELFTEST_STATUS=$status"
+    close $fh
+}
+
 proc mptdc_run_timing_to_names {rpt_file title endpoint_names} {
     if {[llength $endpoint_names] == 0} {
-        mptdc_write_report_failure $rpt_file $title "No endpoint names provided."
+        mptdc_write_recorded_report_failure $rpt_file $title "No endpoint names provided."
         return
     }
 
     set endpoint_objs [mptdc_collect_pin_objects_from_names $endpoint_names]
     if {[llength $endpoint_objs] == 0} {
-        mptdc_write_report_failure $rpt_file $title \
+        mptdc_write_recorded_report_failure $rpt_file $title \
             "No valid timing endpoint pins resolved from [llength $endpoint_names] candidate name(s). report_timing was not run with cell names or raw strings because Genus rejects those objects for -to in this flow."
         return
     }
@@ -1258,12 +1379,12 @@ proc mptdc_run_timing_to_names {rpt_file title endpoint_names} {
         }
     }
 
-    mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
+    mptdc_write_recorded_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
 proc mptdc_run_fast_clock_to_names {rpt_file title endpoint_names {max_paths 300}} {
     if {[llength $endpoint_names] == 0} {
-        mptdc_write_report_failure $rpt_file $title "No endpoint names provided."
+        mptdc_write_recorded_report_failure $rpt_file $title "No endpoint names provided."
         return
     }
 
@@ -1275,14 +1396,14 @@ proc mptdc_run_fast_clock_to_names {rpt_file title endpoint_names {max_paths 300
         catch {set fast_clocks [get_clocks -quiet clk_osc_fast_raw_tap*]}
     }
     if {[llength $fast_clocks] == 0} {
-        mptdc_write_report_failure $rpt_file $title \
+        mptdc_write_recorded_report_failure $rpt_file $title \
             "No fast oscillator clocks were found. Tried clk_osc_fast, clk_osc_fast_buf_tap*, and clk_osc_fast_raw_tap*."
         return
     }
 
     set endpoint_objs [mptdc_collect_pin_objects_from_names $endpoint_names]
     if {[llength $endpoint_objs] == 0} {
-        mptdc_write_report_failure $rpt_file $title \
+        mptdc_write_recorded_report_failure $rpt_file $title \
             "No valid timing endpoint pins resolved from [llength $endpoint_names] candidate name(s). report_timing was not run with cell names or raw strings because Genus rejects those objects for -to in this flow."
         return
     }
@@ -1302,7 +1423,7 @@ proc mptdc_run_fast_clock_to_names {rpt_file title endpoint_names {max_paths 300
         }
     }
 
-    mptdc_write_report_failure $rpt_file $title [join $errors "\n\n"]
+    mptdc_write_recorded_report_failure $rpt_file $title [join $errors "\n\n"]
 }
 
 proc mptdc_try_set_db {objects attr value} {
@@ -1338,6 +1459,109 @@ proc mptdc_try_keep_hierarchy_cells {cells} {
         return
     }
     catch {set_db $cells .ungroup_ok false}
+}
+
+proc mptdc_try_release_cells_for_repair {label patterns fh} {
+    set cells [mptdc_collect_cell_objects $patterns]
+    puts $fh "${label}_MATCHED_CELLS=[llength $cells]"
+    if {[llength $cells] == 0} {
+        return
+    }
+    catch {set_dont_touch $cells false} err1
+    catch {set_db $cells .dont_touch false} err2
+    catch {set_db $cells .preserve false} err3
+    puts $fh "${label}_DONT_TOUCH_RELEASE=set_dont_touch:$err1 set_db_dont_touch:$err2 set_db_preserve:$err3"
+}
+
+proc mptdc_try_unavoid_lib_cells {label patterns fh} {
+    set cells [list]
+    foreach pattern $patterns {
+        catch {set matches [get_db lib_cells $pattern]}
+        foreach cell [mptdc_collection_to_list $matches] {
+            lappend cells $cell
+        }
+    }
+    set cells [mptdc_unique_list $cells]
+    puts $fh "${label}_LIB_CELLS=[llength $cells]"
+    foreach cell $cells {
+        catch {set_db $cell .avoid false} err1
+        catch {set_db $cell .dont_use false} err2
+        puts $fh "${label}_LIB_CELL=[mptdc_object_name $cell] avoid:$err1 dont_use:$err2"
+    }
+}
+
+proc mptdc_apply_final_typical_repair_1 {stage} {
+    global design
+    set fast_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_FAST_TAG_PD false]
+    set drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_DRV_TRANSITION false]
+    if {!$fast_repair && !$drv_repair} {
+        return
+    }
+
+    file mkdir $design(reports_dir)
+    set rpt_file "$design(reports_dir)/final_typical_genus_repair_1.rpt"
+    set fh [open $rpt_file a]
+    puts $fh "# FINAL_TYPICAL_GENUS_REPAIR_1"
+    puts $fh "STAGE=$stage"
+    puts $fh "FAST_TAG_PD_REPAIR=$fast_repair"
+    puts $fh "DRV_TRANSITION_REPAIR=$drv_repair"
+    puts $fh "TIMESTAMP=[clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+
+    if {$fast_repair} {
+        mptdc_message "FINAL_TYPICAL_GENUS_REPAIR_1: enabling targeted fast-tag to PD timing repair"
+        mptdc_try_release_cells_for_repair FAST_TAG_PATH {
+            *gen_fast_tag_col*
+            *u_fast_tag*
+        } $fh
+        mptdc_try_release_cells_for_repair NFAST_CAPTURE_PATH {
+            *gen_pd_row*gen_pd_col*u_pd*
+            *nfast_hit_latched*
+        } $fh
+        mptdc_try_unavoid_lib_cells FAST_TAG_SOURCE_FLOP_CANDIDATES {
+            *DFRRQHDX4*
+            *DFRRQHDX2*
+            *DFRHDX2*
+            *DFRQHDX2*
+        } $fh
+        set fast_tag_q_pins [list]
+        catch {set fast_tag_q_pins [get_pins -quiet -hierarchical *u_fast_tag_tag_o_reg*/Q]}
+        puts $fh "FAST_TAG_Q_PINS=[llength [mptdc_collection_to_list $fast_tag_q_pins]]"
+        catch {set_max_fanout 16 $fast_tag_q_pins} err_fanout
+        catch {set_max_transition 0.45 $fast_tag_q_pins} err_trans
+        puts $fh "FAST_TAG_Q_SET_MAX_FANOUT_16=$err_fanout"
+        puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION_0P45=$err_trans"
+    }
+
+    if {$drv_repair} {
+        mptdc_message "FINAL_TYPICAL_GENUS_REPAIR_1: enabling targeted high-fanout control-net DRV repair"
+        mptdc_try_unavoid_lib_cells CONTROL_DRV_CANDIDATES {
+            *INHDX12*
+            *INHDX8*
+            *BUHDX12*
+            *BUHDX8*
+            *BUHDX6*
+        } $fh
+        set control_nets [list]
+        foreach pattern {
+            *meas_pd_clear*
+            *detect_en*
+            *clear_window*
+            *rst_core_n*
+        } {
+            catch {set matches [get_nets -quiet -hierarchical $pattern]}
+            foreach net [mptdc_collection_to_list $matches] {
+                lappend control_nets $net
+            }
+        }
+        set control_nets [mptdc_unique_list $control_nets]
+        puts $fh "CONTROL_REPAIR_NETS=[llength $control_nets]"
+        catch {set_max_fanout 16 $control_nets} err_ctrl_fanout
+        catch {set_max_transition 0.45 $control_nets} err_ctrl_trans
+        puts $fh "CONTROL_SET_MAX_FANOUT_16=$err_ctrl_fanout"
+        puts $fh "CONTROL_SET_MAX_TRANSITION_0P45=$err_ctrl_trans"
+    }
+    puts $fh ""
+    close $fh
 }
 
 proc mptdc_collect_icg_lib_cells {} {
@@ -1408,7 +1632,7 @@ proc mptdc_report_hotspot_timing {rpt_file title patterns} {
     }
 
     if {[llength $cells] == 0} {
-        mptdc_write_report_failure $rpt_file $title \
+        mptdc_write_recorded_report_failure $rpt_file $title \
             "No cells matched endpoint patterns: $patterns"
         return
     }
@@ -1422,7 +1646,7 @@ proc mptdc_report_hotspot_timing {rpt_file title patterns} {
         }
     }
 
-    mptdc_write_report_failure $rpt_file $title \
+    mptdc_write_recorded_report_failure $rpt_file $title \
         "Matched [llength [mptdc_unique_list $cell_names]] cell(s), but no D/d endpoint pins matched the report patterns. report_timing was not run with cell names because this Genus flow rejects non-endpoint objects for -to. Patterns: $patterns"
 }
 
@@ -1782,7 +2006,7 @@ proc mptdc_report_timing {report_dir} {
 
     # Worst paths in the active view (setup-oriented in the current MMMC setup).
     if {[catch { report_timing -max_paths 20 > "$dir/timing_setup.rpt" } err]} {
-        mptdc_write_report_failure "$dir/timing_setup.rpt" "Setup timing report" $err
+        mptdc_write_recorded_report_failure "$dir/timing_setup.rpt" "Setup timing report" $err
     }
 
     # This Genus build does not accept -early/-late on report_timing. Keep a
@@ -1796,12 +2020,12 @@ proc mptdc_report_timing {report_dir} {
 
     # Use QoR as a compact timing summary on this build.
     if {[catch { report_qor > "$dir/timing_summary.rpt" } err]} {
-        mptdc_write_report_failure "$dir/timing_summary.rpt" "Timing summary report" $err
+        mptdc_write_recorded_report_failure "$dir/timing_summary.rpt" "Timing summary report" $err
     }
 
     # Violations only: max_slack filters to paths with slack < 0.
     if {[catch { report_timing -max_paths 200 -max_slack 0.0 > "$dir/timing_violations.rpt" } err]} {
-        mptdc_write_report_failure "$dir/timing_violations.rpt" "Timing violations report" $err
+        mptdc_write_recorded_report_failure "$dir/timing_violations.rpt" "Timing violations report" $err
     }
 
     mptdc_run_report_candidates [list \
@@ -2010,21 +2234,18 @@ proc mptdc_full_reports {report_dir} {
     ] "$dir/report_area_hier.rpt" "hierarchical area report"
     mptdc_run_report "report_gates" \
         "$dir/report_gates.rpt" "report_gates"
-    mptdc_run_report_candidates [list \
-        "report_gates -depth 20" \
-        "report_gates -hier" \
-        "report_gates -hierarchy" \
-    ] "$dir/report_gates_hier.rpt" "hierarchical gate report"
     mptdc_run_report "report_hierarchy" \
         "$dir/report_hierarchy.rpt" "report_hierarchy"
+    mptdc_write_report_substitute \
+        "$dir/report_gates_hier.rpt" \
+        "Hierarchical Gate Report Substitute" \
+        [list "report_gates -depth 20" "report_gates -hier" "report_gates -hierarchy"] \
+        [list "report_gates.rpt" "report_hierarchy.rpt" "report_area_hier.rpt"] \
+        "Genus 22.13 on the lab server rejects the hierarchical report_gates options seen in the 124954 log. The plain gate, hierarchy, and hierarchical area reports are kept as the supported evidence set."
     mptdc_run_report "report_design_rules" \
         "$dir/report_design_rules.rpt" "report_design_rules"
-    mptdc_run_report_candidates [list \
-        "report_design_rules -violators" \
-        "report_design_rules -all_violators" \
-        "report_design_rules -verbose" \
-        "report_design_rules" \
-    ] "$dir/report_design_rules_verbose.rpt" "verbose design-rule report"
+    mptdc_run_report "report_design_rules" \
+        "$dir/report_design_rules_verbose.rpt" "design-rule report duplicate for parser compatibility"
     mptdc_write_high_fanout_report "$dir/report_high_fanout.rpt" 200 20
     mptdc_run_report "report_qor" \
         "$dir/report_qor.rpt" "report_qor"
@@ -2090,6 +2311,7 @@ proc mptdc_full_reports {report_dir} {
     mptdc_cdc_audit $dir
 
     mptdc_write_qor_manifest $dir
+    mptdc_write_report_helper_status "$dir/report_helpers_status.rpt"
 }
 
 proc mptdc_cdc_audit {dir} {
