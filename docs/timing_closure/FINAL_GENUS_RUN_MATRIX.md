@@ -17,6 +17,7 @@ and not final silicon signoff.
 | `final_typical_genus_control_single_root_20260610_161411` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Selected only `n_6899`/`g33116/Q`, but broad control-net and fast-tag Q constraints were still active. |
 | `final_typical_genus_control_exact_only_20260610_162758` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Pure single-root constraint confirmed; broad control-net and fast-tag Q constraints were skipped, but timing stayed at the control-root result. |
 | `final_typical_genus_control_exact_only_jihd_20260610_165235` | -1.4 | -15.6 | 12 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Best result so far. JIHD fixed DRV without selecting exact control roots; only tap0 bit5/6 fast-tag paths remain. |
+| `final_typical_genus_jihd_tap0_micro_20260610_172216` | -1.4 | -15.6 | 12 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Not a closure result: exact source Q pins matched, but exact endpoint D pins were `0`, so the intended tap0 data-path repair was incomplete. |
 
 ## Interpretation
 
@@ -125,9 +126,19 @@ reduces real setup to a small tap0 residue:
 - `FAST_TAG_MAPPING_STATUS=PASS`
 - `FAST_TAG_SOURCE_UNKNOWN_COUNT=0`
 
-The next run is:
+Run `final_typical_genus_jihd_tap0_micro_20260610_172216` confirmed the first
+micro wrapper was under-constrained:
 
-`FINAL_TYPICAL_GENUS_REPAIR_JIHD_TAP0_MICRO`
+```text
+FAST_TAG_EXACT_SOURCE_Q_PINS=2
+FAST_TAG_EXACT_ENDPOINT_D_PINS=0
+FAST_TAG_EXACT_D_SET_MAX_TRANSITION=SKIPPED_NO_ENDPOINT_D_PINS
+FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=SKIPPED
+```
+
+The next run is therefore:
+
+`FINAL_TYPICAL_GENUS_REPAIR_JIHD_TAP0_MICRO_V2`
 
 It keeps JIHD and disables all broad repair pressure. It applies only exact
 data-path optimization pressure to:
@@ -136,6 +147,18 @@ data-path optimization pressure to:
 - source bits: `tag_o_reg[5]`, `tag_o_reg[6]`
 - endpoint column: `gen_pd_col[0]`
 - endpoint bits: `nfast_hit_latched_reg[5]`, `nfast_hit_latched_reg[6]`
+
+The v2 selector must report:
+
+```text
+FAST_TAG_EXACT_SOURCE_Q_PINS=2
+FAST_TAG_EXACT_ENDPOINT_D_PINS=16
+FAST_TAG_EXACT_Q_SET_MAX_FANOUT=OK
+FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=OK
+FAST_TAG_EXACT_D_SET_MAX_TRANSITION=OK
+FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=1.04
+FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=OK
+```
 
 Pass criteria:
 

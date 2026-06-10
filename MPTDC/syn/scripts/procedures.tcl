@@ -1555,6 +1555,45 @@ proc mptdc_repair_parse_index_list {value default_value} {
     return [mptdc_unique_list $out]
 }
 
+proc mptdc_repair_exact_fast_tag_pin_name_match {role name tap bit pin_name} {
+    set lname [string tolower $name]
+    set lpin [string tolower $pin_name]
+
+    if {![regexp -- [format {/%s$} $lpin] $lname]} {
+        return 0
+    }
+
+    if {$role eq "source"} {
+        set col_exact [format {gen_fast_tag_col\[%s\]} $tap]
+        set bit_exact [format {tag_o_reg\[%s\]/%s$} $bit $lpin]
+        if {[regexp -- $col_exact $lname] && [regexp -- $bit_exact $lname]} {
+            return 1
+        }
+        set col_flat [format {gen_fast_tag_col_?%s([^0-9]|$)} $tap]
+        set bit_flat [format {tag_o_reg_?%s([^0-9].*)?/%s$} $bit $lpin]
+        if {[regexp -- $col_flat $lname] && [regexp -- $bit_flat $lname]} {
+            return 1
+        }
+        return 0
+    }
+
+    if {$role eq "endpoint"} {
+        set col_exact [format {gen_pd_col\[%s\]} $tap]
+        set bit_exact [format {nfast_hit_latched_reg\[%s\]/%s$} $bit $lpin]
+        if {[regexp -- $col_exact $lname] && [regexp -- $bit_exact $lname]} {
+            return 1
+        }
+        set col_flat [format {gen_pd_col_?%s([^0-9]|$)} $tap]
+        set bit_flat [format {nfast_hit_latched_reg_?%s([^0-9].*)?/%s$} $bit $lpin]
+        if {[regexp -- $col_flat $lname] && [regexp -- $bit_flat $lname]} {
+            return 1
+        }
+        return 0
+    }
+
+    return 0
+}
+
 proc mptdc_repair_collect_exact_fast_tag_pins {role taps bits pin_name} {
     set patterns [list]
     foreach tap $taps {
@@ -1568,7 +1607,46 @@ proc mptdc_repair_collect_exact_fast_tag_pins {role taps bits pin_name} {
             }
         }
     }
-    return [mptdc_repair_collect_pins $patterns]
+    set pins [mptdc_repair_collect_pins $patterns]
+    array set seen {}
+    foreach pin [mptdc_collection_to_list $pins] {
+        set name [mptdc_object_name $pin]
+        if {$name ne ""} {
+            set seen($name) 1
+        }
+    }
+
+    # Genus hierarchical globbing is inconsistent around generated names with
+    # literal brackets.  The broad collections below are intentionally followed
+    # by exact name filtering so only the requested tap/bit/pin survives.
+    set fallback_patterns [list]
+    if {$role eq "source"} {
+        lappend fallback_patterns [format {*tag_o_reg*/%s} $pin_name]
+        lappend fallback_patterns [format {*fast_tag*tag_o_reg*/%s} $pin_name]
+    } elseif {$role eq "endpoint"} {
+        lappend fallback_patterns [format {*nfast_hit_latched_reg*/%s} $pin_name]
+        lappend fallback_patterns [format {*gen_pd_col*nfast_hit_latched_reg*/%s} $pin_name]
+    }
+
+    foreach pin [mptdc_repair_collect_pins $fallback_patterns] {
+        set name [mptdc_object_name $pin]
+        if {$name eq "" || [info exists seen($name)]} {
+            continue
+        }
+        foreach tap $taps {
+            foreach bit $bits {
+                if {[mptdc_repair_exact_fast_tag_pin_name_match $role $name $tap $bit $pin_name]} {
+                    set seen($name) 1
+                    lappend pins $pin
+                    break
+                }
+            }
+            if {[info exists seen($name)]} {
+                break
+            }
+        }
+    }
+    return $pins
 }
 
 proc mptdc_repair_set_numeric_env {name default_value} {
@@ -1781,6 +1859,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             *DFRRQHDX2*
             *DFRHDX2*
             *DFRQHDX2*
+            *DFRRQJIHDX4*
+            *DFRRQJIHDX2*
             *DFRJIHDX4*
             *DFRJIHDX2*
             *DFRSJIHDX2*
@@ -1854,6 +1934,12 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $fh "FAST_TAG_EXACT_SOURCE_Q_PINS=[llength [mptdc_collection_to_list $exact_source_q_pins]]"
                 puts $fh "FAST_TAG_EXACT_SOURCE_C_PINS=[llength [mptdc_collection_to_list $exact_source_c_pins]]"
                 puts $fh "FAST_TAG_EXACT_ENDPOINT_D_PINS=[llength [mptdc_collection_to_list $exact_endpoint_d_pins]]"
+                foreach pin [mptdc_collection_to_list $exact_source_q_pins] {
+                    puts $fh "FAST_TAG_EXACT_SOURCE_Q_PIN=[mptdc_object_name $pin]"
+                }
+                foreach pin [mptdc_collection_to_list $exact_endpoint_d_pins] {
+                    puts $fh "FAST_TAG_EXACT_ENDPOINT_D_PIN=[mptdc_object_name $pin]"
+                }
                 if {[llength $exact_source_q_pins] > 0} {
                     set exact_fanout_rc [catch {set_max_fanout $exact_fast_tag_max_fanout $exact_source_q_pins} exact_fanout_err]
                     set exact_trans_rc [catch {set_max_transition $exact_fast_tag_max_transition $exact_source_q_pins} exact_trans_err]

@@ -85,6 +85,26 @@ MPTDC_FAST_TAG_REPAIR_EXACT_MAX_FANOUT=4
 MPTDC_FAST_TAG_REPAIR_EXACT_MAX_TRANSITION_NS=0.35
 ```
 
+Run `final_typical_genus_jihd_tap0_micro_20260610_172216` showed the first
+micro wrapper was incomplete: it matched the two exact source Q pins but zero
+exact endpoint D pins, so the endpoint and Q-to-D repair pressure was skipped.
+
+The v2 repair keeps the same tap/bit scope and tightens only that exact path
+set:
+
+```text
+MPTDC_FAST_TAG_REPAIR_EXACT_DATA_PATHS=1
+MPTDC_FAST_TAG_REPAIR_EXACT_TAPS=0
+MPTDC_FAST_TAG_REPAIR_EXACT_BITS="5 6"
+MPTDC_FAST_TAG_REPAIR_EXACT_MAX_FANOUT=2
+MPTDC_FAST_TAG_REPAIR_EXACT_MAX_TRANSITION_NS=0.30
+MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS=1.04
+```
+
+`MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS=1.04` is a stricter synthesis
+optimization target on the exact Q-to-D data paths. It is not a false path, not
+a multicycle, and not a relaxation.
+
 Keep disabled:
 
 - broad fast-tag Q fanout/transition constraints

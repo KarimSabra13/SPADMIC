@@ -227,7 +227,11 @@ def main() -> int:
         row["mapped_cell"] for row in mapping_rows if row["role"] == "fast_tag_source"
     )
     endpoint_count = sum(1 for row in mapping_rows if row["role"] == "nfast_hit_endpoint")
-    weak_top = top_source_counter.get("DFRRQHDX0", 0) + top_source_counter.get("DFRJIHDX0", 0)
+    weak_top = (
+        top_source_counter.get("DFRRQHDX0", 0)
+        + top_source_counter.get("DFRJIHDX0", 0)
+        + top_source_counter.get("DFRRQJIHDX0", 0)
+    )
     unknown_top = top_source_counter.get("UNKNOWN", 0)
     status = "PASS"
     if not netlist.exists() or weak_top > 0 or unknown_top > 0:
@@ -246,6 +250,10 @@ def main() -> int:
         "FAST_TAG_SOURCE_DFRJIHDX1_COUNT": str(top_source_counter.get("DFRJIHDX1", 0)),
         "FAST_TAG_SOURCE_DFRJIHDX2_COUNT": str(top_source_counter.get("DFRJIHDX2", 0)),
         "FAST_TAG_SOURCE_DFRJIHDX4_COUNT": str(top_source_counter.get("DFRJIHDX4", 0)),
+        "FAST_TAG_SOURCE_DFRRQJIHDX0_COUNT": str(top_source_counter.get("DFRRQJIHDX0", 0)),
+        "FAST_TAG_SOURCE_DFRRQJIHDX1_COUNT": str(top_source_counter.get("DFRRQJIHDX1", 0)),
+        "FAST_TAG_SOURCE_DFRRQJIHDX2_COUNT": str(top_source_counter.get("DFRRQJIHDX2", 0)),
+        "FAST_TAG_SOURCE_DFRRQJIHDX4_COUNT": str(top_source_counter.get("DFRRQJIHDX4", 0)),
         "FAST_TAG_SOURCE_DFRSJIHDX2_COUNT": str(top_source_counter.get("DFRSJIHDX2", 0)),
         "FAST_TAG_SOURCE_UNKNOWN_COUNT": str(top_source_counter.get("UNKNOWN", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRRQHDX0_COUNT": str(mapped_source_counter.get("DFRRQHDX0", 0)),
@@ -256,6 +264,10 @@ def main() -> int:
         "FAST_TAG_MAPPED_SOURCE_DFRJIHDX1_COUNT": str(mapped_source_counter.get("DFRJIHDX1", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRJIHDX2_COUNT": str(mapped_source_counter.get("DFRJIHDX2", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRJIHDX4_COUNT": str(mapped_source_counter.get("DFRJIHDX4", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRRQJIHDX0_COUNT": str(mapped_source_counter.get("DFRRQJIHDX0", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRRQJIHDX1_COUNT": str(mapped_source_counter.get("DFRRQJIHDX1", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRRQJIHDX2_COUNT": str(mapped_source_counter.get("DFRRQJIHDX2", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRRQJIHDX4_COUNT": str(mapped_source_counter.get("DFRRQJIHDX4", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRSJIHDX2_COUNT": str(mapped_source_counter.get("DFRSJIHDX2", 0)),
         "FAST_TAG_TOP_PATH_COUNT": str(len(top_paths)),
     }
@@ -295,6 +307,10 @@ def main() -> int:
                 f"FAST_TAG_SOURCE_DFRJIHDX1_COUNT={values['FAST_TAG_SOURCE_DFRJIHDX1_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRJIHDX2_COUNT={values['FAST_TAG_SOURCE_DFRJIHDX2_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRJIHDX4_COUNT={values['FAST_TAG_SOURCE_DFRJIHDX4_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRRQJIHDX0_COUNT={values['FAST_TAG_SOURCE_DFRRQJIHDX0_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRRQJIHDX1_COUNT={values['FAST_TAG_SOURCE_DFRRQJIHDX1_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRRQJIHDX2_COUNT={values['FAST_TAG_SOURCE_DFRRQJIHDX2_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRRQJIHDX4_COUNT={values['FAST_TAG_SOURCE_DFRRQJIHDX4_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRSJIHDX2_COUNT={values['FAST_TAG_SOURCE_DFRSJIHDX2_COUNT']}",
                 f"FAST_TAG_SOURCE_UNKNOWN_COUNT={values['FAST_TAG_SOURCE_UNKNOWN_COUNT']}",
                 "",
@@ -302,7 +318,7 @@ def main() -> int:
                 "",
                 "- Counts without the `MAPPED` prefix are extracted from top negative FAST_TAG_TO_PD_TS timing startpoints.",
                 "- `MAPPED` counts enumerate fast-tag source registers found in the exported netlist.",
-                "- `REVIEW_REQUIRED` means a weak `DFRRQHDX0`/`DFRJIHDX0` or unknown source cell appears on top FAST_TAG_TO_PD_TS paths.",
+                "- `REVIEW_REQUIRED` means a weak `DFRRQHDX0`/`DFRJIHDX0`/`DFRRQJIHDX0` or unknown source cell appears on top FAST_TAG_TO_PD_TS paths.",
             ]
         )
         + "\n"

@@ -1,4 +1,4 @@
-# Server Run Request - Final Typical Genus JIHD Tap0 Micro
+# Server Run Request - Final Typical Genus JIHD Tap0 Micro V2
 
 Run this on the lab server from:
 
@@ -27,6 +27,21 @@ real setup residue:
 
 This is typical-only closure for the tapeout package. It is not MMMC signoff.
 
+The first tap0 micro run:
+
+`final_typical_genus_jihd_tap0_micro_20260610_172216`
+
+did not move timing because exact endpoint matching failed:
+
+```text
+FAST_TAG_EXACT_SOURCE_Q_PINS=2
+FAST_TAG_EXACT_ENDPOINT_D_PINS=0
+FAST_TAG_EXACT_D_SET_MAX_TRANSITION=SKIPPED_NO_ENDPOINT_D_PINS
+FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=SKIPPED
+```
+
+This v2 run fixes the endpoint selector and adds strict exact-path pressure.
+
 ## Enabled Repair
 
 The wrapper owns the JIHD standard-cell environment and enables only exact
@@ -38,8 +53,9 @@ tap0 data-path pressure:
 - `MPTDC_FAST_TAG_REPAIR_EXACT_DATA_PATHS=1`
 - `MPTDC_FAST_TAG_REPAIR_EXACT_TAPS=0`
 - `MPTDC_FAST_TAG_REPAIR_EXACT_BITS="5 6"`
-- `MPTDC_FAST_TAG_REPAIR_EXACT_MAX_FANOUT=4`
-- `MPTDC_FAST_TAG_REPAIR_EXACT_MAX_TRANSITION_NS=0.35`
+- `MPTDC_FAST_TAG_REPAIR_EXACT_MAX_FANOUT=2`
+- `MPTDC_FAST_TAG_REPAIR_EXACT_MAX_TRANSITION_NS=0.30`
+- `MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS=1.04`
 
 Disabled:
 
@@ -95,13 +111,13 @@ python3 MPTDC/analog_handoff/audit_ro_tune4_abstract.py \
   --copied-lef "$DST_LEF" \
   --report work/evidence/ro_tune4_lef_audit.rpt
 
-RUN_ID=final_typical_genus_jihd_tap0_micro_$(date +%Y%m%d_%H%M%S)
+RUN_ID=final_typical_genus_jihd_tap0_micro_v2_$(date +%Y%m%d_%H%M%S)
 
 MPTDC_WORK_ROOT=work \
 MPTDC_RO_SOURCE_LEF_PATH="$SRC_LEF" \
 O1_RO_LEF_PATH="$DST_LEF" \
 O1_RO_LIBERTY_PATH="$PWD/MPTDC/syn/macros/RO_tune4_real_abstract_shell.lib" \
-bash MPTDC/syn/scripts/server_run_genus_mptdc_final_typical_jihd_tap0_micro.sh "$RUN_ID" \
+bash MPTDC/syn/scripts/server_run_genus_mptdc_final_typical_jihd_tap0_micro_v2.sh "$RUN_ID" \
   2>&1 | tee "work/logs/${RUN_ID}.console.log"
 
 RUN_DIR="work/genus/$RUN_ID"
@@ -138,6 +154,8 @@ FAST_TAG_EXACT_ENDPOINT_D_PINS=16
 FAST_TAG_EXACT_Q_SET_MAX_FANOUT=OK
 FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=OK
 FAST_TAG_EXACT_D_SET_MAX_TRANSITION=OK
+FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=1.04
+FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=OK
 ```
 
 ## Pass Criteria
