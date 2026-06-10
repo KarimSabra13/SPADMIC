@@ -22,6 +22,9 @@ MPTDC/results/**
 MPTDC/lab_snapshots/**
 MPTDC/artifacts/**
 MPTDC/report_artifacts/**
+position/syn/logs/**
+position/syn/reports/**
+position/syn/reports_pushed/**
 nohup.out
 
 # Logs, waveforms, and simulator products
