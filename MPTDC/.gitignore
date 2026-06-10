@@ -7,16 +7,24 @@ build/
 
 # ── Simulation outputs ───────────────────────────────────────────────
 *.log
+*.logv
+*.rpt.tmp
+*.tmp
 *.jou
+*.cmd
 *.wlf
 *.vcd
+*.fst
 *.fsdb
-*.shm
+*.shm/
 *.key
 *.history
 xrun.*
 INCA_libs/
 xcelium.d/
+csrc/
+simv*
+.Xil/
 
 # ── IDE / tool configs ───────────────────────────────────────────────
 *.cfproj
@@ -28,7 +36,12 @@ __pycache__/
 .venv/
 
 # ── Results (large data, not tracked) ────────────────────────────────
-results/
+../work/**
+!../work/README.md
+results/**
+lab_snapshots/**
+artifacts/**
+report_artifacts/**
 
 # ── TB dump files ────────────────────────────────────────────────────
 tb/**/*.csv
@@ -47,6 +60,18 @@ pnr/work/
 pnr/outputs/
 pnr/reports/
 pnr/logs/
+*.spef
+*.sdf
+*.enc
+*.enc.dat/
+innovus.cmd*
+genus.cmd*
+timingReports/
+reports_raw/
+checkpoints/
+snapshots/
+*.tgz
+*.tar.gz
 
 # ── Docs build ───────────────────────────────────────────────────────
 .venv_docs/
