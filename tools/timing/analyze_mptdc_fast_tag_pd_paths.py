@@ -17,7 +17,7 @@ POINT_RE = re.compile(
     r"^\s+(?P<point>\S.*?)\s+-\s+(?P<arc>\S+)\s+(?P<edge>\S+)\s+"
     r"(?P<cell>\S+)\s+(?P<fanout>\d+)\s+(?P<load>-|\d+(?:\.\d+)?)\s+"
     r"(?P<trans>-|\d+(?:\.\d+)?)\s+(?P<delay>-?\d+(?:\.\d+)?)\s+"
-    r"(?P<arrival>-?\d+(?:\.\d+)?)\s+"
+    r"(?P<arrival>-?\d+(?:\.\d+)?)\s*$"
 )
 
 

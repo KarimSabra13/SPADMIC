@@ -264,7 +264,7 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS=${MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS:-0.50}"
   echo "  MPTDC_CONTROL_REPAIR_MAX_FANOUT=${MPTDC_CONTROL_REPAIR_MAX_FANOUT:-16}"
   echo "  MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS=${MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS:-0.50}"
-  echo "  MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS=${MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS:-1}"
+  echo "  MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS=${MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS:-0}"
   echo "  MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV=${MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV:-1}"
   echo "  MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=${MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV:-0}"
   echo "  MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE=${MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE:-0}"
@@ -409,6 +409,7 @@ run_corrected_summary_parser() {
 
 run_final_diagnostic_reports() {
   local fast_analyzer="$REPO_ROOT/tools/timing/analyze_mptdc_fast_tag_pd_paths.py"
+  local fast_mapping_analyzer="$REPO_ROOT/tools/timing/analyze_mptdc_fast_tag_cell_mapping.py"
   local drv_analyzer="$REPO_ROOT/tools/timing/analyze_mptdc_drv_transition_roots.py"
   if [[ -f "$fast_analyzer" && -f "$RESULT_DIR/timing_path_classification.csv" && -f "$RESULT_DIR/timing_violations.rpt" ]]; then
     python3 "$fast_analyzer" \
@@ -416,11 +417,22 @@ run_final_diagnostic_reports() {
       --out-md "$RESULT_DIR/final_genus_fast_tag_to_pd_ts_analysis.md" \
       --limit 50 || true
   fi
+  if [[ -f "$fast_mapping_analyzer" ]]; then
+    mkdir -p "$RESULT_DIR/reports"
+    python3 "$fast_mapping_analyzer" \
+      --run-dir "$RESULT_DIR" \
+      --out-csv "$RESULT_DIR/reports/fast_tag_cell_mapping.csv" \
+      --out-env "$RESULT_DIR/fast_tag_cell_mapping.env" \
+      --out-report "$RESULT_DIR/fast_tag_cell_mapping_guardrail.rpt" || true
+  fi
   if [[ -f "$drv_analyzer" && -f "$RESULT_DIR/report_design_rules.rpt" ]]; then
     mkdir -p "$RESULT_DIR/reports"
     python3 "$drv_analyzer" \
       --run-dir "$RESULT_DIR" \
       --out-csv "$RESULT_DIR/reports/drv_transition_root_causes.csv" || true
+    python3 "$drv_analyzer" \
+      --run-dir "$RESULT_DIR" \
+      --out-csv "$RESULT_DIR/reports/control_drv_root_causes.csv" || true
   fi
 }
 
@@ -476,6 +488,20 @@ REPORT_HELPERS_STATUS="${REPORT_HELPERS_STATUS:-NA}"
 TIMING_SUMMARY_PARSE_STATUS="${TIMING_SUMMARY_PARSE_STATUS:-NA}"
 TIMING_CLASSIFICATION_PARSE_STATUS="${TIMING_CLASSIFICATION_PARSE_STATUS:-NA}"
 SUMMARY_RAW_AGREEMENT_STATUS="${SUMMARY_RAW_AGREEMENT_STATUS:-NA}"
+FAST_TAG_FLOP_BIAS_MODE=DISABLED
+if [[ "${MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS:-0}" == "1" ]]; then
+  FAST_TAG_FLOP_BIAS_MODE=EXPERIMENTAL_UNSAFE
+fi
+FAST_TAG_MAPPING_PARSE_STATUS=NA
+FAST_TAG_MAPPING_STATUS=NA
+FAST_TAG_SOURCE_DFRRQHDX0_COUNT=NA
+FAST_TAG_SOURCE_DFRRQHDX1_COUNT=NA
+FAST_TAG_SOURCE_DFRRQHDX2_COUNT=NA
+FAST_TAG_SOURCE_DFRRQHDX4_COUNT=NA
+FAST_TAG_SOURCE_UNKNOWN_COUNT=NA
+FAST_TAG_MAPPED_SOURCE_COUNT=NA
+FAST_TAG_MAPPED_ENDPOINT_COUNT=NA
+FAST_TAG_TOP_PATH_COUNT=NA
 FINAL_DECISION="GENUS_TYPICAL_REVIEW_REQUIRED"
 RAW_CLOCK_NAMES=(clk_osc_slow)
 BUFFER_CLOCK_NAMES=()
@@ -543,6 +569,10 @@ if [[ -f "$RESULT_DIR/report_design_rules.rpt" ]]; then
   fi
 fi
 run_corrected_summary_parser
+if [[ -f "$RESULT_DIR/fast_tag_cell_mapping.env" ]]; then
+  # shellcheck source=/dev/null
+  source "$RESULT_DIR/fast_tag_cell_mapping.env"
+fi
 
 write_macro_binding_check() {
   local out="$RESULT_DIR/macro_binding_check.rpt"
@@ -641,6 +671,10 @@ write_final_readiness() {
     echo "- Max transition violations: \`$MAX_TRANSITION_VIOLATIONS\`"
     echo "- Report helper failures: \`$REPORT_HELPER_FAILURE_COUNT\`"
     echo "- Report helpers status: \`$REPORT_HELPERS_STATUS\`"
+    echo "- Fast tag flop bias mode: \`$FAST_TAG_FLOP_BIAS_MODE\`"
+    echo "- Fast tag mapping status: \`$FAST_TAG_MAPPING_STATUS\`"
+    echo "- Fast tag top source DFRRQHDX0 count: \`$FAST_TAG_SOURCE_DFRRQHDX0_COUNT\`"
+    echo "- Fast tag top source UNKNOWN count: \`$FAST_TAG_SOURCE_UNKNOWN_COUNT\`"
     echo
     if [[ -f "$RESULT_DIR/timing_path_classification_summary.md" ]]; then
       echo "## Classification Summary"
@@ -712,6 +746,17 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "WORST_REAL_PATH_FAMILY=$WORST_REAL_PATH_FAMILY"
   echo "REPORT_HELPER_FAILURE_COUNT=$REPORT_HELPER_FAILURE_COUNT"
   echo "REPORT_HELPERS_STATUS=$REPORT_HELPERS_STATUS"
+  echo "FAST_TAG_FLOP_BIAS_MODE=$FAST_TAG_FLOP_BIAS_MODE"
+  echo "FAST_TAG_MAPPING_PARSE_STATUS=$FAST_TAG_MAPPING_PARSE_STATUS"
+  echo "FAST_TAG_MAPPING_STATUS=$FAST_TAG_MAPPING_STATUS"
+  echo "FAST_TAG_SOURCE_DFRRQHDX0_COUNT=$FAST_TAG_SOURCE_DFRRQHDX0_COUNT"
+  echo "FAST_TAG_SOURCE_DFRRQHDX1_COUNT=$FAST_TAG_SOURCE_DFRRQHDX1_COUNT"
+  echo "FAST_TAG_SOURCE_DFRRQHDX2_COUNT=$FAST_TAG_SOURCE_DFRRQHDX2_COUNT"
+  echo "FAST_TAG_SOURCE_DFRRQHDX4_COUNT=$FAST_TAG_SOURCE_DFRRQHDX4_COUNT"
+  echo "FAST_TAG_SOURCE_UNKNOWN_COUNT=$FAST_TAG_SOURCE_UNKNOWN_COUNT"
+  echo "FAST_TAG_MAPPED_SOURCE_COUNT=$FAST_TAG_MAPPED_SOURCE_COUNT"
+  echo "FAST_TAG_MAPPED_ENDPOINT_COUNT=$FAST_TAG_MAPPED_ENDPOINT_COUNT"
+  echo "FAST_TAG_TOP_PATH_COUNT=$FAST_TAG_TOP_PATH_COUNT"
   echo "TIMING_SUMMARY_PARSE_STATUS=$TIMING_SUMMARY_PARSE_STATUS"
   echo "TIMING_CLASSIFICATION_PARSE_STATUS=$TIMING_CLASSIFICATION_PARSE_STATUS"
   echo "SUMMARY_RAW_AGREEMENT_STATUS=$SUMMARY_RAW_AGREEMENT_STATUS"
@@ -761,6 +806,7 @@ elif [[ "$GENUS_RC" == "0" \
     && "$UNKNOWN_REVIEW_REQUIRED_COUNT" == "0" \
     && "$SDC_COMMAND_FAILURE_COUNT" == "0" \
     && "$REPORT_HELPER_FAILURE_COUNT" == "0" \
+    && "$FAST_TAG_MAPPING_STATUS" == "PASS" \
     && "$SUMMARY_RAW_AGREEMENT_STATUS" == "PASS" \
     && "$TIMING_SUMMARY_PARSE_STATUS" == "PASS" \
     && "$TIMING_CLASSIFICATION_PARSE_STATUS" == "PASS" \
@@ -840,6 +886,17 @@ write_final_readiness
   echo "- Worst real path family: $WORST_REAL_PATH_FAMILY"
   echo "- Report helper failure count: $REPORT_HELPER_FAILURE_COUNT"
   echo "- Report helpers status: $REPORT_HELPERS_STATUS"
+  echo "- FAST_TAG_FLOP_BIAS_MODE: $FAST_TAG_FLOP_BIAS_MODE"
+  echo "- FAST_TAG_MAPPING_PARSE_STATUS: $FAST_TAG_MAPPING_PARSE_STATUS"
+  echo "- FAST_TAG_MAPPING_STATUS: $FAST_TAG_MAPPING_STATUS"
+  echo "- FAST_TAG_SOURCE_DFRRQHDX0_COUNT: $FAST_TAG_SOURCE_DFRRQHDX0_COUNT"
+  echo "- FAST_TAG_SOURCE_DFRRQHDX1_COUNT: $FAST_TAG_SOURCE_DFRRQHDX1_COUNT"
+  echo "- FAST_TAG_SOURCE_DFRRQHDX2_COUNT: $FAST_TAG_SOURCE_DFRRQHDX2_COUNT"
+  echo "- FAST_TAG_SOURCE_DFRRQHDX4_COUNT: $FAST_TAG_SOURCE_DFRRQHDX4_COUNT"
+  echo "- FAST_TAG_SOURCE_UNKNOWN_COUNT: $FAST_TAG_SOURCE_UNKNOWN_COUNT"
+  echo "- FAST_TAG_MAPPED_SOURCE_COUNT: $FAST_TAG_MAPPED_SOURCE_COUNT"
+  echo "- FAST_TAG_MAPPED_ENDPOINT_COUNT: $FAST_TAG_MAPPED_ENDPOINT_COUNT"
+  echo "- FAST_TAG_TOP_PATH_COUNT: $FAST_TAG_TOP_PATH_COUNT"
   echo "- Timing summary parse status: $TIMING_SUMMARY_PARSE_STATUS"
   echo "- Timing classification parse status: $TIMING_CLASSIFICATION_PARSE_STATUS"
   echo "- Summary/raw agreement status: $SUMMARY_RAW_AGREEMENT_STATUS"
@@ -899,8 +956,11 @@ write_final_readiness
     summary_parser_check.rpt \
     report_helpers_status.rpt \
     helper_tcl_selftest.rpt \
+    fast_tag_cell_mapping_guardrail.rpt \
     final_genus_fast_tag_to_pd_ts_analysis.md \
+    reports/fast_tag_cell_mapping.csv \
     reports/drv_transition_root_causes.csv \
+    reports/control_drv_root_causes.csv \
     timing_path_classification.csv \
     timing_path_classification_summary.md; do
     if [[ -f "$RESULT_DIR/$file" ]]; then

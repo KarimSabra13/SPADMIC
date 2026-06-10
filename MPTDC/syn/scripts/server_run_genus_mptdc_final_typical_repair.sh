@@ -24,6 +24,7 @@ mptdc_common_require_file "stable PD Vernier exception SDC" "$MPTDC_DIR/syn/inpu
 mptdc_common_require_file "RO_tune4 Liberty shell" "$MPTDC_DIR/syn/macros/RO_tune4_real_abstract_shell.lib"
 mptdc_common_require_file "summary parser" "$REPO_ROOT/tools/timing/summarize_mptdc_genus_run.py"
 mptdc_common_require_file "fast-tag path analyzer" "$REPO_ROOT/tools/timing/analyze_mptdc_fast_tag_pd_paths.py"
+mptdc_common_require_file "fast-tag cell mapping analyzer" "$REPO_ROOT/tools/timing/analyze_mptdc_fast_tag_cell_mapping.py"
 mptdc_common_require_file "DRV transition analyzer" "$REPO_ROOT/tools/timing/analyze_mptdc_drv_transition_roots.py"
 
 mkdir -p "$MPTDC_GENUS_WORK"
@@ -44,7 +45,7 @@ export O13_SDC_PATH="${O13_SDC_PATH:-$MPTDC_DIR/syn/inputs/mptdc_pd_vernier_exce
 export O13_GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
 export MPTDC_GENUS_REPAIR_FAST_TAG_PD="${MPTDC_GENUS_REPAIR_FAST_TAG_PD:-1}"
 export MPTDC_GENUS_REPAIR_DRV_TRANSITION="${MPTDC_GENUS_REPAIR_DRV_TRANSITION:-1}"
-export MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS="${MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS:-1}"
+export MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS="${MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS:-0}"
 export MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV="${MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV:-1}"
 export MPTDC_FAST_TAG_REPAIR_MAX_FANOUT="${MPTDC_FAST_TAG_REPAIR_MAX_FANOUT:-16}"
 export MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS="${MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS:-0.50}"

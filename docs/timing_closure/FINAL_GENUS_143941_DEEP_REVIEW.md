@@ -41,9 +41,10 @@ The detailed rows are dominated by fast-tag source C-to-Q delay:
 - endpoint setup: about `264-265 ps`
 
 This is not CDC, not the intentional slow-to-fast PD Vernier exception, and not
-a false-path candidate.  The next safe Genus lever is exact source-flop drive
-bias: prefer `DFRRQHDX4` and avoid `DFRRQHDX1/2` for this repair mode.  Do not
-relax fast-tag preserve or release broad PD/nfast capture fabric.
+a false-path candidate. A later cellbias run proved that broad source-flop
+drive bias is unsafe, so do not avoid `DFRRQHDX1/2` globally and do not use
+that run as a timing baseline. First isolate the control-only DRV repair, then
+use a separate narrow fast-tag setup repair if the baseline returns.
 
 ## Remaining DRV
 
@@ -79,7 +80,8 @@ this single-view repair run.
 
 ## Next Run Decision
 
-The next run should pass only if all of these are true:
+The next run is `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_ONLY`. It should pass only
+if all of these are true:
 
 - setup WNS is `>= 0 ps`;
 - setup TNS is `0 ps`;

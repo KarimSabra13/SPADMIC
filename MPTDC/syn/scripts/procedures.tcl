@@ -1616,10 +1616,10 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         puts $fh "FAST_TAG_C_PINS=[llength [mptdc_collection_to_list $fast_tag_c_pins]]"
         puts $fh "NFAST_CAPTURE_D_PINS=[llength [mptdc_collection_to_list $nfast_capture_d_pins]]"
         if {[llength $fast_tag_q_pins] > 0} {
-            catch {set_max_fanout $fast_tag_max_fanout $fast_tag_q_pins} err_fanout
-            catch {set_max_transition $fast_tag_max_transition $fast_tag_q_pins} err_trans
-            puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=[expr {$err_fanout eq {} ? {OK} : $err_fanout}]"
-            puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=[expr {$err_trans eq {} ? {OK} : $err_trans}]"
+            set fanout_rc [catch {set_max_fanout $fast_tag_max_fanout $fast_tag_q_pins} err_fanout]
+            set trans_rc [catch {set_max_transition $fast_tag_max_transition $fast_tag_q_pins} err_trans]
+            puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=[expr {$fanout_rc == 0 ? {OK} : $err_fanout}]"
+            puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=[expr {$trans_rc == 0 ? {OK} : $err_trans}]"
         }
         if {[llength $fast_tag_c_pins] > 0} {
             if {[llength [info commands set_critical_range]] > 0} {
@@ -1680,10 +1680,10 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         set control_nets [mptdc_unique_list $control_nets]
         puts $fh "CONTROL_REPAIR_NETS=[llength $control_nets]"
         if {[llength $control_nets] > 0} {
-            catch {set_max_fanout $control_max_fanout $control_nets} err_ctrl_fanout
-            catch {set_max_transition $control_max_transition $control_nets} err_ctrl_trans
-            puts $fh "CONTROL_SET_MAX_FANOUT=[expr {$err_ctrl_fanout eq {} ? {OK} : $err_ctrl_fanout}]"
-            puts $fh "CONTROL_SET_MAX_TRANSITION=[expr {$err_ctrl_trans eq {} ? {OK} : $err_ctrl_trans}]"
+            set ctrl_fanout_rc [catch {set_max_fanout $control_max_fanout $control_nets} err_ctrl_fanout]
+            set ctrl_trans_rc [catch {set_max_transition $control_max_transition $control_nets} err_ctrl_trans]
+            puts $fh "CONTROL_SET_MAX_FANOUT=[expr {$ctrl_fanout_rc == 0 ? {OK} : $err_ctrl_fanout}]"
+            puts $fh "CONTROL_SET_MAX_TRANSITION=[expr {$ctrl_trans_rc == 0 ? {OK} : $err_ctrl_trans}]"
         }
         if {$design_drv_repair} {
             catch {set_max_fanout $control_max_fanout [current_design]} err_design_fanout

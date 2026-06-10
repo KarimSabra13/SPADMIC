@@ -75,8 +75,8 @@ the high-fanout non-phase control-net repair experiment.
 
 The repair package may:
 
-- prefer `DFRRQHDX4` for fast-tag source flops after the guarded run confirms
-  the source cells remain `DFRRQHDX2`;
+- consider `DFRRQHDX4` only in a future exact-path fast-tag setup experiment,
+  not as a broad default source-flop bias;
 - prefer `INHDX12` over `INHDX8` on high-fanout non-phase control nets after
   the guarded run confirms the remaining root is `n_6984`;
 - allow stronger local buffers/inverters on high-fanout PD control nets;

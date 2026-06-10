@@ -85,8 +85,7 @@ source C->Q dominated, the repair should stay narrowly focused on the fast-tag
 source instances and their local nfast distribution. A later pressure run that
 also relaxed fast-tag preserve and released broad PD/nfast capture hierarchy
 regressed to `PD_HIT_LATCH_LOCAL_FAST` with about `-91.7 ps` WNS. Do not make
-that broad preserve release the default. Keep any stronger flop or preserve
-experiment opt-in and compare it against this `-3.5 ps` baseline.
+that broad preserve release the default.
 
 ## 143941 Guarded Update
 
@@ -100,6 +99,7 @@ pressure knobs and returned exactly to the real residual:
 - `MPTDC_RELAX_FAST_TAG_PRESERVE`: not active
 
 The top rows are still source C->Q dominated and still launch from
-`DFRRQHDX2`.  The next checked-in repair enables only the exact strong source
-flop bias (`DFRRQHDX4` preferred, `DFRRQHDX1/2` avoided) while preserving the
-fast-tag hierarchy and keeping broad PD/nfast capture release disabled.
+`DFRRQHDX2`. A later cellbias run showed that broad fast-tag flop bias is
+harmful, so the next checked-in run disables that bias and isolates the
+control-driver repair. Any future setup repair must target only proven weak
+top-path source mapping or exact data nets.

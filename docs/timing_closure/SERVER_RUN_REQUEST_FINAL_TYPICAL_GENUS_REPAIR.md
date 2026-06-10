@@ -81,8 +81,8 @@ The corrected wrapper is conservative again:
 - no design-wide DRV pressure by default;
 - fast-tag Q pressure defaults to fanout `16` and transition `0.50 ns`;
 - control-net pressure defaults to fanout `16` and transition `0.50 ns`;
-- strong fast-tag flop and high-fanout inverter bias are enabled by default,
-  but only with exact cell-name patterns and without broad PD fabric release.
+- strong high-fanout inverter bias is enabled by default;
+- strong fast-tag flop bias is disabled by default and is experimental only;
 
 The guarded run `final_typical_genus_repair_guarded_20260610_143941` confirmed
 that the broad pressure regression is gone and the remaining blockers are the
@@ -95,10 +95,15 @@ original narrow ones:
 - report helper failures: `0`;
 - `MPTDC_RELAX_FAST_TAG_PRESERVE`: not active.
 
-The next repair step therefore enables `DFRRQHDX4` source-flop preference and
-`INHDX12` high-fanout control inverter preference by default while keeping
-`MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=0`, transition targets at `0.50 ns`, and
-the fast-tag preserve relaxation off.
+The cellbias run later showed that broad fast-tag flop preference is unsafe:
+it fixed DRV but regressed setup to roughly `-84.7 ps` WNS and `504` violating
+paths. The checked-in default therefore keeps strong fast-tag flop bias
+disabled and leaves it as an explicit experimental mode only.
+
+Use `SERVER_RUN_REQUEST_FINAL_TYPICAL_GENUS_CONTROL_ONLY.md` for the next
+server run. That run enables the `INHDX12` high-fanout control-driver bias
+while keeping `MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=0`, transition targets at
+`0.50 ns`, and fast-tag preserve relaxation off.
 
 ## Expected Good Result
 
