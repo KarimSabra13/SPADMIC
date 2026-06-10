@@ -1548,6 +1548,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_DRV_TRANSITION false]
     set strong_fast_flops [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS false]
     set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV false]
+    set control_bias_stage [string tolower [mptdc_repair_set_numeric_env MPTDC_GENUS_REPAIR_CONTROL_CELL_BIAS_STAGE all]]
+    set control_avoid_inhdx8 [mptdc_bool_env MPTDC_GENUS_REPAIR_CONTROL_AVOID_INHDX8 true]
     set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 16]
     set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.50]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
@@ -1566,6 +1568,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "DRV_TRANSITION_REPAIR=$drv_repair"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
+    puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
+    puts $fh "CONTROL_AVOID_INHDX8=$control_avoid_inhdx8"
     puts $fh "FAST_TAG_MAX_FANOUT=$fast_tag_max_fanout"
     puts $fh "FAST_TAG_MAX_TRANSITION_NS=$fast_tag_max_transition"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
@@ -1651,16 +1655,26 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             *BUHDX8*
             *BUHDX6*
         } $fh
-        if {$strong_control_drv} {
-            mptdc_try_avoid_lib_cells CONTROL_WEAK_INVERTERS {
+        set apply_control_cell_bias [expr {
+            $strong_control_drv &&
+            ($control_bias_stage eq "all" ||
+             $control_bias_stage eq $stage ||
+             ($control_bias_stage eq "post_map_only" && $stage eq "post_map_pre_opt"))
+        }]
+        puts $fh "CONTROL_CELL_BIAS_APPLIED=$apply_control_cell_bias"
+        if {$apply_control_cell_bias} {
+            set weak_control_inverters {
                 */INHDX0
                 */INHDX1
                 */INHDX2
                 */INHDX3
                 */INHDX4
                 */INHDX6
-                */INHDX8
-            } $fh
+            }
+            if {$control_avoid_inhdx8} {
+                lappend weak_control_inverters */INHDX8
+            }
+            mptdc_try_avoid_lib_cells CONTROL_WEAK_INVERTERS $weak_control_inverters $fh
             mptdc_try_unavoid_lib_cells CONTROL_PREFERRED_INVERTERS {
                 */INHDX12
             } $fh

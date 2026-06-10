@@ -130,6 +130,28 @@ def parse_top_fast_paths(path: Path) -> list[dict[str, str]]:
     return rows
 
 
+def inst_from_pin(value: str) -> str:
+    if not value:
+        return ""
+    text = value.strip().lstrip("\\")
+    if "/" not in text:
+        return text
+    return text.rsplit("/", 1)[0].lstrip("\\")
+
+
+def source_cell_from_mapping(row: dict[str, str], mapping_rows: list[dict[str, str]]) -> str:
+    start_inst = canonical(inst_from_pin(row.get("startpoint", "")))
+    if not start_inst:
+        return ""
+    for mapping in mapping_rows:
+        if mapping.get("role") != "fast_tag_source":
+            continue
+        mapped_inst = canonical(mapping.get("instance", ""))
+        if mapped_inst and (mapped_inst == start_inst or mapped_inst in start_inst or start_inst in mapped_inst):
+            return mapping.get("mapped_cell", "")
+    return ""
+
+
 def source_cell_from_block(block: str) -> str:
     points = parse_point_rows(block)
     candidates = [
@@ -183,7 +205,10 @@ def main() -> int:
 
     top_source_counter: Counter[str] = Counter()
     for row in top_paths:
-        top_source_counter[source_cell_from_block(blocks.get(row.get("path", ""), ""))] += 1
+        source_cell = source_cell_from_mapping(row, mapping_rows)
+        if not source_cell:
+            source_cell = source_cell_from_block(blocks.get(row.get("path", ""), ""))
+        top_source_counter[source_cell or "UNKNOWN"] += 1
 
     mapped_source_counter = Counter(
         row["mapped_cell"] for row in mapping_rows if row["role"] == "fast_tag_source"

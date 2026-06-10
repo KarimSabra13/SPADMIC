@@ -11,6 +11,7 @@ and not final silicon signoff.
 | `final_typical_genus_repair_pressure_20260610_141642` | -91.7 | -37024.9 | 512 | `PD_HIT_LATCH_LOCAL_FAST` | 3505 | 1 | Unsafe preserve relaxation and broad pressure active. |
 | `final_typical_genus_repair_guarded_20260610_143941` | -3.5 | -77.1 | 42 | `FAST_TAG_TO_PD_TS` | 1015 | 0 | Best timing baseline; helper path clean. |
 | `final_typical_genus_repair_cellbias_20260610_145854` | -84.7 | -21196.0 | 504 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but broad fast-tag flop bias badly regressed timing. |
+| `final_typical_genus_control_only_20260610_152702` | -23.0 | -1870.3 | 218 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but all-stage control-cell bias still perturbed fast timing. |
 
 ## Interpretation
 
@@ -27,15 +28,21 @@ unsafe. Avoiding `DFRRQHDX1/2` did not force a better source register; it
 allowed weaker or unclassified source mapping in top fast-tag paths and pushed
 WNS to about `-85 ps`.
 
+The control-only run is a partial isolation result. It confirms that fast-tag
+flop bias is not required to clean DRV, but the control-driver bias is still too
+broad when applied before generic mapping.
+
 ## Next Decision
 
-Run `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_ONLY`.
+Run `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_LATE`.
 
-The control-only experiment keeps the solved O13/RO/PD/report behavior, keeps
-fast-tag preserve relaxation disabled, and isolates the good DRV lever from the
-bad fast-tag flop bias:
+The late-control experiment keeps the solved O13/RO/PD/report behavior, keeps
+fast-tag preserve relaxation disabled, and applies control-cell bias only after
+mapping:
 
 - `STRONG_CONTROL_DRV=1`
+- `CONTROL_CELL_BIAS_STAGE=post_map_only`
+- `CONTROL_AVOID_INHDX8=0`
 - `STRONG_FAST_TAG_FLOPS=0`
 - `MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE=0`
 - `MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=0`
@@ -47,6 +54,6 @@ Expected useful outcome:
 - DRV stays at `0 / 0 / 0`.
 
 If that happens, the control repair is good and the remaining work is a
-separate narrow `FAST_TAG_TO_PD_TS` setup repair. If timing stays near
-`-80 ps`, the control-driver bias still perturbs fast timing and must be
-replaced with an exact-net DRV repair.
+separate narrow `FAST_TAG_TO_PD_TS` setup repair. If timing remains around
+`-20 ps` or worse, the control-driver bias still perturbs fast timing and must
+be replaced with an exact-net DRV repair.
