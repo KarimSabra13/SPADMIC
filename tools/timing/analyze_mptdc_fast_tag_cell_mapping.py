@@ -97,13 +97,17 @@ def infer_tap(name: str) -> str:
 
 def infer_bit(name: str) -> str:
     for pattern in (
-        r"tag_o_reg\[([0-9]+)\]",
+        r"tag_o_reg(?:_reg)?\[([0-9]+)\]",
         r"nfast_hit_latched_reg\[([0-9]+)\]",
     ):
         match = re.search(pattern, name)
         if match:
             return match.group(1)
     return "NA"
+
+
+def cell_basename(cell: str) -> str:
+    return cell.rsplit("/", 1)[-1]
 
 
 def infer_drive_strength(cell: str) -> str:
@@ -141,6 +145,7 @@ def inst_from_pin(value: str) -> str:
 
 def source_cell_from_mapping(row: dict[str, str], mapping_rows: list[dict[str, str]]) -> str:
     start_inst = canonical(inst_from_pin(row.get("startpoint", "")))
+    start_text = row.get("startpoint", "")
     if not start_inst:
         return ""
     for mapping in mapping_rows:
@@ -148,7 +153,15 @@ def source_cell_from_mapping(row: dict[str, str], mapping_rows: list[dict[str, s
             continue
         mapped_inst = canonical(mapping.get("instance", ""))
         if mapped_inst and (mapped_inst == start_inst or mapped_inst in start_inst or start_inst in mapped_inst):
-            return mapping.get("mapped_cell", "")
+            return cell_basename(mapping.get("mapped_cell", ""))
+    start_tap = infer_tap(start_text)
+    start_bit = infer_bit(start_text)
+    if start_tap != "NA" and start_bit != "NA":
+        for mapping in mapping_rows:
+            if mapping.get("role") != "fast_tag_source":
+                continue
+            if mapping.get("tap_index") == start_tap and mapping.get("bit_index") == start_bit:
+                return cell_basename(mapping.get("mapped_cell", ""))
     return ""
 
 
@@ -158,13 +171,13 @@ def source_cell_from_block(block: str) -> str:
         point
         for point in points
         if "tag" in point["point"].lower()
-        and point["cell"].startswith(("DF", "SDF"))
+        and cell_basename(point["cell"]).startswith(("DF", "SDF"))
     ]
     for point in candidates:
         if point["point"].endswith(("/Q", "/QN")):
-            return point["cell"]
+            return cell_basename(point["cell"])
     if candidates:
-        return candidates[0]["cell"]
+        return cell_basename(candidates[0]["cell"])
     return "UNKNOWN"
 
 

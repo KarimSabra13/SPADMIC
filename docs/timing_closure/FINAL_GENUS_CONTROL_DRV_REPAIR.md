@@ -99,3 +99,48 @@ a global pressure mode.
 
 If the root is later proven to be reset or asynchronous clear, buffering is
 allowed only with recovery/removal protocol review.
+
+## Late Control Result
+
+Observed result:
+
+- `final_typical_genus_control_late_20260610_154404`
+- setup WNS `-20.4 ps`
+- setup TNS `-5782.7 ps`
+- setup violating paths `378`
+- DRV `0 / 0 / 0`
+
+This is not an acceptable timing isolation result. Delaying the control-cell
+bias until post-map and keeping `INHDX8` legal still perturbs the fast-domain
+implementation. The root problem is the class-level control inverter bias, not
+the fast-tag flop bias.
+
+## Exact Root Experiment
+
+The next experiment is:
+
+`MPTDC_FINAL_TYPICAL_GENUS_REPAIR_CONTROL_ROOT`
+
+This mode disables class-level control-cell bias and enables high-fanout
+PD-control root selection after mapping:
+
+- `STRONG_CONTROL_DRV=0`
+- `CONTROL_CELL_BIAS_STAGE=none`
+- `MPTDC_GENUS_REPAIR_EXACT_CONTROL_ROOTS=1`
+- `MPTDC_CONTROL_REPAIR_EXACT_MIN_FANOUT=64`
+- fast-tag preserve relaxation disabled
+- design-wide DRV pressure disabled
+
+Expected useful outcome:
+
+- timing returns close to the guarded baseline, about `-3.5 ps` WNS and
+  `-77 ps` TNS;
+- the exact selected root list includes the generated high-fanout PD-control
+  root, ideally the `n_6984` class root;
+- DRV is either clean, or returns as a single auditable root in
+  `reports/control_drv_root_causes.csv`.
+
+If timing is good and DRV is clean, proceed to narrow `FAST_TAG_TO_PD_TS`
+repair. If timing is good but DRV returns, the exact-root selector needs one
+more refinement. If timing remains near `-20 ps`, another non-obvious knob is
+still changing fast-domain mapping and must be isolated before timing repair.

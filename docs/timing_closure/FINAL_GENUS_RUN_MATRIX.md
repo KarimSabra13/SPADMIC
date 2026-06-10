@@ -12,6 +12,7 @@ and not final silicon signoff.
 | `final_typical_genus_repair_guarded_20260610_143941` | -3.5 | -77.1 | 42 | `FAST_TAG_TO_PD_TS` | 1015 | 0 | Best timing baseline; helper path clean. |
 | `final_typical_genus_repair_cellbias_20260610_145854` | -84.7 | -21196.0 | 504 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but broad fast-tag flop bias badly regressed timing. |
 | `final_typical_genus_control_only_20260610_152702` | -23.0 | -1870.3 | 218 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but all-stage control-cell bias still perturbed fast timing. |
+| `final_typical_genus_control_late_20260610_154404` | -20.4 | -5782.7 | 378 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but late control-cell bias still perturbed fast timing. |
 
 ## Interpretation
 
@@ -28,21 +29,22 @@ unsafe. Avoiding `DFRRQHDX1/2` did not force a better source register; it
 allowed weaker or unclassified source mapping in top fast-tag paths and pushed
 WNS to about `-85 ps`.
 
-The control-only run is a partial isolation result. It confirms that fast-tag
-flop bias is not required to clean DRV, but the control-driver bias is still too
-broad when applied before generic mapping.
+The control-only and control-late runs are partial isolation results. They
+confirm that fast-tag flop bias is not required to clean DRV, but control-driver
+cell-class bias is still too broad even when delayed until post-map.
 
 ## Next Decision
 
-Run `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_LATE`.
+Run `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_ROOT`.
 
-The late-control experiment keeps the solved O13/RO/PD/report behavior, keeps
-fast-tag preserve relaxation disabled, and applies control-cell bias only after
-mapping:
+The exact-root experiment keeps the solved O13/RO/PD/report behavior, keeps
+fast-tag preserve relaxation disabled, and disables broad control-cell bias.
+It only adds high-fanout PD-control root selection before `syn_opt`:
 
-- `STRONG_CONTROL_DRV=1`
-- `CONTROL_CELL_BIAS_STAGE=post_map_only`
-- `CONTROL_AVOID_INHDX8=0`
+- `STRONG_CONTROL_DRV=0`
+- `CONTROL_CELL_BIAS_STAGE=none`
+- `MPTDC_GENUS_REPAIR_EXACT_CONTROL_ROOTS=1`
+- `MPTDC_CONTROL_REPAIR_EXACT_MIN_FANOUT=64`
 - `STRONG_FAST_TAG_FLOPS=0`
 - `MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE=0`
 - `MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=0`
@@ -53,7 +55,7 @@ Expected useful outcome:
   TNS;
 - DRV stays at `0 / 0 / 0`.
 
-If that happens, the control repair is good and the remaining work is a
-separate narrow `FAST_TAG_TO_PD_TS` setup repair. If timing remains around
-`-20 ps` or worse, the control-driver bias still perturbs fast timing and must
-be replaced with an exact-net DRV repair.
+If that happens, the root-only control repair is good and the remaining work is
+a separate narrow `FAST_TAG_TO_PD_TS` setup repair. If timing returns to the
+guarded baseline but DRV returns, the exact-root selector is missing the real
+root and the repair must be driven from `control_drv_root_causes.csv`.

@@ -62,6 +62,16 @@ The `FAST_TAG_SOURCE_*` counters refer to top negative
 `FAST_TAG_TO_PD_TS` timing startpoints. The mapped-source counters enumerate
 the exported netlist.
 
+Source-cell resolution is intentionally two-step:
+
+1. match the timing startpoint instance directly against exported netlist
+   instances;
+2. if flattened/escaped naming prevents a direct match, match by inferred
+   fast-tag tap and tag bit.
+
+After this fallback, a remaining `UNKNOWN` source count should be treated as a
+real review item rather than a simple bracket/escape formatting miss.
+
 ## Guardrail
 
 Mark the run `REVIEW_REQUIRED` if either appears on top negative

@@ -1542,6 +1542,92 @@ proc mptdc_repair_set_numeric_env {name default_value} {
     return $default_value
 }
 
+proc mptdc_repair_net_fanout {net} {
+    foreach attr {.num_loads .fanout} {
+        if {![catch {set value [get_db $net $attr]}] && [string is integer -strict $value]} {
+            return $value
+        }
+    }
+    foreach attr {.loads .load_pins .pins} {
+        if {![catch {set loads [get_db $net $attr]}]} {
+            return [llength [mptdc_collection_to_list $loads]]
+        }
+    }
+    return -1
+}
+
+proc mptdc_repair_net_load_names {net} {
+    set out [list]
+    foreach attr {.loads .load_pins .pins} {
+        if {[catch {set loads [get_db $net $attr]}]} {
+            continue
+        }
+        foreach load [mptdc_collection_to_list $loads] {
+            set name [mptdc_object_name $load]
+            if {$name ne ""} {
+                lappend out $name
+            }
+        }
+        if {[llength $out] > 0} {
+            break
+        }
+    }
+    return $out
+}
+
+proc mptdc_collect_exact_control_root_nets {min_fanout fh} {
+    set selected [list]
+    set rows [list]
+    if {[catch {set nets [get_db nets]} err]} {
+        puts $fh "EXACT_CONTROL_ROOT_QUERY_ERROR=$err"
+        return $selected
+    }
+    foreach net [mptdc_collection_to_list $nets] {
+        set net_name [mptdc_object_name $net]
+        if {$net_name eq ""} {
+            set net_name "UNKNOWN"
+        }
+        set low_name [string tolower $net_name]
+        if {[string match *clk* $low_name] ||
+            [string match *clock* $low_name] ||
+            [string match *phase* $low_name] ||
+            [string match *ro_tune4* $low_name]} {
+            continue
+        }
+        set fanout [mptdc_repair_net_fanout $net]
+        if {$fanout < $min_fanout} {
+            continue
+        }
+        set pd_sink_count 0
+        set reset_sink_count 0
+        foreach load_name [mptdc_repair_net_load_names $net] {
+            set low_load [string tolower $load_name]
+            if {[string match *gen_pd_row* $low_load] && [string match *u_pd* $low_load]} {
+                incr pd_sink_count
+            }
+            if {[string match *rst* $low_load] || [string match */rn $low_load] || [string match */reset* $low_load]} {
+                incr reset_sink_count
+            }
+        }
+        if {$pd_sink_count == 0 && $reset_sink_count == 0} {
+            continue
+        }
+        set driver ""
+        if {![catch {set drv [get_db $net .driver]}] && [llength $drv] > 0} {
+            set driver [mptdc_object_name $drv]
+        }
+        lappend selected $net
+        lappend rows [list $fanout $net_name $driver $pd_sink_count $reset_sink_count]
+    }
+    set selected [mptdc_unique_list $selected]
+    set rows [lsort -integer -decreasing -index 0 $rows]
+    puts $fh "EXACT_CONTROL_ROOT_NETS=[llength $selected]"
+    foreach row $rows {
+        puts $fh "EXACT_CONTROL_ROOT_NET=[lindex $row 1] fanout=[lindex $row 0] driver=[lindex $row 2] pd_sinks=[lindex $row 3] reset_sinks=[lindex $row 4]"
+    }
+    return $selected
+}
+
 proc mptdc_apply_final_typical_repair_1 {stage} {
     global design
     set fast_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_FAST_TAG_PD false]
@@ -1550,6 +1636,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV false]
     set control_bias_stage [string tolower [mptdc_repair_set_numeric_env MPTDC_GENUS_REPAIR_CONTROL_CELL_BIAS_STAGE all]]
     set control_avoid_inhdx8 [mptdc_bool_env MPTDC_GENUS_REPAIR_CONTROL_AVOID_INHDX8 true]
+    set exact_control_roots [mptdc_bool_env MPTDC_GENUS_REPAIR_EXACT_CONTROL_ROOTS false]
+    set exact_control_min_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_MIN_FANOUT 64]
     set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 16]
     set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.50]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
@@ -1570,6 +1658,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
     puts $fh "CONTROL_AVOID_INHDX8=$control_avoid_inhdx8"
+    puts $fh "EXACT_CONTROL_ROOT_REPAIR=$exact_control_roots"
+    puts $fh "EXACT_CONTROL_ROOT_MIN_FANOUT=$exact_control_min_fanout"
     puts $fh "FAST_TAG_MAX_FANOUT=$fast_tag_max_fanout"
     puts $fh "FAST_TAG_MAX_TRANSITION_NS=$fast_tag_max_transition"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
@@ -1678,6 +1768,17 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             mptdc_try_unavoid_lib_cells CONTROL_PREFERRED_INVERTERS {
                 */INHDX12
             } $fh
+        }
+        if {$exact_control_roots && $stage eq "post_map_pre_opt"} {
+            set exact_control_nets [mptdc_collect_exact_control_root_nets $exact_control_min_fanout $fh]
+            if {[llength $exact_control_nets] > 0} {
+                set exact_fanout_rc [catch {set_max_fanout $control_max_fanout $exact_control_nets} err_exact_fanout]
+                set exact_trans_rc [catch {set_max_transition $control_max_transition $exact_control_nets} err_exact_trans]
+                puts $fh "EXACT_CONTROL_SET_MAX_FANOUT=[expr {$exact_fanout_rc == 0 ? {OK} : $err_exact_fanout}]"
+                puts $fh "EXACT_CONTROL_SET_MAX_TRANSITION=[expr {$exact_trans_rc == 0 ? {OK} : $err_exact_trans}]"
+            }
+        } elseif {$exact_control_roots} {
+            puts $fh "EXACT_CONTROL_ROOT_STAGE=SKIPPED_UNTIL_POST_MAP_PRE_OPT"
         }
         set control_nets [list]
         foreach pattern {
