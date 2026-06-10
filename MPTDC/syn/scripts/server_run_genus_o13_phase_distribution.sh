@@ -5,6 +5,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 MPTDC_DIR="$(cd "$SYN_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$REPO_ROOT/$MPTDC_WORK_ROOT" ;;
+esac
+MPTDC_GENUS_WORK="${MPTDC_GENUS_WORK:-$MPTDC_WORK_ROOT/genus}"
+MPTDC_EVIDENCE_WORK="${MPTDC_EVIDENCE_WORK:-$MPTDC_WORK_ROOT/evidence}"
+export MPTDC_WORK_ROOT MPTDC_GENUS_WORK MPTDC_EVIDENCE_WORK
+export MPTDC_SNAPSHOT_ROOT="${MPTDC_SNAPSHOT_ROOT:-$MPTDC_EVIDENCE_WORK}"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_o13_phase_distribution_genus}"
 REQUESTED_RUN_MODE="${MPTDC_O13_MODE:-typical_synth}"
@@ -24,9 +33,9 @@ if [[ "$REQUESTED_RUN_MODE" == "O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH" ]]; then
   export MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT=1
 fi
 
-RESULT_DIR="$REPO_ROOT/results/genus_osc_pd/$RUN_ID"
+RESULT_DIR="$MPTDC_GENUS_WORK/$RUN_ID"
 SNAPSHOT_TAG="genus_osc_pd_${RUN_ID}"
-SNAPSHOT_DIR="$MPTDC_DIR/lab_snapshots/$SNAPSHOT_TAG"
+SNAPSHOT_DIR="$MPTDC_SNAPSHOT_ROOT/$SNAPSHOT_TAG"
 GENUS_LOG="$RESULT_DIR/genus_${RUN_ID}.log"
 ENV_FILE="$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
 FREQ_DEFINES="$SYN_DIR/inputs/mptdc_freq_modes.defines"
@@ -74,12 +83,15 @@ mkdir -p "$RESULT_DIR" "$SYN_DIR/logs"
   echo "date: $(date -Iseconds)"
   echo "hostname: $(hostname)"
   echo "repo: $REPO_ROOT"
+  echo "work_root: $MPTDC_WORK_ROOT"
   echo "branch: $(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || true)"
   echo "head: $(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
   echo "expected_head: ${EXPECTED_HEAD:-unset}"
   echo "run_id: $RUN_ID"
   echo "run_mode: $RUN_MODE"
   echo "requested_run_mode: $REQUESTED_RUN_MODE"
+  echo "result_dir: $RESULT_DIR"
+  echo "snapshot_dir: $SNAPSHOT_DIR"
   echo "snapshot_tag: $SNAPSHOT_TAG"
   echo "labels: O13_PHASE_DISTRIBUTION_TREE_CLEANUP TYPICAL_ONLY NOT_MMMC NOT_FINAL_SIGNOFF"
   echo "packet_format: unchanged"

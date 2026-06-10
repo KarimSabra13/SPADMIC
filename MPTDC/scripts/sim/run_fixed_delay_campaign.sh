@@ -15,7 +15,7 @@
 #           --fast-tag-encoding NAME raw_lfsr_tag|raw_galois_tag RTL tag generator
 #           --freq-mode NAME    nominal|r750_delta5 RTL timing constants
 #           --delay-list LIST  Comma/space-separated delays in ps
-#           --out-dir DIR      Output directory (default results/fixed_delay_campaign)
+#           --out-dir DIR      Output directory (default work/characterization/fixed_delay_campaign)
 #           --scratch-root DIR Simulator build/work root passed to run_campaign.sh
 #                              (default $MPTDC_SIM_SCRATCH_ROOT when set)
 #           --jitter-sigma N   Override oscillator jitter sigma in ps
@@ -29,6 +29,11 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$(cd "$REPO_ROOT/.." && pwd)/$MPTDC_WORK_ROOT" ;;
+esac
 
 SIM="verilator"
 JOBS=8
@@ -40,7 +45,7 @@ OUT_MODE="raw_features"
 FAST_TAG_ENCODING="raw_lfsr_tag"
 FREQ_MODE="nominal"
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
-OUT_DIR="$REPO_ROOT/results/fixed_delay_campaign"
+OUT_DIR="$MPTDC_WORK_ROOT/characterization/fixed_delay_campaign"
 DELAY_LIST="20,50,100,200,500,1000,2000,5000,10000,30000"
 JITTER_SIGMA_OVERRIDE=""
 JITTER_BOUND_OVERRIDE=""

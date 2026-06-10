@@ -4,9 +4,15 @@ set -u -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MPTDC_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$REPO_ROOT/$MPTDC_WORK_ROOT" ;;
+esac
+MPTDC_VERILATOR_WORK="${MPTDC_VERILATOR_WORK:-$MPTDC_WORK_ROOT/verilator}"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_lint_current_head}"
-RESULT_DIR="$REPO_ROOT/results/local_verilator/$RUN_ID"
+RESULT_DIR="$MPTDC_VERILATOR_WORK/$RUN_ID/lint"
 FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
 FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 

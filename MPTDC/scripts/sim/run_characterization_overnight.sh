@@ -7,7 +7,7 @@
 #           --seed-start N  First seed (default 0)
 #           --seeds N       Seeds per characterization stage
 #           --code-n-conv N Code-density conversions per seed
-#           --out-dir DIR   Output root (default results/characterization/overnight_verilator)
+#           --out-dir DIR   Output root (default work/characterization/overnight_verilator)
 #           --stages LIST   Comma-separated stages, or all
 #           --smoke         Small shape-validation run
 #           --overnight     Aggressive preset (default unless --smoke)
@@ -19,12 +19,17 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$(cd "$REPO_ROOT/.." && pwd)/$MPTDC_WORK_ROOT" ;;
+esac
 
 SIM="verilator"
 JOBS=12
 SEED_START=0
 SEEDS=24
-OUT_DIR="$REPO_ROOT/results/characterization/overnight_verilator"
+OUT_DIR="$MPTDC_WORK_ROOT/characterization/overnight_verilator"
 STAGES="all"
 SMOKE=0
 ANALYZE=0

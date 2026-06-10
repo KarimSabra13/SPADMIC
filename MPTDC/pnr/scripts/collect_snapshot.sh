@@ -4,9 +4,17 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 pnr_dir="$(cd "${script_dir}/.." && pwd)"
 mptdc_dir="$(cd "${pnr_dir}/.." && pwd)"
+repo_root="$(cd "${mptdc_dir}/.." && pwd)"
 
 tag="${1:-innovus_$(date +%Y%m%d_%H%M)_estimate}"
-snapshot_dir="${mptdc_dir}/lab_snapshots/${tag}"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="${repo_root}/${MPTDC_WORK_ROOT}" ;;
+esac
+MPTDC_EVIDENCE_WORK="${MPTDC_EVIDENCE_WORK:-${MPTDC_WORK_ROOT}/evidence}"
+MPTDC_SNAPSHOT_ROOT="${MPTDC_SNAPSHOT_ROOT:-${MPTDC_EVIDENCE_WORK}}"
+snapshot_dir="${MPTDC_SNAPSHOT_ROOT}/${tag}"
 
 mkdir -p "${snapshot_dir}"
 

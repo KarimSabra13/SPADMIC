@@ -19,8 +19,8 @@
 #           --freq-mode NAME  nominal|r750_delta5 RTL timing constants
 #           --jitter-sigma N Override oscillator jitter sigma in ps
 #           --jitter-bound N Override oscillator jitter bound in ps
-#           --out-dir DIR    Output directory (default results/campaign)
-#           --scratch-root DIR Simulator build/work root (default MPTDC/build,
+#           --out-dir DIR    Output directory (default work/characterization/campaign)
+#           --scratch-root DIR Simulator build/work root (default work/scratch/sim,
 #                            or $MPTDC_SIM_SCRATCH_ROOT when set)
 #           --rebuild        Force rebuild / clean simulator workdir
 #           --dry-run        Print what would run without executing
@@ -33,8 +33,13 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$(cd "$REPO_ROOT/.." && pwd)/$MPTDC_WORK_ROOT" ;;
+esac
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
-BUILD_DIR="$REPO_ROOT/build"
+BUILD_DIR="$MPTDC_WORK_ROOT/scratch/sim"
 OBJ_DIR="$BUILD_DIR/obj_dir_campaign"
 BINARY="$OBJ_DIR/tb_campaign_collect"
 XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun"
@@ -54,7 +59,7 @@ FAST_TAG_ENCODING="raw_lfsr_tag"
 FREQ_MODE="nominal"
 JITTER_SIGMA_OVERRIDE=""
 JITTER_BOUND_OVERRIDE=""
-OUT_DIR="$REPO_ROOT/results/campaign"
+OUT_DIR="$MPTDC_WORK_ROOT/characterization/campaign"
 REBUILD=0
 DRY_RUN=0
 SMOKE=0

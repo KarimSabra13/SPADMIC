@@ -38,6 +38,10 @@ import pandas as pd
 from matplotlib.colors import TwoSlopeNorm
 
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_WORK_ROOT = Path(os.environ.get("MPTDC_WORK_ROOT", REPO_ROOT / "work"))
+if not DEFAULT_WORK_ROOT.is_absolute():
+    DEFAULT_WORK_ROOT = REPO_ROOT / DEFAULT_WORK_ROOT
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
@@ -948,7 +952,7 @@ def run_averaging_study(df, n_values, n_trials=2000, rng_seed=42):
 
 def main():
     parser = argparse.ArgumentParser(description="MPTDC discriminator-aware LUT Calibrator")
-    parser.add_argument("--train-dir", default="results/campaign/multihit_15_cal_nominal",
+    parser.add_argument("--train-dir", default=str(DEFAULT_WORK_ROOT / "characterization/campaign/multihit_15_cal_nominal"),
                         help="Directory with training CSVs (seeds 0-23)")
     parser.add_argument("--val-dir", default=None,
                         help="Directory with validation CSVs (seeds 24-29 or 100-129)")
@@ -957,7 +961,7 @@ def main():
     parser.add_argument("--fresh-dir",
                         default=None,
                         help="Optional directory with fresh validation CSVs")
-    parser.add_argument("--out-dir", default="results/calibration_final",
+    parser.add_argument("--out-dir", default=str(DEFAULT_WORK_ROOT / "calibration/final"),
                         help="Output directory for LUT, plots, reports")
     parser.add_argument("--train-seeds", type=int, default=24,
                         help="Number of training seeds (first N)")

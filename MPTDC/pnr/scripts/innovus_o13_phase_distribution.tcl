@@ -31,6 +31,11 @@ proc mptdc_o13_setup_globals {} {
     set pnr_root   [file dirname $script_dir]
     set mptdc_root [file dirname $pnr_root]
     set repo_root  [file dirname $mptdc_root]
+    set work_root [mptdc_o13_env MPTDC_WORK_ROOT "$repo_root/work"]
+    if {[file pathtype $work_root] ne "absolute"} {
+        set work_root [file normalize [file join $repo_root $work_root]]
+    }
+    set innovus_work [mptdc_o13_env MPTDC_INNOVUS_WORK [file join $work_root innovus]]
 
     set o13(script_dir) $script_dir
     set o13(pnr_root) $pnr_root
@@ -38,12 +43,12 @@ proc mptdc_o13_setup_globals {} {
     set o13(repo_root) $repo_root
     set o13(run_id) [mptdc_o13_env MPTDC_O13_RUN_ID 20260608_o13_phase_distribution]
     set o13(source_run_id) [mptdc_o13_env MPTDC_O13_SOURCE_RUN_ID 20260608_o13_phase_distribution_innovus]
-    set o13(result_dir) [mptdc_o13_env MPTDC_O13_RESULT_DIR "$repo_root/results/innovus/$o13(run_id)"]
+    set o13(result_dir) [mptdc_o13_env MPTDC_O13_RESULT_DIR "$innovus_work/$o13(run_id)"]
     set o13(logs_dir) "$o13(result_dir)/logs"
     set o13(reports_dir) "$o13(result_dir)/reports"
     set o13(manifests_dir) "$o13(result_dir)/manifests"
     set o13(work_dir) "$o13(result_dir)/work"
-    set o13(source_result_dir) "$repo_root/results/innovus/$o13(source_run_id)"
+    set o13(source_result_dir) [mptdc_o13_env MPTDC_O13_SOURCE_RESULT_DIR "$innovus_work/$o13(source_run_id)"]
     set o13(source_checkpoint_dat) [mptdc_o13_env MPTDC_O13_SOURCE_CHECKPOINT_DAT "$o13(source_result_dir)/checkpoints/04_route.enc.dat"]
     set o13(source_restore_tcl) [mptdc_o13_env MPTDC_O13_SOURCE_RESTORE_TCL "$o13(source_result_dir)/checkpoints/restore_latest.tcl"]
 

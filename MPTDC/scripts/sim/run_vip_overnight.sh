@@ -10,7 +10,7 @@
 #           Common:
 #             --sim NAME            xrun|xcelium (default xrun)
 #             --jobs N              Parallel jobs (default 32)
-#             --out-dir DIR         Root output dir (default results/vip_overnight)
+#             --out-dir DIR         Root output dir (default work/characterization/vip_overnight)
 #             --scratch-root DIR    Simulator build/work root for xrun/Verilator
 #                                   (default $MPTDC_SIM_SCRATCH_ROOT when set)
 #             --freq-mode NAME      nominal|r750_delta5 RTL timing constants
@@ -55,12 +55,17 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ORIGINAL_ARGS=("$@")
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$(cd "$REPO_ROOT/.." && pwd)/$MPTDC_WORK_ROOT" ;;
+esac
 VIP_RUNNER="$REPO_ROOT/ci/run_vip_xcelium_regression.sh"
 CHAR_RUNNER="$REPO_ROOT/scripts/sim/run_characterization_baseline.sh"
 
 SIM="xrun"
 JOBS=32
-OUT_DIR="$REPO_ROOT/results/vip_overnight"
+OUT_DIR="$MPTDC_WORK_ROOT/characterization/vip_overnight"
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"

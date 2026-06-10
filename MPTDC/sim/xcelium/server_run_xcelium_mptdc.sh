@@ -4,11 +4,18 @@ set -u -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MPTDC_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$REPO_ROOT/$MPTDC_WORK_ROOT" ;;
+esac
+MPTDC_XCELIUM_WORK="${MPTDC_XCELIUM_WORK:-$MPTDC_WORK_ROOT/xcelium}"
+MPTDC_XCELIUM_SCRATCH="${MPTDC_XCELIUM_SCRATCH:-$MPTDC_WORK_ROOT/scratch/xcelium}"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_mptdc_xcelium}"
-RESULT_DIR="$REPO_ROOT/results/xcelium/$RUN_ID"
+RESULT_DIR="$MPTDC_XCELIUM_WORK/$RUN_ID"
 MAIN_LOG="$RESULT_DIR/xcelium_${RUN_ID}.log"
-VIP_WORK_DIR="$MPTDC_DIR/results/xcelium/$RUN_ID/vip"
+VIP_WORK_DIR="$MPTDC_XCELIUM_SCRATCH/$RUN_ID/vip"
 VIP_PUBLISH_DIR="$RESULT_DIR/vip"
 
 DIRECTED_TESTS=(
@@ -28,10 +35,10 @@ VIP_TESTS=(
   vip_maxhits_matrix
 )
 
-if [[ -e "$RESULT_DIR" || -e "$MPTDC_DIR/results/xcelium/$RUN_ID" ]]; then
+if [[ -e "$RESULT_DIR" || -e "$VIP_WORK_DIR" ]]; then
   echo "ERROR: result directory already exists for RUN_ID: $RUN_ID" >&2
   echo "Top-level result: $RESULT_DIR" >&2
-  echo "MPTDC VIP work:   $MPTDC_DIR/results/xcelium/$RUN_ID" >&2
+  echo "MPTDC VIP work:   $VIP_WORK_DIR" >&2
   echo "Use a unique RUN_ID or archive the old server result first." >&2
   exit 2
 fi
@@ -111,8 +118,8 @@ fi
   echo
   echo "- Run ID: \`$RUN_ID\`"
   echo "- Git HEAD: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)\`"
-  echo "- Result directory: \`results/xcelium/$RUN_ID/\`"
-  echo "- VIP work directory: \`MPTDC/results/xcelium/$RUN_ID/vip/\`"
+  echo "- Result directory: \`$RESULT_DIR/\`"
+  echo "- VIP work directory: \`$VIP_WORK_DIR/\`"
   echo "- Directed tests: ${DIRECTED_TESTS[*]}"
   echo "- VIP tests: ${VIP_TESTS[*]}"
   echo "- VIP seeds: ${XCELIUM_SEEDS:-4} from ${XCELIUM_SEED_START:-7000}"

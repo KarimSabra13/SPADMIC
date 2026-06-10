@@ -12,7 +12,7 @@
 #                                 legacy full/2 aliases are mapped to raw_features)
 #           --nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag
 #           --freq-mode NAME      nominal|r750_delta5 RTL timing constants
-#           --out-dir DIR         Root output dir (default results/characterization/baseline_nominal_raw_features)
+#           --out-dir DIR         Root output dir (default work/characterization/baseline_nominal_raw_features)
 #           --scratch-root DIR    Simulator build/work root for xrun/Verilator
 #                                 (default $MPTDC_SIM_SCRATCH_ROOT when set)
 #           --analyze             Run sweep analysis + fine-grid report, including
@@ -49,6 +49,11 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ORIGINAL_ARGS=("$@")
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$(cd "$REPO_ROOT/.." && pwd)/$MPTDC_WORK_ROOT" ;;
+esac
 
 SIM="verilator"
 JOBS=12
@@ -67,7 +72,7 @@ DELTA_STEP=5
 DELTA_LSB=10
 K_VERNIER=11
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
-OUT_DIR="$REPO_ROOT/results/characterization/baseline_nominal_raw_features"
+OUT_DIR="$MPTDC_WORK_ROOT/characterization/baseline_nominal_raw_features"
 ANALYZE=0
 ANALYSIS_JOBS=4
 ANALYSIS_CHUNKSIZE=200000
@@ -79,7 +84,7 @@ TRAIN_SEEDS=24
 TRAIN_MAX_ROWS_PER_SEED=""
 CALIBRATION_VAL_MAX_FILES=""
 VAL_DIR=""
-FRESH_DIR="$REPO_ROOT/results/campaign_validation/multihit_15_cal_nominal"
+FRESH_DIR="$MPTDC_WORK_ROOT/characterization/campaign_validation/multihit_15_cal_nominal"
 FRESH_DIR_EXPLICIT=0
 WITH_FIXED_DELAY=0
 FIXED_DELAY_LIST="20,50,100,200,500,1000,2000,5000,10000,30000"

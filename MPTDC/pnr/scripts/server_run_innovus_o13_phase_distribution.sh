@@ -5,6 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PNR_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 MPTDC_DIR="$(cd "$PNR_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$REPO_ROOT/$MPTDC_WORK_ROOT" ;;
+esac
+MPTDC_INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-$MPTDC_WORK_ROOT/innovus}"
+MPTDC_EVIDENCE_WORK="${MPTDC_EVIDENCE_WORK:-$MPTDC_WORK_ROOT/evidence}"
+export MPTDC_WORK_ROOT MPTDC_INNOVUS_WORK MPTDC_EVIDENCE_WORK
 
 RUN_ID="${1:-20260608_o13_phase_distribution_innovus}"
 SOURCE_RUN_ID="${MPTDC_O13_SOURCE_RUN_ID:-$RUN_ID}"
@@ -13,12 +21,12 @@ if [[ "${MPTDC_O13_VALIDATE_ONLY:-0}" == "1" ]]; then
   RUN_MODE="validate_only"
 fi
 
-RESULT_DIR="$REPO_ROOT/results/innovus/$RUN_ID"
+RESULT_DIR="$MPTDC_INNOVUS_WORK/$RUN_ID"
 LOG_DIR="$RESULT_DIR/logs"
 REPORT_DIR="$RESULT_DIR/reports"
 MANIFEST_DIR="$RESULT_DIR/manifests"
 RUN_LOG="$LOG_DIR/innovus_${RUN_ID}.log"
-SOURCE_RESULT_DIR="$REPO_ROOT/results/innovus/$SOURCE_RUN_ID"
+SOURCE_RESULT_DIR="${MPTDC_O13_SOURCE_RESULT_DIR:-$MPTDC_INNOVUS_WORK/$SOURCE_RUN_ID}"
 SOURCE_CHECKPOINT_DAT="${MPTDC_O13_SOURCE_CHECKPOINT_DAT:-$SOURCE_RESULT_DIR/checkpoints/04_route.enc.dat}"
 SOURCE_RESTORE_TCL="${MPTDC_O13_SOURCE_RESTORE_TCL:-$SOURCE_RESULT_DIR/checkpoints/restore_latest.tcl}"
 
@@ -37,10 +45,12 @@ esac
   echo "# O13 Phase Distribution Wrapper"
   echo "date: $(date -Iseconds)"
   echo "repo: $REPO_ROOT"
+  echo "work_root: $MPTDC_WORK_ROOT"
   echo "branch: $(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || true)"
   echo "head: $(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
   echo "expected_head: ${EXPECTED_HEAD:-unset}"
   echo "run_id: $RUN_ID"
+  echo "result_dir: $RESULT_DIR"
   echo "run_mode: $RUN_MODE"
   echo "source_run_id: $SOURCE_RUN_ID"
   echo "source_checkpoint_dat: $SOURCE_CHECKPOINT_DAT"
@@ -309,7 +319,7 @@ fi
   echo "- Required outputs exit code: $REQUIRED_RC"
   echo "- Wrapper exit code: $WRAPPER_RC"
   echo "- REPORT_COMPLETE: \`$REPORT_COMPLETE\`"
-  echo "- Result directory: \`results/innovus/$RUN_ID\`"
+  echo "- Result directory: \`$RESULT_DIR\`"
   echo "- Labels: \`O13_PHASE_DISTRIBUTION_TREE_CLEANUP\`, \`REPORT_ONLY\`, \`NOT_FINAL_SIGNOFF\`"
   echo
   echo "## Key Outputs"

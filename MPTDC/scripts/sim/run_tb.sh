@@ -16,7 +16,12 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RTL_DIR="$REPO_ROOT/rtl"
 TB_DIR="$REPO_ROOT/tb"
-BUILD_DIR="$REPO_ROOT/build"
+MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
+case "$MPTDC_WORK_ROOT" in
+  /*) ;;
+  *) MPTDC_WORK_ROOT="$(cd "$REPO_ROOT/.." && pwd)/$MPTDC_WORK_ROOT" ;;
+esac
+BUILD_DIR="$MPTDC_WORK_ROOT/scratch/sim"
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 
 # Defaults
