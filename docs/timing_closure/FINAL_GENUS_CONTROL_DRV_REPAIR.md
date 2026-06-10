@@ -180,3 +180,73 @@ that one root class:
 This experiment is named:
 
 `MPTDC_FINAL_TYPICAL_GENUS_REPAIR_CONTROL_SINGLE_ROOT`
+
+## Single Root Result
+
+Observed result:
+
+- `final_typical_genus_control_single_root_20260610_161411`
+- setup WNS `-14.5 ps`
+- setup TNS `-238.0 ps`
+- setup violating paths `42`
+- DRV `0 / 0 / 0`
+
+The exact selector did work:
+
+```text
+EXACT_CONTROL_ROOT_NETS=1
+EXACT_CONTROL_ROOT_NET=n_6899 fanout=64 driver=g33116/Q pd_sinks=64 reset_sinks=0
+```
+
+But this was still a mixed experiment. The shared repair procedure continued
+to apply:
+
+```text
+FAST_TAG_Q_SET_MAX_FANOUT=OK
+FAST_TAG_Q_SET_MAX_TRANSITION=OK
+CONTROL_REPAIR_NETS=130
+CONTROL_SET_MAX_FANOUT=OK
+CONTROL_SET_MAX_TRANSITION=1
+```
+
+So the run proved the single-root selector, but not the timing impact of only
+the single root. The next experiment must disable both the broad control-net
+sweep and the fast-tag Q fanout/transition constraints.
+
+## Exact-Only Experiment
+
+The next experiment is:
+
+`MPTDC_FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY`
+
+Expected knobs:
+
+- `MPTDC_GENUS_REPAIR_EXACT_CONTROL_ROOTS=1`
+- `MPTDC_CONTROL_REPAIR_EXACT_REQUIRE_PD_SINKS=1`
+- `MPTDC_CONTROL_REPAIR_EXACT_ALLOW_RESET_ROOTS=0`
+- `MPTDC_CONTROL_REPAIR_EXACT_DRIVER_REGEX=(^|/)g33116/Q$`
+- `MPTDC_CONTROL_REPAIR_EXACT_MAX_ROOTS=1`
+- `MPTDC_GENUS_REPAIR_APPLY_BROAD_CONTROL_NETS=0`
+- `MPTDC_FAST_TAG_REPAIR_APPLY_Q_CONSTRAINTS=0`
+- `MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV=0`
+- `MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS=0`
+
+The desired repair report signatures are:
+
+```text
+EXACT_CONTROL_ROOT_NETS=1
+EXACT_CONTROL_ROOT_NET=n_6899 fanout=64 driver=g33116/Q pd_sinks=64 reset_sinks=0
+FAST_TAG_Q_SET_MAX_FANOUT=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
+FAST_TAG_Q_SET_MAX_TRANSITION=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED
+CONTROL_REPAIR_NETS=SKIPPED_BROAD_CONTROL_NETS_DISABLED
+CONTROL_SET_MAX_FANOUT=SKIPPED_BROAD_CONTROL_NETS_DISABLED
+CONTROL_SET_MAX_TRANSITION=SKIPPED_BROAD_CONTROL_NETS_DISABLED
+```
+
+If timing returns near the guarded baseline while DRV stays clean, this is the
+right DRV repair. If timing returns near the guarded baseline but DRV returns,
+the single root is too narrow and the next root must be added from the DRV
+root-cause CSV only. If timing remains near `-14.5 ps`, even the exact root
+constraint is perturbing fast-domain mapping and the next repair should move to
+a post-synthesis ECO-style buffer/source-strength path instead of synthesis
+pressure.

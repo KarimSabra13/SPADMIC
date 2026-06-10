@@ -14,6 +14,7 @@ and not final silicon signoff.
 | `final_typical_genus_control_only_20260610_152702` | -23.0 | -1870.3 | 218 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but all-stage control-cell bias still perturbed fast timing. |
 | `final_typical_genus_control_late_20260610_154404` | -20.4 | -5782.7 | 378 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed, but late control-cell bias still perturbed fast timing. |
 | `final_typical_genus_control_root_20260610_160143` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | DRV fixed and path count restored, but six exact roots still cost about 11 ps WNS versus guarded. |
+| `final_typical_genus_control_single_root_20260610_161411` | -14.5 | -238.0 | 42 | `FAST_TAG_TO_PD_TS` | 0 | 0 | Selected only `n_6899`/`g33116/Q`, but broad control-net and fast-tag Q constraints were still active. |
 
 ## Interpretation
 
@@ -34,20 +35,26 @@ The control-only and control-late runs are partial isolation results. They
 confirm that fast-tag flop bias is not required to clean DRV, but control-driver
 cell-class bias is still too broad even when delayed until post-map.
 
-The control-root run is the best DRV-clean result so far. It proves that class
-bias is not necessary: exact high-fanout root constraints can clean DRV. The
-selector was still too broad, though. It selected six roots, including reset and
-epoch capture controls, and the setup result stayed about `11 ps` worse than
-the guarded baseline.
+The control-root run was the first useful DRV-clean result without class-level
+cell bias. It selected six roots, including reset and epoch capture controls,
+so it was not isolated.
+
+The control-single-root run fixed the root selector: it selected only
+`n_6899`, driven by `g33116/Q`, with `64` PD sinks and no reset sinks. However,
+the shared repair procedure still applied broad control-net constraints to
+`130` nets afterward, and it also applied fast-tag Q fanout/transition
+constraints. Therefore this run is not a pure single-root test.
 
 ## Next Decision
 
-Run `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_SINGLE_ROOT`.
+Run `FINAL_TYPICAL_GENUS_REPAIR_CONTROL_EXACT_ONLY`.
 
-The single-root experiment keeps the solved O13/RO/PD/report behavior, keeps
-fast-tag preserve relaxation disabled, disables broad control-cell bias, and
-excludes reset/epoch roots. It targets only the known local PD-control root
-driver class seen in the guarded baseline and control-root evidence:
+The exact-only experiment keeps the solved O13/RO/PD/report behavior, keeps
+fast-tag preserve relaxation disabled, disables broad control-cell bias,
+excludes reset/epoch roots, disables broad control-net constraints, and skips
+the fast-tag Q fanout/transition constraints that were active in the mixed
+single-root run. It targets only the known local PD-control root driver class
+seen in the guarded baseline and control-root evidence:
 
 - `STRONG_CONTROL_DRV=0`
 - `CONTROL_CELL_BIAS_STAGE=none`
@@ -57,6 +64,8 @@ driver class seen in the guarded baseline and control-root evidence:
 - `MPTDC_CONTROL_REPAIR_EXACT_ALLOW_RESET_ROOTS=0`
 - `MPTDC_CONTROL_REPAIR_EXACT_DRIVER_REGEX=(^|/)g33116/Q$`
 - `MPTDC_CONTROL_REPAIR_EXACT_MAX_ROOTS=1`
+- `MPTDC_GENUS_REPAIR_APPLY_BROAD_CONTROL_NETS=0`
+- `MPTDC_FAST_TAG_REPAIR_APPLY_Q_CONSTRAINTS=0`
 - `STRONG_FAST_TAG_FLOPS=0`
 - `MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE=0`
 - `MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=0`

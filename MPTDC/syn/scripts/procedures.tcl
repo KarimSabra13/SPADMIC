@@ -1683,6 +1683,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set exact_control_driver_regex [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_DRIVER_REGEX ""]
     set exact_control_net_regex [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_NET_REGEX ""]
     set exact_control_max_roots [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_EXACT_MAX_ROOTS 0]
+    set apply_fast_tag_q_constraints [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_APPLY_Q_CONSTRAINTS true]
+    set apply_broad_control_nets [mptdc_bool_env MPTDC_GENUS_REPAIR_APPLY_BROAD_CONTROL_NETS true]
     set fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_FANOUT 16]
     set fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_MAX_TRANSITION_NS 0.50]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
@@ -1710,6 +1712,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "EXACT_CONTROL_ROOT_DRIVER_REGEX=$exact_control_driver_regex"
     puts $fh "EXACT_CONTROL_ROOT_NET_REGEX=$exact_control_net_regex"
     puts $fh "EXACT_CONTROL_ROOT_MAX_ROOTS=$exact_control_max_roots"
+    puts $fh "FAST_TAG_APPLY_Q_CONSTRAINTS=$apply_fast_tag_q_constraints"
+    puts $fh "CONTROL_APPLY_BROAD_NETS=$apply_broad_control_nets"
     puts $fh "FAST_TAG_MAX_FANOUT=$fast_tag_max_fanout"
     puts $fh "FAST_TAG_MAX_TRANSITION_NS=$fast_tag_max_transition"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
@@ -1760,10 +1764,15 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         puts $fh "FAST_TAG_C_PINS=[llength [mptdc_collection_to_list $fast_tag_c_pins]]"
         puts $fh "NFAST_CAPTURE_D_PINS=[llength [mptdc_collection_to_list $nfast_capture_d_pins]]"
         if {[llength $fast_tag_q_pins] > 0} {
-            set fanout_rc [catch {set_max_fanout $fast_tag_max_fanout $fast_tag_q_pins} err_fanout]
-            set trans_rc [catch {set_max_transition $fast_tag_max_transition $fast_tag_q_pins} err_trans]
-            puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=[expr {$fanout_rc == 0 ? {OK} : $err_fanout}]"
-            puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=[expr {$trans_rc == 0 ? {OK} : $err_trans}]"
+            if {$apply_fast_tag_q_constraints} {
+                set fanout_rc [catch {set_max_fanout $fast_tag_max_fanout $fast_tag_q_pins} err_fanout]
+                set trans_rc [catch {set_max_transition $fast_tag_max_transition $fast_tag_q_pins} err_trans]
+                puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=[expr {$fanout_rc == 0 ? {OK} : $err_fanout}]"
+                puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=[expr {$trans_rc == 0 ? {OK} : $err_trans}]"
+            } else {
+                puts $fh "FAST_TAG_Q_SET_MAX_FANOUT=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED"
+                puts $fh "FAST_TAG_Q_SET_MAX_TRANSITION=SKIPPED_FAST_TAG_Q_CONSTRAINTS_DISABLED"
+            }
         }
         if {[llength $fast_tag_c_pins] > 0} {
             if {[llength [info commands set_critical_range]] > 0} {
@@ -1837,25 +1846,31 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         } elseif {$exact_control_roots} {
             puts $fh "EXACT_CONTROL_ROOT_STAGE=SKIPPED_UNTIL_POST_MAP_PRE_OPT"
         }
-        set control_nets [list]
-        foreach pattern {
-            *meas_pd_clear*
-            *detect_en*
-            *clear_window*
-            *rst_core_n*
-        } {
-            catch {set matches [get_nets -quiet -hierarchical $pattern]}
-            foreach net [mptdc_collection_to_list $matches] {
-                lappend control_nets $net
+        if {$apply_broad_control_nets} {
+            set control_nets [list]
+            foreach pattern {
+                *meas_pd_clear*
+                *detect_en*
+                *clear_window*
+                *rst_core_n*
+            } {
+                catch {set matches [get_nets -quiet -hierarchical $pattern]}
+                foreach net [mptdc_collection_to_list $matches] {
+                    lappend control_nets $net
+                }
             }
-        }
-        set control_nets [mptdc_unique_list $control_nets]
-        puts $fh "CONTROL_REPAIR_NETS=[llength $control_nets]"
-        if {[llength $control_nets] > 0} {
-            set ctrl_fanout_rc [catch {set_max_fanout $control_max_fanout $control_nets} err_ctrl_fanout]
-            set ctrl_trans_rc [catch {set_max_transition $control_max_transition $control_nets} err_ctrl_trans]
-            puts $fh "CONTROL_SET_MAX_FANOUT=[expr {$ctrl_fanout_rc == 0 ? {OK} : $err_ctrl_fanout}]"
-            puts $fh "CONTROL_SET_MAX_TRANSITION=[expr {$ctrl_trans_rc == 0 ? {OK} : $err_ctrl_trans}]"
+            set control_nets [mptdc_unique_list $control_nets]
+            puts $fh "CONTROL_REPAIR_NETS=[llength $control_nets]"
+            if {[llength $control_nets] > 0} {
+                set ctrl_fanout_rc [catch {set_max_fanout $control_max_fanout $control_nets} err_ctrl_fanout]
+                set ctrl_trans_rc [catch {set_max_transition $control_max_transition $control_nets} err_ctrl_trans]
+                puts $fh "CONTROL_SET_MAX_FANOUT=[expr {$ctrl_fanout_rc == 0 ? {OK} : $err_ctrl_fanout}]"
+                puts $fh "CONTROL_SET_MAX_TRANSITION=[expr {$ctrl_trans_rc == 0 ? {OK} : $err_ctrl_trans}]"
+            }
+        } else {
+            puts $fh "CONTROL_REPAIR_NETS=SKIPPED_BROAD_CONTROL_NETS_DISABLED"
+            puts $fh "CONTROL_SET_MAX_FANOUT=SKIPPED_BROAD_CONTROL_NETS_DISABLED"
+            puts $fh "CONTROL_SET_MAX_TRANSITION=SKIPPED_BROAD_CONTROL_NETS_DISABLED"
         }
         if {$design_drv_repair} {
             catch {set_max_fanout $control_max_fanout [current_design]} err_design_fanout
