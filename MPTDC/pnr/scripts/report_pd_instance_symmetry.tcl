@@ -3,27 +3,49 @@
 # =============================================================================
 
 proc mptdc_osc_pd_inst_ptr {inst} {
-    set ptr ""
-    catch {set ptr [dbGet [dbGet top.insts.name $inst -p]]}
-    if {[llength $ptr] > 0} {
-        return [lindex $ptr 0]
+    set ptrs [list]
+    catch {set ptrs [dbGet top.insts.name $inst -p]}
+    foreach ptr $ptrs {
+        if {$ptr ne "" && $ptr ne "0x0"} {
+            return $ptr
+        }
+    }
+    return ""
+}
+
+proc mptdc_osc_pd_db_attr_from_ptr {ptr attr} {
+    if {$ptr eq ""} { return "" }
+    set db_attrs [list $attr]
+    switch -- $attr {
+        .location { set db_attrs [list .pt .loc .box] }
+        .bbox     { set db_attrs [list .box .bbox] }
+        .base_cell.name { set db_attrs [list .cell.name .baseCell.name .master.name] }
+        .place_status   { set db_attrs [list .pStatus .place_status .status] }
+    }
+    foreach db_attr $db_attrs {
+        set val ""
+        if {![catch {set val [dbGet ${ptr}${db_attr}]}] && $val ne ""} {
+            return $val
+        }
     }
     return ""
 }
 
 proc mptdc_osc_pd_inst_attr {inst attrs} {
+    set ptr [mptdc_osc_pd_inst_ptr $inst]
+    foreach attr $attrs {
+        set val [mptdc_osc_pd_db_attr_from_ptr $ptr $attr]
+        if {$val ne ""} {
+            return $val
+        }
+    }
+
     set obj [get_cells -quiet $inst]
     if {[llength $obj] == 0} {
         catch {set obj [get_cells -quiet -hierarchical $inst]}
     }
     foreach attr $attrs {
-        if {[llength $obj] > 0 && ![catch {set val [get_db $obj $attr]}] && $val ne ""} {
-            return $val
-        }
-    }
-    set ptr [mptdc_osc_pd_inst_ptr $inst]
-    foreach attr $attrs {
-        if {$ptr ne "" && ![catch {set val [dbGet ${ptr}${attr}]}] && $val ne ""} {
+        if {[llength $obj] > 0 && ![catch {set val [get_object_name $obj]}] && $val ne "" && $attr eq ".name"} {
             return $val
         }
     }

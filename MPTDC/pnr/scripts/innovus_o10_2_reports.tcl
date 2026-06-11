@@ -179,6 +179,12 @@ proc mptdc_o10_final_reports {} {
             {reportRoute} \
             {verifyConnectivity} \
         ]
+    mptdc_o10_capture_candidates "$o10(reports_dir)/antenna.rpt" \
+        "O10.2 antenna check" [list \
+            {verifyProcessAntenna} \
+            {verifyAntenna} \
+            {verify_drc -type antenna} \
+        ]
     mptdc_o10_capture_candidates "$o10(reports_dir)/drv_max_transition.rpt" \
         "O10.2 max transition" [list {report_constraint -max_transition -all_violators} {report_constraint -all_violators}]
     mptdc_o10_capture_candidates "$o10(reports_dir)/drv_max_cap.rpt" \
@@ -207,6 +213,7 @@ proc mptdc_o10_final_reports {} {
     puts $fh "- RO CTS attempted: `$o10(ro_cts_attempted)`"
     puts $fh "- Genus starting point: WNS -1.6 ps, TNS -11.2 ps, 7 residual `FAST_TAG_TO_PD_TS` paths."
     puts $fh "- Timing is split into core, IO, reset/recovery, RO-domain, and clk_sys classes."
+    puts $fh "- Antenna review: `reports/antenna.rpt`."
     puts $fh "- This is not MMMC signoff and not final layout signoff."
     close $fh
 }

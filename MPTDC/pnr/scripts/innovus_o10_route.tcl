@@ -3,7 +3,7 @@
 # =============================================================================
 
 proc mptdc_o10_route {} {
-    global o10
+    global o10 pnr
     mptdc_o10_msg "Running route feasibility"
     mptdc_o10_stage_mark route.routeDesign start
     if {[catch {routeDesign} err]} {
@@ -18,12 +18,24 @@ proc mptdc_o10_route {} {
     } else {
         mptdc_o10_stage_mark route.routeDesign done
     }
-    mptdc_o10_stage_mark route.optDesign_postRoute start
-    if {[catch {optDesign -postRoute} err]} {
-        mptdc_o10_msg "optDesign -postRoute failed: $err"
-        mptdc_o10_stage_mark route.optDesign_postRoute failed
+    set run_postroute_opt 1
+    if {[info exists pnr(run_postroute_opt)]} {
+        set run_postroute_opt $pnr(run_postroute_opt)
+    }
+    if {$run_postroute_opt} {
+        mptdc_o10_stage_mark route.optDesign_postRoute start
+        if {[catch {optDesign -postRoute} err]} {
+            mptdc_o10_msg "optDesign -postRoute failed: $err"
+            mptdc_o10_stage_mark route.optDesign_postRoute failed
+        } else {
+            mptdc_o10_stage_mark route.optDesign_postRoute done
+        }
     } else {
-        mptdc_o10_stage_mark route.optDesign_postRoute done
+        mptdc_o10_stage_mark route.optDesign_postRoute skipped
+        set fh [open "$o10(reports_dir)/POSTROUTE_OPT_SKIPPED.txt" w]
+        puts $fh "POSTROUTE_OPT_STATUS=SKIPPED"
+        puts $fh "reason=MPTDC_O10_RUN_POSTROUTE_OPT is not set to 1; route-feasibility flow preserves the routeDesign checkpoint and avoids SI post-route optimization in single non-OCV mode."
+        close $fh
     }
     mptdc_o10_stage_mark route.reports start
     mptdc_o10_report_stage post_route

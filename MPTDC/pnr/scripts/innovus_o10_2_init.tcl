@@ -373,6 +373,7 @@ proc mptdc_o10_setup_globals {} {
     set pnr(die_height_um) [mptdc_o10_env MPTDC_PNR_DIE_HEIGHT_UM ""]
     set pnr(place_max_unplaced) [mptdc_o10_env MPTDC_PNR_PLACE_MAX_UNPLACED 0]
     set pnr(run_clk_sys_cts) [mptdc_o10_env MPTDC_O10_RUN_CLK_SYS_CTS 0]
+    set pnr(run_postroute_opt) [mptdc_o10_env MPTDC_O10_RUN_POSTROUTE_OPT 0]
 }
 
 proc mptdc_pnr_sandwich_boxes {} {

@@ -15,6 +15,19 @@ proc mptdc_o10_unplaced_count_from_checkplace {path} {
     return ""
 }
 
+proc mptdc_o10_out_of_core_count_from_checkplace {path} {
+    if {![file exists $path]} {
+        return ""
+    }
+    set fh [open $path r]
+    set text [read $fh]
+    close $fh
+    if {[regexp {Out of Core Area:[[:space:]]*([0-9]+)} $text -> count]} {
+        return $count
+    }
+    return ""
+}
+
 proc mptdc_o10_write_place_failure {message} {
     global o10
     set fh [open "$o10(reports_dir)/PLACEMENT_FAILED.txt" w]
@@ -40,6 +53,15 @@ proc mptdc_o10_place {} {
         mptdc_o10_msg $msg
         mptdc_o10_write_place_failure $msg
         error $msg
+    }
+    set out_of_core [mptdc_o10_out_of_core_count_from_checkplace $place_check]
+    if {$out_of_core ne "" && $out_of_core > 0} {
+        set fh [open "$o10(reports_dir)/PLACEMENT_REVIEW.txt" w]
+        puts $fh "PLACEMENT_STATUS=REVIEW_REQUIRED"
+        puts $fh "out_of_core_instances=$out_of_core"
+        puts $fh "See reports/place_check_post_place.rpt before treating this as a clean physical result."
+        close $fh
+        mptdc_o10_msg "placement review required: out-of-core instances=$out_of_core"
     }
 
     if {[catch {optDesign -preCTS} err]} {
