@@ -38,6 +38,10 @@ module mptdc_hit_capture_bridge
     end else if (sample_en_i) begin
       snapshot_q.hit_level         <= pd_hit_level_i;
       snapshot_q.nfast_hit_packed  <= pd_nfast_hit_packed_i;
+`ifdef MPTDC_DRAIN_ROW_SKIP
+      for (int row = 0; row < NE; row++)
+        snapshot_q.row_nonzero[row] <= |pd_hit_level_i[row*NE +: NE];
+`endif
       snapshot_q.nslow_snap        <= slow_johnson_to_count(slow_epoch_johnson_stop_i);
       snapshot_q.nfast_snap        <= nfast_snap_i;
       snapshot_q.nfast_stop        <= nfast_stop_i;

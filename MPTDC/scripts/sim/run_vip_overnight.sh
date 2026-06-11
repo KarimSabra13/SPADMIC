@@ -14,6 +14,7 @@
 #             --scratch-root DIR    Simulator build/work root for xrun/Verilator
 #                                   (default $MPTDC_SIM_SCRATCH_ROOT when set)
 #             --freq-mode NAME      nominal|r750_delta5 RTL timing constants
+#             --mptdc-opt-mode NAME BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY
 #             --dry-run             Print downstream commands without executing
 #             --smoke               Tiny shape-check run for both stages
 #             --rebuild             Forward --rebuild to characterization stage
@@ -54,6 +55,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=../mptdc_flow_common.sh
+source "$REPO_ROOT/scripts/mptdc_flow_common.sh"
 ORIGINAL_ARGS=("$@")
 MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
 case "$MPTDC_WORK_ROOT" in
@@ -69,6 +72,8 @@ OUT_DIR="$MPTDC_WORK_ROOT/characterization/vip_overnight"
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"
+OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
+OPT_MODE_DEFINE_OR_PARAMETER="none"
 OSC_TS_SLOW_PS=55
 OSC_TS_FAST_PS=50
 DELTA_STEP=5
@@ -147,6 +152,7 @@ while [[ $# -gt 0 ]]; do
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
+    --mptdc-opt-mode|--opt-mode) OPT_MODE="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --smoke) SMOKE=1; shift ;;
     --clean) CLEAN=1; shift ;;
@@ -231,6 +237,10 @@ if (( DELTA_STEP <= 0 )); then
 fi
 DELTA_LSB=$((2 * DELTA_STEP))
 K_VERNIER=$((OSC_TS_SLOW_PS / DELTA_STEP))
+OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$OPT_MODE")"
+if [[ -n "$OPT_MODE_DEFINE_CSV" ]]; then
+  OPT_MODE_DEFINE_OR_PARAMETER="$OPT_MODE_DEFINE_CSV"
+fi
 
 if [[ -n "$JITTER_SIGMA" && -z "$JITTER_BOUND" ]]; then
   echo "Error: --jitter-sigma requires --jitter-bound" >&2
@@ -303,6 +313,8 @@ MANIFEST="$OUT_DIR/overnight_manifest.json"
 mkdir -p "$OUT_DIR"
 
 echo "[OVERNIGHT] Frequency mode: $FREQ_MODE OSC_TS_SLOW_PS=$OSC_TS_SLOW_PS OSC_TS_FAST_PS=$OSC_TS_FAST_PS DELTA_STEP=$DELTA_STEP DELTA_LSB=$DELTA_LSB K_VERNIER=$K_VERNIER"
+echo "[OVERNIGHT] MPTDC opt mode: $OPT_MODE"
+echo "[OVERNIGHT] MPTDC opt defines: ${OPT_MODE_DEFINE_CSV:-none}"
 if [[ -n "$SCRATCH_ROOT" ]]; then
   echo "[OVERNIGHT] Scratch/build root: $SCRATCH_ROOT"
 fi
@@ -333,6 +345,7 @@ if (( RUN_VIP )); then
       --seed-start "$VIP_SEED_START"
       --seeds "$VIP_SEEDS"
       --out-dir "$VIP_OUT"
+      --mptdc-opt-mode "$OPT_MODE"
     )
     if [[ "$VIP_NUM_CONV" != "0" ]]; then
       vip_cmd+=(--num-conv "$VIP_NUM_CONV")
@@ -353,7 +366,7 @@ if (( RUN_VIP )); then
       vip_cmd+=("${VIP_TESTS[@]}")
     fi
     print_cmd "[RUN][VIP]" "${vip_cmd[@]}"
-    MPTDC_FREQ_MODE="$FREQ_MODE" MPTDC_SIM_SCRATCH_ROOT="$SCRATCH_ROOT" "${vip_cmd[@]}"
+    MPTDC_FREQ_MODE="$FREQ_MODE" MPTDC_OPT_MODE="$OPT_MODE" MPTDC_SIM_SCRATCH_ROOT="$SCRATCH_ROOT" "${vip_cmd[@]}"
     VIP_STATUS="completed"
   fi
 fi
@@ -376,6 +389,7 @@ if (( RUN_CHAR )); then
       --out-mode "$CHAR_OUT_MODE"
       --nfast-encoding "$CHAR_NFAST_ENCODING"
       --freq-mode "$FREQ_MODE"
+      --mptdc-opt-mode "$OPT_MODE"
       --out-dir "$CHAR_OUT"
       --analyze
       --calibrate
@@ -438,6 +452,8 @@ CHAR_FAST_TAG_ENCODING="$CHAR_FAST_TAG_ENCODING" \
 CHAR_RTL_TAG_DEFINE_OR_PARAMETER="$CHAR_RTL_TAG_DEFINE_OR_PARAMETER" \
 FREQ_MODE="$FREQ_MODE" \
 FREQ_RTL_DEFINE_OR_PARAMETER="$FREQ_RTL_DEFINE_OR_PARAMETER" \
+OPT_MODE="$OPT_MODE" \
+OPT_MODE_DEFINE_OR_PARAMETER="$OPT_MODE_DEFINE_OR_PARAMETER" \
 OSC_TS_SLOW_PS="$OSC_TS_SLOW_PS" \
 OSC_TS_FAST_PS="$OSC_TS_FAST_PS" \
 DELTA_STEP="$DELTA_STEP" \
@@ -472,9 +488,12 @@ data = {
         "head": os.environ["RTL_HEAD"],
         "freq_mode": os.environ["FREQ_MODE"],
         "freq_rtl_define_or_parameter": os.environ["FREQ_RTL_DEFINE_OR_PARAMETER"],
+        "mptdc_opt_mode": os.environ["OPT_MODE"],
+        "mptdc_opt_mode_define_or_parameter": os.environ["OPT_MODE_DEFINE_OR_PARAMETER"],
     },
     "frequency_mode": {
         "freq_mode": os.environ["FREQ_MODE"],
+        "mptdc_opt_mode": os.environ["OPT_MODE"],
         "OSC_TS_SLOW_PS": int(os.environ["OSC_TS_SLOW_PS"]),
         "OSC_TS_FAST_PS": int(os.environ["OSC_TS_FAST_PS"]),
         "DELTA_STEP": int(os.environ["DELTA_STEP"]),

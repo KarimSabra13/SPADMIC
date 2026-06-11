@@ -28,7 +28,9 @@ mptdc_common_print_run_header \
 
 export MPTDC_STABLE_FLOW_LABEL="MPTDC_CHARACTERIZATION"
 export MPTDC_FREQ_MODE="${MPTDC_FREQ_MODE:-r750_delta5}"
+export MPTDC_OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
 exec "$MPTDC_DIR/scripts/sim/run_vip_overnight.sh" \
   --freq-mode "$MPTDC_FREQ_MODE" \
+  --mptdc-opt-mode "$MPTDC_OPT_MODE" \
   --out-dir "$RUN_DIR" \
   "$@"

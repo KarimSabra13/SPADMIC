@@ -244,6 +244,7 @@ module mptdc_core
   // start_timeout_latched injects a SYNTHETIC STOP (not a clear) to trigger normal
   // measurement flow: meas_ctrl MEASURE → close → capture → drain → packet.
   wire fe_clear_with_wdt = meas_fe_clear | wdt_force_reset;
+  wire frontend_teardown_busy = meas_fe_clear | meas_pd_clear | wdt_force_reset;
 
   // =========================================================================
   //  Conversion / overflow counters (sys domain)
@@ -390,6 +391,7 @@ module mptdc_core
     .start_async_i        (start_async_i),
     .stop_async_i         (stop_async_i),
     .fe_clear_async_i     (fe_clear_with_wdt),         // meas clear + global watchdog
+    .frontend_teardown_busy_i(frontend_teardown_busy),
     .start_timeout_async_i(start_timeout_latched),     // held synthetic STOP
     .ctx_release_async_i  (drain_ctx_release),
     .capture_en_i         (meas_capture_en),
@@ -668,11 +670,23 @@ module mptdc_core
   // =========================================================================
   //  Status assembly reflects active measurement state.
   // =========================================================================
+`ifdef MPTDC_SAFE_TEARDOWN
+  wire status_measure_idle = (meas_state == ST_M_IDLE);
+  wire status_teardown_idle = ~frontend_teardown_busy;
+`else
+  wire status_measure_idle = 1'b1;
+  wire status_teardown_idle = 1'b1;
+`endif
+
   assign status_o.ready              = conv_arm_i & ~fe_all_ctx_busy
-                                     & ~start_latched_sync;
+                                     & ~start_latched_sync
+                                     & status_measure_idle
+                                     & status_teardown_idle;
   assign status_o.busy               = start_latched_sync
                                      | (|ctx_drain_sync_ff2)
-                                     | (drain_state != ST_D_IDLE);
+                                     | (drain_state != ST_D_IDLE)
+                                     | ~status_measure_idle
+                                     | ~status_teardown_idle;
   assign status_o.ctx_state_packed   = ctx_state_packed;
   assign status_o.drain_state        = drain_state;
   assign status_o.last_hit_count     = last_hit_count_r;

@@ -9,6 +9,7 @@
 #           [--ref-phase-ps N] [--artifact-dir DIR] [--vip-asserts] [--dry-run]
 #           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
 #           [--freq-mode nominal|r750_delta5]
+#           [--mptdc-opt-mode BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY]
 #           [--scratch-root DIR]
 # Context : Verilator is intended for smoke runs; xrun/xcelium/VCS enable
 #           broader simulator and coverage flows.
@@ -18,6 +19,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=../mptdc_flow_common.sh
+source "$REPO_ROOT/scripts/mptdc_flow_common.sh"
 BUILD_DIR="$REPO_ROOT/build"
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 SIM="verilator"
@@ -38,6 +41,7 @@ VIP_ASSERTS=0
 DRY_RUN=0
 FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
 FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
+OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -75,6 +79,8 @@ while [[ $# -gt 0 ]]; do
       FAST_TAG_ENCODING="$2"; shift 2 ;;
     --freq-mode)
       FREQ_MODE="$2"; shift 2 ;;
+    --mptdc-opt-mode|--opt-mode)
+      OPT_MODE="$2"; shift 2 ;;
     --scratch-root)
       SCRATCH_ROOT="$2"; shift 2 ;;
     -h|--help)
@@ -86,6 +92,7 @@ Usage: $0 <test_name> [--sim verilator|xrun|xcelium|vcs] [--waves] [--seed N]
           [--artifact-dir DIR] [--vip-asserts] [--dry-run]
           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
           [--freq-mode nominal|r750_delta5]
+          [--mptdc-opt-mode BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY]
           [--scratch-root DIR]
 
 Notes:
@@ -126,6 +133,13 @@ case "$FREQ_MODE" in
     exit 1
     ;;
 esac
+
+OPT_MODE_DEFINE_TEXT="$(mptdc_common_opt_mode_define_args "$OPT_MODE")"
+OPT_MODE_DEFINE_ARGS=()
+if [[ -n "$OPT_MODE_DEFINE_TEXT" ]]; then
+  mapfile -t OPT_MODE_DEFINE_ARGS <<< "$OPT_MODE_DEFINE_TEXT"
+fi
+OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$OPT_MODE")"
 
 if [[ -n "$SCRATCH_ROOT" ]]; then
   case "$SCRATCH_ROOT" in
@@ -266,7 +280,7 @@ if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
   COV_TEST="${COV_TEST_NAME:-$TEST_NAME}"
 fi
 
-TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}_${FAST_TAG_ENCODING}_${FREQ_MODE}"
+TB_BUILD="$BUILD_DIR/vip_${TEST_NAME}_${SIM}_${FAST_TAG_ENCODING}_${FREQ_MODE}_${OPT_MODE}"
 if [[ -n "$COV_TEST_NAME" ]]; then
   # Parallel xrun campaign jobs must not share one xcelium.d library.
   TB_BUILD+="_$(sanitize_path_token "$COV_TEST_NAME")"
@@ -277,6 +291,9 @@ fi
 if [[ $FUNC_COV -eq 1 || $CODE_COV -eq 1 ]]; then
   COV_DIR="${COV_WORKDIR:-$TB_BUILD/cov_work}"
 fi
+
+echo "[VIP] MPTDC opt mode: $OPT_MODE"
+echo "[VIP] MPTDC opt defines: ${OPT_MODE_DEFINE_CSV:-none}"
 
 if [[ $DRY_RUN -eq 0 ]]; then
   if [[ "$SIM" == "xrun" || "$SIM" == "xcelium" ]]; then
@@ -302,6 +319,7 @@ case "$SIM" in
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
       "${FREQ_MODE_DEFINE_ARGS[@]}"
+      "${OPT_MODE_DEFINE_ARGS[@]}"
       --Mdir "$TB_BUILD"
       --top-module mptdc_vip_tb
       -o mptdc_vip_tb
@@ -328,6 +346,7 @@ case "$SIM" in
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
       "${FREQ_MODE_DEFINE_ARGS[@]}"
+      "${OPT_MODE_DEFINE_ARGS[@]}"
       -f "$REPO_ROOT/rtl/filelist.f"
       -f "$REPO_ROOT/tb/vip/filelist.f"
       -xmlibdirname "$TB_BUILD/xcelium.d"
@@ -362,6 +381,7 @@ case "$SIM" in
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
       "${FREQ_MODE_DEFINE_ARGS[@]}"
+      "${OPT_MODE_DEFINE_ARGS[@]}"
       -f "$REPO_ROOT/rtl/filelist.f"
       -f "$REPO_ROOT/tb/vip/filelist.f"
       -top mptdc_vip_tb

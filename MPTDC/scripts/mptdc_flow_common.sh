@@ -78,3 +78,65 @@ mptdc_common_print_run_header() {
   echo "FINAL_SIGNOFF=NO"
   echo "LEGACY_TRACE=$legacy_trace"
 }
+
+mptdc_common_opt_mode_define_names() {
+  local mode="${1:-STRIDE2}"
+  case "$mode" in
+    BASELINE)
+      return 0
+      ;;
+    SAFE_TEARDOWN)
+      printf '%s\n' MPTDC_SAFE_TEARDOWN
+      ;;
+    ROW_SKIP)
+      printf '%s\n' MPTDC_SAFE_TEARDOWN MPTDC_DRAIN_ROW_SKIP
+      ;;
+    STRIDE2)
+      printf '%s\n' MPTDC_SAFE_TEARDOWN MPTDC_DRAIN_ROW_SKIP MPTDC_DRAIN_SCAN_STRIDE2
+      ;;
+    CLEAR_EARLY)
+      printf '%s\n' MPTDC_SAFE_TEARDOWN MPTDC_DRAIN_ROW_SKIP MPTDC_DRAIN_SCAN_STRIDE2 MPTDC_PD_CLEAR_EARLY
+      ;;
+    CAPTURE_CLEAR_EXPERIMENTAL)
+      echo "ERROR: CAPTURE_CLEAR_EXPERIMENTAL is documented but not implemented in this branch yet." >&2
+      return 2
+      ;;
+    *)
+      echo "ERROR: unsupported MPTDC_OPT_MODE=$mode" >&2
+      echo "Supported: BASELINE SAFE_TEARDOWN ROW_SKIP STRIDE2 CLEAR_EARLY" >&2
+      return 2
+      ;;
+  esac
+}
+
+mptdc_common_opt_mode_define_args() {
+  local mode="${1:-STRIDE2}"
+  local names
+  if ! names="$(mptdc_common_opt_mode_define_names "$mode")"; then
+    return 2
+  fi
+  local name
+  while IFS= read -r name; do
+    [[ -n "$name" ]] && printf '+define+%s\n' "$name"
+  done <<< "$names"
+  return 0
+}
+
+mptdc_common_opt_mode_define_csv() {
+  local mode="${1:-STRIDE2}"
+  local names
+  if ! names="$(mptdc_common_opt_mode_define_names "$mode")"; then
+    return 2
+  fi
+  local name
+  local joined=""
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+    if [[ -n "$joined" ]]; then
+      joined+=","
+    fi
+    joined+="$name"
+  done <<< "$names"
+  printf '%s\n' "$joined"
+  return 0
+}

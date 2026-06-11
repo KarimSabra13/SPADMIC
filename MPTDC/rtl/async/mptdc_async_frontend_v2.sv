@@ -31,6 +31,7 @@ module mptdc_async_frontend_v2
 
   // Clear / release handshake
   input  wire                  fe_clear_async_i,         // clears start+stop latches
+  input  wire                  frontend_teardown_busy_i, // blocks START during clear/reset teardown
   input  wire                  start_timeout_async_i,    // slow-domain watchdog synthetic STOP
   input  wire  [N_CTX-1:0]    ctx_release_async_i,       // per-ctx: drain FSM done
 
@@ -95,10 +96,17 @@ module mptdc_async_frontend_v2
     end
   end
 
+`ifdef MPTDC_SAFE_TEARDOWN
+  wire teardown_start_block = frontend_teardown_busy_i;
+`else
+  wire teardown_start_block = 1'b0;
+  wire unused_frontend_teardown_busy = frontend_teardown_busy_i;
+`endif
+
   wire start_blocked_level = start_latched_q | ~any_ctx_free | ~conv_arm_i
-                           | clear_any;
+                           | clear_any | teardown_start_block;
   wire start_accept_level = start_async_i & any_ctx_free & conv_arm_i
-                          & ~start_latched_q & ~clear_any
+                          & ~start_latched_q & ~clear_any & ~teardown_start_block
                           & ~start_reject_seen_q;
 
   // =========================================================================

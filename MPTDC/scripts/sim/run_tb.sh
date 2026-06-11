@@ -5,6 +5,7 @@
 #           [--sim verilator|xcelium|vcs] [--waves] [--seed N]
 #           [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag]
 #           [--freq-mode nominal|r750_delta5]
+#           [--mptdc-opt-mode BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY]
 #           [--scratch-root DIR]
 # Context : Primary filelist-driven runner for benches under tb/unit and
 #           tb/int.
@@ -14,6 +15,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=../mptdc_flow_common.sh
+source "$REPO_ROOT/scripts/mptdc_flow_common.sh"
 RTL_DIR="$REPO_ROOT/rtl"
 TB_DIR="$REPO_ROOT/tb"
 MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
@@ -31,6 +34,7 @@ SEED=""
 TB_NAME=""
 FAST_TAG_ENCODING="${MPTDC_FAST_TAG_ENCODING:-raw_lfsr_tag}"
 FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
+OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -40,9 +44,10 @@ while [[ $# -gt 0 ]]; do
     --seed)    SEED="$2"; shift 2 ;;
     --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
+    --mptdc-opt-mode|--opt-mode) OPT_MODE="$2"; shift 2 ;;
     --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: $0 <tb_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N] [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag] [--freq-mode nominal|r750_delta5] [--scratch-root DIR]"
+      echo "Usage: $0 <tb_name> [--sim verilator|xcelium|vcs] [--waves] [--seed N] [--fast-tag-encoding raw_lfsr_tag|raw_galois_tag] [--freq-mode nominal|r750_delta5] [--mptdc-opt-mode BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY] [--scratch-root DIR]"
       exit 0
       ;;
     *)
@@ -80,6 +85,13 @@ case "$FREQ_MODE" in
     exit 1
     ;;
 esac
+
+OPT_MODE_DEFINE_TEXT="$(mptdc_common_opt_mode_define_args "$OPT_MODE")"
+OPT_MODE_DEFINE_ARGS=()
+if [[ -n "$OPT_MODE_DEFINE_TEXT" ]]; then
+  mapfile -t OPT_MODE_DEFINE_ARGS <<< "$OPT_MODE_DEFINE_TEXT"
+fi
+OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$OPT_MODE")"
 
 if [[ -n "$SCRATCH_ROOT" ]]; then
   case "$SCRATCH_ROOT" in
@@ -121,7 +133,7 @@ TB_COMMON=(
 )
 
 # Build directory
-TB_BUILD="$BUILD_DIR/${TB_NAME}_${FAST_TAG_ENCODING}_${FREQ_MODE}"
+TB_BUILD="$BUILD_DIR/${TB_NAME}_${FAST_TAG_ENCODING}_${FREQ_MODE}_${OPT_MODE}"
 mkdir -p "$TB_BUILD"
 
 # Keep ccache writes inside the build tree unless the caller already chose a
@@ -135,6 +147,8 @@ echo "  Testbench: $TB_NAME"
 echo "  Simulator: $SIM"
 echo "  Fast tag encoding: $FAST_TAG_ENCODING"
 echo "  Frequency mode: $FREQ_MODE"
+echo "  MPTDC opt mode: $OPT_MODE"
+echo "  MPTDC opt defines: ${OPT_MODE_DEFINE_CSV:-none}"
 echo "  Build dir: $TB_BUILD"
 echo ""
 
@@ -154,6 +168,7 @@ case "$SIM" in
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
       "${FREQ_MODE_DEFINE_ARGS[@]}"
+      "${OPT_MODE_DEFINE_ARGS[@]}"
       --Mdir "$TB_BUILD"
       --top-module "$TB_NAME"
       -o "$TB_NAME"
@@ -199,6 +214,7 @@ case "$SIM" in
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
       "${FREQ_MODE_DEFINE_ARGS[@]}"
+      "${OPT_MODE_DEFINE_ARGS[@]}"
     )
 
     if [[ -n "$SEED" ]]; then
@@ -224,6 +240,7 @@ case "$SIM" in
       +define+MPTDC_USE_OSC_MODEL
       "${FAST_TAG_DEFINE_ARGS[@]}"
       "${FREQ_MODE_DEFINE_ARGS[@]}"
+      "${OPT_MODE_DEFINE_ARGS[@]}"
       -top "$TB_NAME"
       -o "$TB_BUILD/$TB_NAME"
     )

@@ -17,6 +17,7 @@
 #           --fast-tag-encoding NAME raw_lfsr_tag|raw_galois_tag RTL tag generator
 #                            selected for the existing 7-bit packet nfast field
 #           --freq-mode NAME  nominal|r750_delta5 RTL timing constants
+#           --mptdc-opt-mode NAME BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY
 #           --jitter-sigma N Override oscillator jitter sigma in ps
 #           --jitter-bound N Override oscillator jitter bound in ps
 #           --out-dir DIR    Output directory (default work/characterization/campaign)
@@ -33,6 +34,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=../mptdc_flow_common.sh
+source "$REPO_ROOT/scripts/mptdc_flow_common.sh"
 MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
 case "$MPTDC_WORK_ROOT" in
   /*) ;;
@@ -56,7 +59,8 @@ CONFIG_FILTER="*"
 OUT_MODE="raw_features"
 OUT_MODE_ENUM=0
 FAST_TAG_ENCODING="raw_lfsr_tag"
-FREQ_MODE="nominal"
+FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
+OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
 JITTER_SIGMA_OVERRIDE=""
 JITTER_BOUND_OVERRIDE=""
 OUT_DIR="$MPTDC_WORK_ROOT/characterization/campaign"
@@ -126,6 +130,7 @@ while [[ $# -gt 0 ]]; do
     --out-mode)   OUT_MODE="$2";         shift 2 ;;
     --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
+    --mptdc-opt-mode|--opt-mode) OPT_MODE="$2"; shift 2 ;;
     --jitter-sigma) JITTER_SIGMA_OVERRIDE="$2"; shift 2 ;;
     --jitter-bound) JITTER_BOUND_OVERRIDE="$2"; shift 2 ;;
     --out-dir)    OUT_DIR="$2";          shift 2 ;;
@@ -179,6 +184,13 @@ case "$FREQ_MODE" in
     ;;
 esac
 
+OPT_MODE_DEFINE_TEXT="$(mptdc_common_opt_mode_define_args "$OPT_MODE")"
+OPT_MODE_DEFINE_ARGS=()
+if [[ -n "$OPT_MODE_DEFINE_TEXT" ]]; then
+  mapfile -t OPT_MODE_DEFINE_ARGS <<< "$OPT_MODE_DEFINE_TEXT"
+fi
+OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$OPT_MODE")"
+
 if [[ -n "$JITTER_SIGMA_OVERRIDE" && -z "$JITTER_BOUND_OVERRIDE" ]]; then
   echo "[ERROR] --jitter-sigma requires --jitter-bound"
   exit 1
@@ -201,9 +213,9 @@ if [[ -n "$SCRATCH_ROOT" ]]; then
 else
   BUILD_DIR="$REPO_ROOT/build"
 fi
-OBJ_DIR="$BUILD_DIR/obj_dir_campaign_${FAST_TAG_ENCODING}_${FREQ_MODE}"
+OBJ_DIR="$BUILD_DIR/obj_dir_campaign_${FAST_TAG_ENCODING}_${FREQ_MODE}_${OPT_MODE}"
 BINARY="$OBJ_DIR/tb_campaign_collect"
-XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun_${FAST_TAG_ENCODING}_${FREQ_MODE}"
+XRUN_BUILD_ROOT="$BUILD_DIR/campaign_xrun_${FAST_TAG_ENCODING}_${FREQ_MODE}_${OPT_MODE}"
 
 # ── smoke mode overrides ───────────────────────────────────────────────────
 if (( SMOKE )); then
@@ -220,6 +232,7 @@ build_tb() {
     +define+MPTDC_USE_OSC_MODEL
     "${FAST_TAG_DEFINE_ARGS[@]}"
     "${FREQ_MODE_DEFINE_ARGS[@]}"
+    "${OPT_MODE_DEFINE_ARGS[@]}"
     -f "$REPO_ROOT/rtl/filelist.f"
     "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv"
     "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
@@ -330,6 +343,8 @@ echo "[CAMPAIGN] Simulator: ${SIM}"
 echo "[CAMPAIGN] Out mode: ${OUT_MODE}"
 echo "[CAMPAIGN] Fast tag RTL: ${FAST_TAG_ENCODING}"
 echo "[CAMPAIGN] Frequency mode: ${FREQ_MODE}"
+echo "[CAMPAIGN] MPTDC opt mode: ${OPT_MODE}"
+echo "[CAMPAIGN] MPTDC opt defines: ${OPT_MODE_DEFINE_CSV:-none}"
 echo "[CAMPAIGN] Scratch/build root: ${BUILD_DIR}"
 if [[ -n "$JITTER_SIGMA_OVERRIDE" ]]; then
   echo "[CAMPAIGN] Jitter override: sigma=${JITTER_SIGMA_OVERRIDE} ps, bound=${JITTER_BOUND_OVERRIDE} ps"
@@ -373,11 +388,19 @@ worker() {
   local -a cmd
   local -a fast_tag_define_args=()
   local -a freq_mode_define_args=()
+  local -a opt_mode_define_args=()
   if [[ "$FAST_TAG_ENCODING" == "raw_galois_tag" ]]; then
     fast_tag_define_args=(+define+MPTDC_FAST_TAG_GALOIS)
   fi
   if [[ "$FREQ_MODE" == "r750_delta5" ]]; then
     freq_mode_define_args=(+define+MPTDC_FREQ_R750_DELTA5)
+  fi
+  if [[ -n "$OPT_MODE_DEFINE_CSV" ]]; then
+    local -a opt_mode_define_names=()
+    IFS=',' read -r -a opt_mode_define_names <<< "$OPT_MODE_DEFINE_CSV"
+    for define_name in "${opt_mode_define_names[@]}"; do
+      [[ -n "$define_name" ]] && opt_mode_define_args+=("+define+${define_name}")
+    done
   fi
 
   case "$SIM" in
@@ -416,6 +439,7 @@ worker() {
         +define+MPTDC_USE_OSC_MODEL
         "${fast_tag_define_args[@]}"
         "${freq_mode_define_args[@]}"
+        "${opt_mode_define_args[@]}"
         -f "$REPO_ROOT/rtl/filelist.f"
         "$REPO_ROOT/tb/common/mptdc_tb_pkg.sv"
         "$REPO_ROOT/tb/common/mptdc_raw_monitor.sv"
@@ -458,7 +482,7 @@ worker() {
 }
 
 export -f worker print_cmd print_cd_cmd sanitize_path_token config_output_name
-export REPO_ROOT BINARY XRUN_BUILD_ROOT OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN SIM OUT_MODE OUT_MODE_ENUM FAST_TAG_ENCODING FREQ_MODE JITTER_SIGMA_OVERRIDE JITTER_BOUND_OVERRIDE
+export REPO_ROOT BINARY XRUN_BUILD_ROOT OUT_DIR N_CONV DELAY_MIN DELAY_MAX DRY_RUN SIM OUT_MODE OUT_MODE_ENUM FAST_TAG_ENCODING FREQ_MODE OPT_MODE OPT_MODE_DEFINE_CSV JITTER_SIGMA_OVERRIDE JITTER_BOUND_OVERRIDE
 
 # ── launch all seeds ────────────────────────────────────────────────────────
 TOTAL_SEEDS=$(( ${#FILTERED[@]} * SEEDS_PER_CONFIG ))

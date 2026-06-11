@@ -14,6 +14,7 @@
 #                              legacy full/2 aliases are mapped downstream)
 #           --fast-tag-encoding NAME raw_lfsr_tag|raw_galois_tag RTL tag generator
 #           --freq-mode NAME    nominal|r750_delta5 RTL timing constants
+#           --mptdc-opt-mode NAME BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY
 #           --delay-list LIST  Comma/space-separated delays in ps
 #           --out-dir DIR      Output directory (default work/characterization/fixed_delay_campaign)
 #           --scratch-root DIR Simulator build/work root passed to run_campaign.sh
@@ -29,6 +30,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=../mptdc_flow_common.sh
+source "$REPO_ROOT/scripts/mptdc_flow_common.sh"
 MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
 case "$MPTDC_WORK_ROOT" in
   /*) ;;
@@ -43,7 +46,8 @@ SEED_START=0
 CONFIG_FILTER="multihit_15_cal_nominal"
 OUT_MODE="raw_features"
 FAST_TAG_ENCODING="raw_lfsr_tag"
-FREQ_MODE="nominal"
+FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
+OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
 OUT_DIR="$MPTDC_WORK_ROOT/characterization/fixed_delay_campaign"
 DELAY_LIST="20,50,100,200,500,1000,2000,5000,10000,30000"
@@ -80,6 +84,7 @@ while [[ $# -gt 0 ]]; do
     --out-mode) OUT_MODE="$2"; shift 2 ;;
     --fast-tag-encoding) FAST_TAG_ENCODING="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
+    --mptdc-opt-mode|--opt-mode) OPT_MODE="$2"; shift 2 ;;
     --delay-list) DELAY_LIST="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
@@ -118,6 +123,7 @@ case "$FREQ_MODE" in
     exit 1
     ;;
 esac
+OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$OPT_MODE")"
 
 case "$OUT_DIR" in
   /*) ;;
@@ -166,6 +172,8 @@ echo "[FIXED-DELAY] Output root: $OUT_DIR"
 echo "[FIXED-DELAY] Delays (ps): ${DELAYS[*]}"
 echo "[FIXED-DELAY] Fast tag RTL: $FAST_TAG_ENCODING"
 echo "[FIXED-DELAY] Frequency mode: $FREQ_MODE"
+echo "[FIXED-DELAY] MPTDC opt mode: $OPT_MODE"
+echo "[FIXED-DELAY] MPTDC opt defines: ${OPT_MODE_DEFINE_CSV:-none}"
 if [[ -n "$SCRATCH_ROOT" ]]; then
   echo "[FIXED-DELAY] Scratch/build root: $SCRATCH_ROOT"
 fi
@@ -188,6 +196,7 @@ for delay_ps in "${DELAYS[@]}"; do
     --out-mode "$OUT_MODE"
     --fast-tag-encoding "$FAST_TAG_ENCODING"
     --freq-mode "$FREQ_MODE"
+    --mptdc-opt-mode "$OPT_MODE"
     --out-dir "$delay_out"
   )
   if [[ -n "$SCRATCH_ROOT" ]]; then

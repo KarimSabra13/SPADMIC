@@ -52,6 +52,7 @@ esac
   echo "run_id: $RUN_ID"
   echo "result_dir: $RESULT_DIR"
   echo "run_mode: $RUN_MODE"
+  echo "mptdc_opt_mode: ${MPTDC_OPT_MODE:-STRIDE2}"
   echo "source_run_id: $SOURCE_RUN_ID"
   echo "source_checkpoint_dat: $SOURCE_CHECKPOINT_DAT"
   echo "source_restore_tcl: $SOURCE_RESTORE_TCL"

@@ -323,6 +323,9 @@ package mptdc_pkg;
   typedef struct packed {
     logic [PD_N-1:0]                     hit_level;
     logic [PD_N*NFAST_W-1:0]             nfast_hit_packed;  // PD_N × NFAST_W flattened
+`ifdef MPTDC_DRAIN_ROW_SKIP
+    logic [NE-1:0]                       row_nonzero;
+`endif
     logic [NSLOW_W-1:0]                  nslow_snap;        // STOP-side slow snapshot
     logic [NFAST_W-1:0]                  nfast_snap;        // global fast counter at CAPTURE
     logic [NFAST_W-1:0]                  nfast_stop;        // fast counter at STOP edge

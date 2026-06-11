@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 MPTDC_DIR="$(cd "$SYN_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
+# shellcheck source=../../scripts/mptdc_flow_common.sh
+source "$MPTDC_DIR/scripts/mptdc_flow_common.sh"
 MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
 case "$MPTDC_WORK_ROOT" in
   /*) ;;
@@ -56,6 +58,10 @@ else
   O13_SDC="${O13_SDC_PATH:-$SYN_DIR/inputs/mptdc_osc_typical_r750_delta5_o13_phase_distribution.sdc}"
 fi
 O13_FILELIST="${O13_FILELIST_PATH:-$SYN_DIR/filelist_o13_phase_distribution.f}"
+MPTDC_OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
+if ! MPTDC_OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$MPTDC_OPT_MODE")"; then
+  exit 2
+fi
 export MPTDC_GENUS_REPAIR_FAST_TAG_PD="${MPTDC_GENUS_REPAIR_FAST_TAG_PD:-0}"
 export MPTDC_GENUS_REPAIR_DRV_TRANSITION="${MPTDC_GENUS_REPAIR_DRV_TRANSITION:-0}"
 DEFAULT_EXPORT_RUN_ID="${O1_RO_EXPORT_RUN_ID:-20260528_o1_export_ro_tune4_lef}"
@@ -148,6 +154,8 @@ export MPTDC_GENUS_TOOL_LOG="$GENUS_TOOL_LOG"
   echo "packet_format: unchanged"
   echo "nfast_encoding: raw_lfsr_tag"
   echo "frequency_mode: r750_delta5"
+  echo "mptdc_opt_mode: $MPTDC_OPT_MODE"
+  echo "mptdc_opt_defines: ${MPTDC_OPT_MODE_DEFINE_CSV:-none}"
   echo
   echo "git status --short:"
   git -C "$REPO_ROOT" status --short 2>/dev/null || true
@@ -221,20 +229,36 @@ if [[ -f "$O13_FILELIST" ]]; then
   fi
 fi
 
-if [[ "$INPUT_RC" == "0" && "${MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE:-0}" == "1" ]]; then
-  EFFECTIVE_O13_FILELIST="$RESULT_DIR/internal/run/filelist_o13_phase_distribution_final_repair.f"
-  awk '
+EFFECTIVE_DEFINE_CSV="$MPTDC_OPT_MODE_DEFINE_CSV"
+if [[ "${MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE:-0}" == "1" ]]; then
+  if [[ -n "$EFFECTIVE_DEFINE_CSV" ]]; then
+    EFFECTIVE_DEFINE_CSV+=","
+  fi
+  EFFECTIVE_DEFINE_CSV+="MPTDC_RELAX_FAST_TAG_PRESERVE"
+fi
+
+if [[ "$INPUT_RC" == "0" && -n "$EFFECTIVE_DEFINE_CSV" ]]; then
+  EFFECTIVE_O13_FILELIST="$RESULT_DIR/internal/run/filelist_o13_phase_distribution_spadmic_test.f"
+  awk -v defines="$EFFECTIVE_DEFINE_CSV" '
+    function emit_defines(   n, i, arr) {
+      n = split(defines, arr, ",")
+      for (i = 1; i <= n; i++) {
+        if (arr[i] != "") {
+          print "+define+" arr[i]
+        }
+      }
+    }
     BEGIN { added = 0 }
     {
       print
       if (!added && $0 == "+define+MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12") {
-        print "+define+MPTDC_RELAX_FAST_TAG_PRESERVE"
+        emit_defines()
         added = 1
       }
     }
     END {
       if (!added) {
-        print "+define+MPTDC_RELAX_FAST_TAG_PRESERVE"
+        emit_defines()
       }
     }
   ' "$O13_FILELIST" > "$EFFECTIVE_O13_FILELIST"
@@ -250,6 +274,7 @@ export MPTDC_TIMING_VIEW=tc_only
 export MPTDC_TC_ONLY_VIEW=1
 export MPTDC_FREQ_MODE=r750_delta5
 export MPTDC_FREQ_MODE_DEFINES="$FREQ_DEFINES"
+export MPTDC_OPT_MODE
 export PDK_ROOT="${PDK_ROOT:-$DEFAULT_PDK_ROOT}"
 export SC_ROOT="$SC_ROOT_PATH"
 export MPTDC_STDCELL_FAMILY="$STDCELL_FAMILY"
@@ -296,6 +321,8 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  O13_SDC=$O13_SDC"
   echo "  O13_FILELIST=$O13_FILELIST"
   echo "  MPTDC_FREQ_MODE=$MPTDC_FREQ_MODE"
+  echo "  MPTDC_OPT_MODE=$MPTDC_OPT_MODE"
+  echo "  MPTDC_OPT_DEFINES=${MPTDC_OPT_MODE_DEFINE_CSV:-none}"
   echo "  GENUS_EFFORT=$GENUS_EFFORT"
   echo "  MPTDC_TIMING_VIEW=$MPTDC_TIMING_VIEW"
   echo "  FLOW_LABEL=$FLOW_LABEL"

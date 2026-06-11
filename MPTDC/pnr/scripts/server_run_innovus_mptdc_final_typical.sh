@@ -133,6 +133,7 @@ fi
   echo "run_id: $RUN_ID"
   echo "result_dir: $RESULT_DIR"
   echo "mode: $MODE"
+  echo "mptdc_opt_mode: ${MPTDC_OPT_MODE:-STRIDE2}"
   echo "genus_run_id: ${GENUS_RUN_ID:-unset}"
   echo "genus_run_dir: ${GENUS_RUN_DIR:-unset}"
   echo "handoff_dir: ${HANDOFF_DIR:-unset}"

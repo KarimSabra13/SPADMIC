@@ -112,7 +112,35 @@ module mptdc_drain_ctrl
   assign pd_scan_idx    = pd_idx_t'(pd_scan_q[PD_W-1:0]);
   assign scan_done      = (pd_scan_q >= PD_SCAN_DONE);
   assign all_hits_found = (event_seq_q >= snapshot_i.hit_count);
-  assign cell_has_hit   = ~scan_done & snapshot_i.hit_level[pd_scan_idx];
+  assign cell_has_hit   = !scan_done && snapshot_i.hit_level[pd_scan_idx];
+
+`ifdef MPTDC_DRAIN_ROW_SKIP
+  wire row_skip_candidate = !scan_done
+                          && (nf_cnt_q == ph_idx_t'(0))
+                          && !snapshot_i.row_nonzero[ns_cnt_q];
+`else
+  wire row_skip_candidate = 1'b0;
+`endif
+
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+  wire [PD_SCAN_W-1:0] pd_scan_plus1 = pd_scan_q + PD_SCAN_W'(1);
+  wire                 cell1_valid = (pd_scan_plus1 < PD_SCAN_DONE)
+                                   && (nf_cnt_q != ph_idx_t'(NE - 1));
+  pd_idx_t             pd_scan_idx1;
+  ph_idx_t             nf_cnt_plus1;
+  logic                cell1_has_hit;
+  logic                pair_has_hit;
+  logic                pair_two_hits;
+  logic                pair_second_hit_in_budget;
+
+  assign pd_scan_idx1  = pd_idx_t'(pd_scan_plus1[PD_W-1:0]);
+  assign nf_cnt_plus1  = nf_cnt_q + ph_idx_t'(1);
+  assign cell1_has_hit = cell1_valid && snapshot_i.hit_level[pd_scan_idx1];
+  assign pair_has_hit  = cell_has_hit || cell1_has_hit;
+  assign pair_two_hits = cell_has_hit && cell1_has_hit;
+  assign pair_second_hit_in_budget =
+      (event_seq_q + EVENT_SEQ_W'(1)) < snapshot_i.hit_count;
+`endif
 
   // Next scan position
   logic [PD_SCAN_W-1:0] pd_scan_nxt;
@@ -127,12 +155,38 @@ module mptdc_drain_ctrl
       nf_cnt_nxt = nf_cnt_q + ph_idx_t'(1);
       ns_cnt_nxt = ns_cnt_q;
     end
+
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+    pd_scan_nxt = pd_scan_q + PD_SCAN_W'(2);
+    if (nf_cnt_q >= ph_idx_t'(NE - 2)) begin
+      nf_cnt_nxt = '0;
+      ns_cnt_nxt = ns_cnt_q + ph_idx_t'(1);
+    end else begin
+      nf_cnt_nxt = nf_cnt_q + ph_idx_t'(2);
+      ns_cnt_nxt = ns_cnt_q;
+    end
+`endif
+
+`ifdef MPTDC_DRAIN_ROW_SKIP
+    if (row_skip_candidate) begin
+      pd_scan_nxt = pd_scan_q + PD_SCAN_W'(NE);
+      nf_cnt_nxt  = '0;
+      ns_cnt_nxt  = ns_cnt_q + ph_idx_t'(1);
+    end
+`endif
   end
 
   // =========================================================================
   // Record construction
   // =========================================================================
   mptdc_acq_rec_t meta_rec, hit_rec;
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+  mptdc_acq_rec_t stride_pending_rec_q, stride_pending_rec_d;
+  logic           stride_pending_valid_q;
+  pd_idx_t        hit_rec_idx;
+  ph_idx_t        hit_rec_ns, hit_rec_nf;
+  logic [EVENT_SEQ_W-1:0] hit_rec_seq;
+`endif
 
   always_comb begin
     meta_rec                    = '0;
@@ -149,12 +203,45 @@ module mptdc_drain_ctrl
   end
 
   always_comb begin
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+    hit_rec_idx = pd_scan_idx;
+    hit_rec_ns  = ns_cnt_q;
+    hit_rec_nf  = nf_cnt_q;
+    hit_rec_seq = event_seq_q;
+
+    if (stride_pending_valid_q) begin
+      hit_rec_idx = '0;
+      hit_rec_ns  = stride_pending_rec_q.hit.ns;
+      hit_rec_nf  = stride_pending_rec_q.hit.nf;
+      hit_rec_seq = stride_pending_rec_q.hit.event_seq;
+    end else if (!cell_has_hit && cell1_has_hit) begin
+      hit_rec_idx = pd_scan_idx1;
+      hit_rec_nf  = nf_cnt_plus1;
+    end
+
+    hit_rec                     = '0;
+    hit_rec.kind                = ACQ_REC_HIT;
+    hit_rec.hit.ns              = hit_rec_ns;
+    hit_rec.hit.nf              = hit_rec_nf;
+    hit_rec.hit.nfast           = stride_pending_valid_q
+                                ? stride_pending_rec_q.hit.nfast
+                                : snapshot_i.nfast_hit_packed[hit_rec_idx*NFAST_W +: NFAST_W];
+    hit_rec.hit.event_seq       = hit_rec_seq;
+
+    stride_pending_rec_d                    = '0;
+    stride_pending_rec_d.kind               = ACQ_REC_HIT;
+    stride_pending_rec_d.hit.ns             = ns_cnt_q;
+    stride_pending_rec_d.hit.nf             = nf_cnt_plus1;
+    stride_pending_rec_d.hit.nfast          = snapshot_i.nfast_hit_packed[pd_scan_idx1*NFAST_W +: NFAST_W];
+    stride_pending_rec_d.hit.event_seq      = event_seq_q + EVENT_SEQ_W'(1);
+`else
     hit_rec                     = '0;
     hit_rec.kind                = ACQ_REC_HIT;
     hit_rec.hit.ns              = ns_cnt_q;
     hit_rec.hit.nf              = nf_cnt_q;
     hit_rec.hit.nfast           = snapshot_i.nfast_hit_packed[pd_scan_idx*NFAST_W +: NFAST_W];
     hit_rec.hit.event_seq       = event_seq_q;
+`endif
   end
 
   // =========================================================================
@@ -163,6 +250,11 @@ module mptdc_drain_ctrl
   logic advance_scan;
   logic stage_emit_wr;
   logic load_pending_wr;
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+  logic load_stride_pending;
+  logic clear_stride_pending;
+  logic [1:0] scan_hit_advance;
+`endif
   mptdc_acq_rec_t pending_wr_data_d;
   mptdc_acq_rec_t pending_wr_data_q;
   mptdc_acq_rec_t emit_wr_data_q;
@@ -177,6 +269,11 @@ module mptdc_drain_ctrl
     advance_scan   = 1'b0;
     stage_emit_wr  = 1'b0;
     load_pending_wr = 1'b0;
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+    load_stride_pending  = 1'b0;
+    clear_stride_pending = 1'b0;
+    scan_hit_advance     = 2'd0;
+`endif
     pending_wr_data_d = '0;
 
     case (state_q)
@@ -194,8 +291,30 @@ module mptdc_drain_ctrl
 
       // ─────────────────────────────────────────────────────────────
       ST_D_SCAN: begin
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+        if (stride_pending_valid_q) begin
+          stage_emit_wr         = 1'b1;
+          clear_stride_pending  = 1'b1;
+          state_d               = ST_D_EMIT;
+        end else if ((scan_done || all_hits_found) && pending_wr_ready) begin
+          state_d = ST_D_EOC;
+        end else if (row_skip_candidate && pending_wr_ready) begin
+          advance_scan = 1'b1;
+        end else if (pair_has_hit) begin
+          stage_emit_wr     = 1'b1;
+          advance_scan      = 1'b1;
+          scan_hit_advance  = (pair_two_hits && pair_second_hit_in_budget)
+                             ? 2'd2 : 2'd1;
+          load_stride_pending = pair_two_hits && pair_second_hit_in_budget;
+          state_d           = ST_D_EMIT;
+        end else if (pending_wr_ready) begin
+          advance_scan = 1'b1;   // skip empty cell pair or empty row
+        end
+`else
         if ((scan_done || all_hits_found) && pending_wr_ready) begin
           state_d = ST_D_EOC;
+        end else if (row_skip_candidate && pending_wr_ready) begin
+          advance_scan = 1'b1;   // skip empty row
         end else if (cell_has_hit) begin
           stage_emit_wr = 1'b1;
           advance_scan  = 1'b1;
@@ -203,6 +322,7 @@ module mptdc_drain_ctrl
         end else if (pending_wr_ready) begin
           advance_scan = 1'b1;   // skip empty cell
         end
+`endif
       end
 
       // ─────────────────────────────────────────────────────────────
@@ -243,6 +363,10 @@ module mptdc_drain_ctrl
       pending_wr_valid_q <= 1'b0;
       pending_wr_data_q  <= '0;
       emit_wr_data_q     <= '0;
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+      stride_pending_valid_q <= 1'b0;
+      stride_pending_rec_q   <= '0;
+`endif
     end else begin
       state_q <= state_d;
 
@@ -252,6 +376,15 @@ module mptdc_drain_ctrl
         else
           emit_wr_data_q <= hit_rec;
       end
+
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+      if (load_stride_pending) begin
+        stride_pending_valid_q <= 1'b1;
+        stride_pending_rec_q   <= stride_pending_rec_d;
+      end else if (clear_stride_pending) begin
+        stride_pending_valid_q <= 1'b0;
+      end
+`endif
 
       if (load_pending_wr) begin
         pending_wr_valid_q <= 1'b1;
@@ -276,8 +409,12 @@ module mptdc_drain_ctrl
             pd_scan_q <= pd_scan_nxt;
             ns_cnt_q  <= ns_cnt_nxt;
             nf_cnt_q  <= nf_cnt_nxt;
+`ifdef MPTDC_DRAIN_SCAN_STRIDE2
+            event_seq_q <= event_seq_q + EVENT_SEQ_W'(scan_hit_advance);
+`else
             if (cell_has_hit)
               event_seq_q <= event_seq_q + EVENT_SEQ_W'(1);
+`endif
           end
         end
 

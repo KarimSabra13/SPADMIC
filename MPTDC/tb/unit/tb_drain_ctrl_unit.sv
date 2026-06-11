@@ -105,6 +105,10 @@ module tb_drain_ctrl_unit;
     snapshot.hit_level[0]  = 1'b1;
     snapshot.hit_level[5]  = 1'b1;
     snapshot.hit_level[63] = 1'b1;
+`ifdef MPTDC_DRAIN_ROW_SKIP
+    snapshot.row_nonzero[0] = 1'b1;
+    snapshot.row_nonzero[7] = 1'b1;
+`endif
     snapshot.nfast_hit_packed[0*NFAST_W +: NFAST_W]  = exp_tag0;
     snapshot.nfast_hit_packed[5*NFAST_W +: NFAST_W]  = exp_tag5;
     snapshot.nfast_hit_packed[63*NFAST_W +: NFAST_W] = exp_tag73;

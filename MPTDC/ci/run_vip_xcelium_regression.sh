@@ -3,7 +3,7 @@
 # Purpose : VIP Xcelium CDV regression manager.
 # Usage   : bash ci/run_vip_xcelium_regression.sh [options] [test ...]
 #           --jobs N --seed-start N --seeds N --out-dir DIR
-#           [--scratch-root DIR] --dry-run
+#           [--scratch-root DIR] [--mptdc-opt-mode NAME] --dry-run
 # Notes   : Primary runs are wave-light. Failing seeds are rerun with deep waves
 #           into an isolated failures/ directory for morning debug.
 # -----------------------------------------------------------------------------
@@ -20,6 +20,7 @@ SEEDS=32
 NUM_CONV=0
 OUT_DIR="$ROOT/build/vip_xcelium"
 SCRATCH_ROOT="${MPTDC_SIM_SCRATCH_ROOT:-}"
+OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
 DRY_RUN=0
 CLEAN=0
 RERUN_FAILURES=1
@@ -61,6 +62,7 @@ while [[ $# -gt 0 ]]; do
     --num-conv) NUM_CONV="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
+    --mptdc-opt-mode|--opt-mode) OPT_MODE="$2"; shift 2 ;;
     --clean) CLEAN=1; shift ;;
     --no-rerun) RERUN_FAILURES=0; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -125,6 +127,7 @@ run_one() {
   local dry_run="$6"
   local runner="$7"
   local scratch_root="$8"
+  local opt_mode="$9"
 
   local run_id="${test_name}__seed_${seed}"
   local log_dir="$root/logs"
@@ -141,6 +144,7 @@ run_one() {
     --cov-test-name "$run_id"
     --artifact-dir "$artifact_dir"
     --vip-asserts
+    --mptdc-opt-mode "$opt_mode"
   )
 
   if [[ "$num_conv" != "0" ]]; then
@@ -171,22 +175,23 @@ run_one() {
 }
 
 export -f run_one
-export ROOT RUNNER OUT_DIR SIM NUM_CONV DRY_RUN SCRATCH_ROOT
+export ROOT RUNNER OUT_DIR SIM NUM_CONV DRY_RUN SCRATCH_ROOT OPT_MODE
 
 echo "[VIP-CDV] Tests: ${TESTS[*]}"
 echo "[VIP-CDV] Seeds: $SEEDS from $SEED_START"
 echo "[VIP-CDV] Jobs:  $JOBS"
 echo "[VIP-CDV] Out:   $OUT_DIR"
+echo "[VIP-CDV] MPTDC opt mode: $OPT_MODE"
 if [[ -n "$SCRATCH_ROOT" ]]; then
   echo "[VIP-CDV] Scratch/build root: $SCRATCH_ROOT"
 fi
 
 set +e
 if command -v parallel >/dev/null 2>&1 && parallel --version 2>/dev/null | grep -q '^GNU parallel'; then
-  parallel --jobs "$JOBS" --colsep ' ' run_one {1} {2} "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER" "$SCRATCH_ROOT" < "$JOB_LIST"
+  parallel --jobs "$JOBS" --colsep ' ' run_one {1} {2} "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER" "$SCRATCH_ROOT" "$OPT_MODE" < "$JOB_LIST"
   RC=$?
 else
-  xargs -r -P "$JOBS" -L 1 bash -c 'run_one "$1" "$2" "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER" "$SCRATCH_ROOT"' _ < "$JOB_LIST"
+  xargs -r -P "$JOBS" -L 1 bash -c 'run_one "$1" "$2" "$OUT_DIR" "$SIM" "$NUM_CONV" "$DRY_RUN" "$RUNNER" "$SCRATCH_ROOT" "$OPT_MODE"' _ < "$JOB_LIST"
   RC=$?
 fi
 set -e
@@ -208,6 +213,7 @@ if (( RERUN_FAILURES )) && (( DRY_RUN == 0 )) && [[ -s "$FAIL_LIST" ]]; then
       --cov-test-name "${run_id}__debug"
       --artifact-dir "$fail_dir"
       --vip-asserts
+      --mptdc-opt-mode "$OPT_MODE"
     )
     if [[ -n "$SCRATCH_ROOT" ]]; then
       rerun_cmd+=(--scratch-root "$SCRATCH_ROOT")

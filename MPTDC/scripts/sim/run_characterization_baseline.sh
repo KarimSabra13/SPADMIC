@@ -12,6 +12,7 @@
 #                                 legacy full/2 aliases are mapped to raw_features)
 #           --nfast-encoding NAME legacy_binary_nfast|raw_lfsr_tag|raw_galois_tag
 #           --freq-mode NAME      nominal|r750_delta5 RTL timing constants
+#           --mptdc-opt-mode NAME BASELINE|SAFE_TEARDOWN|ROW_SKIP|STRIDE2|CLEAR_EARLY
 #           --out-dir DIR         Root output dir (default work/characterization/baseline_nominal_raw_features)
 #           --scratch-root DIR    Simulator build/work root for xrun/Verilator
 #                                 (default $MPTDC_SIM_SCRATCH_ROOT when set)
@@ -48,6 +49,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=../mptdc_flow_common.sh
+source "$REPO_ROOT/scripts/mptdc_flow_common.sh"
 ORIGINAL_ARGS=("$@")
 MPTDC_WORK_ROOT="${MPTDC_WORK_ROOT:-work}"
 case "$MPTDC_WORK_ROOT" in
@@ -66,6 +69,8 @@ FAST_TAG_ENCODING="raw_lfsr_tag"
 RTL_TAG_DEFINE_OR_PARAMETER="default:TAG_ENCODING_SEL=TAG_ENC_LFSR_FIBONACCI"
 FREQ_MODE="${MPTDC_FREQ_MODE:-nominal}"
 FREQ_RTL_DEFINE_OR_PARAMETER="default:OSC_TS_SLOW_PS=55,OSC_TS_FAST_PS=50"
+OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
+OPT_MODE_DEFINE_OR_PARAMETER="none"
 OSC_TS_SLOW_PS=55
 OSC_TS_FAST_PS=50
 DELTA_STEP=5
@@ -152,6 +157,7 @@ while [[ $# -gt 0 ]]; do
     --out-mode) OUT_MODE="$2"; shift 2 ;;
     --nfast-encoding) NFAST_ENCODING="$2"; shift 2 ;;
     --freq-mode) FREQ_MODE="$2"; shift 2 ;;
+    --mptdc-opt-mode|--opt-mode) OPT_MODE="$2"; shift 2 ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     --scratch-root) SCRATCH_ROOT="$2"; shift 2 ;;
     --analyze) ANALYZE=1; shift ;;
@@ -263,6 +269,10 @@ if (( DELTA_STEP <= 0 )); then
 fi
 DELTA_LSB=$((2 * DELTA_STEP))
 K_VERNIER=$((OSC_TS_SLOW_PS / DELTA_STEP))
+OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$OPT_MODE")"
+if [[ -n "$OPT_MODE_DEFINE_CSV" ]]; then
+  OPT_MODE_DEFINE_OR_PARAMETER="$OPT_MODE_DEFINE_CSV"
+fi
 case "$ANALYSIS_BACKEND" in
   legacy|streaming) ;;
   *)
@@ -326,6 +336,7 @@ CAMPAIGN_CMD=(
   --out-mode "$OUT_MODE"
   --fast-tag-encoding "$FAST_TAG_ENCODING"
   --freq-mode "$FREQ_MODE"
+  --mptdc-opt-mode "$OPT_MODE"
   --out-dir "$CAMPAIGN_DIR"
 )
 if [[ -n "$SCRATCH_ROOT" ]]; then
@@ -403,6 +414,7 @@ FIXED_DELAY_CMD=(
   --out-mode "$OUT_MODE"
   --fast-tag-encoding "$FAST_TAG_ENCODING"
   --freq-mode "$FREQ_MODE"
+  --mptdc-opt-mode "$OPT_MODE"
   --delay-list "$FIXED_DELAY_LIST"
   --out-dir "$FIXED_DELAY_DIR"
   --analyze
@@ -438,6 +450,8 @@ write_manifest() {
   export MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER="$RTL_TAG_DEFINE_OR_PARAMETER"
   export MANIFEST_FREQ_MODE="$FREQ_MODE"
   export MANIFEST_FREQ_RTL_DEFINE_OR_PARAMETER="$FREQ_RTL_DEFINE_OR_PARAMETER"
+  export MANIFEST_OPT_MODE="$OPT_MODE"
+  export MANIFEST_OPT_MODE_DEFINE_OR_PARAMETER="$OPT_MODE_DEFINE_OR_PARAMETER"
   export MANIFEST_OSC_TS_SLOW_PS="$OSC_TS_SLOW_PS"
   export MANIFEST_OSC_TS_FAST_PS="$OSC_TS_FAST_PS"
   export MANIFEST_DELTA_STEP="$DELTA_STEP"
@@ -517,6 +531,8 @@ data = {
         "rtl_tag_define_or_parameter": os.environ["MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER"],
         "freq_mode": os.environ["MANIFEST_FREQ_MODE"],
         "freq_rtl_define_or_parameter": os.environ["MANIFEST_FREQ_RTL_DEFINE_OR_PARAMETER"],
+        "mptdc_opt_mode": os.environ["MANIFEST_OPT_MODE"],
+        "mptdc_opt_mode_define_or_parameter": os.environ["MANIFEST_OPT_MODE_DEFINE_OR_PARAMETER"],
     },
     "frequency_mode": {
         "freq_mode": os.environ["MANIFEST_FREQ_MODE"],
@@ -551,6 +567,7 @@ data = {
         "fast_tag_encoding": os.environ["MANIFEST_FAST_TAG_ENCODING"],
         "rtl_tag_define_or_parameter": os.environ["MANIFEST_RTL_TAG_DEFINE_OR_PARAMETER"],
         "freq_mode": os.environ["MANIFEST_FREQ_MODE"],
+        "mptdc_opt_mode": os.environ["MANIFEST_OPT_MODE"],
         "smoke": env_bool("MANIFEST_SMOKE"),
         "skip_campaign": env_bool("MANIFEST_SKIP_CAMPAIGN"),
     },
@@ -627,6 +644,8 @@ echo "[BASELINE] Config: $CONFIG"
 echo "[BASELINE] Sweep campaign: $SEEDS seed(s) × $N_CONV conv/seed, $JOBS job(s) in parallel"
 echo "[BASELINE] Fast tag RTL: nfast_encoding=$NFAST_ENCODING fast_tag_encoding=$FAST_TAG_ENCODING"
 echo "[BASELINE] Frequency mode: $FREQ_MODE OSC_TS_SLOW_PS=$OSC_TS_SLOW_PS OSC_TS_FAST_PS=$OSC_TS_FAST_PS DELTA_STEP=$DELTA_STEP DELTA_LSB=$DELTA_LSB K_VERNIER=$K_VERNIER"
+echo "[BASELINE] MPTDC opt mode: $OPT_MODE"
+echo "[BASELINE] MPTDC opt defines: ${OPT_MODE_DEFINE_CSV:-none}"
 if [[ -n "$SCRATCH_ROOT" ]]; then
   echo "[BASELINE] Scratch/build root: $SCRATCH_ROOT"
 fi

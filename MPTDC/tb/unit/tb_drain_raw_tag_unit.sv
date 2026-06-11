@@ -96,6 +96,9 @@ module tb_drain_raw_tag_unit;
 
     snapshot.hit_count = 4'd1;
     snapshot.hit_level[5] = 1'b1;
+`ifdef MPTDC_DRAIN_ROW_SKIP
+    snapshot.row_nonzero[0] = 1'b1;
+`endif
     snapshot.nfast_snap = raw_phase0_tag;
     snapshot.nfast_hit_packed[5*NFAST_W +: NFAST_W] = raw_hit_tag;
     snapshot.nslow_snap = 7'd21;

@@ -168,7 +168,11 @@ module mptdc_meas_ctrl
   assign capture_en_o     = (state_q == ST_M_CAPTURE);
   assign meta_en_o        = 1'b0;
   assign fe_clear_o       = (state_q == ST_M_CAPTURE);
+`ifdef MPTDC_PD_CLEAR_EARLY
+  assign pd_clear_o       = (state_q == ST_M_CAPTURE) || (state_q == ST_M_CLEAR);
+`else
   assign pd_clear_o       = (state_q == ST_M_CLEAR);
+`endif
   assign osc_keep_alive_o = (state_q == ST_M_MEASURE)
                            || (state_q == ST_M_SNAPSHOT);
   // Keep the PD input path open through the actual bridge-sampling cycle.
