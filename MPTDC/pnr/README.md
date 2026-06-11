@@ -107,3 +107,35 @@ The flow also prepares a first-pass phase-detector matrix placement hook. By def
 Each run now clears stale PnR reports before initialization and writes `run_status.rpt`. Treat a snapshot as invalid if `run_status.rpt` is missing or does not say `Status: COMPLETE`.
 
 If congestion is high with `MET1-MET3` global signal routing, relax utilization first. The only planned `METTP` signal exception is the localized PD phase mesh; preserve top metal for PDN elsewhere.
+
+## Final-Typical Stable Entry Point
+
+Use the final-typical wrapper only after the Genus gate passes:
+
+```bash
+GENUS_RUN_ID=final_typical_genus_jihd_tap0_micro_v3_drvclean_20260610_175527
+bash MPTDC/pnr/scripts/check_mptdc_pre_pnr_gate.sh --genus-run-id "$GENUS_RUN_ID"
+
+MPTDC_GENUS_RUN_ID="$GENUS_RUN_ID" \
+MPTDC_PNR_IO_LOAD_CLASS=medium \
+MPTDC_PNR_CORE_UTIL=0.55 \
+MPTDC_PNR_PLACE_PD_GRID=1 \
+MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=1 \
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_final_typical.sh mptdc_final_typical_validate --validate-only
+```
+
+The wrapper defaults to `validate_only`; it runs the pre-PNR gate and Tcl
+source checks without launching Innovus. Any mode that can launch Innovus
+requires `MPTDC_FINAL_TYPICAL_APPROVED=1` after review.
+
+Stable Tcl hooks:
+
+- `scripts/innovus_mptdc_floorplan.tcl`
+- `scripts/innovus_mptdc_backend_regions.tcl`
+- `scripts/innovus_mptdc_phase_buffer_place.tcl`
+- `scripts/innovus_mptdc_pd_matrix_place.tcl`
+- `scripts/innovus_mptdc_power.tcl`
+- `scripts/innovus_mptdc_cts.tcl`
+- `scripts/innovus_mptdc_reports.tcl`
+
+Planning docs live under `docs/pnr/`.
