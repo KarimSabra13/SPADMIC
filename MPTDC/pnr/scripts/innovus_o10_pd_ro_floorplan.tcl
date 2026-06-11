@@ -46,6 +46,57 @@ proc mptdc_o10_place_macro {inst box orient fh} {
     return 0
 }
 
+proc mptdc_o10_place_ro_macro {inst box orient fh} {
+    global pnr
+    set llx [lindex $box 0]
+    set lly [lindex $box 1]
+    set urx [lindex $box 2]
+    set ury [lindex $box 3]
+    set ox $pnr(osc_macro_origin_x_um)
+    set oy $pnr(osc_macro_origin_y_um)
+    set w $pnr(osc_macro_width_um)
+    set h $pnr(osc_macro_height_um)
+
+    switch -- $orient {
+        R0 {
+            set x [expr {$llx + $ox}]
+            set y [expr {$lly + $oy}]
+        }
+        MX {
+            set x [expr {$llx + $ox}]
+            set y [expr {$lly + $h - $oy}]
+        }
+        MY {
+            set x [expr {$llx + $w - $ox}]
+            set y [expr {$lly + $oy}]
+        }
+        R180 {
+            set x [expr {$llx + $w - $ox}]
+            set y [expr {$lly + $h - $oy}]
+        }
+        default {
+            set x $llx
+            set y $lly
+        }
+    }
+
+    foreach cmd [list \
+        [list placeInstance $inst $x $y $orient -fixed] \
+        [list placeInstance $inst $x $y $orient] \
+        [list setObjFPlanBox Instance $inst $llx $lly $urx $ury] \
+    ] {
+        if {![catch {uplevel 1 $cmd} err]} {
+            puts $fh "Placed RO macro $inst with $cmd"
+            puts $fh "  desired box: $box"
+            puts $fh "  LEF origin: $ox $oy"
+            return 1
+        }
+        puts $fh "RO macro place skipped for $inst: $cmd"
+        puts $fh "  $err"
+    }
+    return 0
+}
+
 proc mptdc_o10_apply_pd_ro_floorplan {} {
     global o10
     set rpt "$o10(reports_dir)/floorplan_summary.rpt"
@@ -74,10 +125,10 @@ proc mptdc_o10_apply_pd_ro_floorplan {} {
     puts $fh "PD cells: [llength $pd_cells] expected 64"
 
     if {[dict exists $boxes slow]} {
-        foreach c $slow_cells { mptdc_o10_place_macro $c [dict get $boxes slow] R0 $fh }
+        foreach c $slow_cells { mptdc_o10_place_ro_macro $c [dict get $boxes slow] R0 $fh }
     }
     if {[dict exists $boxes fast]} {
-        foreach c $fast_cells { mptdc_o10_place_macro $c [dict get $boxes fast] MX $fh }
+        foreach c $fast_cells { mptdc_o10_place_ro_macro $c [dict get $boxes fast] MX $fh }
     }
 
     if {[dict exists $boxes pd]} {

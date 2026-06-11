@@ -270,17 +270,51 @@ proc mptdc_o10_setup_globals {} {
     set o10(ro_lib) [mptdc_o10_repo_abs_path [mptdc_o10_env O1_RO_LIBERTY_PATH "$mptdc_root/syn/macros/RO_tune4_real_abstract_shell.lib"]]
 
     set paths(PDK_ROOT) [mptdc_o10_env PDK_ROOT /data/pdk/xfab/xh018]
-    set paths(SC_ROOT) [mptdc_o10_env SC_ROOT "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v6_0"]
+    set tech_files(STDCELL_FAMILY) [string toupper [mptdc_o10_env MPTDC_STDCELL_FAMILY HD]]
+    switch -- $tech_files(STDCELL_FAMILY) {
+        JIHD {
+            set default_sc_root "$paths(PDK_ROOT)/diglibs/D_CELLS_JIHD/v6_0"
+            set default_site core_jihd
+            set default_lef "$default_sc_root/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef"
+            if {[file exists "$default_sc_root/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"]} {
+                set default_lef "$default_sc_root/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"
+            }
+            set default_lib "$default_sc_root/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib"
+        }
+        HD {
+            set default_sc_root "$paths(PDK_ROOT)/diglibs/D_CELLS_HD/v6_0"
+            set default_site core_hd
+            set default_lef "$default_sc_root/LEF/v6_0_0/xh018_D_CELLS_HD.lef"
+            set default_lib "$default_sc_root/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+        }
+        default {
+            mptdc_o10_fail "unsupported MPTDC_STDCELL_FAMILY=$tech_files(STDCELL_FAMILY); expected HD or JIHD"
+        }
+    }
+    set paths(SC_ROOT) [mptdc_o10_env SC_ROOT $default_sc_root]
+    switch -- $tech_files(STDCELL_FAMILY) {
+        JIHD {
+            set default_lef "$paths(SC_ROOT)/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef"
+            if {[file exists "$paths(SC_ROOT)/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"]} {
+                set default_lef "$paths(SC_ROOT)/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"
+            }
+            set default_lib "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib"
+        }
+        HD {
+            set default_lef "$paths(SC_ROOT)/LEF/v6_0_0/xh018_D_CELLS_HD.lef"
+            set default_lib "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+        }
+    }
     set tech_files(TECHNOLOGY_LEF) [mptdc_o10_env TECHNOLOGY_LEF "$paths(PDK_ROOT)/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef"]
-    set tech_files(STDCELLS_LEF) "$paths(SC_ROOT)/LEF/v6_0_0/xh018_D_CELLS_HD.lef"
-    set tech_files(STDCELLS_TC_LIB) "$paths(SC_ROOT)/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+    set tech_files(STDCELLS_LEF) [mptdc_o10_env MPTDC_O10_STDCELL_LEF [mptdc_o10_env MPTDC_STDCELL_LEF $default_lef]]
+    set tech_files(STDCELLS_TC_LIB) [mptdc_o10_env MPTDC_O10_STDCELL_TYP_LIB [mptdc_o10_env MPTDC_STDCELL_TC_LIB $default_lib]]
     set tech_files(ALL_LEFS) [list $tech_files(TECHNOLOGY_LEF) $tech_files(STDCELLS_LEF) $o10(ro_lef)]
     set tech_files(ALL_TC_LIBS) [list $tech_files(STDCELLS_TC_LIB) $o10(ro_lib)]
 
     set paths(CAPTABLE_DIR) [mptdc_o10_env CAPTABLE_DIR "$paths(PDK_ROOT)/cadence/v9_0/capTbl/v9_0_1"]
     set tech_files(CAPTABLE_TC) "$paths(CAPTABLE_DIR)/xh018_xx41_MET4_METMID_typ.capTbl"
 
-    set tech(STANDARD_CELL_SITE) "core_hd"
+    set tech(STANDARD_CELL_SITE) [mptdc_o10_env MPTDC_O10_STDCELL_SITE [mptdc_o10_env MPTDC_STDCELL_SITE $default_site]]
     set tech(STANDARD_CELL_VDD) "VDD"
     set tech(STANDARD_CELL_GND) "VSS"
     set tech(STANDARD_CELL_VDD_PINS) [list vdd]
@@ -308,8 +342,14 @@ proc mptdc_o10_setup_globals {} {
     set pnr(pd_region_height_um) [mptdc_o10_env MPTDC_PNR_PD_REGION_HEIGHT_UM 300.0]
     set pnr(osc_macro_width_um) [mptdc_o10_env MPTDC_PNR_OSC_WIDTH_UM 176.675]
     set pnr(osc_macro_height_um) [mptdc_o10_env MPTDC_PNR_OSC_HEIGHT_UM 67.17]
+    set pnr(osc_macro_origin_x_um) [mptdc_o10_env MPTDC_PNR_OSC_ORIGIN_X_UM 0.0]
+    set pnr(osc_macro_origin_y_um) [mptdc_o10_env MPTDC_PNR_OSC_ORIGIN_Y_UM 0.0]
     set pnr(osc_macro_halo_um) [mptdc_o10_env MPTDC_PNR_OSC_HALO_UM 10.0]
     set pnr(pd_region_gap_um) [mptdc_o10_env MPTDC_PNR_PD_OSC_GAP_UM 20.0]
+    set pnr(region_pad_um) [mptdc_o10_env MPTDC_PNR_REGION_PAD_UM 20.0]
+    set pnr(auto_die_from_regions) [mptdc_o10_env MPTDC_PNR_AUTO_DIE_FROM_REGIONS 0]
+    set pnr(die_width_um) [mptdc_o10_env MPTDC_PNR_DIE_WIDTH_UM ""]
+    set pnr(die_height_um) [mptdc_o10_env MPTDC_PNR_DIE_HEIGHT_UM ""]
 }
 
 proc mptdc_pnr_sandwich_boxes {} {

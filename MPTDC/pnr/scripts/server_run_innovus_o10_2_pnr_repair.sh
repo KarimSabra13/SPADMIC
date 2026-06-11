@@ -24,12 +24,6 @@ POSTSYN_SDC="${MPTDC_O10_POSTSYN_SDC:-$O9_DIR/mptdc_top_asic.postsyn.sdc}"
 OVERLAY_SDC="${MPTDC_O10_SDC_OVERLAY:-$MPTDC_DIR/pnr/constraints/mptdc_osc_typical_r750_delta5_innovus.sdc}"
 RO_LEF="${O1_RO_LEF_PATH:-$REPO_ROOT/results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef}"
 RO_LIB="${O1_RO_LIBERTY_PATH:-$MPTDC_DIR/syn/macros/RO_tune4_real_abstract_shell.lib}"
-PDK_ROOT="${PDK_ROOT:-/data/pdk/xfab/xh018}"
-SC_ROOT="${SC_ROOT:-$PDK_ROOT/diglibs/D_CELLS_HD/v6_0}"
-TECH_LEF="${TECHNOLOGY_LEF:-$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef}"
-STD_LEF="${MPTDC_O10_STDCELL_LEF:-$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_HD.lef}"
-STD_TC_LIB="${MPTDC_O10_STDCELL_TYP_LIB:-$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib}"
-POWER_NETS="${MPTDC_O10_POWER_NETS:-VDD VSS}"
 
 repo_abs_path() {
   local path="$1"
@@ -44,6 +38,47 @@ POSTSYN_SDC="$(repo_abs_path "$POSTSYN_SDC")"
 OVERLAY_SDC="$(repo_abs_path "$OVERLAY_SDC")"
 RO_LEF="$(repo_abs_path "$RO_LEF")"
 RO_LIB="$(repo_abs_path "$RO_LIB")"
+
+PDK_ROOT="${PDK_ROOT:-/data/pdk/xfab/xh018}"
+TECH_LEF="${TECHNOLOGY_LEF:-$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef}"
+STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-}"
+if [[ -z "$STDCELL_FAMILY" && -f "$NETLIST" ]]; then
+  if grep -q 'JIHD' "$NETLIST"; then
+    STDCELL_FAMILY="JIHD"
+  fi
+fi
+STDCELL_FAMILY="${STDCELL_FAMILY:-HD}"
+STDCELL_FAMILY="${STDCELL_FAMILY^^}"
+case "$STDCELL_FAMILY" in
+  JIHD)
+    SC_ROOT="${SC_ROOT:-$PDK_ROOT/diglibs/D_CELLS_JIHD/v6_0}"
+    STDCELL_SITE="${MPTDC_O10_STDCELL_SITE:-${MPTDC_STDCELL_SITE:-core_jihd}}"
+    STD_LEF_DEFAULT="$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef"
+    for candidate in \
+      "$SC_ROOT/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef" \
+      "$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef"
+    do
+      if [[ -f "$candidate" ]]; then
+        STD_LEF_DEFAULT="$candidate"
+        break
+      fi
+    done
+    STD_TC_LIB_DEFAULT="$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib"
+    ;;
+  HD)
+    SC_ROOT="${SC_ROOT:-$PDK_ROOT/diglibs/D_CELLS_HD/v6_0}"
+    STDCELL_SITE="${MPTDC_O10_STDCELL_SITE:-${MPTDC_STDCELL_SITE:-core_hd}}"
+    STD_LEF_DEFAULT="$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_HD.lef"
+    STD_TC_LIB_DEFAULT="$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_HD_LPMOS_typ_1_80V_25C.lib"
+    ;;
+  *)
+    echo "ERROR: unsupported MPTDC_STDCELL_FAMILY=$STDCELL_FAMILY; expected HD or JIHD" >&2
+    exit 2
+    ;;
+esac
+STD_LEF="${MPTDC_O10_STDCELL_LEF:-${MPTDC_STDCELL_LEF:-$STD_LEF_DEFAULT}}"
+STD_TC_LIB="${MPTDC_O10_STDCELL_TYP_LIB:-${MPTDC_STDCELL_TC_LIB:-$STD_TC_LIB_DEFAULT}}"
+POWER_NETS="${MPTDC_O10_POWER_NETS:-VDD VSS}"
 
 mkdir -p "$LOG_DIR" "$RESULT_DIR/manifests" "$RESULT_DIR/reports" "$RESULT_DIR/screenshots" "$RESULT_DIR/manager"
 
@@ -78,6 +113,8 @@ esac
   echo "  ro_lef: $RO_LEF"
   echo "  ro_lib: $RO_LIB"
   echo "  tech_lef: $TECH_LEF"
+  echo "  stdcell_family: $STDCELL_FAMILY"
+  echo "  stdcell_site: $STDCELL_SITE"
   echo "  stdcell_lef: $STD_LEF"
   echo "  stdcell_typ_lib: $STD_TC_LIB"
   echo "  power_nets: $POWER_NETS"
@@ -121,6 +158,12 @@ if [[ -f "$RO_LEF" ]]; then
     echo "ERROR: RO LEF macro is not RO_tune4" | tee -a "$RUN_LOG"
     INPUT_RC=3
   fi
+  ro_size_w="$(awk '/^[[:space:]]*SIZE[[:space:]]+/ {print $2; exit}' "$RO_LEF")"
+  ro_size_h="$(awk '/^[[:space:]]*SIZE[[:space:]]+/ {print $4; exit}' "$RO_LEF")"
+  ro_origin_x="$(awk '/^[[:space:]]*ORIGIN[[:space:]]+/ {print $2; exit}' "$RO_LEF")"
+  ro_origin_y="$(awk '/^[[:space:]]*ORIGIN[[:space:]]+/ {print $3; exit}' "$RO_LEF")"
+  echo "RO LEF size: ${ro_size_w:-unknown} x ${ro_size_h:-unknown} um" | tee -a "$RUN_LOG"
+  echo "RO LEF origin: ${ro_origin_x:-0} ${ro_origin_y:-0} um" | tee -a "$RUN_LOG"
 fi
 
 if [[ -f "$NETLIST" ]]; then
@@ -146,10 +189,16 @@ export O1_RO_LIBERTY_PATH="$RO_LIB"
 export PDK_ROOT="$PDK_ROOT"
 export SC_ROOT="$SC_ROOT"
 export TECHNOLOGY_LEF="$TECH_LEF"
+export MPTDC_STDCELL_FAMILY="$STDCELL_FAMILY"
+export MPTDC_O10_STDCELL_LEF="$STD_LEF"
+export MPTDC_O10_STDCELL_TYP_LIB="$STD_TC_LIB"
+export MPTDC_O10_STDCELL_SITE="$STDCELL_SITE"
 export MPTDC_PNR_CORE_UTIL="${MPTDC_PNR_CORE_UTIL:-0.60}"
 export MPTDC_PNR_MAX_DENSITY="${MPTDC_PNR_MAX_DENSITY:-0.70}"
-export MPTDC_PNR_OSC_WIDTH_UM="${MPTDC_PNR_OSC_WIDTH_UM:-176.675}"
-export MPTDC_PNR_OSC_HEIGHT_UM="${MPTDC_PNR_OSC_HEIGHT_UM:-67.17}"
+export MPTDC_PNR_OSC_WIDTH_UM="${MPTDC_PNR_OSC_WIDTH_UM:-${ro_size_w:-176.675}}"
+export MPTDC_PNR_OSC_HEIGHT_UM="${MPTDC_PNR_OSC_HEIGHT_UM:-${ro_size_h:-67.17}}"
+export MPTDC_PNR_OSC_ORIGIN_X_UM="${MPTDC_PNR_OSC_ORIGIN_X_UM:-${ro_origin_x:-0}}"
+export MPTDC_PNR_OSC_ORIGIN_Y_UM="${MPTDC_PNR_OSC_ORIGIN_Y_UM:-${ro_origin_y:-0}}"
 
 if [[ "$RUN_MODE" == "place_only" ]]; then
   export MPTDC_O10_STOP_AFTER="place"
