@@ -9,6 +9,12 @@ proc mptdc_o10_route {} {
     if {[catch {routeDesign} err]} {
         mptdc_o10_msg "routeDesign failed: $err"
         mptdc_o10_stage_mark route.routeDesign failed
+        set fh [open "$o10(reports_dir)/ROUTE_FAILED.txt" w]
+        puts $fh "ROUTE_STATUS=FAILED"
+        puts $fh "routeDesign failed: $err"
+        puts $fh "No post-route timing, congestion, or DRV report should be treated as routed evidence."
+        close $fh
+        error "routeDesign failed: $err"
     } else {
         mptdc_o10_stage_mark route.routeDesign done
     }

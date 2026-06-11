@@ -18,6 +18,13 @@ proc mptdc_o10_env {name default_value} {
     return $default_value
 }
 
+proc mptdc_o10_env_list {name default_value} {
+    if {[info exists ::env($name)] && $::env($name) ne ""} {
+        return [split $::env($name)]
+    }
+    return $default_value
+}
+
 proc mptdc_o10_repo_abs_path {path} {
     global o10
     if {$path eq "" || [file pathtype $path] eq "absolute"} {
@@ -317,17 +324,29 @@ proc mptdc_o10_setup_globals {} {
     set tech(STANDARD_CELL_SITE) [mptdc_o10_env MPTDC_O10_STDCELL_SITE [mptdc_o10_env MPTDC_STDCELL_SITE $default_site]]
     set tech(STANDARD_CELL_VDD) "VDD"
     set tech(STANDARD_CELL_GND) "VSS"
-    set tech(STANDARD_CELL_VDD_PINS) [list vdd]
-    set tech(STANDARD_CELL_GND_PINS) [list gnd]
+    switch -- $tech_files(STDCELL_FAMILY) {
+        JIHD {
+            set default_std_vdd_pins [list VDD]
+            set default_std_gnd_pins [list VSS]
+            set tech(FILLERS) "FILLER01JIHD FILLER02JIHD FILLER05JIHD FILLER10JIHD"
+        }
+        HD {
+            set default_std_vdd_pins [list vdd]
+            set default_std_gnd_pins [list gnd]
+            set tech(FILLERS) "FEED2HD FEED1HD"
+        }
+    }
+    set tech(STANDARD_CELL_VDD_PINS) [mptdc_o10_env_list MPTDC_O10_STDCELL_VDD_PINS $default_std_vdd_pins]
+    set tech(STANDARD_CELL_GND_PINS) [mptdc_o10_env_list MPTDC_O10_STDCELL_GND_PINS $default_std_gnd_pins]
     set tech(OSC_VDD) "VDD"
     set tech(OSC_GND) "VSS"
     set tech(OSC_VDD_PINS) [list VDD {vdd!}]
     set tech(OSC_GND_PINS) [list VSS]
-    set tech(FILLERS) "FEED2HD FEED1HD"
 
     set pnr(core_utilization) [mptdc_o10_env MPTDC_PNR_CORE_UTIL 0.60]
     set pnr(place_global_max_density) [mptdc_o10_env MPTDC_PNR_MAX_DENSITY 0.70]
     set pnr(aspect_ratio) [mptdc_o10_env MPTDC_PNR_ASPECT_RATIO 1.15]
+    set pnr(fixed_die_aspect_ratio) [mptdc_o10_env MPTDC_PNR_FIXED_DIE_ASPECT_RATIO $pnr(aspect_ratio)]
     set pnr(core_margin_um) [mptdc_o10_env MPTDC_PNR_CORE_MARGIN_UM 35.0]
     set pnr(floorplan_snap_um) [mptdc_o10_env MPTDC_PNR_FLOORPLAN_SNAP_UM 0.56]
     set pnr(signal_bottom_layer_idx) [mptdc_o10_env MPTDC_PNR_SIGNAL_BOTTOM_LAYER_IDX 1]
@@ -347,9 +366,13 @@ proc mptdc_o10_setup_globals {} {
     set pnr(osc_macro_halo_um) [mptdc_o10_env MPTDC_PNR_OSC_HALO_UM 10.0]
     set pnr(pd_region_gap_um) [mptdc_o10_env MPTDC_PNR_PD_OSC_GAP_UM 20.0]
     set pnr(region_pad_um) [mptdc_o10_env MPTDC_PNR_REGION_PAD_UM 20.0]
+    set pnr(area_guard_band) [mptdc_o10_env MPTDC_PNR_AREA_GUARD_BAND 1.15]
+    set pnr(min_stdcell_area_um2) [mptdc_o10_env MPTDC_PNR_MIN_STDCELL_AREA_UM2 ""]
     set pnr(auto_die_from_regions) [mptdc_o10_env MPTDC_PNR_AUTO_DIE_FROM_REGIONS 0]
     set pnr(die_width_um) [mptdc_o10_env MPTDC_PNR_DIE_WIDTH_UM ""]
     set pnr(die_height_um) [mptdc_o10_env MPTDC_PNR_DIE_HEIGHT_UM ""]
+    set pnr(place_max_unplaced) [mptdc_o10_env MPTDC_PNR_PLACE_MAX_UNPLACED 0]
+    set pnr(run_clk_sys_cts) [mptdc_o10_env MPTDC_O10_RUN_CLK_SYS_CTS 0]
 }
 
 proc mptdc_pnr_sandwich_boxes {} {

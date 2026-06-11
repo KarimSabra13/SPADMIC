@@ -9,7 +9,7 @@ proc mptdc_o10_clock_count {name} {
 }
 
 proc mptdc_o10_cts {} {
-    global o10
+    global o10 pnr
     mptdc_o10_msg "Running O10.2 CTS policy: clk_sys only, never RO phase clocks"
 
     set ro_clocks [list clk_osc_slow clk_osc_fast]
@@ -41,17 +41,7 @@ proc mptdc_o10_cts {} {
             puts $guard_fh "  skipped: no clock object"
             continue
         }
-        foreach cmd [list \
-            [list set_dont_touch_network $objs] \
-            [list set_ideal_network $objs] \
-        ] {
-            if {![catch {{*}$cmd} err]} {
-                puts $guard_fh "  applied: $cmd"
-            } else {
-                puts $guard_fh "  skipped: $cmd"
-                puts $guard_fh "    $err"
-            }
-        }
+        puts $guard_fh "  audited: RO clock is present and excluded from CTS planning"
     }
     close $guard_fh
     puts $policy_fh "RO clock objects found: $ro_found"
@@ -66,7 +56,16 @@ proc mptdc_o10_cts {} {
     puts $status_fh "ro_clock_count=$ro_found"
     puts $status_fh "ro_cts_attempted=no"
 
-    if {[llength $clk_sys_objs] == 0} {
+    if {$pnr(run_clk_sys_cts) != 1} {
+        puts $status_fh "CTS_STATUS=CTS_SKIPPED_CLEANLY_FOR_FEASIBILITY"
+        puts $status_fh "reason=MPTDC_O10_RUN_CLK_SYS_CTS is not set to 1; skipping CTS until a version-specific clk_sys-only spec is confirmed"
+        set fh [open "$o10(reports_dir)/CTS_SKIPPED.txt" w]
+        puts $fh "CTS_SKIPPED_CLEANLY_FOR_FEASIBILITY"
+        puts $fh "Default O10.2 route-feasibility run skips CTS to avoid accidentally buffering RO phase clocks."
+        puts $fh "Set MPTDC_O10_RUN_CLK_SYS_CTS=1 only after confirming a clk_sys-only CCOpt spec for this Innovus version."
+        close $fh
+        close $status_fh
+    } elseif {[llength $clk_sys_objs] == 0} {
         puts $status_fh "CTS_STATUS=CTS_SKIPPED_CLEANLY_FOR_FEASIBILITY"
         puts $status_fh "reason=clk_sys clock was not found"
         close $status_fh

@@ -215,7 +215,11 @@ run_tcl_source_check() {
 source MPTDC/pnr/scripts/innovus_o10_2_init.tcl
 source MPTDC/pnr/scripts/innovus_o10_2_screenshots.tcl
 source MPTDC/pnr/scripts/innovus_o10_2_reports.tcl
+source MPTDC/pnr/scripts/innovus_o10_pd_ro_floorplan.tcl
+source MPTDC/pnr/scripts/innovus_o10_floorplan.tcl
+source MPTDC/pnr/scripts/innovus_o10_place.tcl
 source MPTDC/pnr/scripts/innovus_o10_2_cts.tcl
+source MPTDC/pnr/scripts/innovus_o10_route.tcl
 source MPTDC/pnr/scripts/innovus_o10_2_phase_net_reports.tcl
 source MPTDC/pnr/scripts/report_pd_instance_symmetry.tcl
 set p1 [mptdc_o10_classify_phase_net_name {u_core/slow_phase[0]}]
