@@ -446,6 +446,26 @@ proc mptdc_o10_write_phase_net_loads_legacy {} {
     close $fh
 }
 
+proc mptdc_o10_load_csv_stats {text cap_index} {
+    set data_rows 0
+    set numeric_cap_rows 0
+    set unknown_budget_rows 0
+    foreach line [lrange [split $text "\n"] 1 end] {
+        set line [string trim $line]
+        if {$line eq ""} { continue }
+        incr data_rows
+        set fields [split $line ","]
+        set cap [string trim [lindex $fields $cap_index]]
+        if {[string is double -strict $cap]} {
+            incr numeric_cap_rows
+        }
+        if {[regexp {(^|,)UNKNOWN(,|$)} $line]} {
+            incr unknown_budget_rows
+        }
+    }
+    return [list $data_rows $numeric_cap_rows $unknown_budget_rows]
+}
+
 proc mptdc_o10_write_load_summaries {} {
     global o10
     set phase_csv "$o10(reports_dir)/phase_net_loads.csv"
@@ -466,6 +486,13 @@ proc mptdc_o10_write_load_summaries {} {
         puts $sfh "- Rows with `NO_SOURCE_PIN_MATCH`: [regexp -all {NO_SOURCE_PIN_MATCH} $text]"
         puts $sfh "- Rows with `NO_NET_FROM_PIN`: [regexp -all {NO_NET_FROM_PIN} $text]"
         puts $sfh "- Rows with `ERROR`: [regexp -all {^ERROR,} $text]"
+        set stats [mptdc_o10_load_csv_stats $text 6]
+        puts $sfh "- Data rows: [lindex $stats 0]"
+        puts $sfh "- Rows with numeric `total_cap_pf`: [lindex $stats 1]"
+        puts $sfh "- Rows with `UNKNOWN` budget label: [lindex $stats 2]"
+        if {[lindex $stats 1] == 0} {
+            puts $sfh "- Note: no numeric cap rows were extracted; use `drv_max_cap.rpt` for violation evidence and treat this CSV as connectivity/sink-class evidence only."
+        }
     }
     close $sfh
 
@@ -483,6 +510,13 @@ proc mptdc_o10_write_load_summaries {} {
         puts $ffh "- Rows with `NO_SOURCE_PIN_MATCH`: [regexp -all {NO_SOURCE_PIN_MATCH} $text]"
         puts $ffh "- Rows with `NO_NET_FROM_PIN`: [regexp -all {NO_NET_FROM_PIN} $text]"
         puts $ffh "- Rows with `ERROR`: [regexp -all {^ERROR,} $text]"
+        set stats [mptdc_o10_load_csv_stats $text 4]
+        puts $ffh "- Data rows: [lindex $stats 0]"
+        puts $ffh "- Rows with numeric `total_cap_pf`: [lindex $stats 1]"
+        puts $ffh "- Rows with `UNKNOWN` budget label: [lindex $stats 2]"
+        if {[lindex $stats 1] == 0} {
+            puts $ffh "- Note: no numeric cap rows were extracted; use `drv_max_cap.rpt` for violation evidence and treat this CSV as connectivity/sink-class evidence only."
+        }
     }
     close $ffh
 }

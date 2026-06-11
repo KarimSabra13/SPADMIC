@@ -70,17 +70,18 @@ proc mptdc_osc_pd_report_instance_symmetry {} {
     set cells [mptdc_osc_pd_cells [list *gen_pd_row*gen_pd_col*u_pd*]]
     set boxes [mptdc_pnr_sandwich_boxes]
     set pd_box [dict get $boxes pd]
-    set llx [lindex $pd_box 0]
-    set lly [lindex $pd_box 1]
-    set urx [lindex $pd_box 2]
-    set ury [lindex $pd_box 3]
-    set pitch_x [expr {($urx - $llx) / 8.0}]
-    set pitch_y [expr {($ury - $lly) / 8.0}]
+    set pd_llx [lindex $pd_box 0]
+    set pd_lly [lindex $pd_box 1]
+    set pd_urx [lindex $pd_box 2]
+    set pd_ury [lindex $pd_box 3]
+    set pitch_x [expr {($pd_urx - $pd_llx) / 8.0}]
+    set pitch_y [expr {($pd_ury - $pd_lly) / 8.0}]
 
     set fh [open $csv w]
     puts $fh "instance,ns,nf,x_um,y_um,llx_um,lly_um,urx_um,ury_um,orient,place_status,expected_region,status,master,width_um,height_um,row,col,expected_x_um,expected_y_um,dx_um,dy_um"
     set coord_valid_count 0
     set missing_coord [list]
+    set missing_bbox [list]
     set missing_logic [list]
     set large_offsets [list]
     foreach cell [lsort $cells] {
@@ -100,22 +101,22 @@ proc mptdc_osc_pd_report_instance_symmetry {} {
         set master [mptdc_osc_pd_inst_attr $cell [list .base_cell.name .cell.name .master.name]]
         set place_status [mptdc_osc_pd_inst_attr $cell [list .place_status .pStatus .status]]
         set bbox [mptdc_osc_pd_box_from_attr [mptdc_osc_pd_inst_attr $cell [list .bbox .box]]]
-        set llx ""
-        set lly ""
-        set urx ""
-        set ury ""
+        set inst_llx ""
+        set inst_lly ""
+        set inst_urx ""
+        set inst_ury ""
         set width ""
         set height ""
         if {[llength $bbox] >= 4} {
-            set llx [lindex $bbox 0]
-            set lly [lindex $bbox 1]
-            set urx [lindex $bbox 2]
-            set ury [lindex $bbox 3]
-            set width [expr {$urx - $llx}]
-            set height [expr {$ury - $lly}]
+            set inst_llx [lindex $bbox 0]
+            set inst_lly [lindex $bbox 1]
+            set inst_urx [lindex $bbox 2]
+            set inst_ury [lindex $bbox 3]
+            set width [expr {$inst_urx - $inst_llx}]
+            set height [expr {$inst_ury - $inst_lly}]
             if {$x eq "" || $y eq ""} {
-                set x $llx
-                set y $lly
+                set x $inst_llx
+                set y $inst_lly
             }
         }
         set exp_x ""
@@ -123,8 +124,8 @@ proc mptdc_osc_pd_report_instance_symmetry {} {
         set dx ""
         set dy ""
         if {$ns ne "" && $nf ne ""} {
-            set exp_x [mptdc_pnr_snap [expr {$llx + ($ns + 0.5) * $pitch_x}]]
-            set exp_y [mptdc_pnr_snap [expr {$lly + ($nf + 0.5) * $pitch_y}]]
+            set exp_x [mptdc_pnr_snap [expr {$pd_llx + ($ns + 0.5) * $pitch_x}]]
+            set exp_y [mptdc_pnr_snap [expr {$pd_lly + ($nf + 0.5) * $pitch_y}]]
             if {$x ne "" && $y ne ""} {
                 set dx [expr {$x - $exp_x}]
                 set dy [expr {$y - $exp_y}]
@@ -135,18 +136,21 @@ proc mptdc_osc_pd_report_instance_symmetry {} {
             }
         }
         set row_status "OK"
-        if {$x eq "" || $y eq "" || $llx eq "" || $lly eq "" || $urx eq "" || $ury eq ""} {
+        if {$x eq "" || $y eq ""} {
             set row_status "COORDINATE_MISSING"
             lappend missing_coord $cell
+        } elseif {$inst_llx eq "" || $inst_lly eq "" || $inst_urx eq "" || $inst_ury eq ""} {
+            set row_status "BBOX_MISSING"
+            lappend missing_bbox $cell
         }
-        puts $fh "$cell,$ns,$nf,$x,$y,$llx,$lly,$urx,$ury,$orient,$place_status,pd_matrix,$row_status,$master,$width,$height,$nf,$ns,$exp_x,$exp_y,$dx,$dy"
+        puts $fh "$cell,$ns,$nf,$x,$y,$inst_llx,$inst_lly,$inst_urx,$inst_ury,$orient,$place_status,pd_matrix,$row_status,$master,$width,$height,$nf,$ns,$exp_x,$exp_y,$dx,$dy"
     }
     close $fh
 
     set report_status "PASS"
     if {[llength $cells] != 64 || [llength $missing_logic] > 0 || [llength $missing_coord] > 0} {
         set report_status "INVALID"
-    } elseif {[llength $large_offsets] > 0} {
+    } elseif {[llength $missing_bbox] > 0 || [llength $large_offsets] > 0} {
         set report_status "REVIEW_REQUIRED"
     }
 
@@ -160,6 +164,7 @@ proc mptdc_osc_pd_report_instance_symmetry {} {
     puts $sfh "- Coordinate-valid cells: $coord_valid_count"
     puts $sfh "- Missing logical index cells: [llength $missing_logic]"
     puts $sfh "- Missing coordinate cells: [llength $missing_coord]"
+    puts $sfh "- Missing bbox cells: [llength $missing_bbox]"
     puts $sfh "- Large offset cells over 5 um: [llength $large_offsets]"
     puts $sfh "- CSV: pd_instance_placement.csv"
     puts $sfh ""
