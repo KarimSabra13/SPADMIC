@@ -524,5 +524,12 @@ proc mptdc_o10_main {} {
 }
 
 if {![info exists ::env(MPTDC_O10_SOURCE_ONLY)] || !$::env(MPTDC_O10_SOURCE_ONLY)} {
-    mptdc_o10_main
+    if {[catch {mptdc_o10_main} err opts]} {
+        puts "MPTDC_O10_2_ERROR: $err"
+        if {[dict exists $opts -errorinfo]} {
+            puts [dict get $opts -errorinfo]
+        }
+        exit 1
+    }
+    exit 0
 }
