@@ -25,25 +25,48 @@ proc mptdc_o11_unique_append {var_name value} {
     }
 }
 
+proc mptdc_o11_internal_net_token_name {object} {
+    set text "$object"
+    # Innovus 22.33 can return restored HDL-internal nets as net: pseudo-tokens
+    # that are useful names but invalid collection arguments.
+    if {[regexp {^net:(.+[/.]iso_tap)$} $text -> name]} {
+        return $name
+    }
+    return ""
+}
+
 proc mptdc_o11_object_names {objects} {
     set names [list]
     if {[llength $objects] == 0} {
         return $names
     }
-    if {![catch {get_object_name $objects} obj_names]} {
+    set query_objects [list]
+    foreach obj $objects {
+        set internal_name [mptdc_o11_internal_net_token_name $obj]
+        if {$internal_name ne ""} {
+            mptdc_o11_unique_append names $internal_name
+        } else {
+            lappend query_objects $obj
+        }
+    }
+    if {[llength $query_objects] == 0} {
+        return $names
+    }
+    if {![catch {get_object_name $query_objects} obj_names]} {
         foreach name $obj_names { mptdc_o11_unique_append names $name }
         return $names
     }
-    if {![catch {get_db $objects .name} obj_names]} {
+    if {![catch {get_db $query_objects .name} obj_names]} {
         foreach name $obj_names { mptdc_o11_unique_append names $name }
         return $names
     }
-    foreach obj $objects { mptdc_o11_unique_append names $obj }
+    foreach obj $query_objects { mptdc_o11_unique_append names $obj }
     return $names
 }
 
 proc mptdc_o11_db_attr {object attr} {
     if {$object eq ""} { return "" }
+    if {[mptdc_o11_internal_net_token_name $object] ne ""} { return "" }
     set object_text "$object"
     if {![regexp {^(0x[0-9A-Fa-f]+|[A-Za-z_][A-Za-z0-9_]*:)} $object_text]
         && [regexp {[][{}"[:space:]/]} $object_text]} {
@@ -54,6 +77,8 @@ proc mptdc_o11_db_attr {object attr} {
 }
 
 proc mptdc_o11_obj_name {object} {
+    set internal_name [mptdc_o11_internal_net_token_name $object]
+    if {$internal_name ne ""} { return $internal_name }
     set name [mptdc_o11_db_attr $object .name]
     if {$name ne ""} { return $name }
     if {![catch {set name [get_object_name $object]}]} { return $name }
