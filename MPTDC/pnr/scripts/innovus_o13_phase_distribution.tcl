@@ -188,7 +188,7 @@ proc mptdc_o13_write_summary {} {
     puts $fh "- Run ID: `$o13(run_id)`"
     puts $fh "- Source run: `$o13(source_run_id)`"
     puts $fh "- Mode: report-only restore of an O13 routed checkpoint."
-    puts $fh "- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`."
+    puts $fh {- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`.}
     puts $fh "- Provisional IO load report: `io_load_model.rpt`."
     puts $fh "- No routing, CTS, RTL, Liberty, packet, or calibration behavior is modified."
     puts $fh "- IO timing uses the documented in-memory provisional load model from `io_load_model.rpt`."

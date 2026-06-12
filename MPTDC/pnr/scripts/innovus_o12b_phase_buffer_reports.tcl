@@ -516,12 +516,24 @@ proc mptdc_o12b_write_property_snapshot {path title object fields} {
     return 1
 }
 
-proc mptdc_o12b_write_native_property_report {path object} {
-    if {$object eq "" || ![mptdc_o12b_db_object_query_safe $object]} {
+proc mptdc_o12b_tcl_braced_literal {value} {
+    set text "$value"
+    if {[string first "\}" $text] >= 0} {
+        return ""
+    }
+    return "{$text}"
+}
+
+proc mptdc_o12b_write_native_named_property_report {path getter name} {
+    if {$name eq ""} {
         return 0
     }
-    set script [list report_property $object > $path]
-    if {![catch {uplevel 1 $script}]} {
+    set literal [mptdc_o12b_tcl_braced_literal $name]
+    if {$literal eq ""} {
+        return 0
+    }
+    set script [format {report_property [%s -quiet -hierarchical %s]} $getter $literal]
+    if {![catch {uplevel 1 "$script > \"$path\""}]} {
         return 1
     }
     return 0
@@ -529,10 +541,10 @@ proc mptdc_o12b_write_native_property_report {path object} {
 
 proc mptdc_o12b_write_net_property_report {path net_name} {
     if {$net_name eq ""} { return 0 }
-    set net_obj [mptdc_o11_net_object $net_name]
-    if {[mptdc_o12b_write_native_property_report $path $net_obj]} {
+    if {[mptdc_o12b_write_native_named_property_report $path get_nets $net_name]} {
         return 1
     }
+    set net_obj [mptdc_o11_net_object $net_name]
     return [mptdc_o12b_write_property_snapshot $path "O12B net properties $net_name" $net_obj [list \
         {capacitance_max .total_capacitance .total_cap .capacitance .load_capacitance .effective_capacitance .cap} \
         {wire_capacitance_max .wire_capacitance .wire_cap .route_capacitance .routing_capacitance} \
@@ -546,10 +558,10 @@ proc mptdc_o12b_write_net_property_report {path net_name} {
 
 proc mptdc_o12b_write_cell_property_report {path cell_name} {
     if {$cell_name eq ""} { return 0 }
-    set cell_obj [mptdc_o12b_get_cell $cell_name]
-    if {[mptdc_o12b_write_native_property_report $path $cell_obj]} {
+    if {[mptdc_o12b_write_native_named_property_report $path get_cells $cell_name]} {
         return 1
     }
+    set cell_obj [mptdc_o12b_get_cell $cell_name]
     return [mptdc_o12b_write_property_snapshot $path "O12B cell properties $cell_name" $cell_obj [list \
         {ref_name .base_cell.name .lib_cell.name .master.name .cell.name .ref_name .base_cell .lib_cell} \
         {base_cell .base_cell.name .base_cell} \

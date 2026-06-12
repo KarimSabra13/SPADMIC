@@ -856,7 +856,7 @@ proc mptdc_o13_write_reports {} {
     puts $ifh ""
     puts $ifh "REPORT_STATUS=REVIEW_REQUIRED"
     puts $ifh ""
-    puts $ifh "- Preferred topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`."
+    puts $ifh {- Preferred topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`.}
     puts $ifh "- BUHDX4 input cap: `[mptdc_o13_xlibd_cell BUHDX4 input_cap_ff 10.56] fF`, safely below the strict `[mptdc_o13_xlibd_budget_ff strict] fF` analog budget."
     puts $ifh "- BUHDX12 input cap: `[mptdc_o13_xlibd_cell BUHDX12 input_cap_ff 32.24] fF`, also under strict budget but less isolated than BUHDX4."
     puts $ifh "- INHDX12 input cap: `[mptdc_o13_xlibd_cell INHDX12 input_cap_ff 55.64] fF`, close to strict budget; do not place directly on RO without analog review."
@@ -879,7 +879,7 @@ proc mptdc_o13_write_reports {} {
     puts $sfh "- Source run: `[mptdc_o13_source_run_id]`"
     puts $sfh "- Strict analog D-load budget: `[mptdc_o13_xlibd_budget_ff strict] fF`."
     puts $sfh "- CN/clock-like estimate: `[mptdc_o13_xlibd_budget_ff cn] fF`."
-    puts $sfh "- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`."
+    puts $sfh {- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`.}
     puts $sfh "- XLIBD reference: `ro_phase_raw_pin_loads_xlibd.csv`, `phase_buffer_output_loads_xlibd.csv`, `fast_tag_loads_xlibd.csv`, `phase_net_loads_xlibd_enhanced.csv`, `phase_net_load_budget_summary.md`, `phase_buffer_xlibd_interpretation.md`."
     puts $sfh "- RAW_RO_LOAD_FIXED=$raw_fixed"
     puts $sfh "- FINAL_DRIVER_OUTPUT_LOAD_QUANTIFIED=$out_quantified"
