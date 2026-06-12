@@ -506,6 +506,12 @@ proc mptdc_o10_main {} {
 
     mptdc_o10_stage_mark init_design start
     mptdc_o10_init_design
+    if {[llength [info commands mptdc_o10_select_interactive_constraint_mode]] > 0} {
+        set o10(interactive_constraint_mode_result) [mptdc_o10_select_interactive_constraint_mode]
+        if {[llength [info commands mptdc_o10_write_interactive_constraint_mode_status]] > 0} {
+            mptdc_o10_write_interactive_constraint_mode_status $o10(interactive_constraint_mode_result)
+        }
+    }
     mptdc_o10_stage_mark init_design done
     mptdc_o10_stage_mark pre_place_reports start
     mptdc_o10_report_stage pre_place

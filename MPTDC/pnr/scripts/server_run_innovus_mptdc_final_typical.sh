@@ -40,6 +40,8 @@ Environment:
                                 or PNR_DENSITY_65_CEILING.
   MPTDC_PNR_CORE_UTIL           Explicit core utilization, capped at 0.65.
   MPTDC_PNR_MAX_DENSITY         Innovus local placement density cap. Default: 0.70.
+  MPTDC_RUN_POSTROUTE_OPT       Default: 0. Set to 1 only for an explicitly
+                                reviewed Innovus optimization experiment.
   MPTDC_PREPARE_GENUS_HANDOFF  Set to 0 to skip stable handoff materialization.
 
 This wrapper is a stable final-typical entrypoint and gate. It does not change
@@ -201,7 +203,7 @@ fi
   echo "pnr_core_util_allowed: 0.58..0.62 first-pass; 0.65 ceiling"
   echo "io_load_class: ${MPTDC_PNR_IO_LOAD_CLASS:-medium}"
   echo "run_clk_sys_cts: ${MPTDC_RUN_CLK_SYS_CTS:-1}"
-  echo "run_postroute_opt: ${MPTDC_RUN_POSTROUTE_OPT:-1}"
+  echo "run_postroute_opt: ${MPTDC_RUN_POSTROUTE_OPT:-0}"
   echo "place_pd_grid: ${MPTDC_PNR_PLACE_PD_GRID:-1}"
   echo "place_phase_buffers: ${MPTDC_PNR_PLACE_PHASE_BUFFERS:-1}"
   echo "place_fast_tags_by_column: ${MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN:-1}"
@@ -402,7 +404,7 @@ run_route_closure() {
   MPTDC_O10_POSTSYN_SDC="$postsyn_sdc" \
   MPTDC_O10_SDC_OVERLAY="$route_overlay" \
   MPTDC_O10_RUN_CLK_SYS_CTS="${MPTDC_RUN_CLK_SYS_CTS:-1}" \
-  MPTDC_O10_RUN_POSTROUTE_OPT="${MPTDC_RUN_POSTROUTE_OPT:-1}" \
+  MPTDC_O10_RUN_POSTROUTE_OPT="${MPTDC_RUN_POSTROUTE_OPT:-0}" \
   MPTDC_STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-${MPTDC_PNR_LIBRARY:-JIHD}}" \
   MPTDC_PNR_CORE_UTIL="$MPTDC_PNR_CORE_UTIL" \
   MPTDC_PNR_MAX_DENSITY="$MPTDC_PNR_MAX_DENSITY" \
@@ -470,7 +472,7 @@ if {[mptdc_pnr_core_util_default] ne "0.60"} { error "core utilization default c
 if {[mptdc_pnr_core_util_max_first_run] ne "0.65"} { error "core utilization max changed" }
 if {[mptdc_pnr_cts_primary_clock] ne "clk_sys"} { error "CTS primary clock changed" }
 if {[mptdc_pnr_route_signal_top_layer] ne "MET3"} { error "signal top route layer changed" }
-if {[mptdc_pnr_postroute_opt_enabled] ne "1"} { error "postroute optimization default changed" }
+if {[mptdc_pnr_postroute_opt_enabled] ne "0"} { error "postroute optimization default changed" }
 if {[lsearch -exact [mptdc_pnr_required_reports] fast_tag_to_pd_route_lengths.csv] < 0} { error "missing fast-tag route-length report requirement" }
 if {[lsearch -exact [mptdc_pnr_required_reports] cts_clock_inclusion_audit.rpt] < 0} { error "missing CTS audit report requirement" }
 if {[lsearch -exact [mptdc_pnr_required_reports] physical_verification_status.md] < 0} { error "missing physical verification report requirement" }

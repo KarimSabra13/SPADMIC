@@ -27,8 +27,16 @@ proc mptdc_o10_route {} {
         if {[catch {optDesign -postRoute} err]} {
             mptdc_o10_msg "optDesign -postRoute failed: $err"
             mptdc_o10_stage_mark route.optDesign_postRoute failed
+            set fh [open "$o10(reports_dir)/POSTROUTE_OPT_FAILED.txt" w]
+            puts $fh "POSTROUTE_OPT_STATUS=FAILED"
+            puts $fh "reason=$err"
+            puts $fh "This run keeps the routed checkpoint for review; do not treat post-route optimization as complete."
+            close $fh
         } else {
             mptdc_o10_stage_mark route.optDesign_postRoute done
+            set fh [open "$o10(reports_dir)/postroute_opt_status.rpt" w]
+            puts $fh "POSTROUTE_OPT_STATUS=COMPLETE"
+            close $fh
         }
     } else {
         mptdc_o10_stage_mark route.optDesign_postRoute skipped
@@ -40,7 +48,7 @@ proc mptdc_o10_route {} {
     mptdc_o10_stage_mark route.reports start
     mptdc_o10_report_stage post_route
     mptdc_o10_capture_candidates "$o10(reports_dir)/hold_post_route.rpt" \
-        "O10 hold post route" [list {report_timing -check_type hold -max_paths 100} {timeDesign -postRoute -hold}]
+        "O10 hold post route" [list {timeDesign -postRoute -hold} {report_timing -check_type hold -max_paths 100}]
     mptdc_o10_stage_mark route.reports done
     mptdc_o10_stage_mark route.defOut start
     catch {defOut "$o10(def_dir)/04_route.def"}

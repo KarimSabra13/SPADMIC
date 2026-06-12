@@ -12,28 +12,35 @@ proc mptdc_o10_select_interactive_constraint_mode {} {
     if {[llength [info commands set_interactive_constraint_modes]] == 0} {
         return [list NOT_AVAILABLE "set_interactive_constraint_modes command not present"]
     }
-    foreach cmd {
-        {get_db constraint_modes functional_mode}
-        {get_db constraint_modes *functional_mode*}
-        {all_constraint_modes}
-    } {
-        set modes [list]
-        if {[catch {set modes [uplevel 1 $cmd]}]} {
-            continue
-        }
-        foreach mode $modes {
-            if {$mode eq "" || $mode eq "0x0"} {
-                continue
-            }
-            if {![catch {set_interactive_constraint_modes $mode} err]} {
-                return [list OK $mode]
-            }
-        }
-    }
     if {![catch {set_interactive_constraint_modes functional_mode} err]} {
         return [list OK functional_mode]
     }
+    if {[llength [info commands all_constraint_modes]] > 0} {
+        set modes [list]
+        if {![catch {set modes [all_constraint_modes]}]} {
+            foreach mode $modes {
+                if {$mode eq "" || $mode eq "0x0"} {
+                    continue
+                }
+                if {![catch {set_interactive_constraint_modes $mode} err]} {
+                    return [list OK $mode]
+                }
+            }
+        }
+    }
     return [list FAILED $err]
+}
+
+proc mptdc_o10_write_interactive_constraint_mode_status {mode_result} {
+    global o10
+    set fh [open "$o10(reports_dir)/interactive_constraint_mode.rpt" w]
+    puts $fh "# O10.2 Interactive Constraint Mode"
+    puts $fh ""
+    puts $fh "STATUS=[lindex $mode_result 0]"
+    puts $fh "DETAIL=[lindex $mode_result 1]"
+    puts $fh ""
+    puts $fh "This mode is selected before report_constraint commands so report generation does not add nonphysical TCLCMD-1048 noise."
+    close $fh
 }
 
 proc mptdc_o10_cts_buffer_cells {} {
@@ -136,17 +143,11 @@ proc mptdc_o10_cts {} {
         catch {set_ccopt_property target_skew 0.15}
         set spec_created 0
         set spec_path "$o10(work_dir)/clk_sys_cts.spec"
-        foreach cmd [list \
-            [list create_ccopt_clock_tree_spec -file $spec_path -clock_tree clk_sys] \
-            [list create_ccopt_clock_tree_spec -file $spec_path -clock_trees [list clk_sys]] \
-            [list create_ccopt_clock_tree_spec -file $spec_path -clocks [list clk_sys]] \
-            [list create_ccopt_clock_tree_spec -file $spec_path] \
-        ] {
-            if {![catch {{*}$cmd} err]} {
-                set spec_created 1
-                puts $status_fh "accepted_spec_command=$cmd"
-                break
-            }
+        set cmd [list create_ccopt_clock_tree_spec -file $spec_path]
+        if {![catch {{*}$cmd} err]} {
+            set spec_created 1
+            puts $status_fh "accepted_spec_command=$cmd"
+        } else {
             puts $status_fh "rejected_spec_command=$cmd"
             puts $status_fh "  $err"
         }
@@ -162,7 +163,12 @@ proc mptdc_o10_cts {} {
                 puts $status_fh "spec_safety=ambiguous_or_ro_clock_reference"
             }
         }
-        if {$spec_created && $spec_safe} {
+        set allow_generic_ccopt [mptdc_o10_env MPTDC_O10_ALLOW_GENERIC_CCOPT 0]
+        puts $status_fh "allow_generic_ccopt=$allow_generic_ccopt"
+        if {$spec_created && ($spec_safe || $allow_generic_ccopt == 1)} {
+            if {!$spec_safe} {
+                puts $status_fh "generic_ccopt_override=YES_REVIEW_REQUIRED"
+            }
             if {![catch {ccopt_design} err]} {
                 set o10(cts_status) "CLK_SYS_ONLY_CTS_COMPLETE"
                 puts $status_fh "CTS_STATUS=CLK_SYS_ONLY_CTS_COMPLETE"
@@ -195,7 +201,7 @@ proc mptdc_o10_cts {} {
     }
     mptdc_o10_report_stage post_cts
     mptdc_o10_capture_candidates "$o10(reports_dir)/hold_post_cts.rpt" \
-        "O10.2 hold post CTS" [list {report_timing -check_type hold -max_paths 100} {timeDesign -postCTS -hold}]
+        "O10.2 hold post CTS" [list {timeDesign -postCTS -hold} {report_timing -check_type hold -max_paths 100}]
     catch {defOut "$o10(def_dir)/03_cts.def"}
     catch {saveDesign "$o10(checkpoints_dir)/03_cts.enc"}
     mptdc_o10_restore_script 03_cts

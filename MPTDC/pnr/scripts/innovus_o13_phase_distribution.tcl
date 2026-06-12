@@ -96,26 +96,21 @@ proc mptdc_o13_select_interactive_constraint_mode {} {
     if {[llength [info commands set_interactive_constraint_modes]] == 0} {
         return [list NOT_AVAILABLE "set_interactive_constraint_modes command not present"]
     }
-    foreach cmd {
-        {get_db constraint_modes functional_mode}
-        {get_db constraint_modes *functional_mode*}
-        {all_constraint_modes}
-    } {
-        set modes [list]
-        if {[catch {set modes [uplevel 1 $cmd]}]} {
-            continue
-        }
-        foreach mode $modes {
-            if {$mode eq "" || $mode eq "0x0"} {
-                continue
-            }
-            if {![catch {set_interactive_constraint_modes $mode} err]} {
-                return [list OK $mode]
-            }
-        }
-    }
     if {![catch {set_interactive_constraint_modes functional_mode} err]} {
         return [list OK functional_mode]
+    }
+    if {[llength [info commands all_constraint_modes]] > 0} {
+        set modes [list]
+        if {![catch {set modes [all_constraint_modes]}]} {
+            foreach mode $modes {
+                if {$mode eq "" || $mode eq "0x0"} {
+                    continue
+                }
+                if {![catch {set_interactive_constraint_modes $mode} err]} {
+                    return [list OK $mode]
+                }
+            }
+        }
     }
     return [list FAILED $err]
 }

@@ -135,13 +135,13 @@ proc mptdc_o12b_db_attrs_for {object} {
 proc mptdc_o12b_db_attr_supported {object attr} {
     set attr_name [string trimleft $attr .]
     if {$attr_name eq ""} { return 0 }
-    set first [lindex [split $attr_name "."] 0]
+    set parent [lindex [split $attr_name "."] 0]
     foreach raw_attr [mptdc_o12b_db_attrs_for $object] {
         set norm [string trimleft $raw_attr .]
-        if {$norm eq $attr_name || $norm eq $first} {
+        if {$norm eq $attr_name} {
             return 1
         }
-        if {[string first "${first}." $norm] == 0} {
+        if {[string first "." $attr_name] >= 0 && $norm eq $parent} {
             return 1
         }
     }

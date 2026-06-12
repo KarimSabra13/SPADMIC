@@ -12,7 +12,7 @@ if {[llength [info commands mptdc_pnr_env]] == 0} {
 }
 
 proc mptdc_pnr_postroute_opt_enabled {} {
-    return [mptdc_pnr_env MPTDC_RUN_POSTROUTE_OPT 1]
+    return [mptdc_pnr_env MPTDC_RUN_POSTROUTE_OPT 0]
 }
 
 proc mptdc_pnr_phase_root_preserve_patterns {} {
@@ -54,7 +54,11 @@ proc mptdc_pnr_write_postroute_opt_status {{path ""}} {
     file mkdir [file dirname $path]
     set fh [open $path w]
     puts $fh "POSTROUTE_OPT_REQUESTED=[mptdc_pnr_postroute_opt_enabled]"
-    puts $fh "POSTROUTE_OPT_STATUS=REVIEW_AFTER_INNOVUS"
+    if {[mptdc_pnr_postroute_opt_enabled]} {
+        puts $fh "POSTROUTE_OPT_STATUS=REVIEW_AFTER_INNOVUS"
+    } else {
+        puts $fh "POSTROUTE_OPT_STATUS=SKIPPED_SINGLE_VIEW_NON_OCV_DEFAULT"
+    }
     puts $fh "protected_patterns=[mptdc_pnr_phase_root_preserve_patterns]"
     puts $fh "forbidden_actions=[join [mptdc_pnr_postroute_opt_forbidden_actions] {; }]"
     close $fh
