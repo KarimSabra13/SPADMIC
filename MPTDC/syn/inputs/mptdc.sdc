@@ -16,7 +16,12 @@
 proc mptdc_try_dont_touch {pattern} {
     set cells [get_cells -quiet -hierarchical $pattern]
     if {[llength $cells] > 0} {
-        catch {set_dont_touch $cells true}
+        if {[llength [info commands set_db]] > 0} {
+            catch {set_db $cells .dont_touch true}
+            catch {set_db $cells .ungroup_ok false}
+        } else {
+            catch {set_dont_touch $cells true}
+        }
     }
 }
 

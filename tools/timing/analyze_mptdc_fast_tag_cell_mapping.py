@@ -146,14 +146,13 @@ def inst_from_pin(value: str) -> str:
 def source_cell_from_mapping(row: dict[str, str], mapping_rows: list[dict[str, str]]) -> str:
     start_inst = canonical(inst_from_pin(row.get("startpoint", "")))
     start_text = row.get("startpoint", "")
-    if not start_inst:
-        return ""
-    for mapping in mapping_rows:
-        if mapping.get("role") != "fast_tag_source":
-            continue
-        mapped_inst = canonical(mapping.get("instance", ""))
-        if mapped_inst and (mapped_inst == start_inst or mapped_inst in start_inst or start_inst in mapped_inst):
-            return cell_basename(mapping.get("mapped_cell", ""))
+    if start_inst:
+        for mapping in mapping_rows:
+            if mapping.get("role") != "fast_tag_source":
+                continue
+            mapped_inst = canonical(mapping.get("instance", ""))
+            if mapped_inst and (mapped_inst == start_inst or mapped_inst in start_inst or start_inst in mapped_inst):
+                return cell_basename(mapping.get("mapped_cell", ""))
     start_tap = infer_tap(start_text)
     start_bit = infer_bit(start_text)
     if start_tap != "NA" and start_bit != "NA":
@@ -161,6 +160,14 @@ def source_cell_from_mapping(row: dict[str, str], mapping_rows: list[dict[str, s
             if mapping.get("role") != "fast_tag_source":
                 continue
             if mapping.get("tap_index") == start_tap and mapping.get("bit_index") == start_bit:
+                return cell_basename(mapping.get("mapped_cell", ""))
+    endpoint_tap = infer_tap(row.get("endpoint", ""))
+    endpoint_bit = infer_bit(row.get("endpoint", ""))
+    if endpoint_tap != "NA" and endpoint_bit != "NA":
+        for mapping in mapping_rows:
+            if mapping.get("role") != "fast_tag_source":
+                continue
+            if mapping.get("tap_index") == endpoint_tap and mapping.get("bit_index") == endpoint_bit:
                 return cell_basename(mapping.get("mapped_cell", ""))
     return ""
 
@@ -284,6 +291,7 @@ def main() -> int:
     endpoint_count = sum(1 for row in mapping_rows if row["role"] == "nfast_hit_endpoint")
     weak_top = (
         top_source_counter.get("DFRRQHDX0", 0)
+        + top_source_counter.get("DFRSQHDX0", 0)
         + top_source_counter.get("DFRJIHDX0", 0)
         + top_source_counter.get("DFRRQJIHDX0", 0)
     )
@@ -302,6 +310,10 @@ def main() -> int:
         "FAST_TAG_SOURCE_DFRRQHDX1_COUNT": str(top_source_counter.get("DFRRQHDX1", 0)),
         "FAST_TAG_SOURCE_DFRRQHDX2_COUNT": str(top_source_counter.get("DFRRQHDX2", 0)),
         "FAST_TAG_SOURCE_DFRRQHDX4_COUNT": str(top_source_counter.get("DFRRQHDX4", 0)),
+        "FAST_TAG_SOURCE_DFRSQHDX0_COUNT": str(top_source_counter.get("DFRSQHDX0", 0)),
+        "FAST_TAG_SOURCE_DFRSQHDX1_COUNT": str(top_source_counter.get("DFRSQHDX1", 0)),
+        "FAST_TAG_SOURCE_DFRSQHDX2_COUNT": str(top_source_counter.get("DFRSQHDX2", 0)),
+        "FAST_TAG_SOURCE_DFRSQHDX4_COUNT": str(top_source_counter.get("DFRSQHDX4", 0)),
         "FAST_TAG_SOURCE_DFRJIHDX0_COUNT": str(top_source_counter.get("DFRJIHDX0", 0)),
         "FAST_TAG_SOURCE_DFRJIHDX1_COUNT": str(top_source_counter.get("DFRJIHDX1", 0)),
         "FAST_TAG_SOURCE_DFRJIHDX2_COUNT": str(top_source_counter.get("DFRJIHDX2", 0)),
@@ -316,6 +328,10 @@ def main() -> int:
         "FAST_TAG_MAPPED_SOURCE_DFRRQHDX1_COUNT": str(mapped_source_counter.get("DFRRQHDX1", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRRQHDX2_COUNT": str(mapped_source_counter.get("DFRRQHDX2", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRRQHDX4_COUNT": str(mapped_source_counter.get("DFRRQHDX4", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRSQHDX0_COUNT": str(mapped_source_counter.get("DFRSQHDX0", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRSQHDX1_COUNT": str(mapped_source_counter.get("DFRSQHDX1", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRSQHDX2_COUNT": str(mapped_source_counter.get("DFRSQHDX2", 0)),
+        "FAST_TAG_MAPPED_SOURCE_DFRSQHDX4_COUNT": str(mapped_source_counter.get("DFRSQHDX4", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRJIHDX0_COUNT": str(mapped_source_counter.get("DFRJIHDX0", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRJIHDX1_COUNT": str(mapped_source_counter.get("DFRJIHDX1", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRJIHDX2_COUNT": str(mapped_source_counter.get("DFRJIHDX2", 0)),
@@ -330,6 +346,10 @@ def main() -> int:
         "FAST_TAG_EXACT_SOURCE_DFRRQHDX1_COUNT": str(exact_source_counter.get("DFRRQHDX1", 0)),
         "FAST_TAG_EXACT_SOURCE_DFRRQHDX2_COUNT": str(exact_source_counter.get("DFRRQHDX2", 0)),
         "FAST_TAG_EXACT_SOURCE_DFRRQHDX4_COUNT": str(exact_source_counter.get("DFRRQHDX4", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRSQHDX0_COUNT": str(exact_source_counter.get("DFRSQHDX0", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRSQHDX1_COUNT": str(exact_source_counter.get("DFRSQHDX1", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRSQHDX2_COUNT": str(exact_source_counter.get("DFRSQHDX2", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRSQHDX4_COUNT": str(exact_source_counter.get("DFRSQHDX4", 0)),
         "FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT": str(exact_source_counter.get("DFRJIHDX1", 0)),
         "FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT": str(exact_source_counter.get("DFRJIHDX2", 0)),
         "FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT": str(exact_source_counter.get("DFRJIHDX4", 0)),
@@ -378,6 +398,10 @@ def main() -> int:
                 f"FAST_TAG_SOURCE_DFRRQHDX1_COUNT={values['FAST_TAG_SOURCE_DFRRQHDX1_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRRQHDX2_COUNT={values['FAST_TAG_SOURCE_DFRRQHDX2_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRRQHDX4_COUNT={values['FAST_TAG_SOURCE_DFRRQHDX4_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRSQHDX0_COUNT={values['FAST_TAG_SOURCE_DFRSQHDX0_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRSQHDX1_COUNT={values['FAST_TAG_SOURCE_DFRSQHDX1_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRSQHDX2_COUNT={values['FAST_TAG_SOURCE_DFRSQHDX2_COUNT']}",
+                f"FAST_TAG_SOURCE_DFRSQHDX4_COUNT={values['FAST_TAG_SOURCE_DFRSQHDX4_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRJIHDX0_COUNT={values['FAST_TAG_SOURCE_DFRJIHDX0_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRJIHDX1_COUNT={values['FAST_TAG_SOURCE_DFRJIHDX1_COUNT']}",
                 f"FAST_TAG_SOURCE_DFRJIHDX2_COUNT={values['FAST_TAG_SOURCE_DFRJIHDX2_COUNT']}",
@@ -395,6 +419,10 @@ def main() -> int:
                 f"FAST_TAG_EXACT_SOURCE_DFRRQHDX1_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQHDX1_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_DFRRQHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQHDX2_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_DFRRQHDX4_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQHDX4_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRSQHDX0_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRSQHDX0_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRSQHDX1_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRSQHDX1_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRSQHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRSQHDX2_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRSQHDX4_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRSQHDX4_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT']}",

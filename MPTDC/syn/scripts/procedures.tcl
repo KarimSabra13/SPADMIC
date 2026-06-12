@@ -836,7 +836,7 @@ proc mptdc_o13_abs5_select_constraint_mode {} {
         return [list NOT_AVAILABLE "set_interactive_constraint_modes command not present"]
     }
 
-    set candidates [list functional_mode]
+    set candidates [list]
     foreach query {
         {get_db constraint_modes functional_mode}
         {get_db constraint_modes *functional_mode*}
@@ -849,6 +849,9 @@ proc mptdc_o13_abs5_select_constraint_mode {} {
                 lappend candidates $item
             }
         }
+    }
+    if {[llength $candidates] == 0} {
+        return [list NOT_FOUND "no constraint modes visible yet"]
     }
 
     set errors [list]
@@ -889,26 +892,30 @@ proc mptdc_o13_abs5_apply_exact_q1_exception {{rpt_file ""}} {
     set exception_failures 0
     set applied_endpoint_count 0
     set apply_rows [list]
-    set mode_result [mptdc_o13_abs5_select_constraint_mode]
-    set mode_status [lindex $mode_result 0]
-    set mode_detail [lindex $mode_result 1]
+    set mode_status "SKIPPED"
+    set mode_detail "exact objects not complete"
 
     if {$endpoints(matched) == 64 && $sources(matched) == 8 && \
         $endpoints(duplicates) == 0 && $sources(duplicates) == 0 && \
         [llength $endpoints(missing)] == 0 && [llength $sources(missing)] == 0} {
-        for {set tap 0} {$tap < 8} {incr tap} {
-            set to_pins [list]
-            for {set nf 0} {$nf < 8} {incr nf} {
-                lappend to_pins $endpoint_by_pair(${tap},${nf})
-            }
-            set source_pin $source_by_tap($tap)
-            if {[catch {set_false_path -from $source_pin -to $to_pins} err]} {
-                incr exception_failures
-                lappend apply_rows [list $tap FAIL $err]
-                mptdc_message "O13 abs5 exact PD Vernier false path failed for slow tap $tap: $err" high
-            } else {
-                incr applied_endpoint_count 8
-                lappend apply_rows [list $tap OK "applied to 8 q1 endpoints"]
+        set mode_result [mptdc_o13_abs5_select_constraint_mode]
+        set mode_status [lindex $mode_result 0]
+        set mode_detail [lindex $mode_result 1]
+        if {$mode_status eq "OK" || $mode_status eq "NOT_AVAILABLE"} {
+            for {set tap 0} {$tap < 8} {incr tap} {
+                set to_pins [list]
+                for {set nf 0} {$nf < 8} {incr nf} {
+                    lappend to_pins $endpoint_by_pair(${tap},${nf})
+                }
+                set source_pin $source_by_tap($tap)
+                if {[catch {set_false_path -from $source_pin -to $to_pins} err]} {
+                    incr exception_failures
+                    lappend apply_rows [list $tap FAIL $err]
+                    mptdc_message "O13 abs5 exact PD Vernier false path failed for slow tap $tap: $err" high
+                } else {
+                    incr applied_endpoint_count 8
+                    lappend apply_rows [list $tap OK "applied to 8 q1 endpoints"]
+                }
             }
         }
     }
@@ -1849,7 +1856,7 @@ proc mptdc_repair_apply_exact_full_path_max_delay {delay from_pins to_pins} {
     set mode_result [mptdc_o13_abs5_select_constraint_mode]
     set mode_status [lindex $mode_result 0]
     set mode_detail [lindex $mode_result 1]
-    if {$mode_status eq "FAIL"} {
+    if {$mode_status ne "OK" && $mode_status ne "NOT_AVAILABLE"} {
         return [dict create result "CONSTRAINT_MODE_FAIL:$mode_detail" mode_status $mode_status mode_detail $mode_detail]
     }
     set rc [catch {
@@ -2025,6 +2032,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_DRV_TRANSITION false]
     set repair4_exact_source_drive [mptdc_bool_env MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE false]
     set repair5_exact_close [mptdc_bool_env MPTDC_GENUS_REPAIR5_EXACT_FAST_TAG_CLOSE false]
+    set repair6_localtag_preserve_close [mptdc_bool_env MPTDC_GENUS_REPAIR6_LOCALTAG_PRESERVE_CLOSE false]
+    if {$repair6_localtag_preserve_close} {
+        set repair4_exact_source_drive true
+        set repair5_exact_close true
+    }
     set strong_fast_flops [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS false]
     set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV false]
     set control_bias_stage [string tolower [mptdc_repair_set_numeric_env MPTDC_GENUS_REPAIR_CONTROL_CELL_BIAS_STAGE all]]
@@ -2080,6 +2092,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "DRV_TRANSITION_REPAIR=$drv_repair"
     puts $fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
     puts $fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
+    puts $fh "REPAIR6_LOCALTAG_PRESERVE_CLOSE=$repair6_localtag_preserve_close"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
@@ -2362,7 +2375,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                     set source_cell_ok true
                     if {$exact_fast_tag_source_cell ne "" && $stage eq "post_map_pre_opt"} {
                         set source_cell_status [dict get $exact_source_cell_result status]
-                        set source_cell_ok [expr {$source_cell_status eq "OK" || $source_cell_status eq "COMMAND_ACCEPTED_VERIFY_AFTER_OPT"}]
+                        set source_cell_ok [expr {$source_cell_status eq "OK"}]
                     }
                     set max_delay_ok true
                     if {$enable_exact_fast_tag_max_delay} {
@@ -2380,6 +2393,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $status_fh "STAGE=$stage"
                 puts $status_fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
                 puts $status_fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
+                puts $status_fh "REPAIR6_LOCALTAG_PRESERVE_CLOSE=$repair6_localtag_preserve_close"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_EXPECTED=$exact_source_expected"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_FOUND=[llength $exact_source_q_records]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_CLOCK_PINS_FOUND=[llength $exact_source_c_records]"
@@ -2462,9 +2476,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 $exact_control_max_roots]
             if {[llength $exact_control_nets] > 0} {
                 set exact_fanout_rc [catch {set_max_fanout $control_max_fanout $exact_control_nets} err_exact_fanout]
-                set exact_trans_rc [catch {set_max_transition $control_max_transition $exact_control_nets} err_exact_trans]
                 puts $fh "EXACT_CONTROL_SET_MAX_FANOUT=[expr {$exact_fanout_rc == 0 ? {OK} : $err_exact_fanout}]"
-                puts $fh "EXACT_CONTROL_SET_MAX_TRANSITION=[expr {$exact_trans_rc == 0 ? {OK} : $err_exact_trans}]"
+                puts $fh "EXACT_CONTROL_SET_MAX_TRANSITION=SKIPPED_NET_OBJECTS_UNSUPPORTED_BY_THIS_GENUS_MODE"
             }
         } elseif {$exact_control_roots} {
             puts $fh "EXACT_CONTROL_ROOT_STAGE=SKIPPED_UNTIL_POST_MAP_PRE_OPT"
@@ -2486,9 +2499,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             puts $fh "CONTROL_REPAIR_NETS=[llength $control_nets]"
             if {[llength $control_nets] > 0} {
                 set ctrl_fanout_rc [catch {set_max_fanout $control_max_fanout $control_nets} err_ctrl_fanout]
-                set ctrl_trans_rc [catch {set_max_transition $control_max_transition $control_nets} err_ctrl_trans]
                 puts $fh "CONTROL_SET_MAX_FANOUT=[expr {$ctrl_fanout_rc == 0 ? {OK} : $err_ctrl_fanout}]"
-                puts $fh "CONTROL_SET_MAX_TRANSITION=[expr {$ctrl_trans_rc == 0 ? {OK} : $err_ctrl_trans}]"
+                puts $fh "CONTROL_SET_MAX_TRANSITION=SKIPPED_NET_OBJECTS_UNSUPPORTED_BY_THIS_GENUS_MODE"
             }
         } else {
             puts $fh "CONTROL_REPAIR_NETS=SKIPPED_BROAD_CONTROL_NETS_DISABLED"
