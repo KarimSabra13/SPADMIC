@@ -556,11 +556,15 @@ proc mptdc_o12b_skip_native_net_property_report {net_name} {
 
 proc mptdc_o12b_write_net_property_report {path net_name} {
     if {$net_name eq ""} { return 0 }
-    if {![mptdc_o12b_skip_native_net_property_report $net_name]
-        && [mptdc_o12b_write_native_named_property_report $path get_nets $net_name]} {
-        return 1
+    set skip_native [mptdc_o12b_skip_native_net_property_report $net_name]
+    if {!$skip_native} {
+        if {[mptdc_o12b_write_native_named_property_report $path get_nets $net_name]} {
+            return 1
+        }
+        set net_obj [mptdc_o11_net_object $net_name]
+    } else {
+        set net_obj ""
     }
-    set net_obj [mptdc_o11_net_object $net_name]
     return [mptdc_o12b_write_property_snapshot $path "O12B net properties $net_name" $net_obj [list \
         {capacitance_max .total_capacitance .total_cap .capacitance .load_capacitance .effective_capacitance .cap} \
         {wire_capacitance_max .wire_capacitance .wire_cap .route_capacitance .routing_capacitance} \

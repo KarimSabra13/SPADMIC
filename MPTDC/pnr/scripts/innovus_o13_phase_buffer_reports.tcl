@@ -484,7 +484,11 @@ proc mptdc_o13_write_reports {} {
             set drv_inst [lindex $row 14]
 
             set raw_net_obj [mptdc_o11_net_object $raw_net]
-            set iso_net_obj [mptdc_o11_net_object $iso_net]
+            if {[mptdc_o12b_skip_native_net_property_report $iso_net]} {
+                set iso_net_obj ""
+            } else {
+                set iso_net_obj [mptdc_o11_net_object $iso_net]
+            }
             set out_net_obj [mptdc_o11_net_object $out_net]
 
             set raw_prop_path "$reports_dir/net_property_${family}_${tap}_raw.rpt"
