@@ -427,9 +427,7 @@ set_input_transition $design(INPUT_TRANSITION) $async_inputs_and_reset
 if {[catch {set_max_fanout $design(MAX_FANOUT) [current_design]} err]} {
     puts "MPTDC_SDC_WARN: set_max_fanout current_design failed: $err"
 }
-if {[catch {set_max_transition $design(MAX_TRANSITION) [current_design]} err]} {
-    puts "MPTDC_SDC_WARN: set_max_transition current_design failed: $err"
-}
+puts "MPTDC_SDC_INFO: design max-transition target $design(MAX_TRANSITION) ns is checked by DRV reports; direct set_max_transition on current_design is skipped because this Genus SDC mode rejects that object form"
 
 # Reset leaf nets are intentionally distributed hierarchically in RTL. Normal
 # clk_sys consumers use these as synchronous reset controls; keep their

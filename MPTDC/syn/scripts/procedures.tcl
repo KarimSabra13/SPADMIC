@@ -1857,6 +1857,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         mptdc_try_unavoid_lib_cells FAST_TAG_SOURCE_FLOP_CANDIDATES {
             *DFRRQHDX4*
             *DFRRQHDX2*
+            *DFRSQHDX4*
+            *DFRSQHDX2*
             *DFRHDX2*
             *DFRQHDX2*
             *DFRRQJIHDX4*
@@ -1869,11 +1871,15 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
             mptdc_try_avoid_lib_cells FAST_TAG_WEAK_RESET_FLOPS {
                 */DFRRQHDX1
                 */SDFRRQHDX1
+                */DFRSQHDX1
+                */SDFRSQHDX1
                 */DFRRQHDX2
                 */SDFRRQHDX2
             } $fh
             mptdc_try_unavoid_lib_cells FAST_TAG_PREFERRED_RESET_FLOPS {
                 *DFRRQHDX4*
+                *DFRSQHDX4*
+                *DFRSQHDX2*
             } $fh
         }
 
