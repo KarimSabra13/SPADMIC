@@ -26,6 +26,11 @@ def fmt(value: float | None) -> str:
     return f"{value:.1f}"
 
 
+def count_matching_lines(text: str, pattern: str) -> int:
+    regex = re.compile(pattern, flags=re.IGNORECASE)
+    return sum(1 for line in text.splitlines() if regex.search(line))
+
+
 def parse_qor(path: Path) -> dict[str, object]:
     rows: list[dict[str, object]] = []
     total_tns: float | None = None
@@ -142,6 +147,56 @@ def parse_report_helpers(path: Path) -> tuple[str, str]:
     return count, status
 
 
+def parse_sdc_diagnostics(path: Path) -> dict[str, str]:
+    text = read_text(path)
+    if not text:
+        return {
+            "SDC_COMMAND_FAILURE_COUNT": "NA",
+            "SDC_235_COUNT": "NA",
+            "TUI_61_COUNT": "NA",
+            "SDC_INVALID_OBJECT_COUNT": "NA",
+        }
+    patterns = {
+        "SDC_COMMAND_FAILURE_COUNT": r"failed\s+[1-9]|MPTDC_O13_.*FATAL|MPTDC_SDC_.*ERROR|\[SDC-202\]|\[SDC-209\]|\[SDC-235\]|\[TUI-61\]|\[SDC-248\]|SDC command requires a constraint mode specification|A required object parameter could not be found|Invalid object passed to SDC command",
+        "SDC_235_COUNT": r"\[SDC-235\]|SDC-235|SDC command requires a constraint mode specification",
+        "TUI_61_COUNT": r"\[TUI-61\]|TUI-61|A required object parameter could not be found",
+        "SDC_INVALID_OBJECT_COUNT": r"\[SDC-248\]|Invalid object passed to SDC command|empty object|invalid object",
+    }
+    return {
+        key: str(count_matching_lines(text, pattern))
+        for key, pattern in patterns.items()
+    }
+
+
+def parse_exact_fast_tag_status(run_dir: Path) -> dict[str, str]:
+    candidates = [
+        run_dir / "fast_tag_exact_repair_status.rpt",
+        run_dir / "reports" / "fast_tag_exact_repair_status.rpt",
+    ]
+    path = next((candidate for candidate in candidates if candidate.exists()), None)
+    defaults = {
+        "EXACT_FAST_TAG_SOURCES_EXPECTED": "NA",
+        "EXACT_FAST_TAG_SOURCES_FOUND": "NA",
+        "EXACT_FAST_TAG_ENDPOINTS_EXPECTED": "NA",
+        "EXACT_FAST_TAG_ENDPOINTS_FOUND": "NA",
+        "EXACT_FAST_TAG_DATAPATHS_EXPECTED": "NA",
+        "EXACT_FAST_TAG_DATAPATHS_FOUND": "NA",
+        "EXACT_FAST_TAG_REPAIR_APPLIED": "NA",
+        "EXACT_FAST_TAG_REPAIR_STATUS": "NA",
+    }
+    if path is None:
+        return defaults
+    values = defaults.copy()
+    for line in read_text(path).splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key in values:
+            values[key] = value.strip()
+    return values
+
+
 def write_env(path: Path, values: dict[str, str]) -> None:
     with path.open("w") as fh:
         for key in sorted(values):
@@ -165,6 +220,14 @@ def write_report(path: Path, values: dict[str, str], qor: dict[str, object], cls
         f"- Real timed TNS ps: `{values['REAL_TIMED_TNS_PS']}`",
         f"- Worst real path family: `{values['WORST_REAL_PATH_FAMILY']}`",
         f"- UNKNOWN_REVIEW_REQUIRED count: `{values['UNKNOWN_REVIEW_REQUIRED_COUNT']}`",
+        f"- SDC command failure count: `{values['SDC_COMMAND_FAILURE_COUNT']}`",
+        f"- SDC-235 count: `{values['SDC_235_COUNT']}`",
+        f"- TUI-61 count: `{values['TUI_61_COUNT']}`",
+        f"- SDC invalid object count: `{values['SDC_INVALID_OBJECT_COUNT']}`",
+        f"- Exact fast-tag sources: `{values['EXACT_FAST_TAG_SOURCES_FOUND']}` / `{values['EXACT_FAST_TAG_SOURCES_EXPECTED']}`",
+        f"- Exact fast-tag endpoints: `{values['EXACT_FAST_TAG_ENDPOINTS_FOUND']}` / `{values['EXACT_FAST_TAG_ENDPOINTS_EXPECTED']}`",
+        f"- Exact fast-tag datapaths: `{values['EXACT_FAST_TAG_DATAPATHS_FOUND']}` / `{values['EXACT_FAST_TAG_DATAPATHS_EXPECTED']}`",
+        f"- Exact fast-tag repair status: `{values['EXACT_FAST_TAG_REPAIR_STATUS']}`",
         "",
         "## Cost Groups",
         "",
@@ -200,6 +263,8 @@ def main() -> int:
     qor = parse_qor(args.run_dir / "timing_summary.rpt")
     cls = parse_classification(args.run_dir / "timing_path_classification.csv")
     helper_count, helper_status = parse_report_helpers(args.run_dir / "report_helpers_status.rpt")
+    sdc = parse_sdc_diagnostics(args.run_dir / "sdc_command_failures.md")
+    exact = parse_exact_fast_tag_status(args.run_dir)
 
     if qor["status"] == "PASS":
         setup_wns = qor.get("setup_wns")
@@ -211,6 +276,10 @@ def main() -> int:
         setup_paths = None
     agreement = "PASS"
     if qor["status"] != "PASS" or cls["status"] != "PASS":
+        agreement = "FAIL"
+    if sdc["SDC_COMMAND_FAILURE_COUNT"] not in {"0", "NA"}:
+        agreement = "FAIL"
+    if exact["EXACT_FAST_TAG_REPAIR_STATUS"] not in {"NA", "PASS"}:
         agreement = "FAIL"
     values = {
         "TIMING_SUMMARY_PARSE_STATUS": str(qor["status"]),
@@ -228,6 +297,8 @@ def main() -> int:
         "WORST_REAL_PATH_FAMILY": str(cls.get("worst_family", "NA")),
         "REPORT_HELPER_FAILURE_COUNT": helper_count,
         "REPORT_HELPERS_STATUS": helper_status,
+        **sdc,
+        **exact,
     }
     args.out_env.parent.mkdir(parents=True, exist_ok=True)
     args.out_report.parent.mkdir(parents=True, exist_ok=True)

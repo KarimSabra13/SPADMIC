@@ -1555,98 +1555,112 @@ proc mptdc_repair_parse_index_list {value default_value} {
     return [mptdc_unique_list $out]
 }
 
-proc mptdc_repair_exact_fast_tag_pin_name_match {role name tap bit pin_name} {
+proc mptdc_repair_index_in_list {value values} {
+    return [expr {[lsearch -exact $values $value] >= 0}]
+}
+
+proc mptdc_repair_csv_quote {value} {
+    set escaped [string map {"\"" "\"\""} $value]
+    return "\"$escaped\""
+}
+
+proc mptdc_repair_fast_tag_pin_info {role name pin_name} {
     set lname [string tolower $name]
     set lpin [string tolower $pin_name]
-
     if {![regexp -- [format {/%s$} $lpin] $lname]} {
-        return 0
+        return ""
     }
 
     if {$role eq "source"} {
-        set col_exact [format {gen_fast_tag_col\[%s\]} $tap]
-        set bit_exact [format {tag_o_reg\[%s\]/%s$} $bit $lpin]
-        if {[regexp -- $col_exact $lname] && [regexp -- $bit_exact $lname]} {
-            return 1
+        if {[regexp {gen_fast_tag_col\[([0-9]+)\].*tag_o_reg\[([0-9]+)\]/([a-z]+)$} $lname -> tap bit pin]} {
+            return [dict create role source tap $tap bit $bit pin $pin]
         }
-        set col_flat [format {gen_fast_tag_col_?%s([^0-9]|$)} $tap]
-        set bit_flat [format {tag_o_reg_?%s([^0-9].*)?/%s$} $bit $lpin]
-        if {[regexp -- $col_flat $lname] && [regexp -- $bit_flat $lname]} {
-            return 1
+        if {[regexp {gen_fast_tag_col_?([0-9]+)([^0-9].*)?tag_o_reg_?([0-9]+)([^0-9].*)?/([a-z]+)$} $lname -> tap _ bit _ pin]} {
+            return [dict create role source tap $tap bit $bit pin $pin]
         }
-        return 0
+        return ""
     }
 
     if {$role eq "endpoint"} {
-        set col_exact [format {gen_pd_col\[%s\]} $tap]
-        set bit_exact [format {nfast_hit_latched_reg\[%s\]/%s$} $bit $lpin]
-        if {[regexp -- $col_exact $lname] && [regexp -- $bit_exact $lname]} {
-            return 1
+        if {[regexp {gen_pd_row\[([0-9]+)\].*gen_pd_col\[([0-9]+)\].*nfast_hit_latched_reg\[([0-9]+)\]/([a-z]+)$} $lname -> row tap bit pin]} {
+            return [dict create role endpoint row $row tap $tap bit $bit pin $pin]
         }
-        set col_flat [format {gen_pd_col_?%s([^0-9]|$)} $tap]
-        set bit_flat [format {nfast_hit_latched_reg_?%s([^0-9].*)?/%s$} $bit $lpin]
-        if {[regexp -- $col_flat $lname] && [regexp -- $bit_flat $lname]} {
-            return 1
+        if {[regexp {gen_pd_row_?([0-9]+)([^0-9].*)?gen_pd_col_?([0-9]+)([^0-9].*)?nfast_hit_latched_reg_?([0-9]+)([^0-9].*)?/([a-z]+)$} $lname -> row _ tap _ bit _ pin]} {
+            return [dict create role endpoint row $row tap $tap bit $bit pin $pin]
         }
-        return 0
+        return ""
     }
 
-    return 0
+    return ""
 }
 
-proc mptdc_repair_collect_exact_fast_tag_pins {role taps bits pin_name} {
+proc mptdc_repair_collect_exact_fast_tag_pin_records {role taps bits pin_name} {
     set patterns [list]
-    foreach tap $taps {
-        foreach bit $bits {
-            if {$role eq "source"} {
-                lappend patterns [format {*gen_fast_tag_col\[%s\]*u_fast_tag*tag_o_reg\[%s\]/%s} $tap $bit $pin_name]
-                lappend patterns [format {*gen_fast_tag_col\[%s\]*tag_o_reg\[%s\]/%s} $tap $bit $pin_name]
-            } elseif {$role eq "endpoint"} {
-                lappend patterns [format {*gen_pd_row*gen_pd_col\[%s\]*u_pd*nfast_hit_latched_reg\[%s\]/%s} $tap $bit $pin_name]
-                lappend patterns [format {*gen_pd_col\[%s\]*u_pd*nfast_hit_latched_reg\[%s\]/%s} $tap $bit $pin_name]
-            }
-        }
-    }
-    set pins [mptdc_repair_collect_pins $patterns]
-    array set seen {}
-    foreach pin [mptdc_collection_to_list $pins] {
-        set name [mptdc_object_name $pin]
-        if {$name ne ""} {
-            set seen($name) 1
-        }
-    }
-
-    # Genus hierarchical globbing is inconsistent around generated names with
-    # literal brackets.  The broad collections below are intentionally followed
-    # by exact name filtering so only the requested tap/bit/pin survives.
-    set fallback_patterns [list]
     if {$role eq "source"} {
-        lappend fallback_patterns [format {*tag_o_reg*/%s} $pin_name]
-        lappend fallback_patterns [format {*fast_tag*tag_o_reg*/%s} $pin_name]
+        lappend patterns [format {*tag_o_reg*/%s} $pin_name]
+        lappend patterns [format {*fast_tag*tag_o_reg*/%s} $pin_name]
+        lappend patterns [format {*gen_fast_tag_col*u_fast_tag*tag_o_reg*/%s} $pin_name]
     } elseif {$role eq "endpoint"} {
-        lappend fallback_patterns [format {*nfast_hit_latched_reg*/%s} $pin_name]
-        lappend fallback_patterns [format {*gen_pd_col*nfast_hit_latched_reg*/%s} $pin_name]
+        lappend patterns [format {*nfast_hit_latched_reg*/%s} $pin_name]
+        lappend patterns [format {*gen_pd_row*gen_pd_col*nfast_hit_latched_reg*/%s} $pin_name]
+        lappend patterns [format {*gen_pd_col*nfast_hit_latched_reg*/%s} $pin_name]
+    } else {
+        return [list]
     }
 
-    foreach pin [mptdc_repair_collect_pins $fallback_patterns] {
+    set records [list]
+    array set seen {}
+    foreach pin [mptdc_repair_collect_pins $patterns] {
         set name [mptdc_object_name $pin]
         if {$name eq "" || [info exists seen($name)]} {
             continue
         }
-        foreach tap $taps {
-            foreach bit $bits {
-                if {[mptdc_repair_exact_fast_tag_pin_name_match $role $name $tap $bit $pin_name]} {
-                    set seen($name) 1
-                    lappend pins $pin
-                    break
-                }
-            }
-            if {[info exists seen($name)]} {
-                break
-            }
+        set info [mptdc_repair_fast_tag_pin_info $role $name $pin_name]
+        if {$info eq ""} {
+            continue
         }
+        set tap [dict get $info tap]
+        set bit [dict get $info bit]
+        if {![mptdc_repair_index_in_list $tap $taps] || ![mptdc_repair_index_in_list $bit $bits]} {
+            continue
+        }
+        dict set info object $pin
+        dict set info name $name
+        set seen($name) 1
+        lappend records $info
+    }
+    return $records
+}
+
+proc mptdc_repair_collect_exact_fast_tag_pins {role taps bits pin_name} {
+    set pins [list]
+    foreach rec [mptdc_repair_collect_exact_fast_tag_pin_records $role $taps $bits $pin_name] {
+        lappend pins [dict get $rec object]
     }
     return $pins
+}
+
+proc mptdc_repair_write_fast_tag_exact_csvs {report_dir taps bits source_records endpoint_records pair_records} {
+    set fh [open "$report_dir/fast_tag_exact_source_discovery.csv" w]
+    puts $fh "tap,bit,pin_name,object"
+    foreach rec $source_records {
+        puts $fh "[dict get $rec tap],[dict get $rec bit],[dict get $rec pin],[mptdc_repair_csv_quote [dict get $rec name]]"
+    }
+    close $fh
+
+    set fh [open "$report_dir/fast_tag_exact_endpoint_discovery.csv" w]
+    puts $fh "row,col,bit,pin_name,object"
+    foreach rec $endpoint_records {
+        puts $fh "[dict get $rec row],[dict get $rec tap],[dict get $rec bit],[dict get $rec pin],[mptdc_repair_csv_quote [dict get $rec name]]"
+    }
+    close $fh
+
+    set fh [open "$report_dir/fast_tag_exact_path_pairs.csv" w]
+    puts $fh "col,bit,row,source_pin,endpoint_pin,status"
+    foreach rec $pair_records {
+        puts $fh "[dict get $rec tap],[dict get $rec bit],[dict get $rec row],[mptdc_repair_csv_quote [dict get $rec source]],[mptdc_repair_csv_quote [dict get $rec endpoint]],[dict get $rec status]"
+    }
+    close $fh
 }
 
 proc mptdc_repair_set_numeric_env {name default_value} {
@@ -1786,6 +1800,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     global design
     set fast_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_FAST_TAG_PD false]
     set drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_DRV_TRANSITION false]
+    set repair4_exact_source_drive [mptdc_bool_env MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE false]
     set strong_fast_flops [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS false]
     set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV false]
     set control_bias_stage [string tolower [mptdc_repair_set_numeric_env MPTDC_GENUS_REPAIR_CONTROL_CELL_BIAS_STAGE all]]
@@ -1807,9 +1822,18 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set exact_fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_FANOUT 4]
     set exact_fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_TRANSITION_NS 0.35]
     set exact_fast_tag_max_delay [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS ""]
+    set enable_exact_fast_tag_max_delay [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_ENABLE_EXACT_MAX_DELAY false]
+    set endpoint_transition_tight [mptdc_bool_env MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT false]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
     set control_max_transition [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS 0.50]
     set design_drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV false]
+    if {$repair4_exact_source_drive} {
+        set exact_fast_tag_data_paths true
+        if {![mptdc_bool_env MPTDC_GENUS_REPAIR4_ALLOW_BROAD_FAST_TAG_Q false]} {
+            set apply_fast_tag_q_constraints false
+        }
+        set endpoint_transition_tight false
+    }
     if {!$fast_repair && !$drv_repair} {
         return
     }
@@ -1821,6 +1845,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "STAGE=$stage"
     puts $fh "FAST_TAG_PD_REPAIR=$fast_repair"
     puts $fh "DRV_TRANSITION_REPAIR=$drv_repair"
+    puts $fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
@@ -1842,6 +1867,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "FAST_TAG_EXACT_MAX_FANOUT=$exact_fast_tag_max_fanout"
     puts $fh "FAST_TAG_EXACT_MAX_TRANSITION_NS=$exact_fast_tag_max_transition"
     puts $fh "FAST_TAG_EXACT_MAX_DELAY_NS=$exact_fast_tag_max_delay"
+    puts $fh "FAST_TAG_EXACT_ENABLE_MAX_DELAY=$enable_exact_fast_tag_max_delay"
+    puts $fh "ENDPOINT_TRANSITION_TIGHT=$endpoint_transition_tight"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
     puts $fh "CONTROL_MAX_TRANSITION_NS=$control_max_transition"
     puts $fh "APPLY_DESIGN_DRV_REPAIR=$design_drv_repair"
@@ -1933,46 +1960,179 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         if {$exact_fast_tag_data_paths} {
             if {[llength $exact_fast_tag_taps] == 0 || [llength $exact_fast_tag_bits] == 0} {
                 puts $fh "FAST_TAG_EXACT_STATUS=SKIPPED_EMPTY_TAPS_OR_BITS"
+                set status_fh [open "$design(reports_dir)/fast_tag_exact_repair_status.rpt" a]
+                puts $status_fh "STAGE=$stage"
+                puts $status_fh "EXACT_FAST_TAG_REPAIR_STATUS=REVIEW_REQUIRED"
+                puts $status_fh "EXACT_FAST_TAG_REPAIR_APPLIED=NO"
+                puts $status_fh "EXACT_FAST_TAG_REVIEW_REASON=EMPTY_TAPS_OR_BITS"
+                close $status_fh
             } else {
-                set exact_source_q_pins [mptdc_repair_collect_exact_fast_tag_pins source $exact_fast_tag_taps $exact_fast_tag_bits Q]
-                set exact_source_c_pins [mptdc_repair_collect_exact_fast_tag_pins source $exact_fast_tag_taps $exact_fast_tag_bits C]
-                set exact_endpoint_d_pins [mptdc_repair_collect_exact_fast_tag_pins endpoint $exact_fast_tag_taps $exact_fast_tag_bits D]
+                set exact_rows {0 1 2 3 4 5 6 7}
+                set exact_source_q_records [mptdc_repair_collect_exact_fast_tag_pin_records source $exact_fast_tag_taps $exact_fast_tag_bits Q]
+                set exact_source_c_records [mptdc_repair_collect_exact_fast_tag_pin_records source $exact_fast_tag_taps $exact_fast_tag_bits C]
+                set exact_endpoint_d_records [mptdc_repair_collect_exact_fast_tag_pin_records endpoint $exact_fast_tag_taps $exact_fast_tag_bits D]
+                set exact_source_q_pins [list]
+                foreach rec $exact_source_q_records { lappend exact_source_q_pins [dict get $rec object] }
+                set exact_source_c_pins [list]
+                foreach rec $exact_source_c_records { lappend exact_source_c_pins [dict get $rec object] }
+                set exact_endpoint_d_pins [list]
+                foreach rec $exact_endpoint_d_records { lappend exact_endpoint_d_pins [dict get $rec object] }
+                set exact_source_expected [expr {[llength $exact_fast_tag_taps] * [llength $exact_fast_tag_bits]}]
+                set exact_endpoint_expected [expr {[llength $exact_rows] * [llength $exact_fast_tag_taps] * [llength $exact_fast_tag_bits]}]
+                set exact_pair_expected $exact_endpoint_expected
+                array set source_by_key {}
+                foreach rec $exact_source_q_records {
+                    set key "[dict get $rec tap],[dict get $rec bit]"
+                    set source_by_key($key) [dict get $rec name]
+                }
+                array set endpoint_by_key {}
+                foreach rec $exact_endpoint_d_records {
+                    set key "[dict get $rec tap],[dict get $rec bit],[dict get $rec row]"
+                    set endpoint_by_key($key) [dict get $rec name]
+                }
+                set pair_records [list]
+                set exact_pair_found 0
+                foreach tap $exact_fast_tag_taps {
+                    foreach bit $exact_fast_tag_bits {
+                        set source_key "$tap,$bit"
+                        foreach row $exact_rows {
+                            set endpoint_key "$tap,$bit,$row"
+                            if {[info exists source_by_key($source_key)] && [info exists endpoint_by_key($endpoint_key)]} {
+                                incr exact_pair_found
+                                lappend pair_records [dict create tap $tap bit $bit row $row source $source_by_key($source_key) endpoint $endpoint_by_key($endpoint_key) status FOUND]
+                            } else {
+                                set source_name ""
+                                set endpoint_name ""
+                                if {[info exists source_by_key($source_key)]} { set source_name $source_by_key($source_key) }
+                                if {[info exists endpoint_by_key($endpoint_key)]} { set endpoint_name $endpoint_by_key($endpoint_key) }
+                                lappend pair_records [dict create tap $tap bit $bit row $row source $source_name endpoint $endpoint_name status MISSING]
+                            }
+                        }
+                    }
+                }
+                mptdc_repair_write_fast_tag_exact_csvs $design(reports_dir) $exact_fast_tag_taps $exact_fast_tag_bits $exact_source_q_records $exact_endpoint_d_records $pair_records
                 puts $fh "FAST_TAG_EXACT_SOURCE_Q_PINS=[llength [mptdc_collection_to_list $exact_source_q_pins]]"
                 puts $fh "FAST_TAG_EXACT_SOURCE_C_PINS=[llength [mptdc_collection_to_list $exact_source_c_pins]]"
                 puts $fh "FAST_TAG_EXACT_ENDPOINT_D_PINS=[llength [mptdc_collection_to_list $exact_endpoint_d_pins]]"
+                puts $fh "FAST_TAG_EXACT_SOURCES_EXPECTED=$exact_source_expected"
+                puts $fh "FAST_TAG_EXACT_SOURCES_FOUND=[llength $exact_source_q_records]"
+                puts $fh "FAST_TAG_EXACT_ENDPOINTS_EXPECTED=$exact_endpoint_expected"
+                puts $fh "FAST_TAG_EXACT_ENDPOINTS_FOUND=[llength $exact_endpoint_d_records]"
+                puts $fh "FAST_TAG_EXACT_PATH_PAIRS_EXPECTED=$exact_pair_expected"
+                puts $fh "FAST_TAG_EXACT_PATH_PAIRS_FOUND=$exact_pair_found"
                 foreach pin [mptdc_collection_to_list $exact_source_q_pins] {
                     puts $fh "FAST_TAG_EXACT_SOURCE_Q_PIN=[mptdc_object_name $pin]"
                 }
                 foreach pin [mptdc_collection_to_list $exact_endpoint_d_pins] {
                     puts $fh "FAST_TAG_EXACT_ENDPOINT_D_PIN=[mptdc_object_name $pin]"
                 }
-                if {[llength $exact_source_q_pins] > 0} {
+                set exact_counts_ok [expr {
+                    [llength $exact_source_q_records] == $exact_source_expected &&
+                    [llength $exact_source_c_records] == $exact_source_expected &&
+                    [llength $exact_endpoint_d_records] == $exact_endpoint_expected &&
+                    $exact_pair_found == $exact_pair_expected
+                }]
+                set exact_group_result "SKIPPED"
+                set exact_fanout_result "SKIPPED"
+                set exact_trans_result "SKIPPED"
+                set exact_endpoint_trans_result "SKIPPED_ENDPOINT_TRANSITION_TIGHT_DISABLED"
+                set exact_delay_result "SKIPPED_EXACT_MAX_DELAY_DISABLED"
+                if {$exact_counts_ok && [llength $exact_source_c_pins] > 0 && [llength $exact_endpoint_d_pins] > 0} {
+                    if {[llength [info commands group_path]] > 0} {
+                        set group_rc [catch {
+                            group_path -name FAST_TAG_EXACT_TO_PD_TS \
+                                -from $exact_source_c_pins \
+                                -to $exact_endpoint_d_pins \
+                                -weight 5 \
+                                -critical_range 0.050
+                        } group_err]
+                        if {$group_rc != 0} {
+                            set group_rc [catch {
+                                group_path -name FAST_TAG_EXACT_TO_PD_TS \
+                                    -from $exact_source_c_pins \
+                                    -to $exact_endpoint_d_pins
+                            } group_err]
+                        }
+                        set exact_group_result [expr {$group_rc == 0 ? {OK} : $group_err}]
+                    } else {
+                        set exact_group_result "NOT_SUPPORTED_BY_THIS_GENUS_VERSION"
+                    }
+                }
+                if {$exact_counts_ok && [llength $exact_source_q_pins] > 0} {
                     set exact_fanout_rc [catch {set_max_fanout $exact_fast_tag_max_fanout $exact_source_q_pins} exact_fanout_err]
                     set exact_trans_rc [catch {set_max_transition $exact_fast_tag_max_transition $exact_source_q_pins} exact_trans_err]
-                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=[expr {$exact_fanout_rc == 0 ? {OK} : $exact_fanout_err}]"
-                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=[expr {$exact_trans_rc == 0 ? {OK} : $exact_trans_err}]"
+                    set exact_fanout_result [expr {$exact_fanout_rc == 0 ? {OK} : $exact_fanout_err}]
+                    set exact_trans_result [expr {$exact_trans_rc == 0 ? {OK} : $exact_trans_err}]
+                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=$exact_fanout_result"
+                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=$exact_trans_result"
                 } else {
-                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=SKIPPED_NO_SOURCE_Q_PINS"
-                    puts $fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=SKIPPED_NO_SOURCE_Q_PINS"
+                    if {!$exact_counts_ok} {
+                        puts $fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=SKIPPED_EXACT_COUNTS_MISMATCH"
+                        puts $fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=SKIPPED_EXACT_COUNTS_MISMATCH"
+                    } else {
+                        puts $fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=SKIPPED_NO_SOURCE_Q_PINS"
+                        puts $fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=SKIPPED_NO_SOURCE_Q_PINS"
+                    }
                 }
-                if {[llength $exact_endpoint_d_pins] > 0} {
+                if {$exact_counts_ok && $endpoint_transition_tight && [llength $exact_endpoint_d_pins] > 0} {
                     set exact_endpoint_trans_rc [catch {set_max_transition $exact_fast_tag_max_transition $exact_endpoint_d_pins} exact_endpoint_trans_err]
-                    puts $fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=[expr {$exact_endpoint_trans_rc == 0 ? {OK} : $exact_endpoint_trans_err}]"
+                    set exact_endpoint_trans_result [expr {$exact_endpoint_trans_rc == 0 ? {OK} : $exact_endpoint_trans_err}]
+                    puts $fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=$exact_endpoint_trans_result"
                 } else {
-                    puts $fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=SKIPPED_NO_ENDPOINT_D_PINS"
+                    puts $fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=$exact_endpoint_trans_result"
                 }
-                if {[llength $exact_source_q_pins] > 0 && [llength $exact_endpoint_d_pins] > 0 && $exact_fast_tag_max_delay ne ""} {
+                if {$exact_counts_ok && $enable_exact_fast_tag_max_delay && [llength $exact_source_q_pins] > 0 && [llength $exact_endpoint_d_pins] > 0 && $exact_fast_tag_max_delay ne ""} {
                     set exact_delay_rc [catch {
                         set_max_delay $exact_fast_tag_max_delay \
                             -from $exact_source_q_pins \
                             -to $exact_endpoint_d_pins
                     } exact_delay_err]
-                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
-                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=[expr {$exact_delay_rc == 0 ? {OK} : $exact_delay_err}]"
-                } else {
-                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
-                    puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=SKIPPED"
+                    set exact_delay_result [expr {$exact_delay_rc == 0 ? {OK} : $exact_delay_err}]
                 }
+                puts $fh "FAST_TAG_EXACT_GROUP_PATH_RESULT=$exact_group_result"
+                puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
+                puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=$exact_delay_result"
+
+                set exact_repair_applied "NO"
+                set exact_repair_status "REVIEW_REQUIRED"
+                set exact_review_reason "EXACT_COUNTS_MISMATCH"
+                if {$exact_counts_ok} {
+                    if {$exact_fanout_result eq "OK" && $exact_trans_result eq "OK"} {
+                        set exact_repair_applied "YES"
+                        set exact_repair_status "PASS"
+                        set exact_review_reason "NONE"
+                    } else {
+                        set exact_review_reason "EXACT_SOURCE_CONSTRAINT_FAILURE"
+                    }
+                }
+                set status_fh [open "$design(reports_dir)/fast_tag_exact_repair_status.rpt" a]
+                puts $status_fh "STAGE=$stage"
+                puts $status_fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
+                puts $status_fh "FAST_TAG_EXACT_SOURCES_EXPECTED=$exact_source_expected"
+                puts $status_fh "FAST_TAG_EXACT_SOURCES_FOUND=[llength $exact_source_q_records]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CLOCK_PINS_FOUND=[llength $exact_source_c_records]"
+                puts $status_fh "FAST_TAG_EXACT_ENDPOINTS_EXPECTED=$exact_endpoint_expected"
+                puts $status_fh "FAST_TAG_EXACT_ENDPOINTS_FOUND=[llength $exact_endpoint_d_records]"
+                puts $status_fh "FAST_TAG_EXACT_PATH_PAIRS_EXPECTED=$exact_pair_expected"
+                puts $status_fh "FAST_TAG_EXACT_PATH_PAIRS_FOUND=$exact_pair_found"
+                puts $status_fh "FAST_TAG_EXACT_REPAIR_APPLIED=$exact_repair_applied"
+                puts $status_fh "FAST_TAG_EXACT_REPAIR_STATUS=$exact_repair_status"
+                puts $status_fh "FAST_TAG_EXACT_REVIEW_REASON=$exact_review_reason"
+                puts $status_fh "FAST_TAG_EXACT_GROUP_PATH_RESULT=$exact_group_result"
+                puts $status_fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=$exact_fanout_result"
+                puts $status_fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=$exact_trans_result"
+                puts $status_fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=$exact_endpoint_trans_result"
+                puts $status_fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=$exact_delay_result"
+                puts $status_fh "EXACT_FAST_TAG_SOURCES_EXPECTED=$exact_source_expected"
+                puts $status_fh "EXACT_FAST_TAG_SOURCES_FOUND=[llength $exact_source_q_records]"
+                puts $status_fh "EXACT_FAST_TAG_ENDPOINTS_EXPECTED=$exact_endpoint_expected"
+                puts $status_fh "EXACT_FAST_TAG_ENDPOINTS_FOUND=[llength $exact_endpoint_d_records]"
+                puts $status_fh "EXACT_FAST_TAG_DATAPATHS_EXPECTED=$exact_pair_expected"
+                puts $status_fh "EXACT_FAST_TAG_DATAPATHS_FOUND=$exact_pair_found"
+                puts $status_fh "EXACT_FAST_TAG_REPAIR_APPLIED=$exact_repair_applied"
+                puts $status_fh "EXACT_FAST_TAG_REPAIR_STATUS=$exact_repair_status"
+                puts $status_fh ""
+                close $status_fh
             }
         }
     }

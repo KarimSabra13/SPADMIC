@@ -117,6 +117,10 @@ done
 
 copy_if_present "${source_reports_dir}/helper_tcl_selftest.rpt"
 copy_if_present "${source_reports_dir}/final_typical_genus_repair_1.rpt"
+copy_if_present "${source_reports_dir}/fast_tag_exact_source_discovery.csv"
+copy_if_present "${source_reports_dir}/fast_tag_exact_endpoint_discovery.csv"
+copy_if_present "${source_reports_dir}/fast_tag_exact_path_pairs.csv"
+copy_if_present "${source_reports_dir}/fast_tag_exact_repair_status.rpt"
 
 {
   echo "Snapshot: ${tag}"
