@@ -221,6 +221,8 @@ source MPTDC/pnr/scripts/innovus_o10_2_init.tcl
 source MPTDC/pnr/scripts/innovus_o10_2_screenshots.tcl
 source MPTDC/pnr/scripts/innovus_o10_2_reports.tcl
 source MPTDC/pnr/scripts/innovus_o10_pd_ro_floorplan.tcl
+source MPTDC/pnr/scripts/innovus_o10_io_pins.tcl
+source MPTDC/pnr/scripts/innovus_o10_power_grid.tcl
 source MPTDC/pnr/scripts/innovus_o10_floorplan.tcl
 source MPTDC/pnr/scripts/innovus_o10_place.tcl
 source MPTDC/pnr/scripts/innovus_o10_2_cts.tcl
@@ -286,7 +288,7 @@ require_output_no_error_marker() {
   local label="$1"
   local rel="$2"
   require_output_nonempty "$label" "$rel"
-  if [[ -s "$RESULT_DIR/$rel" ]] && grep -Eq '(^ERROR,|^FAILED:|REPORT_STATUS=FAILED|REPORT_STATUS=INVALID|FAILED$|ERROR$)' "$RESULT_DIR/$rel"; then
+  if [[ -s "$RESULT_DIR/$rel" ]] && grep -Eq '(^ERROR,|^FAILED:|REPORT_STATUS=FAILED|REPORT_STATUS=INVALID|PIN_DEF_STATUS=FAIL|POWER_DEF_STATUS=FAIL|POWER_GRID_STATUS=FAILED|FAILED$|ERROR$)' "$RESULT_DIR/$rel"; then
     INVALID_REQUIRED+=("$label: invalid marker found: $rel")
     REQUIRED_RC=9
     REPORT_COMPLETE="NO"
@@ -304,6 +306,11 @@ validate_required_outputs() {
   require_output_no_error_marker "fast tag balance summary" "reports/fast_tag_load_balance_summary.md"
   require_output_no_error_marker "PD instance placement" "reports/pd_instance_placement.csv"
   require_output_no_error_marker "PD symmetry summary" "reports/pd_symmetry_summary.md"
+  require_output_no_error_marker "IO pin placement" "reports/io_pin_placement_summary.md"
+  require_output_no_error_marker "IO pin DEF audit" "reports/io_pin_def_audit.rpt"
+  require_output_no_error_marker "power intent" "reports/power_intent.rpt"
+  require_output_no_error_marker "power grid status" "reports/power_grid_status.rpt"
+  require_output_no_error_marker "power DEF audit" "reports/power_def_audit.rpt"
   require_output_no_error_marker "CTS status" "reports/cts_status.rpt"
   require_output_no_error_marker "max transition DRV" "reports/drv_max_transition.rpt"
   require_output_no_error_marker "max cap DRV" "reports/drv_max_cap.rpt"
@@ -341,6 +348,14 @@ validate_required_outputs() {
 }
 
 if [[ "$INNOVUS_RC" == "0" || "$INNOVUS_RC" == "139" ]]; then
+  mkdir -p "$RESULT_DIR/reports"
+  if [[ -s "$RESULT_DIR/def/04_route.def" ]]; then
+    bash "$SCRIPT_DIR/audit_def_io_pins.sh" "$RESULT_DIR/def/04_route.def" > "$RESULT_DIR/reports/io_pin_def_audit.rpt" || true
+    bash "$SCRIPT_DIR/audit_def_power_grid.sh" "$RESULT_DIR/def/04_route.def" > "$RESULT_DIR/reports/power_def_audit.rpt" || true
+  elif [[ -s "$RESULT_DIR/def/02_place.def" ]]; then
+    bash "$SCRIPT_DIR/audit_def_io_pins.sh" "$RESULT_DIR/def/02_place.def" > "$RESULT_DIR/reports/io_pin_def_audit.rpt" || true
+    bash "$SCRIPT_DIR/audit_def_power_grid.sh" "$RESULT_DIR/def/02_place.def" > "$RESULT_DIR/reports/power_def_audit.rpt" || true
+  fi
   case "$RUN_MODE" in
     route_feasibility) validate_required_outputs 1 ;;
     place_only) validate_required_outputs 0 ;;
@@ -438,6 +453,11 @@ fi
     reports/fast_tag_load_balance_summary.md \
     reports/pd_instance_placement.csv \
     reports/pd_symmetry_summary.md \
+    reports/io_pin_placement_summary.md \
+    reports/io_pin_def_audit.rpt \
+    reports/power_intent.rpt \
+    reports/power_grid_status.rpt \
+    reports/power_def_audit.rpt \
     reports/cts_status.rpt \
     reports/congestion.rpt \
     reports/route_summary.rpt \

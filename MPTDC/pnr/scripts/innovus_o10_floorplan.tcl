@@ -113,6 +113,9 @@ proc mptdc_o10_floorplan {} {
     }
 
     mptdc_o10_apply_pd_ro_floorplan
+    if {[llength [info commands mptdc_o10_place_io_pins]] > 0} {
+        mptdc_o10_place_io_pins
+    }
 
     catch {setNanoRouteMode -routeBottomRoutingLayer $pnr(signal_bottom_layer_idx)}
     catch {setNanoRouteMode -routeTopRoutingLayer $pnr(signal_top_layer_idx)}

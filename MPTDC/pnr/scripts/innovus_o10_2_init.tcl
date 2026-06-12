@@ -548,6 +548,8 @@ proc mptdc_o10_main {} {
     source "$o10(script_dir)/innovus_o10_2_screenshots.tcl"
     source "$o10(script_dir)/innovus_o10_2_reports.tcl"
     source "$o10(script_dir)/innovus_o10_pd_ro_floorplan.tcl"
+    source "$o10(script_dir)/innovus_o10_io_pins.tcl"
+    source "$o10(script_dir)/innovus_o10_power_grid.tcl"
     source "$o10(script_dir)/innovus_o10_floorplan.tcl"
     source "$o10(script_dir)/innovus_o10_place.tcl"
     source "$o10(script_dir)/innovus_o10_2_cts.tcl"

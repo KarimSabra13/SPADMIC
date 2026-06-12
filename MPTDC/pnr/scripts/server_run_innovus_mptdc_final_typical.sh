@@ -253,6 +253,10 @@ for rel in \
   innovus_mptdc_route.tcl \
   innovus_mptdc_postroute_opt.tcl \
   innovus_mptdc_reports.tcl \
+  innovus_o10_io_pins.tcl \
+  innovus_o10_power_grid.tcl \
+  audit_def_io_pins.sh \
+  audit_def_power_grid.sh \
   prepare_mptdc_genus_typical_handoff.sh \
   discover_xh018_physical_cells.sh \
   server_run_innovus_o10_2_pnr_repair.sh \
@@ -335,6 +339,12 @@ write_final_closure_summary() {
       reports/drv_max_transition.rpt \
       reports/drv_max_cap.rpt \
       reports/drv_max_fanout.rpt \
+      reports/io_pin_placement_summary.md \
+      reports/io_pin_def_audit.rpt \
+      reports/power_intent.rpt \
+      reports/power_grid_status.rpt \
+      reports/power_def_audit.rpt \
+      reports/cts_status.rpt \
       reports/congestion.rpt \
       reports/route_summary.rpt \
       reports/antenna.rpt \
@@ -466,6 +476,8 @@ source MPTDC/pnr/scripts/innovus_mptdc_cts.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_route.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_postroute_opt.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_reports.tcl
+source MPTDC/pnr/scripts/innovus_o10_io_pins.tcl
+source MPTDC/pnr/scripts/innovus_o10_power_grid.tcl
 if {[mptdc_pnr_ro_load_preferred_ff] ne "58.72"} { error "RO preferred load limit changed" }
 if {[mptdc_pnr_ro_load_warning_ff] ne "75.59"} { error "RO warning load limit changed" }
 if {[mptdc_pnr_core_util_default] ne "0.60"} { error "core utilization default changed" }

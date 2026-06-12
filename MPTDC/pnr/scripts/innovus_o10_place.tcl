@@ -67,6 +67,9 @@ proc mptdc_o10_place {} {
     if {[catch {optDesign -preCTS} err]} {
         mptdc_o10_msg "optDesign -preCTS failed after placement: $err"
     }
+    if {[llength [info commands mptdc_o10_apply_power_plan]] > 0} {
+        mptdc_o10_apply_power_plan
+    }
     mptdc_o10_report_stage post_place
     catch {defOut "$o10(def_dir)/02_place.def"}
     catch {saveDesign "$o10(checkpoints_dir)/02_place.enc"}
