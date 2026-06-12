@@ -25,8 +25,18 @@ proc mptdc_o11_unique_append {var_name value} {
     }
 }
 
+proc mptdc_o11_normalized_object_token {object} {
+    set text [string trim "$object"]
+    while {[string length $text] >= 2
+        && [string index $text 0] eq "\{"
+        && [string index $text end] eq "\}"} {
+        set text [string trim [string range $text 1 end-1]]
+    }
+    return $text
+}
+
 proc mptdc_o11_internal_net_token_name {object} {
-    set text "$object"
+    set text [mptdc_o11_normalized_object_token $object]
     # Innovus 22.33 can return restored HDL-internal nets as net: pseudo-tokens
     # that are useful names but invalid collection arguments.
     if {[regexp {^net:(.+[/.]iso_tap)$} $text -> name]} {
@@ -67,7 +77,7 @@ proc mptdc_o11_object_names {objects} {
 proc mptdc_o11_db_attr {object attr} {
     if {$object eq ""} { return "" }
     if {[mptdc_o11_internal_net_token_name $object] ne ""} { return "" }
-    set object_text "$object"
+    set object_text [mptdc_o11_normalized_object_token $object]
     if {![regexp {^(0x[0-9A-Fa-f]+|[A-Za-z_][A-Za-z0-9_]*:)} $object_text]
         && [regexp {[][{}"[:space:]/]} $object_text]} {
         return ""
@@ -128,6 +138,9 @@ proc mptdc_o11_net_from_pin {pin} {
 
 proc mptdc_o11_net_object {net_name} {
     if {$net_name eq ""} { return "" }
+    if {[mptdc_o11_internal_net_token_name $net_name] ne "" || [regexp {(^|[/.])iso_tap$} [mptdc_o11_normalized_object_token $net_name]]} {
+        return ""
+    }
     set nets [list]
     catch {set nets [get_nets -quiet $net_name]}
     if {[llength $nets] > 0} { return [lindex $nets 0] }

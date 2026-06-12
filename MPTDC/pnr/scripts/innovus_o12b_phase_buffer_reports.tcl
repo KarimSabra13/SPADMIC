@@ -39,7 +39,18 @@ proc mptdc_o12b_num {value} {
 
 proc mptdc_o12b_db_object_query_safe {object} {
     if {$object eq ""} { return 0 }
-    set text "$object"
+    if {[llength [info commands mptdc_o11_internal_net_token_name]] > 0
+        && [mptdc_o11_internal_net_token_name $object] ne ""} {
+        return 0
+    }
+    if {[llength [info commands mptdc_o11_normalized_object_token]] > 0} {
+        set text [mptdc_o11_normalized_object_token $object]
+    } else {
+        set text [string trim "$object"]
+    }
+    if {[regexp {^net:.+[/.]iso_tap$} $text] || [regexp {(^|[/.])iso_tap$} $text]} {
+        return 0
+    }
     if {[regexp {^(0x[0-9A-Fa-f]+|[A-Za-z_][A-Za-z0-9_]*:)} $text]} {
         return 1
     }
@@ -547,7 +558,16 @@ proc mptdc_o12b_skip_native_net_property_report {net_name} {
     # Restored hierarchical HDL-internal nets can resolve as net: pseudo-handles
     # that Innovus 22.33 rejects in report_property.  The DB snapshot fallback
     # still keeps the row contextual without adding caught TCLCMD errors.
-    if {[regexp {(^|[/.])iso_tap$} $net_name]} {
+    if {[llength [info commands mptdc_o11_internal_net_token_name]] > 0
+        && [mptdc_o11_internal_net_token_name $net_name] ne ""} {
+        return 1
+    }
+    if {[llength [info commands mptdc_o11_normalized_object_token]] > 0} {
+        set net_text [mptdc_o11_normalized_object_token $net_name]
+    } else {
+        set net_text [string trim "$net_name"]
+    }
+    if {[regexp {^net:.+[/.]iso_tap$} $net_text] || [regexp {(^|[/.])iso_tap$} $net_text]} {
         return 1
     }
 

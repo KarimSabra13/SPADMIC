@@ -92,6 +92,46 @@ proc mptdc_o13_restore_source_checkpoint {} {
     mptdc_o12b_fail "missing O13 route checkpoint. Tried $o13(source_checkpoint_dat) and $o13(source_restore_tcl)"
 }
 
+proc mptdc_o13_select_interactive_constraint_mode {} {
+    if {[llength [info commands set_interactive_constraint_modes]] == 0} {
+        return [list NOT_AVAILABLE "set_interactive_constraint_modes command not present"]
+    }
+    foreach cmd {
+        {get_db constraint_modes functional_mode}
+        {get_db constraint_modes *functional_mode*}
+        {all_constraint_modes}
+    } {
+        set modes [list]
+        if {[catch {set modes [uplevel 1 $cmd]}]} {
+            continue
+        }
+        foreach mode $modes {
+            if {$mode eq "" || $mode eq "0x0"} {
+                continue
+            }
+            if {![catch {set_interactive_constraint_modes $mode} err]} {
+                return [list OK $mode]
+            }
+        }
+    }
+    if {![catch {set_interactive_constraint_modes functional_mode} err]} {
+        return [list OK functional_mode]
+    }
+    return [list FAILED $err]
+}
+
+proc mptdc_o13_write_constraint_mode_status {mode_result} {
+    global o13
+    set fh [open "$o13(reports_dir)/interactive_constraint_mode.rpt" w]
+    puts $fh "# O13 Interactive Constraint Mode"
+    puts $fh ""
+    puts $fh "STATUS=[lindex $mode_result 0]"
+    puts $fh "DETAIL=[lindex $mode_result 1]"
+    puts $fh ""
+    puts $fh "This mode is selected only so restored-checkpoint report_constraint commands have an active constraint context."
+    close $fh
+}
+
 proc mptdc_o13_write_timing_summary {} {
     global o13
     set fh [open "$o13(reports_dir)/timing_post_route_summary_by_class.md" w]
@@ -217,6 +257,11 @@ proc mptdc_o13_main {} {
     mptdc_o12b_stage_mark io_load_model start
     mptdc_o13_apply_io_load_model
     mptdc_o12b_stage_mark io_load_model done
+
+    mptdc_o12b_stage_mark constraint_mode start
+    set constraint_mode_result [mptdc_o13_select_interactive_constraint_mode]
+    mptdc_o13_write_constraint_mode_status $constraint_mode_result
+    mptdc_o12b_stage_mark constraint_mode done
 
     mptdc_o12b_stage_mark drv_max_cap start
     mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_cap.rpt" \
