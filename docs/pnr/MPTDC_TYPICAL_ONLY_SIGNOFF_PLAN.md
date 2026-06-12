@@ -12,7 +12,7 @@ bridge from clean Genus to physical evidence. It is not final chip signoff.
 
 The P&R flow must start from one approved Genus source:
 
-`final_typical_genus_jihd_tap0_micro_v3_drvclean_20260610_175527`
+`spadmic_test_stride2_genus_repair8_jihd_exact_20260612_130302`
 
 Required gate result:
 
@@ -20,13 +20,16 @@ Required gate result:
 PRE_PNR_GATE=PASS
 FINAL_DECISION=GENUS_TYPICAL_CLOSED
 GENUS_TYPICAL_STATUS=GENUS_TYPICAL_CLOSED
-INNOVUS_READY=READY_FOR_O13_INNOVUS_FEASIBILITY
+READY_FOR_INNOVUS_TYPICAL_CLOSURE=YES
 NOT_MMMC_SIGNOFF=YES
 FINAL_SIGNOFF=NO
+GENUS_WNS_MARGIN_LOW=YES
 ```
 
 The gate must also prove zero setup, real timed, max transition, max
 capacitance, and max fanout violations, plus exact O13 PD Vernier matching.
+The low-margin warning is expected for Repair8 and forces timing-preserving
+placement and route settings; it is not a P&R blocker by itself.
 
 ## Physical Evidence To Produce
 

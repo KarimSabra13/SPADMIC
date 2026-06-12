@@ -9,7 +9,7 @@ wrapper may prepare or launch an implementation run.
 
 ```bash
 bash MPTDC/pnr/scripts/check_mptdc_pre_pnr_gate.sh \
-  --genus-run-id final_typical_genus_jihd_tap0_micro_v3_drvclean_20260610_175527
+  --genus-run-id spadmic_test_stride2_genus_repair8_jihd_exact_20260612_130302
 ```
 
 The checker accepts either `--genus-run-id` or `--genus-run-dir`.
@@ -18,14 +18,16 @@ The checker accepts either `--genus-run-id` or `--genus-run-dir`.
 
 - `FINAL_DECISION=GENUS_TYPICAL_CLOSED`
 - `GENUS_TYPICAL_STATUS=GENUS_TYPICAL_CLOSED`
-- `INNOVUS_READY=READY_FOR_O13_INNOVUS_FEASIBILITY`
+- `READY_FOR_INNOVUS_TYPICAL_CLOSURE=YES`
 - `TYPICAL_ONLY_TAPEOUT_PACKAGE=YES`
 - `NOT_MMMC_SIGNOFF=YES`
 - `FINAL_SIGNOFF=NO`
 - Genus exit code `0`
 - Snapshot exit code `0`
 - setup violating path count `0`
+- setup TNS `0`
 - real timed violating path count `0`
+- real timed TNS `0`
 - max transition/capacitance/fanout violations `0/0/0`
 - PD intentional Vernier paths matched `64`
 - PD intentional Vernier sources matched `8`
@@ -33,9 +35,15 @@ The checker accepts either `--genus-run-id` or `--genus-run-dir`.
 - PD intentional Vernier overmatch and undermatch `NO`
 - unknown review-required count `0`
 - SDC command failure count `0`
+- active SDC failure count `0`
 - report helpers `PASS`
+- summary/raw agreement `PASS`
 - fast-tag mapping `PASS`
-- fast-tag top path count `0`
+- exact fast-tag repair status `PASS`
+- STRIDE2 active
+
+`GENUS_WNS_MARGIN_LOW=YES` is a warning, not a blocker. It is expected for
+Repair8 because Genus closed by about `+0.1 ps`.
 
 ## Override Policy
 

@@ -16,5 +16,5 @@ LEF, Liberty, or Genus handoff.
 | How is RO code CSR timing closed? | RTL/integration | Add a CSR requirement and report timing before signoff. |
 | Is `narrow_*` waived or still top-visible? | integration | Low priority legacy output until top-level TX decision. |
 | Which physical verification deck is authoritative? | physical | Decide Pegasus vs Assura before signoff. |
-| What are the density and antenna requirements? | physical | Produce reports in prototype; signoff threshold still open. |
-| Is `55%` utilization approved for final physical attempt? | project | Use as default prototype value; revisit after route/congestion evidence. |
+| What are the antenna requirements? | physical | Produce reports in prototype; signoff threshold still open. |
+| Is `60%` utilization approved for the first closure attempt? | project | Use `60%` by default, fall back to `58%` on congestion, consider `62%` only if 60% routes are long and congestion is clean. |

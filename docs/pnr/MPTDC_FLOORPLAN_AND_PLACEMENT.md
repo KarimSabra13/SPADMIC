@@ -4,15 +4,20 @@ Status: `TYPICAL_ONLY`, `NOT_MMMC_SIGNOFF`, `NOT_FINAL_SILICON_SIGNOFF`
 
 ## Default Geometry
 
-Default core utilization is `55%`.
+Default core utilization is `60%`.
+
+First closure campaign range is `58%` to `62%`. Do not exceed `65%` until the
+60% and 62% congestion/route evidence has been reviewed.
 
 North-to-south ordering:
 
 ```text
 slow RO_tune4
-slow BUHDX4/BUHDX12 phase-buffer row
+slow BUHDX4 isolation row
+slow BUHDX12 final-driver row
 central 8x8 PD island
-fast BUHDX12/BUHDX4 phase-buffer row
+fast BUHDX12 final-driver row
+fast BUHDX4 isolation row
 fast RO_tune4
 ```
 
@@ -30,6 +35,10 @@ column unless physical pin evidence requires a documented swap.
 `MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=1` places or audits fast-tag logic by PD
 column when the synthesized hierarchy is placeable. This is a placement hint,
 not a change to RTL timing semantics.
+
+The former critical `FAST_TAG_TO_PD_TS` family remains timed. Keep exact bits
+`0`, `5`, and `6` local to their matching PD columns and report post-route
+length, cap, transition, and slack.
 
 ## Phase Buffers
 
@@ -51,3 +60,5 @@ one tap unless the mismatch is reviewed.
 - phase-buffer placement CSV
 - phase route mismatch report
 - fast-tag column-placement report when enabled
+- `fast_tag_to_pd_route_lengths.csv`
+- `fast_tag_to_pd_timing_post_route.rpt`

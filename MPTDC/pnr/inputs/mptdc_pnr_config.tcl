@@ -20,8 +20,8 @@ proc mptdc_env_list_or_default {name default_list} {
 
 set pnr(optimization_goal)        [mptdc_env_or_default MPTDC_PNR_OPT_GOAL area_first]
 set pnr(aspect_ratio)             [mptdc_env_or_default MPTDC_PNR_ASPECT_RATIO 1.0]
-set pnr(core_utilization)         [mptdc_env_or_default MPTDC_PNR_CORE_UTIL 0.78]
-set pnr(place_global_max_density) [mptdc_env_or_default MPTDC_PNR_MAX_DENSITY 0.82]
+set pnr(core_utilization)         [mptdc_env_or_default MPTDC_PNR_CORE_UTIL 0.60]
+set pnr(place_global_max_density) [mptdc_env_or_default MPTDC_PNR_MAX_DENSITY 0.65]
 set pnr(core_margin_um)           [mptdc_env_or_default MPTDC_PNR_CORE_MARGIN_UM 20.0]
 
 # XH018 1P4M baseline. Signals are kept on MET1-MET3 globally so METTP remains

@@ -7,7 +7,8 @@ MPTDC_DIR="$(cd "$PNR_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 
 RUN_ID=""
-GENUS_RUN_ID="${MPTDC_GENUS_RUN_ID:-}"
+GENUS_HANDOFF_RUN="${MPTDC_GENUS_HANDOFF_RUN:-}"
+GENUS_RUN_ID="${MPTDC_GENUS_RUN_ID:-$GENUS_HANDOFF_RUN}"
 GENUS_RUN_DIR="${MPTDC_GENUS_RUN_DIR:-}"
 HANDOFF_DIR="${MPTDC_GENUS_HANDOFF_DIR:-}"
 MODE="${MPTDC_FINAL_TYPICAL_MODE:-validate_only}"
@@ -28,6 +29,10 @@ Options:
 Default mode is validate_only. Modes that can launch Innovus require:
 
   MPTDC_FINAL_TYPICAL_APPROVED=1
+
+Environment:
+  MPTDC_GENUS_HANDOFF_RUN       Alias for the closed Genus run ID.
+  MPTDC_PREPARE_GENUS_HANDOFF  Set to 0 to skip stable handoff materialization.
 
 This wrapper is a stable final-typical entrypoint and gate. It does not change
 RTL and does not convert the run into MMMC or final silicon signoff.
@@ -99,13 +104,16 @@ esac
 
 if [[ -z "$GENUS_RUN_ID" && -z "$GENUS_RUN_DIR" && -z "$HANDOFF_DIR" ]]; then
   echo "ERROR: explicit Genus source is required." >&2
-  echo "Set MPTDC_GENUS_RUN_ID, MPTDC_GENUS_RUN_DIR, or pass --genus-run-id/--genus-run-dir." >&2
+  echo "Set MPTDC_GENUS_HANDOFF_RUN, MPTDC_GENUS_RUN_ID, MPTDC_GENUS_RUN_DIR, or pass --genus-run-id/--genus-run-dir." >&2
   exit 2
 fi
 
 MPTDC_WORK_ROOT="$(abs_path "${MPTDC_WORK_ROOT:-work}")"
 MPTDC_INNOVUS_WORK="$(abs_path "${MPTDC_INNOVUS_WORK:-$MPTDC_WORK_ROOT/innovus}")"
 export MPTDC_WORK_ROOT MPTDC_INNOVUS_WORK
+if [[ -n "$GENUS_HANDOFF_RUN" && -z "$HANDOFF_DIR" ]]; then
+  HANDOFF_DIR="$MPTDC_WORK_ROOT/handoff/genus_typical/mptdc_genus_typical_closed"
+fi
 
 RESULT_DIR="$MPTDC_INNOVUS_WORK/$RUN_ID"
 LOG_DIR="$RESULT_DIR/logs"
@@ -135,19 +143,38 @@ fi
   echo "mode: $MODE"
   echo "mptdc_opt_mode: ${MPTDC_OPT_MODE:-STRIDE2}"
   echo "genus_run_id: ${GENUS_RUN_ID:-unset}"
+  echo "genus_handoff_run: ${GENUS_HANDOFF_RUN:-unset}"
   echo "genus_run_dir: ${GENUS_RUN_DIR:-unset}"
   echo "handoff_dir: ${HANDOFF_DIR:-unset}"
+  echo "pnr_density: ${MPTDC_PNR_CORE_UTIL:-0.60}"
+  echo "pnr_density_allowed: 0.58..0.62 first-pass; do not exceed 0.65"
+  echo "io_load_class: ${MPTDC_PNR_IO_LOAD_CLASS:-medium}"
+  echo "run_clk_sys_cts: ${MPTDC_RUN_CLK_SYS_CTS:-1}"
+  echo "run_postroute_opt: ${MPTDC_RUN_POSTROUTE_OPT:-1}"
+  echo "place_pd_grid: ${MPTDC_PNR_PLACE_PD_GRID:-1}"
+  echo "place_phase_buffers: ${MPTDC_PNR_PLACE_PHASE_BUFFERS:-1}"
+  echo "place_fast_tags_by_column: ${MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN:-1}"
+  echo "pnr_library: ${MPTDC_PNR_LIBRARY:-JIHD}"
   echo "labels: TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF"
   echo
   echo "git status --short --untracked-files=no:"
   git -C "$REPO_ROOT" status --short --untracked-files=no 2>/dev/null || true
 } | tee "$MANIFEST_DIR/run_manifest.txt" | tee "$RUN_LOG"
 
+if [[ -n "$GENUS_HANDOFF_RUN" && "${MPTDC_PREPARE_GENUS_HANDOFF:-1}" == "1" ]]; then
+  echo "Preparing stable Genus handoff package..." | tee -a "$RUN_LOG"
+  MPTDC_WORK_ROOT="$MPTDC_WORK_ROOT" \
+  MPTDC_GENUS_HANDOFF_DIR="$HANDOFF_DIR" \
+    "$SCRIPT_DIR/prepare_mptdc_genus_typical_handoff.sh" "$GENUS_HANDOFF_RUN" \
+    2> >(tee -a "$RUN_LOG" >&2) | tee -a "$RUN_LOG"
+fi
+
 echo "Running pre-PNR gate..." | tee -a "$RUN_LOG"
 GATE_OUTPUT="$("$SCRIPT_DIR/check_mptdc_pre_pnr_gate.sh" "${GATE_ARGS[@]}" 2> >(tee -a "$RUN_LOG" >&2))"
 echo "$GATE_OUTPUT" | tee -a "$RUN_LOG"
 GATE_SOURCE="$(awk -F= '/^PRE_PNR_GATE_SOURCE=/ {print $2; exit}' <<<"$GATE_OUTPUT")"
 GATE_STATUS="$(awk -F= '/^PRE_PNR_GATE=/ {print $2; exit}' <<<"$GATE_OUTPUT")"
+GENUS_WNS_MARGIN_LOW="$(awk -F= '/^GENUS_WNS_MARGIN_LOW=/ {print $2; exit}' <<<"$GATE_OUTPUT")"
 
 if [[ "$GATE_STATUS" != "PASS" ]]; then
   echo "ERROR: pre-PNR gate did not pass without override: $GATE_STATUS" | tee -a "$RUN_LOG"
@@ -170,7 +197,10 @@ for rel in \
   innovus_mptdc_pd_matrix_place.tcl \
   innovus_mptdc_power.tcl \
   innovus_mptdc_cts.tcl \
+  innovus_mptdc_route.tcl \
+  innovus_mptdc_postroute_opt.tcl \
   innovus_mptdc_reports.tcl \
+  prepare_mptdc_genus_typical_handoff.sh \
   discover_xh018_physical_cells.sh
 do
   require_file "$rel" "$SCRIPT_DIR/$rel"
@@ -189,11 +219,19 @@ source MPTDC/pnr/scripts/innovus_mptdc_phase_buffer_place.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_pd_matrix_place.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_power.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_cts.tcl
+source MPTDC/pnr/scripts/innovus_mptdc_route.tcl
+source MPTDC/pnr/scripts/innovus_mptdc_postroute_opt.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_reports.tcl
 if {[mptdc_pnr_ro_load_preferred_ff] ne "58.72"} { error "RO preferred load limit changed" }
 if {[mptdc_pnr_ro_load_warning_ff] ne "75.59"} { error "RO warning load limit changed" }
-if {[mptdc_pnr_core_util_default] ne "0.55"} { error "core utilization default changed" }
+if {[mptdc_pnr_core_util_default] ne "0.60"} { error "core utilization default changed" }
+if {[mptdc_pnr_core_util_max_first_run] ne "0.65"} { error "core utilization max changed" }
 if {[mptdc_pnr_cts_primary_clock] ne "clk_sys"} { error "CTS primary clock changed" }
+if {[mptdc_pnr_route_signal_top_layer] ne "MET3"} { error "signal top route layer changed" }
+if {[mptdc_pnr_postroute_opt_enabled] ne "1"} { error "postroute optimization default changed" }
+if {[lsearch -exact [mptdc_pnr_required_reports] fast_tag_to_pd_route_lengths.csv] < 0} { error "missing fast-tag route-length report requirement" }
+if {[lsearch -exact [mptdc_pnr_required_reports] cts_clock_inclusion_audit.rpt] < 0} { error "missing CTS audit report requirement" }
+if {[lsearch -exact [mptdc_pnr_required_reports] physical_verification_status.md] < 0} { error "missing physical verification report requirement" }
 if {[mptdc_xh018_cells_confirmed] ne "0"} { error "XH018 cells should start unconfirmed" }
 puts "MPTDC final typical Tcl source validation passed"
 EOF
@@ -204,6 +242,7 @@ fi
 
 echo "GATE_SOURCE=$GATE_SOURCE" >> "$MANIFEST_DIR/run_manifest.txt"
 echo "PRE_PNR_GATE=$GATE_STATUS" >> "$MANIFEST_DIR/run_manifest.txt"
+echo "GENUS_WNS_MARGIN_LOW=${GENUS_WNS_MARGIN_LOW:-UNKNOWN}" >> "$MANIFEST_DIR/run_manifest.txt"
 
 case "$MODE" in
   validate_only)

@@ -10,7 +10,15 @@ proc mptdc_pnr_env {name default_value} {
 }
 
 proc mptdc_pnr_core_util_default {} {
-    return [mptdc_pnr_env MPTDC_PNR_CORE_UTIL 0.55]
+    return [mptdc_pnr_env MPTDC_PNR_CORE_UTIL 0.60]
+}
+
+proc mptdc_pnr_core_util_allowed_range {} {
+    return [list min 0.58 default [mptdc_pnr_core_util_default] max 0.62]
+}
+
+proc mptdc_pnr_core_util_max_first_run {} {
+    return 0.65
 }
 
 proc mptdc_pnr_floorplan_labels {} {
@@ -20,11 +28,27 @@ proc mptdc_pnr_floorplan_labels {} {
 proc mptdc_pnr_floorplan_order {} {
     return [list \
         slow_ro_north \
-        slow_buhdx4_buhdx12_row \
+        slow_buhdx4_isolation_row \
+        slow_buhdx12_final_driver_row \
         pd_8x8_island \
-        fast_buhdx12_buhdx4_row \
+        fast_buhdx12_final_driver_row \
+        fast_buhdx4_isolation_row \
         fast_ro_south \
         clk_sys_control_fifo_readout_east \
+    ]
+}
+
+proc mptdc_pnr_floorplan_timing_protection_rules {} {
+    return [list \
+        {keep_fast_tag_generators_near_corresponding_pd_columns} \
+        {keep_nfast_tag_data_routes_short} \
+        {keep_pd_matrix_compact_regular_8x8} \
+        {keep_phase_buffer_drivers_close_to_pd_island} \
+        {keep_backend_east_of_phase_pd_island} \
+        {avoid_wide_clk_sys_buses_over_pd_island} \
+        {do_not_buffer_raw_ro_nets} \
+        {do_not_resize_buhdx4_buhdx12_phase_root_drivers_without_review} \
+        {do_not_cts_raw_ro_or_buffered_phase_clocks} \
     ]
 }
 
@@ -61,7 +85,10 @@ proc mptdc_pnr_write_floorplan_intent {{path ""}} {
     puts $fh "# MPTDC Final Typical Floorplan Intent"
     puts $fh "labels=[join [mptdc_pnr_floorplan_labels] { }]"
     puts $fh "core_utilization=[mptdc_pnr_core_util_default]"
+    puts $fh "core_utilization_allowed=[mptdc_pnr_core_util_allowed_range]"
+    puts $fh "core_utilization_max_first_run=[mptdc_pnr_core_util_max_first_run]"
     puts $fh "order=[join [mptdc_pnr_floorplan_order] { -> }]"
+    puts $fh "timing_protection_rules=[join [mptdc_pnr_floorplan_timing_protection_rules] {; }]"
     puts $fh ""
     dict for {name box} [mptdc_pnr_floorplan_regions] {
         puts $fh "$name=$box"
