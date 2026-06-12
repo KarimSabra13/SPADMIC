@@ -50,9 +50,22 @@ regular placement:
 | `PNR_DENSITY_60_DEFAULT` | `0.60` | First closure run |
 | `PNR_DENSITY_58_FALLBACK` | `0.58` | If 60% shows congestion |
 | `PNR_DENSITY_62_COMPACT` | `0.62` | Only if 60% is congestion-clean and routes remain long |
+| `PNR_DENSITY_65_CEILING` | `0.65` | Escalation ceiling after 62% evidence review |
 
 Do not run 65% or higher until the 60% and 62% route/congestion evidence has
 been reviewed.
+
+The stable wrapper accepts the density mode directly:
+
+```bash
+MPTDC_FINAL_TYPICAL_APPROVED=1 \
+MPTDC_FINAL_TYPICAL_DENSITY_MODE=PNR_DENSITY_62_COMPACT \
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_final_typical.sh <run_id> \
+  --mode route_closure
+```
+
+`PNR_DENSITY_65_CEILING` is the highest accepted core-utilization mode in the
+wrapper. A requested `MPTDC_PNR_CORE_UTIL` above `0.65` is rejected.
 
 ## Required Report Focus
 

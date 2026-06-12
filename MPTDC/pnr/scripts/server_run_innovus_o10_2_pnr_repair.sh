@@ -12,7 +12,12 @@ if [[ "${MPTDC_O10_VALIDATE_ONLY:-0}" == "1" ]]; then
   RUN_MODE="validate_only"
 fi
 
-RESULT_DIR="$REPO_ROOT/results/innovus/$RUN_ID"
+DEFAULT_INNOVUS_WORK="${MPTDC_INNOVUS_WORK:-$REPO_ROOT/results/innovus}"
+case "$DEFAULT_INNOVUS_WORK" in
+  /*) ;;
+  *) DEFAULT_INNOVUS_WORK="$REPO_ROOT/$DEFAULT_INNOVUS_WORK" ;;
+esac
+RESULT_DIR="${MPTDC_O10_RESULT_DIR:-$DEFAULT_INNOVUS_WORK/$RUN_ID}"
 SNAPSHOT_TAG="innovus_o10_2_pnr_repair_${RUN_ID}"
 SNAPSHOT_DIR="$MPTDC_DIR/lab_snapshots/$SNAPSHOT_TAG"
 LOG_DIR="$RESULT_DIR/logs"
@@ -406,7 +411,7 @@ fi
   echo "- Required outputs exit code: $REQUIRED_RC"
   echo "- Wrapper exit code: $WRAPPER_RC"
   echo "- REPORT_COMPLETE: \`$REPORT_COMPLETE\`"
-  echo "- Result directory: \`results/innovus/$RUN_ID\`"
+  echo "- Result directory: \`$RESULT_DIR\`"
   echo "- Snapshot directory: \`MPTDC/lab_snapshots/$SNAPSHOT_TAG\`"
   echo "- Labels: \`O10_2_PNR_CONSTRAINT_REPORT_CTS_REPAIR\`, \`O10_INNOVUS_TYPICAL_FEASIBILITY\`, \`NOT_MMMC_SIGNOFF\`, \`NOT_FINAL_SIGNOFF\`, \`NOT_TAPEOUT_READY\`"
   echo
