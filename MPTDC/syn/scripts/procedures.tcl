@@ -1748,6 +1748,65 @@ proc mptdc_repair_count_cells_with_base {cells base_name} {
     return $count
 }
 
+proc mptdc_repair_default_exact_source_cell_result {target_cell} {
+    return [dict create \
+        requested [expr {$target_cell ne "" ? {YES} : {NO}}] \
+        target_cell $target_cell \
+        target_lib_cells_found 0 \
+        source_cells_found 0 \
+        source_cells_target_count 0 \
+        method SKIPPED \
+        status SKIPPED_SOURCE_CELL_NOT_REQUESTED \
+        source_cell_mode [expr {$target_cell eq "POLARITY_AWARE" ? {POLARITY_AWARE} : {SINGLE_TARGET}}] \
+        reset0_source_count 0 \
+        set1_source_count 0 \
+        unsupported_polarity_count 0 \
+        selected_reset0_target NA \
+        selected_set1_target NA \
+        drrqhdx4_target_count 0 \
+        dfrsqhdx4_target_count 0 \
+        dfrsqhdx2_target_count 0 \
+        polarity_preserved_count 0 \
+        polarity_failed_count 0 \
+        freeze_result SKIPPED]
+}
+
+proc mptdc_repair_source_polarity_from_cell {base_cell} {
+    if {[regexp {^(S)?DFRRQHDX[0-9]+$} $base_cell]} {
+        return RESET0
+    }
+    if {[regexp {^(S)?DFRSQHDX[0-9]+$} $base_cell]} {
+        return SET1
+    }
+    return UNKNOWN
+}
+
+proc mptdc_repair_source_record_cell_info {rec} {
+    set pin_name [dict get $rec name]
+    set inst_name [mptdc_repair_pin_instance_name $pin_name]
+    set cell [mptdc_repair_resolve_cell_from_instance_name $inst_name]
+    set base "UNRESOLVED"
+    if {$cell ne ""} {
+        set base [mptdc_repair_cell_base_name $cell]
+    }
+    dict set rec inst $inst_name
+    dict set rec cell $cell
+    dict set rec current_cell $base
+    dict set rec polarity [mptdc_repair_source_polarity_from_cell $base]
+    return $rec
+}
+
+proc mptdc_repair_write_exact_source_cell_csv_rows {report_dir rows} {
+    set fh [open "$report_dir/fast_tag_exact_source_cell_repair.csv" a]
+    if {[tell $fh] == 0} {
+        puts $fh "stage,source_instance,tap,bit,original_cell,target_cell,command,command_status,final_cell,polarity_preserved,notes"
+    }
+    foreach row $rows {
+        puts $fh "[dict get $row stage],[mptdc_repair_csv_quote [dict get $row source_instance]],[dict get $row tap],[dict get $row bit],[dict get $row original_cell],[dict get $row target_cell],[mptdc_repair_csv_quote [dict get $row command]],[mptdc_repair_csv_quote [dict get $row command_status]],[dict get $row final_cell],[dict get $row polarity_preserved],[mptdc_repair_csv_quote [dict get $row notes]]"
+    }
+    close $fh
+}
+
 proc mptdc_repair_write_exact_source_cell_csv {report_dir stage source_records target_cell source_cells} {
     set cell_by_inst [dict create]
     foreach cell $source_cells {
@@ -1756,10 +1815,7 @@ proc mptdc_repair_write_exact_source_cell_csv {report_dir stage source_records t
             dict set cell_by_inst $cell_name [mptdc_repair_cell_base_name $cell]
         }
     }
-    set fh [open "$report_dir/fast_tag_exact_source_cell_repair.csv" a]
-    if {[tell $fh] == 0} {
-        puts $fh "stage,tap,bit,source_pin,source_inst,current_cell,target_cell,status"
-    }
+    set rows [list]
     foreach rec $source_records {
         set pin_name [dict get $rec name]
         set inst_name [mptdc_repair_pin_instance_name $pin_name]
@@ -1769,23 +1825,284 @@ proc mptdc_repair_write_exact_source_cell_csv {report_dir stage source_records t
             set current_cell [dict get $cell_by_inst $inst_name]
             set status [expr {$current_cell eq $target_cell ? {TARGET_MATCH} : {TARGET_PENDING}}]
         }
-        puts $fh "$stage,[dict get $rec tap],[dict get $rec bit],[mptdc_repair_csv_quote $pin_name],[mptdc_repair_csv_quote $inst_name],$current_cell,$target_cell,$status"
+        lappend rows [dict create \
+            stage $stage \
+            source_instance $inst_name \
+            tap [dict get $rec tap] \
+            bit [dict get $rec bit] \
+            original_cell $current_cell \
+            target_cell $target_cell \
+            command "single_target_status" \
+            command_status $status \
+            final_cell $current_cell \
+            polarity_preserved NA \
+            notes "legacy_single_target"]
     }
+    mptdc_repair_write_exact_source_cell_csv_rows $report_dir $rows
+}
+
+proc mptdc_repair_write_exact_source_legal_cells_report {report_dir stage reset0_found set1_4_found set1_2_found selected_reset0 selected_set1} {
+    set fh [open "$report_dir/fast_tag_exact_source_cell_legal_cells.rpt" a]
+    puts $fh "STAGE=$stage"
+    puts $fh "DFRRQHDX4_FOUND=$reset0_found"
+    puts $fh "DFRSQHDX4_FOUND=$set1_4_found"
+    puts $fh "DFRSQHDX2_FOUND=$set1_2_found"
+    puts $fh "SELECTED_RESET0_TARGET=$selected_reset0"
+    puts $fh "SELECTED_SET1_TARGET=$selected_set1"
+    puts $fh ""
     close $fh
 }
 
+proc mptdc_repair_command_text {cmd} {
+    set parts [list]
+    foreach item $cmd {
+        if {[catch {set text [mptdc_object_name $item]}] || $text eq ""} {
+            set text $item
+        }
+        lappend parts $text
+    }
+    return [join $parts " "]
+}
+
+proc mptdc_repair_cell_change_attempts {cell target_lib target_cell} {
+    set attempts [list]
+    if {[llength [info commands change_link]] > 0} {
+        lappend attempts [list change_link_object [list change_link $cell $target_lib]]
+        lappend attempts [list change_link_name [list change_link $cell $target_cell]]
+    }
+    if {[llength [info commands size_cell]] > 0} {
+        lappend attempts [list size_cell_name [list size_cell $cell $target_cell]]
+    }
+    if {[llength [info commands resize_cell]] > 0} {
+        lappend attempts [list resize_cell_name [list resize_cell $cell $target_cell]]
+    }
+    if {[llength [info commands set_attribute]] > 0} {
+        lappend attempts [list set_attribute_lib_cell_object [list set_attribute lib_cell $target_lib $cell]]
+        lappend attempts [list set_attribute_lib_cell_name [list set_attribute lib_cell $target_cell $cell]]
+    }
+    if {[llength [info commands set_db]] > 0} {
+        lappend attempts [list set_db_lib_cell [list set_db $cell .lib_cell $target_lib]]
+        lappend attempts [list set_db_base_cell [list set_db $cell .base_cell $target_lib]]
+    }
+    if {[llength [info commands eco_change_cell]] > 0} {
+        lappend attempts [list eco_change_cell_object [list eco_change_cell -inst $cell -cell $target_lib]]
+        lappend attempts [list eco_change_cell_name [list eco_change_cell -inst $cell -cell $target_cell]]
+    }
+    if {[llength [info commands replace_cell]] > 0} {
+        lappend attempts [list replace_cell_name [list replace_cell $cell $target_cell]]
+    }
+    return $attempts
+}
+
+proc mptdc_repair_try_change_exact_source_cell {stage rec target_cell target_lib ladder_fh} {
+    set cell [dict get $rec cell]
+    set inst_name [dict get $rec inst]
+    set original_cell [dict get $rec current_cell]
+    set final_cell $original_cell
+    set best_command "NO_COMMAND"
+    set best_status "NO_SUPPORTED_CELL_CHANGE_COMMAND"
+    if {$cell eq "" || $target_lib eq ""} {
+        return [dict create command $best_command status "NO_CELL_OR_TARGET_LIB" final_cell $final_cell]
+    }
+    foreach attempt [mptdc_repair_cell_change_attempts $cell $target_lib $target_cell] {
+        set label [lindex $attempt 0]
+        set cmd [lindex $attempt 1]
+        set command_text [mptdc_repair_command_text $cmd]
+        set rc [catch {eval $cmd} err]
+        set final_cell [mptdc_repair_cell_base_name $cell]
+        set status [expr {$rc == 0 ? {COMMAND_ACCEPTED} : $err}]
+        puts $ladder_fh "STAGE=$stage INSTANCE=$inst_name ORIGINAL=$original_cell TARGET=$target_cell COMMAND=$label TEXT=[mptdc_repair_csv_quote $command_text] STATUS=[mptdc_repair_csv_quote $status] FINAL=$final_cell"
+        set best_command $label
+        set best_status $status
+        if {$rc == 0 && $final_cell eq $target_cell} {
+            return [dict create command $label status OK final_cell $final_cell]
+        }
+    }
+    return [dict create command $best_command status $best_status final_cell $final_cell]
+}
+
+proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records report_dir fh} {
+    set result [mptdc_repair_default_exact_source_cell_result POLARITY_AWARE]
+    dict set result requested YES
+    dict set result source_cell_mode POLARITY_AWARE
+
+    set reset0_target [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_RESET0_CELL DFRRQHDX4]
+    set set1_requested [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL ""]
+    set reset0_lib [mptdc_repair_find_lib_cell $reset0_target]
+    set set1_4_lib [mptdc_repair_find_lib_cell DFRSQHDX4]
+    set set1_2_lib [mptdc_repair_find_lib_cell DFRSQHDX2]
+    set selected_set1 "NA"
+    set selected_set1_lib ""
+    if {$set1_requested ne ""} {
+        set selected_set1 $set1_requested
+        set selected_set1_lib [mptdc_repair_find_lib_cell $set1_requested]
+    } elseif {$set1_4_lib ne ""} {
+        set selected_set1 DFRSQHDX4
+        set selected_set1_lib $set1_4_lib
+    } elseif {$set1_2_lib ne ""} {
+        set selected_set1 DFRSQHDX2
+        set selected_set1_lib $set1_2_lib
+    }
+    mptdc_repair_write_exact_source_legal_cells_report \
+        $report_dir \
+        $stage \
+        [expr {$reset0_lib ne "" ? {YES} : {NO}}] \
+        [expr {$set1_4_lib ne "" ? {YES} : {NO}}] \
+        [expr {$set1_2_lib ne "" ? {YES} : {NO}}] \
+        $reset0_target \
+        $selected_set1
+
+    dict set result selected_reset0_target $reset0_target
+    dict set result selected_set1_target $selected_set1
+    dict set result target_lib_cells_found [expr {($reset0_lib ne "" ? 1 : 0) + ($selected_set1_lib ne "" ? 1 : 0)}]
+    if {$reset0_lib ne ""} {
+        catch {set_db $reset0_lib .avoid false}
+        catch {set_db $reset0_lib .dont_use false}
+    }
+    if {$selected_set1_lib ne ""} {
+        catch {set_db $selected_set1_lib .avoid false}
+        catch {set_db $selected_set1_lib .dont_use false}
+    }
+
+    set resolved_records [list]
+    foreach rec $source_records {
+        lappend resolved_records [mptdc_repair_source_record_cell_info $rec]
+    }
+    dict set result source_cells_found [llength $resolved_records]
+
+    set reset0_count 0
+    set set1_count 0
+    set unsupported_count 0
+    foreach rec $resolved_records {
+        set polarity [dict get $rec polarity]
+        if {$polarity eq "RESET0"} {
+            incr reset0_count
+        } elseif {$polarity eq "SET1"} {
+            incr set1_count
+        } else {
+            incr unsupported_count
+        }
+    }
+    dict set result reset0_source_count $reset0_count
+    dict set result set1_source_count $set1_count
+    dict set result unsupported_polarity_count $unsupported_count
+
+    if {$stage ne "post_map_pre_opt"} {
+        dict set result status SKIPPED_UNTIL_POST_MAP_PRE_OPT
+        return $result
+    }
+    if {$reset0_lib eq "" || $selected_set1_lib eq ""} {
+        dict set result status FAIL_TARGET_LIB_CELL_NOT_FOUND
+        return $result
+    }
+    if {[llength $resolved_records] == 0 || $unsupported_count > 0} {
+        dict set result status FAIL_UNSUPPORTED_SOURCE_POLARITY
+        return $result
+    }
+
+    set ladder_fh [open "$report_dir/fast_tag_exact_source_cell_command_ladder.rpt" a]
+    puts $ladder_fh "STAGE=$stage"
+    set rows [list]
+    set target_cells [list]
+    set target_count 0
+    set drrq4_count 0
+    set dfrsq4_count 0
+    set dfrsq2_count 0
+    set polarity_preserved 0
+    set polarity_failed 0
+    array set seen_cells {}
+    foreach rec $resolved_records {
+        set polarity [dict get $rec polarity]
+        set original_cell [dict get $rec current_cell]
+        set target_cell $reset0_target
+        set target_lib $reset0_lib
+        if {$polarity eq "SET1"} {
+            set target_cell $selected_set1
+            set target_lib $selected_set1_lib
+        }
+        set change_result [mptdc_repair_try_change_exact_source_cell $stage $rec $target_cell $target_lib $ladder_fh]
+        set final_cell [dict get $change_result final_cell]
+        set final_polarity [mptdc_repair_source_polarity_from_cell $final_cell]
+        set preserved [expr {$final_polarity eq $polarity ? {YES} : {NO}}]
+        if {$preserved eq "YES"} {
+            incr polarity_preserved
+        } else {
+            incr polarity_failed
+        }
+        if {$final_cell eq $target_cell} {
+            incr target_count
+            set cell [dict get $rec cell]
+            set cell_name [mptdc_object_name $cell]
+            if {$cell_name ne "" && ![info exists seen_cells($cell_name)]} {
+                set seen_cells($cell_name) 1
+                lappend target_cells $cell
+            }
+        }
+        if {$final_cell eq "DFRRQHDX4"} { incr drrq4_count }
+        if {$final_cell eq "DFRSQHDX4"} { incr dfrsq4_count }
+        if {$final_cell eq "DFRSQHDX2"} { incr dfrsq2_count }
+        lappend rows [dict create \
+            stage $stage \
+            source_instance [dict get $rec inst] \
+            tap [dict get $rec tap] \
+            bit [dict get $rec bit] \
+            original_cell $original_cell \
+            target_cell $target_cell \
+            command [dict get $change_result command] \
+            command_status [dict get $change_result status] \
+            final_cell $final_cell \
+            polarity_preserved $preserved \
+            notes [expr {$final_cell eq $target_cell ? {final_verified} : {target_not_verified}}]]
+    }
+    puts $ladder_fh ""
+    close $ladder_fh
+    mptdc_repair_write_exact_source_cell_csv_rows $report_dir $rows
+
+    dict set result source_cells_target_count $target_count
+    dict set result drrqhdx4_target_count $drrq4_count
+    dict set result dfrsqhdx4_target_count $dfrsq4_count
+    dict set result dfrsqhdx2_target_count $dfrsq2_count
+    dict set result polarity_preserved_count $polarity_preserved
+    dict set result polarity_failed_count $polarity_failed
+    dict set result method POLARITY_AWARE_COMMAND_LADDER
+
+    set freeze_fh [open "$report_dir/fast_tag_exact_source_freeze.rpt" a]
+    puts $freeze_fh "STAGE=$stage"
+    puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_REQUESTED=NO"
+    puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_CELLS=0"
+    puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=SKIPPED_NOT_FINAL_VERIFIED"
+    if {$target_count == [llength $resolved_records] && $polarity_failed == 0} {
+        close $freeze_fh
+        set freeze_fh [open "$report_dir/fast_tag_exact_source_freeze.rpt" a]
+        puts $freeze_fh "STAGE=$stage"
+        puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_REQUESTED=YES"
+        puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_CELLS=[llength $target_cells]"
+        mptdc_try_preserve_cells $target_cells
+        foreach cell $target_cells {
+            puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_CELL=[mptdc_object_name $cell] cell=[mptdc_repair_cell_base_name $cell]"
+        }
+        puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=OK"
+        dict set result freeze_result OK
+        dict set result status PASS_FINAL_VERIFIED
+    } else {
+        dict set result freeze_result SKIPPED_NOT_FINAL_VERIFIED
+        dict set result status FAIL_NOT_APPLIED
+    }
+    puts $freeze_fh ""
+    close $freeze_fh
+    return $result
+}
+
 proc mptdc_repair_apply_exact_source_cell {stage source_records target_cell report_dir fh} {
-    set result [dict create \
-        requested [expr {$target_cell ne "" ? {YES} : {NO}}] \
-        target_cell $target_cell \
-        target_lib_cells_found 0 \
-        source_cells_found 0 \
-        source_cells_target_count 0 \
-        method SKIPPED \
-        status SKIPPED_SOURCE_CELL_NOT_REQUESTED]
+    set result [mptdc_repair_default_exact_source_cell_result $target_cell]
+
+    set requested_mode [string toupper [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_MODE ""]]
+    if {$target_cell eq "POLARITY_AWARE" || $requested_mode eq "POLARITY_AWARE" || [mptdc_bool_env MPTDC_GENUS_REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE false]} {
+        return [mptdc_repair_apply_exact_source_cell_polarity_aware $stage $source_records $report_dir $fh]
+    }
 
     if {$target_cell eq ""} {
-        return $result
+        return [mptdc_repair_default_exact_source_cell_result $target_cell]
     }
     if {$stage ne "post_map_pre_opt"} {
         dict set result status SKIPPED_UNTIL_POST_MAP_PRE_OPT
@@ -2033,7 +2350,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set repair4_exact_source_drive [mptdc_bool_env MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE false]
     set repair5_exact_close [mptdc_bool_env MPTDC_GENUS_REPAIR5_EXACT_FAST_TAG_CLOSE false]
     set repair6_localtag_preserve_close [mptdc_bool_env MPTDC_GENUS_REPAIR6_LOCALTAG_PRESERVE_CLOSE false]
-    if {$repair6_localtag_preserve_close} {
+    set repair7_polarity_source_upgrade [mptdc_bool_env MPTDC_GENUS_REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE false]
+    if {$repair6_localtag_preserve_close || $repair7_polarity_source_upgrade} {
         set repair4_exact_source_drive true
         set repair5_exact_close true
     }
@@ -2063,6 +2381,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_ENABLE false]
     }]
     set exact_fast_tag_source_cell [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL ""]
+    set exact_fast_tag_source_cell_mode [string toupper [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_MODE ""]]
+    if {$repair7_polarity_source_upgrade && $exact_fast_tag_source_cell eq ""} {
+        set exact_fast_tag_source_cell POLARITY_AWARE
+        set exact_fast_tag_source_cell_mode POLARITY_AWARE
+    }
     set endpoint_transition_tight [mptdc_bool_env MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT false]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
     set control_max_transition [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS 0.50]
@@ -2093,6 +2416,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
     puts $fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
     puts $fh "REPAIR6_LOCALTAG_PRESERVE_CLOSE=$repair6_localtag_preserve_close"
+    puts $fh "REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE=$repair7_polarity_source_upgrade"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
@@ -2116,6 +2440,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "FAST_TAG_EXACT_MAX_DELAY_NS=$exact_fast_tag_max_delay"
     puts $fh "FAST_TAG_EXACT_ENABLE_MAX_DELAY=$enable_exact_fast_tag_max_delay"
     puts $fh "FAST_TAG_EXACT_SOURCE_CELL=$exact_fast_tag_source_cell"
+    puts $fh "FAST_TAG_EXACT_SOURCE_CELL_MODE=$exact_fast_tag_source_cell_mode"
     puts $fh "ENDPOINT_TRANSITION_TIGHT=$endpoint_transition_tight"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
     puts $fh "CONTROL_MAX_TRANSITION_NS=$control_max_transition"
@@ -2287,14 +2612,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 set exact_delay_result "SKIPPED_EXACT_MAX_DELAY_DISABLED"
                 set exact_delay_mode_status "SKIPPED"
                 set exact_delay_mode_detail "SKIPPED"
-                set exact_source_cell_result [dict create \
-                    requested [expr {$exact_fast_tag_source_cell ne "" ? {YES} : {NO}}] \
-                    target_cell $exact_fast_tag_source_cell \
-                    target_lib_cells_found 0 \
-                    source_cells_found 0 \
-                    source_cells_target_count 0 \
-                    method SKIPPED \
-                    status SKIPPED_SOURCE_CELL_NOT_REQUESTED]
+                set exact_source_cell_result [mptdc_repair_default_exact_source_cell_result $exact_fast_tag_source_cell]
                 if {$exact_counts_ok && [llength $exact_source_c_pins] > 0 && [llength $exact_endpoint_d_pins] > 0} {
                     if {[llength [info commands group_path]] > 0} {
                         set group_rc [catch {
@@ -2367,6 +2685,18 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $fh "FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT=[dict get $exact_source_cell_result source_cells_target_count]"
                 puts $fh "FAST_TAG_EXACT_SOURCE_CELL_METHOD=[dict get $exact_source_cell_result method]"
                 puts $fh "FAST_TAG_EXACT_SOURCE_CELL_RESULT=[dict get $exact_source_cell_result status]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_MODE=[dict get $exact_source_cell_result source_cell_mode]"
+                puts $fh "FAST_TAG_EXACT_RESET0_SOURCE_COUNT=[dict get $exact_source_cell_result reset0_source_count]"
+                puts $fh "FAST_TAG_EXACT_SET1_SOURCE_COUNT=[dict get $exact_source_cell_result set1_source_count]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT=[dict get $exact_source_cell_result unsupported_polarity_count]"
+                puts $fh "FAST_TAG_EXACT_SELECTED_RESET0_TARGET=[dict get $exact_source_cell_result selected_reset0_target]"
+                puts $fh "FAST_TAG_EXACT_SELECTED_SET1_TARGET=[dict get $exact_source_cell_result selected_set1_target]"
+                puts $fh "FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result drrqhdx4_target_count]"
+                puts $fh "FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx4_target_count]"
+                puts $fh "FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx2_target_count]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_POLARITY_PRESERVED_COUNT=[dict get $exact_source_cell_result polarity_preserved_count]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT=[dict get $exact_source_cell_result polarity_failed_count]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=[dict get $exact_source_cell_result freeze_result]"
 
                 set exact_repair_applied "NO"
                 set exact_repair_status "REVIEW_REQUIRED"
@@ -2375,7 +2705,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                     set source_cell_ok true
                     if {$exact_fast_tag_source_cell ne "" && $stage eq "post_map_pre_opt"} {
                         set source_cell_status [dict get $exact_source_cell_result status]
-                        set source_cell_ok [expr {$source_cell_status eq "OK"}]
+                        set source_cell_ok [expr {$source_cell_status eq "OK" || $source_cell_status eq "PASS_FINAL_VERIFIED"}]
                     }
                     set max_delay_ok true
                     if {$enable_exact_fast_tag_max_delay} {
@@ -2394,6 +2724,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $status_fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
                 puts $status_fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
                 puts $status_fh "REPAIR6_LOCALTAG_PRESERVE_CLOSE=$repair6_localtag_preserve_close"
+                puts $status_fh "REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE=$repair7_polarity_source_upgrade"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_EXPECTED=$exact_source_expected"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_FOUND=[llength $exact_source_q_records]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_CLOCK_PINS_FOUND=[llength $exact_source_c_records]"
@@ -2418,6 +2749,18 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT=[dict get $exact_source_cell_result source_cells_target_count]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_METHOD=[dict get $exact_source_cell_result method]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_RESULT=[dict get $exact_source_cell_result status]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_MODE=[dict get $exact_source_cell_result source_cell_mode]"
+                puts $status_fh "FAST_TAG_EXACT_RESET0_SOURCE_COUNT=[dict get $exact_source_cell_result reset0_source_count]"
+                puts $status_fh "FAST_TAG_EXACT_SET1_SOURCE_COUNT=[dict get $exact_source_cell_result set1_source_count]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT=[dict get $exact_source_cell_result unsupported_polarity_count]"
+                puts $status_fh "FAST_TAG_EXACT_SELECTED_RESET0_TARGET=[dict get $exact_source_cell_result selected_reset0_target]"
+                puts $status_fh "FAST_TAG_EXACT_SELECTED_SET1_TARGET=[dict get $exact_source_cell_result selected_set1_target]"
+                puts $status_fh "FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result drrqhdx4_target_count]"
+                puts $status_fh "FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx4_target_count]"
+                puts $status_fh "FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx2_target_count]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_POLARITY_PRESERVED_COUNT=[dict get $exact_source_cell_result polarity_preserved_count]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT=[dict get $exact_source_cell_result polarity_failed_count]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=[dict get $exact_source_cell_result freeze_result]"
                 puts $status_fh "EXACT_FAST_TAG_SOURCES_EXPECTED=$exact_source_expected"
                 puts $status_fh "EXACT_FAST_TAG_SOURCES_FOUND=[llength $exact_source_q_records]"
                 puts $status_fh "EXACT_FAST_TAG_ENDPOINTS_EXPECTED=$exact_endpoint_expected"

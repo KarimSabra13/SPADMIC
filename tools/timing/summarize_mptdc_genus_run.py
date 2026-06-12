@@ -152,6 +152,9 @@ def parse_sdc_diagnostics(path: Path) -> dict[str, str]:
     if not text:
         return {
             "SDC_COMMAND_FAILURE_COUNT": "NA",
+            "ACTIVE_SDC_FAILURE_COUNT": "NA",
+            "REPORT_DIAGNOSTIC_WARNING_COUNT": "NA",
+            "RAW_SDC_DIAGNOSTIC_COUNT": "NA",
             "SDC_235_COUNT": "NA",
             "TUI_61_COUNT": "NA",
             "SDC_INVALID_OBJECT_COUNT": "NA",
@@ -164,6 +167,9 @@ def parse_sdc_diagnostics(path: Path) -> dict[str, str]:
         key = key.strip()
         if key in {
             "SDC_COMMAND_FAILURE_COUNT",
+            "ACTIVE_SDC_FAILURE_COUNT",
+            "REPORT_DIAGNOSTIC_WARNING_COUNT",
+            "RAW_SDC_DIAGNOSTIC_COUNT",
             "SDC_235_COUNT",
             "TUI_61_COUNT",
             "SDC_INVALID_OBJECT_COUNT",
@@ -172,6 +178,12 @@ def parse_sdc_diagnostics(path: Path) -> dict[str, str]:
     if "SDC_COMMAND_FAILURE_COUNT" in structured:
         return {
             "SDC_COMMAND_FAILURE_COUNT": structured.get("SDC_COMMAND_FAILURE_COUNT", "NA"),
+            "ACTIVE_SDC_FAILURE_COUNT": structured.get(
+                "ACTIVE_SDC_FAILURE_COUNT",
+                structured.get("SDC_COMMAND_FAILURE_COUNT", "NA"),
+            ),
+            "REPORT_DIAGNOSTIC_WARNING_COUNT": structured.get("REPORT_DIAGNOSTIC_WARNING_COUNT", "NA"),
+            "RAW_SDC_DIAGNOSTIC_COUNT": structured.get("RAW_SDC_DIAGNOSTIC_COUNT", "NA"),
             "SDC_235_COUNT": structured.get("SDC_235_COUNT", "NA"),
             "TUI_61_COUNT": structured.get("TUI_61_COUNT", "NA"),
             "SDC_INVALID_OBJECT_COUNT": structured.get("SDC_INVALID_OBJECT_COUNT", "NA"),
@@ -185,6 +197,10 @@ def parse_sdc_diagnostics(path: Path) -> dict[str, str]:
     return {
         key: str(count_matching_lines(text, pattern))
         for key, pattern in patterns.items()
+    } | {
+        "ACTIVE_SDC_FAILURE_COUNT": str(count_matching_lines(text, patterns["SDC_COMMAND_FAILURE_COUNT"])),
+        "REPORT_DIAGNOSTIC_WARNING_COUNT": "0",
+        "RAW_SDC_DIAGNOSTIC_COUNT": "NA",
     }
 
 
@@ -212,6 +228,18 @@ def parse_exact_fast_tag_status(run_dir: Path) -> dict[str, str]:
         "FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT": "NA",
         "FAST_TAG_EXACT_SOURCE_CELL_METHOD": "NA",
         "FAST_TAG_EXACT_SOURCE_CELL_RESULT": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_MODE": "NA",
+        "FAST_TAG_EXACT_RESET0_SOURCE_COUNT": "NA",
+        "FAST_TAG_EXACT_SET1_SOURCE_COUNT": "NA",
+        "FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT": "NA",
+        "FAST_TAG_EXACT_SELECTED_RESET0_TARGET": "NA",
+        "FAST_TAG_EXACT_SELECTED_SET1_TARGET": "NA",
+        "FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT": "NA",
+        "FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT": "NA",
+        "FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT": "NA",
+        "FAST_TAG_EXACT_SOURCE_POLARITY_PRESERVED_COUNT": "NA",
+        "FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT": "NA",
+        "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT": "NA",
     }
     if path is None:
         return defaults
@@ -250,6 +278,9 @@ def write_report(path: Path, values: dict[str, str], qor: dict[str, object], cls
         f"- Worst real path family: `{values['WORST_REAL_PATH_FAMILY']}`",
         f"- UNKNOWN_REVIEW_REQUIRED count: `{values['UNKNOWN_REVIEW_REQUIRED_COUNT']}`",
         f"- SDC command failure count: `{values['SDC_COMMAND_FAILURE_COUNT']}`",
+        f"- Active SDC failure count: `{values['ACTIVE_SDC_FAILURE_COUNT']}`",
+        f"- Report diagnostic warning count: `{values['REPORT_DIAGNOSTIC_WARNING_COUNT']}`",
+        f"- Raw SDC diagnostic count: `{values['RAW_SDC_DIAGNOSTIC_COUNT']}`",
         f"- SDC-235 count: `{values['SDC_235_COUNT']}`",
         f"- TUI-61 count: `{values['TUI_61_COUNT']}`",
         f"- SDC invalid object count: `{values['SDC_INVALID_OBJECT_COUNT']}`",
@@ -262,6 +293,12 @@ def write_report(path: Path, values: dict[str, str], qor: dict[str, object], cls
         f"- Exact fast-tag source cell count: `{values['FAST_TAG_EXACT_SOURCE_CELL_COUNT']}`",
         f"- Exact fast-tag source cell target count: `{values['FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT']}`",
         f"- Exact fast-tag source cell result: `{values['FAST_TAG_EXACT_SOURCE_CELL_RESULT']}`",
+        f"- Exact fast-tag source cell mode: `{values['FAST_TAG_EXACT_SOURCE_CELL_MODE']}`",
+        f"- Exact reset0 source count: `{values['FAST_TAG_EXACT_RESET0_SOURCE_COUNT']}`",
+        f"- Exact set1 source count: `{values['FAST_TAG_EXACT_SET1_SOURCE_COUNT']}`",
+        f"- Exact selected reset0 target: `{values['FAST_TAG_EXACT_SELECTED_RESET0_TARGET']}`",
+        f"- Exact selected set1 target: `{values['FAST_TAG_EXACT_SELECTED_SET1_TARGET']}`",
+        f"- Exact source polarity failed count: `{values['FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT']}`",
         "",
         "## Cost Groups",
         "",
