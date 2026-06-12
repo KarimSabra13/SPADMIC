@@ -44,6 +44,11 @@ proc mptdc_o11_object_names {objects} {
 
 proc mptdc_o11_db_attr {object attr} {
     if {$object eq ""} { return "" }
+    set object_text "$object"
+    if {![regexp {^(0x[0-9A-Fa-f]+|[A-Za-z_][A-Za-z0-9_]*:)} $object_text]
+        && [regexp {[][{}"[:space:]/]} $object_text]} {
+        return ""
+    }
     if {![catch {set val [get_db $object $attr]}]} { return $val }
     return ""
 }
@@ -80,15 +85,18 @@ proc mptdc_o11_get_exact_pins {candidates} {
 
 proc mptdc_o11_net_from_pin {pin} {
     set nets [list]
-    catch {set nets [get_nets -quiet -of_objects $pin]}
+    set pin_obj [mptdc_o11_pin_object $pin]
+    catch {set nets [get_nets -quiet -of_objects $pin_obj]}
     set names [mptdc_o11_object_names $nets]
     if {[llength $names] > 0} { return [lindex $names 0] }
 
-    set net [mptdc_o11_db_attr $pin .net]
+    set net [mptdc_o11_db_attr $pin_obj .net]
     if {$net ne ""} { return [mptdc_o11_obj_name $net] }
 
-    set net [mptdc_o11_db_attr [format {pin:%s} $pin] .net]
-    if {$net ne ""} { return [mptdc_o11_obj_name $net] }
+    if {![regexp {[][{}"[:space:]/]} "$pin"]} {
+        set net [mptdc_o11_db_attr [format {pin:%s} $pin] .net]
+        if {$net ne ""} { return [mptdc_o11_obj_name $net] }
+    }
 
     return ""
 }

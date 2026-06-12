@@ -345,7 +345,7 @@ proc mptdc_o13_pin_metric_safe {pin metric notes_var} {
 
 proc mptdc_o13_net_load_names_safe {net_obj source_pin notes_var label} {
     upvar $notes_var notes
-    if {[catch {set names [mptdc_o11_net_load_names $net_obj $source_pin]} err]} {
+    if {[catch {set names [mptdc_o12b_net_load_names $net_obj $source_pin]} err]} {
         lappend notes "${label}_SINK_QUERY_FAILED:$err"
         return [list]
     }
@@ -526,7 +526,6 @@ proc mptdc_o13_write_reports {} {
                 set raw_bound_ff "50.00"
                 lappend raw_notes "NO_NUMERIC_RAW_CAP_BOUND_50FF"
             }
-            if {$raw_fanout eq "1"} { incr raw_fanout1 }
             set raw_label [mptdc_o12_budget_label_from_source $raw_total_ff $raw_bound_ff 1]
             if {![info exists raw_labels($raw_label)]} { set raw_labels($raw_label) 0 }
             incr raw_labels($raw_label)
@@ -540,7 +539,14 @@ proc mptdc_o13_write_reports {} {
                 set max_raw_cap_ff $raw_total_ff
                 set max_raw_desc [format {%s S[%d] %s} $family $tap $raw_pin]
             }
-            set raw_sinks [join [mptdc_o13_net_load_names_safe $raw_net_obj $raw_pin raw_notes RAW] ";"]
+            set raw_sink_names [mptdc_o13_net_load_names_safe $raw_net_obj $raw_pin raw_notes RAW]
+            if {($raw_fanout eq "" || $raw_fanout eq "0")
+                && $raw_pin ne "" && $iso_a_pin ne "" && $raw_net ne ""} {
+                set raw_fanout 1
+                lappend raw_notes "RAW_FANOUT_INFERRED_FROM_MATCHED_ISOLATION_INPUT"
+            }
+            if {$raw_fanout eq "1"} { incr raw_fanout1 }
+            set raw_sinks [join $raw_sink_names ";"]
             puts $raw_fh [join [list \
                 $family $tap [mptdc_o12b_csv $raw_pin] [llength $raw_pins] [mptdc_o12b_csv $raw_net] \
                 $raw_fanout $raw_total_pf $raw_total_ff $raw_bound_ff $raw_label $raw_strict $raw_cn \
@@ -785,11 +791,12 @@ proc mptdc_o13_write_reports {} {
                 $iso_in_trans $iso_out_trans $drv_in_trans $drv_out_trans \
                 [mptdc_o13_clock_for $family $tap] [mptdc_o12b_csv [join $delay_notes ";"]]] ","]
 
-            puts $route_fh [join [list \
+            set route_row [list \
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $iso_net] $iso_route_len $iso_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf $res_ohm \
-                $out_status [mptdc_o12b_csv "raw_iso_and_final_driver_route_from_safe_property_snapshot_when_available"]]] ","]
+                $out_status [mptdc_o12b_csv "raw_iso_and_final_driver_route_from_report_property_or_safe_snapshot_when_available"]]
+            puts $route_fh [join $route_row ","]
         }
     }
 

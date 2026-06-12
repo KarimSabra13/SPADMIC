@@ -141,7 +141,10 @@ proc mptdc_o12b_db_attr {object attr} {
     if {$object eq ""} { return "" }
     if {![mptdc_o12b_db_object_query_safe $object]} { return "" }
     set attrs [mptdc_o12b_db_attrs_for $object]
-    if {[llength $attrs] > 0 && ![mptdc_o12b_db_attr_supported $object $attr]} {
+    if {[llength $attrs] == 0} {
+        return ""
+    }
+    if {![mptdc_o12b_db_attr_supported $object $attr]} {
         return ""
     }
     set val ""
@@ -414,13 +417,29 @@ proc mptdc_o12b_net_metric_resolved {net_obj metric property_path} {
     return [mptdc_o12b_net_metric $net_obj $metric]
 }
 
+proc mptdc_o12b_net_load_names {net_obj source_pin} {
+    set names [list]
+    set loads [mptdc_o12b_db_attr $net_obj .loads]
+    foreach load $loads {
+        set lname [mptdc_o11_obj_name $load]
+        if {$lname eq "" || $lname eq $source_pin} { continue }
+        mptdc_o11_unique_append names $lname
+    }
+    return $names
+}
+
 proc mptdc_o12b_net_fanout_resolved {net_obj property_path} {
     set prop_data [mptdc_o12b_net_metric_from_property $property_path fanout]
     if {[lindex $prop_data 0] ne ""} {
         return [lindex $prop_data 0]
     }
-    set fanout [mptdc_o11_db_attr $net_obj .num_loads]
-    if {$fanout eq ""} { set fanout [mptdc_o11_db_attr $net_obj .fanout] }
+    set fanout [lindex [mptdc_o12b_first_numeric_attr $net_obj {.num_loads .fanout}] 0]
+    if {$fanout eq ""} {
+        set load_names [mptdc_o12b_net_load_names $net_obj ""]
+        if {[llength $load_names] > 0} {
+            set fanout [llength $load_names]
+        }
+    }
     return $fanout
 }
 
@@ -497,9 +516,23 @@ proc mptdc_o12b_write_property_snapshot {path title object fields} {
     return 1
 }
 
+proc mptdc_o12b_write_native_property_report {path object} {
+    if {$object eq "" || ![mptdc_o12b_db_object_query_safe $object]} {
+        return 0
+    }
+    set script [list report_property $object > $path]
+    if {![catch {uplevel 1 $script}]} {
+        return 1
+    }
+    return 0
+}
+
 proc mptdc_o12b_write_net_property_report {path net_name} {
     if {$net_name eq ""} { return 0 }
     set net_obj [mptdc_o11_net_object $net_name]
+    if {[mptdc_o12b_write_native_property_report $path $net_obj]} {
+        return 1
+    }
     return [mptdc_o12b_write_property_snapshot $path "O12B net properties $net_name" $net_obj [list \
         {capacitance_max .total_capacitance .total_cap .capacitance .load_capacitance .effective_capacitance .cap} \
         {wire_capacitance_max .wire_capacitance .wire_cap .route_capacitance .routing_capacitance} \
@@ -514,6 +547,9 @@ proc mptdc_o12b_write_net_property_report {path net_name} {
 proc mptdc_o12b_write_cell_property_report {path cell_name} {
     if {$cell_name eq ""} { return 0 }
     set cell_obj [mptdc_o12b_get_cell $cell_name]
+    if {[mptdc_o12b_write_native_property_report $path $cell_obj]} {
+        return 1
+    }
     return [mptdc_o12b_write_property_snapshot $path "O12B cell properties $cell_name" $cell_obj [list \
         {ref_name .base_cell.name .lib_cell.name .master.name .cell.name .ref_name .base_cell .lib_cell} \
         {base_cell .base_cell.name .base_cell} \
