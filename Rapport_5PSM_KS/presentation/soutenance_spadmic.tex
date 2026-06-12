@@ -7,9 +7,9 @@
 \usepackage{graphicx}
 \usepackage{tikz}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{tabularx}
 \usepackage{siunitx}
-\usepackage{ragged2e}
 
 \usetikzlibrary{arrows.meta,calc,fit,positioning}
 
@@ -22,86 +22,120 @@
   {../figures/tdc/final_mptdc/}
 }
 
-\definecolor{spadBlue}{HTML}{1F5FBF}
-\definecolor{spadBlueDark}{HTML}{173B73}
-\definecolor{spadGreen}{HTML}{2E7D32}
-\definecolor{spadOrange}{HTML}{C86A20}
-\definecolor{spadRed}{HTML}{B54040}
-\definecolor{spadGray}{HTML}{667085}
-\definecolor{spadLine}{HTML}{CBD5E1}
-\definecolor{spadText}{HTML}{1F2937}
-\definecolor{spadLight}{HTML}{F6F8FB}
+% Minimal scientific palette.
+\definecolor{ink}{HTML}{1D2430}
+\definecolor{muted}{HTML}{667085}
+\definecolor{line}{HTML}{D5DAE0}
+\definecolor{soft}{HTML}{F4F6F7}
+\definecolor{navy}{HTML}{315F8C}
+\definecolor{navy2}{HTML}{1F3345}
+\definecolor{amber}{HTML}{8A4B08}
+\definecolor{amberSoft}{HTML}{F6E7D7}
+\definecolor{paper}{HTML}{FFFFFF}
 
 \setbeamertemplate{navigation symbols}{}
-\setbeamertemplate{caption}[numbered]
-\setbeamercolor{background canvas}{bg=white}
-\setbeamercolor{normal text}{fg=spadText}
-\setbeamercolor{frametitle}{fg=spadBlueDark}
-\setbeamercolor{title}{fg=spadBlueDark}
-\setbeamerfont{frametitle}{series=\bfseries,size=\Large}
-\setbeamerfont{title}{series=\bfseries,size=\Large}
-\setbeamerfont{subtitle}{size=\normalsize}
-\setbeamerfont{footline}{size=\scriptsize}
 \setbeameroption{hide notes}
+\setbeamercolor{background canvas}{bg=paper}
+\setbeamercolor{normal text}{fg=ink}
+\setbeamercolor{frametitle}{fg=navy2}
+\setbeamerfont{frametitle}{series=\bfseries,size=\Large}
+\setbeamerfont{title}{series=\bfseries,size=\LARGE}
+\setbeamerfont{subtitle}{size=\large}
+\setbeamerfont{footline}{size=\scriptsize}
+\setlength{\parindent}{0pt}
+
+\setbeamertemplate{frametitle}{%
+  \vspace{0.34cm}%
+  \noindent%
+  \begin{minipage}[t]{0.78\textwidth}%
+    \insertframetitle%
+  \end{minipage}%
+  \hfill%
+  \begin{minipage}[t]{0.18\textwidth}%
+    \raggedleft%
+    \ifnum\value{section}>0%
+      {\scriptsize\bfseries\color{muted}\insertsectionnumber\;|\;\insertsectionhead}%
+    \fi%
+  \end{minipage}\par%
+  \vspace{0.08cm}%
+  {\color{line}\rule{\textwidth}{0.35pt}}%
+  \vspace{-0.06cm}%
+}
 
 \setbeamertemplate{footline}{%
   \leavevmode%
   \hbox{%
-    \begin{beamercolorbox}[wd=.72\paperwidth,ht=2.8ex,dp=1.1ex,leftskip=1.2em]{footline}%
-      \color{spadGray}Karim SABRA -- SPADMIC / MPTDC
+    \begin{beamercolorbox}[wd=.70\paperwidth,ht=2.6ex,dp=1.0ex,leftskip=1.1em]{footline}%
+      \color{muted}Karim SABRA -- SPADMIC / MPTDC%
+      \ifx\insertsectionhead\empty\else\hspace{1.0em}\color{line}| \color{muted}\insertsectionhead\fi%
     \end{beamercolorbox}%
-    \begin{beamercolorbox}[wd=.28\paperwidth,ht=2.8ex,dp=1.1ex,rightskip=1.2em plus 1fil]{footline}%
-      \hfill\color{spadGray}\insertframenumber
+    \begin{beamercolorbox}[wd=.30\paperwidth,ht=2.6ex,dp=1.0ex,rightskip=1.1em plus 1fil]{footline}%
+      \hfill\color{muted}\insertframenumber%
     \end{beamercolorbox}%
   }%
 }
 
 \tikzset{
-  deckFill/.style n args={1}{draw=#1!45,fill=#1!8},
-  deckArrow/.style={-{Latex[length=2mm]},thick,spadLine},
-  deckBox/.style={rounded corners=4pt,align=center,font=\small\bfseries,minimum height=0.95cm},
-  deckSmall/.style={rounded corners=4pt,align=center,font=\scriptsize\bfseries,minimum height=0.72cm}
+  basebox/.style={draw=line,fill=white,rounded corners=1.5pt,align=center,font=\small,inner sep=5pt},
+  accentbox/.style={basebox,draw=navy!55,fill=navy!4,text=ink},
+  warnbox/.style={basebox,draw=amber!65,fill=amberSoft,text=ink},
+  mutedbox/.style={basebox,draw=line,fill=soft,text=ink},
+  tinybox/.style={basebox,font=\scriptsize,inner sep=3pt},
+  arrow/.style={-{Latex[length=2mm]},line width=0.8pt,draw=navy!70},
+  softarrow/.style={-{Latex[length=2mm]},line width=0.6pt,draw=muted},
+  bus/.style={line width=1.0pt,draw=ink!70},
+  time/.style={line width=0.6pt,draw=muted},
+  dot/.style={circle,fill=navy,inner sep=1.6pt}
 }
 
-\newcommand{\slideTitle}[1]{\frametitle{#1}}
-\newcommand{\metricBox}[3]{%
+\newcommand{\lead}[1]{\relax}
+
+\newcommand{\takeaway}[1]{%
+  \relax%
+}
+
+\newcommand{\metric}[3]{%
   \begin{tikzpicture}
     \node[
-      fill=#3!8,
-      draw=#3!35,
-      rounded corners=4pt,
-      minimum width=3.0cm,
-      minimum height=1.18cm,
-      align=center
+      draw=#3!60,
+      fill=#3!7,
+      rounded corners=2pt,
+      minimum width=3.15cm,
+      minimum height=1.12cm,
+      align=center,
+      inner sep=4pt
     ]{
-      {\Large\bfseries\color{#3!80!black}#1}\\[-1pt]
-      {\scriptsize\color{spadText}#2}
+      {\Large\bfseries\color{#3!85!black}#1}\\[-1pt]
+      {\scriptsize\color{ink}#2}
     };
-  \end{tikzpicture}
-}
-\newcommand{\sectionPill}[2]{%
-  \tikz[baseline=(n.base)]\node[
-    fill=#1!8,
-    draw=#1!35,
-    rounded corners=2pt,
-    inner xsep=5pt,
-    inner ysep=2pt,
-    text=#1!75!black,
-    font=\scriptsize\bfseries
-  ](n){#2};%
-}
-\newcommand{\cnrsBadge}{%
-  \tikz[baseline=(n.base)]\node[
-    draw=spadGray!45,
-    fill=spadGray!8,
-    rounded corners=3pt,
-    inner xsep=8pt,
-    inner ysep=5pt,
-    font=\bfseries\color{spadBlueDark}
-  ](n){CNRS};%
+  \end{tikzpicture}%
 }
 
-\title{SPADMIC : étude d'un ASIC prototype et de son cœur MPTDC}
+\newcommand{\smalltag}[2]{%
+  \tikz[baseline=(n.base)]\node[
+    draw=#1!55,
+    fill=#1!7,
+    rounded corners=1pt,
+    inner xsep=4pt,
+    inner ysep=1.5pt,
+    font=\scriptsize\bfseries,
+    text=#1!80!black
+  ](n){#2};%
+}
+
+\newcommand{\plannumber}[1]{%
+  \tikz[baseline=(n.base)]\node[
+    circle,
+    draw=navy!60,
+    fill=navy!7,
+    minimum size=0.48cm,
+    inner sep=0pt,
+    font=\bfseries\scriptsize,
+    text=navy2
+  ](n){#1};%
+}
+
+\title{SPADMIC / MPTDC}
 \subtitle{Architecture, vérification et calibration d'un TDC Vernier multiphase}
 \author{Karim SABRA}
 \institute{CPE Lyon -- IP2I / CNRS}
@@ -112,839 +146,800 @@
 % ---------------------------------------------------------------------------
 \begin{frame}[plain]
   \begin{tikzpicture}[remember picture,overlay]
-    \fill[white] (current page.south west) rectangle (current page.north east);
-    \fill[spadBlue!5] (current page.north west) rectangle ($(current page.north east)+(0,-1.15)$);
-    \fill[spadBlueDark] (current page.north west) rectangle ($(current page.north west)+(0.12,-\paperheight)$);
-    \node[anchor=north west] at ($(current page.north west)+(0.45,-0.26)$)
-      {\includegraphics[height=0.85cm]{cpe.png}};
-    \node[anchor=north east] at ($(current page.north east)+(-0.55,-0.34)$)
-      {\includegraphics[height=0.75cm]{ip2i.png}};
+    \fill[paper] (current page.south west) rectangle (current page.north east);
+    \fill[navy2] (current page.south west) rectangle ($(current page.south west)+(0.10,\paperheight)$);
+    \draw[line] ($(current page.north west)+(0.72,-0.95)$) -- ($(current page.north east)+(-0.72,-0.95)$);
   \end{tikzpicture}
 
-  \vspace{1.2cm}
-  {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
-  \vspace{0.25cm}
-  {\large \insertsubtitle\par}
-
-  \vspace{1.0cm}
+  \vspace{-0.12cm}
   \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.56\textwidth}
-      {\large\bfseries Karim SABRA}\\[0.2cm]
-      CPE Lyon -- IP2I / CNRS\\
-      Encadrant IP2I : Édouard Bechetoille\\
-      Encadrant école : Abdelbassat Massouri\\
-      Année académique 2025--2026
+    \begin{column}{0.34\textwidth}
+      \includegraphics[height=1.05cm,keepaspectratio]{cpe.png}
     \end{column}
-    \begin{column}{0.36\textwidth}
-      \begin{tikzpicture}[
-        box/.style={deckBox,minimum width=4.3cm}
-      ]
-        \node[box,deckFill={spadBlue}] (a) {Prototype ASIC SPADMIC};
-        \node[box,deckFill={spadGreen},below=0.45cm of a] (b) {Cœur temporel MPTDC};
-        \draw[deckArrow] (a) -- (b);
-      \end{tikzpicture}
+    \begin{column}{0.30\textwidth}
+      \centering
+      {\small\color{muted}Soutenance d'école d'ingénieur}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \raggedleft
+      \includegraphics[height=1.05cm,keepaspectratio]{ip2i.png}
     \end{column}
   \end{columns}
 
-  \note{Présenter le sujet en une phrase : cette soutenance porte sur l'étude d'un bloc de mesure temporelle, le MPTDC, intégré dans un prototype ASIC de lecture SPAD appelé SPADMIC. Annoncer que le fil ira du contexte d'instrumentation jusqu'aux résultats de calibration et aux prochaines étapes physiques.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{Plan : partir du système puis descendre vers le bloc MPTDC}
+  \vspace{1.22cm}
   \begin{center}
-  \begin{tikzpicture}[
-    part/.style={deckBox,minimum width=2.45cm,minimum height=1.25cm,text width=2.2cm},
-    arr/.style={-{Latex[length=2mm]},thick,spadLine}
-  ]
-    \node[part,deckFill={spadGray}] (p1) {1\\Contexte\\SPADMIC};
-    \node[part,deckFill={spadBlue},right=0.35cm of p1] (p2) {2\\Besoin temps\\et Vernier};
-    \node[part,deckFill={spadBlue},right=0.35cm of p2] (p3) {3\\Architecture\\MPTDC};
-    \node[part,deckFill={spadGreen},right=0.35cm of p3] (p4) {4\\Vérification\\caractérisation};
-    \node[part,deckFill={spadOrange},right=0.35cm of p4] (p5) {5\\Limites\\et bilan};
-    \draw[arr] (p1) -- (p2);
-    \draw[arr] (p2) -- (p3);
-    \draw[arr] (p3) -- (p4);
-    \draw[arr] (p4) -- (p5);
-  \end{tikzpicture}
+    {\usebeamerfont{title}\color{navy2}SPADMIC / MPTDC\par}
+    \vspace{0.20cm}
+    {\large Architecture, vérification et calibration d'un TDC Vernier multiphase\par}
   \end{center}
 
-  \vspace{0.45cm}
-  \begin{itemize}
-    \item Le jury découvre d'abord le cadre scientifique et le prototype ASIC.
-    \item Le principe TDC est introduit avant l'architecture Vernier multiphase.
-    \item Les résultats sont présentés comme des résultats RTL/Xcelium pré-silicium.
-  \end{itemize}
+  \vspace{1.18cm}
+  \begin{center}
+    {\large\bfseries Karim SABRA}\\[0.18cm]
+    CPE Lyon -- IP2I / CNRS\\[0.15cm]
+    Encadrant IP2I : Édouard Bechetoille\\
+    Encadrant école : Abdelbassat Massouri\\[0.15cm]
+    Année académique 2025--2026
+  \end{center}
 
-  \note{Annoncer le plan en cinq parties. L'idée principale est que la présentation ne démarre pas au niveau RTL : elle commence au niveau du système, puis descend progressivement vers le TDC, le Vernier, l'intégration MPTDC, la vérification et les limites.}
+  \note{Objectif : ouvrir sobrement et poser le sujet comme un travail d'architecture, de vérification et de calibration pré-silicium. À dire : le focus est le MPTDC de SPADMIC, pas l'ensemble complet de la puce. Transition : annoncer une progression depuis le besoin détecteur jusqu'aux limites physiques.}
+\end{frame}
+
+\section[Besoin]{Cadre et besoin système}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Plan de la soutenance}
+  \lead{Six étapes pour aller du besoin système vers le bloc RTL, puis vers les preuves et les limites.}
+
+  \begin{center}
+  \small
+  \renewcommand{\arraystretch}{1.34}
+  \begin{tabularx}{0.94\textwidth}{@{}>{\centering\arraybackslash}m{0.72cm}>{\bfseries}m{4.25cm}>{\raggedright\arraybackslash}X>{\raggedleft\arraybackslash}m{1.25cm}@{}}
+    \plannumber{1} & Cadre et besoin système & CNRS/IP2I, SPADMIC, matrice SPAD & 4 min\\
+    \plannumber{2} & Problème de mesure & rôle d'un TDC, métriques, limite de \texttt{clk\_sys} & 4 min\\
+    \plannumber{3} & Choix Vernier multiphase & principe Vernier, observation multiphase, non-uniformité & 6 min\\
+    \plannumber{4} & Architecture MPTDC & capture asynchrone, CDC, contextes, trame 16 bit & 8 min\\
+    \plannumber{5} & Validation et calibration & vérification RTL, LUT externe, résultats Xcelium & 6 min\\
+    \plannumber{6} & Limites et perspectives & pré-silicium, CDC/STA/PnR, mesures silicium & 2 min\\
+  \end{tabularx}
+  \end{center}
+
+  \takeaway{Objectif : raconter une démarche d'ingénieur, pas réciter le rapport chapitre par chapitre.}
+  \note{Objectif : donner au jury la carte avant d'entrer dans le détail. À dire : chaque partie répond à une question, depuis le besoin jusqu'à la preuve et aux limites. Transition : passer au message directeur qui encadre toute la soutenance.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{Le travail s'inscrit dans une chaîne d'instrumentation scientifique}
+  \frametitle{Message directeur : mesure exploitable}
+  \lead{Le MPTDC ne se résume pas à un bloc RTL : il transforme des événements asynchrones en observables vérifiables et calibrables.}
+
+  \begin{center}
+  \resizebox{0.96\textwidth}{!}{%
+  \begin{tikzpicture}[
+    col/.style={basebox,minimum width=3.7cm,minimum height=2.0cm,text width=3.2cm},
+    arr/.style={softarrow}
+  ]
+    \node[col,draw=navy!60,fill=navy!4] (arch) {\bfseries Architecture\\[0.15cm]\small Vernier multiphase, capture asynchrone, contextes};
+    \node[col,right=0.65cm of arch] (proof) {\bfseries Observables\\[0.15cm]\small trame compacte, vérification protocolaire, LUT externe};
+    \node[col,draw=amber!70,fill=amberSoft,right=0.65cm of proof] (limit) {\bfseries Limite assumée\\[0.15cm]\small validation RTL/Xcelium pré-silicium, pas post-layout ni silicium};
+    \draw[arr] (arch) -- (proof);
+    \draw[arr] (proof) -- (limit);
+  \end{tikzpicture}}
+  \end{center}
+
+  \takeaway{La contribution défendable est un contrat numérique pré-silicium solide, pas une performance physique finale.}
+  \note{Objectif : fixer la thèse et la frontière scientifique. À dire : le travail porte sur une chaîne de mesure observable, pas sur un timestamp final magique. Transition : situer rapidement le contexte d'instrumentation qui motive ce besoin.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Le cadre est une chaîne d'instrumentation}
+  {\color{muted}\small CNRS / IN2P3 / IP2I : détecteurs, acquisition et microélectronique sont pensés ensemble.\par}\vspace{0.16cm}
+
   \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.58\textwidth}
-      \begin{tikzpicture}[scale=0.95,transform shape,
-        inst/.style={deckBox,minimum width=5.35cm,text width=4.95cm,minimum height=0.78cm,font=\scriptsize\bfseries},
-        arr/.style={-{Latex[length=2mm]},thick,spadLine}
+    \begin{column}{0.55\textwidth}
+      \begin{tikzpicture}[
+        unit/.style={basebox,minimum width=5.85cm,minimum height=0.56cm,text width=5.28cm}
       ]
-        \node[inst,deckFill={spadGray}] (cnrs) {CNRS\\[-1pt]{\normalfont\scriptsize organisme national de recherche}};
-        \node[inst,deckFill={spadGray},below=0.18cm of cnrs] (in2p3) {IN2P3\\physique subatomique et instrumentation};
-        \node[inst,deckFill={spadBlue},below=0.18cm of in2p3] (ip2i) {IP2I Lyon\\détecteurs, acquisition, microélectronique};
-        \node[inst,deckFill={spadGreen},below=0.18cm of ip2i] (team) {Équipe microélectronique\\ASIC analogiques, mixtes et numériques};
-        \node[inst,deckFill={spadBlue},below=0.18cm of team] (proj) {Projet SPADMIC\\lecture intégrée d'une matrice SPAD};
-        \draw[arr] (cnrs) -- (in2p3);
-        \draw[arr] (in2p3) -- (ip2i);
-        \draw[arr] (ip2i) -- (team);
-        \draw[arr] (team) -- (proj);
+        \node[unit,draw=navy!50] (cnrs) {CNRS : recherche et instrumentation};
+        \node[unit,below=0.10cm of cnrs] (in2p3) {IN2P3 : physique subatomique, détecteurs};
+        \node[unit,below=0.10cm of in2p3] (ip2i) {IP2I Lyon : instrumentation et acquisition};
+        \node[unit,below=0.10cm of ip2i] (micro) {Équipe microélectronique : ASIC de lecture};
+        \node[unit,draw=navy!60,fill=navy!4,below=0.10cm of micro] (spadmic) {SPADMIC : prototype de lecture SPAD};
+        \draw[softarrow] (cnrs) -- (in2p3);
+        \draw[softarrow] (in2p3) -- (ip2i);
+        \draw[softarrow] (ip2i) -- (micro);
+        \draw[softarrow] (micro) -- (spadmic);
       \end{tikzpicture}
     \end{column}
     \begin{column}{0.38\textwidth}
-      \begin{center}
-        \includegraphics[height=1.0cm]{cpe.png}\hspace{0.8cm}
-        \includegraphics[height=0.9cm]{ip2i.png}\\[0.55cm]
-        \sectionPill{spadBlue}{message}\\[0.15cm]
-      \end{center}
+      \vspace{0.2cm}
       \begin{itemize}
-        \item L'électronique sert une mesure scientifique.
-        \item Le bloc étudié doit rester intégrable dans un système complet.
-        \item Les choix RTL sont liés aux contraintes d'instrumentation.
+        \item Besoin expérimental : transformer des événements en données.
+        \item Contraintes fortes : intégration, bruit, débit, calibration.
+        \item L'électronique conditionne directement la mesure exploitable.
       \end{itemize}
     \end{column}
   \end{columns}
 
-  \note{Présenter sobrement le cadre : CNRS, IN2P3, IP2I et équipe microélectronique. Le message est que le sujet n'est pas un exercice académique isolé, mais un travail d'instrumentation scientifique où détecteur, ASIC et acquisition doivent être pensés ensemble.}
+  \takeaway{L'électronique conditionne directement la mesure exploitable.}
+  \note{Objectif : installer le contexte sans y passer trop longtemps. À dire : l'institutionnel sert à comprendre pourquoi l'acquisition et l'ASIC font partie de l'instrument. Transition : descendre vers l'objet physique lu par SPADMIC, la matrice SPAD.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{Une matrice SPAD produit des événements brefs qu'il faut exploiter}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.48\textwidth}
-      \begin{itemize}
-        \item Une impulsion SPAD est brève et asynchrone.
-        \item Le système doit détecter, dater, organiser et transmettre.
-        \item Le temps d'arrivée devient une information de reconstruction.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.50\textwidth}
-      \begin{tikzpicture}[
-        box/.style={deckBox,minimum width=1.85cm,minimum height=0.9cm,text width=1.65cm,font=\scriptsize\bfseries},
-        arr/.style={-{Latex[length=2mm]},thick,spadLine}
-      ]
-        \node[box,deckFill={spadGray}] (photon) {Photon\\SPAD};
-        \node[box,deckFill={spadBlue},right=0.25cm of photon] (pulse) {Impulsion\\asynchrone};
-        \node[box,deckFill={spadBlue},right=0.25cm of pulse] (time) {Mesure\\temporelle};
-        \node[box,deckFill={spadGreen},below=0.48cm of time] (data) {Donnée\\numérique};
-        \draw[arr] (photon) -- (pulse);
-        \draw[arr] (pulse) -- (time);
-        \draw[arr] (time) -- (data);
-      \end{tikzpicture}
-    \end{column}
-  \end{columns}
+  \frametitle{Matrice SPAD : événements brefs}
+  \lead{Événement local, impulsion asynchrone, information temporelle à préserver.}
 
-  \vspace{0.25cm}
-  \begin{block}{Idée centrale}
-    Le TDC rend l'information temporelle exploitable par la chaîne numérique et par l'hôte.
-  \end{block}
-
-  \note{Vulgariser le rôle du temps : un événement SPAD n'est pas seulement une détection spatiale. Il faut aussi connaître quand il arrive. Cette information temporelle doit ensuite être transformée en donnée numérique pour être transmise et corrigée.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{SPADMIC combine lecture spatiale et lecture temporelle}
   \begin{center}
-    \includegraphics[width=0.98\textwidth,height=0.78\textheight,keepaspectratio]{spadmic_mind_model.png}
-
-    \vspace{-0.02cm}
-    \sectionPill{spadBlue}{matrice SPAD} \hspace{0.35cm}
-    \sectionPill{spadBlue}{trois voies MPTDC} \hspace{0.35cm}
-    \sectionPill{spadGreen}{position et calibration} \hspace{0.35cm}
-    \sectionPill{spadGray}{sortie partagée}
+    \includegraphics[width=0.96\textwidth,height=0.72\textheight,keepaspectratio]{tdc_measurement_chain.pdf}
   \end{center}
 
-  \note{Utiliser cette vue pour situer le travail : le MPTDC est le cœur temporel, mais il est intégré dans une chaîne plus large avec position, arbitrage, FIFO et hôte. Insister sur le fait que les chemins temporel et spatial sont parallèles.}
+  \takeaway{La valeur scientifique vient de la combinaison position + temps, pas d'un bit de hit isolé.}
+  \note{Objectif : rendre concret le besoin temporel. À dire : un SPAD ne livre pas seulement une position, il produit un événement bref et asynchrone dont le temps d'arrivée doit être préservé. Transition : montrer où cette mesure temporelle se place dans SPADMIC.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{Le défi est de rendre une mesure fine intégrable et exploitable}
+  \frametitle{SPADMIC : lecture spatiale et temporelle}
+  \lead{Trois axes temporels, calcul de position, arbitrage et flux TX partagé.}
+
+  \begin{center}
+    \includegraphics[width=0.99\textwidth,height=0.73\textheight,keepaspectratio]{mptdc_overview.pdf}
+  \end{center}
+
+  \takeaway{Le cœur temporel doit produire des données compactes et calibrables, compatibles avec le reste de l'ASIC.}
+  \note{Objectif : montrer que les trois MPTDC ne sont pas un détail isolé. À dire : SPADMIC combine projections spatiales, voies temporelles et une sortie numérique partagée. Transition : passer des besoins système aux compromis propres au TDC.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\section[Mesure]{Problème de mesure}
+
+\begin{frame}
+  \frametitle{TDC : un compromis système}
+  \lead{Un TDC utile pour SPADMIC doit tenir simultanément plusieurs contraintes d'architecture.}
+
   \begin{center}
   \begin{tikzpicture}[
-    card/.style={deckBox,minimum width=3.45cm,minimum height=1.55cm,text width=3.1cm},
-    arr/.style={-{Latex[length=2mm]},thick,spadLine}
+    c/.style={basebox,minimum width=2.95cm,minimum height=0.92cm},
+    hub/.style={accentbox,minimum width=2.45cm,minimum height=1.05cm}
   ]
-    \node[card,deckFill={spadBlue}] (prec) {Précision\\événements rapides\\et asynchrones};
-    \node[card,deckFill={spadGray},right=0.75cm of prec] (asic) {Intégration ASIC\\surface, routage, domaines};
-    \node[card,deckFill={spadGreen},right=0.75cm of asic] (data) {Exploitabilité\\données calibrables\\et vérifiables};
-    \node[deckBox,deckFill={spadBlue},minimum width=3.0cm,below=1.0cm of asic] (mptdc) {MPTDC};
-    \draw[arr] (prec) -- (mptdc);
-    \draw[arr] (asic) -- (mptdc);
-    \draw[arr] (data) -- (mptdc);
+    \node[hub] (m) {MPTDC\\intégrable};
+    \node[c,above=0.78cm of m] (res) {Résolution\\fine};
+    \node[c,below=0.78cm of m] (obs) {Observabilité\\pour LUT};
+    \node[c,left=1.22cm of m] (range) {Plage\\et réarmement};
+    \node[c,right=1.22cm of m] (asic) {Surface\\puissance\\lecture};
+    \node[c,below right=0.64cm and 1.0cm of m] (cdc) {CDC\\et contrôle};
+    \foreach \x in {res,obs,range,asic,cdc}
+      \draw[softarrow] (m) -- (\x);
   \end{tikzpicture}
   \end{center}
 
-  \note{Présenter les trois contraintes. Le sujet n'est pas seulement de faire un TDC très fin ; il faut un bloc qui soit intégrable dans un ASIC, qui respecte les domaines temporels, et qui produise des données suffisamment riches pour être vérifiées et calibrées.}
+  \takeaway{La résolution nominale n'a de sens que si la mesure peut être lue, vérifiée et corrigée.}
+  \note{Objectif : casser l'idée d'un TDC évalué uniquement par sa résolution. À dire : la mesure utile combine finesse, plage, débit, observabilité et intégration ASIC. Transition : définir les métriques qui structurent la suite.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{Un TDC convertit un intervalle START--STOP en code numérique}
+  \frametitle{Métriques au-delà de la résolution}
+  \lead{Une soutenance solide doit séparer finesse, plage, linéarité, dispersion et débit.}
+
+  \begin{center}
+  \renewcommand{\arraystretch}{1.22}
+  \begin{tabularx}{0.91\textwidth}{@{}>{\bfseries}lXl@{}}
+    \toprule
+    Métrique & Rôle & Support dans le récit\\
+    \midrule
+    Résolution & pas temporel visé & Vernier / multiphase\\
+    Plage & fenêtre codable & compteurs grossiers\\
+    Linéarité & grille non uniforme & DNL / INL, LUT\\
+    RMS & dispersion résiduelle & RMSE, P99\\
+    Temps mort & capacité à repartir & contextes, clear, débit\\
+    Observabilité & correction possible & trame, clé LUT\\
+    \bottomrule
+  \end{tabularx}
+  \end{center}
+
+  \takeaway{Le support doit défendre un système de mesure, pas une formule isolée.}
+  \note{Objectif : donner au jury les critères de lecture des résultats. À dire : la résolution ne suffit pas si la plage, la linéarité, le RMS, le temps mort ou l'observabilité échouent. Transition : expliquer pourquoi \texttt{clk\_sys} ne peut pas porter cette finesse.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{\texttt{clk\_sys} ne suffit pas}
+  \lead{\texttt{clk\_sys} pilote la lecture ; elle ne doit pas définir le pas temporel fin.}
+
+  \begin{center}
+    \includegraphics[width=0.96\textwidth,height=0.72\textheight,keepaspectratio]{timing_diagram_conversion.pdf}
+  \end{center}
+
+  \takeaway{La mesure doit démarrer avant la reprise système par \texttt{clk\_sys}.}
+  \note{Objectif : justifier l'asynchrone avant d'entrer dans le Vernier. À dire : \texttt{clk\_sys} reste utile pour piloter et lire, mais elle injecterait sa quantification si elle lançait la mesure fine. Transition : introduire le Vernier comme moyen de créer une finesse temporelle locale.}
+\end{frame}
+
+\section[Vernier]{Choix Vernier multiphase}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Le Vernier exploite deux délais proches}
+  \lead{Deux lignes de délais proches : rattrapage progressif et pas différentiel.}
+
+  \begin{center}
+    \includegraphics[width=0.92\textwidth,height=0.64\textheight,keepaspectratio]{vernier_timing_principle.pdf}
+  \end{center}
+  \vspace{-0.05cm}
+  \centering
+  \smalltag{navy}{lent 55 ps}\hspace{0.35cm}
+  \smalltag{navy}{rapide 50 ps}\hspace{0.35cm}
+  \smalltag{amber}{$\Delta \approx 5$ ps}
+
+  \takeaway{Le Vernier transforme une petite différence physique en information temporelle fine.}
+  \note{Objectif : expliquer le principe sans l'enterrer sous les équations. À dire : deux délais proches, ici 55 ps et 50 ps, créent une différence exploitable de l'ordre de 5 ps. Transition : montrer pourquoi l'observation multiphase enrichit ce principe.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Le multiphase enrichit l'observation}
+  \lead{Observation parallèle de plusieurs couples de phases pendant une conversion.}
+
+  \begin{center}
+    \includegraphics[width=0.96\textwidth,height=0.68\textheight,keepaspectratio]{vernier_multiphase_timing.pdf}
+  \end{center}
+
+  \vspace{-0.20cm}
+  \begin{center}
+    \smalltag{navy}{observation multiphase}\hspace{0.35cm}
+    \smalltag{amber}{non-uniformité à calibrer}\hspace{0.35cm}
+    \smalltag{navy}{différent du moyennage post-LUT}
+  \end{center}
+
+  \takeaway{Le multiphase enrichit l'observation ; la LUT convertit ensuite en temps corrigé.}
+  \note{Objectif : séparer clairement observation multiphase et moyennage. À dire : plusieurs couples de phases sont observés pendant une conversion, mais cela ne garantit pas une règle uniforme. Transition : il faut maintenant transformer ce principe en bloc actif intégré à SPADMIC.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\section[Arch. MPTDC]{Architecture MPTDC}
+
+\begin{frame}
+  \frametitle{Du principe Vernier au bloc actif}
+  \lead{Du principe Vernier à une architecture exploitable : oscillateurs, matrice, compteurs et mémoire.}
+
+  \begin{center}
+    \includegraphics[width=0.96\textwidth,height=0.71\textheight,keepaspectratio]{vernier_reference_architecture.pdf}
+  \end{center}
+
+  \takeaway{Le travail d'architecture est la transformation du principe en bloc intégrable et lisible par le système.}
+  \note{Objectif : faire la bascule du principe physique vers le composant numérique. À dire : SPADMIC impose capture, snapshot, contextes, paquets et contrôle, qui ne sont pas dans le schéma Vernier de base. Transition : détailler la séparation mesure locale / lecture système.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{MPTDC : mesure locale, lecture système}
+  \lead{Domaine de mesure Vernier d'un côté, domaine \texttt{clk\_sys} de l'autre.}
+
+  \begin{center}
+    \includegraphics[width=0.99\textwidth,height=0.73\textheight,keepaspectratio]{mptdc_block_diagram.pdf}
+  \end{center}
+
+  \takeaway{La séparation des domaines protège la finesse de mesure et organise la lecture.}
+  \note{Objectif : montrer le choix d'ingénierie central du MPTDC. À dire : START/STOP lancent une mesure locale, puis \texttt{clk\_sys} récupère une image figée, contextualisée et sérialisée. Transition : zoomer sur la capture asynchrone.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{START/STOP avant \texttt{clk\_sys}}
+  \lead{Pas d'horloge système sur le chemin de lancement START/STOP.}
+
+  \begin{center}
+    \includegraphics[width=0.96\textwidth,height=0.72\textheight,keepaspectratio]{async_capture_timing.pdf}
+  \end{center}
+
+  \takeaway{La capture asynchrone est un choix de mesure, pas une complication gratuite.}
+  \note{Objectif : défendre la capture asynchrone. À dire : si START/STOP étaient d'abord repris par \texttt{clk\_sys}, l'horloge système entrerait dans l'erreur de mesure. Transition : revenir aux observables de matrice qui devront être calibrées.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Matrice : observables non uniformes}
+  \lead{La matrice $8\times8$ fournit une grille structurée, pas un code uniforme idéal.}
+
+  \begin{center}
+    \includegraphics[width=0.88\textwidth,height=0.68\textheight,keepaspectratio]{fine_grid_coverage.pdf}
+  \end{center}
+  \centering
+  \smalltag{amber}{codes absents}\hspace{0.35cm}
+  \smalltag{navy}{densité variable}\hspace{0.35cm}
+  \smalltag{navy}{correction LUT externe}
+
+  \takeaway{Le timestamp brut n'est pas le produit final : les observables exportées sont la matière de la calibration.}
+  \note{Objectif : préparer la calibration sans la présenter comme une rustine. À dire : les codes absents et la densité variable sont attendus ; le système exporte donc des observables plutôt qu'un timestamp final supposé uniforme. Transition : expliquer comment le protocole protège ces observables.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Snapshot avant clear}
+  \lead{Snapshot, contexte, puis clear : l'image utile est protégée avant nettoyage.}
+
+  \begin{center}
+    \includegraphics[width=0.98\textwidth,height=0.72\textheight,keepaspectratio]{reset_clear_sequence.pdf}
+  \end{center}
+
+  \takeaway{Le clear n'est acceptable qu'après protection de l'information utile.}
+  \note{Objectif : rendre mémorable la séquence snapshot, contexte, clear. À dire : on fige l'image, on l'écrit dans un contexte, puis seulement on nettoie ; le détail reset vs clear reste disponible en backup. Transition : montrer pourquoi deux contextes réduisent le temps mort.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Deux contextes réduisent le temps mort}
+  \lead{Deux contextes permettent de lire une image pendant que la suivante se prépare.}
+
+  \begin{center}
+    \includegraphics[width=0.98\textwidth,height=0.70\textheight,keepaspectratio]{context_pipeline.pdf}
+  \end{center}
+
+  \takeaway{Le double contexte réduit le temps mort lié à la lecture, mais reste une ressource bornée.}
+  \note{Objectif : montrer le recouvrement capture / lecture. À dire : les contextes stockent des images de mesure, ils ne dupliquent pas la matrice Vernier. Transition : présenter la trame qui transporte ces observables hors du bloc.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Trame 16 bit : observables}
+  \lead{Format compact : META, HIT words, EOC, compteurs, phases et statuts.}
+
+  \begin{center}
+    \includegraphics[width=0.96\textwidth,height=0.66\textheight,keepaspectratio]{packet_format_v27.pdf}
+  \end{center}
+  \vspace{-0.04cm}
+  \centering
+  \smalltag{navy}{16 bit}\hspace{0.35cm}
+  \smalltag{navy}{$2N_{\mathrm{det}}+2$ mots}\hspace{0.35cm}
+  \smalltag{navy}{$N_{\mathrm{det}}\leq15$}
+
+  \takeaway{La compacité de sortie et la richesse d'observation sont deux contraintes simultanées.}
+  \note{Objectif : expliquer le choix d'une sortie compacte. À dire : la trame 16 bit transporte les informations nécessaires à la LUT, pas seulement un temps final. Transition : justifier la calibration externe côté hôte.}
+\end{frame}
+
+\section[Validation]{Validation et calibration}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Calibration externe architecturale}
+  \lead{Le silicium exporte une trame compacte ; la correction reste côté hôte.}
+
+  \begin{center}
+    \includegraphics[width=0.98\textwidth,height=0.66\textheight,keepaspectratio]{calibration_export_flow.pdf}
+  \end{center}
+
+  \takeaway{La LUT n'est pas une rustine : elle fait partie du contrat d'observabilité.}
+  \note{Objectif : défendre la LUT comme décision architecturale. À dire : l'ASIC reste compact et exporte les observables ; la correction peut être construite et vérifiée côté hôte. Transition : expliquer comment le RTL a été vérifié autour de ce contrat.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Vérification des risques protocole}
+  \lead{La preuve utile porte sur les comportements qui peuvent casser une mesure : ordre, paquets, timeouts, rétropression.}
+
+  \begin{center}
+  \begin{tikzpicture}[
+    chain/.style={basebox,minimum width=2.15cm,minimum height=0.74cm},
+    risk/.style={tinybox,minimum width=2.20cm,minimum height=0.62cm},
+    core/.style={accentbox,minimum width=2.20cm,minimum height=0.74cm}
+  ]
+    \node[chain,draw=navy!55,fill=navy!4] (scen) {Scénarios};
+    \node[chain,right=0.35cm of scen] (drv) {Driver};
+    \node[chain,right=0.35cm of drv,draw=navy!55,fill=navy!4] (dut) {DUT MPTDC};
+    \node[chain,right=0.35cm of dut] (mon) {Monitor};
+    \node[chain,right=0.35cm of mon,draw=navy!55,fill=navy!4] (score) {Scoreboard};
+    \draw[arrow] (scen) -- (drv);
+    \draw[arrow] (drv) -- (dut);
+    \draw[softarrow] (dut) -- (mon);
+    \draw[softarrow] (mon) -- (score);
+
+    \node[core,below=0.70cm of dut] (m) {Modèle de référence};
+    \draw[softarrow] (m) -- (score);
+    \node[risk,below=0.35cm of scen] (pkt) {paquets};
+    \node[risk,below=0.35cm of drv] (wdt) {watchdogs};
+    \node[risk,below=0.35cm of mon] (bp) {rétropression};
+    \node[risk,below=0.35cm of score] (rst) {reset / clear};
+  \end{tikzpicture}
+  \end{center}
+
+  \takeaway{La vérification démontre un contrat numérique et protocolaire.}
+  \note{Objectif : montrer la méthode de vérification sans prétendre au signoff complet. À dire : les scénarios ciblent les risques de protocole, puis monitors et scoreboard comparent les paquets attendus au modèle. Transition : clarifier précisément ce que cette vérification ne prouve pas.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{RTL $\neq$ signoff physique}
+  \lead{Il faut dire exactement ce qui est validé, et ce qui reste hors preuve RTL.}
+
   \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.56\textwidth}
+    \begin{column}{0.48\textwidth}
       \begin{tikzpicture}[
-        x=1cm,y=1cm,
-        arr/.style={-{Latex[length=2mm]},thick,spadLine}
+        item/.style={basebox,minimum width=5.0cm,minimum height=0.72cm,text width=4.55cm,align=left}
       ]
-        \draw[->,spadGray] (0,0) -- (6.7,0) node[right,font=\scriptsize]{temps};
-        \draw[thick,spadBlue] (0.8,0) -- (0.8,1.0);
-        \draw[thick,spadGreen] (4.8,0) -- (4.8,1.0);
-        \node[above,font=\small\bfseries,text=spadBlueDark] at (0.8,1.0) {START};
-        \node[above,font=\small\bfseries,text=spadGreen!70!black] at (4.8,1.0) {STOP};
-        \draw[<->,thick,spadOrange] (0.8,0.45) -- node[above,font=\small] {$\Delta t$} (4.8,0.45);
-        \node[deckBox,deckFill={spadBlue},minimum width=2.0cm] (tdc) at (3.0,-1.25) {TDC};
-        \node[deckBox,deckFill={spadGreen},minimum width=2.6cm,right=0.7cm of tdc] (code) {code\\numérique};
-        \draw[arr] (tdc) -- (code);
+        \node[item,draw=navy!55,fill=navy!4] (a) {\bfseries Ce que cela soutient};
+        \node[item,below=0.14cm of a] (b) {Ordre snapshot / contexte / clear};
+        \node[item,below=0.14cm of b] (c) {Cohérence des paquets};
+        \node[item,below=0.14cm of c] (d) {Scénarios de contrôle et erreurs};
       \end{tikzpicture}
     \end{column}
-    \begin{column}{0.40\textwidth}
-      \begin{itemize}
-        \item Résolution.
-        \item Plage dynamique.
-        \item Linéarité.
-        \item Bruit RMS.
-        \item Temps mort.
-      \end{itemize}
+    \begin{column}{0.48\textwidth}
+      \begin{tikzpicture}[
+        item/.style={basebox,minimum width=5.0cm,minimum height=0.72cm,text width=4.55cm,align=left}
+      ]
+        \node[item,draw=amber!65,fill=amberSoft] (a) {\bfseries Ce que cela ne prouve pas};
+        \node[item,below=0.14cm of a] (b) {Métastabilité impossible};
+        \node[item,below=0.14cm of b] (c) {Setup / hold / skew clos};
+        \node[item,below=0.14cm of c] (d) {Jitter et PVT silicium};
+      \end{tikzpicture}
     \end{column}
   \end{columns}
 
-  \note{Définir le TDC simplement avant Vernier : il convertit un intervalle de temps entre START et STOP en code numérique. Les métriques utiles ne sont pas seulement la résolution, mais aussi la plage, la linéarité, le bruit et la capacité à se réarmer.}
+  \takeaway{La précision du vocabulaire protège la crédibilité scientifique.}
+  \note{Objectif : protéger la portée scientifique du résultat. À dire : le RTL soutient un contrat fonctionnel, mais il ne ferme ni métastabilité physique, ni setup/hold, ni jitter réel. Transition : présenter les résultats de calibration en gardant cette frontière.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{Le Vernier exploite la différence entre deux délais proches}
+  \frametitle{La mesure brute est fortement biaisée}
+  \lead{Avant LUT : structure systématique et biais d'environ $-1{,}9$ ns.}
+
+  \begin{center}
+    \includegraphics[width=0.94\textwidth,height=0.71\textheight,keepaspectratio]{01_erreur_histogramme_pre_post_lut.png}
+  \end{center}
+  \centering
+  \smalltag{amber}{avant LUT : biais $\approx -1{,}9$ ns}\hspace{0.45cm}
+  \smalltag{navy}{après LUT : centrage proche de zéro}
+
+  \takeaway{La calibration corrige une structure systématique, elle ne masque pas une absence d'information.}
+  \note{Objectif : corriger l'ambiguïté entre avant et après LUT. À dire : le biais d'environ -1,9 ns appartient à la mesure brute, avant correction ; après LUT, le centrage revient près de zéro. Transition : donner les chiffres de validation RTL/Xcelium.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Après LUT : RMSE = 18,56 ps}
+  \lead{Résultat pré-silicium, calculé sur validation tenue hors apprentissage.}
+
   \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.64\textwidth}
-      \includegraphics[width=\linewidth,height=0.74\textheight,keepaspectratio]{vernier_timing_principle.pdf}
+    \begin{column}{0.58\textwidth}
+      \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{char_calibration_prepost_summary_report.pdf}
     \end{column}
-    \begin{column}{0.32\textwidth}
-      \begin{itemize}
-        \item Oscillateur lent.
-        \item Oscillateur rapide.
-        \item Rattrapage progressif.
-      \end{itemize}
-      \vspace{0.35cm}
-      \begin{center}
-        {\Large\bfseries\color{spadBlueDark}$T_{\mathrm{LSB}}=T_{\mathrm{slow}}-T_{\mathrm{fast}}$}
-      \end{center}
+    \begin{column}{0.38\textwidth}
+      \metric{$\approx$1,94 ns}{RMSE brute}{amber}\\[0.12cm]
+      \metric{18,56 ps}{RMSE après LUT}{navy}\\[0.12cm]
+      \metric{38,99 ps}{P99 erreur absolue}{navy}
     \end{column}
   \end{columns}
 
-  \note{Revenir à la figure professionnelle du rapport. Expliquer que la résolution n'est pas directement donnée par une période absolue, mais par la différence entre deux délais proches. Garder le discours simple et éviter de détailler toutes les équations.}
+  \vspace{-0.02cm}
+  \begin{center}
+    \smalltag{amber}{RTL/Xcelium -- validation hors apprentissage -- pré-silicium}
+  \end{center}
+
+  \takeaway{Ce chiffre valide le flux d'observables et de correction ; il reste une validation RTL/Xcelium pré-silicium.}
+  \note{Objectif : citer le résultat principal avec exactitude. À dire : RMSE brute environ 1,94 ns, RMSE après LUT 18,56 ps, P99 absolu 38,99 ps, sur validation hors apprentissage. Transition : présenter le moyennage comme gain statistique séparé.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{Le multiphase densifie l'observation pendant une conversion}
+  \frametitle{Moyennage post-LUT : gain statistique}
+  \lead{Analyse statistique après correction LUT, pas performance par événement unique.}
+
   \begin{columns}[T,totalwidth=\textwidth]
     \begin{column}{0.62\textwidth}
-      \includegraphics[width=\linewidth,height=0.74\textheight,keepaspectratio]{vernier_multiphase_timing.pdf}
+      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{03_rmse_vs_moyennage_limited.png}
     \end{column}
     \begin{column}{0.34\textwidth}
       \begin{itemize}
-        \item Plusieurs phases observées en parallèle.
-        \item Plus de couples lent/rapide testés.
-        \item Temps de décision réduit.
-        \item Jitter accumulé limité.
+        \item $N=1 \rightarrow 18{,}82$ ps.
+        \item $N=4 \rightarrow 9{,}28$ ps.
+        \item $N=15 \rightarrow 4{,}77$ ps.
       \end{itemize}
-      \vspace{0.15cm}
-      \sectionPill{spadOrange}{à ne pas confondre}\\[0.1cm]
-      {\small Gain multiphase pendant une conversion, moyennage après calibration.}
+      \vspace{0.25cm}
+      \smalltag{amber}{prudence : pas par événement unique}
     \end{column}
   \end{columns}
 
-  \note{Expliquer pourquoi on ne s'arrête pas au Vernier simple. Le multiphase observe plusieurs phases en parallèle et peut réduire le temps nécessaire pour obtenir une décision. Ce gain architectural est distinct du moyennage statistique présenté plus tard.}
+  \takeaway{Le gain par moyennage est utile, mais doit rester présenté avec son domaine de validité.}
+  \note{Objectif : éviter de survendre le moyennage. À dire : N=4 donne 9,28 ps et N=15 donne 4,77 ps dans l'analyse post-LUT, mais ce n'est pas une performance mono-événement. Transition : revenir aux limites physiques qui restent décisives.}
 \end{frame}
+
+\section[Limites]{Limites et perspectives}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{L'architecture de référence associe oscillateurs, matrice et compteurs}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.70\textwidth}
-      \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{vernier_reference_architecture.pdf}
-    \end{column}
-    \begin{column}{0.27\textwidth}
-      \begin{itemize}
-        \item Oscillateurs lent/rapide.
-        \item Matrice de détection.
-        \item Compteurs grossiers.
-        \item Mémoire d'échantillonnage.
-      \end{itemize}
-    \end{column}
-  \end{columns}
+  \frametitle{La performance finale reste physique}
+  \lead{Le prochain verrou n'est plus seulement RTL : il est CDC, STA, layout, jitter et silicium.}
 
-  \note{Présenter cette figure comme le socle théorique issu de la référence. Les quatre briques à nommer sont les oscillateurs, la matrice de détection, les compteurs et la mémoire. Transition : SPADMIC impose ensuite de rendre cette idée intégrable dans un vrai bloc RTL.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{SPADMIC ajoute la capture, les contextes et une sortie compacte}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.70\textwidth}
-      \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{vernier_transition_map.pdf}
-    \end{column}
-    \begin{column}{0.27\textwidth}
-      \sectionPill{spadBlue}{conservé}\\[-0.1cm]
-      \begin{itemize}
-        \item Oscillateurs.
-        \item Matrice.
-        \item Compteurs.
-      \end{itemize}
-      \vspace{0.15cm}
-      \sectionPill{spadGreen}{ajouté}\\[-0.1cm]
-      \begin{itemize}
-        \item Capture.
-        \item Contextes.
-        \item FIFO / TX 16 bit.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \note{Cette slide montre que le passage au RTL n'est pas une simple copie de la thèse. On garde les principes Vernier, mais on ajoute ce qui est nécessaire à l'intégration ASIC : capture asynchrone, banque de contextes, contrôleur de lecture, FIFO et sortie compacte.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{Le MPTDC sépare la mesure rapide de la lecture système}
-  \begin{center}
-    \includegraphics[width=0.96\textwidth,height=0.72\textheight,keepaspectratio]{mptdc_block_diagram.pdf}
-  \end{center}
-  \vspace{-0.1cm}
-  \begin{center}
-    \sectionPill{spadBlue}{mesure locale} \hspace{0.4cm}
-    \sectionPill{spadGreen}{image figée} \hspace{0.4cm}
-    \sectionPill{spadGray}{lecture système}
-  \end{center}
-
-  \note{Utiliser la figure 8.1 du rapport comme vue fonctionnelle. Le message est la séparation entre la mesure rapide et les chemins asynchrones d'un côté, et le domaine système de lecture de l'autre. Ne pas détailler les noms RTL.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{START et STOP déclenchent la mesure avant le domaine système}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.70\textwidth}
-      \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{async_capture_timing.pdf}
-    \end{column}
-    \begin{column}{0.27\textwidth}
-      \begin{itemize}
-        \item START lance l'anneau lent.
-        \item STOP lance l'anneau rapide.
-        \item Pas d'échantillonnage initial par clk\_sys.
-        \item Nettoyage repris ensuite par le système.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \note{Expliquer que les verrous asynchrones sont un choix d'architecture. On évite d'ajouter l'incertitude de l'horloge système sur le lancement de la mesure. Le domaine système intervient ensuite pour nettoyer et réarmer.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{Le snapshot protège l'image avant le nettoyage et la lecture}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.70\textwidth}
-      \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{timing_diagram_conversion.pdf}
-    \end{column}
-    \begin{column}{0.27\textwidth}
-      \begin{itemize}
-        \item Attente.
-        \item Mesure active.
-        \item Snapshot.
-        \item Capture contexte.
-        \item Clear / réarmement.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \note{Présenter le protocole en cinq étapes. La matrice mémorise les croisements, la FSM système fige une image cohérente, écrit cette image dans un contexte, puis nettoie la logique. Le double contexte découple la protection de la conversion et la lecture complète du paquet.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{La correction temporelle est externalisée côté hôte}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.66\textwidth}
-      \includegraphics[width=\linewidth,height=0.76\textheight,keepaspectratio]{calibration_export_flow.pdf}
-    \end{column}
-    \begin{column}{0.31\textwidth}
-      \begin{itemize}
-        \item Trame compacte 16 bit.
-        \item Informations utiles à la calibration.
-        \item LUT appliquée hors ASIC.
-        \item Silicium plus simple.
-        \item Correction évolutive.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \note{Expliquer le choix système : l'ASIC n'exporte pas seulement un timestamp brut, mais une trame compacte avec les informations nécessaires à la correction. On évite de figer une correction lourde dans le silicium, et la calibration peut évoluer côté hôte.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{La vérification a été construite par couches}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.52\textwidth}
-      \begin{tikzpicture}[
-        layer/.style={deckBox,minimum height=0.78cm},
-        arr/.style={-{Latex[length=2mm]},thick,spadLine}
-      ]
-        \node[layer,deckFill={spadBlue},minimum width=6.0cm] (u) {Bancs unitaires};
-        \node[layer,deckFill={spadBlue},minimum width=5.3cm,above=0.14cm of u] (i) {Bancs d'intégration};
-        \node[layer,deckFill={spadGreen},minimum width=4.6cm,above=0.14cm of i] (s) {Scénarios dirigés et aléatoires};
-        \node[layer,deckFill={spadGreen},minimum width=3.9cm,above=0.14cm of s] (m) {Modèle de référence};
-        \node[layer,deckFill={spadOrange},minimum width=3.2cm,above=0.14cm of m] (c) {Cas limites};
-      \end{tikzpicture}
-    \end{column}
-    \begin{column}{0.45\textwidth}
-      \begin{itemize}
-        \item Comparaison attendu / observé.
-        \item Cohérence des paquets.
-        \item Resets et timeouts.
-        \item Rétropression.
-        \item Cas limites.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \note{Présenter une méthode, pas une liste de scripts. Le bloc n'a pas seulement été simulé une fois : il a été exercé par couches, avec un modèle de référence et des scénarios variés. Ne pas donner de noms de tests dans le corps principal.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{La LUT supprime le biais principal de la mesure brute}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.57\textwidth}
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{01_erreur_histogramme_pre_post_lut.png}
-    \end{column}
-    \begin{column}{0.40\textwidth}
-      \begin{center}
-        \metricBox{$\approx$1,94 ns}{RMSE avant LUT}{spadOrange}\\[0.18cm]
-        {\Large\bfseries\color{spadGray}$\rightarrow$}\\[-0.03cm]
-        \metricBox{18,56 ps}{RMSE après LUT}{spadGreen}\\[0.18cm]
-        \metricBox{38,99 ps}{P99 après LUT}{spadBlue}
-      \end{center}
-      \vspace{0.1cm}
-      \begin{tabular}{@{}lcc@{}}
-        \toprule
-        & Avant & Après\\
-        \midrule
-        Biais & fort & quasi nul\\
-        Dispersion & ns & ps\\
-        \bottomrule
-      \end{tabular}
-    \end{column}
-  \end{columns}
-
-  \note{Lire le résultat principal. Avant calibration, la mesure brute est fortement biaisée. Après LUT, la distribution est recentrée autour de zéro et fortement resserrée. Rappeler que ces résultats sont issus de simulation RTL/Xcelium, pas de mesures silicium.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{Le moyennage post-LUT donne un gain statistique réaliste}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.58\textwidth}
-      \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{03_rmse_vs_moyennage_limited.png}
-    \end{column}
-    \begin{column}{0.39\textwidth}
-      \begin{itemize}
-        \item Domaine affiché : $N\leq64$.
-        \item $<10$ ps autour de $N=4$.
-        \item $<5$ ps autour de $N=15$.
-        \item Tendance statistique, pas garantie par hit.
-        \item Résultat RTL/Xcelium.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \note{Rester prudent. Le moyennage est un gain statistique après correction sur plusieurs mesures. Il ne faut pas le vendre comme une performance déterministe d'un hit unique. Le domaine est volontairement limité à N inférieur ou égal à 64.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{Les résultats doivent encore être confrontés au physique}
   \begin{center}
   \begin{tikzpicture}[
-    flowStep/.style={deckBox,minimum width=2.0cm,minimum height=0.95cm},
-    arr/.style={-{Latex[length=2mm]},thick,spadLine}
+    s/.style={basebox,minimum width=2.0cm,minimum height=0.8cm},
+    w/.style={warnbox,minimum width=2.0cm,minimum height=0.8cm}
   ]
-    \node[flowStep,deckFill={spadBlue}] (rtl) {RTL};
-    \node[flowStep,deckFill={spadBlue},right=0.32cm of rtl] (syn) {Synthèse};
-    \node[flowStep,deckFill={spadOrange},right=0.32cm of syn] (sta) {STA};
-    \node[flowStep,deckFill={spadOrange},right=0.32cm of sta] (pnr) {PnR};
-    \node[flowStep,deckFill={spadGray},right=0.32cm of pnr] (post) {Post-layout};
-    \node[flowStep,deckFill={spadGray},right=0.32cm of post] (sil) {Silicium};
-    \draw[arr] (rtl) -- (syn);
-    \draw[arr] (syn) -- (sta);
-    \draw[arr] (sta) -- (pnr);
-    \draw[arr] (pnr) -- (post);
-    \draw[arr] (post) -- (sil);
-    \node[draw=spadOrange,rounded corners=3pt,fit=(syn)(sta)(pnr),inner sep=5pt,label={[font=\scriptsize,text=spadOrange]above:travail en cours}] {};
+    \node[s,draw=navy!55,fill=navy!4] (rtl) {RTL};
+    \node[s,right=0.28cm of rtl] (cdc) {CDC};
+    \node[s,right=0.28cm of cdc] (sta) {STA};
+    \node[s,right=0.28cm of sta] (pnr) {PnR};
+    \node[s,right=0.28cm of pnr] (post) {Post-layout};
+    \node[w,right=0.28cm of post] (sil) {Silicium};
+    \foreach \a/\b in {rtl/cdc,cdc/sta,sta/pnr,pnr/post,post/sil}
+      \draw[softarrow] (\a) -- (\b);
   \end{tikzpicture}
   \end{center}
-  \vspace{0.25cm}
+
   \begin{columns}[T,totalwidth=\textwidth]
     \begin{column}{0.48\textwidth}
       \begin{itemize}
-        \item Résultats pré-silicium.
-        \item Oscillateurs réels à consolider.
-        \item CDC et STA à finaliser.
+        \item Oscillateurs réels.
+        \item Setup / hold / skew.
+        \item Jitter et variations PVT.
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
       \begin{itemize}
-        \item Réduction des chemins critiques.
-        \item Setup/hold et skew.
-        \item Post-layout puis mesures silicium.
+        \item Revue CDC formelle.
+        \item Simulations post-layout.
+        \item Corrélation mesures silicium.
       \end{itemize}
     \end{column}
   \end{columns}
 
-  \note{Être clair : le bloc est cohérent côté conception numérique, mais il reste pré-silicium. Les prochaines étapes sont concrètes : synthèse, timing closure, correction setup/hold, maîtrise du skew, PnR, post-layout et mesures silicium.}
+  \takeaway{La conclusion honnête : le numérique est cohérent, la performance finale reste à démontrer physiquement.}
+  \note{Objectif : poser clairement la limite avant la conclusion. À dire : CDC, STA, PnR, extraction, jitter, PVT et silicium restent les étapes qui transformeront le contrat numérique en performance physique. Transition : résumer en trois messages.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{L'apport méthodologique est une boucle complète d'ingénierie ASIC}
+  \frametitle{Trois messages à retenir}
+  \lead{La conclusion doit être simple, défendable et honnête devant le jury.}
+
   \begin{center}
   \begin{tikzpicture}[
-    item/.style={deckBox,minimum width=2.45cm,minimum height=0.8cm},
-    arr/.style={-{Latex[length=2mm]},thick,spadLine}
+    msg/.style={basebox,minimum width=8.8cm,minimum height=0.95cm,text width=8.2cm,align=left}
   ]
-    \node[item,deckFill={spadGray}] (need) {Besoin système};
-    \node[item,deckFill={spadBlue},right=0.45cm of need] (arch) {Architecture};
-    \node[item,deckFill={spadBlue},right=0.45cm of arch] (rtl) {RTL};
-    \node[item,deckFill={spadGreen},below=0.65cm of rtl] (verif) {Vérification};
-    \node[item,deckFill={spadGreen},left=0.45cm of verif] (char) {Caractérisation};
-    \node[item,deckFill={spadOrange},left=0.45cm of char] (phys) {Timing / PnR};
-    \draw[arr] (need) -- (arch);
-    \draw[arr] (arch) -- (rtl);
-    \draw[arr] (rtl) -- (verif);
-    \draw[arr] (verif) -- (char);
-    \draw[arr] (char) -- (phys);
-    \draw[arr] (phys) -- (need);
+    \node[msg,draw=navy!55,fill=navy!4] (a) {\bfseries 1. Architecture : \normalfont Vernier multiphase rendu intégrable dans SPADMIC.};
+    \node[msg,below=0.25cm of a] (b) {\bfseries 2. Preuve numérique : \normalfont protocole vérifié et calibration efficace en RTL/Xcelium.};
+    \node[msg,draw=amber!65,fill=amberSoft,below=0.25cm of b] (c) {\bfseries 3. Limite : \normalfont performance physique à confirmer par post-layout et silicium.};
   \end{tikzpicture}
   \end{center}
-  \vspace{0.15cm}
-  \begin{itemize}
-    \item Relier architecture, micro-architecture et RTL vérifiable.
-    \item Construire tests, modèle de référence et caractérisation.
-    \item Anticiper timing, synthèse, PnR et cycles d'itération.
-  \end{itemize}
 
-  \note{Formuler cette partie de façon professionnelle. L'apport n'est pas seulement d'avoir écrit du RTL, mais d'avoir compris les boucles entre architecture, vérification, résultats de caractérisation et contraintes physiques.}
+  \takeaway{Le récit est ambitieux sur l'ingénierie numérique, prudent sur la performance physique.}
+  \note{Objectif : fermer sans ouvrir un nouveau sujet. À dire : architecture intégrable, preuve numérique pré-silicium, limite physique assumée. Transition : remercier et basculer vers les questions.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \slideTitle{Conclusion : trois messages à retenir}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.56\textwidth}
-      \begin{tikzpicture}[
-        msg/.style={deckBox,minimum width=6.5cm,minimum height=1.05cm,text width=6.1cm}
-      ]
-        \node[msg,deckFill={spadBlue}] (a) {Architecture\\MPTDC intégré et cohérent avec SPADMIC};
-        \node[msg,deckFill={spadGreen},below=0.28cm of a] (b) {Vérification et caractérisation\\contrat numérique validé, calibration efficace};
-        \node[msg,deckFill={spadOrange},below=0.28cm of b] (c) {Perspectives\\timing closure, PnR, post-layout et silicium};
-      \end{tikzpicture}
-    \end{column}
-    \begin{column}{0.40\textwidth}
-      \begin{center}
-        \metricBox{$8\times8$}{phases observées}{spadBlue}\\[0.18cm]
-        \metricBox{18,56 ps}{RMSE après LUT}{spadGreen}\\[0.18cm]
-        \metricBox{38,99 ps}{P99 après LUT}{spadBlue}
-      \end{center}
-    \end{column}
-  \end{columns}
-  \vspace{0.2cm}
-  {\small\itshape Le travail transforme un principe Vernier multiphase en un bloc RTL intégré, vérifié, caractérisé et prêt à être confronté aux contraintes physiques.}
+  \frametitle{Merci pour votre attention}
+  \lead{Questions}
 
-  \note{Conclure sur trois messages : l'architecture est cohérente, la vérification et la calibration donnent confiance dans le contrat numérique, et la prochaine étape est physique. Finir avec la phrase de synthèse proposée.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \slideTitle{Merci pour votre attention}
+  \vspace{0.4cm}
   \begin{center}
-    \vspace{0.1cm}
-    {\Huge\bfseries\color{spadBlueDark}Questions ?}\\[0.55cm]
-    \includegraphics[height=1.05cm]{cpe.png}\hspace{1.1cm}
-    \includegraphics[height=0.95cm]{ip2i.png}\hspace{1.1cm}
-    \cnrsBadge\\[0.65cm]
-    \begin{tabular}{ll}
+    {\Huge\bfseries\color{navy2}Questions ?}\\[0.65cm]
+    \begin{tabular}{@{}ll@{}}
+      Karim SABRA & CPE Lyon -- IP2I / CNRS\\
       Encadrant IP2I & Édouard Bechetoille\\
       Encadrant école & Abdelbassat Massouri\\
-      Équipe & Microélectronique IP2I\\
-      Jury & CPE Lyon
+      Sujet & SPADMIC / MPTDC
     \end{tabular}
   \end{center}
-
-  \note{Remercier les encadrants, l'équipe microélectronique IP2I, CPE Lyon et le jury. Ne pas rouvrir un sujet technique : passer directement aux questions.}
+  \note{Objectif : laisser une slide claire pour les échanges. À dire : remercier le jury, les encadrants et l'équipe. Transition : utiliser les backups selon la question posée.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 % Backup slides
 % ---------------------------------------------------------------------------
+\appendix
+\section{Backup}
 
 \begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Détail du principe Vernier}
+  \frametitle{Backup -- Détail du Vernier}
+  \lead{La résolution élémentaire vient de la différence entre deux délais proches.}
+  \begin{center}
+    \includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{vernier_timing_principle.pdf}
+  \end{center}
+  \takeaway{$T_{\mathrm{LSB}} = T_{\mathrm{slow}} - T_{\mathrm{fast}}$, avec prudence sur l'implémentation physique réelle.}
+  \note{Question traitée : revenir au rattrapage Vernier si le jury veut le détail physique. Réponse clé : le pas différentiel est conceptuel et doit être confronté aux délais réels post-layout.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- Multiphase versus moyennage}
+  \lead{Deux notions différentes : enrichir une conversion, puis moyenner plusieurs estimations corrigées.}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.54\textwidth}
+      \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{vernier_multiphase_timing.pdf}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{03_rmse_vs_moyennage_limited.png}
+    \end{column}
+  \end{columns}
+  \vspace{-0.16cm}
+  \begin{center}
+    \smalltag{navy}{multiphase : une conversion}\hspace{0.35cm}
+    \smalltag{amber}{moyennage : plusieurs mesures corrigées}
+  \end{center}
+  \takeaway{Le multiphase est architectural ; le moyennage est statistique.}
+  \note{Question traitée : éviter la confusion entre plusieurs phases dans une conversion et plusieurs mesures moyennées après LUT. Réponse clé : les deux mécanismes n'agissent pas au même endroit de la chaîne.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- Pourquoi trois axes MPTDC ?}
+  \lead{Les voies temporelles sont coordonnées avec la logique de lecture spatiale de SPADMIC.}
+  \begin{center}
+    \includegraphics[width=0.82\textwidth,height=0.50\textheight,keepaspectratio]{spadmic_mind_model.png}
+  \end{center}
+  \takeaway{Ce ne sont pas trois canaux indépendants abstraits : ils participent à la lecture tri-axis du prototype.}
+  \note{Question traitée : pourquoi trois voies temporelles. Réponse clé : elles suivent la logique de projections tri-axis de SPADMIC et partagent ensuite la chaîne de sortie.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- Paquet et clé LUT}
+  \lead{La correction hôte utilise des champs observables, pas seulement un code temporel brut.}
+  \begin{center}
+    \includegraphics[width=0.98\textwidth,height=0.63\textheight,keepaspectratio]{packet_format_v27.pdf}
+  \end{center}
+  \vspace{-0.10cm}
+  \begin{center}
+    \smalltag{navy}{$n_{\mathrm{fast}}/n_{\mathrm{slow}}$}\hspace{0.25cm}
+    \smalltag{navy}{indices de phase}\hspace{0.25cm}
+    \smalltag{navy}{hit / STOP}\hspace{0.25cm}
+    \smalltag{amber}{clé LUT hôte}
+  \end{center}
+  \takeaway{La trame est pensée pour rendre la calibration possible après acquisition.}
+  \note{Question traitée : quelles informations alimentent la LUT. Réponse clé : compteurs, phases, hit, statuts et métadonnées construisent une clé d'observables côté hôte.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- DNL/INL sur codes observés}
+  \lead{Ces chiffres ne décrivent pas toute la grille théorique, seulement les codes effectivement atteints.}
   \begin{columns}[T,totalwidth=\textwidth]
     \begin{column}{0.62\textwidth}
-      \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{vernier_timing_principle.pdf}
+      \includegraphics[width=\linewidth,height=0.60\textheight,keepaspectratio]{04_dnl_inl_observable.png}
     \end{column}
     \begin{column}{0.34\textwidth}
       \begin{itemize}
-        \item Deux délais proches.
-        \item Rattrapage progressif.
-        \item Code lié au nombre d'étapes.
-      \end{itemize}
-      \vspace{0.25cm}
-      {\Large\bfseries\color{spadBlueDark}$T_{\mathrm{LSB}}=T_{\mathrm{slow}}-T_{\mathrm{fast}}$}
-    \end{column}
-  \end{columns}
-  \note{Réponse : le Vernier permet une finesse temporelle issue d'une différence de délais plutôt que d'une période numérique absolue.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Pourquoi multiphase ?}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.62\textwidth}
-      \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{vernier_multiphase_timing.pdf}
-    \end{column}
-    \begin{column}{0.34\textwidth}
-      \begin{itemize}
-        \item Observation parallèle.
-        \item Décision plus rapide.
-        \item Jitter accumulé limité.
-        \item Différent du moyennage.
+        \item DNL pic : $0{,}987$ LSB.
+        \item INL extrémité : $1{,}553$ LSB.
+        \item Codes manquants explicitement reconnus.
       \end{itemize}
     \end{column}
   \end{columns}
-  \note{Réponse : le multiphase agit pendant une conversion unique, alors que le moyennage intervient après correction sur plusieurs mesures.}
+  \takeaway{La linéarité est défendue sur le domaine observé, pas comme propriété universelle de la matrice complète.}
+  \note{Question traitée : existence de codes manquants et validité DNL/INL. Réponse clé : les métriques sont sur les codes observés, pas sur une grille théorique supposée pleine.}
 \end{frame}
 
 \begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Pourquoi trois axes MPTDC ?}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.68\textwidth}
-      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{spadmic_mind_model.png}
-    \end{column}
-    \begin{column}{0.28\textwidth}
-      \begin{itemize}
-        \item Lecture tri-axis.
-        \item Trois projections géométriques.
-        \item Voies temporelles coordonnées.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-  \note{Réponse : les trois voies correspondent aux trois projections de l'événement dans SPADMIC ; ce ne sont pas seulement trois canaux indépendants.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Pourquoi calibration externe ?}
+  \frametitle{Backup -- Validation hors apprentissage}
+  \lead{La LUT est construite et évaluée sur des ensembles séparés.}
   \begin{center}
+    \includegraphics[width=0.94\textwidth,height=0.62\textheight,keepaspectratio]{calibration_flow.pdf}
+  \end{center}
+  \vspace{-0.10cm}
+  \begin{center}
+    \smalltag{navy}{split train}\hspace{0.35cm}
+    \smalltag{navy}{LUT figée}\hspace{0.35cm}
+    \smalltag{amber}{validation fresh}
+  \end{center}
+  \takeaway{Les 18,56 ps sont une métrique de validation RTL/Xcelium hors apprentissage.}
+  \note{Question traitée : risque d'apprentissage de la LUT. Réponse clé : la LUT est figée avant validation et la métrique est rapportée hors apprentissage.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- Rétropression et saturation}
+  \lead{Deux contextes réduisent le temps mort, mais ne rendent pas le débit infini.}
+  \begin{center}
+    \includegraphics[width=0.84\textwidth,height=0.68\textheight,keepaspectratio]{char_throughput_counters_report.pdf}
+  \end{center}
+  \vspace{-0.08cm}
+  \begin{center}
+    \smalltag{navy}{ready/valid}\hspace{0.35cm}
+    \smalltag{navy}{FIFO 64 mots}\hspace{0.35cm}
+    \smalltag{amber}{débit borné}
+  \end{center}
+  \takeaway{La saturation est une limite système à rendre visible, pas à cacher.}
+  \note{Question traitée : débit et blocage aval. Réponse clé : deux contextes aident, mais ready/valid et saturation restent à gérer comme limites système.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- Watchdogs et absence de STOP}
+  \lead{Les scénarios incomplets doivent aboutir à un état observable et récupérable.}
+  \begin{center}
+    \includegraphics[width=0.88\textwidth,height=0.66\textheight,keepaspectratio]{async_frontend_fsm.pdf}
+  \end{center}
+  \vspace{-0.08cm}
+  \begin{center}
+    \smalltag{navy}{START}\hspace{0.35cm}
+    \smalltag{amber}{timeout}\hspace{0.35cm}
+    \smalltag{navy}{CLEAR}
+  \end{center}
+  \takeaway{Un cas d'erreur maîtrisé est préférable à une conversion bloquée ou silencieuse.}
+  \note{Question traitée : que se passe-t-il si STOP n'arrive pas. Réponse clé : le watchdog doit conduire à un statut exporté et à une récupération contrôlée.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- CDC et compteurs Gray}
+  \lead{La stratégie réduit le risque de mots incohérents, mais n'est pas un signoff CDC formel.}
+  \begin{center}
+    \includegraphics[width=0.98\textwidth,height=0.66\textheight,keepaspectratio]{clock_domain_diagram.pdf}
+  \end{center}
+  \vspace{-0.08cm}
+  \begin{center}
+    \smalltag{navy}{compteurs Gray}\hspace{0.35cm}
+    \smalltag{navy}{snapshot stable}\hspace{0.35cm}
+    \smalltag{amber}{revue CDC à finaliser}
+  \end{center}
+  \takeaway{Au niveau RTL, on réduit et observe le risque ; au niveau physique, il faut le signer.}
+  \note{Question traitée : robustesse CDC et compteurs Gray. Réponse clé : le RTL réduit le risque de mots incohérents, mais une revue CDC formelle reste nécessaire.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- Roadmap de signoff physique}
+  \lead{La suite naturelle est une boucle de corrélation entre simulations physiques et mesures.}
+  \begin{center}
+  \resizebox{0.94\textwidth}{!}{%
   \begin{tikzpicture}[
-    box/.style={deckBox,minimum width=3.0cm,minimum height=1.05cm},
-    arr/.style={-{Latex[length=2mm]},thick,spadLine}
+    s/.style={basebox,minimum width=2.15cm,minimum height=0.82cm},
+    w/.style={warnbox,minimum width=2.15cm,minimum height=0.82cm}
   ]
-    \node[box,deckFill={spadBlue}] (asic) {ASIC\\acquisition};
-    \node[box,deckFill={spadGreen},right=0.8cm of asic] (host) {Hôte\\LUT évolutive};
-    \node[box,deckFill={spadOrange},below=0.7cm of asic] (cost) {Correction embarquée\\surface + rigidité};
-    \draw[arr] (asic) -- node[above,font=\scriptsize]{trame compacte} (host);
-  \end{tikzpicture}
+    \node[s,draw=navy!55,fill=navy!4] (rtl) {RTL};
+    \node[s,right=0.22cm of rtl] (syn) {Synthèse};
+    \node[s,right=0.22cm of syn] (sta) {STA / CDC};
+    \node[s,right=0.22cm of sta] (pnr) {PnR};
+    \node[s,right=0.22cm of pnr] (post) {Post-layout};
+    \node[w,right=0.22cm of post] (sil) {Silicium};
+    \foreach \a/\b in {rtl/syn,syn/sta,sta/pnr,pnr/post,post/sil}
+      \draw[softarrow] (\a) -- (\b);
+  \end{tikzpicture}%
+  }
   \end{center}
-  \begin{itemize}
-    \item La LUT embarquée figerait la correction dans le silicium.
-    \item La correction hôte garde une marge d'évolution après caractérisation.
-  \end{itemize}
-  \note{Réponse : la correction externe simplifie le silicium et permet d'adapter la LUT après caractérisation ou mesures.}
+  \takeaway{Le support doit finir sur cette feuille de route, pas sur une promesse de performance finale.}
+  \note{Question traitée : prochaines étapes pour transformer le résultat RTL en circuit. Réponse clé : synthèse, STA/CDC, PnR, post-layout puis corrélation silicium.}
 \end{frame}
 
 \begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Que signifie la RMSE après LUT ?}
+  \frametitle{Backup -- Reset global vs clear de conversion}
+  \lead{Reset et clear appartiennent à deux temps différents du protocole.}
+
   \begin{center}
-    \metricBox{$\approx$1,94 ns}{RMSE brute}{spadOrange}
-    \hspace{0.65cm}
-    \metricBox{18,56 ps}{RMSE après LUT}{spadGreen}
-    \hspace{0.65cm}
-    \metricBox{38,99 ps}{P99}{spadBlue}
+    \includegraphics[width=0.98\textwidth,height=0.67\textheight,keepaspectratio]{reset_clear_sequence.pdf}
   \end{center}
-  \vspace{0.35cm}
-  \begin{itemize}
-    \item Erreur quadratique moyenne après correction LUT.
-    \item Validation tenue hors apprentissage.
-    \item Résultat RTL/Xcelium, pas mesure silicium.
-  \end{itemize}
-  \note{Réponse : la RMSE mesure la dispersion moyenne après correction sur un jeu de validation non utilisé pour construire la LUT.}
+  \vspace{-0.08cm}
+  \begin{center}
+    \smalltag{navy}{reset global}\hspace{0.35cm}
+    \smalltag{navy}{snapshot / contexte}\hspace{0.35cm}
+    \smalltag{amber}{clear après image figée}
+  \end{center}
+
+  \takeaway{Le reset sécurise l'état global ; le clear nettoie seulement après protection de l'image utile.}
+  \note{Question traitée : différence entre reset et clear. Réponse clé : le reset initialise le système, tandis que le clear est une étape contrôlée de fin de conversion après snapshot et contexte.}
 \end{frame}
 
 \begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Pourquoi la RMSE brute est élevée ?}
+  \frametitle{Backup -- Questions probables du jury}
+  \lead{Cette slide sert de carte mentale pour orienter les réponses vers les backups adaptés.}
+
   \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.58\textwidth}
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{01_erreur_histogramme_pre_post_lut.png}
-    \end{column}
-    \begin{column}{0.38\textwidth}
+    \begin{column}{0.48\textwidth}
       \begin{itemize}
-        \item Grille Vernier non uniforme.
-        \item Reconstruction brute biaisée.
-        \item Biais corrigeable si les bonnes informations sont exportées.
+        \item Pourquoi ne pas utiliser directement \texttt{clk\_sys} ?
+        \item Que transporte vraiment la trame 16 bit ?
+        \item Pourquoi l'erreur brute est-elle aussi biaisée ?
+        \item Le moyennage promet-il moins de 5 ps par hit ?
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item Que prouvent les 18,56 ps ?
+        \item Où sont les risques CDC restants ?
+        \item Que manque-t-il avant les mesures silicium ?
+        \item Pourquoi trois axes MPTDC dans SPADMIC ?
       \end{itemize}
     \end{column}
   \end{columns}
-  \note{Réponse : la mesure brute ne suit pas une échelle fine uniforme ; c'est pour cela que la stratégie de calibration externe est nécessaire.}
-\end{frame}
 
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Que couvre la vérification ?}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.50\textwidth}
-      \begin{tikzpicture}[
-        layer/.style={deckBox,minimum height=0.75cm}
-      ]
-        \node[layer,deckFill={spadBlue},minimum width=6.1cm] (l1) {Paquets et protocole};
-        \node[layer,deckFill={spadBlue},minimum width=5.1cm,above=0.12cm of l1] (l2) {Resets / rétropression};
-        \node[layer,deckFill={spadGreen},minimum width=4.1cm,above=0.12cm of l2] (l3) {Timeouts / cas limites};
-        \node[layer,deckFill={spadGreen},minimum width=3.1cm,above=0.12cm of l3] (l4) {Modèle de référence};
-      \end{tikzpicture}
-    \end{column}
-    \begin{column}{0.46\textwidth}
-      \begin{itemize}
-        \item Confiance fonctionnelle.
-        \item Ne remplace pas STA.
-        \item Ne remplace pas la validation silicium.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-  \note{Réponse : la vérification couvre le comportement numérique attendu, mais elle ne démontre pas les performances physiques finales.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Que reste-t-il pour le signoff physique ?}
-  \begin{center}
-  \begin{tikzpicture}[
-    flowStep/.style={deckBox,minimum width=2.0cm,minimum height=0.9cm},
-    arr/.style={-{Latex[length=2mm]},thick,spadLine}
-  ]
-    \node[flowStep,deckFill={spadBlue}] (rtl) {RTL};
-    \node[flowStep,deckFill={spadOrange},right=0.4cm of rtl] (sta) {STA};
-    \node[flowStep,deckFill={spadOrange},right=0.4cm of sta] (pnr) {PnR};
-    \node[flowStep,deckFill={spadGray},right=0.4cm of pnr] (post) {Post-layout};
-    \node[flowStep,deckFill={spadGray},right=0.4cm of post] (sil) {Silicium};
-    \draw[arr] (rtl) -- (sta);
-    \draw[arr] (sta) -- (pnr);
-    \draw[arr] (pnr) -- (post);
-    \draw[arr] (post) -- (sil);
-  \end{tikzpicture}
-  \end{center}
-  \begin{itemize}
-    \item Contraintes STA et CDC.
-    \item Modèles d'oscillateurs et variations PVT.
-    \item Rejeu post-synthèse et post-layout.
-  \end{itemize}
-  \note{Réponse : il reste la fermeture temporelle, la revue CDC, le post-layout et la confrontation aux mesures silicium.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Timing closure : setup, hold et skew}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.45\textwidth}
-      \begin{itemize}
-        \item Profondeur logique à réduire.
-        \item Chemins critiques à isoler.
-        \item Violations setup/hold à corriger.
-        \item Skew d'horloge à maîtriser.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.51\textwidth}
-      \begin{tikzpicture}[
-        box/.style={deckBox,minimum width=2.6cm},
-        arr/.style={-{Latex[length=2mm]},thick,spadLine}
-      ]
-        \node[box,deckFill={spadBlue}] (rtl) {RTL};
-        \node[box,deckFill={spadOrange},right=0.45cm of rtl] (paths) {Chemins critiques};
-        \node[box,deckFill={spadOrange},below=0.5cm of paths] (fix) {Réorganisation};
-        \node[box,deckFill={spadGreen},left=0.45cm of fix] (sta) {STA / PnR};
-        \draw[arr] (rtl) -- (paths);
-        \draw[arr] (paths) -- (fix);
-        \draw[arr] (fix) -- (sta);
-        \draw[arr] (sta) -- (rtl);
-      \end{tikzpicture}
-    \end{column}
-  \end{columns}
-  \note{Réponse : le timing closure est une boucle d'itération entre RTL, contraintes, synthèse, STA et placement-routage.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Double contexte et réarmement}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.60\textwidth}
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{context_pipeline.pdf}
-    \end{column}
-    \begin{column}{0.36\textwidth}
-      \begin{itemize}
-        \item Snapshot rapide.
-        \item Conversion protégée dans un contexte.
-        \item Lecture séparée.
-        \item Réarmement plus rapide.
-      \end{itemize}
-    \end{column}
-  \end{columns}
-  \note{Réponse : le contexte protège l'image de mesure ; la lecture peut continuer pendant que le bloc prépare la suite.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Rétropression}
-  \begin{center}
-  \begin{tikzpicture}[
-    box/.style={deckBox,minimum width=2.5cm,minimum height=1.0cm},
-    arr/.style={-{Latex[length=2mm]},thick,spadLine}
-  ]
-    \node[box,deckFill={spadBlue}] (ctx) {Contextes};
-    \node[box,deckFill={spadBlue},right=0.65cm of ctx] (fifo) {FIFO};
-    \node[box,deckFill={spadGreen},right=0.65cm of fifo] (tx) {TX};
-    \node[box,deckFill={spadGray},right=0.65cm of tx] (host) {Hôte};
-    \draw[arr] (ctx) -- node[above,font=\scriptsize]{records} (fifo);
-    \draw[arr] (fifo) -- node[above,font=\scriptsize]{ready / valid} (tx);
-    \draw[arr] (tx) -- (host);
-  \end{tikzpicture}
-  \end{center}
-  \begin{itemize}
-    \item La lecture conserve sa position si le récepteur n'est pas prêt.
-    \item Une occupation prolongée peut bloquer l'acceptation de nouveaux événements.
-  \end{itemize}
-  \note{Réponse : la rétropression est gérée fonctionnellement, mais elle reste une contrainte de débit du système.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \slideTitle{Backup -- Limites pré-silicium}
-  \begin{itemize}
-    \item Les chiffres présentés proviennent de simulation RTL/Xcelium.
-    \item Le jitter réel, les variations PVT et le layout restent à consolider.
-    \item Les performances finales devront être confirmées par post-layout puis silicium.
-  \end{itemize}
-  \vspace{0.3cm}
-  \begin{center}
-    \metricBox{pré-silicium}{statut actuel}{spadOrange}
-    \hspace{0.6cm}
-    \metricBox{post-layout}{étape intermédiaire}{spadGray}
-    \hspace{0.6cm}
-    \metricBox{silicium}{validation finale}{spadGreen}
-  \end{center}
-  \note{Réponse : rester sobre et honnête. Le travail donne un état numérique cohérent, mais pas une performance expérimentale finale.}
+  \takeaway{Répondre en revenant toujours au contrat : observables, correction, portée pré-silicium, limites physiques.}
+  \note{Question traitée : préparer la navigation en Q&A. Réponse clé : choisir le backup correspondant et garder la frontière RTL/Xcelium pré-silicium visible.}
 \end{frame}
 
 \end{document}

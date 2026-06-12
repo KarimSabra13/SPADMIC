@@ -14,4 +14,4 @@ pdflatex -interaction=nonstopmode -file-line-error -halt-on-error -output-direct
 Copy-Item ..\build\soutenance_spadmic.pdf ..\dist\soutenance_spadmic.pdf -Force
 ```
 
-La présentation contient 22 slides principales et 12 slides backup. Elle est volontairement sobre : peu de texte par slide, figures du rapport réutilisées, détails RTL fins déplacés en backup.
+La présentation contient 27 slides principales et 12 slides backup. Elle est volontairement sobre : peu de texte par slide, figures du rapport réutilisées, détails RTL fins déplacés en backup et notes orateur courtes dans la source Beamer.
