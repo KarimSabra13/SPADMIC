@@ -1640,6 +1640,229 @@ proc mptdc_repair_collect_exact_fast_tag_pins {role taps bits pin_name} {
     return $pins
 }
 
+proc mptdc_repair_pin_instance_name {pin_name} {
+    if {[regexp {^(.+)/[^/]+$} $pin_name -> inst_name]} {
+        return $inst_name
+    }
+    return ""
+}
+
+proc mptdc_repair_resolve_cell_from_instance_name {inst_name} {
+    if {$inst_name eq ""} {
+        return ""
+    }
+    foreach query [list [mptdc_glob_escape $inst_name] $inst_name] {
+        foreach cmd [list \
+            [list get_cells -quiet $query] \
+            [list get_cells -quiet -hierarchical $query]] {
+            set matches [list]
+            catch {set matches [eval $cmd]}
+            foreach cell [mptdc_collection_to_list $matches] {
+                set cell_name [mptdc_object_name $cell]
+                if {$cell_name eq $inst_name} {
+                    return $cell
+                }
+            }
+        }
+    }
+    set all_cells [list]
+    catch {set all_cells [get_cells -quiet -hierarchical *]}
+    foreach cell [mptdc_collection_to_list $all_cells] {
+        if {[mptdc_object_name $cell] eq $inst_name} {
+            return $cell
+        }
+    }
+    return ""
+}
+
+proc mptdc_repair_collect_cells_from_pin_records {records} {
+    set cells [list]
+    array set seen {}
+    foreach rec $records {
+        set pin_name [dict get $rec name]
+        set inst_name [mptdc_repair_pin_instance_name $pin_name]
+        set cell [mptdc_repair_resolve_cell_from_instance_name $inst_name]
+        if {$cell eq ""} {
+            continue
+        }
+        set cell_name [mptdc_object_name $cell]
+        if {$cell_name ne "" && ![info exists seen($cell_name)]} {
+            set seen($cell_name) 1
+            lappend cells $cell
+        }
+    }
+    return $cells
+}
+
+proc mptdc_repair_cell_base_name {cell} {
+    foreach attr {.base_cell.base_name .base_cell.name .lib_cell.base_name .lib_cell.name .ref_name .cell.name .name} {
+        if {![catch {set value [get_db $cell $attr]}] && $value ne ""} {
+            return [file tail $value]
+        }
+    }
+    return "UNKNOWN"
+}
+
+proc mptdc_repair_find_lib_cell {cell_name} {
+    if {$cell_name eq ""} {
+        return ""
+    }
+    set matches [list]
+    foreach pattern [list $cell_name "*$cell_name" "*/$cell_name"] {
+        set found [list]
+        catch {set found [get_db lib_cells $pattern]}
+        foreach cell [mptdc_collection_to_list $found] {
+            set base "UNKNOWN"
+            foreach attr {.base_name .name} {
+                if {![catch {set value [get_db $cell $attr]}] && $value ne ""} {
+                    set base [file tail $value]
+                    break
+                }
+            }
+            if {$base eq $cell_name || [file tail [mptdc_object_name $cell]] eq $cell_name} {
+                lappend matches $cell
+            }
+        }
+    }
+    set matches [mptdc_unique_list $matches]
+    if {[llength $matches] > 0} {
+        return [lindex $matches 0]
+    }
+    return ""
+}
+
+proc mptdc_repair_count_cells_with_base {cells base_name} {
+    set count 0
+    foreach cell $cells {
+        if {[mptdc_repair_cell_base_name $cell] eq $base_name} {
+            incr count
+        }
+    }
+    return $count
+}
+
+proc mptdc_repair_write_exact_source_cell_csv {report_dir stage source_records target_cell source_cells} {
+    set cell_by_inst [dict create]
+    foreach cell $source_cells {
+        set cell_name [mptdc_object_name $cell]
+        if {$cell_name ne ""} {
+            dict set cell_by_inst $cell_name [mptdc_repair_cell_base_name $cell]
+        }
+    }
+    set fh [open "$report_dir/fast_tag_exact_source_cell_repair.csv" a]
+    if {[tell $fh] == 0} {
+        puts $fh "stage,tap,bit,source_pin,source_inst,current_cell,target_cell,status"
+    }
+    foreach rec $source_records {
+        set pin_name [dict get $rec name]
+        set inst_name [mptdc_repair_pin_instance_name $pin_name]
+        set current_cell "UNRESOLVED"
+        set status "UNRESOLVED"
+        if {[dict exists $cell_by_inst $inst_name]} {
+            set current_cell [dict get $cell_by_inst $inst_name]
+            set status [expr {$current_cell eq $target_cell ? {TARGET_MATCH} : {TARGET_PENDING}}]
+        }
+        puts $fh "$stage,[dict get $rec tap],[dict get $rec bit],[mptdc_repair_csv_quote $pin_name],[mptdc_repair_csv_quote $inst_name],$current_cell,$target_cell,$status"
+    }
+    close $fh
+}
+
+proc mptdc_repair_apply_exact_source_cell {stage source_records target_cell report_dir fh} {
+    set result [dict create \
+        requested [expr {$target_cell ne "" ? {YES} : {NO}}] \
+        target_cell $target_cell \
+        target_lib_cells_found 0 \
+        source_cells_found 0 \
+        source_cells_target_count 0 \
+        method SKIPPED \
+        status SKIPPED_SOURCE_CELL_NOT_REQUESTED]
+
+    if {$target_cell eq ""} {
+        return $result
+    }
+    if {$stage ne "post_map_pre_opt"} {
+        dict set result status SKIPPED_UNTIL_POST_MAP_PRE_OPT
+        return $result
+    }
+
+    set source_cells [mptdc_repair_collect_cells_from_pin_records $source_records]
+    dict set result source_cells_found [llength $source_cells]
+    set target_lib [mptdc_repair_find_lib_cell $target_cell]
+    if {$target_lib ne ""} {
+        dict set result target_lib_cells_found 1
+        catch {set_db $target_lib .avoid false}
+        catch {set_db $target_lib .dont_use false}
+    }
+    if {[llength $source_cells] == 0} {
+        dict set result status NO_EXACT_SOURCE_CELLS
+        return $result
+    }
+    if {$target_lib eq ""} {
+        mptdc_repair_write_exact_source_cell_csv $report_dir $stage $source_records $target_cell $source_cells
+        dict set result status TARGET_LIB_CELL_NOT_FOUND
+        return $result
+    }
+
+    set method_result "NO_SUPPORTED_CELL_CHANGE_COMMAND"
+    set method_used "NONE"
+    set attempts [list]
+    if {[llength [info commands change_link]] > 0} {
+        lappend attempts [list change_link_object [list change_link $source_cells $target_lib]]
+        lappend attempts [list change_link_name [list change_link $source_cells $target_cell]]
+    }
+    if {[llength [info commands eco_change_cell]] > 0} {
+        lappend attempts [list eco_change_cell_object [list eco_change_cell -inst $source_cells -cell $target_lib]]
+        lappend attempts [list eco_change_cell_name [list eco_change_cell -inst $source_cells -cell $target_cell]]
+    }
+    if {[llength [info commands size_cell]] > 0} {
+        lappend attempts [list size_cell_name [list size_cell $source_cells $target_cell]]
+    }
+    if {[llength [info commands replace_cell]] > 0} {
+        lappend attempts [list replace_cell_name [list replace_cell $source_cells $target_cell]]
+    }
+    foreach attempt $attempts {
+        set label [lindex $attempt 0]
+        set cmd [lindex $attempt 1]
+        set rc [catch {eval $cmd} err]
+        lappend method_result "$label:$err"
+        if {$rc == 0} {
+            set method_used $label
+            break
+        }
+    }
+
+    set target_count [mptdc_repair_count_cells_with_base $source_cells $target_cell]
+    dict set result source_cells_target_count $target_count
+    dict set result method $method_used
+    mptdc_repair_write_exact_source_cell_csv $report_dir $stage $source_records $target_cell $source_cells
+    if {$target_count == [llength $source_cells]} {
+        dict set result status OK
+    } elseif {$method_used ne "NONE"} {
+        dict set result status COMMAND_ACCEPTED_VERIFY_AFTER_OPT
+    } else {
+        dict set result status $method_result
+    }
+    return $result
+}
+
+proc mptdc_repair_apply_exact_full_path_max_delay {delay from_pins to_pins} {
+    set mode_result [mptdc_o13_abs5_select_constraint_mode]
+    set mode_status [lindex $mode_result 0]
+    set mode_detail [lindex $mode_result 1]
+    if {$mode_status eq "FAIL"} {
+        return [dict create result "CONSTRAINT_MODE_FAIL:$mode_detail" mode_status $mode_status mode_detail $mode_detail]
+    }
+    set rc [catch {
+        set_max_delay $delay \
+            -from $from_pins \
+            -to $to_pins
+    } err]
+    return [dict create \
+        result [expr {$rc == 0 ? {OK} : $err}] \
+        mode_status $mode_status \
+        mode_detail $mode_detail]
+}
+
 proc mptdc_repair_write_fast_tag_exact_csvs {report_dir taps bits source_records endpoint_records pair_records} {
     set fh [open "$report_dir/fast_tag_exact_source_discovery.csv" w]
     puts $fh "tap,bit,pin_name,object"
@@ -1801,6 +2024,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set fast_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_FAST_TAG_PD false]
     set drv_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_DRV_TRANSITION false]
     set repair4_exact_source_drive [mptdc_bool_env MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE false]
+    set repair5_exact_close [mptdc_bool_env MPTDC_GENUS_REPAIR5_EXACT_FAST_TAG_CLOSE false]
     set strong_fast_flops [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_FAST_TAG_FLOPS false]
     set strong_control_drv [mptdc_bool_env MPTDC_GENUS_REPAIR_STRONG_CONTROL_DRV false]
     set control_bias_stage [string tolower [mptdc_repair_set_numeric_env MPTDC_GENUS_REPAIR_CONTROL_CELL_BIAS_STAGE all]]
@@ -1822,7 +2046,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set exact_fast_tag_max_fanout [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_FANOUT 4]
     set exact_fast_tag_max_transition [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_TRANSITION_NS 0.35]
     set exact_fast_tag_max_delay [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS ""]
-    set enable_exact_fast_tag_max_delay [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_ENABLE_EXACT_MAX_DELAY false]
+    set enable_exact_fast_tag_max_delay [expr {
+        [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_ENABLE_EXACT_MAX_DELAY false] ||
+        [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_ENABLE false]
+    }]
+    set exact_fast_tag_source_cell [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL ""]
     set endpoint_transition_tight [mptdc_bool_env MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT false]
     set control_max_fanout [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_FANOUT 16]
     set control_max_transition [mptdc_repair_set_numeric_env MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS 0.50]
@@ -1832,6 +2060,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         if {![mptdc_bool_env MPTDC_GENUS_REPAIR4_ALLOW_BROAD_FAST_TAG_Q false]} {
             set apply_fast_tag_q_constraints false
         }
+        set endpoint_transition_tight false
+    }
+    if {$repair5_exact_close || $exact_fast_tag_source_cell ne ""} {
+        set exact_fast_tag_data_paths true
+        set apply_fast_tag_q_constraints false
         set endpoint_transition_tight false
     }
     if {!$fast_repair && !$drv_repair} {
@@ -1846,6 +2079,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "FAST_TAG_PD_REPAIR=$fast_repair"
     puts $fh "DRV_TRANSITION_REPAIR=$drv_repair"
     puts $fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
+    puts $fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
@@ -1868,6 +2102,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "FAST_TAG_EXACT_MAX_TRANSITION_NS=$exact_fast_tag_max_transition"
     puts $fh "FAST_TAG_EXACT_MAX_DELAY_NS=$exact_fast_tag_max_delay"
     puts $fh "FAST_TAG_EXACT_ENABLE_MAX_DELAY=$enable_exact_fast_tag_max_delay"
+    puts $fh "FAST_TAG_EXACT_SOURCE_CELL=$exact_fast_tag_source_cell"
     puts $fh "ENDPOINT_TRANSITION_TIGHT=$endpoint_transition_tight"
     puts $fh "CONTROL_MAX_FANOUT=$control_max_fanout"
     puts $fh "CONTROL_MAX_TRANSITION_NS=$control_max_transition"
@@ -2037,18 +2272,28 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 set exact_trans_result "SKIPPED"
                 set exact_endpoint_trans_result "SKIPPED_ENDPOINT_TRANSITION_TIGHT_DISABLED"
                 set exact_delay_result "SKIPPED_EXACT_MAX_DELAY_DISABLED"
+                set exact_delay_mode_status "SKIPPED"
+                set exact_delay_mode_detail "SKIPPED"
+                set exact_source_cell_result [dict create \
+                    requested [expr {$exact_fast_tag_source_cell ne "" ? {YES} : {NO}}] \
+                    target_cell $exact_fast_tag_source_cell \
+                    target_lib_cells_found 0 \
+                    source_cells_found 0 \
+                    source_cells_target_count 0 \
+                    method SKIPPED \
+                    status SKIPPED_SOURCE_CELL_NOT_REQUESTED]
                 if {$exact_counts_ok && [llength $exact_source_c_pins] > 0 && [llength $exact_endpoint_d_pins] > 0} {
                     if {[llength [info commands group_path]] > 0} {
                         set group_rc [catch {
-                            group_path -name FAST_TAG_EXACT_TO_PD_TS \
+                            group_path -name FAST_TAG_TO_PD_TS_EXACT_B056 \
                                 -from $exact_source_c_pins \
                                 -to $exact_endpoint_d_pins \
-                                -weight 5 \
-                                -critical_range 0.050
+                                -weight 8 \
+                                -critical_range 0.080
                         } group_err]
                         if {$group_rc != 0} {
                             set group_rc [catch {
-                                group_path -name FAST_TAG_EXACT_TO_PD_TS \
+                                group_path -name FAST_TAG_TO_PD_TS_EXACT_B056 \
                                     -from $exact_source_c_pins \
                                     -to $exact_endpoint_d_pins
                             } group_err]
@@ -2081,33 +2326,60 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 } else {
                     puts $fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=$exact_endpoint_trans_result"
                 }
-                if {$exact_counts_ok && $enable_exact_fast_tag_max_delay && [llength $exact_source_q_pins] > 0 && [llength $exact_endpoint_d_pins] > 0 && $exact_fast_tag_max_delay ne ""} {
-                    set exact_delay_rc [catch {
-                        set_max_delay $exact_fast_tag_max_delay \
-                            -from $exact_source_q_pins \
-                            -to $exact_endpoint_d_pins
-                    } exact_delay_err]
-                    set exact_delay_result [expr {$exact_delay_rc == 0 ? {OK} : $exact_delay_err}]
+                if {$exact_counts_ok && $stage eq "post_map_pre_opt"} {
+                    set exact_source_cell_result [mptdc_repair_apply_exact_source_cell \
+                        $stage \
+                        $exact_source_q_records \
+                        $exact_fast_tag_source_cell \
+                        $design(reports_dir) \
+                        $fh]
+                }
+                if {$exact_counts_ok && $enable_exact_fast_tag_max_delay && [llength $exact_source_c_pins] > 0 && [llength $exact_endpoint_d_pins] > 0 && $exact_fast_tag_max_delay ne ""} {
+                    set delay_dict [mptdc_repair_apply_exact_full_path_max_delay \
+                        $exact_fast_tag_max_delay \
+                        $exact_source_c_pins \
+                        $exact_endpoint_d_pins]
+                    set exact_delay_result [dict get $delay_dict result]
+                    set exact_delay_mode_status [dict get $delay_dict mode_status]
+                    set exact_delay_mode_detail [dict get $delay_dict mode_detail]
                 }
                 puts $fh "FAST_TAG_EXACT_GROUP_PATH_RESULT=$exact_group_result"
-                puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
-                puts $fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=$exact_delay_result"
+                puts $fh "FAST_TAG_EXACT_C_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
+                puts $fh "FAST_TAG_EXACT_C_TO_D_SET_MAX_DELAY_RESULT=$exact_delay_result"
+                puts $fh "FAST_TAG_EXACT_MAX_DELAY_CONSTRAINT_MODE=$exact_delay_mode_status:$exact_delay_mode_detail"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_TARGET=[dict get $exact_source_cell_result target_cell]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_REQUESTED=[dict get $exact_source_cell_result requested]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_LIB_CELLS_FOUND=[dict get $exact_source_cell_result target_lib_cells_found]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_COUNT=[dict get $exact_source_cell_result source_cells_found]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT=[dict get $exact_source_cell_result source_cells_target_count]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_METHOD=[dict get $exact_source_cell_result method]"
+                puts $fh "FAST_TAG_EXACT_SOURCE_CELL_RESULT=[dict get $exact_source_cell_result status]"
 
                 set exact_repair_applied "NO"
                 set exact_repair_status "REVIEW_REQUIRED"
                 set exact_review_reason "EXACT_COUNTS_MISMATCH"
                 if {$exact_counts_ok} {
-                    if {$exact_fanout_result eq "OK" && $exact_trans_result eq "OK"} {
+                    set source_cell_ok true
+                    if {$exact_fast_tag_source_cell ne "" && $stage eq "post_map_pre_opt"} {
+                        set source_cell_status [dict get $exact_source_cell_result status]
+                        set source_cell_ok [expr {$source_cell_status eq "OK" || $source_cell_status eq "COMMAND_ACCEPTED_VERIFY_AFTER_OPT"}]
+                    }
+                    set max_delay_ok true
+                    if {$enable_exact_fast_tag_max_delay} {
+                        set max_delay_ok [expr {$exact_delay_result eq "OK"}]
+                    }
+                    if {$exact_fanout_result eq "OK" && $exact_trans_result eq "OK" && $source_cell_ok && $max_delay_ok} {
                         set exact_repair_applied "YES"
                         set exact_repair_status "PASS"
                         set exact_review_reason "NONE"
                     } else {
-                        set exact_review_reason "EXACT_SOURCE_CONSTRAINT_FAILURE"
+                        set exact_review_reason "EXACT_REPAIR_COMMAND_FAILURE"
                     }
                 }
                 set status_fh [open "$design(reports_dir)/fast_tag_exact_repair_status.rpt" a]
                 puts $status_fh "STAGE=$stage"
                 puts $status_fh "REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=$repair4_exact_source_drive"
+                puts $status_fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_EXPECTED=$exact_source_expected"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_FOUND=[llength $exact_source_q_records]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_CLOCK_PINS_FOUND=[llength $exact_source_c_records]"
@@ -2122,7 +2394,16 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $status_fh "FAST_TAG_EXACT_Q_SET_MAX_FANOUT=$exact_fanout_result"
                 puts $status_fh "FAST_TAG_EXACT_Q_SET_MAX_TRANSITION=$exact_trans_result"
                 puts $status_fh "FAST_TAG_EXACT_D_SET_MAX_TRANSITION=$exact_endpoint_trans_result"
-                puts $status_fh "FAST_TAG_EXACT_Q_TO_D_SET_MAX_DELAY_RESULT=$exact_delay_result"
+                puts $status_fh "FAST_TAG_EXACT_C_TO_D_SET_MAX_DELAY_NS=$exact_fast_tag_max_delay"
+                puts $status_fh "FAST_TAG_EXACT_C_TO_D_SET_MAX_DELAY_RESULT=$exact_delay_result"
+                puts $status_fh "FAST_TAG_EXACT_MAX_DELAY_CONSTRAINT_MODE=$exact_delay_mode_status:$exact_delay_mode_detail"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_TARGET=[dict get $exact_source_cell_result target_cell]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_REQUESTED=[dict get $exact_source_cell_result requested]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_LIB_CELLS_FOUND=[dict get $exact_source_cell_result target_lib_cells_found]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_COUNT=[dict get $exact_source_cell_result source_cells_found]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT=[dict get $exact_source_cell_result source_cells_target_count]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_METHOD=[dict get $exact_source_cell_result method]"
+                puts $status_fh "FAST_TAG_EXACT_SOURCE_CELL_RESULT=[dict get $exact_source_cell_result status]"
                 puts $status_fh "EXACT_FAST_TAG_SOURCES_EXPECTED=$exact_source_expected"
                 puts $status_fh "EXACT_FAST_TAG_SOURCES_FOUND=[llength $exact_source_q_records]"
                 puts $status_fh "EXACT_FAST_TAG_ENDPOINTS_EXPECTED=$exact_endpoint_expected"

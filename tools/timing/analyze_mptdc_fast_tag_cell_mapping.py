@@ -165,8 +165,31 @@ def source_cell_from_mapping(row: dict[str, str], mapping_rows: list[dict[str, s
     return ""
 
 
+def cell_from_pin_mapping(pin: str, role: str, mapping_rows: list[dict[str, str]]) -> str:
+    inst = canonical(inst_from_pin(pin))
+    if not inst:
+        return ""
+    for mapping in mapping_rows:
+        if mapping.get("role") != role:
+            continue
+        mapped_inst = canonical(mapping.get("instance", ""))
+        if mapped_inst and (mapped_inst == inst or mapped_inst in inst or inst in mapped_inst):
+            return cell_basename(mapping.get("mapped_cell", ""))
+    tap = infer_tap(pin)
+    bit = infer_bit(pin)
+    if tap != "NA" and bit != "NA":
+        for mapping in mapping_rows:
+            if mapping.get("role") == role and mapping.get("tap_index") == tap and mapping.get("bit_index") == bit:
+                return cell_basename(mapping.get("mapped_cell", ""))
+    return ""
+
+
 def source_cell_from_block(block: str) -> str:
     points = parse_point_rows(block)
+    for point in points:
+        cell = cell_basename(point["cell"])
+        if point["point"].endswith(("/Q", "/QN")) and cell.startswith(("DF", "SDF")):
+            return cell
     candidates = [
         point
         for point in points
@@ -179,6 +202,17 @@ def source_cell_from_block(block: str) -> str:
     if candidates:
         return cell_basename(candidates[0]["cell"])
     return "UNKNOWN"
+
+
+def parse_exact_discovery(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open(newline="") as fh:
+        return list(csv.DictReader(fh))
+
+
+def first_existing(paths: list[Path]) -> Path | None:
+    return next((path for path in paths if path.exists()), None)
 
 
 def mark_top_path_membership(mapping_rows: list[dict[str, str]], top_paths: list[dict[str, str]]) -> None:
@@ -223,6 +257,27 @@ def main() -> int:
             source_cell = source_cell_from_block(blocks.get(row.get("path", ""), ""))
         top_source_counter[source_cell or "UNKNOWN"] += 1
 
+    exact_source_path = first_existing(
+        [
+            args.run_dir / "fast_tag_exact_source_discovery.csv",
+            args.run_dir / "reports" / "fast_tag_exact_source_discovery.csv",
+        ]
+    )
+    exact_endpoint_path = first_existing(
+        [
+            args.run_dir / "fast_tag_exact_endpoint_discovery.csv",
+            args.run_dir / "reports" / "fast_tag_exact_endpoint_discovery.csv",
+        ]
+    )
+    exact_source_counter: Counter[str] = Counter()
+    for row in parse_exact_discovery(exact_source_path) if exact_source_path else []:
+        cell = cell_from_pin_mapping(row.get("object", ""), "fast_tag_source", mapping_rows)
+        exact_source_counter[cell or "UNKNOWN"] += 1
+    exact_endpoint_counter: Counter[str] = Counter()
+    for row in parse_exact_discovery(exact_endpoint_path) if exact_endpoint_path else []:
+        cell = cell_from_pin_mapping(row.get("object", ""), "nfast_hit_endpoint", mapping_rows)
+        exact_endpoint_counter[cell or "UNKNOWN"] += 1
+
     mapped_source_counter = Counter(
         row["mapped_cell"] for row in mapping_rows if row["role"] == "fast_tag_source"
     )
@@ -234,7 +289,8 @@ def main() -> int:
     )
     unknown_top = top_source_counter.get("UNKNOWN", 0)
     status = "PASS"
-    if not netlist.exists() or weak_top > 0 or unknown_top > 0:
+    unknown_exact_source = exact_source_counter.get("UNKNOWN", 0)
+    if not netlist.exists() or weak_top > 0 or unknown_top > 0 or unknown_exact_source > 0:
         status = "REVIEW_REQUIRED"
 
     values = {
@@ -270,6 +326,25 @@ def main() -> int:
         "FAST_TAG_MAPPED_SOURCE_DFRRQJIHDX4_COUNT": str(mapped_source_counter.get("DFRRQJIHDX4", 0)),
         "FAST_TAG_MAPPED_SOURCE_DFRSJIHDX2_COUNT": str(mapped_source_counter.get("DFRSJIHDX2", 0)),
         "FAST_TAG_TOP_PATH_COUNT": str(len(top_paths)),
+        "FAST_TAG_EXACT_SOURCE_COUNT": str(sum(exact_source_counter.values())),
+        "FAST_TAG_EXACT_SOURCE_DFRRQHDX1_COUNT": str(exact_source_counter.get("DFRRQHDX1", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRRQHDX2_COUNT": str(exact_source_counter.get("DFRRQHDX2", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRRQHDX4_COUNT": str(exact_source_counter.get("DFRRQHDX4", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT": str(exact_source_counter.get("DFRJIHDX1", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT": str(exact_source_counter.get("DFRJIHDX2", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT": str(exact_source_counter.get("DFRJIHDX4", 0)),
+        "FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT": str(exact_source_counter.get("UNKNOWN", 0)),
+        "FAST_TAG_EXACT_ENDPOINT_COUNT": str(sum(exact_endpoint_counter.values())),
+        "FAST_TAG_EXACT_ENDPOINT_DFRHDX2_COUNT": str(exact_endpoint_counter.get("DFRHDX2", 0)),
+        "FAST_TAG_EXACT_ENDPOINT_DFRHDX4_COUNT": str(exact_endpoint_counter.get("DFRHDX4", 0)),
+        "FAST_TAG_EXACT_ENDPOINT_DFRSHDX2_COUNT": str(exact_endpoint_counter.get("DFRSHDX2", 0)),
+        "FAST_TAG_EXACT_ENDPOINT_DFRSHDX4_COUNT": str(exact_endpoint_counter.get("DFRSHDX4", 0)),
+        "FAST_TAG_EXACT_ENDPOINT_UNKNOWN_COUNT": str(exact_endpoint_counter.get("UNKNOWN", 0)),
+        "FAST_TAG_EXACT_SOURCE_PHASE_CLOCK_LOAD_DELTA_ESTIMATE": (
+            f"{sum(exact_source_counter.values())} exact source flops changed candidate; final delta requires Liberty pin-cap report"
+            if exact_source_counter
+            else "NA"
+        ),
     }
 
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -314,10 +389,33 @@ def main() -> int:
                 f"FAST_TAG_SOURCE_DFRSJIHDX2_COUNT={values['FAST_TAG_SOURCE_DFRSJIHDX2_COUNT']}",
                 f"FAST_TAG_SOURCE_UNKNOWN_COUNT={values['FAST_TAG_SOURCE_UNKNOWN_COUNT']}",
                 "",
+                "## Exact Repaired Source Set",
+                "",
+                f"FAST_TAG_EXACT_SOURCE_COUNT={values['FAST_TAG_EXACT_SOURCE_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRRQHDX1_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQHDX1_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRRQHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQHDX2_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRRQHDX4_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQHDX4_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT={values['FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_PHASE_CLOCK_LOAD_DELTA_ESTIMATE={values['FAST_TAG_EXACT_SOURCE_PHASE_CLOCK_LOAD_DELTA_ESTIMATE']}",
+                "",
+                "## Exact Endpoint Set",
+                "",
+                f"FAST_TAG_EXACT_ENDPOINT_COUNT={values['FAST_TAG_EXACT_ENDPOINT_COUNT']}",
+                f"FAST_TAG_EXACT_ENDPOINT_DFRHDX2_COUNT={values['FAST_TAG_EXACT_ENDPOINT_DFRHDX2_COUNT']}",
+                f"FAST_TAG_EXACT_ENDPOINT_DFRHDX4_COUNT={values['FAST_TAG_EXACT_ENDPOINT_DFRHDX4_COUNT']}",
+                f"FAST_TAG_EXACT_ENDPOINT_DFRSHDX2_COUNT={values['FAST_TAG_EXACT_ENDPOINT_DFRSHDX2_COUNT']}",
+                f"FAST_TAG_EXACT_ENDPOINT_DFRSHDX4_COUNT={values['FAST_TAG_EXACT_ENDPOINT_DFRSHDX4_COUNT']}",
+                f"FAST_TAG_EXACT_ENDPOINT_UNKNOWN_COUNT={values['FAST_TAG_EXACT_ENDPOINT_UNKNOWN_COUNT']}",
+                "",
                 "## Interpretation",
                 "",
                 "- Counts without the `MAPPED` prefix are extracted from top negative FAST_TAG_TO_PD_TS timing startpoints.",
                 "- `MAPPED` counts enumerate fast-tag source registers found in the exported netlist.",
+                "- `EXACT_SOURCE` counts enumerate only the targeted Repair4/Repair5 source-register discovery set.",
+                "- `EXACT_ENDPOINT` counts enumerate only the targeted Repair4/Repair5 endpoint discovery set.",
                 "- `REVIEW_REQUIRED` means a weak `DFRRQHDX0`/`DFRJIHDX0`/`DFRRQJIHDX0` or unknown source cell appears on top FAST_TAG_TO_PD_TS paths.",
             ]
         )

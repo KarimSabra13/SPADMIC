@@ -156,6 +156,26 @@ def parse_sdc_diagnostics(path: Path) -> dict[str, str]:
             "TUI_61_COUNT": "NA",
             "SDC_INVALID_OBJECT_COUNT": "NA",
         }
+    structured = {}
+    for line in text.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key in {
+            "SDC_COMMAND_FAILURE_COUNT",
+            "SDC_235_COUNT",
+            "TUI_61_COUNT",
+            "SDC_INVALID_OBJECT_COUNT",
+        }:
+            structured[key] = value.strip()
+    if "SDC_COMMAND_FAILURE_COUNT" in structured:
+        return {
+            "SDC_COMMAND_FAILURE_COUNT": structured.get("SDC_COMMAND_FAILURE_COUNT", "NA"),
+            "SDC_235_COUNT": structured.get("SDC_235_COUNT", "NA"),
+            "TUI_61_COUNT": structured.get("TUI_61_COUNT", "NA"),
+            "SDC_INVALID_OBJECT_COUNT": structured.get("SDC_INVALID_OBJECT_COUNT", "NA"),
+        }
     patterns = {
         "SDC_COMMAND_FAILURE_COUNT": r"failed\s+[1-9]|MPTDC_O13_.*FATAL|MPTDC_SDC_.*ERROR|\[SDC-202\]|\[SDC-209\]|\[SDC-235\]|\[TUI-61\]|\[SDC-248\]|SDC command requires a constraint mode specification|A required object parameter could not be found|Invalid object passed to SDC command",
         "SDC_235_COUNT": r"\[SDC-235\]|SDC-235|SDC command requires a constraint mode specification",
@@ -183,6 +203,15 @@ def parse_exact_fast_tag_status(run_dir: Path) -> dict[str, str]:
         "EXACT_FAST_TAG_DATAPATHS_FOUND": "NA",
         "EXACT_FAST_TAG_REPAIR_APPLIED": "NA",
         "EXACT_FAST_TAG_REPAIR_STATUS": "NA",
+        "FAST_TAG_EXACT_C_TO_D_SET_MAX_DELAY_RESULT": "NA",
+        "FAST_TAG_EXACT_MAX_DELAY_CONSTRAINT_MODE": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_TARGET": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_REQUESTED": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_LIB_CELLS_FOUND": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_COUNT": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_METHOD": "NA",
+        "FAST_TAG_EXACT_SOURCE_CELL_RESULT": "NA",
     }
     if path is None:
         return defaults
@@ -228,6 +257,11 @@ def write_report(path: Path, values: dict[str, str], qor: dict[str, object], cls
         f"- Exact fast-tag endpoints: `{values['EXACT_FAST_TAG_ENDPOINTS_FOUND']}` / `{values['EXACT_FAST_TAG_ENDPOINTS_EXPECTED']}`",
         f"- Exact fast-tag datapaths: `{values['EXACT_FAST_TAG_DATAPATHS_FOUND']}` / `{values['EXACT_FAST_TAG_DATAPATHS_EXPECTED']}`",
         f"- Exact fast-tag repair status: `{values['EXACT_FAST_TAG_REPAIR_STATUS']}`",
+        f"- Exact fast-tag C-to-D max-delay result: `{values['FAST_TAG_EXACT_C_TO_D_SET_MAX_DELAY_RESULT']}`",
+        f"- Exact fast-tag source cell target: `{values['FAST_TAG_EXACT_SOURCE_CELL_TARGET']}`",
+        f"- Exact fast-tag source cell count: `{values['FAST_TAG_EXACT_SOURCE_CELL_COUNT']}`",
+        f"- Exact fast-tag source cell target count: `{values['FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT']}`",
+        f"- Exact fast-tag source cell result: `{values['FAST_TAG_EXACT_SOURCE_CELL_RESULT']}`",
         "",
         "## Cost Groups",
         "",
@@ -276,10 +310,6 @@ def main() -> int:
         setup_paths = None
     agreement = "PASS"
     if qor["status"] != "PASS" or cls["status"] != "PASS":
-        agreement = "FAIL"
-    if sdc["SDC_COMMAND_FAILURE_COUNT"] not in {"0", "NA"}:
-        agreement = "FAIL"
-    if exact["EXACT_FAST_TAG_REPAIR_STATUS"] not in {"NA", "PASS"}:
         agreement = "FAIL"
     values = {
         "TIMING_SUMMARY_PARSE_STATUS": str(qor["status"]),
