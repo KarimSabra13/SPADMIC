@@ -31,6 +31,27 @@ proc mptdc_osc_pd_db_attr_from_ptr {ptr attr} {
     return ""
 }
 
+proc mptdc_osc_pd_db_attrs_for {attr} {
+    switch -- $attr {
+        .location { return [list .pt .loc .location .origin .box] }
+        .bbox     { return [list .box .bbox .rect .bounds .place_box] }
+        .base_cell.name { return [list .cell.name .baseCell.name .base_cell.name .lib_cell.name .master.name .ref_name] }
+        .place_status   { return [list .pStatus .place_status .status] }
+        default { return [list $attr] }
+    }
+}
+
+proc mptdc_osc_pd_db_attr_from_obj {obj attr} {
+    if {$obj eq ""} { return "" }
+    foreach db_attr [mptdc_osc_pd_db_attrs_for $attr] {
+        set val ""
+        if {![catch {set val [get_db $obj $db_attr]}] && $val ne ""} {
+            return $val
+        }
+    }
+    return ""
+}
+
 proc mptdc_osc_pd_inst_attr {inst attrs} {
     set ptr [mptdc_osc_pd_inst_ptr $inst]
     foreach attr $attrs {
@@ -43,6 +64,13 @@ proc mptdc_osc_pd_inst_attr {inst attrs} {
     set obj [get_cells -quiet $inst]
     if {[llength $obj] == 0} {
         catch {set obj [get_cells -quiet -hierarchical $inst]}
+    }
+    set first_obj [lindex $obj 0]
+    foreach attr $attrs {
+        set val [mptdc_osc_pd_db_attr_from_obj $first_obj $attr]
+        if {$val ne ""} {
+            return $val
+        }
     }
     foreach attr $attrs {
         if {[llength $obj] > 0 && ![catch {set val [get_object_name $obj]}] && $val ne "" && $attr eq ".name"} {
@@ -60,6 +88,70 @@ proc mptdc_osc_pd_box_from_attr {value} {
         return [lrange $value 0 3]
     }
     return [list]
+}
+
+proc mptdc_osc_pd_norm_name {name} {
+    set text "$name"
+    regsub -all {\\([\[\]])} $text {\1} text
+    return $text
+}
+
+proc mptdc_osc_pd_all_cell_objects {} {
+    if {[info exists ::mptdc_osc_pd_all_cell_objects_cache]} {
+        return $::mptdc_osc_pd_all_cell_objects_cache
+    }
+    set cells [list]
+    catch {set cells [get_cells -quiet -hierarchical *]}
+    set ::mptdc_osc_pd_all_cell_objects_cache $cells
+    return $cells
+}
+
+proc mptdc_osc_pd_hier_leaf_bbox {inst} {
+    set prefix "[mptdc_osc_pd_norm_name $inst]/"
+    set found 0
+    set llx ""
+    set lly ""
+    set urx ""
+    set ury ""
+    foreach obj [mptdc_osc_pd_all_cell_objects] {
+        set name ""
+        catch {set name [get_object_name $obj]}
+        if {$name eq ""} {
+            catch {set name [get_db $obj .name]}
+        }
+        set norm [mptdc_osc_pd_norm_name $name]
+        if {[string first $prefix $norm] != 0} {
+            continue
+        }
+        set box [mptdc_osc_pd_box_from_attr [mptdc_osc_pd_db_attr_from_obj $obj .bbox]]
+        if {[llength $box] < 4} {
+            continue
+        }
+        set b_llx [lindex $box 0]
+        set b_lly [lindex $box 1]
+        set b_urx [lindex $box 2]
+        set b_ury [lindex $box 3]
+        if {![string is double -strict $b_llx] || ![string is double -strict $b_lly]
+            || ![string is double -strict $b_urx] || ![string is double -strict $b_ury]} {
+            continue
+        }
+        if {!$found} {
+            set llx $b_llx
+            set lly $b_lly
+            set urx $b_urx
+            set ury $b_ury
+        } else {
+            if {$b_llx < $llx} { set llx $b_llx }
+            if {$b_lly < $lly} { set lly $b_lly }
+            if {$b_urx > $urx} { set urx $b_urx }
+            if {$b_ury > $ury} { set ury $b_ury }
+        }
+        incr found
+    }
+    if {!$found} {
+        return [list]
+    }
+    return [list $llx $lly $urx $ury $found]
 }
 
 proc mptdc_osc_pd_report_instance_symmetry {} {
@@ -101,6 +193,16 @@ proc mptdc_osc_pd_report_instance_symmetry {} {
         set master [mptdc_osc_pd_inst_attr $cell [list .base_cell.name .cell.name .master.name]]
         set place_status [mptdc_osc_pd_inst_attr $cell [list .place_status .pStatus .status]]
         set bbox [mptdc_osc_pd_box_from_attr [mptdc_osc_pd_inst_attr $cell [list .bbox .box]]]
+        set bbox_source "direct"
+        set leaf_count ""
+        if {[llength $bbox] < 4} {
+            set hier_bbox [mptdc_osc_pd_hier_leaf_bbox $cell]
+            if {[llength $hier_bbox] >= 4} {
+                set bbox [lrange $hier_bbox 0 3]
+                set bbox_source "hier_leaf_aggregate"
+                set leaf_count [lindex $hier_bbox 4]
+            }
+        }
         set inst_llx ""
         set inst_lly ""
         set inst_urx ""
@@ -115,9 +217,18 @@ proc mptdc_osc_pd_report_instance_symmetry {} {
             set width [expr {$inst_urx - $inst_llx}]
             set height [expr {$inst_ury - $inst_lly}]
             if {$x eq "" || $y eq ""} {
-                set x $inst_llx
-                set y $inst_lly
+                if {$bbox_source eq "hier_leaf_aggregate"} {
+                    set x [expr {($inst_llx + $inst_urx) / 2.0}]
+                    set y [expr {($inst_lly + $inst_ury) / 2.0}]
+                } else {
+                    set x $inst_llx
+                    set y $inst_lly
+                }
             }
+        }
+        if {$bbox_source eq "hier_leaf_aggregate"} {
+            if {$master eq ""} { set master "HIER_LEAF_AGGREGATE_${leaf_count}_LEAVES" }
+            if {$place_status eq ""} { set place_status "AGGREGATED_FROM_PLACED_LEAVES" }
         }
         set exp_x ""
         set exp_y ""

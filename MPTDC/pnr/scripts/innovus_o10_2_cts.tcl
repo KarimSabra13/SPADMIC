@@ -8,6 +8,50 @@ proc mptdc_o10_clock_count {name} {
     return [llength $objs]
 }
 
+proc mptdc_o10_select_interactive_constraint_mode {} {
+    if {[llength [info commands set_interactive_constraint_modes]] == 0} {
+        return [list NOT_AVAILABLE "set_interactive_constraint_modes command not present"]
+    }
+    foreach cmd {
+        {get_db constraint_modes functional_mode}
+        {get_db constraint_modes *functional_mode*}
+        {all_constraint_modes}
+    } {
+        set modes [list]
+        if {[catch {set modes [uplevel 1 $cmd]}]} {
+            continue
+        }
+        foreach mode $modes {
+            if {$mode eq "" || $mode eq "0x0"} {
+                continue
+            }
+            if {![catch {set_interactive_constraint_modes $mode} err]} {
+                return [list OK $mode]
+            }
+        }
+    }
+    if {![catch {set_interactive_constraint_modes functional_mode} err]} {
+        return [list OK functional_mode]
+    }
+    return [list FAILED $err]
+}
+
+proc mptdc_o10_cts_buffer_cells {} {
+    set family [string toupper [mptdc_o10_env MPTDC_STDCELL_FAMILY HD]]
+    if {$family eq "JIHD"} {
+        return [list BUJIHDX1 BUJIHDX2 BUJIHDX3 BUJIHDX4 BUJIHDX6 BUJIHDX8 BUJIHDX12]
+    }
+    return [list BUHDX1 BUHDX2 BUHDX4 BUHDX6 BUHDX8 BUHDX12]
+}
+
+proc mptdc_o10_cts_inverter_cells {} {
+    set family [string toupper [mptdc_o10_env MPTDC_STDCELL_FAMILY HD]]
+    if {$family eq "JIHD"} {
+        return [list INJIHDX1 INJIHDX2 INJIHDX3 INJIHDX4 INJIHDX6 INJIHDX8 INJIHDX12]
+    }
+    return [list INHDX1 INHDX2 INHDX4 INHDX8 INHDX12]
+}
+
 proc mptdc_o10_cts {} {
     global o10 pnr
     mptdc_o10_msg "Running O10.2 CTS policy: clk_sys only, never RO phase clocks"
@@ -41,6 +85,17 @@ proc mptdc_o10_cts {} {
             puts $guard_fh "  skipped: no clock object"
             continue
         }
+        foreach guard_cmd [list \
+            [list set_dont_touch_network $objs] \
+            [list set_ideal_network $objs] \
+        ] {
+            if {![catch {{*}$guard_cmd} guard_err]} {
+                puts $guard_fh "  applied: $guard_cmd"
+            } else {
+                puts $guard_fh "  skipped: $guard_cmd"
+                puts $guard_fh "    $guard_err"
+            }
+        }
         puts $guard_fh "  audited: RO clock is present and excluded from CTS planning"
     }
     close $guard_fh
@@ -70,8 +125,14 @@ proc mptdc_o10_cts {} {
         puts $status_fh "reason=clk_sys clock was not found"
         close $status_fh
     } else {
-        catch {set_ccopt_property buffer_cells {BUHDX1 BUHDX2 BUHDX4 BUHDX6}}
-        catch {set_ccopt_property inverter_cells {INHDX1 INHDX2 INHDX4}}
+        set mode_result [mptdc_o10_select_interactive_constraint_mode]
+        puts $status_fh "interactive_constraint_mode=[lindex $mode_result 0]:[lindex $mode_result 1]"
+        set cts_buffers [mptdc_o10_cts_buffer_cells]
+        set cts_inverters [mptdc_o10_cts_inverter_cells]
+        puts $status_fh "cts_buffer_cells=$cts_buffers"
+        puts $status_fh "cts_inverter_cells=$cts_inverters"
+        catch {set_ccopt_property buffer_cells $cts_buffers}
+        catch {set_ccopt_property inverter_cells $cts_inverters}
         catch {set_ccopt_property target_skew 0.15}
         set spec_created 0
         set spec_path "$o10(work_dir)/clk_sys_cts.spec"
@@ -79,6 +140,7 @@ proc mptdc_o10_cts {} {
             [list create_ccopt_clock_tree_spec -file $spec_path -clock_tree clk_sys] \
             [list create_ccopt_clock_tree_spec -file $spec_path -clock_trees [list clk_sys]] \
             [list create_ccopt_clock_tree_spec -file $spec_path -clocks [list clk_sys]] \
+            [list create_ccopt_clock_tree_spec -file $spec_path] \
         ] {
             if {![catch {{*}$cmd} err]} {
                 set spec_created 1

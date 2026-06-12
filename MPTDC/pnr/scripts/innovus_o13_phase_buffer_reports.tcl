@@ -316,6 +316,46 @@ proc mptdc_o13_write_stage_placement {fh family tap stage inst cell_type ro_inst
         $pd_x $pd_y [lindex $pd_dist 2] $placement_status [mptdc_o12b_csv [join $notes ";"]]] ","]
 }
 
+proc mptdc_o13_write_stage_placement_safe {fh family tap stage inst cell_type ro_inst ro_x ro_y pd_x pd_y placement_numeric_var min_ro_dist_var max_ro_dist_var} {
+    upvar $placement_numeric_var placement_numeric
+    upvar $min_ro_dist_var min_ro_dist
+    upvar $max_ro_dist_var max_ro_dist
+    if {[catch {
+        mptdc_o13_write_stage_placement $fh $family $tap $stage $inst $cell_type $ro_inst $ro_x $ro_y $pd_x $pd_y placement_numeric min_ro_dist max_ro_dist
+    } err]} {
+        puts $fh [join [list \
+            $family $tap $stage [mptdc_o12b_csv $inst] [mptdc_o12b_csv $cell_type] \
+            "" "" "" "" "" "" [mptdc_o12b_csv $ro_inst] $ro_x $ro_y "" "" "" \
+            $pd_x $pd_y "" PLACEMENT_REVIEW [mptdc_o12b_csv "PLACEMENT_QUERY_FAILED:$err"]] ","]
+    }
+}
+
+proc mptdc_o13_pin_metric_safe {pin metric notes_var} {
+    upvar $notes_var notes
+    if {$pin eq ""} {
+        lappend notes "[string toupper $metric]_PIN_MISSING"
+        return ""
+    }
+    if {[catch {set value [lindex [mptdc_o12b_pin_metric $pin $metric] 0]} err]} {
+        lappend notes "[string toupper $metric]_QUERY_FAILED:$err"
+        return ""
+    }
+    return $value
+}
+
+proc mptdc_o13_delay_ps_safe {a_pin q_pin notes_var label} {
+    upvar $notes_var notes
+    if {$a_pin eq "" || $q_pin eq ""} {
+        lappend notes "${label}_PIN_MISSING"
+        return ""
+    }
+    if {[catch {set value [mptdc_o13_delay_ps $a_pin $q_pin]} err]} {
+        lappend notes "${label}_QUERY_FAILED:$err"
+        return ""
+    }
+    return $value
+}
+
 proc mptdc_o13_write_reports {} {
     set reports_dir [mptdc_o13_reports_dir]
     file mkdir $reports_dir
@@ -700,20 +740,20 @@ proc mptdc_o13_write_reports {} {
                 $family $tap 2 [mptdc_o12b_csv $sequence] [mptdc_o12b_csv $raw_net] \
                 [mptdc_o12b_csv $iso_net] [mptdc_o12b_csv $out_net] $topo_status [mptdc_o12b_csv [join $topo_notes ";"]]] ","]
 
-            mptdc_o13_write_stage_placement $place_fh $family $tap isolation $iso_inst $iso_cell_type $ro_inst $ro_x $ro_y $pd_x $pd_y placement_numeric min_ro_dist max_ro_dist
-            mptdc_o13_write_stage_placement $place_fh $family $tap driver $drv_inst $drv_cell_type $ro_inst $ro_x $ro_y $pd_x $pd_y placement_numeric min_ro_dist max_ro_dist
+            mptdc_o13_write_stage_placement_safe $place_fh $family $tap isolation $iso_inst $iso_cell_type $ro_inst $ro_x $ro_y $pd_x $pd_y placement_numeric min_ro_dist max_ro_dist
+            mptdc_o13_write_stage_placement_safe $place_fh $family $tap driver $drv_inst $drv_cell_type $ro_inst $ro_x $ro_y $pd_x $pd_y placement_numeric min_ro_dist max_ro_dist
 
-            set iso_in_trans [lindex [mptdc_o12b_pin_metric $iso_a_pin transition] 0]
-            set iso_out_trans [lindex [mptdc_o12b_pin_metric $iso_q_pin transition] 0]
-            set drv_in_trans [lindex [mptdc_o12b_pin_metric $drv_a_pin transition] 0]
-            set drv_out_trans [lindex [mptdc_o12b_pin_metric $drv_q_pin transition] 0]
-            set iso_delay_ps [mptdc_o13_delay_ps $iso_a_pin $iso_q_pin]
-            set drv_delay_ps [mptdc_o13_delay_ps $drv_a_pin $drv_q_pin]
+            set delay_notes [list]
+            set iso_in_trans [mptdc_o13_pin_metric_safe $iso_a_pin transition delay_notes]
+            set iso_out_trans [mptdc_o13_pin_metric_safe $iso_q_pin transition delay_notes]
+            set drv_in_trans [mptdc_o13_pin_metric_safe $drv_a_pin transition delay_notes]
+            set drv_out_trans [mptdc_o13_pin_metric_safe $drv_q_pin transition delay_notes]
+            set iso_delay_ps [mptdc_o13_delay_ps_safe $iso_a_pin $iso_q_pin delay_notes ISO_DELAY]
+            set drv_delay_ps [mptdc_o13_delay_ps_safe $drv_a_pin $drv_q_pin delay_notes DRV_DELAY]
             set total_delay_ps ""
             if {$iso_delay_ps ne "" && $drv_delay_ps ne ""} {
                 set total_delay_ps [format "%.2f" [expr {$iso_delay_ps + $drv_delay_ps}]]
             }
-            set delay_notes [list]
             if {$iso_delay_ps eq ""} { lappend delay_notes "ISO_DELAY_ATTR_UNAVAILABLE" }
             if {$drv_delay_ps eq ""} { lappend delay_notes "DRV_DELAY_ATTR_UNAVAILABLE" }
             puts $delay_fh [join [list \
