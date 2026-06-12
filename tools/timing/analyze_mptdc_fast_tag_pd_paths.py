@@ -222,6 +222,8 @@ def main() -> int:
         bit = infer_tag_bit(start, endpoint)
         row_idx, col_idx = infer_row_col(endpoint)
         start_cell = source_q["cell"] if source_q else cell_from_mapping(start, "fast_tag_source", mapping_rows)
+        if not start_cell:
+            start_cell = cell_from_mapping(endpoint, "fast_tag_source", mapping_rows)
         endpoint_cell = endpoint_point["cell"] if endpoint_point else cell_from_mapping(endpoint, "nfast_hit_endpoint", mapping_rows)
         if not start_cell:
             start_cell = "UNKNOWN"
@@ -258,7 +260,7 @@ def main() -> int:
             "## Repair Direction",
             "",
             "- Keep these paths timed in the fast buffered phase clock domains.",
-            "- First try targeted source-register drive and local nfast distribution buffering.",
+            "- If source cells are already strong and WNS is unchanged, pivot to exact local datapath/library pressure before considering endpoint or local buffering.",
             "- Do not alter the O13 PD Vernier exception; it applies to slow buffered phase sources into q1 endpoints, not these nfast tag paths.",
         ]
     )

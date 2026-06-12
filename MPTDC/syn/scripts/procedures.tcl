@@ -2351,7 +2351,8 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set repair5_exact_close [mptdc_bool_env MPTDC_GENUS_REPAIR5_EXACT_FAST_TAG_CLOSE false]
     set repair6_localtag_preserve_close [mptdc_bool_env MPTDC_GENUS_REPAIR6_LOCALTAG_PRESERVE_CLOSE false]
     set repair7_polarity_source_upgrade [mptdc_bool_env MPTDC_GENUS_REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE false]
-    if {$repair6_localtag_preserve_close || $repair7_polarity_source_upgrade} {
+    set repair8_jihd_exact_close [mptdc_bool_env MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE false]
+    if {$repair6_localtag_preserve_close || $repair7_polarity_source_upgrade || $repair8_jihd_exact_close} {
         set repair4_exact_source_drive true
         set repair5_exact_close true
     }
@@ -2417,6 +2418,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
     puts $fh "REPAIR6_LOCALTAG_PRESERVE_CLOSE=$repair6_localtag_preserve_close"
     puts $fh "REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE=$repair7_polarity_source_upgrade"
+    puts $fh "REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE=$repair8_jihd_exact_close"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
@@ -2725,6 +2727,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $status_fh "REPAIR5_EXACT_FAST_TAG_CLOSE=$repair5_exact_close"
                 puts $status_fh "REPAIR6_LOCALTAG_PRESERVE_CLOSE=$repair6_localtag_preserve_close"
                 puts $status_fh "REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE=$repair7_polarity_source_upgrade"
+                puts $status_fh "REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE=$repair8_jihd_exact_close"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_EXPECTED=$exact_source_expected"
                 puts $status_fh "FAST_TAG_EXACT_SOURCES_FOUND=[llength $exact_source_q_records]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_CLOCK_PINS_FOUND=[llength $exact_source_c_records]"

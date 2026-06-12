@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import re
+import shlex
 from collections import Counter
 from pathlib import Path
 
@@ -237,7 +238,7 @@ def mark_top_path_membership(mapping_rows: list[dict[str, str]], top_paths: list
 def write_env(path: Path, values: dict[str, str]) -> None:
     with path.open("w") as fh:
         for key in sorted(values):
-            fh.write(f"{key}={values[key]}\n")
+            fh.write(f"{key}={shlex.quote(str(values[key]))}\n")
 
 
 def main() -> int:
@@ -353,6 +354,10 @@ def main() -> int:
         "FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT": str(exact_source_counter.get("DFRJIHDX1", 0)),
         "FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT": str(exact_source_counter.get("DFRJIHDX2", 0)),
         "FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT": str(exact_source_counter.get("DFRJIHDX4", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRRQJIHDX1_COUNT": str(exact_source_counter.get("DFRRQJIHDX1", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRRQJIHDX2_COUNT": str(exact_source_counter.get("DFRRQJIHDX2", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRRQJIHDX4_COUNT": str(exact_source_counter.get("DFRRQJIHDX4", 0)),
+        "FAST_TAG_EXACT_SOURCE_DFRSJIHDX2_COUNT": str(exact_source_counter.get("DFRSJIHDX2", 0)),
         "FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT": str(exact_source_counter.get("UNKNOWN", 0)),
         "FAST_TAG_EXACT_ENDPOINT_COUNT": str(sum(exact_endpoint_counter.values())),
         "FAST_TAG_EXACT_ENDPOINT_DFRHDX2_COUNT": str(exact_endpoint_counter.get("DFRHDX2", 0)),
@@ -426,6 +431,10 @@ def main() -> int:
                 f"FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRRQJIHDX1_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQJIHDX1_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRRQJIHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQJIHDX2_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRRQJIHDX4_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRRQJIHDX4_COUNT']}",
+                f"FAST_TAG_EXACT_SOURCE_DFRSJIHDX2_COUNT={values['FAST_TAG_EXACT_SOURCE_DFRSJIHDX2_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT={values['FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT']}",
                 f"FAST_TAG_EXACT_SOURCE_PHASE_CLOCK_LOAD_DELTA_ESTIMATE={values['FAST_TAG_EXACT_SOURCE_PHASE_CLOCK_LOAD_DELTA_ESTIMATE']}",
                 "",
