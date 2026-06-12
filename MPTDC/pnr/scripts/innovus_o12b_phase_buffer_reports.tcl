@@ -539,9 +539,25 @@ proc mptdc_o12b_write_native_named_property_report {path getter name} {
     return 0
 }
 
+proc mptdc_o12b_skip_native_net_property_report {net_name} {
+    if {$net_name eq ""} {
+        return 1
+    }
+
+    # Restored hierarchical HDL-internal nets can resolve as net: pseudo-handles
+    # that Innovus 22.33 rejects in report_property.  The DB snapshot fallback
+    # still keeps the row contextual without adding caught TCLCMD errors.
+    if {[regexp {(^|[/.])iso_tap$} $net_name]} {
+        return 1
+    }
+
+    return 0
+}
+
 proc mptdc_o12b_write_net_property_report {path net_name} {
     if {$net_name eq ""} { return 0 }
-    if {[mptdc_o12b_write_native_named_property_report $path get_nets $net_name]} {
+    if {![mptdc_o12b_skip_native_net_property_report $net_name]
+        && [mptdc_o12b_write_native_named_property_report $path get_nets $net_name]} {
         return 1
     }
     set net_obj [mptdc_o11_net_object $net_name]
