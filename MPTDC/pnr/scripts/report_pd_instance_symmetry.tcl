@@ -43,6 +43,9 @@ proc mptdc_osc_pd_db_attrs_for {attr} {
 
 proc mptdc_osc_pd_db_attr_from_obj {obj attr} {
     if {$obj eq ""} { return "" }
+    if {[string match {hinst:*} "$obj"]} {
+        return ""
+    }
     foreach db_attr [mptdc_osc_pd_db_attrs_for $attr] {
         set val ""
         if {![catch {set val [get_db $obj $db_attr]}] && $val ne ""} {

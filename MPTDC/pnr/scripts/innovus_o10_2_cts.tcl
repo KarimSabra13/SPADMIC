@@ -92,18 +92,8 @@ proc mptdc_o10_cts {} {
             puts $guard_fh "  skipped: no clock object"
             continue
         }
-        foreach guard_cmd [list \
-            [list set_dont_touch_network $objs] \
-            [list set_ideal_network $objs] \
-        ] {
-            if {![catch {{*}$guard_cmd} guard_err]} {
-                puts $guard_fh "  applied: $guard_cmd"
-            } else {
-                puts $guard_fh "  skipped: $guard_cmd"
-                puts $guard_fh "    $guard_err"
-            }
-        }
         puts $guard_fh "  audited: RO clock is present and excluded from CTS planning"
+        puts $guard_fh "  network guard commands not applied: generated clock objects are not top ports"
     }
     close $guard_fh
     puts $policy_fh "RO clock objects found: $ro_found"
