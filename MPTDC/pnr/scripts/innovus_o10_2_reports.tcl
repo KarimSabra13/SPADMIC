@@ -62,6 +62,77 @@ proc mptdc_o10_timing_report_stats {path} {
     return [list "ok" $wns $violations $paths]
 }
 
+proc mptdc_o10_write_fast_tag_to_pd_timing_report {} {
+    global o10
+    set path "$o10(reports_dir)/timing_fast_tag_to_pd_post_route.rpt"
+    set source_patterns [list \
+        "*gen_fast_tag_col*tag_o_reg*/Q" \
+        "*gen_fast_tag_col*u_fast_tag*tag_o*/Q" \
+        "*fast_tag_col*tag_o_reg*/Q" \
+    ]
+    set sink_patterns [list \
+        "*gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*/D" \
+        "*gen_pd_row*gen_pd_col*u_pd*nfast_hit*/D" \
+        "*u_pd*nfast_hit_latched_reg*/D" \
+    ]
+    set sources [mptdc_o10_collect_pins $source_patterns]
+    set sinks [mptdc_o10_collect_pins $sink_patterns]
+
+    set fh [open $path w]
+    puts $fh "O10.2 post-route FAST_TAG_TO_PD_TS timing"
+    puts $fh "============================================"
+    puts $fh "REPORT_STATUS=REVIEW_REQUIRED"
+    puts $fh "FAST_TAG_TO_PD_TS_FALSE_PATH=NO"
+    puts $fh "FAST_TAG_TO_PD_TS_MULTICYCLE=NO"
+    puts $fh "source_pin_count=[llength $sources]"
+    puts $fh "sink_pin_count=[llength $sinks]"
+    puts $fh ""
+    puts $fh "Source patterns:"
+    foreach pattern $source_patterns { puts $fh "- $pattern" }
+    puts $fh ""
+    puts $fh "Sink patterns:"
+    foreach pattern $sink_patterns { puts $fh "- $pattern" }
+    close $fh
+
+    if {[llength $sources] == 0 || [llength $sinks] == 0} {
+        set fh [open $path a]
+        puts $fh ""
+        puts $fh "STATUS=NOT_AVAILABLE_EXACT_PINS_UNMATCHED"
+        puts $fh "This report did not prove or waive FAST_TAG_TO_PD_TS timing."
+        close $fh
+        return 0
+    }
+
+    set src_objs [list]
+    set sink_objs [list]
+    catch {set src_objs [get_pins $sources]}
+    catch {set sink_objs [get_pins $sinks]}
+    set ok 0
+    foreach body [list \
+        {report_timing -check_type setup -from $src_objs -to $sink_objs -max_paths 100 -path_type full_clock} \
+        {report_timing -from $src_objs -to $sink_objs -max_paths 100 -path_type full_clock} \
+        {report_timing -from $src_objs -to $sink_objs -max_paths 100} \
+    ] {
+        if {![catch {eval "$body >> \"$path\""} err]} {
+            set ok 1
+            break
+        }
+        set fh [open $path a]
+        puts $fh ""
+        puts $fh "FAILED_COMMAND=$body"
+        puts $fh "FAILED_REASON=$err"
+        close $fh
+    }
+    if {!$ok} {
+        set fh [open $path a]
+        puts $fh ""
+        puts $fh "STATUS=FAILED_TO_RUN_EXACT_FAST_TAG_TO_PD_REPORT"
+        puts $fh "This report did not prove or waive FAST_TAG_TO_PD_TS timing."
+        close $fh
+    }
+    return $ok
+}
+
 proc mptdc_o10_write_checkpoint_status_report {} {
     global o10
     set fh [open "$o10(reports_dir)/checkpoint_status.rpt" w]
@@ -116,6 +187,42 @@ proc mptdc_o10_write_timing_class_reports {} {
             {report_timing -from [get_clocks clk_sys] -to [get_clocks clk_sys] -max_paths 100} \
             {report_timing -max_paths 100} \
         ]
+    mptdc_o10_capture_candidates "$o10(reports_dir)/timing_true_setup_core.rpt" \
+        "O10.2 post-route true setup core timing" [list \
+            {report_timing -check_type setup -from [all_registers] -to [all_registers] -max_paths 50 -path_type full_clock} \
+            {report_timing -check_type setup -from [all_registers] -to [all_registers] -max_paths 50} \
+            {report_timing -from [all_registers] -to [all_registers] -max_paths 50} \
+        ]
+    mptdc_o10_capture_candidates "$o10(reports_dir)/timing_true_setup_clk_sys.rpt" \
+        "O10.2 post-route true setup clk_sys timing" [list \
+            {report_timing -check_type setup -path_group clk_sys -max_paths 50 -path_type full_clock} \
+            {report_timing -check_type setup -from [get_clocks clk_sys] -to [get_clocks clk_sys] -max_paths 50 -path_type full_clock} \
+            {report_timing -path_group clk_sys -max_paths 50} \
+        ]
+    mptdc_o10_capture_candidates "$o10(reports_dir)/timing_true_setup_ro_domain.rpt" \
+        "O10.2 post-route true setup RO oscillator-domain timing" [list \
+            {report_timing -check_type setup -path_group clk_osc_fast -max_paths 50 -path_type full_clock} \
+            {report_timing -check_type setup -path_group clk_osc_fast_tap1 -max_paths 50 -path_type full_clock} \
+            {report_timing -path_group clk_osc_fast -max_paths 50} \
+        ]
+    mptdc_o10_capture_candidates "$o10(reports_dir)/timing_io_block_level.rpt" \
+        "O10.2 post-route block-level IO timing" [list \
+            {report_timing -check_type setup -to [all_outputs] -max_paths 100 -path_type full_clock} \
+            {report_timing -to [all_outputs] -max_paths 100 -path_type full_clock} \
+            {report_timing -to [all_outputs] -max_paths 100} \
+        ]
+    mptdc_o10_capture_append_commands "$o10(reports_dir)/timing_recovery_removal.rpt" \
+        "O10.2 post-route recovery/removal timing" [list \
+            {report_timing -check_type recovery -max_paths 50 -path_type full_clock} \
+            {report_timing -check_type removal -max_paths 50 -path_type full_clock} \
+        ]
+    mptdc_o10_write_fast_tag_to_pd_timing_report
+    mptdc_o10_copy_report_alias "$o10(reports_dir)/timing_true_setup_core.rpt" "$o10(reports_dir)/timing_core_setup.rpt"
+    mptdc_o10_copy_report_alias "$o10(reports_dir)/timing_true_setup_clk_sys.rpt" "$o10(reports_dir)/timing_clk_sys.rpt"
+    mptdc_o10_copy_report_alias "$o10(reports_dir)/timing_true_setup_ro_domain.rpt" "$o10(reports_dir)/timing_ro_domain.rpt"
+    mptdc_o10_copy_report_alias "$o10(reports_dir)/timing_io_block_level.rpt" "$o10(reports_dir)/timing_io_output.rpt"
+    mptdc_o10_copy_report_alias "$o10(reports_dir)/timing_recovery_removal.rpt" "$o10(reports_dir)/timing_reset_recovery.rpt"
+    mptdc_o10_copy_report_alias "$o10(reports_dir)/timing_fast_tag_to_pd_post_route.rpt" "$o10(reports_dir)/fast_tag_to_pd_timing_post_route.rpt"
 
     set fh [open "$o10(reports_dir)/timing_post_route_summary_by_class.md" w]
     puts $fh "# O10.2 Post-Route Timing Summary By Class"
@@ -140,6 +247,7 @@ proc mptdc_o10_write_timing_class_reports {} {
     puts $fh ""
     puts $fh "Do not let IO output or reset/recovery paths dominate the core closure conclusion."
     close $fh
+    mptdc_o10_copy_report_alias "$o10(reports_dir)/timing_post_route_summary_by_class.md" "$o10(reports_dir)/timing_by_class.md"
 }
 
 proc mptdc_o10_write_reset_recovery_summary {} {

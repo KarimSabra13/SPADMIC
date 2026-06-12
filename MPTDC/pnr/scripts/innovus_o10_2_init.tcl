@@ -116,6 +116,34 @@ proc mptdc_o10_capture_candidates {path title bodies} {
     return 0
 }
 
+proc mptdc_o10_capture_append_commands {path title bodies} {
+    set dir [file dirname $path]
+    file mkdir $dir
+    set fh [open $path w]
+    puts $fh "$title"
+    puts $fh [string repeat "=" [string length $title]]
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    close $fh
+
+    set ok_count 0
+    foreach body $bodies {
+        set fh [open $path a]
+        puts $fh ""
+        puts $fh "## COMMAND: $body"
+        close $fh
+        if {[catch {uplevel 1 "$body >> \"$path\""} err]} {
+            set fh [open $path a]
+            puts $fh "FAILED:"
+            puts $fh $err
+            close $fh
+            mptdc_o10_msg "report section failed: $title: $body: $err"
+        } else {
+            incr ok_count
+        }
+    }
+    return $ok_count
+}
+
 proc mptdc_o10_object_names {objects} {
     set names [list]
     if {[llength $objects] == 0} {
@@ -163,6 +191,28 @@ proc mptdc_o10_collect_nets {patterns} {
         }
     }
     return $matches
+}
+
+proc mptdc_o10_collect_pins {patterns} {
+    set matches [list]
+    foreach pattern $patterns {
+        set pins [list]
+        if {[catch {set pins [get_pins -hierarchical -quiet $pattern]}]} {
+            catch {set pins [get_pins -hier $pattern]}
+        }
+        foreach pin [mptdc_o10_object_names $pins] {
+            if {[lsearch -exact $matches $pin] < 0} {
+                lappend matches $pin
+            }
+        }
+    }
+    return $matches
+}
+
+proc mptdc_o10_copy_report_alias {src dst} {
+    if {[file exists $src]} {
+        file copy -force $src $dst
+    }
 }
 
 proc mptdc_pnr_object_names {objects} {
