@@ -37,6 +37,21 @@ proc mptdc_o12b_num {value} {
     return ""
 }
 
+proc mptdc_o12b_db_object_query_safe {object} {
+    if {$object eq ""} { return 0 }
+    set text "$object"
+    if {[regexp {^(0x[0-9A-Fa-f]+|[A-Za-z_][A-Za-z0-9_]*:)} $text]} {
+        return 1
+    }
+    if {[regexp {[][{}"[:space:]]} $text]} {
+        return 0
+    }
+    if {[string first "/" $text] >= 0} {
+        return 0
+    }
+    return 1
+}
+
 proc mptdc_o12b_property_value {path property} {
     if {$path eq "" || ![file exists $path]} { return "" }
     set fh [open $path r]
@@ -58,7 +73,7 @@ proc mptdc_o12b_first_property_numeric {path properties} {
     foreach property $properties {
         set value [mptdc_o12b_num [mptdc_o12b_property_value $path $property]]
         if {$value ne ""} {
-            return [list $value "report_property:$property"]
+            return [list $value "property_file:$property"]
         }
     }
     return [list "" ""]
@@ -68,7 +83,7 @@ proc mptdc_o12b_first_property_text {path properties} {
     foreach property $properties {
         set value [mptdc_o12b_property_value $path $property]
         if {$value ne ""} {
-            return [list $value "report_property:$property"]
+            return [list $value "property_file:$property"]
         }
     }
     return [list "" ""]
@@ -80,6 +95,10 @@ proc mptdc_o12b_db_attrs_for {object} {
     set key "$object"
     if {[info exists mptdc_o12b_attr_cache($key)]} {
         return $mptdc_o12b_attr_cache($key)
+    }
+    if {![mptdc_o12b_db_object_query_safe $object]} {
+        set mptdc_o12b_attr_cache($key) [list]
+        return [list]
     }
 
     set attrs [list]
@@ -120,7 +139,9 @@ proc mptdc_o12b_db_attr_supported {object attr} {
 
 proc mptdc_o12b_db_attr {object attr} {
     if {$object eq ""} { return "" }
-    if {![mptdc_o12b_db_attr_supported $object $attr]} {
+    if {![mptdc_o12b_db_object_query_safe $object]} { return "" }
+    set attrs [mptdc_o12b_db_attrs_for $object]
+    if {[llength $attrs] > 0 && ![mptdc_o12b_db_attr_supported $object $attr]} {
         return ""
     }
     set val ""
@@ -448,17 +469,59 @@ proc mptdc_o12b_write_net_debug_reports {family tap raw_net out_net} {
     }
 }
 
+proc mptdc_o12b_write_property_snapshot {path title object fields} {
+    set dir [file dirname $path]
+    file mkdir $dir
+    set fh [open $path w]
+    puts $fh "$title"
+    puts $fh [string repeat "=" [string length $title]]
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "object | $object"
+    puts $fh "object_query_safe | [mptdc_o12b_db_object_query_safe $object]"
+    foreach field $fields {
+        set property [lindex $field 0]
+        set value ""
+        set source ""
+        foreach attr [lrange $field 1 end] {
+            set value [mptdc_o12b_db_attr $object $attr]
+            if {$value ne ""} {
+                set source $attr
+                break
+            }
+        }
+        puts $fh "$property | $value"
+        puts $fh "${property}_source | $source"
+    }
+    close $fh
+    return 1
+}
+
 proc mptdc_o12b_write_net_property_report {path net_name} {
     if {$net_name eq ""} { return 0 }
-    return [mptdc_o12b_capture_candidates $path "O12B net properties $net_name" [list \
-        [format {report_property [get_nets {%s}]} $net_name]]]
+    set net_obj [mptdc_o11_net_object $net_name]
+    return [mptdc_o12b_write_property_snapshot $path "O12B net properties $net_name" $net_obj [list \
+        {capacitance_max .total_capacitance .total_cap .capacitance .load_capacitance .effective_capacitance .cap} \
+        {wire_capacitance_max .wire_capacitance .wire_cap .route_capacitance .routing_capacitance} \
+        {pin_capacitance_max .pin_capacitance .pin_cap .load_pin_capacitance .load_capacitance} \
+        {resistance_max .resistance .resistance_max .lumped_resistance .lumped_resistance_max} \
+        {transition .transition .max_transition .slew .max_slew} \
+        {route_length .route_length .routed_length .wire_length .total_wire_length .length} \
+        {num_load_pins .num_loads .fanout} \
+        {fanout .fanout .num_loads}]]
 }
 
 proc mptdc_o12b_write_cell_property_report {path cell_name} {
     if {$cell_name eq ""} { return 0 }
-    return [mptdc_o12b_capture_candidates $path "O12B cell properties $cell_name" [list \
-        [format {report_property [get_cells -hierarchical {%s}]} $cell_name] \
-        [format {report_property [get_cells {%s}]} $cell_name]]]
+    set cell_obj [mptdc_o12b_get_cell $cell_name]
+    return [mptdc_o12b_write_property_snapshot $path "O12B cell properties $cell_name" $cell_obj [list \
+        {ref_name .base_cell.name .lib_cell.name .master.name .cell.name .ref_name .base_cell .lib_cell} \
+        {base_cell .base_cell.name .base_cell} \
+        {lib_cell .lib_cell.name .lib_cell} \
+        {master .master.name .master} \
+        {cell .cell.name .cell} \
+        {bbox .bbox .box .rect .bounds .place_box} \
+        {location .location .origin .pt}]]
 }
 
 proc mptdc_o12b_note_metric_unavailable {notes metric object} {
@@ -842,7 +905,7 @@ proc mptdc_o12b_write_reports {} {
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf \
                 $res_ohm $out_status \
-                [mptdc_o12b_csv "raw_and_buffered_route_from_db_or_report_property_when_available"]]
+                [mptdc_o12b_csv "raw_and_buffered_route_from_db_or_safe_property_snapshot_when_available"]]
             puts $route_fh [join $route_row ","]
 
             if {![info exists attr_probe_samples_written]} {

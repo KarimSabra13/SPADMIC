@@ -6,8 +6,8 @@
 #   RO_tune4/S[n] -> BUHDX4 u_iso -> BUHDX12 u_drv -> phase fabric
 #
 # These reports keep raw analog load evidence separate from final digital phase
-# driver evidence.  They reuse the O12B report_property parsers because those
-# are the portable Innovus path that worked on the lab server.
+# driver evidence.  They reuse the O12B property parsers so report generation
+# can tolerate hierarchical hpin/hinst names from restored Innovus checkpoints.
 # =============================================================================
 
 set ::env(MPTDC_O12B_SOURCE_ONLY) 1
@@ -343,6 +343,24 @@ proc mptdc_o13_pin_metric_safe {pin metric notes_var} {
     return $value
 }
 
+proc mptdc_o13_net_load_names_safe {net_obj source_pin notes_var label} {
+    upvar $notes_var notes
+    if {[catch {set names [mptdc_o11_net_load_names $net_obj $source_pin]} err]} {
+        lappend notes "${label}_SINK_QUERY_FAILED:$err"
+        return [list]
+    }
+    return $names
+}
+
+proc mptdc_o13_sink_cell_type_safe {sink_pin notes_var} {
+    upvar $notes_var notes
+    if {[catch {set cell_type [mptdc_o13_sink_cell_type $sink_pin]} err]} {
+        lappend notes "SINK_CELL_TYPE_QUERY_FAILED:$err"
+        return ""
+    }
+    return $cell_type
+}
+
 proc mptdc_o13_delay_ps_safe {a_pin q_pin notes_var label} {
     upvar $notes_var notes
     if {$a_pin eq "" || $q_pin eq ""} {
@@ -522,7 +540,7 @@ proc mptdc_o13_write_reports {} {
                 set max_raw_cap_ff $raw_total_ff
                 set max_raw_desc [format {%s S[%d] %s} $family $tap $raw_pin]
             }
-            set raw_sinks [join [mptdc_o11_net_load_names $raw_net_obj $raw_pin] ";"]
+            set raw_sinks [join [mptdc_o13_net_load_names_safe $raw_net_obj $raw_pin raw_notes RAW] ";"]
             puts $raw_fh [join [list \
                 $family $tap [mptdc_o12b_csv $raw_pin] [llength $raw_pins] [mptdc_o12b_csv $raw_net] \
                 $raw_fanout $raw_total_pf $raw_total_ff $raw_bound_ff $raw_label $raw_strict $raw_cn \
@@ -599,7 +617,7 @@ proc mptdc_o13_write_reports {} {
             }
             if {$route_len ne ""} { lappend out_notes "ROUTE_LENGTH_SOURCE=[lindex $route_data 1]" }
 
-            set sink_names [mptdc_o11_net_load_names $out_net_obj $drv_q_pin]
+            set sink_names [mptdc_o13_net_load_names_safe $out_net_obj $drv_q_pin out_notes OUT]
             set pd_count 0
             set fast_tag_count 0
             set slow_epoch_count 0
@@ -618,18 +636,18 @@ proc mptdc_o13_write_reports {} {
                 } else {
                     incr other_count
                 }
-                set sink_cap [lindex [mptdc_o12b_pin_metric $sink cap] 0]
+                set sink_notes [list]
+                set sink_cap [mptdc_o13_pin_metric_safe $sink cap sink_notes]
                 puts $sink_fh [join [list \
                     $family $tap [mptdc_o12b_csv $drv_q_pin] [mptdc_o12b_csv $out_net] \
                     [mptdc_o12b_csv $sink] $class $sink_cap [mptdc_o12b_pf_to_ff $sink_cap]] ","]
                 if {$class eq "FAST_TAG_CLOCK" || $class eq "FAST_TAG_DATA"} {
-                    set sink_cell_type [mptdc_o13_sink_cell_type $sink]
+                    set sink_cell_type [mptdc_o13_sink_cell_type_safe $sink sink_notes]
                     set sink_role [mptdc_o13_sink_pin_tail $sink]
                     set sink_field [mptdc_o13_sink_cap_field $sink]
                     set sink_cap_ff [mptdc_o12b_pf_to_ff $sink_cap]
                     set sink_ref_cap_ff ""
                     set sink_equiv_count ""
-                    set sink_notes [list]
                     if {$sink_cell_type eq ""} {
                         lappend sink_notes "SINK_CELL_TYPE_UNKNOWN"
                     }
@@ -655,10 +673,14 @@ proc mptdc_o13_write_reports {} {
                 }
             }
 
-            set iso_in_cap_pf [lindex [mptdc_o12b_pin_metric $iso_a_pin cap] 0]
+            set input_cap_notes [list]
+            set iso_in_cap_pf [mptdc_o13_pin_metric_safe $iso_a_pin cap input_cap_notes]
             set iso_in_cap_ff [mptdc_o12b_pf_to_ff $iso_in_cap_pf]
-            set drv_in_cap_pf [lindex [mptdc_o12b_pin_metric $drv_a_pin cap] 0]
+            set drv_in_cap_pf [mptdc_o13_pin_metric_safe $drv_a_pin cap input_cap_notes]
             set drv_in_cap_ff [mptdc_o12b_pf_to_ff $drv_in_cap_pf]
+            foreach input_cap_note $input_cap_notes {
+                lappend out_notes $input_cap_note
+            }
             set out_label [mptdc_o11_budget_label $total_ff]
             set out_strict [mptdc_o13_xlibd_ratio_or_bound $total_ff "" strict]
             set out_cn [mptdc_o13_xlibd_ratio_or_bound $total_ff "" cn]
@@ -767,7 +789,7 @@ proc mptdc_o13_write_reports {} {
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $iso_net] $iso_route_len $iso_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf $res_ohm \
-                $out_status [mptdc_o12b_csv "raw_iso_and_final_driver_route_from_report_property_when_available"]]] ","]
+                $out_status [mptdc_o12b_csv "raw_iso_and_final_driver_route_from_safe_property_snapshot_when_available"]]] ","]
         }
     }
 
