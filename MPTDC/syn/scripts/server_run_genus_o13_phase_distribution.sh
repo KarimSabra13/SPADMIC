@@ -152,6 +152,7 @@ if [[ "$MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE" == "1" ]]; then
   export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL:-POLARITY_AWARE}"
   export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_RESET0_CELL="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_RESET0_CELL:-DFRRQJIHDX4}"
   export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL:-DFRSJIHDX2}"
+  export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-1}"
   export MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT=0
 elif [[ "$MPTDC_GENUS_REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE" == "1" ]]; then
   export MPTDC_GENUS_REPAIR5_EXACT_FAST_TAG_CLOSE=1
@@ -496,6 +497,7 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_MODE=${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_MODE:-unset}"
   echo "  MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_RESET0_CELL=${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_RESET0_CELL:-unset}"
   echo "  MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL=${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL:-auto}"
+  echo "  MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED=${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-0}"
   echo "  MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT=${MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT:-0}"
   echo "  MPTDC_CONTROL_REPAIR_MAX_FANOUT=${MPTDC_CONTROL_REPAIR_MAX_FANOUT:-16}"
   echo "  MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS=${MPTDC_CONTROL_REPAIR_MAX_TRANSITION_NS:-0.50}"
@@ -1146,22 +1148,37 @@ write_final_readiness() {
         if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_MODE:-}" == "POLARITY_AWARE" || "${MPTDC_GENUS_REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE:-0}" == "1" ]]; then
           emit_check_text "exact source cell mode" POLARITY_AWARE "$FAST_TAG_EXACT_SOURCE_CELL_MODE"
           emit_check "exact reset0 source count" 16 "$FAST_TAG_EXACT_RESET0_SOURCE_COUNT"
-          emit_check "exact set1 source count" 8 "$FAST_TAG_EXACT_SET1_SOURCE_COUNT"
-          emit_check "exact unsupported source polarity count" 0 "$FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT"
-          emit_check "exact final DFRRQHDX4 target count" 16 "$FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT"
-          if [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSQHDX4" ]]; then
-            emit_check "exact final DFRSQHDX4 target count" 8 "$FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT"
-          elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSQHDX2" ]]; then
-            emit_check "exact final DFRSQHDX2 target count" 8 "$FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT"
-          elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSJIHDX4" ]]; then
-            emit_check "exact final DFRSJIHDX4 target count" 8 "$FAST_TAG_EXACT_DFRSJIHDX4_TARGET_COUNT"
-          elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSJIHDX2" ]]; then
-            emit_check "exact final DFRSJIHDX2 target count" 8 "$FAST_TAG_EXACT_DFRSJIHDX2_TARGET_COUNT"
+          if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-0}" == "1" ]]; then
+            emit_check "exact set1 source count" 0 "$FAST_TAG_EXACT_SET1_SOURCE_COUNT"
+            emit_check "exact unsupported source polarity count" 8 "$FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT"
           else
-            emit_check_text "exact selected set1 target" "DFRSQHDX4_or_DFRSQHDX2_or_DFRSJIHDX4_or_DFRSJIHDX2" "$FAST_TAG_EXACT_SELECTED_SET1_TARGET"
+            emit_check "exact set1 source count" 8 "$FAST_TAG_EXACT_SET1_SOURCE_COUNT"
+            emit_check "exact unsupported source polarity count" 0 "$FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT"
+          fi
+          if [[ "$FAST_TAG_EXACT_SELECTED_RESET0_TARGET" == "DFRRQJIHDX4" ]]; then
+            emit_check "exact final DFRRQJIHDX4 target count" 16 "$FAST_TAG_EXACT_DFRRQJIHDX4_TARGET_COUNT"
+          else
+            emit_check "exact final DFRRQHDX4 target count" 16 "$FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT"
+          fi
+          if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-0}" != "1" ]]; then
+            if [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSQHDX4" ]]; then
+              emit_check "exact final DFRSQHDX4 target count" 8 "$FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT"
+            elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSQHDX2" ]]; then
+              emit_check "exact final DFRSQHDX2 target count" 8 "$FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT"
+            elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSJIHDX4" ]]; then
+              emit_check "exact final DFRSJIHDX4 target count" 8 "$FAST_TAG_EXACT_DFRSJIHDX4_TARGET_COUNT"
+            elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSJIHDX2" ]]; then
+              emit_check "exact final DFRSJIHDX2 target count" 8 "$FAST_TAG_EXACT_DFRSJIHDX2_TARGET_COUNT"
+            else
+              emit_check_text "exact selected set1 target" "DFRSQHDX4_or_DFRSQHDX2_or_DFRSJIHDX4_or_DFRSJIHDX2" "$FAST_TAG_EXACT_SELECTED_SET1_TARGET"
+            fi
           fi
           emit_check "exact source polarity failed count" 0 "$FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT"
-          emit_check_text "exact fast-tag source cell result" PASS_FINAL_VERIFIED "$FAST_TAG_EXACT_SOURCE_CELL_RESULT"
+          if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-0}" == "1" ]]; then
+            emit_check_text "exact fast-tag source cell result" PASS_PARTIAL_UNSUPPORTED_SKIPPED "$FAST_TAG_EXACT_SOURCE_CELL_RESULT"
+          else
+            emit_check_text "exact fast-tag source cell result" PASS_FINAL_VERIFIED "$FAST_TAG_EXACT_SOURCE_CELL_RESULT"
+          fi
         else
           emit_check "exact fast-tag source cell target count" "$EXACT_FAST_TAG_SOURCES_EXPECTED" "$FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT"
           emit_check_text "exact fast-tag source cell result" OK "$FAST_TAG_EXACT_SOURCE_CELL_RESULT"
@@ -1440,16 +1457,42 @@ if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL:-}" != "" ]]; then
     if [[ "$FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT" == "16" || "$FAST_TAG_EXACT_DFRRQJIHDX4_TARGET_COUNT" == "16" ]]; then
       EXACT_RESET0_TARGET_OK=YES
     fi
-    if [[ "$FAST_TAG_EXACT_SOURCE_CELL_RESULT" == "PASS_FINAL_VERIFIED" \
+    EXACT_SOURCE_CELL_STATUS_OK=NO
+    EXACT_SET1_SOURCE_OK=NO
+    EXACT_UNSUPPORTED_SOURCE_OK=NO
+    if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-0}" == "1" ]]; then
+      if [[ "$FAST_TAG_EXACT_SOURCE_CELL_RESULT" == "PASS_PARTIAL_UNSUPPORTED_SKIPPED" ]]; then
+        EXACT_SOURCE_CELL_STATUS_OK=YES
+      fi
+      if [[ "$FAST_TAG_EXACT_SET1_SOURCE_COUNT" == "0" ]]; then
+        EXACT_SET1_SOURCE_OK=YES
+      fi
+      if [[ "$FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT" == "8" ]]; then
+        EXACT_UNSUPPORTED_SOURCE_OK=YES
+      fi
+    else
+      if [[ "$FAST_TAG_EXACT_SOURCE_CELL_RESULT" == "PASS_FINAL_VERIFIED" ]]; then
+        EXACT_SOURCE_CELL_STATUS_OK=YES
+      fi
+      if [[ "$FAST_TAG_EXACT_SET1_SOURCE_COUNT" == "8" ]]; then
+        EXACT_SET1_SOURCE_OK=YES
+      fi
+      if [[ "$FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT" == "0" ]]; then
+        EXACT_UNSUPPORTED_SOURCE_OK=YES
+      fi
+    fi
+    if [[ "$EXACT_SOURCE_CELL_STATUS_OK" == "YES" \
         && "$FAST_TAG_EXACT_SOURCE_CELL_MODE" == "POLARITY_AWARE" \
         && "$FAST_TAG_EXACT_SOURCE_COUNT" == "$EXACT_FAST_TAG_SOURCES_EXPECTED" \
         && "$FAST_TAG_EXACT_RESET0_SOURCE_COUNT" == "16" \
-        && "$FAST_TAG_EXACT_SET1_SOURCE_COUNT" == "8" \
-        && "$FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT" == "0" \
+        && "$EXACT_SET1_SOURCE_OK" == "YES" \
+        && "$EXACT_UNSUPPORTED_SOURCE_OK" == "YES" \
         && "$EXACT_RESET0_TARGET_OK" == "YES" \
         && "$FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT" == "0" \
         && "$FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT" == "0" ]]; then
-      if [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSQHDX4" && "$FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT" == "8" ]]; then
+      if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-0}" == "1" ]]; then
+        EXACT_SOURCE_CELL_GATE_OK=YES
+      elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSQHDX4" && "$FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT" == "8" ]]; then
         EXACT_SOURCE_CELL_GATE_OK=YES
       elif [[ "$FAST_TAG_EXACT_SELECTED_SET1_TARGET" == "DFRSQHDX2" && "$FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT" == "8" ]]; then
         EXACT_SOURCE_CELL_GATE_OK=YES

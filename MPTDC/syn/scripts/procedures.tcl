@@ -1930,6 +1930,7 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
     set result [mptdc_repair_default_exact_source_cell_result POLARITY_AWARE]
     dict set result requested YES
     dict set result source_cell_mode POLARITY_AWARE
+    set skip_unsupported [mptdc_bool_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED false]
 
     set reset0_target [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_RESET0_CELL DFRRQHDX4]
     set set1_requested [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL ""]
@@ -2007,7 +2008,7 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
         dict set result status FAIL_TARGET_LIB_CELL_NOT_FOUND
         return $result
     }
-    if {[llength $resolved_records] == 0 || $unsupported_count > 0} {
+    if {[llength $resolved_records] == 0 || ($unsupported_count > 0 && !$skip_unsupported)} {
         dict set result status FAIL_UNSUPPORTED_SOURCE_POLARITY
         return $result
     }
@@ -2026,9 +2027,25 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
     set polarity_preserved 0
     set polarity_failed 0
     array set seen_cells {}
+    set known_polarity_count [expr {$reset0_count + $set1_count}]
     foreach rec $resolved_records {
         set polarity [dict get $rec polarity]
         set original_cell [dict get $rec current_cell]
+        if {$polarity eq "UNKNOWN"} {
+            lappend rows [dict create \
+                stage $stage \
+                source_instance [dict get $rec inst] \
+                tap [dict get $rec tap] \
+                bit [dict get $rec bit] \
+                original_cell $original_cell \
+                target_cell SKIPPED_UNSUPPORTED_POLARITY \
+                command SKIPPED \
+                command_status SKIPPED_UNSUPPORTED_POLARITY \
+                final_cell $original_cell \
+                polarity_preserved NA \
+                notes "unsupported_polarity_left_unchanged"]
+            continue
+        }
         set target_cell $reset0_target
         set target_lib $reset0_lib
         if {$polarity eq "SET1"} {
@@ -2101,7 +2118,7 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
     puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_REQUESTED=NO"
     puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_CELLS=0"
     puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=SKIPPED_NOT_FINAL_VERIFIED"
-    if {$target_count == [llength $resolved_records] && $polarity_failed == 0} {
+    if {$known_polarity_count > 0 && $target_count == $known_polarity_count && $polarity_failed == 0} {
         close $freeze_fh
         set freeze_fh [open "$report_dir/fast_tag_exact_source_freeze.rpt" a]
         puts $freeze_fh "STAGE=$stage"
@@ -2113,7 +2130,11 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
         }
         puts $freeze_fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=OK"
         dict set result freeze_result OK
-        dict set result status PASS_FINAL_VERIFIED
+        if {$unsupported_count > 0} {
+            dict set result status PASS_PARTIAL_UNSUPPORTED_SKIPPED
+        } else {
+            dict set result status PASS_FINAL_VERIFIED
+        }
     } else {
         dict set result freeze_result SKIPPED_NOT_FINAL_VERIFIED
         dict set result status FAIL_NOT_APPLIED
@@ -2740,7 +2761,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                     set source_cell_ok true
                     if {$exact_fast_tag_source_cell ne "" && $stage eq "post_map_pre_opt"} {
                         set source_cell_status [dict get $exact_source_cell_result status]
-                        set source_cell_ok [expr {$source_cell_status eq "OK" || $source_cell_status eq "PASS_FINAL_VERIFIED"}]
+                        set source_cell_ok [expr {$source_cell_status eq "OK" || $source_cell_status eq "PASS_FINAL_VERIFIED" || $source_cell_status eq "PASS_PARTIAL_UNSUPPORTED_SKIPPED"}]
                     }
                     set max_delay_ok true
                     if {$enable_exact_fast_tag_max_delay} {
