@@ -1766,16 +1766,21 @@ proc mptdc_repair_default_exact_source_cell_result {target_cell} {
         drrqhdx4_target_count 0 \
         dfrsqhdx4_target_count 0 \
         dfrsqhdx2_target_count 0 \
+        drrqjihdx4_target_count 0 \
+        dfrsjihdx4_target_count 0 \
+        dfrsjihdx2_target_count 0 \
         polarity_preserved_count 0 \
         polarity_failed_count 0 \
         freeze_result SKIPPED]
 }
 
 proc mptdc_repair_source_polarity_from_cell {base_cell} {
-    if {[regexp {^(S)?DFRRQHDX[0-9]+$} $base_cell]} {
+    if {[regexp {^(S)?DFRRQHDX[0-9]+$} $base_cell] ||
+        [regexp {^(S)?DFRRQJIHDX[0-9]+$} $base_cell]} {
         return RESET0
     }
-    if {[regexp {^(S)?DFRSQHDX[0-9]+$} $base_cell]} {
+    if {[regexp {^(S)?DFRSQHDX[0-9]+$} $base_cell] ||
+        [regexp {^(S)?DFRSJIHDX[0-9]+$} $base_cell]} {
         return SET1
     }
     return UNKNOWN
@@ -1929,18 +1934,25 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
     set reset0_target [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_RESET0_CELL DFRRQHDX4]
     set set1_requested [mptdc_repair_set_numeric_env MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL ""]
     set reset0_lib [mptdc_repair_find_lib_cell $reset0_target]
-    set set1_4_lib [mptdc_repair_find_lib_cell DFRSQHDX4]
-    set set1_2_lib [mptdc_repair_find_lib_cell DFRSQHDX2]
+    if {[string match *JIHD* $reset0_target]} {
+        set default_set1_4 DFRSJIHDX4
+        set default_set1_2 DFRSJIHDX2
+    } else {
+        set default_set1_4 DFRSQHDX4
+        set default_set1_2 DFRSQHDX2
+    }
+    set set1_4_lib [mptdc_repair_find_lib_cell $default_set1_4]
+    set set1_2_lib [mptdc_repair_find_lib_cell $default_set1_2]
     set selected_set1 "NA"
     set selected_set1_lib ""
     if {$set1_requested ne ""} {
         set selected_set1 $set1_requested
         set selected_set1_lib [mptdc_repair_find_lib_cell $set1_requested]
     } elseif {$set1_4_lib ne ""} {
-        set selected_set1 DFRSQHDX4
+        set selected_set1 $default_set1_4
         set selected_set1_lib $set1_4_lib
     } elseif {$set1_2_lib ne ""} {
-        set selected_set1 DFRSQHDX2
+        set selected_set1 $default_set1_2
         set selected_set1_lib $set1_2_lib
     }
     mptdc_repair_write_exact_source_legal_cells_report \
@@ -2008,6 +2020,9 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
     set drrq4_count 0
     set dfrsq4_count 0
     set dfrsq2_count 0
+    set drrqjihd4_count 0
+    set dfrsjihd4_count 0
+    set dfrsjihd2_count 0
     set polarity_preserved 0
     set polarity_failed 0
     array set seen_cells {}
@@ -2041,6 +2056,18 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
         if {$final_cell eq "DFRRQHDX4"} { incr drrq4_count }
         if {$final_cell eq "DFRSQHDX4"} { incr dfrsq4_count }
         if {$final_cell eq "DFRSQHDX2"} { incr dfrsq2_count }
+        if {$final_cell eq "DFRRQJIHDX4"} {
+            incr drrq4_count
+            incr drrqjihd4_count
+        }
+        if {$final_cell eq "DFRSJIHDX4"} {
+            incr dfrsq4_count
+            incr dfrsjihd4_count
+        }
+        if {$final_cell eq "DFRSJIHDX2"} {
+            incr dfrsq2_count
+            incr dfrsjihd2_count
+        }
         lappend rows [dict create \
             stage $stage \
             source_instance [dict get $rec inst] \
@@ -2062,6 +2089,9 @@ proc mptdc_repair_apply_exact_source_cell_polarity_aware {stage source_records r
     dict set result drrqhdx4_target_count $drrq4_count
     dict set result dfrsqhdx4_target_count $dfrsq4_count
     dict set result dfrsqhdx2_target_count $dfrsq2_count
+    dict set result drrqjihdx4_target_count $drrqjihd4_count
+    dict set result dfrsjihdx4_target_count $dfrsjihd4_count
+    dict set result dfrsjihdx2_target_count $dfrsjihd2_count
     dict set result polarity_preserved_count $polarity_preserved
     dict set result polarity_failed_count $polarity_failed
     dict set result method POLARITY_AWARE_COMMAND_LADDER
@@ -2696,6 +2726,9 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $fh "FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result drrqhdx4_target_count]"
                 puts $fh "FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx4_target_count]"
                 puts $fh "FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx2_target_count]"
+                puts $fh "FAST_TAG_EXACT_DFRRQJIHDX4_TARGET_COUNT=[dict get $exact_source_cell_result drrqjihdx4_target_count]"
+                puts $fh "FAST_TAG_EXACT_DFRSJIHDX4_TARGET_COUNT=[dict get $exact_source_cell_result dfrsjihdx4_target_count]"
+                puts $fh "FAST_TAG_EXACT_DFRSJIHDX2_TARGET_COUNT=[dict get $exact_source_cell_result dfrsjihdx2_target_count]"
                 puts $fh "FAST_TAG_EXACT_SOURCE_POLARITY_PRESERVED_COUNT=[dict get $exact_source_cell_result polarity_preserved_count]"
                 puts $fh "FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT=[dict get $exact_source_cell_result polarity_failed_count]"
                 puts $fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=[dict get $exact_source_cell_result freeze_result]"
@@ -2761,6 +2794,9 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 puts $status_fh "FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result drrqhdx4_target_count]"
                 puts $status_fh "FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx4_target_count]"
                 puts $status_fh "FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT=[dict get $exact_source_cell_result dfrsqhdx2_target_count]"
+                puts $status_fh "FAST_TAG_EXACT_DFRRQJIHDX4_TARGET_COUNT=[dict get $exact_source_cell_result drrqjihdx4_target_count]"
+                puts $status_fh "FAST_TAG_EXACT_DFRSJIHDX4_TARGET_COUNT=[dict get $exact_source_cell_result dfrsjihdx4_target_count]"
+                puts $status_fh "FAST_TAG_EXACT_DFRSJIHDX2_TARGET_COUNT=[dict get $exact_source_cell_result dfrsjihdx2_target_count]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_POLARITY_PRESERVED_COUNT=[dict get $exact_source_cell_result polarity_preserved_count]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT=[dict get $exact_source_cell_result polarity_failed_count]"
                 puts $status_fh "FAST_TAG_EXACT_SOURCE_FREEZE_RESULT=[dict get $exact_source_cell_result freeze_result]"

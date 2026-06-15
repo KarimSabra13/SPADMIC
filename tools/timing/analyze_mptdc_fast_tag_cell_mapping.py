@@ -112,7 +112,7 @@ def cell_basename(cell: str) -> str:
 
 
 def infer_drive_strength(cell: str) -> str:
-    match = re.search(r"HDX([0-9]+)$", cell)
+    match = re.search(r"(?:HD|JIHD)X([0-9]+)$", cell)
     return match.group(1) if match else "NA"
 
 
@@ -249,9 +249,13 @@ def main() -> int:
     parser.add_argument("--out-report", type=Path, required=True)
     args = parser.parse_args()
 
-    netlist = args.run_dir / "mptdc_top_asic.postsyn.v"
-    if not netlist.exists():
-        netlist = args.run_dir / "outputs" / "mptdc_top_asic.postsyn.v"
+    netlist_candidates = [
+        args.run_dir / "mptdc_axis_core.postsyn.v",
+        args.run_dir / "outputs" / "mptdc_axis_core.postsyn.v",
+        args.run_dir / "mptdc_top_asic.postsyn.v",
+        args.run_dir / "outputs" / "mptdc_top_asic.postsyn.v",
+    ]
+    netlist = next((candidate for candidate in netlist_candidates if candidate.exists()), netlist_candidates[0])
 
     mapping_rows = parse_netlist_instances(netlist)
     top_paths = parse_top_fast_paths(args.run_dir / "timing_path_classification.csv")
