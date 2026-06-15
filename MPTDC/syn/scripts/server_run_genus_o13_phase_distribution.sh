@@ -23,7 +23,13 @@ SIGNOFF_BOUNDARY="${MPTDC_SIGNOFF_BOUNDARY:-TYPICAL_ONLY_NOT_MMMC}"
 LEGACY_TRACE_LABEL="O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH"
 
 RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_o13_phase_distribution_genus}"
-REQUESTED_RUN_MODE="${MPTDC_O13_MODE:-typical_synth}"
+# Product-axis closure defaults to the ABS5 exact PD q1 Vernier exception.
+# This keeps the intentional slow-phase -> same-row PD q1 sampling crossing out
+# of the real timing comparison while leaving fast-tag, q1->q2, clk_sys, reset,
+# and packet/readout paths timed. Set MPTDC_O13_MODE=typical_synth only for
+# legacy phase-distribution comparisons.
+DEFAULT_O13_RUN_MODE="${MPTDC_O13_DEFAULT_MODE:-O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH}"
+REQUESTED_RUN_MODE="${MPTDC_O13_MODE:-$DEFAULT_O13_RUN_MODE}"
 RUN_MODE="$REQUESTED_RUN_MODE"
 if [[ "${MPTDC_O13_VALIDATE_ONLY:-0}" == "1" ]]; then
   RUN_MODE="validate_only"
@@ -62,6 +68,53 @@ MPTDC_OPT_MODE="${MPTDC_OPT_MODE:-STRIDE2}"
 if ! MPTDC_OPT_MODE_DEFINE_CSV="$(mptdc_common_opt_mode_define_csv "$MPTDC_OPT_MODE")"; then
   exit 2
 fi
+
+# Closure profile defaults:
+#   timing_ultra      First-pass timing proof. ABS5 + REPAIR8/JIHD are enabled,
+#                     area recovery and power recovery are disabled to keep the
+#                     timing comparison clean.
+#   area_timing_ultra Area recovery is enabled after timing is understood. Power
+#                     recovery remains disabled because area/timing are higher
+#                     priority for this block.
+#   power_last        Optional late experiment after area/timing closure.
+#   legacy            Keeps old opt-in behavior for archived comparisons.
+MPTDC_GENUS_CLOSURE_PROFILE="${MPTDC_GENUS_CLOSURE_PROFILE:-timing_ultra}"
+case "$MPTDC_GENUS_CLOSURE_PROFILE" in
+  timing_ultra)
+    export O13_GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
+    export MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE="${MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE:-1}"
+    export MPTDC_GENUS_AREA_RECOVERY="${MPTDC_GENUS_AREA_RECOVERY:-0}"
+    export MPTDC_GENUS_POWER_OPT="${MPTDC_GENUS_POWER_OPT:-0}"
+    export O13_ENABLE_CLOCK_GATING="${O13_ENABLE_CLOCK_GATING:-0}"
+    export MPTDC_DESIGN_POWER_EFFORT="${MPTDC_DESIGN_POWER_EFFORT:-none}"
+    ;;
+  area_timing_ultra|area_ultra)
+    export O13_GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
+    export MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE="${MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE:-1}"
+    export MPTDC_GENUS_AREA_RECOVERY="${MPTDC_GENUS_AREA_RECOVERY:-1}"
+    export MPTDC_GENUS_POWER_OPT="${MPTDC_GENUS_POWER_OPT:-0}"
+    export O13_ENABLE_CLOCK_GATING="${O13_ENABLE_CLOCK_GATING:-0}"
+    export MPTDC_DESIGN_POWER_EFFORT="${MPTDC_DESIGN_POWER_EFFORT:-none}"
+    ;;
+  power_last)
+    export O13_GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
+    export MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE="${MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE:-1}"
+    export MPTDC_GENUS_AREA_RECOVERY="${MPTDC_GENUS_AREA_RECOVERY:-1}"
+    export MPTDC_GENUS_POWER_OPT="${MPTDC_GENUS_POWER_OPT:-1}"
+    export O13_ENABLE_CLOCK_GATING="${O13_ENABLE_CLOCK_GATING:-0}"
+    export MPTDC_DESIGN_POWER_EFFORT="${MPTDC_DESIGN_POWER_EFFORT:-high}"
+    ;;
+  legacy|custom)
+    export O13_GENUS_EFFORT="${O13_GENUS_EFFORT:-closure}"
+    ;;
+  *)
+    echo "ERROR: unsupported MPTDC_GENUS_CLOSURE_PROFILE=$MPTDC_GENUS_CLOSURE_PROFILE" >&2
+    echo "Supported: timing_ultra, area_timing_ultra, area_ultra, power_last, legacy, custom" >&2
+    exit 2
+    ;;
+esac
+export MPTDC_GENUS_CLOSURE_PROFILE
+
 export MPTDC_GENUS_REPAIR_FAST_TAG_PD="${MPTDC_GENUS_REPAIR_FAST_TAG_PD:-0}"
 export MPTDC_GENUS_REPAIR_DRV_TRANSITION="${MPTDC_GENUS_REPAIR_DRV_TRANSITION:-0}"
 export MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE="${MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE:-0}"
@@ -85,7 +138,7 @@ if [[ "$MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE" == "1" ]]; then
   export MPTDC_GENUS_REPAIR_APPLY_BROAD_CONTROL_NETS=0
   export MPTDC_GENUS_REPAIR_APPLY_DESIGN_DRV=0
   export MPTDC_GENUS_RELAX_FAST_TAG_PRESERVE=0
-  export MPTDC_DESIGN_POWER_EFFORT=none
+  export MPTDC_DESIGN_POWER_EFFORT="${MPTDC_DESIGN_POWER_EFFORT:-none}"
   export MPTDC_FAST_TAG_REPAIR_APPLY_Q_CONSTRAINTS=0
   export MPTDC_FAST_TAG_REPAIR_EXACT_DATA_PATHS=1
   export MPTDC_FAST_TAG_REPAIR_EXACT_TAPS="${MPTDC_FAST_TAG_REPAIR_EXACT_TAPS:-0 1 2 3 4 5 6 7}"
@@ -238,6 +291,7 @@ export MPTDC_GENUS_TOOL_LOG="$GENUS_TOOL_LOG"
   echo "packet_format: unchanged"
   echo "nfast_encoding: raw_lfsr_tag"
   echo "frequency_mode: r750_delta5"
+  echo "genus_closure_profile: $MPTDC_GENUS_CLOSURE_PROFILE"
   echo "mptdc_opt_mode: $MPTDC_OPT_MODE"
   echo "mptdc_opt_defines: ${MPTDC_OPT_MODE_DEFINE_CSV:-none}"
   echo
@@ -405,9 +459,13 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  O13_SDC=$O13_SDC"
   echo "  O13_FILELIST=$O13_FILELIST"
   echo "  MPTDC_FREQ_MODE=$MPTDC_FREQ_MODE"
+  echo "  MPTDC_GENUS_CLOSURE_PROFILE=$MPTDC_GENUS_CLOSURE_PROFILE"
   echo "  MPTDC_OPT_MODE=$MPTDC_OPT_MODE"
   echo "  MPTDC_OPT_DEFINES=${MPTDC_OPT_MODE_DEFINE_CSV:-none}"
   echo "  GENUS_EFFORT=$GENUS_EFFORT"
+  echo "  MPTDC_GENUS_AREA_RECOVERY=${MPTDC_GENUS_AREA_RECOVERY:-unset}"
+  echo "  MPTDC_GENUS_POWER_OPT=${MPTDC_GENUS_POWER_OPT:-unset}"
+  echo "  O13_ENABLE_CLOCK_GATING=${O13_ENABLE_CLOCK_GATING:-unset}"
   echo "  MPTDC_TIMING_VIEW=$MPTDC_TIMING_VIEW"
   echo "  FLOW_LABEL=$FLOW_LABEL"
   echo "  CLOSURE_LABEL=$CLOSURE_LABEL"
