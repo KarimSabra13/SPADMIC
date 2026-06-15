@@ -69,7 +69,7 @@ CMD=(
   "${FAST_TAG_DEFINE_ARGS[@]}"
   "${FREQ_MODE_DEFINE_ARGS[@]}"
   -f "$MPTDC_DIR/sim/verilator/filelist_verilator.f"
-  --top-module mptdc_top_asic
+  --top-module mptdc_axis_core
 )
 
 {

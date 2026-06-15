@@ -40,6 +40,9 @@ proc mptdc_o10_write_place_failure {message} {
 proc mptdc_o10_place {} {
     global o10 pnr
     mptdc_o10_msg "Running placement"
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort pre_place
+    }
     if {[catch {placeDesign} err]} {
         mptdc_o10_write_place_failure "placeDesign returned an error: $err"
         error "placeDesign failed: $err"
@@ -64,6 +67,9 @@ proc mptdc_o10_place {} {
         mptdc_o10_msg "placement review required: out-of-core instances=$out_of_core"
     }
 
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort pre_cts_opt
+    }
     if {[catch {optDesign -preCTS} err]} {
         mptdc_o10_msg "optDesign -preCTS failed after placement: $err"
     }

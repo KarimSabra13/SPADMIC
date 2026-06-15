@@ -88,11 +88,23 @@ module spadmic_stream_skid_buffer (
         end
 
         2'b11: begin
-          data0_q   <= in_data_i;
-          sop0_q    <= in_sop_i;
-          eop0_q    <= in_eop_i;
-          source0_q <= in_source_i;
-          count_q   <= 2'd1;
+          if (count_q == 2'd2) begin
+            data0_q   <= data1_q;
+            sop0_q    <= sop1_q;
+            eop0_q    <= eop1_q;
+            source0_q <= source1_q;
+            data1_q   <= in_data_i;
+            sop1_q    <= in_sop_i;
+            eop1_q    <= in_eop_i;
+            source1_q <= in_source_i;
+            count_q   <= 2'd2;
+          end else begin
+            data0_q   <= in_data_i;
+            sop0_q    <= in_sop_i;
+            eop0_q    <= in_eop_i;
+            source0_q <= in_source_i;
+            count_q   <= 2'd1;
+          end
         end
 
         default: ;

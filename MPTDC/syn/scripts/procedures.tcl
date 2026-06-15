@@ -3576,7 +3576,7 @@ proc mptdc_full_reports {report_dir} {
             "Constraint Report Substitute" \
             [list "report_constraints"] \
             [list \
-                "mptdc_top_asic.postsyn.sdc" \
+                "mptdc_axis_core.postsyn.sdc" \
                 "final_sdc_overlay_used.sdc" \
                 "check_timing_intent_post_synth.rpt" \
                 "sdc_command_failures.md" \
@@ -3599,7 +3599,7 @@ proc mptdc_full_reports {report_dir} {
             "Timing Exception Report Substitute" \
             [list "report_exceptions" "report_constraints -exceptions"] \
             [list \
-                "mptdc_top_asic.postsyn.sdc" \
+                "mptdc_axis_core.postsyn.sdc" \
                 "pd_vernier_exception_check.rpt" \
                 "timing_pd_intentional_vernier.rpt" \
                 "check_timing_intent_post_synth.rpt" \
@@ -3720,7 +3720,7 @@ proc mptdc_write_qor_manifest {dir} {
         TOPLEVEL FULLCHIP_OR_MACRO CLK_PERIOD OSC_SLOW_PERIOD OSC_FAST_PERIOD
         OSC_SLOW_TAP_STEP OSC_FAST_TAP_STEP CLOCK_UNCERTAINTY
         OSC_CLOCK_UNCERTAINTY_SETUP OSC_CLOCK_UNCERTAINTY_HOLD
-        PRODUCTION_SHARED_READOUT INPUT_DELAY_MACRO
+        INPUT_DELAY_MACRO
         OUTPUT_DELAY_MACRO OUTPUT_LOAD_MACRO MAX_FANOUT MAX_TRANSITION
         RESET_MAX_FANOUT RESET_MAX_TRANSITION
         EXPECTED_LATCH_COUNT selected_setup_analysis_views

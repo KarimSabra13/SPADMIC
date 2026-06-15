@@ -115,9 +115,9 @@ if [[ -d "$SNAPSHOT_DIR" ]]; then
 fi
 cp "$GENUS_LOG" "$RESULT_DIR/genus_${RUN_ID}.log" 2>/dev/null || true
 
-POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
+POSTSYN_NETLIST="$RESULT_DIR/mptdc_axis_core.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
-  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
+  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_axis_core.postsyn.v"
 fi
 
 BINDING_STATUS="UNKNOWN"

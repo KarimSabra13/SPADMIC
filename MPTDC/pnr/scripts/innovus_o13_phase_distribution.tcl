@@ -81,7 +81,7 @@ proc mptdc_o13_restore_source_checkpoint {} {
     global o13
     if {[file exists $o13(source_checkpoint_dat)]} {
         mptdc_o13_msg "Restoring checkpoint from current checkout: $o13(source_checkpoint_dat)"
-        restoreDesign $o13(source_checkpoint_dat) mptdc_top_asic
+        restoreDesign $o13(source_checkpoint_dat) mptdc_axis_core
         return
     }
     if {[file exists $o13(source_restore_tcl)]} {
@@ -200,7 +200,7 @@ proc mptdc_o13_apply_io_load_model {} {
     }
     puts $fh ""
     puts $fh "Important outputs to review:"
-    foreach pattern {acq_data_o narrow_data_o csr_rdata_o csr_rvalid_o acq_valid_o} {
+    foreach pattern {pkt_data_o pkt_data_o csr_rdata_o csr_rvalid_o pkt_valid_o} {
         puts $fh "- $pattern"
     }
     puts $fh ""

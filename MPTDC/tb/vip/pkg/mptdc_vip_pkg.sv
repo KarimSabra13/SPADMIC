@@ -451,8 +451,7 @@ package mptdc_vip_pkg;
     endfunction
   endclass
 
-  // Shared mailboxes that bridge class-based sequencing to the
-  // module-resident BFM loop inside mptdc_vip_tb.
+  // Legacy shared mailboxes for the retired standalone VIP harness.
   mailbox #(mptdc_base_txn) g_bfm_req_mb;
   mailbox #(bit)            g_bfm_ack_mb;   // 1=accepted, 0=rejected
   mailbox #(bit)            g_bfm_done_mb;  // 1=transaction fully completed

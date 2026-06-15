@@ -4,10 +4,10 @@
 // =============================================================================
 // Project : SPAD_MPTDC Verification Collateral
 // File    : mptdc_raw_monitor.sv
-// Purpose : Passive monitor for the 16-bit narrow output stream.
+// Purpose : Passive monitor for the 16-bit packet output stream.
 // Author  : Karim Sabra
 // Notes   : Checks header/EOC framing and hit-count-driven word counts without
-//           driving narrow_ready.
+//           driving pkt_ready.
 // =============================================================================
 `timescale 1ps/1ps
 `default_nettype none
@@ -19,10 +19,10 @@ module mptdc_raw_monitor
   input wire                   clk_sys,
   input wire                   rst_n,
 
-  // Narrow bus (observe only)
-  input wire                   narrow_valid_i,
-  input wire                   narrow_ready_i,
-  input wire [NARROW_W-1:0]   narrow_data_i
+  // Packet bus (observe only)
+  input wire                   pkt_valid_i,
+  input wire                   pkt_ready_i,
+  input wire [NARROW_W-1:0]   pkt_data_i
 );
 
   // ── Internal state ────────────────────────────────────────────────
@@ -47,7 +47,7 @@ module mptdc_raw_monitor
   out_mode_e            mon_mode;
   int unsigned          mon_wph;
 
-  assign mon_w = narrow_data_i;
+  assign mon_w = pkt_data_i;
   always_comb begin
     mon_hc   = header_hit_count(mon_w);
     mon_mode = header_out_mode(mon_w);
@@ -62,7 +62,7 @@ module mptdc_raw_monitor
       pkt_count      <= 0;
       total_hits     <= 0;
       header_latch   <= '0;
-    end else if (narrow_valid_i && narrow_ready_i) begin
+    end else if (pkt_valid_i && pkt_ready_i) begin
       case (mon_state)
         MON_IDLE: begin
           if (is_header(mon_w)) begin

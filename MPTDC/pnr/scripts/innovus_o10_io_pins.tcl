@@ -32,6 +32,19 @@ proc mptdc_o10_io_pin_depth_um {} {
 }
 
 proc mptdc_o10_io_pin_side_for_name {pin_name} {
+    foreach south_pin {
+        async_rst_n
+        reset_n
+        rst_n
+        VDD
+        VSS
+        vdd
+        vss
+    } {
+        if {$pin_name eq $south_pin} {
+            return SOUTH
+        }
+    }
     foreach west_pin {
         start_spad_async_i
         stop_spad_async_i
@@ -40,6 +53,18 @@ proc mptdc_o10_io_pin_side_for_name {pin_name} {
     } {
         if {$pin_name eq $west_pin} {
             return WEST
+        }
+    }
+    foreach north_pattern {
+        {^pkt_data_o(\[[0-9]+\])?$}
+        {^pkt_valid_o$}
+        {^pkt_sop_o$}
+        {^pkt_eop_o$}
+        {^packet_active_o$}
+        {^packet_pending_o$}
+    } {
+        if {[regexp $north_pattern $pin_name]} {
+            return NORTH
         }
     }
     return EAST
@@ -195,6 +220,8 @@ proc mptdc_o10_place_io_pins {} {
     puts $fh "- Total ports: `[llength $ports]`"
     puts $fh "- West ports: `[llength $pins_by_side(WEST)]`"
     puts $fh "- East ports: `[llength $pins_by_side(EAST)]`"
+    puts $fh "- North ports: `[llength $pins_by_side(NORTH)]`"
+    puts $fh "- South ports: `[llength $pins_by_side(SOUTH)]`"
     puts $fh ""
     puts $fh "| Side | Status | Notes |"
     puts $fh "|---|---:|---|"
@@ -202,7 +229,10 @@ proc mptdc_o10_place_io_pins {} {
         puts $fh "| [lindex $row 0] | [lindex $row 1] | `[lindex $row 2]` |"
     }
     puts $fh ""
-    puts $fh "West side is reserved for SPAD and calibration asynchronous inputs. East side carries clk/reset/control/CSR/status/readout block pins."
+    puts $fh "North side carries the product 16-bit packet output bus and packet framing/status stream pins."
+    puts $fh "West side is reserved for SPAD and calibration asynchronous detector inputs."
+    puts $fh "East side carries clk_sys, packet ready, mode/control, max_hits, and minimal status pins."
+    puts $fh "South side carries async reset when present. VDD/VSS are special power nets handled by the power-grid plan, not ordinary signal IO ports."
     close $fh
 
     if {!$pass} {

@@ -97,7 +97,8 @@
 | `spadmic_csr_decoder` | ___% | ___% | ___% | ___% |
 | `spadmic_global_csr` | ___% | ___% | ___% | N/A |
 | `spadmic_top_sequencer` | ___% | ___% | ___% | ___% |
-| `spadmic_tdc_packet_adapter` | ___% | ___% | ___% | ___% |
+| `spadmic_tdc_axis_csr` | ___% | ___% | ___% | ___% |
+| `mptdc_packet16_tx` | ___% | ___% | ___% | ___% |
 | `spadmic_packet_arbiter4` | ___% | ___% | ___% | ___% |
 | `spadmic_position_block` | ___% | ___% | ___% | ___% |
 | `spadmic_tdc_axis_wrapper` | ___% | ___% | ___% | N/A |
@@ -149,7 +150,7 @@
 | `spadmic_global_csr` | | | |
 | `spadmic_top_sequencer` | | | |
 | `spadmic_ref_stop_qualifier` | | | |
-| `spadmic_tdc_packet_adapter` | | | |
+| `mptdc_packet16_tx` | | | |
 | `spadmic_packet_arbiter4` | | | |
 | `spadmic_position_block` | | | |
 | `spadmic_axis_cluster_scan` | | | |

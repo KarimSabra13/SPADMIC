@@ -16,8 +16,8 @@ are not frozen.
 | Area | Functional RTL status | Tapeout-readiness status | Main action |
 |------|-----------------------|--------------------------|-------------|
 | TOP control sequencing | Coherent active/requested model | Needs full reset/mode-switch regression closure | Verify all non-idle reject and drain-commit cases |
-| TDC axes | Preserved MPTDC kernels integrated cleanly | Blocked on oscillator macro and generated-clock signoff | Freeze macro contract and CDC/STA waiver deck |
-| Shared readout | Packet-atomic META-first architecture | Needs stress and packet-integrity evidence | Run/extend shared-readout and correlated-TX tests |
+| TDC axes | Product `mptdc_axis_core` kernels integrated cleanly | Blocked on oscillator macro and generated-clock signoff | Freeze macro contract and CDC/STA waiver deck |
+| Shared readout | Packet-atomic direct TDC/position architecture | Needs stress and packet-integrity evidence | Run/extend shared-readout and correlated-TX tests |
 | Position path | Robust queued detector/packetizer plus raw bitmap mode and SPAD reset output exist | Needs final SPAD-matrix contract and async-line/reset stress evidence | Stress settle, glitch, overflow, raw packets, reset modes, and disable cases |
 | I2C/CSR | Region decode and timeout protection exist | Needs negative-path coverage | Test invalid regions, timeout, reset, NACK, and CSR error propagation |
 | DDR TX | Simple source-synchronous contract | Needs output timing constraints | Define output delay and receiver sampling assumptions |
@@ -36,15 +36,15 @@ clk_sys / async_rst_n / clk_ref_40m / async SPAD inputs
        |- spadmic_top_sequencer
        |- spadmic_tdc_axis_wrapper x3
        |    |- spadmic_ref_stop_qualifier
-       |    `- mptdc_top_asic
+       |    `- mptdc_axis_core
        |         `- mptdc_core
        |              |- async frontend / oscillator wrappers / PD matrix
-       |              |- Gray counters / hit-capture bridge / sys context bank / drain controller
-       |              `- acquisition FIFO export
+       |              |- epoch counters / hit-capture bridge / sys context bank / drain controller
+       |              `- product packetizer
        |- spadmic_position_block
        |    `- spadmic_axis_cluster_scan x3
        |- spadmic_correlated_tx
-       |    |- spadmic_tdc_packet_adapter x3
+       |    |- direct TDC packet streams x3
        |    `- spadmic_packet_arbiter4
        `- spadmic_ddr_tx
 ```
@@ -60,7 +60,7 @@ clk_sys / async_rst_n / clk_ref_40m / async SPAD inputs
 | `clk_ref_40m` STOP qualifier | external ref clock | MPTDC STOP input | generated async pulse from ref edge | Treat as cross-domain/async input to MPTDC |
 | MPTDC slow/fast oscillators | oscillator macro | PD/counter measurement fabric | generated clocks | Real macro generated clocks and uncertainty required |
 | PD cell sampling | slow/fast oscillator taps | async latch/sampler | intentional measurement structure | CDC/STA exception and physical symmetry constraints |
-| Gray counter snapshots | oscillator domains | `clk_sys` hit-capture image | Gray/snapshot CDC | Constrain source clocks and document bounded ambiguity |
+| Epoch/counter snapshots | oscillator domains | `clk_sys` hit-capture image | static snapshot CDC | Constrain source clocks and document bounded ambiguity |
 | held PD/counter image | oscillator/PD fabric | `mptdc_hit_capture_bridge` in `clk_sys` | static-data CDC after synchronized STOP visibility | Waive only with frozen-data proof: STOP visible, image held, bridge sampled, context committed, then PD clear |
 | context bank snapshot | `clk_sys` context bank | `clk_sys` drain | ordinary synchronous storage/readout | Time normally; no CDC waiver needed for context bank storage itself |
 | correlated TX to DDR TX | `clk_sys` | forwarded output clock | synchronous logical word stream | Normal `clk_sys` timing plus output delay constraints |
@@ -80,9 +80,9 @@ clk_sys / async_rst_n / clk_ref_40m / async SPAD inputs
 | `spadmic_top_sequencer` | active image commit after drain | `clk_sys` | wrong idle definition can corrupt packets | transition assertions/tests |
 | `spadmic_tdc_axis_wrapper` | per-axis top glue | async + `clk_ref_40m` + `clk_sys` | enable gating is quasi-static and must not change mid-event | mode-switch drain tests and CDC review |
 | `spadmic_ref_stop_qualifier` | one STOP pulse per event | async/ref clock | latch-based gating requires careful review | hold/rearm/random timing tests |
-| `mptdc_top_asic` | preserved axis wrapper | `clk_sys` + async | depends on stable top-level overrides | per-axis CSR/readout tests |
+| `mptdc_axis_core` | product axis wrapper | `clk_sys` + async | depends on stable top-level controls and reset sequencing | per-axis product packet/control tests |
 | `mptdc_core` | Vernier measurement kernel | generated clocks + async + `clk_sys` | highest signoff risk: oscillator, PD, CDC, constraints | MPTDC regression, CDC/STA waiver deck, macro contract |
-| `spadmic_tdc_packet_adapter` | per-axis TDC serializer | `clk_sys` | malformed META/HIT draining or unsupported mode leakage would corrupt event stream | fixed packet, zero-hit, boundary-bit, stall tests |
+| `mptdc_packet16_tx` | per-axis TDC packetizer | `clk_sys` | malformed META/HIT draining would corrupt event stream | fixed packet, zero-hit, boundary-bit, stall tests |
 | `spadmic_position_block` | position detect/queue/packetize and matrix reset control | async lines into `clk_sys` | async bus sampling, queue overflow, raw payload framing, reset timing versus matrix behavior | settle/glitch/queue/raw/reset stress tests |
 | `spadmic_axis_cluster_scan` | five-cycle pipelined cluster extraction | `clk_sys` datapath | scan timing and edge correctness | stress cluster tests and synthesis timing |
 | `spadmic_correlated_tx` | packet arbiter/event tagger/FIFO | `clk_sys` | event-ID wrap, packet interleaving, FIFO pressure | ARB mode/stress tests |

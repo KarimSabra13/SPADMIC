@@ -25,12 +25,10 @@ module mptdc_meas_ctrl
 
   // Configuration from CSR, stable in clk_sys.
   input  wire [MAX_HITS_W-1:0]  max_hits_cfg_i,
-  input  wire [15:0]            wdt_timeout_i,   // retained for status compatibility
 
   // Static-bus capture / context-bank commit controls.
   output logic                  snapshot_en_o,   // pulse: sample PD/counter fabric into bridge
   output logic                  capture_en_o,    // pulse: commit raw bridge image / reserve context
-  output logic                  meta_en_o,       // pulse: update hit-count/flag metadata
 
   // Frontend / PD control.
   output logic                  fe_clear_o,      // pulse: clear START/STOP latches
@@ -114,8 +112,7 @@ module mptdc_meas_ctrl
     eval_flags_comb.closed_by_fast_maxhit = (effective_max_hits == MAX_HITS_W'(1)) && any_hit_q;
     eval_flags_comb.closed_by_maxhits     = (effective_max_hits > MAX_HITS_W'(1))
                                           && (total_hits_q >= effective_max_hits_ext);
-    eval_flags_comb.closed_by_watchdog    = timeout_active_i
-                                          || ((wdt_timeout_i != 16'd0) && !any_hit_q);
+    eval_flags_comb.closed_by_watchdog    = timeout_active_i;
   end
 
   always_comb begin
@@ -166,7 +163,6 @@ module mptdc_meas_ctrl
 
   assign snapshot_en_o    = (state_q == ST_M_SNAPSHOT);
   assign capture_en_o     = (state_q == ST_M_CAPTURE);
-  assign meta_en_o        = 1'b0;
   assign fe_clear_o       = (state_q == ST_M_CAPTURE);
 `ifdef MPTDC_PD_CLEAR_EARLY
   assign pd_clear_o       = (state_q == ST_M_CAPTURE) || (state_q == ST_M_CLEAR);
@@ -195,8 +191,6 @@ module mptdc_meas_ctrl
     end else begin
       if (snapshot_en_o) assert (state_q == ST_M_SNAPSHOT);
       if (capture_en_o)  assert (state_q == ST_M_CAPTURE);
-      assert (!meta_en_o)
-        else $error("mptdc_meas_ctrl: meta_en_o is retired by fast-clear capture");
       if (pd_clear_o)    assert (state_q == ST_M_CLEAR);
       if (state_q == ST_M_CLEAR) assert (prev_state_q == ST_M_CAPTURE);
       prev_state_q <= state_q;

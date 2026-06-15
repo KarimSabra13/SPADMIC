@@ -207,6 +207,8 @@ fi
   echo "place_pd_grid: ${MPTDC_PNR_PLACE_PD_GRID:-1}"
   echo "place_phase_buffers: ${MPTDC_PNR_PLACE_PHASE_BUFFERS:-1}"
   echo "place_fast_tags_by_column: ${MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN:-1}"
+  echo "physical_effort_enable: ${MPTDC_PNR_PHYSICAL_EFFORT_ENABLE:-1}"
+  echo "physical_effort_mode: ${MPTDC_PNR_PHYSICAL_EFFORT_MODE:-closure}"
   echo "pnr_library: ${MPTDC_PNR_LIBRARY:-JIHD}"
   echo "labels: TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF"
   echo
@@ -245,6 +247,7 @@ require_file() {
 
 for rel in \
   innovus_mptdc_floorplan.tcl \
+  innovus_mptdc_physical_effort.tcl \
   innovus_mptdc_backend_regions.tcl \
   innovus_mptdc_phase_buffer_place.tcl \
   innovus_mptdc_pd_matrix_place.tcl \
@@ -393,11 +396,11 @@ run_route_closure() {
   fi
 
   local netlist postsyn_sdc route_overlay o10_rc o13_rc o13_run_id o13_result_dir
-  if ! netlist="$(find_source_file "$GATE_SOURCE" mptdc_top_asic.postsyn.v)"; then
+  if ! netlist="$(find_source_file "$GATE_SOURCE" mptdc_axis_core.postsyn.v)"; then
     echo "ERROR: missing routed netlist in gate source: $GATE_SOURCE" | tee -a "$RUN_LOG"
     exit 2
   fi
-  if ! postsyn_sdc="$(find_source_file "$GATE_SOURCE" mptdc_top_asic.postsyn.sdc)"; then
+  if ! postsyn_sdc="$(find_source_file "$GATE_SOURCE" mptdc_axis_core.postsyn.sdc)"; then
     echo "ERROR: missing routed SDC in gate source: $GATE_SOURCE" | tee -a "$RUN_LOG"
     exit 2
   fi
@@ -418,6 +421,8 @@ run_route_closure() {
   MPTDC_STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-${MPTDC_PNR_LIBRARY:-JIHD}}" \
   MPTDC_PNR_CORE_UTIL="$MPTDC_PNR_CORE_UTIL" \
   MPTDC_PNR_MAX_DENSITY="$MPTDC_PNR_MAX_DENSITY" \
+  MPTDC_PNR_PHYSICAL_EFFORT_ENABLE="${MPTDC_PNR_PHYSICAL_EFFORT_ENABLE:-1}" \
+  MPTDC_PNR_PHYSICAL_EFFORT_MODE="${MPTDC_PNR_PHYSICAL_EFFORT_MODE:-closure}" \
   MPTDC_PNR_IO_LOAD_CLASS="${MPTDC_PNR_IO_LOAD_CLASS:-medium}" \
   EXPECTED_HEAD="${EXPECTED_HEAD:-$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)}" \
     "$SCRIPT_DIR/server_run_innovus_o10_2_pnr_repair.sh" "$RUN_ID" \
@@ -468,6 +473,7 @@ if command -v tclsh >/dev/null 2>&1; then
     MPTDC_PNR_SOURCE_ONLY=1 tclsh <<'EOF'
 source MPTDC/pnr/config/xh018_cells.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_floorplan.tcl
+source MPTDC/pnr/scripts/innovus_mptdc_physical_effort.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_backend_regions.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_phase_buffer_place.tcl
 source MPTDC/pnr/scripts/innovus_mptdc_pd_matrix_place.tcl

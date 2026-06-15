@@ -18,7 +18,7 @@
 #############################################
 #       Design Hierarchy
 #############################################
-set design(TOPLEVEL)          "mptdc_top_asic"
+set design(TOPLEVEL) "mptdc_axis_core"
 set design(FULLCHIP_OR_MACRO) "MACRO"        ;# No IO ring — TDC is a macro block
 set design(HAS_SCAN)          "no"           ;# No scan chain in this design
 
@@ -125,16 +125,6 @@ if {[info exists ::env(MPTDC_USE_RO_TUNE4_MACRO)] && $::env(MPTDC_USE_RO_TUNE4_M
     set design(OSC_SLOW_ANALOG_PINS) [list rstb {code[7:0]} {S[7:0]} VDD VSS {vdd!}]
     set design(OSC_FAST_ANALOG_PINS) [list rstb {code[7:0]} {S[7:0]} VDD VSS {vdd!}]
     puts {MPTDC_DEFINES_INFO: O1C RO_tune4 macro mode enabled; oscillator tap clocks use u_ro_tune4/S[0:7]}
-}
-
-# Production SPADMIC integration consumes the acquisition-record stream and uses
-# one shared serializer at TOP level. Keep this enabled for backend production
-# synthesis so local per-axis narrow serializers are constant-trimmed; override
-# to 0 only for standalone MPTDC packet-output synthesis/debug.
-if {[info exists ::env(MPTDC_SYN_PRODUCTION_SHARED_READOUT)]} {
-    set design(PRODUCTION_SHARED_READOUT) $::env(MPTDC_SYN_PRODUCTION_SHARED_READOUT)
-} else {
-    set design(PRODUCTION_SHARED_READOUT) 1
 }
 
 # ── Reset ───────────────────────────────────────────────────────────

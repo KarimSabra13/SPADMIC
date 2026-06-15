@@ -25,9 +25,9 @@ spadmic_top_v1
   |- spadmic_top_sequencer
   |- spadmic_tdc_axis_wrapper x 3
   |    |- spadmic_ref_stop_qualifier
-  |    `- mptdc_top_asic
+  |    `- mptdc_axis_core
   |- spadmic_correlated_tx
-  |    |- spadmic_tdc_packet_adapter x 3
+  |    |- direct TDC packet streams x 3
   |    |- spadmic_position_packet_adapter
   |    `- spadmic_packet_arbiter4
   |- spadmic_position_block
@@ -47,14 +47,14 @@ spadmic_top_v1
 This is the single place where the three major subsystems meet:
 
 1. control plane from I2C
-2. three preserved TDC axes
+2. three product TDC axes
 3. position detector and correlated export path
 
 The module deliberately keeps most policy in sub-blocks. Its main job is to wire:
 
 - requested control into the sequencer
 - sequencer outputs into the datapath
-- per-axis TDC exports into the shared TDC readout
+- per-axis TDC packet streams into the shared TDC readout
 - TDC and position packets into the correlated TX block
 - logical packet words into the DDR TX block
 
@@ -123,9 +123,9 @@ the repository.
 
 | Block | File | Domain | Status | Key responsibility |
 |-------|------|--------|--------|--------------------|
-| `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | async input + `clk_ref_40m` + `clk_sys` glue | active | per-axis top-level wrapper around STOP qualification and `mptdc_top_asic` |
+| `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | async input + `clk_ref_40m` + `clk_sys` glue | active | per-axis top-level wrapper around STOP qualification and `mptdc_axis_core` |
+| `spadmic_tdc_axis_csr` | `rtl/spadmic_tdc_axis_csr.sv` | `clk_sys` | active | TOP-owned product TDC control/status CSR |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | async event to `clk_ref_40m` | active | creates one qualified STOP pulse per accepted event |
-| `spadmic_tdc_packet_adapter` | `../arb/rtl/spadmic_tdc_packet_adapter.sv` | `clk_sys` | active | per-axis META/HIT acquisition-record serializer into the unified ARB |
 
 ### `spadmic_tdc_axis_wrapper`
 
@@ -133,8 +133,8 @@ Each axis wrapper keeps the analog-facing event side narrow and predictable:
 
 - applies active enable gating
 - converts the async event into a safe STOP pulse on `clk_ref_40m`
-- forwards the selected input and legacy output-mode compatibility value into the preserved TDC kernel
-- exports acquisition records to the shared top-level readout path
+- forwards selected input, product control pulses, and global max-hit limit into `mptdc_axis_core`
+- exports direct product packet words to the shared top-level readout path
 
 The wrapper exists so the top can optimize area around the TDC kernels without
 rewriting the kernels themselves.
@@ -149,16 +149,17 @@ producer.
 
 This block converts an asynchronous event request into one reference-clock-aligned
 STOP pulse. It is the small but important boundary between the uncontrolled SPAD
-event arrival and the preserved `mptdc_top_asic` input contract.
+event arrival and the product `mptdc_axis_core` input contract.
 
-### `spadmic_tdc_packet_adapter`
+### Direct TDC Packet Streams
 
-The ARB path now serializes each TDC axis locally before central arbitration:
+The MPTDC axis path now serializes each TDC axis locally before central arbitration:
 
 1. each axis keeps its acquisition FIFO inside the local TDC core
-2. each adapter consumes one META record followed by the advertised HIT records
-3. packets expose internal `valid/ready/data/sop/eop/source_id` sidebands
-4. the fixed v2.7 packet is active in the ARB path; legacy mode requests are ignored
+2. each `mptdc_packet16_tx` consumes one META record followed by the advertised HIT records
+3. packets expose internal `valid/ready/data/sop/eop` sidebands
+4. `spadmic_correlated_tx` patches only TDC header bits `[1:0]` with X/Y/Z source identity
+5. the fixed v2.7 packet is active in the ARB path; legacy mode requests are ignored
 
 This removes the old two-level arbitration while keeping packet ownership local
 and easy to backpressure.
@@ -246,8 +247,9 @@ If you need to understand the active TOP quickly, read in this order:
 3. `spadmic_top_sequencer.sv`
 4. `../arb/rtl/spadmic_correlated_tx.sv`
 5. `spadmic_position_block.sv`
-6. `../arb/rtl/spadmic_tdc_packet_adapter.sv`
-7. `spadmic_ddr_tx.sv`
+6. `spadmic_tdc_axis_wrapper.sv`
+7. `spadmic_tdc_axis_csr.sv`
+8. `spadmic_ddr_tx.sv`
 
 Then use:
 

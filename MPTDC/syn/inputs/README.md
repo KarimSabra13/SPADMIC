@@ -77,22 +77,10 @@ OUTPUT_DELAY = t_pad_out + t_bondwire + t_board + t_setup_downstream
 
 ## 1.1 Production Readout Mode
 
-```tcl
-set design(PRODUCTION_SHARED_READOUT) 1
-```
-
-### What it means
-
-Production SPADMIC TOP consumes each MPTDC through `acq_*` acquisition records
-and uses one shared packet serializer. The Genus SDC therefore applies
-`set_case_analysis 1` on `shared_readout_en_i` and `set_case_analysis 0` on
-`narrow_ready_i` by default so per-axis local `narrow_*` serializers are trimmed.
-
-For standalone MPTDC packet-output synthesis or debug, launch Genus with:
-
-```bash
-export MPTDC_SYN_PRODUCTION_SHARED_READOUT=0
-```
+Production SPADMIC synthesis now elaborates `mptdc_axis_core`, the product-only
+axis boundary that emits direct 16-bit packet words with SOP/EOP. The old
+standalone CSR/readout shell and exported acquisition-record mode are no longer
+part of the product filelists.
 
 ---
 

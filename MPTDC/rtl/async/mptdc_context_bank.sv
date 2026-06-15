@@ -20,7 +20,6 @@ module mptdc_context_bank
 
   input  wire  ctx_id_t                 capture_ctx_i,
   input  wire                           capture_en_i,
-  input  wire                           meta_en_i,
   input  mptdc_ctx_snapshot_t           capture_snapshot_i,
   input  wire  [MAX_HITS_W-1:0]         hit_count_i,
   input  wire  tdc_conv_flags_t         flags_i,
@@ -44,22 +43,10 @@ module mptdc_context_bank
         ctx_snapshot_q[i] <= '0;
     end else if (capture_en_i) begin
       ctx_snapshot_q[capture_ctx_i] <= capture_snapshot_with_meta;
-    end else if (meta_en_i) begin
-      ctx_snapshot_q[capture_ctx_i].hit_count <= hit_count_i;
-      ctx_snapshot_q[capture_ctx_i].flags     <= flags_i;
     end
   end
 
   assign snapshot_o = ctx_snapshot_q[read_ctx_i];
-
-  // synthesis translate_off
-  always_ff @(posedge clk_sys) begin
-    if (rst_n) begin
-      assert (!(capture_en_i && meta_en_i))
-        else $error("mptdc_context_bank: capture_en_i and meta_en_i overlap");
-    end
-  end
-  // synthesis translate_on
 
 endmodule : mptdc_context_bank
 

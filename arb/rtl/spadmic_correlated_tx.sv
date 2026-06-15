@@ -12,11 +12,13 @@ module spadmic_correlated_tx (
   input  wire spadmic_pkg::spadmic_tx_sel_e  tx_sel_i,
   input  wire [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] axis_enable_i,
   input  wire                                position_enable_i,
-  input  mptdc_pkg::out_mode_e               tdc_out_mode_i,
 
-  input  wire [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] acq_valid_i,
-  input  wire [mptdc_pkg::ACQ_REC_W-1:0]     acq_data_i [spadmic_pkg::SPADMIC_AXIS_COUNT],
-  output logic [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] acq_ready_o,
+  input  wire [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] tdc_valid_i,
+  input  wire [mptdc_pkg::NARROW_W-1:0]      tdc_data_i [spadmic_pkg::SPADMIC_AXIS_COUNT],
+  input  wire [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] tdc_sop_i,
+  input  wire [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] tdc_eop_i,
+  output logic [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] tdc_ready_o,
+  input  wire [spadmic_pkg::SPADMIC_AXIS_COUNT-1:0] tdc_packet_active_i,
 
   input  wire                                pos_valid_i,
   input  wire [mptdc_pkg::NARROW_W-1:0]      pos_data_i,
@@ -70,9 +72,10 @@ module spadmic_correlated_tx (
   logic                         fifo_full;
 
   logic [SPADMIC_EVENT_ID_W-1:0] unified_event_id_q;
+  logic [NARROW_W-1:0]           tdc_header_patched_data;
+  logic [SPADMIC_AXIS_COUNT-1:0] tdc_source_accept;
 
   assign export_mode = spadmic_export_mode_from_ctrl(tx_sel_i, position_enable_i);
-  wire unused_tdc_out_mode = |tdc_out_mode_i;
 
   always_comb begin
     source_enable_d = '0;
@@ -87,56 +90,38 @@ module spadmic_correlated_tx (
       source_enable_d[SPADMIC_SRC_POSITION] = 1'b1;
   end
 
-  spadmic_tdc_packet_adapter #(.SOURCE_ID(TDC_ID_X)) u_tdc_x_adapter (
-    .clk_sys         (clk_sys),
-    .rst_n           (rst_n),
-    .enable_i        (source_enable_q[TDC_ID_X]),
-    .out_mode_i      (tdc_out_mode_i),
-    .acq_valid_i     (acq_valid_i[0]),
-    .acq_data_i      (acq_data_i[0]),
-    .acq_ready_o     (acq_ready_o[0]),
-    .pkt_valid_o     (src_valid[TDC_ID_X]),
-    .pkt_ready_i     (src_ready[TDC_ID_X]),
-    .pkt_data_o      (src_data[TDC_ID_X]),
-    .pkt_sop_o       (src_sop[TDC_ID_X]),
-    .pkt_eop_o       (src_eop[TDC_ID_X]),
-    .pkt_source_o    (src_source[TDC_ID_X]),
-    .packet_active_o (source_active[TDC_ID_X])
-  );
+  assign tdc_source_accept[0] = source_enable_q[TDC_ID_X]
+                              | source_active[TDC_ID_X]
+                              | arb_source_pending[TDC_ID_X];
+  assign src_valid[TDC_ID_X]  = tdc_valid_i[0] & tdc_source_accept[0];
+  assign src_data[TDC_ID_X]   = tdc_data_i[0];
+  assign src_sop[TDC_ID_X]    = tdc_sop_i[0];
+  assign src_eop[TDC_ID_X]    = tdc_eop_i[0];
+  assign src_source[TDC_ID_X] = TDC_ID_X;
+  assign source_active[TDC_ID_X] = tdc_packet_active_i[0];
+  assign tdc_ready_o[0]       = src_ready[TDC_ID_X] & tdc_source_accept[0];
 
-  spadmic_tdc_packet_adapter #(.SOURCE_ID(TDC_ID_Y)) u_tdc_y_adapter (
-    .clk_sys         (clk_sys),
-    .rst_n           (rst_n),
-    .enable_i        (source_enable_q[TDC_ID_Y]),
-    .out_mode_i      (tdc_out_mode_i),
-    .acq_valid_i     (acq_valid_i[1]),
-    .acq_data_i      (acq_data_i[1]),
-    .acq_ready_o     (acq_ready_o[1]),
-    .pkt_valid_o     (src_valid[TDC_ID_Y]),
-    .pkt_ready_i     (src_ready[TDC_ID_Y]),
-    .pkt_data_o      (src_data[TDC_ID_Y]),
-    .pkt_sop_o       (src_sop[TDC_ID_Y]),
-    .pkt_eop_o       (src_eop[TDC_ID_Y]),
-    .pkt_source_o    (src_source[TDC_ID_Y]),
-    .packet_active_o (source_active[TDC_ID_Y])
-  );
+  assign tdc_source_accept[1] = source_enable_q[TDC_ID_Y]
+                              | source_active[TDC_ID_Y]
+                              | arb_source_pending[TDC_ID_Y];
+  assign src_valid[TDC_ID_Y]  = tdc_valid_i[1] & tdc_source_accept[1];
+  assign src_data[TDC_ID_Y]   = tdc_data_i[1];
+  assign src_sop[TDC_ID_Y]    = tdc_sop_i[1];
+  assign src_eop[TDC_ID_Y]    = tdc_eop_i[1];
+  assign src_source[TDC_ID_Y] = TDC_ID_Y;
+  assign source_active[TDC_ID_Y] = tdc_packet_active_i[1];
+  assign tdc_ready_o[1]       = src_ready[TDC_ID_Y] & tdc_source_accept[1];
 
-  spadmic_tdc_packet_adapter #(.SOURCE_ID(TDC_ID_Z)) u_tdc_z_adapter (
-    .clk_sys         (clk_sys),
-    .rst_n           (rst_n),
-    .enable_i        (source_enable_q[TDC_ID_Z]),
-    .out_mode_i      (tdc_out_mode_i),
-    .acq_valid_i     (acq_valid_i[2]),
-    .acq_data_i      (acq_data_i[2]),
-    .acq_ready_o     (acq_ready_o[2]),
-    .pkt_valid_o     (src_valid[TDC_ID_Z]),
-    .pkt_ready_i     (src_ready[TDC_ID_Z]),
-    .pkt_data_o      (src_data[TDC_ID_Z]),
-    .pkt_sop_o       (src_sop[TDC_ID_Z]),
-    .pkt_eop_o       (src_eop[TDC_ID_Z]),
-    .pkt_source_o    (src_source[TDC_ID_Z]),
-    .packet_active_o (source_active[TDC_ID_Z])
-  );
+  assign tdc_source_accept[2] = source_enable_q[TDC_ID_Z]
+                              | source_active[TDC_ID_Z]
+                              | arb_source_pending[TDC_ID_Z];
+  assign src_valid[TDC_ID_Z]  = tdc_valid_i[2] & tdc_source_accept[2];
+  assign src_data[TDC_ID_Z]   = tdc_data_i[2];
+  assign src_sop[TDC_ID_Z]    = tdc_sop_i[2];
+  assign src_eop[TDC_ID_Z]    = tdc_eop_i[2];
+  assign src_source[TDC_ID_Z] = TDC_ID_Z;
+  assign source_active[TDC_ID_Z] = tdc_packet_active_i[2];
+  assign tdc_ready_o[2]       = src_ready[TDC_ID_Z] & tdc_source_accept[2];
 
   spadmic_position_packet_adapter u_pos_adapter (
     .clk_sys         (clk_sys),
@@ -193,7 +178,11 @@ module spadmic_correlated_tx (
 
   assign arb_fifo_ready = !fifo_full;
   assign fifo_wr_en     = arb_fifo_valid & arb_fifo_ready;
-  assign fifo_wr_data   = arb_fifo_eop ? {2'b11, unified_event_id_q} : arb_fifo_data;
+  assign tdc_header_patched_data =
+      (arb_fifo_sop && (arb_fifo_source != SPADMIC_SRC_POSITION) && is_tdc_header(arb_fifo_data))
+        ? patch_tdc_id_into_header(arb_fifo_data, spadmic_tdc_id_e'(arb_fifo_source))
+        : arb_fifo_data;
+  assign fifo_wr_data   = arb_fifo_eop ? {2'b11, unified_event_id_q} : tdc_header_patched_data;
   assign fifo_rd_en     = fifo_rd_valid & shared_ready_i;
   assign shared_valid_o = fifo_rd_valid;
   assign shared_data_o  = fifo_rd_data;
@@ -244,6 +233,10 @@ module spadmic_correlated_tx (
       packet_source_q <= TDC_ID_X;
     end else if (fifo_wr_en) begin
       if (arb_fifo_sop) begin
+        if (packet_open_q) begin
+          $error("spadmic_correlated_tx: SOP before EOP open_source=%0d new_source=%0d data=0x%04h eop=%0b",
+                 packet_source_q, arb_fifo_source, arb_fifo_data, arb_fifo_eop);
+        end
         assert (!packet_open_q)
           else $error("spadmic_correlated_tx: SOP observed before previous EOP");
         packet_source_q <= arb_fifo_source;

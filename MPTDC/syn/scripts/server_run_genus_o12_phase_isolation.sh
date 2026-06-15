@@ -197,9 +197,9 @@ cp "$GENUS_LOG" "$RESULT_DIR/genus_${RUN_ID}.log" 2>/dev/null || true
 cp "$O12_SDC" "$RESULT_DIR/final_sdc_overlay_used.sdc" 2>/dev/null || true
 cp "$O12_FILELIST" "$RESULT_DIR/final_filelist_used.f" 2>/dev/null || true
 
-POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
+POSTSYN_NETLIST="$RESULT_DIR/mptdc_axis_core.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
-  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
+  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_axis_core.postsyn.v"
 fi
 
 RO_COUNT=0
@@ -281,8 +281,8 @@ fi
   echo "## Key Files"
   for file in \
     "genus_${RUN_ID}.log" \
-    mptdc_top_asic.postsyn.v \
-    mptdc_top_asic.postsyn.sdc \
+    mptdc_axis_core.postsyn.v \
+    mptdc_axis_core.postsyn.sdc \
     final_sdc_overlay_used.sdc \
     final_filelist_used.f \
     o12_phase_isolation_check.rpt \

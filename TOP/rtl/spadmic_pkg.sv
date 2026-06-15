@@ -153,7 +153,7 @@ package spadmic_pkg;
   function automatic spadmic_tdc_id_e tdc_header_source_id(
     input logic [NARROW_W-1:0] word
   );
-    return spadmic_tdc_id_e'({word[6], word[12]});
+    return spadmic_tdc_id_e'(word[1:0]);
   endfunction
 
   function automatic logic [NARROW_W-1:0] patch_tdc_id_into_header(
@@ -163,8 +163,7 @@ package spadmic_pkg;
     logic [NARROW_W-1:0] patched;
     patched = word;
     if (is_tdc_header(word)) begin
-      patched[12] = tdc_id[0];
-      patched[6]  = tdc_id[1];
+      patched[1:0] = tdc_id;
     end
     return patched;
   endfunction

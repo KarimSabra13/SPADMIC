@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------
 # Purpose : Run the fast lint-plus-single-bench smoke flow for MPTDC.
 # Usage   : bash ci/run_smoke.sh
-# Context : Quick local sanity check built around tb_single_conv and the
+# Context : Quick local sanity check built around tb_axis_core_product_smoke and the
 #           shared scripts/sim/run_tb.sh runner.
 # Author  : Karim Sabra
 # -----------------------------------------------------------------------------
@@ -43,12 +43,12 @@ verilator --lint-only --timing -Wall \
   -Wno-WIDTHTRUNC -Wno-UNUSEDPARAM -Wno-PINMISSING -Wno-UNUSEDGENVAR \
   -Wno-CASEINCOMPLETE -Wno-LATCH -Wno-REALCVT -Wno-INITIALDLY -Wno-COMBDLY \
   -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
-  +define+MPTDC_USE_OSC_MODEL -f rtl/filelist.f --top-module mptdc_top_asic
+  +define+MPTDC_USE_OSC_MODEL -f rtl/filelist.f --top-module mptdc_axis_core
 echo "=== Lint PASSED ==="
 echo ""
 
-# Step 2: Core integration test
-run_test tb_single_conv
+# Step 2: Product axis integration test
+run_test tb_axis_core_product_smoke
 
 # Step 3: Summary
 echo "============================================"

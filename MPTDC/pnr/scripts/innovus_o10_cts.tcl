@@ -5,6 +5,9 @@
 proc mptdc_o10_cts {} {
     global o10
     mptdc_o10_msg "Running CTS for clk_sys only"
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort pre_cts
+    }
     set policy_fh [open "$o10(reports_dir)/cts_policy.rpt" w]
     puts $policy_fh "O10 CTS policy"
     puts $policy_fh "=============="
@@ -67,6 +70,9 @@ proc mptdc_o10_cts {} {
         if {[catch {clockDesign} err2]} {
             mptdc_o10_msg "clockDesign also failed: $err2"
         }
+    }
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort post_cts
     }
     catch {optDesign -postCTS}
     mptdc_o10_report_stage post_cts

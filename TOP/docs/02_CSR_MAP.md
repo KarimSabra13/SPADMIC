@@ -5,10 +5,13 @@
 This document covers the software-visible CSR fields owned by the active TOP-level glue:
 
 - `spadmic_global_csr`
+- `spadmic_tdc_axis_csr`
 - `spadmic_position_block`
 - the shared region decode used by `spadmic_csr_decoder`
 
-Per-axis TDC register details remain documented in [`../../MPTDC/docs/03_CSR_MAP.md`](../../MPTDC/docs/03_CSR_MAP.md).
+The TDC regions are now TOP-owned product control/status blocks. Standalone
+MPTDC CSR compatibility, watchdog programming, and local narrow readout controls
+are not part of the product CSR surface.
 
 ## 1. Region decode
 
@@ -17,9 +20,9 @@ The shared 12-bit CSR address uses bits `[11:8]` for region selection.
 | Region | Bits `[11:8]` | Owner |
 |--------|---------------|-------|
 | `0x0` | `GLOBAL` | `spadmic_global_csr` |
-| `0x1` | `TDC_X` | X-axis `mptdc_top_asic` |
-| `0x2` | `TDC_Y` | Y-axis `mptdc_top_asic` |
-| `0x3` | `TDC_Z` | Z-axis `mptdc_top_asic` |
+| `0x1` | `TDC_X` | X-axis `spadmic_tdc_axis_csr` |
+| `0x2` | `TDC_Y` | Y-axis `spadmic_tdc_axis_csr` |
+| `0x3` | `TDC_Z` | Z-axis `spadmic_tdc_axis_csr` |
 | `0x4` | `POSITION` | `spadmic_position_block` |
 
 ## 2. Global CSR block
@@ -29,7 +32,7 @@ The shared 12-bit CSR address uses bits `[11:8]` for region selection.
 | Addr | Name | R/W | Purpose |
 |------|------|-----|---------|
 | `0x000` | `GLOBAL_ID` | R | constant `0x5350_4144` (`"SPAD"`) |
-| `0x004` | `GLOBAL_VERSION` | R | current top-level version encoding (`0x0003_0000` in the active RTL) |
+| `0x004` | `GLOBAL_VERSION` | R | current top-level version encoding (`0x0004_0000` in the active RTL) |
 | `0x008` | `GLOBAL_CTRL` | R/W | requested control image |
 | `0x00C` | `GLOBAL_STATUS` | R | active state, datapath status, and control-accept state |
 | `0x010` | `GLOBAL_FAULT` | R/W1C | sticky faults |
@@ -52,15 +55,15 @@ This register holds the **requested** control image, not the live committed imag
 
 | Bits | Name | Meaning |
 |------|------|---------|
-| `[0]` | `tdc_tx_busy` | shared TDC serializer is inside an active packet |
-| `[3:1]` | `tdc_pkt_pending` | each bit indicates an axis currently presenting a META record at the shared-readout boundary |
+| `[0]` | `tdc_tx_busy` | at least one TDC axis or the TDC arbiter has an active/pending packet |
+| `[3:1]` | `tdc_pkt_pending` | each bit indicates an axis-local packet is active or pending |
 | `[4]` | `position_busy` | position detector or packetizer busy |
 | `[5]` | `position_pending` | position path still has a packet outstanding |
 | `[6]` | `path_idle` | no shared TDC packet, no pending TDC META, no position activity |
 | `[7]` | `active_shared_tx_sel` | live committed export selector (`POSITION` means position-only, `TDC` means TDC-only or both-active depending on `active_position_enable`) |
 | `[8]` | `active_tdc_input_sel` | live committed TDC input source |
 | `[10:9]` | `active_tdc_out_mode` | live committed compatibility value; fixed to RAW_FEATURES |
-| `[13:11]` | `tdc_pkt_full` | each bit mirrors one axis-local acquisition FIFO full flag |
+| `[13:11]` | `tdc_pkt_full` | each bit mirrors one axis-local packet FIFO full flag |
 | `[14]` | `transition_busy` | sequencer is draining or committing a control transition |
 | `[15]` | `ctrl_apply_pending` | requested image differs from active image |
 | `[16]` | `active_global_enable` | live committed global enable |
@@ -95,9 +98,57 @@ This register holds the **requested** control image, not the live committed imag
    - `POSITION` + `1` -> position-only
    - `TDC` + `1` -> correlated both-active
 
-## 4. Position CSR block
+## 4. TDC Axis CSR Blocks
 
-### 4.1 Register summary
+The TDC X/Y/Z regions share the same offset map. `CSR_MAX_HITS` is global in
+effect: a write through any axis region updates one shared `max_hits` value that
+feeds all three `mptdc_axis_core` instances.
+
+| Offset | Name | R/W | Purpose |
+|--------|------|-----|---------|
+| `0x000` | `TDC_CTRL` | R/W | product arm and pulse controls |
+| `0x004` | `TDC_STATUS` | R | minimal live axis status |
+| `0x008` | `TDC_MAX_HITS` | R/W | shared global max-hit limit for all TDC axes |
+| `0x018` | `TDC_FIFO_STATUS` | R | compact FIFO/packet status mirror |
+
+### 4.1 `TDC_CTRL` (`+0x000`)
+
+| Bits | Name | Meaning |
+|------|------|---------|
+| `[0]` | `conv_arm` | persistent conversion arm for this axis |
+| `[1]` | `fifo_clear` | write `1` to emit a one-cycle FIFO clear pulse |
+| `[2]` | `soft_reset` | write `1` to emit a short axis-local reset pulse and clear `conv_arm` |
+
+Reads return only `conv_arm`; pulse bits read as `0`.
+
+### 4.2 `TDC_STATUS` (`+0x004`)
+
+| Bits | Name | Meaning |
+|------|------|---------|
+| `[0]` | `ready` | axis core can accept a START when armed |
+| `[1]` | `busy` | measurement, drain, or packetization activity is in progress |
+| `[2]` | `fifo_full` | axis-local FIFO full |
+| `[3]` | `packet_active` | axis packetizer is inside an active packet |
+| `[4]` | `packet_pending` | axis has packet data active or queued |
+| `[5]` | `stop_armed` | TOP stop qualifier is armed for this axis |
+
+### 4.3 `TDC_MAX_HITS` (`+0x008`)
+
+| Bits | Name | Meaning |
+|------|------|---------|
+| `[3:0]` | `max_hits` | shared global max-hit limit, product reset value `15` |
+
+### 4.4 `TDC_FIFO_STATUS` (`+0x018`)
+
+| Bits | Name | Meaning |
+|------|------|---------|
+| `[0]` | `fifo_full` | same as `TDC_STATUS[2]` |
+| `[1]` | `packet_active` | same as `TDC_STATUS[3]` |
+| `[2]` | `packet_pending` | same as `TDC_STATUS[4]` |
+
+## 5. Position CSR block
+
+### 5.1 Register summary
 
 | Addr | Name | R/W | Purpose |
 |------|------|-----|---------|
@@ -111,7 +162,7 @@ This register holds the **requested** control image, not the live committed imag
 | `0x42C` | `POS_DROP_COUNT` | R | count of accepted snapshots dropped because the internal queue was full |
 | `0x430` | `POS_REJECT_COUNT` | R | count of glitch/empty rejections |
 
-### 4.2 `POS_CTRL` (`0x400`)
+### 5.2 `POS_CTRL` (`0x400`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
@@ -124,20 +175,20 @@ This register holds the **requested** control image, not the live committed imag
 
 The effective enable is `global_enable_i & local_enable`.
 
-### 4.3 `POS_GAP_CFG` (`0x404`)
+### 5.3 `POS_GAP_CFG` (`0x404`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
 | `[6:0]` | `gap_threshold` | minimum zero-run length that starts a new cluster |
 
-### 4.4 `POS_FILTER_CFG` (`0x408`)
+### 5.4 `POS_FILTER_CFG` (`0x408`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
 | `[6:0]` | `min_cluster_span` | clusters smaller than this are suppressed; `1` keeps single-line clusters |
 | `[11:8]` | `settle_cycles` | number of stable `clk_sys` cycles required before snapshot |
 
-### 4.5 `POS_RESET_CFG` (`0x40C`)
+### 5.5 `POS_RESET_CFG` (`0x40C`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
@@ -151,7 +202,7 @@ port, and synchronized line buses are idle. In `periodic` mode, the pulse fires
 on schedule even if the matrix is active; this is intended for low-rate raw
 characterization sweeps.
 
-### 4.6 `POS_STATUS` (`0x420`)
+### 5.6 `POS_STATUS` (`0x420`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
@@ -167,13 +218,13 @@ characterization sweeps.
 | `[15]` | `auto_reset_pending` | event-deferred auto-reset has expired and is waiting for safe idle |
 | `[16]` | `spad_matrix_rst` | reset pulse is asserted in the current `clk_sys` cycle |
 
-### 4.7 `POS_EVENT_COUNT` (`0x424`)
+### 5.7 `POS_EVENT_COUNT` (`0x424`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
 | `[13:0]` | `event_count` | accepted position-event count |
 
-### 4.8 `POS_FAULT_STATUS` (`0x428`)
+### 5.8 `POS_FAULT_STATUS` (`0x428`)
 
 | Bits | Name | Meaning | Clear behavior |
 |------|------|---------|----------------|
@@ -181,13 +232,13 @@ characterization sweeps.
 | `[1]` | `glitch_reject_sticky` | unstable or empty activity was rejected | write `1` to clear |
 | `[3:2]` | `det_state` | current detector FSM state snapshot | read only |
 
-### 4.9 `POS_DROP_COUNT` (`0x42C`)
+### 5.9 `POS_DROP_COUNT` (`0x42C`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
 | `[15:0]` | `drop_count` | count of accepted snapshots dropped because the queue was full |
 
-### 4.10 `POS_REJECT_COUNT` (`0x430`)
+### 5.10 `POS_REJECT_COUNT` (`0x430`)
 
 | Bits | Name | Meaning |
 |------|------|---------|

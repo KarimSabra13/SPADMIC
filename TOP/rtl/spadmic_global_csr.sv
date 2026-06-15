@@ -135,7 +135,7 @@ module spadmic_global_csr (
       end
 
       SPADMIC_CSR_GLOBAL_VERSION: begin
-        rd_data_next = 32'h0003_0000;
+        rd_data_next = 32'h0004_0000;
       end
 
       SPADMIC_CSR_GLOBAL_CTRL: begin

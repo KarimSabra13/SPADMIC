@@ -23,8 +23,8 @@ The current top-level design is organized around one shared physical output bus 
    - correlated both-active
 3. Software writes only the **requested** control image.
 4. `spadmic_top_sequencer` commits the **active** image after the old datapath drains.
-5. The three TDC measurement kernels stay local inside three preserved `mptdc_top_asic` instances.
-6. TDC sharing happens only after each axis has already produced acquisition records.
+5. The three TDC measurement kernels stay local inside three `mptdc_axis_core` product axes.
+6. TDC sharing happens only after each axis has already produced direct packet words.
 7. The shared egress assigns one unified rolling 14-bit event ID and patches it into the EOC word of every emitted packet.
 
 ## 2. End-to-end dataflow
@@ -44,10 +44,9 @@ I2C pins
 ```text
 per-axis async SPAD event
   -> spadmic_ref_stop_qualifier
-  -> mptdc_top_asic
+  -> mptdc_axis_core
   -> mptdc_core local acquisition FIFO
-  -> exported acquisition records
-  -> per-axis spadmic_tdc_packet_adapter
+  -> mptdc_packet16_tx direct packet stream
   -> spadmic_correlated_tx
   -> spadmic_ddr_tx
   -> chip_tx_clk_o / chip_tx_valid_o / chip_tx_data_o[7:0] DDR
@@ -72,14 +71,14 @@ async x/y/z line buses
 |--------|--------|---------|
 | `clk_sys` | external 160 MHz | I2C, CSR, sequencer, ARB adapters, position block, correlated TX, physical TX packer |
 | `clk_ref_40m` | external 40 MHz | STOP qualification only |
-| MPTDC generated clocks | internal oscillators | preserved inside each `mptdc_top_asic` instance |
+| MPTDC generated clocks | internal oscillators | preserved inside each `mptdc_axis_core` instance |
 | async line/event domain | external asynchronous sources | SPAD event entry and position-line entry |
 
 ### Reset strategy
 
 - `async_rst_n` enters the chip top asynchronously.
 - `mptdc_reset_sync` generates `rst_sys_n` for the top-level `clk_sys` glue.
-- Each `mptdc_top_asic` instance receives the original asynchronous top reset and handles its own local synchronization internally.
+- Each `mptdc_axis_core` instance receives the original asynchronous top reset and handles its own local synchronization internally.
 
 ## 4. Requested versus active control
 
@@ -142,25 +141,23 @@ The active RTL keeps the existing CSR width but interprets the committed control
 
 1. gates the asynchronous SPAD event with the active global/axis enables
 2. converts the event into one qualified `clk_ref_40m` STOP pulse
-3. forwards the global TDC input/output-mode overrides into the preserved `mptdc_top_asic`
-4. exports acquisition records instead of using the legacy per-axis narrow output
+3. forwards product controls and global `max_hits` into `mptdc_axis_core`
+4. exports direct 16-bit packet words plus SOP/EOP and packet-active sidebands
 
 Inside each preserved MPTDC kernel, the current measurement-control/context
 pivot is local to `mptdc_core`: oscillator/PD/counter fabric remains
 measurement-local, while `mptdc_meas_ctrl`, `mptdc_hit_capture_bridge`, and
-`mptdc_context_bank` run in `clk_sys`. TOP only sees the acquisition-record FIFO
-export and should not assume a fast-domain context-bank interface.
+`mptdc_context_bank` run in `clk_sys`. TOP only sees the product packet stream
+and should not assume a fast-domain context-bank interface.
 
-### 5.2 Unified ARB TDC packet adapters
+### 5.2 Unified ARB TDC packet streams
 
-`spadmic_tdc_packet_adapter` is the digital-area optimization point in the active top:
+`mptdc_packet16_tx` now lives inside each product axis:
 
 - each axis still owns its own local acquisition FIFO inside `mptdc_core`
-- each adapter consumes one META record and then the announced HIT records
-- the central ARB arbitrates only after each axis is converted to a packet stream
-- the selected `tdc_id` is patched into the TDC header:
-  - bit `[12]` carries `tdc_id[0]`
-  - reserved flag bit `[6]` carries `tdc_id[1]`
+- each product packetizer consumes one META record and then the announced HIT records
+- the central ARB consumes direct `{valid,ready,data,sop,eop}` packet streams
+- the selected `tdc_id` is patched into TDC header bits `[1:0]`
 - the ARB path emits the fixed v2.7 TDC packet; legacy output-mode requests are masked to RAW_FEATURES compatibility
 
 That keeps zero-hit packets self-identifying without paying an extra source-tag word.
@@ -311,10 +308,10 @@ There is no off-chip `ready`/backpressure pin in the active physical contract. A
 | `spadmic_global_csr` | Requested image, status, faults |
 | `spadmic_top_sequencer` | Active-image commit |
 | `spadmic_ref_stop_qualifier` | One qualified STOP pulse per async event |
-| `spadmic_tdc_axis_wrapper` | Per-axis glue around the preserved TDC |
-| `spadmic_tdc_packet_adapter` | Per-axis TDC acquisition-record serializer |
+| `spadmic_tdc_axis_wrapper` | Per-axis glue around the product TDC axis |
+| `spadmic_tdc_axis_csr` | TOP-owned product TDC control/status |
 | `spadmic_position_block` | Position detection, queued packetization, accounting |
 | `spadmic_axis_cluster_scan` | Five-cycle pipelined cluster scan |
 | `spadmic_packet_arbiter4` | Masked packet-atomic four-source arbiter |
-| `spadmic_correlated_tx` | Adapters, unified event tagging, and post-arbiter FIFO |
+| `spadmic_correlated_tx` | Direct TDC/position packet arbitration, unified event tagging, and post-arbiter FIFO |
 | `spadmic_ddr_tx` | Forwarded-clock physical TX packer |

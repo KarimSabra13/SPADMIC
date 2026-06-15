@@ -74,8 +74,8 @@ find_source_file() {
 }
 
 required_files=(
-  mptdc_top_asic.postsyn.v
-  mptdc_top_asic.postsyn.sdc
+  mptdc_axis_core.postsyn.v
+  mptdc_axis_core.postsyn.sdc
   final_sdc_overlay_used.sdc
   final_filelist_used.f
   SUMMARY.md
@@ -93,7 +93,7 @@ required_files=(
 )
 
 optional_files=(
-  mptdc_top_asic.postsyn.sdf
+  mptdc_axis_core.postsyn.sdf
 )
 
 missing_required=()

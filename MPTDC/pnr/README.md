@@ -84,14 +84,14 @@ cd MPTDC/pnr/scripts
 bash collect_snapshot.sh innovus_$(date +%Y%m%d_%H%M)_estimate
 ```
 
-`saveDesign` writes a small restore script (`mptdc_top_asic.place.enc`) plus a
-database directory (`mptdc_top_asic.place.enc.dat`).  To reopen a live run from
+`saveDesign` writes a small restore script (`mptdc_axis_core.place.enc`) plus a
+database directory (`mptdc_axis_core.place.enc.dat`).  To reopen a live run from
 `pnr/scripts`, use one of:
 
 ```tcl
-source ../outputs/mptdc_top_asic.place.enc
+source ../outputs/mptdc_axis_core.place.enc
 # or:
-restoreDesign ../outputs/mptdc_top_asic.place.enc.dat mptdc_top_asic
+restoreDesign ../outputs/mptdc_axis_core.place.enc.dat mptdc_axis_core
 ```
 
 The snapshot helper skips the `.enc` restore script and `.enc.dat` database

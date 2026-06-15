@@ -62,6 +62,9 @@ proc mptdc_o10_cts_inverter_cells {} {
 proc mptdc_o10_cts {} {
     global o10 pnr
     mptdc_o10_msg "Running O10.2 CTS policy: clk_sys only, never RO phase clocks"
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort pre_cts
+    }
 
     set ro_clocks [list clk_osc_slow clk_osc_fast]
     for {set i 1} {$i < 8} {incr i} {
@@ -187,6 +190,9 @@ proc mptdc_o10_cts {} {
     }
 
     if {$o10(cts_status) eq "CLK_SYS_ONLY_CTS_COMPLETE"} {
+        if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+            mptdc_pnr_apply_physical_effort post_cts
+        }
         catch {optDesign -postCTS}
     }
     mptdc_o10_report_stage post_cts

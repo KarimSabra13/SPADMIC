@@ -175,12 +175,9 @@ The maintained coverage classes are:
 The maintained SVA files are:
 
 - `spadmic_ctrl_sva`
-- `spadmic_readout_sva`
-- `spadmic_mux_sva`
-- `spadmic_pos_sva`
 
-They check integration-level invariants rather than re-proving the internals of
-each `mptdc_top_asic` measurement kernel.
+It checks integration-level control invariants rather than re-proving the
+internals of each `mptdc_axis_core` measurement kernel.
 
 ### 6.3 Current high-priority VIP status
 

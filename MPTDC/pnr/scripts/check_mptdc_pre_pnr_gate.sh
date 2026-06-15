@@ -393,13 +393,13 @@ else
 fi
 
 check_file_any "netlist" \
-  mptdc_top_asic.postsyn.v \
-  outputs/mptdc_top_asic.postsyn.v \
-  05_outputs/mptdc_top_asic.postsyn.v
+  mptdc_axis_core.postsyn.v \
+  outputs/mptdc_axis_core.postsyn.v \
+  05_outputs/mptdc_axis_core.postsyn.v
 check_file_any "SDC" \
-  mptdc_top_asic.postsyn.sdc \
-  outputs/mptdc_top_asic.postsyn.sdc \
-  05_outputs/mptdc_top_asic.postsyn.sdc
+  mptdc_axis_core.postsyn.sdc \
+  outputs/mptdc_axis_core.postsyn.sdc \
+  05_outputs/mptdc_axis_core.postsyn.sdc
 check_file_any "final SDC overlay" \
   final_sdc_overlay_used.sdc \
   02_constraints/final_sdc_overlay_used.sdc

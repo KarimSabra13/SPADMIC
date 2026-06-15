@@ -91,6 +91,9 @@ proc mptdc_o10_fixed_die_dimensions {} {
 proc mptdc_o10_floorplan {} {
     global o10 pnr tech
     mptdc_o10_msg "Creating O10 floorplan"
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort floorplan
+    }
     if {$pnr(auto_die_from_regions) || ($pnr(die_width_um) ne "" && $pnr(die_height_um) ne "")} {
         set dims [mptdc_o10_fixed_die_dimensions]
         set die_w [lindex $dims 0]
@@ -120,6 +123,9 @@ proc mptdc_o10_floorplan {} {
     catch {setNanoRouteMode -routeBottomRoutingLayer $pnr(signal_bottom_layer_idx)}
     catch {setNanoRouteMode -routeTopRoutingLayer $pnr(signal_top_layer_idx)}
     catch {setPlaceMode -place_global_max_density $pnr(place_global_max_density)}
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort post_floorplan
+    }
 
     catch {defOut -floorplan -netlist "$o10(def_dir)/01_floorplan.def"}
     catch {saveDesign "$o10(checkpoints_dir)/01_floorplan.enc"}

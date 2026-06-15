@@ -153,9 +153,9 @@ run_one() {
     fi
   done
 
-  local postsyn_netlist="$result_dir/mptdc_top_asic.postsyn.v"
+  local postsyn_netlist="$result_dir/mptdc_axis_core.postsyn.v"
   if [[ ! -f "$postsyn_netlist" ]]; then
-    postsyn_netlist="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
+    postsyn_netlist="$SYN_DIR/outputs/mptdc_axis_core.postsyn.v"
   fi
 
   local check_report="$result_dir/o4_muxless_tags_r600_check.rpt"
@@ -293,7 +293,7 @@ PY
     echo "## Key Files"
     for file in \
       "genus_${run_id}.log" \
-      mptdc_top_asic.postsyn.v \
+      mptdc_axis_core.postsyn.v \
       o4_muxless_tags_r600_check.rpt \
       report_clocks.rpt \
       report_clock_groups.rpt \

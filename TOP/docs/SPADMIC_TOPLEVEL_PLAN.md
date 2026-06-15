@@ -14,7 +14,7 @@ New directories at the repository root keep the MPTDC core untouched:
 
 ```text
 SPADMIC/
-├── MPTDC/          # Existing validated TDC core (unchanged)
+├── MPTDC/          # Product TDC axis core and preserved measurement engine
 ├── TOP/            # SPADMIC top-level integration
 │   ├── rtl/        # All integration RTL (pkg, wrappers, arbiter, position)
 │   ├── tb/         # Unit/smoke testbenches for integration blocks
@@ -35,28 +35,22 @@ async_rst_n ------->|  + top-level CSR dec  |    |
                     +-----------------------+    |
                                                  v
                     +-----------------------+  +------------------+
- clk_ref_40m ------->| X axis wrapper        |->| local acq FIFO   |
+ clk_ref_40m ------->| X axis wrapper        |->| packet stream    |
  x event async ----->| (ref-stop qualifier + |  | (inside MPTDC)   |
-                    |  mptdc_top_asic)      |  +------------------+
+                    |  mptdc_axis_core)     |  +------------------+
                     +-----------------------+          |
                                                        v
                     +-----------------------+  +------------------+
- clk_ref_40m ------->| Y axis wrapper        |->| local acq FIFO   |
+ clk_ref_40m ------->| Y axis wrapper        |->| packet stream    |
  y event async ----->| (ref-stop qualifier + |  | (inside MPTDC)   |
-                    |  mptdc_top_asic)      |  +------------------+
+                    |  mptdc_axis_core)     |  +------------------+
                     +-----------------------+          |
                                                        v
                     +-----------------------+  +------------------+
- clk_ref_40m ------->| Z axis wrapper        |->| local acq FIFO   |
+ clk_ref_40m ------->| Z axis wrapper        |->| packet stream    |
  z event async ----->| (ref-stop qualifier + |  | (inside MPTDC)   |
-                    |  mptdc_top_asic)      |  +------------------+
+                    |  mptdc_axis_core)     |  +------------------+
                     +-----------------------+          |
-                                                       v
-                                              +------------------+
-                                              | per-axis TDC     |
-                                              | packet adapters  |
-                                              +------------------+
-                                                       |
                                                        v
  x/y/z lines[63:0] -----------------------+   +------------------+
                                            v   | unified ARB +    |
@@ -74,7 +68,7 @@ async_rst_n ------->|  + top-level CSR dec  |    |
 |--------|-----------|-------|
 | `clk_sys` | 160 MHz | I2C decode/bridge, CSR, local acquisition FIFOs, ARB adapters/tagger/FIFO, position |
 | `clk_ref_40m` | 40 MHz | Reverse stop qualification only |
-| MPTDC internal | varies | Preserved inside each `mptdc_top_asic` instance |
+| MPTDC internal | varies | Preserved inside each `mptdc_axis_core` instance |
 | Async events | — | Per-axis SPAD OR-tree into axis wrapper |
 | Async line buses | — | `x/y/z_lines_i` enter the position block through synchronizer stages |
 
@@ -97,20 +91,21 @@ Implementation:
 
 ## Unified ARB/TDC readout contract
 
-- Each axis TDC keeps its own local acquisition-record FIFO inside `mptdc_core`
-- `spadmic_tdc_axis_wrapper` exports that record stream instead of using the local per-axis narrow serializer
-- `spadmic_tdc_packet_adapter` serializes each axis into a uniform packet stream before central arbitration
+- Each axis TDC keeps its own local acquisition FIFO inside `mptdc_core`
+- `mptdc_packet16_tx` serializes each axis into a uniform packet stream before central arbitration
+- `spadmic_tdc_axis_wrapper` exports direct packet words plus SOP/EOP and packet-active sidebands
 - `spadmic_correlated_tx` arbitrates `{TDC_X,TDC_Y,TDC_Z,POSITION}` with packet-level locking
 - The active packet source ID is carried on internal sidebands until EOC so header/tagging stays coherent
 - **No packet interleaving**
 
 ### `tdc_id` tagging
 
-- Active shared-TDC tagging reuses header bit `[12]` and reserved flag bit `[6]`:
-  - `{[6],[12]} = 2'b00` = TDC_X
-  - `{[6],[12]} = 2'b01` = TDC_Y
-  - `{[6],[12]} = 2'b10` = TDC_Z
-- Standalone `mptdc_top_asic` keeps `[12] = ctx_id` and flag bit `[6] = 0`
+- Active shared-TDC tagging uses header bits `[1:0]`:
+  - `2'b00` = TDC_X
+  - `2'b01` = TDC_Y
+  - `2'b10` = TDC_Z
+  - `2'b11` = reserved
+- `mptdc_axis_core` emits generic `[1:0] = 2'b00`; TOP patches only TDC header words.
 
 ## Shared chip TX contract
 
@@ -128,7 +123,7 @@ Implementation:
 - `spadmic_global_csr` stores the **requested** control image visible to software
 - `spadmic_top_sequencer` owns the **active** control image that drives the top
 - An accepted control update first forces `global_enable` low, drains the old path, then commits the new active source/mode/control state
-- Drain/idle means: no TDC adapter packet in flight, no pending axis META record, and no outstanding position packet or detector activity
+- Drain/idle means: no TDC packet in flight or pending, and no outstanding position packet or detector activity
 - Busy or non-idle writes are rejected, counted, and reported back through the global fault/status registers
 - Status now distinguishes datapath idleness from control-accept readiness and requested-versus-active mismatch
 
@@ -150,7 +145,8 @@ Implementation:
 |------|---------|
 | `spadmic_pkg.sv` | Constants, types, helper functions |
 | `spadmic_top_v1.sv` | Chip-level integration shell |
-| `spadmic_tdc_axis_wrapper.sv` | Per-axis TDC wrapper (stop qualifier + mptdc_top_asic) |
+| `spadmic_tdc_axis_wrapper.sv` | Per-axis TDC wrapper (stop qualifier + mptdc_axis_core) |
+| `spadmic_tdc_axis_csr.sv` | TOP-owned product TDC control/status CSR |
 | `spadmic_ref_stop_qualifier.sv` | One-shot ref-edge stop generator |
 | `spadmic_csr_decoder.sv` | Address-region decoder for CSR bus |
 | `spadmic_global_csr.sv` | Global identification, enable, status registers |
@@ -161,7 +157,6 @@ Implementation:
 
 | File | Purpose |
 |------|---------|
-| `spadmic_tdc_packet_adapter.sv` | Per-axis META/HIT serializer for the fixed v2.7 TDC packet |
 | `spadmic_position_packet_adapter.sv` | SOP/EOP/source sideband adapter for position packets |
 | `spadmic_packet_arbiter4.sv` | Masked packet-atomic four-source arbiter with source skids |
 | `spadmic_correlated_tx.sv` | Active correlated packet arbiter, unified event tagger, and output FIFO |

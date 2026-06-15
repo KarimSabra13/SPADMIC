@@ -69,7 +69,7 @@ proc mptdc_cts_dbg_restore_design {} {
 
     if {$ctsdbg(checkpoint_dat) ne "" && [file exists $ctsdbg(checkpoint_dat)]} {
         mptdc_cts_dbg_msg "Restoring checkpoint: $ctsdbg(checkpoint_dat)"
-        restoreDesign $ctsdbg(checkpoint_dat) mptdc_top_asic
+        restoreDesign $ctsdbg(checkpoint_dat) mptdc_axis_core
         return "RESTORED_CHECKPOINT_DAT"
     }
     if {$ctsdbg(restore_tcl) ne "" && [file exists $ctsdbg(restore_tcl)]} {

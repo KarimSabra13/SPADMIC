@@ -104,12 +104,23 @@ module spadmic_top_v1 (
   input_sel_e      tdc_input_sel;
   out_mode_e       tdc_out_mode;
 
-  wire [2:0] axis_acq_valid;
-  wire [ACQ_REC_W-1:0] axis_acq_data [3];
-  wire [2:0] axis_acq_ready;
+  wire [2:0] axis_pkt_valid;
+  wire [NARROW_W-1:0] axis_pkt_data [3];
+  wire [2:0] axis_pkt_ready;
+  wire [2:0] axis_pkt_sop;
+  wire [2:0] axis_pkt_eop;
+  wire [2:0] axis_packet_active;
+  wire [2:0] axis_packet_pending;
+  wire [2:0] axis_ready;
+  wire [2:0] axis_busy;
   wire [2:0] axis_fifo_full;
+  wire [2:0] axis_conv_arm;
+  wire [2:0] axis_fifo_clr;
+  wire [2:0] axis_soft_reset;
+  wire [2:0] axis_max_hits_we;
+  wire [MAX_HITS_W-1:0] axis_max_hits_wdata [3];
+  logic [MAX_HITS_W-1:0] tdc_max_hits_q;
   wire [2:0] tdc_conv_pending;
-  mptdc_acq_rec_t axis_acq_rec [3];
 
   wire pos_tx_ready_mux;
   wire pos_tx_valid_mux;
@@ -279,8 +290,93 @@ module spadmic_top_v1 (
     .active_tdc_out_mode_o(tdc_out_mode)
   );
 
-  // Per-axis wrappers preserve the existing MPTDC kernels and export acquisition
-  // records into the shared readout path.
+  always_ff @(posedge clk_sys or negedge rst_sys_n) begin
+    if (!rst_sys_n) begin
+      tdc_max_hits_q <= MAX_HITS_W'(MAX_HITS);
+    end else begin
+      if (axis_max_hits_we[0])
+        tdc_max_hits_q <= axis_max_hits_wdata[0];
+      else if (axis_max_hits_we[1])
+        tdc_max_hits_q <= axis_max_hits_wdata[1];
+      else if (axis_max_hits_we[2])
+        tdc_max_hits_q <= axis_max_hits_wdata[2];
+    end
+  end
+
+  spadmic_tdc_axis_csr u_tdc_x_csr (
+    .clk_sys           (clk_sys),
+    .rst_n             (rst_sys_n),
+    .csr_valid_i       (x_csr_valid),
+    .csr_write_i       (x_csr_write),
+    .csr_addr_i        (x_csr_addr),
+    .csr_wdata_i       (x_csr_wdata),
+    .csr_ready_o       (x_csr_ready),
+    .csr_rvalid_o      (x_csr_rvalid),
+    .csr_rdata_o       (x_csr_rdata),
+    .ready_i           (axis_ready[0]),
+    .busy_i            (axis_busy[0]),
+    .fifo_full_i       (axis_fifo_full[0]),
+    .packet_active_i   (axis_packet_active[0]),
+    .packet_pending_i  (axis_packet_pending[0]),
+    .stop_armed_i      (tdc_stop_armed_o[0]),
+    .max_hits_i        (tdc_max_hits_q),
+    .max_hits_we_o     (axis_max_hits_we[0]),
+    .max_hits_wdata_o  (axis_max_hits_wdata[0]),
+    .conv_arm_o        (axis_conv_arm[0]),
+    .fifo_clr_pulse_o  (axis_fifo_clr[0]),
+    .soft_rst_pulse_o  (axis_soft_reset[0])
+  );
+
+  spadmic_tdc_axis_csr u_tdc_y_csr (
+    .clk_sys           (clk_sys),
+    .rst_n             (rst_sys_n),
+    .csr_valid_i       (y_csr_valid),
+    .csr_write_i       (y_csr_write),
+    .csr_addr_i        (y_csr_addr),
+    .csr_wdata_i       (y_csr_wdata),
+    .csr_ready_o       (y_csr_ready),
+    .csr_rvalid_o      (y_csr_rvalid),
+    .csr_rdata_o       (y_csr_rdata),
+    .ready_i           (axis_ready[1]),
+    .busy_i            (axis_busy[1]),
+    .fifo_full_i       (axis_fifo_full[1]),
+    .packet_active_i   (axis_packet_active[1]),
+    .packet_pending_i  (axis_packet_pending[1]),
+    .stop_armed_i      (tdc_stop_armed_o[1]),
+    .max_hits_i        (tdc_max_hits_q),
+    .max_hits_we_o     (axis_max_hits_we[1]),
+    .max_hits_wdata_o  (axis_max_hits_wdata[1]),
+    .conv_arm_o        (axis_conv_arm[1]),
+    .fifo_clr_pulse_o  (axis_fifo_clr[1]),
+    .soft_rst_pulse_o  (axis_soft_reset[1])
+  );
+
+  spadmic_tdc_axis_csr u_tdc_z_csr (
+    .clk_sys           (clk_sys),
+    .rst_n             (rst_sys_n),
+    .csr_valid_i       (z_csr_valid),
+    .csr_write_i       (z_csr_write),
+    .csr_addr_i        (z_csr_addr),
+    .csr_wdata_i       (z_csr_wdata),
+    .csr_ready_o       (z_csr_ready),
+    .csr_rvalid_o      (z_csr_rvalid),
+    .csr_rdata_o       (z_csr_rdata),
+    .ready_i           (axis_ready[2]),
+    .busy_i            (axis_busy[2]),
+    .fifo_full_i       (axis_fifo_full[2]),
+    .packet_active_i   (axis_packet_active[2]),
+    .packet_pending_i  (axis_packet_pending[2]),
+    .stop_armed_i      (tdc_stop_armed_o[2]),
+    .max_hits_i        (tdc_max_hits_q),
+    .max_hits_we_o     (axis_max_hits_we[2]),
+    .max_hits_wdata_o  (axis_max_hits_wdata[2]),
+    .conv_arm_o        (axis_conv_arm[2]),
+    .fifo_clr_pulse_o  (axis_fifo_clr[2]),
+    .soft_rst_pulse_o  (axis_soft_reset[2])
+  );
+
+  // Per-axis wrappers preserve the existing measurement kernels and now emit
+  // direct product 16-bit packet streams into the shared readout path.
   spadmic_tdc_axis_wrapper u_tdc_x (
     .clk_sys          (clk_sys),
     .clk_ref_40m      (clk_ref_40m),
@@ -290,18 +386,20 @@ module spadmic_top_v1 (
     .spad_event_async_i(spad_x_event_async_i),
     .cal_start_async_i(cal_x_start_async_i),
     .cal_stop_async_i (cal_x_stop_async_i),
-    .input_sel_override_i(tdc_input_sel),
-    .out_mode_override_i(tdc_out_mode),
-    .csr_valid_i      (x_csr_valid),
-    .csr_write_i      (x_csr_write),
-    .csr_addr_i       (x_csr_addr),
-    .csr_wdata_i      (x_csr_wdata),
-    .csr_ready_o      (x_csr_ready),
-    .csr_rvalid_o     (x_csr_rvalid),
-    .csr_rdata_o      (x_csr_rdata),
-    .acq_ready_i      (axis_acq_ready[0]),
-    .acq_valid_o      (axis_acq_valid[0]),
-    .acq_data_o       (axis_acq_data[0]),
+    .input_sel_i      (tdc_input_sel),
+    .conv_arm_i       (axis_conv_arm[0]),
+    .fifo_clr_i       (axis_fifo_clr[0]),
+    .soft_reset_i     (axis_soft_reset[0]),
+    .max_hits_i       (tdc_max_hits_q),
+    .pkt_valid_o      (axis_pkt_valid[0]),
+    .pkt_ready_i      (axis_pkt_ready[0]),
+    .pkt_data_o       (axis_pkt_data[0]),
+    .pkt_sop_o        (axis_pkt_sop[0]),
+    .pkt_eop_o        (axis_pkt_eop[0]),
+    .packet_active_o  (axis_packet_active[0]),
+    .packet_pending_o (axis_packet_pending[0]),
+    .ready_o          (axis_ready[0]),
+    .busy_o           (axis_busy[0]),
     .fifo_full_o      (axis_fifo_full[0]),
     .stop_armed_o     (tdc_stop_armed_o[0])
   );
@@ -315,18 +413,20 @@ module spadmic_top_v1 (
     .spad_event_async_i(spad_y_event_async_i),
     .cal_start_async_i(cal_y_start_async_i),
     .cal_stop_async_i (cal_y_stop_async_i),
-    .input_sel_override_i(tdc_input_sel),
-    .out_mode_override_i(tdc_out_mode),
-    .csr_valid_i      (y_csr_valid),
-    .csr_write_i      (y_csr_write),
-    .csr_addr_i       (y_csr_addr),
-    .csr_wdata_i      (y_csr_wdata),
-    .csr_ready_o      (y_csr_ready),
-    .csr_rvalid_o     (y_csr_rvalid),
-    .csr_rdata_o      (y_csr_rdata),
-    .acq_ready_i      (axis_acq_ready[1]),
-    .acq_valid_o      (axis_acq_valid[1]),
-    .acq_data_o       (axis_acq_data[1]),
+    .input_sel_i      (tdc_input_sel),
+    .conv_arm_i       (axis_conv_arm[1]),
+    .fifo_clr_i       (axis_fifo_clr[1]),
+    .soft_reset_i     (axis_soft_reset[1]),
+    .max_hits_i       (tdc_max_hits_q),
+    .pkt_valid_o      (axis_pkt_valid[1]),
+    .pkt_ready_i      (axis_pkt_ready[1]),
+    .pkt_data_o       (axis_pkt_data[1]),
+    .pkt_sop_o        (axis_pkt_sop[1]),
+    .pkt_eop_o        (axis_pkt_eop[1]),
+    .packet_active_o  (axis_packet_active[1]),
+    .packet_pending_o (axis_packet_pending[1]),
+    .ready_o          (axis_ready[1]),
+    .busy_o           (axis_busy[1]),
     .fifo_full_o      (axis_fifo_full[1]),
     .stop_armed_o     (tdc_stop_armed_o[1])
   );
@@ -340,28 +440,25 @@ module spadmic_top_v1 (
     .spad_event_async_i(spad_z_event_async_i),
     .cal_start_async_i(cal_z_start_async_i),
     .cal_stop_async_i (cal_z_stop_async_i),
-    .input_sel_override_i(tdc_input_sel),
-    .out_mode_override_i(tdc_out_mode),
-    .csr_valid_i      (z_csr_valid),
-    .csr_write_i      (z_csr_write),
-    .csr_addr_i       (z_csr_addr),
-    .csr_wdata_i      (z_csr_wdata),
-    .csr_ready_o      (z_csr_ready),
-    .csr_rvalid_o     (z_csr_rvalid),
-    .csr_rdata_o      (z_csr_rdata),
-    .acq_ready_i      (axis_acq_ready[2]),
-    .acq_valid_o      (axis_acq_valid[2]),
-    .acq_data_o       (axis_acq_data[2]),
+    .input_sel_i      (tdc_input_sel),
+    .conv_arm_i       (axis_conv_arm[2]),
+    .fifo_clr_i       (axis_fifo_clr[2]),
+    .soft_reset_i     (axis_soft_reset[2]),
+    .max_hits_i       (tdc_max_hits_q),
+    .pkt_valid_o      (axis_pkt_valid[2]),
+    .pkt_ready_i      (axis_pkt_ready[2]),
+    .pkt_data_o       (axis_pkt_data[2]),
+    .pkt_sop_o        (axis_pkt_sop[2]),
+    .pkt_eop_o        (axis_pkt_eop[2]),
+    .packet_active_o  (axis_packet_active[2]),
+    .packet_pending_o (axis_packet_pending[2]),
+    .ready_o          (axis_ready[2]),
+    .busy_o           (axis_busy[2]),
     .fifo_full_o      (axis_fifo_full[2]),
     .stop_armed_o     (tdc_stop_armed_o[2])
   );
 
-  assign axis_acq_rec[0] = axis_acq_data[0];
-  assign axis_acq_rec[1] = axis_acq_data[1];
-  assign axis_acq_rec[2] = axis_acq_data[2];
-  assign tdc_conv_pending[0] = axis_acq_valid[0] & (axis_acq_rec[0].kind == ACQ_REC_META);
-  assign tdc_conv_pending[1] = axis_acq_valid[1] & (axis_acq_rec[1].kind == ACQ_REC_META);
-  assign tdc_conv_pending[2] = axis_acq_valid[2] & (axis_acq_rec[2].kind == ACQ_REC_META);
+  assign tdc_conv_pending = axis_packet_pending;
 
   // Position capture is packetized locally, then muxed onto the shared chip TX.
   spadmic_position_block u_position (
@@ -396,10 +493,12 @@ module spadmic_top_v1 (
     .tx_sel_i      (shared_tx_sel),
     .axis_enable_i (axis_enable),
     .position_enable_i(position_enable),
-    .tdc_out_mode_i(tdc_out_mode),
-    .acq_valid_i   (axis_acq_valid),
-    .acq_data_i    (axis_acq_data),
-    .acq_ready_o   (axis_acq_ready),
+    .tdc_valid_i   (axis_pkt_valid),
+    .tdc_data_i    (axis_pkt_data),
+    .tdc_sop_i     (axis_pkt_sop),
+    .tdc_eop_i     (axis_pkt_eop),
+    .tdc_ready_o   (axis_pkt_ready),
+    .tdc_packet_active_i(axis_packet_active),
     .pos_valid_i   (pos_tx_valid_mux),
     .pos_data_i    (pos_tx_data_mux),
     .pos_ready_o   (pos_tx_ready_mux),

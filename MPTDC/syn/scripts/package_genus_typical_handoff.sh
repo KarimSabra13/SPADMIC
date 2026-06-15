@@ -348,9 +348,9 @@ copy_file "$RUN_DIR/final_genus_fast_tag_to_pd_ts_analysis.md" "04_repair/final_
 copy_file "$RUN_DIR/helper_tcl_selftest.rpt" "04_repair/helper_tcl_selftest.rpt"
 copy_file "$RUN_DIR/reports/fast_tag_cell_mapping.csv" "04_repair/fast_tag_cell_mapping.csv"
 
-copy_file "$RUN_DIR/outputs/mptdc_top_asic.postsyn.v" "05_outputs/mptdc_top_asic.postsyn.v"
-copy_file "$RUN_DIR/outputs/mptdc_top_asic.postsyn.sdc" "05_outputs/mptdc_top_asic.postsyn.sdc"
-copy_file "$RUN_DIR/outputs/mptdc_top_asic.postsyn.sdf" "05_outputs/mptdc_top_asic.postsyn.sdf"
+copy_file "$RUN_DIR/outputs/mptdc_axis_core.postsyn.v" "05_outputs/mptdc_axis_core.postsyn.v"
+copy_file "$RUN_DIR/outputs/mptdc_axis_core.postsyn.sdc" "05_outputs/mptdc_axis_core.postsyn.sdc"
+copy_file "$RUN_DIR/outputs/mptdc_axis_core.postsyn.sdf" "05_outputs/mptdc_axis_core.postsyn.sdf"
 copy_dir "$RUN_DIR/outputs/post_synth" "06_innovus_import/post_synth"
 
 copy_glob "07_logs" "$RUN_DIR"/genus*.log "$RUN_DIR/logs"/*.log "$MPTDC_WORK_ROOT/logs/${RUN_ID}"*.log
@@ -454,10 +454,10 @@ Use this package as the Genus input source for the next physical run.
 
 Key files:
 
-- Netlist: \`05_outputs/mptdc_top_asic.postsyn.v\`
-- SDC: \`05_outputs/mptdc_top_asic.postsyn.sdc\`
-- Genus Innovus setup: \`06_innovus_import/post_synth/mptdc_top_asic.invs_setup.tcl\`
-- Genus MMMC export: \`06_innovus_import/post_synth/mptdc_top_asic.mmmc.tcl\`
+- Netlist: \`05_outputs/mptdc_axis_core.postsyn.v\`
+- SDC: \`05_outputs/mptdc_axis_core.postsyn.sdc\`
+- Genus Innovus setup: \`06_innovus_import/post_synth/mptdc_axis_core.invs_setup.tcl\`
+- Genus MMMC export: \`06_innovus_import/post_synth/mptdc_axis_core.mmmc.tcl\`
 
 Recommended immediate command after packaging:
 

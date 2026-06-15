@@ -31,7 +31,7 @@ set syn_dir [file dirname $script_dir]
 puts "================================================================"
 puts " MPTDC — Cadence Genus Logic Synthesis"
 puts " Target: XFAB XH018 (180 nm)"
-puts " Design: mptdc_top_asic"
+puts " Design: mptdc_axis_core"
 puts "================================================================"
 
 set debug_file [file join [pwd] "debug.txt"]

@@ -147,6 +147,6 @@ foreach pattern {
 #
 # TODO: After MPTDC oscillator macro integration:
 # - add generated clocks for slow/fast oscillator tap 0 and phase taps inside
-#   each axis-local mptdc_top_asic.
+#   each axis-local mptdc_axis_core instance.
 # - bind PD matrix exceptions to the physical symmetry/matching constraints.
 # - review all MPTDC async/static CDC waivers against the final macro netlist.

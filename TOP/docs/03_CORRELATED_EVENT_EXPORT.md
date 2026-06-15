@@ -4,7 +4,7 @@
 
 This document defines the active top-level export behavior implemented by:
 
-- `../arb/rtl/spadmic_tdc_packet_adapter.sv`
+- `../../MPTDC/rtl/top/mptdc_axis_core.sv`
 - `../arb/rtl/spadmic_packet_arbiter4.sv`
 - `../position/rtl/spadmic_position_block.sv`
 - `../arb/rtl/spadmic_correlated_tx.sv`
@@ -25,9 +25,9 @@ The active RTL keeps the existing control-image width and derives the export per
 
 The chip-level egress consumes four uniform packet producers:
 
-1. TDC_X packet stream from `spadmic_tdc_packet_adapter`
-2. TDC_Y packet stream from `spadmic_tdc_packet_adapter`
-3. TDC_Z packet stream from `spadmic_tdc_packet_adapter`
+1. TDC_X direct packet stream from `mptdc_axis_core`
+2. TDC_Y direct packet stream from `mptdc_axis_core`
+3. TDC_Z direct packet stream from `mptdc_axis_core`
 4. one queued position packet stream from `spadmic_position_block`
 
 `spadmic_correlated_tx` arbitrates between them at **packet** granularity, never at word granularity. A packet is never interleaved once its header has started.
@@ -65,14 +65,14 @@ TDC and position packets now identify source differently:
 
 | Packet type | Source encoding |
 |-------------|-----------------|
-| TDC | header bit `[12]` = `tdc_id[0]`, header bit `[6]` = `tdc_id[1]` |
+| TDC | header bits `[1:0] = tdc_id` (`00 = X`, `01 = Y`, `10 = Z`, `11 = reserved`) |
 | Position cluster | cluster header marker `[15:14] = 2'b01`; source is implicitly position |
 | Position raw bitmap | raw header pattern from `spadmic_pos_raw_header_word()`; source is implicitly position |
 
 Off-chip software should therefore group packets by:
 
 1. `shared_event_id` from the EOC word
-2. TDC source from the header or implicit position source from the position header
+2. TDC source from header bits `[1:0]` or implicit position source from the position header
 
 ## 5. Position overlap behavior
 

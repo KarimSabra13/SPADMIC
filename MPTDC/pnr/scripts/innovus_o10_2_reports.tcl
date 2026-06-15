@@ -166,7 +166,7 @@ proc mptdc_o10_write_timing_class_reports {} {
     mptdc_o10_capture_candidates "$o10(reports_dir)/timing_post_route_io_output.rpt" \
         "O10.2 post-route IO output timing" [list \
             {report_timing -to [all_outputs] -max_paths 100} \
-            {report_timing -to [get_ports acq_data_o*] -max_paths 100} \
+            {report_timing -to [get_ports pkt_data_o*] -max_paths 100} \
             {report_timing -max_paths 100} \
         ]
     mptdc_o10_capture_candidates "$o10(reports_dir)/timing_post_route_reset_recovery.rpt" \

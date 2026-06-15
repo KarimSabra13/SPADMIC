@@ -114,23 +114,6 @@ run_verilator_tb() {
   "$mdir/V$tb"
 }
 
-run_vip_feature_suite() {
-  local tests=(
-    ctrl_reject
-    reset_recovery
-    smoke_position_raw
-    spad_reset_modes
-    bp_stress
-    i2c_end_to_end
-    tdc_modes
-    pos_clusters
-  )
-
-  for test in "${tests[@]}"; do
-    bash "$TOP_ROOT/scripts/sim/run_vip_test.sh" "$test" || return 1
-  done
-}
-
 echo "═══════════════════════════════════════════════════════"
 echo "  SPADMIC TOP — Tapeout Readiness Gate"
 echo "  TOP_ROOT:     $TOP_ROOT"
@@ -163,14 +146,12 @@ fi
 if command -v xrun >/dev/null 2>&1; then
   run_step "Xcelium TOP smoke" bash "$TOP_ROOT/ci/run_smoke.sh"
   run_step "Xcelium directed regression" bash "$TOP_ROOT/ci/run_directed_regression.sh"
-  run_step "Xcelium VIP smoke" bash "$TOP_ROOT/ci/run_vip_smoke.sh"
-  run_step "Xcelium VIP feature suite" run_vip_feature_suite
 else
   skip_step "Xcelium TOP smoke" "xrun not found"
   skip_step "Xcelium directed regression" "xrun not found"
-  skip_step "Xcelium VIP smoke" "xrun not found"
-  skip_step "Xcelium VIP feature suite" "xrun not found"
 fi
+skip_step "Xcelium VIP smoke" "retired standalone VIP"
+skip_step "Xcelium VIP feature suite" "retired standalone VIP"
 
 echo ""
 echo "═══════════════════════════════════════════════════════"

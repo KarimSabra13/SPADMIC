@@ -24,10 +24,6 @@
 module mptdc_input_mux
   import mptdc_pkg::*;
 (
-    // -- System (unused — kept for uniform instantiation style) -------------
-    input  wire         clk_sys,
-    input  wire         rst_n,
-
     // -- SPAD matrix async inputs ------------------------------------------
     input  wire         start_spad_async_i,
     input  wire         stop_spad_async_i,

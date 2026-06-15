@@ -125,9 +125,9 @@ for file in \
   fi
 done
 
-POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
+POSTSYN_NETLIST="$RESULT_DIR/mptdc_axis_core.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
-  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
+  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_axis_core.postsyn.v"
 fi
 
 CHECK_REPORT="$RESULT_DIR/o3_raw_epoch_cleanup_check.rpt"
@@ -245,7 +245,7 @@ fi
   echo "## Key Files"
   for file in \
     "genus_${RUN_ID}.log" \
-    mptdc_top_asic.postsyn.v \
+    mptdc_axis_core.postsyn.v \
     o3_raw_epoch_cleanup_check.rpt \
     report_clocks.rpt \
     report_clock_groups.rpt \

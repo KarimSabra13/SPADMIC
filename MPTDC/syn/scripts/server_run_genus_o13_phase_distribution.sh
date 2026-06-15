@@ -685,12 +685,12 @@ run_corrected_summary_parser
 run_final_diagnostic_reports
 mirror_final_report_artifacts
 
-POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
+POSTSYN_NETLIST="$RESULT_DIR/mptdc_axis_core.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
-  POSTSYN_NETLIST="$RESULT_DIR/outputs/mptdc_top_asic.postsyn.v"
+  POSTSYN_NETLIST="$RESULT_DIR/outputs/mptdc_axis_core.postsyn.v"
 fi
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
-  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
+  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_axis_core.postsyn.v"
 fi
 
 RO_COUNT=0
@@ -1017,7 +1017,7 @@ write_macro_binding_check() {
 write_packet_contract_check() {
   local out="$RESULT_DIR/packet_contract_check.rpt"
   local pkg="$MPTDC_DIR/rtl/pkg/mptdc_pkg.sv"
-  local tx="$MPTDC_DIR/rtl/readout/mptdc_narrow16_tx_v2.sv"
+  local tx="$MPTDC_DIR/rtl/readout/mptdc_packet16_tx.sv"
   {
     echo "# MPTDC Packet Contract Check"
     echo "FLOW_LABEL=$FLOW_LABEL"
@@ -1594,8 +1594,8 @@ write_final_readiness
   echo "## Key Files"
   for file in \
     "genus_${RUN_ID}.log" \
-    mptdc_top_asic.postsyn.v \
-    mptdc_top_asic.postsyn.sdc \
+    mptdc_axis_core.postsyn.v \
+    mptdc_axis_core.postsyn.sdc \
     final_sdc_overlay_used.sdc \
     final_filelist_used.f \
     o13_phase_distribution_check.rpt \

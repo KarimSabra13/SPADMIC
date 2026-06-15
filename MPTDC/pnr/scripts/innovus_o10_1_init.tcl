@@ -220,11 +220,11 @@ proc mptdc_o10_setup_globals {} {
     set o10(ro_cts_attempted) "no"
     mptdc_o10_mkdirs
 
-    set design(TOPLEVEL) "mptdc_top_asic"
+    set design(TOPLEVEL) "mptdc_axis_core"
     set design(project_root) $mptdc_root
     set design(syn_root) "$mptdc_root/syn"
-    set design(postsyn_netlist) [mptdc_o10_env MPTDC_O10_NETLIST "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.v"]
-    set design(postsyn_sdc) [mptdc_o10_env MPTDC_O10_POSTSYN_SDC "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_top_asic.postsyn.sdc"]
+    set design(postsyn_netlist) [mptdc_o10_env MPTDC_O10_NETLIST "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_axis_core.postsyn.v"]
+    set design(postsyn_sdc) [mptdc_o10_env MPTDC_O10_POSTSYN_SDC "$repo_root/results/genus_osc_pd/20260604_o9_final_typical_r750_delta5/mptdc_axis_core.postsyn.sdc"]
     set o10(sdc_overlay) [mptdc_o10_env MPTDC_O10_SDC_OVERLAY "$mptdc_root/pnr/constraints/mptdc_osc_typical_r750_delta5_innovus.sdc"]
     set o10(ro_lef) [mptdc_o10_env O1_RO_LEF_PATH "$repo_root/results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef"]
     set o10(ro_lib) [mptdc_o10_env O1_RO_LIBERTY_PATH "$mptdc_root/syn/macros/RO_tune4_real_abstract_shell.lib"]

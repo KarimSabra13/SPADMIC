@@ -93,8 +93,8 @@ for file in \
   copy_if_present "$file"
 done
 
-copy_enc_if_requested "${pnr_dir}/outputs/mptdc_top_asic.place.enc"
-copy_dir_if_requested "${pnr_dir}/outputs/mptdc_top_asic.place.enc.dat"
+copy_enc_if_requested "${pnr_dir}/outputs/mptdc_axis_core.place.enc"
+copy_dir_if_requested "${pnr_dir}/outputs/mptdc_axis_core.place.enc.dat"
 
 if [[ -d "${pnr_dir}/reports/prects" ]]; then
   mkdir -p "${snapshot_dir}/prects"

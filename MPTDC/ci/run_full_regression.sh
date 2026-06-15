@@ -47,21 +47,13 @@ verilator --lint-only --timing -Wall \
   -Wno-WIDTHTRUNC -Wno-UNUSEDPARAM -Wno-PINMISSING -Wno-UNUSEDGENVAR \
   -Wno-CASEINCOMPLETE -Wno-LATCH -Wno-REALCVT -Wno-INITIALDLY -Wno-COMBDLY \
   -Wno-PINCONNECTEMPTY -Wno-SYNCASYNCNET -Wno-UNOPTFLAT \
-  +define+MPTDC_USE_OSC_MODEL -f rtl/filelist.f --top-module mptdc_top_asic
+  +define+MPTDC_USE_OSC_MODEL -f rtl/filelist.f --top-module mptdc_axis_core
 echo "=== Lint PASSED ==="
 echo ""
 
-# Integration tests
+# Product integration tests
 INTEGRATION_TBS=(
-    tb_single_conv
-    tb_multi_conv_stress
-    tb_deadtime_measure
-    tb_cal_inject
-    tb_backpressure
-    tb_watchdog_recovery
-    tb_start_wdt
-    tb_overflow_count
-    tb_firsthit_mode
+    tb_axis_core_product_smoke
 )
 
 for tb in "${INTEGRATION_TBS[@]}"; do

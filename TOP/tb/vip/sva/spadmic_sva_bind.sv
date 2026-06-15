@@ -26,29 +26,4 @@ bind spadmic_top_v1 spadmic_ctrl_sva u_ctrl_sva (
   .mode_reject_count    (u_global_csr.mode_reject_count_q[7:0])
 );
 
-// ── Unified ARB assertions ──────────────────────────────────────
-bind spadmic_correlated_tx spadmic_arb_sva u_arb_sva (
-  .clk_sys    (clk_sys),
-  .rst_n      (rst_n),
-  .acq_valid  (acq_valid_i),
-  .acq_ready  (acq_ready_o),
-  .arb_valid  (arb_pkt_valid),
-  .arb_ready  (arb_pkt_ready),
-  .arb_sop    (arb_pkt_sop),
-  .arb_eop    (arb_pkt_eop),
-  .arb_source (arb_pkt_source)
-);
-
-// ── Position path framing assertions ────────────────────────────
-bind spadmic_position_block spadmic_pos_sva u_pos_sva (
-  .clk_sys       (clk_sys),
-  .rst_n         (rst_n),
-  .pos_tx_valid  (pos_valid_o),
-  .pos_tx_data   (pos_data_o),
-  .pos_tx_ready  (pos_ready_i),
-  .pos_fsm_state ({1'b0, det_state_q}),
-  .word_idx      (word_idx_q),
-  .pos_busy      (busy_o)
-);
-
 `default_nettype wire

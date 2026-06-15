@@ -6,8 +6,6 @@
 MPTDC/rtl/pkg/mptdc_pkg.sv
 
 MPTDC/rtl/cdc/mptdc_reset_sync.sv
-MPTDC/rtl/cdc/mptdc_pulse_sync.sv
-MPTDC/rtl/cdc/mptdc_gray_cnt_sync.sv
 MPTDC/rtl/cdc/mptdc_sync_fifo.sv
 
 MPTDC/rtl/osc/mptdc_osc_model.sv
@@ -30,9 +28,7 @@ MPTDC/rtl/ctrl/mptdc_meas_ctrl.sv
 MPTDC/rtl/ctrl/mptdc_drain_ctrl.sv
 MPTDC/rtl/ctrl/mptdc_watchdog.sv
 
-MPTDC/rtl/readout/mptdc_tconv_reco.sv
-MPTDC/rtl/readout/mptdc_narrow16_tx_v2.sv
-MPTDC/rtl/readout/mptdc_csr_minimal.sv
+MPTDC/rtl/readout/mptdc_packet16_tx.sv
 
 MPTDC/rtl/top/mptdc_core.sv
-MPTDC/rtl/top/mptdc_top_asic.sv
+MPTDC/rtl/top/mptdc_axis_core.sv

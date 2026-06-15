@@ -127,7 +127,7 @@ proc mptdc_o12b_restore_source_checkpoint {} {
     global o12b
     if {[file exists $o12b(source_checkpoint_dat)]} {
         mptdc_o12b_msg "Restoring checkpoint from current checkout: $o12b(source_checkpoint_dat)"
-        restoreDesign $o12b(source_checkpoint_dat) mptdc_top_asic
+        restoreDesign $o12b(source_checkpoint_dat) mptdc_axis_core
         return
     }
     if {[file exists $o12b(source_restore_tcl)]} {

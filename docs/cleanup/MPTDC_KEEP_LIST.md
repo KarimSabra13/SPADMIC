@@ -10,7 +10,7 @@ searches, and validation.
 | --- | --- | --- |
 | `MPTDC/rtl/filelist.f` | Primary RTL closure | Prove every simulator/synthesis consumer still compiles |
 | `MPTDC/rtl/pkg/mptdc_pkg.sv` | Shared package/types/geometry | Compile all RTL consumers |
-| `MPTDC/rtl/top/mptdc_top_asic.sv` | Public ASIC boundary | Re-run top-level compile/synthesis checks |
+| `MPTDC/rtl/top/mptdc_axis_core.sv` | Product ASIC axis boundary | Re-run top-level compile/synthesis checks |
 | `MPTDC/rtl/top/mptdc_core.sv` | Core datapath/control integration | Re-run RTL compile and relevant unit/integration tests |
 | `MPTDC/rtl/pd/mptdc_pd_cell.sv` | PD-cell behavior and recent simulator-portability work | Verilator and Xcelium compile/elaboration checks |
 | `MPTDC/rtl/pd/` | Fast/slow epoch and PD capture logic | RTL compile, unit tests, current Genus flow |
@@ -18,7 +18,7 @@ searches, and validation.
 | `MPTDC/rtl/osc/` | Oscillator wrapper, stub/model, phase buffers | Genus/Innovus wrapper dependency checks |
 | `MPTDC/rtl/async/` | Async frontend/capture/context modules | Unit/integration tests and compile |
 | `MPTDC/rtl/ctrl/` | Measurement/drain/control/watchdog logic | Unit/integration tests and compile |
-| `MPTDC/rtl/readout/` | CSR and narrow output path | Unit/integration tests and compile |
+| `MPTDC/rtl/readout/` | Product packet output path | Unit/integration tests and compile |
 | `MPTDC/sim/verilator/filelist_verilator.f` | Local Verilator closure | Verilator compile with current top/test targets |
 | `MPTDC/tb/vip/filelist.f` | VIP compile closure | VIP compile/smoke target |
 

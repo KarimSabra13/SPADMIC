@@ -32,20 +32,13 @@ Each run records:
 
 ## Scope
 
-The default smoke set is intentionally focused:
+The maintained product smoke set is intentionally focused:
 
-- `tb_meas_ctrl_unit`
-- `tb_hit_capture_bridge_unit`
-- `tb_context_bank_unit`
-- `tb_drain_ctrl_unit`
-- `tb_single_conv`
-- `tb_backpressure`
-- VIP `smoke_single_conv`
-- VIP `backpressure_integrity`
-- VIP `vip_maxhits_matrix`
+- lint for `mptdc_axis_core`
+- `tb_axis_core_product_smoke`
 
-Set `MPTDC_VERILATOR_SMOKE_FULL=1` to run the repository's full maintained VIP
-Verilator smoke script after the focused tests.
+The old standalone VIP smoke set was retired with the product-only
+`mptdc_axis_core` boundary.
 
 ## Lint Waivers
 
@@ -72,4 +65,3 @@ smoke flow for the mixed async/event RTL:
 
 These waivers keep Verilator usable for local structural and directed functional
 checks. They do not waive Cadence synthesis, STA, CDC, or Xcelium findings.
-

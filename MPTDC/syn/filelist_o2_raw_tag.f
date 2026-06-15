@@ -15,8 +15,6 @@
 ../rtl/pkg/mptdc_pkg.sv
 
 ../rtl/cdc/mptdc_reset_sync.sv
-../rtl/cdc/mptdc_pulse_sync.sv
-../rtl/cdc/mptdc_gray_cnt_sync.sv
 ../rtl/cdc/mptdc_sync_fifo.sv
 
 ../rtl/osc/mptdc_osc_wrapper.sv
@@ -37,9 +35,7 @@
 ../rtl/ctrl/mptdc_drain_ctrl.sv
 ../rtl/ctrl/mptdc_watchdog.sv
 
-../rtl/readout/mptdc_tconv_reco.sv
-../rtl/readout/mptdc_narrow16_tx_v2.sv
-../rtl/readout/mptdc_csr_minimal.sv
+../rtl/readout/mptdc_packet16_tx.sv
 
 ../rtl/top/mptdc_core.sv
-../rtl/top/mptdc_top_asic.sv
+../rtl/top/mptdc_axis_core.sv

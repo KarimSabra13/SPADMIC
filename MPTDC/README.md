@@ -13,18 +13,18 @@ open signoff work.
 
 ## Active Design
 
-- Top level: `rtl/top/mptdc_top_asic.sv`
+- Product top level: `rtl/top/mptdc_axis_core.sv`
 - Core: `rtl/top/mptdc_core.sv`
 - Package constants and packet types: `rtl/pkg/mptdc_pkg.sv`
 - Oscillator and phase distribution: `rtl/osc/`
 - Phase detector matrix: `rtl/pd/`
 - Async capture and context bridge: `rtl/async/`
-- Drain, FIFO, CSR, and readout: `rtl/ctrl/`, `rtl/readout/`
+- Drain, FIFO, and product packet readout: `rtl/ctrl/`, `rtl/readout/`
 
 The current architecture uses two `RO_tune4` oscillator macros, slow and fast
 phase distribution buffers, an `8 x 8` intentional Vernier phase-detector
-matrix, local raw fast tagging, a slow Johnson epoch, and a fixed packet
-format.  See
+    matrix, local raw fast tagging, a slow Johnson epoch, and a fixed product
+    packet format emitted directly from `mptdc_axis_core`.  See
 [`docs/architecture/MPTDC_ARCHITECTURE.md`](docs/architecture/MPTDC_ARCHITECTURE.md).
 
 ## Standard Output Policy

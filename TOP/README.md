@@ -1,12 +1,12 @@
 # TOP — SPADMIC Top-Level Integration
 
-First-silicon SPADMIC chip-level integration around three preserved `mptdc_top_asic` axes.
+First-silicon SPADMIC chip-level integration around three product-only `mptdc_axis_core` TDC axes.
 
 ## Active architecture at a glance
 
 - one physical source-synchronous TX interface: forwarded `chip_tx_clk_o`, SDR `chip_tx_valid_o`, and 8-bit DDR `chip_tx_data_o`
 - one requested-to-active control contract (`spadmic_global_csr` + `spadmic_top_sequencer`)
-- three lean per-axis TDC packet adapters feeding one unified four-source ARB
+- three product TDC packet streams feeding one unified four-source ARB
 - one async-qualified 64x64x64 SPAD position path with queued snapshots, explicit counters, and sticky faults
 - one correlated shared egress that supports TDC-only, position-only, and both-active export
 - one physical DDR TX packer that preserves the internal 16-bit logical packet stream while repacking it onto the chip pins
@@ -54,8 +54,8 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 ### TDC plane
 
 1. Each axis wrapper qualifies one `clk_ref_40m` STOP pulse from the asynchronous SPAD event.
-2. Each `mptdc_top_asic` instance runs the preserved measurement kernel and exports acquisition records instead of using its local narrow output.
-3. Each per-axis `spadmic_tdc_packet_adapter` serializes META/HIT acquisition records directly into the unified ARB stream.
+2. Each wrapper instantiates one `mptdc_axis_core` product boundary around the preserved measurement kernel.
+3. Each axis core emits a direct 16-bit packet stream with SOP/EOP, packet-active, and packet-pending sidebands.
 
 ### Position plane
 
@@ -80,13 +80,13 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 | `spadmic_csr_decoder` | `rtl/spadmic_csr_decoder.sv` | Shared CSR region decoder with read timeout |
 | `spadmic_global_csr` | `rtl/spadmic_global_csr.sv` | Requested control image plus global status/fault reporting |
 | `spadmic_top_sequencer` | `rtl/spadmic_top_sequencer.sv` | Active-image commit sequencer |
-| `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | Per-axis wrapper around stop qualification and `mptdc_top_asic` |
+| `spadmic_tdc_axis_wrapper` | `rtl/spadmic_tdc_axis_wrapper.sv` | Per-axis wrapper around stop qualification and `mptdc_axis_core` |
+| `spadmic_tdc_axis_csr` | `rtl/spadmic_tdc_axis_csr.sv` | TOP-owned product TDC control/status register block |
 | `spadmic_ref_stop_qualifier` | `rtl/spadmic_ref_stop_qualifier.sv` | One-shot qualified STOP pulse generator |
-| `spadmic_tdc_packet_adapter` | `../arb/rtl/spadmic_tdc_packet_adapter.sv` | Per-axis acquisition-record serializer for the fixed v2.7 TDC packet |
 | `spadmic_packet_arbiter4` | `../arb/rtl/spadmic_packet_arbiter4.sv` | Four-source packet-atomic masked round-robin arbiter |
 | `spadmic_position_block` | `../position/rtl/spadmic_position_block.sv` | Position detector, queued packetizer, and local CSR block |
 | `spadmic_axis_cluster_scan` | `../position/rtl/spadmic_axis_cluster_scan.sv` | Five-cycle pipelined per-axis cluster scanner with overflow flag |
-| `spadmic_correlated_tx` | `../arb/rtl/spadmic_correlated_tx.sv` | TDC adapters, position sideband adapter, unified tagger, and 256-word output FIFO |
+| `spadmic_correlated_tx` | `../arb/rtl/spadmic_correlated_tx.sv` | Direct TDC streams, position sideband adapter, unified tagger, and 256-word output FIFO |
 | `spadmic_ddr_tx` | `rtl/spadmic_ddr_tx.sv` | Source-synchronous 8-bit DDR physical TX packer |
 
 ## Clock and reset summary
@@ -95,7 +95,7 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 |--------|-----------|-------|
 | `clk_sys` | 160 MHz | I2C, CSR, sequencer, shared TDC readout, correlated TX, position block, forwarded TX clock |
 | `clk_ref_40m` | 40 MHz | STOP qualification only |
-| MPTDC internal generated clocks | varies | Preserved inside each `mptdc_top_asic` instance |
+| MPTDC internal generated clocks | varies | Preserved inside each `mptdc_axis_core` instance |
 
 ## Validation entrypoints
 

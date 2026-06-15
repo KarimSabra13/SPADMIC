@@ -234,19 +234,6 @@ set_clock_groups -asynchronous \
     -group [get_clocks $design(OSC_FAST_CLOCKS)]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. PRODUCTION READOUT MODE CASE ANALYSIS
-# ─────────────────────────────────────────────────────────────────────────────
-# SPADMIC TOP production uses acq_* records and one shared serializer. When this
-# macro is synthesized in production mode, constant-propagate that integration
-# contract so the local per-axis narrow serializer does not waste area/power or
-# pollute timing reports. Standalone packet-output synthesis can disable this
-# through MPTDC_SYN_PRODUCTION_SHARED_READOUT=0 before launching Genus.
-if {[info exists design(PRODUCTION_SHARED_READOUT)] && $design(PRODUCTION_SHARED_READOUT)} {
-    mptdc_try_case_analysis_port 1 shared_readout_en_i
-    mptdc_try_case_analysis_port 0 narrow_ready_i
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
 # 5. ASYNCHRONOUS INPUTS — FALSE PATHS
 # ─────────────────────────────────────────────────────────────────────────────
 # START/STOP are truly async pulses from SPAD detectors or calibration.

@@ -133,14 +133,10 @@ when intentionally running a different experiment:
 export MPTDC_OPT_GOAL=timing_first
 ```
 
-Production synthesis defaults to the SPADMIC TOP readout architecture:
-`shared_readout_en_i=1` and `narrow_ready_i=0`, so local per-axis narrow
-serializers are constant-trimmed and the `acq_*`/shared-serializer path remains
-the active product path. For standalone MPTDC packet-output synthesis/debug:
-
-```bash
-export MPTDC_SYN_PRODUCTION_SHARED_READOUT=0
-```
+Production synthesis now targets the SPADMIC product axis boundary
+`mptdc_axis_core`, which emits a direct 16-bit packet stream with SOP/EOP. The
+standalone local CSR/readout shell and exported `acq_*` compatibility path are
+not part of the product filelist.
 
 ### Generated Directories (Gitignored)
 
@@ -225,13 +221,12 @@ constraint values are never hardcoded in two places.
 | **§1 Primary clock** | `create_clock clk_sys -period 6.25` | 160 MHz system domain |
 | **§2 Osc clocks** | Virtual clocks at osc stub pins | Timing for osc-domain logic |
 | **§3 Clock groups** | `set_clock_groups -asynchronous` | 3 async domains (sys, slow, fast) |
-| **§4 Production readout** | `set_case_analysis` on `shared_readout_en_i` / `narrow_ready_i` | Trims standalone local serializer in product mode |
-| **§5 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
-| **§6 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
-| **§6 Async clears** | narrow false paths on PD and Gray-counter clear pins | Covers intentional teardown clears after snapshot/context commit |
-| **§7 CDC protection** | best-effort `set_dont_touch` wrappers on sync FF/pending-latch patterns | Preserves synchronizers where the active Genus/DC parser accepts the matched objects |
-| **§8 CDC max delay** | simplified `set_max_delay` across domains | Keeps CDC intent without relying on unsupported `-datapath_only` forms |
-| **§9-10 I/O delays** | 0.5 ns macro I/O delay | Provisional on-chip SPADMIC block budget |
+| **§4 Async inputs** | `set_false_path` on START/STOP | No timing relationship |
+| **§5 Reset** | `set_false_path` on async_rst_n | Deasserts through sync chain |
+| **§5 Async clears** | narrow false paths on PD and clear pins | Covers intentional teardown clears after snapshot/context commit |
+| **§6 CDC protection** | best-effort `set_dont_touch` wrappers on sync FF/pending-latch patterns | Preserves synchronizers where the active Genus/DC parser accepts the matched objects |
+| **§7 CDC max delay** | simplified `set_max_delay` across domains | Keeps CDC intent without relying on unsupported `-datapath_only` forms |
+| **§8-9 I/O delays** | 0.5 ns macro I/O delay | Provisional on-chip SPADMIC block budget |
 | **§11 Load/drive** | 10 fF macro load, 100 ps transition | Provisional on-chip sink characteristics |
 | **§12 Design rules** | Max fanout 20, max transition 0.5 ns | Signal integrity |
 

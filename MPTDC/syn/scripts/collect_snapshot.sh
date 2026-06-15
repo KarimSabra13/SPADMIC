@@ -65,9 +65,9 @@ if [[ -d "${source_synthesis_dir}" ]]; then
 fi
 
 for file in \
-  "${source_outputs_dir}/mptdc_top_asic.postsyn.v" \
-  "${source_outputs_dir}/mptdc_top_asic.postsyn.sdc" \
-  "${source_outputs_dir}/mptdc_top_asic.postsyn.sdf" \
+  "${source_outputs_dir}/mptdc_axis_core.postsyn.v" \
+  "${source_outputs_dir}/mptdc_axis_core.postsyn.sdc" \
+  "${source_outputs_dir}/mptdc_axis_core.postsyn.sdf" \
   "${source_synthesis_dir}/post_elaboration/check_design.rpt" \
   "${source_synthesis_dir}/post_elaboration/check_timing_intent.rpt" \
   "${source_synthesis_dir}/post_synthesis/timing_setup.rpt" \

@@ -231,9 +231,9 @@ run_one() {
     fi
   done
 
-  local postsyn_netlist="$result_dir/mptdc_top_asic.postsyn.v"
+  local postsyn_netlist="$result_dir/mptdc_axis_core.postsyn.v"
   if [[ ! -f "$postsyn_netlist" ]]; then
-    postsyn_netlist="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
+    postsyn_netlist="$SYN_DIR/outputs/mptdc_axis_core.postsyn.v"
   fi
 
   local check_report="$result_dir/o5_pd_stdcell_check.rpt"
@@ -349,7 +349,7 @@ run_one() {
     echo "## Key Files"
     for file in \
       "genus_${run_id}.log" \
-      mptdc_top_asic.postsyn.v \
+      mptdc_axis_core.postsyn.v \
       o5_pd_stdcell_check.rpt \
       report_clocks.rpt \
       report_clock_groups.rpt \

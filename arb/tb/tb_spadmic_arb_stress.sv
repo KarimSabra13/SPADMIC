@@ -6,15 +6,19 @@ module tb_spadmic_arb_stress;
   import spadmic_pkg::*;
 
   localparam int CLK_PERIOD = 6250;
+  localparam int TDC_PACKET_WORDS = SPADMIC_MAX_TDC_PACKET_WORDS;
   localparam int EXPECTED_WORDS = (3 * SPADMIC_MAX_TDC_PACKET_WORDS) + SPADMIC_POS_RAW_PKT_WORDS;
 
   logic clk_sys;
   logic rst_n;
   logic [2:0] axis_enable;
   logic position_enable;
-  logic [2:0] acq_valid;
-  logic [ACQ_REC_W-1:0] acq_data [3];
-  wire  [2:0] acq_ready;
+  logic [2:0] tdc_valid;
+  logic [NARROW_W-1:0] tdc_data [SPADMIC_AXIS_COUNT];
+  logic [2:0] tdc_sop;
+  logic [2:0] tdc_eop;
+  wire  [2:0] tdc_ready;
+  logic [2:0] tdc_packet_active;
   logic pos_valid;
   logic [NARROW_W-1:0] pos_data;
   wire  pos_ready;
@@ -36,28 +40,35 @@ module tb_spadmic_arb_stress;
   bit raw_packet;
   int raw_word_idx;
   spadmic_source_id_e current_source;
+  int stress_tdc_idx [0:SPADMIC_AXIS_COUNT-1];
+  bit stress_tdc_done [0:SPADMIC_AXIS_COUNT-1];
+  int stress_pos_idx;
+  bit stress_pos_done;
+  bit stress_all_done;
 
   initial clk_sys = 1'b0;
   always #(CLK_PERIOD/2) clk_sys = ~clk_sys;
 
   spadmic_correlated_tx dut (
-    .clk_sys        (clk_sys),
-    .rst_n          (rst_n),
-    .tx_sel_i       (SPADMIC_TX_TDC),
-    .axis_enable_i  (axis_enable),
-    .position_enable_i(position_enable),
-    .tdc_out_mode_i (OUT_MODE_FULL),
-    .acq_valid_i    (acq_valid),
-    .acq_data_i     (acq_data),
-    .acq_ready_o    (acq_ready),
-    .pos_valid_i    (pos_valid),
-    .pos_data_i     (pos_data),
-    .pos_ready_o    (pos_ready),
-    .shared_ready_i (shared_ready),
-    .shared_valid_o (shared_valid),
-    .shared_data_o  (shared_data),
-    .tdc_busy_o     (tdc_busy),
-    .arb_busy_o     (arb_busy),
+    .clk_sys            (clk_sys),
+    .rst_n              (rst_n),
+    .tx_sel_i           (SPADMIC_TX_TDC),
+    .axis_enable_i      (axis_enable),
+    .position_enable_i  (position_enable),
+    .tdc_valid_i        (tdc_valid),
+    .tdc_data_i         (tdc_data),
+    .tdc_sop_i          (tdc_sop),
+    .tdc_eop_i          (tdc_eop),
+    .tdc_ready_o        (tdc_ready),
+    .tdc_packet_active_i(tdc_packet_active),
+    .pos_valid_i        (pos_valid),
+    .pos_data_i         (pos_data),
+    .pos_ready_o        (pos_ready),
+    .shared_ready_i     (shared_ready),
+    .shared_valid_o     (shared_valid),
+    .shared_data_o      (shared_data),
+    .tdc_busy_o         (tdc_busy),
+    .arb_busy_o         (arb_busy),
     .correlation_overflow_o(correlation_overflow)
   );
 
@@ -71,77 +82,55 @@ module tb_spadmic_arb_stress;
     end
   endtask
 
-  function automatic mptdc_acq_rec_t make_meta(input int axis);
-    mptdc_acq_rec_t rec;
-    rec = '0;
-    rec.kind = ACQ_REC_META;
-    rec.meta.hit_count = MAX_HITS_W'(MAX_HITS);
-    rec.meta.nslow = NSLOW_W'(20 + axis);
-    rec.meta.nfast = NFAST_W'(8 + axis);
-    rec.meta.nfast_stop = NFAST_W'(4 + axis);
-    rec.meta.ctx_id = ctx_id_t'(axis[0]);
-    rec.meta.phase0_snap = axis[0];
-    rec.meta.stop_slow_phase_disc = stop_phase_disc_t'(axis);
-    rec.meta.slow_boundary_inc = axis[1];
-    return rec;
+  function automatic logic [NARROW_W-1:0] tdc_header_word(input int axis);
+    tdc_conv_flags_t flags;
+    flags = '0;
+    return {2'b10,
+            PACKET_CTX_W'(ctx_id_t'(axis[0])),
+            logic'(axis[0]),
+            MAX_HITS_W'(MAX_HITS),
+            flags,
+            logic'(axis[1]),
+            2'b00};
   endfunction
 
-  function automatic mptdc_acq_rec_t make_hit(input int hit_idx, input int axis);
-    mptdc_acq_rec_t rec;
-    rec = '0;
-    rec.kind = ACQ_REC_HIT;
-    rec.hit.ns = ph_idx_t'(hit_idx & 7);
-    rec.hit.nf = ph_idx_t'((hit_idx + axis) & 7);
-    rec.hit.nfast = NFAST_W'(30 + hit_idx + axis);
-    rec.hit.event_seq = EVENT_SEQ_W'(hit_idx);
-    return rec;
+  function automatic logic [NARROW_W-1:0] tdc_hit_w0(input int hit_idx, input int axis);
+    logic [NSLOW_W-1:0] nslow;
+    logic [NFAST_W-1:0] nfast;
+    nslow = NSLOW_W'(20 + axis);
+    nfast = NFAST_W'(30 + hit_idx + axis);
+    return {1'b0, nslow[6:0], nfast[6:0], 1'b0};
   endfunction
 
-  task automatic drive_acq(input int axis, input mptdc_acq_rec_t rec);
-    @(posedge clk_sys);
-    #1;
-    acq_data[axis] = rec;
-    acq_valid[axis] = 1'b1;
-    do begin
-      @(negedge clk_sys);
-      #1;
-    end while (!acq_ready[axis]);
-    @(posedge clk_sys);
-    #1;
-    acq_valid[axis] = 1'b0;
-    acq_data[axis] = '0;
-  endtask
+  function automatic logic [NARROW_W-1:0] tdc_hit_w1(input int hit_idx, input int axis);
+    return {1'b0, 4'(hit_idx & 7), 4'((hit_idx + axis) & 7), 4'b0,
+            stop_phase_disc_t'(axis[2:0])};
+  endfunction
 
-  task automatic drive_full_tdc(input int axis);
-    drive_acq(axis, make_meta(axis));
-    for (int i = 0; i < MAX_HITS; i++)
-      drive_acq(axis, make_hit(i, axis));
-  endtask
+  function automatic logic [NARROW_W-1:0] tdc_packet_word(input int axis, input int word_idx);
+    int hit_idx;
+    if (word_idx == 0)
+      return tdc_header_word(axis);
+    if (word_idx == (TDC_PACKET_WORDS - 1))
+      return {2'b11, 14'h2aa};
 
-  task automatic drive_pos_raw();
-    logic [NARROW_W-1:0] words [0:SPADMIC_POS_RAW_PKT_WORDS-1];
-    words[0] = spadmic_pos_raw_header_word(3'b111);
-    for (int i = 1; i < SPADMIC_POS_RAW_PKT_WORDS - 1; i++)
-      words[i] = 16'h4000 + 16'(i);
-    words[2] = 16'hC123;
-    words[7] = 16'hFFFF;
-    words[SPADMIC_POS_RAW_PKT_WORDS-1] = spadmic_pos_eoc_word(4'hA);
+    hit_idx = (word_idx - 1) / 2;
+    if (((word_idx - 1) & 1) == 0)
+      return tdc_hit_w0(hit_idx, axis);
+    return tdc_hit_w1(hit_idx, axis);
+  endfunction
 
-    for (int i = 0; i < SPADMIC_POS_RAW_PKT_WORDS; i++) begin
-      @(posedge clk_sys);
-      #1;
-      pos_data = words[i];
-      pos_valid = 1'b1;
-      do begin
-        @(negedge clk_sys);
-        #1;
-      end while (!pos_ready);
-      @(posedge clk_sys);
-      #1;
-    end
-    pos_valid = 1'b0;
-    pos_data = '0;
-  endtask
+  function automatic logic [NARROW_W-1:0] pos_packet_word(input int word_idx);
+    if (word_idx == 0)
+      return spadmic_pos_raw_header_word(3'b111);
+    if (word_idx == (SPADMIC_POS_RAW_PKT_WORDS - 1))
+      return spadmic_pos_eoc_word(4'hA);
+    if (word_idx == 2)
+      return 16'hC123;
+    if (word_idx == 7)
+      return 16'hFFFF;
+    return 16'h4000 + 16'(word_idx);
+  endfunction
 
   always_ff @(posedge clk_sys or negedge rst_n) begin
     if (!rst_n) begin
@@ -198,23 +187,82 @@ module tb_spadmic_arb_stress;
     rst_n = 1'b0;
     axis_enable = 3'b111;
     position_enable = 1'b1;
-    acq_valid = '0;
+    tdc_valid = '0;
+    tdc_sop = '0;
+    tdc_eop = '0;
+    tdc_packet_active = '0;
     pos_valid = 1'b0;
     pos_data = '0;
-    for (int i = 0; i < 3; i++)
-      acq_data[i] = '0;
+    for (int i = 0; i < SPADMIC_AXIS_COUNT; i++)
+      tdc_data[i] = '0;
 
     repeat (8) @(posedge clk_sys);
     #1;
     rst_n = 1'b1;
     repeat (4) @(posedge clk_sys);
+    #1;
 
-    fork
-      drive_full_tdc(0);
-      drive_full_tdc(1);
-      drive_full_tdc(2);
-      drive_pos_raw();
-    join
+    for (int i = 0; i < SPADMIC_AXIS_COUNT; i++) begin
+      stress_tdc_idx[i] = 0;
+      stress_tdc_done[i] = 1'b0;
+      tdc_valid[i] = 1'b1;
+      tdc_packet_active[i] = 1'b1;
+      tdc_data[i] = tdc_packet_word(i, 0);
+      tdc_sop[i] = 1'b1;
+      tdc_eop[i] = 1'b0;
+    end
+    stress_pos_idx = 0;
+    stress_pos_done = 1'b0;
+    pos_valid = 1'b1;
+    pos_data = pos_packet_word(0);
+
+    stress_all_done = 1'b0;
+    while (!stress_all_done) begin
+      @(posedge clk_sys);
+      for (int i = 0; i < SPADMIC_AXIS_COUNT; i++) begin
+        if (!stress_tdc_done[i] && tdc_valid[i] && tdc_ready[i]) begin
+          if (stress_tdc_idx[i] == (TDC_PACKET_WORDS - 1)) begin
+            stress_tdc_done[i] = 1'b1;
+          end else begin
+            stress_tdc_idx[i]++;
+          end
+        end
+      end
+      if (!stress_pos_done && pos_valid && pos_ready) begin
+        if (stress_pos_idx == (SPADMIC_POS_RAW_PKT_WORDS - 1)) begin
+          stress_pos_done = 1'b1;
+        end else begin
+          stress_pos_idx++;
+        end
+      end
+
+      #1;
+      stress_all_done = stress_pos_done;
+      for (int i = 0; i < SPADMIC_AXIS_COUNT; i++) begin
+        stress_all_done = stress_all_done & stress_tdc_done[i];
+        if (stress_tdc_done[i]) begin
+          tdc_valid[i] = 1'b0;
+          tdc_packet_active[i] = 1'b0;
+          tdc_data[i] = '0;
+          tdc_sop[i] = 1'b0;
+          tdc_eop[i] = 1'b0;
+        end else begin
+          tdc_valid[i] = 1'b1;
+          tdc_packet_active[i] = 1'b1;
+          tdc_data[i] = tdc_packet_word(i, stress_tdc_idx[i]);
+          tdc_sop[i] = (stress_tdc_idx[i] == 0);
+          tdc_eop[i] = (stress_tdc_idx[i] == (TDC_PACKET_WORDS - 1));
+        end
+      end
+
+      if (stress_pos_done) begin
+        pos_valid = 1'b0;
+        pos_data = '0;
+      end else begin
+        pos_valid = 1'b1;
+        pos_data = pos_packet_word(stress_pos_idx);
+      end
+    end
 
     while (packet_count < 4)
       @(posedge clk_sys);
@@ -222,7 +270,7 @@ module tb_spadmic_arb_stress;
     #1;
 
     check("Stress emits exactly four max-burst packets", packet_count == 4);
-    check("Stress drains expected 155-word burst", word_count == EXPECTED_WORDS);
+    check("Stress drains expected max-burst words", word_count == EXPECTED_WORDS);
     check("Stress includes all four sources", packets_by_source[0] == 1 && packets_by_source[1] == 1 &&
                                            packets_by_source[2] == 1 && packets_by_source[3] == 1);
     check("Stress preserves unified tag sequence", tag_errors == 0);

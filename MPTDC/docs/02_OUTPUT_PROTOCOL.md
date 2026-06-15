@@ -1,12 +1,13 @@
 # MPTDC v2.7 — Fixed 16-bit Output Protocol
 
 > - **Author:** Karim Sabra
-> - **Purpose:** Define the live 16-bit packet format emitted by the MPTDC serializer.
-> - **Scope:** Covers the single header/hit/EOC packet format used by both the standalone MPTDC serializer and the shared SPADMIC TDC packet adapter.
+> - **Purpose:** Define the live 16-bit packet format emitted by the product MPTDC packetizer.
+> - **Scope:** Covers the single header/hit/EOC packet format emitted by `mptdc_axis_core` / `mptdc_packet16_tx` before TOP source and event-ID patching.
 
 ## 1. Overview
 
-The active design emits conversion results on a 16-bit ready/valid stream. Each conversion is packetized as:
+The active product design emits conversion results on a 16-bit ready/valid stream
+with SOP/EOP and packet-active sidebands. Each conversion is packetized as:
 
 1. one header word
 2. zero or more hit words
@@ -35,7 +36,7 @@ All hit payload words have `word[15]=0`; receivers should still parse by packet 
 [10:7]  hit_count         = number of hits carried in this packet
 [6:3]   flags             = close reason flags
 [2]     slow_boundary_inc = STOP boundary coarse-count correction
-[1:0]   reserved          = 2'b00
+[1:0]   source_id         = generic 2'b00 from MPTDC; TOP patches X/Y/Z
 ```
 
 ### 3.1 Flag semantics
@@ -116,10 +117,12 @@ The removed fields are recovered as follows when needed offline:
 
 ```text
 [15:14] = 2'b11
-[13:0]  = conv_id
+[13:0]  = event_id placeholder
 ```
 
-`conv_id` is maintained by `mptdc_narrow16_tx_v2.sv` as a local 14-bit wrapping packet counter.
+`mptdc_packet16_tx` emits a zero event-ID placeholder. In SPADMIC product use,
+`spadmic_correlated_tx` overwrites every EOC payload with the unified top-level
+event ID after packet arbitration.
 
 ## 7. Internal origin of packet fields
 
@@ -141,7 +144,9 @@ Important distinction:
 4. Consume the expected number of hit words.
 5. Expect one EOC word at the end.
 
-Decode `header[2]` as `slow_boundary_inc`. Treat `header[1:0]` as reserved/read-zero.
+Decode `header[2]` as `slow_boundary_inc`. In the standalone MPTDC packetizer,
+`header[1:0]` is generic `2'b00`; in SPADMIC TOP output, those bits are patched
+only on TDC header words to identify source (`00 = X`, `01 = Y`, `10 = Z`).
 
 ## 9. Recommended operating usage
 

@@ -121,9 +121,40 @@ set_db syn_map_effort      $mptdc_syn_map_effort       ;# low|medium|high
 set_db syn_opt_effort      $mptdc_syn_opt_effort       ;# low|medium|high|extreme
 set_db design_power_effort $mptdc_design_power_effort  ;# none|low|high
 
+proc mptdc_settings_try_set_db {attr value} {
+    if {[catch {set_db $attr $value} err]} {
+        puts "MPTDC_SETTINGS_WARN: set_db $attr $value skipped: $err"
+        return 0
+    }
+    puts "MPTDC_SETTINGS_INFO: set_db $attr $value"
+    return 1
+}
+
+set mptdc_genus_area_recovery [mptdc_bool_env MPTDC_GENUS_AREA_RECOVERY true]
+set mptdc_genus_power_opt [mptdc_bool_env MPTDC_GENUS_POWER_OPT true]
+if {$mptdc_genus_area_recovery} {
+    foreach attr {
+        syn_map_area_recovery
+        syn_opt_area_recovery
+        optimize_merge_flops
+        optimize_constant_0_flops
+        optimize_constant_1_flops
+    } {
+        mptdc_settings_try_set_db $attr true
+    }
+}
+if {$mptdc_genus_power_opt} {
+    foreach pair {
+        {leakage_power_effort high}
+        {lp_power_analysis_effort high}
+    } {
+        mptdc_settings_try_set_db [lindex $pair 0] [lindex $pair 1]
+    }
+}
+
 #############################################
 #       Verbosity
 #############################################
 set_db information_level 7                ;# 1 (quiet) to 9 (verbose)
 
-mptdc_message "Genus settings loaded ($mptdc_optimization_goal, $mptdc_effort_note, generic=$mptdc_syn_generic_effort map=$mptdc_syn_map_effort opt=$mptdc_syn_opt_effort power=$mptdc_design_power_effort, $ramstyle_note, $clock_gating_note)"
+mptdc_message "Genus settings loaded ($mptdc_optimization_goal, $mptdc_effort_note, generic=$mptdc_syn_generic_effort map=$mptdc_syn_map_effort opt=$mptdc_syn_opt_effort power=$mptdc_design_power_effort, area_recovery=$mptdc_genus_area_recovery, power_opt=$mptdc_genus_power_opt, $ramstyle_note, $clock_gating_note)"

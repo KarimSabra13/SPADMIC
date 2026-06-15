@@ -5,6 +5,9 @@
 proc mptdc_o10_route {} {
     global o10 pnr
     mptdc_o10_msg "Running route feasibility"
+    if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+        mptdc_pnr_apply_physical_effort pre_route
+    }
     mptdc_o10_stage_mark route.routeDesign start
     if {[catch {routeDesign} err]} {
         mptdc_o10_msg "routeDesign failed: $err"
@@ -24,6 +27,9 @@ proc mptdc_o10_route {} {
     }
     if {$run_postroute_opt} {
         mptdc_o10_stage_mark route.optDesign_postRoute start
+        if {[llength [info commands mptdc_pnr_apply_physical_effort]] > 0} {
+            mptdc_pnr_apply_physical_effort pre_postroute_opt
+        }
         if {[catch {optDesign -postRoute} err]} {
             mptdc_o10_msg "optDesign -postRoute failed: $err"
             mptdc_o10_stage_mark route.optDesign_postRoute failed

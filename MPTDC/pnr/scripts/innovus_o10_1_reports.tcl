@@ -100,7 +100,7 @@ proc mptdc_o10_final_reports {} {
         ]
     mptdc_o10_capture_candidates "$o10(reports_dir)/timing_post_route_io_paths.rpt" \
         "O10.1 post-route IO timing candidates" [list \
-            {report_timing -to [get_ports acq_data_o*] -max_paths 100} \
+            {report_timing -to [get_ports pkt_data_o*] -max_paths 100} \
             {report_timing -max_paths 100} \
         ]
     mptdc_o10_write_checkpoint_status_report

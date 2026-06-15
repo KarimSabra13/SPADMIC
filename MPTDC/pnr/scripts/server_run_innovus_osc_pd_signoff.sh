@@ -34,8 +34,8 @@ python3 "$REPO_ROOT/tools/osc/gen_osc_macro_views.py" \
 GEN_MACRO_RC="${GEN_MACRO_RC:-0}"
 
 for required in \
-  "$SYN_DIR/outputs/mptdc_top_asic.postsyn.v" \
-  "$SYN_DIR/outputs/mptdc_top_asic.postsyn.sdc" \
+  "$SYN_DIR/outputs/mptdc_axis_core.postsyn.v" \
+  "$SYN_DIR/outputs/mptdc_axis_core.postsyn.sdc" \
   "$OVERLAY_SDC" \
   "$SYN_DIR/macros/mptdc_osc_slow_provisional.lef" \
   "$SYN_DIR/macros/mptdc_osc_fast_provisional.lef" \
@@ -101,8 +101,8 @@ copy_if_present "$PNR_DIR/reports/prects/extra_report_constraint.rpt" "$RESULT_D
 copy_if_present "$PNR_DIR/reports/prects/extra_report_timing_100.rpt" "$RESULT_DIR/timing_preCTS.rpt"
 copy_if_present "$PNR_DIR/reports/prects/extra_report_timing_full_clock.rpt" "$RESULT_DIR/top100_setup_paths.rpt"
 copy_if_present "$PNR_DIR/reports/prects/extra_report_timing_100.rpt" "$RESULT_DIR/timing_postCTS.rpt"
-copy_if_present "$PNR_DIR/reports/postroute/mptdc_top_asic_postRoute.summary" "$RESULT_DIR/timing_postRoute.rpt"
-copy_if_present "$PNR_DIR/reports/postroute/mptdc_top_asic_postRoute.hold.summary" "$RESULT_DIR/top100_hold_paths.rpt"
+copy_if_present "$PNR_DIR/reports/postroute/mptdc_axis_core_postRoute.summary" "$RESULT_DIR/timing_postRoute.rpt"
+copy_if_present "$PNR_DIR/reports/postroute/mptdc_axis_core_postRoute.hold.summary" "$RESULT_DIR/top100_hold_paths.rpt"
 copy_if_present "$PNR_DIR/reports/run_status.rpt" "$RESULT_DIR/route_summary.rpt"
 copy_if_present "$PNR_DIR/reports/prects/extra_report_clocks.rpt" "$RESULT_DIR/report_clocks.rpt"
 copy_if_present "$PNR_DIR/reports/prects/extra_report_constraint.rpt" "$RESULT_DIR/report_exceptions.rpt"

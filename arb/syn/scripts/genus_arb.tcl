@@ -140,7 +140,6 @@ set design(rtl_files) [list \
     "$repo_root/MPTDC/rtl/pkg/mptdc_pkg.sv" \
     "$repo_root/MPTDC/rtl/cdc/mptdc_sync_fifo.sv" \
     "$repo_root/TOP/rtl/spadmic_pkg.sv" \
-    "$arb_root/rtl/spadmic_tdc_packet_adapter.sv" \
     "$arb_root/rtl/spadmic_position_packet_adapter.sv" \
     "$arb_root/rtl/spadmic_packet_arbiter4.sv" \
     "$arb_root/rtl/spadmic_stream_skid_buffer.sv" \

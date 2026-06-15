@@ -40,24 +40,22 @@ module mptdc_core
   input  wire                   start_async_i,
   input  wire                   stop_async_i,
 
-  // Configuration from CSR
-  input  mptdc_pkg::mptdc_cfg_t cfg_i,
+  // Product controls from TOP-owned CSR
+  input  wire [MAX_HITS_W-1:0] max_hits_i,
   input  wire                   conv_arm_i,
   input  wire                   fifo_clr_i,
 
   // Status to CSR
   output mptdc_pkg::mptdc_status_t status_o,
 
-  // 16-bit output
-  input  wire                   narrow_ready_i,
-  output wire                   narrow_valid_o,
-  output wire [NARROW_W-1:0]   narrow_data_o,
-
-  // Optional shared-readout export (uses the same internal acquisition FIFO)
-  input  wire                   shared_readout_en_i,
-  input  wire                   acq_ready_i,
-  output wire                   acq_valid_o,
-  output wire [ACQ_REC_W-1:0]  acq_data_o
+  // Product 16-bit packet stream
+  output wire                   pkt_valid_o,
+  input  wire                   pkt_ready_i,
+  output wire [NARROW_W-1:0]   pkt_data_o,
+  output wire                   pkt_sop_o,
+  output wire                   pkt_eop_o,
+  output wire                   packet_active_o,
+  output wire                   packet_pending_o
 );
 
   // synthesis translate_off
@@ -128,7 +126,7 @@ module mptdc_core
   // =========================================================================
   //  Internal wires — meas_ctrl (clk_sys domain)
   // =========================================================================
-  wire           meas_capture_en, meas_meta_en, meas_snapshot_en, meas_fe_clear, meas_pd_clear;
+  wire           meas_capture_en, meas_snapshot_en, meas_fe_clear, meas_pd_clear;
   wire           meas_osc_keep_alive;
   wire           meas_pd_gate;        // PD gate for fast-close freeze when max_hits=1
   tdc_conv_flags_t meas_close_flags;
@@ -163,7 +161,6 @@ module mptdc_core
   wire           fifo_rd_valid;
   wire [ACQ_REC_W-1:0] fifo_rd_data;
   wire           fifo_rd_en;
-  wire           fifo_rd_en_narrow;
   wire [$clog2(FIFO_DEPTH+1)-1:0] fifo_level;
 
   // =========================================================================
@@ -328,9 +325,7 @@ module mptdc_core
   assign meas_active_sync  = start_latched_sync & stop_latched_sync;
   assign start_timeout_sync = start_timeout_latched;
 
-  wire [15:0] start_wdt_limit =
-      (cfg_i.wdt_ctx_timeout != 16'd0) ? cfg_i.wdt_ctx_timeout
-                                       : START_WDT_DEFAULT_SYS_CYCLES;
+  wire [15:0] start_wdt_limit = START_WDT_DEFAULT_SYS_CYCLES;
   wire start_window_active = start_latched_sync && !stop_latched_sync;
   logic start_window_active_q;
   wire start_window_open = start_window_active && !start_window_active_q;
@@ -539,10 +534,8 @@ module mptdc_core
     .meas_active_i    (meas_active_sync),
     .timeout_active_i (start_timeout_sync),
     .hit_level_i      (pd_hit_level),
-    .max_hits_cfg_i   (cfg_i.max_hits),
-    .wdt_timeout_i    (cfg_i.wdt_ctx_timeout),
+    .max_hits_cfg_i   (max_hits_i),
     .capture_en_o     (meas_capture_en),
-    .meta_en_o        (meas_meta_en),
     .snapshot_en_o    (meas_snapshot_en),
     .fe_clear_o       (meas_fe_clear),
     .pd_clear_o       (meas_pd_clear),
@@ -575,7 +568,6 @@ module mptdc_core
     .rst_n                (rst_sys_drain_n),
     .capture_ctx_i        (fe_active_ctx),
     .capture_en_i         (meas_capture_en),
-    .meta_en_i            (meas_meta_en),
     .capture_snapshot_i   (hit_capture_snapshot),
     .hit_count_i          (meas_hit_count),
     .flags_i              (meas_close_flags),
@@ -615,25 +607,20 @@ module mptdc_core
     .level_o   (fifo_level)
   );
 
-  // shared_readout_en_i switches the single internal FIFO reader between the
-  // exported acquisition-record interface and the legacy local serializer.
-  assign fifo_rd_en = shared_readout_en_i
-                    ? (fifo_rd_valid & acq_ready_i)
-                    : fifo_rd_en_narrow;
-  assign acq_valid_o = shared_readout_en_i & fifo_rd_valid;
-  assign acq_data_o  = fifo_rd_data;
-
-  // ── Narrow 16-bit TX ──────────────────────────────────────────
-  mptdc_narrow16_tx_v2 u_narrow_tx (
+  // ── Product 16-bit packet TX ──────────────────────────────────
+  mptdc_packet16_tx u_packet_tx (
     .clk_sys         (clk_sys),
     .rst_n           (rst_sys_tx_n),
-    .out_mode_i      (cfg_i.out_mode),
-    .fifo_rd_valid_i (shared_readout_en_i ? 1'b0 : fifo_rd_valid),
+    .fifo_rd_valid_i (fifo_rd_valid),
     .fifo_rd_data_i  (fifo_rd_data),
-    .fifo_rd_en_o    (fifo_rd_en_narrow),
-    .narrow_ready_i  (narrow_ready_i),
-    .narrow_valid_o  (narrow_valid_o),
-    .narrow_data_o   (narrow_data_o)
+    .fifo_rd_en_o    (fifo_rd_en),
+    .pkt_valid_o     (pkt_valid_o),
+    .pkt_ready_i     (pkt_ready_i),
+    .pkt_data_o      (pkt_data_o),
+    .pkt_sop_o       (pkt_sop_o),
+    .pkt_eop_o       (pkt_eop_o),
+    .packet_active_o (packet_active_o),
+    .packet_pending_o(packet_pending_o)
   );
 
   // ── Watchdog (sys domain, global only) ─────────────────────────
@@ -641,7 +628,7 @@ module mptdc_core
     .clk_sys               (clk_sys),
     .rst_n                 (rst_sys_wdt_n),
     .conv_done_i           (drain_conv_done),
-    .wdt_global_timeout_i  (cfg_i.wdt_global_timeout),
+    .wdt_global_timeout_i  (16'd0),
     .wdt_force_reset_o     (wdt_force_reset),
     .wdt_global_trip_cnt_o (wdt_global_trip_cnt)
   );

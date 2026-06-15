@@ -211,9 +211,9 @@ for file in \
   fi
 done
 
-POSTSYN_NETLIST="$RESULT_DIR/mptdc_top_asic.postsyn.v"
+POSTSYN_NETLIST="$RESULT_DIR/mptdc_axis_core.postsyn.v"
 if [[ ! -f "$POSTSYN_NETLIST" ]]; then
-  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_top_asic.postsyn.v"
+  POSTSYN_NETLIST="$SYN_DIR/outputs/mptdc_axis_core.postsyn.v"
 fi
 
 CHECK_REPORT="$RESULT_DIR/o9_final_typical_r750_delta5_check.rpt"
@@ -332,8 +332,8 @@ fi
   echo "## Key Files"
   for file in \
     "genus_${RUN_ID}.log" \
-    mptdc_top_asic.postsyn.v \
-    mptdc_top_asic.postsyn.sdc \
+    mptdc_axis_core.postsyn.v \
+    mptdc_axis_core.postsyn.sdc \
     final_sdc_overlay_used.sdc \
     final_filelist_used.f \
     o9_final_typical_r750_delta5_check.rpt \

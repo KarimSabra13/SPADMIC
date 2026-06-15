@@ -19,20 +19,10 @@ VIP_WORK_DIR="$MPTDC_XCELIUM_SCRATCH/$RUN_ID/vip"
 VIP_PUBLISH_DIR="$RESULT_DIR/vip"
 
 DIRECTED_TESTS=(
-  tb_meas_ctrl_unit
-  tb_hit_capture_bridge_unit
-  tb_context_bank_unit
-  tb_drain_ctrl_unit
-  tb_single_conv
-  tb_backpressure
+  tb_axis_core_product_smoke
 )
 
 VIP_TESTS=(
-  smoke_single_conv
-  backpressure_integrity
-  multi_conv_rearm_stress
-  global_watchdog_recovery
-  vip_maxhits_matrix
 )
 
 if [[ -e "$RESULT_DIR" || -e "$VIP_WORK_DIR" ]]; then
@@ -89,28 +79,32 @@ for tb_name in "${DIRECTED_TESTS[@]}"; do
   run_directed "$tb_name"
 done
 
-VIP_RC=0
-echo "[XCELIUM][VIP] ${VIP_TESTS[*]}" | tee -a "$MAIN_LOG"
-bash "$MPTDC_DIR/ci/run_vip_xcelium_regression.sh" \
-  --jobs "${XCELIUM_JOBS:-4}" \
-  --seed-start "${XCELIUM_SEED_START:-7000}" \
-  --seeds "${XCELIUM_SEEDS:-4}" \
-  --out-dir "$VIP_WORK_DIR" \
-  "${VIP_TESTS[@]}" \
-  >> "$MAIN_LOG" 2>&1 || VIP_RC=$?
+if (( ${#VIP_TESTS[@]} > 0 )); then
+  VIP_RC=0
+  echo "[XCELIUM][VIP] ${VIP_TESTS[*]}" | tee -a "$MAIN_LOG"
+  bash "$MPTDC_DIR/ci/run_vip_xcelium_regression.sh" \
+    --jobs "${XCELIUM_JOBS:-4}" \
+    --seed-start "${XCELIUM_SEED_START:-7000}" \
+    --seeds "${XCELIUM_SEEDS:-4}" \
+    --out-dir "$VIP_WORK_DIR" \
+    "${VIP_TESTS[@]}" \
+    >> "$MAIN_LOG" 2>&1 || VIP_RC=$?
 
-mkdir -p "$VIP_PUBLISH_DIR"
-cp -a "$VIP_WORK_DIR/." "$VIP_PUBLISH_DIR/" 2>/dev/null || true
+  mkdir -p "$VIP_PUBLISH_DIR"
+  cp -a "$VIP_WORK_DIR/." "$VIP_PUBLISH_DIR/" 2>/dev/null || true
 
-if [[ $VIP_RC -eq 0 ]]; then
-  echo "PASS vip_regression selected_tests" | tee -a "$RESULT_DIR/test_summary.txt" | tee -a "$MAIN_LOG"
-  PASS_COUNT=$((PASS_COUNT + 1))
-else
-  echo "FAIL vip_regression selected_tests rc=$VIP_RC" | tee -a "$RESULT_DIR/test_summary.txt" | tee -a "$MAIN_LOG"
-  if [[ -f "$VIP_WORK_DIR/failures.txt" ]]; then
-    cp "$VIP_WORK_DIR/failures.txt" "$RESULT_DIR/failures/vip_failures.txt" || true
+  if [[ $VIP_RC -eq 0 ]]; then
+    echo "PASS vip_regression selected_tests" | tee -a "$RESULT_DIR/test_summary.txt" | tee -a "$MAIN_LOG"
+    PASS_COUNT=$((PASS_COUNT + 1))
+  else
+    echo "FAIL vip_regression selected_tests rc=$VIP_RC" | tee -a "$RESULT_DIR/test_summary.txt" | tee -a "$MAIN_LOG"
+    if [[ -f "$VIP_WORK_DIR/failures.txt" ]]; then
+      cp "$VIP_WORK_DIR/failures.txt" "$RESULT_DIR/failures/vip_failures.txt" || true
+    fi
+    FAIL_COUNT=$((FAIL_COUNT + 1))
   fi
-  FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+  echo "SKIP vip_regression retired_standalone_mptdc_vip" | tee -a "$RESULT_DIR/test_summary.txt" | tee -a "$MAIN_LOG"
 fi
 
 {

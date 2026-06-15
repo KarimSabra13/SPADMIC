@@ -21,9 +21,9 @@ rtl/spadmic_ref_stop_qualifier.sv
 rtl/spadmic_global_csr.sv
 rtl/spadmic_top_sequencer.sv
 rtl/spadmic_csr_decoder.sv
+rtl/spadmic_tdc_axis_csr.sv
 
 // ── Packet arbiter path ──────────────────────────────────────────
-../arb/rtl/spadmic_tdc_packet_adapter.sv
 ../arb/rtl/spadmic_position_packet_adapter.sv
 ../arb/rtl/spadmic_packet_arbiter4.sv
 ../arb/rtl/spadmic_stream_skid_buffer.sv

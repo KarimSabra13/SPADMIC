@@ -94,32 +94,15 @@ export MPTDC_FREQ_MODE="$FREQ_MODE"
 run_step lint bash "$MPTDC_DIR/sim/verilator/run_lint.sh" "$RUN_ID"
 
 TB_RUNNER="$MPTDC_DIR/scripts/sim/run_tb.sh"
-VIP_RUNNER="$MPTDC_DIR/scripts/sim/run_vip_test.sh"
 
 UNIT_TESTS=(
-  tb_slow_epoch_johnson_unit
-  tb_stop_epoch_capture_async_unit
-  tb_johnson_decode_unit
-  tb_fast_epoch_tag_unit
-  tb_narrow16_tx_v2_unit
-  tb_pd_cell_tag_capture_unit
-  tb_pd_gate_false_hit_unit
-  tb_drain_raw_tag_unit
-  tb_meas_ctrl_unit
-  tb_hit_capture_bridge_unit
-  tb_context_bank_unit
-  tb_drain_ctrl_unit
 )
 
 INT_TESTS=(
-  tb_single_conv
-  tb_backpressure
+  tb_axis_core_product_smoke
 )
 
 VIP_TESTS=(
-  smoke_single_conv
-  backpressure_integrity
-  vip_maxhits_matrix
 )
 
 for tb in "${UNIT_TESTS[@]}"; do
@@ -133,10 +116,6 @@ done
 for test_name in "${VIP_TESTS[@]}"; do
   run_step "vip_${test_name}" bash "$VIP_RUNNER" "$test_name" --sim verilator --fast-tag-encoding "$FAST_TAG_ENCODING" --freq-mode "$FREQ_MODE"
 done
-
-if [[ "${MPTDC_VERILATOR_SMOKE_FULL:-0}" == "1" ]]; then
-  run_step full_vip_smoke bash "$MPTDC_DIR/ci/run_vip_smoke.sh"
-fi
 
 {
   echo "# Local Verilator Smoke Summary"
