@@ -131,6 +131,7 @@ copy_if_present "${source_reports_dir}/pd_local_on22_repair_status.rpt"
 copy_if_present "${source_reports_dir}/pd_local_on22_driver_discovery.csv"
 copy_if_present "${source_reports_dir}/pd_local_on22_cell_repair.csv"
 copy_if_present "${source_reports_dir}/pd_local_on22_legal_cells.rpt"
+copy_if_present "${source_reports_dir}/pd_local_on22_timing_discovery.rpt"
 
 {
   echo "Snapshot: ${tag}"

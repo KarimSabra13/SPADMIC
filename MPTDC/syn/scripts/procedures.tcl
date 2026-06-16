@@ -1658,6 +1658,8 @@ proc mptdc_repair_resolve_cell_from_instance_name {inst_name} {
     if {$inst_name eq ""} {
         return ""
     }
+    set exact_matches [list]
+    array set seen_exact {}
     foreach query [list [mptdc_glob_escape $inst_name] $inst_name] {
         foreach cmd [list \
             [list get_cells -quiet $query] \
@@ -1666,18 +1668,31 @@ proc mptdc_repair_resolve_cell_from_instance_name {inst_name} {
             catch {set matches [eval $cmd]}
             foreach cell [mptdc_collection_to_list $matches] {
                 set cell_name [mptdc_object_name $cell]
-                if {$cell_name eq $inst_name} {
-                    return $cell
+                if {$cell_name eq $inst_name && ![info exists seen_exact($cell_name)]} {
+                    set seen_exact($cell_name) 1
+                    lappend exact_matches $cell
                 }
             }
         }
+    }
+    if {[llength $exact_matches] == 1} {
+        return [lindex $exact_matches 0]
+    }
+    if {[llength $exact_matches] > 1} {
+        return ""
     }
     set all_cells [list]
     catch {set all_cells [get_cells -quiet -hierarchical *]}
     foreach cell [mptdc_collection_to_list $all_cells] {
         if {[mptdc_object_name $cell] eq $inst_name} {
-            return $cell
+            if {![info exists seen_exact($inst_name)]} {
+                set seen_exact($inst_name) 1
+                lappend exact_matches $cell
+            }
         }
+    }
+    if {[llength $exact_matches] == 1} {
+        return [lindex $exact_matches 0]
     }
     return ""
 }
@@ -2940,6 +2955,56 @@ proc mptdc_repair_normalize_timing_report_name {name} {
     return $out
 }
 
+proc mptdc_repair_string_starts_with {text prefix} {
+    if {$prefix eq ""} {
+        return true
+    }
+    set n [string length $prefix]
+    if {[string length $text] < $n} {
+        return false
+    }
+    return [expr {[string range $text 0 [expr {$n - 1}]] eq $prefix}]
+}
+
+proc mptdc_repair_parse_timing_endpoint_name {endpoint_text} {
+    set text [mptdc_repair_normalize_timing_report_name $endpoint_text]
+    foreach token [regexp -all -inline {\S+} $text] {
+        set token [mptdc_repair_normalize_timing_report_name $token]
+        if {[string match */nfast_hit_latched_reg*/* $token]} {
+            return $token
+        }
+    }
+    return ""
+}
+
+proc mptdc_repair_timing_output_instance_name {point_text} {
+    set point_text [mptdc_repair_normalize_timing_report_name $point_text]
+    if {[regexp {^(.+)/(Q|QN|Y|Z|ZN)$} $point_text -> inst_name _]} {
+        return $inst_name
+    }
+    return ""
+}
+
+proc mptdc_repair_timing_row_arrival_value {fields source_index} {
+    set arrival ""
+    for {set i [expr {$source_index + 1}]} {$i < [llength $fields]} {incr i} {
+        set token [string trim [lindex $fields $i]]
+        if {[regexp {^-?[0-9]+([.][0-9]+)?$} $token]} {
+            set arrival $token
+        }
+    }
+    return $arrival
+}
+
+proc mptdc_repair_pd_local_on22_zero_timing_stats {} {
+    return [dict create \
+        rows 0 \
+        local_rows 0 \
+        unique_instances 0 \
+        resolved_instances 0 \
+        unresolved_cells 0]
+}
+
 proc mptdc_repair_write_pd_local_on22_timing_failure {rpt_file stage reason} {
     set fh [open $rpt_file w]
     puts $fh "# PD local ON22 timing discovery"
@@ -2995,6 +3060,7 @@ proc mptdc_repair_run_pd_local_on22_timing_discovery_report {stage report_dir en
 }
 
 proc mptdc_repair_parse_pd_local_on22_timing_candidates {rpt_file endpoint_records source_cell} {
+    set ::mptdc_pd_local_on22_timing_stats [mptdc_repair_pd_local_on22_zero_timing_stats]
     set candidate_map [dict create]
     if {$rpt_file eq "" || ![file exists $rpt_file]} {
         return $candidate_map
@@ -3010,6 +3076,11 @@ proc mptdc_repair_parse_pd_local_on22_timing_candidates {rpt_file endpoint_recor
     set current_endpoint ""
     set current_path 0
     set point_order 0
+    array set unique_instances {}
+    array set resolved_instances {}
+    array set unresolved_cells {}
+    set rows_found 0
+    set local_rows_found 0
     while {[gets $fh line] >= 0} {
         if {[regexp {^Path[[:space:]]+([0-9]+):} [string trim $line] -> path_id]} {
             set current_path $path_id
@@ -3018,8 +3089,7 @@ proc mptdc_repair_parse_pd_local_on22_timing_candidates {rpt_file endpoint_recor
             continue
         }
         if {[regexp {^Endpoint:[[:space:]]*(.+)$} [string trim $line] -> endpoint_text]} {
-            set endpoint_text [lindex [split $endpoint_text] 0]
-            set current_endpoint [mptdc_repair_normalize_timing_report_name $endpoint_text]
+            set current_endpoint [mptdc_repair_parse_timing_endpoint_name $endpoint_text]
             continue
         }
         if {$current_endpoint eq "" || ![dict exists $endpoint_lookup $current_endpoint]} {
@@ -3027,43 +3097,50 @@ proc mptdc_repair_parse_pd_local_on22_timing_candidates {rpt_file endpoint_recor
         }
 
         set trimmed [string trim $line]
-        set sep [string first " - " $trimmed]
-        if {$sep < 0} {
+        set fields [regexp -all -inline {\S+} $trimmed]
+        if {[llength $fields] < 2} {
             continue
         }
-        set point_text [mptdc_repair_normalize_timing_report_name \
-            [string range $trimmed 0 [expr {$sep - 1}]]]
-        set rest [string range $trimmed [expr {$sep + 3}] end]
-        set fields [regexp -all -inline {\S+} $rest]
-        if {[llength $fields] < 3} {
+        set source_index [lsearch -exact $fields $source_cell]
+        if {$source_index < 0} {
             continue
         }
-        incr point_order
-        set point_cell [file tail [lindex $fields 2]]
-        if {$point_cell ne $source_cell} {
-            continue
-        }
-        set inst_name [mptdc_repair_pin_instance_name $point_text]
+        set point_text [mptdc_repair_normalize_timing_report_name [lindex $fields 0]]
+        set inst_name [mptdc_repair_timing_output_instance_name $point_text]
         if {$inst_name eq ""} {
             continue
         }
+        incr rows_found
+        incr point_order
         set endpoint_rec [dict get $endpoint_lookup $current_endpoint]
         set local_prefix [mptdc_repair_pd_local_endpoint_prefix [dict get $endpoint_rec name]]
-        if {$local_prefix ne "" && ![string match "${local_prefix}*" $inst_name]} {
+        if {$local_prefix ne "" && ![mptdc_repair_string_starts_with $inst_name $local_prefix]} {
             continue
         }
+        incr local_rows_found
+        set unique_instances($inst_name) 1
         set cell [mptdc_repair_resolve_cell_from_instance_name $inst_name]
         if {$cell eq "" || [mptdc_repair_cell_base_name $cell] ne $source_cell} {
+            set unresolved_cells($inst_name) 1
             continue
         }
+        set resolved_instances($inst_name) 1
+        set arrival [mptdc_repair_timing_row_arrival_value $fields $source_index]
         dict lappend candidate_map $current_endpoint [dict create \
             cell $cell \
             point $point_text \
             instance $inst_name \
             path $current_path \
-            order $point_order]
+            order $point_order \
+            arrival $arrival]
     }
     close $fh
+    set ::mptdc_pd_local_on22_timing_stats [dict create \
+        rows $rows_found \
+        local_rows $local_rows_found \
+        unique_instances [array size unique_instances] \
+        resolved_instances [array size resolved_instances] \
+        unresolved_cells [array size unresolved_cells]]
     return $candidate_map
 }
 
@@ -3088,7 +3165,15 @@ proc mptdc_repair_choose_pd_local_on22_timing_candidate {candidates endpoint_nam
         }
         set score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $bit]
         set order [dict get $cand order]
-        set rank [expr {$order * 1000 + $score}]
+        set arrival ""
+        if {[dict exists $cand arrival]} {
+            set arrival [dict get $cand arrival]
+        }
+        if {$arrival ne "" && [string is double -strict $arrival]} {
+            set rank [expr {int(round($arrival * 1000000.0)) + ($order * 1000) + $score}]
+        } else {
+            set rank [expr {$order * 1000 + $score}]
+        }
         if {![info exists rank_by_cell($cell_name)] || $rank > $rank_by_cell($cell_name)} {
             set rank_by_cell($cell_name) $rank
             dict set cand score $score
@@ -3126,12 +3211,17 @@ proc mptdc_repair_choose_pd_local_on22_timing_candidate {candidates endpoint_nam
 
     if {[llength $best] == 1} {
         set chosen [lindex $best 0]
+        set chosen_arrival ""
+        if {[dict exists $chosen arrival]} {
+            set chosen_arrival [dict get $chosen arrival]
+        }
         return [dict create \
             cell [dict get $chosen cell] \
             candidates $unique_candidates \
             point [dict get $chosen point] \
             path [dict get $chosen path] \
             order [dict get $chosen order] \
+            arrival $chosen_arrival \
             score [dict get $chosen score] \
             status MATCH \
             method TIMING_REPORT_NEAREST_ON22 \
@@ -3169,7 +3259,7 @@ proc mptdc_repair_cell_is_in_pd_local_prefix {cell local_prefix} {
     if {$cell_name eq ""} {
         return false
     }
-    return [string match "${local_prefix}*" $cell_name]
+    return [mptdc_repair_string_starts_with $cell_name $local_prefix]
 }
 
 proc mptdc_repair_collect_pd_local_on22_driver_records {
@@ -3485,6 +3575,7 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     set expected_cells_raw [string trim [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS AUTO]]
     set discovery_mode [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_DISCOVERY_MODE TIMING_REPORT]
     set timing_max_paths [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_TIMING_MAX_PATHS 1000]
+    set apply_repair [mptdc_bool_env MPTDC_PD_LOCAL_ON22_APPLY_REPAIR true]
     set expected_drivers_auto [expr {$expected_drivers_raw eq ""}]
     if {[regexp -nocase {^(auto|discovered|timing|timing_report)$} $expected_drivers_raw]} {
         set expected_drivers_auto 1
@@ -3506,6 +3597,14 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
         $design(reports_dir) \
         $discovery_mode \
         $timing_max_paths]
+    if {![info exists ::mptdc_pd_local_on22_timing_stats]} {
+        set ::mptdc_pd_local_on22_timing_stats [mptdc_repair_pd_local_on22_zero_timing_stats]
+    }
+    set timing_on22_rows [dict get $::mptdc_pd_local_on22_timing_stats rows]
+    set timing_on22_local_rows [dict get $::mptdc_pd_local_on22_timing_stats local_rows]
+    set timing_unique_instances [dict get $::mptdc_pd_local_on22_timing_stats unique_instances]
+    set timing_resolved_instances [dict get $::mptdc_pd_local_on22_timing_stats resolved_instances]
+    set timing_unresolved_cells [dict get $::mptdc_pd_local_on22_timing_stats unresolved_cells]
     set source_cells [list]
     array set seen_cells {}
     set source_driver_count 0
@@ -3593,6 +3692,8 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
             set repair_result "SKIPPED_COUNTS_MISMATCH"
         } elseif {$selected_target_lib eq ""} {
             set repair_result "SKIPPED_NO_LEGAL_TARGET_CELL"
+        } elseif {!$apply_repair} {
+            set repair_result "DISCOVERY_PASS"
         } else {
             catch {set_db $selected_target_lib .avoid false}
             catch {set_db $selected_target_lib .dont_use false}
@@ -3653,7 +3754,10 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     if {$undermatch ne "NO"} { lappend reasons UNDERMATCH }
     if {!$counts_ok} { lappend reasons COUNT_MISMATCH }
     if {$selected_target_lib eq ""} { lappend reasons NO_LEGAL_TARGET_CELL }
-    if {$stage eq "post_map_pre_opt" && $repair_result ne "OK"} { lappend reasons CELL_REPAIR_NOT_OK }
+    if {$timing_unresolved_cells > 0} { lappend reasons UNRESOLVED_CELLS }
+    if {$stage eq "post_map_pre_opt" && $repair_result ne "OK" && !(!$apply_repair && $repair_result eq "DISCOVERY_PASS")} {
+        lappend reasons CELL_REPAIR_NOT_OK
+    }
     if {[llength $reasons] == 0} {
         set status "PASS"
         set review_reason "NONE"
@@ -3662,16 +3766,22 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     }
 
     puts $fh "PD_LOCAL_ON22_REPAIR_ENABLE=$enable"
+    puts $fh "PD_LOCAL_ON22_APPLY_REPAIR=$apply_repair"
     puts $fh "PD_LOCAL_ON22_SOURCE_CELL=$source_cell"
     puts $fh "PD_LOCAL_ON22_TARGET_CELLS=[join $target_cells {,}]"
     puts $fh "PD_LOCAL_ON22_SELECTED_TARGET=$selected_target"
     puts $fh "PD_LOCAL_ON22_TARGET_LIB_CELLS_FOUND=$legal_found"
     puts $fh "PD_LOCAL_ON22_ENDPOINTS_EXPECTED=$expected_endpoints"
     puts $fh "PD_LOCAL_ON22_ENDPOINTS_FOUND=$endpoints_found"
+    puts $fh "PD_LOCAL_ON22_TIMING_ON22_ROWS_FOUND=$timing_on22_rows"
+    puts $fh "PD_LOCAL_ON22_TIMING_ON22_LOCAL_ROWS_FOUND=$timing_on22_local_rows"
+    puts $fh "PD_LOCAL_ON22_TIMING_UNIQUE_ON22_INSTANCES_FOUND=$timing_unique_instances"
+    puts $fh "PD_LOCAL_ON22_TIMING_RESOLVED_ON22_INSTANCES_FOUND=$timing_resolved_instances"
     puts $fh "PD_LOCAL_ON22_SOURCE_DRIVERS_EXPECTED=$expected_drivers_report"
     puts $fh "PD_LOCAL_ON22_SOURCE_DRIVERS_FOUND=$source_driver_count"
     puts $fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells_report"
     puts $fh "PD_LOCAL_ON22_SOURCE_CELLS_FOUND=$cells_found"
+    puts $fh "PD_LOCAL_ON22_UNRESOLVED_CELLS=$timing_unresolved_cells"
     puts $fh "PD_LOCAL_ON22_CHANGED_CELLS=$changed_count"
     puts $fh "PD_LOCAL_ON22_TARGET_CELLS_FOUND=$target_count"
     puts $fh "PD_LOCAL_ON22_REPAIR_RESULT=$repair_result"
@@ -3685,16 +3795,22 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     set status_fh [open "$design(reports_dir)/pd_local_on22_repair_status.rpt" a]
     puts $status_fh "STAGE=$stage"
     puts $status_fh "PD_LOCAL_ON22_REPAIR_ENABLE=$enable"
+    puts $status_fh "PD_LOCAL_ON22_APPLY_REPAIR=$apply_repair"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_CELL=$source_cell"
     puts $status_fh "PD_LOCAL_ON22_TARGET_CELLS=[join $target_cells {,}]"
     puts $status_fh "PD_LOCAL_ON22_SELECTED_TARGET=$selected_target"
     puts $status_fh "PD_LOCAL_ON22_TARGET_LIB_CELLS_FOUND=$legal_found"
     puts $status_fh "PD_LOCAL_ON22_ENDPOINTS_EXPECTED=$expected_endpoints"
     puts $status_fh "PD_LOCAL_ON22_ENDPOINTS_FOUND=$endpoints_found"
+    puts $status_fh "PD_LOCAL_ON22_TIMING_ON22_ROWS_FOUND=$timing_on22_rows"
+    puts $status_fh "PD_LOCAL_ON22_TIMING_ON22_LOCAL_ROWS_FOUND=$timing_on22_local_rows"
+    puts $status_fh "PD_LOCAL_ON22_TIMING_UNIQUE_ON22_INSTANCES_FOUND=$timing_unique_instances"
+    puts $status_fh "PD_LOCAL_ON22_TIMING_RESOLVED_ON22_INSTANCES_FOUND=$timing_resolved_instances"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_DRIVERS_EXPECTED=$expected_drivers_report"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_DRIVERS_FOUND=$source_driver_count"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells_report"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_CELLS_FOUND=$cells_found"
+    puts $status_fh "PD_LOCAL_ON22_UNRESOLVED_CELLS=$timing_unresolved_cells"
     puts $status_fh "PD_LOCAL_ON22_CHANGED_CELLS=$changed_count"
     puts $status_fh "PD_LOCAL_ON22_TARGET_CELLS_FOUND=$target_count"
     puts $status_fh "PD_LOCAL_ON22_REPAIR_RESULT=$repair_result"
@@ -3915,6 +4031,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set pd_local_on22_expected_cells [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS AUTO]
     set pd_local_on22_discovery_mode [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_DISCOVERY_MODE TIMING_REPORT]
     set pd_local_on22_timing_max_paths [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_TIMING_MAX_PATHS 1000]
+    set pd_local_on22_apply_repair [mptdc_bool_env MPTDC_PD_LOCAL_ON22_APPLY_REPAIR true]
     if {!$fast_repair && !$drv_repair && !$pd_hit_to_nfast_local_repair && !$pd_local_on22_repair} {
         return
     }
@@ -3945,6 +4062,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "PD_LOCAL_ON22_EXPECTED_CELLS=$pd_local_on22_expected_cells"
     puts $fh "PD_LOCAL_ON22_DISCOVERY_MODE=$pd_local_on22_discovery_mode"
     puts $fh "PD_LOCAL_ON22_TIMING_MAX_PATHS=$pd_local_on22_timing_max_paths"
+    puts $fh "PD_LOCAL_ON22_APPLY_REPAIR=$pd_local_on22_apply_repair"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
