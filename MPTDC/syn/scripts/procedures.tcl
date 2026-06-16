@@ -2371,7 +2371,14 @@ proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
 
     set bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_BITS ""] "0 1 2 3 4 5 6"]
     set max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 1.10]
-    set max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0.25]
+    set max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0]
+    set max_transition_text [string trim $max_transition]
+    set transition_requested true
+    if {$max_transition_text eq "" ||
+        [regexp -nocase {^(0|0\.0+|skip|none|off|disabled)$} $max_transition_text] ||
+        ([string is double -strict $max_transition_text] && $max_transition_text <= 0.0)} {
+        set transition_requested false
+    }
     set expected_sources [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES 64]
     set expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS 448]
     set rows {0 1 2 3 4 5 6 7}
@@ -2495,7 +2502,9 @@ proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
             set delay_result "SKIPPED_NO_MAX_DELAY_TARGET"
         }
 
-        if {$max_transition ne "" && [llength $source_q_pins] > 0} {
+        if {!$transition_requested} {
+            set transition_result "SKIPPED_INTENTIONAL_MAX_TRANSITION_DISABLED"
+        } elseif {[llength $source_q_pins] > 0} {
             set transition_pins [mptdc_unique_list [concat $source_q_pins $endpoint_d_pins]]
             set transition_rc [catch {set_max_transition $max_transition $transition_pins} transition_err]
             set transition_result [expr {$transition_rc == 0 ? {OK} : $transition_err}]
@@ -2760,7 +2769,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     }
     set pd_hit_to_nfast_bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_BITS ""] "0 1 2 3 4 5 6"]
     set pd_hit_to_nfast_max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 1.10]
-    set pd_hit_to_nfast_max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0.25]
+    set pd_hit_to_nfast_max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0]
     set pd_hit_to_nfast_expected_sources [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES 64]
     set pd_hit_to_nfast_expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS 448]
     if {!$fast_repair && !$drv_repair && !$pd_hit_to_nfast_local_repair} {
