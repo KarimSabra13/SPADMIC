@@ -2361,6 +2361,16 @@ proc mptdc_repair_write_pd_hit_to_nfast_local_csvs {report_dir source_c_records 
     close $fh
 }
 
+proc mptdc_repair_numeric_constraint_requested {value} {
+    set text [string trim $value]
+    if {$text eq "" ||
+        [regexp -nocase {^(0|0\.0+|skip|none|off|disabled)$} $text] ||
+        ([string is double -strict $text] && $text <= 0.0)} {
+        return false
+    }
+    return true
+}
+
 proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
     global design
 
@@ -2370,15 +2380,10 @@ proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
     }
 
     set bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_BITS ""] "0 1 2 3 4 5 6"]
-    set max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 1.10]
+    set max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 0]
     set max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0]
-    set max_transition_text [string trim $max_transition]
-    set transition_requested true
-    if {$max_transition_text eq "" ||
-        [regexp -nocase {^(0|0\.0+|skip|none|off|disabled)$} $max_transition_text] ||
-        ([string is double -strict $max_transition_text] && $max_transition_text <= 0.0)} {
-        set transition_requested false
-    }
+    set delay_requested [mptdc_repair_numeric_constraint_requested $max_delay]
+    set transition_requested [mptdc_repair_numeric_constraint_requested $max_transition]
     set expected_sources [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES 64]
     set expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS 448]
     set rows {0 1 2 3 4 5 6 7}
@@ -2490,7 +2495,11 @@ proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
             set group_result "NOT_SUPPORTED_BY_THIS_GENUS_VERSION"
         }
 
-        if {$max_delay ne ""} {
+        if {!$delay_requested} {
+            set delay_result "SKIPPED_INTENTIONAL_MAX_DELAY_DISABLED"
+            set delay_mode_status "SKIPPED"
+            set delay_mode_detail "INTENTIONAL_MAX_DELAY_DISABLED"
+        } elseif {$max_delay ne ""} {
             set delay_dict [mptdc_repair_apply_exact_full_path_max_delay \
                 $max_delay \
                 $source_c_pins \
@@ -2519,7 +2528,9 @@ proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
     if {$undermatch ne "NO"} { lappend reasons UNDERMATCH }
     if {!$counts_ok} { lappend reasons COUNT_MISMATCH }
     if {$group_result ne "OK"} { lappend reasons GROUP_PATH_NOT_OK }
-    if {$delay_result ne "OK"} { lappend reasons SET_MAX_DELAY_NOT_OK }
+    if {$delay_result ne "OK" && ![string match SKIPPED_INTENTIONAL* $delay_result]} {
+        lappend reasons SET_MAX_DELAY_NOT_OK
+    }
     if {$transition_result ne "OK" && ![string match SKIPPED_INTENTIONAL* $transition_result]} {
         lappend reasons SET_MAX_TRANSITION_NOT_OK
     }
@@ -2569,6 +2580,370 @@ proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
     puts $status_fh "PD_HIT_TO_NFAST_LOCAL_UNDERMATCH=$undermatch"
     puts $status_fh "PD_HIT_TO_NFAST_LOCAL_STATUS=$status"
     puts $status_fh "PD_HIT_TO_NFAST_LOCAL_REVIEW_REASON=$review_reason"
+    puts $status_fh ""
+    close $status_fh
+}
+
+proc mptdc_repair_word_list_env {name default_value} {
+    set value [mptdc_repair_set_numeric_env $name $default_value]
+    regsub -all {,} $value { } value
+    set out [list]
+    foreach item $value {
+        set item [string trim $item]
+        if {$item ne ""} {
+            lappend out $item
+        }
+    }
+    return $out
+}
+
+proc mptdc_repair_pin_nets {pin} {
+    set nets [list]
+    foreach attr {.net .nets} {
+        if {![catch {set value [get_db $pin $attr]}]} {
+            foreach net [mptdc_collection_to_list $value] {
+                if {[mptdc_object_name $net] ne ""} {
+                    lappend nets $net
+                }
+            }
+        }
+    }
+    foreach cmd [list \
+        [list get_nets -quiet -of_objects $pin] \
+        [list get_nets -quiet -of $pin]] {
+        set value [list]
+        if {[catch {set value [eval $cmd]}]} {
+            continue
+        }
+        foreach net [mptdc_collection_to_list $value] {
+            if {[mptdc_object_name $net] ne ""} {
+                lappend nets $net
+            }
+        }
+    }
+    return [mptdc_unique_list $nets]
+}
+
+proc mptdc_repair_net_driver_objects {net} {
+    set drivers [list]
+    foreach attr {.driver .drivers .driver_pin .driver_pins} {
+        if {![catch {set value [get_db $net $attr]}]} {
+            foreach driver [mptdc_collection_to_list $value] {
+                if {[mptdc_object_name $driver] ne ""} {
+                    lappend drivers $driver
+                }
+            }
+        }
+    }
+    return [mptdc_unique_list $drivers]
+}
+
+proc mptdc_repair_resolve_cell_from_driver_object {driver} {
+    set driver_name [mptdc_object_name $driver]
+    if {$driver_name eq ""} {
+        return ""
+    }
+    set inst_name [mptdc_repair_pin_instance_name $driver_name]
+    if {$inst_name ne ""} {
+        return [mptdc_repair_resolve_cell_from_instance_name $inst_name]
+    }
+    set direct_base [mptdc_repair_cell_base_name $driver]
+    if {$direct_base ne "UNKNOWN"} {
+        return $driver
+    }
+    return [mptdc_repair_resolve_cell_from_instance_name $driver_name]
+}
+
+proc mptdc_repair_endpoint_fanin_cells {endpoint_pin} {
+    set cells [list]
+    foreach cmd [list \
+        [list all_fanin -to $endpoint_pin -flat -only_cells] \
+        [list all_fanin -to $endpoint_pin -only_cells] \
+        [list get_fanin -to $endpoint_pin -flat -only_cells] \
+        [list get_fanin -to $endpoint_pin -only_cells]] {
+        set value [list]
+        if {[catch {set value [eval $cmd]}]} {
+            continue
+        }
+        foreach cell [mptdc_collection_to_list $value] {
+            set cell_name [mptdc_object_name $cell]
+            if {$cell_name ne ""} {
+                lappend cells $cell
+            }
+        }
+    }
+    return [mptdc_unique_list $cells]
+}
+
+proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_cell} {
+    set records [list]
+    foreach rec $endpoint_records {
+        set endpoint_pin [dict get $rec object]
+        set endpoint_name [dict get $rec name]
+        set matched false
+        foreach net [mptdc_repair_pin_nets $endpoint_pin] {
+            foreach driver [mptdc_repair_net_driver_objects $net] {
+                set driver_name [mptdc_object_name $driver]
+                set cell [mptdc_repair_resolve_cell_from_driver_object $driver]
+                set inst_name [mptdc_repair_pin_instance_name $driver_name]
+                if {$inst_name eq ""} {
+                    set inst_name [mptdc_object_name $cell]
+                }
+                set base "UNRESOLVED"
+                if {$cell ne ""} {
+                    set base [mptdc_repair_cell_base_name $cell]
+                }
+                set status [expr {$base eq $source_cell ? {MATCH} : {NON_SOURCE_CELL}}]
+                if {$base eq $source_cell} {
+                    set matched true
+                }
+                lappend records [dict create \
+                    row [dict get $rec row] \
+                    col [dict get $rec col] \
+                    bit [dict get $rec bit] \
+                    endpoint $endpoint_name \
+                    driver_pin $driver_name \
+                    driver_instance $inst_name \
+                    cell $cell \
+                    current_cell $base \
+                    status $status]
+            }
+        }
+        if {!$matched} {
+            foreach cell [mptdc_repair_endpoint_fanin_cells $endpoint_pin] {
+                set base [mptdc_repair_cell_base_name $cell]
+                if {$base ne $source_cell} {
+                    continue
+                }
+                set matched true
+                set inst_name [mptdc_object_name $cell]
+                lappend records [dict create \
+                    row [dict get $rec row] \
+                    col [dict get $rec col] \
+                    bit [dict get $rec bit] \
+                    endpoint $endpoint_name \
+                    driver_pin "FANIN_CELL_MATCH" \
+                    driver_instance $inst_name \
+                    cell $cell \
+                    current_cell $base \
+                    status MATCH]
+            }
+        }
+        if {!$matched} {
+            lappend records [dict create \
+                row [dict get $rec row] \
+                col [dict get $rec col] \
+                bit [dict get $rec bit] \
+                endpoint $endpoint_name \
+                driver_pin "" \
+                driver_instance "" \
+                cell "" \
+                current_cell "NO_${source_cell}_DRIVER" \
+                status NO_SOURCE_DRIVER]
+        }
+    }
+    return $records
+}
+
+proc mptdc_repair_write_pd_local_on22_csvs {report_dir driver_records repair_rows} {
+    set fh [open "$report_dir/pd_local_on22_driver_discovery.csv" w]
+    puts $fh "row,col,bit,endpoint_pin,driver_pin,driver_instance,current_cell,status"
+    foreach rec $driver_records {
+        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec bit],[mptdc_repair_csv_quote [dict get $rec endpoint]],[mptdc_repair_csv_quote [dict get $rec driver_pin]],[mptdc_repair_csv_quote [dict get $rec driver_instance]],[dict get $rec current_cell],[dict get $rec status]"
+    }
+    close $fh
+
+    set fh [open "$report_dir/pd_local_on22_cell_repair.csv" a]
+    if {[tell $fh] == 0} {
+        puts $fh "stage,instance,original_cell,target_cell,command,command_status,final_cell,notes"
+    }
+    foreach row $repair_rows {
+        puts $fh "[dict get $row stage],[mptdc_repair_csv_quote [dict get $row instance]],[dict get $row original_cell],[dict get $row target_cell],[mptdc_repair_csv_quote [dict get $row command]],[mptdc_repair_csv_quote [dict get $row command_status]],[dict get $row final_cell],[mptdc_repair_csv_quote [dict get $row notes]]"
+    }
+    close $fh
+}
+
+proc mptdc_apply_pd_local_on22_repair {stage fh} {
+    global design
+
+    set enable [mptdc_bool_env MPTDC_GENUS_REPAIR_PD_LOCAL_ON22 false]
+    if {!$enable} {
+        return
+    }
+
+    set bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_BITS ""] "0 1 2 3 4 5 6"]
+    set source_cell [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_SOURCE_CELL ON22JIHDX0]
+    set target_cells [mptdc_repair_word_list_env MPTDC_PD_LOCAL_ON22_TARGET_CELLS "ON22JIHDX1 ON22JIHDX2"]
+    set expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_ENDPOINTS 448]
+    set expected_cells [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS 448]
+
+    mptdc_message "PD_LOCAL_ON22: enabling scoped final ON22 repair for nfast_hit_latched D drivers"
+
+    set endpoint_records [mptdc_repair_collect_pd_hit_to_nfast_pin_records endpoint $bits D]
+    set driver_records [mptdc_repair_collect_pd_local_on22_driver_records $endpoint_records $source_cell]
+    set source_cells [list]
+    array set seen_cells {}
+    set source_driver_count 0
+    foreach rec $driver_records {
+        if {[dict get $rec status] ne "MATCH"} {
+            continue
+        }
+        incr source_driver_count
+        set cell [dict get $rec cell]
+        set cell_name [mptdc_object_name $cell]
+        if {$cell_name ne "" && ![info exists seen_cells($cell_name)]} {
+            set seen_cells($cell_name) 1
+            lappend source_cells $cell
+        }
+    }
+
+    set selected_target "NA"
+    set selected_target_lib ""
+    set legal_found 0
+    set legal_fh [open "$design(reports_dir)/pd_local_on22_legal_cells.rpt" a]
+    puts $legal_fh "STAGE=$stage"
+    puts $legal_fh "PD_LOCAL_ON22_SOURCE_CELL=$source_cell"
+    foreach target $target_cells {
+        set lib [mptdc_repair_find_lib_cell $target]
+        set found [expr {$lib ne "" ? {YES} : {NO}}]
+        puts $legal_fh "PD_LOCAL_ON22_TARGET_CANDIDATE=$target FOUND=$found"
+        if {$lib ne ""} {
+            incr legal_found
+            if {$selected_target_lib eq ""} {
+                set selected_target $target
+                set selected_target_lib $lib
+            }
+        }
+    }
+    puts $legal_fh "PD_LOCAL_ON22_SELECTED_TARGET=$selected_target"
+    puts $legal_fh ""
+    close $legal_fh
+
+    set endpoints_found [llength $endpoint_records]
+    set cells_found [llength $source_cells]
+    set overmatch [expr {$endpoints_found > $expected_endpoints || $cells_found > $expected_cells || $source_driver_count > $expected_endpoints ? {YES} : {NO}}]
+    set undermatch [expr {$endpoints_found < $expected_endpoints || $cells_found < $expected_cells || $source_driver_count < $expected_endpoints ? {YES} : {NO}}]
+    set counts_ok [expr {
+        $endpoints_found == $expected_endpoints &&
+        $cells_found == $expected_cells &&
+        $source_driver_count == $expected_endpoints &&
+        $overmatch eq "NO" &&
+        $undermatch eq "NO"
+    }]
+
+    set repair_result "SKIPPED_UNTIL_POST_MAP_PRE_OPT"
+    set changed_count 0
+    set target_count 0
+    set repair_rows [list]
+    if {$stage eq "post_map_pre_opt"} {
+        if {!$counts_ok} {
+            set repair_result "SKIPPED_COUNTS_MISMATCH"
+        } elseif {$selected_target_lib eq ""} {
+            set repair_result "SKIPPED_NO_LEGAL_TARGET_CELL"
+        } else {
+            catch {set_db $selected_target_lib .avoid false}
+            catch {set_db $selected_target_lib .dont_use false}
+            set command_any_ok false
+            foreach cell $source_cells {
+                set inst_name [mptdc_object_name $cell]
+                set original_cell [mptdc_repair_cell_base_name $cell]
+                set final_cell $original_cell
+                set best_command "NO_COMMAND"
+                set best_status "NO_SUPPORTED_CELL_CHANGE_COMMAND"
+                foreach attempt [mptdc_repair_cell_change_attempts $cell $selected_target_lib $selected_target] {
+                    set label [lindex $attempt 0]
+                    set cmd [lindex $attempt 1]
+                    set rc [catch {eval $cmd} err]
+                    set final_cell [mptdc_repair_cell_base_name $cell]
+                    set best_command $label
+                    set best_status [expr {$rc == 0 ? {COMMAND_ACCEPTED} : $err}]
+                    if {$rc == 0} {
+                        set command_any_ok true
+                    }
+                    if {$rc == 0 && $final_cell eq $selected_target} {
+                        break
+                    }
+                }
+                if {$final_cell ne $original_cell} {
+                    incr changed_count
+                }
+                if {$final_cell eq $selected_target} {
+                    incr target_count
+                }
+                lappend repair_rows [dict create \
+                    stage $stage \
+                    instance $inst_name \
+                    original_cell $original_cell \
+                    target_cell $selected_target \
+                    command $best_command \
+                    command_status $best_status \
+                    final_cell $final_cell \
+                    notes [expr {$final_cell eq $selected_target ? {target_verified} : {target_not_verified}}]]
+            }
+            if {$target_count == $expected_cells} {
+                set repair_result "OK"
+            } elseif {$command_any_ok} {
+                set repair_result "COMMAND_ACCEPTED_VERIFY_AFTER_OPT"
+            } else {
+                set repair_result "NO_CELL_CHANGE_COMMAND_APPLIED"
+            }
+        }
+    }
+
+    mptdc_repair_write_pd_local_on22_csvs $design(reports_dir) $driver_records $repair_rows
+
+    set status "REVIEW_REQUIRED"
+    set reasons [list]
+    if {$stage ne "post_map_pre_opt"} { lappend reasons SKIPPED_UNTIL_POST_MAP_PRE_OPT }
+    if {$overmatch ne "NO"} { lappend reasons OVERMATCH }
+    if {$undermatch ne "NO"} { lappend reasons UNDERMATCH }
+    if {!$counts_ok} { lappend reasons COUNT_MISMATCH }
+    if {$selected_target_lib eq ""} { lappend reasons NO_LEGAL_TARGET_CELL }
+    if {$stage eq "post_map_pre_opt" && $repair_result ne "OK"} { lappend reasons CELL_REPAIR_NOT_OK }
+    if {[llength $reasons] == 0} {
+        set status "PASS"
+        set review_reason "NONE"
+    } else {
+        set review_reason [join [mptdc_unique_list $reasons] ","]
+    }
+
+    puts $fh "PD_LOCAL_ON22_REPAIR_ENABLE=$enable"
+    puts $fh "PD_LOCAL_ON22_SOURCE_CELL=$source_cell"
+    puts $fh "PD_LOCAL_ON22_TARGET_CELLS=[join $target_cells {,}]"
+    puts $fh "PD_LOCAL_ON22_SELECTED_TARGET=$selected_target"
+    puts $fh "PD_LOCAL_ON22_TARGET_LIB_CELLS_FOUND=$legal_found"
+    puts $fh "PD_LOCAL_ON22_ENDPOINTS_EXPECTED=$expected_endpoints"
+    puts $fh "PD_LOCAL_ON22_ENDPOINTS_FOUND=$endpoints_found"
+    puts $fh "PD_LOCAL_ON22_SOURCE_DRIVERS_FOUND=$source_driver_count"
+    puts $fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells"
+    puts $fh "PD_LOCAL_ON22_SOURCE_CELLS_FOUND=$cells_found"
+    puts $fh "PD_LOCAL_ON22_CHANGED_CELLS=$changed_count"
+    puts $fh "PD_LOCAL_ON22_TARGET_CELLS_FOUND=$target_count"
+    puts $fh "PD_LOCAL_ON22_REPAIR_RESULT=$repair_result"
+    puts $fh "PD_LOCAL_ON22_OVERMATCH=$overmatch"
+    puts $fh "PD_LOCAL_ON22_UNDERMATCH=$undermatch"
+    puts $fh "PD_LOCAL_ON22_STATUS=$status"
+    puts $fh "PD_LOCAL_ON22_REVIEW_REASON=$review_reason"
+
+    set status_fh [open "$design(reports_dir)/pd_local_on22_repair_status.rpt" a]
+    puts $status_fh "STAGE=$stage"
+    puts $status_fh "PD_LOCAL_ON22_REPAIR_ENABLE=$enable"
+    puts $status_fh "PD_LOCAL_ON22_SOURCE_CELL=$source_cell"
+    puts $status_fh "PD_LOCAL_ON22_TARGET_CELLS=[join $target_cells {,}]"
+    puts $status_fh "PD_LOCAL_ON22_SELECTED_TARGET=$selected_target"
+    puts $status_fh "PD_LOCAL_ON22_TARGET_LIB_CELLS_FOUND=$legal_found"
+    puts $status_fh "PD_LOCAL_ON22_ENDPOINTS_EXPECTED=$expected_endpoints"
+    puts $status_fh "PD_LOCAL_ON22_ENDPOINTS_FOUND=$endpoints_found"
+    puts $status_fh "PD_LOCAL_ON22_SOURCE_DRIVERS_FOUND=$source_driver_count"
+    puts $status_fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells"
+    puts $status_fh "PD_LOCAL_ON22_SOURCE_CELLS_FOUND=$cells_found"
+    puts $status_fh "PD_LOCAL_ON22_CHANGED_CELLS=$changed_count"
+    puts $status_fh "PD_LOCAL_ON22_TARGET_CELLS_FOUND=$target_count"
+    puts $status_fh "PD_LOCAL_ON22_REPAIR_RESULT=$repair_result"
+    puts $status_fh "PD_LOCAL_ON22_OVERMATCH=$overmatch"
+    puts $status_fh "PD_LOCAL_ON22_UNDERMATCH=$undermatch"
+    puts $status_fh "PD_LOCAL_ON22_STATUS=$status"
+    puts $status_fh "PD_LOCAL_ON22_REVIEW_REASON=$review_reason"
     puts $status_fh ""
     close $status_fh
 }
@@ -2716,6 +3091,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set repair7_polarity_source_upgrade [mptdc_bool_env MPTDC_GENUS_REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE false]
     set repair8_jihd_exact_close [mptdc_bool_env MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE false]
     set pd_hit_to_nfast_local_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL false]
+    set pd_local_on22_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_PD_LOCAL_ON22 false]
     if {$repair6_localtag_preserve_close || $repair7_polarity_source_upgrade || $repair8_jihd_exact_close} {
         set repair4_exact_source_drive true
         set repair5_exact_close true
@@ -2768,11 +3144,15 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         set endpoint_transition_tight false
     }
     set pd_hit_to_nfast_bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_BITS ""] "0 1 2 3 4 5 6"]
-    set pd_hit_to_nfast_max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 1.10]
+    set pd_hit_to_nfast_max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 0]
     set pd_hit_to_nfast_max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0]
     set pd_hit_to_nfast_expected_sources [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES 64]
     set pd_hit_to_nfast_expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS 448]
-    if {!$fast_repair && !$drv_repair && !$pd_hit_to_nfast_local_repair} {
+    set pd_local_on22_source_cell [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_SOURCE_CELL ON22JIHDX0]
+    set pd_local_on22_target_cells [mptdc_repair_word_list_env MPTDC_PD_LOCAL_ON22_TARGET_CELLS "ON22JIHDX1 ON22JIHDX2"]
+    set pd_local_on22_expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_ENDPOINTS 448]
+    set pd_local_on22_expected_cells [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS 448]
+    if {!$fast_repair && !$drv_repair && !$pd_hit_to_nfast_local_repair && !$pd_local_on22_repair} {
         return
     }
 
@@ -2794,6 +3174,11 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "PD_HIT_TO_NFAST_LOCAL_MAX_TRANSITION_NS=$pd_hit_to_nfast_max_transition"
     puts $fh "PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED=$pd_hit_to_nfast_expected_sources"
     puts $fh "PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED=$pd_hit_to_nfast_expected_endpoints"
+    puts $fh "PD_LOCAL_ON22_REPAIR=$pd_local_on22_repair"
+    puts $fh "PD_LOCAL_ON22_SOURCE_CELL=$pd_local_on22_source_cell"
+    puts $fh "PD_LOCAL_ON22_TARGET_CELLS=[join $pd_local_on22_target_cells {,}]"
+    puts $fh "PD_LOCAL_ON22_EXPECTED_ENDPOINTS=$pd_local_on22_expected_endpoints"
+    puts $fh "PD_LOCAL_ON22_EXPECTED_CELLS=$pd_local_on22_expected_cells"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
@@ -3161,6 +3546,10 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
 
     if {$pd_hit_to_nfast_local_repair} {
         mptdc_apply_pd_hit_to_nfast_local_repair $stage $fh
+    }
+
+    if {$pd_local_on22_repair} {
+        mptdc_apply_pd_local_on22_repair $stage $fh
     }
 
     if {$drv_repair} {

@@ -13,10 +13,11 @@ RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_axis_core_genus_timing_close}"
 #   FAST_TAG_TO_PD_TS and LOCAL_FAST_TAG_SELF paths once preserved.
 # - uses the full 1.333 ns fast-period budget by default for the exact C-to-D
 #   fast-tag timestamp paths.
-# - enables the scoped local PD hit_latched -> nfast_hit_latched repair added
-#   for the near-clean residual timestamp capture cone.
-# - keeps the PD-local transition clamp disabled by default. The 0.25 ns
-#   experiment over-constrained the run and created broad transition DRV.
+# - keeps PD-local discovery and grouping enabled, but disables the broad
+#   hit_latched -> nfast_hit_latched max-delay and transition clamps by
+#   default. The 1.10 ns max-delay experiment over-constrained the run.
+# - enables a scoped post-map ON22JIHDX0 final-driver sizing experiment for
+#   the local nfast_hit_latched D cone.
 export MPTDC_GENUS_CLOSURE_PROFILE=timing_ultra
 export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE:-1}"
 if [[ "$MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE" == "1" ]]; then
@@ -33,10 +34,16 @@ else
 fi
 export MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS="${MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS:-1.333}"
 export MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL="${MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL:-1}"
-export MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS="${MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS:-1.10}"
+export MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS="${MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS:-0}"
 export MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS="${MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS:-0}"
 export MPTDC_PD_HIT_TO_NFAST_BITS="${MPTDC_PD_HIT_TO_NFAST_BITS:-0 1 2 3 4 5 6}"
 export MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES="${MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES:-64}"
 export MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS="${MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS:-448}"
+export MPTDC_GENUS_REPAIR_PD_LOCAL_ON22="${MPTDC_GENUS_REPAIR_PD_LOCAL_ON22:-1}"
+export MPTDC_PD_LOCAL_ON22_SOURCE_CELL="${MPTDC_PD_LOCAL_ON22_SOURCE_CELL:-ON22JIHDX0}"
+export MPTDC_PD_LOCAL_ON22_TARGET_CELLS="${MPTDC_PD_LOCAL_ON22_TARGET_CELLS:-ON22JIHDX1 ON22JIHDX2}"
+export MPTDC_PD_LOCAL_ON22_BITS="${MPTDC_PD_LOCAL_ON22_BITS:-0 1 2 3 4 5 6}"
+export MPTDC_PD_LOCAL_ON22_EXPECTED_ENDPOINTS="${MPTDC_PD_LOCAL_ON22_EXPECTED_ENDPOINTS:-448}"
+export MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS="${MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS:-448}"
 
 exec "$SCRIPT_DIR/server_run_genus_o13_phase_distribution.sh" "$RUN_ID"

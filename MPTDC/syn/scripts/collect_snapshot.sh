@@ -127,6 +127,10 @@ copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_source_discovery.cs
 copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_source_q_discovery.csv"
 copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_endpoint_discovery.csv"
 copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_path_pairs.csv"
+copy_if_present "${source_reports_dir}/pd_local_on22_repair_status.rpt"
+copy_if_present "${source_reports_dir}/pd_local_on22_driver_discovery.csv"
+copy_if_present "${source_reports_dir}/pd_local_on22_cell_repair.csv"
+copy_if_present "${source_reports_dir}/pd_local_on22_legal_cells.rpt"
 
 {
   echo "Snapshot: ${tag}"
