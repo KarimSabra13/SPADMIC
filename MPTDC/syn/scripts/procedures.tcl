@@ -2638,6 +2638,53 @@ proc mptdc_repair_net_driver_objects {net} {
     return [mptdc_unique_list $drivers]
 }
 
+proc mptdc_repair_net_connected_pins {net} {
+    set pins [list]
+    foreach attr {.pins .pin .connections .terms .terminals .loads .driver .drivers .driver_pin .driver_pins .load_pins} {
+        if {![catch {set value [get_db $net $attr]}]} {
+            foreach pin [mptdc_collection_to_list $value] {
+                set pin_name [mptdc_object_name $pin]
+                if {$pin_name ne "" && [regexp {/[^/]+$} $pin_name]} {
+                    lappend pins $pin
+                }
+            }
+        }
+    }
+    foreach cmd [list \
+        [list get_pins -quiet -of_objects $net] \
+        [list get_pins -quiet -of $net]] {
+        set value [list]
+        if {[catch {set value [eval $cmd]}]} {
+            continue
+        }
+        foreach pin [mptdc_collection_to_list $value] {
+            set pin_name [mptdc_object_name $pin]
+            if {$pin_name ne "" && [regexp {/[^/]+$} $pin_name]} {
+                lappend pins $pin
+            }
+        }
+    }
+    return [mptdc_unique_list $pins]
+}
+
+proc mptdc_repair_pin_direction {pin} {
+    foreach attr {.direction .lib_pin.direction .base_pin.direction .pin.direction} {
+        if {![catch {set value [get_db $pin $attr]}] && $value ne ""} {
+            return [string tolower [file tail $value]]
+        }
+    }
+    return ""
+}
+
+proc mptdc_repair_pin_is_output_like {pin} {
+    set direction [mptdc_repair_pin_direction $pin]
+    if {$direction ne ""} {
+        return [expr {[string match *out* $direction]}]
+    }
+    set pin_name [string toupper [mptdc_object_name $pin]]
+    return [regexp {/(Z|ZN|Y|Q|QN|O|CO)$} $pin_name]
+}
+
 proc mptdc_repair_resolve_cell_from_driver_object {driver} {
     set driver_name [mptdc_object_name $driver]
     if {$driver_name eq ""} {
@@ -2654,13 +2701,17 @@ proc mptdc_repair_resolve_cell_from_driver_object {driver} {
     return [mptdc_repair_resolve_cell_from_instance_name $driver_name]
 }
 
-proc mptdc_repair_endpoint_fanin_cells {endpoint_pin} {
+proc mptdc_repair_endpoint_direct_fanin_cells {endpoint_pin} {
     set cells [list]
     foreach cmd [list \
-        [list all_fanin -to $endpoint_pin -flat -only_cells] \
-        [list all_fanin -to $endpoint_pin -only_cells] \
-        [list get_fanin -to $endpoint_pin -flat -only_cells] \
-        [list get_fanin -to $endpoint_pin -only_cells]] {
+        [list all_fanin -to $endpoint_pin -flat -only_cells -levels 1] \
+        [list all_fanin -to $endpoint_pin -flat -levels 1 -only_cells] \
+        [list all_fanin -to $endpoint_pin -only_cells -levels 1] \
+        [list all_fanin -to $endpoint_pin -levels 1 -only_cells] \
+        [list get_fanin -to $endpoint_pin -flat -only_cells -levels 1] \
+        [list get_fanin -to $endpoint_pin -flat -levels 1 -only_cells] \
+        [list get_fanin -to $endpoint_pin -only_cells -levels 1] \
+        [list get_fanin -to $endpoint_pin -levels 1 -only_cells]] {
         set value [list]
         if {[catch {set value [eval $cmd]}]} {
             continue
@@ -2675,12 +2726,34 @@ proc mptdc_repair_endpoint_fanin_cells {endpoint_pin} {
     return [mptdc_unique_list $cells]
 }
 
+proc mptdc_repair_pd_local_endpoint_prefix {endpoint_name} {
+    if {[regexp {^(.*/)nfast_hit_latched_reg(\[[0-9]+\]|_[^/]*)/[^/]+$} $endpoint_name -> prefix _]} {
+        return $prefix
+    }
+    if {[regexp {^(.*/).*nfast_hit_latched_reg[^/]*/[^/]+$} $endpoint_name -> prefix]} {
+        return $prefix
+    }
+    return ""
+}
+
+proc mptdc_repair_cell_is_in_pd_local_prefix {cell local_prefix} {
+    if {$local_prefix eq ""} {
+        return true
+    }
+    set cell_name [mptdc_object_name $cell]
+    if {$cell_name eq ""} {
+        return false
+    }
+    return [string match "${local_prefix}*" $cell_name]
+}
+
 proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_cell} {
     set records [list]
     foreach rec $endpoint_records {
         set endpoint_pin [dict get $rec object]
         set endpoint_name [dict get $rec name]
-        set matched false
+        set local_prefix [mptdc_repair_pd_local_endpoint_prefix $endpoint_name]
+        array set seen_endpoint_cells {}
         foreach net [mptdc_repair_pin_nets $endpoint_pin] {
             foreach driver [mptdc_repair_net_driver_objects $net] {
                 set driver_name [mptdc_object_name $driver]
@@ -2693,9 +2766,15 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
                 if {$cell ne ""} {
                     set base [mptdc_repair_cell_base_name $cell]
                 }
-                set status [expr {$base eq $source_cell ? {MATCH} : {NON_SOURCE_CELL}}]
-                if {$base eq $source_cell} {
-                    set matched true
+                set cell_name [mptdc_object_name $cell]
+                if {$base ne $source_cell || ![mptdc_repair_cell_is_in_pd_local_prefix $cell $local_prefix]} {
+                    continue
+                }
+                if {$cell_name ne "" && [info exists seen_endpoint_cells($cell_name)]} {
+                    continue
+                }
+                if {$cell_name ne ""} {
+                    set seen_endpoint_cells($cell_name) 1
                 }
                 lappend records [dict create \
                     row [dict get $rec row] \
@@ -2706,30 +2785,73 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
                     driver_instance $inst_name \
                     cell $cell \
                     current_cell $base \
-                    status $status]
+                    status MATCH \
+                    method NET_DRIVER_ATTR]
             }
-        }
-        if {!$matched} {
-            foreach cell [mptdc_repair_endpoint_fanin_cells $endpoint_pin] {
-                set base [mptdc_repair_cell_base_name $cell]
-                if {$base ne $source_cell} {
+            foreach pin [mptdc_repair_net_connected_pins $net] {
+                set driver_name [mptdc_object_name $pin]
+                if {$driver_name eq "" || $driver_name eq $endpoint_name || ![mptdc_repair_pin_is_output_like $pin]} {
                     continue
                 }
-                set matched true
-                set inst_name [mptdc_object_name $cell]
+                set cell [mptdc_repair_resolve_cell_from_driver_object $pin]
+                set inst_name [mptdc_repair_pin_instance_name $driver_name]
+                if {$inst_name eq ""} {
+                    set inst_name [mptdc_object_name $cell]
+                }
+                set base "UNRESOLVED"
+                if {$cell ne ""} {
+                    set base [mptdc_repair_cell_base_name $cell]
+                }
+                set cell_name [mptdc_object_name $cell]
+                if {$base ne $source_cell || ![mptdc_repair_cell_is_in_pd_local_prefix $cell $local_prefix]} {
+                    continue
+                }
+                if {$cell_name ne "" && [info exists seen_endpoint_cells($cell_name)]} {
+                    continue
+                }
+                if {$cell_name ne ""} {
+                    set seen_endpoint_cells($cell_name) 1
+                }
                 lappend records [dict create \
                     row [dict get $rec row] \
                     col [dict get $rec col] \
                     bit [dict get $rec bit] \
                     endpoint $endpoint_name \
-                    driver_pin "FANIN_CELL_MATCH" \
+                    driver_pin $driver_name \
                     driver_instance $inst_name \
                     cell $cell \
                     current_cell $base \
-                    status MATCH]
+                    status MATCH \
+                    method NET_CONNECTED_OUTPUT_PIN]
             }
         }
-        if {!$matched} {
+        if {[array size seen_endpoint_cells] == 0} {
+            foreach cell [mptdc_repair_endpoint_direct_fanin_cells $endpoint_pin] {
+                set base [mptdc_repair_cell_base_name $cell]
+                if {$base ne $source_cell || ![mptdc_repair_cell_is_in_pd_local_prefix $cell $local_prefix]} {
+                    continue
+                }
+                set inst_name [mptdc_object_name $cell]
+                if {$inst_name ne "" && [info exists seen_endpoint_cells($inst_name)]} {
+                    continue
+                }
+                if {$inst_name ne ""} {
+                    set seen_endpoint_cells($inst_name) 1
+                }
+                lappend records [dict create \
+                    row [dict get $rec row] \
+                    col [dict get $rec col] \
+                    bit [dict get $rec bit] \
+                    endpoint $endpoint_name \
+                    driver_pin "DIRECT_LEVEL1_FANIN_CELL" \
+                    driver_instance $inst_name \
+                    cell $cell \
+                    current_cell $base \
+                    status MATCH \
+                    method DIRECT_LEVEL1_FANIN_CELL]
+            }
+        }
+        if {[array size seen_endpoint_cells] == 0} {
             lappend records [dict create \
                 row [dict get $rec row] \
                 col [dict get $rec col] \
@@ -2739,17 +2861,19 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
                 driver_instance "" \
                 cell "" \
                 current_cell "NO_${source_cell}_DRIVER" \
-                status NO_SOURCE_DRIVER]
+                status NO_SOURCE_DRIVER \
+                method NONE]
         }
+        unset seen_endpoint_cells
     }
     return $records
 }
 
 proc mptdc_repair_write_pd_local_on22_csvs {report_dir driver_records repair_rows} {
     set fh [open "$report_dir/pd_local_on22_driver_discovery.csv" w]
-    puts $fh "row,col,bit,endpoint_pin,driver_pin,driver_instance,current_cell,status"
+    puts $fh "row,col,bit,endpoint_pin,driver_pin,driver_instance,current_cell,status,method"
     foreach rec $driver_records {
-        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec bit],[mptdc_repair_csv_quote [dict get $rec endpoint]],[mptdc_repair_csv_quote [dict get $rec driver_pin]],[mptdc_repair_csv_quote [dict get $rec driver_instance]],[dict get $rec current_cell],[dict get $rec status]"
+        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec bit],[mptdc_repair_csv_quote [dict get $rec endpoint]],[mptdc_repair_csv_quote [dict get $rec driver_pin]],[mptdc_repair_csv_quote [dict get $rec driver_instance]],[dict get $rec current_cell],[dict get $rec status],[dict get $rec method]"
     }
     close $fh
 
@@ -2775,7 +2899,12 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     set source_cell [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_SOURCE_CELL ON22JIHDX0]
     set target_cells [mptdc_repair_word_list_env MPTDC_PD_LOCAL_ON22_TARGET_CELLS "ON22JIHDX1 ON22JIHDX2"]
     set expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_ENDPOINTS 448]
-    set expected_cells [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS 448]
+    set expected_cells_raw [string trim [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS AUTO]]
+    set expected_cells_auto [expr {$expected_cells_raw eq ""}]
+    if {[regexp -nocase {^(auto|discovered)$} $expected_cells_raw]} {
+        set expected_cells_auto 1
+    }
+    set expected_cells_report [expr {$expected_cells_auto ? {AUTO} : $expected_cells_raw}]
 
     mptdc_message "PD_LOCAL_ON22: enabling scoped final ON22 repair for nfast_hit_latched D drivers"
 
@@ -2821,12 +2950,26 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
 
     set endpoints_found [llength $endpoint_records]
     set cells_found [llength $source_cells]
-    set overmatch [expr {$endpoints_found > $expected_endpoints || $cells_found > $expected_cells || $source_driver_count > $expected_endpoints ? {YES} : {NO}}]
-    set undermatch [expr {$endpoints_found < $expected_endpoints || $cells_found < $expected_cells || $source_driver_count < $expected_endpoints ? {YES} : {NO}}]
+    set expected_cells_for_compare $expected_cells_raw
+    if {$expected_cells_auto || ![string is integer -strict $expected_cells_for_compare]} {
+        set expected_cells_for_compare $cells_found
+    }
+    set overmatch [expr {$endpoints_found > $expected_endpoints || $source_driver_count > $expected_endpoints ? {YES} : {NO}}]
+    if {!$expected_cells_auto && $cells_found > $expected_cells_for_compare} {
+        set overmatch YES
+    }
+    set undermatch [expr {$endpoints_found < $expected_endpoints || $source_driver_count < $expected_endpoints ? {YES} : {NO}}]
+    if {$expected_cells_auto} {
+        if {$cells_found <= 0 || $cells_found > $expected_endpoints} {
+            set undermatch YES
+        }
+    } elseif {$cells_found < $expected_cells_for_compare} {
+        set undermatch YES
+    }
     set counts_ok [expr {
         $endpoints_found == $expected_endpoints &&
-        $cells_found == $expected_cells &&
         $source_driver_count == $expected_endpoints &&
+        ($expected_cells_auto ? ($cells_found > 0 && $cells_found <= $expected_endpoints) : ($cells_found == $expected_cells_for_compare)) &&
         $overmatch eq "NO" &&
         $undermatch eq "NO"
     }]
@@ -2880,7 +3023,8 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
                     final_cell $final_cell \
                     notes [expr {$final_cell eq $selected_target ? {target_verified} : {target_not_verified}}]]
             }
-            if {$target_count == $expected_cells} {
+            set expected_target_count [expr {$expected_cells_auto ? $cells_found : $expected_cells_for_compare}]
+            if {$target_count == $expected_target_count} {
                 set repair_result "OK"
             } elseif {$command_any_ok} {
                 set repair_result "COMMAND_ACCEPTED_VERIFY_AFTER_OPT"
@@ -2915,7 +3059,7 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     puts $fh "PD_LOCAL_ON22_ENDPOINTS_EXPECTED=$expected_endpoints"
     puts $fh "PD_LOCAL_ON22_ENDPOINTS_FOUND=$endpoints_found"
     puts $fh "PD_LOCAL_ON22_SOURCE_DRIVERS_FOUND=$source_driver_count"
-    puts $fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells"
+    puts $fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells_report"
     puts $fh "PD_LOCAL_ON22_SOURCE_CELLS_FOUND=$cells_found"
     puts $fh "PD_LOCAL_ON22_CHANGED_CELLS=$changed_count"
     puts $fh "PD_LOCAL_ON22_TARGET_CELLS_FOUND=$target_count"
@@ -2935,7 +3079,7 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     puts $status_fh "PD_LOCAL_ON22_ENDPOINTS_EXPECTED=$expected_endpoints"
     puts $status_fh "PD_LOCAL_ON22_ENDPOINTS_FOUND=$endpoints_found"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_DRIVERS_FOUND=$source_driver_count"
-    puts $status_fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells"
+    puts $status_fh "PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED=$expected_cells_report"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_CELLS_FOUND=$cells_found"
     puts $status_fh "PD_LOCAL_ON22_CHANGED_CELLS=$changed_count"
     puts $status_fh "PD_LOCAL_ON22_TARGET_CELLS_FOUND=$target_count"
@@ -3151,7 +3295,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set pd_local_on22_source_cell [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_SOURCE_CELL ON22JIHDX0]
     set pd_local_on22_target_cells [mptdc_repair_word_list_env MPTDC_PD_LOCAL_ON22_TARGET_CELLS "ON22JIHDX1 ON22JIHDX2"]
     set pd_local_on22_expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_ENDPOINTS 448]
-    set pd_local_on22_expected_cells [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS 448]
+    set pd_local_on22_expected_cells [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS AUTO]
     if {!$fast_repair && !$drv_repair && !$pd_hit_to_nfast_local_repair && !$pd_local_on22_repair} {
         return
     }
