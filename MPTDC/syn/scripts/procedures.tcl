@@ -2726,6 +2726,148 @@ proc mptdc_repair_endpoint_direct_fanin_cells {endpoint_pin} {
     return [mptdc_unique_list $cells]
 }
 
+proc mptdc_repair_unique_cells_by_name {cells} {
+    set out [list]
+    array set seen {}
+    foreach cell $cells {
+        set name [mptdc_object_name $cell]
+        if {$name eq "" || [info exists seen($name)]} {
+            continue
+        }
+        set seen($name) 1
+        lappend out $cell
+    }
+    return $out
+}
+
+proc mptdc_repair_endpoint_scoped_fanin_cells {endpoint_pin local_prefix source_cell} {
+    set cells [list]
+    foreach cmd [list \
+        [list all_fanin -to $endpoint_pin -flat -only_cells] \
+        [list all_fanin -to $endpoint_pin -only_cells] \
+        [list get_fanin -to $endpoint_pin -flat -only_cells] \
+        [list get_fanin -to $endpoint_pin -only_cells]] {
+        set value [list]
+        if {[catch {set value [eval $cmd]}]} {
+            continue
+        }
+        foreach cell [mptdc_collection_to_list $value] {
+            if {[mptdc_repair_cell_base_name $cell] ne $source_cell} {
+                continue
+            }
+            if {![mptdc_repair_cell_is_in_pd_local_prefix $cell $local_prefix]} {
+                continue
+            }
+            lappend cells $cell
+        }
+    }
+    return [mptdc_repair_unique_cells_by_name $cells]
+}
+
+proc mptdc_repair_pd_local_named_on22_candidates {local_prefix bit source_cell} {
+    set cells [list]
+    if {$local_prefix eq ""} {
+        return $cells
+    }
+    set escaped_prefix [mptdc_glob_escape $local_prefix]
+    set bracket_bit [format {\[%s\]} $bit]
+    set patterns [list \
+        "${escaped_prefix}*nfast_hit_latched_reg${bracket_bit}*" \
+        "${escaped_prefix}*nfast_hit_latched_reg_${bit}*" \
+        "${escaped_prefix}*nfast_hit_latched*${bracket_bit}*" \
+        "${escaped_prefix}*nfast_hit_latched*_${bit}*" \
+        "${escaped_prefix}*nfast*${bracket_bit}*" \
+        "${escaped_prefix}*nfast*_${bit}*"]
+    foreach pattern $patterns {
+        set matches [list]
+        catch {set matches [get_cells -quiet -hierarchical $pattern]}
+        foreach cell [mptdc_collection_to_list $matches] {
+            if {[mptdc_repair_cell_base_name $cell] ne $source_cell} {
+                continue
+            }
+            if {![mptdc_repair_cell_is_in_pd_local_prefix $cell $local_prefix]} {
+                continue
+            }
+            lappend cells $cell
+        }
+    }
+    return [mptdc_repair_unique_cells_by_name $cells]
+}
+
+proc mptdc_repair_pd_local_on22_candidate_score {cell endpoint_name bit} {
+    set cell_name [string tolower [mptdc_object_name $cell]]
+    if {$cell_name eq ""} {
+        return 0
+    }
+
+    set score 0
+    set endpoint_inst [mptdc_repair_pin_instance_name $endpoint_name]
+    set endpoint_tail [string tolower [file tail $endpoint_inst]]
+    if {$endpoint_tail ne "" && [string first $endpoint_tail $cell_name] >= 0} {
+        incr score 200
+    }
+
+    set exact_reg_re [format {nfast_hit_latched_reg\[%s\]} $bit]
+    set exact_us_re [format {nfast_hit_latched_reg_%s([^0-9]|$)} $bit]
+    set bit_token_re [format {(^|[^0-9])%s([^0-9]|$)} $bit]
+    if {[regexp $exact_reg_re $cell_name] || [regexp $exact_us_re $cell_name]} {
+        incr score 100
+    } elseif {[regexp {nfast_hit_latched} $cell_name] && [regexp $bit_token_re $cell_name]} {
+        incr score 80
+    } elseif {[regexp {nfast} $cell_name] && [regexp $bit_token_re $cell_name]} {
+        incr score 40
+    } elseif {[regexp {nfast} $cell_name]} {
+        incr score 10
+    }
+    if {[regexp {hit_latched} $cell_name]} {
+        incr score 5
+    }
+    return $score
+}
+
+proc mptdc_repair_choose_pd_local_on22_candidate {candidates endpoint_name bit} {
+    set candidate_count [llength $candidates]
+    if {$candidate_count == 0} {
+        return [dict create cell "" score 0 status NO_SOURCE_DRIVER method NONE candidate_count 0]
+    }
+    if {$candidate_count == 1} {
+        set cell [lindex $candidates 0]
+        return [dict create \
+            cell $cell \
+            score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $bit] \
+            status MATCH \
+            method SCOPED_UNIQUE_CANDIDATE \
+            candidate_count 1]
+    }
+
+    set best_score -1
+    set best_cells [list]
+    foreach cell $candidates {
+        set score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $bit]
+        if {$score > $best_score} {
+            set best_score $score
+            set best_cells [list $cell]
+        } elseif {$score == $best_score} {
+            lappend best_cells $cell
+        }
+    }
+    if {$best_score > 0 && [llength $best_cells] == 1} {
+        return [dict create \
+            cell [lindex $best_cells 0] \
+            score $best_score \
+            status MATCH \
+            method SCOPED_BEST_BIT_NAME_CANDIDATE \
+            candidate_count $candidate_count]
+    }
+
+    return [dict create \
+        cell "" \
+        score $best_score \
+        status AMBIGUOUS_SOURCE_DRIVER \
+        method SCOPED_AMBIGUOUS_CANDIDATES \
+        candidate_count $candidate_count]
+}
+
 proc mptdc_repair_pd_local_endpoint_prefix {endpoint_name} {
     if {[regexp {^(.*/)nfast_hit_latched_reg(\[[0-9]+\]|_[^/]*)/[^/]+$} $endpoint_name -> prefix _]} {
         return $prefix
@@ -2752,8 +2894,10 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
     foreach rec $endpoint_records {
         set endpoint_pin [dict get $rec object]
         set endpoint_name [dict get $rec name]
+        set endpoint_bit [dict get $rec bit]
         set local_prefix [mptdc_repair_pd_local_endpoint_prefix $endpoint_name]
         array set seen_endpoint_cells {}
+        set nonmatch_reported false
         foreach net [mptdc_repair_pin_nets $endpoint_pin] {
             foreach driver [mptdc_repair_net_driver_objects $net] {
                 set driver_name [mptdc_object_name $driver]
@@ -2786,7 +2930,9 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
                     cell $cell \
                     current_cell $base \
                     status MATCH \
-                    method NET_DRIVER_ATTR]
+                    method NET_DRIVER_ATTR \
+                    candidate_count 1 \
+                    score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $endpoint_bit]]
             }
             foreach pin [mptdc_repair_net_connected_pins $net] {
                 set driver_name [mptdc_object_name $pin]
@@ -2822,7 +2968,9 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
                     cell $cell \
                     current_cell $base \
                     status MATCH \
-                    method NET_CONNECTED_OUTPUT_PIN]
+                    method NET_CONNECTED_OUTPUT_PIN \
+                    candidate_count 1 \
+                    score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $endpoint_bit]]
             }
         }
         if {[array size seen_endpoint_cells] == 0} {
@@ -2848,10 +2996,56 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
                     cell $cell \
                     current_cell $base \
                     status MATCH \
-                    method DIRECT_LEVEL1_FANIN_CELL]
+                    method DIRECT_LEVEL1_FANIN_CELL \
+                    candidate_count 1 \
+                    score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $endpoint_bit]]
             }
         }
         if {[array size seen_endpoint_cells] == 0} {
+            set candidates [concat \
+                [mptdc_repair_endpoint_scoped_fanin_cells $endpoint_pin $local_prefix $source_cell] \
+                [mptdc_repair_pd_local_named_on22_candidates $local_prefix $endpoint_bit $source_cell]]
+            set candidates [mptdc_repair_unique_cells_by_name $candidates]
+            set choice [mptdc_repair_choose_pd_local_on22_candidate $candidates $endpoint_name $endpoint_bit]
+            set chosen_cell [dict get $choice cell]
+            if {[dict get $choice status] eq "MATCH" && $chosen_cell ne ""} {
+                set inst_name [mptdc_object_name $chosen_cell]
+                if {$inst_name ne ""} {
+                    set seen_endpoint_cells($inst_name) 1
+                }
+                lappend records [dict create \
+                    row [dict get $rec row] \
+                    col [dict get $rec col] \
+                    bit [dict get $rec bit] \
+                    endpoint $endpoint_name \
+                    driver_pin [dict get $choice method] \
+                    driver_instance $inst_name \
+                    cell $chosen_cell \
+                    current_cell [mptdc_repair_cell_base_name $chosen_cell] \
+                    status MATCH \
+                    method [dict get $choice method] \
+                    candidate_count [dict get $choice candidate_count] \
+                    score [dict get $choice score]]
+            } elseif {[dict get $choice status] eq "AMBIGUOUS_SOURCE_DRIVER"} {
+                set nonmatch_reported true
+                foreach cell $candidates {
+                    lappend records [dict create \
+                        row [dict get $rec row] \
+                        col [dict get $rec col] \
+                        bit [dict get $rec bit] \
+                        endpoint $endpoint_name \
+                        driver_pin [dict get $choice method] \
+                        driver_instance [mptdc_object_name $cell] \
+                        cell $cell \
+                        current_cell [mptdc_repair_cell_base_name $cell] \
+                        status AMBIGUOUS_SOURCE_DRIVER \
+                        method [dict get $choice method] \
+                        candidate_count [dict get $choice candidate_count] \
+                        score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $endpoint_bit]]
+                }
+            }
+        }
+        if {[array size seen_endpoint_cells] == 0 && !$nonmatch_reported} {
             lappend records [dict create \
                 row [dict get $rec row] \
                 col [dict get $rec col] \
@@ -2862,7 +3056,9 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
                 cell "" \
                 current_cell "NO_${source_cell}_DRIVER" \
                 status NO_SOURCE_DRIVER \
-                method NONE]
+                method NONE \
+                candidate_count 0 \
+                score 0]
         }
         unset seen_endpoint_cells
     }
@@ -2871,9 +3067,9 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
 
 proc mptdc_repair_write_pd_local_on22_csvs {report_dir driver_records repair_rows} {
     set fh [open "$report_dir/pd_local_on22_driver_discovery.csv" w]
-    puts $fh "row,col,bit,endpoint_pin,driver_pin,driver_instance,current_cell,status,method"
+    puts $fh "row,col,bit,endpoint_pin,driver_pin,driver_instance,current_cell,status,method,candidate_count,score"
     foreach rec $driver_records {
-        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec bit],[mptdc_repair_csv_quote [dict get $rec endpoint]],[mptdc_repair_csv_quote [dict get $rec driver_pin]],[mptdc_repair_csv_quote [dict get $rec driver_instance]],[dict get $rec current_cell],[dict get $rec status],[dict get $rec method]"
+        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec bit],[mptdc_repair_csv_quote [dict get $rec endpoint]],[mptdc_repair_csv_quote [dict get $rec driver_pin]],[mptdc_repair_csv_quote [dict get $rec driver_instance]],[dict get $rec current_cell],[dict get $rec status],[dict get $rec method],[dict get $rec candidate_count],[dict get $rec score]"
     }
     close $fh
 
