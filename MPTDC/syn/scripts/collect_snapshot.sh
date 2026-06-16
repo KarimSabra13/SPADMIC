@@ -122,6 +122,11 @@ copy_if_present "${source_reports_dir}/fast_tag_exact_endpoint_discovery.csv"
 copy_if_present "${source_reports_dir}/fast_tag_exact_path_pairs.csv"
 copy_if_present "${source_reports_dir}/fast_tag_exact_source_cell_repair.csv"
 copy_if_present "${source_reports_dir}/fast_tag_exact_repair_status.rpt"
+copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_repair_status.rpt"
+copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_source_discovery.csv"
+copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_source_q_discovery.csv"
+copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_endpoint_discovery.csv"
+copy_if_present "${source_reports_dir}/pd_hit_to_nfast_local_path_pairs.csv"
 
 {
   echo "Snapshot: ${tag}"

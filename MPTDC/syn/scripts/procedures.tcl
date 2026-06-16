@@ -2261,6 +2261,309 @@ proc mptdc_repair_write_fast_tag_exact_csvs {report_dir taps bits source_records
     close $fh
 }
 
+proc mptdc_repair_pd_hit_to_nfast_pin_info {role name pin_name} {
+    set lname [string tolower $name]
+    set lpin [string tolower $pin_name]
+    if {![regexp -- [format {/%s$} $lpin] $lname]} {
+        return ""
+    }
+
+    if {$role eq "source"} {
+        if {[string match *nfast_hit_latched_reg* $lname]} {
+            return ""
+        }
+        if {[regexp {gen_pd_row\[([0-9]+)\].*gen_pd_col\[([0-9]+)\].*/hit_latched_reg[^/]*/([a-z]+)$} $lname -> row col pin]} {
+            return [dict create role source row $row col $col pin $pin]
+        }
+        if {[regexp {gen_pd_row_?([0-9]+)([^0-9].*)?gen_pd_col_?([0-9]+)([^0-9].*)?.*/hit_latched_reg[^/]*/([a-z]+)$} $lname -> row _ col _ pin]} {
+            return [dict create role source row $row col $col pin $pin]
+        }
+        return ""
+    }
+
+    if {$role eq "endpoint"} {
+        if {[regexp {gen_pd_row\[([0-9]+)\].*gen_pd_col\[([0-9]+)\].*/nfast_hit_latched_reg\[([0-9]+)\]/([a-z]+)$} $lname -> row col bit pin]} {
+            return [dict create role endpoint row $row col $col bit $bit pin $pin]
+        }
+        if {[regexp {gen_pd_row_?([0-9]+)([^0-9].*)?gen_pd_col_?([0-9]+)([^0-9].*)?.*/nfast_hit_latched_reg_?([0-9]+)([^/]*)/([a-z]+)$} $lname -> row _ col _ bit _ pin]} {
+            return [dict create role endpoint row $row col $col bit $bit pin $pin]
+        }
+        return ""
+    }
+
+    return ""
+}
+
+proc mptdc_repair_collect_pd_hit_to_nfast_pin_records {role bits pin_name} {
+    set patterns [list]
+    if {$role eq "source"} {
+        lappend patterns [format {*gen_pd_row*gen_pd_col*u_pd/hit_latched_reg*/%s} $pin_name]
+        lappend patterns [format {*gen_pd_row*gen_pd_col*u_pd*hit_latched_reg*/%s} $pin_name]
+    } elseif {$role eq "endpoint"} {
+        lappend patterns [format {*gen_pd_row*gen_pd_col*u_pd/nfast_hit_latched_reg*/%s} $pin_name]
+        lappend patterns [format {*gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*/%s} $pin_name]
+    } else {
+        return [list]
+    }
+
+    set records [list]
+    array set seen {}
+    foreach pin [mptdc_repair_collect_pins $patterns] {
+        set name [mptdc_object_name $pin]
+        if {$name eq "" || [info exists seen($name)]} {
+            continue
+        }
+        set info [mptdc_repair_pd_hit_to_nfast_pin_info $role $name $pin_name]
+        if {$info eq ""} {
+            continue
+        }
+        if {$role eq "endpoint"} {
+            set bit [dict get $info bit]
+            if {![mptdc_repair_index_in_list $bit $bits]} {
+                continue
+            }
+        }
+        dict set info object $pin
+        dict set info name $name
+        set seen($name) 1
+        lappend records $info
+    }
+    return $records
+}
+
+proc mptdc_repair_write_pd_hit_to_nfast_local_csvs {report_dir source_c_records source_q_records endpoint_records pair_records} {
+    set fh [open "$report_dir/pd_hit_to_nfast_local_source_discovery.csv" w]
+    puts $fh "row,col,pin_name,object"
+    foreach rec $source_c_records {
+        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec pin],[mptdc_repair_csv_quote [dict get $rec name]]"
+    }
+    close $fh
+
+    set fh [open "$report_dir/pd_hit_to_nfast_local_source_q_discovery.csv" w]
+    puts $fh "row,col,pin_name,object"
+    foreach rec $source_q_records {
+        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec pin],[mptdc_repair_csv_quote [dict get $rec name]]"
+    }
+    close $fh
+
+    set fh [open "$report_dir/pd_hit_to_nfast_local_endpoint_discovery.csv" w]
+    puts $fh "row,col,bit,pin_name,object"
+    foreach rec $endpoint_records {
+        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec bit],[dict get $rec pin],[mptdc_repair_csv_quote [dict get $rec name]]"
+    }
+    close $fh
+
+    set fh [open "$report_dir/pd_hit_to_nfast_local_path_pairs.csv" w]
+    puts $fh "row,col,bit,source_clock_pin,source_q_pin,endpoint_pin,status"
+    foreach rec $pair_records {
+        puts $fh "[dict get $rec row],[dict get $rec col],[dict get $rec bit],[mptdc_repair_csv_quote [dict get $rec source_c]],[mptdc_repair_csv_quote [dict get $rec source_q]],[mptdc_repair_csv_quote [dict get $rec endpoint]],[dict get $rec status]"
+    }
+    close $fh
+}
+
+proc mptdc_apply_pd_hit_to_nfast_local_repair {stage fh} {
+    global design
+
+    set enable [mptdc_bool_env MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL false]
+    if {!$enable} {
+        return
+    }
+
+    set bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_BITS ""] "0 1 2 3 4 5 6"]
+    set max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 1.10]
+    set max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0.25]
+    set expected_sources [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES 64]
+    set expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS 448]
+    set rows {0 1 2 3 4 5 6 7}
+    set cols {0 1 2 3 4 5 6 7}
+
+    mptdc_message "PD_HIT_TO_NFAST_LOCAL: enabling scoped hit_latched to nfast_hit_latched repair"
+
+    set source_c_records [mptdc_repair_collect_pd_hit_to_nfast_pin_records source $bits C]
+    set source_q_records [mptdc_repair_collect_pd_hit_to_nfast_pin_records source $bits Q]
+    set endpoint_d_records [mptdc_repair_collect_pd_hit_to_nfast_pin_records endpoint $bits D]
+    set source_c_pins [list]
+    foreach rec $source_c_records { lappend source_c_pins [dict get $rec object] }
+    set source_q_pins [list]
+    foreach rec $source_q_records { lappend source_q_pins [dict get $rec object] }
+    set endpoint_d_pins [list]
+    foreach rec $endpoint_d_records { lappend endpoint_d_pins [dict get $rec object] }
+
+    array set source_c_by_key {}
+    foreach rec $source_c_records {
+        set key "[dict get $rec row],[dict get $rec col]"
+        set source_c_by_key($key) [dict get $rec name]
+    }
+    array set source_q_by_key {}
+    foreach rec $source_q_records {
+        set key "[dict get $rec row],[dict get $rec col]"
+        set source_q_by_key($key) [dict get $rec name]
+    }
+    array set endpoint_by_key {}
+    foreach rec $endpoint_d_records {
+        set key "[dict get $rec row],[dict get $rec col],[dict get $rec bit]"
+        set endpoint_by_key($key) [dict get $rec name]
+    }
+
+    set pair_records [list]
+    set pair_found 0
+    foreach row $rows {
+        foreach col $cols {
+            set source_key "$row,$col"
+            foreach bit $bits {
+                set endpoint_key "$row,$col,$bit"
+                set source_c ""
+                set source_q ""
+                set endpoint ""
+                if {[info exists source_c_by_key($source_key)]} { set source_c $source_c_by_key($source_key) }
+                if {[info exists source_q_by_key($source_key)]} { set source_q $source_q_by_key($source_key) }
+                if {[info exists endpoint_by_key($endpoint_key)]} { set endpoint $endpoint_by_key($endpoint_key) }
+                if {$source_c ne "" && $source_q ne "" && $endpoint ne ""} {
+                    incr pair_found
+                    set pair_status FOUND
+                } else {
+                    set pair_status MISSING
+                }
+                lappend pair_records [dict create \
+                    row $row \
+                    col $col \
+                    bit $bit \
+                    source_c $source_c \
+                    source_q $source_q \
+                    endpoint $endpoint \
+                    status $pair_status]
+            }
+        }
+    }
+
+    mptdc_repair_write_pd_hit_to_nfast_local_csvs \
+        $design(reports_dir) \
+        $source_c_records \
+        $source_q_records \
+        $endpoint_d_records \
+        $pair_records
+
+    set sources_found [llength $source_c_records]
+    set source_q_found [llength $source_q_records]
+    set endpoints_found [llength $endpoint_d_records]
+    set overmatch [expr {$sources_found > $expected_sources || $source_q_found > $expected_sources || $endpoints_found > $expected_endpoints ? {YES} : {NO}}]
+    set undermatch [expr {$sources_found < $expected_sources || $source_q_found < $expected_sources || $endpoints_found < $expected_endpoints || $pair_found < $expected_endpoints ? {YES} : {NO}}]
+    set counts_ok [expr {
+        $sources_found == $expected_sources &&
+        $source_q_found == $expected_sources &&
+        $endpoints_found == $expected_endpoints &&
+        $pair_found == $expected_endpoints &&
+        $overmatch eq "NO" &&
+        $undermatch eq "NO"
+    }]
+
+    set group_result "SKIPPED_COUNTS_MISMATCH"
+    set delay_result "SKIPPED_COUNTS_MISMATCH"
+    set delay_mode_status "SKIPPED"
+    set delay_mode_detail "SKIPPED"
+    set transition_result "SKIPPED_COUNTS_MISMATCH"
+    if {$counts_ok && [llength $source_c_pins] > 0 && [llength $endpoint_d_pins] > 0} {
+        if {[llength [info commands group_path]] > 0} {
+            set group_rc [catch {
+                group_path -name PD_HIT_TO_NFAST_LOCAL \
+                    -from $source_c_pins \
+                    -to $endpoint_d_pins \
+                    -weight 8 \
+                    -critical_range 0.080
+            } group_err]
+            if {$group_rc != 0} {
+                set group_rc [catch {
+                    group_path -name PD_HIT_TO_NFAST_LOCAL \
+                        -from $source_c_pins \
+                        -to $endpoint_d_pins
+                } group_err]
+            }
+            set group_result [expr {$group_rc == 0 ? {OK} : $group_err}]
+        } else {
+            set group_result "NOT_SUPPORTED_BY_THIS_GENUS_VERSION"
+        }
+
+        if {$max_delay ne ""} {
+            set delay_dict [mptdc_repair_apply_exact_full_path_max_delay \
+                $max_delay \
+                $source_c_pins \
+                $endpoint_d_pins]
+            set delay_result [dict get $delay_dict result]
+            set delay_mode_status [dict get $delay_dict mode_status]
+            set delay_mode_detail [dict get $delay_dict mode_detail]
+        } else {
+            set delay_result "SKIPPED_NO_MAX_DELAY_TARGET"
+        }
+
+        if {$max_transition ne "" && [llength $source_q_pins] > 0} {
+            set transition_pins [mptdc_unique_list [concat $source_q_pins $endpoint_d_pins]]
+            set transition_rc [catch {set_max_transition $max_transition $transition_pins} transition_err]
+            set transition_result [expr {$transition_rc == 0 ? {OK} : $transition_err}]
+        } else {
+            set transition_result "SKIPPED_NO_MAX_TRANSITION_TARGET"
+        }
+    }
+
+    set status "REVIEW_REQUIRED"
+    set reasons [list]
+    if {$overmatch ne "NO"} { lappend reasons OVERMATCH }
+    if {$undermatch ne "NO"} { lappend reasons UNDERMATCH }
+    if {!$counts_ok} { lappend reasons COUNT_MISMATCH }
+    if {$group_result ne "OK"} { lappend reasons GROUP_PATH_NOT_OK }
+    if {$delay_result ne "OK"} { lappend reasons SET_MAX_DELAY_NOT_OK }
+    if {$transition_result ne "OK" && ![string match SKIPPED_INTENTIONAL* $transition_result]} {
+        lappend reasons SET_MAX_TRANSITION_NOT_OK
+    }
+    if {[llength $reasons] == 0} {
+        set status "PASS"
+        set review_reason "NONE"
+    } else {
+        set review_reason [join [mptdc_unique_list $reasons] ","]
+    }
+
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_REPAIR_ENABLE=$enable"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED=$expected_sources"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_SOURCES_FOUND=$sources_found"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_SOURCE_Q_FOUND=$source_q_found"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED=$expected_endpoints"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_FOUND=$endpoints_found"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_PAIRS_FOUND=$pair_found"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_BITS=[join $bits {,}]"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_MAX_DELAY_NS=$max_delay"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_MAX_TRANSITION_NS=$max_transition"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_GROUP_PATH_RESULT=$group_result"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT=$delay_result"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_MAX_DELAY_CONSTRAINT_MODE=$delay_mode_status:$delay_mode_detail"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT=$transition_result"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_OVERMATCH=$overmatch"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_UNDERMATCH=$undermatch"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_STATUS=$status"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_REVIEW_REASON=$review_reason"
+
+    set status_fh [open "$design(reports_dir)/pd_hit_to_nfast_local_repair_status.rpt" a]
+    puts $status_fh "STAGE=$stage"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_REPAIR_ENABLE=$enable"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED=$expected_sources"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_SOURCES_FOUND=$sources_found"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_SOURCE_Q_FOUND=$source_q_found"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED=$expected_endpoints"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_FOUND=$endpoints_found"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_PAIRS_FOUND=$pair_found"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_BITS=[join $bits {,}]"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_MAX_DELAY_NS=$max_delay"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_MAX_TRANSITION_NS=$max_transition"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_GROUP_PATH_RESULT=$group_result"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT=$delay_result"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_MAX_DELAY_CONSTRAINT_MODE=$delay_mode_status:$delay_mode_detail"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT=$transition_result"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_OVERMATCH=$overmatch"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_UNDERMATCH=$undermatch"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_STATUS=$status"
+    puts $status_fh "PD_HIT_TO_NFAST_LOCAL_REVIEW_REASON=$review_reason"
+    puts $status_fh ""
+    close $status_fh
+}
+
 proc mptdc_repair_set_numeric_env {name default_value} {
     if {[info exists ::env($name)] && $::env($name) ne ""} {
         return $::env($name)
@@ -2403,6 +2706,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set repair6_localtag_preserve_close [mptdc_bool_env MPTDC_GENUS_REPAIR6_LOCALTAG_PRESERVE_CLOSE false]
     set repair7_polarity_source_upgrade [mptdc_bool_env MPTDC_GENUS_REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE false]
     set repair8_jihd_exact_close [mptdc_bool_env MPTDC_GENUS_REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE false]
+    set pd_hit_to_nfast_local_repair [mptdc_bool_env MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL false]
     if {$repair6_localtag_preserve_close || $repair7_polarity_source_upgrade || $repair8_jihd_exact_close} {
         set repair4_exact_source_drive true
         set repair5_exact_close true
@@ -2454,7 +2758,12 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
         set apply_fast_tag_q_constraints false
         set endpoint_transition_tight false
     }
-    if {!$fast_repair && !$drv_repair} {
+    set pd_hit_to_nfast_bits [mptdc_repair_parse_index_list [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_BITS ""] "0 1 2 3 4 5 6"]
+    set pd_hit_to_nfast_max_delay [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS 1.10]
+    set pd_hit_to_nfast_max_transition [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS 0.25]
+    set pd_hit_to_nfast_expected_sources [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES 64]
+    set pd_hit_to_nfast_expected_endpoints [mptdc_repair_set_numeric_env MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS 448]
+    if {!$fast_repair && !$drv_repair && !$pd_hit_to_nfast_local_repair} {
         return
     }
 
@@ -2470,6 +2779,12 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "REPAIR6_LOCALTAG_PRESERVE_CLOSE=$repair6_localtag_preserve_close"
     puts $fh "REPAIR7_POLARITY_AWARE_FAST_TAG_SOURCE_UPGRADE=$repair7_polarity_source_upgrade"
     puts $fh "REPAIR8_JIHD_EXACT_FAST_TAG_CLOSE=$repair8_jihd_exact_close"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_REPAIR=$pd_hit_to_nfast_local_repair"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_BITS=[join $pd_hit_to_nfast_bits {,}]"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_MAX_DELAY_NS=$pd_hit_to_nfast_max_delay"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_MAX_TRANSITION_NS=$pd_hit_to_nfast_max_transition"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED=$pd_hit_to_nfast_expected_sources"
+    puts $fh "PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED=$pd_hit_to_nfast_expected_endpoints"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
@@ -2833,6 +3148,10 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
                 close $status_fh
             }
         }
+    }
+
+    if {$pd_hit_to_nfast_local_repair} {
+        mptdc_apply_pd_hit_to_nfast_local_repair $stage $fh
     }
 
     if {$drv_repair} {
@@ -3844,7 +4163,7 @@ proc mptdc_write_qor_manifest {dir} {
     puts $fh ""
     puts $fh "Review checklist"
     puts $fh "----------------"
-    puts $fh "  [ ] timing_violations.rpt contains no real violations"
+    puts $fh "  [ ] timing_violations.rpt generated; review SUMMARY.md and timing_path_classification_summary.md for real setup status"
     puts $fh "  [ ] report_area_hier.rpt identifies dominant blocks"
     puts $fh "  [ ] report_power.rpt/report_power_hier.rpt are understood as vectorless or activity-backed"
     puts $fh "  [ ] latch_audit.rpt matches the intentional async-frontend latch count"
@@ -3875,7 +4194,7 @@ proc mptdc_print_summary {} {
     puts "================================================================"
     puts ""
     puts " Post-synthesis checklist:"
-    puts "   [ ] timing_violations.rpt has no real setup violations"
+    puts "   [ ] timing_violations.rpt generated; review SUMMARY.md and timing_path_classification_summary.md for real setup status"
     puts "   [ ] Latch audit: exactly $design(EXPECTED_LATCH_COUNT) latches"
     puts "   [ ] report_area_hier.rpt identifies the first area targets"
     puts "   [ ] run_manifest.rpt captures the exact PDK/MMMC/settings baseline"

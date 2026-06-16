@@ -13,6 +13,8 @@ RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_axis_core_genus_timing_close}"
 #   FAST_TAG_TO_PD_TS and LOCAL_FAST_TAG_SELF paths once preserved.
 # - uses the full 1.333 ns fast-period budget by default for the exact C-to-D
 #   fast-tag timestamp paths.
+# - enables the scoped local PD hit_latched -> nfast_hit_latched repair added
+#   for the near-clean residual timestamp capture cone.
 export MPTDC_GENUS_CLOSURE_PROFILE=timing_ultra
 export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE:-1}"
 if [[ "$MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE" == "1" ]]; then
@@ -28,5 +30,11 @@ else
   export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-1}"
 fi
 export MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS="${MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS:-1.333}"
+export MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL="${MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL:-1}"
+export MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS="${MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS:-1.10}"
+export MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS="${MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS:-0.25}"
+export MPTDC_PD_HIT_TO_NFAST_BITS="${MPTDC_PD_HIT_TO_NFAST_BITS:-0 1 2 3 4 5 6}"
+export MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES="${MPTDC_PD_HIT_TO_NFAST_EXPECTED_SOURCES:-64}"
+export MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS="${MPTDC_PD_HIT_TO_NFAST_EXPECTED_ENDPOINTS:-448}"
 
 exec "$SCRIPT_DIR/server_run_genus_o13_phase_distribution.sh" "$RUN_ID"
