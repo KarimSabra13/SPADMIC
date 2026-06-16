@@ -2764,6 +2764,72 @@ proc mptdc_repair_endpoint_scoped_fanin_cells {endpoint_pin local_prefix source_
     return [mptdc_repair_unique_cells_by_name $cells]
 }
 
+proc mptdc_repair_endpoint_scoped_fanin_cells_at_depth {endpoint_pin local_prefix source_cell depth} {
+    set cells [list]
+    foreach cmd [list \
+        [list all_fanin -to $endpoint_pin -flat -only_cells -levels $depth] \
+        [list all_fanin -to $endpoint_pin -flat -levels $depth -only_cells] \
+        [list all_fanin -to $endpoint_pin -only_cells -levels $depth] \
+        [list all_fanin -to $endpoint_pin -levels $depth -only_cells] \
+        [list get_fanin -to $endpoint_pin -flat -only_cells -levels $depth] \
+        [list get_fanin -to $endpoint_pin -flat -levels $depth -only_cells] \
+        [list get_fanin -to $endpoint_pin -only_cells -levels $depth] \
+        [list get_fanin -to $endpoint_pin -levels $depth -only_cells]] {
+        set value [list]
+        if {[catch {set value [eval $cmd]}]} {
+            continue
+        }
+        foreach cell [mptdc_collection_to_list $value] {
+            if {[mptdc_repair_cell_base_name $cell] ne $source_cell} {
+                continue
+            }
+            if {![mptdc_repair_cell_is_in_pd_local_prefix $cell $local_prefix]} {
+                continue
+            }
+            lappend cells $cell
+        }
+    }
+    return [mptdc_repair_unique_cells_by_name $cells]
+}
+
+proc mptdc_repair_choose_pd_local_on22_depth_candidate {endpoint_pin local_prefix source_cell endpoint_name bit max_depth} {
+    for {set depth 1} {$depth <= $max_depth} {incr depth} {
+        set candidates [mptdc_repair_endpoint_scoped_fanin_cells_at_depth \
+            $endpoint_pin $local_prefix $source_cell $depth]
+        set candidate_count [llength $candidates]
+        if {$candidate_count == 0} {
+            continue
+        }
+        if {$candidate_count == 1} {
+            set cell [lindex $candidates 0]
+            return [dict create \
+                cell $cell \
+                candidates $candidates \
+                depth $depth \
+                score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $bit] \
+                status MATCH \
+                method "SCOPED_UNIQUE_FANIN_DEPTH_${depth}" \
+                candidate_count 1]
+        }
+        return [dict create \
+            cell "" \
+            candidates $candidates \
+            depth $depth \
+            score 0 \
+            status AMBIGUOUS_SOURCE_DRIVER \
+            method "SCOPED_AMBIGUOUS_FANIN_DEPTH_${depth}" \
+            candidate_count $candidate_count]
+    }
+    return [dict create \
+        cell "" \
+        candidates [list] \
+        depth 0 \
+        score 0 \
+        status NO_SOURCE_DRIVER \
+        method NONE \
+        candidate_count 0]
+}
+
 proc mptdc_repair_pd_local_named_on22_candidates {local_prefix bit source_cell} {
     set cells [list]
     if {$local_prefix eq ""} {
@@ -3002,6 +3068,47 @@ proc mptdc_repair_collect_pd_local_on22_driver_records {endpoint_records source_
             }
         }
         if {[array size seen_endpoint_cells] == 0} {
+            set choice [mptdc_repair_choose_pd_local_on22_depth_candidate \
+                $endpoint_pin $local_prefix $source_cell $endpoint_name $endpoint_bit 6]
+            set chosen_cell [dict get $choice cell]
+            if {[dict get $choice status] eq "MATCH" && $chosen_cell ne ""} {
+                set inst_name [mptdc_object_name $chosen_cell]
+                if {$inst_name ne ""} {
+                    set seen_endpoint_cells($inst_name) 1
+                }
+                lappend records [dict create \
+                    row [dict get $rec row] \
+                    col [dict get $rec col] \
+                    bit [dict get $rec bit] \
+                    endpoint $endpoint_name \
+                    driver_pin [dict get $choice method] \
+                    driver_instance $inst_name \
+                    cell $chosen_cell \
+                    current_cell [mptdc_repair_cell_base_name $chosen_cell] \
+                    status MATCH \
+                    method [dict get $choice method] \
+                    candidate_count [dict get $choice candidate_count] \
+                    score [dict get $choice score]]
+            } elseif {[dict get $choice status] eq "AMBIGUOUS_SOURCE_DRIVER"} {
+                set nonmatch_reported true
+                foreach cell [dict get $choice candidates] {
+                    lappend records [dict create \
+                        row [dict get $rec row] \
+                        col [dict get $rec col] \
+                        bit [dict get $rec bit] \
+                        endpoint $endpoint_name \
+                        driver_pin [dict get $choice method] \
+                        driver_instance [mptdc_object_name $cell] \
+                        cell $cell \
+                        current_cell [mptdc_repair_cell_base_name $cell] \
+                        status AMBIGUOUS_SOURCE_DRIVER \
+                        method [dict get $choice method] \
+                        candidate_count [dict get $choice candidate_count] \
+                        score [mptdc_repair_pd_local_on22_candidate_score $cell $endpoint_name $endpoint_bit]]
+                }
+            }
+        }
+        if {[array size seen_endpoint_cells] == 0 && !$nonmatch_reported} {
             set candidates [concat \
                 [mptdc_repair_endpoint_scoped_fanin_cells $endpoint_pin $local_prefix $source_cell] \
                 [mptdc_repair_pd_local_named_on22_candidates $local_prefix $endpoint_bit $source_cell]]
