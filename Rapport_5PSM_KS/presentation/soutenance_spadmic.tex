@@ -86,7 +86,8 @@
   softarrow/.style={-{Latex[length=2mm]},line width=0.6pt,draw=muted},
   bus/.style={line width=1.0pt,draw=ink!70},
   time/.style={line width=0.6pt,draw=muted},
-  dot/.style={circle,fill=navy,inner sep=1.6pt}
+  dot/.style={circle,fill=navy,inner sep=1.6pt},
+  focusrect/.style={draw=red!82!black,fill=red!70,fill opacity=0.11,draw opacity=0.90,line width=1.25pt,rounded corners=2pt}
 }
 
 \newcommand{\lead}[1]{\relax}
@@ -122,6 +123,21 @@
     font=\scriptsize\bfseries,
     text=#1!80!black
   ](n){#2};%
+}
+
+\newcommand{\sourcenote}[1]{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[
+      anchor=south east,
+      draw=line,
+      fill=white,
+      rounded corners=1pt,
+      font=\tiny,
+      text=muted,
+      inner xsep=3pt,
+      inner ysep=1.5pt
+    ] at ($(current page.south east)+(-0.44cm,0.40cm)$) {Source : #1};
+  \end{tikzpicture}%
 }
 
 \newcommand{\chaptertransition}[3]{%
@@ -415,8 +431,8 @@
     \begin{column}{0.55\textwidth}
       \centering
       \begin{tikzpicture}[x=1cm,y=1cm]
-        \def\w{6.45}
-        \def\c{2.22}
+        \def\w{7.12}
+        \def\c{2.54}
         \def\rh{0.62}
         \fill[navy2] (0,3.10) rectangle (\w,3.72);
         \node[anchor=west,font=\scriptsize\bfseries,text=white] at (0.20,3.41) {Métrique};
@@ -431,19 +447,19 @@
         \draw[draw=line,line width=0.35pt] (\c,0) -- (\c,3.72);
 
         \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.20,2.79) {Résolution / LSB};
-        \node[anchor=west,text width=3.78cm,align=left,font=\scriptsize] at (\c+0.20,2.79) {largeur minimale d'un pas\\temporel};
+        \node[anchor=west,text width=4.18cm,align=left,font=\scriptsize] at (\c+0.20,2.79) {largeur minimale d'un pas\\temporel};
 
         \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.20,2.17) {Plage dynamique};
-        \node[anchor=west,text width=3.78cm,align=left,font=\scriptsize] at (\c+0.20,2.17) {intervalle mesurable avant\\saturation};
+        \node[anchor=west,text width=4.18cm,align=left,font=\scriptsize] at (\c+0.20,2.17) {intervalle mesurable avant\\saturation};
 
         \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.20,1.55) {DNL};
-        \node[anchor=west,text width=3.78cm,align=left,font=\scriptsize] at (\c+0.20,1.55) {écart local de largeur d'un palier};
+        \node[anchor=west,text width=4.18cm,align=left,font=\scriptsize] at (\c+0.20,1.55) {écart local de largeur d'un palier};
 
         \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.20,0.93) {INL};
-        \node[anchor=west,text width=3.78cm,align=left,font=\scriptsize] at (\c+0.20,0.93) {dérive cumulée face à la\\réponse idéale};
+        \node[anchor=west,text width=4.18cm,align=left,font=\scriptsize] at (\c+0.20,0.93) {dérive cumulée face à la\\réponse idéale};
 
         \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.20,0.31) {Précision RMS};
-        \node[anchor=west,text width=3.78cm,align=left,font=\scriptsize] at (\c+0.20,0.31) {dispersion de l'erreur reconstruite};
+        \node[anchor=west,text width=4.18cm,align=left,font=\scriptsize] at (\c+0.20,0.31) {dispersion de l'erreur reconstruite};
       \end{tikzpicture}%
     \end{column}
     \begin{column}{0.39\textwidth}
@@ -469,8 +485,7 @@
           -- (3.08,2) -- (3.08,3) -- (4.46,3) -- (4.46,4) -- (5.38,4);
 
         \draw[<->,draw=navy,line width=0.78pt] (1.0,4.34) -- node[above,font=\scriptsize,text=navy] {LSB idéal} (2.0,4.34);
-        \draw[<->,draw=amber,line width=0.85pt] (0.74,0.46) -- node[below,font=\scriptsize,text=amber] {DNL} (1.0,0.46);
-        \draw[<->,draw=ink!70,line width=0.72pt] (4.0,3.32) -- node[right,font=\scriptsize,align=left] {INL\\cumulée} (4.46,3.32);
+        \draw[<->,draw=amber,line width=0.95pt] (0.74,0.34) -- node[below=1pt,font=\small\bfseries,text=amber] {DNL} (1.0,0.34);
         \draw[<->,draw=navy2,line width=0.78pt] (0,-0.72) -- node[below,font=\scriptsize,align=center] {plage\\dynamique} (5.38,-0.72);
         \node[font=\scriptsize\bfseries,text=navy2,align=center] at (3.12,4.96) {Fonction de transfert\\non idéale};
       \end{tikzpicture}%
@@ -478,12 +493,8 @@
     \end{column}
   \end{columns}
 
-  \vspace{0.16cm}
-  \begin{center}
-    \small\color{muted}Une bonne résolution ne garantit pas, à elle seule, une précision temporelle faible
-  \end{center}
-
   \takeaway{Le support doit défendre un système de mesure, pas une formule isolée.}
+  \sourcenote{IEEE 1241-2010 ; Henzler 2010}
   \note{Objectif : donner au jury les critères de lecture des résultats. À dire : la résolution correspond au pas, la plage à l'intervalle utile, la DNL aux écarts locaux et l'INL à la dérive cumulée. Le RMS sera utilisé plus tard pour quantifier l'erreur après reconstruction et calibration. Transition : descendre vers les paramètres concrets du MPTDC.}
 \end{frame}
 
@@ -497,47 +508,44 @@
   \begin{tikzpicture}[x=1cm,y=1cm]
     \def\w{9.20}
     \def\c{4.72}
-    \def\rh{0.48}
-    \def\top{4.34}
+    \def\rh{0.43}
+    \def\top{4.42}
     \fill[navy2] (0,\top) rectangle (\w,\top+\rh);
     \node[anchor=west,font=\scriptsize\bfseries,text=white] at (0.24,\top+0.24) {Paramètre};
     \node[anchor=west,font=\scriptsize\bfseries,text=white] at (\c+0.24,\top+0.24) {Valeur / cible};
     \draw[white!50,line width=0.35pt] (\c,\top+0.08) -- (\c,\top+\rh-0.08);
 
-    \foreach \i/\bg in {0/navy2!6,1/soft,2/navy2!6,3/soft,4/navy2!6,5/soft,6/navy2!6,7/soft} {
+    \foreach \i/\bg in {0/navy2!6,1/soft,2/navy2!6,3/soft,4/navy2!6,5/soft,6/navy2!6,7/soft,8/navy2!6} {
       \pgfmathsetmacro{\y}{\top-(\i+1)*\rh}
       \fill[\bg] (0,\y) rectangle (\w,\y+\rh);
       \draw[white,line width=0.35pt] (0,\y) -- (\w,\y);
     }
-    \draw[draw=line,line width=0.45pt] (0,\top-8*\rh) rectangle (\w,\top+\rh);
-    \draw[draw=line,line width=0.35pt] (\c,\top-8*\rh) -- (\c,\top+\rh);
+    \draw[draw=line,line width=0.45pt] (0,\top-9*\rh) rectangle (\w,\top+\rh);
+    \draw[draw=line,line width=0.35pt] (\c,\top-9*\rh) -- (\c,\top+\rh);
 
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,4.10) {Résolution temporelle LSB};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,4.10) {10 ps};
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,3.62) {DNL};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,3.62) {$< 1$ LSB};
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,3.14) {INL};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,3.14) {$< 1$ LSB};
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,2.66) {Horloge système};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,2.66) {160 MHz};
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,2.18) {Surface totale estimée de l'ASIC};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,2.18) {$\sim 10$ mm$^2$};
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,1.70) {Surface estimée du MPTDC};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,1.70) {$\sim 1$ mm$^2$};
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,1.22) {Sortie numérique};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,1.22) {16 bits DDR};
-    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,0.74) {Méthode de calibration};
-    \node[anchor=west,font=\scriptsize] at (\c+0.24,0.74) {calibration externe pour cette version};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,4.205) {Résolution temporelle LSB};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,4.205) {10 ps};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,3.775) {DNL};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,3.775) {$< 1$ LSB};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,3.345) {INL};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,3.345) {$< 1$ LSB};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,2.915) {Horloge système};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,2.915) {160 MHz};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,2.485) {Temps mort};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,2.485) {25 ns idéalement};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,2.055) {Surface totale estimée de l'ASIC};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,2.055) {$\sim 10$ mm$^2$};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,1.625) {Surface estimée du MPTDC};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,1.625) {$\sim 1$ mm$^2$};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,1.195) {Sortie numérique};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,1.195) {16 bits DDR};
+    \node[anchor=west,font=\scriptsize\bfseries,text=navy2] at (0.24,0.765) {Méthode de calibration};
+    \node[anchor=west,font=\scriptsize] at (\c+0.24,0.765) {calibration externe pour cette version};
   \end{tikzpicture}
   \end{center}
 
-  \vspace{0.08cm}
-  \begin{center}
-    \small\color{muted}Objectif : concilier finesse temporelle, intégration ASIC et calibration externe
-  \end{center}
-
   \takeaway{Le MPTDC doit respecter simultanément des cibles temporelles, numériques et physiques.}
-  \note{Objectif : poser le cahier des charges avant d'expliquer la limite de l'horloge système. À dire : le bloc ne peut pas être jugé uniquement sur un pas temporel ; il doit aussi tenir la surface, la sortie DDR 16 bits et la stratégie de calibration externe. Transition : montrer pourquoi l'horloge système seule ne peut pas porter cette finesse.}
+  \note{Objectif : poser le cahier des charges avant d'expliquer la limite de l'horloge système. À dire : le bloc ne peut pas être jugé uniquement sur un pas temporel ; il doit aussi tenir le temps mort cible, la surface, la sortie DDR 16 bits et la stratégie de calibration externe. Le temps mort visé était 25 ns ; la version actuelle est plutôt autour de 30 ns, soit environ 5 cycles FSM. Transition : montrer pourquoi l'horloge système seule ne peut pas porter cette finesse.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
@@ -575,24 +583,17 @@
   \begin{columns}[T,totalwidth=0.92\textwidth]
     \begin{column}{0.46\textwidth}
       \begin{itemize}
-        \item Les événements SPAD sont asynchrones
-        \item Ils n'arrivent pas alignés sur l'horloge système
+        \item Les événements SPAD sont asynchrones et non alignés sur l'horloge système
+        \item À 160 MHz, la période vaut environ 6,25 ns
       \end{itemize}
     \end{column}
     \begin{column}{0.46\textwidth}
       \begin{itemize}
-        \item À 160 MHz, la période vaut environ 6,25 ns
         \item Attendre le prochain front détruit l'information temporelle fine
         \item Il faut une mesure locale plus fine
       \end{itemize}
     \end{column}
   \end{columns}
-
-  \vspace{-0.02cm}
-  \begin{center}
-    \smalltag{navy}{Ce besoin motive le principe Vernier}
-  \end{center}
-
   \takeaway{D'où l'intérêt d'une architecture Vernier déclenchée localement par les événements.}
   \note{Objectif : justifier l'asynchrone avant d'entrer dans le Vernier. À dire : l'horloge système reste utile pour piloter et lire, mais elle imposerait une granularité d'environ 6,25 ns si elle servait directement à dater les événements. Transition : introduire le Vernier comme moyen de créer une finesse temporelle locale.}
 \end{frame}
@@ -608,7 +609,7 @@
 
   \vspace{0.02cm}
   \begin{center}
-      \resizebox{0.95\textwidth}{!}{%
+      \resizebox{0.93\textwidth}{!}{%
       \begin{tikzpicture}[
         x=1.0cm,y=0.64cm,
         sig/.style={font=\scriptsize\bfseries,anchor=east,text=navy2},
@@ -651,20 +652,18 @@
           \node[font=\tiny,text=amber] at (\x+0.10,3.83) {\lab};
         }
 
-        \draw[<->,draw=navy,line width=0.70pt] (1.72,3.92) -- node[above,font=\tiny,text=navy] {$T_{\mathrm{slow}}$} (3.34,3.92);
+        \draw[<->,draw=navy,line width=0.70pt] (1.72,3.92) -- node[above=1.5pt,font=\tiny,text=navy] {$T_{\mathrm{slow}}$} (3.34,3.92);
         \draw[<->,draw=amber,line width=0.70pt] (2.44,2.93) -- node[below,font=\tiny,text=amber] {$T_{\mathrm{fast}}$} (3.84,2.93);
         \draw[<->,draw=muted,line width=0.55pt] (3.34,4.66) -- (3.84,4.66);
-        \node[font=\tiny,text=muted,anchor=west] at (4.02,5.02) {écart qui diminue};
+        \node[font=\tiny,text=muted,anchor=west] at (4.12,5.05) {écart qui diminue};
 
         \node[cnt,minimum width=1.22cm] at (2.50,2.08) {$N_s=0$};
         \node[cnt,minimum width=1.22cm] at (4.14,2.08) {$N_s=1$};
         \node[cnt,minimum width=1.22cm] at (5.76,2.08) {$N_s=2$};
-        \node[cnt,minimum width=0.86cm,draw=navy!55,fill=navy!5] at (7.25,2.08) {gelé};
 
         \node[cnt,minimum width=1.22cm] at (3.14,1.25) {$N_f=0$};
         \node[cnt,minimum width=1.22cm] at (4.54,1.25) {$N_f=1$};
         \node[cnt,minimum width=1.22cm] at (5.92,1.25) {$N_f=2$};
-        \node[cnt,minimum width=0.86cm,draw=amber!65,fill=amberSoft] at (7.25,1.25) {gelé};
 
         \draw[fast] (6.60,0.44) -- (6.60,0.78) -- (6.82,0.78) -- (6.82,0.44);
         \node[font=\tiny\bfseries,text=amber,anchor=west] at (6.94,0.67) {fin de mesure};
@@ -673,6 +672,7 @@
   \end{center}
 
   \takeaway{Le Vernier transforme une petite différence physique en information temporelle fine.}
+  \sourcenote{Annagrebah 2021 ; Dudek 2000}
   \note{Objectif : expliquer le mécanisme au tableau avec un vrai chronogramme monophase. À dire : START lance l'oscillateur lent, STOP lance l'oscillateur rapide, le rapide a une période plus courte et réduit l'écart jusqu'à la coïncidence. Les compteurs donnent la partie grossière, la coïncidence déclenche le reset ou la fin de mesure. Transition : expliquer pourquoi l'observation multiphase enrichit ce principe.}
 \end{frame}
 
@@ -688,75 +688,74 @@
       \begin{tikzpicture}[
         x=1cm,y=1cm,
         input/.style={font=\scriptsize\bfseries,text=navy2,anchor=east},
-        front/.style={basebox,minimum width=1.25cm,minimum height=1.10cm,font=\scriptsize\bfseries,align=center},
-        matrix/.style={basebox,minimum width=1.78cm,minimum height=2.18cm,font=\scriptsize\bfseries,align=center},
-        cnt/.style={basebox,minimum width=1.42cm,minimum height=0.54cm,font=\scriptsize\bfseries,align=center},
-        obs/.style={accentbox,minimum width=1.58cm,minimum height=1.02cm,font=\scriptsize\bfseries,align=center},
-        tx/.style={basebox,draw=navy!60,fill=navy!5,minimum width=1.38cm,minimum height=0.78cm,font=\scriptsize\bfseries,align=center},
+        front/.style={basebox,minimum width=1.28cm,minimum height=0.96cm,font=\scriptsize\bfseries,align=center},
+        matrix/.style={basebox,minimum width=2.54cm,minimum height=1.62cm,font=\scriptsize\bfseries,align=center},
+        cnt/.style={basebox,minimum width=1.46cm,minimum height=0.52cm,font=\scriptsize\bfseries,align=center},
+        obs/.style={accentbox,minimum width=1.70cm,minimum height=0.98cm,font=\scriptsize\bfseries,align=center},
+        tx/.style={basebox,draw=navy!60,fill=navy!5,minimum width=1.34cm,minimum height=0.74cm,font=\scriptsize\bfseries,align=center},
         tap/.style={font=\tiny\bfseries,align=center},
-        invslow/.style={draw=amber!82!black,fill=white,line width=0.75pt},
-        invfast/.style={draw=navy!82!black,fill=white,line width=0.75pt}
+        invslow/.style={draw=amber!82!black,fill=white,line width=0.78pt},
+        invfast/.style={draw=navy!82!black,fill=white,line width=0.78pt},
+        tappath/.style={line width=0.62pt,line cap=round},
+        thickbus/.style={line width=0.88pt,line cap=round}
       ]
-        \node[input] (start) at (-0.08,3.24) {START};
-        \node[input] (stop) at (-0.08,2.36) {STOP};
-        \node[front] (pre) at (0.80,2.80) {Prélogique\\front-end};
+        \node[input] (start) at (-0.04,3.04) {START};
+        \node[input] (stop) at (-0.04,2.34) {STOP};
+        \node[front] (pre) at (0.86,2.69) {Prélogique\\front-end};
 
-        \draw[arrow,draw=ink!65] (start.east) -- ([yshift=0.22cm]pre.west);
-        \draw[arrow,draw=ink!65] (stop.east) -- ([yshift=-0.22cm]pre.west);
+        \draw[arrow,draw=ink!65] (start.east) -- ([yshift=0.18cm]pre.west);
+        \draw[arrow,draw=ink!65] (stop.east) -- ([yshift=-0.18cm]pre.west);
 
-        \node[font=\scriptsize\bfseries,text=amber!82!black] at (3.34,5.02) {Oscillateur lent};
-        \node[font=\scriptsize\bfseries,text=navy!82!black] at (3.34,0.98) {Oscillateur rapide};
+        \node[font=\scriptsize\bfseries,text=amber!82!black] at (3.62,5.02) {Oscillateur lent};
+        \node[font=\scriptsize\bfseries,text=navy!82!black] at (3.62,0.56) {Oscillateur rapide};
 
-        \draw[arrow,draw=amber!78!black] ([yshift=0.22cm]pre.east) -- (1.64,4.20);
-        \draw[arrow,draw=navy!78!black] ([yshift=-0.22cm]pre.east) -- (1.64,1.80);
+        \draw[arrow,draw=amber!78!black] ([yshift=0.20cm]pre.east) -- ++(0.34,0) |- (2.08,4.46);
+        \draw[arrow,draw=navy!78!black] ([yshift=-0.20cm]pre.east) -- ++(0.34,0) |- (2.08,1.14);
 
         \foreach \i/\lab in {0/S1,1/S2,2/S3,3/S4,4/S5} {
-          \pgfmathsetmacro{\x}{1.72+0.72*\i}
-          \draw[invslow] (\x,4.00) -- (\x,4.40) -- (\x+0.39,4.20) -- cycle;
-          \draw[invslow] (\x+0.44,4.20) circle (0.045);
-          \draw[amber!78!black,line width=0.70pt] (\x+0.49,4.20) -- (\x+0.70,4.20);
-          \draw[amber!70!black,line width=0.55pt] (\x+0.49,4.20) -- (\x+0.49,4.58);
-          \node[tap,text=amber!82!black] at (\x+0.49,4.72) {\lab};
+          \pgfmathsetmacro{\x}{2.06+0.56*\i}
+          \draw[invslow] (\x,4.28) -- (\x,4.64) -- (\x+0.34,4.46) -- cycle;
+          \draw[invslow] (\x+0.39,4.46) circle (0.043);
+          \draw[amber!78!black,thickbus] (\x+0.43,4.46) -- (\x+0.56,4.46);
+          \draw[amber!70!black,tappath] (\x+0.43,4.23) -- (\x+0.43,3.56);
+          \node[tap,text=amber!82!black] at (\x+0.43,4.11) {\lab};
         }
         \foreach \i/\lab in {0/F1,1/F2,2/F3,3/F4,4/F5} {
-          \pgfmathsetmacro{\x}{1.72+0.72*\i}
-          \draw[invfast] (\x,1.60) -- (\x,2.00) -- (\x+0.39,1.80) -- cycle;
-          \draw[invfast] (\x+0.44,1.80) circle (0.045);
-          \draw[navy!78!black,line width=0.70pt] (\x+0.49,1.80) -- (\x+0.70,1.80);
-          \draw[navy!70!black,line width=0.55pt] (\x+0.49,1.80) -- (\x+0.49,1.42);
-          \node[tap,text=navy!82!black] at (\x+0.49,1.27) {\lab};
+          \pgfmathsetmacro{\x}{2.06+0.56*\i}
+          \draw[invfast] (\x,0.94) -- (\x,1.30) -- (\x+0.34,1.12) -- cycle;
+          \draw[invfast] (\x+0.39,1.12) circle (0.043);
+          \draw[navy!78!black,thickbus] (\x+0.43,1.12) -- (\x+0.56,1.12);
+          \draw[navy!70!black,tappath] (\x+0.43,1.35) -- (\x+0.43,2.04);
+          \node[tap,text=navy!82!black] at (\x+0.43,0.78) {\lab};
         }
 
-        \draw[amber!72!black,line width=0.90pt] (2.21,4.58) -- (5.20,4.58) -- (5.20,3.88) -- (5.92,3.88);
-        \draw[navy!72!black,line width=0.90pt] (2.21,1.42) -- (5.20,1.42) -- (5.20,2.44) -- (5.92,2.44);
-
-        \node[matrix] (pd) at (6.78,3.16) {};
-        \node[font=\scriptsize\bfseries,text=navy2,align=center] at (6.78,3.73) {Matrice de phase\\$8\times8$};
-        \begin{scope}[shift={(6.20,2.38)},x=0.155cm,y=0.155cm]
-          \foreach \m in {0,...,7} {
-            \foreach \n in {0,...,7} {
-              \fill[white] (\m,\n) rectangle ++(0.78,0.78);
-              \draw[line width=0.14pt,draw=line] (\m,\n) rectangle ++(0.78,0.78);
+        \node[matrix] (pd) at (3.61,2.80) {};
+        \node[font=\scriptsize\bfseries,text=navy2,align=center] at (3.61,3.32) {Matrice de phase\\$5\times5$};
+        \begin{scope}[shift={(2.56,2.16)},x=0.42cm,y=0.20cm]
+          \foreach \m in {0,...,4} {
+            \foreach \n in {0,...,4} {
+              \fill[white] (\m,\n) rectangle ++(0.86,0.86);
+              \draw[line width=0.18pt,draw=line] (\m,\n) rectangle ++(0.86,0.86);
             }
           }
-          \fill[amber!42] (1,5) rectangle ++(0.78,0.78);
-          \fill[navy!30] (3,3) rectangle ++(0.78,0.78);
-          \fill[amber!42] (6,1) rectangle ++(0.78,0.78);
+          \fill[amber!42] (0,3) rectangle ++(0.86,0.86);
+          \fill[navy!30] (2,2) rectangle ++(0.86,0.86);
+          \fill[amber!42] (4,0) rectangle ++(0.86,0.86);
         \end{scope}
 
-        \node[cnt,draw=amber!70,fill=amberSoft] (cs) at (8.38,4.22) {Compteur lent};
-        \node[cnt,draw=navy!62,fill=navy!5] (cf) at (8.38,1.86) {Compteur rapide};
-        \node[obs,minimum width=1.82cm,minimum height=1.08cm] (obs) at (9.84,3.10) {Observables\\[-1pt]\scriptsize $N_s,N_f$\\[-1pt]\scriptsize $n_s,n_f,PD_{ij}$};
-        \node[tx] (read) at (11.34,3.10) {export\\lecture};
+        \node[cnt,draw=amber!70,fill=amberSoft] (cs) at (6.12,4.42) {Compteur lent};
+        \node[cnt,draw=navy!62,fill=navy!5] (cf) at (6.12,1.12) {Compteur rapide};
+        \node[obs] (obs) at (8.06,2.80) {Observables\\[-1pt]\scriptsize $N_s,N_f$\\[-1pt]\scriptsize $n_s,n_f,PD_{ij}$};
+        \node[tx] (read) at (9.66,2.80) {export\\lecture};
 
-        \draw[softarrow,draw=amber!75!black] (4.97,4.20) -- (cs.west);
-        \draw[softarrow,draw=navy!75!black] (4.97,1.80) -- (cf.west);
+        \draw[softarrow,draw=amber!75!black] (4.86,4.46) -- (cs.west);
+        \draw[softarrow,draw=navy!75!black] (4.86,1.12) -- (cf.west);
         \draw[arrow,draw=ink!70] (pd.east) -- (obs.west);
-        \draw[softarrow] (cs.east) -- ++(0.34,0) |- ([yshift=0.24cm]obs.west);
-        \draw[softarrow] (cf.east) -- ++(0.34,0) |- ([yshift=-0.24cm]obs.west);
+        \draw[softarrow,draw=amber!75!black,line width=0.72pt] (cs.east) -- ++(0.12,0) |- ([yshift=0.30cm]obs.west);
+        \draw[softarrow,draw=navy!75!black,line width=0.72pt] (cf.east) -- ++(0.12,0) |- ([yshift=-0.30cm]obs.west);
         \draw[arrow] (obs.east) -- node[above,font=\tiny\bfseries,text=navy] {$\leq15$} (read.west);
 
-        \node[basebox,draw=line,fill=soft,minimum width=3.12cm,minimum height=0.42cm,font=\scriptsize] at (3.50,0.42)
+        \node[basebox,draw=line,fill=soft,minimum width=3.18cm,minimum height=0.42cm,font=\scriptsize] at (3.56,0.16)
           {$T_{\mathrm{LSB}} = T_{\mathrm{slow}} - T_{\mathrm{fast}}$};
       \end{tikzpicture}%
       }
@@ -773,29 +772,30 @@
     \end{column}
   \end{columns}
 
-  \takeaway{Le multiphase relie phases, compteurs et matrice 8x8 pour exporter plusieurs observables calibrables.}
-  \note{Objectif : montrer l'architecture multiphase dans le contexte SPADMIC. À dire : START et STOP alimentent une prélogique, deux oscillateurs génèrent des phases lentes et rapides, la matrice 8x8 détecte les couples de phase et les compteurs complètent les observables exportés. Transition : lire ce principe dans un chronogramme.}
+  \takeaway{Le multiphase relie deux familles de phases, une matrice de détection et des observables exportables.}
+  \sourcenote{Annagrebah 2021 ; vue 5x5 adaptée}
+  \note{Objectif : montrer l'architecture multiphase dans le contexte SPADMIC avec une vue pédagogique 5x5. À dire : START et STOP alimentent une prélogique, deux oscillateurs génèrent des phases lentes et rapides, la matrice centrale observe directement les taps et les compteurs complètent les observables exportés. Transition : lire ce principe dans un chronogramme.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
   \frametitle{IV. Chronogramme du Vernier multiphase}
 
-  \vspace{-0.03cm}
+  \vspace{-0.07cm}
   \begin{center}
-    \resizebox{0.985\textwidth}{0.70\textheight}{%
+    \resizebox{0.94\textwidth}{!}{%
     \begin{tikzpicture}[
-      x=1cm,y=1cm,
+      x=1cm,y=0.72cm,
       lab/.style={font=\scriptsize\bfseries,anchor=east,text=navy2},
       grouplab/.style={font=\scriptsize\bfseries,anchor=east,text=muted},
-      wave/.style={line width=0.82pt,line cap=round,line join=round},
-      base/.style={line width=0.28pt,draw=line},
+      wave/.style={line width=0.90pt,line cap=round,line join=round},
+      base/.style={line width=0.34pt,draw=line},
       slow/.style={wave,draw=amber!86!black},
       fast/.style={wave,draw=navy!86!black},
       startstop/.style={wave,draw=ink},
-      guide/.style={densely dashed,line width=0.48pt,draw=muted!72},
+      guide/.style={densely dashed,line width=0.54pt,draw=muted!72},
       cntbox/.style={draw=line,fill=white,rounded corners=0.6pt,line width=0.35pt,font=\tiny\bfseries,text=navy2,align=center,inner sep=1.2pt},
-      pulsepd/.style={line width=0.90pt,draw=ink!80,line cap=round,line join=round}
+      pulsepd/.style={line width=1.00pt,draw=ink!80,line cap=round,line join=round}
     ]
       \fill[amber!5] (1.74,3.54) rectangle (13.10,5.62);
       \fill[navy!4] (1.74,0.92) rectangle (13.10,3.00);
@@ -828,13 +828,13 @@
         }
       }
 
-      \foreach \k/\y in {1/2.74,2/2.38,3/2.02,4/1.66,5/1.30} {
-        \node[lab,text=navy!86!black] at (1.67,\y) {$F_{\k}$};
-        \foreach \b in {3.12,5.56,8.00,10.44,12.88} {
-          \pgfmathsetmacro{\xf}{\b+0.11*(\k-1)}
-          \draw[fast] (\xf,\y) -- (\xf,\y+0.22) -- (\xf+0.46,\y+0.22) -- (\xf+0.46,\y);
+        \foreach \k/\y in {1/2.74,2/2.38,3/2.02,4/1.66,5/1.30} {
+          \node[lab,text=navy!86!black] at (1.67,\y) {$F_{\k}$};
+          \foreach \b in {3.12,5.29,7.46,9.63,11.80} {
+            \pgfmathsetmacro{\xf}{\b+0.11*(\k-1)}
+            \draw[fast] (\xf,\y) -- (\xf,\y+0.22) -- (\xf+0.46,\y+0.22) -- (\xf+0.46,\y);
+          }
         }
-      }
 
       \draw[<->,draw=amber!80!black,line width=0.45pt] (2.10,5.72) -- node[above,font=\tiny,text=amber!85!black] {$\tau_s$} (2.25,5.72);
       \draw[<->,draw=navy!80!black,line width=0.45pt] (3.12,3.10) -- node[above,font=\tiny,text=navy!85!black] {$\tau_f$} (3.23,3.10);
@@ -843,29 +843,30 @@
         \draw[cntbox,fill=amber!7] (\xa,3.23) rectangle (\xb,3.49);
         \node[font=\tiny\bfseries,text=amber!85!black] at ({(\xa+\xb)/2},3.36) {\txt};
       }
-      \foreach \xa/\xb/\txt in {3.12/5.56/0,5.56/8.00/1,8.00/10.44/2,10.44/12.88/3} {
+      \foreach \xa/\xb/\txt in {3.12/5.29/0,5.29/7.46/1,7.46/9.63/2,9.63/11.80/3,11.80/13.10/4} {
         \draw[cntbox,fill=navy!6] (\xa,0.61) rectangle (\xb,0.87);
         \node[font=\tiny\bfseries,text=navy!85!black] at ({(\xa+\xb)/2},0.74) {\txt};
       }
 
-      \foreach \x in {9.54,9.86,10.18} {
+      \foreach \x in {9.96,10.16,10.30} {
         \draw[guide] (\x,-1.20) -- (\x,6.96);
       }
 
-      \foreach \xa/\xb/\txt in {8.92/9.54/2,9.54/9.86/3,9.86/10.18/4,10.18/10.82/5} {
+      \foreach \xa/\xb/\txt in {8.92/9.63/2,9.63/9.96/3,9.96/10.16/4,10.16/10.30/5,10.30/10.82/6} {
         \draw[cntbox,fill=white] (\xa,0.05) rectangle (\xb,0.31);
         \node[font=\tiny\bfseries,text=navy2] at ({(\xa+\xb)/2},0.18) {\txt};
       }
 
-      \draw[pulsepd] (1.74,-0.30) -- (9.54,-0.30) -- (9.54,-0.08) -- (9.76,-0.08) -- (9.76,-0.30) -- (13.10,-0.30);
-      \draw[pulsepd] (1.74,-0.66) -- (9.86,-0.66) -- (9.86,-0.44) -- (10.08,-0.44) -- (10.08,-0.66) -- (13.10,-0.66);
-      \draw[pulsepd] (1.74,-1.02) -- (10.18,-1.02) -- (10.18,-0.80) -- (10.40,-0.80) -- (10.40,-1.02) -- (13.10,-1.02);
+      \draw[pulsepd] (1.74,-0.30) -- (9.96,-0.30) -- (9.96,-0.08) -- (10.16,-0.08) -- (10.16,-0.30) -- (13.10,-0.30);
+      \draw[pulsepd] (1.74,-0.66) -- (10.16,-0.66) -- (10.16,-0.44) -- (10.36,-0.44) -- (10.36,-0.66) -- (13.10,-0.66);
+      \draw[pulsepd] (1.74,-1.02) -- (10.30,-1.02) -- (10.30,-0.80) -- (10.50,-0.80) -- (10.50,-1.02) -- (13.10,-1.02);
 
     \end{tikzpicture}%
     }
   \end{center}
 
   \takeaway{Les phases et les compteurs produisent plusieurs observables temporels pour une même conversion.}
+  \sourcenote{Annagrebah 2021 ; chronogramme simplifié}
   \note{Objectif : montrer le comportement temporel multiphase sans répéter la motivation. À dire : les phases lentes et rapides évoluent en parallèle, les compteurs encadrent la mesure et quelques sorties PDij matérialisent des coïncidences exploitables. Transition : transformer cette observation en bloc MPTDC lisible et intégré dans SPADMIC.}
 \end{frame}
 
@@ -884,151 +885,223 @@
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \frametitle{IV. START/STOP avant l'horloge système}
-  \lead{Pas d'horloge système sur le chemin de lancement START/STOP.}
+  \frametitle{IV. Entrées : domaine asynchrone}
+  \lead{Le choix d'entrée et la capture restent avant toute reprise par l'horloge système.}
+
+  \begin{center}
+    \includegraphics[width=0.99\textwidth,height=0.73\textheight,keepaspectratio]{mptdc_block_diagram.pdf}
+  \end{center}
+  \begin{tikzpicture}[remember picture,overlay]
+    \draw[focusrect] ($(current page.south west)+(1.05cm,4.08cm)$) rectangle ($(current page.south west)+(6.05cm,5.45cm)$);
+  \end{tikzpicture}
+  \vspace{-0.13cm}
+  \begin{center}
+    \smalltag{amber}{SPAD / calibration}\hspace{0.25cm}
+    \smalltag{amber}{capture asynchrone}\hspace{0.25cm}
+    \smalltag{navy}{aucun clk\_sys avant lancement}
+  \end{center}
+
+  \takeaway{L'entrée choisit la source, puis préserve le front avant le domaine système.}
+  \note{Objectif : préparer l'explication de la logique d'entrée. À dire : la sélection SPAD/calibration et les verrous de capture sont dans le domaine asynchrone ; clk_sys n'intervient pas avant le lancement de mesure. Transition : détailler START/STOP avant l'horloge système.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{IV. START/STOP et stop qualifier}
+  \lead{Le SPAD lance START ; la référence 40 MHz fournit un STOP qualifié seulement pour une mesure acceptée.}
 
   \vspace{0.04cm}
   \begin{columns}[T,totalwidth=0.98\textwidth]
-    \begin{column}{0.48\textwidth}
+    \begin{column}{0.54\textwidth}
       \centering
       \resizebox{\linewidth}{!}{%
       \begin{tikzpicture}[
-        node distance=0.34cm,
-        blk/.style={basebox,minimum width=1.56cm,minimum height=0.56cm,font=\scriptsize},
+        node distance=0.33cm,
+        blk/.style={basebox,minimum width=1.58cm,minimum height=0.56cm,font=\scriptsize},
+        cond/.style={warnbox,minimum width=2.15cm,minimum height=0.56cm,font=\scriptsize},
         event/.style={font=\scriptsize\bfseries,text=navy2}
       ]
-        \node[event] (st) {START};
-        \node[blk,right=of st] (lst) {latch\\START};
-        \node[blk,right=of lst,draw=navy!55,fill=navy!4] (sl) {anneau\\lent};
-        \draw[arrow] (st) -- (lst);
+        \node[event] (spad) {SPAD};
+        \node[blk,right=0.34cm of spad] (start) {START\\async};
+        \node[cond,right=0.34cm of start] (ok) {armé\\+ contexte libre};
+        \node[blk,right=0.34cm of ok] (lst) {latch\\START};
+        \node[blk,right=0.34cm of lst,draw=navy!55,fill=navy!4] (sl) {anneau\\lent};
+
+        \draw[arrow] (spad) -- (start);
+        \draw[arrow] (start) -- (ok);
+        \draw[arrow] (ok) -- (lst);
         \draw[arrow] (lst) -- (sl);
 
-        \node[event,below=0.70cm of st] (sp) {STOP};
-        \node[blk,right=of sp] (lsp) {latch\\STOP};
-        \node[blk,right=of lsp,draw=amber!65,fill=amberSoft] (fa) {anneau\\rapide};
-        \draw[arrow] (sp) -- (lsp);
-        \draw[arrow] (lsp) -- (fa);
+        \node[blk,below=0.74cm of start,draw=amber!65,fill=amberSoft] (ref) {clk\_ref\\40 MHz};
+        \node[blk,right=0.34cm of ref,draw=amber!65,fill=amberSoft] (qual) {stop\\qualifier};
+        \node[cond,right=0.34cm of qual] (valid) {valide si\\START latché};
+        \node[blk,right=0.34cm of valid] (lsp) {latch\\STOP};
+        \node[blk,right=0.34cm of lsp,draw=amber!65,fill=amberSoft] (fa) {anneau\\rapide};
 
-        \node[warnbox,below=0.70cm of lsp,minimum width=4.48cm,align=center,font=\scriptsize] (msg)
-          {Aucune reprise par l'horloge système\\avant le lancement de mesure};
-        \draw[softarrow] (msg.north) -- (lsp.south);
+        \draw[softarrow] (start.south) |- (qual.west);
+        \draw[arrow,draw=amber] (ref) -- (qual);
+        \draw[arrow,draw=amber] (qual) -- (valid);
+        \draw[arrow,draw=amber] (valid) -- (lsp);
+        \draw[arrow,draw=amber] (lsp) -- (fa);
+
+        \node[warnbox,below=0.72cm of valid,minimum width=5.30cm,align=center,font=\scriptsize] (msg)
+          {Les latches gardent les fronts asynchrones ;\\clk\_sys intervient après fermeture de mesure};
+        \draw[softarrow] (msg.north) -- (valid.south);
       \end{tikzpicture}%
       }
     \end{column}
-    \begin{column}{0.47\textwidth}
+    \begin{column}{0.40\textwidth}
       \centering
       \resizebox{\linewidth}{!}{%
       \begin{tikzpicture}[
-        x=0.88cm,y=0.55cm,
+        x=0.86cm,y=0.52cm,
         lab/.style={font=\scriptsize\bfseries,anchor=east,text=navy2},
         wave/.style={line width=0.9pt,draw=ink},
         guide/.style={densely dashed,line width=0.55pt,draw=muted}
       ]
-        \foreach \y in {4.70,3.85,2.80,1.95,0.88}
-          \draw[time] (1.30,\y) -- (7.55,\y);
-        \node[lab] at (1.08,4.70) {START};
-        \node[lab] at (1.08,3.85) {latch S};
-        \node[lab] at (1.08,2.80) {STOP};
-        \node[lab] at (1.08,1.95) {latch F};
-        \node[lab] at (1.08,0.88) {clear};
+        \foreach \y in {5.05,4.20,3.18,2.34,1.22}
+          \draw[time] (1.42,\y) -- (7.70,\y);
+        \node[lab] at (1.18,5.05) {SPAD};
+        \node[lab] at (1.18,4.20) {latch S};
+        \node[lab] at (1.18,3.18) {clk 40};
+        \node[lab] at (1.18,2.34) {STOP qual.};
+        \node[lab] at (1.18,1.22) {latch F};
 
-        \draw[guide] (1.72,0.55) -- (1.72,5.10);
-        \draw[guide] (2.92,0.55) -- (2.92,5.10);
-        \draw[guide,draw=amber] (6.44,0.55) -- (6.44,5.10);
-        \node[font=\tiny\bfseries,text=muted] at (1.72,5.22) {front START};
-        \node[font=\tiny\bfseries,text=muted] at (2.92,5.22) {front STOP};
-        \node[font=\tiny\bfseries,text=amber] at (6.44,5.22) {clear};
+        \draw[guide] (1.92,0.90) -- (1.92,5.42);
+        \draw[guide] (4.12,0.90) -- (4.12,5.42);
+        \node[font=\tiny\bfseries,text=muted] at (1.92,5.55) {événement};
+        \node[font=\tiny\bfseries,text=amber] at (4.12,5.55) {front ref};
 
-        \draw[wave] (1.30,4.70) -- (1.62,4.70) -- (1.62,5.03) -- (1.84,5.03) -- (1.84,4.70) -- (7.55,4.70);
-        \draw[wave,draw=navy] (1.30,3.85) -- (1.72,3.85) -- (1.72,4.18) -- (6.44,4.18) -- (6.44,3.85) -- (7.55,3.85);
-        \draw[wave] (1.30,2.80) -- (2.82,2.80) -- (2.82,3.13) -- (3.04,3.13) -- (3.04,2.80) -- (7.55,2.80);
-        \draw[wave,draw=amber] (1.30,1.95) -- (2.92,1.95) -- (2.92,2.28) -- (6.44,2.28) -- (6.44,1.95) -- (7.55,1.95);
-        \draw[wave] (1.30,0.88) -- (6.32,0.88) -- (6.32,1.21) -- (6.56,1.21) -- (6.56,0.88) -- (7.55,0.88);
+        \draw[wave] (1.42,5.05) -- (1.82,5.05) -- (1.82,5.38) -- (2.06,5.38) -- (2.06,5.05) -- (7.70,5.05);
+        \draw[wave,draw=navy] (1.42,4.20) -- (1.92,4.20) -- (1.92,4.53) -- (6.72,4.53) -- (6.72,4.20) -- (7.70,4.20);
+
+        \draw[wave,draw=amber] (1.42,3.18) -- (2.25,3.18) -- (2.25,3.50) -- (3.20,3.50) -- (3.20,3.18)
+          -- (4.12,3.18) -- (4.12,3.50) -- (5.06,3.50) -- (5.06,3.18)
+          -- (5.98,3.18) -- (5.98,3.50) -- (6.92,3.50) -- (6.92,3.18) -- (7.70,3.18);
+        \draw[wave,draw=amber] (1.42,2.34) -- (4.12,2.34) -- (4.12,2.67) -- (5.06,2.67) -- (5.06,2.34) -- (7.70,2.34);
+        \draw[wave,draw=amber] (1.42,1.22) -- (4.12,1.22) -- (4.12,1.55) -- (6.72,1.55) -- (6.72,1.22) -- (7.70,1.22);
       \end{tikzpicture}%
       }
     \end{column}
   \end{columns}
 
-  \takeaway{La capture asynchrone est un choix de mesure, pas une complication gratuite.}
-  \note{Objectif : défendre la capture asynchrone. À dire : si START/STOP étaient d'abord repris par l'horloge système, celle-ci entrerait dans l'erreur de mesure. Transition : revenir aux observables de matrice qui devront être calibrées.}
+  \takeaway{Le STOP 40 MHz est qualifié, mais la mesure reste déclenchée par des fronts asynchrones latchés.}
+  \note{Objectif : expliquer le stop qualifier sans perdre l'explication des latches. À dire : l'événement SPAD lance START ; si le bloc est armé et qu'un contexte est libre, START est latché. Le stop qualifier transforme ensuite le premier front utile de clk_ref_40m en STOP ; ce STOP n'est effectif dans le MPTDC que si un START a été accepté. Transition : revenir aux observables de matrice qui devront traverser vers clk_sys.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \frametitle{IV. Matrice $8\times8$ : observables non uniformes}
-  \lead{Les couples $(n_s,n_f)$ observés forment une répartition structurée, mais non uniforme.}
+  \frametitle{IV. Anneaux, matrice et frontière CDC}
+  \lead{CDC : une information née hors clk\_sys doit être figée puis resynchronisée sans fabriquer de faux mot.}
+
+  \begin{center}
+    \includegraphics[width=0.99\textwidth,height=0.60\textheight,keepaspectratio]{mptdc_block_diagram.pdf}
+  \end{center}
+  \begin{tikzpicture}[remember picture,overlay]
+    \draw[focusrect] ($(current page.south west)+(5.55cm,2.77cm)$) rectangle ($(current page.south west)+(9.75cm,6.92cm)$);
+  \end{tikzpicture}
+  \vspace{-0.08cm}
+  \begin{center}
+    \begin{tikzpicture}[
+      why/.style={basebox,minimum width=3.62cm,minimum height=0.86cm,text width=3.24cm,align=center,font=\scriptsize}
+    ]
+      \node[why,draw=navy!55,fill=navy!4] (a) {\textbf{Frontière CDC}\\anneaux/matrice $\rightarrow$ clk\_sys};
+      \node[why,right=0.28cm of a,draw=amber!65,fill=amberSoft] (b) {\textbf{Risque binaire}\\skew post-routage $\Rightarrow$ mot instable};
+      \node[why,right=0.28cm of b,draw=navy!55,fill=navy!4] (c) {\textbf{Choix Gray}\\un seul bit change entre deux codes};
+    \end{tikzpicture}
+  \end{center}
+
+  \takeaway{Le Gray ne supprime pas le besoin de revue CDC ; il réduit le risque de lecture incohérente d'un compteur.}
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[
+      anchor=south east,
+      draw=line,
+      fill=white,
+      rounded corners=1pt,
+      font=\tiny,
+      text=muted,
+      inner xsep=3pt,
+      inner ysep=1.5pt
+    ] at ($(current page.south east)+(-0.44cm,0.62cm)$) {Source : Ginosar 2011 ; Cummings 2002};
+  \end{tikzpicture}
+  \note{Objectif : expliquer le choix des compteurs Gray. À dire : les compteurs évoluent dans le domaine des anneaux, pas dans clk_sys. Un compteur binaire peut changer plusieurs bits à la fois ; après routage, les délais de bits peuvent être différents et produire un mot transitoire. Le Gray limite la transition à un bit avant synchronisation, ce qui rend la traversée CDC beaucoup plus défendable. Transition : montrer le domaine système qui draine et sérialise.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{IV. Domaine clk\_sys et sortie}
+  \lead{Après snapshot, la partie système orchestre clear, contexte, drain et trame 16 bits.}
+
+  \begin{center}
+    \includegraphics[width=0.99\textwidth,height=0.73\textheight,keepaspectratio]{mptdc_block_diagram.pdf}
+  \end{center}
+  \begin{tikzpicture}[remember picture,overlay]
+    \draw[focusrect] ($(current page.south west)+(9.08cm,4.33cm)$) rectangle ($(current page.south west)+(14.86cm,6.43cm)$);
+  \end{tikzpicture}
+  \vspace{-0.13cm}
+  \begin{center}
+    \smalltag{navy}{snapshot / clear}\hspace{0.22cm}
+    \smalltag{navy}{contexte figé}\hspace{0.22cm}
+    \smalltag{navy}{FIFO + TX 16 bits}
+  \end{center}
+
+  \takeaway{Le domaine système lit une image stabilisée ; il ne fabrique pas la finesse temporelle.}
+  \note{Objectif : séparer clairement mesure et lecture. À dire : clk_sys récupère l'image figée, pilote le clear et sérialise les records ; la sortie transporte les observables et les statuts, pas seulement un timestamp final. Transition : expliquer pourquoi le snapshot doit précéder le clear.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{IV. FSM de mesure : snapshot, capture, clear}
+  \lead{Après fermeture de mesure, clk\_sys fige l'image, écrit un contexte, puis réarme la matrice.}
 
   \vspace{0.02cm}
   \begin{columns}[T,totalwidth=0.98\textwidth]
-    \begin{column}{0.62\textwidth}
-      \centering
-      \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{fine_grid_coverage.pdf}
-      \vspace{-0.06cm}
-      \smalltag{navy}{axes $n_s$ / $n_f$}\hspace{0.22cm}
-      \smalltag{amber}{codes absents}
-    \end{column}
-    \begin{column}{0.32\textwidth}
-      \vspace{0.22cm}
-      \small
-      \begin{itemize}
-        \item 64 couples physiques observés
-        \item Distribution temporelle non uniforme
-        \item Certains codes sont absents
-        \item Densité variable selon les couples
-        \item Calibration externe nécessaire
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \takeaway{Le timestamp brut n'est pas le produit final : les observables exportées sont la matière de la calibration.}
-  \note{Objectif : préparer la calibration sans la présenter comme une rustine. À dire : la matrice 8x8 donne 64 couples physiques, mais la distribution fine n'est pas uniforme ; certains codes peuvent être absents et plusieurs couples proches, donc le système exporte les observables plutôt qu'un timestamp final supposé uniforme. Transition : expliquer comment le protocole protège ces observables.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{IV. Snapshot avant clear}
-  \lead{Snapshot, contexte, puis clear : l'image utile est protégée avant nettoyage.}
-
-  \vspace{0.05cm}
-  \begin{columns}[T,totalwidth=0.98\textwidth]
-    \begin{column}{0.63\textwidth}
+    \begin{column}{0.66\textwidth}
       \centering
       \resizebox{\linewidth}{!}{%
       \begin{tikzpicture}[
-        node distance=0.28cm,
-        stage/.style={basebox,minimum width=1.58cm,minimum height=0.62cm,font=\scriptsize},
-        prot/.style={accentbox,minimum width=1.72cm,minimum height=0.62cm,font=\scriptsize}
+        node distance=0.30cm,
+        st/.style={basebox,minimum width=1.90cm,minimum height=0.58cm,text width=1.68cm,align=center,font=\scriptsize},
+        hot/.style={accentbox,minimum width=1.90cm,minimum height=0.58cm,text width=1.68cm,align=center,font=\scriptsize},
+        clr/.style={warnbox,minimum width=1.90cm,minimum height=0.58cm,text width=1.68cm,align=center,font=\scriptsize},
+        lab/.style={font=\tiny\bfseries,text=muted}
       ]
-        \node[stage] (hit) {mesure\\terminée};
-        \node[prot,right=of hit] (snap) {snapshot};
-        \node[prot,right=of snap] (ctx) {contexte\\écrit};
-        \node[stage,right=of ctx,draw=amber!65,fill=amberSoft] (clear) {clear\\matrice};
-        \node[stage,right=of clear] (read) {lecture\\TX};
+        \node[st] (idle) at (0.0,2.50) {IDLE\\attente};
+        \node[st,draw=navy!55,fill=navy!4] (meas) at (2.30,2.50) {START/STOP\\latchés};
+        \node[hot] (snap) at (4.60,2.50) {SNAPSHOT\\1 cycle};
+        \node[st] (count) at (4.60,1.30) {COUNT\\1 cycle};
+        \node[st] (eval) at (2.30,1.30) {EVAL\\1 cycle};
+        \node[hot] (cap) at (0.00,1.30) {CAPTURE\\1 cycle};
+        \node[clr] (clear) at (0.00,0.10) {CLEAR\\1 cycle};
 
-        \draw[arrow] (hit) -- (snap);
-        \draw[arrow] (snap) -- (ctx);
-        \draw[arrow] (ctx) -- (clear);
-        \draw[arrow] (clear) -- (read);
+        \draw[arrow] (idle) -- (meas);
+        \draw[arrow] (meas) -- (snap);
+        \draw[arrow] (snap) -- (count);
+        \draw[arrow] (count) -- (eval);
+        \draw[arrow] (eval) -- (cap);
+        \draw[arrow] (cap) -- node[lab,left] {contexte écrit} (clear);
+        \draw[arrow] (clear.west) -- ++(-0.65,0) |- node[lab,left,pos=0.25] {réarmement} (idle.west);
 
-        \draw[navy,line width=0.9pt] ($(snap.south west)+(0,-0.28)$) -- node[below,font=\tiny\bfseries,text=navy] {information protégée} ($(ctx.south east)+(0,-0.28)$);
-        \draw[amber,line width=0.9pt] ($(clear.south west)+(0,-0.28)$) -- node[below,font=\tiny\bfseries,text=amber] {front-end libéré} ($(clear.south east)+(0,-0.28)$);
+        \node[tinybox,minimum width=2.05cm] at (2.30,0.10) {image protégée};
+        \node[tinybox,minimum width=2.15cm] at (4.60,0.10) {lecture découplée};
       \end{tikzpicture}%
       }
     \end{column}
-    \begin{column}{0.31\textwidth}
-      \vspace{0.14cm}
+    \begin{column}{0.28\textwidth}
+      \vspace{0.02cm}
       \small
       \begin{itemize}
-        \item L'image utile est figée avant nettoyage
-        \item Le clear intervient après écriture contexte
-        \item Le reset global reste séparé du clear de conversion
-        \item La trame lit un contexte stable
+        \item START accepté si bloc armé et contexte libre
+        \item STOP utile seulement après START latché
+        \item Après mesure complète : 5 cycles clk\_sys
+        \item À 160 MHz : environ 31 ns de réarmement local
+        \item Lecture TX hors chemin critique grâce aux contextes
       \end{itemize}
     \end{column}
   \end{columns}
 
-  \takeaway{Le clear n'est acceptable qu'après protection de l'information utile.}
-  \note{Objectif : rendre mémorable la séquence snapshot, contexte, clear. À dire : on fige l'image, on l'écrit dans un contexte, puis seulement on nettoie ; le détail reset vs clear reste disponible en backup. Transition : montrer pourquoi deux contextes réduisent le temps mort.}
+  \takeaway{La FSM paie quelques cycles pour protéger l'image avant tout clear ; le double contexte masque ensuite la lecture.}
+  \note{Objectif : rendre claire la FSM cyclique. À dire : IDLE attend une mesure acceptée ; MEASURE correspond à la fermeture START/STOP ; SNAPSHOT fige l'image ; COUNT et EVAL découpent le comptage ; CAPTURE écrit le contexte et libère le front-end ; CLEAR nettoie la matrice. La séquence après mesure complète coûte 5 cycles clk_sys, soit environ 31 ns à 160 MHz, hors attente STOP et hors sérialisation TX. Transition : montrer pourquoi deux contextes réduisent le temps mort lié à la lecture.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
@@ -1046,30 +1119,8 @@
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \frametitle{Trame 16 bit : observables}
-  \lead{Format compact : META, HIT words, EOC, compteurs, phases et statuts.}
-
-  \begin{center}
-    \includegraphics[width=0.96\textwidth,height=0.66\textheight,keepaspectratio]{packet_format_v27.pdf}
-  \end{center}
-  \vspace{-0.04cm}
-  \centering
-  \smalltag{navy}{16 bit}\hspace{0.35cm}
-  \smalltag{navy}{$2N_{\mathrm{det}}+2$ mots}\hspace{0.35cm}
-  \smalltag{navy}{$N_{\mathrm{det}}\leq15$}
-
-  \takeaway{La compacité de sortie et la richesse d'observation sont deux contraintes simultanées.}
-  \note{Objectif : expliquer le choix d'une sortie compacte. À dire : la trame 16 bit transporte les informations nécessaires à la LUT, pas seulement un temps final. Transition : justifier la calibration externe côté hôte.}
-\end{frame}
-
-\section[Vérification]{Vérification et calibration}
-
-\chaptertransition{V}{Vérification et calibration}{Montrer comment le RTL est vérifié et comment les données brutes sont corrigées hors puce.}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{Calibration externe architecturale}
-  \lead{Le silicium exporte une trame compacte ; la correction reste côté hôte.}
+  \frametitle{IV. Flux exporté vers calibration}
+  \lead{Le silicium exporte une trame compacte ; le décodage et la correction restent côté hôte.}
 
   \vspace{0.02cm}
   \begin{columns}[T,totalwidth=0.98\textwidth]
@@ -1081,88 +1132,469 @@
       \vspace{0.18cm}
       \small
       \begin{itemize}
-        \item Répartition des codes non uniforme
-        \item Observables bruts insuffisants seuls
-        \item Trame compacte exportée par l'ASIC
-        \item Décodage et correction hors ASIC
+        \item Image de contexte figée dans l'ASIC
+        \item Trame compacte exportée
+        \item Décodage hôte des observables
         \item LUT externe vers temps corrigé
       \end{itemize}
     \end{column}
   \end{columns}
 
-  \takeaway{La LUT n'est pas une rustine : elle fait partie du contrat d'observabilité.}
-  \note{Objectif : défendre la LUT comme décision architecturale. À dire : l'ASIC reste compact et exporte les observables, tandis que le décodage et la correction restent côté hôte. La LUT transforme ces observables en temps corrigé. Transition : expliquer comment le RTL a été vérifié autour de ce contrat.}
+  \takeaway{La trame ne sort pas un temps final : elle sort les observables nécessaires à la correction.}
+  \note{Objectif : placer le flux exporté avant le détail bit-à-bit de la trame. À dire : après le contexte, l'ASIC sérialise des observables et des statuts ; la correction reste hors ASIC pour garder le silicium compact et calibrable. Transition : détailler le protocole 16 bit.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
+  \frametitle{Trame 16 bit : observables}
+  \lead{Format du rapport : un header, deux mots HIT par détection, puis un EOC.}
+
+  \vspace{0.02cm}
+  \begin{columns}[T,totalwidth=0.98\textwidth]
+    \begin{column}{0.72\textwidth}
+      \centering
+      \resizebox{\linewidth}{!}{%
+      \begin{tikzpicture}[
+        x=0.50cm,y=0.66cm,
+        field/.style={draw=ink!55,line width=0.45pt,fill=white,minimum height=0.44cm,inner sep=0pt,font=\scriptsize,align=center},
+        hfield/.style={field,fill=navy!6},
+        ofield/.style={field,fill=soft},
+        sfield/.style={field,fill=amberSoft},
+        lab/.style={font=\scriptsize\bfseries,text=navy2,anchor=east},
+        bit/.style={font=\tiny,text=muted}
+      ]
+        \node[font=\small\bfseries,text=ink] at (8,4.92) {Protocole de sortie 16 bits};
+        \foreach \x/\t in {1/{[15:14]},3/{[13:12]},6.5/{[11:7]},11.5/{[6:2]},15/{[1:0]}}
+          \node[bit] at (\x,4.50) {\t};
+        \draw[time] (0,4.30) -- (16,4.30);
+
+        \node[lab] at (-0.35,3.68) {HEADER};
+        \draw[hfield] (0,3.36) rectangle (2,4.00);
+        \draw[hfield] (2,3.36) rectangle (4,4.00);
+        \draw[hfield] (4,3.36) rectangle (9,4.00);
+        \draw[hfield] (9,3.36) rectangle (14,4.00);
+        \draw[hfield] (14,3.36) rectangle (16,4.00);
+        \node[font=\tiny\bfseries,text=navy2,align=center] at (1,3.68) {TDC ID\\{\tiny 15:14}};
+        \node[font=\scriptsize] at (3,3.68) {contexte};
+        \node[font=\scriptsize] at (6.5,3.68) {statut / nb. dét.};
+        \node[font=\scriptsize] at (11.5,3.68) {flags / statut};
+        \node[font=\scriptsize] at (15,3.68) {réservé};
+
+        \node[lab] at (-0.35,2.64) {HIT 0};
+        \draw[sfield] (0,2.32) rectangle (1,2.96);
+        \draw[ofield] (1,2.32) rectangle (8,2.96);
+        \draw[ofield] (8,2.32) rectangle (15,2.96);
+        \draw[sfield] (15,2.32) rectangle (16,2.96);
+        \node[font=\scriptsize] at (0.5,2.64) {0};
+        \node[font=\scriptsize] at (4.5,2.64) {$N_{\mathrm{slow}}$};
+        \node[font=\scriptsize] at (11.5,2.64) {$N_{\mathrm{fast}}$};
+        \node[font=\scriptsize] at (15.5,2.64) {0};
+
+        \node[lab] at (-0.35,1.60) {HIT 1};
+        \draw[sfield] (0,1.28) rectangle (1,1.92);
+        \draw[ofield] (1,1.28) rectangle (5,1.92);
+        \draw[ofield] (5,1.28) rectangle (9,1.92);
+        \draw[sfield] (9,1.28) rectangle (16,1.92);
+        \node[font=\scriptsize] at (0.5,1.60) {0};
+        \node[font=\scriptsize] at (3,1.60) {$n_s$};
+        \node[font=\scriptsize] at (7,1.60) {$n_f$};
+        \node[font=\scriptsize] at (12.5,1.60) {métadonnées / statut};
+
+        \node[lab] at (-0.35,0.56) {EOC};
+        \draw[hfield] (0,0.24) rectangle (2,0.88);
+        \draw[ofield] (2,0.24) rectangle (16,0.88);
+        \node[font=\scriptsize] at (1,0.56) {type};
+        \node[font=\scriptsize] at (9,0.56) {identifiant de conversion};
+      \end{tikzpicture}%
+      }
+    \end{column}
+    \begin{column}{0.23\textwidth}
+      \vspace{0.30cm}
+      \small
+      \begin{itemize}
+        \item Header : identifie la voie TDC et le contexte
+        \item Mots HIT : compteurs et indices utiles à la LUT
+        \item Métadonnées : statut utile sans détailler chaque bit
+        \item EOC : ferme la trame et donne le comptage utile
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.02cm}
+  \begin{center}
+    \smalltag{navy}{16 bit}\hspace{0.35cm}
+    \smalltag{navy}{$2N_{\mathrm{det}}+2$ mots}\hspace{0.35cm}
+    \smalltag{navy}{$N_{\mathrm{det}}\leq15$}
+  \end{center}
+
+  \takeaway{La compacité de sortie et la richesse d'observation sont deux contraintes simultanées.}
+  \note{Objectif : expliquer le choix d'une sortie compacte sans descendre dans tous les bits. À dire : la structure reste celle du rapport, avec TDC ID sur les bits 15:14 du header, deux mots HIT par détection pour compteurs et indices, puis EOC pour fermer la trame. Transition : justifier la calibration externe côté hôte.}
+\end{frame}
+
+\section[Vérification]{Vérification et calibration}
+
+\chaptertransition{V}{Vérification et calibration}{Montrer comment le RTL est vérifié et comment les données brutes sont corrigées hors puce.}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
   \frametitle{V. Architecture du banc de vérification}
-  \lead{La preuve utile porte sur les comportements qui peuvent casser une mesure : ordre, paquets, timeouts, rétropression.}
+  \lead{Le banc est organisé comme un environnement de vérification industriel : stimulus contrôlé, observation indépendante, comparaison au modèle.}
 
   \vspace{0.02cm}
   \begin{columns}[T,totalwidth=0.98\textwidth]
     \begin{column}{0.66\textwidth}
       \centering
+      \resizebox{\linewidth}{!}{%
       \begin{tikzpicture}[
         x=1cm,y=1cm,
-        blk/.style={basebox,minimum width=1.42cm,minimum height=0.50cm,font=\scriptsize},
-        smallblk/.style={basebox,minimum width=1.30cm,minimum height=0.44cm,font=\tiny},
-        label/.style={font=\tiny\bfseries,text=muted,anchor=north west}
+        blk/.style={basebox,minimum width=1.46cm,minimum height=0.52cm,font=\scriptsize},
+        smallblk/.style={basebox,minimum width=1.36cm,minimum height=0.46cm,font=\tiny},
+        label/.style={font=\tiny\bfseries,text=muted,anchor=north west},
+        stim/.style={arrow,draw=navy!72,line width=0.82pt},
+        obsarrow/.style={softarrow,draw=amber!72!black,line width=0.72pt},
+        refarrow/.style={<->,>=Latex,draw=ink!68,line width=0.68pt}
       ]
-        \draw[rounded corners=2pt,draw=line,fill=white] (0.00,0.00) rectangle (7.70,4.65);
-        \node[label] at (0.18,4.48) {TB\_top};
+        \draw[rounded corners=2pt,draw=line,fill=white] (0.00,0.00) rectangle (7.90,4.45);
+        \node[label] at (0.18,4.28) {TB\_top};
 
-        \node[blk,draw=navy!55,fill=navy!4] (test) at (1.20,3.86) {Test};
+        \node[blk,draw=navy!55,fill=navy!4] (test) at (1.10,3.72) {Test};
 
-        \draw[rounded corners=2pt,draw=line,fill=soft] (0.48,0.44) rectangle (6.28,3.38);
-        \node[label,anchor=north east] at (6.10,3.22) {Env};
+        \draw[rounded corners=2pt,draw=line,fill=soft] (0.42,0.40) rectangle (7.48,3.18);
+        \node[label,anchor=north east] at (7.28,3.01) {Env. structuré};
 
-        \draw[rounded corners=2pt,draw=line,fill=white] (0.84,1.46) rectangle (4.30,3.02);
-        \node[label] at (0.98,2.86) {Agent};
+        \draw[rounded corners=2pt,draw=line,fill=white] (0.86,1.34) rectangle (4.24,2.74);
+        \node[label,anchor=north east] at (4.06,2.58) {Agent};
 
-        \node[smallblk] (seq) at (1.62,2.38) {Sequencer};
-        \node[smallblk] (drv) at (3.26,2.38) {Driver};
-        \node[smallblk] (mon) at (3.26,1.62) {Monitor};
-        \node[blk] (score) at (5.12,1.62) {Scoreboard};
-        \node[smallblk,draw=navy!55,fill=navy!4] (ref) at (5.12,0.82) {modèle ref.};
+        \node[smallblk] (seq) at (1.54,2.08) {Sequencer};
+        \node[smallblk] (drv) at (3.12,2.08) {Driver};
+        \node[smallblk] (mon) at (3.12,1.45) {Monitor};
+        \node[blk] (iface) at (4.96,2.08) {Interface};
+        \node[blk,draw=amber!65,fill=amberSoft] (dut) at (6.62,2.08) {DUT MPTDC};
+        \node[blk] (score) at (5.48,0.86) {Scoreboard};
+        \node[smallblk,draw=navy!55,fill=navy!4] (ref) at (7.02,0.86) {golden\\model};
 
-        \node[blk] (iface) at (5.12,2.60) {Interface};
-        \node[blk,draw=amber!65,fill=amberSoft] (dut) at (6.90,2.60) {DUT MPTDC};
-
-        \draw[softarrow] (test.south) -- ++(0,-0.42) -| (seq.north);
-        \draw[arrow] (seq.east) -- (drv.west);
-        \draw[arrow] (drv) -- (iface);
-        \draw[arrow] (iface) -- (dut);
-        \draw[softarrow] (dut.south) -- ++(0,-1.15) -| (mon.south);
-        \draw[softarrow] (mon.east) -- (score.west);
-        \draw[softarrow] (ref) -- (score);
-
-        \node[tinybox,minimum width=1.30cm] at (1.46,0.78) {paquets};
-        \node[tinybox,minimum width=1.30cm] at (2.92,0.78) {watchdogs};
-        \node[tinybox,minimum width=1.50cm] at (1.46,0.28) {rétropression};
-        \node[tinybox,minimum width=1.30cm] at (2.92,0.28) {reset / clear};
-      \end{tikzpicture}
+        \draw[obsarrow] (test.south) -- ++(0,-0.28) -| (seq.north);
+        \draw[stim] (seq.east) -- (drv.west);
+        \draw[stim] (drv.east) -- (iface.west);
+        \draw[stim] ([yshift=0.10cm]iface.east) -- ([yshift=0.10cm]dut.west);
+        \draw[obsarrow] ([yshift=-0.10cm]dut.west) -- ([yshift=-0.10cm]iface.east);
+        \draw[obsarrow] (iface.south) |- (mon.east);
+        \draw[obsarrow] (mon.east) -- ++(0.48,0) |- (score.west);
+        \draw[refarrow] (score.east) -- (ref.west);
+      \end{tikzpicture}%
+      }
     \end{column}
     \begin{column}{0.29\textwidth}
       \vspace{0.32cm}
       \small
       \begin{itemize}
-        \item Stimuli dirigés et scénarios contraints
-        \item Observation des sorties
-        \item Comparaison au comportement attendu
-        \item Vérification des paquets et cas limites
-        \item Approche structurée inspirée des pratiques industrielles
+        \item Le test choisit les scénarios et paramètres
+        \item Le driver applique les entrées au DUT
+        \item Le monitor observe sans influencer la simulation
+        \item Le scoreboard compare au golden model
+        \item Structure proche d'un environnement de TB industriel
       \end{itemize}
     \end{column}
   \end{columns}
 
   \takeaway{La vérification démontre un contrat numérique et protocolaire.}
-  \note{Objectif : montrer la méthode de vérification sans prétendre au signoff complet. À dire : les scénarios ciblent les risques de protocole, puis monitors et scoreboard comparent les paquets attendus au modèle. Transition : clarifier précisément ce que cette vérification ne prouve pas.}
+  \note{Objectif : montrer la méthode de vérification sans lister tous les cas. À dire : le test pilote les scénarios, le driver agit sur l'interface, le monitor observe les sorties et le scoreboard compare au golden model. L'intérêt est d'avoir une vérification reproductible et structurée, proche des pratiques industrielles. Transition : expliquer ensuite comment les trames alimentent la calibration.}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}
-  \frametitle{V. RTL $\neq$ signoff physique}
+  \frametitle{V. LUT et méthode de calibration}
+  \lead{La LUT associe les observables exportées à une correction moyenne apprise hors ASIC.}
+
+  \vspace{0.04cm}
+  \begin{columns}[T,totalwidth=0.98\textwidth]
+    \begin{column}{0.58\textwidth}
+      \centering
+      \resizebox{\linewidth}{!}{%
+      \begin{tikzpicture}[
+        calstep/.style={basebox,minimum width=1.72cm,minimum height=0.62cm,text width=1.46cm,align=center,font=\scriptsize},
+        cal/.style={accentbox,minimum width=1.72cm,minimum height=0.62cm,text width=1.46cm,align=center,font=\scriptsize},
+        tag/.style={font=\tiny\bfseries,text=muted}
+      ]
+        \node[cal] (mux) at (0.00,2.50) {mux\\calibration};
+        \node[calstep] (stim) at (2.05,2.50) {retards\\connus};
+        \node[calstep,draw=navy!55,fill=navy!4] (tdc) at (4.10,2.50) {MPTDC};
+        \node[calstep] (trame) at (6.15,2.50) {trames\\16 bit};
+
+        \node[calstep] (dec) at (1.05,1.05) {décodage\\hôte};
+        \node[calstep] (key) at (3.10,1.05) {clé\\observable};
+        \node[cal] (lut) at (5.15,1.05) {LUT\\figée};
+        \node[calstep] (corr) at (7.20,1.05) {temps\\corrigé};
+
+        \draw[arrow] (mux.east) -- (stim.west);
+        \draw[arrow] (stim.east) -- (tdc.west);
+        \draw[arrow] (tdc.east) -- (trame.west);
+        \draw[softarrow] (trame.south) -- ++(0,-0.40) -| (dec.north);
+        \draw[arrow] (dec.east) -- (key.west);
+        \draw[arrow] (key.east) -- (lut.west);
+        \draw[arrow] (lut.east) -- (corr.west);
+
+        \node[tag,align=center] at (3.10,0.18) {clé = compteurs + phases + statuts + métadonnées};
+        \node[tinybox,minimum width=3.85cm] at (5.15,-0.36) {correction moyenne apprise puis gelée};
+      \end{tikzpicture}%
+      }
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \small
+      \begin{itemize}
+        \item Pré-silicium : balayer des délais connus et collecter les trames
+        \item Construire une clé avec compteurs, phases, statuts et métadonnées
+        \item Apprendre une correction moyenne, puis figer la LUT
+        \item En silicium : réutiliser le mux d'entrée pour injecter une référence de calibration
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \takeaway{La calibration reste évolutive côté hôte, tandis que l'ASIC garde un protocole compact et stable.}
+  \note{Objectif : expliquer la LUT sans trop détailler. À dire : on excite le TDC avec des instants connus, on collecte les trames, on construit une clé avec compteurs, phases et statuts, puis on apprend une correction moyenne par clé. En silicium, le mux d'entrée permet de basculer vers une injection de calibration pour reconstruire ou vérifier cette LUT. Transition : présenter l'effet mesuré de cette correction.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{RMS / précision : effet de la LUT}
+  \lead{La correction LUT retire le biais systématique et ramène l'erreur RMS à l'échelle picoseconde.}
+
+  \begin{columns}[T,totalwidth=0.98\textwidth]
+    \begin{column}{0.67\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{01_erreur_histogramme_pre_post_lut.png}
+    \end{column}
+    \begin{column}{0.29\textwidth}
+      \vspace{0.42cm}
+      \small
+      \begin{itemize}
+        \item Avant LUT : biais $\approx -1{,}9$ ns
+        \item RMSE brute $\approx 1{,}94$ ns
+        \item Erreur structurée par les observables bruts
+        \item Après LUT : RMSE $=18{,}56$ ps
+        \item P99 absolu $\approx 38{,}99$ ps
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \takeaway{La calibration corrige une structure systématique, elle ne masque pas une absence d'information.}
+  \note{Objectif : corriger l'ambiguïté entre avant et après LUT. À dire : le biais d'environ -1,9 ns appartient à la mesure brute, avant correction ; après LUT, la RMSE tombe à 18,56 ps et le P99 absolu vaut environ 38,99 ps. Transition : regarder ensuite DNL/INL sur les codes atteints.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{V. Linéarité observable des codes atteints}
+  \lead{DNL et INL sont évaluées sur les codes réellement atteints, avec les codes absents explicitement reconnus.}
+
+  \begin{columns}[T,totalwidth=0.98\textwidth]
+    \begin{column}{0.62\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{04_dnl_inl_observable.pdf}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \vspace{0.10cm}
+      \footnotesize
+      \begin{itemize}
+        \item DNL pic $\approx 0{,}987$ LSB : certains paliers bruts sont plus larges ou plus étroits
+        \item INL en extrémité utile : ordre de grandeur $\sim 1$ LSB sur la plage réaliste observée
+        \item Les codes absents sont déclarés hors domaine observé, pas cachés
+        \item Pour l'application, ces signatures sont corrigées par la LUT avant le temps final
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \takeaway{DNL/INL décrivent la matière brute ; la LUT transforme cette non-uniformité en mesure temporelle exploitable.}
+  \note{Objectif : rendre DNL/INL utiles pour le récit applicatif. À dire : la DNL montre la non-uniformité locale des pas. En lecture système, le STOP venant de \texttt{clk\_ref\_40m} borne la plage dynamique réaliste autour de 25 ns ; la campagne a gardé 30 ns en marge, ce qui fait lire l'INL de bout de gamme comme une dérive brute de l'ordre de 1 ns avant LUT. Les codes absents restent explicitement hors domaine observé. Transition : quantifier ensuite le gain statistique par moyennage.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Moyennage post-LUT : gain statistique}
+  \lead{Analyse statistique après correction LUT, pas performance par événement unique.}
+
+  \begin{center}
+  \begin{columns}[T,totalwidth=0.90\textwidth]
+    \begin{column}{0.60\textwidth}
+      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{03_rmse_vs_moyennage_limited.png}
+    \end{column}
+    \begin{column}{0.26\textwidth}
+      \begin{itemize}
+        \item $N=1 \rightarrow 18{,}82$ ps
+        \item $N=4 \rightarrow 9{,}28$ ps
+        \item $N=15 \rightarrow 4{,}77$ ps
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \end{center}
+
+  \takeaway{Le gain par moyennage est utile, mais doit rester présenté avec son domaine de validité.}
+  \note{Objectif : éviter de survendre le moyennage. À dire : N=4 donne 9,28 ps et N=15 donne 4,77 ps dans l'analyse post-LUT, mais ce n'est pas une performance mono-événement. Transition : revenir aux limites physiques qui restent décisives.}
+\end{frame}
+
+\section[Limites]{Limites et perspectives}
+
+\chaptertransition{VI}{Limites et perspectives}{Clarifier la frontière entre preuve RTL, signoff physique et méthode de travail.}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{La performance finale reste physique}
+  \lead{Le RTL valide un contrat numérique ; la précision finale doit encore survivre aux contraintes physiques.}
+
+  \begin{center}
+  \resizebox{0.94\textwidth}{!}{%
+  \begin{tikzpicture}[
+    s/.style={basebox,minimum width=1.85cm,minimum height=0.74cm},
+    w/.style={warnbox,minimum width=1.85cm,minimum height=0.74cm}
+  ]
+    \node[s,draw=navy!55,fill=navy!4] (rtl) {RTL};
+    \node[s,right=0.24cm of rtl] (cdc) {CDC};
+    \node[s,right=0.24cm of cdc] (sta) {STA};
+    \node[s,right=0.24cm of sta] (pnr) {PnR};
+    \node[s,right=0.24cm of pnr] (post) {Post-layout};
+    \node[w,right=0.24cm of post] (sil) {Silicium};
+    \foreach \a/\b in {rtl/cdc,cdc/sta,sta/pnr,pnr/post,post/sil}
+      \draw[softarrow] (\a) -- (\b);
+  \end{tikzpicture}
+  }
+  \end{center}
+
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.48\textwidth}
+      \small
+      \textbf{\color{navy2}Déjà défendu}
+      \begin{itemize}
+        \item Séquence START/STOP, snapshot, capture, clear
+        \item Trame compacte et observables exportés
+        \item LUT efficace en validation RTL/Xcelium
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \small
+      \textbf{\color{navy2}Encore à signer}
+      \begin{itemize}
+        \item CDC/STA avec skew et délais routés
+        \item Extraction post-layout, jitter et PVT
+        \item Corrélation avec mesures silicium
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \takeaway{La conclusion honnête : le comportement numérique est cohérent, mais la performance temporelle finale reste une preuve physique.}
+  \note{Objectif : poser clairement la limite avant la conclusion. À dire : le RTL/Xcelium valide l'ordre des opérations, la trame et la correction, mais pas les délais routés, la métastabilité physique, le jitter ni la tenue PVT. Transition : prendre un recul méthodologique sur la manière de travailler.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Un travail par boucles successives}
+  \lead{Dans une architecture numérique complexe, chaque étape oblige à revisiter les hypothèses de l'étape précédente.}
+
+  \begin{center}
+  \resizebox{0.95\textwidth}{!}{%
+  \begin{tikzpicture}[
+    s/.style={basebox,minimum width=1.80cm,minimum height=0.70cm,text width=1.55cm,align=center,font=\scriptsize},
+    hot/.style={accentbox,minimum width=1.80cm,minimum height=0.70cm,text width=1.55cm,align=center,font=\scriptsize},
+    ret/.style={-{Latex[length=2mm]},draw=amber!85!black,line width=0.7pt,densely dashed}
+  ]
+    \node[hot] (cdcahier) at (0.00,1.60) {cahier des\\charges};
+    \node[s] (arch) at (2.05,1.60) {architecture};
+    \node[s] (micro) at (4.10,1.60) {micro-\\architecture};
+    \node[s] (rtl) at (6.15,1.60) {RTL};
+    \node[s] (verif) at (8.20,1.60) {vérification};
+    \node[s] (sta) at (10.25,1.60) {CDC / STA};
+    \node[hot] (pnr) at (12.30,1.60) {PnR /\\post-layout};
+
+    \foreach \a/\b in {cdcahier/arch,arch/micro,micro/rtl,rtl/verif,verif/sta,sta/pnr}
+      \draw[arrow] (\a) -- (\b);
+
+    \draw[ret] (verif.south) .. controls +(0,-0.62) and +(0,-0.62) .. (micro.south);
+    \draw[ret] (sta.south) .. controls +(0,-1.08) and +(0,-1.08) .. (arch.south);
+  \end{tikzpicture}%
+  }
+  \end{center}
+
+  \vspace{0.10cm}
+  \begin{columns}[T,totalwidth=0.94\textwidth]
+    \begin{column}{0.46\textwidth}
+      \small
+      \begin{itemize}
+        \item La vérification révèle les ambiguïtés du cahier des charges
+        \item Le RTL rend visibles les choix cachés de microarchitecture
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \small
+      \begin{itemize}
+        \item CDC, STA et PnR peuvent remettre en cause une hypothèse logique
+        \item La méthode utile est itérative : mesurer, corriger, revalider
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Ce que je retiens : une architecture robuste se construit en boucle, pas en ligne droite.}
+  \note{Objectif : donner une conclusion personnelle et méthodologique. À dire : le projet m'a appris qu'un cahier des charges, une architecture, une microarchitecture, le RTL, la vérification, la STA et le PnR ne sont pas des étapes séparées ; chaque étape peut forcer à revisiter l'hypothèse précédente. Transition : finir avec les trois messages à retenir.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Trois messages à retenir}
+  \lead{La conclusion doit être simple, défendable et honnête devant le jury.}
+
+  \begin{center}
+  \begin{tikzpicture}[
+    msg/.style={basebox,minimum width=9.4cm,minimum height=0.82cm,text width=8.85cm,align=left}
+  ]
+    \node[msg,draw=navy!55,fill=navy!4] (a) {\bfseries 1. Architecture : \normalfont Vernier multiphase intégré à SPADMIC avec export d'observables.};
+    \node[msg,below=0.20cm of a] (b) {\bfseries 2. Preuve numérique : \normalfont protocole vérifié et LUT efficace en RTL/Xcelium.};
+    \node[msg,draw=amber!65,fill=amberSoft,below=0.20cm of b] (c) {\bfseries 3. Limite : \normalfont précision finale à confirmer par CDC, STA, post-layout et silicium.};
+  \end{tikzpicture}
+  \end{center}
+
+  \takeaway{Le récit reste centré sur trois points : architecture, preuve numérique et limite physique.}
+  \note{Objectif : fermer sans ouvrir un nouveau sujet. À dire : architecture intégrable, preuve numérique pré-silicium, limite physique assumée. Transition : remercier et basculer vers les questions.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}
+  \frametitle{Merci pour votre attention}
+  \lead{Questions}
+
+  \vspace{0.4cm}
+  \begin{center}
+    {\Huge\bfseries\color{navy2}Questions ?}\\[0.65cm]
+    \begin{tabular}{@{}ll@{}}
+      Karim SABRA & CPE Lyon -- IP2I / CNRS\\
+      Encadrant IP2I & Edouard Bechetoille\\
+      Encadrant école & Abdelbassat Massouri\\
+      Sujet & SPADMIC
+    \end{tabular}
+  \end{center}
+  \note{Objectif : laisser une slide claire pour les échanges. À dire : remercier le jury, les encadrants et l'équipe. Transition : utiliser les backups selon la question posée.}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+% Backup slides
+% ---------------------------------------------------------------------------
+\appendix
+\section{Backup}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- Validation hors apprentissage}
+  \lead{La LUT est construite et évaluée sur des ensembles séparés.}
+  \begin{center}
+    \includegraphics[width=0.94\textwidth,height=0.62\textheight,keepaspectratio]{calibration_flow.pdf}
+  \end{center}
+  \vspace{-0.10cm}
+  \begin{center}
+    \smalltag{navy}{split train}\hspace{0.35cm}
+    \smalltag{navy}{LUT figée}\hspace{0.35cm}
+    \smalltag{amber}{validation fresh}
+  \end{center}
+  \takeaway{Les 18,56 ps sont une métrique de validation RTL/Xcelium hors apprentissage.}
+  \note{Question traitée : risque d'apprentissage de la LUT. Réponse clé : la LUT est figée avant validation et la métrique est rapportée hors apprentissage.}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+  \frametitle{Backup -- RTL $\neq$ signoff physique}
   \lead{Il faut dire exactement ce qui est validé, et ce qui reste hors preuve RTL.}
 
   \begin{columns}[T,totalwidth=\textwidth]
@@ -1198,364 +1630,7 @@
   \end{center}
 
   \takeaway{La précision du vocabulaire protège la crédibilité scientifique.}
-  \note{Objectif : protéger la portée scientifique du résultat. À dire : le RTL soutient un contrat fonctionnel, mais il ne ferme ni métastabilité physique, ni setup/hold, ni jitter réel. Transition : présenter les résultats de calibration en gardant cette frontière.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{La mesure brute est fortement biaisée}
-  \lead{Avant LUT : structure systématique et biais d'environ $-1{,}9$ ns.}
-
-  \begin{columns}[T,totalwidth=0.98\textwidth]
-    \begin{column}{0.67\textwidth}
-      \centering
-      \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{01_erreur_histogramme_pre_post_lut.png}
-    \end{column}
-    \begin{column}{0.29\textwidth}
-      \vspace{0.42cm}
-      \small
-      \begin{itemize}
-        \item Avant LUT : biais $\approx -1{,}9$ ns
-        \item Erreur structurée par les observables bruts
-        \item Après LUT : centrage proche de zéro
-        \item Validation numérique pré-silicium
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \takeaway{La calibration corrige une structure systématique, elle ne masque pas une absence d'information.}
-  \note{Objectif : corriger l'ambiguïté entre avant et après LUT. À dire : le biais d'environ -1,9 ns appartient à la mesure brute, avant correction ; après LUT, le centrage revient près de zéro. Transition : donner les chiffres de validation RTL/Xcelium.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{V. Linéarité observable des codes atteints}
-  \lead{DNL et INL sont évaluées sur les codes réellement atteints, avec les codes absents explicitement reconnus.}
-
-  \begin{columns}[T,totalwidth=0.98\textwidth]
-    \begin{column}{0.66\textwidth}
-      \centering
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{04_dnl_inl_observable.pdf}
-    \end{column}
-    \begin{column}{0.30\textwidth}
-      \vspace{0.16cm}
-      \small
-      \begin{itemize}
-        \item DNL pic $\approx 0{,}987$ LSB
-        \item INL extrémité $\approx 1{,}553$ LSB
-        \item Analyse limitée aux codes effectivement atteints
-        \item Codes absents reconnus
-        \item Non-uniformité cohérente avec la structure brute
-      \end{itemize}
-      \vspace{0.16cm}
-      \smalltag{amber}{motive la LUT externe}
-    \end{column}
-  \end{columns}
-
-  \takeaway{La linéarité observable confirme que la correction externe fait partie du flux de mesure.}
-  \note{Objectif : placer DNL/INL dans la partie principale plutôt qu'en backup. À dire : les métriques ne supposent pas une répartition complète des codes ; elles portent sur les codes atteints, avec une non-uniformité cohérente avec la matrice brute et la nécessité de calibration. Transition : quantifier ensuite l'effet de la LUT sur l'erreur temporelle.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{Après LUT : RMSE = 18,56 ps}
-  \lead{Résultat pré-silicium, calculé sur validation tenue hors apprentissage.}
-
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.58\textwidth}
-      \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{char_calibration_prepost_summary_report.pdf}
-    \end{column}
-    \begin{column}{0.38\textwidth}
-      \metric{$\approx$1,94 ns}{RMSE brute}{amber}\\[0.12cm]
-      \metric{18,56 ps}{RMSE après LUT}{navy}\\[0.12cm]
-      \metric{38,99 ps}{P99 erreur absolue}{navy}
-    \end{column}
-  \end{columns}
-
-  \vspace{-0.02cm}
-  \begin{center}
-    \smalltag{amber}{RTL/Xcelium -- validation hors apprentissage -- pré-silicium}
-  \end{center}
-
-  \takeaway{Ce chiffre valide le flux d'observables et de correction ; il reste une validation RTL/Xcelium pré-silicium.}
-  \note{Objectif : citer le résultat principal avec exactitude. À dire : RMSE brute environ 1,94 ns, RMSE après LUT 18,56 ps, P99 absolu 38,99 ps, sur validation hors apprentissage. Transition : présenter le moyennage comme gain statistique séparé.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{Moyennage post-LUT : gain statistique}
-  \lead{Analyse statistique après correction LUT, pas performance par événement unique.}
-
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.62\textwidth}
-      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{03_rmse_vs_moyennage_limited.png}
-    \end{column}
-    \begin{column}{0.34\textwidth}
-      \begin{itemize}
-        \item $N=1 \rightarrow 18{,}82$ ps
-        \item $N=4 \rightarrow 9{,}28$ ps
-        \item $N=15 \rightarrow 4{,}77$ ps
-      \end{itemize}
-      \vspace{0.25cm}
-      \smalltag{amber}{prudence : pas par événement unique}
-    \end{column}
-  \end{columns}
-
-  \takeaway{Le gain par moyennage est utile, mais doit rester présenté avec son domaine de validité.}
-  \note{Objectif : éviter de survendre le moyennage. À dire : N=4 donne 9,28 ps et N=15 donne 4,77 ps dans l'analyse post-LUT, mais ce n'est pas une performance mono-événement. Transition : revenir aux limites physiques qui restent décisives.}
-\end{frame}
-
-\section[Limites]{Limites et perspectives}
-
-\chaptertransition{VI}{Limites et perspectives}{Clarifier ce que la simulation RTL valide, puis ouvrir vers le signoff physique.}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{La performance finale reste physique}
-  \lead{Le prochain verrou n'est plus seulement RTL : il est CDC, STA, layout, jitter et silicium.}
-
-  \begin{center}
-  \begin{tikzpicture}[
-    s/.style={basebox,minimum width=2.0cm,minimum height=0.8cm},
-    w/.style={warnbox,minimum width=2.0cm,minimum height=0.8cm}
-  ]
-    \node[s,draw=navy!55,fill=navy!4] (rtl) {RTL};
-    \node[s,right=0.28cm of rtl] (cdc) {CDC};
-    \node[s,right=0.28cm of cdc] (sta) {STA};
-    \node[s,right=0.28cm of sta] (pnr) {PnR};
-    \node[s,right=0.28cm of pnr] (post) {Post-layout};
-    \node[w,right=0.28cm of post] (sil) {Silicium};
-    \foreach \a/\b in {rtl/cdc,cdc/sta,sta/pnr,pnr/post,post/sil}
-      \draw[softarrow] (\a) -- (\b);
-  \end{tikzpicture}
-  \end{center}
-
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.48\textwidth}
-      \begin{itemize}
-        \item Oscillateurs réels
-        \item Setup / hold / skew
-        \item Jitter et variations PVT
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{itemize}
-        \item Revue CDC formelle
-        \item Simulations post-layout
-        \item Corrélation mesures silicium
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \takeaway{La conclusion honnête : le numérique est cohérent, la performance finale reste à démontrer physiquement.}
-  \note{Objectif : poser clairement la limite avant la conclusion. À dire : CDC, STA, PnR, extraction, jitter, PVT et silicium restent les étapes qui transformeront le contrat numérique en performance physique. Transition : résumer en trois messages.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{Trois messages à retenir}
-  \lead{La conclusion doit être simple, défendable et honnête devant le jury.}
-
-  \begin{center}
-  \begin{tikzpicture}[
-    msg/.style={basebox,minimum width=8.8cm,minimum height=0.95cm,text width=8.2cm,align=left}
-  ]
-    \node[msg,draw=navy!55,fill=navy!4] (a) {\bfseries 1. Architecture : \normalfont Vernier multiphase rendu intégrable dans SPADMIC.};
-    \node[msg,below=0.25cm of a] (b) {\bfseries 2. Preuve numérique : \normalfont protocole vérifié et calibration efficace en RTL/Xcelium.};
-    \node[msg,draw=amber!65,fill=amberSoft,below=0.25cm of b] (c) {\bfseries 3. Limite : \normalfont performance physique à confirmer par post-layout et silicium.};
-  \end{tikzpicture}
-  \end{center}
-
-  \takeaway{Le récit est ambitieux sur l'ingénierie numérique, prudent sur la performance physique.}
-  \note{Objectif : fermer sans ouvrir un nouveau sujet. À dire : architecture intégrable, preuve numérique pré-silicium, limite physique assumée. Transition : remercier et basculer vers les questions.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}
-  \frametitle{Merci pour votre attention}
-  \lead{Questions}
-
-  \vspace{0.4cm}
-  \begin{center}
-    {\Huge\bfseries\color{navy2}Questions ?}\\[0.65cm]
-    \begin{tabular}{@{}ll@{}}
-      Karim SABRA & CPE Lyon -- IP2I / CNRS\\
-      Encadrant IP2I & Edouard Bechetoille\\
-      Encadrant école & Abdelbassat Massouri\\
-      Sujet & SPADMIC
-    \end{tabular}
-  \end{center}
-  \note{Objectif : laisser une slide claire pour les échanges. À dire : remercier le jury, les encadrants et l'équipe. Transition : utiliser les backups selon la question posée.}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-% Backup slides
-% ---------------------------------------------------------------------------
-\appendix
-\section{Backup}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Détail du Vernier}
-  \lead{La résolution élémentaire vient de la différence entre deux délais proches.}
-  \begin{center}
-    \includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{vernier_timing_principle.pdf}
-  \end{center}
-  \takeaway{$T_{\mathrm{LSB}} = T_{\mathrm{slow}} - T_{\mathrm{fast}}$, avec prudence sur l'implémentation physique réelle.}
-  \note{Question traitée : revenir au rattrapage Vernier si le jury veut le détail physique. Réponse clé : le pas différentiel est conceptuel et doit être confronté aux délais réels post-layout.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Multiphase versus moyennage}
-  \lead{Deux notions différentes : enrichir une conversion, puis moyenner plusieurs estimations corrigées.}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.54\textwidth}
-      \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{vernier_multiphase_timing.pdf}
-    \end{column}
-    \begin{column}{0.42\textwidth}
-      \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{03_rmse_vs_moyennage_limited.png}
-    \end{column}
-  \end{columns}
-  \vspace{-0.16cm}
-  \begin{center}
-    \smalltag{navy}{multiphase : une conversion}\hspace{0.35cm}
-    \smalltag{amber}{moyennage : plusieurs mesures corrigées}
-  \end{center}
-  \takeaway{Le multiphase est architectural ; le moyennage est statistique.}
-  \note{Question traitée : éviter la confusion entre plusieurs phases dans une conversion et plusieurs mesures moyennées après LUT. Réponse clé : les deux mécanismes n'agissent pas au même endroit de la chaîne.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Pourquoi trois axes MPTDC ?}
-  \lead{Les voies temporelles sont coordonnées avec la logique de lecture spatiale de SPADMIC.}
-  \begin{center}
-    \includegraphics[width=0.82\textwidth,height=0.50\textheight,keepaspectratio]{spadmic_mind_model.png}
-  \end{center}
-  \takeaway{Ce ne sont pas trois canaux indépendants abstraits : ils participent à la lecture tri-axis du prototype.}
-  \note{Question traitée : pourquoi trois voies temporelles. Réponse clé : elles suivent la logique de projections tri-axis de SPADMIC et partagent ensuite la chaîne de sortie.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Paquet et clé LUT}
-  \lead{La correction hôte utilise des champs observables, pas seulement un code temporel brut.}
-  \begin{center}
-    \includegraphics[width=0.98\textwidth,height=0.63\textheight,keepaspectratio]{packet_format_v27.pdf}
-  \end{center}
-  \vspace{-0.10cm}
-  \begin{center}
-    \smalltag{navy}{$n_{\mathrm{fast}}/n_{\mathrm{slow}}$}\hspace{0.25cm}
-    \smalltag{navy}{indices de phase}\hspace{0.25cm}
-    \smalltag{navy}{hit / STOP}\hspace{0.25cm}
-    \smalltag{amber}{clé LUT hôte}
-  \end{center}
-  \takeaway{La trame est pensée pour rendre la calibration possible après acquisition.}
-  \note{Question traitée : quelles informations alimentent la LUT. Réponse clé : compteurs, phases, hit, statuts et métadonnées construisent une clé d'observables côté hôte.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- DNL/INL sur codes observés}
-  \lead{Ces chiffres ne décrivent pas toute la répartition théorique, seulement les codes effectivement atteints.}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.62\textwidth}
-      \includegraphics[width=\linewidth,height=0.60\textheight,keepaspectratio]{04_dnl_inl_observable.png}
-    \end{column}
-    \begin{column}{0.34\textwidth}
-      \begin{itemize}
-        \item DNL pic : $0{,}987$ LSB
-        \item INL extrémité : $1{,}553$ LSB
-        \item Codes manquants explicitement reconnus
-      \end{itemize}
-    \end{column}
-  \end{columns}
-  \takeaway{La linéarité est défendue sur le domaine observé, pas comme propriété universelle de la matrice complète.}
-  \note{Question traitée : existence de codes manquants et validité DNL/INL. Réponse clé : les métriques sont sur les codes observés, pas sur une répartition théorique supposée pleine.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Validation hors apprentissage}
-  \lead{La LUT est construite et évaluée sur des ensembles séparés.}
-  \begin{center}
-    \includegraphics[width=0.94\textwidth,height=0.62\textheight,keepaspectratio]{calibration_flow.pdf}
-  \end{center}
-  \vspace{-0.10cm}
-  \begin{center}
-    \smalltag{navy}{split train}\hspace{0.35cm}
-    \smalltag{navy}{LUT figée}\hspace{0.35cm}
-    \smalltag{amber}{validation fresh}
-  \end{center}
-  \takeaway{Les 18,56 ps sont une métrique de validation RTL/Xcelium hors apprentissage.}
-  \note{Question traitée : risque d'apprentissage de la LUT. Réponse clé : la LUT est figée avant validation et la métrique est rapportée hors apprentissage.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Rétropression et saturation}
-  \lead{Deux contextes réduisent le temps mort, mais ne rendent pas le débit infini.}
-  \begin{center}
-    \includegraphics[width=0.84\textwidth,height=0.68\textheight,keepaspectratio]{char_throughput_counters_report.pdf}
-  \end{center}
-  \vspace{-0.08cm}
-  \begin{center}
-    \smalltag{navy}{ready/valid}\hspace{0.35cm}
-    \smalltag{navy}{FIFO 64 mots}\hspace{0.35cm}
-    \smalltag{amber}{débit borné}
-  \end{center}
-  \takeaway{La saturation est une limite système à rendre visible, pas à cacher.}
-  \note{Question traitée : débit et blocage aval. Réponse clé : deux contextes aident, mais ready/valid et saturation restent à gérer comme limites système.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Watchdogs et absence de STOP}
-  \lead{Les scénarios incomplets doivent aboutir à un état observable et récupérable.}
-  \begin{center}
-    \includegraphics[width=0.88\textwidth,height=0.66\textheight,keepaspectratio]{async_frontend_fsm.pdf}
-  \end{center}
-  \vspace{-0.08cm}
-  \begin{center}
-    \smalltag{navy}{START}\hspace{0.35cm}
-    \smalltag{amber}{timeout}\hspace{0.35cm}
-    \smalltag{navy}{CLEAR}
-  \end{center}
-  \takeaway{Un cas d'erreur maîtrisé est préférable à une conversion bloquée ou silencieuse.}
-  \note{Question traitée : que se passe-t-il si STOP n'arrive pas. Réponse clé : le watchdog doit conduire à un statut exporté et à une récupération contrôlée.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- CDC et compteurs Gray}
-  \lead{La stratégie réduit le risque de mots incohérents, mais n'est pas un signoff CDC formel.}
-  \begin{center}
-    \includegraphics[width=0.98\textwidth,height=0.66\textheight,keepaspectratio]{clock_domain_diagram.pdf}
-  \end{center}
-  \vspace{-0.08cm}
-  \begin{center}
-    \smalltag{navy}{compteurs Gray}\hspace{0.35cm}
-    \smalltag{navy}{snapshot stable}\hspace{0.35cm}
-    \smalltag{amber}{revue CDC à finaliser}
-  \end{center}
-  \takeaway{Au niveau RTL, on réduit et observe le risque ; au niveau physique, il faut le signer.}
-  \note{Question traitée : robustesse CDC et compteurs Gray. Réponse clé : le RTL réduit le risque de mots incohérents, mais une revue CDC formelle reste nécessaire.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Roadmap de signoff physique}
-  \lead{La suite naturelle est une boucle de corrélation entre simulations physiques et mesures.}
-  \begin{center}
-  \resizebox{0.94\textwidth}{!}{%
-  \begin{tikzpicture}[
-    s/.style={basebox,minimum width=2.15cm,minimum height=0.82cm},
-    w/.style={warnbox,minimum width=2.15cm,minimum height=0.82cm}
-  ]
-    \node[s,draw=navy!55,fill=navy!4] (rtl) {RTL};
-    \node[s,right=0.22cm of rtl] (syn) {Synthèse};
-    \node[s,right=0.22cm of syn] (sta) {STA / CDC};
-    \node[s,right=0.22cm of sta] (pnr) {PnR};
-    \node[s,right=0.22cm of pnr] (post) {Post-layout};
-    \node[w,right=0.22cm of post] (sil) {Silicium};
-    \foreach \a/\b in {rtl/syn,syn/sta,sta/pnr,pnr/post,post/sil}
-      \draw[softarrow] (\a) -- (\b);
-  \end{tikzpicture}%
-  }
-  \end{center}
-  \takeaway{Le support doit finir sur cette feuille de route, pas sur une promesse de performance finale.}
-  \note{Question traitée : prochaines étapes pour transformer le résultat RTL en circuit. Réponse clé : synthèse, STA/CDC, PnR, post-layout puis corrélation silicium.}
+  \note{Question traitée : portée de la validation. Réponse clé : le RTL valide un contrat fonctionnel, mais pas la métastabilité, le timing post-layout, le jitter réel ou la performance silicium finale.}
 \end{frame}
 
 \begin{frame}[noframenumbering]
@@ -1574,33 +1649,6 @@
 
   \takeaway{Le reset sécurise l'état global ; le clear nettoie seulement après protection de l'image utile.}
   \note{Question traitée : différence entre reset et clear. Réponse clé : le reset initialise le système, tandis que le clear est une étape contrôlée de fin de conversion après snapshot et contexte.}
-\end{frame}
-
-\begin{frame}[noframenumbering]
-  \frametitle{Backup -- Questions probables du jury}
-  \lead{Cette slide sert de carte mentale pour orienter les réponses vers les backups adaptés.}
-
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.48\textwidth}
-      \begin{itemize}
-        \item Pourquoi ne pas utiliser directement l'horloge système ?
-        \item Que transporte vraiment la trame 16 bit ?
-        \item Pourquoi l'erreur brute est-elle aussi biaisée ?
-        \item Le moyennage promet-il moins de 5 ps par hit ?
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{itemize}
-        \item Que prouvent les 18,56 ps ?
-        \item Où sont les risques CDC restants ?
-        \item Que manque-t-il avant les mesures silicium ?
-        \item Pourquoi trois axes MPTDC dans SPADMIC ?
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \takeaway{Répondre en revenant toujours au contrat : observables, correction, portée pré-silicium, limites physiques.}
-  \note{Question traitée : préparer la navigation en Q&A. Réponse clé : choisir le backup correspondant et garder la frontière RTL/Xcelium pré-silicium visible.}
 \end{frame}
 
 \end{document}
