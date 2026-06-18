@@ -1401,22 +1401,26 @@ write_final_readiness() {
       fi
     fi
     emit_check_text "exact source-cell override result" SKIPPED_SOURCE_CELL_NOT_REQUESTED "$FAST_TAG_EXACT_SOURCE_CELL_RESULT"
-    emit_check_text "PD hit-to-nfast local repair status" PASS "$PD_HIT_TO_NFAST_LOCAL_STATUS"
-    emit_check "PD hit-to-nfast local sources" "$PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED" "$PD_HIT_TO_NFAST_LOCAL_SOURCES_FOUND"
-    emit_check "PD hit-to-nfast local endpoints" "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_FOUND"
-    emit_check "PD hit-to-nfast local pairs" "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" "$PD_HIT_TO_NFAST_LOCAL_PAIRS_FOUND"
-    emit_check_text "PD hit-to-nfast local group path" OK "$PD_HIT_TO_NFAST_LOCAL_GROUP_PATH_RESULT"
-    if [[ "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT" == "OK" \
-        || "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT" == SKIPPED_INTENTIONAL* ]]; then
-      echo "| PD hit-to-nfast local max delay | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT\` | PASS |"
+    if [[ "${MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL:-0}" == "1" ]]; then
+      emit_check_text "PD hit-to-nfast local repair status" PASS "$PD_HIT_TO_NFAST_LOCAL_STATUS"
+      emit_check "PD hit-to-nfast local sources" "$PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED" "$PD_HIT_TO_NFAST_LOCAL_SOURCES_FOUND"
+      emit_check "PD hit-to-nfast local endpoints" "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_FOUND"
+      emit_check "PD hit-to-nfast local pairs" "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" "$PD_HIT_TO_NFAST_LOCAL_PAIRS_FOUND"
+      emit_check_text "PD hit-to-nfast local group path" OK "$PD_HIT_TO_NFAST_LOCAL_GROUP_PATH_RESULT"
+      if [[ "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT" == "OK" \
+          || "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT" == SKIPPED_INTENTIONAL* ]]; then
+        echo "| PD hit-to-nfast local max delay | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT\` | PASS |"
+      else
+        echo "| PD hit-to-nfast local max delay | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT\` | FAIL |"
+      fi
+      if [[ "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT" == "OK" \
+          || "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT" == SKIPPED_INTENTIONAL* ]]; then
+        echo "| PD hit-to-nfast local max transition | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT\` | PASS |"
+      else
+        echo "| PD hit-to-nfast local max transition | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT\` | FAIL |"
+      fi
     else
-      echo "| PD hit-to-nfast local max delay | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT\` | FAIL |"
-    fi
-    if [[ "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT" == "OK" \
-        || "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT" == SKIPPED_INTENTIONAL* ]]; then
-      echo "| PD hit-to-nfast local max transition | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT\` | PASS |"
-    else
-      echo "| PD hit-to-nfast local max transition | \`OK_or_SKIPPED_INTENTIONAL\` | \`$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT\` | FAIL |"
+      echo "| PD hit-to-nfast local repair stage | \`DISABLED_FOR_SCOPED_ON22\` | \`${MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL:-0}\` | PASS |"
     fi
     if [[ "${MPTDC_GENUS_REPAIR_PD_LOCAL_ON22:-0}" == "1" ]]; then
       emit_check_text "PD local ON22 repair status" PASS "$PD_LOCAL_ON22_STATUS"
@@ -1559,7 +1563,12 @@ emit_check() {
   local expected="$2"
   local actual="$3"
   local status="FAIL"
-  [[ "$actual" == "$expected" ]] && status="PASS"
+  if [[ "$actual" == "$expected" ]]; then
+    status="PASS"
+  elif [[ ( "$expected" == "0" || "$expected" == "0.0" ) \
+      && ( "$actual" == "0" || "$actual" == "0.0" || "$actual" == "-0.0" ) ]]; then
+    status="PASS"
+  fi
   echo "| $label | \`$expected\` | \`$actual\` | $status |"
 }
 
@@ -1860,7 +1869,7 @@ if [[ "${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL:-}" != "" ]]; then
   fi
 fi
 
-PD_HIT_TO_NFAST_LOCAL_GATE_OK=NO
+PD_HIT_TO_NFAST_LOCAL_GATE_OK=YES
 PD_HIT_TO_NFAST_LOCAL_DELAY_GATE_OK=NO
 if [[ "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT" == "OK" \
     || "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT" == SKIPPED_INTENTIONAL* ]]; then
@@ -1871,18 +1880,20 @@ if [[ "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT" == "OK" \
     || "$PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT" == SKIPPED_INTENTIONAL* ]]; then
   PD_HIT_TO_NFAST_LOCAL_TRANSITION_GATE_OK=YES
 fi
-if [[ ( "$PD_HIT_TO_NFAST_LOCAL_REPAIR_ENABLE" == "1" || "$PD_HIT_TO_NFAST_LOCAL_REPAIR_ENABLE" == "true" ) \
-    && "$PD_HIT_TO_NFAST_LOCAL_SOURCES_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED" \
-    && "$PD_HIT_TO_NFAST_LOCAL_SOURCE_Q_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED" \
-    && "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" \
-    && "$PD_HIT_TO_NFAST_LOCAL_PAIRS_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" \
-    && "$PD_HIT_TO_NFAST_LOCAL_GROUP_PATH_RESULT" == "OK" \
-    && "$PD_HIT_TO_NFAST_LOCAL_DELAY_GATE_OK" == "YES" \
-    && "$PD_HIT_TO_NFAST_LOCAL_TRANSITION_GATE_OK" == "YES" \
-    && "$PD_HIT_TO_NFAST_LOCAL_OVERMATCH" == "NO" \
-    && "$PD_HIT_TO_NFAST_LOCAL_UNDERMATCH" == "NO" \
-    && "$PD_HIT_TO_NFAST_LOCAL_STATUS" == "PASS" ]]; then
-  PD_HIT_TO_NFAST_LOCAL_GATE_OK=YES
+if [[ "$PD_HIT_TO_NFAST_LOCAL_REPAIR_ENABLE" == "1" || "$PD_HIT_TO_NFAST_LOCAL_REPAIR_ENABLE" == "true" ]]; then
+  PD_HIT_TO_NFAST_LOCAL_GATE_OK=NO
+  if [[ "$PD_HIT_TO_NFAST_LOCAL_SOURCES_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED" \
+      && "$PD_HIT_TO_NFAST_LOCAL_SOURCE_Q_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED" \
+      && "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" \
+      && "$PD_HIT_TO_NFAST_LOCAL_PAIRS_FOUND" == "$PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED" \
+      && "$PD_HIT_TO_NFAST_LOCAL_GROUP_PATH_RESULT" == "OK" \
+      && "$PD_HIT_TO_NFAST_LOCAL_DELAY_GATE_OK" == "YES" \
+      && "$PD_HIT_TO_NFAST_LOCAL_TRANSITION_GATE_OK" == "YES" \
+      && "$PD_HIT_TO_NFAST_LOCAL_OVERMATCH" == "NO" \
+      && "$PD_HIT_TO_NFAST_LOCAL_UNDERMATCH" == "NO" \
+      && "$PD_HIT_TO_NFAST_LOCAL_STATUS" == "PASS" ]]; then
+    PD_HIT_TO_NFAST_LOCAL_GATE_OK=YES
+  fi
 fi
 PD_LOCAL_ON22_GATE_OK=YES
 if [[ "${MPTDC_GENUS_REPAIR_PD_LOCAL_ON22:-0}" == "1" ]]; then
