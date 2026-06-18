@@ -1,5 +1,7 @@
 # MPTDC Synthesis
 
+Author: Karim Sabra
+
 This directory contains the Cadence Genus inputs and backend for the active
 `mptdc_axis_core` product boundary. The current repository baseline is closed in
 a typical view and is intended for Innovus feasibility, not final signoff.

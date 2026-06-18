@@ -1,5 +1,7 @@
 # SPADMIC TOP — VIP Guide
 
+Author: Karim Sabra
+
 ## Scope
 
 This guide explains the current modular VIP under `TOP/tb/vip/`.

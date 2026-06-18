@@ -1,11 +1,22 @@
 # MPTDC
 
+Author: Karim Sabra
+
 MPTDC is the SPADMIC multi-phase Vernier time-to-digital converter. The active
 repository boundary is one product axis with a 16-bit packet stream. RTL,
 verification, synthesis/PnR inputs, calibration code, and concise evidence are
 versioned; generated tool output belongs under `work/`.
 
 Start with [`HANDOFF.md`](HANDOFF.md).
+
+## Handoff rule
+
+The active handoff path is product-axis first: `mptdc_axis_core`, product smoke,
+canonical Genus profile, then Innovus feasibility. Retired standalone CSR/VIP
+handoff drafts and O-stage narrative documents were removed from the active
+documentation set. Backend compatibility names may still appear inside scripts
+and generated evidence so old reports remain traceable, but new work should use
+the stable purpose-named entrypoints listed here.
 
 ## Active design
 

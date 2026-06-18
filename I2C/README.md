@@ -1,5 +1,7 @@
 # I2C — SPADMIC Configuration Interface
 
+Author: Karim Sabra
+
 Low-speed configuration path from the I2C pins into the `clk_sys` CSR fabric used by the SPADMIC top.
 
 ## Active role
@@ -54,9 +56,9 @@ The shared SPADMIC decoder uses bits `[11:8]` of the 12-bit CSR address:
 | Region | Bits `[11:8]` | Description |
 |--------|---------------|-------------|
 | `GLOBAL` | `4'h0` | Chip ID, version, requested control image, active status, fault counters |
-| `TDC_X` | `4'h1` | X-axis `mptdc_top_asic` CSR window |
-| `TDC_Y` | `4'h2` | Y-axis `mptdc_top_asic` CSR window |
-| `TDC_Z` | `4'h3` | Z-axis `mptdc_top_asic` CSR window |
+| `TDC_X` | `4'h1` | X-axis TOP-owned `mptdc_axis_core` CSR window |
+| `TDC_Y` | `4'h2` | Y-axis TOP-owned `mptdc_axis_core` CSR window |
+| `TDC_Z` | `4'h3` | Z-axis TOP-owned `mptdc_axis_core` CSR window |
 | `POSITION` | `4'h4` | Position-block configuration and status registers |
 
 See [`TOP/docs/02_CSR_MAP.md`](../TOP/docs/02_CSR_MAP.md) for the detailed global and position register fields.

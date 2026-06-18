@@ -1,5 +1,7 @@
 # TOP — SPADMIC Top-Level Integration
 
+Author: Karim Sabra
+
 First-silicon SPADMIC chip-level integration around three product-only `mptdc_axis_core` TDC axes.
 
 ## Active architecture at a glance

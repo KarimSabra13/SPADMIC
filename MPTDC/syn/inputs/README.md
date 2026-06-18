@@ -1,5 +1,7 @@
 # MPTDC Synthesis Inputs
 
+Author: Karim Sabra
+
 Use `mptdc_axis_core_typical_closed.sdc` as the canonical Genus constraint
 entrypoint. The wrapper selects it automatically; handoff runs should not build
 an alternate SDC stack through shell arguments.
@@ -29,5 +31,6 @@ Tcl compatibility. They are not independent handoff flows.
 
 Changes to periods, uncertainty, object counts, exception matching, path budgets,
 or design-rule limits require a named profile experiment and a before/after
-report. Generic legacy files are retained for old exploratory flows but are not
-the source of truth for this handoff.
+report. Historical SDC filenames remain only where the canonical entrypoint
+delegates to them or where backend compatibility still requires them; they are
+not source-of-truth handoff commands.

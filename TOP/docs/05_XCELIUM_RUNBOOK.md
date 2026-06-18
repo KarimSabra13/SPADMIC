@@ -1,5 +1,7 @@
 # SPADMIC TOP — Xcelium Lab-Server Runbook
 
+Author: Karim Sabra
+
 ## 1. Prerequisites
 
 - **Xcelium** (Cadence) installed and on `$PATH` (`xrun`, `imc`)

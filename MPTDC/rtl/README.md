@@ -1,5 +1,7 @@
 # MPTDC RTL
 
+Author: Karim Sabra
+
 This directory contains the active product-axis RTL. The synthesis and product
 verification top is `top/mptdc_axis_core.sv`; `top/mptdc_core.sv` is the internal
 measurement/readout integration core.
@@ -20,6 +22,12 @@ measurement/readout integration core.
 `filelist.f` is the simulation compile-order source of truth. Synthesis uses
 `syn/filelist_axis_core_typical_closed.f`, which excludes the behavioral
 oscillator model and enables the real macro/phase-distribution defines.
+
+The RTL is organized by ownership boundary, not by synthesis convenience. Keep
+new logic in the directory that owns the contract it changes; do not hide CDC,
+oscillator, or packet-interface changes inside unrelated cleanup commits.
+For the block-by-block architecture, timing/PPA rationale, and refactor rules,
+use `../docs/architecture/MPTDC_ARCHITECTURE.md`.
 
 ## Frozen functional invariants
 
@@ -49,3 +57,15 @@ drain/FIFO, or calibration interpretation. A change is not handoff-ready until:
 Do not “clean up” intentional latches, synchronizer attributes, preserved phase
 buffers, clock-as-data paths, or the static held-bus bridge without a replacement
 architecture and matching timing/verification evidence.
+
+## Naming policy
+
+New modules, signals, parameters, scripts, and generated reports should use
+purpose-based names that reveal ownership and intent. Examples are product top,
+timing view, phase topology, packet role, or repair scope.
+
+Existing RTL names are not renamed in this documentation cleanup. In this block,
+hierarchy and signal names are consumed by filelists, reports, parser checks,
+timing exceptions, calibration/debug scripts, and external review notes. Rename
+them only in a separate refactor with local regression, Xcelium, Genus, and
+affected calibration evidence.

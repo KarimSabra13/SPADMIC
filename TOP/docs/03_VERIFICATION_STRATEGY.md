@@ -1,5 +1,7 @@
 # SPADMIC TOP — Verification Strategy
 
+Author: Karim Sabra
+
 ## 1. Scope
 
 This document describes the **active** verification strategy for `spadmic_top_v1`.

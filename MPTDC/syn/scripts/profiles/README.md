@@ -1,5 +1,7 @@
 # Genus Closure Profiles
 
+Author: Karim Sabra
+
 This directory contains versioned synthesis policy. A profile defines what the
 flow is allowed to optimize; the server runner implements how Genus is invoked.
 
@@ -8,7 +10,7 @@ flow is allowed to optimize; the server runner implements how Genus is invoked.
 `genus_axis_core_typical_closed.sh` is the handoff baseline validated by the
 June 18, 2026 run at commit `fa66cc4d36936e2bf0d41e6b24f2f9486569e242`.
 It fixes the effective policy inside the repository and rejects inherited
-legacy timing variables.
+experiment timing variables.
 
 Use only:
 
@@ -36,3 +38,7 @@ criterion. A profile becomes canonical only after its reports show:
 
 Historical `O13`, `ABS*`, and `REPAIR*` names remain in the backend for report
 traceability. They are implementation labels, not handoff interfaces.
+
+Name new profile fields by stable intent, not by experiment number. A reviewer
+should be able to infer the affected path family and guard directly from the
+variable name.

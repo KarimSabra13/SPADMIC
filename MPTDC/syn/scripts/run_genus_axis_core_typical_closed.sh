@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Author: Karim Sabra
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

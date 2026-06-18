@@ -1,5 +1,7 @@
 # SPADMIC TOP — Test Catalog
 
+Author: Karim Sabra
+
 ## 1. Directed Benches (Unit/Stress Layer)
 
 | # | Bench | Block Under Test | Key Checks |

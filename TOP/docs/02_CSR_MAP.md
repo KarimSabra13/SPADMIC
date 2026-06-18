@@ -1,5 +1,7 @@
 # SPADMIC TOP — Global and Position CSR Map
 
+Author: Karim Sabra
+
 ## Scope
 
 This document covers the software-visible CSR fields owned by the active TOP-level glue:

@@ -5,6 +5,7 @@
 // Project  : SPAD_MPTDC - Product axis core
 // File     : mptdc_axis_core.sv
 // Purpose  : SPADMIC product boundary for one MPTDC axis.
+// Author   : Karim Sabra
 // =============================================================================
 module mptdc_axis_core
   import mptdc_pkg::*;

@@ -1,5 +1,7 @@
 # SPADMIC TOP — TX Interface Contract
 
+Author: Karim Sabra
+
 ## Scope
 
 This document defines the **chip-facing** TX interface implemented by

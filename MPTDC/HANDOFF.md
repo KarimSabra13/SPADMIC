@@ -1,9 +1,27 @@
 # MPTDC Handoff
 
+Author: Karim Sabra
+Status: active owner handoff for the SPADMIC product-axis MPTDC
+
 This is the starting point for a new RTL, verification, synthesis, or physical
 implementation owner. The active product boundary is `mptdc_axis_core`; the
 current backend input is a typical-only Genus-closed netlist suitable for an
 Innovus feasibility pass, not final signoff.
+
+## How to read this repository
+
+Use this file as the entrypoint, then follow the source-of-truth documents in
+the ownership map below. Legacy MPTDC planning notes, numbered handoff drafts,
+and O-stage narrative documents were removed from the active documentation set
+because they described retired `mptdc_top_asic`, standalone CSR/VIP, or
+pre-closure synthesis assumptions. Historical sequence names remain only where
+required for backend report correlation or generated evidence.
+
+The implementation intentionally contains nonstandard mixed-clock structures:
+oscillator phases are measurement clocks, the Vernier q1 relation is an intended
+measurement crossing, async frontend storage is not accidental latch inference,
+and the context bridge is a static held-bus protocol. Treat these as design
+contracts that need explicit verification/timing evidence, not as cleanup noise.
 
 ## Frozen baseline
 
@@ -11,6 +29,7 @@ Innovus feasibility pass, not final signoff.
 | --- | --- |
 | RTL product top | `MPTDC/rtl/top/mptdc_axis_core.sv` |
 | Integration core | `MPTDC/rtl/top/mptdc_core.sv` |
+| Active handoff branch | `SPADMIC_test` |
 | Frequency mode | `R750_delta5` |
 | Phase distribution | `BUHDX4 -> BUHDX12` per slow/fast tap |
 | PD fabric | intentional `8 x 8` Vernier matrix |
@@ -46,6 +65,11 @@ The Genus command accepts only an optional run ID. The closure policy is stored
 in `MPTDC/syn/scripts/profiles/genus_axis_core_typical_closed.sh` so an inherited
 shell environment cannot silently change the handoff baseline.
 
+If Verilator is unavailable on the Cadence server, record that as a tool
+availability gap and use the Xcelium smoke as the Cadence portability gate. Do
+not mark the Verilator-based smoke or full regression as passed unless the
+`verilator` executable is actually available and the wrapper exits cleanly.
+
 ## Ownership map
 
 | Area | Source of truth | Handoff contract |
@@ -70,3 +94,20 @@ shell environment cannot silently change the handoff baseline.
    DRV count, path-family classification, and exact exception-count evidence.
 6. Merge the handoff cleanup only after the local smoke, profile check, and a
    server-side Genus rerun have passed from a clean tracked tree.
+7. Separate reference evidence from active checkout state. A later docs/script
+   cleanup commit may sit above the timing-reference commit, but it needs its
+   own clean wrapper rerun before becoming the accepted PnR handoff head.
+
+## Naming and cleanup policy
+
+Public entrypoints use purpose-based names: product boundary, timing view,
+closure profile, or physical intent. Internal backend names that still contain
+`O13`, `ABS`, or `REPAIR` are compatibility labels for reproducing the proven
+Genus run; do not rename them in a documentation-only cleanup because that would
+change the validated command path.
+
+RTL signal and parameter names should describe ownership and meaning, but broad
+renaming is a functional-risk change in this block. Rename RTL only with
+matching simulation, synthesis, timing, and calibration evidence. For this
+cleanup, use documentation to explain existing names and reserve RTL/script
+renames for a separate validated refactor.

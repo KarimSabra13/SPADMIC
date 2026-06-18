@@ -1,5 +1,7 @@
 # MPTDC VIP Status
 
+Author: Karim Sabra
+
 The standalone class-based MPTDC VIP harness was retired by the product-only
 `mptdc_axis_core` cleanup. It depended on the old standalone CSR/readout
 top-level boundary and no longer represents the active SPADMIC product path.

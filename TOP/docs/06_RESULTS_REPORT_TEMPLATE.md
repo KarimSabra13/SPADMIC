@@ -1,5 +1,7 @@
 # SPADMIC TOP — Verification Results Report
 
+Author: Karim Sabra
+
 > **Date**: _________________  
 > **Engineer**: _________________  
 > **Branch**: `SPADMIC_top` @ commit `_________________`  
@@ -156,7 +158,7 @@
 | `spadmic_axis_cluster_scan` | | | |
 | `spadmic_correlated_tx` | | | |
 | `spadmic_ddr_tx` | | | |
-| MPTDC active blocks | | | See `MPTDC/docs/04_VERIFICATION.md` |
+| MPTDC active blocks | | | See `MPTDC/docs/verification/MPTDC_VERIFICATION.md` |
 
 ---
 

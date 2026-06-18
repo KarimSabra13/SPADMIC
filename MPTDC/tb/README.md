@@ -1,5 +1,7 @@
 # MPTDC Verification Collateral
 
+Author: Karim Sabra
+
 The maintained verification target is the product boundary
 `mptdc_axis_core`. The former standalone CSR/readout VIP remains under `vip/`
 for archival or reusable components, but it is not part of the product smoke or

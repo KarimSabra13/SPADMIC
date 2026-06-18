@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck shell=bash
+# Author: Karim Sabra
 #
 # Canonical Genus policy for the MPTDC product-axis typical closure baseline.
 # Source this file through run_genus_axis_core_typical_closed.sh. Edit only the

@@ -1,5 +1,7 @@
 # Genus Axis-Core Typical-Closed Profile
 
+Author: Karim Sabra
+
 This document explains the fixed policy in
 `MPTDC/syn/scripts/profiles/genus_axis_core_typical_closed.sh`. The profile is a
 repository-owned configuration, not a collection of command-line knobs.
@@ -23,7 +25,7 @@ Use:
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh [run_id]
 ```
 
-Only the optional run ID is public. The profile rejects inherited legacy timing
+Only the optional run ID is public. The profile rejects inherited experiment timing
 variables before it exports the internal adapter values used by the historical
 Genus backend. Machine paths and output roots remain configurable because they
 do not select repair policy.
@@ -109,6 +111,6 @@ while the effective target remains X1.
 
 Copy the canonical profile and wrapper under a hypothesis-based name. Record the
 expected affected path family, rollback threshold, and baseline comparison. Do
-not export a legacy backend variable on the command line. Promote a profile only
+not export a backend experiment variable on the command line. Promote a profile only
 after exact object counts, SDC cleanliness, WNS/TNS/path counts, DRVs, and
 path-family classification are clean and the server run is tied to a commit.

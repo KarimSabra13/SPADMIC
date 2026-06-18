@@ -1,5 +1,7 @@
 # SPADMIC TOP — Correlated Event Export Contract
 
+Author: Karim Sabra
+
 ## Scope
 
 This document defines the active top-level export behavior implemented by:

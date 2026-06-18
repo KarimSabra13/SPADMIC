@@ -1,5 +1,7 @@
 # SPADMIC I2C — Block Guide
 
+Author: Karim Sabra
+
 ## Scope
 
 This is the block-by-block guide for the SPADMIC I2C control path.

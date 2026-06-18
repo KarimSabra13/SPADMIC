@@ -1,5 +1,7 @@
 # MPTDC Local Verilator Flow
 
+Author: Karim Sabra
+
 This directory contains the local-only Verilator baseline used for timing
 closure iterations. It is intended for syntax, lint, and directed digital smoke
 coverage. It is not Genus, Innovus, Xcelium, CDC signoff, analog signoff, or

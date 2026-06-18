@@ -1,5 +1,7 @@
 # SPADMIC TOP — Tapeout Readiness and Robustness Map
 
+Author: Karim Sabra
+
 ## Scope
 
 This document is the tapeout-focused RTL map for the active SPADMIC digital top.

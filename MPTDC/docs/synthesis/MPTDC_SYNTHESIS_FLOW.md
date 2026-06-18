@@ -1,5 +1,7 @@
 # MPTDC Synthesis Flow
 
+Author: Karim Sabra
+
 The active synthesis flow is the Cadence Genus typical-closed handoff flow for
 `mptdc_axis_core`. It is suitable as input to an Innovus feasibility study. It is
 not MMMC or final tapeout signoff.
@@ -25,9 +27,9 @@ are compatibility shims to the same canonical entrypoint.
 ## Flow layering
 
 1. `run_genus_axis_core_typical_closed.sh` validates the repository, input files,
-   run ID, and clean-tree policy.
+   run ID, clean-tree policy, and current checkout guard.
 2. `scripts/profiles/genus_axis_core_typical_closed.sh` owns the validated
-   closure policy and rejects inherited legacy experiment variables.
+   closure policy and rejects inherited experiment variables.
 3. `filelist_axis_core_typical_closed.f` names the product RTL and synthesis
    defines without presenting O13 as the flow name.
 4. `inputs/mptdc_axis_core_typical_closed.sdc` is the canonical SDC entrypoint.
@@ -38,6 +40,10 @@ are compatibility shims to the same canonical entrypoint.
 
 This separation allows the backend to retain historical labels while the handoff
 interface exposes one stable purpose-based flow.
+
+The canonical wrapper pins the backend `EXPECTED_HEAD` guard to the current
+checkout. This prevents an inherited stale experiment SHA from aborting a valid
+handoff rerun while still catching accidental checkout drift inside the backend.
 
 ## Validated timing policy
 

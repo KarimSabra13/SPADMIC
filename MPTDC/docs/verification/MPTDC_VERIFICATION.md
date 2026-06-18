@@ -1,5 +1,7 @@
 # MPTDC Verification
 
+Author: Karim Sabra
+
 The maintained verification boundary is `mptdc_axis_core`. This document defines
 handoff gates; it does not claim final coverage or analog/post-layout signoff.
 
@@ -17,6 +19,10 @@ handoff gates; it does not claim final coverage or analog/post-layout signoff.
 The active product integration test is
 `tb/int/tb_axis_core_product_smoke.sv`. The class-based standalone VIP under
 `tb/vip/` is archival because it targets the retired CSR/readout boundary.
+
+Verilator-based wrappers require a local `verilator` binary. Cadence server
+bring-up may have Xcelium but not Verilator; in that case record the Verilator
+gate as blocked by tool availability and keep the Xcelium smoke result separate.
 
 ## Minimum handoff scenarios
 

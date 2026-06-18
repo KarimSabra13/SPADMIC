@@ -1,8 +1,11 @@
 # MPTDC Documentation Map
 
-Active documents describe the current product boundary. Historical experiment
-logs retain provenance but must not be used as the recommended command or
-architecture description.
+Author: Karim Sabra
+
+Active documents describe the current product boundary. Legacy planning notes,
+numbered drafts, and old O-stage narrative documents were removed from the
+active documentation tree. Generated results may still exist under `results/`
+or external work directories, but they are evidence, not owner-facing guidance.
 
 ## Active documents
 
@@ -30,10 +33,10 @@ architecture description.
 - When an active document changes, update `../HANDOFF.md` if the owner-facing
   command, source of truth, or readiness state changed.
 
-## Historical material
+## Removed material
 
-Numbered legacy documents, old CSR/VIP notes, timing-iteration logs, and O1/O13
-experiment records are retained for provenance. They may describe retired
-standalone boundaries or pre-closure assumptions. Use the active documents
-above for handoff decisions, and consult historical files only to explain why a
-current guard or constraint exists.
+The removed documents were consolidated into the active architecture,
+verification, synthesis, timing, PnR, calibration, and signoff-limit documents
+above. If an old report is needed for forensic comparison, use the commit
+history or the generated run directory named in the active timing-status page.
+Do not reintroduce parallel narrative documents for the same owner decision.

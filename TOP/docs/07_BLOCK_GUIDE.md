@@ -1,5 +1,7 @@
 # SPADMIC TOP — Block Guide
 
+Author: Karim Sabra
+
 ## Scope
 
 This is the block-by-block reference for `TOP/rtl/`.

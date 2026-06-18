@@ -1,5 +1,7 @@
 # SPADMIC top-level v1 integration note
 
+Author: Karim Sabra
+
 ## Scope
 
 This document is the compact integration note for the active SPADMIC top around the validated `MPTDC` block.

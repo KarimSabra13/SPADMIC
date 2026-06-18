@@ -1,5 +1,7 @@
 # SPADMIC I2C — Integration Guide
 
+Author: Karim Sabra
+
 ## Scope
 
 This document explains how the active I2C block participates in the SPADMIC top-level control plane.
@@ -14,9 +16,9 @@ spadmic_top_v1
   |- spadmic_i2c_csr_bridge
   `- spadmic_csr_decoder
        |- spadmic_global_csr
-       |- X-axis mptdc_top_asic CSR
-       |- Y-axis mptdc_top_asic CSR
-       |- Z-axis mptdc_top_asic CSR
+       |- X-axis mptdc_axis_core CSR window
+       |- Y-axis mptdc_axis_core CSR window
+       |- Z-axis mptdc_axis_core CSR window
        `- spadmic_position_block CSR
 ```
 
@@ -124,4 +126,7 @@ Writes complete immediately from the decoder side once the request has been acce
 For the detailed register fields, use:
 
 - [`../../TOP/docs/02_CSR_MAP.md`](../../TOP/docs/02_CSR_MAP.md) for `GLOBAL` and `POSITION`
-- [`../../MPTDC/docs/03_CSR_MAP.md`](../../MPTDC/docs/03_CSR_MAP.md) for each per-axis TDC window
+- [`../../MPTDC/HANDOFF.md`](../../MPTDC/HANDOFF.md) and
+  [`../../MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md`](../../MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md)
+  for the product-axis TDC boundary. The retired standalone MPTDC CSR map is no
+  longer an active handoff document.

@@ -1,5 +1,7 @@
 # SPADMIC TOP — Active Architecture Guide
 
+Author: Karim Sabra
+
 ## Scope
 
 This document describes the active chip-level RTL in `TOP/rtl/` and its interaction with the preserved `MPTDC` and `I2C` blocks.

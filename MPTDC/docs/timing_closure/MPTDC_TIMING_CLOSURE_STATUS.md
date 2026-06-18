@@ -1,5 +1,7 @@
 # MPTDC Timing Closure Status
 
+Author: Karim Sabra
+
 The active `mptdc_axis_core` baseline is closed in the June 18, 2026 typical
 Genus view and is ready for an Innovus feasibility study. This is not MMMC,
 extracted, or final tapeout signoff.
@@ -20,6 +22,10 @@ The exact PD exception matched 64 paths from eight sources. The final scoped
 local repair resolved 355 mapped X0 instances and selected the safe X1 target.
 The stronger X2 trial was rejected because it introduced a new local regression.
 The canonical profile therefore keeps X2 disabled.
+
+Repository cleanup commits above the reference timing commit do not change this
+timing evidence by themselves. They must be validated by a clean canonical
+wrapper rerun before the newer checkout becomes the accepted PnR handoff head.
 
 Reproduce the repository policy with:
 
