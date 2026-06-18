@@ -2,9 +2,9 @@
 # XH018 physical-cell candidates for MPTDC PNR
 #
 # These values are intentionally not marked confirmed. The current lab
-# discovery proves JIHD decap, antenna, tie, CTS-buffer, and phase-buffer
-# candidates, but the exact tap, endcap, and row-filler source is still
-# unresolved. Do not use this file for insertion until those classes are
+# discovery proves JIHD decap, antenna, tie, CTS-buffer, CTS-inverter, and
+# phase-buffer candidates, but the exact tap, endcap, and row-filler source is
+# still unresolved. Do not use this file for insertion until those classes are
 # discovered from the approved PDK inputs and reviewed.
 # =============================================================================
 
@@ -21,14 +21,14 @@ array set mptdc_xh018_cells {
     tie_high            {LOGIC1DJIHD LOGIC1LVJIHD}
     tie_low             {LOGIC0DJIHD LOGIC0LVJIHD}
     cts_buffers         {CLKVBUFJIHD}
-    cts_inverters       {}
+    cts_inverters       {INJIHDX0 INJIHDX1 INJIHDX12 INJIHDX2 INJIHDX3 INJIHDX4 INJIHDX6 INJIHDX8}
     phase_iso_buffer    {BUJIHDX4}
     phase_final_buffer  {BUJIHDX12}
     phase_buffer_policy {PREFER_UNIFORM_JIHD_AFTER_FRESH_GENUS_RERUN}
     stdcell_site        {core_jihd}
     stdcell_pg_power    {}
     stdcell_pg_ground   {}
-    source              {20260618_mptdc_jihd_discovery_00c060a0}
+    source              {20260618_mptdc_jihd_discovery_15d35861}
     source_hashes       {
         e0587511b5bbb47e7d5a96febc83aec9694179c4193f39faae20bbbe235b41b5  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef
         723d02c5c82480b093072e01f5fc3d57f801d83635b39f778b77b87f39762d61  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_fast_1_98V_0C.lib
@@ -40,7 +40,7 @@ array set mptdc_xh018_cells {
         7162a11babf8472cebd198e3d9b64f7786bd5796d9672a59e1ef19e6a7d2446e  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_slow_1_62V_m40C.lib
         405a0b21dc1910cd1c95555c53b374b91f1f637da264dedaf363396b27b7a985  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib
     }
-    unresolved_classes  {tap endcap_left endcap_right filler cts_inverters stdcell_pg_power stdcell_pg_ground}
+    unresolved_classes  {tap endcap_left endcap_right filler stdcell_pg_power stdcell_pg_ground}
     reviewed_by         {Karim Sabra}
     reviewed_date       {2026-06-18}
 }

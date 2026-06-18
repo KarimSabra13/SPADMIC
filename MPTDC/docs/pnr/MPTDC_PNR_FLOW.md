@@ -239,11 +239,14 @@ Required implementation evidence:
 
 Tap, endcap, tie, filler, decap, and antenna cells must be discovered from the
 exact physical collateral used by the run. The 2026-06-18 JIHD-only discovery
-proved JIHD decaps, antenna cells, `LOGIC0/LOGIC1` tie candidates, `CLKVBUFJIHD`,
-and `BUJIHDX4/BUJIHDX12`; it did not find tap, endcap, or row-filler cells in
-the JIHD standard-cell LEF. Do not mark `MPTDC/pnr/config/xh018_cells.tcl`
-confirmed until those missing classes are resolved from approved PDK sources and
-site/PG compatibility is checked.
+proved JIHD decaps, antenna cells, `LOGIC0/LOGIC1` tie candidates,
+`CLKVBUFJIHD`, `INJIHDX*`, and `BUJIHDX4/BUJIHDX12`; it did not find tap,
+endcap, or row-filler cells in the JIHD standard-cell LEF. The broader XH018
+LEF search found `FILLER*` macros only in IO-cell LEFs, which are not accepted
+as core JIHD row fillers without explicit site/PG compatibility evidence. Do
+not mark `MPTDC/pnr/config/xh018_cells.tcl` confirmed until those missing
+classes are resolved from approved PDK sources and site/PG compatibility is
+checked.
 
 If no RO current model is available, do not block the rest of PnR. Report:
 

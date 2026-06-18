@@ -46,8 +46,9 @@ physical cells are confirmed and explicit Innovus stages are implemented.
   are separate gates.
 - Physical cells must be discovered from approved PDK collateral before
   tap/endcap/tie/filler/decap/antenna/CTS insertion. `config/xh018_cells.tcl`
-  currently records JIHD candidates but remains unconfirmed because tap,
-  endcap, and row-filler cells were not found in the JIHD standard-cell LEF.
+  currently records JIHD decap, antenna, tie, CTS-buffer, CTS-inverter, and
+  phase-buffer candidates, but remains unconfirmed because tap, endcap, and
+  row-filler cells were not found in the JIHD standard-cell LEF.
 
 ## Directory Ownership
 
