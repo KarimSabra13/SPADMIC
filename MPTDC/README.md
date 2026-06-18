@@ -1,90 +1,68 @@
 # MPTDC
 
-Author: Karim Sabra
+MPTDC is the SPADMIC multi-phase Vernier time-to-digital converter. The active
+repository boundary is one product axis with a 16-bit packet stream. RTL,
+verification, synthesis/PnR inputs, calibration code, and concise evidence are
+versioned; generated tool output belongs under `work/`.
 
-MPTDC is the SPADMIC Vernier multi-phase time-to-digital converter.  The active
-repository view is a typical-only closure and documentation workspace: it keeps
-RTL, verification, synthesis, PnR, calibration, and compact evidence in git,
-while generated tool outputs belong under `work/`.
+Start with [`HANDOFF.md`](HANDOFF.md).
 
-This checkout does not claim final tapeout signoff.  MMMC, final analog
-confirmation, final LVS/DRC/PEX, and final post-layout characterization remain
-open signoff work.
+## Active design
 
-## Active Design
-
-- Product top level: `rtl/top/mptdc_axis_core.sv`
-- Core: `rtl/top/mptdc_core.sv`
-- Package constants and packet types: `rtl/pkg/mptdc_pkg.sv`
+- Product top: `rtl/top/mptdc_axis_core.sv`
+- Integration core: `rtl/top/mptdc_core.sv`
+- Package and packet contract: `rtl/pkg/mptdc_pkg.sv`
 - Oscillator and phase distribution: `rtl/osc/`
-- Phase detector matrix: `rtl/pd/`
-- Async capture and context bridge: `rtl/async/`
-- Drain, FIFO, and product packet readout: `rtl/ctrl/`, `rtl/readout/`
+- Intentional `8 x 8` Vernier detector matrix: `rtl/pd/`
+- Async capture and held-context bridge: `rtl/async/`
+- System control, drain, FIFO, and packet output: `rtl/ctrl/`, `rtl/readout/`
 
-The current architecture uses two `RO_tune4` oscillator macros, slow and fast
-phase distribution buffers, an `8 x 8` intentional Vernier phase-detector
-    matrix, local raw fast tagging, a slow Johnson epoch, and a fixed product
-    packet format emitted directly from `mptdc_axis_core`.  See
-[`docs/architecture/MPTDC_ARCHITECTURE.md`](docs/architecture/MPTDC_ARCHITECTURE.md).
+The active physical model uses two `RO_tune4` macro abstracts and a two-stage
+`BUHDX4 -> BUHDX12` digital phase distribution per tap. `mptdc_top_asic` and the
+retired standalone CSR/VIP boundary are not the product synthesis top.
 
-## Standard Output Policy
+## Stable entrypoints
 
-New generated output goes under:
-
-```text
-../work/
-  genus/
-  innovus/
-  xcelium/
-  verilator/
-  characterization/
-  calibration/
-  plots/
-  logs/
-  evidence/
-  scratch/
-```
-
-The `work/` tree is ignored by git except for its README.  Do not add Genus,
-Innovus, Xcelium, Verilator, waveform, database, large CSV, or checkpoint
-outputs to source control.
-
-## Active Commands
-
-Run these commands from the repository root:
+Run from the repository root:
 
 ```bash
-bash MPTDC/syn/scripts/server_run_genus_mptdc_typical.sh
-bash MPTDC/pnr/scripts/server_run_innovus_mptdc_feasibility.sh
-bash MPTDC/scripts/sim/run_mptdc_verilator_smoke.sh
+bash MPTDC/ci/run_smoke.sh
+bash MPTDC/ci/run_full_regression.sh
 bash MPTDC/scripts/sim/run_mptdc_xcelium_smoke.sh
 bash MPTDC/scripts/sim/run_mptdc_characterization.sh
 bash MPTDC/scripts/calibration/run_mptdc_calibration.sh
+bash MPTDC/syn/scripts/check_genus_axis_core_typical_closed_profile.sh
+bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_feasibility.sh
 ```
 
-The stable wrappers print the run directory, git HEAD, and
-`FINAL_SIGNOFF=NO`.  They reject a dirty tracked tree unless
-`MPTDC_ALLOW_DIRTY=1` is set.
+The stable wrappers record the run directory and git HEAD, print
+`FINAL_SIGNOFF=NO`, and reject a dirty tracked tree unless
+`MPTDC_ALLOW_DIRTY=1` is intentionally set.
 
 ## Documentation
 
 | Area | Document |
 | --- | --- |
+| Handoff index | [`HANDOFF.md`](HANDOFF.md) |
+| Documentation map | [`docs/README.md`](docs/README.md) |
+| RTL ownership | [`rtl/README.md`](rtl/README.md) |
 | Architecture | [`docs/architecture/MPTDC_ARCHITECTURE.md`](docs/architecture/MPTDC_ARCHITECTURE.md) |
 | Verification | [`docs/verification/MPTDC_VERIFICATION.md`](docs/verification/MPTDC_VERIFICATION.md) |
 | Synthesis | [`docs/synthesis/MPTDC_SYNTHESIS_FLOW.md`](docs/synthesis/MPTDC_SYNTHESIS_FLOW.md) |
-| PnR | [`docs/pnr/MPTDC_PNR_FLOW.md`](docs/pnr/MPTDC_PNR_FLOW.md) |
-| Calibration | [`docs/calibration/MPTDC_CALIBRATION_FLOW.md`](docs/calibration/MPTDC_CALIBRATION_FLOW.md) |
+| Genus profile rationale | [`docs/synthesis/GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md`](docs/synthesis/GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md) |
 | Timing status | [`docs/timing_closure/MPTDC_TIMING_CLOSURE_STATUS.md`](docs/timing_closure/MPTDC_TIMING_CLOSURE_STATUS.md) |
-| Signoff limitations | [`docs/signoff_notes/MPTDC_SIGNOFF_LIMITATIONS.md`](docs/signoff_notes/MPTDC_SIGNOFF_LIMITATIONS.md) |
-| Historical closure log | [`../docs/timing_history/MPTDC_TIMING_CLOSURE_HISTORY.md`](../docs/timing_history/MPTDC_TIMING_CLOSURE_HISTORY.md) |
+| PnR | [`docs/pnr/MPTDC_PNR_FLOW.md`](docs/pnr/MPTDC_PNR_FLOW.md) |
+| Signoff limits | [`docs/signoff_notes/MPTDC_SIGNOFF_LIMITATIONS.md`](docs/signoff_notes/MPTDC_SIGNOFF_LIMITATIONS.md) |
 
-## Protected Inputs
+## Output policy
 
-Keep these categories versioned:
+New generated data goes under the repository-level `work/` tree:
 
-- RTL, testbenches, VIP, filelists, scripts, and constraints.
-- `RO_tune4` macro abstracts under `syn/macros/`.
-- Analog handoff inputs under `analog_handoff/`.
-- XLIBD reference/config files under `tech/xlibd/` and `pnr/config/`.
-- Concise architecture, flow, timing, and evidence documentation.
+```text
+work/{genus,innovus,xcelium,verilator,characterization,calibration,evidence,logs,scratch}/
+```
+
+Do not add tool databases, logs, waveforms, checkpoints, large CSV files, or
+raw run directories to source control. Keep only reviewed summaries that state
+the source commit, command, run ID, result, and signoff boundary.

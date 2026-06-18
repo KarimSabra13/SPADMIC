@@ -1,81 +1,93 @@
 # MPTDC Synthesis Flow
 
-Author: Karim Sabra
+The active synthesis flow is the Cadence Genus typical-closed handoff flow for
+`mptdc_axis_core`. It is suitable as input to an Innovus feasibility study. It is
+not MMMC or final tapeout signoff.
 
-The active synthesis flow is a typical-only Cadence Genus flow for MPTDC timing
-closure.  It is not MMMC signoff and is not final tapeout signoff.
-
-## Active Command
+## Canonical command
 
 Run from the repository root:
 
 ```bash
-bash MPTDC/syn/scripts/server_run_genus_mptdc_typical.sh
+bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh [run_id]
 ```
 
-Equivalent stable aliases are available for timing-closure and final-typical
-server handoff:
+The optional argument names the run directory. No timing-policy arguments or
+environment overrides are accepted. Work-root and machine infrastructure such
+as `MPTDC_WORK_ROOT`, `PDK_ROOT`, and `SC_ROOT` remain environment-configurable;
+closure decisions do not.
 
-```bash
-bash MPTDC/syn/scripts/server_run_genus_mptdc_timing_closure.sh
-bash MPTDC/syn/scripts/server_run_genus_mptdc_final_typical.sh
-```
+Legacy public filenames (`server_run_genus_mptdc_typical.sh`,
+`server_run_genus_mptdc_timing_closure.sh`,
+`server_run_genus_mptdc_final_typical.sh`, and the old axis timing-close name)
+are compatibility shims to the same canonical entrypoint.
 
-Outputs are written to `work/genus/<run_id>/`.
+## Flow layering
 
-## Active Timing Model
+1. `run_genus_axis_core_typical_closed.sh` validates the repository, input files,
+   run ID, and clean-tree policy.
+2. `scripts/profiles/genus_axis_core_typical_closed.sh` owns the validated
+   closure policy and rejects inherited legacy experiment variables.
+3. `filelist_axis_core_typical_closed.f` names the product RTL and synthesis
+   defines without presenting O13 as the flow name.
+4. `inputs/mptdc_axis_core_typical_closed.sdc` is the canonical SDC entrypoint.
+5. `server_run_genus_o13_phase_distribution.sh` remains the internal backend for
+   historical report compatibility and result parsing.
+6. `procedures.tcl` performs the mapped repair, reporting, and fail-closed count
+   checks.
 
-The active flow uses:
+This separation allows the backend to retain historical labels while the handoff
+interface exposes one stable purpose-based flow.
 
-- Typical-only timing view.
-- R750_delta5 frequency mode.
-- Real `RO_tune4` macro binding.
-- RO interface audit before Genus launch.
-- Raw RO phase clocks at `RO_tune4/S[0:7]`.
-- Buffered phase clocks at the final `BUHDX12` phase drivers.
-- A narrow, count-checked PD intentional Vernier exception.
-- Clock/CDC constraints for the async capture and context bridge.
+## Validated timing policy
 
-The current stable command is the user-facing name for the latest
-phase-distribution, clock/CDC, and PD Vernier repair flow.  Historical
-experiment names and result notes are preserved in
-`docs/timing_history/MPTDC_TIMING_CLOSURE_HISTORY.md`.
+The profile reproduces the June 18, 2026 clean run:
+
+- typical-only `R750_delta5` timing model;
+- JIHD standard cells and timing-focused optimization;
+- exact 64-path PD Vernier q1 exception with eight sources;
+- exact fast-tag path constraints using the full `1.333 ns` C-to-D budget;
+- exact fast-tag source-cell remapping disabled;
+- broad PD hit-to-nfast delay/transition pressure disabled;
+- local ON22 discovery from timing reports;
+- 448 expected local endpoints;
+- driver/cell count policy `AUTO` because 355 unique real ON22 drivers is valid;
+- requested targets `ON22JIHDX1 ON22JIHDX2` with X2 prohibited;
+- 355 resolved `ON22JIHDX0` instances resized to X1 in the reference run.
+
+The detailed rationale and impact of each setting is documented in
+[`GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md`](GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md).
 
 ## Inputs
 
-Protected inputs include:
+Protected synthesis inputs include:
 
-- `syn/inputs/mptdc_typical_r750_delta5.sdc`.
-- `syn/inputs/mptdc_clock_model_typical.sdc`.
-- `syn/inputs/mptdc_pd_vernier_exceptions.sdc`.
-- `syn/inputs/mptdc_phase_distribution.sdc`.
-- `syn/macros/RO_tune4_real_abstract_shell.lib`.
-- `analog_handoff/real_ro_tune4_abstract.env`.
-- `analog_handoff/audit_ro_tune4_abstract.py`.
+- `filelist_axis_core_typical_closed.f`;
+- `inputs/mptdc_axis_core_typical_closed.sdc` and its stable delegates;
+- `inputs/README.md` for constraint ownership and edit rules;
+- `macros/RO_tune4_real_abstract_shell.lib`;
+- `analog_handoff/real_ro_tune4_abstract.env`;
+- `analog_handoff/audit_ro_tune4_abstract.py`;
+- `scripts/profiles/genus_axis_core_typical_closed.sh`;
+- the Genus backend and `procedures.tcl`.
 
-The stable SDC names are aliases first.  Legacy SDC files remain until all
-references are updated and validated.
+Historical O13/ABS/REPAIR files remain protected because the stable aliases and
+report parsers delegate to them. They are not recommended commands.
 
-The `RO_tune4` audit verifies that the real LEF parser ignores
-`PROPERTYDEFINITIONS`, finds the real `MACRO RO_tune4` block, and sees `rstb`,
-`code[0:7]`, `S[0:7]`, `VDD`, `VSS`, and `vdd!`.  In the macro, `rstb=1`
-means run and `rstb=0` means stop.  `code[7:0]` is the tuning bus and must
-remain routable even if a timing experiment uses fixed tuning.
+## Output and decision policy
 
-## Output Policy
+The wrapper writes to `work/genus/<run_id>/`, records git HEAD/branch, and prints
+`FINAL_SIGNOFF=NO`. A typical closure decision requires:
 
-The Genus wrapper must:
+- Genus exit code zero;
+- exact PD exception and local-repair discovery checks;
+- no active SDC failures or invalid objects;
+- setup WNS at least zero, zero setup violating paths, and zero TNS within report
+  numerical tolerance;
+- zero max-transition, max-capacitance, and max-fanout violations;
+- no unclassified new real path family.
 
-- Print the exact run directory and git HEAD.
-- Print `FINAL_SIGNOFF=NO`.
-- Reject a dirty tracked tree unless `MPTDC_ALLOW_DIRTY=1`.
-- Fail if required filelists, SDCs, macro abstracts, or handoff files are
-  missing.
-- Keep historical traceability in labels and manifests without making old
-  experiment names the recommended command.
-
-## Signoff Boundary
-
-This flow is suitable for typical timing-closure development and backend
-handoff.  It does not replace MMMC, final extracted timing, formal signoff
-checks, analog phase validation, LVS, DRC, or PEX.
+The reference result is WNS `+0.3 ps`, TNS `-0.0 ps`, zero setup violations, and
+zero DRVs. That result authorizes Innovus feasibility only. After any profile,
+RTL, library, SDC, or parser change, run the profile checker and a fresh server
+Genus comparison before updating the baseline.

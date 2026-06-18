@@ -1,93 +1,89 @@
 # MPTDC Architecture
 
-Author: Karim Sabra
+This document describes the active SPADMIC product-axis RTL. It is an
+architecture contract, not a final physical-signoff statement.
 
-This document describes the active MPTDC RTL architecture.  It is a design
-description, not a final signoff statement.
+## Product boundary
 
-## System Boundary
+The maintained top is `rtl/top/mptdc_axis_core.sv`. It selects SPAD or
+calibration START/STOP inputs, generates a synchronized local reset, instantiates
+`mptdc_core`, and exports the fixed 16-bit packet stream plus ready/busy/FIFO
+status. `mptdc_top_asic` belongs to an older standalone boundary and is not the
+active product synthesis top.
 
-The top-level ASIC wrapper is `rtl/top/mptdc_top_asic.sv`; the main integration
-point is `rtl/top/mptdc_core.sv`.  The design contains:
+`rtl/top/mptdc_core.sv` integrates:
 
-- `clk_sys` control, drain, FIFO, CSR, and readout logic.
-- Two oscillator phase families: slow and fast.
-- An `8 x 8` phase-detector matrix.
-- Async capture/context logic that bridges measurement-local phase activity
-  into the system-clock drain path.
-- A fixed 16-bit packetized output stream.
+- slow and fast oscillator phase families;
+- buffered phase distribution;
+- the `8 x 8` Vernier detector matrix;
+- local fast tag and slow epoch capture;
+- async frontend/context ownership;
+- held-context CDC into `clk_sys`;
+- measurement control, drain, watchdog, FIFO, and packet readout.
 
-The packet format is fixed by RTL package types and readout logic.  Cleanup and
-timing-flow work must not change packet fields, ordering, or calibration
-semantics.
+## Clock and reset domains
 
-## Oscillator And Phase Distribution
+`clk_sys` owns ordinary control, status, draining, FIFO operation, and packet
+transmission. Slow and fast oscillator phases own measurement-local activity.
+The design does not assume synchronous phase relationships between these
+families.
 
-The physical timing model uses two `RO_tune4` macro abstracts, one slow and one
-fast.  Their `S[0:7]` pins are the raw analog phase sources and remain protected
-load-check points in synthesis and PnR.
+The product reset asserts asynchronously and deasserts through explicit local
+synchronizers. Reset synchronizer attributes and staggered depths are preserved
+to prevent optimization from rebuilding one high-fanout reset tree. Changes to
+reset structure require CDC, recovery/removal, and physical review.
 
-The current digital phase distribution inserts a two-stage buffer chain per tap:
+## Oscillators and phase distribution
+
+Physical synthesis binds two `RO_tune4` macro abstracts, one slow and one fast.
+Their `S[0:7]` pins are raw analog phase sources and remain auditable load points.
+Each tap uses the validated digital topology:
 
 ```text
-RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> buffered phase clock
+RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> digital phase fabric
 ```
 
-The raw RO phase pins are still modeled and checked.  The buffered phase clocks
-are the intended downstream digital phase clocks used by the current typical
-clock model.  Clock-tree synthesis must not treat RO or phase clocks like
-ordinary `clk_sys` clocks.
+The final `BUHDX12` outputs are modeled as buffered phase clocks for the current
+typical flow. RO and phase clocks are not ordinary `clk_sys` CTS targets.
 
-## Phase Detector Matrix
+## Vernier detector matrix
 
-The PD fabric is an `8 x 8` matrix.  Each row corresponds to a slow phase and
-each column corresponds to a fast phase.  The intended timing relationship is a
-Vernier slow-to-fast sampling relation: selected slow-phase state is sampled in
-the fast-phase domain by the PD cell.
+The detector is an `8 x 8` matrix: each row corresponds to one slow phase and
+each column to one fast phase. The slow-to-fast q1 sampling relation is the
+intentional Vernier measurement. The synthesis exception is therefore narrow,
+fail-closed, and count-checked at eight sources and 64 q1 endpoints.
 
-That slow-to-fast sampling is intentional measurement behavior.  It is not a
-packet-format change and it is not a calibration bypass.  Timing exceptions for
-this path must be narrow, count-checked, and limited to the intentional PD
-sampler relation.
+The exception does not cut q1-to-q2, hit latching, local nfast capture, fast-tag,
+reset, control, FIFO, or packet paths. Those remain real timing paths.
 
-## Epoch And Tags
+## Tags, epoch, and context capture
 
-The design uses a local fast `raw_lfsr_tag` for fast-side phase context and a
-slow Johnson epoch for slow-side context.  These fields preserve measurement
-state without reintroducing a global fast counter.
+The current architecture uses a local fast raw tag and a slow Johnson epoch.
+These preserve measurement context without a global high-speed binary counter.
+The sampled PD image and associated metadata are held in a context bank before
+`clk_sys` consumes them. Control crossings use explicit synchronization; the
+multi-bit context image relies on a documented static-held-bus protocol after
+its ownership/ready handshake.
 
-The raw tag and epoch are consumed by the capture and drain path, then emitted
-through the existing fixed packet format.  Any calibration or reconstruction
-change must remain compatible with that packet contract.
+## Drain and packet contract
 
-## Async Capture And Context Bridge
+The drain controller serializes complete context records into a synchronous
+FIFO. `mptdc_packet16_tx` emits the fixed narrow packet with valid/ready and
+SOP/EOP. Packet field meanings, order, calibration interpretation, and
+backpressure behavior are external contracts; cleanup work must not change them
+implicitly.
 
-Measurement activity is local to oscillator and PD timing domains.  The capture
-bridge holds the raw PD image and associated context, then hands a stable image
-to the `clk_sys` drain path.  The current architecture keeps the measurement
-fabric and system control fabric separated:
+## Active physical assumptions
 
-- Async STOP and epoch capture record measurement-local events.
-- Context banks preserve the sampled image.
-- CDC helpers synchronize control pulses and counters where needed.
-- Drain logic consumes complete records only after capture is stable.
+- Product top: `mptdc_axis_core`.
+- Frequency mode: `R750_delta5`.
+- Standard-cell family for the closed Genus run: JIHD.
+- Typical-only Genus timing view.
+- Real `RO_tune4` macro binding.
+- Buffered `BUHDX4 -> BUHDX12` phase distribution.
+- Exact count-checked PD Vernier exception.
+- Scoped local ON22 X0-to-X1 repair on real endpoint cones.
 
-## Drain, FIFO, And Readout
-
-The drain controller serializes hit records into an acquisition FIFO.  The
-readout path can use the local narrow 16-bit transmitter or the shared
-acquisition-record export interface, depending on integration mode.  The active
-RTL keeps a fixed packet format and does not use cleanup work to alter software
-visible fields.
-
-## Design Constraints
-
-The active closure assumptions are:
-
-- Typical-only timing view for the current flow.
-- R750_delta5 frequency mode for the active oscillator timing constants.
-- `RO_tune4` macro binding is required for physical synthesis/PnR studies.
-- RO/phase clocks are protected from normal CTS treatment.
-- `clk_sys` remains the ordinary digital clock-tree target.
-- Final MMMC, post-layout characterization, LVS/DRC/PEX, and analog phase
-  confirmation are not complete in this repository state.
+Final MMMC timing, extracted parasitics, analog phase/jitter confirmation, LVS,
+DRC, PEX, and post-layout characterization remain outside this architecture
+claim.
