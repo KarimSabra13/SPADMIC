@@ -33,6 +33,8 @@ use `../docs/architecture/MPTDC_ARCHITECTURE.md`.
 
 - `NE=8`, two retained contexts, and an `8 x 8` PD matrix.
 - One slow and one fast `RO_tune4` phase family.
+- Two independent TOP-owned RO tuning buses: `ro_slow_code_i[7:0]` and
+  `ro_fast_code_i[7:0]`.
 - `R750_delta5` timing/frequency mode for the current physical baseline.
 - `BUHDX4 -> BUHDX12` buffered phase distribution.
 - Fixed 16-bit packet stream at `mptdc_axis_core`.
@@ -40,6 +42,30 @@ use `../docs/architecture/MPTDC_ARCHITECTURE.md`.
   oscillator-domain binary fast counter.
 - Async frontend ownership and teardown semantics remain explicit.
 - Context data is held stable before the `clk_sys` drain path consumes it.
+
+## RO code interface
+
+TOP owns the software-visible CSR image for oscillator tuning. The MPTDC product
+axis receives the current requested values through:
+
+```systemverilog
+input wire [7:0] ro_slow_code_i;
+input wire [7:0] ro_fast_code_i;
+```
+
+`mptdc_core` copies these buses into local `ro_slow_code_q` and
+`ro_fast_code_q` registers only while the measurement engine is idle, both
+oscillators are stopped, no context is draining, and frontend teardown is clear.
+Those local copies drive `RO_tune4/code[7:0]`.
+
+This split is a physical-timing choice. Long CSR routes may reach the local
+shadow registers, but the load-sensitive code nets from shadow register to RO
+macro should stay short after placement. A CSR write during a live measurement is
+allowed architecturally, but it must not reach either RO macro until the axis
+returns to idle. `soft_reset_i` clears the measurement/control state but does
+not force the local RO code registers to zero. The top asynchronous reset clears
+the local code registers and blocks arming until one idle reload has occurred.
+Writing `8'h00` through the CSR is the normal way to select code zero.
 
 ## RTL change checklist
 

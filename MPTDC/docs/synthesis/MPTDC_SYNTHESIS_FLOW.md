@@ -3,8 +3,12 @@
 Author: Karim Sabra
 
 The active synthesis flow is the Cadence Genus typical-closed handoff flow for
-`mptdc_axis_core`. It is suitable as input to an Innovus feasibility study. It is
-not MMMC or final tapeout signoff.
+`mptdc_axis_core`. It produces the mapped netlist/SDC package consumed by
+Innovus. It is not MMMC or final tapeout signoff.
+
+The June 18, 2026 clean handoff is valid only for the exact RTL commit that
+generated it. Any RTL interface, phase-buffer, SDC, library, or profile change
+invalidates that handoff and requires a fresh canonical Genus run before PnR.
 
 ## Canonical command
 
@@ -94,6 +98,14 @@ The wrapper writes to `work/genus/<run_id>/`, records git HEAD/branch, and print
 - no unclassified new real path family.
 
 The reference result is WNS `+0.3 ps`, TNS `-0.0 ps`, zero setup violations, and
-zero DRVs. That result authorizes Innovus feasibility only. After any profile,
-RTL, library, SDC, or parser change, run the profile checker and a fresh server
-Genus comparison before updating the baseline.
+zero DRVs. The later server rerun
+`20260618_axis_core_typical_closed_handoff_rerun2` reproduced closure at commit
+`d290cd7dc15222a343e4c8c0e60005494ac62ec4` and passed the pre-PnR handoff gate,
+with the explicit warning that the WNS margin is only `+0.3 ps`.
+
+That result authorizes only the next implementation step for that exact
+netlist. The current RO-code RTL interface change creates a new netlist
+contract, so the old handoff must be treated as reference evidence, not as the
+active PnR input. After any profile, RTL, library, SDC, or parser change, run
+the profile checker and a fresh server Genus comparison before updating the
+baseline.

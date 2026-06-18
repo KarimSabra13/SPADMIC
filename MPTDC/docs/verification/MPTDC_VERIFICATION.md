@@ -36,6 +36,10 @@ The maintained product regression must exercise:
 - rejected START/overflow accounting;
 - watchdog recovery when STOP does not arrive;
 - consecutive conversions without stale context leakage.
+- default `ro_slow_code_i`/`ro_fast_code_i` zero-code behavior;
+- idle capture of nonzero slow/fast RO codes;
+- no live-measurement propagation of a changed external RO code;
+- no forced zeroing of local RO code shadows by `soft_reset_i`.
 
 Focused unit tests are useful for local logic but do not replace the product
 boundary test.
@@ -55,8 +59,9 @@ Generated logs, waves, coverage databases, and campaign data belong under
 test list, pass/fail count, and exclusions.
 
 The June 18, 2026 Genus result proves typical mapped timing for its exact RTL and
-profile. It does not prove that simulation still passes after repository cleanup.
-Before merging a handoff refactor, run the local smoke and profile check. Before
-updating the functional baseline, also run the full regression and Xcelium smoke.
-RTL or timing-policy changes require a fresh Genus result; physical topology
-changes additionally require Innovus and characterization reruns.
+profile. It does not cover later RTL changes such as the slow/fast RO-code
+interface and local shadow registers. Before merging a handoff refactor, run the
+local smoke and profile check. Before updating the functional baseline, also run
+the full regression and Xcelium smoke. RTL or timing-policy changes require a
+fresh Genus result; physical topology changes additionally require Innovus and
+characterization reruns.

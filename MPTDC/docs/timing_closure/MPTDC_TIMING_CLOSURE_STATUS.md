@@ -2,9 +2,9 @@
 
 Author: Karim Sabra
 
-The active `mptdc_axis_core` baseline is closed in the June 18, 2026 typical
-Genus view and is ready for an Innovus feasibility study. This is not MMMC,
-extracted, or final tapeout signoff.
+The June 18, 2026 `mptdc_axis_core` reference baseline is closed in the typical
+Genus view and was ready for an Innovus feasibility study at its exact Git HEAD.
+This is not MMMC, extracted, or final tapeout signoff.
 
 | Metric | Result |
 | --- | ---: |
@@ -24,8 +24,11 @@ The stronger X2 trial was rejected because it introduced a new local regression.
 The canonical profile therefore keeps X2 disabled.
 
 Repository cleanup commits above the reference timing commit do not change this
-timing evidence by themselves. They must be validated by a clean canonical
-wrapper rerun before the newer checkout becomes the accepted PnR handoff head.
+timing evidence by themselves. RTL changes do. The slow/fast RO-code interface
+and local shadow registers create a new netlist contract, so this timing result
+is now reference evidence, not the active PnR handoff for the current checkout.
+A clean canonical wrapper rerun is required before the newer checkout becomes
+the accepted PnR handoff head.
 
 Reproduce the repository policy with:
 

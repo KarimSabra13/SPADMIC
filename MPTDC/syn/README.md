@@ -4,7 +4,9 @@ Author: Karim Sabra
 
 This directory contains the Cadence Genus inputs and backend for the active
 `mptdc_axis_core` product boundary. The current repository baseline is closed in
-a typical view and is intended for Innovus feasibility, not final signoff.
+a typical reference view at its exact Genus-run commit and is intended for
+Innovus feasibility, not final signoff. RTL changes require a new canonical
+Genus run before the checkout is a valid PnR handoff.
 
 ## Run the handoff flow
 
@@ -61,6 +63,10 @@ aliases to the canonical command; they are not separate policies.
 - Transition/capacitance/fanout violations: `0 / 0 / 0`
 - Effective local repair: 355 resolved `ON22JIHDX0` instances resized to X1
 - X2 policy: prohibited after a `LOCAL_FAST_TAG_SELF` regression
+
+The later `20260618_axis_core_typical_closed_handoff_rerun2` server run also
+closed typical Genus and passed the pre-PnR handoff gate for its exact HEAD. It
+does not cover subsequent RO-code RTL changes.
 
 See
 [`../docs/synthesis/GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md`](../docs/synthesis/GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md)

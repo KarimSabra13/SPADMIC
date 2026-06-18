@@ -21,6 +21,14 @@ proc mptdc_pnr_core_util_max_first_run {} {
     return 0.65
 }
 
+proc mptdc_pnr_target_aspect_ratio {} {
+    return [mptdc_pnr_env MPTDC_PNR_ASPECT_RATIO 1.333333]
+}
+
+proc mptdc_pnr_allowed_aspect_ratio_range {} {
+    return [list min 1.20 target [mptdc_pnr_target_aspect_ratio] max 1.47]
+}
+
 proc mptdc_pnr_floorplan_labels {} {
     return [list TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF]
 }
@@ -77,6 +85,35 @@ proc mptdc_pnr_floorplan_regions {} {
     ]
 }
 
+proc mptdc_pnr_auto_dimensions {} {
+    set std_area [mptdc_pnr_env MPTDC_PNR_STDCELL_AREA_UM2 [mptdc_pnr_env MPTDC_PNR_MIN_STDCELL_AREA_UM2 0.0]]
+    set util [mptdc_pnr_core_util_default]
+    set ratio [mptdc_pnr_target_aspect_ratio]
+    set guard [mptdc_pnr_env MPTDC_PNR_AREA_GUARD_BAND 1.20]
+    set region_area 0.0
+    dict for {name box} [mptdc_pnr_floorplan_regions] {
+        set w [expr {[lindex $box 2] - [lindex $box 0]}]
+        set h [expr {[lindex $box 3] - [lindex $box 1]}]
+        set region_area [expr {$region_area + ($w * $h)}]
+    }
+    set cell_area [expr {$std_area > 0.0 ? ($std_area / $util) : 0.0}]
+    set required_area [expr {max($region_area, $cell_area) * $guard}]
+    if {$required_area <= 0.0} {
+        set required_area 1.0
+    }
+    set height [expr {sqrt($required_area / $ratio)}]
+    set width [expr {$height * $ratio}]
+    return [dict create \
+        width_um $width \
+        height_um $height \
+        aspect_ratio [expr {$width / $height}] \
+        target_aspect_ratio $ratio \
+        standard_cell_area_um2 $std_area \
+        reserved_region_area_um2 $region_area \
+        utilization $util \
+        area_guard_band $guard]
+}
+
 proc mptdc_pnr_write_floorplan_intent {{path ""}} {
     if {$path eq ""} {
         set path [mptdc_pnr_env MPTDC_PNR_FLOORPLAN_REPORT mptdc_floorplan_intent.rpt]
@@ -87,11 +124,16 @@ proc mptdc_pnr_write_floorplan_intent {{path ""}} {
     puts $fh "core_utilization=[mptdc_pnr_core_util_default]"
     puts $fh "core_utilization_allowed=[mptdc_pnr_core_util_allowed_range]"
     puts $fh "core_utilization_max_first_run=[mptdc_pnr_core_util_max_first_run]"
+    puts $fh "aspect_ratio_allowed=[mptdc_pnr_allowed_aspect_ratio_range]"
     puts $fh "order=[join [mptdc_pnr_floorplan_order] { -> }]"
     puts $fh "timing_protection_rules=[join [mptdc_pnr_floorplan_timing_protection_rules] {; }]"
     puts $fh ""
     dict for {name box} [mptdc_pnr_floorplan_regions] {
         puts $fh "$name=$box"
+    }
+    puts $fh ""
+    dict for {name value} [mptdc_pnr_auto_dimensions] {
+        puts $fh "auto_dimension_$name=$value"
     }
     close $fh
     return $path

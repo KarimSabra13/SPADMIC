@@ -34,6 +34,7 @@ module mptdc_core
   import mptdc_pkg::*;
 (
   input  wire                   clk_sys,
+  input  wire                   async_rst_n_i,
   input  wire                   rst_sys_n,
 
   // Async START/STOP from input mux
@@ -42,6 +43,8 @@ module mptdc_core
 
   // Product controls from TOP-owned CSR
   input  wire [MAX_HITS_W-1:0] max_hits_i,
+  input  wire [7:0]             ro_slow_code_i,
+  input  wire [7:0]             ro_fast_code_i,
   input  wire                   conv_arm_i,
   input  wire                   fifo_clr_i,
 
@@ -79,6 +82,11 @@ module mptdc_core
   wire [NE-1:0] slow_phase, fast_phase;
   wire           slow_phase0_guard, slow_phase7d_probe;
   wire           osc_fast_ph0 = fast_phase[0];
+  logic [7:0]    ro_slow_code_q;
+  logic [7:0]    ro_fast_code_q;
+  logic          ro_code_loaded_q;
+  logic [1:0]    ro_code_osc_slow_en_sync_q;
+  logic [1:0]    ro_code_osc_fast_en_sync_q;
 
   // =========================================================================
   //  Internal wires — frontend
@@ -325,6 +333,39 @@ module mptdc_core
   assign meas_active_sync  = start_latched_sync & stop_latched_sync;
   assign start_timeout_sync = start_timeout_latched;
 
+  always_ff @(posedge clk_sys or negedge async_rst_n_i) begin
+    if (!async_rst_n_i) begin
+      ro_code_osc_slow_en_sync_q <= '0;
+      ro_code_osc_fast_en_sync_q <= '0;
+    end else begin
+      ro_code_osc_slow_en_sync_q <= {ro_code_osc_slow_en_sync_q[0], fe_osc_slow_en};
+      ro_code_osc_fast_en_sync_q <= {ro_code_osc_fast_en_sync_q[0], fe_osc_fast_en};
+    end
+  end
+
+  wire ro_code_capture_idle = !ro_code_osc_slow_en_sync_q[1]
+                            && !ro_code_osc_fast_en_sync_q[1]
+                            && !start_latched_sync
+                            && !stop_latched_sync
+                            && !(|ctx_drain_sync_ff2)
+                            && (meas_state == ST_M_IDLE)
+                            && (drain_state == ST_D_IDLE)
+                            && !frontend_teardown_busy;
+
+  always_ff @(posedge clk_sys or negedge async_rst_n_i) begin
+    if (!async_rst_n_i) begin
+      ro_slow_code_q  <= 8'h00;
+      ro_fast_code_q  <= 8'h00;
+      ro_code_loaded_q <= 1'b0;
+    end else if (ro_code_capture_idle) begin
+      ro_slow_code_q  <= ro_slow_code_i;
+      ro_fast_code_q  <= ro_fast_code_i;
+      ro_code_loaded_q <= 1'b1;
+    end
+  end
+
+  wire conv_arm_after_ro_code_load = conv_arm_i & ro_code_loaded_q;
+
   wire [15:0] start_wdt_limit = START_WDT_DEFAULT_SYS_CYCLES;
   wire start_window_active = start_latched_sync && !stop_latched_sync;
   logic start_window_active_q;
@@ -382,7 +423,7 @@ module mptdc_core
   // ── Frontend ────────────────────────────────────────────────────
   mptdc_async_frontend_v2 u_frontend (
     .rst_n                (rst_sys_n),
-    .conv_arm_i           (conv_arm_i),
+    .conv_arm_i           (conv_arm_after_ro_code_load),
     .start_async_i        (start_async_i),
     .stop_async_i         (stop_async_i),
     .fe_clear_async_i     (fe_clear_with_wdt),         // meas clear + global watchdog
@@ -407,7 +448,7 @@ module mptdc_core
   mptdc_osc_wrapper #(.NE(NE), .TS_STEP_PS(OSC_TS_SLOW_PS)) u_osc_slow (
     .en              (fe_osc_slow_en),
     .rst_n           (rst_sys_n),
-    .trim_i          (8'h00),
+    .trim_i          (ro_slow_code_q),
     .phase           (slow_phase_raw),
     .phase0_guard_o  (/* buffered below */),
     .phase7d_probe_o (/* buffered below */)
@@ -417,7 +458,7 @@ module mptdc_core
   mptdc_osc_wrapper #(.NE(NE), .TS_STEP_PS(OSC_TS_FAST_PS)) u_osc_fast (
     .en              (fe_osc_fast_en),
     .rst_n           (rst_sys_n),
-    .trim_i          (8'h00),
+    .trim_i          (ro_fast_code_q),
     .phase           (fast_phase_raw),
     .phase0_guard_o  (/* unused */),
     .phase7d_probe_o (/* unused */)
@@ -665,7 +706,7 @@ module mptdc_core
   wire status_teardown_idle = 1'b1;
 `endif
 
-  assign status_o.ready              = conv_arm_i & ~fe_all_ctx_busy
+  assign status_o.ready              = conv_arm_after_ro_code_load & ~fe_all_ctx_busy
                                      & ~start_latched_sync
                                      & status_measure_idle
                                      & status_teardown_idle;

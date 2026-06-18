@@ -135,7 +135,8 @@ Each axis wrapper keeps the analog-facing event side narrow and predictable:
 
 - applies active enable gating
 - converts the async event into a safe STOP pulse on `clk_ref_40m`
-- forwards selected input, product control pulses, and global max-hit limit into `mptdc_axis_core`
+- forwards selected input, product control pulses, global max-hit limit, and
+  per-axis slow/fast RO-code images into `mptdc_axis_core`
 - exports direct product packet words to the shared top-level readout path
 
 The wrapper exists so the top can optimize area around the TDC kernels without
@@ -146,6 +147,10 @@ measurement clocks. Its normal measurement controller, hit-capture bridge,
 context bank, drain, and FIFO ownership are `clk_sys` logic, so TOP-level
 timing/CDC review should not describe the MPTDC context bank as a fast-domain
 producer.
+
+The axis CSR owns the software-visible slow/fast RO-code image. The MPTDC core
+captures those values into local shadow registers only while idle, so TOP should
+not add a separate handshake or try to drive `RO_tune4/code[7:0]` directly.
 
 ### `spadmic_ref_stop_qualifier`
 

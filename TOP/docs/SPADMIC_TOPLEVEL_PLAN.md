@@ -94,6 +94,8 @@ Implementation:
 ## Unified ARB/TDC readout contract
 
 - Each axis TDC keeps its own local acquisition FIFO inside `mptdc_core`
+- Each axis CSR owns independent slow/fast RO-code images; each MPTDC core
+  captures them into local idle-only shadow registers near the RO macros
 - `mptdc_packet16_tx` serializes each axis into a uniform packet stream before central arbitration
 - `spadmic_tdc_axis_wrapper` exports direct packet words plus SOP/EOP and packet-active sidebands
 - `spadmic_correlated_tx` arbitrates `{TDC_X,TDC_Y,TDC_Z,POSITION}` with packet-level locking

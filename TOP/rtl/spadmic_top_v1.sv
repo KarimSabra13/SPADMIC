@@ -119,6 +119,8 @@ module spadmic_top_v1 (
   wire [2:0] axis_soft_reset;
   wire [2:0] axis_max_hits_we;
   wire [MAX_HITS_W-1:0] axis_max_hits_wdata [3];
+  wire [7:0] axis_ro_slow_code [3];
+  wire [7:0] axis_ro_fast_code [3];
   logic [MAX_HITS_W-1:0] tdc_max_hits_q;
   wire [2:0] tdc_conv_pending;
 
@@ -322,6 +324,8 @@ module spadmic_top_v1 (
     .max_hits_i        (tdc_max_hits_q),
     .max_hits_we_o     (axis_max_hits_we[0]),
     .max_hits_wdata_o  (axis_max_hits_wdata[0]),
+    .ro_slow_code_o    (axis_ro_slow_code[0]),
+    .ro_fast_code_o    (axis_ro_fast_code[0]),
     .conv_arm_o        (axis_conv_arm[0]),
     .fifo_clr_pulse_o  (axis_fifo_clr[0]),
     .soft_rst_pulse_o  (axis_soft_reset[0])
@@ -346,6 +350,8 @@ module spadmic_top_v1 (
     .max_hits_i        (tdc_max_hits_q),
     .max_hits_we_o     (axis_max_hits_we[1]),
     .max_hits_wdata_o  (axis_max_hits_wdata[1]),
+    .ro_slow_code_o    (axis_ro_slow_code[1]),
+    .ro_fast_code_o    (axis_ro_fast_code[1]),
     .conv_arm_o        (axis_conv_arm[1]),
     .fifo_clr_pulse_o  (axis_fifo_clr[1]),
     .soft_rst_pulse_o  (axis_soft_reset[1])
@@ -370,6 +376,8 @@ module spadmic_top_v1 (
     .max_hits_i        (tdc_max_hits_q),
     .max_hits_we_o     (axis_max_hits_we[2]),
     .max_hits_wdata_o  (axis_max_hits_wdata[2]),
+    .ro_slow_code_o    (axis_ro_slow_code[2]),
+    .ro_fast_code_o    (axis_ro_fast_code[2]),
     .conv_arm_o        (axis_conv_arm[2]),
     .fifo_clr_pulse_o  (axis_fifo_clr[2]),
     .soft_rst_pulse_o  (axis_soft_reset[2])
@@ -391,6 +399,8 @@ module spadmic_top_v1 (
     .fifo_clr_i       (axis_fifo_clr[0]),
     .soft_reset_i     (axis_soft_reset[0]),
     .max_hits_i       (tdc_max_hits_q),
+    .ro_slow_code_i   (axis_ro_slow_code[0]),
+    .ro_fast_code_i   (axis_ro_fast_code[0]),
     .pkt_valid_o      (axis_pkt_valid[0]),
     .pkt_ready_i      (axis_pkt_ready[0]),
     .pkt_data_o       (axis_pkt_data[0]),
@@ -418,6 +428,8 @@ module spadmic_top_v1 (
     .fifo_clr_i       (axis_fifo_clr[1]),
     .soft_reset_i     (axis_soft_reset[1]),
     .max_hits_i       (tdc_max_hits_q),
+    .ro_slow_code_i   (axis_ro_slow_code[1]),
+    .ro_fast_code_i   (axis_ro_fast_code[1]),
     .pkt_valid_o      (axis_pkt_valid[1]),
     .pkt_ready_i      (axis_pkt_ready[1]),
     .pkt_data_o       (axis_pkt_data[1]),
@@ -445,6 +457,8 @@ module spadmic_top_v1 (
     .fifo_clr_i       (axis_fifo_clr[2]),
     .soft_reset_i     (axis_soft_reset[2]),
     .max_hits_i       (tdc_max_hits_q),
+    .ro_slow_code_i   (axis_ro_slow_code[2]),
+    .ro_fast_code_i   (axis_ro_fast_code[2]),
     .pkt_valid_o      (axis_pkt_valid[2]),
     .pkt_ready_i      (axis_pkt_ready[2]),
     .pkt_data_o       (axis_pkt_data[2]),

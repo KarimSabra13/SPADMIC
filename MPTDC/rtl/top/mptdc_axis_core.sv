@@ -23,6 +23,8 @@ module mptdc_axis_core
   input  wire                    fifo_clr_i,
   input  wire                    soft_reset_i,
   input  wire [MAX_HITS_W-1:0]  max_hits_i,
+  input  wire [7:0]              ro_slow_code_i,
+  input  wire [7:0]              ro_fast_code_i,
 
   output wire                    pkt_valid_o,
   input  wire                    pkt_ready_i,
@@ -74,10 +76,13 @@ module mptdc_axis_core
 
   mptdc_core u_core (
     .clk_sys          (clk_sys),
+    .async_rst_n_i    (async_rst_n),
     .rst_sys_n        (rst_core_n),
     .start_async_i    (start_async),
     .stop_async_i     (stop_async),
     .max_hits_i       (max_hits_i),
+    .ro_slow_code_i   (ro_slow_code_i),
+    .ro_fast_code_i   (ro_fast_code_i),
     .conv_arm_i       (conv_arm_i),
     .fifo_clr_i       (fifo_clr_i),
     .status_o         (status),

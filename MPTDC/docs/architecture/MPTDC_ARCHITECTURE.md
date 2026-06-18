@@ -14,6 +14,7 @@ The maintained synthesis and verification top is
 
 - SPAD or calibration START/STOP input selection.
 - Local reset synchronization.
+- Two independent slow/fast RO tuning-code inputs from the TOP-owned CSR image.
 - One integrated Vernier measurement core.
 - One fixed 16-bit packet stream with `valid/ready`, `sop`, and `eop`.
 - Busy, ready, FIFO-level, overflow, and diagnostic status.
@@ -28,6 +29,8 @@ used as the handoff entrypoint.
 SPAD/CAL async inputs
   -> mptdc_input_mux
   -> mptdc_async_frontend_v2
+TOP CSR RO code image
+  -> idle-only local slow/fast RO code shadow registers
   -> RO_tune4 slow/fast phase families
   -> BUHDX4 -> BUHDX12 phase distribution
   -> 8 x 8 PD matrix and local fast tag capture
@@ -56,6 +59,7 @@ by local phase capture and a static context transfer.
 | `mptdc_reset_sync` | Async-assert, sync-deassert reset leaf. | Reset release must be local to the consuming domain, not one rebuilt global tree. | Reduces recovery/removal risk and avoids unnecessary high-fanout reset buffering. |
 | `mptdc_osc_wrapper` | Selects behavioral model for simulation or real `RO_tune4` macro binding for synthesis. | Keeps simulation portable while preserving the physical macro interface. | Prevents the synthesizable filelist from accidentally using the behavioral oscillator model. |
 | `mptdc_phase_buffer_bank` | Buffers each slow/fast `RO_tune4/S[n]` tap through `BUHDX4 -> BUHDX12`. | Raw RO pins are analog load points; digital fabric needs isolated, stronger phase drivers. | The topology controls RO loading and gives Genus/Innovus explicit load/report points. |
+| Local RO code shadows | Two 8-bit `clk_sys` register banks close to the slow and fast RO code sides. | Software-visible CSR values may be routed from TOP, but live RO code must be stable during a measurement. | Long static TOP routes terminate at local flops; only short local nets drive `RO_tune4/code[7:0]`, reducing load and measurement disturbance. |
 | `mptdc_fast_epoch_tag` | Produces the local fast raw tag sampled by PD cells. | A local tag is cheaper and more timing-local than a global fast binary counter. | Reduces global fast-domain fanout and avoids wide high-speed counter distribution. |
 | `mptdc_slow_epoch_johnson` | Produces the slow Johnson epoch. | Johnson coding changes one bit per step and is robust for sampled phase context. | Lowers switching and decode complexity versus a wider binary epoch source. |
 | `mptdc_pd_cell` | Implements the intentional slow-to-fast Vernier q1 sampling relation and captures local `nfast` data. | The q1 relation is the measurement itself, not an accidental CDC path. | Requires a narrow count-checked exception only on q1; downstream hit/tag paths remain real timed logic. |
@@ -91,6 +95,8 @@ global tree without recovery/removal and CDC evidence.
 
 The physical model binds two `RO_tune4` macro abstracts, one slow and one fast.
 Their `S[0:7]` pins are raw analog phase pins and remain explicit audit points.
+Their `code[7:0]` pins are driven by local shadow registers, not directly by a
+long software CSR bus.
 Each phase tap uses:
 
 ```text
@@ -102,6 +108,20 @@ fabric needs a repeatable drive point. The `BUHDX4` stage isolates the macro
 pin; the `BUHDX12` stage provides the final digital phase driver. The active
 typical flow models the final phase-driver outputs as buffered phase clocks.
 They are not ordinary `clk_sys` CTS targets.
+
+The RO tuning interface has three rules:
+
+1. The external CSR image is the architectural source of truth.
+2. The local shadow registers update only while the axis is idle and both
+   oscillators are stopped.
+3. The held local value drives the RO throughout the complete live measurement
+   interval.
+
+`soft_reset_i` does not clear these local shadows. The top asynchronous reset
+does clear them and prevents arming until the first deterministic idle reload
+has occurred. This preserves the previous all-zero behavior at reset while
+allowing software to program nonzero slow/fast tuning values without a new
+software-visible handshake.
 
 ## Vernier Matrix and Exception Boundary
 
@@ -172,6 +192,9 @@ The major choices are tied to timing and PPA:
    the full PD image across top-level boundaries.
 7. The local ON22 X0-to-X1 repair is scoped to real endpoint cones. X2 is
    blocked because it created a `LOCAL_FAST_TAG_SELF` regression.
+8. Local RO code shadows convert a long static integration bus into short
+   macro-adjacent load nets and prevent mid-measurement code changes from
+   perturbing oscillator behavior.
 
 ## Active Physical Assumptions
 
@@ -181,12 +204,17 @@ The major choices are tied to timing and PPA:
 - Timing view: typical-only Genus.
 - Macro binding: real `RO_tune4` abstract shell.
 - Phase topology: `BUHDX4 -> BUHDX12` per slow/fast tap.
+- RO tuning: independent slow/fast 8-bit CSR images captured into local
+  idle-only shadow registers before oscillator activity.
 - PD exception: exact, narrow, count-checked q1 Vernier relation.
 - Timing repair: scoped local ON22 X0-to-X1 repair, X2 prohibited.
 
+Any RTL or phase-buffer-cell change after the June 18, 2026 Genus reference
+invalidates that handoff netlist. The current RO-code interface must therefore
+be followed by a fresh canonical Genus run before a new Innovus signoff attempt.
 Final MMMC timing, extracted parasitics, analog phase/jitter confirmation, LVS,
 DRC, PEX, and post-layout characterization remain outside this architecture
-claim.
+claim until server evidence exists.
 
 ## Refactor Rules
 

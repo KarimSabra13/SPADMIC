@@ -21,6 +21,8 @@ module spadmic_tdc_axis_wrapper (
   input  wire                       fifo_clr_i,
   input  wire                       soft_reset_i,
   input  wire [mptdc_pkg::MAX_HITS_W-1:0] max_hits_i,
+  input  wire [7:0]                 ro_slow_code_i,
+  input  wire [7:0]                 ro_fast_code_i,
 
   output wire                       pkt_valid_o,
   input  wire                       pkt_ready_i,
@@ -69,6 +71,8 @@ module spadmic_tdc_axis_wrapper (
     .fifo_clr_i         (fifo_clr_i),
     .soft_reset_i       (soft_reset_i),
     .max_hits_i         (max_hits_i),
+    .ro_slow_code_i     (ro_slow_code_i),
+    .ro_fast_code_i     (ro_fast_code_i),
     .pkt_valid_o        (pkt_valid_o),
     .pkt_ready_i        (pkt_ready_i),
     .pkt_data_o         (pkt_data_o),

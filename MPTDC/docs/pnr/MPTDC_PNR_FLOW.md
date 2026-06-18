@@ -2,65 +2,334 @@
 
 Author: Karim Sabra
 
-The active PnR flow is a typical-only Innovus feasibility and timing-closure
-flow.  It is not final tapeout signoff.
+This document defines the physical-implementation path for the active
+`mptdc_axis_core` digital block. It separates the existing typical Innovus
+helpers from the required digital signoff flow. A feasibility result must not be
+renamed into signoff.
 
-## Active Commands
+## Current Status
 
-Run from the repository root:
+The latest server result before the RO-code RTL change was:
+
+- Genus run: `20260618_axis_core_typical_closed_handoff_rerun2`.
+- Git HEAD: `d290cd7dc15222a343e4c8c0e60005494ac62ec4`.
+- Setup WNS: `+0.3 ps`.
+- Setup TNS: `-0.0 ps`.
+- Setup violations: `0`.
+- Max transition/capacitance/fanout violations: `0 / 0 / 0`.
+- PD Vernier exception: 64 paths from 8 sources, no overmatch, no undermatch.
+- Local ON22 repair: 355 `ON22JIHDX0` instances changed to `ON22JIHDX1`.
+- Pre-PnR gate: PASS, with low-WNS warning.
+
+That handoff is reference evidence only after the RO-code RTL interface change.
+A fresh canonical Genus run from the new Git HEAD is required before any real
+PnR signoff run.
+
+## Owner-Facing Commands
+
+Run from the repository root on the Cadence server:
 
 ```bash
-bash MPTDC/pnr/scripts/server_run_innovus_mptdc_feasibility.sh
-bash MPTDC/pnr/scripts/server_run_innovus_mptdc_typical.sh
-bash MPTDC/pnr/scripts/server_run_innovus_mptdc_final_typical.sh
+# 1. Discover real physical-cell names from the installed PDK inputs.
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
+  20260618_mptdc_digital_signoff_discovery \
+  --mode discover_only
+
+# 2. After reviewing the discovery output, update MPTDC/pnr/config/xh018_cells.tcl
+#    with proven LEF/Liberty names, source paths, hashes, site, and PG pins.
+
+# 3. Rerun Genus after RTL/netlist changes.
+bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh \
+  <fresh_genus_run_id>
+
+# 4. Build the handoff package and gate it.
+bash MPTDC/pnr/scripts/prepare_mptdc_genus_typical_handoff.sh \
+  <fresh_genus_run_id>
+bash MPTDC/pnr/scripts/check_mptdc_pre_pnr_gate.sh \
+  --genus-run-id <fresh_genus_run_id>
+
+# 5. Validate digital signoff sources without launching Innovus.
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
+  <digital_signoff_validate_run_id> \
+  --mode validate_only \
+  --genus-run-id <fresh_genus_run_id>
 ```
 
-Outputs are written to `work/innovus/<run_id>/`.
+The digital signoff wrapper records tool versions and rejects a dirty tracked
+source tree. `full_signoff` must remain fail-closed until the actual Innovus
+stages are explicitly implemented and reviewed.
 
 ## Physical Intent
 
-The active PnR model preserves:
+The block must be horizontally elongated. The final MPTDC boundary target is:
 
-- `RO_tune4/S[0:7]` as raw analog source/load-check pins.
-- `RO_tune4/rstb` as the active-high run/stop control.
-- `RO_tune4/code[7:0]` as routable tuning inputs.
-- BUHDX4 isolation followed by BUHDX12 final phase drivers.
-- Matched slow and fast phase-buffer topology.
-- No CTS on RO or buffered phase clocks.
-- Ordinary CTS policy for `clk_sys`.
-- Explicit RO raw-load reporting and phase-buffer output-load reporting.
+```text
+width / height = 4 / 3 = 1.333333
+allowed range = 1.20 .. 1.47
+```
 
-The `RO_tune4` macro abstracts, analog handoff files, and XLIBD references are
-protected source inputs and must not be removed during cleanup.
+The automatic dimensioning logic must account for standard-cell area, two
+`RO_tune4` macros, halos, phase-buffer rows, the full PD island, east-side
+backend, route channels, power structures, IO pin capacity, target utilization,
+and guard bands.
 
-Before a real implementation run, the RO interface audit must pass for the
-source and copied LEF.  The audit checks the real `MACRO RO_tune4` block, not
-`PROPERTYDEFINITIONS` entries such as `MACRO CatenaDesignType STRING ;`.
+Initial density policy:
 
-## Constraints
+- core utilization target: `0.60`;
+- normal adjustment range: `0.58 .. 0.62`;
+- `0.65` maximum only as a labelled experiment;
+- moderate placement density to preserve routability.
 
-Stable PnR constraint aliases are:
+Optimization priority is:
 
-- `pnr/constraints/mptdc_typical_r750_delta5.sdc`.
-- `pnr/constraints/mptdc_clock_model_typical.sdc`.
-- `pnr/constraints/mptdc_phase_distribution.sdc`.
-- `pnr/constraints/mptdc_io_load_model.sdc`.
+1. timing and measurement symmetry;
+2. area;
+3. routability;
+4. power.
 
-These aliases initially source or mirror existing validated overlays.  Legacy
-constraint filenames remain until all wrappers and docs are updated.
+Area must not be reduced by destroying phase symmetry or the already tiny timing
+margin.
 
-## Outputs
+## Measurement Stack
 
-Generated PnR directories, logs, reports, checkpoints, routed databases, and
-tarballs belong under `work/innovus/` or an external artifact store.  Git should
-keep only compact summaries and curated evidence indexes.
+The intended north-to-south stack is:
 
-## Signoff Boundary
+```text
+north boundary
+  slow RO_tune4, orientation R0
+  slow isolation buffer row
+  slow final-driver row
+  8 x 8 PD detector matrix
+  fast final-driver row
+  fast isolation buffer row
+  fast RO_tune4, orientation MX
+south boundary
+```
 
-This flow is a feasibility and closure flow.  It does not claim:
+The RO `S[0:7]` pins should face the PD matrix. The RO `code[7:0]` pins should
+face away from the PD matrix and toward the corresponding external/local-code
+region. The backend region belongs on the east side and contains ordinary
+`clk_sys` logic, drain, context bank, FIFO, packet readout, and control/status.
 
-- MMMC closure.
-- Final extracted post-layout timing.
-- Final analog phase confirmation.
-- LVS/DRC/PEX completion.
-- Tapeout-ready signoff.
+Counters and local tag logic may sit near the oscillator or PD column when that
+improves timing and preserves symmetry.
+
+## PD Matrix
+
+The physical matrix represents all pairs:
+
+```text
+slow phase ns = 0..7
+fast phase nf = 0..7
+```
+
+There must be exactly 64 identifiable tiles. The implementation must document
+which physical axis maps to `ns` and which maps to `nf`. Do not assume the
+hierarchical `u_pd` instance is directly placeable; discover and constrain the
+leaf cells belonging to each tile.
+
+Required checks:
+
+- exactly 64 tiles found;
+- no tile outside its assigned matrix location;
+- uniform tile dimensions;
+- uniform internal leaf-cell count unless an RTL difference is proven;
+- regular row and column pitch;
+- no backend cell inside a PD tile;
+- no unexplained orientation difference;
+- no unplaced or out-of-core leaf cell.
+
+## Phase Buffers
+
+Each raw tap must keep the same topology:
+
+```text
+RO_tune4/S[n] -> isolation buffer -> final driver -> phase consumers
+```
+
+Required counts:
+
+- 8 slow raw taps;
+- 8 fast raw taps;
+- 16 isolation stages;
+- 16 final-driver stages.
+
+If valid JIHD `BUJIHDX4` and `BUJIHDX12` equivalents exist in both LEF and
+Liberty, propose a uniform JIHD topology before changing the netlist. If they do
+not exist, retaining `BUHDX4/BUHDX12` requires evidence that both masters are
+loaded, legal, site-compatible, PG-connected, and not unresolved black boxes.
+
+Raw RO nets must not receive arbitrary buffering. Any route promotion, shielding,
+resizing, antenna repair, or extra stage on phase nets must be reviewed for
+symmetry and should be applied equivalently across the affected tap family.
+
+Target phase-family matching after extraction:
+
+- capacitance spread <= 10%;
+- route-delay spread <= 10%;
+- route-length spread <= 10%;
+- identical buffer-stage count;
+- equivalent routing-layer sequence;
+- nearly equivalent via count.
+
+Also report absolute worst mismatch in ps, fF, micrometres, and via count.
+
+## RO Code Placement
+
+TOP-owned CSR values feed `ro_slow_code_i[7:0]` and `ro_fast_code_i[7:0]` into
+each product axis. `mptdc_core` captures them into local shadow registers only
+while idle, and the local registers drive `RO_tune4/code[7:0]`.
+
+Place the slow local code registers near the external/code side of the slow RO.
+Place the fast local code registers near the external/code side of the fast RO.
+The long TOP/CSR routes may reach those registers; the short register-to-RO
+nets are the load-sensitive physical interface.
+
+## Backend Separation
+
+The measurement island must be visually and physically distinct from the
+east-side backend. Normal backend buses should not cross over or under the PD
+matrix when a reasonable alternative exists.
+
+Create route blockages or restrictions for lower metals over the matrix where
+practical. Allowed crossings must be classified. The final crossing report must
+use:
+
+- `ALLOWED_MEASUREMENT_CROSSING`;
+- `APPROVED_CRITICAL_EXCEPTION`;
+- `UNEXPECTED_BACKEND_CROSSING`.
+
+`UNEXPECTED_BACKEND_CROSSING` must be empty for PASS.
+
+## IO Pin Plan
+
+Use a functional pin plan with explicit exceptions:
+
+- west: detector-facing asynchronous START/STOP/CAL inputs;
+- north: packet outputs and status outputs;
+- east: `clk_sys`, packet ready, input select, conversion arm, FIFO clear,
+  soft reset, max-hit/config control;
+- north or nearest clean slow-side segment: `ro_slow_code_i[7:0]`;
+- south or nearest clean fast-side segment: `ro_fast_code_i[7:0]`;
+- south: `async_rst_n` and selected low-priority controls.
+
+Power pins are not ordinary signal pins. Create wide VDD/VSS access shapes on
+east/south boundaries aligned with the power ring and parent integration.
+
+## Power Plan
+
+The digital implementation uses VDD = 1.8 V and VSS = ground. RO `VDD` and
+`vdd!` must connect to VDD; RO VSS must connect to VSS. No RO pin may connect to
+a 3.3 V rail.
+
+Required implementation evidence:
+
+- core ring;
+- regular straps;
+- standard-cell rail connection;
+- macro pin connection;
+- east/south block PG access;
+- zero unconnected PG pins;
+- zero special-route opens;
+- zero accidental shorts.
+
+Tap, endcap, tie, filler, decap, and antenna cells must be discovered from the
+exact JIHD LEF/Liberty used by the run. Do not use
+`UNCONFIRMED_PLACEHOLDERS` for insertion.
+
+If no RO current model is available, do not block the rest of PnR. Report:
+
+```text
+RO_EM_IR_MODEL=NOT_AVAILABLE
+RO_INTERNAL_EM_IR_SIGNOFF=EXTERNAL_OR_DEFERRED
+```
+
+## CTS Policy
+
+Run real CTS for `clk_sys` only. The following clocks must not be included in
+ordinary CTS:
+
+- `clk_osc_slow`;
+- `clk_osc_fast`;
+- `clk_osc_slow_tap*`;
+- `clk_osc_fast_tap*`;
+- `clk_osc_*_buf_tap*`.
+
+Do not use `set_ideal_network` on routed RO or phase networks for final STA.
+Exclude them from CCOpt while keeping them propagated and RC-visible.
+
+Moderate CTS targets:
+
+- target skew: `0.15 ns`;
+- pass maximum measured skew: `0.20 ns`;
+- target maximum clock transition: `0.35 ns`.
+
+Any CTS skip, ambiguous clock-tree spec, or RO-clock inclusion is a hard fail in
+digital signoff.
+
+## MMMC and Timing
+
+The PnR signoff setup must include:
+
+- `TC_NOMINAL`: JIHD typical Liberty, typical RC, nominal constraints;
+- `WC_SETUP`: JIHD slow Liberty, worst RC, setup analysis;
+- `BC_HOLD`: JIHD fast Liberty, best RC, hold analysis;
+- `RO_MAX_FREQ_STRESS`: report-only 1.000 ns oscillator-domain stress overlay.
+
+Use only PDK-supplied cap tables, QRC tech files, and variation data. Do not
+invent OCV/AOCV/POCV/derates.
+
+Temporary nominal oscillator assumptions:
+
+- slow period: `1.430 ns`;
+- fast period: `1.333 ns`.
+
+Temporary IO model:
+
+```text
+MPTDC_PNR_IO_LOAD_CLASS=medium
+output_load=0.0256 pF
+IO_BUDGET_PROVISIONAL=YES
+```
+
+The final digital timing claim is therefore under documented RO period and IO
+load assumptions until characterized RO PVT and final parent-level budgets are
+available.
+
+## Signoff Evidence
+
+Final status must be reported as separate keys, never one vague READY label:
+
+```text
+RTL_INTERFACE_STATUS
+GENUS_HANDOFF_STATUS
+FLOORPLAN_STATUS
+IO_STATUS
+RO_MACRO_STATUS
+PHASE_BUFFER_STATUS
+PD_MATRIX_STATUS
+PHASE_RC_SYMMETRY_STATUS
+POWER_GRID_STATUS
+CTS_STATUS
+ROUTE_STATUS
+SETUP_STATUS_TC
+SETUP_STATUS_WC
+HOLD_STATUS_BC
+RO_1GHZ_STRESS_STATUS
+DRV_STATUS
+ANTENNA_STATUS
+EXTRACTION_STATUS
+DRC_STATUS
+LVS_STATUS
+RO_INTERNAL_SIGNOFF_STATUS
+DELIVERABLE_STATUS
+DIGITAL_PNR_SIGNOFF
+```
+
+Every key must be `PASS`, `FAIL`, `EXTERNAL`, `DEFERRED`, or `PROVISIONAL` and
+must reference concrete evidence.
+
+Generated Innovus logs, databases, reports, routed DEF/GDS/SPEF/SDF, and
+checkpoints belong under the configured work/artifact directory. Commit only
+reviewed source changes, configuration, tests, compact documentation, and
+evidence indexes.

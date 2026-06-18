@@ -24,6 +24,8 @@ module tb_axis_core_product_smoke;
   logic fifo_clr;
   logic soft_reset;
   logic [MAX_HITS_W-1:0] max_hits;
+  logic [7:0] ro_slow_code;
+  logic [7:0] ro_fast_code;
   logic pkt_valid;
   logic pkt_ready;
   logic [NARROW_W-1:0] pkt_data;
@@ -55,6 +57,8 @@ module tb_axis_core_product_smoke;
     .fifo_clr_i         (fifo_clr),
     .soft_reset_i       (soft_reset),
     .max_hits_i         (max_hits),
+    .ro_slow_code_i     (ro_slow_code),
+    .ro_fast_code_i     (ro_fast_code),
     .pkt_valid_o        (pkt_valid),
     .pkt_ready_i        (pkt_ready),
     .pkt_data_o         (pkt_data),
@@ -88,6 +92,8 @@ module tb_axis_core_product_smoke;
     fifo_clr = 1'b0;
     soft_reset = 1'b0;
     max_hits = MAX_HITS_W'(MAX_HITS);
+    ro_slow_code = 8'h00;
+    ro_fast_code = 8'h00;
     pkt_ready = 1'b1;
     repeat (8) @(posedge clk_sys);
     #1;
@@ -165,6 +171,15 @@ module tb_axis_core_product_smoke;
     #1;
     check("Axis leaves reset ready", ready);
     check("Axis FIFO not full after reset", !fifo_full);
+    check("Default slow RO code captured", u_dut.u_core.ro_slow_code_q == 8'h00);
+    check("Default fast RO code captured", u_dut.u_core.ro_fast_code_q == 8'h00);
+
+    ro_slow_code = 8'h3c;
+    ro_fast_code = 8'ha5;
+    repeat (3) @(posedge clk_sys);
+    #1;
+    check("Idle slow RO code captured", u_dut.u_core.ro_slow_code_q == 8'h3c);
+    check("Idle fast RO code captured", u_dut.u_core.ro_fast_code_q == 8'ha5);
 
     max_hits = MAX_HITS_W'(2);
     #1;
@@ -202,11 +217,15 @@ module tb_axis_core_product_smoke;
     soft_reset = 1'b1;
     @(posedge clk_sys);
     #1;
+    ro_slow_code = 8'h12;
+    ro_fast_code = 8'h34;
     soft_reset = 1'b0;
     repeat (16) @(posedge clk_sys);
     #1;
     check("Soft reset returns ready", ready);
     check("Soft reset clears packet outputs", !pkt_valid && !packet_active && !packet_pending);
+    check("Soft reset does not force slow RO code zero", u_dut.u_core.ro_slow_code_q == 8'h12);
+    check("Soft reset does not force fast RO code zero", u_dut.u_core.ro_fast_code_q == 8'h34);
 
     fifo_clr = 1'b1;
     @(posedge clk_sys);

@@ -28,6 +28,8 @@ module spadmic_tdc_axis_csr (
   input  wire [mptdc_pkg::MAX_HITS_W-1:0]  max_hits_i,
   output logic                              max_hits_we_o,
   output logic [mptdc_pkg::MAX_HITS_W-1:0] max_hits_wdata_o,
+  output logic [7:0]                        ro_slow_code_o,
+  output logic [7:0]                        ro_fast_code_o,
 
   output logic                              conv_arm_o,
   output logic                              fifo_clr_pulse_o,
@@ -47,6 +49,8 @@ module spadmic_tdc_axis_csr (
       soft_rst_pulse_o    <= 1'b0;
       max_hits_we_o       <= 1'b0;
       max_hits_wdata_o    <= MAX_HITS_W'(MAX_HITS);
+      ro_slow_code_o      <= 8'h00;
+      ro_fast_code_o      <= 8'h00;
     end else begin
       fifo_clr_pulse_o <= 1'b0;
       soft_rst_pulse_o <= 1'b0;
@@ -63,6 +67,11 @@ module spadmic_tdc_axis_csr (
           CSR_MAX_HITS: begin
             max_hits_we_o    <= 1'b1;
             max_hits_wdata_o <= csr_wdata_i[MAX_HITS_W-1:0];
+          end
+
+          CSR_RO_CODE: begin
+            ro_slow_code_o <= csr_wdata_i[7:0];
+            ro_fast_code_o <= csr_wdata_i[15:8];
           end
 
           default: ;
@@ -86,6 +95,11 @@ module spadmic_tdc_axis_csr (
 
       CSR_MAX_HITS: begin
         rd_data_next[MAX_HITS_W-1:0] = max_hits_i;
+      end
+
+      CSR_RO_CODE: begin
+        rd_data_next[7:0]  = ro_slow_code_o;
+        rd_data_next[15:8] = ro_fast_code_o;
       end
 
       CSR_STATUS: begin

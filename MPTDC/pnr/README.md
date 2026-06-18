@@ -3,8 +3,10 @@
 Author: Karim Sabra
 
 This directory contains Innovus collateral for the active `mptdc_axis_core`
-product boundary. The current handoff target is Innovus feasibility from the
-typical-closed Genus profile. It is not final tapeout signoff.
+product boundary. The historical `final_typical` wrappers are typical-only
+implementation helpers. The digital signoff flow is separate and must produce
+MMMC, extraction, DRC/LVS, CTS, power, routing, and phase-symmetry evidence
+before any signoff claim.
 
 ## Active Entry Points
 
@@ -14,11 +16,15 @@ Run from the repository root:
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_feasibility.sh
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_typical.sh
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_final_typical.sh
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode discover_only
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode validate_only --genus-run-id <fresh_genus_run_id>
 ```
 
 Use the feasibility wrapper first after a clean canonical Genus rerun. The
 `final_typical` wrapper is still typical-only and requires explicit approval
-before launching a real implementation mode.
+before launching a real implementation mode. The digital signoff wrapper is the
+only owner-facing signoff entrypoint; it is intentionally fail-closed until
+physical cells are confirmed and explicit Innovus stages are implemented.
 
 ## Active Physical Intent
 
@@ -27,11 +33,18 @@ before launching a real implementation mode.
 - Standard-cell family: JIHD for the current closed Genus result.
 - Macro model: real `RO_tune4` abstract shell, not the old oscillator stub.
 - Phase distribution: `BUHDX4 -> BUHDX12` per slow/fast tap.
+- Floorplan target: horizontally elongated `4:3` block boundary, accepted range
+  `1.20 <= width/height <= 1.47`.
+- Measurement stack: slow RO north, slow phase buffers, central `8 x 8` PD
+  matrix, fast phase buffers, fast RO south, backend logic east.
 - Clock policy: `clk_sys` is the ordinary CTS target; RO and buffered phase
   clocks are measurement clocks and must not be flattened into normal CTS.
 - Required audits: RO interface, phase-buffer clock model, pin geometry, power
   geometry, CTS state, timing, congestion, antenna, and physical verification
   are separate gates.
+- Physical cells must be discovered from the exact JIHD LEF/Liberty set before
+  tap/endcap/tie/filler/decap/antenna/CTS insertion. `config/xh018_cells.tcl`
+  must not contain `UNCONFIRMED_PLACEHOLDERS` for a signoff run.
 
 ## Directory Ownership
 

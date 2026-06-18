@@ -26,8 +26,11 @@ product integration gate.
 A handoff regression should cover reset and soft reset, SPAD and calibration
 input selection, conversion arm, START/STOP acquisition, normal packet
 backpressure, FIFO clear, overflow/rejected START behavior, watchdog recovery,
-and consecutive conversions. Timing-sensitive analog behavior remains modeled;
-physical phase/jitter validation is a separate analog/post-layout task.
+consecutive conversions, and the slow/fast RO-code contract. The RO-code checks
+must prove reset-default zero behavior, idle capture of nonzero CSR values, and
+that `soft_reset_i` does not force the local code shadows to zero.
+Timing-sensitive analog behavior remains modeled; physical phase/jitter
+validation is a separate analog/post-layout task.
 
 ## Evidence policy
 

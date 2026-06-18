@@ -80,9 +80,9 @@ clk_sys / async_rst_n / clk_ref_40m / async SPAD inputs
 | `spadmic_csr_decoder` | CSR region decode and timeout | `clk_sys` | invalid/stalled slaves must not hang software | invalid-region and timeout tests |
 | `spadmic_global_csr` | requested image and status | `clk_sys` | status/fault semantics drive software safety | readback and rejected-write tests |
 | `spadmic_top_sequencer` | active image commit after drain | `clk_sys` | wrong idle definition can corrupt packets | transition assertions/tests |
-| `spadmic_tdc_axis_wrapper` | per-axis top glue | async + `clk_ref_40m` + `clk_sys` | enable gating is quasi-static and must not change mid-event | mode-switch drain tests and CDC review |
+| `spadmic_tdc_axis_wrapper` | per-axis top glue | async + `clk_ref_40m` + `clk_sys` | enable gating and RO-code routing are quasi-static and must not perturb an active event | mode-switch drain tests, RO-code idle-capture tests, and CDC review |
 | `spadmic_ref_stop_qualifier` | one STOP pulse per event | async/ref clock | latch-based gating requires careful review | hold/rearm/random timing tests |
-| `mptdc_axis_core` | product axis wrapper | `clk_sys` + async | depends on stable top-level controls and reset sequencing | per-axis product packet/control tests |
+| `mptdc_axis_core` | product axis wrapper | `clk_sys` + async | depends on stable top-level controls, RO-code shadow loading, and reset sequencing | per-axis product packet/control tests |
 | `mptdc_core` | Vernier measurement kernel | generated clocks + async + `clk_sys` | highest signoff risk: oscillator, PD, CDC, constraints | MPTDC regression, CDC/STA waiver deck, macro contract |
 | `mptdc_packet16_tx` | per-axis TDC packetizer | `clk_sys` | malformed META/HIT draining would corrupt event stream | fixed packet, zero-hit, boundary-bit, stall tests |
 | `spadmic_position_block` | position detect/queue/packetize and matrix reset control | async lines into `clk_sys` | async bus sampling, queue overflow, raw payload framing, reset timing versus matrix behavior | settle/glitch/queue/raw/reset stress tests |

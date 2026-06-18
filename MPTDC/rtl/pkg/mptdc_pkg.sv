@@ -276,6 +276,7 @@ package mptdc_pkg;
   localparam logic [CSR_ADDR_W-1:0] CSR_MAX_HITS    = 6'h08;  // max_hits[3:0]
   localparam logic [CSR_ADDR_W-1:0] CSR_WDT_CTX     = 6'h0C;  // per-context watchdog timeout
   localparam logic [CSR_ADDR_W-1:0] CSR_WDT_GLOBAL  = 6'h10;  // global watchdog timeout
+  localparam logic [CSR_ADDR_W-1:0] CSR_RO_CODE     = 6'h14;  // [7:0] slow, [15:8] fast RO code
 
   // Status registers (read)
   localparam logic [CSR_ADDR_W-1:0] CSR_STATUS      = 6'h20;  // ready, busy, ctx_states

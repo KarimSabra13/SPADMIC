@@ -102,16 +102,21 @@ This register holds the **requested** control image, not the live committed imag
 
 ## 4. TDC Axis CSR Blocks
 
-The TDC X/Y/Z regions share the same offset map. `CSR_MAX_HITS` is global in
-effect: a write through any axis region updates one shared `max_hits` value that
-feeds all three `mptdc_axis_core` instances.
+The TDC X/Y/Z regions share the same local MPTDC offset map. The shared decoder
+forwards address bits `[5:0]` into each axis CSR, so the offsets below are the
+RTL-visible offsets used by `spadmic_tdc_axis_csr`.
+
+`TDC_MAX_HITS` is global in effect: a write through any axis region updates one
+shared `max_hits` value that feeds all three `mptdc_axis_core` instances.
+`TDC_RO_CODE` is per-axis: each axis owns independent slow/fast code images.
 
 | Offset | Name | R/W | Purpose |
 |--------|------|-----|---------|
 | `0x000` | `TDC_CTRL` | R/W | product arm and pulse controls |
-| `0x004` | `TDC_STATUS` | R | minimal live axis status |
 | `0x008` | `TDC_MAX_HITS` | R/W | shared global max-hit limit for all TDC axes |
-| `0x018` | `TDC_FIFO_STATUS` | R | compact FIFO/packet status mirror |
+| `0x014` | `TDC_RO_CODE` | R/W | per-axis slow/fast RO tuning code image |
+| `0x020` | `TDC_STATUS` | R | minimal live axis status |
+| `0x028` | `TDC_FIFO_STATUS` | R | compact FIFO/packet status mirror |
 
 ### 4.1 `TDC_CTRL` (`+0x000`)
 
@@ -123,7 +128,28 @@ feeds all three `mptdc_axis_core` instances.
 
 Reads return only `conv_arm`; pulse bits read as `0`.
 
-### 4.2 `TDC_STATUS` (`+0x004`)
+### 4.2 `TDC_MAX_HITS` (`+0x008`)
+
+| Bits | Name | Meaning |
+|------|------|---------|
+| `[3:0]` | `max_hits` | shared global max-hit limit, product reset value `15` |
+
+### 4.3 `TDC_RO_CODE` (`+0x014`)
+
+| Bits | Name | Meaning |
+|------|------|---------|
+| `[7:0]` | `ro_slow_code` | per-axis slow `RO_tune4/code[7:0]` requested value |
+| `[15:8]` | `ro_fast_code` | per-axis fast `RO_tune4/code[7:0]` requested value |
+| `[31:16]` | reserved | write ignored, reads `0` |
+
+These fields are the software-visible source of truth. Inside each
+`mptdc_axis_core`, the values are captured into local shadow registers only when
+the measurement engine is idle and both oscillators are stopped. A write during
+an active measurement is allowed, but the new value must not reach the RO macro
+until the axis returns to idle. `soft_reset` does not force these local shadows
+to zero; writing `8'h00` is the normal way to select code zero.
+
+### 4.4 `TDC_STATUS` (`+0x020`)
 
 | Bits | Name | Meaning |
 |------|------|---------|
@@ -134,13 +160,7 @@ Reads return only `conv_arm`; pulse bits read as `0`.
 | `[4]` | `packet_pending` | axis has packet data active or queued |
 | `[5]` | `stop_armed` | TOP stop qualifier is armed for this axis |
 
-### 4.3 `TDC_MAX_HITS` (`+0x008`)
-
-| Bits | Name | Meaning |
-|------|------|---------|
-| `[3:0]` | `max_hits` | shared global max-hit limit, product reset value `15` |
-
-### 4.4 `TDC_FIFO_STATUS` (`+0x018`)
+### 4.5 `TDC_FIFO_STATUS` (`+0x028`)
 
 | Bits | Name | Meaning |
 |------|------|---------|

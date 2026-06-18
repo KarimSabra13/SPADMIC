@@ -17,6 +17,11 @@ repository-owned configuration, not a collection of command-line knobs.
 - Decision: `GENUS_TYPICAL_CLOSED`
 - Next use: Innovus feasibility, not MMMC signoff
 
+This reference is not a floating approval for later RTL. If the product
+interface, oscillator binding, phase buffers, filelist, SDC, profile, or parser
+changes, rerun the canonical flow from the new Git HEAD and generate a new
+handoff package.
+
 ## Public interface
 
 Use:
@@ -106,6 +111,10 @@ the same 355 instances were changed, X2 altered local delay/load balance and
 created a new `LOCAL_FAST_TAG_SELF` critical family. The canonical profile keeps
 X2 in the requested list but forces `ALLOW_X2=0`, so reports retain the request
 while the effective target remains X1.
+
+This is a local protected-family rule. It prohibits `ON22JIHDX2` for the scoped
+PD local ON22 repair described above; it is not a global ban on every X2 cell in
+the design.
 
 ## Change procedure
 

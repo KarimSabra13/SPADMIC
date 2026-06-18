@@ -5,8 +5,9 @@ Status: active owner handoff for the SPADMIC product-axis MPTDC
 
 This is the starting point for a new RTL, verification, synthesis, or physical
 implementation owner. The active product boundary is `mptdc_axis_core`; the
-current backend input is a typical-only Genus-closed netlist suitable for an
-Innovus feasibility pass, not final signoff.
+current source tree contains the slow/fast RO-code interface needed for physical
+implementation. Any Genus handoff created before that RTL change is reference
+evidence only until a fresh canonical Genus run is produced.
 
 ## How to read this repository
 
@@ -31,7 +32,8 @@ contracts that need explicit verification/timing evidence, not as cleanup noise.
 | Integration core | `MPTDC/rtl/top/mptdc_core.sv` |
 | Active handoff branch | `SPADMIC_test` |
 | Frequency mode | `R750_delta5` |
-| Phase distribution | `BUHDX4 -> BUHDX12` per slow/fast tap |
+| Phase distribution | `BUHDX4 -> BUHDX12` per slow/fast tap unless a proven JIHD replacement is approved |
+| RO code interface | TOP-owned slow/fast CSR values captured into local idle-only shadow registers |
 | PD fabric | intentional `8 x 8` Vernier matrix |
 | Genus baseline commit | `fa66cc4d36936e2bf0d41e6b24f2f9486569e242` |
 | Genus baseline run | `20260618_111124_axis_core_genus_timing_close_on22x1_final_guarded` |
@@ -46,6 +48,11 @@ source path:
 /sim/ksabra/SPADMIC_work/genus/20260618_111124_axis_core_genus_timing_close_on22x1_final_guarded
 ```
 
+The later server rerun
+`20260618_axis_core_typical_closed_handoff_rerun2` also closed typical Genus and
+passed the pre-PnR gate for its exact Git HEAD. It must not be reused after the
+RO-code interface change; rerun Genus and prepare a new handoff package first.
+
 ## Canonical commands
 
 Run from the repository root:
@@ -59,6 +66,8 @@ bash MPTDC/scripts/calibration/run_mptdc_calibration.sh
 bash MPTDC/syn/scripts/check_genus_axis_core_typical_closed_profile.sh
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_feasibility.sh
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode discover_only
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode validate_only --genus-run-id <fresh_genus_run_id>
 ```
 
 The Genus command accepts only an optional run ID. The closure policy is stored
@@ -78,7 +87,7 @@ not mark the Verilator-based smoke or full regression as passed unless the
 | Verification | `tb/README.md`, `docs/verification/MPTDC_VERIFICATION.md` | Product-axis smoke is maintained; old standalone VIP is archival. |
 | Synthesis | `syn/README.md`, `docs/synthesis/MPTDC_SYNTHESIS_FLOW.md` | Use the canonical profile and stable SDC/filelist aliases. |
 | Timing status | `docs/timing_closure/MPTDC_TIMING_CLOSURE_STATUS.md` | Typical closure is clean; physical/MMMC signoff remains open. |
-| PnR | `docs/pnr/MPTDC_PNR_FLOW.md` | Begin with feasibility and preserve nonstandard oscillator/phase-clock intent. |
+| PnR | `docs/pnr/MPTDC_PNR_FLOW.md` | Separate typical helpers from real digital signoff; preserve oscillator/phase-clock intent. |
 | Signoff limits | `docs/signoff_notes/MPTDC_SIGNOFF_LIMITATIONS.md` | Do not convert feasibility labels into final signoff claims. |
 
 ## Change rules
@@ -97,6 +106,10 @@ not mark the Verilator-based smoke or full regression as passed unless the
 7. Separate reference evidence from active checkout state. A later docs/script
    cleanup commit may sit above the timing-reference commit, but it needs its
    own clean wrapper rerun before becoming the accepted PnR handoff head.
+8. A PnR signoff run needs confirmed physical-cell names, MMMC views, real
+   `clk_sys` CTS, extracted timing, antenna/DRC/LVS evidence, and separate
+   status keys. Do not convert the typical feasibility result into signoff by
+   changing labels.
 
 ## Naming and cleanup policy
 

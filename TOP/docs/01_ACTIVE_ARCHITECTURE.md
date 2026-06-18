@@ -28,6 +28,8 @@ The current top-level design is organized around one shared physical output bus 
 5. The three TDC measurement kernels stay local inside three `mptdc_axis_core` product axes.
 6. TDC sharing happens only after each axis has already produced direct packet words.
 7. The shared egress assigns one unified rolling 14-bit event ID and patches it into the EOC word of every emitted packet.
+8. Slow/fast RO tuning values are TOP-owned CSR images that each axis core
+   captures locally only while idle.
 
 ## 2. End-to-end dataflow
 
@@ -143,7 +145,8 @@ The active RTL keeps the existing CSR width but interprets the committed control
 
 1. gates the asynchronous SPAD event with the active global/axis enables
 2. converts the event into one qualified `clk_ref_40m` STOP pulse
-3. forwards product controls and global `max_hits` into `mptdc_axis_core`
+3. forwards product controls, global `max_hits`, and per-axis RO tuning codes
+   into `mptdc_axis_core`
 4. exports direct 16-bit packet words plus SOP/EOP and packet-active sidebands
 
 Inside each preserved MPTDC kernel, the current measurement-control/context
@@ -151,6 +154,13 @@ pivot is local to `mptdc_core`: oscillator/PD/counter fabric remains
 measurement-local, while `mptdc_meas_ctrl`, `mptdc_hit_capture_bridge`, and
 `mptdc_context_bank` run in `clk_sys`. TOP only sees the product packet stream
 and should not assume a fast-domain context-bank interface.
+
+Each `spadmic_tdc_axis_csr` also owns a per-axis `TDC_RO_CODE` image:
+`[7:0]` for slow RO code and `[15:8]` for fast RO code. The MPTDC core copies
+those values into local macro-adjacent shadow registers only while idle, then
+holds them stable for the full live measurement interval. This lets software
+change the requested code without perturbing an active conversion and gives PnR
+short local register-to-RO code nets.
 
 ### 5.2 Unified ARB TDC packet streams
 

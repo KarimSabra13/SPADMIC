@@ -33,6 +33,7 @@ proc mptdc_pnr_write_cts_policy {{path ""}} {
     puts $fh "primary_clock=[mptdc_pnr_cts_primary_clock]"
     puts $fh "excluded_clock_patterns=[mptdc_pnr_cts_excluded_clock_patterns]"
     puts $fh "raw_ro_and_buffered_phase_cts=NO"
+    puts $fh "phase_network_idealized_for_final_sta=NO"
     puts $fh "labels=TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF"
     close $fh
     return $path
@@ -62,6 +63,7 @@ proc mptdc_pnr_write_cts_inclusion_audit {{path ""}} {
     puts $fh "excluded_patterns=[mptdc_pnr_cts_excluded_clock_patterns]"
     puts $fh "RO_CLOCKS_IN_CTS=NO"
     puts $fh "PHASE_CLOCKS_IN_CTS=NO"
+    puts $fh "SET_IDEAL_NETWORK_ON_PHASE_CLOCKS=NO"
     puts $fh "failure_action=do_not_call_near_signoff"
     close $fh
     return $path
@@ -75,6 +77,5 @@ proc mptdc_pnr_apply_cts_exclusions {} {
             continue
         }
         catch {set_dont_touch_network $clocks}
-        catch {set_ideal_network $clocks}
     }
 }

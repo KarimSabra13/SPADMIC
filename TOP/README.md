@@ -9,6 +9,7 @@ First-silicon SPADMIC chip-level integration around three product-only `mptdc_ax
 - one physical source-synchronous TX interface: forwarded `chip_tx_clk_o`, SDR `chip_tx_valid_o`, and 8-bit DDR `chip_tx_data_o`
 - one requested-to-active control contract (`spadmic_global_csr` + `spadmic_top_sequencer`)
 - three product TDC packet streams feeding one unified four-source ARB
+- per-axis slow/fast RO-code CSR images feeding local MPTDC shadow registers
 - one async-qualified 64x64x64 SPAD position path with queued snapshots, explicit counters, and sticky faults
 - one correlated shared egress that supports TDC-only, position-only, and both-active export
 - one physical DDR TX packer that preserves the internal 16-bit logical packet stream while repacking it onto the chip pins
@@ -57,7 +58,10 @@ The generator now uses Graphviz/DOT for orthogonal, schematic-style layout and w
 
 1. Each axis wrapper qualifies one `clk_ref_40m` STOP pulse from the asynchronous SPAD event.
 2. Each wrapper instantiates one `mptdc_axis_core` product boundary around the preserved measurement kernel.
-3. Each axis core emits a direct 16-bit packet stream with SOP/EOP, packet-active, and packet-pending sidebands.
+3. Each axis CSR provides independent slow/fast RO-code images; each MPTDC core
+   captures them locally only while idle.
+4. Each axis core emits a direct 16-bit packet stream with SOP/EOP,
+   packet-active, and packet-pending sidebands.
 
 ### Position plane
 

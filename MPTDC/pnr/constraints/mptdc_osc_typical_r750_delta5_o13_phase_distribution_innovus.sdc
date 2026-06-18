@@ -12,6 +12,12 @@ puts "MPTDC_O13_INNOVUS_SDC_INFO: labels = O13_PHASE_DISTRIBUTION_TREE_CLEANUP T
 
 set mptdc_o13_fast_period_typ_ns 1.333
 set mptdc_o13_slow_period_typ_ns 1.430
+if {[info exists ::env(MPTDC_RO_FAST_PERIOD_NS)] && $::env(MPTDC_RO_FAST_PERIOD_NS) ne ""} {
+    set mptdc_o13_fast_period_typ_ns $::env(MPTDC_RO_FAST_PERIOD_NS)
+}
+if {[info exists ::env(MPTDC_RO_SLOW_PERIOD_NS)] && $::env(MPTDC_RO_SLOW_PERIOD_NS) ne ""} {
+    set mptdc_o13_slow_period_typ_ns $::env(MPTDC_RO_SLOW_PERIOD_NS)
+}
 set mptdc_o13_setup_uncertainty_ns 0.010
 set mptdc_o13_hold_uncertainty_ns 0.005
 

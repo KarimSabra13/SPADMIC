@@ -19,6 +19,17 @@ proc mptdc_pnr_ro_load_warning_ff {} {
     return [mptdc_pnr_env MPTDC_PNR_RO_LOAD_WARNING_FF 75.59]
 }
 
+proc mptdc_pnr_ro_load_shell_limit_ff {} {
+    return [mptdc_pnr_env MPTDC_PNR_RO_LOAD_SHELL_LIMIT_FF 50.0]
+}
+
+proc mptdc_pnr_ro_load_resolved_limit_ff {} {
+    set shell [mptdc_pnr_ro_load_shell_limit_ff]
+    set preferred [mptdc_pnr_ro_load_preferred_ff]
+    set warning [mptdc_pnr_ro_load_warning_ff]
+    return [expr {min($shell, $preferred, $warning)}]
+}
+
 proc mptdc_pnr_required_reports {} {
     return [list \
         run_manifest.txt \
@@ -51,6 +62,7 @@ proc mptdc_pnr_required_reports {} {
         drv_max_cap.rpt \
         drv_max_fanout.rpt \
         raw_ro_pin_loads.csv \
+        ro_load_limit_sources.rpt \
         ro_phase_raw_pin_loads_xlibd.csv \
         phase_buffer_output_loads.csv \
         phase_buffer_output_loads_xlibd.csv \
@@ -81,6 +93,9 @@ proc mptdc_pnr_write_report_manifest {{path ""}} {
     puts $fh "labels=TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF"
     puts $fh "ro_load_preferred_ff=[mptdc_pnr_ro_load_preferred_ff]"
     puts $fh "ro_load_warning_ff=[mptdc_pnr_ro_load_warning_ff]"
+    puts $fh "ro_load_shell_limit_ff=[mptdc_pnr_ro_load_shell_limit_ff]"
+    puts $fh "ro_load_resolved_limit_ff=[mptdc_pnr_ro_load_resolved_limit_ff]"
+    puts $fh "ro_load_policy=use_most_restrictive_validated_limit_until_analog_approval"
     puts $fh "FAST_TAG_TO_PD_TS_POSTROUTE_CLEAN=REVIEW_AFTER_ROUTE"
     puts $fh "RESET_RECOVERY_STATUS=RESET_RECOVERY_REVIEW_REQUIRED_UNTIL_PROVEN"
     puts $fh "ANTENNA_STATUS=REVIEW_AFTER_ROUTE"

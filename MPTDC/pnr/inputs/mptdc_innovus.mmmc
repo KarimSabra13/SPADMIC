@@ -1,12 +1,13 @@
 # =============================================================================
 # Project  : SPAD_MPTDC — Vernier Time-to-Digital Converter
 # File     : mptdc_innovus.mmmc
-# Purpose  : Innovus-compatible legacy MMMC view definition for PnR estimates
+# Purpose  : Innovus-compatible MMMC view definition for MPTDC digital signoff
 # =============================================================================
 #
-# Genus uses syn/inputs/mptdc.mmmc. Innovus v22.33 on the lab server starts
-# this flow in legacy MMMC mode, so this file avoids MMMC2 timing_condition
-# syntax and binds library sets directly to delay corners.
+# Genus uses syn/inputs/mptdc.mmmc. Innovus v22.33 on the lab server starts this
+# flow in legacy MMMC mode, so this file avoids MMMC2 timing_condition syntax
+# and binds library sets directly to delay corners. The active signoff names are
+# TC_NOMINAL, WC_SETUP, BC_HOLD, and the report-only RO_MAX_FREQ_STRESS view.
 # =============================================================================
 
 ###########################
@@ -23,8 +24,22 @@ if {[info exists ::env(MPTDC_OSC_PD_SDC_OVERLAY)] && $::env(MPTDC_OSC_PD_SDC_OVE
 }
 
 create_constraint_mode \
-    -name functional_mode \
+    -name NOMINAL_FUNCTIONAL \
     -sdc_files $mptdc_innovus_sdc_files
+
+set mptdc_innovus_stress_sdc_files $mptdc_innovus_sdc_files
+if {[info exists ::env(MPTDC_RO_STRESS_SDC_OVERLAY)] && $::env(MPTDC_RO_STRESS_SDC_OVERLAY) ne ""} {
+    if {[file exists $::env(MPTDC_RO_STRESS_SDC_OVERLAY)]} {
+        lappend mptdc_innovus_stress_sdc_files $::env(MPTDC_RO_STRESS_SDC_OVERLAY)
+        puts "MPTDC_MMMC_INFO: enabling RO stress SDC overlay $::env(MPTDC_RO_STRESS_SDC_OVERLAY)"
+    } else {
+        puts "MPTDC_MMMC_WARN: requested RO stress SDC overlay does not exist: $::env(MPTDC_RO_STRESS_SDC_OVERLAY)"
+    }
+}
+
+create_constraint_mode \
+    -name RO_MAX_FREQ_STRESS_MODE \
+    -sdc_files $mptdc_innovus_stress_sdc_files
 
 ###########################
 #    RC Corners
@@ -79,18 +94,50 @@ create_delay_corner -name wc_corner \
 ###########################
 #    Analysis Views
 ###########################
+create_analysis_view -name BC_HOLD \
+    -constraint_mode NOMINAL_FUNCTIONAL \
+    -delay_corner bc_corner
+
+create_analysis_view -name TC_NOMINAL \
+    -constraint_mode NOMINAL_FUNCTIONAL \
+    -delay_corner tc_corner
+
+create_analysis_view -name WC_SETUP \
+    -constraint_mode NOMINAL_FUNCTIONAL \
+    -delay_corner wc_corner
+
+create_analysis_view -name RO_MAX_FREQ_STRESS \
+    -constraint_mode RO_MAX_FREQ_STRESS_MODE \
+    -delay_corner wc_corner
+
+# Legacy aliases remain for older report-only scripts. New signoff wrappers use
+# the purpose-named views above.
 create_analysis_view -name bc_view \
-    -constraint_mode functional_mode \
+    -constraint_mode NOMINAL_FUNCTIONAL \
     -delay_corner bc_corner
 
 create_analysis_view -name tc_view \
-    -constraint_mode functional_mode \
+    -constraint_mode NOMINAL_FUNCTIONAL \
     -delay_corner tc_corner
 
 create_analysis_view -name wc_view \
-    -constraint_mode functional_mode \
+    -constraint_mode NOMINAL_FUNCTIONAL \
     -delay_corner wc_corner
 
+set mptdc_innovus_setup_views [list TC_NOMINAL WC_SETUP]
+set mptdc_innovus_hold_views  [list TC_NOMINAL BC_HOLD]
+
+if {[info exists ::env(MPTDC_SIGNOFF_SETUP_VIEWS)] && $::env(MPTDC_SIGNOFF_SETUP_VIEWS) ne ""} {
+    set mptdc_innovus_setup_views [split $::env(MPTDC_SIGNOFF_SETUP_VIEWS)]
+}
+if {[info exists ::env(MPTDC_SIGNOFF_HOLD_VIEWS)] && $::env(MPTDC_SIGNOFF_HOLD_VIEWS) ne ""} {
+    set mptdc_innovus_hold_views [split $::env(MPTDC_SIGNOFF_HOLD_VIEWS)]
+}
+
 set_analysis_view \
-    -setup $design(selected_setup_analysis_views) \
-    -hold  $design(selected_hold_analysis_views)
+    -setup $mptdc_innovus_setup_views \
+    -hold  $mptdc_innovus_hold_views
+
+puts "MPTDC_MMMC_INFO: setup_views=$mptdc_innovus_setup_views"
+puts "MPTDC_MMMC_INFO: hold_views=$mptdc_innovus_hold_views"
+puts "MPTDC_MMMC_INFO: stress_view=RO_MAX_FREQ_STRESS report_only"

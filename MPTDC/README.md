@@ -29,8 +29,10 @@ the stable purpose-named entrypoints listed here.
 - System control, drain, FIFO, and packet output: `rtl/ctrl/`, `rtl/readout/`
 
 The active physical model uses two `RO_tune4` macro abstracts and a two-stage
-`BUHDX4 -> BUHDX12` digital phase distribution per tap. `mptdc_top_asic` and the
-retired standalone CSR/VIP boundary are not the product synthesis top.
+`BUHDX4 -> BUHDX12` digital phase distribution per tap. Slow and fast RO tuning
+codes enter through TOP-owned CSR values and are captured into local idle-only
+shadow registers before driving the RO macros. `mptdc_top_asic` and the retired
+standalone CSR/VIP boundary are not the product synthesis top.
 
 ## Stable entrypoints
 
@@ -45,11 +47,17 @@ bash MPTDC/scripts/calibration/run_mptdc_calibration.sh
 bash MPTDC/syn/scripts/check_genus_axis_core_typical_closed_profile.sh
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_feasibility.sh
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode discover_only
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode validate_only --genus-run-id <fresh_genus_run_id>
 ```
 
 The stable wrappers record the run directory and git HEAD, print
 `FINAL_SIGNOFF=NO`, and reject a dirty tracked tree unless
 `MPTDC_ALLOW_DIRTY=1` is intentionally set.
+
+The digital signoff wrapper is not a renamed typical wrapper. It must remain
+fail-closed until the PDK physical cells, MMMC setup, power, CTS, routing,
+extraction, antenna, DRC, LVS, and deliverable checks have concrete evidence.
 
 ## Documentation
 
