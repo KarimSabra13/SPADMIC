@@ -12,12 +12,14 @@ RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_axis_core_genus_timing_close}"
 #   source override improves drive but has high C->Q and can dominate both
 #   FAST_TAG_TO_PD_TS and LOCAL_FAST_TAG_SELF paths once preserved.
 # - uses the full 1.333 ns fast-period budget by default for the exact C-to-D
-#   fast-tag timestamp paths.
+#   fast-tag timestamp paths. Tighter values are treated as experiments and are
+#   ignored unless MPTDC_ALLOW_TIGHT_FAST_TAG_MAX_DELAY=1.
 # - keeps PD-local discovery and grouping enabled, but disables the broad
 #   hit_latched -> nfast_hit_latched max-delay and transition clamps by
 #   default. The 1.10 ns max-delay experiment over-constrained the run.
 # - enables a scoped post-map ON22JIHDX0 final-driver sizing experiment for
-#   the local nfast_hit_latched D cone.
+#   the local nfast_hit_latched D cone. ON22JIHDX2 is kept opt-in because the
+#   20260618 margin run regressed LOCAL_FAST_TAG_SELF timing.
 export MPTDC_GENUS_CLOSURE_PROFILE=timing_ultra
 export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE:-1}"
 if [[ "$MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_CELL_DISABLE" == "1" ]]; then
@@ -32,7 +34,14 @@ else
   export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SET1_CELL:-DFRSJIHDX2}"
   export MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED="${MPTDC_FAST_TAG_REPAIR_EXACT_SOURCE_SKIP_UNSUPPORTED:-1}"
 fi
-export MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS="${MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS:-1.333}"
+export MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_REQUESTED_NS="${MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS:-1.333}"
+export MPTDC_ALLOW_TIGHT_FAST_TAG_MAX_DELAY="${MPTDC_ALLOW_TIGHT_FAST_TAG_MAX_DELAY:-0}"
+export MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS="$MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_REQUESTED_NS"
+if [[ "$MPTDC_ALLOW_TIGHT_FAST_TAG_MAX_DELAY" != "1" ]]; then
+  if awk -v v="$MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS" 'BEGIN { exit ((v + 0) < 1.333 ? 0 : 1) }'; then
+    export MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_NS=1.333
+  fi
+fi
 export MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL="${MPTDC_GENUS_REPAIR_PD_HIT_TO_NFAST_LOCAL:-0}"
 export MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS="${MPTDC_PD_HIT_TO_NFAST_MAX_DELAY_NS:-0}"
 export MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS="${MPTDC_PD_HIT_TO_NFAST_MAX_TRANSITION_NS:-0}"
@@ -49,5 +58,6 @@ export MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS="${MPTDC_PD_LOCAL_ON22_EXPECTED_CELLS:
 export MPTDC_PD_LOCAL_ON22_DISCOVERY_MODE="${MPTDC_PD_LOCAL_ON22_DISCOVERY_MODE:-TIMING_REPORT}"
 export MPTDC_PD_LOCAL_ON22_TIMING_MAX_PATHS="${MPTDC_PD_LOCAL_ON22_TIMING_MAX_PATHS:-1000}"
 export MPTDC_PD_LOCAL_ON22_APPLY_REPAIR="${MPTDC_PD_LOCAL_ON22_APPLY_REPAIR:-1}"
+export MPTDC_PD_LOCAL_ON22_ALLOW_X2="${MPTDC_PD_LOCAL_ON22_ALLOW_X2:-0}"
 
 exec "$SCRIPT_DIR/server_run_genus_o13_phase_distribution.sh" "$RUN_ID"

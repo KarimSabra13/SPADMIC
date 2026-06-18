@@ -3576,6 +3576,21 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     set discovery_mode [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_DISCOVERY_MODE TIMING_REPORT]
     set timing_max_paths [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_TIMING_MAX_PATHS 1000]
     set apply_repair [mptdc_bool_env MPTDC_PD_LOCAL_ON22_APPLY_REPAIR true]
+    set allow_x2 [mptdc_bool_env MPTDC_PD_LOCAL_ON22_ALLOW_X2 false]
+    set requested_target_cells $target_cells
+    if {!$allow_x2} {
+        set filtered_target_cells [list]
+        foreach target $target_cells {
+            if {[string toupper $target] eq "ON22JIHDX2"} {
+                continue
+            }
+            lappend filtered_target_cells $target
+        }
+        if {[llength $filtered_target_cells] == 0} {
+            set filtered_target_cells [list ON22JIHDX1]
+        }
+        set target_cells $filtered_target_cells
+    }
     set expected_drivers_auto [expr {$expected_drivers_raw eq ""}]
     if {[regexp -nocase {^(auto|discovered|timing|timing_report)$} $expected_drivers_raw]} {
         set expected_drivers_auto 1
@@ -3768,6 +3783,8 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     puts $fh "PD_LOCAL_ON22_REPAIR_ENABLE=$enable"
     puts $fh "PD_LOCAL_ON22_APPLY_REPAIR=$apply_repair"
     puts $fh "PD_LOCAL_ON22_SOURCE_CELL=$source_cell"
+    puts $fh "PD_LOCAL_ON22_ALLOW_X2=$allow_x2"
+    puts $fh "PD_LOCAL_ON22_REQUESTED_TARGET_CELLS=[join $requested_target_cells {,}]"
     puts $fh "PD_LOCAL_ON22_TARGET_CELLS=[join $target_cells {,}]"
     puts $fh "PD_LOCAL_ON22_SELECTED_TARGET=$selected_target"
     puts $fh "PD_LOCAL_ON22_TARGET_LIB_CELLS_FOUND=$legal_found"
@@ -3797,6 +3814,8 @@ proc mptdc_apply_pd_local_on22_repair {stage fh} {
     puts $status_fh "PD_LOCAL_ON22_REPAIR_ENABLE=$enable"
     puts $status_fh "PD_LOCAL_ON22_APPLY_REPAIR=$apply_repair"
     puts $status_fh "PD_LOCAL_ON22_SOURCE_CELL=$source_cell"
+    puts $status_fh "PD_LOCAL_ON22_ALLOW_X2=$allow_x2"
+    puts $status_fh "PD_LOCAL_ON22_REQUESTED_TARGET_CELLS=[join $requested_target_cells {,}]"
     puts $status_fh "PD_LOCAL_ON22_TARGET_CELLS=[join $target_cells {,}]"
     puts $status_fh "PD_LOCAL_ON22_SELECTED_TARGET=$selected_target"
     puts $status_fh "PD_LOCAL_ON22_TARGET_LIB_CELLS_FOUND=$legal_found"
@@ -4032,6 +4051,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     set pd_local_on22_discovery_mode [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_DISCOVERY_MODE TIMING_REPORT]
     set pd_local_on22_timing_max_paths [mptdc_repair_set_numeric_env MPTDC_PD_LOCAL_ON22_TIMING_MAX_PATHS 1000]
     set pd_local_on22_apply_repair [mptdc_bool_env MPTDC_PD_LOCAL_ON22_APPLY_REPAIR true]
+    set pd_local_on22_allow_x2 [mptdc_bool_env MPTDC_PD_LOCAL_ON22_ALLOW_X2 false]
     if {!$fast_repair && !$drv_repair && !$pd_hit_to_nfast_local_repair && !$pd_local_on22_repair} {
         return
     }
@@ -4063,6 +4083,7 @@ proc mptdc_apply_final_typical_repair_1 {stage} {
     puts $fh "PD_LOCAL_ON22_DISCOVERY_MODE=$pd_local_on22_discovery_mode"
     puts $fh "PD_LOCAL_ON22_TIMING_MAX_PATHS=$pd_local_on22_timing_max_paths"
     puts $fh "PD_LOCAL_ON22_APPLY_REPAIR=$pd_local_on22_apply_repair"
+    puts $fh "PD_LOCAL_ON22_ALLOW_X2=$pd_local_on22_allow_x2"
     puts $fh "STRONG_FAST_TAG_FLOPS=$strong_fast_flops"
     puts $fh "STRONG_CONTROL_DRV=$strong_control_drv"
     puts $fh "CONTROL_CELL_BIAS_STAGE=$control_bias_stage"
