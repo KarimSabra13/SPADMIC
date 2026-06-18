@@ -32,7 +32,9 @@ physical cells are confirmed and explicit Innovus stages are implemented.
 - Input netlist/SDC source: canonical Genus axis-core typical-closed flow.
 - Standard-cell family: JIHD for the current closed Genus result.
 - Macro model: real `RO_tune4` abstract shell, not the old oscillator stub.
-- Phase distribution: `BUHDX4 -> BUHDX12` per slow/fast tap.
+- Phase distribution in the last closed handoff: `BUHDX4 -> BUHDX12` per
+  slow/fast tap. The 2026-06-18 JIHD discovery proved `BUJIHDX4 -> BUJIHDX12`
+  exists in JIHD LEF/Liberty; using it requires a fresh Genus handoff.
 - Floorplan target: horizontally elongated `4:3` block boundary, accepted range
   `1.20 <= width/height <= 1.47`.
 - Measurement stack: slow RO north, slow phase buffers, central `8 x 8` PD
@@ -42,9 +44,10 @@ physical cells are confirmed and explicit Innovus stages are implemented.
 - Required audits: RO interface, phase-buffer clock model, pin geometry, power
   geometry, CTS state, timing, congestion, antenna, and physical verification
   are separate gates.
-- Physical cells must be discovered from the exact JIHD LEF/Liberty set before
+- Physical cells must be discovered from approved PDK collateral before
   tap/endcap/tie/filler/decap/antenna/CTS insertion. `config/xh018_cells.tcl`
-  must not contain `UNCONFIRMED_PLACEHOLDERS` for a signoff run.
+  currently records JIHD candidates but remains unconfirmed because tap,
+  endcap, and row-filler cells were not found in the JIHD standard-cell LEF.
 
 ## Directory Ownership
 

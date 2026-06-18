@@ -158,6 +158,10 @@ If valid JIHD `BUJIHDX4` and `BUJIHDX12` equivalents exist in both LEF and
 Liberty, propose a uniform JIHD topology before changing the netlist. If they do
 not exist, retaining `BUHDX4/BUHDX12` requires evidence that both masters are
 loaded, legal, site-compatible, PG-connected, and not unresolved black boxes.
+The 2026-06-18 JIHD discovery proved `BUJIHDX4` and `BUJIHDX12` in the exact
+JIHD LEF and all 1.8 V JIHD Liberty corners. Switching to that uniform topology
+is therefore the preferred next netlist experiment, but it still invalidates the
+old Genus handoff and requires a fresh Genus closure run.
 
 Raw RO nets must not receive arbitrary buffering. Any route promotion, shielding,
 resizing, antenna repair, or extra stage on phase nets must be reviewed for
@@ -234,8 +238,12 @@ Required implementation evidence:
 - zero accidental shorts.
 
 Tap, endcap, tie, filler, decap, and antenna cells must be discovered from the
-exact JIHD LEF/Liberty used by the run. Do not use
-`UNCONFIRMED_PLACEHOLDERS` for insertion.
+exact physical collateral used by the run. The 2026-06-18 JIHD-only discovery
+proved JIHD decaps, antenna cells, `LOGIC0/LOGIC1` tie candidates, `CLKVBUFJIHD`,
+and `BUJIHDX4/BUJIHDX12`; it did not find tap, endcap, or row-filler cells in
+the JIHD standard-cell LEF. Do not mark `MPTDC/pnr/config/xh018_cells.tcl`
+confirmed until those missing classes are resolved from approved PDK sources and
+site/PG compatibility is checked.
 
 If no RO current model is available, do not block the rest of PnR. Report:
 

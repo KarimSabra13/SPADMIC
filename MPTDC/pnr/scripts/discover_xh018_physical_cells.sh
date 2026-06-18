@@ -178,10 +178,10 @@ ENDCAP="$(classify '(endcap|^end|_end)')"
 FILLER="$(classify '(fill|filler)')"
 DECAP="$(classify '(decap|dcap)')"
 ANTENNA="$(classify '(antenna|ant)')"
-TIE_HIGH="$(classify '(tiehi|tieh|tie1|tie_high|tieone)')"
-TIE_LOW="$(classify '(tielo|tiel|tie0|tie_low|tiezero)')"
+TIE_HIGH="$(classify '(tiehi|tieh|tie1|tie_high|tieone|logic1)')"
+TIE_LOW="$(classify '(tielo|tiel|tie0|tie_low|tiezero|logic0)')"
 CTS_BUFFERS="$(classify '(clk.*buf|buf.*clk|^ct.*buf|^ck.*buf|clock.*buffer)')"
-CTS_INVERTERS="$(classify '(clk.*inv|inv.*clk|^ct.*inv|^ck.*inv|clock.*invert)')"
+CTS_INVERTERS="$(classify '(clk.*inv|inv.*clk|^ct.*inv|^ck.*inv|clock.*invert|^in.*jihd|^in.*hd)')"
 JIHD_PHASE_X4="$(classify_intersection '^(BUJIHDX4|BU.*JIHD.*X4)$')"
 JIHD_PHASE_X12="$(classify_intersection '^(BUJIHDX12|BU.*JIHD.*X12)$')"
 HD_PHASE_X4="$(classify_intersection '^BUHDX4$')"
@@ -200,6 +200,22 @@ elif [[ " $HD_PHASE_X4 " == *" BUHDX4 "* && " $HD_PHASE_X12 " == *" BUHDX12 "* ]
   PHASE_FINAL_RECOMMENDED="BUHDX12"
   PHASE_POLICY_RECOMMENDED="FALLBACK_MIXED_OR_LEGACY_PHASE_TOPOLOGY_REVIEW"
 fi
+
+missing_required_candidates() {
+  local missing=()
+  [[ -z "$TAP" ]] && missing+=("tap")
+  [[ -z "$ENDCAP" ]] && missing+=("endcap")
+  [[ -z "$FILLER" ]] && missing+=("filler")
+  [[ -z "$DECAP" ]] && missing+=("decap")
+  [[ -z "$ANTENNA" ]] && missing+=("antenna")
+  [[ -z "$TIE_HIGH" ]] && missing+=("tie_high")
+  [[ -z "$TIE_LOW" ]] && missing+=("tie_low")
+  [[ -z "$CTS_BUFFERS" ]] && missing+=("cts_buffers")
+  [[ -z "$CTS_INVERTERS" ]] && missing+=("cts_inverters")
+  [[ -z "$PHASE_ISO_RECOMMENDED" ]] && missing+=("phase_iso_buffer")
+  [[ -z "$PHASE_FINAL_RECOMMENDED" ]] && missing+=("phase_final_buffer")
+  printf '%s\n' "${missing[*]:-none}"
+}
 
 emit_report() {
   echo "# XH018 physical-cell candidate discovery"
@@ -230,6 +246,7 @@ emit_report() {
   echo "phase_iso_recommended=${PHASE_ISO_RECOMMENDED:-}"
   echo "phase_final_recommended=${PHASE_FINAL_RECOMMENDED:-}"
   echo "phase_buffer_policy_recommended=${PHASE_POLICY_RECOMMENDED:-}"
+  echo "missing_required_candidates=$(missing_required_candidates)"
   if [[ "$COMPACT" == "1" ]]; then
     echo "full_candidate_tcl=${OUT:-not_requested}"
   fi
@@ -279,6 +296,7 @@ emit_tcl() {
     echo "    hd_phase_x4_candidates {${HD_PHASE_X4:-}}"
     echo "    hd_phase_x12_candidates {${HD_PHASE_X12:-}}"
     echo "    jihd_buffer_candidates {${JIHD_BUFFERS:-}}"
+    echo "    missing_required_candidates {$(missing_required_candidates)}"
     echo "}"
   } > "$path"
 }
