@@ -78,6 +78,7 @@ required_files=(
   mptdc_axis_core.postsyn.sdc
   final_sdc_overlay_used.sdc
   final_filelist_used.f
+  run_manifest.txt
   SUMMARY.md
   timing_summary.rpt
   timing_violations.rpt
@@ -142,10 +143,44 @@ summary_value() {
   ' "$SOURCE_DIR/SUMMARY.md"
 }
 
+source_run_value() {
+  local key="$1"
+  local file
+  for file in "$SOURCE_DIR/SUMMARY.md" "$SOURCE_DIR/run_manifest.txt"; do
+    [[ -f "$file" ]] || continue
+    awk -v key="$key" '
+      function clean(value) {
+        gsub(/^[ \t]+/, "", value)
+        gsub(/[ \t]+$/, "", value)
+        gsub(/^`/, "", value)
+        gsub(/`$/, "", value)
+        return value
+      }
+      BEGIN { lower_key = tolower(key) }
+      {
+        lower_line = tolower($0)
+        eq_prefix = lower_key "="
+        colon_prefix = lower_key ": "
+        if (index(lower_line, eq_prefix) == 1) {
+          print clean(substr($0, length(key) + 2))
+          exit
+        }
+        if (index(lower_line, colon_prefix) == 1) {
+          print clean(substr($0, length(key) + 3))
+          exit
+        }
+      }
+    ' "$file"
+  done | awk 'NF {print; exit}'
+}
+
 SOURCE_BRANCH="$(summary_value "Branch")"
 SOURCE_HEAD="$(summary_value "Git HEAD")"
+SOURCE_OPT_MODE="$(source_run_value "MPTDC_OPT_MODE")"
+[[ -z "$SOURCE_OPT_MODE" ]] && SOURCE_OPT_MODE="$(source_run_value "mptdc_opt_mode")"
 [[ -z "$SOURCE_BRANCH" ]] && SOURCE_BRANCH="$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || true)"
 [[ -z "$SOURCE_HEAD" ]] && SOURCE_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
+[[ -z "$SOURCE_OPT_MODE" ]] && SOURCE_OPT_MODE="UNKNOWN"
 
 MANIFEST="$HANDOFF_DIR/HANDOFF_MANIFEST.md"
 {
@@ -160,6 +195,7 @@ MANIFEST="$HANDOFF_DIR/HANDOFF_MANIFEST.md"
   echo "NOT_MMMC_SIGNOFF=YES"
   echo "NOT_FINAL_SILICON_SIGNOFF=YES"
   echo "TYPICAL_ONLY_TAPEOUT_PACKAGE=YES"
+  echo "MPTDC_OPT_MODE=$SOURCE_OPT_MODE"
   echo "GENUS_WNS_MARGIN_LOW=YES"
   echo
   echo "## Source Evidence"
@@ -167,6 +203,7 @@ MANIFEST="$HANDOFF_DIR/HANDOFF_MANIFEST.md"
   echo "- Branch: \`$SOURCE_BRANCH\`"
   echo "- Git HEAD: \`$SOURCE_HEAD\`"
   echo "- Genus run ID: \`$RUN_ID\`"
+  echo "- MPTDC_OPT_MODE: \`$SOURCE_OPT_MODE\`"
   echo "- Setup WNS ps: \`$(summary_value "Setup WNS ps")\`"
   echo "- Setup TNS ps: \`$(summary_value "Setup TNS ps")\`"
   echo "- Setup violating path count: \`$(summary_value "Setup violating path count")\`"
