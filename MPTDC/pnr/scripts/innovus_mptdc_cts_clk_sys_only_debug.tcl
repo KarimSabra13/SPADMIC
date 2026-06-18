@@ -41,7 +41,7 @@ proc mptdc_cts_dbg_setup {} {
     set ctsdbg(run_ccopt) [mptdc_cts_dbg_env MPTDC_CTS_DEBUG_RUN_CCOPT 0]
     set ctsdbg(status) "CTS_SKIPPED_NO_SAFE_CLK_SYS_ONLY_COMMAND"
     set ctsdbg(primary_clock) "clk_sys"
-    set ctsdbg(forbidden_regex) {(clk_osc|RO_tune4|u_ro_tune4|phase_buf|gen_phase_buf|BUHDX4|BUHDX12|u_core_u_phase_buf)}
+    set ctsdbg(forbidden_regex) {(clk_osc|RO_tune4|u_ro_tune4|phase_buf|gen_phase_buf|BUHDX4|BUHDX12|BUJIHDX4|BUJIHDX12|u_core_u_phase_buf)}
 
     file mkdir $ctsdbg(reports_dir)
     file mkdir $ctsdbg(work_dir)

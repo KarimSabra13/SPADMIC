@@ -23,7 +23,7 @@ Tcl compatibility. They are not independent handoff flows.
 
 - Top: `mptdc_axis_core`.
 - View: typical-only `R750_delta5`.
-- Phase distribution: `BUHDX4 -> BUHDX12`.
+- Phase distribution: `BUJIHDX4 -> BUJIHDX12`.
 - Exact exception scope: eight slow-phase sources and 64 q1 endpoints.
 - q1-to-q2, local capture, fast-tag, reset, control, FIFO, and packet paths stay
   timed.

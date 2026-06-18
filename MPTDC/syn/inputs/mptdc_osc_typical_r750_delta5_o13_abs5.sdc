@@ -92,7 +92,7 @@ proc mptdc_o13_abs5_collect_slow_source_pins {} {
     array set seen {}
 
     # Use the exact per-tap resolver from abs3.  Abs3 has already proven these
-    # BUHDX12 Q pins exist by creating clk_osc_slow_buf_tap0..7 on them.
+    # BUJIHDX12 Q pins exist by creating clk_osc_slow_buf_tap0..7 on them.
     for {set tap 0} {$tap < 8} {incr tap} {
         set found [list]
         if {[llength [info commands mptdc_o13_abs3_try_get_pins]] > 0 &&

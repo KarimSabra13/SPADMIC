@@ -15,7 +15,7 @@ if {[llength [info commands mptdc_pnr_env]] == 0} {
 }
 
 proc mptdc_pnr_phase_buffer_expected_topology {} {
-    return {RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric}
+    return {RO_tune4/S[n] -> BUJIHDX4 -> BUJIHDX12 -> phase fabric}
 }
 
 proc mptdc_pnr_phase_buffer_expected_count {} {

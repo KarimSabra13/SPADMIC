@@ -3,7 +3,7 @@
 #
 # Restores a routed O13 checkpoint and generates DB-backed reports for:
 #
-#   RO_tune4/S[n] -> BUHDX4 u_iso -> BUHDX12 u_drv -> phase fabric
+#   RO_tune4/S[n] -> BUJIHDX4 u_iso -> BUJIHDX12 u_drv -> phase fabric
 #
 # No route, CTS, RTL, Liberty, packet, or calibration behavior is modified by
 # this script.  It may apply a documented in-memory provisional IO set_load for
@@ -223,7 +223,7 @@ proc mptdc_o13_write_summary {} {
     puts $fh "- Run ID: `$o13(run_id)`"
     puts $fh "- Source run: `$o13(source_run_id)`"
     puts $fh "- Mode: report-only restore of an O13 routed checkpoint."
-    puts $fh {- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`.}
+    puts $fh {- Expected topology: `RO_tune4/S[n] -> BUJIHDX4 -> BUJIHDX12 -> phase fabric`.}
     puts $fh "- Provisional IO load report: `io_load_model.rpt`."
     puts $fh "- No routing, CTS, RTL, Liberty, packet, or calibration behavior is modified."
     puts $fh "- IO timing uses the documented in-memory provisional load model from `io_load_model.rpt`."

@@ -1,4 +1,4 @@
-# Purpose: Stable Innovus alias for BUHDX4 to BUHDX12 phase distribution.
+# Purpose: Stable Innovus alias for BUJIHDX4 to BUJIHDX12 phase distribution.
 # Source mode: R750_delta5 typical-only phase-distribution model.
 # Signoff: not MMMC signoff, not final tapeout signoff.
 # Related legacy file: mptdc_osc_typical_r750_delta5_o13_phase_distribution_innovus.sdc.

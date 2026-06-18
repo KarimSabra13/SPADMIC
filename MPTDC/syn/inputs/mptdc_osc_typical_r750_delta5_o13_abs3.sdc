@@ -5,13 +5,13 @@
 #
 # This overlay is loaded after mptdc.sdc.  The base SDC creates raw RO clocks on
 # RO_tune4/S[0:7].  This overlay creates final digital phase clocks on the
-# BUHDX12 driver outputs, adds those clocks to the oscillator clock collection,
+# BUJIHDX12 driver outputs, adds those clocks to the oscillator clock collection,
 # and re-applies the clk_sys-vs-oscillator asynchronous clock relationship.
 # =============================================================================
 
 puts "MPTDC_O13_ABS3_SDC_INFO: loading O13_ABS3_CLOCK_CDC_CONSTRAINT_REPAIR overlay"
 puts "MPTDC_O13_ABS3_SDC_INFO: signoff status = TYPICAL_ONLY_NOT_MMMC_NOT_FINAL_SIGNOFF"
-puts "MPTDC_O13_ABS3_SDC_INFO: expected RTL define = MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12"
+puts "MPTDC_O13_ABS3_SDC_INFO: expected RTL define = MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12"
 
 set mptdc_o13_setup_uncertainty_ns 0.010
 set mptdc_o13_hold_uncertainty_ns 0.005
@@ -180,10 +180,10 @@ if {[catch {
 }
 
 puts "MPTDC_O13_ABS3_SDC_INFO: matched raw RO pins = $mptdc_o13_abs3_raw_pin_count"
-puts "MPTDC_O13_ABS3_SDC_INFO: matched BUHDX4 iso A pins = $mptdc_o13_abs3_iso_a_count"
-puts "MPTDC_O13_ABS3_SDC_INFO: matched BUHDX4 iso Q pins = $mptdc_o13_abs3_iso_q_count"
-puts "MPTDC_O13_ABS3_SDC_INFO: matched BUHDX12 driver A pins = $mptdc_o13_abs3_drv_a_count"
-puts "MPTDC_O13_ABS3_SDC_INFO: matched BUHDX12 driver Q pins = $mptdc_o13_abs3_drv_q_count"
+puts "MPTDC_O13_ABS3_SDC_INFO: matched BUJIHDX4 iso A pins = $mptdc_o13_abs3_iso_a_count"
+puts "MPTDC_O13_ABS3_SDC_INFO: matched BUJIHDX4 iso Q pins = $mptdc_o13_abs3_iso_q_count"
+puts "MPTDC_O13_ABS3_SDC_INFO: matched BUJIHDX12 driver A pins = $mptdc_o13_abs3_drv_a_count"
+puts "MPTDC_O13_ABS3_SDC_INFO: matched BUJIHDX12 driver Q pins = $mptdc_o13_abs3_drv_q_count"
 puts "MPTDC_O13_ABS3_SDC_INFO: raw clock count = [llength $mptdc_o13_abs3_raw_clocks]"
 puts "MPTDC_O13_ABS3_SDC_INFO: buffer slow clock count = [llength [mptdc_o13_abs3_clock_collection $mptdc_o13_abs3_slow_buffer_clock_names]]"
 puts "MPTDC_O13_ABS3_SDC_INFO: buffer fast clock count = [llength [mptdc_o13_abs3_clock_collection $mptdc_o13_abs3_fast_buffer_clock_names]]"
@@ -191,7 +191,7 @@ puts "MPTDC_O13_ABS3_SDC_INFO: generated final-driver clocks = $mptdc_o13_abs3_g
 puts "MPTDC_O13_ABS3_SDC_INFO: oscillator clocks in async group = [llength $mptdc_o13_abs3_all_osc_clocks]"
 puts "MPTDC_O13_ABS3_SDC_INFO: clk_sys async to raw+buffer oscillator clocks = $mptdc_o13_abs3_async_status"
 puts "MPTDC_O13_ABS3_SDC_INFO: raw RO clocks remain analog load-check source clocks"
-puts "MPTDC_O13_ABS3_SDC_INFO: BUHDX12 Q clocks are downstream digital phase-clock sources"
+puts "MPTDC_O13_ABS3_SDC_INFO: BUJIHDX12 Q clocks are downstream digital phase-clock sources"
 puts "MPTDC_O13_ABS3_SDC_INFO: phase-buffer chain and same-domain oscillator paths remain timed"
 
 if {[info exists ::env(MPTDC_O13_CLOCK_MODEL_RPT)] && $::env(MPTDC_O13_CLOCK_MODEL_RPT) ne ""} {

@@ -402,7 +402,7 @@ single-view Genus package for the next physical implementation step.
 
 - Standard-cell family: JIHD D_CELLS, 1.8 V typical Liberty.
 - Frequency mode: \`r750_delta5\`.
-- Phase topology: \`RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric\`.
+- Phase topology: \`RO_tune4/S[n] -> BUJIHDX4 -> BUJIHDX12 -> phase fabric\`.
 - Packet format and \`raw_lfsr_tag\` encoding are unchanged.
 - \`FAST_TAG_TO_PD_TS\` remains real timed fast oscillator-domain setup timing;
   it was fixed by targeted tap0 bit 5/6 data-path pressure, not by false-path

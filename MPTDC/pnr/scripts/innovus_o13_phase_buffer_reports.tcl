@@ -3,7 +3,7 @@
 #
 # Report-only helpers for the two-stage O13 topology:
 #
-#   RO_tune4/S[n] -> BUHDX4 u_iso -> BUHDX12 u_drv -> phase fabric
+#   RO_tune4/S[n] -> BUJIHDX4 u_iso -> BUJIHDX12 u_drv -> phase fabric
 #
 # These reports keep raw analog load evidence separate from final digital phase
 # driver evidence.  They reuse the O12B property parsers so report generation
@@ -75,8 +75,8 @@ proc mptdc_o13_get_pins {candidates} {
 }
 
 proc mptdc_o13_expected_cell_type_for_inst {cell_name} {
-    if {[regexp {(^|[/.])u_iso$} $cell_name]} { return "BUHDX4" }
-    if {[regexp {(^|[/.])u_drv$} $cell_name]} { return "BUHDX12" }
+    if {[regexp {(^|[/.])u_iso$} $cell_name]} { return "BUJIHDX4" }
+    if {[regexp {(^|[/.])u_drv$} $cell_name]} { return "BUJIHDX12" }
     return ""
 }
 
@@ -240,8 +240,8 @@ proc mptdc_o13_xlibd_driver_suitability {cell_type cap_ff fanout transition_ps} 
     if {[string is double -strict $transition_ps] && $transition_ps > 500.0} {
         return "TRANSITION_WARNING_REVIEW_ROUTE"
     }
-    if {$cell_type eq "BUHDX12"} {
-        return "BUHDX12_SUITABLE_FOR_O13_REVIEW"
+    if {$cell_type eq "BUJIHDX12"} {
+        return "BUJIHDX12_SUITABLE_FOR_O13_REVIEW"
     }
     return "UNDER_XLIBD_LIMITS_REVIEW_TRANSITION"
 }
@@ -556,13 +556,13 @@ proc mptdc_o13_write_reports {} {
                 $raw_fanout $raw_total_pf $raw_total_ff $raw_bound_ff $raw_label $raw_strict $raw_cn \
                 [mptdc_o12b_csv $iso_a_pin] [mptdc_o12b_csv $raw_sinks] [mptdc_o12b_csv [join $raw_notes ";"]]] ","]
 
-            set xlibd_iso_input_cap [mptdc_o13_xlibd_cell BUHDX4 input_cap_ff 10.56]
-            set raw_xlibd_note "receiver_cell=BUHDX4;receiver_input_cap_ff=$xlibd_iso_input_cap;raw_ro_load_budget_is_analog_authoritative"
+            set xlibd_iso_input_cap [mptdc_o13_xlibd_cell BUJIHDX4 input_cap_ff ""]
+            set raw_xlibd_note "receiver_cell=BUJIHDX4;receiver_input_cap_ff=$xlibd_iso_input_cap;raw_ro_load_budget_is_analog_authoritative;requires_jihd_liberty_pin_cap_report"
             mptdc_o13_write_xlibd_load_row $xlibd_fh $family $tap raw_ro_source $raw_pin $raw_net \
                 $raw_total_pf $raw_total_ff $raw_bound_ff RO_tune4 "" "" "" $raw_label $raw_xlibd_note
 
             set first_cell_type $iso_cell_type
-            if {$first_cell_type eq ""} { set first_cell_type "BUHDX4" }
+            if {$first_cell_type eq ""} { set first_cell_type "BUJIHDX4" }
             set first_cell_input_cap_ff [mptdc_o13_xlibd_cell $first_cell_type input_cap_ff ""]
             set raw_strict_budget [mptdc_o13_xlibd_budget_ff strict]
             set raw_cn_budget [mptdc_o13_xlibd_budget_ff cn]
@@ -744,16 +744,16 @@ proc mptdc_o13_write_reports {} {
             if {$raw_pin eq "" || $iso_a_pin eq "" || $iso_q_pin eq "" || $drv_a_pin eq "" || $drv_q_pin eq "" || $iso_inst eq "" || $drv_inst eq ""} {
                 set topo_status "MISSING_BUFFER"
                 lappend topo_notes "missing raw/iso/driver pin or instance"
-            } elseif {$iso_cell_type ne "BUHDX4" || $drv_cell_type ne "BUHDX12"} {
+            } elseif {$iso_cell_type ne "BUJIHDX4" || $drv_cell_type ne "BUJIHDX12"} {
                 if {$iso_cell_type eq "" || $drv_cell_type eq ""} {
                     set topo_status "TOPOLOGY_SHAPE_MATCHED"
                     lappend topo_notes "CELL_TYPE_UNRESOLVED_BY_DB"
                 } else {
                     set topo_status "TOPOLOGY_MISMATCH"
-                    lappend topo_notes "expected BUHDX4;BUHDX12 got $sequence"
+                    lappend topo_notes "expected BUJIHDX4;BUJIHDX12 got $sequence"
                 }
             } else {
-                lappend topo_notes "CELL_SEQUENCE=BUHDX4;BUHDX12"
+                lappend topo_notes "CELL_SEQUENCE=BUJIHDX4;BUJIHDX12"
                 lappend topo_notes "ISO_CELL_SOURCE=$iso_cell_source"
                 lappend topo_notes "DRV_CELL_SOURCE=$drv_cell_source"
             }
@@ -835,8 +835,8 @@ proc mptdc_o13_write_reports {} {
     puts $bfh "- DFRRQHDX2 D/C/RN caps: `[mptdc_o13_xlibd_cell DFRRQHDX2 d_cap_ff 3.20]` / `[mptdc_o13_xlibd_cell DFRRQHDX2 clk_cap_ff 3.45]` / `[mptdc_o13_xlibd_cell DFRRQHDX2 rn_cap_ff 6.51]` fF."
     puts $bfh "- DFRQHDX2 D/C caps: `[mptdc_o13_xlibd_cell DFRQHDX2 d_cap_ff 2.70]` / `[mptdc_o13_xlibd_cell DFRQHDX2 clk_cap_ff 3.63]` fF."
     puts $bfh "- DFRHDX1 D/C caps: `[mptdc_o13_xlibd_cell DFRHDX1 d_cap_ff 2.71]` / `[mptdc_o13_xlibd_cell DFRHDX1 clk_cap_ff 3.63]` fF."
-    puts $bfh "- BUHDX4 input cap: `[mptdc_o13_xlibd_cell BUHDX4 input_cap_ff 10.56] fF`."
-    puts $bfh "- BUHDX12 input cap: `[mptdc_o13_xlibd_cell BUHDX12 input_cap_ff 32.24] fF`."
+    puts $bfh "- BUJIHDX4 input cap: `[mptdc_o13_xlibd_cell BUJIHDX4 input_cap_ff UNKNOWN] fF`."
+    puts $bfh "- BUJIHDX12 input cap: `[mptdc_o13_xlibd_cell BUJIHDX12 input_cap_ff UNKNOWN] fF`."
     if {$max_raw_cap_ff ne ""} {
         puts $bfh "- Max measured raw RO source load: `$max_raw_cap_ff fF` at `$max_raw_desc`."
         puts $bfh "- Max raw equivalent DFRRQHDX2 D/C/RN inputs: `[mptdc_o13_xlibd_equiv_or_bound $max_raw_cap_ff "" d]` / `[mptdc_o13_xlibd_equiv_or_bound $max_raw_cap_ff "" c]` / `[mptdc_o13_xlibd_equiv_or_bound $max_raw_cap_ff "" rn]`."
@@ -860,17 +860,16 @@ proc mptdc_o13_write_reports {} {
     puts $ifh ""
     puts $ifh "REPORT_STATUS=REVIEW_REQUIRED"
     puts $ifh ""
-    puts $ifh {- Preferred topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`.}
-    puts $ifh "- BUHDX4 input cap: `[mptdc_o13_xlibd_cell BUHDX4 input_cap_ff 10.56] fF`, safely below the strict `[mptdc_o13_xlibd_budget_ff strict] fF` analog budget."
-    puts $ifh "- BUHDX12 input cap: `[mptdc_o13_xlibd_cell BUHDX12 input_cap_ff 32.24] fF`, also under strict budget but less isolated than BUHDX4."
+    puts $ifh {- Preferred topology: `RO_tune4/S[n] -> BUJIHDX4 -> BUJIHDX12 -> phase fabric`.}
+    puts $ifh "- BUJIHDX4 input cap: `[mptdc_o13_xlibd_cell BUJIHDX4 input_cap_ff UNKNOWN] fF`; quantify from the active JIHD Liberty before analog load signoff."
+    puts $ifh "- BUJIHDX12 input cap: `[mptdc_o13_xlibd_cell BUJIHDX12 input_cap_ff UNKNOWN] fF`; quantify from the active JIHD Liberty before analog load signoff."
     puts $ifh "- INHDX12 input cap: `[mptdc_o13_xlibd_cell INHDX12 input_cap_ff 55.64] fF`, close to strict budget; do not place directly on RO without analog review."
     puts $ifh "- BUHDX2/BUHDX3 input caps: `[mptdc_o13_xlibd_cell BUHDX2 input_cap_ff 5.72]` / `[mptdc_o13_xlibd_cell BUHDX3 input_cap_ff 8.07] fF`; useful intermediate-drive choices but not final drivers for 0.5-0.7 pF phase loads."
-    puts $ifh "- BUHDX4 at `0.8075 pF`: rise/fall transition `[mptdc_o13_xlibd_cell BUHDX4 timing.load_0p8075_pf.rise_transition_ns 1.1716]` / `[mptdc_o13_xlibd_cell BUHDX4 timing.load_0p8075_pf.fall_transition_ns 0.8442] ns`."
+    puts $ifh "- BUJIHDX4 transition evidence must come from active JIHD Liberty/report_timing, not from legacy BUHD XLIBD values."
     puts $ifh "- BUHDX3 at `0.6058 pF`: rise/fall transition `[mptdc_o13_xlibd_cell BUHDX3 timing.load_0p6058_pf.rise_transition_ns 1.1723]` / `[mptdc_o13_xlibd_cell BUHDX3 timing.load_0p6058_pf.fall_transition_ns 0.8588] ns`, too weak for preferred final phase drive."
-    puts $ifh "- BUHDX12 at `0.6058 pF`: rise/fall transition `[mptdc_o13_xlibd_cell BUHDX12 timing.load_0p6058_pf.rise_transition_ns 0.3080]` / `[mptdc_o13_xlibd_cell BUHDX12 timing.load_0p6058_pf.fall_transition_ns 0.2295] ns`."
-    puts $ifh "- BUHDX12 at `1.2106 pF`: rise/fall transition `[mptdc_o13_xlibd_cell BUHDX12 timing.load_1p2106_pf.rise_transition_ns 0.5955]` / `[mptdc_o13_xlibd_cell BUHDX12 timing.load_1p2106_pf.fall_transition_ns 0.4391] ns`."
+    puts $ifh "- BUJIHDX12 transition evidence must come from active JIHD Liberty/report_timing, not from legacy BUHD XLIBD values."
     puts $ifh ""
-    puts $ifh "Decision: `BUHDX4 -> BUHDX12` remains the preferred O13 topology. If routed transition still fails, evaluate matched `BUHDX4 -> BUHDX12 -> BUHDX12` next."
+    puts $ifh "Decision: `BUJIHDX4 -> BUJIHDX12` is the required uniform-JIHD O13 topology for the next Genus handoff."
     puts $ifh ""
     puts $ifh "This report is interpretation only. The timing engine remains the full Liberty view used by Genus/Innovus."
     close $ifh
@@ -883,7 +882,7 @@ proc mptdc_o13_write_reports {} {
     puts $sfh "- Source run: `[mptdc_o13_source_run_id]`"
     puts $sfh "- Strict analog D-load budget: `[mptdc_o13_xlibd_budget_ff strict] fF`."
     puts $sfh "- CN/clock-like estimate: `[mptdc_o13_xlibd_budget_ff cn] fF`."
-    puts $sfh {- Expected topology: `RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> phase fabric`.}
+    puts $sfh {- Expected topology: `RO_tune4/S[n] -> BUJIHDX4 -> BUJIHDX12 -> phase fabric`.}
     puts $sfh "- XLIBD reference: `ro_phase_raw_pin_loads_xlibd.csv`, `phase_buffer_output_loads_xlibd.csv`, `fast_tag_loads_xlibd.csv`, `phase_net_loads_xlibd_enhanced.csv`, `phase_net_load_budget_summary.md`, `phase_buffer_xlibd_interpretation.md`."
     puts $sfh "- RAW_RO_LOAD_FIXED=$raw_fixed"
     puts $sfh "- FINAL_DRIVER_OUTPUT_LOAD_QUANTIFIED=$out_quantified"
@@ -944,8 +943,8 @@ proc mptdc_o13_write_reports {} {
     puts $tfh "REPORT_STATUS=REVIEW_REQUIRED"
     puts $tfh ""
     puts $tfh "- Source run: `[mptdc_o13_source_run_id]`"
-    puts $tfh "- Expected physical topology: `BUHDX4 -> BUHDX12` per tap."
-    puts $tfh "- Expected RTL define: `MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12`."
+    puts $tfh "- Expected physical topology: `BUJIHDX4 -> BUJIHDX12` per tap."
+    puts $tfh "- Expected RTL define: `MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12`."
     puts $tfh "- TOPOLOGY_MATCH/SHAPE rows: $topo_match of 16."
     puts $tfh "- Topology problem rows: $topo_bad of 16."
     puts $tfh ""
@@ -974,6 +973,6 @@ proc mptdc_o13_write_reports {} {
         puts $pfh "- RO-to-buffer Manhattan distance: `UNKNOWN`."
     }
     puts $pfh ""
-    puts $pfh "O13 placement is closure-quality only when first-stage BUHDX4 cells stay close to RO pins and second-stage BUHDX12 cells are ordered and balanced before digital distribution."
+    puts $pfh "O13 placement is closure-quality only when first-stage BUJIHDX4 cells stay close to RO pins and second-stage BUJIHDX12 cells are ordered and balanced before digital distribution."
     close $pfh
 }

@@ -3,7 +3,7 @@
 # =============================================================================
 # Typical feasibility only. Not MMMC signoff, not final silicon signoff, and not
 # tapeout-ready.  Raw RO_tune4/S pins remain analog load-check source pins;
-# generated clocks at final BUHDX12 outputs model downstream digital phase
+# generated clocks at final BUJIHDX12 outputs model downstream digital phase
 # clocks.
 # =============================================================================
 
@@ -143,10 +143,10 @@ foreach family {slow fast} {
 }
 
 puts "MPTDC_O13_INNOVUS_SDC_INFO: matched raw RO pins = $mptdc_o13_raw_pin_count"
-puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUHDX4 iso A pins = $mptdc_o13_iso_a_count"
-puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUHDX4 iso Q pins = $mptdc_o13_iso_q_count"
-puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUHDX12 driver A pins = $mptdc_o13_drv_a_count"
-puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUHDX12 driver Q pins = $mptdc_o13_drv_q_count"
+puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUJIHDX4 iso A pins = $mptdc_o13_iso_a_count"
+puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUJIHDX4 iso Q pins = $mptdc_o13_iso_q_count"
+puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUJIHDX12 driver A pins = $mptdc_o13_drv_a_count"
+puts "MPTDC_O13_INNOVUS_SDC_INFO: matched BUJIHDX12 driver Q pins = $mptdc_o13_drv_q_count"
 puts "MPTDC_O13_INNOVUS_SDC_INFO: raw clocks = $mptdc_o13_raw_clock_count"
 puts "MPTDC_O13_INNOVUS_SDC_INFO: generated final-driver clocks = $mptdc_o13_generated_clock_count"
 if {$mptdc_o13_raw_pin_count != 16 || $mptdc_o13_iso_a_count != 16 || $mptdc_o13_iso_q_count != 16 || $mptdc_o13_drv_a_count != 16 || $mptdc_o13_drv_q_count != 16 || $mptdc_o13_generated_clock_count != 16} {

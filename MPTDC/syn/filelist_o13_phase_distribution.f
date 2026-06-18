@@ -7,7 +7,7 @@
 // and PD RTL behavior.  The architecture change is confined to the matched
 // phase buffer bank:
 //
-//   RO_tune4/S[n] -> BUHDX4 -> BUHDX12 -> digital phase fabric
+//   RO_tune4/S[n] -> BUJIHDX4 -> BUJIHDX12 -> digital phase fabric
 //
 // This is feasibility/closure input, not final signoff.
 // =============================================================================
@@ -16,7 +16,7 @@
 +define+MPTDC_USE_RO_TUNE4_MACRO
 +define+MPTDC_FREQ_R750_DELTA5
 +define+MPTDC_O13_PHASE_DISTRIBUTION
-+define+MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12
++define+MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12
 
 ../rtl/pkg/mptdc_pkg.sv
 

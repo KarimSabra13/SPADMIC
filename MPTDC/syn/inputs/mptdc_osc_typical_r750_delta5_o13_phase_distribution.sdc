@@ -3,12 +3,12 @@
 # =============================================================================
 # Typical feasibility only. Not MMMC, not final signoff, and not a tapeout view.
 # This overlay keeps RO_tune4/S pins as analog source/load-check points and
-# creates downstream digital phase clocks at the final BUHDX12 driver outputs.
+# creates downstream digital phase clocks at the final BUJIHDX12 driver outputs.
 # =============================================================================
 
 puts "MPTDC_O13_SDC_INFO: loading O13_PHASE_DISTRIBUTION_TREE_CLEANUP overlay"
 puts "MPTDC_O13_SDC_INFO: signoff status = TYPICAL_ONLY_NOT_MMMC_NOT_FINAL_SIGNOFF"
-puts "MPTDC_O13_SDC_INFO: expected RTL define = MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12"
+puts "MPTDC_O13_SDC_INFO: expected RTL define = MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12"
 
 set mptdc_o13_setup_uncertainty_ns 0.010
 set mptdc_o13_hold_uncertainty_ns 0.005
@@ -112,15 +112,15 @@ foreach family {slow fast} {
 }
 
 puts "MPTDC_O13_SDC_INFO: matched raw RO pins = $mptdc_o13_raw_pin_count"
-puts "MPTDC_O13_SDC_INFO: matched BUHDX4 iso A pins = $mptdc_o13_iso_a_count"
-puts "MPTDC_O13_SDC_INFO: matched BUHDX4 iso Q pins = $mptdc_o13_iso_q_count"
-puts "MPTDC_O13_SDC_INFO: matched BUHDX12 driver A pins = $mptdc_o13_drv_a_count"
-puts "MPTDC_O13_SDC_INFO: matched BUHDX12 driver Q pins = $mptdc_o13_drv_q_count"
+puts "MPTDC_O13_SDC_INFO: matched BUJIHDX4 iso A pins = $mptdc_o13_iso_a_count"
+puts "MPTDC_O13_SDC_INFO: matched BUJIHDX4 iso Q pins = $mptdc_o13_iso_q_count"
+puts "MPTDC_O13_SDC_INFO: matched BUJIHDX12 driver A pins = $mptdc_o13_drv_a_count"
+puts "MPTDC_O13_SDC_INFO: matched BUJIHDX12 driver Q pins = $mptdc_o13_drv_q_count"
 puts "MPTDC_O13_SDC_INFO: generated final-driver clocks = $mptdc_o13_generated_clock_count"
 if {$mptdc_o13_raw_pin_count != 16 || $mptdc_o13_iso_a_count != 16 || $mptdc_o13_iso_q_count != 16 || $mptdc_o13_drv_a_count != 16 || $mptdc_o13_drv_q_count != 16 || $mptdc_o13_generated_clock_count != 16} {
     puts "MPTDC_O13_SDC_WARN: expected complete 16-tap two-stage phase-buffer clock model"
 }
 
 puts "MPTDC_O13_SDC_INFO: RO S pins remain analog load-check source pins"
-puts "MPTDC_O13_SDC_INFO: BUHDX12 Q pins are downstream digital phase-clock sources"
+puts "MPTDC_O13_SDC_INFO: BUJIHDX12 Q pins are downstream digital phase-clock sources"
 puts "MPTDC_O13_SDC_INFO: no broad oscillator-domain false paths added"

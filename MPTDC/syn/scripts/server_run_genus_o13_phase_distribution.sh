@@ -383,12 +383,12 @@ if [[ -f "$REAL_LEF" && -f "$REAL_LIB" && -f "$RO_AUDIT_SCRIPT" ]]; then
 fi
 
 if [[ -f "$O13_FILELIST" ]]; then
-  if ! grep -q 'MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12' "$O13_FILELIST"; then
-    echo "ERROR: O13 filelist does not select MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12" | tee -a "$GENUS_LOG"
+  if ! grep -q 'MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12' "$O13_FILELIST"; then
+    echo "ERROR: O13 filelist does not select MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12" | tee -a "$GENUS_LOG"
     INPUT_RC=4
   fi
-  if grep -q 'MPTDC_PHASE_BUFFER_USE_BUHDX4' "$O13_FILELIST"; then
-    echo "ERROR: O13 filelist must not also select one-stage MPTDC_PHASE_BUFFER_USE_BUHDX4" | tee -a "$GENUS_LOG"
+  if grep -Eq 'MPTDC_PHASE_BUFFER_USE_BUHDX4|MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12' "$O13_FILELIST"; then
+    echo "ERROR: O13 filelist must not also select legacy BUHD phase-buffer topology" | tee -a "$GENUS_LOG"
     INPUT_RC=4
   fi
 fi
@@ -415,7 +415,7 @@ if [[ "$INPUT_RC" == "0" && -n "$EFFECTIVE_DEFINE_CSV" ]]; then
     BEGIN { added = 0 }
     {
       print
-      if (!added && $0 == "+define+MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12") {
+      if (!added && $0 == "+define+MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12") {
         emit_defines()
         added = 1
       }
@@ -499,8 +499,8 @@ export MPTDC_RELAX_PD_PRESERVE="${O13_RELAX_PD_PRESERVE:-1}"
   echo "  SIGNOFF_BOUNDARY=$SIGNOFF_BOUNDARY"
   echo "  LEGACY_TRACE=$LEGACY_TRACE_LABEL"
   echo "  MPTDC_GENUS_RUN_DIR=$MPTDC_GENUS_RUN_DIR"
-  echo "  PHASE_BUFFER_TOPOLOGY=BUHDX4 isolation + BUHDX12 digital driver per tap"
-  echo "  PHASE_BUFFER_DEFINE=MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12"
+  echo "  PHASE_BUFFER_TOPOLOGY=BUJIHDX4 isolation + BUJIHDX12 digital driver per tap"
+  echo "  PHASE_BUFFER_DEFINE=MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12"
   echo "  FINAL_TYPICAL_GENUS_REPAIR_1_FAST_TAG_PD=$MPTDC_GENUS_REPAIR_FAST_TAG_PD"
   echo "  FINAL_TYPICAL_GENUS_REPAIR_1_DRV_TRANSITION=$MPTDC_GENUS_REPAIR_DRV_TRANSITION"
   echo "  MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE=${MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE:-0}"
@@ -810,6 +810,8 @@ RO_COUNT=0
 STUB_COUNT=0
 BUHDX4_COUNT=0
 BUHDX12_COUNT=0
+BUJIHDX4_COUNT=0
+BUJIHDX12_COUNT=0
 PHASE_BUF_TEXT_COUNT=0
 ISO_TEXT_COUNT=0
 DRV_TEXT_COUNT=0
@@ -1003,6 +1005,8 @@ if [[ -f "$POSTSYN_NETLIST" ]]; then
   STUB_COUNT="$(grep -cE 'mptdc_osc_stub' "$POSTSYN_NETLIST" || true)"
   BUHDX4_COUNT="$(grep -cE '^[[:space:]]*BUHDX4[[:space:]]+' "$POSTSYN_NETLIST" || true)"
   BUHDX12_COUNT="$(grep -cE '^[[:space:]]*BUHDX12[[:space:]]+' "$POSTSYN_NETLIST" || true)"
+  BUJIHDX4_COUNT="$(grep -cE '^[[:space:]]*BUJIHDX4[[:space:]]+' "$POSTSYN_NETLIST" || true)"
+  BUJIHDX12_COUNT="$(grep -cE '^[[:space:]]*BUJIHDX12[[:space:]]+' "$POSTSYN_NETLIST" || true)"
   PHASE_BUF_TEXT_COUNT="$(grep -cE 'u_phase_buf_slow|u_phase_buf_fast|mptdc_phase_buffer_bank' "$POSTSYN_NETLIST" || true)"
   ISO_TEXT_COUNT="$(grep -cE 'u_iso' "$POSTSYN_NETLIST" || true)"
   DRV_TEXT_COUNT="$(grep -cE 'u_drv' "$POSTSYN_NETLIST" || true)"
@@ -1277,6 +1281,8 @@ write_macro_binding_check() {
     echo "MPTDC_OSC_STUB_COUNT=$STUB_COUNT"
     echo "BUHDX4_COUNT=$BUHDX4_COUNT"
     echo "BUHDX12_COUNT=$BUHDX12_COUNT"
+    echo "BUJIHDX4_COUNT=$BUJIHDX4_COUNT"
+    echo "BUJIHDX12_COUNT=$BUJIHDX12_COUNT"
     echo "RAW_RO_CLOCKS_FOUND=$RAW_RO_CLOCKS_FOUND"
     echo "BUFFER_PHASE_CLOCKS_FOUND=$BUFFER_PHASE_CLOCKS_FOUND"
     echo "RO_TUNE4_LIB=$REAL_LIB"
@@ -1286,8 +1292,7 @@ write_macro_binding_check() {
     echo "STDCELL_LEF=$STDCELL_LEF"
     echo "STDCELL_TC_LIB=$STDCELL_TC_LIB"
     echo "XLIBD_RO_STRICT_D_LOAD_BUDGET_FF=58.72"
-    echo "XLIBD_BUHDX4_INPUT_CAP_FF=10.56"
-    echo "XLIBD_BUHDX12_INPUT_CAP_FF=32.24"
+    echo "XLIBD_BUJIHD_INPUT_CAP_FF=REQUIRES_JIHD_LIBERTY_PIN_CAP_REPORT"
     echo "XLIBD_USAGE=REFERENCE_ONLY_NOT_TIMING_ENGINE"
     echo
     if [[ "$RO_COUNT" == "2" && "$STUB_COUNT" == "0" ]]; then
@@ -1595,6 +1600,8 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "mptdc_osc_stub_count=$STUB_COUNT"
   echo "buhdx4_count=$BUHDX4_COUNT"
   echo "buhdx12_count=$BUHDX12_COUNT"
+  echo "bujihdx4_count=$BUJIHDX4_COUNT"
+  echo "bujihdx12_count=$BUJIHDX12_COUNT"
   echo "phase_buffer_text_count=$PHASE_BUF_TEXT_COUNT"
   echo "u_iso_text_count=$ISO_TEXT_COUNT"
   echo "u_drv_text_count=$DRV_TEXT_COUNT"
@@ -2019,18 +2026,20 @@ write_final_readiness
   echo "- FINAL_SIGNOFF: NO"
   echo "- Signoff status: \`TYPICAL_ONLY_TAPEOUT_PACKAGE_NOT_MMMC_SIGNOFF_NOT_FINAL_SIGNOFF\`"
   echo "- Frequency mode: \`r750_delta5\`"
-  echo "- Phase distribution: \`BUHDX4 -> BUHDX12\`"
+  echo "- Phase distribution: \`BUJIHDX4 -> BUJIHDX12\`"
   echo "- Packet format: unchanged"
   echo "- raw_lfsr_tag: unchanged"
   echo "- NFAST encoding: \`raw_lfsr_tag\`"
   echo "- Fast-tag preserve mode: \`$FAST_TAG_PRESERVE_MODE\`"
-  echo "- Phase buffer topology: \`BUHDX4 -> BUHDX12 per tap\`"
+  echo "- Phase buffer topology: \`BUJIHDX4 -> BUJIHDX12 per tap\`"
   echo "- HDL filelist: \`$O13_FILELIST\`"
   echo "- SDC overlay: \`$O13_SDC\`"
   echo "- RO_tune4 instance count: $RO_COUNT"
   echo "- mptdc_osc_stub residue count: $STUB_COUNT"
   echo "- BUHDX4 instance count: $BUHDX4_COUNT"
   echo "- BUHDX12 instance count: $BUHDX12_COUNT"
+  echo "- BUJIHDX4 instance count: $BUJIHDX4_COUNT"
+  echo "- BUJIHDX12 instance count: $BUJIHDX12_COUNT"
   echo "- phase-buffer hierarchy text count: $PHASE_BUF_TEXT_COUNT"
   echo "- u_iso text count: $ISO_TEXT_COUNT"
   echo "- u_drv text count: $DRV_TEXT_COUNT"

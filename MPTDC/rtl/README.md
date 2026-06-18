@@ -36,7 +36,7 @@ use `../docs/architecture/MPTDC_ARCHITECTURE.md`.
 - Two independent TOP-owned RO tuning buses: `ro_slow_code_i[7:0]` and
   `ro_fast_code_i[7:0]`.
 - `R750_delta5` timing/frequency mode for the current physical baseline.
-- `BUHDX4 -> BUHDX12` buffered phase distribution.
+- `BUJIHDX4 -> BUJIHDX12` buffered phase distribution.
 - Fixed 16-bit packet stream at `mptdc_axis_core`.
 - Local fast raw tag plus slow Johnson epoch; no reintroduction of a global
   oscillator-domain binary fast counter.

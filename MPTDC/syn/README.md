@@ -76,7 +76,7 @@ for the reasoning and direct impact of every policy value.
 
 The canonical filelist excludes `mptdc_osc_model.sv`, binds the real
 `RO_tune4` macro interface, selects `R750_delta5`, and preserves the validated
-`BUHDX4 -> BUHDX12` phase distribution. The canonical SDC delegates to the
+`BUJIHDX4 -> BUJIHDX12` phase distribution. The canonical SDC delegates to the
 count-checked PD Vernier constraint stack.
 
 Generated output belongs in `work/genus/<run_id>/`. Do not commit Genus databases,

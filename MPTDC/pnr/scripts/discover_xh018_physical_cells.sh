@@ -175,7 +175,7 @@ classify_intersection() {
 
 TAP="$(classify '(^|_)(tap|welltap|wtap)')"
 ENDCAP="$(classify '(endcap|^end|_end)')"
-FILLER="$(classify '(fill|filler)')"
+FILLER="$(classify '(fill|filler|^feed|_feed)')"
 DECAP="$(classify '(decap|dcap)')"
 ANTENNA="$(classify '(antenna|ant)')"
 TIE_HIGH="$(classify '(tiehi|tieh|tie1|tie_high|tieone|logic1)')"

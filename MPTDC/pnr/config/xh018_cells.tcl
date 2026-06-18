@@ -4,13 +4,15 @@
 # These values are intentionally not marked confirmed. The current lab
 # discovery proves JIHD decap, antenna, tie, CTS-buffer, CTS-inverter, and
 # phase-buffer candidates, but the exact tap, endcap, and row-filler source is
-# still unresolved. Do not use this file for insertion until those classes are
-# discovered from the approved PDK inputs and reviewed.
+# still unresolved. Those row-infrastructure cells may come from a non-JIHD
+# XH018 library only after ALL_PDK discovery proves their LEF/Liberty presence,
+# site compatibility, and PG pins. Do not use this file for insertion until
+# those classes are discovered from approved PDK inputs and reviewed.
 # =============================================================================
 
 global mptdc_xh018_cells
 array set mptdc_xh018_cells {
-    status              JIHD_CANDIDATES_TAP_ENDCAP_FILLER_UNRESOLVED
+    status              JIHD_PHASE_CONFIRMED_ROW_CELLS_REQUIRE_ALL_PDK_DISCOVERY
     confirmed           0
     tap                 {}
     endcap_left         {}
@@ -25,6 +27,7 @@ array set mptdc_xh018_cells {
     phase_iso_buffer    {BUJIHDX4}
     phase_final_buffer  {BUJIHDX12}
     phase_buffer_policy {PREFER_UNIFORM_JIHD_AFTER_FRESH_GENUS_RERUN}
+    row_cell_policy     {ALLOW_APPROVED_NON_JIHD_AFTER_ALL_PDK_DISCOVERY}
     stdcell_site        {core_jihd}
     stdcell_pg_power    {}
     stdcell_pg_ground   {}

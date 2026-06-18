@@ -186,6 +186,7 @@ if [[ "$MODE" == "discover_only" ]]; then
       PDK_ROOT=/eda/pdk/xfab/xh018
     fi
   fi
+  DISCOVERY_SCOPE="${MPTDC_DISCOVERY_SCOPE:-JIHD_ONLY}"
   SC_ROOT="${SC_ROOT:-$PDK_ROOT/diglibs/D_CELLS_JIHD/v6_0}"
   STD_LEF="${MPTDC_STDCELL_LEF:-}"
   if [[ -z "$STD_LEF" ]]; then
@@ -204,6 +205,19 @@ if [[ "$MODE" == "discover_only" ]]; then
   fi
 
   DISCOVERY_ARGS=(--lef "$STD_LEF" --compact --out "$REPORT_DIR/xh018_cells_candidates.tcl")
+  case "$DISCOVERY_SCOPE" in
+    JIHD_ONLY|jihd|jihd_only)
+      DISCOVERY_SCOPE="JIHD_ONLY"
+      ;;
+    ALL_PDK|all_pdk|pdk|mixed)
+      DISCOVERY_SCOPE="ALL_PDK"
+      DISCOVERY_ARGS+=(--root "$PDK_ROOT")
+      ;;
+    *)
+      echo "ERROR: unsupported MPTDC_DISCOVERY_SCOPE=$DISCOVERY_SCOPE; use JIHD_ONLY or ALL_PDK" | tee -a "$RUN_LOG"
+      exit 6
+      ;;
+  esac
   if [[ -d "$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range" ]]; then
     while IFS= read -r lib; do
       DISCOVERY_ARGS+=(--lib "$lib")
@@ -215,6 +229,7 @@ if [[ "$MODE" == "discover_only" ]]; then
   fi
 
   echo "DISCOVERY_LIBRARY=JIHD" | tee -a "$RUN_LOG"
+  echo "DISCOVERY_SCOPE=$DISCOVERY_SCOPE" | tee -a "$RUN_LOG"
   echo "DISCOVERY_SC_ROOT=$SC_ROOT" | tee -a "$RUN_LOG"
   echo "DISCOVERY_STDCELL_LEF=$STD_LEF" | tee -a "$RUN_LOG"
   "$SCRIPT_DIR/discover_xh018_physical_cells.sh" \

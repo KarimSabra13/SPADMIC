@@ -32,7 +32,7 @@ SPAD/CAL async inputs
 TOP CSR RO code image
   -> idle-only local slow/fast RO code shadow registers
   -> RO_tune4 slow/fast phase families
-  -> BUHDX4 -> BUHDX12 phase distribution
+  -> BUJIHDX4 -> BUJIHDX12 phase distribution
   -> 8 x 8 PD matrix and local fast tag capture
   -> static held context image
   -> mptdc_hit_capture_bridge into clk_sys
@@ -58,7 +58,7 @@ by local phase capture and a static context transfer.
 | `mptdc_input_mux` | Combinational selection between SPAD and calibration START/STOP. | Calibration must use the same downstream timing path as real SPAD events. | Avoids a second frontend and avoids duplicating async capture logic. |
 | `mptdc_reset_sync` | Async-assert, sync-deassert reset leaf. | Reset release must be local to the consuming domain, not one rebuilt global tree. | Reduces recovery/removal risk and avoids unnecessary high-fanout reset buffering. |
 | `mptdc_osc_wrapper` | Selects behavioral model for simulation or real `RO_tune4` macro binding for synthesis. | Keeps simulation portable while preserving the physical macro interface. | Prevents the synthesizable filelist from accidentally using the behavioral oscillator model. |
-| `mptdc_phase_buffer_bank` | Buffers each slow/fast `RO_tune4/S[n]` tap through `BUHDX4 -> BUHDX12`. | Raw RO pins are analog load points; digital fabric needs isolated, stronger phase drivers. | The topology controls RO loading and gives Genus/Innovus explicit load/report points. |
+| `mptdc_phase_buffer_bank` | Buffers each slow/fast `RO_tune4/S[n]` tap through `BUJIHDX4 -> BUJIHDX12`. | Raw RO pins are analog load points; digital fabric needs isolated, stronger phase drivers. | The topology controls RO loading and gives Genus/Innovus explicit load/report points. |
 | Local RO code shadows | Two 8-bit `clk_sys` register banks close to the slow and fast RO code sides. | Software-visible CSR values may be routed from TOP, but live RO code must be stable during a measurement. | Long static TOP routes terminate at local flops; only short local nets drive `RO_tune4/code[7:0]`, reducing load and measurement disturbance. |
 | `mptdc_fast_epoch_tag` | Produces the local fast raw tag sampled by PD cells. | A local tag is cheaper and more timing-local than a global fast binary counter. | Reduces global fast-domain fanout and avoids wide high-speed counter distribution. |
 | `mptdc_slow_epoch_johnson` | Produces the slow Johnson epoch. | Johnson coding changes one bit per step and is robust for sampled phase context. | Lowers switching and decode complexity versus a wider binary epoch source. |
@@ -100,12 +100,12 @@ long software CSR bus.
 Each phase tap uses:
 
 ```text
-RO_tune4/S[n] -> BUHDX4 isolation -> BUHDX12 digital driver -> PD/tag fabric
+RO_tune4/S[n] -> BUJIHDX4 isolation -> BUJIHDX12 digital driver -> PD/tag fabric
 ```
 
 This topology was chosen because the RO pins are load-sensitive and the digital
-fabric needs a repeatable drive point. The `BUHDX4` stage isolates the macro
-pin; the `BUHDX12` stage provides the final digital phase driver. The active
+fabric needs a repeatable drive point. The `BUJIHDX4` stage isolates the macro
+pin; the `BUJIHDX12` stage provides the final digital phase driver. The active
 typical flow models the final phase-driver outputs as buffered phase clocks.
 They are not ordinary `clk_sys` CTS targets.
 
@@ -203,7 +203,7 @@ The major choices are tied to timing and PPA:
 - Standard-cell family for the closed Genus run: JIHD.
 - Timing view: typical-only Genus.
 - Macro binding: real `RO_tune4` abstract shell.
-- Phase topology: `BUHDX4 -> BUHDX12` per slow/fast tap.
+- Phase topology: `BUJIHDX4 -> BUJIHDX12` per slow/fast tap.
 - RO tuning: independent slow/fast 8-bit CSR images captured into local
   idle-only shadow registers before oscillator activity.
 - PD exception: exact, narrow, count-checked q1 Vernier relation.

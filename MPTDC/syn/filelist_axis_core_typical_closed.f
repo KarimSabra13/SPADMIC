@@ -5,7 +5,7 @@
 // Top      : mptdc_axis_core
 // =============================================================================
 // The MPTDC_O13_* defines below are retained RTL implementation guards for the
-// validated BUHDX4 -> BUHDX12 phase distribution. O13 is not the public flow
+// validated BUJIHDX4 -> BUJIHDX12 phase distribution. O13 is not the public flow
 // name; the canonical entrypoint is run_genus_axis_core_typical_closed.sh.
 //
 // This filelist excludes the behavioral oscillator model and binds the real
@@ -16,7 +16,7 @@
 +define+MPTDC_USE_RO_TUNE4_MACRO
 +define+MPTDC_FREQ_R750_DELTA5
 +define+MPTDC_O13_PHASE_DISTRIBUTION
-+define+MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12
++define+MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12
 
 ../rtl/pkg/mptdc_pkg.sv
 
