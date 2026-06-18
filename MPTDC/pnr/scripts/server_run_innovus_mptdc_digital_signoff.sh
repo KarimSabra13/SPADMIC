@@ -176,10 +176,49 @@ else
 fi
 
 if [[ "$MODE" == "discover_only" ]]; then
+  PDK_ROOT="${MPTDC_PDK_ROOT:-${PDK_ROOT:-}}"
+  if [[ -z "$PDK_ROOT" ]]; then
+    if [[ -d /eda/pdk/xfab/xh018 ]]; then
+      PDK_ROOT=/eda/pdk/xfab/xh018
+    elif [[ -d /data/pdk/xfab/xh018 ]]; then
+      PDK_ROOT=/data/pdk/xfab/xh018
+    else
+      PDK_ROOT=/eda/pdk/xfab/xh018
+    fi
+  fi
+  SC_ROOT="${SC_ROOT:-$PDK_ROOT/diglibs/D_CELLS_JIHD/v6_0}"
+  STD_LEF="${MPTDC_STDCELL_LEF:-}"
+  if [[ -z "$STD_LEF" ]]; then
+    for candidate in \
+      "$SC_ROOT/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef" \
+      "$SC_ROOT/LEF/v6_0_0/xh018/xh018_D_CELLS_JIHD.lef"; do
+      if [[ -f "$candidate" ]]; then
+        STD_LEF="$candidate"
+        break
+      fi
+    done
+  fi
+  if [[ -z "$STD_LEF" || ! -f "$STD_LEF" ]]; then
+    echo "ERROR: JIHD standard-cell LEF not found under SC_ROOT=$SC_ROOT" | tee -a "$RUN_LOG"
+    exit 6
+  fi
+
+  DISCOVERY_ARGS=(--lef "$STD_LEF" --compact --out "$REPORT_DIR/xh018_cells_candidates.tcl")
+  if [[ -d "$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range" ]]; then
+    while IFS= read -r lib; do
+      DISCOVERY_ARGS+=(--lib "$lib")
+    done < <(
+      find "$SC_ROOT/liberty_LPMOS/v6_0_0/PVT_1_80V_range" -maxdepth 1 -type f -name 'D_CELLS_JIHD_LPMOS_*.lib' | sort
+    )
+  elif [[ -n "${MPTDC_STDCELL_TC_LIB:-}" && -f "$MPTDC_STDCELL_TC_LIB" ]]; then
+    DISCOVERY_ARGS+=(--lib "$MPTDC_STDCELL_TC_LIB")
+  fi
+
+  echo "DISCOVERY_LIBRARY=JIHD" | tee -a "$RUN_LOG"
+  echo "DISCOVERY_SC_ROOT=$SC_ROOT" | tee -a "$RUN_LOG"
+  echo "DISCOVERY_STDCELL_LEF=$STD_LEF" | tee -a "$RUN_LOG"
   "$SCRIPT_DIR/discover_xh018_physical_cells.sh" \
-    --root "${MPTDC_PDK_ROOT:-/eda/pdk/xfab/xh018}" \
-    --root "${PDK_ROOT:-/data/pdk/xfab/xh018}" \
-    --out "$REPORT_DIR/xh018_cells_candidates.tcl" \
+    "${DISCOVERY_ARGS[@]}" \
     | tee "$REPORT_DIR/xh018_cells_candidates.rpt" | tee -a "$RUN_LOG"
   exit 0
 fi

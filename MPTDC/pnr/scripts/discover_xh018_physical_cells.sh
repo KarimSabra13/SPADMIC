@@ -10,6 +10,7 @@ OUT=""
 LEF_FILES=()
 LIB_FILES=()
 SEARCH_ROOTS=()
+COMPACT=0
 
 usage() {
   cat <<'USAGE'
@@ -21,6 +22,7 @@ Options:
   --lib <file>       Add a Liberty file to scan. Repeatable.
   --root <dir>       Add a directory to search for *.lef/*.lib. Repeatable.
   --out <file>       Write a Tcl candidate file.
+  --compact          Print a short console report; full details remain in Tcl.
   -h, --help         Show this help.
 
 The script only reports candidates found in real LEF/Liberty inputs. It does
@@ -53,6 +55,10 @@ while [[ $# -gt 0 ]]; do
     --out)
       OUT="$(abs_path "${2:?missing --out value}")"
       shift 2
+      ;;
+    --compact)
+      COMPACT=1
+      shift
       ;;
     -h|--help)
       usage
@@ -200,11 +206,13 @@ emit_report() {
   echo "status=UNCONFIRMED_CANDIDATES"
   echo "lef_count=${#LEF_FILES[@]}"
   echo "lib_count=${#LIB_FILES[@]}"
-  echo "lef_files=${LEF_FILES[*]:-}"
-  echo "lib_files=${LIB_FILES[*]:-}"
-  echo "source_hashes_begin"
-  sed 's/^/  /' "$TMP_HASHES"
-  echo "source_hashes_end"
+  if [[ "$COMPACT" != "1" ]]; then
+    echo "lef_files=${LEF_FILES[*]:-}"
+    echo "lib_files=${LIB_FILES[*]:-}"
+    echo "source_hashes_begin"
+    sed 's/^/  /' "$TMP_HASHES"
+    echo "source_hashes_end"
+  fi
   echo "tap_candidates=${TAP:-}"
   echo "endcap_candidates=${ENDCAP:-}"
   echo "filler_candidates=${FILLER:-}"
@@ -222,6 +230,9 @@ emit_report() {
   echo "phase_iso_recommended=${PHASE_ISO_RECOMMENDED:-}"
   echo "phase_final_recommended=${PHASE_FINAL_RECOMMENDED:-}"
   echo "phase_buffer_policy_recommended=${PHASE_POLICY_RECOMMENDED:-}"
+  if [[ "$COMPACT" == "1" ]]; then
+    echo "full_candidate_tcl=${OUT:-not_requested}"
+  fi
 }
 
 emit_tcl() {
