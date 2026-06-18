@@ -79,6 +79,10 @@ if grep -Eq 'MPTDC_PD_LOCAL_ON22_|MPTDC_FAST_TAG_REPAIR_|MPTDC_GENUS_REPAIR_PD_'
   fail "canonical wrapper contains backend timing knobs; keep them in the profile adapter"
 fi
 
+if ! grep -Eq 'EXPECTED_HEAD=.*rev-parse HEAD' "$CANONICAL_WRAPPER"; then
+  fail "canonical wrapper does not pin EXPECTED_HEAD to the current checkout"
+fi
+
 # Confirm in a fresh shell that one legacy timing override is rejected before
 # the profile exports any backend variables of its own.
 if bash -c '

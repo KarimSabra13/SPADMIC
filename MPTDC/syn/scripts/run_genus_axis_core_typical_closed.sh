@@ -44,6 +44,13 @@ mptdc_common_require_file "RO_tune4 Liberty shell" "$SYN_DIR/macros/RO_tune4_rea
 # if a legacy experiment variable is inherited from the calling shell.
 mptdc_genus_axis_core_typical_closed_apply "$SYN_DIR"
 
+EXPECTED_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
+if [[ -z "$EXPECTED_HEAD" ]]; then
+  echo "ERROR: could not resolve repository HEAD for Genus guard." >&2
+  exit 2
+fi
+export EXPECTED_HEAD
+
 mkdir -p "$MPTDC_GENUS_WORK"
 export MPTDC_GENUS_RUN_DIR="$RUN_DIR"
 
@@ -55,6 +62,7 @@ mptdc_common_print_run_header \
   "O13 backend retained internally; ABS5 exact Vernier exception + JIHD repair8 + guarded local ON22 X1"
 
 mptdc_genus_axis_core_typical_closed_print
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
 echo "INNOVUS_INTENT=FEASIBILITY_INPUT_ONLY"
 echo "EXPECTED_FINAL_DECISION=GENUS_TYPICAL_CLOSED"
 
