@@ -464,6 +464,60 @@ proc mptdc_signoff_count_cells {patterns} {
     return [llength [mptdc_signoff_collect_cells $patterns]]
 }
 
+proc mptdc_signoff_set_env_default {name value} {
+    if {![info exists ::env($name)] || $::env($name) eq ""} {
+        set ::env($name) $value
+    }
+}
+
+proc mptdc_signoff_phase_buffer_patterns {family stage} {
+    set inst [expr {$stage eq "iso" ? "u_iso" : "u_drv"}]
+    return [list \
+        "*u_phase_buf_${family}*gen_phase_buf*${inst}*" \
+        "*phase_buf_${family}*gen_phase_buf*${inst}*" \
+        "*u_phase_buf_${family}*${inst}*" \
+        "*phase_buf_${family}*${inst}*" \
+        "*${family}*${inst}*"]
+}
+
+proc mptdc_signoff_phase_buffer_instances {family stage} {
+    return [mptdc_signoff_collect_cells [mptdc_signoff_phase_buffer_patterns $family $stage]]
+}
+
+proc mptdc_signoff_set_default_phase_buffer_origins {} {
+    mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
+    if {[llength [info commands mptdc_pnr_floorplan_regions]] == 0} {
+        return
+    }
+    set regions [mptdc_pnr_floorplan_regions]
+    if {![dict exists $regions fast_phase_buffers] || ![dict exists $regions slow_phase_buffers]} {
+        return
+    }
+
+    set pitch [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_PITCH_UM 24.0]
+    set x_offset [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_X_OFFSET_UM 40.0]
+    set y_offset [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_Y_OFFSET_UM 2.0]
+    set row_sep [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_ROW_SEPARATION_UM 8.0]
+
+    set fast_box [dict get $regions fast_phase_buffers]
+    set slow_box [dict get $regions slow_phase_buffers]
+    set fast_x [expr {[lindex $fast_box 0] + $x_offset}]
+    set slow_x [expr {[lindex $slow_box 0] + $x_offset}]
+    set fast_y0 [lindex $fast_box 1]
+    set slow_y0 [lindex $slow_box 1]
+
+    mptdc_signoff_set_env_default MPTDC_PNR_PHASE_BUF_PITCH_UM $pitch
+    mptdc_signoff_set_env_default MPTDC_PNR_PHASE_BUF_ORIENT R0
+    mptdc_signoff_set_env_default MPTDC_PNR_FAST_ISO_X $fast_x
+    mptdc_signoff_set_env_default MPTDC_PNR_FAST_ISO_Y [expr {$fast_y0 + $y_offset}]
+    mptdc_signoff_set_env_default MPTDC_PNR_FAST_DRV_X $fast_x
+    mptdc_signoff_set_env_default MPTDC_PNR_FAST_DRV_Y [expr {$fast_y0 + $y_offset + $row_sep}]
+    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_DRV_X $slow_x
+    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_DRV_Y [expr {$slow_y0 + $y_offset}]
+    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_ISO_X $slow_x
+    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_ISO_Y [expr {$slow_y0 + $y_offset + $row_sep}]
+}
+
 proc mptdc_signoff_write_count_gate {path rows} {
     set fh [open $path w]
     set failures [list]
@@ -1013,14 +1067,20 @@ proc mptdc_signoff_place_pd_matrix {} {
 
 proc mptdc_signoff_place_phase_buffers {} {
     global mptdc_xh018_cells
+    mptdc_signoff_set_default_phase_buffer_origins
     mptdc_signoff_source_if_exists innovus_mptdc_phase_buffer_place.tcl
+    set placement_applied NOT_RUN
     if {[llength [info commands mptdc_pnr_apply_phase_buffer_placement]] > 0} {
-        mptdc_pnr_apply_phase_buffer_placement final_typical
+        set placement_applied [expr {[mptdc_pnr_apply_phase_buffer_placement final_typical] ? "YES" : "NO"}]
     }
-    set slow_iso [mptdc_signoff_count_cells [list *slow*gen_phase_buf*u_iso* *phase_buf_slow*gen_phase_buf*u_iso*]]
-    set slow_drv [mptdc_signoff_count_cells [list *slow*gen_phase_buf*u_drv* *phase_buf_slow*gen_phase_buf*u_drv*]]
-    set fast_iso [mptdc_signoff_count_cells [list *fast*gen_phase_buf*u_iso* *phase_buf_fast*gen_phase_buf*u_iso*]]
-    set fast_drv [mptdc_signoff_count_cells [list *fast*gen_phase_buf*u_drv* *phase_buf_fast*gen_phase_buf*u_drv*]]
+    set slow_iso_insts [mptdc_signoff_phase_buffer_instances slow iso]
+    set slow_drv_insts [mptdc_signoff_phase_buffer_instances slow drv]
+    set fast_iso_insts [mptdc_signoff_phase_buffer_instances fast iso]
+    set fast_drv_insts [mptdc_signoff_phase_buffer_instances fast drv]
+    set slow_iso [llength $slow_iso_insts]
+    set slow_drv [llength $slow_drv_insts]
+    set fast_iso [llength $fast_iso_insts]
+    set fast_drv [llength $fast_drv_insts]
     set rpt [file join [mptdc_signoff_report_dir] phase_buffer_status.rpt]
     mptdc_signoff_write_count_gate $rpt [list \
         [list SLOW_ISO_COUNT 8 $slow_iso] \
@@ -1028,6 +1088,14 @@ proc mptdc_signoff_place_phase_buffers {} {
         [list FAST_ISO_COUNT 8 $fast_iso] \
         [list FAST_DRIVER_COUNT 8 $fast_drv]]
     set fh [open $rpt a]
+    puts $fh "PHASE_BUFFER_PLACEMENT_APPLIED=$placement_applied"
+    foreach {label insts} [list \
+        SLOW_ISO_INSTANCES $slow_iso_insts \
+        SLOW_DRIVER_INSTANCES $slow_drv_insts \
+        FAST_ISO_INSTANCES $fast_iso_insts \
+        FAST_DRIVER_INSTANCES $fast_drv_insts] {
+        puts $fh "$label=[join $insts { }]"
+    }
     puts $fh "PHASE_ISO_BUFFER=$mptdc_xh018_cells(phase_iso_buffer)"
     puts $fh "PHASE_FINAL_BUFFER=$mptdc_xh018_cells(phase_final_buffer)"
     puts $fh "PHASE_BUFFER_STATUS=PASS"

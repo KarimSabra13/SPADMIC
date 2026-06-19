@@ -67,7 +67,11 @@ proc mptdc_o13_pin_candidates {family tap role} {
         [format {u_core/u_phase_buf_%s/gen_phase_buf[%d].%s/%s} $family $tap $inst $pin] \
         [format {u_core_u_phase_buf_%s/gen_phase_buf[%d].%s/%s} $family $tap $inst $pin] \
         [format {u_core_u_phase_buf_%s_gen_phase_buf_%d__%s/%s} $family $tap $inst $pin] \
-        [format {*u_phase_buf_%s*gen_phase_buf*%d*%s/%s} $family $tap $inst $pin]]
+        [format {*u_phase_buf_%s*gen_phase_buf*%d*%s/%s} $family $tap $inst $pin] \
+        [format {*u_phase_buf_%s*%s*%d*/%s} $family $inst $tap $pin] \
+        [format {*u_phase_buf_%s*%d*%s/%s} $family $tap $inst $pin] \
+        [format {*phase_buf_%s*%s*%d*/%s} $family $inst $tap $pin] \
+        [format {*phase_buf_%s*%d*%s/%s} $family $tap $inst $pin]]
 }
 
 proc mptdc_o13_get_pins {candidates} {
@@ -75,8 +79,8 @@ proc mptdc_o13_get_pins {candidates} {
 }
 
 proc mptdc_o13_expected_cell_type_for_inst {cell_name} {
-    if {[regexp {(^|[/.])u_iso$} $cell_name]} { return "BUJIHDX4" }
-    if {[regexp {(^|[/.])u_drv$} $cell_name]} { return "BUJIHDX12" }
+    if {[regexp {(^|[/.])u_iso($|[^[:alnum:]_])} $cell_name] || [regexp {u_iso} $cell_name]} { return "BUJIHDX4" }
+    if {[regexp {(^|[/.])u_drv($|[^[:alnum:]_])} $cell_name] || [regexp {u_drv} $cell_name]} { return "BUJIHDX12" }
     return ""
 }
 
