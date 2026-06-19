@@ -53,6 +53,83 @@ proc mptdc_osc_pd_box_from_obj {obj} {
     return [list]
 }
 
+proc mptdc_osc_pd_inst_ptr {inst} {
+    set ptrs [list]
+    catch {set ptrs [dbGet top.insts.name $inst -p]}
+    foreach ptr $ptrs {
+        if {$ptr ne "" && $ptr ne "0x0"} {
+            return $ptr
+        }
+    }
+    return ""
+}
+
+proc mptdc_osc_pd_flat_value {value} {
+    while {[llength $value] == 1} {
+        set value [lindex $value 0]
+    }
+    return $value
+}
+
+proc mptdc_osc_pd_size_from_value {value} {
+    set value [mptdc_osc_pd_flat_value $value]
+    if {[llength $value] < 2} { return [list] }
+    foreach v [lrange $value 0 1] {
+        if {![string is double -strict $v]} { return [list] }
+    }
+    if {[llength $value] >= 4} {
+        foreach v [lrange $value 0 3] {
+            if {![string is double -strict $v]} { return [list] }
+        }
+        set width [expr {[lindex $value 2] - [lindex $value 0]}]
+        set height [expr {[lindex $value 3] - [lindex $value 1]}]
+    } else {
+        set width [lindex $value 0]
+        set height [lindex $value 1]
+    }
+    if {$width <= 0.0 || $height <= 0.0} { return [list] }
+    return [list $width $height]
+}
+
+proc mptdc_osc_pd_member_size {member} {
+    set ptr [mptdc_osc_pd_inst_ptr $member]
+    foreach attr {
+        .cell.size .baseCell.size .base_cell.size .libCell.size .master.size
+        .cell.box .baseCell.box .base_cell.box .libCell.box .master.box
+        .cell.bbox .baseCell.bbox .base_cell.bbox .libCell.bbox .master.bbox
+        .box .bbox
+    } {
+        set value ""
+        if {$ptr ne "" && ![catch {set value [dbGet ${ptr}${attr}]}] && $value ne ""} {
+            set size [mptdc_osc_pd_size_from_value $value]
+            if {[llength $size] == 2} { return $size }
+        }
+    }
+
+    set objs [list]
+    catch {set objs [get_cells -quiet $member]}
+    if {[llength $objs] == 0} {
+        catch {set objs [get_cells -quiet -hierarchical $member]}
+    }
+    set obj [lindex $objs 0]
+    foreach attr {
+        .base_cell.size .lib_cell.size .master.size .cell.size
+        .base_cell.box .lib_cell.box .master.box .cell.box
+        .base_cell.bbox .lib_cell.bbox .master.bbox .cell.bbox
+        .bbox .box
+    } {
+        set value ""
+        if {$obj ne "" && ![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+            set size [mptdc_osc_pd_size_from_value $value]
+            if {[llength $size] == 2} { return $size }
+        }
+    }
+
+    return [list \
+        [mptdc_pnr_env MPTDC_PNR_PD_TILE_DEFAULT_CELL_WIDTH_UM 4.48] \
+        [mptdc_pnr_env MPTDC_PNR_PD_TILE_ROW_HEIGHT_UM 4.48]]
+}
+
 proc mptdc_osc_pd_leaf_objects_under {inst} {
     set prefix "[mptdc_osc_pd_norm_name $inst]/"
     set out [list]
@@ -147,6 +224,11 @@ proc mptdc_osc_pd_create_tile_region {group box members fh} {
     return [list $added $region_status $constraint_type]
 }
 
+proc mptdc_osc_pd_snap_up {value step} {
+    if {$step <= 0.0} { return $value }
+    return [expr {ceil($value / $step) * $step}]
+}
+
 proc mptdc_osc_pd_apply_tile_box {cell_name box fh} {
     set llx [lindex $box 0]
     set lly [lindex $box 1]
@@ -158,6 +240,113 @@ proc mptdc_osc_pd_apply_tile_box {cell_name box fh} {
     }
     puts $fh "  tile_box_warning $cell_name $box: $err"
     return 0
+}
+
+proc mptdc_osc_pd_apply_leaf_tile_box {member box fh} {
+    set llx [lindex $box 0]
+    set lly [lindex $box 1]
+    set urx [lindex $box 2]
+    set ury [lindex $box 3]
+    if {![catch {setObjFPlanBox Instance $member $llx $lly $urx $ury} err]} {
+        return 1
+    }
+    puts $fh "  leaf_tile_box_warning $member $box: $err"
+    return 0
+}
+
+proc mptdc_osc_pd_preplace_tile_members {members box fh} {
+    if {![mptdc_pnr_env MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 1]} {
+        return [dict create enabled 0 box_constraints 0 preplaced 0 failures 0 overflow 0]
+    }
+    set llx [lindex $box 0]
+    set lly [lindex $box 1]
+    set urx [lindex $box 2]
+    set ury [lindex $box 3]
+    set site_w [mptdc_pnr_env MPTDC_PNR_PD_TILE_SITE_WIDTH_UM 0.56]
+    set row_h [mptdc_pnr_env MPTDC_PNR_PD_TILE_ROW_HEIGHT_UM 4.48]
+    set spacing [mptdc_pnr_env MPTDC_PNR_PD_TILE_MEMBER_SPACING_UM 0.0]
+    set fix_leaves [mptdc_pnr_env MPTDC_PNR_PD_TILE_FIX_LEAVES 1]
+    set tile_w [expr {$urx - $llx}]
+    set tile_h [expr {$ury - $lly}]
+
+    set leaf_box_count 0
+    set entries [list]
+    foreach member $members {
+        if {[mptdc_osc_pd_apply_leaf_tile_box $member $box $fh]} {
+            incr leaf_box_count
+        }
+        set size [mptdc_osc_pd_member_size $member]
+        set width [mptdc_osc_pd_snap_up [lindex $size 0] $site_w]
+        set height [mptdc_osc_pd_snap_up [lindex $size 1] $row_h]
+        if {$width <= 0.0} { set width $site_w }
+        if {$height <= 0.0} { set height $row_h }
+        if {$height > $row_h} { set row_h $height }
+        lappend entries [list $width $height $member]
+    }
+
+    set rows [list]
+    set row [list]
+    set row_width 0.0
+    foreach entry [lsort -real -decreasing -index 0 $entries] {
+        set width [lindex $entry 0]
+        set next_width [expr {$row_width + ($row_width > 0.0 ? $spacing : 0.0) + $width}]
+        if {[llength $row] > 0 && $next_width > $tile_w} {
+            lappend rows [list $row_width $row]
+            set row [list]
+            set row_width 0.0
+            set next_width $width
+        }
+        lappend row $entry
+        set row_width $next_width
+    }
+    if {[llength $row] > 0} {
+        lappend rows [list $row_width $row]
+    }
+
+    set overflow 0
+    set total_h [expr {[llength $rows] * $row_h}]
+    if {$total_h > $tile_h} {
+        set overflow 1
+        puts $fh "  tile_pack_overflow rows=[llength $rows] row_h=$row_h tile_h=$tile_h"
+    }
+    set y [mptdc_pnr_snap [expr {$lly + max(0.0, ($tile_h - $total_h) / 2.0)}]]
+    set preplaced 0
+    set failures 0
+    foreach row_item $rows {
+        set row_width [lindex $row_item 0]
+        set row_entries [lindex $row_item 1]
+        set x [mptdc_pnr_snap [expr {$llx + max(0.0, ($tile_w - $row_width) / 2.0)}]]
+        foreach entry $row_entries {
+            set width [lindex $entry 0]
+            set member [lindex $entry 2]
+            set cmd [list placeInstance $member $x $y R0]
+            if {$fix_leaves} { lappend cmd -fixed }
+            if {[catch {eval $cmd} err]} {
+                if {$fix_leaves} {
+                    set fallback [list placeInstance $member $x $y R0]
+                    if {![catch {eval $fallback} err2]} {
+                        incr preplaced
+                    } else {
+                        incr failures
+                        puts $fh "  leaf_preplace_warning $member x=$x y=$y: $err ; fallback: $err2"
+                    }
+                } else {
+                    incr failures
+                    puts $fh "  leaf_preplace_warning $member x=$x y=$y: $err"
+                }
+            } else {
+                incr preplaced
+            }
+            set x [mptdc_pnr_snap [expr {$x + $width + $spacing}]]
+        }
+        set y [mptdc_pnr_snap [expr {$y + $row_h}]]
+    }
+    return [dict create \
+        enabled 1 \
+        box_constraints $leaf_box_count \
+        preplaced $preplaced \
+        failures $failures \
+        overflow $overflow]
 }
 
 proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
@@ -195,6 +384,10 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
     set tile_regions 0
     set tile_region_assignments 0
     set tile_region_failures 0
+    set leaf_box_constraints 0
+    set leaf_preplacements 0
+    set leaf_preplacement_failures 0
+    set leaf_pack_overflows 0
     set margin [mptdc_pnr_env MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 1.0]
     foreach cell [lsort $cells] {
         set cell_name [mptdc_osc_pd_object_name $cell]
@@ -231,6 +424,15 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         if {[mptdc_osc_pd_apply_tile_box $cell_name $tile_box $fh]} {
             incr placed
         }
+        set preplace_result [mptdc_osc_pd_preplace_tile_members $members $tile_box $fh]
+        incr leaf_box_constraints [dict get $preplace_result box_constraints]
+        incr leaf_preplacements [dict get $preplace_result preplaced]
+        incr leaf_preplacement_failures [dict get $preplace_result failures]
+        incr leaf_pack_overflows [dict get $preplace_result overflow]
+        puts $fh "  leaf_tile_box_constraints=[dict get $preplace_result box_constraints]"
+        puts $fh "  leaf_preplacements=[dict get $preplace_result preplaced]"
+        puts $fh "  leaf_preplacement_failures=[dict get $preplace_result failures]"
+        puts $fh "  leaf_pack_overflow=[dict get $preplace_result overflow]"
     }
 
     puts $fh ""
@@ -238,6 +440,10 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
     puts $fh "Tile regions accepted: $tile_regions"
     puts $fh "Tile region failures: $tile_region_failures"
     puts $fh "Tile region assignments: $tile_region_assignments"
+    puts $fh "Leaf tile box constraints accepted: $leaf_box_constraints"
+    puts $fh "Leaf preplacements accepted: $leaf_preplacements"
+    puts $fh "Leaf preplacement failures: $leaf_preplacement_failures"
+    puts $fh "Leaf pack overflows: $leaf_pack_overflows"
     puts $fh "If tile region count is below 64, the synthesized PD hierarchy could not be decomposed into leaf-cell groups for physical matrix enforcement."
     close $fh
     return [dict create \
@@ -245,5 +451,9 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         tile_regions $tile_regions \
         tile_region_failures $tile_region_failures \
         tile_region_assignments $tile_region_assignments \
-        tile_box_constraints $placed]
+        tile_box_constraints $placed \
+        leaf_tile_box_constraints $leaf_box_constraints \
+        leaf_preplacements $leaf_preplacements \
+        leaf_preplacement_failures $leaf_preplacement_failures \
+        leaf_pack_overflows $leaf_pack_overflows]
 }

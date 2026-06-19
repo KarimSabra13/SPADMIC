@@ -1865,12 +1865,37 @@ proc mptdc_signoff_place_pd_matrix {} {
         if {[dict exists $grid_result tile_region_assignments]} {
             set tile_assignments [dict get $grid_result tile_region_assignments]
         }
+        set tile_box_constraints 0
+        if {[dict exists $grid_result tile_box_constraints]} {
+            set tile_box_constraints [dict get $grid_result tile_box_constraints]
+        }
+        set leaf_box_constraints 0
+        if {[dict exists $grid_result leaf_tile_box_constraints]} {
+            set leaf_box_constraints [dict get $grid_result leaf_tile_box_constraints]
+        }
+        set leaf_preplacements 0
+        if {[dict exists $grid_result leaf_preplacements]} {
+            set leaf_preplacements [dict get $grid_result leaf_preplacements]
+        }
+        set leaf_preplacement_failures 0
+        if {[dict exists $grid_result leaf_preplacement_failures]} {
+            set leaf_preplacement_failures [dict get $grid_result leaf_preplacement_failures]
+        }
+        set leaf_pack_overflows 0
+        if {[dict exists $grid_result leaf_pack_overflows]} {
+            set leaf_pack_overflows [dict get $grid_result leaf_pack_overflows]
+        }
         set fh [open $rpt a]
         puts $fh "PD_GRID_PLACEMENT_STATUS=PASS"
         puts $fh "PD_GRID_PLACEMENT_REPORT=$grid_report"
         puts $fh "PD_GRID_TILE_REGIONS=$tile_regions"
         puts $fh "PD_GRID_TILE_REGION_FAILURES=$tile_region_failures"
         puts $fh "PD_GRID_TILE_REGION_ASSIGNMENTS=$tile_assignments"
+        puts $fh "PD_GRID_TILE_BOX_CONSTRAINTS=$tile_box_constraints"
+        puts $fh "PD_GRID_LEAF_TILE_BOX_CONSTRAINTS=$leaf_box_constraints"
+        puts $fh "PD_GRID_LEAF_PREPLACEMENTS=$leaf_preplacements"
+        puts $fh "PD_GRID_LEAF_PREPLACEMENT_FAILURES=$leaf_preplacement_failures"
+        puts $fh "PD_GRID_LEAF_PACK_OVERFLOWS=$leaf_pack_overflows"
         close $fh
         if {$tile_regions != 64 || $tile_region_failures != 0 || $tile_assignments < 64} {
             set fh [open $rpt a]
