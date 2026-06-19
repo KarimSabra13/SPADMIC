@@ -602,6 +602,16 @@ proc mptdc_signoff_db_object_name {obj} {
 
 proc mptdc_signoff_db_object_box {obj} {
     if {$obj eq ""} { return [list] }
+    if {![regexp {^(inst|hinst|pin|net|term):|^0x[0-9a-fA-F]+$} "$obj"]} {
+        set ptr [mptdc_signoff_cell_ptr $obj]
+        foreach attr {.box .bbox} {
+            set value ""
+            if {$ptr ne "" && ![catch {set value [dbGet ${ptr}${attr}]}] && $value ne ""} {
+                set box [mptdc_signoff_flat_box $value]
+                if {[mptdc_signoff_box_valid $box]} { return $box }
+            }
+        }
+    }
     # Innovus hinst objects reject .box, and this build prints IMPDBTCL-248
     # even inside catch. Use attributes that work for both hinst and inst-like
     # objects before any command can emit that diagnostic.
@@ -619,6 +629,16 @@ proc mptdc_signoff_db_object_box {obj} {
 proc mptdc_signoff_leaf_cell_objects_under {inst} {
     set prefix "[mptdc_signoff_norm_inst_name $inst]/"
     set out [list]
+    set db_names [list]
+    catch {set db_names [dbGet top.insts.name]}
+    foreach name $db_names {
+        if {$name eq ""} { continue }
+        set norm [mptdc_signoff_norm_inst_name $name]
+        if {$norm eq [mptdc_signoff_norm_inst_name $inst]} { continue }
+        if {[string first $prefix $norm] == 0 && [lsearch -exact $out $name] < 0} {
+            lappend out $name
+        }
+    }
     set all_cells [list]
     catch {set all_cells [get_cells -quiet -hierarchical *]}
     foreach obj $all_cells {
@@ -628,10 +648,9 @@ proc mptdc_signoff_leaf_cell_objects_under {inst} {
             continue
         }
         set norm [mptdc_signoff_norm_inst_name $name]
-        if {[string first $prefix $norm] == 0} {
-            set box [mptdc_signoff_db_object_box $obj]
-            if {![mptdc_signoff_box_valid $box]} { continue }
-            lappend out $obj
+        if {$norm eq [mptdc_signoff_norm_inst_name $inst]} { continue }
+        if {[string first $prefix $norm] == 0 && [lsearch -exact $out $name] < 0} {
+            lappend out $name
         }
     }
     return $out
@@ -661,10 +680,6 @@ proc mptdc_signoff_cell_center {inst} {
 }
 
 proc mptdc_signoff_cell_or_leaf_box {inst} {
-    set box [mptdc_signoff_cell_box $inst]
-    if {[mptdc_signoff_box_valid $box]} {
-        return [concat $box [list 1 direct]]
-    }
     set found 0
     set llx ""
     set lly ""
@@ -691,6 +706,10 @@ proc mptdc_signoff_cell_or_leaf_box {inst} {
         incr found
     }
     if {$found == 0} {
+        set box [mptdc_signoff_cell_box $inst]
+        if {[mptdc_signoff_box_valid $box]} {
+            return [concat $box [list 1 direct]]
+        }
         return [list]
     }
     return [list $llx $lly $urx $ury $found hier_leaf_aggregate]

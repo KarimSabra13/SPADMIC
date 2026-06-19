@@ -56,6 +56,16 @@ proc mptdc_osc_pd_box_from_obj {obj} {
 proc mptdc_osc_pd_leaf_objects_under {inst} {
     set prefix "[mptdc_osc_pd_norm_name $inst]/"
     set out [list]
+    set db_names [list]
+    catch {set db_names [dbGet top.insts.name]}
+    foreach name $db_names {
+        if {$name eq ""} { continue }
+        set norm [mptdc_osc_pd_norm_name $name]
+        if {$norm eq [mptdc_osc_pd_norm_name $inst]} { continue }
+        if {[string first $prefix $norm] == 0 && [lsearch -exact $out $name] < 0} {
+            lappend out $name
+        }
+    }
     set all_cells [list]
     catch {set all_cells [get_cells -quiet -hierarchical *]}
     foreach obj $all_cells {
@@ -65,8 +75,9 @@ proc mptdc_osc_pd_leaf_objects_under {inst} {
             continue
         }
         set norm [mptdc_osc_pd_norm_name $name]
-        if {[string first $prefix $norm] == 0} {
-            lappend out $obj
+        if {$norm eq [mptdc_osc_pd_norm_name $inst]} { continue }
+        if {[string first $prefix $norm] == 0 && [lsearch -exact $out $name] < 0} {
+            lappend out $name
         }
     }
     return $out
@@ -108,15 +119,45 @@ proc mptdc_osc_pd_create_tile_region {group box members fh} {
         }
     }
     set region_status FAIL
+    set constraint_type NONE
     if {$added > 0} {
-        if {![catch {createRegion $group $llx $lly $urx $ury} err]} {
+        set use_fence [mptdc_pnr_env MPTDC_PNR_PD_TILE_USE_FENCE 1]
+        if {$use_fence && ![info exists ::mptdc_osc_pd_create_fence_usable]} {
+            set ::mptdc_osc_pd_create_fence_usable [expr {[llength [info commands createFence]] > 0}]
+        }
+        if {$use_fence && $::mptdc_osc_pd_create_fence_usable} {
+            if {![catch {createFence $group $llx $lly $urx $ury} err]} {
+                set region_status PASS
+                set constraint_type FENCE
+            } else {
+                puts $fh "  fence_create_warning $group $box: $err"
+                set ::mptdc_osc_pd_create_fence_usable 0
+            }
+        }
+        if {$region_status ne "PASS" && ![catch {createRegion $group $llx $lly $urx $ury} err]} {
             set region_status PASS
+            set constraint_type REGION
         } else {
-            puts $fh "  region_create_warning $group $box: $err"
+            if {$region_status ne "PASS"} {
+                puts $fh "  region_create_warning $group $box: $err"
+            }
         }
     }
-    puts $fh "  tile_region group=$group leaf_count=$added box=$box status=$region_status"
-    return [list $added $region_status]
+    puts $fh "  tile_region group=$group member_count=$added box=$box constraint=$constraint_type status=$region_status"
+    return [list $added $region_status $constraint_type]
+}
+
+proc mptdc_osc_pd_apply_tile_box {cell_name box fh} {
+    set llx [lindex $box 0]
+    set lly [lindex $box 1]
+    set urx [lindex $box 2]
+    set ury [lindex $box 3]
+    if {![catch {setObjFPlanBox Instance $cell_name $llx $lly $urx $ury} err]} {
+        puts $fh "  applied: setObjFPlanBox Instance {$cell_name} $llx $lly $urx $ury"
+        return 1
+    }
+    puts $fh "  tile_box_warning $cell_name $box: $err"
+    return 0
 }
 
 proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
@@ -173,7 +214,12 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         set y [mptdc_pnr_snap [expr {$lly + ($nf * $pitch_y)}]]
         puts $fh "CELL $cell_name ns=$ns nf=$nf origin=($x,$y) tile_box=$tile_box"
         set leaf_objs [mptdc_osc_pd_leaf_objects_under $cell_name]
-        set members [concat [list $cell_name] $leaf_objs]
+        if {[llength $leaf_objs] > 0} {
+            set members $leaf_objs
+        } else {
+            set members [list $cell_name]
+        }
+        puts $fh "  leaf_member_count=[llength $leaf_objs]"
         set group [mptdc_osc_pd_tile_group_name $ns $nf]
         set tile_result [mptdc_osc_pd_create_tile_region $group $tile_box $members $fh]
         incr tile_region_assignments [lindex $tile_result 0]
@@ -182,23 +228,13 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         } else {
             incr tile_region_failures
         }
-        foreach cmd [list \
-            [list placeInstance $cell_name $x $y R0] \
-            [list setObjFPlanBox Instance $cell_name $x $y [expr {$x + 1.0}] [expr {$y + 1.0}]] \
-        ] {
-            if {![catch {uplevel 1 $cmd} err]} {
-                puts $fh "  applied: $cmd"
-                incr placed
-                break
-            } else {
-                puts $fh "  skipped: $cmd"
-                puts $fh "    $err"
-            }
+        if {[mptdc_osc_pd_apply_tile_box $cell_name $tile_box $fh]} {
+            incr placed
         }
     }
 
     puts $fh ""
-    puts $fh "Place/fence attempts accepted: $placed"
+    puts $fh "Tile box constraints accepted: $placed"
     puts $fh "Tile regions accepted: $tile_regions"
     puts $fh "Tile region failures: $tile_region_failures"
     puts $fh "Tile region assignments: $tile_region_assignments"
@@ -209,5 +245,5 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         tile_regions $tile_regions \
         tile_region_failures $tile_region_failures \
         tile_region_assignments $tile_region_assignments \
-        place_attempts_accepted $placed]
+        tile_box_constraints $placed]
 }
