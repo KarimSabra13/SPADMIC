@@ -591,6 +591,9 @@ proc mptdc_signoff_norm_inst_name {name} {
 }
 
 proc mptdc_signoff_db_object_name {obj} {
+    if {![regexp {^(inst|hinst|pin|net|term):|^0x[0-9a-fA-F]+$} "$obj"]} {
+        return "$obj"
+    }
     set name ""
     catch {set name [get_object_name $obj]}
     if {$name eq ""} { catch {set name [get_db $obj .name]} }
@@ -619,13 +622,15 @@ proc mptdc_signoff_leaf_cell_objects_under {inst} {
     set all_cells [list]
     catch {set all_cells [get_cells -quiet -hierarchical *]}
     foreach obj $all_cells {
-        if {[string match {hinst:*} "$obj"]} { continue }
-        set box [mptdc_signoff_db_object_box $obj]
-        if {![mptdc_signoff_box_valid $box]} { continue }
         set name [mptdc_signoff_db_object_name $obj]
         if {$name eq ""} { continue }
+        if {[string match {hinst:*} "$obj"] || [string match {hinst:*} "$name"]} {
+            continue
+        }
         set norm [mptdc_signoff_norm_inst_name $name]
         if {[string first $prefix $norm] == 0} {
+            set box [mptdc_signoff_db_object_box $obj]
+            if {![mptdc_signoff_box_valid $box]} { continue }
             lappend out $obj
         }
     }
@@ -634,7 +639,7 @@ proc mptdc_signoff_leaf_cell_objects_under {inst} {
 
 proc mptdc_signoff_cell_box {inst} {
     set ptr [mptdc_signoff_cell_ptr $inst]
-    foreach attr {.bbox .place_box} {
+    foreach attr {.box} {
         set value ""
         if {$ptr ne "" && ![catch {set value [dbGet ${ptr}${attr}]}] && $value ne ""} {
             set box [mptdc_signoff_flat_box $value]

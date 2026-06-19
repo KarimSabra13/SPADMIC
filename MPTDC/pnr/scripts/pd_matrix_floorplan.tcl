@@ -23,6 +23,9 @@ proc mptdc_osc_pd_norm_name {name} {
 }
 
 proc mptdc_osc_pd_object_name {obj} {
+    if {![regexp {^(inst|hinst|pin|net|term):|^0x[0-9a-fA-F]+$} "$obj"]} {
+        return "$obj"
+    }
     set name ""
     catch {set name [get_object_name $obj]}
     if {$name eq ""} { catch {set name [get_db $obj .name]} }
@@ -56,11 +59,11 @@ proc mptdc_osc_pd_leaf_objects_under {inst} {
     set all_cells [list]
     catch {set all_cells [get_cells -quiet -hierarchical *]}
     foreach obj $all_cells {
-        if {[string match {hinst:*} "$obj"]} { continue }
-        set box [mptdc_osc_pd_box_from_obj $obj]
-        if {[llength $box] < 4} { continue }
         set name [mptdc_osc_pd_object_name $obj]
         if {$name eq ""} { continue }
+        if {[string match {hinst:*} "$obj"] || [string match {hinst:*} "$name"]} {
+            continue
+        }
         set norm [mptdc_osc_pd_norm_name $name]
         if {[string first $prefix $norm] == 0} {
             lappend out $obj
@@ -153,10 +156,12 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
     set tile_region_failures 0
     set margin [mptdc_pnr_env MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 1.0]
     foreach cell [lsort $cells] {
+        set cell_name [mptdc_osc_pd_object_name $cell]
+        if {$cell_name eq ""} { set cell_name "$cell" }
         set ns ""
         set nf ""
-        if {![mptdc_osc_pd_parse_ns_nf $cell ns nf]} {
-            puts $fh "SKIP unparsable cell: $cell"
+        if {![mptdc_osc_pd_parse_ns_nf $cell_name ns nf]} {
+            puts $fh "SKIP unparsable cell: raw=$cell name=$cell_name"
             continue
         }
         set tile_llx [mptdc_pnr_snap [expr {$llx + ($ns * $pitch_x) + $margin}]]
@@ -166,9 +171,9 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         set tile_box [list $tile_llx $tile_lly $tile_urx $tile_ury]
         set x [mptdc_pnr_snap [expr {$llx + ($ns * $pitch_x)}]]
         set y [mptdc_pnr_snap [expr {$lly + ($nf * $pitch_y)}]]
-        puts $fh "CELL $cell ns=$ns nf=$nf origin=($x,$y) tile_box=$tile_box"
-        set leaf_objs [mptdc_osc_pd_leaf_objects_under $cell]
-        set members [concat [list $cell] $leaf_objs]
+        puts $fh "CELL $cell_name ns=$ns nf=$nf origin=($x,$y) tile_box=$tile_box"
+        set leaf_objs [mptdc_osc_pd_leaf_objects_under $cell_name]
+        set members [concat [list $cell_name] $leaf_objs]
         set group [mptdc_osc_pd_tile_group_name $ns $nf]
         set tile_result [mptdc_osc_pd_create_tile_region $group $tile_box $members $fh]
         incr tile_region_assignments [lindex $tile_result 0]
@@ -178,8 +183,8 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
             incr tile_region_failures
         }
         foreach cmd [list \
-            [list placeInstance $cell $x $y R0] \
-            [list setObjFPlanBox Instance $cell $x $y [expr {$x + 1.0}] [expr {$y + 1.0}]] \
+            [list placeInstance $cell_name $x $y R0] \
+            [list setObjFPlanBox Instance $cell_name $x $y [expr {$x + 1.0}] [expr {$y + 1.0}]] \
         ] {
             if {![catch {uplevel 1 $cmd} err]} {
                 puts $fh "  applied: $cmd"

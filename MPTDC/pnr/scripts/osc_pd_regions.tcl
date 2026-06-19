@@ -16,7 +16,43 @@ proc mptdc_osc_pd_timestamp {} {
     return [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]
 }
 
+proc mptdc_osc_pd_object_names {objects} {
+    set names [list]
+    if {[llength $objects] == 0} {
+        return $names
+    }
+    if {![catch {get_object_name $objects} obj_names] && $obj_names ne ""} {
+        foreach name $obj_names {
+            if {$name ne "" && [lsearch -exact $names $name] < 0} {
+                lappend names $name
+            }
+        }
+        if {[llength $names] > 0} { return $names }
+    }
+    if {![catch {get_db $objects .name} obj_names] && $obj_names ne ""} {
+        foreach name $obj_names {
+            if {$name ne "" && [lsearch -exact $names $name] < 0} {
+                lappend names $name
+            }
+        }
+        if {[llength $names] > 0} { return $names }
+    }
+    foreach obj $objects {
+        set name ""
+        catch {set name [get_object_name $obj]}
+        if {$name eq ""} { catch {set name [get_db $obj .name]} }
+        if {$name eq ""} { set name "$obj" }
+        if {[lsearch -exact $names $name] < 0} {
+            lappend names $name
+        }
+    }
+    return $names
+}
+
 proc mptdc_osc_pd_cells {patterns} {
+    if {[llength [info commands mptdc_signoff_collect_cells]] > 0} {
+        return [mptdc_signoff_collect_cells $patterns]
+    }
     if {[llength [info commands mptdc_pnr_collect_cells]] > 0} {
         return [mptdc_pnr_collect_cells $patterns]
     }
@@ -24,7 +60,7 @@ proc mptdc_osc_pd_cells {patterns} {
     foreach pattern $patterns {
         set cells [list]
         catch {set cells [get_cells -quiet -hierarchical $pattern]}
-        foreach cell $cells {
+        foreach cell [mptdc_osc_pd_object_names $cells] {
             if {[lsearch -exact $out $cell] < 0} {
                 lappend out $cell
             }
