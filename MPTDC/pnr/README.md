@@ -47,9 +47,11 @@ physical cells are confirmed and explicit Innovus stages are implemented.
 - Physical cells must be discovered from approved PDK collateral before
   tap/endcap/tie/filler/decap/antenna/CTS insertion. `config/xh018_cells.tcl`
   currently records JIHD decap, antenna, tie, CTS-buffer, CTS-inverter, and
-  phase-buffer candidates, but remains unconfirmed until tap, endcap, and
-  row-filler policy is proven from the installed XH018 PDK. Row cells may come
-  from a non-JIHD PDK library only with explicit LEF/Liberty/site/PG evidence.
+  phase-buffer candidates, JIHD FEED row fillers, and JIHD `vddi/gndi` PG
+  pins. It remains unconfirmed because the 2026-06-19 all-LEF row audit found
+  no CORE tap/endcap macros; IO `CORNER*`/ENDCAP pad-ring cells are not
+  accepted as core-row tap/endcap infrastructure. Row cells may come from a
+  non-JIHD PDK library only with explicit LEF/Liberty/site/PG evidence.
 
 ## Directory Ownership
 

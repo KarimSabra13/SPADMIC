@@ -3,16 +3,17 @@
 #
 # These values are intentionally not marked confirmed. The current lab
 # discovery proves JIHD decap, antenna, tie, CTS-buffer, CTS-inverter,
-# phase-buffer, and FEED-row filler candidates. The exact tap and endcap source
-# is still unresolved. Those remaining row-infrastructure cells may come from a
-# non-JIHD XH018 library only after ALL_PDK discovery proves their LEF/Liberty
-# presence, site compatibility, and PG pins. Do not use this file for insertion
-# until those classes are discovered from approved PDK inputs and reviewed.
+# phase-buffer, FEED-row filler candidates, and JIHD stdcell PG pin names.
+# The exact tap and endcap source is still unresolved: the 2026-06-19 all-LEF
+# row audit found no CORE tap/endcap macros, while IO ENDCAP/CORNER macros are
+# pad-ring cells and are not accepted as core-row infrastructure.
+# Do not use this file for insertion until those classes are discovered from
+# approved PDK inputs and reviewed.
 # =============================================================================
 
 global mptdc_xh018_cells
 array set mptdc_xh018_cells {
-    status              JIHD_PHASE_AND_FILLER_CONFIRMED_TAP_ENDCAP_REQUIRE_ALL_PDK_DISCOVERY
+    status              JIHD_PHASE_FILLER_PG_CONFIRMED_TAP_ENDCAP_NOT_FOUND_IN_CORE_LEF
     confirmed           0
     tap                 {}
     endcap_left         {}
@@ -27,11 +28,16 @@ array set mptdc_xh018_cells {
     phase_iso_buffer    {BUJIHDX4}
     phase_final_buffer  {BUJIHDX12}
     phase_buffer_policy {PREFER_UNIFORM_JIHD_AFTER_FRESH_GENUS_RERUN}
-    row_cell_policy     {ALLOW_APPROVED_NON_JIHD_AFTER_ALL_PDK_DISCOVERY}
+    row_cell_policy     {ALLOW_APPROVED_NON_JIHD_AFTER_ALL_PDK_DISCOVERY_BUT_REJECT_IO_RING_CORNERS_FOR_CORE_ROWS}
     stdcell_site        {core_jihd}
-    stdcell_pg_power    {}
-    stdcell_pg_ground   {}
-    source              {20260618_mptdc_allpdk_discovery_846a580d}
+    stdcell_pg_power    {vddi}
+    stdcell_pg_ground   {gndi}
+    row_audit           {20260619_xh018_row_infra_5c24d714}
+    core_tap_count      {0}
+    core_endcap_count   {0}
+    core_filler_count   {24}
+    io_endcap_count     {165}
+    source              {20260618_mptdc_allpdk_discovery_846a580d 20260619_xh018_row_infra_5c24d714}
     source_hashes       {
         e0587511b5bbb47e7d5a96febc83aec9694179c4193f39faae20bbbe235b41b5  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef
         723d02c5c82480b093072e01f5fc3d57f801d83635b39f778b77b87f39762d61  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_fast_1_98V_0C.lib
@@ -43,9 +49,9 @@ array set mptdc_xh018_cells {
         7162a11babf8472cebd198e3d9b64f7786bd5796d9672a59e1ef19e6a7d2446e  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_slow_1_62V_m40C.lib
         405a0b21dc1910cd1c95555c53b374b91f1f637da264dedaf363396b27b7a985  /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib
     }
-    unresolved_classes  {tap endcap_left endcap_right stdcell_pg_power stdcell_pg_ground}
+    unresolved_classes  {tap endcap_left endcap_right}
     reviewed_by         {Karim Sabra}
-    reviewed_date       {2026-06-18}
+    reviewed_date       {2026-06-19}
 }
 
 proc mptdc_xh018_cells_confirmed {} {
