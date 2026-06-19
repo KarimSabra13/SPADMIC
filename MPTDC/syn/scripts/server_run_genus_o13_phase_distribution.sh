@@ -812,6 +812,8 @@ BUHDX4_COUNT=0
 BUHDX12_COUNT=0
 BUJIHDX4_COUNT=0
 BUJIHDX12_COUNT=0
+BUJIHDX4_PHASE_ISO_COUNT=0
+BUJIHDX12_PHASE_DRV_COUNT=0
 PHASE_BUF_TEXT_COUNT=0
 ISO_TEXT_COUNT=0
 DRV_TEXT_COUNT=0
@@ -1007,6 +1009,8 @@ if [[ -f "$POSTSYN_NETLIST" ]]; then
   BUHDX12_COUNT="$(grep -cE '^[[:space:]]*BUHDX12[[:space:]]+' "$POSTSYN_NETLIST" || true)"
   BUJIHDX4_COUNT="$(grep -cE '^[[:space:]]*BUJIHDX4[[:space:]]+' "$POSTSYN_NETLIST" || true)"
   BUJIHDX12_COUNT="$(grep -cE '^[[:space:]]*BUJIHDX12[[:space:]]+' "$POSTSYN_NETLIST" || true)"
+  BUJIHDX4_PHASE_ISO_COUNT="$(grep -cE '^[[:space:]]*BUJIHDX4[[:space:]]+.*u_iso' "$POSTSYN_NETLIST" || true)"
+  BUJIHDX12_PHASE_DRV_COUNT="$(grep -cE '^[[:space:]]*BUJIHDX12[[:space:]]+.*u_drv' "$POSTSYN_NETLIST" || true)"
   PHASE_BUF_TEXT_COUNT="$(grep -cE 'u_phase_buf_slow|u_phase_buf_fast|mptdc_phase_buffer_bank' "$POSTSYN_NETLIST" || true)"
   ISO_TEXT_COUNT="$(grep -cE 'u_iso' "$POSTSYN_NETLIST" || true)"
   DRV_TEXT_COUNT="$(grep -cE 'u_drv' "$POSTSYN_NETLIST" || true)"
@@ -1283,6 +1287,8 @@ write_macro_binding_check() {
     echo "BUHDX12_COUNT=$BUHDX12_COUNT"
     echo "BUJIHDX4_COUNT=$BUJIHDX4_COUNT"
     echo "BUJIHDX12_COUNT=$BUJIHDX12_COUNT"
+    echo "BUJIHDX4_PHASE_ISO_COUNT=$BUJIHDX4_PHASE_ISO_COUNT"
+    echo "BUJIHDX12_PHASE_DRV_COUNT=$BUJIHDX12_PHASE_DRV_COUNT"
     echo "RAW_RO_CLOCKS_FOUND=$RAW_RO_CLOCKS_FOUND"
     echo "BUFFER_PHASE_CLOCKS_FOUND=$BUFFER_PHASE_CLOCKS_FOUND"
     echo "RO_TUNE4_LIB=$REAL_LIB"
@@ -1602,6 +1608,8 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "buhdx12_count=$BUHDX12_COUNT"
   echo "bujihdx4_count=$BUJIHDX4_COUNT"
   echo "bujihdx12_count=$BUJIHDX12_COUNT"
+  echo "bujihdx4_phase_iso_count=$BUJIHDX4_PHASE_ISO_COUNT"
+  echo "bujihdx12_phase_drv_count=$BUJIHDX12_PHASE_DRV_COUNT"
   echo "phase_buffer_text_count=$PHASE_BUF_TEXT_COUNT"
   echo "u_iso_text_count=$ISO_TEXT_COUNT"
   echo "u_drv_text_count=$DRV_TEXT_COUNT"
@@ -2040,6 +2048,8 @@ write_final_readiness
   echo "- BUHDX12 instance count: $BUHDX12_COUNT"
   echo "- BUJIHDX4 instance count: $BUJIHDX4_COUNT"
   echo "- BUJIHDX12 instance count: $BUJIHDX12_COUNT"
+  echo "- BUJIHDX4 phase-buffer u_iso count: $BUJIHDX4_PHASE_ISO_COUNT"
+  echo "- BUJIHDX12 phase-buffer u_drv count: $BUJIHDX12_PHASE_DRV_COUNT"
   echo "- phase-buffer hierarchy text count: $PHASE_BUF_TEXT_COUNT"
   echo "- u_iso text count: $ISO_TEXT_COUNT"
   echo "- u_drv text count: $DRV_TEXT_COUNT"

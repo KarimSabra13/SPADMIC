@@ -1034,9 +1034,9 @@ proc mptdc_o13_abs4_write_phase_buffer_paths {rpt_file} {
     set fh [open $rpt_file w]
     puts $fh "# O13 Phase Buffer Topology Report"
     puts $fh ""
-    puts $fh "This report is structural. Generated clocks can make RO->BUHDX4->BUHDX12 invisible as an ordinary data path, so the report traverses expected pins and clocks directly."
+    puts $fh "This report is structural. Generated clocks can make RO->BUJIHDX4->BUJIHDX12 invisible as an ordinary data path, so the report traverses expected pins and clocks directly."
     puts $fh ""
-    puts $fh "| family | tap | raw_ro_pin | buhdx4_a | buhdx4_q | buhdx12_a | buhdx12_q | raw_clock | buffer_clock | status |"
+    puts $fh "| family | tap | raw_ro_pin | bujihdx4_a | bujihdx4_q | bujihdx12_a | bujihdx12_q | raw_clock | buffer_clock | status |"
     puts $fh "|---|---:|---|---|---|---|---|---|---|---|"
 
     foreach family {slow fast} {
