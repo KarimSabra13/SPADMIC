@@ -19,16 +19,44 @@ proc mptdc_pnr_ro_power_pin_map {} {
     return [dict create VDD VDD vdd! VDD VSS VSS]
 }
 
+proc mptdc_pnr_unique_append {var_name value} {
+    upvar 1 $var_name values
+    if {$value eq ""} { return }
+    if {[lsearch -exact $values $value] < 0} {
+        lappend values $value
+    }
+}
+
+proc mptdc_pnr_object_names {objects} {
+    set names [list]
+    if {[llength $objects] == 0} {
+        return $names
+    }
+    if {![catch {get_object_name $objects} obj_names]} {
+        foreach name $obj_names {
+            mptdc_pnr_unique_append names "$name"
+        }
+        return $names
+    }
+    if {![catch {get_db $objects .name} obj_names]} {
+        foreach name $obj_names {
+            mptdc_pnr_unique_append names "$name"
+        }
+        return $names
+    }
+    foreach obj $objects {
+        mptdc_pnr_unique_append names "$obj"
+    }
+    return $names
+}
+
 proc mptdc_pnr_collect_ro_tune4_instances {} {
     set out [list]
     foreach pattern [list *u_ro_tune4* *RO_tune4*] {
         set cells [list]
         catch {set cells [get_cells -quiet -hierarchical $pattern]}
-        foreach cell $cells {
-            set name "$cell"
-            if {[lsearch -exact $out $name] < 0} {
-                lappend out $name
-            }
+        foreach name [mptdc_pnr_object_names $cells] {
+            mptdc_pnr_unique_append out $name
         }
     }
     return $out

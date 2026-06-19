@@ -393,16 +393,44 @@ proc mptdc_signoff_capture_candidates {path title bodies} {
     return 0
 }
 
+proc mptdc_signoff_unique_append {var_name value} {
+    upvar 1 $var_name values
+    if {$value eq ""} { return }
+    if {[lsearch -exact $values $value] < 0} {
+        lappend values $value
+    }
+}
+
+proc mptdc_signoff_object_names {objects} {
+    set names [list]
+    if {[llength $objects] == 0} {
+        return $names
+    }
+    if {![catch {get_object_name $objects} obj_names]} {
+        foreach name $obj_names {
+            mptdc_signoff_unique_append names "$name"
+        }
+        return $names
+    }
+    if {![catch {get_db $objects .name} obj_names]} {
+        foreach name $obj_names {
+            mptdc_signoff_unique_append names "$name"
+        }
+        return $names
+    }
+    foreach obj $objects {
+        mptdc_signoff_unique_append names "$obj"
+    }
+    return $names
+}
+
 proc mptdc_signoff_collect_cells {patterns} {
     set out [list]
     foreach pattern $patterns {
         set cells [list]
         catch {set cells [get_cells -quiet -hierarchical $pattern]}
-        foreach cell $cells {
-            set name "$cell"
-            if {[lsearch -exact $out $name] < 0} {
-                lappend out $name
-            }
+        foreach name [mptdc_signoff_object_names $cells] {
+            mptdc_signoff_unique_append out $name
         }
     }
     return $out
@@ -413,11 +441,8 @@ proc mptdc_signoff_collect_pins {patterns} {
     foreach pattern $patterns {
         set pins [list]
         catch {set pins [get_pins -quiet -hierarchical $pattern]}
-        foreach pin $pins {
-            set name "$pin"
-            if {[lsearch -exact $out $name] < 0} {
-                lappend out $name
-            }
+        foreach name [mptdc_signoff_object_names $pins] {
+            mptdc_signoff_unique_append out $name
         }
     }
     return $out
@@ -428,11 +453,8 @@ proc mptdc_signoff_collect_clocks {patterns} {
     foreach pattern $patterns {
         set clocks [list]
         catch {set clocks [get_clocks -quiet $pattern]}
-        foreach clk $clocks {
-            set name "$clk"
-            if {[lsearch -exact $out $name] < 0} {
-                lappend out $name
-            }
+        foreach name [mptdc_signoff_object_names $clocks] {
+            mptdc_signoff_unique_append out $name
         }
     }
     return $out
