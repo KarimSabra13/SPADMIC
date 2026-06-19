@@ -480,7 +480,24 @@ proc mptdc_signoff_phase_buffer_patterns {family stage} {
         "*${family}*${inst}*"]
 }
 
+proc mptdc_signoff_phase_buffer_instances_from_o13 {family stage} {
+    if {[llength [info commands mptdc_o13_phase_stage_instances]] == 0} {
+        return [list]
+    }
+    set role [expr {$stage eq "iso" ? "isolation" : "driver"}]
+    set out [list]
+    foreach item [mptdc_o13_phase_stage_instances $family $role] {
+        set inst [lindex $item 1]
+        mptdc_signoff_unique_append out $inst
+    }
+    return $out
+}
+
 proc mptdc_signoff_phase_buffer_instances {family stage} {
+    set out [mptdc_signoff_phase_buffer_instances_from_o13 $family $stage]
+    if {[llength $out] > 0} {
+        return $out
+    }
     return [mptdc_signoff_collect_cells [mptdc_signoff_phase_buffer_patterns $family $stage]]
 }
 
@@ -1066,8 +1083,11 @@ proc mptdc_signoff_place_pd_matrix {} {
 }
 
 proc mptdc_signoff_place_phase_buffers {} {
-    global mptdc_xh018_cells
+    global mptdc_xh018_cells o13 o12b
     mptdc_signoff_set_default_phase_buffer_origins
+    set o13(reports_dir) [mptdc_signoff_report_dir]
+    set o12b(reports_dir) [mptdc_signoff_report_dir]
+    set ::env(MPTDC_O13_RESULT_DIR) [mptdc_signoff_result_dir]
     mptdc_signoff_source_if_exists innovus_mptdc_phase_buffer_place.tcl
     set placement_applied NOT_RUN
     if {[llength [info commands mptdc_pnr_apply_phase_buffer_placement]] > 0} {
@@ -1082,12 +1102,23 @@ proc mptdc_signoff_place_phase_buffers {} {
     set fast_iso [llength $fast_iso_insts]
     set fast_drv [llength $fast_drv_insts]
     set rpt [file join [mptdc_signoff_report_dir] phase_buffer_status.rpt]
-    mptdc_signoff_write_count_gate $rpt [list \
+    set rows [list \
         [list SLOW_ISO_COUNT 8 $slow_iso] \
         [list SLOW_DRIVER_COUNT 8 $slow_drv] \
         [list FAST_ISO_COUNT 8 $fast_iso] \
         [list FAST_DRIVER_COUNT 8 $fast_drv]]
-    set fh [open $rpt a]
+    set failures [list]
+    set fh [open $rpt w]
+    foreach row $rows {
+        set label [lindex $row 0]
+        set expected [lindex $row 1]
+        set actual [lindex $row 2]
+        set status [expr {$expected eq $actual ? "PASS" : "FAIL"}]
+        puts $fh "$label expected=$expected actual=$actual status=$status"
+        if {$status ne "PASS"} {
+            lappend failures "$label expected=$expected actual=$actual"
+        }
+    }
     puts $fh "PHASE_BUFFER_PLACEMENT_APPLIED=$placement_applied"
     foreach {label insts} [list \
         SLOW_ISO_INSTANCES $slow_iso_insts \
@@ -1098,8 +1129,11 @@ proc mptdc_signoff_place_phase_buffers {} {
     }
     puts $fh "PHASE_ISO_BUFFER=$mptdc_xh018_cells(phase_iso_buffer)"
     puts $fh "PHASE_FINAL_BUFFER=$mptdc_xh018_cells(phase_final_buffer)"
-    puts $fh "PHASE_BUFFER_STATUS=PASS"
+    puts $fh "PHASE_BUFFER_STATUS=[expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]"
     close $fh
+    if {[llength $failures] > 0} {
+        error "MPTDC_COUNT_GATE_FAILED: $failures"
+    }
     mptdc_signoff_set_status PHASE_BUFFER_STATUS PASS $rpt
 }
 
