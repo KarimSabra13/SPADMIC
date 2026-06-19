@@ -9,10 +9,10 @@ renamed into signoff.
 
 ## Current Status
 
-The latest server result before the RO-code RTL change was:
+The active digital-PNR preparation state is:
 
-- Genus run: `20260618_axis_core_typical_closed_handoff_rerun2`.
-- Git HEAD: `d290cd7dc15222a343e4c8c0e60005494ac62ec4`.
+- Reviewed PNR source HEAD: `eb7a2c0fc66ff9daffa0751bc683c3d68df8d649`.
+- Genus handoff run: `20260618_axis_core_typical_closed_bujihd_846a580d`.
 - Setup WNS: `+0.3 ps`.
 - Setup TNS: `-0.0 ps`.
 - Setup violations: `0`.
@@ -20,44 +20,61 @@ The latest server result before the RO-code RTL change was:
 - PD Vernier exception: 64 paths from 8 sources, no overmatch, no undermatch.
 - Local ON22 repair: 355 `ON22JIHDX0` instances changed to `ON22JIHDX1`.
 - Pre-PnR gate: PASS, with low-WNS warning.
+- Phase-buffer topology: `BUJIHDX4 -> BUJIHDX12`.
+- Row-infrastructure status: PROVISIONAL, because no dedicated CORE tap/endcap
+  master was found and DRC/LVS qualification is still required.
 
-That handoff is reference evidence only after the RO-code RTL interface change.
-A fresh canonical Genus run from the new Git HEAD is required before any real
-PnR signoff run.
+This is enough to launch implementation under the reviewed provisional row
+policy. It is not enough to claim final digital PNR PASS.
 
 ## Owner-Facing Commands
 
 Run from the repository root on the Cadence server:
 
 ```bash
-# 1. Discover real physical-cell names from the installed PDK inputs.
+# 1. Discover real physical-cell names from the installed PDK inputs when the
+#    PDK installation changes.
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
   20260618_mptdc_digital_signoff_discovery \
   --mode discover_only
 
-# 2. After reviewing the discovery output, update MPTDC/pnr/config/xh018_cells.tcl
-#    with proven LEF/Liberty names, source paths, hashes, site, and PG pins.
-
-# 3. Rerun Genus after RTL/netlist changes.
+# 2. Rerun Genus after RTL/netlist changes.
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh \
   <fresh_genus_run_id>
 
-# 4. Build the handoff package and gate it.
+# 3. Build the handoff package and gate it.
 bash MPTDC/pnr/scripts/prepare_mptdc_genus_typical_handoff.sh \
   <fresh_genus_run_id>
 bash MPTDC/pnr/scripts/check_mptdc_pre_pnr_gate.sh \
-  --genus-run-id <fresh_genus_run_id>
+  --genus-run-id <fresh_genus_run_id> \
+  --handoff-dir <handoff_dir>
 
-# 5. Validate digital signoff sources without launching Innovus.
+# 4. Validate digital PNR sources without launching Innovus.
+export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
   <digital_signoff_validate_run_id> \
   --mode validate_only \
-  --genus-run-id <fresh_genus_run_id>
+  --genus-run-id <fresh_genus_run_id> \
+  --handoff-dir <handoff_dir>
+
+# 5. Launch implementation under the provisional row policy after review.
+export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
+export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
+  <digital_signoff_run_id> \
+  --mode full_signoff \
+  --genus-run-id <fresh_genus_run_id> \
+  --handoff-dir <handoff_dir>
+
+# 6. Package the row-infrastructure DRC/LVS qualification request/evidence.
+bash MPTDC/pnr/scripts/qualify_xh018_row_infrastructure.sh \
+  <row_qualification_run_id>
 ```
 
 The digital signoff wrapper records tool versions and rejects a dirty tracked
-source tree. `full_signoff` must remain fail-closed until the actual Innovus
-stages are explicitly implemented and reviewed.
+source tree. `full_signoff` is an explicit Innovus implementation launch, but
+the resulting digital PNR status remains PROVISIONAL until row and final block
+DRC/LVS evidence are clean.
 
 ## Physical Intent
 
@@ -245,9 +262,26 @@ endcap, or row-filler cells in the JIHD standard-cell LEF. The 2026-06-19
 all-LEF row audit proved JIHD `FEED*` CORE fillers on `core_jihd` and JIHD
 stdcell PG pins `vddi/gndi`, but found no CORE tap/endcap macros. The many
 IO `CORNER*`/ENDCAP macros are pad-ring cells and are not accepted as
-core-row tap/endcap infrastructure. Do not mark
-`MPTDC/pnr/config/xh018_cells.tcl` confirmed until tap/endcap policy is
-resolved from approved PDK sources and site/PG compatibility is checked.
+core-row tap/endcap infrastructure.
+
+`MPTDC/pnr/config/xh018_cells.tcl` therefore uses a per-class reviewed policy:
+JIHD filler/spacer/decap/antenna/tie/CTS/phase-buffer classes require real
+masters, while tap/endcap classes use
+`NO_DEDICATED_MASTER_PENDING_DRC_LVS`. This policy allows implementation only
+when `MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1` is set. It does not allow final
+PASS until DRC/LVS proves no floating wells and legal row edges.
+
+The standard-cell PG mapping is:
+
+```text
+globalNetConnect VDD -type pgpin -pin vddi -inst *
+globalNetConnect VSS -type pgpin -pin gndi -inst *
+RO VDD  -> VDD
+RO vdd! -> VDD
+RO VSS  -> VSS
+```
+
+Global-net-connect failures must be reported, not hidden.
 
 If no RO current model is available, do not block the rest of PnR. Report:
 
@@ -313,27 +347,30 @@ available.
 Final status must be reported as separate keys, never one vague READY label:
 
 ```text
-RTL_INTERFACE_STATUS
+PRE_PNR_GATE_STATUS
 GENUS_HANDOFF_STATUS
+ROW_INFRA_POLICY_STATUS
+ROW_INFRA_DRC_LVS_STATUS
+PHYSICAL_CELL_CONFIG_STATUS
+PG_CONNECTIVITY_STATUS
 FLOORPLAN_STATUS
 IO_STATUS
 RO_MACRO_STATUS
-PHASE_BUFFER_STATUS
 PD_MATRIX_STATUS
-PHASE_RC_SYMMETRY_STATUS
-POWER_GRID_STATUS
+PHASE_BUFFER_STATUS
 CTS_STATUS
 ROUTE_STATUS
+EXTRACTION_STATUS
 SETUP_STATUS_TC
 SETUP_STATUS_WC
 HOLD_STATUS_BC
-RO_1GHZ_STRESS_STATUS
+PHASE_LOAD_STATUS
+RC_SYMMETRY_STATUS
+BACKEND_CROSSING_STATUS
 DRV_STATUS
 ANTENNA_STATUS
-EXTRACTION_STATUS
 DRC_STATUS
 LVS_STATUS
-RO_INTERNAL_SIGNOFF_STATUS
 DELIVERABLE_STATUS
 DIGITAL_PNR_SIGNOFF
 ```

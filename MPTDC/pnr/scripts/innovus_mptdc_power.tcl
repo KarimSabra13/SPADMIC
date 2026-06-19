@@ -19,6 +19,32 @@ proc mptdc_pnr_ro_power_pin_map {} {
     return [dict create VDD VDD vdd! VDD VSS VSS]
 }
 
+proc mptdc_pnr_stdcell_power_pins {} {
+    set repo_root [file normalize [mptdc_pnr_env MPTDC_REPO_ROOT [file join [file dirname [info script]] ../../..]]]
+    set cfg [file join $repo_root MPTDC/pnr/config/xh018_cells.tcl]
+    if {[file exists $cfg]} {
+        source $cfg
+        set pins [mptdc_xh018_cell_list stdcell_pg_power]
+        if {[llength $pins] > 0} {
+            return $pins
+        }
+    }
+    return [list vddi]
+}
+
+proc mptdc_pnr_stdcell_ground_pins {} {
+    set repo_root [file normalize [mptdc_pnr_env MPTDC_REPO_ROOT [file join [file dirname [info script]] ../../..]]]
+    set cfg [file join $repo_root MPTDC/pnr/config/xh018_cells.tcl]
+    if {[file exists $cfg]} {
+        source $cfg
+        set pins [mptdc_xh018_cell_list stdcell_pg_ground]
+        if {[llength $pins] > 0} {
+            return $pins
+        }
+    }
+    return [list gndi]
+}
+
 proc mptdc_pnr_power_rules {} {
     return [list \
         {digital_domain_uses_1p8v_vdd_vss} \
@@ -39,6 +65,8 @@ proc mptdc_pnr_write_power_intent {{path ""}} {
     dict for {key value} [mptdc_pnr_power_nets] {
         puts $fh "$key=$value"
     }
+    puts $fh "stdcell_power_pins=[mptdc_pnr_stdcell_power_pins]"
+    puts $fh "stdcell_ground_pins=[mptdc_pnr_stdcell_ground_pins]"
     puts $fh "ro_pin_map=[mptdc_pnr_ro_power_pin_map]"
     puts $fh "rules=[join [mptdc_pnr_power_rules] {; }]"
     puts $fh "required_reports=power_connectivity.rpt power_intent.rpt unconnected_pg_pins.rpt"
@@ -52,13 +80,32 @@ proc mptdc_pnr_apply_power_connectivity {} {
     set nets [mptdc_pnr_power_nets]
     set power [dict get $nets power]
     set ground [dict get $nets ground]
-    foreach cmd [list \
-        [list globalNetConnect $power -type pgpin -pin vdd -inst *] \
-        [list globalNetConnect $ground -type pgpin -pin gnd -inst *] \
-        [list globalNetConnect $power -type pgpin -pin VDD -inst *] \
-        [list globalNetConnect $power -type pgpin -pin vdd! -inst *] \
-        [list globalNetConnect $ground -type pgpin -pin VSS -inst *] \
-    ] {
-        catch {{*}$cmd}
+    set report [mptdc_pnr_env MPTDC_PNR_POWER_CONNECTIVITY_REPORT power_connectivity.rpt]
+    file mkdir [file dirname $report]
+    set fh [open $report w]
+    set failures [list]
+    set commands [list]
+    foreach pg_pin [mptdc_pnr_stdcell_power_pins] {
+        lappend commands [list globalNetConnect $power -type pgpin -pin $pg_pin -inst *]
     }
+    foreach pg_pin [mptdc_pnr_stdcell_ground_pins] {
+        lappend commands [list globalNetConnect $ground -type pgpin -pin $pg_pin -inst *]
+    }
+    foreach {pin net} [mptdc_pnr_ro_power_pin_map] {
+        lappend commands [list globalNetConnect $net -type pgpin -pin $pin -inst *]
+    }
+    foreach cmd $commands {
+        puts $fh "COMMAND=$cmd"
+        if {[catch {{*}$cmd} err]} {
+            puts $fh "STATUS=FAIL ERROR=$err"
+            lappend failures "$cmd: $err"
+        } else {
+            puts $fh "STATUS=PASS"
+        }
+    }
+    close $fh
+    if {[llength $failures] > 0} {
+        error "MPTDC_PNR_POWER_CONNECTIVITY_FAILED: $failures"
+    }
+    return $report
 }

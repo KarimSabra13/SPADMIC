@@ -27,6 +27,9 @@ Options:
 full_signoff launches Innovus and requires:
   MPTDC_DIGITAL_SIGNOFF_APPROVED=1
 
+Provisional no-dedicated-core-tap/endcap implementation also requires:
+  MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
+
 This is the digital block signoff entrypoint. It must not be replaced by a
 renamed typical-feasibility wrapper.
 USAGE
@@ -111,6 +114,8 @@ RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
   echo "genus_run_id: ${GENUS_RUN_ID:-unset}"
   echo "genus_run_dir: ${GENUS_RUN_DIR:-unset}"
   echo "handoff_dir: ${HANDOFF_DIR:-unset}"
+  echo "row_infra_policy: NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS"
+  echo "allow_no_core_tap_endcap_policy: ${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
   echo "labels: DIGITAL_PNR_SIGNOFF_FLOW NOT_FEASIBILITY_RENAME"
   echo
   echo "git status --short --untracked-files=no:"
@@ -244,6 +249,9 @@ if command -v tclsh >/dev/null 2>&1; then
     cd "$REPO_ROOT"
     MPTDC_REPO_ROOT="$REPO_ROOT" \
     MPTDC_SIGNOFF_RESULT_DIR="$RESULT_DIR" \
+    MPTDC_SIGNOFF_GENUS_RUN_ID="$GENUS_RUN_ID" \
+    MPTDC_SIGNOFF_GENUS_RUN_DIR="$GENUS_RUN_DIR" \
+    MPTDC_SIGNOFF_HANDOFF_DIR="$HANDOFF_DIR" \
     MPTDC_DIGITAL_SIGNOFF_SOURCE_ONLY=1 \
       tclsh MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl
   ) 2>&1 | tee "$REPORT_DIR/source_check.rpt" | tee -a "$RUN_LOG"
@@ -269,6 +277,12 @@ if [[ "${MPTDC_DIGITAL_SIGNOFF_APPROVED:-0}" != "1" ]]; then
   exit 5
 fi
 
+if [[ "${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}" != "1" ]]; then
+  echo "ERROR: provisional implementation requires MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1." | tee -a "$RUN_LOG"
+  echo "This does not allow final PASS; it records ROW_INFRA_STATUS=PROVISIONAL." | tee -a "$RUN_LOG"
+  exit 5
+fi
+
 if ! command -v innovus >/dev/null 2>&1; then
   echo "ERROR: innovus not found in PATH; run this on the lab server." | tee -a "$RUN_LOG"
   exit 127
@@ -278,6 +292,12 @@ fi
   cd "$REPO_ROOT"
   MPTDC_REPO_ROOT="$REPO_ROOT" \
   MPTDC_SIGNOFF_RESULT_DIR="$RESULT_DIR" \
+  MPTDC_SIGNOFF_GENUS_RUN_ID="$GENUS_RUN_ID" \
+  MPTDC_SIGNOFF_GENUS_RUN_DIR="$GENUS_RUN_DIR" \
+  MPTDC_SIGNOFF_HANDOFF_DIR="$HANDOFF_DIR" \
+  MPTDC_STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-JIHD}" \
+  MPTDC_STDCELL_SITE="${MPTDC_STDCELL_SITE:-core_jihd}" \
+  O1_USE_REAL_RO_ABSTRACT="${O1_USE_REAL_RO_ABSTRACT:-1}" \
     innovus -nowin -init MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl \
       -log "$LOG_DIR/innovus_mptdc_digital_signoff.log"
 ) 2>&1 | tee -a "$RUN_LOG"

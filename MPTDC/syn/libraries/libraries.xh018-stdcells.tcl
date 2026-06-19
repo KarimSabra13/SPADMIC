@@ -86,11 +86,15 @@ if {[info exists ::env(MPTDC_STDCELL_SITE)] && $::env(MPTDC_STDCELL_SITE) ne ""}
 }
 set tech(STANDARD_CELL_VDD)  "VDD"
 set tech(STANDARD_CELL_GND)  "VSS"
-# Lab Innovus/Voltus reports power-level names as lower-case for this library,
-# while top-level rails remain VDD/VSS. Use the LEF-visible lower-case PG pin
-# names so globalNetConnect does not emit false errors for absent VDD/VSS pins.
-set tech(STANDARD_CELL_VDD_PINS) [list vdd]
-set tech(STANDARD_CELL_GND_PINS) [list gnd]
+if {$mptdc_stdcell_family eq "JIHD"} {
+    # The reviewed XH018/JIHD LEF audit found lower-case JIHD PG pins vddi/gndi.
+    # Top-level rails remain VDD/VSS; only the LEF pgpin names are family-specific.
+    set tech(STANDARD_CELL_VDD_PINS) [list vddi]
+    set tech(STANDARD_CELL_GND_PINS) [list gndi]
+} else {
+    set tech(STANDARD_CELL_VDD_PINS) [list vdd]
+    set tech(STANDARD_CELL_GND_PINS) [list gnd]
+}
 
 #############################################
 #       Liberty Timing Libraries (.lib)
