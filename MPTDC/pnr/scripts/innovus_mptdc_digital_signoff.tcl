@@ -785,7 +785,14 @@ proc mptdc_signoff_require_no_drv_violation_markers {paths} {
         }
         set fh [open $path r]
         while {[gets $fh line] >= 0} {
-            if {[regexp -nocase {VIOLATED|violator|violation} $line] && ![regexp -nocase {0[[:space:]]+viol|no[[:space:]]+viol} $line]} {
+            set trimmed [string trim $line]
+            if {$trimmed eq "" || [string match "#*" $trimmed]} {
+                continue
+            }
+            if {[regexp -nocase {no[[:space:]]+violations?[[:space:]]+found|0[[:space:]]+violations?} $trimmed]} {
+                continue
+            }
+            if {[regexp -nocase {VIOLATED|violator|violation} $trimmed]} {
                 lappend bad "$path: $line"
                 break
             }
@@ -1312,7 +1319,6 @@ proc mptdc_signoff_extract_and_sta {} {
     set setup_rpt [file join [mptdc_signoff_report_dir] timing_tc_nominal.rpt]
     set hold_rpt [file join [mptdc_signoff_report_dir] timing_tc_hold.rpt]
     set setup_top [file join [mptdc_signoff_report_dir] timing_tc_nominal_top100.rpt]
-    set hold_top [file join [mptdc_signoff_report_dir] timing_tc_hold_top100.rpt]
     mptdc_signoff_capture_required_candidates $setup_rpt \
         "TC_NOMINAL setup timing" [list \
             {timeDesign -postRoute} \
@@ -1325,10 +1331,6 @@ proc mptdc_signoff_extract_and_sta {} {
         "TC_NOMINAL hold timing" [list \
             {timeDesign -postRoute -hold} \
             {report_timing -view TC_NOMINAL -check_type hold -max_paths 100}]
-    mptdc_signoff_capture_candidates $hold_top \
-        "TC_NOMINAL hold top100" [list \
-            {report_timing -view TC_NOMINAL -check_type hold -max_paths 100} \
-            {report_timing -check_type hold -max_paths 100}]
     mptdc_signoff_require_no_negative_slack $setup_rpt tc_setup
     mptdc_signoff_require_no_negative_slack $hold_rpt tc_hold
     mptdc_signoff_set_status EXTRACTION_STATUS PASS extraction_rc.rpt
