@@ -393,6 +393,13 @@ proc mptdc_signoff_capture_candidates {path title bodies} {
     return 0
 }
 
+proc mptdc_signoff_capture_required_candidates {path title bodies} {
+    if {[mptdc_signoff_capture_candidates $path $title $bodies]} {
+        return 1
+    }
+    error "MPTDC_REQUIRED_REPORT_COMMAND_FAILED: title=$title path=$path"
+}
+
 proc mptdc_signoff_unique_append {var_name value} {
     upvar 1 $var_name values
     if {$value eq ""} { return }
@@ -708,6 +715,22 @@ proc mptdc_signoff_stop_if_wns_below {path limit_ns stage {top_path ""}} {
     }
 }
 
+proc mptdc_signoff_timing_line_is_failure {line} {
+    if {[regexp -nocase {REPORT_STATUS=FAILED|VIOLATED} $line]} {
+        return 1
+    }
+    if {[regexp -nocase {Violating Paths:[^0-9]*([0-9]+)} $line -> count] && $count > 0} {
+        return 1
+    }
+    foreach label {WNS TNS slack {Slack Time}} {
+        set pattern "${label}\[^-+0-9\]*(\[-+\]?\[0-9\]+(\[.\]\[0-9\]+)?)"
+        if {[regexp -nocase $pattern $line -> value] && $value < -0.000001} {
+            return 1
+        }
+    }
+    return 0
+}
+
 proc mptdc_signoff_require_no_negative_slack {path label} {
     if {![file exists $path]} {
         error "MPTDC_REPORT_MISSING_FOR_GATE: label=$label path=$path"
@@ -715,7 +738,7 @@ proc mptdc_signoff_require_no_negative_slack {path label} {
     set fh [open $path r]
     set bad [list]
     while {[gets $fh line] >= 0} {
-        if {[regexp -nocase {VIOLATED|violating path|slack[^-+0-9]*-[0-9]} $line]} {
+        if {[mptdc_signoff_timing_line_is_failure $line]} {
             lappend bad $line
             if {[llength $bad] >= 5} {
                 break
@@ -726,6 +749,31 @@ proc mptdc_signoff_require_no_negative_slack {path label} {
     if {[llength $bad] > 0} {
         error "MPTDC_TIMING_GATE_FAILED: label=$label report=$path evidence=$bad"
     }
+}
+
+proc mptdc_signoff_configure_post_route_tc_sta {} {
+    set rpt [file join [mptdc_signoff_report_dir] extraction_sta_policy.rpt]
+    set fh [open $rpt w]
+    puts $fh "TC_SETUP_VIEWS=TC_NOMINAL"
+    puts $fh "TC_HOLD_VIEWS=TC_NOMINAL"
+    puts $fh "POST_ROUTE_ANALYSIS_TYPE=onChipVariation"
+    puts $fh "CPPR=both"
+    if {[catch {set_analysis_view -setup [list TC_NOMINAL] -hold [list TC_NOMINAL]} err]} {
+        puts $fh "SET_ANALYSIS_VIEW_STATUS=FAIL"
+        puts $fh "SET_ANALYSIS_VIEW_ERROR=$err"
+        close $fh
+        error "MPTDC_POST_ROUTE_TC_VIEW_SETUP_FAILED: $err"
+    }
+    puts $fh "SET_ANALYSIS_VIEW_STATUS=PASS"
+    if {[catch {setAnalysisMode -analysisType onChipVariation -cppr both} err]} {
+        puts $fh "SET_ANALYSIS_MODE_STATUS=FAIL"
+        puts $fh "SET_ANALYSIS_MODE_ERROR=$err"
+        close $fh
+        error "MPTDC_POST_ROUTE_OCV_MODE_SETUP_FAILED: $err"
+    }
+    puts $fh "SET_ANALYSIS_MODE_STATUS=PASS"
+    close $fh
+    return $rpt
 }
 
 proc mptdc_signoff_require_no_drv_violation_markers {paths} {
@@ -878,7 +926,6 @@ proc mptdc_signoff_post_import_gate {} {
 proc mptdc_signoff_post_import_timing_gate {} {
     set timing [file join [mptdc_signoff_report_dir] timing_tc_post_import.rpt]
     mptdc_signoff_capture_candidates $timing "TC post-import timing" [list \
-        {timeDesign -prePlace -analysisView TC_NOMINAL} \
         {timeDesign -prePlace} \
         {report_timing -view TC_NOMINAL -max_paths 20}]
     set top20 [file join [mptdc_signoff_report_dir] timing_tc_post_import_top20.rpt]
@@ -1148,7 +1195,6 @@ proc mptdc_signoff_place_design {} {
     }
     set timing [file join [mptdc_signoff_report_dir] timing_tc_pre_cts.rpt]
     mptdc_signoff_capture_candidates $timing "TC pre-CTS timing" [list \
-        {timeDesign -preCTS -analysisView TC_NOMINAL} \
         {timeDesign -preCTS} \
         {report_timing -view TC_NOMINAL -max_paths 100}]
     set top100 [file join [mptdc_signoff_report_dir] timing_tc_pre_cts_top100.rpt]
@@ -1218,9 +1264,9 @@ proc mptdc_signoff_run_cts {} {
     }
     catch {optDesign -postCTS}
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] timing_post_cts.rpt] \
-        "TC post-CTS setup" [list {timeDesign -postCTS -analysisView TC_NOMINAL} {timeDesign -postCTS}]
+        "TC post-CTS setup" [list {timeDesign -postCTS} {report_timing -view TC_NOMINAL -max_paths 100}]
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] hold_post_cts.rpt] \
-        "TC post-CTS hold" [list {timeDesign -postCTS -hold -analysisView TC_NOMINAL} {timeDesign -postCTS -hold}]
+        "TC post-CTS hold" [list {timeDesign -postCTS -hold} {report_timing -view TC_NOMINAL -check_type hold -max_paths 100}]
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] clock_tree_summary.rpt] \
         "clock tree summary" [list {report_ccopt_clock_trees -summary} {report_clock_tree -summary}]
     set sfh [open $rpt a]
@@ -1258,22 +1304,34 @@ proc mptdc_signoff_route_design {} {
 }
 
 proc mptdc_signoff_extract_and_sta {} {
-    catch {extractRC}
-    mptdc_signoff_set_status EXTRACTION_STATUS PASS extractRC
+    set extract_rpt [file join [mptdc_signoff_report_dir] extraction_rc.rpt]
+    mptdc_signoff_capture_required_candidates $extract_rpt \
+        "post-route TC extractRC" [list {extractRC}]
+    set sta_policy [mptdc_signoff_configure_post_route_tc_sta]
+    mptdc_signoff_set_status EXTRACTION_STATUS PROVISIONAL $sta_policy
     set setup_rpt [file join [mptdc_signoff_report_dir] timing_tc_nominal.rpt]
     set hold_rpt [file join [mptdc_signoff_report_dir] timing_tc_hold.rpt]
-    mptdc_signoff_capture_candidates $setup_rpt \
+    set setup_top [file join [mptdc_signoff_report_dir] timing_tc_nominal_top100.rpt]
+    set hold_top [file join [mptdc_signoff_report_dir] timing_tc_hold_top100.rpt]
+    mptdc_signoff_capture_required_candidates $setup_rpt \
         "TC_NOMINAL setup timing" [list \
-            {timeDesign -postRoute -analysisView TC_NOMINAL} \
+            {timeDesign -postRoute} \
+            {report_timing -view TC_NOMINAL -max_paths 100}]
+    mptdc_signoff_capture_candidates $setup_top \
+        "TC_NOMINAL setup top100" [list \
             {report_timing -view TC_NOMINAL -max_paths 100} \
-            {timeDesign -postRoute}]
-    mptdc_signoff_capture_candidates $hold_rpt \
+            {report_timing -max_paths 100}]
+    mptdc_signoff_capture_required_candidates $hold_rpt \
         "TC_NOMINAL hold timing" [list \
-            {timeDesign -postRoute -hold -analysisView TC_NOMINAL} \
+            {timeDesign -postRoute -hold} \
+            {report_timing -view TC_NOMINAL -check_type hold -max_paths 100}]
+    mptdc_signoff_capture_candidates $hold_top \
+        "TC_NOMINAL hold top100" [list \
             {report_timing -view TC_NOMINAL -check_type hold -max_paths 100} \
-            {timeDesign -postRoute -hold}]
+            {report_timing -check_type hold -max_paths 100}]
     mptdc_signoff_require_no_negative_slack $setup_rpt tc_setup
     mptdc_signoff_require_no_negative_slack $hold_rpt tc_hold
+    mptdc_signoff_set_status EXTRACTION_STATUS PASS extraction_rc.rpt
     mptdc_signoff_set_status SETUP_STATUS_TC PASS timing_tc_nominal.rpt
     mptdc_signoff_set_status TC_HOLD_STATUS PASS timing_tc_hold.rpt
     mptdc_signoff_set_status SETUP_STATUS_WC DEFERRED scope_tc_only
