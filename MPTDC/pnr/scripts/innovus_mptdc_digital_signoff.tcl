@@ -500,13 +500,140 @@ proc mptdc_signoff_parse_wns_ns {path} {
     return $value
 }
 
-proc mptdc_signoff_stop_if_wns_below {path limit_ns stage} {
+proc mptdc_signoff_timing_class_regexes {} {
+    return [list \
+        CLK_SYS {clk_sys} \
+        OSC_SLOW {clk_osc_slow|u_osc_slow|slow_phase} \
+        OSC_FAST {clk_osc_fast|u_osc_fast|fast_phase} \
+        PHASE_BUFFER {phase_buf|gen_phase_buf|BUJIHDX4|BUJIHDX12|iso_tap} \
+        PD_MATRIX {gen_pd_row|gen_pd_col|u_pd|mptdc_pd} \
+        FAST_TAG {fast_tag|raw_lfsr_tag|nfast} \
+        RO_CONTROL {ro_code|RO_tune4|u_ro_tune4|rstb} \
+        RESET_OR_CLEAR {rst|reset|clear_window} \
+        DATA_PATH {packet|axis|fifo|hit|timestamp}]
+}
+
+proc mptdc_signoff_write_timing_stage_classification {stage summary_path top_path wns limit_ns} {
+    set rpt [file join [mptdc_signoff_report_dir] "timing_tc_${stage}_classification.rpt"]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC TC Timing Stage Classification"
+    puts $fh "STAGE=$stage"
+    puts $fh "SUMMARY_REPORT=$summary_path"
+    puts $fh "TOP_PATH_REPORT=$top_path"
+    puts $fh "WNS_NS=$wns"
+    puts $fh "LIMIT_NS=$limit_ns"
+    puts $fh "GATE_STATUS=[expr {$wns ne "" && $wns < $limit_ns ? "FAIL" : "PASS_OR_NOT_EVALUATED"}]"
+    puts $fh "ACTION_ON_FAIL=STOP_BEFORE_NEXT_PHYSICAL_STAGE"
+
+    array set counts {}
+    array set examples {}
+    foreach {class regex} [mptdc_signoff_timing_class_regexes] {
+        set counts($class) 0
+        set examples($class) [list]
+    }
+
+    set key_lines [list]
+    set parsed_paths [list]
+    set start ""
+    set endpoint ""
+    set group ""
+    set slack ""
+
+    if {$top_path ne "" && [file exists $top_path]} {
+        set tfh [open $top_path r]
+        while {[gets $tfh line] >= 0} {
+            foreach {class regex} [mptdc_signoff_timing_class_regexes] {
+                if {[regexp -nocase $regex $line]} {
+                    incr counts($class)
+                    if {[llength $examples($class)] < 3} {
+                        lappend examples($class) [string trim $line]
+                    }
+                }
+            }
+            if {[regexp -nocase {^[[:space:]]*Startpoint:[[:space:]]*(.*)} $line -> value]} {
+                if {$start ne "" || $endpoint ne "" || $slack ne ""} {
+                    lappend parsed_paths [dict create start $start endpoint $endpoint group $group slack $slack]
+                }
+                set start [string trim $value]
+                set endpoint ""
+                set group ""
+                set slack ""
+            } elseif {[regexp -nocase {^[[:space:]]*Endpoint:[[:space:]]*(.*)} $line -> value]} {
+                set endpoint [string trim $value]
+            } elseif {[regexp -nocase {^[[:space:]]*Path[[:space:]_]*Group:[[:space:]]*(.*)} $line -> value]} {
+                set group [string trim $value]
+            } elseif {[regexp -nocase {slack[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} $line -> value]} {
+                set slack $value
+            }
+            if {[regexp -nocase {Startpoint:|Endpoint:|Path[[:space:]_]*Group:|slack|VIOLATED} $line]} {
+                if {[llength $key_lines] < 120} {
+                    lappend key_lines [string trim $line]
+                }
+            }
+        }
+        close $tfh
+        if {$start ne "" || $endpoint ne "" || $slack ne ""} {
+            lappend parsed_paths [dict create start $start endpoint $endpoint group $group slack $slack]
+        }
+    } else {
+        puts $fh "TOP_PATH_REPORT_STATUS=MISSING"
+    }
+
+    puts $fh ""
+    puts $fh "CLASS_LINE_COUNTS:"
+    foreach {class regex} [mptdc_signoff_timing_class_regexes] {
+        puts $fh "$class=$counts($class)"
+        set idx 0
+        foreach example $examples($class) {
+            incr idx
+            puts $fh "${class}_EXAMPLE_${idx}=$example"
+        }
+    }
+
+    puts $fh ""
+    puts $fh "PARSED_TOP_PATHS:"
+    if {[llength $parsed_paths] == 0} {
+        puts $fh "PARSE_STATUS=NO_STRUCTURED_PATHS_FOUND"
+    } else {
+        set idx 0
+        foreach path $parsed_paths {
+            incr idx
+            if {$idx > 20} { break }
+            set text "[dict get $path start] [dict get $path endpoint] [dict get $path group]"
+            set classes [list]
+            foreach {class regex} [mptdc_signoff_timing_class_regexes] {
+                if {[regexp -nocase $regex $text]} {
+                    lappend classes $class
+                }
+            }
+            if {[llength $classes] == 0} {
+                lappend classes UNKNOWN
+            }
+            puts $fh "PATH_${idx}_CLASS=[join $classes ,]"
+            puts $fh "PATH_${idx}_START=[dict get $path start]"
+            puts $fh "PATH_${idx}_END=[dict get $path endpoint]"
+            puts $fh "PATH_${idx}_GROUP=[dict get $path group]"
+            puts $fh "PATH_${idx}_SLACK_NS=[dict get $path slack]"
+        }
+    }
+
+    puts $fh ""
+    puts $fh "KEY_TIMING_LINES:"
+    foreach line $key_lines {
+        puts $fh $line
+    }
+    close $fh
+    return $rpt
+}
+
+proc mptdc_signoff_stop_if_wns_below {path limit_ns stage {top_path ""}} {
     set wns [mptdc_signoff_parse_wns_ns $path]
     if {$wns eq ""} {
         return
     }
     if {$wns < $limit_ns} {
-        error "MPTDC_TC_WNS_BELOW_STAGE_LIMIT: stage=$stage wns_ns=$wns limit_ns=$limit_ns report=$path"
+        set classification [mptdc_signoff_write_timing_stage_classification $stage $path $top_path $wns $limit_ns]
+        error "MPTDC_TC_WNS_BELOW_STAGE_LIMIT: stage=$stage wns_ns=$wns limit_ns=$limit_ns report=$path classification=$classification"
     }
 }
 
@@ -679,11 +806,12 @@ proc mptdc_signoff_post_import_gate {} {
         {timeDesign -prePlace -analysisView TC_NOMINAL} \
         {timeDesign -prePlace} \
         {report_timing -view TC_NOMINAL -max_paths 20}]
-    mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] timing_tc_post_import_top20.rpt] \
+    set top20 [file join [mptdc_signoff_report_dir] timing_tc_post_import_top20.rpt]
+    mptdc_signoff_capture_candidates $top20 \
         "TC post-import top20" [list {report_timing -view TC_NOMINAL -max_paths 20} {report_timing -max_paths 20}]
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] check_timing_tc_post_import.rpt] \
         "TC post-import check timing" [list {check_timing -verbose} {check_timing}]
-    mptdc_signoff_stop_if_wns_below $timing -0.5 post_import
+    mptdc_signoff_stop_if_wns_below $timing -0.5 post_import $top20
     mptdc_signoff_set_status RO_IMPORT_STATUS PASS $rpt
     mptdc_signoff_set_status SETUP_STATUS_TC PROVISIONAL timing_tc_post_import.rpt
 }
@@ -918,9 +1046,10 @@ proc mptdc_signoff_place_design {} {
         {timeDesign -preCTS -analysisView TC_NOMINAL} \
         {timeDesign -preCTS} \
         {report_timing -view TC_NOMINAL -max_paths 100}]
-    mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] timing_tc_pre_cts_top100.rpt] \
+    set top100 [file join [mptdc_signoff_report_dir] timing_tc_pre_cts_top100.rpt]
+    mptdc_signoff_capture_candidates $top100 \
         "TC pre-CTS top100" [list {report_timing -view TC_NOMINAL -max_paths 100} {report_timing -max_paths 100}]
-    mptdc_signoff_stop_if_wns_below $timing -1.0 pre_cts
+    mptdc_signoff_stop_if_wns_below $timing -1.0 pre_cts $top100
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] check_place_post_place.rpt] \
         "post-place check" [list {checkPlace} {checkDesign -all}]
     catch {defOut [file join [mptdc_signoff_def_dir] 02_place.def]}
