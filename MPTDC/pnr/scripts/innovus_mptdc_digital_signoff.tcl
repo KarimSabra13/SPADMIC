@@ -801,6 +801,10 @@ proc mptdc_signoff_post_import_gate {} {
     }
 
     mptdc_signoff_audit_effective_sdc
+    mptdc_signoff_set_status RO_IMPORT_STATUS PASS $rpt
+}
+
+proc mptdc_signoff_post_import_timing_gate {} {
     set timing [file join [mptdc_signoff_report_dir] timing_tc_post_import.rpt]
     mptdc_signoff_capture_candidates $timing "TC post-import timing" [list \
         {timeDesign -prePlace -analysisView TC_NOMINAL} \
@@ -812,7 +816,6 @@ proc mptdc_signoff_post_import_gate {} {
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] check_timing_tc_post_import.rpt] \
         "TC post-import check timing" [list {check_timing -verbose} {check_timing}]
     mptdc_signoff_stop_if_wns_below $timing -0.5 post_import $top20
-    mptdc_signoff_set_status RO_IMPORT_STATUS PASS $rpt
     mptdc_signoff_set_status SETUP_STATUS_TC PROVISIONAL timing_tc_post_import.rpt
 }
 
@@ -1255,6 +1258,9 @@ proc mptdc_signoff_main {} {
     }
     mptdc_signoff_stage post_import_gate RO_IMPORT_STATUS {
         mptdc_signoff_post_import_gate
+    }
+    mptdc_signoff_stage post_import_tc_timing SETUP_STATUS_TC {
+        mptdc_signoff_post_import_timing_gate
     }
     mptdc_signoff_stage pg_connectivity PG_CONNECTIVITY_STATUS {
         mptdc_signoff_apply_pg_connectivity

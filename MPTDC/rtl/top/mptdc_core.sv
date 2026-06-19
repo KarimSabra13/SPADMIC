@@ -81,7 +81,6 @@ module mptdc_core
   wire [NE-1:0] slow_phase_raw, fast_phase_raw;
   wire [NE-1:0] slow_phase, fast_phase;
   wire           slow_phase0_guard, slow_phase7d_probe;
-  wire           osc_fast_ph0 = fast_phase[0];
   logic [7:0]    ro_slow_code_q;
   logic [7:0]    ro_fast_code_q;
   logic          ro_code_loaded_q;
@@ -185,7 +184,7 @@ module mptdc_core
   //  sensitivity. Sys-domain leaves use staggered depths so synthesis cannot
   //  merge equivalent reset synchronizers back into one high-fanout control net.
   // =========================================================================
-  (* keep = "true", dont_touch = "true" *) wire rst_fast_n;
+  (* keep = "true", dont_touch = "true" *) wire [NE-1:0] rst_fast_tap_n;
   (* keep = "true", dont_touch = "true" *) wire rst_sys_status_n;
   (* keep = "true", dont_touch = "true" *) wire rst_sys_drain_n;
   (* keep = "true", dont_touch = "true" *) wire rst_sys_fifo_n;
@@ -225,13 +224,6 @@ module mptdc_core
     .clk         (clk_sys),
     .async_rst_n (rst_sys_n),
     .rst_n_o     (rst_sys_wdt_n)
-  );
-
-  (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
-  mptdc_reset_sync #(.STAGES(2)) u_rst_fast_sync (
-    .clk         (osc_fast_ph0),
-    .async_rst_n (rst_sys_n),
-    .rst_n_o     (rst_fast_n)
   );
 
   // =========================================================================
@@ -480,6 +472,18 @@ module mptdc_core
   assign slow_phase0_guard  = slow_phase[0];
   assign slow_phase7d_probe = slow_phase[7];
 
+  // Release each fast-tag reset in the same phase-tap domain that clocks the
+  // tag flops. A phase-0-only synchronizer leaves recovery timed against the
+  // other fast taps as an asynchronous crossing.
+  for (genvar nf_rst = 0; nf_rst < NE; nf_rst++) begin : gen_rst_fast_tap
+    (* keep_hierarchy = "yes", dont_touch = "true", preserve *)
+    mptdc_reset_sync #(.STAGES(2)) u_rst_fast_sync (
+      .clk         (fast_phase[nf_rst]),
+      .async_rst_n (rst_sys_n),
+      .rst_n_o     (rst_fast_tap_n[nf_rst])
+    );
+  end
+
   // ── Local fast epoch tags (one shallow tag generator per fast column) ──────
   // Each tag is clocked by the same fast tap that samples the corresponding PD
   // column.  This avoids a shared phase-0 binary counter crossing into every
@@ -496,7 +500,7 @@ module mptdc_core
       .TAG_ENCODING_SEL (FAST_TAG_ENCODING_SEL)
     ) u_fast_tag (
       .clk_fast     (fast_phase[nf_tag]),
-      .rst_n        (rst_fast_n),
+      .rst_n        (rst_fast_tap_n[nf_tag]),
       .clear_window (meas_pd_clear),
       .enable_i     (fe_osc_fast_en),
       .tag_o        (fast_tag_col[nf_tag])
