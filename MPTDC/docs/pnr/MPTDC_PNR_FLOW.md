@@ -4,28 +4,32 @@ Author: Karim Sabra
 
 This document defines the physical-implementation path for the active
 `mptdc_axis_core` digital block. It separates the existing typical Innovus
-helpers from the required digital signoff flow. A feasibility result must not be
-renamed into signoff.
+helpers from the digital PNR closure flow. A feasibility result must not be
+renamed into signoff, and a TC-only result must not be renamed into MMMC or
+tapeout readiness.
 
 ## Current Status
 
-The active digital-PNR preparation state is:
+The active TC-only digital-PNR state is:
 
-- Reviewed PNR source HEAD: `eb7a2c0fc66ff9daffa0751bc683c3d68df8d649`.
-- Genus handoff run: `20260618_axis_core_typical_closed_bujihd_846a580d`.
-- Setup WNS: `+0.3 ps`.
+- Reviewed PNR source HEAD: `e3026f3528669a7c9ab07d344645483ee502d9e1`.
+- Genus handoff run: `20260619_axis_core_typical_closed_fast_rst_77131c8d`.
+- Last routed/timed TC-only Innovus run: `20260619_mptdc_tc_pnr_closure_e3026f35`.
+- Post-route TC setup WNS: `+0.057 ns`.
+- Post-route TC hold WNS: `+0.091 ns`.
 - Setup TNS: `-0.0 ps`.
 - Setup violations: `0`.
 - Max transition/capacitance/fanout violations: `0 / 0 / 0`.
 - PD Vernier exception: 64 paths from 8 sources, no overmatch, no undermatch.
-- Local ON22 repair: 355 `ON22JIHDX0` instances changed to `ON22JIHDX1`.
+- Local ON22 repair: enabled in the Genus handoff and checked by the pre-PNR gate.
 - Pre-PnR gate: PASS, with low-WNS warning.
 - Phase-buffer topology: `BUJIHDX4 -> BUJIHDX12`.
 - Row-infrastructure status: PROVISIONAL, because no dedicated CORE tap/endcap
   master was found and DRC/LVS qualification is still required.
 
-This is enough to launch implementation under the reviewed provisional row
-policy. It is not enough to claim final digital PNR PASS.
+This is enough to prove real TC post-route timing closure and to launch the next
+physical cleanup pass under the reviewed provisional row policy. It is not enough
+to claim MMMC signoff, final digital PNR PASS, or tapeout readiness.
 
 ## Owner-Facing Commands
 
@@ -72,9 +76,11 @@ bash MPTDC/pnr/scripts/qualify_xh018_row_infrastructure.sh \
 ```
 
 The digital signoff wrapper records tool versions and rejects a dirty tracked
-source tree. `full_signoff` is an explicit Innovus implementation launch, but
-the resulting digital PNR status remains PROVISIONAL until row and final block
-DRC/LVS evidence are clean.
+source tree. `full_signoff` is an explicit Innovus implementation launch. In
+`MPTDC_CLOSURE_SCOPE=TC_ONLY`, it may produce `MPTDC_TC_PNR_CLOSURE=PASS` when
+the TC route/timing gates are clean, but `DIGITAL_PNR_SIGNOFF` remains
+PROVISIONAL and `READY_FOR_TAPEOUT` remains NO until row and final block DRC/LVS
+evidence are clean and the scope is no longer a TC-only exception.
 
 ## Physical Intent
 
@@ -89,6 +95,10 @@ The automatic dimensioning logic must account for standard-cell area, two
 `RO_tune4` macros, halos, phase-buffer rows, the full PD island, east-side
 backend, route channels, power structures, IO pin capacity, target utilization,
 and guard bands.
+
+The flow must measure the Innovus core box after `floorPlan`; passing the
+requested ratio to Innovus is not sufficient. `FLOORPLAN_ASPECT_STATUS=PASS`
+requires the measured width/height to be in the allowed range.
 
 Initial density policy:
 
@@ -195,6 +205,22 @@ Target phase-family matching after extraction:
 
 Also report absolute worst mismatch in ps, fF, micrometres, and via count.
 
+Before global placement, CTS, or route, the flow must also run
+`ro_phase_overlap_audit.rpt`. `RO_PHASE_PLACEMENT_STATUS=PASS` requires:
+
+- exactly two `RO_tune4` macros;
+- valid slow and fast RO macro bboxes;
+- 8 slow isolation buffers and 8 slow final drivers;
+- 8 fast isolation buffers and 8 fast final drivers;
+- zero RO/phase-buffer bbox overlap;
+- minimum RO-to-phase-buffer clearance at or above
+  `MPTDC_RO_PHASE_MIN_CLEARANCE_UM`, default `10.0`;
+- no macro/cell overlap text in the companion pre-placement `checkPlace` report.
+
+The slow phase-buffer rows belong below the slow RO macro, outside the slow RO
+bbox plus halo, facing the PD matrix. The fast phase-buffer rows belong above the
+fast RO macro, outside the fast RO bbox plus halo, facing the PD matrix.
+
 ## RO Code Placement
 
 TOP-owned CSR values feed `ro_slow_code_i[7:0]` and `ro_fast_code_i[7:0]` into
@@ -238,6 +264,16 @@ Power pins are not ordinary signal pins. Create wide VDD/VSS access shapes on
 east/south boundaries aligned with the power ring and parent integration.
 
 ## Power Plan
+
+`PG_CONNECTIVITY_STATUS=PASS` requires physical evidence, not only successful
+`globalNetConnect` commands. The physical PG gate must report ring/strap/sroute
+creation, RO PG pin connection, standard-cell rail connection, and zero
+special-net connectivity errors from parsed Innovus reports. If those reports
+are missing or unparsed, PG remains FAIL or PROVISIONAL.
+
+Fillers are inserted only after placement, CTS, route, and route ECO work. The
+row-infrastructure stage records the no-dedicated-tap/endcap policy; it must not
+pretend early filler insertion passed before Innovus placement is legal.
 
 The digital implementation uses VDD = 1.8 V and VSS = ground. RO `VDD` and
 `vdd!` must connect to VDD; RO VSS must connect to VSS. No RO pin may connect to

@@ -29,6 +29,39 @@ proc mptdc_pnr_allowed_aspect_ratio_range {} {
     return [list min 1.20 target [mptdc_pnr_target_aspect_ratio] max 1.47]
 }
 
+proc mptdc_pnr_box_valid {box} {
+    if {[llength $box] < 4} { return 0 }
+    foreach value [lrange $box 0 3] {
+        if {![string is double -strict $value]} { return 0 }
+    }
+    return [expr {([lindex $box 2] > [lindex $box 0]) && ([lindex $box 3] > [lindex $box 1])}]
+}
+
+proc mptdc_pnr_core_box {} {
+    set core_box [list]
+    foreach cmd {
+        {dbGet top.fPlan.coreBox}
+        {dbGet top.fPlan.box}
+    } {
+        if {![catch {set core_box [eval $cmd]}] && $core_box ne ""} {
+            break
+        }
+    }
+    while {[llength $core_box] == 1} {
+        set core_box [lindex $core_box 0]
+    }
+    if {[llength $core_box] >= 4} {
+        return [lrange $core_box 0 3]
+    }
+    return [list]
+}
+
+proc mptdc_pnr_snap {value} {
+    set snap [mptdc_pnr_env MPTDC_PNR_FLOORPLAN_SNAP_UM 0.56]
+    if {$snap <= 0.0} { return $value }
+    return [expr {round($value / $snap) * $snap}]
+}
+
 proc mptdc_pnr_floorplan_labels {} {
     return [list TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF]
 }
@@ -61,12 +94,62 @@ proc mptdc_pnr_floorplan_timing_protection_rules {} {
 }
 
 proc mptdc_pnr_floorplan_regions {} {
+    set core_box [mptdc_pnr_core_box]
     set pd_w [mptdc_pnr_env MPTDC_PNR_PD_REGION_WIDTH_UM 300.0]
     set pd_h [mptdc_pnr_env MPTDC_PNR_PD_REGION_HEIGHT_UM 300.0]
-    set ro_w [mptdc_pnr_env MPTDC_PNR_OSC_WIDTH_UM 300.0]
-    set ro_h [mptdc_pnr_env MPTDC_PNR_OSC_HEIGHT_UM 100.0]
+    set ro_w [mptdc_pnr_env MPTDC_PNR_OSC_WIDTH_UM 176.675]
+    set ro_h [mptdc_pnr_env MPTDC_PNR_OSC_HEIGHT_UM 67.17]
     set gap  [mptdc_pnr_env MPTDC_PNR_PD_OSC_GAP_UM 20.0]
     set buf_h [mptdc_pnr_env MPTDC_PNR_PHASE_BUFFER_ROW_HEIGHT_UM 20.0]
+
+    if {[mptdc_pnr_box_valid $core_box]} {
+        set llx [lindex $core_box 0]
+        set lly [lindex $core_box 1]
+        set urx [lindex $core_box 2]
+        set ury [lindex $core_box 3]
+        set core_w [expr {$urx - $llx}]
+        set core_h [expr {$ury - $lly}]
+        set edge [mptdc_pnr_env MPTDC_PNR_REGION_EDGE_MARGIN_UM 30.0]
+        set backend_gap [mptdc_pnr_env MPTDC_PNR_BACKEND_GAP_UM 40.0]
+        set backend_w [mptdc_pnr_env MPTDC_PNR_BACKEND_WIDTH_UM 300.0]
+        set left_x [mptdc_pnr_snap [expr {$llx + $edge}]]
+
+        set max_left_w [expr {$core_w - (2.0 * $edge) - $backend_gap - $backend_w}]
+        if {$max_left_w > 120.0 && $pd_w > $max_left_w} {
+            set pd_w $max_left_w
+        }
+        if {$pd_w < 120.0} { set pd_w 120.0 }
+
+        set stack_h [expr {(2.0 * $ro_h) + (2.0 * $buf_h) + $pd_h + (4.0 * $gap)}]
+        set max_stack_h [expr {$core_h - (2.0 * $edge)}]
+        if {$stack_h > $max_stack_h} {
+            set pd_h [expr {$max_stack_h - (2.0 * $ro_h) - (2.0 * $buf_h) - (4.0 * $gap)}]
+            if {$pd_h < 120.0} { set pd_h 120.0 }
+            set stack_h [expr {(2.0 * $ro_h) + (2.0 * $buf_h) + $pd_h + (4.0 * $gap)}]
+        }
+
+        set stack_lly [mptdc_pnr_snap [expr {$lly + (($core_h - $stack_h) / 2.0)}]]
+        set fast_ro_y $stack_lly
+        set fast_buf_y [mptdc_pnr_snap [expr {$fast_ro_y + $ro_h + $gap}]]
+        set pd_y [mptdc_pnr_snap [expr {$fast_buf_y + $buf_h + $gap}]]
+        set slow_buf_y [mptdc_pnr_snap [expr {$pd_y + $pd_h + $gap}]]
+        set slow_ro_y [mptdc_pnr_snap [expr {$slow_buf_y + $buf_h + $gap}]]
+        set left_w [expr {max($pd_w, $ro_w)}]
+        set backend_x [mptdc_pnr_snap [expr {$left_x + $left_w + $backend_gap}]]
+        set backend_urx [expr {$urx - $edge}]
+        if {$backend_x + 80.0 > $backend_urx} {
+            set backend_x [mptdc_pnr_snap [expr {$left_x + $left_w + 20.0}]]
+        }
+        return [dict create \
+            fast_ro [list $left_x $fast_ro_y [expr {$left_x + $ro_w}] [expr {$fast_ro_y + $ro_h}]] \
+            fast_phase_buffers [list $left_x $fast_buf_y [expr {$left_x + $left_w}] [expr {$fast_buf_y + $buf_h}]] \
+            pd_island [list $left_x $pd_y [expr {$left_x + $pd_w}] [expr {$pd_y + $pd_h}]] \
+            slow_phase_buffers [list $left_x $slow_buf_y [expr {$left_x + $left_w}] [expr {$slow_buf_y + $buf_h}]] \
+            slow_ro [list $left_x $slow_ro_y [expr {$left_x + $ro_w}] [expr {$slow_ro_y + $ro_h}]] \
+            backend_east [list $backend_x [expr {$lly + $edge}] $backend_urx [expr {$ury - $edge}]] \
+        ]
+    }
+
     set x0 0.0
     set y0 0.0
     set fast_ro_y $y0
@@ -83,6 +166,28 @@ proc mptdc_pnr_floorplan_regions {} {
         slow_ro [list $x0 $slow_ro_y [expr {$x0 + $ro_w}] [expr {$slow_ro_y + $ro_h}]] \
         backend_east [list $east_x $fast_ro_y [expr {$east_x + [mptdc_pnr_env MPTDC_PNR_BACKEND_WIDTH_UM 220.0]}] [expr {$slow_ro_y + $ro_h}]] \
     ]
+}
+
+proc mptdc_pnr_sandwich_boxes {} {
+    set regions [mptdc_pnr_floorplan_regions]
+    set boxes [dict create]
+    set core_box [mptdc_pnr_core_box]
+    if {[mptdc_pnr_box_valid $core_box]} {
+        dict set boxes core $core_box
+    }
+    foreach {legacy_key region_key} {
+        fast fast_ro
+        fast_buf fast_phase_buffers
+        pd pd_island
+        slow_buf slow_phase_buffers
+        slow slow_ro
+        backend backend_east
+    } {
+        if {[dict exists $regions $region_key]} {
+            dict set boxes $legacy_key [dict get $regions $region_key]
+        }
+    }
+    return $boxes
 }
 
 proc mptdc_pnr_auto_dimensions {} {

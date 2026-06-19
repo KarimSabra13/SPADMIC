@@ -4,9 +4,11 @@ Author: Karim Sabra
 
 This directory contains Innovus collateral for the active `mptdc_axis_core`
 product boundary. The historical `final_typical` wrappers are typical-only
-implementation helpers. The digital signoff flow is separate and must produce
-MMMC, extraction, DRC/LVS, CTS, power, routing, and phase-symmetry evidence
-before any signoff claim.
+implementation helpers. The digital PNR closure flow is separate. In
+`MPTDC_CLOSURE_SCOPE=TC_ONLY`, it may prove TC route/timing closure, but it must
+not be described as MMMC signoff or tapeout readiness until extraction, DRC/LVS,
+CTS, physical PG, routing, filler, PD physical regularity, backend crossing, and
+phase-symmetry evidence are clean for the intended scope.
 
 ## Active Entry Points
 
@@ -26,8 +28,8 @@ bash MPTDC/pnr/scripts/qualify_xh018_row_infrastructure.sh <run_id>
 
 Use the feasibility wrapper first after a clean canonical Genus rerun. The
 `final_typical` wrapper is still typical-only and requires explicit approval
-before launching a real implementation mode. The digital signoff wrapper is the
-owner-facing digital PNR entrypoint. Its source gate allows the reviewed
+before launching a real implementation mode. The digital PNR wrapper is the
+owner-facing implementation entrypoint. Its source gate allows the reviewed
 no-dedicated-CORE-tap/endcap policy only when
 `MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1` is set; this permits implementation
 with `ROW_INFRA_STATUS=PROVISIONAL`, not final PASS. Final PASS remains blocked
@@ -43,14 +45,16 @@ until row-infrastructure or final-block DRC/LVS proves the policy.
   2026-06-18 JIHD discovery proved both masters in JIHD LEF/Liberty; any BUHD
   handoff is legacy input only.
 - Floorplan target: horizontally elongated `4:3` block boundary, accepted range
-  `1.20 <= width/height <= 1.47`.
+  `1.20 <= width/height <= 1.47`; the flow must measure the final Innovus core
+  box before declaring aspect PASS.
 - Measurement stack: slow RO north, slow phase buffers, central `8 x 8` PD
   matrix, fast phase buffers, fast RO south, backend logic east.
 - Clock policy: `clk_sys` is the ordinary CTS target; RO and buffered phase
   clocks are measurement clocks and must not be flattened into normal CTS.
 - Required audits: RO interface, phase-buffer clock model, pin geometry, power
-  geometry, CTS state, timing, congestion, antenna, and physical verification
-  are separate gates.
+  geometry, RO/phase-buffer overlap and halo clearance, filler insertion, route
+  opens/shorts, CTS measured skew/transition, timing, congestion, antenna, and
+  physical verification are separate gates.
 - `config/xh018_cells.tcl` is a reviewed per-class policy source. JIHD FEED
   fillers, FCPE/FEED spacers, decaps, antenna cells, ties, CTS cells,
   `BUJIHDX4/BUJIHDX12`, `core_jihd`, and `vddi/gndi` PG pins are known. CORE

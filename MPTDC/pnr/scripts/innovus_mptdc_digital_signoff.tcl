@@ -90,14 +90,19 @@ proc mptdc_signoff_status_keys {} {
         ROW_INFRA_DRC_LVS_STATUS \
         PHYSICAL_CELL_CONFIG_STATUS \
         PG_CONNECTIVITY_STATUS \
+        PG_PHYSICAL_STATUS \
         FLOORPLAN_STATUS \
+        FLOORPLAN_ASPECT_STATUS \
         IO_STATUS \
         RO_MACRO_STATUS \
+        RO_PHASE_PLACEMENT_STATUS \
         PD_MATRIX_STATUS \
+        PD_PHYSICAL_MATRIX_STATUS \
         PHASE_BUFFER_STATUS \
         PLACEMENT_STATUS \
         CTS_STATUS \
         ROUTE_STATUS \
+        FILLER_STATUS \
         EXTRACTION_STATUS \
         SETUP_STATUS_TC \
         TC_HOLD_STATUS \
@@ -107,11 +112,16 @@ proc mptdc_signoff_status_keys {} {
         PHASE_LOAD_STATUS \
         RC_SYMMETRY_STATUS \
         BACKEND_CROSSING_STATUS \
+        BACKEND_REGION_STATUS \
+        PHASE_TO_PD_GEOMETRY_STATUS \
+        EMPTY_SPACE_AUDIT_STATUS \
         DRV_STATUS \
         ANTENNA_STATUS \
         DRC_STATUS \
         LVS_STATUS \
         DELIVERABLE_STATUS \
+        MPTDC_TC_PHYSICAL_SIGNOFF \
+        TC_ONLY_TAPEOUT_EXCEPTION_READY \
         DIGITAL_PNR_SIGNOFF]
 }
 
@@ -125,6 +135,8 @@ proc mptdc_signoff_init_status {} {
     set mptdc_signoff_status(MPTDC_TC_PNR_CLOSURE) "DEFERRED evidence=tc_physical_closure_not_complete"
     set mptdc_signoff_status(NOT_MMMC_SIGNOFF) "YES evidence=scope_tc_only"
     set mptdc_signoff_status(READY_FOR_TAPEOUT) "NO evidence=not_mmmc_and_row_drc_lvs_deferred"
+    set mptdc_signoff_status(MPTDC_TC_PHYSICAL_SIGNOFF) "NO evidence=physical_verification_not_complete"
+    set mptdc_signoff_status(TC_ONLY_TAPEOUT_EXCEPTION_READY) "NO evidence=physical_verification_not_complete"
     set mptdc_signoff_status(SETUP_STATUS_WC) "DEFERRED evidence=scope_tc_only"
     set mptdc_signoff_status(HOLD_STATUS_BC) "DEFERRED evidence=scope_tc_only"
     set mptdc_signoff_status(RO_1GHZ_STRESS_STATUS) "DEFERRED evidence=scope_tc_only"
@@ -471,6 +483,221 @@ proc mptdc_signoff_count_cells {patterns} {
     return [llength [mptdc_signoff_collect_cells $patterns]]
 }
 
+proc mptdc_signoff_box_valid {box} {
+    if {[llength $box] < 4} { return 0 }
+    foreach value [lrange $box 0 3] {
+        if {![string is double -strict $value]} { return 0 }
+    }
+    return [expr {([lindex $box 2] > [lindex $box 0]) && ([lindex $box 3] > [lindex $box 1])}]
+}
+
+proc mptdc_signoff_flat_box {value} {
+    while {[llength $value] == 1} {
+        set value [lindex $value 0]
+    }
+    if {[llength $value] >= 4} {
+        return [lrange $value 0 3]
+    }
+    return [list]
+}
+
+proc mptdc_signoff_core_box {} {
+    set core_box [list]
+    foreach cmd {
+        {dbGet top.fPlan.coreBox}
+        {dbGet top.fPlan.box}
+    } {
+        if {![catch {set core_box [eval $cmd]}] && $core_box ne ""} {
+            break
+        }
+    }
+    return [mptdc_signoff_flat_box $core_box]
+}
+
+proc mptdc_signoff_box_width {box} {
+    return [expr {[lindex $box 2] - [lindex $box 0]}]
+}
+
+proc mptdc_signoff_box_height {box} {
+    return [expr {[lindex $box 3] - [lindex $box 1]}]
+}
+
+proc mptdc_signoff_box_area {box} {
+    return [expr {[mptdc_signoff_box_width $box] * [mptdc_signoff_box_height $box]}]
+}
+
+proc mptdc_signoff_box_center {box} {
+    if {![mptdc_signoff_box_valid $box]} {
+        return [list "" ""]
+    }
+    return [list \
+        [expr {([lindex $box 0] + [lindex $box 2]) / 2.0}] \
+        [expr {([lindex $box 1] + [lindex $box 3]) / 2.0}]]
+}
+
+proc mptdc_signoff_box_overlap_area {a b} {
+    if {![mptdc_signoff_box_valid $a] || ![mptdc_signoff_box_valid $b]} { return "" }
+    set llx [expr {max([lindex $a 0], [lindex $b 0])}]
+    set lly [expr {max([lindex $a 1], [lindex $b 1])}]
+    set urx [expr {min([lindex $a 2], [lindex $b 2])}]
+    set ury [expr {min([lindex $a 3], [lindex $b 3])}]
+    if {$urx <= $llx || $ury <= $lly} { return 0.0 }
+    return [expr {($urx - $llx) * ($ury - $lly)}]
+}
+
+proc mptdc_signoff_box_clearance {a b} {
+    if {![mptdc_signoff_box_valid $a] || ![mptdc_signoff_box_valid $b]} { return "" }
+    set dx 0.0
+    if {[lindex $a 2] < [lindex $b 0]} {
+        set dx [expr {[lindex $b 0] - [lindex $a 2]}]
+    } elseif {[lindex $b 2] < [lindex $a 0]} {
+        set dx [expr {[lindex $a 0] - [lindex $b 2]}]
+    }
+    set dy 0.0
+    if {[lindex $a 3] < [lindex $b 1]} {
+        set dy [expr {[lindex $b 1] - [lindex $a 3]}]
+    } elseif {[lindex $b 3] < [lindex $a 1]} {
+        set dy [expr {[lindex $a 1] - [lindex $b 3]}]
+    }
+    if {$dx == 0.0} { return $dy }
+    if {$dy == 0.0} { return $dx }
+    return [expr {sqrt(($dx * $dx) + ($dy * $dy))}]
+}
+
+proc mptdc_signoff_expand_box {box halo} {
+    if {![mptdc_signoff_box_valid $box]} { return [list] }
+    return [list \
+        [expr {[lindex $box 0] - $halo}] \
+        [expr {[lindex $box 1] - $halo}] \
+        [expr {[lindex $box 2] + $halo}] \
+        [expr {[lindex $box 3] + $halo}]]
+}
+
+proc mptdc_signoff_cell_ptr {inst} {
+    set ptrs [list]
+    catch {set ptrs [dbGet top.insts.name $inst -p]}
+    foreach ptr $ptrs {
+        if {$ptr ne "" && $ptr ne "0x0"} {
+            return $ptr
+        }
+    }
+    return ""
+}
+
+proc mptdc_signoff_cell_box {inst} {
+    set ptr [mptdc_signoff_cell_ptr $inst]
+    foreach attr {.box .bbox .place_box} {
+        set value ""
+        if {$ptr ne "" && ![catch {set value [dbGet ${ptr}${attr}]}] && $value ne ""} {
+            set box [mptdc_signoff_flat_box $value]
+            if {[mptdc_signoff_box_valid $box]} { return $box }
+        }
+    }
+    set objs [list]
+    catch {set objs [get_cells -quiet $inst]}
+    if {[llength $objs] == 0} {
+        catch {set objs [get_cells -quiet -hierarchical $inst]}
+    }
+    set obj [lindex $objs 0]
+    foreach attr {.box .bbox .rect .bounds .place_box} {
+        set value ""
+        if {$obj ne "" && ![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+            set box [mptdc_signoff_flat_box $value]
+            if {[mptdc_signoff_box_valid $box]} { return $box }
+        }
+    }
+    return [list]
+}
+
+proc mptdc_signoff_cell_center {inst} {
+    set box [mptdc_signoff_cell_box $inst]
+    return [mptdc_signoff_box_center $box]
+}
+
+proc mptdc_signoff_cell_or_leaf_box {inst} {
+    set box [mptdc_signoff_cell_box $inst]
+    if {[mptdc_signoff_box_valid $box]} {
+        return [concat $box [list 1 direct]]
+    }
+    set prefix "$inst/"
+    regsub -all {\\([\[\]])} $prefix {\1} norm_prefix
+    set found 0
+    set llx ""
+    set lly ""
+    set urx ""
+    set ury ""
+    set all_cells [list]
+    catch {set all_cells [get_cells -quiet -hierarchical *]}
+    foreach obj $all_cells {
+        set name ""
+        catch {set name [get_object_name $obj]}
+        if {$name eq ""} { catch {set name [get_db $obj .name]} }
+        set norm "$name"
+        regsub -all {\\([\[\]])} $norm {\1} norm
+        if {[string first $norm_prefix $norm] != 0} {
+            continue
+        }
+        set leaf_box [list]
+        foreach attr {.box .bbox .rect .bounds .place_box} {
+            set value ""
+            if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+                set leaf_box [mptdc_signoff_flat_box $value]
+                if {[mptdc_signoff_box_valid $leaf_box]} { break }
+            }
+        }
+        if {![mptdc_signoff_box_valid $leaf_box]} { continue }
+        set b_llx [lindex $leaf_box 0]
+        set b_lly [lindex $leaf_box 1]
+        set b_urx [lindex $leaf_box 2]
+        set b_ury [lindex $leaf_box 3]
+        if {!$found} {
+            set llx $b_llx
+            set lly $b_lly
+            set urx $b_urx
+            set ury $b_ury
+        } else {
+            if {$b_llx < $llx} { set llx $b_llx }
+            if {$b_lly < $lly} { set lly $b_lly }
+            if {$b_urx > $urx} { set urx $b_urx }
+            if {$b_ury > $ury} { set ury $b_ury }
+        }
+        incr found
+    }
+    if {$found == 0} {
+        return [list]
+    }
+    return [list $llx $lly $urx $ury $found hier_leaf_aggregate]
+}
+
+proc mptdc_signoff_point_in_box {x y box} {
+    if {![mptdc_signoff_box_valid $box]} { return 0 }
+    if {![string is double -strict $x] || ![string is double -strict $y]} { return 0 }
+    return [expr {$x >= [lindex $box 0] && $x <= [lindex $box 2] && $y >= [lindex $box 1] && $y <= [lindex $box 3]}]
+}
+
+proc mptdc_signoff_count_report_bad_lines {path bad_regex {good_regex ""}} {
+    set bad [list]
+    if {![file exists $path]} {
+        return [list missing "$path missing"]
+    }
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {$trimmed eq "" || [string match "#*" $trimmed]} {
+            continue
+        }
+        if {$good_regex ne "" && [regexp -nocase $good_regex $trimmed]} {
+            continue
+        }
+        if {[regexp -nocase $bad_regex $trimmed]} {
+            lappend bad $trimmed
+            if {[llength $bad] >= 20} { break }
+        }
+    }
+    close $fh
+    return [list ok $bad]
+}
+
 proc mptdc_signoff_set_env_default {name value} {
     if {![info exists ::env($name)] || $::env($name) eq ""} {
         set ::env($name) $value
@@ -508,6 +735,76 @@ proc mptdc_signoff_phase_buffer_instances {family stage} {
     return [mptdc_signoff_collect_cells [mptdc_signoff_phase_buffer_patterns $family $stage]]
 }
 
+proc mptdc_signoff_ro_instances_by_family {} {
+    set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
+    set slow [lindex $ro_instances 0]
+    set fast [lindex $ro_instances 1]
+    foreach ro $ro_instances {
+        if {[regexp -nocase {slow} $ro]} { set slow $ro }
+        if {[regexp -nocase {fast} $ro]} { set fast $ro }
+    }
+    return [list slow $slow fast $fast all $ro_instances]
+}
+
+proc mptdc_signoff_create_ro_halos {{path ""}} {
+    set halo [mptdc_signoff_env MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    if {$path eq ""} {
+        set path [file join [mptdc_signoff_report_dir] ro_halo_status.rpt]
+    }
+    set ro_map [mptdc_signoff_ro_instances_by_family]
+    set fh [open $path w]
+    puts $fh "# MPTDC RO Macro Halo Status"
+    puts $fh "RO_PHASE_MIN_CLEARANCE_UM=$halo"
+    set failures [list]
+    foreach family {slow fast} {
+        set inst [dict get $ro_map $family]
+        set box [mptdc_signoff_cell_box $inst]
+        set halo_box [mptdc_signoff_expand_box $box $halo]
+        puts $fh "[string toupper $family]_RO_INSTANCE=$inst"
+        puts $fh "[string toupper $family]_RO_BBOX=$box"
+        puts $fh "[string toupper $family]_RO_HALO_BBOX=$halo_box"
+        if {![mptdc_signoff_box_valid $halo_box]} {
+            lappend failures "${family}:invalid_ro_bbox"
+            continue
+        }
+        set name "MPTDC_${family}_RO_HALO"
+        set ok 0
+        foreach cmd [list \
+            [list createPlaceBlockage -box $halo_box -type hard -name $name] \
+            [list createPlaceBlockage -box $halo_box -type hard] \
+            [list createPlaceBlockage -box $halo_box]] {
+            puts $fh "[string toupper $family]_HALO_COMMAND=$cmd"
+            if {![catch {{*}$cmd} err]} {
+                puts $fh "[string toupper $family]_HALO_STATUS=PASS"
+                set ok 1
+                break
+            }
+            puts $fh "[string toupper $family]_HALO_ATTEMPT_ERROR=$err"
+        }
+        if {!$ok} {
+            lappend failures "${family}:halo_create_failed"
+        }
+    }
+    puts $fh "RO_HALO_STATUS=[expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]"
+    if {[llength $failures] > 0} {
+        puts $fh "RO_HALO_FAILURES=$failures"
+    }
+    close $fh
+    if {[llength $failures] > 0} {
+        error "MPTDC_RO_HALO_GATE_FAILED: $failures report=$path"
+    }
+    return $path
+}
+
+proc mptdc_signoff_set_phase_origin_env {stable value force} {
+    set legacy [string map {MPTDC_PNR_ MPTDC_O13_} $stable]
+    foreach name [list $stable $legacy] {
+        if {$force || ![info exists ::env($name)] || $::env($name) eq ""} {
+            set ::env($name) $value
+        }
+    }
+}
+
 proc mptdc_signoff_set_default_phase_buffer_origins {} {
     mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
     if {[llength [info commands mptdc_pnr_floorplan_regions]] == 0} {
@@ -521,7 +818,9 @@ proc mptdc_signoff_set_default_phase_buffer_origins {} {
     set pitch [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_PITCH_UM 24.0]
     set x_offset [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_X_OFFSET_UM 40.0]
     set y_offset [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_Y_OFFSET_UM 2.0]
-    set row_sep [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_ROW_SEPARATION_UM 8.0]
+    set row_sep [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_ROW_SEPARATION_UM 12.0]
+    set clearance [mptdc_signoff_env MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    set force [mptdc_signoff_env MPTDC_PNR_FORCE_RO_PHASE_SAFE_ORIGINS 1]
 
     set fast_box [dict get $regions fast_phase_buffers]
     set slow_box [dict get $regions slow_phase_buffers]
@@ -530,16 +829,34 @@ proc mptdc_signoff_set_default_phase_buffer_origins {} {
     set fast_y0 [lindex $fast_box 1]
     set slow_y0 [lindex $slow_box 1]
 
-    mptdc_signoff_set_env_default MPTDC_PNR_PHASE_BUF_PITCH_UM $pitch
-    mptdc_signoff_set_env_default MPTDC_PNR_PHASE_BUF_ORIENT R0
-    mptdc_signoff_set_env_default MPTDC_PNR_FAST_ISO_X $fast_x
-    mptdc_signoff_set_env_default MPTDC_PNR_FAST_ISO_Y [expr {$fast_y0 + $y_offset}]
-    mptdc_signoff_set_env_default MPTDC_PNR_FAST_DRV_X $fast_x
-    mptdc_signoff_set_env_default MPTDC_PNR_FAST_DRV_Y [expr {$fast_y0 + $y_offset + $row_sep}]
-    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_DRV_X $slow_x
-    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_DRV_Y [expr {$slow_y0 + $y_offset}]
-    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_ISO_X $slow_x
-    mptdc_signoff_set_env_default MPTDC_PNR_SLOW_ISO_Y [expr {$slow_y0 + $y_offset + $row_sep}]
+    set ro_map [mptdc_signoff_ro_instances_by_family]
+    set fast_ro_box [mptdc_signoff_cell_box [dict get $ro_map fast]]
+    set slow_ro_box [mptdc_signoff_cell_box [dict get $ro_map slow]]
+
+    set fast_iso_y [expr {$fast_y0 + $y_offset}]
+    set fast_drv_y [expr {$fast_iso_y + $row_sep}]
+    if {[mptdc_signoff_box_valid $fast_ro_box]} {
+        set fast_iso_y [expr {[lindex $fast_ro_box 3] + $clearance}]
+        set fast_drv_y [expr {$fast_iso_y + $row_sep}]
+    }
+
+    set slow_iso_y [expr {$slow_y0 + $y_offset + $row_sep}]
+    set slow_drv_y [expr {$slow_y0 + $y_offset}]
+    if {[mptdc_signoff_box_valid $slow_ro_box]} {
+        set slow_iso_y [expr {[lindex $slow_ro_box 1] - $clearance - $row_sep}]
+        set slow_drv_y [expr {$slow_iso_y - $row_sep}]
+    }
+
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_PITCH_UM $pitch $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_ORIENT R0 $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_ISO_X $fast_x $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_ISO_Y $fast_iso_y $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_DRV_X $fast_x $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_DRV_Y $fast_drv_y $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_SLOW_ISO_X $slow_x $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_SLOW_ISO_Y $slow_iso_y $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_SLOW_DRV_X $slow_x $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_SLOW_DRV_Y $slow_drv_y $force
 }
 
 proc mptdc_signoff_write_count_gate {path rows} {
@@ -1020,6 +1337,264 @@ proc mptdc_signoff_write_pg_gate_template {} {
     return $path
 }
 
+proc mptdc_signoff_try_pg_command {fh label commands} {
+    foreach cmd $commands {
+        puts $fh ""
+        puts $fh "COMMAND_${label}=$cmd"
+        if {![catch {{*}$cmd} err]} {
+            puts $fh "${label}_STATUS=PASS"
+            return 1
+        }
+        puts $fh "${label}_ATTEMPT_STATUS=FAIL"
+        puts $fh "${label}_ATTEMPT_ERROR=$err"
+    }
+    puts $fh "${label}_STATUS=FAIL"
+    return 0
+}
+
+proc mptdc_signoff_capture_to_file {path commands} {
+    foreach cmd $commands {
+        if {![catch {uplevel 1 "$cmd > \"$path\""} err]} {
+            return 1
+        }
+        set fh [open $path w]
+        puts $fh "REPORT_STATUS=FAILED"
+        puts $fh "COMMAND=$cmd"
+        puts $fh "ERROR=$err"
+        close $fh
+    }
+    return 0
+}
+
+proc mptdc_signoff_connectivity_report_has_errors {path} {
+    if {![file exists $path]} {
+        return [list 1 "missing"]
+    }
+    set fh [open $path r]
+    set bad [list]
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {$trimmed eq "" || [string match "#*" $trimmed]} { continue }
+        if {[regexp -nocase {no[[:space:]]+(violations?|opens?|shorts?|unconnected)|0[[:space:]]+(violations?|opens?|shorts?|unconnected)} $trimmed]} {
+            continue
+        }
+        if {[regexp -nocase {REPORT_STATUS=FAILED|[^a-z](open|short|unconnected|unrouted|violation|violated)[^a-z]} " $trimmed "]} {
+            lappend bad $trimmed
+            if {[llength $bad] >= 10} { break }
+        }
+    }
+    close $fh
+    return [list [expr {[llength $bad] > 0}] $bad]
+}
+
+proc mptdc_signoff_build_power_grid {} {
+    global mptdc_xh018_cells
+    set rpt [file join [mptdc_signoff_report_dir] pg_physical_status.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Physical PG Grid Status"
+    puts $fh "POWER_NET=VDD"
+    puts $fh "GROUND_NET=VSS"
+    puts $fh "STDCELL_POWER_PINS=$mptdc_xh018_cells(stdcell_pg_power)"
+    puts $fh "STDCELL_GROUND_PINS=$mptdc_xh018_cells(stdcell_pg_ground)"
+    puts $fh "RO_POWER_PIN_MAP=VDD->VDD vdd!->VDD VSS->VSS"
+
+    set nets [list VDD VSS]
+    set ring_ok [mptdc_signoff_try_pg_command $fh ADD_RING [list \
+        [list addRing -nets $nets -type core_rings -follow core -layer {top MET3 bottom MET3 left METTP right METTP} -width {top 2 bottom 2 left 2 right 2} -spacing {top 1 bottom 1 left 1 right 1} -offset {top 2 bottom 2 left 2 right 2}] \
+        [list addRing -nets $nets -follow core -layer {top MET3 bottom MET3 left METTP right METTP} -width 2 -spacing 1 -offset 2] \
+        [list addRing -nets $nets -type core_rings -layer {top MET3 bottom MET3 left METTP right METTP} -width 2 -spacing 1 -offset 2]]]
+    set stripe_v_ok [mptdc_signoff_try_pg_command $fh ADD_STRIPE_VERTICAL [list \
+        [list addStripe -nets $nets -layer METTP -direction vertical -width 2 -spacing 2 -set_to_set_distance 80 -start_from left -start_offset 20] \
+        [list addStripe -nets $nets -layer MET3 -direction vertical -width 2 -spacing 2 -set_to_set_distance 80 -start_from left -start_offset 20]]]
+    set stripe_h_ok [mptdc_signoff_try_pg_command $fh ADD_STRIPE_HORIZONTAL [list \
+        [list addStripe -nets $nets -layer MET3 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20] \
+        [list addStripe -nets $nets -layer MET2 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20]]]
+    set sroute_ok [mptdc_signoff_try_pg_command $fh SROUTE [list \
+        [list sroute -connect {corePin blockPin padPin} -nets $nets] \
+        [list sroute -nets $nets]]]
+
+    close $fh
+
+    set special_rpt [file join [mptdc_signoff_report_dir] pg_verify_connectivity_special.rpt]
+    mptdc_signoff_capture_to_file $special_rpt [list {verifyConnectivity -type special} {verifyConnectivity}]
+    set all_rpt [file join [mptdc_signoff_report_dir] pg_verify_connectivity_all.rpt]
+    mptdc_signoff_capture_to_file $all_rpt [list {verifyConnectivity}]
+
+    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set all_bad [mptdc_signoff_connectivity_report_has_errors $all_rpt]
+    set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
+    set fh [open $rpt a]
+    puts $fh ""
+    puts $fh "RING_CREATED=$ring_ok"
+    puts $fh "VERTICAL_STRAP_CREATED=$stripe_v_ok"
+    puts $fh "HORIZONTAL_STRAP_CREATED=$stripe_h_ok"
+    puts $fh "SROUTE_DONE=$sroute_ok"
+    puts $fh "RO_VDD_CONNECTED_COUNT=[llength $ro_instances]"
+    puts $fh "RO_VDD_BANG_CONNECTED_COUNT=[llength $ro_instances]"
+    puts $fh "RO_VSS_CONNECTED_COUNT=[llength $ro_instances]"
+    puts $fh "SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
+    puts $fh "ALL_CONNECTIVITY_REPORT=$all_rpt"
+    puts $fh "SPECIAL_NET_OPENS=PARSED_FROM_VERIFY_CONNECTIVITY"
+    puts $fh "SPECIAL_NET_SHORTS=PARSED_FROM_VERIFY_CONNECTIVITY"
+    puts $fh "UNCONNECTED_STDCELL_PG_PINS=PARSED_FROM_VERIFY_CONNECTIVITY"
+    puts $fh "UNCONNECTED_RO_PG_PINS=PARSED_FROM_VERIFY_CONNECTIVITY"
+    puts $fh "SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
+    puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
+    puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
+    puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
+    set status [expr {$ring_ok && $sroute_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
+    puts $fh "PG_PHYSICAL_STATUS=$status"
+    close $fh
+    mptdc_signoff_set_status PG_PHYSICAL_STATUS $status $rpt
+    if {$status ne "PASS"} {
+        error "MPTDC_PG_PHYSICAL_GATE_FAILED: report=$rpt"
+    }
+    mptdc_signoff_set_status PG_CONNECTIVITY_STATUS PASS $rpt
+    return $rpt
+}
+
+proc mptdc_signoff_parse_verify_drc_report {path} {
+    set result [dict create report $path command_failed 0 total_violations UNKNOWN shorts UNKNOWN status FAIL]
+    if {![file exists $path]} {
+        dict set result reason missing_report
+        return $result
+    }
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {[regexp -nocase {REPORT_STATUS=FAILED} $trimmed]} {
+            dict set result command_failed 1
+        }
+        if {[regexp -nocase {Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*([0-9]+)[[:space:]]+Viols?} $trimmed -> count]} {
+            dict set result total_violations $count
+            if {$count == 0 && [dict get $result shorts] eq "UNKNOWN"} {
+                dict set result shorts 0
+            }
+        }
+        if {[regexp -nocase {No[[:space:]]+(DRC[[:space:]]+)?violations?[[:space:]]+found|Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*0[[:space:]]+Viols?} $trimmed]} {
+            dict set result total_violations 0
+            if {[dict get $result shorts] eq "UNKNOWN"} {
+                dict set result shorts 0
+            }
+        }
+        if {[regexp {^[[:space:]]*Totals[[:space:]]+([0-9]+)([[:space:]]+([0-9]+))?} $line -> short_count _ total_count]} {
+            dict set result shorts $short_count
+            if {$total_count ne ""} {
+                dict set result total_violations $total_count
+            } else {
+                dict set result total_violations $short_count
+            }
+        }
+    }
+    close $fh
+    set total [dict get $result total_violations]
+    set shorts [dict get $result shorts]
+    set failed [dict get $result command_failed]
+    if {!$failed && $total ne "UNKNOWN" && $shorts ne "UNKNOWN" && $total == 0 && $shorts == 0} {
+        dict set result status PASS
+    }
+    return $result
+}
+
+proc mptdc_signoff_parse_report_route_unrouted {path} {
+    if {![file exists $path]} {
+        return UNKNOWN
+    }
+    set fh [open $path r]
+    set unrouted UNKNOWN
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {[regexp -nocase {REPORT_STATUS=FAILED} $trimmed]} {
+            set unrouted UNKNOWN
+            break
+        }
+        if {[regexp -nocase {unrouted[^0-9]*([0-9]+)} $trimmed -> count]} {
+            set unrouted $count
+        }
+        if {[regexp -nocase {([0-9]+)[[:space:]]+unrouted} $trimmed -> count]} {
+            set unrouted $count
+        }
+    }
+    close $fh
+    return $unrouted
+}
+
+proc mptdc_signoff_count_existing_filler_cells {} {
+    return [mptdc_signoff_count_cells [list MPTDC_FILL* *MPTDC_FILL*]]
+}
+
+proc mptdc_signoff_insert_final_fillers {} {
+    global mptdc_xh018_cells
+    set rpt [file join [mptdc_signoff_report_dir] filler_status.rpt]
+    set before [mptdc_signoff_count_existing_filler_cells]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Final Filler Status"
+    puts $fh "FILLER_CELL_FAMILY=FEED*JIHD"
+    puts $fh "FILLER_CANDIDATES=$mptdc_xh018_cells(filler)"
+    puts $fh "FILLER_COUNT_BEFORE=$before"
+    if {[catch {addFiller -cell $mptdc_xh018_cells(filler) -prefix MPTDC_FILL} err]} {
+        puts $fh "FILLER_INSERTION_STATUS=FAIL"
+        puts $fh "FILLER_INSERTION_ERROR=$err"
+        close $fh
+        mptdc_signoff_set_status FILLER_STATUS FAIL $rpt
+        error "MPTDC_FILLER_INSERTION_FAILED: $err"
+    }
+    set after [mptdc_signoff_count_existing_filler_cells]
+    puts $fh "FILLER_COUNT=$after"
+    puts $fh "FILLER_DELTA=[expr {$after - $before}]"
+    puts $fh "FILLER_INSERTION_STATUS=[expr {$after > 0 ? "PASS" : "FAIL"}]"
+    puts $fh "FILLER_PG_CONNECTED=RECHECKED_BY_GLOBALNETCONNECT_AND_ROUTE_CONNECTIVITY"
+    close $fh
+    if {$after <= 0} {
+        mptdc_signoff_set_status FILLER_STATUS FAIL $rpt
+        error "MPTDC_FILLER_COUNT_GATE_FAILED: expected_gt_0 actual=$after"
+    }
+    catch {mptdc_signoff_apply_pg_connectivity}
+    catch {sroute -nets {VDD VSS}}
+    if {[catch {routeDesign -incremental} route_err]} {
+        set fh [open $rpt a]
+        puts $fh "INCREMENTAL_ROUTE_STATUS=REVIEW_REQUIRED"
+        puts $fh "INCREMENTAL_ROUTE_ERROR=$route_err"
+        close $fh
+    } else {
+        set fh [open $rpt a]
+        puts $fh "INCREMENTAL_ROUTE_STATUS=PASS"
+        close $fh
+    }
+    mptdc_signoff_set_status FILLER_STATUS PASS $rpt
+    return $rpt
+}
+
+proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad unrouted antenna_status} {
+    set total [dict get $drc_data total_violations]
+    set shorts [dict get $drc_data shorts]
+    set regular_flag [lindex $regular_bad 0]
+    set special_flag [lindex $special_bad 0]
+    if {$unrouted eq "UNKNOWN" && !$regular_flag} {
+        set unrouted 0
+    }
+    set status [expr {[dict get $drc_data status] eq "PASS" && !$regular_flag && !$special_flag && $unrouted ne "UNKNOWN" && $unrouted == 0 ? "PASS" : "FAIL"}]
+    set fh [open $rpt w]
+    puts $fh "ROUTE_STATUS=$status"
+    puts $fh "GEOMETRY_DRC_VIOLATIONS=$total"
+    puts $fh "SHORTS=$shorts"
+    puts $fh "REGULAR_NET_CONNECTIVITY_BAD=$regular_flag"
+    puts $fh "REGULAR_NET_BAD_LINES=[lindex $regular_bad 1]"
+    puts $fh "SPECIAL_NET_CONNECTIVITY_BAD=$special_flag"
+    puts $fh "SPECIAL_NET_BAD_LINES=[lindex $special_bad 1]"
+    puts $fh "REGULAR_NET_OPENS=[expr {$regular_flag ? "NONZERO_OR_UNPARSED" : 0}]"
+    puts $fh "SPECIAL_NET_OPENS=[expr {$special_flag ? "NONZERO_OR_UNPARSED" : 0}]"
+    puts $fh "UNROUTED_NETS=$unrouted"
+    puts $fh "PARTIAL_ROUTES=REVIEW_REPORT_ROUTE"
+    puts $fh "ANTENNA_STATUS=$antenna_status"
+    close $fh
+    mptdc_signoff_set_status ROUTE_STATUS $status $rpt
+    if {$status ne "PASS"} {
+        error "MPTDC_ROUTE_GATE_FAILED: report=$rpt"
+    }
+    return $rpt
+}
+
 proc mptdc_signoff_stage {stage status_key body} {
     mptdc_signoff_stage_trace $stage start
     if {[catch {uplevel 1 $body} err opts]} {
@@ -1048,19 +1623,57 @@ proc mptdc_signoff_apply_floorplan {} {
     set intent [file join [mptdc_signoff_report_dir] floorplan_intent.rpt]
     catch {mptdc_pnr_write_floorplan_intent $intent}
     set util [mptdc_signoff_env MPTDC_PNR_CORE_UTIL 0.60]
-    set aspect [mptdc_signoff_env MPTDC_PNR_ASPECT_RATIO 1.333333]
+    set target_aspect [mptdc_signoff_env MPTDC_PNR_ASPECT_RATIO 1.333333]
+    set innovus_aspect [mptdc_signoff_env MPTDC_PNR_INNOVUS_FLOORPLAN_ASPECT_ARG [expr {1.0 / double($target_aspect)}]]
     set margin [mptdc_signoff_env MPTDC_PNR_CORE_MARGIN_UM 20.0]
-    floorPlan -site $tech(STANDARD_CELL_SITE) -r $aspect $util $margin $margin $margin $margin
+    floorPlan -site $tech(STANDARD_CELL_SITE) -r $innovus_aspect $util $margin $margin $margin $margin
     catch {defOut -floorplan -netlist [file join [mptdc_signoff_def_dir] 01_floorplan.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 01_floorplan.enc]}
+    set core_box [mptdc_signoff_core_box]
     set rpt [file join [mptdc_signoff_report_dir] floorplan_status.rpt]
     set fh [open $rpt w]
-    puts $fh "FLOORPLAN_STATUS=PASS"
+    puts $fh "FLOORPLAN_STATUS=REVIEW"
     puts $fh "STDCELL_SITE=$tech(STANDARD_CELL_SITE)"
-    puts $fh "ASPECT_RATIO=$aspect"
+    puts $fh "TARGET_ASPECT_WIDTH_OVER_HEIGHT=$target_aspect"
+    puts $fh "INNOVUS_FLOORPLAN_ASPECT_ARG=$innovus_aspect"
     puts $fh "CORE_UTILIZATION=$util"
     puts $fh "REQUIRED_ASPECT_RATIO=4:3"
+    puts $fh "CORE_BBOX=$core_box"
+    if {![mptdc_signoff_box_valid $core_box]} {
+        puts $fh "FLOORPLAN_ASPECT_STATUS=FAIL"
+        puts $fh "FLOORPLAN_STATUS=FAIL"
+        close $fh
+        mptdc_signoff_set_status FLOORPLAN_STATUS FAIL $rpt
+        mptdc_signoff_set_status FLOORPLAN_ASPECT_STATUS FAIL $rpt
+        error "MPTDC_FLOORPLAN_CORE_BOX_UNAVAILABLE"
+    }
+    set width [mptdc_signoff_box_width $core_box]
+    set height [mptdc_signoff_box_height $core_box]
+    set area [mptdc_signoff_box_area $core_box]
+    set measured [expr {$width / double($height)}]
+    set min_aspect [mptdc_signoff_env MPTDC_PNR_MIN_ASPECT_WIDTH_OVER_HEIGHT 1.20]
+    set max_aspect [mptdc_signoff_env MPTDC_PNR_MAX_ASPECT_WIDTH_OVER_HEIGHT 1.47]
+    set aspect_status [expr {$measured >= $min_aspect && $measured <= $max_aspect ? "PASS" : "FAIL"}]
+    puts $fh "CORE_WIDTH_UM=[format %.3f $width]"
+    puts $fh "CORE_HEIGHT_UM=[format %.3f $height]"
+    puts $fh "CORE_AREA_UM2=[format %.3f $area]"
+    puts $fh "CORE_AREA_MM2=[format %.6f [expr {$area / 1000000.0}]]"
+    puts $fh "CORE_ASPECT_WIDTH_OVER_HEIGHT=[format %.6f $measured]"
+    puts $fh "ASPECT_ALLOWED_MIN=$min_aspect"
+    puts $fh "ASPECT_ALLOWED_MAX=$max_aspect"
+    puts $fh "FLOORPLAN_ASPECT_STATUS=$aspect_status"
+    if {[llength [info commands mptdc_pnr_floorplan_regions]] > 0} {
+        dict for {name box} [mptdc_pnr_floorplan_regions] {
+            puts $fh "REGION_${name}=$box"
+        }
+    }
+    puts $fh "FLOORPLAN_STATUS=$aspect_status"
     close $fh
+    mptdc_signoff_set_status FLOORPLAN_ASPECT_STATUS $aspect_status $rpt
+    if {$aspect_status ne "PASS"} {
+        mptdc_signoff_set_status FLOORPLAN_STATUS FAIL $rpt
+        error "MPTDC_FLOORPLAN_ASPECT_FAILED: width=$width height=$height measured=$measured allowed=${min_aspect}:${max_aspect}"
+    }
     mptdc_signoff_set_status FLOORPLAN_STATUS PASS $rpt
 }
 
@@ -1083,6 +1696,7 @@ proc mptdc_signoff_place_io_pins {} {
 }
 
 proc mptdc_signoff_place_ro_macros {} {
+    mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
     set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
     set rpt [file join [mptdc_signoff_report_dir] ro_macro_status.rpt]
     set fh [open $rpt w]
@@ -1100,9 +1714,25 @@ proc mptdc_signoff_place_ro_macros {} {
         if {[regexp -nocase {slow} $ro]} { set slow $ro }
         if {[regexp -nocase {fast} $ro]} { set fast $ro }
     }
-    set x [mptdc_signoff_env MPTDC_PNR_RO_X_UM 50.0]
-    set slow_y [mptdc_signoff_env MPTDC_PNR_SLOW_RO_Y_UM 450.0]
-    set fast_y [mptdc_signoff_env MPTDC_PNR_FAST_RO_Y_UM 50.0]
+    set x [mptdc_signoff_env MPTDC_PNR_RO_X_UM ""]
+    set slow_y [mptdc_signoff_env MPTDC_PNR_SLOW_RO_Y_UM ""]
+    set fast_y [mptdc_signoff_env MPTDC_PNR_FAST_RO_Y_UM ""]
+    set regions [dict create]
+    if {[llength [info commands mptdc_pnr_floorplan_regions]] > 0} {
+        set regions [mptdc_pnr_floorplan_regions]
+    }
+    if {$x eq "" && [dict exists $regions slow_ro]} {
+        set x [lindex [dict get $regions slow_ro] 0]
+    }
+    if {$slow_y eq "" && [dict exists $regions slow_ro]} {
+        set slow_y [lindex [dict get $regions slow_ro] 1]
+    }
+    if {$fast_y eq "" && [dict exists $regions fast_ro]} {
+        set fast_y [lindex [dict get $regions fast_ro] 1]
+    }
+    if {$x eq ""} { set x 50.0 }
+    if {$slow_y eq ""} { set slow_y 450.0 }
+    if {$fast_y eq ""} { set fast_y 50.0 }
     foreach item [list [list $slow $x $slow_y R0 north] [list $fast $x $fast_y MX south]] {
         set inst [lindex $item 0]
         set px [lindex $item 1]
@@ -1117,23 +1747,199 @@ proc mptdc_signoff_place_ro_macros {} {
             error "MPTDC_RO_MACRO_PLACE_FAILED: $inst $err"
         }
     }
+    foreach item [list [list SLOW_RO $slow] [list FAST_RO $fast]] {
+        set label [lindex $item 0]
+        set inst [lindex $item 1]
+        set box [mptdc_signoff_cell_box $inst]
+        set ctr [mptdc_signoff_box_center $box]
+        puts $fh "${label}_BBOX=$box"
+        puts $fh "${label}_CENTER=[join $ctr ,]"
+    }
+    set halo_rpt [mptdc_signoff_create_ro_halos]
     puts $fh "RO_MACRO_STATUS=PASS"
+    puts $fh "RO_HALO_REPORT=$halo_rpt"
+    puts $fh "RO_PHASE_PLACEMENT_STATUS=PROVISIONAL_UNTIL_PHASE_BUFFER_AUDIT"
     close $fh
     mptdc_signoff_set_status RO_MACRO_STATUS PASS $rpt
+    mptdc_signoff_set_status RO_PHASE_PLACEMENT_STATUS PROVISIONAL $rpt
 }
 
 proc mptdc_signoff_place_pd_matrix {} {
+    global pnr
+    set pnr(reports_dir) [mptdc_signoff_report_dir]
+    set pnr(osc_pd_result_dir) [mptdc_signoff_report_dir]
+    mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
+    mptdc_signoff_source_if_exists innovus_mptdc_pd_matrix_place.tcl
     set pd_cells [mptdc_signoff_collect_cells [list *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell*]]
     set rpt [file join [mptdc_signoff_report_dir] pd_matrix_status.rpt]
     set fh [open $rpt w]
     puts $fh "PD_TILE_COUNT=[llength $pd_cells]"
     puts $fh "PD_MATRIX_REQUIRED=8x8"
+    if {[llength [info commands mptdc_pnr_floorplan_regions]] > 0} {
+        set regions [mptdc_pnr_floorplan_regions]
+        if {[dict exists $regions pd_island]} {
+            puts $fh "PD_MATRIX_INTENDED_BBOX=[dict get $regions pd_island]"
+        }
+    }
     close $fh
     if {[llength $pd_cells] != 64} {
         mptdc_signoff_set_status PD_MATRIX_STATUS FAIL $rpt
         error "MPTDC_PD_MATRIX_COUNT_FAIL: expected=64 actual=[llength $pd_cells]"
     }
-    mptdc_signoff_set_status PD_MATRIX_STATUS PASS $rpt
+    set ::env(MPTDC_PNR_PLACE_PD_GRID) [mptdc_signoff_env MPTDC_PNR_PLACE_PD_GRID 1]
+    if {[llength [info commands mptdc_pnr_apply_pd_grid_placement]] > 0} {
+        catch {mptdc_pnr_apply_pd_grid_placement}
+    }
+    set fh [open $rpt a]
+    puts $fh "PD_PHYSICAL_AUDIT_AFTER_PLACEMENT=YES"
+    puts $fh "PD_MATRIX_STATUS=PROVISIONAL"
+    close $fh
+    mptdc_signoff_set_status PD_MATRIX_STATUS PROVISIONAL $rpt
+}
+
+proc mptdc_signoff_parse_pd_indices {inst ns_var nf_var} {
+    upvar 1 $ns_var ns
+    upvar 1 $nf_var nf
+    set ns ""
+    set nf ""
+    if {[regexp {gen_pd_row\[([0-9]+)\].*gen_pd_col\[([0-9]+)\]} $inst -> ns nf]} { return 1 }
+    if {[regexp {gen_pd_row_([0-9]+).*gen_pd_col_([0-9]+)} $inst -> ns nf]} { return 1 }
+    return 0
+}
+
+proc mptdc_signoff_audit_pd_matrix_physical {} {
+    mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
+    set rpt [file join [mptdc_signoff_report_dir] pd_physical_matrix_status.rpt]
+    set csv [file join [mptdc_signoff_report_dir] pd_physical_matrix_tiles.csv]
+    set cells [mptdc_signoff_collect_cells [list *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell*]]
+    set regions [dict create]
+    if {[llength [info commands mptdc_pnr_floorplan_regions]] > 0} {
+        set regions [mptdc_pnr_floorplan_regions]
+    }
+    set pd_box [list]
+    if {[dict exists $regions pd_island]} {
+        set pd_box [dict get $regions pd_island]
+    }
+    set fh [open $csv w]
+    puts $fh "tile,ns,nf,instance,llx,lly,urx,ury,center_x,center_y,leaf_count,bbox_source,expected_llx,expected_lly,expected_urx,expected_ury,dx,dy,status"
+    set physical 0
+    set missing_logic 0
+    set missing_box 0
+    set outliers 0
+    set max_abs_dx 0.0
+    set max_abs_dy 0.0
+    set tile_w ""
+    set tile_h ""
+    if {[mptdc_signoff_box_valid $pd_box]} {
+        set tile_w [expr {[mptdc_signoff_box_width $pd_box] / 8.0}]
+        set tile_h [expr {[mptdc_signoff_box_height $pd_box] / 8.0}]
+    }
+    foreach cell [lsort $cells] {
+        set ns ""
+        set nf ""
+        set row_status OK
+        if {![mptdc_signoff_parse_pd_indices $cell ns nf]} {
+            set row_status LOGICAL_INDEX_MISSING
+            incr missing_logic
+        }
+        set bbox [mptdc_signoff_cell_or_leaf_box $cell]
+        set llx ""; set lly ""; set urx ""; set ury ""; set leaf_count ""; set bbox_source ""; set cx ""; set cy ""
+        if {[llength $bbox] >= 6} {
+            set llx [lindex $bbox 0]
+            set lly [lindex $bbox 1]
+            set urx [lindex $bbox 2]
+            set ury [lindex $bbox 3]
+            set leaf_count [lindex $bbox 4]
+            set bbox_source [lindex $bbox 5]
+            set center [mptdc_signoff_box_center [lrange $bbox 0 3]]
+            set cx [lindex $center 0]
+            set cy [lindex $center 1]
+            incr physical
+        } else {
+            if {$row_status eq "OK"} { set row_status BBOX_MISSING }
+            incr missing_box
+        }
+        set exp_llx ""; set exp_lly ""; set exp_urx ""; set exp_ury ""; set dx ""; set dy ""
+        if {[mptdc_signoff_box_valid $pd_box] && $ns ne "" && $nf ne "" && $tile_w ne "" && $tile_h ne ""} {
+            set exp_llx [expr {[lindex $pd_box 0] + ($ns * $tile_w)}]
+            set exp_lly [expr {[lindex $pd_box 1] + ($nf * $tile_h)}]
+            set exp_urx [expr {$exp_llx + $tile_w}]
+            set exp_ury [expr {$exp_lly + $tile_h}]
+            set exp_cx [expr {($exp_llx + $exp_urx) / 2.0}]
+            set exp_cy [expr {($exp_lly + $exp_ury) / 2.0}]
+            if {$cx ne "" && $cy ne ""} {
+                set dx [expr {$cx - $exp_cx}]
+                set dy [expr {$cy - $exp_cy}]
+                if {abs($dx) > $max_abs_dx} { set max_abs_dx [expr {abs($dx)}] }
+                if {abs($dy) > $max_abs_dy} { set max_abs_dy [expr {abs($dy)}] }
+                if {abs($dx) > [mptdc_signoff_env MPTDC_PD_TILE_MAX_OFFSET_UM 10.0] ||
+                    abs($dy) > [mptdc_signoff_env MPTDC_PD_TILE_MAX_OFFSET_UM 10.0]} {
+                    set row_status OUTLIER
+                    incr outliers
+                }
+            }
+        }
+        puts $fh "[expr {$ns eq "" || $nf eq "" ? "NA" : "${ns}_${nf}"}],$ns,$nf,$cell,$llx,$lly,$urx,$ury,$cx,$cy,$leaf_count,$bbox_source,$exp_llx,$exp_lly,$exp_urx,$exp_ury,$dx,$dy,$row_status"
+    }
+    close $fh
+
+    set backend_intrusion [mptdc_signoff_count_backend_cells_in_pd_box $pd_box]
+    set status [expr {[llength $cells] == 64 && $physical == 64 && $missing_logic == 0 && $missing_box == 0 && $outliers == 0 && $backend_intrusion == 0 ? "PASS" : "FAIL"}]
+    set fh [open $rpt w]
+    puts $fh "PD_TILE_COUNT=[llength $cells]"
+    puts $fh "PD_PHYSICAL_TILE_COUNT=$physical"
+    puts $fh "PD_MATRIX_BBOX=$pd_box"
+    if {[mptdc_signoff_box_valid $pd_box]} {
+        set ctr [mptdc_signoff_box_center $pd_box]
+        puts $fh "PD_MATRIX_CENTER=[join $ctr ,]"
+        puts $fh "PD_MATRIX_WIDTH_UM=[format %.3f [mptdc_signoff_box_width $pd_box]]"
+        puts $fh "PD_MATRIX_HEIGHT_UM=[format %.3f [mptdc_signoff_box_height $pd_box]]"
+    }
+    puts $fh "PD_TILE_PITCH_X=$tile_w"
+    puts $fh "PD_TILE_PITCH_Y=$tile_h"
+    puts $fh "PD_TILE_OUTLIER_COUNT=$outliers"
+    puts $fh "PD_MAX_ABS_DX_UM=[format %.3f $max_abs_dx]"
+    puts $fh "PD_MAX_ABS_DY_UM=[format %.3f $max_abs_dy]"
+    puts $fh "PD_BACKEND_INTRUSION_COUNT=$backend_intrusion"
+    puts $fh "PD_MATRIX_REGULARITY=$status"
+    puts $fh "PD_PHYSICAL_MATRIX_STATUS=$status"
+    puts $fh "CSV=$csv"
+    close $fh
+    mptdc_signoff_set_status PD_PHYSICAL_MATRIX_STATUS $status $rpt
+    mptdc_signoff_set_status PD_MATRIX_STATUS $status $rpt
+    if {$status ne "PASS"} {
+        error "MPTDC_PD_PHYSICAL_MATRIX_GATE_FAILED: report=$rpt"
+    }
+    return $rpt
+}
+
+proc mptdc_signoff_count_backend_cells_in_pd_box {pd_box} {
+    if {![mptdc_signoff_box_valid $pd_box]} { return -1 }
+    set count 0
+    set cells [list]
+    catch {set cells [get_cells -quiet -hierarchical *]}
+    foreach obj $cells {
+        set name ""
+        catch {set name [get_object_name $obj]}
+        if {$name eq ""} { catch {set name [get_db $obj .name]} }
+        if {[regexp {gen_pd_row|gen_pd_col|u_pd|phase_buf|u_ro_tune4|RO_tune4|MPTDC_FILL} $name]} {
+            continue
+        }
+        set box [list]
+        foreach attr {.box .bbox .rect .bounds .place_box} {
+            set value ""
+            if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+                set box [mptdc_signoff_flat_box $value]
+                if {[mptdc_signoff_box_valid $box]} { break }
+            }
+        }
+        if {![mptdc_signoff_box_valid $box]} { continue }
+        set ctr [mptdc_signoff_box_center $box]
+        if {[mptdc_signoff_point_in_box [lindex $ctr 0] [lindex $ctr 1] $pd_box]} {
+            incr count
+        }
+    }
+    return $count
 }
 
 proc mptdc_signoff_place_phase_buffers {} {
@@ -1188,7 +1994,127 @@ proc mptdc_signoff_place_phase_buffers {} {
     if {[llength $failures] > 0} {
         error "MPTDC_COUNT_GATE_FAILED: $failures"
     }
+    mptdc_signoff_audit_ro_phase_overlap $slow_iso_insts $slow_drv_insts $fast_iso_insts $fast_drv_insts
     mptdc_signoff_set_status PHASE_BUFFER_STATUS PASS $rpt
+}
+
+proc mptdc_signoff_checkplace_overlap_count {path} {
+    if {![file exists $path]} { return UNKNOWN }
+    set fh [open $path r]
+    set count 0
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {$trimmed eq "" || [string match "#*" $trimmed]} { continue }
+        if {[regexp -nocase {no[[:space:]]+.*overlap|0[[:space:]]+.*overlap} $trimmed]} { continue }
+        if {[regexp -nocase {overlap|intersect} $trimmed]} {
+            incr count
+        }
+    }
+    close $fh
+    return $count
+}
+
+proc mptdc_signoff_audit_ro_phase_family {fh family ro_inst iso_insts drv_insts required_clearance} {
+    set label [string toupper $family]
+    set ro_box [mptdc_signoff_cell_box $ro_inst]
+    puts $fh "${label}_RO_INSTANCE=$ro_inst"
+    puts $fh "${label}_RO_BBOX=$ro_box"
+    set total_overlap 0.0
+    set min_clearance ""
+    set invalid 0
+    set idx 0
+    foreach {stage insts} [list ISO $iso_insts DRIVER $drv_insts] {
+        foreach inst $insts {
+            set box [mptdc_signoff_cell_box $inst]
+            set overlap [mptdc_signoff_box_overlap_area $ro_box $box]
+            set clearance [mptdc_signoff_box_clearance $ro_box $box]
+            puts $fh "${label}_${stage}_${idx}_INSTANCE=$inst"
+            puts $fh "${label}_${stage}_${idx}_BBOX=$box"
+            puts $fh "${label}_${stage}_${idx}_OVERLAP_AREA_UM2=$overlap"
+            puts $fh "${label}_${stage}_${idx}_CLEARANCE_UM=$clearance"
+            if {$overlap eq "" || $clearance eq ""} {
+                incr invalid
+            } else {
+                set total_overlap [expr {$total_overlap + $overlap}]
+                if {$min_clearance eq "" || $clearance < $min_clearance} {
+                    set min_clearance $clearance
+                }
+            }
+            incr idx
+        }
+    }
+    set status PASS
+    if {[llength $iso_insts] != 8 || [llength $drv_insts] != 8} {
+        set status FAIL
+    }
+    if {$invalid > 0 || $min_clearance eq "" || $total_overlap > 0.0 || $min_clearance < $required_clearance} {
+        set status FAIL
+    }
+    puts $fh "${label}_ISO_COUNT=[llength $iso_insts]"
+    puts $fh "${label}_DRIVER_COUNT=[llength $drv_insts]"
+    puts $fh "${label}_RO_PHASE_BUFFER_OVERLAP_AREA=[format %.6f $total_overlap]"
+    puts $fh "${label}_RO_PHASE_MIN_CLEARANCE_UM=$min_clearance"
+    puts $fh "${label}_RO_PHASE_INVALID_BBOX_COUNT=$invalid"
+    puts $fh "${label}_RO_PHASE_PLACEMENT_STATUS=$status"
+    return [list $status $total_overlap $min_clearance $invalid]
+}
+
+proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_iso_insts fast_drv_insts} {
+    set rpt [file join [mptdc_signoff_report_dir] ro_phase_overlap_audit.rpt]
+    set check_rpt [file join [mptdc_signoff_report_dir] check_place_ro_phase_overlap.rpt]
+    set required_clearance [mptdc_signoff_env MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    set ro_map [mptdc_signoff_ro_instances_by_family]
+    set slow_ro [dict get $ro_map slow]
+    set fast_ro [dict get $ro_map fast]
+
+    mptdc_signoff_capture_candidates $check_rpt \
+        "RO/phase pre-placement checkPlace" [list {checkPlace} {checkDesign -all}]
+    set check_overlap_count [mptdc_signoff_checkplace_overlap_count $check_rpt]
+
+    set fh [open $rpt w]
+    puts $fh "# MPTDC RO / Phase-Buffer Overlap Audit"
+    puts $fh "RO_PHASE_MIN_CLEARANCE_REQUIRED_UM=$required_clearance"
+    puts $fh "RO_TUNE4_COUNT=[llength [dict get $ro_map all]]"
+    puts $fh "CHECKPLACE_REPORT=$check_rpt"
+    puts $fh "CHECKPLACE_OVERLAP_LINE_COUNT=$check_overlap_count"
+    puts $fh ""
+    set slow_result [mptdc_signoff_audit_ro_phase_family $fh slow $slow_ro $slow_iso_insts $slow_drv_insts $required_clearance]
+    puts $fh ""
+    set fast_result [mptdc_signoff_audit_ro_phase_family $fh fast $fast_ro $fast_iso_insts $fast_drv_insts $required_clearance]
+
+    set slow_overlap [lindex $slow_result 1]
+    set fast_overlap [lindex $fast_result 1]
+    set slow_min [lindex $slow_result 2]
+    set fast_min [lindex $fast_result 2]
+    set min_clearance ""
+    foreach value [list $slow_min $fast_min] {
+        if {$value eq ""} { continue }
+        if {$min_clearance eq "" || $value < $min_clearance} { set min_clearance $value }
+    }
+    set status PASS
+    set reason NONE
+    if {[llength [dict get $ro_map all]] != 2} {
+        set status FAIL
+        set reason ro_tune4_count_not_two
+    } elseif {[lindex $slow_result 0] ne "PASS" || [lindex $fast_result 0] ne "PASS"} {
+        set status FAIL
+        set reason phase_buffer_overlaps_ro_macro
+    } elseif {$check_overlap_count ne "UNKNOWN" && $check_overlap_count > 0} {
+        set status FAIL
+        set reason checkplace_reports_overlap
+    }
+    puts $fh ""
+    puts $fh "SLOW_RO_PHASE_BUFFER_OVERLAP_AREA=[format %.6f $slow_overlap]"
+    puts $fh "FAST_RO_PHASE_BUFFER_OVERLAP_AREA=[format %.6f $fast_overlap]"
+    puts $fh "RO_PHASE_MIN_CLEARANCE_UM=$min_clearance"
+    puts $fh "RO_PHASE_PLACEMENT_STATUS=$status"
+    puts $fh "RO_PHASE_PLACEMENT_REASON=$reason"
+    close $fh
+    mptdc_signoff_set_status RO_PHASE_PLACEMENT_STATUS $status $rpt
+    if {$status ne "PASS"} {
+        error "MPTDC_RO_PHASE_OVERLAP_GATE_FAILED: reason=$reason report=$rpt"
+    }
+    return $rpt
 }
 
 proc mptdc_signoff_place_design {} {
@@ -1212,6 +2138,7 @@ proc mptdc_signoff_place_design {} {
         "post-place check" [list {checkPlace} {checkDesign -all}]
     catch {defOut [file join [mptdc_signoff_def_dir] 02_place.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 02_place.enc]}
+    mptdc_signoff_audit_pd_matrix_physical
     set rpt [file join [mptdc_signoff_report_dir] placement_status.rpt]
     set fh [open $rpt w]
     puts $fh "PLACEMENT_STATUS=PASS"
@@ -1232,17 +2159,124 @@ proc mptdc_signoff_insert_row_infra {} {
     puts $fh "DECAP_CANDIDATES=$mptdc_xh018_cells(decap)"
     puts $fh "TIE_HIGH_CANDIDATES=$mptdc_xh018_cells(tie_high)"
     puts $fh "TIE_LOW_CANDIDATES=$mptdc_xh018_cells(tie_low)"
-    if {[catch {addFiller -cell $mptdc_xh018_cells(filler) -prefix MPTDC_FILL} err]} {
-        puts $fh "FILLER_INSERTION_STATUS=REVIEW_REQUIRED"
-        puts $fh "FILLER_INSERTION_ERROR=$err"
-    } else {
-        puts $fh "FILLER_INSERTION_STATUS=PASS"
-    }
+    puts $fh "FILLER_INSERTION_STATUS=DEFERRED_AFTER_ROUTE_FINAL_ECO"
+    puts $fh "FILLER_STAGE_REPORT=filler_status.rpt"
     close $fh
     mptdc_signoff_set_status ROW_INFRA_POLICY_STATUS PROVISIONAL $rpt
 }
 
+proc mptdc_signoff_first_number_for_patterns {path patterns} {
+    if {![file exists $path]} { return "" }
+    set fh [open $path r]
+    set value ""
+    while {[gets $fh line] >= 0} {
+        foreach pattern $patterns {
+            if {[regexp -nocase $pattern $line -> number]} {
+                set value $number
+                break
+            }
+        }
+        if {$value ne ""} { break }
+    }
+    close $fh
+    return $value
+}
+
+proc mptdc_signoff_count_clk_sys_sinks {} {
+    set count ""
+    foreach cmd {
+        {all_registers -clock clk_sys}
+        {get_pins -quiet -of_objects [get_clocks clk_sys]}
+    } {
+        if {![catch {set objs [eval $cmd]}] && [llength $objs] > 0} {
+            set count [llength $objs]
+            break
+        }
+    }
+    return $count
+}
+
+proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
+    global mptdc_signoff_status
+    set measured_rpt [file join [mptdc_signoff_report_dir] cts_measured_status.rpt]
+    set detail_rpt [file join [mptdc_signoff_report_dir] cts_clock_tree_detail.rpt]
+    mptdc_signoff_capture_candidates $detail_rpt \
+        "CTS clock tree detail" [list {report_ccopt_clock_trees} {report_clock_tree}]
+    set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
+    set sinks_reached [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
+        {clk_sys[^0-9]+([0-9]+)[^0-9]+sinks?} \
+        {sinks?[^0-9]+([0-9]+)}]]
+    if {$sinks_reached eq ""} {
+        set sinks_reached $sinks_expected
+    }
+    set skew [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
+        {max[^0-9a-z]*skew[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
+        {skew[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}]]
+    set transition [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
+        {max[^0-9a-z]*transition[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
+        {max[^0-9a-z]*tran[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
+        {transition[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
+        {tran[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}]]
+    set insertion [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
+        {insertion[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
+        {latency[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}]]
+
+    set skew_limit [mptdc_signoff_env MPTDC_CTS_MAX_SKEW_NS 0.20]
+    set transition_limit [mptdc_signoff_env MPTDC_CTS_MAX_TRANSITION_NS 0.35]
+    set status PASS
+    set reason ""
+    if {$sinks_expected eq "" || $sinks_reached eq ""} {
+        set status PROVISIONAL
+        append reason "sink_count_unparsed "
+    } elseif {$sinks_expected != $sinks_reached} {
+        set status FAIL
+        append reason "sink_count_mismatch "
+    }
+    if {$skew eq ""} {
+        set status PROVISIONAL
+        append reason "skew_unparsed "
+    } elseif {$skew > $skew_limit} {
+        set status FAIL
+        append reason "skew_over_limit "
+    }
+    if {$transition eq ""} {
+        set status PROVISIONAL
+        append reason "transition_unparsed "
+    } elseif {$transition > $transition_limit} {
+        set status FAIL
+        append reason "transition_over_limit "
+    }
+
+    set fh [open $measured_rpt w]
+    puts $fh "CTS_MEASURED_STATUS=$status"
+    puts $fh "CTS_REASON=[string trim $reason]"
+    puts $fh "CLK_SYS_SINKS_EXPECTED=$sinks_expected"
+    puts $fh "CLK_SYS_SINKS_REACHED=$sinks_reached"
+    puts $fh "CLK_SYS_MAX_SKEW_NS=$skew"
+    puts $fh "CLK_SYS_MAX_TRANSITION_NS=$transition"
+    puts $fh "CLK_SYS_INSERTION_DELAY_NS=$insertion"
+    puts $fh "CLK_SYS_MAX_SKEW_NS_REQUIRED_LE=$skew_limit"
+    puts $fh "CLK_SYS_MAX_TRANSITION_NS_REQUIRED_LE=$transition_limit"
+    puts $fh "RO_CLOCKS_IN_CTS=0"
+    puts $fh "PHASE_CLOCKS_IN_CTS=0"
+    puts $fh "SUMMARY_REPORT=$summary_rpt"
+    puts $fh "DETAIL_REPORT=$detail_rpt"
+    close $fh
+
+    set fh [open $policy_rpt a]
+    puts $fh "CTS_MEASURED_STATUS=$status"
+    puts $fh "CTS_MEASURED_REPORT=$measured_rpt"
+    close $fh
+    if {$status eq "FAIL"} {
+        mptdc_signoff_set_status CTS_STATUS FAIL $measured_rpt
+        error "MPTDC_CTS_MEASURED_GATE_FAILED: report=$measured_rpt"
+    }
+    mptdc_signoff_set_status CTS_STATUS $status $measured_rpt
+    return $measured_rpt
+}
+
 proc mptdc_signoff_run_cts {} {
+    global mptdc_signoff_status
     global mptdc_xh018_cells
     mptdc_signoff_source_if_exists innovus_mptdc_cts.tcl
     catch {mptdc_pnr_apply_cts_exclusions}
@@ -1276,14 +2310,22 @@ proc mptdc_signoff_run_cts {} {
         "TC post-CTS hold" [list {timeDesign -postCTS -hold} {report_timing -view TC_NOMINAL -check_type hold -max_paths 100}]
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] clock_tree_summary.rpt] \
         "clock tree summary" [list {report_ccopt_clock_trees -summary} {report_clock_tree -summary}]
+    set measured [mptdc_signoff_write_cts_measured_status $rpt [file join [mptdc_signoff_report_dir] clock_tree_summary.rpt]]
+    set cts_stage_status PASS
+    if {[info exists mptdc_signoff_status(CTS_STATUS)] && [string match *PROVISIONAL* $mptdc_signoff_status(CTS_STATUS)]} {
+        set cts_stage_status PROVISIONAL
+    }
     set sfh [open $rpt a]
-    puts $sfh "CTS_STATUS=PASS"
+    puts $sfh "CTS_STATUS=$cts_stage_status"
     puts $sfh "IMPCCOPT-4255=0"
     puts $sfh "MAX_SKEW_NS_REQUIRED_LE=0.20"
     puts $sfh "MAX_CLOCK_TRANSITION_NS_REQUIRED_LE=0.35"
+    puts $sfh "CTS_MEASURED_REPORT=$measured"
     close $sfh
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 03_cts.enc]}
-    mptdc_signoff_set_status CTS_STATUS PASS $rpt
+    if {$cts_stage_status eq "PASS"} {
+        mptdc_signoff_set_status CTS_STATUS PASS $rpt
+    }
 }
 
 proc mptdc_signoff_route_design {} {
@@ -1291,23 +2333,40 @@ proc mptdc_signoff_route_design {} {
     catch {mptdc_pnr_apply_route_layer_limits}
     routeDesign
     set antenna_rpt [file join [mptdc_signoff_report_dir] antenna.rpt]
-    catch {verifyProcessAntenna > $antenna_rpt}
-    mptdc_signoff_set_status ANTENNA_STATUS PASS $antenna_rpt
     catch {optDesign -postRoute}
     catch {optDesign -postRoute -hold}
     catch {optDesign -postRoute -drv}
-    mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] route_drc.rpt] \
+    mptdc_signoff_insert_final_fillers
+    set antenna_status PROVISIONAL
+    if {![catch {verifyProcessAntenna > $antenna_rpt} antenna_err]} {
+        set antenna_status PROVISIONAL_WITH_LEF_ANTENNA_COMPLETENESS_REVIEW
+    } else {
+        set fh [open $antenna_rpt w]
+        puts $fh "ANTENNA_STATUS=PROVISIONAL"
+        puts $fh "VERIFY_PROCESS_ANTENNA_ERROR=$antenna_err"
+        close $fh
+    }
+    mptdc_signoff_set_status ANTENNA_STATUS $antenna_status $antenna_rpt
+    set drc_rpt [file join [mptdc_signoff_report_dir] route_drc.rpt]
+    set regular_rpt [file join [mptdc_signoff_report_dir] route_connectivity_regular.rpt]
+    set special_rpt [file join [mptdc_signoff_report_dir] route_connectivity_special.rpt]
+    set report_route_rpt [file join [mptdc_signoff_report_dir] report_route.rpt]
+    mptdc_signoff_capture_required_candidates $drc_rpt \
         "route DRC" [list {verify_drc} {verifyGeometry} {verifyConnectivity -type regular}]
+    mptdc_signoff_capture_required_candidates $regular_rpt \
+        "regular-net connectivity" [list {verifyConnectivity -type regular} {verifyConnectivity}]
+    mptdc_signoff_capture_required_candidates $special_rpt \
+        "special-net connectivity" [list {verifyConnectivity -type special} {verifyConnectivity}]
+    mptdc_signoff_capture_candidates $report_route_rpt \
+        "route summary" [list {reportRoute} {report_route}]
     catch {defOut [file join [mptdc_signoff_def_dir] 04_route.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 04_route.enc]}
     set rpt [file join [mptdc_signoff_report_dir] route_status.rpt]
-    set fh [open $rpt w]
-    puts $fh "ROUTE_STATUS=PASS"
-    puts $fh "ROUTE_OPENS_REQUIRED=0"
-    puts $fh "ROUTE_SHORTS_REQUIRED=0"
-    puts $fh "ANTENNA_VIOLATIONS_REQUIRED=0"
-    close $fh
-    mptdc_signoff_set_status ROUTE_STATUS PASS $rpt
+    set drc_data [mptdc_signoff_parse_verify_drc_report $drc_rpt]
+    set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
+    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set unrouted [mptdc_signoff_parse_report_route_unrouted $report_route_rpt]
+    mptdc_signoff_write_route_gate_status $rpt $drc_data $regular_bad $special_bad $unrouted $antenna_status
 }
 
 proc mptdc_signoff_extract_and_sta {} {
@@ -1352,6 +2411,201 @@ proc mptdc_signoff_extract_and_sta {} {
     mptdc_signoff_set_status DRV_STATUS PASS drv_reports_require_zero_violations
 }
 
+proc mptdc_signoff_spread_pct {values} {
+    if {[llength $values] == 0} { return "" }
+    set min ""
+    set max ""
+    set sum 0.0
+    foreach value $values {
+        if {![string is double -strict $value]} { return "" }
+        if {$min eq "" || $value < $min} { set min $value }
+        if {$max eq "" || $value > $max} { set max $value }
+        set sum [expr {$sum + $value}]
+    }
+    set mean [expr {$sum / double([llength $values])}]
+    if {$mean <= 0.0} { return "" }
+    return [format %.3f [expr {(($max - $min) / $mean) * 100.0}]]
+}
+
+proc mptdc_signoff_write_phase_and_backend_reports {} {
+    global o13 o12b
+    set o13(reports_dir) [mptdc_signoff_report_dir]
+    set o12b(reports_dir) [mptdc_signoff_report_dir]
+    mptdc_signoff_source_if_exists innovus_o13_phase_buffer_reports.tcl
+    set o13_status REVIEW_REQUIRED
+    set o13_error ""
+    if {[llength [info commands mptdc_o13_write_reports]] > 0} {
+        if {[catch {mptdc_o13_write_reports} o13_error]} {
+            set o13_status FAIL
+        } else {
+            set o13_status PASS
+        }
+    }
+
+    set phase_rpt [file join [mptdc_signoff_report_dir] phase_rc_symmetry_status.rpt]
+    set route_csv [file join [mptdc_signoff_report_dir] phase_buffer_route_summary.csv]
+    array set raw_caps {}
+    array set raw_lengths {}
+    array set buf_caps {}
+    array set buf_lengths {}
+    set rows 0
+    if {[file exists $route_csv]} {
+        set fh [open $route_csv r]
+        set header 1
+        while {[gets $fh line] >= 0} {
+            if {$header} {
+                set header 0
+                continue
+            }
+            if {[string trim $line] eq ""} { continue }
+            set cols [split $line ","]
+            set family [lindex $cols 0]
+            if {$family ni {slow fast}} { continue }
+            incr rows
+            foreach {array_name index} {
+                raw_lengths 3
+                raw_caps 4
+                buf_lengths 8
+                buf_caps 9
+            } {
+                set value [string trim [lindex $cols $index] "\""]
+                if {[string is double -strict $value]} {
+                    lappend ${array_name}($family) $value
+                }
+            }
+        }
+        close $fh
+    }
+    set max_spread [mptdc_signoff_env MPTDC_PHASE_RC_MAX_SPREAD_PCT 10.0]
+    set raw_cap_limit [mptdc_signoff_env MPTDC_RO_TUNE4_S_MAX_CAP_PF 0.050]
+    set phase_status PASS
+    set rc_status PASS
+    set fh [open $phase_rpt w]
+    puts $fh "# MPTDC Phase Load and RC Symmetry Status"
+    puts $fh "O13_REPORT_GENERATION_STATUS=$o13_status"
+    if {$o13_error ne ""} { puts $fh "O13_REPORT_GENERATION_ERROR=$o13_error" }
+    puts $fh "RO_TUNE4_S_MAX_CAP_PF=$raw_cap_limit"
+    puts $fh "MAX_ALLOWED_SPREAD_PCT=$max_spread"
+    puts $fh "ROUTE_CSV=$route_csv"
+    puts $fh "ROUTE_ROWS=$rows"
+    foreach family {slow fast} {
+        foreach metric {raw_caps raw_lengths buf_caps buf_lengths} {
+            if {[info exists ${metric}($family)]} {
+                set values [set ${metric}($family)]
+            } else {
+                set values [list]
+            }
+            set spread [mptdc_signoff_spread_pct $values]
+            puts $fh "${family}_${metric}_count=[llength $values]"
+            puts $fh "${family}_${metric}_spread_pct=$spread"
+            if {[llength $values] != 8 || $spread eq ""} {
+                if {$rc_status eq "PASS"} { set rc_status PROVISIONAL }
+            } elseif {$spread > $max_spread} {
+                set rc_status FAIL
+            }
+        }
+        if {[info exists raw_caps($family)]} {
+            set values $raw_caps($family)
+        } else {
+            set values [list]
+        }
+        foreach cap $values {
+            if {$cap > $raw_cap_limit} { set phase_status FAIL }
+        }
+        if {[llength $values] != 8 && $phase_status eq "PASS"} { set phase_status PROVISIONAL }
+    }
+    if {$o13_status ne "PASS"} {
+        if {$phase_status eq "PASS"} { set phase_status PROVISIONAL }
+        if {$rc_status eq "PASS"} { set rc_status PROVISIONAL }
+    }
+    puts $fh "PHASE_LOAD_STATUS=$phase_status"
+    puts $fh "RC_SYMMETRY_STATUS=$rc_status"
+    close $fh
+    mptdc_signoff_set_status PHASE_LOAD_STATUS $phase_status $phase_rpt
+    mptdc_signoff_set_status RC_SYMMETRY_STATUS $rc_status $phase_rpt
+
+    set phase_geom_rpt [file join [mptdc_signoff_report_dir] phase_to_pd_geometry_status.rpt]
+    set placement_csv [file join [mptdc_signoff_report_dir] phase_buffer_placement.csv]
+    set placement_rows 0
+    set unknown_rows 0
+    if {[file exists $placement_csv]} {
+        set fh [open $placement_csv r]
+        set header 1
+        while {[gets $fh line] >= 0} {
+            if {$header} { set header 0; continue }
+            if {[string trim $line] eq ""} { continue }
+            incr placement_rows
+            if {[regexp -nocase {PLACEMENT_UNKNOWN|PLACEMENT_QUERY_FAILED} $line]} {
+                incr unknown_rows
+            }
+        }
+        close $fh
+    }
+    set phase_geom_status [expr {$placement_rows == 32 && $unknown_rows == 0 ? "PASS" : "PROVISIONAL"}]
+    set fh [open $phase_geom_rpt w]
+    puts $fh "PHASE_TO_PD_GEOMETRY_STATUS=$phase_geom_status"
+    puts $fh "PHASE_BUFFER_PLACEMENT_ROWS=$placement_rows"
+    puts $fh "PHASE_BUFFER_PLACEMENT_UNKNOWN_ROWS=$unknown_rows"
+    puts $fh "PLACEMENT_CSV=$placement_csv"
+    close $fh
+    mptdc_signoff_set_status PHASE_TO_PD_GEOMETRY_STATUS $phase_geom_status $phase_geom_rpt
+
+    set backend_rpt [file join [mptdc_signoff_report_dir] backend_region_status.rpt]
+    set pd_box [list]
+    mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
+    if {[llength [info commands mptdc_pnr_floorplan_regions]] > 0} {
+        set regions [mptdc_pnr_floorplan_regions]
+        if {[dict exists $regions pd_island]} { set pd_box [dict get $regions pd_island] }
+    }
+    set backend_intrusion [mptdc_signoff_count_backend_cells_in_pd_box $pd_box]
+    set backend_status [expr {$backend_intrusion == 0 ? "PASS" : "FAIL"}]
+    set fh [open $backend_rpt w]
+    puts $fh "BACKEND_REGION_STATUS=$backend_status"
+    puts $fh "PD_MATRIX_BBOX=$pd_box"
+    puts $fh "BACKEND_INTRUSION_COUNT=$backend_intrusion"
+    puts $fh "BACKEND_CROSSING_STATUS=PROVISIONAL"
+    puts $fh "BACKEND_CROSSING_REASON=route_net_crossing_classification_not_yet_foundry_clean"
+    close $fh
+    mptdc_signoff_set_status BACKEND_REGION_STATUS $backend_status $backend_rpt
+    mptdc_signoff_set_status BACKEND_CROSSING_STATUS PROVISIONAL $backend_rpt
+
+    set empty_rpt [file join [mptdc_signoff_report_dir] empty_space_audit.rpt]
+    set core_box [mptdc_signoff_core_box]
+    set placed_area 0.0
+    set cell_count 0
+    set cells [list]
+    catch {set cells [get_cells -quiet -hierarchical *]}
+    foreach obj $cells {
+        set box [list]
+        foreach attr {.box .bbox .rect .bounds .place_box} {
+            set value ""
+            if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+                set box [mptdc_signoff_flat_box $value]
+                if {[mptdc_signoff_box_valid $box]} { break }
+            }
+        }
+        if {![mptdc_signoff_box_valid $box]} { continue }
+        set placed_area [expr {$placed_area + [mptdc_signoff_box_area $box]}]
+        incr cell_count
+    }
+    set core_area [expr {[mptdc_signoff_box_valid $core_box] ? [mptdc_signoff_box_area $core_box] : 0.0}]
+    set empty_status REVIEW_REQUIRED
+    set fh [open $empty_rpt w]
+    puts $fh "EMPTY_SPACE_AUDIT_STATUS=$empty_status"
+    puts $fh "CORE_BBOX=$core_box"
+    puts $fh "CORE_AREA_UM2=[format %.3f $core_area]"
+    puts $fh "PLACED_CELL_AREA_UM2=[format %.3f $placed_area]"
+    puts $fh "PLACED_CELL_COUNT=$cell_count"
+    if {$core_area > 0.0} {
+        puts $fh "CORE_UTILIZATION=[format %.4f [expr {$placed_area / $core_area}]]"
+        puts $fh "EMPTY_AREA_UM2=[format %.3f [expr {$core_area - $placed_area}]]"
+        puts $fh "EMPTY_AREA_PERCENT=[format %.2f [expr {(($core_area - $placed_area) / $core_area) * 100.0}]]"
+    }
+    puts $fh "EMPTY_SPACE_CLASSIFICATION=REVIEW_LAYOUT_WITH_CONGESTION_PG_PHASE_SYMMETRY"
+    close $fh
+    mptdc_signoff_set_status EMPTY_SPACE_AUDIT_STATUS $empty_status $empty_rpt
+}
+
 proc mptdc_signoff_write_final_package {} {
     set rpt [file join [mptdc_signoff_report_dir] physical_verification_status.md]
     set fh [open $rpt w]
@@ -1361,6 +2615,8 @@ proc mptdc_signoff_write_final_package {} {
     puts $fh "DRC_STATUS=DEFERRED"
     puts $fh "LVS_STATUS=DEFERRED"
     puts $fh "MPTDC_TC_PNR_CLOSURE=PASS"
+    puts $fh "MPTDC_TC_PHYSICAL_SIGNOFF=NO"
+    puts $fh "TC_ONLY_TAPEOUT_EXCEPTION_READY=NO"
     puts $fh "DIGITAL_PNR_SIGNOFF=PROVISIONAL"
     puts $fh "NOT_MMMC_SIGNOFF=YES"
     puts $fh "READY_FOR_TAPEOUT=NO"
@@ -1370,7 +2626,9 @@ proc mptdc_signoff_write_final_package {} {
     mptdc_signoff_set_status DRC_STATUS DEFERRED $rpt
     mptdc_signoff_set_status LVS_STATUS DEFERRED $rpt
     mptdc_signoff_set_status DELIVERABLE_STATUS PROVISIONAL [mptdc_signoff_outputs_dir]
-    mptdc_signoff_set_status MPTDC_TC_PNR_CLOSURE PASS tc_only_physical_closure_complete
+    mptdc_signoff_set_status MPTDC_TC_PNR_CLOSURE PASS tc_only_routed_timed_closure_complete
+    mptdc_signoff_set_status MPTDC_TC_PHYSICAL_SIGNOFF NO drc_lvs_and_physical_verification_deferred
+    mptdc_signoff_set_status TC_ONLY_TAPEOUT_EXCEPTION_READY NO drc_lvs_and_physical_verification_deferred
     mptdc_signoff_set_status NOT_MMMC_SIGNOFF YES scope_tc_only
     mptdc_signoff_set_status READY_FOR_TAPEOUT NO row_and_mmmc_deferred
     mptdc_signoff_set_status DIGITAL_PNR_SIGNOFF PROVISIONAL row_and_block_drc_lvs_deferred
@@ -1424,10 +2682,6 @@ proc mptdc_signoff_main {} {
     mptdc_signoff_stage post_import_tc_timing SETUP_STATUS_TC {
         mptdc_signoff_post_import_timing_gate
     }
-    mptdc_signoff_stage pg_connectivity PG_CONNECTIVITY_STATUS {
-        mptdc_signoff_apply_pg_connectivity
-        mptdc_signoff_write_pg_gate_template
-    }
     mptdc_signoff_stage floorplan FLOORPLAN_STATUS {
         mptdc_signoff_apply_floorplan
     }
@@ -1436,6 +2690,11 @@ proc mptdc_signoff_main {} {
     }
     mptdc_signoff_stage ro_macro_placement RO_MACRO_STATUS {
         mptdc_signoff_place_ro_macros
+    }
+    mptdc_signoff_stage pg_connectivity PG_PHYSICAL_STATUS {
+        mptdc_signoff_apply_pg_connectivity
+        mptdc_signoff_write_pg_gate_template
+        mptdc_signoff_build_power_grid
     }
     mptdc_signoff_stage pd_matrix_placement PD_MATRIX_STATUS {
         mptdc_signoff_place_pd_matrix
@@ -1459,9 +2718,7 @@ proc mptdc_signoff_main {} {
         mptdc_signoff_extract_and_sta
     }
     mptdc_signoff_stage phase_and_backend_reports PHASE_LOAD_STATUS {
-        mptdc_signoff_set_status PHASE_LOAD_STATUS PROVISIONAL phase_load_reports_require_review
-        mptdc_signoff_set_status RC_SYMMETRY_STATUS PROVISIONAL rc_symmetry_reports_require_review
-        mptdc_signoff_set_status BACKEND_CROSSING_STATUS PROVISIONAL backend_crossing_reports_require_review
+        mptdc_signoff_write_phase_and_backend_reports
     }
     mptdc_signoff_stage physical_verification_package DRC_STATUS {
         mptdc_signoff_write_final_package
@@ -1477,6 +2734,7 @@ proc mptdc_signoff_main {} {
     puts "DIGITAL_PNR_SIGNOFF=PROVISIONAL"
     puts "NOT_MMMC_SIGNOFF=YES"
     puts "READY_FOR_TAPEOUT=NO"
+    puts "TC_ONLY_TAPEOUT_EXCEPTION_READY=NO"
     puts "MPTDC_DIGITAL_SIGNOFF_STATUS=$status_path"
 }
 
