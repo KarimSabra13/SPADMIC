@@ -2,7 +2,11 @@
 # Stable MPTDC PD matrix 8x8 placement/audit hook
 # =============================================================================
 
-source [file join [file dirname [file normalize [info script]]] pd_matrix_floorplan.tcl]
+set mptdc_pd_script_dir [file dirname [file normalize [info script]]]
+source [file join $mptdc_pd_script_dir innovus_mptdc_floorplan.tcl]
+source [file join $mptdc_pd_script_dir osc_pd_regions.tcl]
+source [file join $mptdc_pd_script_dir pd_matrix_floorplan.tcl]
+unset mptdc_pd_script_dir
 
 if {[llength [info commands mptdc_pnr_env]] == 0} {
     proc mptdc_pnr_env {name default_value} {

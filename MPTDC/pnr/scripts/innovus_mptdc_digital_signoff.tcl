@@ -599,12 +599,10 @@ proc mptdc_signoff_db_object_name {obj} {
 
 proc mptdc_signoff_db_object_box {obj} {
     if {$obj eq ""} { return [list] }
-    set attrs [list .box .bbox .rect .bounds .place_box]
-    if {[string match {hinst:*} "$obj"]} {
-        # Innovus hinst objects commonly have .bbox but reject .box. Avoid
-        # noisy IMPDBTCL-248 messages while still accepting hierarchical bboxes.
-        set attrs [list .bbox .rect .bounds .place_box]
-    }
+    # Innovus hinst objects reject .box, and this build prints IMPDBTCL-248
+    # even inside catch. Use attributes that work for both hinst and inst-like
+    # objects before any command can emit that diagnostic.
+    set attrs [list .bbox .rect .bounds .place_box]
     foreach attr $attrs {
         set value ""
         if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
@@ -636,7 +634,7 @@ proc mptdc_signoff_leaf_cell_objects_under {inst} {
 
 proc mptdc_signoff_cell_box {inst} {
     set ptr [mptdc_signoff_cell_ptr $inst]
-    foreach attr {.box .bbox .place_box} {
+    foreach attr {.bbox .place_box} {
         set value ""
         if {$ptr ne "" && ![catch {set value [dbGet ${ptr}${attr}]}] && $value ne ""} {
             set box [mptdc_signoff_flat_box $value]
@@ -1812,7 +1810,59 @@ proc mptdc_signoff_place_pd_matrix {} {
     }
     set ::env(MPTDC_PNR_PLACE_PD_GRID) [mptdc_signoff_env MPTDC_PNR_PLACE_PD_GRID 1]
     if {[llength [info commands mptdc_pnr_apply_pd_grid_placement]] > 0} {
-        catch {mptdc_pnr_apply_pd_grid_placement}
+        set grid_result [dict create]
+        if {[catch {set grid_result [mptdc_pnr_apply_pd_grid_placement]} err opts]} {
+            set fh [open $rpt a]
+            puts $fh "PD_GRID_PLACEMENT_STATUS=FAIL"
+            puts $fh "PD_GRID_PLACEMENT_ERROR=$err"
+            if {[dict exists $opts -errorinfo]} {
+                puts $fh "PD_GRID_PLACEMENT_ERRORINFO_BEGIN"
+                puts $fh [dict get $opts -errorinfo]
+                puts $fh "PD_GRID_PLACEMENT_ERRORINFO_END"
+            }
+            close $fh
+            mptdc_signoff_set_status PD_MATRIX_STATUS FAIL $rpt
+            error "MPTDC_PD_GRID_PLACEMENT_FAILED: report=$rpt"
+        }
+        if {[dict exists $grid_result report]} {
+            set grid_report [dict get $grid_result report]
+        } else {
+            set grid_report ""
+        }
+        set tile_regions 0
+        if {[dict exists $grid_result tile_regions]} {
+            set tile_regions [dict get $grid_result tile_regions]
+        }
+        set tile_region_failures 64
+        if {[dict exists $grid_result tile_region_failures]} {
+            set tile_region_failures [dict get $grid_result tile_region_failures]
+        }
+        set tile_assignments 0
+        if {[dict exists $grid_result tile_region_assignments]} {
+            set tile_assignments [dict get $grid_result tile_region_assignments]
+        }
+        set fh [open $rpt a]
+        puts $fh "PD_GRID_PLACEMENT_STATUS=PASS"
+        puts $fh "PD_GRID_PLACEMENT_REPORT=$grid_report"
+        puts $fh "PD_GRID_TILE_REGIONS=$tile_regions"
+        puts $fh "PD_GRID_TILE_REGION_FAILURES=$tile_region_failures"
+        puts $fh "PD_GRID_TILE_REGION_ASSIGNMENTS=$tile_assignments"
+        close $fh
+        if {$tile_regions != 64 || $tile_region_failures != 0 || $tile_assignments < 64} {
+            set fh [open $rpt a]
+            puts $fh "PD_MATRIX_STATUS=FAIL"
+            puts $fh "PD_MATRIX_FAIL_REASON=pd_tile_regions_not_fully_created"
+            close $fh
+            mptdc_signoff_set_status PD_MATRIX_STATUS FAIL $rpt
+            error "MPTDC_PD_TILE_REGION_GATE_FAILED: report=$rpt"
+        }
+    } else {
+        set fh [open $rpt a]
+        puts $fh "PD_GRID_PLACEMENT_STATUS=FAIL"
+        puts $fh "PD_GRID_PLACEMENT_ERROR=missing_mptdc_pnr_apply_pd_grid_placement"
+        close $fh
+        mptdc_signoff_set_status PD_MATRIX_STATUS FAIL $rpt
+        error "MPTDC_PD_GRID_PLACEMENT_HELPER_MISSING: report=$rpt"
     }
     set fh [open $rpt a]
     puts $fh "PD_PHYSICAL_AUDIT_AFTER_PLACEMENT=YES"

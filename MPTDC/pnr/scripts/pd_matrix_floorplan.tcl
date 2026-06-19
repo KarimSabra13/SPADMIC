@@ -31,10 +31,7 @@ proc mptdc_osc_pd_object_name {obj} {
 
 proc mptdc_osc_pd_box_from_obj {obj} {
     if {$obj eq ""} { return [list] }
-    set attrs [list .box .bbox .rect .bounds .place_box]
-    if {[string match {hinst:*} "$obj"]} {
-        set attrs [list .bbox .rect .bounds .place_box]
-    }
+    set attrs [list .bbox .rect .bounds .place_box]
     foreach attr $attrs {
         set value ""
         if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
@@ -76,7 +73,18 @@ proc mptdc_osc_pd_tile_group_name {ns nf} {
     return "mptdc_pd_tile_${ns}_${nf}"
 }
 
-proc mptdc_osc_pd_create_tile_region {group box leaf_objs fh} {
+proc mptdc_osc_pd_group_member_name {item} {
+    if {![regexp {^(inst|hinst|pin|net|term):|^0x[0-9a-fA-F]+$} "$item"]} {
+        return "$item"
+    }
+    set name [mptdc_osc_pd_object_name $item]
+    if {$name eq ""} {
+        set name "$item"
+    }
+    return $name
+}
+
+proc mptdc_osc_pd_create_tile_region {group box members fh} {
     set llx [lindex $box 0]
     set lly [lindex $box 1]
     set urx [lindex $box 2]
@@ -87,13 +95,13 @@ proc mptdc_osc_pd_create_tile_region {group box leaf_objs fh} {
     } else {
         puts $fh "  group_created $group"
     }
-    foreach obj $leaf_objs {
-        set leaf_name [mptdc_osc_pd_object_name $obj]
-        if {$leaf_name eq ""} { continue }
-        if {![catch {addInstToInstGroup $group $leaf_name} err]} {
+    foreach obj $members {
+        set member_name [mptdc_osc_pd_group_member_name $obj]
+        if {$member_name eq ""} { continue }
+        if {![catch {addInstToInstGroup $group $member_name} err]} {
             incr added
         } else {
-            puts $fh "  group_add_warning $group $leaf_name: $err"
+            puts $fh "  group_add_warning $group $member_name: $err"
         }
     }
     set region_status FAIL
@@ -141,7 +149,7 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
 
     set placed 0
     set tile_regions 0
-    set tile_region_leafs 0
+    set tile_region_assignments 0
     set tile_region_failures 0
     set margin [mptdc_pnr_env MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 1.0]
     foreach cell [lsort $cells] {
@@ -160,9 +168,10 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         set y [mptdc_pnr_snap [expr {$lly + ($nf * $pitch_y)}]]
         puts $fh "CELL $cell ns=$ns nf=$nf origin=($x,$y) tile_box=$tile_box"
         set leaf_objs [mptdc_osc_pd_leaf_objects_under $cell]
+        set members [concat [list $cell] $leaf_objs]
         set group [mptdc_osc_pd_tile_group_name $ns $nf]
-        set tile_result [mptdc_osc_pd_create_tile_region $group $tile_box $leaf_objs $fh]
-        incr tile_region_leafs [lindex $tile_result 0]
+        set tile_result [mptdc_osc_pd_create_tile_region $group $tile_box $members $fh]
+        incr tile_region_assignments [lindex $tile_result 0]
         if {[lindex $tile_result 1] eq "PASS"} {
             incr tile_regions
         } else {
@@ -187,7 +196,13 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
     puts $fh "Place/fence attempts accepted: $placed"
     puts $fh "Tile regions accepted: $tile_regions"
     puts $fh "Tile region failures: $tile_region_failures"
-    puts $fh "Tile region leaf assignments: $tile_region_leafs"
+    puts $fh "Tile region assignments: $tile_region_assignments"
     puts $fh "If tile region count is below 64, the synthesized PD hierarchy could not be decomposed into leaf-cell groups for physical matrix enforcement."
     close $fh
+    return [dict create \
+        report $rpt \
+        tile_regions $tile_regions \
+        tile_region_failures $tile_region_failures \
+        tile_region_assignments $tile_region_assignments \
+        place_attempts_accepted $placed]
 }
