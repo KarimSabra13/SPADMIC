@@ -19,6 +19,24 @@ proc mptdc_pnr_route_signal_top_layer {} {
     return [mptdc_pnr_env MPTDC_PNR_SIGNAL_TOP_LAYER MET3]
 }
 
+proc mptdc_pnr_route_layer_index {layer} {
+    set value [string toupper [string trim $layer]]
+    if {[string is integer -strict $value]} {
+        return $value
+    }
+    array set layer_index {
+        MET1 1
+        MET2 2
+        MET3 3
+        MET4 4
+        METTP 5
+    }
+    if {[info exists layer_index($value)]} {
+        return $layer_index($value)
+    }
+    return $layer
+}
+
 proc mptdc_pnr_route_power_top_policy {} {
     return {reserve_top_metal_mainly_for_power}
 }
@@ -57,9 +75,11 @@ proc mptdc_pnr_write_route_intent {{path ""}} {
 proc mptdc_pnr_apply_route_layer_limits {} {
     set bottom [mptdc_pnr_route_signal_bottom_layer]
     set top [mptdc_pnr_route_signal_top_layer]
-    catch {setNanoRouteMode -routeBottomRoutingLayer $bottom}
-    catch {setNanoRouteMode -routeTopRoutingLayer $top}
-    return [list bottom $bottom top $top]
+    set bottom_idx [mptdc_pnr_route_layer_index $bottom]
+    set top_idx [mptdc_pnr_route_layer_index $top]
+    catch {setNanoRouteMode -routeBottomRoutingLayer $bottom_idx}
+    catch {setNanoRouteMode -routeTopRoutingLayer $top_idx}
+    return [list bottom $bottom top $top bottom_index $bottom_idx top_index $top_idx]
 }
 
 proc mptdc_pnr_write_fast_tag_route_lengths_template {{path ""}} {

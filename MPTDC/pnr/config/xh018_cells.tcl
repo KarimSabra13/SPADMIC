@@ -46,7 +46,7 @@ array set mptdc_xh018_cells {
     tie_low_policy              REQUIRED_MASTER
     tie_low                     {LOGIC0DJIHD LOGIC0LVJIHD}
     cts_buffers_policy          REQUIRED_MASTER
-    cts_buffers                 {CLKVBUFJIHD}
+    cts_buffers                 {BUJIHDX1 BUJIHDX2 BUJIHDX3 BUJIHDX4 BUJIHDX6 BUJIHDX8 BUJIHDX12}
     cts_inverters_policy        REQUIRED_MASTER
     cts_inverters               {INJIHDX0 INJIHDX1 INJIHDX2 INJIHDX3 INJIHDX4 INJIHDX6 INJIHDX8 INJIHDX12}
     phase_iso_buffer_policy     REQUIRED_MASTER

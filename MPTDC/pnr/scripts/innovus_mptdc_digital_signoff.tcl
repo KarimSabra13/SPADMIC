@@ -483,6 +483,31 @@ proc mptdc_signoff_count_cells {patterns} {
     return [llength [mptdc_signoff_collect_cells $patterns]]
 }
 
+proc mptdc_signoff_collect_inst_names_from_db {patterns} {
+    set out [list]
+    set all_names [list]
+    foreach cmd {
+        {dbGet top.insts.name}
+        {get_db insts .name}
+    } {
+        if {![catch {set names [eval $cmd]}] && $names ne ""} {
+            foreach name $names {
+                if {$name eq "" || $name eq "0x0" || $name eq "NULL"} { continue }
+                mptdc_signoff_unique_append all_names "$name"
+            }
+        }
+    }
+    foreach name $all_names {
+        foreach pattern $patterns {
+            if {[string match $pattern $name]} {
+                mptdc_signoff_unique_append out $name
+                break
+            }
+        }
+    }
+    return $out
+}
+
 proc mptdc_signoff_box_valid {box} {
     if {[llength $box] < 4} { return 0 }
     foreach value [lrange $box 0 3] {
@@ -1566,7 +1591,12 @@ proc mptdc_signoff_parse_report_route_unrouted {path} {
 }
 
 proc mptdc_signoff_count_existing_filler_cells {} {
-    return [mptdc_signoff_count_cells [list MPTDC_FILL* *MPTDC_FILL*]]
+    set patterns [list MPTDC_FILL* *MPTDC_FILL*]
+    set names [mptdc_signoff_collect_cells $patterns]
+    foreach name [mptdc_signoff_collect_inst_names_from_db $patterns] {
+        mptdc_signoff_unique_append names $name
+    }
+    return [llength $names]
 }
 
 proc mptdc_signoff_insert_final_fillers {} {
@@ -1609,6 +1639,42 @@ proc mptdc_signoff_insert_final_fillers {} {
     }
     mptdc_signoff_set_status FILLER_STATUS PASS $rpt
     return $rpt
+}
+
+proc mptdc_signoff_postroute_opt_enabled {} {
+    return [mptdc_signoff_env_truthy MPTDC_ENABLE_POSTROUTE_OPT]
+}
+
+proc mptdc_signoff_run_optional_postroute_opt {} {
+    set rpt [file join [mptdc_signoff_report_dir] postroute_opt_status.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Optional Post-Route Optimization Status"
+    if {![mptdc_signoff_postroute_opt_enabled]} {
+        puts $fh "POSTROUTE_OPT_STATUS=SKIPPED"
+        puts $fh "POSTROUTE_OPT_REASON=disabled_by_default_for_tc_only_single_non_ocv"
+        puts $fh "POSTROUTE_OPT_ENABLE_ENV=MPTDC_ENABLE_POSTROUTE_OPT"
+        close $fh
+        return
+    }
+    close $fh
+    catch {setDelayCalMode -SIAware false}
+    catch {setSIMode -separate_delta_delay_on_data false}
+    foreach item {
+        {setup {optDesign -postRoute}}
+        {hold {optDesign -postRoute -hold}}
+        {drv {optDesign -postRoute -drv}}
+    } {
+        set label [lindex $item 0]
+        set cmd [lindex $item 1]
+        set fh [open $rpt a]
+        if {[catch {eval $cmd} err]} {
+            puts $fh "POSTROUTE_OPT_${label}_STATUS=REVIEW_REQUIRED"
+            puts $fh "POSTROUTE_OPT_${label}_ERROR=$err"
+        } else {
+            puts $fh "POSTROUTE_OPT_${label}_STATUS=PASS"
+        }
+        close $fh
+    }
 }
 
 proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad unrouted antenna_status} {
@@ -2447,9 +2513,7 @@ proc mptdc_signoff_route_design {} {
     catch {mptdc_pnr_apply_route_layer_limits}
     routeDesign
     set antenna_rpt [file join [mptdc_signoff_report_dir] antenna.rpt]
-    catch {optDesign -postRoute}
-    catch {optDesign -postRoute -hold}
-    catch {optDesign -postRoute -drv}
+    mptdc_signoff_run_optional_postroute_opt
     mptdc_signoff_insert_final_fillers
     set antenna_status PROVISIONAL
     if {![catch {verifyProcessAntenna > $antenna_rpt} antenna_err]} {
