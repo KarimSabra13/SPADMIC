@@ -49,12 +49,19 @@ if {[info exists ::env(TECHNOLOGY_LEF)]} {
 }
 set tech_files(ALL_LEFS) [list $tech_files(TECHNOLOGY_LEF)]
 
+set mptdc_o1_real_ro_enabled 0
+if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
+    set mptdc_o1_real_ro_enabled 1
+}
+
 # Provisional MPTDC oscillator black-box abstracts. These are intentionally
 # checked-in placeholders for early Genus/Innovus planning until the custom
 # analog oscillator team delivers final LEF/Liberty views.
 set tech_files(MPTDC_OSC_LEF) "$design(project_root)/syn/macros/mptdc_osc_blackbox.lef"
-if {[file exists $tech_files(MPTDC_OSC_LEF)]} {
+if {!$mptdc_o1_real_ro_enabled && [file exists $tech_files(MPTDC_OSC_LEF)]} {
     lappend tech_files(ALL_LEFS) $tech_files(MPTDC_OSC_LEF)
+} elseif {$mptdc_o1_real_ro_enabled} {
+    puts "MPTDC_LIB_INFO: O1 real RO_tune4 active; skipping mptdc_osc_blackbox.lef"
 }
 
 # O0 oscillator/PD signoff track: optional provisional macro abstracts generated
@@ -82,7 +89,7 @@ if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE
 # SPADMIC/RO_tune4/abstract OA view.  This is intentionally independent of the
 # O0 provisional LEF switch so O1A cannot silently fall back to placeholder
 # macro geometry.  The server wrappers verify the file before the tool starts.
-if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
+if {$mptdc_o1_real_ro_enabled} {
     set tech(OSC_REAL_RO_MACRO) "RO_tune4"
     set tech(OSC_SLOW_MACRO_REAL) "RO_tune4"
     set tech(OSC_FAST_MACRO_REAL) "RO_tune4"
@@ -201,7 +208,7 @@ set tech(OSC_PHASE_PINS)      [list {phase_o[0]} {phase_o[1]} {phase_o[2]} {phas
 set tech(OSC_SLOW_ENABLE_PIN) "start_i"
 set tech(OSC_FAST_ENABLE_PIN) "stop_i"
 
-if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
+if {$mptdc_o1_real_ro_enabled} {
     set tech(OSC_SLOW_MACRO)      "RO_tune4"
     set tech(OSC_FAST_MACRO)      "RO_tune4"
     set tech(OSC_VDD)             "VDD"

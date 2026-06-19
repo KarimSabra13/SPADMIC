@@ -23,6 +23,7 @@ The current active first-silicon digital baseline is:
 |-----------|------|-----------------|
 | [`MPTDC/`](MPTDC/) | Vernier multi-phase TDC core, verification, calibration, synthesis collateral | [`MPTDC/README.md`](MPTDC/README.md) |
 | [`TOP/`](TOP/) | SPADMIC chip-level integration around three MPTDC axes | [`TOP/README.md`](TOP/README.md) |
+| [`position/`](position/) | Async-qualified SPAD position detector, cluster scanner, packetizer, and position synthesis collateral | [`position/docs/README.md`](position/docs/README.md) |
 | [`I2C/`](I2C/) | I2C slave and CSR bridge used by the active top-level | [`I2C/README.md`](I2C/README.md) |
 | [`Rapport_5PSM_KS/`](Rapport_5PSM_KS/) | Report project kept in the repo but excluded from the current cleanup/documentation pass | — |
 
@@ -32,6 +33,7 @@ The current active first-silicon digital baseline is:
 |------|-----------------|----------------|
 | Full chip / integration | [`TOP/README.md`](TOP/README.md) | [`TOP/docs/01_ACTIVE_ARCHITECTURE.md`](TOP/docs/01_ACTIVE_ARCHITECTURE.md), [`TOP/docs/07_BLOCK_GUIDE.md`](TOP/docs/07_BLOCK_GUIDE.md), [`TOP/docs/08_TX_INTERFACE.md`](TOP/docs/08_TX_INTERFACE.md), [`TOP/docs/09_VIP_GUIDE.md`](TOP/docs/09_VIP_GUIDE.md), [`TOP/docs/10_TAPEOUT_READINESS.md`](TOP/docs/10_TAPEOUT_READINESS.md) |
 | TDC core | [`MPTDC/README.md`](MPTDC/README.md) | [`MPTDC/HANDOFF.md`](MPTDC/HANDOFF.md), [`MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md`](MPTDC/docs/architecture/MPTDC_ARCHITECTURE.md), [`MPTDC/docs/synthesis/MPTDC_SYNTHESIS_FLOW.md`](MPTDC/docs/synthesis/MPTDC_SYNTHESIS_FLOW.md), [`MPTDC/docs/verification/MPTDC_VERIFICATION.md`](MPTDC/docs/verification/MPTDC_VERIFICATION.md) |
+| Position block | [`position/docs/README.md`](position/docs/README.md) | [`position/docs/01_REUSABLE_DIGITAL_FLOW_FROM_MPTDC.md`](position/docs/01_REUSABLE_DIGITAL_FLOW_FROM_MPTDC.md) |
 | I2C control plane | [`I2C/README.md`](I2C/README.md) | [`I2C/docs/01_INTEGRATION_GUIDE.md`](I2C/docs/01_INTEGRATION_GUIDE.md), [`I2C/docs/02_BLOCK_GUIDE.md`](I2C/docs/02_BLOCK_GUIDE.md) |
 
 ## Active system dataflow

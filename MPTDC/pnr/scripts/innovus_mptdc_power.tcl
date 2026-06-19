@@ -19,6 +19,21 @@ proc mptdc_pnr_ro_power_pin_map {} {
     return [dict create VDD VDD vdd! VDD VSS VSS]
 }
 
+proc mptdc_pnr_collect_ro_tune4_instances {} {
+    set out [list]
+    foreach pattern [list *u_ro_tune4* *RO_tune4*] {
+        set cells [list]
+        catch {set cells [get_cells -quiet -hierarchical $pattern]}
+        foreach cell $cells {
+            set name "$cell"
+            if {[lsearch -exact $out $name] < 0} {
+                lappend out $name
+            }
+        }
+    }
+    return $out
+}
+
 proc mptdc_pnr_stdcell_power_pins {} {
     set repo_root [file normalize [mptdc_pnr_env MPTDC_REPO_ROOT [file join [file dirname [info script]] ../../..]]]
     set cfg [file join $repo_root MPTDC/pnr/config/xh018_cells.tcl]
@@ -91,8 +106,20 @@ proc mptdc_pnr_apply_power_connectivity {} {
     foreach pg_pin [mptdc_pnr_stdcell_ground_pins] {
         lappend commands [list globalNetConnect $ground -type pgpin -pin $pg_pin -inst *]
     }
-    foreach {pin net} [mptdc_pnr_ro_power_pin_map] {
-        lappend commands [list globalNetConnect $net -type pgpin -pin $pin -inst *]
+    set ro_instances [mptdc_pnr_collect_ro_tune4_instances]
+    puts $fh "RO_TUNE4_INSTANCE_COUNT=[llength $ro_instances]"
+    foreach ro $ro_instances {
+        puts $fh "RO_TUNE4_INSTANCE=$ro"
+    }
+    if {[llength $ro_instances] != 2} {
+        puts $fh "STATUS=FAIL ERROR=expected_exactly_two_ro_tune4_instances"
+        close $fh
+        error "MPTDC_PNR_POWER_CONNECTIVITY_FAILED: expected exactly 2 RO_tune4 instances, found [llength $ro_instances]"
+    }
+    foreach ro $ro_instances {
+        foreach {pin net} [mptdc_pnr_ro_power_pin_map] {
+            lappend commands [list globalNetConnect $net -type pgpin -pin $pin -inst $ro]
+        }
     }
     foreach cmd $commands {
         puts $fh "COMMAND=$cmd"

@@ -43,6 +43,46 @@ abs_path() {
   esac
 }
 
+lef_macro_name() {
+  local lef="$1"
+  awk '
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {print $2; exit}
+  ' "$lef"
+}
+
+resolve_ro_handoff() {
+  local env_file="${MPTDC_RO_HANDOFF_ENV:-$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env}"
+  local default_ro_lef="$REPO_ROOT/results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef"
+  local default_ro_lib="$MPTDC_DIR/syn/macros/RO_tune4_real_abstract_shell.lib"
+  local candidate=""
+  local macro=""
+
+  if [[ -f "$env_file" ]]; then
+    # shellcheck disable=SC1090
+    source "$env_file"
+    export MPTDC_RO_HANDOFF_ENV_SOURCED="$env_file"
+  else
+    export MPTDC_RO_HANDOFF_ENV_SOURCED="missing:$env_file"
+  fi
+
+  export O1_USE_REAL_RO_ABSTRACT="${O1_USE_REAL_RO_ABSTRACT:-1}"
+  export O1_RO_LIBERTY_PATH="${O1_RO_LIBERTY_PATH:-$default_ro_lib}"
+
+  if [[ -z "${O1_RO_LEF_PATH:-}" ]]; then
+    for candidate in "$default_ro_lef" "${O1_RO_SOURCE_LEF_PATH:-}"; do
+      [[ -n "$candidate" && -f "$candidate" ]] || continue
+      macro="$(lef_macro_name "$candidate" 2>/dev/null || true)"
+      if [[ "$macro" == "RO_tune4" ]]; then
+        export O1_RO_LEF_PATH="$candidate"
+        break
+      fi
+    done
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --genus-run-id)
@@ -101,6 +141,10 @@ MANIFEST_DIR="$RESULT_DIR/manifests"
 mkdir -p "$LOG_DIR" "$REPORT_DIR" "$MANIFEST_DIR"
 RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
 
+resolve_ro_handoff
+export MPTDC_CLOSURE_SCOPE="${MPTDC_CLOSURE_SCOPE:-TC_ONLY}"
+export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
+
 {
   echo "# MPTDC Digital Block Signoff Wrapper"
   echo "Author: Karim Sabra"
@@ -116,7 +160,13 @@ RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
   echo "handoff_dir: ${HANDOFF_DIR:-unset}"
   echo "row_infra_policy: NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS"
   echo "allow_no_core_tap_endcap_policy: ${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
-  echo "labels: DIGITAL_PNR_SIGNOFF_FLOW NOT_FEASIBILITY_RENAME"
+  echo "closure_scope: $MPTDC_CLOSURE_SCOPE"
+  echo "ro_handoff_env: ${MPTDC_RO_HANDOFF_ENV_SOURCED:-unset}"
+  echo "O1_USE_REAL_RO_ABSTRACT: ${O1_USE_REAL_RO_ABSTRACT:-unset}"
+  echo "O1_RO_LEF_PATH: ${O1_RO_LEF_PATH:-unset}"
+  echo "O1_RO_LEF_MACRO: $(if [[ -n "${O1_RO_LEF_PATH:-}" && -f "${O1_RO_LEF_PATH:-}" ]]; then lef_macro_name "$O1_RO_LEF_PATH" 2>/dev/null || true; else echo unset; fi)"
+  echo "O1_RO_LIBERTY_PATH: ${O1_RO_LIBERTY_PATH:-unset}"
+  echo "labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO"
   echo
   echo "git status --short --untracked-files=no:"
   git -C "$REPO_ROOT" status --short --untracked-files=no 2>/dev/null || true
@@ -125,6 +175,29 @@ RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
 if [[ "$MODE" != "discover_only" && -n "$(git -C "$REPO_ROOT" status --short --untracked-files=no 2>/dev/null)" ]]; then
   echo "ERROR: tracked working tree must be clean before digital signoff launch." | tee -a "$RUN_LOG"
   exit 3
+fi
+
+if [[ "$MODE" != "discover_only" ]]; then
+  if [[ "${MPTDC_CLOSURE_SCOPE:-}" != "TC_ONLY" ]]; then
+    echo "ERROR: today's digital PNR closure wrapper requires MPTDC_CLOSURE_SCOPE=TC_ONLY." | tee -a "$RUN_LOG"
+    exit 3
+  fi
+  if [[ "${O1_USE_REAL_RO_ABSTRACT:-0}" != "1" ]]; then
+    echo "ERROR: O1_USE_REAL_RO_ABSTRACT=1 is required for TC-only physical closure." | tee -a "$RUN_LOG"
+    exit 3
+  fi
+  if [[ -z "${O1_RO_LEF_PATH:-}" || ! -f "${O1_RO_LEF_PATH:-}" ]]; then
+    echo "ERROR: O1_RO_LEF_PATH is not a readable canonical RO_tune4 LEF: ${O1_RO_LEF_PATH:-unset}" | tee -a "$RUN_LOG"
+    exit 3
+  fi
+  if [[ "$(lef_macro_name "$O1_RO_LEF_PATH" 2>/dev/null || true)" != "RO_tune4" ]]; then
+    echo "ERROR: O1_RO_LEF_PATH macro is not exactly RO_tune4: $O1_RO_LEF_PATH" | tee -a "$RUN_LOG"
+    exit 3
+  fi
+  if [[ -z "${O1_RO_LIBERTY_PATH:-}" || ! -f "${O1_RO_LIBERTY_PATH:-}" ]]; then
+    echo "ERROR: O1_RO_LIBERTY_PATH is not readable: ${O1_RO_LIBERTY_PATH:-unset}" | tee -a "$RUN_LOG"
+    exit 3
+  fi
 fi
 
 report_tool_version() {
@@ -252,6 +325,11 @@ if command -v tclsh >/dev/null 2>&1; then
     MPTDC_SIGNOFF_GENUS_RUN_ID="$GENUS_RUN_ID" \
     MPTDC_SIGNOFF_GENUS_RUN_DIR="$GENUS_RUN_DIR" \
     MPTDC_SIGNOFF_HANDOFF_DIR="$HANDOFF_DIR" \
+    MPTDC_CLOSURE_SCOPE="$MPTDC_CLOSURE_SCOPE" \
+    MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="$MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY" \
+    O1_USE_REAL_RO_ABSTRACT="${O1_USE_REAL_RO_ABSTRACT:-1}" \
+    O1_RO_LEF_PATH="${O1_RO_LEF_PATH:-}" \
+    O1_RO_LIBERTY_PATH="${O1_RO_LIBERTY_PATH:-}" \
     MPTDC_DIGITAL_SIGNOFF_SOURCE_ONLY=1 \
       tclsh MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl
   ) 2>&1 | tee "$REPORT_DIR/source_check.rpt" | tee -a "$RUN_LOG"
@@ -288,6 +366,7 @@ if ! command -v innovus >/dev/null 2>&1; then
   exit 127
 fi
 
+set +e
 (
   cd "$REPO_ROOT"
   MPTDC_REPO_ROOT="$REPO_ROOT" \
@@ -295,9 +374,40 @@ fi
   MPTDC_SIGNOFF_GENUS_RUN_ID="$GENUS_RUN_ID" \
   MPTDC_SIGNOFF_GENUS_RUN_DIR="$GENUS_RUN_DIR" \
   MPTDC_SIGNOFF_HANDOFF_DIR="$HANDOFF_DIR" \
+  MPTDC_CLOSURE_SCOPE="$MPTDC_CLOSURE_SCOPE" \
+  MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="$MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY" \
   MPTDC_STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-JIHD}" \
   MPTDC_STDCELL_SITE="${MPTDC_STDCELL_SITE:-core_jihd}" \
   O1_USE_REAL_RO_ABSTRACT="${O1_USE_REAL_RO_ABSTRACT:-1}" \
+  O1_RO_LEF_PATH="${O1_RO_LEF_PATH:-}" \
+  O1_RO_LIBERTY_PATH="${O1_RO_LIBERTY_PATH:-}" \
     innovus -nowin -init MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl \
       -log "$LOG_DIR/innovus_mptdc_digital_signoff.log"
 ) 2>&1 | tee -a "$RUN_LOG"
+innovus_rc=${PIPESTATUS[0]}
+set -e
+
+fatal_audit="$REPORT_DIR/innovus_fatal_message_audit.rpt"
+fatal_pattern='TECHLIB-702|TECHLIB-704|IMPDB-2504|IMPECO-560|IMPOPT-3115|IMPDB-1221|IMPCCOPT-4255'
+fatal_found=0
+: > "$fatal_audit"
+for log_file in "$RUN_LOG" "$LOG_DIR/innovus_mptdc_digital_signoff.log"; do
+  if [[ -f "$log_file" ]]; then
+    if grep -E "$fatal_pattern" "$log_file" >> "$fatal_audit"; then
+      fatal_found=1
+    fi
+  fi
+done
+if [[ "$fatal_found" == "1" ]]; then
+  echo "ERROR: fatal Innovus message audit failed. Review $fatal_audit" | tee -a "$RUN_LOG"
+  exit 6
+fi
+{
+  echo "INNOVUS_FATAL_MESSAGE_AUDIT=PASS"
+  echo "REQUIRED_ABSENT_MESSAGES=$fatal_pattern"
+} > "$fatal_audit"
+
+if [[ "$innovus_rc" != "0" ]]; then
+  echo "ERROR: Innovus exited with code $innovus_rc." | tee -a "$RUN_LOG"
+  exit "$innovus_rc"
+fi

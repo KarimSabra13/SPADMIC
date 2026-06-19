@@ -8,19 +8,52 @@
 # flow in legacy MMMC mode, so this file avoids MMMC2 timing_condition syntax
 # and binds library sets directly to delay corners. The active signoff names are
 # TC_NOMINAL, WC_SETUP, BC_HOLD, and the report-only RO_MAX_FREQ_STRESS view.
+# MPTDC_CLOSURE_SCOPE=TC_ONLY keeps WC_SETUP/BC_HOLD/RO_MAX_FREQ_STRESS defined
+# but inactive for today's TC-only physical closure run.
 # =============================================================================
+
+proc mptdc_mmmc_env {name default_value} {
+    if {[info exists ::env($name)] && $::env($name) ne ""} {
+        return $::env($name)
+    }
+    return $default_value
+}
+
+proc mptdc_mmmc_lappend_unique_existing {var_name path label} {
+    upvar 1 $var_name paths
+    if {$path eq ""} {
+        return 0
+    }
+    if {![file exists $path]} {
+        puts "MPTDC_MMMC_WARN: requested $label does not exist: $path"
+        return 0
+    }
+    set normalized [file normalize $path]
+    set normalized_existing [list]
+    foreach existing $paths {
+        if {[file exists $existing]} {
+            lappend normalized_existing [file normalize $existing]
+        } else {
+            lappend normalized_existing $existing
+        }
+    }
+    if {[lsearch -exact $normalized_existing $normalized] >= 0} {
+        puts "MPTDC_MMMC_INFO: skipping duplicate $label $normalized"
+        return 0
+    }
+    lappend paths $normalized
+    puts "MPTDC_MMMC_INFO: enabling $label $normalized"
+    return 1
+}
+
+set mptdc_closure_scope [string toupper [mptdc_mmmc_env MPTDC_CLOSURE_SCOPE FULL_MMMC]]
 
 ###########################
 #    Constraint Modes
 ###########################
 set mptdc_innovus_sdc_files [list $design(postsyn_sdc)]
 if {[info exists ::env(MPTDC_OSC_PD_SDC_OVERLAY)] && $::env(MPTDC_OSC_PD_SDC_OVERLAY) ne ""} {
-    if {[file exists $::env(MPTDC_OSC_PD_SDC_OVERLAY)]} {
-        lappend mptdc_innovus_sdc_files $::env(MPTDC_OSC_PD_SDC_OVERLAY)
-        puts "MPTDC_MMMC_INFO: enabling oscillator/PD Innovus SDC overlay $::env(MPTDC_OSC_PD_SDC_OVERLAY)"
-    } else {
-        puts "MPTDC_MMMC_WARN: requested oscillator/PD Innovus SDC overlay does not exist: $::env(MPTDC_OSC_PD_SDC_OVERLAY)"
-    }
+    mptdc_mmmc_lappend_unique_existing mptdc_innovus_sdc_files $::env(MPTDC_OSC_PD_SDC_OVERLAY) "oscillator/PD Innovus SDC overlay"
 }
 
 create_constraint_mode \
@@ -29,12 +62,7 @@ create_constraint_mode \
 
 set mptdc_innovus_stress_sdc_files $mptdc_innovus_sdc_files
 if {[info exists ::env(MPTDC_RO_STRESS_SDC_OVERLAY)] && $::env(MPTDC_RO_STRESS_SDC_OVERLAY) ne ""} {
-    if {[file exists $::env(MPTDC_RO_STRESS_SDC_OVERLAY)]} {
-        lappend mptdc_innovus_stress_sdc_files $::env(MPTDC_RO_STRESS_SDC_OVERLAY)
-        puts "MPTDC_MMMC_INFO: enabling RO stress SDC overlay $::env(MPTDC_RO_STRESS_SDC_OVERLAY)"
-    } else {
-        puts "MPTDC_MMMC_WARN: requested RO stress SDC overlay does not exist: $::env(MPTDC_RO_STRESS_SDC_OVERLAY)"
-    }
+    mptdc_mmmc_lappend_unique_existing mptdc_innovus_stress_sdc_files $::env(MPTDC_RO_STRESS_SDC_OVERLAY) "RO stress SDC overlay"
 }
 
 create_constraint_mode \
@@ -124,8 +152,17 @@ create_analysis_view -name wc_view \
     -constraint_mode NOMINAL_FUNCTIONAL \
     -delay_corner wc_corner
 
-set mptdc_innovus_setup_views [list TC_NOMINAL WC_SETUP]
-set mptdc_innovus_hold_views  [list TC_NOMINAL BC_HOLD]
+if {$mptdc_closure_scope eq "TC_ONLY"} {
+    set mptdc_innovus_setup_views [list TC_NOMINAL]
+    set mptdc_innovus_hold_views  [list TC_NOMINAL]
+    puts "MPTDC_CLOSURE_SCOPE=TC_ONLY"
+    puts "SETUP_STATUS_WC=DEFERRED evidence=scope_tc_only"
+    puts "HOLD_STATUS_BC=DEFERRED evidence=scope_tc_only"
+    puts "RO_1GHZ_STRESS_STATUS=DEFERRED evidence=scope_tc_only"
+} else {
+    set mptdc_innovus_setup_views [list TC_NOMINAL WC_SETUP]
+    set mptdc_innovus_hold_views  [list TC_NOMINAL BC_HOLD]
+}
 
 if {[info exists ::env(MPTDC_SIGNOFF_SETUP_VIEWS)] && $::env(MPTDC_SIGNOFF_SETUP_VIEWS) ne ""} {
     set mptdc_innovus_setup_views [split $::env(MPTDC_SIGNOFF_SETUP_VIEWS)]

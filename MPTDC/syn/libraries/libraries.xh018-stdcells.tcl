@@ -143,10 +143,16 @@ puts "MPTDC_LIB_INFO: standard-cell TC Liberty=$tech_files(STDCELLS_TC_LIB)"
 # Innovus planning. Final characterized oscillator macro Liberty must replace or
 # augment this file before signoff timing is claimed on macro internals.
 set tech_files(MPTDC_OSC_BB_LIB) "$design(project_root)/syn/macros/mptdc_osc_blackbox.lib"
-if {[file exists $tech_files(MPTDC_OSC_BB_LIB)]} {
+set mptdc_o1_real_ro_enabled 0
+if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
+    set mptdc_o1_real_ro_enabled 1
+}
+if {!$mptdc_o1_real_ro_enabled && [file exists $tech_files(MPTDC_OSC_BB_LIB)]} {
     lappend tech_files(ALL_TC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
     lappend tech_files(ALL_WC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
     lappend tech_files(ALL_BC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
+} elseif {$mptdc_o1_real_ro_enabled} {
+    puts "MPTDC_LIB_INFO: O1 real RO_tune4 active; skipping mptdc_osc_blackbox.lib"
 }
 
 set mptdc_enable_provisional_osc_liberty 0
