@@ -584,6 +584,56 @@ proc mptdc_signoff_cell_ptr {inst} {
     return ""
 }
 
+proc mptdc_signoff_norm_inst_name {name} {
+    set text "$name"
+    regsub -all {\\([\[\]])} $text {\1} text
+    return $text
+}
+
+proc mptdc_signoff_db_object_name {obj} {
+    set name ""
+    catch {set name [get_object_name $obj]}
+    if {$name eq ""} { catch {set name [get_db $obj .name]} }
+    return $name
+}
+
+proc mptdc_signoff_db_object_box {obj} {
+    if {$obj eq ""} { return [list] }
+    set attrs [list .box .bbox .rect .bounds .place_box]
+    if {[string match {hinst:*} "$obj"]} {
+        # Innovus hinst objects commonly have .bbox but reject .box. Avoid
+        # noisy IMPDBTCL-248 messages while still accepting hierarchical bboxes.
+        set attrs [list .bbox .rect .bounds .place_box]
+    }
+    foreach attr $attrs {
+        set value ""
+        if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+            set box [mptdc_signoff_flat_box $value]
+            if {[mptdc_signoff_box_valid $box]} { return $box }
+        }
+    }
+    return [list]
+}
+
+proc mptdc_signoff_leaf_cell_objects_under {inst} {
+    set prefix "[mptdc_signoff_norm_inst_name $inst]/"
+    set out [list]
+    set all_cells [list]
+    catch {set all_cells [get_cells -quiet -hierarchical *]}
+    foreach obj $all_cells {
+        if {[string match {hinst:*} "$obj"]} { continue }
+        set box [mptdc_signoff_db_object_box $obj]
+        if {![mptdc_signoff_box_valid $box]} { continue }
+        set name [mptdc_signoff_db_object_name $obj]
+        if {$name eq ""} { continue }
+        set norm [mptdc_signoff_norm_inst_name $name]
+        if {[string first $prefix $norm] == 0} {
+            lappend out $obj
+        }
+    }
+    return $out
+}
+
 proc mptdc_signoff_cell_box {inst} {
     set ptr [mptdc_signoff_cell_ptr $inst]
     foreach attr {.box .bbox .place_box} {
@@ -599,14 +649,7 @@ proc mptdc_signoff_cell_box {inst} {
         catch {set objs [get_cells -quiet -hierarchical $inst]}
     }
     set obj [lindex $objs 0]
-    foreach attr {.box .bbox .rect .bounds .place_box} {
-        set value ""
-        if {$obj ne "" && ![catch {set value [get_db $obj $attr]}] && $value ne ""} {
-            set box [mptdc_signoff_flat_box $value]
-            if {[mptdc_signoff_box_valid $box]} { return $box }
-        }
-    }
-    return [list]
+    return [mptdc_signoff_db_object_box $obj]
 }
 
 proc mptdc_signoff_cell_center {inst} {
@@ -619,32 +662,13 @@ proc mptdc_signoff_cell_or_leaf_box {inst} {
     if {[mptdc_signoff_box_valid $box]} {
         return [concat $box [list 1 direct]]
     }
-    set prefix "$inst/"
-    regsub -all {\\([\[\]])} $prefix {\1} norm_prefix
     set found 0
     set llx ""
     set lly ""
     set urx ""
     set ury ""
-    set all_cells [list]
-    catch {set all_cells [get_cells -quiet -hierarchical *]}
-    foreach obj $all_cells {
-        set name ""
-        catch {set name [get_object_name $obj]}
-        if {$name eq ""} { catch {set name [get_db $obj .name]} }
-        set norm "$name"
-        regsub -all {\\([\[\]])} $norm {\1} norm
-        if {[string first $norm_prefix $norm] != 0} {
-            continue
-        }
-        set leaf_box [list]
-        foreach attr {.box .bbox .rect .bounds .place_box} {
-            set value ""
-            if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
-                set leaf_box [mptdc_signoff_flat_box $value]
-                if {[mptdc_signoff_box_valid $leaf_box]} { break }
-            }
-        }
+    foreach obj [mptdc_signoff_leaf_cell_objects_under $inst] {
+        set leaf_box [mptdc_signoff_db_object_box $obj]
         if {![mptdc_signoff_box_valid $leaf_box]} { continue }
         set b_llx [lindex $leaf_box 0]
         set b_lly [lindex $leaf_box 1]
@@ -1919,20 +1943,11 @@ proc mptdc_signoff_count_backend_cells_in_pd_box {pd_box} {
     set cells [list]
     catch {set cells [get_cells -quiet -hierarchical *]}
     foreach obj $cells {
-        set name ""
-        catch {set name [get_object_name $obj]}
-        if {$name eq ""} { catch {set name [get_db $obj .name]} }
+        set name [mptdc_signoff_db_object_name $obj]
         if {[regexp {gen_pd_row|gen_pd_col|u_pd|phase_buf|u_ro_tune4|RO_tune4|MPTDC_FILL} $name]} {
             continue
         }
-        set box [list]
-        foreach attr {.box .bbox .rect .bounds .place_box} {
-            set value ""
-            if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
-                set box [mptdc_signoff_flat_box $value]
-                if {[mptdc_signoff_box_valid $box]} { break }
-            }
-        }
+        set box [mptdc_signoff_db_object_box $obj]
         if {![mptdc_signoff_box_valid $box]} { continue }
         set ctr [mptdc_signoff_box_center $box]
         if {[mptdc_signoff_point_in_box [lindex $ctr 0] [lindex $ctr 1] $pd_box]} {
@@ -2576,14 +2591,7 @@ proc mptdc_signoff_write_phase_and_backend_reports {} {
     set cells [list]
     catch {set cells [get_cells -quiet -hierarchical *]}
     foreach obj $cells {
-        set box [list]
-        foreach attr {.box .bbox .rect .bounds .place_box} {
-            set value ""
-            if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
-                set box [mptdc_signoff_flat_box $value]
-                if {[mptdc_signoff_box_valid $box]} { break }
-            }
-        }
+        set box [mptdc_signoff_db_object_box $obj]
         if {![mptdc_signoff_box_valid $box]} { continue }
         set placed_area [expr {$placed_area + [mptdc_signoff_box_area $box]}]
         incr cell_count

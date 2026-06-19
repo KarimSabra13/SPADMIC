@@ -16,6 +16,98 @@ proc mptdc_osc_pd_parse_ns_nf {inst ns_var nf_var} {
     return 0
 }
 
+proc mptdc_osc_pd_norm_name {name} {
+    set text "$name"
+    regsub -all {\\([\[\]])} $text {\1} text
+    return $text
+}
+
+proc mptdc_osc_pd_object_name {obj} {
+    set name ""
+    catch {set name [get_object_name $obj]}
+    if {$name eq ""} { catch {set name [get_db $obj .name]} }
+    return $name
+}
+
+proc mptdc_osc_pd_box_from_obj {obj} {
+    if {$obj eq ""} { return [list] }
+    set attrs [list .box .bbox .rect .bounds .place_box]
+    if {[string match {hinst:*} "$obj"]} {
+        set attrs [list .bbox .rect .bounds .place_box]
+    }
+    foreach attr $attrs {
+        set value ""
+        if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+            while {[llength $value] == 1} { set value [lindex $value 0] }
+            if {[llength $value] < 4} { continue }
+            set box [lrange $value 0 3]
+            set ok 1
+            foreach v $box {
+                if {![string is double -strict $v]} { set ok 0 }
+            }
+            if {$ok && [lindex $box 2] > [lindex $box 0] && [lindex $box 3] > [lindex $box 1]} {
+                return $box
+            }
+        }
+    }
+    return [list]
+}
+
+proc mptdc_osc_pd_leaf_objects_under {inst} {
+    set prefix "[mptdc_osc_pd_norm_name $inst]/"
+    set out [list]
+    set all_cells [list]
+    catch {set all_cells [get_cells -quiet -hierarchical *]}
+    foreach obj $all_cells {
+        if {[string match {hinst:*} "$obj"]} { continue }
+        set box [mptdc_osc_pd_box_from_obj $obj]
+        if {[llength $box] < 4} { continue }
+        set name [mptdc_osc_pd_object_name $obj]
+        if {$name eq ""} { continue }
+        set norm [mptdc_osc_pd_norm_name $name]
+        if {[string first $prefix $norm] == 0} {
+            lappend out $obj
+        }
+    }
+    return $out
+}
+
+proc mptdc_osc_pd_tile_group_name {ns nf} {
+    return "mptdc_pd_tile_${ns}_${nf}"
+}
+
+proc mptdc_osc_pd_create_tile_region {group box leaf_objs fh} {
+    set llx [lindex $box 0]
+    set lly [lindex $box 1]
+    set urx [lindex $box 2]
+    set ury [lindex $box 3]
+    set added 0
+    if {[catch {createInstGroup $group} err]} {
+        puts $fh "  group_create_warning $group: $err"
+    } else {
+        puts $fh "  group_created $group"
+    }
+    foreach obj $leaf_objs {
+        set leaf_name [mptdc_osc_pd_object_name $obj]
+        if {$leaf_name eq ""} { continue }
+        if {![catch {addInstToInstGroup $group $leaf_name} err]} {
+            incr added
+        } else {
+            puts $fh "  group_add_warning $group $leaf_name: $err"
+        }
+    }
+    set region_status FAIL
+    if {$added > 0} {
+        if {![catch {createRegion $group $llx $lly $urx $ury} err]} {
+            set region_status PASS
+        } else {
+            puts $fh "  region_create_warning $group $box: $err"
+        }
+    }
+    puts $fh "  tile_region group=$group leaf_count=$added box=$box status=$region_status"
+    return [list $added $region_status]
+}
+
 proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
     global pnr
     set out_dir [mptdc_osc_pd_result_dir]
@@ -48,6 +140,10 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
     puts $fh ""
 
     set placed 0
+    set tile_regions 0
+    set tile_region_leafs 0
+    set tile_region_failures 0
+    set margin [mptdc_pnr_env MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 1.0]
     foreach cell [lsort $cells] {
         set ns ""
         set nf ""
@@ -55,9 +151,23 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
             puts $fh "SKIP unparsable cell: $cell"
             continue
         }
-        set x [mptdc_pnr_snap [expr {$llx + ($ns + 0.5) * $pitch_x}]]
-        set y [mptdc_pnr_snap [expr {$lly + ($nf + 0.5) * $pitch_y}]]
-        puts $fh "CELL $cell ns=$ns nf=$nf target=($x,$y)"
+        set tile_llx [mptdc_pnr_snap [expr {$llx + ($ns * $pitch_x) + $margin}]]
+        set tile_lly [mptdc_pnr_snap [expr {$lly + ($nf * $pitch_y) + $margin}]]
+        set tile_urx [mptdc_pnr_snap [expr {$llx + (($ns + 1) * $pitch_x) - $margin}]]
+        set tile_ury [mptdc_pnr_snap [expr {$lly + (($nf + 1) * $pitch_y) - $margin}]]
+        set tile_box [list $tile_llx $tile_lly $tile_urx $tile_ury]
+        set x [mptdc_pnr_snap [expr {$llx + ($ns * $pitch_x)}]]
+        set y [mptdc_pnr_snap [expr {$lly + ($nf * $pitch_y)}]]
+        puts $fh "CELL $cell ns=$ns nf=$nf origin=($x,$y) tile_box=$tile_box"
+        set leaf_objs [mptdc_osc_pd_leaf_objects_under $cell]
+        set group [mptdc_osc_pd_tile_group_name $ns $nf]
+        set tile_result [mptdc_osc_pd_create_tile_region $group $tile_box $leaf_objs $fh]
+        incr tile_region_leafs [lindex $tile_result 0]
+        if {[lindex $tile_result 1] eq "PASS"} {
+            incr tile_regions
+        } else {
+            incr tile_region_failures
+        }
         foreach cmd [list \
             [list placeInstance $cell $x $y R0] \
             [list setObjFPlanBox Instance $cell $x $y [expr {$x + 1.0}] [expr {$y + 1.0}]] \
@@ -75,6 +185,9 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
 
     puts $fh ""
     puts $fh "Place/fence attempts accepted: $placed"
-    puts $fh "If accepted count is 0, the synthesized PD hierarchy is not a hard placeable master yet; use the generated symmetry CSV and regions as the enforceable provisional check."
+    puts $fh "Tile regions accepted: $tile_regions"
+    puts $fh "Tile region failures: $tile_region_failures"
+    puts $fh "Tile region leaf assignments: $tile_region_leafs"
+    puts $fh "If tile region count is below 64, the synthesized PD hierarchy could not be decomposed into leaf-cell groups for physical matrix enforcement."
     close $fh
 }
