@@ -80,15 +80,51 @@ proc mptdc_o10_io_pin_command_side {logical_side} {
     }
 }
 
+proc mptdc_o10_io_unique_append {var_name value} {
+    upvar 1 $var_name values
+    if {$value eq ""} {
+        return
+    }
+    if {[lsearch -exact $values $value] < 0} {
+        lappend values $value
+    }
+}
+
+proc mptdc_o10_io_object_names {objects} {
+    set names [list]
+    if {[llength $objects] == 0} {
+        return $names
+    }
+    if {[llength [info commands mptdc_o10_object_names]] > 0} {
+        foreach name [mptdc_o10_object_names $objects] {
+            mptdc_o10_io_unique_append names "$name"
+        }
+        return $names
+    }
+    if {![catch {get_object_name $objects} obj_names]} {
+        foreach name $obj_names {
+            mptdc_o10_io_unique_append names "$name"
+        }
+        return $names
+    }
+    if {![catch {get_db $objects .name} obj_names]} {
+        foreach name $obj_names {
+            mptdc_o10_io_unique_append names "$name"
+        }
+        return $names
+    }
+    foreach obj $objects {
+        mptdc_o10_io_unique_append names "$obj"
+    }
+    return $names
+}
+
 proc mptdc_o10_io_pin_port_names {} {
     set ports [list]
     if {[catch {set ports [get_ports -quiet *]}]} {
         catch {set ports [get_ports *]}
     }
-    if {[llength [info commands mptdc_o10_object_names]] > 0} {
-        return [lsort -dictionary [mptdc_o10_object_names $ports]]
-    }
-    return [lsort -dictionary $ports]
+    return [lsort -dictionary [mptdc_o10_io_object_names $ports]]
 }
 
 proc mptdc_o10_io_pin_direction {pin_name} {
