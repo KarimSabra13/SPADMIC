@@ -148,6 +148,14 @@ proc mptdc_signoff_set_status {key state evidence} {
     set mptdc_signoff_status($key) "$state evidence=$evidence"
 }
 
+proc mptdc_signoff_status_state {key} {
+    global mptdc_signoff_status
+    if {![info exists mptdc_signoff_status($key)]} {
+        return ""
+    }
+    return [lindex $mptdc_signoff_status($key) 0]
+}
+
 proc mptdc_signoff_write_status {{path ""}} {
     global mptdc_signoff_status
     if {$path eq ""} {
@@ -1123,20 +1131,52 @@ proc mptdc_signoff_require_no_negative_slack {path label} {
     if {![file exists $path]} {
         error "MPTDC_REPORT_MISSING_FOR_GATE: label=$label path=$path"
     }
+    set bad [mptdc_signoff_collect_timing_failures $path]
+    if {[llength $bad] > 0} {
+        error "MPTDC_TIMING_GATE_FAILED: label=$label report=$path evidence=$bad"
+    }
+}
+
+proc mptdc_signoff_collect_timing_failures {path {limit 5}} {
+    if {![file exists $path]} {
+        return [list "REPORT_MISSING path=$path"]
+    }
     set fh [open $path r]
     set bad [list]
     while {[gets $fh line] >= 0} {
         if {[mptdc_signoff_timing_line_is_failure $line]} {
             lappend bad $line
-            if {[llength $bad] >= 5} {
+            if {[llength $bad] >= $limit} {
                 break
             }
         }
     }
     close $fh
-    if {[llength $bad] > 0} {
-        error "MPTDC_TIMING_GATE_FAILED: label=$label report=$path evidence=$bad"
+    return $bad
+}
+
+proc mptdc_signoff_write_extracted_timing_status {path setup_rpt hold_rpt setup_bad hold_bad} {
+    set fh [open $path w]
+    puts $fh "# MPTDC Extracted TC Timing Status"
+    puts $fh "TC_TIMING_GATE_POLICY=report_failures_without_aborting_physical_package"
+    puts $fh "TC_SETUP_REPORT=$setup_rpt"
+    puts $fh "TC_HOLD_REPORT=$hold_rpt"
+    set setup_status [expr {[llength $setup_bad] == 0 ? "PASS" : "FAIL"}]
+    set hold_status [expr {[llength $hold_bad] == 0 ? "PASS" : "FAIL"}]
+    puts $fh "SETUP_STATUS_TC=$setup_status"
+    puts $fh "TC_HOLD_STATUS=$hold_status"
+    if {[llength $setup_bad] > 0} {
+        puts $fh "TC_SETUP_FAILURE_EVIDENCE_BEGIN"
+        foreach line $setup_bad { puts $fh $line }
+        puts $fh "TC_SETUP_FAILURE_EVIDENCE_END"
     }
+    if {[llength $hold_bad] > 0} {
+        puts $fh "TC_HOLD_FAILURE_EVIDENCE_BEGIN"
+        foreach line $hold_bad { puts $fh $line }
+        puts $fh "TC_HOLD_FAILURE_EVIDENCE_END"
+    }
+    close $fh
+    return [list $setup_status $hold_status]
 }
 
 proc mptdc_signoff_configure_post_route_tc_sta {} {
@@ -2710,11 +2750,14 @@ proc mptdc_signoff_extract_and_sta {} {
         "TC_NOMINAL hold timing" [list \
             {timeDesign -postRoute -hold} \
             {report_timing -view TC_NOMINAL -check_type hold -max_paths 100}]
-    mptdc_signoff_require_no_negative_slack $setup_rpt tc_setup
-    mptdc_signoff_require_no_negative_slack $hold_rpt tc_hold
     mptdc_signoff_set_status EXTRACTION_STATUS PASS extraction_rc.rpt
-    mptdc_signoff_set_status SETUP_STATUS_TC PASS timing_tc_nominal.rpt
-    mptdc_signoff_set_status TC_HOLD_STATUS PASS timing_tc_hold.rpt
+    set setup_bad [mptdc_signoff_collect_timing_failures $setup_rpt]
+    set hold_bad [mptdc_signoff_collect_timing_failures $hold_rpt]
+    set timing_status_rpt [file join [mptdc_signoff_report_dir] extracted_timing_status.rpt]
+    lassign [mptdc_signoff_write_extracted_timing_status $timing_status_rpt \
+        $setup_rpt $hold_rpt $setup_bad $hold_bad] setup_status hold_status
+    mptdc_signoff_set_status SETUP_STATUS_TC $setup_status timing_tc_nominal.rpt
+    mptdc_signoff_set_status TC_HOLD_STATUS $hold_status timing_tc_hold.rpt
     mptdc_signoff_set_status SETUP_STATUS_WC DEFERRED scope_tc_only
     mptdc_signoff_set_status HOLD_STATUS_BC DEFERRED scope_tc_only
     mptdc_signoff_set_status RO_1GHZ_STRESS_STATUS DEFERRED scope_tc_only
@@ -2921,13 +2964,32 @@ proc mptdc_signoff_write_phase_and_backend_reports {} {
 
 proc mptdc_signoff_write_final_package {} {
     set rpt [file join [mptdc_signoff_report_dir] physical_verification_status.md]
+    set setup_state [mptdc_signoff_status_state SETUP_STATUS_TC]
+    set hold_state [mptdc_signoff_status_state TC_HOLD_STATUS]
+    set route_state [mptdc_signoff_status_state ROUTE_STATUS]
+    set extraction_state [mptdc_signoff_status_state EXTRACTION_STATUS]
+    set tc_pnr_state PASS
+    set tc_pnr_evidence tc_only_routed_timed_closure_complete
+    set digital_evidence row_and_block_drc_lvs_deferred
+    if {$route_state ne "PASS" || $extraction_state ne "PASS"} {
+        set tc_pnr_state DEFERRED
+        set tc_pnr_evidence route_or_extraction_not_complete
+        set digital_evidence row_and_block_drc_lvs_deferred_route_or_extraction_not_complete
+    } elseif {$setup_state ne "PASS" || $hold_state ne "PASS"} {
+        set tc_pnr_state DEFERRED
+        set tc_pnr_evidence tc_timing_not_closed
+        set digital_evidence row_and_block_drc_lvs_deferred_timing_not_closed
+    }
     set fh [open $rpt w]
     puts $fh "# Physical Verification Status"
     puts $fh ""
     puts $fh "ROW_INFRA_DRC_LVS_STATUS=DEFERRED"
     puts $fh "DRC_STATUS=DEFERRED"
     puts $fh "LVS_STATUS=DEFERRED"
-    puts $fh "MPTDC_TC_PNR_CLOSURE=PASS"
+    puts $fh "MPTDC_TC_PNR_CLOSURE=$tc_pnr_state"
+    puts $fh "MPTDC_TC_PNR_CLOSURE_EVIDENCE=$tc_pnr_evidence"
+    puts $fh "SETUP_STATUS_TC=$setup_state"
+    puts $fh "TC_HOLD_STATUS=$hold_state"
     puts $fh "MPTDC_TC_PHYSICAL_SIGNOFF=NO"
     puts $fh "TC_ONLY_TAPEOUT_EXCEPTION_READY=NO"
     puts $fh "DIGITAL_PNR_SIGNOFF=PROVISIONAL"
@@ -2939,12 +3001,12 @@ proc mptdc_signoff_write_final_package {} {
     mptdc_signoff_set_status DRC_STATUS DEFERRED $rpt
     mptdc_signoff_set_status LVS_STATUS DEFERRED $rpt
     mptdc_signoff_set_status DELIVERABLE_STATUS PROVISIONAL [mptdc_signoff_outputs_dir]
-    mptdc_signoff_set_status MPTDC_TC_PNR_CLOSURE PASS tc_only_routed_timed_closure_complete
+    mptdc_signoff_set_status MPTDC_TC_PNR_CLOSURE $tc_pnr_state $tc_pnr_evidence
     mptdc_signoff_set_status MPTDC_TC_PHYSICAL_SIGNOFF NO drc_lvs_and_physical_verification_deferred
     mptdc_signoff_set_status TC_ONLY_TAPEOUT_EXCEPTION_READY NO drc_lvs_and_physical_verification_deferred
     mptdc_signoff_set_status NOT_MMMC_SIGNOFF YES scope_tc_only
     mptdc_signoff_set_status READY_FOR_TAPEOUT NO row_and_mmmc_deferred
-    mptdc_signoff_set_status DIGITAL_PNR_SIGNOFF PROVISIONAL row_and_block_drc_lvs_deferred
+    mptdc_signoff_set_status DIGITAL_PNR_SIGNOFF PROVISIONAL $digital_evidence
 }
 
 proc mptdc_signoff_source_check {} {
@@ -3037,10 +3099,17 @@ proc mptdc_signoff_main {} {
         mptdc_signoff_write_final_package
     }
     set status_path [mptdc_signoff_write_status]
-    puts "MPTDC_DIGITAL_SIGNOFF_EXECUTION=COMPLETE_TC_ONLY_PROVISIONAL"
-    puts "MPTDC_TC_PNR_CLOSURE=PASS"
-    puts "SETUP_STATUS_TC=PASS"
-    puts "TC_HOLD_STATUS=PASS"
+    set tc_pnr_state [mptdc_signoff_status_state MPTDC_TC_PNR_CLOSURE]
+    set setup_state [mptdc_signoff_status_state SETUP_STATUS_TC]
+    set hold_state [mptdc_signoff_status_state TC_HOLD_STATUS]
+    if {$tc_pnr_state eq "PASS"} {
+        puts "MPTDC_DIGITAL_SIGNOFF_EXECUTION=COMPLETE_TC_ONLY_PROVISIONAL"
+    } else {
+        puts "MPTDC_DIGITAL_SIGNOFF_EXECUTION=COMPLETE_TC_ONLY_PROVISIONAL_TIMING_NOT_CLOSED"
+    }
+    puts "MPTDC_TC_PNR_CLOSURE=$tc_pnr_state"
+    puts "SETUP_STATUS_TC=$setup_state"
+    puts "TC_HOLD_STATUS=$hold_state"
     puts "SETUP_STATUS_WC=DEFERRED evidence=scope_tc_only"
     puts "HOLD_STATUS_BC=DEFERRED evidence=scope_tc_only"
     puts "RO_1GHZ_STRESS_STATUS=DEFERRED evidence=scope_tc_only"
