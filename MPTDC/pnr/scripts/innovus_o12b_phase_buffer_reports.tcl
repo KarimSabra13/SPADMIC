@@ -439,6 +439,14 @@ proc mptdc_o12b_net_metric_resolved {net_obj metric property_path} {
     return [mptdc_o12b_net_metric $net_obj $metric]
 }
 
+proc mptdc_o12b_net_metric_resolved_named {net_name net_obj metric property_path} {
+    set data [mptdc_o12b_net_metric_resolved $net_obj $metric $property_path]
+    if {[lindex $data 0] ne ""} {
+        return $data
+    }
+    return [mptdc_o12b_net_metric_from_dbget_name $net_name $metric]
+}
+
 proc mptdc_o12b_net_load_names {net_obj source_pin} {
     set names [list]
     set loads [mptdc_o12b_db_attr $net_obj .loads]
@@ -741,6 +749,108 @@ proc mptdc_o12b_dbget_attr_raw {ptr attr} {
     return ""
 }
 
+proc mptdc_o12b_dbget_box_segment_length_um {box} {
+    set nums [list]
+    foreach token $box {
+        set num [mptdc_o12b_num $token]
+        if {$num ne ""} {
+            lappend nums $num
+        }
+    }
+    if {[llength $nums] < 4} {
+        return ""
+    }
+    set llx [lindex $nums 0]
+    set lly [lindex $nums 1]
+    set urx [lindex $nums 2]
+    set ury [lindex $nums 3]
+    set dx [expr {abs($urx - $llx)}]
+    set dy [expr {abs($ury - $lly)}]
+    return [expr {$dx > $dy ? $dx : $dy}]
+}
+
+proc mptdc_o12b_dbget_route_shape_length_um {shape_ptr} {
+    foreach attr {.box .rect .bbox} {
+        set box [mptdc_o12b_dbget_attr_raw $shape_ptr $attr]
+        if {$box eq "" || $box eq "0x0"} {
+            continue
+        }
+        set length [mptdc_o12b_dbget_box_segment_length_um $box]
+        if {$length ne ""} {
+            return $length
+        }
+    }
+    return ""
+}
+
+proc mptdc_o12b_dbget_route_length_for_ptr {ptr} {
+    foreach attr {.wires .pWires .sWires .vWires .whatIfWires} {
+        set shapes [mptdc_o12b_dbget_attr_raw $ptr $attr]
+        if {$shapes eq "" || $shapes eq "0x0"} {
+            continue
+        }
+        set total 0.0
+        set count 0
+        foreach shape_ptr $shapes {
+            if {$shape_ptr eq "" || $shape_ptr eq "0x0"} {
+                continue
+            }
+            set length [mptdc_o12b_dbget_route_shape_length_um $shape_ptr]
+            if {$length eq ""} {
+                continue
+            }
+            set total [expr {$total + $length}]
+            incr count
+        }
+        if {$count > 0} {
+            return [list [format "%.6f" $total] "dbGet_net${attr}_box_length_um"]
+        }
+    }
+
+    set box_size [mptdc_o12b_dbget_attr_raw $ptr .box_size]
+    if {[llength $box_size] >= 2} {
+        set sx [mptdc_o12b_num [lindex $box_size 0]]
+        set sy [mptdc_o12b_num [lindex $box_size 1]]
+        if {$sx ne "" && $sy ne ""} {
+            return [list [format "%.6f" [expr {$sx + $sy}]] "dbGet_net_bbox_manhattan_um_estimate"]
+        }
+    }
+    return [list "" ""]
+}
+
+proc mptdc_o12b_net_metric_from_dbget_name {net_name metric} {
+    if {$net_name eq ""} {
+        return [list "" ""]
+    }
+    foreach ptr [mptdc_o12b_net_dbget_ptrs $net_name] {
+        if {$metric eq "route_length"} {
+            set route_data [mptdc_o12b_dbget_route_length_for_ptr $ptr]
+            if {[lindex $route_data 0] ne ""} {
+                return $route_data
+            }
+            continue
+        }
+
+        array set attrs {
+            total_cap {.totalCap .total_cap .totalCapacitance .total_capacitance .capacitance .cap}
+            wire_cap {.wireCap .wire_cap .wireCapacitance .wire_capacitance .routeCap .route_cap .routingCapacitance .routing_capacitance}
+            pin_cap {.pinCap .pin_cap .pinCapacitance .pin_capacitance}
+            resistance {.resistance .totalResistance .total_resistance}
+            transition {.transition .maxTransition .max_transition .slew .maxSlew .max_slew}
+        }
+        if {![info exists attrs($metric)]} {
+            return [list "" ""]
+        }
+        foreach attr $attrs($metric) {
+            set val [mptdc_o12b_num [mptdc_o12b_dbget_attr_raw $ptr $attr]]
+            if {$val ne ""} {
+                return [list $val "dbGet_net_attr:$attr"]
+            }
+        }
+    }
+    return [list "" ""]
+}
+
 proc mptdc_o12b_probe_get_db_route_objects {fh object indent} {
     set route_attrs {.wires .wire .routes .route .routedWires .routed_wires .regularWires .regular_wires .rWires .shapes .rects .segments .sWires}
     set found_route_object 0
@@ -1015,7 +1125,7 @@ proc mptdc_o12b_write_reports {} {
             set raw_fanout [mptdc_o12b_net_fanout_resolved $raw_net_obj $raw_prop_path]
             set out_fanout [mptdc_o12b_net_fanout_resolved $out_net_obj $out_prop_path]
 
-            set raw_total_data [mptdc_o12b_net_metric_resolved $raw_net_obj total_cap $raw_prop_path]
+            set raw_total_data [mptdc_o12b_net_metric_resolved_named $raw_net $raw_net_obj total_cap $raw_prop_path]
             set raw_total_pf [lindex $raw_total_data 0]
             set raw_total_ff [mptdc_o12b_pf_to_ff $raw_total_pf]
             set raw_bound_ff ""
@@ -1054,12 +1164,12 @@ proc mptdc_o12b_write_reports {} {
                 $raw_fanout $raw_total_pf $raw_total_ff $raw_bound_ff $raw_label $raw_strict $raw_cn \
                 [mptdc_o12b_csv $a_pin] [mptdc_o12b_csv $raw_sinks] [mptdc_o12b_csv [join $raw_notes ";"]]] ","]
 
-            set total_data [mptdc_o12b_net_metric_resolved $out_net_obj total_cap $out_prop_path]
-            set wire_data [mptdc_o12b_net_metric_resolved $out_net_obj wire_cap $out_prop_path]
-            set pin_data [mptdc_o12b_net_metric_resolved $out_net_obj pin_cap $out_prop_path]
-            set res_data [mptdc_o12b_net_metric_resolved $out_net_obj resistance $out_prop_path]
-            set trans_data [mptdc_o12b_net_metric_resolved $out_net_obj transition $out_prop_path]
-            set route_data [mptdc_o12b_net_metric_resolved $out_net_obj route_length $out_prop_path]
+            set total_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj total_cap $out_prop_path]
+            set wire_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj wire_cap $out_prop_path]
+            set pin_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj pin_cap $out_prop_path]
+            set res_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj resistance $out_prop_path]
+            set trans_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj transition $out_prop_path]
+            set route_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj route_length $out_prop_path]
             set total_pf [lindex $total_data 0]
             set wire_pf [lindex $wire_data 0]
             set pin_pf [lindex $pin_data 0]
@@ -1209,12 +1319,16 @@ proc mptdc_o12b_write_reports {} {
                 $in_trans $out_pin_trans [mptdc_o12b_clock_for $family $tap] \
                 [mptdc_o12b_csv [join $delay_notes ";"]]] ","]
 
-            set raw_route_len [lindex [mptdc_o12b_net_metric_resolved $raw_net_obj route_length $raw_prop_path] 0]
+            set raw_route_data [mptdc_o12b_net_metric_resolved_named $raw_net $raw_net_obj route_length $raw_prop_path]
+            set raw_route_len [lindex $raw_route_data 0]
+            set route_notes [list "raw_and_buffered_route_from_report_property_safe_snapshot_or_dbget_when_available"]
+            if {[lindex $raw_route_data 1] ne ""} { lappend route_notes "RAW_ROUTE_LENGTH_SOURCE=[lindex $raw_route_data 1]" }
+            if {[lindex $route_data 1] ne ""} { lappend route_notes "BUFFERED_ROUTE_LENGTH_SOURCE=[lindex $route_data 1]" }
             set route_row [list \
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf \
                 $res_ohm $out_status \
-                [mptdc_o12b_csv "raw_and_buffered_route_from_db_or_safe_property_snapshot_when_available"]]
+                [mptdc_o12b_csv [join $route_notes ";"]]]
             puts $route_fh [join $route_row ","]
 
             if {![info exists attr_probe_samples_written]} {

@@ -529,7 +529,7 @@ proc mptdc_o13_write_reports {} {
             set raw_fanout [mptdc_o12b_net_fanout_resolved $raw_net_obj $raw_prop_path]
             set out_fanout [mptdc_o12b_net_fanout_resolved $out_net_obj $out_prop_path]
 
-            set raw_total_data [mptdc_o12b_net_metric_resolved $raw_net_obj total_cap $raw_prop_path]
+            set raw_total_data [mptdc_o12b_net_metric_resolved_named $raw_net $raw_net_obj total_cap $raw_prop_path]
             set raw_total_pf [lindex $raw_total_data 0]
             set raw_total_ff [mptdc_o12b_pf_to_ff $raw_total_pf]
             set raw_bound_ff ""
@@ -595,15 +595,15 @@ proc mptdc_o13_write_reports {} {
                 [mptdc_o12b_csv $first_cell_type] $first_cell_input_cap_ff $first_strict_ratio $first_cn_ratio \
                 $raw_label [mptdc_o12b_csv [join $raw_xlibd_row_notes ";"]]] ","]
 
-            set iso_total_data [mptdc_o12b_net_metric_resolved $iso_net_obj total_cap $iso_prop_path]
-            set iso_route_data [mptdc_o12b_net_metric_resolved $iso_net_obj route_length $iso_prop_path]
-            set total_data [mptdc_o12b_net_metric_resolved $out_net_obj total_cap $out_prop_path]
-            set wire_data [mptdc_o12b_net_metric_resolved $out_net_obj wire_cap $out_prop_path]
-            set pin_data [mptdc_o12b_net_metric_resolved $out_net_obj pin_cap $out_prop_path]
-            set res_data [mptdc_o12b_net_metric_resolved $out_net_obj resistance $out_prop_path]
-            set trans_data [mptdc_o12b_net_metric_resolved $out_net_obj transition $out_prop_path]
-            set route_data [mptdc_o12b_net_metric_resolved $out_net_obj route_length $out_prop_path]
-            set raw_route_data [mptdc_o12b_net_metric_resolved $raw_net_obj route_length $raw_prop_path]
+            set iso_total_data [mptdc_o12b_net_metric_resolved_named $iso_net $iso_net_obj total_cap $iso_prop_path]
+            set iso_route_data [mptdc_o12b_net_metric_resolved_named $iso_net $iso_net_obj route_length $iso_prop_path]
+            set total_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj total_cap $out_prop_path]
+            set wire_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj wire_cap $out_prop_path]
+            set pin_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj pin_cap $out_prop_path]
+            set res_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj resistance $out_prop_path]
+            set trans_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj transition $out_prop_path]
+            set route_data [mptdc_o12b_net_metric_resolved_named $out_net $out_net_obj route_length $out_prop_path]
+            set raw_route_data [mptdc_o12b_net_metric_resolved_named $raw_net $raw_net_obj route_length $raw_prop_path]
 
             set iso_total_pf [lindex $iso_total_data 0]
             set iso_route_len [lindex $iso_route_data 0]
@@ -614,7 +614,6 @@ proc mptdc_o13_write_reports {} {
             set res_ohm [lindex $res_data 0]
             set out_trans [lindex $trans_data 0]
             set route_len [lindex $route_data 0]
-            set raw_route_len [lindex $raw_route_data 0]
             set total_ff [mptdc_o12b_pf_to_ff $total_pf]
             set wire_ff [mptdc_o12b_pf_to_ff $wire_pf]
             set pin_ff [mptdc_o12b_pf_to_ff $pin_pf]
@@ -812,11 +811,16 @@ proc mptdc_o13_write_reports {} {
                 $iso_in_trans $iso_out_trans $drv_in_trans $drv_out_trans \
                 [mptdc_o13_clock_for $family $tap] [mptdc_o12b_csv [join $delay_notes ";"]]] ","]
 
+            set route_notes [list "raw_iso_and_final_driver_route_from_report_property_safe_snapshot_or_dbget_when_available"]
+            if {[lindex $raw_route_data 1] ne ""} { lappend route_notes "RAW_ROUTE_LENGTH_SOURCE=[lindex $raw_route_data 1]" }
+            if {[lindex $iso_route_data 1] ne ""} { lappend route_notes "ISO_ROUTE_LENGTH_SOURCE=[lindex $iso_route_data 1]" }
+            if {[lindex $iso_total_data 1] ne ""} { lappend route_notes "ISO_TOTAL_CAP_SOURCE=[lindex $iso_total_data 1]" }
+            if {[lindex $route_data 1] ne ""} { lappend route_notes "BUFFERED_ROUTE_LENGTH_SOURCE=[lindex $route_data 1]" }
             set route_row [list \
                 $family $tap [mptdc_o12b_csv $raw_net] $raw_route_len $raw_total_pf \
                 [mptdc_o12b_csv $iso_net] $iso_route_len $iso_total_pf \
                 [mptdc_o12b_csv $out_net] $route_len $total_pf $wire_pf $pin_pf $res_ohm \
-                $out_status [mptdc_o12b_csv "raw_iso_and_final_driver_route_from_report_property_or_safe_snapshot_when_available"]]
+                $out_status [mptdc_o12b_csv [join $route_notes ";"]]]
             puts $route_fh [join $route_row ","]
         }
     }
