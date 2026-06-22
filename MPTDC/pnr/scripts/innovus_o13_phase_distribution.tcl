@@ -96,9 +96,8 @@ proc mptdc_o13_select_interactive_constraint_mode {} {
     if {[llength [info commands set_interactive_constraint_modes]] == 0} {
         return [list NOT_AVAILABLE "set_interactive_constraint_modes command not present"]
     }
-    if {![catch {set_interactive_constraint_modes functional_mode} err]} {
-        return [list OK functional_mode]
-    }
+
+    set candidates [list]
     if {[llength [info commands all_constraint_modes]] > 0} {
         set modes [list]
         if {![catch {set modes [all_constraint_modes]}]} {
@@ -106,13 +105,37 @@ proc mptdc_o13_select_interactive_constraint_mode {} {
                 if {$mode eq "" || $mode eq "0x0"} {
                     continue
                 }
-                if {![catch {set_interactive_constraint_modes $mode} err]} {
-                    return [list OK $mode]
-                }
+                mptdc_o11_unique_append candidates $mode
             }
         }
     }
-    return [list FAILED $err]
+    if {[llength [info commands get_db]] > 0} {
+        foreach query {
+            {get_db constraint_modes *functional_mode*}
+            {get_db constraint_modes}
+        } {
+            set modes [list]
+            catch {set modes [eval $query]}
+            foreach mode $modes {
+                if {$mode eq "" || $mode eq "0x0"} {
+                    continue
+                }
+                mptdc_o11_unique_append candidates $mode
+            }
+        }
+    }
+    if {[llength $candidates] == 0} {
+        return [list NOT_FOUND "no constraint modes visible in restored checkpoint"]
+    }
+
+    set errors [list]
+    foreach mode $candidates {
+        if {![catch {set_interactive_constraint_modes $mode} err]} {
+            return [list OK $mode]
+        }
+        lappend errors "$mode: $err"
+    }
+    return [list FAILED [join $errors " | "]]
 }
 
 proc mptdc_o13_write_constraint_mode_status {mode_result} {

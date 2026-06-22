@@ -632,6 +632,148 @@ proc mptdc_o12b_note_metric_unavailable {notes metric object} {
     return $notes
 }
 
+proc mptdc_o12b_dbget_name_candidates {name} {
+    set candidates [list]
+    set text [string trim "$name"]
+    if {$text eq ""} { return $candidates }
+    if {[llength [info commands mptdc_o11_internal_net_token_name]] > 0} {
+        set internal [mptdc_o11_internal_net_token_name $text]
+        if {$internal ne ""} { set text $internal }
+    }
+    if {[regexp {^net:(.+)$} $text -> net_text]} {
+        set text $net_text
+    }
+    regsub {^mptdc_axis_core/} $text {} stripped
+    foreach candidate [list $text $stripped] {
+        if {$candidate eq ""} { continue }
+        mptdc_o11_unique_append candidates $candidate
+        set escaped [string map [list "\\" "\\\\" "\[" "\\\[" "\]" "\\\]"] $candidate]
+        mptdc_o11_unique_append candidates $escaped
+    }
+    return $candidates
+}
+
+proc mptdc_o12b_net_dbget_ptrs {net_name} {
+    global mptdc_o12b_net_dbget_ptr_cache
+    set key "$net_name"
+    if {[info exists mptdc_o12b_net_dbget_ptr_cache($key)]} {
+        return $mptdc_o12b_net_dbget_ptr_cache($key)
+    }
+    set ptrs [list]
+    if {$net_name eq "" || [llength [info commands dbGet]] == 0} {
+        set mptdc_o12b_net_dbget_ptr_cache($key) $ptrs
+        return $ptrs
+    }
+    foreach candidate [mptdc_o12b_dbget_name_candidates $net_name] {
+        set found [list]
+        if {![catch {set found [dbGet top.nets.name $candidate -p]}]} {
+            foreach ptr $found {
+                if {$ptr ne "" && $ptr ne "0x0"} {
+                    mptdc_o11_unique_append ptrs $ptr
+                }
+            }
+        }
+    }
+    set mptdc_o12b_net_dbget_ptr_cache($key) $ptrs
+    return $ptrs
+}
+
+proc mptdc_o12b_dbget_attrs_for_ptr {ptr} {
+    global mptdc_o12b_dbget_attr_cache
+    if {$ptr eq "" || $ptr eq "0x0" || [llength [info commands dbGet]] == 0} {
+        return [list]
+    }
+    if {[info exists mptdc_o12b_dbget_attr_cache($ptr)]} {
+        return $mptdc_o12b_dbget_attr_cache($ptr)
+    }
+    set attrs [list]
+    if {![catch {set raw_attrs [dbGet ${ptr}.?]}]} {
+        if {[catch {
+            foreach raw $raw_attrs {
+                set token [string trim [lindex $raw 0]]
+                if {$token eq ""} { continue }
+                lappend attrs $token
+            }
+        }]} {
+            foreach raw [split "$raw_attrs" "\n"] {
+                set token [string trim $raw]
+                if {$token eq ""} { continue }
+                lappend attrs $token
+            }
+        }
+    }
+    set mptdc_o12b_dbget_attr_cache($ptr) $attrs
+    return $attrs
+}
+
+proc mptdc_o12b_dbget_attr_supported {ptr attr} {
+    set attr_name [string trimleft $attr .]
+    if {$ptr eq "" || $attr_name eq ""} { return 0 }
+    set parent [lindex [split $attr_name "."] 0]
+    foreach raw_attr [mptdc_o12b_dbget_attrs_for_ptr $ptr] {
+        set norm [string trimleft $raw_attr .]
+        if {$norm eq $attr_name} {
+            return 1
+        }
+        if {[string first "." $attr_name] >= 0 && $norm eq $parent} {
+            return 1
+        }
+    }
+    return 0
+}
+
+proc mptdc_o12b_dbget_attr_raw_supported {ptr attr} {
+    if {$ptr eq "" || [llength [info commands dbGet]] == 0} { return "" }
+    if {![mptdc_o12b_dbget_attr_supported $ptr $attr]} { return "" }
+    set val ""
+    if {![catch {set val [dbGet ${ptr}${attr}]}] && $val ne ""} {
+        return $val
+    }
+    return ""
+}
+
+proc mptdc_o12b_probe_route_objects {fh ptr indent} {
+    set route_attrs {.wires .wire .routes .route .routedWires .routed_wires .regularWires .regular_wires .rWires .shapes .rects .segments .sWires}
+    set found_route_object 0
+    foreach attr $route_attrs {
+        if {![mptdc_o12b_dbget_attr_supported $ptr $attr]} {
+            continue
+        }
+        set raw [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
+        set raw_len 0
+        catch {set raw_len [llength $raw]}
+        set first ""
+        if {$raw_len > 0} {
+            set first [lindex $raw 0]
+        }
+        puts $fh "${indent}- $attr count=$raw_len first=[mptdc_o12b_csv [mptdc_o12b_scalar $first]]"
+        if {$raw_len > 0 && $first ne "" && $first ne "0x0"} {
+            set found_route_object 1
+            puts $fh "${indent}  first_object=$first"
+            puts $fh "${indent}  first_object_attributes:"
+            set sub_attrs [mptdc_o12b_dbget_attrs_for_ptr $first]
+            if {[llength $sub_attrs] == 0} {
+                puts $fh "${indent}  - <none or unavailable>"
+            } else {
+                foreach sub_attr $sub_attrs {
+                    puts $fh "${indent}  - $sub_attr"
+                }
+            }
+            set sub_candidates {.length .routeLength .route_length .wireLength .wire_length .totalLength .total_length .layer.name .layer .rect .box .bbox .pt .points .width .status .shape}
+            puts $fh "${indent}  first_object_candidate_values:"
+            foreach sub_attr $sub_candidates {
+                if {![mptdc_o12b_dbget_attr_supported $first $sub_attr]} {
+                    continue
+                }
+                puts $fh "${indent}  - $sub_attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_dbget_attr_raw_supported $first $sub_attr]]]"
+            }
+        }
+    }
+    if {!$found_route_object} {
+        puts $fh "${indent}- no_supported_route_shape_object_found"
+    }
+}
+
 proc mptdc_o12b_write_attr_probe {samples} {
     global o12b
     set path "$o12b(reports_dir)/phase_buffer_db_attribute_probe.rpt"
@@ -643,9 +785,13 @@ proc mptdc_o12b_write_attr_probe {samples} {
     foreach item $samples {
         set label [lindex $item 0]
         set object [lindex $item 1]
+        set kind [lindex $item 2]
+        set name [lindex $item 3]
         puts $fh "## $label"
         puts $fh ""
         puts $fh "object: $object"
+        if {$kind ne ""} { puts $fh "kind: $kind" }
+        if {$name ne ""} { puts $fh "name: $name" }
         puts $fh "attributes:"
         set attrs [list]
         if {[catch {set attrs [mptdc_o12b_db_attrs_for $object]} err]} {
@@ -665,42 +811,44 @@ proc mptdc_o12b_write_attr_probe {samples} {
                 puts $fh "- raw_attrs: [mptdc_o12b_csv $attrs]"
             }
         }
-        set route_attrs {.wires .wire .routes .route .routed_wires .regular_wires .shapes .rects .segments}
-        puts $fh "route_metric_probe:"
-        set found_route_object 0
-        foreach attr $route_attrs {
-            if {![mptdc_o12b_db_attr_supported $object $attr]} {
-                continue
+        puts $fh "get_db_route_metric_probe:"
+        mptdc_o12b_probe_route_objects $fh $object ""
+        if {$kind eq "net" || [regexp {_net$} $label]} {
+            set probe_name $name
+            if {$probe_name eq ""} {
+                set probe_name [mptdc_o11_obj_name $object]
             }
-            set raw [mptdc_o12b_db_attr_raw_supported $object $attr]
-            set raw_len 0
-            catch {set raw_len [llength $raw]}
-            set first ""
-            if {$raw_len > 0} {
-                set first [lindex $raw 0]
+            set ptrs [mptdc_o12b_net_dbget_ptrs $probe_name]
+            puts $fh "dbGet_net_probe:"
+            puts $fh "- query_name=[mptdc_o12b_csv $probe_name]"
+            if {[llength $ptrs] == 0} {
+                puts $fh "- no_dbGet_top_net_pointer"
             }
-            puts $fh "- $attr count=$raw_len first=[mptdc_o12b_csv [mptdc_o12b_scalar $first]]"
-            if {$raw_len > 0} {
-                if {[mptdc_o12b_db_object_query_safe $first]} {
-                    set found_route_object 1
-                    puts $fh "  first_object=$first"
-                    puts $fh "  first_object_attributes:"
-                    foreach sub_attr [mptdc_o12b_db_attrs_for $first] {
-                        puts $fh "  - $sub_attr"
-                    }
-                    set sub_candidates {.length .route_length .wire_length .total_length .layer .rect .bbox .box .points .width .status}
-                    puts $fh "  first_object_candidate_values:"
-                    foreach sub_attr $sub_candidates {
-                        if {![mptdc_o12b_db_attr_supported $first $sub_attr]} {
-                            continue
-                        }
-                        puts $fh "  - $sub_attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_db_attr_raw_supported $first $sub_attr]]]"
+            foreach ptr [lrange $ptrs 0 2] {
+                puts $fh "- ptr=$ptr"
+                set ptr_name [mptdc_o12b_dbget_attr_raw_supported $ptr .name]
+                if {$ptr_name ne ""} {
+                    puts $fh "  name=[mptdc_o12b_csv [mptdc_o12b_scalar $ptr_name]]"
+                }
+                puts $fh "  attributes:"
+                set ptr_attrs [mptdc_o12b_dbget_attrs_for_ptr $ptr]
+                if {[llength $ptr_attrs] == 0} {
+                    puts $fh "  - <none or unavailable>"
+                } else {
+                    foreach attr $ptr_attrs {
+                        puts $fh "  - $attr"
                     }
                 }
+                puts $fh "  candidate_net_values:"
+                foreach attr {.numTerms .numInstTerms .numInputTerms .numOutputTerms .numVias .num_vias .totalCap .total_cap .totalCapacitance .total_capacitance .wireCap .wire_cap .wireCapacitance .wire_capacitance .pinCap .pin_cap .resistance .routeLength .route_length .wireLength .wire_length .length} {
+                    if {![mptdc_o12b_dbget_attr_supported $ptr $attr]} {
+                        continue
+                    }
+                    puts $fh "  - $attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]]]"
+                }
+                puts $fh "  route_metric_probe:"
+                mptdc_o12b_probe_route_objects $fh $ptr "  "
             }
-        }
-        if {!$found_route_object} {
-            puts $fh "- no_supported_route_shape_object_found"
         }
         puts $fh ""
     }
@@ -1047,8 +1195,8 @@ proc mptdc_o12b_write_reports {} {
             if {![info exists attr_probe_samples_written]} {
                 set attr_probe_samples_written 1
                 set attr_probe_samples [list \
-                    [list "${family}_${tap}_raw_net" $raw_net_obj] \
-                    [list "${family}_${tap}_buffered_net" $out_net_obj] \
+                    [list "${family}_${tap}_raw_net" $raw_net_obj net $raw_net] \
+                    [list "${family}_${tap}_buffered_net" $out_net_obj net $out_net] \
                     [list "${family}_${tap}_buffer_cell" [mptdc_o12b_get_cell $buf_inst]] \
                     [list "${family}_${tap}_buffer_input_pin" [mptdc_o11_pin_object $a_pin]] \
                     [list "${family}_${tap}_buffer_output_pin" [mptdc_o11_pin_object $q_pin]]]

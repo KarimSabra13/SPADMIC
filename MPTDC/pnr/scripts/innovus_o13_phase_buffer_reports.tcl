@@ -497,9 +497,9 @@ proc mptdc_o13_write_reports {} {
             if {![info exists attr_probe_samples_written]} {
                 set attr_probe_samples_written 1
                 set attr_probe_samples [list \
-                    [list "${family}_${tap}_raw_net" $raw_net_obj] \
-                    [list "${family}_${tap}_isolation_net" $iso_net_obj] \
-                    [list "${family}_${tap}_buffered_net" $out_net_obj] \
+                    [list "${family}_${tap}_raw_net" $raw_net_obj net $raw_net] \
+                    [list "${family}_${tap}_isolation_net" $iso_net_obj net $iso_net] \
+                    [list "${family}_${tap}_buffered_net" $out_net_obj net $out_net] \
                     [list "${family}_${tap}_isolation_cell" [mptdc_o12b_get_cell $iso_inst]] \
                     [list "${family}_${tap}_driver_cell" [mptdc_o12b_get_cell $drv_inst]] \
                     [list "${family}_${tap}_isolation_input_pin" [mptdc_o11_pin_object $iso_a_pin]] \
