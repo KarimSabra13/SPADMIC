@@ -28,6 +28,9 @@ proc mptdc_o12b_scalar {value} {
 
 proc mptdc_o12b_num {value} {
     set value [mptdc_o12b_scalar $value]
+    if {[regexp {^0x[0-9A-Fa-f]+$} "$value"]} {
+        return ""
+    }
     if {[string is double -strict $value]} {
         return $value
     }
@@ -771,7 +774,7 @@ proc mptdc_o12b_dbget_box_segment_length_um {box} {
 
 proc mptdc_o12b_dbget_route_shape_length_um {shape_ptr} {
     foreach attr {.box .rect .bbox} {
-        set box [mptdc_o12b_dbget_attr_raw $shape_ptr $attr]
+        set box [mptdc_o12b_dbget_attr_raw_supported $shape_ptr $attr]
         if {$box eq "" || $box eq "0x0"} {
             continue
         }
@@ -784,8 +787,17 @@ proc mptdc_o12b_dbget_route_shape_length_um {shape_ptr} {
 }
 
 proc mptdc_o12b_dbget_route_length_for_ptr {ptr} {
+    set box_size [mptdc_o12b_dbget_attr_raw_supported $ptr .box_size]
+    if {[llength $box_size] >= 2} {
+        set sx [mptdc_o12b_num [lindex $box_size 0]]
+        set sy [mptdc_o12b_num [lindex $box_size 1]]
+        if {$sx ne "" && $sy ne ""} {
+            return [list [format "%.6f" [expr {$sx + $sy}]] "dbGet_net_bbox_manhattan_um_estimate"]
+        }
+    }
+
     foreach attr {.wires .pWires .sWires .vWires .whatIfWires} {
-        set shapes [mptdc_o12b_dbget_attr_raw $ptr $attr]
+        set shapes [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
         if {$shapes eq "" || $shapes eq "0x0"} {
             continue
         }
@@ -806,15 +818,6 @@ proc mptdc_o12b_dbget_route_length_for_ptr {ptr} {
             return [list [format "%.6f" $total] "dbGet_net${attr}_box_length_um"]
         }
     }
-
-    set box_size [mptdc_o12b_dbget_attr_raw $ptr .box_size]
-    if {[llength $box_size] >= 2} {
-        set sx [mptdc_o12b_num [lindex $box_size 0]]
-        set sy [mptdc_o12b_num [lindex $box_size 1]]
-        if {$sx ne "" && $sy ne ""} {
-            return [list [format "%.6f" [expr {$sx + $sy}]] "dbGet_net_bbox_manhattan_um_estimate"]
-        }
-    }
     return [list "" ""]
 }
 
@@ -831,22 +834,7 @@ proc mptdc_o12b_net_metric_from_dbget_name {net_name metric} {
             continue
         }
 
-        array set attrs {
-            total_cap {.totalCap .total_cap .totalCapacitance .total_capacitance .capacitance .cap}
-            wire_cap {.wireCap .wire_cap .wireCapacitance .wire_capacitance .routeCap .route_cap .routingCapacitance .routing_capacitance}
-            pin_cap {.pinCap .pin_cap .pinCapacitance .pin_capacitance}
-            resistance {.resistance .totalResistance .total_resistance}
-            transition {.transition .maxTransition .max_transition .slew .maxSlew .max_slew}
-        }
-        if {![info exists attrs($metric)]} {
-            return [list "" ""]
-        }
-        foreach attr $attrs($metric) {
-            set val [mptdc_o12b_num [mptdc_o12b_dbget_attr_raw $ptr $attr]]
-            if {$val ne ""} {
-                return [list $val "dbGet_net_attr:$attr"]
-            }
-        }
+        return [list "" ""]
     }
     return [list "" ""]
 }
@@ -897,7 +885,7 @@ proc mptdc_o12b_probe_dbget_net_route_objects {fh ptr indent} {
     set route_attrs {.wires .pWires .sWires .vWires .whatIfWires .vias .sVias .whatIfVias}
     set found_route_attr 0
     foreach attr $route_attrs {
-        set raw [mptdc_o12b_dbget_attr_raw $ptr $attr]
+        set raw [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
         set raw_len 0
         catch {set raw_len [llength $raw]}
         set first ""
@@ -967,7 +955,7 @@ proc mptdc_o12b_write_attr_probe {samples} {
             }
             foreach ptr [lrange $ptrs 0 2] {
                 puts $fh "- ptr=$ptr"
-                set ptr_name [mptdc_o12b_dbget_attr_raw $ptr .name]
+                set ptr_name [mptdc_o12b_dbget_attr_raw_supported $ptr .name]
                 if {$ptr_name ne ""} {
                     puts $fh "  name=[mptdc_o12b_csv [mptdc_o12b_scalar $ptr_name]]"
                 }
@@ -975,7 +963,7 @@ proc mptdc_o12b_write_attr_probe {samples} {
                 puts $fh "  - skipped_full_dbGet_question_mark_probe"
                 puts $fh "  candidate_net_values:"
                 foreach attr {.numTerms .numInputTerms .numOutputTerms .area .box .box_size .bottomPreferredLayer .topPreferredLayer} {
-                    set val [mptdc_o12b_dbget_attr_raw $ptr $attr]
+                    set val [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
                     if {$val eq "" || $val eq "0x0"} {
                         continue
                     }
