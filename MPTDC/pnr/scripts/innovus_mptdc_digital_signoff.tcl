@@ -20,6 +20,22 @@ proc mptdc_signoff_env_truthy {name} {
     return [expr {$value in {1 yes true on}}]
 }
 
+proc mptdc_signoff_env_int {name default_value} {
+    set value [mptdc_signoff_env $name $default_value]
+    if {[string is integer -strict $value]} {
+        return $value
+    }
+    return $default_value
+}
+
+proc mptdc_signoff_env_double {name default_value} {
+    set value [mptdc_signoff_env $name $default_value]
+    if {[string is double -strict $value]} {
+        return $value
+    }
+    return $default_value
+}
+
 proc mptdc_signoff_closure_scope {} {
     return [string toupper [mptdc_signoff_env MPTDC_CLOSURE_SCOPE TC_ONLY]]
 }
@@ -1765,6 +1781,10 @@ proc mptdc_signoff_postroute_opt_enabled {} {
     return [mptdc_signoff_env_truthy MPTDC_ENABLE_POSTROUTE_OPT]
 }
 
+proc mptdc_signoff_tc_closure_enabled {} {
+    return [mptdc_signoff_env_truthy MPTDC_ENABLE_TC_CLOSURE]
+}
+
 proc mptdc_signoff_run_optional_postroute_opt {} {
     set rpt [file join [mptdc_signoff_report_dir] postroute_opt_status.rpt]
     set fh [open $rpt w]
@@ -1776,11 +1796,42 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
         close $fh
         return
     }
+    set closure_mode [mptdc_signoff_tc_closure_enabled]
+    set default_setup_passes [expr {$closure_mode ? 3 : 1}]
+    set setup_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_PASSES $default_setup_passes]
+    if {$setup_passes < 1} {
+        set setup_passes 1
+    }
+    set default_target [expr {$closure_mode ? 0.050 : 0.000}]
+    set setup_target [mptdc_signoff_env_double MPTDC_POSTROUTE_SETUP_TARGET_SLACK_NS $default_target]
+    puts $fh "POSTROUTE_OPT_TC_CLOSURE_MODE=[expr {$closure_mode ? "ENABLED" : "DISABLED"}]"
+    puts $fh "POSTROUTE_OPT_SETUP_PASSES=$setup_passes"
+    puts $fh "POSTROUTE_OPT_SETUP_TARGET_SLACK_NS=$setup_target"
     close $fh
     catch {setDelayCalMode -SIAware false}
     catch {setSIMode -separate_delta_delay_on_data false}
+    foreach cmd [list \
+        "setOptMode -setupTargetSlack $setup_target" \
+        "setOptMode -opt_setup_target_slack $setup_target"] {
+        catch {eval $cmd}
+    }
+    set setup_aggregate_status PASS
+    for {set pass 1} {$pass <= $setup_passes} {incr pass} {
+        set fh [open $rpt a]
+        puts $fh "POSTROUTE_OPT_SETUP_PASS=$pass"
+        if {[catch {optDesign -postRoute} err]} {
+            puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_STATUS=REVIEW_REQUIRED"
+            puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_ERROR=$err"
+            set setup_aggregate_status REVIEW_REQUIRED
+        } else {
+            puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_STATUS=PASS"
+        }
+        close $fh
+    }
+    set fh [open $rpt a]
+    puts $fh "POSTROUTE_OPT_setup_STATUS=$setup_aggregate_status"
+    close $fh
     foreach item {
-        {setup {optDesign -postRoute}}
         {hold {optDesign -postRoute -hold}}
         {drv {optDesign -postRoute -drv}}
     } {
@@ -1797,6 +1848,85 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     }
 }
 
+proc mptdc_signoff_capture_route_gate_reports {drc_rpt regular_rpt special_rpt report_route_rpt} {
+    mptdc_signoff_capture_required_candidates $drc_rpt \
+        "route DRC" [list {verify_drc} {verifyGeometry} {verifyConnectivity -type regular}]
+    mptdc_signoff_capture_required_candidates $regular_rpt \
+        "regular-net connectivity" [list {verifyConnectivity -type regular} {verifyConnectivity}]
+    mptdc_signoff_capture_required_candidates $special_rpt \
+        "special-net connectivity" [list {verifyConnectivity -type special} {verifyConnectivity}]
+    mptdc_signoff_capture_candidates $report_route_rpt \
+        "route summary" [list {reportRoute} {report_route}]
+}
+
+proc mptdc_signoff_read_route_gate_reports {drc_rpt regular_rpt special_rpt report_route_rpt} {
+    set drc_data [mptdc_signoff_parse_verify_drc_report $drc_rpt]
+    set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
+    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set unrouted [mptdc_signoff_parse_report_route_unrouted $report_route_rpt]
+    if {$unrouted eq "UNKNOWN" && ![lindex $regular_bad 0]} {
+        set unrouted 0
+    }
+    return [list $drc_data $regular_bad $special_bad $unrouted]
+}
+
+proc mptdc_signoff_route_gate_is_pass {drc_data regular_bad special_bad unrouted} {
+    return [expr {[dict get $drc_data status] eq "PASS" &&
+        ![lindex $regular_bad 0] &&
+        ![lindex $special_bad 0] &&
+        $unrouted ne "UNKNOWN" &&
+        $unrouted == 0}]
+}
+
+proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_route_rpt route_gate} {
+    set rpt [file join [mptdc_signoff_report_dir] route_recovery_status.rpt]
+    lassign $route_gate drc_data regular_bad special_bad unrouted
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Route Gate Recovery"
+    puts $fh "ROUTE_GATE_RECOVERY_INITIAL_DRC=[dict get $drc_data total_violations]"
+    puts $fh "ROUTE_GATE_RECOVERY_INITIAL_SHORTS=[dict get $drc_data shorts]"
+    if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
+        puts $fh "ROUTE_GATE_RECOVERY_STATUS=NOT_NEEDED"
+        close $fh
+        return $route_gate
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_DISABLE_ROUTE_GATE_RECOVERY]} {
+        puts $fh "ROUTE_GATE_RECOVERY_STATUS=DISABLED"
+        close $fh
+        return $route_gate
+    }
+    close $fh
+    foreach cmd [list {ecoRoute -target} {ecoRoute -target all} {ecoRoute}] {
+        set fh [open $rpt a]
+        puts $fh "ROUTE_GATE_RECOVERY_COMMAND=$cmd"
+        close $fh
+        if {[catch {uplevel 1 $cmd} err]} {
+            set fh [open $rpt a]
+            puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_STATUS=FAIL"
+            puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_ERROR=$err"
+            close $fh
+            continue
+        }
+        mptdc_signoff_capture_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt
+        set route_gate [mptdc_signoff_read_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt]
+        lassign $route_gate drc_data regular_bad special_bad unrouted
+        set fh [open $rpt a]
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_DRC=[dict get $drc_data total_violations]"
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_SHORTS=[dict get $drc_data shorts]"
+        if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
+            puts $fh "ROUTE_GATE_RECOVERY_STATUS=PASS"
+            close $fh
+            return $route_gate
+        }
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_STATUS=REVIEW_REQUIRED"
+        close $fh
+    }
+    set fh [open $rpt a]
+    puts $fh "ROUTE_GATE_RECOVERY_STATUS=REVIEW_REQUIRED"
+    close $fh
+    return $route_gate
+}
+
 proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad unrouted antenna_status} {
     set total [dict get $drc_data total_violations]
     set shorts [dict get $drc_data shorts]
@@ -1805,7 +1935,7 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     if {$unrouted eq "UNKNOWN" && !$regular_flag} {
         set unrouted 0
     }
-    set status [expr {[dict get $drc_data status] eq "PASS" && !$regular_flag && !$special_flag && $unrouted ne "UNKNOWN" && $unrouted == 0 ? "PASS" : "FAIL"}]
+    set status [expr {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted] ? "PASS" : "FAIL"}]
     set fh [open $rpt w]
     puts $fh "ROUTE_STATUS=$status"
     puts $fh "GEOMETRY_DRC_VIOLATIONS=$total"
@@ -2718,22 +2848,15 @@ proc mptdc_signoff_route_design {} {
     set regular_rpt [file join [mptdc_signoff_report_dir] route_connectivity_regular.rpt]
     set special_rpt [file join [mptdc_signoff_report_dir] route_connectivity_special.rpt]
     set report_route_rpt [file join [mptdc_signoff_report_dir] report_route.rpt]
-    mptdc_signoff_capture_required_candidates $drc_rpt \
-        "route DRC" [list {verify_drc} {verifyGeometry} {verifyConnectivity -type regular}]
-    mptdc_signoff_capture_required_candidates $regular_rpt \
-        "regular-net connectivity" [list {verifyConnectivity -type regular} {verifyConnectivity}]
-    mptdc_signoff_capture_required_candidates $special_rpt \
-        "special-net connectivity" [list {verifyConnectivity -type special} {verifyConnectivity}]
-    mptdc_signoff_capture_candidates $report_route_rpt \
-        "route summary" [list {reportRoute} {report_route}]
+    mptdc_signoff_capture_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt
+    set rpt [file join [mptdc_signoff_report_dir] route_status.rpt]
+    set route_gate [mptdc_signoff_read_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt]
+    set route_gate [mptdc_signoff_route_gate_recovery \
+        $drc_rpt $regular_rpt $special_rpt $report_route_rpt $route_gate]
+    lassign $route_gate drc_data regular_bad special_bad unrouted
+    mptdc_signoff_write_route_gate_status $rpt $drc_data $regular_bad $special_bad $unrouted $antenna_status
     catch {defOut [file join [mptdc_signoff_def_dir] 04_route.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 04_route.enc]}
-    set rpt [file join [mptdc_signoff_report_dir] route_status.rpt]
-    set drc_data [mptdc_signoff_parse_verify_drc_report $drc_rpt]
-    set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
-    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
-    set unrouted [mptdc_signoff_parse_report_route_unrouted $report_route_rpt]
-    mptdc_signoff_write_route_gate_status $rpt $drc_data $regular_bad $special_bad $unrouted $antenna_status
 }
 
 proc mptdc_signoff_extract_and_sta {} {
