@@ -704,6 +704,11 @@ proc mptdc_o13_write_reports {} {
             set iso_in_cap_ff [mptdc_o12b_pf_to_ff $iso_in_cap_pf]
             set drv_in_cap_pf [mptdc_o13_pin_metric_safe $drv_a_pin cap input_cap_notes]
             set drv_in_cap_ff [mptdc_o12b_pf_to_ff $drv_in_cap_pf]
+            if {$iso_total_pf eq "" && $drv_in_cap_pf ne ""} {
+                set iso_total_pf $drv_in_cap_pf
+                set iso_total_data [list $iso_total_pf "driver_input_pin_cap_lower_bound"]
+                lappend input_cap_notes "ISO_TOTAL_CAP_FALLBACK_FROM_DRIVER_INPUT_PIN_CAP"
+            }
             foreach input_cap_note $input_cap_notes {
                 lappend out_notes $input_cap_note
             }
