@@ -3181,6 +3181,10 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
     set row_keys [dict create]
     set family_counts [dict create slow 0 fast 0]
     set delay_metrics [list]
+    set parse_errors [list]
+    set missing_metric_counts [dict create]
+    set invalid_metric_counts [dict create]
+    set structure_ok 1
 
     if {![file exists $route_csv]} {
         set parse_status DATA_MISSING
@@ -3216,33 +3220,51 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
                 if {$family ni {slow fast}} {
                     set parse_status DATA_MISSING
                     set parse_error "bad_family_line_${line_no}:$family"
+                    set structure_ok 0
                     break
                 }
                 if {$tap eq ""} {
                     set parse_status DATA_MISSING
                     set parse_error "missing_tap_line_$line_no"
+                    set structure_ok 0
                     break
                 }
                 set key "$family/$tap"
                 if {[dict exists $row_keys $key]} {
                     set parse_status DATA_MISSING
                     set parse_error "duplicate_family_tap:$key"
+                    set structure_ok 0
                     break
                 }
                 dict set row_keys $key 1
                 dict incr family_counts $family
                 set row [dict create family $family tap $tap]
-                foreach metric [concat $numeric_metrics $delay_metrics] {
+                foreach metric $numeric_metrics {
                     set value [mptdc_signoff_csv_get $cols $header $metric]
                     if {![string is double -strict $value]} {
                         set parse_status DATA_MISSING
-                        set parse_error "nonnumeric_${metric}_line_${line_no}:$value"
-                        break
+                        if {$value eq ""} {
+                            dict incr missing_metric_counts $metric
+                        } else {
+                            dict incr invalid_metric_counts $metric
+                        }
+                        lappend parse_errors "nonnumeric_${metric}_line_${line_no}:$value"
+                        continue
                     }
                     dict set row $metric $value
                 }
-                if {$parse_status ne "PASS"} {
-                    break
+                foreach metric $delay_metrics {
+                    set value [mptdc_signoff_csv_get $cols $header $metric]
+                    if {$value eq ""} {
+                        continue
+                    }
+                    if {![string is double -strict $value]} {
+                        set parse_status DATA_MISSING
+                        dict incr invalid_metric_counts $metric
+                        lappend parse_errors "nonnumeric_${metric}_line_${line_no}:$value"
+                        continue
+                    }
+                    dict set row $metric $value
                 }
                 lappend rows $row
             }
@@ -3250,7 +3272,11 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
         close $fh
     }
 
-    if {$parse_status eq "PASS"} {
+    if {$parse_error eq "" && [llength $parse_errors] > 0} {
+        set parse_error [lindex $parse_errors 0]
+    }
+
+    if {$structure_ok} {
         if {[llength $rows] != 16 ||
             [dict get $family_counts slow] != 8 ||
             [dict get $family_counts fast] != 8} {
@@ -3266,60 +3292,74 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
     set classification PARSER_FALSE_FAILURE
     set asymmetry_count 0
     set metrics_for_symmetry [concat \
-        [list raw_route_length_um raw_total_cap_pf buffered_route_length_um buffered_total_cap_pf] \
+        $numeric_metrics \
         $delay_metrics]
+    set data_missing [expr {$parse_status ne "PASS"}]
+    set actual_asymmetry 0
 
-    if {$parse_status ne "PASS"} {
-        set rc_status FAIL
-        set phase_status PROVISIONAL
-        set classification DATA_MISSING
-    } else {
-        foreach family {slow fast} {
-            foreach metric $metrics_for_symmetry {
-                set stats [mptdc_signoff_metric_stats $rows $family $metric]
-                set spread [dict get $stats spread_pct]
-                if {$spread eq "" || [dict get $stats count] != 8} {
-                    set rc_status FAIL
-                    set classification DATA_MISSING
-                } elseif {$spread > $max_spread} {
-                    set rc_status FAIL
-                    set classification ACTUAL_PHYSICAL_ASYMMETRY
-                    incr asymmetry_count
-                }
-            }
-            foreach row $rows {
-                if {[dict get $row family] ne $family} { continue }
-                if {[dict get $row raw_total_cap_pf] > $raw_cap_limit} {
-                    set phase_status FAIL
-                }
+    foreach family {slow fast} {
+        foreach metric $metrics_for_symmetry {
+            set stats [mptdc_signoff_metric_stats $rows $family $metric]
+            set spread [dict get $stats spread_pct]
+            if {$spread eq "" || [dict get $stats count] != 8} {
+                set data_missing 1
+            } elseif {$spread > $max_spread} {
+                set actual_asymmetry 1
+                incr asymmetry_count
             }
         }
+        foreach row $rows {
+            if {[dict get $row family] ne $family} { continue }
+            if {[dict exists $row raw_total_cap_pf] && [dict get $row raw_total_cap_pf] > $raw_cap_limit} {
+                set phase_status FAIL
+            }
+        }
+    }
+    if {$data_missing || $actual_asymmetry} {
+        set rc_status FAIL
+    }
+    if {$data_missing && $phase_status eq "PASS"} {
+        set phase_status PROVISIONAL
+    }
+    if {$actual_asymmetry && $data_missing} {
+        set classification ACTUAL_PHYSICAL_ASYMMETRY_WITH_DATA_MISSING
+    } elseif {$actual_asymmetry} {
+        set classification ACTUAL_PHYSICAL_ASYMMETRY
+    } elseif {$data_missing} {
+        set classification DATA_MISSING
     }
 
     file mkdir [file dirname $detailed_csv]
     set dfh [open $detailed_csv w]
     puts $dfh "family,tap,metric,unit,count,min,max,mean,absolute_spread,percentage_spread,worst_tap,best_tap"
-    if {$parse_status eq "PASS"} {
-        foreach family {slow fast} {
-            foreach metric [concat $numeric_metrics $delay_metrics] {
-                set unit ""
-                if {[string match *_um $metric]} {
-                    set unit um
-                } elseif {[string match *_pf $metric]} {
-                    set unit pf
-                } elseif {[string match *_ohm $metric]} {
-                    set unit ohm
-                } elseif {[string match *_ps $metric]} {
-                    set unit ps
-                } elseif {[string match *_ns $metric]} {
-                    set unit ns
-                }
-                set stats [mptdc_signoff_metric_stats $rows $family $metric]
-                puts $dfh "$family,ALL,$metric,$unit,[dict get $stats count],[dict get $stats min],[dict get $stats max],[dict get $stats mean],[dict get $stats spread_abs],[dict get $stats spread_pct],[dict get $stats worst_tap],[dict get $stats best_tap]"
+    foreach family {slow fast} {
+        foreach metric [concat $numeric_metrics $delay_metrics] {
+            set unit ""
+            if {[string match *_um $metric]} {
+                set unit um
+            } elseif {[string match *_pf $metric]} {
+                set unit pf
+            } elseif {[string match *_ohm $metric]} {
+                set unit ohm
+            } elseif {[string match *_ps $metric]} {
+                set unit ps
+            } elseif {[string match *_ns $metric]} {
+                set unit ns
             }
+            set stats [mptdc_signoff_metric_stats $rows $family $metric]
+            puts $dfh "$family,ALL,$metric,$unit,[dict get $stats count],[dict get $stats min],[dict get $stats max],[dict get $stats mean],[dict get $stats spread_abs],[dict get $stats spread_pct],[dict get $stats worst_tap],[dict get $stats best_tap]"
         }
     }
     close $dfh
+
+    set missing_total 0
+    foreach metric [dict keys $missing_metric_counts] {
+        incr missing_total [dict get $missing_metric_counts $metric]
+    }
+    set invalid_total 0
+    foreach metric [dict keys $invalid_metric_counts] {
+        incr invalid_total [dict get $invalid_metric_counts $metric]
+    }
 
     set sfh [open $status_rpt w]
     puts $sfh "# MPTDC Phase Load and RC Symmetry Status"
@@ -3331,6 +3371,23 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
     puts $sfh "FAST_ROWS=[dict get $family_counts fast]"
     puts $sfh "PARSE_STATUS=$parse_status"
     if {$parse_error ne ""} { puts $sfh "PARSE_ERROR=$parse_error" }
+    puts $sfh "PARSE_ERROR_COUNT=[llength $parse_errors]"
+    if {[llength $parse_errors] > 0} {
+        puts $sfh "PARSE_ERRORS=[join [lrange $parse_errors 0 11] {;}]"
+        if {[llength $parse_errors] > 12} {
+            puts $sfh "PARSE_ERRORS_TRUNCATED=YES"
+        }
+    }
+    puts $sfh "MISSING_NUMERIC_FIELD_COUNT=$missing_total"
+    puts $sfh "INVALID_NUMERIC_FIELD_COUNT=$invalid_total"
+    puts $sfh "MISSING_NUMERIC_METRICS=[join [lsort [dict keys $missing_metric_counts]] { }]"
+    puts $sfh "INVALID_NUMERIC_METRICS=[join [lsort [dict keys $invalid_metric_counts]] { }]"
+    foreach metric [lsort [dict keys $missing_metric_counts]] {
+        puts $sfh "MISSING_${metric}_count=[dict get $missing_metric_counts $metric]"
+    }
+    foreach metric [lsort [dict keys $invalid_metric_counts]] {
+        puts $sfh "INVALID_${metric}_count=[dict get $invalid_metric_counts $metric]"
+    }
     puts $sfh "UNITS_ROUTE_LENGTH=um"
     puts $sfh "UNITS_CAPACITANCE=pf"
     puts $sfh "UNITS_RESISTANCE=ohm"
@@ -3339,20 +3396,18 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
     puts $sfh "OPTIONAL_DELAY_METRICS=[join $delay_metrics { }]"
     puts $sfh "RC_SYMMETRY_FAILURE_CLASSIFICATION=$classification"
     puts $sfh "RC_SYMMETRY_ASYMMETRIC_METRIC_COUNT=$asymmetry_count"
-    if {$parse_status eq "PASS"} {
-        foreach family {slow fast} {
-            foreach metric [concat $numeric_metrics $delay_metrics] {
-                set stats [mptdc_signoff_metric_stats $rows $family $metric]
-                set prefix "${family}_${metric}"
-                puts $sfh "${prefix}_count=[dict get $stats count]"
-                puts $sfh "${prefix}_min=[dict get $stats min]"
-                puts $sfh "${prefix}_max=[dict get $stats max]"
-                puts $sfh "${prefix}_mean=[dict get $stats mean]"
-                puts $sfh "${prefix}_absolute_spread=[dict get $stats spread_abs]"
-                puts $sfh "${prefix}_percentage_spread=[dict get $stats spread_pct]"
-                puts $sfh "${prefix}_worst_tap=[dict get $stats worst_tap]"
-                puts $sfh "${prefix}_best_tap=[dict get $stats best_tap]"
-            }
+    foreach family {slow fast} {
+        foreach metric [concat $numeric_metrics $delay_metrics] {
+            set stats [mptdc_signoff_metric_stats $rows $family $metric]
+            set prefix "${family}_${metric}"
+            puts $sfh "${prefix}_count=[dict get $stats count]"
+            puts $sfh "${prefix}_min=[dict get $stats min]"
+            puts $sfh "${prefix}_max=[dict get $stats max]"
+            puts $sfh "${prefix}_mean=[dict get $stats mean]"
+            puts $sfh "${prefix}_absolute_spread=[dict get $stats spread_abs]"
+            puts $sfh "${prefix}_percentage_spread=[dict get $stats spread_pct]"
+            puts $sfh "${prefix}_worst_tap=[dict get $stats worst_tap]"
+            puts $sfh "${prefix}_best_tap=[dict get $stats best_tap]"
         }
     }
     puts $sfh "PHASE_LOAD_STATUS=$phase_status"

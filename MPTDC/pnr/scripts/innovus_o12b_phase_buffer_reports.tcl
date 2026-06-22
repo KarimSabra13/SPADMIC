@@ -150,12 +150,6 @@ proc mptdc_o12b_db_attr_supported {object attr} {
 
 proc mptdc_o12b_db_attr {object attr} {
     if {$object eq ""} { return "" }
-    # Some restored Innovus 22.33 objects do not advertise every usable alias
-    # through ".?", even though direct get_db on the alias succeeds.  Also,
-    # net: pseudo-handles may be unsafe for report_property but still usable
-    # for direct get_db metric queries.
-    set val [mptdc_o12b_direct_db_attr $object $attr]
-    if {$val ne ""} { return $val }
     if {![mptdc_o12b_db_object_query_safe $object]} { return "" }
     set attrs [mptdc_o12b_db_attrs_for $object]
     if {[llength $attrs] == 0} {
@@ -164,8 +158,10 @@ proc mptdc_o12b_db_attr {object attr} {
     if {![mptdc_o12b_db_attr_supported $object $attr]} {
         return ""
     }
-    set val [mptdc_o12b_direct_db_attr $object $attr]
-    if {$val ne ""} { return $val }
+    set val ""
+    if {![catch {set val [get_db $object $attr]}] && $val ne ""} {
+        return [mptdc_o12b_scalar $val]
+    }
     return ""
 }
 
@@ -189,11 +185,13 @@ proc mptdc_o12b_first_text_attr {object attrs} {
     return [list "" ""]
 }
 
-proc mptdc_o12b_direct_db_attr {object attr} {
+proc mptdc_o12b_db_attr_raw_supported {object attr} {
     if {$object eq ""} { return "" }
+    if {![mptdc_o12b_db_object_query_safe $object]} { return "" }
+    if {![mptdc_o12b_db_attr_supported $object $attr]} { return "" }
     set val ""
     if {![catch {set val [get_db $object $attr]}] && $val ne ""} {
-        return [mptdc_o12b_scalar $val]
+        return $val
     }
     return ""
 }
@@ -666,6 +664,43 @@ proc mptdc_o12b_write_attr_probe {samples} {
                 puts $fh "- ATTR_LIST_PARSE_FAILED: $err"
                 puts $fh "- raw_attrs: [mptdc_o12b_csv $attrs]"
             }
+        }
+        set route_attrs {.wires .wire .routes .route .routed_wires .regular_wires .shapes .rects .segments}
+        puts $fh "route_metric_probe:"
+        set found_route_object 0
+        foreach attr $route_attrs {
+            if {![mptdc_o12b_db_attr_supported $object $attr]} {
+                continue
+            }
+            set raw [mptdc_o12b_db_attr_raw_supported $object $attr]
+            set raw_len 0
+            catch {set raw_len [llength $raw]}
+            set first ""
+            if {$raw_len > 0} {
+                set first [lindex $raw 0]
+            }
+            puts $fh "- $attr count=$raw_len first=[mptdc_o12b_csv [mptdc_o12b_scalar $first]]"
+            if {$raw_len > 0} {
+                if {[mptdc_o12b_db_object_query_safe $first]} {
+                    set found_route_object 1
+                    puts $fh "  first_object=$first"
+                    puts $fh "  first_object_attributes:"
+                    foreach sub_attr [mptdc_o12b_db_attrs_for $first] {
+                        puts $fh "  - $sub_attr"
+                    }
+                    set sub_candidates {.length .route_length .wire_length .total_length .layer .rect .bbox .box .points .width .status}
+                    puts $fh "  first_object_candidate_values:"
+                    foreach sub_attr $sub_candidates {
+                        if {![mptdc_o12b_db_attr_supported $first $sub_attr]} {
+                            continue
+                        }
+                        puts $fh "  - $sub_attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_db_attr_raw_supported $first $sub_attr]]]"
+                    }
+                }
+            }
+        }
+        if {!$found_route_object} {
+            puts $fh "- no_supported_route_shape_object_found"
         }
         puts $fh ""
     }
