@@ -3589,6 +3589,22 @@ proc mptdc_signoff_source_check {} {
     puts "MPTDC_DIGITAL_SIGNOFF_STATUS_TEMPLATE=$status_path"
 }
 
+proc mptdc_signoff_phase_rc_parse_only {} {
+    mptdc_signoff_mkdirs
+    mptdc_signoff_write_phase_rc_parser_selftest
+    set route_csv [file join [mptdc_signoff_report_dir] phase_buffer_route_summary.csv]
+    set detailed_csv [file join [mptdc_signoff_report_dir] phase_rc_symmetry_detailed.csv]
+    set phase_rpt [file join [mptdc_signoff_report_dir] phase_rc_symmetry_status.rpt]
+    set result [mptdc_signoff_phase_rc_parse_csv $route_csv $detailed_csv $phase_rpt]
+    puts "MPTDC_PHASE_RC_PARSE_ONLY=PASS"
+    puts "PHASE_RC_PARSE_STATUS=[dict get $result parse_status]"
+    puts "PHASE_LOAD_STATUS=[dict get $result phase_status]"
+    puts "RC_SYMMETRY_STATUS=[dict get $result rc_status]"
+    puts "RC_SYMMETRY_FAILURE_CLASSIFICATION=[dict get $result classification]"
+    puts "PHASE_RC_SYMMETRY_STATUS_REPORT=$phase_rpt"
+    puts "PHASE_RC_SYMMETRY_DETAILED_CSV=$detailed_csv"
+}
+
 proc mptdc_signoff_main {} {
     mptdc_signoff_mkdirs
     mptdc_signoff_init_status
@@ -3671,6 +3687,11 @@ proc mptdc_signoff_main {} {
 
 if {[info exists ::env(MPTDC_DIGITAL_SIGNOFF_SOURCE_ONLY)] && $::env(MPTDC_DIGITAL_SIGNOFF_SOURCE_ONLY)} {
     mptdc_signoff_source_check
+    return
+}
+
+if {[info exists ::env(MPTDC_PHASE_RC_PARSE_ONLY)] && $::env(MPTDC_PHASE_RC_PARSE_ONLY)} {
+    mptdc_signoff_phase_rc_parse_only
     return
 }
 
