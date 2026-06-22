@@ -732,14 +732,14 @@ proc mptdc_o12b_dbget_attr_raw_supported {ptr attr} {
     return ""
 }
 
-proc mptdc_o12b_probe_route_objects {fh ptr indent} {
+proc mptdc_o12b_probe_get_db_route_objects {fh object indent} {
     set route_attrs {.wires .wire .routes .route .routedWires .routed_wires .regularWires .regular_wires .rWires .shapes .rects .segments .sWires}
     set found_route_object 0
     foreach attr $route_attrs {
-        if {![mptdc_o12b_dbget_attr_supported $ptr $attr]} {
+        if {![mptdc_o12b_db_attr_supported $object $attr]} {
             continue
         }
-        set raw [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
+        set raw [mptdc_o12b_db_attr_raw_supported $object $attr]
         set raw_len 0
         catch {set raw_len [llength $raw]}
         set first ""
@@ -751,7 +751,7 @@ proc mptdc_o12b_probe_route_objects {fh ptr indent} {
             set found_route_object 1
             puts $fh "${indent}  first_object=$first"
             puts $fh "${indent}  first_object_attributes:"
-            set sub_attrs [mptdc_o12b_dbget_attrs_for_ptr $first]
+            set sub_attrs [mptdc_o12b_db_attrs_for $first]
             if {[llength $sub_attrs] == 0} {
                 puts $fh "${indent}  - <none or unavailable>"
             } else {
@@ -762,15 +762,37 @@ proc mptdc_o12b_probe_route_objects {fh ptr indent} {
             set sub_candidates {.length .routeLength .route_length .wireLength .wire_length .totalLength .total_length .layer.name .layer .rect .box .bbox .pt .points .width .status .shape}
             puts $fh "${indent}  first_object_candidate_values:"
             foreach sub_attr $sub_candidates {
-                if {![mptdc_o12b_dbget_attr_supported $first $sub_attr]} {
+                if {![mptdc_o12b_db_attr_supported $first $sub_attr]} {
                     continue
                 }
-                puts $fh "${indent}  - $sub_attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_dbget_attr_raw_supported $first $sub_attr]]]"
+                puts $fh "${indent}  - $sub_attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_db_attr_raw_supported $first $sub_attr]]]"
             }
         }
     }
     if {!$found_route_object} {
         puts $fh "${indent}- no_supported_route_shape_object_found"
+    }
+}
+
+proc mptdc_o12b_probe_dbget_net_route_objects {fh ptr indent} {
+    set route_attrs {.wires .pWires .sWires .vWires .whatIfWires .vias .sVias .whatIfVias}
+    set found_route_attr 0
+    foreach attr $route_attrs {
+        if {![mptdc_o12b_dbget_attr_supported $ptr $attr]} {
+            continue
+        }
+        set raw [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
+        set raw_len 0
+        catch {set raw_len [llength $raw]}
+        set first ""
+        if {$raw_len > 0} {
+            set first [lindex $raw 0]
+        }
+        set found_route_attr 1
+        puts $fh "${indent}- $attr count=$raw_len first=[mptdc_o12b_csv [mptdc_o12b_scalar $first]]"
+    }
+    if {!$found_route_attr} {
+        puts $fh "${indent}- no_supported_dbGet_net_route_attr_found"
     }
 }
 
@@ -812,7 +834,7 @@ proc mptdc_o12b_write_attr_probe {samples} {
             }
         }
         puts $fh "get_db_route_metric_probe:"
-        mptdc_o12b_probe_route_objects $fh $object ""
+        mptdc_o12b_probe_get_db_route_objects $fh $object ""
         if {$kind eq "net" || [regexp {_net$} $label]} {
             set probe_name $name
             if {$probe_name eq ""} {
@@ -847,7 +869,7 @@ proc mptdc_o12b_write_attr_probe {samples} {
                     puts $fh "  - $attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]]]"
                 }
                 puts $fh "  route_metric_probe:"
-                mptdc_o12b_probe_route_objects $fh $ptr "  "
+                mptdc_o12b_probe_dbget_net_route_objects $fh $ptr "  "
             }
         }
         puts $fh ""

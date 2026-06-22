@@ -150,6 +150,22 @@ proc mptdc_o13_write_constraint_mode_status {mode_result} {
     close $fh
 }
 
+proc mptdc_o13_write_skipped_constraint_report {path title mode_result} {
+    set dir [file dirname $path]
+    file mkdir $dir
+    set fh [open $path w]
+    puts $fh "$title"
+    puts $fh [string repeat "=" [string length $title]]
+    puts $fh "Generated: [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S %Z}]"
+    puts $fh ""
+    puts $fh "STATUS=SKIPPED_NO_INTERACTIVE_CONSTRAINT_MODE"
+    puts $fh "CONSTRAINT_MODE_STATUS=[lindex $mode_result 0]"
+    puts $fh "CONSTRAINT_MODE_DETAIL=[lindex $mode_result 1]"
+    puts $fh ""
+    puts $fh "The restored checkpoint did not expose an interactive constraint mode, so report_constraint was not run to keep the report-only log free of TCLCMD-1048 errors."
+    close $fh
+}
+
 proc mptdc_o13_write_timing_summary {} {
     global o13
     set fh [open "$o13(reports_dir)/timing_post_route_summary_by_class.md" w]
@@ -280,26 +296,42 @@ proc mptdc_o13_main {} {
     set constraint_mode_result [mptdc_o13_select_interactive_constraint_mode]
     mptdc_o13_write_constraint_mode_status $constraint_mode_result
     mptdc_o12b_stage_mark constraint_mode done
+    set constraint_mode_ok [expr {[lindex $constraint_mode_result 0] eq "OK"}]
 
     mptdc_o12b_stage_mark drv_max_cap start
-    mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_cap.rpt" \
-        "O13 restored checkpoint max capacitance" [list \
-            {report_constraint -max_capacitance -all_violators} \
-            {report_constraint -all_violators}]
+    if {$constraint_mode_ok} {
+        mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_cap.rpt" \
+            "O13 restored checkpoint max capacitance" [list \
+                {report_constraint -max_capacitance -all_violators} \
+                {report_constraint -all_violators}]
+    } else {
+        mptdc_o13_write_skipped_constraint_report "$o13(reports_dir)/drv_max_cap.rpt" \
+            "O13 restored checkpoint max capacitance" $constraint_mode_result
+    }
     mptdc_o12b_stage_mark drv_max_cap done
 
     mptdc_o12b_stage_mark drv_max_transition start
-    mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_transition.rpt" \
-        "O13 restored checkpoint max transition" [list \
-            {report_constraint -max_transition -all_violators} \
-            {report_constraint -all_violators}]
+    if {$constraint_mode_ok} {
+        mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_transition.rpt" \
+            "O13 restored checkpoint max transition" [list \
+                {report_constraint -max_transition -all_violators} \
+                {report_constraint -all_violators}]
+    } else {
+        mptdc_o13_write_skipped_constraint_report "$o13(reports_dir)/drv_max_transition.rpt" \
+            "O13 restored checkpoint max transition" $constraint_mode_result
+    }
     mptdc_o12b_stage_mark drv_max_transition done
 
     mptdc_o12b_stage_mark drv_max_fanout start
-    mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_fanout.rpt" \
-        "O13 restored checkpoint max fanout" [list \
-            {report_constraint -max_fanout -all_violators} \
-            {report_constraint -all_violators}]
+    if {$constraint_mode_ok} {
+        mptdc_o12b_capture_candidates "$o13(reports_dir)/drv_max_fanout.rpt" \
+            "O13 restored checkpoint max fanout" [list \
+                {report_constraint -max_fanout -all_violators} \
+                {report_constraint -all_violators}]
+    } else {
+        mptdc_o13_write_skipped_constraint_report "$o13(reports_dir)/drv_max_fanout.rpt" \
+            "O13 restored checkpoint max fanout" $constraint_mode_result
+    }
     mptdc_o12b_stage_mark drv_max_fanout done
 
     mptdc_o12b_stage_mark timing_ro_osc_domain start
