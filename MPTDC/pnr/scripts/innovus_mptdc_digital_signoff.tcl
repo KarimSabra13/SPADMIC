@@ -1631,11 +1631,13 @@ proc mptdc_signoff_count_existing_filler_cells {} {
 
 proc mptdc_signoff_post_filler_route_cleanup {rpt} {
     set commands [list \
-        {routeDesign -globalDetail} \
-        {routeDesign -wireOpt -viaOpt} \
+        {ecoRoute -target} \
+        {ecoRoute -target all} \
+        {ecoRoute} \
     ]
     set fh [open $rpt a]
     puts $fh "POST_FILLER_ROUTE_CLEANUP=REQUIRED_AFTER_POSTROUTE_FILLER"
+    puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=ecoRoute_target_not_globalDetail"
     close $fh
     foreach cmd $commands {
         set fh [open $rpt a]
@@ -1650,7 +1652,7 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
         }
         set fh [open $rpt a]
         puts $fh "POST_FILLER_ROUTE_STATUS=PASS"
-        puts $fh "INCREMENTAL_ROUTE_STATUS=PASS_BY_GLOBALDETAIL"
+        puts $fh "INCREMENTAL_ROUTE_STATUS=PASS_BY_ECOROUTE"
         close $fh
         return 1
     }
@@ -1688,7 +1690,25 @@ proc mptdc_signoff_insert_final_fillers {} {
         error "MPTDC_FILLER_COUNT_GATE_FAILED: expected_gt_0 actual=$after"
     }
     catch {mptdc_signoff_apply_pg_connectivity}
-    catch {sroute -nets {VDD VSS}}
+    set fh [open $rpt a]
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POST_FILLER_SROUTE]} {
+        close $fh
+        if {[catch {sroute -nets {VDD VSS}} sroute_err]} {
+            set fh [open $rpt a]
+            puts $fh "POST_FILLER_SROUTE_STATUS=REVIEW_REQUIRED"
+            puts $fh "POST_FILLER_SROUTE_ERROR=$sroute_err"
+            close $fh
+        } else {
+            set fh [open $rpt a]
+            puts $fh "POST_FILLER_SROUTE_STATUS=PASS"
+            close $fh
+        }
+    } else {
+        puts $fh "POST_FILLER_SROUTE_STATUS=SKIPPED"
+        puts $fh "POST_FILLER_SROUTE_REASON=pg_connectivity_rechecked_without_special_route_mutation"
+        puts $fh "POST_FILLER_SROUTE_ENABLE_ENV=MPTDC_ENABLE_POST_FILLER_SROUTE"
+        close $fh
+    }
     mptdc_signoff_post_filler_route_cleanup $rpt
     mptdc_signoff_set_status FILLER_STATUS PASS $rpt
     return $rpt
