@@ -113,7 +113,13 @@ while IFS= read -r entry; do
   if [[ -z "$selected_reason" ]]; then
     selected_reason="$(basename "$run_dir"):$reason"
   fi
-done < <(find "$INNOVUS_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr)
+done < <(
+  find "$INNOVUS_ROOT" -mindepth 3 -maxdepth 3 \
+    -path '*/reports/digital_pnr_signoff_status.rpt' \
+    -printf '%T@ %h\n' |
+  sed 's#/reports$##' |
+  sort -nr
+)
 
 if [[ -z "$selected" ]]; then
   echo "ERROR: no complete TC release baseline found under $INNOVUS_ROOT" >&2
