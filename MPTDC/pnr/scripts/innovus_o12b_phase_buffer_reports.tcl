@@ -150,6 +150,12 @@ proc mptdc_o12b_db_attr_supported {object attr} {
 
 proc mptdc_o12b_db_attr {object attr} {
     if {$object eq ""} { return "" }
+    # Some restored Innovus 22.33 objects do not advertise every usable alias
+    # through ".?", even though direct get_db on the alias succeeds.  Also,
+    # net: pseudo-handles may be unsafe for report_property but still usable
+    # for direct get_db metric queries.
+    set val [mptdc_o12b_direct_db_attr $object $attr]
+    if {$val ne ""} { return $val }
     if {![mptdc_o12b_db_object_query_safe $object]} { return "" }
     set attrs [mptdc_o12b_db_attrs_for $object]
     if {[llength $attrs] == 0} {
@@ -158,10 +164,8 @@ proc mptdc_o12b_db_attr {object attr} {
     if {![mptdc_o12b_db_attr_supported $object $attr]} {
         return ""
     }
-    set val ""
-    if {![catch {set val [get_db $object $attr]}] && $val ne ""} {
-        return [mptdc_o12b_scalar $val]
-    }
+    set val [mptdc_o12b_direct_db_attr $object $attr]
+    if {$val ne ""} { return $val }
     return ""
 }
 
@@ -183,6 +187,15 @@ proc mptdc_o12b_first_text_attr {object attrs} {
         }
     }
     return [list "" ""]
+}
+
+proc mptdc_o12b_direct_db_attr {object attr} {
+    if {$object eq ""} { return "" }
+    set val ""
+    if {![catch {set val [get_db $object $attr]}] && $val ne ""} {
+        return [mptdc_o12b_scalar $val]
+    }
+    return ""
 }
 
 proc mptdc_o12b_expected_phase_cell_type {} {
