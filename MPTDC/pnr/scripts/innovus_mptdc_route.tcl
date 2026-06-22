@@ -19,6 +19,10 @@ proc mptdc_pnr_route_signal_top_layer {} {
     return [mptdc_pnr_env MPTDC_PNR_SIGNAL_TOP_LAYER MET3]
 }
 
+proc mptdc_pnr_route_effective_top_floor_layer {} {
+    return [mptdc_pnr_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]
+}
+
 proc mptdc_pnr_route_layer_index {layer} {
     set value [string toupper [string trim $layer]]
     if {[string is integer -strict $value]} {
@@ -35,6 +39,39 @@ proc mptdc_pnr_route_layer_index {layer} {
         return $layer_index($value)
     }
     return $layer
+}
+
+proc mptdc_pnr_route_layer_name {layer} {
+    set value [string toupper [string trim $layer]]
+    if {![string is integer -strict $value]} {
+        return $value
+    }
+    array set layer_name {
+        1 MET1
+        2 MET2
+        3 MET3
+        4 MET4
+        5 METTP
+    }
+    if {[info exists layer_name($value)]} {
+        return $layer_name($value)
+    }
+    return $layer
+}
+
+proc mptdc_pnr_route_effective_top_layer {requested_top} {
+    set requested_idx [mptdc_pnr_route_layer_index $requested_top]
+    set floor [mptdc_pnr_route_effective_top_floor_layer]
+    set floor_idx [mptdc_pnr_route_layer_index $floor]
+    set effective $requested_top
+    set effective_idx $requested_idx
+    set reason requested
+    if {[string is integer -strict $requested_idx] && [string is integer -strict $floor_idx] && $requested_idx < $floor_idx} {
+        set effective $floor
+        set effective_idx $floor_idx
+        set reason promoted_to_post_cts_existing_route_floor
+    }
+    return [list top $effective top_index $effective_idx reason $reason requested_top $requested_top requested_top_index $requested_idx floor_top $floor floor_top_index $floor_idx]
 }
 
 proc mptdc_pnr_route_power_top_policy {} {
@@ -58,10 +95,14 @@ proc mptdc_pnr_write_route_intent {{path ""}} {
     if {$path eq ""} {
         set path [mptdc_pnr_env MPTDC_PNR_ROUTE_INTENT_REPORT mptdc_route_intent.rpt]
     }
+    set effective_top [mptdc_pnr_route_effective_top_layer [mptdc_pnr_route_signal_top_layer]]
     set fh [open $path w]
     puts $fh "# MPTDC Final Typical Route Intent"
     puts $fh "signal_bottom_layer=[mptdc_pnr_route_signal_bottom_layer]"
     puts $fh "signal_top_layer=[mptdc_pnr_route_signal_top_layer]"
+    puts $fh "effective_route_top_layer=[dict get $effective_top top]"
+    puts $fh "effective_route_top_layer_index=[dict get $effective_top top_index]"
+    puts $fh "effective_route_top_reason=[dict get $effective_top reason]"
     puts $fh "top_metal_policy=[mptdc_pnr_route_power_top_policy]"
     puts $fh "FAST_TAG_TO_PD_TS_TIMED=YES"
     puts $fh "FAST_TAG_TO_PD_TS_POSTROUTE_CLEAN=REVIEW_AFTER_ROUTE"
@@ -76,10 +117,11 @@ proc mptdc_pnr_apply_route_layer_limits {} {
     set bottom [mptdc_pnr_route_signal_bottom_layer]
     set top [mptdc_pnr_route_signal_top_layer]
     set bottom_idx [mptdc_pnr_route_layer_index $bottom]
-    set top_idx [mptdc_pnr_route_layer_index $top]
+    set effective_top [mptdc_pnr_route_effective_top_layer $top]
+    set top_idx [dict get $effective_top top_index]
     catch {setNanoRouteMode -routeBottomRoutingLayer $bottom_idx}
     catch {setNanoRouteMode -routeTopRoutingLayer $top_idx}
-    return [list bottom $bottom top $top bottom_index $bottom_idx top_index $top_idx]
+    return [dict merge [list bottom $bottom bottom_index $bottom_idx] $effective_top]
 }
 
 proc mptdc_pnr_write_fast_tag_route_lengths_template {{path ""}} {

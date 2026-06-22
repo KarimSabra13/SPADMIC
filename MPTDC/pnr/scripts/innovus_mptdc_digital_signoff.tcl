@@ -2362,6 +2362,45 @@ proc mptdc_signoff_first_number_for_patterns {path patterns} {
     return $value
 }
 
+proc mptdc_signoff_numeric_max {a b} {
+    if {$a eq ""} { return $b }
+    if {$b eq ""} { return $a }
+    if {$b > $a} { return $b }
+    return $a
+}
+
+proc mptdc_signoff_parse_cts_summary_metrics {path} {
+    set metrics [dict create total_sinks "" clk_sys_skew "" clk_sys_insertion "" max_transition ""]
+    if {![file exists $path]} {
+        return $metrics
+    }
+    set fh [open $path r]
+    set in_sink_counts 0
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {[regexp -nocase {Clock DAG sink counts} $trimmed]} {
+            set in_sink_counts 1
+            continue
+        }
+        if {$in_sink_counts && [regexp -nocase {^Total[[:space:]]+([0-9]+)} $trimmed -> total_sinks]} {
+            dict set metrics total_sinks $total_sinks
+            set in_sink_counts 0
+        }
+        if {[regexp -nocase {clk_sys/[^[:space:]]*[[:space:]]+([-+]?[0-9.]+)[[:space:]]+([-+]?[0-9.]+)[[:space:]]+([-+]?[0-9.]+)} $trimmed -> min_id max_id skew]} {
+            dict set metrics clk_sys_insertion $max_id
+            dict set metrics clk_sys_skew $skew
+        }
+        if {[regexp -nocase {^(Trunk|Leaf)[[:space:]]+[-+]?[0-9.]+[[:space:]]+[0-9]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+([-+]?[0-9.]+)} $trimmed -> _ max_tran]} {
+            dict set metrics max_transition [mptdc_signoff_numeric_max [dict get $metrics max_transition] $max_tran]
+        }
+        if {[regexp -nocase {^(Trunk|Leaf).*max=([-+]?[0-9.]+)ns} $trimmed -> _ max_tran]} {
+            dict set metrics max_transition [mptdc_signoff_numeric_max [dict get $metrics max_transition] $max_tran]
+        }
+    }
+    close $fh
+    return $metrics
+}
+
 proc mptdc_signoff_count_clk_sys_sinks {} {
     set count ""
     foreach cmd {
@@ -2382,24 +2421,40 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     set detail_rpt [file join [mptdc_signoff_report_dir] cts_clock_tree_detail.rpt]
     mptdc_signoff_capture_candidates $detail_rpt \
         "CTS clock tree detail" [list {report_ccopt_clock_trees} {report_clock_tree}]
+    set summary_metrics [mptdc_signoff_parse_cts_summary_metrics $summary_rpt]
     set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
     set sinks_reached [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {clk_sys[^0-9]+([0-9]+)[^0-9]+sinks?} \
         {sinks?[^0-9]+([0-9]+)}]]
+    if {[dict get $summary_metrics total_sinks] ne ""} {
+        set sinks_reached [dict get $summary_metrics total_sinks]
+        if {$sinks_expected eq "" || $sinks_expected < $sinks_reached} {
+            set sinks_expected $sinks_reached
+        }
+    }
     if {$sinks_reached eq ""} {
         set sinks_reached $sinks_expected
     }
     set skew [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {max[^0-9a-z]*skew[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
         {skew[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}]]
+    if {[dict get $summary_metrics clk_sys_skew] ne ""} {
+        set skew [dict get $summary_metrics clk_sys_skew]
+    }
     set transition [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {max[^0-9a-z]*transition[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
         {max[^0-9a-z]*tran[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
         {transition[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
         {tran[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}]]
+    if {[dict get $summary_metrics max_transition] ne ""} {
+        set transition [dict get $summary_metrics max_transition]
+    }
     set insertion [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {insertion[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
         {latency[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}]]
+    if {[dict get $summary_metrics clk_sys_insertion] ne ""} {
+        set insertion [dict get $summary_metrics clk_sys_insertion]
+    }
 
     set skew_limit [mptdc_signoff_env MPTDC_CTS_MAX_SKEW_NS 0.20]
     set transition_limit [mptdc_signoff_env MPTDC_CTS_MAX_TRANSITION_NS 0.35]
@@ -2510,7 +2565,21 @@ proc mptdc_signoff_run_cts {} {
 
 proc mptdc_signoff_route_design {} {
     mptdc_signoff_source_if_exists innovus_mptdc_route.tcl
-    catch {mptdc_pnr_apply_route_layer_limits}
+    set route_intent_rpt [file join [mptdc_signoff_report_dir] route_layer_intent.rpt]
+    catch {mptdc_pnr_write_route_intent $route_intent_rpt}
+    set route_layer_rpt [file join [mptdc_signoff_report_dir] route_layer_limits.rpt]
+    set rfh [open $route_layer_rpt w]
+    puts $rfh "# MPTDC Route Layer Limits"
+    if {[catch {mptdc_pnr_apply_route_layer_limits} layer_limits]} {
+        puts $rfh "ROUTE_LAYER_LIMIT_STATUS=REVIEW_REQUIRED"
+        puts $rfh "ROUTE_LAYER_LIMIT_ERROR=$layer_limits"
+    } else {
+        puts $rfh "ROUTE_LAYER_LIMIT_STATUS=APPLIED"
+        foreach {key value} $layer_limits {
+            puts $rfh "[string toupper $key]=$value"
+        }
+    }
+    close $rfh
     routeDesign
     set antenna_rpt [file join [mptdc_signoff_report_dir] antenna.rpt]
     mptdc_signoff_run_optional_postroute_opt
