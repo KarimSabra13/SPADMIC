@@ -2763,18 +2763,26 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     mptdc_signoff_capture_candidates $detail_rpt \
         "CTS clock tree detail" [list {report_ccopt_clock_trees} {report_clock_tree}]
     set summary_metrics [mptdc_signoff_parse_cts_summary_metrics $summary_rpt]
-    set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
+    set sinks_expected ""
+    set sink_count_source ""
     set sinks_reached [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {clk_sys[^0-9]+([0-9]+)[^0-9]+sinks?} \
         {sinks?[^0-9]+([0-9]+)}]]
     if {[dict get $summary_metrics total_sinks] ne ""} {
         set sinks_reached [dict get $summary_metrics total_sinks]
-        if {$sinks_expected eq "" || $sinks_expected < $sinks_reached} {
-            set sinks_expected $sinks_reached
-        }
+        set sinks_expected $sinks_reached
+        set sink_count_source clock_tree_summary
+    }
+    if {$sinks_expected eq "" && $sinks_reached ne ""} {
+        set sinks_expected $sinks_reached
+        set sink_count_source clock_tree_summary_pattern
     }
     if {$sinks_reached eq ""} {
+        set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
         set sinks_reached $sinks_expected
+        if {$sinks_expected ne ""} {
+            set sink_count_source db_query
+        }
     }
     set skew [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {max[^0-9a-z]*skew[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
@@ -2828,6 +2836,7 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     puts $fh "CTS_REASON=[string trim $reason]"
     puts $fh "CLK_SYS_SINKS_EXPECTED=$sinks_expected"
     puts $fh "CLK_SYS_SINKS_REACHED=$sinks_reached"
+    puts $fh "CLK_SYS_SINK_COUNT_SOURCE=$sink_count_source"
     puts $fh "CLK_SYS_MAX_SKEW_NS=$skew"
     puts $fh "CLK_SYS_MAX_TRANSITION_NS=$transition"
     puts $fh "CLK_SYS_INSERTION_DELAY_NS=$insertion"
