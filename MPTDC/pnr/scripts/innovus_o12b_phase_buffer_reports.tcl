@@ -699,17 +699,12 @@ proc mptdc_o12b_dbget_attrs_for_ptr {ptr} {
     }
     set attrs [list]
     if {![catch {set raw_attrs [dbGet ${ptr}.?]}]} {
-        if {[catch {
-            foreach raw $raw_attrs {
-                set token [string trim [lindex $raw 0]]
+        foreach raw [split "$raw_attrs" "\n"] {
+            foreach token [split [string trim $raw]] {
+                set token [string trim $token]
                 if {$token eq ""} { continue }
-                lappend attrs $token
-            }
-        }]} {
-            foreach raw [split "$raw_attrs" "\n"] {
-                set token [string trim $raw]
-                if {$token eq ""} { continue }
-                lappend attrs $token
+                if {[regexp {^[A-Za-z_][A-Za-z0-9_]*:$} $token]} { continue }
+                mptdc_o11_unique_append attrs $token
             }
         }
     }
@@ -787,7 +782,9 @@ proc mptdc_o12b_dbget_route_shape_length_um {shape_ptr} {
 }
 
 proc mptdc_o12b_dbget_route_length_for_ptr {ptr} {
-    set box_size [mptdc_o12b_dbget_attr_raw_supported $ptr .box_size]
+    # top.nets .box_size is present in the Innovus 22.33 net schema.  Reading it
+    # directly avoids the noisy dbGet .? schema printout in per-net report loops.
+    set box_size [mptdc_o12b_dbget_attr_raw $ptr .box_size]
     if {[llength $box_size] >= 2} {
         set sx [mptdc_o12b_num [lindex $box_size 0]]
         set sy [mptdc_o12b_num [lindex $box_size 1]]
