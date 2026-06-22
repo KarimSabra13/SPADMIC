@@ -732,6 +732,15 @@ proc mptdc_o12b_dbget_attr_raw_supported {ptr attr} {
     return ""
 }
 
+proc mptdc_o12b_dbget_attr_raw {ptr attr} {
+    if {$ptr eq "" || $ptr eq "0x0" || $attr eq "" || [llength [info commands dbGet]] == 0} { return "" }
+    set val ""
+    if {![catch {set val [dbGet ${ptr}${attr}]}] && $val ne ""} {
+        return $val
+    }
+    return ""
+}
+
 proc mptdc_o12b_probe_get_db_route_objects {fh object indent} {
     set route_attrs {.wires .wire .routes .route .routedWires .routed_wires .regularWires .regular_wires .rWires .shapes .rects .segments .sWires}
     set found_route_object 0
@@ -778,15 +787,15 @@ proc mptdc_o12b_probe_dbget_net_route_objects {fh ptr indent} {
     set route_attrs {.wires .pWires .sWires .vWires .whatIfWires .vias .sVias .whatIfVias}
     set found_route_attr 0
     foreach attr $route_attrs {
-        if {![mptdc_o12b_dbget_attr_supported $ptr $attr]} {
-            continue
-        }
-        set raw [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
+        set raw [mptdc_o12b_dbget_attr_raw $ptr $attr]
         set raw_len 0
         catch {set raw_len [llength $raw]}
         set first ""
         if {$raw_len > 0} {
             set first [lindex $raw 0]
+        }
+        if {$raw eq "" || $raw eq "0x0"} {
+            continue
         }
         set found_route_attr 1
         puts $fh "${indent}- $attr count=$raw_len first=[mptdc_o12b_csv [mptdc_o12b_scalar $first]]"
@@ -848,25 +857,19 @@ proc mptdc_o12b_write_attr_probe {samples} {
             }
             foreach ptr [lrange $ptrs 0 2] {
                 puts $fh "- ptr=$ptr"
-                set ptr_name [mptdc_o12b_dbget_attr_raw_supported $ptr .name]
+                set ptr_name [mptdc_o12b_dbget_attr_raw $ptr .name]
                 if {$ptr_name ne ""} {
                     puts $fh "  name=[mptdc_o12b_csv [mptdc_o12b_scalar $ptr_name]]"
                 }
                 puts $fh "  attributes:"
-                set ptr_attrs [mptdc_o12b_dbget_attrs_for_ptr $ptr]
-                if {[llength $ptr_attrs] == 0} {
-                    puts $fh "  - <none or unavailable>"
-                } else {
-                    foreach attr $ptr_attrs {
-                        puts $fh "  - $attr"
-                    }
-                }
+                puts $fh "  - skipped_full_dbGet_question_mark_probe"
                 puts $fh "  candidate_net_values:"
-                foreach attr {.numTerms .numInstTerms .numInputTerms .numOutputTerms .numVias .num_vias .totalCap .total_cap .totalCapacitance .total_capacitance .wireCap .wire_cap .wireCapacitance .wire_capacitance .pinCap .pin_cap .resistance .routeLength .route_length .wireLength .wire_length .length} {
-                    if {![mptdc_o12b_dbget_attr_supported $ptr $attr]} {
+                foreach attr {.numTerms .numInputTerms .numOutputTerms .area .box .box_size .bottomPreferredLayer .topPreferredLayer} {
+                    set val [mptdc_o12b_dbget_attr_raw $ptr $attr]
+                    if {$val eq "" || $val eq "0x0"} {
                         continue
                     }
-                    puts $fh "  - $attr=[mptdc_o12b_csv [mptdc_o12b_scalar [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]]]"
+                    puts $fh "  - $attr=[mptdc_o12b_csv [mptdc_o12b_scalar $val]]"
                 }
                 puts $fh "  route_metric_probe:"
                 mptdc_o12b_probe_dbget_net_route_objects $fh $ptr "  "

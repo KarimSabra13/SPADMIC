@@ -288,15 +288,15 @@ proc mptdc_o13_main {} {
         "O13 restored checkpoint clocks" [list {report_clocks}]
     mptdc_o12b_stage_mark report_clocks done
 
-    mptdc_o12b_stage_mark io_load_model start
-    mptdc_o13_apply_io_load_model
-    mptdc_o12b_stage_mark io_load_model done
-
     mptdc_o12b_stage_mark constraint_mode start
     set constraint_mode_result [mptdc_o13_select_interactive_constraint_mode]
     mptdc_o13_write_constraint_mode_status $constraint_mode_result
     mptdc_o12b_stage_mark constraint_mode done
     set constraint_mode_ok [expr {[lindex $constraint_mode_result 0] eq "OK"}]
+
+    mptdc_o12b_stage_mark io_load_model start
+    mptdc_o13_apply_io_load_model
+    mptdc_o12b_stage_mark io_load_model done
 
     mptdc_o12b_stage_mark drv_max_cap start
     if {$constraint_mode_ok} {
