@@ -140,6 +140,19 @@ done
 
 RUN_ID="${RUN_ID:-mptdc_final_typical_$(date +%Y%m%d_%H%M%S)}"
 
+if [[ "${MPTDC_PHASE_RC_PARSE_ONLY:-0}" =~ ^(1|yes|true|on)$ ]]; then
+  if [[ -z "${MPTDC_SIGNOFF_RESULT_DIR:-}" && -n "${ROUTE_CSV:-}" ]]; then
+    route_reports_dir="$(cd "$(dirname "$ROUTE_CSV")" && pwd)"
+    export MPTDC_SIGNOFF_RESULT_DIR="$(cd "$route_reports_dir/.." && pwd)"
+  fi
+  : "${MPTDC_SIGNOFF_RESULT_DIR:=$(abs_path "${MPTDC_WORK_ROOT:-work}/innovus/${RUN_ID}")}"
+  export MPTDC_SIGNOFF_RESULT_DIR MPTDC_PHASE_RC_PARSE_ONLY
+  if command -v tclsh >/dev/null 2>&1; then
+    exec tclsh "$SCRIPT_DIR/innovus_mptdc_digital_signoff.tcl"
+  fi
+  exec innovus -nowin -init "$SCRIPT_DIR/innovus_mptdc_digital_signoff.tcl"
+fi
+
 case "$MODE" in
   validate_only|place_prepare|report_only|route_closure) ;;
   *)

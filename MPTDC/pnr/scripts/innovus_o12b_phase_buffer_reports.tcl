@@ -40,6 +40,61 @@ proc mptdc_o12b_num {value} {
     return ""
 }
 
+proc mptdc_o12b_numeric_tokens {value} {
+    set nums [list]
+    if {[catch {set len [llength $value]}]} {
+        set items [list "$value"]
+    } else {
+        set items $value
+        if {$len == 0} {
+            set items [list "$value"]
+        }
+    }
+    foreach item $items {
+        set num [mptdc_o12b_num $item]
+        if {$num ne ""} {
+            lappend nums $num
+            continue
+        }
+        if {[regexp {^0x[0-9A-Fa-f]+$} "$item"]} {
+            continue
+        }
+        foreach match [regexp -all -inline {[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?} "$item"] {
+            lappend nums $match
+        }
+    }
+    return $nums
+}
+
+proc mptdc_o12b_first_numeric_token {value} {
+    set nums [mptdc_o12b_numeric_tokens $value]
+    if {[llength $nums] == 0} {
+        return ""
+    }
+    return [lindex $nums 0]
+}
+
+proc mptdc_o12b_bbox_manhattan_from_sizes {sx_value sy_value source} {
+    set sx [mptdc_o12b_first_numeric_token $sx_value]
+    set sy [mptdc_o12b_first_numeric_token $sy_value]
+    if {$sx eq "" || $sy eq ""} {
+        return [list "" ""]
+    }
+    return [list [format "%.6f" [expr {abs($sx) + abs($sy)}]] $source]
+}
+
+proc mptdc_o12b_bbox_manhattan_from_box {box source} {
+    set nums [mptdc_o12b_numeric_tokens $box]
+    if {[llength $nums] < 4} {
+        return [list "" ""]
+    }
+    set llx [lindex $nums 0]
+    set lly [lindex $nums 1]
+    set urx [lindex $nums 2]
+    set ury [lindex $nums 3]
+    return [list [format "%.6f" [expr {abs($urx - $llx) + abs($ury - $lly)}]] $source]
+}
+
 proc mptdc_o12b_db_object_query_safe {object} {
     if {$object eq ""} { return 0 }
     if {[llength [info commands mptdc_o11_internal_net_token_name]] > 0
@@ -417,7 +472,23 @@ proc mptdc_o12b_net_metric {net_obj metric} {
         route_length {.route_length .routed_length .wire_length .total_wire_length .length}
     }
     if {![info exists attrs($metric)]} { return [list "" ""] }
-    return [mptdc_o12b_first_numeric_attr $net_obj $attrs($metric)]
+    set data [mptdc_o12b_first_numeric_attr $net_obj $attrs($metric)]
+    if {[lindex $data 0] ne "" || $metric ne "route_length"} {
+        return $data
+    }
+    set sx [mptdc_o12b_db_attr $net_obj .box_sizex]
+    set sy [mptdc_o12b_db_attr $net_obj .box_sizey]
+    set data [mptdc_o12b_bbox_manhattan_from_sizes $sx $sy "get_db_net_bbox_manhattan_estimate"]
+    if {[lindex $data 0] ne ""} {
+        return $data
+    }
+    foreach attr {.box_size .bbox .box .rect .bounds} {
+        set data [mptdc_o12b_bbox_manhattan_from_box [mptdc_o12b_db_attr $net_obj $attr] "get_db_net_bbox_manhattan_estimate:$attr"]
+        if {[lindex $data 0] ne ""} {
+            return $data
+        }
+    }
+    return [list "" ""]
 }
 
 proc mptdc_o12b_net_metric_from_property {property_path metric} {
@@ -782,17 +853,33 @@ proc mptdc_o12b_dbget_route_shape_length_um {shape_ptr} {
 }
 
 proc mptdc_o12b_dbget_route_length_for_ptr {ptr} {
-    # top.nets .box_size is present in the Innovus 22.33 net schema.  Reading it
-    # directly avoids the noisy dbGet .? schema printout in per-net report loops.
-    set box_size [mptdc_o12b_dbget_attr_raw $ptr .box_size]
-    if {[llength $box_size] >= 2} {
-        set sx [mptdc_o12b_num [lindex $box_size 0]]
-        set sy [mptdc_o12b_num [lindex $box_size 1]]
-        if {$sx ne "" && $sy ne ""} {
-            return [list [format "%.6f" [expr {$sx + $sy}]] "dbGet_net_bbox_manhattan_um_estimate"]
+    set data [mptdc_o12b_bbox_manhattan_from_sizes \
+        [mptdc_o12b_dbget_attr_raw $ptr .box_sizex] \
+        [mptdc_o12b_dbget_attr_raw $ptr .box_sizey] \
+        "dbGet_net_bbox_manhattan_estimate"]
+    if {[lindex $data 0] ne ""} {
+        return $data
+    }
+
+    foreach attr {.box_size .box .bbox} {
+        set data [mptdc_o12b_bbox_manhattan_from_box \
+            [mptdc_o12b_dbget_attr_raw $ptr $attr] \
+            "dbGet_net_bbox_manhattan_estimate:$attr"]
+        if {[lindex $data 0] ne ""} {
+            return $data
         }
     }
 
+    set use_shape_fallback 0
+    if {[info exists ::env(MPTDC_O12B_ROUTE_SHAPE_FALLBACK)]} {
+        set flag [string tolower $::env(MPTDC_O12B_ROUTE_SHAPE_FALLBACK)]
+        if {$flag ni {0 false no off ""}} {
+            set use_shape_fallback 1
+        }
+    }
+    if {!$use_shape_fallback} {
+        return [list "" ""]
+    }
     foreach attr {.wires .pWires .sWires .vWires .whatIfWires} {
         set shapes [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
         if {$shapes eq "" || $shapes eq "0x0"} {
@@ -882,7 +969,7 @@ proc mptdc_o12b_probe_dbget_net_route_objects {fh ptr indent} {
     set route_attrs {.wires .pWires .sWires .vWires .whatIfWires .vias .sVias .whatIfVias}
     set found_route_attr 0
     foreach attr $route_attrs {
-        set raw [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
+        set raw [mptdc_o12b_dbget_attr_raw $ptr $attr]
         set raw_len 0
         catch {set raw_len [llength $raw]}
         set first ""
@@ -959,8 +1046,8 @@ proc mptdc_o12b_write_attr_probe {samples} {
                 puts $fh "  attributes:"
                 puts $fh "  - skipped_full_dbGet_question_mark_probe"
                 puts $fh "  candidate_net_values:"
-                foreach attr {.numTerms .numInputTerms .numOutputTerms .area .box .box_size .bottomPreferredLayer .topPreferredLayer} {
-                    set val [mptdc_o12b_dbget_attr_raw_supported $ptr $attr]
+                foreach attr {.numTerms .numInputTerms .numOutputTerms .area .box .box_sizex .box_sizey .box_size .bottomPreferredLayer .topPreferredLayer} {
+                    set val [mptdc_o12b_dbget_attr_raw $ptr $attr]
                     if {$val eq "" || $val eq "0x0"} {
                         continue
                     }
