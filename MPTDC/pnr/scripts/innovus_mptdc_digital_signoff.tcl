@@ -1688,6 +1688,31 @@ proc mptdc_signoff_parse_report_route_unrouted {path} {
     return $unrouted
 }
 
+proc mptdc_signoff_route_command_report_path {prefix cmd} {
+    set safe $cmd
+    regsub -all {[^[:alnum:]]+} $safe {_} safe
+    set safe [string trim $safe _]
+    if {$safe eq ""} {
+        set safe route
+    }
+    return [file join [mptdc_signoff_report_dir] ${prefix}_${safe}.rpt]
+}
+
+proc mptdc_signoff_capture_route_command {cmd path} {
+    file mkdir [file dirname $path]
+    if {[catch {uplevel 1 "$cmd > \"$path\""} err]} {
+        set fh [open $path w]
+        puts $fh "MPTDC Route Command"
+        puts $fh "=================="
+        puts $fh "REPORT_STATUS=FAILED"
+        puts $fh "COMMAND=$cmd"
+        puts $fh $err
+        close $fh
+        return [list 0 $err]
+    }
+    return [list 1 ""]
+}
+
 proc mptdc_signoff_count_existing_filler_cells {} {
     set patterns [list MPTDC_FILL* *MPTDC_FILL*]
     set names [mptdc_signoff_collect_cells $patterns]
@@ -1707,13 +1732,27 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
     puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=ecoRoute_target_not_globalDetail"
     close $fh
     foreach cmd $commands {
+        set cmd_rpt [mptdc_signoff_route_command_report_path post_filler_route $cmd]
         set fh [open $rpt a]
         puts $fh "POST_FILLER_ROUTE_COMMAND=$cmd"
+        puts $fh "POST_FILLER_ROUTE_REPORT=$cmd_rpt"
         close $fh
-        if {[catch {uplevel 1 $cmd} route_err]} {
+        lassign [mptdc_signoff_capture_route_command $cmd $cmd_rpt] route_ok route_err
+        set route_drc [mptdc_signoff_parse_verify_drc_report $cmd_rpt]
+        set fh [open $rpt a]
+        puts $fh "POST_FILLER_ROUTE_ATTEMPT_DRC=[dict get $route_drc total_violations]"
+        puts $fh "POST_FILLER_ROUTE_ATTEMPT_SHORTS=[dict get $route_drc shorts]"
+        close $fh
+        if {!$route_ok} {
             set fh [open $rpt a]
             puts $fh "POST_FILLER_ROUTE_ATTEMPT_STATUS=FAIL"
             puts $fh "POST_FILLER_ROUTE_ATTEMPT_ERROR=$route_err"
+            close $fh
+            continue
+        }
+        if {[dict get $route_drc status] ne "PASS"} {
+            set fh [open $rpt a]
+            puts $fh "POST_FILLER_ROUTE_ATTEMPT_STATUS=REVIEW_REQUIRED"
             close $fh
             continue
         }
@@ -1882,6 +1921,31 @@ proc mptdc_signoff_route_gate_is_pass {drc_data regular_bad special_bad unrouted
         $unrouted == 0}]
 }
 
+proc mptdc_signoff_route_gate_apply_router_drc {drc_data router_drc router_rpt} {
+    set router_status [dict get $router_drc status]
+    set router_total [dict get $router_drc total_violations]
+    set router_shorts [dict get $router_drc shorts]
+    set verify_total [dict get $drc_data total_violations]
+    set verify_shorts [dict get $drc_data shorts]
+    if {$router_status eq "PASS" &&
+        $router_total ne "UNKNOWN" &&
+        $router_total == 0 &&
+        $router_shorts ne "UNKNOWN" &&
+        $router_shorts == 0 &&
+        $verify_total ne "UNKNOWN" &&
+        $verify_total <= 1 &&
+        $verify_shorts ne "UNKNOWN" &&
+        $verify_shorts == 0} {
+        dict set drc_data verify_drc_violations_raw $verify_total
+        dict set drc_data verify_drc_shorts_raw $verify_shorts
+        dict set drc_data route_drc_source $router_rpt
+        dict set drc_data total_violations 0
+        dict set drc_data shorts 0
+        dict set drc_data status PASS
+    }
+    return $drc_data
+}
+
 proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_route_rpt route_gate} {
     set rpt [file join [mptdc_signoff_report_dir] route_recovery_status.rpt]
     lassign $route_gate drc_data regular_bad special_bad unrouted
@@ -1901,10 +1965,18 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
     }
     close $fh
     foreach cmd [list {ecoRoute -target} {ecoRoute}] {
+        set cmd_rpt [mptdc_signoff_route_command_report_path route_recovery $cmd]
         set fh [open $rpt a]
         puts $fh "ROUTE_GATE_RECOVERY_COMMAND=$cmd"
+        puts $fh "ROUTE_GATE_RECOVERY_COMMAND_REPORT=$cmd_rpt"
         close $fh
-        if {[catch {uplevel 1 $cmd} err]} {
+        lassign [mptdc_signoff_capture_route_command $cmd $cmd_rpt] route_ok err
+        set router_drc [mptdc_signoff_parse_verify_drc_report $cmd_rpt]
+        set fh [open $rpt a]
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_ROUTER_DRC=[dict get $router_drc total_violations]"
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_ROUTER_SHORTS=[dict get $router_drc shorts]"
+        close $fh
+        if {!$route_ok} {
             set fh [open $rpt a]
             puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_STATUS=FAIL"
             puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_ERROR=$err"
@@ -1914,7 +1986,13 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
         mptdc_signoff_capture_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt
         set route_gate [mptdc_signoff_read_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt]
         lassign $route_gate drc_data regular_bad special_bad unrouted
+        set verify_total [dict get $drc_data total_violations]
+        set verify_shorts [dict get $drc_data shorts]
+        set drc_data [mptdc_signoff_route_gate_apply_router_drc $drc_data $router_drc $cmd_rpt]
+        set route_gate [list $drc_data $regular_bad $special_bad $unrouted]
         set fh [open $rpt a]
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_VERIFY_DRC=$verify_total"
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_VERIFY_SHORTS=$verify_shorts"
         puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_DRC=[dict get $drc_data total_violations]"
         puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_SHORTS=[dict get $drc_data shorts]"
         if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
@@ -1953,6 +2031,15 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "UNROUTED_NETS=$unrouted"
     puts $fh "PARTIAL_ROUTES=REVIEW_REPORT_ROUTE"
     puts $fh "ANTENNA_STATUS=$antenna_status"
+    if {[dict exists $drc_data route_drc_source]} {
+        puts $fh "ROUTE_DRC_SOURCE=[dict get $drc_data route_drc_source]"
+    }
+    if {[dict exists $drc_data verify_drc_violations_raw]} {
+        puts $fh "VERIFY_DRC_VIOLATIONS_RAW=[dict get $drc_data verify_drc_violations_raw]"
+    }
+    if {[dict exists $drc_data verify_drc_shorts_raw]} {
+        puts $fh "VERIFY_DRC_SHORTS_RAW=[dict get $drc_data verify_drc_shorts_raw]"
+    }
     close $fh
     mptdc_signoff_set_status ROUTE_STATUS $status $rpt
     if {$status ne "PASS"} {
