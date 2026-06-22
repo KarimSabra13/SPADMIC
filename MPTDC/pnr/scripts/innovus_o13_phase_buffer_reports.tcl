@@ -494,6 +494,19 @@ proc mptdc_o13_write_reports {} {
                 set iso_net_obj [mptdc_o11_net_object $iso_net]
             }
             set out_net_obj [mptdc_o11_net_object $out_net]
+            if {![info exists attr_probe_samples_written]} {
+                set attr_probe_samples_written 1
+                set attr_probe_samples [list \
+                    [list "${family}_${tap}_raw_net" $raw_net_obj] \
+                    [list "${family}_${tap}_isolation_net" $iso_net_obj] \
+                    [list "${family}_${tap}_buffered_net" $out_net_obj] \
+                    [list "${family}_${tap}_isolation_cell" [mptdc_o12b_get_cell $iso_inst]] \
+                    [list "${family}_${tap}_driver_cell" [mptdc_o12b_get_cell $drv_inst]] \
+                    [list "${family}_${tap}_isolation_input_pin" [mptdc_o11_pin_object $iso_a_pin]] \
+                    [list "${family}_${tap}_isolation_output_pin" [mptdc_o11_pin_object $iso_q_pin]] \
+                    [list "${family}_${tap}_driver_input_pin" [mptdc_o11_pin_object $drv_a_pin]] \
+                    [list "${family}_${tap}_driver_output_pin" [mptdc_o11_pin_object $drv_q_pin]]]
+            }
 
             set raw_prop_path "$reports_dir/net_property_${family}_${tap}_raw.rpt"
             set iso_prop_path "$reports_dir/net_property_${family}_${tap}_iso.rpt"
@@ -819,6 +832,17 @@ proc mptdc_o13_write_reports {} {
     close $raw_xlibd_fh
     close $out_xlibd_fh
     close $fast_tag_xlibd_fh
+
+    if {[info exists attr_probe_samples]} {
+        if {[catch {mptdc_o12b_write_attr_probe $attr_probe_samples} probe_err]} {
+            set probe_path "$reports_dir/phase_buffer_db_attribute_probe.rpt"
+            set pfh [open $probe_path w]
+            puts $pfh "# O13 Innovus DB Attribute Probe"
+            puts $pfh ""
+            puts $pfh "ATTR_PROBE_FAILED=$probe_err"
+            close $pfh
+        }
+    }
 
     set raw_fixed [expr {$raw_matched == 16 && $raw_missing == 0 && $raw_fanout1 == 16 ? "YES" : "NO"}]
     set out_quantified [expr {$out_matched == 16 && $out_numeric == 16 ? "YES" : "NO"}]
