@@ -1521,6 +1521,28 @@ proc mptdc_signoff_connectivity_report_has_errors {path} {
     return [list [expr {[llength $bad] > 0}] $bad]
 }
 
+proc mptdc_signoff_count_ro_pg_pin_connections {ro_instances pin expected_net} {
+    set count 0
+    foreach ro $ro_instances {
+        set pins [list]
+        if {[catch {set pins [get_pins -quiet "${ro}/${pin}"]}]} {
+            return UNKNOWN
+        }
+        if {[llength $pins] == 0} {
+            return UNKNOWN
+        }
+        set nets [list]
+        if {[catch {set nets [get_nets -quiet -of_objects $pins]}]} {
+            return UNKNOWN
+        }
+        set net_names [mptdc_signoff_object_names $nets]
+        if {[lsearch -exact $net_names $expected_net] >= 0} {
+            incr count
+        }
+    }
+    return $count
+}
+
 proc mptdc_signoff_build_power_grid {} {
     global mptdc_xh018_cells
     set rpt [file join [mptdc_signoff_report_dir] pg_physical_status.rpt]
@@ -1557,15 +1579,25 @@ proc mptdc_signoff_build_power_grid {} {
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
     set all_bad [mptdc_signoff_connectivity_report_has_errors $all_rpt]
     set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
+    set ro_vdd_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances VDD VDD]
+    set ro_vdd_bang_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances vdd! VDD]
+    set ro_vss_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances VSS VSS]
+    set ro_count [llength $ro_instances]
+    set ro_pg_ok [expr {$ro_count == 2 &&
+        $ro_vdd_count ne "UNKNOWN" && $ro_vdd_count == $ro_count &&
+        $ro_vdd_bang_count ne "UNKNOWN" && $ro_vdd_bang_count == $ro_count &&
+        $ro_vss_count ne "UNKNOWN" && $ro_vss_count == $ro_count}]
     set fh [open $rpt a]
     puts $fh ""
     puts $fh "RING_CREATED=$ring_ok"
     puts $fh "VERTICAL_STRAP_CREATED=$stripe_v_ok"
     puts $fh "HORIZONTAL_STRAP_CREATED=$stripe_h_ok"
     puts $fh "SROUTE_DONE=$sroute_ok"
-    puts $fh "RO_VDD_CONNECTED_COUNT=[llength $ro_instances]"
-    puts $fh "RO_VDD_BANG_CONNECTED_COUNT=[llength $ro_instances]"
-    puts $fh "RO_VSS_CONNECTED_COUNT=[llength $ro_instances]"
+    puts $fh "RO_INSTANCE_COUNT=$ro_count"
+    puts $fh "RO_VDD_CONNECTED_COUNT=$ro_vdd_count"
+    puts $fh "RO_VDD_BANG_CONNECTED_COUNT=$ro_vdd_bang_count"
+    puts $fh "RO_VSS_CONNECTED_COUNT=$ro_vss_count"
+    puts $fh "RO_PG_PIN_QUERY_STATUS=[expr {$ro_pg_ok ? "PASS" : "FAIL"}]"
     puts $fh "SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
     puts $fh "ALL_CONNECTIVITY_REPORT=$all_rpt"
     puts $fh "SPECIAL_NET_OPENS=PARSED_FROM_VERIFY_CONNECTIVITY"
@@ -1576,7 +1608,7 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
-    set status [expr {$ring_ok && $sroute_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
+    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
     puts $fh "PG_PHYSICAL_STATUS=$status"
     close $fh
     mptdc_signoff_set_status PG_PHYSICAL_STATUS $status $rpt
@@ -2018,10 +2050,33 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
         set unrouted 0
     }
     set status [expr {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted] ? "PASS" : "FAIL"}]
+    set verify_total $total
+    set verify_shorts $shorts
+    if {[dict exists $drc_data verify_drc_violations_raw]} {
+        set verify_total [dict get $drc_data verify_drc_violations_raw]
+    }
+    if {[dict exists $drc_data verify_drc_shorts_raw]} {
+        set verify_shorts [dict get $drc_data verify_drc_shorts_raw]
+    }
+    set innovus_verify_status FAIL
+    if {$verify_total ne "UNKNOWN" && $verify_shorts ne "UNKNOWN"} {
+        if {$verify_total == 0 && $verify_shorts == 0} {
+            set innovus_verify_status PASS
+        } elseif {$verify_total <= 1 && $verify_shorts == 0} {
+            set innovus_verify_status REVIEW_REQUIRED
+        }
+    }
     set fh [open $rpt w]
     puts $fh "ROUTE_STATUS=$status"
+    puts $fh "ROUTE_IMPLEMENTATION_STATUS=$status"
+    puts $fh "INNOVUS_VERIFY_DRC_STATUS=$innovus_verify_status"
+    puts $fh "FOUNDRY_DRC_STATUS=DEFERRED"
     puts $fh "GEOMETRY_DRC_VIOLATIONS=$total"
     puts $fh "SHORTS=$shorts"
+    puts $fh "ROUTER_TRANSCRIPT_DRC=$total"
+    puts $fh "ROUTER_TRANSCRIPT_SHORTS=$shorts"
+    puts $fh "INNOVUS_VERIFY_DRC_VIOLATIONS_RAW=$verify_total"
+    puts $fh "INNOVUS_VERIFY_DRC_SHORTS_RAW=$verify_shorts"
     puts $fh "REGULAR_NET_CONNECTIVITY_BAD=$regular_flag"
     puts $fh "REGULAR_NET_BAD_LINES=[lindex $regular_bad 1]"
     puts $fh "SPECIAL_NET_CONNECTIVITY_BAD=$special_flag"
@@ -2711,7 +2766,7 @@ proc mptdc_signoff_numeric_max {a b} {
 }
 
 proc mptdc_signoff_parse_cts_summary_metrics {path} {
-    set metrics [dict create total_sinks "" clk_sys_skew "" clk_sys_insertion "" max_transition ""]
+    set metrics [dict create total_sinks "" clk_sys_skew "" clk_sys_insertion_min "" clk_sys_insertion_max "" clk_sys_insertion_range "" max_transition ""]
     if {![file exists $path]} {
         return $metrics
     }
@@ -2728,7 +2783,9 @@ proc mptdc_signoff_parse_cts_summary_metrics {path} {
             set in_sink_counts 0
         }
         if {[regexp -nocase {clk_sys/[^[:space:]]*[[:space:]]+([-+]?[0-9.]+)[[:space:]]+([-+]?[0-9.]+)[[:space:]]+([-+]?[0-9.]+)} $trimmed -> min_id max_id skew]} {
-            dict set metrics clk_sys_insertion $max_id
+            dict set metrics clk_sys_insertion_min $min_id
+            dict set metrics clk_sys_insertion_max $max_id
+            dict set metrics clk_sys_insertion_range [expr {$max_id - $min_id}]
             dict set metrics clk_sys_skew $skew
         }
         if {[regexp -nocase {^(Trunk|Leaf)[[:space:]]+[-+]?[0-9.]+[[:space:]]+[0-9]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+([-+]?[0-9.]+)} $trimmed -> _ max_tran]} {
@@ -2745,11 +2802,11 @@ proc mptdc_signoff_parse_cts_summary_metrics {path} {
 proc mptdc_signoff_count_clk_sys_sinks {} {
     set count ""
     foreach cmd {
-        {all_registers -clock clk_sys}
-        {get_pins -quiet -of_objects [get_clocks clk_sys]}
+        {sizeof_collection [all_registers -clock clk_sys]}
+        {sizeof_collection [get_pins -quiet -of_objects [get_clocks clk_sys]]}
     } {
-        if {![catch {set objs [eval $cmd]}] && [llength $objs] > 0} {
-            set count [llength $objs]
+        if {![catch {set value [eval $cmd]}] && [string is integer -strict $value] && $value > 0} {
+            set count $value
             break
         }
     }
@@ -2763,26 +2820,13 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     mptdc_signoff_capture_candidates $detail_rpt \
         "CTS clock tree detail" [list {report_ccopt_clock_trees} {report_clock_tree}]
     set summary_metrics [mptdc_signoff_parse_cts_summary_metrics $summary_rpt]
-    set sinks_expected ""
-    set sink_count_source ""
+    set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
+    set sink_count_source [expr {$sinks_expected eq "" ? "" : "independent_timing_graph_query"}]
     set sinks_reached [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {clk_sys[^0-9]+([0-9]+)[^0-9]+sinks?} \
         {sinks?[^0-9]+([0-9]+)}]]
     if {[dict get $summary_metrics total_sinks] ne ""} {
         set sinks_reached [dict get $summary_metrics total_sinks]
-        set sinks_expected $sinks_reached
-        set sink_count_source clock_tree_summary
-    }
-    if {$sinks_expected eq "" && $sinks_reached ne ""} {
-        set sinks_expected $sinks_reached
-        set sink_count_source clock_tree_summary_pattern
-    }
-    if {$sinks_reached eq ""} {
-        set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
-        set sinks_reached $sinks_expected
-        if {$sinks_expected ne ""} {
-            set sink_count_source db_query
-        }
     }
     set skew [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {max[^0-9a-z]*skew[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
@@ -2801,8 +2845,11 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     set insertion [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {insertion[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
         {latency[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}]]
-    if {[dict get $summary_metrics clk_sys_insertion] ne ""} {
-        set insertion [dict get $summary_metrics clk_sys_insertion]
+    set insertion_min [dict get $summary_metrics clk_sys_insertion_min]
+    set insertion_max [dict get $summary_metrics clk_sys_insertion_max]
+    set insertion_range [dict get $summary_metrics clk_sys_insertion_range]
+    if {$insertion_max ne ""} {
+        set insertion $insertion_max
     }
 
     set skew_limit [mptdc_signoff_env MPTDC_CTS_MAX_SKEW_NS 0.20]
@@ -2811,7 +2858,7 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     set reason ""
     if {$sinks_expected eq "" || $sinks_reached eq ""} {
         set status PROVISIONAL
-        append reason "sink_count_unparsed "
+        append reason "independent_sink_count_unparsed "
     } elseif {$sinks_expected != $sinks_reached} {
         set status FAIL
         append reason "sink_count_mismatch "
@@ -2840,6 +2887,9 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     puts $fh "CLK_SYS_MAX_SKEW_NS=$skew"
     puts $fh "CLK_SYS_MAX_TRANSITION_NS=$transition"
     puts $fh "CLK_SYS_INSERTION_DELAY_NS=$insertion"
+    puts $fh "CLK_SYS_MIN_INSERTION_DELAY_NS=$insertion_min"
+    puts $fh "CLK_SYS_MAX_INSERTION_DELAY_NS=$insertion_max"
+    puts $fh "CLK_SYS_INSERTION_DELAY_RANGE_NS=$insertion_range"
     puts $fh "CLK_SYS_MAX_SKEW_NS_REQUIRED_LE=$skew_limit"
     puts $fh "CLK_SYS_MAX_TRANSITION_NS_REQUIRED_LE=$transition_limit"
     puts $fh "RO_CLOCKS_IN_CTS=0"
@@ -3020,6 +3070,337 @@ proc mptdc_signoff_spread_pct {values} {
     return [format %.3f [expr {(($max - $min) / $mean) * 100.0}]]
 }
 
+proc mptdc_signoff_csv_split {line} {
+    set out [list]
+    foreach col [split $line ","] {
+        lappend out [string trim [string trim $col] "\""]
+    }
+    return $out
+}
+
+proc mptdc_signoff_csv_header_map {header mandatory} {
+    set seen [dict create]
+    set index 0
+    foreach col [mptdc_signoff_csv_split $header] {
+        set name [string trim $col]
+        if {$name eq ""} {
+            incr index
+            continue
+        }
+        if {[dict exists $seen $name]} {
+            error "duplicate_column:$name"
+        }
+        dict set seen $name $index
+        incr index
+    }
+    foreach name $mandatory {
+        if {![dict exists $seen $name]} {
+            error "missing_column:$name"
+        }
+    }
+    return $seen
+}
+
+proc mptdc_signoff_csv_get {cols header name} {
+    if {![dict exists $header $name]} {
+        return ""
+    }
+    set index [dict get $header $name]
+    if {$index >= [llength $cols]} {
+        return ""
+    }
+    return [string trim [lindex $cols $index]]
+}
+
+proc mptdc_signoff_metric_stats {rows family metric} {
+    set count 0
+    set min ""
+    set max ""
+    set sum 0.0
+    set min_tap ""
+    set max_tap ""
+    foreach row $rows {
+        if {[dict get $row family] ne $family} {
+            continue
+        }
+        if {![dict exists $row $metric]} {
+            continue
+        }
+        set value [dict get $row $metric]
+        if {![string is double -strict $value]} {
+            continue
+        }
+        set tap [dict get $row tap]
+        if {$min eq "" || $value < $min} {
+            set min $value
+            set min_tap $tap
+        }
+        if {$max eq "" || $value > $max} {
+            set max $value
+            set max_tap $tap
+        }
+        set sum [expr {$sum + $value}]
+        incr count
+    }
+    if {$count == 0} {
+        return [dict create count 0 min "" max "" mean "" spread_abs "" spread_pct "" best_tap "" worst_tap ""]
+    }
+    set mean [expr {$sum / double($count)}]
+    set spread_abs [expr {$max - $min}]
+    set spread_pct ""
+    if {$mean > 0.0} {
+        set spread_pct [expr {($spread_abs / $mean) * 100.0}]
+    }
+    return [dict create \
+        count $count \
+        min [format %.6f $min] \
+        max [format %.6f $max] \
+        mean [format %.6f $mean] \
+        spread_abs [format %.6f $spread_abs] \
+        spread_pct [expr {$spread_pct eq "" ? "" : [format %.3f $spread_pct]}] \
+        best_tap $min_tap \
+        worst_tap $max_tap]
+}
+
+proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
+    set numeric_metrics [list \
+        raw_route_length_um \
+        raw_total_cap_pf \
+        isolation_route_length_um \
+        isolation_total_cap_pf \
+        buffered_route_length_um \
+        buffered_total_cap_pf \
+        buffered_wire_cap_pf \
+        buffered_pin_cap_pf \
+        buffered_res_ohm]
+    set mandatory [concat [list family tap] $numeric_metrics]
+    set optional_delay_metrics [list extracted_delay_ps extracted_delay_ns buffered_delay_ps buffered_delay_ns delay_ps delay_ns]
+    set rows [list]
+    set parse_status PASS
+    set parse_error ""
+    set row_keys [dict create]
+    set family_counts [dict create slow 0 fast 0]
+    set delay_metrics [list]
+
+    if {![file exists $route_csv]} {
+        set parse_status DATA_MISSING
+        set parse_error "missing_route_csv"
+    } else {
+        set fh [open $route_csv r]
+        set header_line ""
+        while {[gets $fh line] >= 0} {
+            if {[string trim $line] ne ""} {
+                set header_line $line
+                break
+            }
+        }
+        if {$header_line eq ""} {
+            set parse_status DATA_MISSING
+            set parse_error "empty_route_csv"
+        } elseif {[catch {set header [mptdc_signoff_csv_header_map $header_line $mandatory]} header_err]} {
+            set parse_status DATA_MISSING
+            set parse_error $header_err
+        } else {
+            foreach metric $optional_delay_metrics {
+                if {[dict exists $header $metric]} {
+                    lappend delay_metrics $metric
+                }
+            }
+            set line_no 1
+            while {[gets $fh line] >= 0} {
+                incr line_no
+                if {[string trim $line] eq ""} { continue }
+                set cols [mptdc_signoff_csv_split $line]
+                set family [mptdc_signoff_csv_get $cols $header family]
+                set tap [mptdc_signoff_csv_get $cols $header tap]
+                if {$family ni {slow fast}} {
+                    set parse_status DATA_MISSING
+                    set parse_error "bad_family_line_${line_no}:$family"
+                    break
+                }
+                if {$tap eq ""} {
+                    set parse_status DATA_MISSING
+                    set parse_error "missing_tap_line_$line_no"
+                    break
+                }
+                set key "$family/$tap"
+                if {[dict exists $row_keys $key]} {
+                    set parse_status DATA_MISSING
+                    set parse_error "duplicate_family_tap:$key"
+                    break
+                }
+                dict set row_keys $key 1
+                dict incr family_counts $family
+                set row [dict create family $family tap $tap]
+                foreach metric [concat $numeric_metrics $delay_metrics] {
+                    set value [mptdc_signoff_csv_get $cols $header $metric]
+                    if {![string is double -strict $value]} {
+                        set parse_status DATA_MISSING
+                        set parse_error "nonnumeric_${metric}_line_${line_no}:$value"
+                        break
+                    }
+                    dict set row $metric $value
+                }
+                if {$parse_status ne "PASS"} {
+                    break
+                }
+                lappend rows $row
+            }
+        }
+        close $fh
+    }
+
+    if {$parse_status eq "PASS"} {
+        if {[llength $rows] != 16 ||
+            [dict get $family_counts slow] != 8 ||
+            [dict get $family_counts fast] != 8} {
+            set parse_status DATA_MISSING
+            set parse_error "expected_16_rows_8_slow_8_fast_got_total_[llength $rows]_slow_[dict get $family_counts slow]_fast_[dict get $family_counts fast]"
+        }
+    }
+
+    set max_spread [mptdc_signoff_env MPTDC_PHASE_RC_MAX_SPREAD_PCT 10.0]
+    set raw_cap_limit [mptdc_signoff_env MPTDC_RO_TUNE4_S_MAX_CAP_PF 0.050]
+    set rc_status PASS
+    set phase_status PASS
+    set classification PARSER_FALSE_FAILURE
+    set asymmetry_count 0
+    set metrics_for_symmetry [concat \
+        [list raw_route_length_um raw_total_cap_pf buffered_route_length_um buffered_total_cap_pf] \
+        $delay_metrics]
+
+    if {$parse_status ne "PASS"} {
+        set rc_status FAIL
+        set phase_status PROVISIONAL
+        set classification DATA_MISSING
+    } else {
+        foreach family {slow fast} {
+            foreach metric $metrics_for_symmetry {
+                set stats [mptdc_signoff_metric_stats $rows $family $metric]
+                set spread [dict get $stats spread_pct]
+                if {$spread eq "" || [dict get $stats count] != 8} {
+                    set rc_status FAIL
+                    set classification DATA_MISSING
+                } elseif {$spread > $max_spread} {
+                    set rc_status FAIL
+                    set classification ACTUAL_PHYSICAL_ASYMMETRY
+                    incr asymmetry_count
+                }
+            }
+            foreach row $rows {
+                if {[dict get $row family] ne $family} { continue }
+                if {[dict get $row raw_total_cap_pf] > $raw_cap_limit} {
+                    set phase_status FAIL
+                }
+            }
+        }
+    }
+
+    file mkdir [file dirname $detailed_csv]
+    set dfh [open $detailed_csv w]
+    puts $dfh "family,tap,metric,unit,count,min,max,mean,absolute_spread,percentage_spread,worst_tap,best_tap"
+    if {$parse_status eq "PASS"} {
+        foreach family {slow fast} {
+            foreach metric [concat $numeric_metrics $delay_metrics] {
+                set unit ""
+                if {[string match *_um $metric]} {
+                    set unit um
+                } elseif {[string match *_pf $metric]} {
+                    set unit pf
+                } elseif {[string match *_ohm $metric]} {
+                    set unit ohm
+                } elseif {[string match *_ps $metric]} {
+                    set unit ps
+                } elseif {[string match *_ns $metric]} {
+                    set unit ns
+                }
+                set stats [mptdc_signoff_metric_stats $rows $family $metric]
+                puts $dfh "$family,ALL,$metric,$unit,[dict get $stats count],[dict get $stats min],[dict get $stats max],[dict get $stats mean],[dict get $stats spread_abs],[dict get $stats spread_pct],[dict get $stats worst_tap],[dict get $stats best_tap]"
+            }
+        }
+    }
+    close $dfh
+
+    set sfh [open $status_rpt w]
+    puts $sfh "# MPTDC Phase Load and RC Symmetry Status"
+    puts $sfh "PARSER_SCHEMA_VERSION=2"
+    puts $sfh "ROUTE_CSV=$route_csv"
+    puts $sfh "DETAILED_CSV=$detailed_csv"
+    puts $sfh "ROUTE_ROWS=[llength $rows]"
+    puts $sfh "SLOW_ROWS=[dict get $family_counts slow]"
+    puts $sfh "FAST_ROWS=[dict get $family_counts fast]"
+    puts $sfh "PARSE_STATUS=$parse_status"
+    if {$parse_error ne ""} { puts $sfh "PARSE_ERROR=$parse_error" }
+    puts $sfh "UNITS_ROUTE_LENGTH=um"
+    puts $sfh "UNITS_CAPACITANCE=pf"
+    puts $sfh "UNITS_RESISTANCE=ohm"
+    puts $sfh "RO_TUNE4_S_MAX_CAP_PF=$raw_cap_limit"
+    puts $sfh "MAX_ALLOWED_SPREAD_PCT=$max_spread"
+    puts $sfh "OPTIONAL_DELAY_METRICS=[join $delay_metrics { }]"
+    puts $sfh "RC_SYMMETRY_FAILURE_CLASSIFICATION=$classification"
+    puts $sfh "RC_SYMMETRY_ASYMMETRIC_METRIC_COUNT=$asymmetry_count"
+    if {$parse_status eq "PASS"} {
+        foreach family {slow fast} {
+            foreach metric [concat $numeric_metrics $delay_metrics] {
+                set stats [mptdc_signoff_metric_stats $rows $family $metric]
+                set prefix "${family}_${metric}"
+                puts $sfh "${prefix}_count=[dict get $stats count]"
+                puts $sfh "${prefix}_min=[dict get $stats min]"
+                puts $sfh "${prefix}_max=[dict get $stats max]"
+                puts $sfh "${prefix}_mean=[dict get $stats mean]"
+                puts $sfh "${prefix}_absolute_spread=[dict get $stats spread_abs]"
+                puts $sfh "${prefix}_percentage_spread=[dict get $stats spread_pct]"
+                puts $sfh "${prefix}_worst_tap=[dict get $stats worst_tap]"
+                puts $sfh "${prefix}_best_tap=[dict get $stats best_tap]"
+            }
+        }
+    }
+    puts $sfh "PHASE_LOAD_STATUS=$phase_status"
+    puts $sfh "RC_SYMMETRY_STATUS=$rc_status"
+    close $sfh
+
+    return [dict create \
+        parse_status $parse_status \
+        phase_status $phase_status \
+        rc_status $rc_status \
+        classification $classification \
+        rows [llength $rows] \
+        detailed_csv $detailed_csv]
+}
+
+proc mptdc_signoff_write_phase_rc_parser_selftest {} {
+    set rpt [file join [mptdc_signoff_report_dir] phase_rc_parser_selftest.rpt]
+    set fixture [file join [mptdc_signoff_report_dir] phase_rc_parser_selftest_fixture.csv]
+    set detail [file join [mptdc_signoff_report_dir] phase_rc_parser_selftest_detailed.csv]
+    set status [file join [mptdc_signoff_report_dir] phase_rc_parser_selftest_status.rpt]
+    file mkdir [file dirname $fixture]
+    set fh [open $fixture w]
+    puts $fh "family,tap,raw_net,raw_route_length_um,raw_total_cap_pf,isolation_net,isolation_route_length_um,isolation_total_cap_pf,buffered_net,buffered_route_length_um,buffered_total_cap_pf,buffered_wire_cap_pf,buffered_pin_cap_pf,buffered_res_ohm,status,notes"
+    foreach family {slow fast} {
+        for {set tap 0} {$tap < 8} {incr tap} {
+            set base [expr {100.0 + $tap}]
+            puts $fh "$family,$tap,raw_${family}_${tap},$base,0.020,iso_${family}_${tap},[expr {$base + 1.0}],0.024,buf_${family}_${tap},[expr {$base + 2.0}],0.030,0.012,0.018,10.0,PASS,selftest"
+        }
+    }
+    close $fh
+    set result [mptdc_signoff_phase_rc_parse_csv $fixture $detail $status]
+    set pass [expr {[dict get $result parse_status] eq "PASS" && [dict get $result rc_status] eq "PASS"}]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Phase RC Parser Self-Test"
+    puts $fh "PHASE_RC_PARSER_SELFTEST_SCHEMA_VERSION=1"
+    puts $fh "PHASE_RC_PARSER_SELFTEST_STATUS=[expr {$pass ? "PASS" : "FAIL"}]"
+    puts $fh "PHASE_RC_PARSER_SELFTEST_FIXTURE=$fixture"
+    puts $fh "PHASE_RC_PARSER_SELFTEST_DETAIL=$detail"
+    puts $fh "PHASE_RC_PARSER_SELFTEST_STATUS_REPORT=$status"
+    puts $fh "PHASE_RC_PARSER_SELFTEST_PARSE_STATUS=[dict get $result parse_status]"
+    puts $fh "PHASE_RC_PARSER_SELFTEST_RC_STATUS=[dict get $result rc_status]"
+    close $fh
+    if {!$pass} {
+        error "MPTDC_PHASE_RC_PARSER_SELFTEST_FAILED: report=$rpt"
+    }
+    return $rpt
+}
+
 proc mptdc_signoff_write_phase_and_backend_reports {} {
     global o13 o12b
     set o13(reports_dir) [mptdc_signoff_report_dir]
@@ -3035,84 +3416,21 @@ proc mptdc_signoff_write_phase_and_backend_reports {} {
         }
     }
 
-    set phase_rpt [file join [mptdc_signoff_report_dir] phase_rc_symmetry_status.rpt]
     set route_csv [file join [mptdc_signoff_report_dir] phase_buffer_route_summary.csv]
-    array set raw_caps {}
-    array set raw_lengths {}
-    array set buf_caps {}
-    array set buf_lengths {}
-    set rows 0
-    if {[file exists $route_csv]} {
-        set fh [open $route_csv r]
-        set header 1
-        while {[gets $fh line] >= 0} {
-            if {$header} {
-                set header 0
-                continue
-            }
-            if {[string trim $line] eq ""} { continue }
-            set cols [split $line ","]
-            set family [lindex $cols 0]
-            if {$family ni {slow fast}} { continue }
-            incr rows
-            foreach {array_name index} {
-                raw_lengths 3
-                raw_caps 4
-                buf_lengths 8
-                buf_caps 9
-            } {
-                set value [string trim [lindex $cols $index] "\""]
-                if {[string is double -strict $value]} {
-                    lappend ${array_name}($family) $value
-                }
-            }
-        }
-        close $fh
-    }
-    set max_spread [mptdc_signoff_env MPTDC_PHASE_RC_MAX_SPREAD_PCT 10.0]
-    set raw_cap_limit [mptdc_signoff_env MPTDC_RO_TUNE4_S_MAX_CAP_PF 0.050]
-    set phase_status PASS
-    set rc_status PASS
-    set fh [open $phase_rpt w]
-    puts $fh "# MPTDC Phase Load and RC Symmetry Status"
-    puts $fh "O13_REPORT_GENERATION_STATUS=$o13_status"
-    if {$o13_error ne ""} { puts $fh "O13_REPORT_GENERATION_ERROR=$o13_error" }
-    puts $fh "RO_TUNE4_S_MAX_CAP_PF=$raw_cap_limit"
-    puts $fh "MAX_ALLOWED_SPREAD_PCT=$max_spread"
-    puts $fh "ROUTE_CSV=$route_csv"
-    puts $fh "ROUTE_ROWS=$rows"
-    foreach family {slow fast} {
-        foreach metric {raw_caps raw_lengths buf_caps buf_lengths} {
-            if {[info exists ${metric}($family)]} {
-                set values [set ${metric}($family)]
-            } else {
-                set values [list]
-            }
-            set spread [mptdc_signoff_spread_pct $values]
-            puts $fh "${family}_${metric}_count=[llength $values]"
-            puts $fh "${family}_${metric}_spread_pct=$spread"
-            if {[llength $values] != 8 || $spread eq ""} {
-                if {$rc_status eq "PASS"} { set rc_status PROVISIONAL }
-            } elseif {$spread > $max_spread} {
-                set rc_status FAIL
-            }
-        }
-        if {[info exists raw_caps($family)]} {
-            set values $raw_caps($family)
-        } else {
-            set values [list]
-        }
-        foreach cap $values {
-            if {$cap > $raw_cap_limit} { set phase_status FAIL }
-        }
-        if {[llength $values] != 8 && $phase_status eq "PASS"} { set phase_status PROVISIONAL }
-    }
+    set phase_rpt [file join [mptdc_signoff_report_dir] phase_rc_symmetry_status.rpt]
+    set detailed_csv [file join [mptdc_signoff_report_dir] phase_rc_symmetry_detailed.csv]
+    set phase_result [mptdc_signoff_phase_rc_parse_csv $route_csv $detailed_csv $phase_rpt]
+    set phase_status [dict get $phase_result phase_status]
+    set rc_status [dict get $phase_result rc_status]
     if {$o13_status ne "PASS"} {
         if {$phase_status eq "PASS"} { set phase_status PROVISIONAL }
         if {$rc_status eq "PASS"} { set rc_status PROVISIONAL }
     }
-    puts $fh "PHASE_LOAD_STATUS=$phase_status"
-    puts $fh "RC_SYMMETRY_STATUS=$rc_status"
+    set fh [open $phase_rpt a]
+    puts $fh "O13_REPORT_GENERATION_STATUS=$o13_status"
+    if {$o13_error ne ""} { puts $fh "O13_REPORT_GENERATION_ERROR=$o13_error" }
+    puts $fh "EFFECTIVE_PHASE_LOAD_STATUS=$phase_status"
+    puts $fh "EFFECTIVE_RC_SYMMETRY_STATUS=$rc_status"
     close $fh
     mptdc_signoff_set_status PHASE_LOAD_STATUS $phase_status $phase_rpt
     mptdc_signoff_set_status RC_SYMMETRY_STATUS $rc_status $phase_rpt
@@ -3243,6 +3561,7 @@ proc mptdc_signoff_source_check {} {
     mptdc_signoff_mkdirs
     mptdc_signoff_init_status
     mptdc_signoff_require_tc_only_scope
+    mptdc_signoff_write_phase_rc_parser_selftest
     set ro_rpt [mptdc_signoff_write_ro_source_report]
     set provisional [mptdc_signoff_check_physical_cell_policy implementation]
     mptdc_signoff_write_policy_manifest
