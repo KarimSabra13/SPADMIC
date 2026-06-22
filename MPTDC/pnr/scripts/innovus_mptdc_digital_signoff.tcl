@@ -1610,19 +1610,19 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
         }
         if {[regexp -nocase {No[[:space:]]+(DRC[[:space:]]+)?violations?[[:space:]]+found|Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*0[[:space:]]+Viols?} $trimmed]} {
             dict set result total_violations 0
-            if {[dict get $result shorts] eq "UNKNOWN"} {
-                dict set result shorts 0
-            }
+            dict set result shorts 0
         }
         if {[regexp -nocase {Total[[:space:]]+number[[:space:]]+of[[:space:]]+DRC[[:space:]]+violations[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> count] ||
             [regexp -nocase {CELL_VIEW[[:space:]].*[[:space:]]has[[:space:]]+([0-9]+)[[:space:]]+DRC[[:space:]]+violations?} $trimmed -> count] ||
             [regexp -nocase {number[[:space:]]+of[[:space:]]+violations[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> count]} {
             dict set result total_violations $count
-            if {$count == 0 && [dict get $result shorts] eq "UNKNOWN"} {
+            if {$count == 0} {
                 dict set result shorts 0
             }
         }
-        if {[lsearch -nocase $tokens Short] >= 0 && [lsearch -nocase $tokens Totals] >= 0} {
+        if {[llength $tokens] > 0 &&
+            ![string equal -nocase [lindex $tokens 0] Totals] &&
+            ([lsearch -nocase $tokens Totals] >= 0 || [lsearch -nocase $tokens Total] >= 0)} {
             set drc_columns $tokens
             continue
         }
@@ -1636,12 +1636,13 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
                 }
                 if {$short_idx >= 0} {
                     dict set result shorts [lindex $counts $short_idx]
+                } else {
+                    dict set result shorts 0
                 }
                 if {$total_idx >= 0} {
                     dict set result total_violations [lindex $counts $total_idx]
                 }
             } elseif {[llength $counts] == 2} {
-                dict set result shorts [lindex $counts 0]
                 dict set result total_violations [lindex $counts 1]
             } elseif {[llength $counts] > 2} {
                 dict set result total_violations [lindex $counts end]
@@ -1654,6 +1655,10 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
     set total [dict get $result total_violations]
     set shorts [dict get $result shorts]
     set failed [dict get $result command_failed]
+    if {$total ne "UNKNOWN" && $total == 0} {
+        dict set result shorts 0
+        set shorts 0
+    }
     if {!$failed && $total ne "UNKNOWN" && $shorts ne "UNKNOWN" && $total == 0 && $shorts == 0} {
         dict set result status PASS
     }
@@ -1695,7 +1700,6 @@ proc mptdc_signoff_count_existing_filler_cells {} {
 proc mptdc_signoff_post_filler_route_cleanup {rpt} {
     set commands [list \
         {ecoRoute -target} \
-        {ecoRoute -target all} \
         {ecoRoute} \
     ]
     set fh [open $rpt a]
@@ -1896,7 +1900,7 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
         return $route_gate
     }
     close $fh
-    foreach cmd [list {ecoRoute -target} {ecoRoute -target all} {ecoRoute}] {
+    foreach cmd [list {ecoRoute -target} {ecoRoute}] {
         set fh [open $rpt a]
         puts $fh "ROUTE_GATE_RECOVERY_COMMAND=$cmd"
         close $fh
