@@ -635,8 +635,17 @@ proc mptdc_signoff_db_object_name {obj} {
 
 proc mptdc_signoff_db_object_box {obj} {
     if {$obj eq ""} { return [list] }
+    set names [list]
     if {![regexp {^(inst|hinst|pin|net|term):|^0x[0-9a-fA-F]+$} "$obj"]} {
-        set ptr [mptdc_signoff_cell_ptr $obj]
+        lappend names $obj
+    } else {
+        set obj_name [mptdc_signoff_db_object_name $obj]
+        if {$obj_name ne ""} {
+            lappend names $obj_name
+        }
+    }
+    foreach name $names {
+        set ptr [mptdc_signoff_cell_ptr $name]
         foreach attr {.box .bbox} {
             set value ""
             if {$ptr ne "" && ![catch {set value [dbGet ${ptr}${attr}]}] && $value ne ""} {
@@ -645,13 +654,11 @@ proc mptdc_signoff_db_object_box {obj} {
             }
         }
     }
-    # Innovus hinst objects reject .box, and this build prints IMPDBTCL-248
-    # even inside catch. Use attributes that work for both hinst and inst-like
-    # objects before any command can emit that diagnostic.
-    set attrs [list .bbox .rect .bounds .place_box]
-    foreach attr $attrs {
+    # This Innovus build prints IMPDBTCL-248 for invalid inst attributes even
+    # inside catch, so only probe the direct-object bbox attribute known here.
+    if {[regexp {^(inst|hinst|pin|net|term):|^0x[0-9a-fA-F]+$} "$obj"]} {
         set value ""
-        if {![catch {set value [get_db $obj $attr]}] && $value ne ""} {
+        if {![catch {set value [get_db $obj .bbox]}] && $value ne ""} {
             set box [mptdc_signoff_flat_box $value]
             if {[mptdc_signoff_box_valid $box]} { return $box }
         }
