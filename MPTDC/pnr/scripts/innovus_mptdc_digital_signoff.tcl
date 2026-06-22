@@ -1531,8 +1531,11 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
         return $result
     }
     set fh [open $path r]
+    set drc_columns [list]
     while {[gets $fh line] >= 0} {
         set trimmed [string trim $line]
+        set clean [string trim [regsub {^#} $trimmed ""]]
+        set tokens [regexp -all -inline {\S+} $clean]
         if {[regexp -nocase {REPORT_STATUS=FAILED} $trimmed]} {
             dict set result command_failed 1
         }
@@ -1548,12 +1551,39 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
                 dict set result shorts 0
             }
         }
-        if {[regexp {^[[:space:]]*Totals[[:space:]]+([0-9]+)([[:space:]]+([0-9]+))?} $line -> short_count _ total_count]} {
-            dict set result shorts $short_count
-            if {$total_count ne ""} {
-                dict set result total_violations $total_count
-            } else {
-                dict set result total_violations $short_count
+        if {[regexp -nocase {Total[[:space:]]+number[[:space:]]+of[[:space:]]+DRC[[:space:]]+violations[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> count] ||
+            [regexp -nocase {CELL_VIEW[[:space:]].*[[:space:]]has[[:space:]]+([0-9]+)[[:space:]]+DRC[[:space:]]+violations?} $trimmed -> count] ||
+            [regexp -nocase {number[[:space:]]+of[[:space:]]+violations[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> count]} {
+            dict set result total_violations $count
+            if {$count == 0 && [dict get $result shorts] eq "UNKNOWN"} {
+                dict set result shorts 0
+            }
+        }
+        if {[lsearch -nocase $tokens Short] >= 0 && [lsearch -nocase $tokens Totals] >= 0} {
+            set drc_columns $tokens
+            continue
+        }
+        if {[llength $tokens] >= 2 && [string equal -nocase [lindex $tokens 0] Totals]} {
+            set counts [lrange $tokens 1 end]
+            if {[llength $drc_columns] == [llength $counts]} {
+                set short_idx [lsearch -nocase $drc_columns Short]
+                set total_idx [lsearch -nocase $drc_columns Totals]
+                if {$total_idx < 0} {
+                    set total_idx [lsearch -nocase $drc_columns Total]
+                }
+                if {$short_idx >= 0} {
+                    dict set result shorts [lindex $counts $short_idx]
+                }
+                if {$total_idx >= 0} {
+                    dict set result total_violations [lindex $counts $total_idx]
+                }
+            } elseif {[llength $counts] == 2} {
+                dict set result shorts [lindex $counts 0]
+                dict set result total_violations [lindex $counts 1]
+            } elseif {[llength $counts] > 2} {
+                dict set result total_violations [lindex $counts end]
+            } elseif {[llength $counts] == 1} {
+                dict set result total_violations [lindex $counts 0]
             }
         }
     }
@@ -1599,6 +1629,38 @@ proc mptdc_signoff_count_existing_filler_cells {} {
     return [llength $names]
 }
 
+proc mptdc_signoff_post_filler_route_cleanup {rpt} {
+    set commands [list \
+        {routeDesign -globalDetail} \
+        {routeDesign -wireOpt -viaOpt} \
+    ]
+    set fh [open $rpt a]
+    puts $fh "POST_FILLER_ROUTE_CLEANUP=REQUIRED_AFTER_POSTROUTE_FILLER"
+    close $fh
+    foreach cmd $commands {
+        set fh [open $rpt a]
+        puts $fh "POST_FILLER_ROUTE_COMMAND=$cmd"
+        close $fh
+        if {[catch {uplevel 1 $cmd} route_err]} {
+            set fh [open $rpt a]
+            puts $fh "POST_FILLER_ROUTE_ATTEMPT_STATUS=FAIL"
+            puts $fh "POST_FILLER_ROUTE_ATTEMPT_ERROR=$route_err"
+            close $fh
+            continue
+        }
+        set fh [open $rpt a]
+        puts $fh "POST_FILLER_ROUTE_STATUS=PASS"
+        puts $fh "INCREMENTAL_ROUTE_STATUS=PASS_BY_GLOBALDETAIL"
+        close $fh
+        return 1
+    }
+    set fh [open $rpt a]
+    puts $fh "POST_FILLER_ROUTE_STATUS=REVIEW_REQUIRED"
+    puts $fh "INCREMENTAL_ROUTE_STATUS=REVIEW_REQUIRED"
+    close $fh
+    return 0
+}
+
 proc mptdc_signoff_insert_final_fillers {} {
     global mptdc_xh018_cells
     set rpt [file join [mptdc_signoff_report_dir] filler_status.rpt]
@@ -1627,16 +1689,7 @@ proc mptdc_signoff_insert_final_fillers {} {
     }
     catch {mptdc_signoff_apply_pg_connectivity}
     catch {sroute -nets {VDD VSS}}
-    if {[catch {routeDesign -incremental} route_err]} {
-        set fh [open $rpt a]
-        puts $fh "INCREMENTAL_ROUTE_STATUS=REVIEW_REQUIRED"
-        puts $fh "INCREMENTAL_ROUTE_ERROR=$route_err"
-        close $fh
-    } else {
-        set fh [open $rpt a]
-        puts $fh "INCREMENTAL_ROUTE_STATUS=PASS"
-        close $fh
-    }
+    mptdc_signoff_post_filler_route_cleanup $rpt
     mptdc_signoff_set_status FILLER_STATUS PASS $rpt
     return $rpt
 }
