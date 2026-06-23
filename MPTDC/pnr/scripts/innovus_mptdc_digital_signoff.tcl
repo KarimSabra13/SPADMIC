@@ -181,7 +181,7 @@ proc mptdc_signoff_write_status {{path ""}} {
     set fh [open $path w]
     puts $fh "# MPTDC Digital PNR Signoff Status"
     puts $fh "Author: Karim Sabra"
-    puts $fh "STATUS_SCHEMA=PASS_FAIL_EXTERNAL_DEFERRED_PROVISIONAL"
+    puts $fh "STATUS_SCHEMA=PASS_FAIL_EXTERNAL_DEFERRED_PROVISIONAL_ACCEPTED"
     foreach key [mptdc_signoff_status_keys] {
         if {[info exists mptdc_signoff_status($key)]} {
             puts $fh "$key=$mptdc_signoff_status($key)"
@@ -3329,6 +3329,52 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
         set classification DATA_MISSING
     }
 
+    set missing_total 0
+    foreach metric [dict keys $missing_metric_counts] {
+        incr missing_total [dict get $missing_metric_counts $metric]
+    }
+    set invalid_total 0
+    foreach metric [dict keys $invalid_metric_counts] {
+        incr invalid_total [dict get $invalid_metric_counts $metric]
+    }
+
+    set original_parse_status $parse_status
+    set original_phase_status $phase_status
+    set original_rc_status $rc_status
+    set original_classification $classification
+    set acceptance_requested [mptdc_signoff_env_truthy MPTDC_PHASE_RC_ACCEPT_ASYMMETRY]
+    set acceptance_applied 0
+    set acceptance_scope [mptdc_signoff_env MPTDC_PHASE_RC_ACCEPT_SCOPE TC_ONLY_O13_OWNER_REVIEW]
+    set acceptance_reason [mptdc_signoff_env MPTDC_PHASE_RC_ACCEPT_REASON owner_accepted_o13_phase_rc_asymmetry_for_this_tc_only_version]
+    regsub -all {[\r\n]} $acceptance_scope { } acceptance_scope
+    regsub -all {[\r\n]} $acceptance_reason { } acceptance_reason
+
+    set missing_metrics [lsort [dict keys $missing_metric_counts]]
+    set isolation_cap_only_missing [expr {
+        [llength $missing_metrics] == 0 ||
+        ([llength $missing_metrics] == 1 && [lindex $missing_metrics 0] eq "isolation_total_cap_pf")
+    }]
+    set structurally_complete [expr {
+        $structure_ok &&
+        [llength $rows] == 16 &&
+        [dict get $family_counts slow] == 8 &&
+        [dict get $family_counts fast] == 8 &&
+        $invalid_total == 0
+    }]
+    set acceptance_eligible [expr {
+        $acceptance_requested &&
+        $actual_asymmetry &&
+        $structurally_complete &&
+        $isolation_cap_only_missing &&
+        $phase_status ne "FAIL"
+    }]
+    if {$acceptance_eligible} {
+        set acceptance_applied 1
+        set phase_status ACCEPTED
+        set rc_status ACCEPTED
+        set classification "TC_ONLY_ACCEPTED_${classification}"
+    }
+
     file mkdir [file dirname $detailed_csv]
     set dfh [open $detailed_csv w]
     puts $dfh "family,tap,metric,unit,count,min,max,mean,absolute_spread,percentage_spread,worst_tap,best_tap"
@@ -3351,15 +3397,6 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
         }
     }
     close $dfh
-
-    set missing_total 0
-    foreach metric [dict keys $missing_metric_counts] {
-        incr missing_total [dict get $missing_metric_counts $metric]
-    }
-    set invalid_total 0
-    foreach metric [dict keys $invalid_metric_counts] {
-        incr invalid_total [dict get $invalid_metric_counts $metric]
-    }
 
     set sfh [open $status_rpt w]
     puts $sfh "# MPTDC Phase Load and RC Symmetry Status"
@@ -3396,6 +3433,15 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
     puts $sfh "OPTIONAL_DELAY_METRICS=[join $delay_metrics { }]"
     puts $sfh "RC_SYMMETRY_FAILURE_CLASSIFICATION=$classification"
     puts $sfh "RC_SYMMETRY_ASYMMETRIC_METRIC_COUNT=$asymmetry_count"
+    puts $sfh "RC_SYMMETRY_ACCEPTANCE_REQUESTED=[expr {$acceptance_requested ? "YES" : "NO"}]"
+    puts $sfh "RC_SYMMETRY_ACCEPTANCE_ELIGIBLE=[expr {$acceptance_eligible ? "YES" : "NO"}]"
+    puts $sfh "RC_SYMMETRY_ACCEPTANCE_APPLIED=[expr {$acceptance_applied ? "YES" : "NO"}]"
+    puts $sfh "RC_SYMMETRY_ACCEPTANCE_SCOPE=$acceptance_scope"
+    puts $sfh "RC_SYMMETRY_ACCEPTANCE_REASON=$acceptance_reason"
+    puts $sfh "PHASE_RC_PARSE_ORIGINAL_STATUS=$original_parse_status"
+    puts $sfh "PHASE_LOAD_ORIGINAL_STATUS=$original_phase_status"
+    puts $sfh "RC_SYMMETRY_ORIGINAL_STATUS=$original_rc_status"
+    puts $sfh "RC_SYMMETRY_ORIGINAL_CLASSIFICATION=$original_classification"
     foreach family {slow fast} {
         foreach metric [concat $numeric_metrics $delay_metrics] {
             set stats [mptdc_signoff_metric_stats $rows $family $metric]
@@ -3419,6 +3465,10 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
         phase_status $phase_status \
         rc_status $rc_status \
         classification $classification \
+        original_phase_status $original_phase_status \
+        original_rc_status $original_rc_status \
+        original_classification $original_classification \
+        acceptance_applied [expr {$acceptance_applied ? "YES" : "NO"}] \
         rows [llength $rows] \
         detailed_csv $detailed_csv]
 }
@@ -3478,8 +3528,8 @@ proc mptdc_signoff_write_phase_and_backend_reports {} {
     set phase_status [dict get $phase_result phase_status]
     set rc_status [dict get $phase_result rc_status]
     if {$o13_status ne "PASS"} {
-        if {$phase_status eq "PASS"} { set phase_status PROVISIONAL }
-        if {$rc_status eq "PASS"} { set rc_status PROVISIONAL }
+        if {$phase_status in {PASS ACCEPTED}} { set phase_status PROVISIONAL }
+        if {$rc_status in {PASS ACCEPTED}} { set rc_status PROVISIONAL }
     }
     set fh [open $phase_rpt a]
     puts $fh "O13_REPORT_GENERATION_STATUS=$o13_status"
@@ -3656,6 +3706,9 @@ proc mptdc_signoff_phase_rc_parse_only {} {
     puts "PHASE_LOAD_STATUS=[dict get $result phase_status]"
     puts "RC_SYMMETRY_STATUS=[dict get $result rc_status]"
     puts "RC_SYMMETRY_FAILURE_CLASSIFICATION=[dict get $result classification]"
+    puts "RC_SYMMETRY_ACCEPTANCE_APPLIED=[dict get $result acceptance_applied]"
+    puts "PHASE_LOAD_ORIGINAL_STATUS=[dict get $result original_phase_status]"
+    puts "RC_SYMMETRY_ORIGINAL_STATUS=[dict get $result original_rc_status]"
     puts "PHASE_RC_SYMMETRY_STATUS_REPORT=$phase_rpt"
     puts "PHASE_RC_SYMMETRY_DETAILED_CSV=$detailed_csv"
 }

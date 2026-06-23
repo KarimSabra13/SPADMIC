@@ -43,6 +43,10 @@ Environment:
   MPTDC_RUN_POSTROUTE_OPT       Default: 0. Set to 1 only for an explicitly
                                 reviewed Innovus optimization experiment.
   MPTDC_PREPARE_GENUS_HANDOFF  Set to 0 to skip stable handoff materialization.
+  MPTDC_PHASE_RC_ACCEPT_ASYMMETRY
+                                Set to 1 only after owner review accepts the
+                                O13 phase-RC asymmetry for this TC-only version.
+  MPTDC_PHASE_RC_ACCEPT_REASON  Optional manifest/status reason for that review.
 
 This wrapper is a stable final-typical entrypoint and gate. It does not change
 RTL and does not convert the run into MMMC or final silicon signoff.
@@ -223,6 +227,8 @@ fi
   echo "physical_effort_enable: ${MPTDC_PNR_PHYSICAL_EFFORT_ENABLE:-1}"
   echo "physical_effort_mode: ${MPTDC_PNR_PHYSICAL_EFFORT_MODE:-closure}"
   echo "pnr_library: ${MPTDC_PNR_LIBRARY:-JIHD}"
+  echo "phase_rc_accept_asymmetry: ${MPTDC_PHASE_RC_ACCEPT_ASYMMETRY:-0}"
+  echo "phase_rc_accept_reason: ${MPTDC_PHASE_RC_ACCEPT_REASON:-unset}"
   echo "labels: TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF"
   echo
   echo "git status --short --untracked-files=no:"
