@@ -2862,6 +2862,77 @@ proc mptdc_signoff_count_cts_fanout_violations {path} {
     return $count
 }
 
+proc mptdc_signoff_read_file_text {path} {
+    if {![file exists $path]} {
+        return ""
+    }
+    set fh [open $path r]
+    set text [read $fh]
+    close $fh
+    return $text
+}
+
+proc mptdc_signoff_clk_sys_cts_spec_forbidden_regex {} {
+    return {(clk_osc|RO_tune4|u_ro_tune4|mptdc_phase_buffer_bank|phase_buf|gen_phase_buf|u_core_u_phase_buf)}
+}
+
+proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
+    set spec_path [file join [mptdc_signoff_work_dir] clk_sys_cts.spec]
+    set audit_path [file join [mptdc_signoff_report_dir] cts_clk_sys_spec_audit.rpt]
+    set forbidden_regex [mptdc_signoff_clk_sys_cts_spec_forbidden_regex]
+    set status FAIL
+    set accepted_cmd ""
+    set detail ""
+    set has_clk_sys 0
+    set has_forbidden 0
+
+    set fh [open $audit_path w]
+    puts $fh "# MPTDC clk_sys-only CTS spec audit"
+    puts $fh "SPEC_PATH=$spec_path"
+    puts $fh "FORBIDDEN_REGEX=$forbidden_regex"
+
+    foreach cmd [list \
+        [list create_ccopt_clock_tree_spec -file $spec_path -clock_tree clk_sys] \
+        [list create_ccopt_clock_tree_spec -file $spec_path -clock_trees [list clk_sys]] \
+        [list create_ccopt_clock_tree_spec -file $spec_path -clocks [list clk_sys]] \
+    ] {
+        catch {file delete -force $spec_path}
+        puts $fh "SPEC_COMMAND=$cmd"
+        if {[catch {{*}$cmd} err]} {
+            puts $fh "SPEC_COMMAND_STATUS=FAIL"
+            puts $fh "SPEC_COMMAND_ERROR=$err"
+            continue
+        }
+        set text [mptdc_signoff_read_file_text $spec_path]
+        set has_clk_sys [regexp {clk_sys} $text]
+        set has_forbidden [regexp $forbidden_regex $text]
+        puts $fh "SPEC_COMMAND_STATUS=PASS"
+        puts $fh "HAS_CLK_SYS=$has_clk_sys"
+        puts $fh "HAS_FORBIDDEN_RO_OR_PHASE=$has_forbidden"
+        if {$has_clk_sys && !$has_forbidden} {
+            set status PASS
+            set accepted_cmd $cmd
+            set detail "clk_sys_only_spec_accepted"
+            break
+        }
+        set detail "spec_not_clk_sys_only"
+    }
+
+    puts $fh "CTS_SPEC_AUDIT_STATUS=$status"
+    puts $fh "CTS_SPEC_AUDIT_DETAIL=$detail"
+    puts $fh "ACCEPTED_SPEC_COMMAND=$accepted_cmd"
+    close $fh
+
+    set pfh [open $policy_rpt a]
+    puts $pfh "CTS_SPEC_AUDIT_STATUS=$status"
+    puts $pfh "CTS_SPEC_AUDIT_REPORT=$audit_path"
+    puts $pfh "CTS_SPEC_PATH=$spec_path"
+    puts $pfh "CTS_SPEC_ACCEPTED_COMMAND=$accepted_cmd"
+    close $pfh
+
+    return [list $status $spec_path $audit_path $accepted_cmd]
+}
+
 proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     global mptdc_signoff_status
     set measured_rpt [file join [mptdc_signoff_report_dir] cts_measured_status.rpt]
@@ -3001,9 +3072,18 @@ proc mptdc_signoff_run_cts {} {
     catch {set_ccopt_property inverter_cells $mptdc_xh018_cells(cts_inverters)}
     catch {set_ccopt_property target_skew 0.20}
     catch {set_ccopt_property target_max_trans 0.35}
+    set spec_result [mptdc_signoff_create_clk_sys_cts_spec $rpt]
+    set spec_status [lindex $spec_result 0]
+    if {$spec_status ne "PASS"} {
+        set efh [open $rpt a]
+        puts $efh "CTS_STATUS=FAIL"
+        puts $efh "CTS_FAIL_REASON=no_safe_clk_sys_only_ccopt_spec"
+        close $efh
+        error "MPTDC_CLK_SYS_CTS_SPEC_FAILED: report=[lindex $spec_result 2]"
+    }
     set ccopt_ok 0
     set ccopt_last_error ""
-    foreach cmd [list {ccopt_design -cts} {ccopt_design}] {
+    foreach cmd [list {ccopt_design} {ccopt_design -cts}] {
         set efh [open $rpt a]
         puts $efh "CCOPT_COMMAND=$cmd"
         close $efh
