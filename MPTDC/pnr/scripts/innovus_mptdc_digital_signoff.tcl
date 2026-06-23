@@ -1609,10 +1609,22 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
     set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
+    set provisional_reason ""
+    if {$status ne "PASS" &&
+        [mptdc_signoff_env_truthy MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG] &&
+        $ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok && $ro_pg_ok} {
+        set status PROVISIONAL
+        set provisional_reason "pre_place_verify_connectivity_requires_placed_cells; route_stage_rechecks_regular_and_special_connectivity"
+    }
     puts $fh "PG_PHYSICAL_STATUS=$status"
+    if {$provisional_reason ne ""} {
+        puts $fh "PG_PHYSICAL_PROVISIONAL_REASON=$provisional_reason"
+        puts $fh "MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG=1"
+        puts $fh "FINAL_CONNECTIVITY_RECHECK=route_status.rpt"
+    }
     close $fh
     mptdc_signoff_set_status PG_PHYSICAL_STATUS $status $rpt
-    if {$status ne "PASS"} {
+    if {$status ni {PASS PROVISIONAL}} {
         error "MPTDC_PG_PHYSICAL_GATE_FAILED: report=$rpt"
     }
     mptdc_signoff_set_status PG_CONNECTIVITY_STATUS PASS $rpt
@@ -2813,6 +2825,38 @@ proc mptdc_signoff_count_clk_sys_sinks {} {
     return $count
 }
 
+proc mptdc_signoff_clk_sys_root_fanout {} {
+    set nets [list]
+    catch {set nets [get_nets -quiet clk_sys]}
+    if {[llength $nets] == 0} {
+        catch {set nets [get_nets clk_sys]}
+    }
+    foreach net $nets {
+        foreach attr {.num_loads .num_load_pins .fanout} {
+            if {![catch {set value [get_db $net $attr]}] &&
+                [string is integer -strict $value]} {
+                return $value
+            }
+        }
+    }
+    return ""
+}
+
+proc mptdc_signoff_count_cts_fanout_violations {path} {
+    if {![file exists $path]} {
+        return ""
+    }
+    set count ""
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        if {[regexp -nocase {Found[[:space:]]+a[[:space:]]+total[[:space:]]+of[[:space:]]+([0-9]+)[[:space:]]+clock[[:space:]]+tree[[:space:]]+nets?[[:space:]]+with[[:space:]]+max[[:space:]]+fanout[[:space:]]+violations?} $line -> value]} {
+            set count $value
+        }
+    }
+    close $fh
+    return $count
+}
+
 proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     global mptdc_signoff_status
     set measured_rpt [file join [mptdc_signoff_report_dir] cts_measured_status.rpt]
@@ -2854,6 +2898,9 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
 
     set skew_limit [mptdc_signoff_env MPTDC_CTS_MAX_SKEW_NS 0.20]
     set transition_limit [mptdc_signoff_env MPTDC_CTS_MAX_TRANSITION_NS 0.35]
+    set root_fanout_limit [mptdc_signoff_env_int MPTDC_CTS_CLK_SYS_MAX_ROOT_FANOUT 100]
+    set root_fanout [mptdc_signoff_clk_sys_root_fanout]
+    set fanout_violations [mptdc_signoff_count_cts_fanout_violations $detail_rpt]
     set status PASS
     set reason ""
     if {$sinks_expected eq "" || $sinks_reached eq ""} {
@@ -2877,6 +2924,20 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
         set status FAIL
         append reason "transition_over_limit "
     }
+    if {$root_fanout eq ""} {
+        set status PROVISIONAL
+        append reason "clk_sys_root_fanout_unparsed "
+    } elseif {$root_fanout > $root_fanout_limit} {
+        set status FAIL
+        append reason "clk_sys_root_fanout_over_limit "
+    }
+    if {$fanout_violations eq ""} {
+        set status PROVISIONAL
+        append reason "cts_fanout_violations_unparsed "
+    } elseif {$fanout_violations > 0} {
+        set status FAIL
+        append reason "cts_fanout_violations_nonzero "
+    }
 
     set fh [open $measured_rpt w]
     puts $fh "CTS_MEASURED_STATUS=$status"
@@ -2892,6 +2953,10 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     puts $fh "CLK_SYS_INSERTION_DELAY_RANGE_NS=$insertion_range"
     puts $fh "CLK_SYS_MAX_SKEW_NS_REQUIRED_LE=$skew_limit"
     puts $fh "CLK_SYS_MAX_TRANSITION_NS_REQUIRED_LE=$transition_limit"
+    puts $fh "CLK_SYS_ROOT_FANOUT=$root_fanout"
+    puts $fh "CLK_SYS_ROOT_FANOUT_REQUIRED_LE=$root_fanout_limit"
+    puts $fh "CTS_MAX_FANOUT_VIOLATIONS=$fanout_violations"
+    puts $fh "CTS_MAX_FANOUT_VIOLATIONS_REQUIRED=0"
     puts $fh "RO_CLOCKS_IN_CTS=0"
     puts $fh "PHASE_CLOCKS_IN_CTS=0"
     puts $fh "SUMMARY_REPORT=$summary_rpt"
@@ -2931,12 +2996,30 @@ proc mptdc_signoff_run_cts {} {
     catch {set_ccopt_property inverter_cells $mptdc_xh018_cells(cts_inverters)}
     catch {set_ccopt_property target_skew 0.20}
     catch {set_ccopt_property target_max_trans 0.35}
-    if {[catch {ccopt_design -cts} err]} {
+    set ccopt_ok 0
+    set ccopt_last_error ""
+    foreach cmd [list {ccopt_design -cts} {ccopt_design}] {
         set efh [open $rpt a]
-        puts $efh "CTS_STATUS=FAIL"
+        puts $efh "CCOPT_COMMAND=$cmd"
+        close $efh
+        if {![catch {uplevel #0 $cmd} err]} {
+            set ccopt_ok 1
+            set efh [open $rpt a]
+            puts $efh "CCOPT_COMMAND_STATUS=PASS"
+            close $efh
+            break
+        }
+        set ccopt_last_error $err
+        set efh [open $rpt a]
+        puts $efh "CCOPT_COMMAND_STATUS=FAIL"
         puts $efh "CCOPT_ERROR=$err"
         close $efh
-        error "MPTDC_CLK_SYS_CTS_FAILED: $err"
+    }
+    if {!$ccopt_ok} {
+        set efh [open $rpt a]
+        puts $efh "CTS_STATUS=FAIL"
+        close $efh
+        error "MPTDC_CLK_SYS_CTS_FAILED: $ccopt_last_error"
     }
     catch {optDesign -postCTS}
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] timing_post_cts.rpt] \
