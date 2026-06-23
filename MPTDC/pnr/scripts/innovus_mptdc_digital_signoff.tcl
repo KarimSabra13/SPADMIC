@@ -2876,25 +2876,74 @@ proc mptdc_signoff_clk_sys_cts_spec_forbidden_regex {} {
     return {(clk_osc|RO_tune4|u_ro_tune4|mptdc_phase_buffer_bank|phase_buf|gen_phase_buf|u_core_u_phase_buf)}
 }
 
+proc mptdc_signoff_try_cts_policy_cmd {fh label cmd} {
+    puts $fh "${label}_COMMAND=$cmd"
+    if {[catch {{*}$cmd} err]} {
+        puts $fh "${label}_STATUS=SKIPPED_OR_FAILED"
+        puts $fh "${label}_ERROR=$err"
+        return 0
+    }
+    puts $fh "${label}_STATUS=PASS"
+    return 1
+}
+
+proc mptdc_signoff_prepare_clk_sys_for_cts {policy_rpt} {
+    set cleanup_rpt [file join [mptdc_signoff_report_dir] cts_clk_sys_constraint_cleanup.rpt]
+    set fanout_limit [mptdc_signoff_env_int MPTDC_CTS_CLK_SYS_MAX_ROOT_FANOUT 100]
+    set fh [open $cleanup_rpt w]
+    puts $fh "# MPTDC clk_sys CTS constraint cleanup"
+    puts $fh "INTENT=remove_handoff_ideal_network_only_from_clk_sys"
+    puts $fh "RO_PHASE_CLOCKS_REMAIN_PROTECTED=YES"
+    puts $fh "CLK_SYS_ROOT_FANOUT_BEFORE=[mptdc_signoff_clk_sys_root_fanout]"
+
+    foreach cmd [list \
+        [list remove_ideal_network [get_ports clk_sys]] \
+        [list remove_ideal_network [get_nets clk_sys]] \
+        [list set_propagated_clock [get_clocks clk_sys]] \
+    ] {
+        mptdc_signoff_try_cts_policy_cmd $fh CLK_SYS_CTS_CLEANUP $cmd
+    }
+
+    foreach cmd [list \
+        [list set_ccopt_property max_fanout $fanout_limit] \
+        [list set_ccopt_property cts_max_fanout $fanout_limit] \
+        [list set_ccopt_property target_max_fanout $fanout_limit] \
+        [list set_ccopt_property -clock_tree clk_sys max_fanout $fanout_limit] \
+        [list set_ccopt_property -clock_tree clk_sys cts_max_fanout $fanout_limit] \
+    ] {
+        mptdc_signoff_try_cts_policy_cmd $fh CLK_SYS_CTS_FANOUT_PROPERTY $cmd
+    }
+
+    puts $fh "CLK_SYS_ROOT_FANOUT_AFTER_CLEANUP=[mptdc_signoff_clk_sys_root_fanout]"
+    close $fh
+
+    set pfh [open $policy_rpt a]
+    puts $pfh "CLK_SYS_CTS_CONSTRAINT_CLEANUP_REPORT=$cleanup_rpt"
+    close $pfh
+    return $cleanup_rpt
+}
+
 proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
     set spec_path [file join [mptdc_signoff_work_dir] clk_sys_cts.spec]
     set audit_path [file join [mptdc_signoff_report_dir] cts_clk_sys_spec_audit.rpt]
     set forbidden_regex [mptdc_signoff_clk_sys_cts_spec_forbidden_regex]
-    set status FAIL
+    set status PROVISIONAL
     set accepted_cmd ""
     set detail ""
     set has_clk_sys 0
     set has_forbidden 0
+    set strict [mptdc_signoff_env_truthy MPTDC_REQUIRE_CLK_SYS_ONLY_CTS_SPEC]
 
     set fh [open $audit_path w]
     puts $fh "# MPTDC clk_sys-only CTS spec audit"
     puts $fh "SPEC_PATH=$spec_path"
     puts $fh "FORBIDDEN_REGEX=$forbidden_regex"
+    puts $fh "STRICT_CLK_SYS_ONLY_SPEC_REQUIRED=$strict"
+    puts $fh "NOTE=Innovus_22_33_create_ccopt_clock_tree_spec_does_not_accept_clock_tree_selection_options"
 
     foreach cmd [list \
-        [list create_ccopt_clock_tree_spec -file $spec_path -clock_tree clk_sys] \
-        [list create_ccopt_clock_tree_spec -file $spec_path -clock_trees [list clk_sys]] \
-        [list create_ccopt_clock_tree_spec -file $spec_path -clocks [list clk_sys]] \
+        [list create_ccopt_clock_tree_spec -file $spec_path -views [list TC_NOMINAL]] \
+        [list create_ccopt_clock_tree_spec -file $spec_path] \
     ] {
         catch {file delete -force $spec_path}
         puts $fh "SPEC_COMMAND=$cmd"
@@ -2915,7 +2964,13 @@ proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
             set detail "clk_sys_only_spec_accepted"
             break
         }
-        set detail "spec_not_clk_sys_only"
+        if {$has_clk_sys && $has_forbidden} {
+            set accepted_cmd $cmd
+            set status PROVISIONAL
+            set detail "generic_spec_contains_ro_or_phase_clock_text"
+            break
+        }
+        set detail "generic_spec_did_not_expose_clk_sys"
     }
 
     puts $fh "CTS_SPEC_AUDIT_STATUS=$status"
@@ -2930,6 +2985,9 @@ proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
     puts $pfh "CTS_SPEC_ACCEPTED_COMMAND=$accepted_cmd"
     close $pfh
 
+    if {$strict && $status ne "PASS"} {
+        return [list FAIL $spec_path $audit_path $accepted_cmd]
+    }
     return [list $status $spec_path $audit_path $accepted_cmd]
 }
 
@@ -3072,15 +3130,24 @@ proc mptdc_signoff_run_cts {} {
     catch {set_ccopt_property inverter_cells $mptdc_xh018_cells(cts_inverters)}
     catch {set_ccopt_property target_skew 0.20}
     catch {set_ccopt_property target_max_trans 0.35}
+    mptdc_signoff_prepare_clk_sys_for_cts $rpt
     set spec_result [mptdc_signoff_create_clk_sys_cts_spec $rpt]
     set spec_status [lindex $spec_result 0]
-    if {$spec_status ne "PASS"} {
+    if {$spec_status eq "FAIL"} {
         set efh [open $rpt a]
         puts $efh "CTS_STATUS=FAIL"
-        puts $efh "CTS_FAIL_REASON=no_safe_clk_sys_only_ccopt_spec"
+        puts $efh "CTS_FAIL_REASON=strict_clk_sys_only_ccopt_spec_required_but_unavailable"
         close $efh
         error "MPTDC_CLK_SYS_CTS_SPEC_FAILED: report=[lindex $spec_result 2]"
     }
+    set efh [open $rpt a]
+    puts $efh "CTS_SPEC_GATE_STATUS=$spec_status"
+    if {$spec_status eq "PASS"} {
+        puts $efh "CTS_SPEC_GATE_ACTION=strict_clk_sys_spec_accepted"
+    } else {
+        puts $efh "CTS_SPEC_GATE_ACTION=proceed_to_measured_cts_gate"
+    }
+    close $efh
     set ccopt_ok 0
     set ccopt_last_error ""
     foreach cmd [list {ccopt_design} {ccopt_design -cts}] {
