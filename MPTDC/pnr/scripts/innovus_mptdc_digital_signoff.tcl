@@ -2799,11 +2799,30 @@ proc mptdc_signoff_parse_cts_summary_metrics {path} {
             dict set metrics total_sinks $total_sinks
             set in_sink_counts 0
         }
-        if {[regexp -nocase {clk_sys/[^[:space:]]*[[:space:]]+([-+]?[0-9.]+)[[:space:]]+([-+]?[0-9.]+)[[:space:]]+([-+]?[0-9.]+)} $trimmed -> min_id max_id skew]} {
+        if {[regexp -nocase {clk_sys/[^[:space:]]*[[:space:]]+([-+]?[0-9]+[.][0-9]+)[[:space:]]+([-+]?[0-9]+[.][0-9]+)[[:space:]]+([-+]?[0-9]+[.][0-9]+)} $trimmed -> min_id max_id skew]} {
             dict set metrics clk_sys_insertion_min $min_id
             dict set metrics clk_sys_insertion_max $max_id
             dict set metrics clk_sys_insertion_range [expr {$max_id - $min_id}]
             dict set metrics clk_sys_skew $skew
+        }
+        if {[regexp -nocase {clk_sys/} $trimmed] && ![regexp -nocase {insertion delay} $trimmed]} {
+            set small_nums [list]
+            foreach value [regexp -all -inline {[-+]?[0-9]*[.]?[0-9]+} $trimmed] {
+                if {$value <= 1.0} {
+                    lappend small_nums $value
+                }
+            }
+            if {[llength $small_nums] >= 4} {
+                set min_id [lindex $small_nums end-3]
+                set max_id [lindex $small_nums end-2]
+                set skew [lindex $small_nums end-1]
+                if {$min_id <= $max_id} {
+                    dict set metrics clk_sys_insertion_min $min_id
+                    dict set metrics clk_sys_insertion_max $max_id
+                    dict set metrics clk_sys_insertion_range [expr {$max_id - $min_id}]
+                    dict set metrics clk_sys_skew $skew
+                }
+            }
         }
         if {[regexp -nocase {clk_sys/[^[:space:]:]+:[[:space:]].*insertion delay[[:space:]]+\[min=([-+]?[0-9.]+),[[:space:]]+max=([-+]?[0-9.]+).*skew[[:space:]]+\[([-+]?[0-9.]+)[[:space:]]+vs} $trimmed -> min_id max_id skew]} {
             dict set metrics clk_sys_insertion_min $min_id
@@ -2823,6 +2842,15 @@ proc mptdc_signoff_parse_cts_summary_metrics {path} {
     }
     close $fh
     return $metrics
+}
+
+proc mptdc_signoff_merge_empty_metrics {primary fallback} {
+    foreach key [dict keys $fallback] {
+        if {[dict get $primary $key] eq "" && [dict get $fallback $key] ne ""} {
+            dict set primary $key [dict get $fallback $key]
+        }
+    }
+    return $primary
 }
 
 proc mptdc_signoff_count_clk_sys_sinks {} {
@@ -2846,7 +2874,7 @@ proc mptdc_signoff_clk_sys_root_fanout {} {
         catch {set nets [get_nets clk_sys]}
     }
     foreach net $nets {
-        foreach attr {.num_loads .num_load_pins .fanout} {
+        foreach attr {.num_loads .num_load_pins} {
             if {![catch {set value [get_db $net $attr]}] &&
                 [string is integer -strict $value]} {
                 return $value
@@ -2884,6 +2912,21 @@ proc mptdc_signoff_safe_db_value {obj attr} {
     return $value
 }
 
+proc mptdc_signoff_abbrev_db_value {value {limit 48}} {
+    set value [string trim $value]
+    if {$value eq ""} {
+        return ""
+    }
+    set words [split $value]
+    if {[llength $words] > $limit} {
+        return "[join [lrange $words 0 [expr {$limit - 1}]] { }] ...TRUNCATED_[llength $words]_TOKENS"
+    }
+    if {[string length $value] > 512} {
+        return "[string range $value 0 511]...TRUNCATED_[string length $value]_CHARS"
+    }
+    return $value
+}
+
 proc mptdc_signoff_write_clk_sys_root_audit {tag} {
     set rpt [file join [mptdc_signoff_report_dir] "cts_clk_sys_root_${tag}.rpt"]
     set fanout_limit [mptdc_signoff_env_int MPTDC_CTS_CLK_SYS_MAX_ROOT_FANOUT 100]
@@ -2898,7 +2941,7 @@ proc mptdc_signoff_write_clk_sys_root_audit {tag} {
         PORT_COUNT {get_ports -quiet clk_sys}
         NET_COUNT {get_nets -quiet clk_sys}
         PIN_COUNT {get_pins -quiet -of_objects [get_clocks clk_sys]}
-        CCOPT_CLOCK_TREES {get_ccopt_clock_trees -quiet clk_sys}
+        CCOPT_CLOCK_TREES {get_ccopt_clock_trees clk_sys}
     } {
         if {[catch {set objs [eval $cmd]} err]} {
             puts $fh "${label}_STATUS=UNAVAILABLE"
@@ -2918,10 +2961,10 @@ proc mptdc_signoff_write_clk_sys_root_audit {tag} {
         incr idx
         set names [mptdc_signoff_object_names [list $net]]
         puts $fh "CLK_SYS_NET_${idx}_NAME=[join $names { }]"
-        foreach attr {.name .num_loads .num_load_pins .fanout .is_ideal .is_dont_touch .is_clock .route_status .wires.status} {
+        foreach attr {.name .num_loads .num_load_pins .is_ideal .is_dont_touch .is_clock .wires.status} {
             set value [mptdc_signoff_safe_db_value $net $attr]
             if {$value ne ""} {
-                puts $fh "CLK_SYS_NET_${idx}_${attr}=$value"
+                puts $fh "CLK_SYS_NET_${idx}_${attr}=[mptdc_signoff_abbrev_db_value $value]"
             }
         }
     }
@@ -3071,6 +3114,8 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     mptdc_signoff_capture_candidates $detail_rpt \
         "CTS clock tree detail" [list {report_ccopt_clock_trees} {report_clock_tree}]
     set summary_metrics [mptdc_signoff_parse_cts_summary_metrics $summary_rpt]
+    set detail_metrics [mptdc_signoff_parse_cts_summary_metrics $detail_rpt]
+    set summary_metrics [mptdc_signoff_merge_empty_metrics $summary_metrics $detail_metrics]
     set total_dag_sinks [dict get $summary_metrics total_sinks]
     set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
     set sink_count_source ""
