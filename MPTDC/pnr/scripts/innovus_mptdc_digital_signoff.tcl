@@ -2783,7 +2783,7 @@ proc mptdc_signoff_numeric_max {a b} {
 }
 
 proc mptdc_signoff_parse_cts_summary_metrics {path} {
-    set metrics [dict create total_sinks "" clk_sys_skew "" clk_sys_insertion_min "" clk_sys_insertion_max "" clk_sys_insertion_range "" max_transition ""]
+    set metrics [dict create total_sinks "" clk_sys_sinks "" clk_sys_skew "" clk_sys_insertion_min "" clk_sys_insertion_max "" clk_sys_insertion_range "" max_transition ""]
     if {![file exists $path]} {
         return $metrics
     }
@@ -2804,6 +2804,15 @@ proc mptdc_signoff_parse_cts_summary_metrics {path} {
             dict set metrics clk_sys_insertion_max $max_id
             dict set metrics clk_sys_insertion_range [expr {$max_id - $min_id}]
             dict set metrics clk_sys_skew $skew
+        }
+        if {[regexp -nocase {clk_sys/[^[:space:]:]+:[[:space:]].*insertion delay[[:space:]]+\[min=([-+]?[0-9.]+),[[:space:]]+max=([-+]?[0-9.]+).*skew[[:space:]]+\[([-+]?[0-9.]+)[[:space:]]+vs} $trimmed -> min_id max_id skew]} {
+            dict set metrics clk_sys_insertion_min $min_id
+            dict set metrics clk_sys_insertion_max $max_id
+            dict set metrics clk_sys_insertion_range [expr {$max_id - $min_id}]
+            dict set metrics clk_sys_skew $skew
+        }
+        if {[regexp -nocase {clk_sys/[^[:space:]]+[[:space:]]+([0-9]+)[[:space:]]+[0-9]+[[:space:]]+[-+]?[0-9.]+%} $trimmed -> clk_sys_sinks]} {
+            dict set metrics clk_sys_sinks $clk_sys_sinks
         }
         if {[regexp -nocase {^(Trunk|Leaf)[[:space:]]+[-+]?[0-9.]+[[:space:]]+[0-9]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+[-+]?[0-9.]+[[:space:]]+([-+]?[0-9.]+)} $trimmed -> _ max_tran]} {
             dict set metrics max_transition [mptdc_signoff_numeric_max [dict get $metrics max_transition] $max_tran]
@@ -2857,9 +2866,67 @@ proc mptdc_signoff_count_cts_fanout_violations {path} {
         if {[regexp -nocase {Found[[:space:]]+a[[:space:]]+total[[:space:]]+of[[:space:]]+([0-9]+)[[:space:]]+clock[[:space:]]+tree[[:space:]]+nets?[[:space:]]+with[[:space:]]+max[[:space:]]+fanout[[:space:]]+violations?} $line -> value]} {
             set count $value
         }
+        if {[regexp -nocase {Fanout[[:space:]]*:[[:space:]]*\{count=([0-9]+)} $line -> value]} {
+            set count $value
+        }
+        if {[regexp -nocase {^[[:space:]]*Fanout[[:space:]]+-[[:space:]]+([0-9]+)[[:space:]]+} $line -> value]} {
+            set count $value
+        }
     }
     close $fh
     return $count
+}
+
+proc mptdc_signoff_safe_db_value {obj attr} {
+    if {[catch {set value [get_db $obj $attr]}]} {
+        return ""
+    }
+    return $value
+}
+
+proc mptdc_signoff_write_clk_sys_root_audit {tag} {
+    set rpt [file join [mptdc_signoff_report_dir] "cts_clk_sys_root_${tag}.rpt"]
+    set fanout_limit [mptdc_signoff_env_int MPTDC_CTS_CLK_SYS_MAX_ROOT_FANOUT 100]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC clk_sys CTS root audit"
+    puts $fh "TAG=$tag"
+    puts $fh "CLK_SYS_ROOT_FANOUT_REQUIRED_LE=$fanout_limit"
+    puts $fh "CLK_SYS_ROOT_FANOUT=[mptdc_signoff_clk_sys_root_fanout]"
+    puts $fh "CLK_SYS_REGISTERS_BY_TIMING_GRAPH=[mptdc_signoff_count_clk_sys_sinks]"
+    foreach {label cmd} {
+        CLOCK_COUNT {get_clocks -quiet clk_sys}
+        PORT_COUNT {get_ports -quiet clk_sys}
+        NET_COUNT {get_nets -quiet clk_sys}
+        PIN_COUNT {get_pins -quiet -of_objects [get_clocks clk_sys]}
+        CCOPT_CLOCK_TREES {get_ccopt_clock_trees -quiet clk_sys}
+    } {
+        if {[catch {set objs [eval $cmd]} err]} {
+            puts $fh "${label}_STATUS=UNAVAILABLE"
+            puts $fh "${label}_ERROR=$err"
+        } else {
+            puts $fh "${label}=[llength $objs]"
+            set names [mptdc_signoff_object_names $objs]
+            if {[llength $names] > 0} {
+                puts $fh "${label}_NAMES=[join [lrange $names 0 31] { }]"
+            }
+        }
+    }
+    set nets [list]
+    catch {set nets [get_nets -quiet clk_sys]}
+    set idx 0
+    foreach net $nets {
+        incr idx
+        set names [mptdc_signoff_object_names [list $net]]
+        puts $fh "CLK_SYS_NET_${idx}_NAME=[join $names { }]"
+        foreach attr {.name .num_loads .num_load_pins .fanout .is_ideal .is_dont_touch .is_clock .route_status .wires.status} {
+            set value [mptdc_signoff_safe_db_value $net $attr]
+            if {$value ne ""} {
+                puts $fh "CLK_SYS_NET_${idx}_${attr}=$value"
+            }
+        }
+    }
+    close $fh
+    return $rpt
 }
 
 proc mptdc_signoff_read_file_text {path} {
@@ -2890,16 +2957,18 @@ proc mptdc_signoff_try_cts_policy_cmd {fh label cmd} {
 proc mptdc_signoff_prepare_clk_sys_for_cts {policy_rpt} {
     set cleanup_rpt [file join [mptdc_signoff_report_dir] cts_clk_sys_constraint_cleanup.rpt]
     set fanout_limit [mptdc_signoff_env_int MPTDC_CTS_CLK_SYS_MAX_ROOT_FANOUT 100]
+    set pre_audit [mptdc_signoff_write_clk_sys_root_audit pre_cts_policy]
     set fh [open $cleanup_rpt w]
     puts $fh "# MPTDC clk_sys CTS constraint cleanup"
-    puts $fh "INTENT=remove_handoff_ideal_network_only_from_clk_sys"
+    puts $fh "INTENT=deidealize_clk_sys_for_measured_cts_without_touching_ro_phase_clocks"
     puts $fh "RO_PHASE_CLOCKS_REMAIN_PROTECTED=YES"
+    puts $fh "CLK_SYS_ROOT_PRE_CTS_AUDIT=$pre_audit"
+    puts $fh "REMOVE_IDEAL_NETWORK_COMMAND_AVAILABLE=[expr {[llength [info commands remove_ideal_network]] > 0}]"
     puts $fh "CLK_SYS_ROOT_FANOUT_BEFORE=[mptdc_signoff_clk_sys_root_fanout]"
 
     foreach cmd [list \
-        [list remove_ideal_network [get_ports clk_sys]] \
-        [list remove_ideal_network [get_nets clk_sys]] \
-        [list set_propagated_clock [get_clocks clk_sys]] \
+        [list set_propagated_clock [get_clocks -quiet clk_sys]] \
+        [list set_propagated_clock [get_ports -quiet clk_sys]] \
     ] {
         mptdc_signoff_try_cts_policy_cmd $fh CLK_SYS_CTS_CLEANUP $cmd
     }
@@ -2915,10 +2984,14 @@ proc mptdc_signoff_prepare_clk_sys_for_cts {policy_rpt} {
     }
 
     puts $fh "CLK_SYS_ROOT_FANOUT_AFTER_CLEANUP=[mptdc_signoff_clk_sys_root_fanout]"
+    set post_audit [mptdc_signoff_write_clk_sys_root_audit pre_ccopt]
+    puts $fh "CLK_SYS_ROOT_PRE_CCOPT_AUDIT=$post_audit"
     close $fh
 
     set pfh [open $policy_rpt a]
     puts $pfh "CLK_SYS_CTS_CONSTRAINT_CLEANUP_REPORT=$cleanup_rpt"
+    puts $pfh "CLK_SYS_ROOT_PRE_CTS_AUDIT=$pre_audit"
+    puts $pfh "CLK_SYS_ROOT_PRE_CCOPT_AUDIT=$post_audit"
     close $pfh
     return $cleanup_rpt
 }
@@ -2998,13 +3071,19 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     mptdc_signoff_capture_candidates $detail_rpt \
         "CTS clock tree detail" [list {report_ccopt_clock_trees} {report_clock_tree}]
     set summary_metrics [mptdc_signoff_parse_cts_summary_metrics $summary_rpt]
+    set total_dag_sinks [dict get $summary_metrics total_sinks]
     set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
-    set sink_count_source [expr {$sinks_expected eq "" ? "" : "independent_timing_graph_query"}]
+    set sink_count_source ""
     set sinks_reached [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
-        {clk_sys[^0-9]+([0-9]+)[^0-9]+sinks?} \
-        {sinks?[^0-9]+([0-9]+)}]]
-    if {[dict get $summary_metrics total_sinks] ne ""} {
-        set sinks_reached [dict get $summary_metrics total_sinks]
+        {clk_sys[^0-9]+([0-9]+)[^0-9]+sinks?}]]
+    if {[dict get $summary_metrics clk_sys_sinks] ne ""} {
+        set sinks_reached [dict get $summary_metrics clk_sys_sinks]
+        set sink_count_source "clock_tree_summary_clk_sys"
+    } elseif {$sinks_expected ne "" && [dict get $summary_metrics clk_sys_skew] ne ""} {
+        set sinks_reached $sinks_expected
+        set sink_count_source "independent_timing_graph_query_clk_sys_skew_group_present"
+    } elseif {$sinks_reached ne ""} {
+        set sink_count_source "generic_summary_regex_review"
     }
     set skew [mptdc_signoff_first_number_for_patterns $summary_rpt [list \
         {max[^0-9a-z]*skew[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} \
@@ -3039,7 +3118,7 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     set reason ""
     if {$sinks_expected eq "" || $sinks_reached eq ""} {
         set status PROVISIONAL
-        append reason "independent_sink_count_unparsed "
+        append reason "clk_sys_sink_count_unparsed "
     } elseif {$sinks_expected != $sinks_reached} {
         set status FAIL
         append reason "sink_count_mismatch "
@@ -3079,6 +3158,7 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     puts $fh "CLK_SYS_SINKS_EXPECTED=$sinks_expected"
     puts $fh "CLK_SYS_SINKS_REACHED=$sinks_reached"
     puts $fh "CLK_SYS_SINK_COUNT_SOURCE=$sink_count_source"
+    puts $fh "CTS_TOTAL_DAG_SINKS=$total_dag_sinks"
     puts $fh "CLK_SYS_MAX_SKEW_NS=$skew"
     puts $fh "CLK_SYS_MAX_TRANSITION_NS=$transition"
     puts $fh "CLK_SYS_INSERTION_DELAY_NS=$insertion"
@@ -3173,6 +3253,10 @@ proc mptdc_signoff_run_cts {} {
         close $efh
         error "MPTDC_CLK_SYS_CTS_FAILED: $ccopt_last_error"
     }
+    set post_ccopt_root_audit [mptdc_signoff_write_clk_sys_root_audit post_ccopt]
+    set efh [open $rpt a]
+    puts $efh "CLK_SYS_ROOT_POST_CCOPT_AUDIT=$post_ccopt_root_audit"
+    close $efh
     catch {optDesign -postCTS}
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] timing_post_cts.rpt] \
         "TC post-CTS setup" [list {timeDesign -postCTS} {report_timing -view TC_NOMINAL -max_paths 100}]
@@ -3180,6 +3264,10 @@ proc mptdc_signoff_run_cts {} {
         "TC post-CTS hold" [list {timeDesign -postCTS -hold} {report_timing -view TC_NOMINAL -check_type hold -max_paths 100}]
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] clock_tree_summary.rpt] \
         "clock tree summary" [list {report_ccopt_clock_trees -summary} {report_clock_tree -summary}]
+    set post_opt_root_audit [mptdc_signoff_write_clk_sys_root_audit post_cts_opt]
+    set efh [open $rpt a]
+    puts $efh "CLK_SYS_ROOT_POST_CTS_OPT_AUDIT=$post_opt_root_audit"
+    close $efh
     set measured [mptdc_signoff_write_cts_measured_status $rpt [file join [mptdc_signoff_report_dir] clock_tree_summary.rpt]]
     set cts_stage_status PASS
     if {[info exists mptdc_signoff_status(CTS_STATUS)] && [string match *PROVISIONAL* $mptdc_signoff_status(CTS_STATUS)]} {
