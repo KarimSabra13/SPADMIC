@@ -1608,14 +1608,19 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
+    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok}]
     set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
     set provisional_reason ""
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG] &&
-        $ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok && $ro_pg_ok} {
+        $primitive_pg_ok} {
         set status PROVISIONAL
         set provisional_reason "pre_place_verify_connectivity_requires_placed_cells; route_stage_rechecks_regular_and_special_connectivity"
+        if {!$ro_pg_ok} {
+            append provisional_reason "; ro_pg_pin_query_deferred_to_route_connectivity_recheck"
+        }
     }
+    puts $fh "PREPLACE_PRIMITIVE_PG_STATUS=[expr {$primitive_pg_ok ? "PASS" : "FAIL"}]"
     puts $fh "PG_PHYSICAL_STATUS=$status"
     if {$provisional_reason ne ""} {
         puts $fh "PG_PHYSICAL_PROVISIONAL_REASON=$provisional_reason"
