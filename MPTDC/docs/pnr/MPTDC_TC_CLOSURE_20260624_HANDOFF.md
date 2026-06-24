@@ -258,6 +258,48 @@ Fix:
 - Add `MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP`, default `0`.
 - Record `CHECKPLACE_OVERLAP_STATUS=REVIEW_REQUIRED` when global checkPlace
   reports overlap text.
+
+### Truthyfix1 Partial Run And Post-Route Plateau Guard
+
+Run:
+`20260624_mptdc_digital_signoff_tc_clkcts_3e1a75b8_truthyfix1`.
+
+This run cleared the previous Tcl arity failure and reached real post-route
+optimization. The manual terminal stop happened during optional post-route
+setup optimization / ECO routing, so the status file is a partial snapshot.
+
+Partial status evidence before the stop:
+
+- `RO_PHASE_PLACEMENT_STATUS=PASS`.
+- `PD_MATRIX_STATUS=PASS`.
+- `PD_PHYSICAL_MATRIX_STATUS=PASS`.
+- `PHASE_BUFFER_STATUS=PASS`.
+- `PLACEMENT_STATUS=PASS`.
+- `CTS_STATUS=PASS`.
+- `ROUTE_STATUS=DEFERRED evidence=not_run` because the run was suspended before
+  the route stage completed and wrote its final reports.
+- Fast-tag timing focus was active and did not use false paths or multicycles.
+- `set_critical_range` was unavailable in Innovus and should not by itself make
+  the fast-tag timing focus fail.
+
+The optional post-route setup loop was too aggressive for this stage:
+
+- Server command requested `MPTDC_POSTROUTE_SETUP_OPT_PASSES=12`.
+- Server command requested `MPTDC_POSTROUTE_SETUP_TARGET_SLACK_NS=0.200`.
+- Innovus repeatedly reported WNS around `-0.083 ns` and TNS around
+  `-6.56 ns`, so additional passes were not buying useful closure.
+
+Fix:
+
+- Cap optional setup passes with `MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES`,
+  default `4`.
+- Cap optional hold passes with `MPTDC_POSTROUTE_HOLD_OPT_MAX_PASSES`,
+  default `2`.
+- Add setup timing snapshots after each post-route setup pass.
+- Stop optional setup optimization early when target slack is reached or WNS
+  plateaus for `MPTDC_POSTROUTE_SETUP_STALL_LIMIT` passes, default `2`.
+- Treat missing Innovus `set_critical_range` as
+  `SOURCE_CRITICAL_RANGE_STATUS=SKIPPED`, not `REVIEW_REQUIRED`.
 - Keep `RO_PHASE_PLACEMENT_STATUS=PASS` when the measured slow/fast RO/phase
   bbox checks pass and only the aggregate global checkPlace text is dirty.
 - For strict experiments, set

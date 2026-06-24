@@ -994,6 +994,22 @@ proc mptdc_signoff_parse_wns_ns {path} {
     return $value
 }
 
+proc mptdc_signoff_parse_tns_ns {path} {
+    if {![file exists $path]} {
+        return ""
+    }
+    set fh [open $path r]
+    set value ""
+    while {[gets $fh line] >= 0} {
+        if {[regexp -nocase {TNS[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)} $line -> number]} {
+            set value $number
+            break
+        }
+    }
+    close $fh
+    return $value
+}
+
 proc mptdc_signoff_timing_class_regexes {} {
     return [list \
         CLK_SYS {clk_sys} \
@@ -2010,7 +2026,10 @@ proc mptdc_signoff_apply_fast_tag_timing_focus {} {
     } else {
         puts $fh "GROUP_PATH_STATUS=PASS"
     }
-    if {[catch {set_critical_range $critical_range $src_pins} err]} {
+    if {[llength [info commands set_critical_range]] == 0} {
+        puts $fh "SOURCE_CRITICAL_RANGE_STATUS=SKIPPED"
+        puts $fh "SOURCE_CRITICAL_RANGE_REASON=command_unavailable_in_innovus"
+    } elseif {[catch {set_critical_range $critical_range $src_pins} err]} {
         puts $fh "SOURCE_CRITICAL_RANGE_STATUS=REVIEW_REQUIRED"
         puts $fh "SOURCE_CRITICAL_RANGE_ERROR=$err"
         set focus_status REVIEW_REQUIRED
@@ -2071,6 +2090,20 @@ proc mptdc_signoff_capture_drv_reports {tran_rpt cap_rpt fanout_rpt} {
         "max fanout" [list {report_constraint -max_fanout -all_violators} {reportFanoutViolation}]
 }
 
+proc mptdc_signoff_capture_postroute_setup_snapshot {prefix pass} {
+    set rpt [file join [mptdc_signoff_report_dir] "postroute_opt_${prefix}_pass_${pass}_timing.rpt"]
+    if {[catch {timeDesign -postRoute > $rpt} err]} {
+        set fh [open $rpt w]
+        puts $fh "REPORT_STATUS=FAILED"
+        puts $fh "REPORT_ERROR=$err"
+        close $fh
+        return [dict create status REVIEW_REQUIRED report $rpt wns "" tns "" error $err]
+    }
+    set wns [mptdc_signoff_parse_wns_ns $rpt]
+    set tns [mptdc_signoff_parse_tns_ns $rpt]
+    return [dict create status PASS report $rpt wns $wns tns $tns error ""]
+}
+
 proc mptdc_signoff_run_optional_postroute_opt {} {
     set rpt [file join [mptdc_signoff_report_dir] postroute_opt_status.rpt]
     set fh [open $rpt w]
@@ -2094,22 +2127,54 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     puts $fh "POSTROUTE_OPT_CPPR=both"
     set closure_mode [mptdc_signoff_tc_closure_enabled]
     set default_setup_passes [expr {$closure_mode ? 3 : 1}]
-    set setup_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_PASSES $default_setup_passes]
+    set requested_setup_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_PASSES $default_setup_passes]
+    set setup_passes $requested_setup_passes
     if {$setup_passes < 1} {
         set setup_passes 1
+    }
+    set setup_max_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES 4]
+    if {$setup_max_passes < 1} {
+        set setup_max_passes 1
+    }
+    if {$setup_passes > $setup_max_passes} {
+        set setup_passes $setup_max_passes
     }
     set default_target [expr {$closure_mode ? 0.050 : 0.000}]
     set setup_target [mptdc_signoff_env_double MPTDC_POSTROUTE_SETUP_TARGET_SLACK_NS $default_target]
     set default_hold_passes [expr {$closure_mode ? 2 : 1}]
-    set hold_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_HOLD_OPT_PASSES $default_hold_passes]
+    set requested_hold_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_HOLD_OPT_PASSES $default_hold_passes]
+    set hold_passes $requested_hold_passes
     if {$hold_passes < 1} {
         set hold_passes 1
     }
+    set hold_max_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_HOLD_OPT_MAX_PASSES 2]
+    if {$hold_max_passes < 1} {
+        set hold_max_passes 1
+    }
+    if {$hold_passes > $hold_max_passes} {
+        set hold_passes $hold_max_passes
+    }
     set default_hold_target [expr {$closure_mode ? 0.020 : 0.000}]
     set hold_target [mptdc_signoff_env_double MPTDC_POSTROUTE_HOLD_TARGET_SLACK_NS $default_hold_target]
+    set setup_early_stop [mptdc_signoff_env_truthy MPTDC_POSTROUTE_SETUP_EARLY_STOP 1]
+    set setup_stall_limit [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_STALL_LIMIT 2]
+    if {$setup_stall_limit < 1} {
+        set setup_stall_limit 1
+    }
+    set setup_min_improvement [mptdc_signoff_env_double MPTDC_POSTROUTE_SETUP_MIN_IMPROVEMENT_NS 0.005]
+    if {$setup_min_improvement < 0.0} {
+        set setup_min_improvement 0.0
+    }
     puts $fh "POSTROUTE_OPT_TC_CLOSURE_MODE=[expr {$closure_mode ? "ENABLED" : "DISABLED"}]"
+    puts $fh "POSTROUTE_OPT_SETUP_REQUESTED_PASSES=$requested_setup_passes"
+    puts $fh "POSTROUTE_OPT_SETUP_MAX_PASSES=$setup_max_passes"
     puts $fh "POSTROUTE_OPT_SETUP_PASSES=$setup_passes"
     puts $fh "POSTROUTE_OPT_SETUP_TARGET_SLACK_NS=$setup_target"
+    puts $fh "POSTROUTE_OPT_SETUP_EARLY_STOP=[expr {$setup_early_stop ? 1 : 0}]"
+    puts $fh "POSTROUTE_OPT_SETUP_STALL_LIMIT=$setup_stall_limit"
+    puts $fh "POSTROUTE_OPT_SETUP_MIN_IMPROVEMENT_NS=$setup_min_improvement"
+    puts $fh "POSTROUTE_OPT_HOLD_REQUESTED_PASSES=$requested_hold_passes"
+    puts $fh "POSTROUTE_OPT_HOLD_MAX_PASSES=$hold_max_passes"
     puts $fh "POSTROUTE_OPT_HOLD_PASSES=$hold_passes"
     puts $fh "POSTROUTE_OPT_HOLD_TARGET_SLACK_NS=$hold_target"
     close $fh
@@ -2127,9 +2192,12 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     puts $fh "POSTROUTE_OPT_FAST_TAG_TIMING_FOCUS_REPORT=$focus_rpt"
     close $fh
     set setup_aggregate_status PASS
+    set best_setup_wns ""
+    set setup_stall_count 0
     for {set pass 1} {$pass <= $setup_passes} {incr pass} {
         set fh [open $rpt a]
         puts $fh "POSTROUTE_OPT_SETUP_PASS=$pass"
+        flush $fh
         if {[catch {optDesign -postRoute} err]} {
             puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_STATUS=REVIEW_REQUIRED"
             puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_ERROR=$err"
@@ -2137,7 +2205,42 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
         } else {
             puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_STATUS=PASS"
         }
+        set timing_snapshot [mptdc_signoff_capture_postroute_setup_snapshot setup $pass]
+        set setup_wns [dict get $timing_snapshot wns]
+        set setup_tns [dict get $timing_snapshot tns]
+        puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TIMING_REPORT=[dict get $timing_snapshot report]"
+        puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_WNS_NS=$setup_wns"
+        puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TNS_NS=$setup_tns"
+        if {[dict get $timing_snapshot status] ne "PASS"} {
+            puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TIMING_STATUS=REVIEW_REQUIRED"
+            puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TIMING_ERROR=[dict get $timing_snapshot error]"
+            set setup_aggregate_status REVIEW_REQUIRED
+        } else {
+            puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TIMING_STATUS=PASS"
+        }
+        set stop_reason ""
+        if {$setup_early_stop && $setup_wns ne ""} {
+            if {$setup_wns >= $setup_target} {
+                set stop_reason "target_slack_reached"
+            } elseif {$best_setup_wns eq "" || ($setup_wns - $best_setup_wns) >= $setup_min_improvement} {
+                set best_setup_wns $setup_wns
+                set setup_stall_count 0
+            } else {
+                incr setup_stall_count
+                if {$setup_stall_count >= $setup_stall_limit} {
+                    set stop_reason "setup_wns_plateau"
+                }
+            }
+        }
+        puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_STALL_COUNT=$setup_stall_count"
+        if {$stop_reason ne ""} {
+            puts $fh "POSTROUTE_OPT_SETUP_STOP_AFTER_PASS=$pass"
+            puts $fh "POSTROUTE_OPT_SETUP_STOP_REASON=$stop_reason"
+        }
         close $fh
+        if {$stop_reason ne ""} {
+            break
+        }
     }
     set fh [open $rpt a]
     puts $fh "POSTROUTE_OPT_setup_STATUS=$setup_aggregate_status"
