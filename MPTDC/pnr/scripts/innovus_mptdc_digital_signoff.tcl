@@ -3016,9 +3016,51 @@ proc mptdc_signoff_try_cts_policy_cmd {fh label cmd} {
     return 1
 }
 
+proc mptdc_signoff_select_interactive_constraint_mode {fh} {
+    if {[llength [info commands set_interactive_constraint_modes]] == 0} {
+        puts $fh "INTERACTIVE_CONSTRAINT_MODE_STATUS=UNAVAILABLE"
+        puts $fh "INTERACTIVE_CONSTRAINT_MODE_DETAIL=set_interactive_constraint_modes_not_present"
+        return 0
+    }
+    foreach mode {functional_mode TC_NOMINAL} {
+        if {![catch {set_interactive_constraint_modes $mode} err]} {
+            puts $fh "INTERACTIVE_CONSTRAINT_MODE_STATUS=PASS"
+            puts $fh "INTERACTIVE_CONSTRAINT_MODE=$mode"
+            return 1
+        }
+    }
+    if {[llength [info commands all_constraint_modes]] > 0} {
+        set modes [list]
+        if {![catch {set modes [all_constraint_modes]}]} {
+            foreach mode $modes {
+                if {$mode eq "" || $mode eq "0x0"} {
+                    continue
+                }
+                if {![catch {set_interactive_constraint_modes $mode} err]} {
+                    puts $fh "INTERACTIVE_CONSTRAINT_MODE_STATUS=PASS"
+                    puts $fh "INTERACTIVE_CONSTRAINT_MODE=$mode"
+                    return 1
+                }
+            }
+        }
+    }
+    puts $fh "INTERACTIVE_CONSTRAINT_MODE_STATUS=FAIL"
+    puts $fh "INTERACTIVE_CONSTRAINT_MODE_ERROR=$err"
+    return 0
+}
+
+proc mptdc_signoff_cts_target_fanout {root_fanout_limit} {
+    set default_target $root_fanout_limit
+    if {$default_target > 64} {
+        set default_target 64
+    }
+    return [mptdc_signoff_env_int MPTDC_CTS_CLK_SYS_TARGET_FANOUT $default_target]
+}
+
 proc mptdc_signoff_prepare_clk_sys_for_cts {policy_rpt} {
     set cleanup_rpt [file join [mptdc_signoff_report_dir] cts_clk_sys_constraint_cleanup.rpt]
     set fanout_limit [mptdc_signoff_env_int MPTDC_CTS_CLK_SYS_MAX_ROOT_FANOUT 100]
+    set target_fanout [mptdc_signoff_cts_target_fanout $fanout_limit]
     set pre_audit [mptdc_signoff_write_clk_sys_root_audit pre_cts_policy]
     set fh [open $cleanup_rpt w]
     puts $fh "# MPTDC clk_sys CTS constraint cleanup"
@@ -3027,14 +3069,23 @@ proc mptdc_signoff_prepare_clk_sys_for_cts {policy_rpt} {
     puts $fh "CLK_SYS_ROOT_PRE_CTS_AUDIT=$pre_audit"
     puts $fh "REMOVE_IDEAL_NETWORK_COMMAND_AVAILABLE=[expr {[llength [info commands remove_ideal_network]] > 0}]"
     puts $fh "CLK_SYS_ROOT_FANOUT_BEFORE=[mptdc_signoff_clk_sys_root_fanout]"
+    puts $fh "CLK_SYS_CTS_TARGET_FANOUT=$target_fanout"
 
-    puts $fh "CLK_SYS_CTS_CLEANUP_COMMAND=set_propagated_clock clk_sys"
-    puts $fh "CLK_SYS_CTS_CLEANUP_STATUS=SKIPPED"
-    puts $fh "CLK_SYS_CTS_CLEANUP_REASON=innovus_interactive_constraint_mode_not_enabled_for_signoff_wrapper"
+    mptdc_signoff_select_interactive_constraint_mode $fh
+    set clk_sys [list]
+    catch {set clk_sys [get_clocks -quiet clk_sys]}
+    if {[llength $clk_sys] > 0} {
+        mptdc_signoff_try_cts_policy_cmd $fh CLK_SYS_CTS_CLEANUP \
+            [list set_propagated_clock $clk_sys]
+    } else {
+        puts $fh {CLK_SYS_CTS_CLEANUP_COMMAND=set_propagated_clock [get_clocks clk_sys]}
+        puts $fh "CLK_SYS_CTS_CLEANUP_STATUS=SKIPPED_OR_FAILED"
+        puts $fh "CLK_SYS_CTS_CLEANUP_ERROR=clk_sys_clock_not_found"
+    }
 
     foreach cmd [list \
-        [list set_ccopt_property max_fanout $fanout_limit] \
-        [list set_ccopt_property cts_max_fanout $fanout_limit] \
+        [list set_ccopt_property max_fanout $target_fanout] \
+        [list set_ccopt_property cts_max_fanout $target_fanout] \
     ] {
         mptdc_signoff_try_cts_policy_cmd $fh CLK_SYS_CTS_FANOUT_PROPERTY $cmd
     }
