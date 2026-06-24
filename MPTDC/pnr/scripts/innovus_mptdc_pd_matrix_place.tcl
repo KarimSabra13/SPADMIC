@@ -79,7 +79,7 @@ proc mptdc_pnr_write_fast_tag_column_intent {{path ""}} {
     puts $fh "decision_field=FAST_TAG_TO_PD_TS_POSTROUTE_CLEAN"
     puts $fh "exact_taps=[mptdc_pnr_exact_fast_tag_taps]"
     puts $fh "exact_bits=[mptdc_pnr_exact_fast_tag_bits]"
-    puts $fh "rule=place_each_fast_tag_generator_near_matching_pd_column"
+    puts $fh "rule=place_each_fast_tag_generator_near_matching_pd_column_or_center_spine"
     puts $fh "rule=keep_bits_0_5_6_routes_short_and_local"
     close $fh
     return $path
@@ -177,6 +177,30 @@ proc mptdc_pnr_fast_tag_column_side_box {pd_box boxes side width gap} {
         set backend_llx [lindex [dict get $boxes backend] 0]
     }
 
+    if {$side eq "center"} {
+        set inner_llx [expr {$pd_llx + $gap}]
+        set inner_urx [expr {$pd_urx - $gap}]
+        set available [expr {$inner_urx - $inner_llx}]
+        if {$available <= 0.0} {
+            return [list [mptdc_pnr_snap $pd_llx] $pd_lly [mptdc_pnr_snap $pd_urx] $pd_ury]
+        }
+        if {$width > $available} {
+            set width $available
+        }
+        set center [expr {($pd_llx + $pd_urx) / 2.0}]
+        set llx [expr {$center - ($width / 2.0)}]
+        set urx [expr {$center + ($width / 2.0)}]
+        if {$llx < $inner_llx} {
+            set llx $inner_llx
+            set urx [expr {$llx + $width}]
+        }
+        if {$urx > $inner_urx} {
+            set urx $inner_urx
+            set llx [expr {$urx - $width}]
+        }
+        return [list [format %.3f [mptdc_pnr_snap $llx]] $pd_lly [format %.3f [mptdc_pnr_snap $urx]] $pd_ury]
+    }
+
     if {$side eq "west"} {
         set urx [expr {$pd_llx - $gap}]
         set llx [expr {$urx - $width}]
@@ -228,7 +252,7 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
     }
     set pd_box [dict get $boxes pd]
     set side [string tolower [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_SIDE east]]
-    if {$side ni {east west}} { set side east }
+    if {$side ni {east west center}} { set side east }
     set width [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_STRIP_WIDTH_UM 32.0]
     set gap [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_GAP_UM 2.0]
     set y_margin [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_Y_MARGIN_UM 1.0]

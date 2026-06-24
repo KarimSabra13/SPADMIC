@@ -1240,6 +1240,10 @@ proc mptdc_signoff_require_no_drv_violation_markers {paths} {
             if {$trimmed eq "" || [string match "#*" $trimmed]} {
                 continue
             }
+            if {[regexp -nocase {REPORT_STATUS=FAILED} $trimmed]} {
+                lappend bad "$path: $line"
+                break
+            }
             if {[regexp -nocase {no[[:space:]]+violations?[[:space:]]+found|0[[:space:]]+violations?} $trimmed]} {
                 continue
             }
@@ -1858,7 +1862,17 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
             close $fh
             continue
         }
-        if {[dict get $route_drc status] ne "PASS"} {
+        set verify_rpt [mptdc_signoff_route_command_report_path post_filler_verify "${cmd}_verify_drc"]
+        set verify_ok [mptdc_signoff_capture_candidates $verify_rpt \
+            "post-filler verify_drc after $cmd" [list {verify_drc} {verifyGeometry}]]
+        set verify_drc [mptdc_signoff_parse_verify_drc_report $verify_rpt]
+        set fh [open $rpt a]
+        puts $fh "POST_FILLER_ROUTE_VERIFY_REPORT=$verify_rpt"
+        puts $fh "POST_FILLER_ROUTE_VERIFY_CAPTURE_STATUS=[expr {$verify_ok ? "PASS" : "REVIEW_REQUIRED"}]"
+        puts $fh "POST_FILLER_ROUTE_VERIFY_DRC=[dict get $verify_drc total_violations]"
+        puts $fh "POST_FILLER_ROUTE_VERIFY_SHORTS=[dict get $verify_drc shorts]"
+        close $fh
+        if {[dict get $route_drc status] ne "PASS" || [dict get $verify_drc status] ne "PASS"} {
             set fh [open $rpt a]
             puts $fh "POST_FILLER_ROUTE_ATTEMPT_STATUS=REVIEW_REQUIRED"
             close $fh
@@ -1936,6 +1950,130 @@ proc mptdc_signoff_tc_closure_enabled {} {
     return [mptdc_signoff_env_truthy MPTDC_ENABLE_TC_CLOSURE]
 }
 
+proc mptdc_signoff_fast_tag_timing_focus_enabled {} {
+    return [mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_TIMING_FOCUS 0]
+}
+
+proc mptdc_signoff_collection_count {objects} {
+    if {$objects eq ""} { return 0 }
+    if {![catch {sizeof_collection $objects} count] && [string is integer -strict $count]} {
+        return $count
+    }
+    return [llength $objects]
+}
+
+proc mptdc_signoff_apply_fast_tag_timing_focus {} {
+    set rpt [file join [mptdc_signoff_report_dir] fast_tag_timing_focus.rpt]
+    set timing_rpt [file join [mptdc_signoff_report_dir] fast_tag_to_pd_timing_focus.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Fast-Tag-to-PD Timing Focus"
+    puts $fh "FAST_TAG_TIMING_FOCUS_ENABLED=[mptdc_signoff_fast_tag_timing_focus_enabled]"
+    puts $fh "FAST_TAG_TO_PD_TS_FALSE_PATH=NO"
+    puts $fh "FAST_TAG_TO_PD_TS_MULTICYCLE=NO"
+    if {![mptdc_signoff_fast_tag_timing_focus_enabled]} {
+        puts $fh "FAST_TAG_TIMING_FOCUS_STATUS=SKIPPED"
+        close $fh
+        return $rpt
+    }
+
+    set src_pins ""
+    set dst_pins ""
+    catch {set src_pins [get_pins -quiet -hierarchical *u_fast_tag_tag_o_reg*/Q]}
+    if {[mptdc_signoff_collection_count $src_pins] == 0} {
+        catch {set src_pins [get_pins -quiet -hierarchical *gen_fast_tag_col*u_fast_tag*tag_o_reg*/Q]}
+    }
+    catch {set dst_pins [get_pins -quiet -hierarchical *gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*/D]}
+    if {[mptdc_signoff_collection_count $dst_pins] == 0} {
+        catch {set dst_pins [get_pins -quiet -hierarchical *nfast_hit_latched_reg*/D]}
+    }
+
+    set src_count [mptdc_signoff_collection_count $src_pins]
+    set dst_count [mptdc_signoff_collection_count $dst_pins]
+    set critical_range [mptdc_signoff_env_double MPTDC_PNR_FAST_TAG_CRITICAL_RANGE_NS 0.080]
+    set max_transition [mptdc_signoff_env_double MPTDC_PNR_FAST_TAG_MAX_TRANSITION_NS 0.350]
+    puts $fh "FAST_TAG_SOURCE_Q_PIN_COUNT=$src_count"
+    puts $fh "NFAST_CAPTURE_D_PIN_COUNT=$dst_count"
+    puts $fh "FAST_TAG_CRITICAL_RANGE_NS=$critical_range"
+    puts $fh "FAST_TAG_MAX_TRANSITION_NS=$max_transition"
+    puts $fh "FAST_TAG_GROUP_NAME=FAST_TAG_TO_PD_TS_PHYSICAL"
+    puts $fh "FAST_TAG_TIMING_REPORT=$timing_rpt"
+
+    if {$src_count == 0 || $dst_count == 0} {
+        puts $fh "FAST_TAG_TIMING_FOCUS_STATUS=REVIEW_REQUIRED"
+        puts $fh "FAST_TAG_TIMING_FOCUS_ERROR=missing_source_or_endpoint_pins"
+        close $fh
+        return $rpt
+    }
+
+    set focus_status PASS
+    if {[catch {group_path -name FAST_TAG_TO_PD_TS_PHYSICAL -from $src_pins -to $dst_pins} err]} {
+        puts $fh "GROUP_PATH_STATUS=REVIEW_REQUIRED"
+        puts $fh "GROUP_PATH_ERROR=$err"
+        set focus_status REVIEW_REQUIRED
+    } else {
+        puts $fh "GROUP_PATH_STATUS=PASS"
+    }
+    if {[catch {set_critical_range $critical_range $src_pins} err]} {
+        puts $fh "SOURCE_CRITICAL_RANGE_STATUS=REVIEW_REQUIRED"
+        puts $fh "SOURCE_CRITICAL_RANGE_ERROR=$err"
+        set focus_status REVIEW_REQUIRED
+    } else {
+        puts $fh "SOURCE_CRITICAL_RANGE_STATUS=PASS"
+    }
+    if {[catch {set_max_transition $max_transition $src_pins} err]} {
+        puts $fh "SOURCE_MAX_TRANSITION_STATUS=REVIEW_REQUIRED"
+        puts $fh "SOURCE_MAX_TRANSITION_ERROR=$err"
+        set focus_status REVIEW_REQUIRED
+    } else {
+        puts $fh "SOURCE_MAX_TRANSITION_STATUS=PASS"
+    }
+    if {[catch {report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths 100 -path_type full_clock > $timing_rpt} err]} {
+        set tfh [open $timing_rpt w]
+        puts $tfh "REPORT_STATUS=FAILED"
+        puts $tfh "REPORT_ERROR=$err"
+        close $tfh
+        puts $fh "FAST_TAG_TIMING_REPORT_STATUS=REVIEW_REQUIRED"
+        puts $fh "FAST_TAG_TIMING_REPORT_ERROR=$err"
+        set focus_status REVIEW_REQUIRED
+    } else {
+        puts $fh "FAST_TAG_TIMING_REPORT_STATUS=PASS"
+    }
+    puts $fh "FAST_TAG_TIMING_FOCUS_STATUS=$focus_status"
+    close $fh
+    return $rpt
+}
+
+proc mptdc_signoff_capture_drv_reports {tran_rpt cap_rpt fanout_rpt} {
+    set bounded [mptdc_signoff_env_truthy MPTDC_SKIP_VERBOSE_DRV_ALL_VIOLATORS 0]
+    set mode [expr {$bounded ? "BOUNDED_NO_ALL_VIOLATORS" : "VERBOSE_ALL_VIOLATORS"}]
+    set mode_rpt [file join [mptdc_signoff_report_dir] drv_report_policy.rpt]
+    set fh [open $mode_rpt w]
+    puts $fh "# MPTDC DRV Report Policy"
+    puts $fh "DRV_REPORT_MODE=$mode"
+    puts $fh "MPTDC_SKIP_VERBOSE_DRV_ALL_VIOLATORS=[expr {$bounded ? 1 : 0}]"
+    puts $fh "DRV_MAX_TRANSITION_REPORT=$tran_rpt"
+    puts $fh "DRV_MAX_CAP_REPORT=$cap_rpt"
+    puts $fh "DRV_MAX_FANOUT_REPORT=$fanout_rpt"
+    close $fh
+
+    if {$bounded} {
+        mptdc_signoff_capture_candidates $tran_rpt \
+            "max transition bounded" [list {report_constraint -drv_violation_type max_transition} {report_constraint -max_transition} {reportTranViolation}]
+        mptdc_signoff_capture_candidates $cap_rpt \
+            "max capacitance bounded" [list {report_constraint -drv_violation_type max_capacitance} {report_constraint -max_capacitance} {reportCapViolation}]
+        mptdc_signoff_capture_candidates $fanout_rpt \
+            "max fanout bounded" [list {report_constraint -drv_violation_type max_fanout} {report_constraint -max_fanout} {reportFanoutViolation}]
+        return
+    }
+
+    mptdc_signoff_capture_candidates $tran_rpt \
+        "max transition" [list {report_constraint -max_transition -all_violators} {reportTranViolation}]
+    mptdc_signoff_capture_candidates $cap_rpt \
+        "max capacitance" [list {report_constraint -max_capacitance -all_violators} {reportCapViolation}]
+    mptdc_signoff_capture_candidates $fanout_rpt \
+        "max fanout" [list {report_constraint -max_fanout -all_violators} {reportFanoutViolation}]
+}
+
 proc mptdc_signoff_run_optional_postroute_opt {} {
     set rpt [file join [mptdc_signoff_report_dir] postroute_opt_status.rpt]
     set fh [open $rpt w]
@@ -1987,6 +2125,10 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
         "setOptMode -opt_hold_target_slack $hold_target"] {
         catch {eval $cmd}
     }
+    set focus_rpt [mptdc_signoff_apply_fast_tag_timing_focus]
+    set fh [open $rpt a]
+    puts $fh "POSTROUTE_OPT_FAST_TAG_TIMING_FOCUS_REPORT=$focus_rpt"
+    close $fh
     set setup_aggregate_status PASS
     for {set pass 1} {$pass <= $setup_passes} {incr pass} {
         set fh [open $rpt a]
@@ -3815,12 +3957,7 @@ proc mptdc_signoff_extract_and_sta {} {
     set tran_rpt [file join [mptdc_signoff_report_dir] drv_max_transition.rpt]
     set cap_rpt [file join [mptdc_signoff_report_dir] drv_max_cap.rpt]
     set fanout_rpt [file join [mptdc_signoff_report_dir] drv_max_fanout.rpt]
-    mptdc_signoff_capture_candidates $tran_rpt \
-        "max transition" [list {report_constraint -max_transition -all_violators} {reportTranViolation}]
-    mptdc_signoff_capture_candidates $cap_rpt \
-        "max capacitance" [list {report_constraint -max_capacitance -all_violators} {reportCapViolation}]
-    mptdc_signoff_capture_candidates $fanout_rpt \
-        "max fanout" [list {report_constraint -max_fanout -all_violators} {reportFanoutViolation}]
+    mptdc_signoff_capture_drv_reports $tran_rpt $cap_rpt $fanout_rpt
     mptdc_signoff_require_no_drv_violation_markers [list $tran_rpt $cap_rpt $fanout_rpt]
     mptdc_signoff_set_status DRV_STATUS PASS drv_reports_require_zero_violations
 }
