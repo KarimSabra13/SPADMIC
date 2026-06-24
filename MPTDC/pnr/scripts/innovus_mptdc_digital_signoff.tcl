@@ -2799,6 +2799,9 @@ proc mptdc_signoff_parse_cts_summary_metrics {path} {
             dict set metrics total_sinks $total_sinks
             set in_sink_counts 0
         }
+        if {[regexp -nocase {sink counts[[:space:]]*:.*total=([0-9]+)} $trimmed -> total_sinks]} {
+            dict set metrics total_sinks $total_sinks
+        }
         if {[regexp -nocase {clk_sys/[^[:space:]]*[[:space:]]+([-+]?[0-9]+[.][0-9]+)[[:space:]]+([-+]?[0-9]+[.][0-9]+)[[:space:]]+([-+]?[0-9]+[.][0-9]+)} $trimmed -> min_id max_id skew]} {
             dict set metrics clk_sys_insertion_min $min_id
             dict set metrics clk_sys_insertion_max $max_id
@@ -2851,6 +2854,14 @@ proc mptdc_signoff_merge_empty_metrics {primary fallback} {
         }
     }
     return $primary
+}
+
+proc mptdc_signoff_merge_metrics_from_files {metrics paths} {
+    foreach path $paths {
+        set file_metrics [mptdc_signoff_parse_cts_summary_metrics $path]
+        set metrics [mptdc_signoff_merge_empty_metrics $metrics $file_metrics]
+    }
+    return $metrics
 }
 
 proc mptdc_signoff_count_clk_sys_sinks {} {
@@ -2941,7 +2952,7 @@ proc mptdc_signoff_write_clk_sys_root_audit {tag} {
         PORT_COUNT {get_ports -quiet clk_sys}
         NET_COUNT {get_nets -quiet clk_sys}
         PIN_COUNT {get_pins -quiet -of_objects [get_clocks clk_sys]}
-        CCOPT_CLOCK_TREES {get_ccopt_clock_trees clk_sys}
+        CCOPT_CLOCK_TREES {get_ccopt_clock_trees}
     } {
         if {[catch {set objs [eval $cmd]} err]} {
             puts $fh "${label}_STATUS=UNAVAILABLE"
@@ -2964,7 +2975,11 @@ proc mptdc_signoff_write_clk_sys_root_audit {tag} {
         foreach attr {.name .num_loads .num_load_pins .is_ideal .is_dont_touch .is_clock .wires.status} {
             set value [mptdc_signoff_safe_db_value $net $attr]
             if {$value ne ""} {
-                puts $fh "CLK_SYS_NET_${idx}_${attr}=[mptdc_signoff_abbrev_db_value $value]"
+                if {$attr eq ".wires.status"} {
+                    puts $fh "CLK_SYS_NET_${idx}_${attr}=[mptdc_signoff_abbrev_db_value $value 8]"
+                } else {
+                    puts $fh "CLK_SYS_NET_${idx}_${attr}=[mptdc_signoff_abbrev_db_value $value]"
+                }
             }
         }
     }
@@ -3114,8 +3129,10 @@ proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
     mptdc_signoff_capture_candidates $detail_rpt \
         "CTS clock tree detail" [list {report_ccopt_clock_trees} {report_clock_tree}]
     set summary_metrics [mptdc_signoff_parse_cts_summary_metrics $summary_rpt]
-    set detail_metrics [mptdc_signoff_parse_cts_summary_metrics $detail_rpt]
-    set summary_metrics [mptdc_signoff_merge_empty_metrics $summary_metrics $detail_metrics]
+    set summary_metrics [mptdc_signoff_merge_metrics_from_files $summary_metrics [list \
+        $detail_rpt \
+        [file join [mptdc_signoff_result_dir] logs innovus_mptdc_digital_signoff.log] \
+        [file join [mptdc_signoff_result_dir] logs digital_signoff_wrapper.log]]]
     set total_dag_sinks [dict get $summary_metrics total_sinks]
     set sinks_expected [mptdc_signoff_count_clk_sys_sinks]
     set sink_count_source ""
