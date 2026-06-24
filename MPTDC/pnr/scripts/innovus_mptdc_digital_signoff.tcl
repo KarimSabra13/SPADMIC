@@ -2512,6 +2512,30 @@ proc mptdc_signoff_place_pd_matrix {} {
         mptdc_signoff_set_status PD_MATRIX_STATUS FAIL $rpt
         error "MPTDC_PD_GRID_PLACEMENT_HELPER_MISSING: report=$rpt"
     }
+    if {[llength [info commands mptdc_pnr_apply_fast_tag_column_placement]] > 0} {
+        set fast_tag_result [dict create]
+        set fast_tag_report [file join [mptdc_signoff_report_dir] fast_tag_column_placement.rpt]
+        if {[catch {set fast_tag_result [mptdc_pnr_apply_fast_tag_column_placement $fast_tag_report]} err opts]} {
+            set fh [open $rpt a]
+            puts $fh "FAST_TAG_COLUMN_PLACEMENT_STATUS=REVIEW_REQUIRED"
+            puts $fh "FAST_TAG_COLUMN_PLACEMENT_REPORT=$fast_tag_report"
+            puts $fh "FAST_TAG_COLUMN_PLACEMENT_ERROR=$err"
+            if {[dict exists $opts -errorinfo]} {
+                puts $fh "FAST_TAG_COLUMN_PLACEMENT_ERRORINFO_BEGIN"
+                puts $fh [dict get $opts -errorinfo]
+                puts $fh "FAST_TAG_COLUMN_PLACEMENT_ERRORINFO_END"
+            }
+            close $fh
+        } else {
+            set fh [open $rpt a]
+            puts $fh "FAST_TAG_COLUMN_PLACEMENT_STATUS=[dict get $fast_tag_result status]"
+            puts $fh "FAST_TAG_COLUMN_PLACEMENT_REPORT=[dict get $fast_tag_result report]"
+            puts $fh "FAST_TAG_COLUMN_CONSTRAINTS=[dict get $fast_tag_result constrained]"
+            puts $fh "FAST_TAG_COLUMN_PREPLACEMENTS=[dict get $fast_tag_result preplaced]"
+            puts $fh "FAST_TAG_COLUMN_FAILURES=[dict get $fast_tag_result failures]"
+            close $fh
+        }
+    }
     set fh [open $rpt a]
     puts $fh "PD_PHYSICAL_AUDIT_AFTER_PLACEMENT=YES"
     puts $fh "PD_MATRIX_STATUS=PROVISIONAL"
