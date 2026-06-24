@@ -1965,15 +1965,26 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     }
     set default_target [expr {$closure_mode ? 0.050 : 0.000}]
     set setup_target [mptdc_signoff_env_double MPTDC_POSTROUTE_SETUP_TARGET_SLACK_NS $default_target]
+    set default_hold_passes [expr {$closure_mode ? 2 : 1}]
+    set hold_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_HOLD_OPT_PASSES $default_hold_passes]
+    if {$hold_passes < 1} {
+        set hold_passes 1
+    }
+    set default_hold_target [expr {$closure_mode ? 0.020 : 0.000}]
+    set hold_target [mptdc_signoff_env_double MPTDC_POSTROUTE_HOLD_TARGET_SLACK_NS $default_hold_target]
     puts $fh "POSTROUTE_OPT_TC_CLOSURE_MODE=[expr {$closure_mode ? "ENABLED" : "DISABLED"}]"
     puts $fh "POSTROUTE_OPT_SETUP_PASSES=$setup_passes"
     puts $fh "POSTROUTE_OPT_SETUP_TARGET_SLACK_NS=$setup_target"
+    puts $fh "POSTROUTE_OPT_HOLD_PASSES=$hold_passes"
+    puts $fh "POSTROUTE_OPT_HOLD_TARGET_SLACK_NS=$hold_target"
     close $fh
     catch {setDelayCalMode -SIAware false}
     catch {setSIMode -separate_delta_delay_on_data false}
     foreach cmd [list \
         "setOptMode -setupTargetSlack $setup_target" \
-        "setOptMode -opt_setup_target_slack $setup_target"] {
+        "setOptMode -opt_setup_target_slack $setup_target" \
+        "setOptMode -holdTargetSlack $hold_target" \
+        "setOptMode -opt_hold_target_slack $hold_target"] {
         catch {eval $cmd}
     }
     set setup_aggregate_status PASS
@@ -1992,21 +2003,30 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     set fh [open $rpt a]
     puts $fh "POSTROUTE_OPT_setup_STATUS=$setup_aggregate_status"
     close $fh
-    foreach item {
-        {hold {optDesign -postRoute -hold}}
-        {drv {optDesign -postRoute -drv}}
-    } {
-        set label [lindex $item 0]
-        set cmd [lindex $item 1]
+    set hold_aggregate_status PASS
+    for {set pass 1} {$pass <= $hold_passes} {incr pass} {
         set fh [open $rpt a]
-        if {[catch {eval $cmd} err]} {
-            puts $fh "POSTROUTE_OPT_${label}_STATUS=REVIEW_REQUIRED"
-            puts $fh "POSTROUTE_OPT_${label}_ERROR=$err"
+        puts $fh "POSTROUTE_OPT_HOLD_PASS=$pass"
+        if {[catch {optDesign -postRoute -hold} err]} {
+            puts $fh "POSTROUTE_OPT_hold_PASS_${pass}_STATUS=REVIEW_REQUIRED"
+            puts $fh "POSTROUTE_OPT_hold_PASS_${pass}_ERROR=$err"
+            set hold_aggregate_status REVIEW_REQUIRED
         } else {
-            puts $fh "POSTROUTE_OPT_${label}_STATUS=PASS"
+            puts $fh "POSTROUTE_OPT_hold_PASS_${pass}_STATUS=PASS"
         }
         close $fh
     }
+    set fh [open $rpt a]
+    puts $fh "POSTROUTE_OPT_hold_STATUS=$hold_aggregate_status"
+    close $fh
+    set fh [open $rpt a]
+    if {[catch {optDesign -postRoute -drv} err]} {
+        puts $fh "POSTROUTE_OPT_drv_STATUS=REVIEW_REQUIRED"
+        puts $fh "POSTROUTE_OPT_drv_ERROR=$err"
+    } else {
+        puts $fh "POSTROUTE_OPT_drv_STATUS=PASS"
+    }
+    close $fh
 }
 
 proc mptdc_signoff_capture_route_gate_reports {drc_rpt regular_rpt special_rpt report_route_rpt} {
