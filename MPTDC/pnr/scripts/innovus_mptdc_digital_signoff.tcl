@@ -2039,6 +2039,25 @@ proc mptdc_signoff_route_gate_is_pass {drc_data regular_bad special_bad unrouted
         $unrouted == 0}]
 }
 
+proc mptdc_signoff_route_gate_review_allowed {drc_data regular_bad special_bad unrouted} {
+    if {![mptdc_signoff_env_truthy MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE]} {
+        return 0
+    }
+    set total [dict get $drc_data total_violations]
+    set shorts [dict get $drc_data shorts]
+    if {$total eq "UNKNOWN" || $shorts eq "UNKNOWN"} {
+        return 0
+    }
+    set max_review [mptdc_signoff_env_int MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 10]
+    return [expr {$total > 0 &&
+        $total <= $max_review &&
+        $shorts == 0 &&
+        ![lindex $regular_bad 0] &&
+        ![lindex $special_bad 0] &&
+        $unrouted ne "UNKNOWN" &&
+        $unrouted == 0}]
+}
+
 proc mptdc_signoff_route_gate_apply_router_drc {drc_data router_drc router_rpt} {
     set router_status [dict get $router_drc status]
     set router_total [dict get $router_drc total_violations]
@@ -2135,7 +2154,13 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     if {$unrouted eq "UNKNOWN" && !$regular_flag} {
         set unrouted 0
     }
-    set status [expr {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted] ? "PASS" : "FAIL"}]
+    set status FAIL
+    set review_allowed [mptdc_signoff_route_gate_review_allowed $drc_data $regular_bad $special_bad $unrouted]
+    if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
+        set status PASS
+    } elseif {$review_allowed} {
+        set status PROVISIONAL
+    }
     set verify_total $total
     set verify_shorts $shorts
     if {[dict exists $drc_data verify_drc_violations_raw]} {
@@ -2172,6 +2197,12 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "UNROUTED_NETS=$unrouted"
     puts $fh "PARTIAL_ROUTES=REVIEW_REPORT_ROUTE"
     puts $fh "ANTENNA_STATUS=$antenna_status"
+    puts $fh "ROUTE_DRC_REVIEW_CONTINUE_STATUS=[expr {$review_allowed ? "ENABLED" : "DISABLED"}]"
+    puts $fh "ROUTE_DRC_REVIEW_CONTINUE_ENV=MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE"
+    puts $fh "ROUTE_DRC_REVIEW_MAX_VIOLATIONS=[mptdc_signoff_env_int MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 10]"
+    if {$review_allowed} {
+        puts $fh "ROUTE_DRC_REVIEW_CLASS=NONSHORT_GEOMETRY_DRC_WITH_CLEAN_CONNECTIVITY"
+    }
     if {[dict exists $drc_data route_drc_source]} {
         puts $fh "ROUTE_DRC_SOURCE=[dict get $drc_data route_drc_source]"
     }
@@ -2183,7 +2214,7 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     }
     close $fh
     mptdc_signoff_set_status ROUTE_STATUS $status $rpt
-    if {$status ne "PASS"} {
+    if {$status eq "FAIL"} {
         error "MPTDC_ROUTE_GATE_FAILED: report=$rpt"
     }
     return $rpt
