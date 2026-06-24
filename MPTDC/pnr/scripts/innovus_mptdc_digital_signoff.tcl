@@ -2959,7 +2959,11 @@ proc mptdc_signoff_write_clk_sys_root_audit {tag} {
             puts $fh "${label}_ERROR=$err"
         } else {
             puts $fh "${label}=[llength $objs]"
-            set names [mptdc_signoff_object_names $objs]
+            if {$label eq "CCOPT_CLOCK_TREES"} {
+                set names $objs
+            } else {
+                set names [mptdc_signoff_object_names $objs]
+            }
             if {[llength $names] > 0} {
                 puts $fh "${label}_NAMES=[join [lrange $names 0 31] { }]"
             }
@@ -3024,19 +3028,13 @@ proc mptdc_signoff_prepare_clk_sys_for_cts {policy_rpt} {
     puts $fh "REMOVE_IDEAL_NETWORK_COMMAND_AVAILABLE=[expr {[llength [info commands remove_ideal_network]] > 0}]"
     puts $fh "CLK_SYS_ROOT_FANOUT_BEFORE=[mptdc_signoff_clk_sys_root_fanout]"
 
-    foreach cmd [list \
-        [list set_propagated_clock [get_clocks -quiet clk_sys]] \
-        [list set_propagated_clock [get_ports -quiet clk_sys]] \
-    ] {
-        mptdc_signoff_try_cts_policy_cmd $fh CLK_SYS_CTS_CLEANUP $cmd
-    }
+    puts $fh "CLK_SYS_CTS_CLEANUP_COMMAND=set_propagated_clock clk_sys"
+    puts $fh "CLK_SYS_CTS_CLEANUP_STATUS=SKIPPED"
+    puts $fh "CLK_SYS_CTS_CLEANUP_REASON=innovus_interactive_constraint_mode_not_enabled_for_signoff_wrapper"
 
     foreach cmd [list \
         [list set_ccopt_property max_fanout $fanout_limit] \
         [list set_ccopt_property cts_max_fanout $fanout_limit] \
-        [list set_ccopt_property target_max_fanout $fanout_limit] \
-        [list set_ccopt_property -clock_tree clk_sys max_fanout $fanout_limit] \
-        [list set_ccopt_property -clock_tree clk_sys cts_max_fanout $fanout_limit] \
     ] {
         mptdc_signoff_try_cts_policy_cmd $fh CLK_SYS_CTS_FANOUT_PROPERTY $cmd
     }
