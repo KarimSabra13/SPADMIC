@@ -253,6 +253,18 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
     set pd_box [dict get $boxes pd]
     set side [string tolower [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_SIDE east]]
     if {$side ni {east west center}} { set side east }
+    set center_allowed [mptdc_pnr_env_truthy MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD 0]
+    if {$side eq "center" &&
+        [mptdc_pnr_env_truthy MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 1] &&
+        !$center_allowed} {
+        puts $fh "FAST_TAG_COLUMN_PLACEMENT_STATUS=REVIEW_REQUIRED"
+        puts $fh "FAST_TAG_COLUMN_PLACEMENT_ERROR=center_strip_over_pd_requires_explicit_override"
+        puts $fh "FAST_TAG_COLUMN_SIDE=$side"
+        puts $fh "FAST_TAG_CENTER_OVER_PD_ALLOWED=0"
+        puts $fh "FAST_TAG_CENTER_OVER_PD_ENV=MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD"
+        close $fh
+        return [dict create status REVIEW_REQUIRED report $path constrained 0 preplaced 0 failures 1]
+    }
     set width [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_STRIP_WIDTH_UM 32.0]
     set gap [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_GAP_UM 2.0]
     set y_margin [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_Y_MARGIN_UM 1.0]

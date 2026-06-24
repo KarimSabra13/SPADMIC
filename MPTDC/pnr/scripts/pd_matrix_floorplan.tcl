@@ -206,11 +206,25 @@ proc mptdc_osc_pd_create_tile_region {group box members fh} {
     set region_status FAIL
     set constraint_type NONE
     if {$added > 0} {
+        set constraint_mode [string tolower [mptdc_pnr_env MPTDC_PNR_PD_TILE_CONSTRAINT_MODE auto]]
+        if {$constraint_mode ni {auto fence region box none}} {
+            set constraint_mode auto
+        }
         set use_fence [mptdc_pnr_env MPTDC_PNR_PD_TILE_USE_FENCE 1]
-        if {$use_fence && ![info exists ::mptdc_osc_pd_create_fence_usable]} {
+        if {$constraint_mode eq "auto"} {
+            set constraint_mode [expr {$use_fence ? "fence" : "region"}]
+        }
+        if {$constraint_mode eq "box"} {
+            set region_status PASS
+            set constraint_type BOX_ONLY
+        } elseif {$constraint_mode eq "none"} {
+            set region_status PASS
+            set constraint_type MEMBERS_ONLY
+        }
+        if {$constraint_mode eq "fence" && ![info exists ::mptdc_osc_pd_create_fence_usable]} {
             set ::mptdc_osc_pd_create_fence_usable [expr {[llength [info commands createFence]] > 0}]
         }
-        if {$use_fence && $::mptdc_osc_pd_create_fence_usable} {
+        if {$constraint_mode eq "fence" && $::mptdc_osc_pd_create_fence_usable} {
             if {![catch {createFence $group $llx $lly $urx $ury} err]} {
                 set region_status PASS
                 set constraint_type FENCE
@@ -219,7 +233,9 @@ proc mptdc_osc_pd_create_tile_region {group box members fh} {
                 set ::mptdc_osc_pd_create_fence_usable 0
             }
         }
-        if {$region_status ne "PASS" && ![catch {createRegion $group $llx $lly $urx $ury} err]} {
+        if {$constraint_mode in {fence region} &&
+            $region_status ne "PASS" &&
+            ![catch {createRegion $group $llx $lly $urx $ury} err]} {
             set region_status PASS
             set constraint_type REGION
         } else {

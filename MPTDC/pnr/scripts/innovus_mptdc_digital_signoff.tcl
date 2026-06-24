@@ -1813,6 +1813,158 @@ proc mptdc_signoff_parse_report_route_unrouted {path} {
     return $unrouted
 }
 
+proc mptdc_signoff_parse_checkplace_report {path} {
+    set result [dict create \
+        report $path \
+        command_failed 0 \
+        overlap UNKNOWN \
+        region_fence UNKNOWN \
+        not_of_fence UNKNOWN \
+        unplaced UNKNOWN \
+        placed UNKNOWN \
+        fixed UNKNOWN \
+        status FAIL]
+    if {![file exists $path]} {
+        dict set result reason missing_report
+        return $result
+    }
+
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {[regexp -nocase {REPORT_STATUS=FAILED} $trimmed]} {
+            dict set result command_failed 1
+        }
+        if {[regexp -nocase {Overlapping[[:space:]]+with[[:space:]]+other[[:space:]]+instance[[:space:]]*:[[:space:]]*([0-9]+)} $trimmed -> count]} {
+            dict set result overlap $count
+        }
+        if {[regexp -nocase {Region/Fence[[:space:]]+Violation[[:space:]]*:[[:space:]]*([0-9]+)} $trimmed -> count]} {
+            dict set result region_fence $count
+        }
+        if {[regexp -nocase {Not-of-Fence[[:space:]]+Violation[[:space:]]*:[[:space:]]*([0-9]+)} $trimmed -> count]} {
+            dict set result not_of_fence $count
+        }
+        if {[regexp -nocase {Placed[[:space:]]*=[[:space:]]*([0-9]+).*Fixed[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> placed fixed]} {
+            dict set result placed $placed
+            dict set result fixed $fixed
+        } elseif {[regexp -nocase {Placed[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> placed]} {
+            dict set result placed $placed
+        }
+        if {[regexp -nocase {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> count]} {
+            dict set result unplaced $count
+        }
+    }
+    close $fh
+
+    foreach key {overlap region_fence not_of_fence unplaced} {
+        if {[dict get $result $key] eq "UNKNOWN"} {
+            dict set result $key 0
+        }
+    }
+    if {![dict get $result command_failed] &&
+        [dict get $result overlap] == 0 &&
+        [dict get $result region_fence] == 0 &&
+        [dict get $result not_of_fence] == 0 &&
+        [dict get $result unplaced] == 0} {
+        dict set result status PASS
+    }
+    return $result
+}
+
+proc mptdc_signoff_checkplace_is_clean {data} {
+    return [expr {![dict get $data command_failed] &&
+        [dict get $data overlap] == 0 &&
+        [dict get $data region_fence] == 0 &&
+        [dict get $data not_of_fence] == 0 &&
+        [dict get $data unplaced] == 0}]
+}
+
+proc mptdc_signoff_write_placement_gate_status {rpt label data recovery_rpt} {
+    set clean [mptdc_signoff_checkplace_is_clean $data]
+    set dirty_allowed [mptdc_signoff_env_truthy MPTDC_ALLOW_DIRTY_PLACEMENT_ROUTE 0]
+    set status FAIL
+    if {$clean} {
+        set status PASS
+    } elseif {$dirty_allowed} {
+        set status PROVISIONAL
+    }
+
+    set fh [open $rpt w]
+    puts $fh "PLACEMENT_GATE_LABEL=$label"
+    puts $fh "PLACEMENT_STATUS=$status"
+    puts $fh "CHECKPLACE_REPORT=[dict get $data report]"
+    puts $fh "CHECKPLACE_COMMAND_FAILED=[dict get $data command_failed]"
+    puts $fh "OVERLAPPING_WITH_OTHER_INSTANCE=[dict get $data overlap]"
+    puts $fh "REGION_FENCE_VIOLATIONS=[dict get $data region_fence]"
+    puts $fh "NOT_OF_FENCE_VIOLATIONS=[dict get $data not_of_fence]"
+    puts $fh "UNPLACED_CELLS=[dict get $data unplaced]"
+    puts $fh "PLACED_CELLS=[dict get $data placed]"
+    puts $fh "FIXED_CELLS=[dict get $data fixed]"
+    puts $fh "DIRTY_PLACEMENT_ROUTE_ALLOWED=[expr {$dirty_allowed ? 1 : 0}]"
+    puts $fh "DIRTY_PLACEMENT_ROUTE_ENV=MPTDC_ALLOW_DIRTY_PLACEMENT_ROUTE"
+    if {$recovery_rpt ne ""} {
+        puts $fh "PLACEMENT_GATE_RECOVERY_REPORT=$recovery_rpt"
+    }
+    close $fh
+    return $status
+}
+
+proc mptdc_signoff_capture_placement_gate {label check_rpt status_rpt {allow_recovery 1}} {
+    mptdc_signoff_capture_candidates $check_rpt \
+        "$label checkPlace" [list {checkPlace} {checkDesign -all}]
+    set data [mptdc_signoff_parse_checkplace_report $check_rpt]
+    set recovery_rpt ""
+
+    if {$allow_recovery &&
+        ![mptdc_signoff_checkplace_is_clean $data] &&
+        [mptdc_signoff_env_truthy MPTDC_PLACEMENT_GATE_RECOVERY 1]} {
+        set recovery_rpt [file join [mptdc_signoff_report_dir] "${label}_placement_recovery.rpt"]
+        set fh [open $recovery_rpt w]
+        puts $fh "PLACEMENT_GATE_LABEL=$label"
+        puts $fh "INITIAL_CHECKPLACE_REPORT=$check_rpt"
+        puts $fh "INITIAL_OVERLAPS=[dict get $data overlap]"
+        puts $fh "INITIAL_REGION_FENCE_VIOLATIONS=[dict get $data region_fence]"
+        puts $fh "INITIAL_NOT_OF_FENCE_VIOLATIONS=[dict get $data not_of_fence]"
+        puts $fh "INITIAL_UNPLACED_CELLS=[dict get $data unplaced]"
+        close $fh
+
+        foreach cmd {{refinePlace -preserveRouting true -hardFence false} {refinePlace}} {
+            set fh [open $recovery_rpt a]
+            puts $fh "RECOVERY_COMMAND=$cmd"
+            close $fh
+            if {[catch {uplevel #0 $cmd} err]} {
+                set fh [open $recovery_rpt a]
+                puts $fh "RECOVERY_COMMAND_STATUS=FAIL"
+                puts $fh "RECOVERY_COMMAND_ERROR=$err"
+                close $fh
+                continue
+            }
+            set fh [open $recovery_rpt a]
+            puts $fh "RECOVERY_COMMAND_STATUS=PASS"
+            close $fh
+            break
+        }
+
+        set recovered_check [file join [mptdc_signoff_report_dir] "${label}_check_place_after_recovery.rpt"]
+        mptdc_signoff_capture_candidates $recovered_check \
+            "$label checkPlace after placement recovery" [list {checkPlace} {checkDesign -all}]
+        set data [mptdc_signoff_parse_checkplace_report $recovered_check]
+        set fh [open $recovery_rpt a]
+        puts $fh "RECOVERED_CHECKPLACE_REPORT=$recovered_check"
+        puts $fh "RECOVERED_OVERLAPS=[dict get $data overlap]"
+        puts $fh "RECOVERED_REGION_FENCE_VIOLATIONS=[dict get $data region_fence]"
+        puts $fh "RECOVERED_NOT_OF_FENCE_VIOLATIONS=[dict get $data not_of_fence]"
+        puts $fh "RECOVERED_UNPLACED_CELLS=[dict get $data unplaced]"
+        close $fh
+    }
+
+    set status [mptdc_signoff_write_placement_gate_status $status_rpt $label $data $recovery_rpt]
+    dict set data status $status
+    dict set data status_report $status_rpt
+    dict set data recovery_report $recovery_rpt
+    return $data
+}
+
 proc mptdc_signoff_route_command_report_path {prefix cmd} {
     set safe $cmd
     regsub -all {[^[:alnum:]]+} $safe {_} safe
@@ -3122,18 +3274,19 @@ proc mptdc_signoff_place_design {} {
     mptdc_signoff_capture_candidates $top100 \
         "TC pre-CTS top100" [list {report_timing -view TC_NOMINAL -max_paths 100} {report_timing -max_paths 100}]
     mptdc_signoff_stop_if_wns_below $timing -1.0 pre_cts $top100
-    mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] check_place_post_place.rpt] \
-        "post-place check" [list {checkPlace} {checkDesign -all}]
+    set place_gate [mptdc_signoff_capture_placement_gate \
+        post_place \
+        [file join [mptdc_signoff_report_dir] check_place_post_place.rpt] \
+        [file join [mptdc_signoff_report_dir] placement_status.rpt] \
+        1]
+    set placement_status [dict get $place_gate status]
+    mptdc_signoff_set_status PLACEMENT_STATUS $placement_status [dict get $place_gate status_report]
+    if {$placement_status eq "FAIL"} {
+        error "MPTDC_PLACEMENT_GATE_FAILED: report=[dict get $place_gate status_report]"
+    }
     catch {defOut [file join [mptdc_signoff_def_dir] 02_place.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 02_place.enc]}
     mptdc_signoff_audit_pd_matrix_physical
-    set rpt [file join [mptdc_signoff_report_dir] placement_status.rpt]
-    set fh [open $rpt w]
-    puts $fh "PLACEMENT_STATUS=PASS"
-    puts $fh "UNPLACED_CELLS=REQUIRE_CHECK_PLACE_ZERO"
-    puts $fh "UNPLACED_TERMS=REQUIRE_CHECK_PLACE_ZERO"
-    close $fh
-    mptdc_signoff_set_status PLACEMENT_STATUS PASS $rpt
 }
 
 proc mptdc_signoff_insert_row_infra {} {
@@ -4002,7 +4155,39 @@ proc mptdc_signoff_route_design {} {
         }
     }
     close $rfh
-    routeDesign
+    set place_gate [mptdc_signoff_capture_placement_gate \
+        pre_route \
+        [file join [mptdc_signoff_report_dir] check_place_pre_route.rpt] \
+        [file join [mptdc_signoff_report_dir] placement_pre_route_status.rpt] \
+        1]
+    if {[dict get $place_gate status] eq "FAIL"} {
+        mptdc_signoff_set_status ROUTE_STATUS FAIL [dict get $place_gate status_report]
+        error "MPTDC_PRE_ROUTE_PLACEMENT_GATE_FAILED: report=[dict get $place_gate status_report]"
+    }
+
+    set route_cmd [mptdc_signoff_env MPTDC_ROUTE_DESIGN_COMMAND ""]
+    if {$route_cmd eq ""} {
+        if {[mptdc_signoff_env_truthy MPTDC_ROUTE_DESIGN_PLACEMENT_CHECK 1]} {
+            set route_cmd {routeDesign -placementCheck}
+        } else {
+            set route_cmd {routeDesign}
+        }
+    }
+    set route_cmd_rpt [file join [mptdc_signoff_report_dir] route_command_status.rpt]
+    set rcfh [open $route_cmd_rpt w]
+    puts $rcfh "ROUTE_COMMAND=$route_cmd"
+    puts $rcfh "ROUTE_DESIGN_PLACEMENT_CHECK=[expr {[mptdc_signoff_env_truthy MPTDC_ROUTE_DESIGN_PLACEMENT_CHECK 1] ? 1 : 0}]"
+    close $rcfh
+    if {[catch {uplevel #0 $route_cmd} route_err]} {
+        set rcfh [open $route_cmd_rpt a]
+        puts $rcfh "ROUTE_COMMAND_STATUS=FAIL"
+        puts $rcfh "ROUTE_COMMAND_ERROR=$route_err"
+        close $rcfh
+        error "MPTDC_ROUTE_COMMAND_FAILED: report=$route_cmd_rpt error=$route_err"
+    }
+    set rcfh [open $route_cmd_rpt a]
+    puts $rcfh "ROUTE_COMMAND_STATUS=PASS"
+    close $rcfh
     set antenna_rpt [file join [mptdc_signoff_report_dir] antenna.rpt]
     mptdc_signoff_run_optional_postroute_opt
     mptdc_signoff_insert_final_fillers

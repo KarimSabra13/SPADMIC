@@ -16,11 +16,11 @@ proc mptdc_pnr_route_signal_bottom_layer {} {
 }
 
 proc mptdc_pnr_route_signal_top_layer {} {
-    return [mptdc_pnr_env MPTDC_PNR_SIGNAL_TOP_LAYER MET3]
+    return [mptdc_pnr_env MPTDC_PNR_SIGNAL_TOP_LAYER MET4]
 }
 
 proc mptdc_pnr_route_effective_top_floor_layer {} {
-    return [mptdc_pnr_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]
+    return [mptdc_pnr_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER MET4]
 }
 
 proc mptdc_pnr_route_layer_index {layer} {
@@ -86,7 +86,7 @@ proc mptdc_pnr_route_protection_rules {} {
         {avoid_wide_clk_sys_backend_routes_over_pd_island} \
         {do_not_buffer_raw_ro_nets} \
         {do_not_resize_or_replace_buhdx4_buhdx12_phase_root_drivers_without_review} \
-        {use_m1_m2_m3_for_signal_routing} \
+        {use_m1_through_m4_for_signal_routing} \
         [mptdc_pnr_route_power_top_policy] \
     ]
 }
