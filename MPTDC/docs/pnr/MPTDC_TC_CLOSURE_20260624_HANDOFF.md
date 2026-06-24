@@ -269,13 +269,35 @@ showed `fixed_status=SKIPPED` for PD tile leaves, meaning the server shell had
 carried forward the relaxed timing experiment setting
 `MPTDC_PNR_PD_TILE_FIX_LEAVES=0`.
 
+### Roauditfix1 Tcl Arity Failure
+
+Run:
+`20260624_mptdc_digital_signoff_tc_clkcts_9360dfcd_roauditfix1`.
+
+The run confirmed that `MPTDC_PNR_PD_TILE_FIX_LEAVES=1` was active. The PD
+floorplan report changed from `fixed_status=SKIPPED` to `fixed_status=PASS`
+for PD tile leaves.
+
+The run stopped before the RO/phase audit files were created:
+
+```text
+PHASE_BUFFER_STATUS=FAIL
+MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=phase_buffer_placement
+error=wrong # args: should be "mptdc_signoff_env_truthy name"
+```
+
+Cause: newer code called `mptdc_signoff_env_truthy` with an optional default
+argument, but the helper still accepted only one argument. The fix is to make
+`mptdc_signoff_env_truthy` accept `{default_value 0}` and route through
+`mptdc_signoff_env`.
+
 ## Active Server Run To Watch
 
 Previous failed run:
-`20260624_mptdc_digital_signoff_tc_clkcts_bb76d407_myorient1`.
+`20260624_mptdc_digital_signoff_tc_clkcts_9360dfcd_roauditfix1`.
 
-Next intended run after pulling the RO-audit fix:
-`20260624_mptdc_digital_signoff_tc_clkcts_<new_short_sha>_roauditfix1`.
+Next intended run after pulling the Tcl arity fix:
+`20260624_mptdc_digital_signoff_tc_clkcts_<new_short_sha>_truthyfix1`.
 
 Launch state expected on the server:
 
@@ -292,7 +314,7 @@ export MPTDC_PNR_FAST_TAG_COLUMN_ORIENT=AUTO
 export MPTDC_PNR_PHASE_BUF_ORIENT=AUTO
 export MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES="MY R0 MX R180"
 export MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP=0
-export SIGNOFF_RUN=20260624_mptdc_digital_signoff_tc_clkcts_$(git rev-parse --short=8 HEAD)_roauditfix1
+export SIGNOFF_RUN=20260624_mptdc_digital_signoff_tc_clkcts_$(git rev-parse --short=8 HEAD)_truthyfix1
 
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
   "$SIGNOFF_RUN" \

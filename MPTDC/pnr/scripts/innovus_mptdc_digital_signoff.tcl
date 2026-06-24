@@ -12,11 +12,8 @@ proc mptdc_signoff_env {name default_value} {
     return $default_value
 }
 
-proc mptdc_signoff_env_truthy {name} {
-    if {![info exists ::env($name)]} {
-        return 0
-    }
-    set value [string tolower $::env($name)]
+proc mptdc_signoff_env_truthy {name {default_value 0}} {
+    set value [string tolower [mptdc_signoff_env $name $default_value]]
     return [expr {$value in {1 yes true on}}]
 }
 
