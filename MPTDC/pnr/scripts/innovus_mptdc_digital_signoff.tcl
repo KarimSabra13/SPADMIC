@@ -1947,6 +1947,16 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
         close $fh
         return
     }
+    if {[catch {mptdc_signoff_configure_post_route_tc_sta} sta_policy]} {
+        puts $fh "POSTROUTE_OPT_TIMING_POLICY_STATUS=FAIL"
+        puts $fh "POSTROUTE_OPT_TIMING_POLICY_ERROR=$sta_policy"
+        close $fh
+        error "MPTDC_POSTROUTE_OPT_TIMING_POLICY_FAILED: $sta_policy"
+    }
+    puts $fh "POSTROUTE_OPT_TIMING_POLICY_STATUS=PASS"
+    puts $fh "POSTROUTE_OPT_TIMING_POLICY_REPORT=$sta_policy"
+    puts $fh "POSTROUTE_OPT_ANALYSIS_TYPE=onChipVariation"
+    puts $fh "POSTROUTE_OPT_CPPR=both"
     set closure_mode [mptdc_signoff_tc_closure_enabled]
     set default_setup_passes [expr {$closure_mode ? 3 : 1}]
     set setup_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_PASSES $default_setup_passes]
