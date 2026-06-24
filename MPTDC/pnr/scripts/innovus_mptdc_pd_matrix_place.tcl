@@ -258,6 +258,7 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
     set y_margin [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_Y_MARGIN_UM 1.0]
     set fix_cells [mptdc_pnr_env_truthy MPTDC_PNR_FAST_TAG_COLUMN_FIX 0]
     set preplace [mptdc_pnr_env_truthy MPTDC_PNR_FAST_TAG_COLUMN_PREPLACE 1]
+    set orient [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_ORIENT AUTO]
     set strip_box [mptdc_pnr_fast_tag_column_side_box $pd_box $boxes $side $width $gap]
     set strip_llx [lindex $strip_box 0]
     set strip_urx [lindex $strip_box 2]
@@ -284,6 +285,7 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
     puts $fh "FAST_TAG_COLUMN_RECORDS=[llength $records]"
     puts $fh "FAST_TAG_COLUMN_PREPLACE=$preplace"
     puts $fh "FAST_TAG_COLUMN_FIX=$fix_cells"
+    puts $fh "FAST_TAG_COLUMN_ORIENT=$orient"
 
     for {set col 0} {$col < 8} {incr col} {
         set col_records [list]
@@ -314,9 +316,16 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
                 incr constrained
             }
             if {$preplace} {
-                set cmd [list placeInstance $inst $x $y R0]
-                if {$fix_cells} { lappend cmd -fixed }
-                if {[catch {eval $cmd} err_place]} {
+                if {[llength [info commands mptdc_pnr_place_instance_row_legal]] > 0} {
+                    set place_result [mptdc_pnr_place_instance_row_legal $inst $x $y $orient $fix_cells]
+                    if {[dict get $place_result status] eq "PASS"} {
+                        incr preplaced_count
+                        puts $fh "  preplaced inst=$inst x=$x y=$y command=[dict get $place_result command] fixed_status=[dict get $place_result fixed_status]"
+                    } else {
+                        incr failures
+                        puts $fh "  preplace_fail inst=$inst x=$x y=$y errors=[dict get $place_result errors]"
+                    }
+                } elseif {[catch {placeInstance $inst $x $y} err_place]} {
                     incr failures
                     puts $fh "  preplace_fail inst=$inst x=$x y=$y error=$err_place"
                 } else {

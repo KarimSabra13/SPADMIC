@@ -950,7 +950,7 @@ proc mptdc_signoff_set_default_phase_buffer_origins {} {
     }
 
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_PITCH_UM $pitch $force
-    mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_ORIENT R0 $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_ORIENT AUTO $force
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_ISO_X $fast_x $force
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_ISO_Y $fast_iso_y $force
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_DRV_X $fast_x $force

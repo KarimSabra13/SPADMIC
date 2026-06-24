@@ -2,6 +2,14 @@
 # O0 PD matrix regular-grid placement intent
 # =============================================================================
 
+set mptdc_pd_matrix_script_dir [file dirname [file normalize [info script]]]
+set mptdc_pd_matrix_place_utils [file join $mptdc_pd_matrix_script_dir innovus_mptdc_place_utils.tcl]
+if {[file exists $mptdc_pd_matrix_place_utils]} {
+    source $mptdc_pd_matrix_place_utils
+}
+unset mptdc_pd_matrix_script_dir
+unset mptdc_pd_matrix_place_utils
+
 proc mptdc_osc_pd_parse_ns_nf {inst ns_var nf_var} {
     upvar 1 $ns_var ns
     upvar 1 $nf_var nf
@@ -266,6 +274,7 @@ proc mptdc_osc_pd_preplace_tile_members {members box fh} {
     set row_h [mptdc_pnr_env MPTDC_PNR_PD_TILE_ROW_HEIGHT_UM 4.48]
     set spacing [mptdc_pnr_env MPTDC_PNR_PD_TILE_MEMBER_SPACING_UM 0.0]
     set fix_leaves [mptdc_pnr_env MPTDC_PNR_PD_TILE_FIX_LEAVES 1]
+    set orient [mptdc_pnr_env MPTDC_PNR_PD_TILE_ORIENT AUTO]
     set tile_w [expr {$urx - $llx}]
     set tile_h [expr {$ury - $lly}]
 
@@ -319,23 +328,23 @@ proc mptdc_osc_pd_preplace_tile_members {members box fh} {
         foreach entry $row_entries {
             set width [lindex $entry 0]
             set member [lindex $entry 2]
-            set cmd [list placeInstance $member $x $y R0]
-            if {$fix_leaves} { lappend cmd -fixed }
-            if {[catch {eval $cmd} err]} {
-                if {$fix_leaves} {
-                    set fallback [list placeInstance $member $x $y R0]
-                    if {![catch {eval $fallback} err2]} {
-                        incr preplaced
-                    } else {
-                        incr failures
-                        puts $fh "  leaf_preplace_warning $member x=$x y=$y: $err ; fallback: $err2"
-                    }
+            if {[llength [info commands mptdc_pnr_place_instance_row_legal]] > 0} {
+                set place_result [mptdc_pnr_place_instance_row_legal $member $x $y $orient $fix_leaves]
+                if {[dict get $place_result status] eq "PASS"} {
+                    incr preplaced
+                    puts $fh "  leaf_preplaced $member x=$x y=$y orient=$orient command=[dict get $place_result command] fixed_status=[dict get $place_result fixed_status]"
                 } else {
                     incr failures
-                    puts $fh "  leaf_preplace_warning $member x=$x y=$y: $err"
+                    puts $fh "  leaf_preplace_warning $member x=$x y=$y orient=$orient errors=[dict get $place_result errors]"
                 }
             } else {
-                incr preplaced
+                set cmd [list placeInstance $member $x $y]
+                if {[catch {eval $cmd} err]} {
+                    incr failures
+                    puts $fh "  leaf_preplace_warning $member x=$x y=$y: $err"
+                } else {
+                    incr preplaced
+                }
             }
             set x [mptdc_pnr_snap [expr {$x + $width + $spacing}]]
         }

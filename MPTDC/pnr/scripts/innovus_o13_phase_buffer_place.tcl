@@ -8,6 +8,13 @@
 # =============================================================================
 
 set ::env(MPTDC_O13_SOURCE_ONLY) 1
+set mptdc_o13_place_script_dir [file dirname [file normalize [info script]]]
+set mptdc_o13_place_utils [file join $mptdc_o13_place_script_dir innovus_mptdc_place_utils.tcl]
+if {[file exists $mptdc_o13_place_utils]} {
+    source $mptdc_o13_place_utils
+}
+unset mptdc_o13_place_script_dir
+unset mptdc_o13_place_utils
 source [file join [file dirname [file normalize [info script]]] innovus_o13_phase_buffer_reports.tcl]
 
 proc mptdc_o13_env {name default_value} {
@@ -42,6 +49,15 @@ proc mptdc_o13_phase_stage_instances {family stage_role} {
 }
 
 proc mptdc_o13_place_one {inst x y orient fh} {
+    if {[llength [info commands mptdc_pnr_place_instance_row_legal]] > 0} {
+        set place_result [mptdc_pnr_place_instance_row_legal $inst $x $y $orient 0]
+        if {[dict get $place_result status] eq "PASS"} {
+            puts $fh "placed,$inst,$x,$y,$orient,[mptdc_o12b_csv [dict get $place_result command]],"
+            return 1
+        }
+        puts $fh "place_attempt_failed,$inst,$x,$y,$orient,,[mptdc_o12b_csv [dict get $place_result errors]]"
+        return 0
+    }
     foreach cmd [list \
         [list placeInstance $inst $x $y $orient] \
         [list placeInstance $inst $x $y $orient -fixed]] {
@@ -73,7 +89,7 @@ proc mptdc_o13_apply_phase_buffer_placement {mode} {
     puts $fh ""
 
     set pitch [mptdc_o13_env MPTDC_O13_PHASE_BUF_PITCH_UM 4.0]
-    set orient [mptdc_o13_env MPTDC_O13_PHASE_BUF_ORIENT R0]
+    set orient [mptdc_o13_env MPTDC_O13_PHASE_BUF_ORIENT AUTO]
     puts $fh "pitch_um=$pitch"
     puts $fh "orient=$orient"
 
