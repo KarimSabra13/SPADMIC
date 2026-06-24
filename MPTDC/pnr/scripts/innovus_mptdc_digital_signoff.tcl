@@ -3064,6 +3064,78 @@ proc mptdc_signoff_clk_sys_cts_spec_forbidden_regex {} {
     return {(clk_osc|RO_tune4|u_ro_tune4|mptdc_phase_buffer_bank|phase_buf|gen_phase_buf|u_core_u_phase_buf)}
 }
 
+proc mptdc_signoff_ccopt_clock_tree_names {} {
+    if {[llength [info commands get_ccopt_clock_trees]] == 0} {
+        return ""
+    }
+    if {[catch {set trees [get_ccopt_clock_trees]}]} {
+        return ""
+    }
+    return $trees
+}
+
+proc mptdc_signoff_ccopt_tree_set_valid {trees forbidden_regex} {
+    if {$trees eq ""} {
+        return 0
+    }
+    set tree_text [join $trees { }]
+    if {![regexp {(^|[[:space:]])clk_sys($|[[:space:]])} $tree_text]} {
+        return 0
+    }
+    if {[regexp $forbidden_regex $tree_text]} {
+        return 0
+    }
+    if {[llength $trees] != 1} {
+        return 0
+    }
+    return 1
+}
+
+proc mptdc_signoff_filter_clk_sys_cts_spec {input_path output_path forbidden_regex} {
+    set in [open $input_path r]
+    set out [open $output_path w]
+    set command ""
+    set total 0
+    set kept 0
+    set dropped_forbidden 0
+    set dropped_clk_sys_ideal 0
+    set incomplete 0
+
+    while {[gets $in line] >= 0} {
+        append command $line "\n"
+        if {![info complete $command]} {
+            continue
+        }
+        incr total
+        set trimmed [string trim $command]
+        set drop 0
+        if {[regexp $forbidden_regex $command]} {
+            set drop 1
+            incr dropped_forbidden
+        } elseif {[regexp -nocase {^[[:space:]]*set_ccopt_property[[:space:]]+ideal_net[[:space:]].*-net[[:space:]]+clk_sys[[:space:]]+true} $trimmed]} {
+            set drop 1
+            incr dropped_clk_sys_ideal
+        }
+        if {!$drop} {
+            puts -nonewline $out $command
+            incr kept
+        }
+        set command ""
+    }
+
+    if {[string trim $command] ne ""} {
+        incr incomplete
+    }
+    close $in
+    close $out
+    return [dict create \
+        TOTAL_COMMANDS $total \
+        KEPT_COMMANDS $kept \
+        DROPPED_FORBIDDEN_COMMANDS $dropped_forbidden \
+        DROPPED_CLK_SYS_IDEAL_COMMANDS $dropped_clk_sys_ideal \
+        INCOMPLETE_COMMANDS $incomplete]
+}
+
 proc mptdc_signoff_try_cts_policy_cmd {fh label cmd} {
     puts $fh "${label}_COMMAND=$cmd"
     if {[catch {{*}$cmd} err]} {
@@ -3175,6 +3247,7 @@ proc mptdc_signoff_prepare_clk_sys_for_cts {policy_rpt} {
 
 proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
     set spec_path [file join [mptdc_signoff_work_dir] clk_sys_cts.spec]
+    set raw_spec_path [file join [mptdc_signoff_work_dir] clk_sys_cts.generic.spec]
     set audit_path [file join [mptdc_signoff_report_dir] cts_clk_sys_spec_audit.rpt]
     set forbidden_regex [mptdc_signoff_clk_sys_cts_spec_forbidden_regex]
     set status PROVISIONAL
@@ -3182,13 +3255,16 @@ proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
     set detail ""
     set has_clk_sys 0
     set has_forbidden 0
+    set filtered_has_clk_sys 0
+    set filtered_has_forbidden 0
     set allow_generic [mptdc_signoff_env_truthy MPTDC_ALLOW_GENERIC_CCOPT_WITH_RO_CLOCKS]
     set require_clk_sys_only [mptdc_signoff_env_truthy MPTDC_REQUIRE_CLK_SYS_ONLY_CTS_SPEC]
     set strict [expr {$require_clk_sys_only || !$allow_generic}]
 
     set fh [open $audit_path w]
     puts $fh "# MPTDC clk_sys-only CTS spec audit"
-    puts $fh "SPEC_PATH=$spec_path"
+    puts $fh "SELECTED_SPEC_PATH=$spec_path"
+    puts $fh "GENERIC_SPEC_PATH=$raw_spec_path"
     puts $fh "FORBIDDEN_REGEX=$forbidden_regex"
     puts $fh "ALLOW_GENERIC_CCOPT_WITH_RO_CLOCKS=$allow_generic"
     puts $fh "REQUIRE_CLK_SYS_ONLY_SPEC_ENV=$require_clk_sys_only"
@@ -3196,23 +3272,38 @@ proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
     puts $fh "NOTE=Innovus_22_33_create_ccopt_clock_tree_spec_does_not_accept_clock_tree_selection_options"
 
     foreach cmd [list \
-        [list create_ccopt_clock_tree_spec -file $spec_path -views [list TC_NOMINAL]] \
-        [list create_ccopt_clock_tree_spec -file $spec_path] \
+        [list create_ccopt_clock_tree_spec -file $raw_spec_path -views [list TC_NOMINAL]] \
+        [list create_ccopt_clock_tree_spec -file $raw_spec_path] \
     ] {
-        catch {file delete -force $spec_path}
+        catch {file delete -force $raw_spec_path $spec_path}
         puts $fh "SPEC_COMMAND=$cmd"
         if {[catch {{*}$cmd} err]} {
             puts $fh "SPEC_COMMAND_STATUS=FAIL"
             puts $fh "SPEC_COMMAND_ERROR=$err"
             continue
         }
-        set text [mptdc_signoff_read_file_text $spec_path]
+        set trees_after_create [mptdc_signoff_ccopt_clock_tree_names]
+        if {$trees_after_create eq ""} {
+            puts $fh "CCOPT_CLOCK_TREES_AFTER_SPEC_CREATE=UNAVAILABLE"
+        } else {
+            puts $fh "CCOPT_CLOCK_TREES_AFTER_SPEC_CREATE=[llength $trees_after_create]"
+            puts $fh "CCOPT_CLOCK_TREE_NAMES_AFTER_SPEC_CREATE=[join $trees_after_create { }]"
+        }
+        set text [mptdc_signoff_read_file_text $raw_spec_path]
         set has_clk_sys [regexp {clk_sys} $text]
         set has_forbidden [regexp $forbidden_regex $text]
         puts $fh "SPEC_COMMAND_STATUS=PASS"
-        puts $fh "HAS_CLK_SYS=$has_clk_sys"
-        puts $fh "HAS_FORBIDDEN_RO_OR_PHASE=$has_forbidden"
+        puts $fh "GENERIC_HAS_CLK_SYS=$has_clk_sys"
+        puts $fh "GENERIC_HAS_FORBIDDEN_RO_OR_PHASE=$has_forbidden"
+        if {$trees_after_create ne "" &&
+            ![mptdc_signoff_ccopt_tree_set_valid $trees_after_create $forbidden_regex]} {
+            set status FAIL
+            set accepted_cmd $cmd
+            set detail "ccopt_session_contains_non_clk_sys_trees_after_spec_create"
+            break
+        }
         if {$has_clk_sys && !$has_forbidden} {
+            file copy -force $raw_spec_path $spec_path
             set status PASS
             set accepted_cmd $cmd
             set detail "clk_sys_only_spec_accepted"
@@ -3220,12 +3311,30 @@ proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
         }
         if {$has_clk_sys && $has_forbidden} {
             set accepted_cmd $cmd
+            set filter_stats [mptdc_signoff_filter_clk_sys_cts_spec \
+                $raw_spec_path $spec_path $forbidden_regex]
+            foreach key [lsort [dict keys $filter_stats]] {
+                puts $fh "FILTER_$key=[dict get $filter_stats $key]"
+            }
+            set filtered_text [mptdc_signoff_read_file_text $spec_path]
+            set filtered_has_clk_sys [regexp {clk_sys} $filtered_text]
+            set filtered_has_forbidden [regexp $forbidden_regex $filtered_text]
+            puts $fh "FILTERED_HAS_CLK_SYS=$filtered_has_clk_sys"
+            puts $fh "FILTERED_HAS_FORBIDDEN_RO_OR_PHASE=$filtered_has_forbidden"
+            if {$filtered_has_clk_sys &&
+                !$filtered_has_forbidden &&
+                [dict get $filter_stats INCOMPLETE_COMMANDS] == 0} {
+                set status PASS
+                set detail "filtered_clk_sys_only_spec_accepted"
+                break
+            }
             if {$strict} {
                 set status FAIL
             } else {
+                file copy -force $raw_spec_path $spec_path
                 set status PROVISIONAL
             }
-            set detail "generic_spec_contains_ro_or_phase_clock_text"
+            set detail "generic_spec_contains_ro_or_phase_clock_text_and_filter_failed"
             break
         }
         set detail "generic_spec_did_not_expose_clk_sys"
@@ -3240,13 +3349,69 @@ proc mptdc_signoff_create_clk_sys_cts_spec {policy_rpt} {
     puts $pfh "CTS_SPEC_AUDIT_STATUS=$status"
     puts $pfh "CTS_SPEC_AUDIT_REPORT=$audit_path"
     puts $pfh "CTS_SPEC_PATH=$spec_path"
+    puts $pfh "CTS_GENERIC_SPEC_PATH=$raw_spec_path"
     puts $pfh "CTS_SPEC_ACCEPTED_COMMAND=$accepted_cmd"
     close $pfh
 
     if {$strict && $status ne "PASS"} {
-        return [list FAIL $spec_path $audit_path $accepted_cmd]
+        return [list FAIL $spec_path $audit_path $accepted_cmd $raw_spec_path]
     }
-    return [list $status $spec_path $audit_path $accepted_cmd]
+    return [list $status $spec_path $audit_path $accepted_cmd $raw_spec_path]
+}
+
+proc mptdc_signoff_source_clk_sys_cts_spec {spec_path policy_rpt} {
+    set source_rpt [file join [mptdc_signoff_report_dir] cts_clk_sys_spec_source.rpt]
+    set forbidden_regex [mptdc_signoff_clk_sys_cts_spec_forbidden_regex]
+    set fh [open $source_rpt w]
+    puts $fh "# MPTDC selected clk_sys CTS spec source audit"
+    puts $fh "SELECTED_SPEC_PATH=$spec_path"
+    puts $fh "FORBIDDEN_REGEX=$forbidden_regex"
+
+    set pre_trees [mptdc_signoff_ccopt_clock_tree_names]
+    if {$pre_trees eq ""} {
+        puts $fh "PRE_SOURCE_CCOPT_CLOCK_TREES=UNAVAILABLE"
+    } else {
+        puts $fh "PRE_SOURCE_CCOPT_CLOCK_TREES=[llength $pre_trees]"
+        puts $fh "PRE_SOURCE_CCOPT_CLOCK_TREE_NAMES=[join $pre_trees { }]"
+    }
+
+    set source_status PASS
+    if {$pre_trees ne "" && [llength $pre_trees] > 0} {
+        puts $fh "SOURCE_SELECTED_SPEC_STATUS=SKIPPED_ALREADY_DEFINED"
+    } else {
+        puts $fh "SOURCE_SELECTED_SPEC_COMMAND=source $spec_path"
+        if {[catch {uplevel #0 [list source $spec_path]} err]} {
+            set source_status FAIL
+            puts $fh "SOURCE_SELECTED_SPEC_STATUS=FAIL"
+            puts $fh "SOURCE_SELECTED_SPEC_ERROR=$err"
+        } else {
+            puts $fh "SOURCE_SELECTED_SPEC_STATUS=PASS"
+        }
+    }
+
+    set post_trees [mptdc_signoff_ccopt_clock_tree_names]
+    if {$post_trees eq ""} {
+        puts $fh "POST_SOURCE_CCOPT_CLOCK_TREES=UNAVAILABLE"
+    } else {
+        puts $fh "POST_SOURCE_CCOPT_CLOCK_TREES=[llength $post_trees]"
+        puts $fh "POST_SOURCE_CCOPT_CLOCK_TREE_NAMES=[join $post_trees { }]"
+    }
+    set tree_valid [mptdc_signoff_ccopt_tree_set_valid $post_trees $forbidden_regex]
+    puts $fh "POST_SOURCE_CLK_SYS_ONLY_TREE_SET=$tree_valid"
+    if {!$tree_valid} {
+        set source_status FAIL
+    }
+    set root_audit [mptdc_signoff_write_clk_sys_root_audit pre_ccopt_selected_spec]
+    puts $fh "CLK_SYS_ROOT_PRE_CCOPT_SELECTED_SPEC_AUDIT=$root_audit"
+    puts $fh "CTS_SPEC_SOURCE_STATUS=$source_status"
+    close $fh
+
+    set pfh [open $policy_rpt a]
+    puts $pfh "CTS_SPEC_SOURCE_STATUS=$source_status"
+    puts $pfh "CTS_SPEC_SOURCE_REPORT=$source_rpt"
+    puts $pfh "CLK_SYS_ROOT_PRE_CCOPT_SELECTED_SPEC_AUDIT=$root_audit"
+    close $pfh
+    return [list $source_status $source_rpt]
 }
 
 proc mptdc_signoff_write_cts_measured_status {policy_rpt summary_rpt} {
@@ -3409,6 +3574,14 @@ proc mptdc_signoff_run_cts {} {
         puts $efh "CTS_FAIL_ACTION=do_not_run_generic_ccopt_because_it_adds_ro_phase_clock_trees"
         close $efh
         error "MPTDC_CLK_SYS_CTS_SPEC_FAILED: report=[lindex $spec_result 2]"
+    }
+    set spec_source_result [mptdc_signoff_source_clk_sys_cts_spec [lindex $spec_result 1] $rpt]
+    if {[lindex $spec_source_result 0] ne "PASS"} {
+        set efh [open $rpt a]
+        puts $efh "CTS_STATUS=FAIL"
+        puts $efh "CTS_FAIL_REASON=selected_clk_sys_cts_spec_source_or_validation_failed"
+        close $efh
+        error "MPTDC_CLK_SYS_CTS_SPEC_SOURCE_FAILED: report=[lindex $spec_source_result 1]"
     }
     set efh [open $rpt a]
     puts $efh "CTS_SPEC_GATE_STATUS=$spec_status"
