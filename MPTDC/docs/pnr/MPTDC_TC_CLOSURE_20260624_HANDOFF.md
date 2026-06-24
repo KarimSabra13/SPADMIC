@@ -258,6 +258,10 @@ Fix:
 - Add `MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP`, default `0`.
 - Record `CHECKPLACE_OVERLAP_STATUS=REVIEW_REQUIRED` when global checkPlace
   reports overlap text.
+- Keep `RO_PHASE_PLACEMENT_STATUS=PASS` when the measured slow/fast RO/phase
+  bbox checks pass and only the aggregate global checkPlace text is dirty.
+- For strict experiments, set
+  `MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP=1`.
 
 ### Truthyfix1 Partial Run And Post-Route Plateau Guard
 
@@ -300,10 +304,6 @@ Fix:
   plateaus for `MPTDC_POSTROUTE_SETUP_STALL_LIMIT` passes, default `2`.
 - Treat missing Innovus `set_critical_range` as
   `SOURCE_CRITICAL_RANGE_STATUS=SKIPPED`, not `REVIEW_REQUIRED`.
-- Keep `RO_PHASE_PLACEMENT_STATUS=PASS` when the measured slow/fast RO/phase
-  bbox checks pass and only the aggregate global checkPlace text is dirty.
-- For strict experiments, set
-  `MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP=1`.
 
 The next diagnostic run should explicitly set
 `MPTDC_PNR_PD_TILE_FIX_LEAVES=1`. The `bb76d407_myorient1` PD floorplan report
