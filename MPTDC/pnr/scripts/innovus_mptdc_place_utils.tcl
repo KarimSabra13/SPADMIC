@@ -24,8 +24,7 @@ proc mptdc_pnr_place_unique_cmd {var_name cmd} {
 proc mptdc_pnr_place_mark_fixed {inst} {
     set errors [list]
     foreach cmd [list \
-        [list setInstancePlacementStatus $inst fixed] \
-        [list setInstancePlacementStatus -name $inst -status fixed] \
+        [list setInstancePlacementStatus -status fixed -name $inst] \
         [list set_db [list $inst] .place_status fixed]] {
         if {![catch {uplevel 1 $cmd} err]} {
             return [dict create status PASS command $cmd errors $errors]
@@ -46,36 +45,44 @@ proc mptdc_pnr_place_mark_fixed {inst} {
     return [dict create status REVIEW_REQUIRED command "" errors $errors]
 }
 
+proc mptdc_pnr_place_orient_candidates {orient} {
+    set orient [string toupper [string trim $orient]]
+    if {$orient eq ""} { set orient AUTO }
+
+    set fallback [list MY R0 MX R180]
+    if {[info exists ::env(MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES)] && \
+        $::env(MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES) ne ""} {
+        set fallback [list]
+        foreach item $::env(MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES) {
+            set item [string toupper [string trim $item]]
+            if {$item ne ""} { lappend fallback $item }
+        }
+    }
+
+    if {$orient in {AUTO ROW ROW_LEGAL LEGAL}} {
+        return $fallback
+    }
+
+    set candidates [list $orient]
+    foreach item $fallback {
+        if {$item ni $candidates} {
+            lappend candidates $item
+        }
+    }
+    return $candidates
+}
+
 proc mptdc_pnr_place_instance_row_legal {inst x y {orient AUTO} {fixed 0}} {
     set orient [string toupper [string trim $orient]]
     if {$orient eq ""} { set orient AUTO }
     set fixed [expr {$fixed ? 1 : 0}]
 
     set cmds [list]
-    if {$orient in {AUTO ROW ROW_LEGAL LEGAL R0}} {
-        if {$fixed} {
-            mptdc_pnr_place_unique_cmd cmds [list placeInstance $inst $x $y -fixed]
-        }
+    foreach alt [mptdc_pnr_place_orient_candidates $orient] {
+        mptdc_pnr_place_unique_cmd cmds [list placeInstance $inst $x $y $alt]
+    }
+    if {$orient ni {AUTO ROW ROW_LEGAL LEGAL}} {
         mptdc_pnr_place_unique_cmd cmds [list placeInstance $inst $x $y]
-        foreach alt {MY R0 MX R180} {
-            set cmd [list placeInstance $inst $x $y $alt]
-            if {$fixed} { lappend cmd -fixed }
-            mptdc_pnr_place_unique_cmd cmds $cmd
-        }
-    } else {
-        set cmd [list placeInstance $inst $x $y $orient]
-        if {$fixed} { lappend cmd -fixed }
-        mptdc_pnr_place_unique_cmd cmds $cmd
-        if {$fixed} {
-            mptdc_pnr_place_unique_cmd cmds [list placeInstance $inst $x $y -fixed]
-        }
-        mptdc_pnr_place_unique_cmd cmds [list placeInstance $inst $x $y]
-        foreach alt {MY R0 MX R180} {
-            if {$alt eq $orient} { continue }
-            set cmd [list placeInstance $inst $x $y $alt]
-            if {$fixed} { lappend cmd -fixed }
-            mptdc_pnr_place_unique_cmd cmds $cmd
-        }
     }
 
     set errors [list]

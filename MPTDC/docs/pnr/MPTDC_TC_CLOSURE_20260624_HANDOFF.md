@@ -14,7 +14,10 @@ READY_FOR_TAPEOUT=NO until row/block DRC/LVS and non-TC-only timing are closed
 ## Branch State
 
 - Working branch: `SPADMIC_test`.
-- Current PNR source commit: `6117bf1e778f49e211975cfc8c60fd3238e912c7`.
+- Row-legal orientation v1 source commit:
+  `6117bf1e778f49e211975cfc8c60fd3238e912c7`.
+- Documentation-only handoff commit:
+  `bb6443bea629`.
 - Previous aggressive fast-tag commit:
   `ba9abf8a3eb8854680ee6b977c3047d63ae961a6`.
 - Genus handoff run:
@@ -144,10 +147,70 @@ tclsh source checks for:
 git diff --check
 ```
 
+### Autoorient1 Failure And V2 Fix
+
+Run:
+`20260624_mptdc_digital_signoff_tc_clkcts_6117bf1e_autoorient1`.
+
+The v1 AUTO-orientation patch did not fix the server run. It produced a better
+report, but the same illegal-orientation signature remained.
+
+Important evidence:
+
+- `FAST_TAG_COLUMN_ORIENT=AUTO`.
+- Fast-tag placement report commands still looked like
+  `placeInstance {inst} x y -fixed`, with no explicit orientation.
+- Innovus defaulted those un-oriented `placeInstance` calls to `R0`.
+- The log still contained `IMPFP-10137` and `IMPFP-9996` warnings for PD tile
+  leaves, fast-tag registers, and fast phase-buffer drivers.
+- The helper also printed `IMPTCM-48` errors because it tried an invalid
+  placement-status command before the valid syntax.
+- `extracted_timing_status.rpt` and `route_status.rpt` were not produced because
+  the run stopped at `phase_buffer_placement`.
+
+The RO/phase-buffer geometry itself did not show a real overlap in the audit:
+
+- `SLOW_RO_PHASE_PLACEMENT_STATUS=PASS`.
+- `FAST_RO_PHASE_PLACEMENT_STATUS=PASS`.
+- `SLOW_RO_PHASE_BUFFER_OVERLAP_AREA=0.000000`.
+- `FAST_RO_PHASE_BUFFER_OVERLAP_AREA=0.000000`.
+- `RO_PHASE_MIN_CLEARANCE_UM=10.67`.
+
+The final status still failed:
+
+```text
+RO_PHASE_PLACEMENT_STATUS=FAIL
+RO_PHASE_PLACEMENT_REASON=checkplace_reports_overlap
+```
+
+Interpretation: this failure should be treated as a remaining row-orientation /
+checkPlace-cleanliness blocker, not as a proven physical RO/phase-buffer bbox
+overlap.
+
+The v2 helper fix changes AUTO behavior again:
+
+- Do not try un-oriented `placeInstance` first for AUTO.
+- Do not use `placeInstance ... -fixed` as the first AUTO attempt.
+- Try explicit row-legal candidates first, defaulting to `MY R0 MX R180`.
+- Mark fixed cells separately with the valid syntax:
+  `setInstancePlacementStatus -status fixed -name <inst>`.
+- Allow override through `MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES` if the row
+  orientation candidate order needs to change.
+
+Local stub evidence after the v2 fix:
+
+```text
+command=placeInstance u0 10.0 20.0 MY
+fixed_command=setInstancePlacementStatus -status fixed -name u0
+```
+
 ## Active Server Run To Watch
 
-Current intended run:
+Previous failed run:
 `20260624_mptdc_digital_signoff_tc_clkcts_6117bf1e_autoorient1`.
+
+Next intended run after pulling the v2 helper fix:
+`20260624_mptdc_digital_signoff_tc_clkcts_<new_short_sha>_myorient1`.
 
 Launch state expected on the server:
 
@@ -157,12 +220,12 @@ source .venv/bin/activate
 git checkout SPADMIC_test
 git pull --ff-only
 git rev-parse --short=12 HEAD
-# expect: 6117bf1e778f
 
 export MPTDC_PNR_PD_TILE_ORIENT=AUTO
 export MPTDC_PNR_FAST_TAG_COLUMN_ORIENT=AUTO
 export MPTDC_PNR_PHASE_BUF_ORIENT=AUTO
-export SIGNOFF_RUN=20260624_mptdc_digital_signoff_tc_clkcts_6117bf1e_autoorient1
+export MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES="MY R0 MX R180"
+export SIGNOFF_RUN=20260624_mptdc_digital_signoff_tc_clkcts_$(git rev-parse --short=8 HEAD)_myorient1
 
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
   "$SIGNOFF_RUN" \
@@ -172,10 +235,12 @@ bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
 ```
 
 The first thing to confirm is that the prior `IMPFP-9996`, `IMPFP-10137`, and
-`RO_PHASE_OVERLAP_GATE_FAILED` failure signature is gone. If it is gone, inspect
-placement, route, extraction, and timing. If it remains, the next fix must be in
-the row/legalization placement helper or in a remaining direct `placeInstance`
-call that still passes `R0`.
+`RO_PHASE_OVERLAP_GATE_FAILED` failure signature is gone. Also confirm the
+placement reports now show commands like `placeInstance ... MY`, not
+`placeInstance ... -fixed` without an orientation. If the signature is gone,
+inspect placement, route, extraction, and timing. If it remains, the next fix
+must be in a remaining direct `placeInstance` call that still defaults to `R0`,
+or in the row-legal candidate order.
 
 ## Environment Variables And Reasons
 
@@ -207,6 +272,7 @@ PD matrix and row legality:
 | `MPTDC_PNR_PD_TILE_FIX_LEAVES` | `0` | Allows placement/optimization to move leaves after initial guidance. |
 | `MPTDC_PNR_PD_TILE_USE_FENCE` | `1` | Keeps PD tile logic inside the intended matrix regions. |
 | `MPTDC_PNR_PD_TILE_ORIENT` | `AUTO` | Avoids illegal forced `R0`; lets Innovus choose row-compatible orientation. |
+| `MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES` | `MY R0 MX R180` | Explicit candidate order for AUTO placement; `MY` first matches the JIHD row/site warning that cells can only flip about Y-axis. |
 
 Fast-tag placement and timing focus:
 
