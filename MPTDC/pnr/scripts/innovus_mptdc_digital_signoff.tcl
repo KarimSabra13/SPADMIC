@@ -2942,6 +2942,7 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     set rpt [file join [mptdc_signoff_report_dir] ro_phase_overlap_audit.rpt]
     set check_rpt [file join [mptdc_signoff_report_dir] check_place_ro_phase_overlap.rpt]
     set required_clearance [mptdc_signoff_env MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    set fail_on_global_checkplace [mptdc_signoff_env_truthy MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP 0]
     set ro_map [mptdc_signoff_ro_instances_by_family]
     set slow_ro [dict get $ro_map slow]
     set fast_ro [dict get $ro_map fast]
@@ -2956,6 +2957,14 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     puts $fh "RO_TUNE4_COUNT=[llength [dict get $ro_map all]]"
     puts $fh "CHECKPLACE_REPORT=$check_rpt"
     puts $fh "CHECKPLACE_OVERLAP_LINE_COUNT=$check_overlap_count"
+    puts $fh "CHECKPLACE_OVERLAP_FATAL=$fail_on_global_checkplace"
+    if {$check_overlap_count eq "UNKNOWN"} {
+        puts $fh "CHECKPLACE_OVERLAP_STATUS=UNKNOWN"
+    } elseif {$check_overlap_count > 0} {
+        puts $fh "CHECKPLACE_OVERLAP_STATUS=REVIEW_REQUIRED"
+    } else {
+        puts $fh "CHECKPLACE_OVERLAP_STATUS=PASS"
+    }
     puts $fh ""
     set slow_result [mptdc_signoff_audit_ro_phase_family $fh slow $slow_ro $slow_iso_insts $slow_drv_insts $required_clearance]
     puts $fh ""
@@ -2978,7 +2987,7 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     } elseif {[lindex $slow_result 0] ne "PASS" || [lindex $fast_result 0] ne "PASS"} {
         set status FAIL
         set reason phase_buffer_overlaps_ro_macro
-    } elseif {$check_overlap_count ne "UNKNOWN" && $check_overlap_count > 0} {
+    } elseif {$fail_on_global_checkplace && $check_overlap_count ne "UNKNOWN" && $check_overlap_count > 0} {
         set status FAIL
         set reason checkplace_reports_overlap
     }

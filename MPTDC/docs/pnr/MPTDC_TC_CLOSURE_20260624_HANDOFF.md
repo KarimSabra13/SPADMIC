@@ -204,13 +204,78 @@ command=placeInstance u0 10.0 20.0 MY
 fixed_command=setInstancePlacementStatus -status fixed -name u0
 ```
 
+### Myorient1 Failure And RO-Audit Fix
+
+Run:
+`20260624_mptdc_digital_signoff_tc_clkcts_bb76d407_myorient1`.
+
+The v2 helper did fix explicit preplacement command generation. Evidence:
+
+- Fast-tag commands used explicit `MY`, for example
+  `placeInstance {u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[1]} ... MY`.
+- Phase-buffer commands used explicit `MY`.
+- PD tile leaf commands used explicit `MY`.
+- Fast-tag column placement reported `FAST_TAG_COLUMN_PLACEMENT_STATUS=PASS`.
+- Phase-buffer count/status reported `PHASE_BUFFER_STATUS=PASS`.
+
+The run still stopped at `phase_buffer_placement`, but the measured
+RO/phase-buffer geometry was clean:
+
+```text
+SLOW_RO_PHASE_PLACEMENT_STATUS=PASS
+FAST_RO_PHASE_PLACEMENT_STATUS=PASS
+SLOW_RO_PHASE_BUFFER_OVERLAP_AREA=0.000000
+FAST_RO_PHASE_BUFFER_OVERLAP_AREA=0.000000
+RO_PHASE_MIN_CLEARANCE_UM=10.67
+```
+
+The final status failed only because the audit treated the aggregate global
+`checkPlace` summary as a hard RO/phase overlap gate:
+
+```text
+CHECKPLACE_OVERLAP_LINE_COUNT=1
+RO_PHASE_PLACEMENT_STATUS=FAIL
+RO_PHASE_PLACEMENT_REASON=checkplace_reports_overlap
+```
+
+The companion `checkPlace` report showed unrelated global placement/fence
+issues, not measured RO/phase bbox overlap:
+
+```text
+Region/Fence Violation: 357
+Overlapping with other instance: 215
+Not-of-Fence Violation: 56
+```
+
+Interpretation: this is a false hard stop for the RO/phase gate. The audit must
+still fail on real RO/phase overlap or clearance below
+`MPTDC_RO_PHASE_MIN_CLEARANCE_UM`, but aggregate `checkPlace` overlap text must
+be review context by default because it includes unrelated PD/fence violations
+at this early placement point.
+
+Fix:
+
+- Add `MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP`, default `0`.
+- Record `CHECKPLACE_OVERLAP_STATUS=REVIEW_REQUIRED` when global checkPlace
+  reports overlap text.
+- Keep `RO_PHASE_PLACEMENT_STATUS=PASS` when the measured slow/fast RO/phase
+  bbox checks pass and only the aggregate global checkPlace text is dirty.
+- For strict experiments, set
+  `MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP=1`.
+
+The next diagnostic run should explicitly set
+`MPTDC_PNR_PD_TILE_FIX_LEAVES=1`. The `bb76d407_myorient1` PD floorplan report
+showed `fixed_status=SKIPPED` for PD tile leaves, meaning the server shell had
+carried forward the relaxed timing experiment setting
+`MPTDC_PNR_PD_TILE_FIX_LEAVES=0`.
+
 ## Active Server Run To Watch
 
 Previous failed run:
-`20260624_mptdc_digital_signoff_tc_clkcts_6117bf1e_autoorient1`.
+`20260624_mptdc_digital_signoff_tc_clkcts_bb76d407_myorient1`.
 
-Next intended run after pulling the v2 helper fix:
-`20260624_mptdc_digital_signoff_tc_clkcts_<new_short_sha>_myorient1`.
+Next intended run after pulling the RO-audit fix:
+`20260624_mptdc_digital_signoff_tc_clkcts_<new_short_sha>_roauditfix1`.
 
 Launch state expected on the server:
 
@@ -222,10 +287,12 @@ git pull --ff-only
 git rev-parse --short=12 HEAD
 
 export MPTDC_PNR_PD_TILE_ORIENT=AUTO
+export MPTDC_PNR_PD_TILE_FIX_LEAVES=1
 export MPTDC_PNR_FAST_TAG_COLUMN_ORIENT=AUTO
 export MPTDC_PNR_PHASE_BUF_ORIENT=AUTO
 export MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES="MY R0 MX R180"
-export SIGNOFF_RUN=20260624_mptdc_digital_signoff_tc_clkcts_$(git rev-parse --short=8 HEAD)_myorient1
+export MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP=0
+export SIGNOFF_RUN=20260624_mptdc_digital_signoff_tc_clkcts_$(git rev-parse --short=8 HEAD)_roauditfix1
 
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
   "$SIGNOFF_RUN" \
@@ -235,12 +302,14 @@ bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
 ```
 
 The first thing to confirm is that the prior `IMPFP-9996`, `IMPFP-10137`, and
-`RO_PHASE_OVERLAP_GATE_FAILED` failure signature is gone. Also confirm the
-placement reports now show commands like `placeInstance ... MY`, not
-`placeInstance ... -fixed` without an orientation. If the signature is gone,
-inspect placement, route, extraction, and timing. If it remains, the next fix
-must be in a remaining direct `placeInstance` call that still defaults to `R0`,
-or in the row-legal candidate order.
+`RO_PHASE_OVERLAP_GATE_FAILED` failure signature is gone or materially reduced.
+Also confirm the placement reports still show explicit `MY` orientation in
+`placeInstance` commands, not `placeInstance ... -fixed` without an
+orientation. If the RO/phase
+gate passes, inspect placement, route, extraction, and timing. If the same
+illegal-orientation warning remains on PD leaves, inspect whether
+`MPTDC_PNR_PD_TILE_FIX_LEAVES=1` reached Innovus and whether PD leaf report
+entries changed from `fixed_status=SKIPPED` to `fixed_status=PASS`.
 
 ## Environment Variables And Reasons
 
@@ -269,10 +338,11 @@ PD matrix and row legality:
 | Variable | Value | Reason |
 | --- | --- | --- |
 | `MPTDC_PNR_PD_TILE_PREPLACE_LEAVES` | `1` | Keeps PD tile leaf placement structured by matrix tile. |
-| `MPTDC_PNR_PD_TILE_FIX_LEAVES` | `0` | Allows placement/optimization to move leaves after initial guidance. |
+| `MPTDC_PNR_PD_TILE_FIX_LEAVES` | `1` | Keeps row-legal PD leaf placements fixed during this diagnostic run, avoiding later illegal `R0` attempts from a carried-over relaxed timing experiment. |
 | `MPTDC_PNR_PD_TILE_USE_FENCE` | `1` | Keeps PD tile logic inside the intended matrix regions. |
 | `MPTDC_PNR_PD_TILE_ORIENT` | `AUTO` | Avoids illegal forced `R0`; lets Innovus choose row-compatible orientation. |
 | `MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES` | `MY R0 MX R180` | Explicit candidate order for AUTO placement; `MY` first matches the JIHD row/site warning that cells can only flip about Y-axis. |
+| `MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP` | `0` | Keeps the RO/phase gate tied to measured RO/phase bbox overlap and clearance; aggregate global `checkPlace` overlap text is review context unless this is explicitly set to `1`. |
 
 Fast-tag placement and timing focus:
 

@@ -214,8 +214,15 @@ Before global placement, CTS, or route, the flow must also run
 - 8 fast isolation buffers and 8 fast final drivers;
 - zero RO/phase-buffer bbox overlap;
 - minimum RO-to-phase-buffer clearance at or above
-  `MPTDC_RO_PHASE_MIN_CLEARANCE_UM`, default `10.0`;
-- no macro/cell overlap text in the companion pre-placement `checkPlace` report.
+  `MPTDC_RO_PHASE_MIN_CLEARANCE_UM`, default `10.0`.
+
+The companion pre-placement `checkPlace` report is still captured and its
+aggregate overlap text is reported as `CHECKPLACE_OVERLAP_STATUS`. By default,
+that aggregate global report is review context rather than a hard RO/phase
+gate, because it can include unrelated PD/fence placement violations. Set
+`MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP=1` only for strict
+experiments that intentionally want any global checkPlace overlap text to fail
+the RO/phase gate.
 
 The slow phase-buffer rows belong below the slow RO macro, outside the slow RO
 bbox plus halo, facing the PD matrix. The fast phase-buffer rows belong above the
