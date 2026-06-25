@@ -12,24 +12,34 @@ tapeout readiness.
 
 The active TC-only digital-PNR state is:
 
-- Reviewed PNR source HEAD: `e3026f3528669a7c9ab07d344645483ee502d9e1`.
-- Genus handoff run: `20260619_axis_core_typical_closed_fast_rst_77131c8d`.
-- Last routed/timed TC-only Innovus run: `20260619_mptdc_tc_pnr_closure_e3026f35`.
-- Post-route TC setup WNS: `+0.057 ns`.
-- Post-route TC hold WNS: `+0.091 ns`.
-- Setup TNS: `-0.0 ps`.
-- Setup violations: `0`.
-- Max transition/capacitance/fanout violations: `0 / 0 / 0`.
+- Reviewed PNR source HEAD: `010285dc`.
+- Genus handoff run: `20260623_1207_mptdc_axis_core_typical_closed_ba2b2932`.
+- Last routed/filled/extracted/timed TC-only Innovus run:
+  `20260625_mptdc_tc_fullclosure_010285dc_postfiller1`.
+- Post-route extracted TC setup WNS: `0.000 ns`.
+- Post-route extracted TC hold WNS: `+0.048 ns`.
+- TC setup TNS: `0.000 ns`.
+- TC setup violations: `0`.
+- TC hold violations: `0`.
+- Post-route DRV status: `PASS`.
+- Route connectivity: shorts `0`, regular opens `0`, special opens `0`,
+  unroutes `0`.
+- Route DRC status: `PROVISIONAL`, with independent `verify_drc` reporting
+  `2` non-short `MET1 Mar` violations.
 - PD Vernier exception: 64 paths from 8 sources, no overmatch, no undermatch.
 - Local ON22 repair: enabled in the Genus handoff and checked by the pre-PNR gate.
 - Pre-PnR gate: PASS, with low-WNS warning.
 - Phase-buffer topology: `BUJIHDX4 -> BUJIHDX12`.
 - Row-infrastructure status: PROVISIONAL, because no dedicated CORE tap/endcap
   master was found and DRC/LVS qualification is still required.
+- Full foundry DRC/LVS, row DRC/LVS, WC setup, BC hold, RO stress, and IR/EM
+  remain deferred or external.
 
-This is enough to prove real TC post-route timing closure and to launch the next
-physical cleanup pass under the reviewed provisional row policy. It is not enough
-to claim MMMC signoff, final digital PNR PASS, or tapeout readiness.
+This is enough to keep the June 25 run as the TC-only provisional baseline for
+continued physical cleanup. It is not enough to claim MMMC signoff, final
+digital PNR PASS, or tapeout readiness. The detailed baseline and inspection
+commands are recorded in
+[`MPTDC_TC_CLOSURE_20260625_BASELINE.md`](MPTDC_TC_CLOSURE_20260625_BASELINE.md).
 
 ## Owner-Facing Commands
 

@@ -24,7 +24,7 @@ measurement crossing, async frontend storage is not accidental latch inference,
 and the context bridge is a static held-bus protocol. Treat these as design
 contracts that need explicit verification/timing evidence, not as cleanup noise.
 
-## Frozen baseline
+## Current TC-Only Provisional Baseline
 
 | Item | Value |
 | --- | --- |
@@ -32,26 +32,30 @@ contracts that need explicit verification/timing evidence, not as cleanup noise.
 | Integration core | `MPTDC/rtl/top/mptdc_core.sv` |
 | Active handoff branch | `SPADMIC_test` |
 | Frequency mode | `R750_delta5` |
-| Phase distribution | `BUHDX4 -> BUHDX12` per slow/fast tap unless a proven JIHD replacement is approved |
+| Phase distribution | `BUJIHDX4 -> BUJIHDX12` per slow/fast tap |
 | RO code interface | TOP-owned slow/fast CSR values captured into local idle-only shadow registers |
 | PD fabric | intentional `8 x 8` Vernier matrix |
-| Genus baseline commit | `fa66cc4d36936e2bf0d41e6b24f2f9486569e242` |
-| Genus baseline run | `20260618_111124_axis_core_genus_timing_close_on22x1_final_guarded` |
-| Genus result | WNS `+0.3 ps`, TNS `-0.0 ps`, setup paths `0`, DRVs `0` |
-| Backend readiness | `READY_FOR_O13_INNOVUS_FEASIBILITY` (recorded historical tool label) |
-| Signoff boundary | typical-only; not MMMC, extracted, LVS, DRC, or PEX signoff |
+| Source commit | `010285dc` |
+| Genus handoff run | `20260623_1207_mptdc_axis_core_typical_closed_ba2b2932` |
+| Innovus baseline run | `20260625_mptdc_tc_fullclosure_010285dc_postfiller1` |
+| Extracted TC setup | WNS `0.000 ns`, TNS `0.000 ns`, violating paths `0` |
+| Extracted TC hold | WNS `+0.048 ns`, TNS `0.000 ns`, violating paths `0` |
+| Route status | `PROVISIONAL`: independent `verify_drc` has `2` non-short `MET1 Mar` violations |
+| Backend readiness | `TC_ONLY_PROVISIONAL_BASELINE` |
+| Signoff boundary | TC-only; not MMMC, foundry DRC/LVS, row DRC/LVS, IR/EM, or tapeout signoff |
 
 The server result path is external generated evidence and is not a repository
 source path:
 
 ```text
-/sim/ksabra/SPADMIC_work/genus/20260618_111124_axis_core_genus_timing_close_on22x1_final_guarded
+/sim/ksabra/SPADMIC_work/innovus/20260625_mptdc_tc_fullclosure_010285dc_postfiller1
 ```
 
-The later server rerun
-`20260618_axis_core_typical_closed_handoff_rerun2` also closed typical Genus and
-passed the pre-PnR gate for its exact Git HEAD. It must not be reused after the
-RO-code interface change; rerun Genus and prepare a new handoff package first.
+The detailed baseline and inspection commands are in
+`MPTDC/docs/pnr/MPTDC_TC_CLOSURE_20260625_BASELINE.md`. Do not call this final
+signoff until the route DRC markers, foundry DRC/LVS, row qualification, antenna
+evidence, IR/EM, and non-TC-only timing scope are closed or explicitly waived by
+the proper owner.
 
 ## Canonical commands
 

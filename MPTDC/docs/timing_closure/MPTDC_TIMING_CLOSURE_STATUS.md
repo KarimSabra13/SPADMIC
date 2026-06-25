@@ -2,49 +2,57 @@
 
 Author: Karim Sabra
 
-The June 18, 2026 `mptdc_axis_core` reference baseline is closed in the typical
-Genus view and was ready for an Innovus feasibility study at its exact Git HEAD.
-This is not MMMC, extracted, or final tapeout signoff.
+The June 25, 2026 `mptdc_axis_core` TC-only Innovus baseline is extracted and
+clean in the official TC setup/hold gates at source commit `010285dc`. This is
+not MMMC, foundry DRC/LVS, or final tapeout signoff.
 
 | Metric | Result |
 | --- | ---: |
-| Commit | `fa66cc4d36936e2bf0d41e6b24f2f9486569e242` |
-| Reference run | `20260618_111124_axis_core_genus_timing_close_on22x1_final_guarded` |
-| Setup WNS | `+0.3 ps` |
-| Setup TNS | `-0.0 ps` |
+| Commit | `010285dc` |
+| Reference run | `20260625_mptdc_tc_fullclosure_010285dc_postfiller1` |
+| Genus handoff | `20260623_1207_mptdc_axis_core_typical_closed_ba2b2932` |
+| Extracted TC setup WNS | `0.000 ns` |
+| Extracted TC setup TNS | `0.000 ns` |
 | Setup violating paths | `0` |
+| Extracted TC hold WNS | `+0.048 ns` |
+| Extracted TC hold TNS | `0.000 ns` |
+| Hold violating paths | `0` |
 | Transition violations | `0` |
 | Capacitance violations | `0` |
 | Fanout violations | `0` |
-| Decision | `GENUS_TYPICAL_CLOSED` |
+| Decision | `TC_ONLY_PROVISIONAL_BASELINE` |
 
-The exact PD exception matched 64 paths from eight sources. The final scoped
-local repair resolved 355 mapped X0 instances and selected the safe X1 target.
-The stronger X2 trial was rejected because it introduced a new local regression.
-The canonical profile therefore keeps X2 disabled.
+The official `timeDesign` setup and hold reports pass after post-route
+extraction. The route/filler/extraction/DRV/timing stack is therefore a useful
+TC-only baseline for continued physical closure.
 
-Repository cleanup commits above the reference timing commit do not change this
-timing evidence by themselves. RTL changes do. The slow/fast RO-code interface
-and local shadow registers create a new netlist contract, so this timing result
-is now reference evidence, not the active PnR handoff for the current checkout.
-A clean canonical wrapper rerun is required before the newer checkout becomes
-the accepted PnR handoff head.
+There is one timing-report discrepancy to keep visible: the focused
+`fast_tag_to_pd_timing_focus.rpt` still shows command-specific negative setup
+paths down to about `-0.065 ns`, while the official extracted TC setup summary
+reports WNS/TNS `0.000/0.000` with zero violating paths and
+`fast_tag_timing_focus.rpt` reports `GROUP_PATH_STATUS=PASS`. Resolve that
+accounting difference before making any stronger closure claim. Do not use false
+paths or broad multicycle suppression to hide it.
 
-Reproduce the repository policy with:
+Reproduce the repository policy and timing flow with:
 
 ```bash
 bash MPTDC/syn/scripts/check_genus_axis_core_typical_closed_profile.sh
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
+  <run_id> \
+  --mode full_signoff \
+  --genus-run-id <fresh_genus_run_id> \
+  --handoff-dir <handoff_dir>
 ```
 
-The values and full rationale are in
-`MPTDC/syn/scripts/profiles/genus_axis_core_typical_closed.sh` and
-`MPTDC/docs/synthesis/GENUS_AXIS_CORE_TYPICAL_CLOSED_PROFILE.md`.
+The current baseline evidence and server-side inspection commands are in
+`MPTDC/docs/pnr/MPTDC_TC_CLOSURE_20260625_BASELINE.md`.
 
-Remaining work is a clean server rerun of the new wrapper, Innovus feasibility,
-post-placement and post-clock-tree review, MMMC/extracted timing, analog
-confirmation, characterization, and physical verification.
+Remaining work is independent route-DRC cleanup, foundry DRC/LVS, row
+qualification, antenna signoff, IR/EM, WC/BC timing, RO stress review, analog
+confirmation, and physical verification.
 
 ```text
-TYPICAL_ONLY_NOT_MMMC_NOT_FINAL_SIGNOFF
+TC_ONLY_PROVISIONAL_NOT_MMMC_NOT_FINAL_SIGNOFF
 ```
