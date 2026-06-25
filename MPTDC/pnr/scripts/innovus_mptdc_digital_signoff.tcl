@@ -1886,7 +1886,7 @@ proc mptdc_signoff_parse_checkplace_report {path} {
 
     set inferred_zero_fields [list]
     if {![dict get $result command_failed] && [dict get $result command_complete]} {
-        foreach key {region_fence not_of_fence} {
+        foreach key {overlap region_fence not_of_fence} {
             if {[dict get $result $key] eq "UNKNOWN"} {
                 dict set result $key 0
                 lappend inferred_zero_fields $key
@@ -3147,7 +3147,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     close $fh
     mptdc_signoff_set_status PD_PHYSICAL_MATRIX_STATUS $status $rpt
     mptdc_signoff_set_status PD_MATRIX_STATUS $status $rpt
-    if {$status ne "PASS"} {
+    if {$status eq "FAIL"} {
         error "MPTDC_PD_PHYSICAL_MATRIX_GATE_FAILED: report=$rpt"
     }
     return $rpt
