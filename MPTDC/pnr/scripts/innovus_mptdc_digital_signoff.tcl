@@ -1522,16 +1522,17 @@ proc mptdc_signoff_apply_pg_connectivity {} {
         }
     }
     puts $fh "IMPDB-1221=0"
-    puts $fh "UNCONNECTED_STDCELL_PG_PINS=REQUIRE_VERIFY_CONNECTIVITY_ZERO"
-    puts $fh "UNCONNECTED_RO_PG_PINS=REQUIRE_VERIFY_CONNECTIVITY_ZERO"
-    puts $fh "PG_OPENS=REQUIRE_VERIFY_CONNECTIVITY_ZERO"
-    puts $fh "PG_SHORTS=REQUIRE_VERIFY_CONNECTIVITY_ZERO"
+    puts $fh "PG_CONNECTIVITY_STAGE=PRE_PLACEMENT_GLOBAL_NET_CONNECT"
+    puts $fh "UNCONNECTED_STDCELL_PG_PINS=DEFER_TO_POSTROUTE_CONNECTIVITY_GATE"
+    puts $fh "UNCONNECTED_RO_PG_PINS=DEFER_TO_POSTROUTE_CONNECTIVITY_GATE"
+    puts $fh "PG_OPENS=DEFER_TO_POSTROUTE_CONNECTIVITY_GATE"
+    puts $fh "PG_SHORTS=DEFER_TO_POSTROUTE_CONNECTIVITY_GATE"
     close $fh
     if {[llength $failures] > 0} {
         mptdc_signoff_set_status PG_CONNECTIVITY_STATUS FAIL $path
         error "MPTDC_DIGITAL_SIGNOFF_PG_CONNECT_FAILED: $failures"
     }
-    mptdc_signoff_set_status PG_CONNECTIVITY_STATUS PASS $path
+    mptdc_signoff_set_status PG_CONNECTIVITY_STATUS PROVISIONAL $path
     return $path
 }
 
@@ -1595,6 +1596,28 @@ proc mptdc_signoff_connectivity_report_has_errors {path} {
     }
     close $fh
     return [list [expr {[llength $bad] > 0}] $bad]
+}
+
+proc mptdc_signoff_write_pg_postroute_connectivity_status {special_rpt regular_rpt} {
+    set rpt [file join [mptdc_signoff_report_dir] pg_postroute_connectivity_status.rpt]
+    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
+    set special_flag [lindex $special_bad 0]
+    set status [expr {$special_flag ? "FAIL" : "PASS"}]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Post-route PG Connectivity Status"
+    puts $fh "PG_CONNECTIVITY_STATUS=$status"
+    puts $fh "PG_CONNECTIVITY_STAGE=POST_ROUTE_SPECIAL_NET_VERIFY"
+    puts $fh "SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
+    puts $fh "SPECIAL_CONNECTIVITY_BAD=$special_flag"
+    puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
+    puts $fh "REGULAR_CONNECTIVITY_REPORT=$regular_rpt"
+    puts $fh "REGULAR_CONNECTIVITY_BAD=[lindex $regular_bad 0]"
+    puts $fh "REGULAR_CONNECTIVITY_BAD_LINES=[lindex $regular_bad 1]"
+    puts $fh "PG_GATE_NOTE=regular_net_connectivity_is_reported_for_route_gate_only"
+    close $fh
+    mptdc_signoff_set_status PG_CONNECTIVITY_STATUS $status $rpt
+    return $status
 }
 
 proc mptdc_signoff_count_ro_pg_pin_connections {ro_instances pin expected_net} {
@@ -1708,7 +1731,7 @@ proc mptdc_signoff_build_power_grid {} {
     if {$status ni {PASS PROVISIONAL}} {
         error "MPTDC_PG_PHYSICAL_GATE_FAILED: report=$rpt"
     }
-    mptdc_signoff_set_status PG_CONNECTIVITY_STATUS PASS $rpt
+    mptdc_signoff_set_status PG_CONNECTIVITY_STATUS PROVISIONAL $rpt
     return $rpt
 }
 
@@ -1817,6 +1840,8 @@ proc mptdc_signoff_parse_checkplace_report {path} {
     set result [dict create \
         report $path \
         command_failed 0 \
+        command_complete 0 \
+        parser_complete 0 \
         overlap UNKNOWN \
         region_fence UNKNOWN \
         not_of_fence UNKNOWN \
@@ -1835,6 +1860,9 @@ proc mptdc_signoff_parse_checkplace_report {path} {
         if {[regexp -nocase {REPORT_STATUS=FAILED} $trimmed]} {
             dict set result command_failed 1
         }
+        if {[regexp -nocase {Finished[[:space:]]+checkPlace|checkPlace[[:space:]].*complete|Finished[[:space:]]+Check[[:space:]]+Place} $trimmed]} {
+            dict set result command_complete 1
+        }
         if {[regexp -nocase {Overlapping[[:space:]]+with[[:space:]]+other[[:space:]]+instance[[:space:]]*:[[:space:]]*([0-9]+)} $trimmed -> count]} {
             dict set result overlap $count
         }
@@ -1844,24 +1872,46 @@ proc mptdc_signoff_parse_checkplace_report {path} {
         if {[regexp -nocase {Not-of-Fence[[:space:]]+Violation[[:space:]]*:[[:space:]]*([0-9]+)} $trimmed -> count]} {
             dict set result not_of_fence $count
         }
-        if {[regexp -nocase {Placed[[:space:]]*=[[:space:]]*([0-9]+).*Fixed[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> placed fixed]} {
+        if {[regexp -nocase {^\*?info:[[:space:]]*Placed[[:space:]]*=[[:space:]]*([0-9]+).*Fixed[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> placed fixed]} {
             dict set result placed $placed
             dict set result fixed $fixed
-        } elseif {[regexp -nocase {Placed[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> placed]} {
+        } elseif {[regexp -nocase {^\*?info:[[:space:]]*Placed[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> placed]} {
             dict set result placed $placed
         }
-        if {[regexp -nocase {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> count]} {
+        if {[regexp -nocase {^\*?info:[[:space:]]*Unplaced[[:space:]]*=[[:space:]]*([0-9]+)} $trimmed -> count]} {
             dict set result unplaced $count
         }
     }
     close $fh
 
-    foreach key {overlap region_fence not_of_fence unplaced} {
+    set inferred_zero_fields [list]
+    if {![dict get $result command_failed] && [dict get $result command_complete]} {
+        foreach key {region_fence not_of_fence} {
+            if {[dict get $result $key] eq "UNKNOWN"} {
+                dict set result $key 0
+                lappend inferred_zero_fields $key
+            }
+        }
+    }
+
+    set missing [list]
+    foreach key {overlap region_fence not_of_fence unplaced placed} {
         if {[dict get $result $key] eq "UNKNOWN"} {
-            dict set result $key 0
+            lappend missing $key
         }
     }
     if {![dict get $result command_failed] &&
+        [dict get $result command_complete] &&
+        [llength $missing] == 0} {
+        dict set result parser_complete 1
+    } else {
+        dict set result missing_fields $missing
+    }
+    if {[llength $inferred_zero_fields] > 0} {
+        dict set result inferred_zero_fields $inferred_zero_fields
+    }
+    if {![dict get $result command_failed] &&
+        [dict get $result parser_complete] &&
         [dict get $result overlap] == 0 &&
         [dict get $result region_fence] == 0 &&
         [dict get $result not_of_fence] == 0 &&
@@ -1873,6 +1923,7 @@ proc mptdc_signoff_parse_checkplace_report {path} {
 
 proc mptdc_signoff_checkplace_is_clean {data} {
     return [expr {![dict get $data command_failed] &&
+        [dict get $data parser_complete] &&
         [dict get $data overlap] == 0 &&
         [dict get $data region_fence] == 0 &&
         [dict get $data not_of_fence] == 0 &&
@@ -1894,6 +1945,14 @@ proc mptdc_signoff_write_placement_gate_status {rpt label data recovery_rpt} {
     puts $fh "PLACEMENT_STATUS=$status"
     puts $fh "CHECKPLACE_REPORT=[dict get $data report]"
     puts $fh "CHECKPLACE_COMMAND_FAILED=[dict get $data command_failed]"
+    puts $fh "CHECKPLACE_COMMAND_COMPLETE=[dict get $data command_complete]"
+    puts $fh "CHECKPLACE_PARSER_COMPLETE=[dict get $data parser_complete]"
+    if {[dict exists $data missing_fields]} {
+        puts $fh "CHECKPLACE_MISSING_FIELDS=[dict get $data missing_fields]"
+    }
+    if {[dict exists $data inferred_zero_fields]} {
+        puts $fh "CHECKPLACE_INFERRED_ZERO_FIELDS=[dict get $data inferred_zero_fields]"
+    }
     puts $fh "OVERLAPPING_WITH_OTHER_INSTANCE=[dict get $data overlap]"
     puts $fh "REGION_FENCE_VIOLATIONS=[dict get $data region_fence]"
     puts $fh "NOT_OF_FENCE_VIOLATIONS=[dict get $data not_of_fence]"
@@ -1910,8 +1969,8 @@ proc mptdc_signoff_write_placement_gate_status {rpt label data recovery_rpt} {
 }
 
 proc mptdc_signoff_capture_placement_gate {label check_rpt status_rpt {allow_recovery 1}} {
-    mptdc_signoff_capture_candidates $check_rpt \
-        "$label checkPlace" [list {checkPlace} {checkDesign -all}]
+    mptdc_signoff_capture_required_candidates $check_rpt \
+        "$label checkPlace" [list {checkPlace}]
     set data [mptdc_signoff_parse_checkplace_report $check_rpt]
     set recovery_rpt ""
 
@@ -1946,8 +2005,8 @@ proc mptdc_signoff_capture_placement_gate {label check_rpt status_rpt {allow_rec
         }
 
         set recovered_check [file join [mptdc_signoff_report_dir] "${label}_check_place_after_recovery.rpt"]
-        mptdc_signoff_capture_candidates $recovered_check \
-            "$label checkPlace after placement recovery" [list {checkPlace} {checkDesign -all}]
+        mptdc_signoff_capture_required_candidates $recovered_check \
+            "$label checkPlace after placement recovery" [list {checkPlace}]
         set data [mptdc_signoff_parse_checkplace_report $recovered_check]
         set fh [open $recovery_rpt a]
         puts $fh "RECOVERED_CHECKPLACE_REPORT=$recovered_check"
@@ -1977,13 +2036,21 @@ proc mptdc_signoff_route_command_report_path {prefix cmd} {
 
 proc mptdc_signoff_capture_route_command {cmd path} {
     file mkdir [file dirname $path]
-    if {[catch {uplevel 1 "$cmd > \"$path\""} err]} {
+    if {[catch {uplevel 1 "$cmd > \"$path\""} err opts]} {
         set fh [open $path w]
         puts $fh "MPTDC Route Command"
         puts $fh "=================="
         puts $fh "REPORT_STATUS=FAILED"
         puts $fh "COMMAND=$cmd"
-        puts $fh $err
+        puts $fh "ERROR=$err"
+        if {[dict exists $opts -errorcode]} {
+            puts $fh "ERRORCODE=[dict get $opts -errorcode]"
+        }
+        if {[dict exists $opts -errorinfo]} {
+            puts $fh "ERRORINFO_BEGIN"
+            puts $fh [dict get $opts -errorinfo]
+            puts $fh "ERRORINFO_END"
+        }
         close $fh
         return [list 0 $err]
     }
@@ -2425,7 +2492,7 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
 
 proc mptdc_signoff_capture_route_gate_reports {drc_rpt regular_rpt special_rpt report_route_rpt} {
     mptdc_signoff_capture_required_candidates $drc_rpt \
-        "route DRC" [list {verify_drc} {verifyGeometry} {verifyConnectivity -type regular}]
+        "route DRC" [list {verify_drc} {verifyGeometry}]
     mptdc_signoff_capture_required_candidates $regular_rpt \
         "regular-net connectivity" [list {verifyConnectivity -type regular} {verifyConnectivity}]
     mptdc_signoff_capture_required_candidates $special_rpt \
@@ -2439,9 +2506,6 @@ proc mptdc_signoff_read_route_gate_reports {drc_rpt regular_rpt special_rpt repo
     set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
     set unrouted [mptdc_signoff_parse_report_route_unrouted $report_route_rpt]
-    if {$unrouted eq "UNKNOWN" && ![lindex $regular_bad 0]} {
-        set unrouted 0
-    }
     return [list $drc_data $regular_bad $special_bad $unrouted]
 }
 
@@ -2473,27 +2537,10 @@ proc mptdc_signoff_route_gate_review_allowed {drc_data regular_bad special_bad u
 }
 
 proc mptdc_signoff_route_gate_apply_router_drc {drc_data router_drc router_rpt} {
-    set router_status [dict get $router_drc status]
-    set router_total [dict get $router_drc total_violations]
-    set router_shorts [dict get $router_drc shorts]
-    set verify_total [dict get $drc_data total_violations]
-    set verify_shorts [dict get $drc_data shorts]
-    if {$router_status eq "PASS" &&
-        $router_total ne "UNKNOWN" &&
-        $router_total == 0 &&
-        $router_shorts ne "UNKNOWN" &&
-        $router_shorts == 0 &&
-        $verify_total ne "UNKNOWN" &&
-        $verify_total <= 1 &&
-        $verify_shorts ne "UNKNOWN" &&
-        $verify_shorts == 0} {
-        dict set drc_data verify_drc_violations_raw $verify_total
-        dict set drc_data verify_drc_shorts_raw $verify_shorts
-        dict set drc_data route_drc_source $router_rpt
-        dict set drc_data total_violations 0
-        dict set drc_data shorts 0
-        dict set drc_data status PASS
-    }
+    dict set drc_data router_transcript_status [dict get $router_drc status]
+    dict set drc_data router_transcript_drc [dict get $router_drc total_violations]
+    dict set drc_data router_transcript_shorts [dict get $router_drc shorts]
+    dict set drc_data router_transcript_source $router_rpt
     return $drc_data
 }
 
@@ -2506,6 +2553,12 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
     puts $fh "ROUTE_GATE_RECOVERY_INITIAL_SHORTS=[dict get $drc_data shorts]"
     if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
         puts $fh "ROUTE_GATE_RECOVERY_STATUS=NOT_NEEDED"
+        close $fh
+        return $route_gate
+    }
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_ROUTE_GATE_RECOVERY 0]} {
+        puts $fh "ROUTE_GATE_RECOVERY_STATUS=DISABLED_BY_DEFAULT"
+        puts $fh "ROUTE_GATE_RECOVERY_ENABLE_ENV=MPTDC_ENABLE_ROUTE_GATE_RECOVERY"
         close $fh
         return $route_gate
     }
@@ -2565,9 +2618,6 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     set shorts [dict get $drc_data shorts]
     set regular_flag [lindex $regular_bad 0]
     set special_flag [lindex $special_bad 0]
-    if {$unrouted eq "UNKNOWN" && !$regular_flag} {
-        set unrouted 0
-    }
     set status FAIL
     set review_allowed [mptdc_signoff_route_gate_review_allowed $drc_data $regular_bad $special_bad $unrouted]
     if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
@@ -2598,8 +2648,15 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "FOUNDRY_DRC_STATUS=DEFERRED"
     puts $fh "GEOMETRY_DRC_VIOLATIONS=$total"
     puts $fh "SHORTS=$shorts"
-    puts $fh "ROUTER_TRANSCRIPT_DRC=$total"
-    puts $fh "ROUTER_TRANSCRIPT_SHORTS=$shorts"
+    if {[dict exists $drc_data router_transcript_drc]} {
+        puts $fh "ROUTER_TRANSCRIPT_DRC=[dict get $drc_data router_transcript_drc]"
+        puts $fh "ROUTER_TRANSCRIPT_SHORTS=[dict get $drc_data router_transcript_shorts]"
+        puts $fh "ROUTER_TRANSCRIPT_STATUS=[dict get $drc_data router_transcript_status]"
+        puts $fh "ROUTER_TRANSCRIPT_SOURCE=[dict get $drc_data router_transcript_source]"
+    } else {
+        puts $fh "ROUTER_TRANSCRIPT_DRC=NOT_USED_FOR_GATE"
+        puts $fh "ROUTER_TRANSCRIPT_SHORTS=NOT_USED_FOR_GATE"
+    }
     puts $fh "INNOVUS_VERIFY_DRC_VIOLATIONS_RAW=$verify_total"
     puts $fh "INNOVUS_VERIFY_DRC_SHORTS_RAW=$verify_shorts"
     puts $fh "REGULAR_NET_CONNECTIVITY_BAD=$regular_flag"
@@ -2970,6 +3027,21 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     set max_abs_dy 0.0
     set tile_w ""
     set tile_h ""
+    set audit_mode [string tolower [mptdc_signoff_env MPTDC_PD_PHYSICAL_AUDIT_MODE auto]]
+    if {$audit_mode eq "auto"} {
+        if {[mptdc_signoff_env_truthy MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 0] ||
+            [mptdc_signoff_env_truthy MPTDC_PNR_PD_TILE_FIX_LEAVES 0]} {
+            set audit_mode strict_center
+        } else {
+            set audit_mode soft_region
+        }
+    }
+    if {$audit_mode ni {strict_center soft_region relaxed}} {
+        set audit_mode strict_center
+    }
+    set max_center_offset [mptdc_signoff_env MPTDC_PD_TILE_MAX_OFFSET_UM 10.0]
+    set tile_region_margin [mptdc_signoff_env MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 1.0]
+    set soft_box_margin [mptdc_signoff_env MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM 2.0]
     if {[mptdc_signoff_box_valid $pd_box]} {
         set tile_w [expr {[mptdc_signoff_box_width $pd_box] / 8.0}]
         set tile_h [expr {[mptdc_signoff_box_height $pd_box] / 8.0}]
@@ -3007,15 +3079,30 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
             set exp_ury [expr {$exp_lly + $tile_h}]
             set exp_cx [expr {($exp_llx + $exp_urx) / 2.0}]
             set exp_cy [expr {($exp_lly + $exp_ury) / 2.0}]
+            set tile_check_box [list \
+                [expr {$exp_llx + $tile_region_margin}] \
+                [expr {$exp_lly + $tile_region_margin}] \
+                [expr {$exp_urx - $tile_region_margin}] \
+                [expr {$exp_ury - $tile_region_margin}]]
+            if {![mptdc_signoff_box_valid $tile_check_box]} {
+                set tile_check_box [list $exp_llx $exp_lly $exp_urx $exp_ury]
+            }
+            set tile_check_box [mptdc_signoff_expand_box $tile_check_box $soft_box_margin]
             if {$cx ne "" && $cy ne ""} {
                 set dx [expr {$cx - $exp_cx}]
                 set dy [expr {$cy - $exp_cy}]
                 if {abs($dx) > $max_abs_dx} { set max_abs_dx [expr {abs($dx)}] }
                 if {abs($dy) > $max_abs_dy} { set max_abs_dy [expr {abs($dy)}] }
-                if {abs($dx) > [mptdc_signoff_env MPTDC_PD_TILE_MAX_OFFSET_UM 10.0] ||
-                    abs($dy) > [mptdc_signoff_env MPTDC_PD_TILE_MAX_OFFSET_UM 10.0]} {
-                    set row_status OUTLIER
-                    incr outliers
+                if {$audit_mode eq "strict_center"} {
+                    if {abs($dx) > $max_center_offset || abs($dy) > $max_center_offset} {
+                        set row_status OUTLIER
+                        incr outliers
+                    }
+                } else {
+                    if {![mptdc_signoff_point_in_box $cx $cy $tile_check_box]} {
+                        set row_status OUTSIDE_TILE_REGION
+                        incr outliers
+                    }
                 }
             }
         }
@@ -3024,7 +3111,13 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     close $fh
 
     set backend_intrusion [mptdc_signoff_count_backend_cells_in_pd_box $pd_box]
-    set status [expr {[llength $cells] == 64 && $physical == 64 && $missing_logic == 0 && $missing_box == 0 && $outliers == 0 && $backend_intrusion == 0 ? "PASS" : "FAIL"}]
+    set essential_status [expr {[llength $cells] == 64 && $physical == 64 && $missing_logic == 0 && $missing_box == 0 && $backend_intrusion == 0 ? "PASS" : "FAIL"}]
+    set regularity_status [expr {$essential_status eq "PASS" && $outliers == 0 ? "PASS" : "FAIL"}]
+    set relaxed_gate [expr {[mptdc_signoff_env_truthy MPTDC_ALLOW_RELAXED_PD_MATRIX 0] || $audit_mode eq "relaxed"}]
+    set status $regularity_status
+    if {$status ne "PASS" && $relaxed_gate && $essential_status eq "PASS"} {
+        set status REVIEW_REQUIRED
+    }
     set fh [open $rpt w]
     puts $fh "PD_TILE_COUNT=[llength $cells]"
     puts $fh "PD_PHYSICAL_TILE_COUNT=$physical"
@@ -3037,11 +3130,18 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     }
     puts $fh "PD_TILE_PITCH_X=$tile_w"
     puts $fh "PD_TILE_PITCH_Y=$tile_h"
+    puts $fh "PD_PHYSICAL_AUDIT_MODE=$audit_mode"
+    puts $fh "PD_PHYSICAL_MATRIX_RELAXED_GATE=[expr {$relaxed_gate ? 1 : 0}]"
+    puts $fh "PD_TILE_STRICT_CENTER_MAX_OFFSET_UM=$max_center_offset"
+    puts $fh "PD_TILE_REGION_MARGIN_UM=$tile_region_margin"
+    puts $fh "PD_TILE_SOFT_BOX_MARGIN_UM=$soft_box_margin"
     puts $fh "PD_TILE_OUTLIER_COUNT=$outliers"
     puts $fh "PD_MAX_ABS_DX_UM=[format %.3f $max_abs_dx]"
     puts $fh "PD_MAX_ABS_DY_UM=[format %.3f $max_abs_dy]"
     puts $fh "PD_BACKEND_INTRUSION_COUNT=$backend_intrusion"
-    puts $fh "PD_MATRIX_REGULARITY=$status"
+    puts $fh "PD_MATRIX_ESSENTIAL_STATUS=$essential_status"
+    puts $fh "PD_MATRIX_REGULARITY=$regularity_status"
+    puts $fh "PD_PHYSICAL_MATRIX_GATE_STATUS=$status"
     puts $fh "PD_PHYSICAL_MATRIX_STATUS=$status"
     puts $fh "CSV=$csv"
     close $fh
@@ -4109,7 +4209,44 @@ proc mptdc_signoff_run_cts {} {
     set efh [open $rpt a]
     puts $efh "CLK_SYS_ROOT_POST_CCOPT_AUDIT=$post_ccopt_root_audit"
     close $efh
-    catch {optDesign -postCTS}
+    set tc_view_status PASS
+    set efh [open $rpt a]
+    if {[catch {set_analysis_view -setup [list TC_NOMINAL] -hold [list TC_NOMINAL]} tc_view_err tc_view_opts]} {
+        set tc_view_status FAIL
+        puts $efh "POST_CTS_SET_ANALYSIS_VIEW_STATUS=FAIL"
+        puts $efh "POST_CTS_SET_ANALYSIS_VIEW_ERROR=$tc_view_err"
+        if {[dict exists $tc_view_opts -errorinfo]} {
+            puts $efh "POST_CTS_SET_ANALYSIS_VIEW_ERRORINFO_BEGIN"
+            puts $efh [dict get $tc_view_opts -errorinfo]
+            puts $efh "POST_CTS_SET_ANALYSIS_VIEW_ERRORINFO_END"
+        }
+    } else {
+        puts $efh "POST_CTS_SET_ANALYSIS_VIEW_STATUS=PASS"
+    }
+    close $efh
+    if {$tc_view_status ne "PASS" && ![mptdc_signoff_env_truthy MPTDC_ALLOW_TC_VIEW_REVIEW_CONTINUE 0]} {
+        mptdc_signoff_set_status CTS_STATUS FAIL $rpt
+        error "MPTDC_POST_CTS_TC_VIEW_SETUP_FAILED: report=$rpt"
+    }
+    set post_cts_opt_status PASS
+    set efh [open $rpt a]
+    if {[catch {optDesign -postCTS} post_cts_err post_cts_opts]} {
+        set post_cts_opt_status FAIL
+        puts $efh "POST_CTS_OPT_STATUS=FAIL"
+        puts $efh "POST_CTS_OPT_ERROR=$post_cts_err"
+        if {[dict exists $post_cts_opts -errorinfo]} {
+            puts $efh "POST_CTS_OPT_ERRORINFO_BEGIN"
+            puts $efh [dict get $post_cts_opts -errorinfo]
+            puts $efh "POST_CTS_OPT_ERRORINFO_END"
+        }
+    } else {
+        puts $efh "POST_CTS_OPT_STATUS=PASS"
+    }
+    close $efh
+    if {$post_cts_opt_status ne "PASS" && ![mptdc_signoff_env_truthy MPTDC_ALLOW_CTS_POSTOPT_REVIEW_CONTINUE 0]} {
+        mptdc_signoff_set_status CTS_STATUS FAIL $rpt
+        error "MPTDC_POST_CTS_OPT_FAILED: report=$rpt"
+    }
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] timing_post_cts.rpt] \
         "TC post-CTS setup" [list {timeDesign -postCTS} {report_timing -view TC_NOMINAL -max_paths 100}]
     mptdc_signoff_capture_candidates [file join [mptdc_signoff_report_dir] hold_post_cts.rpt] \
@@ -4125,6 +4262,9 @@ proc mptdc_signoff_run_cts {} {
     if {[info exists mptdc_signoff_status(CTS_STATUS)] && [string match *PROVISIONAL* $mptdc_signoff_status(CTS_STATUS)]} {
         set cts_stage_status PROVISIONAL
     }
+    if {$tc_view_status ne "PASS" || $post_cts_opt_status ne "PASS"} {
+        set cts_stage_status REVIEW_REQUIRED
+    }
     set sfh [open $rpt a]
     puts $sfh "CTS_STATUS=$cts_stage_status"
     puts $sfh "IMPCCOPT-4255=0"
@@ -4135,6 +4275,8 @@ proc mptdc_signoff_run_cts {} {
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 03_cts.enc]}
     if {$cts_stage_status eq "PASS"} {
         mptdc_signoff_set_status CTS_STATUS PASS $rpt
+    } else {
+        mptdc_signoff_set_status CTS_STATUS $cts_stage_status $rpt
     }
 }
 
@@ -4142,9 +4284,29 @@ proc mptdc_signoff_route_design {} {
     mptdc_signoff_source_if_exists innovus_mptdc_route.tcl
     set route_intent_rpt [file join [mptdc_signoff_report_dir] route_layer_intent.rpt]
     catch {mptdc_pnr_write_route_intent $route_intent_rpt}
+    set route_audit_rpt [file join [mptdc_signoff_report_dir] route_layer_audit.rpt]
+    set route_audit [dict create status FAIL report $route_audit_rpt]
+    if {[catch {set route_audit [mptdc_pnr_audit_route_layers $route_audit_rpt]} audit_err audit_opts]} {
+        set afh [open $route_audit_rpt a]
+        puts $afh "ROUTE_LAYER_AUDIT_STATUS=FAIL"
+        puts $afh "ROUTE_LAYER_AUDIT_ERROR=$audit_err"
+        if {[dict exists $audit_opts -errorinfo]} {
+            puts $afh "ROUTE_LAYER_AUDIT_ERRORINFO_BEGIN"
+            puts $afh [dict get $audit_opts -errorinfo]
+            puts $afh "ROUTE_LAYER_AUDIT_ERRORINFO_END"
+        }
+        close $afh
+        mptdc_signoff_set_status ROUTE_STATUS FAIL $route_audit_rpt
+        error "MPTDC_ROUTE_LAYER_AUDIT_FAILED: report=$route_audit_rpt error=$audit_err"
+    }
+    if {[dict get $route_audit status] ne "PASS"} {
+        mptdc_signoff_set_status ROUTE_STATUS FAIL $route_audit_rpt
+        error "MPTDC_ROUTE_LAYER_AUDIT_FAILED: report=$route_audit_rpt invalid=[dict get $route_audit invalid]"
+    }
     set route_layer_rpt [file join [mptdc_signoff_report_dir] route_layer_limits.rpt]
     set rfh [open $route_layer_rpt w]
     puts $rfh "# MPTDC Route Layer Limits"
+    puts $rfh "ROUTE_LAYER_AUDIT_REPORT=$route_audit_rpt"
     if {[catch {mptdc_pnr_apply_route_layer_limits} layer_limits]} {
         puts $rfh "ROUTE_LAYER_LIMIT_STATUS=REVIEW_REQUIRED"
         puts $rfh "ROUTE_LAYER_LIMIT_ERROR=$layer_limits"
@@ -4178,10 +4340,18 @@ proc mptdc_signoff_route_design {} {
     puts $rcfh "ROUTE_COMMAND=$route_cmd"
     puts $rcfh "ROUTE_DESIGN_PLACEMENT_CHECK=[expr {[mptdc_signoff_env_truthy MPTDC_ROUTE_DESIGN_PLACEMENT_CHECK 1] ? 1 : 0}]"
     close $rcfh
-    if {[catch {uplevel #0 $route_cmd} route_err]} {
+    if {[catch {uplevel #0 $route_cmd} route_err route_opts]} {
         set rcfh [open $route_cmd_rpt a]
         puts $rcfh "ROUTE_COMMAND_STATUS=FAIL"
         puts $rcfh "ROUTE_COMMAND_ERROR=$route_err"
+        if {[dict exists $route_opts -errorcode]} {
+            puts $rcfh "ROUTE_COMMAND_ERRORCODE=[dict get $route_opts -errorcode]"
+        }
+        if {[dict exists $route_opts -errorinfo]} {
+            puts $rcfh "ROUTE_COMMAND_ERRORINFO_BEGIN"
+            puts $rcfh [dict get $route_opts -errorinfo]
+            puts $rcfh "ROUTE_COMMAND_ERRORINFO_END"
+        }
         close $rcfh
         error "MPTDC_ROUTE_COMMAND_FAILED: report=$route_cmd_rpt error=$route_err"
     }
@@ -4211,6 +4381,7 @@ proc mptdc_signoff_route_design {} {
     set route_gate [mptdc_signoff_route_gate_recovery \
         $drc_rpt $regular_rpt $special_rpt $report_route_rpt $route_gate]
     lassign $route_gate drc_data regular_bad special_bad unrouted
+    mptdc_signoff_write_pg_postroute_connectivity_status $special_rpt $regular_rpt
     mptdc_signoff_write_route_gate_status $rpt $drc_data $regular_bad $special_bad $unrouted $antenna_status
     catch {defOut [file join [mptdc_signoff_def_dir] 04_route.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 04_route.enc]}
@@ -4252,8 +4423,32 @@ proc mptdc_signoff_extract_and_sta {} {
     set cap_rpt [file join [mptdc_signoff_report_dir] drv_max_cap.rpt]
     set fanout_rpt [file join [mptdc_signoff_report_dir] drv_max_fanout.rpt]
     mptdc_signoff_capture_drv_reports $tran_rpt $cap_rpt $fanout_rpt
-    mptdc_signoff_require_no_drv_violation_markers [list $tran_rpt $cap_rpt $fanout_rpt]
-    mptdc_signoff_set_status DRV_STATUS PASS drv_reports_require_zero_violations
+    set drv_status_rpt [file join [mptdc_signoff_report_dir] drv_status.rpt]
+    if {[catch {mptdc_signoff_require_no_drv_violation_markers [list $tran_rpt $cap_rpt $fanout_rpt]} drv_err drv_opts]} {
+        set fh [open $drv_status_rpt w]
+        puts $fh "# MPTDC Post-route DRV Status"
+        puts $fh "DRV_STATUS=FAIL"
+        puts $fh "DRV_MAX_TRANSITION_REPORT=$tran_rpt"
+        puts $fh "DRV_MAX_CAP_REPORT=$cap_rpt"
+        puts $fh "DRV_MAX_FANOUT_REPORT=$fanout_rpt"
+        puts $fh "DRV_ERROR=$drv_err"
+        if {[dict exists $drv_opts -errorinfo]} {
+            puts $fh "DRV_ERRORINFO_BEGIN"
+            puts $fh [dict get $drv_opts -errorinfo]
+            puts $fh "DRV_ERRORINFO_END"
+        }
+        close $fh
+        mptdc_signoff_set_status DRV_STATUS FAIL $drv_status_rpt
+        error $drv_err
+    }
+    set fh [open $drv_status_rpt w]
+    puts $fh "# MPTDC Post-route DRV Status"
+    puts $fh "DRV_STATUS=PASS"
+    puts $fh "DRV_MAX_TRANSITION_REPORT=$tran_rpt"
+    puts $fh "DRV_MAX_CAP_REPORT=$cap_rpt"
+    puts $fh "DRV_MAX_FANOUT_REPORT=$fanout_rpt"
+    close $fh
+    mptdc_signoff_set_status DRV_STATUS PASS $drv_status_rpt
 }
 
 proc mptdc_signoff_spread_pct {values} {
@@ -4821,15 +5016,20 @@ proc mptdc_signoff_write_final_package {} {
     set rpt [file join [mptdc_signoff_report_dir] physical_verification_status.md]
     set setup_state [mptdc_signoff_status_state SETUP_STATUS_TC]
     set hold_state [mptdc_signoff_status_state TC_HOLD_STATUS]
+    set placement_state [mptdc_signoff_status_state PLACEMENT_STATUS]
+    set pg_conn_state [mptdc_signoff_status_state PG_CONNECTIVITY_STATUS]
+    set cts_state [mptdc_signoff_status_state CTS_STATUS]
     set route_state [mptdc_signoff_status_state ROUTE_STATUS]
     set extraction_state [mptdc_signoff_status_state EXTRACTION_STATUS]
+    set drv_state [mptdc_signoff_status_state DRV_STATUS]
     set tc_pnr_state PASS
     set tc_pnr_evidence tc_only_routed_timed_closure_complete
     set digital_evidence row_and_block_drc_lvs_deferred
-    if {$route_state ne "PASS" || $extraction_state ne "PASS"} {
+    if {$placement_state ne "PASS" || $pg_conn_state ne "PASS" || $cts_state ne "PASS" ||
+        $route_state ne "PASS" || $extraction_state ne "PASS" || $drv_state ne "PASS"} {
         set tc_pnr_state DEFERRED
-        set tc_pnr_evidence route_or_extraction_not_complete
-        set digital_evidence row_and_block_drc_lvs_deferred_route_or_extraction_not_complete
+        set tc_pnr_evidence implementation_gate_not_complete
+        set digital_evidence row_and_block_drc_lvs_deferred_implementation_gate_not_complete
     } elseif {$setup_state ne "PASS" || $hold_state ne "PASS"} {
         set tc_pnr_state DEFERRED
         set tc_pnr_evidence tc_timing_not_closed
@@ -4843,6 +5043,12 @@ proc mptdc_signoff_write_final_package {} {
     puts $fh "LVS_STATUS=DEFERRED"
     puts $fh "MPTDC_TC_PNR_CLOSURE=$tc_pnr_state"
     puts $fh "MPTDC_TC_PNR_CLOSURE_EVIDENCE=$tc_pnr_evidence"
+    puts $fh "PLACEMENT_STATUS=$placement_state"
+    puts $fh "PG_CONNECTIVITY_STATUS=$pg_conn_state"
+    puts $fh "CTS_STATUS=$cts_state"
+    puts $fh "ROUTE_STATUS=$route_state"
+    puts $fh "EXTRACTION_STATUS=$extraction_state"
+    puts $fh "DRV_STATUS=$drv_state"
     puts $fh "SETUP_STATUS_TC=$setup_state"
     puts $fh "TC_HOLD_STATUS=$hold_state"
     puts $fh "MPTDC_TC_PHYSICAL_SIGNOFF=NO"
@@ -4862,6 +5068,33 @@ proc mptdc_signoff_write_final_package {} {
     mptdc_signoff_set_status NOT_MMMC_SIGNOFF YES scope_tc_only
     mptdc_signoff_set_status READY_FOR_TAPEOUT NO row_and_mmmc_deferred
     mptdc_signoff_set_status DIGITAL_PNR_SIGNOFF PROVISIONAL $digital_evidence
+
+    set matrix [file join [mptdc_signoff_report_dir] acceptance_matrix.rpt]
+    set mfh [open $matrix w]
+    puts $mfh "# MPTDC TC Innovus Acceptance Matrix"
+    foreach key { \
+        PLACEMENT_STATUS \
+        PD_MATRIX_STATUS \
+        PD_PHYSICAL_MATRIX_STATUS \
+        PG_PHYSICAL_STATUS \
+        PG_CONNECTIVITY_STATUS \
+        CTS_STATUS \
+        ROUTE_STATUS \
+        ANTENNA_STATUS \
+        EXTRACTION_STATUS \
+        SETUP_STATUS_TC \
+        TC_HOLD_STATUS \
+        DRV_STATUS \
+        MPTDC_TC_PNR_CLOSURE \
+        DRC_STATUS \
+        LVS_STATUS \
+        READY_FOR_TAPEOUT} {
+        puts $mfh "$key=[mptdc_signoff_status_state $key]"
+    }
+    puts $mfh "TC_INNOVUS_SCOPE=YES"
+    puts $mfh "FOUNDRY_DRC_LVS_IR_SCOPE=DEFERRED"
+    puts $mfh "ACCEPTANCE_MATRIX_STATUS=$tc_pnr_state"
+    close $mfh
 }
 
 proc mptdc_signoff_source_check {} {

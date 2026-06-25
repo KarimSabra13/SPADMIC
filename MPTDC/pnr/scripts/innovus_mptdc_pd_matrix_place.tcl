@@ -255,7 +255,7 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
     if {$side ni {east west center}} { set side east }
     set center_allowed [mptdc_pnr_env_truthy MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD 0]
     if {$side eq "center" &&
-        [mptdc_pnr_env_truthy MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 1] &&
+        [mptdc_pnr_env_truthy MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 0] &&
         !$center_allowed} {
         puts $fh "FAST_TAG_COLUMN_PLACEMENT_STATUS=REVIEW_REQUIRED"
         puts $fh "FAST_TAG_COLUMN_PLACEMENT_ERROR=center_strip_over_pd_requires_explicit_override"
@@ -269,7 +269,7 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
     set gap [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_GAP_UM 2.0]
     set y_margin [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_Y_MARGIN_UM 1.0]
     set fix_cells [mptdc_pnr_env_truthy MPTDC_PNR_FAST_TAG_COLUMN_FIX 0]
-    set preplace [mptdc_pnr_env_truthy MPTDC_PNR_FAST_TAG_COLUMN_PREPLACE 1]
+    set preplace [mptdc_pnr_env_truthy MPTDC_PNR_FAST_TAG_COLUMN_PREPLACE 0]
     set orient [mptdc_pnr_env MPTDC_PNR_FAST_TAG_COLUMN_ORIENT AUTO]
     set strip_box [mptdc_pnr_fast_tag_column_side_box $pd_box $boxes $side $width $gap]
     set strip_llx [lindex $strip_box 0]
@@ -297,6 +297,7 @@ proc mptdc_pnr_apply_fast_tag_column_placement {{path ""}} {
     puts $fh "FAST_TAG_COLUMN_RECORDS=[llength $records]"
     puts $fh "FAST_TAG_COLUMN_PREPLACE=$preplace"
     puts $fh "FAST_TAG_COLUMN_FIX=$fix_cells"
+    puts $fh "FAST_TAG_COLUMN_PLACEMENT_STRATEGY=[expr {$preplace ? "MANUAL_PREPLACE_WITH_POSTCHECK" : "SOFT_REGION_GUIDANCE"}]"
     puts $fh "FAST_TAG_COLUMN_ORIENT=$orient"
 
     for {set col 0} {$col < 8} {incr col} {

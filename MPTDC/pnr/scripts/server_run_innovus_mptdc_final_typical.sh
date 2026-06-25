@@ -508,7 +508,8 @@ if {[mptdc_pnr_ro_load_warning_ff] ne "75.59"} { error "RO warning load limit ch
 if {[mptdc_pnr_core_util_default] ne "0.60"} { error "core utilization default changed" }
 if {[mptdc_pnr_core_util_max_first_run] ne "0.65"} { error "core utilization max changed" }
 if {[mptdc_pnr_cts_primary_clock] ne "clk_sys"} { error "CTS primary clock changed" }
-if {[mptdc_pnr_route_signal_top_layer] ne "MET3"} { error "signal top route layer changed" }
+if {[mptdc_pnr_route_signal_top_layer] ne "MET4"} { error "signal top route layer changed" }
+if {[dict get [mptdc_pnr_route_effective_top_layer [mptdc_pnr_route_signal_top_layer]] top] ne "METTP"} { error "effective route top floor changed" }
 if {[mptdc_pnr_postroute_opt_enabled] ne "0"} { error "postroute optimization default changed" }
 if {[lsearch -exact [mptdc_pnr_required_reports] fast_tag_to_pd_route_lengths.csv] < 0} { error "missing fast-tag route-length report requirement" }
 if {[lsearch -exact [mptdc_pnr_required_reports] cts_clock_inclusion_audit.rpt] < 0} { error "missing CTS audit report requirement" }

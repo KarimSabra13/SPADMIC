@@ -279,7 +279,7 @@ proc mptdc_osc_pd_apply_leaf_tile_box {member box fh} {
 }
 
 proc mptdc_osc_pd_preplace_tile_members {members box fh} {
-    if {![mptdc_pnr_env MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 1]} {
+    if {![mptdc_pnr_env MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 0]} {
         return [dict create enabled 0 box_constraints 0 preplaced 0 failures 0 overflow 0]
     }
     set llx [lindex $box 0]
@@ -289,7 +289,7 @@ proc mptdc_osc_pd_preplace_tile_members {members box fh} {
     set site_w [mptdc_pnr_env MPTDC_PNR_PD_TILE_SITE_WIDTH_UM 0.56]
     set row_h [mptdc_pnr_env MPTDC_PNR_PD_TILE_ROW_HEIGHT_UM 4.48]
     set spacing [mptdc_pnr_env MPTDC_PNR_PD_TILE_MEMBER_SPACING_UM 0.0]
-    set fix_leaves [mptdc_pnr_env MPTDC_PNR_PD_TILE_FIX_LEAVES 1]
+    set fix_leaves [mptdc_pnr_env MPTDC_PNR_PD_TILE_FIX_LEAVES 0]
     set orient [mptdc_pnr_env MPTDC_PNR_PD_TILE_ORIENT AUTO]
     set tile_w [expr {$urx - $llx}]
     set tile_h [expr {$ury - $lly}]
