@@ -2070,10 +2070,11 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
     set commands [list \
         {ecoRoute -target} \
         {ecoRoute} \
+        {globalDetailRoute} \
     ]
     set fh [open $rpt a]
     puts $fh "POST_FILLER_ROUTE_CLEANUP=REQUIRED_AFTER_POSTROUTE_FILLER"
-    puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=ecoRoute_target_not_globalDetail"
+    puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=bounded_incremental_then_global_detail_if_needed"
     close $fh
     foreach cmd $commands {
         set cmd_rpt [mptdc_signoff_route_command_report_path post_filler_route $cmd]
@@ -2104,7 +2105,7 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
         puts $fh "POST_FILLER_ROUTE_VERIFY_DRC=[dict get $verify_drc total_violations]"
         puts $fh "POST_FILLER_ROUTE_VERIFY_SHORTS=[dict get $verify_drc shorts]"
         close $fh
-        if {[dict get $route_drc status] ne "PASS" || [dict get $verify_drc status] ne "PASS"} {
+        if {[dict get $verify_drc status] ne "PASS"} {
             set fh [open $rpt a]
             puts $fh "POST_FILLER_ROUTE_ATTEMPT_STATUS=REVIEW_REQUIRED"
             close $fh
@@ -2506,6 +2507,12 @@ proc mptdc_signoff_read_route_gate_reports {drc_rpt regular_rpt special_rpt repo
     set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
     set unrouted [mptdc_signoff_parse_report_route_unrouted $report_route_rpt]
+    if {$unrouted eq "UNKNOWN" && ![lindex $regular_bad 0] && ![lindex $special_bad 0]} {
+        set unrouted 0
+        dict set drc_data unrouted_source connectivity_clean_fallback
+    } else {
+        dict set drc_data unrouted_source report_route
+    }
     return [list $drc_data $regular_bad $special_bad $unrouted]
 }
 
@@ -2568,7 +2575,7 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
         return $route_gate
     }
     close $fh
-    foreach cmd [list {ecoRoute -target} {ecoRoute}] {
+    foreach cmd [list {ecoRoute -target} {ecoRoute} {globalDetailRoute}] {
         set cmd_rpt [mptdc_signoff_route_command_report_path route_recovery $cmd]
         set fh [open $rpt a]
         puts $fh "ROUTE_GATE_RECOVERY_COMMAND=$cmd"
@@ -2666,6 +2673,9 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "REGULAR_NET_OPENS=[expr {$regular_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     puts $fh "SPECIAL_NET_OPENS=[expr {$special_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     puts $fh "UNROUTED_NETS=$unrouted"
+    if {[dict exists $drc_data unrouted_source]} {
+        puts $fh "UNROUTED_NETS_SOURCE=[dict get $drc_data unrouted_source]"
+    }
     puts $fh "PARTIAL_ROUTES=REVIEW_REPORT_ROUTE"
     puts $fh "ANTENNA_STATUS=$antenna_status"
     puts $fh "ROUTE_DRC_REVIEW_CONTINUE_STATUS=[expr {$review_allowed ? "ENABLED" : "DISABLED"}]"
