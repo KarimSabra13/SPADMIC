@@ -23,8 +23,16 @@ proc mptdc_pnr_route_effective_top_floor_layer {} {
     return [mptdc_pnr_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]
 }
 
+proc mptdc_pnr_route_normalize_layer_value {layer} {
+    set value [string trim $layer]
+    if {[regexp -nocase {^(layer|route_layer|routing_layer):(.+)$} $value -> _ suffix]} {
+        set value [string trim $suffix]
+    }
+    return [string toupper $value]
+}
+
 proc mptdc_pnr_route_layer_index {layer} {
-    set value [string toupper [string trim $layer]]
+    set value [mptdc_pnr_route_normalize_layer_value $layer]
     if {[string is integer -strict $value]} {
         return $value
     }
@@ -42,7 +50,7 @@ proc mptdc_pnr_route_layer_index {layer} {
 }
 
 proc mptdc_pnr_route_layer_name {layer} {
-    set value [string toupper [string trim $layer]]
+    set value [mptdc_pnr_route_normalize_layer_value $layer]
     if {![string is integer -strict $value]} {
         return $value
     }
@@ -183,6 +191,50 @@ proc mptdc_pnr_route_audit_value {fh invalid_var label value} {
     }
 }
 
+proc mptdc_pnr_route_db_attrs_for {object} {
+    global mptdc_pnr_route_attr_cache
+    if {$object eq ""} { return [list] }
+    set key "$object"
+    if {[info exists mptdc_pnr_route_attr_cache($key)]} {
+        return $mptdc_pnr_route_attr_cache($key)
+    }
+
+    set attrs [list]
+    if {![catch {set raw_attrs [get_db $object .?]}]} {
+        if {[catch {
+            foreach raw $raw_attrs {
+                set token [string trim [lindex $raw 0]]
+                if {$token eq ""} { continue }
+                lappend attrs $token
+            }
+        }]} {
+            foreach raw [split "$raw_attrs" "\n"] {
+                set token [string trim $raw]
+                if {$token eq ""} { continue }
+                lappend attrs $token
+            }
+        }
+    }
+    set mptdc_pnr_route_attr_cache($key) $attrs
+    return $attrs
+}
+
+proc mptdc_pnr_route_db_attr_supported {object attr} {
+    set attr_name [string trimleft $attr .]
+    if {$attr_name eq ""} { return 0 }
+    set parent [lindex [split $attr_name "."] 0]
+    foreach raw_attr [mptdc_pnr_route_db_attrs_for $object] {
+        set norm [string trimleft $raw_attr .]
+        if {$norm eq $attr_name} {
+            return 1
+        }
+        if {[string first "." $attr_name] >= 0 && $norm eq $parent} {
+            return 1
+        }
+    }
+    return 0
+}
+
 proc mptdc_pnr_route_audit_object_attrs {fh invalid_var object_label objects attrs {limit 20000}} {
     upvar 1 $invalid_var invalid
     set scanned 0
@@ -195,6 +247,9 @@ proc mptdc_pnr_route_audit_object_attrs {fh invalid_var object_label objects att
         set obj_name $obj
         catch {set obj_name [get_db $obj .name]}
         foreach attr $attrs {
+            if {![mptdc_pnr_route_db_attr_supported $obj $attr]} {
+                continue
+            }
             if {[catch {set value [get_db $obj $attr]} err] || $value eq "" || $value eq "0x0"} {
                 continue
             }
