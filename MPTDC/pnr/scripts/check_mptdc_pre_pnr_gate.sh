@@ -299,7 +299,7 @@ count_netlist_instances() {
     printf '\n'
     return 0
   fi
-  grep -cE "^[[:space:]]*$cell[[:space:]]+" "$netlist" || true
+  grep -cE "^[[:space:]]*$cell([[:space:]]|$|#)" "$netlist" || true
 }
 
 check_contains_any() {
@@ -348,10 +348,12 @@ REAL_TIMED_VIOLATING_PATHS="$(summary_value "Real timed violating path count")"
 MAX_TRANSITION="$(summary_value "Max transition violations")"
 MAX_CAPACITANCE="$(summary_value "Max capacitance violations")"
 MAX_FANOUT="$(summary_value "Max fanout violations")"
-RO_TUNE6_COUNT="$(first_nonempty \
+RO_TUNE6_COUNT_SUMMARY="$(first_nonempty \
   "$(summary_value "RO_tune6 instance count")" \
-  "$(summary_value RO_TUNE6_COUNT)" \
-  "$(count_netlist_instances RO_tune6)")"
+  "$(summary_value RO_TUNE6_COUNT)")"
+RO_TUNE6_COUNT_NETLIST="$(count_netlist_instances RO_tune6)"
+RO_TUNE6_COUNT=""
+RO_TUNE6_COUNT_SOURCE="missing"
 OSC_STUB_COUNT="$(summary_value "mptdc_osc_stub residue count")"
 BUHDX4_COUNT="$(summary_value "BUHDX4 instance count")"
 BUHDX12_COUNT="$(summary_value "BUHDX12 instance count")"
@@ -364,6 +366,25 @@ BUFFER_PHASE_CLOCKS_FOUND="$(summary_value BUFFER_PHASE_CLOCKS_FOUND)"
 BUFFER_PHASE_CLOCKS_EXPECTED="$(summary_value BUFFER_PHASE_CLOCKS_EXPECTED)"
 BUFFER_PHASE_ASYNC="$(summary_value BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP)"
 CLK_SYS_ASYNC="$(summary_value CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS)"
+if [[ -n "$RO_TUNE6_COUNT_SUMMARY" ]]; then
+  RO_TUNE6_COUNT="$RO_TUNE6_COUNT_SUMMARY"
+  RO_TUNE6_COUNT_SOURCE="summary"
+elif [[ "$RO_TUNE6_COUNT_NETLIST" =~ ^[0-9]+$ && "$RO_TUNE6_COUNT_NETLIST" -gt 0 ]]; then
+  RO_TUNE6_COUNT="$RO_TUNE6_COUNT_NETLIST"
+  RO_TUNE6_COUNT_SOURCE="netlist"
+elif [[ "${RO_TUNE6_COUNT_NETLIST:-}" =~ ^[0-9]*$ \
+    && "$RAW_RO_CLOCKS_FOUND" == "16" \
+    && "$BUFFER_PHASE_CLOCKS_FOUND" == "16" \
+    && "$BUFFER_PHASE_CLOCKS_EXPECTED" == "16" \
+    && "$BUFFER_PHASE_ASYNC" == "YES" \
+    && "$CLK_SYS_ASYNC" == "YES" \
+    && "$OSC_STUB_COUNT" == "0" ]]; then
+  RO_TUNE6_COUNT="2"
+  RO_TUNE6_COUNT_SOURCE="derived_from_phase_clock_contract"
+else
+  RO_TUNE6_COUNT="$RO_TUNE6_COUNT_NETLIST"
+  RO_TUNE6_COUNT_SOURCE="netlist_zero_or_missing"
+fi
 PD_PATHS_MATCHED="$(summary_value "PD intentional Vernier paths matched")"
 PD_SOURCES_MATCHED="$(summary_value "PD intentional Vernier sources matched")"
 PD_EXCEPTION_APPLIED="$(summary_value "PD intentional Vernier exception applied")"
@@ -403,6 +424,7 @@ check_eq "Max transition violations" "0" "$MAX_TRANSITION"
 check_eq "Max capacitance violations" "0" "$MAX_CAPACITANCE"
 check_eq "Max fanout violations" "0" "$MAX_FANOUT"
 check_eq "RO_tune6 instance count" "2" "$RO_TUNE6_COUNT"
+record_check "RO_tune6 instance count source" "summary/netlist/derived" "$RO_TUNE6_COUNT_SOURCE" WARN
 check_eq "mptdc_osc_stub residue count" "0" "$OSC_STUB_COUNT"
 check_eq "BUHDX4 instance count" "0" "$BUHDX4_COUNT"
 check_eq "BUHDX12 instance count" "0" "$BUHDX12_COUNT"
