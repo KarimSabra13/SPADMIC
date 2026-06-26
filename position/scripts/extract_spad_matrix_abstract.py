@@ -591,6 +591,39 @@ def write_seed_tcl(path: Path, macro: Macro, pin_summary: list[dict[str, object]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def sanitize_name(name: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.+-]+", "_", name)
+    return safe.strip("._") or "macro"
+
+
+def macro_index_row(macro: Macro) -> dict[str, object]:
+    return {
+        "macro": macro.name,
+        "class": macro.cls,
+        "origin_x": macro.origin[0],
+        "origin_y": macro.origin[1],
+        "width_um": macro.width,
+        "height_um": macro.height,
+        "symmetry": macro.symmetry,
+        "site": macro.site,
+        "pin_count": len(macro.pins),
+        "obs_shape_count": len(macro.obs),
+    }
+
+
+def write_macro_outputs(out_dir: Path, macro: Macro, edge_tolerance: float, expected_axis_count: int, svg_labels: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pin_summary, pin_rects = collect_pin_rows(macro, edge_tolerance)
+
+    write_csv(out_dir / "matrix_pin_summary.csv", pin_summary)
+    write_csv(out_dir / "matrix_pin_shapes.csv", pin_rects)
+    write_json(out_dir / "matrix_macro_summary.json", macro, pin_summary, pin_rects, edge_tolerance, expected_axis_count)
+    write_svg(out_dir / "matrix_pin_map.svg", macro, pin_rects, svg_labels)
+    write_report(out_dir / "matrix_handoff_report.md", macro, pin_summary, pin_rects, expected_axis_count)
+    write_seed_tcl(out_dir / "position_pnr_seed.tcl", macro, pin_summary)
+    return pin_summary, pin_rects
+
+
 def choose_macro(macros: dict[str, Macro], requested: str | None) -> Macro:
     if requested:
         if requested not in macros:
@@ -607,10 +640,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lef", required=True, type=Path, help="SPAD matrix LEF abstract path")
     parser.add_argument("--macro", help="Macro name inside the LEF; required when LEF has multiple macros")
-    parser.add_argument("--out-dir", required=True, type=Path, help="Output directory")
+    parser.add_argument("--out-dir", type=Path, help="Output directory")
     parser.add_argument("--expected-axis-count", type=int, default=64, help="Expected X/Y/Z line count")
     parser.add_argument("--edge-tolerance-um", type=float, default=-1.0, help="Pin-to-edge tolerance in um; default is max(size)*0.001")
     parser.add_argument("--svg-labels", choices=["none", "all"], default="none", help="Whether to draw pin names in the SVG")
+    parser.add_argument("--list-macros", action="store_true", help="List macros in the LEF and exit")
+    parser.add_argument("--all-macros", action="store_true", help="Extract every macro in the LEF")
     args = parser.parse_args()
 
     if not args.lef.is_file():
@@ -619,29 +654,53 @@ def main() -> int:
     macros = parse_lef(args.lef)
     if not macros:
         raise SystemExit(f"ERROR: no LEF MACRO blocks found in {args.lef}")
-    macro = choose_macro(macros, args.macro)
-    if macro.size is None:
-        raise SystemExit(f"ERROR: macro {macro.name} has no SIZE statement")
 
-    edge_tolerance = args.edge_tolerance_um
-    if edge_tolerance < 0:
-        edge_tolerance = max(macro.width, macro.height) * 0.001
+    if args.list_macros:
+        writer = csv.DictWriter(sys.stdout, fieldnames=list(macro_index_row(next(iter(macros.values()))).keys()))
+        writer.writeheader()
+        for macro in sorted(macros.values(), key=lambda m: natural_sort_key(m.name)):
+            writer.writerow(macro_index_row(macro))
+        return 0
+
+    if args.out_dir is None:
+        raise SystemExit("ERROR: --out-dir is required unless --list-macros is used")
+
+    if args.all_macros:
+        selected_macros = sorted(macros.values(), key=lambda m: natural_sort_key(m.name))
+    else:
+        selected_macros = [choose_macro(macros, args.macro)]
+
+    for macro in selected_macros:
+        if macro.size is None:
+            raise SystemExit(f"ERROR: macro {macro.name} has no SIZE statement")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    pin_summary, pin_rects = collect_pin_rows(macro, edge_tolerance)
+    index_rows = [macro_index_row(macro) for macro in selected_macros]
+    write_csv(args.out_dir / "matrix_macro_index.csv", index_rows)
+    (args.out_dir / "matrix_macro_index.json").write_text(
+        json.dumps(index_rows, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
-    write_csv(args.out_dir / "matrix_pin_summary.csv", pin_summary)
-    write_csv(args.out_dir / "matrix_pin_shapes.csv", pin_rects)
-    write_json(args.out_dir / "matrix_macro_summary.json", macro, pin_summary, pin_rects, edge_tolerance, args.expected_axis_count)
-    write_svg(args.out_dir / "matrix_pin_map.svg", macro, pin_rects, args.svg_labels)
-    write_report(args.out_dir / "matrix_handoff_report.md", macro, pin_summary, pin_rects, args.expected_axis_count)
-    write_seed_tcl(args.out_dir / "position_pnr_seed.tcl", macro, pin_summary)
+    for macro in selected_macros:
+        edge_tolerance = args.edge_tolerance_um
+        if edge_tolerance < 0:
+            edge_tolerance = max(macro.width, macro.height) * 0.001
 
-    print(f"SPAD_MATRIX_MACRO={macro.name}")
-    print(f"SPAD_MATRIX_SIZE_UM={macro.width}x{macro.height}")
-    print(f"SPAD_MATRIX_PIN_COUNT={len(macro.pins)}")
+        macro_out_dir = args.out_dir
+        if len(selected_macros) > 1:
+            macro_out_dir = args.out_dir / "macros" / sanitize_name(macro.name)
+        write_macro_outputs(macro_out_dir, macro, edge_tolerance, args.expected_axis_count, args.svg_labels)
+
+        print(f"SPAD_MATRIX_MACRO={macro.name}")
+        print(f"SPAD_MATRIX_SIZE_UM={macro.width}x{macro.height}")
+        print(f"SPAD_MATRIX_PIN_COUNT={len(macro.pins)}")
+        print(f"SPAD_MATRIX_MACRO_OUTPUT_DIR={macro_out_dir}")
     print(f"SPAD_MATRIX_OUTPUT_DIR={args.out_dir}")
-    print(f"SPAD_MATRIX_REPORT={args.out_dir / 'matrix_handoff_report.md'}")
+    if len(selected_macros) == 1:
+        print(f"SPAD_MATRIX_REPORT={args.out_dir / 'matrix_handoff_report.md'}")
+    else:
+        print(f"SPAD_MATRIX_MACRO_INDEX={args.out_dir / 'matrix_macro_index.csv'}")
     return 0
 
 

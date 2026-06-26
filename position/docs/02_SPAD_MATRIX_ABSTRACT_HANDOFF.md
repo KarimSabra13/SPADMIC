@@ -52,7 +52,45 @@ So the matrix abstract extract becomes the seed for:
 
 ## Server Command
 
+For the finalized matrix handoff, use the read-only directory inventory wrapper.
+It scans the analog directory, writes nothing there, finds LEF/GDS/OAS/DEF/CDL
+candidates, and parses all LEF abstracts it can find.
+
 Run this on the server checkout that can see the analog handoff path:
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only
+
+MATRIX3_DIR=/group/validgmr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice3
+
+bash position/scripts/run_spad_matrix_final_layout_extract.sh \
+  --source-dir "$MATRIX3_DIR" \
+  --run-id 20260626_matrice3_final_extract \
+  --svg-labels all
+```
+
+All outputs go under:
+
+```text
+work/position/matrix_handoff/20260626_matrice3_final_extract/
+```
+
+The script refuses to write inside `--source-dir`.
+
+If the server path was typed with the older group spelling, first check which
+directory exists:
+
+```bash
+ls -ld /group/validgmr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice3
+ls -ld /group/validmgr/PROJET/Prj_xh018/spadmic/TOPLEVEL/matrice3
+```
+
+Use the path that exists as `MATRIX3_DIR`.
+
+The older LEF-only wrapper is still available when the exact abstract LEF is
+already known:
 
 ```bash
 cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
