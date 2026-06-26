@@ -84,6 +84,22 @@ class Macro:
             return 0.0
         return self.size[1]
 
+    @property
+    def boundary_x1(self) -> float:
+        return -self.origin[0]
+
+    @property
+    def boundary_y1(self) -> float:
+        return -self.origin[1]
+
+    @property
+    def boundary_x2(self) -> float:
+        return self.width - self.origin[0]
+
+    @property
+    def boundary_y2(self) -> float:
+        return self.height - self.origin[1]
+
 
 def strip_comment(line: str) -> str:
     for marker in ("#", "//"):
@@ -289,10 +305,10 @@ def guess_axis_index(pin_name: str) -> tuple[str, int | None]:
 def classify_side(macro: Macro, bbox: tuple[float, float, float, float], tolerance: float) -> tuple[str, float]:
     x1, y1, x2, y2 = bbox
     distances = {
-        "LEFT": abs(x1),
-        "RIGHT": abs(macro.width - x2),
-        "BOTTOM": abs(y1),
-        "TOP": abs(macro.height - y2),
+        "LEFT": abs(x1 - macro.boundary_x1),
+        "RIGHT": abs(macro.boundary_x2 - x2),
+        "BOTTOM": abs(y1 - macro.boundary_y1),
+        "TOP": abs(macro.boundary_y2 - y2),
     }
     side, dist = min(distances.items(), key=lambda kv: kv[1])
     if dist <= tolerance:
@@ -327,12 +343,19 @@ def collect_pin_rows(macro: Macro, edge_tolerance: float) -> tuple[list[dict[str
             side = "NO_SHAPE"
             edge_dist = math.nan
             cx = cy = width = height = math.nan
+            ll_x1 = ll_y1 = ll_x2 = ll_y2 = ll_cx = ll_cy = math.nan
         else:
             side, edge_dist = classify_side(macro, bbox, edge_tolerance)
             cx = (bbox[0] + bbox[2]) / 2.0
             cy = (bbox[1] + bbox[3]) / 2.0
             width = bbox[2] - bbox[0]
             height = bbox[3] - bbox[1]
+            ll_x1 = bbox[0] - macro.boundary_x1
+            ll_y1 = bbox[1] - macro.boundary_y1
+            ll_x2 = bbox[2] - macro.boundary_x1
+            ll_y2 = bbox[3] - macro.boundary_y1
+            ll_cx = cx - macro.boundary_x1
+            ll_cy = cy - macro.boundary_y1
         layers = sorted({s.layer for s in pin.shapes if s.layer})
         pin_summary.append(
             {
@@ -352,6 +375,12 @@ def collect_pin_rows(macro: Macro, edge_tolerance: float) -> tuple[list[dict[str
                 "bbox_y2": "" if bbox is None else bbox[3],
                 "center_x": cx,
                 "center_y": cy,
+                "ll_bbox_x1": ll_x1,
+                "ll_bbox_y1": ll_y1,
+                "ll_bbox_x2": ll_x2,
+                "ll_bbox_y2": ll_y2,
+                "ll_center_x": ll_cx,
+                "ll_center_y": ll_cy,
                 "width": width,
                 "height": height,
                 "side": side,
@@ -359,6 +388,10 @@ def collect_pin_rows(macro: Macro, edge_tolerance: float) -> tuple[list[dict[str
             }
         )
         for shape_id, shape in enumerate(pin.shapes):
+            ll_shape_x1 = shape.x1 - macro.boundary_x1
+            ll_shape_y1 = shape.y1 - macro.boundary_y1
+            ll_shape_x2 = shape.x2 - macro.boundary_x1
+            ll_shape_y2 = shape.y2 - macro.boundary_y1
             pin_rects.append(
                 {
                     "macro": macro.name,
@@ -369,6 +402,12 @@ def collect_pin_rows(macro: Macro, edge_tolerance: float) -> tuple[list[dict[str
                     "index_guess": "" if index is None else index,
                     "shape_id": shape_id,
                     **shape_to_dict(shape),
+                    "ll_x1": ll_shape_x1,
+                    "ll_y1": ll_shape_y1,
+                    "ll_x2": ll_shape_x2,
+                    "ll_y2": ll_shape_y2,
+                    "ll_cx": shape.cx - macro.boundary_x1,
+                    "ll_cy": shape.cy - macro.boundary_y1,
                     "side": side,
                     "edge_distance": edge_dist,
                 }
@@ -415,6 +454,18 @@ def write_json(path: Path, macro: Macro, pin_summary: list[dict[str, object]], p
             "name": macro.name,
             "class": macro.cls,
             "origin": macro.origin,
+            "boundary_raw": {
+                "x1": macro.boundary_x1,
+                "y1": macro.boundary_y1,
+                "x2": macro.boundary_x2,
+                "y2": macro.boundary_y2,
+            },
+            "lower_left_normalized_boundary": {
+                "x1": 0.0,
+                "y1": 0.0,
+                "x2": macro.width,
+                "y2": macro.height,
+            },
             "width": macro.width,
             "height": macro.height,
             "symmetry": macro.symmetry,
@@ -537,6 +588,10 @@ def write_report(path: Path, macro: Macro, pin_summary: list[dict[str, object]],
         f"WIDTH_UM={macro.width}",
         f"HEIGHT_UM={macro.height}",
         f"ORIGIN={macro.origin[0]},{macro.origin[1]}",
+        f"RAW_BOUNDARY_X1_UM={macro.boundary_x1}",
+        f"RAW_BOUNDARY_Y1_UM={macro.boundary_y1}",
+        f"RAW_BOUNDARY_X2_UM={macro.boundary_x2}",
+        f"RAW_BOUNDARY_Y2_UM={macro.boundary_y2}",
         f"CLASS={macro.cls}",
         f"SITE={macro.site}",
         f"SYMMETRY={macro.symmetry}",
@@ -579,13 +634,17 @@ def write_seed_tcl(path: Path, macro: Macro, pin_summary: list[dict[str, object]
         f"set spad_matrix_macro_name {{{macro.name}}}",
         f"set spad_matrix_width_um {macro.width}",
         f"set spad_matrix_height_um {macro.height}",
+        f"set spad_matrix_origin_um {{{macro.origin[0]} {macro.origin[1]}}}",
+        f"set spad_matrix_raw_boundary_um {{{macro.boundary_x1} {macro.boundary_y1} {macro.boundary_x2} {macro.boundary_y2}}}",
         "array unset spad_matrix_pin_center",
+        "array unset spad_matrix_pin_center_ll",
         "array unset spad_matrix_pin_side",
         "array unset spad_matrix_pin_axis",
     ]
     for row in pin_summary:
         pin = str(row["pin"])
         lines.append(f"set spad_matrix_pin_center({{{pin}}}) {{{row['center_x']} {row['center_y']}}}")
+        lines.append(f"set spad_matrix_pin_center_ll({{{pin}}}) {{{row['ll_center_x']} {row['ll_center_y']}}}")
         lines.append(f"set spad_matrix_pin_side({{{pin}}}) {{{row['side']}}}")
         lines.append(f"set spad_matrix_pin_axis({{{pin}}}) {{{row['axis_guess']}}}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -602,6 +661,10 @@ def macro_index_row(macro: Macro) -> dict[str, object]:
         "class": macro.cls,
         "origin_x": macro.origin[0],
         "origin_y": macro.origin[1],
+        "raw_boundary_x1": macro.boundary_x1,
+        "raw_boundary_y1": macro.boundary_y1,
+        "raw_boundary_x2": macro.boundary_x2,
+        "raw_boundary_y2": macro.boundary_y2,
         "width_um": macro.width,
         "height_um": macro.height,
         "symmetry": macro.symmetry,
