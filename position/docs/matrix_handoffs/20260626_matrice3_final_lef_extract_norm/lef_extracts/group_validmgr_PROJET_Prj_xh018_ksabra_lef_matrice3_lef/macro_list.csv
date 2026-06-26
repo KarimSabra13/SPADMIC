@@ -1,0 +1,2 @@
+macro,class,origin_x,origin_y,raw_boundary_x1,raw_boundary_y1,raw_boundary_x2,raw_boundary_y2,width_um,height_um,symmetry,site,pin_count,obs_shape_count
+matrice3,BLOCK,51.395,65.86,-51.395,-65.86,1948.515,1659.68,1999.91,1725.54,X Y R90,,565,1916

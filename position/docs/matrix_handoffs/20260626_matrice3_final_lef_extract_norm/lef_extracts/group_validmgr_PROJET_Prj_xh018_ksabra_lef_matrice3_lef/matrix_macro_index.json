@@ -1,0 +1,18 @@
+[
+  {
+    "class": "BLOCK",
+    "height_um": 1725.54,
+    "macro": "matrice3",
+    "obs_shape_count": 1916,
+    "origin_x": 51.395,
+    "origin_y": 65.86,
+    "pin_count": 565,
+    "raw_boundary_x1": -51.395,
+    "raw_boundary_x2": 1948.515,
+    "raw_boundary_y1": -65.86,
+    "raw_boundary_y2": 1659.68,
+    "site": "",
+    "symmetry": "X Y R90",
+    "width_um": 1999.91
+  }
+]
