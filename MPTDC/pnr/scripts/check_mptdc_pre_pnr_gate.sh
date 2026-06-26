@@ -275,6 +275,33 @@ check_file_any() {
   record_check "$label" "file exists" "$SOURCE_ROOT/${1:-}" FAIL
 }
 
+find_first_file() {
+  local rel path
+  for rel in "$@"; do
+    path="$SOURCE_ROOT/$rel"
+    if [[ -f "$path" ]]; then
+      printf '%s\n' "$path"
+      return 0
+    fi
+  done
+  return 1
+}
+
+count_netlist_instances() {
+  local cell="$1"
+  local netlist=""
+  netlist="$(find_first_file \
+    mptdc_axis_core.postsyn.v \
+    outputs/mptdc_axis_core.postsyn.v \
+    outputs/post_synth/mptdc_axis_core.postsyn.v \
+    05_outputs/mptdc_axis_core.postsyn.v || true)"
+  if [[ -z "$netlist" ]]; then
+    printf '\n'
+    return 0
+  fi
+  grep -cE "^[[:space:]]*$cell[[:space:]]+" "$netlist" || true
+}
+
 check_contains_any() {
   local name="$1"
   local expected="$2"
@@ -321,7 +348,10 @@ REAL_TIMED_VIOLATING_PATHS="$(summary_value "Real timed violating path count")"
 MAX_TRANSITION="$(summary_value "Max transition violations")"
 MAX_CAPACITANCE="$(summary_value "Max capacitance violations")"
 MAX_FANOUT="$(summary_value "Max fanout violations")"
-RO_TUNE6_COUNT="$(summary_value "RO_tune6 instance count")"
+RO_TUNE6_COUNT="$(first_nonempty \
+  "$(summary_value "RO_tune6 instance count")" \
+  "$(summary_value RO_TUNE6_COUNT)" \
+  "$(count_netlist_instances RO_tune6)")"
 OSC_STUB_COUNT="$(summary_value "mptdc_osc_stub residue count")"
 BUHDX4_COUNT="$(summary_value "BUHDX4 instance count")"
 BUHDX12_COUNT="$(summary_value "BUHDX12 instance count")"
