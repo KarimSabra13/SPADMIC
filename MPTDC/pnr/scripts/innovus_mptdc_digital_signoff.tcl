@@ -232,11 +232,28 @@ proc mptdc_signoff_source_xh018_cells {} {
 }
 
 proc mptdc_signoff_default_ro_lef {} {
-    return [file join [mptdc_signoff_repo_root] results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef]
+    return "/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef"
 }
 
 proc mptdc_signoff_default_ro_liberty {} {
-    return [file join [mptdc_signoff_repo_root] MPTDC/syn/macros/RO_tune4_real_abstract_shell.lib]
+    return [file join [mptdc_signoff_repo_root] MPTDC/syn/macros/RO_tune6_real_layout_shell.lib]
+}
+
+proc mptdc_signoff_ro_macro_name {} {
+    if {[info exists ::env(O1_RO_CELL_NAME)] && $::env(O1_RO_CELL_NAME) ne ""} {
+        return $::env(O1_RO_CELL_NAME)
+    }
+    return "RO_tune6"
+}
+
+proc mptdc_signoff_ro_cell_patterns {} {
+    set macro [mptdc_signoff_ro_macro_name]
+    return [list *u_ro_tune4* *$macro*]
+}
+
+proc mptdc_signoff_ro_pin_patterns {} {
+    set macro [mptdc_signoff_ro_macro_name]
+    return [list *u_ro_tune4*/S* *$macro*/S*]
 }
 
 proc mptdc_signoff_lef_macro_name {lef_path} {
@@ -273,11 +290,15 @@ proc mptdc_signoff_prepare_ro_inputs {} {
     if {![info exists ::env(O1_RO_LIBERTY_PATH)] || $::env(O1_RO_LIBERTY_PATH) eq ""} {
         set ::env(O1_RO_LIBERTY_PATH) [mptdc_signoff_default_ro_liberty]
     }
-    set lef [mptdc_signoff_required_file "RO_tune4 LEF" $::env(O1_RO_LEF_PATH)]
-    set lib [mptdc_signoff_required_file "RO_tune4 Liberty" $::env(O1_RO_LIBERTY_PATH)]
+    if {![info exists ::env(O1_RO_CELL_NAME)] || $::env(O1_RO_CELL_NAME) eq ""} {
+        set ::env(O1_RO_CELL_NAME) [mptdc_signoff_ro_macro_name]
+    }
+    set expected [mptdc_signoff_ro_macro_name]
+    set lef [mptdc_signoff_required_file "$expected LEF" $::env(O1_RO_LEF_PATH)]
+    set lib [mptdc_signoff_required_file "$expected Liberty" $::env(O1_RO_LIBERTY_PATH)]
     set macro [mptdc_signoff_lef_macro_name $lef]
-    if {$macro ne "RO_tune4"} {
-        error "MPTDC_RO_LEF_MACRO_MISMATCH: O1_RO_LEF_PATH=$lef macro=$macro expected=RO_tune4"
+    if {$macro ne $expected} {
+        error "MPTDC_RO_LEF_MACRO_MISMATCH: O1_RO_LEF_PATH=$lef macro=$macro expected=$expected"
     }
     set ::env(O1_RO_LEF_PATH) $lef
     set ::env(O1_RO_LIBERTY_PATH) $lib
@@ -289,13 +310,14 @@ proc mptdc_signoff_write_ro_source_report {} {
     set path [file join [mptdc_signoff_report_dir] ro_import_source_gate.rpt]
     set fh [open $path w]
     puts $fh "O1_USE_REAL_RO_ABSTRACT=1"
+    puts $fh "O1_RO_CELL_NAME=[mptdc_signoff_ro_macro_name]"
     puts $fh "O1_RO_LEF_PATH=[dict get $ro lef]"
     puts $fh "O1_RO_LEF_MACRO=[dict get $ro macro]"
     puts $fh "O1_RO_LIBERTY_PATH=[dict get $ro liberty]"
     puts $fh "MPTDC_OSC_BLACKBOX_ALLOWED=NO"
     puts $fh "MPTDC_OSC_SLOW_BB_ALLOWED=NO"
     puts $fh "MPTDC_OSC_FAST_BB_ALLOWED=NO"
-    puts $fh "REQUIRED_RO_TUNE4_INSTANCES=2"
+    puts $fh "REQUIRED_RO_TUNE6_INSTANCES=2"
     puts $fh "REQUIRED_EMPTY_MODULES=0"
     puts $fh "REQUIRED_RAW_PHASE_NETS_WITH_RO_DRIVERS=16"
     puts $fh "FATAL_IMPORT_MESSAGES=TECHLIB-702 TECHLIB-704 IMPDB-2504"
@@ -835,7 +857,7 @@ proc mptdc_signoff_phase_buffer_instances {family stage} {
 }
 
 proc mptdc_signoff_ro_instances_by_family {} {
-    set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
+    set ro_instances [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]
     set slow [lindex $ro_instances 0]
     set fast [lindex $ro_instances 1]
     foreach ro $ro_instances {
@@ -1018,7 +1040,7 @@ proc mptdc_signoff_timing_class_regexes {} {
         PHASE_BUFFER {phase_buf|gen_phase_buf|BUJIHDX4|BUJIHDX12|iso_tap} \
         PD_MATRIX {gen_pd_row|gen_pd_col|u_pd|mptdc_pd} \
         FAST_TAG {fast_tag|raw_lfsr_tag|nfast} \
-        RO_CONTROL {ro_code|RO_tune4|u_ro_tune4|rstb} \
+        RO_CONTROL {ro_code|RO_tune6|u_ro_tune4|rstb} \
         RESET_OR_CLEAR {rst|reset|clear_window} \
         DATA_PATH {packet|axis|fifo|hit|timestamp}]
 }
@@ -1425,8 +1447,8 @@ proc mptdc_signoff_audit_effective_sdc {} {
 
 proc mptdc_signoff_post_import_gate {} {
     set rpt [file join [mptdc_signoff_report_dir] post_import_integrity_gate.rpt]
-    set ro_count [mptdc_signoff_count_cells [list *u_ro_tune4* *RO_tune4*]]
-    set raw_pins [mptdc_signoff_collect_pins [list *u_ro_tune4*/S* *RO_tune4*/S*]]
+    set ro_count [mptdc_signoff_count_cells [mptdc_signoff_ro_cell_patterns]]
+    set raw_pins [mptdc_signoff_collect_pins [mptdc_signoff_ro_pin_patterns]]
     set empty_modules [mptdc_signoff_count_cells [list *MPTDC_OSC_SLOW_BB* *MPTDC_OSC_FAST_BB* *mptdc_osc_stub*]]
     set fh [open $rpt w]
     puts $fh "NETLIST_UNIQUE=YES"
@@ -1436,7 +1458,7 @@ proc mptdc_signoff_post_import_gate {} {
     puts $fh "TECHLIB-702=0"
     puts $fh "TECHLIB-704=0"
     puts $fh "IMPDB-2504=0"
-    puts $fh "RO_TUNE4_INSTANCE_COUNT=$ro_count"
+    puts $fh "RO_TUNE6_INSTANCE_COUNT=$ro_count"
     puts $fh "EMPTY_OSC_BLACKBOX_OR_STUB_COUNT=$empty_modules"
     puts $fh "RAW_RO_PHASE_PIN_COUNT=[llength $raw_pins]"
     close $fh
@@ -1476,13 +1498,13 @@ proc mptdc_signoff_apply_pg_connectivity {} {
     set path [file join [mptdc_signoff_report_dir] pg_connectivity_commands.rpt]
     set fh [open $path w]
     set failures [list]
-    set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
-    puts $fh "RO_TUNE4_INSTANCE_COUNT=[llength $ro_instances]"
+    set ro_instances [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]
+    puts $fh "RO_TUNE6_INSTANCE_COUNT=[llength $ro_instances]"
     foreach ro $ro_instances {
-        puts $fh "RO_TUNE4_INSTANCE=$ro"
+        puts $fh "RO_TUNE6_INSTANCE=$ro"
     }
     if {[llength $ro_instances] != 2} {
-        puts $fh "STATUS=FAIL ERROR=expected_exactly_two_ro_tune4_instances"
+        puts $fh "STATUS=FAIL ERROR=expected_exactly_two_ro_tune6_instances"
         close $fh
         mptdc_signoff_set_status PG_CONNECTIVITY_STATUS FAIL $path
         error "MPTDC_DIGITAL_SIGNOFF_PG_RO_INSTANCE_COUNT_FAILED: expected=2 actual=[llength $ro_instances]"
@@ -1677,7 +1699,7 @@ proc mptdc_signoff_build_power_grid {} {
 
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
     set all_bad [mptdc_signoff_connectivity_report_has_errors $all_rpt]
-    set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
+    set ro_instances [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]
     set ro_vdd_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances VDD VDD]
     set ro_vdd_bang_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances vdd! VDD]
     set ro_vss_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances VSS VSS]
@@ -2803,11 +2825,11 @@ proc mptdc_signoff_place_io_pins {} {
 
 proc mptdc_signoff_place_ro_macros {} {
     mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
-    set ro_instances [mptdc_signoff_collect_cells [list *u_ro_tune4* *RO_tune4*]]
+    set ro_instances [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]
     set rpt [file join [mptdc_signoff_report_dir] ro_macro_status.rpt]
     set fh [open $rpt w]
-    puts $fh "RO_TUNE4_COUNT=[llength $ro_instances]"
-    foreach ro $ro_instances { puts $fh "RO_TUNE4_INSTANCE=$ro" }
+    puts $fh "RO_TUNE6_COUNT=[llength $ro_instances]"
+    foreach ro $ro_instances { puts $fh "RO_TUNE6_INSTANCE=$ro" }
     if {[llength $ro_instances] != 2} {
         puts $fh "RO_MACRO_STATUS=FAIL"
         close $fh
@@ -3170,7 +3192,7 @@ proc mptdc_signoff_count_backend_cells_in_pd_box {pd_box} {
     catch {set cells [get_cells -quiet -hierarchical *]}
     foreach obj $cells {
         set name [mptdc_signoff_db_object_name $obj]
-        if {[regexp {gen_pd_row|gen_pd_col|u_pd|phase_buf|u_ro_tune4|RO_tune4|MPTDC_FILL} $name]} {
+        if {[regexp {gen_pd_row|gen_pd_col|u_pd|phase_buf|u_ro_tune4|RO_tune6|MPTDC_FILL} $name]} {
             continue
         }
         set box [mptdc_signoff_db_object_box $obj]
@@ -3316,7 +3338,7 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     set fh [open $rpt w]
     puts $fh "# MPTDC RO / Phase-Buffer Overlap Audit"
     puts $fh "RO_PHASE_MIN_CLEARANCE_REQUIRED_UM=$required_clearance"
-    puts $fh "RO_TUNE4_COUNT=[llength [dict get $ro_map all]]"
+    puts $fh "RO_TUNE6_COUNT=[llength [dict get $ro_map all]]"
     puts $fh "CHECKPLACE_REPORT=$check_rpt"
     puts $fh "CHECKPLACE_OVERLAP_LINE_COUNT=$check_overlap_count"
     puts $fh "CHECKPLACE_OVERLAP_FATAL=$fail_on_global_checkplace"
@@ -3345,7 +3367,7 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     set reason NONE
     if {[llength [dict get $ro_map all]] != 2} {
         set status FAIL
-        set reason ro_tune4_count_not_two
+        set reason ro_tune6_count_not_two
     } elseif {[lindex $slow_result 0] ne "PASS" || [lindex $fast_result 0] ne "PASS"} {
         set status FAIL
         set reason phase_buffer_overlaps_ro_macro
@@ -3660,7 +3682,7 @@ proc mptdc_signoff_read_file_text {path} {
 }
 
 proc mptdc_signoff_clk_sys_cts_spec_forbidden_regex {} {
-    return {(clk_osc|RO_tune4|u_ro_tune4|mptdc_phase_buffer_bank|phase_buf|gen_phase_buf|u_core_u_phase_buf)}
+    return {(clk_osc|RO_tune6|u_ro_tune4|mptdc_phase_buffer_bank|phase_buf|gen_phase_buf|u_core_u_phase_buf)}
 }
 
 proc mptdc_signoff_ccopt_clock_tree_names {} {
@@ -4693,7 +4715,8 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
     }
 
     set max_spread [mptdc_signoff_env MPTDC_PHASE_RC_MAX_SPREAD_PCT 10.0]
-    set raw_cap_limit [mptdc_signoff_env MPTDC_RO_TUNE4_S_MAX_CAP_PF 0.050]
+    set raw_cap_limit [mptdc_signoff_env MPTDC_RO_TUNE6_S_MAX_CAP_PF \
+        [mptdc_signoff_env MPTDC_RO_TUNE4_S_MAX_CAP_PF 0.050]]
     set rc_status PASS
     set phase_status PASS
     set classification PARSER_FALSE_FAILURE
@@ -4835,7 +4858,7 @@ proc mptdc_signoff_phase_rc_parse_csv {route_csv detailed_csv status_rpt} {
     puts $sfh "UNITS_ROUTE_LENGTH=um"
     puts $sfh "UNITS_CAPACITANCE=pf"
     puts $sfh "UNITS_RESISTANCE=ohm"
-    puts $sfh "RO_TUNE4_S_MAX_CAP_PF=$raw_cap_limit"
+    puts $sfh "RO_TUNE6_S_MAX_CAP_PF=$raw_cap_limit"
     puts $sfh "MAX_ALLOWED_SPREAD_PCT=$max_spread"
     puts $sfh "OPTIONAL_DELAY_METRICS=[join $delay_metrics { }]"
     puts $sfh "RC_SYMMETRY_FAILURE_CLASSIFICATION=$classification"

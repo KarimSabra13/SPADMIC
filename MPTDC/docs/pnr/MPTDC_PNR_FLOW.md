@@ -41,6 +41,14 @@ digital PNR PASS, or tapeout readiness. The detailed baseline and inspection
 commands are recorded in
 [`MPTDC_TC_CLOSURE_20260625_BASELINE.md`](MPTDC_TC_CLOSURE_20260625_BASELINE.md).
 
+The active rerun target uses the layout-backed `RO_tune6` macro from
+`SPADMIC/RO_tune6/layout`. Innovus expects a canonical exported LEF at
+`/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef` and a shell Liberty
+at `MPTDC/syn/macros/RO_tune6_real_layout_shell.lib`. The RO instance path
+remains `u_ro_tune4` intentionally so the existing oscillator SDC/report paths
+stay stable. The full OA-to-LEF handoff contract is in
+`MPTDC/analog_handoff/RO_TUNE6_LAYOUT_EXPORT.md`.
+
 ## Owner-Facing Commands
 
 Run from the repository root on the Cadence server:
@@ -49,35 +57,31 @@ Run from the repository root on the Cadence server:
 # 1. Discover real physical-cell names from the installed PDK inputs when the
 #    PDK installation changes.
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
-  20260618_mptdc_digital_signoff_discovery \
   --mode discover_only
 
 # 2. Rerun Genus after RTL/netlist changes.
-bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh \
-  <fresh_genus_run_id>
+bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh
 
 # 3. Build the handoff package and gate it.
 bash MPTDC/pnr/scripts/prepare_mptdc_genus_typical_handoff.sh \
-  <fresh_genus_run_id>
+  MPTDC_TC_Closure_Genus
 bash MPTDC/pnr/scripts/check_mptdc_pre_pnr_gate.sh \
-  --genus-run-id <fresh_genus_run_id> \
+  --genus-run-id MPTDC_TC_Closure_Genus \
   --handoff-dir <handoff_dir>
 
 # 4. Validate digital PNR sources without launching Innovus.
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
-  <digital_signoff_validate_run_id> \
   --mode validate_only \
-  --genus-run-id <fresh_genus_run_id> \
+  --genus-run-id MPTDC_TC_Closure_Genus \
   --handoff-dir <handoff_dir>
 
 # 5. Launch implementation under the provisional row policy after review.
 export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
-  <digital_signoff_run_id> \
   --mode full_signoff \
-  --genus-run-id <fresh_genus_run_id> \
+  --genus-run-id MPTDC_TC_Closure_Genus \
   --handoff-dir <handoff_dir>
 
 # 6. Package the row-infrastructure DRC/LVS qualification request/evidence.
@@ -102,7 +106,7 @@ allowed range = 1.20 .. 1.47
 ```
 
 The automatic dimensioning logic must account for standard-cell area, two
-`RO_tune4` macros, halos, phase-buffer rows, the full PD island, east-side
+`RO_tune6` macros, halos, phase-buffer rows, the full PD island, east-side
 backend, route channels, power structures, IO pin capacity, target utilization,
 and guard bands.
 
@@ -133,13 +137,13 @@ The intended north-to-south stack is:
 
 ```text
 north boundary
-  slow RO_tune4, orientation R0
+  slow RO_tune6, orientation R0
   slow isolation buffer row
   slow final-driver row
   8 x 8 PD detector matrix
   fast final-driver row
   fast isolation buffer row
-  fast RO_tune4, orientation MX
+  fast RO_tune6, orientation MX
 south boundary
 ```
 
@@ -181,7 +185,7 @@ Required checks:
 Each raw tap must keep the same topology:
 
 ```text
-RO_tune4/S[n] -> isolation buffer -> final driver -> phase consumers
+RO_tune6/S[n] -> isolation buffer -> final driver -> phase consumers
 ```
 
 Required counts:
@@ -218,7 +222,7 @@ Also report absolute worst mismatch in ps, fF, micrometres, and via count.
 Before global placement, CTS, or route, the flow must also run
 `ro_phase_overlap_audit.rpt`. `RO_PHASE_PLACEMENT_STATUS=PASS` requires:
 
-- exactly two `RO_tune4` macros;
+- exactly two `RO_tune6` macros;
 - valid slow and fast RO macro bboxes;
 - 8 slow isolation buffers and 8 slow final drivers;
 - 8 fast isolation buffers and 8 fast final drivers;
@@ -242,7 +246,7 @@ fast RO macro, outside the fast RO bbox plus halo, facing the PD matrix.
 
 TOP-owned CSR values feed `ro_slow_code_i[7:0]` and `ro_fast_code_i[7:0]` into
 each product axis. `mptdc_core` captures them into local shadow registers only
-while idle, and the local registers drive `RO_tune4/code[7:0]`.
+while idle, and the local registers drive `RO_tune6/code[7:0]`.
 
 Place the slow local code registers near the external/code side of the slow RO.
 Place the fast local code registers near the external/code side of the fast RO.

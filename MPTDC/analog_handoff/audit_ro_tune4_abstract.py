@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit the RO_tune4 RTL/Liberty/LEF interface used by MPTDC flows.
+"""Audit the real RO macro RTL/Liberty/LEF interface used by MPTDC flows.
 
 The LEF parser intentionally ignores PROPERTYDEFINITIONS.  Some exported LEFs
 contain entries such as ``MACRO CatenaDesignType STRING ;`` in that section;
@@ -23,13 +23,12 @@ sys.path.insert(0, str(TOOLS_TIMING))
 from parse_lef_macros import LefMacro, parse_lef_macros  # noqa: E402
 
 
-ENV_FILE = MPTDC_ROOT / "analog_handoff" / "real_ro_tune4_abstract.env"
-DEFAULT_COPIED_LEF = REPO_ROOT / "work" / "macros" / "ro_tune4" / "RO_tune4_real_abstract.lef"
-DEFAULT_LIBERTY = MPTDC_ROOT / "syn" / "macros" / "RO_tune4_real_abstract_shell.lib"
+ENV_FILE = MPTDC_ROOT / "analog_handoff" / "real_ro_tune6_layout.env"
+DEFAULT_COPIED_LEF = Path("/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef")
+DEFAULT_LIBERTY = MPTDC_ROOT / "syn" / "macros" / "RO_tune6_real_layout_shell.lib"
 DEFAULT_RTL = MPTDC_ROOT / "rtl" / "osc" / "mptdc_osc_wrapper.sv"
-DEFAULT_REPORT = Path("reports") / "ro_tune4_lef_audit.rpt"
+DEFAULT_REPORT = Path("reports") / "ro_tune6_lef_audit.rpt"
 
-EXPECTED_MACRO = "RO_tune4"
 REQUIRED_INPUTS = ["rstb"] + [f"code[{idx}]" for idx in range(8)]
 REQUIRED_OUTPUTS = [f"S[{idx}]" for idx in range(8)]
 REQUIRED_SUPPLIES = ["VDD", "VSS", "vdd!"]
@@ -98,14 +97,14 @@ def scan_property_macro_entries(path: Path) -> list[str]:
     return entries
 
 
-def select_ro_macro(macros: list[LefMacro]) -> LefMacro | None:
+def select_ro_macro(macros: list[LefMacro], expected_macro: str) -> LefMacro | None:
     for macro in macros:
-        if macro.name == EXPECTED_MACRO:
+        if macro.name == expected_macro:
             return macro
     return None
 
 
-def audit_lef(path: Path | None) -> dict[str, object]:
+def audit_lef(path: Path | None, expected_macro: str) -> dict[str, object]:
     result: dict[str, object] = {
         "path": str(path) if path else "unset",
         "found": False,
@@ -123,7 +122,7 @@ def audit_lef(path: Path | None) -> dict[str, object]:
 
     macros = parse_lef_macros(path)
     macro_names = [macro.name for macro in macros]
-    macro = select_ro_macro(macros)
+    macro = select_ro_macro(macros, expected_macro)
     result["found"] = True
     result["macros"] = macro_names
     result["property_entries"] = scan_property_macro_entries(path)
@@ -156,7 +155,7 @@ def expand_bus(bits_name: str) -> set[str]:
     return {f"{bits_name}[{idx}]" for idx in range(8)}
 
 
-def audit_liberty(path: Path) -> dict[str, object]:
+def audit_liberty(path: Path, expected_macro: str) -> dict[str, object]:
     result: dict[str, object] = {
         "path": str(path),
         "found": path.is_file(),
@@ -169,7 +168,9 @@ def audit_liberty(path: Path) -> dict[str, object]:
         return result
 
     text = path.read_text(encoding="utf-8", errors="replace")
-    result["cell_found"] = bool(re.search(r"\bcell\s*\(\s*\"?RO_tune4\"?\s*\)", text))
+    result["cell_found"] = bool(
+        re.search(rf"\bcell\s*\(\s*\"?{re.escape(expected_macro)}\"?\s*\)", text)
+    )
     pins: set[str] = set()
     pins.update(match.strip('"') for match in re.findall(r"\bpin\s*\(\s*([^)]+?)\s*\)", text))
     pins.update(match.strip('"') for match in re.findall(r"\bpg_pin\s*\(\s*([^)]+?)\s*\)", text))
@@ -187,7 +188,7 @@ def audit_liberty(path: Path) -> dict[str, object]:
     return result
 
 
-def audit_rtl(path: Path) -> dict[str, object]:
+def audit_rtl(path: Path, expected_macro: str) -> dict[str, object]:
     result: dict[str, object] = {
         "path": str(path),
         "found": path.is_file(),
@@ -200,7 +201,11 @@ def audit_rtl(path: Path) -> dict[str, object]:
         return result
 
     text = path.read_text(encoding="utf-8", errors="replace")
-    match = re.search(r"\bmodule\s+RO_tune4\s*\((.*?)\);\s*endmodule", text, re.S)
+    match = re.search(
+        rf"\bmodule\s+{re.escape(expected_macro)}\s*\((.*?)\);\s*endmodule",
+        text,
+        re.S,
+    )
     if not match:
         return result
 
@@ -224,6 +229,7 @@ def join_list(values: object) -> str:
 
 def write_report(
     report: Path,
+    expected_macro: str,
     source: dict[str, object],
     copied: dict[str, object],
     liberty: dict[str, object],
@@ -239,8 +245,8 @@ def write_report(
         [
             source["found"],
             copied["found"],
-            source["macro_name"] == EXPECTED_MACRO,
-            copied["macro_name"] == EXPECTED_MACRO,
+            source["macro_name"] == expected_macro,
+            copied["macro_name"] == expected_macro,
             property_ignored,
             required_found,
             geometry_present,
@@ -259,7 +265,8 @@ def write_report(
 
     report.parent.mkdir(parents=True, exist_ok=True)
     with report.open("w", encoding="utf-8") as fh:
-        fh.write("# RO_tune4 LEF/Liberty/RTL Interface Audit\n\n")
+        fh.write(f"# {expected_macro} LEF/Liberty/RTL Interface Audit\n\n")
+        fh.write(f"EXPECTED_MACRO={expected_macro}\n")
         fh.write(f"SOURCE_LEF={source['path']}\n")
         fh.write(f"COPIED_LEF={copied['path']}\n")
         fh.write(f"LIBERTY_FILE={liberty['path']}\n")
@@ -292,9 +299,9 @@ def write_report(
         fh.write(f"PIN_GEOMETRY_PRESENT={yesno(geometry_present)}\n")
         fh.write(f"SOURCE_PIN_NAMES={join_list(source['pins'])}\n")
         fh.write(f"COPIED_PIN_NAMES={join_list(copied['pins'])}\n")
-        fh.write(f"LIBERTY_CELL_RO_TUNE4_FOUND={yesno(bool(liberty['cell_found']))}\n")
+        fh.write(f"LIBERTY_CELL_{expected_macro.upper()}_FOUND={yesno(bool(liberty['cell_found']))}\n")
         fh.write(f"LIBERTY_REQUIRED_PINS_FOUND={yesno(bool(liberty['required_found']))}\n")
-        fh.write(f"RTL_MODULE_RO_TUNE4_FOUND={yesno(bool(rtl['module_found']))}\n")
+        fh.write(f"RTL_MODULE_{expected_macro.upper()}_FOUND={yesno(bool(rtl['module_found']))}\n")
         fh.write(f"RTL_LOGICAL_PINS_FOUND={yesno(bool(rtl['logical_pins_found']))}\n")
         fh.write(f"RTL_SUPPLY_PINS_EXPLICIT={yesno(bool(rtl['explicit_supply_pins']))}\n")
         fh.write("RTL_SUPPLY_PIN_POLICY=LIBERTY_PG_AND_LEF_PHYSICAL_PINS\n")
@@ -303,14 +310,22 @@ def write_report(
 
 
 def main() -> int:
-    env_values = shell_env(ENV_FILE)
+    env_file = resolve_optional_path(os.environ.get("MPTDC_RO_HANDOFF_ENV")) or ENV_FILE
+    env_values = shell_env(env_file)
+    expected_macro = (
+        os.environ.get("O1_RO_CELL_NAME")
+        or env_values.get("O1_RO_CELL_NAME")
+        or "RO_tune6"
+    )
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--macro", default=expected_macro)
     parser.add_argument("--source-lef", default=os.environ.get("O1_RO_SOURCE_LEF_PATH") or env_values.get("O1_RO_SOURCE_LEF_PATH"))
     parser.add_argument("--copied-lef", default=os.environ.get("O1_RO_LEF_PATH") or env_values.get("O1_RO_LEF_PATH") or str(DEFAULT_COPIED_LEF))
     parser.add_argument("--liberty", default=os.environ.get("O1_RO_LIBERTY_PATH") or str(DEFAULT_LIBERTY))
     parser.add_argument("--rtl", default=str(DEFAULT_RTL))
     parser.add_argument("--report", default=str(DEFAULT_REPORT))
     args = parser.parse_args()
+    expected_macro = args.macro
 
     source_path = resolve_optional_path(args.source_lef)
     copied_path = resolve_optional_path(args.copied_lef)
@@ -318,12 +333,12 @@ def main() -> int:
     rtl_path = resolve_optional_path(args.rtl)
     report_path = resolve_optional_path(args.report) or DEFAULT_REPORT
 
-    source = audit_lef(source_path)
-    copied = audit_lef(copied_path)
-    liberty = audit_liberty(liberty_path or DEFAULT_LIBERTY)
-    rtl = audit_rtl(rtl_path or DEFAULT_RTL)
-    passed = write_report(report_path, source, copied, liberty, rtl)
-    print(f"RO_TUNE4_AUDIT_REPORT={report_path}")
+    source = audit_lef(source_path, expected_macro)
+    copied = audit_lef(copied_path, expected_macro)
+    liberty = audit_liberty(liberty_path or DEFAULT_LIBERTY, expected_macro)
+    rtl = audit_rtl(rtl_path or DEFAULT_RTL, expected_macro)
+    passed = write_report(report_path, expected_macro, source, copied, liberty, rtl)
+    print(f"RO_MACRO_AUDIT_REPORT={report_path}")
     print(f"AUDIT_STATUS={'PASS' if passed else 'FAIL'}")
     return 0 if passed else 1
 

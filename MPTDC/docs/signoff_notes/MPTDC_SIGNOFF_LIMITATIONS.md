@@ -32,7 +32,7 @@ Cleanup work must not silently modify:
 
 - Packet format.
 - Calibration semantics.
-- `RO_tune4` macro abstracts.
+- `RO_tune6` layout/OA/LEF macro collateral.
 - XLIBD references.
 - Intentional PD Vernier timing logic.
 

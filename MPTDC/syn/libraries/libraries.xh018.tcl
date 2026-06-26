@@ -53,6 +53,10 @@ set mptdc_o1_real_ro_enabled 0
 if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
     set mptdc_o1_real_ro_enabled 1
 }
+set mptdc_o1_real_ro_macro "RO_tune6"
+if {[info exists ::env(O1_RO_CELL_NAME)] && $::env(O1_RO_CELL_NAME) ne ""} {
+    set mptdc_o1_real_ro_macro $::env(O1_RO_CELL_NAME)
+}
 
 # Provisional MPTDC oscillator black-box abstracts. These are intentionally
 # checked-in placeholders for early Genus/Innovus planning until the custom
@@ -61,7 +65,7 @@ set tech_files(MPTDC_OSC_LEF) "$design(project_root)/syn/macros/mptdc_osc_blackb
 if {!$mptdc_o1_real_ro_enabled && [file exists $tech_files(MPTDC_OSC_LEF)]} {
     lappend tech_files(ALL_LEFS) $tech_files(MPTDC_OSC_LEF)
 } elseif {$mptdc_o1_real_ro_enabled} {
-    puts "MPTDC_LIB_INFO: O1 real RO_tune4 active; skipping mptdc_osc_blackbox.lef"
+    puts "MPTDC_LIB_INFO: O1 real $mptdc_o1_real_ro_macro active; skipping mptdc_osc_blackbox.lef"
 }
 
 # O0 oscillator/PD signoff track: optional provisional macro abstracts generated
@@ -86,20 +90,20 @@ if {[info exists ::env(MPTDC_OSC_PD_USE_PROVISIONAL)] && $::env(MPTDC_OSC_PD_USE
 }
 
 # O1 real-abstract track: use a lab-server exported LEF from the real
-# SPADMIC/RO_tune4/abstract OA view.  This is intentionally independent of the
+# SPADMIC/RO_tune6/layout OA view.  This is intentionally independent of the
 # O0 provisional LEF switch so O1A cannot silently fall back to placeholder
 # macro geometry.  The server wrappers verify the file before the tool starts.
 if {$mptdc_o1_real_ro_enabled} {
-    set tech(OSC_REAL_RO_MACRO) "RO_tune4"
-    set tech(OSC_SLOW_MACRO_REAL) "RO_tune4"
-    set tech(OSC_FAST_MACRO_REAL) "RO_tune4"
+    set tech(OSC_REAL_RO_MACRO) $mptdc_o1_real_ro_macro
+    set tech(OSC_SLOW_MACRO_REAL) $mptdc_o1_real_ro_macro
+    set tech(OSC_FAST_MACRO_REAL) $mptdc_o1_real_ro_macro
     if {[info exists ::env(O1_RO_LEF_PATH)] && $::env(O1_RO_LEF_PATH) ne ""} {
-        set tech_files(O1_RO_TUNE4_REAL_LEF) $::env(O1_RO_LEF_PATH)
-        if {[file exists $tech_files(O1_RO_TUNE4_REAL_LEF)]} {
-            lappend tech_files(ALL_LEFS) $tech_files(O1_RO_TUNE4_REAL_LEF)
-            puts "MPTDC_LIB_INFO: enabling O1 real RO_tune4 LEF $tech_files(O1_RO_TUNE4_REAL_LEF)"
+        set tech_files(O1_RO_REAL_LEF) $::env(O1_RO_LEF_PATH)
+        if {[file exists $tech_files(O1_RO_REAL_LEF)]} {
+            lappend tech_files(ALL_LEFS) $tech_files(O1_RO_REAL_LEF)
+            puts "MPTDC_LIB_INFO: enabling O1 real $mptdc_o1_real_ro_macro LEF $tech_files(O1_RO_REAL_LEF)"
         } else {
-            puts "MPTDC_LIB_WARN: O1_RO_LEF_PATH does not exist: $tech_files(O1_RO_TUNE4_REAL_LEF)"
+            puts "MPTDC_LIB_WARN: O1_RO_LEF_PATH does not exist: $tech_files(O1_RO_REAL_LEF)"
         }
     } else {
         puts "MPTDC_LIB_WARN: O1_USE_REAL_RO_ABSTRACT is set but O1_RO_LEF_PATH is empty"
@@ -209,8 +213,8 @@ set tech(OSC_SLOW_ENABLE_PIN) "start_i"
 set tech(OSC_FAST_ENABLE_PIN) "stop_i"
 
 if {$mptdc_o1_real_ro_enabled} {
-    set tech(OSC_SLOW_MACRO)      "RO_tune4"
-    set tech(OSC_FAST_MACRO)      "RO_tune4"
+    set tech(OSC_SLOW_MACRO)      $mptdc_o1_real_ro_macro
+    set tech(OSC_FAST_MACRO)      $mptdc_o1_real_ro_macro
     set tech(OSC_VDD)             "VDD"
     set tech(OSC_GND)             "VSS"
     set tech(OSC_VDD_PINS)        [list VDD {vdd!}]
@@ -219,7 +223,7 @@ if {$mptdc_o1_real_ro_enabled} {
     set tech(OSC_PHASE_PINS)      [list {S[0]} {S[1]} {S[2]} {S[3]} {S[4]} {S[5]} {S[6]} {S[7]}]
     set tech(OSC_SLOW_ENABLE_PIN) "rstb"
     set tech(OSC_FAST_ENABLE_PIN) "rstb"
-    puts "MPTDC_LIB_INFO: O1 real RO_tune4 macro pin contract enabled"
+    puts "MPTDC_LIB_INFO: O1 real $mptdc_o1_real_ro_macro macro pin contract enabled"
 }
 
 #############################################

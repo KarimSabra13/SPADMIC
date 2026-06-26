@@ -22,7 +22,7 @@ if [[ $# -gt 1 ]]; then
 fi
 
 mptdc_common_init_work_roots "$REPO_ROOT"
-RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_axis_core_typical_closed}"
+RUN_ID="${1:-${MPTDC_GENUS_RUN_ID:-MPTDC_TC_Closure_Genus}}"
 RUN_DIR="$MPTDC_GENUS_WORK/$RUN_ID"
 
 case "$RUN_ID" in
@@ -35,11 +35,11 @@ esac
 mptdc_common_require_clean_tracked "$REPO_ROOT"
 mptdc_common_require_file "Genus backend" "$BACKEND"
 mptdc_common_require_file "Genus Tcl entrypoint" "$SCRIPT_DIR/genus.tcl"
-mptdc_common_require_file "RO_tune4 interface audit" "$MPTDC_DIR/analog_handoff/audit_ro_tune4_abstract.py"
-mptdc_common_require_file "RO_tune4 handoff environment" "$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
+mptdc_common_require_file "RO_tune6 interface audit" "$MPTDC_DIR/analog_handoff/audit_ro_tune6_layout.py"
+mptdc_common_require_file "RO_tune6 handoff environment" "$MPTDC_DIR/analog_handoff/real_ro_tune6_layout.env"
 mptdc_common_require_file "canonical axis-core filelist" "$SYN_DIR/filelist_axis_core_typical_closed.f"
 mptdc_common_require_file "canonical typical-closure SDC" "$SYN_DIR/inputs/mptdc_axis_core_typical_closed.sdc"
-mptdc_common_require_file "RO_tune4 Liberty shell" "$SYN_DIR/macros/RO_tune4_real_abstract_shell.lib"
+mptdc_common_require_file "RO_tune6 Liberty shell" "$SYN_DIR/macros/RO_tune6_real_layout_shell.lib"
 
 # Apply the fixed policy before creating output directories. This fails closed
 # if a legacy experiment variable is inherited from the calling shell.

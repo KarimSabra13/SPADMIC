@@ -17,9 +17,10 @@ bash MPTDC/syn/scripts/check_genus_axis_core_typical_closed_profile.sh
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh [run_id]
 ```
 
-Only the optional run ID is accepted. Do not pass repair cells, path counts,
-max-delay values, or experiment modes through the shell. The validated values
-are documented and stored in:
+Only the optional run ID is accepted. Without it, the run ID is
+`MPTDC_TC_Closure_Genus`. Do not pass repair cells, path counts, max-delay
+values, or experiment modes through the shell. The validated values are
+documented and stored in:
 
 ```text
 scripts/profiles/genus_axis_core_typical_closed.sh
@@ -37,7 +38,7 @@ syn/
 ├── inputs/
 │   ├── README.md                         active constraint map and edit rules
 │   └── mptdc_axis_core_typical_closed.sdc canonical constraint entrypoint
-├── macros/                                RO_tune4 Liberty/physical abstracts
+├── macros/                                RO_tune6 Liberty shell and historical abstracts
 ├── libraries/                             XFAB library resolution
 └── scripts/
     ├── README.md                          public/internal ownership map
@@ -75,9 +76,10 @@ for the reasoning and direct impact of every policy value.
 ## Input and output policy
 
 The canonical filelist excludes `mptdc_osc_model.sv`, binds the real
-`RO_tune4` macro interface, selects `R750_delta5`, and preserves the validated
-`BUJIHDX4 -> BUJIHDX12` phase distribution. The canonical SDC delegates to the
-count-checked PD Vernier constraint stack.
+`RO_tune6` macro interface, selects `R750_delta5`, and preserves the validated
+`BUJIHDX4 -> BUJIHDX12` phase distribution. The RTL instance name remains
+`u_ro_tune4` so the existing SDC/report paths stay stable. The canonical SDC
+delegates to the count-checked PD Vernier constraint stack.
 
 Generated output belongs in `work/genus/<run_id>/`. Do not commit Genus databases,
 logs, netlists, reports, or checkpoints as source. Preserve a concise summary

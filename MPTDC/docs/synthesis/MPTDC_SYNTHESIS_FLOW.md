@@ -18,10 +18,11 @@ Run from the repository root:
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh [run_id]
 ```
 
-The optional argument names the run directory. No timing-policy arguments or
-environment overrides are accepted. Work-root and machine infrastructure such
-as `MPTDC_WORK_ROOT`, `PDK_ROOT`, and `SC_ROOT` remain environment-configurable;
-closure decisions do not.
+The optional argument names the run directory. Without it, the run ID is
+`MPTDC_TC_Closure_Genus`. No timing-policy arguments or environment overrides
+are accepted. Work-root and machine infrastructure such as `MPTDC_WORK_ROOT`,
+`PDK_ROOT`, and `SC_ROOT` remain environment-configurable; closure decisions do
+not.
 
 Legacy public filenames (`server_run_genus_mptdc_typical.sh`,
 `server_run_genus_mptdc_timing_closure.sh`,
@@ -75,11 +76,18 @@ Protected synthesis inputs include:
 - `filelist_axis_core_typical_closed.f`;
 - `inputs/mptdc_axis_core_typical_closed.sdc` and its stable delegates;
 - `inputs/README.md` for constraint ownership and edit rules;
-- `macros/RO_tune4_real_abstract_shell.lib`;
-- `analog_handoff/real_ro_tune4_abstract.env`;
-- `analog_handoff/audit_ro_tune4_abstract.py`;
+- `macros/RO_tune6_real_layout_shell.lib`;
+- `analog_handoff/real_ro_tune6_layout.env`;
+- `analog_handoff/audit_ro_tune6_layout.py`;
 - `scripts/profiles/genus_axis_core_typical_closed.sh`;
 - the Genus backend and `procedures.tcl`.
+
+The active RO rerun expects the exported physical LEF at
+`/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef`. The RTL instance
+name remains `u_ro_tune4` for constraint stability, but the instantiated macro
+master is `RO_tune6`. See
+`MPTDC/analog_handoff/RO_TUNE6_LAYOUT_EXPORT.md` for the OA source, required
+LEF contents, exact output name, and audit commands.
 
 Historical O13/ABS/REPAIR files remain protected because the stable aliases and
 report parsers delegate to them. They are not recommended commands.

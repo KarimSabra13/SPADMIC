@@ -22,7 +22,7 @@ PACKAGE_LABEL="${MPTDC_FINAL_PACKAGE_LABEL:-TYPICAL_ONLY_TAPEOUT_PACKAGE}"
 SIGNOFF_BOUNDARY="${MPTDC_SIGNOFF_BOUNDARY:-TYPICAL_ONLY_NOT_MMMC}"
 LEGACY_TRACE_LABEL="O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH"
 
-RUN_ID="${1:-$(date +%Y%m%d_%H%M%S)_o13_phase_distribution_genus}"
+RUN_ID="${1:-${MPTDC_GENUS_RUN_ID:-MPTDC_TC_Closure_Genus}}"
 # Product-axis closure defaults to the ABS5 exact PD q1 Vernier exception.
 # This keeps the intentional slow-phase -> same-row PD q1 sampling crossing out
 # of the real timing comparison while leaving fast-tag, q1->q2, clk_sys, reset,
@@ -51,8 +51,8 @@ SNAPSHOT_TAG="genus_osc_pd_${RUN_ID}"
 SNAPSHOT_DIR="$MPTDC_SNAPSHOT_ROOT/$SNAPSHOT_TAG"
 GENUS_LOG="$RESULT_DIR/genus_${RUN_ID}.log"
 GENUS_TOOL_LOG="$RESULT_DIR/logs/genus_o13_phase_distribution.log"
-ENV_FILE="$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env"
-RO_AUDIT_SCRIPT="$MPTDC_DIR/analog_handoff/audit_ro_tune4_abstract.py"
+ENV_FILE="${MPTDC_RO_HANDOFF_ENV:-$MPTDC_DIR/analog_handoff/real_ro_tune6_layout.env}"
+RO_AUDIT_SCRIPT="$MPTDC_DIR/analog_handoff/audit_ro_tune6_layout.py"
 FREQ_DEFINES="$SYN_DIR/inputs/mptdc_freq_modes.defines"
 if [[ "${MPTDC_O13_ABS5_PD_Q1_EXCEPTION_EXACT:-0}" == "1" && -z "${O13_SDC_PATH:-}" ]]; then
   O13_SDC="$SYN_DIR/inputs/mptdc_pd_vernier_exceptions.sdc"
@@ -227,9 +227,9 @@ elif [[ "$MPTDC_GENUS_REPAIR4_EXACT_FAST_TAG_SOURCE_DRIVE" == "1" ]]; then
   export MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_ENABLE="${MPTDC_FAST_TAG_REPAIR_EXACT_MAX_DELAY_ENABLE:-$MPTDC_FAST_TAG_REPAIR_ENABLE_EXACT_MAX_DELAY}"
   export MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT="${MPTDC_GENUS_REPAIR_ENDPOINT_TRANSITION_TIGHT:-0}"
 fi
-DEFAULT_EXPORT_RUN_ID="${O1_RO_EXPORT_RUN_ID:-20260528_o1_export_ro_tune4_lef}"
-DEFAULT_REAL_LEF="$REPO_ROOT/results/osc_pd/$DEFAULT_EXPORT_RUN_ID/real_abstract_lef/RO_tune4_real_abstract.lef"
-DEFAULT_REAL_LIB="$SYN_DIR/macros/RO_tune4_real_abstract_shell.lib"
+DEFAULT_EXPORT_RUN_ID="${O1_RO_EXPORT_RUN_ID:-MPTDC_TC_Closure_RO_tune6_lef}"
+DEFAULT_REAL_LEF="${O1_RO_DEFAULT_LEF:-/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef}"
+DEFAULT_REAL_LIB="$SYN_DIR/macros/RO_tune6_real_layout_shell.lib"
 STDCELL_FAMILY="$(printf '%s' "${MPTDC_STDCELL_FAMILY:-HD}" | tr '[:lower:]' '[:upper:]')"
 case "$STDCELL_FAMILY" in
   HD)
@@ -353,28 +353,29 @@ fi
 REAL_LEF="${O1_RO_LEF_PATH:-$DEFAULT_REAL_LEF}"
 REAL_LIB="${O1_RO_LIBERTY_PATH:-$DEFAULT_REAL_LIB}"
 
-require_file "RO_tune4 real LEF" "$REAL_LEF"
-require_file "RO_tune4 Liberty shell" "$REAL_LIB"
-require_file "RO_tune4 interface audit" "$RO_AUDIT_SCRIPT"
+require_file "RO_tune6 real LEF" "$REAL_LEF"
+require_file "RO_tune6 Liberty shell" "$REAL_LIB"
+require_file "RO_tune6 interface audit" "$RO_AUDIT_SCRIPT"
 require_file "standard-cell LEF" "$STDCELL_LEF"
 require_file "standard-cell typical Liberty" "$STDCELL_TC_LIB"
 require_file "O13 SDC overlay" "$O13_SDC"
 require_file "O13 HDL filelist" "$O13_FILELIST"
 require_file "frequency-mode defines" "$FREQ_DEFINES"
 
-RO_AUDIT_REPORT="$RESULT_DIR/reports/ro_tune4_lef_audit.rpt"
+RO_AUDIT_REPORT="$RESULT_DIR/reports/ro_tune6_lef_audit.rpt"
 if [[ -f "$REAL_LEF" && -f "$REAL_LIB" && -f "$RO_AUDIT_SCRIPT" ]]; then
   RO_AUDIT_SOURCE_LEF="${MPTDC_RO_SOURCE_LEF_PATH:-${O1_RO_SOURCE_LEF_PATH:-}}"
   echo "O13 real LEF: $REAL_LEF" | tee -a "$GENUS_LOG"
   echo "O13 source LEF for audit: ${RO_AUDIT_SOURCE_LEF:-unset}" | tee -a "$GENUS_LOG"
-  echo "[RO_AUDIT] Checking RO_tune4 LEF/Liberty/RTL interface" | tee -a "$GENUS_LOG"
+  echo "[RO_AUDIT] Checking RO_tune6 LEF/Liberty/RTL interface" | tee -a "$GENUS_LOG"
   if ! python3 "$RO_AUDIT_SCRIPT" \
+    --macro "${O1_RO_CELL_NAME:-RO_tune6}" \
     --source-lef "$RO_AUDIT_SOURCE_LEF" \
     --copied-lef "$REAL_LEF" \
     --liberty "$REAL_LIB" \
     --rtl "$MPTDC_DIR/rtl/osc/mptdc_osc_wrapper.sv" \
     --report "$RO_AUDIT_REPORT" >> "$GENUS_LOG" 2>&1; then
-    echo "ERROR: RO_tune4 interface audit failed: $RO_AUDIT_REPORT" | tee -a "$GENUS_LOG"
+    echo "ERROR: RO_tune6 interface audit failed: $RO_AUDIT_REPORT" | tee -a "$GENUS_LOG"
     INPUT_RC=3
   fi
   if [[ -f "$RO_AUDIT_REPORT" ]]; then
@@ -449,7 +450,9 @@ export MPTDC_SYN_INPUTS_DIR="$SYN_DIR/inputs"
 export O1_USE_REAL_RO_ABSTRACT=1
 export O1_RO_LEF_PATH="$REAL_LEF"
 export O1_RO_LIBERTY_PATH="$REAL_LIB"
-export MPTDC_USE_RO_TUNE4_MACRO=1
+export O1_RO_CELL_NAME="${O1_RO_CELL_NAME:-RO_tune6}"
+export MPTDC_USE_RO_TUNE6_MACRO=1
+unset MPTDC_USE_RO_TUNE4_MACRO
 export MPTDC_READ_HDL_LIST="$O13_FILELIST"
 export MPTDC_OSC_PD_USE_PROVISIONAL=0
 export MPTDC_OSC_PD_USE_PROVISIONAL_LIBERTY=0
@@ -1003,7 +1006,7 @@ for family in slow fast; do
   done
 done
 if [[ -f "$POSTSYN_NETLIST" ]]; then
-  RO_COUNT="$(grep -cE '^[[:space:]]*RO_tune4[[:space:]]+' "$POSTSYN_NETLIST" || true)"
+  RO_COUNT="$(grep -cE '^[[:space:]]*RO_tune6[[:space:]]+' "$POSTSYN_NETLIST" || true)"
   STUB_COUNT="$(grep -cE 'mptdc_osc_stub' "$POSTSYN_NETLIST" || true)"
   BUHDX4_COUNT="$(grep -cE '^[[:space:]]*BUHDX4[[:space:]]+' "$POSTSYN_NETLIST" || true)"
   BUHDX12_COUNT="$(grep -cE '^[[:space:]]*BUHDX12[[:space:]]+' "$POSTSYN_NETLIST" || true)"
@@ -1281,7 +1284,7 @@ write_macro_binding_check() {
     echo "# MPTDC Macro Binding Check"
     echo "FLOW_LABEL=$FLOW_LABEL"
     echo "LEGACY_TRACE=$LEGACY_TRACE_LABEL"
-    echo "RO_TUNE4_COUNT=$RO_COUNT"
+    echo "RO_TUNE6_COUNT=$RO_COUNT"
     echo "MPTDC_OSC_STUB_COUNT=$STUB_COUNT"
     echo "BUHDX4_COUNT=$BUHDX4_COUNT"
     echo "BUHDX12_COUNT=$BUHDX12_COUNT"
@@ -1291,8 +1294,8 @@ write_macro_binding_check() {
     echo "BUJIHDX12_PHASE_DRV_COUNT=$BUJIHDX12_PHASE_DRV_COUNT"
     echo "RAW_RO_CLOCKS_FOUND=$RAW_RO_CLOCKS_FOUND"
     echo "BUFFER_PHASE_CLOCKS_FOUND=$BUFFER_PHASE_CLOCKS_FOUND"
-    echo "RO_TUNE4_LIB=$REAL_LIB"
-    echo "RO_TUNE4_LEF=$REAL_LEF"
+    echo "RO_TUNE6_LIB=$REAL_LIB"
+    echo "RO_TUNE6_LEF=$REAL_LEF"
     echo "STDCELL_FAMILY=$STDCELL_FAMILY"
     echo "STDCELL_SITE=$STDCELL_SITE"
     echo "STDCELL_LEF=$STDCELL_LEF"
@@ -1345,7 +1348,7 @@ write_final_readiness() {
     echo
     echo "| Check | Expected | Actual | Status |"
     echo "|---|---:|---:|---|"
-    emit_check "RO_tune4 count" 2 "$RO_COUNT"
+    emit_check "RO_tune6 count" 2 "$RO_COUNT"
     emit_check "mptdc_osc_stub count" 0 "$STUB_COUNT"
     emit_check "raw RO clocks found" 16 "$RAW_RO_CLOCKS_FOUND"
     emit_check "buffer phase clocks found" 16 "$BUFFER_PHASE_CLOCKS_FOUND"
@@ -1602,7 +1605,7 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "# O13 Phase Distribution Check"
   echo
   echo "post_synth_netlist=$POSTSYN_NETLIST"
-  echo "ro_tune4_count=$RO_COUNT"
+  echo "ro_tune6_count=$RO_COUNT"
   echo "mptdc_osc_stub_count=$STUB_COUNT"
   echo "buhdx4_count=$BUHDX4_COUNT"
   echo "buhdx12_count=$BUHDX12_COUNT"
@@ -1779,8 +1782,8 @@ CHECK_REPORT="$RESULT_DIR/o13_phase_distribution_check.rpt"
   echo "SUMMARY_RAW_AGREEMENT_STATUS=$SUMMARY_RAW_AGREEMENT_STATUS"
   echo
   if [[ -f "$POSTSYN_NETLIST" ]]; then
-    echo "## RO_tune4 instances"
-    grep -nE '^[[:space:]]*RO_tune4[[:space:]]+' "$POSTSYN_NETLIST" || true
+    echo "## RO_tune6 instances"
+    grep -nE '^[[:space:]]*RO_tune6[[:space:]]+' "$POSTSYN_NETLIST" || true
     echo
     echo "## O13 phase-distribution cells"
     grep -nE 'BUHDX4|BUHDX12|u_phase_buf_slow|u_phase_buf_fast|mptdc_phase_buffer_bank|u_iso|u_drv' "$POSTSYN_NETLIST" || true
@@ -2042,7 +2045,7 @@ write_final_readiness
   echo "- Phase buffer topology: \`BUJIHDX4 -> BUJIHDX12 per tap\`"
   echo "- HDL filelist: \`$O13_FILELIST\`"
   echo "- SDC overlay: \`$O13_SDC\`"
-  echo "- RO_tune4 instance count: $RO_COUNT"
+  echo "- RO_tune6 instance count: $RO_COUNT"
   echo "- mptdc_osc_stub residue count: $STUB_COUNT"
   echo "- BUHDX4 instance count: $BUHDX4_COUNT"
   echo "- BUHDX12 instance count: $BUHDX12_COUNT"
@@ -2053,7 +2056,7 @@ write_final_readiness
   echo "- phase-buffer hierarchy text count: $PHASE_BUF_TEXT_COUNT"
   echo "- u_iso text count: $ISO_TEXT_COUNT"
   echo "- u_drv text count: $DRV_TEXT_COUNT"
-  echo "- report_clocks RO_tune4/S match count: $CLOCKS_ON_RO"
+  echo "- report_clocks u_ro_tune4/S raw-RO match count: $CLOCKS_ON_RO"
   echo "- report_clocks final-driver generated-clock count: $BUFFER_CLOCKS"
   echo "- RAW_RO_CLOCKS_FOUND: $RAW_RO_CLOCKS_FOUND"
   echo "- BUFFER_PHASE_CLOCKS_FOUND: $BUFFER_PHASE_CLOCKS_FOUND"

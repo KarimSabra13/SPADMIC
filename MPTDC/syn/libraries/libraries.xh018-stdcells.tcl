@@ -147,12 +147,16 @@ set mptdc_o1_real_ro_enabled 0
 if {[info exists ::env(O1_USE_REAL_RO_ABSTRACT)] && $::env(O1_USE_REAL_RO_ABSTRACT)} {
     set mptdc_o1_real_ro_enabled 1
 }
+set mptdc_o1_real_ro_macro "RO_tune6"
+if {[info exists ::env(O1_RO_CELL_NAME)] && $::env(O1_RO_CELL_NAME) ne ""} {
+    set mptdc_o1_real_ro_macro $::env(O1_RO_CELL_NAME)
+}
 if {!$mptdc_o1_real_ro_enabled && [file exists $tech_files(MPTDC_OSC_BB_LIB)]} {
     lappend tech_files(ALL_TC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
     lappend tech_files(ALL_WC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
     lappend tech_files(ALL_BC_LIBS) $tech_files(MPTDC_OSC_BB_LIB)
 } elseif {$mptdc_o1_real_ro_enabled} {
-    puts "MPTDC_LIB_INFO: O1 real RO_tune4 active; skipping mptdc_osc_blackbox.lib"
+    puts "MPTDC_LIB_INFO: O1 real $mptdc_o1_real_ro_macro active; skipping mptdc_osc_blackbox.lib"
 }
 
 set mptdc_enable_provisional_osc_liberty 0
@@ -187,14 +191,14 @@ if {$mptdc_enable_provisional_osc_liberty} {
 # are delivered; this hook lets the lab server select a real Liberty without
 # editing the flow scripts.
 if {[info exists ::env(O1_RO_LIBERTY_PATH)] && $::env(O1_RO_LIBERTY_PATH) ne ""} {
-    set tech_files(O1_RO_TUNE4_REAL_LIB) $::env(O1_RO_LIBERTY_PATH)
-    if {[file exists $tech_files(O1_RO_TUNE4_REAL_LIB)]} {
-        lappend tech_files(ALL_TC_LIBS) $tech_files(O1_RO_TUNE4_REAL_LIB)
-        lappend tech_files(ALL_WC_LIBS) $tech_files(O1_RO_TUNE4_REAL_LIB)
-        lappend tech_files(ALL_BC_LIBS) $tech_files(O1_RO_TUNE4_REAL_LIB)
-        puts "MPTDC_LIB_INFO: enabling O1 real RO_tune4 Liberty $tech_files(O1_RO_TUNE4_REAL_LIB)"
+    set tech_files(O1_RO_REAL_LIB) $::env(O1_RO_LIBERTY_PATH)
+    if {[file exists $tech_files(O1_RO_REAL_LIB)]} {
+        lappend tech_files(ALL_TC_LIBS) $tech_files(O1_RO_REAL_LIB)
+        lappend tech_files(ALL_WC_LIBS) $tech_files(O1_RO_REAL_LIB)
+        lappend tech_files(ALL_BC_LIBS) $tech_files(O1_RO_REAL_LIB)
+        puts "MPTDC_LIB_INFO: enabling O1 real $mptdc_o1_real_ro_macro Liberty $tech_files(O1_RO_REAL_LIB)"
     } else {
-        puts "MPTDC_LIB_WARN: O1_RO_LIBERTY_PATH does not exist: $tech_files(O1_RO_TUNE4_REAL_LIB)"
+        puts "MPTDC_LIB_WARN: O1_RO_LIBERTY_PATH does not exist: $tech_files(O1_RO_REAL_LIB)"
     }
 }
 

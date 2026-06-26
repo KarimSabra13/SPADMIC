@@ -7,7 +7,7 @@ MPTDC_DIR="$(cd "$PNR_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 
 RUN_ID=""
-GENUS_RUN_ID="${MPTDC_GENUS_RUN_ID:-}"
+GENUS_RUN_ID="${MPTDC_GENUS_RUN_ID:-MPTDC_TC_Closure_Genus}"
 GENUS_RUN_DIR="${MPTDC_GENUS_RUN_DIR:-}"
 HANDOFF_DIR="${MPTDC_GENUS_HANDOFF_DIR:-}"
 MODE="${MPTDC_DIGITAL_SIGNOFF_MODE:-validate_only}"
@@ -54,9 +54,10 @@ lef_macro_name() {
 }
 
 resolve_ro_handoff() {
-  local env_file="${MPTDC_RO_HANDOFF_ENV:-$MPTDC_DIR/analog_handoff/real_ro_tune4_abstract.env}"
-  local default_ro_lef="$REPO_ROOT/results/osc_pd/20260528_o1_export_ro_tune4_lef/real_abstract_lef/RO_tune4_real_abstract.lef"
-  local default_ro_lib="$MPTDC_DIR/syn/macros/RO_tune4_real_abstract_shell.lib"
+  local env_file="${MPTDC_RO_HANDOFF_ENV:-$MPTDC_DIR/analog_handoff/real_ro_tune6_layout.env}"
+  local default_ro_lef="${O1_RO_DEFAULT_LEF:-/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef}"
+  local default_ro_lib="$MPTDC_DIR/syn/macros/RO_tune6_real_layout_shell.lib"
+  local expected_ro_macro="${O1_RO_CELL_NAME:-RO_tune6}"
   local candidate=""
   local macro=""
 
@@ -69,13 +70,14 @@ resolve_ro_handoff() {
   fi
 
   export O1_USE_REAL_RO_ABSTRACT="${O1_USE_REAL_RO_ABSTRACT:-1}"
+  export O1_RO_CELL_NAME="${O1_RO_CELL_NAME:-$expected_ro_macro}"
   export O1_RO_LIBERTY_PATH="${O1_RO_LIBERTY_PATH:-$default_ro_lib}"
 
   if [[ -z "${O1_RO_LEF_PATH:-}" ]]; then
     for candidate in "$default_ro_lef" "${O1_RO_SOURCE_LEF_PATH:-}"; do
       [[ -n "$candidate" && -f "$candidate" ]] || continue
       macro="$(lef_macro_name "$candidate" 2>/dev/null || true)"
-      if [[ "$macro" == "RO_tune4" ]]; then
+      if [[ "$macro" == "$O1_RO_CELL_NAME" ]]; then
         export O1_RO_LEF_PATH="$candidate"
         break
       fi
@@ -131,7 +133,7 @@ case "$MODE" in
     ;;
 esac
 
-RUN_ID="${RUN_ID:-mptdc_digital_signoff_$(date +%Y%m%d_%H%M%S)}"
+RUN_ID="${RUN_ID:-${MPTDC_INNOVUS_RUN_ID:-MPTDC_TC_Closure_Innovus}}"
 MPTDC_WORK_ROOT="$(abs_path "${MPTDC_WORK_ROOT:-work}")"
 MPTDC_INNOVUS_WORK="$(abs_path "${MPTDC_INNOVUS_WORK:-$MPTDC_WORK_ROOT/innovus}")"
 RESULT_DIR="$MPTDC_INNOVUS_WORK/$RUN_ID"
@@ -163,6 +165,7 @@ export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_P
   echo "closure_scope: $MPTDC_CLOSURE_SCOPE"
   echo "ro_handoff_env: ${MPTDC_RO_HANDOFF_ENV_SOURCED:-unset}"
   echo "O1_USE_REAL_RO_ABSTRACT: ${O1_USE_REAL_RO_ABSTRACT:-unset}"
+  echo "O1_RO_CELL_NAME: ${O1_RO_CELL_NAME:-unset}"
   echo "O1_RO_LEF_PATH: ${O1_RO_LEF_PATH:-unset}"
   echo "O1_RO_LEF_MACRO: $(if [[ -n "${O1_RO_LEF_PATH:-}" && -f "${O1_RO_LEF_PATH:-}" ]]; then lef_macro_name "$O1_RO_LEF_PATH" 2>/dev/null || true; else echo unset; fi)"
   echo "O1_RO_LIBERTY_PATH: ${O1_RO_LIBERTY_PATH:-unset}"
@@ -187,11 +190,11 @@ if [[ "$MODE" != "discover_only" ]]; then
     exit 3
   fi
   if [[ -z "${O1_RO_LEF_PATH:-}" || ! -f "${O1_RO_LEF_PATH:-}" ]]; then
-    echo "ERROR: O1_RO_LEF_PATH is not a readable canonical RO_tune4 LEF: ${O1_RO_LEF_PATH:-unset}" | tee -a "$RUN_LOG"
+    echo "ERROR: O1_RO_LEF_PATH is not a readable canonical RO_tune6 LEF: ${O1_RO_LEF_PATH:-unset}" | tee -a "$RUN_LOG"
     exit 3
   fi
-  if [[ "$(lef_macro_name "$O1_RO_LEF_PATH" 2>/dev/null || true)" != "RO_tune4" ]]; then
-    echo "ERROR: O1_RO_LEF_PATH macro is not exactly RO_tune4: $O1_RO_LEF_PATH" | tee -a "$RUN_LOG"
+  if [[ "$(lef_macro_name "$O1_RO_LEF_PATH" 2>/dev/null || true)" != "${O1_RO_CELL_NAME:-RO_tune6}" ]]; then
+    echo "ERROR: O1_RO_LEF_PATH macro is not exactly ${O1_RO_CELL_NAME:-RO_tune6}: $O1_RO_LEF_PATH" | tee -a "$RUN_LOG"
     exit 3
   fi
   if [[ -z "${O1_RO_LIBERTY_PATH:-}" || ! -f "${O1_RO_LIBERTY_PATH:-}" ]]; then

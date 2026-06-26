@@ -50,9 +50,14 @@ proc mptdc_pnr_object_names {objects} {
     return $names
 }
 
-proc mptdc_pnr_collect_ro_tune4_instances {} {
+proc mptdc_pnr_ro_macro_name {} {
+    return [mptdc_pnr_env O1_RO_CELL_NAME RO_tune6]
+}
+
+proc mptdc_pnr_collect_ro_instances {} {
     set out [list]
-    foreach pattern [list *u_ro_tune4* *RO_tune4*] {
+    set macro [mptdc_pnr_ro_macro_name]
+    foreach pattern [list *u_ro_tune4* *$macro*] {
         set cells [list]
         catch {set cells [get_cells -quiet -hierarchical $pattern]}
         foreach name [mptdc_pnr_object_names $cells] {
@@ -91,10 +96,10 @@ proc mptdc_pnr_stdcell_ground_pins {} {
 proc mptdc_pnr_power_rules {} {
     return [list \
         {digital_domain_uses_1p8v_vdd_vss} \
-        {ro_tune4_vdd_uses_vdd_1p8v} \
-        {ro_tune4_vdd_bang_connects_to_vdd} \
-        {ro_tune4_vss_connects_to_vss} \
-        {do_not_connect_ro_tune4_to_vdda_3p3v} \
+        {ro_tune6_vdd_uses_vdd_1p8v} \
+        {ro_tune6_vdd_bang_connects_to_vdd} \
+        {ro_tune6_vss_connects_to_vss} \
+        {do_not_connect_ro_tune6_to_vdda_3p3v} \
         {report_unconnected_pg_pins} \
     ]
 }
@@ -134,15 +139,17 @@ proc mptdc_pnr_apply_power_connectivity {} {
     foreach pg_pin [mptdc_pnr_stdcell_ground_pins] {
         lappend commands [list globalNetConnect $ground -type pgpin -pin $pg_pin -inst *]
     }
-    set ro_instances [mptdc_pnr_collect_ro_tune4_instances]
-    puts $fh "RO_TUNE4_INSTANCE_COUNT=[llength $ro_instances]"
+    set ro_macro [mptdc_pnr_ro_macro_name]
+    set ro_instances [mptdc_pnr_collect_ro_instances]
+    puts $fh "RO_MACRO=$ro_macro"
+    puts $fh "RO_TUNE6_INSTANCE_COUNT=[llength $ro_instances]"
     foreach ro $ro_instances {
-        puts $fh "RO_TUNE4_INSTANCE=$ro"
+        puts $fh "RO_TUNE6_INSTANCE=$ro"
     }
     if {[llength $ro_instances] != 2} {
-        puts $fh "STATUS=FAIL ERROR=expected_exactly_two_ro_tune4_instances"
+        puts $fh "STATUS=FAIL ERROR=expected_exactly_two_ro_tune6_instances"
         close $fh
-        error "MPTDC_PNR_POWER_CONNECTIVITY_FAILED: expected exactly 2 RO_tune4 instances, found [llength $ro_instances]"
+        error "MPTDC_PNR_POWER_CONNECTIVITY_FAILED: expected exactly 2 $ro_macro instances, found [llength $ro_instances]"
     }
     foreach ro $ro_instances {
         foreach {pin net} [mptdc_pnr_ro_power_pin_map] {

@@ -40,9 +40,8 @@ Reproduce the repository policy and timing flow with:
 bash MPTDC/syn/scripts/check_genus_axis_core_typical_closed_profile.sh
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
-  <run_id> \
   --mode full_signoff \
-  --genus-run-id <fresh_genus_run_id> \
+  --genus-run-id MPTDC_TC_Closure_Genus \
   --handoff-dir <handoff_dir>
 ```
 

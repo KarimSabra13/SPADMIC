@@ -31,7 +31,7 @@ SPAD/CAL async inputs
   -> mptdc_async_frontend_v2
 TOP CSR RO code image
   -> idle-only local slow/fast RO code shadow registers
-  -> RO_tune4 slow/fast phase families
+  -> RO_tune6 slow/fast phase families
   -> BUJIHDX4 -> BUJIHDX12 phase distribution
   -> 8 x 8 PD matrix and local fast tag capture
   -> static held context image
@@ -57,9 +57,9 @@ by local phase capture and a static context transfer.
 | `mptdc_core` | Integration core tying oscillators, phase distribution, PD matrix, async frontend, context, drain, FIFO, packetizer, and watchdog. | Centralizes the measurement/readout contract while preserving sub-block ownership. | Gives synthesis a stable hierarchy for local repairs and lets reports classify oscillator, PD, CDC, drain, and packet paths separately. |
 | `mptdc_input_mux` | Combinational selection between SPAD and calibration START/STOP. | Calibration must use the same downstream timing path as real SPAD events. | Avoids a second frontend and avoids duplicating async capture logic. |
 | `mptdc_reset_sync` | Async-assert, sync-deassert reset leaf. | Reset release must be local to the consuming domain, not one rebuilt global tree. | Reduces recovery/removal risk and avoids unnecessary high-fanout reset buffering. |
-| `mptdc_osc_wrapper` | Selects behavioral model for simulation or real `RO_tune4` macro binding for synthesis. | Keeps simulation portable while preserving the physical macro interface. | Prevents the synthesizable filelist from accidentally using the behavioral oscillator model. |
-| `mptdc_phase_buffer_bank` | Buffers each slow/fast `RO_tune4/S[n]` tap through `BUJIHDX4 -> BUJIHDX12`. | Raw RO pins are analog load points; digital fabric needs isolated, stronger phase drivers. | The topology controls RO loading and gives Genus/Innovus explicit load/report points. |
-| Local RO code shadows | Two 8-bit `clk_sys` register banks close to the slow and fast RO code sides. | Software-visible CSR values may be routed from TOP, but live RO code must be stable during a measurement. | Long static TOP routes terminate at local flops; only short local nets drive `RO_tune4/code[7:0]`, reducing load and measurement disturbance. |
+| `mptdc_osc_wrapper` | Selects behavioral model for simulation or real `RO_tune6` macro binding for synthesis. | Keeps simulation portable while preserving the physical macro interface. | Prevents the synthesizable filelist from accidentally using the behavioral oscillator model. |
+| `mptdc_phase_buffer_bank` | Buffers each slow/fast `RO_tune6/S[n]` tap through `BUJIHDX4 -> BUJIHDX12`. | Raw RO pins are analog load points; digital fabric needs isolated, stronger phase drivers. | The topology controls RO loading and gives Genus/Innovus explicit load/report points. |
+| Local RO code shadows | Two 8-bit `clk_sys` register banks close to the slow and fast RO code sides. | Software-visible CSR values may be routed from TOP, but live RO code must be stable during a measurement. | Long static TOP routes terminate at local flops; only short local nets drive `RO_tune6/code[7:0]`, reducing load and measurement disturbance. |
 | `mptdc_fast_epoch_tag` | Produces the local fast raw tag sampled by PD cells. | A local tag is cheaper and more timing-local than a global fast binary counter. | Reduces global fast-domain fanout and avoids wide high-speed counter distribution. |
 | `mptdc_slow_epoch_johnson` | Produces the slow Johnson epoch. | Johnson coding changes one bit per step and is robust for sampled phase context. | Lowers switching and decode complexity versus a wider binary epoch source. |
 | `mptdc_pd_cell` | Implements the intentional slow-to-fast Vernier q1 sampling relation and captures local `nfast` data. | The q1 relation is the measurement itself, not an accidental CDC path. | Requires a narrow count-checked exception only on q1; downstream hit/tag paths remain real timed logic. |
@@ -93,14 +93,14 @@ global tree without recovery/removal and CDC evidence.
 
 ## Oscillator and Phase Distribution
 
-The physical model binds two `RO_tune4` macro abstracts, one slow and one fast.
+The physical model binds two `RO_tune6` layout-backed macros, one slow and one fast.
 Their `S[0:7]` pins are raw analog phase pins and remain explicit audit points.
 Their `code[7:0]` pins are driven by local shadow registers, not directly by a
 long software CSR bus.
 Each phase tap uses:
 
 ```text
-RO_tune4/S[n] -> BUJIHDX4 isolation -> BUJIHDX12 digital driver -> PD/tag fabric
+RO_tune6/S[n] -> BUJIHDX4 isolation -> BUJIHDX12 digital driver -> PD/tag fabric
 ```
 
 This topology was chosen because the RO pins are load-sensitive and the digital
@@ -202,7 +202,7 @@ The major choices are tied to timing and PPA:
 - Frequency mode: `R750_delta5`.
 - Standard-cell family for the closed Genus run: JIHD.
 - Timing view: typical-only Genus.
-- Macro binding: real `RO_tune4` abstract shell.
+- Macro binding: real `RO_tune6` layout-backed macro with shell Liberty.
 - Phase topology: `BUJIHDX4 -> BUJIHDX12` per slow/fast tap.
 - RO tuning: independent slow/fast 8-bit CSR images captured into local
   idle-only shadow registers before oscillator activity.

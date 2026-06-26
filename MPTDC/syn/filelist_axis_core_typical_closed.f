@@ -9,11 +9,11 @@
 // name; the canonical entrypoint is run_genus_axis_core_typical_closed.sh.
 //
 // This filelist excludes the behavioral oscillator model and binds the real
-// RO_tune4 macro interface through the synthesis environment.
+// RO_tune6 macro interface through the synthesis environment.
 // =============================================================================
 
 +define+SYNTHESIS
-+define+MPTDC_USE_RO_TUNE4_MACRO
++define+MPTDC_USE_RO_TUNE6_MACRO
 +define+MPTDC_FREQ_R750_DELTA5
 +define+MPTDC_O13_PHASE_DISTRIBUTION
 +define+MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12

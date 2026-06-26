@@ -44,6 +44,20 @@ contracts that need explicit verification/timing evidence, not as cleanup noise.
 | Backend readiness | `TC_ONLY_PROVISIONAL_BASELINE` |
 | Signoff boundary | TC-only; not MMMC, foundry DRC/LVS, row DRC/LVS, IR/EM, or tapeout signoff |
 
+The June 25 baseline is reference evidence for the closure recipe. The active
+next rerun replaces the old RO abstract with the layout-backed `RO_tune6`
+master from OA cell `SPADMIC/RO_tune6/layout`. The expected exported LEF is:
+
+```text
+/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+```
+
+The RTL intentionally keeps the RO instance name `u_ro_tune4` so existing
+`u_core/u_osc_*/u_ro_tune4/S[n]` SDC/report paths stay stable. The macro master
+and LEF/Liberty collateral are `RO_tune6`. The OA-to-LEF export contract,
+required pins, target file name, and pre-run audit commands are documented in
+`MPTDC/analog_handoff/RO_TUNE6_LAYOUT_EXPORT.md`.
+
 The server result path is external generated evidence and is not a repository
 source path:
 
@@ -70,12 +84,15 @@ bash MPTDC/scripts/calibration/run_mptdc_calibration.sh
 bash MPTDC/syn/scripts/check_genus_axis_core_typical_closed_profile.sh
 bash MPTDC/syn/scripts/run_genus_axis_core_typical_closed.sh
 bash MPTDC/pnr/scripts/server_run_innovus_mptdc_feasibility.sh
-bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode discover_only
-bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh <run_id> --mode validate_only --genus-run-id <fresh_genus_run_id>
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh --mode discover_only
+bash MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh --mode validate_only
 ```
 
-The Genus command accepts only an optional run ID. The closure policy is stored
-in `MPTDC/syn/scripts/profiles/genus_axis_core_typical_closed.sh` so an inherited
+Without an explicit argument, the Genus wrapper writes
+`work/genus/MPTDC_TC_Closure_Genus`, and the Innovus wrapper writes
+`work/innovus/MPTDC_TC_Closure_Innovus`. The Genus command accepts only an
+optional run ID. The closure policy is stored in
+`MPTDC/syn/scripts/profiles/genus_axis_core_typical_closed.sh` so an inherited
 shell environment cannot silently change the handoff baseline.
 
 If Verilator is unavailable on the Cadence server, record that as a tool

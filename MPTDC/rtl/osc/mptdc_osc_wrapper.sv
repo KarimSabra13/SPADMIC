@@ -13,14 +13,23 @@
 //
 // Selection is controlled by defines:
 //   - MPTDC_USE_OSC_MODEL       : simulation behavioural model with #delays
-//   - MPTDC_USE_RO_TUNE4_MACRO  : synthesis-only real RO_tune4 macro binding
+//   - MPTDC_USE_RO_TUNE6_MACRO  : synthesis-only real RO_tune6 macro binding
+//   - MPTDC_USE_RO_TUNE4_MACRO  : legacy synthesis-only RO_tune4 binding
 //   - otherwise                 : controllable implementation placeholder
 //
 // The wrapper is instantiated twice at the top level — once for the slow
 // oscillator (TS_STEP_PS = 55) and once for the fast oscillator
 // (TS_STEP_PS = 50).
 // =============================================================================
-`ifdef MPTDC_USE_RO_TUNE4_MACRO
+`ifdef MPTDC_USE_RO_TUNE6_MACRO
+(* black_box, keep_hierarchy = "yes", dont_touch = "true" *)
+module RO_tune6 (
+  input  wire       rstb,
+  input  wire [7:0] code,
+  output wire [7:0] S
+);
+endmodule
+`elsif MPTDC_USE_RO_TUNE4_MACRO
 (* black_box, keep_hierarchy = "yes", dont_touch = "true" *)
 module RO_tune4 (
   input  wire       rstb,
@@ -48,6 +57,8 @@ module mptdc_osc_wrapper #(
   initial begin
 `ifdef MPTDC_USE_OSC_MODEL
     $display("[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)");
+`elsif MPTDC_USE_RO_TUNE6_MACRO
+    $display("[OSC_WRAPPER] MODE = RO_tune6 macro binding (synthesis only)");
 `elsif MPTDC_USE_RO_TUNE4_MACRO
     $display("[OSC_WRAPPER] MODE = RO_tune4 macro binding (synthesis only)");
 `else
@@ -70,10 +81,27 @@ module mptdc_osc_wrapper #(
     .phase0_guard_o(phase0_guard_o),
     .phase7d_probe_o(phase7d_probe_o)
   );
-`elsif MPTDC_USE_RO_TUNE4_MACRO
-  // Synthesis-only real macro binding.  For RO_tune4, rstb is the active-high
+`elsif MPTDC_USE_RO_TUNE6_MACRO
+  // Synthesis-only real macro binding.  For RO_tune6, rstb is the active-high
   // oscillator run/start control, so it maps directly to the architectural
   // oscillator enable.  It is intentionally not tied to the global reset.
+  if (NE != 8) begin : gen_invalid_ro_tune6_ne
+    initial begin
+      $error("RO_tune6 macro binding requires NE=8; got NE=%0d", NE);
+    end
+  end
+
+  (* keep_hierarchy = "yes", dont_touch = "true" *)
+  RO_tune6 u_ro_tune4 (
+    .rstb(en),
+    .code(trim_i),
+    .S   (phase[7:0])
+  );
+
+  assign phase0_guard_o = phase[0];
+  assign phase7d_probe_o = phase[7];
+`elsif MPTDC_USE_RO_TUNE4_MACRO
+  // Legacy synthesis-only real macro binding retained for archived runs.
   if (NE != 8) begin : gen_invalid_ro_tune4_ne
     initial begin
       $error("RO_tune4 macro binding requires NE=8; got NE=%0d", NE);
