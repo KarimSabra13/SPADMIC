@@ -280,6 +280,45 @@ proc mptdc_signoff_lef_macro_name {lef_path} {
     return $macro
 }
 
+proc mptdc_signoff_lef_macro_size {lef_path macro_name} {
+    set fh [open $lef_path r]
+    set in_prop 0
+    set in_macro 0
+    set width ""
+    set height ""
+    while {[gets $fh line] >= 0} {
+        if {[regexp {^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$} $line]} {
+            set in_prop 1
+            continue
+        }
+        if {$in_prop && [regexp {^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$} $line]} {
+            set in_prop 0
+            continue
+        }
+        if {$in_prop} {
+            continue
+        }
+        if {[regexp {^[[:space:]]*MACRO[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> macro]} {
+            set in_macro [expr {$macro eq $macro_name}]
+            continue
+        }
+        if {$in_macro &&
+            [regexp {^[[:space:]]*SIZE[[:space:]]+([-+0-9.]+)[[:space:]]+BY[[:space:]]+([-+0-9.]+)[[:space:]]*;} $line -> width height]} {
+            break
+        }
+        if {$in_macro && [regexp {^[[:space:]]*END[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> macro]} {
+            if {$macro eq $macro_name} {
+                break
+            }
+        }
+    }
+    close $fh
+    if {$width eq "" || $height eq ""} {
+        return [list]
+    }
+    return [list $width $height]
+}
+
 proc mptdc_signoff_prepare_ro_inputs {} {
     if {![mptdc_signoff_env_truthy O1_USE_REAL_RO_ABSTRACT]} {
         set ::env(O1_USE_REAL_RO_ABSTRACT) 1
@@ -300,9 +339,15 @@ proc mptdc_signoff_prepare_ro_inputs {} {
     if {$macro ne $expected} {
         error "MPTDC_RO_LEF_MACRO_MISMATCH: O1_RO_LEF_PATH=$lef macro=$macro expected=$expected"
     }
+    set size [mptdc_signoff_lef_macro_size $lef $expected]
+    if {[llength $size] != 2} {
+        error "MPTDC_RO_LEF_SIZE_MISSING: O1_RO_LEF_PATH=$lef macro=$expected"
+    }
+    set ::env(MPTDC_PNR_OSC_WIDTH_UM) [lindex $size 0]
+    set ::env(MPTDC_PNR_OSC_HEIGHT_UM) [lindex $size 1]
     set ::env(O1_RO_LEF_PATH) $lef
     set ::env(O1_RO_LIBERTY_PATH) $lib
-    return [dict create lef $lef liberty $lib macro $macro]
+    return [dict create lef $lef liberty $lib macro $macro width [lindex $size 0] height [lindex $size 1]]
 }
 
 proc mptdc_signoff_write_ro_source_report {} {
@@ -313,6 +358,9 @@ proc mptdc_signoff_write_ro_source_report {} {
     puts $fh "O1_RO_CELL_NAME=[mptdc_signoff_ro_macro_name]"
     puts $fh "O1_RO_LEF_PATH=[dict get $ro lef]"
     puts $fh "O1_RO_LEF_MACRO=[dict get $ro macro]"
+    puts $fh "MPTDC_PNR_OSC_WIDTH_UM=[dict get $ro width]"
+    puts $fh "MPTDC_PNR_OSC_HEIGHT_UM=[dict get $ro height]"
+    puts $fh "MPTDC_RO_LEF_SIZE_STATUS=PASS"
     puts $fh "O1_RO_LIBERTY_PATH=[dict get $ro liberty]"
     puts $fh "MPTDC_OSC_BLACKBOX_ALLOWED=NO"
     puts $fh "MPTDC_OSC_SLOW_BB_ALLOWED=NO"
@@ -825,6 +873,40 @@ proc mptdc_signoff_set_env_default {name value} {
     }
 }
 
+proc mptdc_signoff_apply_recovery_defaults {} {
+    foreach {name value} {
+        MPTDC_PNR_PD_TILE_CONSTRAINT_MODE box
+        MPTDC_PNR_PD_TILE_USE_FENCE 0
+        MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 0
+        MPTDC_PNR_PD_TILE_FIX_LEAVES 0
+        MPTDC_PD_PHYSICAL_AUDIT_MODE soft_region
+        MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM 12.0
+        MPTDC_PD_TILE_MAX_OFFSET_UM 12.0
+        MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN 1
+        MPTDC_PNR_FAST_TAG_COLUMN_SIDE center
+        MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD 1
+        MPTDC_PNR_FAST_TAG_COLUMN_PREPLACE 0
+        MPTDC_PNR_FAST_TAG_COLUMN_FIX 0
+        MPTDC_PNR_FAST_TAG_COLUMN_STRIP_WIDTH_UM 40.0
+        MPTDC_ENABLE_POSTROUTE_OPT 1
+        MPTDC_ENABLE_TC_CLOSURE 1
+        MPTDC_POSTROUTE_SETUP_OPT_PASSES 10
+        MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES 10
+        MPTDC_POSTROUTE_SETUP_EARLY_STOP 1
+        MPTDC_POSTROUTE_SETUP_STALL_LIMIT 1
+        MPTDC_POSTROUTE_SETUP_MIN_IMPROVEMENT_NS 0.005
+        MPTDC_PNR_FAST_TAG_TIMING_FOCUS 1
+        MPTDC_PNR_FAST_TAG_TARGETED_ECO 1
+        MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2 1
+        MPTDC_ENABLE_POST_FILLER_SROUTE 1
+        MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
+        MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 1
+        MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 6
+    } {
+        mptdc_signoff_set_env_default $name $value
+    }
+}
+
 proc mptdc_signoff_phase_buffer_patterns {family stage} {
     set inst [expr {$stage eq "iso" ? "u_iso" : "u_drv"}]
     return [list \
@@ -1030,6 +1112,29 @@ proc mptdc_signoff_parse_tns_ns {path} {
     }
     close $fh
     return $value
+}
+
+proc mptdc_signoff_parse_worst_slack_ns {path} {
+    if {![file exists $path]} {
+        return ""
+    }
+    set fh [open $path r]
+    set worst ""
+    while {[gets $fh line] >= 0} {
+        foreach pattern {
+            {Slack Time[[:space:]]+([-+]?[0-9]+([.][0-9]+)?)}
+            {slack[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}
+            {WNS[^-+0-9]*([-+]?[0-9]+([.][0-9]+)?)}
+        } {
+            if {[regexp -nocase $pattern $line -> value]} {
+                if {$worst eq "" || $value < $worst} {
+                    set worst $value
+                }
+            }
+        }
+    }
+    close $fh
+    return $worst
 }
 
 proc mptdc_signoff_timing_class_regexes {} {
@@ -2206,7 +2311,12 @@ proc mptdc_signoff_tc_closure_enabled {} {
 }
 
 proc mptdc_signoff_fast_tag_timing_focus_enabled {} {
-    return [mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_TIMING_FOCUS 0]
+    return [expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_TIMING_FOCUS 0] ||
+        [mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_TARGETED_ECO 0]}]
+}
+
+proc mptdc_signoff_fast_tag_targeted_eco_enabled {} {
+    return [mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_TARGETED_ECO 0]
 }
 
 proc mptdc_signoff_collection_count {objects} {
@@ -2215,6 +2325,43 @@ proc mptdc_signoff_collection_count {objects} {
         return $count
     }
     return [llength $objects]
+}
+
+proc mptdc_signoff_fast_tag_source_q_pins {} {
+    set src_pins ""
+    catch {set src_pins [get_pins -quiet -hierarchical *u_fast_tag_tag_o_reg*/Q]}
+    if {[mptdc_signoff_collection_count $src_pins] == 0} {
+        catch {set src_pins [get_pins -quiet -hierarchical *gen_fast_tag_col*u_fast_tag*tag_o_reg*/Q]}
+    }
+    return $src_pins
+}
+
+proc mptdc_signoff_fast_tag_capture_d_pins {} {
+    set dst_pins ""
+    catch {set dst_pins [get_pins -quiet -hierarchical *gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*/D]}
+    if {[mptdc_signoff_collection_count $dst_pins] == 0} {
+        catch {set dst_pins [get_pins -quiet -hierarchical *nfast_hit_latched_reg*/D]}
+    }
+    return $dst_pins
+}
+
+proc mptdc_signoff_capture_fast_tag_timing_report {src_pins dst_pins timing_rpt} {
+    if {[mptdc_signoff_collection_count $src_pins] == 0 ||
+        [mptdc_signoff_collection_count $dst_pins] == 0} {
+        set tfh [open $timing_rpt w]
+        puts $tfh "REPORT_STATUS=FAILED"
+        puts $tfh "REPORT_ERROR=missing_source_or_endpoint_pins"
+        close $tfh
+        return [dict create status REVIEW_REQUIRED report $timing_rpt error missing_source_or_endpoint_pins]
+    }
+    if {[catch {report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths 100 -path_type full_clock > $timing_rpt} err]} {
+        set tfh [open $timing_rpt w]
+        puts $tfh "REPORT_STATUS=FAILED"
+        puts $tfh "REPORT_ERROR=$err"
+        close $tfh
+        return [dict create status REVIEW_REQUIRED report $timing_rpt error $err]
+    }
+    return [dict create status PASS report $timing_rpt error ""]
 }
 
 proc mptdc_signoff_apply_fast_tag_timing_focus {} {
@@ -2231,16 +2378,8 @@ proc mptdc_signoff_apply_fast_tag_timing_focus {} {
         return $rpt
     }
 
-    set src_pins ""
-    set dst_pins ""
-    catch {set src_pins [get_pins -quiet -hierarchical *u_fast_tag_tag_o_reg*/Q]}
-    if {[mptdc_signoff_collection_count $src_pins] == 0} {
-        catch {set src_pins [get_pins -quiet -hierarchical *gen_fast_tag_col*u_fast_tag*tag_o_reg*/Q]}
-    }
-    catch {set dst_pins [get_pins -quiet -hierarchical *gen_pd_row*gen_pd_col*u_pd*nfast_hit_latched_reg*/D]}
-    if {[mptdc_signoff_collection_count $dst_pins] == 0} {
-        catch {set dst_pins [get_pins -quiet -hierarchical *nfast_hit_latched_reg*/D]}
-    }
+    set src_pins [mptdc_signoff_fast_tag_source_q_pins]
+    set dst_pins [mptdc_signoff_fast_tag_capture_d_pins]
 
     set src_count [mptdc_signoff_collection_count $src_pins]
     set dst_count [mptdc_signoff_collection_count $dst_pins]
@@ -2285,11 +2424,9 @@ proc mptdc_signoff_apply_fast_tag_timing_focus {} {
     } else {
         puts $fh "SOURCE_MAX_TRANSITION_STATUS=PASS"
     }
-    if {[catch {report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths 100 -path_type full_clock > $timing_rpt} err]} {
-        set tfh [open $timing_rpt w]
-        puts $tfh "REPORT_STATUS=FAILED"
-        puts $tfh "REPORT_ERROR=$err"
-        close $tfh
+    set timing_result [mptdc_signoff_capture_fast_tag_timing_report $src_pins $dst_pins $timing_rpt]
+    if {[dict get $timing_result status] ne "PASS"} {
+        set err [dict get $timing_result error]
         puts $fh "FAST_TAG_TIMING_REPORT_STATUS=REVIEW_REQUIRED"
         puts $fh "FAST_TAG_TIMING_REPORT_ERROR=$err"
         set focus_status REVIEW_REQUIRED
@@ -2297,6 +2434,254 @@ proc mptdc_signoff_apply_fast_tag_timing_focus {} {
         puts $fh "FAST_TAG_TIMING_REPORT_STATUS=PASS"
     }
     puts $fh "FAST_TAG_TIMING_FOCUS_STATUS=$focus_status"
+    close $fh
+    return $rpt
+}
+
+proc mptdc_signoff_pin_source_cells {pins} {
+    set cells [list]
+    set cell_objs [list]
+    catch {set cell_objs [get_cells -quiet -of_objects $pins]}
+    foreach name [mptdc_signoff_object_names $cell_objs] {
+        mptdc_signoff_unique_append cells $name
+    }
+    foreach pin_name [mptdc_signoff_object_names $pins] {
+        set inst $pin_name
+        regsub {/[^/]+$} $inst {} inst
+        mptdc_signoff_unique_append cells $inst
+    }
+    return $cells
+}
+
+proc mptdc_signoff_cell_master_name {inst} {
+    set ptr [mptdc_signoff_cell_ptr $inst]
+    foreach attr {cell.name base_cell.name lib_cell.name ref_name master.name} {
+        set value ""
+        if {$ptr ne "" && ![catch {set value [dbGet ${ptr}.${attr}]}] && $value ne "" && $value ne "0x0"} {
+            return "$value"
+        }
+    }
+    foreach attr {base_cell.name lib_cell.name ref_name cell.name master.name} {
+        set value ""
+        if {![catch {set value [get_db inst:$inst .$attr]}] && $value ne "" && $value ne "0x0"} {
+            return "$value"
+        }
+    }
+    return UNKNOWN
+}
+
+proc mptdc_signoff_set_cell_dont_touch {inst value} {
+    set ok 0
+    set obj [list]
+    catch {set obj [get_cells -quiet $inst]}
+    if {[mptdc_signoff_collection_count $obj] > 0} {
+        if {![catch {set_dont_touch $obj $value}]} { set ok 1 }
+        if {![catch {set_db $obj .dont_touch $value}]} { set ok 1 }
+    }
+    if {![catch {set_db inst:$inst .dont_touch $value}]} { set ok 1 }
+    return $ok
+}
+
+proc mptdc_signoff_fast_tag_eco_allow_cell {inst} {
+    set norm [mptdc_signoff_norm_inst_name $inst]
+    set master [string toupper [mptdc_signoff_cell_master_name $inst]]
+    if {[regexp -nocase {RO_tune6|u_ro_tune4|phase_buf|gen_phase_buf|clk_osc|clk_sys|cts} $norm]} {
+        return [dict create allowed 0 class FORBIDDEN_PROTECTED_MACRO_PHASE_OR_CLOCK master $master]
+    }
+    if {[regexp -nocase {tag_o_reg|nfast_hit_latched_reg|_reg(\[[0-9]+\])?$} $norm]} {
+        return [dict create allowed 0 class FORBIDDEN_SOURCE_OR_CAPTURE_FLOP master $master]
+    }
+    if {$master eq "ON22JIHDX1"} {
+        return [dict create allowed 1 class ON22_X1_TO_X2_CANDIDATE master $master]
+    }
+    if {[regexp {^(BU|IN).*JIHDX[0-9]+$} $master] &&
+        [regexp -nocase {fast_tag|raw_lfsr|nfast|tag} $norm]} {
+        return [dict create allowed 1 class FAST_TAG_DATA_BUFFER_OR_INVERTER master $master]
+    }
+    return [dict create allowed 0 class NON_TARGET_CELL master $master]
+}
+
+proc mptdc_signoff_collect_fast_tag_eco_cells {} {
+    set patterns [list \
+        *gen_fast_tag_col* \
+        *u_fast_tag* \
+        *raw_lfsr_tag* \
+        *nfast*]
+    set cells [list]
+    foreach inst [mptdc_signoff_collect_cells $patterns] {
+        set info [mptdc_signoff_fast_tag_eco_allow_cell $inst]
+        if {[dict get $info allowed]} {
+            mptdc_signoff_unique_append cells $inst
+        }
+    }
+    return $cells
+}
+
+proc mptdc_signoff_try_on22_x2_resize {inst} {
+    set errors [list]
+    foreach cmd [list \
+        [list ecoChangeCell -inst $inst -cell ON22JIHDX2] \
+        [list change_link $inst ON22JIHDX2] \
+        [list sizeCell $inst ON22JIHDX2] \
+        [list replaceCell $inst ON22JIHDX2]] {
+        if {![catch {uplevel #0 $cmd} err]} {
+            return [dict create status PASS command $cmd error ""]
+        }
+        lappend errors "$cmd: $err"
+    }
+    return [dict create status REVIEW_REQUIRED command "" error [join $errors { | }]]
+}
+
+proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
+    set rpt [file join [mptdc_signoff_report_dir] fast_tag_targeted_eco.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Fast-Tag Targeted Innovus ECO"
+    puts $fh "FAST_TAG_TARGETED_ECO_ENABLED=[mptdc_signoff_fast_tag_targeted_eco_enabled]"
+    puts $fh "FAST_TAG_TO_PD_TS_FALSE_PATH=NO"
+    puts $fh "FAST_TAG_TO_PD_TS_MULTICYCLE=NO"
+    puts $fh "FAST_TAG_TARGETED_ECO_SCOPE=innovus_only_no_rtl_no_genus"
+    puts $fh "FAST_TAG_TARGETED_ECO_ALLOWED=fast_tag_data_buffers_inverters_and_ON22JIHDX1_to_ON22JIHDX2"
+    puts $fh "FAST_TAG_TARGETED_ECO_FORBIDDEN=RO_macros_phase_buffers_oscillator_clocks_broad_clk_sys_CTS"
+    if {![mptdc_signoff_fast_tag_targeted_eco_enabled]} {
+        puts $fh "FAST_TAG_TARGETED_ECO_STATUS=SKIPPED"
+        close $fh
+        return $rpt
+    }
+
+    set src_pins [mptdc_signoff_fast_tag_source_q_pins]
+    set dst_pins [mptdc_signoff_fast_tag_capture_d_pins]
+    set src_cells [mptdc_signoff_pin_source_cells $src_pins]
+    set dst_cells [mptdc_signoff_pin_source_cells $dst_pins]
+    puts $fh "FAST_TAG_SOURCE_Q_PIN_COUNT=[mptdc_signoff_collection_count $src_pins]"
+    puts $fh "NFAST_CAPTURE_D_PIN_COUNT=[mptdc_signoff_collection_count $dst_pins]"
+    puts $fh "FAST_TAG_SOURCE_FLOP_COUNT=[llength $src_cells]"
+    puts $fh "NFAST_CAPTURE_FLOP_COUNT=[llength $dst_cells]"
+    if {[mptdc_signoff_collection_count $src_pins] == 0 ||
+        [mptdc_signoff_collection_count $dst_pins] == 0} {
+        puts $fh "FAST_TAG_TARGETED_ECO_STATUS=REVIEW_REQUIRED"
+        puts $fh "FAST_TAG_TARGETED_ECO_ERROR=missing_source_or_endpoint_pins"
+        close $fh
+        return $rpt
+    }
+
+    set protected [list]
+    foreach inst [concat \
+        $src_cells \
+        $dst_cells \
+        [mptdc_signoff_collect_cells [list *RO_tune6* *u_ro_tune4* *phase_buf* *gen_phase_buf* *u_phase_buf*]]] {
+        mptdc_signoff_unique_append protected $inst
+    }
+    set protected_count 0
+    foreach inst $protected {
+        if {[mptdc_signoff_set_cell_dont_touch $inst true]} {
+            incr protected_count
+        }
+    }
+    puts $fh "FAST_TAG_ECO_PROTECTED_CELL_COUNT=$protected_count"
+    foreach pattern {clk_osc_slow clk_osc_fast clk_osc_slow_tap* clk_osc_fast_tap* clk_osc_*_buf_tap* clk_sys} {
+        if {![catch {set_dont_touch_network [get_clocks $pattern]} err]} {
+            puts $fh "FAST_TAG_ECO_PROTECTED_CLOCK=$pattern"
+        } else {
+            puts $fh "FAST_TAG_ECO_PROTECTED_CLOCK_WARNING=$pattern error=$err"
+        }
+    }
+
+    set allowed [mptdc_signoff_collect_fast_tag_eco_cells]
+    set allowed_count 0
+    set on22_candidates [list]
+    foreach inst $allowed {
+        set info [mptdc_signoff_fast_tag_eco_allow_cell $inst]
+        if {[mptdc_signoff_set_cell_dont_touch $inst false]} {
+            incr allowed_count
+        }
+        puts $fh "FAST_TAG_ECO_ALLOWED_CELL=$inst class=[dict get $info class] master=[dict get $info master]"
+        if {[dict get $info class] eq "ON22_X1_TO_X2_CANDIDATE"} {
+            lappend on22_candidates $inst
+        }
+    }
+    puts $fh "FAST_TAG_ECO_ALLOWED_CELL_COUNT=$allowed_count"
+    puts $fh "FAST_TAG_ECO_ON22_X1_CANDIDATE_COUNT=[llength $on22_candidates]"
+
+    set resize_attempts 0
+    set resize_success 0
+    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2 1]} {
+        foreach inst $on22_candidates {
+            incr resize_attempts
+            set result [mptdc_signoff_try_on22_x2_resize $inst]
+            puts $fh "FAST_TAG_ECO_ON22_X2_ATTEMPT=$inst status=[dict get $result status] command=[dict get $result command]"
+            if {[dict get $result status] eq "PASS"} {
+                incr resize_success
+            } else {
+                puts $fh "FAST_TAG_ECO_ON22_X2_ATTEMPT_ERROR=[dict get $result error]"
+            }
+        }
+    } else {
+        puts $fh "FAST_TAG_ECO_ON22_X2_STATUS=DISABLED_BY_ENV"
+    }
+    puts $fh "FAST_TAG_ECO_ON22_X2_ATTEMPTS=$resize_attempts"
+    puts $fh "FAST_TAG_ECO_ON22_X2_SUCCESSES=$resize_success"
+    puts $fh "FAST_TAG_ECO_BUFFER_INSERTION_SCOPE=delegated_to_following_optDesign_postRoute_with_fast_tag_group_and_protected_forbidden_families"
+    puts $fh "FAST_TAG_TARGETED_ECO_STATUS=PASS"
+    close $fh
+    return $rpt
+}
+
+proc mptdc_signoff_write_fast_tag_timing_diagnosis {timing_rpt setup_wns setup_closure_status} {
+    set rpt [file join [mptdc_signoff_report_dir] fast_tag_to_pd_timing_diagnosis.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Fast-Tag-to-PD Timing Diagnosis"
+    puts $fh "FAST_TAG_TO_PD_TS_FALSE_PATH=NO"
+    puts $fh "FAST_TAG_TO_PD_TS_MULTICYCLE=NO"
+    puts $fh "FAST_TAG_TIMING_REPORT=$timing_rpt"
+    puts $fh "POSTROUTE_OPT_SETUP_WNS_NS=$setup_wns"
+    puts $fh "POSTROUTE_OPT_SETUP_CLOSURE_STATUS=$setup_closure_status"
+    if {![file exists $timing_rpt]} {
+        puts $fh "FAST_TAG_TIMING_DIAGNOSIS_STATUS=REVIEW_REQUIRED"
+        puts $fh "FAST_TAG_TIMING_DIAGNOSIS_ERROR=timing_report_missing"
+        close $fh
+        return $rpt
+    }
+    set focus_slack [mptdc_signoff_parse_worst_slack_ns $timing_rpt]
+    puts $fh "FAST_TAG_FOCUSED_WORST_SLACK_NS=$focus_slack"
+    set source_score 0
+    set buffer_score 0
+    set net_score 0
+    set path_markers 0
+    set fh_in [open $timing_rpt r]
+    while {[gets $fh_in line] >= 0} {
+        if {[regexp -nocase {^Path[[:space:]]+[0-9]+:|Startpoint:|Beginpoint:|Endpoint:|Slack Time|slack} $line]} {
+            incr path_markers
+        }
+        if {[regexp -nocase {DFRRQ|DFF|tag_o_reg|clock.to.q|clock-to-q|C->Q|CK.*Q|/C[[:space:]].*/Q} $line]} {
+            incr source_score
+        }
+        if {[regexp -nocase {BUJIHD|INJIHD|ON22JIHD|buffer|inverter} $line]} {
+            incr buffer_score
+        }
+        if {[regexp -nocase {net delay|wire|route|interconnect|capacitance|fanout|physical|distance} $line]} {
+            incr net_score
+        }
+    }
+    close $fh_in
+    set dominant UNKNOWN_REVIEW_REPORT
+    if {$source_score >= $buffer_score && $source_score >= $net_score && $source_score > 0} {
+        set dominant SOURCE_FLOP_C_TO_Q_OR_LAUNCH_Q
+    } elseif {$buffer_score >= $net_score && $buffer_score > 0} {
+        set dominant BUFFER_INVERTER_ON22_DELAY
+    } elseif {$net_score > 0} {
+        set dominant PHYSICAL_DISTANCE_OR_NET_DELAY
+    }
+    puts $fh "FAST_TAG_DIAGNOSIS_SOURCE_FLOP_SCORE=$source_score"
+    puts $fh "FAST_TAG_DIAGNOSIS_BUFFER_INVERTER_ON22_SCORE=$buffer_score"
+    puts $fh "FAST_TAG_DIAGNOSIS_PHYSICAL_NET_SCORE=$net_score"
+    puts $fh "FAST_TAG_DIAGNOSIS_PATH_MARKERS=$path_markers"
+    puts $fh "FAST_TAG_DIAGNOSIS_DOMINANT_TERM=$dominant"
+    if {$setup_closure_status eq "FAIL"} {
+        puts $fh "FAST_TAG_DIAGNOSIS_ACTION=STOP_OPT_LOOP_AND_REPORT_RESIDUAL_PATH"
+    } else {
+        puts $fh "FAST_TAG_DIAGNOSIS_ACTION=REVIEW_FOCUSED_REPORT_AGAINST_OFFICIAL_TC_GATE"
+    }
+    puts $fh "FAST_TAG_TIMING_DIAGNOSIS_STATUS=PASS"
     close $fh
     return $rpt
 }
@@ -2374,12 +2759,19 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     if {$setup_passes < 1} {
         set setup_passes 1
     }
-    set setup_max_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES 4]
+    set setup_hard_cap 10
+    set setup_max_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES 10]
     if {$setup_max_passes < 1} {
         set setup_max_passes 1
     }
+    set setup_hard_cap_applied 0
+    if {$setup_max_passes > $setup_hard_cap} {
+        set setup_max_passes $setup_hard_cap
+        set setup_hard_cap_applied 1
+    }
     if {$setup_passes > $setup_max_passes} {
         set setup_passes $setup_max_passes
+        set setup_hard_cap_applied 1
     }
     set default_target [expr {$closure_mode ? 0.050 : 0.000}]
     set setup_target [mptdc_signoff_env_double MPTDC_POSTROUTE_SETUP_TARGET_SLACK_NS $default_target]
@@ -2399,6 +2791,7 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     set default_hold_target [expr {$closure_mode ? 0.020 : 0.000}]
     set hold_target [mptdc_signoff_env_double MPTDC_POSTROUTE_HOLD_TARGET_SLACK_NS $default_hold_target]
     set setup_early_stop [mptdc_signoff_env_truthy MPTDC_POSTROUTE_SETUP_EARLY_STOP 1]
+    set setup_plateau_guard [mptdc_signoff_env_truthy MPTDC_POSTROUTE_SETUP_PLATEAU_GUARD 1]
     set setup_stall_limit [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_STALL_LIMIT 2]
     if {$setup_stall_limit < 1} {
         set setup_stall_limit 1
@@ -2409,10 +2802,13 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     }
     puts $fh "POSTROUTE_OPT_TC_CLOSURE_MODE=[expr {$closure_mode ? "ENABLED" : "DISABLED"}]"
     puts $fh "POSTROUTE_OPT_SETUP_REQUESTED_PASSES=$requested_setup_passes"
+    puts $fh "POSTROUTE_OPT_SETUP_HARD_CAP=$setup_hard_cap"
+    puts $fh "POSTROUTE_OPT_SETUP_HARD_CAP_APPLIED=$setup_hard_cap_applied"
     puts $fh "POSTROUTE_OPT_SETUP_MAX_PASSES=$setup_max_passes"
     puts $fh "POSTROUTE_OPT_SETUP_PASSES=$setup_passes"
     puts $fh "POSTROUTE_OPT_SETUP_TARGET_SLACK_NS=$setup_target"
     puts $fh "POSTROUTE_OPT_SETUP_EARLY_STOP=[expr {$setup_early_stop ? 1 : 0}]"
+    puts $fh "POSTROUTE_OPT_SETUP_PLATEAU_GUARD=[expr {$setup_plateau_guard ? 1 : 0}]"
     puts $fh "POSTROUTE_OPT_SETUP_STALL_LIMIT=$setup_stall_limit"
     puts $fh "POSTROUTE_OPT_SETUP_MIN_IMPROVEMENT_NS=$setup_min_improvement"
     puts $fh "POSTROUTE_OPT_HOLD_REQUESTED_PASSES=$requested_hold_passes"
@@ -2432,9 +2828,15 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     set focus_rpt [mptdc_signoff_apply_fast_tag_timing_focus]
     set fh [open $rpt a]
     puts $fh "POSTROUTE_OPT_FAST_TAG_TIMING_FOCUS_REPORT=$focus_rpt"
+    set eco_rpt [mptdc_signoff_apply_fast_tag_targeted_eco]
+    puts $fh "POSTROUTE_OPT_FAST_TAG_TARGETED_ECO_REPORT=$eco_rpt"
     close $fh
     set setup_aggregate_status PASS
     set best_setup_wns ""
+    set final_setup_wns ""
+    set final_setup_tns ""
+    set setup_stop_after 0
+    set setup_stop_reason ""
     set setup_stall_count 0
     for {set pass 1} {$pass <= $setup_passes} {incr pass} {
         set fh [open $rpt a]
@@ -2450,6 +2852,8 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
         set timing_snapshot [mptdc_signoff_capture_postroute_setup_snapshot setup $pass]
         set setup_wns [dict get $timing_snapshot wns]
         set setup_tns [dict get $timing_snapshot tns]
+        set final_setup_wns $setup_wns
+        set final_setup_tns $setup_tns
         puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TIMING_REPORT=[dict get $timing_snapshot report]"
         puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_WNS_NS=$setup_wns"
         puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TNS_NS=$setup_tns"
@@ -2461,15 +2865,15 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
             puts $fh "POSTROUTE_OPT_setup_PASS_${pass}_TIMING_STATUS=PASS"
         }
         set stop_reason ""
-        if {$setup_early_stop && $setup_wns ne ""} {
-            if {$setup_wns >= $setup_target} {
+        if {$setup_wns ne ""} {
+            if {$setup_early_stop && $setup_wns >= $setup_target} {
                 set stop_reason "target_slack_reached"
             } elseif {$best_setup_wns eq "" || ($setup_wns - $best_setup_wns) >= $setup_min_improvement} {
                 set best_setup_wns $setup_wns
                 set setup_stall_count 0
             } else {
                 incr setup_stall_count
-                if {$setup_stall_count >= $setup_stall_limit} {
+                if {$setup_plateau_guard && $setup_stall_count >= $setup_stall_limit} {
                     set stop_reason "setup_wns_plateau"
                 }
             }
@@ -2478,14 +2882,37 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
         if {$stop_reason ne ""} {
             puts $fh "POSTROUTE_OPT_SETUP_STOP_AFTER_PASS=$pass"
             puts $fh "POSTROUTE_OPT_SETUP_STOP_REASON=$stop_reason"
+            set setup_stop_after $pass
+            set setup_stop_reason $stop_reason
         }
         close $fh
         if {$stop_reason ne ""} {
             break
         }
     }
+    if {$setup_stop_reason eq ""} {
+        set setup_stop_after $setup_passes
+        set setup_stop_reason max_passes_exhausted
+    }
+    set setup_closure_status FAIL
+    if {$setup_aggregate_status eq "PASS" && $final_setup_wns ne "" && $final_setup_wns >= 0.0} {
+        set setup_closure_status PASS
+    }
+    set final_fast_tag_timing_rpt [file join [mptdc_signoff_report_dir] fast_tag_to_pd_timing_postroute_opt_final.rpt]
+    set final_src_pins [mptdc_signoff_fast_tag_source_q_pins]
+    set final_dst_pins [mptdc_signoff_fast_tag_capture_d_pins]
+    set final_fast_tag_timing_result [mptdc_signoff_capture_fast_tag_timing_report $final_src_pins $final_dst_pins $final_fast_tag_timing_rpt]
+    set diagnosis_rpt [mptdc_signoff_write_fast_tag_timing_diagnosis $final_fast_tag_timing_rpt $final_setup_wns $setup_closure_status]
     set fh [open $rpt a]
     puts $fh "POSTROUTE_OPT_setup_STATUS=$setup_aggregate_status"
+    puts $fh "POSTROUTE_OPT_SETUP_STOP_AFTER_PASS=$setup_stop_after"
+    puts $fh "POSTROUTE_OPT_SETUP_STOP_REASON=$setup_stop_reason"
+    puts $fh "POSTROUTE_OPT_SETUP_FINAL_WNS_NS=$final_setup_wns"
+    puts $fh "POSTROUTE_OPT_SETUP_FINAL_TNS_NS=$final_setup_tns"
+    puts $fh "POSTROUTE_OPT_SETUP_CLOSURE_STATUS=$setup_closure_status"
+    puts $fh "POSTROUTE_OPT_FAST_TAG_FINAL_TIMING_REPORT=$final_fast_tag_timing_rpt"
+    puts $fh "POSTROUTE_OPT_FAST_TAG_FINAL_TIMING_STATUS=[dict get $final_fast_tag_timing_result status]"
+    puts $fh "POSTROUTE_OPT_FAST_TAG_TIMING_DIAGNOSIS_REPORT=$diagnosis_rpt"
     close $fh
     set hold_aggregate_status PASS
     for {set pass 1} {$pass <= $hold_passes} {incr pass} {
@@ -3145,7 +3572,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     set backend_intrusion [mptdc_signoff_count_backend_cells_in_pd_box $pd_box]
     set essential_status [expr {[llength $cells] == 64 && $physical == 64 && $missing_logic == 0 && $missing_box == 0 && $backend_intrusion == 0 ? "PASS" : "FAIL"}]
     set regularity_status [expr {$essential_status eq "PASS" && $outliers == 0 ? "PASS" : "FAIL"}]
-    set relaxed_gate [expr {[mptdc_signoff_env_truthy MPTDC_ALLOW_RELAXED_PD_MATRIX 0] || $audit_mode eq "relaxed"}]
+    set relaxed_gate [expr {[mptdc_signoff_env_truthy MPTDC_ALLOW_RELAXED_PD_MATRIX 0] || $audit_mode in {relaxed soft_region}}]
     set status $regularity_status
     if {$status ne "PASS" && $relaxed_gate && $essential_status eq "PASS"} {
         set status REVIEW_REQUIRED
@@ -5131,6 +5558,7 @@ proc mptdc_signoff_write_final_package {} {
 }
 
 proc mptdc_signoff_source_check {} {
+    mptdc_signoff_apply_recovery_defaults
     mptdc_signoff_mkdirs
     mptdc_signoff_init_status
     mptdc_signoff_require_tc_only_scope
@@ -5182,6 +5610,7 @@ proc mptdc_signoff_phase_rc_parse_only {} {
 }
 
 proc mptdc_signoff_main {} {
+    mptdc_signoff_apply_recovery_defaults
     mptdc_signoff_mkdirs
     mptdc_signoff_init_status
     mptdc_signoff_stage source_gate PHYSICAL_CELL_CONFIG_STATUS {

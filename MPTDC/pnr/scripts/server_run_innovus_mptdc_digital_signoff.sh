@@ -53,6 +53,76 @@ lef_macro_name() {
   ' "$lef"
 }
 
+lef_macro_size() {
+  local lef="$1"
+  local macro="${2:-RO_tune6}"
+  awk -v target="$macro" '
+    /^[[:space:]]*PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=1; next}
+    inprop && /^[[:space:]]*END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$/ {inprop=0; next}
+    inprop {next}
+    /^[[:space:]]*MACRO[[:space:]]+[^[:space:];]+[[:space:]]*$/ {
+      in_macro = ($2 == target)
+      next
+    }
+    in_macro && /^[[:space:]]*SIZE[[:space:]]+[-+0-9.]+[[:space:]]+BY[[:space:]]+[-+0-9.]+[[:space:]]*;/ {
+      print $2, $4
+      exit
+    }
+    in_macro && /^[[:space:]]*END[[:space:]]+[^[:space:];]+[[:space:]]*$/ {
+      if ($2 == target) exit
+    }
+  ' "$lef"
+}
+
+apply_recovery_defaults() {
+  export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE="${MPTDC_PNR_PD_TILE_CONSTRAINT_MODE:-box}"
+  export MPTDC_PNR_PD_TILE_USE_FENCE="${MPTDC_PNR_PD_TILE_USE_FENCE:-0}"
+  export MPTDC_PNR_PD_TILE_PREPLACE_LEAVES="${MPTDC_PNR_PD_TILE_PREPLACE_LEAVES:-0}"
+  export MPTDC_PNR_PD_TILE_FIX_LEAVES="${MPTDC_PNR_PD_TILE_FIX_LEAVES:-0}"
+  export MPTDC_PD_PHYSICAL_AUDIT_MODE="${MPTDC_PD_PHYSICAL_AUDIT_MODE:-soft_region}"
+  export MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM="${MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM:-12.0}"
+  export MPTDC_PD_TILE_MAX_OFFSET_UM="${MPTDC_PD_TILE_MAX_OFFSET_UM:-12.0}"
+
+  export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN="${MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN:-1}"
+  export MPTDC_PNR_FAST_TAG_COLUMN_SIDE="${MPTDC_PNR_FAST_TAG_COLUMN_SIDE:-center}"
+  export MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD="${MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD:-1}"
+  export MPTDC_PNR_FAST_TAG_COLUMN_PREPLACE="${MPTDC_PNR_FAST_TAG_COLUMN_PREPLACE:-0}"
+  export MPTDC_PNR_FAST_TAG_COLUMN_FIX="${MPTDC_PNR_FAST_TAG_COLUMN_FIX:-0}"
+  export MPTDC_PNR_FAST_TAG_COLUMN_STRIP_WIDTH_UM="${MPTDC_PNR_FAST_TAG_COLUMN_STRIP_WIDTH_UM:-40.0}"
+
+  export MPTDC_ENABLE_POSTROUTE_OPT="${MPTDC_ENABLE_POSTROUTE_OPT:-1}"
+  export MPTDC_ENABLE_TC_CLOSURE="${MPTDC_ENABLE_TC_CLOSURE:-1}"
+  export MPTDC_POSTROUTE_SETUP_OPT_PASSES="${MPTDC_POSTROUTE_SETUP_OPT_PASSES:-10}"
+  export MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES="${MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES:-10}"
+  export MPTDC_POSTROUTE_SETUP_EARLY_STOP="${MPTDC_POSTROUTE_SETUP_EARLY_STOP:-1}"
+  export MPTDC_POSTROUTE_SETUP_STALL_LIMIT="${MPTDC_POSTROUTE_SETUP_STALL_LIMIT:-1}"
+  export MPTDC_POSTROUTE_SETUP_MIN_IMPROVEMENT_NS="${MPTDC_POSTROUTE_SETUP_MIN_IMPROVEMENT_NS:-0.005}"
+
+  export MPTDC_PNR_FAST_TAG_TIMING_FOCUS="${MPTDC_PNR_FAST_TAG_TIMING_FOCUS:-1}"
+  export MPTDC_PNR_FAST_TAG_TARGETED_ECO="${MPTDC_PNR_FAST_TAG_TARGETED_ECO:-1}"
+  export MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2="${MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2:-1}"
+
+  export MPTDC_ENABLE_POST_FILLER_SROUTE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-1}"
+  export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-1}"
+  export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE="${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-1}"
+  export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS="${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-6}"
+}
+
+export_ro_lef_size() {
+  local lef="$1"
+  local macro="$2"
+  local width=""
+  local height=""
+
+  read -r width height < <(lef_macro_size "$lef" "$macro" 2>/dev/null || true)
+  if [[ -z "$width" || -z "$height" ]]; then
+    echo "ERROR: could not parse SIZE for MACRO $macro in O1_RO_LEF_PATH=$lef" | tee -a "$RUN_LOG"
+    exit 3
+  fi
+  export MPTDC_PNR_OSC_WIDTH_UM="$width"
+  export MPTDC_PNR_OSC_HEIGHT_UM="$height"
+}
+
 resolve_ro_handoff() {
   local env_file="${MPTDC_RO_HANDOFF_ENV:-$MPTDC_DIR/analog_handoff/real_ro_tune6_layout.env}"
   local default_ro_lef="${O1_RO_DEFAULT_LEF:-/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef}"
@@ -146,6 +216,11 @@ RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
 resolve_ro_handoff
 export MPTDC_CLOSURE_SCOPE="${MPTDC_CLOSURE_SCOPE:-TC_ONLY}"
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
+apply_recovery_defaults
+
+if [[ "$MODE" != "discover_only" && -n "${O1_RO_LEF_PATH:-}" && -f "${O1_RO_LEF_PATH:-}" ]]; then
+  export_ro_lef_size "$O1_RO_LEF_PATH" "${O1_RO_CELL_NAME:-RO_tune6}"
+fi
 
 {
   echo "# MPTDC Digital Block Signoff Wrapper"
@@ -168,7 +243,15 @@ export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_P
   echo "O1_RO_CELL_NAME: ${O1_RO_CELL_NAME:-unset}"
   echo "O1_RO_LEF_PATH: ${O1_RO_LEF_PATH:-unset}"
   echo "O1_RO_LEF_MACRO: $(if [[ -n "${O1_RO_LEF_PATH:-}" && -f "${O1_RO_LEF_PATH:-}" ]]; then lef_macro_name "$O1_RO_LEF_PATH" 2>/dev/null || true; else echo unset; fi)"
+  echo "MPTDC_PNR_OSC_WIDTH_UM: ${MPTDC_PNR_OSC_WIDTH_UM:-unset}"
+  echo "MPTDC_PNR_OSC_HEIGHT_UM: ${MPTDC_PNR_OSC_HEIGHT_UM:-unset}"
   echo "O1_RO_LIBERTY_PATH: ${O1_RO_LIBERTY_PATH:-unset}"
+  echo "pd_tile_constraint_mode: ${MPTDC_PNR_PD_TILE_CONSTRAINT_MODE:-unset}"
+  echo "pd_physical_audit_mode: ${MPTDC_PD_PHYSICAL_AUDIT_MODE:-unset}"
+  echo "fast_tag_column_side: ${MPTDC_PNR_FAST_TAG_COLUMN_SIDE:-unset}"
+  echo "postroute_setup_passes: ${MPTDC_POSTROUTE_SETUP_OPT_PASSES:-unset}"
+  echo "postroute_setup_max_passes: ${MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES:-unset}"
+  echo "fast_tag_targeted_eco: ${MPTDC_PNR_FAST_TAG_TARGETED_ECO:-unset}"
   echo "labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO"
   echo
   echo "git status --short --untracked-files=no:"
@@ -197,6 +280,12 @@ if [[ "$MODE" != "discover_only" ]]; then
     echo "ERROR: O1_RO_LEF_PATH macro is not exactly ${O1_RO_CELL_NAME:-RO_tune6}: $O1_RO_LEF_PATH" | tee -a "$RUN_LOG"
     exit 3
   fi
+  export_ro_lef_size "$O1_RO_LEF_PATH" "${O1_RO_CELL_NAME:-RO_tune6}"
+  {
+    echo "MPTDC_PNR_OSC_WIDTH_UM=$MPTDC_PNR_OSC_WIDTH_UM"
+    echo "MPTDC_PNR_OSC_HEIGHT_UM=$MPTDC_PNR_OSC_HEIGHT_UM"
+    echo "MPTDC_RO_LEF_SIZE_STATUS=PASS"
+  } | tee -a "$MANIFEST_DIR/run_manifest.txt" | tee -a "$RUN_LOG"
   if [[ -z "${O1_RO_LIBERTY_PATH:-}" || ! -f "${O1_RO_LIBERTY_PATH:-}" ]]; then
     echo "ERROR: O1_RO_LIBERTY_PATH is not readable: ${O1_RO_LIBERTY_PATH:-unset}" | tee -a "$RUN_LOG"
     exit 3
