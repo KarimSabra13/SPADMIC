@@ -28,6 +28,50 @@ The untracked files are user-owned references. They must not be deleted, reforma
 
 [FROZEN] The root untracked reference files remain user-owned and are not added to the RTL filelists.
 
+## Phase 7 ASIC-Preparation Continuation Snapshot
+
+- Branch: `SPADMIC_test`
+- Base commit before Phase 7+ edits: `5cdf489fbfb0a13e1a5ee7f5a253002e023602ac`
+- Base commit message: `5cdf489f matrix top phased integration`
+- Date/time: `2026-06-28T18:51:27+02:00`
+- Working tree at Phase 7+ start:
+  - `?? ParameterDefs.sv`
+  - `?? multi_ShiftRegisterChain_cfg_v1.sv`
+  - `?? pixel_readout.pdf`
+
+[FROZEN] The continuation target is `TOP/rtl/spadmic_top_matrix_v1.sv`, not the legacy `TOP/rtl/spadmic_top_v1.sv`.
+
+[FROZEN] Cadence tools are not available locally in this session. Any Xcelium, Genus, Innovus, CDC/RDC, DRC/LVS, PEX, MMMC, DDR timing, or matrix macro timing result must come from a server run and must not be claimed from local Verilator evidence.
+
+[FROZEN] `clk_cfg_40m` is a real separate PLL-generated matrix configuration domain. The matrix configuration controller must use a real `clk_sys <-> clk_cfg_40m` CDC and must never sample a changing multi-bit command/readback bus without a stable-bus handshake.
+
+[FROZEN] `Cout` is the returned `Cin` after matrix propagation/RC effects and must be used for physical matrix configuration readback timing. The existing mirror-readback behavior is not final.
+
+[FROZEN] A real `clk_sys` output FIFO is required between event bundle TX and DDR16 pairer. Initial target depth is 512 16-bit words, with event admission blocked when free space is below the documented worst-case event reservation.
+
+[FROZEN] Shared TDC configuration is required through matrix-top CSR:
+  - programmable `max_hits`, default 15;
+  - one shared slow RO code for all three axes;
+  - one shared fast RO code for all three axes;
+  - optional `fifo_clr` and `soft_reset` pulses;
+  - calibration axis mask.
+
+[DEFAULT FOR V1] Exact RO code-to-frequency transfer is not known. Document the approximate 700 MHz RO target from MPTDC evidence but do not invent a code-frequency equation.
+
+[DEFAULT FOR V1] Writing RO code `8'h00` may be used as the clear/default policy if that is the simplest safe implementation.
+
+[FROZEN] Position must support both raw bitmap and cluster/compact packet modes selectable through CSR/I2C. The current raw-only snapshot packetizer is a bring-up step, not the final v1 position path.
+
+[IMPLEMENTED] Phase 0 preflight confirmed no local diffs in protected MPTDC internals and no diff in `TOP/rtl/spadmic_top_v1.sv`.
+
+[RISK] Phase 0 preflight confirmed current RTL limitations that must be resolved before ASIC-ready local regression:
+  - [RISK] CSR address width is still 12-bit.
+  - [RISK] Shared TDC max-hits and RO codes are still hardwired in `spadmic_top_matrix_v1`.
+  - [RISK] Position path in the new top is raw-only.
+  - [RISK] Matrix configuration readback is not Cout-based.
+  - [RISK] Bundle TX feeds DDR16 pairer directly with no real output FIFO.
+  - [RISK] Full-top BOTH test and directed skew campaign are not yet in the readiness gate.
+
 ## Source Priority
 
 1. [FROZEN] User decisions in the matrix-top implementation prompts.
