@@ -55,6 +55,12 @@ module tb_spadmic_matrix_top_csr_unit;
   logic ddr_busy;
   logic ddr_pair_valid;
   logic ddr_padded;
+  logic [SPADMIC_OUTPUT_FIFO_LEVEL_W-1:0] output_fifo_level;
+  logic [SPADMIC_OUTPUT_FIFO_LEVEL_W-1:0] output_fifo_free_words;
+  logic output_fifo_empty;
+  logic output_fifo_full;
+  logic output_fifo_almost_full;
+  logic output_fifo_overflow;
   logic bundle_missing_source;
   logic position_packet_drop;
   wire global_enable;
@@ -128,6 +134,12 @@ module tb_spadmic_matrix_top_csr_unit;
     .ddr_busy_i(ddr_busy),
     .ddr_pair_valid_i(ddr_pair_valid),
     .ddr_padded_i(ddr_padded),
+    .output_fifo_level_i(output_fifo_level),
+    .output_fifo_free_words_i(output_fifo_free_words),
+    .output_fifo_empty_i(output_fifo_empty),
+    .output_fifo_full_i(output_fifo_full),
+    .output_fifo_almost_full_i(output_fifo_almost_full),
+    .output_fifo_overflow_i(output_fifo_overflow),
     .bundle_missing_source_i(bundle_missing_source),
     .position_packet_drop_i(position_packet_drop),
     .global_enable_o(global_enable),
@@ -208,6 +220,7 @@ module tb_spadmic_matrix_top_csr_unit;
 
   initial begin
     logic [31:0] rd;
+    logic [15:0] overflow_count_before;
 
     pass_count = 0;
     fail_count = 0;
@@ -248,6 +261,12 @@ module tb_spadmic_matrix_top_csr_unit;
     ddr_busy = 1'b0;
     ddr_pair_valid = 1'b0;
     ddr_padded = 1'b0;
+    output_fifo_level = '0;
+    output_fifo_free_words = SPADMIC_OUTPUT_FIFO_LEVEL_W'(SPADMIC_OUTPUT_FIFO_DEPTH);
+    output_fifo_empty = 1'b1;
+    output_fifo_full = 1'b0;
+    output_fifo_almost_full = 1'b0;
+    output_fifo_overflow = 1'b0;
     bundle_missing_source = 1'b0;
     position_packet_drop = 1'b0;
 
@@ -277,7 +296,7 @@ module tb_spadmic_matrix_top_csr_unit;
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_TDC_ONLY, 1'b1},
                   1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("busy mode reject sets PATH_BUSY code", rd[7:4] == CMD_ERR_PATH_BUSY);
+    check("busy mode reject sets PATH_BUSY code", rd[11:8] == CMD_ERR_PATH_BUSY);
     check("busy mode reject does not change active mode", active_mode == SPADMIC_MODE_POSITION_ONLY);
     safe_idle = 1'b1;
 
@@ -285,13 +304,13 @@ module tb_spadmic_matrix_top_csr_unit;
                   {24'h0, 1'b1, 3'b000, SPADMIC_MODE_TDC_ONLY, 1'b1},
                   1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("bad TDC axis mask rejected", rd[7:4] == CMD_ERR_BAD_MODE);
+    check("bad TDC axis mask rejected", rd[11:8] == CMD_ERR_BAD_MODE);
 
     csr_write_cmd(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b001, SPADMIC_MODE_BOTH, 1'b1},
                   1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("partial BOTH axis mask rejected", rd[7:4] == CMD_ERR_BAD_MODE);
+    check("partial BOTH axis mask rejected", rd[11:8] == CMD_ERR_BAD_MODE);
 
     csr_write_cmd(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b001, SPADMIC_MODE_CALIBRATION, 1'b1},
@@ -365,7 +384,7 @@ module tb_spadmic_matrix_top_csr_unit;
     matrix_cfg_busy = 1'b1;
     csr_write_cmd(SPADMIC_CSR_MATRIX_CFG_CMD, {28'h0, OP_READ_COLUMN_64, 1'b1}, 1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("busy cfg command reports busy", rd[7:4] == CMD_ERR_BUSY);
+    check("busy cfg command reports busy", rd[11:8] == CMD_ERR_BUSY);
     csr_read_cmd(SPADMIC_CSR_MATRIX_CFG_CMD, rd, 1'b0);
     check("busy rejected command leaves opcode readback unchanged", rd[3:1] == OP_WRITE_COLUMN_64);
     matrix_cfg_busy = 1'b0;
@@ -374,12 +393,12 @@ module tb_spadmic_matrix_top_csr_unit;
     safe_idle  = 1'b0;
     csr_write_cmd(SPADMIC_CSR_MATRIX_CFG_WDATA_LO, 32'hCAFE_BABE, 1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("path-busy cfg parameter write reports PATH_BUSY", rd[7:4] == CMD_ERR_PATH_BUSY);
+    check("path-busy cfg parameter write reports PATH_BUSY", rd[11:8] == CMD_ERR_PATH_BUSY);
     check("path-busy cfg parameter write leaves data unchanged",
           matrix_cfg_wdata == 64'h0123_4567_89AB_CDEF);
     csr_write_cmd(SPADMIC_CSR_MATRIX_CFG_CMD, {28'h0, OP_READ_COLUMN_64, 1'b1}, 1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("path-busy cfg command reports PATH_BUSY", rd[7:4] == CMD_ERR_PATH_BUSY);
+    check("path-busy cfg command reports PATH_BUSY", rd[11:8] == CMD_ERR_PATH_BUSY);
     csr_read_cmd(SPADMIC_CSR_MATRIX_CFG_CMD, rd, 1'b0);
     check("path-busy rejected command leaves opcode readback unchanged",
           rd[3:1] == OP_WRITE_COLUMN_64);
@@ -388,7 +407,7 @@ module tb_spadmic_matrix_top_csr_unit;
 
     csr_write_cmd(SPADMIC_CSR_MATRIX_CFG_COL, 32'd44, 1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("invalid cfg column reports invalid col", rd[7:4] == CMD_ERR_INVALID_COL);
+    check("invalid cfg column reports invalid col", rd[11:8] == CMD_ERR_INVALID_COL);
 
     event_rejected_not_ready = 1'b1;
     @(posedge clk_sys);
@@ -405,15 +424,53 @@ module tb_spadmic_matrix_top_csr_unit;
     check("B TDC 0x3000 does not alias global ID", rd != 32'h5350_4D54);
     csr_read_cmd(SPADMIC_CSR_TX_STATUS, rd, 1'b0);
     check("TX status valid at full 16-bit 0x7000", rd[1:0] == 2'b01);
+    output_fifo_empty = 1'b0;
+    output_fifo_level = SPADMIC_OUTPUT_FIFO_LEVEL_W'(500);
+    output_fifo_free_words = SPADMIC_OUTPUT_FIFO_LEVEL_W'(12);
+    output_fifo_almost_full = 1'b1;
+    csr_read_cmd(SPADMIC_CSR_OUTPUT_FIFO_STATUS, rd, 1'b0);
+    check("output FIFO status reports not empty", !rd[0]);
+    check("output FIFO status reports almost full", rd[2]);
+    check("output FIFO status reports level", rd[15:4] == 12'd500);
+    check("output FIFO status reports free words", rd[31:16] == 16'd12);
+    output_fifo_overflow = 1'b1;
+    @(posedge clk_sys);
+    #1;
+    output_fifo_overflow = 1'b0;
+    csr_read_cmd(SPADMIC_CSR_TX_STATUS, rd, 1'b0);
+    check("TX status reports FIFO overflow sticky", rd[9]);
+    check("TX status reports FIFO overflow count", rd[31:16] == 16'd1);
+    csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
+    check("MTOP fault reports FIFO overflow sticky", rd[4]);
+    output_fifo_empty = 1'b1;
+    output_fifo_level = '0;
+    output_fifo_free_words = SPADMIC_OUTPUT_FIFO_LEVEL_W'(SPADMIC_OUTPUT_FIFO_DEPTH);
+    output_fifo_almost_full = 1'b0;
     csr_read_cmd(16'h700C, rd, 1'b1);
     check("unsupported TX 0x700C reports error instead of aliasing", rd == 32'h0);
     csr_write_cmd(16'h2A00, 32'hDEAD_BEEF, 1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("bad 16-bit address reports bad addr", rd[7:4] == 4'd5);
+    check("bad 16-bit address reports bad addr", rd[11:8] == 4'd5);
 
-    csr_write_cmd(SPADMIC_CSR_MTOP_FAULT, 32'h0000_00FF, 1'b0);
+    csr_write_cmd(SPADMIC_CSR_MTOP_FAULT, 32'h0000_0F1F, 1'b0);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
     check("W1C fault clear works", rd[3:0] == 4'h0);
+    check("W1C FIFO overflow clear works", !rd[4]);
+    check("W1C last error clear works", rd[11:8] == 4'd0);
+
+    csr_read_cmd(SPADMIC_CSR_TX_STATUS, rd, 1'b0);
+    overflow_count_before = rd[31:16];
+    output_fifo_overflow = 1'b1;
+    csr_write_cmd(SPADMIC_CSR_MTOP_FAULT, 32'h0000_0010, 1'b0);
+    output_fifo_overflow = 1'b0;
+    csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
+    check("same-cycle FIFO overflow dominates W1C clear", rd[4]);
+    csr_read_cmd(SPADMIC_CSR_TX_STATUS, rd, 1'b0);
+    check("same-cycle FIFO overflow increments count",
+          rd[31:16] > overflow_count_before);
+    csr_write_cmd(SPADMIC_CSR_MTOP_FAULT, 32'h0000_0010, 1'b0);
+    csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
+    check("FIFO overflow clears after overflow is gone", !rd[4]);
 
     if (fail_count != 0)
       $fatal(1, "tb_spadmic_matrix_top_csr_unit: %0d failures", fail_count);

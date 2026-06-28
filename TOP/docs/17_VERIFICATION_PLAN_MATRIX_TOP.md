@@ -103,6 +103,14 @@ Implemented Phase 4/5 tests:
 - `tb_spadmic_matrix_cfg_ctrl_unit` covers returned-Cout qualified write/read/global-fill readback, column 0 and column 43 operations, invalid column rejection, command-while-busy rejection, reset abort, and Cout timeout/error behavior.
 - `tb_spadmic_top_matrix_v1_shell_unit` includes a simple returned-Cout echo model so the top shell exercises the non-mirror matrix configuration path.
 
+Implemented Phase 6 tests:
+
+- `tb_spadmic_output_fifo_unit` covers synchronous FIFO reset, level/free-space, reserve almost-full threshold, push/pop ordering, full/overflow behavior, and simultaneous push/pop while full.
+- `tb_spadmic_output_fifo_ddr_marker_unit` covers the top-level FIFO-to-DDR marker convention: two odd one-word bundles separated by ordered FIFO flush markers must serialize as independent padded DDR pairs, not as one cross-event pair.
+- `tb_spadmic_matrix_top_csr_unit` covers implemented FIFO status fields, FIFO overflow sticky/count visibility, same-cycle overflow-versus-W1C priority, and W1C clearing through `MTOP_FAULT[4]`.
+- `tb_spadmic_top_output_pressure_unit` is an explicit white-box pressure/fault-injection test. It forces top-level output-capacity state to prove that free space below the reservation blocks `pre_event_resources_ready`, the reservation boundary recovers, nonempty FIFO blocks `safe_idle`, and a pending FIFO flush marker blocks `safe_idle`.
+- `tb_spadmic_top_matrix_v1_shell_unit` continues to pass with the FIFO inserted between bundle TX and DDR16 pairer.
+
 Still required:
 
 - Full top-level BOTH event simulation using real MPTDC packet completion and position packet completion in one bundle.

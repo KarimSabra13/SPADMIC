@@ -42,6 +42,8 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 512;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_LEVEL_W = $clog2(SPADMIC_OUTPUT_FIFO_DEPTH + 1);
   localparam int unsigned SPADMIC_MAX_EVENT_BUNDLE_WORDS = 128;
+  localparam int unsigned SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES =
+      SPADMIC_MAX_EVENT_BUNDLE_WORDS + 1; // include ordered flush marker
 
   typedef enum logic [SPADMIC_AXIS_ID_W-1:0] {
     TDC_ID_X = 2'd0,

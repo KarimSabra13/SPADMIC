@@ -43,7 +43,7 @@ R/Y/B[63:0]
 
 TDC packet streams + position stream
   -> event bundle TX
-  -> output FIFO (planned)
+  -> output FIFO
   -> DDR16 pairer
   -> future DDR16 macro boundary
 
@@ -69,6 +69,10 @@ clk_ref_40m : MPTDC STOP qualifier reference
 - Snapshot-owned position packetizer with CSR-selected raw bitmap mode and
   fixed 8-word cluster mode.
 - Event bundle transmitter with common event ID patching.
+- 512-entry synchronous output FIFO between bundle TX and DDR16 pairer.
+- Output admission reservation based on 128 logical bundle words plus one
+  ordered flush-marker entry.
+- Ordered FIFO flush markers so bundle padding cannot pair across event boundaries.
 - Verilator local readiness gate that lints both legacy and matrix top modules.
 
 ## Not Yet Final
@@ -81,8 +85,9 @@ clk_ref_40m : MPTDC STOP qualifier reference
   snapshots. Compact cluster packets and a deeper position queue remain
   deferred.
 - Matrix configuration readback now uses returned `Cout` strobes to capture `Dout` into the `clk_cfg_40m` controller. The timing remains non-signoff until the matrix macro handoff defines setup/hold/min-pulse/Cout delay.
-- There is no real output FIFO between bundle TX and DDR16 pairer.
-- Event admission does not yet reserve FIFO space for worst-case events.
+- Output FIFO is implemented, but the final DDR macro has no ready/backpressure
+  contract yet. The current pairer consumes in `clk_sys`; future macro-ready
+  behavior may require a wrapper update.
 - Full-top BOTH test and directed R/Y/B skew campaign are missing from the local readiness gate.
 - Xcelium has not been run locally.
 - Genus/Innovus scripts for matrix-top ASIC preparation are not yet present.
@@ -113,6 +118,7 @@ clk_ref_40m : MPTDC STOP qualifier reference
   - 512 x 16-bit initial depth.
   - level/free-space/almost-full CSR status.
   - admission blocked when free space is below the worst-case event reservation.
+  - ordered internal flush marker carried through FIFO for odd-word padding.
 - Verification:
   - CSR16 and I2C 16-bit tests.
   - shared TDC config tests.

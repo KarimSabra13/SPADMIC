@@ -55,6 +55,12 @@ module spadmic_matrix_top_csr (
   input  logic                                ddr_busy_i,
   input  logic                                ddr_pair_valid_i,
   input  logic                                ddr_padded_i,
+  input  logic [spadmic_pkg::SPADMIC_OUTPUT_FIFO_LEVEL_W-1:0] output_fifo_level_i,
+  input  logic [spadmic_pkg::SPADMIC_OUTPUT_FIFO_LEVEL_W-1:0] output_fifo_free_words_i,
+  input  logic                                output_fifo_empty_i,
+  input  logic                                output_fifo_full_i,
+  input  logic                                output_fifo_almost_full_i,
+  input  logic                                output_fifo_overflow_i,
   input  logic                                bundle_missing_source_i,
   input  logic                                position_packet_drop_i,
 
@@ -111,6 +117,8 @@ module spadmic_matrix_top_csr (
   logic        event_reject_q;
   logic        reset_done_q;
   logic        snapshot_timeout_q;
+  logic        output_fifo_overflow_sticky_q;
+  logic [15:0] output_fifo_overflow_count_q;
 
   wire csr_accept = csr_valid_i & csr_ready_o;
   wire ctrl_safe_to_commit = safe_idle_i && !transition_busy_i && !matrix_cfg_busy_i;
@@ -230,7 +238,8 @@ module spadmic_matrix_top_csr (
 
       SPADMIC_CSR_MTOP_FAULT: begin
         rd[3:0] = fault_sticky_q;
-        rd[7:4] = csr_last_error_q;
+        rd[4]   = output_fifo_overflow_sticky_q;
+        rd[11:8] = csr_last_error_q;
       end
 
       SPADMIC_CSR_MTOP_FAULT_COUNT: begin
@@ -331,21 +340,30 @@ module spadmic_matrix_top_csr (
       end
 
       SPADMIC_CSR_TX_STATUS: begin
-        rd[0] = ddr_empty_i;
+        rd[0] = ddr_empty_i && output_fifo_empty_i && !ddr_pair_valid_i;
         rd[1] = ddr_busy_i;
         rd[2] = ddr_pair_valid_i;
         rd[3] = ddr_padded_i;
         rd[4] = bundle_missing_source_i;
         rd[5] = position_packet_drop_i;
+        rd[6] = output_fifo_empty_i;
+        rd[7] = output_fifo_full_i;
+        rd[8] = output_fifo_almost_full_i;
+        rd[9] = output_fifo_overflow_sticky_q;
+        rd[31:16] = output_fifo_overflow_count_q;
       end
 
       SPADMIC_CSR_OUTPUT_FIFO_STATUS: begin
-        rd[0] = ddr_empty_i;
-        rd[1] = ddr_busy_i;
+        rd[0] = output_fifo_empty_i;
+        rd[1] = output_fifo_full_i;
+        rd[2] = output_fifo_almost_full_i;
+        rd[3] = output_fifo_overflow_sticky_q;
+        rd[15:4] = 12'(output_fifo_level_i);
+        rd[31:16] = 16'(output_fifo_free_words_i);
       end
 
       SPADMIC_CSR_OUTPUT_FIFO_WATERMARKS: begin
-        rd[15:0]  = 16'(SPADMIC_MAX_EVENT_BUNDLE_WORDS);
+        rd[15:0]  = 16'(SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES);
         rd[31:16] = 16'(SPADMIC_OUTPUT_FIFO_DEPTH);
       end
 
@@ -395,6 +413,8 @@ module spadmic_matrix_top_csr (
       event_reject_q          <= 1'b0;
       reset_done_q            <= 1'b0;
       snapshot_timeout_q      <= 1'b0;
+      output_fifo_overflow_sticky_q <= 1'b0;
+      output_fifo_overflow_count_q  <= '0;
     end else begin
       logic [SPADMIC_CSR_DATA_W-1:0] rd_next;
       logic write_error;
@@ -430,6 +450,10 @@ module spadmic_matrix_top_csr (
         reset_disabled_count_q <= sat16_inc(reset_disabled_count_q);
       if (snapshot_timeout_i && !snapshot_timeout_q)
         snapshot_timeout_count_q <= sat16_inc(snapshot_timeout_count_q);
+      if (output_fifo_overflow_i) begin
+        output_fifo_overflow_sticky_q <= 1'b1;
+        output_fifo_overflow_count_q <= sat16_inc(output_fifo_overflow_count_q);
+      end
 
       if (csr_accept) begin
         if (!addr_valid) begin
@@ -528,7 +552,9 @@ module spadmic_matrix_top_csr (
 
             SPADMIC_CSR_MTOP_FAULT: begin
               fault_sticky_q <= fault_sticky_q & ~csr_wdata_i[3:0];
-              if (csr_wdata_i[7:4] != 4'h0)
+              if (csr_wdata_i[4] && !output_fifo_overflow_i)
+                output_fifo_overflow_sticky_q <= 1'b0;
+              if (csr_wdata_i[11:8] != 4'h0)
                 csr_last_error_q <= CMD_ERR_NONE;
             end
 

@@ -35,7 +35,7 @@ This table is the implemented subset for the new matrix top shell. Registers not
 | `0x0008` | `MTOP_CTRL_REQUEST` | RW | disabled, axes `111`, auto-reset `1` | global enable, requested/active mode, normal axis mask, auto reset; writes accepted only when safe idle |
 | `0x000C` | `MTOP_CTRL_ACTIVE` | RO | disabled | active mode/control image |
 | `0x0010` | `MTOP_STATUS` | RO | `0` | safe idle, event/config/snapshot/reset/DDR status, current event ID |
-| `0x0014` | `MTOP_FAULT` | W1C/RO | `0` | sticky faults and last CSR error code |
+| `0x0014` | `MTOP_FAULT` | W1C/RO | `0` | sticky faults, output FIFO overflow sticky, and last CSR error code |
 | `0x0018` | `MTOP_FAULT_COUNT` | RO | `0` | saturating global fault count and config reject count |
 | `0x0020` | `SHARED_TDC_MAX_HITS` | RW | `15` | shared programmable MPTDC max-hits value broadcast to all three wrappers |
 | `0x0024` | `SHARED_TDC_RO_SLOW_CODE` | RW | `0` | shared slow RO code broadcast to all three wrappers |
@@ -56,11 +56,11 @@ This table is the implemented subset for the new matrix top shell. Registers not
 | `0x6014` | `MATRIX_CFG_RDATA_LO` | RO | `0` | config readback `[31:0]`; Phase 5 RTL uses returned-`Cout` qualified `Dout` sampling |
 | `0x6018` | `MATRIX_CFG_RDATA_HI` | RO | `0` | config readback `[63:32]`; Phase 5 RTL uses returned-`Cout` qualified `Dout` sampling |
 | `0x601C` | `MATRIX_CFG_LAST_ERROR` | RO | `0` | matrix config last error, CSR last error, event reject count |
-| `0x7000` | `TX_STATUS` | RO | `empty` | DDR16 pairer empty/busy/pair/padded status |
-| `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `empty` | placeholder until the Phase 6 FIFO is inserted |
-| `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | `MAX_EVENT_BUNDLE_WORDS=128`, `OUTPUT_FIFO_DEPTH=512` |
+| `0x7000` | `TX_STATUS` | RO | `empty` | DDR16 pairer, bundle, position drop, and output FIFO overflow status |
+| `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `empty` | output FIFO empty/full/almost-full/level/free-space status |
+| `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | reserve entries `129`, `OUTPUT_FIFO_DEPTH=512` |
 
-Implemented command error codes in `MTOP_FAULT[7:4]`:
+Implemented command error codes in `MTOP_FAULT[11:8]`:
 
 | Code | Meaning |
 | --- | --- |
@@ -78,7 +78,9 @@ Phase 4/5 additions in the active implementation:
 - `MTOP_CTRL_REQUEST` rejects partial axis masks for normal `TDC_ONLY` and `BOTH` modes. Those modes require `axis_mask=3'b111`.
 - Partial axis masks remain legal only through `CALIB_AXIS_MASK` in `CALIBRATION` mode.
 - `TX_STATUS[4]` exposes bundle missing-source error.
-- `TX_STATUS[5]` exposes raw position packetizer drop.
+- `TX_STATUS[5]` exposes position packetizer drop.
+- `TX_STATUS[9]` exposes sticky output FIFO overflow.
+- `TX_STATUS[31:16]` exposes the saturating output FIFO overflow counter.
 - `MATRIX_EVENT_STATUS[7:4]` reports the union of currently pending sources and bundle-completed sources.
 - `MATRIX_CFG_RDATA_LO/HI` now report the controller's returned-`Cout` sampled readback value. This is functional RTL behavior, not final matrix timing signoff.
 
@@ -119,7 +121,7 @@ Unsupported addresses should return a clean target error if simple. They should 
 | `0x0008` | `MTOP_CTRL_REQUEST` | RW | disabled, axes `111`, auto-reset `1` | global enable, requested mode, requested normal axis mask, auto-reset enable |
 | `0x000C` | `MTOP_CTRL_ACTIVE` | RO | disabled, axes `111`, auto-reset `1` | active mode/control image |
 | `0x0010` | `MTOP_STATUS` | RO | `0` | safe idle, event/snapshot/reset/config/output busy, current event ID |
-| `0x0014` | `MTOP_FAULT` | W1C/RO | `0` | sticky faults `[3:0]`, last command error `[7:4]` |
+| `0x0014` | `MTOP_FAULT` | W1C/RO | `0` | sticky faults `[3:0]`, output FIFO overflow sticky `[4]`, last command error `[11:8]` |
 | `0x0018` | `MTOP_FAULT_COUNT` | RO | `0` | global fault count `[15:0]`, config/event reject count `[31:16]` |
 | `0x001C` | reserved discovery | RO | `0` | planned geometry/feature discovery expansion |
 
@@ -218,8 +220,8 @@ The `clk_sys` side snapshots parameters before toggling the CDC request. The `cl
 
 | Address | Name | Access | Reset | Fields |
 | --- | --- | --- | --- | --- |
-| `0x7000` | `TX_STATUS` | RO | `0` | output idle, fifo empty/full, ddr pairer empty |
-| `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `0` | placeholder until Phase 6 FIFO insertion |
+| `0x7000` | `TX_STATUS` | RO | `0` | DDR16 pairer status, bundle/position fault summary, output FIFO overflow sticky/count |
+| `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `0` | output FIFO empty/full/almost-full/level/free-space |
 | `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | event reservation and FIFO depth |
 | `0x700C` | `TX_FAULT_STICKY` | W1C/RO | `0` | pressure, malformed packet, unsupported odd packet |
 | `0x7010` | `TX_COUNTERS` | RO | `0` | transmitted words/pairs, pressure rejects |
@@ -234,6 +236,29 @@ Active `TX_STATUS` layout at `0x7000`:
 | `[3]` | DDR16 padded odd bundle word |
 | `[4]` | bundle missing source |
 | `[5]` | position packetizer drop |
+| `[6]` | output FIFO empty |
+| `[7]` | output FIFO full |
+| `[8]` | output FIFO almost full |
+| `[9]` | output FIFO overflow sticky |
+| `[31:16]` | output FIFO overflow saturating count |
+
+Active `OUTPUT_FIFO_STATUS` layout at `0x7004`:
+
+| Bits | Field |
+| --- | --- |
+| `[0]` | output FIFO empty |
+| `[1]` | output FIFO full |
+| `[2]` | output FIFO almost full, asserted when free entries are below the reservation |
+| `[3]` | output FIFO overflow sticky mirror |
+| `[15:4]` | output FIFO level in entries |
+| `[31:16]` | output FIFO free entries |
+
+The matrix top uses `SPADMIC_OUTPUT_FIFO_DEPTH=512` entries and a logical
+worst-case bundle estimate of `SPADMIC_MAX_EVENT_BUNDLE_WORDS=128`. Admission
+uses `SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES=129` so the 128 logical words and one
+ordered flush marker can both fit. The integrated FIFO carries 16-bit logical
+words plus an internal ordered flush-marker bit; CSR level/free-space counts
+entries, including any pending marker.
 
 ## Software Sequences
 

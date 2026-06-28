@@ -176,9 +176,29 @@ module spadmic_top_matrix_v1 (
   wire ddr_busy;
   wire ddr_empty;
   wire ddr_padded;
+  wire bundle_word_valid;
+  wire bundle_word_ready;
+  wire [NARROW_W-1:0] bundle_word_data;
+  wire bundle_flush;
+  wire output_fifo_push_valid;
+  wire output_fifo_push_ready;
+  wire [NARROW_W:0] output_fifo_push_data;
+  wire output_fifo_pop_valid;
+  wire output_fifo_pop_ready;
+  wire output_fifo_pop_fire;
+  wire [NARROW_W:0] output_fifo_pop_data;
+  wire output_fifo_pop_is_flush;
+  wire [SPADMIC_OUTPUT_FIFO_LEVEL_W-1:0] output_fifo_level;
+  wire [SPADMIC_OUTPUT_FIFO_LEVEL_W-1:0] output_fifo_free_words;
+  wire output_fifo_empty;
+  wire output_fifo_full;
+  wire output_fifo_almost_full;
+  wire output_fifo_overflow;
+  logic bundle_flush_pending_q;
+  wire output_capacity_available;
+  wire ddr_flush;
   wire ddr_word_valid;
   wire [NARROW_W-1:0] ddr_word_data;
-  wire ddr_flush;
 
   wire pos_pkt_valid;
   wire pos_pkt_ready;
@@ -256,10 +276,15 @@ module spadmic_top_matrix_v1 (
       ((tdc_path_busy_mask & tdc_resource_required_mask) == 3'b000);
   assign active_position_path_idle =
       !mode_has_position_packet || (!pos_packet_busy && !pos_packet_pending);
-  assign output_path_idle = bundle_idle && ddr_empty && !ddr_pair_valid_o;
+  assign output_capacity_available =
+      (output_fifo_free_words >=
+       SPADMIC_OUTPUT_FIFO_LEVEL_W'(SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES));
+  assign output_path_idle = bundle_idle && output_fifo_empty &&
+                            !bundle_flush_pending_q &&
+                            ddr_empty && !ddr_pair_valid_o;
   assign pre_event_resources_ready =
-      event_idle && !snapshot_busy && !reset_busy && !matrix_cfg_busy &&
-      output_path_idle &&
+    event_idle && !snapshot_busy && !reset_busy && !matrix_cfg_busy &&
+      output_capacity_available &&
       active_position_path_idle &&
       (!mode_has_tdc || (tdc_required_path_idle && tdc_required_ready &&
                          tdc_required_fifo_ok));
@@ -311,6 +336,17 @@ module spadmic_top_matrix_v1 (
   assign tdc_pkt_ready[1] = src_ready[TDC_ID_Y];
   assign tdc_pkt_ready[2] = src_ready[TDC_ID_Z];
   assign pos_pkt_ready = src_ready[SPADMIC_SRC_POSITION];
+  assign bundle_word_ready = !bundle_flush_pending_q && output_fifo_push_ready;
+  assign output_fifo_push_valid = bundle_flush_pending_q || bundle_word_valid;
+  assign output_fifo_push_data =
+      bundle_flush_pending_q ? {1'b1, {NARROW_W{1'b0}}} :
+                               {1'b0, bundle_word_data};
+  assign output_fifo_pop_is_flush = output_fifo_pop_data[NARROW_W];
+  assign output_fifo_pop_fire = output_fifo_pop_valid && output_fifo_pop_ready;
+  assign ddr_word_valid = output_fifo_pop_fire && !output_fifo_pop_is_flush;
+  assign ddr_word_data = output_fifo_pop_data[NARROW_W-1:0];
+  assign ddr_flush = output_fifo_pop_fire && output_fifo_pop_is_flush;
+  assign output_fifo_pop_ready = output_fifo_pop_is_flush ? 1'b1 : ddr_word_ready;
   assign src_data[TDC_ID_X] = tdc_pkt_data[0];
   assign src_data[TDC_ID_Y] = tdc_pkt_data[1];
   assign src_data[TDC_ID_Z] = tdc_pkt_data[2];
@@ -337,6 +373,17 @@ module spadmic_top_matrix_v1 (
         tdc_start_seen_q <= '0;
       else
         tdc_start_seen_q <= tdc_start_seen_q | tdc_start_sync2_q;
+    end
+  end
+
+  always_ff @(posedge clk_sys or negedge rst_sys_n) begin
+    if (!rst_sys_n) begin
+      bundle_flush_pending_q <= 1'b0;
+    end else begin
+      if (bundle_flush)
+        bundle_flush_pending_q <= 1'b1;
+      else if (bundle_flush_pending_q && output_fifo_push_ready)
+        bundle_flush_pending_q <= 1'b0;
     end
   end
 
@@ -450,6 +497,12 @@ module spadmic_top_matrix_v1 (
     .ddr_busy_i                  (ddr_busy),
     .ddr_pair_valid_i            (ddr_pair_valid_o),
     .ddr_padded_i                (ddr_padded),
+    .output_fifo_level_i         (output_fifo_level),
+    .output_fifo_free_words_i    (output_fifo_free_words),
+    .output_fifo_empty_i         (output_fifo_empty),
+    .output_fifo_full_i          (output_fifo_full),
+    .output_fifo_almost_full_i   (output_fifo_almost_full),
+    .output_fifo_overflow_i      (output_fifo_overflow),
     .bundle_missing_source_i     (bundle_missing_source_error),
     .position_packet_drop_i      (pos_packet_drop),
     .global_enable_o             (global_enable),
@@ -686,15 +739,37 @@ module spadmic_top_matrix_v1 (
     .src_data_i              (src_data),
     .src_sop_i               (src_sop),
     .src_eop_i               (src_eop),
-    .word_valid_o            (ddr_word_valid),
-    .word_ready_i            (ddr_word_ready),
-    .word_data_o             (ddr_word_data),
-    .flush_o                 (ddr_flush),
+    .word_valid_o            (bundle_word_valid),
+    .word_ready_i            (bundle_word_ready),
+    .word_data_o             (bundle_word_data),
+    .flush_o                 (bundle_flush),
     .completed_packet_mask_o (bundle_completed_packet_mask),
     .done_o                  (bundle_done),
     .busy_o                  (bundle_busy),
     .idle_o                  (bundle_idle),
     .missing_source_error_o  (bundle_missing_source_error)
+  );
+
+  spadmic_output_fifo #(
+    .DATA_W        (NARROW_W + 1),
+    .DEPTH         (SPADMIC_OUTPUT_FIFO_DEPTH),
+    .RESERVE_WORDS (SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES),
+    .LEVEL_W       (SPADMIC_OUTPUT_FIFO_LEVEL_W)
+  ) u_output_fifo (
+    .clk_sys       (clk_sys),
+    .rst_n         (rst_sys_n),
+    .push_valid_i  (output_fifo_push_valid),
+    .push_ready_o  (output_fifo_push_ready),
+    .push_data_i   (output_fifo_push_data),
+    .pop_valid_o   (output_fifo_pop_valid),
+    .pop_ready_i   (output_fifo_pop_ready),
+    .pop_data_o    (output_fifo_pop_data),
+    .level_o       (output_fifo_level),
+    .free_words_o  (output_fifo_free_words),
+    .empty_o       (output_fifo_empty),
+    .full_o        (output_fifo_full),
+    .almost_full_o (output_fifo_almost_full),
+    .overflow_o    (output_fifo_overflow)
   );
 
   spadmic_matrix_cfg_ctrl u_matrix_cfg (

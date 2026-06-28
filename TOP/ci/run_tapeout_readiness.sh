@@ -131,8 +131,11 @@ VERILATOR_TBS=(
   tb_spadmic_matrix_snapshot_frontend_unit
   tb_spadmic_position_snapshot_packetizer_unit
   tb_spadmic_event_bundle_tx_unit
+  tb_spadmic_output_fifo_unit
+  tb_spadmic_output_fifo_ddr_marker_unit
   tb_spadmic_matrix_top_csr_unit
   tb_spadmic_top_matrix_v1_shell_unit
+  tb_spadmic_top_output_pressure_unit
   tb_spadmic_top_sequencer_unit
   tb_spadmic_stress_csr
   tb_spadmic_stress_position

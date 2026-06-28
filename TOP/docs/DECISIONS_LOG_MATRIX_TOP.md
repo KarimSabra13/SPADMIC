@@ -69,7 +69,7 @@ The untracked files are user-owned references. They must not be deleted, reforma
   - [IMPLEMENTED] Shared TDC max-hits and RO codes now come from matrix-top CSR and are wired to the three wrappers.
   - [IMPLEMENTED] Position path in the new top now supports raw bitmap mode and fixed 8-word cluster mode from frozen snapshots.
   - [IMPLEMENTED] Matrix configuration readback is now returned-`Cout` based in the digital controller. It remains non-signoff until matrix macro timing is available.
-  - [RISK] Bundle TX feeds DDR16 pairer directly with no real output FIFO.
+  - [IMPLEMENTED] Bundle TX now feeds a real `clk_sys` output FIFO before the DDR16 pairer.
   - [RISK] Full-top BOTH test and directed skew campaign are not yet in the readiness gate.
 
 ## Source Priority
@@ -275,7 +275,8 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Phase 3: CSR and I2C integration for the new matrix shell.
 - [IMPLEMENTED] Phase 4: MPTDC wrappers, frozen TOP-owned START gating, raw snapshot position packetizer, rejected-event cleanup, and mode-aware event source masks integrated into `spadmic_top_matrix_v1`.
 - [IMPLEMENTED] Phase 5: coordinator-owned bundle TX, one physical event ID per expected packet, DDR16 pairer connection, bundle flush/padding, and TX status visibility integrated into `spadmic_top_matrix_v1`.
-- [IMPLEMENTED] Phase 6: maintained Verilator regression/readiness coverage, CI lint update, docs/review cleanup, and limitations recorded for this implementation scope. Final Xcelium, STA, CDC signoff, PnR, analog matrix, and DDR macro handoff remain deferred.
+- [IMPLEMENTED] Phase 6: inserted the required output FIFO and event-admission reservation path between bundle TX and DDR16 pairer. Final Xcelium, STA, CDC signoff, PnR, analog matrix, and DDR macro handoff remain deferred.
+- [VERIFIED] Phase 6 output FIFO local gate passed `bash TOP/ci/run_tapeout_readiness.sh` with 17 pass, 0 fail, and 4 expected local skips after the ordered-marker regression was added. Review recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_OUTPUT_FIFO.md`.
 
 ## Phase 4/5 Implementation Decisions
 
@@ -295,9 +296,10 @@ Pin family summary from the CSV:
 - [DEFAULT FOR V1] Cluster mode uses the existing two-cluster-per-axis scanner with top-local defaults `gap_threshold=2` and `min_cluster_span=1`. Compact cluster packets and a 16-entry position queue remain deferred because the matrix top currently allows one physical event in flight.
 - [IMPLEMENTED] `spadmic_event_bundle_tx` is a TOP-owned final bundle path. It waits for `bundle_start`, drains only the latched required source mask, patches all EOC words with the coordinator-owned 14-bit event ID, and uses deterministic source order `R, Y, B, POSITION`.
 - [IMPLEMENTED] The legacy `spadmic_correlated_tx` remains unchanged for `spadmic_top_v1`; it is not used by `spadmic_top_matrix_v1` because it increments event IDs per packet and has no bundle barrier.
-- [IMPLEMENTED] DDR16 pairer input is now driven by `spadmic_event_bundle_tx`. `flush_o` is asserted after each bundle so an odd final word is padded on `DATA_H` if needed.
-- [IMPLEMENTED] `safe_idle` for the matrix top is mode-aware. It includes event coordinator, snapshot, reset, matrix configuration, active-mode TDC packet state, active-mode position packet state, bundle TX, and DDR16 pairer state. Inactive TDC or position blocks do not block CSR/config acceptance.
-- [IMPLEMENTED] Pre-event resource grant uses the simplest v1 admission policy: accept only when the previous event/output path is drained and required producers are ready. No mode-dependent free-space reservation FIFO is added because the new bundle path streams directly into the DDR16 pairer.
+- [IMPLEMENTED] DDR16 pairer input is now driven from `spadmic_output_fifo`. `spadmic_event_bundle_tx` pushes logical words into the FIFO and its `flush_o` is converted into an ordered FIFO marker so odd final words are padded at the correct bundle boundary before later event words can be paired.
+- [IMPLEMENTED] `safe_idle` for the matrix top is mode-aware. It includes event coordinator, snapshot, reset, matrix configuration, active-mode TDC packet state, active-mode position packet state, bundle TX, output FIFO empty state, pending FIFO flush marker state, and DDR16 pairer state. Inactive TDC or position blocks do not block CSR/config acceptance.
+- [IMPLEMENTED] Pre-event resource grant now includes output FIFO free-space reservation. `SPADMIC_OUTPUT_FIFO_DEPTH=512`, `SPADMIC_MAX_EVENT_BUNDLE_WORDS=128`, and `SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES=129` are the implemented v1 defaults.
+- [IMPLEMENTED] Output FIFO entries are 17 bits in the top integration: 16 logical data bits plus one ordered flush-marker bit. CSR level/free-space status counts FIFO entries, including any pending flush marker.
 - [IMPLEMENTED] Normal TDC-only and BOTH mode CSR writes require axis mask `3'b111`. Partial axis masks remain allowed only in calibration mode.
 - [IMPLEMENTED] Shared TDC `max_hits` and RO code CSR ownership is now exposed by the matrix-top CSR and wired to all three wrappers.
 - [IMPLEMENTED] The matrix-top package/I2C/CSR path now uses the final 16-bit address width. The old top decoder remains outside this target.
@@ -312,7 +314,7 @@ Pin family summary from the CSV:
   - `0x4000` for the position mode request placeholder.
   - `0x5000-0x5024` for event/snapshot/reset status and snapshots.
   - `0x6000-0x601C` for matrix configuration command/status/data.
-  - `0x7000-0x7008` for TX/output status and FIFO watermark placeholders.
+  - `0x7000-0x7008` for TX/output status and implemented FIFO status/watermarks.
 - [IMPLEMENTED] Unsupported 16-bit addresses return the CSR bad-address error path instead of silently aliasing to implemented low addresses.
 - [IMPLEMENTED] Shared `max_hits`, shared slow RO code, shared fast RO code, shared soft-reset pulse, and shared FIFO-clear pulse are exposed by matrix-top CSR and wired to all three `spadmic_tdc_axis_wrapper` instances in `TOP/rtl/spadmic_top_matrix_v1.sv`.
 - [DEFAULT FOR V1] `max_hits` resets to 15 and remains programmable through CSR/I2C.
@@ -320,7 +322,8 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] `CALIB_AXIS_MASK` owns partial-axis selection for calibration mode. Normal `TDC_ONLY` and `BOTH` mode requests still require all three axes.
 - [IMPLEMENTED] `POSITION_MODE` is CSR-visible, safe-idle protected, and connected to `spadmic_position_snapshot_packetizer` as raw/cluster select in the matrix-top path.
 - [RISK] `TOP/rtl/spadmic_csr_decoder.sv` remains a legacy decoder with old-top assumptions. This is accepted because `TOP/rtl/spadmic_top_v1.sv` is protected and not the matrix-top target.
-- [RISK] `OUTPUT_FIFO_STATUS` and `OUTPUT_FIFO_WATERMARKS` are CSR placeholders until the required 512-word output FIFO is inserted.
+- [IMPLEMENTED] `OUTPUT_FIFO_STATUS` and `OUTPUT_FIFO_WATERMARKS` report the required 512-entry output FIFO level/free-space/pressure state and reservation constants.
+- [IMPLEMENTED] Output FIFO overflow is visible as sticky `MTOP_FAULT[4]`, `TX_STATUS[9]`, and an incrementing saturating counter in `TX_STATUS[31:16]`. `MTOP_FAULT[4]` is W1C.
 
 ## Review Loop Status
 
@@ -346,7 +349,7 @@ Pin family summary from the CSV:
 - [VERIFIED] Local `bash TOP/ci/run_tapeout_readiness.sh` passed with 14 pass, 0 fail, and 4 skipped steps caused by missing `xrun` and retired standalone VIP.
 - [IMPLEMENTED] Phase 4 MPTDC, position packet, and final bundle integration are implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE4.md`.
 - [IMPLEMENTED] Phase 5 DDR16 output integration is implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE5.md`.
-- [VERIFIED] Phase 6 local readiness/review closure is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE6.md`.
+- [VERIFIED] Phase 6 local readiness/review closure is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_OUTPUT_FIFO.md`.
 
 ## Affected Files
 
