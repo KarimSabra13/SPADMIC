@@ -15,10 +15,12 @@ Status: Verifier signed off for the local Verilator/open-source Phase 7 scope.
 
 - `TOP/ci/run_tapeout_readiness.sh`
 - `TOP/tb/spadmic_top_matrix_v1_i2c_tasks.svh`
+- `TOP/tb/tb_spadmic_matrix_top_csr_16b_unit.sv`
 - `TOP/tb/tb_spadmic_i2c_matrix_top_16b_unit.sv`
 - `TOP/tb/tb_spadmic_position_modes_unit.sv`
 - `TOP/tb/tb_spadmic_position_snapshot_cluster_unit.sv`
 - `TOP/tb/tb_spadmic_matrix_cfg_cout_readback_unit.sv`
+- `TOP/tb/tb_spadmic_top_output_fifo_pressure_integration_unit.sv`
 - `TOP/tb/tb_spadmic_top_matrix_v1_both_full_unit.sv`
 - `TOP/tb/tb_spadmic_top_matrix_v1_skew_campaign.sv`
 - `TOP/tb/tb_spadmic_top_reset_during_event_unit.sv`
@@ -32,11 +34,19 @@ Status: Verifier signed off for the local Verilator/open-source Phase 7 scope.
 - Added a reusable testbench-only I2C helper include for matrix-top tests.
 - Added real-top I2C16, BOTH full, skew-campaign, reset-during-event, and
   mode-transition regressions.
+- Added the explicit CSR16-named entry point required by the verification plan
+  while preserving the canonical CSR unit test implementation.
 - Added focused position RAW/CLUSTER and snapshot-cluster tests.
 - Added a named Cout readback test that proves WRITE_COLUMN_64 readback is
   returned by Dout/Cout, not mirrored WDATA. The broader matrix config unit test
   remains responsible for READ_COLUMN_64, global fill, busy reject, reset abort,
   and missing Cout timeout.
+- Expanded the skew campaign beyond the six R/Y/B orders with simultaneous
+  arrival, near-`clk_sys`, near-`clk_ref_40m`, sub-cycle, medium, near-watchdog,
+  and beyond-default-watchdog offset cases.
+- Added a real top-level FIFO-pressure integration test that uses I2C to enter
+  position-only mode, queues three real matrix events while only the DDR pairer
+  intake is stalled, then checks FIFO drain and ordered EOC event IDs.
 - Expanded the local readiness script to run the standalone matrix unit tests
   and the new Phase 7 matrix-top tests.
 
@@ -44,8 +54,10 @@ Status: Verifier signed off for the local Verilator/open-source Phase 7 scope.
 
 | Test | Result |
 | --- | --- |
+| `tb_spadmic_matrix_top_csr_16b_unit` | PASS, 190 pass / 0 fail |
 | `tb_spadmic_top_matrix_v1_both_full_unit` | PASS, 9 pass / 0 fail |
-| `tb_spadmic_top_matrix_v1_skew_campaign` | PASS, 60 pass / 0 fail |
+| `tb_spadmic_top_matrix_v1_skew_campaign` | PASS, 139 pass / 0 fail |
+| `tb_spadmic_top_output_fifo_pressure_integration_unit` | PASS, 20 pass / 0 fail |
 | `tb_spadmic_top_reset_during_event_unit` | PASS, 6 pass / 0 fail |
 | `tb_spadmic_top_reset_during_matrix_cfg_unit` | PASS, 5 pass / 0 fail |
 | `tb_spadmic_top_mode_transition_unit` | PASS, 6 pass / 0 fail |
@@ -53,7 +65,16 @@ Status: Verifier signed off for the local Verilator/open-source Phase 7 scope.
 | `tb_spadmic_position_modes_unit` | PASS, 8 pass / 0 fail |
 | `tb_spadmic_position_snapshot_cluster_unit` | PASS, 8 pass / 0 fail |
 | `tb_spadmic_matrix_cfg_cout_readback_unit` | PASS, 4 pass / 0 fail |
-| `bash TOP/ci/run_tapeout_readiness.sh` | PASS, 31 pass / 0 fail / 4 expected local skips |
+| `bash TOP/ci/run_tapeout_readiness.sh` | PASS, 33 pass / 0 fail / 4 expected local skips |
+
+## Verifier Continuation Findings
+
+| Severity | Finding | Builder Response | Status |
+| --- | --- | --- | --- |
+| MEDIUM | The required CSR16 artifact name was missing because only `tb_spadmic_matrix_top_csr_unit` existed. | Added `tb_spadmic_matrix_top_csr_16b_unit` as an explicit wrapper entry point and included it in local and server regressions. | FIXED |
+| MEDIUM | The skew campaign covered the six axis orders but not the required offset classes. | Added simultaneous, sub-cycle, near-`clk_sys`, near-`clk_ref_40m`, medium, near-watchdog, and beyond-default-watchdog cases. | FIXED |
+| MEDIUM | FIFO pressure coverage was mostly white-box and did not prove multiple real events queue through the top while DDR drains slowly. | Added `tb_spadmic_top_output_fifo_pressure_integration_unit`, which queues three real position-only events through the full top and checks FIFO level, drain, and EOC order. | FIXED |
+| LOW | Commit hygiene: the two new required test files must be staged explicitly while root reference files stay untracked. | Builder stages only the tracked docs/scripts plus the two new `TOP/tb` tests and excludes `ParameterDefs.sv`, `multi_ShiftRegisterChain_cfg_v1.sv`, and `pixel_readout.pdf`. | FIXED IN COMMIT |
 
 ## Findings
 
@@ -74,8 +95,10 @@ Status: Verifier signed off for the local Verilator/open-source Phase 7 scope.
 
 ## Verifier Status
 
-Verifier rechecked the Phase 7 working-tree diff after the full readiness gate
-passed. No BLOCKER, HIGH, MEDIUM, or LOW findings remain for local
-open-source scope. Phase 7 is approved for commit with the explicit limitation
-that it is not Xcelium, CDC/RDC, STA, Genus, Innovus, DDR macro, or matrix
+Verifier rechecked the Phase 7 continuation diff after the focused tests and
+the full local readiness gate passed. No BLOCKER, HIGH, MEDIUM, or LOW
+technical findings remain for the local open-source scope. The only remaining
+commit-hygiene note is to stage the two new `TOP/tb` files explicitly and keep
+the root reference files untracked. This remains local Verilator/open-source
+evidence only, not Xcelium, CDC/RDC, STA, Genus, Innovus, DDR macro, or matrix
 macro signoff.

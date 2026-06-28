@@ -59,6 +59,7 @@ Do not commit `xcelium.d`, raw `work/`, waves, or large logs.
 The server script should run, at minimum:
 
 - `tb_spadmic_matrix_top_csr_unit`
+- `tb_spadmic_matrix_top_csr_16b_unit`
 - `tb_spadmic_i2c_matrix_top_16b_unit`
 - `tb_spadmic_matrix_or_tree_unit`
 - `tb_spadmic_matrix_snapshot_frontend_unit`
@@ -72,6 +73,7 @@ The server script should run, at minimum:
 - `tb_spadmic_output_fifo_ddr_marker_unit`
 - `tb_spadmic_ddr16_tx_pairer_unit`
 - `tb_spadmic_top_output_pressure_unit`
+- `tb_spadmic_top_output_fifo_pressure_integration_unit`
 - `tb_spadmic_top_matrix_v1_both_full_unit`
 - `tb_spadmic_top_matrix_v1_skew_campaign`
 - `tb_spadmic_top_reset_during_event_unit`

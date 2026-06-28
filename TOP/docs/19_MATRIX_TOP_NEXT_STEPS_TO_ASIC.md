@@ -1,11 +1,13 @@
 # SPADMIC Matrix TOP Next Steps To ASIC
 
-Status: planning and execution roadmap for controlled implementation after commit `5cdf489f`.
+Status: roadmap and current local execution record for the controlled matrix-top ASIC-preparation flow.
 
 ## Metadata
 
 - Branch: `SPADMIC_test`
 - Baseline commit: `5cdf489fbfb0a13e1a5ee7f5a253002e023602ac`
+- Previous pushed checkpoint before verifier-gap closure:
+  `95a09a53cbaa7df5b557860f3e856b08102f70d4`
 - Date: `2026-06-28`
 - Target top: `TOP/rtl/spadmic_top_matrix_v1.sv`
 - Legacy top: `TOP/rtl/spadmic_top_v1.sv` remains protected and unchanged.
@@ -88,9 +90,9 @@ clk_ref_40m : MPTDC STOP qualifier reference
 - Output FIFO is implemented, but the final DDR macro has no ready/backpressure
   contract yet. The current pairer consumes in `clk_sys`; future macro-ready
   behavior may require a wrapper update.
-- Full-top BOTH test and directed R/Y/B skew campaign are missing from the local readiness gate.
+- Full-top BOTH and directed R/Y/B skew-campaign tests are now present in the local readiness gate.
 - Xcelium has not been run locally.
-- Genus/Innovus scripts for matrix-top ASIC preparation are not yet present.
+- Genus and Innovus matrix-top scripts are present for server execution, but they have not been run locally because Cadence tools are unavailable in this environment.
 
 ## Final V1 Feature List
 

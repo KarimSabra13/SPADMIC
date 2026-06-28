@@ -1,6 +1,6 @@
 # Review: Matrix TOP Phase 7 Planning Baseline
 
-Status: Phase 0/Phase 1 preflight and roadmap review.
+Status: Phase 7 preflight and roadmap review; implementation closure is recorded below and in the linked phase reviews.
 
 ## Metadata
 
@@ -75,6 +75,27 @@ Accepted. Phase 1 documentation now records these as known limitations and creat
 4. Output FIFO/admission.
 5. Verification expansion.
 6. Server Xcelium/Genus/Innovus scripts.
+
+## Post-Implementation Closure
+
+The findings above were intentionally recorded against the `5cdf489f` baseline.
+They are no longer open at the Phase 7 server-script checkpoint
+`95a09a53cbaa7df5b557860f3e856b08102f70d4`.
+
+| Original Finding | Closure Evidence | Status |
+| --- | --- | --- |
+| Full-top BOTH coverage missing | `tb_spadmic_top_matrix_v1_both_full_unit` is present, included in `TOP/ci/run_tapeout_readiness.sh`, and passed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`. | FIXED |
+| Matrix configuration readback not Cout-based | `spadmic_matrix_cfg_ctrl` uses returned `Cout` qualified `Dout` sampling; closure is reviewed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_MATRIX_CFG_COUT.md` and local regression includes `tb_spadmic_matrix_cfg_cout_readback_unit`. | FIXED |
+| Position path raw-only | RAW and fixed CLUSTER snapshot packet modes are implemented and reviewed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_POSITION_FULL.md`; Phase 7 regression adds position mode tests. | FIXED |
+| No real output FIFO | `spadmic_output_fifo` is integrated between bundle TX and DDR16 pairer; closure is reviewed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_OUTPUT_FIFO.md`. | FIXED |
+| CSR path still 12-bit | Matrix-top CSR/I2C path is 16-bit; closure is reviewed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_CSR16.md`. | FIXED |
+| Shared TDC config not plumbed | Shared `max_hits`, slow RO code, fast RO code, soft reset, FIFO clear, and calibration mask are matrix-top CSR owned and wired to the three wrappers; closure is reviewed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_CSR16.md`. | FIXED |
+| Skew campaign missing | `tb_spadmic_top_matrix_v1_skew_campaign` is present, included in readiness, and passed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`. | FIXED |
+| Server command docs before scripts existed | Xcelium, Genus, and Innovus server scripts are now present and reviewed in `REVIEW_MATRIX_TOP_XCELIUM_PLAN.md`, `REVIEW_MATRIX_TOP_GENUS_OOC_PLAN.md`, and `REVIEW_MATRIX_TOP_INNOVUS_FLOORPLAN_PLAN.md`. | FIXED |
+
+Remaining limitations are external execution/signoff gates only: Xcelium,
+Genus, Innovus, CDC/RDC tool review, DDR macro timing, and matrix macro timing
+have not been run locally and are not claimed as passed.
 
 ## Signoff Statement
 

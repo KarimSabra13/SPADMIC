@@ -70,7 +70,7 @@ The untracked files are user-owned references. They must not be deleted, reforma
   - [IMPLEMENTED] Position path in the new top now supports raw bitmap mode and fixed 8-word cluster mode from frozen snapshots.
   - [IMPLEMENTED] Matrix configuration readback is now returned-`Cout` based in the digital controller. It remains non-signoff until matrix macro timing is available.
   - [IMPLEMENTED] Bundle TX now feeds a real `clk_sys` output FIFO before the DDR16 pairer.
-  - [RISK] Full-top BOTH test and directed skew campaign are not yet in the readiness gate.
+  - [VERIFIED] Full-top BOTH and directed R/Y/B skew campaign tests are now in the maintained local readiness gate as of Phase 7.
 
 ## Source Priority
 
@@ -243,8 +243,8 @@ Pin family summary from the CSV:
 - [OBSOLETE RTL] `TOP/rtl/spadmic_top_v1.sv` exports one active-high `spad_matrix_rst_o`, not final Rz/Yz/Bz active-low buses.
 - [OBSOLETE RTL] `TOP/rtl/spadmic_ddr_tx.sv` implements current 8-bit DDR TX and is not the final DDR16 macro boundary.
 - [IMPLEMENTED] Current matrix-top CSR address storage/decode is 16-bit. The legacy top decoder still has old-top assumptions and remains outside the matrix-top target.
-- [RISK] Phase 3 must widen CSR address storage/decode and I2C pointer handling before the final `0x0000-0x7FFF` map is reachable.
-- [OBSOLETE RTL] Current event ID tagging is packet-oriented in the output path, not one physical event ID shared across the bundle.
+- [IMPLEMENTED] The CSR16 continuation widened matrix-top CSR address storage/decode and I2C pointer handling so the final `0x0000-0x7FFF` map is reachable in the matrix-top target path.
+- [OBSOLETE RTL] Legacy `spadmic_correlated_tx` packet-oriented event tagging remains in the old top path. The matrix-top bundle path now patches one physical event ID across all expected packet EOC words.
 - [RISK] Position event count width mismatches documentation: RTL uses a small event count while CSR docs describe a wider field.
 - [RISK] Current active docs and some CI/test references are stale and must not be treated as tapeout-complete evidence.
 - [IMPLEMENTED] `TOP/rtl/spadmic_top_matrix_v1.sv` is now the Phase 2 matrix-top shell. It does not replace or retire `TOP/rtl/spadmic_top_v1.sv`.
@@ -277,8 +277,9 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Phase 5: coordinator-owned bundle TX, one physical event ID per expected packet, DDR16 pairer connection, bundle flush/padding, and TX status visibility integrated into `spadmic_top_matrix_v1`.
 - [IMPLEMENTED] Phase 6: inserted the required output FIFO and event-admission reservation path between bundle TX and DDR16 pairer. Final Xcelium, STA, CDC signoff, PnR, analog matrix, and DDR macro handoff remain deferred.
 - [VERIFIED] Phase 6 output FIFO local gate passed `bash TOP/ci/run_tapeout_readiness.sh` with 17 pass, 0 fail, and 4 expected local skips after the ordered-marker regression was added. Review recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_OUTPUT_FIFO.md`.
-- [IMPLEMENTED] Phase 7 expands the maintained local Verilator readiness gate with named CSR/I2C16, position raw/cluster, Cout readback, BOTH full, skew-campaign, reset-abort, and mode-transition tests for the matrix top.
-- [VERIFIED] Builder local Phase 7 gate `bash TOP/ci/run_tapeout_readiness.sh` passed with 31 pass, 0 fail, and 4 expected local skips. The skips are Xcelium TOP smoke, Xcelium directed regression, and retired standalone VIP steps; Xcelium remains a server-only gate.
+- [IMPLEMENTED] Phase 7 expands the maintained local Verilator readiness gate with named CSR/I2C16, position raw/cluster, Cout readback, output FIFO pressure, BOTH full, skew-campaign, reset-abort, and mode-transition tests for the matrix top.
+- [IMPLEMENTED] The continuation added the explicit `tb_spadmic_matrix_top_csr_16b_unit` artifact name, expanded the R/Y/B skew campaign with required offset classes, and added `tb_spadmic_top_output_fifo_pressure_integration_unit` for real top-level FIFO-pressure coverage.
+- [VERIFIED] Builder local Phase 7 gate `bash TOP/ci/run_tapeout_readiness.sh` passed with 33 pass, 0 fail, and 4 expected local skips. The skips are Xcelium TOP smoke, Xcelium directed regression, and retired standalone VIP steps; Xcelium remains a server-only gate.
 
 ## Phase 4/5 Implementation Decisions
 
@@ -305,7 +306,7 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Normal TDC-only and BOTH mode CSR writes require axis mask `3'b111`. Partial axis masks remain allowed only in calibration mode.
 - [IMPLEMENTED] Shared TDC `max_hits` and RO code CSR ownership is now exposed by the matrix-top CSR and wired to all three wrappers.
 - [IMPLEMENTED] The matrix-top package/I2C/CSR path now uses the final 16-bit address width. The old top decoder remains outside this target.
-- [RISK] TDC-only packet generation through real MPTDC wrappers is covered in the matrix top shell test. BOTH-mode packet generation and the full directed R/Y/B skew campaign remain required.
+- [VERIFIED] TDC-only packet generation through real MPTDC wrappers is covered in the matrix top shell test. BOTH-mode packet generation and the directed R/Y/B skew campaign are covered by the Phase 7 local-regression tests and readiness gate.
 
 ## CSR16 And Shared TDC Continuation Decisions
 
@@ -348,13 +349,14 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Verifier Phase 2 review report created at `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE2.md`.
 - [IMPLEMENTED] Verifier Phase 3 review report created at `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE3.md`.
 - [VERIFIED] Verifier Phase 2/3 rechecks passed with no remaining BLOCKER, HIGH, MEDIUM, or LOW findings in scope.
-- [VERIFIED] Local `bash TOP/ci/run_tapeout_readiness.sh` passed with 14 pass, 0 fail, and 4 skipped steps caused by missing `xrun` and retired standalone VIP.
+- [VERIFIED] Earlier Phase 2/3 local `bash TOP/ci/run_tapeout_readiness.sh` passed with 14 pass, 0 fail, and 4 skipped steps caused by missing `xrun` and retired standalone VIP. The current Phase 7+ gate is recorded below as 33 pass, 0 fail, and 4 expected local skips.
 - [IMPLEMENTED] Phase 4 MPTDC, position packet, and final bundle integration are implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE4.md`.
 - [IMPLEMENTED] Phase 5 DDR16 output integration is implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE5.md`.
 - [VERIFIED] Phase 6 local readiness/review closure is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_OUTPUT_FIFO.md`.
 - [IMPLEMENTED] Phase 7 local regression expansion is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`.
-- [VERIFIED] Builder Phase 7 readiness run passed locally with 31 pass, 0 fail, and 4 expected skips before Verifier recheck.
-- [VERIFIED] Verifier Phase 7 recheck found no BLOCKER, HIGH, MEDIUM, or LOW findings for the local open-source scope. Notes about controller-level reset-abort coverage and untracked root reference files are recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`.
+- [VERIFIED] Builder Phase 7 readiness run passed locally with 33 pass, 0 fail, and 4 expected skips after the continuation fixes.
+- [IMPLEMENTED] Verifier continuation findings are recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`: missing CSR16 artifact name, narrow skew offsets, and mostly white-box FIFO pressure coverage were fixed before commit.
+- [VERIFIED] Verifier continuation recheck approved commit/push for the local open-source scope with no remaining technical BLOCKER, HIGH, MEDIUM, or LOW findings. This is not Xcelium, CDC/RDC, STA, Genus, Innovus, DDR macro, or matrix macro signoff.
 - [IMPLEMENTED] Phase 8 server Xcelium run script is prepared at `TOP/ci/server_run_matrix_top_xcelium.sh`. It writes generated results under `/sim/ksabra/SPADMIC_work/xcelium/<RUN_ID>` and fails if `xrun` is missing. Local Codex did not run Xcelium.
 - [VERIFIED] Phase 8 Verifier recheck passed after Builder fixed the server `SUMMARY.md` reporting mismatch. No BLOCKER, HIGH, MEDIUM, or LOW findings remain for server-script preparation.
 - [IMPLEMENTED] Phase 9 pre-Genus CDC/RDC source review is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_CDC_RDC_PREGENUS.md`. This is a source-based classification only and not CDC/RDC tool signoff.

@@ -143,10 +143,12 @@ VERILATOR_TBS=(
   tb_spadmic_matrix_cfg_ctrl_unit
   tb_spadmic_matrix_cfg_cout_readback_unit
   tb_spadmic_matrix_top_csr_unit
+  tb_spadmic_matrix_top_csr_16b_unit
   tb_spadmic_top_matrix_v1_shell_unit
   tb_spadmic_top_matrix_v1_both_full_unit
   tb_spadmic_top_matrix_v1_skew_campaign
   tb_spadmic_top_output_pressure_unit
+  tb_spadmic_top_output_fifo_pressure_integration_unit
   tb_spadmic_top_reset_during_event_unit
   tb_spadmic_top_reset_during_matrix_cfg_unit
   tb_spadmic_top_mode_transition_unit

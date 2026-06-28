@@ -141,6 +141,28 @@ module tb_spadmic_top_matrix_v1_skew_campaign;
     end
   endtask
 
+  task automatic wait_reset_active(input string label);
+    int guard;
+    begin
+      guard = 0;
+      while ((Rz == {64{1'b1}}) && guard < 2000) begin
+        guard++;
+        @(posedge clk_sys);
+      end
+      check(label, Rz != {64{1'b1}});
+    end
+  endtask
+
+  task automatic clear_matrix_and_rearm(input string label);
+    begin
+      repeat (4) @(posedge clk_sys);
+      R = '0;
+      Y = '0;
+      B = '0;
+      wait_safe_idle(label);
+    end
+  endtask
+
   task automatic run_order(
     input int first_axis,
     input int second_axis,
@@ -179,13 +201,73 @@ module tb_spadmic_top_matrix_v1_skew_campaign;
       seen_mask |= axis_mask(third_axis);
       wait_start_seen(seen_mask, {label, " all starts seen"});
 
-      wait (Rz != {64{1'b1}});
+      wait_reset_active({label, " reset becomes active"});
       check({label, " reset waits for all required starts"}, dut.tdc_start_seen_q == 3'b111);
-      repeat (4) @(posedge clk_sys);
-      R = '0;
-      Y = '0;
-      B = '0;
-      wait_safe_idle({label, " drains and rearms"});
+      clear_matrix_and_rearm({label, " drains and rearms"});
+    end
+  endtask
+
+  task automatic run_simultaneous(input string suffix);
+    string label;
+    begin
+      label = {"0ns ", suffix};
+      wait_safe_idle({label, " starts from safe idle"});
+      check({label, " resources ready before first edge"}, dut.pre_event_resources_ready);
+      drive_axis(0, 1'b1);
+      drive_axis(1, 1'b1);
+      drive_axis(2, 1'b1);
+      #1;
+      check({label, " all axes reach independent START gates together"},
+            dut.tdc_start_async_to_core == 3'b111);
+      wait_start_seen(3'b111, {label, " all simultaneous starts seen"});
+      wait_reset_active({label, " reset becomes active"});
+      check({label, " reset waits for all required starts"}, dut.tdc_start_seen_q == 3'b111);
+      clear_matrix_and_rearm({label, " drains and rearms"});
+    end
+  endtask
+
+  task automatic run_order_ps(
+    input int first_axis,
+    input int second_axis,
+    input int third_axis,
+    input int gap1_ps,
+    input int gap2_ps,
+    input string suffix
+  );
+    logic [2:0] seen_mask;
+    string label;
+    begin
+      label = {axis_name(first_axis), "->", axis_name(second_axis), "->",
+               axis_name(third_axis), " ", suffix};
+      wait_safe_idle({label, " starts from safe idle"});
+      check({label, " resources ready before first edge"}, dut.pre_event_resources_ready);
+      check({label, " gap1 is positive"}, gap1_ps > 1);
+      check({label, " gap2 is positive"}, gap2_ps > 1);
+
+      drive_axis(first_axis, 1'b1);
+      #1;
+      check({label, " first axis reaches its START gate"},
+            (dut.tdc_start_async_to_core & axis_mask(first_axis)) != 3'b000);
+      #(gap1_ps - 1);
+
+      drive_axis(second_axis, 1'b1);
+      #1;
+      check({label, " second axis reaches START after ps offset"},
+            (dut.tdc_start_async_to_core & axis_mask(second_axis)) != 3'b000);
+      #(gap2_ps - 1);
+
+      drive_axis(third_axis, 1'b1);
+      #1;
+      check({label, " third axis reaches START after ps offset"},
+            (dut.tdc_start_async_to_core & axis_mask(third_axis)) != 3'b000);
+
+      seen_mask = axis_mask(first_axis) |
+                  axis_mask(second_axis) |
+                  axis_mask(third_axis);
+      wait_start_seen(seen_mask, {label, " all starts seen"});
+      wait_reset_active({label, " reset becomes active"});
+      check({label, " reset waits for all required starts"}, dut.tdc_start_seen_q == 3'b111);
+      clear_matrix_and_rearm({label, " drains and rearms"});
     end
   endtask
 
@@ -216,6 +298,25 @@ module tb_spadmic_top_matrix_v1_skew_campaign;
     run_order(2, 0, 1, 5, 2);
     run_order(2, 1, 0, 8, 5);
 
+    run_simultaneous("all-axis arrival");
+    run_order_ps(0, 1, 2, CLK_SYS_PERIOD - 75, 125,
+                 "near clk_sys edge");
+    run_order_ps(1, 2, 0, CLK_40M_PERIOD - 125, 250,
+                 "near clk_ref_40m edge");
+    run_order_ps(2, 0, 1, 750, 950,
+                 "small subcycle skew");
+    run_order_ps(0, 2, 1, (3 * CLK_SYS_PERIOD) + 1000,
+                 (5 * CLK_SYS_PERIOD) + 2000,
+                 "medium skew");
+    run_order_ps(1, 0, 2, 30 * CLK_SYS_PERIOD,
+                 31 * CLK_SYS_PERIOD,
+                 "near default 64-cycle snapshot watchdog");
+
+    i2c_write_csr(SPADMIC_CSR_MATRIX_SNAPSHOT_CFG, {16'd128, 16'd2});
+    run_order_ps(2, 1, 0, 65 * CLK_SYS_PERIOD,
+                 5 * CLK_SYS_PERIOD,
+                 "beyond default watchdog with extended watchdog");
+
     if (fail_count != 0)
       $fatal(1, "tb_spadmic_top_matrix_v1_skew_campaign: %0d failures", fail_count);
 
@@ -225,7 +326,7 @@ module tb_spadmic_top_matrix_v1_skew_campaign;
   end
 
   initial begin
-    #8_000_000_000;
+    #20_000_000_000;
     $fatal(1, "tb_spadmic_top_matrix_v1_skew_campaign: TIMEOUT");
   end
 endmodule
