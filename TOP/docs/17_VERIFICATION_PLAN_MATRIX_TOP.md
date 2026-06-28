@@ -69,6 +69,9 @@ Checks:
 - write column 0;
 - write column 43;
 - read back selected column;
+- write-column readback comes from delayed returned `Cout/Dout`, not mirrored `wdata`;
+- selected `Dout` is sampled only on the intended returned `Cout` edge;
+- missing returned `Cout` reports timeout/error and clears `matrix_cfg_valid`;
 - global fill 0;
 - global fill 1;
 - invalid column rejected;
@@ -97,6 +100,8 @@ Implemented Phase 4/5 tests:
 - `tb_spadmic_position_snapshot_packetizer_unit` covers 14-word raw packet generation, raw R/Y/B word ordering, fixed 8-word cluster packet generation, single-cluster and two-cluster images, 14-bit EOC event ID in both packet modes, snapshot-captured pulse behavior, and busy drop reporting.
 - `tb_spadmic_event_bundle_tx_unit` covers deterministic R/Y/B/POSITION order, TDC source header patching, common event ID in all EOC words, missing-source error, and bundle flush.
 - `tb_spadmic_top_matrix_v1_shell_unit` covers I2C/CSR, position-only matrix event acceptance, selective reset, raw bundle emission into DDR16, DDR drain, safe idle, matrix configuration after drain, inactive-TDC-safe-idle behavior in position-only mode, and TDC-only event flow through real MPTDC wrappers into the DDR16 bundle path.
+- `tb_spadmic_matrix_cfg_ctrl_unit` covers returned-Cout qualified write/read/global-fill readback, column 0 and column 43 operations, invalid column rejection, command-while-busy rejection, reset abort, and Cout timeout/error behavior.
+- `tb_spadmic_top_matrix_v1_shell_unit` includes a simple returned-Cout echo model so the top shell exercises the non-mirror matrix configuration path.
 
 Still required:
 
@@ -104,6 +109,7 @@ Still required:
 - Directed physical skew campaign across all R/Y/B arrival orders.
 - Mode transition tests while old-mode producers are draining.
 - Compact cluster position packets and a deeper position queue are deferred unless required after Phase 6 output FIFO integration.
+- Cadence CDC/RDC and macro-timing review of the returned-Cout sampler remains required before any signoff claim.
 
 ## Directed Skew Campaign
 

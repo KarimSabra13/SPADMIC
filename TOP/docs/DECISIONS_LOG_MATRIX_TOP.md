@@ -68,7 +68,7 @@ The untracked files are user-owned references. They must not be deleted, reforma
   - [IMPLEMENTED] CSR address width is now 16-bit for the matrix-top package/I2C path as of the CSR16 continuation; the legacy top decoder remains outside this target.
   - [IMPLEMENTED] Shared TDC max-hits and RO codes now come from matrix-top CSR and are wired to the three wrappers.
   - [IMPLEMENTED] Position path in the new top now supports raw bitmap mode and fixed 8-word cluster mode from frozen snapshots.
-  - [RISK] Matrix configuration readback is not Cout-based.
+  - [IMPLEMENTED] Matrix configuration readback is now returned-`Cout` based in the digital controller. It remains non-signoff until matrix macro timing is available.
   - [RISK] Bundle TX feeds DDR16 pairer directly with no real output FIFO.
   - [RISK] Full-top BOTH test and directed skew campaign are not yet in the readiness gate.
 
@@ -261,6 +261,9 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] `TOP/rtl/spadmic_matrix_top_csr.sv` is the Phase 3 matrix-top CSR endpoint for the new shell. It responds to every I2C/CSR transaction directly so the I2C bridge never waits forever after writes.
 - [IMPLEMENTED] Matrix configuration CSR command/parameter writes are rejected unless the top is path-safe and matrix configuration is not busy.
 - [IMPLEMENTED] Matrix configuration command readback remains unchanged after rejected command writes.
+- [IMPLEMENTED] Matrix configuration `WRITE_COLUMN_64`, `READ_COLUMN_64`, `GLOBAL_FILL_0`, and `GLOBAL_FILL_1` now wait for the selected/readback column's returned `Cout` strobe and sample the corresponding `Dout` bit through a per-column returned-clock sampler.
+- [IMPLEMENTED] Missing returned `Cout` raises `ERR_COUT_TIMEOUT`, clears `readback_valid`, and clears `matrix_cfg_valid`.
+- [RISK] Returned-`Cout` capture is a real CDC/RDC boundary. It is functionally modeled and locally Verilator-tested, but not CDC/RDC/signoff-clean until Cadence CDC/RDC and matrix timing handoff are available.
 - [IMPLEMENTED] The CSR16 continuation supersedes the earlier incremental 12-bit matrix-top CSR step. Active matrix-top registers now use final 16-bit addresses.
 - [RISK] Phase 3 does not yet replace the old `spadmic_csr_decoder` path used by `spadmic_top_v1`. That is intentional to avoid breaking the legacy top while the matrix top is being built.
 

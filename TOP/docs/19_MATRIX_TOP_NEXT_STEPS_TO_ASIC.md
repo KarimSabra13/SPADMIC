@@ -64,7 +64,7 @@ clk_ref_40m : MPTDC STOP qualifier reference
 - Raw matrix snapshot frontend with settle and watchdog behavior.
 - Active-low selective reset controller.
 - DDR16 pairer without generic dual-edge final RTL.
-- Matrix configuration controller with separate `clk_cfg_40m` domain and a basic stable-bus toggle handshake.
+- Matrix configuration controller with separate `clk_cfg_40m` domain, stable-bus toggle command/status CDC, and returned-`Cout` qualified `Dout` readback.
 - Initial matrix-top CSR endpoint.
 - Snapshot-owned position packetizer with CSR-selected raw bitmap mode and
   fixed 8-word cluster mode.
@@ -80,7 +80,7 @@ clk_ref_40m : MPTDC STOP qualifier reference
 - Position path now supports raw bitmap mode and fixed cluster mode from frozen
   snapshots. Compact cluster packets and a deeper position queue remain
   deferred.
-- Matrix configuration readback still mirrors write data for write commands and samples `Dout` on `clk_cfg_40m`; it does not yet use returned `Cout` edges.
+- Matrix configuration readback now uses returned `Cout` strobes to capture `Dout` into the `clk_cfg_40m` controller. The timing remains non-signoff until the matrix macro handoff defines setup/hold/min-pulse/Cout delay.
 - There is no real output FIFO between bundle TX and DDR16 pairer.
 - Event admission does not yet reserve FIFO space for worst-case events.
 - Full-top BOTH test and directed R/Y/B skew campaign are missing from the local readiness gate.

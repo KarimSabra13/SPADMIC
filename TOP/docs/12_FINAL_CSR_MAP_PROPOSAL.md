@@ -53,8 +53,8 @@ This table is the implemented subset for the new matrix top shell. Registers not
 | `0x6008` | `MATRIX_CFG_COL` | RW | `0` | selected column 0..43; invalid column rejected |
 | `0x600C` | `MATRIX_CFG_WDATA_LO` | RW | `0` | write data `[31:0]`; rejected while config busy |
 | `0x6010` | `MATRIX_CFG_WDATA_HI` | RW | `0` | write data `[63:32]`; rejected while config busy |
-| `0x6014` | `MATRIX_CFG_RDATA_LO` | RO | `0` | config readback `[31:0]`; true Cout-based readback remains Phase 5 work |
-| `0x6018` | `MATRIX_CFG_RDATA_HI` | RO | `0` | config readback `[63:32]`; true Cout-based readback remains Phase 5 work |
+| `0x6014` | `MATRIX_CFG_RDATA_LO` | RO | `0` | config readback `[31:0]`; Phase 5 RTL uses returned-`Cout` qualified `Dout` sampling |
+| `0x6018` | `MATRIX_CFG_RDATA_HI` | RO | `0` | config readback `[63:32]`; Phase 5 RTL uses returned-`Cout` qualified `Dout` sampling |
 | `0x601C` | `MATRIX_CFG_LAST_ERROR` | RO | `0` | matrix config last error, CSR last error, event reject count |
 | `0x7000` | `TX_STATUS` | RO | `empty` | DDR16 pairer empty/busy/pair/padded status |
 | `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `empty` | placeholder until the Phase 6 FIFO is inserted |
@@ -80,6 +80,7 @@ Phase 4/5 additions in the active implementation:
 - `TX_STATUS[4]` exposes bundle missing-source error.
 - `TX_STATUS[5]` exposes raw position packetizer drop.
 - `MATRIX_EVENT_STATUS[7:4]` reports the union of currently pending sources and bundle-completed sources.
+- `MATRIX_CFG_RDATA_LO/HI` now report the controller's returned-`Cout` sampled readback value. This is functional RTL behavior, not final matrix timing signoff.
 
 Shared TDC configuration notes:
 

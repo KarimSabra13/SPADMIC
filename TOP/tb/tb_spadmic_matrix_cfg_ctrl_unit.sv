@@ -11,6 +11,7 @@ module tb_spadmic_matrix_cfg_ctrl_unit;
   localparam logic [3:0] ERR_BUSY        = 4'd1;
   localparam logic [3:0] ERR_INVALID_COL = 4'd3;
   localparam logic [3:0] ERR_CFG_RESET   = 4'd4;
+  localparam logic [3:0] ERR_COUT_TIMEOUT = 4'd5;
 
   logic clk_sys;
   logic clk_cfg_40m;
@@ -31,8 +32,11 @@ module tb_spadmic_matrix_cfg_ctrl_unit;
   wire [43:0] matrix_cin;
   logic [43:0] matrix_dout;
   logic [43:0] matrix_cout;
-  logic [63:0] read_pattern;
-  int read_idx;
+  logic [63:0] return_pattern;
+  logic use_return_pattern;
+  logic suppress_cout;
+  logic [5:0] model_return_col;
+  int return_idx;
   int pass_count;
   int fail_count;
 
@@ -84,6 +88,8 @@ module tb_spadmic_matrix_cfg_ctrl_unit;
       cmd_op    = op;
       col_idx   = col;
       wdata     = data;
+      model_return_col = ((op == OP_GLOBAL_FILL_0) ||
+                          (op == OP_GLOBAL_FILL_1)) ? 6'd0 : col;
       cmd_start = 1'b1;
       @(negedge clk_sys);
       cmd_start = 1'b0;
@@ -111,12 +117,27 @@ module tb_spadmic_matrix_cfg_ctrl_unit;
     end
   endtask
 
-  always @(negedge clk_cfg_40m) begin
-    if (matrix_cin[7]) begin
-      matrix_dout[7] <= read_pattern[read_idx[5:0]];
-      read_idx <= read_idx + 1;
+  genvar col;
+  generate
+    for (col = 0; col < 44; col++) begin : g_matrix_return_model
+      always @(posedge matrix_cin[col]) begin
+        logic sample_bit;
+        sample_bit = matrix_din[col];
+        if (use_return_pattern && (model_return_col == 6'(col))) begin
+          sample_bit = return_pattern[return_idx[5:0]];
+          return_idx <= return_idx + 1;
+        end
+
+        if (!(suppress_cout && (model_return_col == 6'(col)))) begin
+          #(CFG_PERIOD/5);
+          matrix_dout[col] <= sample_bit;
+          matrix_cout[col] <= 1'b1;
+          #(CFG_PERIOD/5);
+          matrix_cout[col] <= 1'b0;
+        end
+      end
     end
-  end
+  endgenerate
 
   initial begin
     pass_count  = 0;
@@ -129,8 +150,11 @@ module tb_spadmic_matrix_cfg_ctrl_unit;
     wdata       = '0;
     matrix_dout = '0;
     matrix_cout = '0;
-    read_pattern = 64'hA55A_0123_4567_89EF;
-    read_idx = 0;
+    return_pattern = 64'hA55A_0123_4567_89EF;
+    use_return_pattern = 1'b0;
+    suppress_cout = 1'b0;
+    model_return_col = 6'd0;
+    return_idx = 0;
 
     repeat (4) @(posedge clk_sys);
     rst_cfg_n = 1'b1;
@@ -140,24 +164,33 @@ module tb_spadmic_matrix_cfg_ctrl_unit;
     check("reset leaves controller idle", !busy && !done);
     check("reset drives matrix config outputs idle", matrix_din == '0 && matrix_cin == '0);
 
+    use_return_pattern = 1'b1;
+    return_pattern = 64'hF0E1_D2C3_B4A5_9687;
+    return_idx = 0;
     start_cmd(OP_WRITE_COLUMN_64, 6'd0, 64'h0123_4567_89AB_CDEF);
     check("write command enters busy", busy);
     wait_done();
     check("write column reports no error", !error);
-    check("write column readback mirrors written data", readback_valid && rdata == 64'h0123_4567_89AB_CDEF);
+    check("write column readback uses returned Dout/Cout path",
+          readback_valid && rdata == 64'hF0E1_D2C3_B4A5_9687);
     check("matrix cfg valid after write", matrix_cfg_valid);
 
+    return_pattern = 64'h1357_9BDF_2468_ACE0;
+    return_idx = 0;
     start_cmd(OP_WRITE_COLUMN_64, 6'd43, 64'hFEDC_BA98_7654_3210);
     wait_done();
-    check("write column 43 accepted", !error && rdata == 64'hFEDC_BA98_7654_3210);
+    check("write column 43 captures physical readback",
+          !error && rdata == 64'h1357_9BDF_2468_ACE0);
 
-    read_idx = 0;
+    return_pattern = 64'hA55A_0123_4567_89EF;
+    return_idx = 0;
     start_cmd(OP_READ_COLUMN_64, 6'd7, 64'h0);
     wait_done();
     check("read column reports no error", !error);
     check("readback valid after read", readback_valid);
-    check("read command captures Dout serial data", rdata == read_pattern);
+    check("read command captures Dout on returned Cout", rdata == return_pattern);
 
+    use_return_pattern = 1'b0;
     start_cmd(OP_GLOBAL_FILL_0, 6'd0, 64'h0);
     wait_done();
     check("global fill 0 readback is zero", !error && rdata == 64'h0);
@@ -166,11 +199,23 @@ module tb_spadmic_matrix_cfg_ctrl_unit;
     wait_done();
     check("global fill 1 readback is all ones", !error && rdata == 64'hFFFF_FFFF_FFFF_FFFF);
 
+    use_return_pattern = 1'b1;
+    return_pattern = 64'hFFFF_0000_FFFF_0000;
+    return_idx = 0;
+    suppress_cout = 1'b1;
+    start_cmd(OP_READ_COLUMN_64, 6'd5, 64'h0);
+    wait_done();
+    check("missing Cout reports timeout", done && error && last_error == ERR_COUT_TIMEOUT);
+    check("missing Cout clears readback valid", !readback_valid && rdata == 64'h0);
+    check("missing Cout clears cfg valid", !matrix_cfg_valid);
+    suppress_cout = 1'b0;
+
     start_cmd(OP_WRITE_COLUMN_64, 6'd44, 64'h0);
     check("invalid column rejected", done && error && last_error == ERR_INVALID_COL && !busy);
     check("invalid column clears stale readback", !readback_valid && rdata == 64'h0);
     check("invalid column clears cfg valid conservatively", !matrix_cfg_valid);
 
+    use_return_pattern = 1'b0;
     start_cmd(OP_WRITE_COLUMN_64, 6'd1, 64'h1234);
     @(negedge clk_sys);
     cmd_op = OP_READ_COLUMN_64;

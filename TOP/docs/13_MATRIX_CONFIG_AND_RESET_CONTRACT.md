@@ -1,6 +1,6 @@
 # Matrix Configuration And Selective Reset Contract
 
-Status: Phase 0 contract. Timing fields marked TBD are not signoff constraints.
+Status: Phase 5 contract. Returned-Cout readback is implemented in RTL, but matrix macro timing fields marked TBD are not signoff constraints.
 
 ## Physical Matrix Interface
 
@@ -119,6 +119,14 @@ Command behavior:
 
 Command while BUSY is rejected. Reset aborts the operation, drives safe idle outputs, and clears `matrix_cfg_valid`.
 
+Implemented Phase 5 readback behavior:
+
+- `WRITE_COLUMN_64` drives one selected `Din[col]` bit per `clk_cfg_40m` bit step, pulses `Cin[col]`, waits for the returned `Cout[col]` strobe, samples `Dout[col]`, and stores the sampled bit into the CSR-visible 64-bit readback shift register.
+- `READ_COLUMN_64` clocks the selected column and samples `Dout[col]` on the returned `Cout[col]` strobe.
+- `GLOBAL_FILL_0` and `GLOBAL_FILL_1` drive all 44 `Din/Cin` columns in parallel for each bit step and use column 0 returned `Cout[0]/Dout[0]` as the reference readback path.
+- Missing returned `Cout` raises `ERR_COUT_TIMEOUT`, clears `readback_valid`, clears `matrix_cfg_valid`, and returns the physical outputs to idle.
+- The previous write-data mirror readback model is obsolete and must not be used as evidence of physical matrix readback.
+
 ## `clk_sys` To `clk_cfg_40m` CDC
 
 The matrix configuration controller must not double-flop changing multi-bit buses independently.
@@ -141,10 +149,14 @@ Required return protocol:
 
 This interface is non-signoff until analog handoff provides setup, hold, min high, min low, and Dout/Cout delay.
 
+The returned-`Cout` sampler is a real CDC/RDC boundary. The current RTL captures `Dout[col]` in a per-column returned-`Cout` event domain, synchronizes a capture toggle/data back into `clk_cfg_40m`, and then returns a stable readback bus to `clk_sys` through the existing done-toggle handshake. This is functionally tested locally, but it still requires Cadence CDC/RDC review, STA classification, and final matrix macro timing.
+
 ## `clk_cfg_40m` Sequencing Defaults
 
 - `Cin` active edge: rising edge.
 - `Din` stable before the rising edge and held after the edge.
+- `Cout` is treated as the returned `Cin` strobe after matrix propagation/RC delay.
+- `Dout` is sampled only when the selected/readback column's returned `Cout` is observed.
 - Outputs idle low after reset or abort.
 - No combinational clock gates from the old reference RTL.
 - Global fill may clock multiple columns if the matrix contract allows it; otherwise implementation may iterate columns.
@@ -152,8 +164,8 @@ This interface is non-signoff until analog handoff provides setup, hold, min hig
 ## Open Matrix Designer Items
 
 - Meaning of `cfg0` and `cfg1`.
-- Exact Dout/Cout timing and function.
-- Whether Cout is a clock, token, or status return.
+- Exact Dout/Cout timing, including setup/hold of `Dout` around returned `Cout` and maximum returned-Cout latency.
+- Whether returned `Cout` needs dedicated clock-tree or generated-clock treatment in signoff.
 - Minimum and maximum reset low time.
 - Reset-select skew and overlap requirements.
 - Whether a separate global matrix reset exists.

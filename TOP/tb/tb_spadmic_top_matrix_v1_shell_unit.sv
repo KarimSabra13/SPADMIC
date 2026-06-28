@@ -54,6 +54,21 @@ module tb_spadmic_top_matrix_v1_shell_unit;
   initial clk_cfg_40m = 1'b0;
   always #(CLK_CFG_PERIOD/2) clk_cfg_40m = ~clk_cfg_40m;
 
+  genvar matrix_col;
+  generate
+    for (matrix_col = 0; matrix_col < 44; matrix_col++) begin : g_matrix_cfg_return_model
+      always @(posedge matrix_cin[matrix_col]) begin
+        logic sample_bit;
+        sample_bit = matrix_din[matrix_col];
+        #(CLK_CFG_PERIOD/5);
+        matrix_dout[matrix_col] <= sample_bit;
+        matrix_cout[matrix_col] <= 1'b1;
+        #(CLK_CFG_PERIOD/5);
+        matrix_cout[matrix_col] <= 1'b0;
+      end
+    end
+  endgenerate
+
   spadmic_top_matrix_v1 dut (
     .clk_sys(clk_sys),
     .clk_ref_40m(clk_ref_40m),
