@@ -100,12 +100,10 @@ OOC feasibility order:
 - power/PG notes;
 - `SUMMARY.md`.
 
-## Planned Server Command After Script Creation
+## Server Command
 
 The wrapper script `TOP/pnr/scripts/server_run_innovus_matrix_top_floorplan.sh`
-is planned in the execution roadmap and is not present at the Phase 1
-documentation checkpoint. After that script is created and reviewed, the
-intended server command is:
+is now present. After review, the intended server command is:
 
 ```bash
 cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
@@ -115,6 +113,11 @@ source /eda/cadence/eda_2023-2024
 export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 bash TOP/pnr/scripts/server_run_innovus_matrix_top_floorplan.sh "$RUN_ID"
 ```
+
+The script first generates CSV-derived planning collateral from normalized
+`ll_*` coordinates, then runs an Innovus planning seed if Innovus is available.
+It fails clearly if Innovus is missing and does not claim placement/routing
+signoff.
 
 ## Negative Claims
 

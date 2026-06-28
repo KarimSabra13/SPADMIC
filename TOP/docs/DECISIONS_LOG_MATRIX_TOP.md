@@ -361,6 +361,8 @@ Pin family summary from the CSV:
 - [VERIFIED] Phase 9 Verifier recheck found no BLOCKER, HIGH, MEDIUM, or LOW findings for the source-based CDC/RDC/reset review. CDC/RDC tool signoff remains not run.
 - [IMPLEMENTED] Phase 10 Genus OOC server infrastructure is prepared under `TOP/syn/`. It is typical-only, writes generated results under `/sim/ksabra/SPADMIC_work/genus/<RUN_ID>/`, and does not claim local Genus execution.
 - [VERIFIED] Phase 10 Verifier recheck passed after Builder fixed fatal `check_design`, report redirection, and warning classification issues. Actual Genus execution remains a server gate.
+- [IMPLEMENTED] Phase 11 Innovus/floorplan planning infrastructure is prepared under `TOP/pnr/`. The CSV generator uses normalized `ll_*` coordinates and generated server artifacts are kept under `/sim/ksabra/SPADMIC_work/innovus/<RUN_ID>/`.
+- [VERIFIED] Phase 11 Verifier recheck passed after Builder fixed the OOC output-root convention. Innovus execution and physical closure remain server gates.
 
 ## Affected Files
 
