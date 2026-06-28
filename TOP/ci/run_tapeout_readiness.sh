@@ -128,14 +128,28 @@ VERILATOR_TBS=(
   tb_spadmic_arb_modes
   tb_spadmic_arb_stress
   tb_spadmic_i2c_control_plane_unit
+  tb_spadmic_i2c_matrix_top_16b_unit
+  tb_spadmic_matrix_or_tree_unit
   tb_spadmic_matrix_snapshot_frontend_unit
+  tb_spadmic_matrix_reset_ctrl_unit
+  tb_spadmic_event_coordinator_modes_unit
   tb_spadmic_position_snapshot_packetizer_unit
+  tb_spadmic_position_modes_unit
+  tb_spadmic_position_snapshot_cluster_unit
   tb_spadmic_event_bundle_tx_unit
+  tb_spadmic_ddr16_tx_pairer_unit
   tb_spadmic_output_fifo_unit
   tb_spadmic_output_fifo_ddr_marker_unit
+  tb_spadmic_matrix_cfg_ctrl_unit
+  tb_spadmic_matrix_cfg_cout_readback_unit
   tb_spadmic_matrix_top_csr_unit
   tb_spadmic_top_matrix_v1_shell_unit
+  tb_spadmic_top_matrix_v1_both_full_unit
+  tb_spadmic_top_matrix_v1_skew_campaign
   tb_spadmic_top_output_pressure_unit
+  tb_spadmic_top_reset_during_event_unit
+  tb_spadmic_top_reset_during_matrix_cfg_unit
+  tb_spadmic_top_mode_transition_unit
   tb_spadmic_top_sequencer_unit
   tb_spadmic_stress_csr
   tb_spadmic_stress_position

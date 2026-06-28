@@ -277,6 +277,8 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Phase 5: coordinator-owned bundle TX, one physical event ID per expected packet, DDR16 pairer connection, bundle flush/padding, and TX status visibility integrated into `spadmic_top_matrix_v1`.
 - [IMPLEMENTED] Phase 6: inserted the required output FIFO and event-admission reservation path between bundle TX and DDR16 pairer. Final Xcelium, STA, CDC signoff, PnR, analog matrix, and DDR macro handoff remain deferred.
 - [VERIFIED] Phase 6 output FIFO local gate passed `bash TOP/ci/run_tapeout_readiness.sh` with 17 pass, 0 fail, and 4 expected local skips after the ordered-marker regression was added. Review recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_OUTPUT_FIFO.md`.
+- [IMPLEMENTED] Phase 7 expands the maintained local Verilator readiness gate with named CSR/I2C16, position raw/cluster, Cout readback, BOTH full, skew-campaign, reset-abort, and mode-transition tests for the matrix top.
+- [VERIFIED] Builder local Phase 7 gate `bash TOP/ci/run_tapeout_readiness.sh` passed with 31 pass, 0 fail, and 4 expected local skips. The skips are Xcelium TOP smoke, Xcelium directed regression, and retired standalone VIP steps; Xcelium remains a server-only gate.
 
 ## Phase 4/5 Implementation Decisions
 
@@ -350,6 +352,9 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Phase 4 MPTDC, position packet, and final bundle integration are implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE4.md`.
 - [IMPLEMENTED] Phase 5 DDR16 output integration is implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE5.md`.
 - [VERIFIED] Phase 6 local readiness/review closure is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_OUTPUT_FIFO.md`.
+- [IMPLEMENTED] Phase 7 local regression expansion is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`.
+- [VERIFIED] Builder Phase 7 readiness run passed locally with 31 pass, 0 fail, and 4 expected skips before Verifier recheck.
+- [VERIFIED] Verifier Phase 7 recheck found no BLOCKER, HIGH, MEDIUM, or LOW findings for the local open-source scope. Notes about controller-level reset-abort coverage and untracked root reference files are recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`.
 
 ## Affected Files
 

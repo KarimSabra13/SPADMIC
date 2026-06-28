@@ -111,11 +111,28 @@ Implemented Phase 6 tests:
 - `tb_spadmic_top_output_pressure_unit` is an explicit white-box pressure/fault-injection test. It forces top-level output-capacity state to prove that free space below the reservation blocks `pre_event_resources_ready`, the reservation boundary recovers, nonempty FIFO blocks `safe_idle`, and a pending FIFO flush marker blocks `safe_idle`.
 - `tb_spadmic_top_matrix_v1_shell_unit` continues to pass with the FIFO inserted between bundle TX and DDR16 pairer.
 
+Implemented Phase 7 local-regression expansion:
+
+- `tb_spadmic_i2c_matrix_top_16b_unit` drives the real I2C slave/bridge into `spadmic_top_matrix_v1` and checks representative final 16-bit regions `0x0000`, `0x5000`, `0x6000`, and `0x7000`.
+- `tb_spadmic_position_modes_unit` checks RAW versus CLUSTER position packet mode selection from a frozen snapshot.
+- `tb_spadmic_position_snapshot_cluster_unit` checks snapshot-driven cluster extraction and multi-cluster header bits.
+- `tb_spadmic_matrix_cfg_cout_readback_unit` checks that WRITE_COLUMN_64 readback uses returned Dout/Cout data rather than mirroring WDATA. Broader READ_COLUMN_64 and Cout-timeout coverage remains in `tb_spadmic_matrix_cfg_ctrl_unit`.
+- `tb_spadmic_top_matrix_v1_both_full_unit` configures BOTH through I2C, uses the real MPTDC wrappers, and checks a complete R/Y/B/POSITION bundle with one shared event ID.
+- `tb_spadmic_top_matrix_v1_skew_campaign` runs all six R/Y/B arrival orders through the full top START gates and confirms later axes still reach their independent START gates after the first axis has opened the event.
+- `tb_spadmic_top_reset_during_event_unit` asserts global reset during an active matrix event/reset pulse and checks safe reset-select, config, DDR, and I2C recovery behavior.
+- `tb_spadmic_top_reset_during_matrix_cfg_unit` asserts the configuration-domain reset while a matrix configuration operation is active and checks abort/idle/status behavior.
+- `tb_spadmic_top_mode_transition_unit` verifies the v1 mode/config policy: mode writes are accepted only at safe idle and rejected with PATH_BUSY while an event path is active.
+
+Phase 7 local readiness result:
+
+- `bash TOP/ci/run_tapeout_readiness.sh` passed locally with 31 pass, 0 fail,
+  and 4 expected local skips. The skipped steps are the Xcelium TOP smoke,
+  Xcelium directed regression, and retired standalone VIP steps.
+
 Still required:
 
-- Full top-level BOTH event simulation using real MPTDC packet completion and position packet completion in one bundle.
-- Directed physical skew campaign across all R/Y/B arrival orders.
-- Mode transition tests while old-mode producers are draining.
+- Xcelium execution of the expanded local regression list on the Cadence server.
+- CDC/RDC tool signoff of the clk_sys, clk_cfg_40m, Cout, I2C, and async matrix crossings.
 - Compact cluster position packets and a deeper position queue are deferred unless required after Phase 6 output FIFO integration.
 - Cadence CDC/RDC and macro-timing review of the returned-Cout sampler remains required before any signoff claim.
 
