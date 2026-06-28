@@ -21,11 +21,11 @@ RUN_ID=matrix_top_$(date +%Y%m%d_%H%M%S)
 
 The script must refuse to overwrite an existing run directory.
 
-## Planned Server Command After Script Creation
+## Server Command
 
-The wrapper script `TOP/ci/server_run_matrix_top_xcelium.sh` is planned in the
-execution roadmap and is not present at the Phase 1 documentation checkpoint.
-After that script is created and reviewed, the intended server command is:
+The wrapper script `TOP/ci/server_run_matrix_top_xcelium.sh` is now present for
+server execution. It must be run on the Cadence server after sourcing the
+Cadence environment:
 
 ```bash
 cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
@@ -58,12 +58,19 @@ Do not commit `xcelium.d`, raw `work/`, waves, or large logs.
 
 The server script should run, at minimum:
 
-- `tb_spadmic_matrix_top_csr_16b_unit`
+- `tb_spadmic_matrix_top_csr_unit`
 - `tb_spadmic_i2c_matrix_top_16b_unit`
+- `tb_spadmic_matrix_or_tree_unit`
+- `tb_spadmic_matrix_snapshot_frontend_unit`
+- `tb_spadmic_matrix_reset_ctrl_unit`
+- `tb_spadmic_event_coordinator_modes_unit`
 - `tb_spadmic_position_modes_unit`
 - `tb_spadmic_position_snapshot_cluster_unit`
 - `tb_spadmic_matrix_cfg_cout_readback_unit`
+- `tb_spadmic_matrix_cfg_ctrl_unit`
 - `tb_spadmic_output_fifo_unit`
+- `tb_spadmic_output_fifo_ddr_marker_unit`
+- `tb_spadmic_ddr16_tx_pairer_unit`
 - `tb_spadmic_top_output_pressure_unit`
 - `tb_spadmic_top_matrix_v1_both_full_unit`
 - `tb_spadmic_top_matrix_v1_skew_campaign`
@@ -71,6 +78,8 @@ The server script should run, at minimum:
 - `tb_spadmic_top_reset_during_matrix_cfg_unit`
 - `tb_spadmic_top_mode_transition_unit`
 - existing matrix-top smoke/unit tests already in `TOP/ci/run_tapeout_readiness.sh`
+- maintained baseline TOP/ARB/I2C/position tests needed to catch portability
+  regressions.
 
 Tests that are not implemented at script creation time must be reported as missing/fail, not silently skipped.
 

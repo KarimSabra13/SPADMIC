@@ -355,6 +355,8 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Phase 7 local regression expansion is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`.
 - [VERIFIED] Builder Phase 7 readiness run passed locally with 31 pass, 0 fail, and 4 expected skips before Verifier recheck.
 - [VERIFIED] Verifier Phase 7 recheck found no BLOCKER, HIGH, MEDIUM, or LOW findings for the local open-source scope. Notes about controller-level reset-abort coverage and untracked root reference files are recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_LOCAL_REGRESSION.md`.
+- [IMPLEMENTED] Phase 8 server Xcelium run script is prepared at `TOP/ci/server_run_matrix_top_xcelium.sh`. It writes generated results under `/sim/ksabra/SPADMIC_work/xcelium/<RUN_ID>` and fails if `xrun` is missing. Local Codex did not run Xcelium.
+- [VERIFIED] Phase 8 Verifier recheck passed after Builder fixed the server `SUMMARY.md` reporting mismatch. No BLOCKER, HIGH, MEDIUM, or LOW findings remain for server-script preparation.
 
 ## Affected Files
 
