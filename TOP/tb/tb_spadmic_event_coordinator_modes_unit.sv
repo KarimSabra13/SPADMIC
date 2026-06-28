@@ -17,6 +17,7 @@ module tb_spadmic_event_coordinator_modes_unit;
   logic raw_snapshot_required;
   logic auto_reset_enable;
   logic snapshot_valid;
+  logic position_snapshot_captured;
   logic [2:0] tdc_start_seen;
   logic [3:0] packet_pending_mask;
   logic reset_done;
@@ -53,6 +54,7 @@ module tb_spadmic_event_coordinator_modes_unit;
     .raw_snapshot_required_i(raw_snapshot_required),
     .auto_reset_enable_i(auto_reset_enable),
     .snapshot_valid_i(snapshot_valid),
+    .position_snapshot_captured_i(position_snapshot_captured),
     .tdc_start_seen_i(tdc_start_seen),
     .packet_pending_mask_i(packet_pending_mask),
     .reset_done_i(reset_done),
@@ -88,6 +90,7 @@ module tb_spadmic_event_coordinator_modes_unit;
       matrix_activity       = 1'b0;
       cal_activity          = 1'b0;
       snapshot_valid        = 1'b0;
+      position_snapshot_captured = 1'b0;
       tdc_start_seen        = 3'b000;
       packet_pending_mask   = 4'b0000;
       reset_done            = 1'b0;
@@ -165,7 +168,13 @@ module tb_spadmic_event_coordinator_modes_unit;
     tdc_start_seen  = 3'b000;
     @(posedge clk_sys);
     #1;
-    check("Position-only reset does not wait for TDC", reset_start);
+    check("Position-only allocates event ID from raw snapshot", event_id_valid);
+    check("Position-only reset waits for position snapshot copy", !reset_start);
+    @(negedge clk_sys);
+    position_snapshot_captured = 1'b1;
+    @(posedge clk_sys);
+    #1;
+    check("Position-only reset starts after position snapshot copy", reset_start);
     check("Position-only expected packet mask", required_packet_mask == 4'b1000);
     pulse_reset_done();
     packet_pending_mask = 4'b1000;
@@ -180,6 +189,7 @@ module tb_spadmic_event_coordinator_modes_unit;
     @(negedge clk_sys);
     matrix_activity = 1'b0;
     snapshot_valid  = 1'b1;
+    position_snapshot_captured = 1'b1;
     tdc_start_seen  = 3'b111;
     @(posedge clk_sys);
     #1;

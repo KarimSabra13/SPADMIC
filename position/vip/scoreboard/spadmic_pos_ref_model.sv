@@ -10,7 +10,7 @@ class spadmic_pos_ref_model;
   endfunction
 
   function automatic logic [2:0] pkt_multi_cluster_mask(input logic [15:0] hdr);
-    return is_spadmic_pos_compact_header(hdr) ? hdr[2:0] : 3'b000;
+    return is_spadmic_pos_cluster_header(hdr) ? hdr[2:0] : 3'b000;
   endfunction
 
   function automatic logic pkt_overflow_any(input logic [15:0] hdr);

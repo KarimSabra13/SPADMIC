@@ -93,8 +93,8 @@ Checks:
 
 Implemented Phase 4/5 tests:
 
-- `tb_spadmic_event_coordinator_modes_unit` covers mode masks, no fixed AND, frozen grant behavior, calibration matrix ignore, and rejected-event cleanup reset.
-- `tb_spadmic_position_snapshot_packetizer_unit` covers 14-word raw packet generation, raw R/Y/B word ordering, 14-bit EOC event ID, and busy drop reporting.
+- `tb_spadmic_event_coordinator_modes_unit` covers mode masks, no fixed AND, frozen grant behavior, calibration matrix ignore, rejected-event cleanup reset, position-only event-ID allocation from raw snapshot validity, and the new requirement that selective reset waits for the position packetizer's snapshot copy in position-producing modes.
+- `tb_spadmic_position_snapshot_packetizer_unit` covers 14-word raw packet generation, raw R/Y/B word ordering, fixed 8-word cluster packet generation, single-cluster and two-cluster images, 14-bit EOC event ID in both packet modes, snapshot-captured pulse behavior, and busy drop reporting.
 - `tb_spadmic_event_bundle_tx_unit` covers deterministic R/Y/B/POSITION order, TDC source header patching, common event ID in all EOC words, missing-source error, and bundle flush.
 - `tb_spadmic_top_matrix_v1_shell_unit` covers I2C/CSR, position-only matrix event acceptance, selective reset, raw bundle emission into DDR16, DDR drain, safe idle, matrix configuration after drain, inactive-TDC-safe-idle behavior in position-only mode, and TDC-only event flow through real MPTDC wrappers into the DDR16 bundle path.
 
@@ -103,6 +103,7 @@ Still required:
 - Full top-level BOTH event simulation using real MPTDC packet completion and position packet completion in one bundle.
 - Directed physical skew campaign across all R/Y/B arrival orders.
 - Mode transition tests while old-mode producers are draining.
+- Compact cluster position packets and a deeper position queue are deferred unless required after Phase 6 output FIFO integration.
 
 ## Directed Skew Campaign
 

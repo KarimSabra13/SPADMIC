@@ -187,10 +187,14 @@ module spadmic_top_matrix_v1 (
   wire pos_pkt_eop;
   wire pos_packet_pending;
   wire pos_packet_busy;
+  wire pos_snapshot_captured;
+  logic pos_snapshot_captured_seen_q;
   wire pos_packet_done;
   wire pos_packet_drop;
   logic pos_packet_started_q;
   wire pos_packet_start;
+  wire [SPADMIC_LINE_COUNT_W-1:0] position_gap_threshold;
+  wire [SPADMIC_LINE_COUNT_W-1:0] position_min_cluster_span;
 
   wire [SPADMIC_SRC_COUNT-1:0] src_valid;
   wire [SPADMIC_SRC_COUNT-1:0] src_ready;
@@ -296,6 +300,8 @@ module spadmic_top_matrix_v1 (
       event_open && event_id_valid && required_packet_mask[3] &&
       snapshot_valid && !pos_packet_started_q && !pos_packet_busy &&
       !pos_packet_pending;
+  assign position_gap_threshold = SPADMIC_LINE_COUNT_W'(2);
+  assign position_min_cluster_span = SPADMIC_LINE_COUNT_W'(1);
 
   assign src_valid[TDC_ID_X] = tdc_pkt_valid[0];
   assign src_valid[TDC_ID_Y] = tdc_pkt_valid[1];
@@ -337,10 +343,15 @@ module spadmic_top_matrix_v1 (
   always_ff @(posedge clk_sys or negedge rst_sys_n) begin
     if (!rst_sys_n) begin
       pos_packet_started_q <= 1'b0;
+      pos_snapshot_captured_seen_q <= 1'b0;
     end else if (!event_open) begin
       pos_packet_started_q <= 1'b0;
+      pos_snapshot_captured_seen_q <= 1'b0;
     end else if (pos_packet_start) begin
       pos_packet_started_q <= 1'b1;
+      pos_snapshot_captured_seen_q <= 1'b0;
+    end else if (pos_snapshot_captured) begin
+      pos_snapshot_captured_seen_q <= 1'b1;
     end
   end
 
@@ -531,6 +542,8 @@ module spadmic_top_matrix_v1 (
     .raw_snapshot_required_i    (1'b1),
     .auto_reset_enable_i        (auto_reset_enable),
     .snapshot_valid_i           (snapshot_valid),
+    .position_snapshot_captured_i(pos_snapshot_captured_seen_q ||
+                                  pos_snapshot_captured),
     .tdc_start_seen_i           (tdc_start_seen_q),
     .packet_pending_mask_i      (packet_pending_mask),
     .reset_done_i               (reset_done),
@@ -642,10 +655,13 @@ module spadmic_top_matrix_v1 (
     .clk_sys          (clk_sys),
     .rst_n            (rst_sys_n),
     .start_i          (pos_packet_start),
+    .mode_i           (position_mode),
     .event_id_i       (event_id),
     .snapshot_R_i     (snapshot_R),
     .snapshot_Y_i     (snapshot_Y),
     .snapshot_B_i     (snapshot_B),
+    .gap_threshold_i  (position_gap_threshold),
+    .min_cluster_span_i(position_min_cluster_span),
     .pkt_valid_o      (pos_pkt_valid),
     .pkt_ready_i      (pos_pkt_ready),
     .pkt_data_o       (pos_pkt_data),
@@ -653,6 +669,7 @@ module spadmic_top_matrix_v1 (
     .pkt_eop_o        (pos_pkt_eop),
     .packet_pending_o (pos_packet_pending),
     .busy_o           (pos_packet_busy),
+    .snapshot_captured_o(pos_snapshot_captured),
     .done_o           (pos_packet_done),
     .drop_o           (pos_packet_drop)
   );
@@ -722,8 +739,7 @@ module spadmic_top_matrix_v1 (
       event_accept_enable ^ pos_packet_done ^ pos_packet_drop ^
       bundle_busy ^ bundle_missing_source_error ^ cfg_accept ^
       (|requested_axis_mask) ^ (requested_mode != SPADMIC_MODE_DISABLED) ^
-      (|completed_packet_status_mask) ^ (|calib_axis_mask) ^
-      (position_mode == SPADMIC_POS_MODE_RAW);
+      (|completed_packet_status_mask) ^ (|calib_axis_mask);
 
 endmodule
 

@@ -281,14 +281,13 @@ package spadmic_pkg;
     input logic [2:0] non_empty_mask,
     input logic [2:0] multi_cluster_mask
   );
-    logic [9:0] reserved;
-
-    reserved = '0;
     return {
       2'b01,
       overflow_any,
       non_empty_mask,
-      reserved
+      1'b0,
+      6'b0,
+      multi_cluster_mask
     };
   endfunction
 

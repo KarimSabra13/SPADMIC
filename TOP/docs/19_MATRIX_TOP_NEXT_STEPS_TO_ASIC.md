@@ -66,15 +66,20 @@ clk_ref_40m : MPTDC STOP qualifier reference
 - DDR16 pairer without generic dual-edge final RTL.
 - Matrix configuration controller with separate `clk_cfg_40m` domain and a basic stable-bus toggle handshake.
 - Initial matrix-top CSR endpoint.
-- Raw-only position snapshot packetizer.
+- Snapshot-owned position packetizer with CSR-selected raw bitmap mode and
+  fixed 8-word cluster mode.
 - Event bundle transmitter with common event ID patching.
 - Verilator local readiness gate that lints both legacy and matrix top modules.
 
 ## Not Yet Final
 
-- CSR address width is still 12 bits. Final external map must be 16 bits.
-- Shared TDC `max_hits`, slow RO code, fast RO code, `fifo_clr`, and `soft_reset` are not fully CSR-plumbed into the new top.
-- Position path is raw-only in the new top; cluster/compact mode is not integrated from frozen snapshots.
+- CSR address width is now 16 bits in the matrix-top target path. Legacy old-top
+  decode remains outside the matrix-top target.
+- Shared TDC `max_hits`, slow RO code, fast RO code, `fifo_clr`, and
+  `soft_reset` are CSR-plumbed into the three matrix-top TDC wrappers.
+- Position path now supports raw bitmap mode and fixed cluster mode from frozen
+  snapshots. Compact cluster packets and a deeper position queue remain
+  deferred.
 - Matrix configuration readback still mirrors write data for write commands and samples `Dout` on `clk_cfg_40m`; it does not yet use returned `Cout` edges.
 - There is no real output FIFO between bundle TX and DDR16 pairer.
 - Event admission does not yet reserve FIFO space for worst-case events.

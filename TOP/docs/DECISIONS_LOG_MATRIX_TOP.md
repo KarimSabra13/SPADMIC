@@ -60,14 +60,14 @@ The untracked files are user-owned references. They must not be deleted, reforma
 
 [DEFAULT FOR V1] Writing RO code `8'h00` may be used as the clear/default policy if that is the simplest safe implementation.
 
-[FROZEN] Position must support both raw bitmap and cluster/compact packet modes selectable through CSR/I2C. The current raw-only snapshot packetizer is a bring-up step, not the final v1 position path.
+[FROZEN] Position must support both raw bitmap and cluster packet modes selectable through CSR/I2C. Compact cluster packet mode is optional/deferred unless the existing packet format is needed later.
 
 [IMPLEMENTED] Phase 0 preflight confirmed no local diffs in protected MPTDC internals and no diff in `TOP/rtl/spadmic_top_v1.sv`.
 
 [RISK] Phase 0 preflight limitations and current continuation status:
   - [IMPLEMENTED] CSR address width is now 16-bit for the matrix-top package/I2C path as of the CSR16 continuation; the legacy top decoder remains outside this target.
   - [IMPLEMENTED] Shared TDC max-hits and RO codes now come from matrix-top CSR and are wired to the three wrappers.
-  - [RISK] Position path in the new top is raw-only.
+  - [IMPLEMENTED] Position path in the new top now supports raw bitmap mode and fixed 8-word cluster mode from frozen snapshots.
   - [RISK] Matrix configuration readback is not Cout-based.
   - [RISK] Bundle TX feeds DDR16 pairer directly with no real output FIFO.
   - [RISK] Full-top BOTH test and directed skew campaign are not yet in the readiness gate.
@@ -286,8 +286,10 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] `stop_armed_o` from `spadmic_ref_stop_qualifier` is not used as a pre-event resource grant input. Phase 6 top-level TDC-only simulation showed that it asserts in response to START, so using it in the live pre-grant can falsely turn an accepted event into a cleanup-only rejection. It remains a status signal only until a stable wrapper-local `start_accepted`/`stop_available` contract is defined.
 - [IMPLEMENTED] `tdc_start_seen_q[2:0]` is derived locally in the top from the gated START levels through `clk_sys` synchronization. This is used only for reset prerequisites and CSR status; it is not a chip pin.
 - [IMPLEMENTED] Rejected matrix events now open a bounded cleanup path in `spadmic_event_coordinator`: no normal event ID is allocated, no packet bundle is emitted, but raw snapshot is allowed to trigger selective reset and rearm.
-- [IMPLEMENTED] `spadmic_position_snapshot_packetizer` emits a 14-word raw position packet from the protected matrix snapshot. This makes TDC-only independent of position packetization and gives position-only/BOTH a snapshot consumer without re-detecting async matrix lines.
-- [DEFAULT FOR V1] The new position path exports raw bitmap packets first. Legacy cluster packetization remains in `spadmic_position_block` and is not used by the new matrix top until a later snapshot-driven refactor.
+- [IMPLEMENTED] `spadmic_position_snapshot_packetizer` emits a 14-word raw position packet or fixed 8-word cluster packet from the protected matrix snapshot. This makes TDC-only independent of position packetization and gives position-only/BOTH a snapshot consumer without re-detecting async matrix lines.
+- [IMPLEMENTED] The packetizer asserts `snapshot_captured_o` after copying the frozen bitmap into private registers. In position-producing modes, `spadmic_event_coordinator` uses this copy confirmation before asserting selective reset, while position-only event ID allocation still occurs from raw snapshot validity.
+- [IMPLEMENTED] Noncompact cluster position headers now encode `multi_cluster_mask` in bits `[2:0]`, matching the compact-header multi-mask location. The position VIP reference parser was updated to treat those bits as valid for all cluster headers.
+- [DEFAULT FOR V1] Cluster mode uses the existing two-cluster-per-axis scanner with top-local defaults `gap_threshold=2` and `min_cluster_span=1`. Compact cluster packets and a 16-entry position queue remain deferred because the matrix top currently allows one physical event in flight.
 - [IMPLEMENTED] `spadmic_event_bundle_tx` is a TOP-owned final bundle path. It waits for `bundle_start`, drains only the latched required source mask, patches all EOC words with the coordinator-owned 14-bit event ID, and uses deterministic source order `R, Y, B, POSITION`.
 - [IMPLEMENTED] The legacy `spadmic_correlated_tx` remains unchanged for `spadmic_top_v1`; it is not used by `spadmic_top_matrix_v1` because it increments event IDs per packet and has no bundle barrier.
 - [IMPLEMENTED] DDR16 pairer input is now driven by `spadmic_event_bundle_tx`. `flush_o` is asserted after each bundle so an odd final word is padded on `DATA_H` if needed.
@@ -313,7 +315,7 @@ Pin family summary from the CSV:
 - [DEFAULT FOR V1] `max_hits` resets to 15 and remains programmable through CSR/I2C.
 - [DEFAULT FOR V1] Shared RO code `8'h00` is the reset/default clear value. The exact code-frequency transfer function remains unknown; no exact 700 MHz code mapping is claimed.
 - [IMPLEMENTED] `CALIB_AXIS_MASK` owns partial-axis selection for calibration mode. Normal `TDC_ONLY` and `BOTH` mode requests still require all three axes.
-- [IMPLEMENTED] `POSITION_MODE` is CSR-visible and safe-idle protected. It is not yet connected to a final raw/cluster position implementation; that remains the position integration phase.
+- [IMPLEMENTED] `POSITION_MODE` is CSR-visible, safe-idle protected, and connected to `spadmic_position_snapshot_packetizer` as raw/cluster select in the matrix-top path.
 - [RISK] `TOP/rtl/spadmic_csr_decoder.sv` remains a legacy decoder with old-top assumptions. This is accepted because `TOP/rtl/spadmic_top_v1.sv` is protected and not the matrix-top target.
 - [RISK] `OUTPUT_FIFO_STATUS` and `OUTPUT_FIFO_WATERMARKS` are CSR placeholders until the required 512-word output FIFO is inserted.
 

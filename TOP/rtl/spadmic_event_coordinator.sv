@@ -18,6 +18,7 @@ module spadmic_event_coordinator (
   input  logic                         raw_snapshot_required_i,
   input  logic                         auto_reset_enable_i,
   input  logic                         snapshot_valid_i,
+  input  logic                         position_snapshot_captured_i,
   input  logic [2:0]                   tdc_start_seen_i,
   input  logic [3:0]                   packet_pending_mask_i,
   input  logic                         reset_done_i,
@@ -95,6 +96,11 @@ module spadmic_event_coordinator (
   wire bundle_ready =
       ((packet_pending_mask_i & required_packet_mask_o) ==
        required_packet_mask_o);
+  wire event_has_position_packet =
+      !event_rejected_q && required_packet_mask_o[3];
+  wire snapshot_reset_ack =
+      snapshot_valid_i &&
+      (!event_has_position_packet || position_snapshot_captured_i);
 
   assign event_open_o = (state_q != EVT_IDLE);
   assign event_id_valid_o = event_id_valid_q;
@@ -106,7 +112,7 @@ module spadmic_event_coordinator (
       (active_mode_i != SPADMIC_MODE_DISABLED) &&
       pre_event_resources_ready_i;
   assign observed_reset_ack_mask_o = {
-      snapshot_valid_i,
+      snapshot_reset_ack,
       tdc_start_seen_i
   };
 
