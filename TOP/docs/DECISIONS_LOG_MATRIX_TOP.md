@@ -359,6 +359,8 @@ Pin family summary from the CSV:
 - [VERIFIED] Phase 8 Verifier recheck passed after Builder fixed the server `SUMMARY.md` reporting mismatch. No BLOCKER, HIGH, MEDIUM, or LOW findings remain for server-script preparation.
 - [IMPLEMENTED] Phase 9 pre-Genus CDC/RDC source review is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_CDC_RDC_PREGENUS.md`. This is a source-based classification only and not CDC/RDC tool signoff.
 - [VERIFIED] Phase 9 Verifier recheck found no BLOCKER, HIGH, MEDIUM, or LOW findings for the source-based CDC/RDC/reset review. CDC/RDC tool signoff remains not run.
+- [IMPLEMENTED] Phase 10 Genus OOC server infrastructure is prepared under `TOP/syn/`. It is typical-only, writes generated results under `/sim/ksabra/SPADMIC_work/genus/<RUN_ID>/`, and does not claim local Genus execution.
+- [VERIFIED] Phase 10 Verifier recheck passed after Builder fixed fatal `check_design`, report redirection, and warning classification issues. Actual Genus execution remains a server gate.
 
 ## Affected Files
 

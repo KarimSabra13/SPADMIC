@@ -1,0 +1,238 @@
+# SPADMIC matrix-top OOC Genus block runner
+# Status: server-facing typical-only feasibility script, not signoff.
+
+proc require_env {name} {
+  if {![info exists ::env($name)] || $::env($name) eq ""} {
+    puts stderr "ERROR: required environment variable $name is not set"
+    exit 2
+  }
+  return $::env($name)
+}
+
+proc run_report {cmd out_file {fatal 0}} {
+  file mkdir [file dirname $out_file]
+  # Genus report commands print to stdout. Use the tool/Tcl redirection form so
+  # the file receives the actual report body, not only the Tcl return value.
+  if {[catch {uplevel #0 "$cmd > $out_file"} result]} {
+    set fh [open $out_file w]
+    puts $fh "REPORT_COMMAND_FAILED: $cmd"
+    puts $fh $result
+    close $fh
+    puts "WARN: report failed: $cmd"
+    if {$fatal} {
+      puts stderr "ERROR: fatal report/check failed: $cmd"
+      exit 10
+    }
+    return 0
+  }
+  return 1
+}
+
+proc classify_reports {run_dir} {
+  set out_file [file join $run_dir reports messages warning_classification.rpt]
+  file mkdir [file dirname $out_file]
+  set files [glob -nocomplain -types f \
+    [file join $run_dir logs *] \
+    [file join $run_dir reports * *.rpt] \
+    [file join $run_dir reports * *]]
+  array set patterns {
+    unresolved        {unresolved|not found|cannot resolve}
+    inferred_latch    {latch|inferred latch}
+    unconstrained     {unconstrained|no clock|no paths}
+    all_false_path     {false.path|no paths}
+    blackbox          {black.?box|blackbox}
+    design_rule       {max.transition|max.cap|max.fanout|design rule}
+    undriven          {undriven|unconnected|multiply driven|multi.?driven}
+  }
+  set fh [open $out_file w]
+  puts $fh "# Warning Classification"
+  puts $fh ""
+  foreach key [lsort [array names patterns]] {
+    set count 0
+    set first ""
+    foreach file $files {
+      if {[catch {set in [open $file r]}]} {
+        continue
+      }
+      while {[gets $in line] >= 0} {
+        if {[regexp -nocase $patterns($key) $line]} {
+          incr count
+          if {$first eq ""} {
+            set first "[file tail $file]: $line"
+          }
+        }
+      }
+      close $in
+    }
+    puts $fh "$key count=$count"
+    if {$first ne ""} {
+      puts $fh "  first=$first"
+    }
+  }
+  close $fh
+}
+
+set REPO_ROOT       [require_env SPADMIC_REPO_ROOT]
+set TOP_ROOT        [require_env SPADMIC_TOP_ROOT]
+set MPTDC_ROOT      [require_env SPADMIC_MPTDC_ROOT]
+set RUN_DIR         [require_env GENUS_RUN_DIR]
+set TOP_MODULE      [require_env GENUS_TOP_MODULE]
+set BLOCK_NAME      [require_env GENUS_BLOCK_NAME]
+set MPTDC_FILELIST  [require_env GENUS_MPTDC_FILELIST]
+set TOP_FILELIST    [require_env GENUS_TOP_FILELIST]
+set COMMON_SDC      [require_env GENUS_COMMON_SDC]
+
+set REPORT_DIR [file join $RUN_DIR reports]
+set OUT_DIR    [file join $RUN_DIR outputs]
+set LOG_DIR    [file join $RUN_DIR logs]
+file mkdir $REPORT_DIR $OUT_DIR $LOG_DIR
+foreach subdir {elaboration timing qor messages} {
+  file mkdir [file join $REPORT_DIR $subdir]
+}
+
+puts "================================================================"
+puts "SPADMIC matrix-top OOC Genus"
+puts "Block: $BLOCK_NAME"
+puts "Top module: $TOP_MODULE"
+puts "Run directory: $RUN_DIR"
+puts "================================================================"
+
+# Reuse the verified XH018 path discovery from the MPTDC collateral, but keep
+# this run typical-only and separate from MPTDC signoff.
+set design(project_root) $MPTDC_ROOT
+source [file join $MPTDC_ROOT syn libraries libraries.xh018.tcl]
+source [file join $MPTDC_ROOT syn libraries libraries.xh018-stdcells.tcl]
+
+if {[info exists tech_files(ALL_TC_LIBS)] && [llength $tech_files(ALL_TC_LIBS)] > 0} {
+  puts "INFO: reading typical Liberty files: $tech_files(ALL_TC_LIBS)"
+  read_libs $tech_files(ALL_TC_LIBS)
+} else {
+  puts stderr "ERROR: no typical Liberty files were found"
+  exit 3
+}
+
+if {[info exists tech_files(ALL_LEFS)] && [llength $tech_files(ALL_LEFS)] > 0} {
+  set available_lefs [list]
+  foreach lef $tech_files(ALL_LEFS) {
+    if {[file exists $lef]} {
+      lappend available_lefs $lef
+    } else {
+      puts "WARN: LEF missing, not loaded: $lef"
+    }
+  }
+  if {[llength $available_lefs] > 0} {
+    catch {read_physical -lef $available_lefs} lef_result
+    puts "INFO: read_physical result: $lef_result"
+  }
+}
+
+set_db hdl_language sv
+set_db hdl_undriven_signal_value 0
+set_db information_level 7
+
+puts "INFO: reading MPTDC filelist $MPTDC_FILELIST"
+read_hdl -sv -f $MPTDC_FILELIST
+puts "INFO: reading TOP filelist $TOP_FILELIST"
+read_hdl -sv -f $TOP_FILELIST
+
+puts "INFO: elaborating $TOP_MODULE"
+if {[catch {elaborate $TOP_MODULE} elab_err]} {
+  set fh [open [file join $REPORT_DIR elaboration check_design_post_elab.rpt] w]
+  puts $fh "ELABORATION_FAILED"
+  puts $fh $elab_err
+  close $fh
+  puts stderr "ERROR: elaboration failed: $elab_err"
+  exit 4
+}
+
+current_design $TOP_MODULE
+
+if {[catch {read_sdc $COMMON_SDC} sdc_err]} {
+  puts stderr "ERROR: read_sdc failed: $sdc_err"
+  exit 5
+}
+
+if {[catch {check_design -unresolved} unresolved_err]} {
+  set fh [open [file join $REPORT_DIR elaboration check_design_post_elab.rpt] w]
+  puts $fh "CHECK_DESIGN_UNRESOLVED_FAILED"
+  puts $fh $unresolved_err
+  close $fh
+  puts stderr "ERROR: check_design -unresolved failed: $unresolved_err"
+  exit 6
+}
+
+run_report {check_design -all} [file join $REPORT_DIR elaboration check_design_post_elab.rpt] 1
+run_report {check_timing_intent -verbose} [file join $REPORT_DIR timing check_timing_intent.rpt]
+run_report {report_clocks} [file join $REPORT_DIR timing report_clocks.rpt]
+run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_pre_synth.rpt]
+
+if {[catch {syn_generic} generic_err]} {
+  puts stderr "ERROR: syn_generic failed: $generic_err"
+  exit 7
+}
+run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_post_generic.rpt]
+
+if {[catch {syn_map} map_err]} {
+  puts stderr "ERROR: syn_map failed: $map_err"
+  exit 8
+}
+run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_post_map.rpt]
+
+if {[catch {syn_opt} opt_err]} {
+  puts stderr "ERROR: syn_opt failed: $opt_err"
+  exit 9
+}
+run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_post_opt.rpt]
+
+run_report {report_qor} [file join $REPORT_DIR qor report_qor.rpt]
+run_report {report_area} [file join $REPORT_DIR qor report_area.rpt]
+run_report {report_area -hierarchical} [file join $REPORT_DIR qor report_area_hierarchy.rpt]
+run_report {report_design_rules} [file join $REPORT_DIR qor report_design_rules.rpt]
+run_report {report_messages} [file join $REPORT_DIR messages report_messages.rpt]
+classify_reports $RUN_DIR
+
+if {[catch {write_hdl > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.v]} write_hdl_err]} {
+  puts "WARN: write_hdl failed: $write_hdl_err"
+}
+if {[catch {write_sdc > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.sdc]} write_sdc_err]} {
+  puts "WARN: write_sdc failed: $write_sdc_err"
+}
+if {[catch {write_sdf -nonegchecks -edges check_edge > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.sdf]} write_sdf_err]} {
+  puts "WARN: write_sdf failed: $write_sdf_err"
+}
+
+set summary [open [file join $RUN_DIR SUMMARY.md] w]
+puts $summary "# Genus OOC Block Summary"
+puts $summary ""
+puts $summary "- Block: `$BLOCK_NAME`"
+puts $summary "- Top module: `$TOP_MODULE`"
+puts $summary "- Run directory: `$RUN_DIR`"
+puts $summary "- Status: completed tool flow; review reports before claiming closure"
+puts $summary "- Signoff: non-signoff, typical-only feasibility"
+puts $summary ""
+puts $summary "## Required Reports"
+foreach rel {
+  reports/elaboration/check_design_post_elab.rpt
+  reports/timing/check_timing_intent.rpt
+  reports/timing/report_clocks.rpt
+  reports/timing/report_timing_pre_synth.rpt
+  reports/timing/report_timing_post_generic.rpt
+  reports/timing/report_timing_post_map.rpt
+  reports/timing/report_timing_post_opt.rpt
+  reports/qor/report_qor.rpt
+  reports/qor/report_area.rpt
+  reports/qor/report_area_hierarchy.rpt
+  reports/qor/report_design_rules.rpt
+  reports/messages/report_messages.rpt
+  reports/messages/warning_classification.rpt
+} {
+  if {[file exists [file join $RUN_DIR $rel]]} {
+    puts $summary "- present: `$rel`"
+  } else {
+    puts $summary "- missing: `$rel`"
+  }
+}
+close $summary
+
+puts "INFO: completed $BLOCK_NAME"
+exit 0

@@ -80,12 +80,10 @@ The Genus wrapper must classify at least:
 - max transition, max fanout, and max capacitance warnings;
 - undriven or multiply-driven signals.
 
-## Planned Server Command After Script Creation
+## Server Command
 
-The wrapper script `TOP/syn/scripts/run_genus_all_matrix_ooc.sh` is planned in
-the execution roadmap and is not present at the Phase 1 documentation
-checkpoint. After that script is created and reviewed, the intended server
-command is:
+The wrapper script `TOP/syn/scripts/run_genus_all_matrix_ooc.sh` is now present.
+After review, the intended server command is:
 
 ```bash
 cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
@@ -95,6 +93,10 @@ source /eda/cadence/eda_2023-2024
 export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 bash TOP/syn/scripts/run_genus_all_matrix_ooc.sh "$RUN_ID"
 ```
+
+The script writes all generated files under
+`/sim/ksabra/SPADMIC_work/genus/<RUN_ID>/<BLOCK>/` and fails clearly if Genus is
+not available in `PATH`.
 
 ## Limitations
 
