@@ -14,6 +14,11 @@ BENCHES=(
   tb_spadmic_arb_stress
   tb_spadmic_ddr_tx_unit
   tb_spadmic_i2c_control_plane_unit
+  tb_spadmic_matrix_snapshot_frontend_unit
+  tb_spadmic_position_snapshot_packetizer_unit
+  tb_spadmic_event_bundle_tx_unit
+  tb_spadmic_matrix_top_csr_unit
+  tb_spadmic_top_matrix_v1_shell_unit
   tb_spadmic_ref_stop_qualifier_hold_unit
   tb_spadmic_ref_stop_qualifier_unit
   tb_spadmic_position_deadtime_characterization

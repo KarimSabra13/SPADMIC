@@ -16,6 +16,8 @@ MPTDC_ROOT="$PROJECT_ROOT/MPTDC"
 BUILD_ROOT="$TOP_ROOT/build/tapeout_readiness"
 
 mkdir -p "$BUILD_ROOT"
+export CCACHE_DIR="$BUILD_ROOT/ccache"
+mkdir -p "$CCACHE_DIR"
 
 PASS=0
 FAIL=0
@@ -80,12 +82,13 @@ VERILATOR_WARNINGS=(
 )
 
 run_verilator_top_lint() {
+  local top_module="$1"
   cd "$PROJECT_ROOT" || return 1
   verilator --lint-only --timing "${VERILATOR_WARNINGS[@]}" \
     +define+MPTDC_USE_OSC_MODEL \
     "${MPTDC_FILES[@]}" \
     "${TOP_FILES[@]}" \
-    --top-module spadmic_top_v1
+    --top-module "$top_module"
 }
 
 run_verilator_tb() {
@@ -125,6 +128,11 @@ VERILATOR_TBS=(
   tb_spadmic_arb_modes
   tb_spadmic_arb_stress
   tb_spadmic_i2c_control_plane_unit
+  tb_spadmic_matrix_snapshot_frontend_unit
+  tb_spadmic_position_snapshot_packetizer_unit
+  tb_spadmic_event_bundle_tx_unit
+  tb_spadmic_matrix_top_csr_unit
+  tb_spadmic_top_matrix_v1_shell_unit
   tb_spadmic_top_sequencer_unit
   tb_spadmic_stress_csr
   tb_spadmic_stress_position
@@ -132,7 +140,8 @@ VERILATOR_TBS=(
 )
 
 if command -v verilator >/dev/null 2>&1; then
-  run_step "Verilator full TOP lint" run_verilator_top_lint
+  run_step "Verilator legacy TOP lint" run_verilator_top_lint spadmic_top_v1
+  run_step "Verilator matrix TOP lint" run_verilator_top_lint spadmic_top_matrix_v1
   for tb in "${VERILATOR_TBS[@]}"; do
     run_step "Verilator unit: $tb" run_verilator_tb "$tb"
   done

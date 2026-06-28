@@ -85,6 +85,9 @@ package spadmic_pkg;
   localparam logic [3:0] SPADMIC_REGION_TDC_Y    = 4'h2;
   localparam logic [3:0] SPADMIC_REGION_TDC_Z    = 4'h3;
   localparam logic [3:0] SPADMIC_REGION_POSITION = 4'h4;
+  localparam logic [3:0] SPADMIC_REGION_MATRIX_EVENT = 4'h5;
+  localparam logic [3:0] SPADMIC_REGION_MATRIX_CFG   = 4'h6;
+  localparam logic [3:0] SPADMIC_REGION_TX_DEBUG     = 4'h7;
 
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_ID      = 12'h000;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_VERSION = 12'h004;
@@ -92,6 +95,37 @@ package spadmic_pkg;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_STATUS  = 12'h00C;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_FAULT   = 12'h010;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_GLOBAL_FAULT_COUNT = 12'h014;
+
+  // Matrix-top Phase 3 CSR addresses. These live in the active 12-bit
+  // implementation map while the final externally documented 16-bit regions are
+  // still represented by the upper nibble convention.
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MTOP_CTRL_REQUEST = 12'h020;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MTOP_CTRL_ACTIVE  = 12'h024;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MTOP_STATUS       = 12'h028;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MTOP_FAULT        = 12'h02C;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MTOP_FAULT_COUNT  = 12'h030;
+
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_EVENT_STATUS = 12'h500;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_SNAPSHOT_CFG = 12'h504;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_RESET_CTRL   = 12'h508;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_RESET_STATUS = 12'h50C;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_R_SNAP_LO    = 12'h510;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_R_SNAP_HI    = 12'h514;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_Y_SNAP_LO    = 12'h518;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_Y_SNAP_HI    = 12'h51C;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_B_SNAP_LO    = 12'h520;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_B_SNAP_HI    = 12'h524;
+
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_CMD      = 12'h600;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_STATUS   = 12'h604;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_COL      = 12'h608;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_WDATA_LO = 12'h60C;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_WDATA_HI = 12'h610;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_RDATA_LO = 12'h614;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_RDATA_HI = 12'h618;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_MATRIX_CFG_LAST_ERROR = 12'h61C;
+
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_TX_STATUS = 12'h700;
 
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_CTRL        = 12'h400;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_GAP_CFG     = 12'h404;

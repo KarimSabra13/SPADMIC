@@ -13,6 +13,7 @@ module spadmic_matrix_snapshot_frontend #(
   input  logic              rst_n,
   input  logic              enable_i,
   input  logic              clear_i,
+  input  logic [2:0]        required_direction_mask_i,
   input  logic [LINE_W-1:0] R_i,
   input  logic [LINE_W-1:0] Y_i,
   input  logic [LINE_W-1:0] B_i,
@@ -47,13 +48,26 @@ module spadmic_matrix_snapshot_frontend #(
   logic [15:0] watchdog_count_q;
   logic [1:0]  zero_count_q;
 
-  wire any_activity = (|r_sync3) || (|y_sync3) || (|b_sync3);
-  wire all_nonzero  = (|r_sync3) && (|y_sync3) && (|b_sync3);
-  wire all_zero     = !(|r_sync3) && !(|y_sync3) && !(|b_sync3);
+  wire r_required = required_direction_mask_i[0];
+  wire y_required = required_direction_mask_i[1];
+  wire b_required = required_direction_mask_i[2];
+  wire any_required_activity =
+      (r_required && (|r_sync3)) ||
+      (y_required && (|y_sync3)) ||
+      (b_required && (|b_sync3));
+  wire required_nonzero =
+      (!r_required || (|r_sync3)) &&
+      (!y_required || (|y_sync3)) &&
+      (!b_required || (|b_sync3)) &&
+      (required_direction_mask_i != 3'b000);
+  wire required_zero =
+      (!r_required || !(|r_sync3)) &&
+      (!y_required || !(|y_sync3)) &&
+      (!b_required || !(|b_sync3));
   wire sample_changed =
-      (r_sync3 != sample_R_q) ||
-      (y_sync3 != sample_Y_q) ||
-      (b_sync3 != sample_B_q);
+      (r_required && (r_sync3 != sample_R_q)) ||
+      (y_required && (y_sync3 != sample_Y_q)) ||
+      (b_required && (b_sync3 != sample_B_q));
   wire stable_ready =
       (settle_cycles_i == 16'd0) ||
       (stable_count_q >= (settle_cycles_i - 16'd1));
@@ -132,7 +146,7 @@ module spadmic_matrix_snapshot_frontend #(
             timeout_o        <= 1'b0;
             overlap_o        <= 1'b0;
             reject_o         <= 1'b0;
-            if (all_zero) begin
+            if (required_zero) begin
               if (zero_count_q != 2'd2)
                 zero_count_q <= zero_count_q + 2'd1;
               rearm_ready_o <= (zero_count_q >= 2'd1);
@@ -141,7 +155,7 @@ module spadmic_matrix_snapshot_frontend #(
               rearm_ready_o <= 1'b0;
             end
 
-            if (any_activity) begin
+            if (any_required_activity) begin
               state_q          <= SNAP_SETTLE;
               sample_R_q       <= r_sync3;
               sample_Y_q       <= y_sync3;
@@ -166,12 +180,12 @@ module spadmic_matrix_snapshot_frontend #(
               sample_Y_q     <= y_sync3;
               sample_B_q     <= b_sync3;
               stable_count_q <= '0;
-              overlap_o      <= overlap_o | any_activity;
+              overlap_o      <= overlap_o | any_required_activity;
             end else if (!stable_ready) begin
               stable_count_q <= stable_count_q + 16'd1;
             end
 
-            if (all_nonzero && !sample_changed && stable_ready) begin
+            if (required_nonzero && !sample_changed && stable_ready) begin
               snapshot_R_o     <= r_sync3;
               snapshot_Y_o     <= y_sync3;
               snapshot_B_o     <= b_sync3;
@@ -202,7 +216,7 @@ module spadmic_matrix_snapshot_frontend #(
           end
 
           SNAP_REARM: begin
-            if (all_zero) begin
+            if (required_zero) begin
               if (zero_count_q != 2'd2)
                 zero_count_q <= zero_count_q + 2'd1;
               if (zero_count_q >= 2'd1) begin

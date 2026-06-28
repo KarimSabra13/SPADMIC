@@ -25,6 +25,7 @@ module spadmic_event_coordinator (
   input  logic                         rearm_ready_i,
   output logic                         event_open_o,
   output logic [13:0]                  event_id_o,
+  output logic                         event_id_valid_o,
   output logic [3:0]                   required_packet_mask_o,
   output logic [2:0]                   required_tdc_mask_o,
   output logic [3:0]                   required_reset_ack_mask_o,
@@ -52,6 +53,7 @@ module spadmic_event_coordinator (
   logic [13:0] next_event_id_q;
   logic        event_id_valid_q;
   logic        event_uses_matrix_q;
+  logic        event_rejected_q;
 
   wire mode_uses_matrix =
       (active_mode_i == SPADMIC_MODE_TDC_ONLY) ||
@@ -95,6 +97,7 @@ module spadmic_event_coordinator (
        required_packet_mask_o);
 
   assign event_open_o = (state_q != EVT_IDLE);
+  assign event_id_valid_o = event_id_valid_q;
   assign busy_o       = event_open_o;
   assign idle_o       = (state_q == EVT_IDLE);
   assign accept_enable_o =
@@ -115,6 +118,7 @@ module spadmic_event_coordinator (
       event_id_o                <= '0;
       event_id_valid_q          <= 1'b0;
       event_uses_matrix_q       <= 1'b0;
+      event_rejected_q          <= 1'b0;
       required_packet_mask_o    <= '0;
       required_tdc_mask_o       <= '0;
       required_reset_ack_mask_o <= '0;
@@ -131,6 +135,7 @@ module spadmic_event_coordinator (
           event_mode_q              <= SPADMIC_MODE_DISABLED;
           event_id_valid_q          <= 1'b0;
           event_uses_matrix_q       <= 1'b0;
+          event_rejected_q          <= 1'b0;
           required_packet_mask_o    <= '0;
           required_tdc_mask_o       <= '0;
           required_reset_ack_mask_o <= '0;
@@ -139,9 +144,19 @@ module spadmic_event_coordinator (
             if (!pre_event_resources_ready_i ||
                 (calc_required_packet_mask == 4'b0000)) begin
               rejected_not_ready_o <= 1'b1;
+              if (matrix_event_trigger && raw_snapshot_required_i) begin
+                event_mode_q              <= active_mode_i;
+                event_uses_matrix_q       <= 1'b1;
+                event_rejected_q          <= 1'b1;
+                required_packet_mask_o    <= '0;
+                required_tdc_mask_o       <= '0;
+                required_reset_ack_mask_o <= 4'b1000;
+                state_q                   <= EVT_WAIT_RESET_ACK;
+              end
             end else begin
               event_mode_q              <= active_mode_i;
               event_uses_matrix_q       <= mode_uses_matrix;
+              event_rejected_q          <= 1'b0;
               required_packet_mask_o    <= calc_required_packet_mask;
               required_tdc_mask_o       <= calc_required_tdc_mask;
               required_reset_ack_mask_o <= calc_required_reset_ack_mask;
@@ -158,6 +173,7 @@ module spadmic_event_coordinator (
 
         EVT_WAIT_RESET_ACK: begin
           if ((event_mode_q == SPADMIC_MODE_POSITION_ONLY) &&
+              !event_rejected_q &&
               snapshot_valid_i && !event_id_valid_q) begin
             event_id_o       <= next_event_id_q;
             next_event_id_q  <= next_event_id_q + 14'd1;
@@ -165,12 +181,15 @@ module spadmic_event_coordinator (
           end
 
           if (reset_prerequisites_met &&
-              ((event_mode_q != SPADMIC_MODE_POSITION_ONLY) ||
+              (event_rejected_q ||
+               (event_mode_q != SPADMIC_MODE_POSITION_ONLY) ||
                snapshot_valid_i || event_id_valid_q)) begin
             if (auto_reset_enable_i &&
                 (required_reset_ack_mask_o != 4'b0000)) begin
               reset_start_o <= 1'b1;
               state_q       <= EVT_WAIT_RESET_DONE;
+            end else if (event_rejected_q) begin
+              state_q <= EVT_REARM;
             end else begin
               state_q <= EVT_WAIT_PACKETS;
             end
@@ -178,8 +197,12 @@ module spadmic_event_coordinator (
         end
 
         EVT_WAIT_RESET_DONE: begin
-          if (reset_done_i)
-            state_q <= EVT_WAIT_PACKETS;
+          if (reset_done_i) begin
+            if (event_rejected_q)
+              state_q <= EVT_REARM;
+            else
+              state_q <= EVT_WAIT_PACKETS;
+          end
         end
 
         EVT_WAIT_PACKETS: begin

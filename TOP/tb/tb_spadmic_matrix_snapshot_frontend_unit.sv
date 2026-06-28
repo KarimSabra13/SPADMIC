@@ -8,6 +8,7 @@ module tb_spadmic_matrix_snapshot_frontend_unit;
   logic rst_n;
   logic enable;
   logic clear;
+  logic [2:0] required_direction_mask;
   logic [63:0] R;
   logic [63:0] Y;
   logic [63:0] B;
@@ -31,6 +32,7 @@ module tb_spadmic_matrix_snapshot_frontend_unit;
     .rst_n(rst_n),
     .enable_i(enable),
     .clear_i(clear),
+    .required_direction_mask_i(required_direction_mask),
     .R_i(R),
     .Y_i(Y),
     .B_i(B),
@@ -91,6 +93,7 @@ module tb_spadmic_matrix_snapshot_frontend_unit;
     rst_n      = 1'b0;
     enable     = 1'b1;
     clear      = 1'b0;
+    required_direction_mask = 3'b111;
     R          = '0;
     Y          = '0;
     B          = '0;
@@ -129,6 +132,26 @@ module tb_spadmic_matrix_snapshot_frontend_unit;
     check("incomplete image causes timeout", timeout);
     check("timeout snapshot keeps accumulated asserted R", snapshot_R[1]);
     clear_and_rearm();
+
+    required_direction_mask = 3'b101;
+    @(negedge clk_sys);
+    R[7] = 1'b1;
+    B[8] = 1'b1;
+    wait_valid();
+    check("mask-aware snapshot does not require inactive Y", snapshot_valid && !reject);
+    check("mask-aware snapshot captures required R/B", snapshot_R[7] && snapshot_B[8]);
+    check("mask-aware snapshot leaves absent Y zero", snapshot_Y == 64'h0);
+    @(negedge clk_sys);
+    clear = 1'b1;
+    @(negedge clk_sys);
+    clear = 1'b0;
+    R = '0;
+    B = '0;
+    Y[12] = 1'b1;
+    repeat (8) @(posedge clk_sys);
+    #1;
+    check("unrequired Y does not block masked rearm", rearm_ready);
+    Y = '0;
 
     if (fail_count != 0)
       $fatal(1, "tb_spadmic_matrix_snapshot_frontend_unit: %0d failures", fail_count);

@@ -1,6 +1,6 @@
 # Final TOP Reset, Control, And Event Plan
 
-Status: Phase 0 implementation plan. This document supersedes older TOP reset/control assumptions for the matrix-top integration work, but it does not by itself change RTL.
+Status: Phase 6 local implementation and verification status. This document supersedes older TOP reset/control assumptions for the matrix-top integration work.
 
 ## Scope
 
@@ -15,6 +15,34 @@ This plan defines the final v1 control architecture for:
 - reset and power-up behavior.
 
 Protected MPTDC measurement internals are outside this scope.
+
+## Implemented RTL Status
+
+Phase 2/3 added the first matrix-top shell and CSR/I2C endpoint. Phase 4/5/6 connected the first event/output path and local readiness coverage:
+
+- `TOP/rtl/spadmic_top_matrix_v1.sv` exposes the final/provisional chip-level matrix ports, separate `clk_cfg_40m`, calibration inputs, and DDR16 `DATA_L/DATA_H` style boundary.
+- `TOP/rtl/spadmic_matrix_top_csr.sv` implements the new matrix-top CSR endpoint used by `spadmic_top_matrix_v1`.
+- `TOP/rtl/spadmic_top_v1.sv` remains untouched and is not retired.
+- No protected MPTDC internals are modified.
+
+Remaining local limitations:
+
+- BOTH-mode full top event generation still needs a dedicated top-level test.
+- Full directed R/Y/B physical skew campaign is not complete.
+- Cluster packetization remains in the legacy position block and is not yet snapshot-driven.
+- Shared TDC `max_hits` and RO code CSRs are not fully migrated into the matrix-top CSR endpoint.
+
+Validated Phase 2/3 behavior:
+
+- reset-select outputs idle high on global reset;
+- matrix config outputs idle on reset;
+- I2C can read the matrix-top ID;
+- I2C can write/read reset-width and active mode controls;
+- I2C can launch a `WRITE_COLUMN_64` matrix configuration command through the command/status CDC controller;
+- matrix config readback is visible through CSR;
+- position-only events generate selective reset, raw position packets, bundle output, DDR16 output, and safe-idle drain;
+- TDC-only events generate selective reset, real MPTDC wrapper packets for R/Y/B, bundle output, DDR16 output, and safe-idle drain;
+- Verilator readiness now lints both legacy `spadmic_top_v1` and matrix `spadmic_top_matrix_v1`.
 
 ## Explicit Modes
 
@@ -233,3 +261,22 @@ Phase 1 standalone blocks expose status to CSR integration:
 - output pressure status.
 
 Fault bits are sticky W1C in the future CSR implementation. Fault counters saturate.
+
+## Implemented Phase 4/5 RTL Status
+
+The matrix-top shell now contains a first integrated event/output path:
+
+- `spadmic_top_matrix_v1` instantiates the three existing `spadmic_tdc_axis_wrapper` blocks without changing protected MPTDC internals.
+- The R/Y/B START gates are owned by TOP logic before the wrapper input. Before an event, they use the stable pre-event grant; after event open, they use the frozen `required_tdc_mask`.
+- The START gate is one-shot per axis for one physical event. A held matrix line can deliver the first accepted START edge, but the corresponding axis gate closes after TOP-local `tdc_start_seen` is synchronized. This avoids repeated MPTDC conversions while preserving the first-arrival skew.
+- `stop_armed_o` is not used as a pre-event ready signal because it responds to START; using it in the live grant can falsely reject the event at first START. It remains CSR/status-only until a stable wrapper-local acceptance signal is defined.
+- `spadmic_event_coordinator` handles rejected/not-ready matrix activity as cleanup-only flow: it waits for raw snapshot, starts selective reset when enabled, waits for rearm, and emits no normal bundle.
+- `spadmic_position_snapshot_packetizer` builds a 14-word raw position packet from the frozen snapshot. TDC-only remains independent of position packetization.
+- `spadmic_event_bundle_tx` waits for all expected sources, drains only the latched source mask, patches every EOC with the coordinator-owned 14-bit event ID, and emits deterministic R/Y/B/POSITION order.
+- `spadmic_ddr16_tx_pairer` is driven by the bundle stream and receives a bundle-end flush for odd-word padding.
+
+Current limitations:
+
+- Full cluster packetization is still in the legacy position block and is not yet snapshot-driven.
+- Shared TDC max-hits and RO-code CSRs are not fully migrated into the matrix-top CSR endpoint.
+- Position-only and TDC-only top-level flows are verified through the new matrix top shell. BOTH-mode top-level packet generation and the full directed R/Y/B skew campaign remain required.

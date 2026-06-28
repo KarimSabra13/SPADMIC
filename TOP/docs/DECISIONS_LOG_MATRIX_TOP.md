@@ -15,6 +15,19 @@ Status: Phase 0 implementation anchor, planning and documentation first.
 
 The untracked files are user-owned references. They must not be deleted, reformatted, or added to compile filelists unless explicitly approved.
 
+## Phase 2/3 Continuation Snapshot
+
+- Branch: `SPADMIC_test`
+- Base commit before Phase 2/3 edits: `0eb7c84e8b849b930b036f434a6511910c6446bc`
+- Base commit message: `0eb7c84e matrix top phase0 phase1 foundation`
+- Date/time: `2026-06-28T14:16:27+02:00`
+- Working tree at Phase 2/3 start:
+  - `?? ParameterDefs.sv`
+  - `?? multi_ShiftRegisterChain_cfg_v1.sv`
+  - `?? pixel_readout.pdf`
+
+[FROZEN] The root untracked reference files remain user-owned and are not added to the RTL filelists.
+
 ## Source Priority
 
 1. [FROZEN] User decisions in the matrix-top implementation prompts.
@@ -190,16 +203,56 @@ Pin family summary from the CSV:
 - [OBSOLETE RTL] Current event ID tagging is packet-oriented in the output path, not one physical event ID shared across the bundle.
 - [RISK] Position event count width mismatches documentation: RTL uses a small event count while CSR docs describe a wider field.
 - [RISK] Current active docs and some CI/test references are stale and must not be treated as tapeout-complete evidence.
+- [IMPLEMENTED] `TOP/rtl/spadmic_top_matrix_v1.sv` is now the Phase 2 matrix-top shell. It does not replace or retire `TOP/rtl/spadmic_top_v1.sv`.
+- [IMPLEMENTED] The new matrix top exposes `clk_cfg_40m`, R/Y/B matrix event buses, Rz/Yz/Bz reset-select outputs, 44-column Din/Cin/Dout/Cout, calibration inputs, and the DDR16 `DATA_L/DATA_H` style boundary.
+- [IMPLEMENTED] The new matrix top instantiates the Phase 1 snapshot, reset, matrix configuration, OR-tree, event coordinator, DDR16 pairer, I2C slave, I2C bridge, and matrix-top CSR endpoint.
+- [IMPLEMENTED] Matrix snapshot direction qualification is explicit and mask-aware through `required_direction_mask_i`.
+- [IMPLEMENTED] `spadmic_top_matrix_v1` derives the snapshot/event direction mask from active mode:
+  - TDC-only uses `active_axis_mask`.
+  - Position-only uses `3'b111`.
+  - BOTH uses `3'b111`.
+  - Disabled and calibration use `3'b000`.
+- [IMPLEMENTED] `matrix_activity` is masked with the same direction mask, avoiding an unqualified fixed OR/AND across inactive directions.
+- [IMPLEMENTED] The new matrix top now computes `pre_event_resources_ready` from event idle, snapshot/reset/config idle, mode-aware required producer idle/ready state, and output drain state. It no longer holds the grant false after Phase 4/5 integration.
+- [IMPLEMENTED] `TOP/rtl/spadmic_matrix_top_csr.sv` is the Phase 3 matrix-top CSR endpoint for the new shell. It responds to every I2C/CSR transaction directly so the I2C bridge never waits forever after writes.
+- [IMPLEMENTED] Matrix configuration CSR command/parameter writes are rejected unless the top is path-safe and matrix configuration is not busy.
+- [IMPLEMENTED] Matrix configuration command readback remains unchanged after rejected command writes.
+- [IMPLEMENTED] The Phase 3 CSR implementation uses the current active 12-bit internal address bus and adds 0x5xx/0x6xx/0x7xx regions as an incremental step. The final externally documented 16-bit map remains a later widening task.
+- [RISK] Phase 3 does not yet replace the old `spadmic_csr_decoder` path used by `spadmic_top_v1`. That is intentional to avoid breaking the legacy top while the matrix top is being built.
 
 ## Implementation Phases
 
 - [IMPLEMENTED] Phase 0: decision log, final planning docs, floorplan plan, verification/STA/CDC/PNR plan, and Phase 0 review report.
 - [IMPLEMENTED] Phase 1: standalone RTL modules and unit tests.
-- [NOT IMPLEMENTED] Phase 2: `spadmic_top_matrix_v1.sv` shell.
-- [NOT IMPLEMENTED] Phase 3: CSR and I2C integration.
-- [NOT IMPLEMENTED] Phase 4: MPTDC/position/event integration.
-- [NOT IMPLEMENTED] Phase 5: DDR16 and output path integration.
-- [NOT IMPLEMENTED] Phase 6: regression, constraints, and cleanup.
+- [IMPLEMENTED] Phase 2: `spadmic_top_matrix_v1.sv` shell.
+- [IMPLEMENTED] Phase 3: CSR and I2C integration for the new matrix shell.
+- [IMPLEMENTED] Phase 4: MPTDC wrappers, frozen TOP-owned START gating, raw snapshot position packetizer, rejected-event cleanup, and mode-aware event source masks integrated into `spadmic_top_matrix_v1`.
+- [IMPLEMENTED] Phase 5: coordinator-owned bundle TX, one physical event ID per expected packet, DDR16 pairer connection, bundle flush/padding, and TX status visibility integrated into `spadmic_top_matrix_v1`.
+- [IMPLEMENTED] Phase 6: maintained Verilator regression/readiness coverage, CI lint update, docs/review cleanup, and limitations recorded for this implementation scope. Final Xcelium, STA, CDC signoff, PnR, analog matrix, and DDR macro handoff remain deferred.
+
+## Phase 4/5 Implementation Decisions
+
+- [IMPLEMENTED] The protected MPTDC product boundary remains untouched. `mptdc_axis_core`, `mptdc_core`, MPTDC async/ctrl/readout/pd/osc RTL are not edited.
+- [IMPLEMENTED] `spadmic_top_matrix_v1` instantiates three existing `spadmic_tdc_axis_wrapper` instances:
+  - R axis uses legacy X source bit 0.
+  - Y axis uses source bit 1.
+  - B axis uses legacy Z source bit 2.
+- [IMPLEMENTED] Skew-safe normal START gating is TOP-owned and placed before `spad_event_async_i`. The first accepted event uses stable pre-event resources while later arrivals in the same event use the frozen `event_open/required_tdc_mask` context.
+- [IMPLEMENTED] The TOP START gate is one-shot per axis during one physical event. Once the TOP-local synchronized `tdc_start_seen_q[axis]` bit is set, that axis gate is closed until the event ends. This preserves the first R/Y/B arrival edge and prevents repeated MPTDC conversions from matrix lines that remain asserted until selective reset.
+- [IMPLEMENTED] `stop_armed_o` from `spadmic_ref_stop_qualifier` is not used as a pre-event resource grant input. Phase 6 top-level TDC-only simulation showed that it asserts in response to START, so using it in the live pre-grant can falsely turn an accepted event into a cleanup-only rejection. It remains a status signal only until a stable wrapper-local `start_accepted`/`stop_available` contract is defined.
+- [IMPLEMENTED] `tdc_start_seen_q[2:0]` is derived locally in the top from the gated START levels through `clk_sys` synchronization. This is used only for reset prerequisites and CSR status; it is not a chip pin.
+- [IMPLEMENTED] Rejected matrix events now open a bounded cleanup path in `spadmic_event_coordinator`: no normal event ID is allocated, no packet bundle is emitted, but raw snapshot is allowed to trigger selective reset and rearm.
+- [IMPLEMENTED] `spadmic_position_snapshot_packetizer` emits a 14-word raw position packet from the protected matrix snapshot. This makes TDC-only independent of position packetization and gives position-only/BOTH a snapshot consumer without re-detecting async matrix lines.
+- [DEFAULT FOR V1] The new position path exports raw bitmap packets first. Legacy cluster packetization remains in `spadmic_position_block` and is not used by the new matrix top until a later snapshot-driven refactor.
+- [IMPLEMENTED] `spadmic_event_bundle_tx` is a TOP-owned final bundle path. It waits for `bundle_start`, drains only the latched required source mask, patches all EOC words with the coordinator-owned 14-bit event ID, and uses deterministic source order `R, Y, B, POSITION`.
+- [IMPLEMENTED] The legacy `spadmic_correlated_tx` remains unchanged for `spadmic_top_v1`; it is not used by `spadmic_top_matrix_v1` because it increments event IDs per packet and has no bundle barrier.
+- [IMPLEMENTED] DDR16 pairer input is now driven by `spadmic_event_bundle_tx`. `flush_o` is asserted after each bundle so an odd final word is padded on `DATA_H` if needed.
+- [IMPLEMENTED] `safe_idle` for the matrix top is mode-aware. It includes event coordinator, snapshot, reset, matrix configuration, active-mode TDC packet state, active-mode position packet state, bundle TX, and DDR16 pairer state. Inactive TDC or position blocks do not block CSR/config acceptance.
+- [IMPLEMENTED] Pre-event resource grant uses the simplest v1 admission policy: accept only when the previous event/output path is drained and required producers are ready. No mode-dependent free-space reservation FIFO is added because the new bundle path streams directly into the DDR16 pairer.
+- [IMPLEMENTED] Normal TDC-only and BOTH mode CSR writes require axis mask `3'b111`. Partial axis masks remain allowed only in calibration mode.
+- [RISK] Shared TDC `max_hits` and RO code CSR ownership is still not fully exposed in the new matrix-top CSR map. The Phase 4 integration uses safe defaults for wrapper bring-up.
+- [RISK] The matrix-top CSR is still an incremental 12-bit implementation. The final externally documented 16-bit CSR map and shared TDC configuration registers remain Phase 6/next-step work.
+- [RISK] TDC-only packet generation through real MPTDC wrappers is covered in the matrix top shell test. BOTH-mode packet generation and the full directed R/Y/B skew campaign remain required.
 
 ## Review Loop Status
 
@@ -212,6 +265,20 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Verifier Phase 1 review report created at `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE1.md`.
 - [IMPLEMENTED] Builder response to Phase 1 findings recorded in the review report.
 - [VERIFIED] Verifier Phase 1 recheck passed with no remaining findings in scope.
+- [IMPLEMENTED] Builder Phase 2 matrix top shell created at `TOP/rtl/spadmic_top_matrix_v1.sv`.
+- [IMPLEMENTED] Builder Phase 3 matrix-top CSR/I2C endpoint created at `TOP/rtl/spadmic_matrix_top_csr.sv`.
+- [IMPLEMENTED] Builder Phase 2/3 tests created:
+  - `TOP/tb/tb_spadmic_matrix_top_csr_unit.sv`
+  - `TOP/tb/tb_spadmic_top_matrix_v1_shell_unit.sv`
+- [IMPLEMENTED] Builder added mask-aware snapshot coverage to `TOP/tb/tb_spadmic_matrix_snapshot_frontend_unit.sv`.
+- [IMPLEMENTED] Builder Phase 2/3 Verilator tests passed before Verifier review.
+- [IMPLEMENTED] Verifier Phase 2 review report created at `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE2.md`.
+- [IMPLEMENTED] Verifier Phase 3 review report created at `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE3.md`.
+- [VERIFIED] Verifier Phase 2/3 rechecks passed with no remaining BLOCKER, HIGH, MEDIUM, or LOW findings in scope.
+- [VERIFIED] Local `bash TOP/ci/run_tapeout_readiness.sh` passed with 14 pass, 0 fail, and 4 skipped steps caused by missing `xrun` and retired standalone VIP.
+- [IMPLEMENTED] Phase 4 MPTDC, position packet, and final bundle integration are implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE4.md`.
+- [IMPLEMENTED] Phase 5 DDR16 output integration is implemented for the new matrix top shell with limitations recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE5.md`.
+- [VERIFIED] Phase 6 local readiness/review closure is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE6.md`.
 
 ## Affected Files
 
@@ -227,6 +294,23 @@ Phase 0 documentation files:
 - `TOP/docs/17_VERIFICATION_PLAN_MATRIX_TOP.md`
 - `TOP/docs/18_STA_CDC_PNR_PLAN_MATRIX_TOP.md`
 - `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE0.md`
+
+Phase 2/3 RTL files:
+
+- `TOP/rtl/spadmic_matrix_top_csr.sv`
+- `TOP/rtl/spadmic_top_matrix_v1.sv`
+- `TOP/rtl/spadmic_pkg.sv`
+- `TOP/filelist.f`
+
+Phase 2/3 tests:
+
+- `TOP/tb/tb_spadmic_matrix_top_csr_unit.sv`
+- `TOP/tb/tb_spadmic_top_matrix_v1_shell_unit.sv`
+
+Phase 2/3 review reports:
+
+- `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE2.md`
+- `TOP/docs/reviews/REVIEW_MATRIX_TOP_PHASE3.md`
 
 Phase 1 planned standalone RTL/test files:
 

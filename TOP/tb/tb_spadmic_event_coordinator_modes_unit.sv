@@ -24,6 +24,7 @@ module tb_spadmic_event_coordinator_modes_unit;
   logic rearm_ready;
   wire event_open;
   wire [13:0] event_id;
+  wire event_id_valid;
   wire [3:0] required_packet_mask;
   wire [2:0] required_tdc_mask;
   wire [3:0] required_reset_ack_mask;
@@ -59,6 +60,7 @@ module tb_spadmic_event_coordinator_modes_unit;
     .rearm_ready_i(rearm_ready),
     .event_open_o(event_open),
     .event_id_o(event_id),
+    .event_id_valid_o(event_id_valid),
     .required_packet_mask_o(required_packet_mask),
     .required_tdc_mask_o(required_tdc_mask),
     .required_reset_ack_mask_o(required_reset_ack_mask),
@@ -222,7 +224,19 @@ module tb_spadmic_event_coordinator_modes_unit;
     @(posedge clk_sys);
     #1;
     check("not-ready event is rejected", rejected_not_ready);
-    check("not-ready event does not open", !event_open);
+    check("not-ready event opens cleanup only", event_open);
+    check("not-ready cleanup has no normal packet mask", required_packet_mask == 4'b0000);
+    check("not-ready cleanup does not allocate event ID", !event_id_valid);
+    matrix_activity = 1'b0;
+    snapshot_valid = 1'b1;
+    @(posedge clk_sys);
+    #1;
+    check("not-ready cleanup starts selective reset from snapshot", reset_start);
+    pulse_reset_done();
+    rearm_ready = 1'b1;
+    repeat (2) @(posedge clk_sys);
+    #1;
+    check("not-ready cleanup returns idle", idle);
 
     if (fail_count != 0)
       $fatal(1, "tb_spadmic_event_coordinator_modes_unit: %0d failures", fail_count);

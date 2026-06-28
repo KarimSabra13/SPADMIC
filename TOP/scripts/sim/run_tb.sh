@@ -39,6 +39,8 @@ fi
 
 BUILD_DIR="$REPO_ROOT/build/directed/$TB_NAME"
 mkdir -p "$BUILD_DIR"
+export CCACHE_DIR="$BUILD_DIR/ccache"
+mkdir -p "$CCACHE_DIR"
 
 # ── Resolve filelists to absolute paths ────────────────────────
 source "$SCRIPT_DIR/resolve_flist.sh"
