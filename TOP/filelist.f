@@ -10,6 +10,14 @@
 // ── SPADMIC package ──────────────────────────────────────────────
 rtl/spadmic_pkg.sv
 
+// ── Matrix-top standalone Phase 1 blocks ────────────────────────
+rtl/spadmic_matrix_or_tree.sv
+rtl/spadmic_matrix_snapshot_frontend.sv
+rtl/spadmic_matrix_reset_ctrl.sv
+rtl/spadmic_event_coordinator.sv
+rtl/spadmic_ddr16_tx_pairer.sv
+rtl/spadmic_matrix_cfg_ctrl.sv
+
 // ── I2C control plane (from I2C/) ────────────────────────────────
 ../I2C/rtl/spadmic_i2c_slave.sv
 ../I2C/rtl/spadmic_i2c_csr_bridge.sv

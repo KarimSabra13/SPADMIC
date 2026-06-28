@@ -1,0 +1,145 @@
+# Matrix TOP Verification Plan
+
+Status: Phase 0 plan for Phase 1 and later verification.
+
+## Phase 0 Verification
+
+Checks:
+
+- branch, commit, and working-tree status recorded;
+- decision log exists;
+- final docs record frozen mode rules;
+- `clk_cfg_40m` is documented as a separate domain;
+- DDR16 target replaces current 8-bit DDR as final target;
+- `matrice3` floorplan plan uses normalized `ll_*` CSV coordinates;
+- protected MPTDC boundary is documented;
+- stale docs/test references are recorded as risk.
+
+## Unit Tests
+
+### OR64 Tree
+
+- every input bit toggles output;
+- no cross-axis coupling when three instances are used;
+- balanced logic structure is reviewable.
+
+### Snapshot Frontend
+
+- all six R/Y/B arrival orders;
+- all three directions nonzero for valid normal snapshot;
+- late bit before capture restarts settle;
+- incomplete direction watchdog timeout;
+- overlap indication;
+- snapshot frozen after acceptance;
+- rearm after two synchronized all-zero samples;
+- capture-only behavior for TDC-only.
+
+### Reset Controller
+
+- outputs all ones after global reset;
+- width zero disables pulse;
+- width one produces exactly one `clk_sys` cycle;
+- arbitrary N produces exactly N cycles;
+- multi-bit R/Y/B mask drives Cartesian over-reset;
+- mask stable during active reset;
+- async reset releases outputs inactive high;
+- no retry or clear verification.
+
+### Event Coordinator
+
+- TDC-only does not wait for position packet/queue;
+- Position-only does not wait for MPTDC ready/busy/packet;
+- BOTH waits for all active required sources;
+- Calibration ignores matrix activity;
+- masks stable after event open;
+- frozen grant prevents first busy TDC from blocking later skewed STARTs;
+- one event in flight.
+
+### DDR16 Pairer
+
+- two consecutive words produce one pair;
+- older word goes to DATA_L/default low side;
+- idle zeros;
+- reset clears state;
+- busy/empty status correct;
+- odd word behavior follows pair-valid policy and is documented/testable.
+
+### Matrix Configuration Controller
+
+- write column 0;
+- write column 43;
+- read back selected column;
+- global fill 0;
+- global fill 1;
+- invalid column rejected;
+- command while busy rejected;
+- reset aborts operation and clears busy;
+- `clk_sys -> clk_cfg_40m` request toggle cannot be lost;
+- `clk_cfg_40m -> clk_sys` done toggle cannot be lost;
+- no unstable multi-bit bus sampled directly;
+- `Din/Cin` sequence uses `clk_cfg_40m`, not combinational clock gating.
+
+## Integration Tests
+
+- TDC-only event with delayed position queue full: no blockage.
+- Position-only event while MPTDC busy: no blockage.
+- BOTH event all four sources: contiguous bundle.
+- Calibration selected one/two/three axes: no unused axis blockage.
+- Mode transitions every pair of modes while idle.
+- Mode transitions while an event is active drain old-mode resources before commit.
+- Reset during matrix configuration.
+- Reset during event lifecycle.
+- Output pressure stops new event acceptance without losing accepted packets.
+
+## Directed Skew Campaign
+
+Arrival orders:
+
+- R -> Y -> B
+- R -> B -> Y
+- Y -> R -> B
+- Y -> B -> R
+- B -> R -> Y
+- B -> Y -> R
+
+Offsets:
+
+- 0 ns;
+- near `clk_sys` edge;
+- near `clk_ref_40m` edge;
+- small skew;
+- medium skew;
+- near snapshot watchdog;
+- beyond snapshot watchdog.
+
+## Assertions
+
+Use simple simulation assertions where practical:
+
+- at most one active event;
+- active mode stable during event;
+- required masks stable during event;
+- reset mask stable while active;
+- reset pulse exact width;
+- no reset in calibration mode;
+- no TDC dependency in position-only;
+- no position dependency in TDC-only;
+- one event ID per bundle;
+- no source change mid-packet;
+- no new event before prior event closes.
+
+## Static Checks
+
+- lint;
+- CDC/RDC classification;
+- reset recovery/removal review;
+- no unintended latches;
+- no unintended combinational clock gating;
+- no broad false path hiding useful START-tree reporting;
+- SDC coverage for active outputs;
+- synchronizer preservation attributes;
+- OR-tree path reports.
+
+## Tool Limitations To Record
+
+If a simulator or linter is unavailable, the Verifier report must record the exact command attempted and the failure. A missing tool is not a pass.

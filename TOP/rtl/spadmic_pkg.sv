@@ -19,6 +19,10 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_LINE_W      = 64;
   localparam int unsigned SPADMIC_LINE_IDX_W  = $clog2(SPADMIC_LINE_W);
   localparam int unsigned SPADMIC_LINE_COUNT_W = $clog2(SPADMIC_LINE_W + 1);
+  localparam int unsigned SPADMIC_MATRIX_COLUMN_COUNT = 44;
+  localparam int unsigned SPADMIC_MATRIX_COLUMN_IDX_W = $clog2(SPADMIC_MATRIX_COLUMN_COUNT);
+  localparam int unsigned SPADMIC_MATRIX_CFG_BITS_PER_COLUMN = 64;
+  localparam int unsigned SPADMIC_DDR16_PHY_W = 16;
   localparam int unsigned SPADMIC_CSR_ADDR_W  = 12;
   localparam int unsigned SPADMIC_CSR_DATA_W  = mptdc_pkg::CSR_DATA_W;
   localparam int unsigned SPADMIC_EVENT_ID_W  = 14;
@@ -56,6 +60,14 @@ package spadmic_pkg;
     SPADMIC_EXPORT_POSITION_ONLY = 2'd1,
     SPADMIC_EXPORT_BOTH_ACTIVE   = 2'd2
   } spadmic_export_mode_e;
+
+  typedef enum logic [2:0] {
+    SPADMIC_MODE_DISABLED      = 3'd0,
+    SPADMIC_MODE_TDC_ONLY      = 3'd1,
+    SPADMIC_MODE_POSITION_ONLY = 3'd2,
+    SPADMIC_MODE_BOTH          = 3'd3,
+    SPADMIC_MODE_CALIBRATION   = 3'd4
+  } spadmic_operating_mode_e;
 
   typedef enum logic {
     SPADMIC_POS_MODE_CLUSTER = 1'b0,
