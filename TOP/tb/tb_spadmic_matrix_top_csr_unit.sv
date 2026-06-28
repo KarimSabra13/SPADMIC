@@ -67,6 +67,13 @@ module tb_spadmic_matrix_top_csr_unit;
   wire [15:0] watchdog_cycles;
   wire [15:0] reset_width;
   wire snapshot_clear;
+  wire [mptdc_pkg::MAX_HITS_W-1:0] tdc_max_hits;
+  wire [7:0] tdc_ro_slow_code;
+  wire [7:0] tdc_ro_fast_code;
+  wire tdc_soft_reset;
+  wire tdc_fifo_clr;
+  wire [2:0] calib_axis_mask;
+  spadmic_pos_mode_e position_mode;
   wire matrix_cfg_cmd_start;
   wire [2:0] matrix_cfg_cmd_op;
   wire [5:0] matrix_cfg_col_idx;
@@ -133,6 +140,13 @@ module tb_spadmic_matrix_top_csr_unit;
     .watchdog_cycles_o(watchdog_cycles),
     .reset_width_o(reset_width),
     .snapshot_clear_o(snapshot_clear),
+    .tdc_max_hits_o(tdc_max_hits),
+    .tdc_ro_slow_code_o(tdc_ro_slow_code),
+    .tdc_ro_fast_code_o(tdc_ro_fast_code),
+    .tdc_soft_reset_o(tdc_soft_reset),
+    .tdc_fifo_clr_o(tdc_fifo_clr),
+    .calib_axis_mask_o(calib_axis_mask),
+    .position_mode_o(position_mode),
     .matrix_cfg_cmd_start_o(matrix_cfg_cmd_start),
     .matrix_cfg_cmd_op_o(matrix_cfg_cmd_op),
     .matrix_cfg_col_idx_o(matrix_cfg_col_idx),
@@ -246,6 +260,10 @@ module tb_spadmic_matrix_top_csr_unit;
     check("reset active mode disabled", rd[3:1] == SPADMIC_MODE_DISABLED);
     check("reset axis mask defaults all axes", rd[6:4] == 3'b111);
     check("reset auto reset enabled", rd[7]);
+    csr_read_cmd(SPADMIC_CSR_SHARED_TDC_MAX_HITS, rd, 1'b0);
+    check("reset shared max_hits defaults 15", rd[3:0] == 4'd15);
+    csr_read_cmd(SPADMIC_CSR_CALIB_AXIS_MASK, rd, 1'b0);
+    check("reset calibration axis mask defaults all axes", rd[2:0] == 3'b111);
 
     csr_write_cmd(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_POSITION_ONLY, 1'b1},
@@ -279,6 +297,46 @@ module tb_spadmic_matrix_top_csr_unit;
                   {24'h0, 1'b1, 3'b001, SPADMIC_MODE_CALIBRATION, 1'b1},
                   1'b0);
     check("calibration accepts diagnostic partial axis mask", cfg_accept);
+
+    csr_write_cmd(SPADMIC_CSR_CALIB_AXIS_MASK, 32'h0000_0005, 1'b0);
+    check("calibration axis mask write accepted", cfg_accept);
+    check("calibration axis mask updates register", calib_axis_mask == 3'b101);
+    csr_read_cmd(SPADMIC_CSR_CALIB_AXIS_MASK, rd, 1'b0);
+    check("calibration axis mask readback", rd[2:0] == 3'b101);
+    csr_write_cmd(SPADMIC_CSR_MTOP_CTRL_REQUEST,
+                  {24'h0, 1'b1, 3'b111, SPADMIC_MODE_CALIBRATION, 1'b1},
+                  1'b0);
+    check("calibration mode uses calibration mask", active_axis_mask == 3'b101);
+
+    csr_write_cmd(SPADMIC_CSR_SHARED_TDC_MAX_HITS, 32'h0000_0009, 1'b0);
+    check("shared max_hits write accepted", cfg_accept);
+    check("shared max_hits output updates", tdc_max_hits == 4'd9);
+    csr_read_cmd(SPADMIC_CSR_SHARED_TDC_MAX_HITS, rd, 1'b0);
+    check("shared max_hits readback", rd[3:0] == 4'd9);
+
+    csr_write_cmd(SPADMIC_CSR_SHARED_TDC_RO_SLOW, 32'h0000_005A, 1'b0);
+    check("shared slow RO code updates", tdc_ro_slow_code == 8'h5A);
+    csr_write_cmd(SPADMIC_CSR_SHARED_TDC_RO_FAST, 32'h0000_00C3, 1'b0);
+    check("shared fast RO code updates", tdc_ro_fast_code == 8'hC3);
+    csr_read_cmd(SPADMIC_CSR_SHARED_TDC_RO_SLOW, rd, 1'b0);
+    check("shared slow RO readback", rd[7:0] == 8'h5A);
+    csr_read_cmd(SPADMIC_CSR_SHARED_TDC_RO_FAST, rd, 1'b0);
+    check("shared fast RO readback", rd[7:0] == 8'hC3);
+    csr_write_cmd(SPADMIC_CSR_SHARED_TDC_RO_FAST, 32'h0000_0000, 1'b0);
+    check("shared fast RO zero clear/default policy", tdc_ro_fast_code == 8'h00);
+
+    csr_write_cmd(SPADMIC_CSR_SHARED_TDC_CTRL, 32'h0000_0003, 1'b0);
+    check("shared TDC soft reset pulse", tdc_soft_reset);
+    check("shared TDC fifo clear pulse", tdc_fifo_clr);
+    @(posedge clk_sys);
+    #1;
+    check("shared TDC soft reset pulse clears", !tdc_soft_reset);
+    check("shared TDC fifo clear pulse clears", !tdc_fifo_clr);
+
+    csr_write_cmd(SPADMIC_CSR_POSITION_MODE, 32'h0000_0000, 1'b0);
+    check("position mode cluster write accepted", position_mode == SPADMIC_POS_MODE_CLUSTER);
+    csr_write_cmd(SPADMIC_CSR_POSITION_MODE, 32'h0000_0001, 1'b0);
+    check("position mode raw write accepted", position_mode == SPADMIC_POS_MODE_RAW);
 
     csr_write_cmd(SPADMIC_CSR_MATRIX_SNAPSHOT_CFG, 32'h0040_0003, 1'b0);
     check("snapshot settle updated", settle_cycles == 16'd3);
@@ -339,9 +397,19 @@ module tb_spadmic_matrix_top_csr_unit;
     csr_read_cmd(SPADMIC_CSR_MATRIX_CFG_LAST_ERROR, rd, 1'b0);
     check("event reject counter increments", rd[23:8] == 16'd1);
 
-    csr_write_cmd(12'h2A0, 32'hDEAD_BEEF, 1'b1);
+    csr_read_cmd(16'h1000, rd, 1'b1);
+    check("R TDC 0x1000 does not alias global ID", rd != 32'h5350_4D54);
+    csr_read_cmd(16'h2000, rd, 1'b1);
+    check("Y TDC 0x2000 does not alias global ID", rd != 32'h5350_4D54);
+    csr_read_cmd(16'h3000, rd, 1'b1);
+    check("B TDC 0x3000 does not alias global ID", rd != 32'h5350_4D54);
+    csr_read_cmd(SPADMIC_CSR_TX_STATUS, rd, 1'b0);
+    check("TX status valid at full 16-bit 0x7000", rd[1:0] == 2'b01);
+    csr_read_cmd(16'h700C, rd, 1'b1);
+    check("unsupported TX 0x700C reports error instead of aliasing", rd == 32'h0);
+    csr_write_cmd(16'h2A00, 32'hDEAD_BEEF, 1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
-    check("bad address reports bad addr", rd[7:4] == 4'd5);
+    check("bad 16-bit address reports bad addr", rd[7:4] == 4'd5);
 
     csr_write_cmd(SPADMIC_CSR_MTOP_FAULT, 32'h0000_00FF, 1'b0);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);

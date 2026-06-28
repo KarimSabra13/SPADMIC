@@ -68,6 +68,13 @@ module spadmic_matrix_top_csr (
   output logic [15:0]                         watchdog_cycles_o,
   output logic [15:0]                         reset_width_o,
   output logic                                snapshot_clear_o,
+  output logic [mptdc_pkg::MAX_HITS_W-1:0]    tdc_max_hits_o,
+  output logic [7:0]                          tdc_ro_slow_code_o,
+  output logic [7:0]                          tdc_ro_fast_code_o,
+  output logic                                tdc_soft_reset_o,
+  output logic                                tdc_fifo_clr_o,
+  output logic [2:0]                          calib_axis_mask_o,
+  output spadmic_pkg::spadmic_pos_mode_e      position_mode_o,
 
   output logic                                matrix_cfg_cmd_start_o,
   output logic [2:0]                          matrix_cfg_cmd_op_o,
@@ -77,6 +84,7 @@ module spadmic_matrix_top_csr (
   output logic                                cfg_accept_o
 );
   import spadmic_pkg::*;
+  import mptdc_pkg::*;
 
   localparam logic [2:0] OP_WRITE_COLUMN_64 = 3'd1;
   localparam logic [2:0] OP_READ_COLUMN_64  = 3'd2;
@@ -90,6 +98,7 @@ module spadmic_matrix_top_csr (
   localparam logic [3:0] CMD_ERR_PATH_BUSY   = 4'd4;
   localparam logic [3:0] CMD_ERR_BAD_ADDR    = 4'd5;
   localparam logic [3:0] CMD_ERR_BAD_MODE    = 4'd6;
+  localparam logic [3:0] CMD_ERR_BAD_VALUE   = 4'd7;
 
   logic [15:0] fault_count_q;
   logic [15:0] cfg_reject_count_q;
@@ -121,13 +130,14 @@ module spadmic_matrix_top_csr (
 
   function automatic logic mode_axis_valid(
     input spadmic_operating_mode_e mode_value,
-    input logic [2:0] axis_mask
+    input logic [2:0] axis_mask,
+    input logic [2:0] calib_mask
   );
     if ((mode_value == SPADMIC_MODE_TDC_ONLY) ||
         (mode_value == SPADMIC_MODE_BOTH))
       return (axis_mask == 3'b111);
     if (mode_value == SPADMIC_MODE_CALIBRATION)
-      return (axis_mask != 3'b000);
+      return (calib_mask != 3'b000);
     return 1'b1;
   endfunction
 
@@ -164,7 +174,15 @@ module spadmic_matrix_top_csr (
       SPADMIC_CSR_MATRIX_CFG_RDATA_LO,
       SPADMIC_CSR_MATRIX_CFG_RDATA_HI,
       SPADMIC_CSR_MATRIX_CFG_LAST_ERROR,
-      SPADMIC_CSR_TX_STATUS: return 1'b1;
+      SPADMIC_CSR_SHARED_TDC_MAX_HITS,
+      SPADMIC_CSR_SHARED_TDC_RO_SLOW,
+      SPADMIC_CSR_SHARED_TDC_RO_FAST,
+      SPADMIC_CSR_SHARED_TDC_CTRL,
+      SPADMIC_CSR_CALIB_AXIS_MASK,
+      SPADMIC_CSR_POSITION_MODE,
+      SPADMIC_CSR_TX_STATUS,
+      SPADMIC_CSR_OUTPUT_FIFO_STATUS,
+      SPADMIC_CSR_OUTPUT_FIFO_WATERMARKS: return 1'b1;
       default: return 1'b0;
     endcase
   endfunction
@@ -218,6 +236,31 @@ module spadmic_matrix_top_csr (
       SPADMIC_CSR_MTOP_FAULT_COUNT: begin
         rd[15:0]  = fault_count_q;
         rd[31:16] = cfg_reject_count_q;
+      end
+
+      SPADMIC_CSR_SHARED_TDC_MAX_HITS: begin
+        rd[MAX_HITS_W-1:0] = tdc_max_hits_o;
+      end
+
+      SPADMIC_CSR_SHARED_TDC_RO_SLOW: begin
+        rd[7:0] = tdc_ro_slow_code_o;
+      end
+
+      SPADMIC_CSR_SHARED_TDC_RO_FAST: begin
+        rd[7:0] = tdc_ro_fast_code_o;
+      end
+
+      SPADMIC_CSR_SHARED_TDC_CTRL: begin
+        rd[0] = 1'b0;  // soft_reset is a command pulse, not a sticky state.
+        rd[1] = 1'b0;  // fifo_clr is a command pulse, not a sticky state.
+      end
+
+      SPADMIC_CSR_CALIB_AXIS_MASK: begin
+        rd[2:0] = calib_axis_mask_o;
+      end
+
+      SPADMIC_CSR_POSITION_MODE: begin
+        rd[0] = position_mode_o;
       end
 
       SPADMIC_CSR_MATRIX_EVENT_STATUS: begin
@@ -296,6 +339,16 @@ module spadmic_matrix_top_csr (
         rd[5] = position_packet_drop_i;
       end
 
+      SPADMIC_CSR_OUTPUT_FIFO_STATUS: begin
+        rd[0] = ddr_empty_i;
+        rd[1] = ddr_busy_i;
+      end
+
+      SPADMIC_CSR_OUTPUT_FIFO_WATERMARKS: begin
+        rd[15:0]  = 16'(SPADMIC_MAX_EVENT_BUNDLE_WORDS);
+        rd[31:16] = 16'(SPADMIC_OUTPUT_FIFO_DEPTH);
+      end
+
       default: rd = '0;
     endcase
 
@@ -319,6 +372,13 @@ module spadmic_matrix_top_csr (
       watchdog_cycles_o       <= 16'd64;
       reset_width_o           <= 16'd0;
       snapshot_clear_o        <= 1'b0;
+      tdc_max_hits_o          <= MAX_HITS_W'(MAX_HITS);
+      tdc_ro_slow_code_o      <= 8'h00;
+      tdc_ro_fast_code_o      <= 8'h00;
+      tdc_soft_reset_o        <= 1'b0;
+      tdc_fifo_clr_o          <= 1'b0;
+      calib_axis_mask_o       <= 3'b111;
+      position_mode_o         <= SPADMIC_POS_MODE_RAW;
       matrix_cfg_cmd_start_o  <= 1'b0;
       matrix_cfg_cmd_op_o     <= OP_WRITE_COLUMN_64;
       matrix_cfg_cmd_op_q     <= OP_WRITE_COLUMN_64;
@@ -348,6 +408,8 @@ module spadmic_matrix_top_csr (
       csr_rdata_o            <= '0;
       csr_err_o              <= 1'b0;
       snapshot_clear_o       <= 1'b0;
+      tdc_soft_reset_o       <= 1'b0;
+      tdc_fifo_clr_o         <= 1'b0;
       matrix_cfg_cmd_start_o <= 1'b0;
       cfg_accept_o           <= 1'b0;
       fault_this_cycle       = 1'b0;
@@ -377,7 +439,7 @@ module spadmic_matrix_top_csr (
           case (csr_addr_i)
             SPADMIC_CSR_MTOP_CTRL_REQUEST: begin
               if (!mode_value_valid(csr_wdata_i[3:1]) ||
-                  !mode_axis_valid(next_mode, next_axis_mask)) begin
+                  !mode_axis_valid(next_mode, next_axis_mask, calib_axis_mask_o)) begin
                 write_error      = 1'b1;
                 write_error_code = CMD_ERR_BAD_MODE;
               end else if (!ctrl_safe_to_commit) begin
@@ -387,10 +449,80 @@ module spadmic_matrix_top_csr (
                 global_enable_o       <= csr_wdata_i[0];
                 requested_mode_o      <= next_mode;
                 active_mode_o         <= next_mode;
-                requested_axis_mask_o <= next_axis_mask;
-                active_axis_mask_o    <= next_axis_mask;
+                requested_axis_mask_o <= (next_mode == SPADMIC_MODE_CALIBRATION)
+                                       ? calib_axis_mask_o : next_axis_mask;
+                active_axis_mask_o    <= (next_mode == SPADMIC_MODE_CALIBRATION)
+                                       ? calib_axis_mask_o : next_axis_mask;
                 auto_reset_enable_o   <= csr_wdata_i[7];
                 cfg_accept_o          <= 1'b1;
+              end
+            end
+
+            SPADMIC_CSR_SHARED_TDC_MAX_HITS: begin
+              if (!ctrl_safe_to_commit) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_PATH_BUSY;
+              end else begin
+                tdc_max_hits_o <= MAX_HITS_W'(csr_wdata_i[MAX_HITS_W-1:0]);
+                cfg_accept_o   <= 1'b1;
+              end
+            end
+
+            SPADMIC_CSR_SHARED_TDC_RO_SLOW: begin
+              if (!ctrl_safe_to_commit) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_PATH_BUSY;
+              end else begin
+                tdc_ro_slow_code_o <= csr_wdata_i[7:0];
+                cfg_accept_o       <= 1'b1;
+              end
+            end
+
+            SPADMIC_CSR_SHARED_TDC_RO_FAST: begin
+              if (!ctrl_safe_to_commit) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_PATH_BUSY;
+              end else begin
+                tdc_ro_fast_code_o <= csr_wdata_i[7:0];
+                cfg_accept_o       <= 1'b1;
+              end
+            end
+
+            SPADMIC_CSR_SHARED_TDC_CTRL: begin
+              if (!ctrl_safe_to_commit) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_PATH_BUSY;
+              end else begin
+                tdc_soft_reset_o <= csr_wdata_i[0];
+                tdc_fifo_clr_o   <= csr_wdata_i[1];
+                cfg_accept_o     <= |csr_wdata_i[1:0];
+              end
+            end
+
+            SPADMIC_CSR_CALIB_AXIS_MASK: begin
+              if (!ctrl_safe_to_commit) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_PATH_BUSY;
+              end else if (csr_wdata_i[2:0] == 3'b000) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_BAD_VALUE;
+              end else begin
+                calib_axis_mask_o <= csr_wdata_i[2:0];
+                if (active_mode_o == SPADMIC_MODE_CALIBRATION) begin
+                  requested_axis_mask_o <= csr_wdata_i[2:0];
+                  active_axis_mask_o    <= csr_wdata_i[2:0];
+                end
+                cfg_accept_o <= 1'b1;
+              end
+            end
+
+            SPADMIC_CSR_POSITION_MODE: begin
+              if (!ctrl_safe_to_commit) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_PATH_BUSY;
+              end else begin
+                position_mode_o <= spadmic_pos_mode_e'(csr_wdata_i[0]);
+                cfg_accept_o    <= 1'b1;
               end
             end
 

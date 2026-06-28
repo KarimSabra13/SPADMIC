@@ -1,6 +1,6 @@
 # Final CSR Map Proposal
 
-Status: Phase 3 proposal plus first implemented matrix-top CSR subset.
+Status: CSR16 implementation proposal plus active matrix-top CSR subset.
 
 ## Control-Plane Rules
 
@@ -15,41 +15,50 @@ Status: Phase 3 proposal plus first implemented matrix-top CSR subset.
 - Safe reads while busy are allowed.
 - Fault bits are W1C. Fault counters saturate. Normal event counters may wrap.
 
-Current RTL warning:
+Current RTL status:
 
-- Active RTL still uses a 12-bit CSR address width in `TOP/rtl/spadmic_pkg.sv`, `TOP/rtl/spadmic_csr_decoder.sv`, and the I2C slave pointer storage.
-- The 16-bit map below is the final target.
-- Phase 3 has implemented a new matrix-top CSR endpoint at `TOP/rtl/spadmic_matrix_top_csr.sv`, but it deliberately keeps the current active 12-bit internal CSR width to avoid destabilizing the old top.
-- Therefore the new matrix top currently decodes `0x0xx`, `0x5xx`, `0x6xx`, and `0x7xx` offsets. The final external `0x0000-0x7FFF` map still requires a later CSR/I2C address-width migration.
-- `TOP/rtl/spadmic_top_v1.sv` still uses the legacy decoder path. The new implementation is scoped to `TOP/rtl/spadmic_top_matrix_v1.sv`.
+- `TOP/rtl/spadmic_pkg.sv` now defines `SPADMIC_CSR_ADDR_W = 16`.
+- `I2C/rtl/spadmic_i2c_slave.sv` now preserves the complete 16-bit external register pointer.
+- `TOP/rtl/spadmic_matrix_top_csr.sv` decodes the active matrix-top CSR subset using full 16-bit addresses.
+- `TOP/rtl/spadmic_top_matrix_v1.sv` is the active target for this CSR16 migration.
+- `TOP/rtl/spadmic_top_v1.sv` remains protected and is not the matrix-top implementation target.
+- `TOP/rtl/spadmic_csr_decoder.sv` is still the legacy top decoder and still has local legacy assumptions. Any legacy-top CSR migration must be a separate approved change.
 
-## Phase 3 Implemented 12-Bit Matrix-Top CSR Subset
+## Implemented Matrix-Top CSR16 Subset
 
-This table is the implemented subset for the new matrix top shell. It uses the low 12 address bits visible today through `spadmic_i2c_slave`.
+This table is the implemented subset for the new matrix top shell. Registers not listed here remain planned or reserved.
 
 | Address | Name | Access | Reset | Implemented behavior |
 | --- | --- | --- | --- | --- |
-| `0x000` | `GLOBAL_ID` | RO | `0x5350_4D54` | matrix-top ID `"SPMT"` |
-| `0x004` | `GLOBAL_VERSION` | RO | `0x0005_0000` | matrix-top shell version |
-| `0x020` | `MTOP_CTRL_REQUEST` | RW | disabled, axes `111`, auto-reset `1` | global enable, requested/active mode, axis mask, auto reset; writes accepted only when safe idle |
-| `0x024` | `MTOP_CTRL_ACTIVE` | RO | disabled | active mode/control image |
-| `0x028` | `MTOP_STATUS` | RO | `0` | safe idle, event/config/snapshot/reset/DDR status, current event ID |
-| `0x02C` | `MTOP_FAULT` | W1C/RO | `0` | sticky faults and last CSR error code |
-| `0x030` | `MTOP_FAULT_COUNT` | RO | `0` | saturating global fault count and config reject count |
-| `0x500` | `MATRIX_EVENT_STATUS` | RW/RO | `0` | read masks/event ID; write bit 0 pulses snapshot clear |
-| `0x504` | `MATRIX_SNAPSHOT_CFG` | RW | settle `2`, watchdog `64` | settle cycles `[15:0]`, watchdog cycles `[31:16]`; safe-idle write only |
-| `0x508` | `MATRIX_RESET_CTRL` | RW | width `0`, auto-reset `1` | reset width `[15:0]`, auto-reset bit 16; rejected while event/reset busy |
-| `0x50C` | `MATRIX_RESET_STATUS` | RO | `0` | reset/snapshot status and disabled-reset counter |
-| `0x510-0x524` | `MATRIX_*_SNAP_*` | RO | `0` | last raw R/Y/B snapshots |
-| `0x600` | `MATRIX_CFG_CMD` | RW/command | op `WRITE_COLUMN_64` | bit 0 START, bits `[3:1]` opcode; busy/invalid ops rejected in CSR |
-| `0x604` | `MATRIX_CFG_STATUS` | RO | `0` | busy, done, error, last error, readback valid, cfg valid |
-| `0x608` | `MATRIX_CFG_COL` | RW | `0` | selected column 0..43; invalid column rejected |
-| `0x60C` | `MATRIX_CFG_WDATA_LO` | RW | `0` | write data `[31:0]`; rejected while config busy |
-| `0x610` | `MATRIX_CFG_WDATA_HI` | RW | `0` | write data `[63:32]`; rejected while config busy |
-| `0x614` | `MATRIX_CFG_RDATA_LO` | RO | `0` | config readback `[31:0]` |
-| `0x618` | `MATRIX_CFG_RDATA_HI` | RO | `0` | config readback `[63:32]` |
-| `0x61C` | `MATRIX_CFG_LAST_ERROR` | RO | `0` | matrix config last error, CSR last error, event reject count |
-| `0x700` | `TX_STATUS` | RO | `empty` | DDR16 pairer empty/busy/pair/padded status |
+| `0x0000` | `GLOBAL_ID` | RO | `0x5350_4D54` | matrix-top ID `"SPMT"` |
+| `0x0004` | `GLOBAL_VERSION` | RO | `0x0005_0000` | matrix-top shell version |
+| `0x0008` | `MTOP_CTRL_REQUEST` | RW | disabled, axes `111`, auto-reset `1` | global enable, requested/active mode, normal axis mask, auto reset; writes accepted only when safe idle |
+| `0x000C` | `MTOP_CTRL_ACTIVE` | RO | disabled | active mode/control image |
+| `0x0010` | `MTOP_STATUS` | RO | `0` | safe idle, event/config/snapshot/reset/DDR status, current event ID |
+| `0x0014` | `MTOP_FAULT` | W1C/RO | `0` | sticky faults and last CSR error code |
+| `0x0018` | `MTOP_FAULT_COUNT` | RO | `0` | saturating global fault count and config reject count |
+| `0x0020` | `SHARED_TDC_MAX_HITS` | RW | `15` | shared programmable MPTDC max-hits value broadcast to all three wrappers |
+| `0x0024` | `SHARED_TDC_RO_SLOW_CODE` | RW | `0` | shared slow RO code broadcast to all three wrappers |
+| `0x0028` | `SHARED_TDC_RO_FAST_CODE` | RW | `0` | shared fast RO code broadcast to all three wrappers |
+| `0x002C` | `SHARED_TDC_CTRL` | WO/command | `0` | bit 0 soft reset pulse, bit 1 FIFO clear pulse; command accepted only at safe idle |
+| `0x0030` | `CALIB_AXIS_MASK` | RW | `3'b111` | nonzero calibration-only required axis mask |
+| `0x4000` | `POSITION_MODE` | RW | raw | raw/cluster mode request placeholder; final cluster integration is Phase 4 work |
+| `0x5000` | `MATRIX_EVENT_STATUS` | RW/RO | `0` | read masks/event ID; write bit 0 pulses snapshot clear |
+| `0x5004` | `MATRIX_SNAPSHOT_CFG` | RW | settle `2`, watchdog `64` | settle cycles `[15:0]`, watchdog cycles `[31:16]`; safe-idle write only |
+| `0x5008` | `MATRIX_RESET_CTRL` | RW | width `0`, auto-reset `1` | reset width `[15:0]`, auto-reset bit 16; rejected while event/reset busy |
+| `0x500C` | `MATRIX_RESET_STATUS` | RO | `0` | reset/snapshot status and disabled-reset counter |
+| `0x5010-0x5024` | `MATRIX_*_SNAP_*` | RO | `0` | last raw R/Y/B snapshots |
+| `0x6000` | `MATRIX_CFG_CMD` | RW/command | op `WRITE_COLUMN_64` | bit 0 START, bits `[3:1]` opcode; busy/invalid ops rejected in CSR |
+| `0x6004` | `MATRIX_CFG_STATUS` | RO | `0` | busy, done, error, last error, readback valid, cfg valid |
+| `0x6008` | `MATRIX_CFG_COL` | RW | `0` | selected column 0..43; invalid column rejected |
+| `0x600C` | `MATRIX_CFG_WDATA_LO` | RW | `0` | write data `[31:0]`; rejected while config busy |
+| `0x6010` | `MATRIX_CFG_WDATA_HI` | RW | `0` | write data `[63:32]`; rejected while config busy |
+| `0x6014` | `MATRIX_CFG_RDATA_LO` | RO | `0` | config readback `[31:0]`; true Cout-based readback remains Phase 5 work |
+| `0x6018` | `MATRIX_CFG_RDATA_HI` | RO | `0` | config readback `[63:32]`; true Cout-based readback remains Phase 5 work |
+| `0x601C` | `MATRIX_CFG_LAST_ERROR` | RO | `0` | matrix config last error, CSR last error, event reject count |
+| `0x7000` | `TX_STATUS` | RO | `empty` | DDR16 pairer empty/busy/pair/padded status |
+| `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `empty` | placeholder until the Phase 6 FIFO is inserted |
+| `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | `MAX_EVENT_BUNDLE_WORDS=128`, `OUTPUT_FIFO_DEPTH=512` |
 
 Implemented command error codes in `MTOP_FAULT[7:4]`:
 
@@ -62,18 +71,27 @@ Implemented command error codes in `MTOP_FAULT[7:4]`:
 | `4` | path not safe/idle for requested write |
 | `5` | unsupported address |
 | `6` | invalid mode or illegal axis mask |
+| `7` | invalid value |
 
-Phase 4/5 additions in the active 12-bit implementation:
+Phase 4/5 additions in the active implementation:
 
 - `MTOP_CTRL_REQUEST` rejects partial axis masks for normal `TDC_ONLY` and `BOTH` modes. Those modes require `axis_mask=3'b111`.
-- Partial axis masks remain legal in `CALIBRATION` mode.
+- Partial axis masks remain legal only through `CALIB_AXIS_MASK` in `CALIBRATION` mode.
 - `TX_STATUS[4]` exposes bundle missing-source error.
 - `TX_STATUS[5]` exposes raw position packetizer drop.
 - `MATRIX_EVENT_STATUS[7:4]` reports the union of currently pending sources and bundle-completed sources.
 
+Shared TDC configuration notes:
+
+- One shared `max_hits`, one shared slow RO code, and one shared fast RO code feed all three MPTDC wrappers in `TOP/rtl/spadmic_top_matrix_v1.sv`.
+- `max_hits` defaults to 15 and remains programmable through CSR/I2C.
+- RO code `8'h00` is the reset/default value and may be used by software as the simplest clear policy.
+- The exact RO code to frequency transfer function is not known in this repository state. The architectural target is approximately 700 MHz based on MPTDC documentation/evidence, but this CSR map does not claim any exact code-frequency equation.
+
 Implemented tests:
 
 - `TOP/tb/tb_spadmic_matrix_top_csr_unit.sv`
+- `TOP/tb/tb_spadmic_i2c_control_plane_unit.sv`
 - `TOP/tb/tb_spadmic_top_matrix_v1_shell_unit.sv`
 
 ## Address Regions
@@ -95,41 +113,34 @@ Unsupported addresses should return a clean target error if simple. They should 
 
 | Address | Name | Access | Reset | Fields |
 | --- | --- | --- | --- | --- |
-| `0x0000` | `GLOBAL_ID` | RO | implementation-defined | project/magic ID |
-| `0x0004` | `GLOBAL_VERSION` | RO | implementation-defined | major/minor/patch/build |
-| `0x0008` | `FEATURE_DISCOVERY` | RO | implementation-defined | mode bits, DDR16 present, matrix cfg present, CSR-only errors |
-| `0x000C` | `GEOMETRY` | RO | `44/64` encoded | columns=44, lines=64, cfg_bits_per_col=64 |
-| `0x0010` | `GLOBAL_CTRL_REQUEST` | RW | `0` | requested mode, requested enable, calibration axis mask, diagnostic axis mask |
-| `0x0014` | `GLOBAL_CTRL_ACTIVE` | RO | `0` | active mode, active enable, active masks |
-| `0x0018` | `GLOBAL_STATUS` | RO | `0` | safe_idle, cfg_accept, transition_busy, path_idle |
-| `0x001C` | `GLOBAL_FAULT_STICKY` | W1C/RO | `0` | sticky global faults |
-| `0x0020` | `LAST_CMD_ERROR` | W1C/RO | `0` | last rejected command/error code |
-| `0x0024` | `GLOBAL_FAULT_COUNT` | RO | `0` | saturating fault count |
+| `0x0000` | `GLOBAL_ID` | RO | `0x5350_4D54` | matrix-top project/magic ID |
+| `0x0004` | `GLOBAL_VERSION` | RO | `0x0005_0000` | matrix-top shell version |
+| `0x0008` | `MTOP_CTRL_REQUEST` | RW | disabled, axes `111`, auto-reset `1` | global enable, requested mode, requested normal axis mask, auto-reset enable |
+| `0x000C` | `MTOP_CTRL_ACTIVE` | RO | disabled, axes `111`, auto-reset `1` | active mode/control image |
+| `0x0010` | `MTOP_STATUS` | RO | `0` | safe idle, event/snapshot/reset/config/output busy, current event ID |
+| `0x0014` | `MTOP_FAULT` | W1C/RO | `0` | sticky faults `[3:0]`, last command error `[7:4]` |
+| `0x0018` | `MTOP_FAULT_COUNT` | RO | `0` | global fault count `[15:0]`, config/event reject count `[31:16]` |
+| `0x001C` | reserved discovery | RO | `0` | planned geometry/feature discovery expansion |
 
-Writes to `GLOBAL_CTRL_REQUEST` are accepted only when the requested value is valid. Active image updates happen only through the mode-safe transition sequencer.
+Writes to `MTOP_CTRL_REQUEST` are accepted only when the requested value is valid and the matrix-top path is safe idle. For v1, rejected writes do not mutate command or mode state.
 
 ## Event Registers
 
 | Address | Name | Access | Reset | Fields |
 | --- | --- | --- | --- | --- |
-| `0x0030` | `EVENT_STATE` | RO | IDLE | coordinator state |
-| `0x0034` | `CURRENT_EVENT_ID` | RO | `0` | bits `[13:0]` current/last event ID |
-| `0x0038` | `REQUIRED_PACKET_MASK` | RO | `0` | `{POSITION,B,Y,R}` |
-| `0x003C` | `COMPLETED_PACKET_MASK` | RO | `0` | completed packet sources |
-| `0x0040` | `REQUIRED_RESET_ACK_MASK` | RO | `0` | `{SNAPSHOT,B,Y,R}` |
-| `0x0044` | `OBSERVED_RESET_ACK_MASK` | RO | `0` | observed reset prerequisites |
-| `0x0048` | `EVENT_REJECT_COUNT` | RO | `0` | saturating rejected/not-ready count |
-| `0x004C` | `EVENT_ACCEPT_COUNT` | RO | `0` | normal accepted event count |
-| `0x0050` | `EVENT_ERROR_STATUS` | W1C/RO | `0` | missing source, incomplete bundle, invalid mode |
+| `0x5000` | `MATRIX_EVENT_STATUS` | RW/RO | `0` | required packet mask, completed/pending packet mask, event ID; write bit 0 clears snapshot status |
+| `0x5010-0x5024` | `LAST_*_SNAP_*` | RO | `0` | last raw R/Y/B snapshot words |
+| planned | expanded event status | RO/W1C | `0` | coordinator state, reset-ack masks, accept/reject counters |
 
 ## Shared TDC Configuration
 
 | Address | Name | Access | Reset | Fields |
 | --- | --- | --- | --- | --- |
-| `0x0060` | `TDC_SHARED_CFG_REQUEST` | RW | implementation-defined | shared max_hits and normal-axis policy |
-| `0x0064` | `TDC_RO_SLOW_CODE_REQUEST` | RW | implementation-defined | shared slow RO code |
-| `0x0068` | `TDC_RO_FAST_CODE_REQUEST` | RW | implementation-defined | shared fast RO code |
-| `0x006C` | `TDC_SHARED_CFG_ACTIVE` | RO | reset default | committed active values |
+| `0x0020` | `SHARED_TDC_MAX_HITS` | RW | `15` | shared max-hits value to all R/Y/B wrappers |
+| `0x0024` | `SHARED_TDC_RO_SLOW_CODE` | RW | `0` | shared slow RO code to all R/Y/B wrappers |
+| `0x0028` | `SHARED_TDC_RO_FAST_CODE` | RW | `0` | shared fast RO code to all R/Y/B wrappers |
+| `0x002C` | `SHARED_TDC_CTRL` | WO/command | `0` | bit 0 shared soft-reset pulse, bit 1 shared FIFO-clear pulse |
+| `0x0030` | `CALIB_AXIS_MASK` | RW | `3'b111` | selected axes used only in calibration mode |
 
 Final TOP presents one shared slow RO code and one shared fast RO code. Per-axis local idle shadows may remain inside wrappers close to MPTDC macros.
 
@@ -165,18 +176,16 @@ The RTL/documentation event-count width mismatch must be corrected during positi
 
 | Address | Name | Access | Reset | Fields |
 | --- | --- | --- | --- | --- |
-| `0x5000` | `MATRIX_RESET_CTRL` | RW | `0` | auto reset enable, status clear |
-| `0x5004` | `MATRIX_RESET_WIDTH` | RW | `0` | 16-bit width in `clk_sys` cycles |
-| `0x5008` | `MATRIX_RESET_STATUS` | W1C/RO | `0` | busy, done, disabled, timeout, invalid image |
-| `0x500C` | `MATRIX_RESET_COUNT` | RO | `0` | completed reset pulse count |
+| `0x5004` | `MATRIX_SNAPSHOT_CFG` | RW | settle `2`, watchdog `64` | settle cycles `[15:0]`, watchdog cycles `[31:16]` |
+| `0x5008` | `MATRIX_RESET_CTRL` | RW | width `0`, auto-reset `1` | 16-bit width in `clk_sys` cycles and auto-reset enable |
+| `0x500C` | `MATRIX_RESET_STATUS` | RO | `0` | snapshot/reset status and disabled-reset count |
 | `0x5010` | `LAST_R_SNAPSHOT_LO` | RO | `0` | R bits `[31:0]` |
 | `0x5014` | `LAST_R_SNAPSHOT_HI` | RO | `0` | R bits `[63:32]` |
 | `0x5018` | `LAST_Y_SNAPSHOT_LO` | RO | `0` | Y bits `[31:0]` |
 | `0x501C` | `LAST_Y_SNAPSHOT_HI` | RO | `0` | Y bits `[63:32]` |
 | `0x5020` | `LAST_B_SNAPSHOT_LO` | RO | `0` | B bits `[31:0]` |
 | `0x5024` | `LAST_B_SNAPSHOT_HI` | RO | `0` | B bits `[63:32]` |
-| `0x5028` | `SNAPSHOT_STATUS` | W1C/RO | `0` | valid, busy, timeout, overlap, rearm_ready |
-| `0x502C` | `SNAPSHOT_COUNTERS` | RO | `0` | snapshot accepted/rejected/timeouts |
+| planned | `SNAPSHOT_COUNTERS` | RO | `0` | snapshot accepted/rejected/timeouts |
 
 If `MATRIX_RESET_WIDTH=0`, automatic selective reset is disabled. In matrix modes this is diagnostic/single-shot behavior unless external/global recovery clears the matrix.
 
@@ -209,12 +218,12 @@ The `clk_sys` side snapshots parameters before toggling the CDC request. The `cl
 | Address | Name | Access | Reset | Fields |
 | --- | --- | --- | --- | --- |
 | `0x7000` | `TX_STATUS` | RO | `0` | output idle, fifo empty/full, ddr pairer empty |
-| `0x7004` | `TX_FIFO_LEVEL` | RO | `0` | logical 16-bit words in output FIFO |
-| `0x7008` | `DDR16_PAIR_STATUS` | RO | `0` | pair valid, half full, empty, busy |
+| `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `0` | placeholder until Phase 6 FIFO insertion |
+| `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | event reservation and FIFO depth |
 | `0x700C` | `TX_FAULT_STICKY` | W1C/RO | `0` | pressure, malformed packet, unsupported odd packet |
 | `0x7010` | `TX_COUNTERS` | RO | `0` | transmitted words/pairs, pressure rejects |
 
-Active Phase 4/5 12-bit `TX_STATUS` layout at `0x700`:
+Active `TX_STATUS` layout at `0x7000`:
 
 | Bits | Field |
 | --- | --- |

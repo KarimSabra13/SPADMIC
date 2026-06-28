@@ -189,7 +189,7 @@ module spadmic_i2c_slave #(
             rx_byte = {rx_shift_q[6:0], sda_sync};
             rx_shift_q <= rx_byte;
             if (bit_idx_q == 3'd0) begin
-              pointer_addr_q <= {rx_byte[3:0], 8'h00};
+              pointer_addr_q <= {rx_byte, 8'h00};
               state_q <= ST_ACK_PTR_HI;
             end else begin
               bit_idx_q <= bit_idx_q - 3'd1;

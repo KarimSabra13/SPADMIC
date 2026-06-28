@@ -78,6 +78,13 @@ module spadmic_top_matrix_v1 (
   wire [15:0] watchdog_cycles;
   wire [15:0] reset_width;
   wire snapshot_clear_csr;
+  wire [MAX_HITS_W-1:0] shared_tdc_max_hits;
+  wire [7:0] shared_tdc_ro_slow_code;
+  wire [7:0] shared_tdc_ro_fast_code;
+  wire shared_tdc_soft_reset;
+  wire shared_tdc_fifo_clr;
+  wire [2:0] calib_axis_mask;
+  spadmic_pos_mode_e position_mode;
   wire cfg_accept;
 
   wire r_matrix_event;
@@ -89,6 +96,7 @@ module spadmic_top_matrix_v1 (
   wire matrix_event_allowed;
   logic [2:0] snapshot_required_direction_mask;
   wire [2:0] matrix_event_vector;
+  wire [2:0] cal_start_vector;
 
   wire snapshot_valid;
   wire [SPADMIC_LINE_W-1:0] snapshot_R;
@@ -220,10 +228,10 @@ module spadmic_top_matrix_v1 (
   assign matrix_event_vector = {b_matrix_event, y_matrix_event, r_matrix_event};
   assign matrix_activity = matrix_event_allowed &&
                            (|(matrix_event_vector & snapshot_required_direction_mask));
+  assign cal_start_vector = {cal_b_start_async_i, cal_y_start_async_i, cal_r_start_async_i};
   assign cal_activity = global_enable &&
                         (active_mode == SPADMIC_MODE_CALIBRATION) &&
-                        (cal_r_start_async_i || cal_y_start_async_i ||
-                         cal_b_start_async_i);
+                        (|(cal_start_vector & active_axis_mask));
 
   assign mode_has_matrix_tdc =
       (active_mode == SPADMIC_MODE_TDC_ONLY) ||
@@ -443,6 +451,13 @@ module spadmic_top_matrix_v1 (
     .watchdog_cycles_o           (watchdog_cycles),
     .reset_width_o               (reset_width),
     .snapshot_clear_o            (snapshot_clear_csr),
+    .tdc_max_hits_o              (shared_tdc_max_hits),
+    .tdc_ro_slow_code_o          (shared_tdc_ro_slow_code),
+    .tdc_ro_fast_code_o          (shared_tdc_ro_fast_code),
+    .tdc_soft_reset_o            (shared_tdc_soft_reset),
+    .tdc_fifo_clr_o              (shared_tdc_fifo_clr),
+    .calib_axis_mask_o           (calib_axis_mask),
+    .position_mode_o             (position_mode),
     .matrix_cfg_cmd_start_o      (matrix_cfg_cmd_start),
     .matrix_cfg_cmd_op_o         (matrix_cfg_cmd_op),
     .matrix_cfg_col_idx_o        (matrix_cfg_col_idx),
@@ -547,11 +562,11 @@ module spadmic_top_matrix_v1 (
     .cal_stop_async_i  (cal_r_stop_async_i),
     .input_sel_i       (tdc_input_sel),
     .conv_arm_i        (tdc_conv_arm[0]),
-    .fifo_clr_i        (1'b0),
-    .soft_reset_i      (1'b0),
-    .max_hits_i        (MAX_HITS_W'(MAX_HITS)),
-    .ro_slow_code_i    (8'h00),
-    .ro_fast_code_i    (8'h00),
+    .fifo_clr_i        (shared_tdc_fifo_clr),
+    .soft_reset_i      (shared_tdc_soft_reset),
+    .max_hits_i        (shared_tdc_max_hits),
+    .ro_slow_code_i    (shared_tdc_ro_slow_code),
+    .ro_fast_code_i    (shared_tdc_ro_fast_code),
     .pkt_valid_o       (tdc_pkt_valid[0]),
     .pkt_ready_i       (tdc_pkt_ready[0]),
     .pkt_data_o        (tdc_pkt_data[0]),
@@ -576,11 +591,11 @@ module spadmic_top_matrix_v1 (
     .cal_stop_async_i  (cal_y_stop_async_i),
     .input_sel_i       (tdc_input_sel),
     .conv_arm_i        (tdc_conv_arm[1]),
-    .fifo_clr_i        (1'b0),
-    .soft_reset_i      (1'b0),
-    .max_hits_i        (MAX_HITS_W'(MAX_HITS)),
-    .ro_slow_code_i    (8'h00),
-    .ro_fast_code_i    (8'h00),
+    .fifo_clr_i        (shared_tdc_fifo_clr),
+    .soft_reset_i      (shared_tdc_soft_reset),
+    .max_hits_i        (shared_tdc_max_hits),
+    .ro_slow_code_i    (shared_tdc_ro_slow_code),
+    .ro_fast_code_i    (shared_tdc_ro_fast_code),
     .pkt_valid_o       (tdc_pkt_valid[1]),
     .pkt_ready_i       (tdc_pkt_ready[1]),
     .pkt_data_o        (tdc_pkt_data[1]),
@@ -605,11 +620,11 @@ module spadmic_top_matrix_v1 (
     .cal_stop_async_i  (cal_b_stop_async_i),
     .input_sel_i       (tdc_input_sel),
     .conv_arm_i        (tdc_conv_arm[2]),
-    .fifo_clr_i        (1'b0),
-    .soft_reset_i      (1'b0),
-    .max_hits_i        (MAX_HITS_W'(MAX_HITS)),
-    .ro_slow_code_i    (8'h00),
-    .ro_fast_code_i    (8'h00),
+    .fifo_clr_i        (shared_tdc_fifo_clr),
+    .soft_reset_i      (shared_tdc_soft_reset),
+    .max_hits_i        (shared_tdc_max_hits),
+    .ro_slow_code_i    (shared_tdc_ro_slow_code),
+    .ro_fast_code_i    (shared_tdc_ro_fast_code),
     .pkt_valid_o       (tdc_pkt_valid[2]),
     .pkt_ready_i       (tdc_pkt_ready[2]),
     .pkt_data_o        (tdc_pkt_data[2]),
@@ -707,7 +722,8 @@ module spadmic_top_matrix_v1 (
       event_accept_enable ^ pos_packet_done ^ pos_packet_drop ^
       bundle_busy ^ bundle_missing_source_error ^ cfg_accept ^
       (|requested_axis_mask) ^ (requested_mode != SPADMIC_MODE_DISABLED) ^
-      (|completed_packet_status_mask);
+      (|completed_packet_status_mask) ^ (|calib_axis_mask) ^
+      (position_mode == SPADMIC_POS_MODE_RAW);
 
 endmodule
 

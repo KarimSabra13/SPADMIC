@@ -270,7 +270,7 @@ module tb_spadmic_i2c_control_plane_unit;
     i2c_write_cmd(16'h0100, 32'hAABB_CCDD);
     check("Write command emitted", txn_valid === 1'b1);
     check("Write command marked write", txn_write === 1'b1);
-    check("Write command captures full TDC_X address", txn_addr === 12'h100);
+    check("Write command captures full TDC_X address", txn_addr === 16'h0100);
     check("Write command preserves 32-bit payload", txn_wdata === 32'hAABB_CCDD);
     clear_txn_valid();
     check("Write command clears after ready", txn_valid === 1'b0);
@@ -278,7 +278,7 @@ module tb_spadmic_i2c_control_plane_unit;
     i2c_begin_read_cmd(16'h0400);
     check("Read command emitted", txn_valid === 1'b1);
     check("Read command marked read", txn_write === 1'b0);
-    check("Read command captures full POSITION address", txn_addr === 12'h400);
+    check("Read command captures full POSITION address", txn_addr === 16'h0400);
     txn_ready     = 1'b1;
     @(posedge clk_sys);
     txn_ready     = 1'b0;
@@ -302,6 +302,11 @@ module tb_spadmic_i2c_control_plane_unit;
     repeat (2) @(posedge clk_sys);
     check("Read command returns 32-bit payload", readback_data === 32'h1234_5678);
     check("Read command clears after ready", txn_valid === 1'b0);
+
+    i2c_write_cmd(16'h7100, 32'h5566_7788);
+    check("Write command preserves full 16-bit high region address", txn_addr === 16'h7100);
+    check("High-region write command preserves payload", txn_wdata === 32'h5566_7788);
+    clear_txn_valid();
 
     $display("========================================");
     $display("I2C CMD PATH: %0d PASS, %0d FAIL out of %0d",

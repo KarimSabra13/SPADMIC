@@ -64,9 +64,9 @@ The untracked files are user-owned references. They must not be deleted, reforma
 
 [IMPLEMENTED] Phase 0 preflight confirmed no local diffs in protected MPTDC internals and no diff in `TOP/rtl/spadmic_top_v1.sv`.
 
-[RISK] Phase 0 preflight confirmed current RTL limitations that must be resolved before ASIC-ready local regression:
-  - [RISK] CSR address width is still 12-bit.
-  - [RISK] Shared TDC max-hits and RO codes are still hardwired in `spadmic_top_matrix_v1`.
+[RISK] Phase 0 preflight limitations and current continuation status:
+  - [IMPLEMENTED] CSR address width is now 16-bit for the matrix-top package/I2C path as of the CSR16 continuation; the legacy top decoder remains outside this target.
+  - [IMPLEMENTED] Shared TDC max-hits and RO codes now come from matrix-top CSR and are wired to the three wrappers.
   - [RISK] Position path in the new top is raw-only.
   - [RISK] Matrix configuration readback is not Cout-based.
   - [RISK] Bundle TX feeds DDR16 pairer directly with no real output FIFO.
@@ -242,7 +242,7 @@ Pin family summary from the CSV:
 - [OBSOLETE RTL] `TOP/rtl/spadmic_top_v1.sv` still exposes scalar async SPAD event pins plus separate `x/y/z_lines_i[63:0]`, not final physical R/Y/B matrix ports.
 - [OBSOLETE RTL] `TOP/rtl/spadmic_top_v1.sv` exports one active-high `spad_matrix_rst_o`, not final Rz/Yz/Bz active-low buses.
 - [OBSOLETE RTL] `TOP/rtl/spadmic_ddr_tx.sv` implements current 8-bit DDR TX and is not the final DDR16 macro boundary.
-- [OBSOLETE RTL] Current CSR address storage/decode is 12-bit in active RTL, while the final external map is 16-bit and reserves regions through `0x7xxx`.
+- [IMPLEMENTED] Current matrix-top CSR address storage/decode is 16-bit. The legacy top decoder still has old-top assumptions and remains outside the matrix-top target.
 - [RISK] Phase 3 must widen CSR address storage/decode and I2C pointer handling before the final `0x0000-0x7FFF` map is reachable.
 - [OBSOLETE RTL] Current event ID tagging is packet-oriented in the output path, not one physical event ID shared across the bundle.
 - [RISK] Position event count width mismatches documentation: RTL uses a small event count while CSR docs describe a wider field.
@@ -261,7 +261,7 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] `TOP/rtl/spadmic_matrix_top_csr.sv` is the Phase 3 matrix-top CSR endpoint for the new shell. It responds to every I2C/CSR transaction directly so the I2C bridge never waits forever after writes.
 - [IMPLEMENTED] Matrix configuration CSR command/parameter writes are rejected unless the top is path-safe and matrix configuration is not busy.
 - [IMPLEMENTED] Matrix configuration command readback remains unchanged after rejected command writes.
-- [IMPLEMENTED] The Phase 3 CSR implementation uses the current active 12-bit internal address bus and adds 0x5xx/0x6xx/0x7xx regions as an incremental step. The final externally documented 16-bit map remains a later widening task.
+- [IMPLEMENTED] The CSR16 continuation supersedes the earlier incremental 12-bit matrix-top CSR step. Active matrix-top registers now use final 16-bit addresses.
 - [RISK] Phase 3 does not yet replace the old `spadmic_csr_decoder` path used by `spadmic_top_v1`. That is intentional to avoid breaking the legacy top while the matrix top is being built.
 
 ## Implementation Phases
@@ -294,9 +294,28 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] `safe_idle` for the matrix top is mode-aware. It includes event coordinator, snapshot, reset, matrix configuration, active-mode TDC packet state, active-mode position packet state, bundle TX, and DDR16 pairer state. Inactive TDC or position blocks do not block CSR/config acceptance.
 - [IMPLEMENTED] Pre-event resource grant uses the simplest v1 admission policy: accept only when the previous event/output path is drained and required producers are ready. No mode-dependent free-space reservation FIFO is added because the new bundle path streams directly into the DDR16 pairer.
 - [IMPLEMENTED] Normal TDC-only and BOTH mode CSR writes require axis mask `3'b111`. Partial axis masks remain allowed only in calibration mode.
-- [RISK] Shared TDC `max_hits` and RO code CSR ownership is still not fully exposed in the new matrix-top CSR map. The Phase 4 integration uses safe defaults for wrapper bring-up.
-- [RISK] The matrix-top CSR is still an incremental 12-bit implementation. The final externally documented 16-bit CSR map and shared TDC configuration registers remain Phase 6/next-step work.
+- [IMPLEMENTED] Shared TDC `max_hits` and RO code CSR ownership is now exposed by the matrix-top CSR and wired to all three wrappers.
+- [IMPLEMENTED] The matrix-top package/I2C/CSR path now uses the final 16-bit address width. The old top decoder remains outside this target.
 - [RISK] TDC-only packet generation through real MPTDC wrappers is covered in the matrix top shell test. BOTH-mode packet generation and the full directed R/Y/B skew campaign remain required.
+
+## CSR16 And Shared TDC Continuation Decisions
+
+- [IMPLEMENTED] The matrix-top CSR address width is now 16 bits through `SPADMIC_CSR_ADDR_W=16` in `TOP/rtl/spadmic_pkg.sv`.
+- [IMPLEMENTED] `I2C/rtl/spadmic_i2c_slave.sv` now preserves the complete 16-bit external pointer high byte. High-region addresses such as `0x7100` are not truncated to a 12-bit alias.
+- [IMPLEMENTED] `TOP/rtl/spadmic_matrix_top_csr.sv` decodes the active matrix-top register subset at final 16-bit addresses:
+  - `0x0000-0x0030` for ID/version/mode/fault/shared TDC/calibration controls.
+  - `0x4000` for the position mode request placeholder.
+  - `0x5000-0x5024` for event/snapshot/reset status and snapshots.
+  - `0x6000-0x601C` for matrix configuration command/status/data.
+  - `0x7000-0x7008` for TX/output status and FIFO watermark placeholders.
+- [IMPLEMENTED] Unsupported 16-bit addresses return the CSR bad-address error path instead of silently aliasing to implemented low addresses.
+- [IMPLEMENTED] Shared `max_hits`, shared slow RO code, shared fast RO code, shared soft-reset pulse, and shared FIFO-clear pulse are exposed by matrix-top CSR and wired to all three `spadmic_tdc_axis_wrapper` instances in `TOP/rtl/spadmic_top_matrix_v1.sv`.
+- [DEFAULT FOR V1] `max_hits` resets to 15 and remains programmable through CSR/I2C.
+- [DEFAULT FOR V1] Shared RO code `8'h00` is the reset/default clear value. The exact code-frequency transfer function remains unknown; no exact 700 MHz code mapping is claimed.
+- [IMPLEMENTED] `CALIB_AXIS_MASK` owns partial-axis selection for calibration mode. Normal `TDC_ONLY` and `BOTH` mode requests still require all three axes.
+- [IMPLEMENTED] `POSITION_MODE` is CSR-visible and safe-idle protected. It is not yet connected to a final raw/cluster position implementation; that remains the position integration phase.
+- [RISK] `TOP/rtl/spadmic_csr_decoder.sv` remains a legacy decoder with old-top assumptions. This is accepted because `TOP/rtl/spadmic_top_v1.sv` is protected and not the matrix-top target.
+- [RISK] `OUTPUT_FIFO_STATUS` and `OUTPUT_FIFO_WATERMARKS` are CSR placeholders until the required 512-word output FIFO is inserted.
 
 ## Review Loop Status
 
