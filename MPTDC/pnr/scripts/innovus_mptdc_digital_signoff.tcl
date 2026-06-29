@@ -918,11 +918,16 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_BLOCK_PG_PINS 1
         MPTDC_BLOCK_PG_PIN_LAYER METTP
         MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss
+        MPTDC_BLOCK_PG_PIN_CREATE_MODE on_die
+        MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0
         MPTDC_ENABLE_POST_FILLER_SROUTE 1
+        MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0
+        MPTDC_SROUTE_CONNECT_STRIPE 1
         MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
         MPTDC_REQUIRE_DRC_SAFE_FILLER 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
-        MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc}}
+        MPTDC_ROUTE_GATE_SROUTE_RECOVERY 1
+        MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc} {routeDesign -detail} {ecoRoute -fix_drc}}
         MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 0
         MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 0
     } {
@@ -1720,6 +1725,39 @@ proc mptdc_signoff_try_pg_command {fh label commands} {
     return 0
 }
 
+proc mptdc_signoff_configure_sroute_mode {fh label} {
+    set preserve [expr {[mptdc_signoff_env_truthy MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0] ? "true" : "false"}]
+    set connect_stripe [expr {[mptdc_signoff_env_truthy MPTDC_SROUTE_CONNECT_STRIPE 1] ? "true" : "false"}]
+    set mode_groups [list \
+        [list PRESERVE_EXISTING_ROUTES [list \
+            [list setSrouteMode -preserveExistingRoutes $preserve] \
+            [list setSrouteMode -sroutePreserveExistingRoutes $preserve]]] \
+        [list CONNECT_STRIPE [list \
+            [list setSrouteMode -connectStripe $connect_stripe] \
+            [list setSrouteMode -srouteConnectStripe $connect_stripe]]]]
+
+    puts $fh "${label}_SROUTE_MODE_PRESERVE_EXISTING_ROUTES=$preserve"
+    puts $fh "${label}_SROUTE_MODE_CONNECT_STRIPE=$connect_stripe"
+    foreach group $mode_groups {
+        set suffix [lindex $group 0]
+        set commands [lindex $group 1]
+        set applied 0
+        foreach cmd $commands {
+            puts $fh "${label}_SROUTE_MODE_${suffix}_COMMAND=$cmd"
+            if {![catch {{*}$cmd} err]} {
+                puts $fh "${label}_SROUTE_MODE_${suffix}_STATUS=PASS"
+                set applied 1
+                break
+            }
+            puts $fh "${label}_SROUTE_MODE_${suffix}_ATTEMPT_STATUS=FAIL"
+            puts $fh "${label}_SROUTE_MODE_${suffix}_ATTEMPT_ERROR=$err"
+        }
+        if {!$applied} {
+            puts $fh "${label}_SROUTE_MODE_${suffix}_STATUS=REVIEW_REQUIRED"
+        }
+    }
+}
+
 proc mptdc_signoff_block_pg_pin_specs {} {
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss]]
     switch -- $style {
@@ -1785,12 +1823,31 @@ proc mptdc_signoff_create_one_block_pg_pin {fh net side layer rect width depth} 
     set lly [lindex $rect 1]
     set urx [lindex $rect 2]
     set ury [lindex $rect 3]
-    set commands [list \
-        [list editPin -pin $net -side $side -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
-        [list editPin -pin $net -side $side -layer $layer -spreadType SIDE -pinWidth $width -pinDepth $depth -fixedPin 1] \
-        [list editPin -pin $net -side $side_lc -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
+    set create_mode [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_CREATE_MODE on_die]]
+    puts $fh "BLOCK_PG_PIN_${net}_CREATE_MODE=$create_mode"
+    set on_die_commands [list \
+        [list createPGPin -onDie -net $net -width $width -length $depth] \
+        [list createPGPin -onDie -net $net -width $depth -length $width]]
+    set geom_commands [list \
         [list createPGPin $net -net $net -geom $layer $llx $lly $urx $ury -dir bidi] \
         [list createPGPin $net -net $net -geom $layer $llx $lly $urx $ury]]
+    set editpin_commands [list \
+        [list editPin -pin $net -side $side -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
+        [list editPin -pin $net -side $side -layer $layer -spreadType SIDE -pinWidth $width -pinDepth $depth -fixedPin 1] \
+        [list editPin -pin $net -side $side_lc -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1]]
+    set commands [list]
+    if {$create_mode eq "geom"} {
+        set commands $geom_commands
+    } elseif {$create_mode eq "geom_then_on_die"} {
+        set commands [concat $geom_commands $on_die_commands]
+    } else {
+        set commands [concat $on_die_commands $geom_commands]
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0]} {
+        set commands [concat $commands $editpin_commands]
+    } else {
+        puts $fh "BLOCK_PG_PIN_${net}_EDITPIN_FALLBACK=DISABLED"
+    }
     foreach cmd $commands {
         puts $fh "BLOCK_PG_PIN_${net}_COMMAND=$cmd"
         if {![catch {{*}$cmd} err]} {
@@ -1967,6 +2024,7 @@ proc mptdc_signoff_build_power_grid {} {
     close $fh
     lassign [mptdc_signoff_create_block_pg_pins] block_pin_ok block_pin_rpt
     set fh [open $rpt a]
+    mptdc_signoff_configure_sroute_mode $fh PRE_ROUTE_PG
     set sroute_ok [mptdc_signoff_try_pg_command $fh SROUTE [list \
         [list sroute -connect {corePin blockPin padPin} -nets $nets] \
         [list sroute -nets $nets]]]
@@ -2493,6 +2551,7 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
 
     set fh [open $rpt a]
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POST_FILLER_SROUTE]} {
+        mptdc_signoff_configure_sroute_mode $fh POST_FILLER
         set sroute_ok [mptdc_signoff_try_pg_command $fh POST_FILLER_SROUTE [list \
             [list sroute -connect {corePin blockPin padPin} -nets {VDD VSS}] \
             [list sroute -nets {VDD VSS}]]]
@@ -2743,7 +2802,6 @@ proc mptdc_signoff_set_cell_dont_touch {inst value} {
         if {![catch {set_dont_touch $obj $value}]} { set ok 1 }
         if {![catch {set_db $obj .dont_touch $value}]} { set ok 1 }
     }
-    if {![catch {set_db inst:$inst .dont_touch $value}]} { set ok 1 }
     return $ok
 }
 
@@ -2752,16 +2810,13 @@ proc mptdc_signoff_set_cell_size_ok {inst} {
     set obj [list]
     catch {set obj [get_cells -quiet $inst]}
     if {[mptdc_signoff_collection_count $obj] > 0} {
-        if {![catch {set_dont_touch $obj sizeOk}]} { set ok 1 }
-        if {![catch {set_db $obj .dont_touch sizeOk}]} { set ok 1 }
+        if {![catch {set_db $obj .dont_touch size_ok}]} { set ok 1 }
     }
-    if {![catch {set_db inst:$inst .dont_touch sizeOk}]} { set ok 1 }
     if {!$ok} {
         if {[mptdc_signoff_collection_count $obj] > 0} {
             if {![catch {set_dont_touch $obj false}]} { set ok 1 }
             if {![catch {set_db $obj .dont_touch false}]} { set ok 1 }
         }
-        if {![catch {set_db inst:$inst .dont_touch false}]} { set ok 1 }
     }
     return $ok
 }
@@ -3370,6 +3425,38 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
         return $route_gate
     }
     close $fh
+    if {[lindex $special_bad 0] && [mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 1]} {
+        set fh [open $rpt a]
+        puts $fh "ROUTE_GATE_SROUTE_RECOVERY=ENABLED"
+        puts $fh "ROUTE_GATE_SROUTE_RECOVERY_INITIAL_SPECIAL_BAD_LINES=[lindex $special_bad 1]"
+        mptdc_signoff_configure_sroute_mode $fh ROUTE_GATE
+        set sroute_ok [mptdc_signoff_try_pg_command $fh ROUTE_GATE_SROUTE [list \
+            [list sroute -connect {corePin blockPin padPin} -nets {VDD VSS}] \
+            [list sroute -nets {VDD VSS}]]]
+        puts $fh "ROUTE_GATE_SROUTE_RECOVERY_COMMAND_STATUS=[expr {$sroute_ok ? "PASS" : "FAIL"}]"
+        close $fh
+        if {$sroute_ok} {
+            mptdc_signoff_capture_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt
+            set route_gate [mptdc_signoff_read_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt]
+            lassign $route_gate drc_data regular_bad special_bad unrouted
+            set fh [open $rpt a]
+            puts $fh "ROUTE_GATE_SROUTE_RECOVERY_VERIFY_DRC=[dict get $drc_data total_violations]"
+            puts $fh "ROUTE_GATE_SROUTE_RECOVERY_VERIFY_SHORTS=[dict get $drc_data shorts]"
+            puts $fh "ROUTE_GATE_SROUTE_RECOVERY_SPECIAL_BAD=[lindex $special_bad 0]"
+            puts $fh "ROUTE_GATE_SROUTE_RECOVERY_SPECIAL_BAD_LINES=[lindex $special_bad 1]"
+            close $fh
+            if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
+                set fh [open $rpt a]
+                puts $fh "ROUTE_GATE_RECOVERY_STATUS=PASS_AFTER_SROUTE"
+                close $fh
+                return $route_gate
+            }
+        }
+    } else {
+        set fh [open $rpt a]
+        puts $fh "ROUTE_GATE_SROUTE_RECOVERY=[expr {[lindex $special_bad 0] ? "DISABLED_BY_ENV" : "NOT_NEEDED"}]"
+        close $fh
+    }
     foreach cmd [mptdc_signoff_route_repair_commands] {
         set cmd_rpt [mptdc_signoff_route_command_report_path route_recovery $cmd]
         set fh [open $rpt a]
@@ -4441,14 +4528,10 @@ proc mptdc_signoff_write_clk_sys_root_audit {tag} {
         incr idx
         set names [mptdc_signoff_object_names [list $net]]
         puts $fh "CLK_SYS_NET_${idx}_NAME=[join $names { }]"
-        foreach attr {.name .num_loads .num_load_pins .is_ideal .is_dont_touch .is_clock .wires.status} {
+        foreach attr {.name .num_loads .num_load_pins .is_ideal .is_dont_touch .is_clock} {
             set value [mptdc_signoff_safe_db_value $net $attr]
             if {$value ne ""} {
-                if {$attr eq ".wires.status"} {
-                    puts $fh "CLK_SYS_NET_${idx}_${attr}=[mptdc_signoff_abbrev_db_value $value 8]"
-                } else {
-                    puts $fh "CLK_SYS_NET_${idx}_${attr}=[mptdc_signoff_abbrev_db_value $value]"
-                }
+                puts $fh "CLK_SYS_NET_${idx}_${attr}=[mptdc_signoff_abbrev_db_value $value]"
             }
         }
     }

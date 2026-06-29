@@ -75,7 +75,7 @@ lef_macro_size() {
 }
 
 apply_recovery_defaults() {
-  local default_route_repair_commands='{ecoRoute -target} {ecoRoute -fix_drc}'
+  local default_route_repair_commands='{ecoRoute -target} {ecoRoute -fix_drc} {routeDesign -detail} {ecoRoute -fix_drc}'
 
   export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE="${MPTDC_PNR_PD_TILE_CONSTRAINT_MODE:-none}"
   export MPTDC_PNR_PD_TILE_APPLY_HIER_BOX="${MPTDC_PNR_PD_TILE_APPLY_HIER_BOX:-0}"
@@ -116,10 +116,15 @@ apply_recovery_defaults() {
   export MPTDC_ENABLE_BLOCK_PG_PINS="${MPTDC_ENABLE_BLOCK_PG_PINS:-1}"
   export MPTDC_BLOCK_PG_PIN_LAYER="${MPTDC_BLOCK_PG_PIN_LAYER:-METTP}"
   export MPTDC_BLOCK_PG_PIN_STYLE="${MPTDC_BLOCK_PG_PIN_STYLE:-left_vdd_right_vss}"
+  export MPTDC_BLOCK_PG_PIN_CREATE_MODE="${MPTDC_BLOCK_PG_PIN_CREATE_MODE:-on_die}"
+  export MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK="${MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK:-0}"
   export MPTDC_ENABLE_POST_FILLER_SROUTE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-1}"
+  export MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES="${MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES:-0}"
+  export MPTDC_SROUTE_CONNECT_STRIPE="${MPTDC_SROUTE_CONNECT_STRIPE:-1}"
   export MPTDC_FILLER_ADD_FILLERS_WITH_DRC="${MPTDC_FILLER_ADD_FILLERS_WITH_DRC:-0}"
   export MPTDC_REQUIRE_DRC_SAFE_FILLER="${MPTDC_REQUIRE_DRC_SAFE_FILLER:-1}"
   export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-1}"
+  export MPTDC_ROUTE_GATE_SROUTE_RECOVERY="${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-1}"
   export MPTDC_ROUTE_REPAIR_COMMANDS="${MPTDC_ROUTE_REPAIR_COMMANDS:-$default_route_repair_commands}"
   export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE="${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-0}"
   export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS="${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-0}"
@@ -433,8 +438,13 @@ fi
   echo "block_pg_pins: ${MPTDC_ENABLE_BLOCK_PG_PINS:-unset}"
   echo "block_pg_pin_layer: ${MPTDC_BLOCK_PG_PIN_LAYER:-unset}"
   echo "block_pg_pin_style: ${MPTDC_BLOCK_PG_PIN_STYLE:-unset}"
+  echo "block_pg_pin_create_mode: ${MPTDC_BLOCK_PG_PIN_CREATE_MODE:-unset}"
+  echo "block_pg_pin_editpin_fallback: ${MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK:-unset}"
   echo "post_filler_sroute: ${MPTDC_ENABLE_POST_FILLER_SROUTE:-unset}"
   echo "post_filler_sroute_required_bypass: ${MPTDC_BYPASS_POST_FILLER_SROUTE_REQUIRED:-0}"
+  echo "sroute_preserve_existing_routes: ${MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES:-unset}"
+  echo "sroute_connect_stripe: ${MPTDC_SROUTE_CONNECT_STRIPE:-unset}"
+  echo "route_gate_sroute_recovery: ${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset}"
   echo "filler_add_fillers_with_drc: ${MPTDC_FILLER_ADD_FILLERS_WITH_DRC:-unset}"
   echo "require_drc_safe_filler: ${MPTDC_REQUIRE_DRC_SAFE_FILLER:-unset}"
   echo "route_repair_commands: ${MPTDC_ROUTE_REPAIR_COMMANDS:-unset}"
