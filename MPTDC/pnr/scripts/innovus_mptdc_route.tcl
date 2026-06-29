@@ -16,11 +16,51 @@ proc mptdc_pnr_route_signal_bottom_layer {} {
 }
 
 proc mptdc_pnr_route_signal_top_layer {} {
-    return [mptdc_pnr_env MPTDC_PNR_SIGNAL_TOP_LAYER MET4]
+    return [mptdc_pnr_env MPTDC_PNR_SIGNAL_TOP_LAYER [mptdc_pnr_route_default_signal_top_layer]]
 }
 
 proc mptdc_pnr_route_effective_top_floor_layer {} {
     return [mptdc_pnr_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]
+}
+
+proc mptdc_pnr_route_stack_key {} {
+    set stack [string tolower [mptdc_pnr_env MPTDC_XH018_STACK xx31]]
+    switch -glob -- $stack {
+        xx31 - 1131 - xh018_1131 - xh018_xx31 - 1p3m { return xx31 }
+        xx33 - 1133 - xh018_1133 - xh018_xx33 { return xx33 }
+        xx41 - 1141 - xh018_1141 - xh018_xx41 - 1p4m { return xx41 }
+        xx43 - 1143 - xh018_1143 - xh018_xx43 { return xx43 }
+        xx51 - 1151 - xh018_1151 - xh018_xx51 - 1p5m { return xx51 }
+        default { return $stack }
+    }
+}
+
+proc mptdc_pnr_route_default_layers_for_stack {} {
+    switch -- [mptdc_pnr_route_stack_key] {
+        xx31 { return {MET1 MET2 MET3 METTP} }
+        xx33 { return {MET1 MET2 MET3 METTP METTHK} }
+        xx41 { return {MET1 MET2 MET3 MET4 METTP} }
+        xx43 { return {MET1 MET2 MET3 MET4 METTP METTHK} }
+        xx51 { return {MET1 MET2 MET3 MET4 MET5 METTP} }
+        default { return {MET1 MET2 MET3 METTP} }
+    }
+}
+
+proc mptdc_pnr_route_known_layer_names {} {
+    set env_layers [mptdc_pnr_env MPTDC_PNR_ROUTE_LAYER_NAMES ""]
+    if {$env_layers ne ""} {
+        return [split $env_layers]
+    }
+    return [mptdc_pnr_route_default_layers_for_stack]
+}
+
+proc mptdc_pnr_route_default_signal_top_layer {} {
+    switch -- [mptdc_pnr_route_stack_key] {
+        xx31 - xx33 { return MET3 }
+        xx41 - xx43 { return MET4 }
+        xx51 { return MET5 }
+        default { return MET3 }
+    }
 }
 
 proc mptdc_pnr_route_normalize_layer_value {layer} {
@@ -36,15 +76,12 @@ proc mptdc_pnr_route_layer_index {layer} {
     if {[string is integer -strict $value]} {
         return $value
     }
-    array set layer_index {
-        MET1 1
-        MET2 2
-        MET3 3
-        MET4 4
-        METTP 5
-    }
-    if {[info exists layer_index($value)]} {
-        return $layer_index($value)
+    set idx 1
+    foreach name [mptdc_pnr_route_known_layer_names] {
+        if {[mptdc_pnr_route_normalize_layer_value $name] eq $value} {
+            return $idx
+        }
+        incr idx
     }
     return $layer
 }
@@ -54,25 +91,15 @@ proc mptdc_pnr_route_layer_name {layer} {
     if {![string is integer -strict $value]} {
         return $value
     }
-    array set layer_name {
-        1 MET1
-        2 MET2
-        3 MET3
-        4 MET4
-        5 METTP
-    }
-    if {[info exists layer_name($value)]} {
-        return $layer_name($value)
+    set layers [mptdc_pnr_route_known_layer_names]
+    if {$value >= 1 && $value <= [llength $layers]} {
+        return [lindex $layers [expr {$value - 1}]]
     }
     return $layer
 }
 
-proc mptdc_pnr_route_known_layer_names {} {
-    return {MET1 MET2 MET3 MET4 METTP}
-}
-
 proc mptdc_pnr_route_max_layer_index {} {
-    return 5
+    return [llength [mptdc_pnr_route_known_layer_names]]
 }
 
 proc mptdc_pnr_route_layer_is_valid {layer} {
@@ -305,8 +332,7 @@ proc mptdc_pnr_audit_route_layers {{path ""}} {
     foreach item [list \
         [list nets {get_db nets}] \
         [list timing_nets {get_nets -quiet *}] \
-        [list route_types {get_db route_types}] \
-        [list non_default_rules {get_db non_default_rules}]] {
+        [list route_types {get_db route_types}]] {
         set label [lindex $item 0]
         set cmd [lindex $item 1]
         if {[catch {set objects [uplevel #0 $cmd]} err] || $objects eq "" || $objects eq "0x0"} {
@@ -339,7 +365,7 @@ proc mptdc_pnr_route_protection_rules {} {
         {avoid_wide_clk_sys_backend_routes_over_pd_island} \
         {do_not_buffer_raw_ro_nets} \
         {do_not_resize_or_replace_buhdx4_buhdx12_phase_root_drivers_without_review} \
-        {use_m1_through_m4_for_signal_routing} \
+        "use_[mptdc_pnr_route_signal_bottom_layer]_through_[mptdc_pnr_route_signal_top_layer]_for_signal_routing" \
         [mptdc_pnr_route_power_top_policy] \
     ]
 }
@@ -351,6 +377,8 @@ proc mptdc_pnr_write_route_intent {{path ""}} {
     set effective_top [mptdc_pnr_route_effective_top_layer [mptdc_pnr_route_signal_top_layer]]
     set fh [open $path w]
     puts $fh "# MPTDC Final Typical Route Intent"
+    puts $fh "xh018_stack=[mptdc_pnr_route_stack_key]"
+    puts $fh "known_route_layers=[mptdc_pnr_route_known_layer_names]"
     puts $fh "signal_bottom_layer=[mptdc_pnr_route_signal_bottom_layer]"
     puts $fh "signal_top_layer=[mptdc_pnr_route_signal_top_layer]"
     puts $fh "effective_route_top_layer=[dict get $effective_top top]"

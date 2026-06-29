@@ -10,7 +10,9 @@
 #   2. Override with environment variables when needed:
 #        PDK_ROOT       -> full XH018 root
 #        TECHNOLOGY_LEF -> explicit technology LEF file
-#   3. Update METAL_STACK / routing layers only if your metal option differs
+#        MPTDC_XH018_STACK -> xx31, xx33, xx41, xx43, or xx51
+#   3. Keep the stack selector coherent: tech LEF, capTbl, QRC deck, and route
+#      layer names must describe the same foundry option.
 #   4. Set QRC tech file paths if available
 #
 # This file defines technology-level settings (process node, metal stack,
@@ -21,7 +23,100 @@
 #############################################
 #       Process / Metal Stack
 #############################################
-set METAL_STACK "1P4M"                ;# Verified lab flow: 4-metal HD option
+proc mptdc_xh018_env_or_default {name default_value} {
+    if {[info exists ::env($name)] && $::env($name) ne ""} {
+        return $::env($name)
+    }
+    return $default_value
+}
+
+proc mptdc_xh018_normalize_stack {value} {
+    set stack [string tolower [string trim $value]]
+    switch -glob -- $stack {
+        "" { return "" }
+        "xx31" - "1131" - "xh018_1131" - "xh018_xx31" - "1p3m" {
+            return "xx31"
+        }
+        "xx33" - "1133" - "xh018_1133" - "xh018_xx33" {
+            return "xx33"
+        }
+        "xx41" - "1141" - "xh018_1141" - "xh018_xx41" - "1p4m" {
+            return "xx41"
+        }
+        "xx43" - "1143" - "xh018_1143" - "xh018_xx43" {
+            return "xx43"
+        }
+        "xx51" - "1151" - "xh018_1151" - "xh018_xx51" - "1p5m" {
+            return "xx51"
+        }
+        default {
+            error "MPTDC_XH018_STACK_UNSUPPORTED: $value; expected xx31, xx33, xx41, xx43, or xx51"
+        }
+    }
+}
+
+proc mptdc_xh018_stack_defaults {stack} {
+    switch -- $stack {
+        xx31 {
+            return [dict create \
+                metal_stack "XH018_1131_1P3M_MET3_METMID" \
+                technology_lef "xh018_xx31_HD_MET3_METMID.lef" \
+                captbl_stem "xh018_xx31_MET3_METMID" \
+                qrc_family "XH018_1131" \
+                layer_names {MET1 MET2 MET3 METTP} \
+                signal_top_layer MET3 \
+                effective_top_floor_layer METTP]
+        }
+        xx33 {
+            return [dict create \
+                metal_stack "XH018_1133_1P3M_MET3_METMID_METTHK" \
+                technology_lef "xh018_xx33_HD_MET3_METMID_METTHK.lef" \
+                captbl_stem "xh018_xx33_MET3_METMID_METTHK" \
+                qrc_family "XH018_1133" \
+                layer_names {MET1 MET2 MET3 METTP METTHK} \
+                signal_top_layer MET3 \
+                effective_top_floor_layer METTP]
+        }
+        xx41 {
+            return [dict create \
+                metal_stack "XH018_1141_1P4M_MET4_METMID" \
+                technology_lef "xh018_xx41_HD_MET4_METMID.lef" \
+                captbl_stem "xh018_xx41_MET4_METMID" \
+                qrc_family "XH018_1141" \
+                layer_names {MET1 MET2 MET3 MET4 METTP} \
+                signal_top_layer MET4 \
+                effective_top_floor_layer METTP]
+        }
+        xx43 {
+            return [dict create \
+                metal_stack "XH018_1143_1P4M_MET4_METMID_METTHK" \
+                technology_lef "xh018_xx43_HD_MET4_METMID_METTHK.lef" \
+                captbl_stem "xh018_xx43_MET4_METMID_METTHK" \
+                qrc_family "XH018_1143" \
+                layer_names {MET1 MET2 MET3 MET4 METTP METTHK} \
+                signal_top_layer MET4 \
+                effective_top_floor_layer METTP]
+        }
+        xx51 {
+            return [dict create \
+                metal_stack "XH018_1151_1P5M_MET5_METMID" \
+                technology_lef "xh018_xx51_HD_MET5_METMID.lef" \
+                captbl_stem "xh018_xx51_MET5_METMID" \
+                qrc_family "XH018_1151" \
+                layer_names {MET1 MET2 MET3 MET4 MET5 METTP} \
+                signal_top_layer MET5 \
+                effective_top_floor_layer METTP]
+        }
+        default {
+            error "MPTDC_XH018_STACK_UNSUPPORTED: $stack"
+        }
+    }
+}
+
+set tech(XH018_STACK) [mptdc_xh018_normalize_stack \
+    [mptdc_xh018_env_or_default MPTDC_XH018_STACK "xx31"]]
+set mptdc_xh018_stack_cfg [mptdc_xh018_stack_defaults $tech(XH018_STACK)]
+set METAL_STACK [dict get $mptdc_xh018_stack_cfg metal_stack]
 set TRACKS      "12T"                 ;# Metadata only; not consumed by current Genus flow
 set_db design_process_node 180        ;# 180 nm process node
 
@@ -39,14 +134,24 @@ if {[info exists ::env(PDK_ROOT)]} {
 #############################################
 set paths(TECH_LEF_DIR) "$paths(PDK_ROOT)/cadence/v9_0/techLEF/v9_0_1"
 
-# Technology LEF (layer and via definitions). The current checked-in default
-# matches the 4-metal HD lab flow. Override TECHNOLOGY_LEF for another option.
+# Technology LEF (layer and via definitions). The selected stack also chooses
+# matching capTbl/QRC defaults below; do not override only one of these files
+# unless you are deliberately auditing a foundry collateral issue.
 if {[info exists ::env(TECHNOLOGY_LEF)]} {
     set tech_files(TECHNOLOGY_LEF) $::env(TECHNOLOGY_LEF)
 } else {
     set tech_files(TECHNOLOGY_LEF) \
-        "$paths(TECH_LEF_DIR)/xh018_xx41_HD_MET4_METMID.lef"
+        "$paths(TECH_LEF_DIR)/[dict get $mptdc_xh018_stack_cfg technology_lef]"
 }
+set mptdc_xh018_tech_lef_tail [file tail $tech_files(TECHNOLOGY_LEF)]
+if {[regexp -nocase {xh018_xx([0-9]+)} $mptdc_xh018_tech_lef_tail -> mptdc_xh018_lef_code]} {
+    set mptdc_xh018_lef_stack [mptdc_xh018_normalize_stack "xx$mptdc_xh018_lef_code"]
+    if {$mptdc_xh018_lef_stack ne $tech(XH018_STACK)} {
+        error "MPTDC_XH018_STACK_MISMATCH: MPTDC_XH018_STACK=$tech(XH018_STACK) but TECHNOLOGY_LEF=$tech_files(TECHNOLOGY_LEF) implies $mptdc_xh018_lef_stack"
+    }
+}
+puts "MPTDC_LIB_INFO: XH018 stack=$tech(XH018_STACK) metal_stack=$METAL_STACK"
+puts "MPTDC_LIB_INFO: XH018 technology LEF=$tech_files(TECHNOLOGY_LEF)"
 set tech_files(ALL_LEFS) [list $tech_files(TECHNOLOGY_LEF)]
 
 set mptdc_o1_real_ro_enabled 0
@@ -113,13 +218,13 @@ if {$mptdc_o1_real_ro_enabled} {
 #############################################
 #       Parasitic Extraction (QRC)
 #############################################
-# Defaults target the verified lab-server XH018 deck matching:
-#   xh018_xx41_HD_MET4_METMID.lef  ->  XH018_1141 QRC family
+# Defaults target the selected XH018 stack.  For the analog-team xx31 stack,
+# this resolves to xh018_xx31_* capTbl files and XH018_1131 QRC decks.
 if {[info exists ::env(QRC_ROOT)]} {
     set paths(QRC_ROOT) $::env(QRC_ROOT)
 } else {
     set paths(QRC_ROOT) \
-        "$paths(PDK_ROOT)/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1141"
+        "$paths(PDK_ROOT)/cadence/v10_1/QRC_pvs/v10_1_1/[dict get $mptdc_xh018_stack_cfg qrc_family]"
 }
 
 if {[info exists ::env(CAPTABLE_DIR)]} {
@@ -144,9 +249,26 @@ if {[info exists ::env(QRCTECH_WC)]} {
     set tech_files(QRCTECH_WC) "$paths(QRC_ROOT)/QRC-Max/qrcTechFile"
 }
 
-set tech_files(CAPTABLE_BC) "$paths(CAPTABLE_DIR)/xh018_xx41_MET4_METMID_min.capTbl"
-set tech_files(CAPTABLE_TC) "$paths(CAPTABLE_DIR)/xh018_xx41_MET4_METMID_typ.capTbl"
-set tech_files(CAPTABLE_WC) "$paths(CAPTABLE_DIR)/xh018_xx41_MET4_METMID_max.capTbl"
+set mptdc_xh018_captbl_stem [dict get $mptdc_xh018_stack_cfg captbl_stem]
+if {[info exists ::env(CAPTABLE_BC)]} {
+    set tech_files(CAPTABLE_BC) $::env(CAPTABLE_BC)
+} else {
+    set tech_files(CAPTABLE_BC) "$paths(CAPTABLE_DIR)/${mptdc_xh018_captbl_stem}_min.capTbl"
+}
+if {[info exists ::env(CAPTABLE_TC)]} {
+    set tech_files(CAPTABLE_TC) $::env(CAPTABLE_TC)
+} else {
+    set tech_files(CAPTABLE_TC) "$paths(CAPTABLE_DIR)/${mptdc_xh018_captbl_stem}_typ.capTbl"
+}
+if {[info exists ::env(CAPTABLE_WC)]} {
+    set tech_files(CAPTABLE_WC) $::env(CAPTABLE_WC)
+} else {
+    set tech_files(CAPTABLE_WC) "$paths(CAPTABLE_DIR)/${mptdc_xh018_captbl_stem}_max.capTbl"
+}
+puts "MPTDC_LIB_INFO: XH018 capTbl BC=$tech_files(CAPTABLE_BC)"
+puts "MPTDC_LIB_INFO: XH018 capTbl TC=$tech_files(CAPTABLE_TC)"
+puts "MPTDC_LIB_INFO: XH018 capTbl WC=$tech_files(CAPTABLE_WC)"
+puts "MPTDC_LIB_INFO: XH018 QRC root=$paths(QRC_ROOT)"
 
 set tech(HAS_QRC_TECH) 1
 foreach qrc_file [list \
@@ -168,10 +290,19 @@ set tech(TEMPERATURE_WC)  125    ;# Worst case (slow)
 #############################################
 #       Physical Design Constants
 #############################################
-# Layer names (default XH018 4-metal HD stack). The lab LEF names the usable
-# metals MET1/MET2/MET3/METTP; METTP is the top/thick metal reserved primarily
-# for power distribution in the estimation flow.
-set tech(layer_names) "MET1 MET2 MET3 METTP"
+# Layer names are stack-dependent.  xx31 has no MET4; xx41 has MET4 plus METTP.
+set tech(layer_names) [dict get $mptdc_xh018_stack_cfg layer_names]
+set tech(signal_top_layer) [dict get $mptdc_xh018_stack_cfg signal_top_layer]
+set tech(effective_top_floor_layer) [dict get $mptdc_xh018_stack_cfg effective_top_floor_layer]
+if {![info exists ::env(MPTDC_PNR_ROUTE_LAYER_NAMES)] || $::env(MPTDC_PNR_ROUTE_LAYER_NAMES) eq ""} {
+    set ::env(MPTDC_PNR_ROUTE_LAYER_NAMES) $tech(layer_names)
+}
+if {![info exists ::env(MPTDC_PNR_SIGNAL_TOP_LAYER)] || $::env(MPTDC_PNR_SIGNAL_TOP_LAYER) eq ""} {
+    set ::env(MPTDC_PNR_SIGNAL_TOP_LAYER) $tech(signal_top_layer)
+}
+if {![info exists ::env(MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER)] || $::env(MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER) eq ""} {
+    set ::env(MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER) $tech(effective_top_floor_layer)
+}
 
 # Standard cell dimensions
 set tech(row_height)  7.56        ;# µm — XH018 standard cell height

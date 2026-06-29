@@ -24,11 +24,11 @@ set pnr(core_utilization)         [mptdc_env_or_default MPTDC_PNR_CORE_UTIL 0.60
 set pnr(place_global_max_density) [mptdc_env_or_default MPTDC_PNR_MAX_DENSITY 0.70]
 set pnr(core_margin_um)           [mptdc_env_or_default MPTDC_PNR_CORE_MARGIN_UM 20.0]
 
-# XH018 1P4M baseline. Signals are kept on MET1-MET3 globally so METTP remains
-# available for VDD/VSS straps. The only first-cleanup exception is inside the
-# PD matrix region, where the 8 slow and 8 fast phase nets may use METTP for
-# matched low-RC routing/shielding.
-set pnr(metal_stack)              [mptdc_env_or_default MPTDC_PNR_METAL_STACK 1P4M]
+# XH018 stack selection.  The analog RO_tune6 handoff is on the xx31/1131
+# MET3+METMID option, so the digital PNR default keeps ordinary signals off
+# METTP while allowing the flow to use METTP when existing CTS/PG routes require
+# the top floor.  Override only with a matching techLEF/capTbl/QRC bundle.
+set pnr(metal_stack)              [mptdc_env_or_default MPTDC_PNR_METAL_STACK xx31]
 set pnr(signal_bottom_layer)      [mptdc_env_or_default MPTDC_PNR_SIGNAL_BOTTOM_LAYER MET1]
 set pnr(signal_top_layer)         [mptdc_env_or_default MPTDC_PNR_SIGNAL_TOP_LAYER MET3]
 set pnr(signal_bottom_layer_idx)  [mptdc_env_or_default MPTDC_PNR_SIGNAL_BOTTOM_LAYER_IDX 1]

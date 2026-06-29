@@ -875,6 +875,13 @@ proc mptdc_signoff_set_env_default {name value} {
 
 proc mptdc_signoff_apply_recovery_defaults {} {
     foreach {name value} {
+        MPTDC_XH018_STACK xx31
+        MPTDC_PNR_METAL_STACK xx31
+        MPTDC_PNR_ROUTE_LAYER_NAMES {MET1 MET2 MET3 METTP}
+        MPTDC_PNR_SIGNAL_TOP_LAYER MET3
+        MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP
+        MPTDC_PNR_POWER_LAYER METTP
+        MPTDC_PNR_PHASE_TOP_LAYER METTP
         MPTDC_PNR_PD_TILE_CONSTRAINT_MODE box
         MPTDC_PNR_PD_TILE_USE_FENCE 0
         MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 0

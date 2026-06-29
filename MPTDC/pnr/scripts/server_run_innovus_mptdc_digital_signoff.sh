@@ -155,6 +155,117 @@ resolve_ro_handoff() {
   fi
 }
 
+infer_xh018_stack_from_techlef() {
+  local lef="${1:-}"
+  local base
+  base="$(basename "$lef" 2>/dev/null || true)"
+  case "$base" in
+    *xx31*) echo xx31 ;;
+    *xx33*) echo xx33 ;;
+    *xx41*) echo xx41 ;;
+    *xx43*) echo xx43 ;;
+    *xx51*) echo xx51 ;;
+    *) echo "" ;;
+  esac
+}
+
+configure_xh018_stack() {
+  local pdk="${MPTDC_PDK_ROOT:-${PDK_ROOT:-}}"
+  if [[ -z "$pdk" ]]; then
+    if [[ -d /eda/pdk/xfab/xh018 ]]; then
+      pdk=/eda/pdk/xfab/xh018
+    elif [[ -d /data/pdk/xfab/xh018 ]]; then
+      pdk=/data/pdk/xfab/xh018
+    else
+      pdk=/eda/pdk/xfab/xh018
+    fi
+  fi
+  export PDK_ROOT="$pdk"
+
+  local inferred_stack=""
+  if [[ -n "${TECHNOLOGY_LEF:-}" ]]; then
+    inferred_stack="$(infer_xh018_stack_from_techlef "$TECHNOLOGY_LEF")"
+  fi
+
+  local stack="${MPTDC_XH018_STACK:-$inferred_stack}"
+  stack="${stack:-xx31}"
+  stack="${stack,,}"
+
+  local tech_lef=""
+  local captbl_stem=""
+  local qrc_family=""
+  local route_layers=""
+  local signal_top=""
+  local floor_top="METTP"
+  case "$stack" in
+    xx31|1131|xh018_1131|xh018_xx31|1p3m)
+      stack=xx31
+      tech_lef="$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef"
+      captbl_stem="xh018_xx31_MET3_METMID"
+      qrc_family="XH018_1131"
+      route_layers="MET1 MET2 MET3 METTP"
+      signal_top="MET3"
+      ;;
+    xx33|1133|xh018_1133|xh018_xx33)
+      stack=xx33
+      tech_lef="$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx33_HD_MET3_METMID_METTHK.lef"
+      captbl_stem="xh018_xx33_MET3_METMID_METTHK"
+      qrc_family="XH018_1133"
+      route_layers="MET1 MET2 MET3 METTP METTHK"
+      signal_top="MET3"
+      ;;
+    xx41|1141|xh018_1141|xh018_xx41|1p4m)
+      stack=xx41
+      tech_lef="$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx41_HD_MET4_METMID.lef"
+      captbl_stem="xh018_xx41_MET4_METMID"
+      qrc_family="XH018_1141"
+      route_layers="MET1 MET2 MET3 MET4 METTP"
+      signal_top="MET4"
+      ;;
+    xx43|1143|xh018_1143|xh018_xx43)
+      stack=xx43
+      tech_lef="$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx43_HD_MET4_METMID_METTHK.lef"
+      captbl_stem="xh018_xx43_MET4_METMID_METTHK"
+      qrc_family="XH018_1143"
+      route_layers="MET1 MET2 MET3 MET4 METTP METTHK"
+      signal_top="MET4"
+      ;;
+    xx51|1151|xh018_1151|xh018_xx51|1p5m)
+      stack=xx51
+      tech_lef="$PDK_ROOT/cadence/v9_0/techLEF/v9_0_1/xh018_xx51_HD_MET5_METMID.lef"
+      captbl_stem="xh018_xx51_MET5_METMID"
+      qrc_family="XH018_1151"
+      route_layers="MET1 MET2 MET3 MET4 MET5 METTP"
+      signal_top="MET5"
+      ;;
+    *)
+      echo "ERROR: unsupported MPTDC_XH018_STACK=$stack; use xx31, xx33, xx41, xx43, or xx51" | tee -a "$RUN_LOG"
+      exit 3
+      ;;
+  esac
+
+  export MPTDC_XH018_STACK="$stack"
+  export TECHNOLOGY_LEF="${TECHNOLOGY_LEF:-$tech_lef}"
+  if [[ -n "$inferred_stack" && "$inferred_stack" != "$stack" ]]; then
+    echo "ERROR: TECHNOLOGY_LEF=$TECHNOLOGY_LEF implies $inferred_stack but MPTDC_XH018_STACK=$stack" | tee -a "$RUN_LOG"
+    exit 3
+  fi
+  export CAPTABLE_DIR="${CAPTABLE_DIR:-$PDK_ROOT/cadence/v9_0/capTbl/v9_0_1}"
+  export CAPTABLE_BC="${CAPTABLE_BC:-$CAPTABLE_DIR/${captbl_stem}_min.capTbl}"
+  export CAPTABLE_TC="${CAPTABLE_TC:-$CAPTABLE_DIR/${captbl_stem}_typ.capTbl}"
+  export CAPTABLE_WC="${CAPTABLE_WC:-$CAPTABLE_DIR/${captbl_stem}_max.capTbl}"
+  export QRC_ROOT="${QRC_ROOT:-$PDK_ROOT/cadence/v10_1/QRC_pvs/v10_1_1/$qrc_family}"
+  export QRCTECH_BC="${QRCTECH_BC:-$QRC_ROOT/QRC-Min/qrcTechFile}"
+  export QRCTECH_TC="${QRCTECH_TC:-$QRC_ROOT/QRC-Typ/qrcTechFile}"
+  export QRCTECH_WC="${QRCTECH_WC:-$QRC_ROOT/QRC-Max/qrcTechFile}"
+  export MPTDC_PNR_METAL_STACK="${MPTDC_PNR_METAL_STACK:-$stack}"
+  export MPTDC_PNR_ROUTE_LAYER_NAMES="${MPTDC_PNR_ROUTE_LAYER_NAMES:-$route_layers}"
+  export MPTDC_PNR_SIGNAL_TOP_LAYER="${MPTDC_PNR_SIGNAL_TOP_LAYER:-$signal_top}"
+  export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-$floor_top}"
+  export MPTDC_PNR_POWER_LAYER="${MPTDC_PNR_POWER_LAYER:-$floor_top}"
+  export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-$floor_top}"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --genus-run-id)
@@ -214,6 +325,7 @@ mkdir -p "$LOG_DIR" "$REPORT_DIR" "$MANIFEST_DIR"
 RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
 
 resolve_ro_handoff
+configure_xh018_stack
 export MPTDC_CLOSURE_SCOPE="${MPTDC_CLOSURE_SCOPE:-TC_ONLY}"
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
 apply_recovery_defaults
@@ -238,6 +350,15 @@ fi
   echo "row_infra_policy: NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS"
   echo "allow_no_core_tap_endcap_policy: ${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
   echo "closure_scope: $MPTDC_CLOSURE_SCOPE"
+  echo "xh018_stack: ${MPTDC_XH018_STACK:-unset}"
+  echo "technology_lef: ${TECHNOLOGY_LEF:-unset}"
+  echo "captable_bc: ${CAPTABLE_BC:-unset}"
+  echo "captable_tc: ${CAPTABLE_TC:-unset}"
+  echo "captable_wc: ${CAPTABLE_WC:-unset}"
+  echo "qrc_root: ${QRC_ROOT:-unset}"
+  echo "route_layers: ${MPTDC_PNR_ROUTE_LAYER_NAMES:-unset}"
+  echo "signal_top_layer: ${MPTDC_PNR_SIGNAL_TOP_LAYER:-unset}"
+  echo "effective_top_floor_layer: ${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-unset}"
   echo "ro_handoff_env: ${MPTDC_RO_HANDOFF_ENV_SOURCED:-unset}"
   echo "O1_USE_REAL_RO_ABSTRACT: ${O1_USE_REAL_RO_ABSTRACT:-unset}"
   echo "O1_RO_CELL_NAME: ${O1_RO_CELL_NAME:-unset}"
