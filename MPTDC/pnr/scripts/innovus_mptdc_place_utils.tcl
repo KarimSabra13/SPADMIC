@@ -116,7 +116,10 @@ proc mptdc_pnr_place_orient_candidates {orient} {
     set orient [string toupper [string trim $orient]]
     if {$orient eq ""} { set orient AUTO }
 
-    set fallback [list MY R0 MX R180]
+    # Prefer the orientations that have been legal on the XH018 JIHD rows in
+    # recent Innovus runs.  Keep the older candidates as fallbacks because row
+    # orientation can alternate after floorplan changes.
+    set fallback [list MX R180 MY R0]
     if {[info exists ::env(MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES)] && \
         $::env(MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES) ne ""} {
         set fallback [list]

@@ -1067,6 +1067,7 @@ proc mptdc_signoff_set_default_phase_buffer_origins {} {
     set y_offset [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_Y_OFFSET_UM 2.0]
     set row_sep [mptdc_signoff_env MPTDC_PNR_PHASE_BUF_ROW_SEPARATION_UM 12.0]
     set clearance [mptdc_signoff_env MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
+    set origin_clearance [mptdc_signoff_env MPTDC_RO_PHASE_ORIGIN_CLEARANCE_UM [expr {$clearance + 6.0}]]
     set force [mptdc_signoff_env MPTDC_PNR_FORCE_RO_PHASE_SAFE_ORIGINS 1]
 
     set fast_box [dict get $regions fast_phase_buffers]
@@ -1083,19 +1084,19 @@ proc mptdc_signoff_set_default_phase_buffer_origins {} {
     set fast_iso_y [expr {$fast_y0 + $y_offset}]
     set fast_drv_y [expr {$fast_iso_y + $row_sep}]
     if {[mptdc_signoff_box_valid $fast_ro_box]} {
-        set fast_iso_y [expr {[lindex $fast_ro_box 3] + $clearance}]
+        set fast_iso_y [expr {[lindex $fast_ro_box 3] + $origin_clearance}]
         set fast_drv_y [expr {$fast_iso_y + $row_sep}]
     }
 
     set slow_iso_y [expr {$slow_y0 + $y_offset + $row_sep}]
     set slow_drv_y [expr {$slow_y0 + $y_offset}]
     if {[mptdc_signoff_box_valid $slow_ro_box]} {
-        set slow_iso_y [expr {[lindex $slow_ro_box 1] - $clearance - $row_sep}]
+        set slow_iso_y [expr {[lindex $slow_ro_box 1] - $origin_clearance - $row_sep}]
         set slow_drv_y [expr {$slow_iso_y - $row_sep}]
     }
 
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_PITCH_UM $pitch $force
-    mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_ORIENT AUTO $force
+    mptdc_signoff_set_phase_origin_env MPTDC_PNR_PHASE_BUF_ORIENT ROW_LEGAL $force
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_ISO_X $fast_x $force
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_ISO_Y $fast_iso_y $force
     mptdc_signoff_set_phase_origin_env MPTDC_PNR_FAST_DRV_X $fast_x $force
@@ -4443,7 +4444,11 @@ proc mptdc_signoff_place_phase_buffers {} {
     if {[llength $failures] > 0} {
         error "MPTDC_COUNT_GATE_FAILED: $failures"
     }
-    mptdc_signoff_audit_ro_phase_overlap $slow_iso_insts $slow_drv_insts $fast_iso_insts $fast_drv_insts
+    if {[mptdc_signoff_env_truthy MPTDC_RO_PHASE_PREPLACE_AUDIT 1]} {
+        mptdc_signoff_audit_ro_phase_overlap \
+            $slow_iso_insts $slow_drv_insts $fast_iso_insts $fast_drv_insts \
+            pre_place 0
+    }
     mptdc_signoff_set_status PHASE_BUFFER_STATUS PASS $rpt
 }
 
@@ -4508,9 +4513,14 @@ proc mptdc_signoff_audit_ro_phase_family {fh family ro_inst iso_insts drv_insts 
     return [list $status $total_overlap $min_clearance $invalid]
 }
 
-proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_iso_insts fast_drv_insts} {
-    set rpt [file join [mptdc_signoff_report_dir] ro_phase_overlap_audit.rpt]
-    set check_rpt [file join [mptdc_signoff_report_dir] check_place_ro_phase_overlap.rpt]
+proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_iso_insts fast_drv_insts {label final} {fatal 1}} {
+    if {$label eq "" || $label eq "final" || $label eq "post_place"} {
+        set rpt [file join [mptdc_signoff_report_dir] ro_phase_overlap_audit.rpt]
+        set check_rpt [file join [mptdc_signoff_report_dir] check_place_ro_phase_overlap.rpt]
+    } else {
+        set rpt [file join [mptdc_signoff_report_dir] "ro_phase_overlap_${label}_audit.rpt"]
+        set check_rpt [file join [mptdc_signoff_report_dir] "check_place_ro_phase_overlap_${label}.rpt"]
+    }
     set required_clearance [mptdc_signoff_env MPTDC_RO_PHASE_MIN_CLEARANCE_UM 10.0]
     set fail_on_global_checkplace [mptdc_signoff_env_truthy MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP 0]
     set ro_map [mptdc_signoff_ro_instances_by_family]
@@ -4518,11 +4528,13 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     set fast_ro [dict get $ro_map fast]
 
     mptdc_signoff_capture_candidates $check_rpt \
-        "RO/phase pre-placement checkPlace" [list {checkPlace} {checkDesign -all}]
+        "RO/phase $label checkPlace" [list {checkPlace} {checkDesign -all}]
     set check_overlap_count [mptdc_signoff_checkplace_overlap_count $check_rpt]
 
     set fh [open $rpt w]
     puts $fh "# MPTDC RO / Phase-Buffer Overlap Audit"
+    puts $fh "RO_PHASE_AUDIT_LABEL=$label"
+    puts $fh "RO_PHASE_AUDIT_FATAL=$fatal"
     puts $fh "RO_PHASE_MIN_CLEARANCE_REQUIRED_UM=$required_clearance"
     puts $fh "RO_TUNE6_COUNT=[llength [dict get $ro_map all]]"
     puts $fh "CHECKPLACE_REPORT=$check_rpt"
@@ -4554,9 +4566,15 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     if {[llength [dict get $ro_map all]] != 2} {
         set status FAIL
         set reason ro_tune6_count_not_two
-    } elseif {[lindex $slow_result 0] ne "PASS" || [lindex $fast_result 0] ne "PASS"} {
+    } elseif {[lindex $slow_result 3] > 0 || [lindex $fast_result 3] > 0} {
+        set status FAIL
+        set reason phase_buffer_bbox_invalid
+    } elseif {$slow_overlap > 0.0 || $fast_overlap > 0.0} {
         set status FAIL
         set reason phase_buffer_overlaps_ro_macro
+    } elseif {[lindex $slow_result 0] ne "PASS" || [lindex $fast_result 0] ne "PASS"} {
+        set status FAIL
+        set reason phase_buffer_clearance_below_required
     } elseif {$fail_on_global_checkplace && $check_overlap_count ne "UNKNOWN" && $check_overlap_count > 0} {
         set status FAIL
         set reason checkplace_reports_overlap
@@ -4569,7 +4587,7 @@ proc mptdc_signoff_audit_ro_phase_overlap {slow_iso_insts slow_drv_insts fast_is
     puts $fh "RO_PHASE_PLACEMENT_REASON=$reason"
     close $fh
     mptdc_signoff_set_status RO_PHASE_PLACEMENT_STATUS $status $rpt
-    if {$status ne "PASS"} {
+    if {$status ne "PASS" && $fatal} {
         error "MPTDC_RO_PHASE_OVERLAP_GATE_FAILED: reason=$reason report=$rpt"
     }
     return $rpt
@@ -4602,6 +4620,12 @@ proc mptdc_signoff_place_design {} {
     if {$placement_status eq "FAIL"} {
         error "MPTDC_PLACEMENT_GATE_FAILED: report=[dict get $place_gate status_report]"
     }
+    mptdc_signoff_audit_ro_phase_overlap \
+        [mptdc_signoff_phase_buffer_instances slow iso] \
+        [mptdc_signoff_phase_buffer_instances slow drv] \
+        [mptdc_signoff_phase_buffer_instances fast iso] \
+        [mptdc_signoff_phase_buffer_instances fast drv] \
+        post_place 1
     catch {defOut [file join [mptdc_signoff_def_dir] 02_place.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 02_place.enc]}
     mptdc_signoff_audit_pd_matrix_physical

@@ -52,7 +52,15 @@ proc mptdc_o13_place_one {inst x y orient fh} {
     if {[llength [info commands mptdc_pnr_place_instance_row_legal]] > 0} {
         set place_result [mptdc_pnr_place_instance_row_legal $inst $x $y $orient 0]
         if {[dict get $place_result status] eq "PASS"} {
-            puts $fh "placed,$inst,$x,$y,$orient,[mptdc_o12b_csv [dict get $place_result command]],"
+            set actual_orient ""
+            set actual_status ""
+            set actual_origin ""
+            set actual_box ""
+            catch {set actual_orient [dict get $place_result actual_orient]}
+            catch {set actual_status [dict get $place_result actual_status]}
+            catch {set actual_origin [dict get $place_result actual_origin]}
+            catch {set actual_box [dict get $place_result actual_box]}
+            puts $fh "placed,$inst,$x,$y,$orient,[mptdc_o12b_csv [dict get $place_result command]],actual_orient=$actual_orient actual_status=$actual_status actual_origin=[mptdc_o12b_csv $actual_origin] actual_box=[mptdc_o12b_csv $actual_box]"
             return 1
         }
         puts $fh "place_attempt_failed,$inst,$x,$y,$orient,,[mptdc_o12b_csv [dict get $place_result errors]]"
