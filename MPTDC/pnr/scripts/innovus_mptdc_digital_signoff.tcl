@@ -1758,14 +1758,18 @@ proc mptdc_signoff_verify_block_pg_pin {net} {
     if {![catch {set ports [get_ports -quiet $net]}] && [llength $ports] > 0} {
         return [list 1 get_ports [mptdc_signoff_object_names $ports]]
     }
-    set terms ""
+    set names ""
     foreach cmd [list \
-        [list dbGet top.terms.name $net] \
-        [list dbGet top.pgTerms.name $net] \
+        [list dbGet top.pgTerms.name] \
+        [list dbGet top.terms.name] \
         [list get_db ports $net] \
     ] {
-        if {![catch {set terms [{*}$cmd]}] && $terms ne "" && $terms ne "0x0"} {
-            return [list 1 $cmd $terms]
+        if {![catch {set names [{*}$cmd]}] && $names ne "" && $names ne "0x0"} {
+            foreach name $names {
+                if {$name eq $net} {
+                    return [list 1 $cmd $names]
+                }
+            }
         }
     }
     return [list 0 none "no top-level term/port object found for $net"]
@@ -1775,13 +1779,16 @@ proc mptdc_signoff_create_one_block_pg_pin {fh net side layer rect width depth} 
     set side_lc [string tolower $side]
     set assign_x [expr {([lindex $rect 0] + [lindex $rect 2]) / 2.0}]
     set assign_y [expr {([lindex $rect 1] + [lindex $rect 3]) / 2.0}]
+    set llx [lindex $rect 0]
+    set lly [lindex $rect 1]
+    set urx [lindex $rect 2]
+    set ury [lindex $rect 3]
     set commands [list \
         [list editPin -pin $net -side $side -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
         [list editPin -pin $net -side $side -layer $layer -spreadType SIDE -pinWidth $width -pinDepth $depth -fixedPin 1] \
         [list editPin -pin $net -side $side_lc -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
-        [list createPGPin $net -net $net -geom $layer $rect] \
-        [list createPGPin -name $net -net $net -layer $layer -rect $rect] \
-        [list addPGPin -net $net -pin $net -layer $layer -rect $rect]]
+        [list createPGPin $net -net $net -geom $layer $llx $lly $urx $ury -dir bidi] \
+        [list createPGPin $net -net $net -geom $layer $llx $lly $urx $ury]]
     foreach cmd $commands {
         puts $fh "BLOCK_PG_PIN_${net}_COMMAND=$cmd"
         if {![catch {{*}$cmd} err]} {
