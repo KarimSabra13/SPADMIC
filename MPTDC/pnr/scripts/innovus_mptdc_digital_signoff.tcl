@@ -931,6 +931,8 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0
         MPTDC_ENABLE_FINAL_FILLER 1
         MPTDC_ENABLE_POST_FILLER_SROUTE 0
+        MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1
+        MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 0
         MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0
         MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0
         MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0
@@ -1906,6 +1908,57 @@ proc mptdc_signoff_configure_sroute_mode {fh label} {
     }
 }
 
+proc mptdc_signoff_run_postplace_pre_route_sroute {} {
+    set rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_sroute_status.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Post-placement Pre-route SRoute Status"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1] ? 1 : 0}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REQUIRE_CLEAN=[expr {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 0] ? 1 : 0}]"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1]} {
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=SKIPPED"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REASON=disabled_by_env"
+        close $fh
+        return $rpt
+    }
+
+    mptdc_signoff_configure_sroute_mode $fh POSTPLACE_PRE_ROUTE
+    set command_ok [mptdc_signoff_try_sroute_command $fh POSTPLACE_PRE_ROUTE_SROUTE [mptdc_signoff_sroute_commands {VDD VSS}]]
+    set summary [mptdc_signoff_sroute_attempt_summary POSTPLACE_PRE_ROUTE_SROUTE]
+    set summary_status [dict get $summary status]
+    set wires [dict get $summary wires]
+    set open_ports [dict get $summary open_ports]
+    set progress_ok [expr {$summary_status in {PASS REVIEW_REQUIRED} &&
+        $wires ne "UNKNOWN" && $wires > 0}]
+    if {$command_ok} {
+        set status PASS
+    } elseif {$progress_ok} {
+        set status REVIEW_REQUIRED
+    } else {
+        set status FAIL
+    }
+
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_COMMAND_STATUS=[expr {$command_ok ? "PASS" : "FAIL"}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_STATUS=$summary_status"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_WIRES=$wires"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_OPEN_PORTS=$open_ports"
+    if {[dict exists $summary reason]} {
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_REASON=[dict get $summary reason]"
+    }
+    if {[dict exists $summary report]} {
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_REPORT=[dict get $summary report]"
+    }
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_PROGRESS_STATUS=[expr {$progress_ok ? "PASS" : "FAIL"}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=$status"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
+    close $fh
+
+    if {$status ne "PASS" &&
+        [mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 0]} {
+        error "MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=$status report=$rpt"
+    }
+    return $rpt
+}
+
 proc mptdc_signoff_block_pg_pin_specs {} {
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss]]
     switch -- $style {
@@ -2366,45 +2419,20 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
     return $result
 }
 
-proc mptdc_signoff_marker_attr {marker attrs} {
-    foreach attr $attrs {
-        set value ""
-        if {![catch {set value [dbGet ${marker}.${attr}]}] && $value ne "" && $value ne "0x0"} {
-            return $value
-        }
-        if {![catch {set value [get_db $marker .$attr]}] && $value ne "" && $value ne "0x0"} {
-            return $value
-        }
-    }
-    return ""
-}
-
 proc mptdc_signoff_dump_drc_markers {path} {
     file mkdir [file dirname $path]
     set schema_rpt [file rootname $path]_schema.rpt
     catch {dbSchema marker > $schema_rpt}
     catch {help marker >> $schema_rpt}
     set markers [list]
-    foreach cmd {
-        {dbGet top.markers}
-        {get_db markers}
-        {get_db marker}
-    } {
-        if {![catch {set markers [eval $cmd]}] && $markers ne "" && $markers ne "0x0"} {
-            break
-        }
-    }
+    catch {set markers [dbGet top.markers]}
     set fh [open $path w]
-    puts $fh "idx\ttype\tsubtype\tlayer\tbox"
+    puts $fh "idx\tmarker_handle"
     set idx 0
     foreach marker $markers {
         if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} { continue }
         incr idx
-        set type [mptdc_signoff_marker_attr $marker {type marker_type}]
-        set subtype [mptdc_signoff_marker_attr $marker {subType subtype sub_type}]
-        set layer [mptdc_signoff_marker_attr $marker {layer.name layer}]
-        set box [mptdc_signoff_marker_attr $marker {box bbox rect}]
-        puts $fh "$idx\t[mptdc_signoff_report_value $type]\t[mptdc_signoff_report_value $subtype]\t[mptdc_signoff_report_value $layer]\t[mptdc_signoff_report_value $box]"
+        puts $fh "$idx\t[mptdc_signoff_report_value $marker]"
     }
     close $fh
     return $path
@@ -5635,6 +5663,7 @@ proc mptdc_signoff_route_design {} {
         mptdc_signoff_set_status ROUTE_STATUS FAIL [dict get $place_gate status_report]
         error "MPTDC_PRE_ROUTE_PLACEMENT_GATE_FAILED: report=[dict get $place_gate status_report]"
     }
+    mptdc_signoff_run_postplace_pre_route_sroute
 
     set route_cmd [mptdc_signoff_env MPTDC_ROUTE_DESIGN_COMMAND ""]
     if {$route_cmd eq ""} {
