@@ -403,9 +403,16 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
 
     puts $fh "PD box: $pd_box"
     puts $fh "Pitch x/y: $pitch_x / $pitch_y"
+    set apply_hier_box [mptdc_pnr_env MPTDC_PNR_PD_TILE_APPLY_HIER_BOX 1]
+    set constraint_mode [mptdc_pnr_env MPTDC_PNR_PD_TILE_CONSTRAINT_MODE box]
+    set margin [mptdc_pnr_env MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 1.0]
+    puts $fh "PD_TILE_CONSTRAINT_MODE=$constraint_mode"
+    puts $fh "PD_TILE_APPLY_HIER_BOX=$apply_hier_box"
+    puts $fh "PD_TILE_REGION_MARGIN_UM=$margin"
     puts $fh ""
 
     set placed 0
+    set skipped_hier_boxes 0
     set tile_regions 0
     set tile_region_assignments 0
     set tile_region_failures 0
@@ -413,7 +420,6 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
     set leaf_preplacements 0
     set leaf_preplacement_failures 0
     set leaf_pack_overflows 0
-    set margin [mptdc_pnr_env MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 1.0]
     foreach cell [lsort $cells] {
         set cell_name [mptdc_osc_pd_object_name $cell]
         if {$cell_name eq ""} { set cell_name "$cell" }
@@ -446,8 +452,13 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         } else {
             incr tile_region_failures
         }
-        if {[mptdc_osc_pd_apply_tile_box $cell_name $tile_box $fh]} {
-            incr placed
+        if {$apply_hier_box} {
+            if {[mptdc_osc_pd_apply_tile_box $cell_name $tile_box $fh]} {
+                incr placed
+            }
+        } else {
+            incr skipped_hier_boxes
+            puts $fh "  skipped: setObjFPlanBox Instance {$cell_name} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX"
         }
         set preplace_result [mptdc_osc_pd_preplace_tile_members $members $tile_box $fh]
         incr leaf_box_constraints [dict get $preplace_result box_constraints]
@@ -462,6 +473,7 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
 
     puts $fh ""
     puts $fh "Tile box constraints accepted: $placed"
+    puts $fh "Tile box constraints skipped: $skipped_hier_boxes"
     puts $fh "Tile regions accepted: $tile_regions"
     puts $fh "Tile region failures: $tile_region_failures"
     puts $fh "Tile region assignments: $tile_region_assignments"
@@ -477,6 +489,7 @@ proc mptdc_osc_pd_apply_pd_matrix_floorplan {} {
         tile_region_failures $tile_region_failures \
         tile_region_assignments $tile_region_assignments \
         tile_box_constraints $placed \
+        tile_box_constraints_skipped $skipped_hier_boxes \
         leaf_tile_box_constraints $leaf_box_constraints \
         leaf_preplacements $leaf_preplacements \
         leaf_preplacement_failures $leaf_preplacement_failures \

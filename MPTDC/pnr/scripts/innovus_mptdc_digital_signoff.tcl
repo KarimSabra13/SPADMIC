@@ -117,6 +117,7 @@ proc mptdc_signoff_status_keys {} {
         ROUTE_STATUS \
         FILLER_STATUS \
         EXTRACTION_STATUS \
+        POWER_STATUS \
         SETUP_STATUS_TC \
         TC_HOLD_STATUS \
         SETUP_STATUS_WC \
@@ -882,13 +883,17 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP
         MPTDC_PNR_POWER_LAYER METTP
         MPTDC_PNR_PHASE_TOP_LAYER METTP
-        MPTDC_PNR_PD_TILE_CONSTRAINT_MODE box
+        MPTDC_PNR_PD_TILE_CONSTRAINT_MODE none
+        MPTDC_PNR_PD_TILE_APPLY_HIER_BOX 0
+        MPTDC_PNR_PD_TILE_REGION_MARGIN_UM 0.0
         MPTDC_PNR_PD_TILE_USE_FENCE 0
         MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 0
         MPTDC_PNR_PD_TILE_FIX_LEAVES 0
         MPTDC_PD_PHYSICAL_AUDIT_MODE soft_region
         MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM 12.0
         MPTDC_PD_TILE_MAX_OFFSET_UM 12.0
+        MPTDC_PNR_FIX_RO_MACROS 0
+        MPTDC_PNR_CREATE_RO_HALOS 0
         MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN 1
         MPTDC_PNR_FAST_TAG_COLUMN_SIDE center
         MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD 1
@@ -897,18 +902,23 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_COLUMN_STRIP_WIDTH_UM 40.0
         MPTDC_ENABLE_POSTROUTE_OPT 1
         MPTDC_ENABLE_TC_CLOSURE 1
-        MPTDC_POSTROUTE_SETUP_OPT_PASSES 10
-        MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES 10
+        MPTDC_POSTROUTE_SETUP_OPT_PASSES 4
+        MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES 4
         MPTDC_POSTROUTE_SETUP_EARLY_STOP 1
+        MPTDC_POSTROUTE_SETUP_PLATEAU_GUARD 1
         MPTDC_POSTROUTE_SETUP_STALL_LIMIT 1
         MPTDC_POSTROUTE_SETUP_MIN_IMPROVEMENT_NS 0.005
         MPTDC_PNR_FAST_TAG_TIMING_FOCUS 1
         MPTDC_PNR_FAST_TAG_TARGETED_ECO 1
         MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2 1
-        MPTDC_ENABLE_POST_FILLER_SROUTE 1
+        MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0
+        MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1
+        MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64
+        MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4
+        MPTDC_ENABLE_POST_FILLER_SROUTE 0
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
-        MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 1
-        MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 6
+        MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 0
+        MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 0
     } {
         mptdc_signoff_set_env_default $name $value
     }
@@ -965,6 +975,13 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
     set fh [open $path w]
     puts $fh "# MPTDC RO Macro Halo Status"
     puts $fh "RO_PHASE_MIN_CLEARANCE_UM=$halo"
+    puts $fh "RO_HALO_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_CREATE_RO_HALOS 1] ? 1 : 0}]"
+    if {![mptdc_signoff_env_truthy MPTDC_PNR_CREATE_RO_HALOS 1]} {
+        puts $fh "RO_HALO_STATUS=SKIPPED"
+        puts $fh "RO_HALO_REASON=disabled_for_tc_closure_placement_relaxation"
+        close $fh
+        return $path
+    }
     set failures [list]
     foreach family {slow fast} {
         set inst [dict get $ro_map $family]
@@ -2191,6 +2208,16 @@ proc mptdc_signoff_capture_route_command {cmd path} {
     return [list 1 ""]
 }
 
+proc mptdc_signoff_route_repair_commands {} {
+    return [list \
+        {ecoRoute -target} \
+        {ecoRoute -target -fix_drc} \
+        {ecoRoute -fix_drc} \
+        {globalDetailRoute -route_with_eco true} \
+        {globalDetailRoute -route_with_timing_driven true} \
+        {globalDetailRoute}]
+}
+
 proc mptdc_signoff_count_existing_filler_cells {} {
     set patterns [list MPTDC_FILL* *MPTDC_FILL*]
     set names [mptdc_signoff_collect_cells $patterns]
@@ -2201,11 +2228,7 @@ proc mptdc_signoff_count_existing_filler_cells {} {
 }
 
 proc mptdc_signoff_post_filler_route_cleanup {rpt} {
-    set commands [list \
-        {ecoRoute -target} \
-        {ecoRoute} \
-        {globalDetailRoute} \
-    ]
+    set commands [mptdc_signoff_route_repair_commands]
     set fh [open $rpt a]
     puts $fh "POST_FILLER_ROUTE_CLEANUP=REQUIRED_AFTER_POSTROUTE_FILLER"
     puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=bounded_incremental_then_global_detail_if_needed"
@@ -2489,6 +2512,40 @@ proc mptdc_signoff_set_cell_dont_touch {inst value} {
     return $ok
 }
 
+proc mptdc_signoff_set_cell_size_ok {inst} {
+    set ok 0
+    set obj [list]
+    catch {set obj [get_cells -quiet $inst]}
+    if {[mptdc_signoff_collection_count $obj] > 0} {
+        if {![catch {set_dont_touch $obj sizeOk}]} { set ok 1 }
+        if {![catch {set_db $obj .dont_touch sizeOk}]} { set ok 1 }
+    }
+    if {![catch {set_db inst:$inst .dont_touch sizeOk}]} { set ok 1 }
+    if {!$ok} {
+        if {[mptdc_signoff_collection_count $obj] > 0} {
+            if {![catch {set_dont_touch $obj false}]} { set ok 1 }
+            if {![catch {set_db $obj .dont_touch false}]} { set ok 1 }
+        }
+        if {![catch {set_db inst:$inst .dont_touch false}]} { set ok 1 }
+    }
+    return $ok
+}
+
+proc mptdc_signoff_fast_tag_eco_next_drive_master {master} {
+    set master [string toupper $master]
+    if {![regexp {^(.+JIHD)X([0-9]+)$} $master -> prefix drive]} {
+        return ""
+    }
+    set limit [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4]
+    if {$limit < 1} { set limit 1 }
+    foreach next {1 2 3 4 6 8 12} {
+        if {$next > $drive && $next <= $limit} {
+            return "${prefix}X${next}"
+        }
+    }
+    return ""
+}
+
 proc mptdc_signoff_fast_tag_eco_allow_cell {inst} {
     set norm [mptdc_signoff_norm_inst_name $inst]
     set master [string toupper [mptdc_signoff_cell_master_name $inst]]
@@ -2502,8 +2559,13 @@ proc mptdc_signoff_fast_tag_eco_allow_cell {inst} {
         return [dict create allowed 1 class ON22_X1_TO_X2_CANDIDATE master $master]
     }
     if {[regexp {^(BU|IN).*JIHDX[0-9]+$} $master] &&
-        [regexp -nocase {fast_tag|raw_lfsr|nfast|tag} $norm]} {
+        [regexp -nocase {fast_tag|raw_lfsr|nfast|tag|hit|meas_ctrl} $norm]} {
         return [dict create allowed 1 class FAST_TAG_DATA_BUFFER_OR_INVERTER master $master]
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1] &&
+        [mptdc_signoff_fast_tag_eco_next_drive_master $master] ne "" &&
+        [regexp -nocase {fast_tag|raw_lfsr|nfast|tag|hit|meas_ctrl} $norm]} {
+        return [dict create allowed 1 class FAST_TAG_RELATED_UPSIZE_CANDIDATE master $master]
     }
     return [dict create allowed 0 class NON_TARGET_CELL master $master]
 }
@@ -2513,7 +2575,9 @@ proc mptdc_signoff_collect_fast_tag_eco_cells {} {
         *gen_fast_tag_col* \
         *u_fast_tag* \
         *raw_lfsr_tag* \
-        *nfast*]
+        *nfast* \
+        *meas_ctrl* \
+        *hit*]
     set cells [list]
     foreach inst [mptdc_signoff_collect_cells $patterns] {
         set info [mptdc_signoff_fast_tag_eco_allow_cell $inst]
@@ -2524,19 +2588,23 @@ proc mptdc_signoff_collect_fast_tag_eco_cells {} {
     return $cells
 }
 
-proc mptdc_signoff_try_on22_x2_resize {inst} {
+proc mptdc_signoff_try_cell_resize {inst target_cell} {
     set errors [list]
     foreach cmd [list \
-        [list ecoChangeCell -inst $inst -cell ON22JIHDX2] \
-        [list change_link $inst ON22JIHDX2] \
-        [list sizeCell $inst ON22JIHDX2] \
-        [list replaceCell $inst ON22JIHDX2]] {
+        [list ecoChangeCell -inst $inst -cell $target_cell] \
+        [list change_link $inst $target_cell] \
+        [list sizeCell $inst $target_cell] \
+        [list replaceCell $inst $target_cell]] {
         if {![catch {uplevel #0 $cmd} err]} {
             return [dict create status PASS command $cmd error ""]
         }
         lappend errors "$cmd: $err"
     }
     return [dict create status REVIEW_REQUIRED command "" error [join $errors { | }]]
+}
+
+proc mptdc_signoff_try_on22_x2_resize {inst} {
+    return [mptdc_signoff_try_cell_resize $inst ON22JIHDX2]
 }
 
 proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
@@ -2547,8 +2615,12 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     puts $fh "FAST_TAG_TO_PD_TS_FALSE_PATH=NO"
     puts $fh "FAST_TAG_TO_PD_TS_MULTICYCLE=NO"
     puts $fh "FAST_TAG_TARGETED_ECO_SCOPE=innovus_only_no_rtl_no_genus"
-    puts $fh "FAST_TAG_TARGETED_ECO_ALLOWED=fast_tag_data_buffers_inverters_and_ON22JIHDX1_to_ON22JIHDX2"
+    puts $fh "FAST_TAG_TARGETED_ECO_ALLOWED=fast_tag_related_data_buffers_inverters_small_gates_and_ON22JIHDX1_to_ON22JIHDX2"
     puts $fh "FAST_TAG_TARGETED_ECO_FORBIDDEN=RO_macros_phase_buffers_oscillator_clocks_broad_clk_sys_CTS"
+    puts $fh "FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0] ? 1 : 0}]"
+    puts $fh "FAST_TAG_ECO_UPSIZE_SMALL_GATES=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1] ? 1 : 0}]"
+    puts $fh "FAST_TAG_ECO_MAX_UPSIZE_CELLS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64]"
+    puts $fh "FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4]"
     if {![mptdc_signoff_fast_tag_targeted_eco_enabled]} {
         puts $fh "FAST_TAG_TARGETED_ECO_STATUS=SKIPPED"
         close $fh
@@ -2572,10 +2644,13 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     }
 
     set protected [list]
-    foreach inst [concat \
-        $src_cells \
-        $dst_cells \
-        [mptdc_signoff_collect_cells [list *RO_tune6* *u_ro_tune4* *phase_buf* *gen_phase_buf* *u_phase_buf*]]] {
+    set protect_endpoint_flops [mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0]
+    if {$protect_endpoint_flops} {
+        foreach inst [concat $src_cells $dst_cells] {
+            mptdc_signoff_unique_append protected $inst
+        }
+    }
+    foreach inst [mptdc_signoff_collect_cells [list *RO_tune6* *u_ro_tune4* *phase_buf* *gen_phase_buf* *u_phase_buf*]] {
         mptdc_signoff_unique_append protected $inst
     }
     set protected_count 0
@@ -2585,6 +2660,16 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
         }
     }
     puts $fh "FAST_TAG_ECO_PROTECTED_CELL_COUNT=$protected_count"
+    set size_ok_endpoint_count 0
+    if {!$protect_endpoint_flops} {
+        foreach inst [concat $src_cells $dst_cells] {
+            if {[mptdc_signoff_set_cell_size_ok $inst]} {
+                incr size_ok_endpoint_count
+                puts $fh "FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=$inst"
+            }
+        }
+    }
+    puts $fh "FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK_COUNT=$size_ok_endpoint_count"
     foreach pattern {clk_osc_slow clk_osc_fast clk_osc_slow_tap* clk_osc_fast_tap* clk_osc_*_buf_tap* clk_sys} {
         if {![catch {set_dont_touch_network [get_clocks $pattern]} err]} {
             puts $fh "FAST_TAG_ECO_PROTECTED_CLOCK=$pattern"
@@ -2596,37 +2681,55 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     set allowed [mptdc_signoff_collect_fast_tag_eco_cells]
     set allowed_count 0
     set on22_candidates [list]
+    set upsize_candidates [list]
     foreach inst $allowed {
         set info [mptdc_signoff_fast_tag_eco_allow_cell $inst]
         if {[mptdc_signoff_set_cell_dont_touch $inst false]} {
             incr allowed_count
         }
-        puts $fh "FAST_TAG_ECO_ALLOWED_CELL=$inst class=[dict get $info class] master=[dict get $info master]"
+        set target [mptdc_signoff_fast_tag_eco_next_drive_master [dict get $info master]]
+        puts $fh "FAST_TAG_ECO_ALLOWED_CELL=$inst class=[dict get $info class] master=[dict get $info master] resize_target=$target"
         if {[dict get $info class] eq "ON22_X1_TO_X2_CANDIDATE"} {
             lappend on22_candidates $inst
+        }
+        if {$target ne ""} {
+            lappend upsize_candidates [list $inst $target]
         }
     }
     puts $fh "FAST_TAG_ECO_ALLOWED_CELL_COUNT=$allowed_count"
     puts $fh "FAST_TAG_ECO_ON22_X1_CANDIDATE_COUNT=[llength $on22_candidates]"
+    puts $fh "FAST_TAG_ECO_UPSIZE_CANDIDATE_COUNT=[llength $upsize_candidates]"
 
     set resize_attempts 0
     set resize_success 0
-    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2 1]} {
-        foreach inst $on22_candidates {
+    set max_upsize [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64]
+    if {$max_upsize < 0} { set max_upsize 0 }
+    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1]} {
+        foreach candidate $upsize_candidates {
+            if {$resize_attempts >= $max_upsize} {
+                puts $fh "FAST_TAG_ECO_UPSIZE_STOP_REASON=max_upsize_cells_reached"
+                break
+            }
+            set inst [lindex $candidate 0]
+            set target [lindex $candidate 1]
+            if {$target eq "ON22JIHDX2" && ![mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2 1]} {
+                puts $fh "FAST_TAG_ECO_UPSIZE_SKIPPED=$inst target=$target reason=ON22_X2_disabled_by_env"
+                continue
+            }
             incr resize_attempts
-            set result [mptdc_signoff_try_on22_x2_resize $inst]
-            puts $fh "FAST_TAG_ECO_ON22_X2_ATTEMPT=$inst status=[dict get $result status] command=[dict get $result command]"
+            set result [mptdc_signoff_try_cell_resize $inst $target]
+            puts $fh "FAST_TAG_ECO_UPSIZE_ATTEMPT=$inst target=$target status=[dict get $result status] command=[dict get $result command]"
             if {[dict get $result status] eq "PASS"} {
                 incr resize_success
             } else {
-                puts $fh "FAST_TAG_ECO_ON22_X2_ATTEMPT_ERROR=[dict get $result error]"
+                puts $fh "FAST_TAG_ECO_UPSIZE_ATTEMPT_ERROR=[dict get $result error]"
             }
         }
     } else {
-        puts $fh "FAST_TAG_ECO_ON22_X2_STATUS=DISABLED_BY_ENV"
+        puts $fh "FAST_TAG_ECO_UPSIZE_STATUS=DISABLED_BY_ENV"
     }
-    puts $fh "FAST_TAG_ECO_ON22_X2_ATTEMPTS=$resize_attempts"
-    puts $fh "FAST_TAG_ECO_ON22_X2_SUCCESSES=$resize_success"
+    puts $fh "FAST_TAG_ECO_UPSIZE_ATTEMPTS=$resize_attempts"
+    puts $fh "FAST_TAG_ECO_UPSIZE_SUCCESSES=$resize_success"
     puts $fh "FAST_TAG_ECO_BUFFER_INSERTION_SCOPE=delegated_to_following_optDesign_postRoute_with_fast_tag_group_and_protected_forbidden_families"
     puts $fh "FAST_TAG_TARGETED_ECO_STATUS=PASS"
     close $fh
@@ -3031,7 +3134,7 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
         return $route_gate
     }
     close $fh
-    foreach cmd [list {ecoRoute -target} {ecoRoute} {globalDetailRoute}] {
+    foreach cmd [mptdc_signoff_route_repair_commands] {
         set cmd_rpt [mptdc_signoff_route_command_report_path route_recovery $cmd]
         set fh [open $rpt a]
         puts $fh "ROUTE_GATE_RECOVERY_COMMAND=$cmd"
@@ -3295,14 +3398,21 @@ proc mptdc_signoff_place_ro_macros {} {
     if {$x eq ""} { set x 50.0 }
     if {$slow_y eq ""} { set slow_y 450.0 }
     if {$fast_y eq ""} { set fast_y 50.0 }
+    set fix_ro [mptdc_signoff_env_truthy MPTDC_PNR_FIX_RO_MACROS 1]
+    puts $fh "RO_MACRO_FIXED=[expr {$fix_ro ? "YES" : "NO"}]"
     foreach item [list [list $slow $x $slow_y R0 north] [list $fast $x $fast_y MX south]] {
         set inst [lindex $item 0]
         set px [lindex $item 1]
         set py [lindex $item 2]
         set orient [lindex $item 3]
         set region [lindex $item 4]
-        puts $fh "PLACE_RO instance=$inst region=$region x=$px y=$py orient=$orient fixed=YES"
-        if {[catch {placeInstance $inst $px $py $orient -fixed} err]} {
+        set place_cmd [list placeInstance $inst $px $py $orient]
+        if {$fix_ro} {
+            lappend place_cmd -fixed
+        }
+        puts $fh "PLACE_RO instance=$inst region=$region x=$px y=$py orient=$orient fixed=[expr {$fix_ro ? "YES" : "NO"}]"
+        puts $fh "PLACE_RO_COMMAND=$place_cmd"
+        if {[catch {uplevel #0 $place_cmd} err]} {
             puts $fh "STATUS=FAIL ERROR=$err"
             close $fh
             mptdc_signoff_set_status RO_MACRO_STATUS FAIL $rpt
@@ -3385,6 +3495,10 @@ proc mptdc_signoff_place_pd_matrix {} {
         if {[dict exists $grid_result tile_box_constraints]} {
             set tile_box_constraints [dict get $grid_result tile_box_constraints]
         }
+        set tile_box_constraints_skipped 0
+        if {[dict exists $grid_result tile_box_constraints_skipped]} {
+            set tile_box_constraints_skipped [dict get $grid_result tile_box_constraints_skipped]
+        }
         set leaf_box_constraints 0
         if {[dict exists $grid_result leaf_tile_box_constraints]} {
             set leaf_box_constraints [dict get $grid_result leaf_tile_box_constraints]
@@ -3408,6 +3522,7 @@ proc mptdc_signoff_place_pd_matrix {} {
         puts $fh "PD_GRID_TILE_REGION_FAILURES=$tile_region_failures"
         puts $fh "PD_GRID_TILE_REGION_ASSIGNMENTS=$tile_assignments"
         puts $fh "PD_GRID_TILE_BOX_CONSTRAINTS=$tile_box_constraints"
+        puts $fh "PD_GRID_TILE_BOX_CONSTRAINTS_SKIPPED=$tile_box_constraints_skipped"
         puts $fh "PD_GRID_LEAF_TILE_BOX_CONSTRAINTS=$leaf_box_constraints"
         puts $fh "PD_GRID_LEAF_PREPLACEMENTS=$leaf_preplacements"
         puts $fh "PD_GRID_LEAF_PREPLACEMENT_FAILURES=$leaf_preplacement_failures"
@@ -4853,12 +4968,37 @@ proc mptdc_signoff_route_design {} {
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 04_route.enc]}
 }
 
+proc mptdc_signoff_capture_power_report {} {
+    set power_rpt [file join [mptdc_signoff_report_dir] power_tc_nominal.rpt]
+    set status_rpt [file join [mptdc_signoff_report_dir] power_status.rpt]
+    set ok [mptdc_signoff_capture_candidates $power_rpt \
+        "TC_NOMINAL Innovus power report" [list \
+            {report_power} \
+            {reportPower}]]
+    set status [expr {$ok ? "PROVISIONAL" : "REVIEW_REQUIRED"}]
+    set fh [open $status_rpt w]
+    puts $fh "# MPTDC TC Innovus Power Status"
+    puts $fh "POWER_STATUS=$status"
+    puts $fh "POWER_REPORT=$power_rpt"
+    puts $fh "POWER_SCOPE=innovus_tc_nominal_default_activity"
+    puts $fh "POWER_SIGNOFF_SCOPE=NO_IR_EM_NO_ACTIVITY_SIGNOFF"
+    if {!$ok} {
+        puts $fh "POWER_REPORT_CAPTURE_STATUS=REVIEW_REQUIRED"
+    } else {
+        puts $fh "POWER_REPORT_CAPTURE_STATUS=PASS"
+    }
+    close $fh
+    mptdc_signoff_set_status POWER_STATUS $status $status_rpt
+    return $status_rpt
+}
+
 proc mptdc_signoff_extract_and_sta {} {
     set extract_rpt [file join [mptdc_signoff_report_dir] extraction_rc.rpt]
     mptdc_signoff_capture_required_candidates $extract_rpt \
         "post-route TC extractRC" [list {extractRC}]
     set sta_policy [mptdc_signoff_configure_post_route_tc_sta]
     mptdc_signoff_set_status EXTRACTION_STATUS PROVISIONAL $sta_policy
+    mptdc_signoff_capture_power_report
     set setup_rpt [file join [mptdc_signoff_report_dir] timing_tc_nominal.rpt]
     set hold_rpt [file join [mptdc_signoff_report_dir] timing_tc_hold.rpt]
     set setup_top [file join [mptdc_signoff_report_dir] timing_tc_nominal_top100.rpt]
@@ -5488,6 +5628,7 @@ proc mptdc_signoff_write_final_package {} {
     set cts_state [mptdc_signoff_status_state CTS_STATUS]
     set route_state [mptdc_signoff_status_state ROUTE_STATUS]
     set extraction_state [mptdc_signoff_status_state EXTRACTION_STATUS]
+    set power_state [mptdc_signoff_status_state POWER_STATUS]
     set drv_state [mptdc_signoff_status_state DRV_STATUS]
     set tc_pnr_state PASS
     set tc_pnr_evidence tc_only_routed_timed_closure_complete
@@ -5515,6 +5656,7 @@ proc mptdc_signoff_write_final_package {} {
     puts $fh "CTS_STATUS=$cts_state"
     puts $fh "ROUTE_STATUS=$route_state"
     puts $fh "EXTRACTION_STATUS=$extraction_state"
+    puts $fh "POWER_STATUS=$power_state"
     puts $fh "DRV_STATUS=$drv_state"
     puts $fh "SETUP_STATUS_TC=$setup_state"
     puts $fh "TC_HOLD_STATUS=$hold_state"
@@ -5549,6 +5691,7 @@ proc mptdc_signoff_write_final_package {} {
         ROUTE_STATUS \
         ANTENNA_STATUS \
         EXTRACTION_STATUS \
+        POWER_STATUS \
         SETUP_STATUS_TC \
         TC_HOLD_STATUS \
         DRV_STATUS \
