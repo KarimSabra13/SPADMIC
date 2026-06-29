@@ -915,6 +915,9 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1
         MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64
         MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4
+        MPTDC_ENABLE_BLOCK_PG_PINS 1
+        MPTDC_BLOCK_PG_PIN_LAYER METTP
+        MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss
         MPTDC_ENABLE_POST_FILLER_SROUTE 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
         MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc}}
@@ -1715,6 +1718,142 @@ proc mptdc_signoff_try_pg_command {fh label commands} {
     return 0
 }
 
+proc mptdc_signoff_block_pg_pin_specs {} {
+    set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss]]
+    switch -- $style {
+        left_vdd_right_vss {
+            return [list [list VDD LEFT] [list VSS RIGHT]]
+        }
+        left_vss_right_vdd {
+            return [list [list VSS LEFT] [list VDD RIGHT]]
+        }
+        default {
+            error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_STYLE: $style"
+        }
+    }
+}
+
+proc mptdc_signoff_block_pg_pin_rect {side core_box width depth} {
+    set llx [lindex $core_box 0]
+    set lly [lindex $core_box 1]
+    set urx [lindex $core_box 2]
+    set ury [lindex $core_box 3]
+    set cy [expr {($lly + $ury) / 2.0}]
+    set half [expr {$width / 2.0}]
+    switch -- [string toupper $side] {
+        LEFT {
+            return [list $llx [expr {$cy - $half}] [expr {$llx + $depth}] [expr {$cy + $half}]]
+        }
+        RIGHT {
+            return [list [expr {$urx - $depth}] [expr {$cy - $half}] $urx [expr {$cy + $half}]]
+        }
+        default {
+            error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_SIDE: $side"
+        }
+    }
+}
+
+proc mptdc_signoff_verify_block_pg_pin {net} {
+    set ports [list]
+    if {![catch {set ports [get_ports -quiet $net]}] && [llength $ports] > 0} {
+        return [list 1 get_ports [mptdc_signoff_object_names $ports]]
+    }
+    set terms ""
+    foreach cmd [list \
+        [list dbGet top.terms.name $net] \
+        [list dbGet top.pgTerms.name $net] \
+        [list get_db ports $net] \
+    ] {
+        if {![catch {set terms [{*}$cmd]}] && $terms ne "" && $terms ne "0x0"} {
+            return [list 1 $cmd $terms]
+        }
+    }
+    return [list 0 none "no top-level term/port object found for $net"]
+}
+
+proc mptdc_signoff_create_one_block_pg_pin {fh net side layer rect width depth} {
+    set side_lc [string tolower $side]
+    set assign_x [expr {([lindex $rect 0] + [lindex $rect 2]) / 2.0}]
+    set assign_y [expr {([lindex $rect 1] + [lindex $rect 3]) / 2.0}]
+    set commands [list \
+        [list editPin -pin $net -side $side -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
+        [list editPin -pin $net -side $side -layer $layer -spreadType SIDE -pinWidth $width -pinDepth $depth -fixedPin 1] \
+        [list editPin -pin $net -side $side_lc -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
+        [list createPGPin $net -net $net -geom $layer $rect] \
+        [list createPGPin -name $net -net $net -layer $layer -rect $rect] \
+        [list addPGPin -net $net -pin $net -layer $layer -rect $rect]]
+    foreach cmd $commands {
+        puts $fh "BLOCK_PG_PIN_${net}_COMMAND=$cmd"
+        if {![catch {{*}$cmd} err]} {
+            puts $fh "BLOCK_PG_PIN_${net}_CREATE_STATUS=PASS"
+            puts $fh "BLOCK_PG_PIN_${net}_CREATE_COMMAND=$cmd"
+            return 1
+        }
+        puts $fh "BLOCK_PG_PIN_${net}_ATTEMPT_STATUS=FAIL"
+        puts $fh "BLOCK_PG_PIN_${net}_ATTEMPT_ERROR=$err"
+    }
+    puts $fh "BLOCK_PG_PIN_${net}_CREATE_STATUS=FAIL"
+    return 0
+}
+
+proc mptdc_signoff_create_block_pg_pins {} {
+    set rpt [file join [mptdc_signoff_report_dir] block_pg_pin_status.rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Block PG Pin Status"
+    puts $fh "BLOCK_PG_PIN_ENABLE=[mptdc_signoff_env MPTDC_ENABLE_BLOCK_PG_PINS 1]"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_PINS 1]} {
+        puts $fh "BLOCK_PG_PIN_STATUS=SKIPPED"
+        puts $fh "BLOCK_PG_PIN_REASON=MPTDC_ENABLE_BLOCK_PG_PINS_DISABLED"
+        close $fh
+        return [list 1 $rpt]
+    }
+
+    set layer [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_LAYER METTP]
+    set width [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_WIDTH_UM 2.0]
+    set depth [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_DEPTH_UM 2.0]
+    set core_box [mptdc_signoff_core_box]
+    puts $fh "BLOCK_PG_PIN_LAYER=$layer"
+    puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss]"
+    puts $fh "BLOCK_PG_PIN_WIDTH_UM=$width"
+    puts $fh "BLOCK_PG_PIN_DEPTH_UM=$depth"
+    puts $fh "CORE_BBOX=$core_box"
+    if {![mptdc_signoff_box_valid $core_box]} {
+        puts $fh "BLOCK_PG_PIN_STATUS=FAIL"
+        puts $fh "BLOCK_PG_PIN_ERROR=invalid_core_bbox"
+        close $fh
+        return [list 0 $rpt]
+    }
+
+    set failures [list]
+    foreach spec [mptdc_signoff_block_pg_pin_specs] {
+        set net [lindex $spec 0]
+        set side [lindex $spec 1]
+        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $width $depth]
+        puts $fh ""
+        puts $fh "BLOCK_PG_PIN_NET=$net"
+        puts $fh "BLOCK_PG_PIN_SIDE=$side"
+        puts $fh "BLOCK_PG_PIN_RECT=$rect"
+        set create_ok [mptdc_signoff_create_one_block_pg_pin $fh $net $side $layer $rect $width $depth]
+        set verify [mptdc_signoff_verify_block_pg_pin $net]
+        puts $fh "BLOCK_PG_PIN_${net}_VERIFY_STATUS=[expr {[lindex $verify 0] ? "PASS" : "FAIL"}]"
+        puts $fh "BLOCK_PG_PIN_${net}_VERIFY_SOURCE=[lindex $verify 1]"
+        puts $fh "BLOCK_PG_PIN_${net}_VERIFY_DETAIL=[lindex $verify 2]"
+        if {!$create_ok || ![lindex $verify 0]} {
+            lappend failures $net
+        }
+    }
+
+    if {[llength $failures] > 0} {
+        puts $fh "BLOCK_PG_PIN_STATUS=FAIL"
+        puts $fh "BLOCK_PG_PIN_FAILURES=$failures"
+        close $fh
+        return [list 0 $rpt]
+    }
+    puts $fh "BLOCK_PG_PIN_STATUS=PASS"
+    close $fh
+    return [list 1 $rpt]
+}
+
 proc mptdc_signoff_capture_to_file {path commands} {
     foreach cmd $commands {
         if {![catch {uplevel 1 "$cmd > \"$path\""} err]} {
@@ -1816,6 +1955,9 @@ proc mptdc_signoff_build_power_grid {} {
     set stripe_h_ok [mptdc_signoff_try_pg_command $fh ADD_STRIPE_HORIZONTAL [list \
         [list addStripe -nets $nets -layer MET3 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20] \
         [list addStripe -nets $nets -layer MET2 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20]]]
+    close $fh
+    lassign [mptdc_signoff_create_block_pg_pins] block_pin_ok block_pin_rpt
+    set fh [open $rpt a]
     set sroute_ok [mptdc_signoff_try_pg_command $fh SROUTE [list \
         [list sroute -connect {corePin blockPin padPin} -nets $nets] \
         [list sroute -nets $nets]]]
@@ -1843,6 +1985,8 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "RING_CREATED=$ring_ok"
     puts $fh "VERTICAL_STRAP_CREATED=$stripe_v_ok"
     puts $fh "HORIZONTAL_STRAP_CREATED=$stripe_h_ok"
+    puts $fh "BLOCK_PG_PIN_STATUS=[expr {$block_pin_ok ? "PASS" : "FAIL"}]"
+    puts $fh "BLOCK_PG_PIN_REPORT=$block_pin_rpt"
     puts $fh "SROUTE_DONE=$sroute_ok"
     puts $fh "RO_INSTANCE_COUNT=$ro_count"
     puts $fh "RO_VDD_CONNECTED_COUNT=$ro_vdd_count"
@@ -1859,8 +2003,8 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
-    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok}]
-    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
+    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $sroute_ok}]
+    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
     set provisional_reason ""
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG] &&
@@ -2232,7 +2376,8 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
     set commands [mptdc_signoff_route_repair_commands]
     set fh [open $rpt a]
     puts $fh "POST_FILLER_ROUTE_CLEANUP=REQUIRED_AFTER_POSTROUTE_FILLER"
-    puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=bounded_incremental_then_global_detail_if_needed"
+    puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=bounded_incremental_eco_only"
+    puts $fh "POST_FILLER_ROUTE_REPAIR_COMMANDS=$commands"
     close $fh
     foreach cmd $commands {
         set cmd_rpt [mptdc_signoff_route_command_report_path post_filler_route $cmd]
@@ -2311,17 +2456,14 @@ proc mptdc_signoff_insert_final_fillers {} {
     catch {mptdc_signoff_apply_pg_connectivity}
     set fh [open $rpt a]
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POST_FILLER_SROUTE]} {
-        close $fh
-        if {[catch {sroute -nets {VDD VSS}} sroute_err]} {
-            set fh [open $rpt a]
+        set sroute_ok [mptdc_signoff_try_pg_command $fh POST_FILLER_SROUTE [list \
+            [list sroute -connect {corePin blockPin padPin} -nets {VDD VSS}] \
+            [list sroute -nets {VDD VSS}]]]
+        if {!$sroute_ok} {
             puts $fh "POST_FILLER_SROUTE_STATUS=REVIEW_REQUIRED"
-            puts $fh "POST_FILLER_SROUTE_ERROR=$sroute_err"
-            close $fh
-        } else {
-            set fh [open $rpt a]
-            puts $fh "POST_FILLER_SROUTE_STATUS=PASS"
-            close $fh
+            puts $fh "POST_FILLER_SROUTE_REASON=all_sroute_command_variants_failed"
         }
+        close $fh
     } else {
         puts $fh "POST_FILLER_SROUTE_STATUS=SKIPPED"
         puts $fh "POST_FILLER_SROUTE_REASON=pg_connectivity_rechecked_without_special_route_mutation"
@@ -3118,6 +3260,7 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
     puts $fh "# MPTDC Route Gate Recovery"
     puts $fh "ROUTE_GATE_RECOVERY_INITIAL_DRC=[dict get $drc_data total_violations]"
     puts $fh "ROUTE_GATE_RECOVERY_INITIAL_SHORTS=[dict get $drc_data shorts]"
+    puts $fh "ROUTE_GATE_RECOVERY_REPAIR_COMMANDS=[mptdc_signoff_route_repair_commands]"
     if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
         puts $fh "ROUTE_GATE_RECOVERY_STATUS=NOT_NEEDED"
         close $fh

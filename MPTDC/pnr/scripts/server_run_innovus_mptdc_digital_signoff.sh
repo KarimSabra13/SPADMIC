@@ -75,6 +75,8 @@ lef_macro_size() {
 }
 
 apply_recovery_defaults() {
+  local default_route_repair_commands='{ecoRoute -target} {ecoRoute -fix_drc}'
+
   export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE="${MPTDC_PNR_PD_TILE_CONSTRAINT_MODE:-none}"
   export MPTDC_PNR_PD_TILE_APPLY_HIER_BOX="${MPTDC_PNR_PD_TILE_APPLY_HIER_BOX:-0}"
   export MPTDC_PNR_PD_TILE_REGION_MARGIN_UM="${MPTDC_PNR_PD_TILE_REGION_MARGIN_UM:-0.0}"
@@ -111,9 +113,12 @@ apply_recovery_defaults() {
   export MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS="${MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS:-64}"
   export MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT="${MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT:-4}"
 
+  export MPTDC_ENABLE_BLOCK_PG_PINS="${MPTDC_ENABLE_BLOCK_PG_PINS:-1}"
+  export MPTDC_BLOCK_PG_PIN_LAYER="${MPTDC_BLOCK_PG_PIN_LAYER:-METTP}"
+  export MPTDC_BLOCK_PG_PIN_STYLE="${MPTDC_BLOCK_PG_PIN_STYLE:-left_vdd_right_vss}"
   export MPTDC_ENABLE_POST_FILLER_SROUTE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-1}"
   export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-1}"
-  export MPTDC_ROUTE_REPAIR_COMMANDS="${MPTDC_ROUTE_REPAIR_COMMANDS:-{{ecoRoute -target} {ecoRoute -fix_drc}}}"
+  export MPTDC_ROUTE_REPAIR_COMMANDS="${MPTDC_ROUTE_REPAIR_COMMANDS:-$default_route_repair_commands}"
   export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE="${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-0}"
   export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS="${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-0}"
 }
@@ -367,6 +372,12 @@ export MPTDC_CLOSURE_SCOPE="${MPTDC_CLOSURE_SCOPE:-TC_ONLY}"
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
 apply_recovery_defaults
 
+if [[ "$MODE" == "full_signoff" && "${MPTDC_ENABLE_POST_FILLER_SROUTE,,}" =~ ^(0|no|false|off)$ && "${MPTDC_BYPASS_POST_FILLER_SROUTE_REQUIRED:-0}" != "1" ]]; then
+  echo "ERROR: full_signoff requires MPTDC_ENABLE_POST_FILLER_SROUTE=1." | tee -a "$RUN_LOG"
+  echo "Set MPTDC_BYPASS_POST_FILLER_SROUTE_REQUIRED=1 only for an explicit debug bypass." | tee -a "$RUN_LOG"
+  exit 3
+fi
+
 if [[ "$MODE" != "discover_only" && -n "${O1_RO_LEF_PATH:-}" && -f "${O1_RO_LEF_PATH:-}" ]]; then
   export_ro_lef_size "$O1_RO_LEF_PATH" "${O1_RO_CELL_NAME:-RO_tune6}"
 fi
@@ -417,7 +428,12 @@ fi
   echo "fast_tag_targeted_eco: ${MPTDC_PNR_FAST_TAG_TARGETED_ECO:-unset}"
   echo "fast_tag_eco_protect_endpoint_flops: ${MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS:-unset}"
   echo "fast_tag_eco_upsize_small_gates: ${MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES:-unset}"
+  echo "block_pg_pins: ${MPTDC_ENABLE_BLOCK_PG_PINS:-unset}"
+  echo "block_pg_pin_layer: ${MPTDC_BLOCK_PG_PIN_LAYER:-unset}"
+  echo "block_pg_pin_style: ${MPTDC_BLOCK_PG_PIN_STYLE:-unset}"
   echo "post_filler_sroute: ${MPTDC_ENABLE_POST_FILLER_SROUTE:-unset}"
+  echo "post_filler_sroute_required_bypass: ${MPTDC_BYPASS_POST_FILLER_SROUTE_REQUIRED:-0}"
+  echo "route_repair_commands: ${MPTDC_ROUTE_REPAIR_COMMANDS:-unset}"
   echo "route_drc_review_continue: ${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-unset}"
   echo "labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO"
   echo
