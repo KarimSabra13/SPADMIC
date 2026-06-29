@@ -1769,11 +1769,8 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
         return $commands
     }
     foreach cmd [list \
-        [list sroute -connect {corePin blockPin stripe} -nets $nets] \
         [list sroute -connect {corePin blockPin floatingStripe} -nets $nets] \
-        [list sroute -connect {corePin blockPin blockRing} -nets $nets] \
         [list sroute -connect {corePin blockPin padPin} -nets $nets] \
-        [list sroute -connect {corePin blockPin padPin stripe} -nets $nets] \
         [list sroute -nets $nets] \
     ] {
         if {[lsearch -exact $commands $cmd] < 0} {
@@ -1920,44 +1917,66 @@ proc mptdc_signoff_sroute_attempt_summary {label} {
     return $best
 }
 
+proc mptdc_signoff_try_sroute_mode_group {fh label suffix commands} {
+    set applied 0
+    foreach cmd $commands {
+        puts $fh "${label}_SROUTE_MODE_${suffix}_COMMAND=$cmd"
+        if {![catch {{*}$cmd} err]} {
+            puts $fh "${label}_SROUTE_MODE_${suffix}_STATUS=PASS"
+            set applied 1
+            break
+        }
+        puts $fh "${label}_SROUTE_MODE_${suffix}_ATTEMPT_STATUS=FAIL"
+        puts $fh "${label}_SROUTE_MODE_${suffix}_ATTEMPT_ERROR=$err"
+    }
+    if {!$applied} {
+        puts $fh "${label}_SROUTE_MODE_${suffix}_STATUS=REVIEW_REQUIRED"
+    }
+    return $applied
+}
+
 proc mptdc_signoff_configure_sroute_mode {fh label} {
     if {![mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
         puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=0"
         puts $fh "${label}_SROUTE_MODE_STATUS=SKIPPED"
-        puts $fh "${label}_SROUTE_MODE_REASON=disabled_to_avoid_unsupported_setSrouteMode_options"
+        puts $fh "${label}_SROUTE_MODE_REASON=disabled_by_env"
         return
     }
     puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=1"
-    set preserve [expr {[mptdc_signoff_env_truthy MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0] ? "true" : "false"}]
-    set connect_stripe [expr {[mptdc_signoff_env_truthy MPTDC_SROUTE_CONNECT_STRIPE 1] ? "true" : "false"}]
-    set mode_groups [list \
-        [list PRESERVE_EXISTING_ROUTES [list \
-            [list setSrouteMode -preserveExistingRoutes $preserve] \
-            [list setSrouteMode -sroutePreserveExistingRoutes $preserve]]] \
-        [list CONNECT_STRIPE [list \
-            [list setSrouteMode -connectStripe $connect_stripe] \
-            [list setSrouteMode -srouteConnectStripe $connect_stripe]]]]
+    puts $fh "${label}_SROUTE_MODE_LEGACY_PRESERVE_EXISTING_ROUTES_ENV=[mptdc_signoff_env MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES unset]"
+    puts $fh "${label}_SROUTE_MODE_LEGACY_CONNECT_STRIPE_ENV=[mptdc_signoff_env MPTDC_SROUTE_CONNECT_STRIPE unset]"
 
-    puts $fh "${label}_SROUTE_MODE_PRESERVE_EXISTING_ROUTES=$preserve"
-    puts $fh "${label}_SROUTE_MODE_CONNECT_STRIPE=$connect_stripe"
+    set mode_groups [list \
+        [list VIA_THRU_TO_CLOSEST_RING [list [list setSrouteMode -viaThruToClosestRing true]]] \
+        [list EXTEND_NEAREST_TARGET [list [list setSrouteMode -extendNearestTarget true]]] \
+        [list BLOCK_PIN_ROUTE_WITH_PIN_WIDTH [list [list setSrouteMode -blockPinRouteWithPinWidth true]]] \
+        [list BLOCK_PIN_CONNECT_RING_PIN_CORNERS [list [list setSrouteMode -blockPinConnectRingPinCorners true]]] \
+        [list CONNECT_BROKEN_CORE_PIN [list [list setSrouteMode -connectBrokenCorePin true]]] \
+        [list CORE_PIN_REFER_TO_FOLLOW_PIN [list [list setSrouteMode -corePinReferToFollowPin true]]]]
+
+    set via_shape [mptdc_signoff_env MPTDC_SROUTE_VIA_CONNECT_TO_SHAPE ""]
+    if {$via_shape ne ""} {
+        lappend mode_groups [list VIA_CONNECT_TO_SHAPE [list [list setSrouteMode -viaConnectToShape $via_shape]]]
+    }
+    set target_search_distance [mptdc_signoff_env MPTDC_SROUTE_TARGET_SEARCH_DISTANCE_UM ""]
+    if {$target_search_distance ne ""} {
+        lappend mode_groups [list TARGET_SEARCH_DISTANCE [list [list setSrouteMode -targetSearchDistance $target_search_distance]]]
+    }
+    set core_pin_stop [mptdc_signoff_env MPTDC_SROUTE_CORE_PIN_STOP_ROUTE ""]
+    if {$core_pin_stop ne ""} {
+        lappend mode_groups [list CORE_PIN_STOP_ROUTE [list [list setSrouteMode -corePinStopRoute $core_pin_stop]]]
+    }
+
+    set pass_count 0
     foreach group $mode_groups {
         set suffix [lindex $group 0]
         set commands [lindex $group 1]
-        set applied 0
-        foreach cmd $commands {
-            puts $fh "${label}_SROUTE_MODE_${suffix}_COMMAND=$cmd"
-            if {![catch {{*}$cmd} err]} {
-                puts $fh "${label}_SROUTE_MODE_${suffix}_STATUS=PASS"
-                set applied 1
-                break
-            }
-            puts $fh "${label}_SROUTE_MODE_${suffix}_ATTEMPT_STATUS=FAIL"
-            puts $fh "${label}_SROUTE_MODE_${suffix}_ATTEMPT_ERROR=$err"
-        }
-        if {!$applied} {
-            puts $fh "${label}_SROUTE_MODE_${suffix}_STATUS=REVIEW_REQUIRED"
+        if {[mptdc_signoff_try_sroute_mode_group $fh $label $suffix $commands]} {
+            incr pass_count
         }
     }
+    puts $fh "${label}_SROUTE_MODE_PASS_COUNT=$pass_count"
+    puts $fh "${label}_SROUTE_MODE_STATUS=[expr {$pass_count > 0 ? "PASS" : "REVIEW_REQUIRED"}]"
 }
 
 proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
@@ -1965,6 +1984,7 @@ proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
     set fh [open $path w]
     puts $fh "# MPTDC PG Object Dump"
     puts $fh "DUMP_LABEL=$label"
+    catch {set_db get_db_display_limit [mptdc_signoff_env_int MPTDC_DB_DISPLAY_LIMIT 20000]}
     foreach item [list \
         [list PG_TERM_NAMES {dbGet top.pgTerms.name}] \
         [list PG_TERM_COUNT {llength [dbGet top.pgTerms.name]}] \
@@ -1972,12 +1992,12 @@ proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
         [list VDD_PG_TERM_NAMES {dbGet [dbGet top.pgTerms.name VDD* -p].name}] \
         [list VDD_PG_TERM_NETS {dbGet [dbGet top.pgTerms.name VDD* -p].net.name}] \
         [list VDD_PG_TERM_LAYERS {dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.layer.name}] \
-        [list VDD_PG_TERM_RECTS {dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.rect}] \
+        [list VDD_PG_TERM_BOXES {dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.box}] \
         [list VSS_PG_TERM_HANDLES {dbGet top.pgTerms.name VSS* -p}] \
         [list VSS_PG_TERM_NAMES {dbGet [dbGet top.pgTerms.name VSS* -p].name}] \
         [list VSS_PG_TERM_NETS {dbGet [dbGet top.pgTerms.name VSS* -p].net.name}] \
         [list VSS_PG_TERM_LAYERS {dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.layer.name}] \
-        [list VSS_PG_TERM_RECTS {dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.rect}] \
+        [list VSS_PG_TERM_BOXES {dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.box}] \
         [list TERM_NAMES {dbGet top.terms.name}] \
         [list VDD_NET_HANDLES {dbGet top.nets.name VDD -p}] \
         [list VDD_SWIRE_COUNT {llength [dbGet [dbGet top.nets.name VDD -p].sWires]}] \
@@ -2000,12 +2020,36 @@ proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
             puts $fh "${key}_ERROR=[mptdc_signoff_report_value $err]"
         } else {
             puts $fh "${key}_STATUS=PASS"
+            puts $fh "${key}_VALUE=[mptdc_signoff_report_value $value]"
             puts $fh [mptdc_signoff_report_value $value]
         }
         puts $fh "${key}_END"
     }
     close $fh
     return $path
+}
+
+proc mptdc_signoff_pg_connectivity_commands {nets} {
+    return [list \
+        [list verifyConnectivity -type special -nets $nets] \
+        [list verifyConnectivity -nets $nets -type special] \
+        [list verifyConnectivity -type special -net $nets] \
+        [list verifyConnectivity -net $nets -type special] \
+        [list verifyConnectivity -type special]]
+}
+
+proc mptdc_signoff_capture_to_file_selected {path commands} {
+    foreach cmd $commands {
+        if {![catch {uplevel 1 "$cmd > \"$path\""} err]} {
+            return [list 1 $cmd]
+        }
+        set fh [open $path w]
+        puts $fh "REPORT_STATUS=FAILED"
+        puts $fh "COMMAND=$cmd"
+        puts $fh "ERROR=$err"
+        close $fh
+    }
+    return [list 0 ""]
 }
 
 proc mptdc_signoff_run_postplace_pre_route_sroute {} {
@@ -2070,9 +2114,11 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
 
     set special_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_verify_connectivity_special.rpt]
-    mptdc_signoff_capture_to_file $special_rpt [list {verifyConnectivity -type special} {verifyConnectivity}]
+    lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands {VDD VSS}]] special_capture_ok special_capture_cmd
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_CAPTURE_STATUS=[expr {$special_capture_ok ? "PASS" : "FAIL"}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_COMMAND=$special_capture_cmd"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
 
@@ -2339,7 +2385,7 @@ proc mptdc_signoff_connectivity_report_has_errors {path} {
         if {[regexp -nocase {no[[:space:]]+(violations?|opens?|shorts?|unconnected)|0[[:space:]]+(violations?|opens?|shorts?|unconnected)} $trimmed]} {
             continue
         }
-        if {[regexp -nocase {REPORT_STATUS=FAILED|[^a-z](open|short|unconnected|unrouted|violation|violated)[^a-z]} " $trimmed "]} {
+        if {[regexp -nocase {REPORT_STATUS=FAILED|no[[:space:]]+routing|[1-9][0-9]*[[:space:]]+Problem\(s\)|Verification Complete[[:space:]]*:[[:space:]]*[1-9][0-9]*[[:space:]]+Viols|[^a-z](open|short|unconnected|unrouted|violation|violated|dangling)[^a-z]} " $trimmed "]} {
             lappend bad $trimmed
             if {[llength $bad] >= 10} { break }
         }
@@ -2428,7 +2474,7 @@ proc mptdc_signoff_build_power_grid {} {
     close $fh
 
     set special_rpt [file join [mptdc_signoff_report_dir] pg_verify_connectivity_special.rpt]
-    mptdc_signoff_capture_to_file $special_rpt [list {verifyConnectivity -type special} {verifyConnectivity}]
+    lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands $nets]] special_capture_ok special_capture_cmd
     set all_rpt [file join [mptdc_signoff_report_dir] pg_verify_connectivity_all.rpt]
     mptdc_signoff_capture_to_file $all_rpt [list {verifyConnectivity}]
 
@@ -2464,6 +2510,8 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "RO_VSS_CONNECTED_COUNT=$ro_vss_count"
     puts $fh "RO_PG_PIN_QUERY_STATUS=[expr {$ro_pg_ok ? "PASS" : "FAIL"}]"
     puts $fh "SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
+    puts $fh "SPECIAL_CONNECTIVITY_CAPTURE_STATUS=[expr {$special_capture_ok ? "PASS" : "FAIL"}]"
+    puts $fh "SPECIAL_CONNECTIVITY_COMMAND=$special_capture_cmd"
     puts $fh "ALL_CONNECTIVITY_REPORT=$all_rpt"
     puts $fh "SPECIAL_NET_OPENS=PARSED_FROM_VERIFY_CONNECTIVITY"
     puts $fh "SPECIAL_NET_SHORTS=PARSED_FROM_VERIFY_CONNECTIVITY"
@@ -2930,8 +2978,7 @@ proc mptdc_signoff_post_filler_verify {rpt} {
     set all_rpt [file join [mptdc_signoff_report_dir] post_filler_verify_connectivity_all.rpt]
     set drc_ok [mptdc_signoff_capture_candidates $drc_rpt \
         "post-filler verify_drc" [list {verify_drc} {verifyGeometry}]]
-    set special_ok [mptdc_signoff_capture_candidates $special_rpt \
-        "post-filler special-net connectivity" [list {verifyConnectivity -type special} {verifyConnectivity}]]
+    lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands {VDD VSS}]] special_ok special_cmd
     set all_ok [mptdc_signoff_capture_candidates $all_rpt \
         "post-filler all-net connectivity" [list {verifyConnectivity}]]
     set drc_data [mptdc_signoff_parse_verify_drc_report $drc_rpt]
@@ -2950,6 +2997,7 @@ proc mptdc_signoff_post_filler_verify {rpt} {
     puts $fh "POST_FILLER_VERIFY_SHORTS=[dict get $drc_data shorts]"
     puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
     puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_CAPTURE_STATUS=[expr {$special_ok ? "PASS" : "REVIEW_REQUIRED"}]"
+    puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_COMMAND=$special_cmd"
     puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
     puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
     puts $fh "POST_FILLER_ALL_CONNECTIVITY_REPORT=$all_rpt"
@@ -3901,8 +3949,13 @@ proc mptdc_signoff_capture_route_gate_reports {drc_rpt regular_rpt special_rpt r
     mptdc_signoff_dump_drc_markers [file rootname $drc_rpt]_markers.tsv
     mptdc_signoff_capture_required_candidates $regular_rpt \
         "regular-net connectivity" [list {verifyConnectivity -type regular} {verifyConnectivity}]
-    mptdc_signoff_capture_required_candidates $special_rpt \
-        "special-net connectivity" [list {verifyConnectivity -type special} {verifyConnectivity}]
+    lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands {VDD VSS}]] special_ok special_cmd
+    if {!$special_ok} {
+        error "MPTDC_REQUIRED_REPORT_COMMAND_FAILED: title=special-net connectivity path=$special_rpt"
+    }
+    set fh [open [file rootname $special_rpt]_command.rpt w]
+    puts $fh "SPECIAL_CONNECTIVITY_COMMAND=$special_cmd"
+    close $fh
     mptdc_signoff_capture_candidates $report_route_rpt \
         "route summary" [list {reportRoute} {report_route}]
 }
