@@ -918,9 +918,10 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_BLOCK_PG_PINS 1
         MPTDC_BLOCK_PG_PIN_LAYER METTP
         MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss
-        MPTDC_BLOCK_PG_PIN_CREATE_MODE on_die
+        MPTDC_BLOCK_PG_PIN_CREATE_MODE geom
         MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0
         MPTDC_ENABLE_POST_FILLER_SROUTE 1
+        MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0
         MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0
         MPTDC_SROUTE_CONNECT_STRIPE 1
         MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
@@ -1726,6 +1727,13 @@ proc mptdc_signoff_try_pg_command {fh label commands} {
 }
 
 proc mptdc_signoff_configure_sroute_mode {fh label} {
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
+        puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=0"
+        puts $fh "${label}_SROUTE_MODE_STATUS=SKIPPED"
+        puts $fh "${label}_SROUTE_MODE_REASON=disabled_to_avoid_unsupported_setSrouteMode_options"
+        return
+    }
+    puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=1"
     set preserve [expr {[mptdc_signoff_env_truthy MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0] ? "true" : "false"}]
     set connect_stripe [expr {[mptdc_signoff_env_truthy MPTDC_SROUTE_CONNECT_STRIPE 1] ? "true" : "false"}]
     set mode_groups [list \
@@ -1823,7 +1831,7 @@ proc mptdc_signoff_create_one_block_pg_pin {fh net side layer rect width depth} 
     set lly [lindex $rect 1]
     set urx [lindex $rect 2]
     set ury [lindex $rect 3]
-    set create_mode [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_CREATE_MODE on_die]]
+    set create_mode [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_CREATE_MODE geom]]
     puts $fh "BLOCK_PG_PIN_${net}_CREATE_MODE=$create_mode"
     set on_die_commands [list \
         [list createPGPin -onDie -net $net -width $width -length $depth] \
