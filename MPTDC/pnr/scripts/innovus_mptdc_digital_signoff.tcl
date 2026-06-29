@@ -919,6 +919,8 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_BLOCK_PG_PIN_LAYER METTP
         MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss
         MPTDC_ENABLE_POST_FILLER_SROUTE 1
+        MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
+        MPTDC_REQUIRE_DRC_SAFE_FILLER 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
         MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc}}
         MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 0
@@ -2379,70 +2381,165 @@ proc mptdc_signoff_count_existing_filler_cells {} {
     return [llength $names]
 }
 
+proc mptdc_signoff_configure_filler_mode {} {
+    set rpt [file join [mptdc_signoff_report_dir] filler_mode_status.rpt]
+    set allow_drc [mptdc_signoff_env_truthy MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0]
+    set require_safe [mptdc_signoff_env_truthy MPTDC_REQUIRE_DRC_SAFE_FILLER 1]
+    set value [expr {$allow_drc ? "true" : "false"}]
+    set commands [list \
+        [list setFillerMode -add_fillers_with_drc $value] \
+        [list setFillerMode -add_fillers_with_drc [expr {$allow_drc ? 1 : 0}]] \
+        [list setFillerMode -addFillersWithDrc $value] \
+        [list setFillerMode -addFillersWithDrc [expr {$allow_drc ? 1 : 0}]]]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Filler Mode Status"
+    puts $fh "MPTDC_FILLER_ADD_FILLERS_WITH_DRC=[expr {$allow_drc ? 1 : 0}]"
+    puts $fh "MPTDC_REQUIRE_DRC_SAFE_FILLER=[expr {$require_safe ? 1 : 0}]"
+    puts $fh "REQUESTED_ADD_FILLERS_WITH_DRC=$value"
+    foreach cmd $commands {
+        puts $fh "FILLER_MODE_COMMAND=$cmd"
+        if {![catch {{*}$cmd} err]} {
+            puts $fh "FILLER_MODE_STATUS=PASS"
+            puts $fh "FILLER_MODE_APPLIED_COMMAND=$cmd"
+            close $fh
+            return [list 1 $rpt]
+        }
+        puts $fh "FILLER_MODE_ATTEMPT_STATUS=FAIL"
+        puts $fh "FILLER_MODE_ATTEMPT_ERROR=$err"
+    }
+    if {$allow_drc || !$require_safe} {
+        puts $fh "FILLER_MODE_STATUS=REVIEW_REQUIRED"
+        puts $fh "FILLER_MODE_REASON=setFillerMode_variant_not_accepted"
+        close $fh
+        return [list 1 $rpt]
+    }
+    puts $fh "FILLER_MODE_STATUS=FAIL"
+    puts $fh "FILLER_MODE_REASON=drc_safe_filler_mode_required_but_not_applied"
+    close $fh
+    return [list 0 $rpt]
+}
+
+proc mptdc_signoff_post_filler_run_route_command {rpt phase cmd} {
+    set cmd_rpt [mptdc_signoff_route_command_report_path $phase $cmd]
+    set fh [open $rpt a]
+    puts $fh "POST_FILLER_ROUTE_COMMAND_PHASE=$phase"
+    puts $fh "POST_FILLER_ROUTE_COMMAND=$cmd"
+    puts $fh "POST_FILLER_ROUTE_REPORT=$cmd_rpt"
+    close $fh
+    lassign [mptdc_signoff_capture_route_command $cmd $cmd_rpt] route_ok route_err
+    set route_drc [mptdc_signoff_parse_verify_drc_report $cmd_rpt]
+    set fh [open $rpt a]
+    puts $fh "POST_FILLER_ROUTE_${phase}_COMMAND_STATUS=[expr {$route_ok ? "PASS" : "FAIL"}]"
+    puts $fh "POST_FILLER_ROUTE_${phase}_ROUTER_DRC=[dict get $route_drc total_violations]"
+    puts $fh "POST_FILLER_ROUTE_${phase}_ROUTER_SHORTS=[dict get $route_drc shorts]"
+    if {!$route_ok} {
+        puts $fh "POST_FILLER_ROUTE_${phase}_ERROR=$route_err"
+    }
+    close $fh
+    return $route_ok
+}
+
+proc mptdc_signoff_post_filler_verify {rpt} {
+    set drc_rpt [file join [mptdc_signoff_report_dir] post_filler_verify_drc.rpt]
+    set special_rpt [file join [mptdc_signoff_report_dir] post_filler_verify_connectivity_special.rpt]
+    set all_rpt [file join [mptdc_signoff_report_dir] post_filler_verify_connectivity_all.rpt]
+    set drc_ok [mptdc_signoff_capture_candidates $drc_rpt \
+        "post-filler verify_drc" [list {verify_drc} {verifyGeometry}]]
+    set special_ok [mptdc_signoff_capture_candidates $special_rpt \
+        "post-filler special-net connectivity" [list {verifyConnectivity -type special} {verifyConnectivity}]]
+    set all_ok [mptdc_signoff_capture_candidates $all_rpt \
+        "post-filler all-net connectivity" [list {verifyConnectivity}]]
+    set drc_data [mptdc_signoff_parse_verify_drc_report $drc_rpt]
+    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set all_bad [mptdc_signoff_connectivity_report_has_errors $all_rpt]
+    set verify_pass [expr {$drc_ok && $special_ok && $all_ok &&
+        [dict get $drc_data status] eq "PASS" &&
+        ![lindex $special_bad 0] &&
+        ![lindex $all_bad 0]}]
+    set fh [open $rpt a]
+    puts $fh "POST_FILLER_VERIFY_DRC_REPORT=$drc_rpt"
+    puts $fh "POST_FILLER_VERIFY_DRC_CAPTURE_STATUS=[expr {$drc_ok ? "PASS" : "REVIEW_REQUIRED"}]"
+    puts $fh "POST_FILLER_VERIFY_DRC=[dict get $drc_data total_violations]"
+    puts $fh "POST_FILLER_VERIFY_SHORTS=[dict get $drc_data shorts]"
+    puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
+    puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_CAPTURE_STATUS=[expr {$special_ok ? "PASS" : "REVIEW_REQUIRED"}]"
+    puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
+    puts $fh "POST_FILLER_SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
+    puts $fh "POST_FILLER_ALL_CONNECTIVITY_REPORT=$all_rpt"
+    puts $fh "POST_FILLER_ALL_CONNECTIVITY_CAPTURE_STATUS=[expr {$all_ok ? "PASS" : "REVIEW_REQUIRED"}]"
+    puts $fh "POST_FILLER_ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
+    puts $fh "POST_FILLER_ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
+    puts $fh "POST_FILLER_VERIFY_STATUS=[expr {$verify_pass ? "PASS" : "REVIEW_REQUIRED"}]"
+    close $fh
+    return $verify_pass
+}
+
 proc mptdc_signoff_post_filler_route_cleanup {rpt} {
     set commands [mptdc_signoff_route_repair_commands]
+    if {[llength $commands] == 0} {
+        set commands [list {ecoRoute -target} {ecoRoute -fix_drc}]
+    }
+    set pre_sroute_cmd [lindex $commands 0]
+    set post_sroute_cmds [lrange $commands 1 end]
     set fh [open $rpt a]
     puts $fh "POST_FILLER_ROUTE_CLEANUP=REQUIRED_AFTER_POSTROUTE_FILLER"
-    puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=bounded_incremental_eco_only"
+    puts $fh "POST_FILLER_ROUTE_CLEANUP_POLICY=bounded_incremental_eco_then_pg_then_drc"
     puts $fh "POST_FILLER_ROUTE_REPAIR_COMMANDS=$commands"
+    puts $fh "POST_FILLER_ROUTE_PRE_SROUTE_COMMAND=$pre_sroute_cmd"
+    puts $fh "POST_FILLER_ROUTE_POST_SROUTE_COMMANDS=$post_sroute_cmds"
     close $fh
-    foreach cmd $commands {
-        set cmd_rpt [mptdc_signoff_route_command_report_path post_filler_route $cmd]
-        set fh [open $rpt a]
-        puts $fh "POST_FILLER_ROUTE_COMMAND=$cmd"
-        puts $fh "POST_FILLER_ROUTE_REPORT=$cmd_rpt"
-        close $fh
-        lassign [mptdc_signoff_capture_route_command $cmd $cmd_rpt] route_ok route_err
-        set route_drc [mptdc_signoff_parse_verify_drc_report $cmd_rpt]
-        set fh [open $rpt a]
-        puts $fh "POST_FILLER_ROUTE_ATTEMPT_DRC=[dict get $route_drc total_violations]"
-        puts $fh "POST_FILLER_ROUTE_ATTEMPT_SHORTS=[dict get $route_drc shorts]"
-        close $fh
-        if {!$route_ok} {
-            set fh [open $rpt a]
-            puts $fh "POST_FILLER_ROUTE_ATTEMPT_STATUS=FAIL"
-            puts $fh "POST_FILLER_ROUTE_ATTEMPT_ERROR=$route_err"
-            close $fh
-            continue
-        }
-        set verify_rpt [mptdc_signoff_route_command_report_path post_filler_verify "${cmd}_verify_drc"]
-        set verify_ok [mptdc_signoff_capture_candidates $verify_rpt \
-            "post-filler verify_drc after $cmd" [list {verify_drc} {verifyGeometry}]]
-        set verify_drc [mptdc_signoff_parse_verify_drc_report $verify_rpt]
-        set fh [open $rpt a]
-        puts $fh "POST_FILLER_ROUTE_VERIFY_REPORT=$verify_rpt"
-        puts $fh "POST_FILLER_ROUTE_VERIFY_CAPTURE_STATUS=[expr {$verify_ok ? "PASS" : "REVIEW_REQUIRED"}]"
-        puts $fh "POST_FILLER_ROUTE_VERIFY_DRC=[dict get $verify_drc total_violations]"
-        puts $fh "POST_FILLER_ROUTE_VERIFY_SHORTS=[dict get $verify_drc shorts]"
-        close $fh
-        if {[dict get $verify_drc status] ne "PASS"} {
-            set fh [open $rpt a]
-            puts $fh "POST_FILLER_ROUTE_ATTEMPT_STATUS=REVIEW_REQUIRED"
-            close $fh
-            continue
-        }
-        set fh [open $rpt a]
-        puts $fh "POST_FILLER_ROUTE_STATUS=PASS"
-        puts $fh "INCREMENTAL_ROUTE_STATUS=PASS_BY_ECOROUTE"
-        close $fh
-        return 1
-    }
+
+    set route_ok [mptdc_signoff_post_filler_run_route_command $rpt POST_FILLER_PRE_SROUTE $pre_sroute_cmd]
+
     set fh [open $rpt a]
-    puts $fh "POST_FILLER_ROUTE_STATUS=REVIEW_REQUIRED"
-    puts $fh "INCREMENTAL_ROUTE_STATUS=REVIEW_REQUIRED"
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POST_FILLER_SROUTE]} {
+        set sroute_ok [mptdc_signoff_try_pg_command $fh POST_FILLER_SROUTE [list \
+            [list sroute -connect {corePin blockPin padPin} -nets {VDD VSS}] \
+            [list sroute -nets {VDD VSS}]]]
+        if {!$sroute_ok} {
+            puts $fh "POST_FILLER_SROUTE_REASON=all_sroute_command_variants_failed"
+        }
+    } else {
+        set sroute_ok 1
+        puts $fh "POST_FILLER_SROUTE_STATUS=SKIPPED"
+        puts $fh "POST_FILLER_SROUTE_REASON=pg_connectivity_rechecked_without_special_route_mutation"
+        puts $fh "POST_FILLER_SROUTE_ENABLE_ENV=MPTDC_ENABLE_POST_FILLER_SROUTE"
+    }
     close $fh
-    return 0
+
+    foreach cmd $post_sroute_cmds {
+        if {![mptdc_signoff_post_filler_run_route_command $rpt POST_FILLER_POST_SROUTE $cmd]} {
+            set route_ok 0
+        }
+    }
+    set verify_ok [mptdc_signoff_post_filler_verify $rpt]
+    set fh [open $rpt a]
+    set status [expr {$route_ok && $sroute_ok && $verify_ok ? "PASS" : "REVIEW_REQUIRED"}]
+    puts $fh "POST_FILLER_ROUTE_STATUS=$status"
+    puts $fh "INCREMENTAL_ROUTE_STATUS=$status"
+    close $fh
+    return [expr {$status eq "PASS"}]
 }
 
 proc mptdc_signoff_insert_final_fillers {} {
     global mptdc_xh018_cells
     set rpt [file join [mptdc_signoff_report_dir] filler_status.rpt]
     set before [mptdc_signoff_count_existing_filler_cells]
+    lassign [mptdc_signoff_configure_filler_mode] filler_mode_ok filler_mode_rpt
     set fh [open $rpt w]
     puts $fh "# MPTDC Final Filler Status"
     puts $fh "FILLER_CELL_FAMILY=FEED*JIHD"
     puts $fh "FILLER_CANDIDATES=$mptdc_xh018_cells(filler)"
     puts $fh "FILLER_COUNT_BEFORE=$before"
+    puts $fh "FILLER_MODE_REPORT=$filler_mode_rpt"
+    puts $fh "FILLER_MODE_STATUS=[expr {$filler_mode_ok ? "PASS_OR_REVIEW" : "FAIL"}]"
+    if {!$filler_mode_ok} {
+        puts $fh "FILLER_INSERTION_STATUS=FAIL"
+        puts $fh "FILLER_INSERTION_REASON=drc_safe_filler_mode_not_applied"
+        close $fh
+        mptdc_signoff_set_status FILLER_STATUS FAIL $rpt
+        error "MPTDC_FILLER_MODE_GATE_FAILED: report=$filler_mode_rpt"
+    }
     if {[catch {addFiller -cell $mptdc_xh018_cells(filler) -prefix MPTDC_FILL} err]} {
         puts $fh "FILLER_INSERTION_STATUS=FAIL"
         puts $fh "FILLER_INSERTION_ERROR=$err"
@@ -2461,23 +2558,11 @@ proc mptdc_signoff_insert_final_fillers {} {
         error "MPTDC_FILLER_COUNT_GATE_FAILED: expected_gt_0 actual=$after"
     }
     catch {mptdc_signoff_apply_pg_connectivity}
+    set post_filler_ok [mptdc_signoff_post_filler_route_cleanup $rpt]
     set fh [open $rpt a]
-    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POST_FILLER_SROUTE]} {
-        set sroute_ok [mptdc_signoff_try_pg_command $fh POST_FILLER_SROUTE [list \
-            [list sroute -connect {corePin blockPin padPin} -nets {VDD VSS}] \
-            [list sroute -nets {VDD VSS}]]]
-        if {!$sroute_ok} {
-            puts $fh "POST_FILLER_SROUTE_STATUS=REVIEW_REQUIRED"
-            puts $fh "POST_FILLER_SROUTE_REASON=all_sroute_command_variants_failed"
-        }
-        close $fh
-    } else {
-        puts $fh "POST_FILLER_SROUTE_STATUS=SKIPPED"
-        puts $fh "POST_FILLER_SROUTE_REASON=pg_connectivity_rechecked_without_special_route_mutation"
-        puts $fh "POST_FILLER_SROUTE_ENABLE_ENV=MPTDC_ENABLE_POST_FILLER_SROUTE"
-        close $fh
-    }
-    mptdc_signoff_post_filler_route_cleanup $rpt
+    puts $fh "POST_FILLER_CLEANUP_STATUS=[expr {$post_filler_ok ? "PASS" : "REVIEW_REQUIRED"}]"
+    puts $fh "POST_FILLER_GATE_NOTE=route_status_rpt_remains_the_hard_short_open_gate"
+    close $fh
     mptdc_signoff_set_status FILLER_STATUS PASS $rpt
     return $rpt
 }
