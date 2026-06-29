@@ -1807,7 +1807,15 @@ proc mptdc_signoff_capture_sroute_command {cmd path} {
 }
 
 proc mptdc_signoff_parse_sroute_report {path} {
-    set result [dict create report $path command_failed 0 wires UNKNOWN open_ports 0 status REVIEW_REQUIRED]
+    set result [dict create \
+        report $path \
+        command_failed 0 \
+        wires UNKNOWN \
+        open_ports 0 \
+        block_open_ports 0 \
+        core_open_ports 0 \
+        power_bump_open_ports 0 \
+        status REVIEW_REQUIRED]
     if {![file exists $path]} {
         dict set result reason missing_report
         return $result
@@ -1820,7 +1828,20 @@ proc mptdc_signoff_parse_sroute_report {path} {
         if {[regexp -nocase {sroute[[:space:]]+created[[:space:]]+([0-9]+)[[:space:]]+wire} $line -> wires]} {
             dict set result wires $wires
         }
-        if {[regexp -nocase {Number[[:space:]]+of[[:space:]].*ports[[:space:]]+routed:.*open:[[:space:]]*([0-9]+)} $line -> open]} {
+        if {[regexp -nocase {Number[[:space:]]+of[[:space:]]+(Block|Core|Power Bump)[[:space:]]+ports[[:space:]]+routed:.*open:[[:space:]]*([0-9]+)} $line -> port_type open]} {
+            switch -nocase -- $port_type {
+                block {
+                    dict incr result block_open_ports $open
+                }
+                core {
+                    dict incr result core_open_ports $open
+                }
+                "power bump" {
+                    dict incr result power_bump_open_ports $open
+                }
+            }
+            dict incr result open_ports $open
+        } elseif {[regexp -nocase {Number[[:space:]]+of[[:space:]].*ports[[:space:]]+routed:.*open:[[:space:]]*([0-9]+)} $line -> open]} {
             dict incr result open_ports $open
         }
     }
@@ -1854,6 +1875,9 @@ proc mptdc_signoff_try_sroute_command {fh label commands} {
         puts $fh "${label}_ATTEMPT_${idx}_STATUS=[dict get $data status]"
         puts $fh "${label}_ATTEMPT_${idx}_WIRES=[dict get $data wires]"
         puts $fh "${label}_ATTEMPT_${idx}_OPEN_PORTS=[dict get $data open_ports]"
+        puts $fh "${label}_ATTEMPT_${idx}_BLOCK_OPEN_PORTS=[dict get $data block_open_ports]"
+        puts $fh "${label}_ATTEMPT_${idx}_CORE_OPEN_PORTS=[dict get $data core_open_ports]"
+        puts $fh "${label}_ATTEMPT_${idx}_POWER_BUMP_OPEN_PORTS=[dict get $data power_bump_open_ports]"
         if {[dict exists $data reason]} {
             puts $fh "${label}_ATTEMPT_${idx}_REASON=[dict get $data reason]"
         }
@@ -1882,7 +1906,15 @@ proc mptdc_signoff_sroute_attempt_summary {label} {
         set wires [dict get $data wires]
         if {[dict get $data status] eq "REVIEW_REQUIRED" &&
             $wires ne "UNKNOWN" && $wires > 0} {
-            set best $data
+            set best_wires [dict get $best wires]
+            set best_open [dict get $best open_ports]
+            set data_open [dict get $data open_ports]
+            if {[dict get $best status] ne "REVIEW_REQUIRED" ||
+                $best_wires eq "UNKNOWN" ||
+                $data_open < $best_open ||
+                ($data_open == $best_open && $wires > $best_wires)} {
+                set best $data
+            }
         }
     }
     return $best
@@ -1935,10 +1967,26 @@ proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
     puts $fh "DUMP_LABEL=$label"
     foreach item [list \
         [list PG_TERM_NAMES {dbGet top.pgTerms.name}] \
+        [list PG_TERM_COUNT {llength [dbGet top.pgTerms.name]}] \
+        [list VDD_PG_TERM_HANDLES {dbGet top.pgTerms.name VDD* -p}] \
+        [list VDD_PG_TERM_NAMES {dbGet [dbGet top.pgTerms.name VDD* -p].name}] \
+        [list VDD_PG_TERM_NETS {dbGet [dbGet top.pgTerms.name VDD* -p].net.name}] \
+        [list VDD_PG_TERM_LAYERS {dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.layer.name}] \
+        [list VDD_PG_TERM_RECTS {dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.rect}] \
+        [list VSS_PG_TERM_HANDLES {dbGet top.pgTerms.name VSS* -p}] \
+        [list VSS_PG_TERM_NAMES {dbGet [dbGet top.pgTerms.name VSS* -p].name}] \
+        [list VSS_PG_TERM_NETS {dbGet [dbGet top.pgTerms.name VSS* -p].net.name}] \
+        [list VSS_PG_TERM_LAYERS {dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.layer.name}] \
+        [list VSS_PG_TERM_RECTS {dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.rect}] \
         [list TERM_NAMES {dbGet top.terms.name}] \
-        [list NET_NAMES {dbGet top.nets.name}] \
         [list VDD_NET_HANDLES {dbGet top.nets.name VDD -p}] \
+        [list VDD_SWIRE_COUNT {llength [dbGet [dbGet top.nets.name VDD -p].sWires]}] \
+        [list VDD_SWIRE_LAYERS {dbGet [dbGet top.nets.name VDD -p].sWires.layer.name}] \
+        [list VDD_SWIRE_STATUS {dbGet [dbGet top.nets.name VDD -p].sWires.status}] \
         [list VSS_NET_HANDLES {dbGet top.nets.name VSS -p}] \
+        [list VSS_SWIRE_COUNT {llength [dbGet [dbGet top.nets.name VSS -p].sWires]}] \
+        [list VSS_SWIRE_LAYERS {dbGet [dbGet top.nets.name VSS -p].sWires.layer.name}] \
+        [list VSS_SWIRE_STATUS {dbGet [dbGet top.nets.name VSS -p].sWires.status}] \
         [list GET_PORTS_VDD {get_ports -quiet VDD}] \
         [list GET_PORTS_VSS {get_ports -quiet VSS}] \
     ] {
@@ -2002,6 +2050,15 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_STATUS=$summary_status"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_WIRES=$wires"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_OPEN_PORTS=$open_ports"
+    if {[dict exists $summary block_open_ports]} {
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_BLOCK_OPEN_PORTS=[dict get $summary block_open_ports]"
+    }
+    if {[dict exists $summary core_open_ports]} {
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_CORE_OPEN_PORTS=[dict get $summary core_open_ports]"
+    }
+    if {[dict exists $summary power_bump_open_ports]} {
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_POWER_BUMP_OPEN_PORTS=[dict get $summary power_bump_open_ports]"
+    }
     if {[dict exists $summary reason]} {
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_REASON=[dict get $summary reason]"
     }
@@ -2011,6 +2068,13 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_PROGRESS_STATUS=[expr {$progress_ok ? "PASS" : "FAIL"}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=$status"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
+
+    set special_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_verify_connectivity_special.rpt]
+    mptdc_signoff_capture_to_file $special_rpt [list {verifyConnectivity -type special} {verifyConnectivity}]
+    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
 
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
