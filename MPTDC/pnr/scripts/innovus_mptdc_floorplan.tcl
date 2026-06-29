@@ -14,7 +14,7 @@ proc mptdc_pnr_core_util_default {} {
 }
 
 proc mptdc_pnr_core_util_allowed_range {} {
-    return [list min 0.58 default [mptdc_pnr_core_util_default] max 0.62]
+    return [list min 0.55 default [mptdc_pnr_core_util_default] max 0.62]
 }
 
 proc mptdc_pnr_core_util_max_first_run {} {

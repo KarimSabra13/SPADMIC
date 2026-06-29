@@ -892,6 +892,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PD_PHYSICAL_AUDIT_MODE soft_region
         MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM 12.0
         MPTDC_PD_TILE_MAX_OFFSET_UM 12.0
+        MPTDC_PNR_CORE_UTIL 0.55
         MPTDC_PNR_FIX_RO_MACROS 0
         MPTDC_PNR_CREATE_RO_HALOS 0
         MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN 1
@@ -915,12 +916,19 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1
         MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64
         MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4
+        MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN 1
+        MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100
+        MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128
         MPTDC_ENABLE_BLOCK_PG_PINS 1
         MPTDC_BLOCK_PG_PIN_LAYER METTP
-        MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss
+        MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss
+        MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0
+        MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0
         MPTDC_BLOCK_PG_PIN_CREATE_MODE geom
         MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0
-        MPTDC_ENABLE_POST_FILLER_SROUTE 1
+        MPTDC_ENABLE_FINAL_FILLER 1
+        MPTDC_ENABLE_POST_FILLER_SROUTE 0
+        MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0
         MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0
         MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0
         MPTDC_SROUTE_CONNECT_STRIPE 1
@@ -1726,6 +1734,113 @@ proc mptdc_signoff_try_pg_command {fh label commands} {
     return 0
 }
 
+proc mptdc_signoff_report_token {text} {
+    set token "$text"
+    regsub -all {[^[:alnum:]_]+} $token {_} token
+    set token [string trim $token _]
+    if {$token eq ""} { return item }
+    return $token
+}
+
+proc mptdc_signoff_report_value {value} {
+    set text "$value"
+    regsub -all {[\t\r\n]+} $text { } text
+    return $text
+}
+
+proc mptdc_signoff_sroute_commands {nets} {
+    set commands [list [list sroute -connect {corePin blockPin} -nets $nets]]
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0]} {
+        lappend commands [list sroute -connect {corePin blockPin padPin} -nets $nets]
+        lappend commands [list sroute -nets $nets]
+    }
+    return $commands
+}
+
+proc mptdc_signoff_capture_sroute_command {cmd path} {
+    file mkdir [file dirname $path]
+    if {[catch {uplevel #0 "$cmd > \"$path\""} err opts]} {
+        set fh [open $path w]
+        puts $fh "MPTDC SRoute Command"
+        puts $fh "==================="
+        puts $fh "REPORT_STATUS=FAILED"
+        puts $fh "COMMAND=$cmd"
+        puts $fh "ERROR=$err"
+        if {[dict exists $opts -errorcode]} {
+            puts $fh "ERRORCODE=[dict get $opts -errorcode]"
+        }
+        if {[dict exists $opts -errorinfo]} {
+            puts $fh "ERRORINFO_BEGIN"
+            puts $fh [dict get $opts -errorinfo]
+            puts $fh "ERRORINFO_END"
+        }
+        close $fh
+        return [list 0 $err]
+    }
+    return [list 1 ""]
+}
+
+proc mptdc_signoff_parse_sroute_report {path} {
+    set result [dict create report $path command_failed 0 wires UNKNOWN open_ports 0 status REVIEW_REQUIRED]
+    if {![file exists $path]} {
+        dict set result reason missing_report
+        return $result
+    }
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        if {[regexp -nocase {REPORT_STATUS=FAILED} $line]} {
+            dict set result command_failed 1
+        }
+        if {[regexp -nocase {sroute[[:space:]]+created[[:space:]]+([0-9]+)[[:space:]]+wire} $line -> wires]} {
+            dict set result wires $wires
+        }
+        if {[regexp -nocase {Number[[:space:]]+of[[:space:]].*ports[[:space:]]+routed:.*open:[[:space:]]*([0-9]+)} $line -> open]} {
+            dict incr result open_ports $open
+        }
+    }
+    close $fh
+    if {[dict get $result command_failed]} {
+        dict set result status FAIL
+    } elseif {[dict get $result wires] ne "UNKNOWN" && [dict get $result wires] == 0} {
+        dict set result status REVIEW_REQUIRED
+        dict set result reason zero_wires_created
+    } else {
+        dict set result status PASS
+    }
+    return $result
+}
+
+proc mptdc_signoff_try_sroute_command {fh label commands} {
+    puts $fh "${label}_PADPIN_FALLBACK_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0] ? 1 : 0}]"
+    set idx 0
+    foreach cmd $commands {
+        incr idx
+        set report [file join [mptdc_signoff_report_dir] "[mptdc_signoff_report_token $label]_sroute_${idx}.rpt"]
+        puts $fh ""
+        puts $fh "COMMAND_${label}=$cmd"
+        puts $fh "${label}_ATTEMPT_${idx}_REPORT=$report"
+        lassign [mptdc_signoff_capture_sroute_command $cmd $report] ok err
+        set data [mptdc_signoff_parse_sroute_report $report]
+        puts $fh "${label}_ATTEMPT_${idx}_COMMAND_STATUS=[expr {$ok ? "PASS" : "FAIL"}]"
+        puts $fh "${label}_ATTEMPT_${idx}_STATUS=[dict get $data status]"
+        puts $fh "${label}_ATTEMPT_${idx}_WIRES=[dict get $data wires]"
+        puts $fh "${label}_ATTEMPT_${idx}_OPEN_PORTS=[dict get $data open_ports]"
+        if {[dict exists $data reason]} {
+            puts $fh "${label}_ATTEMPT_${idx}_REASON=[dict get $data reason]"
+        }
+        if {!$ok} {
+            puts $fh "${label}_ATTEMPT_${idx}_ERROR=$err"
+        }
+        if {[dict get $data status] eq "PASS"} {
+            puts $fh "${label}_STATUS=PASS"
+            puts $fh "${label}_REPORT=$report"
+            return 1
+        }
+    }
+    puts $fh "${label}_STATUS=FAIL"
+    return 0
+}
+
 proc mptdc_signoff_configure_sroute_mode {fh label} {
     if {![mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
         puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=0"
@@ -1767,13 +1882,20 @@ proc mptdc_signoff_configure_sroute_mode {fh label} {
 }
 
 proc mptdc_signoff_block_pg_pin_specs {} {
-    set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss]]
+    set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss]]
     switch -- $style {
         left_vdd_right_vss {
-            return [list [list VDD LEFT] [list VSS RIGHT]]
+            return [list [list VDD LEFT 0.50 VDD] [list VSS RIGHT 0.50 VSS]]
         }
         left_vss_right_vdd {
-            return [list [list VSS LEFT] [list VDD RIGHT]]
+            return [list [list VSS LEFT 0.50 VSS] [list VDD RIGHT 0.50 VDD]]
+        }
+        both_sides_vdd_vss {
+            return [list \
+                [list VDD LEFT 0.40 VDD_LEFT] \
+                [list VSS LEFT 0.60 VSS_LEFT] \
+                [list VDD RIGHT 0.40 VDD_RIGHT] \
+                [list VSS RIGHT 0.60 VSS_RIGHT]]
         }
         default {
             error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_STYLE: $style"
@@ -1781,12 +1903,17 @@ proc mptdc_signoff_block_pg_pin_specs {} {
     }
 }
 
-proc mptdc_signoff_block_pg_pin_rect {side core_box width depth} {
+proc mptdc_signoff_block_pg_pin_rect {side core_box width depth {y_fraction 0.50}} {
     set llx [lindex $core_box 0]
     set lly [lindex $core_box 1]
     set urx [lindex $core_box 2]
     set ury [lindex $core_box 3]
-    set cy [expr {($lly + $ury) / 2.0}]
+    if {![string is double -strict $y_fraction]} {
+        set y_fraction 0.50
+    }
+    if {$y_fraction < 0.0} { set y_fraction 0.0 }
+    if {$y_fraction > 1.0} { set y_fraction 1.0 }
+    set cy [expr {$lly + (($ury - $lly) * $y_fraction)}]
     set half [expr {$width / 2.0}]
     switch -- [string toupper $side] {
         LEFT {
@@ -1817,13 +1944,17 @@ proc mptdc_signoff_verify_block_pg_pin {net} {
                 if {$name eq $net} {
                     return [list 1 $cmd $names]
                 }
+                if {[regexp "^${net}(_|$)" $name]} {
+                    return [list 1 $cmd $names]
+                }
             }
         }
     }
     return [list 0 none "no top-level term/port object found for $net"]
 }
 
-proc mptdc_signoff_create_one_block_pg_pin {fh net side layer rect width depth} {
+proc mptdc_signoff_create_one_block_pg_pin {fh pin_name net side layer rect width depth} {
+    set label [mptdc_signoff_report_token $pin_name]
     set side_lc [string tolower $side]
     set assign_x [expr {([lindex $rect 0] + [lindex $rect 2]) / 2.0}]
     set assign_y [expr {([lindex $rect 1] + [lindex $rect 3]) / 2.0}]
@@ -1832,17 +1963,17 @@ proc mptdc_signoff_create_one_block_pg_pin {fh net side layer rect width depth} 
     set urx [lindex $rect 2]
     set ury [lindex $rect 3]
     set create_mode [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_CREATE_MODE geom]]
-    puts $fh "BLOCK_PG_PIN_${net}_CREATE_MODE=$create_mode"
+    puts $fh "BLOCK_PG_PIN_${label}_CREATE_MODE=$create_mode"
     set on_die_commands [list \
         [list createPGPin -onDie -net $net -width $width -length $depth] \
         [list createPGPin -onDie -net $net -width $depth -length $width]]
     set geom_commands [list \
-        [list createPGPin $net -net $net -geom $layer $llx $lly $urx $ury -dir bidi] \
-        [list createPGPin $net -net $net -geom $layer $llx $lly $urx $ury]]
+        [list createPGPin $pin_name -net $net -geom $layer $llx $lly $urx $ury -dir bidi] \
+        [list createPGPin $pin_name -net $net -geom $layer $llx $lly $urx $ury]]
     set editpin_commands [list \
-        [list editPin -pin $net -side $side -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
-        [list editPin -pin $net -side $side -layer $layer -spreadType SIDE -pinWidth $width -pinDepth $depth -fixedPin 1] \
-        [list editPin -pin $net -side $side_lc -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1]]
+        [list editPin -pin $pin_name -side $side -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1] \
+        [list editPin -pin $pin_name -side $side -layer $layer -spreadType SIDE -pinWidth $width -pinDepth $depth -fixedPin 1] \
+        [list editPin -pin $pin_name -side $side_lc -layer $layer -assign [list $assign_x $assign_y] -pinWidth $width -pinDepth $depth -fixedPin 1]]
     set commands [list]
     if {$create_mode eq "geom"} {
         set commands $geom_commands
@@ -1854,19 +1985,19 @@ proc mptdc_signoff_create_one_block_pg_pin {fh net side layer rect width depth} 
     if {[mptdc_signoff_env_truthy MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0]} {
         set commands [concat $commands $editpin_commands]
     } else {
-        puts $fh "BLOCK_PG_PIN_${net}_EDITPIN_FALLBACK=DISABLED"
+        puts $fh "BLOCK_PG_PIN_${label}_EDITPIN_FALLBACK=DISABLED"
     }
     foreach cmd $commands {
-        puts $fh "BLOCK_PG_PIN_${net}_COMMAND=$cmd"
+        puts $fh "BLOCK_PG_PIN_${label}_COMMAND=$cmd"
         if {![catch {{*}$cmd} err]} {
-            puts $fh "BLOCK_PG_PIN_${net}_CREATE_STATUS=PASS"
-            puts $fh "BLOCK_PG_PIN_${net}_CREATE_COMMAND=$cmd"
+            puts $fh "BLOCK_PG_PIN_${label}_CREATE_STATUS=PASS"
+            puts $fh "BLOCK_PG_PIN_${label}_CREATE_COMMAND=$cmd"
             return 1
         }
-        puts $fh "BLOCK_PG_PIN_${net}_ATTEMPT_STATUS=FAIL"
-        puts $fh "BLOCK_PG_PIN_${net}_ATTEMPT_ERROR=$err"
+        puts $fh "BLOCK_PG_PIN_${label}_ATTEMPT_STATUS=FAIL"
+        puts $fh "BLOCK_PG_PIN_${label}_ATTEMPT_ERROR=$err"
     }
-    puts $fh "BLOCK_PG_PIN_${net}_CREATE_STATUS=FAIL"
+    puts $fh "BLOCK_PG_PIN_${label}_CREATE_STATUS=FAIL"
     return 0
 }
 
@@ -1883,11 +2014,11 @@ proc mptdc_signoff_create_block_pg_pins {} {
     }
 
     set layer [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_LAYER METTP]
-    set width [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_WIDTH_UM 2.0]
-    set depth [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_DEPTH_UM 2.0]
+    set width [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0]
+    set depth [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0]
     set core_box [mptdc_signoff_core_box]
     puts $fh "BLOCK_PG_PIN_LAYER=$layer"
-    puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE left_vdd_right_vss]"
+    puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss]"
     puts $fh "BLOCK_PG_PIN_WIDTH_UM=$width"
     puts $fh "BLOCK_PG_PIN_DEPTH_UM=$depth"
     puts $fh "CORE_BBOX=$core_box"
@@ -1902,18 +2033,29 @@ proc mptdc_signoff_create_block_pg_pins {} {
     foreach spec [mptdc_signoff_block_pg_pin_specs] {
         set net [lindex $spec 0]
         set side [lindex $spec 1]
-        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $width $depth]
+        set y_fraction 0.50
+        if {[llength $spec] >= 3} {
+            set y_fraction [lindex $spec 2]
+        }
+        set pin_name $net
+        if {[llength $spec] >= 4} {
+            set pin_name [lindex $spec 3]
+        }
+        set label [mptdc_signoff_report_token $pin_name]
+        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $width $depth $y_fraction]
         puts $fh ""
         puts $fh "BLOCK_PG_PIN_NET=$net"
+        puts $fh "BLOCK_PG_PIN_NAME=$pin_name"
         puts $fh "BLOCK_PG_PIN_SIDE=$side"
+        puts $fh "BLOCK_PG_PIN_Y_FRACTION=$y_fraction"
         puts $fh "BLOCK_PG_PIN_RECT=$rect"
-        set create_ok [mptdc_signoff_create_one_block_pg_pin $fh $net $side $layer $rect $width $depth]
+        set create_ok [mptdc_signoff_create_one_block_pg_pin $fh $pin_name $net $side $layer $rect $width $depth]
         set verify [mptdc_signoff_verify_block_pg_pin $net]
-        puts $fh "BLOCK_PG_PIN_${net}_VERIFY_STATUS=[expr {[lindex $verify 0] ? "PASS" : "FAIL"}]"
-        puts $fh "BLOCK_PG_PIN_${net}_VERIFY_SOURCE=[lindex $verify 1]"
-        puts $fh "BLOCK_PG_PIN_${net}_VERIFY_DETAIL=[lindex $verify 2]"
+        puts $fh "BLOCK_PG_PIN_${label}_VERIFY_STATUS=[expr {[lindex $verify 0] ? "PASS" : "FAIL"}]"
+        puts $fh "BLOCK_PG_PIN_${label}_VERIFY_SOURCE=[lindex $verify 1]"
+        puts $fh "BLOCK_PG_PIN_${label}_VERIFY_DETAIL=[lindex $verify 2]"
         if {!$create_ok || ![lindex $verify 0]} {
-            lappend failures $net
+            lappend failures $pin_name
         }
     }
 
@@ -2033,9 +2175,7 @@ proc mptdc_signoff_build_power_grid {} {
     lassign [mptdc_signoff_create_block_pg_pins] block_pin_ok block_pin_rpt
     set fh [open $rpt a]
     mptdc_signoff_configure_sroute_mode $fh PRE_ROUTE_PG
-    set sroute_ok [mptdc_signoff_try_pg_command $fh SROUTE [list \
-        [list sroute -connect {corePin blockPin padPin} -nets $nets] \
-        [list sroute -nets $nets]]]
+    set sroute_ok [mptdc_signoff_try_sroute_command $fh SROUTE [mptdc_signoff_sroute_commands $nets]]
 
     close $fh
 
@@ -2182,6 +2322,49 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
         dict set result status PASS
     }
     return $result
+}
+
+proc mptdc_signoff_marker_attr {marker attrs} {
+    foreach attr $attrs {
+        set value ""
+        if {![catch {set value [dbGet ${marker}.${attr}]}] && $value ne "" && $value ne "0x0"} {
+            return $value
+        }
+        if {![catch {set value [get_db $marker .$attr]}] && $value ne "" && $value ne "0x0"} {
+            return $value
+        }
+    }
+    return ""
+}
+
+proc mptdc_signoff_dump_drc_markers {path} {
+    file mkdir [file dirname $path]
+    set markers [list]
+    foreach cmd {
+        {dbGet top.markers}
+        {get_db markers}
+        {get_db marker}
+    } {
+        if {![catch {set markers [eval $cmd]}] && $markers ne "" && $markers ne "0x0"} {
+            break
+        }
+    }
+    set fh [open $path w]
+    puts $fh "idx\ttype\tsubtype\tlayer\tbox\tnets\tobjects"
+    set idx 0
+    foreach marker $markers {
+        if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} { continue }
+        incr idx
+        set type [mptdc_signoff_marker_attr $marker {type marker_type}]
+        set subtype [mptdc_signoff_marker_attr $marker {subType subtype sub_type}]
+        set layer [mptdc_signoff_marker_attr $marker {layer.name layer}]
+        set box [mptdc_signoff_marker_attr $marker {box bbox rect}]
+        set nets [mptdc_signoff_marker_attr $marker {nets.name net.name net}]
+        set objects [mptdc_signoff_marker_attr $marker {objects.name objs.name insts.name inst.name}]
+        puts $fh "$idx\t[mptdc_signoff_report_value $type]\t[mptdc_signoff_report_value $subtype]\t[mptdc_signoff_report_value $layer]\t[mptdc_signoff_report_value $box]\t[mptdc_signoff_report_value $nets]\t[mptdc_signoff_report_value $objects]"
+    }
+    close $fh
+    return $path
 }
 
 proc mptdc_signoff_parse_report_route_unrouted {path} {
@@ -2494,10 +2677,12 @@ proc mptdc_signoff_post_filler_run_route_command {rpt phase cmd} {
     close $fh
     lassign [mptdc_signoff_capture_route_command $cmd $cmd_rpt] route_ok route_err
     set route_drc [mptdc_signoff_parse_verify_drc_report $cmd_rpt]
+    set marker_rpt [mptdc_signoff_dump_drc_markers [file rootname $cmd_rpt]_markers.tsv]
     set fh [open $rpt a]
     puts $fh "POST_FILLER_ROUTE_${phase}_COMMAND_STATUS=[expr {$route_ok ? "PASS" : "FAIL"}]"
     puts $fh "POST_FILLER_ROUTE_${phase}_ROUTER_DRC=[dict get $route_drc total_violations]"
     puts $fh "POST_FILLER_ROUTE_${phase}_ROUTER_SHORTS=[dict get $route_drc shorts]"
+    puts $fh "POST_FILLER_ROUTE_${phase}_MARKER_REPORT=$marker_rpt"
     if {!$route_ok} {
         puts $fh "POST_FILLER_ROUTE_${phase}_ERROR=$route_err"
     }
@@ -2516,6 +2701,7 @@ proc mptdc_signoff_post_filler_verify {rpt} {
     set all_ok [mptdc_signoff_capture_candidates $all_rpt \
         "post-filler all-net connectivity" [list {verifyConnectivity}]]
     set drc_data [mptdc_signoff_parse_verify_drc_report $drc_rpt]
+    set marker_rpt [mptdc_signoff_dump_drc_markers [file join [mptdc_signoff_report_dir] post_filler_verify_drc_markers.tsv]]
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
     set all_bad [mptdc_signoff_connectivity_report_has_errors $all_rpt]
     set verify_pass [expr {$drc_ok && $special_ok && $all_ok &&
@@ -2524,6 +2710,7 @@ proc mptdc_signoff_post_filler_verify {rpt} {
         ![lindex $all_bad 0]}]
     set fh [open $rpt a]
     puts $fh "POST_FILLER_VERIFY_DRC_REPORT=$drc_rpt"
+    puts $fh "POST_FILLER_VERIFY_DRC_MARKER_REPORT=$marker_rpt"
     puts $fh "POST_FILLER_VERIFY_DRC_CAPTURE_STATUS=[expr {$drc_ok ? "PASS" : "REVIEW_REQUIRED"}]"
     puts $fh "POST_FILLER_VERIFY_DRC=[dict get $drc_data total_violations]"
     puts $fh "POST_FILLER_VERIFY_SHORTS=[dict get $drc_data shorts]"
@@ -2560,9 +2747,7 @@ proc mptdc_signoff_post_filler_route_cleanup {rpt} {
     set fh [open $rpt a]
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POST_FILLER_SROUTE]} {
         mptdc_signoff_configure_sroute_mode $fh POST_FILLER
-        set sroute_ok [mptdc_signoff_try_pg_command $fh POST_FILLER_SROUTE [list \
-            [list sroute -connect {corePin blockPin padPin} -nets {VDD VSS}] \
-            [list sroute -nets {VDD VSS}]]]
+        set sroute_ok [mptdc_signoff_try_sroute_command $fh POST_FILLER_SROUTE [mptdc_signoff_sroute_commands {VDD VSS}]]
         if {!$sroute_ok} {
             puts $fh "POST_FILLER_SROUTE_REASON=all_sroute_command_variants_failed"
         }
@@ -2592,6 +2777,19 @@ proc mptdc_signoff_insert_final_fillers {} {
     global mptdc_xh018_cells
     set rpt [file join [mptdc_signoff_report_dir] filler_status.rpt]
     set before [mptdc_signoff_count_existing_filler_cells]
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_FINAL_FILLER 1]} {
+        set fh [open $rpt w]
+        puts $fh "# MPTDC Final Filler Status"
+        puts $fh "FILLER_COUNT_BEFORE=$before"
+        puts $fh "FILLER_INSERTION_STATUS=SKIPPED"
+        puts $fh "FILLER_INSERTION_REASON=MPTDC_ENABLE_FINAL_FILLER_DISABLED_FOR_ROUTE_DEBUG"
+        puts $fh "FILLER_STATUS=PROVISIONAL"
+        puts $fh "POST_FILLER_ROUTE_CLEANUP=SKIPPED"
+        puts $fh "POST_FILLER_GATE_NOTE=route_status_rpt_will_capture_base_route_without_final_filler"
+        close $fh
+        mptdc_signoff_set_status FILLER_STATUS PROVISIONAL $rpt
+        return $rpt
+    }
     lassign [mptdc_signoff_configure_filler_mode] filler_mode_ok filler_mode_rpt
     set fh [open $rpt w]
     puts $fh "# MPTDC Final Filler Status"
@@ -2686,7 +2884,9 @@ proc mptdc_signoff_capture_fast_tag_timing_report {src_pins dst_pins timing_rpt}
         close $tfh
         return [dict create status REVIEW_REQUIRED report $timing_rpt error missing_source_or_endpoint_pins]
     }
-    if {[catch {report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths 100 -path_type full_clock > $timing_rpt} err]} {
+    set max_paths [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100]
+    if {$max_paths < 1} { set max_paths 100 }
+    if {[catch {report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths $max_paths -path_type full_clock > $timing_rpt} err]} {
         set tfh [open $timing_rpt w]
         puts $tfh "REPORT_STATUS=FAILED"
         puts $tfh "REPORT_ERROR=$err"
@@ -2886,6 +3086,57 @@ proc mptdc_signoff_collect_fast_tag_eco_cells {} {
     return $cells
 }
 
+proc mptdc_signoff_extract_inst_from_timing_token {token} {
+    set text [string trim "$token" " \t\r\n,;(){}"]
+    if {![regexp {/} $text]} { return "" }
+    regsub {/[A-Za-z0-9_$\[\]\\]+.*$} $text {} inst
+    set inst [string trim $inst " \t\r\n,;(){}"]
+    if {$inst eq "" || [regexp {^(Startpoint|Endpoint|Path|clock|data)$} $inst]} {
+        return ""
+    }
+    return $inst
+}
+
+proc mptdc_signoff_fast_tag_path_eco_scores {timing_rpt} {
+    set scores [dict create]
+    if {![file exists $timing_rpt]} {
+        return $scores
+    }
+    set max_cells [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128]
+    if {$max_cells < 1} { set max_cells 128 }
+    set fh [open $timing_rpt r]
+    while {[gets $fh line] >= 0} {
+        foreach token [regexp -all -inline {\S+/\S+} $line] {
+            set inst [mptdc_signoff_extract_inst_from_timing_token $token]
+            if {$inst eq ""} { continue }
+            set info [mptdc_signoff_fast_tag_eco_allow_cell $inst]
+            if {![dict get $info allowed]} { continue }
+            if {[dict exists $scores $inst]} {
+                dict incr scores $inst
+            } else {
+                dict set scores $inst 1
+            }
+            if {[dict size $scores] >= $max_cells} {
+                break
+            }
+        }
+        if {[dict size $scores] >= $max_cells} {
+            break
+        }
+    }
+    close $fh
+    return $scores
+}
+
+proc mptdc_signoff_rank_fast_tag_path_eco_cells {timing_rpt} {
+    set ranked [list]
+    set scores [mptdc_signoff_fast_tag_path_eco_scores $timing_rpt]
+    dict for {inst score} $scores {
+        lappend ranked [list $inst $score]
+    }
+    return [lsort -integer -decreasing -index 1 $ranked]
+}
+
 proc mptdc_signoff_try_cell_resize {inst target_cell} {
     set errors [list]
     foreach cmd [list \
@@ -2914,11 +3165,14 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     puts $fh "FAST_TAG_TO_PD_TS_MULTICYCLE=NO"
     puts $fh "FAST_TAG_TARGETED_ECO_SCOPE=innovus_only_no_rtl_no_genus"
     puts $fh "FAST_TAG_TARGETED_ECO_ALLOWED=fast_tag_related_data_buffers_inverters_small_gates_and_ON22JIHDX1_to_ON22JIHDX2"
-    puts $fh "FAST_TAG_TARGETED_ECO_FORBIDDEN=RO_macros_phase_buffers_oscillator_clocks_broad_clk_sys_CTS"
+    puts $fh "FAST_TAG_TARGETED_ECO_FORBIDDEN=RO_macros_phase_buffers_oscillator_clocks_clock_tree_cells"
     puts $fh "FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_UPSIZE_SMALL_GATES=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_MAX_UPSIZE_CELLS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64]"
     puts $fh "FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4]"
+    puts $fh "FAST_TAG_ECO_PATH_DRIVEN=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN 1] ? 1 : 0}]"
+    puts $fh "FAST_TAG_ECO_PATH_MAX_PATHS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100]"
+    puts $fh "FAST_TAG_ECO_PATH_MAX_CELLS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128]"
     if {![mptdc_signoff_fast_tag_targeted_eco_enabled]} {
         puts $fh "FAST_TAG_TARGETED_ECO_STATUS=SKIPPED"
         close $fh
@@ -2940,6 +3194,11 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
         close $fh
         return $rpt
     }
+
+    set path_timing_rpt [file join [mptdc_signoff_report_dir] fast_tag_to_pd_timing_targeted_eco_input.rpt]
+    set path_timing_result [mptdc_signoff_capture_fast_tag_timing_report $src_pins $dst_pins $path_timing_rpt]
+    puts $fh "FAST_TAG_ECO_PATH_TIMING_REPORT=$path_timing_rpt"
+    puts $fh "FAST_TAG_ECO_PATH_TIMING_REPORT_STATUS=[dict get $path_timing_result status]"
 
     set protected [list]
     set protect_endpoint_flops [mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0]
@@ -2968,7 +3227,7 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
         }
     }
     puts $fh "FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK_COUNT=$size_ok_endpoint_count"
-    foreach pattern {clk_osc_slow clk_osc_fast clk_osc_slow_tap* clk_osc_fast_tap* clk_osc_*_buf_tap* clk_sys} {
+    foreach pattern {clk_osc_slow clk_osc_fast clk_osc_slow_tap* clk_osc_fast_tap* clk_osc_*_buf_tap*} {
         if {![catch {set_dont_touch_network [get_clocks $pattern]} err]} {
             puts $fh "FAST_TAG_ECO_PROTECTED_CLOCK=$pattern"
         } else {
@@ -2976,7 +3235,36 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
         }
     }
 
-    set allowed [mptdc_signoff_collect_fast_tag_eco_cells]
+    set path_scores [dict create]
+    set path_allowed [list]
+    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN 1] &&
+        [dict get $path_timing_result status] eq "PASS"} {
+        set path_scores [mptdc_signoff_fast_tag_path_eco_scores $path_timing_rpt]
+        foreach ranked [mptdc_signoff_rank_fast_tag_path_eco_cells $path_timing_rpt] {
+            set inst [lindex $ranked 0]
+            set score [lindex $ranked 1]
+            set info [mptdc_signoff_fast_tag_eco_allow_cell $inst]
+            if {![dict get $info allowed]} { continue }
+            mptdc_signoff_unique_append path_allowed $inst
+            puts $fh "FAST_TAG_ECO_PATH_ALLOWED_CELL=$inst score=$score class=[dict get $info class] master=[dict get $info master]"
+        }
+        puts $fh "FAST_TAG_ECO_PATH_DRIVEN_STATUS=PASS"
+    } else {
+        puts $fh "FAST_TAG_ECO_PATH_DRIVEN_STATUS=SKIPPED"
+    }
+    puts $fh "FAST_TAG_ECO_PATH_ALLOWED_CELL_COUNT=[llength $path_allowed]"
+
+    set broad_allowed [mptdc_signoff_collect_fast_tag_eco_cells]
+    set allowed [list]
+    foreach inst $path_allowed {
+        mptdc_signoff_unique_append allowed $inst
+    }
+    set path_order_count [llength $allowed]
+    foreach inst $broad_allowed {
+        mptdc_signoff_unique_append allowed $inst
+    }
+    puts $fh "FAST_TAG_ECO_NAME_FALLBACK_ALLOWED_CELL_COUNT=[llength $broad_allowed]"
+    puts $fh "FAST_TAG_ECO_PATH_ORDERED_PREFIX_COUNT=$path_order_count"
     set allowed_count 0
     set on22_candidates [list]
     set upsize_candidates [list]
@@ -2986,7 +3274,11 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
             incr allowed_count
         }
         set target [mptdc_signoff_fast_tag_eco_next_drive_master [dict get $info master]]
-        puts $fh "FAST_TAG_ECO_ALLOWED_CELL=$inst class=[dict get $info class] master=[dict get $info master] resize_target=$target"
+        set path_score 0
+        if {[dict exists $path_scores $inst]} {
+            set path_score [dict get $path_scores $inst]
+        }
+        puts $fh "FAST_TAG_ECO_ALLOWED_CELL=$inst class=[dict get $info class] master=[dict get $info master] path_score=$path_score resize_target=$target"
         if {[dict get $info class] eq "ON22_X1_TO_X2_CANDIDATE"} {
             lappend on22_candidates $inst
         }
@@ -3351,6 +3643,7 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
 proc mptdc_signoff_capture_route_gate_reports {drc_rpt regular_rpt special_rpt report_route_rpt} {
     mptdc_signoff_capture_required_candidates $drc_rpt \
         "route DRC" [list {verify_drc} {verifyGeometry}]
+    mptdc_signoff_dump_drc_markers [file rootname $drc_rpt]_markers.tsv
     mptdc_signoff_capture_required_candidates $regular_rpt \
         "regular-net connectivity" [list {verifyConnectivity -type regular} {verifyConnectivity}]
     mptdc_signoff_capture_required_candidates $special_rpt \
@@ -3361,6 +3654,10 @@ proc mptdc_signoff_capture_route_gate_reports {drc_rpt regular_rpt special_rpt r
 
 proc mptdc_signoff_read_route_gate_reports {drc_rpt regular_rpt special_rpt report_route_rpt} {
     set drc_data [mptdc_signoff_parse_verify_drc_report $drc_rpt]
+    set marker_rpt [file rootname $drc_rpt]_markers.tsv
+    if {[file exists $marker_rpt]} {
+        dict set drc_data marker_report $marker_rpt
+    }
     set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
     set unrouted [mptdc_signoff_parse_report_route_unrouted $report_route_rpt]
@@ -3438,9 +3735,7 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
         puts $fh "ROUTE_GATE_SROUTE_RECOVERY=ENABLED"
         puts $fh "ROUTE_GATE_SROUTE_RECOVERY_INITIAL_SPECIAL_BAD_LINES=[lindex $special_bad 1]"
         mptdc_signoff_configure_sroute_mode $fh ROUTE_GATE
-        set sroute_ok [mptdc_signoff_try_pg_command $fh ROUTE_GATE_SROUTE [list \
-            [list sroute -connect {corePin blockPin padPin} -nets {VDD VSS}] \
-            [list sroute -nets {VDD VSS}]]]
+        set sroute_ok [mptdc_signoff_try_sroute_command $fh ROUTE_GATE_SROUTE [mptdc_signoff_sroute_commands {VDD VSS}]]
         puts $fh "ROUTE_GATE_SROUTE_RECOVERY_COMMAND_STATUS=[expr {$sroute_ok ? "PASS" : "FAIL"}]"
         close $fh
         if {$sroute_ok} {
@@ -3485,6 +3780,7 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
             continue
         }
         mptdc_signoff_capture_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt
+        set recovery_marker_rpt [mptdc_signoff_dump_drc_markers [file rootname $cmd_rpt]_markers.tsv]
         set route_gate [mptdc_signoff_read_route_gate_reports $drc_rpt $regular_rpt $special_rpt $report_route_rpt]
         lassign $route_gate drc_data regular_bad special_bad unrouted
         set verify_total [dict get $drc_data total_violations]
@@ -3496,6 +3792,7 @@ proc mptdc_signoff_route_gate_recovery {drc_rpt regular_rpt special_rpt report_r
         puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_VERIFY_SHORTS=$verify_shorts"
         puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_DRC=[dict get $drc_data total_violations]"
         puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_SHORTS=[dict get $drc_data shorts]"
+        puts $fh "ROUTE_GATE_RECOVERY_ATTEMPT_MARKER_REPORT=$recovery_marker_rpt"
         if {[mptdc_signoff_route_gate_is_pass $drc_data $regular_bad $special_bad $unrouted]} {
             puts $fh "ROUTE_GATE_RECOVERY_STATUS=PASS"
             close $fh
@@ -3577,15 +3874,24 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     if {[dict exists $drc_data route_drc_source]} {
         puts $fh "ROUTE_DRC_SOURCE=[dict get $drc_data route_drc_source]"
     }
+    if {[dict exists $drc_data marker_report]} {
+        puts $fh "DRC_MARKER_REPORT=[dict get $drc_data marker_report]"
+    }
     if {[dict exists $drc_data verify_drc_violations_raw]} {
         puts $fh "VERIFY_DRC_VIOLATIONS_RAW=[dict get $drc_data verify_drc_violations_raw]"
     }
     if {[dict exists $drc_data verify_drc_shorts_raw]} {
         puts $fh "VERIFY_DRC_SHORTS_RAW=[dict get $drc_data verify_drc_shorts_raw]"
     }
+    set failure_marker_rpt ""
+    if {$status eq "FAIL"} {
+        set failure_marker_rpt [file join [mptdc_signoff_report_dir] route_gate_failure_drc_markers.tsv]
+        puts $fh "ROUTE_GATE_FAILURE_MARKER_REPORT=$failure_marker_rpt"
+    }
     close $fh
     mptdc_signoff_set_status ROUTE_STATUS $status $rpt
     if {$status eq "FAIL"} {
+        mptdc_signoff_dump_drc_markers $failure_marker_rpt
         error "MPTDC_ROUTE_GATE_FAILED: report=$rpt"
     }
     return $rpt

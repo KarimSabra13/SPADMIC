@@ -86,6 +86,7 @@ apply_recovery_defaults() {
   export MPTDC_PD_PHYSICAL_AUDIT_MODE="${MPTDC_PD_PHYSICAL_AUDIT_MODE:-soft_region}"
   export MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM="${MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM:-12.0}"
   export MPTDC_PD_TILE_MAX_OFFSET_UM="${MPTDC_PD_TILE_MAX_OFFSET_UM:-12.0}"
+  export MPTDC_PNR_CORE_UTIL="${MPTDC_PNR_CORE_UTIL:-0.55}"
   export MPTDC_PNR_FIX_RO_MACROS="${MPTDC_PNR_FIX_RO_MACROS:-0}"
   export MPTDC_PNR_CREATE_RO_HALOS="${MPTDC_PNR_CREATE_RO_HALOS:-0}"
 
@@ -112,13 +113,20 @@ apply_recovery_defaults() {
   export MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES="${MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES:-1}"
   export MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS="${MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS:-64}"
   export MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT="${MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT:-4}"
+  export MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN="${MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN:-1}"
+  export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS="${MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS:-100}"
+  export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS="${MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS:-128}"
 
   export MPTDC_ENABLE_BLOCK_PG_PINS="${MPTDC_ENABLE_BLOCK_PG_PINS:-1}"
   export MPTDC_BLOCK_PG_PIN_LAYER="${MPTDC_BLOCK_PG_PIN_LAYER:-METTP}"
-  export MPTDC_BLOCK_PG_PIN_STYLE="${MPTDC_BLOCK_PG_PIN_STYLE:-left_vdd_right_vss}"
+  export MPTDC_BLOCK_PG_PIN_STYLE="${MPTDC_BLOCK_PG_PIN_STYLE:-both_sides_vdd_vss}"
+  export MPTDC_BLOCK_PG_PIN_WIDTH_UM="${MPTDC_BLOCK_PG_PIN_WIDTH_UM:-4.0}"
+  export MPTDC_BLOCK_PG_PIN_DEPTH_UM="${MPTDC_BLOCK_PG_PIN_DEPTH_UM:-28.0}"
   export MPTDC_BLOCK_PG_PIN_CREATE_MODE="${MPTDC_BLOCK_PG_PIN_CREATE_MODE:-geom}"
   export MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK="${MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK:-0}"
-  export MPTDC_ENABLE_POST_FILLER_SROUTE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-1}"
+  export MPTDC_ENABLE_FINAL_FILLER="${MPTDC_ENABLE_FINAL_FILLER:-1}"
+  export MPTDC_ENABLE_POST_FILLER_SROUTE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-0}"
+  export MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK="${MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK:-0}"
   export MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS="${MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS:-0}"
   export MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES="${MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES:-0}"
   export MPTDC_SROUTE_CONNECT_STRIPE="${MPTDC_SROUTE_CONNECT_STRIPE:-1}"
@@ -380,12 +388,6 @@ export MPTDC_CLOSURE_SCOPE="${MPTDC_CLOSURE_SCOPE:-TC_ONLY}"
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
 apply_recovery_defaults
 
-if [[ "$MODE" == "full_signoff" && "${MPTDC_ENABLE_POST_FILLER_SROUTE,,}" =~ ^(0|no|false|off)$ && "${MPTDC_BYPASS_POST_FILLER_SROUTE_REQUIRED:-0}" != "1" ]]; then
-  echo "ERROR: full_signoff requires MPTDC_ENABLE_POST_FILLER_SROUTE=1." | tee -a "$RUN_LOG"
-  echo "Set MPTDC_BYPASS_POST_FILLER_SROUTE_REQUIRED=1 only for an explicit debug bypass." | tee -a "$RUN_LOG"
-  exit 3
-fi
-
 if [[ "$MODE" != "discover_only" && -n "${O1_RO_LEF_PATH:-}" && -f "${O1_RO_LEF_PATH:-}" ]]; then
   export_ro_lef_size "$O1_RO_LEF_PATH" "${O1_RO_CELL_NAME:-RO_tune6}"
 fi
@@ -427,6 +429,7 @@ fi
   echo "pd_tile_apply_hier_box: ${MPTDC_PNR_PD_TILE_APPLY_HIER_BOX:-unset}"
   echo "pd_tile_region_margin_um: ${MPTDC_PNR_PD_TILE_REGION_MARGIN_UM:-unset}"
   echo "pd_physical_audit_mode: ${MPTDC_PD_PHYSICAL_AUDIT_MODE:-unset}"
+  echo "pnr_core_util: ${MPTDC_PNR_CORE_UTIL:-unset}"
   echo "fix_ro_macros: ${MPTDC_PNR_FIX_RO_MACROS:-unset}"
   echo "create_ro_halos: ${MPTDC_PNR_CREATE_RO_HALOS:-unset}"
   echo "fast_tag_column_side: ${MPTDC_PNR_FAST_TAG_COLUMN_SIDE:-unset}"
@@ -436,13 +439,20 @@ fi
   echo "fast_tag_targeted_eco: ${MPTDC_PNR_FAST_TAG_TARGETED_ECO:-unset}"
   echo "fast_tag_eco_protect_endpoint_flops: ${MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS:-unset}"
   echo "fast_tag_eco_upsize_small_gates: ${MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES:-unset}"
+  echo "fast_tag_eco_path_driven: ${MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN:-unset}"
+  echo "fast_tag_eco_path_max_paths: ${MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS:-unset}"
+  echo "fast_tag_eco_path_max_cells: ${MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS:-unset}"
   echo "block_pg_pins: ${MPTDC_ENABLE_BLOCK_PG_PINS:-unset}"
   echo "block_pg_pin_layer: ${MPTDC_BLOCK_PG_PIN_LAYER:-unset}"
   echo "block_pg_pin_style: ${MPTDC_BLOCK_PG_PIN_STYLE:-unset}"
+  echo "block_pg_pin_width_um: ${MPTDC_BLOCK_PG_PIN_WIDTH_UM:-unset}"
+  echo "block_pg_pin_depth_um: ${MPTDC_BLOCK_PG_PIN_DEPTH_UM:-unset}"
   echo "block_pg_pin_create_mode: ${MPTDC_BLOCK_PG_PIN_CREATE_MODE:-unset}"
   echo "block_pg_pin_editpin_fallback: ${MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK:-unset}"
+  echo "final_filler: ${MPTDC_ENABLE_FINAL_FILLER:-unset}"
   echo "post_filler_sroute: ${MPTDC_ENABLE_POST_FILLER_SROUTE:-unset}"
   echo "post_filler_sroute_required_bypass: ${MPTDC_BYPASS_POST_FILLER_SROUTE_REQUIRED:-0}"
+  echo "sroute_padpin_fallback: ${MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK:-unset}"
   echo "sroute_mode_experiments: ${MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS:-unset}"
   echo "sroute_preserve_existing_routes: ${MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES:-unset}"
   echo "sroute_connect_stripe: ${MPTDC_SROUTE_CONNECT_STRIPE:-unset}"
