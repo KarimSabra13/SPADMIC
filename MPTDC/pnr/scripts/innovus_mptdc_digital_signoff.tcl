@@ -919,11 +919,14 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN 1
         MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100
         MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128
+        MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK 0
+        MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 0
         MPTDC_ENABLE_BLOCK_PG_PINS 1
         MPTDC_BLOCK_PG_PIN_LAYER METTP
         MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss
         MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0
         MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0
+        MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0
         MPTDC_BLOCK_PG_PIN_CREATE_MODE geom
         MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0
         MPTDC_ENABLE_FINAL_FILLER 1
@@ -935,7 +938,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
         MPTDC_REQUIRE_DRC_SAFE_FILLER 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
-        MPTDC_ROUTE_GATE_SROUTE_RECOVERY 1
+        MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0
         MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc} {routeDesign -detail} {ecoRoute -fix_drc}}
         MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 0
         MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 0
@@ -1802,6 +1805,9 @@ proc mptdc_signoff_parse_sroute_report {path} {
     close $fh
     if {[dict get $result command_failed]} {
         dict set result status FAIL
+    } elseif {[dict get $result open_ports] > 0} {
+        dict set result status REVIEW_REQUIRED
+        dict set result reason open_ports_nonzero
     } elseif {[dict get $result wires] ne "UNKNOWN" && [dict get $result wires] == 0} {
         dict set result status REVIEW_REQUIRED
         dict set result reason zero_wires_created
@@ -1909,6 +1915,7 @@ proc mptdc_signoff_block_pg_pin_rect {side core_box width depth {y_fraction 0.50
     set lly [lindex $core_box 1]
     set urx [lindex $core_box 2]
     set ury [lindex $core_box 3]
+    set outside [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0]
     if {![string is double -strict $y_fraction]} {
         set y_fraction 0.50
     }
@@ -1918,10 +1925,10 @@ proc mptdc_signoff_block_pg_pin_rect {side core_box width depth {y_fraction 0.50
     set half [expr {$width / 2.0}]
     switch -- [string toupper $side] {
         LEFT {
-            return [list $llx [expr {$cy - $half}] [expr {$llx + $depth}] [expr {$cy + $half}]]
+            return [list [expr {$llx - $outside}] [expr {$cy - $half}] [expr {$llx + $depth}] [expr {$cy + $half}]]
         }
         RIGHT {
-            return [list [expr {$urx - $depth}] [expr {$cy - $half}] $urx [expr {$cy + $half}]]
+            return [list [expr {$urx - $depth}] [expr {$cy - $half}] [expr {$urx + $outside}] [expr {$cy + $half}]]
         }
         default {
             error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_SIDE: $side"
@@ -2022,6 +2029,7 @@ proc mptdc_signoff_create_block_pg_pins {} {
     puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss]"
     puts $fh "BLOCK_PG_PIN_WIDTH_UM=$width"
     puts $fh "BLOCK_PG_PIN_DEPTH_UM=$depth"
+    puts $fh "BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM=[mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0]"
     puts $fh "CORE_BBOX=$core_box"
     if {![mptdc_signoff_box_valid $core_box]} {
         puts $fh "BLOCK_PG_PIN_STATUS=FAIL"
@@ -2340,6 +2348,9 @@ proc mptdc_signoff_marker_attr {marker attrs} {
 
 proc mptdc_signoff_dump_drc_markers {path} {
     file mkdir [file dirname $path]
+    set schema_rpt [file rootname $path]_schema.rpt
+    catch {dbSchema marker > $schema_rpt}
+    catch {help marker >> $schema_rpt}
     set markers [list]
     foreach cmd {
         {dbGet top.markers}
@@ -2351,7 +2362,7 @@ proc mptdc_signoff_dump_drc_markers {path} {
         }
     }
     set fh [open $path w]
-    puts $fh "idx\ttype\tsubtype\tlayer\tbox\tnets\tobjects"
+    puts $fh "idx\ttype\tsubtype\tlayer\tbox"
     set idx 0
     foreach marker $markers {
         if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} { continue }
@@ -2360,9 +2371,7 @@ proc mptdc_signoff_dump_drc_markers {path} {
         set subtype [mptdc_signoff_marker_attr $marker {subType subtype sub_type}]
         set layer [mptdc_signoff_marker_attr $marker {layer.name layer}]
         set box [mptdc_signoff_marker_attr $marker {box bbox rect}]
-        set nets [mptdc_signoff_marker_attr $marker {nets.name net.name net}]
-        set objects [mptdc_signoff_marker_attr $marker {objects.name objs.name insts.name inst.name}]
-        puts $fh "$idx\t[mptdc_signoff_report_value $type]\t[mptdc_signoff_report_value $subtype]\t[mptdc_signoff_report_value $layer]\t[mptdc_signoff_report_value $box]\t[mptdc_signoff_report_value $nets]\t[mptdc_signoff_report_value $objects]"
+        puts $fh "$idx\t[mptdc_signoff_report_value $type]\t[mptdc_signoff_report_value $subtype]\t[mptdc_signoff_report_value $layer]\t[mptdc_signoff_report_value $box]"
     }
     close $fh
     return $path
@@ -2887,14 +2896,22 @@ proc mptdc_signoff_capture_fast_tag_timing_report {src_pins dst_pins timing_rpt}
     }
     set max_paths [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100]
     if {$max_paths < 1} { set max_paths 100 }
-    if {[catch {report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths $max_paths -path_type full_clock > $timing_rpt} err]} {
-        set tfh [open $timing_rpt w]
-        puts $tfh "REPORT_STATUS=FAILED"
-        puts $tfh "REPORT_ERROR=$err"
-        close $tfh
-        return [dict create status REVIEW_REQUIRED report $timing_rpt error $err]
+    set errors [list]
+    foreach cmd [list \
+        [list report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths $max_paths -path_type full_clock -net] \
+        [list report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths $max_paths -path_type full_clock] \
+        [list report_timing -view TC_NOMINAL -from $src_pins -to $dst_pins -max_paths $max_paths]] {
+        set redirect_cmd [concat $cmd [list > $timing_rpt]]
+        if {![catch {eval $redirect_cmd} err]} {
+            return [dict create status PASS report $timing_rpt command $cmd error ""]
+        }
+        lappend errors "$cmd: $err"
     }
-    return [dict create status PASS report $timing_rpt error ""]
+    set tfh [open $timing_rpt w]
+    puts $tfh "REPORT_STATUS=FAILED"
+    puts $tfh "REPORT_ERROR=[join $errors { | }]"
+    close $tfh
+    return [dict create status REVIEW_REQUIRED report $timing_rpt command "" error [join $errors { | }]]
 }
 
 proc mptdc_signoff_apply_fast_tag_timing_focus {} {
@@ -3051,6 +3068,11 @@ proc mptdc_signoff_fast_tag_eco_allow_cell {inst} {
     if {[regexp -nocase {RO_tune6|u_ro_tune4|phase_buf|gen_phase_buf|clk_osc|clk_sys|cts} $norm]} {
         return [dict create allowed 0 class FORBIDDEN_PROTECTED_MACRO_PHASE_OR_CLOCK master $master]
     }
+    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 0] &&
+        [regexp -nocase {tag_o_reg|nfast_hit_latched_reg} $norm] &&
+        [mptdc_signoff_fast_tag_eco_next_drive_master $master] ne ""} {
+        return [dict create allowed 1 class FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master $master]
+    }
     if {[regexp -nocase {tag_o_reg|nfast_hit_latched_reg|_reg(\[[0-9]+\])?$} $norm]} {
         return [dict create allowed 0 class FORBIDDEN_SOURCE_OR_CAPTURE_FLOP master $master]
     }
@@ -3174,6 +3196,8 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     puts $fh "FAST_TAG_ECO_PATH_DRIVEN=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN 1] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_PATH_MAX_PATHS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100]"
     puts $fh "FAST_TAG_ECO_PATH_MAX_CELLS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128]"
+    puts $fh "FAST_TAG_ECO_NAME_FALLBACK=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK 0] ? 1 : 0}]"
+    puts $fh "FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 0] ? 1 : 0}]"
     if {![mptdc_signoff_fast_tag_targeted_eco_enabled]} {
         puts $fh "FAST_TAG_TARGETED_ECO_STATUS=SKIPPED"
         close $fh
@@ -3200,6 +3224,9 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     set path_timing_result [mptdc_signoff_capture_fast_tag_timing_report $src_pins $dst_pins $path_timing_rpt]
     puts $fh "FAST_TAG_ECO_PATH_TIMING_REPORT=$path_timing_rpt"
     puts $fh "FAST_TAG_ECO_PATH_TIMING_REPORT_STATUS=[dict get $path_timing_result status]"
+    if {[dict exists $path_timing_result command]} {
+        puts $fh "FAST_TAG_ECO_PATH_TIMING_REPORT_COMMAND=[dict get $path_timing_result command]"
+    }
 
     set protected [list]
     set protect_endpoint_flops [mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0]
@@ -3255,7 +3282,10 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     }
     puts $fh "FAST_TAG_ECO_PATH_ALLOWED_CELL_COUNT=[llength $path_allowed]"
 
-    set broad_allowed [mptdc_signoff_collect_fast_tag_eco_cells]
+    set broad_allowed [list]
+    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK 0]} {
+        set broad_allowed [mptdc_signoff_collect_fast_tag_eco_cells]
+    }
     set allowed [list]
     foreach inst $path_allowed {
         mptdc_signoff_unique_append allowed $inst
@@ -3885,13 +3915,21 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
         puts $fh "VERIFY_DRC_SHORTS_RAW=[dict get $drc_data verify_drc_shorts_raw]"
     }
     set failure_marker_rpt ""
+    set failure_def ""
+    set failure_checkpoint ""
     if {$status eq "FAIL"} {
         set failure_marker_rpt [file join [mptdc_signoff_report_dir] route_gate_failure_drc_markers.tsv]
+        set failure_def [file join [mptdc_signoff_def_dir] 04_route_failed.def]
+        set failure_checkpoint [file join [mptdc_signoff_checkpoint_dir] 04_route_failed.enc]
         puts $fh "ROUTE_GATE_FAILURE_MARKER_REPORT=$failure_marker_rpt"
+        puts $fh "ROUTE_GATE_FAILURE_DEF=$failure_def"
+        puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT=$failure_checkpoint"
     }
     close $fh
     mptdc_signoff_set_status ROUTE_STATUS $status $rpt
     if {$status eq "FAIL"} {
+        catch {defOut $failure_def}
+        catch {saveDesign $failure_checkpoint}
         mptdc_signoff_dump_drc_markers $failure_marker_rpt
         error "MPTDC_ROUTE_GATE_FAILED: report=$rpt"
     }
