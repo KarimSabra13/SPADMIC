@@ -182,8 +182,9 @@ configure_xh018_stack() {
   fi
   export PDK_ROOT="$pdk"
 
+  local allow_stack_file_overrides="${MPTDC_ALLOW_EXPLICIT_STACK_FILE_OVERRIDES:-0}"
   local inferred_stack=""
-  if [[ -n "${TECHNOLOGY_LEF:-}" ]]; then
+  if [[ "$allow_stack_file_overrides" == "1" && -n "${TECHNOLOGY_LEF:-}" ]]; then
     inferred_stack="$(infer_xh018_stack_from_techlef "$TECHNOLOGY_LEF")"
   fi
 
@@ -245,25 +246,51 @@ configure_xh018_stack() {
   esac
 
   export MPTDC_XH018_STACK="$stack"
-  export TECHNOLOGY_LEF="${TECHNOLOGY_LEF:-$tech_lef}"
+  if [[ "$allow_stack_file_overrides" == "1" ]]; then
+    export TECHNOLOGY_LEF="${TECHNOLOGY_LEF:-$tech_lef}"
+  else
+    if [[ -n "${TECHNOLOGY_LEF:-}" && "$TECHNOLOGY_LEF" != "$tech_lef" ]]; then
+      echo "INFO: overriding TECHNOLOGY_LEF from $TECHNOLOGY_LEF to stack-owned $tech_lef" | tee -a "$RUN_LOG"
+    fi
+    export TECHNOLOGY_LEF="$tech_lef"
+  fi
+  inferred_stack="$(infer_xh018_stack_from_techlef "$TECHNOLOGY_LEF")"
   if [[ -n "$inferred_stack" && "$inferred_stack" != "$stack" ]]; then
     echo "ERROR: TECHNOLOGY_LEF=$TECHNOLOGY_LEF implies $inferred_stack but MPTDC_XH018_STACK=$stack" | tee -a "$RUN_LOG"
     exit 3
   fi
-  export CAPTABLE_DIR="${CAPTABLE_DIR:-$PDK_ROOT/cadence/v9_0/capTbl/v9_0_1}"
-  export CAPTABLE_BC="${CAPTABLE_BC:-$CAPTABLE_DIR/${captbl_stem}_min.capTbl}"
-  export CAPTABLE_TC="${CAPTABLE_TC:-$CAPTABLE_DIR/${captbl_stem}_typ.capTbl}"
-  export CAPTABLE_WC="${CAPTABLE_WC:-$CAPTABLE_DIR/${captbl_stem}_max.capTbl}"
-  export QRC_ROOT="${QRC_ROOT:-$PDK_ROOT/cadence/v10_1/QRC_pvs/v10_1_1/$qrc_family}"
-  export QRCTECH_BC="${QRCTECH_BC:-$QRC_ROOT/QRC-Min/qrcTechFile}"
-  export QRCTECH_TC="${QRCTECH_TC:-$QRC_ROOT/QRC-Typ/qrcTechFile}"
-  export QRCTECH_WC="${QRCTECH_WC:-$QRC_ROOT/QRC-Max/qrcTechFile}"
-  export MPTDC_PNR_METAL_STACK="${MPTDC_PNR_METAL_STACK:-$stack}"
-  export MPTDC_PNR_ROUTE_LAYER_NAMES="${MPTDC_PNR_ROUTE_LAYER_NAMES:-$route_layers}"
-  export MPTDC_PNR_SIGNAL_TOP_LAYER="${MPTDC_PNR_SIGNAL_TOP_LAYER:-$signal_top}"
-  export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-$floor_top}"
-  export MPTDC_PNR_POWER_LAYER="${MPTDC_PNR_POWER_LAYER:-$floor_top}"
-  export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-$floor_top}"
+
+  if [[ "$allow_stack_file_overrides" == "1" ]]; then
+    export CAPTABLE_DIR="${CAPTABLE_DIR:-$PDK_ROOT/cadence/v9_0/capTbl/v9_0_1}"
+    export CAPTABLE_BC="${CAPTABLE_BC:-$CAPTABLE_DIR/${captbl_stem}_min.capTbl}"
+    export CAPTABLE_TC="${CAPTABLE_TC:-$CAPTABLE_DIR/${captbl_stem}_typ.capTbl}"
+    export CAPTABLE_WC="${CAPTABLE_WC:-$CAPTABLE_DIR/${captbl_stem}_max.capTbl}"
+    export QRC_ROOT="${QRC_ROOT:-$PDK_ROOT/cadence/v10_1/QRC_pvs/v10_1_1/$qrc_family}"
+    export QRCTECH_BC="${QRCTECH_BC:-$QRC_ROOT/QRC-Min/qrcTechFile}"
+    export QRCTECH_TC="${QRCTECH_TC:-$QRC_ROOT/QRC-Typ/qrcTechFile}"
+    export QRCTECH_WC="${QRCTECH_WC:-$QRC_ROOT/QRC-Max/qrcTechFile}"
+    export MPTDC_PNR_METAL_STACK="${MPTDC_PNR_METAL_STACK:-$stack}"
+    export MPTDC_PNR_ROUTE_LAYER_NAMES="${MPTDC_PNR_ROUTE_LAYER_NAMES:-$route_layers}"
+    export MPTDC_PNR_SIGNAL_TOP_LAYER="${MPTDC_PNR_SIGNAL_TOP_LAYER:-$signal_top}"
+    export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-$floor_top}"
+    export MPTDC_PNR_POWER_LAYER="${MPTDC_PNR_POWER_LAYER:-$floor_top}"
+    export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-$floor_top}"
+  else
+    export CAPTABLE_DIR="$PDK_ROOT/cadence/v9_0/capTbl/v9_0_1"
+    export CAPTABLE_BC="$CAPTABLE_DIR/${captbl_stem}_min.capTbl"
+    export CAPTABLE_TC="$CAPTABLE_DIR/${captbl_stem}_typ.capTbl"
+    export CAPTABLE_WC="$CAPTABLE_DIR/${captbl_stem}_max.capTbl"
+    export QRC_ROOT="$PDK_ROOT/cadence/v10_1/QRC_pvs/v10_1_1/$qrc_family"
+    export QRCTECH_BC="$QRC_ROOT/QRC-Min/qrcTechFile"
+    export QRCTECH_TC="$QRC_ROOT/QRC-Typ/qrcTechFile"
+    export QRCTECH_WC="$QRC_ROOT/QRC-Max/qrcTechFile"
+    export MPTDC_PNR_METAL_STACK="$stack"
+    export MPTDC_PNR_ROUTE_LAYER_NAMES="$route_layers"
+    export MPTDC_PNR_SIGNAL_TOP_LAYER="$signal_top"
+    export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="$floor_top"
+    export MPTDC_PNR_POWER_LAYER="$floor_top"
+    export MPTDC_PNR_PHASE_TOP_LAYER="$floor_top"
+  fi
 }
 
 while [[ $# -gt 0 ]]; do
