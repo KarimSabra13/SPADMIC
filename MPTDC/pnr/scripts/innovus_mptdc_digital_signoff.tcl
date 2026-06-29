@@ -1848,6 +1848,24 @@ proc mptdc_signoff_try_sroute_command {fh label commands} {
     return 0
 }
 
+proc mptdc_signoff_sroute_attempt_summary {label} {
+    set token [mptdc_signoff_report_token $label]
+    set best [dict create status FAIL wires UNKNOWN open_ports 0 reason no_successful_clean_attempt report ""]
+    foreach report [lsort [glob -nocomplain [file join [mptdc_signoff_report_dir] "${token}_sroute_*.rpt"]]] {
+        set data [mptdc_signoff_parse_sroute_report $report]
+        dict set data report $report
+        if {[dict get $data status] eq "PASS"} {
+            return $data
+        }
+        set wires [dict get $data wires]
+        if {[dict get $data status] eq "REVIEW_REQUIRED" &&
+            $wires ne "UNKNOWN" && $wires > 0} {
+            set best $data
+        }
+    }
+    return $best
+}
+
 proc mptdc_signoff_configure_sroute_mode {fh label} {
     if {![mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
         puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=0"
@@ -2185,6 +2203,11 @@ proc mptdc_signoff_build_power_grid {} {
     set fh [open $rpt a]
     mptdc_signoff_configure_sroute_mode $fh PRE_ROUTE_PG
     set sroute_ok [mptdc_signoff_try_sroute_command $fh SROUTE [mptdc_signoff_sroute_commands $nets]]
+    set sroute_summary [mptdc_signoff_sroute_attempt_summary SROUTE]
+    set sroute_status [dict get $sroute_summary status]
+    set sroute_wires [dict get $sroute_summary wires]
+    set sroute_progress_ok [expr {$sroute_status in {PASS REVIEW_REQUIRED} &&
+        $sroute_wires ne "UNKNOWN" && $sroute_wires > 0}]
 
     close $fh
 
@@ -2212,6 +2235,13 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "BLOCK_PG_PIN_STATUS=[expr {$block_pin_ok ? "PASS" : "FAIL"}]"
     puts $fh "BLOCK_PG_PIN_REPORT=$block_pin_rpt"
     puts $fh "SROUTE_DONE=$sroute_ok"
+    puts $fh "SROUTE_EFFECTIVE_STATUS=$sroute_status"
+    puts $fh "SROUTE_EFFECTIVE_WIRES=$sroute_wires"
+    puts $fh "SROUTE_EFFECTIVE_OPEN_PORTS=[dict get $sroute_summary open_ports]"
+    if {[dict exists $sroute_summary reason]} {
+        puts $fh "SROUTE_EFFECTIVE_REASON=[dict get $sroute_summary reason]"
+    }
+    puts $fh "SROUTE_PREPLACE_PROGRESS_STATUS=[expr {$sroute_progress_ok ? "PASS" : "FAIL"}]"
     puts $fh "RO_INSTANCE_COUNT=$ro_count"
     puts $fh "RO_VDD_CONNECTED_COUNT=$ro_vdd_count"
     puts $fh "RO_VDD_BANG_CONNECTED_COUNT=$ro_vdd_bang_count"
@@ -2227,7 +2257,7 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
-    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $sroute_ok}]
+    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $sroute_progress_ok}]
     set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
     set provisional_reason ""
     if {$status ne "PASS" &&
@@ -2235,6 +2265,9 @@ proc mptdc_signoff_build_power_grid {} {
         $primitive_pg_ok} {
         set status PROVISIONAL
         set provisional_reason "pre_place_verify_connectivity_requires_placed_cells; route_stage_rechecks_regular_and_special_connectivity"
+        if {!$sroute_ok} {
+            append provisional_reason "; sroute_open_ports_deferred_to_route_stage"
+        }
         if {!$ro_pg_ok} {
             append provisional_reason "; ro_pg_pin_query_deferred_to_route_connectivity_recheck"
         }
