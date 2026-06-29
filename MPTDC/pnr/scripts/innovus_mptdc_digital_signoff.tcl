@@ -915,8 +915,9 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1
         MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64
         MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4
-        MPTDC_ENABLE_POST_FILLER_SROUTE 0
+        MPTDC_ENABLE_POST_FILLER_SROUTE 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
+        MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc}}
         MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 0
         MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 0
     } {
@@ -2209,13 +2210,13 @@ proc mptdc_signoff_capture_route_command {cmd path} {
 }
 
 proc mptdc_signoff_route_repair_commands {} {
-    return [list \
-        {ecoRoute -target} \
-        {ecoRoute -target -fix_drc} \
-        {ecoRoute -fix_drc} \
-        {globalDetailRoute -route_with_eco true} \
-        {globalDetailRoute -route_with_timing_driven true} \
-        {globalDetailRoute}]
+    set raw [mptdc_signoff_env MPTDC_ROUTE_REPAIR_COMMANDS ""]
+    if {$raw ne ""} {
+        if {![catch {llength $raw}]} {
+            return $raw
+        }
+    }
+    return [list {ecoRoute -target} {ecoRoute -fix_drc}]
 }
 
 proc mptdc_signoff_count_existing_filler_cells {} {
