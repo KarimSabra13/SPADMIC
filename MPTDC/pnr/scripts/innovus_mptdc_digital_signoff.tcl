@@ -929,10 +929,16 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0
         MPTDC_BLOCK_PG_PIN_CREATE_MODE geom
         MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0
+        MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 1
+        MPTDC_BLOCK_PG_STITCH_WIDTH_UM 2.0
+        MPTDC_BLOCK_PG_STITCH_SPACING_UM 2.0
+        MPTDC_BLOCK_PG_STITCH_SET_DISTANCE_UM 5000.0
+        MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 1
         MPTDC_ENABLE_FINAL_FILLER 1
         MPTDC_ENABLE_POST_FILLER_SROUTE 0
         MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1
         MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 0
+        MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN 1
         MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0
         MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0
         MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0
@@ -1992,12 +1998,10 @@ proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
         [list VDD_PG_TERM_NAMES {dbGet [dbGet top.pgTerms.name VDD* -p].name}] \
         [list VDD_PG_TERM_NETS {dbGet [dbGet top.pgTerms.name VDD* -p].net.name}] \
         [list VDD_PG_TERM_LAYERS {dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.layer.name}] \
-        [list VDD_PG_TERM_BOXES {dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.box}] \
         [list VSS_PG_TERM_HANDLES {dbGet top.pgTerms.name VSS* -p}] \
         [list VSS_PG_TERM_NAMES {dbGet [dbGet top.pgTerms.name VSS* -p].name}] \
         [list VSS_PG_TERM_NETS {dbGet [dbGet top.pgTerms.name VSS* -p].net.name}] \
         [list VSS_PG_TERM_LAYERS {dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.layer.name}] \
-        [list VSS_PG_TERM_BOXES {dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.box}] \
         [list TERM_NAMES {dbGet top.terms.name}] \
         [list VDD_NET_HANDLES {dbGet top.nets.name VDD -p}] \
         [list VDD_SWIRE_COUNT {llength [dbGet [dbGet top.nets.name VDD -p].sWires]}] \
@@ -2066,6 +2070,15 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
         return $rpt
     }
 
+    set pg_dump_initial [mptdc_signoff_dump_pg_terms \
+        [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_objects_before_stitch.rpt] \
+        POSTPLACE_PRE_ROUTE_BEFORE_STITCH]
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_OBJECT_DUMP_BEFORE_STITCH=$pg_dump_initial"
+    lassign [mptdc_signoff_create_block_pg_stitches \
+        postplace_pre_route_block_pg_stitch_status.rpt \
+        POSTPLACE_PRE_ROUTE_BLOCK_PG_STITCH] postplace_stitch_ok postplace_stitch_rpt
+    puts $fh "POSTPLACE_PRE_ROUTE_BLOCK_PG_STITCH_STATUS=[expr {$postplace_stitch_ok ? "PASS" : "FAIL"}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_BLOCK_PG_STITCH_REPORT=$postplace_stitch_rpt"
     set pg_dump_pre [mptdc_signoff_dump_pg_terms \
         [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_objects_before_sroute.rpt] \
         POSTPLACE_PRE_ROUTE_BEFORE_SROUTE]
@@ -2089,6 +2102,7 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     } else {
         set status FAIL
     }
+    set status_before_verify $status
 
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_COMMAND_STATUS=[expr {$command_ok ? "PASS" : "FAIL"}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_STATUS=$summary_status"
@@ -2109,10 +2123,6 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     if {[dict exists $summary report]} {
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_EFFECTIVE_REPORT=[dict get $summary report]"
     }
-    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_PROGRESS_STATUS=[expr {$progress_ok ? "PASS" : "FAIL"}]"
-    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=$status"
-    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
-
     set special_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_verify_connectivity_special.rpt]
     lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands {VDD VSS}]] special_capture_ok special_capture_cmd
     set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
@@ -2121,6 +2131,19 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_COMMAND=$special_capture_cmd"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
+    set verify_clean_override 0
+    if {$status ne "PASS" &&
+        $special_capture_ok &&
+        ![lindex $special_bad 0] &&
+        [mptdc_signoff_env_truthy MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN 1]} {
+        set status PASS
+        set verify_clean_override 1
+    }
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS_BEFORE_VERIFY=$status_before_verify"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_VERIFY_CLEAN_OVERRIDE=$verify_clean_override"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_PROGRESS_STATUS=[expr {$progress_ok ? "PASS" : "FAIL"}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=$status"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
 
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
@@ -2359,6 +2382,175 @@ proc mptdc_signoff_create_block_pg_pins {} {
     return [list 1 $rpt]
 }
 
+proc mptdc_signoff_block_pg_net_slot {net} {
+    switch -- [string toupper $net] {
+        VDD { return 0 }
+        VSS { return 1 }
+        default { return 0 }
+    }
+}
+
+proc mptdc_signoff_block_pg_stitch_coordinate {net side rect core_box width spacing} {
+    set pitch [mptdc_signoff_env_double MPTDC_BLOCK_PG_STITCH_NET_PITCH_UM [expr {$width + $spacing}]]
+    set min_pitch [expr {$width + $spacing}]
+    if {$pitch < $min_pitch} {
+        set pitch $min_pitch
+    }
+    set slot [mptdc_signoff_block_pg_net_slot $net]
+    set half [expr {$width / 2.0}]
+    switch -- [string toupper $side] {
+        LEFT {
+            set coord [expr {[lindex $core_box 0] + ($slot * $pitch)}]
+            set low [expr {[lindex $rect 0] + $half}]
+            set high [expr {[lindex $rect 2] - $half}]
+        }
+        RIGHT {
+            set coord [expr {[lindex $core_box 2] - ($slot * $pitch)}]
+            set low [expr {[lindex $rect 0] + $half}]
+            set high [expr {[lindex $rect 2] - $half}]
+        }
+        BOTTOM {
+            set coord [expr {[lindex $core_box 1] + ($slot * $pitch)}]
+            set low [expr {[lindex $rect 1] + $half}]
+            set high [expr {[lindex $rect 3] - $half}]
+        }
+        TOP {
+            set coord [expr {[lindex $core_box 3] - ($slot * $pitch)}]
+            set low [expr {[lindex $rect 1] + $half}]
+            set high [expr {[lindex $rect 3] - $half}]
+        }
+        default {
+            error "MPTDC_UNSUPPORTED_BLOCK_PG_STITCH_SIDE: $side"
+        }
+    }
+    if {$coord < $low} { set coord $low }
+    if {$coord > $high} { set coord $high }
+    return [format %.3f $coord]
+}
+
+proc mptdc_signoff_block_pg_stitch_commands {net layer direction start_from offset width spacing set_distance} {
+    set base [list addStripe -nets [list $net] -layer $layer -direction $direction \
+        -width $width -spacing $spacing -set_to_set_distance $set_distance \
+        -start_from $start_from -start_offset $offset]
+    set commands [list]
+    set number_of_sets [mptdc_signoff_env_int MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 1]
+    if {$number_of_sets > 0} {
+        lappend commands [concat $base [list -number_of_sets $number_of_sets]]
+    }
+    lappend commands $base
+    return $commands
+}
+
+proc mptdc_signoff_create_block_pg_stitches {{report_name block_pg_stitch_status.rpt} {label BLOCK_PG_STITCH}} {
+    set rpt [file join [mptdc_signoff_report_dir] $report_name]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Block PG Stitch Stripe Status"
+    puts $fh "${label}_ENABLE=[mptdc_signoff_env MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 1]"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 1]} {
+        puts $fh "${label}_STATUS=SKIPPED"
+        puts $fh "${label}_REASON=MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES_DISABLED"
+        close $fh
+        return [list 1 $rpt]
+    }
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_PINS 1]} {
+        puts $fh "${label}_STATUS=SKIPPED"
+        puts $fh "${label}_REASON=block_pg_pins_disabled"
+        close $fh
+        return [list 1 $rpt]
+    }
+
+    set default_layer [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_LAYER METTP]
+    set pin_width [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0]
+    set pin_depth [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0]
+    set stitch_width [mptdc_signoff_env_double MPTDC_BLOCK_PG_STITCH_WIDTH_UM 2.0]
+    set stitch_spacing [mptdc_signoff_env_double MPTDC_BLOCK_PG_STITCH_SPACING_UM 2.0]
+    set set_distance [mptdc_signoff_env_double MPTDC_BLOCK_PG_STITCH_SET_DISTANCE_UM 5000.0]
+    set core_box [mptdc_signoff_core_box]
+    puts $fh "${label}_PIN_LAYER_DEFAULT=$default_layer"
+    puts $fh "${label}_PIN_WIDTH_UM=$pin_width"
+    puts $fh "${label}_PIN_DEPTH_UM=$pin_depth"
+    puts $fh "${label}_WIDTH_UM=$stitch_width"
+    puts $fh "${label}_SPACING_UM=$stitch_spacing"
+    puts $fh "${label}_SET_DISTANCE_UM=$set_distance"
+    puts $fh "${label}_NUMBER_OF_SETS=[mptdc_signoff_env_int MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 1]"
+    puts $fh "CORE_BBOX=$core_box"
+    if {![mptdc_signoff_box_valid $core_box]} {
+        puts $fh "${label}_STATUS=FAIL"
+        puts $fh "${label}_ERROR=invalid_core_bbox"
+        close $fh
+        return [list 0 $rpt]
+    }
+
+    set failures [list]
+    set created 0
+    foreach spec [mptdc_signoff_block_pg_pin_specs] {
+        set net [lindex $spec 0]
+        set side [lindex $spec 1]
+        set y_fraction 0.50
+        if {[llength $spec] >= 3} {
+            set y_fraction [lindex $spec 2]
+        }
+        set pin_name $net
+        if {[llength $spec] >= 4} {
+            set pin_name [lindex $spec 3]
+        }
+        set layer $default_layer
+        if {[llength $spec] >= 5} {
+            set layer [lindex $spec 4]
+        }
+        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $pin_width $pin_depth $y_fraction]
+        set side_u [string toupper $side]
+        switch -- $side_u {
+            LEFT -
+            RIGHT {
+                set direction vertical
+                set start_from left
+                set offset [mptdc_signoff_block_pg_stitch_coordinate $net $side_u $rect $core_box $stitch_width $stitch_spacing]
+            }
+            TOP -
+            BOTTOM {
+                set direction horizontal
+                set start_from bottom
+                set offset [mptdc_signoff_block_pg_stitch_coordinate $net $side_u $rect $core_box $stitch_width $stitch_spacing]
+            }
+            default {
+                lappend failures "$pin_name:unsupported_side:$side"
+                continue
+            }
+        }
+        set item_label [mptdc_signoff_report_token "${label}_${pin_name}"]
+        puts $fh ""
+        puts $fh "${item_label}_PIN=$pin_name"
+        puts $fh "${item_label}_NET=$net"
+        puts $fh "${item_label}_SIDE=$side_u"
+        puts $fh "${item_label}_LAYER=$layer"
+        puts $fh "${item_label}_DIRECTION=$direction"
+        puts $fh "${item_label}_START_FROM=$start_from"
+        puts $fh "${item_label}_START_OFFSET=$offset"
+        puts $fh "${item_label}_PIN_RECT=$rect"
+        set ok [mptdc_signoff_try_pg_command $fh $item_label \
+            [mptdc_signoff_block_pg_stitch_commands $net $layer $direction $start_from $offset \
+                $stitch_width $stitch_spacing $set_distance]]
+        if {$ok} {
+            incr created
+        } else {
+            lappend failures $pin_name
+        }
+    }
+
+    puts $fh ""
+    puts $fh "${label}_CREATED_COUNT=$created"
+    if {[llength $failures] > 0} {
+        puts $fh "${label}_STATUS=FAIL"
+        puts $fh "${label}_FAILURES=$failures"
+        close $fh
+        return [list 0 $rpt]
+    }
+    puts $fh "${label}_STATUS=PASS"
+    close $fh
+    return [list 1 $rpt]
+}
+
 proc mptdc_signoff_capture_to_file {path commands} {
     foreach cmd $commands {
         if {![catch {uplevel 1 "$cmd > \"$path\""} err]} {
@@ -2462,6 +2654,7 @@ proc mptdc_signoff_build_power_grid {} {
         [list addStripe -nets $nets -layer MET2 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20]]]
     close $fh
     lassign [mptdc_signoff_create_block_pg_pins] block_pin_ok block_pin_rpt
+    lassign [mptdc_signoff_create_block_pg_stitches block_pg_stitch_status.rpt BLOCK_PG_STITCH] block_stitch_ok block_stitch_rpt
     set fh [open $rpt a]
     mptdc_signoff_configure_sroute_mode $fh PRE_ROUTE_PG
     set sroute_ok [mptdc_signoff_try_sroute_command $fh SROUTE [mptdc_signoff_sroute_commands $nets]]
@@ -2496,6 +2689,8 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "HORIZONTAL_STRAP_CREATED=$stripe_h_ok"
     puts $fh "BLOCK_PG_PIN_STATUS=[expr {$block_pin_ok ? "PASS" : "FAIL"}]"
     puts $fh "BLOCK_PG_PIN_REPORT=$block_pin_rpt"
+    puts $fh "BLOCK_PG_STITCH_STATUS=[expr {$block_stitch_ok ? "PASS" : "FAIL"}]"
+    puts $fh "BLOCK_PG_STITCH_REPORT=$block_stitch_rpt"
     puts $fh "SROUTE_DONE=$sroute_ok"
     puts $fh "SROUTE_EFFECTIVE_STATUS=$sroute_status"
     puts $fh "SROUTE_EFFECTIVE_WIRES=$sroute_wires"
@@ -2521,8 +2716,8 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
-    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $sroute_progress_ok}]
-    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
+    set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_progress_ok}]
+    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
     set provisional_reason ""
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG] &&
