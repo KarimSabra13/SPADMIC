@@ -1763,6 +1763,26 @@ proc mptdc_signoff_sroute_commands {nets} {
     return $commands
 }
 
+proc mptdc_signoff_postplace_sroute_commands {nets} {
+    set commands [mptdc_signoff_sroute_commands $nets]
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 1]} {
+        return $commands
+    }
+    foreach cmd [list \
+        [list sroute -connect {corePin blockPin stripe} -nets $nets] \
+        [list sroute -connect {corePin blockPin floatingStripe} -nets $nets] \
+        [list sroute -connect {corePin blockPin blockRing} -nets $nets] \
+        [list sroute -connect {corePin blockPin padPin} -nets $nets] \
+        [list sroute -connect {corePin blockPin padPin stripe} -nets $nets] \
+        [list sroute -nets $nets] \
+    ] {
+        if {[lsearch -exact $commands $cmd] < 0} {
+            lappend commands $cmd
+        }
+    }
+    return $commands
+}
+
 proc mptdc_signoff_capture_sroute_command {cmd path} {
     file mkdir [file dirname $path]
     if {[catch {uplevel #0 "$cmd > \"$path\""} err opts]} {
@@ -1908,12 +1928,45 @@ proc mptdc_signoff_configure_sroute_mode {fh label} {
     }
 }
 
+proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
+    file mkdir [file dirname $path]
+    set fh [open $path w]
+    puts $fh "# MPTDC PG Object Dump"
+    puts $fh "DUMP_LABEL=$label"
+    foreach item [list \
+        [list PG_TERM_NAMES {dbGet top.pgTerms.name}] \
+        [list TERM_NAMES {dbGet top.terms.name}] \
+        [list NET_NAMES {dbGet top.nets.name}] \
+        [list VDD_NET_HANDLES {dbGet top.nets.name VDD -p}] \
+        [list VSS_NET_HANDLES {dbGet top.nets.name VSS -p}] \
+        [list GET_PORTS_VDD {get_ports -quiet VDD}] \
+        [list GET_PORTS_VSS {get_ports -quiet VSS}] \
+    ] {
+        set key [lindex $item 0]
+        set cmd [lindex $item 1]
+        puts $fh ""
+        puts $fh "${key}_COMMAND=$cmd"
+        puts $fh "${key}_BEGIN"
+        if {[catch {set value [uplevel #0 $cmd]} err]} {
+            puts $fh "${key}_STATUS=FAIL"
+            puts $fh "${key}_ERROR=[mptdc_signoff_report_value $err]"
+        } else {
+            puts $fh "${key}_STATUS=PASS"
+            puts $fh [mptdc_signoff_report_value $value]
+        }
+        puts $fh "${key}_END"
+    }
+    close $fh
+    return $path
+}
+
 proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     set rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_sroute_status.rpt]
     set fh [open $rpt w]
     puts $fh "# MPTDC Post-placement Pre-route SRoute Status"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1] ? 1 : 0}]"
-    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REQUIRE_CLEAN=[expr {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 0] ? 1 : 0}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REQUIRE_CLEAN=[expr {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1] ? 1 : 0}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_CANDIDATE_PROBE=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 1] ? 1 : 0}]"
     if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1]} {
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=SKIPPED"
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REASON=disabled_by_env"
@@ -1921,8 +1974,16 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
         return $rpt
     }
 
+    set pg_dump_pre [mptdc_signoff_dump_pg_terms \
+        [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_objects_before_sroute.rpt] \
+        POSTPLACE_PRE_ROUTE_BEFORE_SROUTE]
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_OBJECT_DUMP_BEFORE=$pg_dump_pre"
     mptdc_signoff_configure_sroute_mode $fh POSTPLACE_PRE_ROUTE
-    set command_ok [mptdc_signoff_try_sroute_command $fh POSTPLACE_PRE_ROUTE_SROUTE [mptdc_signoff_sroute_commands {VDD VSS}]]
+    set command_ok [mptdc_signoff_try_sroute_command $fh POSTPLACE_PRE_ROUTE_SROUTE [mptdc_signoff_postplace_sroute_commands {VDD VSS}]]
+    set pg_dump_post [mptdc_signoff_dump_pg_terms \
+        [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_objects_after_sroute.rpt] \
+        POSTPLACE_PRE_ROUTE_AFTER_SROUTE]
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_OBJECT_DUMP_AFTER=$pg_dump_post"
     set summary [mptdc_signoff_sroute_attempt_summary POSTPLACE_PRE_ROUTE_SROUTE]
     set summary_status [dict get $summary status]
     set wires [dict get $summary wires]
@@ -1950,12 +2011,19 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_PROGRESS_STATUS=[expr {$progress_ok ? "PASS" : "FAIL"}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=$status"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
-    close $fh
 
     if {$status ne "PASS" &&
-        [mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 0]} {
+        [mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+        set fail_def [file join [mptdc_signoff_def_dir] 03b_postplace_pre_route_sroute_failed.def]
+        set fail_ckpt [file join [mptdc_signoff_checkpoint_dir] 03b_postplace_pre_route_sroute_failed.enc]
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_DEF=$fail_def"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT=$fail_ckpt"
+        close $fh
+        catch {defOut $fail_def}
+        catch {saveDesign $fail_ckpt}
         error "MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=$status report=$rpt"
     }
+    close $fh
     return $rpt
 }
 
@@ -1974,6 +2042,24 @@ proc mptdc_signoff_block_pg_pin_specs {} {
                 [list VSS LEFT 0.60 VSS_LEFT] \
                 [list VDD RIGHT 0.40 VDD_RIGHT] \
                 [list VSS RIGHT 0.60 VSS_RIGHT]]
+        }
+        top_bottom_vdd_vss {
+            return [list \
+                [list VDD TOP 0.40 VDD_TOP MET3] \
+                [list VSS TOP 0.60 VSS_TOP MET3] \
+                [list VDD BOTTOM 0.40 VDD_BOTTOM MET3] \
+                [list VSS BOTTOM 0.60 VSS_BOTTOM MET3]]
+        }
+        all_sides_vdd_vss {
+            return [list \
+                [list VDD LEFT 0.40 VDD_LEFT METTP] \
+                [list VSS LEFT 0.60 VSS_LEFT METTP] \
+                [list VDD RIGHT 0.40 VDD_RIGHT METTP] \
+                [list VSS RIGHT 0.60 VSS_RIGHT METTP] \
+                [list VDD TOP 0.40 VDD_TOP MET3] \
+                [list VSS TOP 0.60 VSS_TOP MET3] \
+                [list VDD BOTTOM 0.40 VDD_BOTTOM MET3] \
+                [list VSS BOTTOM 0.60 VSS_BOTTOM MET3]]
         }
         default {
             error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_STYLE: $style"
@@ -2000,6 +2086,14 @@ proc mptdc_signoff_block_pg_pin_rect {side core_box width depth {y_fraction 0.50
         }
         RIGHT {
             return [list [expr {$urx - $depth}] [expr {$cy - $half}] [expr {$urx + $outside}] [expr {$cy + $half}]]
+        }
+        TOP {
+            set cx [expr {$llx + (($urx - $llx) * $y_fraction)}]
+            return [list [expr {$cx - $half}] [expr {$ury - $depth}] [expr {$cx + $half}] [expr {$ury + $outside}]]
+        }
+        BOTTOM {
+            set cx [expr {$llx + (($urx - $llx) * $y_fraction)}]
+            return [list [expr {$cx - $half}] [expr {$lly - $outside}] [expr {$cx + $half}] [expr {$lly + $depth}]]
         }
         default {
             error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_SIDE: $side"
@@ -2113,6 +2207,7 @@ proc mptdc_signoff_create_block_pg_pins {} {
     foreach spec [mptdc_signoff_block_pg_pin_specs] {
         set net [lindex $spec 0]
         set side [lindex $spec 1]
+        set pin_layer $layer
         set y_fraction 0.50
         if {[llength $spec] >= 3} {
             set y_fraction [lindex $spec 2]
@@ -2121,15 +2216,19 @@ proc mptdc_signoff_create_block_pg_pins {} {
         if {[llength $spec] >= 4} {
             set pin_name [lindex $spec 3]
         }
+        if {[llength $spec] >= 5} {
+            set pin_layer [lindex $spec 4]
+        }
         set label [mptdc_signoff_report_token $pin_name]
         set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $width $depth $y_fraction]
         puts $fh ""
         puts $fh "BLOCK_PG_PIN_NET=$net"
         puts $fh "BLOCK_PG_PIN_NAME=$pin_name"
         puts $fh "BLOCK_PG_PIN_SIDE=$side"
+        puts $fh "BLOCK_PG_PIN_LAYER_EFFECTIVE=$pin_layer"
         puts $fh "BLOCK_PG_PIN_Y_FRACTION=$y_fraction"
         puts $fh "BLOCK_PG_PIN_RECT=$rect"
-        set create_ok [mptdc_signoff_create_one_block_pg_pin $fh $pin_name $net $side $layer $rect $width $depth]
+        set create_ok [mptdc_signoff_create_one_block_pg_pin $fh $pin_name $net $side $pin_layer $rect $width $depth]
         set verify [mptdc_signoff_verify_block_pg_pin $net]
         puts $fh "BLOCK_PG_PIN_${label}_VERIFY_STATUS=[expr {[lindex $verify 0] ? "PASS" : "FAIL"}]"
         puts $fh "BLOCK_PG_PIN_${label}_VERIFY_SOURCE=[lindex $verify 1]"
