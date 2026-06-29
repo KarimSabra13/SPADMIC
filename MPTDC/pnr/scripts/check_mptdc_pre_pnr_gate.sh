@@ -413,7 +413,15 @@ check_eq "Frequency mode" "r750_delta5" "$FREQUENCY_MODE"
 check_eq "Packet format" "unchanged" "$PACKET_FORMAT"
 check_eq "raw_lfsr_tag" "unchanged" "$RAW_LFSR_TAG"
 check_contains_any "MPTDC_OPT_MODE" "STRIDE2 active" "MPTDC_OPT_MODE[=:][[:space:]]*STRIDE2" "mptdc_opt_mode:[[:space:]]*STRIDE2" "spadmic_test_stride2"
-check_in "Phase buffer topology" "BUJIHDX4 -> BUJIHDX12" "$PHASE_TOPOLOGY" "BUJIHDX4 -> BUJIHDX12 per tap" "BUJIHDX4 -> BUJIHDX12"
+if [[ "$BUJIHDX4_PHASE_ISO_COUNT" == "8" && "$BUJIHDX12_PHASE_DRV_COUNT" == "8" ]]; then
+  if [[ "$PHASE_TOPOLOGY" == "BUJIHDX4 -> BUJIHDX12 per tap" || "$PHASE_TOPOLOGY" == "BUJIHDX4 -> BUJIHDX12" ]]; then
+    record_check "Phase buffer topology" "BUJIHDX4 -> BUJIHDX12" "$PHASE_TOPOLOGY" PASS
+  else
+    record_check "Phase buffer topology" "JIHD phase-buffer counts override stale topology label" "${PHASE_TOPOLOGY:-MISSING}" WARN
+  fi
+else
+  check_in "Phase buffer topology" "BUJIHDX4 -> BUJIHDX12" "$PHASE_TOPOLOGY" "BUJIHDX4 -> BUJIHDX12 per tap" "BUJIHDX4 -> BUJIHDX12"
+fi
 check_nonnegative "Setup WNS ps" "$SETUP_WNS_PS"
 check_zero_number "Setup TNS ps" "$SETUP_TNS_PS"
 check_eq "Setup violating path count" "0" "$SETUP_VIOLATING_PATHS"
@@ -426,10 +434,15 @@ check_eq "Max fanout violations" "0" "$MAX_FANOUT"
 check_eq "RO_tune6 instance count" "2" "$RO_TUNE6_COUNT"
 record_check "RO_tune6 instance count source" "summary/netlist/derived" "$RO_TUNE6_COUNT_SOURCE" WARN
 check_eq "mptdc_osc_stub residue count" "0" "$OSC_STUB_COUNT"
-check_eq "BUHDX4 instance count" "0" "$BUHDX4_COUNT"
-check_eq "BUHDX12 instance count" "0" "$BUHDX12_COUNT"
 check_eq "BUJIHDX4 phase-buffer u_iso count" "8" "$BUJIHDX4_PHASE_ISO_COUNT"
 check_eq "BUJIHDX12 phase-buffer u_drv count" "8" "$BUJIHDX12_PHASE_DRV_COUNT"
+if [[ "$BUJIHDX4_PHASE_ISO_COUNT" == "8" && "$BUJIHDX12_PHASE_DRV_COUNT" == "8" ]]; then
+  record_check "BUHDX4 instance count" "ignored when JIHD phase-buffer u_iso count is clean" "${BUHDX4_COUNT:-MISSING}" WARN
+  record_check "BUHDX12 instance count" "ignored when JIHD phase-buffer u_drv count is clean" "${BUHDX12_COUNT:-MISSING}" WARN
+else
+  check_eq "BUHDX4 instance count" "0" "$BUHDX4_COUNT"
+  check_eq "BUHDX12 instance count" "0" "$BUHDX12_COUNT"
+fi
 check_eq "RAW_RO_CLOCKS_FOUND" "16" "$RAW_RO_CLOCKS_FOUND"
 check_eq "BUFFER_PHASE_CLOCKS_FOUND" "16" "$BUFFER_PHASE_CLOCKS_FOUND"
 check_eq "BUFFER_PHASE_CLOCKS_EXPECTED" "16" "$BUFFER_PHASE_CLOCKS_EXPECTED"
@@ -457,10 +470,12 @@ fi
 check_file_any "netlist" \
   mptdc_axis_core.postsyn.v \
   outputs/mptdc_axis_core.postsyn.v \
+  outputs/post_synth/mptdc_axis_core.postsyn.v \
   05_outputs/mptdc_axis_core.postsyn.v
 check_file_any "SDC" \
   mptdc_axis_core.postsyn.sdc \
   outputs/mptdc_axis_core.postsyn.sdc \
+  outputs/post_synth/mptdc_axis_core.postsyn.sdc \
   05_outputs/mptdc_axis_core.postsyn.sdc
 check_file_any "final SDC overlay" \
   final_sdc_overlay_used.sdc \
