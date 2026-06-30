@@ -941,10 +941,13 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1
         MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1
         MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN 1
+        MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0
+        MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0
         MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0
         MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0
         MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0
         MPTDC_SROUTE_CONNECT_STRIPE 1
+        MPTDC_SROUTE_CORE_PIN_STOP_ROUTE RowEnd
         MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
         MPTDC_REQUIRE_DRC_SAFE_FILLER 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
@@ -972,6 +975,19 @@ proc mptdc_signoff_pg_policy_guard {} {
     }
     if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
         lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1"
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+        lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1 expected 0"
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+        lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0"
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
+        lappend failures "MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS=1 expected 0"
+    }
+    set core_pin_stop [mptdc_signoff_env MPTDC_SROUTE_CORE_PIN_STOP_ROUTE RowEnd]
+    if {$core_pin_stop ne "RowEnd"} {
+        lappend failures "MPTDC_SROUTE_CORE_PIN_STOP_ROUTE=$core_pin_stop expected RowEnd"
     }
     if {[llength $failures] > 0} {
         error "MPTDC_PG_POLICY_GUARD_FAILED: [join $failures {; }]; set MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=1 only for explicit debug bypass"
@@ -1798,15 +1814,25 @@ proc mptdc_signoff_sroute_commands {nets} {
 }
 
 proc mptdc_signoff_postplace_sroute_commands {nets} {
-    set commands [mptdc_signoff_sroute_commands $nets]
-    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 1]} {
+    set commands [list [list sroute -connect {corePin} -nets $nets \
+        -corePinTarget {ring stripe} -allowLayerChange 1]]
+
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
         return $commands
     }
+
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+        set cmd [list sroute -connect {corePin blockPin} -nets $nets \
+            -blockPin all -blockPinTarget {ring stripe} \
+            -corePinTarget {ring stripe} -allowLayerChange 1]
+        if {[lsearch -exact $commands $cmd] < 0} {
+            lappend commands $cmd
+        }
+    }
+
     foreach cmd [list \
-        [list sroute -connect {blockPin} -nets $nets \
-            -blockPin all -blockPinTarget {ring stripe} -allowLayerChange 1] \
         [list sroute -connect {corePin} -nets $nets \
-            -corePinTarget {ring stripe} -allowLayerChange 1] \
+            -corePinTarget firstAfterRowEnd -allowLayerChange 1] \
     ] {
         if {[lsearch -exact $commands $cmd] < 0} {
             lappend commands $cmd
@@ -1972,10 +1998,16 @@ proc mptdc_signoff_try_sroute_mode_group {fh label suffix commands} {
 }
 
 proc mptdc_signoff_configure_sroute_mode {fh label} {
+    set core_pin_stop [mptdc_signoff_env MPTDC_SROUTE_CORE_PIN_STOP_ROUTE ""]
+    set core_pin_stop_ok 0
+    if {$core_pin_stop ne ""} {
+        set core_pin_stop_ok [mptdc_signoff_try_sroute_mode_group $fh $label CORE_PIN_STOP_ROUTE [list [list setSrouteMode -corePinStopRoute $core_pin_stop]]]
+    }
+
     if {![mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
         puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=0"
-        puts $fh "${label}_SROUTE_MODE_STATUS=SKIPPED"
-        puts $fh "${label}_SROUTE_MODE_REASON=disabled_by_env"
+        puts $fh "${label}_SROUTE_MODE_STATUS=[expr {$core_pin_stop eq "" ? "SKIPPED" : ($core_pin_stop_ok ? "PASS" : "REVIEW_REQUIRED")}]"
+        puts $fh "${label}_SROUTE_MODE_REASON=[expr {$core_pin_stop eq "" ? "disabled_by_env" : "deterministic_core_pin_stop_only"}]"
         return
     }
     puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=1"
@@ -1998,12 +2030,10 @@ proc mptdc_signoff_configure_sroute_mode {fh label} {
     if {$target_search_distance ne ""} {
         lappend mode_groups [list TARGET_SEARCH_DISTANCE [list [list setSrouteMode -targetSearchDistance $target_search_distance]]]
     }
-    set core_pin_stop [mptdc_signoff_env MPTDC_SROUTE_CORE_PIN_STOP_ROUTE ""]
-    if {$core_pin_stop ne ""} {
-        lappend mode_groups [list CORE_PIN_STOP_ROUTE [list [list setSrouteMode -corePinStopRoute $core_pin_stop]]]
-    }
-
     set pass_count 0
+    if {$core_pin_stop_ok} {
+        incr pass_count
+    }
     foreach group $mode_groups {
         set suffix [lindex $group 0]
         set commands [lindex $group 1]
@@ -2244,7 +2274,9 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "# MPTDC Post-placement Pre-route SRoute Status"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1] ? 1 : 0}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REQUIRE_CLEAN=[expr {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1] ? 1 : 0}]"
-    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_CANDIDATE_PROBE=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 1] ? 1 : 0}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_CANDIDATE_PROBE=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0] ? 1 : 0}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_BLOCKPIN=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0] ? 1 : 0}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_CORE_PIN_STOP_ROUTE=[mptdc_signoff_env MPTDC_SROUTE_CORE_PIN_STOP_ROUTE unset]"
     if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1]} {
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=SKIPPED"
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REASON=disabled_by_env"
