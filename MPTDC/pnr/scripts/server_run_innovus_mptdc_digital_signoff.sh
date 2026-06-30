@@ -158,6 +158,12 @@ apply_recovery_defaults() {
   export MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES="${MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES:-0}"
   export MPTDC_SROUTE_CONNECT_STRIPE="${MPTDC_SROUTE_CONNECT_STRIPE:-1}"
   export MPTDC_SROUTE_CORE_PIN_STOP_ROUTE="${MPTDC_SROUTE_CORE_PIN_STOP_ROUTE:-RowEnd}"
+  export MPTDC_ENABLE_RO_PG_HOOKUP="${MPTDC_ENABLE_RO_PG_HOOKUP:-1}"
+  export MPTDC_REQUIRE_RO_PG_HOOKUP="${MPTDC_REQUIRE_RO_PG_HOOKUP:-1}"
+  export MPTDC_RO_PG_HOOKUP_SEARCH_UM="${MPTDC_RO_PG_HOOKUP_SEARCH_UM:-45.0}"
+  export MPTDC_RO_PG_HOOKUP_MARGIN_UM="${MPTDC_RO_PG_HOOKUP_MARGIN_UM:-1.0}"
+  export MPTDC_RO_PG_HOOKUP_SPACING_UM="${MPTDC_RO_PG_HOOKUP_SPACING_UM:-2.0}"
+  export MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM="${MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM:-5000.0}"
   export MPTDC_FILLER_ADD_FILLERS_WITH_DRC="${MPTDC_FILLER_ADD_FILLERS_WITH_DRC:-0}"
   export MPTDC_REQUIRE_DRC_SAFE_FILLER="${MPTDC_REQUIRE_DRC_SAFE_FILLER:-1}"
   export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-1}"
@@ -194,6 +200,12 @@ guard_pg_policy() {
   fi
   if [[ "${MPTDC_SROUTE_CORE_PIN_STOP_ROUTE:-}" != "RowEnd" ]]; then
     failures+=("MPTDC_SROUTE_CORE_PIN_STOP_ROUTE=${MPTDC_SROUTE_CORE_PIN_STOP_ROUTE:-unset} expected RowEnd")
+  fi
+  if ! is_truthy "${MPTDC_ENABLE_RO_PG_HOOKUP:-1}"; then
+    failures+=("MPTDC_ENABLE_RO_PG_HOOKUP=${MPTDC_ENABLE_RO_PG_HOOKUP:-unset} expected 1")
+  fi
+  if ! is_truthy "${MPTDC_REQUIRE_RO_PG_HOOKUP:-1}"; then
+    failures+=("MPTDC_REQUIRE_RO_PG_HOOKUP=${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset} expected 1")
   fi
   if ((${#failures[@]} > 0)); then
     {
@@ -549,6 +561,12 @@ fi
   echo "sroute_via_connect_to_shape: ${MPTDC_SROUTE_VIA_CONNECT_TO_SHAPE:-unset}"
   echo "sroute_target_search_distance_um: ${MPTDC_SROUTE_TARGET_SEARCH_DISTANCE_UM:-unset}"
   echo "sroute_core_pin_stop_route: ${MPTDC_SROUTE_CORE_PIN_STOP_ROUTE:-unset}"
+  echo "ro_pg_hookup: ${MPTDC_ENABLE_RO_PG_HOOKUP:-unset}"
+  echo "ro_pg_hookup_required: ${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset}"
+  echo "ro_pg_hookup_search_um: ${MPTDC_RO_PG_HOOKUP_SEARCH_UM:-unset}"
+  echo "ro_pg_hookup_margin_um: ${MPTDC_RO_PG_HOOKUP_MARGIN_UM:-unset}"
+  echo "ro_pg_hookup_spacing_um: ${MPTDC_RO_PG_HOOKUP_SPACING_UM:-unset}"
+  echo "ro_pg_hookup_set_distance_um: ${MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM:-unset}"
   echo "db_display_limit: ${MPTDC_DB_DISPLAY_LIMIT:-unset}"
   echo "route_gate_sroute_recovery: ${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset}"
   echo "filler_add_fillers_with_drc: ${MPTDC_FILLER_ADD_FILLERS_WITH_DRC:-unset}"
