@@ -923,21 +923,23 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 0
         MPTDC_ENABLE_BLOCK_PG_PINS 1
         MPTDC_BLOCK_PG_PIN_LAYER METTP
-        MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss
+        MPTDC_BLOCK_PG_PIN_STYLE mesh_intersection_vdd_vss
         MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0
         MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0
         MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0
         MPTDC_BLOCK_PG_PIN_CREATE_MODE geom
         MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK 0
-        MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 1
+        MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0
         MPTDC_BLOCK_PG_STITCH_WIDTH_UM 2.0
         MPTDC_BLOCK_PG_STITCH_SPACING_UM 2.0
         MPTDC_BLOCK_PG_STITCH_SET_DISTANCE_UM 5000.0
         MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 0
-        MPTDC_ENABLE_FINAL_FILLER 1
+        MPTDC_ENABLE_FINAL_FILLER 0
         MPTDC_ENABLE_POST_FILLER_SROUTE 0
+        MPTDC_ENABLE_PREPLACE_PG_SROUTE 0
+        MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG 1
         MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1
-        MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 0
+        MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1
         MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN 1
         MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0
         MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0
@@ -947,7 +949,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_REQUIRE_DRC_SAFE_FILLER 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
         MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0
-        MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc} {routeDesign -detail} {ecoRoute -fix_drc}}
+        MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc}}
         MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 0
         MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 0
     } {
@@ -1761,10 +1763,15 @@ proc mptdc_signoff_report_value {value} {
 }
 
 proc mptdc_signoff_sroute_commands {nets} {
-    set commands [list [list sroute -connect {corePin blockPin} -nets $nets]]
+    set commands [list \
+        [list sroute -connect {corePin blockPin} -nets $nets \
+            -blockPin all -blockPinTarget {ring stripe} \
+            -corePinTarget {ring stripe} -allowLayerChange 1]]
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0]} {
-        lappend commands [list sroute -connect {corePin blockPin padPin} -nets $nets]
-        lappend commands [list sroute -nets $nets]
+        lappend commands [list sroute -connect {corePin blockPin padPin} -nets $nets \
+            -blockPin all -blockPinTarget {ring stripe} \
+            -corePinTarget {ring stripe} -padPinTarget {ring stripe} \
+            -allowLayerChange 1]
     }
     return $commands
 }
@@ -1775,9 +1782,10 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
         return $commands
     }
     foreach cmd [list \
-        [list sroute -connect {corePin blockPin floatingStripe} -nets $nets] \
-        [list sroute -connect {corePin blockPin padPin} -nets $nets] \
-        [list sroute -nets $nets] \
+        [list sroute -connect {blockPin} -nets $nets \
+            -blockPin all -blockPinTarget {ring stripe} -allowLayerChange 1] \
+        [list sroute -connect {corePin} -nets $nets \
+            -corePinTarget {ring stripe} -allowLayerChange 1] \
     ] {
         if {[lsearch -exact $commands $cmd] < 0} {
             lappend commands $cmd
@@ -2034,6 +2042,158 @@ proc mptdc_signoff_dump_pg_terms {path {label PG_OBJECT_DUMP}} {
     return $path
 }
 
+proc mptdc_signoff_dump_pg_topology_value {fh key cmd} {
+    puts $fh ""
+    puts $fh "${key}_COMMAND=$cmd"
+    puts $fh "${key}_BEGIN"
+    if {[catch {set value [uplevel #0 $cmd]} err]} {
+        puts $fh "${key}_STATUS=FAIL"
+        puts $fh "${key}_ERROR=[mptdc_signoff_report_value $err]"
+    } else {
+        puts $fh "${key}_STATUS=PASS"
+        puts $fh "${key}_VALUE=[mptdc_signoff_report_value $value]"
+    }
+    puts $fh "${key}_END"
+}
+
+proc mptdc_signoff_dump_pg_topology {path {label PG_TOPOLOGY}} {
+    file mkdir [file dirname $path]
+    set fh [open $path w]
+    set base [file rootname [file tail $path]]
+    set dir [file dirname $path]
+    puts $fh "# MPTDC PG Topology Dump"
+    puts $fh "DUMP_LABEL=$label"
+    catch {set_db get_db_display_limit [mptdc_signoff_env_int MPTDC_DB_DISPLAY_LIMIT 50000]}
+
+    foreach item [list \
+        [list marker {dbSchema marker}] \
+        [list sWire {dbSchema sWire}] \
+        [list term {dbSchema term}] \
+        [list pin {dbSchema pin}] \
+        [list pinShape {dbSchema pinShape}] \
+    ] {
+        set name [lindex $item 0]
+        set cmd [lindex $item 1]
+        set schema_path [file join $dir "${base}_${name}_schema.rpt"]
+        puts $fh "SCHEMA_${name}_REPORT=$schema_path"
+        if {[catch {uplevel #0 "$cmd > \"$schema_path\""} err]} {
+            puts $fh "SCHEMA_${name}_STATUS=FAIL"
+            puts $fh "SCHEMA_${name}_ERROR=[mptdc_signoff_report_value $err]"
+        } else {
+            puts $fh "SCHEMA_${name}_STATUS=PASS"
+        }
+    }
+
+    foreach item [list \
+        [list TOP_NAME {dbGet top.name}] \
+        [list CORE_BOX {dbGet top.fPlan.coreBox}] \
+        [list PG_TERM_NAMES {dbGet top.pgTerms.name}] \
+        [list PG_TERM_NETS {dbGet top.pgTerms.net.name}] \
+        [list PG_TERM_LAYERS {dbGet top.pgTerms.pins.allShapes.layer.name}] \
+        [list VDD_PGTERM_NAMES {dbGet [dbGet top.pgTerms.net.name VDD -p2].name}] \
+        [list VSS_PGTERM_NAMES {dbGet [dbGet top.pgTerms.net.name VSS -p2].name}] \
+        [list VDD_SWIRE_COUNT {llength [dbGet [dbGet top.nets.name VDD -p].sWires]}] \
+        [list VSS_SWIRE_COUNT {llength [dbGet [dbGet top.nets.name VSS -p].sWires]}] \
+    ] {
+        mptdc_signoff_dump_pg_topology_value $fh [lindex $item 0] [lindex $item 1]
+    }
+
+    set max_swires [mptdc_signoff_env_int MPTDC_PG_TOPOLOGY_MAX_SWIRE_ROWS 600]
+    puts $fh ""
+    puts $fh "SWIRE_NON_FOLLOWPIN_TABLE_BEGIN"
+    puts $fh "net\tidx\tshape\tlayer\tstatus\twidth\tgeomType\tbox\tpts"
+    foreach net {VDD VSS} {
+        if {[catch {set nh [dbGet top.nets.name $net -p]} err] || $nh eq "" || $nh eq "0x0"} {
+            puts $fh "$net\tERROR\t[mptdc_signoff_report_value $err]"
+            continue
+        }
+        if {[catch {set swires [dbGet $nh.sWires]} err]} {
+            puts $fh "$net\tERROR\t[mptdc_signoff_report_value $err]"
+            continue
+        }
+        set idx 0
+        set rows 0
+        set skipped_followpin 0
+        foreach sw $swires {
+            incr idx
+            if {$sw eq "" || $sw eq "0x0" || $sw eq "NULL"} {
+                continue
+            }
+            set shape UNKNOWN
+            set layer UNKNOWN
+            set status UNKNOWN
+            set width UNKNOWN
+            set geom UNKNOWN
+            set box UNKNOWN
+            set pts UNKNOWN
+            catch {set shape [dbGet $sw.shape]}
+            if {$shape eq "followpin"} {
+                incr skipped_followpin
+                continue
+            }
+            catch {set layer [dbGet $sw.layer.name]}
+            catch {set status [dbGet $sw.status]}
+            catch {set width [dbGet $sw.width]}
+            catch {set geom [dbGet $sw.geomType]}
+            catch {set box [dbGet $sw.box]}
+            catch {set pts [dbGet $sw.pts]}
+            puts $fh "$net\t$idx\t[mptdc_signoff_report_value $shape]\t[mptdc_signoff_report_value $layer]\t[mptdc_signoff_report_value $status]\t[mptdc_signoff_report_value $width]\t[mptdc_signoff_report_value $geom]\t[mptdc_signoff_report_value $box]\t[mptdc_signoff_report_value $pts]"
+            incr rows
+            if {$rows >= $max_swires} {
+                puts $fh "$net\tTRUNCATED\tmax_non_followpin_rows=$max_swires"
+                break
+            }
+        }
+        puts $fh "$net\tFOLLOWPIN_ROWS_SKIPPED\t$skipped_followpin"
+    }
+    puts $fh "SWIRE_NON_FOLLOWPIN_TABLE_END"
+
+    set verify_rpt [file join $dir "${base}_verify_special.rpt"]
+    set verify_console [file join $dir "${base}_verify_special.console.rpt"]
+    puts $fh ""
+    puts $fh "VERIFY_SPECIAL_REPORT=$verify_rpt"
+    puts $fh "VERIFY_SPECIAL_CONSOLE=$verify_console"
+    if {[catch {uplevel #0 "verifyConnectivity -type special -nets {VDD VSS} -report \"$verify_rpt\" > \"$verify_console\""} err]} {
+        puts $fh "VERIFY_SPECIAL_STATUS=FAIL"
+        puts $fh "VERIFY_SPECIAL_ERROR=[mptdc_signoff_report_value $err]"
+    } else {
+        puts $fh "VERIFY_SPECIAL_STATUS=PASS"
+    }
+
+    set max_markers [mptdc_signoff_env_int MPTDC_PG_TOPOLOGY_MAX_MARKER_ROWS 160]
+    puts $fh ""
+    puts $fh "MARKER_TABLE_BEGIN"
+    puts $fh "idx\thandle\tbox\tlayer\ttype\tsubType\tmessage"
+    if {[catch {set markers [dbGet top.markers]} err]} {
+        puts $fh "MARKER_STATUS=FAIL\t[mptdc_signoff_report_value $err]"
+    } else {
+        set idx 0
+        foreach marker $markers {
+            if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} { continue }
+            incr idx
+            if {$idx > $max_markers} {
+                puts $fh "TRUNCATED\tmax_marker_rows=$max_markers"
+                break
+            }
+            set box UNKNOWN
+            set layer UNKNOWN
+            set type UNKNOWN
+            set subtype UNKNOWN
+            set message UNKNOWN
+            catch {set box [dbGet $marker.box]}
+            catch {set layer [dbGet $marker.layer.name]}
+            catch {set type [dbGet $marker.type]}
+            catch {set subtype [dbGet $marker.subType]}
+            catch {set message [dbGet $marker.message]}
+            puts $fh "$idx\t[mptdc_signoff_report_value $marker]\t[mptdc_signoff_report_value $box]\t[mptdc_signoff_report_value $layer]\t[mptdc_signoff_report_value $type]\t[mptdc_signoff_report_value $subtype]\t[mptdc_signoff_report_value $message]"
+        }
+        puts $fh "MARKER_COUNT=$idx"
+    }
+    puts $fh "MARKER_TABLE_END"
+    close $fh
+    return $path
+}
+
 proc mptdc_signoff_pg_connectivity_commands {nets} {
     return [list \
         [list verifyConnectivity -type special -nets $nets] \
@@ -2084,12 +2244,20 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
         [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_objects_before_sroute.rpt] \
         POSTPLACE_PRE_ROUTE_BEFORE_SROUTE]
     puts $fh "POSTPLACE_PRE_ROUTE_PG_OBJECT_DUMP_BEFORE=$pg_dump_pre"
+    set pg_topology_pre [mptdc_signoff_dump_pg_topology \
+        [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_topology_before_sroute.rpt] \
+        POSTPLACE_PRE_ROUTE_BEFORE_SROUTE]
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_TOPOLOGY_BEFORE=$pg_topology_pre"
     mptdc_signoff_configure_sroute_mode $fh POSTPLACE_PRE_ROUTE
     set command_ok [mptdc_signoff_try_sroute_command $fh POSTPLACE_PRE_ROUTE_SROUTE [mptdc_signoff_postplace_sroute_commands {VDD VSS}]]
     set pg_dump_post [mptdc_signoff_dump_pg_terms \
         [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_objects_after_sroute.rpt] \
         POSTPLACE_PRE_ROUTE_AFTER_SROUTE]
     puts $fh "POSTPLACE_PRE_ROUTE_PG_OBJECT_DUMP_AFTER=$pg_dump_post"
+    set pg_topology_post [mptdc_signoff_dump_pg_topology \
+        [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_topology_after_sroute.rpt] \
+        POSTPLACE_PRE_ROUTE_AFTER_SROUTE]
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_TOPOLOGY_AFTER=$pg_topology_post"
     set summary [mptdc_signoff_sroute_attempt_summary POSTPLACE_PRE_ROUTE_SROUTE]
     set summary_status [dict get $summary status]
     set wires [dict get $summary wires]
@@ -2159,11 +2327,32 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
         [mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
         set fail_def [file join [mptdc_signoff_def_dir] 03b_postplace_pre_route_sroute_failed.def]
         set fail_ckpt [file join [mptdc_signoff_checkpoint_dir] 03b_postplace_pre_route_sroute_failed.enc]
+        set fail_ckpt_dat "${fail_ckpt}.dat"
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_DEF=$fail_def"
         puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT=$fail_ckpt"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_DAT=$fail_ckpt_dat"
         close $fh
-        catch {defOut $fail_def}
-        catch {saveDesign $fail_ckpt}
+        set def_status PASS
+        set def_error ""
+        if {[catch {defOut $fail_def} def_error]} {
+            set def_status FAIL
+        }
+        set ckpt_status PASS
+        set ckpt_error ""
+        if {[catch {saveDesign $fail_ckpt} ckpt_error]} {
+            set ckpt_status FAIL
+        }
+        set fh [open $rpt a]
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_DEF_SAVE_STATUS=$def_status"
+        if {$def_error ne ""} {
+            puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_DEF_SAVE_ERROR=[mptdc_signoff_report_value $def_error]"
+        }
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_SAVE_STATUS=$ckpt_status"
+        if {$ckpt_error ne ""} {
+            puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_SAVE_ERROR=[mptdc_signoff_report_value $ckpt_error]"
+        }
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_DAT_EXISTS=[expr {[file isdirectory $fail_ckpt_dat] ? 1 : 0}]"
+        close $fh
         error "MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=$status report=$rpt"
     }
     close $fh
@@ -2171,7 +2360,7 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
 }
 
 proc mptdc_signoff_block_pg_pin_specs {} {
-    set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss]]
+    set style [mptdc_signoff_block_pg_pin_style]
     switch -- $style {
         left_vdd_right_vss {
             return [list [list VDD LEFT 0.50 VDD] [list VSS RIGHT 0.50 VSS]]
@@ -2204,13 +2393,159 @@ proc mptdc_signoff_block_pg_pin_specs {} {
                 [list VDD BOTTOM 0.40 VDD_BOTTOM MET3] \
                 [list VSS BOTTOM 0.60 VSS_BOTTOM MET3]]
         }
+        mesh_intersection -
+        mesh_intersection_vdd_vss {
+            return [list \
+                [list VDD LEFT 0.40 VDD_LEFT METTP] \
+                [list VSS LEFT 0.60 VSS_LEFT METTP] \
+                [list VDD RIGHT 0.40 VDD_RIGHT METTP] \
+                [list VSS RIGHT 0.60 VSS_RIGHT METTP] \
+                [list VDD TOP 0.40 VDD_TOP MET3] \
+                [list VSS TOP 0.60 VSS_TOP MET3] \
+                [list VDD BOTTOM 0.40 VDD_BOTTOM MET3] \
+                [list VSS BOTTOM 0.60 VSS_BOTTOM MET3]]
+        }
         default {
             error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_STYLE: $style"
         }
     }
 }
 
-proc mptdc_signoff_block_pg_pin_rect {side core_box width depth {y_fraction 0.50}} {
+proc mptdc_signoff_block_pg_pin_style {} {
+    return [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_intersection_vdd_vss]]
+}
+
+proc mptdc_signoff_block_pg_pin_style_is_mesh {} {
+    set style [mptdc_signoff_block_pg_pin_style]
+    return [expr {$style in {mesh_intersection mesh_intersection_vdd_vss}}]
+}
+
+proc mptdc_signoff_pg_ring_width {} {
+    return [mptdc_signoff_env_double MPTDC_PG_RING_WIDTH_UM 2.0]
+}
+
+proc mptdc_signoff_pg_ring_spacing {} {
+    return [mptdc_signoff_env_double MPTDC_PG_RING_SPACING_UM 1.0]
+}
+
+proc mptdc_signoff_pg_ring_offset {} {
+    return [mptdc_signoff_env_double MPTDC_PG_RING_OFFSET_UM 2.0]
+}
+
+proc mptdc_signoff_pg_stripe_width {} {
+    return [mptdc_signoff_env_double MPTDC_PG_STRIPE_WIDTH_UM 2.0]
+}
+
+proc mptdc_signoff_pg_stripe_spacing {} {
+    return [mptdc_signoff_env_double MPTDC_PG_STRIPE_SPACING_UM 2.0]
+}
+
+proc mptdc_signoff_pg_stripe_pitch {} {
+    return [mptdc_signoff_env_double MPTDC_PG_STRIPE_PITCH_UM 80.0]
+}
+
+proc mptdc_signoff_pg_stripe_start_offset {} {
+    return [mptdc_signoff_env_double MPTDC_PG_STRIPE_START_OFFSET_UM 20.0]
+}
+
+proc mptdc_signoff_pg_ring_center {net side core_box} {
+    set ring_width [mptdc_signoff_pg_ring_width]
+    set ring_spacing [mptdc_signoff_pg_ring_spacing]
+    set ring_offset [mptdc_signoff_pg_ring_offset]
+    set slot [mptdc_signoff_block_pg_net_slot $net]
+    set delta [expr {$ring_offset + ($ring_width / 2.0) + ($slot * ($ring_width + $ring_spacing))}]
+    switch -- [string toupper $side] {
+        LEFT {
+            return [expr {[lindex $core_box 0] - $delta}]
+        }
+        RIGHT {
+            return [expr {[lindex $core_box 2] + $delta}]
+        }
+        BOTTOM {
+            return [expr {[lindex $core_box 1] - $delta}]
+        }
+        TOP {
+            return [expr {[lindex $core_box 3] + $delta}]
+        }
+        default {
+            error "MPTDC_UNSUPPORTED_PG_RING_SIDE: $side"
+        }
+    }
+}
+
+proc mptdc_signoff_pg_nearest_stripe_center {net axis core_box fraction} {
+    set axis [string tolower $axis]
+    if {$axis eq "x"} {
+        set min [lindex $core_box 0]
+        set max [lindex $core_box 2]
+    } elseif {$axis eq "y"} {
+        set min [lindex $core_box 1]
+        set max [lindex $core_box 3]
+    } else {
+        error "MPTDC_UNSUPPORTED_PG_STRIPE_AXIS: $axis"
+    }
+    if {![string is double -strict $fraction]} {
+        set fraction 0.50
+    }
+    if {$fraction < 0.0} { set fraction 0.0 }
+    if {$fraction > 1.0} { set fraction 1.0 }
+    set stripe_width [mptdc_signoff_pg_stripe_width]
+    set stripe_spacing [mptdc_signoff_pg_stripe_spacing]
+    set stripe_pitch [mptdc_signoff_pg_stripe_pitch]
+    set stripe_start [mptdc_signoff_pg_stripe_start_offset]
+    set slot [mptdc_signoff_block_pg_net_slot $net]
+    set first [expr {$min + $stripe_start + ($stripe_width / 2.0) + ($slot * ($stripe_width + $stripe_spacing))}]
+    set target [expr {$min + (($max - $min) * $fraction)}]
+    if {$stripe_pitch <= 0.0} {
+        set stripe_pitch [expr {$stripe_width + $stripe_spacing}]
+    }
+    set idx [expr {int(floor((($target - $first) / $stripe_pitch) + 0.5))}]
+    if {$idx < 0} { set idx 0 }
+    set max_idx [expr {int(floor(($max - $first) / $stripe_pitch))}]
+    if {$max_idx < 0} { set max_idx 0 }
+    if {$idx > $max_idx} { set idx $max_idx }
+    return [format %.3f [expr {$first + ($idx * $stripe_pitch)}]]
+}
+
+proc mptdc_signoff_pg_mesh_pin_rect {net side core_box width y_fraction} {
+    if {$net eq ""} {
+        set net [expr {$y_fraction > 0.5 ? "VSS" : "VDD"}]
+    }
+    set side_u [string toupper $side]
+    set ring_width [mptdc_signoff_pg_ring_width]
+    set ring_half [expr {$ring_width / 2.0}]
+    set pin_half [expr {$width / 2.0}]
+    switch -- $side_u {
+        LEFT -
+        RIGHT {
+            set x [mptdc_signoff_pg_ring_center $net $side_u $core_box]
+            set y [mptdc_signoff_pg_nearest_stripe_center $net y $core_box $y_fraction]
+            return [list \
+                [format %.3f [expr {$x - $ring_half}]] \
+                [format %.3f [expr {$y - $pin_half}]] \
+                [format %.3f [expr {$x + $ring_half}]] \
+                [format %.3f [expr {$y + $pin_half}]]]
+        }
+        TOP -
+        BOTTOM {
+            set x [mptdc_signoff_pg_nearest_stripe_center $net x $core_box $y_fraction]
+            set y [mptdc_signoff_pg_ring_center $net $side_u $core_box]
+            return [list \
+                [format %.3f [expr {$x - $pin_half}]] \
+                [format %.3f [expr {$y - $ring_half}]] \
+                [format %.3f [expr {$x + $pin_half}]] \
+                [format %.3f [expr {$y + $ring_half}]]]
+        }
+        default {
+            error "MPTDC_UNSUPPORTED_BLOCK_PG_PIN_SIDE: $side"
+        }
+    }
+}
+
+proc mptdc_signoff_block_pg_pin_rect {side core_box width depth {y_fraction 0.50} {net ""}} {
+    if {[mptdc_signoff_block_pg_pin_style_is_mesh]} {
+        return [mptdc_signoff_pg_mesh_pin_rect $net $side $core_box $width $y_fraction]
+    }
     set llx [lindex $core_box 0]
     set lly [lindex $core_box 1]
     set urx [lindex $core_box 2]
@@ -2338,6 +2673,14 @@ proc mptdc_signoff_create_block_pg_pins {} {
     puts $fh "BLOCK_PG_PIN_WIDTH_UM=$width"
     puts $fh "BLOCK_PG_PIN_DEPTH_UM=$depth"
     puts $fh "BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM=[mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0]"
+    puts $fh "BLOCK_PG_PIN_MESH_ALIGNED=[expr {[mptdc_signoff_block_pg_pin_style_is_mesh] ? 1 : 0}]"
+    puts $fh "BLOCK_PG_RING_WIDTH_UM=[mptdc_signoff_pg_ring_width]"
+    puts $fh "BLOCK_PG_RING_SPACING_UM=[mptdc_signoff_pg_ring_spacing]"
+    puts $fh "BLOCK_PG_RING_OFFSET_UM=[mptdc_signoff_pg_ring_offset]"
+    puts $fh "BLOCK_PG_STRIPE_WIDTH_UM=[mptdc_signoff_pg_stripe_width]"
+    puts $fh "BLOCK_PG_STRIPE_SPACING_UM=[mptdc_signoff_pg_stripe_spacing]"
+    puts $fh "BLOCK_PG_STRIPE_PITCH_UM=[mptdc_signoff_pg_stripe_pitch]"
+    puts $fh "BLOCK_PG_STRIPE_START_OFFSET_UM=[mptdc_signoff_pg_stripe_start_offset]"
     puts $fh "CORE_BBOX=$core_box"
     if {![mptdc_signoff_box_valid $core_box]} {
         puts $fh "BLOCK_PG_PIN_STATUS=FAIL"
@@ -2363,7 +2706,7 @@ proc mptdc_signoff_create_block_pg_pins {} {
             set pin_layer [lindex $spec 4]
         }
         set label [mptdc_signoff_report_token $pin_name]
-        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $width $depth $y_fraction]
+        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $width $depth $y_fraction $net]
         puts $fh ""
         puts $fh "BLOCK_PG_PIN_NET=$net"
         puts $fh "BLOCK_PG_PIN_NAME=$pin_name"
@@ -2455,8 +2798,8 @@ proc mptdc_signoff_create_block_pg_stitches {{report_name block_pg_stitch_status
     set rpt [file join [mptdc_signoff_report_dir] $report_name]
     set fh [open $rpt w]
     puts $fh "# MPTDC Block PG Stitch Stripe Status"
-    puts $fh "${label}_ENABLE=[mptdc_signoff_env MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 1]"
-    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 1]} {
+    puts $fh "${label}_ENABLE=[mptdc_signoff_env MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0]"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0]} {
         puts $fh "${label}_STATUS=SKIPPED"
         puts $fh "${label}_REASON=MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES_DISABLED"
         close $fh
@@ -2508,7 +2851,7 @@ proc mptdc_signoff_create_block_pg_stitches {{report_name block_pg_stitch_status
         if {[llength $spec] >= 5} {
             set layer [lindex $spec 4]
         }
-        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $pin_width $pin_depth $y_fraction]
+        set rect [mptdc_signoff_block_pg_pin_rect $side $core_box $pin_width $pin_depth $y_fraction $net]
         set side_u [string toupper $side]
         switch -- $side_u {
             LEFT -
@@ -2666,13 +3009,33 @@ proc mptdc_signoff_build_power_grid {} {
     lassign [mptdc_signoff_create_block_pg_pins] block_pin_ok block_pin_rpt
     lassign [mptdc_signoff_create_block_pg_stitches block_pg_stitch_status.rpt BLOCK_PG_STITCH] block_stitch_ok block_stitch_rpt
     set fh [open $rpt a]
-    mptdc_signoff_configure_sroute_mode $fh PRE_ROUTE_PG
-    set sroute_ok [mptdc_signoff_try_sroute_command $fh SROUTE [mptdc_signoff_sroute_commands $nets]]
-    set sroute_summary [mptdc_signoff_sroute_attempt_summary SROUTE]
+    set preplace_sroute_enabled [mptdc_signoff_env_truthy MPTDC_ENABLE_PREPLACE_PG_SROUTE 0]
+    puts $fh "PREPLACE_PG_SROUTE_ENABLED=[expr {$preplace_sroute_enabled ? 1 : 0}]"
+    if {$preplace_sroute_enabled} {
+        mptdc_signoff_configure_sroute_mode $fh PRE_ROUTE_PG
+        set sroute_ok [mptdc_signoff_try_sroute_command $fh SROUTE [mptdc_signoff_sroute_commands $nets]]
+        set sroute_summary [mptdc_signoff_sroute_attempt_summary SROUTE]
+    } else {
+        puts $fh "PRE_ROUTE_PG_SROUTE_MODE_STATUS=SKIPPED"
+        puts $fh "PRE_ROUTE_PG_SROUTE_MODE_REASON=preplace_pg_sroute_disabled"
+        puts $fh "SROUTE_STATUS=SKIPPED"
+        set sroute_ok 0
+        set sroute_summary [dict create \
+            status SKIPPED \
+            wires 0 \
+            open_ports 0 \
+            block_open_ports 0 \
+            core_open_ports 0 \
+            power_bump_open_ports 0 \
+            reason preplace_pg_sroute_disabled \
+            report ""]
+    }
     set sroute_status [dict get $sroute_summary status]
     set sroute_wires [dict get $sroute_summary wires]
-    set sroute_progress_ok [expr {$sroute_status in {PASS REVIEW_REQUIRED} &&
-        $sroute_wires ne "UNKNOWN" && $sroute_wires > 0}]
+    set sroute_progress_ok [expr {!$preplace_sroute_enabled ||
+        ($sroute_status in {PASS REVIEW_REQUIRED} &&
+        $sroute_wires ne "UNKNOWN" && $sroute_wires > 0)}]
+    set sroute_gate_ok [expr {!$preplace_sroute_enabled || $sroute_ok}]
 
     close $fh
 
@@ -2727,7 +3090,7 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "ALL_CONNECTIVITY_BAD=[lindex $all_bad 0]"
     puts $fh "ALL_CONNECTIVITY_BAD_LINES=[lindex $all_bad 1]"
     set primitive_pg_ok [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_progress_ok}]
-    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
+    set status [expr {$ring_ok && $stripe_v_ok && $stripe_h_ok && $block_pin_ok && $block_stitch_ok && $sroute_gate_ok && $ro_pg_ok && ![lindex $special_bad 0] && ![lindex $all_bad 0] ? "PASS" : "FAIL"}]
     set provisional_reason ""
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG] &&
@@ -2843,12 +3206,22 @@ proc mptdc_signoff_dump_drc_markers {path} {
     set markers [list]
     catch {set markers [dbGet top.markers]}
     set fh [open $path w]
-    puts $fh "idx\tmarker_handle"
+    puts $fh "idx\tmarker_handle\tbox\tlayer\ttype\tsubType\tmessage"
     set idx 0
     foreach marker $markers {
         if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} { continue }
         incr idx
-        puts $fh "$idx\t[mptdc_signoff_report_value $marker]"
+        set box UNKNOWN
+        set layer UNKNOWN
+        set type UNKNOWN
+        set subtype UNKNOWN
+        set message UNKNOWN
+        catch {set box [dbGet $marker.box]}
+        catch {set layer [dbGet $marker.layer.name]}
+        catch {set type [dbGet $marker.type]}
+        catch {set subtype [dbGet $marker.subType]}
+        catch {set message [dbGet $marker.message]}
+        puts $fh "$idx\t[mptdc_signoff_report_value $marker]\t[mptdc_signoff_report_value $box]\t[mptdc_signoff_report_value $layer]\t[mptdc_signoff_report_value $type]\t[mptdc_signoff_report_value $subtype]\t[mptdc_signoff_report_value $message]"
     }
     close $fh
     return $path
@@ -4403,15 +4776,36 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
         set failure_marker_rpt [file join [mptdc_signoff_report_dir] route_gate_failure_drc_markers.tsv]
         set failure_def [file join [mptdc_signoff_def_dir] 04_route_failed.def]
         set failure_checkpoint [file join [mptdc_signoff_checkpoint_dir] 04_route_failed.enc]
+        set failure_checkpoint_dat "${failure_checkpoint}.dat"
         puts $fh "ROUTE_GATE_FAILURE_MARKER_REPORT=$failure_marker_rpt"
         puts $fh "ROUTE_GATE_FAILURE_DEF=$failure_def"
         puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT=$failure_checkpoint"
+        puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT_DAT=$failure_checkpoint_dat"
     }
     close $fh
     mptdc_signoff_set_status ROUTE_STATUS $status $rpt
     if {$status eq "FAIL"} {
-        catch {defOut $failure_def}
-        catch {saveDesign $failure_checkpoint}
+        set failure_def_status PASS
+        set failure_def_error ""
+        if {[catch {defOut $failure_def} failure_def_error]} {
+            set failure_def_status FAIL
+        }
+        set failure_ckpt_status PASS
+        set failure_ckpt_error ""
+        if {[catch {saveDesign $failure_checkpoint} failure_ckpt_error]} {
+            set failure_ckpt_status FAIL
+        }
+        set fh [open $rpt a]
+        puts $fh "ROUTE_GATE_FAILURE_DEF_SAVE_STATUS=$failure_def_status"
+        if {$failure_def_error ne ""} {
+            puts $fh "ROUTE_GATE_FAILURE_DEF_SAVE_ERROR=[mptdc_signoff_report_value $failure_def_error]"
+        }
+        puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT_SAVE_STATUS=$failure_ckpt_status"
+        if {$failure_ckpt_error ne ""} {
+            puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT_SAVE_ERROR=[mptdc_signoff_report_value $failure_ckpt_error]"
+        }
+        puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT_DAT_EXISTS=[expr {[file isdirectory $failure_checkpoint_dat] ? 1 : 0}]"
+        close $fh
         mptdc_signoff_dump_drc_markers $failure_marker_rpt
         error "MPTDC_ROUTE_GATE_FAILED: report=$rpt"
     }
