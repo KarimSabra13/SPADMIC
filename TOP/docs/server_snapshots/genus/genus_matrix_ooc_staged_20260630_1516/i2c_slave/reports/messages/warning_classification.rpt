@@ -1,0 +1,15 @@
+# Warning Classification
+
+Scope: curated report files only. Script echoes, library variable names, and raw stdout text are excluded to avoid false positives.
+
+design_rule count=0
+inferred_latch count=0
+missing_external_delay count=2
+  first=check_timing_intent.rpt: The following primary inputs have no clocked external delays.  As a result the  
+no_clock_waveform count=0
+tool_error count=0
+tool_warning count=2
+  first=report_messages.rpt: |MESG-11 |Warning|    9|Maximum message print count reached.                    |
+undriven count=9
+  first=check_design_post_elab.rpt:  Multidriven Port(s)/Pin(s)
+unresolved count=0

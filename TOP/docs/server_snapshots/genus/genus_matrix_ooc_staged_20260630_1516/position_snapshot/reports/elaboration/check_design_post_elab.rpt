@@ -1,0 +1,222 @@
+# Excerpt from /sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_staged_20260630_1516/position_snapshot/reports/elaboration/check_design_post_elab.rpt
+# First 220 lines
+
+ 	 Check Design Report (c)
+	 ------------------- 
+No subdesign's name is greater than 1.5k in length.
+
+ Feedthrough Module(s)
+ -------------------------
+No feed through module in 'spadmic_position_snapshot_packetizer'
+
+  Unresolved References & Empty Modules
+  ------------------------------------- 
+No unresolved references in design 'spadmic_position_snapshot_packetizer'
+
+No empty modules in design 'spadmic_position_snapshot_packetizer'
+
+ Unloaded Pin(s), Port(s)
+ -------------------------
+design 'spadmic_position_snapshot_packetizer' has the following unloaded sequential elements
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[1][last_hit][0]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[1][last_hit][1]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[1][last_hit][2]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[1][last_hit][3]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[1][last_hit][4]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[1][last_hit][5]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[0][first_hit][0]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[0][first_hit][1]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[0][first_hit][2]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[0][first_hit][3]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[0][first_hit][4]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/quad_q_reg[0][first_hit][5]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/clusters_q_reg[cluster_count][0]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/clusters_q_reg[cluster_count][1]
+inst:spadmic_position_snapshot_packetizer/u_r_cluster_scan/clusters_q_reg[empty]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[1][last_hit][0]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[1][last_hit][1]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[1][last_hit][2]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[1][last_hit][3]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[1][last_hit][4]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[1][last_hit][5]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[0][first_hit][0]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[0][first_hit][1]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[0][first_hit][2]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[0][first_hit][3]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[0][first_hit][4]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/quad_q_reg[0][first_hit][5]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/clusters_q_reg[cluster_count][0]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/clusters_q_reg[cluster_count][1]
+inst:spadmic_position_snapshot_packetizer/u_y_cluster_scan/clusters_q_reg[empty]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[1][last_hit][0]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[1][last_hit][1]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[1][last_hit][2]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[1][last_hit][3]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[1][last_hit][4]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[1][last_hit][5]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[0][first_hit][0]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[0][first_hit][1]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[0][first_hit][2]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[0][first_hit][3]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[0][first_hit][4]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/quad_q_reg[0][first_hit][5]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/clusters_q_reg[cluster_count][0]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/clusters_q_reg[cluster_count][1]
+inst:spadmic_position_snapshot_packetizer/u_b_cluster_scan/clusters_q_reg[empty]
+Total number of unloaded sequential elements in design 'spadmic_position_snapshot_packetizer' : 45
+
+No unloaded port in 'spadmic_position_snapshot_packetizer'
+
+ Unloaded Combinational Pin(s)
+ -------------------------------
+No unloaded combinational element in 'spadmic_position_snapshot_packetizer'
+
+ Assigns
+ ------- 
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_335/out_0[8]' in module case_box_1020
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_233/out_0[8]' in module case_box_1040
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_267/out_0[8]' in module case_box_1060
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_301/out_0[8]' in module case_box_1080
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_28/out_0[8]' in module case_box_1102
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_369/out_0[8]' in module case_box_1122
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_403/out_0[8]' in module case_box_1142
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_chunk_lines_155_437/out_0[8]' in module case_box_1162
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/u_r_cluster_scan/ctl_state_q_281_20/out_0[0]' in module case_box_1342
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[31]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[30]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[29]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[28]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[27]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[26]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[25]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[24]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[23]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[22]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[21]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[20]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[19]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[18]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[17]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[16]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[15]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[14]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[13]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[12]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[11]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[10]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[9]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[8]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[7]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[6]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[5]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_240_31/Z[4]' in module sub_unsigned_3592
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[31]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[30]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[29]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[28]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[27]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[26]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[25]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[24]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[23]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[22]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[21]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[20]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[19]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[18]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[17]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[16]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[15]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[14]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[13]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[12]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[11]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[10]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[9]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[8]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[7]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[6]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[5]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_245_31/Z[4]' in module sub_unsigned_3594
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[31]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[30]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[29]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[28]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[27]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[26]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[25]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[24]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[23]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[22]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[21]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[20]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[19]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[18]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[17]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[16]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[15]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[14]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[13]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[12]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[11]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[10]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[9]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[8]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[7]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[6]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[5]' in module sub_unsigned_3596
+Encountered an assign statement at hport 'hport:spadmic_position_snapshot_packetizer/sub_250_31/Z[4]' in module sub_unsigned_3596
+Total number of assign statements in design 'spadmic_position_snapshot_packetizer' : 93
+
+ Undriven Port(s)/Pin(s)
+ ------------------------
+No undriven combinational pin in 'spadmic_position_snapshot_packetizer'
+
+No undriven sequential pin in 'spadmic_position_snapshot_packetizer'
+
+No undriven hierarchical pin in 'spadmic_position_snapshot_packetizer'
+
+No undriven port in 'spadmic_position_snapshot_packetizer'
+
+ Multidriven Port(s)/Pin(s)
+--------------------------
+
+No multidriven combinational pin in 'spadmic_position_snapshot_packetizer'
+
+No multidriven sequential pin in 'spadmic_position_snapshot_packetizer'
+
+No multidriven hierarchical pin in 'spadmic_position_snapshot_packetizer'
+
+No multidriven ports in 'spadmic_position_snapshot_packetizer'
+
+No multidriven unloaded nets in 'spadmic_position_snapshot_packetizer'
+
+  Constant Pin(s)
+  ----------------
+design 'spadmic_position_snapshot_packetizer' has the following constant input combinational pin(s)
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5528/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5537/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5542/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5557/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5577/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5597/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5617/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5637/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5668/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5677/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5682/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5697/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5717/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5737/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5757/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5777/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5808/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5817/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5822/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5837/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5857/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5877/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5897/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5917/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5948/in_0
+pin:spadmic_position_snapshot_packetizer/u_r_cluster_scan/g5957/in_0

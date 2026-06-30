@@ -1,0 +1,80 @@
+RUN_ID=genus_matrix_ooc_staged_20260630_1516
+DATE_UTC=2026-06-30T13:16:43Z
+REPO_ROOT=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+TOP_ROOT=/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP
+MPTDC_ROOT=/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC
+RUN_ROOT=/sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_staged_20260630_1516
+MPTDC_XH018_STACK=xx31
+MPTDC_STDCELL_FAMILY=JIHD
+MPTDC_PNR_ROUTE_LAYER_NAMES=MET1 MET2 MET3 METTP
+MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
+MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=METTP
+MPTDC_PNR_POWER_LAYER=METTP
+BRANCH=SPADMIC_test
+HEAD=195b6d1bf87c16042294c8e3d411b50d989f541a
+STATUS_SHORT_BEGIN
+?? .GenusRestruct_1514628/
+?? .GenusRestruct_198797/
+?? .GenusRestruct_2188097/
+?? .cadence/
+?? .rs_ksabra.tstamp
+?? MPTDC/pnr/logs_prev_20260518_1113_signoff_taps_pdmatrix/
+?? MPTDC/pnr/reports_prev_20260518_1113_signoff_taps_pdmatrix/
+?? MPTDC/pnr/scripts/.GenusRestruct_974702/
+?? MPTDC/pnr/scripts/.metrics
+?? MPTDC/pnr/scripts/checkDesign/
+?? MPTDC/pnr/scripts/mptdc_axis_core.antenna.lef
+?? MPTDC/pnr/scripts/mptdc_axis_core.antenna.rpt
+?? MPTDC/pnr/scripts/mptdc_axis_core.conn.rpt
+?? MPTDC/pnr/scripts/mptdc_axis_core.conn.rpt.old
+?? MPTDC/pnr/scripts/mptdc_top_asic.antenna.lef
+?? MPTDC/pnr/scripts/mptdc_top_asic.antenna.rpt
+?? MPTDC/pnr/scripts/mptdc_top_asic.antenna.rpt.old
+?? MPTDC/pnr/scripts/mptdc_top_asic.conn.rpt
+?? MPTDC/pnr/scripts/mptdc_top_asic.conn.rpt.old
+?? MPTDC/pnr/scripts/pm.ob
+?? MPTDC/pnr/scripts/power.rpt
+?? MPTDC/pnr/scripts/scheduling_file.cts.1025127
+?? MPTDC/pnr/scripts/scheduling_file.cts.1534428
+?? MPTDC/pnr/scripts/scheduling_file.cts.1572896
+?? MPTDC/pnr/scripts/scheduling_file.cts.1672774
+?? MPTDC/pnr/scripts/scheduling_file.cts.3844666
+?? MPTDC/pnr/scripts/scheduling_file.cts.3926685
+?? MPTDC/pnr/scripts/scheduling_file.cts.3944337
+?? MPTDC/pnr/scripts/scheduling_file.cts.567744
+?? MPTDC/pnr/scripts/scheduling_file.cts.842514
+?? MPTDC/pnr/scripts/scheduling_file.cts.865205
+?? MPTDC/syn/.rs_ksabra.tstamp
+?? MPTDC/syn/scripts/debug.txt
+?? MPTDC/syn/scripts/genus.log1
+?? MPTDC/syn/scripts/genus.log2
+?? MPTDC/syn/scripts/genus.log3
+?? MPTDC/syn/scripts/genus.log4
+?? MPTDC/work/
+?? MPTDC_DIGITAL_SIGNOFF_ERROR:
+?? arb/syn/logs/
+?? arb/syn/outputs/
+?? arb/syn/reports/
+?? arb/syn/scripts/.rs_ksabra.tstamp
+?? arb/syn/scripts/fv/
+?? cat
+?? check_innovus_signoff_availability.sh
+?? fv/
+?? innovus.log1
+?? innovus.logv1
+?? logs/
+?? mptdc_axis_core.antenna.lef
+?? mptdc_axis_core.antenna.rpt
+?? mptdc_axis_core.antenna.rpt.old
+?? mptdc_axis_core.conn.rpt
+?? mptdc_axis_core.conn.rpt.old
+?? mptdc_axis_core.drc.rpt
+?? mptdc_axis_core.drc.rpt.old
+?? mptdc_axis_core.geom.rpt
+?? mptdc_axis_core.geom.rpt.old
+?? position/syn/scripts/.rs_ksabra.tstamp
+?? position/syn/scripts/fv/
+?? reports/
+?? run
+?? source
+STATUS_SHORT_END

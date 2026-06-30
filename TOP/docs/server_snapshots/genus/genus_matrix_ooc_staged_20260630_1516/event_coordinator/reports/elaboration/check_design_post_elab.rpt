@@ -1,0 +1,210 @@
+# Excerpt from /sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_staged_20260630_1516/event_coordinator/reports/elaboration/check_design_post_elab.rpt
+# First 220 lines
+
+ 	 Check Design Report (c)
+	 ------------------- 
+No subdesign's name is greater than 1.5k in length.
+
+ Feedthrough Module(s)
+ -------------------------
+No feed through module in 'spadmic_event_coordinator'
+
+  Unresolved References & Empty Modules
+  ------------------------------------- 
+No unresolved references in design 'spadmic_event_coordinator'
+
+No empty modules in design 'spadmic_event_coordinator'
+
+ Unloaded Pin(s), Port(s)
+ -------------------------
+No unloaded sequential element in 'spadmic_event_coordinator'
+
+No unloaded port in 'spadmic_event_coordinator'
+
+ Unloaded Combinational Pin(s)
+ -------------------------------
+No unloaded combinational element in 'spadmic_event_coordinator'
+
+ Assigns
+ ------- 
+Encountered an assign statement at port 'port:spadmic_event_coordinator/event_open_o' in design spadmic_event_coordinator
+Encountered an assign statement at port 'port:spadmic_event_coordinator/observed_reset_ack_mask_o[2]' in design spadmic_event_coordinator
+Encountered an assign statement at port 'port:spadmic_event_coordinator/observed_reset_ack_mask_o[1]' in design spadmic_event_coordinator
+Encountered an assign statement at port 'port:spadmic_event_coordinator/observed_reset_ack_mask_o[0]' in design spadmic_event_coordinator
+Encountered an assign statement at port 'port:spadmic_event_coordinator/busy_o' in design spadmic_event_coordinator
+Total number of assign statements in design 'spadmic_event_coordinator' : 5
+
+ Undriven Port(s)/Pin(s)
+ ------------------------
+No undriven combinational pin in 'spadmic_event_coordinator'
+
+No undriven sequential pin in 'spadmic_event_coordinator'
+
+No undriven hierarchical pin in 'spadmic_event_coordinator'
+
+No undriven port in 'spadmic_event_coordinator'
+
+ Multidriven Port(s)/Pin(s)
+--------------------------
+
+No multidriven combinational pin in 'spadmic_event_coordinator'
+
+No multidriven sequential pin in 'spadmic_event_coordinator'
+
+No multidriven hierarchical pin in 'spadmic_event_coordinator'
+
+No multidriven ports in 'spadmic_event_coordinator'
+
+No multidriven unloaded nets in 'spadmic_event_coordinator'
+
+  Constant Pin(s)
+  ----------------
+No constant combinational pin(s) in design 'spadmic_event_coordinator'
+
+No constant sequential pin(s) in design 'spadmic_event_coordinator'
+
+design 'spadmic_event_coordinator' has the following constant input hierarchical pin(s)
+hpin:spadmic_event_coordinator/add_185_49/B 	 (fanout : 2)
+hpin:spadmic_event_coordinator/mux_74_7/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_74_7/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_74_7/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_150_46/in_1[3] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_150_46/in_1[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_150_46/in_1[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_150_46/in_1[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_149_15/in_0[3] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_149_15/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_149_15/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_packet_mask_o_149_15/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_153_40/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_153_40/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_83_7/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_83_7/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_83_7/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_150_46/in_1[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_150_46/in_1[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_150_46/in_1[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_149_15/in_0[3] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_149_15/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_149_15/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_reset_ack_mask_o_149_15/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_mode_q_153_40/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_mode_q_153_40/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_mode_q_153_40/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_mode_q_149_15/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_mode_q_149_15/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_mode_q_149_15/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_id_valid_q_171_33/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_id_valid_q_171_33/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_id_valid_q_150_46/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_id_valid_q_149_15/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_197_26/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_197_26/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_197_26/in_1[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_197_26/in_1[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_193_37/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_193_37/in_1[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_193_37/in_1[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_193_37/in_1[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_uses_matrix_q_149_15/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_rejected_q_150_46/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_rejected_q_149_15/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_rejected_not_ready_o_150_46/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_rejected_not_ready_o_150_46/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_rejected_not_ready_o_149_15/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_rejected_not_ready_o_139_13/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_bundle_start_o_215_28/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_bundle_start_o_215_28/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_bundle_start_o_139_13/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_reset_start_o_193_37/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_reset_start_o_193_37/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_reset_start_o_189_39/in_0 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_reset_start_o_139_13/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_tdc_mask_o_150_46/in_1[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_tdc_mask_o_150_46/in_1[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_tdc_mask_o_150_46/in_1[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_tdc_mask_o_149_15/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_tdc_mask_o_149_15/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_required_tdc_mask_o_149_15/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_event_id_valid_q_139_13/in_1 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_0[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_0[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_0[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_2[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_3[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_3[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_3[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_4[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_4[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_4[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_5[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_5[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_5[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_6[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_6[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_6[0] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_7[2] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_7[1] 	 (fanout : 1)
+hpin:spadmic_event_coordinator/mux_state_q_139_13/in_7[0] 	 (fanout : 1)
+Total number of constant hierarchical pins in design 'spadmic_event_coordinator' : 82
+
+No constant connected ports in design 'spadmic_event_coordinator'
+
+  Preserved instances(s)
+  ----------------
+No preserved combinational instance(s) in design 'spadmic_event_coordinator'
+No preserved sequential instance(s) in design 'spadmic_event_coordinator'
+No preserved hierarchical instance(s) in design 'spadmic_event_coordinator'
+
+  Physical only instances(s)
+  ----------------
+No physical only instance(s) in design 'spadmic_event_coordinator'
+
+  Logical only instance(s) and linked libcells
+    -----------------------------------------
+No logical only instance(s) in design 'spadmic_event_coordinator'
+
+Libcells with no corresponding LEF
+----------------------------------
+lib_cell:default_emulate_libset_max/D_CELLS_JIHD_LPMOS_typ_1_80V_25C/MPROBEBUJIHDX8
+lib_cell:default_emulate_libset_max/D_CELLS_JIHD_LPMOS_typ_1_80V_25C/MPROBEJIHD
+lib_cell:default_emulate_libset_max/D_CELLS_JIHD_LPMOS_typ_1_80V_25C/CLKVBUFJIHD
+
+Total number of cell(s) with only library (.lib) info : 3
+
+LEF cells with no corresponding libcell
+---------------------------------------
+
+No physical (LEF) cells found.
+
+ Summary
+ ------- 
+
+              Name                       Total
+----------------------------------------------
+Unresolved References                        0
+Empty Modules                                0
+Unloaded Port(s)                             0
+Unloaded Sequential Pin(s)                   0
+Unloaded Combinational Pin(s)                0
+Assigns                                      5
+Undriven Port(s)                             0
+Undriven Leaf Pin(s)                         0
+Undriven hierarchical pin(s)                 0
+Multidriven Port(s)                          0
+Multidriven Leaf Pin(s)                      0
+Multidriven hierarchical Pin(s)              0
+Multidriven unloaded net(s)                  0
+Constant Port(s)                             0
+Constant Leaf Pin(s)                         0
+Constant hierarchical Pin(s)                82
+Preserved leaf instance(s)                   0
+Preserved hierarchical instance(s)           0
+Feedthrough Modules(s)                       0
+Libcells with no LEF cell                    3
+Physical (LEF) cells with no libcell         0
+Subdesigns with long module name             0
+Physical only instance(s)                    0
+Logical only instance(s)                     0
+
+  Done Checking the design.
