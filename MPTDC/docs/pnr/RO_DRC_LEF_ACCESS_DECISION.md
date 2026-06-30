@@ -10,6 +10,15 @@ The corrected audit moved this from diagnosis to a PnR-only LEF-access patch.
 Do not edit the golden `/group/.../RO_tune6.lef`; generate a diagnostic/closure
 copy under `/sim/...` and use it through `O1_RO_LEF_PATH`.
 
+Latest implementation recipe:
+`MPTDC/docs/pnr/RO_TUNE6_V2_DRC_CLOSURE_COMMANDS.md`.
+For new failed-route evidence, first build fresh RO-local marker inputs with
+`MPTDC/pnr/scripts/build_ro_route_drc_probe.py` or the wrapper
+`MPTDC/pnr/scripts/server_prepare_ro_tune6_pnr_lef.sh`; do not reuse the old
+`20260630_mptdc_mesh_bypass_broken_ro_probe_route_v1` probe for new LEF cuts.
+The v2 recipe intentionally uses `0.45um` x/y access margins after the `0.20um`
+first patch left `0.200um` vs `0.280um` spacing failures.
+
 The latest no-filler diagnostic route reached the route gate and localized the
 remaining route DRCs at the two `RO_tune6` macro edges.  That strongly points to
 macro signal escape or LEF abstract access, but the first LEF comparison used an
