@@ -387,6 +387,11 @@ Pin family summary from the CSV:
 - [VERIFIED] Server Innovus floorplan seed `innovus_matrix_top_fp_evidence_20260630_1214` completed with `INNOVUS_RC=0`; snapshot committed by the server as `3603455e`. This ties the seed evidence to the latest pushed branch state.
 - [VERIFIED] The one previously `UNKNOWN` matrix pin is `VTUNE`, marked `INOUT/ANALOG/LEFT` in the CSV at normalized coordinate approximately `(1.93, 61.725)`. It is analog-owned and must be handled as a keepout/ownership item, not as a missing R/Y/B/Rz/Yz/Bz/Din/Cin/Dout/Cout digital pin.
 - [RISK] Next Innovus milestone must be a real design import/floorplan feasibility run. Current Innovus runs are seed-only and do not prove placement, route, CTS, PG, extraction, DRC/LVS, or timing.
+- [VERIFIED] Server Genus clean run `genus_matrix_ooc_clean_20260630_1222` passed all 12 configured OOC blocks with `GENUS_RC=0` at run commit `50e488e7044f9a991c0605601bd1f1f1110d4760`; snapshot committed as `94c8b014`. This is accepted as typical-only OOC feasibility, not signoff.
+- [FAILED REVIEW] The same clean Genus snapshot still contains one `TUI-204` tool error per block and false-positive `undriven` classifications caused by evidence-flow commands, not by RTL failure. Review is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_GENUS_OOC_genus_matrix_ooc_clean_20260630_1222.md`.
+- [IMPLEMENTED] Builder updated `TOP/syn/scripts/run_genus_matrix_block.tcl` to avoid unsupported Genus 22.13 report/SDF options, generate `report_area_hierarchy.rpt` using the compatible default `report_area` format, move `report_messages` after output collateral generation, and suppress `No undriven ...` false positives.
+- [IMPLEMENTED] Builder updated `TOP/ci/collect_matrix_top_server_snapshot.sh` so future snapshots include `report_area_hierarchy.rpt` and distinguish source-run branch/commit from snapshot-collection branch/commit.
+- [NOT IMPLEMENTED] A final clean Genus evidence snapshot after these script fixes still needs to be run on the server.
 
 ## Affected Files
 

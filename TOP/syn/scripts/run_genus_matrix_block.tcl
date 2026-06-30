@@ -88,7 +88,7 @@ proc classify_reports {run_dir} {
         continue
       }
       while {[gets $in line] >= 0} {
-        if {[regexp -nocase {no violations|No unresolved references|No empty modules|Unresolved References & Empty Modules|Undriven Port\(s\)/Pin\(s\)|Unloaded Pin\(s\), Port\(s\)|no unloaded port} $line]} {
+        if {[regexp -nocase {no violations|No unresolved references|No empty modules|Unresolved References & Empty Modules|Undriven Port\(s\)/Pin\(s\)|Unloaded Pin\(s\), Port\(s\)|no unloaded port|^No .*undriven|^No .*unconnected|^No .*multiply driven|^No .*multi.?driven} $line]} {
           continue
         }
         if {[regexp -nocase $patterns($key) $line]} {
@@ -248,10 +248,12 @@ run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_ti
 
 run_report {report_qor} [file join $REPORT_DIR qor report_qor.rpt]
 run_report {report_area} [file join $REPORT_DIR qor report_area.rpt]
-run_report {report_area -hierarchical} [file join $REPORT_DIR qor report_area_hierarchy.rpt]
+# Genus 22.13 in the server environment rejects report_area -hierarchical
+# with TUI-204. The default report_area output already includes hierarchy rows
+# where hierarchy exists, so capture that format under the hierarchy filename
+# instead of polluting the message database with an unsupported option.
+run_report {report_area} [file join $REPORT_DIR qor report_area_hierarchy.rpt]
 run_report {report_design_rules} [file join $REPORT_DIR qor report_design_rules.rpt]
-run_report {report_messages} [file join $REPORT_DIR messages report_messages.rpt]
-classify_reports $RUN_DIR
 
 if {[catch {write_hdl > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.v]} write_hdl_err]} {
   puts "WARN: write_hdl failed: $write_hdl_err"
@@ -259,9 +261,12 @@ if {[catch {write_hdl > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.v]} write_hdl_
 if {[catch {write_sdc > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.sdc]} write_sdc_err]} {
   puts "WARN: write_sdc failed: $write_sdc_err"
 }
-if {[catch {write_sdf -nonegchecks -edges check_edge > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.sdf]} write_sdf_err]} {
+if {[catch {write_sdf > [file join $OUT_DIR ${BLOCK_NAME}.postsyn.sdf]} write_sdf_err]} {
   puts "WARN: write_sdf failed: $write_sdf_err"
 }
+
+run_report {report_messages} [file join $REPORT_DIR messages report_messages.rpt]
+classify_reports $RUN_DIR
 
 set summary [open [file join $RUN_DIR SUMMARY.md] w]
 puts $summary "# Genus OOC Block Summary"

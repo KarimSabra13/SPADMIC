@@ -131,7 +131,7 @@ case "$KIND" in
         */logs/failure.tail|*/reports/messages/warning_classification.rpt)
           copy_file "$file" "$rel"
           ;;
-        */reports/elaboration/check_design_post_elab.rpt|*/reports/messages/report_messages.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/timing/report_timing_*.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_qor.rpt|*/reports/qor/report_design_rules.rpt)
+        */reports/elaboration/check_design_post_elab.rpt|*/reports/messages/report_messages.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/timing/report_timing_*.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_area_hierarchy.rpt|*/reports/qor/report_qor.rpt|*/reports/qor/report_design_rules.rpt)
           copy_excerpt "$file" "$rel" 220
           ;;
         */outputs/*.postsyn.sdc)
@@ -153,6 +153,13 @@ case "$KIND" in
     ;;
 esac
 
+SOURCE_RUN_BRANCH=""
+SOURCE_RUN_HEAD=""
+if [[ -f "$SRC_DIR/run_manifest.txt" ]]; then
+  SOURCE_RUN_BRANCH="$(awk -F= '$1 == "BRANCH" {print $2; exit}' "$SRC_DIR/run_manifest.txt")"
+  SOURCE_RUN_HEAD="$(awk -F= '$1 == "HEAD" {print $2; exit}' "$SRC_DIR/run_manifest.txt")"
+fi
+
 {
   echo "# Matrix TOP Server Snapshot"
   echo
@@ -160,8 +167,14 @@ esac
   echo "- Run ID: \`$RUN_ID\`"
   echo "- Source directory: \`$SRC_DIR\`"
   echo "- Snapshot directory: \`$DST_DIR\`"
-  echo "- Repository branch: \`$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)\`"
-  echo "- Repository commit: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)\`"
+  if [[ -n "$SOURCE_RUN_BRANCH" ]]; then
+    echo "- Source run branch: \`$SOURCE_RUN_BRANCH\`"
+  fi
+  if [[ -n "$SOURCE_RUN_HEAD" ]]; then
+    echo "- Source run commit: \`$SOURCE_RUN_HEAD\`"
+  fi
+  echo "- Snapshot collection branch: \`$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)\`"
+  echo "- Snapshot collection commit: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)\`"
   echo "- Created UTC: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
   echo
   echo "## Included Files"
