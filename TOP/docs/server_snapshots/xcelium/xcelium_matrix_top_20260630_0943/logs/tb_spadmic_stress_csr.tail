@@ -1,0 +1,80 @@
+		worklib.spadmic_global_csr:sv <0x47b4b8be>
+			streams:  15, words: 12948
+		worklib.spadmic_csr_decoder:sv <0x23cdb5bd>
+			streams:  17, words:  9604
+		worklib.tb_spadmic_stress_csr:sv <0x636b8b80>
+			streams: 121, words: 82098
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 4       4
+		Verilog packages:        2       2
+		Registers:             219     219
+		Scalar wires:          109       -
+		Vectored wires:         50       -
+		Always blocks:          13      13
+		Initial blocks:          6       6
+		Cont. assignments:      16      42
+		Pseudo assignments:     91       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_stress_csr:sv
+Loading snapshot worklib.tb_spadmic_stress_csr:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+========================================
+STRESS TEST: spadmic_csr_decoder + global_csr
+========================================
+[PASS] T1: T1 global ID read no error
+[PASS] T2: T1 global ID = 0x5350_4144 (SPAD)
+[PASS] T3: T2 version read no error
+[PASS] T4: T2 version nonzero
+[PASS] T5: T3 ctrl readback
+[PASS] T6: T3b active global enable applied
+[PASS] T7: T3b active axis enables applied
+[PASS] T8: T3b sequencer idle after commit
+[PASS] T9: T3b control accept high when idle
+[PASS] T10: T4 status read no error
+[PASS] T11: T4 status busy bit
+[PASS] T12: T4 status pending bits
+[PASS] T13: T4 position busy/pending bits
+[PASS] T14: T4 packet full bits
+[PASS] T15: T4 control accept low while busy
+[PASS] T16: T4a global fault mirrors position drop
+[PASS] T17: T4a global fault mirrors position glitch
+[PASS] T18: T4a global fault mirrors correlation overflow
+[PASS] T19: T4b ctrl write rejected while busy
+[PASS] T20: T4b reject sticky set
+[PASS] T21: T4b reject count increments
+[PASS] T22: T4c ctrl readback updates request
+[PASS] T23: T4c active shared-tx switched
+[PASS] T24: T4c transition complete
+[PASS] T25: T4c no pending config mismatch
+[PASS] T26: T5 TDC_X write/read
+[PASS] T27: T5 TDC_X no error
+[PASS] T28: T6 TDC_Y write/read
+[PASS] T29: T6 TDC_Y no error
+[PASS] T30: T7 TDC_Z write/read
+[PASS] T31: T7 TDC_Z no error
+[PASS] T32: T8 POS write/read
+[PASS] T33: T8 POS no error
+[PASS] T34: T9 invalid region → error
+[PASS] T35: T9b region 0xF → error
+[PASS] T36: T10 50 back-to-back writes → last value
+[PASS] T37: T11 20 alternating read/write cycles
+[PASS] T38: T12 cross-region X isolated
+[PASS] T39: T12 cross-region Y isolated
+[PASS] T40: T12 cross-region Z isolated
+[PASS] T41: T13 delayed rsp_ready → still valid
+[PASS] T42: T13 correct data after delay
+========================================
+CSR STRESS: 42 PASS, 0 FAIL out of 42
+========================================
+Simulation complete via $finish(1) at time 3578125 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_stress_csr.sv:557     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:47 CEST  (total: 00:00:01)

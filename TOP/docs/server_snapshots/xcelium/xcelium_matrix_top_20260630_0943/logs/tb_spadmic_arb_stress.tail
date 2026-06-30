@@ -1,0 +1,80 @@
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_axis_cluster_scan.sv
+	module worklib.spadmic_axis_cluster_scan:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_position_block.sv
+	module worklib.spadmic_position_block:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv
+  input  mptdc_pkg::input_sel_e     input_sel_i,
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/arb/tb/tb_spadmic_arb_stress.sv
+	module worklib.tb_spadmic_arb_stress:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		spadmic_pkg
+		tb_spadmic_arb_stress
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.mptdc_sync_fifo:sv <0x50e170de>
+			streams:  20, words: 11440
+		worklib.spadmic_stream_skid_buffer:sv <0x54544100>
+			streams:  19, words: 17038
+		worklib.spadmic_packet_arbiter4:sv <0x61a87a31>
+			streams:  25, words: 18311
+		worklib.spadmic_position_packet_adapter:sv <0x7b75d474>
+			streams:  10, words:  6321
+		worklib.spadmic_correlated_tx:sv <0x093523b1>
+			streams:  72, words: 35890
+		worklib.tb_spadmic_arb_stress:sv <0x4cd5f751>
+			streams:  41, words: 32483
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 6       6
+		Verilog packages:        2       2
+		Registers:             269     269
+		Scalar wires:           85       -
+		Vectored wires:         52       -
+		Always blocks:          19      19
+		Initial blocks:          4       4
+		Cont. assignments:      44      61
+		Pseudo assignments:     56       -
+		Assertions:             13      13
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_arb_stress:sv
+Loading snapshot worklib.tb_spadmic_arb_stress:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] Stress emits exactly four max-burst packets
+[PASS] Stress drains expected max-burst words
+[PASS] Stress includes all four sources
+[PASS] Stress preserves unified tag sequence
+[PASS] Stress has no packet framing errors
+[PASS] Stress leaves no ARB busy state
+[PASS] Stress has no event-ID overflow
+tb_spadmic_arb_stress: 7 pass / 0 fail
+Simulation complete via $finish(1) at time 1596876 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/arb/tb/tb_spadmic_arb_stress.sv:284     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:43:57 CEST  (total: 00:00:01)

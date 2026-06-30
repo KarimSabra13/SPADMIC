@@ -1,0 +1,80 @@
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] path-busy cfg parameter write reports PATH_BUSY
+[PASS] path-busy cfg parameter write leaves data unchanged
+[PASS] write response valid
+[PASS] write response error expectation
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] path-busy cfg command reports PATH_BUSY
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] path-busy rejected command leaves opcode readback unchanged
+[PASS] write response valid
+[PASS] write response error expectation
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] invalid cfg column reports invalid col
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] event reject counter increments
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] R TDC 0x1000 does not alias global ID
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] Y TDC 0x2000 does not alias global ID
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] B TDC 0x3000 does not alias global ID
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] TX status valid at full 16-bit 0x7000
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] output FIFO status reports not empty
+[PASS] output FIFO status reports almost full
+[PASS] output FIFO status reports level
+[PASS] output FIFO status reports free words
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] TX status reports FIFO overflow sticky
+[PASS] TX status reports FIFO overflow count
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] MTOP fault reports FIFO overflow sticky
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] unsupported TX 0x700C reports error instead of aliasing
+[PASS] write response valid
+[PASS] write response error expectation
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] bad 16-bit address reports bad addr
+[PASS] write response valid
+[PASS] write response error expectation
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] W1C fault clear works
+[PASS] W1C FIFO overflow clear works
+[PASS] W1C last error clear works
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] write response valid
+[PASS] write response error expectation
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] same-cycle FIFO overflow dominates W1C clear
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] same-cycle FIFO overflow increments count
+[PASS] write response valid
+[PASS] write response error expectation
+[PASS] read response valid
+[PASS] read response error expectation
+[PASS] FIFO overflow clears after overflow is gone
+tb_spadmic_matrix_top_csr_unit: 190 pass / 0 fail
+Simulation complete via $finish(1) at time 793750 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_matrix_top_csr_unit.sv:479     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:28 CEST  (total: 00:00:01)

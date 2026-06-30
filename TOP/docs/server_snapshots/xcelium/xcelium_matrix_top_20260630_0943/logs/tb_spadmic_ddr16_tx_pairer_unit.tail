@@ -1,0 +1,80 @@
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../arb/rtl/spadmic_stream_skid_buffer.sv,18|52): Implicit net port (in_source_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_stream_skid_buffer:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../arb/rtl/spadmic_correlated_tx.sv
+	module worklib.spadmic_correlated_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_ddr_tx.sv
+	module worklib.spadmic_ddr_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_axis_cluster_scan.sv
+	module worklib.spadmic_axis_cluster_scan:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_position_block.sv
+	module worklib.spadmic_position_block:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv
+  input  mptdc_pkg::input_sel_e     input_sel_i,
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_ddr16_tx_pairer_unit.sv
+	module worklib.tb_spadmic_ddr16_tx_pairer_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		tb_spadmic_ddr16_tx_pairer_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_ddr16_tx_pairer:sv <0x5131c303>
+			streams:  10, words:  5253
+		worklib.tb_spadmic_ddr16_tx_pairer_unit:sv <0x6060c93d>
+			streams:  11, words: 15674
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 2       2
+		Registers:              20      20
+		Scalar wires:           14       -
+		Vectored wires:          3       -
+		Always blocks:           2       2
+		Initial blocks:          3       3
+		Cont. assignments:       3       4
+		Pseudo assignments:      5       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_ddr16_tx_pairer_unit:sv
+Loading snapshot worklib.tb_spadmic_ddr16_tx_pairer_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] reset leaves pairer empty
+[PASS] word interface ready
+[PASS] DDR clock follows clk_sys
+[PASS] single word makes pairer busy
+[PASS] two words produce valid pair
+[PASS] older word appears on DATA_L
+[PASS] newer word appears on DATA_H
+[PASS] real pair is not padded
+[PASS] flush emits odd final word
+[PASS] odd word uses DATA_L
+[PASS] odd word pads DATA_H with zero
+[PASS] odd flush reports padded pair
+[PASS] idle data returns to zero
+[PASS] pairer empty after flush
+tb_spadmic_ddr16_tx_pairer_unit: 14 pass / 0 fail
+Simulation complete via $finish(1) at time 84376 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_ddr16_tx_pairer_unit.sv:109     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:17 CEST  (total: 00:00:01)

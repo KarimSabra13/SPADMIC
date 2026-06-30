@@ -1,0 +1,80 @@
+Loading snapshot worklib.tb_spadmic_stress_position:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+========================================
+STRESS TEST: spadmic_position_block
+========================================
+[PASS] T1: T1 basic packet: 8 words
+[PASS] T2: T1 header word
+[PASS] T3: T1 EOC word
+[PASS] T4: T1 event tag increments
+[PASS] T5: T2 full bitmaps -> 8 words
+[PASS] T6: T3 10 back-to-back events -> 80 words
+[PASS] T7: T4 first packet collected
+[PASS] T8: T4 second packet queued behind first
+[PASS] T9: T4 no drop counted while queue absorbs overlap
+[PASS] T10: T4 drop sticky remains clear
+[PASS] T11: T5 backpressure → correct packet
+[PASS] T12: T6 disabled → no tx_valid
+[PASS] T13: T6 re-enabled → packet OK
+[PASS] T14: T7 CSR gap config → packet produced
+[PASS] T15: T7b min-span 1 packet length
+[PASS] T16: T7b single line retained as cluster
+[PASS] T17: T8 glitch pulse produces no packet
+[PASS] T18: T8 reject counter increments
+[PASS] T19: T8 glitch sticky set
+[PASS] T20: T8 glitch sticky clears
+[PASS] T21: T9 short pulse rejected by settle window
+[PASS] T22: T9 settle-window reject counted
+[PASS] T23: T9 settle window delays packet start
+[PASS] T24: T9 settle window eventually queues packet
+[PASS] T25: T9 stable event captured after settle window
+[PASS] T26: T10 merged-gap packet length
+[PASS] T27: T10 merged-gap header
+[PASS] T28: T10 merged-gap x cluster0
+[PASS] T29: T10 merged-gap x cluster1 invalid
+[PASS] T30: T10 threshold-gap packet length
+[PASS] T31: T10 threshold-gap header
+[PASS] T32: T10 threshold-gap x cluster0
+[PASS] T33: T10 threshold-gap x cluster1
+[PASS] T34: T11 mid-packet stall keeps valid high
+[PASS] T35: T11 mid-packet stall keeps valid high
+[PASS] T36: T11 mid-packet stall holds data
+[PASS] T37: T11 mid-packet stall keeps valid high
+[PASS] T38: T11 mid-packet stall holds data
+[PASS] T39: T12 overflow packet length
+[PASS] T40: T12 overflow header
+[PASS] T41: T12 overflow x cluster0 retained
+[PASS] T42: T12 overflow x cluster1 retained
+[PASS] T43: T13 raw packet length
+[PASS] T44: T13 raw header
+[PASS] T45: T13 raw X word0
+[PASS] T46: T13 raw X word3
+[PASS] T47: T13 raw Y word1
+[PASS] T48: T13 raw Z word1
+[PASS] T49: T13 raw Z word3
+[PASS] T50: T13 raw EOC
+[PASS] T51: T13b compact XYZ single-cluster length
+[PASS] T52: T13b compact XYZ header
+[PASS] T53: T13b compact X cluster0
+[PASS] T54: T13b compact Y cluster0
+[PASS] T55: T13b compact Z cluster0
+[PASS] T56: T13b compact EOC
+[PASS] T57: T13b compact auto-detects second cluster length
+[PASS] T58: T13b compact second-cluster header
+[PASS] T59: T13b compact X cluster0 retained
+[PASS] T60: T13b compact X cluster1 retained
+[PASS] T61: T13b compact Y cluster0 retained
+[PASS] T62: T13b compact second-cluster EOC
+[PASS] T63: T14 manual reset pulse asserted
+[PASS] T64: T14 manual reset pulse is one cycle
+[PASS] T65: T14 periodic reset pulse appears
+[PASS] T66: T14 deferred reset waits while lines active
+[PASS] T67: T14 deferred reset fires after safe idle
+========================================
+POSITION STRESS: 67 PASS, 0 FAIL out of 67
+========================================
+Simulation complete via $finish(1) at time 5628125 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/position/tb/tb_spadmic_stress_position.sv:763     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:49 CEST  (total: 00:00:01)

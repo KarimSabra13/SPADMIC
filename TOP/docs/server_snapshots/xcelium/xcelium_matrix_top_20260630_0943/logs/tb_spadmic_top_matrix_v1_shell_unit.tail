@@ -1,0 +1,80 @@
+			streams:  66, words: 21206
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                  Instances  Unique
+		Modules:                389      38
+		Verilog packages:         2       2
+		Registers:             3015     748
+		Scalar wires:          1197       -
+		Expanded wires:        1614     207
+		Vectored wires:         537       -
+		Always blocks:         1003      94
+		Initial blocks:         139      12
+		Cont. assignments:      544     274
+		Pseudo assignments:     461       -
+		Assertions:             365      25
+		Simulation timescale:   1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_top_matrix_v1_shell_unit:sv
+Loading snapshot worklib.tb_spadmic_top_matrix_v1_shell_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[PASS] async reset drives reset-select buses inactive
+[PASS] async reset drives matrix config idle
+[PASS] async reset drives DDR outputs idle
+[PASS] reset release keeps reset-select buses inactive
+[PASS] DDR clock follows clk_sys boundary
+[PASS] I2C reads matrix-top ID
+[PASS] I2C writes shared TDC max_hits
+[PASS] I2C writes shared slow RO code
+[PASS] I2C writes shared fast RO code
+[PASS] I2C commits calibration mode
+[PASS] calibration active axis mask uses CSR selection
+[PASS] unselected calibration Y start is ignored
+[PASS] unselected calibration B start is ignored
+[PASS] selected calibration R start is accepted
+[PASS] reset after calibration gate check restores idle outputs
+[PASS] I2C writes reset width and auto reset
+[PASS] I2C commits position-only active mode
+[PASS] I2C commits global enable
+[PASS] position event asserts selective reset
+[PASS] position-only event drains DDR16 pairer
+[PASS] top returns safe idle after position event
+[PASS] position-only safe_idle ignores inactive TDC busy
+[PASS] I2C observes matrix cfg valid
+[PASS] I2C reads matrix cfg low readback
+[PASS] I2C reads matrix cfg high readback
+[PASS] matrix config outputs return idle after command
+[PASS] I2C commits TDC-only active mode
+[PASS] TDC-only resources become ready
+[PASS] TDC-only event asserts selective reset
+[PASS] TDC-only event returns safe idle
+[PASS] TDC-only event emits DDR16 output
+[PASS] TDC-only completed packet mask is R/Y/B only
+tb_spadmic_top_matrix_v1_shell_unit: 32 pass / 0 fail
+Simulation complete via $finish(1) at time 1196234375 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_matrix_v1_shell_unit.sv:438     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:32 CEST  (total: 00:00:04)

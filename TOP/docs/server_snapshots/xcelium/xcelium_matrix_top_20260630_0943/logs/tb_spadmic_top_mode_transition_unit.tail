@@ -1,0 +1,80 @@
+			streams:  29, words: 24484
+		worklib.mptdc_reset_sync:sv <0x2fca26c5>
+			streams:   4, words:   712
+		worklib.mptdc_reset_sync:sv <0x74f2b647>
+			streams:   4, words:   712
+		worklib.tb_spadmic_top_mode_transition_unit:sv <0x542b7aad>
+    #3_000_000_000;
+    |
+xmvlog_cg: *W,NEGDLY (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_mode_transition_unit.sv,162|4): Negative delay value, using delay of zero.
+			streams:  31, words: 32563
+		worklib.spadmic_matrix_or_tree:sv <0x5e6edefd>
+			streams:   3, words:  1457
+		worklib.mptdc_async_frontend_v2:sv <0x6e78fc29>
+			streams:  22, words: 11938
+		worklib.mptdc_osc_model:sv <0x6adf9479>
+			streams:   4, words:  8064
+		worklib.mptdc_osc_model:sv <0x1636eedd>
+			streams:   4, words:  8064
+		worklib.mptdc_phase_buffer_bank:sv <0x29292253>
+			streams:   2, words:   316
+		worklib.mptdc_core:sv <0x72e0f85e>
+			streams:  75, words: 27913
+		worklib.spadmic_matrix_cfg_ctrl:sv <0x4f30fb0f>
+			streams:  68, words: 48758
+		worklib.spadmic_top_matrix_v1:sv <0x3a60b39d>
+			streams:  66, words: 21206
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                  Instances  Unique
+		Modules:                389      38
+		Verilog packages:         2       2
+		Registers:             2964     740
+		Scalar wires:          1197       -
+		Expanded wires:        1614     207
+		Vectored wires:         537       -
+		Always blocks:          958      92
+		Initial blocks:         139      12
+		Cont. assignments:      544     274
+		Pseudo assignments:     456       -
+		Assertions:             365      25
+		Simulation timescale:   1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_top_mode_transition_unit:sv
+Loading snapshot worklib.tb_spadmic_top_mode_transition_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=55 HALF_PERIOD=440
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+[OSC_WRAPPER] MODE = MODEL (behavioural simulation with #delays)
+[OSC_MODEL] NE=8 TS_STEP_PS=50 HALF_PERIOD=400
+[OSC_MODEL] jitter_sigma_ps=0 jitter_bound_ps=0
+xmsim: *W,TRNEGDEL: negative delay encountered, using delay of zero.
+            File: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_mode_transition_unit.sv, line = 162, pos = 4
+           Scope: tb_spadmic_top_mode_transition_unit
+            Time: 0 FS + 0
+
+xmsim: *F,FATSEV (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_mode_transition_unit.sv,163): (time 0 FS).
+tb_spadmic_top_mode_transition_unit
+tb_spadmic_top_mode_transition_unit: TIMEOUT
+Simulation terminated via $fatal(1) at time 0 FS + 1
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_mode_transition_unit.sv:163     $fatal(1, "tb_spadmic_top_mode_transition_unit: TIMEOUT");
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:44 CEST  (total: 00:00:01)

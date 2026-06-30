@@ -1,0 +1,80 @@
+		Vectored wires:          1       -
+		Initial blocks:          1       1
+		Cont. assignments:      21       3
+		Pseudo assignments:      1       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_matrix_or_tree_unit:sv
+Loading snapshot worklib.tb_spadmic_matrix_or_tree_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] all-zero input clears event
+[PASS] input bit 0 reaches output
+[PASS] input bit 1 reaches output
+[PASS] input bit 2 reaches output
+[PASS] input bit 3 reaches output
+[PASS] input bit 4 reaches output
+[PASS] input bit 5 reaches output
+[PASS] input bit 6 reaches output
+[PASS] input bit 7 reaches output
+[PASS] input bit 8 reaches output
+[PASS] input bit 9 reaches output
+[PASS] input bit 10 reaches output
+[PASS] input bit 11 reaches output
+[PASS] input bit 12 reaches output
+[PASS] input bit 13 reaches output
+[PASS] input bit 14 reaches output
+[PASS] input bit 15 reaches output
+[PASS] input bit 16 reaches output
+[PASS] input bit 17 reaches output
+[PASS] input bit 18 reaches output
+[PASS] input bit 19 reaches output
+[PASS] input bit 20 reaches output
+[PASS] input bit 21 reaches output
+[PASS] input bit 22 reaches output
+[PASS] input bit 23 reaches output
+[PASS] input bit 24 reaches output
+[PASS] input bit 25 reaches output
+[PASS] input bit 26 reaches output
+[PASS] input bit 27 reaches output
+[PASS] input bit 28 reaches output
+[PASS] input bit 29 reaches output
+[PASS] input bit 30 reaches output
+[PASS] input bit 31 reaches output
+[PASS] input bit 32 reaches output
+[PASS] input bit 33 reaches output
+[PASS] input bit 34 reaches output
+[PASS] input bit 35 reaches output
+[PASS] input bit 36 reaches output
+[PASS] input bit 37 reaches output
+[PASS] input bit 38 reaches output
+[PASS] input bit 39 reaches output
+[PASS] input bit 40 reaches output
+[PASS] input bit 41 reaches output
+[PASS] input bit 42 reaches output
+[PASS] input bit 43 reaches output
+[PASS] input bit 44 reaches output
+[PASS] input bit 45 reaches output
+[PASS] input bit 46 reaches output
+[PASS] input bit 47 reaches output
+[PASS] input bit 48 reaches output
+[PASS] input bit 49 reaches output
+[PASS] input bit 50 reaches output
+[PASS] input bit 51 reaches output
+[PASS] input bit 52 reaches output
+[PASS] input bit 53 reaches output
+[PASS] input bit 54 reaches output
+[PASS] input bit 55 reaches output
+[PASS] input bit 56 reaches output
+[PASS] input bit 57 reaches output
+[PASS] input bit 58 reaches output
+[PASS] input bit 59 reaches output
+[PASS] input bit 60 reaches output
+[PASS] input bit 61 reaches output
+[PASS] input bit 62 reaches output
+[PASS] input bit 63 reaches output
+[PASS] event returns low after all bits clear
+tb_spadmic_matrix_or_tree_unit: 66 pass / 0 fail
+Simulation complete via $finish(1) at time 66 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_matrix_or_tree_unit.sv:49     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:02 CEST  (total: 00:00:01)

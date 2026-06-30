@@ -1,0 +1,80 @@
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../arb/rtl/spadmic_packet_arbiter4.sv
+	module worklib.spadmic_packet_arbiter4:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../arb/rtl/spadmic_stream_skid_buffer.sv
+  input  spadmic_pkg::spadmic_source_id_e in_source_i,
+                                                    |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../arb/rtl/spadmic_stream_skid_buffer.sv,18|52): Implicit net port (in_source_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_stream_skid_buffer:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../arb/rtl/spadmic_correlated_tx.sv
+	module worklib.spadmic_correlated_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_ddr_tx.sv
+	module worklib.spadmic_ddr_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_axis_cluster_scan.sv
+	module worklib.spadmic_axis_cluster_scan:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_position_block.sv
+	module worklib.spadmic_position_block:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv
+  input  mptdc_pkg::input_sel_e     input_sel_i,
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_matrix_cfg_cout_readback_unit.sv
+	module worklib.tb_spadmic_matrix_cfg_cout_readback_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		tb_spadmic_matrix_cfg_cout_readback_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_matrix_cout_bit_sampler:sv <0x345df5db>
+			streams:   3, words:  1149
+		worklib.tb_spadmic_matrix_cfg_cout_readback_unit:sv <0x3b52ef9c>
+			streams:  23, words: 18710
+		worklib.spadmic_matrix_cfg_ctrl:sv <0x64ed88f1>
+			streams:  68, words: 48758
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                46       3
+		Registers:             159      73
+		Scalar wires:          234       -
+		Expanded wires:         88       2
+		Vectored wires:          7       -
+		Always blocks:          50       7
+		Initial blocks:          4       4
+		Cont. assignments:       4       4
+		Pseudo assignments:    142       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_matrix_cfg_cout_readback_unit:sv
+Loading snapshot worklib.tb_spadmic_matrix_cfg_cout_readback_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] command completes
+[PASS] WRITE_COLUMN_64 captures physical Dout using Cout
+[PASS] write readback is returned pattern, not WDATA mirror
+[PASS] matrix_cfg_valid set after physical readback
+tb_spadmic_matrix_cfg_cout_readback_unit: 4 pass / 0 fail
+Simulation complete via $finish(1) at time 8134376 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_matrix_cfg_cout_readback_unit.sv:140     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:20 CEST  (total: 00:00:01)

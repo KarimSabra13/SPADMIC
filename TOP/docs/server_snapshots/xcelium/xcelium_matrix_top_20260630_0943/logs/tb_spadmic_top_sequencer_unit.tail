@@ -1,0 +1,80 @@
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_sequencer_unit.sv
+	module worklib.tb_spadmic_top_sequencer_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		spadmic_pkg
+		tb_spadmic_top_sequencer_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_top_sequencer:sv <0x1cd16830>
+			streams:   8, words:  4247
+		worklib.tb_spadmic_top_sequencer_unit:sv <0x1ac3d7ec>
+			streams:  21, words: 25160
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 2       2
+		Verilog packages:        2       2
+		Registers:             130     130
+		Scalar wires:           19       -
+		Vectored wires:          6       -
+		Always blocks:           3       3
+		Initial blocks:          3       3
+		Cont. assignments:       3       3
+		Pseudo assignments:     16       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_top_sequencer_unit:sv
+Loading snapshot worklib.tb_spadmic_top_sequencer_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] Reset defaults global enable low
+[PASS] Reset defaults axis enable all on
+[PASS] Reset defaults position enable on
+[PASS] Reset defaults shared tx TDC
+[PASS] Reset defaults input select SPAD
+[PASS] Reset defaults output mode raw-features
+[PASS] Reset settles to accepting state
+[PASS] Reset settles with no transition busy
+[PASS] Accepted request enters transition
+[PASS] Transition forces global enable low
+[PASS] Old source held until commit
+[PASS] Accept gate closes during transition
+[PASS] Committed request re-enables global enable
+[PASS] Committed request updates axis enables
+[PASS] Committed request updates shared source
+[PASS] Committed request updates input select
+[PASS] Committed request keeps output mode fixed
+[PASS] Transition completes after idle commit
+[PASS] Accept gate reopens after commit
+[PASS] Drain transition starts busy
+[PASS] Drain transition keeps global enable low
+[PASS] Drain transition keeps prior source active
+[PASS] Pending packet holds transition busy
+[PASS] Pending packet holds prior source
+[PASS] Pending packet holds transition busy
+[PASS] Pending packet holds prior source
+[PASS] Clearing pending commits requested source
+[PASS] Clearing pending keeps output mode fixed
+[PASS] Transition busy clears after drain
+[PASS] Accept gate restores after drain
+tb_spadmic_top_sequencer_unit: 30 pass / 0 fail
+Simulation complete via $finish(1) at time 78126 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_sequencer_unit.sv:166     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:46 CEST  (total: 00:00:01)

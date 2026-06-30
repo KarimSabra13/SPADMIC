@@ -1,0 +1,80 @@
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_position_snapshot_packetizer_unit.sv
+	module worklib.tb_spadmic_position_snapshot_packetizer_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		spadmic_pkg
+		tb_spadmic_position_snapshot_packetizer_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_axis_cluster_scan:sv <0x554679a3>
+			streams:  19, words: 22786
+		worklib.spadmic_position_snapshot_packetizer:sv <0x31fc6af8>
+			streams:  42, words: 32451
+		worklib.tb_spadmic_position_snapshot_packetizer_unit:sv <0x03c63b61>
+			streams:  24, words: 34125
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 5       3
+		Verilog packages:        2       2
+		Registers:             340     236
+		Scalar wires:           36       -
+		Vectored wires:         23       -
+		Always blocks:          10       8
+		Initial blocks:          3       3
+		Cont. assignments:      12       8
+		Pseudo assignments:     25       -
+		Assertions:              1       1
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_position_snapshot_packetizer_unit:sv
+Loading snapshot worklib.tb_spadmic_position_snapshot_packetizer_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] reset leaves packetizer idle
+[PASS] raw mode copies snapshot before packet drain
+[PASS] raw position packet has 14 words
+[PASS] raw position header encodes all directions
+[PASS] R raw low word captured
+[PASS] Y raw low word captured
+[PASS] B raw high word captured
+[PASS] EOC uses 14-bit event ID
+[PASS] packetizer returns idle
+[PASS] cluster mode copies snapshot before scan
+[PASS] cluster scan reports packet pending before first word
+[PASS] cluster position packet has 8 words
+[PASS] cluster header encodes all directions
+[PASS] R cluster0 captured
+[PASS] R cluster1 empty
+[PASS] Y cluster0 captured
+[PASS] B cluster0 captured
+[PASS] cluster EOC uses 14-bit event ID
+[PASS] cluster packetizer returns idle
+[PASS] cluster multi-hit snapshot captured
+[PASS] cluster header encodes R multi-cluster mask
+[PASS] R cluster0 from multi-cluster image
+[PASS] R cluster1 from multi-cluster image
+[PASS] start creates pending packet
+[PASS] second start while busy reports drop
+tb_spadmic_position_snapshot_packetizer_unit: 25 pass / 0 fail
+Simulation complete via $finish(1) at time 446875 PS + 3
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_position_snapshot_packetizer_unit.sv:217     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:09 CEST  (total: 00:00:02)

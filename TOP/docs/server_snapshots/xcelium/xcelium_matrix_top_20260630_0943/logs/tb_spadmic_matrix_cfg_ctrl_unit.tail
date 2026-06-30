@@ -1,0 +1,80 @@
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_matrix_cfg_ctrl_unit.sv
+	module worklib.tb_spadmic_matrix_cfg_ctrl_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		tb_spadmic_matrix_cfg_ctrl_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_matrix_cout_bit_sampler:sv <0x345df5db>
+			streams:   3, words:  1149
+		worklib.spadmic_matrix_cfg_ctrl:sv <0x64ed88f1>
+			streams:  68, words: 48758
+		worklib.tb_spadmic_matrix_cfg_ctrl_unit:sv <0x45e63d00>
+			streams:  23, words: 37063
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                46       3
+		Registers:             206      77
+		Scalar wires:          234       -
+		Expanded wires:         88       2
+		Vectored wires:          7       -
+		Always blocks:          93       7
+		Initial blocks:          4       4
+		Cont. assignments:       4       4
+		Pseudo assignments:    142       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_matrix_cfg_ctrl_unit:sv
+Loading snapshot worklib.tb_spadmic_matrix_cfg_ctrl_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] reset leaves controller idle
+[PASS] reset drives matrix config outputs idle
+[PASS] write command enters busy
+[PASS] command done before timeout
+[PASS] write column reports no error
+[PASS] write column readback uses returned Dout/Cout path
+[PASS] matrix cfg valid after write
+[PASS] command done before timeout
+[PASS] write column 43 captures physical readback
+[PASS] command done before timeout
+[PASS] read column reports no error
+[PASS] readback valid after read
+[PASS] read command captures Dout on returned Cout
+[PASS] command done before timeout
+[PASS] global fill 0 readback is zero
+[PASS] command done before timeout
+[PASS] global fill 1 readback is all ones
+[PASS] command done before timeout
+[PASS] missing Cout reports timeout
+[PASS] missing Cout clears readback valid
+[PASS] missing Cout clears cfg valid
+[PASS] invalid column rejected
+[PASS] invalid column clears stale readback
+[PASS] invalid column clears cfg valid conservatively
+[PASS] command while busy rejected
+[PASS] busy reject clears stale readback
+[PASS] busy reject clears cfg valid while command runs
+[PASS] command done before timeout
+[PASS] original command still completes
+[PASS] original command restores cfg valid
+[PASS] command done before timeout
+[PASS] reset abort drives outputs idle
+[PASS] cfg reset alone clears sys busy
+[PASS] cfg reset alone clears cfg valid
+[PASS] global reset abort drives outputs idle
+[PASS] reset abort clears busy
+tb_spadmic_matrix_cfg_ctrl_unit: 36 pass / 0 fail
+Simulation complete via $finish(1) at time 49315626 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_matrix_cfg_ctrl_unit.sv:261     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:44:19 CEST  (total: 00:00:02)
