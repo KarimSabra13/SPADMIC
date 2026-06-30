@@ -1,0 +1,2 @@
+pin,pin_family,direction,use,side,ll_center_x,ll_center_y
+VTUNE,VTUNE,INOUT,ANALOG,LEFT,1.9299999999999997,61.725
