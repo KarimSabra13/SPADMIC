@@ -1,0 +1,222 @@
+# Excerpt from /sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_rerun_20260630_1009/matrix_cfg_ctrl/reports/elaboration/check_design_post_elab.rpt
+# First 220 lines
+
+ 	 Check Design Report (c)
+	 ------------------- 
+No subdesign's name is greater than 1.5k in length.
+
+ Feedthrough Module(s)
+ -------------------------
+No feed through module in 'spadmic_matrix_cfg_ctrl'
+
+  Unresolved References & Empty Modules
+  ------------------------------------- 
+No unresolved references in design 'spadmic_matrix_cfg_ctrl'
+
+No empty modules in design 'spadmic_matrix_cfg_ctrl'
+
+ Unloaded Pin(s), Port(s)
+ -------------------------
+No unloaded sequential element in 'spadmic_matrix_cfg_ctrl'
+
+No unloaded port in 'spadmic_matrix_cfg_ctrl'
+
+ Unloaded Combinational Pin(s)
+ -------------------------------
+No unloaded combinational element in 'spadmic_matrix_cfg_ctrl'
+
+ Assigns
+ ------- 
+Encountered an assign statement at hport 'hport:spadmic_matrix_cfg_ctrl/ctl_cfg_state_q_289_13/out_0[0]' in module case_box_56
+Encountered an assign statement at hport 'hport:spadmic_matrix_cfg_ctrl/ctl_289_13/out_0[1]' in module case_box_64
+Total number of assign statements in design 'spadmic_matrix_cfg_ctrl' : 2
+
+ Undriven Port(s)/Pin(s)
+ ------------------------
+No undriven combinational pin in 'spadmic_matrix_cfg_ctrl'
+
+No undriven sequential pin in 'spadmic_matrix_cfg_ctrl'
+
+No undriven hierarchical pin in 'spadmic_matrix_cfg_ctrl'
+
+No undriven port in 'spadmic_matrix_cfg_ctrl'
+
+ Multidriven Port(s)/Pin(s)
+--------------------------
+
+No multidriven combinational pin in 'spadmic_matrix_cfg_ctrl'
+
+No multidriven sequential pin in 'spadmic_matrix_cfg_ctrl'
+
+No multidriven hierarchical pin in 'spadmic_matrix_cfg_ctrl'
+
+No multidriven ports in 'spadmic_matrix_cfg_ctrl'
+
+No multidriven unloaded nets in 'spadmic_matrix_cfg_ctrl'
+
+  Constant Pin(s)
+  ----------------
+No constant combinational pin(s) in design 'spadmic_matrix_cfg_ctrl'
+
+No constant sequential pin(s) in design 'spadmic_matrix_cfg_ctrl'
+
+design 'spadmic_matrix_cfg_ctrl' has the following constant input hierarchical pin(s)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_11/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_11/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_5/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_5/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_6/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_6/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_7/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_7/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_8/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_8/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_9/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_9/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_10/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_10/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_12/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_12/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_13/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_13/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_14/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_14/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_15/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_15/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_16/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_16/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_17/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_17/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_18/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_18/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_19/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_19/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_20/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_20/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_21/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_21/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_22/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_22/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_23/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_23/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_24/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_24/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_25/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_25/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_26/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_26/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_27/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_27/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_28/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_28/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_29/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_29/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_30/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_30/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_31/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_31/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_32/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_32/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_33/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_33/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_34/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_34/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_35/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_35/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_36/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_36/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_37/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_37/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_38/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_38/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_39/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_39/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_40/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_40/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_41/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_41/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_42/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_42/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_43/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_43/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_44/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_44/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_45/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_45/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_46/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_46/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_47/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_47/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_48/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_active_cout_mask_cfg_110_48/in_1 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_33/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_212/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_213/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_214/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_215/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_216/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_217/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_218/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_219/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_220/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_221/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_222/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_223/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_224/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_225/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_226/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_227/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_228/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_229/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_230/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_231/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_232/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_233/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_234/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_235/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_236/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_237/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_238/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_239/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_240/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_241/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_242/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_243/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_244/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_245/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_246/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_247/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_248/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_249/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_250/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_251/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_252/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_253/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/mux_matrix_din_o_322_254/in_0 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_96_35/B[5] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_96_35/B[4] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_96_35/B[3] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_96_35/B[2] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_96_35/B[1] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_96_35/B[0] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_121_26/B[5] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_121_26/B[4] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_121_26/B[3] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_121_26/B[2] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_121_26/B[1] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_121_26/B[0] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/gte_362_45/B[3] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/gte_362_45/B[2] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/gte_362_45/B[1] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/gte_362_45/B[0] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_129_21/B[6] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_129_21/B[5] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_129_21/B[4] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_129_21/B[3] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_129_21/B[2] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_129_21/B[1] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_129_21/B[0] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/add_359_42/B 	 (fanout : 2)
+hpin:spadmic_matrix_cfg_ctrl/add_374_58/B 	 (fanout : 2)
+hpin:spadmic_matrix_cfg_ctrl/lt_109_21/B[5] 	 (fanout : 1)
+hpin:spadmic_matrix_cfg_ctrl/lt_109_21/B[4] 	 (fanout : 1)

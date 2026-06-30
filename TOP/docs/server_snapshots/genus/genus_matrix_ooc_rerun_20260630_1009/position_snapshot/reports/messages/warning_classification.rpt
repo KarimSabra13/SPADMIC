@@ -1,0 +1,16 @@
+# Warning Classification
+
+all_false_path count=2
+  first=report_qor.rpt: default    No paths   0.0            
+blackbox count=62
+  first=genus.stdout.log: @file(libraries.xh018.tcl) 169: set tech_files(MPTDC_OSC_LEF) "$design(project_root)/syn/macros/mptdc_osc_blackbox.lef"
+design_rule count=18
+  first=genus.stdout.log:     set tech_files(CAPTABLE_WC) "$paths(CAPTABLE_DIR)/${mptdc_xh018_captbl_stem}_max.capTbl"
+inferred_latch count=10
+  first=genus.stdout.log:         : Genus removes the flip-flop or latch inferred for an unused signal or variable. To preserve the flip-flop or latch, set the hdl_preserve_unused_registers attribute to true or use a pragma in the RTL.
+unconstrained count=6
+  first=check_timing_intent.rpt: The following primary inputs have no clocked external delays.  As a result the  
+undriven count=54
+  first=genus.stdout.log: @file(run_genus_matrix_block.tcl) 148: set_db hdl_undriven_signal_value 0
+unresolved count=18
+  first=genus.stdout.log: @file(run_genus_matrix_block.tcl) 173: if {[catch {check_design -unresolved} unresolved_err]} {

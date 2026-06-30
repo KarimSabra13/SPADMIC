@@ -1,0 +1,94 @@
+# Matrix TOP Server Snapshot
+
+- Kind: `genus`
+- Run ID: `genus_matrix_ooc_rerun_20260630_1009`
+- Source directory: `/sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_rerun_20260630_1009`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/server_snapshots/genus/genus_matrix_ooc_rerun_20260630_1009`
+- Repository branch: `SPADMIC_test`
+- Repository commit: `f9176211de29b08ca3b4d82e882e28f63161612c`
+- Created UTC: `2026-06-30T09:06:45Z`
+
+## Included Files
+- `README.md`
+- `SUMMARY.md`
+- `ddr16_pairer/reports/elaboration/check_design_post_elab.rpt`
+- `ddr16_pairer/reports/messages/warning_classification.rpt`
+- `ddr16_pairer/reports/qor/report_area.rpt`
+- `ddr16_pairer/reports/qor/report_qor.rpt`
+- `ddr16_pairer/reports/timing/check_timing_intent.rpt`
+- `ddr16_pairer/reports/timing/report_clocks.rpt`
+- `event_bundle_tx/reports/elaboration/check_design_post_elab.rpt`
+- `event_bundle_tx/reports/messages/warning_classification.rpt`
+- `event_bundle_tx/reports/qor/report_area.rpt`
+- `event_bundle_tx/reports/qor/report_qor.rpt`
+- `event_bundle_tx/reports/timing/check_timing_intent.rpt`
+- `event_bundle_tx/reports/timing/report_clocks.rpt`
+- `event_coordinator/reports/elaboration/check_design_post_elab.rpt`
+- `event_coordinator/reports/messages/warning_classification.rpt`
+- `event_coordinator/reports/qor/report_area.rpt`
+- `event_coordinator/reports/qor/report_qor.rpt`
+- `event_coordinator/reports/timing/check_timing_intent.rpt`
+- `event_coordinator/reports/timing/report_clocks.rpt`
+- `git_status_short.txt`
+- `i2c_csr_bridge/reports/elaboration/check_design_post_elab.rpt`
+- `i2c_csr_bridge/reports/messages/warning_classification.rpt`
+- `i2c_csr_bridge/reports/qor/report_area.rpt`
+- `i2c_csr_bridge/reports/qor/report_qor.rpt`
+- `i2c_csr_bridge/reports/timing/check_timing_intent.rpt`
+- `i2c_csr_bridge/reports/timing/report_clocks.rpt`
+- `i2c_slave/reports/elaboration/check_design_post_elab.rpt`
+- `i2c_slave/reports/messages/warning_classification.rpt`
+- `i2c_slave/reports/qor/report_area.rpt`
+- `i2c_slave/reports/qor/report_qor.rpt`
+- `i2c_slave/reports/timing/check_timing_intent.rpt`
+- `i2c_slave/reports/timing/report_clocks.rpt`
+- `matrix_cfg_ctrl/reports/elaboration/check_design_post_elab.rpt`
+- `matrix_cfg_ctrl/reports/messages/warning_classification.rpt`
+- `matrix_cfg_ctrl/reports/qor/report_area.rpt`
+- `matrix_cfg_ctrl/reports/qor/report_qor.rpt`
+- `matrix_cfg_ctrl/reports/timing/check_timing_intent.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_clocks.rpt`
+- `matrix_reset_ctrl/reports/elaboration/check_design_post_elab.rpt`
+- `matrix_reset_ctrl/reports/messages/warning_classification.rpt`
+- `matrix_reset_ctrl/reports/qor/report_area.rpt`
+- `matrix_reset_ctrl/reports/qor/report_qor.rpt`
+- `matrix_reset_ctrl/reports/timing/check_timing_intent.rpt`
+- `matrix_reset_ctrl/reports/timing/report_clocks.rpt`
+- `matrix_top_csr/reports/elaboration/check_design_post_elab.rpt`
+- `matrix_top_csr/reports/messages/warning_classification.rpt`
+- `matrix_top_csr/reports/qor/report_area.rpt`
+- `matrix_top_csr/reports/qor/report_qor.rpt`
+- `matrix_top_csr/reports/timing/check_timing_intent.rpt`
+- `matrix_top_csr/reports/timing/report_clocks.rpt`
+- `or64_tree/reports/elaboration/check_design_post_elab.rpt`
+- `or64_tree/reports/messages/warning_classification.rpt`
+- `or64_tree/reports/qor/report_area.rpt`
+- `or64_tree/reports/qor/report_qor.rpt`
+- `or64_tree/reports/timing/check_timing_intent.rpt`
+- `or64_tree/reports/timing/report_clocks.rpt`
+- `output_fifo/reports/elaboration/check_design_post_elab.rpt`
+- `output_fifo/reports/messages/warning_classification.rpt`
+- `output_fifo/reports/qor/report_area.rpt`
+- `output_fifo/reports/qor/report_qor.rpt`
+- `output_fifo/reports/timing/check_timing_intent.rpt`
+- `output_fifo/reports/timing/report_clocks.rpt`
+- `position_snapshot/reports/elaboration/check_design_post_elab.rpt`
+- `position_snapshot/reports/messages/warning_classification.rpt`
+- `position_snapshot/reports/qor/report_area.rpt`
+- `position_snapshot/reports/qor/report_qor.rpt`
+- `position_snapshot/reports/timing/check_timing_intent.rpt`
+- `position_snapshot/reports/timing/report_clocks.rpt`
+- `run_manifest.txt`
+- `spadmic_top_matrix_v1/reports/elaboration/check_design_post_elab.rpt`
+- `spadmic_top_matrix_v1/reports/messages/warning_classification.rpt`
+- `spadmic_top_matrix_v1/reports/qor/report_area.rpt`
+- `spadmic_top_matrix_v1/reports/qor/report_qor.rpt`
+- `spadmic_top_matrix_v1/reports/timing/check_timing_intent.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_clocks.rpt`
+
+## Excluded By Policy
+
+- raw `*.log` files except curated tails;
+- Xcelium `xcelium.d` libraries;
+- Genus/Innovus databases, checkpoints, netlists, SDF/SPEF, waves, and tarballs;
+- generated server work directories under `/sim`.
