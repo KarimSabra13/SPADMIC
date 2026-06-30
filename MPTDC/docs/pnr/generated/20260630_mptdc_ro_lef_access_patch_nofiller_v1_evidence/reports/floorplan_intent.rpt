@@ -1,0 +1,24 @@
+# MPTDC Final Typical Floorplan Intent
+labels=TYPICAL_ONLY NOT_MMMC_SIGNOFF NOT_FINAL_SILICON_SIGNOFF
+core_utilization=0.55
+core_utilization_allowed=min 0.55 default 0.55 max 0.62
+core_utilization_max_first_run=0.65
+aspect_ratio_allowed=min 1.20 target 1.333333 max 1.47
+order=slow_ro_north -> slow_buhdx4_isolation_row -> slow_buhdx12_final_driver_row -> pd_8x8_island -> fast_buhdx12_final_driver_row -> fast_buhdx4_isolation_row -> fast_ro_south -> clk_sys_control_fifo_readout_east
+timing_protection_rules=keep_fast_tag_generators_near_corresponding_pd_columns; keep_nfast_tag_data_routes_short; keep_pd_matrix_compact_regular_8x8; keep_phase_buffer_drivers_close_to_pd_island; keep_backend_east_of_phase_pd_island; avoid_wide_clk_sys_buses_over_pd_island; do_not_buffer_raw_ro_nets; do_not_resize_buhdx4_buhdx12_phase_root_drivers_without_review; do_not_cts_raw_ro_or_buffered_phase_clocks
+
+fast_ro=30.24 109.2 199.175 179.69
+fast_phase_buffers=30.24 199.92 330.24 219.92
+pd_island=30.24 239.68 330.24 539.68
+slow_phase_buffers=30.24 559.44 330.24 579.44
+slow_ro=30.24 599.2 199.175 669.69
+backend_east=370.16 30.0 753.41 749.52
+
+auto_dimension_width_um=801.570853669
+auto_dimension_height_um=601.178290546
+auto_dimension_aspect_ratio=1.333333
+auto_dimension_target_aspect_ratio=1.333333
+auto_dimension_standard_cell_area_um2=0.0
+auto_dimension_reserved_region_area_um2=401572.4963
+auto_dimension_utilization=0.55
+auto_dimension_area_guard_band=1.20

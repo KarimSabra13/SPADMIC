@@ -1,0 +1,10 @@
+# MPTDC Post-route PG Connectivity Status
+PG_CONNECTIVITY_STATUS=FAIL
+PG_CONNECTIVITY_STAGE=POST_ROUTE_SPECIAL_NET_VERIFY
+SPECIAL_CONNECTIVITY_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/reports/route_connectivity_special.rpt
+SPECIAL_CONNECTIVITY_BAD=1
+SPECIAL_CONNECTIVITY_BAD_LINES={Net VDD: has an unconnected terminal, has special routes with opens, has regular routing with opens.} {650 Problem(s) (IMPVFC-96): Terminal(s) are not connected.} {1 Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.} {349 Problem(s) (IMPVFC-92): Pieces of the net are not connected together.} {Verification Complete : 1000 Viols.  0 Wrngs.}
+REGULAR_CONNECTIVITY_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/reports/route_connectivity_regular.rpt
+REGULAR_CONNECTIVITY_BAD=0
+REGULAR_CONNECTIVITY_BAD_LINES=
+PG_GATE_NOTE=regular_net_connectivity_is_reported_for_route_gate_only

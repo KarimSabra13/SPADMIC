@@ -1,0 +1,15 @@
+RO_TUNE6_COUNT=2
+RO_TUNE6_INSTANCE=u_core_u_osc_fast_u_ro_tune4
+RO_TUNE6_INSTANCE=u_core_u_osc_slow_u_ro_tune4
+RO_MACRO_FIXED=NO
+PLACE_RO instance=u_core_u_osc_slow_u_ro_tune4 region=north x=50.4 y=610.4 orient=R0 fixed=NO
+PLACE_RO_COMMAND=placeInstance u_core_u_osc_slow_u_ro_tune4 50.4 610.4 R0
+PLACE_RO instance=u_core_u_osc_fast_u_ro_tune4 region=south x=50.4 y=120.4 orient=MX fixed=NO
+PLACE_RO_COMMAND=placeInstance u_core_u_osc_fast_u_ro_tune4 50.4 120.4 MX
+SLOW_RO_BBOX=50.4 610.4 219.335 680.89
+SLOW_RO_CENTER=134.8675,645.645
+FAST_RO_BBOX=50.4 120.4 219.335 190.89
+FAST_RO_CENTER=134.8675,155.645
+RO_MACRO_STATUS=PASS
+RO_HALO_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/reports/ro_halo_status.rpt
+RO_PHASE_PLACEMENT_STATUS=PROVISIONAL_UNTIL_PHASE_BUFFER_AUDIT
