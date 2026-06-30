@@ -88,7 +88,7 @@ proc classify_reports {run_dir} {
         continue
       }
       while {[gets $in line] >= 0} {
-        if {[regexp -nocase {no violations|No unresolved references|No empty modules|Unresolved References & Empty Modules|Undriven Port\(s\)/Pin\(s\)|Unloaded Pin\(s\), Port\(s\)|no unloaded port|^No .*undriven|^No .*unconnected|^No .*multiply driven|^No .*multi.?driven} $line]} {
+        if {[regexp -nocase {no violations|No unresolved references|No empty modules|Unresolved References & Empty Modules|Undriven Port\(s\)/Pin\(s\)|Multidriven Port\(s\)/Pin\(s\)|Unloaded Pin\(s\), Port\(s\)|no unloaded port|^No .*undriven|^No .*unconnected|^No .*multiply driven|^No .*multi.?driven} $line]} {
           continue
         }
         if {[regexp -nocase $patterns($key) $line]} {

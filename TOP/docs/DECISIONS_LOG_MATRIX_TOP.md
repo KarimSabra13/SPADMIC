@@ -406,6 +406,11 @@ Pin family summary from the CSV:
   - updated `TOP/pnr/scripts/server_run_innovus_matrix_ooc.sh`
 - [VERIFIED] Local Verifier smoke confirms the locked first geometry reports `STATUS=FAIL` with `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`, about `109 um` height excess, and about `0.839 mm^2` maximum MPTDC placeholder area per axis if the vertical stack must fit with current die/core assumptions.
 - [RISK] The staged Innovus OOC wrapper validates Genus collateral and creates per-block run directories but does not yet run real Innovus import/place/preCTS. This is intentional until the clean Genus evidence and top geometry gates are resolved.
+- [VERIFIED] Server Genus staged run `genus_matrix_ooc_staged_20260630_1516` passed all 12 configured OOC blocks with `GENUS_RC=0` at source commit `195b6d1bf87c16042294c8e3d411b50d989f541a`. This remains typical-only OOC feasibility, not MMMC or final timing signoff.
+- [FAILED REVIEW] Server staged floorplan run `innovus_matrix_top_staged_fp_20260630_1628` correctly stopped before Innovus with `FP_RC=5`, `STATUS=FAIL`, and `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`. The default 1.0 mm2, 4:3-aspect three-axis MPTDC vertical stack is 109.038 um too tall for the 3800 um x 2700 um die with 120 um pad/core keepout.
+- [DEFAULT FOR V1] A 1.0 mm2 MPTDC placeholder with aspect ratio `1.8` is an explicit next candidate, not a silent replacement. Local generator evidence gives `STATUS=PASS` in the same 3800 um x 2700 um outline with MPTDC width/height about `1341.641 um x 745.356 um`; final acceptance still needs the real MPTDC physical handoff.
+- [VERIFIED] Server OOC collateral gate `innovus_matrix_ooc_gate_20260630_1628` returned `OOC_RC=4`, `READY_FOR_NEXT_IMPORT_TEMPLATE`, with all 10 connectivity-first block netlists and SDCs present. DDR16 remains excluded by default because it is low priority for the next physical step.
+- [IMPLEMENTED] Builder fixed a warning-classifier false positive where the `Multidriven Port(s)/Pin(s)` report heading was counted as an undriven/multidriven finding even when detailed Genus text said no such issue.
 
 ## Affected Files
 

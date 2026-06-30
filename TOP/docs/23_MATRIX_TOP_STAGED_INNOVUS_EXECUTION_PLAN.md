@@ -107,6 +107,31 @@ space must increase, the pad keepout must shrink with real pad-ring data, or
 the user must approve a different MPTDC arrangement. The current user decision
 is to stop and report instead of silently using a 2+1 fallback.
 
+## Server Result And Candidate Geometry
+
+Server run `innovus_matrix_top_staged_fp_20260630_1628` confirmed the expected
+default failure:
+
+- return code: `5`
+- status: `FAIL`
+- issue: `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`
+- height excess: `109.038 um`
+- max per-axis MPTDC placeholder area at the default 4:3 aspect: `0.839170 mm^2`
+
+This blocks real top placement with the default placeholder only. It does not
+prove the die outline is impossible. A local explicit candidate using the same
+`1.0 mm^2` MPTDC area but a wider `1.8` aspect ratio passed the generator:
+
+- die: `3800 um x 2700 um`
+- MPTDC area: `1.0 mm^2` per axis
+- MPTDC aspect: `1.8`
+- MPTDC width/height: about `1341.641 um x 745.356 um`
+- vertical stack height including gaps: about `2316.068 um`
+- feasibility status: `PASS`
+
+This candidate is provisional until the MPTDC physical handoff gives real width,
+height, halos, pins, keepouts, and orientation constraints.
+
 ## Server Commands
 
 Clean Genus gate:
