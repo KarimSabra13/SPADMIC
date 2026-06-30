@@ -1,0 +1,381 @@
+#	MET2         11       11
+#	MET3          7        7
+#	Totals       18       18
+#    number of process antenna violations = 192
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2424.30 (MB), peak = 2637.70 (MB)
+#start 61th optimization iteration ...
+#   number of violations = 18
+#
+#    By Layer and Type :
+#	          Short   Totals
+#	MET1          0        0
+#	MET2         11       11
+#	MET3          7        7
+#	Totals       18       18
+#    number of process antenna violations = 192
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2425.71 (MB), peak = 2637.70 (MB)
+#Complete Detail Routing.
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 762713 um.
+#Total half perimeter of net bounding box = 596503 um.
+#Total wire length on LAYER MET1 = 62657 um.
+#Total wire length on LAYER MET2 = 270044 um.
+#Total wire length on LAYER MET3 = 309942 um.
+#Total wire length on LAYER METTP = 120070 um.
+#Total number of vias = 89238
+#Up-Via Summary (total 89238):
+#           
+#-----------------------
+# MET1            51616
+# MET2            32397
+# MET3             5225
+#-----------------------
+#                 89238 
+#
+#Total number of DRC violations = 18
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#Cpu time = 00:02:18
+#Elapsed time = 00:02:19
+#Increased memory = -0.30 (MB)
+#Total memory = 2425.95 (MB)
+#Peak memory = 2637.70 (MB)
+#
+#start routing for process antenna violation fix ...
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#    By Layer and Type :
+#	          Short   Totals
+#	MET1          0        0
+#	MET2         11       11
+#	MET3          7        7
+#	Totals       18       18
+#cpu time = 00:00:03, elapsed time = 00:00:03, memory = 2424.46 (MB), peak = 2637.70 (MB)
+#
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 762858 um.
+#Total half perimeter of net bounding box = 596503 um.
+#Total wire length on LAYER MET1 = 62657 um.
+#Total wire length on LAYER MET2 = 269823 um.
+#Total wire length on LAYER MET3 = 309969 um.
+#Total wire length on LAYER METTP = 120408 um.
+#Total number of vias = 89514
+#Up-Via Summary (total 89514):
+#           
+#-----------------------
+# MET1            51616
+# MET2            32505
+# MET3             5393
+#-----------------------
+#                 89514 
+#
+#Total number of DRC violations = 18
+#Total number of process antenna violations = 7
+#Total number of net violated process antenna rule = 7
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#
+#
+#start delete and reroute for process antenna violation fix ...
+#cpu time = 00:00:21, elapsed time = 00:00:21, memory = 2423.42 (MB), peak = 2637.70 (MB)
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 762810 um.
+#Total half perimeter of net bounding box = 596503 um.
+#Total wire length on LAYER MET1 = 62478 um.
+#Total wire length on LAYER MET2 = 270594 um.
+#Total wire length on LAYER MET3 = 310180 um.
+#Total wire length on LAYER METTP = 119558 um.
+#Total number of vias = 89576
+#Up-Via Summary (total 89576):
+#           
+#-----------------------
+# MET1            51616
+# MET2            32567
+# MET3             5393
+#-----------------------
+#                 89576 
+#
+#Total number of DRC violations = 18
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#
+#
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 762810 um.
+#Total half perimeter of net bounding box = 596503 um.
+#Total wire length on LAYER MET1 = 62478 um.
+#Total wire length on LAYER MET2 = 270594 um.
+#Total wire length on LAYER MET3 = 310180 um.
+#Total wire length on LAYER METTP = 119558 um.
+#Total number of vias = 89576
+#Up-Via Summary (total 89576):
+#           
+#-----------------------
+# MET1            51616
+# MET2            32567
+# MET3             5393
+#-----------------------
+#                 89576 
+#
+#Total number of DRC violations = 18
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start Post Route via swapping...
+#94.00% of area are rerouted by ECO routing.
+#   number of violations = 18
+#
+#    By Layer and Type :
+#	          Short   Totals
+#	MET1          0        0
+#	MET2         11       11
+#	MET3          7        7
+#	Totals       18       18
+#cpu time = 00:00:18, elapsed time = 00:00:18, memory = 2424.31 (MB), peak = 2637.70 (MB)
+#CELL_VIEW mptdc_axis_core,init has 18 DRC violations
+#Total number of DRC violations = 18
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#Post Route via swapping is done.
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 762810 um.
+#Total half perimeter of net bounding box = 596503 um.
+#Total wire length on LAYER MET1 = 62478 um.
+#Total wire length on LAYER MET2 = 270594 um.
+#Total wire length on LAYER MET3 = 310180 um.
+#Total wire length on LAYER METTP = 119558 um.
+#Total number of vias = 89576
+#Total number of multi-cut vias = 84811 ( 94.7%)
+#Total number of single cut vias = 4765 (  5.3%)
+#Up-Via Summary (total 89576):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            4192 (  8.1%)     47424 ( 91.9%)      51616
+# MET2             438 (  1.3%)     32129 ( 98.7%)      32567
+# MET3             135 (  2.5%)      5258 ( 97.5%)       5393
+#-----------------------------------------------------------
+#                 4765 (  5.3%)     84811 ( 94.7%)      89576 
+#
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start Post Route wire spreading..
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start DRC checking..
+#   number of violations = 18
+#
+#    By Layer and Type :
+#	          Short   Totals
+#	MET1          0        0
+#	MET2         11       11
+#	MET3          7        7
+#	Totals       18       18
+#cpu time = 00:00:09, elapsed time = 00:00:09, memory = 2422.83 (MB), peak = 2637.70 (MB)
+#CELL_VIEW mptdc_axis_core,init has 18 DRC violations
+#Total number of DRC violations = 18
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start data preparation for wire spreading...
+#
+#Data preparation is done on Tue Jun 30 15:39:44 2026
+#
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start Post Route Wire Spread.
+#Done with 4789 horizontal wires in 6 hboxes and 4140 vertical wires in 8 hboxes.
+#Complete Post Route Wire Spread.
+#
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 771906 um.
+#Total half perimeter of net bounding box = 596503 um.
+#Total wire length on LAYER MET1 = 62810 um.
+#Total wire length on LAYER MET2 = 273058 um.
+#Total wire length on LAYER MET3 = 314469 um.
+#Total wire length on LAYER METTP = 121569 um.
+#Total number of vias = 89576
+#Total number of multi-cut vias = 84811 ( 94.7%)
+#Total number of single cut vias = 4765 (  5.3%)
+#Up-Via Summary (total 89576):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            4192 (  8.1%)     47424 ( 91.9%)      51616
+# MET2             438 (  1.3%)     32129 ( 98.7%)      32567
+# MET3             135 (  2.5%)      5258 ( 97.5%)       5393
+#-----------------------------------------------------------
+#                 4765 (  5.3%)     84811 ( 94.7%)      89576 
+#
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start DRC checking..
+#   number of violations = 18
+#
+#    By Layer and Type :
+#	          Short   Totals
+#	MET1          0        0
+#	MET2         11       11
+#	MET3          7        7
+#	Totals       18       18
+#cpu time = 00:00:09, elapsed time = 00:00:09, memory = 2428.01 (MB), peak = 2637.70 (MB)
+#CELL_VIEW mptdc_axis_core,init has 18 DRC violations
+#Total number of DRC violations = 18
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#   number of violations = 18
+#
+#    By Layer and Type :
+#	          Short   Totals
+#	MET1          0        0
+#	MET2         11       11
+#	MET3          7        7
+#	Totals       18       18
+#cpu time = 00:00:12, elapsed time = 00:00:13, memory = 2428.07 (MB), peak = 2637.70 (MB)
+#CELL_VIEW mptdc_axis_core,init has 18 DRC violations
+#Total number of DRC violations = 18
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 0
+#Total number of violations on LAYER MET2 = 11
+#Total number of violations on LAYER MET3 = 7
+#Total number of violations on LAYER METTP = 0
+#Post Route wire spread is done.
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 771906 um.
+#Total half perimeter of net bounding box = 596503 um.
+#Total wire length on LAYER MET1 = 62810 um.
+#Total wire length on LAYER MET2 = 273058 um.
+#Total wire length on LAYER MET3 = 314469 um.
+#Total wire length on LAYER METTP = 121569 um.
+#Total number of vias = 89576
+#Total number of multi-cut vias = 84811 ( 94.7%)
+#Total number of single cut vias = 4765 (  5.3%)
+#Up-Via Summary (total 89576):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            4192 (  8.1%)     47424 ( 91.9%)      51616
+# MET2             438 (  1.3%)     32129 ( 98.7%)      32567
+# MET3             135 (  2.5%)      5258 ( 97.5%)       5393
+#-----------------------------------------------------------
+#                 4765 (  5.3%)     84811 ( 94.7%)      89576 
+#
+#detailRoute Statistics:
+#Cpu time = 00:03:23
+#Elapsed time = 00:03:24
+#Increased memory = 1.82 (MB)
+#Total memory = 2428.07 (MB)
+#Peak memory = 2637.70 (MB)
+#
+#globalDetailRoute statistics:
+#Cpu time = 00:03:49
+#Elapsed time = 00:03:50
+#Increased memory = 18.95 (MB)
+#Total memory = 2420.37 (MB)
+#Peak memory = 2637.70 (MB)
+#Number of warnings = 1
+#Total number of warnings = 3
+#Number of fails = 0
+#Total number of fails = 0
+#Complete globalDetailRoute on Tue Jun 30 15:39:57 2026
+#
+% End globalDetailRoute (date=06/30 15:39:57, total cpu=0:03:49, real=0:03:50, peak res=2637.7M, current mem=2420.5M)
+#Default setup view is reset to TC_NOMINAL.
+#Default setup view is reset to TC_NOMINAL.
+AAE_INFO: Post Route call back at the end of routeDesign
+#routeDesign: cpu time = 00:04:22, elapsed time = 00:04:22, memory = 2406.32 (MB), peak = 2637.70 (MB)
+
+*** Summary of all messages that are not suppressed in this session:
+Severity  ID               Count  Summary                                  
+WARNING   IMPPTN-1250          1  Pin placement has been enabled on metal ...
+WARNING   NRIG-1303            1  The congestion map does not match the GC...
+*** Message Summary: 2 warning(s), 0 error(s)
+
+#% End routeDesign (date=06/30 15:39:57, total cpu=0:04:22, real=0:04:23, peak res=2637.7M, current mem=2406.3M)
+<CMD> verifyProcessAntenna > /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/reports/antenna.rpt
+
+******* START VERIFY ANTENNA ********
+Report File: mptdc_axis_core.antenna.rpt

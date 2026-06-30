@@ -1,0 +1,121 @@
+% Begin Save netlist data ... (date=06/30 15:35:20, mem=2396.1M)
+Writing Binary DB to /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/checkpoints/03_cts.enc.dat/mptdc_axis_core.v.bin in single-threaded mode...
+% End Save netlist data ... (date=06/30 15:35:20, total cpu=0:00:00.1, real=0:00:00.0, peak res=2396.1M, current mem=2396.1M)
+Saving symbol-table file ...
+Saving congestion map file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/checkpoints/03_cts.enc.dat/mptdc_axis_core.route.congmap.gz ...
+% Begin Save AAE data ... (date=06/30 15:35:20, mem=2396.2M)
+Saving AAE Data ...
+% End Save AAE data ... (date=06/30 15:35:20, total cpu=0:00:00.0, real=0:00:00.0, peak res=2396.2M, current mem=2396.2M)
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+Saving preference file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/checkpoints/03_cts.enc.dat/gui.pref.tcl ...
+Saving mode setting ...
+Saving global file ...
+% Begin Save floorplan data ... (date=06/30 15:35:20, mem=2396.6M)
+Saving floorplan file ...
+% End Save floorplan data ... (date=06/30 15:35:21, total cpu=0:00:00.0, real=0:00:01.0, peak res=2396.6M, current mem=2396.6M)
+Saving PG file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/checkpoints/03_cts.enc.dat/mptdc_axis_core.pg.gz, version#2, (Created by Innovus v22.33-s094_1 on Tue Jun 30 15:35:21 2026)
+*** Completed savePGFile (cpu=0:00:00.0 real=0:00:00.0 mem=2737.0M) ***
+Saving Drc markers ...
+... 28 markers are saved ...
+... 0 geometry drc markers are saved ...
+... 0 antenna drc markers are saved ...
+% Begin Save placement data ... (date=06/30 15:35:21, mem=2396.8M)
+** Saving stdCellPlacement_binary (version# 2) ...
+Save Adaptive View Pruning View Names to Binary file
+% End Save placement data ... (date=06/30 15:35:21, total cpu=0:00:00.0, real=0:00:00.0, peak res=2396.8M, current mem=2396.8M)
+% Begin Save routing data ... (date=06/30 15:35:21, mem=2396.8M)
+Saving route file ...
+*** Completed saveRoute (cpu=0:00:00.1 real=0:00:00.0 mem=2737.0M) ***
+% End Save routing data ... (date=06/30 15:35:21, total cpu=0:00:00.2, real=0:00:00.0, peak res=2396.8M, current mem=2396.8M)
+Saving property file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/checkpoints/03_cts.enc.dat/mptdc_axis_core.prop
+*** Completed saveProperty (cpu=0:00:00.0 real=0:00:00.0 mem=2740.0M) ***
+#Saving pin access data to file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/checkpoints/03_cts.enc.dat/mptdc_axis_core.apa ...
+#
+Saving rc congestion map /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/checkpoints/03_cts.enc.dat/mptdc_axis_core.congmap.gz ...
+% Begin Save power constraints data ... (date=06/30 15:35:22, mem=2396.8M)
+% End Save power constraints data ... (date=06/30 15:35:22, total cpu=0:00:00.0, real=0:00:00.0, peak res=2396.8M, current mem=2396.8M)
+wc_rc tc_rc bc_rc
+Generated self-contained design 03_cts.enc.dat
+bc_libset wc_libset tc_libset
+wc_rc tc_rc bc_rc
+NOMINAL_FUNCTIONAL RO_MAX_FREQ_STRESS_MODE
+/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc
+/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc
+#% End save design ... (date=06/30 15:35:23, total cpu=0:00:01.9, real=0:00:04.0, peak res=2397.5M, current mem=2397.5M)
+
+*** Summary of all messages that are not suppressed in this session:
+Severity  ID               Count  Summary                                  
+WARNING   IMPCTE-104           5  The constraint mode of this inactive vie...
+*** Message Summary: 5 warning(s), 0 error(s)
+
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+Type 'man IMPDBTCL-204' for more detail.
+**WARN: (EMS-27):	Message (IMPDBTCL-204) has exceeded the current message display limit of 20.
+To increase the message display limit, refer to the product command reference manual.
+**ERROR: (IMPDBTCL-247):	'wires' is not a recognized object or root attribute. Run 'help root:' to get a list of all root attributes, or 'man get_db' for more information about accessing objects and attributes.
+Number of objects exceeds limit. Use 'set_db get_db_display_limit <value>' to control the number of objects evaluated by 'get_db <object> .*' query.
+<CMD> setDesignMode -bottomRoutingLayer 1
+<CMD> setDesignMode -topRoutingLayer 4
+<CMD> checkPlace > /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_ro_lef_access_patch_nofiller_v1/reports/check_place_pre_route.rpt
+Begin checking placement ... (start mem=2764.2M, init mem=2764.2M)
+*info: Placed = 14320          (Fixed = 102)
+*info: Unplaced = 0           
+Placement Density:53.40%(400838/750617)
+Placement Density (including fixed std cells):53.47%(401962/751741)
+Finished checkPlace (total: cpu=0:00:00.3, real=0:00:00.0; vio checks: cpu=0:00:00.2, real=0:00:00.0; mem=2764.2M)
+<CMD> routeDesign -placementCheck
+#% Begin routeDesign (date=06/30 15:35:34, mem=2426.7M)
+#routeDesign: cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2426.68 (MB), peak = 2633.91 (MB)
+AAE_INFO: Pre Route call back at the beginning of routeDesign
+#**INFO: setDesignMode -flowEffort standard
+#**INFO: setDesignMode -powerEffort none
+**INFO: User settings:
+setNanoRouteMode -route_route_side                            front
+setNanoRouteMode -route_extract_third_party_compatible        false
