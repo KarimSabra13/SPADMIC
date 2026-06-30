@@ -91,7 +91,17 @@ fi
 
 source "$TOP_ROOT/scripts/sim/resolve_flist.sh"
 resolve_flist "$MPTDC_ROOT" "$MPTDC_ROOT/rtl/filelist.f" "$RUN_ROOT/filelists/mptdc_abs.f"
-resolve_flist "$TOP_ROOT" "$TOP_ROOT/filelist.f" "$RUN_ROOT/filelists/top_abs.f"
+resolve_flist "$TOP_ROOT" "$TOP_ROOT/filelist.f" "$RUN_ROOT/filelists/top_abs.raw.f"
+
+# Keep the shared TOP filelist intact for simulation and legacy coverage, but
+# filter the matrix-top Genus OOC input set. The old top and obsolete DDR8
+# dual-edge RTL are not part of the final matrix-top path; reading them makes
+# Genus fail before it reaches the DDR16 matrix-top design.
+TOP_GENUS_EXCLUDE_RE='/TOP/rtl/(spadmic_ddr_tx|spadmic_top_v1)\.sv$'
+grep -E "$TOP_GENUS_EXCLUDE_RE" "$RUN_ROOT/filelists/top_abs.raw.f" \
+  > "$RUN_ROOT/filelists/top_genus_excluded.f" || true
+grep -v -E "$TOP_GENUS_EXCLUDE_RE" "$RUN_ROOT/filelists/top_abs.raw.f" \
+  > "$RUN_ROOT/filelists/top_abs.f"
 
 PASS=0
 FAIL=0
@@ -110,6 +120,19 @@ FAILED=()
   echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
   echo "- Effective top floor layer: \`$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER\`"
   echo "- Signoff: non-signoff, typical-only feasibility"
+  echo
+  echo "## Matrix TOP Genus Filelist"
+  echo
+  echo "- Raw TOP filelist: \`filelists/top_abs.raw.f\`"
+  echo "- Genus TOP filelist: \`filelists/top_abs.f\`"
+  echo "- Excluded legacy/obsolete files: \`filelists/top_genus_excluded.f\`"
+  if [[ -s "$RUN_ROOT/filelists/top_genus_excluded.f" ]]; then
+    echo
+    echo "Excluded files:"
+    while IFS= read -r excluded_file; do
+      echo "- \`$excluded_file\`"
+    done < "$RUN_ROOT/filelists/top_genus_excluded.f"
+  fi
   echo
   echo "## Blocks"
   echo

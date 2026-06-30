@@ -118,6 +118,21 @@ The script writes all generated files under
 `/sim/ksabra/SPADMIC_work/genus/<RUN_ID>/<BLOCK>/` and fails clearly if Genus is
 not available in `PATH`.
 
+## Matrix-Top Genus Filelist
+
+`TOP/filelist.f` remains the shared simulation and legacy-top filelist. The
+Genus wrapper resolves it to `filelists/top_abs.raw.f`, then creates a
+matrix-top synthesis filelist at `filelists/top_abs.f`.
+
+The Genus-only filelist excludes:
+
+- `TOP/rtl/spadmic_ddr_tx.sv`, the obsolete 8-bit dual-edge DDR RTL;
+- `TOP/rtl/spadmic_top_v1.sv`, the legacy top that instantiates that DDR8 path.
+
+This filtering does not alter Xcelium/Verilator inputs. It only prevents unused
+legacy RTL from blocking `spadmic_top_matrix_v1` OOC synthesis. The matrix-top
+output path uses `spadmic_ddr16_tx_pairer` and the future DDR16 macro boundary.
+
 After the run, create a small tracked evidence snapshot for review:
 
 ```bash

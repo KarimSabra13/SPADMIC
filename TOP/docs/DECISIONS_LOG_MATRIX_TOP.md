@@ -372,6 +372,9 @@ Pin family summary from the CSV:
 - [FAILED REVIEW] Server Xcelium run `xcelium_matrix_top_20260630_0943` at commit `fe8f68712e5e6a3f990c996c3daf2b957613a889` produced 27 pass, 4 fail, 0 missing. The failures were captured in `TOP/docs/server_snapshots/xcelium/xcelium_matrix_top_20260630_0943/`.
 - [IMPLEMENTED] Builder fixed Xcelium testbench portability issues from that snapshot: explicit 64-bit timeout delays for long test watchdogs and removal of an extra initial driver on `saw_reset_error`.
 - [VERIFIED] Verifier analysis is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_XCELIUM_xcelium_matrix_top_20260630_0943.md`. Local Verilator recheck passed for the four failing tests and full local readiness passed with 33 pass, 0 fail, and 4 expected local skips. A new server Xcelium rerun remains required.
+- [VERIFIED] Server Xcelium rerun `xcelium_matrix_top_rerun_20260630_0952` passed all required tests with `XRUN_RC=0`; snapshot committed by the server as `95845a3e`.
+- [FAILED REVIEW] First server Genus OOC attempt `genus_matrix_ooc_20260630_0953` failed in the first block because the matrix-top OOC flow read `TOP/rtl/spadmic_ddr_tx.sv`, the obsolete 8-bit dual-edge DDR RTL. Genus rejects the `posedge clk_sys or negedge clk_sys` procedural model. This is a Genus input-selection issue, not a protected MPTDC issue.
+- [IMPLEMENTED] Builder updated `TOP/syn/scripts/run_genus_all_matrix_ooc.sh` to generate a Genus-only matrix-top filelist that excludes `TOP/rtl/spadmic_ddr_tx.sv` and `TOP/rtl/spadmic_top_v1.sv` while leaving the shared simulation filelist unchanged.
 
 ## Affected Files
 

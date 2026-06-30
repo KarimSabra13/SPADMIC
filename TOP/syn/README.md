@@ -48,6 +48,20 @@ The server wrapper currently runs OOC feasibility for:
 MPTDC internal synthesis remains governed by the existing MPTDC handoff flow.
 These TOP scripts do not modify or replace that product boundary.
 
+## Matrix-Top Filelist Filtering
+
+The normal `TOP/filelist.f` remains shared by simulation, legacy-top checks, and
+matrix-top checks. For Genus OOC, `run_genus_all_matrix_ooc.sh` writes:
+
+- `filelists/top_abs.raw.f`: resolved raw TOP filelist;
+- `filelists/top_abs.f`: synthesis-only matrix-top filelist;
+- `filelists/top_genus_excluded.f`: excluded legacy/obsolete files.
+
+The filtered Genus filelist excludes `TOP/rtl/spadmic_ddr_tx.sv` and
+`TOP/rtl/spadmic_top_v1.sv`. The old DDR8 module is intentionally not part of
+the final matrix-top DDR16 macro-boundary path and is not valid Genus input due
+to its generic dual-edge procedural model.
+
 ## Constraints
 
 `constraints/matrix_top_ooc_common.sdc` defines:
