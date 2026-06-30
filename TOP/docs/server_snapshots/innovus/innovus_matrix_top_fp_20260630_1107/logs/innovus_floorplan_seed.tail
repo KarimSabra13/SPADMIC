@@ -1,0 +1,45 @@
+
+Cadence Innovus(TM) Implementation System.
+Copyright 2022 Cadence Design Systems, Inc. All rights reserved worldwide.
+
+Version:	v22.33-s094_1, built Fri Aug 25 16:48:21 PDT 2023
+Options:	-no_gui -files /sim/ksabra/SPADMIC_work/innovus/innovus_matrix_top_fp_20260630_1107/run_innovus_floorplan_seed.tcl 
+Date:		Tue Jun 30 11:07:07 2026
+Host:		lyoelectrosrv01.in2p3.fr (x86_64 w/Linux 4.18.0-553.120.1.el8_10.x86_64) (16cores*64cpus*Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz 22528KB)
+OS:		Rocky Linux 8.10 (Green Obsidian)
+
+License:
+		[11:07:07.004486] Configured Lic search path (21.01-s002): 30000@cadence.cnfm.fr:5280@ccflex01.in2p3.fr:5280@ccflex02.in2p3.fr:5280@ccflex03.in2p3.fr:5280@licences01.ipnl.in2p3.fr:1717@licences01.ipnl.in2p3.fr
+
+		invs	Innovus Implementation System	22.1	checkout succeeded
+		8 CPU jobs allowed with the current license(s). Use setMultiCpuUsage to set your required CPU count.
+Create and set the environment variable TMPDIR to /tmp/innovus_temp_3481326_lyoelectrosrv01.in2p3.fr_ksabra_TQQQvr.
+
+Change the soft stacksize limit to 0.2%RAM (385 mbytes). Set global soft_stack_size_limit to change the value.
+
+**INFO:  MMMC transition support version v31-84 
+
+[INFO] Loading PVS 22.22 fill procedures
+**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+Sourcing file "/sim/ksabra/SPADMIC_work/innovus/innovus_matrix_top_fp_20260630_1107/run_innovus_floorplan_seed.tcl" ...
+SPADMIC_INNOVUS_INFO: run_root=/sim/ksabra/SPADMIC_work/innovus/innovus_matrix_top_fp_20260630_1107
+SPADMIC_INNOVUS_INFO: matrix_lef=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/matrice3.lef
+SPADMIC_INNOVUS_INFO: regions_tcl=/sim/ksabra/SPADMIC_work/innovus/innovus_matrix_top_fp_20260630_1107/generated/matrix_floorplan_regions.tcl
+control_reset_supervision_bottom 0.000 -450.000 2899.910 -80.000
+fifo_bundle_ddr_north 2349.910 1805.540 3199.910 2245.540
+internal_nearest_right_corridor 1966.471 64.935 2249.910 1690.775
+matrix_halo -50.000 -50.000 2049.910 1775.540
+matrix_macro_ll_relative 0.000 0.000 1999.910 1725.540
+mptdc_cluster_right 2099.910 431.385 2949.910 1294.155
+or64_input_banks 1799.910 0.000 2299.910 1725.540
+pll_placeholder_bottom_right 2949.910 -450.000 3299.910 -80.000
+position_cluster_main 2449.910 258.831 2949.910 949.047
+position_distributed_frontend 1699.910 0.000 2349.910 1725.540
+reset_driver_banks 1749.910 0.000 2249.910 1725.540
+SPADMIC_INNOVUS_INFO: planning seed completed. No init_design/place/route/signoff was run by this seed.
+
+*** Memory Usage v#1 (Current mem = 1304.176M, initial mem = 635.133M) ***
+*** Message Summary: 0 warning(s), 0 error(s)
+
+--- Ending "Innovus" (totcpu=0:00:23.4, real=0:00:25.0, mem=1304.2M) ---
+

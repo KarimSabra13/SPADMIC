@@ -1,0 +1,14 @@
+# Excerpt from /sim/ksabra/SPADMIC_work/innovus/innovus_matrix_top_fp_20260630_1107/reports/matrix_floorplan_regions_from_innovus.rpt
+# First 260 lines
+SPADMIC matrix top floorplan planning regions
+control_reset_supervision_bottom 0.000 -450.000 2899.910 -80.000
+fifo_bundle_ddr_north 2349.910 1805.540 3199.910 2245.540
+internal_nearest_right_corridor 1966.471 64.935 2249.910 1690.775
+matrix_halo -50.000 -50.000 2049.910 1775.540
+matrix_macro_ll_relative 0.000 0.000 1999.910 1725.540
+mptdc_cluster_right 2099.910 431.385 2949.910 1294.155
+or64_input_banks 1799.910 0.000 2299.910 1725.540
+pll_placeholder_bottom_right 2949.910 -450.000 3299.910 -80.000
+position_cluster_main 2449.910 258.831 2949.910 949.047
+position_distributed_frontend 1699.910 0.000 2349.910 1725.540
+reset_driver_banks 1749.910 0.000 2249.910 1725.540
