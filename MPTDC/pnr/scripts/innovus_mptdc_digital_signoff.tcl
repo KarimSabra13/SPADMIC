@@ -981,7 +981,10 @@ proc mptdc_signoff_pg_policy_guard {} {
         lappend failures "MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0"
     }
     if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
-        lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1"
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1] ||
+            ![mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
+            lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 requires MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=1 and MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1"
+        }
     }
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
         lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1 expected 0"
