@@ -3111,6 +3111,12 @@ proc mptdc_signoff_ro_pg_shape_schema_status {} {
         }
         lappend detail "$inst:term_shape_attr_unsupported"
     }
+    set fallback_rows [mptdc_signoff_ro_pg_all_pin_shapes_from_lef]
+    if {[llength $fallback_rows] > 0} {
+        return [dict create supported 1 reason lef_orientation_fallback \
+            fallback_pin_shape_count [llength $fallback_rows] \
+            db_schema_detail [join $detail { | }]]
+    }
     if {!$inst_attr_supported || !$term_shape_supported} {
         return [dict create supported 0 reason pin_shape_schema_unsupported detail [join $detail { | }]]
     }
@@ -3125,6 +3131,229 @@ proc mptdc_signoff_ro_pg_add_shape_row {var_name seen_name inst pin net layer bo
     if {[lsearch -exact $seen $key] >= 0} { return }
     lappend seen $key
     lappend rows [dict create inst $inst pin $pin net $net layer $layer box $box source $source]
+}
+
+proc mptdc_signoff_ro_pg_supply_net_for_pin {pin} {
+    foreach spec [mptdc_signoff_ro_pg_supply_specs] {
+        if {[lindex $spec 0] eq $pin} {
+            return [lindex $spec 1]
+        }
+    }
+    return ""
+}
+
+proc mptdc_signoff_cell_orient {inst} {
+    set ptr [mptdc_signoff_cell_ptr $inst]
+    foreach attr {orient orientation} {
+        set value ""
+        if {$ptr ne "" && ![catch {set value [dbGet ${ptr}.${attr}]}] &&
+            $value ne "" && $value ne "0x0" && $value ne "NULL"} {
+            return [string toupper $value]
+        }
+        if {![catch {set value [get_db inst:$inst .$attr]}] &&
+            $value ne "" && $value ne "0x0" && $value ne "NULL"} {
+            return [string toupper $value]
+        }
+    }
+    if {[regexp -nocase {fast} $inst]} { return MX }
+    return R0
+}
+
+proc mptdc_signoff_ro_pg_audit_orient {orient} {
+    set orient [string toupper [string trim $orient]]
+    switch -- $orient {
+        N -
+        R0 { return R0 }
+        S -
+        R180 { return R180 }
+        FN -
+        MY { return MY }
+        FS -
+        MX { return MX }
+        default { return $orient }
+    }
+}
+
+proc mptdc_signoff_ro_pg_normalize_box {box} {
+    set x1 [lindex $box 0]
+    set y1 [lindex $box 1]
+    set x2 [lindex $box 2]
+    set y2 [lindex $box 3]
+    return [list [expr {min($x1, $x2)}] [expr {min($y1, $y2)}] \
+        [expr {max($x1, $x2)}] [expr {max($y1, $y2)}]]
+}
+
+proc mptdc_signoff_ro_pg_lef_pin_rows {} {
+    set lef [mptdc_signoff_env O1_RO_LEF_PATH ""]
+    if {$lef eq "" || ![file exists $lef]} {
+        return [dict create status FAIL reason missing_lef rows [list] origin [list 0 0] size [list]]
+    }
+    set macro [mptdc_signoff_ro_macro_name]
+    set wanted [list]
+    foreach spec [mptdc_signoff_ro_pg_supply_specs] {
+        lappend wanted [lindex $spec 0]
+    }
+
+    set fh [open $lef r]
+    set in_prop 0
+    set in_macro 0
+    set in_obs 0
+    set pin ""
+    set layer ""
+    set origin [list 0 0]
+    set size [list]
+    set rows [list]
+    while {[gets $fh raw] >= 0} {
+        set line [string trim $raw]
+        if {$line eq ""} { continue }
+        if {[regexp -nocase {^PROPERTYDEFINITIONS[[:space:]]*$} $line]} {
+            set in_prop 1
+            continue
+        }
+        if {$in_prop} {
+            if {[regexp -nocase {^END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$} $line]} {
+                set in_prop 0
+            }
+            continue
+        }
+        if {!$in_macro} {
+            if {[regexp {^MACRO[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> name] &&
+                $name eq $macro} {
+                set in_macro 1
+            }
+            continue
+        }
+        if {$pin eq "" && !$in_obs &&
+            [regexp {^END[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> name] &&
+            $name eq $macro} {
+            break
+        }
+        if {$pin eq "" && !$in_obs &&
+            [regexp {^ORIGIN[[:space:]]+([-+0-9.]+)[[:space:]]+([-+0-9.]+)[[:space:]]*;} $line -> ox oy]} {
+            set origin [list $ox $oy]
+            continue
+        }
+        if {$pin eq "" && !$in_obs &&
+            [regexp {^SIZE[[:space:]]+([-+0-9.]+)[[:space:]]+BY[[:space:]]+([-+0-9.]+)[[:space:]]*;} $line -> w h]} {
+            set size [list $w $h]
+            continue
+        }
+        if {!$in_obs && [regexp {^PIN[[:space:]]+([^[:space:];]+)} $line -> name]} {
+            set pin $name
+            set layer ""
+            continue
+        }
+        if {$pin ne "" &&
+            [regexp {^END[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> name] &&
+            $name eq $pin} {
+            set pin ""
+            set layer ""
+            continue
+        }
+        if {$pin eq "" && [regexp -nocase {^OBS[[:space:]]*$} $line]} {
+            set in_obs 1
+            set layer ""
+            continue
+        }
+        if {$in_obs && [regexp -nocase {^END[[:space:]]*$} $line]} {
+            set in_obs 0
+            set layer ""
+            continue
+        }
+        if {[regexp {^LAYER[[:space:]]+([^[:space:];]+)} $line -> name]} {
+            set layer $name
+            continue
+        }
+        if {$pin ne "" && $layer ne "" &&
+            [lsearch -exact $wanted $pin] >= 0 &&
+            [regexp {^RECT[[:space:]]+([-+0-9.]+)[[:space:]]+([-+0-9.]+)[[:space:]]+([-+0-9.]+)[[:space:]]+([-+0-9.]+)[[:space:]]*;} $line -> x1 y1 x2 y2]} {
+            set net [mptdc_signoff_ro_pg_supply_net_for_pin $pin]
+            lappend rows [dict create pin $pin net $net layer $layer \
+                box [mptdc_signoff_ro_pg_normalize_box [list $x1 $y1 $x2 $y2]]]
+        }
+    }
+    close $fh
+    if {[llength $size] != 2} {
+        return [dict create status FAIL reason missing_size rows [list] origin $origin size $size]
+    }
+    return [dict create status PASS reason ok rows $rows origin $origin size $size]
+}
+
+proc mptdc_signoff_ro_pg_lef_box_to_abs {lef_box inst_box orient origin size} {
+    set orient [mptdc_signoff_ro_pg_audit_orient $orient]
+    set ox [lindex $origin 0]
+    set oy [lindex $origin 1]
+    set w [lindex $size 0]
+    set h [lindex $size 1]
+    set x1 [lindex $lef_box 0]
+    set y1 [lindex $lef_box 1]
+    set x2 [lindex $lef_box 2]
+    set y2 [lindex $lef_box 3]
+
+    switch -- $orient {
+        R0 {
+            set lx1 [expr {$x1 + $ox}]
+            set lx2 [expr {$x2 + $ox}]
+            set ly1 [expr {$y1 + $oy}]
+            set ly2 [expr {$y2 + $oy}]
+        }
+        MX {
+            set lx1 [expr {$x1 + $ox}]
+            set lx2 [expr {$x2 + $ox}]
+            set ly1 [expr {$h - ($y2 + $oy)}]
+            set ly2 [expr {$h - ($y1 + $oy)}]
+        }
+        MY {
+            set lx1 [expr {$w - ($x2 + $ox)}]
+            set lx2 [expr {$w - ($x1 + $ox)}]
+            set ly1 [expr {$y1 + $oy}]
+            set ly2 [expr {$y2 + $oy}]
+        }
+        R180 {
+            set lx1 [expr {$w - ($x2 + $ox)}]
+            set lx2 [expr {$w - ($x1 + $ox)}]
+            set ly1 [expr {$h - ($y2 + $oy)}]
+            set ly2 [expr {$h - ($y1 + $oy)}]
+        }
+        default {
+            set lx1 [expr {$x1 + $ox}]
+            set lx2 [expr {$x2 + $ox}]
+            set ly1 [expr {$y1 + $oy}]
+            set ly2 [expr {$y2 + $oy}]
+        }
+    }
+
+    set abs [list \
+        [expr {[lindex $inst_box 0] + $lx1}] \
+        [expr {[lindex $inst_box 1] + $ly1}] \
+        [expr {[lindex $inst_box 0] + $lx2}] \
+        [expr {[lindex $inst_box 1] + $ly2}]]
+    return [mptdc_signoff_ro_pg_normalize_box $abs]
+}
+
+proc mptdc_signoff_ro_pg_all_pin_shapes_from_lef {} {
+    set lef_data [mptdc_signoff_ro_pg_lef_pin_rows]
+    if {[dict get $lef_data status] ne "PASS"} {
+        return [list]
+    }
+    set rows [list]
+    set seen [list]
+    set pin_rows [dict get $lef_data rows]
+    set origin [dict get $lef_data origin]
+    set size [dict get $lef_data size]
+    foreach inst [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]] {
+        set inst_box [mptdc_signoff_cell_box $inst]
+        if {![mptdc_signoff_box_valid $inst_box]} { continue }
+        set orient [mptdc_signoff_cell_orient $inst]
+        foreach row $pin_rows {
+            set abs_box [mptdc_signoff_ro_pg_lef_box_to_abs [dict get $row box] \
+                $inst_box $orient $origin $size]
+            mptdc_signoff_ro_pg_add_shape_row rows seen $inst [dict get $row pin] \
+                [dict get $row net] [dict get $row layer] $abs_box \
+                "lef_orientation_fallback:$orient"
+        }
+    }
+    return $rows
 }
 
 proc mptdc_signoff_ro_pg_shape_rows_from_term {term inst pin net} {
@@ -3246,7 +3475,26 @@ proc mptdc_signoff_ro_pg_all_pin_shapes {} {
             }
         }
     }
-    return $rows
+    if {[llength $rows] > 0} {
+        return $rows
+    }
+    return [mptdc_signoff_ro_pg_all_pin_shapes_from_lef]
+}
+
+proc mptdc_signoff_ro_pg_shape_source_counts {rows} {
+    set counts [dict create]
+    foreach row $rows {
+        set source [dict get $row source]
+        if {![dict exists $counts $source]} {
+            dict set counts $source 0
+        }
+        dict incr counts $source
+    }
+    set out [list]
+    foreach source [lsort [dict keys $counts]] {
+        lappend out "$source=[dict get $counts $source]"
+    }
+    return $out
 }
 
 proc mptdc_signoff_ro_pg_nearest_target {net pin_box preferred_layer {max_distance ""}} {
@@ -3373,6 +3621,7 @@ proc mptdc_signoff_ro_pg_probe {path {label RO_PG_PROBE}} {
     }
     set rows [mptdc_signoff_ro_pg_all_pin_shapes]
     puts $fh "RO_PG_PIN_SHAPE_COUNT=[llength $rows]"
+    puts $fh "RO_PG_PIN_SHAPE_SOURCES=[join [mptdc_signoff_ro_pg_shape_source_counts $rows] { }]"
     puts $fh ""
     puts $fh "RO_PG_PIN_SHAPES_BEGIN"
     puts $fh "idx\tinst\tpin\tnet\tlayer\tbox\tsource\ttarget_status\ttarget_shape\ttarget_layer\ttarget_distance\ttarget_box"
@@ -3485,6 +3734,7 @@ proc mptdc_signoff_ro_pg_hookup {} {
 
     set rows [mptdc_signoff_ro_pg_all_pin_shapes]
     puts $fh "RO_PG_PIN_SHAPE_COUNT=[llength $rows]"
+    puts $fh "RO_PG_PIN_SHAPE_SOURCES=[join [mptdc_signoff_ro_pg_shape_source_counts $rows] { }]"
     set failures [list]
     set created 0
     set skipped 0
