@@ -377,9 +377,16 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Builder updated `TOP/syn/scripts/run_genus_all_matrix_ooc.sh` to generate a Genus-only matrix-top filelist that excludes `TOP/rtl/spadmic_ddr_tx.sv` and `TOP/rtl/spadmic_top_v1.sv` while leaving the shared simulation filelist unchanged.
 - [VERIFIED] Server Genus OOC rerun `genus_matrix_ooc_rerun_20260630_1009` passed all 12 configured blocks with `GENUS_RC=0`; snapshot committed by the server as `90004bef`. This is accepted as typical-only OOC feasibility, not final timing closure or MMMC signoff.
 - [FAILED REVIEW] Genus rerun review found that the snapshot did not include enough targeted evidence to prove intended async clock groups and had a noisy warning classifier that counted script/library text as design warnings.
-- [IMPLEMENTED] Builder tightened `TOP/syn/constraints/matrix_top_ooc_common.sdc`, `TOP/syn/scripts/run_genus_matrix_block.tcl`, and `TOP/ci/collect_matrix_top_server_snapshot.sh` so the next Genus run captures inter-clock timing reports, report exceptions, curated messages, and less noisy warning classifications.
+- [IMPLEMENTED] Builder tightened `TOP/syn/constraints/matrix_top_ooc_common.sdc`, `TOP/syn/scripts/run_genus_matrix_block.tcl`, and `TOP/ci/collect_matrix_top_server_snapshot.sh` so the next Genus run captures inter-clock timing reports, curated messages, generated-SDC clock-group excerpts, and less noisy warning classifications.
 - [VERIFIED] Server Innovus floorplan seed `innovus_matrix_top_fp_20260630_1107` completed with `INNOVUS_RC=0`; snapshot committed by the server as `d6f30ddb`. This validates CSV/LEF planning-seed command compatibility only. No placement, routing, CTS, PG, DRC/LVS, extraction, timing closure, or signoff was run.
 - [RISK] The Innovus pin-family review still has one `UNKNOWN` matrix pin on the left side. This must be resolved before final top-chip floorplan constraints and pad-level integration.
+- [VERIFIED] Server Genus evidence run `genus_matrix_ooc_evidence_20260630_1117` passed all 12 configured blocks with `GENUS_RC=0`; snapshot committed by the server as `49cf7f35`. This confirms the matrix-top OOC flow remains green after the evidence-capture changes.
+- [FAILED REVIEW] Genus evidence run `genus_matrix_ooc_evidence_20260630_1117` still captured a `TUI-204` message because `report_exceptions` is not supported in this Genus build. Builder removed that report command after review.
+- [IMPLEMENTED] Builder added explicit `report_timing -unconstrained` inter-clock reports and generated-SDC clock-group excerpts for the next Genus evidence snapshot.
+- [IMPLEMENTED] Builder refined Genus warning classification again so headings such as `No unresolved references` and `Max_transition design rule: no violations` are not counted as findings.
+- [VERIFIED] Server Innovus floorplan seed `innovus_matrix_top_fp_evidence_20260630_1214` completed with `INNOVUS_RC=0`; snapshot committed by the server as `3603455e`. This ties the seed evidence to the latest pushed branch state.
+- [VERIFIED] The one previously `UNKNOWN` matrix pin is `VTUNE`, marked `INOUT/ANALOG/LEFT` in the CSV at normalized coordinate approximately `(1.93, 61.725)`. It is analog-owned and must be handled as a keepout/ownership item, not as a missing R/Y/B/Rz/Yz/Bz/Din/Cin/Dout/Cout digital pin.
+- [RISK] Next Innovus milestone must be a real design import/floorplan feasibility run. Current Innovus runs are seed-only and do not prove placement, route, CTS, PG, extraction, DRC/LVS, or timing.
 
 ## Affected Files
 

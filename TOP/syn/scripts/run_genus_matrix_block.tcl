@@ -38,6 +38,16 @@ proc maybe_run_clock_report {from_clock to_clock out_file} {
   run_report "report_timing -from \[get_clocks $from_clock\] -to \[get_clocks $to_clock\] -max_paths 20" $out_file
 }
 
+proc maybe_run_unconstrained_clock_report {from_clock to_clock out_file} {
+  if {[llength [get_clocks $from_clock -quiet]] == 0} {
+    return
+  }
+  if {[llength [get_clocks $to_clock -quiet]] == 0} {
+    return
+  }
+  run_report "report_timing -unconstrained -from \[get_clocks $from_clock\] -to \[get_clocks $to_clock\] -max_paths 20" $out_file
+}
+
 proc classify_reports {run_dir} {
   set out_file [file join $run_dir reports messages warning_classification.rpt]
   file mkdir [file dirname $out_file]
@@ -56,14 +66,14 @@ proc classify_reports {run_dir} {
     }
   }
   array set patterns {
-    unresolved              {unresolved reference|unresolved module|cannot resolve|not found}
+    unresolved              {unresolved reference[^s]|unresolved module[^s]|cannot resolve|not found}
     inferred_latch          {Latch inferred|inferred latch}
     no_clock_waveform       {no clock waveform|Unclocked source}
     missing_external_delay  {primary inputs have no clocked external delays|primary outputs have no clocked external delays}
     design_rule             {max.transition|max.cap|max.fanout|design rule}
     undriven                {undriven|unconnected|multiply driven|multi.?driven}
-    tool_error              {(^|[^A-Za-z])Error[[:space:]]*:}
-    tool_warning            {(^|[^A-Za-z])Warning[[:space:]]*:}
+    tool_error              {(^|[^A-Za-z])Error[[:space:]]*:|\|[^|]+\|Error[[:space:]]*\|}
+    tool_warning            {(^|[^A-Za-z])Warning[[:space:]]*:|\|[^|]+\|Warning[[:space:]]*\|}
   }
   set fh [open $out_file w]
   puts $fh "# Warning Classification"
@@ -78,6 +88,9 @@ proc classify_reports {run_dir} {
         continue
       }
       while {[gets $in line] >= 0} {
+        if {[regexp -nocase {no violations|No unresolved references|No empty modules|Unresolved References & Empty Modules|Undriven Port\(s\)/Pin\(s\)|Unloaded Pin\(s\), Port\(s\)|no unloaded port} $line]} {
+          continue
+        }
         if {[regexp -nocase $patterns($key) $line]} {
           incr count
           if {$first eq ""} {
@@ -205,11 +218,14 @@ if {[catch {check_design -unresolved} unresolved_err]} {
 run_report {check_design -all} [file join $REPORT_DIR elaboration check_design_post_elab.rpt] 1
 run_report {check_timing_intent -verbose} [file join $REPORT_DIR timing check_timing_intent.rpt]
 run_report {report_clocks} [file join $REPORT_DIR timing report_clocks.rpt]
-run_report {report_exceptions} [file join $REPORT_DIR timing report_exceptions.rpt]
 maybe_run_clock_report clk_sys clk_cfg_40m [file join $REPORT_DIR timing report_timing_clk_sys_to_clk_cfg_40m.rpt]
 maybe_run_clock_report clk_cfg_40m clk_sys [file join $REPORT_DIR timing report_timing_clk_cfg_40m_to_clk_sys.rpt]
 maybe_run_clock_report clk_sys clk_ref_40m [file join $REPORT_DIR timing report_timing_clk_sys_to_clk_ref_40m.rpt]
 maybe_run_clock_report clk_ref_40m clk_sys [file join $REPORT_DIR timing report_timing_clk_ref_40m_to_clk_sys.rpt]
+maybe_run_unconstrained_clock_report clk_sys clk_cfg_40m [file join $REPORT_DIR timing report_timing_unconstrained_clk_sys_to_clk_cfg_40m.rpt]
+maybe_run_unconstrained_clock_report clk_cfg_40m clk_sys [file join $REPORT_DIR timing report_timing_unconstrained_clk_cfg_40m_to_clk_sys.rpt]
+maybe_run_unconstrained_clock_report clk_sys clk_ref_40m [file join $REPORT_DIR timing report_timing_unconstrained_clk_sys_to_clk_ref_40m.rpt]
+maybe_run_unconstrained_clock_report clk_ref_40m clk_sys [file join $REPORT_DIR timing report_timing_unconstrained_clk_ref_40m_to_clk_sys.rpt]
 run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_pre_synth.rpt]
 
 if {[catch {syn_generic} generic_err]} {
@@ -261,11 +277,14 @@ foreach rel {
   reports/elaboration/check_design_post_elab.rpt
   reports/timing/check_timing_intent.rpt
   reports/timing/report_clocks.rpt
-  reports/timing/report_exceptions.rpt
   reports/timing/report_timing_clk_sys_to_clk_cfg_40m.rpt
   reports/timing/report_timing_clk_cfg_40m_to_clk_sys.rpt
   reports/timing/report_timing_clk_sys_to_clk_ref_40m.rpt
   reports/timing/report_timing_clk_ref_40m_to_clk_sys.rpt
+  reports/timing/report_timing_unconstrained_clk_sys_to_clk_cfg_40m.rpt
+  reports/timing/report_timing_unconstrained_clk_cfg_40m_to_clk_sys.rpt
+  reports/timing/report_timing_unconstrained_clk_sys_to_clk_ref_40m.rpt
+  reports/timing/report_timing_unconstrained_clk_ref_40m_to_clk_sys.rpt
   reports/timing/report_timing_pre_synth.rpt
   reports/timing/report_timing_post_generic.rpt
   reports/timing/report_timing_post_map.rpt

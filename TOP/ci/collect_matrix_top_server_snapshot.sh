@@ -95,6 +95,18 @@ copy_matching_tail() {
   fi
 }
 
+copy_sdc_clock_groups() {
+  local src="$1"
+  local dst_rel="$2"
+  if [[ -f "$src" ]]; then
+    mkdir -p "$DST_DIR/$(dirname "$dst_rel")"
+    {
+      echo "# Clock-group and clock excerpts from $src"
+      grep -E 'create_clock|set_clock_groups|clk_sys|clk_cfg_40m|clk_ref_40m' "$src" || true
+    } > "$DST_DIR/$dst_rel"
+  fi
+}
+
 copy_file "$SRC_DIR/SUMMARY.md" "SUMMARY.md"
 copy_file "$SRC_DIR/run_manifest.txt" "run_manifest.txt"
 copy_file "$SRC_DIR/git_status_short.txt" "git_status_short.txt"
@@ -119,8 +131,11 @@ case "$KIND" in
         */logs/failure.tail|*/reports/messages/warning_classification.rpt)
           copy_file "$file" "$rel"
           ;;
-        */reports/elaboration/check_design_post_elab.rpt|*/reports/messages/report_messages.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/timing/report_exceptions.rpt|*/reports/timing/report_timing_*.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_qor.rpt|*/reports/qor/report_design_rules.rpt)
+        */reports/elaboration/check_design_post_elab.rpt|*/reports/messages/report_messages.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/timing/report_timing_*.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_qor.rpt|*/reports/qor/report_design_rules.rpt)
           copy_excerpt "$file" "$rel" 220
+          ;;
+        */outputs/*.postsyn.sdc)
+          copy_sdc_clock_groups "$file" "$rel.clock_groups.txt"
           ;;
       esac
     done < <(find "$SRC_DIR" -type f 2>/dev/null | sort)

@@ -71,7 +71,9 @@ the matrix-top OOC flow.
     `clk_ref_40m`.
 - `TOP/syn/scripts/run_genus_matrix_block.tcl`
   - Added targeted inter-clock timing reports.
-  - Added `report_exceptions`.
+  - Added report-capture hooks for timing evidence. The later evidence run
+    showed `report_exceptions` is unsupported in this Genus build, so that
+    command was removed in the follow-up script cleanup.
   - Refined warning classification scope.
 - `TOP/ci/collect_matrix_top_server_snapshot.sh`
   - Added curated `report_messages`, design-rule, post-opt timing, inter-clock
