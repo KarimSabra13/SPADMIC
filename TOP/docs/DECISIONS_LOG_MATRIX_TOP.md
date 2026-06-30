@@ -369,6 +369,9 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] `TOP/syn/scripts/run_genus_matrix_block.tcl` fails early if the sourced matrix-top Genus libraries do not resolve to `xx31/JIHD`.
 - [IMPLEMENTED] `TOP/ci/collect_matrix_top_server_snapshot.sh` creates lightweight tracked evidence snapshots under `TOP/docs/server_snapshots/` for server-side Xcelium, Genus, and Innovus runs. Raw tool databases, raw logs, waves, SPEF/SDF, netlists, and tarballs remain excluded.
 - [VERIFIED] Stack-alignment policy and snapshot loop are reviewed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_STACK_ALIGNMENT.md`.
+- [FAILED REVIEW] Server Xcelium run `xcelium_matrix_top_20260630_0943` at commit `fe8f68712e5e6a3f990c996c3daf2b957613a889` produced 27 pass, 4 fail, 0 missing. The failures were captured in `TOP/docs/server_snapshots/xcelium/xcelium_matrix_top_20260630_0943/`.
+- [IMPLEMENTED] Builder fixed Xcelium testbench portability issues from that snapshot: explicit 64-bit timeout delays for long test watchdogs and removal of an extra initial driver on `saw_reset_error`.
+- [VERIFIED] Verifier analysis is recorded in `TOP/docs/reviews/REVIEW_MATRIX_TOP_XCELIUM_xcelium_matrix_top_20260630_0943.md`. Local Verilator recheck passed for the four failing tests and full local readiness passed with 33 pass, 0 fail, and 4 expected local skips. A new server Xcelium rerun remains required.
 
 ## Affected Files
 

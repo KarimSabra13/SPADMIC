@@ -159,7 +159,7 @@ module tb_spadmic_top_mode_transition_unit;
   end
 
   initial begin
-    #3_000_000_000;
+    #(64'd3_000_000_000);
     $fatal(1, "tb_spadmic_top_mode_transition_unit: TIMEOUT");
   end
 endmodule

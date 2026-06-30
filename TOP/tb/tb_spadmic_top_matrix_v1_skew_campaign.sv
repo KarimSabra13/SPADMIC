@@ -326,7 +326,7 @@ module tb_spadmic_top_matrix_v1_skew_campaign;
   end
 
   initial begin
-    #20_000_000_000;
+    #(64'd20_000_000_000);
     $fatal(1, "tb_spadmic_top_matrix_v1_skew_campaign: TIMEOUT");
   end
 endmodule

@@ -143,7 +143,7 @@ module tb_spadmic_top_reset_during_event_unit;
   end
 
   initial begin
-    #2_000_000_000;
+    #(64'd2_000_000_000);
     $fatal(1, "tb_spadmic_top_reset_during_event_unit: TIMEOUT");
   end
 endmodule

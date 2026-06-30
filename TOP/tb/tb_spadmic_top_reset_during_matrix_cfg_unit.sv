@@ -86,7 +86,6 @@ module tb_spadmic_top_reset_during_matrix_cfg_unit;
     wdata = 64'h0123_4567_89AB_CDEF;
     matrix_dout = '0;
     matrix_cout = '0;
-    saw_reset_error = 1'b0;
 
     repeat (4) @(posedge clk_sys);
     rst_sys_n = 1'b1;

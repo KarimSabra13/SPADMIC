@@ -243,7 +243,7 @@ module tb_spadmic_top_output_fifo_pressure_integration_unit;
   end
 
   initial begin
-    #6_000_000_000;
+    #(64'd6_000_000_000);
     $fatal(1, "tb_spadmic_top_output_fifo_pressure_integration_unit: TIMEOUT");
   end
 endmodule

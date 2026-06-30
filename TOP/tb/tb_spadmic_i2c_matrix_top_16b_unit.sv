@@ -123,7 +123,7 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
   end
 
   initial begin
-    #2_000_000_000;
+    #(64'd2_000_000_000);
     $fatal(1, "tb_spadmic_i2c_matrix_top_16b_unit: TIMEOUT");
   end
 endmodule
