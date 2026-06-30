@@ -15,6 +15,16 @@ MATRIX_CSV="${SPADMIC_MATRIX_PIN_CSV:-$REPO_ROOT/position/docs/matrix_handoffs/2
 MATRIX_LEF="${SPADMIC_MATRIX_LEF:-/group/validmgr/PROJET/Prj_xh018/ksabra/lef/matrice3.lef}"
 GENERATED_DIR="$RUN_ROOT/generated"
 
+# Match the mature MPTDC physical stack by default. This floorplan seed is still
+# non-signoff, but the manifests must expose stack drift early.
+export MPTDC_XH018_STACK="${MPTDC_XH018_STACK:-xx31}"
+export MPTDC_STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-JIHD}"
+export MPTDC_PNR_ROUTE_LAYER_NAMES="${MPTDC_PNR_ROUTE_LAYER_NAMES:-MET1 MET2 MET3 METTP}"
+export MPTDC_PNR_SIGNAL_TOP_LAYER="${MPTDC_PNR_SIGNAL_TOP_LAYER:-MET3}"
+export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-METTP}"
+export MPTDC_PNR_POWER_LAYER="${MPTDC_PNR_POWER_LAYER:-METTP}"
+export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-METTP}"
+
 if [[ -e "$RUN_ROOT" ]]; then
   echo "ERROR: run directory already exists: $RUN_ROOT" >&2
   exit 2
@@ -29,6 +39,11 @@ mkdir -p "$RUN_ROOT/logs" "$RUN_ROOT/reports" "$GENERATED_DIR"
   echo "RUN_ROOT=$RUN_ROOT"
   echo "MATRIX_CSV=$MATRIX_CSV"
   echo "MATRIX_LEF=$MATRIX_LEF"
+  echo "MPTDC_XH018_STACK=$MPTDC_XH018_STACK"
+  echo "MPTDC_STDCELL_FAMILY=$MPTDC_STDCELL_FAMILY"
+  echo "MPTDC_PNR_ROUTE_LAYER_NAMES=$MPTDC_PNR_ROUTE_LAYER_NAMES"
+  echo "MPTDC_PNR_SIGNAL_TOP_LAYER=$MPTDC_PNR_SIGNAL_TOP_LAYER"
+  echo "MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER"
   echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
   echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   echo "STATUS_SHORT_BEGIN"
@@ -49,6 +64,11 @@ python3 "$PNR_ROOT/scripts/gen_matrix_floorplan_from_csv.py" \
   echo "- Run directory: \`$RUN_ROOT\`"
   echo "- Matrix CSV: \`$MATRIX_CSV\`"
   echo "- Matrix LEF: \`$MATRIX_LEF\`"
+  echo "- XH018 stack: \`$MPTDC_XH018_STACK\`"
+  echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
+  echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"
+  echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
+  echo "- Effective top floor layer: \`$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER\`"
   echo "- Branch: \`$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)\`"
   echo "- Commit: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)\`"
   echo "- Generated pin plan: \`generated/floorplan_summary.md\`"
@@ -103,4 +123,3 @@ tail -100 "$RUN_ROOT/logs/innovus_floorplan_seed.stdout.log" \
 
 cat "$RUN_ROOT/SUMMARY.md"
 exit "$rc"
-

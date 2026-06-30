@@ -13,6 +13,22 @@ Status: server-side product-like floorplan feasibility plan. No Innovus run has 
 - Matrix LEF on server: `/group/validmgr/PROJET/Prj_xh018/ksabra/lef/matrice3.lef`
 - Matrix pin CSV in repo: `position/docs/matrix_handoffs/20260626_matrice3_final_lef_extract_norm/matrice3_pin_coordinates.csv`
 
+## Required Technology Alignment
+
+The floorplan feasibility scripts must preserve the same stack policy as the
+MPTDC physical flow:
+
+- XH018 stack: `xx31`.
+- Standard-cell family: `D_CELLS_JIHD`.
+- Known route layers: `MET1 MET2 MET3 METTP`.
+- Ordinary signal routing target: `MET1` through `MET3`.
+- `METTP` policy: top floor for PG/CTS/reviewed exceptions, not a free default
+  signal layer.
+
+The current top floorplan seed remains a planning run, not a full Innovus
+implementation. Its manifest records this stack policy so any server-side drift
+is visible before a real `init_design/place/route` flow is promoted.
+
 ## Floorplan Intent
 
 - Place `matrice3` on the left side of the chip, roughly centered vertically.
@@ -111,6 +127,8 @@ git checkout SPADMIC_test
 git pull --ff-only origin SPADMIC_test
 source /eda/cadence/eda_2023-2024
 export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
 bash TOP/pnr/scripts/server_run_innovus_matrix_top_floorplan.sh "$RUN_ID"
 ```
 
@@ -118,6 +136,18 @@ The script first generates CSV-derived planning collateral from normalized
 `ll_*` coordinates, then runs an Innovus planning seed if Innovus is available.
 It fails clearly if Innovus is missing and does not claim placement/routing
 signoff.
+
+After the run, create a small tracked evidence snapshot:
+
+```bash
+TOP/ci/collect_matrix_top_server_snapshot.sh innovus "$RUN_ID"
+git add TOP/docs/server_snapshots/innovus/"$RUN_ID"
+git commit -m "docs: add matrix top Innovus snapshot $RUN_ID"
+git push origin SPADMIC_test
+```
+
+Do not commit Innovus databases, checkpoints, routed DEFs, raw logs, SPEF/SDF,
+or tarballs unless a later reviewed handoff policy explicitly asks for them.
 
 ## Negative Claims
 

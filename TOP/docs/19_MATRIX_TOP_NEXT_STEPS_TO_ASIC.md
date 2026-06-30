@@ -173,6 +173,21 @@ Genus should not be used as a substitute for functional verification. Before a m
 - Directed skew campaign is either passing or has documented open bugs.
 - Xcelium server matrix-top regression is run and reviewed when available.
 
+## Technology Stack Gate
+
+Before any matrix-top Genus or Innovus result is used for schedule decisions,
+the run manifest must show:
+
+- `MPTDC_XH018_STACK=xx31`;
+- `MPTDC_STDCELL_FAMILY=JIHD`;
+- `MPTDC_PNR_ROUTE_LAYER_NAMES=MET1 MET2 MET3 METTP`;
+- ordinary signal top layer `MET3`;
+- effective top floor / PG / reviewed exception layer `METTP`.
+
+This keeps the new matrix-top flow aligned with the current MPTDC product
+boundary. A run that silently defaults to HD or to a different XH018 stack is a
+flow failure, not implementation evidence.
+
 ## Xcelium-Before-Genus Policy
 
 Xcelium is required before treating Genus results as implementation-ready evidence because:
@@ -182,6 +197,23 @@ Xcelium is required before treating Genus results as implementation-ready eviden
 - The current local environment cannot run `xrun`.
 
 Local Verilator pass means "open-source bring-up confidence", not Xcelium pass.
+
+## Server Snapshot Loop
+
+For fast review without polluting the repository with raw tool output:
+
+1. Run Xcelium, Genus, or Innovus under `/sim/ksabra/SPADMIC_work`.
+2. Run `TOP/ci/collect_matrix_top_server_snapshot.sh <kind> <RUN_ID>`.
+3. Commit only the generated `TOP/docs/server_snapshots/<kind>/<RUN_ID>/`
+   directory.
+4. Push `SPADMIC_test`.
+5. Codex pulls the branch, reviews the small snapshot, writes a review document
+   under `TOP/docs/reviews/`, and patches RTL/docs/scripts only if the evidence
+   requires it.
+
+This loop is intended to be fast: summaries and tails are enough for first-pass
+triage; full server logs stay in `/sim` unless a specific failure requires
+manual retrieval.
 
 ## Genus OOC Plan
 

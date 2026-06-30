@@ -36,6 +36,19 @@ export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 bash TOP/ci/server_run_matrix_top_xcelium.sh "$RUN_ID"
 ```
 
+After the run, collect a small tracked evidence snapshot:
+
+```bash
+TOP/ci/collect_matrix_top_server_snapshot.sh xcelium "$RUN_ID"
+git add TOP/docs/server_snapshots/xcelium/"$RUN_ID"
+git commit -m "docs: add matrix top Xcelium snapshot $RUN_ID"
+git push origin SPADMIC_test
+```
+
+The snapshot collector copies `SUMMARY.md`, manifests, pass/fail summaries, and
+log tails only. It intentionally excludes raw `xcelium.d`, full logs, waves, and
+generated work directories.
+
 ## Output Directory Structure
 
 ```text

@@ -12,6 +12,24 @@ Status: typical-only synthesis feasibility plan. No Genus run has been performed
 - Genus output root: `/sim/ksabra/SPADMIC_work/genus/<RUN_ID>/<BLOCK>/`
 - Signoff status: non-signoff, typical-only feasibility.
 
+## Required Technology Alignment
+
+The matrix-top Genus OOC flow must match the current mature MPTDC physical
+baseline unless a separate reviewed technology migration is opened:
+
+- XFAB process: `xh018`, 180 nm.
+- XH018 stack: `xx31` / `XH018_1131_1P3M_MET3_METMID`.
+- Technology LEF family: `xh018_xx31_HD_MET3_METMID.lef`.
+- Standard-cell family: `D_CELLS_JIHD`.
+- Route layer list: `MET1 MET2 MET3 METTP`.
+- Ordinary signal top layer: `MET3`.
+- Effective top floor / PG / reviewed exception layer: `METTP`.
+
+`TOP/syn/scripts/run_genus_all_matrix_ooc.sh` sets these defaults before
+launching Genus. `TOP/syn/scripts/run_genus_matrix_block.tcl` checks the sourced
+MPTDC library state and fails early if the stack or standard-cell family drifts
+away from `xx31/JIHD`.
+
 ## Block List And Order
 
 1. Snapshot-driven position wrapper/path.
@@ -91,12 +109,25 @@ git checkout SPADMIC_test
 git pull --ff-only origin SPADMIC_test
 source /eda/cadence/eda_2023-2024
 export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
 bash TOP/syn/scripts/run_genus_all_matrix_ooc.sh "$RUN_ID"
 ```
 
 The script writes all generated files under
 `/sim/ksabra/SPADMIC_work/genus/<RUN_ID>/<BLOCK>/` and fails clearly if Genus is
 not available in `PATH`.
+
+After the run, create a small tracked evidence snapshot for review:
+
+```bash
+TOP/ci/collect_matrix_top_server_snapshot.sh genus "$RUN_ID"
+git add TOP/docs/server_snapshots/genus/"$RUN_ID"
+git commit -m "docs: add matrix top Genus snapshot $RUN_ID"
+git push origin SPADMIC_test
+```
+
+Do not commit raw Genus databases, full logs, netlists, SDF/SPEF, or tarballs.
 
 ## Limitations
 

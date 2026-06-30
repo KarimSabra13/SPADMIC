@@ -365,6 +365,10 @@ Pin family summary from the CSV:
 - [VERIFIED] Phase 10 Verifier recheck passed after Builder fixed fatal `check_design`, report redirection, and warning classification issues. Actual Genus execution remains a server gate.
 - [IMPLEMENTED] Phase 11 Innovus/floorplan planning infrastructure is prepared under `TOP/pnr/`. The CSV generator uses normalized `ll_*` coordinates and generated server artifacts are kept under `/sim/ksabra/SPADMIC_work/innovus/<RUN_ID>/`.
 - [VERIFIED] Phase 11 Verifier recheck passed after Builder fixed the OOC output-root convention. Innovus execution and physical closure remain server gates.
+- [IMPLEMENTED] Stack-alignment continuation: TOP server Genus/Innovus wrappers now default to the MPTDC-aligned physical stack: `MPTDC_XH018_STACK=xx31`, `MPTDC_STDCELL_FAMILY=JIHD`, route layers `MET1 MET2 MET3 METTP`, ordinary signal top `MET3`, and `METTP` reserved as the effective top/PG/reviewed-exception layer.
+- [IMPLEMENTED] `TOP/syn/scripts/run_genus_matrix_block.tcl` fails early if the sourced matrix-top Genus libraries do not resolve to `xx31/JIHD`.
+- [IMPLEMENTED] `TOP/ci/collect_matrix_top_server_snapshot.sh` creates lightweight tracked evidence snapshots under `TOP/docs/server_snapshots/` for server-side Xcelium, Genus, and Innovus runs. Raw tool databases, raw logs, waves, SPEF/SDF, netlists, and tarballs remain excluded.
+- [VERIFIED] Stack-alignment policy and snapshot loop are reviewed in `TOP/docs/reviews/REVIEW_MATRIX_TOP_STACK_ALIGNMENT.md`.
 
 ## Affected Files
 

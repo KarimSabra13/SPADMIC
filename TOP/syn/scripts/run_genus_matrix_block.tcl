@@ -103,6 +103,24 @@ set design(project_root) $MPTDC_ROOT
 source [file join $MPTDC_ROOT syn libraries libraries.xh018.tcl]
 source [file join $MPTDC_ROOT syn libraries libraries.xh018-stdcells.tcl]
 
+set spadmic_expected_stack "xx31"
+if {[info exists ::env(SPADMIC_TOP_EXPECTED_XH018_STACK)] && $::env(SPADMIC_TOP_EXPECTED_XH018_STACK) ne ""} {
+  set spadmic_expected_stack $::env(SPADMIC_TOP_EXPECTED_XH018_STACK)
+}
+set spadmic_expected_stdcell "JIHD"
+if {[info exists ::env(SPADMIC_TOP_EXPECTED_STDCELL_FAMILY)] && $::env(SPADMIC_TOP_EXPECTED_STDCELL_FAMILY) ne ""} {
+  set spadmic_expected_stdcell [string toupper $::env(SPADMIC_TOP_EXPECTED_STDCELL_FAMILY)]
+}
+if {![info exists tech(XH018_STACK)] || [string tolower $tech(XH018_STACK)] ne [string tolower $spadmic_expected_stack]} {
+  puts stderr "ERROR: matrix-top Genus stack mismatch: got [expr {[info exists tech(XH018_STACK)] ? $tech(XH018_STACK) : {unset}}], expected $spadmic_expected_stack"
+  exit 11
+}
+if {![info exists tech(STANDARD_CELL_FAMILY)] || [string toupper $tech(STANDARD_CELL_FAMILY)] ne $spadmic_expected_stdcell} {
+  puts stderr "ERROR: matrix-top Genus stdcell mismatch: got [expr {[info exists tech(STANDARD_CELL_FAMILY)] ? $tech(STANDARD_CELL_FAMILY) : {unset}}], expected $spadmic_expected_stdcell"
+  exit 12
+}
+puts "INFO: matrix-top stack aligned: XH018=$tech(XH018_STACK) stdcell=$tech(STANDARD_CELL_FAMILY) route_layers=$::env(MPTDC_PNR_ROUTE_LAYER_NAMES) signal_top=$::env(MPTDC_PNR_SIGNAL_TOP_LAYER)"
+
 if {[info exists tech_files(ALL_TC_LIBS)] && [llength $tech_files(ALL_TC_LIBS)] > 0} {
   puts "INFO: reading typical Liberty files: $tech_files(ALL_TC_LIBS)"
   read_libs $tech_files(ALL_TC_LIBS)
