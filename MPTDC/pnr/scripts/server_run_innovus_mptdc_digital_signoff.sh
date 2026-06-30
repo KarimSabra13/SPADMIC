@@ -239,6 +239,13 @@ resolve_ro_handoff() {
   local default_ro_lef="${O1_RO_DEFAULT_LEF:-/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef}"
   local default_ro_lib="$MPTDC_DIR/syn/macros/RO_tune6_real_layout_shell.lib"
   local expected_ro_macro="${O1_RO_CELL_NAME:-RO_tune6}"
+  local explicit_use_real_ro_abstract="${O1_USE_REAL_RO_ABSTRACT:-}"
+  local explicit_ro_cell_name="${O1_RO_CELL_NAME:-}"
+  local explicit_ro_source_lef_path="${O1_RO_SOURCE_LEF_PATH:-}"
+  local explicit_ro_lef_path="${O1_RO_LEF_PATH:-}"
+  local explicit_ro_liberty_path="${O1_RO_LIBERTY_PATH:-}"
+  local override_fields=()
+  local candidate_order=()
   local candidate=""
   local macro=""
 
@@ -250,12 +257,43 @@ resolve_ro_handoff() {
     export MPTDC_RO_HANDOFF_ENV_SOURCED="missing:$env_file"
   fi
 
+  if [[ -n "$explicit_use_real_ro_abstract" ]]; then
+    export O1_USE_REAL_RO_ABSTRACT="$explicit_use_real_ro_abstract"
+    override_fields+=("O1_USE_REAL_RO_ABSTRACT")
+  fi
+  if [[ -n "$explicit_ro_cell_name" ]]; then
+    export O1_RO_CELL_NAME="$explicit_ro_cell_name"
+    override_fields+=("O1_RO_CELL_NAME")
+  fi
+  if [[ -n "$explicit_ro_source_lef_path" ]]; then
+    export O1_RO_SOURCE_LEF_PATH="$explicit_ro_source_lef_path"
+    override_fields+=("O1_RO_SOURCE_LEF_PATH")
+  fi
+  if [[ -n "$explicit_ro_lef_path" ]]; then
+    export O1_RO_LEF_PATH="$explicit_ro_lef_path"
+    override_fields+=("O1_RO_LEF_PATH")
+  fi
+  if [[ -n "$explicit_ro_liberty_path" ]]; then
+    export O1_RO_LIBERTY_PATH="$explicit_ro_liberty_path"
+    override_fields+=("O1_RO_LIBERTY_PATH")
+  fi
+  if ((${#override_fields[@]} > 0)); then
+    export MPTDC_RO_HANDOFF_OVERRIDE_STATUS="preserved:${override_fields[*]}"
+  else
+    export MPTDC_RO_HANDOFF_OVERRIDE_STATUS="none"
+  fi
+
   export O1_USE_REAL_RO_ABSTRACT="${O1_USE_REAL_RO_ABSTRACT:-1}"
   export O1_RO_CELL_NAME="${O1_RO_CELL_NAME:-$expected_ro_macro}"
   export O1_RO_LIBERTY_PATH="${O1_RO_LIBERTY_PATH:-$default_ro_lib}"
 
   if [[ -z "${O1_RO_LEF_PATH:-}" ]]; then
-    for candidate in "$default_ro_lef" "${O1_RO_SOURCE_LEF_PATH:-}"; do
+    if [[ -n "$explicit_ro_source_lef_path" ]]; then
+      candidate_order=("${O1_RO_SOURCE_LEF_PATH:-}" "$default_ro_lef")
+    else
+      candidate_order=("$default_ro_lef" "${O1_RO_SOURCE_LEF_PATH:-}")
+    fi
+    for candidate in "${candidate_order[@]}"; do
       [[ -n "$candidate" && -f "$candidate" ]] || continue
       macro="$(lef_macro_name "$candidate" 2>/dev/null || true)"
       if [[ "$macro" == "$O1_RO_CELL_NAME" ]]; then
@@ -499,6 +537,7 @@ fi
   echo "signal_top_layer: ${MPTDC_PNR_SIGNAL_TOP_LAYER:-unset}"
   echo "effective_top_floor_layer: ${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-unset}"
   echo "ro_handoff_env: ${MPTDC_RO_HANDOFF_ENV_SOURCED:-unset}"
+  echo "ro_handoff_override_status: ${MPTDC_RO_HANDOFF_OVERRIDE_STATUS:-unset}"
   echo "O1_USE_REAL_RO_ABSTRACT: ${O1_USE_REAL_RO_ABSTRACT:-unset}"
   echo "O1_RO_CELL_NAME: ${O1_RO_CELL_NAME:-unset}"
   echo "O1_RO_LEF_PATH: ${O1_RO_LEF_PATH:-unset}"
