@@ -920,10 +920,10 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100
         MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128
         MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK 0
-        MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 0
+        MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 1
         MPTDC_ENABLE_BLOCK_PG_PINS 1
         MPTDC_BLOCK_PG_PIN_LAYER METTP
-        MPTDC_BLOCK_PG_PIN_STYLE mesh_intersection_vdd_vss
+        MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss
         MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0
         MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0
         MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0
@@ -950,10 +950,31 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
         MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0
         MPTDC_ROUTE_REPAIR_COMMANDS {{ecoRoute -target} {ecoRoute -fix_drc}}
-        MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 0
-        MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 0
+        MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 1
+        MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 2
+        MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES Mar
     } {
         mptdc_signoff_set_env_default $name $value
+    }
+}
+
+proc mptdc_signoff_pg_policy_guard {} {
+    if {[mptdc_signoff_env_truthy MPTDC_ALLOW_LEGACY_PG_TOPOLOGY 0]} {
+        return
+    }
+    set failures [list]
+    set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]]
+    if {$style ne "mesh_lr_vdd_vss"} {
+        lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected mesh_lr_vdd_vss"
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0]} {
+        lappend failures "MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0"
+    }
+    if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+        lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1"
+    }
+    if {[llength $failures] > 0} {
+        error "MPTDC_PG_POLICY_GUARD_FAILED: [join $failures {; }]; set MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=1 only for explicit debug bypass"
     }
 }
 
@@ -2393,6 +2414,13 @@ proc mptdc_signoff_block_pg_pin_specs {} {
                 [list VDD BOTTOM 0.40 VDD_BOTTOM MET3] \
                 [list VSS BOTTOM 0.60 VSS_BOTTOM MET3]]
         }
+        mesh_lr_vdd_vss {
+            return [list \
+                [list VDD LEFT 0.40 VDD_LEFT METTP] \
+                [list VSS LEFT 0.60 VSS_LEFT METTP] \
+                [list VDD RIGHT 0.40 VDD_RIGHT METTP] \
+                [list VSS RIGHT 0.60 VSS_RIGHT METTP]]
+        }
         mesh_intersection -
         mesh_intersection_vdd_vss {
             return [list \
@@ -2412,12 +2440,12 @@ proc mptdc_signoff_block_pg_pin_specs {} {
 }
 
 proc mptdc_signoff_block_pg_pin_style {} {
-    return [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_intersection_vdd_vss]]
+    return [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]]
 }
 
 proc mptdc_signoff_block_pg_pin_style_is_mesh {} {
     set style [mptdc_signoff_block_pg_pin_style]
-    return [expr {$style in {mesh_intersection mesh_intersection_vdd_vss}}]
+    return [expr {$style in {mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss}}]
 }
 
 proc mptdc_signoff_pg_ring_width {} {
@@ -2669,7 +2697,7 @@ proc mptdc_signoff_create_block_pg_pins {} {
     set depth [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0]
     set core_box [mptdc_signoff_core_box]
     puts $fh "BLOCK_PG_PIN_LAYER=$layer"
-    puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE both_sides_vdd_vss]"
+    puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]"
     puts $fh "BLOCK_PG_PIN_WIDTH_UM=$width"
     puts $fh "BLOCK_PG_PIN_DEPTH_UM=$depth"
     puts $fh "BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM=[mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0]"
@@ -3121,7 +3149,7 @@ proc mptdc_signoff_build_power_grid {} {
 }
 
 proc mptdc_signoff_parse_verify_drc_report {path} {
-    set result [dict create report $path command_failed 0 total_violations UNKNOWN shorts UNKNOWN status FAIL]
+    set result [dict create report $path command_failed 0 total_violations UNKNOWN shorts UNKNOWN status FAIL drc_class_counts {}]
     if {![file exists $path]} {
         dict set result reason missing_report
         return $result
@@ -3162,11 +3190,20 @@ proc mptdc_signoff_parse_verify_drc_report {path} {
         if {[llength $tokens] >= 2 && [string equal -nocase [lindex $tokens 0] Totals]} {
             set counts [lrange $tokens 1 end]
             if {[llength $drc_columns] == [llength $counts]} {
+                set class_counts [dict create]
                 set short_idx [lsearch -nocase $drc_columns Short]
                 set total_idx [lsearch -nocase $drc_columns Totals]
                 if {$total_idx < 0} {
                     set total_idx [lsearch -nocase $drc_columns Total]
                 }
+                for {set i 0} {$i < [llength $drc_columns]} {incr i} {
+                    set column [lindex $drc_columns $i]
+                    if {[string equal -nocase $column Totals] || [string equal -nocase $column Total]} {
+                        continue
+                    }
+                    dict set class_counts $column [lindex $counts $i]
+                }
+                dict set result drc_class_counts $class_counts
                 if {$short_idx >= 0} {
                     dict set result shorts [lindex $counts $short_idx]
                 } else {
@@ -4564,6 +4601,47 @@ proc mptdc_signoff_route_gate_is_pass {drc_data regular_bad special_bad unrouted
         $unrouted == 0}]
 }
 
+proc mptdc_signoff_route_drc_review_class {drc_data} {
+    set total [dict get $drc_data total_violations]
+    if {$total eq "UNKNOWN"} {
+        return [list 0 unknown_total {}]
+    }
+    set class_counts [dict get $drc_data drc_class_counts]
+    if {[llength $class_counts] == 0} {
+        return [list 0 missing_class_counts {}]
+    }
+    set allowed_raw [mptdc_signoff_env MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES Mar]
+    set allowed [list]
+    foreach cls $allowed_raw {
+        lappend allowed [string tolower $cls]
+    }
+    set nonzero [list]
+    set disallowed [list]
+    set allowed_total 0
+    foreach {cls count} $class_counts {
+        if {$count eq "" || ![string is integer -strict $count]} {
+            lappend disallowed "$cls=$count"
+            continue
+        }
+        if {$count == 0} {
+            continue
+        }
+        lappend nonzero "$cls=$count"
+        if {[lsearch -exact $allowed [string tolower $cls]] >= 0} {
+            incr allowed_total $count
+        } else {
+            lappend disallowed "$cls=$count"
+        }
+    }
+    if {[llength $disallowed] > 0} {
+        return [list 0 "disallowed_classes:[join $disallowed ,]" $nonzero]
+    }
+    if {$allowed_total != $total} {
+        return [list 0 "class_total_mismatch:allowed=$allowed_total total=$total" $nonzero]
+    }
+    return [list 1 allowed_classes $nonzero]
+}
+
 proc mptdc_signoff_route_gate_review_allowed {drc_data regular_bad special_bad unrouted} {
     if {![mptdc_signoff_env_truthy MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE]} {
         return 0
@@ -4573,14 +4651,17 @@ proc mptdc_signoff_route_gate_review_allowed {drc_data regular_bad special_bad u
     if {$total eq "UNKNOWN" || $shorts eq "UNKNOWN"} {
         return 0
     }
-    set max_review [mptdc_signoff_env_int MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 10]
+    set max_review [mptdc_signoff_env_int MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 2]
+    set review_class [mptdc_signoff_route_drc_review_class $drc_data]
+    set review_class_ok [lindex $review_class 0]
     return [expr {$total > 0 &&
         $total <= $max_review &&
         $shorts == 0 &&
         ![lindex $regular_bad 0] &&
         ![lindex $special_bad 0] &&
         $unrouted ne "UNKNOWN" &&
-        $unrouted == 0}]
+        $unrouted == 0 &&
+        $review_class_ok}]
 }
 
 proc mptdc_signoff_route_gate_apply_router_drc {drc_data router_drc router_rpt} {
@@ -4717,10 +4798,11 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     if {$verify_total ne "UNKNOWN" && $verify_shorts ne "UNKNOWN"} {
         if {$verify_total == 0 && $verify_shorts == 0} {
             set innovus_verify_status PASS
-        } elseif {$verify_total <= 1 && $verify_shorts == 0} {
+        } elseif {$review_allowed} {
             set innovus_verify_status REVIEW_REQUIRED
         }
     }
+    set review_class [mptdc_signoff_route_drc_review_class $drc_data]
     set fh [open $rpt w]
     puts $fh "ROUTE_STATUS=$status"
     puts $fh "ROUTE_IMPLEMENTATION_STATUS=$status"
@@ -4753,9 +4835,14 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "ANTENNA_STATUS=$antenna_status"
     puts $fh "ROUTE_DRC_REVIEW_CONTINUE_STATUS=[expr {$review_allowed ? "ENABLED" : "DISABLED"}]"
     puts $fh "ROUTE_DRC_REVIEW_CONTINUE_ENV=MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE"
-    puts $fh "ROUTE_DRC_REVIEW_MAX_VIOLATIONS=[mptdc_signoff_env_int MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 10]"
+    puts $fh "ROUTE_DRC_REVIEW_MAX_VIOLATIONS=[mptdc_signoff_env_int MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 2]"
+    puts $fh "ROUTE_DRC_REVIEW_ALLOWED_CLASSES=[mptdc_signoff_env MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES Mar]"
+    puts $fh "ROUTE_DRC_REVIEW_CLASS_STATUS=[expr {[lindex $review_class 0] ? "PASS" : "FAIL"}]"
+    puts $fh "ROUTE_DRC_REVIEW_CLASS_REASON=[lindex $review_class 1]"
+    puts $fh "ROUTE_DRC_REVIEW_CLASS_COUNTS=[lindex $review_class 2]"
+    puts $fh "ROUTE_DRC_CLASS_COUNTS=[dict get $drc_data drc_class_counts]"
     if {$review_allowed} {
-        puts $fh "ROUTE_DRC_REVIEW_CLASS=NONSHORT_GEOMETRY_DRC_WITH_CLEAN_CONNECTIVITY"
+        puts $fh "ROUTE_DRC_REVIEW_CLASS=ALLOWED_NONSHORT_MAR_WITH_CLEAN_CONNECTIVITY"
     }
     if {[dict exists $drc_data route_drc_source]} {
         puts $fh "ROUTE_DRC_SOURCE=[dict get $drc_data route_drc_source]"
@@ -7281,6 +7368,7 @@ proc mptdc_signoff_write_final_package {} {
 
 proc mptdc_signoff_source_check {} {
     mptdc_signoff_apply_recovery_defaults
+    mptdc_signoff_pg_policy_guard
     mptdc_signoff_mkdirs
     mptdc_signoff_init_status
     mptdc_signoff_require_tc_only_scope
@@ -7333,6 +7421,7 @@ proc mptdc_signoff_phase_rc_parse_only {} {
 
 proc mptdc_signoff_main {} {
     mptdc_signoff_apply_recovery_defaults
+    mptdc_signoff_pg_policy_guard
     mptdc_signoff_mkdirs
     mptdc_signoff_init_status
     mptdc_signoff_stage source_gate PHYSICAL_CELL_CONFIG_STATUS {

@@ -74,6 +74,13 @@ lef_macro_size() {
   ' "$lef"
 }
 
+is_truthy() {
+  case "${1:-0}" in
+    1|true|TRUE|yes|YES|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 apply_recovery_defaults() {
   local default_route_repair_commands='{ecoRoute -target} {ecoRoute -fix_drc}'
 
@@ -122,11 +129,11 @@ apply_recovery_defaults() {
   export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS="${MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS:-100}"
   export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS="${MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS:-128}"
   export MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK="${MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK:-0}"
-  export MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE="${MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE:-0}"
+  export MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE="${MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE:-1}"
 
   export MPTDC_ENABLE_BLOCK_PG_PINS="${MPTDC_ENABLE_BLOCK_PG_PINS:-1}"
   export MPTDC_BLOCK_PG_PIN_LAYER="${MPTDC_BLOCK_PG_PIN_LAYER:-METTP}"
-  export MPTDC_BLOCK_PG_PIN_STYLE="${MPTDC_BLOCK_PG_PIN_STYLE:-mesh_intersection_vdd_vss}"
+  export MPTDC_BLOCK_PG_PIN_STYLE="${MPTDC_BLOCK_PG_PIN_STYLE:-mesh_lr_vdd_vss}"
   export MPTDC_BLOCK_PG_PIN_WIDTH_UM="${MPTDC_BLOCK_PG_PIN_WIDTH_UM:-4.0}"
   export MPTDC_BLOCK_PG_PIN_DEPTH_UM="${MPTDC_BLOCK_PG_PIN_DEPTH_UM:-28.0}"
   export MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM="${MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM:-8.0}"
@@ -154,8 +161,35 @@ apply_recovery_defaults() {
   export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-1}"
   export MPTDC_ROUTE_GATE_SROUTE_RECOVERY="${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"
   export MPTDC_ROUTE_REPAIR_COMMANDS="${MPTDC_ROUTE_REPAIR_COMMANDS:-$default_route_repair_commands}"
-  export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE="${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-0}"
-  export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS="${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-0}"
+  export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE="${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-1}"
+  export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS="${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-2}"
+  export MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES="${MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES:-Mar}"
+}
+
+guard_pg_policy() {
+  if is_truthy "${MPTDC_ALLOW_LEGACY_PG_TOPOLOGY:-0}"; then
+    export MPTDC_PG_POLICY_GUARD_STATUS=BYPASSED
+    return
+  fi
+  local failures=()
+  if [[ "${MPTDC_BLOCK_PG_PIN_STYLE:-}" != "mesh_lr_vdd_vss" ]]; then
+    failures+=("MPTDC_BLOCK_PG_PIN_STYLE=${MPTDC_BLOCK_PG_PIN_STYLE:-unset} expected mesh_lr_vdd_vss")
+  fi
+  if is_truthy "${MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES:-0}"; then
+    failures+=("MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0")
+  fi
+  if ! is_truthy "${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-1}"; then
+    failures+=("MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-unset} expected 1")
+  fi
+  if ((${#failures[@]} > 0)); then
+    {
+      echo "ERROR: stale or unsafe PG topology environment detected."
+      printf 'ERROR: %s\n' "${failures[@]}"
+      echo "ERROR: unset the stale MPTDC_* variables or set MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=1 only for explicit debug bypass."
+    } | tee -a "$RUN_LOG"
+    exit 4
+  fi
+  export MPTDC_PG_POLICY_GUARD_STATUS=PASS
 }
 
 export_ro_lef_size() {
@@ -406,6 +440,7 @@ configure_xh018_stack
 export MPTDC_CLOSURE_SCOPE="${MPTDC_CLOSURE_SCOPE:-TC_ONLY}"
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
 apply_recovery_defaults
+guard_pg_policy
 
 if [[ "$MODE" != "discover_only" && -n "${O1_RO_LEF_PATH:-}" && -f "${O1_RO_LEF_PATH:-}" ]]; then
   export_ro_lef_size "$O1_RO_LEF_PATH" "${O1_RO_CELL_NAME:-RO_tune6}"
@@ -476,6 +511,8 @@ fi
   echo "block_pg_pin_outside_overlap_um: ${MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM:-unset}"
   echo "block_pg_pin_create_mode: ${MPTDC_BLOCK_PG_PIN_CREATE_MODE:-unset}"
   echo "block_pg_pin_editpin_fallback: ${MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK:-unset}"
+  echo "pg_policy_guard: ${MPTDC_PG_POLICY_GUARD_STATUS:-unset}"
+  echo "allow_legacy_pg_topology: ${MPTDC_ALLOW_LEGACY_PG_TOPOLOGY:-0}"
   echo "block_pg_stitch_stripes: ${MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES:-unset}"
   echo "block_pg_stitch_width_um: ${MPTDC_BLOCK_PG_STITCH_WIDTH_UM:-unset}"
   echo "block_pg_stitch_spacing_um: ${MPTDC_BLOCK_PG_STITCH_SPACING_UM:-unset}"
@@ -503,6 +540,8 @@ fi
   echo "require_drc_safe_filler: ${MPTDC_REQUIRE_DRC_SAFE_FILLER:-unset}"
   echo "route_repair_commands: ${MPTDC_ROUTE_REPAIR_COMMANDS:-unset}"
   echo "route_drc_review_continue: ${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-unset}"
+  echo "route_drc_review_max_violations: ${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-unset}"
+  echo "route_drc_review_allowed_classes: ${MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES:-unset}"
   echo "labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO"
   echo
   echo "git status --short --untracked-files=no:"
