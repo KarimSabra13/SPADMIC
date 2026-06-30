@@ -1,0 +1,80 @@
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv
+  input  mptdc_pkg::input_sel_e     input_sel_i,
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_i2c_control_plane_unit.sv
+	module worklib.tb_spadmic_i2c_control_plane_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		spadmic_pkg
+		tb_spadmic_i2c_control_plane_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_i2c_slave:sv <0x11dff800>
+			streams:  29, words: 24484
+		worklib.tb_spadmic_i2c_control_plane_unit:sv <0x6dc29bd3>
+			streams:  29, words: 38371
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 2       2
+		Verilog packages:        2       2
+		Registers:             161     161
+		Scalar wires:           23       -
+		Vectored wires:          5       -
+		Always blocks:           2       2
+		Initial blocks:          3       3
+		Cont. assignments:       6      15
+		Pseudo assignments:     12       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_i2c_control_plane_unit:sv
+Loading snapshot worklib.tb_spadmic_i2c_control_plane_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+========================================
+I2C COMMAND-PATH UNIT TEST
+========================================
+[PASS] T1: Non-matching I2C address NACKs
+[PASS] T2: Non-matching address emits no transaction
+[PASS] T3: Read without valid pointer NACKs
+[PASS] T4: Pointerless read emits no transaction
+[PASS] T5: Write command emitted
+[PASS] T6: Write command marked write
+[PASS] T7: Write command captures full TDC_X address
+[PASS] T8: Write command preserves 32-bit payload
+[PASS] T9: Write command clears after ready
+[PASS] T10: Read command emitted
+[PASS] T11: Read command marked read
+[PASS] T12: Read command captures full POSITION address
+[PASS] T13: Read command returns 32-bit payload
+[PASS] T14: Read command clears after ready
+[PASS] T15: Write command preserves full 16-bit high region address
+[PASS] T16: High-region write command preserves payload
+========================================
+I2C CMD PATH: 16 PASS, 0 FAIL out of 16
+========================================
+Simulation complete via $finish(1) at time 136746875 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_i2c_control_plane_unit.sv:317     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:52:20 CEST  (total: 00:00:02)

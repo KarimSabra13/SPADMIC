@@ -1,0 +1,80 @@
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_event_coordinator_modes_unit.sv
+	module worklib.tb_spadmic_event_coordinator_modes_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		spadmic_pkg
+		tb_spadmic_event_coordinator_modes_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_event_coordinator:sv <0x537a73fb>
+			streams:  25, words: 13634
+		worklib.tb_spadmic_event_coordinator_modes_unit:sv <0x5e93e088>
+			streams:  25, words: 50323
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 2       2
+		Verilog packages:        2       2
+		Registers:             138     138
+		Scalar wires:           36       -
+		Vectored wires:         13       -
+		Always blocks:           2       2
+		Initial blocks:          3       3
+		Cont. assignments:      13      19
+		Pseudo assignments:     17       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_event_coordinator_modes_unit:sv
+Loading snapshot worklib.tb_spadmic_event_coordinator_modes_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] TDC-only mask excludes position
+[PASS] frozen grant survives live resource drop
+[PASS] TDC-only bundles without position packet
+[PASS] event returns idle
+[PASS] Position-only allocates event ID from raw snapshot
+[PASS] Position-only reset waits for position snapshot copy
+[PASS] Position-only reset starts after position snapshot copy
+[PASS] Position-only expected packet mask
+[PASS] Position-only bundles without TDC packets
+[PASS] event returns idle
+[PASS] BOTH does not bundle before position packet
+[PASS] BOTH bundles when all four sources pending
+[PASS] event returns idle
+[PASS] Calibration ignores matrix activity
+[PASS] Calibration required packet mask uses selected axes
+[PASS] Calibration does not start matrix reset
+[PASS] Calibration bundles selected axes only
+[PASS] event returns idle
+[PASS] not-ready event is rejected
+[PASS] not-ready event opens cleanup only
+[PASS] not-ready cleanup has no normal packet mask
+[PASS] not-ready cleanup does not allocate event ID
+[PASS] not-ready cleanup starts selective reset from snapshot
+[PASS] not-ready cleanup returns idle
+tb_spadmic_event_coordinator_modes_unit: 24 pass / 0 fail
+Simulation complete via $finish(1) at time 259376 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_event_coordinator_modes_unit.sv:255     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:52:28 CEST  (total: 00:00:01)

@@ -1,0 +1,80 @@
+	module worklib.spadmic_correlated_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_ddr_tx.sv
+	module worklib.spadmic_ddr_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_axis_cluster_scan.sv
+	module worklib.spadmic_axis_cluster_scan:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_position_block.sv
+	module worklib.spadmic_position_block:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv
+  input  mptdc_pkg::input_sel_e     input_sel_i,
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_position_snapshot_cluster_unit.sv
+	module worklib.tb_spadmic_position_snapshot_cluster_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		mptdc_pkg
+		spadmic_pkg
+		tb_spadmic_position_snapshot_cluster_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_axis_cluster_scan:sv <0x554679a3>
+			streams:  19, words: 22786
+		worklib.spadmic_position_snapshot_packetizer:sv <0x31fc6af8>
+			streams:  42, words: 32451
+		worklib.tb_spadmic_position_snapshot_cluster_unit:sv <0x6530c515>
+			streams:  15, words: 16259
+		worklib.spadmic_pkg:sv <0x7a9a95d2>
+			streams:  21, words:  5763
+		worklib.mptdc_pkg:sv <0x23f53fb2>
+			streams:   9, words:  3739
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 5       3
+		Verilog packages:        2       2
+		Registers:             330     226
+		Scalar wires:           36       -
+		Vectored wires:         23       -
+		Always blocks:          10       8
+		Initial blocks:          3       3
+		Cont. assignments:      12       8
+		Pseudo assignments:     19       -
+		Assertions:              1       1
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_position_snapshot_cluster_unit:sv
+Loading snapshot worklib.tb_spadmic_position_snapshot_cluster_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] cluster packetizer captures frozen snapshot immediately
+[PASS] cluster snapshot produces fixed packet length
+[PASS] cluster header marks R multi-cluster
+[PASS] R cluster0 extracted from frozen bitmap
+[PASS] R cluster1 extracted from frozen bitmap
+[PASS] Y cluster extracted from frozen bitmap
+[PASS] B cluster extracted from frozen bitmap
+[PASS] cluster packet EOC uses common event ID
+tb_spadmic_position_snapshot_cluster_unit: 8 pass / 0 fail
+Simulation complete via $finish(1) at time 134376 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_position_snapshot_cluster_unit.sv:123     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:52:34 CEST  (total: 00:00:01)

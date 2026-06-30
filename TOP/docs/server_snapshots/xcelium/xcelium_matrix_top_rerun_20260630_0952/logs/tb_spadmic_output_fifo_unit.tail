@@ -1,0 +1,80 @@
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../arb/rtl/spadmic_correlated_tx.sv
+	module worklib.spadmic_correlated_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_ddr_tx.sv
+	module worklib.spadmic_ddr_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_axis_cluster_scan.sv
+	module worklib.spadmic_axis_cluster_scan:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_position_block.sv
+	module worklib.spadmic_position_block:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv
+  input  mptdc_pkg::input_sel_e     input_sel_i,
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_output_fifo_unit.sv
+	module worklib.tb_spadmic_output_fifo_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		tb_spadmic_output_fifo_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_output_fifo:sv <0x43475b7b>
+			streams:  15, words:  6851
+		worklib.tb_spadmic_output_fifo_unit:sv <0x5d9325bd>
+			streams:  12, words: 22528
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 2       2
+		Registers:              29      29
+		Scalar wires:           17       -
+		Vectored wires:          8       -
+		Always blocks:           2       2
+		Initial blocks:          3       3
+		Cont. assignments:       7      11
+		Pseudo assignments:      5       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_output_fifo_unit:sv
+Loading snapshot worklib.tb_spadmic_output_fifo_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] reset leaves FIFO empty
+[PASS] reset leaves push ready
+[PASS] reset reports full free space
+[PASS] three pushes update level
+[PASS] free words update after pushes
+[PASS] reserve threshold not yet almost full
+[PASS] first popped word preserves order
+[PASS] second popped word preserves order
+[PASS] FIFO reaches full
+[PASS] FIFO reports zero free words
+[PASS] FIFO almost_full asserted when reserved free space missing
+[PASS] overflow pulse on push while full
+[PASS] overflow does not change full level
+[PASS] simultaneous full pop returns oldest word
+[PASS] simultaneous full push/pop keeps FIFO full
+[PASS] simultaneous replacement exits last
+[PASS] FIFO drains empty
+tb_spadmic_output_fifo_unit: 17 pass / 0 fail
+Simulation complete via $finish(1) at time 318751 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_output_fifo_unit.sv:164     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:52:36 CEST  (total: 00:00:02)

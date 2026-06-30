@@ -1,0 +1,80 @@
+[PASS] B->Y->R reset waits for all required starts
+[PASS] B->Y->R drains and rearms
+[PASS] 0ns all-axis arrival starts from safe idle
+[PASS] 0ns all-axis arrival resources ready before first edge
+[PASS] 0ns all-axis arrival all axes reach independent START gates together
+[PASS] 0ns all-axis arrival all simultaneous starts seen
+[PASS] 0ns all-axis arrival reset becomes active
+[PASS] 0ns all-axis arrival reset waits for all required starts
+[PASS] 0ns all-axis arrival drains and rearms
+[PASS] R->Y->B near clk_sys edge starts from safe idle
+[PASS] R->Y->B near clk_sys edge resources ready before first edge
+[PASS] R->Y->B near clk_sys edge gap1 is positive
+[PASS] R->Y->B near clk_sys edge gap2 is positive
+[PASS] R->Y->B near clk_sys edge first axis reaches its START gate
+[PASS] R->Y->B near clk_sys edge second axis reaches START after ps offset
+[PASS] R->Y->B near clk_sys edge third axis reaches START after ps offset
+[PASS] R->Y->B near clk_sys edge all starts seen
+[PASS] R->Y->B near clk_sys edge reset becomes active
+[PASS] R->Y->B near clk_sys edge reset waits for all required starts
+[PASS] R->Y->B near clk_sys edge drains and rearms
+[PASS] Y->B->R near clk_ref_40m edge starts from safe idle
+[PASS] Y->B->R near clk_ref_40m edge resources ready before first edge
+[PASS] Y->B->R near clk_ref_40m edge gap1 is positive
+[PASS] Y->B->R near clk_ref_40m edge gap2 is positive
+[PASS] Y->B->R near clk_ref_40m edge first axis reaches its START gate
+[PASS] Y->B->R near clk_ref_40m edge second axis reaches START after ps offset
+[PASS] Y->B->R near clk_ref_40m edge third axis reaches START after ps offset
+[PASS] Y->B->R near clk_ref_40m edge all starts seen
+[PASS] Y->B->R near clk_ref_40m edge reset becomes active
+[PASS] Y->B->R near clk_ref_40m edge reset waits for all required starts
+[PASS] Y->B->R near clk_ref_40m edge drains and rearms
+[PASS] B->R->Y small subcycle skew starts from safe idle
+[PASS] B->R->Y small subcycle skew resources ready before first edge
+[PASS] B->R->Y small subcycle skew gap1 is positive
+[PASS] B->R->Y small subcycle skew gap2 is positive
+[PASS] B->R->Y small subcycle skew first axis reaches its START gate
+[PASS] B->R->Y small subcycle skew second axis reaches START after ps offset
+[PASS] B->R->Y small subcycle skew third axis reaches START after ps offset
+[PASS] B->R->Y small subcycle skew all starts seen
+[PASS] B->R->Y small subcycle skew reset becomes active
+[PASS] B->R->Y small subcycle skew reset waits for all required starts
+[PASS] B->R->Y small subcycle skew drains and rearms
+[PASS] R->B->Y medium skew starts from safe idle
+[PASS] R->B->Y medium skew resources ready before first edge
+[PASS] R->B->Y medium skew gap1 is positive
+[PASS] R->B->Y medium skew gap2 is positive
+[PASS] R->B->Y medium skew first axis reaches its START gate
+[PASS] R->B->Y medium skew second axis reaches START after ps offset
+[PASS] R->B->Y medium skew third axis reaches START after ps offset
+[PASS] R->B->Y medium skew all starts seen
+[PASS] R->B->Y medium skew reset becomes active
+[PASS] R->B->Y medium skew reset waits for all required starts
+[PASS] R->B->Y medium skew drains and rearms
+[PASS] Y->R->B near default 64-cycle snapshot watchdog starts from safe idle
+[PASS] Y->R->B near default 64-cycle snapshot watchdog resources ready before first edge
+[PASS] Y->R->B near default 64-cycle snapshot watchdog gap1 is positive
+[PASS] Y->R->B near default 64-cycle snapshot watchdog gap2 is positive
+[PASS] Y->R->B near default 64-cycle snapshot watchdog first axis reaches its START gate
+[PASS] Y->R->B near default 64-cycle snapshot watchdog second axis reaches START after ps offset
+[PASS] Y->R->B near default 64-cycle snapshot watchdog third axis reaches START after ps offset
+[PASS] Y->R->B near default 64-cycle snapshot watchdog all starts seen
+[PASS] Y->R->B near default 64-cycle snapshot watchdog reset becomes active
+[PASS] Y->R->B near default 64-cycle snapshot watchdog reset waits for all required starts
+[PASS] Y->R->B near default 64-cycle snapshot watchdog drains and rearms
+[PASS] B->Y->R beyond default watchdog with extended watchdog starts from safe idle
+[PASS] B->Y->R beyond default watchdog with extended watchdog resources ready before first edge
+[PASS] B->Y->R beyond default watchdog with extended watchdog gap1 is positive
+[PASS] B->Y->R beyond default watchdog with extended watchdog gap2 is positive
+[PASS] B->Y->R beyond default watchdog with extended watchdog first axis reaches its START gate
+[PASS] B->Y->R beyond default watchdog with extended watchdog second axis reaches START after ps offset
+[PASS] B->Y->R beyond default watchdog with extended watchdog third axis reaches START after ps offset
+[PASS] B->Y->R beyond default watchdog with extended watchdog all starts seen
+[PASS] B->Y->R beyond default watchdog with extended watchdog reset becomes active
+[PASS] B->Y->R beyond default watchdog with extended watchdog reset waits for all required starts
+[PASS] B->Y->R beyond default watchdog with extended watchdog drains and rearms
+tb_spadmic_top_matrix_v1_skew_campaign: 139 pass / 0 fail
+Simulation complete via $finish(1) at time 131884375 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_top_matrix_v1_skew_campaign.sv:325     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:52:59 CEST  (total: 00:00:02)

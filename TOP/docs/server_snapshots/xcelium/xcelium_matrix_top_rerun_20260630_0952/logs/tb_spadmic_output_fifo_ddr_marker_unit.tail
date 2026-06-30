@@ -1,0 +1,80 @@
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_ddr_tx.sv
+	module worklib.spadmic_ddr_tx:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_axis_cluster_scan.sv
+	module worklib.spadmic_axis_cluster_scan:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/../position/rtl/spadmic_position_block.sv
+	module worklib.spadmic_position_block:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv
+  input  mptdc_pkg::input_sel_e     input_sel_i,
+                                              |
+xmvlog: *W,NODNTW (/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_tdc_axis_wrapper.sv,19|46): Implicit net port (input_sel_i) is not allowed since `default_nettype is declared as 'none'; 'wire' used instead [19.2(IEEE 2001)].
+	module worklib.spadmic_tdc_axis_wrapper:sv
+		errors: 0, warnings: 1
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_v1.sv
+	module worklib.spadmic_top_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/rtl/spadmic_top_matrix_v1.sv
+	module worklib.spadmic_top_matrix_v1:sv
+		errors: 0, warnings: 0
+file: /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_output_fifo_ddr_marker_unit.sv
+	module worklib.tb_spadmic_output_fifo_ddr_marker_unit:sv
+		errors: 0, warnings: 0
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC given but not used.
+xmvlog: *W,SPDUSD: Include directory /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb given but not used.
+	Total errors/warnings found outside modules and primitives:
+		errors: 0, warnings: 2
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		tb_spadmic_output_fifo_ddr_marker_unit
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.spadmic_ddr16_tx_pairer:sv <0x5131c303>
+			streams:  10, words:  5253
+		worklib.spadmic_output_fifo:sv <0x7fb5f264>
+			streams:  15, words:  6882
+		worklib.tb_spadmic_output_fifo_ddr_marker_unit:sv <0x7eba8592>
+			streams:  15, words: 17943
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 3       3
+		Registers:              44      44
+		Scalar wires:           34       -
+		Vectored wires:         11       -
+		Always blocks:           3       3
+		Initial blocks:          3       3
+		Cont. assignments:      13      21
+		Pseudo assignments:      5       -
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.tb_spadmic_output_fifo_ddr_marker_unit:sv
+Loading snapshot worklib.tb_spadmic_output_fifo_ddr_marker_unit:sv .................... Done
+xcelium> source /eda/cadence/2023-24/RHELx86/XCELIUM_23.03.007/tools/xcelium/files/xmsimrc
+xcelium> run
+[PASS] reset leaves FIFO empty
+[PASS] reset leaves pairer empty
+[PASS] FIFO accepts queued entry
+[PASS] FIFO accepts queued entry
+[PASS] FIFO accepts queued entry
+[PASS] FIFO accepts queued entry
+[PASS] two odd bundles queued with markers
+[PASS] pairer remains empty while FIFO drain is blocked
+[PASS] first odd bundle keeps DATA_L
+[PASS] first odd bundle pads DATA_H
+[PASS] first odd bundle reports padded
+[PASS] second odd bundle keeps DATA_L
+[PASS] second odd bundle pads DATA_H
+[PASS] second odd bundle reports padded
+[PASS] FIFO drains after ordered markers
+[PASS] pairer returns empty after ordered markers
+[PASS] no FIFO overflow during marker test
+tb_spadmic_output_fifo_ddr_marker_unit: 17 pass / 0 fail
+Simulation complete via $finish(1) at time 121876 PS + 0
+/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/tb/tb_spadmic_output_fifo_ddr_marker_unit.sv:184     $finish;
+xcelium> exit
+TOOL:	xrun(64)	23.03-s007: Exiting on Jun 30, 2026 at 09:52:37 CEST  (total: 00:00:01)
