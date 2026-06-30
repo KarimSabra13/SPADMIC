@@ -948,6 +948,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES 0
         MPTDC_SROUTE_CONNECT_STRIPE 1
         MPTDC_SROUTE_CORE_PIN_STOP_ROUTE RowEnd
+        MPTDC_ENABLE_RO_PG_PROBE 0
         MPTDC_ENABLE_RO_PG_HOOKUP 1
         MPTDC_REQUIRE_RO_PG_HOOKUP 1
         MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0
@@ -3021,11 +3022,25 @@ proc mptdc_signoff_ro_pg_unique_append {var_name value} {
     }
 }
 
+proc mptdc_signoff_db_attr_supported {handle attr} {
+    if {![mptdc_signoff_ro_pg_valid_handle $handle]} { return 0 }
+    if {[catch {set attrs [dbGet ${handle}.?]}]} { return 0 }
+    foreach item $attrs {
+        set name $item
+        regsub {[\(:].*$} $name {} name
+        if {$name eq $attr} {
+            return 1
+        }
+    }
+    return 0
+}
+
 proc mptdc_signoff_ro_pg_inst_term_handles {inst pin} {
     set handles [list]
     set ptr [mptdc_signoff_cell_ptr $inst]
     if {$ptr ne ""} {
         foreach attr {instTerms pgInstTerms} {
+            if {![mptdc_signoff_db_attr_supported $ptr $attr]} { continue }
             foreach depth {-p -p2} {
                 if {![catch {set values [dbGet ${ptr}.${attr}.name $pin $depth]}]} {
                     foreach value $values {
@@ -3040,6 +3055,7 @@ proc mptdc_signoff_ro_pg_inst_term_handles {inst pin} {
         foreach inst_ptr $inst_ptrs {
             if {![mptdc_signoff_ro_pg_valid_handle $inst_ptr]} { continue }
             foreach attr {instTerms pgInstTerms} {
+                if {![mptdc_signoff_db_attr_supported $inst_ptr $attr]} { continue }
                 foreach depth {-p -p2} {
                     if {![catch {set values [dbGet ${inst_ptr}.${attr}.name $pin $depth]}]} {
                         foreach value $values {
@@ -3051,6 +3067,54 @@ proc mptdc_signoff_ro_pg_inst_term_handles {inst pin} {
         }
     }
     return $handles
+}
+
+proc mptdc_signoff_ro_pg_shape_schema_status {} {
+    set ro_instances [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]
+    if {[llength $ro_instances] == 0} {
+        return [dict create supported 0 reason no_ro_instances]
+    }
+    set inst_attr_supported 0
+    set term_shape_supported 0
+    set detail [list]
+    foreach inst $ro_instances {
+        set ptr [mptdc_signoff_cell_ptr $inst]
+        if {![mptdc_signoff_ro_pg_valid_handle $ptr]} {
+            lappend detail "$inst:no_inst_handle"
+            continue
+        }
+        set attrs [list]
+        foreach attr {instTerms pgInstTerms} {
+            if {[mptdc_signoff_db_attr_supported $ptr $attr]} {
+                lappend attrs $attr
+            }
+        }
+        if {[llength $attrs] == 0} {
+            lappend detail "$inst:inst_term_attr_unsupported"
+            continue
+        }
+        set inst_attr_supported 1
+        foreach attr $attrs {
+            foreach spec [mptdc_signoff_ro_pg_supply_specs] {
+                set pin [lindex $spec 0]
+                if {[catch {set terms [dbGet ${ptr}.${attr}.name $pin -p]}]} { continue }
+                foreach term $terms {
+                    if {![mptdc_signoff_ro_pg_valid_handle $term]} { continue }
+                    foreach shape_attr {pins pin allShapes} {
+                        if {[mptdc_signoff_db_attr_supported $term $shape_attr]} {
+                            set term_shape_supported 1
+                            return [dict create supported 1 reason ok inst $inst term_attr $attr shape_attr $shape_attr]
+                        }
+                    }
+                }
+            }
+        }
+        lappend detail "$inst:term_shape_attr_unsupported"
+    }
+    if {!$inst_attr_supported || !$term_shape_supported} {
+        return [dict create supported 0 reason pin_shape_schema_unsupported detail [join $detail { | }]]
+    }
+    return [dict create supported 1 reason ok]
 }
 
 proc mptdc_signoff_ro_pg_add_shape_row {var_name seen_name inst pin net layer box source} {
@@ -3067,7 +3131,17 @@ proc mptdc_signoff_ro_pg_shape_rows_from_term {term inst pin net} {
     set rows [list]
     set seen [list]
     set shape_handles [list]
-    foreach expr [list "${term}.pins.allShapes" "${term}.pin.allShapes" "${term}.allShapes"] {
+    set shape_exprs [list]
+    if {[mptdc_signoff_db_attr_supported $term pins]} {
+        lappend shape_exprs "${term}.pins.allShapes"
+    }
+    if {[mptdc_signoff_db_attr_supported $term pin]} {
+        lappend shape_exprs "${term}.pin.allShapes"
+    }
+    if {[mptdc_signoff_db_attr_supported $term allShapes]} {
+        lappend shape_exprs "${term}.allShapes"
+    }
+    foreach expr $shape_exprs {
         if {![catch {set values [dbGet $expr]}]} {
             foreach value $values {
                 mptdc_signoff_ro_pg_unique_append shape_handles $value
@@ -3094,22 +3168,32 @@ proc mptdc_signoff_ro_pg_shape_rows_from_term {term inst pin net} {
     }
 
     set layers [list]
-    foreach expr [list \
-        "${term}.pins.allShapes.layer.name" \
-        "${term}.pin.allShapes.layer.name" \
-        "${term}.allShapes.layer.name"] {
+    set layer_exprs [list]
+    set box_exprs [list]
+    if {[mptdc_signoff_db_attr_supported $term pins]} {
+        lappend layer_exprs "${term}.pins.allShapes.layer.name"
+        lappend box_exprs "${term}.pins.allShapes.shapes.box" \
+            "${term}.pins.allShapes.box" \
+            "${term}.pins.allShapes.shapes.rect" \
+            "${term}.pins.allShapes.rect"
+    }
+    if {[mptdc_signoff_db_attr_supported $term pin]} {
+        lappend layer_exprs "${term}.pin.allShapes.layer.name"
+        lappend box_exprs "${term}.pin.allShapes.shapes.box" \
+            "${term}.pin.allShapes.box"
+    }
+    if {[mptdc_signoff_db_attr_supported $term allShapes]} {
+        lappend layer_exprs "${term}.allShapes.layer.name"
+        lappend box_exprs "${term}.allShapes.shapes.box" \
+            "${term}.allShapes.box"
+    }
+    foreach expr $layer_exprs {
         if {![catch {set layers [dbGet $expr]}] && [llength $layers] > 0} {
             break
         }
     }
     set boxes [list]
-    foreach expr [list \
-        "${term}.pins.allShapes.shapes.box" \
-        "${term}.pins.allShapes.box" \
-        "${term}.pins.allShapes.shapes.rect" \
-        "${term}.pins.allShapes.rect" \
-        "${term}.pin.allShapes.shapes.box" \
-        "${term}.pin.allShapes.box"] {
+    foreach expr $box_exprs {
         if {![catch {set boxes [dbGet $expr]}] && [llength $boxes] > 0} {
             break
         }
@@ -3268,8 +3352,25 @@ proc mptdc_signoff_ro_pg_probe {path {label RO_PG_PROBE}} {
     set search [mptdc_signoff_env_double MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0]
     puts $fh "# MPTDC RO PG Probe"
     puts $fh "DUMP_LABEL=$label"
+    puts $fh "RO_PG_PROBE_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 0] ? 1 : 0}]"
     puts $fh "RO_PG_HOOKUP_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 1] ? 1 : 0}]"
     puts $fh "RO_PG_HOOKUP_SEARCH_UM=$search"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 0]} {
+        puts $fh "RO_PG_PROBE_STATUS=SKIPPED"
+        puts $fh "RO_PG_PROBE_REASON=disabled_by_env"
+        close $fh
+        return $path
+    }
+    set schema [mptdc_signoff_ro_pg_shape_schema_status]
+    if {![dict get $schema supported]} {
+        puts $fh "RO_PG_PROBE_STATUS=FAIL"
+        puts $fh "RO_PG_PROBE_REASON=[dict get $schema reason]"
+        if {[dict exists $schema detail]} {
+            puts $fh "RO_PG_PROBE_SCHEMA_DETAIL=[dict get $schema detail]"
+        }
+        close $fh
+        return $path
+    }
     set rows [mptdc_signoff_ro_pg_all_pin_shapes]
     puts $fh "RO_PG_PIN_SHAPE_COUNT=[llength $rows]"
     puts $fh ""
@@ -3361,6 +3462,16 @@ proc mptdc_signoff_ro_pg_hookup {} {
         puts $fh "RO_PG_HOOKUP_REASON=disabled_by_env"
         close $fh
         return [list 1 $rpt]
+    }
+    set schema [mptdc_signoff_ro_pg_shape_schema_status]
+    if {![dict get $schema supported]} {
+        puts $fh "RO_PG_HOOKUP_STATUS=FAIL"
+        puts $fh "RO_PG_HOOKUP_REASON=[dict get $schema reason]"
+        if {[dict exists $schema detail]} {
+            puts $fh "RO_PG_HOOKUP_SCHEMA_DETAIL=[dict get $schema detail]"
+        }
+        close $fh
+        return [list 0 $rpt]
     }
 
     set search [mptdc_signoff_env_double MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0]

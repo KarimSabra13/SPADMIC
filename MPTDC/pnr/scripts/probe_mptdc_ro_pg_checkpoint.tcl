@@ -54,6 +54,7 @@ if {[catch {uplevel #0 "verifyConnectivity -type special -nets {VDD VSS} -report
 puts "MPTDC_RO_PG_PROBE_STATUS=PASS"
 puts "MPTDC_RO_PG_PROBE_CKPT=$ckpt"
 puts "MPTDC_RO_PG_PROBE_OUTDIR=$outdir"
+puts "MPTDC_RO_PG_PROBE_ENABLED=[mptdc_signoff_env MPTDC_ENABLE_RO_PG_PROBE 0]"
 puts "MPTDC_RO_PG_PROBE_REPORT=$probe_rpt"
 puts "MPTDC_RO_PG_TOPOLOGY_REPORT=$topology_rpt"
 puts "MPTDC_RO_PG_VERIFY_SPECIAL_REPORT=$verify_rpt"
