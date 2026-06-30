@@ -28,24 +28,47 @@ proc run_report {cmd out_file {fatal 0}} {
   return 1
 }
 
+proc maybe_run_clock_report {from_clock to_clock out_file} {
+  if {[llength [get_clocks $from_clock -quiet]] == 0} {
+    return
+  }
+  if {[llength [get_clocks $to_clock -quiet]] == 0} {
+    return
+  }
+  run_report "report_timing -from \[get_clocks $from_clock\] -to \[get_clocks $to_clock\] -max_paths 20" $out_file
+}
+
 proc classify_reports {run_dir} {
   set out_file [file join $run_dir reports messages warning_classification.rpt]
   file mkdir [file dirname $out_file]
-  set files [glob -nocomplain -types f \
-    [file join $run_dir logs *] \
-    [file join $run_dir reports * *.rpt] \
-    [file join $run_dir reports * *]]
+  set files [list]
+  foreach rel {
+    reports/elaboration/check_design_post_elab.rpt
+    reports/timing/check_timing_intent.rpt
+    reports/timing/report_timing_pre_synth.rpt
+    reports/timing/report_timing_post_opt.rpt
+    reports/qor/report_design_rules.rpt
+    reports/messages/report_messages.rpt
+  } {
+    set file [file join $run_dir $rel]
+    if {[file exists $file]} {
+      lappend files $file
+    }
+  }
   array set patterns {
-    unresolved        {unresolved|not found|cannot resolve}
-    inferred_latch    {latch|inferred latch}
-    unconstrained     {unconstrained|no clock|no paths}
-    all_false_path     {false.path|no paths}
-    blackbox          {black.?box|blackbox}
-    design_rule       {max.transition|max.cap|max.fanout|design rule}
-    undriven          {undriven|unconnected|multiply driven|multi.?driven}
+    unresolved              {unresolved reference|unresolved module|cannot resolve|not found}
+    inferred_latch          {Latch inferred|inferred latch}
+    no_clock_waveform       {no clock waveform|Unclocked source}
+    missing_external_delay  {primary inputs have no clocked external delays|primary outputs have no clocked external delays}
+    design_rule             {max.transition|max.cap|max.fanout|design rule}
+    undriven                {undriven|unconnected|multiply driven|multi.?driven}
+    tool_error              {(^|[^A-Za-z])Error[[:space:]]*:}
+    tool_warning            {(^|[^A-Za-z])Warning[[:space:]]*:}
   }
   set fh [open $out_file w]
   puts $fh "# Warning Classification"
+  puts $fh ""
+  puts $fh "Scope: curated report files only. Script echoes, library variable names, and raw stdout text are excluded to avoid false positives."
   puts $fh ""
   foreach key [lsort [array names patterns]] {
     set count 0
@@ -182,6 +205,11 @@ if {[catch {check_design -unresolved} unresolved_err]} {
 run_report {check_design -all} [file join $REPORT_DIR elaboration check_design_post_elab.rpt] 1
 run_report {check_timing_intent -verbose} [file join $REPORT_DIR timing check_timing_intent.rpt]
 run_report {report_clocks} [file join $REPORT_DIR timing report_clocks.rpt]
+run_report {report_exceptions} [file join $REPORT_DIR timing report_exceptions.rpt]
+maybe_run_clock_report clk_sys clk_cfg_40m [file join $REPORT_DIR timing report_timing_clk_sys_to_clk_cfg_40m.rpt]
+maybe_run_clock_report clk_cfg_40m clk_sys [file join $REPORT_DIR timing report_timing_clk_cfg_40m_to_clk_sys.rpt]
+maybe_run_clock_report clk_sys clk_ref_40m [file join $REPORT_DIR timing report_timing_clk_sys_to_clk_ref_40m.rpt]
+maybe_run_clock_report clk_ref_40m clk_sys [file join $REPORT_DIR timing report_timing_clk_ref_40m_to_clk_sys.rpt]
 run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_pre_synth.rpt]
 
 if {[catch {syn_generic} generic_err]} {
@@ -233,6 +261,11 @@ foreach rel {
   reports/elaboration/check_design_post_elab.rpt
   reports/timing/check_timing_intent.rpt
   reports/timing/report_clocks.rpt
+  reports/timing/report_exceptions.rpt
+  reports/timing/report_timing_clk_sys_to_clk_cfg_40m.rpt
+  reports/timing/report_timing_clk_cfg_40m_to_clk_sys.rpt
+  reports/timing/report_timing_clk_sys_to_clk_ref_40m.rpt
+  reports/timing/report_timing_clk_ref_40m_to_clk_sys.rpt
   reports/timing/report_timing_pre_synth.rpt
   reports/timing/report_timing_post_generic.rpt
   reports/timing/report_timing_post_map.rpt

@@ -79,6 +79,22 @@ copy_excerpt() {
   fi
 }
 
+copy_matching_tail() {
+  local src="$1"
+  local dst_rel="$2"
+  local pattern="$3"
+  local lines="${4:-240}"
+  if [[ -f "$src" ]]; then
+    mkdir -p "$DST_DIR/$(dirname "$dst_rel")"
+    {
+      echo "# Matching tail from $src"
+      echo "# Pattern: $pattern"
+      echo "# Last $lines matching lines"
+      grep -E "$pattern" "$src" | tail -n "$lines" || true
+    } > "$DST_DIR/$dst_rel"
+  fi
+}
+
 copy_file "$SRC_DIR/SUMMARY.md" "SUMMARY.md"
 copy_file "$SRC_DIR/run_manifest.txt" "run_manifest.txt"
 copy_file "$SRC_DIR/git_status_short.txt" "git_status_short.txt"
@@ -93,13 +109,17 @@ case "$KIND" in
     done < <(find "$SRC_DIR/logs" -maxdepth 1 -type f -name '*.tail' 2>/dev/null | sort)
     ;;
   genus)
+    copy_file "$SRC_DIR/filelists/top_genus_excluded.f" "filelists/top_genus_excluded.f"
     while IFS= read -r file; do
       rel="${file#"$SRC_DIR"/}"
       case "$rel" in
+        */logs/genus.stdout.log)
+          copy_matching_tail "$file" "${rel%.log}.messages.tail" '^(Error|Warning|Info)[[:space:]]*:|^\*\*(WARN|ERROR|INFO)' 260
+          ;;
         */logs/failure.tail|*/reports/messages/warning_classification.rpt)
           copy_file "$file" "$rel"
           ;;
-        */reports/elaboration/check_design_post_elab.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_qor.rpt)
+        */reports/elaboration/check_design_post_elab.rpt|*/reports/messages/report_messages.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/timing/report_exceptions.rpt|*/reports/timing/report_timing_*.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_qor.rpt|*/reports/qor/report_design_rules.rpt)
           copy_excerpt "$file" "$rel" 220
           ;;
       esac
