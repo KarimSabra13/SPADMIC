@@ -1,0 +1,122 @@
+# Excerpt from /sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_evidence_20260630_1117/or64_tree/reports/elaboration/check_design_post_elab.rpt
+# First 220 lines
+
+ 	 Check Design Report (c)
+	 ------------------- 
+No subdesign's name is greater than 1.5k in length.
+
+ Feedthrough Module(s)
+ -------------------------
+No feed through module in 'spadmic_matrix_or_tree'
+
+  Unresolved References & Empty Modules
+  ------------------------------------- 
+No unresolved references in design 'spadmic_matrix_or_tree'
+
+No empty modules in design 'spadmic_matrix_or_tree'
+
+ Unloaded Pin(s), Port(s)
+ -------------------------
+No unloaded sequential element in 'spadmic_matrix_or_tree'
+
+No unloaded port in 'spadmic_matrix_or_tree'
+
+ Unloaded Combinational Pin(s)
+ -------------------------------
+No unloaded combinational element in 'spadmic_matrix_or_tree'
+
+ Assigns
+ ------- 
+Total number of assign statements in design 'spadmic_matrix_or_tree' : 0
+
+ Undriven Port(s)/Pin(s)
+ ------------------------
+No undriven combinational pin in 'spadmic_matrix_or_tree'
+
+No undriven sequential pin in 'spadmic_matrix_or_tree'
+
+No undriven hierarchical pin in 'spadmic_matrix_or_tree'
+
+No undriven port in 'spadmic_matrix_or_tree'
+
+ Multidriven Port(s)/Pin(s)
+--------------------------
+
+No multidriven combinational pin in 'spadmic_matrix_or_tree'
+
+No multidriven sequential pin in 'spadmic_matrix_or_tree'
+
+No multidriven hierarchical pin in 'spadmic_matrix_or_tree'
+
+No multidriven ports in 'spadmic_matrix_or_tree'
+
+No multidriven unloaded nets in 'spadmic_matrix_or_tree'
+
+  Constant Pin(s)
+  ----------------
+No constant combinational pin(s) in design 'spadmic_matrix_or_tree'
+
+No constant sequential pin(s) in design 'spadmic_matrix_or_tree'
+
+No constant hierarchical pin(s) in design 'spadmic_matrix_or_tree'
+
+No constant connected ports in design 'spadmic_matrix_or_tree'
+
+  Preserved instances(s)
+  ----------------
+No preserved combinational instance(s) in design 'spadmic_matrix_or_tree'
+No preserved sequential instance(s) in design 'spadmic_matrix_or_tree'
+No preserved hierarchical instance(s) in design 'spadmic_matrix_or_tree'
+
+  Physical only instances(s)
+  ----------------
+No physical only instance(s) in design 'spadmic_matrix_or_tree'
+
+  Logical only instance(s) and linked libcells
+    -----------------------------------------
+No logical only instance(s) in design 'spadmic_matrix_or_tree'
+
+Libcells with no corresponding LEF
+----------------------------------
+lib_cell:default_emulate_libset_max/D_CELLS_JIHD_LPMOS_typ_1_80V_25C/MPROBEBUJIHDX8
+lib_cell:default_emulate_libset_max/D_CELLS_JIHD_LPMOS_typ_1_80V_25C/MPROBEJIHD
+lib_cell:default_emulate_libset_max/D_CELLS_JIHD_LPMOS_typ_1_80V_25C/CLKVBUFJIHD
+
+Total number of cell(s) with only library (.lib) info : 3
+
+LEF cells with no corresponding libcell
+---------------------------------------
+
+No physical (LEF) cells found.
+
+ Summary
+ ------- 
+
+              Name                       Total
+----------------------------------------------
+Unresolved References                        0
+Empty Modules                                0
+Unloaded Port(s)                             0
+Unloaded Sequential Pin(s)                   0
+Unloaded Combinational Pin(s)                0
+Assigns                                      0
+Undriven Port(s)                             0
+Undriven Leaf Pin(s)                         0
+Undriven hierarchical pin(s)                 0
+Multidriven Port(s)                          0
+Multidriven Leaf Pin(s)                      0
+Multidriven hierarchical Pin(s)              0
+Multidriven unloaded net(s)                  0
+Constant Port(s)                             0
+Constant Leaf Pin(s)                         0
+Constant hierarchical Pin(s)                 0
+Preserved leaf instance(s)                   0
+Preserved hierarchical instance(s)           0
+Feedthrough Modules(s)                       0
+Libcells with no LEF cell                    3
+Physical (LEF) cells with no libcell         0
+Subdesigns with long module name             0
+Physical only instance(s)                    0
+Logical only instance(s)                     0
+
+  Done Checking the design.

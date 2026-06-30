@@ -1,0 +1,197 @@
+# Matrix TOP Server Snapshot
+
+- Kind: `genus`
+- Run ID: `genus_matrix_ooc_evidence_20260630_1117`
+- Source directory: `/sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_evidence_20260630_1117`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/server_snapshots/genus/genus_matrix_ooc_evidence_20260630_1117`
+- Repository branch: `SPADMIC_test`
+- Repository commit: `69fb37cc844744c31bbe81268998335ada1fb8aa`
+- Created UTC: `2026-06-30T10:14:03Z`
+
+## Included Files
+- `README.md`
+- `SUMMARY.md`
+- `ddr16_pairer/logs/genus.stdout.messages.tail`
+- `ddr16_pairer/reports/elaboration/check_design_post_elab.rpt`
+- `ddr16_pairer/reports/messages/report_messages.rpt`
+- `ddr16_pairer/reports/messages/warning_classification.rpt`
+- `ddr16_pairer/reports/qor/report_area.rpt`
+- `ddr16_pairer/reports/qor/report_design_rules.rpt`
+- `ddr16_pairer/reports/qor/report_qor.rpt`
+- `ddr16_pairer/reports/timing/check_timing_intent.rpt`
+- `ddr16_pairer/reports/timing/report_clocks.rpt`
+- `ddr16_pairer/reports/timing/report_exceptions.rpt`
+- `ddr16_pairer/reports/timing/report_timing_post_generic.rpt`
+- `ddr16_pairer/reports/timing/report_timing_post_map.rpt`
+- `ddr16_pairer/reports/timing/report_timing_post_opt.rpt`
+- `ddr16_pairer/reports/timing/report_timing_pre_synth.rpt`
+- `event_bundle_tx/logs/genus.stdout.messages.tail`
+- `event_bundle_tx/reports/elaboration/check_design_post_elab.rpt`
+- `event_bundle_tx/reports/messages/report_messages.rpt`
+- `event_bundle_tx/reports/messages/warning_classification.rpt`
+- `event_bundle_tx/reports/qor/report_area.rpt`
+- `event_bundle_tx/reports/qor/report_design_rules.rpt`
+- `event_bundle_tx/reports/qor/report_qor.rpt`
+- `event_bundle_tx/reports/timing/check_timing_intent.rpt`
+- `event_bundle_tx/reports/timing/report_clocks.rpt`
+- `event_bundle_tx/reports/timing/report_exceptions.rpt`
+- `event_bundle_tx/reports/timing/report_timing_post_generic.rpt`
+- `event_bundle_tx/reports/timing/report_timing_post_map.rpt`
+- `event_bundle_tx/reports/timing/report_timing_post_opt.rpt`
+- `event_bundle_tx/reports/timing/report_timing_pre_synth.rpt`
+- `event_coordinator/logs/genus.stdout.messages.tail`
+- `event_coordinator/reports/elaboration/check_design_post_elab.rpt`
+- `event_coordinator/reports/messages/report_messages.rpt`
+- `event_coordinator/reports/messages/warning_classification.rpt`
+- `event_coordinator/reports/qor/report_area.rpt`
+- `event_coordinator/reports/qor/report_design_rules.rpt`
+- `event_coordinator/reports/qor/report_qor.rpt`
+- `event_coordinator/reports/timing/check_timing_intent.rpt`
+- `event_coordinator/reports/timing/report_clocks.rpt`
+- `event_coordinator/reports/timing/report_exceptions.rpt`
+- `event_coordinator/reports/timing/report_timing_post_generic.rpt`
+- `event_coordinator/reports/timing/report_timing_post_map.rpt`
+- `event_coordinator/reports/timing/report_timing_post_opt.rpt`
+- `event_coordinator/reports/timing/report_timing_pre_synth.rpt`
+- `filelists/top_genus_excluded.f`
+- `git_status_short.txt`
+- `i2c_csr_bridge/logs/genus.stdout.messages.tail`
+- `i2c_csr_bridge/reports/elaboration/check_design_post_elab.rpt`
+- `i2c_csr_bridge/reports/messages/report_messages.rpt`
+- `i2c_csr_bridge/reports/messages/warning_classification.rpt`
+- `i2c_csr_bridge/reports/qor/report_area.rpt`
+- `i2c_csr_bridge/reports/qor/report_design_rules.rpt`
+- `i2c_csr_bridge/reports/qor/report_qor.rpt`
+- `i2c_csr_bridge/reports/timing/check_timing_intent.rpt`
+- `i2c_csr_bridge/reports/timing/report_clocks.rpt`
+- `i2c_csr_bridge/reports/timing/report_exceptions.rpt`
+- `i2c_csr_bridge/reports/timing/report_timing_post_generic.rpt`
+- `i2c_csr_bridge/reports/timing/report_timing_post_map.rpt`
+- `i2c_csr_bridge/reports/timing/report_timing_post_opt.rpt`
+- `i2c_csr_bridge/reports/timing/report_timing_pre_synth.rpt`
+- `i2c_slave/logs/genus.stdout.messages.tail`
+- `i2c_slave/reports/elaboration/check_design_post_elab.rpt`
+- `i2c_slave/reports/messages/report_messages.rpt`
+- `i2c_slave/reports/messages/warning_classification.rpt`
+- `i2c_slave/reports/qor/report_area.rpt`
+- `i2c_slave/reports/qor/report_design_rules.rpt`
+- `i2c_slave/reports/qor/report_qor.rpt`
+- `i2c_slave/reports/timing/check_timing_intent.rpt`
+- `i2c_slave/reports/timing/report_clocks.rpt`
+- `i2c_slave/reports/timing/report_exceptions.rpt`
+- `i2c_slave/reports/timing/report_timing_post_generic.rpt`
+- `i2c_slave/reports/timing/report_timing_post_map.rpt`
+- `i2c_slave/reports/timing/report_timing_post_opt.rpt`
+- `i2c_slave/reports/timing/report_timing_pre_synth.rpt`
+- `matrix_cfg_ctrl/logs/genus.stdout.messages.tail`
+- `matrix_cfg_ctrl/reports/elaboration/check_design_post_elab.rpt`
+- `matrix_cfg_ctrl/reports/messages/report_messages.rpt`
+- `matrix_cfg_ctrl/reports/messages/warning_classification.rpt`
+- `matrix_cfg_ctrl/reports/qor/report_area.rpt`
+- `matrix_cfg_ctrl/reports/qor/report_design_rules.rpt`
+- `matrix_cfg_ctrl/reports/qor/report_qor.rpt`
+- `matrix_cfg_ctrl/reports/timing/check_timing_intent.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_clocks.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_exceptions.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_timing_clk_cfg_40m_to_clk_sys.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_timing_clk_sys_to_clk_cfg_40m.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_timing_post_generic.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_timing_post_map.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_timing_post_opt.rpt`
+- `matrix_cfg_ctrl/reports/timing/report_timing_pre_synth.rpt`
+- `matrix_reset_ctrl/logs/genus.stdout.messages.tail`
+- `matrix_reset_ctrl/reports/elaboration/check_design_post_elab.rpt`
+- `matrix_reset_ctrl/reports/messages/report_messages.rpt`
+- `matrix_reset_ctrl/reports/messages/warning_classification.rpt`
+- `matrix_reset_ctrl/reports/qor/report_area.rpt`
+- `matrix_reset_ctrl/reports/qor/report_design_rules.rpt`
+- `matrix_reset_ctrl/reports/qor/report_qor.rpt`
+- `matrix_reset_ctrl/reports/timing/check_timing_intent.rpt`
+- `matrix_reset_ctrl/reports/timing/report_clocks.rpt`
+- `matrix_reset_ctrl/reports/timing/report_exceptions.rpt`
+- `matrix_reset_ctrl/reports/timing/report_timing_post_generic.rpt`
+- `matrix_reset_ctrl/reports/timing/report_timing_post_map.rpt`
+- `matrix_reset_ctrl/reports/timing/report_timing_post_opt.rpt`
+- `matrix_reset_ctrl/reports/timing/report_timing_pre_synth.rpt`
+- `matrix_top_csr/logs/genus.stdout.messages.tail`
+- `matrix_top_csr/reports/elaboration/check_design_post_elab.rpt`
+- `matrix_top_csr/reports/messages/report_messages.rpt`
+- `matrix_top_csr/reports/messages/warning_classification.rpt`
+- `matrix_top_csr/reports/qor/report_area.rpt`
+- `matrix_top_csr/reports/qor/report_design_rules.rpt`
+- `matrix_top_csr/reports/qor/report_qor.rpt`
+- `matrix_top_csr/reports/timing/check_timing_intent.rpt`
+- `matrix_top_csr/reports/timing/report_clocks.rpt`
+- `matrix_top_csr/reports/timing/report_exceptions.rpt`
+- `matrix_top_csr/reports/timing/report_timing_post_generic.rpt`
+- `matrix_top_csr/reports/timing/report_timing_post_map.rpt`
+- `matrix_top_csr/reports/timing/report_timing_post_opt.rpt`
+- `matrix_top_csr/reports/timing/report_timing_pre_synth.rpt`
+- `or64_tree/logs/genus.stdout.messages.tail`
+- `or64_tree/reports/elaboration/check_design_post_elab.rpt`
+- `or64_tree/reports/messages/report_messages.rpt`
+- `or64_tree/reports/messages/warning_classification.rpt`
+- `or64_tree/reports/qor/report_area.rpt`
+- `or64_tree/reports/qor/report_design_rules.rpt`
+- `or64_tree/reports/qor/report_qor.rpt`
+- `or64_tree/reports/timing/check_timing_intent.rpt`
+- `or64_tree/reports/timing/report_clocks.rpt`
+- `or64_tree/reports/timing/report_exceptions.rpt`
+- `or64_tree/reports/timing/report_timing_post_generic.rpt`
+- `or64_tree/reports/timing/report_timing_post_map.rpt`
+- `or64_tree/reports/timing/report_timing_post_opt.rpt`
+- `or64_tree/reports/timing/report_timing_pre_synth.rpt`
+- `output_fifo/logs/genus.stdout.messages.tail`
+- `output_fifo/reports/elaboration/check_design_post_elab.rpt`
+- `output_fifo/reports/messages/report_messages.rpt`
+- `output_fifo/reports/messages/warning_classification.rpt`
+- `output_fifo/reports/qor/report_area.rpt`
+- `output_fifo/reports/qor/report_design_rules.rpt`
+- `output_fifo/reports/qor/report_qor.rpt`
+- `output_fifo/reports/timing/check_timing_intent.rpt`
+- `output_fifo/reports/timing/report_clocks.rpt`
+- `output_fifo/reports/timing/report_exceptions.rpt`
+- `output_fifo/reports/timing/report_timing_post_generic.rpt`
+- `output_fifo/reports/timing/report_timing_post_map.rpt`
+- `output_fifo/reports/timing/report_timing_post_opt.rpt`
+- `output_fifo/reports/timing/report_timing_pre_synth.rpt`
+- `position_snapshot/logs/genus.stdout.messages.tail`
+- `position_snapshot/reports/elaboration/check_design_post_elab.rpt`
+- `position_snapshot/reports/messages/report_messages.rpt`
+- `position_snapshot/reports/messages/warning_classification.rpt`
+- `position_snapshot/reports/qor/report_area.rpt`
+- `position_snapshot/reports/qor/report_design_rules.rpt`
+- `position_snapshot/reports/qor/report_qor.rpt`
+- `position_snapshot/reports/timing/check_timing_intent.rpt`
+- `position_snapshot/reports/timing/report_clocks.rpt`
+- `position_snapshot/reports/timing/report_exceptions.rpt`
+- `position_snapshot/reports/timing/report_timing_post_generic.rpt`
+- `position_snapshot/reports/timing/report_timing_post_map.rpt`
+- `position_snapshot/reports/timing/report_timing_post_opt.rpt`
+- `position_snapshot/reports/timing/report_timing_pre_synth.rpt`
+- `run_manifest.txt`
+- `spadmic_top_matrix_v1/logs/genus.stdout.messages.tail`
+- `spadmic_top_matrix_v1/reports/elaboration/check_design_post_elab.rpt`
+- `spadmic_top_matrix_v1/reports/messages/report_messages.rpt`
+- `spadmic_top_matrix_v1/reports/messages/warning_classification.rpt`
+- `spadmic_top_matrix_v1/reports/qor/report_area.rpt`
+- `spadmic_top_matrix_v1/reports/qor/report_design_rules.rpt`
+- `spadmic_top_matrix_v1/reports/qor/report_qor.rpt`
+- `spadmic_top_matrix_v1/reports/timing/check_timing_intent.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_clocks.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_exceptions.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_clk_cfg_40m_to_clk_sys.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_clk_ref_40m_to_clk_sys.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_clk_sys_to_clk_cfg_40m.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_clk_sys_to_clk_ref_40m.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_post_generic.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_post_map.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_post_opt.rpt`
+- `spadmic_top_matrix_v1/reports/timing/report_timing_pre_synth.rpt`
+
+## Excluded By Policy
+
+- raw `*.log` files except curated tails;
+- Xcelium `xcelium.d` libraries;
+- Genus/Innovus databases, checkpoints, netlists, SDF/SPEF, waves, and tarballs;
+- generated server work directories under `/sim`.

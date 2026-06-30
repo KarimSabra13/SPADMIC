@@ -1,0 +1,16 @@
+# Warning Classification
+
+Scope: curated report files only. Script echoes, library variable names, and raw stdout text are excluded to avoid false positives.
+
+design_rule count=3
+  first=report_design_rules.rpt: Max_transition design rule: no violations.
+inferred_latch count=0
+missing_external_delay count=2
+  first=check_timing_intent.rpt: The following primary inputs have no clocked external delays.  As a result the  
+no_clock_waveform count=0
+tool_error count=0
+tool_warning count=0
+undriven count=18
+  first=check_design_post_elab.rpt:  Undriven Port(s)/Pin(s)
+unresolved count=3
+  first=check_design_post_elab.rpt:   Unresolved References & Empty Modules
