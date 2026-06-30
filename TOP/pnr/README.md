@@ -54,6 +54,52 @@ Default matrix LEF:
 
 Override with `SPADMIC_MATRIX_LEF` or `SPADMIC_MATRIX_PIN_CSV` if needed.
 
+## Staged Top Floorplan Command
+
+The next physical flow should use the staged wrapper before any real top
+placement. It generates full-die/core/matrix/MPTDC/pad-policy reports and
+intentionally stops before Innovus if the geometry is infeasible.
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+RUN_ID=innovus_matrix_top_staged_fp_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/server_run_innovus_matrix_top_staged_floorplan.sh "$RUN_ID"
+```
+
+Default planning inputs:
+
+- full-die envelope: `3800 um x 2700 um`;
+- pad/core keepout assumption: `120 um`;
+- MPTDC placeholders: three vertical `1.0 mm^2` boxes, `4:3` aspect ratio,
+  ordered R/Y/B from top to bottom;
+- pad policy template:
+  `TOP/pnr/inputs/matrix_top_pad_policy_template.csv`.
+
+Under those defaults the expected result is a controlled feasibility stop:
+`MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`. This is useful evidence, not a
+tool failure.
+
+## Staged OOC Collateral Gate
+
+After a clean Genus OOC run, validate per-block collateral before adding real
+Innovus import/place/preCTS commands:
+
+```bash
+OOC_RUN_ID=innovus_matrix_ooc_gate_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/server_run_innovus_matrix_ooc.sh "$OOC_RUN_ID" "$GENUS_RUN_ID"
+```
+
+The OOC gate is connectivity-first and excludes DDR16 by default. Set
+`SPADMIC_INNOVUS_INCLUDE_DDR16=1` only when the DDR macro boundary is ready for
+physical work.
+
 ## Floorplan Intent
 
 - `matrice3` on the left, vertically centered.
@@ -77,4 +123,3 @@ Override with `SPADMIC_MATRIX_LEF` or `SPADMIC_MATRIX_PIN_CSV` if needed.
 - No placement, CTS, routing, DRC/LVS, PG, extracted timing, or signoff claim.
 - Final netlists, MMMC, MPTDC physical collateral, matrix macro timing, and DDR
   macro timing must be integrated before real closure.
-

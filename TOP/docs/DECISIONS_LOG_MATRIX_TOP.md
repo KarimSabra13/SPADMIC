@@ -181,7 +181,13 @@ Pin family summary from the CSV:
 - [FROZEN] Control/reset/supervision registers should be placed toward the bottom of the matrix.
 - [FROZEN] PLL should be placed toward bottom-right.
 - [FROZEN] The provided image is conceptual only. Physical planning must use `matrice3_pin_coordinates.csv`, normalized `ll_*` coordinates, and explicit routing corridors for `INTERNAL_NEAREST_RIGHT` pins.
-- [TBD - NEEDS FLOORPLAN] Final top-chip die size, exact macro coordinate, halo, pin corridors, power-grid keepouts, and final MPTDC orientation.
+- [FROZEN] First top floorplan envelope is a full die of `3800 um x 2700 um`, with up to approximately 5% horizontal extension allowed if explicitly reported.
+- [DEFAULT FOR V1] First pad/core keepout assumption is `120 um` until pad-ring LEF/DEF or a richer pad handoff replaces it.
+- [FROZEN] First MPTDC placeholder arrangement is a vertical stack to the right of the matrix, with R top, Y middle, and B bottom.
+- [FROZEN] MPTDC placeholder boxes are parametric, default `1.0 mm^2` each, with horizontal:vertical aspect ratio `4:3`.
+- [FROZEN] If the vertical MPTDC placeholder stack does not fit, scripts must stop and report. Do not silently switch to a 2+1 fallback.
+- [FROZEN] DDR16 is deferred from early Innovus OOC. It remains a north-side future boundary until the DDR macro contract is ready.
+- [TBD - NEEDS FLOORPLAN] Final exact pad-ring/core keepout, final MPTDC macro dimensions, final PLL size, and final top-level pad coordinates.
 
 ## Matrix Reset Assumptions
 
@@ -392,6 +398,14 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Builder updated `TOP/syn/scripts/run_genus_matrix_block.tcl` to avoid unsupported Genus 22.13 report/SDF options, generate `report_area_hierarchy.rpt` using the compatible default `report_area` format, move `report_messages` after output collateral generation, and suppress `No undriven ...` false positives.
 - [IMPLEMENTED] Builder updated `TOP/ci/collect_matrix_top_server_snapshot.sh` so future snapshots include `report_area_hierarchy.rpt` and distinguish source-run branch/commit from snapshot-collection branch/commit.
 - [NOT IMPLEMENTED] A final clean Genus evidence snapshot after these script fixes still needs to be run on the server.
+- [IMPLEMENTED] Builder added staged matrix-top Innovus planning infrastructure:
+  - `TOP/pnr/inputs/matrix_top_pad_policy_template.csv`
+  - `TOP/pnr/scripts/gen_matrix_top_floorplan_plan.py`
+  - `TOP/pnr/scripts/server_run_innovus_matrix_top_staged_floorplan.sh`
+  - `TOP/pnr/templates/matrix_top_staged_floorplan.tcl`
+  - updated `TOP/pnr/scripts/server_run_innovus_matrix_ooc.sh`
+- [VERIFIED] Local Verifier smoke confirms the locked first geometry reports `STATUS=FAIL` with `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`, about `109 um` height excess, and about `0.839 mm^2` maximum MPTDC placeholder area per axis if the vertical stack must fit with current die/core assumptions.
+- [RISK] The staged Innovus OOC wrapper validates Genus collateral and creates per-block run directories but does not yet run real Innovus import/place/preCTS. This is intentional until the clean Genus evidence and top geometry gates are resolved.
 
 ## Affected Files
 

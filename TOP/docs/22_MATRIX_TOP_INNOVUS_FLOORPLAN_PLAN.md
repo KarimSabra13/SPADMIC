@@ -102,6 +102,22 @@ OOC feasibility order:
 6. Control/CSR.
 7. Product-like matrix-top floorplan.
 
+The staged continuation is now captured in:
+
+```text
+TOP/docs/23_MATRIX_TOP_STAGED_INNOVUS_EXECUTION_PLAN.md
+```
+
+The first TOP staged floorplan wrapper is:
+
+```text
+TOP/pnr/scripts/server_run_innovus_matrix_top_staged_floorplan.sh
+```
+
+This wrapper uses a full-die `3800 um x 2700 um` planning envelope, a
+parameterized `120 um` pad/core keepout, and three provisional vertical MPTDC
+placeholders. It stops before Innovus if the geometry is infeasible.
+
 ## Required Reports
 
 - macro placement report;
