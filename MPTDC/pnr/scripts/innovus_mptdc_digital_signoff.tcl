@@ -933,7 +933,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_BLOCK_PG_STITCH_WIDTH_UM 2.0
         MPTDC_BLOCK_PG_STITCH_SPACING_UM 2.0
         MPTDC_BLOCK_PG_STITCH_SET_DISTANCE_UM 5000.0
-        MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 1
+        MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 0
         MPTDC_ENABLE_FINAL_FILLER 1
         MPTDC_ENABLE_POST_FILLER_SROUTE 0
         MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1
@@ -1907,15 +1907,16 @@ proc mptdc_signoff_sroute_attempt_summary {label} {
             return $data
         }
         set wires [dict get $data wires]
-        if {[dict get $data status] eq "REVIEW_REQUIRED" &&
-            $wires ne "UNKNOWN" && $wires > 0} {
+        if {[dict get $data status] eq "REVIEW_REQUIRED"} {
             set best_wires [dict get $best wires]
             set best_open [dict get $best open_ports]
             set data_open [dict get $data open_ports]
             if {[dict get $best status] ne "REVIEW_REQUIRED" ||
                 $best_wires eq "UNKNOWN" ||
                 $data_open < $best_open ||
-                ($data_open == $best_open && $wires > $best_wires)} {
+                ($data_open == $best_open &&
+                    $wires ne "UNKNOWN" &&
+                    ($best_wires eq "UNKNOWN" || $wires > $best_wires))} {
                 set best $data
             }
         }
@@ -2144,6 +2145,15 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_PROGRESS_STATUS=[expr {$progress_ok ? "PASS" : "FAIL"}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=$status"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
+    set gate_action PASS
+    if {$status ne "PASS"} {
+        if {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            set gate_action FAIL_FAST
+        } else {
+            set gate_action CONTINUE_FOR_ROUTE_GATE
+        }
+    }
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_GATE_ACTION=$gate_action"
 
     if {$status ne "PASS" &&
         [mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
@@ -2433,7 +2443,7 @@ proc mptdc_signoff_block_pg_stitch_commands {net layer direction start_from offs
         -width $width -spacing $spacing -set_to_set_distance $set_distance \
         -start_from $start_from -start_offset $offset]
     set commands [list]
-    set number_of_sets [mptdc_signoff_env_int MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 1]
+    set number_of_sets [mptdc_signoff_env_int MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 0]
     if {$number_of_sets > 0} {
         lappend commands [concat $base [list -number_of_sets $number_of_sets]]
     }
@@ -2472,7 +2482,7 @@ proc mptdc_signoff_create_block_pg_stitches {{report_name block_pg_stitch_status
     puts $fh "${label}_WIDTH_UM=$stitch_width"
     puts $fh "${label}_SPACING_UM=$stitch_spacing"
     puts $fh "${label}_SET_DISTANCE_UM=$set_distance"
-    puts $fh "${label}_NUMBER_OF_SETS=[mptdc_signoff_env_int MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 1]"
+    puts $fh "${label}_NUMBER_OF_SETS=[mptdc_signoff_env_int MPTDC_BLOCK_PG_STITCH_NUMBER_OF_SETS 0]"
     puts $fh "CORE_BBOX=$core_box"
     if {![mptdc_signoff_box_valid $core_box]} {
         puts $fh "${label}_STATUS=FAIL"
