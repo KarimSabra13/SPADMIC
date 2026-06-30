@@ -1,0 +1,2 @@
+# Clock-group and clock excerpts from /sim/ksabra/SPADMIC_work/genus/genus_matrix_ooc_clean_20260630_1222/ddr16_pairer/outputs/ddr16_pairer.postsyn.sdc
+create_clock -name "clk_sys" -period 6.25 -waveform {0.0 3.125} [get_ports clk_sys]

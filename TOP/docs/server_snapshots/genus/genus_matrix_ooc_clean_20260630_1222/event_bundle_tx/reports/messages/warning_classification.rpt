@@ -1,0 +1,16 @@
+# Warning Classification
+
+Scope: curated report files only. Script echoes, library variable names, and raw stdout text are excluded to avoid false positives.
+
+design_rule count=0
+inferred_latch count=0
+missing_external_delay count=2
+  first=check_timing_intent.rpt: The following primary inputs have no clocked external delays.  As a result the  
+no_clock_waveform count=0
+tool_error count=1
+  first=report_messages.rpt: |TUI-204|Error  |    1|An invalid option was specified.                                                                 |
+tool_warning count=1
+  first=report_messages.rpt: |MESG-11|Warning|    6|Maximum message print count reached.                                                             |
+undriven count=18
+  first=check_design_post_elab.rpt: No undriven combinational pin in 'spadmic_event_bundle_tx'
+unresolved count=0
