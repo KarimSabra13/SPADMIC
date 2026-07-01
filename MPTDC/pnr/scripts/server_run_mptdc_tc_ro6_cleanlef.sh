@@ -21,6 +21,8 @@ HANDOFF_DIR_VALUE="${MPTDC_GENUS_HANDOFF_DIR:-$DEFAULT_HANDOFF_DIR}"
 GENUS_RUN_ID_VALUE="${MPTDC_GENUS_RUN_ID:-$DEFAULT_GENUS_RUN_ID}"
 INNOVUS_WORK_VALUE="${MPTDC_INNOVUS_WORK:-$DEFAULT_INNOVUS_WORK}"
 WORK_ROOT_VALUE="${MPTDC_WORK_ROOT:-$DEFAULT_WORK_ROOT}"
+ROUTE_RECOVERY_VALUE="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-0}"
+ROUTE_REPAIR_COMMANDS_VALUE="${MPTDC_ROUTE_REPAIR_COMMANDS:-{ecoRoute -target} {ecoRoute -fix_drc}}"
 
 usage() {
   cat <<'USAGE'
@@ -37,11 +39,17 @@ Options:
   --genus-run-id <id>    Genus run id label used by the pre-PNR gate.
   --innovus-work <path>  Innovus run root.
   --work-root <path>     MPTDC work root.
+  --enable-route-recovery
+                         Enable guarded post-route ecoRoute recovery probe.
+  --route-repair-commands <cmds>
+                         Tcl list of route repair commands used with recovery.
   -h, --help             Show this help.
 
 This launcher is the corrected RO_tune6 VDD/VSS-only closure path. It requires
 real RO PG hookup and uses a guarded blockPin sroute probe, while keeping the
 old vdd!/RO-only PG filter strategy disabled.
+Route recovery is disabled by default; enabling it still keeps the final
+verify_drc/connectivity gate authoritative.
 USAGE
 }
 
@@ -135,6 +143,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --work-root)
       WORK_ROOT_VALUE="${2:?missing --work-root value}"
+      shift 2
+      ;;
+    --enable-route-recovery)
+      ROUTE_RECOVERY_VALUE=1
+      shift
+      ;;
+    --disable-route-recovery)
+      ROUTE_RECOVERY_VALUE=0
+      shift
+      ;;
+    --route-repair-commands)
+      ROUTE_REPAIR_COMMANDS_VALUE="${2:?missing --route-repair-commands value}"
       shift 2
       ;;
     -h|--help)
@@ -298,7 +318,8 @@ export MPTDC_RO_PG_HOOKUP_MARGIN_UM=1.0
 export MPTDC_RO_PG_HOOKUP_SPACING_UM=2.0
 export MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM=5000.0
 
-export MPTDC_ENABLE_ROUTE_GATE_RECOVERY=0
+export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="$ROUTE_RECOVERY_VALUE"
+export MPTDC_ROUTE_REPAIR_COMMANDS="$ROUTE_REPAIR_COMMANDS_VALUE"
 export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE=0
 export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS=0
 export MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES=Mar
@@ -349,6 +370,8 @@ echo "MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=$MPTDC_POSTPLACE_PRE_ROUTE_A
 echo "MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=$MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX"
 echo "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=$MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE"
 echo "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=$MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN"
+echo "MPTDC_ENABLE_ROUTE_GATE_RECOVERY=$MPTDC_ENABLE_ROUTE_GATE_RECOVERY"
+echo "MPTDC_ROUTE_REPAIR_COMMANDS=$MPTDC_ROUTE_REPAIR_COMMANDS"
 echo "MPTDC_ENABLE_POSTROUTE_OPT=$MPTDC_ENABLE_POSTROUTE_OPT"
 echo "MPTDC_ENABLE_FINAL_FILLER=$MPTDC_ENABLE_FINAL_FILLER"
 echo "MPTDC_GENUS_HANDOFF_DIR=$MPTDC_GENUS_HANDOFF_DIR"
