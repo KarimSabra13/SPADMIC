@@ -893,6 +893,8 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM 12.0
         MPTDC_PD_TILE_MAX_OFFSET_UM 12.0
         MPTDC_PNR_CORE_UTIL 0.55
+        MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0
+        MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE 0
         MPTDC_PNR_FIX_RO_MACROS 0
         MPTDC_PNR_CREATE_RO_HALOS 0
         MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN 1
@@ -6464,7 +6466,9 @@ proc mptdc_signoff_place_ro_macros {} {
     if {$x eq ""} { set x 50.0 }
     if {$slow_y eq ""} { set slow_y 450.0 }
     if {$fast_y eq ""} { set fast_y 50.0 }
-    set fix_ro [mptdc_signoff_env_truthy MPTDC_PNR_FIX_RO_MACROS 1]
+    set free_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0]
+    set fix_ro [expr {$free_internal ? 0 : [mptdc_signoff_env_truthy MPTDC_PNR_FIX_RO_MACROS 1]}]
+    puts $fh "FREE_INTERNAL_PLACEMENT=[expr {$free_internal ? 1 : 0}]"
     puts $fh "RO_MACRO_FIXED=[expr {$fix_ro ? "YES" : "NO"}]"
     foreach item [list [list $slow $x $slow_y R0 north] [list $fast $x $fast_y MX south]] {
         set inst [lindex $item 0]
@@ -6822,13 +6826,17 @@ proc mptdc_signoff_count_backend_cells_in_pd_box {pd_box} {
 
 proc mptdc_signoff_place_phase_buffers {} {
     global mptdc_xh018_cells o13 o12b
+    set free_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0]
+    set skip_phase_preplace [mptdc_signoff_env_truthy MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE $free_internal]
     mptdc_signoff_set_default_phase_buffer_origins
     set o13(reports_dir) [mptdc_signoff_report_dir]
     set o12b(reports_dir) [mptdc_signoff_report_dir]
     set ::env(MPTDC_O13_RESULT_DIR) [mptdc_signoff_result_dir]
     mptdc_signoff_source_if_exists innovus_mptdc_phase_buffer_place.tcl
     set placement_applied NOT_RUN
-    if {[llength [info commands mptdc_pnr_apply_phase_buffer_placement]] > 0} {
+    if {$skip_phase_preplace} {
+        set placement_applied SKIPPED_FREE_INTERNAL_PLACEMENT
+    } elseif {[llength [info commands mptdc_pnr_apply_phase_buffer_placement]] > 0} {
         set placement_applied [expr {[mptdc_pnr_apply_phase_buffer_placement final_typical] ? "YES" : "NO"}]
     }
     set slow_iso_insts [mptdc_signoff_phase_buffer_instances slow iso]
@@ -6847,6 +6855,8 @@ proc mptdc_signoff_place_phase_buffers {} {
         [list FAST_DRIVER_COUNT 8 $fast_drv]]
     set failures [list]
     set fh [open $rpt w]
+    puts $fh "FREE_INTERNAL_PLACEMENT=[expr {$free_internal ? 1 : 0}]"
+    puts $fh "SKIP_PHASE_BUFFER_PREPLACE=[expr {$skip_phase_preplace ? 1 : 0}]"
     foreach row $rows {
         set label [lindex $row 0]
         set expected [lindex $row 1]
@@ -6867,12 +6877,16 @@ proc mptdc_signoff_place_phase_buffers {} {
     }
     puts $fh "PHASE_ISO_BUFFER=$mptdc_xh018_cells(phase_iso_buffer)"
     puts $fh "PHASE_FINAL_BUFFER=$mptdc_xh018_cells(phase_final_buffer)"
+    if {$skip_phase_preplace} {
+        puts $fh "RO_PHASE_PREPLACE_AUDIT_SKIPPED=1"
+        puts $fh "RO_PHASE_PREPLACE_AUDIT_SKIP_REASON=phase_buffers_left_to_placeDesign"
+    }
     puts $fh "PHASE_BUFFER_STATUS=[expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]"
     close $fh
     if {[llength $failures] > 0} {
         error "MPTDC_COUNT_GATE_FAILED: $failures"
     }
-    if {[mptdc_signoff_env_truthy MPTDC_RO_PHASE_PREPLACE_AUDIT 1]} {
+    if {!$skip_phase_preplace && [mptdc_signoff_env_truthy MPTDC_RO_PHASE_PREPLACE_AUDIT 1]} {
         mptdc_signoff_audit_ro_phase_overlap \
             $slow_iso_insts $slow_drv_insts $fast_iso_insts $fast_drv_insts \
             pre_place 0
@@ -7048,12 +7062,14 @@ proc mptdc_signoff_place_design {} {
     if {$placement_status eq "FAIL"} {
         error "MPTDC_PLACEMENT_GATE_FAILED: report=[dict get $place_gate status_report]"
     }
+    set ro_phase_post_fatal_default [expr {[mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0] ? 0 : 1}]
+    set ro_phase_post_fatal [mptdc_signoff_env_truthy MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL $ro_phase_post_fatal_default]
     mptdc_signoff_audit_ro_phase_overlap \
         [mptdc_signoff_phase_buffer_instances slow iso] \
         [mptdc_signoff_phase_buffer_instances slow drv] \
         [mptdc_signoff_phase_buffer_instances fast iso] \
         [mptdc_signoff_phase_buffer_instances fast drv] \
-        post_place 1
+        post_place $ro_phase_post_fatal
     catch {defOut [file join [mptdc_signoff_def_dir] 02_place.def]}
     catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 02_place.enc]}
     mptdc_signoff_audit_pd_matrix_physical

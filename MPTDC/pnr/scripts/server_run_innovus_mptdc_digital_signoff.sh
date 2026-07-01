@@ -94,6 +94,14 @@ apply_recovery_defaults() {
   export MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM="${MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM:-12.0}"
   export MPTDC_PD_TILE_MAX_OFFSET_UM="${MPTDC_PD_TILE_MAX_OFFSET_UM:-12.0}"
   export MPTDC_PNR_CORE_UTIL="${MPTDC_PNR_CORE_UTIL:-0.55}"
+  export MPTDC_PNR_FREE_INTERNAL_PLACEMENT="${MPTDC_PNR_FREE_INTERNAL_PLACEMENT:-0}"
+  if is_truthy "$MPTDC_PNR_FREE_INTERNAL_PLACEMENT"; then
+    export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE="${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-1}"
+    export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL="${MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL:-0}"
+    export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN="${MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN:-0}"
+  else
+    export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE="${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-0}"
+  fi
   export MPTDC_PNR_FIX_RO_MACROS="${MPTDC_PNR_FIX_RO_MACROS:-0}"
   export MPTDC_PNR_CREATE_RO_HALOS="${MPTDC_PNR_CREATE_RO_HALOS:-0}"
   export MPTDC_PNR_PHASE_BUF_ORIENT="${MPTDC_PNR_PHASE_BUF_ORIENT:-ROW_LEGAL}"
@@ -636,6 +644,8 @@ fi
   echo "pd_tile_region_margin_um: ${MPTDC_PNR_PD_TILE_REGION_MARGIN_UM:-unset}"
   echo "pd_physical_audit_mode: ${MPTDC_PD_PHYSICAL_AUDIT_MODE:-unset}"
   echo "pnr_core_util: ${MPTDC_PNR_CORE_UTIL:-unset}"
+  echo "free_internal_placement: ${MPTDC_PNR_FREE_INTERNAL_PLACEMENT:-unset}"
+  echo "skip_phase_buffer_preplace: ${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-unset}"
   echo "fix_ro_macros: ${MPTDC_PNR_FIX_RO_MACROS:-unset}"
   echo "create_ro_halos: ${MPTDC_PNR_CREATE_RO_HALOS:-unset}"
   echo "phase_buf_orient: ${MPTDC_PNR_PHASE_BUF_ORIENT:-unset}"
@@ -643,6 +653,8 @@ fi
   echo "ro_phase_min_clearance_um: ${MPTDC_RO_PHASE_MIN_CLEARANCE_UM:-unset}"
   echo "ro_phase_origin_clearance_um: ${MPTDC_RO_PHASE_ORIGIN_CLEARANCE_UM:-unset}"
   echo "ro_phase_preplace_audit: ${MPTDC_RO_PHASE_PREPLACE_AUDIT:-unset}"
+  echo "ro_phase_postplace_audit_fatal: ${MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL:-unset}"
+  echo "place_fast_tags_by_column: ${MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN:-unset}"
   echo "fast_tag_column_side: ${MPTDC_PNR_FAST_TAG_COLUMN_SIDE:-unset}"
   echo "postroute_setup_passes: ${MPTDC_POSTROUTE_SETUP_OPT_PASSES:-unset}"
   echo "postroute_setup_max_passes: ${MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES:-unset}"
