@@ -36,16 +36,29 @@ proc mptdc_ckpt_sanitize {value} {
     return $safe
 }
 
+proc mptdc_ckpt_command_is_helper {command} {
+    if {[catch {set head [lindex $command 0]}]} {
+        return 0
+    }
+    return [string match "mptdc_ckpt_*" $head]
+}
+
 proc mptdc_ckpt_capture {label command path} {
     file mkdir [file dirname $path]
     set fh [open $path w]
     puts $fh "# $label"
     puts $fh "COMMAND=$command"
     close $fh
-    if {[catch {uplevel #0 "$command >> \"$path\""} err opts]} {
+    set is_helper [mptdc_ckpt_command_is_helper $command]
+    if {$is_helper} {
+        set invoke $command
+    } else {
+        set invoke "$command >> \"$path\""
+    }
+    if {[catch {uplevel #0 $invoke} result opts]} {
         set fh [open $path a]
         puts $fh "REPORT_STATUS=FAILED"
-        puts $fh "ERROR=$err"
+        puts $fh "ERROR=$result"
         if {[dict exists $opts -errorcode]} {
             puts $fh "ERRORCODE=[dict get $opts -errorcode]"
         }
@@ -55,9 +68,12 @@ proc mptdc_ckpt_capture {label command path} {
             puts $fh "ERRORINFO_END"
         }
         close $fh
-        return [list 0 $err]
+        return [list 0 $result]
     }
     set fh [open $path a]
+    if {$is_helper} {
+        puts $fh "HELPER_RESULT=$result"
+    }
     puts $fh "REPORT_STATUS=PASS"
     close $fh
     return [list 1 ""]
