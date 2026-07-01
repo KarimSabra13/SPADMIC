@@ -1,0 +1,9 @@
+# MPTDC PNR SDC Sanitization
+INPUT_SDC=/sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff/mptdc_axis_core.postsyn.sdc
+OUTPUT_SDC=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc
+REMOVED_SET_IDEAL_NETWORK_LINES=2
+KEPT_LINES=1800
+INTENT=deidealize_genus_handoff_for_real_clk_sys_cts
+RAW_POSTSYN_SDC_OVERRIDE_ENV=MPTDC_USE_RAW_POSTSYN_SDC
+REMOVED_LINE=set_ideal_network [get_ports clk_sys]
+REMOVED_LINE=set_ideal_network [get_ports async_rst_n]

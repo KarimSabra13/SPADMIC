@@ -1,0 +1,79 @@
+RUN_ID=20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609
+RUN_DIR=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609
+HEAD=7dd4da5da3245afb1116d771fe072f6b832119d5
+PNR_LEF=/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_20260701_mptdc_tc_ro6_cleanlef_localbridge_base_route_143726_v2.lef
+
+ROUTE_STATUS=FAIL
+ROUTE_IMPLEMENTATION_STATUS=FAIL
+INNOVUS_VERIFY_DRC_STATUS=FAIL
+FOUNDRY_DRC_STATUS=DEFERRED
+GEOMETRY_DRC_VIOLATIONS=9
+SHORTS=5
+ROUTER_TRANSCRIPT_DRC=NOT_USED_FOR_GATE
+ROUTER_TRANSCRIPT_SHORTS=NOT_USED_FOR_GATE
+INNOVUS_VERIFY_DRC_VIOLATIONS_RAW=9
+INNOVUS_VERIFY_DRC_SHORTS_RAW=5
+REGULAR_NET_CONNECTIVITY_BAD=0
+REGULAR_NET_BAD_LINES=
+SPECIAL_NET_CONNECTIVITY_BAD=1
+SPECIAL_NET_BAD_LINES={Net VDD: dangling Wire.} {Net VSS: dangling Wire.} {32 Problem(s) (IMPVFC-94): The net has dangling wire(s).} {Verification Complete : 32 Viols.  0 Wrngs.}
+SPECIAL_NET_CONNECTIVITY_RAW_BAD=1
+SPECIAL_NET_CONNECTIVITY_FILTER_STATUS=DISABLED
+SPECIAL_NET_CONNECTIVITY_FILTERED_RO_TERMINALS=0
+SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=0
+SPECIAL_NET_CONNECTIVITY_FILTER_REPORT=
+REGULAR_NET_OPENS=0
+SPECIAL_NET_OPENS=NONZERO_OR_UNPARSED
+UNROUTED_NETS=UNKNOWN
+UNROUTED_NETS_SOURCE=report_route
+PARTIAL_ROUTES=REVIEW_REPORT_ROUTE
+ANTENNA_STATUS=PROVISIONAL_WITH_LEF_ANTENNA_COMPLETENESS_REVIEW
+ROUTE_DRC_REVIEW_CONTINUE_STATUS=DISABLED
+ROUTE_DRC_REVIEW_CONTINUE_ENV=MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE
+ROUTE_DRC_REVIEW_MAX_VIOLATIONS=0
+ROUTE_DRC_REVIEW_ALLOWED_CLASSES=Mar
+ROUTE_DRC_REVIEW_CLASS_STATUS=FAIL
+ROUTE_DRC_REVIEW_CLASS_REASON=disallowed_classes:Short=5,MetSpc=2
+ROUTE_DRC_REVIEW_CLASS_COUNTS=Short=5 MetSpc=2 Mar=2
+ROUTE_DRC_CLASS_COUNTS=Short 5 MetSpc 2 Mar 2
+DRC_MARKER_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/reports/route_drc_markers.tsv
+ROUTE_GATE_FAILURE_MARKER_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/reports/route_gate_failure_drc_markers.tsv
+ROUTE_GATE_FAILURE_DEF=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/def/04_route_failed.def
+ROUTE_GATE_FAILURE_CHECKPOINT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/checkpoints/04_route_failed.enc
+ROUTE_GATE_FAILURE_CHECKPOINT_DAT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/checkpoints/04_route_failed.enc.dat
+ROUTE_GATE_FAILURE_DEF_SAVE_STATUS=PASS
+ROUTE_GATE_FAILURE_CHECKPOINT_SAVE_STATUS=PASS
+ROUTE_GATE_FAILURE_CHECKPOINT_SAVE_ERROR=0
+ROUTE_GATE_FAILURE_CHECKPOINT_DAT_EXISTS=1
+
+RO_FOCUSED_MARKERS
+idx	marker_handle	box	layer	type	subType	message
+42	0x7fdb972c0c50	{116.315 120.005 116.325 120.235}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[0] & Regular Wire of Net u_core_ro_fast_code_q[1] Actual: 0.010000 Required: 0.230000 Type: ParallelRunLength Spacing # 10 230 3 2 : 116.3250 120.0050 116.5550 120.2350 1: 116.0850 120.0050 116.3150 120.2350 1
+43	0x7fdb972c0c80	{117.575 119.75 117.6 119.865}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[7] & Regular Wire of Net u_core_ro_fast_code_q[6] Actual: 0.115000 Required: 0.230000 Type: ParallelRunLength Spacing # 115 230 3 2 : 117.5750 119.8650 117.6000 120.0950 1: 117.3200 119.4700 117.6000 119.7500 1
+44	0x7fdb972c0cb0	{117.575 119.75 117.6 119.865}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[7] & Regular Wire of Net u_core_ro_fast_code_q[6] Actual: 0.115000 Required: 0.230000 Type: ParallelRunLength Spacing # 115 230 3 2 : 117.5750 119.8650 117.6000 120.0950 1: 117.3200 119.4700 117.6000 119.7500 1
+45	0x7fdb972c0ce0	{116.325 119.445 116.34 119.75}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[1] & Regular Wire of Net u_core_ro_fast_code_q[0] Type: Metal Short # -1 -1 9 2 : 116.3250 119.4450 116.3400 119.7500 1: 116.3250 119.4450 116.3400 119.7500 1
+46	0x7fdb972c0d10	{117.485 119.865 117.575 120.235}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[7] & Regular Wire of Net u_core_ro_fast_code_q[6] Type: Metal Short # -1 -1 9 2 : 117.4850 119.8650 117.5750 120.2350 1: 117.4850 119.8650 117.5750 120.2350 1
+47	0x7fdb972c0d40	{117.485 120.005 117.525 120.235}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[6] & Regular Wire of Net u_core_ro_fast_code_q[7] Type: Metal Short # -1 -1 9 2 : 117.4850 120.0050 117.5250 120.2350 1: 117.4850 120.0050 117.5250 120.2350 1
+48	0x7fdb59af0f80	{116.325 119.445 116.34 119.75}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[1] & Pin of Cell u_core_u_osc_fast_u_ro_tune4 Type: Metal Short # -1 -1 9 2 : 116.3250 119.4450 116.3400 119.7500 1: 116.3250 119.4450 116.3400 119.7500 1
+49	0x7fdb59af0f50	{117.485 119.865 117.575 120.235}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[7] & Pin of Cell u_core_u_osc_fast_u_ro_tune4 Type: Metal Short # -1 -1 9 2 : 117.4850 119.8650 117.5750 120.2350 1: 117.4850 119.8650 117.5750 120.2350 1
+50	0x7fdb59af0ef0	{116.315 119.75 116.325 120.235}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[1] Actual: 0.010000 Required: 0.230000 Type: ParallelRunLength Spacing # 10 230 3 2 : 116.0850 119.7500 116.3150 120.2350 1: 116.3250 119.7500 116.5550 120.2350 1     LEF Description:  SPACING 0.230000 
+51	0x7fdb59af0ec0	{117.575 119.75 117.6 119.865}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[6] Actual: 0.115000 Required: 0.230000 Type: ParallelRunLength Spacing # 115 230 3 2 : 117.3200 119.4700 117.6000 119.7500 1: 117.5750 119.8650 117.6000 120.0950 1     LEF Description:  SPACING 0.230000 
+
+RESIDUAL_ORIENTED_SUMMARY
+# RO Marker vs LEF Oriented Audit Summary
+MARKERS=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/local_route_drc_probe_residual/ro_marker_to_inst_audit.tsv
+INSTANCES=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/local_route_drc_probe_residual/ro_instance_boxes.tsv
+RO_LEF=/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_20260701_mptdc_tc_ro6_cleanlef_localbridge_base_route_143726_v2.lef
+MACRO=RO_tune6
+LEF_ORIGIN=68.7 88.515
+LEF_SIZE=168.945 70.5
+PIN_RECT_COUNT=19
+OBS_RECT_COUNT=230
+MARKER_ROWS_ANALYZED=6
+COUNT 6 MX|MET1|NO_OBS_OR_PIN_OVERLAP
+
+INTERPRETATION_RULES:
+OBS_OVERLAP_NO_PIN means the abstract OBS blocks the marker region without a legal same-layer pin.
+PIN_AND_OBS_OVERLAP means a pin-access window may be covered by OBS and should be split or trimmed.
+NO_OBS_OR_PIN_OVERLAP means do not patch OBS blindly; use absolute geometry or local routing guidance next.
+PIN_OVERLAP_NO_OBS means the marker reaches a legal pin shape; investigate spacing/via/access rules next.

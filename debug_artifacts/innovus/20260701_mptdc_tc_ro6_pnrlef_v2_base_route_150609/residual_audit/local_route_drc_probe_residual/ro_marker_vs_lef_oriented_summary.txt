@@ -1,0 +1,17 @@
+# RO Marker vs LEF Oriented Audit Summary
+MARKERS=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/local_route_drc_probe_residual/ro_marker_to_inst_audit.tsv
+INSTANCES=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_base_route_150609/local_route_drc_probe_residual/ro_instance_boxes.tsv
+RO_LEF=/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_20260701_mptdc_tc_ro6_cleanlef_localbridge_base_route_143726_v2.lef
+MACRO=RO_tune6
+LEF_ORIGIN=68.7 88.515
+LEF_SIZE=168.945 70.5
+PIN_RECT_COUNT=19
+OBS_RECT_COUNT=230
+MARKER_ROWS_ANALYZED=6
+COUNT 6 MX|MET1|NO_OBS_OR_PIN_OVERLAP
+
+INTERPRETATION_RULES:
+OBS_OVERLAP_NO_PIN means the abstract OBS blocks the marker region without a legal same-layer pin.
+PIN_AND_OBS_OVERLAP means a pin-access window may be covered by OBS and should be split or trimmed.
+NO_OBS_OR_PIN_OVERLAP means do not patch OBS blindly; use absolute geometry or local routing guidance next.
+PIN_OVERLAP_NO_OBS means the marker reaches a legal pin shape; investigate spacing/via/access rules next.
