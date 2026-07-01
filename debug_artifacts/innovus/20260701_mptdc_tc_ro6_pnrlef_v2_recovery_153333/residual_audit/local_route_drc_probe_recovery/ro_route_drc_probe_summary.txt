@@ -1,0 +1,16 @@
+# RO Route DRC Probe Summary
+MARKERS=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_recovery_153333/reports/route_drc_markers.tsv
+DEF=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_tc_ro6_pnrlef_v2_recovery_153333/def/04_route_failed.def
+LEF=/sim/ksabra/SPADMIC_work/lef/RO_tune6_pnr_pin_access_20260701_mptdc_tc_ro6_cleanlef_localbridge_base_route_143726_v2.lef
+MACRO=RO_tune6
+INSTANCE_COUNT=2
+MARKER_ROWS_TOTAL=45
+MARKER_ROWS_SELECTED=2
+INSTANCE_MARGIN_UM=0.5
+INSTANCE u_core_u_osc_fast_u_ro_tune4 macro=RO_tune6 def_orient=FS audit_orient=MX box=50.4 120.4 219.345 190.9
+INSTANCE u_core_u_osc_slow_u_ro_tune4 macro=RO_tune6 def_orient=N audit_orient=R0 box=50.4 610.4 219.345 680.9
+COUNT 2 selected_by_inst u_core_u_osc_fast_u_ro_tune4
+COUNT 2 selected_by_layer MET1
+COUNT 2 selected_by_subtype Metal_Short
+COUNT 32 skipped_non_geometry
+COUNT 11 skipped_not_near_ro

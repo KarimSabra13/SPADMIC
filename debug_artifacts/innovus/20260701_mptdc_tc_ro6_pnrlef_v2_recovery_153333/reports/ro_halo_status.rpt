@@ -1,0 +1,5 @@
+# MPTDC RO Macro Halo Status
+RO_PHASE_MIN_CLEARANCE_UM=10.0
+RO_HALO_ENABLED=0
+RO_HALO_STATUS=SKIPPED
+RO_HALO_REASON=disabled_for_tc_closure_placement_relaxation

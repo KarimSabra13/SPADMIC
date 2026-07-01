@@ -1,0 +1,3 @@
+inst	macro	def_orient	inst_orient	x	y	width	height	inst_box
+u_core_u_osc_fast_u_ro_tune4	RO_tune6	FS	MX	50.4	120.4	168.945	70.5	50.4 120.4 219.345 190.9
+u_core_u_osc_slow_u_ro_tune4	RO_tune6	N	R0	50.4	610.4	168.945	70.5	50.4 610.4 219.345 680.9

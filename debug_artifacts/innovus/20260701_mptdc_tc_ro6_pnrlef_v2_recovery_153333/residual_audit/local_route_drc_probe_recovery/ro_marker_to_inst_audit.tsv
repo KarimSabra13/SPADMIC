@@ -1,0 +1,3 @@
+idx	inst	inst_orient	marker_layer	marker_box	marker_local_box	type	subType	message
+39	u_core_u_osc_fast_u_ro_tune4	MX	MET1	116.81 120.565 116.875 120.795	66.41 0.165 66.475 0.395	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[6] & Regular Wire of Net u_core_ro_fast_code_q[0] Type: Metal Short # -1 -1 9 2 : 116.8100 120.5650 116.8750 120.7950 1: 116.8100 120.5650 116.8750 120.7950 1
+41	u_core_u_osc_fast_u_ro_tune4	MX	MET1	116.81 119.445 116.875 120.795	66.41 -0.955 66.475 0.395	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[0] & Pin of Cell u_core_u_osc_fast_u_ro_tune4 Type: Metal Short # -1 -1 9 2 : 116.8100 119.4450 116.8750 120.7950 1: 116.8100 119.4450 116.8750 120.7950 1
