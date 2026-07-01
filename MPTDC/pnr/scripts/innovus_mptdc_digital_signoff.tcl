@@ -987,14 +987,18 @@ proc mptdc_signoff_pg_strategy_manual_ro_core_sroute {} {
     return [expr {[mptdc_signoff_pg_strategy] eq "manual_ro_pg_core_sroute"}]
 }
 
+proc mptdc_signoff_pg_strategy_ro_hookup_blockpin_probe {} {
+    return [expr {[mptdc_signoff_pg_strategy] eq "conservative_ro_hookup_blockpin_probe"}]
+}
+
 proc mptdc_signoff_pg_policy_guard {} {
     if {[mptdc_signoff_env_truthy MPTDC_ALLOW_LEGACY_PG_TOPOLOGY 0]} {
         return
     }
     set failures [list]
     set strategy [mptdc_signoff_pg_strategy]
-    if {[lsearch -exact {conservative_ro_hookup innovus_sroute_golden_ro manual_ro_pg_core_sroute} $strategy] < 0} {
-        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, innovus_sroute_golden_ro, or manual_ro_pg_core_sroute"
+    if {[lsearch -exact {conservative_ro_hookup conservative_ro_hookup_blockpin_probe innovus_sroute_golden_ro manual_ro_pg_core_sroute} $strategy] < 0} {
+        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, or manual_ro_pg_core_sroute"
     }
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]]
     if {$style ne "mesh_lr_vdd_vss"} {
@@ -1057,6 +1061,34 @@ proc mptdc_signoff_pg_policy_guard {} {
         }
         if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
             lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean or RO-filtered before route"
+        }
+    } elseif {$strategy eq "conservative_ro_hookup_blockpin_probe"} {
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN 1]} {
+            lappend failures "MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_PROBE=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_HOOKUP=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 1]} {
+            lappend failures "MPTDC_REQUIRE_RO_PG_HOOKUP=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_MACRO_PATCH 0]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_MACRO_PATCH=1 expected 0 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
+            lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean before route"
         }
     } else {
         if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
@@ -1931,6 +1963,17 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
             if {[lsearch -exact $commands $cmd] < 0} {
                 lappend commands $cmd
             }
+        }
+        return $commands
+    }
+
+    if {[mptdc_signoff_pg_strategy_ro_hookup_blockpin_probe]} {
+        set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
+            -blockPin all -blockPinTarget {ring stripe} \
+            -corePinTarget {ring stripe} -allowLayerChange 1]]
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+            lappend commands [list sroute -connect {corePin} -nets $nets \
+                -corePinTarget firstAfterRowEnd -allowLayerChange 1]
         }
         return $commands
     }

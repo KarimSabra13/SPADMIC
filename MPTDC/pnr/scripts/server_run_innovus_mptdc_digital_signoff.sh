@@ -244,6 +244,32 @@ guard_pg_policy() {
         failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for innovus_sroute_golden_ro")
       fi
       ;;
+    conservative_ro_hookup_blockpin_probe)
+      if ! is_truthy "${MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN:-1}"; then
+        failures+=("MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=${MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_RO_PG_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_PROBE=${MPTDC_ENABLE_RO_PG_PROBE:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_RO_PG_HOOKUP:-1}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_HOOKUP=${MPTDC_ENABLE_RO_PG_HOOKUP:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if ! is_truthy "${MPTDC_REQUIRE_RO_PG_HOOKUP:-1}"; then
+        failures+=("MPTDC_REQUIRE_RO_PG_HOOKUP=${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if is_truthy "${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_MACRO_PATCH=${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-unset} expected 0 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if is_truthy "${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"; then
+        failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for conservative_ro_hookup_blockpin_probe")
+      fi
+      ;;
     conservative_ro_hookup)
       if is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
         failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1 expected 0")
