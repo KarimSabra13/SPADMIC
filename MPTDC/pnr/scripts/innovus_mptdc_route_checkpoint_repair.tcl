@@ -95,6 +95,66 @@ proc mptdc_ckpt_env_commands {} {
     return [list $raw]
 }
 
+proc mptdc_ckpt_continue_after_command_fail {} {
+    return [mptdc_ckpt_env MPTDC_CHECKPOINT_REPAIR_KEEP_GOING 0]
+}
+
+proc mptdc_ckpt_select_nets {nets} {
+    if {[llength $nets] == 0} {
+        error "mptdc_ckpt_select_nets requires at least one net"
+    }
+    catch {deselectAll}
+    set selected {}
+    set failures {}
+    foreach net $nets {
+        set net [string trim $net]
+        if {$net eq ""} {
+            continue
+        }
+        if {[catch {selectNet $net} err]} {
+            lappend failures "$net:$err"
+        } else {
+            lappend selected $net
+        }
+    }
+    puts "MPTDC_CKPT_SELECTED_NETS=[join $selected { }]"
+    if {[llength $failures] > 0} {
+        error "mptdc_ckpt_select_nets failed: [join $failures {; }]"
+    }
+    if {[llength $selected] == 0} {
+        error "mptdc_ckpt_select_nets selected zero nets"
+    }
+    return $selected
+}
+
+proc mptdc_ckpt_route_selected_nets {nets} {
+    set selected [mptdc_ckpt_select_nets $nets]
+    puts "MPTDC_CKPT_ROUTE_SELECTED_NET_COUNT=[llength $selected]"
+
+    # The via-in-pin route modes exposed by Innovus make this checkpoint report
+    # thousands of Via_In_Pin DRCs on already-routed std-cell nets. Keep this
+    # surgical repair on the selected-net path only.
+    catch {setNanoRouteMode -route_with_via_in_pin false}
+    catch {setNanoRouteMode -route_with_via_only_for_block_cell_pin false}
+
+    if {[catch {setNanoRouteMode -route_selected_net_only true} err]} {
+        error "failed to enable selected-net routing: $err"
+    }
+
+    set route_err ""
+    set route_status [catch {
+        globalDetailRoute -select
+        detailRoute -select
+    } route_err]
+
+    catch {setNanoRouteMode -route_selected_net_only false}
+    if {$route_status} {
+        error "selected-net route failed: $route_err"
+    }
+    catch {deselectAll}
+    return $selected
+}
+
 proc mptdc_ckpt_verify_snapshot {tag} {
     set report_dir [mptdc_signoff_report_dir]
     set drc_rpt [file join $report_dir ${tag}_verify_drc.rpt]
@@ -209,6 +269,9 @@ mptdc_ckpt_write_snapshot_status $status_fh INITIAL $initial_snapshot
 
 set idx 0
 set final_snapshot $initial_snapshot
+set command_failure 0
+set command_failure_index 0
+set command_failure_error ""
 foreach command $command_list {
     incr idx
     set tag [format "%02d_after_command" $idx]
@@ -228,6 +291,12 @@ foreach command $command_list {
     puts $status_fh "COMMAND_${idx}_DRC_REPORT=[dict get $final_snapshot drc_rpt]"
     puts $status_fh "COMMAND_${idx}_MARKER_REPORT=[dict get $final_snapshot marker_rpt]"
     flush $status_fh
+    if {!$ok && ![mptdc_ckpt_continue_after_command_fail]} {
+        set command_failure 1
+        set command_failure_index $idx
+        set command_failure_error $err
+        break
+    }
 }
 
 set final_def [file join [mptdc_signoff_def_dir] repaired_route.def]
@@ -250,7 +319,12 @@ puts $status_fh "FINAL_DEF=$final_def"
 puts $status_fh "FINAL_CHECKPOINT=$final_ckpt"
 puts $status_fh "FINAL_CHECKPOINT_DAT=$final_ckpt_dat"
 puts $status_fh "FINAL_CHECKPOINT_DAT_EXISTS=[expr {[file isdirectory $final_ckpt_dat] ? 1 : 0}]"
-if {[dict get $final_snapshot route_gate_pass]} {
+if {$command_failure} {
+    puts $status_fh "CHECKPOINT_REPAIR_STATUS=FAIL_COMMAND"
+    puts $status_fh "CHECKPOINT_REPAIR_FAILED_COMMAND_INDEX=$command_failure_index"
+    puts $status_fh "CHECKPOINT_REPAIR_FAILED_COMMAND_ERROR=$command_failure_error"
+    puts $status_fh "CHECKPOINT_REPAIR_KEEP_GOING_ENV=MPTDC_CHECKPOINT_REPAIR_KEEP_GOING"
+} elseif {[dict get $final_snapshot route_gate_pass]} {
     puts $status_fh "CHECKPOINT_REPAIR_STATUS=PASS_ROUTE_GATE"
 } elseif {$final_drc ne "UNKNOWN" && $final_shorts ne "UNKNOWN" && $final_drc == 0 && $final_shorts == 0} {
     puts $status_fh "CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY"

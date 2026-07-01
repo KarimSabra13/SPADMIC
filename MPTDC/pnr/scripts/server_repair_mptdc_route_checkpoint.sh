@@ -32,6 +32,12 @@ Options:
 This wrapper restores an existing route checkpoint and runs targeted repair
 commands. It does not rerun import, floorplan, placement, CTS, or routeDesign
 from scratch.
+
+The commands file is Tcl. For selected-net repair, prefer:
+  mptdc_ckpt_route_selected_nets {net_a net_b net_c}
+
+Commands fail fast by default. Set MPTDC_CHECKPOINT_REPAIR_KEEP_GOING=1 only for
+exploratory probes where later commands should still run after a failed command.
 USAGE
 }
 
