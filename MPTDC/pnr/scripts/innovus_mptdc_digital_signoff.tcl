@@ -893,6 +893,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM 12.0
         MPTDC_PD_TILE_MAX_OFFSET_UM 12.0
         MPTDC_PNR_CORE_UTIL 0.55
+        MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT 0
         MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0
         MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE 0
         MPTDC_PNR_FIX_RO_MACROS 0
@@ -6520,6 +6521,7 @@ proc mptdc_signoff_place_pd_matrix {} {
     set pnr(osc_pd_result_dir) [mptdc_signoff_report_dir]
     mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
     mptdc_signoff_source_if_exists innovus_mptdc_pd_matrix_place.tcl
+    set free_all_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT 0]
     set pd_cells [mptdc_signoff_collect_cells [list *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell*]]
     set rpt [file join [mptdc_signoff_report_dir] pd_matrix_status.rpt]
     set fh [open $rpt w]
@@ -6535,6 +6537,18 @@ proc mptdc_signoff_place_pd_matrix {} {
     if {[llength $pd_cells] != 64} {
         mptdc_signoff_set_status PD_MATRIX_STATUS FAIL $rpt
         error "MPTDC_PD_MATRIX_COUNT_FAIL: expected=64 actual=[llength $pd_cells]"
+    }
+    if {$free_all_internal} {
+        set fh [open $rpt a]
+        puts $fh "FREE_ALL_INTERNAL_PLACEMENT=1"
+        puts $fh "PD_GRID_PLACEMENT_STATUS=SKIPPED_FREE_ALL_INTERNAL_PLACEMENT"
+        puts $fh "PD_GRID_PLACEMENT_REASON=all_internal_cells_left_to_placeDesign"
+        puts $fh "FAST_TAG_COLUMN_PLACEMENT_STATUS=SKIPPED_FREE_ALL_INTERNAL_PLACEMENT"
+        puts $fh "PD_PHYSICAL_AUDIT_AFTER_PLACEMENT=YES_REPORT_ONLY"
+        puts $fh "PD_MATRIX_STATUS=REVIEW_REQUIRED"
+        close $fh
+        mptdc_signoff_set_status PD_MATRIX_STATUS REVIEW_REQUIRED $rpt
+        return
     }
     set ::env(MPTDC_PNR_PLACE_PD_GRID) [mptdc_signoff_env MPTDC_PNR_PLACE_PD_GRID 1]
     if {[llength [info commands mptdc_pnr_apply_pd_grid_placement]] > 0} {
@@ -6667,6 +6681,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
     set rpt [file join [mptdc_signoff_report_dir] pd_physical_matrix_status.rpt]
     set csv [file join [mptdc_signoff_report_dir] pd_physical_matrix_tiles.csv]
+    set free_all_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT 0]
     set cells [mptdc_signoff_collect_cells [list *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell*]]
     set regions [dict create]
     if {[llength [info commands mptdc_pnr_floorplan_regions]] > 0} {
@@ -6687,6 +6702,9 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     set tile_w ""
     set tile_h ""
     set audit_mode [string tolower [mptdc_signoff_env MPTDC_PD_PHYSICAL_AUDIT_MODE auto]]
+    if {$free_all_internal && $audit_mode eq "auto"} {
+        set audit_mode free_internal
+    }
     if {$audit_mode eq "auto"} {
         if {[mptdc_signoff_env_truthy MPTDC_PNR_PD_TILE_PREPLACE_LEAVES 0] ||
             [mptdc_signoff_env_truthy MPTDC_PNR_PD_TILE_FIX_LEAVES 0]} {
@@ -6695,7 +6713,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
             set audit_mode soft_region
         }
     }
-    if {$audit_mode ni {strict_center soft_region relaxed}} {
+    if {$audit_mode ni {strict_center soft_region relaxed free_internal}} {
         set audit_mode strict_center
     }
     set max_center_offset [mptdc_signoff_env MPTDC_PD_TILE_MAX_OFFSET_UM 10.0]
@@ -6772,9 +6790,11 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     set backend_intrusion [mptdc_signoff_count_backend_cells_in_pd_box $pd_box]
     set essential_status [expr {[llength $cells] == 64 && $physical == 64 && $missing_logic == 0 && $missing_box == 0 && $backend_intrusion == 0 ? "PASS" : "FAIL"}]
     set regularity_status [expr {$essential_status eq "PASS" && $outliers == 0 ? "PASS" : "FAIL"}]
-    set relaxed_gate [expr {[mptdc_signoff_env_truthy MPTDC_ALLOW_RELAXED_PD_MATRIX 0] || $audit_mode in {relaxed soft_region}}]
+    set relaxed_gate [expr {[mptdc_signoff_env_truthy MPTDC_ALLOW_RELAXED_PD_MATRIX 0] || $audit_mode in {relaxed soft_region free_internal}}]
     set status $regularity_status
-    if {$status ne "PASS" && $relaxed_gate && $essential_status eq "PASS"} {
+    if {$audit_mode eq "free_internal"} {
+        set status REVIEW_REQUIRED
+    } elseif {$status ne "PASS" && $relaxed_gate && $essential_status eq "PASS"} {
         set status REVIEW_REQUIRED
     }
     set fh [open $rpt w]
@@ -6790,6 +6810,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     puts $fh "PD_TILE_PITCH_X=$tile_w"
     puts $fh "PD_TILE_PITCH_Y=$tile_h"
     puts $fh "PD_PHYSICAL_AUDIT_MODE=$audit_mode"
+    puts $fh "FREE_ALL_INTERNAL_PLACEMENT=[expr {$free_all_internal ? 1 : 0}]"
     puts $fh "PD_PHYSICAL_MATRIX_RELAXED_GATE=[expr {$relaxed_gate ? 1 : 0}]"
     puts $fh "PD_TILE_STRICT_CENTER_MAX_OFFSET_UM=$max_center_offset"
     puts $fh "PD_TILE_REGION_MARGIN_UM=$tile_region_margin"

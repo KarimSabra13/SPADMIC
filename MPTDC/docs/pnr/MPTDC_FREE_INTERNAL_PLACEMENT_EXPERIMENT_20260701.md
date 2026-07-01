@@ -43,6 +43,16 @@ When enabled, it:
 
 The real Innovus placement legality gate still runs and can still fail the run.
 
+`MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=1` is the more aggressive mode for a
+fresh automatic placement candidate.  It implies
+`MPTDC_PNR_FREE_INTERNAL_PLACEMENT=1` and additionally skips PD-grid group/region
+creation and fast-tag column placement.  The PD physical matrix audit is still
+written after placement, but it is report-only
+(`PD_PHYSICAL_AUDIT_MODE=free_internal`) so it cannot block CTS/route/timing
+while the optimizer is allowed to move internal logic freely.  This mode keeps
+pins fixed through the normal IO flow; it does not make the run GDS-ready by
+itself.
+
 `MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE=1` is also available as an explicit
 timing-candidate escape hatch.  It keeps `ROUTE_STATUS=FAIL` and saves the
 failure DEF/checkpoint/marker reports, but continues to extraction/STA so timing
@@ -72,6 +82,7 @@ Use `server_run_innovus_mptdc_digital_signoff.sh` directly, not the clean-LEF
 wrapper, because the clean-LEF wrapper intentionally forces some older
 RO-focused defaults.  The fresh run should explicitly pass:
 
+- `MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=1`
 - `MPTDC_PNR_FREE_INTERNAL_PLACEMENT=1`
 - `MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=1`
 - `MPTDC_PNR_FIX_RO_MACROS=0`
@@ -80,6 +91,6 @@ RO-focused defaults.  The fresh run should explicitly pass:
 - `MPTDC_PNR_PD_TILE_PREPLACE_LEAVES=0`
 - `MPTDC_PNR_PD_TILE_FIX_LEAVES=0`
 - `MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0`
-- `MPTDC_PD_PHYSICAL_AUDIT_MODE=relaxed`
+- `MPTDC_PD_PHYSICAL_AUDIT_MODE=free_internal`
 - `MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE=1` only when timing evidence is more
   urgent than route cleanliness for this exploratory candidate.

@@ -94,6 +94,12 @@ apply_recovery_defaults() {
   export MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM="${MPTDC_PD_TILE_SOFT_BOX_MARGIN_UM:-12.0}"
   export MPTDC_PD_TILE_MAX_OFFSET_UM="${MPTDC_PD_TILE_MAX_OFFSET_UM:-12.0}"
   export MPTDC_PNR_CORE_UTIL="${MPTDC_PNR_CORE_UTIL:-0.55}"
+  export MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT="${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-0}"
+  if is_truthy "$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"; then
+    export MPTDC_PNR_FREE_INTERNAL_PLACEMENT=1
+    export MPTDC_PD_PHYSICAL_AUDIT_MODE="${MPTDC_PD_PHYSICAL_AUDIT_MODE:-free_internal}"
+    export MPTDC_ALLOW_RELAXED_PD_MATRIX="${MPTDC_ALLOW_RELAXED_PD_MATRIX:-1}"
+  fi
   export MPTDC_PNR_FREE_INTERNAL_PLACEMENT="${MPTDC_PNR_FREE_INTERNAL_PLACEMENT:-0}"
   if is_truthy "$MPTDC_PNR_FREE_INTERNAL_PLACEMENT"; then
     export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE="${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-1}"
@@ -645,6 +651,7 @@ fi
   echo "pd_tile_region_margin_um: ${MPTDC_PNR_PD_TILE_REGION_MARGIN_UM:-unset}"
   echo "pd_physical_audit_mode: ${MPTDC_PD_PHYSICAL_AUDIT_MODE:-unset}"
   echo "pnr_core_util: ${MPTDC_PNR_CORE_UTIL:-unset}"
+  echo "free_all_internal_placement: ${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-unset}"
   echo "free_internal_placement: ${MPTDC_PNR_FREE_INTERNAL_PLACEMENT:-unset}"
   echo "skip_phase_buffer_preplace: ${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-unset}"
   echo "fix_ro_macros: ${MPTDC_PNR_FIX_RO_MACROS:-unset}"
