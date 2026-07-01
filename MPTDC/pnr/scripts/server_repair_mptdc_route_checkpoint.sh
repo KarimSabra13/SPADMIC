@@ -37,6 +37,11 @@ The commands file is Tcl. For selected-net repair, prefer:
   mptdc_ckpt_route_selected_nets {net_a net_b net_c}
   mptdc_ckpt_assert_geometry_clean
 
+Alternate selected-net route strategies for probes:
+  mptdc_ckpt_route_selected_nets_route_design {net_a}
+  mptdc_ckpt_route_selected_nets_detail_only {net_a}
+  mptdc_ckpt_route_selected_nets_legacy {net_a}
+
 Commands fail fast by default. Set MPTDC_CHECKPOINT_REPAIR_KEEP_GOING=1 only for
 exploratory probes where later commands should still run after a failed command.
 USAGE

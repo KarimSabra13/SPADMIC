@@ -143,9 +143,10 @@ proc mptdc_ckpt_select_nets {nets} {
     return $selected
 }
 
-proc mptdc_ckpt_route_selected_nets {nets} {
+proc mptdc_ckpt_route_selected_nets_with_commands {nets route_commands route_label} {
     set selected [mptdc_ckpt_select_nets $nets]
     puts "MPTDC_CKPT_ROUTE_SELECTED_NET_COUNT=[llength $selected]"
+    puts "MPTDC_CKPT_ROUTE_SELECTED_STRATEGY=$route_label"
 
     # The via-in-pin route modes exposed by Innovus make this checkpoint report
     # thousands of Via_In_Pin DRCs on already-routed std-cell nets. Keep this
@@ -159,8 +160,11 @@ proc mptdc_ckpt_route_selected_nets {nets} {
 
     set route_err ""
     set route_status [catch {
-        globalDetailRoute -select
-        detailRoute -select
+        foreach route_command $route_commands {
+            puts ""
+            puts $route_command
+            uplevel #0 $route_command
+        }
     } route_err]
 
     catch {setNanoRouteMode -route_selected_net_only false}
@@ -169,6 +173,34 @@ proc mptdc_ckpt_route_selected_nets {nets} {
     }
     catch {deselectAll}
     return $selected
+}
+
+proc mptdc_ckpt_route_selected_nets {nets} {
+    return [mptdc_ckpt_route_selected_nets_with_commands \
+        $nets \
+        [list {globalDetailRoute -select} {detailRoute -select}] \
+        global_detail_plus_detail]
+}
+
+proc mptdc_ckpt_route_selected_nets_route_design {nets} {
+    return [mptdc_ckpt_route_selected_nets_with_commands \
+        $nets \
+        [list {routeDesign -selected}] \
+        route_design_selected]
+}
+
+proc mptdc_ckpt_route_selected_nets_detail_only {nets} {
+    return [mptdc_ckpt_route_selected_nets_with_commands \
+        $nets \
+        [list {detailRoute -select}] \
+        detail_only_selected]
+}
+
+proc mptdc_ckpt_route_selected_nets_legacy {nets} {
+    return [mptdc_ckpt_route_selected_nets_with_commands \
+        $nets \
+        [list {routeSelectedNet}] \
+        route_selected_net_legacy]
 }
 
 proc mptdc_ckpt_assert_geometry_clean {} {

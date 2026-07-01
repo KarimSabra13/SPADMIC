@@ -131,11 +131,56 @@ The harness was then fixed so `mptdc_ckpt_*` helper commands execute directly
 instead of receiving Innovus-style `>> report` redirection as extra Tcl
 arguments.
 
+### `20260701_mptdc_route_ckpt_split_guard2_163854`
+
+This run proves that the helper dispatch is fixed and selected-net routing is
+actually executing. The first command routed `CTS_6` from the DRC-clean delete
+checkpoint:
+
+```text
+MPTDC_CKPT_SELECTED_NETS=CTS_6
+MPTDC_CKPT_ROUTE_SELECTED_NET_COUNT=1
+```
+
+However, the immediate geometry guard failed:
+
+```text
+COMMAND_1_STATUS=PASS
+COMMAND_1_VERIFY_DRC=2
+COMMAND_1_VERIFY_SHORTS=1
+COMMAND_1_VERIFY_REGULAR_CONNECTIVITY_BAD=1
+CHECKPOINT_REPAIR_FAILED_COMMAND_INDEX=2
+CHECKPOINT_REPAIR_FAILED_COMMAND_ERROR=geometry is not clean after checkpoint repair command: DRC=2 SHORTS=1
+```
+
+The router transcript shows the new residual marker class after routing `CTS_6`:
+
+```text
+Total number of DRC violations = 2
+Total number of violations on LAYER MET2 = 2
+```
+
+This is not a wrapper failure. It means the default selected-net strategy
+`globalDetailRoute -select; detailRoute -select` is not safe for `CTS_6`.
+The next useful steps are:
+
+1. Dump the `inline_01_assert_geometry_verify_drc_markers.tsv` entries for the
+   routed `CTS_6` attempt.
+2. Route the six non-`CTS_6` residual regular nets from the clean source
+   checkpoint to see whether regular signal connectivity can be reduced to only
+   the clock-tree net.
+3. Probe `CTS_6` with alternate selected-net engines or a manual route, but do
+   not restart broad `routeDesign`.
+
 ## Harness Rules After This Escalation
 
 - Do not use `setNanoRouteMode -route_with_via_in_pin true`.
 - Do not use broad `routeDesign` from the DRC-clean delete checkpoint.
 - Route selected nets through `mptdc_ckpt_route_selected_nets`.
+- If the default selected-net route is not clean, use the alternate helper
+  probes `mptdc_ckpt_route_selected_nets_route_design`,
+  `mptdc_ckpt_route_selected_nets_detail_only`, or
+  `mptdc_ckpt_route_selected_nets_legacy` from the clean source checkpoint.
 - Check geometry immediately with `mptdc_ckpt_assert_geometry_clean`.
 - Fail fast on command errors unless `MPTDC_CHECKPOINT_REPAIR_KEEP_GOING=1` is
   explicitly set for exploratory runs.
