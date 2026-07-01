@@ -155,6 +155,25 @@ proc mptdc_ckpt_route_selected_nets {nets} {
     return $selected
 }
 
+proc mptdc_ckpt_assert_geometry_clean {} {
+    global mptdc_ckpt_inline_assert_idx
+    if {![info exists mptdc_ckpt_inline_assert_idx]} {
+        set mptdc_ckpt_inline_assert_idx 0
+    }
+    incr mptdc_ckpt_inline_assert_idx
+    set tag [format "inline_%02d_assert_geometry" $mptdc_ckpt_inline_assert_idx]
+    set snapshot [mptdc_ckpt_verify_snapshot $tag]
+    set total [dict get $snapshot total_violations]
+    set shorts [dict get $snapshot shorts]
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_DRC=$total"
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_SHORTS=$shorts"
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_REPORT=[dict get $snapshot drc_rpt]"
+    if {$total eq "UNKNOWN" || $shorts eq "UNKNOWN" || $total != 0 || $shorts != 0} {
+        error "geometry is not clean after checkpoint repair command: DRC=$total SHORTS=$shorts report=[dict get $snapshot drc_rpt]"
+    }
+    return $snapshot
+}
+
 proc mptdc_ckpt_verify_snapshot {tag} {
     set report_dir [mptdc_signoff_report_dir]
     set drc_rpt [file join $report_dir ${tag}_verify_drc.rpt]
