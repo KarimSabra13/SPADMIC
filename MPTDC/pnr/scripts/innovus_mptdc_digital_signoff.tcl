@@ -3740,6 +3740,22 @@ proc mptdc_signoff_ro_pg_nearest_target {net pin_box preferred_layer {max_distan
 }
 
 proc mptdc_signoff_ro_pg_bridge_direction {pin_box target_box} {
+    set x_overlap [expr {max([lindex $pin_box 0], [lindex $target_box 0]) <= min([lindex $pin_box 2], [lindex $target_box 2])}]
+    set y_overlap [expr {max([lindex $pin_box 1], [lindex $target_box 1]) <= min([lindex $pin_box 3], [lindex $target_box 3])}]
+    set target_w [expr {[lindex $target_box 2] - [lindex $target_box 0]}]
+    set target_h [expr {[lindex $target_box 3] - [lindex $target_box 1]}]
+    if {$y_overlap && !$x_overlap} {
+        return horizontal
+    }
+    if {$x_overlap && !$y_overlap} {
+        return vertical
+    }
+    if {$y_overlap && $x_overlap} {
+        if {$target_h >= $target_w} {
+            return horizontal
+        }
+        return vertical
+    }
     set pin_ctr [mptdc_signoff_box_center $pin_box]
     set target_ctr [mptdc_signoff_box_center $target_box]
     set dx [expr {abs([lindex $target_ctr 0] - [lindex $pin_ctr 0])}]
@@ -3750,7 +3766,26 @@ proc mptdc_signoff_ro_pg_bridge_direction {pin_box target_box} {
     return vertical
 }
 
-proc mptdc_signoff_ro_pg_bridge_area {pin_box target_box margin} {
+proc mptdc_signoff_ro_pg_bridge_area {pin_box target_box direction margin} {
+    set pin_ctr [mptdc_signoff_box_center $pin_box]
+    set x_overlap [expr {max([lindex $pin_box 0], [lindex $target_box 0]) <= min([lindex $pin_box 2], [lindex $target_box 2])}]
+    set y_overlap [expr {max([lindex $pin_box 1], [lindex $target_box 1]) <= min([lindex $pin_box 3], [lindex $target_box 3])}]
+    if {$direction eq "horizontal" && $y_overlap} {
+        set y [lindex $pin_ctr 1]
+        return [list \
+            [format %.3f [expr {min([lindex $pin_box 0], [lindex $target_box 0]) - $margin}]] \
+            [format %.3f [expr {$y - $margin}]] \
+            [format %.3f [expr {max([lindex $pin_box 2], [lindex $target_box 2]) + $margin}]] \
+            [format %.3f [expr {$y + $margin}]]]
+    }
+    if {$direction eq "vertical" && $x_overlap} {
+        set x [lindex $pin_ctr 0]
+        return [list \
+            [format %.3f [expr {$x - $margin}]] \
+            [format %.3f [expr {min([lindex $pin_box 1], [lindex $target_box 1]) - $margin}]] \
+            [format %.3f [expr {$x + $margin}]] \
+            [format %.3f [expr {max([lindex $pin_box 3], [lindex $target_box 3]) + $margin}]]]
+    }
     return [list \
         [format %.3f [expr {min([lindex $pin_box 0], [lindex $target_box 0]) - $margin}]] \
         [format %.3f [expr {min([lindex $pin_box 1], [lindex $target_box 1]) - $margin}]] \
@@ -3962,7 +3997,7 @@ proc mptdc_signoff_ro_pg_hookup {} {
 
         set target_box [dict get $target box]
         set direction [mptdc_signoff_ro_pg_bridge_direction $pin_box $target_box]
-        set area [mptdc_signoff_ro_pg_bridge_area $pin_box $target_box $margin]
+        set area [mptdc_signoff_ro_pg_bridge_area $pin_box $target_box $direction $margin]
         set pin_ctr [mptdc_signoff_box_center $pin_box]
         set coord [expr {$direction eq "horizontal" ? [lindex $pin_ctr 1] : [lindex $pin_ctr 0]}]
         set width [mptdc_signoff_ro_pg_layer_width $layer]
