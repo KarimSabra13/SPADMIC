@@ -952,6 +952,8 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_RO_PG_PROBE 0
         MPTDC_ENABLE_RO_PG_HOOKUP 1
         MPTDC_REQUIRE_RO_PG_HOOKUP 1
+        MPTDC_ENABLE_RO_PG_MACRO_PATCH 0
+        MPTDC_ALLOW_RO_DERIVED_PG_DANGLING 1
         MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0
         MPTDC_RO_PG_HOOKUP_MARGIN_UM 1.0
         MPTDC_RO_PG_HOOKUP_SPACING_UM 2.0
@@ -981,14 +983,18 @@ proc mptdc_signoff_pg_strategy_innovus_sroute {} {
     return [expr {[mptdc_signoff_pg_strategy] eq "innovus_sroute_golden_ro"}]
 }
 
+proc mptdc_signoff_pg_strategy_manual_ro_core_sroute {} {
+    return [expr {[mptdc_signoff_pg_strategy] eq "manual_ro_pg_core_sroute"}]
+}
+
 proc mptdc_signoff_pg_policy_guard {} {
     if {[mptdc_signoff_env_truthy MPTDC_ALLOW_LEGACY_PG_TOPOLOGY 0]} {
         return
     }
     set failures [list]
     set strategy [mptdc_signoff_pg_strategy]
-    if {[lsearch -exact {conservative_ro_hookup innovus_sroute_golden_ro} $strategy] < 0} {
-        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup or innovus_sroute_golden_ro"
+    if {[lsearch -exact {conservative_ro_hookup innovus_sroute_golden_ro manual_ro_pg_core_sroute} $strategy] < 0} {
+        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, innovus_sroute_golden_ro, or manual_ro_pg_core_sroute"
     }
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]]
     if {$style ne "mesh_lr_vdd_vss"} {
@@ -1029,6 +1035,28 @@ proc mptdc_signoff_pg_policy_guard {} {
         }
         if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
             lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean before route"
+        }
+    } elseif {$strategy eq "manual_ro_pg_core_sroute"} {
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1 for manual_ro_pg_core_sroute"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0 for manual_ro_pg_core_sroute"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_PROBE=0 expected 1 for manual_ro_pg_core_sroute"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 0]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_HOOKUP=1 expected 0 for manual_ro_pg_core_sroute"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 0]} {
+            lappend failures "MPTDC_REQUIRE_RO_PG_HOOKUP=1 expected 0 for manual_ro_pg_core_sroute"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_MACRO_PATCH 0]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_MACRO_PATCH=0 expected 1 for manual_ro_pg_core_sroute"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
+            lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean or RO-filtered before route"
         }
     } else {
         if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
@@ -1874,6 +1902,16 @@ proc mptdc_signoff_sroute_commands {nets} {
 }
 
 proc mptdc_signoff_postplace_sroute_commands {nets} {
+    if {[mptdc_signoff_pg_strategy_manual_ro_core_sroute]} {
+        set commands [list [list sroute -connect {corePin} -nets $nets \
+            -corePinTarget {ring stripe} -allowLayerChange 1]]
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+            lappend commands [list sroute -connect {corePin} -nets $nets \
+                -corePinTarget firstAfterRowEnd -allowLayerChange 1]
+        }
+        return $commands
+    }
+
     if {[mptdc_signoff_pg_strategy_innovus_sroute]} {
         set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
             -blockPin all -blockPinTarget {ring stripe} \
@@ -2446,12 +2484,19 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     }
     set special_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_verify_connectivity_special.rpt]
     lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands {VDD VSS}]] special_capture_ok special_capture_cmd
-    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set special_detail_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_topology_after_sroute_verify_special.rpt]
+    set special_bad [mptdc_signoff_pg_connectivity_report_has_errors $special_rpt $special_detail_rpt POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY]
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DETAIL_REPORT=$special_detail_rpt"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_CAPTURE_STATUS=[expr {$special_capture_ok ? "PASS" : "FAIL"}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_COMMAND=$special_capture_cmd"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_RAW_BAD=[lindex $special_bad 2]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_FILTER_STATUS=[lindex $special_bad 3]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_FILTER_REPORT=[lindex $special_bad 6]"
     if {!$special_capture_ok} {
         set status FAIL
     } elseif {[lindex $special_bad 0]} {
@@ -3938,9 +3983,180 @@ proc mptdc_signoff_connectivity_report_has_errors {path} {
     return [list [expr {[llength $bad] > 0}] $bad]
 }
 
+proc mptdc_signoff_ro_pg_macro_filter_enabled {} {
+    return [expr {[mptdc_signoff_pg_strategy_manual_ro_core_sroute] &&
+        [mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_MACRO_PATCH 0]}]
+}
+
+proc mptdc_signoff_ro_pg_known_instance {inst} {
+    set inst [string trim $inst]
+    if {[regexp {(^|/)u_core_u_osc_(fast|slow)_u_ro_tune4$} $inst]} {
+        return 1
+    }
+    set norm [mptdc_signoff_norm_inst_name $inst]
+    foreach ro [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]] {
+        if {$norm eq [mptdc_signoff_norm_inst_name $ro]} {
+            return 1
+        }
+    }
+    return 0
+}
+
+proc mptdc_signoff_pg_line_box {line} {
+    if {[regexp {at[[:space:]]+\(([0-9.+-]+),[[:space:]]*([0-9.+-]+)\)[[:space:]]+\(([0-9.+-]+),[[:space:]]*([0-9.+-]+)\)} $line -> x1 y1 x2 y2]} {
+        return [list $x1 $y1 $x2 $y2]
+    }
+    return [list]
+}
+
+proc mptdc_signoff_ro_pg_line_near_ro {line} {
+    set box [mptdc_signoff_pg_line_box $line]
+    if {![mptdc_signoff_box_valid $box]} {
+        return 0
+    }
+    set search [mptdc_signoff_env_double MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0]
+    foreach ro [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]] {
+        set ro_box [mptdc_signoff_cell_box $ro]
+        if {![mptdc_signoff_box_valid $ro_box]} { continue }
+        set dist [mptdc_signoff_box_clearance $box $ro_box]
+        if {$dist ne "" && $dist <= $search} {
+            return 1
+        }
+    }
+    return 0
+}
+
+proc mptdc_signoff_classify_pg_connectivity_detail {detail_path} {
+    set data [dict create \
+        status FAIL \
+        reason missing_detail \
+        ro_terminal_count 0 \
+        non_ro_terminal_count 0 \
+        allowed_derived_count 0 \
+        non_ro_failure_count 0 \
+        allowed_lines [list] \
+        non_ro_lines [list] \
+        detail_report $detail_path]
+    if {$detail_path eq "" || ![file exists $detail_path]} {
+        return $data
+    }
+
+    dict set data status PASS
+    dict set data reason parsed
+    set derived_lines [list]
+    set fh [open $detail_path r]
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {$trimmed eq "" || [string match "#*" $trimmed]} { continue }
+        if {[regexp {^Net[[:space:]]+(VDD|VSS),[[:space:]]+Pin[[:space:]]+Pin:[[:space:]]+([^;]+)/(VDD|VSS|vdd!);.*has an unconnected terminal} $trimmed -> net inst pin]} {
+            if {[mptdc_signoff_ro_pg_known_instance $inst]} {
+                dict incr data ro_terminal_count
+                dict lappend data allowed_lines $trimmed
+            } else {
+                dict incr data non_ro_terminal_count
+                dict incr data non_ro_failure_count
+                dict lappend data non_ro_lines $trimmed
+            }
+            continue
+        }
+        if {[regexp {^Net[[:space:]]+(VDD|VSS):[[:space:]]+(has special routes with opens|dangling Wire)} $trimmed]} {
+            lappend derived_lines $trimmed
+            continue
+        }
+        if {[regexp -nocase {REPORT_STATUS=FAILED|no[[:space:]]+routing|[^a-z](short|unconnected|unrouted|violation|violated)[^a-z]} " $trimmed "]} {
+            dict incr data non_ro_failure_count
+            dict lappend data non_ro_lines $trimmed
+        }
+    }
+    close $fh
+
+    set ro_terms [dict get $data ro_terminal_count]
+    set non_ro_terms [dict get $data non_ro_terminal_count]
+    set allow_derived [expr {$ro_terms > 0 &&
+        $non_ro_terms == 0 &&
+        [mptdc_signoff_env_truthy MPTDC_ALLOW_RO_DERIVED_PG_DANGLING 1]}]
+    foreach line $derived_lines {
+        if {[mptdc_signoff_ro_pg_line_near_ro $line] || $allow_derived} {
+            dict incr data allowed_derived_count
+            dict lappend data allowed_lines $line
+        } else {
+            dict incr data non_ro_failure_count
+            dict lappend data non_ro_lines $line
+        }
+    }
+
+    if {[dict get $data non_ro_failure_count] > 0} {
+        dict set data status FAIL
+        dict set data reason non_ro_pg_failures
+    } elseif {$ro_terms > 0} {
+        dict set data status FILTERED_RO_ONLY
+        dict set data reason ro_macro_pg_only
+    } else {
+        dict set data status FAIL
+        dict set data reason no_ro_macro_terminal_evidence
+    }
+    return $data
+}
+
+proc mptdc_signoff_write_ro_pg_macro_filter_report {path summary_path detail_path raw_bad class_data} {
+    file mkdir [file dirname $path]
+    set fh [open $path w]
+    puts $fh "# MPTDC RO Macro PG Filter Status"
+    puts $fh "RO_PG_MACRO_FILTER_ENABLED=[expr {[mptdc_signoff_ro_pg_macro_filter_enabled] ? 1 : 0}]"
+    puts $fh "RO_PG_MACRO_FILTER_STRATEGY=[mptdc_signoff_pg_strategy]"
+    puts $fh "RO_PG_MACRO_FILTER_SUMMARY_REPORT=$summary_path"
+    puts $fh "RO_PG_MACRO_FILTER_DETAIL_REPORT=$detail_path"
+    puts $fh "RO_PG_MACRO_FILTER_RAW_BAD=[lindex $raw_bad 0]"
+    puts $fh "RO_PG_MACRO_FILTER_RAW_BAD_LINES=[lindex $raw_bad 1]"
+    puts $fh "RO_PG_MACRO_FILTER_STATUS=[dict get $class_data status]"
+    puts $fh "RO_PG_MACRO_FILTER_REASON=[dict get $class_data reason]"
+    puts $fh "RO_PG_FILTERED_UNCONNECTED_TERMINALS=[dict get $class_data ro_terminal_count]"
+    puts $fh "RO_PG_FILTERED_DERIVED_SPECIAL_LINES=[dict get $class_data allowed_derived_count]"
+    puts $fh "RO_PG_NON_RO_TERMINALS=[dict get $class_data non_ro_terminal_count]"
+    puts $fh "RO_PG_NON_RO_FAILURES=[dict get $class_data non_ro_failure_count]"
+    puts $fh ""
+    puts $fh "RO_PG_ALLOWED_LINES_BEGIN"
+    foreach line [dict get $class_data allowed_lines] {
+        puts $fh $line
+    }
+    puts $fh "RO_PG_ALLOWED_LINES_END"
+    puts $fh ""
+    puts $fh "RO_PG_NON_RO_LINES_BEGIN"
+    foreach line [dict get $class_data non_ro_lines] {
+        puts $fh $line
+    }
+    puts $fh "RO_PG_NON_RO_LINES_END"
+    close $fh
+}
+
+proc mptdc_signoff_pg_connectivity_report_has_errors {summary_path {detail_path ""} {label PG_CONNECTIVITY}} {
+    set raw_bad [mptdc_signoff_connectivity_report_has_errors $summary_path]
+    if {![lindex $raw_bad 0] || ![mptdc_signoff_ro_pg_macro_filter_enabled]} {
+        return [list [lindex $raw_bad 0] [lindex $raw_bad 1] [lindex $raw_bad 0] DISABLED 0 0 ""]
+    }
+    if {$detail_path eq ""} {
+        set candidate "[file rootname $summary_path]_detailed.rpt"
+        if {[file exists $candidate]} {
+            set detail_path $candidate
+        }
+    }
+    set class_data [mptdc_signoff_classify_pg_connectivity_detail $detail_path]
+    set filter_rpt [file join [mptdc_signoff_report_dir] "[mptdc_signoff_report_token $label]_ro_pg_macro_filter.rpt"]
+    mptdc_signoff_write_ro_pg_macro_filter_report $filter_rpt $summary_path $detail_path $raw_bad $class_data
+    set non_ro_count [dict get $class_data non_ro_failure_count]
+    set ro_count [dict get $class_data ro_terminal_count]
+    set effective_bad [expr {[dict get $class_data status] ne "FILTERED_RO_ONLY"}]
+    if {$effective_bad} {
+        set effective_lines [dict get $class_data non_ro_lines]
+    } else {
+        set effective_lines [list]
+    }
+    return [list $effective_bad $effective_lines [lindex $raw_bad 0] [dict get $class_data status] $ro_count $non_ro_count $filter_rpt]
+}
+
 proc mptdc_signoff_write_pg_postroute_connectivity_status {special_rpt regular_rpt} {
     set rpt [file join [mptdc_signoff_report_dir] pg_postroute_connectivity_status.rpt]
-    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set special_bad [mptdc_signoff_pg_connectivity_report_has_errors $special_rpt "" POST_ROUTE_SPECIAL_CONNECTIVITY]
     set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
     set special_flag [lindex $special_bad 0]
     set status [expr {$special_flag ? "FAIL" : "PASS"}]
@@ -3951,6 +4167,11 @@ proc mptdc_signoff_write_pg_postroute_connectivity_status {special_rpt regular_r
     puts $fh "SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
     puts $fh "SPECIAL_CONNECTIVITY_BAD=$special_flag"
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
+    puts $fh "SPECIAL_CONNECTIVITY_RAW_BAD=[lindex $special_bad 2]"
+    puts $fh "SPECIAL_CONNECTIVITY_FILTER_STATUS=[lindex $special_bad 3]"
+    puts $fh "SPECIAL_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
+    puts $fh "SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
+    puts $fh "SPECIAL_CONNECTIVITY_FILTER_REPORT=[lindex $special_bad 6]"
     puts $fh "REGULAR_CONNECTIVITY_REPORT=$regular_rpt"
     puts $fh "REGULAR_CONNECTIVITY_BAD=[lindex $regular_bad 0]"
     puts $fh "REGULAR_CONNECTIVITY_BAD_LINES=[lindex $regular_bad 1]"
@@ -5601,6 +5822,9 @@ proc mptdc_signoff_capture_route_gate_reports {drc_rpt regular_rpt special_rpt r
     set fh [open [file rootname $special_rpt]_command.rpt w]
     puts $fh "SPECIAL_CONNECTIVITY_COMMAND=$special_cmd"
     close $fh
+    set special_detail_rpt "[file rootname $special_rpt]_detailed.rpt"
+    set special_detail_console "[file rootname $special_rpt]_detailed.console.rpt"
+    catch {uplevel #0 "verifyConnectivity -type special -nets {VDD VSS} -report \"$special_detail_rpt\" > \"$special_detail_console\""}
     mptdc_signoff_capture_candidates $report_route_rpt \
         "route summary" [list {reportRoute} {report_route}]
 }
@@ -5612,7 +5836,7 @@ proc mptdc_signoff_read_route_gate_reports {drc_rpt regular_rpt special_rpt repo
         dict set drc_data marker_report $marker_rpt
     }
     set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
-    set special_bad [mptdc_signoff_connectivity_report_has_errors $special_rpt]
+    set special_bad [mptdc_signoff_pg_connectivity_report_has_errors $special_rpt "" ROUTE_GATE_SPECIAL_CONNECTIVITY]
     set unrouted [mptdc_signoff_parse_report_route_unrouted $report_route_rpt]
     if {$unrouted eq "UNKNOWN" && ![lindex $regular_bad 0] && ![lindex $special_bad 0]} {
         set unrouted 0
@@ -5855,6 +6079,11 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "REGULAR_NET_BAD_LINES=[lindex $regular_bad 1]"
     puts $fh "SPECIAL_NET_CONNECTIVITY_BAD=$special_flag"
     puts $fh "SPECIAL_NET_BAD_LINES=[lindex $special_bad 1]"
+    puts $fh "SPECIAL_NET_CONNECTIVITY_RAW_BAD=[lindex $special_bad 2]"
+    puts $fh "SPECIAL_NET_CONNECTIVITY_FILTER_STATUS=[lindex $special_bad 3]"
+    puts $fh "SPECIAL_NET_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
+    puts $fh "SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
+    puts $fh "SPECIAL_NET_CONNECTIVITY_FILTER_REPORT=[lindex $special_bad 6]"
     puts $fh "REGULAR_NET_OPENS=[expr {$regular_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     puts $fh "SPECIAL_NET_OPENS=[expr {$special_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     puts $fh "UNROUTED_NETS=$unrouted"
