@@ -115,6 +115,21 @@ proc mptdc_ckpt_continue_after_command_fail {} {
     return [mptdc_ckpt_env MPTDC_CHECKPOINT_REPAIR_KEEP_GOING 0]
 }
 
+proc mptdc_ckpt_source_tcl {path} {
+    if {[string trim $path] eq ""} {
+        error "mptdc_ckpt_source_tcl requires a Tcl file path"
+    }
+    if {![file exists $path]} {
+        error "mptdc_ckpt_source_tcl file does not exist: $path"
+    }
+    if {![file readable $path]} {
+        error "mptdc_ckpt_source_tcl file is not readable: $path"
+    }
+    puts "MPTDC_CKPT_SOURCE_TCL=$path"
+    source $path
+    return $path
+}
+
 proc mptdc_ckpt_select_nets {nets} {
     if {[llength $nets] == 0} {
         error "mptdc_ckpt_select_nets requires at least one net"
