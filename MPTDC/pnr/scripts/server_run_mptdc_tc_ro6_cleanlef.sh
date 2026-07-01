@@ -7,47 +7,48 @@ MPTDC_DIR="$(cd "$PNR_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$MPTDC_DIR/.." && pwd)"
 
 DEFAULT_FINAL_LEF="/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef"
-DEFAULT_PNR_LEF="$DEFAULT_FINAL_LEF"
 DEFAULT_HANDOFF_DIR="/sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff"
 DEFAULT_GENUS_RUN_ID="MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233"
 DEFAULT_INNOVUS_WORK="/sim/ksabra/SPADMIC_work/innovus"
 DEFAULT_WORK_ROOT="/sim/ksabra/SPADMIC_work"
 
+STAGE="base_route"
 RUN_ID=""
 EXPECTED_HEAD_VALUE="${EXPECTED_HEAD:-}"
 FINAL_LEF_VALUE="${FINAL_LEF:-$DEFAULT_FINAL_LEF}"
-PNR_LEF_VALUE="${PNR_LEF:-$DEFAULT_PNR_LEF}"
+PNR_LEF_VALUE="${PNR_LEF:-$FINAL_LEF_VALUE}"
 HANDOFF_DIR_VALUE="${MPTDC_GENUS_HANDOFF_DIR:-$DEFAULT_HANDOFF_DIR}"
 GENUS_RUN_ID_VALUE="${MPTDC_GENUS_RUN_ID:-$DEFAULT_GENUS_RUN_ID}"
 INNOVUS_WORK_VALUE="${MPTDC_INNOVUS_WORK:-$DEFAULT_INNOVUS_WORK}"
 WORK_ROOT_VALUE="${MPTDC_WORK_ROOT:-$DEFAULT_WORK_ROOT}"
-CLEAR_STALE_ENV_VALUE="${MPTDC_CLEAR_STALE_ENV:-1}"
 
 usage() {
   cat <<'USAGE'
 Usage:
-  server_run_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler.sh [RUN_ID] [options]
+  server_run_mptdc_tc_ro6_cleanlef.sh [RUN_ID] [options]
 
 Options:
+  --stage <stage>        base_route, route_timing, or final_candidate.
   --run-id <id>          Override the generated run id.
   --expected-head <sha>  Require the repository HEAD to match this commit.
-  --source-lef <path>    Golden RO_tune6 macro-only LEF.
-  --pnr-lef <path>       RO_tune6 LEF used by Innovus; defaults to the golden macro LEF.
+  --source-lef <path>    Corrected RO_tune6 macro LEF.
+  --pnr-lef <path>       RO_tune6 LEF used by Innovus; defaults to source LEF.
   --handoff-dir <path>   Prepared Genus handoff directory.
   --genus-run-id <id>    Genus run id label used by the pre-PNR gate.
   --innovus-work <path>  Innovus run root.
   --work-root <path>     MPTDC work root.
-  --no-clear-env         Do not clear stale MPTDC_* and O1_* exports first.
   -h, --help             Show this help.
 
-This is a foreground TC-only full-closure attempt. It enables strict PG, CTS,
-route, strict route DRC, bounded post-route timing optimization, and final
-filler cleanup. It is not MMMC or foundry DRC/LVS signoff.
-
-This legacy launcher is retained for old filtered-RO-PG debug only. For the
-corrected RO_tune6 VDD/VSS-only LEF closure path, use:
-  MPTDC/pnr/scripts/server_run_mptdc_tc_ro6_cleanlef.sh
+This launcher is the corrected RO_tune6 VDD/VSS-only closure path. It requires
+real RO PG hookup and disables the old vdd!/RO-only PG filter strategy.
 USAGE
+}
+
+is_truthy() {
+  case "${1:-0}" in
+    1|true|TRUE|yes|YES|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 macro_only_precheck() {
@@ -75,8 +76,34 @@ macro_only_precheck() {
   ' "$lef"
 }
 
+lef_pin_policy_precheck() {
+  local lef="$1"
+  local pins
+  pins="$(awk '
+    /^[[:space:]]*MACRO[[:space:]]+RO_tune6[[:space:]]*$/ {in_macro=1; next}
+    in_macro && /^[[:space:]]*PIN[[:space:]]+/ {print $2}
+    in_macro && /^[[:space:]]*END[[:space:]]+RO_tune6[[:space:]]*$/ {exit}
+  ' "$lef")"
+  if ! grep -qx "VDD" <<<"$pins"; then
+    echo "ERROR: corrected RO_tune6 LEF does not export PIN VDD" >&2
+    return 1
+  fi
+  if ! grep -qx "VSS" <<<"$pins"; then
+    echo "ERROR: corrected RO_tune6 LEF does not export PIN VSS" >&2
+    return 1
+  fi
+  if grep -qx "vdd!" <<<"$pins"; then
+    echo "ERROR: corrected RO_tune6 LEF must not export PIN vdd!" >&2
+    return 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --stage)
+      STAGE="${2:?missing --stage value}"
+      shift 2
+      ;;
     --run-id)
       RUN_ID="${2:?missing --run-id value}"
       shift 2
@@ -109,10 +136,6 @@ while [[ $# -gt 0 ]]; do
       WORK_ROOT_VALUE="${2:?missing --work-root value}"
       shift 2
       ;;
-    --no-clear-env)
-      CLEAR_STALE_ENV_VALUE=0
-      shift
-      ;;
     -h|--help)
       usage
       exit 0
@@ -135,19 +158,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-RUN_ID="${RUN_ID:-20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_$(date +%H%M%S)}"
-RUN_DIR="$INNOVUS_WORK_VALUE/$RUN_ID"
+case "$STAGE" in
+  base_route|route_timing|final_candidate) ;;
+  *)
+    echo "ERROR: --stage must be base_route, route_timing, or final_candidate" >&2
+    exit 2
+    ;;
+esac
 
 cd "$REPO_ROOT"
-
-if [[ "${MPTDC_ALLOW_LEGACY_RO_PG_FILTER:-0}" != "1" ]]; then
-  cat >&2 <<'EOF'
-ERROR: this legacy fullclosure launcher still uses the old filtered RO PG debug strategy.
-ERROR: use MPTDC/pnr/scripts/server_run_mptdc_tc_ro6_cleanlef.sh for corrected VDD/VSS-only RO_tune6 closure.
-ERROR: set MPTDC_ALLOW_LEGACY_RO_PG_FILTER=1 only to reproduce historical debug behavior.
-EOF
-  exit 2
-fi
 
 ACTUAL_HEAD="$(git rev-parse HEAD)"
 echo "REPO_ROOT=$REPO_ROOT"
@@ -172,14 +191,17 @@ test -d "$HANDOFF_DIR_VALUE"
 test -r "$REPO_ROOT/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib"
 macro_only_precheck "$FINAL_LEF_VALUE" "source LEF"
 macro_only_precheck "$PNR_LEF_VALUE" "PnR LEF"
+lef_pin_policy_precheck "$PNR_LEF_VALUE"
 
-if [[ "$CLEAR_STALE_ENV_VALUE" == "1" ]]; then
-  while IFS='=' read -r name _; do
-    case "$name" in
-      MPTDC_*|O1_*) unset "$name" ;;
-    esac
-  done < <(env)
-fi
+while IFS='=' read -r name _; do
+  case "$name" in
+    MPTDC_*|O1_*) unset "$name" ;;
+  esac
+done < <(env)
+
+suffix="$STAGE"
+RUN_ID="${RUN_ID:-20260701_mptdc_tc_ro6_cleanlef_${suffix}_$(date +%H%M%S)}"
+RUN_DIR="$INNOVUS_WORK_VALUE/$RUN_ID"
 
 export MPTDC_WORK_ROOT="$WORK_ROOT_VALUE"
 export MPTDC_INNOVUS_WORK="$INNOVUS_WORK_VALUE"
@@ -193,7 +215,7 @@ export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 export MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG=1
 export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0
-export MPTDC_PG_STRATEGY=manual_ro_pg_core_sroute
+export MPTDC_PG_STRATEGY=conservative_ro_hookup
 
 export O1_USE_REAL_RO_ABSTRACT=1
 export O1_RO_CELL_NAME=RO_tune6
@@ -202,6 +224,8 @@ export O1_RO_LEF_PATH="$PNR_LEF_VALUE"
 export O1_RO_LIBERTY_PATH="$REPO_ROOT/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib"
 
 export MPTDC_PNR_CORE_UTIL=0.55
+export MPTDC_PNR_FIX_RO_MACROS=1
+export MPTDC_PNR_CREATE_RO_HALOS=0
 export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE=none
 export MPTDC_PNR_PD_TILE_APPLY_HIER_BOX=0
 export MPTDC_PNR_PD_TILE_REGION_MARGIN_UM=0.0
@@ -209,14 +233,11 @@ export MPTDC_PNR_PD_TILE_USE_FENCE=0
 export MPTDC_PNR_PD_TILE_PREPLACE_LEAVES=0
 export MPTDC_PNR_PD_TILE_FIX_LEAVES=0
 export MPTDC_PD_PHYSICAL_AUDIT_MODE=soft_region
-export MPTDC_PNR_FIX_RO_MACROS=0
-export MPTDC_PNR_CREATE_RO_HALOS=0
 export MPTDC_PNR_PHASE_BUF_ORIENT=ROW_LEGAL
 export MPTDC_PNR_ROW_LEGAL_ORIENT_CANDIDATES="MX R180 MY R0"
 export MPTDC_RO_PHASE_MIN_CLEARANCE_UM=10.0
 export MPTDC_RO_PHASE_ORIGIN_CLEARANCE_UM=16.0
 export MPTDC_RO_PHASE_PREPLACE_AUDIT=1
-export MPTDC_RO_PHASE_FAIL_ON_GLOBAL_CHECKPLACE_OVERLAP=0
 
 export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=1
 export MPTDC_PNR_FAST_TAG_COLUMN_BITS=ALL
@@ -227,30 +248,17 @@ export MPTDC_PNR_FAST_TAG_COLUMN_FIX=0
 export MPTDC_PNR_FAST_TAG_COLUMN_STRIP_WIDTH_UM=40.0
 export MPTDC_PNR_FAST_TAG_TIMING_FOCUS=1
 export MPTDC_PNR_FAST_TAG_TARGETED_ECO=1
-export MPTDC_PNR_FAST_TAG_CRITICAL_RANGE_NS=0.080
-export MPTDC_PNR_FAST_TAG_MAX_TRANSITION_NS=0.350
+export MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN=1
+export MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2=1
+export MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES=1
+export MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE=1
 export MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS=160
 export MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=12
 export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS=200
 export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS=240
-export MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2=1
-export MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES=1
-export MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN=1
-export MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE=1
 
 export MPTDC_RUN_CLK_SYS_CTS=1
-export MPTDC_ENABLE_POSTROUTE_OPT=1
 export MPTDC_ENABLE_TC_CLOSURE=1
-export MPTDC_POSTROUTE_SETUP_OPT_PASSES=3
-export MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES=3
-export MPTDC_POSTROUTE_SETUP_TARGET_SLACK_NS=0.020
-export MPTDC_POSTROUTE_SETUP_EARLY_STOP=1
-export MPTDC_POSTROUTE_SETUP_PLATEAU_GUARD=1
-export MPTDC_POSTROUTE_SETUP_STALL_LIMIT=1
-export MPTDC_POSTROUTE_SETUP_MIN_IMPROVEMENT_NS=0.003
-export MPTDC_POSTROUTE_HOLD_OPT_PASSES=1
-export MPTDC_POSTROUTE_HOLD_OPT_MAX_PASSES=1
-export MPTDC_POSTROUTE_HOLD_TARGET_SLACK_NS=0.020
 export MPTDC_SKIP_VERBOSE_DRV_ALL_VIOLATORS=1
 export MPTDC_DB_DISPLAY_LIMIT=50000
 
@@ -263,54 +271,82 @@ export MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM=8.0
 export MPTDC_BLOCK_PG_PIN_CREATE_MODE=geom
 export MPTDC_BLOCK_PG_PIN_EDITPIN_FALLBACK=0
 export MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=0
+
 export MPTDC_ENABLE_PREPLACE_PG_SROUTE=0
 export MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=1
 export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
-export MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=1
-export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1
+export MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=0
+export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0
 export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0
 export MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK=0
 export MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS=0
 export MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES=0
 export MPTDC_SROUTE_CONNECT_STRIPE=1
 export MPTDC_SROUTE_CORE_PIN_STOP_ROUTE=RowEnd
+export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
+
 export MPTDC_ENABLE_RO_PG_PROBE=1
-export MPTDC_ENABLE_RO_PG_HOOKUP=0
-export MPTDC_REQUIRE_RO_PG_HOOKUP=0
-export MPTDC_ENABLE_RO_PG_MACRO_PATCH=1
-export MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=1
+export MPTDC_ENABLE_RO_PG_HOOKUP=1
+export MPTDC_REQUIRE_RO_PG_HOOKUP=1
+export MPTDC_ENABLE_RO_PG_MACRO_PATCH=0
+export MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=0
 export MPTDC_RO_PG_HOOKUP_SEARCH_UM=45.0
 export MPTDC_RO_PG_HOOKUP_MARGIN_UM=1.0
 export MPTDC_RO_PG_HOOKUP_SPACING_UM=2.0
 export MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM=5000.0
-export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
 
-export MPTDC_ENABLE_FINAL_FILLER=1
-export MPTDC_ENABLE_POST_FILLER_SROUTE=1
+export MPTDC_ENABLE_ROUTE_GATE_RECOVERY=0
+export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE=0
+export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS=0
+export MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES=Mar
+
+export MPTDC_ENABLE_POSTROUTE_OPT=0
+export MPTDC_ENABLE_FINAL_FILLER=0
+export MPTDC_ENABLE_POST_FILLER_SROUTE=0
 export MPTDC_FILLER_ADD_FILLERS_WITH_DRC=0
 export MPTDC_REQUIRE_DRC_SAFE_FILLER=1
 
-export MPTDC_ENABLE_ROUTE_GATE_RECOVERY=1
-export MPTDC_ROUTE_REPAIR_COMMANDS="{ecoRoute -target} {ecoRoute -fix_drc}"
-export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE=0
-export MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES=Mar
-export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS=0
+if [[ "$STAGE" == "route_timing" || "$STAGE" == "final_candidate" ]]; then
+  export MPTDC_ENABLE_POSTROUTE_OPT=1
+  export MPTDC_POSTROUTE_SETUP_TARGET_SLACK_NS=0.000
+  export MPTDC_POSTROUTE_SETUP_OPT_PASSES=4
+  export MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES=4
+  export MPTDC_POSTROUTE_SETUP_EARLY_STOP=1
+  export MPTDC_POSTROUTE_SETUP_PLATEAU_GUARD=1
+  export MPTDC_POSTROUTE_SETUP_STALL_LIMIT=1
+  export MPTDC_POSTROUTE_SETUP_MIN_IMPROVEMENT_NS=0.003
+  export MPTDC_POSTROUTE_HOLD_TARGET_SLACK_NS=0.000
+  export MPTDC_POSTROUTE_HOLD_OPT_PASSES=1
+  export MPTDC_POSTROUTE_HOLD_OPT_MAX_PASSES=1
+fi
+
+if [[ "$STAGE" == "final_candidate" ]]; then
+  export MPTDC_ENABLE_FINAL_FILLER=1
+  export MPTDC_ENABLE_POST_FILLER_SROUTE=0
+fi
 
 export MPTDC_PHASE_RC_ACCEPT_ASYMMETRY=1
-export MPTDC_PHASE_RC_ACCEPT_SCOPE=TC_ONLY_O13_OWNER_REVIEW
-export MPTDC_PHASE_RC_ACCEPT_REASON=owner_accepted_phase_rc_asymmetry_for_tc_only_fullclosure_20260630
+export MPTDC_PHASE_RC_ACCEPT_SCOPE=TC_ONLY_CLEAN_RO6_LEF
+export MPTDC_PHASE_RC_ACCEPT_REASON=owner_accepted_phase_rc_asymmetry_for_tc_only_clean_ro6_lef_closure
 
 echo "RUN_ID=$RUN_ID"
 echo "RUN_DIR=$RUN_DIR"
+echo "STAGE=$STAGE"
 echo "FINAL_LEF=$FINAL_LEF_VALUE"
 echo "PNR_LEF=$PNR_LEF_VALUE"
 echo "MPTDC_PG_STRATEGY=$MPTDC_PG_STRATEGY"
 echo "INNOVUS_RO_LEF=$O1_RO_LEF_PATH"
+echo "O1_RO_LIBERTY_PATH=$O1_RO_LIBERTY_PATH"
+echo "MPTDC_ENABLE_RO_PG_HOOKUP=$MPTDC_ENABLE_RO_PG_HOOKUP"
+echo "MPTDC_REQUIRE_RO_PG_HOOKUP=$MPTDC_REQUIRE_RO_PG_HOOKUP"
 echo "MPTDC_ENABLE_RO_PG_MACRO_PATCH=$MPTDC_ENABLE_RO_PG_MACRO_PATCH"
+echo "MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=$MPTDC_ALLOW_RO_DERIVED_PG_DANGLING"
 echo "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=$MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN"
+echo "MPTDC_ENABLE_POSTROUTE_OPT=$MPTDC_ENABLE_POSTROUTE_OPT"
+echo "MPTDC_ENABLE_FINAL_FILLER=$MPTDC_ENABLE_FINAL_FILLER"
 echo "MPTDC_GENUS_HANDOFF_DIR=$MPTDC_GENUS_HANDOFF_DIR"
 echo "MPTDC_GENUS_RUN_ID=$MPTDC_GENUS_RUN_ID"
-echo "Starting foreground Innovus full_signoff run..."
+echo "Starting foreground Innovus full_signoff clean-LEF run..."
 
 exec bash "$SCRIPT_DIR/server_run_innovus_mptdc_digital_signoff.sh" \
   "$RUN_ID" \

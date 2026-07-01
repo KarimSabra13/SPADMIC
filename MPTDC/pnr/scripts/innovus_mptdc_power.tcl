@@ -16,7 +16,7 @@ proc mptdc_pnr_power_nets {} {
 }
 
 proc mptdc_pnr_ro_power_pin_map {} {
-    return [dict create VDD VDD vdd! VDD VSS VSS]
+    return [dict create VDD VDD VSS VSS]
 }
 
 proc mptdc_pnr_unique_append {var_name value} {
@@ -97,7 +97,7 @@ proc mptdc_pnr_power_rules {} {
     return [list \
         {digital_domain_uses_1p8v_vdd_vss} \
         {ro_tune6_vdd_uses_vdd_1p8v} \
-        {ro_tune6_vdd_bang_connects_to_vdd} \
+        {ro_tune6_vdd_bang_is_merged_into_vdd_and_not_exported} \
         {ro_tune6_vss_connects_to_vss} \
         {do_not_connect_ro_tune6_to_vdda_3p3v} \
         {report_unconnected_pg_pins} \

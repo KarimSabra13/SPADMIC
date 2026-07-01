@@ -390,7 +390,7 @@ proc mptdc_o10_setup_globals {} {
     set tech(STANDARD_CELL_GND_PINS) [mptdc_o10_env_list MPTDC_O10_STDCELL_GND_PINS $default_std_gnd_pins]
     set tech(OSC_VDD) "VDD"
     set tech(OSC_GND) "VSS"
-    set tech(OSC_VDD_PINS) [list VDD {vdd!}]
+    set tech(OSC_VDD_PINS) [list VDD]
     set tech(OSC_GND_PINS) [list VSS]
 
     set pnr(core_utilization) [mptdc_o10_env MPTDC_PNR_CORE_UTIL 0.60]

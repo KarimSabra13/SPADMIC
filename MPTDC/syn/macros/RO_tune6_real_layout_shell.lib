@@ -60,11 +60,6 @@ library (RO_tune6_real_layout_shell) {
       voltage_name : "VSS";
     }
 
-    pg_pin ("vdd!") {
-      pg_type : primary_power;
-      voltage_name : "VDD";
-    }
-
     pin (rstb) {
       direction : input;
       capacitance : 0.001;

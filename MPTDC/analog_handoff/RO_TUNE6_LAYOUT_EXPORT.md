@@ -54,14 +54,16 @@ The exported LEF must contain:
 - `MACRO RO_tune6`;
 - valid `SIZE`, `ORIGIN`, `SYMMETRY`, and site-compatible geometry;
 - pins `rstb`, `code[0]` through `code[7]`, `S[0]` through `S[7]`;
-- power pins `VDD`, `VSS`, and `vdd!`;
+- power pins `VDD` and `VSS` only;
 - physical `PORT`/`LAYER`/`RECT` geometry for every required pin;
 - obstruction or blockage geometry that protects layout-internal metals;
 - routing layers consistent with the XH018 JIHD Innovus stack.
 
-The logical pin contract is the same as the old RO wrapper contract, but the
-macro master is now `RO_tune6`. The RTL instance path intentionally remains
-`u_ro_tune4` so existing timing and report paths stay stable.
+The active PnR supply contract is `VDD` and `VSS` only. The analog layout may
+merge an internal `vdd!` supply into `VDD`, but `vdd!` must not be exported as a
+separate Innovus macro PG pin. The macro master is now `RO_tune6`. The RTL
+instance path intentionally remains `u_ro_tune4` so existing timing and report
+paths stay stable.
 
 ## Local Sanity Commands
 

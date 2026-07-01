@@ -58,7 +58,6 @@ proc mptdc_o10_apply_power_plan {} {
         [list globalNetConnect $tech(STANDARD_CELL_VDD) -type pgpin -pin vdd -inst *] \
         [list globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin gnd -inst *] \
         [list globalNetConnect $tech(STANDARD_CELL_VDD) -type pgpin -pin VDD -inst *] \
-        [list globalNetConnect $tech(STANDARD_CELL_VDD) -type pgpin -pin vdd! -inst *] \
         [list globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin VSS -inst *] \
     ] {
         catch {{*}$cmd}
@@ -122,7 +121,7 @@ proc mptdc_o10_apply_power_plan {} {
     puts $fh "GROUND_NET=VSS"
     puts $fh "STANDARD_CELL_VDD_PINS=$tech(STANDARD_CELL_VDD_PINS)"
     puts $fh "STANDARD_CELL_GND_PINS=$tech(STANDARD_CELL_GND_PINS)"
-    puts $fh "RO_POWER_PIN_MAP=VDD->VDD vdd!->VDD VSS->VSS"
+    puts $fh "RO_POWER_PIN_MAP=VDD->VDD VSS->VSS"
     close $fh
 
     foreach report_cmd [list \

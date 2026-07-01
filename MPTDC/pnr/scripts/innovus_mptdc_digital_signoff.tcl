@@ -953,7 +953,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_RO_PG_HOOKUP 1
         MPTDC_REQUIRE_RO_PG_HOOKUP 1
         MPTDC_ENABLE_RO_PG_MACRO_PATCH 0
-        MPTDC_ALLOW_RO_DERIVED_PG_DANGLING 1
+        MPTDC_ALLOW_RO_DERIVED_PG_DANGLING 0
         MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0
         MPTDC_RO_PG_HOOKUP_MARGIN_UM 1.0
         MPTDC_RO_PG_HOOKUP_SPACING_UM 2.0
@@ -1818,7 +1818,7 @@ proc mptdc_signoff_apply_pg_connectivity {} {
         }
     }
     foreach ro $ro_instances {
-        foreach item {{VDD VDD} {vdd! VDD} {VSS VSS}} {
+        foreach item [mptdc_signoff_ro_pg_supply_specs] {
             set pin [lindex $item 0]
             set net [lindex $item 1]
             set cmd [list globalNetConnect $net -type pgpin -pin $pin -inst $ro]
@@ -3118,7 +3118,7 @@ proc mptdc_signoff_create_block_pg_stitches {{report_name block_pg_stitch_status
 }
 
 proc mptdc_signoff_ro_pg_supply_specs {} {
-    return [list [list VDD VDD] [list vdd! VDD] [list VSS VSS]]
+    return [list [list VDD VDD] [list VSS VSS]]
 }
 
 proc mptdc_signoff_ro_pg_layer_width {layer} {
@@ -4212,7 +4212,7 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "GROUND_NET=VSS"
     puts $fh "STDCELL_POWER_PINS=$mptdc_xh018_cells(stdcell_pg_power)"
     puts $fh "STDCELL_GROUND_PINS=$mptdc_xh018_cells(stdcell_pg_ground)"
-    puts $fh "RO_POWER_PIN_MAP=VDD->VDD vdd!->VDD VSS->VSS"
+    puts $fh "RO_POWER_PIN_MAP=VDD->VDD VSS->VSS"
 
     set nets [list VDD VSS]
     set ring_ok [mptdc_signoff_try_pg_command $fh ADD_RING [list \
@@ -4268,12 +4268,10 @@ proc mptdc_signoff_build_power_grid {} {
     set all_bad [mptdc_signoff_connectivity_report_has_errors $all_rpt]
     set ro_instances [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]]
     set ro_vdd_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances VDD VDD]
-    set ro_vdd_bang_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances vdd! VDD]
     set ro_vss_count [mptdc_signoff_count_ro_pg_pin_connections $ro_instances VSS VSS]
     set ro_count [llength $ro_instances]
     set ro_pg_ok [expr {$ro_count == 2 &&
         $ro_vdd_count ne "UNKNOWN" && $ro_vdd_count == $ro_count &&
-        $ro_vdd_bang_count ne "UNKNOWN" && $ro_vdd_bang_count == $ro_count &&
         $ro_vss_count ne "UNKNOWN" && $ro_vss_count == $ro_count}]
     set fh [open $rpt a]
     puts $fh ""
@@ -4294,7 +4292,6 @@ proc mptdc_signoff_build_power_grid {} {
     puts $fh "SROUTE_PREPLACE_PROGRESS_STATUS=[expr {$sroute_progress_ok ? "PASS" : "FAIL"}]"
     puts $fh "RO_INSTANCE_COUNT=$ro_count"
     puts $fh "RO_VDD_CONNECTED_COUNT=$ro_vdd_count"
-    puts $fh "RO_VDD_BANG_CONNECTED_COUNT=$ro_vdd_bang_count"
     puts $fh "RO_VSS_CONNECTED_COUNT=$ro_vss_count"
     puts $fh "RO_PG_PIN_QUERY_STATUS=[expr {$ro_pg_ok ? "PASS" : "FAIL"}]"
     puts $fh "SPECIAL_CONNECTIVITY_REPORT=$special_rpt"

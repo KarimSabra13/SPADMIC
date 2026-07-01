@@ -93,7 +93,7 @@ ROW_TEST_PG_MAPPING=
   VDD -> vddi
   VSS -> gndi
   RO VDD -> VDD
-  RO vdd! -> VDD
+  RO vdd! intentionally merged into VDD and not exported as a macro PG pin
   RO VSS -> VSS
 ROW_TEST_ACCEPTANCE_REPORTS=
   ROW_TEST_DRC_STATUS

@@ -243,7 +243,7 @@ proc mptdc_o10_setup_globals {} {
     set tech(STANDARD_CELL_GND_PINS) [list gnd]
     set tech(OSC_VDD) "VDD"
     set tech(OSC_GND) "VSS"
-    set tech(OSC_VDD_PINS) [list VDD {vdd!}]
+    set tech(OSC_VDD_PINS) [list VDD]
     set tech(OSC_GND_PINS) [list VSS]
     set tech(FILLERS) "FEED2HD FEED1HD"
 
