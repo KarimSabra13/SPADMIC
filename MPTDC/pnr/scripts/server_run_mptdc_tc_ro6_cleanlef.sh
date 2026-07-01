@@ -23,6 +23,8 @@ INNOVUS_WORK_VALUE="${MPTDC_INNOVUS_WORK:-$DEFAULT_INNOVUS_WORK}"
 WORK_ROOT_VALUE="${MPTDC_WORK_ROOT:-$DEFAULT_WORK_ROOT}"
 ROUTE_RECOVERY_VALUE="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-0}"
 ROUTE_REPAIR_COMMANDS_VALUE="${MPTDC_ROUTE_REPAIR_COMMANDS:-{ecoRoute -target} {ecoRoute -fix_drc}}"
+FREE_INTERNAL_VALUE="${MPTDC_PNR_FREE_INTERNAL_PLACEMENT:-0}"
+FREE_ALL_INTERNAL_VALUE="${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-0}"
 
 usage() {
   cat <<'USAGE'
@@ -41,6 +43,9 @@ Options:
   --work-root <path>     MPTDC work root.
   --enable-route-recovery
                          Enable guarded post-route ecoRoute recovery probe.
+  --free-internal        Leave RO/phase-buffer internals movable for placement.
+  --free-all-internal    More aggressive mode: also skip PD-grid and fast-tag
+                         preplacement so placeDesign controls internal logic.
   --route-repair-commands <cmds>
                          Tcl list of route repair commands used with recovery.
   -h, --help             Show this help.
@@ -153,6 +158,15 @@ while [[ $# -gt 0 ]]; do
       ROUTE_RECOVERY_VALUE=0
       shift
       ;;
+    --free-internal)
+      FREE_INTERNAL_VALUE=1
+      shift
+      ;;
+    --free-all-internal)
+      FREE_ALL_INTERNAL_VALUE=1
+      FREE_INTERNAL_VALUE=1
+      shift
+      ;;
     --route-repair-commands)
       ROUTE_REPAIR_COMMANDS_VALUE="${2:?missing --route-repair-commands value}"
       shift 2
@@ -244,6 +258,13 @@ export O1_RO_SOURCE_LEF_PATH="$FINAL_LEF_VALUE"
 export O1_RO_LEF_PATH="$PNR_LEF_VALUE"
 export O1_RO_LIBERTY_PATH="$REPO_ROOT/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib"
 
+if is_truthy "$FREE_ALL_INTERNAL_VALUE"; then
+  FREE_INTERNAL_VALUE=1
+fi
+
+export MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT="$FREE_ALL_INTERNAL_VALUE"
+export MPTDC_PNR_FREE_INTERNAL_PLACEMENT="$FREE_INTERNAL_VALUE"
+
 export MPTDC_PNR_CORE_UTIL=0.55
 export MPTDC_PNR_FIX_RO_MACROS=1
 export MPTDC_PNR_CREATE_RO_HALOS=0
@@ -277,6 +298,24 @@ export MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS=160
 export MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=12
 export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS=200
 export MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS=240
+
+if is_truthy "$MPTDC_PNR_FREE_INTERNAL_PLACEMENT"; then
+  export MPTDC_PNR_FIX_RO_MACROS=0
+  export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=1
+  export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL=0
+  export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0
+  export MPTDC_PD_PHYSICAL_AUDIT_MODE=free_internal
+  export MPTDC_ALLOW_RELAXED_PD_MATRIX=1
+fi
+
+if is_truthy "$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"; then
+  export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0
+  export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE=none
+  export MPTDC_PNR_PD_TILE_APPLY_HIER_BOX=0
+  export MPTDC_PNR_PD_TILE_USE_FENCE=0
+  export MPTDC_PNR_PD_TILE_PREPLACE_LEAVES=0
+  export MPTDC_PNR_PD_TILE_FIX_LEAVES=0
+fi
 
 export MPTDC_RUN_CLK_SYS_CTS=1
 export MPTDC_ENABLE_TC_CLOSURE=1
@@ -361,6 +400,12 @@ echo "PNR_LEF=$PNR_LEF_VALUE"
 echo "MPTDC_PG_STRATEGY=$MPTDC_PG_STRATEGY"
 echo "INNOVUS_RO_LEF=$O1_RO_LEF_PATH"
 echo "O1_RO_LIBERTY_PATH=$O1_RO_LIBERTY_PATH"
+echo "MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"
+echo "MPTDC_PNR_FREE_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_INTERNAL_PLACEMENT"
+echo "MPTDC_PNR_FIX_RO_MACROS=$MPTDC_PNR_FIX_RO_MACROS"
+echo "MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-unset}"
+echo "MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=$MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN"
+echo "MPTDC_PD_PHYSICAL_AUDIT_MODE=$MPTDC_PD_PHYSICAL_AUDIT_MODE"
 echo "MPTDC_ENABLE_RO_PG_HOOKUP=$MPTDC_ENABLE_RO_PG_HOOKUP"
 echo "MPTDC_REQUIRE_RO_PG_HOOKUP=$MPTDC_REQUIRE_RO_PG_HOOKUP"
 echo "MPTDC_ENABLE_RO_PG_MACRO_PATCH=$MPTDC_ENABLE_RO_PG_MACRO_PATCH"

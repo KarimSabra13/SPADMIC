@@ -78,9 +78,10 @@ Result: `MPTDC_DIGITAL_SIGNOFF_SOURCE_CHECK=PASS`.
 
 ## Server Run Contract
 
-Use `server_run_innovus_mptdc_digital_signoff.sh` directly, not the clean-LEF
-wrapper, because the clean-LEF wrapper intentionally forces some older
-RO-focused defaults.  The fresh run should explicitly pass:
+Use `server_run_mptdc_tc_ro6_cleanlef.sh --free-all-internal` for the corrected
+RO_tune6 VDD/VSS-only path with full internal placement freedom.  The wrapper
+now records the free-placement controls explicitly and overrides the older
+RO-focused fixed-placement defaults.  The run should show:
 
 - `MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=1`
 - `MPTDC_PNR_FREE_INTERNAL_PLACEMENT=1`
