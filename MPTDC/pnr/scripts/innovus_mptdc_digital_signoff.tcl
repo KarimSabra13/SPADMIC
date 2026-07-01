@@ -915,13 +915,14 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0
         MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1
         MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64
-        MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4
+        MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 12
         MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN 1
         MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100
         MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128
         MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK 0
         MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 1
         MPTDC_ENABLE_BLOCK_PG_PINS 1
+        MPTDC_PG_STRATEGY conservative_ro_hookup
         MPTDC_BLOCK_PG_PIN_LAYER METTP
         MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss
         MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0
@@ -968,29 +969,33 @@ proc mptdc_signoff_apply_recovery_defaults {} {
     }
 }
 
+proc mptdc_signoff_pg_strategy {} {
+    set strategy [string tolower [mptdc_signoff_env MPTDC_PG_STRATEGY conservative_ro_hookup]]
+    if {$strategy eq ""} {
+        set strategy conservative_ro_hookup
+    }
+    return $strategy
+}
+
+proc mptdc_signoff_pg_strategy_innovus_sroute {} {
+    return [expr {[mptdc_signoff_pg_strategy] eq "innovus_sroute_golden_ro"}]
+}
+
 proc mptdc_signoff_pg_policy_guard {} {
     if {[mptdc_signoff_env_truthy MPTDC_ALLOW_LEGACY_PG_TOPOLOGY 0]} {
         return
     }
     set failures [list]
+    set strategy [mptdc_signoff_pg_strategy]
+    if {[lsearch -exact {conservative_ro_hookup innovus_sroute_golden_ro} $strategy] < 0} {
+        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup or innovus_sroute_golden_ro"
+    }
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]]
     if {$style ne "mesh_lr_vdd_vss"} {
         lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected mesh_lr_vdd_vss"
     }
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0]} {
         lappend failures "MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0"
-    }
-    if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
-        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1] ||
-            ![mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
-            lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 requires MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=1 and MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1"
-        }
-    }
-    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
-        lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1 expected 0"
-    }
-    if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
-        lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0"
     }
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
         lappend failures "MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS=1 expected 0"
@@ -999,11 +1004,50 @@ proc mptdc_signoff_pg_policy_guard {} {
     if {$core_pin_stop ne "RowEnd"} {
         lappend failures "MPTDC_SROUTE_CORE_PIN_STOP_ROUTE=$core_pin_stop expected RowEnd"
     }
-    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 1]} {
-        lappend failures "MPTDC_ENABLE_RO_PG_HOOKUP=0 expected 1"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1]} {
+        lappend failures "MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=0 expected 1"
     }
-    if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 1]} {
-        lappend failures "MPTDC_REQUIRE_RO_PG_HOOKUP=0 expected 1"
+
+    if {$strategy eq "innovus_sroute_golden_ro"} {
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1 for innovus_sroute_golden_ro"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0 expected 1 for innovus_sroute_golden_ro"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0 expected 1 for innovus_sroute_golden_ro"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_PROBE=0 expected 1 for innovus_sroute_golden_ro"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 0]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_HOOKUP=1 expected 0 for innovus_sroute_golden_ro"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 0]} {
+            lappend failures "MPTDC_REQUIRE_RO_PG_HOOKUP=1 expected 0 for innovus_sroute_golden_ro"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
+            lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean before route"
+        }
+    } else {
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            if {![mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
+                lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 requires MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1"
+            }
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1 expected 0"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_HOOKUP=0 expected 1"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 1]} {
+            lappend failures "MPTDC_REQUIRE_RO_PG_HOOKUP=0 expected 1"
+        }
     }
     if {[llength $failures] > 0} {
         error "MPTDC_PG_POLICY_GUARD_FAILED: [join $failures {; }]; set MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=1 only for explicit debug bypass"
@@ -1830,6 +1874,29 @@ proc mptdc_signoff_sroute_commands {nets} {
 }
 
 proc mptdc_signoff_postplace_sroute_commands {nets} {
+    if {[mptdc_signoff_pg_strategy_innovus_sroute]} {
+        set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
+            -blockPin all -blockPinTarget {ring stripe} \
+            -corePinTarget {ring stripe} -allowLayerChange 1]]
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0]} {
+            lappend commands [list sroute -connect {corePin blockPin padPin} -nets $nets \
+                -blockPin all -blockPinTarget {ring stripe} \
+                -corePinTarget {ring stripe} -padPinTarget {ring stripe} \
+                -allowLayerChange 1]
+        }
+        foreach cmd [list \
+            [list sroute -connect {corePin} -nets $nets \
+                -corePinTarget {ring stripe} -allowLayerChange 1] \
+            [list sroute -connect {corePin} -nets $nets \
+                -corePinTarget firstAfterRowEnd -allowLayerChange 1] \
+        ] {
+            if {[lsearch -exact $commands $cmd] < 0} {
+                lappend commands $cmd
+            }
+        }
+        return $commands
+    }
+
     set commands [list [list sroute -connect {corePin} -nets $nets \
         -corePinTarget {ring stripe} -allowLayerChange 1]]
 
@@ -2288,6 +2355,7 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     set rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_sroute_status.rpt]
     set fh [open $rpt w]
     puts $fh "# MPTDC Post-placement Pre-route SRoute Status"
+    puts $fh "POSTPLACE_PRE_ROUTE_PG_STRATEGY=[mptdc_signoff_pg_strategy]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1] ? 1 : 0}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REQUIRE_CLEAN=[expr {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1] ? 1 : 0}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_CANDIDATE_PROBE=[expr {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0] ? 1 : 0}]"
@@ -2384,6 +2452,15 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_COMMAND=$special_capture_cmd"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=[lindex $special_bad 0]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
+    if {!$special_capture_ok} {
+        set status FAIL
+    } elseif {[lindex $special_bad 0]} {
+        if {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            set status FAIL
+        } elseif {$status eq "PASS"} {
+            set status REVIEW_REQUIRED
+        }
+    }
     set verify_clean_override 0
     if {$status ne "PASS" &&
         $special_capture_ok &&
@@ -4833,7 +4910,7 @@ proc mptdc_signoff_fast_tag_eco_next_drive_master {master} {
     if {![regexp {^(.+JIHD)X([0-9]+)$} $master -> prefix drive]} {
         return ""
     }
-    set limit [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4]
+    set limit [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 12]
     if {$limit < 1} { set limit 1 }
     foreach next {1 2 3 4 6 8 12} {
         if {$next > $drive && $next <= $limit} {
@@ -4901,6 +4978,66 @@ proc mptdc_signoff_extract_inst_from_timing_token {token} {
     return $inst
 }
 
+proc mptdc_signoff_extract_inst_from_timing_cell_text {text} {
+    set text [string trim "$text" " \t\r\n,;(){}"]
+    if {$text eq "" || [regexp {^/} $text]} {
+        return ""
+    }
+    regsub -- {->.*$} $text {} text
+    set text [string trim "$text" " \t\r\n,;(){}"]
+    if {$text eq ""} {
+        return ""
+    }
+    if {[regexp {^(.+)/([^/]+)$} $text -> prefix leaf]} {
+        if {[regexp {^(A|A[0-9]+|B|B[0-9]+|C|CK|CLK|D|G|I|IN|O|Q|QN|RN|RB|S|SE|SI|SN|Y|Z|ZN|VDD|VSS|vdd!|gnd!)$} $leaf]} {
+            return $prefix
+        }
+        return $text
+    }
+    if {[regexp {^(Startpoint|Endpoint|Path|clock|data|arrival|required|slack)$} $text]} {
+        return ""
+    }
+    if {![regexp {(^u_|^FE_|_reg|\[[0-9]+\]|/g|^g[0-9])} $text]} {
+        return ""
+    }
+    return $text
+}
+
+proc mptdc_signoff_timing_line_inst_candidates {line pending_var} {
+    upvar 1 $pending_var pending_inst
+    set candidates [list]
+    set first_text ""
+    if {[regexp {^\s*\|\s*([^|]*?)\s*\|} $line -> first_col]} {
+        set first_col [string trim "$first_col"]
+        set first_text $first_col
+        if {[regexp {^/} $first_col] && $pending_inst ne ""} {
+            lappend candidates $pending_inst
+        } else {
+            set inst [mptdc_signoff_extract_inst_from_timing_cell_text $first_col]
+            if {$inst ne ""} {
+                lappend candidates $inst
+                set pending_inst $inst
+            }
+        }
+    }
+    foreach token [regexp -all -inline {\S+/\S+} $line] {
+        if {$first_text ne "" && [string trim "$token" " \t\r\n,;(){}"] eq $first_text} {
+            continue
+        }
+        set inst [mptdc_signoff_extract_inst_from_timing_token $token]
+        if {$inst ne ""} {
+            lappend candidates $inst
+        }
+    }
+    set unique [list]
+    foreach inst $candidates {
+        if {[lsearch -exact $unique $inst] < 0} {
+            lappend unique $inst
+        }
+    }
+    return $unique
+}
+
 proc mptdc_signoff_fast_tag_path_eco_scores {timing_rpt} {
     set scores [dict create]
     if {![file exists $timing_rpt]} {
@@ -4909,10 +5046,9 @@ proc mptdc_signoff_fast_tag_path_eco_scores {timing_rpt} {
     set max_cells [mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128]
     if {$max_cells < 1} { set max_cells 128 }
     set fh [open $timing_rpt r]
+    set pending_inst ""
     while {[gets $fh line] >= 0} {
-        foreach token [regexp -all -inline {\S+/\S+} $line] {
-            set inst [mptdc_signoff_extract_inst_from_timing_token $token]
-            if {$inst eq ""} { continue }
+        foreach inst [mptdc_signoff_timing_line_inst_candidates $line pending_inst] {
             set info [mptdc_signoff_fast_tag_eco_allow_cell $inst]
             if {![dict get $info allowed]} { continue }
             if {[dict exists $scores $inst]} {
@@ -4973,7 +5109,7 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     puts $fh "FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_UPSIZE_SMALL_GATES=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_MAX_UPSIZE_CELLS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS 64]"
-    puts $fh "FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 4]"
+    puts $fh "FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT 12]"
     puts $fh "FAST_TAG_ECO_PATH_DRIVEN=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN 1] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_PATH_MAX_PATHS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS 100]"
     puts $fh "FAST_TAG_ECO_PATH_MAX_CELLS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128]"
