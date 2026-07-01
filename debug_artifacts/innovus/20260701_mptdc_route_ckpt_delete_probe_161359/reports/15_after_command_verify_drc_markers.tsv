@@ -1,0 +1,34 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7fe1df4faa10	{1041.04 772.8 1041.04 772.8}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+2	0x7fe1df4faa40	{219.575 647.36 219.575 647.36}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7fe1df4faa70	{219.575 638.4 219.575 638.4}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7fe1df4faaa0	{219.575 629.44 219.575 629.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+5	0x7fe1df4faad0	{219.575 620.48 219.575 620.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+6	0x7fe1df4fabc0	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+7	0x7fe1df4fac20	{221.745 681.16 221.745 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+8	0x7fe1df4facb0	{219.575 669.76 219.575 669.76}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+9	0x7fe1df4face0	{219.575 660.8 219.575 660.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7fe1df4fad70	{50.17 642.88 50.17 642.88}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+11	0x7fe1df4fada0	{50.17 633.92 50.17 633.92}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7fe1df4fadd0	{50.17 624.96 50.17 624.96}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+13	0x7fe1df4fae00	{50.17 669.76 50.17 669.76}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+14	0x7fe1df4fae30	{50.17 660.8 50.17 660.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+15	0x7fe1df4faf50	{50.4 651.84 50.4 651.84}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+16	0x7fe1df4fab00	{219.575 181.44 219.575 181.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+17	0x7fe1df4fab30	{219.575 172.48 219.575 172.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+18	0x7fe1df4fab60	{219.575 163.52 219.575 163.52}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+19	0x7fe1df4fab90	{219.575 154.56 219.575 154.56}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+20	0x7fe1df4fad10	{219.575 141.12 219.575 141.12}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+21	0x7fe1df4fae60	{50.17 176.96 50.17 176.96}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+22	0x7fe1df4fae90	{50.17 168.0 50.17 168.0}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+23	0x7fe1df4faec0	{50.17 159.04 50.17 159.04}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+24	0x7fe1df4faef0	{50.17 141.12 50.17 141.12}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+25	0x7fe1df4faf80	{50.4 150.08 50.4 150.08}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+26	0x7fe1e9415640	{117.485 119.675 117.51 119.865}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[7] & Regular Wire of Net u_core_ro_fast_code_q[6] Actual: 0.190000 Required: 0.230000 Type: ParallelRunLength Spacing # 190 230 3 2 : 117.4850 119.8650 117.7150 120.0950 1: 117.2800 119.4450 117.5100 119.6750 1
+27	0x7fe1df4fabf0	{48.0 121.16 48.0 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+28	0x7fe1df4fac50	{221.745 121.16 221.745 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+29	0x7fe1df4fac80	{201.16 118.0 201.16 118.0}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+30	0x7fe1df4fad40	{219.575 132.16 219.575 132.16}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+31	0x7fe1df4faf20	{50.17 132.16 50.17 132.16}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+32	0x7fe1df4fafb0	{48.0 125.16 48.0 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+33	0x7fe1df4fafe0	{221.745 125.16 221.745 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS

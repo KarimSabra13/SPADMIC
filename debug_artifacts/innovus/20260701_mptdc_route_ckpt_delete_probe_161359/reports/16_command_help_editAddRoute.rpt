@@ -1,0 +1,10 @@
+# checkpoint repair command 16
+COMMAND=help editAddRoute
+
+Usage: editAddRoute [-help] <point>
+
+-help       # Prints out the command usage
+<point>     # Specify the x and y coordinates for the startpoint or endpoint of the wire segment (point, required)
+
+
+REPORT_STATUS=PASS

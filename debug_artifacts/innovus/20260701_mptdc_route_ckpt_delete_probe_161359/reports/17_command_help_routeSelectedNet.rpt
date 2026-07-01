@@ -1,0 +1,8 @@
+# checkpoint repair command 17
+COMMAND=help routeSelectedNet
+No help is available for 'routeSelectedNet'.
+      You might have typed the command name incorrectly
+      (command names are case sensitive), or this is an
+      unknown or unsupported command.
+
+REPORT_STATUS=PASS

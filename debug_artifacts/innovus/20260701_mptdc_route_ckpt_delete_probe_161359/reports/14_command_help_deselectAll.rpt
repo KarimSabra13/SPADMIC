@@ -1,0 +1,9 @@
+# checkpoint repair command 14
+COMMAND=help deselectAll
+
+Usage: deselectAll [-help]
+
+-help  # Prints out the command usage
+
+
+REPORT_STATUS=PASS

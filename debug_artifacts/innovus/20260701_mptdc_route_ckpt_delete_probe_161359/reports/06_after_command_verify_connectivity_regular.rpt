@@ -1,0 +1,32 @@
+VERIFY_CONNECTIVITY use new engine.
+
+******** Start: VERIFY CONNECTIVITY ********
+Start Time: Wed Jul  1 16:15:36 2026
+
+Design Name: mptdc_axis_core
+Database Units: 1000
+Design Boundary: (0.0000, 0.0000) (1061.2000, 801.9200)
+Error Limit = 1000; Warning Limit = 50
+Check specified nets
+Net CTS_6: no routing.
+Net u_core_ro_fast_code_q[7]: no routing.
+Net u_core_ro_fast_code_q[6]: no routing.
+Net u_core_ro_fast_code_q[0]: no routing.
+**** 16:15:37 **** Processed 5000 nets.
+**** 16:15:37 **** Processed 10000 nets.
+Net u_core_n_64592: no routing.
+Net u_core_gen_pd_row[1].gen_pd_col[1].u_pd/q1: no routing.
+**** 16:15:37 **** Processed 15000 nets.
+
+Begin Summary 
+    6 Problem(s) (IMPVFC-98): Net has no global routing and no special routing.
+    6 total info(s) created.
+End Summary
+
+End Time: Wed Jul  1 16:15:37 2026
+Time Elapsed: 0:00:01.0
+
+******** End: VERIFY CONNECTIVITY ********
+  Verification Complete : 6 Viols.  0 Wrngs.
+  (CPU Time: 0:00:00.6  MEM: 0.000M)
+

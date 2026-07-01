@@ -1,0 +1,3 @@
+# checkpoint repair command 6
+COMMAND=editDelete -net {u_core_gen_pd_row[1].gen_pd_col[1].u_pd/q1}
+REPORT_STATUS=PASS

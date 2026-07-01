@@ -1,0 +1,37 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7fe1e9415d00	{219.96 625.61 220.22 626.335}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_gen_pd_row[1].gen_pd_col[1].u_pd/q1 & Special Wire of Net VSS Type: Metal Short # -1 -1 9 2 : 219.9600 625.6100 220.2200 626.3350 2: 219.9600 625.6100 220.2200 626.3350 2
+2	0x7fe1de0784d0	{1041.04 772.8 1041.04 772.8}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7fe1de078500	{219.575 647.36 219.575 647.36}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7fe1de078530	{219.575 638.4 219.575 638.4}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+5	0x7fe1de078560	{219.575 629.44 219.575 629.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+6	0x7fe1de078590	{219.575 620.48 219.575 620.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+7	0x7fe1de078680	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+8	0x7fe1de0786e0	{221.745 681.16 221.745 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+9	0x7fe1de078770	{219.575 669.76 219.575 669.76}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7fe1de0787a0	{219.575 660.8 219.575 660.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+11	0x7fe1de078830	{50.17 642.88 50.17 642.88}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+12	0x7fe1de078860	{50.17 633.92 50.17 633.92}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+13	0x7fe1de078890	{50.17 624.96 50.17 624.96}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+14	0x7fe1de0788c0	{50.17 669.76 50.17 669.76}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+15	0x7fe1de0788f0	{50.17 660.8 50.17 660.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+16	0x7fe1de078a10	{50.4 651.84 50.4 651.84}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+17	0x7fe1de078ad0	{331.61 416.22 331.99 416.5}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57562 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+18	0x7fe1de078b00	{219.96 625.61 220.22 626.335}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_gen_pd_row[1].gen_pd_col[1].u_pd/q1 & Special Wire of Net VSS Type: Metal Short # -1 -1 9 2 : 219.9600 625.6100 220.2200 626.3350 2: 219.9600 625.6100 220.2200 626.3350 2
+19	0x7fe1de0785c0	{219.575 181.44 219.575 181.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+20	0x7fe1de0785f0	{219.575 172.48 219.575 172.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+21	0x7fe1de078620	{219.575 163.52 219.575 163.52}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+22	0x7fe1de078650	{219.575 154.56 219.575 154.56}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+23	0x7fe1de0787d0	{219.575 141.12 219.575 141.12}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+24	0x7fe1de078920	{50.17 176.96 50.17 176.96}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+25	0x7fe1de078950	{50.17 168.0 50.17 168.0}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+26	0x7fe1de078980	{50.17 159.04 50.17 159.04}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+27	0x7fe1de0789b0	{50.17 141.12 50.17 141.12}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+28	0x7fe1de078a40	{50.4 150.08 50.4 150.08}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+29	0x7fe1e9415640	{117.485 119.675 117.51 119.865}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[7] & Regular Wire of Net u_core_ro_fast_code_q[6] Actual: 0.190000 Required: 0.230000 Type: ParallelRunLength Spacing # 190 230 3 2 : 117.4850 119.8650 117.7150 120.0950 1: 117.2800 119.4450 117.5100 119.6750 1
+30	0x7fe1de0786b0	{48.0 121.16 48.0 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+31	0x7fe1de078710	{221.745 121.16 221.745 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+32	0x7fe1de078740	{201.16 118.0 201.16 118.0}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+33	0x7fe1de078800	{219.575 132.16 219.575 132.16}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+34	0x7fe1de0789e0	{50.17 132.16 50.17 132.16}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+35	0x7fe1de078a70	{48.0 125.16 48.0 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+36	0x7fe1de078aa0	{221.745 125.16 221.745 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS

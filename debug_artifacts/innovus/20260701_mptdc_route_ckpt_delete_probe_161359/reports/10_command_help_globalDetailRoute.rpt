@@ -1,0 +1,11 @@
+# checkpoint repair command 10
+COMMAND=help globalDetailRoute
+
+Usage: globalDetailRoute [-help] [<area>] [-select]
+
+-help                               # Prints out the command usage
+<area>                              # route area (box, optional)
+-select                             # -route selected nets only (bool, optional)
+
+
+REPORT_STATUS=PASS

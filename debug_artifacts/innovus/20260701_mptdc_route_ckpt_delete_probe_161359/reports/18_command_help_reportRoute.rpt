@@ -1,0 +1,13 @@
+# checkpoint repair command 18
+COMMAND=help reportRoute
+
+Usage: reportRoute [-help] [-clock] [-em] [-ndr] [-selected_net_only]
+
+-help                  # Prints out the command usage
+-clock                 # report short wires statistics of clock nets (bool, optional)
+-em                    # report EM statistics of nets (bool, optional)
+-ndr                   # report NDR statistics of nets (bool, optional)
+-selected_net_only     # report statistics of selected nets (bool, optional)
+
+
+REPORT_STATUS=PASS

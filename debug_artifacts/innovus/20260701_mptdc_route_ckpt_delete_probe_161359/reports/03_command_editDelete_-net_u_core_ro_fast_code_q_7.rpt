@@ -1,0 +1,3 @@
+# checkpoint repair command 3
+COMMAND=editDelete -net {u_core_ro_fast_code_q[7]}
+REPORT_STATUS=PASS

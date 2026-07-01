@@ -1,0 +1,3 @@
+# checkpoint repair command 4
+COMMAND=editDelete -net {CTS_6}
+REPORT_STATUS=PASS
