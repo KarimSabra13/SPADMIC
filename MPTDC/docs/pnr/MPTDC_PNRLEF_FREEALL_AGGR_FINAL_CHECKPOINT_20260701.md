@@ -896,3 +896,300 @@ It may be used to justify continuing a TC-only dirty route timing package:
 ```text
 MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE=1
 ```
+
+## Restored Checkpoint Extraction And STA
+
+After preserving the original `211109` route-failure checkpoint and the first
+bounded PG dangling-wire prune probe, the checkpoint was restored again only to
+extract timing and write the post-route report package. This was not a new full
+PnR run. It was a checkpoint analysis run from the same geometry-clean route
+database.
+
+Restored analysis run:
+
+```text
+run_id=20260701_mptdc_211109_ckpt_extract_sta_224348
+result_dir=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_ckpt_extract_sta_224348
+source_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_final_211109/checkpoints/04_route_failed.enc.dat
+repo=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+branch=SPADMIC_test
+baseline_head=fd295f995feb9e59e4b6dd37682db096d555d7ed
+innovus_rc=0
+```
+
+The restore wrapper used the checkpoint-repair harness in keep-going mode, with
+the original route-failed checkpoint as `--checkpoint`. The important environment
+and command contract was:
+
+```sh
+export EXPECTED_HEAD=fd295f995feb9e59e4b6dd37682db096d555d7ed
+export FINAL_RUN_ID=20260701_mptdc_ro6_pnrlef_freeall_aggr_final_211109
+export FINAL_DIR=/sim/ksabra/SPADMIC_work/innovus/$FINAL_RUN_ID
+export BEST_CKPT="$FINAL_DIR/checkpoints/04_route_failed.enc.dat"
+export STA_RUN_ID=20260701_mptdc_211109_ckpt_extract_sta_224348
+export STA_CMDS=/tmp/${STA_RUN_ID}.commands.tcl
+export MPTDC_CHECKPOINT_REPAIR_KEEP_GOING=1
+
+MPTDC/pnr/scripts/server_repair_mptdc_route_checkpoint.sh \
+  --run-id "$STA_RUN_ID" \
+  --checkpoint "$BEST_CKPT" \
+  --commands-file "$STA_CMDS" \
+  --expected-head "$EXPECTED_HEAD"
+```
+
+The commands file restored the checkpoint, ran the MPTDC signoff extraction and
+TC timing helpers, wrote the phase/backend diagnostic reports, then saved a
+self-contained `repaired_route.enc.dat` copy for traceability. The key point is
+that extraction/STA was run on the preserved 211109 route database, not on the
+later rejected dirty-route rerun.
+
+Checkpoint integrity after restore:
+
+```text
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY
+```
+
+Extracted TC timing:
+
+```text
+SETUP_STATUS_TC=FAIL
+TC_HOLD_STATUS=PASS
+
+setup WNS=-0.014 ns
+setup TNS=-0.074 ns
+setup violating paths=11
+
+hold WNS=+0.026 ns
+hold TNS=0.000 ns
+hold violating paths=0
+```
+
+Digital status package from this restored analysis:
+
+```text
+MPTDC_TC_PNR_CLOSURE=DEFERRED evidence=implementation_gate_not_complete
+PG_CONNECTIVITY_STATUS=FAIL evidence=special_pg_dangling_only_restored_211109
+ROUTE_STATUS=FAIL evidence=geometry_clean_regular_clean_special_pg_dangling_only
+FILLER_STATUS=PASS evidence=restored_211109_filler_inserted_postfiller_drc0
+EXTRACTION_STATUS=PASS evidence=extraction_rc.rpt
+POWER_STATUS=PROVISIONAL evidence=power_status.rpt
+SETUP_STATUS_TC=FAIL evidence=timing_tc_nominal.rpt
+TC_HOLD_STATUS=PASS evidence=timing_tc_hold.rpt
+DRV_STATUS=PASS evidence=drv_status.rpt
+READY_FOR_TAPEOUT=NO evidence=row_and_mmmc_deferred
+DIGITAL_PNR_SIGNOFF=PROVISIONAL evidence=row_and_block_drc_lvs_deferred_implementation_gate_not_complete
+```
+
+Engineering interpretation:
+
+- The restored checkpoint is clean for Innovus geometry DRC, shorts, and regular
+  net connectivity.
+- The route gate still cannot be called clean because VDD/VSS special-net
+  dangling wires remain.
+- TC extraction and STA are usable as an engineering timing package, but they do
+  not override the route/PG gate.
+- Hold and DRV are not the current blockers.
+- The residual setup miss is small, systematic, and on the `nfast_hit_latched`
+  capture paths.
+
+## Top 11 Setup Path Classification
+
+The extracted `timing_tc_nominal_top100.rpt` was reduced into
+`setup_top11_classification.tsv` and `setup_top11_full_blocks.rpt`. The top 11
+violating setup paths are:
+
+```text
+1   clk_osc_fast_buf_tap1  u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0]/Q   -> u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]/D
+2   clk_osc_fast_buf_tap0  u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4]/Q   -> u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]/D
+3   clk_osc_fast_buf_tap0  u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4]/Q   -> u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]/D
+4   clk_osc_fast_buf_tap4  u_core_gen_pd_row[3].gen_pd_col[4].u_pd/hit_latched_reg/Q -> u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]/D
+5   clk_osc_fast_buf_tap4  u_core_gen_pd_row[3].gen_pd_col[4].u_pd/hit_latched_reg/Q -> u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]/D
+6   clk_osc_fast_buf_tap2  u_core_gen_pd_row[7].gen_pd_col[2].u_pd/hit_latched_reg/Q -> u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]/D
+7   clk_osc_fast_buf_tap1  u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0]/Q   -> u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]/D
+8   clk_osc_fast_buf_tap2  u_core_gen_pd_row[1].gen_pd_col[2].u_pd/hit_latched_reg/Q -> u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]/D
+9   clk_osc_fast_buf_tap5  u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0]/Q   -> u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]/D
+10  clk_osc_fast_buf_tap5  u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0]/Q   -> u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]/D
+11  clk_osc_fast_buf_tap1  u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0]/Q   -> u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]/D
+```
+
+Path group distribution:
+
+```text
+clk_osc_fast_buf_tap0: 2 paths
+clk_osc_fast_buf_tap1: 3 paths
+clk_osc_fast_buf_tap2: 2 paths
+clk_osc_fast_buf_tap4: 2 paths
+clk_osc_fast_buf_tap5: 2 paths
+```
+
+Source classification:
+
+```text
+fast_tag_tag_o_reg launch paths: 7 / 11
+local hit_latched_reg launch paths: 4 / 11
+nfast_hit_latched_reg capture endpoints: 11 / 11
+```
+
+Engineering comment:
+
+- This is not one isolated endpoint, one single bad row, or one router accident.
+- The miss is spread across multiple fast oscillator tap groups.
+- All failing endpoints are `nfast_hit_latched_reg[*]/D`.
+- The failures are centered on the fast-tag to PD/nfast-hit capture interface.
+- The remaining margin is only 14 ps WNS and 74 ps TNS, so a very small ECO can
+  close it if the change does not disturb hold, DRC, or PG/route geometry.
+
+## Rejected Dirty-Route Debug Run
+
+A later debug run must not be treated as the best checkpoint:
+
+```text
+run_id=20260701_mptdc_ro6_pnrlef_freeall_aggr_dirtyroute_220957
+result_dir=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_dirtyroute_220957
+head=0f9e5a577b24a88c36a7cb6e1478012541a9d7dd
+```
+
+This run intentionally differed from the preserved final candidate:
+
+```text
+free_all_internal_placement=0
+free_internal_placement=0
+skip_phase_buffer_preplace=0
+fix_ro_macros=1
+pd_physical_audit_mode=soft_region
+final_filler=0
+postroute_setup_passes=4
+postroute_setup_max_passes=4
+postroute_opt_status=SKIPPED
+```
+
+It routed faster, but it created a real geometry short:
+
+```text
+GEOMETRY_DRC_VIOLATIONS=1
+SHORTS=1
+REGULAR_NET_CONNECTIVITY_BAD=0
+SPECIAL_NET_CONNECTIVITY_BAD=1
+ROUTE_DRC_REVIEW_CLASS_REASON=disallowed_classes:Short=1
+```
+
+Marker evidence:
+
+```text
+MET2 Geometry Metal_Short
+Regular Wire of Net u_core_gen_pd_row[5].gen_pd_col[4].u_pd/n_29
+Special Wire of Net VDD
+bbox={220.5000 130.0100 220.7600 130.7350}
+```
+
+Engineering comment:
+
+- The dirty-route run is useful as negative evidence only.
+- It proves that allowing a different placement/routing recipe can turn the
+  problem from "special-PG dangling only" into a real signal-to-VDD short.
+- It must not replace the `211109` checkpoint for ECO work.
+- All next timing ECO probes must restore from the original `211109`
+  checkpoint, not from the dirty-route checkpoint.
+
+## One-By-One ECO Policy
+
+The checkpoint now has three separate unresolved issues:
+
+```text
+1. PG special-net dangling markers: 8 VDD/VSS IMPVFC-94 markers.
+2. TC setup margin: WNS=-0.014 ns, TNS=-0.074 ns, 11 paths.
+3. Final physical signoff: DRC/LVS/foundry verification deferred.
+```
+
+The next engineering step is a strictly bounded timing ECO sequence. The
+purpose is to learn whether a very small Innovus-only data-path resize can close
+the 14 ps setup miss without damaging the clean route geometry.
+
+Mandatory ECO baseline:
+
+```text
+baseline_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_final_211109/checkpoints/04_route_failed.enc.dat
+baseline_geometry_drc=0
+baseline_shorts=0
+baseline_regular_connectivity_bad=0
+baseline_special_connectivity_bad=1
+baseline_setup_wns=-0.014 ns
+baseline_setup_tns=-0.074 ns
+baseline_hold_wns=+0.026 ns
+baseline_hold_tns=0.000 ns
+```
+
+Do not ECO from:
+
+```text
+/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_dirtyroute_220957
+```
+
+ECO acceptance gates after each single candidate:
+
+```text
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+SETUP_STATUS_TC improves or closes
+TC_HOLD_STATUS=PASS
+DRV_STATUS=PASS
+```
+
+The known special-PG dangling state may remain during this timing probe:
+
+```text
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+```
+
+but it must be described as:
+
+```text
+special_pg_dangling_only_still_pending_manual_pg_cleanup
+```
+
+Immediate rejection criteria:
+
+```text
+FINAL_DRC>0
+FINAL_SHORTS>0
+FINAL_REGULAR_CONNECTIVITY_BAD=1
+TC_HOLD_STATUS=FAIL
+DRV_STATUS=FAIL
+setup WNS/TNS degrades materially
+```
+
+The first ECO should be diagnostic and minimal:
+
+```text
+MPTDC_PNR_FAST_TAG_TARGETED_ECO=1
+MPTDC_PNR_FAST_TAG_ECO_MAX_UPSIZE_CELLS=1
+MPTDC_PNR_FAST_TAG_ECO_PATH_DRIVEN=1
+MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_PATHS=11
+MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS=64
+MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK=0
+MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS=1
+MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE=0
+MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES=1
+MPTDC_PNR_FAST_TAG_ECO_ALLOW_ON22_X2=1
+```
+
+Rationale:
+
+- `MAX_UPSIZE_CELLS=1` makes the first run a one-cell experiment.
+- `PATH_MAX_PATHS=11` focuses the search on the complete known failing set.
+- `NAME_FALLBACK=0` prevents broad name-pattern ECO from touching cells outside
+  the path-driven set.
+- `PROTECT_ENDPOINT_FLOPS=1` avoids changing the capture flops on the first
+  probe; this reduces hold and sequential-cell risk.
+- If the first one-cell run is clean but insufficient, the next candidates can
+  increase `MAX_UPSIZE_CELLS` to 2 and then 4, still restoring from the original
+  checkpoint each time.
+
+Do not mix timing ECO with PG-special cleanup in the same run. PG cleanup remains
+a separate task because the current route geometry is clean and the dirty-route
+experiment showed that recipe changes can introduce real shorts.
