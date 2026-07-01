@@ -1,0 +1,16 @@
+STAGE=route
+STATUS=FAIL
+ERROR=MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/postplace_pre_route_sroute_status.rpt
+
+MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/postplace_pre_route_sroute_status.rpt
+    while executing
+"error "MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=$status report=$rpt""
+    (procedure "mptdc_signoff_run_postplace_pre_route_sroute" line 146)
+    invoked from within
+"mptdc_signoff_run_postplace_pre_route_sroute"
+    (procedure "mptdc_signoff_route_design" line 43)
+    invoked from within
+"mptdc_signoff_route_design"
+    ("uplevel" body line 2)
+    invoked from within
+"uplevel 1 $body"

@@ -1,0 +1,110 @@
+# MPTDC Digital Block Signoff Wrapper
+Author: Karim Sabra
+date: 2026-07-01T10:40:50+02:00
+repo: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+branch: SPADMIC_test
+head: eb2d38163740824a18503e15ee00beaea34dca6a
+mode: full_signoff
+run_id: 20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050
+result_dir: /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050
+genus_run_id: MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233
+genus_run_dir: unset
+handoff_dir: /sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff
+row_infra_policy: NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS
+allow_no_core_tap_endcap_policy: 1
+closure_scope: TC_ONLY
+xh018_stack: xx31
+technology_lef: /eda/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef
+captable_bc: /eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_min.capTbl
+captable_tc: /eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_typ.capTbl
+captable_wc: /eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_max.capTbl
+qrc_root: /eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131
+route_layers: MET1 MET2 MET3 METTP
+signal_top_layer: MET3
+effective_top_floor_layer: METTP
+ro_handoff_env: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/analog_handoff/real_ro_tune6_layout.env
+ro_handoff_override_status: preserved:O1_USE_REAL_RO_ABSTRACT O1_RO_CELL_NAME O1_RO_SOURCE_LEF_PATH O1_RO_LEF_PATH O1_RO_LIBERTY_PATH
+O1_USE_REAL_RO_ABSTRACT: 1
+O1_RO_CELL_NAME: RO_tune6
+O1_RO_LEF_PATH: /group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+O1_RO_LEF_MACRO: RO_tune6
+MPTDC_PNR_OSC_WIDTH_UM: 168.945
+MPTDC_PNR_OSC_HEIGHT_UM: 70.5
+O1_RO_LIBERTY_PATH: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib
+pd_tile_constraint_mode: none
+pd_tile_apply_hier_box: 0
+pd_tile_region_margin_um: 0.0
+pd_physical_audit_mode: soft_region
+pnr_core_util: 0.55
+fix_ro_macros: 0
+create_ro_halos: 0
+phase_buf_orient: ROW_LEGAL
+row_legal_orient_candidates: MX R180 MY R0
+ro_phase_min_clearance_um: 10.0
+ro_phase_origin_clearance_um: 16.0
+ro_phase_preplace_audit: 1
+fast_tag_column_side: center
+postroute_setup_passes: 3
+postroute_setup_max_passes: 3
+postroute_setup_plateau_guard: 1
+fast_tag_targeted_eco: 1
+fast_tag_eco_protect_endpoint_flops: 0
+fast_tag_eco_upsize_small_gates: 1
+fast_tag_eco_path_driven: 1
+fast_tag_eco_path_max_paths: 200
+fast_tag_eco_path_max_cells: 240
+fast_tag_eco_name_fallback: 0
+fast_tag_eco_allow_endpoint_flop_resize: 1
+block_pg_pins: 1
+block_pg_pin_layer: METTP
+block_pg_pin_style: mesh_lr_vdd_vss
+block_pg_pin_width_um: 4.0
+block_pg_pin_depth_um: 28.0
+block_pg_pin_outside_overlap_um: 8.0
+block_pg_pin_create_mode: geom
+block_pg_pin_editpin_fallback: 0
+pg_policy_guard: PASS
+allow_legacy_pg_topology: 0
+block_pg_stitch_stripes: 0
+block_pg_stitch_width_um: 2.0
+block_pg_stitch_spacing_um: 2.0
+block_pg_stitch_set_distance_um: 5000.0
+block_pg_stitch_number_of_sets: 0
+final_filler: 1
+post_filler_sroute: 1
+post_filler_sroute_required_bypass: 0
+preplace_pg_sroute: 0
+allow_provisional_preplace_pg: 1
+postplace_pre_route_sroute: 1
+postplace_pre_route_sroute_require_clean: 1
+postplace_pre_route_accept_pg_verify_clean: 1
+postplace_sroute_candidate_probe: 1
+postplace_sroute_blockpin: 1
+sroute_padpin_fallback: 0
+sroute_mode_experiments: 0
+sroute_preserve_existing_routes: 0
+sroute_connect_stripe: 1
+sroute_via_connect_to_shape: unset
+sroute_target_search_distance_um: unset
+sroute_core_pin_stop_route: RowEnd
+ro_pg_probe: 1
+ro_pg_hookup: 0
+ro_pg_hookup_required: 0
+ro_pg_hookup_search_um: 45.0
+ro_pg_hookup_margin_um: 1.0
+ro_pg_hookup_spacing_um: 2.0
+ro_pg_hookup_set_distance_um: 5000.0
+db_display_limit: 50000
+route_gate_sroute_recovery: 0
+filler_add_fillers_with_drc: 0
+require_drc_safe_filler: 1
+route_repair_commands: {ecoRoute -target} {ecoRoute -fix_drc}
+route_drc_review_continue: 0
+route_drc_review_max_violations: 0
+route_drc_review_allowed_classes: Mar
+labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO
+
+git status --short --untracked-files=no:
+MPTDC_PNR_OSC_WIDTH_UM=168.945
+MPTDC_PNR_OSC_HEIGHT_UM=70.5
+MPTDC_RO_LEF_SIZE_STATUS=PASS

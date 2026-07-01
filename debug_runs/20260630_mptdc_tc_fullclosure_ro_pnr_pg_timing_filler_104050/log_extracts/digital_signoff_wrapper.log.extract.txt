@@ -1,0 +1,1267 @@
+===== HEAD: /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/logs/digital_signoff_wrapper.log =====
+# MPTDC Digital Block Signoff Wrapper
+Author: Karim Sabra
+date: 2026-07-01T10:40:50+02:00
+repo: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+branch: SPADMIC_test
+head: eb2d38163740824a18503e15ee00beaea34dca6a
+mode: full_signoff
+run_id: 20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050
+result_dir: /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050
+genus_run_id: MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233
+genus_run_dir: unset
+handoff_dir: /sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff
+row_infra_policy: NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS
+allow_no_core_tap_endcap_policy: 1
+closure_scope: TC_ONLY
+xh018_stack: xx31
+technology_lef: /eda/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef
+captable_bc: /eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_min.capTbl
+captable_tc: /eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_typ.capTbl
+captable_wc: /eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_max.capTbl
+qrc_root: /eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131
+route_layers: MET1 MET2 MET3 METTP
+signal_top_layer: MET3
+effective_top_floor_layer: METTP
+ro_handoff_env: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/analog_handoff/real_ro_tune6_layout.env
+ro_handoff_override_status: preserved:O1_USE_REAL_RO_ABSTRACT O1_RO_CELL_NAME O1_RO_SOURCE_LEF_PATH O1_RO_LEF_PATH O1_RO_LIBERTY_PATH
+O1_USE_REAL_RO_ABSTRACT: 1
+O1_RO_CELL_NAME: RO_tune6
+O1_RO_LEF_PATH: /group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+O1_RO_LEF_MACRO: RO_tune6
+MPTDC_PNR_OSC_WIDTH_UM: 168.945
+MPTDC_PNR_OSC_HEIGHT_UM: 70.5
+O1_RO_LIBERTY_PATH: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib
+pd_tile_constraint_mode: none
+pd_tile_apply_hier_box: 0
+pd_tile_region_margin_um: 0.0
+pd_physical_audit_mode: soft_region
+pnr_core_util: 0.55
+fix_ro_macros: 0
+create_ro_halos: 0
+phase_buf_orient: ROW_LEGAL
+row_legal_orient_candidates: MX R180 MY R0
+ro_phase_min_clearance_um: 10.0
+ro_phase_origin_clearance_um: 16.0
+ro_phase_preplace_audit: 1
+fast_tag_column_side: center
+postroute_setup_passes: 3
+postroute_setup_max_passes: 3
+postroute_setup_plateau_guard: 1
+fast_tag_targeted_eco: 1
+fast_tag_eco_protect_endpoint_flops: 0
+fast_tag_eco_upsize_small_gates: 1
+fast_tag_eco_path_driven: 1
+fast_tag_eco_path_max_paths: 200
+fast_tag_eco_path_max_cells: 240
+fast_tag_eco_name_fallback: 0
+fast_tag_eco_allow_endpoint_flop_resize: 1
+block_pg_pins: 1
+block_pg_pin_layer: METTP
+block_pg_pin_style: mesh_lr_vdd_vss
+block_pg_pin_width_um: 4.0
+block_pg_pin_depth_um: 28.0
+block_pg_pin_outside_overlap_um: 8.0
+block_pg_pin_create_mode: geom
+block_pg_pin_editpin_fallback: 0
+pg_policy_guard: PASS
+allow_legacy_pg_topology: 0
+block_pg_stitch_stripes: 0
+block_pg_stitch_width_um: 2.0
+block_pg_stitch_spacing_um: 2.0
+block_pg_stitch_set_distance_um: 5000.0
+block_pg_stitch_number_of_sets: 0
+final_filler: 1
+post_filler_sroute: 1
+post_filler_sroute_required_bypass: 0
+preplace_pg_sroute: 0
+allow_provisional_preplace_pg: 1
+postplace_pre_route_sroute: 1
+postplace_pre_route_sroute_require_clean: 1
+postplace_pre_route_accept_pg_verify_clean: 1
+postplace_sroute_candidate_probe: 1
+postplace_sroute_blockpin: 1
+sroute_padpin_fallback: 0
+sroute_mode_experiments: 0
+sroute_preserve_existing_routes: 0
+sroute_connect_stripe: 1
+sroute_via_connect_to_shape: unset
+sroute_target_search_distance_um: unset
+sroute_core_pin_stop_route: RowEnd
+ro_pg_probe: 1
+ro_pg_hookup: 0
+ro_pg_hookup_required: 0
+ro_pg_hookup_search_um: 45.0
+ro_pg_hookup_margin_um: 1.0
+ro_pg_hookup_spacing_um: 2.0
+ro_pg_hookup_set_distance_um: 5000.0
+db_display_limit: 50000
+route_gate_sroute_recovery: 0
+filler_add_fillers_with_drc: 0
+require_drc_safe_filler: 1
+route_repair_commands: {ecoRoute -target} {ecoRoute -fix_drc}
+route_drc_review_continue: 0
+route_drc_review_max_violations: 0
+route_drc_review_allowed_classes: Mar
+labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO
+
+git status --short --untracked-files=no:
+MPTDC_PNR_OSC_WIDTH_UM=168.945
+MPTDC_PNR_OSC_HEIGHT_UM=70.5
+MPTDC_RO_LEF_SIZE_STATUS=PASS
+PRE_PNR_GATE=PASS
+PRE_PNR_GATE_SOURCE=/sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff
+PRE_PNR_GATE_KIND=handoff
+GENUS_WNS_MARGIN_LOW=YES
+MPTDC_DIGITAL_SIGNOFF_SOURCE_CHECK=PASS
+MPTDC_CLOSURE_SCOPE=TC_ONLY
+MPTDC_TC_PNR_CLOSURE=DEFERRED
+SETUP_STATUS_WC=DEFERRED evidence=scope_tc_only
+HOLD_STATUS_BC=DEFERRED evidence=scope_tc_only
+RO_1GHZ_STRESS_STATUS=DEFERRED evidence=scope_tc_only
+RO_IMPORT_SOURCE_GATE=PASS
+ROW_INFRA_POLICY=NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS
+ROW_INFRA_STATUS=PROVISIONAL
+IMPLEMENTATION_ALLOWED=YES
+FINAL_SIGNOFF_ALLOWED=NO
+DIGITAL_PNR_SIGNOFF=PROVISIONAL
+NOT_MMMC_SIGNOFF=YES
+READY_FOR_TAPEOUT=NO
+PROVISIONAL_ROW_CLASSES=tap endcap_left endcap_right
+MPTDC_DIGITAL_SIGNOFF_STATUS_TEMPLATE=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/digital_pnr_signoff_status.rpt
+
+Cadence Innovus(TM) Implementation System.
+Copyright 2022 Cadence Design Systems, Inc. All rights reserved worldwide.
+
+Version:	v22.33-s094_1, built Fri Aug 25 16:48:21 PDT 2023
+Options:	-nowin -init MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl -log /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/logs/innovus_mptdc_digital_signoff.log 
+Date:		Wed Jul  1 10:40:53 2026
+Host:		lyoelectrosrv01.in2p3.fr (x86_64 w/Linux 4.18.0-553.120.1.el8_10.x86_64) (16cores*64cpus*Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz 22528KB)
+OS:		Rocky Linux 8.10 (Green Obsidian)
+
+License:
+		[10:40:53.004462] Configured Lic search path (21.01-s002): 30000@cadence.cnfm.fr:5280@ccflex01.in2p3.fr:5280@ccflex02.in2p3.fr:5280@ccflex03.in2p3.fr:5280@licences01.ipnl.in2p3.fr:1717@licences01.ipnl.in2p3.fr
+
+		invs	Innovus Implementation System	22.1	checkout succeeded
+		8 CPU jobs allowed with the current license(s). Use setMultiCpuUsage to set your required CPU count.
+Create and set the environment variable TMPDIR to /tmp/innovus_temp_3885904_lyoelectrosrv01.in2p3.fr_ksabra_ANKYDM.
+
+Change the soft stacksize limit to 0.2%RAM (385 mbytes). Set global soft_stack_size_limit to change the value.
+
+**INFO:  MMMC transition support version v31-84 
+
+[INFO] Loading PVS 22.22 fill procedures
+**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+Sourcing file "MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl" ...
+##  Process: 180           (User Set)               
+##     Node: (not set)                           
+
+##  Check design process and node:  
+##  Design tech node is not set.
+
+Applying the recommended capacitance filtering threshold values for 180nm process node: total_c_th=5, relative_c_th=0.03 and coupling_c_th=3.
+	These values will be used by all post-route extraction engines, including TQuantus, IQuantus and Quantus QRC extraction.
+	For postRoute effortLevel low extraction, the coupling_c_th value will be used only when the -capFilterMode parameter of the setExtractRCMode command is set to relAndCoup or relOrCoup. Default value of -capFilterMode parameter in postRoute extraction effortLevel low is relOnly.
+	The accuracy mode for postRoute effortLevel low extraction will be set to 'standard'.
+	Default value for EffortLevel(-effortLevel option of the setExtractRCMode) in postRoute extraction mode is 'low'.
+MPTDC_LIB_INFO: XH018 stack=xx31 metal_stack=XH018_1131_1P3M_MET3_METMID
+MPTDC_LIB_INFO: XH018 technology LEF=/eda/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef
+MPTDC_LIB_INFO: O1 real RO_tune6 active; skipping mptdc_osc_blackbox.lef
+MPTDC_LIB_INFO: enabling O1 real RO_tune6 LEF /group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+MPTDC_LIB_INFO: XH018 capTbl BC=/eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_min.capTbl
+MPTDC_LIB_INFO: XH018 capTbl TC=/eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_typ.capTbl
+MPTDC_LIB_INFO: XH018 capTbl WC=/eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_max.capTbl
+MPTDC_LIB_INFO: XH018 QRC root=/eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131
+MPTDC_LIB_INFO: O1 real RO_tune6 macro pin contract enabled
+MPTDC_LIB_INFO: standard-cell family=JIHD library=D_CELLS_JIHD
+MPTDC_LIB_INFO: standard-cell root=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0
+MPTDC_LIB_INFO: standard-cell LEF=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef
+MPTDC_LIB_INFO: standard-cell TC Liberty=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib
+MPTDC_LIB_INFO: O1 real RO_tune6 active; skipping mptdc_osc_blackbox.lib
+MPTDC_LIB_INFO: enabling O1 real RO_tune6 Liberty /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib
+#% Begin Load MMMC data ... (date=07/01 10:41:17, mem=1348.7M)
+MPTDC_CLOSURE_SCOPE=TC_ONLY
+SETUP_STATUS_WC=DEFERRED evidence=scope_tc_only
+HOLD_STATUS_BC=DEFERRED evidence=scope_tc_only
+RO_1GHZ_STRESS_STATUS=DEFERRED evidence=scope_tc_only
+#% End Load MMMC data ... (date=07/01 10:41:17, total cpu=0:00:00.0, real=0:00:00.0, peak res=1349.7M, current mem=1349.7M)
+
+Loading LEF file /eda/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef ...
+
+Loading LEF file /group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef ...
+Set DBUPerIGU to M2 pitch 560.
+**ERROR: (IMPLF-186):	The property 'CatenaDesignType' is not defined or the object containing the property does not match the object type 'MACRO' in PROPERTYDEFINITIONS section. The property is ignored.
+
+Loading LEF file /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef ...
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLNP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLN2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[0]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[7]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[0]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[7]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-200):	Pin 'rstb' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[1]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[2]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[3]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[4]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[5]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'code[6]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[2]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[6]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[3]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[1]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[5]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'S[4]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+
+##  Check design process and node:  
+##  Design tech node is not set.
+
+Loading view definition file from /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/pnr/inputs/mptdc_innovus.mmmc
+Reading tc_libset timing library '/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib' ...
+
+===== KEY LINES: /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/logs/digital_signoff_wrapper.log =====
+8:run_id: 20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050
+9:result_dir: /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050
+10:genus_run_id: MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233
+12:handoff_dir: /sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff
+13:row_infra_policy: NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS
+31:MPTDC_PNR_OSC_WIDTH_UM: 168.945
+32:MPTDC_PNR_OSC_HEIGHT_UM: 70.5
+74:post_filler_sroute: 1
+75:post_filler_sroute_required_bypass: 0
+76:preplace_pg_sroute: 0
+78:postplace_pre_route_sroute: 1
+79:postplace_pre_route_sroute_require_clean: 1
+81:postplace_sroute_candidate_probe: 1
+82:postplace_sroute_blockpin: 1
+83:sroute_padpin_fallback: 0
+84:sroute_mode_experiments: 0
+85:sroute_preserve_existing_routes: 0
+86:sroute_connect_stripe: 1
+87:sroute_via_connect_to_shape: unset
+88:sroute_target_search_distance_um: unset
+89:sroute_core_pin_stop_route: RowEnd
+98:route_gate_sroute_recovery: 0
+105:labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO
+108:MPTDC_PNR_OSC_WIDTH_UM=168.945
+109:MPTDC_PNR_OSC_HEIGHT_UM=70.5
+110:MPTDC_RO_LEF_SIZE_STATUS=PASS
+112:PRE_PNR_GATE_SOURCE=/sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff
+114:GENUS_WNS_MARGIN_LOW=YES
+115:MPTDC_DIGITAL_SIGNOFF_SOURCE_CHECK=PASS
+116:MPTDC_CLOSURE_SCOPE=TC_ONLY
+117:MPTDC_TC_PNR_CLOSURE=DEFERRED
+122:ROW_INFRA_POLICY=NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS
+130:MPTDC_DIGITAL_SIGNOFF_STATUS_TEMPLATE=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/digital_pnr_signoff_status.rpt
+136:Options:	-nowin -init MPTDC/pnr/scripts/innovus_mptdc_digital_signoff.tcl -log /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/logs/innovus_mptdc_digital_signoff.log 
+153:**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+166:MPTDC_LIB_INFO: XH018 stack=xx31 metal_stack=XH018_1131_1P3M_MET3_METMID
+167:MPTDC_LIB_INFO: XH018 technology LEF=/eda/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef
+168:MPTDC_LIB_INFO: O1 real RO_tune6 active; skipping mptdc_osc_blackbox.lef
+169:MPTDC_LIB_INFO: enabling O1 real RO_tune6 LEF /group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+170:MPTDC_LIB_INFO: XH018 capTbl BC=/eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_min.capTbl
+171:MPTDC_LIB_INFO: XH018 capTbl TC=/eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_typ.capTbl
+172:MPTDC_LIB_INFO: XH018 capTbl WC=/eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_max.capTbl
+173:MPTDC_LIB_INFO: XH018 QRC root=/eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131
+174:MPTDC_LIB_INFO: O1 real RO_tune6 macro pin contract enabled
+175:MPTDC_LIB_INFO: standard-cell family=JIHD library=D_CELLS_JIHD
+176:MPTDC_LIB_INFO: standard-cell root=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0
+177:MPTDC_LIB_INFO: standard-cell LEF=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/LEF/v6_0_0/xh018_D_CELLS_JIHD.lef
+178:MPTDC_LIB_INFO: standard-cell TC Liberty=/eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib
+179:MPTDC_LIB_INFO: O1 real RO_tune6 active; skipping mptdc_osc_blackbox.lib
+180:MPTDC_LIB_INFO: enabling O1 real RO_tune6 Liberty /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib
+182:MPTDC_CLOSURE_SCOPE=TC_ONLY
+192:**ERROR: (IMPLF-186):	The property 'CatenaDesignType' is not defined or the object containing the property does not match the object type 'MACRO' in PROPERTYDEFINITIONS section. The property is ignored.
+195:**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+197:**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLNP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+199:**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLN2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+201:**WARN: (IMPLF-200):	Pin 'code[0]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+203:**WARN: (IMPLF-200):	Pin 'code[7]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+205:**WARN: (IMPLF-201):	Pin 'S[0]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+207:**WARN: (IMPLF-201):	Pin 'S[7]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+209:**WARN: (IMPLF-200):	Pin 'rstb' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+211:**WARN: (IMPLF-200):	Pin 'code[1]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+213:**WARN: (IMPLF-200):	Pin 'code[2]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+215:**WARN: (IMPLF-200):	Pin 'code[3]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+217:**WARN: (IMPLF-200):	Pin 'code[4]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+219:**WARN: (IMPLF-200):	Pin 'code[5]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+221:**WARN: (IMPLF-200):	Pin 'code[6]' in macro 'RO_tune6' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+223:**WARN: (IMPLF-201):	Pin 'S[2]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+225:**WARN: (IMPLF-201):	Pin 'S[6]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+227:**WARN: (IMPLF-201):	Pin 'S[3]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+229:**WARN: (IMPLF-201):	Pin 'S[1]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+231:**WARN: (IMPLF-201):	Pin 'S[5]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+233:**WARN: (IMPLF-201):	Pin 'S[4]' in macro 'RO_tune6' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+240:Reading tc_libset timing library '/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib' ...
+242:Reading tc_libset timing library '/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib' ...
+243:**WARN: (TECHLIB-9108):	 'input_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+244:**WARN: (TECHLIB-9108):	 'input_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+245:**WARN: (TECHLIB-9108):	 'output_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+246:**WARN: (TECHLIB-9108):	 'output_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+247:**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_rise' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+248:**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_fall' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+249:**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_rise' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+250:**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_fall' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib, Line 17)
+251:**WARN: (TECHLIB-302):	No function defined for cell 'RO_tune6'. The cell will only be used for analysis. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib)
+256:Created 855 new cells from 2 timing libraries.
+259:Reading verilog netlist '/sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff/mptdc_axis_core.postsyn.v'
+304:Reading timing constraints file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc' ...
+306:**WARN: (TCLCMD-1461):	Skipped unsupported command: set_units (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 12).
+308:**WARN: (TCLCMD-1461):	Skipped unsupported command: set_units (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 13).
+311:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[7].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+313:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[6].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+315:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[5].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+317:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[4].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+319:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[3].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+321:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[2].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+323:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[1].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+325:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[7].gen_pd_col[0].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+327:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[7].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+329:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[6].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+331:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[5].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+333:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[4].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+335:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[3].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+337:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[2].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+339:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[1].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+341:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[6].gen_pd_col[0].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+343:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[7].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+345:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[6].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+347:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[5].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+349:**WARN: (TCLCMD-1531):	'set_false_path' has been applied on hierarchical pin '\u_core_gen_pd_row[5].gen_pd_col[4].u_pd /clear_window' (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+351:Message <TCLCMD-1531> has exceeded the message display limit of '20'. Use 'set_message -no_limit -id list_of_msgIDs' to reset the message limit. (File /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc, Line 173).
+354:INFO (CTE): Reading of timing constraints file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/pnr_constraints/mptdc_axis_core.postsyn.pnr_cts.sdc completed, with 22 WARNING
+357:**WARN: (TA-976):	Path groups asserted by the group_path constraint are considered by the software to be global in nature - they cannot be restricted to specific constraint modes. Due to this restriction, the group_path constraint is not supported directly in the constraint files which are configured in mode-specific commands such as create_constraint_mode. The current group_path entry will be ignored. You can enter the group_path constraint interactively or as part of a general command script -  where it will be interpreted as global and will be in effect for all modes.
+382:MPTDC_MMMC_INFO: setup_views=TC_NOMINAL
+383:MPTDC_MMMC_INFO: hold_views=TC_NOMINAL
+384:MPTDC_MMMC_INFO: stress_view=RO_MAX_FREQ_STRESS report_only
+389:ERROR     IMPLF-186            1  The property '%s' is not defined or the ...
+390:WARNING   IMPLF-200           12  Pin '%s' in macro '%s' has no ANTENNAGAT...
+391:WARNING   IMPLF-201            8  Pin '%s' in macro '%s' has no ANTENNADIF...
+392:WARNING   TA-976               1  Path groups asserted by the group_path c...
+393:WARNING   TCLCMD-1461          2  Skipped unsupported command: %s          
+394:WARNING   TCLCMD-1531        128  '%s' has been applied on hierarchical pi...
+395:WARNING   TECHLIB-302          1  No function defined for cell '%s'. The c...
+396:WARNING   TECHLIB-9108         8   '%s' not specified in the library, usin...
+426:**WARN: (IMPFP-325):	Floorplan of the design is resized. All current floorplan objects are automatically derived based on specified new floorplan. This may change blocks, fixed standard cells, existing routes and blockages.
+427:Writing DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/01_floorplan.def', current time is Wed Jul  1 10:41:30 2026 ...
+429:DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/01_floorplan.def' is written, current time is Wed Jul  1 10:41:30 2026 ...
+434:Writing Binary DB to /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/01_floorplan.enc.dat/mptdc_axis_core.v.bin in single-threaded mode...
+437:Saving congestion map file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/01_floorplan.enc.dat/mptdc_axis_core.route.congmap.gz ...
+441:Saving preference file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/01_floorplan.enc.dat/gui.pref.tcl ...
+457:Saving property file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/01_floorplan.enc.dat/mptdc_axis_core.prop
+549:innovus 1> **WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+550:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+551:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+552:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+553:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+554:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+555:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+556:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+557:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+558:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+559:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+560:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+561:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+562:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+563:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+564:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+565:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+566:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+567:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+568:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+569:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+570:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+571:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+572:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+573:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+574:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+575:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+576:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+577:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+578:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+579:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+580:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+581:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+582:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+583:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+584:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+585:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+586:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+587:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+588:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+589:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+590:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX2 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+591:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+592:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+593:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+594:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+595:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+596:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+597:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+598:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+599:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+600:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+601:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+602:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+603:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+604:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+605:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+606:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+607:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+608:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+609:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+610:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+611:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+612:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+613:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+614:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+615:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+616:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+617:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+618:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+619:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+620:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[1] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+621:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+622:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[2] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+623:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+624:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[3] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+625:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+626:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[4] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+627:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+628:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+629:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+630:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] with cell name DFRRQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+631:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation R0 is not compatible with the orientation of row site core_jihd.
+632:**WARN: (IMPFP-9996):	Instance u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] with cell name DFRSQJIHDX1 cannot flip or rotate to R0 since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+633:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+634:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[0].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+635:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+636:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[1].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+637:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+638:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[2].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+639:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+640:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[3].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+641:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+642:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[4].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+643:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+644:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[5].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+645:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+646:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[6].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+647:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+648:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[7].u_iso with cell name BUJIHDX4 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+649:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+650:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[0].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+651:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+652:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[1].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+653:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+654:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[2].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+655:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+656:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[3].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+657:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+658:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[4].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+659:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+660:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[5].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+661:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+662:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[6].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+663:**WARN: (IMPFP-10137):	Object doesn't snap to the closest row site core_jihd since the orientation MX is not compatible with the orientation of row site core_jihd.
+664:**WARN: (IMPFP-9996):	Instance u_core_u_phase_buf_slow/gen_phase_buf[7].u_drv with cell name BUJIHDX12 cannot flip or rotate to MX since the site SYMMETRY is defined as SYMMETRY Y in LEF file. It can only flip about Y-axis.
+674:**INFO: Enable pre-place timing setting for timing analysis
+676:**WARN: (IMPDC-1629):	The default delay limit was set to 101. This is less than the default of 1000 and may result in inaccurate delay calculation for nets with a fanout higher than the setting.  If needed, the default delay limit may be adjusted by running the command 'set delaycal_use_default_delay_limit'.
+696:**INFO: Disable pre-place timing setting for timing analysis
+700:**INFO: Pre-place timing setting for timing analysis already disabled
+731:Density for the design = 0.531.
+733:Pin Density = 0.1754.
+736:**WARN: (IMPSP-9531):	Turning off clkGateAware when timingDriven is off
+793:**WARN: (IMPSP-9025):	No scan chain specified/traced.
+816:Density distribution unevenness ratio = 16.674%
+817:**INFO: Enable pre-place timing setting for timing analysis
+819:**WARN: (IMPDC-1629):	The default delay limit was set to 101. This is less than the default of 1000 and may result in inaccurate delay calculation for nets with a fanout higher than the setting.  If needed, the default delay limit may be adjusted by running the command 'set delaycal_use_default_delay_limit'.
+839:**INFO: Disable pre-place timing setting for timing analysis
+843:Info: Disable timing driven in postCTS congRepair.
+886:WARNING   IMPDC-1629           2  The default delay limit was set to %d. T...
+887:WARNING   IMPSP-9531           1  Turning off clkGateAware when timingDriv...
+888:WARNING   IMPSP-9025           1  No scan chain specified/traced.          
+920:**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+952:**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+953:To avoid such a configuration impacting timing closure, since otherwise such cells could be inserted but never optimized or removed, optDesign is treating the following cells as dont_use.
+961:DRC Margin: user margin 0.0; extra margin 0.2
+964:Multi-VT timing optimization disabled based on library information.
+1033:|           WNS (ns):| -26.304 |
+1034:|           TNS (ns):|-30506.9 |
+1050:Density: 53.140%
+1085:GigaOpt HFN: use maxLocalDensity 1.2
+1086:GigaOpt Checkpoint: Internal optDRV -useLevelizedBufferTreeOnly -auxMaxFanoutCountLimit 500 -largeScaleFixing -maxIter 1 -maxLocalDensity 1.2 -numThreads 1 -preCTS -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC
+1091:| Density | Commits |  WNS   |   TNS    |    Real    |  Mem   |
+1099:GigaOpt HFN: restore maxLocalDensity to 0.98
+1102:GigaOpt Checkpoint: Internal optDRV -max_tran -max_cap -maxLocalDensity 1.2 -numThreads 1 -largeScaleFixing -maxIter 2 -preCTS -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC
+1109:| nets | terms|  wViol  | nets | terms|  wViol  | nets | terms| nets | terms|   WNS   |   TNS   |  #Buf  |  #Inv  | #Resize|Density|   Real   |   Mem   |
+1120:GigaOpt DRV: restore maxLocalDensity to 0.98
+1126:  Dominating TNS: -0.000
+1130:GigaOpt Checkpoint: Internal globalOpt -maxLocalDensity 1.2 -numThreads 1 -preCTS -rebufferAll -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC -enableHighLayerOpt -maxIter 50 -maxIterForLEPG 50
+1136:** GigaOpt Global Opt WNS Slack -3.597  TNS Slack -390.292 
+1138:|  WNS   |  TNS   | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+1186:** GigaOpt Global Opt End WNS Slack -0.077  TNS Slack -1.416 
+1190:*** Check timing (0:00:00.0)
+1196:Reclaim Optimization WNS Slack -0.077  TNS Slack -1.416 Density 53.56
+1198:| Density | Commits |  WNS   |  TNS   |    Real    |  Mem   |
+1210:Reclaim Optimization End WNS Slack -0.077  TNS Slack -1.399 Density 53.00
+1270:**WARN: (IMPSP-9025):	No scan chain specified/traced.
+1362:*** Check timing (0:00:00.0)
+1363:Begin: GigaOpt Optimization in WNS mode
+1364:GigaOpt Checkpoint: Internal optTiming -maxLocalDensity 1.0 -maxLocalDensityForHardenOpt 0.92 -numThreads 1 -preCTS -wtns -integratedAreaOpt -pgMode all -ipoTgtSlackCoef 1.5 -effTgtSlackCoef 1 -nativePathGroupFlow -NDROptEffortAuto -usefulSkew -nonLegalPlaceEcoBumpRecoveryInWNSOpt
+1370:** GigaOpt Optimizer WNS Slack -0.413 TNS Slack -18.345 Density 53.00
+1371:OptDebug: Start of Optimizer WNS Pass 0:
+1373:|Path Group|   WNS|    TNS|
+1384:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+1435:OptDebug: End of Optimizer WNS Pass 0:
+1437:|Path Group|  WNS|  TNS|
+1445:** GigaOpt Optimizer WNS Slack 0.062 TNS Slack 0.000 Density 53.39
+1472:** GigaOpt Optimizer WNS Slack 0.062 TNS Slack 0.000 Density 53.39
+1475:|Path Group|  WNS|  TNS|
+1487:End: GigaOpt Optimization in WNS mode
+1489:*** Check timing (0:00:00.0)
+1495:Reclaim Optimization WNS Slack 0.000  TNS Slack 0.000 Density 53.39
+1497:| Density | Commits |  WNS   |  TNS   |    Real    |  Mem   |
+1502:Reclaim Optimization End WNS Slack 0.000  TNS Slack 0.000 Density 53.00
+1513:Reclaim Optimization WNS Slack 0.000  TNS Slack 0.000 Density 53.00
+1515:| Density | Commits |  WNS   |  TNS   |    Real    |  Mem   |
+1526:Reclaim Optimization End WNS Slack 0.000  TNS Slack 0.000 Density 52.82
+1554:GigaOpt Checkpoint: Internal optDRV -inPostEcoStage -smallScaleFixing -maxIter 3 -max_tran -max_cap -maxLocalDensity 0.98 -numThreads 1 -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC -setupTNSCostFactor 1.0 -preCTS
+1561:| nets | terms|  wViol  | nets | terms|  wViol  | nets | terms| nets | terms|   WNS   |   TNS   |  #Buf  |  #Inv  | #Resize|Density|   Real   |   Mem   |
+1597:  Dominating TNS: -0.000
+1674:Reported timing to dir ./timingReports
+1687:|           WNS (ns):| -0.191  | -0.191  |  0.065  |
+1688:|           TNS (ns):| -0.756  | -0.756  |  0.000  |
+1704:Density: 52.822%
+1721:WARNING   IMPSP-9025           1  No scan chain specified/traced.          
+1722:WARNING   IMPOPT-6118          1  The following cells have a dont_touch pr...
+1723:WARNING   IMPOPT-3564          1  The following cells are set dont_use tem...
+1728:Writing DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/02_place.def', current time is Wed Jul  1 10:46:29 2026 ...
+1730:DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/02_place.def' is written, current time is Wed Jul  1 10:46:29 2026 ...
+1735:Writing Binary DB to /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/02_place.enc.dat/mptdc_axis_core.v.bin in single-threaded mode...
+1738:Saving congestion map file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/02_place.enc.dat/mptdc_axis_core.route.congmap.gz ...
+1742:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+1743:Type 'man IMPCTE-104' for more detail.
+1744:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+1745:Type 'man IMPCTE-104' for more detail.
+1746:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+1747:Type 'man IMPCTE-104' for more detail.
+1748:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+1749:Type 'man IMPCTE-104' for more detail.
+1750:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+1751:Type 'man IMPCTE-104' for more detail.
+1752:Saving preference file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/02_place.enc.dat/gui.pref.tcl ...
+1758:Saving PG file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/02_place.enc.dat/mptdc_axis_core.pg.gz, version#2, (Created by Innovus v22.33-s094_1 on Wed Jul  1 10:46:30 2026)
+1763:... 0 antenna drc markers are saved ...
+1772:Saving property file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/02_place.enc.dat/mptdc_axis_core.prop
+1774:Saving rc congestion map /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/02_place.enc.dat/mptdc_axis_core.congmap.gz ...
+1782:WARNING   IMPCTE-104           5  The constraint mode of this inactive vie...
+1800:Creating clock tree spec for modes (timing configs): NOMINAL_FUNCTIONAL
+1802:Reset timing graph...
+1804:Reset timing graph done.
+1808:Reset timing graph...
+1810:Reset timing graph done.
+1811:Wrote: /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/work/clk_sys_cts.generic.spec
+1839:setNanoRouteMode -route_global_exp_timing_driven_std_delay     57.3
+1865:Reset timing graph...
+1867:Reset timing graph done.
+1869:Reset timing graph...
+1871:Reset timing graph done.
+1872:Clock tree spec update: Ideal nets, transition and delay annotations were updated to match active timing constraints.
+1880:Placement Density:52.82%(396488/750617)
+1881:Placement Density (including fixed std cells):52.89%(397612/751741)
+1884:**WARN: (IMPCCOPT-2015):	Innovus will not update I/O latencies for the following reason(s):
+1967:**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+1990:For timing_corner tc_corner:both, late and power domain auto-default:
+2056:  sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2072:  Found 0 antenna diodes in the clock trees.
+2100:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2105:      Reset timing graph...
+2107:      Reset timing graph done.
+2124:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2137:          Clock tree timing engine global stage delay update for tc_corner:both.late...
+2138:          Clock tree timing engine global stage delay update for tc_corner:both.late done. (took cpu=0:00:00.0 real=0:00:00.0)
+2145:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2154:      Reset timing graph...
+2156:      Reset timing graph done.
+2191:    Clock tree timing engine global stage delay update for tc_corner:both.late...
+2192:    Clock tree timing engine global stage delay update for tc_corner:both.late done. (took cpu=0:00:00.3 real=0:00:00.3)
+2227:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2250:  Reset timing graph...
+2252:  Reset timing graph done.
+2317:Info: Disable timing driven in postCTS congRepair.
+2378:  Clock tree timing engine global stage delay update for tc_corner:both.late...
+2379:  Clock tree timing engine global stage delay update for tc_corner:both.late done. (took cpu=0:00:00.2 real=0:00:00.2)
+2382:    sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2407:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2431:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2456:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2479:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2502:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2525:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2548:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2577:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2604:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2628:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2652:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2675:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2716:            sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2736:            sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2756:            sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2775:        sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2793:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2814:        sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2847:          sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2866:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2890:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2914:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2936:  Clock tree timing engine global stage delay update for tc_corner:both.late...
+2937:  Clock tree timing engine global stage delay update for tc_corner:both.late done. (took cpu=0:00:00.2 real=0:00:00.2)
+2940:    sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2962:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+2985:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3044:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3075:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3098:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3155:        sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3181:      Reset timing graph...
+3183:      Reset timing graph done.
+3189:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3212:  Reset timing graph...
+3214:  Reset timing graph done.
+3341:        Clock tree timing engine global stage delay update for tc_corner:both.late...
+3342:        Clock tree timing engine global stage delay update for tc_corner:both.late done. (took cpu=0:00:00.1 real=0:00:00.1)
+3346:          sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3369:            sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3403:            sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3447:            sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3468:        Reset timing graph...
+3470:        Reset timing graph done.
+3474:        Reset timing graph...
+3476:        Reset timing graph done.
+3479:          sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3605:#Total wire length = 45831 um.
+3607:#Total wire length on LAYER MET1 = 0 um.
+3608:#Total wire length on LAYER MET2 = 12698 um.
+3609:#Total wire length on LAYER MET3 = 22001 um.
+3610:#Total wire length on LAYER METTP = 11132 um.
+3705:#Total wire length = 45803 um.
+3707:#Total wire length on LAYER MET1 = 128 um.
+3708:#Total wire length on LAYER MET2 = 13003 um.
+3709:#Total wire length on LAYER MET3 = 21584 um.
+3710:#Total wire length on LAYER METTP = 11087 um.
+3764:#Total wire length = 54983 um.
+3766:#Total wire length on LAYER MET1 = 3 um.
+3767:#Total wire length on LAYER MET2 = 7604 um.
+3768:#Total wire length on LAYER MET3 = 30195 um.
+3769:#Total wire length on LAYER METTP = 17182 um.
+3780:#Total number of DRC violations = 0
+3868:  Clock tree timing engine global stage delay update for tc_corner:both.late...
+3869:  Clock tree timing engine global stage delay update for tc_corner:both.late done. (took cpu=0:00:00.2 real=0:00:00.2)
+3872:    sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3928:        sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+3977:        sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+4005:      sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+4048:        sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+4069:    Reset timing graph...
+4071:    Reset timing graph done.
+4078:  Update timing and DAG stats after post-conditioning...
+4079:  Update timing and DAG stats after post-conditioning done. (took cpu=0:00:00.0 real=0:00:00.0)
+4080:  Clock tree timing engine global stage delay update for tc_corner:both.late...
+4081:  Clock tree timing engine global stage delay update for tc_corner:both.late done. (took cpu=0:00:00.2 real=0:00:00.2)
+4084:    sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+4250:**WARN: (IMPCCOPT-2015):	Innovus will not update I/O latencies for the following reason(s):
+4256:Clock DAG stats after update timingGraph:
+4258:  sink counts      : regular=3982, enable_latch=0, load_capacitance=0, antenna=0, node_sink=0, total=3982
+4266:Clock DAG net violations after update timingGraph: none
+4267:Clock DAG primary half-corner transition distribution after update timingGraph:
+4270:Clock DAG library cell distribution after update timingGraph {count}:
+4272:Primary reporting skew groups after update timingGraph:
+4274:Skew group summary after update timingGraph:
+4293:**WARN: (IMPSP-9025):	No scan chain specified/traced.
+4301:**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+4329:**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+4330:To avoid such a configuration impacting timing closure, since otherwise such cells could be inserted but never optimized or removed, optDesign is treating the following cells as dont_use.
+4338:DRC Margin: user margin 0.0; extra margin 0.2
+4342:Multi-VT timing optimization disabled based on library information.
+4375:|           WNS (ns):| -0.101  | -0.101  |  0.647  |
+4376:|           TNS (ns):| -15.724 | -15.724 |  0.000  |
+4392:Density: 53.200%
+4434:GigaOpt HFN: use maxLocalDensity 1.2
+4435:GigaOpt Checkpoint: Internal optDRV -useLevelizedBufferTreeOnly -auxMaxFanoutCountLimit 500 -largeScaleFixing -maxIter 1 -maxLocalDensity 1.2 -numThreads 1 -postCTS -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC
+4442:GigaOpt HFN: restore maxLocalDensity to 0.98
+4446:GigaOpt Checkpoint: Internal globalOpt -maxLocalDensity 1.2 -numThreads 1 -postCTS -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC -enableHighLayerOpt -maxIter 50 -maxIterForLEPG 50
+4456:** GigaOpt Global Opt WNS Slack -0.101  TNS Slack -15.724 
+4458:|  WNS   |  TNS   | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+4499:** GigaOpt Global Opt End WNS Slack -0.059  TNS Slack -1.724 
+4503:*** Check timing (0:00:00.0)
+4509:Begin: GigaOpt Optimization in WNS mode
+4510:GigaOpt Checkpoint: Internal optTiming -maxLocalDensity 1.0 -maxLocalDensityForHardenOpt 0.92 -numThreads 1 -postCTS -wtns -integratedAreaOpt -pgMode all -ipoTgtSlackCoef 1.5 -effTgtSlackCoef 1 -nativePathGroupFlow -NDROptEffortAuto -usefulSkew -nonLegalPlaceEcoBumpRecoveryInWNSOpt
+4520:** GigaOpt Optimizer WNS Slack -0.059 TNS Slack -1.724 Density 53.28
+4521:OptDebug: Start of Optimizer WNS Pass 0:
+4523:|Path Group|   WNS|   TNS|
+4531:CCOptDebug: Start of Optimizer WNS Pass 0: reg2reg* WNS -0.059ns TNS -1.724ns; HEPG WNS -0.059ns TNS -1.724ns; all paths WNS -0.059ns TNS -1.724ns; Real time 0:02:12
+4535:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+4594:|           WNS (ns):| -0.108  |  0.139  | -0.108  |
+4595:|           TNS (ns):| -0.907  |  0.000  | -0.907  |
+4600:Density: 53.412%
+4606:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+4619:OptDebug: End of Optimizer WNS Pass 0:
+4621:|Path Group|   WNS|   TNS|
+4629:CCOptDebug: End of Optimizer WNS Pass 0: reg2reg* WNS -0.020ns TNS -0.146ns; HEPG WNS -0.020ns TNS -0.146ns; all paths WNS -0.020ns TNS -0.146ns; Real time 0:02:38
+4630:** GigaOpt Optimizer WNS Slack -0.020 TNS Slack -0.146 Density 53.41
+4637:Density distribution unevenness ratio = 18.948%
+4658:** GigaOpt Optimizer WNS Slack -0.020 TNS Slack -0.146 Density 53.41
+4659:OptDebug: Start of Optimizer WNS Pass 1:
+4661:|Path Group|   WNS|   TNS|
+4669:CCOptDebug: Start of Optimizer WNS Pass 1: reg2reg* WNS -0.020ns TNS -0.146ns; HEPG WNS -0.020ns TNS -0.146ns; all paths WNS -0.020ns TNS -0.146ns; Real time 0:02:39
+4672:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+4680:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+4693:OptDebug: End of Optimizer WNS Pass 1:
+4695:|Path Group|   WNS|   TNS|
+4703:CCOptDebug: End of Optimizer WNS Pass 1: reg2reg* WNS -0.020ns TNS -0.129ns; HEPG WNS -0.020ns TNS -0.129ns; all paths WNS -0.020ns TNS -0.129ns; Real time 0:02:43
+4704:** GigaOpt Optimizer WNS Slack -0.020 TNS Slack -0.129 Density 53.41
+4711:Density distribution unevenness ratio = 18.943%
+4730:** GigaOpt Optimizer WNS Slack -0.020 TNS Slack -0.129 Density 53.41
+4733:|Path Group|   WNS|   TNS|
+4745:End: GigaOpt Optimization in WNS mode
+4746:Begin: GigaOpt Optimization in TNS mode
+4747:GigaOpt Checkpoint: Internal optTiming -allEndPoints -maxLocalDensity 0.95 -maxLocalDensityForHardenOpt 0.92 -numThreads 1 -postCTS -pgMode all -nativePathGroupFlow -wtns -nonLegalPlaceEcoBumpRecoveryInTNSOpt -NDROptEffortAuto -ipoTgtSlackCoef 1.5 -effTgtSlackCoef 1
+4757:** GigaOpt Optimizer WNS Slack -0.020 TNS Slack -0.129 Density 53.41
+4758:OptDebug: Start of Optimizer TNS Pass:
+4760:|Path Group|   WNS|   TNS|
+4768:CCOptDebug: Start of Optimizer TNS Pass: reg2reg* WNS -0.020ns TNS -0.129ns; HEPG WNS -0.020ns TNS -0.129ns; all paths WNS -0.020ns TNS -0.129ns; Real time 0:02:46
+4771:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+4784:OptDebug: End of Optimizer TNS Pass:
+4786:|Path Group|   WNS|   TNS|
+4794:CCOptDebug: End of Optimizer TNS Pass: reg2reg* WNS -0.020ns TNS -0.117ns; HEPG WNS -0.020ns TNS -0.117ns; all paths WNS -0.020ns TNS -0.117ns; Real time 0:03:42
+4801:Density distribution unevenness ratio = 18.946%
+4822:** GigaOpt Optimizer WNS Slack -0.020 TNS Slack -0.117 Density 53.64
+4825:|Path Group|   WNS|   TNS|
+4837:End: GigaOpt Optimization in TNS mode
+4845:Reclaim Optimization WNS Slack -0.020  TNS Slack -0.117 Density 53.64
+4847:| Density | Commits |  WNS   |  TNS   |    Real    |  Mem   |
+4852:Reclaim Optimization End WNS Slack -0.020  TNS Slack -0.117 Density 53.40
+4865:Reclaim Optimization WNS Slack -0.020  TNS Slack -0.117 Density 53.40
+4867:| Density | Commits |  WNS   |  TNS   |    Real    |  Mem   |
+4877:Reclaim Optimization End WNS Slack -0.020  TNS Slack -0.117 Density 53.39
+5034:GigaOpt Checkpoint: Internal optDRV -inPostEcoStage -smallScaleFixing -maxIter 3 -max_tran -max_cap -maxLocalDensity 0.98 -numThreads 1 -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC -setupTNSCostFactor 1.0 -postCTS
+5043:| nets | terms|  wViol  | nets | terms|  wViol  | nets | terms| nets | terms|   WNS   |   TNS   |  #Buf  |  #Inv  | #Resize|Density|   Real   |   Mem   |
+5054:GigaOpt: WNS changes after postEco optimization: -0.228 -> -0.204 (bump = -0.024)
+5056:Design TNS changes after trial route: -2.506 -> -15.088
+5057:Begin: GigaOpt TNS non-legal recovery
+5058:GigaOpt Checkpoint: Internal optTiming -setupRecovery -newSetupRecovery -allEndPoints -maxLocalDensity 0.92 -numThreads 1 -nativePathGroupFlow  -NDROptEffortAuto  -ipoTgtSlackCoef 0 -effTgtSlackCoef 0 -tnsBumpRecoveryInTNS -integratedAreaOpt
+5068:** GigaOpt Optimizer WNS Slack -0.204 TNS Slack -15.088 Density 53.39
+5069:OptDebug: Start of Optimizer TNS Pass:
+5071:|Path Group|   WNS|    TNS|
+5079:CCOptDebug: Start of Optimizer TNS Pass: reg2reg* WNS -0.204ns TNS -15.088ns; HEPG WNS -0.204ns TNS -15.088ns; all paths WNS -0.204ns TNS -15.088ns; Real time 0:04:39
+5082:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+5107:OptDebug: End of Optimizer TNS Pass:
+5109:|Path Group|   WNS|   TNS|
+5117:CCOptDebug: End of Optimizer TNS Pass: reg2reg* WNS -0.028ns TNS -0.129ns; HEPG WNS -0.028ns TNS -0.129ns; all paths WNS -0.028ns TNS -0.129ns; Real time 0:04:43
+5124:Density distribution unevenness ratio = 18.742%
+5145:** GigaOpt Optimizer WNS Slack -0.029 TNS Slack -0.129 Density 53.41
+5148:|Path Group|   WNS|   TNS|
+5160:End: GigaOpt TNS non-legal recovery
+5162:**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+5169:  Dominating TNS: -0.000
+5253:Reported timing to dir ./timingReports
+5266:|           WNS (ns):| -0.028  | -0.028  |  0.655  |
+5267:|           TNS (ns):| -0.126  | -0.126  |  0.000  |
+5283:Density: 53.415%
+5296:WARNING   IMPSP-9025           1  No scan chain specified/traced.          
+5297:WARNING   IMPOPT-7293          1  Vt partitioning has found only one parti...
+5298:WARNING   IMPOPT-6118          1  The following cells have a dont_touch pr...
+5299:WARNING   IMPOPT-3564          1  The following cells are set dont_use tem...
+5300:WARNING   IMPCCOPT-1182        1  The clock_gating_cells property has no u...
+5301:WARNING   IMPCCOPT-2015        2  %s will not update I/O latencies for the...
+5306:The system is switching to MMMC mode. Existing timing, extraction and delay/sdf information from single mode will be reset. Please respecify spef for specific RC corners and/or sdf information for specific views.
+5307:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+5308:Type 'man IMPCTE-104' for more detail.
+5309:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+5310:Type 'man IMPCTE-104' for more detail.
+5311:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+5312:Type 'man IMPCTE-104' for more detail.
+5313:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+5314:Type 'man IMPCTE-104' for more detail.
+5315:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+5316:Type 'man IMPCTE-104' for more detail.
+5343:Reading timing constraints file '/tmp/innovus_temp_3885904_lyoelectrosrv01.in2p3.fr_ksabra_ANKYDM/.mmmcr1uX10/modes/NOMINAL_FUNCTIONAL/NOMINAL_FUNCTIONAL.sdc' ...
+5406:**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+5434:**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+5435:To avoid such a configuration impacting timing closure, since otherwise such cells could be inserted but never optimized or removed, optDesign is treating the following cells as dont_use.
+5443:DRC Margin: user margin 0.0; extra margin 0.2
+5447:Multi-VT timing optimization disabled based on library information.
+5481:|           WNS (ns):| -0.028  | -0.028  |  0.655  |
+5482:|           TNS (ns):| -0.126  | -0.126  |  0.000  |
+5498:Density: 53.415%
+5541:GigaOpt HFN: use maxLocalDensity 1.2
+5542:GigaOpt Checkpoint: Internal optDRV -useLevelizedBufferTreeOnly -auxMaxFanoutCountLimit 500 -largeScaleFixing -maxIter 1 -maxLocalDensity 1.2 -numThreads 1 -postCTS -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC
+5549:GigaOpt HFN: restore maxLocalDensity to 0.98
+5553:GigaOpt Checkpoint: Internal globalOpt -maxLocalDensity 1.2 -numThreads 1 -postCTS -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC -enableHighLayerOpt -maxIter 50 -maxIterForLEPG 50
+5563:** GigaOpt Global Opt WNS Slack -0.029  TNS Slack -0.126 
+5565:|  WNS   |  TNS   | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+5606:** GigaOpt Global Opt End WNS Slack -0.029  TNS Slack -0.127 
+5610:*** Check timing (0:00:00.0)
+5616:Begin: GigaOpt Optimization in WNS mode
+5617:GigaOpt Checkpoint: Internal optTiming -maxLocalDensity 1.0 -maxLocalDensityForHardenOpt 0.92 -numThreads 1 -postCTS -wtns -integratedAreaOpt -pgMode all -ipoTgtSlackCoef 1.5 -effTgtSlackCoef 1 -nativePathGroupFlow -NDROptEffortAuto -usefulSkew -nonLegalPlaceEcoBumpRecoveryInWNSOpt
+5627:** GigaOpt Optimizer WNS Slack -0.029 TNS Slack -0.127 Density 53.41
+5628:OptDebug: Start of Optimizer WNS Pass 0:
+5630:|Path Group|   WNS|   TNS|
+5641:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+5684:|           WNS (ns):| -0.111  |  0.139  | -0.111  |
+5685:|           TNS (ns):| -1.029  |  0.000  | -1.029  |
+5690:Density: 53.425%
+5696:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+5707:OptDebug: End of Optimizer WNS Pass 0:
+5709:|Path Group|   WNS|   TNS|
+5717:** GigaOpt Optimizer WNS Slack -0.025 TNS Slack -0.083 Density 53.42
+5724:Density distribution unevenness ratio = 18.742%
+5743:** GigaOpt Optimizer WNS Slack -0.025 TNS Slack -0.083 Density 53.42
+5744:OptDebug: Start of Optimizer WNS Pass 1:
+5746:|Path Group|   WNS|   TNS|
+5756:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+5764:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+5775:OptDebug: End of Optimizer WNS Pass 1:
+5777:|Path Group|   WNS|   TNS|
+5785:** GigaOpt Optimizer WNS Slack -0.025 TNS Slack -0.083 Density 53.42
+5792:Density distribution unevenness ratio = 18.742%
+5813:** GigaOpt Optimizer WNS Slack -0.025 TNS Slack -0.083 Density 53.42
+5816:|Path Group|   WNS|   TNS|
+5828:End: GigaOpt Optimization in WNS mode
+5829:Begin: GigaOpt Optimization in TNS mode
+5830:GigaOpt Checkpoint: Internal optTiming -allEndPoints -maxLocalDensity 0.95 -maxLocalDensityForHardenOpt 0.92 -numThreads 1 -postCTS -pgMode all -nativePathGroupFlow -wtns -nonLegalPlaceEcoBumpRecoveryInTNSOpt -NDROptEffortAuto -ipoTgtSlackCoef 1.5 -effTgtSlackCoef 1
+5840:** GigaOpt Optimizer WNS Slack -0.025 TNS Slack -0.083 Density 53.42
+5841:OptDebug: Start of Optimizer TNS Pass:
+5843:|Path Group|   WNS|   TNS|
+5853:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+5866:OptDebug: End of Optimizer TNS Pass:
+5868:|Path Group|   WNS|   TNS|
+5882:Density distribution unevenness ratio = 18.766%
+5903:** GigaOpt Optimizer WNS Slack -0.025 TNS Slack -0.080 Density 53.63
+5906:|Path Group|   WNS|   TNS|
+5918:End: GigaOpt Optimization in TNS mode
+5926:Reclaim Optimization WNS Slack -0.025  TNS Slack -0.080 Density 53.63
+5928:| Density | Commits |  WNS   |  TNS   |    Real    |  Mem   |
+5933:Reclaim Optimization End WNS Slack -0.025  TNS Slack -0.080 Density 53.41
+5946:Reclaim Optimization WNS Slack -0.025  TNS Slack -0.080 Density 53.41
+5948:| Density | Commits |  WNS   |  TNS   |    Real    |  Mem   |
+5959:Reclaim Optimization End WNS Slack -0.025  TNS Slack -0.134 Density 53.39
+6118:GigaOpt Checkpoint: Internal optDRV -inPostEcoStage -smallScaleFixing -maxIter 3 -max_tran -max_cap -maxLocalDensity 0.98 -numThreads 1 -preRouteDontEndWithRefinePlaceIncrSteinerRouteDC -setupTNSCostFactor 1.0 -postCTS
+6127:| nets | terms|  wViol  | nets | terms|  wViol  | nets | terms| nets | terms|   WNS   |   TNS   |  #Buf  |  #Inv  | #Resize|Density|   Real   |   Mem   |
+6138:GigaOpt: WNS changes after postEco optimization: -0.025 -> -0.035 (bump = 0.01)
+6140:Design TNS changes after trial route: -0.138 -> -0.713
+6141:Begin: GigaOpt TNS non-legal recovery
+6142:GigaOpt Checkpoint: Internal optTiming -setupRecovery -newSetupRecovery -allEndPoints -maxLocalDensity 0.92 -numThreads 1 -nativePathGroupFlow  -NDROptEffortAuto  -ipoTgtSlackCoef 0 -effTgtSlackCoef 0 -tnsBumpRecoveryInTNS -integratedAreaOpt
+6152:** GigaOpt Optimizer WNS Slack -0.035 TNS Slack -0.713 Density 53.40
+6153:OptDebug: Start of Optimizer TNS Pass:
+6155:|Path Group|   WNS|   TNS|
+6165:|  WNS   | All WNS |  TNS   | All TNS | Density |    Real    |  Mem   |Worst View|Pathgroup|                     End Point                      |
+6176:OptDebug: End of Optimizer TNS Pass:
+6178:|Path Group|   WNS|   TNS|
+6192:Density distribution unevenness ratio = 18.772%
+6213:** GigaOpt Optimizer WNS Slack -0.031 TNS Slack -0.141 Density 53.42
+6216:|Path Group|   WNS|   TNS|
+6228:End: GigaOpt TNS non-legal recovery
+6230:**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+6237:  Dominating TNS: -0.000
+6323:Reported timing to dir ./timingReports
+6336:|           WNS (ns):| -0.031  | -0.031  |  0.696  |
+6337:|           TNS (ns):| -0.142  | -0.142  |  0.000  |
+6353:Density: 53.419%
+6370:Writing Binary DB to /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03_cts.enc.dat/mptdc_axis_core.v.bin in single-threaded mode...
+6373:Saving congestion map file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03_cts.enc.dat/mptdc_axis_core.route.congmap.gz ...
+6377:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+6378:Type 'man IMPCTE-104' for more detail.
+6379:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+6380:Type 'man IMPCTE-104' for more detail.
+6381:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+6382:Type 'man IMPCTE-104' for more detail.
+6383:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+6384:Type 'man IMPCTE-104' for more detail.
+6385:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+6386:Type 'man IMPCTE-104' for more detail.
+6387:Saving preference file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03_cts.enc.dat/gui.pref.tcl ...
+6393:Saving PG file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03_cts.enc.dat/mptdc_axis_core.pg.gz, version#2, (Created by Innovus v22.33-s094_1 on Wed Jul  1 10:54:51 2026)
+6398:... 0 antenna drc markers are saved ...
+6407:Saving property file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03_cts.enc.dat/mptdc_axis_core.prop
+6409:#Saving pin access data to file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03_cts.enc.dat/mptdc_axis_core.apa ...
+6411:Saving rc congestion map /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03_cts.enc.dat/mptdc_axis_core.congmap.gz ...
+6419:WARNING   IMPCTE-104           5  The constraint mode of this inactive vie...
+6422:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6424:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6426:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6428:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6430:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6432:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6434:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6436:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6438:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6440:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6442:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6444:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6446:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6448:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6450:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6452:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6454:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6456:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6458:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6460:**WARN: (IMPDBTCL-204):	'shapes' is not a recognized object/attribute for object type 'net'. For help use 'dbSchema net' to get list of all supported (settable/unsettable) objects and attributes.
+6462:**WARN: (EMS-27):	Message (IMPDBTCL-204) has exceeded the current message display limit of 20.
+6464:**ERROR: (IMPDBTCL-247):	'wires' is not a recognized object or root attribute. Run 'help root:' to get a list of all root attributes, or 'man get_db' for more information about accessing objects and attributes.
+39300:#% Begin sroute (date=07/01 10:55:05, mem=2514.8M)
+39301:#% End sroute (date=07/01 10:55:11, total cpu=0:00:05.4, real=0:00:06.0, peak res=2532.3M, current mem=2532.3M)
+39302:#% Begin sroute (date=07/01 10:55:11, mem=2532.4M)
+39303:#% End sroute (date=07/01 10:55:12, total cpu=0:00:01.1, real=0:00:01.0, peak res=2532.4M, current mem=2525.1M)
+39304:#% Begin sroute (date=07/01 10:55:12, mem=2525.1M)
+39305:#% End sroute (date=07/01 10:55:13, total cpu=0:00:01.1, real=0:00:01.0, peak res=2525.1M, current mem=2524.3M)
+39306:Writing DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/03b_postplace_pre_route_sroute_failed.def', current time is Wed Jul  1 10:55:13 2026 ...
+39308:DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/03b_postplace_pre_route_sroute_failed.def' is written, current time is Wed Jul  1 10:55:13 2026 ...
+39313:Writing Binary DB to /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.v.bin in single-threaded mode...
+39316:Saving congestion map file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.route.congmap.gz ...
+39320:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+39321:Type 'man IMPCTE-104' for more detail.
+39322:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+39323:Type 'man IMPCTE-104' for more detail.
+39324:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+39325:Type 'man IMPCTE-104' for more detail.
+39326:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+39327:Type 'man IMPCTE-104' for more detail.
+39328:**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+39329:Type 'man IMPCTE-104' for more detail.
+39330:Saving preference file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/gui.pref.tcl ...
+39336:Saving PG file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.pg.gz, version#2, (Created by Innovus v22.33-s094_1 on Wed Jul  1 10:55:15 2026)
+39341:... 0 antenna drc markers are saved ...
+39350:Saving property file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.prop
+39352:#Saving pin access data to file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.apa ...
+39354:Saving rc congestion map /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.congmap.gz ...
+39357:Generated self-contained design 03b_postplace_pre_route_sroute_failed.enc.dat
+39362:WARNING   IMPCTE-104           5  The constraint mode of this inactive vie...
+39365:MPTDC_DIGITAL_SIGNOFF_ERROR: MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=route error=MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/postplace_pre_route_sroute_status.rpt
+39366:MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=route error=MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/postplace_pre_route_sroute_status.rpt
+39368:"error "MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=$stage error=$err""
+39383:ERROR: Innovus exited with code 1.
+
+===== TAIL: /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/logs/digital_signoff_wrapper.log =====
+
+Object: net:mptdc_axis_core/u_core_gen_pd_row\[7\].gen_pd_col\[7\].u_pd/n_29
+
+Object: net:mptdc_axis_core/u_core_gen_pd_row\[7\].gen_pd_col\[7\].u_pd/n_30
+
+Object: net:mptdc_axis_core/u_core_gen_pd_row\[7\].gen_pd_col\[7\].u_pd/n_31
+
+Object: net:mptdc_axis_core/u_core_gen_pd_row\[7\].gen_pd_col\[7\].u_pd/n_39
+
+Object: net:mptdc_axis_core/u_core_gen_pd_row\[7\].gen_pd_col\[7\].u_pd/n_40
+
+Object: net:mptdc_axis_core/u_core_gen_pd_row\[7\].gen_pd_col\[7\].u_pd/q1
+
+Object: net:mptdc_axis_core/u_core_gen_pd_row\[7\].gen_pd_col\[7\].u_pd/q2
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[0\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[0\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[1\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[1\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[2\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[2\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[3\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[3\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[4\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[4\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[5\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[5\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[6\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[6\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[7\].u_rst_fast_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_gen_rst_fast_tap\[7\].u_rst_fast_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[0\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[1\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[2\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[3\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[4\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[5\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[6\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_fast/gen_phase_buf\[7\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[0\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[1\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[2\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[3\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[4\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[5\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[6\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_phase_buf_slow/gen_phase_buf\[7\].iso_tap
+
+Object: net:mptdc_axis_core/u_core_u_rst_drain_sync/sync_q[3]
+
+Object: net:mptdc_axis_core/u_core_u_rst_drain_sync/sync_q[2]
+
+Object: net:mptdc_axis_core/u_core_u_rst_drain_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_u_rst_drain_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_u_rst_fifo_sync/sync_q[2]
+
+Object: net:mptdc_axis_core/u_core_u_rst_fifo_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_u_rst_fifo_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_u_rst_status_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_u_rst_status_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/u_core_u_rst_tx_sync/sync_q[4]
+
+Object: net:mptdc_axis_core/u_core_u_rst_tx_sync/sync_q[3]
+
+Object: net:mptdc_axis_core/u_core_u_rst_tx_sync/sync_q[2]
+
+Object: net:mptdc_axis_core/u_core_u_rst_tx_sync/sync_q[1]
+
+Object: net:mptdc_axis_core/u_core_u_rst_tx_sync/sync_q[0]
+
+Object: net:mptdc_axis_core/VDD
+
+Object: net:mptdc_axis_core/VSS
+
+Object: net:mptdc_axis_core/FE_OCPN68208_FE_DBTN31_u_core_pd_hit_level_51
+
+Object: net:mptdc_axis_core/FE_OCPN68207_FE_DBTN33_u_core_pd_hit_level_59
+
+Object: net:mptdc_axis_core/FE_OFN68202_u_core_n_41714
+
+Object: net:mptdc_axis_core/FE_OFN68201_n
+
+Object: net:mptdc_axis_core/FE_OFN68200_FE_OCPN4925_u_core_pd_hit_level_11
+
+Object: net:mptdc_axis_core/FE_OFN68199_FE_OCPN4938_u_core_pd_hit_level_59
+
+Object: net:mptdc_axis_core/FE_OFN68198_FE_DBTN17_u_core_drain_read_ctx_0
+
+Object: net:mptdc_axis_core/FE_OCPN68194_u_core_fast_tag_col_6__4
+
+Object: net:mptdc_axis_core/FE_OCPN68192_u_core_fast_tag_col_6__4
+
+Object: net:mptdc_axis_core/FE_OCPN68191_u_core_n_1539
+
+Number of objects exceeds limit. Use 'set_db get_db_display_limit <value>' to control the number of objects evaluated by 'get_db <object> .*' query.
+Object: route_type:default_route_type_leaf
+
+Object: route_type:default_route_type_nonleaf
+
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+inst: area bottomPadding box box_area box_ll box_llx box_lly box_size box_sizex box_sizey box_ur box_urx box_ury boxes cell defName dftDontScan dontInvertPhase dontMergeMultibit dontSplitMultibit dontTouch dontTouchEffective dontTouchSources group hInst hdlName instTerms isAlwaysOn isAlwaysOnBuffer isFixedMask isHaloBlock isInsideIlm isIsolation isJtagElem isLegal isLevelShifter isPhysOnly isSpareGate ldeDistanceLeft ldeDistanceRight leftPadding lithoHalo mapToMultibitBankLabel mapToMultibitRegister maskShift multibitFlopRejectionReason name objType orient pHaloBot pHaloBox pHaloBox_area pHaloBox_ll pHaloBox_llx pHaloBox_lly pHaloBox_size pHaloBox_sizex pHaloBox_sizey pHaloBox_ur pHaloBox_urx pHaloBox_ury pHaloLeft pHaloPoly pHaloRight pHaloTop pStatus pStatusCTS pStatusEffective pd pgInstTerms props pt pt_x pt_y rHaloBotLayer rHaloPoly rHaloSideSize rHaloTopLayer rightPadding sdp topPadding unusedBitCountInMultibit useCellsOnly
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+topCell: bumps designLib designView dftDontScan fPlan hInst insts isProtoModelCommitted isProtoModelSpecified markers name nets numBidirs numInputs numInsts numNets numPGTerms numPhysInsts numPhysNets numPhysTerms numTerms objType pds pgNets pgTerms physInsts physNets physTerms pinToCornerDist pkgComponents pkgObjects props ptns readOnly restoreDbDesignName restoreDbToolName restoreDbToolVersion seqReasonDeleted statusClockSynthesized statusDetailRouted statusIoPlaced statusPlaced statusPowerAnalyzed statusRCExtracted statusRouted statusScanOpted symmetryR90 symmetryX symmetryY terms texts
+#% Begin sroute (date=07/01 10:55:05, mem=2514.8M)
+#% End sroute (date=07/01 10:55:11, total cpu=0:00:05.4, real=0:00:06.0, peak res=2532.3M, current mem=2532.3M)
+#% Begin sroute (date=07/01 10:55:11, mem=2532.4M)
+#% End sroute (date=07/01 10:55:12, total cpu=0:00:01.1, real=0:00:01.0, peak res=2532.4M, current mem=2525.1M)
+#% Begin sroute (date=07/01 10:55:12, mem=2525.1M)
+#% End sroute (date=07/01 10:55:13, total cpu=0:00:01.1, real=0:00:01.0, peak res=2525.1M, current mem=2524.3M)
+Writing DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/03b_postplace_pre_route_sroute_failed.def', current time is Wed Jul  1 10:55:13 2026 ...
+unitPerMicron=1000, dbgMicronPerDBU=0.001000, unitPerDBU=1.000000
+DEF file '/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/def/03b_postplace_pre_route_sroute_failed.def' is written, current time is Wed Jul  1 10:55:13 2026 ...
+#% Begin save design ... (date=07/01 10:55:13, mem=2511.7M)
+% Begin Save ccopt configuration ... (date=07/01 10:55:13, mem=2511.7M)
+% End Save ccopt configuration ... (date=07/01 10:55:14, total cpu=0:00:00.1, real=0:00:00.0, peak res=2511.9M, current mem=2511.9M)
+% Begin Save netlist data ... (date=07/01 10:55:14, mem=2511.9M)
+Writing Binary DB to /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.v.bin in single-threaded mode...
+% End Save netlist data ... (date=07/01 10:55:14, total cpu=0:00:00.1, real=0:00:00.0, peak res=2511.9M, current mem=2511.9M)
+Saving symbol-table file ...
+Saving congestion map file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.route.congmap.gz ...
+% Begin Save AAE data ... (date=07/01 10:55:14, mem=2512.0M)
+Saving AAE Data ...
+% End Save AAE data ... (date=07/01 10:55:14, total cpu=0:00:00.0, real=0:00:00.0, peak res=2512.0M, current mem=2512.0M)
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+Type 'man IMPCTE-104' for more detail.
+Saving preference file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/gui.pref.tcl ...
+Saving mode setting ...
+Saving global file ...
+% Begin Save floorplan data ... (date=07/01 10:55:14, mem=2512.5M)
+Saving floorplan file ...
+% End Save floorplan data ... (date=07/01 10:55:15, total cpu=0:00:00.0, real=0:00:01.0, peak res=2512.5M, current mem=2512.5M)
+Saving PG file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.pg.gz, version#2, (Created by Innovus v22.33-s094_1 on Wed Jul  1 10:55:15 2026)
+*** Completed savePGFile (cpu=0:00:00.0 real=0:00:00.0 mem=2787.2M) ***
+Saving Drc markers ...
+... 40 markers are saved ...
+... 0 geometry drc markers are saved ...
+... 0 antenna drc markers are saved ...
+% Begin Save placement data ... (date=07/01 10:55:15, mem=2512.8M)
+** Saving stdCellPlacement_binary (version# 2) ...
+Save Adaptive View Pruning View Names to Binary file
+% End Save placement data ... (date=07/01 10:55:15, total cpu=0:00:00.0, real=0:00:00.0, peak res=2513.0M, current mem=2513.0M)
+% Begin Save routing data ... (date=07/01 10:55:15, mem=2513.0M)
+Saving route file ...
+*** Completed saveRoute (cpu=0:00:00.0 real=0:00:00.0 mem=2787.2M) ***
+% End Save routing data ... (date=07/01 10:55:15, total cpu=0:00:00.1, real=0:00:00.0, peak res=2513.0M, current mem=2513.0M)
+Saving property file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.prop
+*** Completed saveProperty (cpu=0:00:00.0 real=0:00:00.0 mem=2790.2M) ***
+#Saving pin access data to file /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.apa ...
+#
+Saving rc congestion map /sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat/mptdc_axis_core.congmap.gz ...
+% Begin Save power constraints data ... (date=07/01 10:55:16, mem=2513.0M)
+% End Save power constraints data ... (date=07/01 10:55:16, total cpu=0:00:00.0, real=0:00:00.0, peak res=2513.0M, current mem=2513.0M)
+Generated self-contained design 03b_postplace_pre_route_sroute_failed.enc.dat
+#% End save design ... (date=07/01 10:55:16, total cpu=0:00:01.6, real=0:00:03.0, peak res=2514.0M, current mem=2514.0M)
+
+*** Summary of all messages that are not suppressed in this session:
+Severity  ID               Count  Summary                                  
+WARNING   IMPCTE-104           5  The constraint mode of this inactive vie...
+*** Message Summary: 5 warning(s), 0 error(s)
+
+MPTDC_DIGITAL_SIGNOFF_ERROR: MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=route error=MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/postplace_pre_route_sroute_status.rpt
+MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=route error=MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_104050/reports/postplace_pre_route_sroute_status.rpt
+    while executing
+"error "MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=$stage error=$err""
+    (procedure "mptdc_signoff_stage" line 17)
+    invoked from within
+"mptdc_signoff_stage route ROUTE_STATUS {
+        mptdc_signoff_route_design
+    }"
+    (procedure "mptdc_signoff_main" line 49)
+    invoked from within
+"mptdc_signoff_main"
+
+*** Memory Usage v#1 (Current mem = 2807.363M, initial mem = 643.133M) ***
+*** Message Summary: 71666 warning(s), 2 error(s)
+
+--- Ending "Innovus" (totcpu=0:12:49, real=0:14:23, mem=2807.4M) ---
+
+ERROR: Innovus exited with code 1.

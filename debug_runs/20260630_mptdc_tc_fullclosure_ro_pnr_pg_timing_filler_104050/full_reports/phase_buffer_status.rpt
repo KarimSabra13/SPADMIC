@@ -1,0 +1,12 @@
+SLOW_ISO_COUNT expected=8 actual=8 status=PASS
+SLOW_DRIVER_COUNT expected=8 actual=8 status=PASS
+FAST_ISO_COUNT expected=8 actual=8 status=PASS
+FAST_DRIVER_COUNT expected=8 actual=8 status=PASS
+PHASE_BUFFER_PLACEMENT_APPLIED=YES
+SLOW_ISO_INSTANCES=u_core_u_phase_buf_slow/gen_phase_buf[0].u_iso u_core_u_phase_buf_slow/gen_phase_buf[1].u_iso u_core_u_phase_buf_slow/gen_phase_buf[2].u_iso u_core_u_phase_buf_slow/gen_phase_buf[3].u_iso u_core_u_phase_buf_slow/gen_phase_buf[4].u_iso u_core_u_phase_buf_slow/gen_phase_buf[5].u_iso u_core_u_phase_buf_slow/gen_phase_buf[6].u_iso u_core_u_phase_buf_slow/gen_phase_buf[7].u_iso
+SLOW_DRIVER_INSTANCES=u_core_u_phase_buf_slow/gen_phase_buf[0].u_drv u_core_u_phase_buf_slow/gen_phase_buf[1].u_drv u_core_u_phase_buf_slow/gen_phase_buf[2].u_drv u_core_u_phase_buf_slow/gen_phase_buf[3].u_drv u_core_u_phase_buf_slow/gen_phase_buf[4].u_drv u_core_u_phase_buf_slow/gen_phase_buf[5].u_drv u_core_u_phase_buf_slow/gen_phase_buf[6].u_drv u_core_u_phase_buf_slow/gen_phase_buf[7].u_drv
+FAST_ISO_INSTANCES=u_core_u_phase_buf_fast/gen_phase_buf[0].u_iso u_core_u_phase_buf_fast/gen_phase_buf[1].u_iso u_core_u_phase_buf_fast/gen_phase_buf[2].u_iso u_core_u_phase_buf_fast/gen_phase_buf[3].u_iso u_core_u_phase_buf_fast/gen_phase_buf[4].u_iso u_core_u_phase_buf_fast/gen_phase_buf[5].u_iso u_core_u_phase_buf_fast/gen_phase_buf[6].u_iso u_core_u_phase_buf_fast/gen_phase_buf[7].u_iso
+FAST_DRIVER_INSTANCES=u_core_u_phase_buf_fast/gen_phase_buf[0].u_drv u_core_u_phase_buf_fast/gen_phase_buf[1].u_drv u_core_u_phase_buf_fast/gen_phase_buf[2].u_drv u_core_u_phase_buf_fast/gen_phase_buf[3].u_drv u_core_u_phase_buf_fast/gen_phase_buf[4].u_drv u_core_u_phase_buf_fast/gen_phase_buf[5].u_drv u_core_u_phase_buf_fast/gen_phase_buf[6].u_drv u_core_u_phase_buf_fast/gen_phase_buf[7].u_drv
+PHASE_ISO_BUFFER=BUJIHDX4
+PHASE_FINAL_BUFFER=BUJIHDX12
+PHASE_BUFFER_STATUS=PASS
