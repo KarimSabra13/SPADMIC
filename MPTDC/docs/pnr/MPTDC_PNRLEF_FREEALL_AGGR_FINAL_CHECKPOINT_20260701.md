@@ -1353,3 +1353,96 @@ the original `211109` checkpoint again and exclude both already-tested cells:
 exclude FE_PSBC1565_u_core_fast_tag_col_0__4
 exclude FE_PSBC1567_u_core_fast_tag_col_0__4
 ```
+
+## Aggressive All-Path Endpoint-Flop ECO Probe
+
+An aggressive all-path timing ECO probe was run after the two one-cell probes.
+This run allowed endpoint flop resizing and attempted up to 512 cells from the
+original `211109` checkpoint.
+
+```text
+run_id=20260701_mptdc_211109_aggr_allpath_flop_231850
+result_dir=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_aggr_allpath_flop_231850
+source_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_final_211109/checkpoints/04_route_failed.enc.dat
+head=86407339b09a8c1f886a674f70a2a74ad9fb952b
+innovus_rc=0
+```
+
+Aggressive ECO policy:
+
+```text
+FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS=0
+FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE=1
+FAST_TAG_ECO_UPSIZE_SMALL_GATES=1
+FAST_TAG_ECO_MAX_UPSIZE_CELLS=512
+FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=12
+FAST_TAG_ECO_PATH_DRIVEN=1
+FAST_TAG_ECO_PATH_MAX_PATHS=100
+FAST_TAG_ECO_PATH_MAX_CELLS=1024
+FAST_TAG_ECO_NAME_FALLBACK=1
+```
+
+ECO action summary:
+
+```text
+FAST_TAG_SOURCE_Q_PIN_COUNT=56
+NFAST_CAPTURE_D_PIN_COUNT=448
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK_COUNT=504
+FAST_TAG_ECO_UPSIZE_STOP_REASON=max_upsize_cells_reached
+FAST_TAG_ECO_UPSIZE_ATTEMPTS=512
+FAST_TAG_ECO_UPSIZE_SUCCESSES=254
+FAST_TAG_TARGETED_ECO_STATUS=PASS
+```
+
+Several attempted target masters were rejected by Innovus command fallback, for
+example `DFRJIHDX3`, `DFRQJIHDX3`, `DFRSJIHDX3`, and `DFRSQJIHDX6`, while 254
+resizes were accepted. The accepted broad endpoint-flop and small-cell resizing
+was still destructive for placement.
+
+Physical result after the aggressive ECO:
+
+```text
+FINAL_DRC=2
+FINAL_SHORTS=1
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+CHECKPOINT_REPAIR_STATUS=REVIEW_REQUIRED
+```
+
+The saved marker table shows placement overlap violations, including resized
+`nfast_hit_latched_reg` instances, fast-tag instances, and filler cells:
+
+```text
+inline_01_assert_geometry_regular_verify_drc_markers.tsv
+POLY1 Placement SPOverlapViolation
+Inst u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1] is placed overlapping with other insts CheckPlace
+Inst u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] is placed overlapping with other insts CheckPlace
+Inst u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] is placed overlapping with other insts CheckPlace
+```
+
+Timing optimization result:
+
+```text
+POSTROUTE_OPT_TC_CLOSURE_MODE=DISABLED
+POSTROUTE_OPT_SETUP_PASSES=10
+POSTROUTE_OPT_SETUP_FINAL_WNS_NS=-0.085
+POSTROUTE_OPT_SETUP_FINAL_TNS_NS=-1.271
+POSTROUTE_OPT_SETUP_CLOSURE_STATUS=FAIL
+POSTROUTE_OPT_SETUP_STOP_REASON=max_passes_exhausted
+POSTROUTE_OPT_hold_STATUS=PASS
+POSTROUTE_OPT_drv_STATUS=PASS
+```
+
+Engineering decision:
+
+```text
+ECO_RESULT=REJECT_FOR_PHYSICAL_AND_TIMING
+REASON=created_placement_overlap_short_and_setup_degraded_to_minus_85ps
+DO_NOT_USE_CHECKPOINT=20260701_mptdc_211109_aggr_allpath_flop_231850
+```
+
+This run proves that broad endpoint-flop resizing is not a viable closure path
+from the routed checkpoint. It should not be used as a baseline for any further
+ECO or waiver package. If a timing waiver is required, restore the original
+geometry-clean `211109` checkpoint and apply the false path there, so the waiver
+run preserves the known geometry and regular-connectivity state.
