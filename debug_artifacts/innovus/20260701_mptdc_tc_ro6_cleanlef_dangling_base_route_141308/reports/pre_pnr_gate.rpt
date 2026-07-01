@@ -1,0 +1,4 @@
+PRE_PNR_GATE=PASS
+PRE_PNR_GATE_SOURCE=/sim/ksabra/SPADMIC_work/handoff/genus_typical/MPTDC_TC_Closure_Genus_RO6_xx31_20260629_1233_handoff
+PRE_PNR_GATE_KIND=handoff
+GENUS_WNS_MARGIN_LOW=YES

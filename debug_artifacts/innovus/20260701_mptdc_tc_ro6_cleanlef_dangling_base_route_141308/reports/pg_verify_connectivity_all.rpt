@@ -1,0 +1,52 @@
+VERIFY_CONNECTIVITY use new engine.
+
+******** Start: VERIFY CONNECTIVITY ********
+Start Time: Wed Jul  1 14:13:51 2026
+
+Design Name: mptdc_axis_core
+Database Units: 1000
+Design Boundary: (0.0000, 0.0000) (1061.2000, 801.9200)
+Error Limit = 1000; Warning Limit = 50
+Check all nets
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_fifo_rd_ptr_q_reg[5] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_drain_ctrl_pd_scan_q_reg[1] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_meas_ctrl_state_q_reg[2] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_meas_ctrl_state_q_reg[0] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_drain_ctrl_state_q_reg[1] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][7] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][6] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][5] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][4] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][3] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][2] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][1] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][row_nonzero][0] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][63] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][62] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][61] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][60] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][59] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][58] is placed and rerun verifyConnectivity.
+**WARN: (IMPVFC-96):	Instance pin C of net clk_sys has not been placed. Please make sure instance u_core_u_ctx_bank_ctx_snapshot_q_reg[1][hit_level][57] is placed and rerun verifyConnectivity.
+**WARN: (EMS-27):	Message (IMPVFC-96) has exceeded the current message display limit of 20.
+To increase the message display limit, refer to the product command reference manual.
+**** 14:13:51 **** Processed 5000 nets.
+**** 14:13:51 **** Processed 10000 nets.
+**** 14:13:51 **** Processed 15000 nets.
+Net VDD: has an unconnected terminal, has special routes with opens, dangling Wire.
+Net VSS: has an unconnected terminal, has special routes with opens, dangling Wire.
+
+Begin Summary 
+    4 Problem(s) (IMPVFC-96): Terminal(s) are not connected.
+    2 Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.
+    21 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+    27 total info(s) created.
+End Summary
+
+End Time: Wed Jul  1 14:13:51 2026
+Time Elapsed: 0:00:00.0
+
+******** End: VERIFY CONNECTIVITY ********
+  Verification Complete : 27 Viols.  0 Wrngs.
+  (CPU Time: 0:00:00.1  MEM: 0.000M)
+

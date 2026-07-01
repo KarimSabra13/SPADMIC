@@ -1,0 +1,55 @@
+*** Begin SPECIAL ROUTE on Wed Jul  1 14:26:49 2026 ***
+SPECIAL ROUTE ran on directory: /home/validmgr/ksabra/2026_SPAD/SPADMIC
+SPECIAL ROUTE ran on machine: lyoelectrosrv01.in2p3.fr (Linux 4.18.0-553.120.1.el8_10.x86_64 Xeon 2.10Ghz)
+
+Begin option processing ...
+srouteConnectPowerBump set to false
+routeSelectNet set to "VDD VSS"
+routeSpecial set to true
+srouteConnectBlockPin set to false
+srouteConnectConverterPin set to false
+srouteConnectPadPin set to false
+srouteConnectStripe set to false
+srouteFollowPadPin set to false
+srouteJogControl set to "preferWithChanges differentLayer"
+sroutePadPinAllPorts set to true
+sroutePreserveExistingRoutes set to true
+srouteRoutePowerBarPortOnBothDir set to true
+End option processing: cpu: 0:00:00, real: 0:00:00, peak: 4087.00 megs.
+
+Reading DB technology information...
+Finished reading DB technology information.
+Reading floorplan and netlist information...
+Finished reading floorplan and netlist information.
+Read in 8 layers, 4 routing layers, 1 overlap layer
+Read in 852 macros, 162 used
+Read in 14298 components
+  14296 core components: 0 unplaced, 14196 placed, 100 fixed
+  2 block/ring components: 0 unplaced, 0 placed, 2 fixed
+Read in 59 physical pins
+  59 physical pins: 0 unplaced, 0 placed, 59 fixed
+Read in 1 blockages
+Read in 55 nets
+Read in 2 special nets, 2 routed
+Read in 28655 terminals
+2 nets selected.
+
+Begin power routing ...
+CPU time for VDD FollowPin 0 seconds
+CPU time for VSS FollowPin 0 seconds
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (1043.04, 772.40) (1045.04, 772.66).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (1043.04, 772.40) (1045.04, 772.66).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIA2 at (1043.04, 772.40) (1045.04, 772.66).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to MINAREA rule violation, viaGen fail to generate via on layer MET3 at (1043.77, 772.40) (1044.31, 772.66).
+**WARN: (IMPPP-531):	ViaGen Warning: Due to SPACING rule violation, viaGen fail to generate via on layer VIATP at (1043.24, 772.40) (1044.84, 772.66).
+  Number of Core ports routed: 1  open: 24
+End power routing: cpu: 0:00:01, real: 0:00:01, peak: 4091.00 megs.
+
+
+
+ Begin updating DB with routing results ...
+ Updating DB with 59 io pins ...
+ Updating DB with 0 via definition ...
+sroute created 0 wire.
+ViaGen created 0 via, deleted 0 via to avoid violation.
+innovus 1> 
