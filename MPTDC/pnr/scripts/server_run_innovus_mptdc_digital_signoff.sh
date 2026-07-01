@@ -173,6 +173,7 @@ apply_recovery_defaults() {
   export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE="${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-1}"
   export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS="${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-2}"
   export MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES="${MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES:-Mar}"
+  export MPTDC_PG_STRATEGY="${MPTDC_PG_STRATEGY:-conservative_ro_hookup}"
 }
 
 guard_pg_policy() {
@@ -181,6 +182,7 @@ guard_pg_policy() {
     return
   fi
   local failures=()
+  local pg_strategy="${MPTDC_PG_STRATEGY:-conservative_ro_hookup}"
   if [[ "${MPTDC_BLOCK_PG_PIN_STYLE:-}" != "mesh_lr_vdd_vss" ]]; then
     failures+=("MPTDC_BLOCK_PG_PIN_STYLE=${MPTDC_BLOCK_PG_PIN_STYLE:-unset} expected mesh_lr_vdd_vss")
   fi
@@ -192,24 +194,53 @@ guard_pg_policy() {
       failures+=("MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-unset} requires MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=1 and MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1")
     fi
   fi
-  if is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
-    failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1 expected 0")
-  fi
-  if is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
-    failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0")
-  fi
   if is_truthy "${MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS:-0}"; then
     failures+=("MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS=1 expected 0")
   fi
   if [[ "${MPTDC_SROUTE_CORE_PIN_STOP_ROUTE:-}" != "RowEnd" ]]; then
     failures+=("MPTDC_SROUTE_CORE_PIN_STOP_ROUTE=${MPTDC_SROUTE_CORE_PIN_STOP_ROUTE:-unset} expected RowEnd")
   fi
-  if ! is_truthy "${MPTDC_ENABLE_RO_PG_HOOKUP:-1}"; then
-    failures+=("MPTDC_ENABLE_RO_PG_HOOKUP=${MPTDC_ENABLE_RO_PG_HOOKUP:-unset} expected 1")
-  fi
-  if ! is_truthy "${MPTDC_REQUIRE_RO_PG_HOOKUP:-1}"; then
-    failures+=("MPTDC_REQUIRE_RO_PG_HOOKUP=${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset} expected 1")
-  fi
+
+  case "$pg_strategy" in
+    innovus_sroute_golden_ro)
+      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-unset} expected 1 for innovus_sroute_golden_ro")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-unset} expected 1 for innovus_sroute_golden_ro")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_RO_PG_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_PROBE=${MPTDC_ENABLE_RO_PG_PROBE:-unset} expected 1 for innovus_sroute_golden_ro")
+      fi
+      if is_truthy "${MPTDC_ENABLE_RO_PG_HOOKUP:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_HOOKUP=${MPTDC_ENABLE_RO_PG_HOOKUP:-unset} expected 0 for innovus_sroute_golden_ro")
+      fi
+      if is_truthy "${MPTDC_REQUIRE_RO_PG_HOOKUP:-0}"; then
+        failures+=("MPTDC_REQUIRE_RO_PG_HOOKUP=${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset} expected 0 for innovus_sroute_golden_ro")
+      fi
+      if is_truthy "${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"; then
+        failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for innovus_sroute_golden_ro")
+      fi
+      ;;
+    conservative_ro_hookup)
+      if is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1 expected 0")
+      fi
+      if is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_RO_PG_HOOKUP:-1}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_HOOKUP=${MPTDC_ENABLE_RO_PG_HOOKUP:-unset} expected 1")
+      fi
+      if ! is_truthy "${MPTDC_REQUIRE_RO_PG_HOOKUP:-1}"; then
+        failures+=("MPTDC_REQUIRE_RO_PG_HOOKUP=${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset} expected 1")
+      fi
+      ;;
+    *)
+      failures+=("MPTDC_PG_STRATEGY=$pg_strategy unsupported")
+      ;;
+  esac
+
   if ((${#failures[@]} > 0)); then
     {
       echo "ERROR: stale or unsafe PG topology environment detected."
