@@ -95,3 +95,10 @@ RO-focused fixed-placement defaults.  The run should show:
 - `MPTDC_PD_PHYSICAL_AUDIT_MODE=free_internal`
 - `MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE=1` only when timing evidence is more
   urgent than route cleanliness for this exploratory candidate.
+
+For the fastest strict final-candidate attempt after the 2026-07-01 free-all
+golden-LEF route failure, use `--aggressive-postroute` with `--stage
+final_candidate`, `--enable-route-recovery`, and the generated PnR-only
+`RO_tune6` pin-access LEF.  This keeps the route DRC/connectivity gates strict
+while raising post-route setup optimization to the Tcl hard cap and expanding
+the bounded fast-tag ECO upsize/search budget.
