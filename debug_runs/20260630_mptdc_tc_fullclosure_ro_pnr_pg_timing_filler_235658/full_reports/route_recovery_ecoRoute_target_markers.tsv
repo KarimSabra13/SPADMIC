@@ -1,0 +1,42 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7fa25d6b21a0	{530.97 519.82 531.35 520.1}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_40747 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0 
+2	0x7fa25d6b2740	{530.97 519.82 531.35 520.1}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_40747 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+3	0x7fa25d6b28c0	{221.745 681.16 221.745 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+4	0x7fa25d6b28f0	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+5	0x7fa25d6b2110	{302.49 411.18 302.87 411.46}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57560 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0 
+6	0x7fa25d6b2140	{319.29 416.22 319.67 416.5}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57561 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0 
+7	0x7fa25d6b2170	{323.21 419.58 323.59 419.86}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57556 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0 
+8	0x7fa25d6b26b0	{302.49 411.18 302.87 411.46}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57560 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+9	0x7fa25d6b26e0	{319.29 416.22 319.67 416.5}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57561 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+10	0x7fa25d6b2710	{323.21 419.58 323.59 419.86}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57556 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+11	0x7fa25d6b21d0	{169.3 608.25 170.1 608.63}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[4] Type: Metal Short # -1 -1 9 2 : 169.3000 608.2500 170.1000 608.6300 2: 169.3000 608.2500 170.1000 608.6300 2
+12	0x7fa25d6b2200	{169.82 600.16 170.1 608.63}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[4] Type: Metal Short # -1 -1 9 2 : 169.8200 600.1600 170.1000 608.6300 2: 169.8200 600.1600 170.1000 608.6300 2
+13	0x7fa25d6b2680	{169.82 600.16 170.1 608.63}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[4] & Special Wire of Net VDD Type: Metal Short # -1 -1 9 2 : 169.8200 600.1600 170.1000 608.6300 2: 169.8200 600.1600 170.1000 608.6300 2
+14	0x7fa25d6b2770	{168.4 610.4 170.4 620.14}	MET1	Geometry	Metal_Short	Special Wire of Net VDD & Blockage of Cell u_core_u_osc_slow_u_ro_tune4 Type: Metal Short # -1 -1 9 2 : 168.2850 610.2850 170.5150 620.2550 1: 168.2850 610.2850 170.5150 620.2550 1
+15	0x7fa25d6b27a0	{169.3 608.25 170.1 608.63}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[4] & Special Wire of Net VDD Type: Metal Short # -1 -1 9 2 : 169.3000 608.2500 170.1000 608.6300 2: 169.3000 608.2500 170.1000 608.6300 2
+16	0x7fa25d6b2830	{144.88 625.66 146.88 639.455}	MET2	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_osc_slow_u_ro_tune4/vdd!; Direction: INOUT; Use: POWER;
+17	0x7fa25d6b2860	{52.43 627.355 57.575 630.59}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_osc_slow_u_ro_tune4/VDD; Direction: INOUT; Use: POWER;
+18	0x7fa25d6b2a10	{50.405 645.6 52.085 653.265}	MET1	Connectivity	UnConnectedPin	Net VSS Pin: u_core_u_osc_slow_u_ro_tune4/VSS; Direction: INOUT; Use: GROUND;
+19	0x7fa25d6b20e0	{168.4 191.685 170.4 191.915}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ctx_snapshot[nfast_hit_packed][383] Type: Metal Short # -1 -1 9 2 : 168.4000 191.6850 170.4000 191.9150 1: 168.4000 191.6850 170.4000 191.9150 1
+20	0x7fa25d6b25f0	{168.4 181.16 170.4 190.9}	MET1	Geometry	Metal_Short	Special Wire of Net VDD & Blockage of Cell u_core_u_osc_fast_u_ro_tune4 Type: Metal Short # -1 -1 9 2 : 168.2850 181.0450 170.5150 191.0150 1: 168.2850 181.0450 170.5150 191.0150 1
+21	0x7fa25d6b2620	{168.4 191.685 170.4 191.915}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ctx_snapshot[nfast_hit_packed][383] & Special Wire of Net VDD Type: Metal Short # -1 -1 9 2 : 168.4000 191.6850 170.4000 191.9150 1: 168.4000 191.6850 170.4000 191.9150 1
+22	0x7fa25d6b27d0	{144.88 161.845 146.88 175.64}	MET2	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_osc_fast_u_ro_tune4/vdd!; Direction: INOUT; Use: POWER;
+23	0x7fa25d6b2800	{52.43 170.71 57.575 173.945}	MET1	Connectivity	UnConnectedPin	Net VDD Pin: u_core_u_osc_fast_u_ro_tune4/VDD; Direction: INOUT; Use: POWER;
+24	0x7fa25d6b29e0	{50.405 148.035 52.085 155.7}	MET1	Connectivity	UnConnectedPin	Net VSS Pin: u_core_u_osc_fast_u_ro_tune4/VSS; Direction: INOUT; Use: GROUND;
+25	0x7fa25d6b2920	{221.745 121.16 221.745 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+26	0x7fa25d6b2980	{201.16 118.0 201.16 118.0}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+27	0x7fa25d6b2a70	{221.745 125.16 221.745 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+28	0x7fa2b34c9400	{116.315 120.005 116.325 120.795}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[1] Actual: 0.010000 Required: 0.230000 Type: ParallelRunLength Spacing # 10 230 3 2 : 116.3250 120.0050 116.5550 120.7950 1: 116.0850 120.0050 116.3150 120.7950 1
+29	0x7fa2b34c93d0	{116.315 120.005 116.325 120.795}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[1] Actual: 0.010000 Required: 0.230000 Type: ParallelRunLength Spacing # 10 230 3 2 : 116.3250 120.0050 116.5550 120.7950 1: 116.0850 120.0050 116.3150 120.7950 1
+30	0x7fa2b34c93a0	{117.295 119.865 117.435 120.095}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[6] Type: Metal Short # -1 -1 9 2 : 117.2950 119.8650 117.4350 120.0950 1: 117.2950 119.8650 117.4350 120.0950 1
+31	0x7fa2b34c9370	{117.295 119.865 117.435 120.795}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[7] Type: Metal Short # -1 -1 9 2 : 117.2950 119.8650 117.4350 120.7950 1: 117.2950 119.8650 117.4350 120.7950 1
+32	0x7fa25d6b2080	{117.295 119.865 117.51 119.98}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[7] Type: Metal Short # -1 -1 9 2 : 117.2950 119.8650 117.5100 119.9800 1: 117.2950 119.8650 117.5100 119.9800 1
+33	0x7fa25d6b20b0	{117.295 120.565 117.435 120.795}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[6] Type: Metal Short # -1 -1 9 2 : 117.2950 120.5650 117.4350 120.7950 1: 117.2950 120.5650 117.4350 120.7950 1
+34	0x7fa25d6b2590	{117.295 119.865 117.51 119.98}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[7] & Regular Wire of Net u_core_ro_fast_code_q[6] Type: Metal Short # -1 -1 9 2 : 117.2950 119.8650 117.5100 119.9800 1: 117.2950 119.8650 117.5100 119.9800 1
+35	0x7fa25d6b25c0	{117.295 119.865 117.435 120.795}	MET1	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[7] & Pin of Cell u_core_u_osc_fast_u_ro_tune4 Type: Metal Short # -1 -1 9 2 : 117.2950 119.8650 117.4350 120.7950 1: 117.2950 119.8650 117.4350 120.7950 1
+36	0x7fa25d6b2650	{116.315 120.005 116.325 120.795}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[1] & Regular Wire of Net u_core_ro_fast_code_q[0] Actual: 0.010000 Required: 0.230000 Type: ParallelRunLength Spacing # 10 230 3 2 : 116.0850 120.0050 116.3150 120.7950 1: 116.3250 120.0050 116.5550 120.7950 1     LEF Description:  SPACING 0.230000 
+37	0x7fa25d6b2950	{48.0 121.16 48.0 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+38	0x7fa25d6b29b0	{121.16 118.0 121.16 118.0}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+39	0x7fa25d6b2aa0	{48.0 125.16 48.0 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+40	0x7fa25d6b2890	{16.16 16.16 1045.04 785.76}	POLY1	Connectivity	Open	Net VDD
+41	0x7fa25d6b2a40	{13.16 13.16 1048.04 788.76}	POLY1	Connectivity	Open	Net VSS

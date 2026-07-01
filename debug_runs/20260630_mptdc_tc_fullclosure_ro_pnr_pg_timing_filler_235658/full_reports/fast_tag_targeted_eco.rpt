@@ -1,0 +1,719 @@
+# MPTDC Fast-Tag Targeted Innovus ECO
+FAST_TAG_TARGETED_ECO_ENABLED=1
+FAST_TAG_TO_PD_TS_FALSE_PATH=NO
+FAST_TAG_TO_PD_TS_MULTICYCLE=NO
+FAST_TAG_TARGETED_ECO_SCOPE=innovus_only_no_rtl_no_genus
+FAST_TAG_TARGETED_ECO_ALLOWED=fast_tag_related_data_buffers_inverters_small_gates_and_ON22JIHDX1_to_ON22JIHDX2
+FAST_TAG_TARGETED_ECO_FORBIDDEN=RO_macros_phase_buffers_oscillator_clocks_clock_tree_cells
+FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS=0
+FAST_TAG_ECO_UPSIZE_SMALL_GATES=1
+FAST_TAG_ECO_MAX_UPSIZE_CELLS=96
+FAST_TAG_ECO_UPSIZE_DRIVE_LIMIT=4
+FAST_TAG_ECO_PATH_DRIVEN=1
+FAST_TAG_ECO_PATH_MAX_PATHS=150
+FAST_TAG_ECO_PATH_MAX_CELLS=160
+FAST_TAG_ECO_NAME_FALLBACK=0
+FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE=1
+FAST_TAG_SOURCE_Q_PIN_COUNT=56
+NFAST_CAPTURE_D_PIN_COUNT=448
+FAST_TAG_SOURCE_FLOP_COUNT=56
+NFAST_CAPTURE_FLOP_COUNT=448
+FAST_TAG_ECO_PATH_TIMING_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_235658/reports/fast_tag_to_pd_timing_targeted_eco_input.rpt
+FAST_TAG_ECO_PATH_TIMING_REPORT_STATUS=PASS
+FAST_TAG_ECO_PATH_TIMING_REPORT_COMMAND=report_timing -view TC_NOMINAL -from 0x78e0 -to 0x78e3 -max_paths 150 -path_type full_clock -net
+FAST_TAG_ECO_PROTECTED_CELL_COUNT=36
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[0].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[1].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[2].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[3].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[4].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[5].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[6].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[0].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[1].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[2].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[3].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[3].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[3].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[3].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[3].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[3].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[3].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[4].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[4].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[4].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[4].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[4].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[4].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[4].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[5].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[6].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[6].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[6].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[6].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[6].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[6].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[6].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[7].u_pd/nfast_hit_latched_reg[0]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[7].u_pd/nfast_hit_latched_reg[6]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[7].u_pd/nfast_hit_latched_reg[4]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[7].u_pd/nfast_hit_latched_reg[1]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[7].u_pd/nfast_hit_latched_reg[5]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[7].u_pd/nfast_hit_latched_reg[3]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK=u_core_gen_pd_row[7].gen_pd_col[7].u_pd/nfast_hit_latched_reg[2]
+FAST_TAG_ECO_ENDPOINT_FLOP_SIZE_OK_COUNT=504
+FAST_TAG_ECO_PROTECTED_CLOCK=clk_osc_slow
+FAST_TAG_ECO_PROTECTED_CLOCK=clk_osc_fast
+FAST_TAG_ECO_PROTECTED_CLOCK=clk_osc_slow_tap*
+FAST_TAG_ECO_PROTECTED_CLOCK=clk_osc_fast_tap*
+FAST_TAG_ECO_PROTECTED_CLOCK=clk_osc_*_buf_tap*
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1778_u_core_fast_tag_col_4__2 score=16 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1840_u_core_fast_tag_col_4__3 score=16 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1841_u_core_fast_tag_col_4__4 score=16 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1787_u_core_fast_tag_col_4__1 score=16 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC813_u_core_fast_tag_col_4__0 score=14 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX4
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1859_u_core_fast_tag_col_5__4 score=14 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX2
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC150_u_core_fast_tag_col_0__0 score=10 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX8
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC844_u_core_fast_tag_col_0__4 score=10 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX6
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] score=8 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] score=8 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] score=8 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] score=8 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] score=8 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1861_u_core_fast_tag_col_6__3 score=8 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1789_u_core_fast_tag_col_6__4 score=8 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC151_u_core_fast_tag_col_0__0 score=8 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX8
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC193_u_core_fast_tag_col_1__0 score=8 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX8
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] score=7 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] score=7 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] score=7 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] score=7 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] score=7 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1786_u_core_fast_tag_col_2__1 score=6 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OCPC1895_FE_OFN174_u_core_fast_tag_col_2__1 score=6 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX12
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] score=6 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] score=5 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] score=5 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] score=5 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] score=4 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] score=4 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1437_u_core_fast_tag_col_0__2 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1813_u_core_fast_tag_col_7__0 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1882_u_core_fast_tag_col_1__2 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1883_u_core_fast_tag_col_1__2 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX4
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] score=4 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] score=4 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OCPC1486_u_core_fast_tag_col_0__3 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OCPC1488_u_core_fast_tag_col_0__3 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1884_u_core_fast_tag_col_2__4 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] score=4 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1001_u_core_fast_tag_col_1__3 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1860_u_core_fast_tag_col_6__2 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX2
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1769_u_core_fast_tag_col_1__1 score=4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] score=3 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] score=3 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] score=3 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] score=3 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] score=3 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] score=3 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] score=2 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] score=2 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] score=2 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] score=2 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] score=2 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] score=2 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1438_u_core_fast_tag_col_0__2 score=2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX8
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1814_u_core_fast_tag_col_7__0 score=2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX2
+FAST_TAG_ECO_PATH_ALLOWED_CELL=FE_OFC1788_u_core_fast_tag_col_6__4 score=2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] score=1 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] score=1 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] score=1 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] score=1 class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1
+FAST_TAG_ECO_PATH_DRIVEN_STATUS=PASS
+FAST_TAG_ECO_PATH_ALLOWED_CELL_COUNT=62
+FAST_TAG_ECO_NAME_FALLBACK_ALLOWED_CELL_COUNT=0
+FAST_TAG_ECO_PATH_ORDERED_PREFIX_COUNT=62
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1778_u_core_fast_tag_col_4__2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3 path_score=16 resize_target=INJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1840_u_core_fast_tag_col_4__3 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3 path_score=16 resize_target=INJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1841_u_core_fast_tag_col_4__4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3 path_score=16 resize_target=INJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1787_u_core_fast_tag_col_4__1 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4 path_score=16 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC813_u_core_fast_tag_col_4__0 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX4 path_score=14 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1859_u_core_fast_tag_col_5__4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX2 path_score=14 resize_target=INJIHDX3
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC150_u_core_fast_tag_col_0__0 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX8 path_score=10 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC844_u_core_fast_tag_col_0__4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX6 path_score=10 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=8 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=8 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=8 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=8 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=8 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1861_u_core_fast_tag_col_6__3 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1 path_score=8 resize_target=INJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1789_u_core_fast_tag_col_6__4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1 path_score=8 resize_target=INJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC151_u_core_fast_tag_col_0__0 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX8 path_score=8 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC193_u_core_fast_tag_col_1__0 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX8 path_score=8 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1 path_score=7 resize_target=DFRSQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=7 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=7 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=7 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=7 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1786_u_core_fast_tag_col_2__1 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4 path_score=6 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=FE_OCPC1895_FE_OFN174_u_core_fast_tag_col_2__1 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX12 path_score=6 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=6 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=5 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1 path_score=5 resize_target=DFRSQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=5 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=4 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=4 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1437_u_core_fast_tag_col_0__2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX3 path_score=4 resize_target=BUJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1813_u_core_fast_tag_col_7__0 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1 path_score=4 resize_target=INJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1882_u_core_fast_tag_col_1__2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4 path_score=4 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1883_u_core_fast_tag_col_1__2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX4 path_score=4 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=4 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1 path_score=4 resize_target=DFRSQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OCPC1486_u_core_fast_tag_col_0__3 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3 path_score=4 resize_target=INJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=FE_OCPC1488_u_core_fast_tag_col_0__3 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX3 path_score=4 resize_target=BUJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1884_u_core_fast_tag_col_2__4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3 path_score=4 resize_target=INJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=4 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1001_u_core_fast_tag_col_1__3 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX3 path_score=4 resize_target=INJIHDX4
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1860_u_core_fast_tag_col_6__2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX2 path_score=4 resize_target=INJIHDX3
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1769_u_core_fast_tag_col_1__1 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX4 path_score=4 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=3 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=3 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=3 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRSQJIHDX1 path_score=3 resize_target=DFRSQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=3 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=3 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=2 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=2 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=2 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=2 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=2 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=2 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1438_u_core_fast_tag_col_0__2 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=BUJIHDX8 path_score=2 resize_target=
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1814_u_core_fast_tag_col_7__0 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX2 path_score=2 resize_target=INJIHDX3
+FAST_TAG_ECO_ALLOWED_CELL=FE_OFC1788_u_core_fast_tag_col_6__4 class=FAST_TAG_DATA_BUFFER_OR_INVERTER master=INJIHDX1 path_score=2 resize_target=INJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=1 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=1 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=1 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] class=FAST_TAG_ENDPOINT_FLOP_BOUNDED_RESIZE master=DFRRQJIHDX1 path_score=1 resize_target=DFRRQJIHDX2
+FAST_TAG_ECO_ALLOWED_CELL_COUNT=62
+FAST_TAG_ECO_ON22_X1_CANDIDATE_COUNT=0
+FAST_TAG_ECO_UPSIZE_CANDIDATE_COUNT=50
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1778_u_core_fast_tag_col_4__2 target=INJIHDX4 status=PASS command=ecoChangeCell -inst FE_OFC1778_u_core_fast_tag_col_4__2 -cell INJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1840_u_core_fast_tag_col_4__3 target=INJIHDX4 status=PASS command=ecoChangeCell -inst FE_OFC1840_u_core_fast_tag_col_4__3 -cell INJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1841_u_core_fast_tag_col_4__4 target=INJIHDX4 status=PASS command=ecoChangeCell -inst FE_OFC1841_u_core_fast_tag_col_4__4 -cell INJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1859_u_core_fast_tag_col_5__4 target=INJIHDX3 status=PASS command=ecoChangeCell -inst FE_OFC1859_u_core_fast_tag_col_5__4 -cell INJIHDX3
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1861_u_core_fast_tag_col_6__3 target=INJIHDX2 status=PASS command=ecoChangeCell -inst FE_OFC1861_u_core_fast_tag_col_6__3 -cell INJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1789_u_core_fast_tag_col_6__4 target=INJIHDX2 status=PASS command=ecoChangeCell -inst FE_OFC1789_u_core_fast_tag_col_6__4 -cell INJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] target=DFRSQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0]} -cell DFRSQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] target=DFRSQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0]} -cell DFRSQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1437_u_core_fast_tag_col_0__2 target=BUJIHDX4 status=PASS command=ecoChangeCell -inst FE_OFC1437_u_core_fast_tag_col_0__2 -cell BUJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1813_u_core_fast_tag_col_7__0 target=INJIHDX2 status=PASS command=ecoChangeCell -inst FE_OFC1813_u_core_fast_tag_col_7__0 -cell INJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] target=DFRSQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0]} -cell DFRSQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OCPC1486_u_core_fast_tag_col_0__3 target=INJIHDX4 status=PASS command=ecoChangeCell -inst FE_OCPC1486_u_core_fast_tag_col_0__3 -cell INJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OCPC1488_u_core_fast_tag_col_0__3 target=BUJIHDX4 status=PASS command=ecoChangeCell -inst FE_OCPC1488_u_core_fast_tag_col_0__3 -cell BUJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1884_u_core_fast_tag_col_2__4 target=INJIHDX4 status=PASS command=ecoChangeCell -inst FE_OFC1884_u_core_fast_tag_col_2__4 -cell INJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1001_u_core_fast_tag_col_1__3 target=INJIHDX4 status=PASS command=ecoChangeCell -inst FE_OFC1001_u_core_fast_tag_col_1__3 -cell INJIHDX4
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1860_u_core_fast_tag_col_6__2 target=INJIHDX3 status=PASS command=ecoChangeCell -inst FE_OFC1860_u_core_fast_tag_col_6__2 -cell INJIHDX3
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] target=DFRSQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0]} -cell DFRSQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1814_u_core_fast_tag_col_7__0 target=INJIHDX3 status=PASS command=ecoChangeCell -inst FE_OFC1814_u_core_fast_tag_col_7__0 -cell INJIHDX3
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_OFC1788_u_core_fast_tag_col_6__4 target=INJIHDX2 status=PASS command=ecoChangeCell -inst FE_OFC1788_u_core_fast_tag_col_6__4 -cell INJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPT=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] target=DFRRQJIHDX2 status=PASS command=ecoChangeCell -inst {u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6]} -cell DFRRQJIHDX2
+FAST_TAG_ECO_UPSIZE_ATTEMPTS=50
+FAST_TAG_ECO_UPSIZE_SUCCESSES=50
+FAST_TAG_ECO_BUFFER_INSERTION_SCOPE=delegated_to_following_optDesign_postRoute_with_fast_tag_group_and_protected_forbidden_families
+FAST_TAG_TARGETED_ECO_STATUS=PASS

@@ -1,0 +1,25 @@
+VERIFY_CONNECTIVITY use new engine.
+
+******** Start: VERIFY CONNECTIVITY ********
+Start Time: Wed Jul  1 00:27:15 2026
+
+Design Name: mptdc_axis_core
+Database Units: 1000
+Design Boundary: (0.0000, 0.0000) (1061.2000, 801.9200)
+Error Limit = 1000; Warning Limit = 50
+Check specified nets
+**** 00:27:15 **** Processed 5000 nets.
+**** 00:27:15 **** Processed 10000 nets.
+**** 00:27:15 **** Processed 15000 nets.
+
+Begin Summary 
+  Found no problems or warnings.
+End Summary
+
+End Time: Wed Jul  1 00:27:15 2026
+Time Elapsed: 0:00:00.0
+
+******** End: VERIFY CONNECTIVITY ********
+  Verification Complete : 0 Viols.  0 Wrngs.
+  (CPU Time: 0:00:00.7  MEM: 0.000M)
+

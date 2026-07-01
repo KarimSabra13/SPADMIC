@@ -1,0 +1,72 @@
+*** timeDesign #1 [begin] : totSession cpu/real = 0:00:27.2/0:00:27.5 (1.0), mem = 1882.2M
+Set Using Default Delay Limit as 101.
+**WARN: (IMPDC-1629):	The default delay limit was set to 101. This is less than the default of 1000 and may result in inaccurate delay calculation for nets with a fanout higher than the setting.  If needed, the default delay limit may be adjusted by running the command 'set delaycal_use_default_delay_limit'.
+Setting High Fanout Nets ( > 100 ) as ideal temporarily for -prePlace option
+Set Default Net Delay as 0 ps.
+Set Default Net Load as 0 pF. 
+Set Default Input Pin Transition as 1 ps.
+INFO: setAnalysisMode clkSrcPath true -> false
+INFO: setAnalysisMode clockPropagation sdcControl -> forcedIdeal
+Starting delay calculation for Setup views
+AAE_INFO: opIsDesignInPostRouteState() is 0
+AAE DB initialization (MEM=2024.78 CPU=0:00:00.0 REAL=0:00:00.0) 
+#################################################################################
+# Design Stage: PreRoute
+# Design Name: mptdc_axis_core
+# Design Mode: 180nm
+# Analysis Mode: MMMC Non-OCV 
+# Parasitics Mode: No SPEF/RCDB 
+# Signoff Settings: SI Off 
+#################################################################################
+Using master clock 'clk_osc_fast_tap2' for generated clock 'clk_osc_fast_buf_tap2' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_fast_tap6' for generated clock 'clk_osc_fast_buf_tap6' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_fast_tap3' for generated clock 'clk_osc_fast_buf_tap3' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_fast_tap7' for generated clock 'clk_osc_fast_buf_tap7' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_fast_tap1' for generated clock 'clk_osc_fast_buf_tap1' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_fast_tap4' for generated clock 'clk_osc_fast_buf_tap4' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_fast_tap5' for generated clock 'clk_osc_fast_buf_tap5' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow_tap4' for generated clock 'clk_osc_slow_buf_tap4' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow_tap2' for generated clock 'clk_osc_slow_buf_tap2' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow_tap5' for generated clock 'clk_osc_slow_buf_tap5' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow_tap6' for generated clock 'clk_osc_slow_buf_tap6' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow_tap7' for generated clock 'clk_osc_slow_buf_tap7' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_fast' for generated clock 'clk_osc_fast_buf_tap0' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow_tap3' for generated clock 'clk_osc_slow_buf_tap3' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow_tap1' for generated clock 'clk_osc_slow_buf_tap1' in view 'TC_NOMINAL'
+Using master clock 'clk_osc_slow' for generated clock 'clk_osc_slow_buf_tap0' in view 'TC_NOMINAL'
+Calculate delays in Single mode...
+Start delay calculation (fullDC) (1 T). (MEM=2045.04)
+siFlow : Timing analysis mode is single, using late cdB files
+Total number of fetched objects 15138
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+End delay calculation. (MEM=2194.66 CPU=0:00:01.8 REAL=0:00:02.0)
+End delay calculation (fullDC). (MEM=2194.66 CPU=0:00:02.3 REAL=0:00:03.0)
+*** Done Building Timing Graph (cpu=0:00:03.7 real=0:00:05.0 totSessionCpu=0:00:31.8 mem=2186.7M)
+
+------------------------------------------------------------------
+          timeDesign Summary
+------------------------------------------------------------------
+
+Setup views included:
+ TC_NOMINAL 
+
++--------------------+---------+---------+---------+
+|     Setup mode     |   all   | reg2reg | default |
++--------------------+---------+---------+---------+
+|           WNS (ns):|  0.025  |  0.025  |  1.730  |
+|           TNS (ns):|  0.000  |  0.000  |  0.000  |
+|    Violating Paths:|    0    |    0    |    0    |
+|          All Paths:|  4886   |  4862   |  2192   |
++--------------------+---------+---------+---------+
+
+Density: 69.982%
+------------------------------------------------------------------
+Set Using Default Delay Limit as 1000.
+Resetting back High Fanout Nets as non-ideal
+Set Default Net Delay as 1000 ps.
+Set Default Input Pin Transition as 0.1 ps.
+Set Default Net Load as 0.5 pF. 
+Reported timing to dir ./timingReports
+Total CPU time: 4.97 sec
+Total Real time: 6.0 sec
+Total Memory Usage: 2100.144531 Mbytes

@@ -1,0 +1,21 @@
+========================================================================================================================================================================================================================================================================================================
+pinShape: This corresponds to one of a term's .pins.layerShapeShapes.shapes. It carries a link to the term object, that a layerShape object does not have. This allows GUI operations that need both the layerShape and the term object together as one object like delete_obj or wire-editing commands.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+layer: obj(layer), Layer of the pinShape.
+mask: int, The mask number for this pinShape if its layer has multiple masks. 0 means it is uncolored. Refer to layer.numMasks for legal range.
+name: string, Name of the term for this pinShape. Note that all the pin shapes for one term will have the same name.
+objType: enum(antennaData antennaModel bndry bump bumpGrid bumpTerm bus busGuide busSinkGroup cellDensity densityShape fPlan foreign gCellGridDef group guiLine guiPoly guiRect guiText hInst hInstTerm hNet hTerm head inst instTerm io layer layerRule layerShape libCell marker net netGroup pBlkg pWire pd pgInstTerm pin pinGroup pinGuide pinShape pkgComponent pkgObject prop ptn ptnCell ptnPinBlkg rBlkg resistor resizeBlkg routeType row rule sViaInst sWire sdp shape shapeVia site stackViaRule term text topCell trackDef vCell vWire via viaInst viaRuleGenerate whatIfVia whatIfWire wire), Object type name.
+polyPts: list(pt), Points of the polygon of the pinShape for type rect or polygon.
+rect: rect, Bounding box of the pinShape for type rect or polygon.
+rect_area: area, Area of bounding box of the pinShape for type rect or polygon.
+rect_ll: pt, Lower left (ll) of bounding box of the pinShape for type rect or polygon.
+rect_llx: coord, Lower left X (llx) of bounding box of the pinShape for type rect or polygon.
+rect_lly: coord, Lower left Y (lly) of bounding box of the pinShape for type rect or polygon.
+rect_size: pt, Size of bounding box of the pinShape for type rect or polygon.
+rect_sizex: coord, Size X of bounding box of the pinShape for type rect or polygon.
+rect_sizey: coord, Size Y of bounding box of the pinShape for type rect or polygon.
+rect_ur: pt, Upper right (ur) of bounding box of the pinShape for type rect or polygon.
+rect_urx: coord, Upper Right X (urx) of bounding box of the pinShape for type rect or polygon.
+rect_ury: coord, Upper Right Y (ury) of bounding box of the pinShape for type rect or polygon.
+term: obj(term), The term this pinShape belongs to.
+type: enum(polygon rect), Type of the pinShape.

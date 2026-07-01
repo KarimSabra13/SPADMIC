@@ -1,0 +1,16 @@
+STAGE=route
+STATUS=FAIL
+ERROR=MPTDC_ROUTE_GATE_FAILED: report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_235658/reports/route_status.rpt
+
+MPTDC_ROUTE_GATE_FAILED: report=/sim/ksabra/SPADMIC_work/innovus/20260630_mptdc_tc_fullclosure_ro_pnr_pg_timing_filler_235658/reports/route_status.rpt
+    while executing
+"error "MPTDC_ROUTE_GATE_FAILED: report=$rpt""
+    (procedure "mptdc_signoff_write_route_gate_status" line 121)
+    invoked from within
+"mptdc_signoff_write_route_gate_status $rpt $drc_data $regular_bad $special_bad $unrouted $antenna_status"
+    (procedure "mptdc_signoff_route_design" line 99)
+    invoked from within
+"mptdc_signoff_route_design"
+    ("uplevel" body line 2)
+    invoked from within
+"uplevel 1 $body"
