@@ -1288,3 +1288,68 @@ apply exactly one remaining candidate
 reroute only as needed
 rerun geometry, regular connectivity, extraction, setup, hold, and DRV checks
 ```
+
+## Second One-Cell Fast-Tag ECO Probe
+
+The second one-cell timing ECO probe restored the original `211109` checkpoint
+again and excluded the first rejected cell. This was a manual single-candidate
+probe, not a broad `MAX_UPSIZE_CELLS=2` run.
+
+```text
+run_id=20260701_mptdc_211109_eco_fasttag_next1_230955
+result_dir=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_eco_fasttag_next1_230955
+source_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_final_211109/checkpoints/04_route_failed.enc.dat
+head=04f27c53350632ccd59eda5137fc3c9b48bf4411
+innovus_rc=0
+```
+
+Manual ECO action:
+
+```text
+MPTDC_MANUAL_ECO_INST=FE_PSBC1567_u_core_fast_tag_col_0__4
+MPTDC_MANUAL_ECO_TARGET=BUJIHDX8
+MPTDC_MANUAL_ECO_RESIZE_STATUS=PASS
+MPTDC_MANUAL_ECO_RESIZE_COMMAND=ecoChangeCell -inst FE_PSBC1567_u_core_fast_tag_col_0__4 -cell BUJIHDX8
+```
+
+Physical result after the ECO:
+
+```text
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY
+PG_CONNECTIVITY_STATUS=FAIL evidence=special_pg_dangling_only_after_manual_single_cell_eco
+ROUTE_STATUS=FAIL evidence=geometry_clean_regular_clean_special_pg_dangling_only_after_manual_single_cell_eco
+EXTRACTION_STATUS=PASS evidence=extraction_rc.rpt
+TC_HOLD_STATUS=PASS evidence=timing_tc_hold.rpt
+DRV_STATUS=PASS evidence=drv_status.rpt
+```
+
+Timing result after the ECO:
+
+```text
+baseline setup WNS=-0.014 ns, TNS=-0.074 ns, violating paths=11
+second-probe setup WNS=-0.014 ns, TNS=-0.072 ns, violating paths=11
+hold WNS=+0.026 ns, TNS=0.000 ns, violating paths=0
+```
+
+Engineering decision:
+
+```text
+ECO_RESULT=MARGINAL_TNS_IMPROVEMENT_NOT_CLOSED
+TESTED_CELL=FE_PSBC1567_u_core_fast_tag_col_0__4
+TESTED_RESIZE=TO_BUJIHDX8
+REASON=WNS_UNCHANGED_TNS_IMPROVED_BY_2PS_PATH_COUNT_UNCHANGED
+```
+
+This candidate is physically safe and directionally better than the first
+candidate, but it is not sufficient. It does not close setup and does not improve
+WNS. Keep it as a comparison point only. The next one-by-one probe must restore
+the original `211109` checkpoint again and exclude both already-tested cells:
+
+```text
+exclude FE_PSBC1565_u_core_fast_tag_col_0__4
+exclude FE_PSBC1567_u_core_fast_tag_col_0__4
+```
