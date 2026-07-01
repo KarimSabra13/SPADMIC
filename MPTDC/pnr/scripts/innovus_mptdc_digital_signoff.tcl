@@ -942,6 +942,8 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE 1
         MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1
         MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN 1
+        MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY 0
+        MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX 64
         MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0
         MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0
         MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK 0
@@ -1068,6 +1070,9 @@ proc mptdc_signoff_pg_policy_guard {} {
         }
         if {![mptdc_signoff_env_truthy MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN 1]} {
             lappend failures "MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=0 expected 1 for conservative_ro_hookup_blockpin_probe"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY 0]} {
+            lappend failures "MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0 expected 1 for conservative_ro_hookup_blockpin_probe"
         }
         if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
             lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0 expected 1 for conservative_ro_hookup_blockpin_probe"
@@ -2529,6 +2534,7 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands {VDD VSS}]] special_capture_ok special_capture_cmd
     set special_detail_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_topology_after_sroute_verify_special.rpt]
     set special_bad [mptdc_signoff_pg_connectivity_report_has_errors $special_rpt $special_detail_rpt POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY]
+    set dangling_only [mptdc_signoff_special_connectivity_dangling_only_status $special_rpt $special_detail_rpt]
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DETAIL_REPORT=$special_detail_rpt"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_CAPTURE_STATUS=[expr {$special_capture_ok ? "PASS" : "FAIL"}]"
@@ -2540,10 +2546,23 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_FILTER_REPORT=[lindex $special_bad 6]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_STATUS=[dict get $dangling_only status]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_REASON=[dict get $dangling_only reason]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_COUNT=[dict get $dangling_only dangling_count]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DETAIL_DANGLING_COUNT=[dict get $dangling_only detail_dangling_count]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_SUMMARY_DANGLING_COUNT=[dict get $dangling_only summary_dangling_count]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_MAX=[dict get $dangling_only max_dangling]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_COUNT=[dict get $dangling_only fatal_count]"
+    puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_FATAL_LINES=[dict get $dangling_only fatal_lines]"
+    set dangling_only_override 0
     if {!$special_capture_ok} {
         set status FAIL
     } elseif {[lindex $special_bad 0]} {
-        if {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+        if {$progress_ok &&
+            [dict get $dangling_only status] eq "DANGLING_ONLY"} {
+            set status PASS
+            set dangling_only_override 1
+        } elseif {[mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
             set status FAIL
         } elseif {$status eq "PASS"} {
             set status REVIEW_REQUIRED
@@ -2559,6 +2578,7 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     }
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS_BEFORE_VERIFY=$status_before_verify"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_VERIFY_CLEAN_OVERRIDE=$verify_clean_override"
+    puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_DANGLING_ONLY_OVERRIDE=$dangling_only_override"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_PROGRESS_STATUS=[expr {$progress_ok ? "PASS" : "FAIL"}]"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=$status"
     puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
@@ -4024,6 +4044,79 @@ proc mptdc_signoff_connectivity_report_has_errors {path} {
     }
     close $fh
     return [list [expr {[llength $bad] > 0}] $bad]
+}
+
+proc mptdc_signoff_special_connectivity_dangling_only_status {summary_path detail_path} {
+    set max_dangling [mptdc_signoff_env_int MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX 64]
+    set data [dict create \
+        status FAIL \
+        reason no_dangling_evidence \
+        dangling_count 0 \
+        detail_dangling_count 0 \
+        summary_dangling_count UNKNOWN \
+        max_dangling $max_dangling \
+        fatal_count 0 \
+        fatal_lines [list]]
+    set paths [list $summary_path $detail_path]
+    set saw_dangling 0
+    foreach path $paths {
+        if {$path eq ""} { continue }
+        if {![file exists $path]} {
+            dict incr data fatal_count
+            dict lappend data fatal_lines "missing_report=$path"
+            continue
+        }
+        set fh [open $path r]
+        while {[gets $fh line] >= 0} {
+            set trimmed [string trim $line]
+            if {$trimmed eq "" || [string match "#*" $trimmed]} { continue }
+            if {[regexp {^Net[[:space:]]+(VDD|VSS):[[:space:]]+dangling Wire(\.|[[:space:]]+at[[:space:]])} $trimmed]} {
+                set saw_dangling 1
+                if {[regexp {[[:space:]]+at[[:space:]]+\(} $trimmed]} {
+                    dict incr data detail_dangling_count
+                }
+                continue
+            }
+            if {[regexp -nocase {^([0-9]+)[[:space:]]+Problem\(s\)[[:space:]]+\(IMPVFC-94\):[[:space:]]+The net has dangling wire\(s\)\.?$} $trimmed -> count]} {
+                set saw_dangling 1
+                dict set data summary_dangling_count $count
+                continue
+            }
+            if {[regexp -nocase {^Verification Complete[[:space:]]*:[[:space:]]*([0-9]+)[[:space:]]+Viols\.[[:space:]]+0[[:space:]]+Wrngs\.?$} $trimmed -> count]} {
+                if {$count > 0} {
+                    set saw_dangling 1
+                }
+                continue
+            }
+            if {[regexp -nocase {REPORT_STATUS=FAILED|no[[:space:]]+routing|IMPVFC-(96|200)|has[[:space:]]+an[[:space:]]+unconnected[[:space:]]+terminal|has[[:space:]]+special[[:space:]]+routes[[:space:]]+with[[:space:]]+opens|Pieces[[:space:]]+of[[:space:]]+the[[:space:]]+net[[:space:]]+are[[:space:]]+not[[:space:]]+connected[[:space:]]+together|[^a-z](open|short|unconnected|unrouted|violation|violated)[^a-z]} " $trimmed "]} {
+                dict incr data fatal_count
+                dict lappend data fatal_lines $trimmed
+            }
+        }
+        close $fh
+    }
+
+    set detail_count [dict get $data detail_dangling_count]
+    set summary_count [dict get $data summary_dangling_count]
+    if {$detail_count > 0} {
+        dict set data dangling_count $detail_count
+    } elseif {$summary_count ne "UNKNOWN"} {
+        dict set data dangling_count $summary_count
+    }
+    set dangling_count [dict get $data dangling_count]
+    if {![mptdc_signoff_env_truthy MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY 0]} {
+        dict set data reason disabled_by_env
+    } elseif {[dict get $data fatal_count] > 0} {
+        dict set data reason fatal_connectivity_lines
+    } elseif {!$saw_dangling || $dangling_count == 0} {
+        dict set data reason no_dangling_evidence
+    } elseif {$dangling_count > $max_dangling} {
+        dict set data reason dangling_count_exceeds_limit
+    } else {
+        dict set data status DANGLING_ONLY
+        dict set data reason only_impvfc_94_dangling
+    }
+    return $data
 }
 
 proc mptdc_signoff_ro_pg_macro_filter_enabled {} {

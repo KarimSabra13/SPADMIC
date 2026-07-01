@@ -151,6 +151,8 @@ apply_recovery_defaults() {
   export MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE="${MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE:-1}"
   export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN="${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-1}"
   export MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN="${MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN:-1}"
+  export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY="${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-0}"
+  export MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX="${MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX:-64}"
   export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE="${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"
   export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN="${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"
   export MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK="${MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK:-0}"
@@ -247,6 +249,9 @@ guard_pg_policy() {
     conservative_ro_hookup_blockpin_probe)
       if ! is_truthy "${MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN:-1}"; then
         failures+=("MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=${MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
+      fi
+      if ! is_truthy "${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-0}"; then
+        failures+=("MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
       fi
       if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
         failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-unset} expected 1 for conservative_ro_hookup_blockpin_probe")
@@ -673,6 +678,8 @@ fi
   echo "postplace_pre_route_sroute: ${MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE:-unset}"
   echo "postplace_pre_route_sroute_require_clean: ${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-unset}"
   echo "postplace_pre_route_accept_pg_verify_clean: ${MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN:-unset}"
+  echo "postplace_pre_route_allow_dangling_only: ${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-unset}"
+  echo "postplace_pre_route_dangling_only_max: ${MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX:-unset}"
   echo "postplace_sroute_candidate_probe: ${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-unset}"
   echo "postplace_sroute_blockpin: ${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-unset}"
   echo "sroute_padpin_fallback: ${MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK:-unset}"
