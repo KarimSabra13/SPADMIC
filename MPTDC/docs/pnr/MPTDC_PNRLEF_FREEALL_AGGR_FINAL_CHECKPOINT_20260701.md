@@ -1193,3 +1193,98 @@ Rationale:
 Do not mix timing ECO with PG-special cleanup in the same run. PG cleanup remains
 a separate task because the current route geometry is clean and the dirty-route
 experiment showed that recipe changes can introduce real shorts.
+
+## First One-Cell Fast-Tag ECO Probe
+
+The first one-cell timing ECO probe was run from the preserved `211109`
+checkpoint after this document was pushed. The run used the documented
+single-cell policy:
+
+```text
+run_id=20260701_mptdc_211109_eco_fasttag_1cell_230007
+result_dir=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_eco_fasttag_1cell_230007
+source_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_final_211109/checkpoints/04_route_failed.enc.dat
+head=5a4df2c0e7a79340ecea78107a5abc27c6b7f731
+```
+
+Important shell note:
+
+```text
+ECO_RC=130
+```
+
+This exit code was not an Innovus ECO failure. The checkpoint repair script
+finished its report and save steps, then Innovus stayed at its interactive prompt.
+The next shell commands were typed into Innovus until the session was interrupted
+with Ctrl-C. The reports from this run are valid because the following evidence
+was written before interruption:
+
+```text
+MPTDC_ECO_FOCUS_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_eco_fasttag_1cell_230007/reports/fast_tag_timing_focus.rpt
+MPTDC_ECO_APPLY_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_eco_fasttag_1cell_230007/reports/fast_tag_targeted_eco.rpt
+MPTDC_ECO_STATUS_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_eco_fasttag_1cell_230007/reports/digital_pnr_signoff_status.rpt
+MPTDC_CHECKPOINT_REPAIR_STATUS_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_eco_fasttag_1cell_230007/reports/checkpoint_repair_status.rpt
+Generated self-contained design repaired_route.enc.dat
+```
+
+The wrapper has since been patched to call `exit 0` after writing
+`checkpoint_repair_status.rpt`, so future checkpoint-repair probes should return
+to the shell normally.
+
+One-cell ECO action:
+
+```text
+FAST_TAG_ECO_PATH_ALLOWED_CELL_COUNT=7
+FAST_TAG_ECO_UPSIZE_ATTEMPT=FE_PSBC1565_u_core_fast_tag_col_0__4 target=INJIHDX4 status=PASS command=ecoChangeCell -inst FE_PSBC1565_u_core_fast_tag_col_0__4 -cell INJIHDX4
+FAST_TAG_ECO_UPSIZE_SUCCESSES=1
+FAST_TAG_TARGETED_ECO_STATUS=PASS
+```
+
+Physical result after the ECO:
+
+```text
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY
+PG_CONNECTIVITY_STATUS=FAIL evidence=special_pg_dangling_only_after_single_cell_eco
+ROUTE_STATUS=FAIL evidence=geometry_clean_regular_clean_special_pg_dangling_only_after_single_cell_eco
+EXTRACTION_STATUS=PASS evidence=extraction_rc.rpt
+TC_HOLD_STATUS=PASS evidence=timing_tc_hold.rpt
+DRV_STATUS=PASS evidence=drv_status.rpt
+```
+
+Timing result after the ECO:
+
+```text
+baseline setup WNS=-0.014 ns, TNS=-0.074 ns, violating paths=11
+one-cell setup WNS=-0.018 ns, TNS=-0.089 ns, violating paths=12
+hold WNS=+0.026 ns, TNS=0.000 ns, violating paths=0
+```
+
+Engineering decision:
+
+```text
+ECO_RESULT=REJECT_FOR_TIMING
+REJECTED_CELL=FE_PSBC1565_u_core_fast_tag_col_0__4
+REJECTED_RESIZE=INJIHDX3_TO_INJIHDX4
+REASON=setup_degraded_and_violating_path_count_increased
+```
+
+This run is physically clean enough to keep as evidence, but it must not be used
+as the next ECO baseline. The next timing probe must restore the original
+`211109` checkpoint again and try a different single candidate. Do not simply
+rerun the automated ECO with `MAX_UPSIZE_CELLS=2`, because that would reapply the
+rejected first resize and contaminate the result.
+
+Next one-by-one ECO rule:
+
+```text
+restore original 211109 checkpoint
+read candidate list from the 1-cell report
+exclude FE_PSBC1565_u_core_fast_tag_col_0__4
+apply exactly one remaining candidate
+reroute only as needed
+rerun geometry, regular connectivity, extraction, setup, hold, and DRV checks
+```

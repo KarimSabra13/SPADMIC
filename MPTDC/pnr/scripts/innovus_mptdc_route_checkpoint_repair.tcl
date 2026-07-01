@@ -465,3 +465,4 @@ if {$command_failure} {
 close $status_fh
 
 puts "MPTDC_CHECKPOINT_REPAIR_STATUS_REPORT=$status_rpt"
+exit 0
