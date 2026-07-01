@@ -1,0 +1,17 @@
+# checkpoint repair command 2
+COMMAND=selectNet {u_core_ro_fast_code_q[0]} {u_core_ro_fast_code_q[6]} {u_core_ro_fast_code_q[7]} {CTS_6} {u_core_n_64592} {u_core_gen_pd_row[1].gen_pd_col[1].u_pd/q1} {u_core_n_57562}
+
+Usage: selectNet [-help] { <netName> | -allDefClock  | -clock  | -nonDefaultRule  | -shield  }
+
+**ERROR: (IMPTCM-48):	"u_core_ro_fast_code_q[6]" is not a legal option for command "selectNet". Either the current option or an option prior to it is not specified correctly.
+REPORT_STATUS=FAILED
+ERROR=
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+
+    while executing
+"selectNet {u_core_ro_fast_code_q[0]} {u_core_ro_fast_code_q[6]} {u_core_ro_fast_code_q[7]} {CTS_6} {u_core_n_64592} {u_core_gen_pd_row[1].gen_pd_col[1..."
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 "$command >> \"$path\"""
+ERRORINFO_END

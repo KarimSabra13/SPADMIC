@@ -1,0 +1,343 @@
+# checkpoint repair command 8
+COMMAND=detailRoute -select
+
+detailRoute -select
+
+#Start detailRoute on Wed Jul  1 16:24:46 2026
+#
+#num needed restored net=0
+#need_extraction net=0 (total=16362)
+#NanoRoute Version 22.33-s094_1 NR230808-0153/22_13-UB
+#Start routing data preparation on Wed Jul  1 16:24:46 2026
+#
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Build and mark too close pins for the same net.
+#Restoring pin access data from file /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_route_ckpt_delete_probe_161359/checkpoints/repaired_route.enc.dat/mptdc_axis_core.apa ...
+#Done restoring pin access data
+#Rebuild pin access data for option change.
+#Initial pin access analysis.
+#Detail pin access analysis.
+# MET1         H   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.4850
+# MET2         V   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.5600
+# MET3         H   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.5600
+# METTP        V   Track-Pitch = 1.1200    Line-2-Via Pitch = 0.9500
+#Bottom routing layer index=1(MET1), bottom routing layer for shielding=1(MET1), bottom shield layer=1(MET1)
+#shield_bottom_stripe_layer=1(MET1), shield_top_stripe_layer=4(METTP)
+#pin_access_rlayer=2(MET2)
+#shield_top_dpt_rlayer=-1 top_rlayer=4 top_trim_metal_rlayer=-1 rlayer_lowest=1 bottom_rlayer=1
+#enable_trim_layer_shield=F enable_dpt_layer_shield=F has_line_end_grid=F
+#enable_dpt_layer_shield=F
+#has_line_end_grid=F
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1967.65 (MB), peak = 2000.72 (MB)
+#Regenerating Ggrids automatically.
+#Auto generating G-grids with size=15 tracks, using layer MET2's pitch = 0.5600.
+#Using automatically generated G-grids.
+#Done routing data preparation.
+#cpu time = 00:00:08, elapsed time = 00:00:08, memory = 1970.08 (MB), peak = 2000.72 (MB)
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start Detail Routing..
+#start initial detail routing ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.82 (MB), peak = 2000.72 (MB)
+#start 1st optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 2nd optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 3rd optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 4th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 5th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 6th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 7th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 8th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 9th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 10th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 11th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 12th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 13th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 14th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 15th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 16th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 17th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 18th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 19th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#start 20th optimization iteration ...
+#   number of violations = 1000
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.84 (MB), peak = 2000.72 (MB)
+#Complete Detail Routing.
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 803206 um.
+#Total half perimeter of net bounding box = 598959 um.
+#Total wire length on LAYER MET1 = 66743 um.
+#Total wire length on LAYER MET2 = 276196 um.
+#Total wire length on LAYER MET3 = 317069 um.
+#Total wire length on LAYER METTP = 143197 um.
+#Total number of vias = 92837
+#Total number of multi-cut vias = 87890 ( 94.7%)
+#Total number of single cut vias = 4947 (  5.3%)
+#Up-Via Summary (total 92837):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            4313 (  8.1%)     49105 ( 91.9%)      53418
+# MET2             437 (  1.3%)     32959 ( 98.7%)      33396
+# MET3             197 (  3.3%)      5826 ( 96.7%)       6023
+#-----------------------------------------------------------
+#                 4947 (  5.3%)     87890 ( 94.7%)      92837 
+#
+#Total number of DRC violations = 1000
+#Total number of violations on LAYER MET1 = 1000
+#Total number of violations on LAYER MET2 = 0
+#Total number of violations on LAYER MET3 = 0
+#Total number of violations on LAYER METTP = 0
+#Cpu time = 00:00:09
+#Elapsed time = 00:00:09
+#Increased memory = 16.19 (MB)
+#Total memory = 1970.91 (MB)
+#Peak memory = 2000.72 (MB)
+#
+#start routing for process antenna violation fix ...
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16360 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#    By Layer and Type :
+#	          ViaIP   Totals
+#	MET1       1000     1000
+#	Totals     1000     1000
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 1970.91 (MB), peak = 2000.72 (MB)
+#
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 803206 um.
+#Total half perimeter of net bounding box = 598959 um.
+#Total wire length on LAYER MET1 = 66743 um.
+#Total wire length on LAYER MET2 = 276196 um.
+#Total wire length on LAYER MET3 = 317069 um.
+#Total wire length on LAYER METTP = 143197 um.
+#Total number of vias = 92837
+#Total number of multi-cut vias = 87890 ( 94.7%)
+#Total number of single cut vias = 4947 (  5.3%)
+#Up-Via Summary (total 92837):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            4313 (  8.1%)     49105 ( 91.9%)      53418
+# MET2             437 (  1.3%)     32959 ( 98.7%)      33396
+# MET3             197 (  3.3%)      5826 ( 96.7%)       6023
+#-----------------------------------------------------------
+#                 4947 (  5.3%)     87890 ( 94.7%)      92837 
+#
+#Total number of DRC violations = 1000
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 1000
+#Total number of violations on LAYER MET2 = 0
+#Total number of violations on LAYER MET3 = 0
+#Total number of violations on LAYER METTP = 0
+#
+#
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 803206 um.
+#Total half perimeter of net bounding box = 598959 um.
+#Total wire length on LAYER MET1 = 66743 um.
+#Total wire length on LAYER MET2 = 276196 um.
+#Total wire length on LAYER MET3 = 317069 um.
+#Total wire length on LAYER METTP = 143197 um.
+#Total number of vias = 92837
+#Total number of multi-cut vias = 87890 ( 94.7%)
+#Total number of single cut vias = 4947 (  5.3%)
+#Up-Via Summary (total 92837):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            4313 (  8.1%)     49105 ( 91.9%)      53418
+# MET2             437 (  1.3%)     32959 ( 98.7%)      33396
+# MET3             197 (  3.3%)      5826 ( 96.7%)       6023
+#-----------------------------------------------------------
+#                 4947 (  5.3%)     87890 ( 94.7%)      92837 
+#
+#Total number of DRC violations = 1000
+#Total number of process antenna violations = 0
+#Total number of net violated process antenna rule = 0
+#Total number of violations on LAYER MET1 = 1000
+#Total number of violations on LAYER MET2 = 0
+#Total number of violations on LAYER MET3 = 0
+#Total number of violations on LAYER METTP = 0
+#
+#
+#detailRoute statistics:
+#Cpu time = 00:00:11
+#Elapsed time = 00:00:11
+#Increased memory = 14.65 (MB)
+#Total memory = 1968.19 (MB)
+#Peak memory = 2000.72 (MB)
+#Number of warnings = 0
+#Total number of warnings = 1
+#Number of fails = 0
+#Total number of fails = 0
+#Complete detailRoute on Wed Jul  1 16:24:57 2026
+#
+REPORT_STATUS=PASS

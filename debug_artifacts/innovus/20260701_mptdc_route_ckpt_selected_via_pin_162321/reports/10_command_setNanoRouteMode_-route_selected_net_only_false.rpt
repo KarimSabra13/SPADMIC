@@ -1,0 +1,3 @@
+# checkpoint repair command 10
+COMMAND=setNanoRouteMode -route_selected_net_only false
+REPORT_STATUS=PASS

@@ -1,0 +1,23 @@
+#-check_same_via_cell true               # bool, default=false, user setting
+ *** Starting Verify DRC (MEM: 1976.9) ***
+
+  VERIFY DRC ...... Starting Verification
+  VERIFY DRC ...... Initializing
+  VERIFY DRC ...... Deleting Existing Violations
+  VERIFY DRC ...... Creating Sub-Areas
+  VERIFY DRC ...... Using new threading
+  VERIFY DRC ...... Sub-Area: {0.000 0.000 213.440 202.400} 1 of 20
+  VERIFY DRC ...... Sub-Area : 1 complete 61 Viols.
+  VERIFY DRC ...... Sub-Area: {213.440 0.000 426.880 202.400} 2 of 20
+**WARN: (IMPVFG-1103):	VERIFY DRC did not complete: Number of violations exceeds the Error Limit [1000]
+
+  Verification Complete : 1000 Viols.
+
+ Violation Summary By Layer and Type:
+
+	          ViaIP   Totals
+	MET1       1000     1000
+	Totals     1000     1000
+
+ *** End Verify DRC (CPU TIME: 0:00:00.3  ELAPSED TIME: 0:00:00.0  MEM: 264.1M) ***
+

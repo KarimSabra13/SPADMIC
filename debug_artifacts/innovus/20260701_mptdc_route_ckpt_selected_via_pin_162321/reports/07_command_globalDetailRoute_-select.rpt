@@ -1,0 +1,14 @@
+# checkpoint repair command 7
+COMMAND=globalDetailRoute -select
+#WARNING (NRIF-89) Option -select(ed) or setNanoRouteMode -route_selected_net_only true is enabled, but there is no selected net. Please turn off the option or select net to proceed the command.
+REPORT_STATUS=FAILED
+ERROR=
+ERRORCODE=NONE
+ERRORINFO_BEGIN
+
+    while executing
+"globalDetailRoute -select >> "/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_route_ckpt_selected_via_pin_162321/reports/07_command_globalDetailRoute_..."
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 "$command >> \"$path\"""
+ERRORINFO_END

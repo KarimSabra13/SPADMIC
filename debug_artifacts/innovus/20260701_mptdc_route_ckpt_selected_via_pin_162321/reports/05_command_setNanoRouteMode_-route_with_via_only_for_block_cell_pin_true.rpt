@@ -1,0 +1,3 @@
+# checkpoint repair command 5
+COMMAND=setNanoRouteMode -route_with_via_only_for_block_cell_pin true
+REPORT_STATUS=PASS
