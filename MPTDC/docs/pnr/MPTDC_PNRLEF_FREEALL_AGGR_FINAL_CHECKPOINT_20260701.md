@@ -1446,3 +1446,112 @@ from the routed checkpoint. It should not be used as a baseline for any further
 ECO or waiver package. If a timing waiver is required, restore the original
 geometry-clean `211109` checkpoint and apply the false path there, so the waiver
 run preserves the known geometry and regular-connectivity state.
+
+## False-Path Nfast Risk Checkpoint
+
+After the aggressive all-path ECO was rejected, the original `211109`
+geometry-clean checkpoint was restored and a timing-risk checkpoint was created
+by applying an explicit false path to every `nfast_hit_latched_reg` capture `D`
+pin.
+
+This run is the best saved dry-run candidate so far, but it is not final
+physical signoff. Its setup timing is clean only because of the explicit timing
+exception, and special PG connectivity still fails.
+
+```text
+run_id=20260701_mptdc_211109_falsepath_nfast_risk_235618
+result_dir=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618
+source_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_freeall_aggr_final_211109/checkpoints/04_route_failed.enc.dat
+checkpoint_to_preserve=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/checkpoints/repaired_route.enc.dat
+def_to_preserve=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/def/repaired_route.def
+head=6a432f2b7f91a1ea25cfaa5f95a487d4949f0910
+innovus_rc=0
+```
+
+Applied risk exception:
+
+```text
+FALSE_PATH_SCOPE=all_nfast_hit_latched_reg_D
+FALSE_PATH_COMMAND=set_false_path -to [mptdc_signoff_fast_tag_capture_d_pins]
+FALSE_PATH_NFAST_D_PIN_COUNT=448
+FALSE_PATH_RISK_ACCEPTED_BY=manual_checkpoint_experiment
+FALSE_PATH_NOT_FINAL_SIGNOFF=1
+```
+
+Physical checkpoint status:
+
+```text
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY
+```
+
+The save transcript still reported 8 saved markers, but these are not geometry
+DRC markers:
+
+```text
+8 markers saved
+0 geometry drc markers saved
+0 antenna drc markers saved
+```
+
+The route/signoff status intentionally keeps the PG-special failure visible:
+
+```text
+PG_CONNECTIVITY_STATUS=FAIL evidence=special_pg_dangling_only_falsepath_nfast_risk
+ROUTE_STATUS=FAIL evidence=geometry_clean_regular_clean_special_pg_dangling_only_falsepath_nfast_risk
+EXTRACTION_STATUS=PASS evidence=extraction_rc.rpt
+SETUP_STATUS_TC=PASS evidence=timing_tc_nominal.rpt
+TC_HOLD_STATUS=PASS evidence=timing_tc_hold.rpt
+DRV_STATUS=PASS evidence=drv_status.rpt
+```
+
+Timing after the exception:
+
+```text
+setup WNS=+0.001 ns
+setup TNS=0.000 ns
+setup violating paths=0
+hold WNS=+0.026 ns
+hold TNS=0.000 ns
+hold violating paths=0
+```
+
+Important warnings and audit items:
+
+```text
+TCLCMD-1531 warnings were reported while reading existing SDC false paths on hierarchical clear_window pins.
+Number of path exceptions in the constraint file = 15
+The Innovus message summary reported 182 warnings and 1 error even though INNOVUS_RC=0.
+The single reported error must be inspected and classified before any external handoff.
+```
+
+Engineering classification:
+
+```text
+CHECKPOINT_RESULT=ACCEPT_FOR_INTERNAL_DRY_GDS_RISK_REVIEW_ONLY
+FINAL_SIGNOFF_READY=NO
+READY_FOR_TAPEOUT=NO
+DRY_GDS_ALLOWED_ONLY_IF_WAIVER_PACKAGE_INCLUDES=false_path_nfast_448_D_pins_and_special_pg_dangling
+BLOCKING_BEFORE_FINAL_GDS=special_pg_connectivity_fail_and_unclassified_innovus_error_summary
+```
+
+This checkpoint is useful because it preserves the known clean geometry and
+regular connectivity while showing that the remaining TC setup paths can be
+removed by the explicit nfast capture exception. It should be archived as the
+current best dry-run/risk checkpoint, not as a final tapeout checkpoint.
+
+Before any final GDS or tapeout handoff, the following remain mandatory:
+
+```text
+inspect the one Innovus error reported in the session summary
+classify and repair or formally waive the VDD/VSS special PG dangling markers
+rerun verify_drc
+rerun verifyConnectivity -type regular
+rerun verifyConnectivity -type special
+rerun extraction, setup, hold, and DRV after PG repair
+run the final required LVS/antenna/foundry decks outside this TC-only wrapper
+remove or sign off the nfast false-path waiver with design-owner approval
+```
