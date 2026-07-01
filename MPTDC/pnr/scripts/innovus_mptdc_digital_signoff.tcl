@@ -970,6 +970,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE 1
         MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 2
         MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES Mar
+        MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE 0
     } {
         mptdc_signoff_set_env_default $name $value
     }
@@ -6266,6 +6267,7 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "ROUTE_DRC_REVIEW_CONTINUE_ENV=MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE"
     puts $fh "ROUTE_DRC_REVIEW_MAX_VIOLATIONS=[mptdc_signoff_env_int MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS 2]"
     puts $fh "ROUTE_DRC_REVIEW_ALLOWED_CLASSES=[mptdc_signoff_env MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES Mar]"
+    puts $fh "DIRTY_ROUTE_TIMING_CONTINUE=[expr {[mptdc_signoff_env_truthy MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE 0] ? 1 : 0}]"
     puts $fh "ROUTE_DRC_REVIEW_CLASS_STATUS=[expr {[lindex $review_class 0] ? "PASS" : "FAIL"}]"
     puts $fh "ROUTE_DRC_REVIEW_CLASS_REASON=[lindex $review_class 1]"
     puts $fh "ROUTE_DRC_REVIEW_CLASS_COUNTS=[lindex $review_class 2]"
@@ -6321,6 +6323,12 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
             puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT_SAVE_ERROR=[mptdc_signoff_report_value $failure_ckpt_error]"
         }
         puts $fh "ROUTE_GATE_FAILURE_CHECKPOINT_DAT_EXISTS=[expr {[file isdirectory $failure_checkpoint_dat] ? 1 : 0}]"
+        if {[mptdc_signoff_env_truthy MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE 0]} {
+            puts $fh "ROUTE_GATE_FAILURE_ACTION=CONTINUE_TO_EXTRACTION_STA_FOR_DIRTY_TIMING_CANDIDATE"
+            close $fh
+            mptdc_signoff_dump_drc_markers $failure_marker_rpt
+            return $rpt
+        }
         close $fh
         mptdc_signoff_dump_drc_markers $failure_marker_rpt
         error "MPTDC_ROUTE_GATE_FAILED: report=$rpt"

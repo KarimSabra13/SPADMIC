@@ -43,6 +43,12 @@ When enabled, it:
 
 The real Innovus placement legality gate still runs and can still fail the run.
 
+`MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE=1` is also available as an explicit
+timing-candidate escape hatch.  It keeps `ROUTE_STATUS=FAIL` and saves the
+failure DEF/checkpoint/marker reports, but continues to extraction/STA so timing
+optimization evidence can be generated from a dirty route candidate.  It must
+not be used to label a route-clean or GDS-ready result.
+
 ## Validation
 
 Local validation performed before server handoff:
@@ -75,4 +81,5 @@ RO-focused defaults.  The fresh run should explicitly pass:
 - `MPTDC_PNR_PD_TILE_FIX_LEAVES=0`
 - `MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0`
 - `MPTDC_PD_PHYSICAL_AUDIT_MODE=relaxed`
-
+- `MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE=1` only when timing evidence is more
+  urgent than route cleanliness for this exploratory candidate.

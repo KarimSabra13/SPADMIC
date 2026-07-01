@@ -185,6 +185,7 @@ apply_recovery_defaults() {
   export MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE="${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-1}"
   export MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS="${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-2}"
   export MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES="${MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES:-Mar}"
+  export MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE="${MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE:-0}"
   export MPTDC_PG_STRATEGY="${MPTDC_PG_STRATEGY:-conservative_ro_hookup}"
 }
 
@@ -718,6 +719,7 @@ fi
   echo "route_drc_review_continue: ${MPTDC_ALLOW_ROUTE_DRC_REVIEW_CONTINUE:-unset}"
   echo "route_drc_review_max_violations: ${MPTDC_ROUTE_DRC_REVIEW_MAX_VIOLATIONS:-unset}"
   echo "route_drc_review_allowed_classes: ${MPTDC_ROUTE_DRC_REVIEW_ALLOWED_CLASSES:-unset}"
+  echo "dirty_route_timing_continue: ${MPTDC_ALLOW_DIRTY_ROUTE_TIMING_CONTINUE:-unset}"
   echo "labels: MPTDC_TC_PNR_CLOSURE DIGITAL_PNR_SIGNOFF_FLOW TC_ONLY NOT_MMMC_SIGNOFF READY_FOR_TAPEOUT_NO"
   echo
   echo "git status --short --untracked-files=no:"
