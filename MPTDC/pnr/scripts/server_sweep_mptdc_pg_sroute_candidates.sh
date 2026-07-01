@@ -95,7 +95,7 @@ mkdir -p "$INNOVUS_WORK_VALUE"
 SUMMARY_CSV="$INNOVUS_WORK_VALUE/${BASE_RUN_ID}_summary.csv"
 SUMMARY_MD="$INNOVUS_WORK_VALUE/${BASE_RUN_ID}_summary.md"
 
-printf 'candidate,run_id,rc,drc,shorts,regular_bad,special_bad,special_raw_bad,special_non_ro,unrouted,route_gate_pass,checkpoint,status_report\n' > "$SUMMARY_CSV"
+printf 'candidate,run_id,rc,drc,shorts,regular_bad,special_bad,special_raw_bad,special_filter_status,special_filtered_ro,special_non_ro,unrouted,route_gate_pass,checkpoint,status_report\n' > "$SUMMARY_CSV"
 
 cat > "$SUMMARY_MD" <<EOF
 # MPTDC PG Isolated SRoute Candidate Sweep
@@ -188,7 +188,8 @@ EOF
   MPTDC_CHECKPOINT_REPAIR_KEEP_GOING=1 \
     MPTDC_INNOVUS_WORK="$INNOVUS_WORK_VALUE" \
     "$SCRIPT_DIR/server_repair_mptdc_route_checkpoint.sh" \
-      "${repair_args[@]}"
+      "${repair_args[@]}" \
+      </dev/null
   rc=$?
   set -e
 
@@ -199,7 +200,10 @@ EOF
     local key="$1"
     local file="$2"
     if [[ -f "$file" ]]; then
-      grep -E "^${key}=" "$file" | tail -1 | cut -d= -f2- || true
+      grep -E "(^|[[:space:]>])${key}=" "$file" \
+        | tail -1 \
+        | sed -E "s/.*${key}=//" \
+        || true
     fi
   }
 
@@ -211,12 +215,15 @@ EOF
   checkpoint="$(field FINAL_CHECKPOINT_DAT "$status_report")"
   status="$(field CHECKPOINT_REPAIR_STATUS "$status_report")"
   special_raw="$(field "PG_CANDIDATE_${candidate}_SPECIAL_RAW_BAD" "$command_report")"
+  special_filter_status="$(field "PG_CANDIDATE_${candidate}_SPECIAL_FILTER_STATUS" "$command_report")"
+  special_filtered_ro="$(field "PG_CANDIDATE_${candidate}_SPECIAL_FILTERED_RO_TERMINALS" "$command_report")"
   special_non_ro="$(field "PG_CANDIDATE_${candidate}_SPECIAL_NON_RO_FAILURES" "$command_report")"
   unrouted="$(field "PG_CANDIDATE_${candidate}_UNROUTED" "$command_report")"
 
-  printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+  printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
     "$candidate" "$run_id" "$rc" "$drc" "$shorts" "$regular_bad" "$special_bad" \
-    "$special_raw" "$special_non_ro" "$unrouted" "$route_gate" "$checkpoint" "$status_report" \
+    "$special_raw" "$special_filter_status" "$special_filtered_ro" "$special_non_ro" \
+    "$unrouted" "$route_gate" "$checkpoint" "$status_report" \
     >> "$SUMMARY_CSV"
 
   {
@@ -226,7 +233,7 @@ EOF
     echo "- rc: \`$rc\`"
     echo "- final_drc/shorts: \`${drc:-NA}/${shorts:-NA}\`"
     echo "- regular_bad: \`${regular_bad:-NA}\`"
-    echo "- special_bad/raw/non_ro: \`${special_bad:-NA}/${special_raw:-NA}/${special_non_ro:-NA}\`"
+    echo "- special_bad/raw/filter/ro/non_ro: \`${special_bad:-NA}/${special_raw:-NA}/${special_filter_status:-NA}/${special_filtered_ro:-NA}/${special_non_ro:-NA}\`"
     echo "- unrouted: \`${unrouted:-NA}\`"
     echo "- route_gate_pass: \`${route_gate:-NA}\`"
     echo "- status_report: \`$status_report\`"

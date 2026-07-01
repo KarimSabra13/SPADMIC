@@ -37,7 +37,7 @@ def read_lines(path: pathlib.Path | None) -> list[str]:
 
 
 def add_example(bucket: dict[str, list[str]], key: str, line: str, max_examples: int) -> None:
-    if len(bucket[key]) < max_examples:
+    if line not in bucket[key] and len(bucket[key]) < max_examples:
         bucket[key].append(line)
 
 
@@ -151,10 +151,11 @@ def write_counter(out: list[str], title: str, counter: collections.Counter, limi
 
 
 def build_report(args: argparse.Namespace) -> str:
-    summary = summarize_connectivity(
-        read_lines(args.summary) + read_lines(args.detail),
-        args.max_examples,
-    )
+    summary_lines = read_lines(args.summary)
+    detail_lines = read_lines(args.detail)
+    summary_only = summarize_connectivity(summary_lines, args.max_examples)
+    detail_only = summarize_connectivity(detail_lines, args.max_examples)
+    summary = summarize_connectivity(summary_lines + detail_lines, args.max_examples)
     probe = summarize_probe(read_lines(args.probe))
 
     out: list[str] = []
@@ -169,10 +170,21 @@ def build_report(args: argparse.Namespace) -> str:
         out.append("## Missing Inputs")
         out.extend(str(path) for path in summary["missing"])
 
+    problem_source = "combined"
     problem_counts = summary["problem_counts"]
     problem_text = summary["problem_text"]
+    if summary_only["problem_counts"]:
+        problem_source = "summary"
+        problem_counts = summary_only["problem_counts"]
+        problem_text = summary_only["problem_text"]
+    elif detail_only["problem_counts"]:
+        problem_source = "detail"
+        problem_counts = detail_only["problem_counts"]
+        problem_text = detail_only["problem_text"]
+
     out.append("")
     out.append("## IMPVFC Problem Counts")
+    out.append(f"source={problem_source}")
     if problem_counts:
         for code, count in problem_counts.most_common():
             out.append(f"{code}: {count} - {problem_text.get(code, '')}")
