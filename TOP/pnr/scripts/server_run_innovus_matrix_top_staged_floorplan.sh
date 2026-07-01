@@ -14,6 +14,7 @@ RUN_ROOT="$WORK_ROOT/innovus/$RUN_ID"
 MATRIX_CSV="${SPADMIC_MATRIX_PIN_CSV:-$REPO_ROOT/position/docs/matrix_handoffs/20260626_matrice3_final_lef_extract_norm/matrice3_pin_coordinates.csv}"
 MATRIX_LEF="${SPADMIC_MATRIX_LEF:-/group/validmgr/PROJET/Prj_xh018/ksabra/lef/matrice3.lef}"
 PAD_POLICY="${SPADMIC_MATRIX_TOP_PAD_POLICY:-$PNR_ROOT/inputs/matrix_top_pad_policy_template.csv}"
+BOX_RING_SOURCE="${SPADMIC_TOP_BOX_RING_SOURCE:-/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC}"
 GENERATED_DIR="$RUN_ROOT/generated"
 
 export MPTDC_XH018_STACK="${MPTDC_XH018_STACK:-xx31}"
@@ -39,11 +40,15 @@ mkdir -p "$RUN_ROOT/logs" "$RUN_ROOT/reports" "$GENERATED_DIR"
   echo "MATRIX_CSV=$MATRIX_CSV"
   echo "MATRIX_LEF=$MATRIX_LEF"
   echo "PAD_POLICY=$PAD_POLICY"
-  echo "DIE_WIDTH_UM=${SPADMIC_MATRIX_TOP_DIE_WIDTH_UM:-3800.0}"
-  echo "DIE_HEIGHT_UM=${SPADMIC_MATRIX_TOP_DIE_HEIGHT_UM:-2700.0}"
-  echo "PAD_KEEPOUT_UM=${SPADMIC_MATRIX_TOP_PAD_KEEPOUT_UM:-120.0}"
-  echo "MPTDC_PLACEHOLDER_AREA_UM2=${SPADMIC_MPTDC_PLACEHOLDER_AREA_UM2:-1000000.0}"
-  echo "MPTDC_PLACEHOLDER_ASPECT=${SPADMIC_MPTDC_PLACEHOLDER_ASPECT:-1.3333333333333333}"
+  echo "BOX_RING_SOURCE=$BOX_RING_SOURCE"
+  echo "DIE_WIDTH_UM=${SPADMIC_MATRIX_TOP_DIE_WIDTH_UM:-4293.179}"
+  echo "DIE_HEIGHT_UM=${SPADMIC_MATRIX_TOP_DIE_HEIGHT_UM:-3209.173}"
+  echo "PAD_RING_DEPTH_UM=${SPADMIC_MATRIX_TOP_PAD_KEEPOUT_UM:-164.0}"
+  echo "MPTDC_FULL_BOUNDARY_WIDTH_UM=${SPADMIC_MPTDC_FULL_WIDTH_UM:-1061.20}"
+  echo "MPTDC_FULL_BOUNDARY_HEIGHT_UM=${SPADMIC_MPTDC_FULL_HEIGHT_UM:-801.92}"
+  echo "MPTDC_DIMENSION_MARGIN_PCT=${SPADMIC_MPTDC_DIMENSION_MARGIN_PCT:-5.0}"
+  echo "MPTDC_HALO_UM=${SPADMIC_MPTDC_HALO_UM:-20.0}"
+  echo "MPTDC_GAP_UM=${SPADMIC_MPTDC_GAP_UM:-20.0}"
   echo "MPTDC_XH018_STACK=$MPTDC_XH018_STACK"
   echo "MPTDC_STDCELL_FAMILY=$MPTDC_STDCELL_FAMILY"
   echo "MPTDC_PNR_ROUTE_LAYER_NAMES=$MPTDC_PNR_ROUTE_LAYER_NAMES"
@@ -62,12 +67,20 @@ python3 "$PNR_ROOT/scripts/gen_matrix_top_floorplan_plan.py" \
   --pad-policy "$PAD_POLICY" \
   --out "$GENERATED_DIR" \
   --run-id "$RUN_ID" \
-  --die-width-um "${SPADMIC_MATRIX_TOP_DIE_WIDTH_UM:-3800.0}" \
-  --die-height-um "${SPADMIC_MATRIX_TOP_DIE_HEIGHT_UM:-2700.0}" \
-  --pad-keepout-um "${SPADMIC_MATRIX_TOP_PAD_KEEPOUT_UM:-120.0}" \
-  --mptdc-area-um2 "${SPADMIC_MPTDC_PLACEHOLDER_AREA_UM2:-1000000.0}" \
-  --mptdc-aspect-ratio "${SPADMIC_MPTDC_PLACEHOLDER_ASPECT:-1.3333333333333333}" \
-  --horizontal-extension-pct "${SPADMIC_MATRIX_TOP_HORIZONTAL_EXTENSION_PCT:-5.0}"
+  --die-width-um "${SPADMIC_MATRIX_TOP_DIE_WIDTH_UM:-4293.179}" \
+  --die-height-um "${SPADMIC_MATRIX_TOP_DIE_HEIGHT_UM:-3209.173}" \
+  --pad-keepout-um "${SPADMIC_MATRIX_TOP_PAD_KEEPOUT_UM:-164.0}" \
+  --box-ring-source "$BOX_RING_SOURCE" \
+  --matrix-left-margin-um "${SPADMIC_MATRIX_LEFT_MARGIN_UM:-164.0}" \
+  --mptdc-width-um "${SPADMIC_MPTDC_FULL_WIDTH_UM:-1061.20}" \
+  --mptdc-height-um "${SPADMIC_MPTDC_FULL_HEIGHT_UM:-801.92}" \
+  --mptdc-dimension-margin-pct "${SPADMIC_MPTDC_DIMENSION_MARGIN_PCT:-5.0}" \
+  --mptdc-halo-um "${SPADMIC_MPTDC_HALO_UM:-20.0}" \
+  --mptdc-gap-um "${SPADMIC_MPTDC_GAP_UM:-20.0}" \
+  --scenario-a-mptdc-width-um "${SPADMIC_MPTDC_CORE_WIDTH_UM:-1020.88}" \
+  --scenario-a-mptdc-height-um "${SPADMIC_MPTDC_CORE_HEIGHT_UM:-761.60}" \
+  --scenario-a-mptdc-gap-um "${SPADMIC_MPTDC_CORE_GAP_UM:-40.0}" \
+  --horizontal-extension-pct "0.0"
 
 {
   echo "# SPADMIC Matrix TOP Staged Innovus Floorplan Run"
@@ -77,6 +90,7 @@ python3 "$PNR_ROOT/scripts/gen_matrix_top_floorplan_plan.py" \
   echo "- Matrix CSV: \`$MATRIX_CSV\`"
   echo "- Matrix LEF: \`$MATRIX_LEF\`"
   echo "- Pad policy: \`$PAD_POLICY\`"
+  echo "- BOX_RING/OA source: \`$BOX_RING_SOURCE\`"
   echo "- XH018 stack: \`$MPTDC_XH018_STACK\`"
   echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
   echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"

@@ -151,7 +151,9 @@ case "$KIND" in
     copy_file "$SRC_DIR/generated/matrix_unknown_pins.csv" "generated/matrix_unknown_pins.csv"
     copy_file "$SRC_DIR/generated/matrix_top_region_summary.csv" "generated/matrix_top_region_summary.csv"
     copy_file "$SRC_DIR/generated/mptdc_placeholder_summary.csv" "generated/mptdc_placeholder_summary.csv"
+    copy_file "$SRC_DIR/generated/mptdc_scenario_summary.csv" "generated/mptdc_scenario_summary.csv"
     copy_file "$SRC_DIR/generated/pad_policy_summary.csv" "generated/pad_policy_summary.csv"
+    copy_file "$SRC_DIR/generated/top_floorplan_regions.tcl" "generated/top_floorplan_regions.tcl"
     copy_file "$SRC_DIR/reports/ooc_collateral_manifest.csv" "reports/ooc_collateral_manifest.csv"
     while IFS= read -r file; do
       rel="${file#"$SRC_DIR"/}"

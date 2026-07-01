@@ -114,9 +114,11 @@ The first TOP staged floorplan wrapper is:
 TOP/pnr/scripts/server_run_innovus_matrix_top_staged_floorplan.sh
 ```
 
-This wrapper uses a full-die `3800 um x 2700 um` planning envelope, a
-parameterized `120 um` pad/core keepout, and three provisional vertical MPTDC
-placeholders. It stops before Innovus if the geometry is infeasible.
+This wrapper now uses the layout-derived full-die envelope
+`4293.179 um x 3209.173 um`, a `164 um` pad-ring/core planning depth, and the
+required MPTDC Scenario B full-boundary reservation. Scenario B uses
+`1061.20 um x 801.92 um` per MPTDC before `5%` dimension margin and `20 um`
+halo. It stops before Innovus if this geometry is infeasible.
 
 ## Required Reports
 

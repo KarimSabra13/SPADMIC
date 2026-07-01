@@ -25,19 +25,29 @@ export MPTDC_PNR_POWER_LAYER="${MPTDC_PNR_POWER_LAYER:-METTP}"
 export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-METTP}"
 
 BLOCKS=(
-  "position_snapshot:spadmic_position_snapshot_packetizer"
-  "output_fifo:spadmic_output_fifo"
-  "event_bundle_tx:spadmic_event_bundle_tx"
   "or64_tree:spadmic_matrix_or_tree"
   "matrix_reset_ctrl:spadmic_matrix_reset_ctrl"
   "matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl"
-  "ddr16_pairer:spadmic_ddr16_tx_pairer"
+  "position_snapshot:spadmic_position_snapshot_packetizer"
+  "output_fifo:spadmic_output_fifo"
+  "event_bundle_tx:spadmic_event_bundle_tx"
   "event_coordinator:spadmic_event_coordinator"
   "matrix_top_csr:spadmic_matrix_top_csr"
   "i2c_csr_bridge:spadmic_i2c_csr_bridge"
   "i2c_slave:spadmic_i2c_slave"
-  "spadmic_top_matrix_v1:spadmic_top_matrix_v1"
 )
+
+SKIPPED_BLOCKS=("ddr16_pairer:spadmic_ddr16_tx_pairer" "spadmic_top_matrix_v1:spadmic_top_matrix_v1")
+
+if [[ "${SPADMIC_GENUS_INCLUDE_DDR16:-0}" == "1" ]]; then
+  BLOCKS+=("ddr16_pairer:spadmic_ddr16_tx_pairer")
+  SKIPPED_BLOCKS=("${SKIPPED_BLOCKS[@]/ddr16_pairer:spadmic_ddr16_tx_pairer}")
+fi
+
+if [[ "${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}" == "1" ]]; then
+  BLOCKS+=("spadmic_top_matrix_v1:spadmic_top_matrix_v1")
+  SKIPPED_BLOCKS=("${SKIPPED_BLOCKS[@]/spadmic_top_matrix_v1:spadmic_top_matrix_v1}")
+fi
 
 if [[ -e "$RUN_ROOT" ]]; then
   echo "ERROR: run directory already exists: $RUN_ROOT" >&2
@@ -59,6 +69,8 @@ mkdir -p "$RUN_ROOT/filelists" "$RUN_ROOT/logs"
   echo "MPTDC_PNR_SIGNAL_TOP_LAYER=$MPTDC_PNR_SIGNAL_TOP_LAYER"
   echo "MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER"
   echo "MPTDC_PNR_POWER_LAYER=$MPTDC_PNR_POWER_LAYER"
+  echo "SPADMIC_GENUS_INCLUDE_DDR16=${SPADMIC_GENUS_INCLUDE_DDR16:-0}"
+  echo "SPADMIC_GENUS_INCLUDE_FULL_TOP=${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}"
   echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
   echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   echo "STATUS_SHORT_BEGIN"
@@ -77,9 +89,11 @@ if ! command -v genus >/dev/null 2>&1; then
     echo "- Commit: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)\`"
     echo "- XH018 stack: \`$MPTDC_XH018_STACK\`"
     echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
-    echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"
-    echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
-    echo "- Result: FAIL"
+  echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"
+  echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
+  echo "- DDR16 included: \`${SPADMIC_GENUS_INCLUDE_DDR16:-0}\`"
+  echo "- Full matrix top included: \`${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}\`"
+  echo "- Result: FAIL"
     echo "- First error: \`genus not found in PATH\`"
     echo
     echo "Source \`/eda/cadence/eda_2023-2024\` on the server before running this script."
@@ -119,6 +133,8 @@ FAILED=()
   echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"
   echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
   echo "- Effective top floor layer: \`$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER\`"
+  echo "- DDR16 included: \`${SPADMIC_GENUS_INCLUDE_DDR16:-0}\`"
+  echo "- Full matrix top included: \`${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}\`"
   echo "- Signoff: non-signoff, typical-only feasibility"
   echo
   echo "## Matrix TOP Genus Filelist"
@@ -133,6 +149,12 @@ FAILED=()
       echo "- \`$excluded_file\`"
     done < "$RUN_ROOT/filelists/top_genus_excluded.f"
   fi
+  echo
+  echo "Skipped by default:"
+  for skipped in "${SKIPPED_BLOCKS[@]}"; do
+    [[ -n "$skipped" ]] || continue
+    echo "- \`${skipped%%:*}\` / \`${skipped##*:}\`"
+  done
   echo
   echo "## Blocks"
   echo

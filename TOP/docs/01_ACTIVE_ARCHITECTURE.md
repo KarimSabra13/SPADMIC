@@ -73,8 +73,9 @@ async x/y/z line buses
 
 | Domain | Source | Used by |
 |--------|--------|---------|
-| `clk_sys` | external 160 MHz | I2C, CSR, sequencer, ARB adapters, position block, correlated TX, physical TX packer |
-| `clk_ref_40m` | external 40 MHz | STOP qualification only |
+| `clk_sys` | selected 160 MHz, reset-default PLL source with external-160 fallback | I2C, CSR, sequencer, ARB adapters, position block, correlated TX, physical TX packer |
+| `clk_ref_40m` | shared internal 40 MHz from PLL or external-160 divide-by-4 | STOP qualification only |
+| `clk_cfg_40m` | same shared internal 40 MHz source as `clk_ref_40m` for v1 | matrix configuration controller |
 | MPTDC generated clocks | internal oscillators | preserved inside each `mptdc_axis_core` instance |
 | async line/event domain | external asynchronous sources | SPAD event entry and position-line entry |
 

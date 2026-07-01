@@ -43,11 +43,11 @@ The untracked files are user-owned references. They must not be deleted, reforma
 
 [FROZEN] Cadence tools are not available locally in this session. Any Xcelium, Genus, Innovus, CDC/RDC, DRC/LVS, PEX, MMMC, DDR timing, or matrix macro timing result must come from a server run and must not be claimed from local Verilator evidence.
 
-[FROZEN] `clk_cfg_40m` is a real separate PLL-generated matrix configuration domain. The matrix configuration controller must use a real `clk_sys <-> clk_cfg_40m` CDC and must never sample a changing multi-bit command/readback bus without a stable-bus handshake.
+[FROZEN] `clk_cfg_40m` and `clk_ref_40m` are real named 40 MHz logical clocks, but they are not separate external pads in v1. In PLL mode, one PLL 40 MHz output feeds both logical clocks. In external-clock mode, one external 160 MHz pad feeds a divide-by-4 clock that also feeds both logical 40 MHz clocks. The matrix configuration controller must keep its stable-bus handshake until final STA/CDC proves the generated-clock relationship is safe to simplify.
 
 [FROZEN] `Cout` is the returned `Cin` after matrix propagation/RC effects and must be used for physical matrix configuration readback timing. The existing mirror-readback behavior is not final.
 
-[FROZEN] A real `clk_sys` output FIFO is required between event bundle TX and DDR16 pairer. Initial target depth is 512 16-bit words, with event admission blocked when free space is below the documented worst-case event reservation.
+[FROZEN] A real `clk_sys` output FIFO is required between event bundle TX and DDR16 pairer. The physical-planning target depth is 256 logical 16-bit words plus marker metadata, with event admission blocked when free space is below the documented worst-case event reservation.
 
 [FROZEN] Shared TDC configuration is required through matrix-top CSR:
   - programmable `max_hits`, default 15;
@@ -181,13 +181,16 @@ Pin family summary from the CSV:
 - [FROZEN] Control/reset/supervision registers should be placed toward the bottom of the matrix.
 - [FROZEN] PLL should be placed toward bottom-right.
 - [FROZEN] The provided image is conceptual only. Physical planning must use `matrice3_pin_coordinates.csv`, normalized `ll_*` coordinates, and explicit routing corridors for `INTERNAL_NEAREST_RIGHT` pins.
-- [FROZEN] First top floorplan envelope is a full die of `3800 um x 2700 um`, with up to approximately 5% horizontal extension allowed if explicitly reported.
-- [DEFAULT FOR V1] First pad/core keepout assumption is `120 um` until pad-ring LEF/DEF or a richer pad handoff replaces it.
+- [FROZEN] Current top floorplan envelope uses the layout-derived die of about `4293.179 um x 3209.173 um`. Die height is not flexible in the normal flow.
+- [FROZEN] Current pad-ring/core physical planning depth is about `164 um`, replacing the older `120 um` abstract keepout.
 - [FROZEN] First MPTDC placeholder arrangement is a vertical stack to the right of the matrix, with R top, Y middle, and B bottom.
-- [FROZEN] MPTDC placeholder boxes are parametric, default `1.0 mm^2` each, with horizontal:vertical aspect ratio `4:3`.
+- [FROZEN] Required MPTDC planning case uses the full DEF/block boundary `1061.20 um x 801.92 um`, plus `5%` dimensional margin and a provisional `20 um` halo around each MPTDC.
+- [FROZEN] MPTDCs should keep the same orientation where possible; no independent mirroring/rotation is allowed unless a real PnR blockage justifies it.
+- [FROZEN] If the full-boundary MPTDC stack is tight, reduce the inter-MPTDC gap from `40 um` to `20 um` before considering any die-size risk item.
 - [FROZEN] If the vertical MPTDC placeholder stack does not fit, scripts must stop and report. Do not silently switch to a 2+1 fallback.
 - [FROZEN] DDR16 is deferred from early Innovus OOC. It remains a north-side future boundary until the DDR macro contract is ready.
-- [TBD - NEEDS FLOORPLAN] Final exact pad-ring/core keepout, final MPTDC macro dimensions, final PLL size, and final top-level pad coordinates.
+- [FROZEN] The top layout source of truth for BOX_RING/pad-ring geometry is the OA cell at `/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC`.
+- [TBD - NEEDS FLOORPLAN] Exact BOX_RING blockage coordinates, final PLL size, and final top-level pad coordinates still need a parseable export or analog/layout handoff.
 
 ## Matrix Reset Assumptions
 
@@ -307,7 +310,7 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] The legacy `spadmic_correlated_tx` remains unchanged for `spadmic_top_v1`; it is not used by `spadmic_top_matrix_v1` because it increments event IDs per packet and has no bundle barrier.
 - [IMPLEMENTED] DDR16 pairer input is now driven from `spadmic_output_fifo`. `spadmic_event_bundle_tx` pushes logical words into the FIFO and its `flush_o` is converted into an ordered FIFO marker so odd final words are padded at the correct bundle boundary before later event words can be paired.
 - [IMPLEMENTED] `safe_idle` for the matrix top is mode-aware. It includes event coordinator, snapshot, reset, matrix configuration, active-mode TDC packet state, active-mode position packet state, bundle TX, output FIFO empty state, pending FIFO flush marker state, and DDR16 pairer state. Inactive TDC or position blocks do not block CSR/config acceptance.
-- [IMPLEMENTED] Pre-event resource grant now includes output FIFO free-space reservation. `SPADMIC_OUTPUT_FIFO_DEPTH=512`, `SPADMIC_MAX_EVENT_BUNDLE_WORDS=128`, and `SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES=129` are the implemented v1 defaults.
+- [IMPLEMENTED] Pre-event resource grant now includes output FIFO free-space reservation. `SPADMIC_OUTPUT_FIFO_DEPTH=256`, `SPADMIC_MAX_EVENT_BUNDLE_WORDS=128`, and `SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES=129` are the implemented physical-planning defaults.
 - [IMPLEMENTED] Output FIFO entries are 17 bits in the top integration: 16 logical data bits plus one ordered flush-marker bit. CSR level/free-space status counts FIFO entries, including any pending flush marker.
 - [IMPLEMENTED] Normal TDC-only and BOTH mode CSR writes require axis mask `3'b111`. Partial axis masks remain allowed only in calibration mode.
 - [IMPLEMENTED] Shared TDC `max_hits` and RO code CSR ownership is now exposed by the matrix-top CSR and wired to all three wrappers.
@@ -407,10 +410,12 @@ Pin family summary from the CSV:
 - [VERIFIED] Local Verifier smoke confirms the locked first geometry reports `STATUS=FAIL` with `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`, about `109 um` height excess, and about `0.839 mm^2` maximum MPTDC placeholder area per axis if the vertical stack must fit with current die/core assumptions.
 - [RISK] The staged Innovus OOC wrapper validates Genus collateral and creates per-block run directories but does not yet run real Innovus import/place/preCTS. This is intentional until the clean Genus evidence and top geometry gates are resolved.
 - [VERIFIED] Server Genus staged run `genus_matrix_ooc_staged_20260630_1516` passed all 12 configured OOC blocks with `GENUS_RC=0` at source commit `195b6d1bf87c16042294c8e3d411b50d989f541a`. This remains typical-only OOC feasibility, not MMMC or final timing signoff.
-- [FAILED REVIEW] Server staged floorplan run `innovus_matrix_top_staged_fp_20260630_1628` correctly stopped before Innovus with `FP_RC=5`, `STATUS=FAIL`, and `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`. The default 1.0 mm2, 4:3-aspect three-axis MPTDC vertical stack is 109.038 um too tall for the 3800 um x 2700 um die with 120 um pad/core keepout.
-- [DEFAULT FOR V1] A 1.0 mm2 MPTDC placeholder with aspect ratio `1.8` is an explicit next candidate, not a silent replacement. Local generator evidence gives `STATUS=PASS` in the same 3800 um x 2700 um outline with MPTDC width/height about `1341.641 um x 745.356 um`; final acceptance still needs the real MPTDC physical handoff.
+- [HISTORICAL] Server staged floorplan run `innovus_matrix_top_staged_fp_20260630_1628` correctly stopped before Innovus with `FP_RC=5`, `STATUS=FAIL`, and `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`. The old default 1.0 mm2, 4:3-aspect three-axis MPTDC vertical stack was 109.038 um too tall for the obsolete 3800 um x 2700 um abstract die with 120 um pad/core keepout.
+- [SUPERSEDED] The earlier 1.0 mm2, aspect-ratio-1.8 candidate is no longer the active planning case. It is replaced by the full-boundary Scenario B reservation in the real top envelope.
 - [VERIFIED] Server OOC collateral gate `innovus_matrix_ooc_gate_20260630_1628` returned `OOC_RC=4`, `READY_FOR_NEXT_IMPORT_TEMPLATE`, with all 10 connectivity-first block netlists and SDCs present. DDR16 remains excluded by default because it is low priority for the next physical step.
 - [IMPLEMENTED] Builder fixed a warning-classifier false positive where the `Multidriven Port(s)/Pin(s)` report heading was counted as an undriven/multidriven finding even when detailed Genus text said no such issue.
+- [FROZEN] New TOP Genus OOC runs exclude `ddr16_pairer` and full `spadmic_top_matrix_v1` by default. They are opt-in only through explicit environment variables after the staged subblock flow is reviewed.
+- [FROZEN] Clock mux reset default selects PLL 160 MHz. PLL lock/status is CSR-only for v1; there is no external lock pin.
 
 ## Affected Files
 

@@ -59,7 +59,7 @@ clk_sys / async_rst_n / clk_ref_40m / async SPAD inputs
 | `i2c_scl_i/sda_i` | I2C pins | `clk_sys` | 2FF synchronized sampled protocol | Check max supported I2C rate versus `clk_sys` sampling |
 | SPAD event to TDC wrapper | async event | async gate + `clk_ref_40m` qualifier | intentional async request plus ref-clock pulse qualification | Verify no held-high retrigger and no mode-switch glitch |
 | `x/y/z_lines_i` | SPAD matrix | `clk_sys` position block | multibit async sampled bus with settle filter | CDC waiver plus functional settle/glitch tests |
-| `clk_ref_40m` STOP qualifier | external ref clock | MPTDC STOP input | generated async pulse from ref edge | Treat as cross-domain/async input to MPTDC |
+| `clk_ref_40m` STOP qualifier | internal 40 MHz from PLL or external-160 divide-by-4 | MPTDC STOP input | generated async pulse from ref edge | Treat as cross-domain/async input to MPTDC until final generated-clock STA is reviewed |
 | MPTDC slow/fast oscillators | oscillator macro | PD/counter measurement fabric | generated clocks | Real macro generated clocks and uncertainty required |
 | PD cell sampling | slow/fast oscillator taps | async latch/sampler | intentional measurement structure | CDC/STA exception and physical symmetry constraints |
 | Epoch/counter snapshots | oscillator domains | `clk_sys` hit-capture image | static snapshot CDC | Constrain source clocks and document bounded ambiguity |

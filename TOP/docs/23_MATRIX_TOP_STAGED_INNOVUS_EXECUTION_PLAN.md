@@ -12,12 +12,17 @@ This is not placement, route, CTS, DRC/LVS, PEX, MMMC, or final signoff.
 - Route layers: `MET1 MET2 MET3 METTP`
 - Ordinary signal top layer: `MET3`
 - Effective PG/exception layer: `METTP`
-- First full-die envelope: `3800 um x 2700 um`
-- Default pad/core keepout assumption: `120 um`
+- Current full-die envelope: `4293.179 um x 3209.173 um`
+- Pad-ring/core physical planning depth: about `164 um`
+- BOX_RING/OA source: `/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC`
 - Matrix macro: `matrice3`, `1999.91 um x 1725.54 um`
 - Matrix placement: left side, vertically centered
 - MPTDC placeholders: three vertical boxes, R top, Y middle, B bottom
-- MPTDC placeholder size: default `1.0 mm^2` each, aspect ratio `4:3`
+- MPTDC Scenario A: optimistic core box `1020.88 um x 761.60 um`
+- MPTDC Scenario B: required full boundary `1061.20 um x 801.92 um`, `5%`
+  dimensional margin, `20 um` halo, `20 um` inter-axis gap
+- Clock pads: one external 160 MHz clock only; 40 MHz clocks are internal
+  PLL/divider outputs
 - DDR16: deferred from early OOC; keep only as a future north-side boundary
 
 ## Flow Order
@@ -42,7 +47,9 @@ The initial OOC order is:
 10. `i2c_slave`
 
 `ddr16_pairer` is intentionally excluded unless
-`SPADMIC_INNOVUS_INCLUDE_DDR16=1`.
+`SPADMIC_INNOVUS_INCLUDE_DDR16=1`. Genus OOC also excludes `ddr16_pairer` and
+full `spadmic_top_matrix_v1` unless `SPADMIC_GENUS_INCLUDE_DDR16=1` or
+`SPADMIC_GENUS_INCLUDE_FULL_TOP=1` is explicitly set.
 
 ## New Inputs And Outputs
 
@@ -73,6 +80,7 @@ feasibility_status.txt
 top_floorplan_regions.tcl
 matrix_top_region_summary.csv
 mptdc_placeholder_summary.csv
+mptdc_scenario_summary.csv
 pad_policy_summary.csv
 matrix_pin_family_summary.csv
 matrix_pin_side_summary.csv
@@ -90,24 +98,25 @@ This wrapper generates planning collateral and stops before Innovus when
 
 ## Current Expected Geometry Result
 
-With the locked default die envelope and three `1.0 mm^2` MPTDC placeholders in
-a vertical stack, the plan is expected to fail height feasibility:
+The active geometry gate is Scenario B, not the older abstract `1.0 mm^2`,
+`4:3` placeholder. Scenario B reserves the full MPTDC DEF/block boundary with
+margin and halo:
 
-- core planning box: `120 120 3680 2580`
-- matrix placement: left/centered
-- MPTDC vertical stack: about `2678 um` including two `40 um` gaps
-- available core height: `2460 um`
-- expected excess: about `109 um`
-- maximum MPTDC placeholder area per axis that fits this stack: about
-  `0.839 mm^2`
+- die: `4293.179 um x 3209.173 um`
+- pad-ring/core planning depth: `164 um`
+- MPTDC boundary: `1061.20 um x 801.92 um`
+- dimensional margin: `5%`
+- halo: `20 um` around each MPTDC
+- effective per-axis planning envelope: about `1154 um x 882 um`
+- MPTDC vertical order: R, Y, B
+- inter-axis gap: `20 um`
 
-This is a useful result, not a script failure. It means either MPTDC physical
-area must come in below the provisional `1.0 mm^2` estimate, vertical die/core
-space must increase, the pad keepout must shrink with real pad-ring data, or
-the user must approve a different MPTDC arrangement. The current user decision
-is to stop and report instead of silently using a 2+1 fallback.
+Local generator probing shows this Scenario B geometry is expected to pass the
+planning gate in the real envelope. If it fails on the server, treat that as a
+geometry issue to review, not as permission to silently switch to 2+1 MPTDC
+placement or increase die height.
 
-## Server Result And Candidate Geometry
+## Historical Geometry Failure
 
 Server run `innovus_matrix_top_staged_fp_20260630_1628` confirmed the expected
 default failure:
@@ -118,19 +127,9 @@ default failure:
 - height excess: `109.038 um`
 - max per-axis MPTDC placeholder area at the default 4:3 aspect: `0.839170 mm^2`
 
-This blocks real top placement with the default placeholder only. It does not
-prove the die outline is impossible. A local explicit candidate using the same
-`1.0 mm^2` MPTDC area but a wider `1.8` aspect ratio passed the generator:
-
-- die: `3800 um x 2700 um`
-- MPTDC area: `1.0 mm^2` per axis
-- MPTDC aspect: `1.8`
-- MPTDC width/height: about `1341.641 um x 745.356 um`
-- vertical stack height including gaps: about `2316.068 um`
-- feasibility status: `PASS`
-
-This candidate is provisional until the MPTDC physical handoff gives real width,
-height, halos, pins, keepouts, and orientation constraints.
+That old failure remains useful historical evidence only. It is superseded by
+the current full-boundary Scenario B using the larger custom TOP die and the
+layout-derived pad-ring depth.
 
 ## Server Commands
 
@@ -153,6 +152,8 @@ export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 export MPTDC_XH018_STACK=xx31
 export MPTDC_STDCELL_FAMILY=JIHD
 export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+export SPADMIC_GENUS_INCLUDE_DDR16=0
+export SPADMIC_GENUS_INCLUDE_FULL_TOP=0
 
 GENUS_RUN_ID=genus_matrix_ooc_clean2_$(date +%Y%m%d_%H%M)
 bash TOP/syn/scripts/run_genus_all_matrix_ooc.sh "$GENUS_RUN_ID"
@@ -180,7 +181,7 @@ TOP/ci/collect_matrix_top_server_snapshot.sh innovus "$OOC_RUN_ID"
 
 Expected early return codes:
 
-- staged floorplan returns `5` if the locked geometry is infeasible;
+- staged floorplan returns `5` if Scenario B geometry is infeasible;
 - OOC gate returns `4` when all required Genus collateral exists and the next
   reviewed import template is needed;
 - neither return code is a placement/signoff pass.

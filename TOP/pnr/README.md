@@ -75,16 +75,20 @@ bash TOP/pnr/scripts/server_run_innovus_matrix_top_staged_floorplan.sh "$RUN_ID"
 
 Default planning inputs:
 
-- full-die envelope: `3800 um x 2700 um`;
-- pad/core keepout assumption: `120 um`;
-- MPTDC placeholders: three vertical `1.0 mm^2` boxes, `4:3` aspect ratio,
-  ordered R/Y/B from top to bottom;
+- full-die envelope: `4293.179 um x 3209.173 um`;
+- pad-ring/core planning depth: `164 um`;
+- BOX_RING/OA source:
+  `/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC`;
+- MPTDC Scenario B: full DEF/block boundary `1061.20 um x 801.92 um`,
+  `5%` dimension margin, `20 um` halo, and `20 um` inter-axis gap, ordered
+  R/Y/B from top to bottom;
 - pad policy template:
   `TOP/pnr/inputs/matrix_top_pad_policy_template.csv`.
 
-Under those defaults the expected result is a controlled feasibility stop:
-`MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`. This is useful evidence, not a
-tool failure.
+Under those defaults the expected result is a Scenario B geometry pass. Any
+failure should stop before Innovus and be reviewed as a geometry issue, not
+silently repaired by changing to a 2+1 MPTDC arrangement or increasing die
+height.
 
 ## Staged OOC Collateral Gate
 

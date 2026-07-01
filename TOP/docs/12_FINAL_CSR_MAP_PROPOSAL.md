@@ -58,7 +58,7 @@ This table is the implemented subset for the new matrix top shell. Registers not
 | `0x601C` | `MATRIX_CFG_LAST_ERROR` | RO | `0` | matrix config last error, CSR last error, event reject count |
 | `0x7000` | `TX_STATUS` | RO | `empty` | DDR16 pairer, bundle, position drop, and output FIFO overflow status |
 | `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `empty` | output FIFO empty/full/almost-full/level/free-space status |
-| `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | reserve entries `129`, `OUTPUT_FIFO_DEPTH=512` |
+| `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | reserve entries `129`, `OUTPUT_FIFO_DEPTH=256` |
 
 Implemented command error codes in `MTOP_FAULT[11:8]`:
 
@@ -253,7 +253,7 @@ Active `OUTPUT_FIFO_STATUS` layout at `0x7004`:
 | `[15:4]` | output FIFO level in entries |
 | `[31:16]` | output FIFO free entries |
 
-The matrix top uses `SPADMIC_OUTPUT_FIFO_DEPTH=512` entries and a logical
+The matrix top uses `SPADMIC_OUTPUT_FIFO_DEPTH=256` entries and a logical
 worst-case bundle estimate of `SPADMIC_MAX_EVENT_BUNDLE_WORDS=128`. Admission
 uses `SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES=129` so the 128 logical words and one
 ordered flush marker can both fit. The integrated FIFO carries 16-bit logical

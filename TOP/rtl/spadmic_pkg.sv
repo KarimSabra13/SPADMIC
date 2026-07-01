@@ -39,7 +39,7 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_MAX_TDC_PACKET_WORDS = 2 + (mptdc_pkg::MAX_HITS * 2);
   localparam int unsigned SPADMIC_MAX_CONCURRENT_ARB_BURST_WORDS =
       (SPADMIC_AXIS_COUNT * SPADMIC_MAX_TDC_PACKET_WORDS) + SPADMIC_POS_RAW_PKT_WORDS;
-  localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 512;
+  localparam int unsigned SPADMIC_OUTPUT_FIFO_DEPTH = 256;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_LEVEL_W = $clog2(SPADMIC_OUTPUT_FIFO_DEPTH + 1);
   localparam int unsigned SPADMIC_MAX_EVENT_BUNDLE_WORDS = 128;
   localparam int unsigned SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES =

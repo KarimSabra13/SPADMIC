@@ -39,8 +39,9 @@ spadmic_event_bundle_tx
   -> DDR16 macro boundary
 ```
 
-`spadmic_output_fifo` is synchronous to `clk_sys`, has 512 entries in v1, and
-is used by event admission through a 129-entry reservation threshold. That
+`spadmic_output_fifo` is synchronous to `clk_sys`, has 256 entries in the
+current physical-planning target, and is used by event admission through a
+129-entry reservation threshold. That
 threshold covers the 128-word logical bundle estimate plus one ordered flush
 marker. In the top integration each FIFO entry carries 16 logical data bits plus
 one internal flush-marker bit. Bundle TX words enter the FIFO as data entries;

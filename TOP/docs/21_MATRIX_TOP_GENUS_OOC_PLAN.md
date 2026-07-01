@@ -32,16 +32,20 @@ away from `xx31/JIHD`.
 
 ## Block List And Order
 
-1. Snapshot-driven position wrapper/path.
-2. Output FIFO plus bundle path.
-3. OR64 three-axis wrapper.
-4. Matrix reset controller.
-5. Matrix configuration controller plus Cout sampler.
-6. DDR16 pairer.
+1. OR64 three-axis wrapper.
+2. Matrix reset controller.
+3. Matrix configuration controller plus Cout sampler.
+4. Snapshot-driven position wrapper/path.
+5. Output FIFO.
+6. Event bundle TX.
 7. Event coordinator.
 8. Matrix-top CSR.
 9. I2C/CSR bridge feasibility.
-10. `spadmic_top_matrix_v1` feasibility with intended black boxes/collateral documented.
+10. I2C slave.
+
+`ddr16_pairer` and full `spadmic_top_matrix_v1` are excluded by default. Enable
+them only with explicit reviewed overrides after the staged subblock flow is
+ready.
 
 For MPTDC, use existing MPTDC axis-core flow/results as source of truth. Do not synthesize three unique MPTDC variants unless a later handoff requires it.
 
@@ -52,7 +56,7 @@ Minimum intended constraints:
 - `clk_sys`: 6.25 ns.
 - `clk_cfg_40m`: 25 ns.
 - `clk_ref_40m`: 25 ns where STOP qualifier logic is included.
-- Treat `clk_sys` and `clk_cfg_40m` as distinct domains unless the final PLL/STA constraints prove a synchronous relationship.
+- Treat `clk_sys`, `clk_cfg_40m`, and `clk_ref_40m` conservatively until the final PLL/divider generated-clock constraints prove the intended v1 relationship.
 - Mark ASYNC_REG synchronizers for preservation.
 - Classify matrix R/Y/B START paths separately from synchronized snapshot paths.
 - Preserve OR64 hierarchy sufficiently for path and skew reporting.

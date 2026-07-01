@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate staged SPADMIC matrix-top floorplan planning collateral.
 
-This is a planning generator, not a signoff placer.  It consumes the final
-matrice3 normalized pin CSV, a small pad-policy CSV, and the current user
-floorplan decisions to create reviewable Tcl/CSV/Markdown collateral for the
+This is a planning generator, not a signoff placer. It consumes the final
+matrice3 normalized pin CSV, a pad-policy CSV, and the current TOP physical
+planning decisions to create reviewable Tcl/CSV/Markdown collateral for the
 next Innovus stage.
 """
 
@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import argparse
 import csv
-import math
 import re
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -34,6 +34,45 @@ SUPPLY_RE = re.compile(r"(vdd|vss|gnd|avdd|avss|dvdd|dvss|vdda|vssa)", re.IGNORE
 AXIS_ORDER = ("R", "Y", "B")
 
 
+@dataclass(frozen=True)
+class MptdcScenario:
+    name: str
+    description: str
+    boundary_width_um: float
+    boundary_height_um: float
+    dimension_margin_pct: float
+    halo_um: float
+    gap_um: float
+
+    @property
+    def margin_scale(self) -> float:
+        return 1.0 + (self.dimension_margin_pct / 100.0)
+
+    @property
+    def macro_width_um(self) -> float:
+        return self.boundary_width_um * self.margin_scale
+
+    @property
+    def macro_height_um(self) -> float:
+        return self.boundary_height_um * self.margin_scale
+
+    @property
+    def planning_width_um(self) -> float:
+        return self.macro_width_um + (2.0 * self.halo_um)
+
+    @property
+    def planning_height_um(self) -> float:
+        return self.macro_height_um + (2.0 * self.halo_um)
+
+    @property
+    def planning_area_um2(self) -> float:
+        return self.planning_width_um * self.planning_height_um
+
+    @property
+    def aspect_ratio(self) -> float:
+        return self.planning_width_um / self.planning_height_um
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -52,19 +91,25 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--out", required=True, help="Output directory.")
     parser.add_argument("--run-id", default="matrix_top_floorplan", help="Run ID.")
-    parser.add_argument("--die-width-um", type=float, default=3800.0)
-    parser.add_argument("--die-height-um", type=float, default=2700.0)
-    parser.add_argument("--pad-keepout-um", type=float, default=120.0)
+    parser.add_argument("--die-width-um", type=float, default=4293.179)
+    parser.add_argument("--die-height-um", type=float, default=3209.173)
+    parser.add_argument("--pad-keepout-um", type=float, default=164.0)
+    parser.add_argument("--box-ring-source", default="/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC")
     parser.add_argument("--matrix-width-um", type=float, default=1999.91)
     parser.add_argument("--matrix-height-um", type=float, default=1725.54)
-    parser.add_argument("--matrix-left-margin-um", type=float, default=120.0)
+    parser.add_argument("--matrix-left-margin-um", type=float, default=164.0)
     parser.add_argument("--matrix-halo-um", type=float, default=50.0)
     parser.add_argument("--internal-corridor-extra-um", type=float, default=250.0)
-    parser.add_argument("--mptdc-area-um2", type=float, default=1_000_000.0)
-    parser.add_argument("--mptdc-aspect-ratio", type=float, default=4.0 / 3.0)
-    parser.add_argument("--mptdc-gap-um", type=float, default=40.0)
     parser.add_argument("--mptdc-left-gap-um", type=float, default=100.0)
-    parser.add_argument("--horizontal-extension-pct", type=float, default=5.0)
+    parser.add_argument("--mptdc-gap-um", type=float, default=20.0)
+    parser.add_argument("--mptdc-width-um", type=float, default=1061.20)
+    parser.add_argument("--mptdc-height-um", type=float, default=801.92)
+    parser.add_argument("--mptdc-dimension-margin-pct", type=float, default=5.0)
+    parser.add_argument("--mptdc-halo-um", type=float, default=20.0)
+    parser.add_argument("--scenario-a-mptdc-width-um", type=float, default=1020.88)
+    parser.add_argument("--scenario-a-mptdc-height-um", type=float, default=761.60)
+    parser.add_argument("--scenario-a-mptdc-gap-um", type=float, default=40.0)
+    parser.add_argument("--horizontal-extension-pct", type=float, default=0.0)
     parser.add_argument("--pll-width-um", type=float, default=300.0)
     parser.add_argument("--pll-height-um", type=float, default=220.0)
     return parser.parse_args()
@@ -108,6 +153,10 @@ def fmt_rect(rect: tuple[float, float, float, float]) -> str:
 
 def rect_area(rect: tuple[float, float, float, float]) -> float:
     return max(0.0, rect[2] - rect[0]) * max(0.0, rect[3] - rect[1])
+
+
+def shrink_rect(rect: tuple[float, float, float, float], amount: float) -> tuple[float, float, float, float]:
+    return (rect[0] + amount, rect[1] + amount, rect[2] - amount, rect[3] - amount)
 
 
 def write_csv(path: Path, header: list[str], rows: list[list[object]]) -> None:
@@ -195,6 +244,53 @@ def axis_pin_centers(rows: list[dict[str, str]]) -> dict[str, float]:
     return centers
 
 
+def place_mptdc_stack(
+    scenario: MptdcScenario,
+    matrix: tuple[float, float, float, float],
+    core: tuple[float, float, float, float],
+    left_gap_um: float,
+) -> tuple[dict[str, tuple[float, float, float, float]], dict[str, float | str]]:
+    planning_w = scenario.planning_width_um
+    planning_h = scenario.planning_height_um
+    stack_h = (3.0 * planning_h) + (2.0 * scenario.gap_um)
+    x1 = matrix[2] + left_gap_um
+    stack_y1 = core[1] + (((core[3] - core[1]) - stack_h) / 2.0)
+
+    boxes: dict[str, tuple[float, float, float, float]] = {}
+    y_top = stack_y1 + stack_h
+    for axis in AXIS_ORDER:
+        y2 = y_top
+        y1 = y2 - planning_h
+        boxes[axis] = (x1, y1, x1 + planning_w, y2)
+        y_top = y1 - scenario.gap_um
+
+    width_excess = max(0.0, (x1 + planning_w) - core[2])
+    height_excess = max(0.0, core[1] - stack_y1, (stack_y1 + stack_h) - core[3])
+    aspect = scenario.aspect_ratio
+    height_limit = max(0.0, ((core[3] - core[1]) - (2.0 * scenario.gap_um)) / 3.0)
+    width_limit = max(0.0, core[2] - x1)
+    max_plan_h = min(height_limit, width_limit / aspect if aspect > 0.0 else 0.0)
+    max_area_fit = max_plan_h * max_plan_h * aspect
+    issues: list[str] = []
+    if width_excess > 0.0:
+        issues.append("MPTDC_STACK_EXCEEDS_CORE_WIDTH")
+    if height_excess > 0.0:
+        issues.append("MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT")
+
+    metrics: dict[str, float | str] = {
+        "status": "FAIL" if issues else "PASS",
+        "issues": " ".join(issues),
+        "width_excess_um": width_excess,
+        "height_excess_um": height_excess,
+        "max_area_fit_um2": max_area_fit,
+        "stack_height_um": stack_h,
+        "planning_width_um": planning_w,
+        "planning_height_um": planning_h,
+        "planning_area_um2": scenario.planning_area_um2,
+    }
+    return boxes, metrics
+
+
 def main() -> int:
     args = parse_args()
     out_dir = Path(args.out)
@@ -228,38 +324,61 @@ def main() -> int:
         matrix[3] + args.matrix_halo_um,
     )
 
-    if args.mptdc_aspect_ratio <= 0.0:
-        raise SystemExit("mptdc aspect ratio must be positive")
-    mptdc_w = math.sqrt(args.mptdc_area_um2 * args.mptdc_aspect_ratio)
-    mptdc_h = math.sqrt(args.mptdc_area_um2 / args.mptdc_aspect_ratio)
-    mptdc_stack_h = (3.0 * mptdc_h) + (2.0 * args.mptdc_gap_um)
-    mptdc_x1 = matrix[2] + args.mptdc_left_gap_um
-    mptdc_stack_y1 = core[1] + ((core_h - mptdc_stack_h) / 2.0)
-    mptdc_boxes: dict[str, tuple[float, float, float, float]] = {}
-    y_top = mptdc_stack_y1 + mptdc_stack_h
-    for axis in AXIS_ORDER:
-        y2 = y_top
-        y1 = y2 - mptdc_h
-        mptdc_boxes[axis] = (mptdc_x1, y1, mptdc_x1 + mptdc_w, y2)
-        y_top = y1 - args.mptdc_gap_um
+    scenario_a = MptdcScenario(
+        name="A_CORE_OPTIMISTIC",
+        description="MPTDC core-box estimate only; no dimensional margin or halo.",
+        boundary_width_um=args.scenario_a_mptdc_width_um,
+        boundary_height_um=args.scenario_a_mptdc_height_um,
+        dimension_margin_pct=0.0,
+        halo_um=0.0,
+        gap_um=args.scenario_a_mptdc_gap_um,
+    )
+    scenario_b = MptdcScenario(
+        name="B_FULL_BOUNDARY_MARGIN_HALO",
+        description="Required TOP planning case: full DEF boundary, 5 percent dimension margin, and provisional halo.",
+        boundary_width_um=args.mptdc_width_um,
+        boundary_height_um=args.mptdc_height_um,
+        dimension_margin_pct=args.mptdc_dimension_margin_pct,
+        halo_um=args.mptdc_halo_um,
+        gap_um=args.mptdc_gap_um,
+    )
+    scenarios = [scenario_a, scenario_b]
 
-    width_need = (mptdc_x1 + mptdc_w) - core[2]
-    height_need = max(0.0, core[1] - mptdc_stack_y1, (mptdc_stack_y1 + mptdc_stack_h) - core[3])
-    allowed_extended_w = die_w * (1.0 + (args.horizontal_extension_pct / 100.0))
-    width_after_horizontal_extension = (mptdc_x1 + mptdc_w) <= (allowed_extended_w - keepout)
-    mptdc_height_limit = max(0.0, (core_h - (2.0 * args.mptdc_gap_um)) / 3.0)
-    mptdc_width_limit = max(0.0, core[2] - mptdc_x1)
-    max_area_by_height = (mptdc_height_limit * mptdc_height_limit) * args.mptdc_aspect_ratio
-    max_area_by_width = (mptdc_width_limit * mptdc_width_limit) / args.mptdc_aspect_ratio
-    max_area_fit = min(max_area_by_height, max_area_by_width)
+    scenario_boxes: dict[str, dict[str, tuple[float, float, float, float]]] = {}
+    scenario_metrics: dict[str, dict[str, float | str]] = {}
+    scenario_rows: list[list[object]] = []
+    for scenario in scenarios:
+        boxes, metrics = place_mptdc_stack(scenario, matrix, core, args.mptdc_left_gap_um)
+        scenario_boxes[scenario.name] = boxes
+        scenario_metrics[scenario.name] = metrics
+        scenario_rows.append(
+            [
+                scenario.name,
+                scenario.description,
+                f"{scenario.boundary_width_um:.3f}",
+                f"{scenario.boundary_height_um:.3f}",
+                f"{scenario.dimension_margin_pct:.3f}",
+                f"{scenario.halo_um:.3f}",
+                f"{scenario.gap_um:.3f}",
+                f"{scenario.planning_width_um:.3f}",
+                f"{scenario.planning_height_um:.3f}",
+                f"{scenario.planning_area_um2:.3f}",
+                metrics["status"],
+                metrics["issues"],
+                f"{float(metrics['width_excess_um']):.3f}",
+                f"{float(metrics['height_excess_um']):.3f}",
+                f"{float(metrics['max_area_fit_um2']):.3f}",
+            ]
+        )
 
+    main_scenario = scenario_b
+    mptdc_boxes = scenario_boxes[main_scenario.name]
+    main_metrics = scenario_metrics[main_scenario.name]
     feasibility_issues: list[str] = []
     if matrix[0] < core[0] or matrix[2] > core[2] or matrix[1] < core[1] or matrix[3] > core[3]:
         feasibility_issues.append("MATRIX_OUTSIDE_CORE")
-    if width_need > 0.0:
-        feasibility_issues.append("MPTDC_STACK_EXCEEDS_CORE_WIDTH")
-    if height_need > 0.0:
-        feasibility_issues.append("MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT")
+    if main_metrics["issues"]:
+        feasibility_issues.extend(str(main_metrics["issues"]).split())
     if internal_bbox is None:
         feasibility_issues.append("NO_INTERNAL_RIGHT_CORRIDOR_DETECTED")
     top_status = "FAIL" if feasibility_issues else "PASS"
@@ -275,6 +394,8 @@ def main() -> int:
 
     regions: dict[str, tuple[float, float, float, float]] = {
         "die": (0.0, 0.0, die_w, die_h),
+        "box_ring_outer": (0.0, 0.0, die_w, die_h),
+        "box_ring_inner_planning": core,
         "core_planning": core,
         "matrice3_macro": matrix,
         "matrice3_halo": matrix_halo,
@@ -285,19 +406,23 @@ def main() -> int:
         "position_cluster_main": (matrix[2] + 420.0, matrix[1] + 280.0, min(core[2], matrix[2] + 920.0), matrix[1] + 920.0),
         "control_reset_supervision_south": (matrix[0], core[1], min(core[2], matrix[2] + 1050.0), matrix[1] - 80.0),
         "fifo_bundle_north": (matrix[2] + 220.0, max(matrix[3] - 50.0, core[3] - 420.0), core[2], core[3]),
-        "pll_placeholder_south_east": (core[2] - args.pll_width_um, core[1], core[2], core[1] + args.pll_height_um),
+        "pll_clock_mux_south_east": (core[2] - args.pll_width_um, core[1], core[2], core[1] + args.pll_height_um),
     }
     if internal_corridor:
         regions["internal_nearest_right_corridor"] = internal_corridor
     for axis, rect in mptdc_boxes.items():
-        regions[f"mptdc_{axis.lower()}_placeholder"] = rect
+        macro_rect = shrink_rect(rect, main_scenario.halo_um)
+        regions[f"mptdc_{axis.lower()}_planning_halo"] = rect
+        regions[f"mptdc_{axis.lower()}_macro_boundary_margin"] = macro_rect
 
     mptdc_rows: list[list[object]] = []
     for axis in AXIS_ORDER:
         rect = mptdc_boxes[axis]
+        macro_rect = shrink_rect(rect, main_scenario.halo_um)
         mptdc_rows.append(
             [
                 axis,
+                main_scenario.name,
                 f"{rect[0]:.3f}",
                 f"{rect[1]:.3f}",
                 f"{rect[2]:.3f}",
@@ -305,6 +430,10 @@ def main() -> int:
                 f"{rect[2] - rect[0]:.3f}",
                 f"{rect[3] - rect[1]:.3f}",
                 f"{rect_area(rect):.3f}",
+                f"{macro_rect[0]:.3f}",
+                f"{macro_rect[1]:.3f}",
+                f"{macro_rect[2]:.3f}",
+                f"{macro_rect[3]:.3f}",
                 f"{axis_centers[axis]:.3f}",
             ]
         )
@@ -345,8 +474,44 @@ def main() -> int:
     )
     write_csv(
         out_dir / "mptdc_placeholder_summary.csv",
-        ["axis", "x1_um", "y1_um", "x2_um", "y2_um", "width_um", "height_um", "area_um2", "matrix_axis_pin_y_centroid_um"],
+        [
+            "axis",
+            "scenario",
+            "planning_x1_um",
+            "planning_y1_um",
+            "planning_x2_um",
+            "planning_y2_um",
+            "planning_width_um",
+            "planning_height_um",
+            "planning_area_um2",
+            "macro_x1_um",
+            "macro_y1_um",
+            "macro_x2_um",
+            "macro_y2_um",
+            "matrix_axis_pin_y_centroid_um",
+        ],
         mptdc_rows,
+    )
+    write_csv(
+        out_dir / "mptdc_scenario_summary.csv",
+        [
+            "scenario",
+            "description",
+            "boundary_width_um",
+            "boundary_height_um",
+            "dimension_margin_pct",
+            "halo_um",
+            "gap_um",
+            "planning_width_um",
+            "planning_height_um",
+            "planning_area_um2",
+            "status",
+            "issues",
+            "width_excess_um",
+            "height_excess_um",
+            "max_planning_area_fit_um2",
+        ],
+        scenario_rows,
     )
     write_csv(
         out_dir / "pad_policy_summary.csv",
@@ -366,16 +531,20 @@ def main() -> int:
 
     with (out_dir / "top_floorplan_regions.tcl").open("w") as fh:
         fh.write("# Generated by gen_matrix_top_floorplan_plan.py\n")
-        fh.write("# Coordinates are absolute planning coordinates in um for the first TOP seed.\n")
+        fh.write("# Coordinates are absolute planning coordinates in um for the TOP seed.\n")
         fh.write("namespace eval spadmic_matrix_top_fp {\n")
         fh.write(f"  variable run_id {{{args.run_id}}}\n")
         fh.write(f"  variable status {{{top_status}}}\n")
         fh.write(f"  variable issue_list {{{' '.join(feasibility_issues)}}}\n")
+        fh.write(f"  variable scenario {{{main_scenario.name}}}\n")
+        fh.write(f"  variable box_ring_source {{{args.box_ring_source}}}\n")
         fh.write(f"  variable die_width_um {die_w:.3f}\n")
         fh.write(f"  variable die_height_um {die_h:.3f}\n")
-        fh.write(f"  variable pad_keepout_um {keepout:.3f}\n")
-        fh.write(f"  variable mptdc_area_um2 {args.mptdc_area_um2:.3f}\n")
-        fh.write(f"  variable mptdc_aspect_ratio {args.mptdc_aspect_ratio:.6f}\n")
+        fh.write(f"  variable pad_ring_depth_um {keepout:.3f}\n")
+        fh.write(f"  variable mptdc_boundary_width_um {main_scenario.boundary_width_um:.3f}\n")
+        fh.write(f"  variable mptdc_boundary_height_um {main_scenario.boundary_height_um:.3f}\n")
+        fh.write(f"  variable mptdc_dimension_margin_pct {main_scenario.dimension_margin_pct:.3f}\n")
+        fh.write(f"  variable mptdc_halo_um {main_scenario.halo_um:.3f}\n")
         fh.write(f"  variable mptdc_axis_order {{{' '.join(AXIS_ORDER)}}}\n")
         fh.write("  variable regions\n")
         for name, rect in sorted(regions.items()):
@@ -389,39 +558,54 @@ def main() -> int:
 
     with (out_dir / "feasibility_status.txt").open("w") as fh:
         fh.write(f"STATUS={top_status}\n")
+        fh.write(f"SCENARIO={main_scenario.name}\n")
         fh.write(f"ISSUES={' '.join(feasibility_issues)}\n")
-        fh.write(f"MPTDC_WIDTH_EXCESS_UM={max(0.0, width_need):.3f}\n")
-        fh.write(f"MPTDC_HEIGHT_EXCESS_UM={height_need:.3f}\n")
-        fh.write(f"MPTDC_MAX_AREA_FIT_UM2={max_area_fit:.3f}\n")
-        fh.write(f"MPTDC_MAX_AREA_FIT_MM2={max_area_fit / 1_000_000.0:.6f}\n")
-        fh.write(f"HORIZONTAL_EXTENSION_CAN_FIX_WIDTH={width_after_horizontal_extension}\n")
+        fh.write(f"MPTDC_WIDTH_EXCESS_UM={float(main_metrics['width_excess_um']):.3f}\n")
+        fh.write(f"MPTDC_HEIGHT_EXCESS_UM={float(main_metrics['height_excess_um']):.3f}\n")
+        fh.write(f"MPTDC_MAX_PLANNING_AREA_FIT_UM2={float(main_metrics['max_area_fit_um2']):.3f}\n")
+        fh.write(f"MPTDC_MAX_PLANNING_AREA_FIT_MM2={float(main_metrics['max_area_fit_um2']) / 1_000_000.0:.6f}\n")
+        fh.write("HORIZONTAL_EXTENSION_CAN_FIX_WIDTH=False\n")
 
     with (out_dir / "top_floorplan_summary.md").open("w") as fh:
         fh.write("# SPADMIC Matrix TOP Staged Floorplan Plan\n\n")
         fh.write(f"- Run ID: `{args.run_id}`\n")
         fh.write(f"- Input matrix CSV: `{matrix_csv}`\n")
         fh.write(f"- Pad policy CSV: `{pad_policy_csv}`\n")
+        fh.write(f"- BOX_RING/OA source: `{args.box_ring_source}`\n")
         fh.write("- Coordinate basis: absolute planning coordinates in um; matrix pins use normalized `ll_*` source columns\n")
+        fh.write(f"- Gated scenario: `{main_scenario.name}`\n")
         fh.write(f"- Status: `{top_status}`\n")
         fh.write(f"- Issues: `{', '.join(feasibility_issues) if feasibility_issues else 'none'}`\n")
         fh.write(f"- Die: `{die_w:.3f} um x {die_h:.3f} um` ({(die_w * die_h) / 1_000_000.0:.3f} mm^2)\n")
-        fh.write(f"- Pad/core keepout assumption: `{keepout:.3f} um`\n")
+        fh.write(f"- Pad-ring/core physical planning depth: `{keepout:.3f} um`\n")
         fh.write(f"- Core planning box: `{fmt_rect(core)}`\n")
         fh.write(f"- Matrix placement: `{fmt_rect(matrix)}`\n")
         fh.write(f"- Matrix area: `{rect_area(matrix) / 1_000_000.0:.6f} mm^2`\n")
-        fh.write(f"- MPTDC placeholder area per axis: `{args.mptdc_area_um2 / 1_000_000.0:.6f} mm^2`\n")
-        fh.write(f"- MPTDC placeholder aspect ratio: `{args.mptdc_aspect_ratio:.6f}`\n")
-        fh.write(f"- MPTDC placeholder width/height: `{mptdc_w:.3f} um x {mptdc_h:.3f} um`\n")
-        fh.write(f"- MPTDC vertical stack height including gaps: `{mptdc_stack_h:.3f} um`\n")
-        fh.write(f"- MPTDC width excess beyond core: `{max(0.0, width_need):.3f} um`\n")
-        fh.write(f"- MPTDC height excess beyond core: `{height_need:.3f} um`\n")
-        fh.write(f"- Maximum MPTDC placeholder area per axis that fits current vertical stack: `{max_area_fit / 1_000_000.0:.6f} mm^2`\n")
-        fh.write(f"- Horizontal extension allowed: `{args.horizontal_extension_pct:.3f}%`, width after extension `{allowed_extended_w:.3f} um`\n")
-        fh.write(f"- Horizontal extension can fix width issue: `{width_after_horizontal_extension}`\n")
+        fh.write(f"- Required MPTDC planning envelope per axis: `{main_scenario.planning_width_um:.3f} um x {main_scenario.planning_height_um:.3f} um`\n")
+        fh.write(f"- Required MPTDC planning area per axis: `{main_scenario.planning_area_um2 / 1_000_000.0:.6f} mm^2`\n")
+        fh.write(f"- MPTDC vertical stack height including gaps: `{float(main_metrics['stack_height_um']):.3f} um`\n")
+        fh.write(f"- MPTDC width excess beyond core: `{float(main_metrics['width_excess_um']):.3f} um`\n")
+        fh.write(f"- MPTDC height excess beyond core: `{float(main_metrics['height_excess_um']):.3f} um`\n")
+        fh.write(f"- Maximum required-style MPTDC planning area per axis that fits: `{float(main_metrics['max_area_fit_um2']) / 1_000_000.0:.6f} mm^2`\n")
+        fh.write("- Horizontal die extension allowed by normal flow: `0.000%`\n")
+        fh.write("\n## Scenario Comparison\n\n")
+        fh.write("| Scenario | Boundary | Margin | Halo | Gap | Planning envelope | Status | Issues |\n")
+        fh.write("| --- | --- | ---: | ---: | ---: | --- | --- | --- |\n")
+        for scenario in scenarios:
+            metrics = scenario_metrics[scenario.name]
+            fh.write(
+                f"| `{scenario.name}` | `{scenario.boundary_width_um:.3f} x {scenario.boundary_height_um:.3f} um` "
+                f"| {scenario.dimension_margin_pct:.1f}% | {scenario.halo_um:.1f} um | {scenario.gap_um:.1f} um "
+                f"| `{scenario.planning_width_um:.3f} x {scenario.planning_height_um:.3f} um` "
+                f"| `{metrics['status']}` | `{metrics['issues'] or 'none'}` |\n"
+            )
         fh.write("\n## Axis Placeholder Order\n\n")
-        fh.write("| Axis | Placement intent | Pin centroid y from CSV |\n| --- | --- | ---: |\n")
+        fh.write("| Axis | Planning halo box | Macro boundary+margin box | Pin centroid y from CSV |\n")
+        fh.write("| --- | --- | --- | ---: |\n")
         for axis in AXIS_ORDER:
-            fh.write(f"| `{axis}` | `{fmt_rect(mptdc_boxes[axis])}` | {axis_centers[axis]:.3f} |\n")
+            rect = mptdc_boxes[axis]
+            macro_rect = shrink_rect(rect, main_scenario.halo_um)
+            fh.write(f"| `{axis}` | `{fmt_rect(rect)}` | `{fmt_rect(macro_rect)}` | {axis_centers[axis]:.3f} |\n")
         fh.write("\n## Pin Evidence\n\n")
         fh.write(f"- Matrix pin rows: `{len(rows)}`\n")
         fh.write(f"- Pin normalized bbox: `{fmt_rect(pin_bbox)}`\n")
@@ -429,9 +613,10 @@ def main() -> int:
         if internal_bbox:
             fh.write(f"- INTERNAL_NEAREST_RIGHT normalized bbox: `{fmt_rect(internal_bbox)}`\n")
         fh.write("- Unknown/analog rows are reported in `matrix_unknown_pins.csv`.\n")
-        fh.write("\n## Pad Policy\n\n")
+        fh.write("\n## Pad And Clock Policy\n\n")
         fh.write(f"- Policy rows: `{len(pad_rows)}`\n")
-        fh.write("- Current policy is side/order/group only because pad-ring LEF/DEF is not final.\n")
+        fh.write("- Current policy uses one external 160 MHz clock pad; `clk_cfg_40m` and `clk_ref_40m` are not independent external pads.\n")
+        fh.write("- Reset default selects PLL 160 MHz; external 160 MHz mode uses one divide-by-4 clock for both logical 40 MHz domains.\n")
         fh.write("- DDR16 entries are north-side placeholders and intentionally low priority.\n")
         fh.write("- `VTUNE` and matrix supplies are analog/macro-owned and not digital route claims.\n")
         fh.write("\n## Promotion Rule\n\n")
