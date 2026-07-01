@@ -42,6 +42,11 @@ Alternate selected-net route strategies for probes:
   mptdc_ckpt_route_selected_nets_detail_only {net_a}
   mptdc_ckpt_route_selected_nets_legacy {net_a}
 
+Surgical cleanup and stronger final guard helpers:
+  mptdc_ckpt_delete_regular_net_area net layer {x1 y1 x2 y2}
+  mptdc_ckpt_delete_regular_drc_wires net
+  mptdc_ckpt_assert_geometry_regular_clean
+
 Commands fail fast by default. Set MPTDC_CHECKPOINT_REPAIR_KEEP_GOING=1 only for
 exploratory probes where later commands should still run after a failed command.
 USAGE

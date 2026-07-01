@@ -153,24 +153,52 @@ CHECKPOINT_REPAIR_FAILED_COMMAND_INDEX=2
 CHECKPOINT_REPAIR_FAILED_COMMAND_ERROR=geometry is not clean after checkpoint repair command: DRC=2 SHORTS=1
 ```
 
-The router transcript shows the new residual marker class after routing `CTS_6`:
+The actual marker dump shows a single bad MET2 patch:
 
 ```text
-Total number of DRC violations = 2
-Total number of violations on LAYER MET2 = 2
+MET2 Metal_Short Regular Wire of Net CTS_6 & Special Wire of Net VDD
+  box {54.46 197.35 54.74 197.73}
+MET2 Minimal_Area Regular Wire of Net CTS_6
+  Actual: 0.10640000 Required: 0.20200000
 ```
 
 This is not a wrapper failure. It means the default selected-net strategy
 `globalDetailRoute -select; detailRoute -select` is not safe for `CTS_6`.
-The next useful steps are:
+The route-design selected-net strategy reproduced the same failure:
 
-1. Dump the `inline_01_assert_geometry_verify_drc_markers.tsv` entries for the
-   routed `CTS_6` attempt.
-2. Route the six non-`CTS_6` residual regular nets from the clean source
+```text
+20260701_mptdc_route_ckpt_cts_route_design_164800
+COMMAND_1_STATUS=PASS
+COMMAND_1_VERIFY_DRC=2
+COMMAND_1_VERIFY_SHORTS=1
+```
+
+The other two selected-net probes did not produce useful CTS routing:
+
+```text
+20260701_mptdc_route_ckpt_cts_detail_only_165032
+COMMAND_1_STATUS=FAIL
+FINAL_DRC=0
+FINAL_SHORTS=0
+regular connectivity still reports CTS_6 plus the six other no-routing nets
+
+20260701_mptdc_route_ckpt_cts_legacy_165158
+CHECKPOINT_REPAIR_FAILED_COMMAND_ERROR=selected-net route failed: invalid command name "routeSelectedNet"
+```
+
+The next useful steps are therefore:
+
+1. Route the six non-`CTS_6` residual regular nets from the clean source
    checkpoint to see whether regular signal connectivity can be reduced to only
    the clock-tree net.
-3. Probe `CTS_6` with alternate selected-net engines or a manual route, but do
-   not restart broad `routeDesign`.
+2. Route `CTS_6` with one of the working selected-net engines and surgically
+   trim only the bad MET2 regular patch at `{54.46 197.35 54.74 197.73}`.
+3. If trimming leaves `CTS_6` connected and geometry-clean, combine the six
+   non-CTS route commands plus the CTS trim into one final checkpoint and run
+   post-route extraction/timing reports from that checkpoint.
+4. If trimming leaves `CTS_6` unrouted, stop automatic routing and make a
+   manual/clock-specific route around that VDD stripe; broad `routeDesign` is
+   already proven counterproductive.
 
 ## Harness Rules After This Escalation
 
@@ -181,6 +209,9 @@ The next useful steps are:
   probes `mptdc_ckpt_route_selected_nets_route_design`,
   `mptdc_ckpt_route_selected_nets_detail_only`, or
   `mptdc_ckpt_route_selected_nets_legacy` from the clean source checkpoint.
+- For marker-local edits, use `mptdc_ckpt_delete_regular_net_area` or
+  `mptdc_ckpt_delete_regular_drc_wires`, then require
+  `mptdc_ckpt_assert_geometry_regular_clean` before timing reports.
 - Check geometry immediately with `mptdc_ckpt_assert_geometry_clean`.
 - Fail fast on command errors unless `MPTDC_CHECKPOINT_REPAIR_KEEP_GOING=1` is
   explicitly set for exploratory runs.

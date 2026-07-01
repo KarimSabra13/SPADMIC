@@ -203,6 +203,32 @@ proc mptdc_ckpt_route_selected_nets_legacy {nets} {
         route_selected_net_legacy]
 }
 
+proc mptdc_ckpt_delete_regular_net_area {net layer box} {
+    if {[string trim $net] eq ""} {
+        error "mptdc_ckpt_delete_regular_net_area requires a net"
+    }
+    if {[string trim $layer] eq ""} {
+        error "mptdc_ckpt_delete_regular_net_area requires a layer"
+    }
+    if {[llength $box] != 4} {
+        error "mptdc_ckpt_delete_regular_net_area requires box {x1 y1 x2 y2}"
+    }
+    puts "MPTDC_CKPT_DELETE_REGULAR_NET_AREA_NET=$net"
+    puts "MPTDC_CKPT_DELETE_REGULAR_NET_AREA_LAYER=$layer"
+    puts "MPTDC_CKPT_DELETE_REGULAR_NET_AREA_BOX=$box"
+    editDelete -net $net -layer $layer -area $box -type Regular
+    return $box
+}
+
+proc mptdc_ckpt_delete_regular_drc_wires {net} {
+    if {[string trim $net] eq ""} {
+        error "mptdc_ckpt_delete_regular_drc_wires requires a net"
+    }
+    puts "MPTDC_CKPT_DELETE_REGULAR_DRC_WIRES_NET=$net"
+    editDelete -net $net -regular_wire_with_drc -type Regular
+    return $net
+}
+
 proc mptdc_ckpt_assert_geometry_clean {} {
     global mptdc_ckpt_inline_assert_idx
     if {![info exists mptdc_ckpt_inline_assert_idx]} {
@@ -218,6 +244,29 @@ proc mptdc_ckpt_assert_geometry_clean {} {
     puts "MPTDC_CKPT_ASSERT_GEOMETRY_REPORT=[dict get $snapshot drc_rpt]"
     if {$total eq "UNKNOWN" || $shorts eq "UNKNOWN" || $total != 0 || $shorts != 0} {
         error "geometry is not clean after checkpoint repair command: DRC=$total SHORTS=$shorts report=[dict get $snapshot drc_rpt]"
+    }
+    return $snapshot
+}
+
+proc mptdc_ckpt_assert_geometry_regular_clean {} {
+    global mptdc_ckpt_inline_assert_idx
+    if {![info exists mptdc_ckpt_inline_assert_idx]} {
+        set mptdc_ckpt_inline_assert_idx 0
+    }
+    incr mptdc_ckpt_inline_assert_idx
+    set tag [format "inline_%02d_assert_geometry_regular" $mptdc_ckpt_inline_assert_idx]
+    set snapshot [mptdc_ckpt_verify_snapshot $tag]
+    set total [dict get $snapshot total_violations]
+    set shorts [dict get $snapshot shorts]
+    set regular_bad [dict get $snapshot regular_bad]
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_REGULAR_DRC=$total"
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_REGULAR_SHORTS=$shorts"
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_REGULAR_BAD=$regular_bad"
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_REGULAR_BAD_LINES=[dict get $snapshot regular_bad_lines]"
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_REGULAR_SPECIAL_BAD=[dict get $snapshot special_bad]"
+    puts "MPTDC_CKPT_ASSERT_GEOMETRY_REGULAR_REPORT=[dict get $snapshot drc_rpt]"
+    if {$total eq "UNKNOWN" || $shorts eq "UNKNOWN" || $regular_bad eq "UNKNOWN" || $total != 0 || $shorts != 0 || $regular_bad != 0} {
+        error "geometry/regular connectivity is not clean after checkpoint repair command: DRC=$total SHORTS=$shorts REGULAR_BAD=$regular_bad report=[dict get $snapshot drc_rpt]"
     }
     return $snapshot
 }
