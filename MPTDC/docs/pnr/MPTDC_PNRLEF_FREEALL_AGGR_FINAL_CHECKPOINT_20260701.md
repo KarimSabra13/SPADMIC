@@ -1465,7 +1465,19 @@ source_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_ro6_pnrlef_fre
 checkpoint_to_preserve=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/checkpoints/repaired_route.enc.dat
 def_to_preserve=/sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/def/repaired_route.def
 head=6a432f2b7f91a1ea25cfaa5f95a487d4949f0910
+preservation_doc_head=c66b03d26d47115e7e533239dfb1f2d8dde155c8
 innovus_rc=0
+```
+
+The checkpoint was also preserved under a human-readable risk-review label on
+the server:
+
+```text
+label_dir=/sim/ksabra/SPADMIC_work/innovus/ACCEPTED_INTERNAL_DRYGDS_RISK_20260701_mptdc_211109_falsepath_nfast_risk_235618
+label_checkpoint_symlink=label_dir/repaired_route.enc.dat -> /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/checkpoints/repaired_route.enc.dat
+label_def_symlink=label_dir/repaired_route.def -> /sim/ksabra/SPADMIC_work/innovus/20260701_mptdc_211109_falsepath_nfast_risk_235618/def/repaired_route.def
+label_manifest=label_dir/MANIFEST.txt
+label_copied_reports=checkpoint_repair_status.rpt digital_pnr_signoff_status.rpt false_path_nfast_risk_status.rpt timing_tc_nominal.rpt timing_tc_hold.rpt
 ```
 
 Applied risk exception:
@@ -1497,6 +1509,17 @@ DRC markers:
 0 antenna drc markers saved
 ```
 
+The remaining 8 markers are the special-PG dangling locations reported by
+`verifyConnectivity -type special -nets {VDD VSS}`:
+
+```text
+SPECIAL_PG_DANGLING_MARKERS=8
+VDD_MET3_DANGLING=(48.000,681.160) (48.000,121.160) (221.745,681.160) (221.745,121.160)
+VDD_METTP_DANGLING=(201.160,118.000) (121.160,118.000)
+VSS_MET3_DANGLING=(48.000,125.160) (221.745,125.160)
+SPECIAL_PG_DANGLING_STATUS=FAIL_SPECIAL_PG_DANGLING_ONLY
+```
+
 The route/signoff status intentionally keeps the PG-special failure visible:
 
 ```text
@@ -1525,7 +1548,9 @@ Important warnings and audit items:
 TCLCMD-1531 warnings were reported while reading existing SDC false paths on hierarchical clear_window pins.
 Number of path exceptions in the constraint file = 15
 The Innovus message summary reported 182 warnings and 1 error even though INNOVUS_RC=0.
-The single reported error must be inspected and classified before any external handoff.
+The single reported error was inspected after preservation and classified as an ignored import property issue:
+IMPLF-186 CatenaDesignType property is not defined for MACRO PROPERTYDEFINITIONS; property ignored.
+IMPLF_186_CLASSIFICATION=NONBLOCKING_FOR_INTERNAL_DRY_GDS_RISK_REVIEW_IMPORT_PROPERTY_IGNORED
 ```
 
 Engineering classification:
@@ -1535,7 +1560,8 @@ CHECKPOINT_RESULT=ACCEPT_FOR_INTERNAL_DRY_GDS_RISK_REVIEW_ONLY
 FINAL_SIGNOFF_READY=NO
 READY_FOR_TAPEOUT=NO
 DRY_GDS_ALLOWED_ONLY_IF_WAIVER_PACKAGE_INCLUDES=false_path_nfast_448_D_pins_and_special_pg_dangling
-BLOCKING_BEFORE_FINAL_GDS=special_pg_connectivity_fail_and_unclassified_innovus_error_summary
+BLOCKING_BEFORE_FINAL_GDS=special_pg_connectivity_fail_false_path_waiver_lvs_antenna_foundry_checks
+BLOCKING_BEFORE_EXTERNAL_SIGNOFF=special_pg_connectivity_fail_and_false_path_waiver
 ```
 
 This checkpoint is useful because it preserves the known clean geometry and
@@ -1546,7 +1572,7 @@ current best dry-run/risk checkpoint, not as a final tapeout checkpoint.
 Before any final GDS or tapeout handoff, the following remain mandatory:
 
 ```text
-inspect the one Innovus error reported in the session summary
+track IMPLF-186 as an ignored LEF/property import issue and fix or waive it if final collateral QA requires it
 classify and repair or formally waive the VDD/VSS special PG dangling markers
 rerun verify_drc
 rerun verifyConnectivity -type regular
