@@ -268,6 +268,7 @@ proc mptdc_pvs_pg_short_swire_record {sw net} {
     set pts_raw [mptdc_pvs_pg_short_dbget "$sw.pts" ""]
     set rect [mptdc_pvs_pg_short_rect $box_raw]
     return [dict create \
+        source INNOVUS_SWIRE \
         handle $sw \
         net $net \
         layer $layer \
@@ -278,6 +279,133 @@ proc mptdc_pvs_pg_short_swire_record {sw net} {
         box $box_raw \
         rect $rect \
         pts $pts_raw]
+}
+
+proc mptdc_pvs_pg_short_def_um {raw} {
+    if {$raw eq "*" || ![string is double -strict $raw]} {
+        return UNKNOWN
+    }
+    return [expr {$raw / 1000.0}]
+}
+
+proc mptdc_pvs_pg_short_def_rect_from_segment {x1 y1 x2 y2 width_dbu} {
+    if {$x1 eq "UNKNOWN" || $y1 eq "UNKNOWN" || $x2 eq "UNKNOWN" || $y2 eq "UNKNOWN"} {
+        return {}
+    }
+    set width [expr {$width_dbu / 1000.0}]
+    set half [expr {$width / 2.0}]
+    if {$x1 == $x2} {
+        set rx1 [expr {$x1 - $half}]
+        set rx2 [expr {$x1 + $half}]
+        set ry1 [expr {$y1 < $y2 ? $y1 : $y2}]
+        set ry2 [expr {$y1 > $y2 ? $y1 : $y2}]
+    } elseif {$y1 == $y2} {
+        set rx1 [expr {$x1 < $x2 ? $x1 : $x2}]
+        set rx2 [expr {$x1 > $x2 ? $x1 : $x2}]
+        set ry1 [expr {$y1 - $half}]
+        set ry2 [expr {$y1 + $half}]
+    } else {
+        set rx1 [expr {($x1 < $x2 ? $x1 : $x2) - $half}]
+        set rx2 [expr {($x1 > $x2 ? $x1 : $x2) + $half}]
+        set ry1 [expr {($y1 < $y2 ? $y1 : $y2) - $half}]
+        set ry2 [expr {($y1 > $y2 ? $y1 : $y2) + $half}]
+    }
+    return [list $rx1 $ry1 $rx2 $ry2]
+}
+
+proc mptdc_pvs_pg_short_def_route_points {rest} {
+    set points {}
+    set start 0
+    while {[regexp -indices -start $start {\([[:space:]]*([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]*\)} $rest match xt yt]} {
+        set x [string range $rest [lindex $xt 0] [lindex $xt 1]]
+        set y [string range $rest [lindex $yt 0] [lindex $yt 1]]
+        lappend points [list $x $y]
+        set start [expr {[lindex $match 1] + 1}]
+    }
+    return $points
+}
+
+proc mptdc_pvs_pg_short_parse_def_specialnets {path} {
+    if {$path eq "" || ![file exists $path]} {
+        return {}
+    }
+    set records {}
+    set fh [open $path r]
+    set in_special 0
+    set current_net ""
+    set line_no 0
+    while {[gets $fh line] >= 0} {
+        incr line_no
+        set trimmed [string trim $line]
+        if {[regexp {^SPECIALNETS[[:space:]]+} $trimmed]} {
+            set in_special 1
+            continue
+        }
+        if {!$in_special} {
+            continue
+        }
+        if {[regexp {^END[[:space:]]+SPECIALNETS} $trimmed]} {
+            break
+        }
+        if {[regexp {^-[[:space:]]+([^[:space:]]+)} $trimmed -> net]} {
+            set current_net $net
+        }
+        if {$current_net ni {VDD VSS}} {
+            continue
+        }
+        if {![regexp {^(?:\+[[:space:]]+ROUTED|NEW)[[:space:]]+([^[:space:]]+)[[:space:]]+([0-9]+)(.*)$} $trimmed -> layer width_dbu rest]} {
+            continue
+        }
+        set shape UNKNOWN
+        if {[regexp {\+[[:space:]]+SHAPE[[:space:]]+([^[:space:]]+)} $rest -> parsed_shape]} {
+            set shape $parsed_shape
+        }
+        set raw_points [mptdc_pvs_pg_short_def_route_points $rest]
+        if {[llength $raw_points] < 2} {
+            continue
+        }
+        set prev_x UNKNOWN
+        set prev_y UNKNOWN
+        set prev_valid 0
+        set seg_idx 0
+        foreach raw_pt $raw_points {
+            lassign $raw_pt raw_x raw_y
+            if {$raw_x eq "*"} {
+                set x $prev_x
+            } else {
+                set x [mptdc_pvs_pg_short_def_um $raw_x]
+            }
+            if {$raw_y eq "*"} {
+                set y $prev_y
+            } else {
+                set y [mptdc_pvs_pg_short_def_um $raw_y]
+            }
+            if {$prev_valid && $x ne "UNKNOWN" && $y ne "UNKNOWN"} {
+                incr seg_idx
+                set rect [mptdc_pvs_pg_short_def_rect_from_segment $prev_x $prev_y $x $y $width_dbu]
+                if {[llength $rect] == 4} {
+                    set handle [format "DEF:%d:%d" $line_no $seg_idx]
+                    lappend records [dict create \
+                        source DEF_SPECIALNET \
+                        handle $handle \
+                        net $current_net \
+                        layer $layer \
+                        shape $shape \
+                        status ROUTED \
+                        width [expr {$width_dbu / 1000.0}] \
+                        geomType SPECIALNET \
+                        box [mptdc_pvs_pg_short_format_rect $rect] \
+                        rect $rect \
+                        pts [list [list $prev_x $prev_y] [list $x $y]]]
+                }
+            }
+            set prev_x $x
+            set prev_y $y
+            set prev_valid [expr {$x ne "UNKNOWN" && $y ne "UNKNOWN"}]
+        }
+    }
+    close $fh
+    return $records
 }
 
 proc mptdc_pvs_pg_short_collect_swires {{nets {VDD VSS}}} {
@@ -321,6 +449,7 @@ proc mptdc_pvs_pg_short_match_polygon {poly swires} {
 }
 
 proc mptdc_pvs_pg_short_write_swire_match {fh prefix rec} {
+    puts $fh "${prefix}_MATCH_SOURCE=[mptdc_pvs_pg_short_report_value [dict get $rec source]]"
     puts $fh "${prefix}_MATCH_NET=[dict get $rec net]"
     puts $fh "${prefix}_MATCH_LAYER=[mptdc_pvs_pg_short_report_value [dict get $rec layer]]"
     puts $fh "${prefix}_MATCH_SHAPE=[mptdc_pvs_pg_short_report_value [dict get $rec shape]]"
@@ -411,6 +540,8 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
 
     set shorts [mptdc_pvs_pg_short_parse_file $pvs_shorts]
     set swires [mptdc_pvs_pg_short_collect_swires {VDD VSS}]
+    set def_records [mptdc_pvs_pg_short_parse_def_specialnets $source_def]
+    set match_records [concat $swires $def_records]
     set map_rpt [file join $report_dir pvs_pg_short_polygon_map.rpt]
     set csv_rpt [file join $report_dir pvs_pg_short_specialnet_map.csv]
     set status_rpt [file join $report_dir pvs_pg_short_root_cause_status.rpt]
@@ -423,6 +554,8 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
     puts $map_fh "SOURCE_DEF=[expr {$source_def eq "" ? "unset" : $source_def}]"
     puts $map_fh "BRIDGE_WINDOW_UM=[mptdc_pvs_pg_short_format_rect $bridge_window]"
     puts $map_fh "SWIRE_RECORDS_SCANNED=[llength $swires]"
+    puts $map_fh "DEF_SPECIALNET_RECORDS_SCANNED=[llength $def_records]"
+    puts $map_fh "MATCH_RECORDS_SCANNED=[llength $match_records]"
     puts $csv_fh "short_id,net_a,net_b,poly_id,pvs_sn,pvs_layer,innovus_layer,pvs_box_um,bridge_window_overlap_um2,match_count,match_net,match_layer,match_shape,match_box_um,match_overlap_um2,classification"
 
     set target_count 0
@@ -431,6 +564,10 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
     set bridge_polygon_count 0
     set vdd_match_count 0
     set vss_match_count 0
+    set swire_match_count 0
+    set def_match_count 0
+    set candidate_pool {}
+    array set candidate_seen {}
     foreach short $shorts {
         if {![mptdc_pvs_pg_short_is_target $short]} {
             continue
@@ -459,12 +596,12 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
             if {$bridge_overlap > 0.0} {
                 incr bridge_polygon_count
             }
-            set matches [mptdc_pvs_pg_short_match_polygon $poly $swires]
+            set matches [mptdc_pvs_pg_short_match_polygon $poly $match_records]
             set match_count [llength $matches]
             if {$match_count > 0} {
                 incr matched_polygon_count
             }
-            set classification [expr {$match_count > 0 ? "SPECIAL_SWIRE_MATCH" : "NO_TOP_SWIRE_MATCH"}]
+            set classification [expr {$match_count > 0 ? "SPECIALNET_GEOMETRY_MATCH" : "NO_SPECIALNET_MATCH"}]
             puts $map_fh "SHORT_${sid}_POLY_${pid}_SN=[dict get $poly sn]"
             puts $map_fh "SHORT_${sid}_POLY_${pid}_PVS_LAYER=$pvs_layer"
             puts $map_fh "SHORT_${sid}_POLY_${pid}_INNOVUS_LAYER=$innovus_layer"
@@ -478,6 +615,21 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
                 set match_net [dict get $rec net]
                 if {$match_net eq "VDD"} { incr vdd_match_count }
                 if {$match_net eq "VSS"} { incr vss_match_count }
+                if {[dict get $rec source] eq "INNOVUS_SWIRE"} { incr swire_match_count }
+                if {[dict get $rec source] eq "DEF_SPECIALNET"} { incr def_match_count }
+                if {$bridge_overlap > 0.0} {
+                    foreach candidate [mptdc_pvs_pg_short_collect_delete_candidates [list $rec] $bridge_window $max_span] {
+                        set key [join [list \
+                            [dict get $candidate source] \
+                            [dict get $candidate net] \
+                            [dict get $candidate layer] \
+                            [mptdc_pvs_pg_short_format_rect [dict get $candidate rect]]] {|}]
+                        if {![info exists candidate_seen($key)]} {
+                            set candidate_seen($key) 1
+                            lappend candidate_pool $candidate
+                        }
+                    }
+                }
                 if {$mi <= 8} {
                     mptdc_pvs_pg_short_write_swire_match $map_fh "SHORT_${sid}_POLY_${pid}_MATCH_${mi}" $rec
                 }
@@ -493,7 +645,7 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
     close $map_fh
     close $csv_fh
 
-    set candidates [mptdc_pvs_pg_short_collect_delete_candidates $swires $bridge_window $max_span]
+    set candidates $candidate_pool
     set status_fh [open $status_rpt w]
     puts $status_fh "# MPTDC PVS PG Short Root Cause Status"
     puts $status_fh "MODE=$mode"
@@ -507,6 +659,11 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
     puts $status_fh "BRIDGE_WINDOW_POLYGON_COUNT=$bridge_polygon_count"
     puts $status_fh "VDD_MATCH_COUNT=$vdd_match_count"
     puts $status_fh "VSS_MATCH_COUNT=$vss_match_count"
+    puts $status_fh "INNOVUS_SWIRE_MATCH_COUNT=$swire_match_count"
+    puts $status_fh "DEF_SPECIALNET_MATCH_COUNT=$def_match_count"
+    puts $status_fh "SWIRE_RECORDS_SCANNED=[llength $swires]"
+    puts $status_fh "DEF_SPECIALNET_RECORDS_SCANNED=[llength $def_records]"
+    puts $status_fh "MATCH_RECORDS_SCANNED=[llength $match_records]"
     puts $status_fh "BRIDGE_WINDOW_UM=[mptdc_pvs_pg_short_format_rect $bridge_window]"
     puts $status_fh "DELETE_CANDIDATE_COUNT=[llength $candidates]"
     puts $status_fh "STREAMOUT_ONLY_SUSPECT=[expr {$matched_polygon_count == 0 ? "YES" : "NO"}]"
