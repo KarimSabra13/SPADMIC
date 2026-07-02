@@ -575,6 +575,10 @@ proc mptdc_pvs_pg_short_run {{mode ""}} {
     return $status_rpt
 }
 
+proc mptdc_ckpt_pvs_pg_short_run {} {
+    return [mptdc_pvs_pg_short_run]
+}
+
 if {[mptdc_pvs_pg_short_env_truthy MPTDC_PVS_PG_SHORT_AUTORUN 0]} {
     mptdc_pvs_pg_short_run
 }

@@ -230,15 +230,8 @@ fi
 } > "$MANIFEST_DIR/safe_source_manifest.txt"
 
 {
-  echo "set ::env(MPTDC_PVS_PG_SHORT_AUTORUN) {0}"
-  echo "set ::env(MPTDC_PVS_PG_SHORT_MODE) {$MODE}"
-  echo "set ::env(MPTDC_PVS_PG_SHORTS_FILE) {$SAFE_PVS_SHORTS}"
-  echo "set ::env(MPTDC_PVS_PG_SHORT_SOURCE_DEF) {${SAFE_DEF:-}}"
-  echo "set ::env(MPTDC_PVS_PG_SHORT_BRIDGE_WINDOW_UM) {$BRIDGE_WINDOW}"
-  echo "set ::env(MPTDC_PVS_PG_SHORT_DELETE_MARGIN_UM) {$DELETE_MARGIN_UM}"
-  echo "set ::env(MPTDC_PVS_PG_SHORT_MAX_DELETE_SPAN_UM) {$MAX_DELETE_SPAN_UM}"
   echo "mptdc_ckpt_source_tcl {$SCRIPT_DIR/innovus_mptdc_pvs_pg_short_probe.tcl}"
-  echo "mptdc_pvs_pg_short_run"
+  echo "mptdc_ckpt_pvs_pg_short_run"
   echo "mptdc_ckpt_assert_geometry_regular_clean"
 } > "$COMMANDS_FILE"
 
@@ -263,11 +256,29 @@ export MPTDC_PVS_PG_SHORT_MAX_DELETE_SPAN_UM="$MAX_DELETE_SPAN_UM"
 "$SCRIPT_DIR/server_repair_mptdc_route_checkpoint.sh" "${repair_args[@]}"
 rc=$?
 
+MAP_REPORT="$REPORT_DIR/pvs_pg_short_polygon_map.rpt"
+CSV_REPORT="$REPORT_DIR/pvs_pg_short_specialnet_map.csv"
+STATUS_REPORT="$REPORT_DIR/pvs_pg_short_root_cause_status.rpt"
+CKPT_STATUS="$REPORT_DIR/checkpoint_repair_status.rpt"
+
+if [[ "$rc" -eq 0 ]]; then
+  if [[ ! -s "$STATUS_REPORT" || ! -s "$MAP_REPORT" || ! -s "$CSV_REPORT" ]]; then
+    echo "ERROR: PVS PG short probe did not produce all expected reports." >&2
+    echo "  status_report=$STATUS_REPORT" >&2
+    echo "  map_report=$MAP_REPORT" >&2
+    echo "  csv_report=$CSV_REPORT" >&2
+    rc=4
+  elif [[ -f "$CKPT_STATUS" ]] && grep -q '^CHECKPOINT_REPAIR_STATUS=FAIL_COMMAND$' "$CKPT_STATUS"; then
+    echo "ERROR: checkpoint command hook failed; inspect $CKPT_STATUS" >&2
+    rc=4
+  fi
+fi
+
 echo "PVS_PG_SHORT_RC=$rc"
 echo "PVS_PG_SHORT_RESULT_DIR=$RESULT_DIR"
 echo "PVS_PG_SHORT_SAFE_CHECKPOINT=$SAFE_CHECKPOINT"
-echo "PVS_PG_SHORT_MAP_REPORT=$REPORT_DIR/pvs_pg_short_polygon_map.rpt"
-echo "PVS_PG_SHORT_CSV_REPORT=$REPORT_DIR/pvs_pg_short_specialnet_map.csv"
-echo "PVS_PG_SHORT_STATUS_REPORT=$REPORT_DIR/pvs_pg_short_root_cause_status.rpt"
-echo "PVS_PG_SHORT_CHECKPOINT_STATUS=$REPORT_DIR/checkpoint_repair_status.rpt"
+echo "PVS_PG_SHORT_MAP_REPORT=$MAP_REPORT"
+echo "PVS_PG_SHORT_CSV_REPORT=$CSV_REPORT"
+echo "PVS_PG_SHORT_STATUS_REPORT=$STATUS_REPORT"
+echo "PVS_PG_SHORT_CHECKPOINT_STATUS=$CKPT_STATUS"
 exit "$rc"
