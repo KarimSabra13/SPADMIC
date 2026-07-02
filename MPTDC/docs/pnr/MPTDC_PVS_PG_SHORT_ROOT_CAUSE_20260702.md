@@ -21,6 +21,7 @@ Innovus regular connectivity gate: PASS
 Innovus special connectivity gate: FAIL, pre-existing PG special issue
 PVS LVS PG short gate: FAIL
 Root cause class: EXPORTED_SPECIALNET_GEOMETRY
+Surgical proof candidate: PASS Innovus geometry/regular gate, pending fresh dryGDS/PVS
 Final signoff ready: NO
 Ready for tapeout: NO
 ```
@@ -212,6 +213,15 @@ copy wrapper. This mode deletes only the current matched short `BLOCKWIRE`
 candidates, one at a time, then runs the Innovus geometry/regular gate after
 each deletion.
 
+This proof was run as:
+
+```text
+proof_run=20260702_mptdc_pvs_pg_short_surgical_proof_145940
+proof_dir=/sim/ksabra/SPADMIC_work/innovus/20260702_mptdc_pvs_pg_short_surgical_proof_145940
+proof_checkpoint=/sim/ksabra/SPADMIC_work/innovus/20260702_mptdc_pvs_pg_short_surgical_proof_145940/checkpoints/repaired_route.enc.dat
+mode=surgical_proof
+```
+
 Acceptance for this step is narrow:
 
 ```text
@@ -225,16 +235,72 @@ CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY or PASS_ROUTE_GATE
 PVS_PG_SHORT_STATUS=SURGICAL_PROOF_EDITED_SAFE_COPY_NEEDS_DRYGDS_PVS
 ```
 
+The observed result met that narrow proof gate:
+
+```text
+DELETE_ATTEMPTS=3
+DELETE_SUCCESSES=3
+DIRTY_ABORT=0
+FINAL_DRC=0
+FINAL_SHORTS=0
+FINAL_REGULAR_CONNECTIVITY_BAD=0
+FINAL_SPECIAL_CONNECTIVITY_BAD=1
+FINAL_CHECKPOINT_DAT=/sim/ksabra/SPADMIC_work/innovus/20260702_mptdc_pvs_pg_short_surgical_proof_145940/checkpoints/repaired_route.enc.dat
+CHECKPOINT_REPAIR_STATUS=PASS_GEOMETRY_REVIEW_CONNECTIVITY
+PVS_PG_SHORT_STATUS=SURGICAL_PROOF_EDITED_SAFE_COPY_NEEDS_DRYGDS_PVS
+FINAL_SIGNOFF_READY=NO
+READY_FOR_TAPEOUT=NO
+```
+
+The exact edits were:
+
+```text
+DELETE_1_NET=VDD
+DELETE_1_LAYER=MET2
+DELETE_1_SHAPE=BLOCKWIRE
+DELETE_1_BOX=54.000 600.160 56.000 609.120
+DELETE_1_STATUS=PASS
+
+DELETE_2_NET=VSS
+DELETE_2_LAYER=MET2
+DELETE_2_SHAPE=BLOCKWIRE
+DELETE_2_BOX=52.260 650.200 54.260 686.160
+DELETE_2_STATUS=PASS
+
+DELETE_3_NET=VDD
+DELETE_3_LAYER=MET1
+DELETE_3_SHAPE=BLOCKWIRE
+DELETE_3_BOX=54.000 609.120 56.000 628.970
+DELETE_3_STATUS=PASS
+```
+
 This does not prove final correctness. It only creates a safe-copy candidate
 checkpoint for dryGDS/PVS confirmation.
 
-### Fix 2 - Fresh dryGDS/PVS Confirmation
-
-If the surgical proof passes the Innovus gate, rerun the same dryGDS/PVS debug
-flow that created `drygds_oa_20260702_001608`, but use:
+There is one important caveat: after delete 1 and delete 2, special connectivity
+remained the known dangling-only class. After delete 3, Innovus special
+connectivity still failed and added VDD open/unconnected-terminal evidence:
 
 ```text
-CHK_DAT=<surgical_proof_run>/checkpoints/repaired_route.enc.dat
+Net VDD: has an unconnected terminal, has special routes with opens, dangling Wire.
+Net VSS: dangling Wire.
+1 Problem(s) (IMPVFC-96): Terminal(s) are not connected.
+1 Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.
+8 Problem(s) (IMPVFC-94): The net has dangling wire(s).
+Verification Complete : 10 Viols.  0 Wrngs.
+```
+
+That is acceptable only for the current proof objective because the proof gate
+is DRC, route shorts, and regular connectivity. It is not a PG-clean checkpoint
+and not a signoff checkpoint.
+
+### Fix 2 - Fresh dryGDS/PVS Confirmation
+
+The surgical proof passed the Innovus geometry/regular gate. Rerun the same
+dryGDS/PVS debug flow that created `drygds_oa_20260702_001608`, but use:
+
+```text
+CHK_DAT=/sim/ksabra/SPADMIC_work/innovus/20260702_mptdc_pvs_pg_short_surgical_proof_145940/checkpoints/repaired_route.enc.dat
 ```
 
 Acceptance for this step is:
@@ -261,6 +327,12 @@ smart fix is to move upstream:
 
 Broad post-route PG repair remains a bad default because earlier post-route
 `sroute` experiments connected some PG topology but created many route shorts.
+
+If the proof checkpoint removes the PVS VDD/VSS short, still do a generator-level
+cleanup before any final handoff: the proof deliberately cut PG special geometry
+and leaves special connectivity failing. The durable fix is to prevent the
+lower-left bridge blockwires from being generated while preserving intentional
+VDD/VSS access.
 
 ## Commands - Surgical Proof
 
