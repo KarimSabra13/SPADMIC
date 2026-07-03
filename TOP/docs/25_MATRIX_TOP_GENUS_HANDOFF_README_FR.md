@@ -30,10 +30,18 @@ Matrice de connectivite detaillee:
 TOP/docs/26_MATRIX_TOP_HANDOFF_CONNECTIVITY.csv
 ```
 
-Cette matrice CSV est le document a copier dans le dossier handoff serveur
-pour lever l'ambiguite que les `.postsyn.v/.sdc` seuls ne resolvent pas:
-ports de chaque sous-bloc, connexions inter-blocs, pads, macros, glue RTL,
-tieoffs et actions attendues dans le wrapper top final.
+Vues lisibles derivees de la meme matrice:
+
+```text
+TOP/docs/26_MATRIX_TOP_HANDOFF_CONNECTIVITY_READABLE.md
+TOP/docs/26_MATRIX_TOP_HANDOFF_CONNECTIVITY_EXCEL.csv
+```
+
+La matrice CSV source est le document machine-readable a copier dans le dossier
+handoff serveur pour lever l'ambiguite que les `.postsyn.v/.sdc` seuls ne
+resolvent pas: ports de chaque sous-bloc, connexions inter-blocs, pads, macros,
+glue RTL, tieoffs et actions attendues dans le wrapper top final. Pour une
+lecture humaine, utiliser de preference la vue Markdown ou le CSV Excel.
 
 Blocs disponibles:
 
