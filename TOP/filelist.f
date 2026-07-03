@@ -48,5 +48,6 @@ rtl/spadmic_ddr_tx.sv
 
 // ── Per-axis TDC wrapper & top shell ─────────────────────────────
 rtl/spadmic_tdc_axis_wrapper.sv
+rtl/spadmic_tdc3_frontend.sv
 rtl/spadmic_top_v1.sv
 rtl/spadmic_top_matrix_v1.sv

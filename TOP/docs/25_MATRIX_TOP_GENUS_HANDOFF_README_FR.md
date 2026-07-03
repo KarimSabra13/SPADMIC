@@ -24,6 +24,17 @@ Fichiers attendus par bloc digital:
 <block>/<block>.postsyn.sdc
 ```
 
+Matrice de connectivite detaillee:
+
+```text
+TOP/docs/26_MATRIX_TOP_HANDOFF_CONNECTIVITY.csv
+```
+
+Cette matrice CSV est le document a copier dans le dossier handoff serveur
+pour lever l'ambiguite que les `.postsyn.v/.sdc` seuls ne resolvent pas:
+ports de chaque sous-bloc, connexions inter-blocs, pads, macros, glue RTL,
+tieoffs et actions attendues dans le wrapper top final.
+
 Blocs disponibles:
 
 | Dossier | Module netlist | Role |
@@ -39,13 +50,57 @@ Blocs disponibles:
 | `i2c_csr_bridge` | `spadmic_i2c_csr_bridge` | Pont transaction I2C vers bus CSR local |
 | `i2c_slave` | `spadmic_i2c_slave` | Esclave I2C synchronise dans `clk_sys` |
 | `ddr16_pairer` | `spadmic_ddr16_tx_pairer` | Regroupement 2 mots 16b vers interface DDR16 |
+| `tdc3_frontend` | `spadmic_tdc3_frontend` | Glue synthetise autour des trois axes MPTDC avec `mptdc_axis_core` en black-box |
 | `mptdc` | `mptdc` / macro handoff | Bloc MPTDC physique separe, a garder protege |
 
-Note importante: `spadmic_matrix_snapshot_frontend`, `spadmic_tdc_axis_wrapper`,
-les synchroniseurs reset, le wrapper clock/PLL, les pads, le BOX_RING, la
-matrice analogique et les drivers SLVS ne sont pas tous des dossiers de handoff
-separes dans ce tree. Ils restent du glue/top integration ou des macros a
-instancier dans le wrapper final.
+Note importante: `spadmic_tdc_axis_wrapper` n'est pas donne comme dossier
+separe parce qu'il est maintenant emballe dans le handoff `tdc3_frontend`.
+`tdc3_frontend` ne contient pas les internes MPTDC: chaque instance
+`mptdc_axis_core` y est traitee comme black-box et doit etre liee au handoff
+MPTDC physique separe. `spadmic_matrix_snapshot_frontend`, les synchroniseurs
+reset, le wrapper clock/PLL, les pads, le BOX_RING, la matrice analogique et
+les drivers SLVS ne sont pas tous des dossiers de handoff separes dans ce tree.
+Ils restent du glue/top integration ou des macros a instancier dans le wrapper
+final.
+
+## Handoff TDC3 frontend
+
+Le bloc `tdc3_frontend` est le plus simple moyen de ne pas perdre la
+fonctionnalite de wrapper autour des MPTDC:
+
+- un wrapper independant par axe `R`, `Y`, `B`;
+- un `spadmic_ref_stop_qualifier` independant par axe;
+- gating independant des signaux SPAD et calibration;
+- mux calibration/SPAD conserve dans le `mptdc_axis_core` externe;
+- backpressure et status packet separes par axe.
+
+La convention d'axe est:
+
+```text
+index 0 = R
+index 1 = Y
+index 2 = B
+```
+
+Le runner dedie ne lit pas le RTL interne MPTDC. Il lit seulement
+`mptdc_pkg.sv` et le stub black-box `mptdc_axis_core_blackbox.sv`, puis
+synthesise le glue TOP:
+
+```text
+TOP/syn/scripts/run_genus_tdc3_frontend_handoff.sh
+```
+
+Sorties serveur attendues:
+
+```text
+/sim/ksabra/SPADMIC_work/handoff/genus/tdc3_frontend/tdc3_frontend.postsyn.v
+/sim/ksabra/SPADMIC_work/handoff/genus/tdc3_frontend/tdc3_frontend.postsyn.sdc
+/sim/ksabra/SPADMIC_work/handoff/genus/tdc3_frontend/HANDOFF_MANIFEST.txt
+```
+
+Le wrapper top final doit ensuite linker trois instances physiques externes de
+`mptdc_axis_core` depuis le handoff MPTDC. Il ne faut pas resynthetiser ou
+modifier le MPTDC pour generer ce glue.
 
 ## Vue top niveau
 
@@ -297,35 +352,42 @@ Sorties:
 - `reset_start_o`, `bundle_start_o`;
 - `accept_enable_o`, `rejected_not_ready_o`, `busy_o`, `idle_o`.
 
-### `mptdc`
+### `tdc3_frontend` et `mptdc`
 
-Role: mesurer le timing par axe. Le handoff `mptdc` est un bloc/macro protege.
+Role: conserver le glue TOP autour des trois MPTDC sans resynthetiser les
+internes MPTDC. Le handoff `tdc3_frontend` contient les trois wrappers R/Y/B et
+les trois qualifiers de STOP. Le handoff `mptdc` reste un bloc/macro protege.
 Les internes MPTDC ne doivent pas etre modifies au niveau TOP.
 
-Dans `spadmic_top_matrix_v1`, chaque axe passe par `spadmic_tdc_axis_wrapper`:
+Dans le wrapper top final, le chemin attendu devient:
 
 ```text
-R event -> TDC R wrapper -> MPTDC R packet stream
-Y event -> TDC Y wrapper -> MPTDC Y packet stream
-B event -> TDC B wrapper -> MPTDC B packet stream
+R event -> tdc3_frontend[0] -> TDC R wrapper -> MPTDC R packet stream
+Y event -> tdc3_frontend[1] -> TDC Y wrapper -> MPTDC Y packet stream
+B event -> tdc3_frontend[2] -> TDC B wrapper -> MPTDC B packet stream
 ```
 
-Entrees par axe via wrapper:
+Entrees de `tdc3_frontend`:
 
 - `clk_sys`, `clk_ref_40m`, `async_rst_n`;
-- `global_enable_i`, `axis_enable_i`;
-- `spad_event_async_i` depuis le front-end matrice;
-- `cal_start_async_i`, `cal_stop_async_i`;
+- `global_enable_i`, `axis_enable_i[2:0]`;
+- `spad_event_async_i[2:0]` depuis le front-end matrice;
+- `cal_start_async_i[2:0]`, `cal_stop_async_i[2:0]`;
 - `input_sel_i`: SPAD ou calibration;
-- `conv_arm_i`, `fifo_clr_i`, `soft_reset_i`;
+- `conv_arm_i[2:0]`, `fifo_clr_i`, `soft_reset_i`;
 - `max_hits_i`, `ro_slow_code_i`, `ro_fast_code_i`.
 
-Sorties par axe:
+Sorties de `tdc3_frontend`:
 
-- `pkt_valid_o`, `pkt_ready_i`, `pkt_data_o[15:0]`, `pkt_sop_o`, `pkt_eop_o`;
-- `packet_active_o`, `packet_pending_o`;
-- `ready_o`, `busy_o`, `fifo_full_o`;
-- `stop_armed_o`.
+- `pkt_valid_o[2:0]`, `pkt_ready_i[2:0]`;
+- `pkt_data_o[3*NARROW_W-1:0]`, avec slices R=0, Y=1, B=2;
+- `pkt_sop_o[2:0]`, `pkt_eop_o[2:0]`;
+- `packet_active_o[2:0]`, `packet_pending_o[2:0]`;
+- `ready_o[2:0]`, `busy_o[2:0]`, `fifo_full_o[2:0]`;
+- `stop_armed_o[2:0]`.
+
+Le netlist engineer doit donc instancier `tdc3_frontend.postsyn.v` puis linker
+les trois black-box `mptdc_axis_core` vers le handoff MPTDC physique.
 
 ### `position_snapshot`
 
@@ -477,7 +539,7 @@ Legende:
         |  |      |       input: snapshot_R/Y/B[63:0], event_id, position mode                   ||
         |  |      |       output: POSITION pkt_valid/data/sop/eop/pending                       ||
         |  |      |                                                                                ||
-        |  |      +--> TDC packet sources from three MPTDC wrappers                               ||
+        |  |      +--> [HANDOFF] tdc3_frontend with three MPTDC wrapper slices                    ||
         |  |              TDC_R pkt_valid/data/sop/eop/pending                                    ||
         |  |              TDC_Y pkt_valid/data/sop/eop/pending                                    ||
         |  |              TDC_B pkt_valid/data/sop/eop/pending                                    ||
@@ -488,7 +550,7 @@ Legende:
         |  | left / center-left               |        | full boundary planning: 1061.20 x 801.92 | |
         |  | AVDD/AVSS, VTUNE macro-owned     |        | plus 5 percent dimension margin + halo   | |
         |  |                                   |        |                                         | |
-        |  | outputs to digital:               | R_i -->| [GLUE] spadmic_tdc_axis_wrapper R        | |
+        |  | outputs to digital:               | R_i -->| [HANDOFF] tdc3_frontend R slice          | |
  WEST   |  |   R_i[63:0] --------------------+|        | input: spad_event_async_i, cal_r_*       | | EAST
  left   |  |   Y_i[63:0] -------------------+||        | output: TDC_R packet stream              | | right
  side   |  |   B_i[63:0] ------------------+|||        +-----------------------------------------+ | side
@@ -497,7 +559,7 @@ Legende:
         |  |   Rz_o[63:0] <-------------------+||      | [MACRO] MPTDC_Y middle                   | |
         |  |   Yz_o[63:0] <--------------------+|      | same orientation as R/B if possible       | |
         |  |   Bz_o[63:0] <---------------------+      |                                         | |
-        |  |                                   | Y_i -->| [GLUE] spadmic_tdc_axis_wrapper Y        | |
+        |  |                                   | Y_i -->| [HANDOFF] tdc3_frontend Y slice          | |
         |  | matrix config/readback:           |        | input: spad_event_async_i, cal_y_*       | |
         |  |   Din[43:0] <--- matrix_din_o     |        | output: TDC_Y packet stream              | |
         |  |   Cin[43:0] <--- matrix_cin_o     |        +-----------------------------------------+ |
@@ -506,7 +568,7 @@ Legende:
         |  +-----------------|-----------------+        | [MACRO] MPTDC_B bottom                   | |
         |                    |                          | same orientation, close to R/Y           | |
         |                    |                          |                                         | |
-        |                    |                    B_i -->| [GLUE] spadmic_tdc_axis_wrapper B        | |
+        |                    |                    B_i -->| [HANDOFF] tdc3_frontend B slice          | |
         |                    |                          | input: spad_event_async_i, cal_b_*       | |
         |                    |                          | output: TDC_B packet stream              | |
         |                    |                          +-----------------------------------------+ |
@@ -619,6 +681,7 @@ wrapper final.
         |  MPTDC / calibration path                                                       |
         |  ------------------------                                                      |
         |  event_coordinator + matrix events + cal_r/y/b_start/stop                      |
+        |      --> tdc3_frontend                                                         |
         |      --> 3x spadmic_tdc_axis_wrapper                                           |
         |      --> 3x MPTDC protected macro/block                                        |
         |      --> TDC_R/TDC_Y/TDC_B packet streams                                      |
@@ -641,7 +704,8 @@ wrapper final.
 3. Connecter les signaux macro matrice: R/Y/B, Rz/Yz/Bz, Din/Cin/Dout/Cout.
 4. Ajouter le glue `snapshot_frontend` s'il n'est pas absorbe dans un top netlist
    genere.
-5. Instancier/relier les trois MPTDC comme macros protegees.
+5. Instancier `tdc3_frontend`, puis linker ses trois black-box
+   `mptdc_axis_core` vers les macros MPTDC protegees.
 6. Connecter `position_snapshot`, `event_bundle_tx`, `output_fifo`,
    `ddr16_pairer`.
 7. Ajouter le wrapper PLL/clock: une entree externe 160 MHz seulement, pas de
@@ -659,3 +723,5 @@ wrapper final.
 - La matrice, le PLL, les drivers SLVS, le BOX_RING et les pads restent sous la
   responsabilite du wrapper top/custom layout.
 - Les internes MPTDC restent proteges.
+- `tdc3_frontend` est un handoff de glue seulement; il ne remplace pas le
+  handoff physique `mptdc_axis_core`.
