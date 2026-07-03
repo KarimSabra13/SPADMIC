@@ -120,6 +120,12 @@ required MPTDC Scenario B full-boundary reservation. Scenario B uses
 `1061.20 um x 801.92 um` per MPTDC before `5%` dimension margin and `20 um`
 halo. It stops before Innovus if this geometry is infeasible.
 
+Current wrapper/pad assumptions are captured in
+`TOP/docs/24_MATRIX_TOP_CHIP_WRAPPER_PAD_CONTRACT.md`: one external 160 MHz
+clock, active-high `i2c_RST`, CSR-visible PLL controls, six calibration pads,
+and a north SLVS row with 16 data drivers plus dedicated clock and valid
+drivers.
+
 ## Required Reports
 
 - macro placement report;

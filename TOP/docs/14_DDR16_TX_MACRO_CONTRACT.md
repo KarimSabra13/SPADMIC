@@ -1,12 +1,15 @@
 # DDR16 TX Macro Contract
 
-Status: Phase 0 macro-boundary plan. The final analog DDR macro handoff is still TBD.
+Status: staged macro-boundary contract. The final analog SLVS/DDR driver timing
+handoff is still TBD.
 
 ## Final Direction
 
 The final physical TX interface is 16 DDR data bits. The current 8-bit DDR TX RTL is obsolete for final silicon and must not be used as the final macro boundary.
 
-The digital design shall provide a clean single-edge RTL boundary to a custom DDR macro model/wrapper. It shall not implement final DDR behavior using generic dual-edge procedural logic.
+The digital design shall provide a clean single-edge RTL boundary to custom
+SLVS/DDR driver wrappers. It shall not implement final DDR behavior using
+generic dual-edge procedural logic.
 
 ## Provisional Digital Boundary
 
@@ -15,18 +18,26 @@ output logic [15:0] ddr_data_l_o;
 output logic [15:0] ddr_data_h_o;
 output logic        ddr_pair_valid_o;
 output logic        ddr_clk_o;
-output logic        ddr_enable_o; // optional if macro requires it
 ```
 
 Defaults:
 
 - `ddr_data_l_o` is the older logical 16-bit word.
 - `ddr_data_h_o` is the next logical 16-bit word.
-- `ddr_pair_valid_o` qualifies the pair.
-- `ddr_clk_o` is derived from `clk_sys` unless macro ownership changes.
+- `ddr_pair_valid_o` qualifies the pair and feeds the dedicated valid driver.
+- `ddr_clk_o` feeds the dedicated forwarded-clock driver unless macro ownership changes.
 - Idle drives data zero and valid low.
 
 Exact DATA_L/DATA_H edge mapping is TBD with the DDR macro designer.
+
+Physical mapping now assumes the north driver row contains:
+
+- 16 SLVS DDR data driver instances for `DATA[15:0]`;
+- one dedicated forwarded-clock driver;
+- one dedicated valid driver.
+
+Each data driver instance consumes one bit from `ddr_data_l_o` and one bit from
+`ddr_data_h_o`. The digital boundary no longer targets the old DDR8 path.
 
 ## Pairing Stage
 
@@ -64,8 +75,7 @@ pairer can avoid padding.
 
 ## Open DDR Designer Items
 
-- Is the macro one 16-bit block or 16 one-bit lanes?
-- Exact port names for DATA_L, DATA_H, clock, valid, enable, reset.
+- Exact driver instance/pin names for DATA_L, DATA_H, clock, valid, enable, and reset.
 - Which side owns/generated the forwarded clock?
 - Which of DATA_L/DATA_H appears on the rising/falling edge?
 - Is valid single-data-rate per pair, DDR, or per half?

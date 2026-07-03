@@ -45,6 +45,16 @@ The untracked files are user-owned references. They must not be deleted, reforma
 
 [FROZEN] `clk_cfg_40m` and `clk_ref_40m` are real named 40 MHz logical clocks, but they are not separate external pads in v1. In PLL mode, one PLL 40 MHz output feeds both logical clocks. In external-clock mode, one external 160 MHz pad feeds a divide-by-4 clock that also feeds both logical 40 MHz clocks. The matrix configuration controller must keep its stable-bus handshake until final STA/CDC proves the generated-clock relationship is safe to simplify.
 
+[FROZEN] The matrix-top core has a dedicated active-high I2C pad reset input
+`i2c_rst_i` / pad `i2c_RST`. It resets only the I2C transport path and is not a
+global digital reset.
+
+[FROZEN] PLL macro control uses CSR-visible digital outputs for SelA_Fint
+through SelH_Fint, Sw0_RO through Sw4_RO, sel_pulsePFD, Enable_Div, Sel_40M,
+and the 160 MHz source select. PLL lock/status is CSR-visible only. Ibi_KVCO,
+Icp, Ref_in_pll_ro, Rst_Div, and Rst_CP are external pad inputs owned by the
+future pad-ring/PLL wrapper.
+
 [FROZEN] `Cout` is the returned `Cin` after matrix propagation/RC effects and must be used for physical matrix configuration readback timing. The existing mirror-readback behavior is not final.
 
 [FROZEN] A real `clk_sys` output FIFO is required between event bundle TX and DDR16 pairer. The physical-planning target depth is 256 logical 16-bit words plus marker metadata, with event admission blocked when free space is below the documented worst-case event reservation.
@@ -182,13 +192,14 @@ Pin family summary from the CSV:
 - [FROZEN] PLL should be placed toward bottom-right.
 - [FROZEN] The provided image is conceptual only. Physical planning must use `matrice3_pin_coordinates.csv`, normalized `ll_*` coordinates, and explicit routing corridors for `INTERNAL_NEAREST_RIGHT` pins.
 - [FROZEN] Current top floorplan envelope uses the layout-derived die of about `4293.179 um x 3209.173 um`. Die height is not flexible in the normal flow.
+- [FROZEN] The layout description also reports a normalized BOX_RING hint of about `X=3200 um` by `Y=3700 um`. Until a parseable BOX_RING export maps coordinate frames, scripts must record that hint but continue to gate against explicit die-width/die-height arguments rather than silently swapping dimensions.
 - [FROZEN] Current pad-ring/core physical planning depth is about `164 um`, replacing the older `120 um` abstract keepout.
 - [FROZEN] First MPTDC placeholder arrangement is a vertical stack to the right of the matrix, with R top, Y middle, and B bottom.
 - [FROZEN] Required MPTDC planning case uses the full DEF/block boundary `1061.20 um x 801.92 um`, plus `5%` dimensional margin and a provisional `20 um` halo around each MPTDC.
 - [FROZEN] MPTDCs should keep the same orientation where possible; no independent mirroring/rotation is allowed unless a real PnR blockage justifies it.
 - [FROZEN] If the full-boundary MPTDC stack is tight, reduce the inter-MPTDC gap from `40 um` to `20 um` before considering any die-size risk item.
 - [FROZEN] If the vertical MPTDC placeholder stack does not fit, scripts must stop and report. Do not silently switch to a 2+1 fallback.
-- [FROZEN] DDR16 is deferred from early Innovus OOC. It remains a north-side future boundary until the DDR macro contract is ready.
+- [FROZEN] DDR16 is part of the staged per-block flow. The final top uses 16 north-row SLVS data driver instances, one forwarded-clock driver, and one valid driver. Full top assembly still remains deferred until wrapper/pad-ring and macro collateral exist.
 - [FROZEN] The top layout source of truth for BOX_RING/pad-ring geometry is the OA cell at `/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC`.
 - [TBD - NEEDS FLOORPLAN] Exact BOX_RING blockage coordinates, final PLL size, and final top-level pad coordinates still need a parseable export or analog/layout handoff.
 
@@ -412,9 +423,9 @@ Pin family summary from the CSV:
 - [VERIFIED] Server Genus staged run `genus_matrix_ooc_staged_20260630_1516` passed all 12 configured OOC blocks with `GENUS_RC=0` at source commit `195b6d1bf87c16042294c8e3d411b50d989f541a`. This remains typical-only OOC feasibility, not MMMC or final timing signoff.
 - [HISTORICAL] Server staged floorplan run `innovus_matrix_top_staged_fp_20260630_1628` correctly stopped before Innovus with `FP_RC=5`, `STATUS=FAIL`, and `MPTDC_VERTICAL_STACK_EXCEEDS_CORE_HEIGHT`. The old default 1.0 mm2, 4:3-aspect three-axis MPTDC vertical stack was 109.038 um too tall for the obsolete 3800 um x 2700 um abstract die with 120 um pad/core keepout.
 - [SUPERSEDED] The earlier 1.0 mm2, aspect-ratio-1.8 candidate is no longer the active planning case. It is replaced by the full-boundary Scenario B reservation in the real top envelope.
-- [VERIFIED] Server OOC collateral gate `innovus_matrix_ooc_gate_20260630_1628` returned `OOC_RC=4`, `READY_FOR_NEXT_IMPORT_TEMPLATE`, with all 10 connectivity-first block netlists and SDCs present. DDR16 remains excluded by default because it is low priority for the next physical step.
+- [VERIFIED] Server OOC collateral gate `innovus_matrix_ooc_gate_20260630_1628` returned `OOC_RC=4`, `READY_FOR_NEXT_IMPORT_TEMPLATE`, with all 10 connectivity-first block netlists and SDCs present. At that time DDR16 was excluded by default; this is now superseded by the updated north SLVS/DDR16 contract.
 - [IMPLEMENTED] Builder fixed a warning-classifier false positive where the `Multidriven Port(s)/Pin(s)` report heading was counted as an undriven/multidriven finding even when detailed Genus text said no such issue.
-- [FROZEN] New TOP Genus OOC runs exclude `ddr16_pairer` and full `spadmic_top_matrix_v1` by default. They are opt-in only through explicit environment variables after the staged subblock flow is reviewed.
+- [FROZEN] New TOP Genus/Innovus OOC runs include `ddr16_pairer` by default because the north SLVS data/clock/valid row is part of the staged top contract. DDR16 is scheduled last because it is lower priority than reset/OR64/snapshot/config/event/FIFO/CSR/I2C physical readiness. Full `spadmic_top_matrix_v1` remains excluded by default; DDR16 may be excluded only for narrow debug reruns.
 - [FROZEN] Clock mux reset default selects PLL 160 MHz. PLL lock/status is CSR-only for v1; there is no external lock pin.
 
 ## Affected Files

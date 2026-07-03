@@ -112,6 +112,8 @@ package spadmic_pkg;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_SHARED_TDC_RO_FAST  = 16'h0028;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_SHARED_TDC_CTRL     = 16'h002C;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_CALIB_AXIS_MASK     = 16'h0030;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_PLL_CTRL            = 16'h0034;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_PLL_STATUS          = 16'h0038;
 
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POSITION_MODE       = 16'h4000;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_POS_CTRL        = 16'h4000;

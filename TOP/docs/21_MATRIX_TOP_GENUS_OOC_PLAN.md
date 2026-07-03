@@ -32,20 +32,25 @@ away from `xx31/JIHD`.
 
 ## Block List And Order
 
-1. OR64 three-axis wrapper.
-2. Matrix reset controller.
-3. Matrix configuration controller plus Cout sampler.
-4. Snapshot-driven position wrapper/path.
-5. Output FIFO.
+1. Matrix reset controller.
+2. OR64 three-axis wrapper.
+3. Snapshot-driven position wrapper/path.
+4. Matrix configuration controller plus Cout sampler.
+5. Event coordinator.
 6. Event bundle TX.
-7. Event coordinator.
+7. Output FIFO.
 8. Matrix-top CSR.
 9. I2C/CSR bridge feasibility.
 10. I2C slave.
+11. DDR16 pairer.
 
-`ddr16_pairer` and full `spadmic_top_matrix_v1` are excluded by default. Enable
-them only with explicit reviewed overrides after the staged subblock flow is
-ready.
+`ddr16_pairer` is now included by default because the north SLVS row is part of
+the staged top contract. It is scheduled last because the data-driver row is
+real but lower priority than the control, matrix, packet, and FIFO path for the
+next physical step. Full `spadmic_top_matrix_v1` remains excluded by default.
+Set `SPADMIC_GENUS_EXCLUDE_DDR16=1` only for a narrow debug rerun, and set
+`SPADMIC_GENUS_INCLUDE_FULL_TOP=1` only for an explicitly reviewed full-top
+experiment.
 
 For MPTDC, use existing MPTDC axis-core flow/results as source of truth. Do not synthesize three unique MPTDC variants unless a later handoff requires it.
 

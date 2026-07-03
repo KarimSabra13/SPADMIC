@@ -25,23 +25,32 @@ export MPTDC_PNR_POWER_LAYER="${MPTDC_PNR_POWER_LAYER:-METTP}"
 export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-METTP}"
 
 BLOCKS=(
-  "or64_tree:spadmic_matrix_or_tree"
   "matrix_reset_ctrl:spadmic_matrix_reset_ctrl"
-  "matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl"
+  "or64_tree:spadmic_matrix_or_tree"
   "position_snapshot:spadmic_position_snapshot_packetizer"
-  "output_fifo:spadmic_output_fifo"
-  "event_bundle_tx:spadmic_event_bundle_tx"
+  "matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl"
   "event_coordinator:spadmic_event_coordinator"
+  "event_bundle_tx:spadmic_event_bundle_tx"
+  "output_fifo:spadmic_output_fifo"
   "matrix_top_csr:spadmic_matrix_top_csr"
   "i2c_csr_bridge:spadmic_i2c_csr_bridge"
   "i2c_slave:spadmic_i2c_slave"
+  "ddr16_pairer:spadmic_ddr16_tx_pairer"
 )
 
-SKIPPED_BLOCKS=("ddr16_pairer:spadmic_ddr16_tx_pairer" "spadmic_top_matrix_v1:spadmic_top_matrix_v1")
+SKIPPED_BLOCKS=("spadmic_top_matrix_v1:spadmic_top_matrix_v1")
+DDR16_INCLUDED=1
 
-if [[ "${SPADMIC_GENUS_INCLUDE_DDR16:-0}" == "1" ]]; then
-  BLOCKS+=("ddr16_pairer:spadmic_ddr16_tx_pairer")
-  SKIPPED_BLOCKS=("${SKIPPED_BLOCKS[@]/ddr16_pairer:spadmic_ddr16_tx_pairer}")
+if [[ "${SPADMIC_GENUS_EXCLUDE_DDR16:-0}" == "1" ]]; then
+  DDR16_INCLUDED=0
+  SKIPPED_BLOCKS+=("ddr16_pairer:spadmic_ddr16_tx_pairer")
+  TMP_BLOCKS=()
+  for item in "${BLOCKS[@]}"; do
+    if [[ "$item" != "ddr16_pairer:spadmic_ddr16_tx_pairer" ]]; then
+      TMP_BLOCKS+=("$item")
+    fi
+  done
+  BLOCKS=("${TMP_BLOCKS[@]}")
 fi
 
 if [[ "${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}" == "1" ]]; then
@@ -69,7 +78,8 @@ mkdir -p "$RUN_ROOT/filelists" "$RUN_ROOT/logs"
   echo "MPTDC_PNR_SIGNAL_TOP_LAYER=$MPTDC_PNR_SIGNAL_TOP_LAYER"
   echo "MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER"
   echo "MPTDC_PNR_POWER_LAYER=$MPTDC_PNR_POWER_LAYER"
-  echo "SPADMIC_GENUS_INCLUDE_DDR16=${SPADMIC_GENUS_INCLUDE_DDR16:-0}"
+  echo "SPADMIC_GENUS_EXCLUDE_DDR16=${SPADMIC_GENUS_EXCLUDE_DDR16:-0}"
+  echo "DDR16_INCLUDED=$DDR16_INCLUDED"
   echo "SPADMIC_GENUS_INCLUDE_FULL_TOP=${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}"
   echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
   echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
@@ -91,7 +101,7 @@ if ! command -v genus >/dev/null 2>&1; then
     echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
   echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"
   echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
-  echo "- DDR16 included: \`${SPADMIC_GENUS_INCLUDE_DDR16:-0}\`"
+  echo "- DDR16 included: \`$DDR16_INCLUDED\`"
   echo "- Full matrix top included: \`${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}\`"
   echo "- Result: FAIL"
     echo "- First error: \`genus not found in PATH\`"
@@ -133,7 +143,7 @@ FAILED=()
   echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"
   echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
   echo "- Effective top floor layer: \`$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER\`"
-  echo "- DDR16 included: \`${SPADMIC_GENUS_INCLUDE_DDR16:-0}\`"
+  echo "- DDR16 included: \`$DDR16_INCLUDED\`"
   echo "- Full matrix top included: \`${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}\`"
   echo "- Signoff: non-signoff, typical-only feasibility"
   echo

@@ -63,6 +63,7 @@ module spadmic_matrix_top_csr (
   input  logic                                output_fifo_overflow_i,
   input  logic                                bundle_missing_source_i,
   input  logic                                position_packet_drop_i,
+  input  logic                                pll_lock_i,
 
   output logic                                global_enable_o,
   output spadmic_pkg::spadmic_operating_mode_e requested_mode_o,
@@ -81,6 +82,12 @@ module spadmic_matrix_top_csr (
   output logic                                tdc_fifo_clr_o,
   output logic [2:0]                          calib_axis_mask_o,
   output spadmic_pkg::spadmic_pos_mode_e      position_mode_o,
+  output logic [7:0]                          pll_fint_sel_o,
+  output logic [4:0]                          pll_ro_sw_o,
+  output logic                                pll_sel_pulse_pfd_o,
+  output logic                                pll_enable_div_o,
+  output logic                                pll_sel_40m_o,
+  output logic                                clk_160m_ext_select_o,
 
   output logic                                matrix_cfg_cmd_start_o,
   output logic [2:0]                          matrix_cfg_cmd_op_o,
@@ -187,6 +194,8 @@ module spadmic_matrix_top_csr (
       SPADMIC_CSR_SHARED_TDC_RO_FAST,
       SPADMIC_CSR_SHARED_TDC_CTRL,
       SPADMIC_CSR_CALIB_AXIS_MASK,
+      SPADMIC_CSR_PLL_CTRL,
+      SPADMIC_CSR_PLL_STATUS,
       SPADMIC_CSR_POSITION_MODE,
       SPADMIC_CSR_TX_STATUS,
       SPADMIC_CSR_OUTPUT_FIFO_STATUS,
@@ -266,6 +275,21 @@ module spadmic_matrix_top_csr (
 
       SPADMIC_CSR_CALIB_AXIS_MASK: begin
         rd[2:0] = calib_axis_mask_o;
+      end
+
+      SPADMIC_CSR_PLL_CTRL: begin
+        rd[7:0]   = pll_fint_sel_o;
+        rd[12:8]  = pll_ro_sw_o;
+        rd[13]    = pll_sel_pulse_pfd_o;
+        rd[14]    = pll_enable_div_o;
+        rd[15]    = pll_sel_40m_o;
+        rd[16]    = clk_160m_ext_select_o;
+      end
+
+      SPADMIC_CSR_PLL_STATUS: begin
+        rd[0] = pll_lock_i;
+        rd[1] = clk_160m_ext_select_o;
+        rd[2] = pll_enable_div_o;
       end
 
       SPADMIC_CSR_POSITION_MODE: begin
@@ -397,6 +421,12 @@ module spadmic_matrix_top_csr (
       tdc_fifo_clr_o          <= 1'b0;
       calib_axis_mask_o       <= 3'b111;
       position_mode_o         <= SPADMIC_POS_MODE_RAW;
+      pll_fint_sel_o          <= '0;
+      pll_ro_sw_o             <= '0;
+      pll_sel_pulse_pfd_o     <= 1'b0;
+      pll_enable_div_o        <= 1'b1;
+      pll_sel_40m_o           <= 1'b0;
+      clk_160m_ext_select_o   <= 1'b0;
       matrix_cfg_cmd_start_o  <= 1'b0;
       matrix_cfg_cmd_op_o     <= OP_WRITE_COLUMN_64;
       matrix_cfg_cmd_op_q     <= OP_WRITE_COLUMN_64;
@@ -537,6 +567,21 @@ module spadmic_matrix_top_csr (
                   active_axis_mask_o    <= csr_wdata_i[2:0];
                 end
                 cfg_accept_o <= 1'b1;
+              end
+            end
+
+            SPADMIC_CSR_PLL_CTRL: begin
+              if (!ctrl_safe_to_commit) begin
+                write_error      = 1'b1;
+                write_error_code = CMD_ERR_PATH_BUSY;
+              end else begin
+                pll_fint_sel_o        <= csr_wdata_i[7:0];
+                pll_ro_sw_o           <= csr_wdata_i[12:8];
+                pll_sel_pulse_pfd_o   <= csr_wdata_i[13];
+                pll_enable_div_o      <= csr_wdata_i[14];
+                pll_sel_40m_o         <= csr_wdata_i[15];
+                clk_160m_ext_select_o <= csr_wdata_i[16];
+                cfg_accept_o          <= 1'b1;
               end
             end
 

@@ -84,6 +84,8 @@ Default planning inputs:
   R/Y/B from top to bottom;
 - pad policy template:
   `TOP/pnr/inputs/matrix_top_pad_policy_template.csv`.
+- wrapper/pad contract:
+  `TOP/docs/24_MATRIX_TOP_CHIP_WRAPPER_PAD_CONTRACT.md`.
 
 Under those defaults the expected result is a Scenario B geometry pass. Any
 failure should stop before Innovus and be reviewed as a geometry issue, not
@@ -100,9 +102,9 @@ OOC_RUN_ID=innovus_matrix_ooc_gate_$(date +%Y%m%d_%H%M)
 bash TOP/pnr/scripts/server_run_innovus_matrix_ooc.sh "$OOC_RUN_ID" "$GENUS_RUN_ID"
 ```
 
-The OOC gate is connectivity-first and excludes DDR16 by default. Set
-`SPADMIC_INNOVUS_INCLUDE_DDR16=1` only when the DDR macro boundary is ready for
-physical work.
+The OOC gate is connectivity-first and includes `ddr16_pairer` by default,
+because the north SLVS row is now part of the staged top contract. Set
+`SPADMIC_INNOVUS_EXCLUDE_DDR16=1` only for a narrow debug rerun.
 
 ## Floorplan Intent
 
@@ -116,8 +118,13 @@ physical work.
 - Distributed position frontend near matrix pins; cluster/packet logic grouped
   further right.
 - FIFO/bundle/DDR north or north-east because final DDR outputs are north.
+- North SLVS row: 16 data drivers plus one forwarded-clock driver and one valid
+  driver.
 - CSR/I2C/control/reset supervision near the matrix bottom.
-- PLL placeholder bottom-right.
+- I2C pad reset `i2c_RST` maps to active-high core `i2c_rst_i` and resets only
+  the I2C transport.
+- PLL placeholder/clock wrapper bottom-right; PLL analog pad inputs remain
+  wrapper-owned while CSR outputs drive the documented PLL selection bits.
 - Reserve corridors for `INTERNAL_NEAREST_RIGHT` pins.
 
 ## Limitations

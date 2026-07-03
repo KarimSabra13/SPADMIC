@@ -11,7 +11,7 @@ Usage:
 
 Optional environment:
   SPADMIC_WORK_ROOT                 Default: /sim/ksabra/SPADMIC_work
-  SPADMIC_INNOVUS_INCLUDE_DDR16     Default: 0
+  SPADMIC_INNOVUS_EXCLUDE_DDR16     Default: 0
   SPADMIC_INNOVUS_OOC_BLOCKS        Override block list, space-separated.
 
 This wrapper validates per-block Genus OOC collateral and creates per-block
@@ -43,20 +43,29 @@ export MPTDC_PNR_SIGNAL_TOP_LAYER="${MPTDC_PNR_SIGNAL_TOP_LAYER:-MET3}"
 export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-METTP}"
 
 DEFAULT_BLOCKS=(
-  or64_tree
   matrix_reset_ctrl
-  matrix_cfg_ctrl
+  or64_tree
   position_snapshot
-  output_fifo
-  event_bundle_tx
+  matrix_cfg_ctrl
   event_coordinator
+  event_bundle_tx
+  output_fifo
   matrix_top_csr
   i2c_csr_bridge
   i2c_slave
+  ddr16_pairer
 )
 
-if [[ "${SPADMIC_INNOVUS_INCLUDE_DDR16:-0}" == "1" ]]; then
-  DEFAULT_BLOCKS+=(ddr16_pairer)
+DDR16_INCLUDED=1
+if [[ "${SPADMIC_INNOVUS_EXCLUDE_DDR16:-0}" == "1" ]]; then
+  DDR16_INCLUDED=0
+  TMP_BLOCKS=()
+  for block in "${DEFAULT_BLOCKS[@]}"; do
+    if [[ "$block" != "ddr16_pairer" ]]; then
+      TMP_BLOCKS+=("$block")
+    fi
+  done
+  DEFAULT_BLOCKS=("${TMP_BLOCKS[@]}")
 fi
 
 if [[ -n "${SPADMIC_INNOVUS_OOC_BLOCKS:-}" ]]; then
@@ -84,7 +93,8 @@ mkdir -p "$RUN_ROOT/logs" "$RUN_ROOT/reports" "$RUN_ROOT/blocks"
   echo "MPTDC_PNR_ROUTE_LAYER_NAMES=$MPTDC_PNR_ROUTE_LAYER_NAMES"
   echo "MPTDC_PNR_SIGNAL_TOP_LAYER=$MPTDC_PNR_SIGNAL_TOP_LAYER"
   echo "MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER"
-  echo "DDR16_INCLUDED=${SPADMIC_INNOVUS_INCLUDE_DDR16:-0}"
+  echo "SPADMIC_INNOVUS_EXCLUDE_DDR16=${SPADMIC_INNOVUS_EXCLUDE_DDR16:-0}"
+  echo "DDR16_INCLUDED=$DDR16_INCLUDED"
   echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
   echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   echo "STATUS_SHORT_BEGIN"
@@ -170,7 +180,7 @@ done
   echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
   echo "- Route layers: \`$MPTDC_PNR_ROUTE_LAYER_NAMES\`"
   echo "- Ordinary signal top layer: \`$MPTDC_PNR_SIGNAL_TOP_LAYER\`"
-  echo "- DDR16 included: \`${SPADMIC_INNOVUS_INCLUDE_DDR16:-0}\`"
+  echo "- DDR16 included: \`$DDR16_INCLUDED\`"
   echo "- Signoff: non-signoff OOC collateral gate"
   echo
   echo "## Connectivity-First Blocks"

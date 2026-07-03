@@ -93,6 +93,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-id", default="matrix_top_floorplan", help="Run ID.")
     parser.add_argument("--die-width-um", type=float, default=4293.179)
     parser.add_argument("--die-height-um", type=float, default=3209.173)
+    parser.add_argument("--layout-normalized-width-um", type=float, default=3200.0)
+    parser.add_argument("--layout-normalized-height-um", type=float, default=3700.0)
     parser.add_argument("--pad-keepout-um", type=float, default=164.0)
     parser.add_argument("--box-ring-source", default="/group/validmgr/PROJET/Prj_xh018/ksabra/cds/design/SPADMIC")
     parser.add_argument("--matrix-width-um", type=float, default=1999.91)
@@ -405,8 +407,11 @@ def main() -> int:
         "position_distributed_frontend": (matrix[2] - 280.0, matrix[1], matrix[2] + 300.0, matrix[3]),
         "position_cluster_main": (matrix[2] + 420.0, matrix[1] + 280.0, min(core[2], matrix[2] + 920.0), matrix[1] + 920.0),
         "control_reset_supervision_south": (matrix[0], core[1], min(core[2], matrix[2] + 1050.0), matrix[1] - 80.0),
+        "north_slvs_driver_row": (core[0], max(core[1], core[3] - 180.0), core[2], core[3]),
+        "ddr16_bundle_fifo_tx_north": (matrix[2] + 220.0, max(matrix[3] - 50.0, core[3] - 520.0), core[2], core[3] - 180.0),
         "fifo_bundle_north": (matrix[2] + 220.0, max(matrix[3] - 50.0, core[3] - 420.0), core[2], core[3]),
         "pll_clock_mux_south_east": (core[2] - args.pll_width_um, core[1], core[2], core[1] + args.pll_height_um),
+        "pll_analog_cluster_bottom": (max(core[0], core[2] - 520.0), core[1], core[2], min(core[3], core[1] + 360.0)),
     }
     if internal_corridor:
         regions["internal_nearest_right_corridor"] = internal_corridor
@@ -573,6 +578,8 @@ def main() -> int:
         fh.write(f"- Pad policy CSV: `{pad_policy_csv}`\n")
         fh.write(f"- BOX_RING/OA source: `{args.box_ring_source}`\n")
         fh.write("- Coordinate basis: absolute planning coordinates in um; matrix pins use normalized `ll_*` source columns\n")
+        fh.write(f"- Layout normalized BOX_RING hint: `X {args.layout_normalized_width_um:.3f} um x Y {args.layout_normalized_height_um:.3f} um`\n")
+        fh.write("- Coordinate-frame note: the normalized BOX_RING hint is recorded for analog/layout alignment; the active geometry gate still uses the explicit die width/height arguments until a parseable BOX_RING export maps the coordinate frames.\n")
         fh.write(f"- Gated scenario: `{main_scenario.name}`\n")
         fh.write(f"- Status: `{top_status}`\n")
         fh.write(f"- Issues: `{', '.join(feasibility_issues) if feasibility_issues else 'none'}`\n")
@@ -617,7 +624,10 @@ def main() -> int:
         fh.write(f"- Policy rows: `{len(pad_rows)}`\n")
         fh.write("- Current policy uses one external 160 MHz clock pad; `clk_cfg_40m` and `clk_ref_40m` are not independent external pads.\n")
         fh.write("- Reset default selects PLL 160 MHz; external 160 MHz mode uses one divide-by-4 clock for both logical 40 MHz domains.\n")
-        fh.write("- DDR16 entries are north-side placeholders and intentionally low priority.\n")
+        fh.write("- DDR16 planning uses 16 north-side SLVS data drivers plus one forwarded-clock driver and one valid driver.\n")
+        fh.write("- `i2c_RST` is an active-high pad reset that resets only the I2C transport inside the digital core.\n")
+        fh.write("- Six calibration START/STOP pads remain top-level external pins.\n")
+        fh.write("- PLL CSR outputs drive SelA_Fint..SelH_Fint, Sw0_RO..Sw4_RO, sel_pulsePFD, Enable_Div, and Sel_40M; Ibi_KVCO, Icp, Ref_in_pll_ro, Rst_Div, and Rst_CP remain external pad inputs to the PLL wrapper.\n")
         fh.write("- `VTUNE` and matrix supplies are analog/macro-owned and not digital route claims.\n")
         fh.write("\n## Promotion Rule\n\n")
         fh.write("- If `Status` is `FAIL`, the server Innovus wrapper must stop after generating reports.\n")

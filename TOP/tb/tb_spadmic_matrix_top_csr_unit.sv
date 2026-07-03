@@ -10,6 +10,7 @@ module tb_spadmic_matrix_top_csr_unit;
   localparam logic [3:0] CMD_ERR_BUSY        = 4'd1;
   localparam logic [3:0] CMD_ERR_INVALID_COL = 4'd3;
   localparam logic [3:0] CMD_ERR_PATH_BUSY   = 4'd4;
+  localparam logic [3:0] CMD_ERR_BAD_ADDR    = 4'd5;
   localparam logic [3:0] CMD_ERR_BAD_MODE    = 4'd6;
 
   logic clk_sys;
@@ -63,6 +64,7 @@ module tb_spadmic_matrix_top_csr_unit;
   logic output_fifo_overflow;
   logic bundle_missing_source;
   logic position_packet_drop;
+  logic pll_lock;
   wire global_enable;
   spadmic_operating_mode_e requested_mode;
   spadmic_operating_mode_e active_mode;
@@ -80,6 +82,12 @@ module tb_spadmic_matrix_top_csr_unit;
   wire tdc_fifo_clr;
   wire [2:0] calib_axis_mask;
   spadmic_pos_mode_e position_mode;
+  wire [7:0] pll_fint_sel;
+  wire [4:0] pll_ro_sw;
+  wire pll_sel_pulse_pfd;
+  wire pll_enable_div;
+  wire pll_sel_40m;
+  wire clk_160m_ext_select;
   wire matrix_cfg_cmd_start;
   wire [2:0] matrix_cfg_cmd_op;
   wire [5:0] matrix_cfg_col_idx;
@@ -142,6 +150,7 @@ module tb_spadmic_matrix_top_csr_unit;
     .output_fifo_overflow_i(output_fifo_overflow),
     .bundle_missing_source_i(bundle_missing_source),
     .position_packet_drop_i(position_packet_drop),
+    .pll_lock_i(pll_lock),
     .global_enable_o(global_enable),
     .requested_mode_o(requested_mode),
     .active_mode_o(active_mode),
@@ -159,6 +168,12 @@ module tb_spadmic_matrix_top_csr_unit;
     .tdc_fifo_clr_o(tdc_fifo_clr),
     .calib_axis_mask_o(calib_axis_mask),
     .position_mode_o(position_mode),
+    .pll_fint_sel_o(pll_fint_sel),
+    .pll_ro_sw_o(pll_ro_sw),
+    .pll_sel_pulse_pfd_o(pll_sel_pulse_pfd),
+    .pll_enable_div_o(pll_enable_div),
+    .pll_sel_40m_o(pll_sel_40m),
+    .clk_160m_ext_select_o(clk_160m_ext_select),
     .matrix_cfg_cmd_start_o(matrix_cfg_cmd_start),
     .matrix_cfg_cmd_op_o(matrix_cfg_cmd_op),
     .matrix_cfg_col_idx_o(matrix_cfg_col_idx),
@@ -269,6 +284,7 @@ module tb_spadmic_matrix_top_csr_unit;
     output_fifo_overflow = 1'b0;
     bundle_missing_source = 1'b0;
     position_packet_drop = 1'b0;
+    pll_lock = 1'b0;
 
     repeat (4) @(posedge clk_sys);
     rst_n = 1'b1;
@@ -283,6 +299,14 @@ module tb_spadmic_matrix_top_csr_unit;
     check("reset shared max_hits defaults 15", rd[3:0] == 4'd15);
     csr_read_cmd(SPADMIC_CSR_CALIB_AXIS_MASK, rd, 1'b0);
     check("reset calibration axis mask defaults all axes", rd[2:0] == 3'b111);
+    csr_read_cmd(SPADMIC_CSR_PLL_CTRL, rd, 1'b0);
+    check("reset PLL Fint select defaults zero", rd[7:0] == 8'h00);
+    check("reset PLL RO switches default zero", rd[12:8] == 5'b00000);
+    check("reset PLL divider enabled", rd[14]);
+    check("reset PLL source is internal", !rd[16]);
+    pll_lock = 1'b1;
+    csr_read_cmd(SPADMIC_CSR_PLL_STATUS, rd, 1'b0);
+    check("PLL status reports lock input", rd[0]);
 
     csr_write_cmd(SPADMIC_CSR_MTOP_CTRL_REQUEST,
                   {24'h0, 1'b1, 3'b111, SPADMIC_MODE_POSITION_ONLY, 1'b1},
@@ -351,6 +375,26 @@ module tb_spadmic_matrix_top_csr_unit;
     #1;
     check("shared TDC soft reset pulse clears", !tdc_soft_reset);
     check("shared TDC fifo clear pulse clears", !tdc_fifo_clr);
+
+    csr_write_cmd(SPADMIC_CSR_PLL_CTRL, 32'h0001_75A5, 1'b0);
+    check("PLL CSR write accepted", cfg_accept);
+    check("PLL Fint select output updates", pll_fint_sel == 8'hA5);
+    check("PLL RO switch output updates", pll_ro_sw == 5'b10101);
+    check("PLL PFD pulse select output updates", pll_sel_pulse_pfd);
+    check("PLL divider enable output updates", pll_enable_div);
+    check("PLL 40M select remains cleared", !pll_sel_40m);
+    check("external 160 source select output updates", clk_160m_ext_select);
+    csr_read_cmd(SPADMIC_CSR_PLL_CTRL, rd, 1'b0);
+    check("PLL control readback", rd[16:0] == 17'h175A5);
+    safe_idle = 1'b0;
+    csr_write_cmd(SPADMIC_CSR_PLL_CTRL, 32'h0000_0000, 1'b1);
+    csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
+    check("busy PLL write reports PATH_BUSY", rd[11:8] == CMD_ERR_PATH_BUSY);
+    check("busy PLL write leaves control unchanged", pll_fint_sel == 8'hA5);
+    safe_idle = 1'b1;
+    csr_write_cmd(SPADMIC_CSR_PLL_STATUS, 32'h0000_0001, 1'b1);
+    csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
+    check("PLL status is read-only", rd[11:8] == CMD_ERR_BAD_ADDR);
 
     csr_write_cmd(SPADMIC_CSR_POSITION_MODE, 32'h0000_0000, 1'b0);
     check("position mode cluster write accepted", position_mode == SPADMIC_POS_MODE_CLUSTER);

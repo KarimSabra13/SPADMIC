@@ -13,7 +13,11 @@ This review covers the staged matrix-top planning patch that:
 - uses the known custom TOP die envelope `4293.179 um x 3209.173 um` and 164 um pad-ring/core planning depth;
 - documents the one-external-160-MHz clock policy and internal 40 MHz logical clocks;
 - reduces the implemented output FIFO depth to 256 entries while preserving the 129-entry event reservation;
-- excludes `ddr16_pairer` and full `spadmic_top_matrix_v1` from default Genus OOC runs.
+- historically excluded `ddr16_pairer` and full `spadmic_top_matrix_v1` from
+  default Genus OOC runs. The DDR16 part of this statement is superseded by
+  `TOP/docs/24_MATRIX_TOP_CHIP_WRAPPER_PAD_CONTRACT.md`; `ddr16_pairer` is now
+  included by default but scheduled last. Full `spadmic_top_matrix_v1` remains
+  excluded by default.
 
 ## Findings
 

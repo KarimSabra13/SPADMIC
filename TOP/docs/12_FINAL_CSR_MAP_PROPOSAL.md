@@ -42,6 +42,8 @@ This table is the implemented subset for the new matrix top shell. Registers not
 | `0x0028` | `SHARED_TDC_RO_FAST_CODE` | RW | `0` | shared fast RO code broadcast to all three wrappers |
 | `0x002C` | `SHARED_TDC_CTRL` | WO/command | `0` | bit 0 soft reset pulse, bit 1 FIFO clear pulse; command accepted only at safe idle |
 | `0x0030` | `CALIB_AXIS_MASK` | RW | `3'b111` | nonzero calibration-only required axis mask |
+| `0x0034` | `PLL_CTRL` | RW | divider enabled, PLL source | SelA_Fint..SelH_Fint, Sw0_RO..Sw4_RO, sel_pulsePFD, Enable_Div, Sel_40M, 160 MHz source select |
+| `0x0038` | `PLL_STATUS` | RO | live | PLL lock input, 160 MHz source select, divider enable |
 | `0x4000` | `POSITION_MODE` | RW | raw | raw/cluster mode request placeholder; final cluster integration is Phase 4 work |
 | `0x5000` | `MATRIX_EVENT_STATUS` | RW/RO | `0` | read masks/event ID; write bit 0 pulses snapshot clear |
 | `0x5004` | `MATRIX_SNAPSHOT_CFG` | RW | settle `2`, watchdog `64` | settle cycles `[15:0]`, watchdog cycles `[31:16]`; safe-idle write only |
@@ -144,8 +146,17 @@ Writes to `MTOP_CTRL_REQUEST` are accepted only when the requested value is vali
 | `0x0028` | `SHARED_TDC_RO_FAST_CODE` | RW | `0` | shared fast RO code to all R/Y/B wrappers |
 | `0x002C` | `SHARED_TDC_CTRL` | WO/command | `0` | bit 0 shared soft-reset pulse, bit 1 shared FIFO-clear pulse |
 | `0x0030` | `CALIB_AXIS_MASK` | RW | `3'b111` | selected axes used only in calibration mode |
+| `0x0034` | `PLL_CTRL` | RW | `0x0000_4000` | `[7:0]` SelA_Fint..SelH_Fint, `[12:8]` Sw0_RO..Sw4_RO, `[13]` sel_pulsePFD, `[14]` Enable_Div, `[15]` Sel_40M, `[16]` external-160 source select |
+| `0x0038` | `PLL_STATUS` | RO | live | `[0]` PLL lock, `[1]` external-160 source select, `[2]` Enable_Div |
 
 Final TOP presents one shared slow RO code and one shared fast RO code. Per-axis local idle shadows may remain inside wrappers close to MPTDC macros.
+
+PLL control notes:
+
+- reset default keeps `clk_160m_ext_select_o=0`, meaning PLL 160 MHz is the selected source at reset;
+- reset default keeps `pll_enable_div_o=1`;
+- `i2c_RST` resets the I2C transport, not these CSR control outputs;
+- Ibi_KVCO, Icp, Ref_in_pll_ro, Rst_Div, and Rst_CP are not CSR outputs; they are external pad inputs to the final chip wrapper/PLL macro.
 
 ## Per-Axis TDC Registers
 

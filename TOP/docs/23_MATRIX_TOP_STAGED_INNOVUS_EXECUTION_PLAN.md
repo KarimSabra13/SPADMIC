@@ -23,7 +23,10 @@ This is not placement, route, CTS, DRC/LVS, PEX, MMMC, or final signoff.
   dimensional margin, `20 um` halo, `20 um` inter-axis gap
 - Clock pads: one external 160 MHz clock only; 40 MHz clocks are internal
   PLL/divider outputs
-- DDR16: deferred from early OOC; keep only as a future north-side boundary
+- DDR16: 16 north-row SLVS data drivers plus dedicated forwarded-clock and
+  valid drivers; `ddr16_pairer` is included in staged sub-block OOC by default
+- I2C pad reset: `i2c_RST`, active high, maps to core `i2c_rst_i`
+- Wrapper/pad contract: `TOP/docs/24_MATRIX_TOP_CHIP_WRAPPER_PAD_CONTRACT.md`
 
 ## Flow Order
 
@@ -35,21 +38,22 @@ This is not placement, route, CTS, DRC/LVS, PEX, MMMC, or final signoff.
 
 The initial OOC order is:
 
-1. `or64_tree`
-2. `matrix_reset_ctrl`
-3. `matrix_cfg_ctrl`
-4. `position_snapshot`
-5. `output_fifo`
+1. `matrix_reset_ctrl`
+2. `or64_tree`
+3. `position_snapshot`
+4. `matrix_cfg_ctrl`
+5. `event_coordinator`
 6. `event_bundle_tx`
-7. `event_coordinator`
+7. `output_fifo`
 8. `matrix_top_csr`
 9. `i2c_csr_bridge`
 10. `i2c_slave`
+11. `ddr16_pairer`
 
-`ddr16_pairer` is intentionally excluded unless
-`SPADMIC_INNOVUS_INCLUDE_DDR16=1`. Genus OOC also excludes `ddr16_pairer` and
-full `spadmic_top_matrix_v1` unless `SPADMIC_GENUS_INCLUDE_DDR16=1` or
-`SPADMIC_GENUS_INCLUDE_FULL_TOP=1` is explicitly set.
+Full `spadmic_top_matrix_v1` remains excluded from Genus OOC unless
+`SPADMIC_GENUS_INCLUDE_FULL_TOP=1` is explicitly set. DDR16 is included by
+default. Use `SPADMIC_GENUS_EXCLUDE_DDR16=1` or
+`SPADMIC_INNOVUS_EXCLUDE_DDR16=1` only for narrow debug reruns.
 
 ## New Inputs And Outputs
 
@@ -152,7 +156,6 @@ export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 export MPTDC_XH018_STACK=xx31
 export MPTDC_STDCELL_FAMILY=JIHD
 export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
-export SPADMIC_GENUS_INCLUDE_DDR16=0
 export SPADMIC_GENUS_INCLUDE_FULL_TOP=0
 
 GENUS_RUN_ID=genus_matrix_ooc_clean2_$(date +%Y%m%d_%H%M)

@@ -13,9 +13,18 @@ module spadmic_top_matrix_v1 (
   input  wire                                clk_cfg_40m,
   input  wire                                async_rst_n,
 
+  input  wire                                i2c_rst_i,
   input  wire                                i2c_scl_i,
   input  wire                                i2c_sda_i,
   output wire                                i2c_sda_oe_o,
+
+  input  wire                                pll_lock_i,
+  output wire [7:0]                          pll_fint_sel_o,
+  output wire [4:0]                          pll_ro_sw_o,
+  output wire                                pll_sel_pulse_pfd_o,
+  output wire                                pll_enable_div_o,
+  output wire                                pll_sel_40m_o,
+  output wire                                clk_160m_ext_select_o,
 
   input  wire [spadmic_pkg::SPADMIC_LINE_W-1:0] R_i,
   input  wire [spadmic_pkg::SPADMIC_LINE_W-1:0] Y_i,
@@ -47,6 +56,8 @@ module spadmic_top_matrix_v1 (
 
   wire rst_sys_n;
   wire rst_cfg_n;
+  wire rst_i2c_n;
+  wire i2c_async_rst_n;
 
   wire i2c_cmd_valid;
   wire i2c_cmd_write;
@@ -414,9 +425,17 @@ module spadmic_top_matrix_v1 (
     .rst_n_o     (rst_cfg_n)
   );
 
+  assign i2c_async_rst_n = async_rst_n & ~i2c_rst_i;
+
+  mptdc_reset_sync #(.STAGES(2)) u_rst_i2c_sync (
+    .clk         (clk_sys),
+    .async_rst_n (i2c_async_rst_n),
+    .rst_n_o     (rst_i2c_n)
+  );
+
   spadmic_i2c_slave u_i2c_slave (
     .clk_sys         (clk_sys),
-    .rst_n           (rst_sys_n),
+    .rst_n           (rst_i2c_n),
     .i2c_scl_i       (i2c_scl_i),
     .i2c_sda_i       (i2c_sda_i),
     .i2c_sda_oe_o    (i2c_sda_oe_o),
@@ -433,7 +452,7 @@ module spadmic_top_matrix_v1 (
 
   spadmic_i2c_csr_bridge u_i2c_bridge (
     .clk_sys         (clk_sys),
-    .rst_n           (rst_sys_n),
+    .rst_n           (rst_i2c_n),
     .i2c_cmd_valid_i (i2c_cmd_valid),
     .i2c_cmd_write_i (i2c_cmd_write),
     .i2c_cmd_addr_i  (i2c_cmd_addr),
@@ -505,6 +524,7 @@ module spadmic_top_matrix_v1 (
     .output_fifo_overflow_i      (output_fifo_overflow),
     .bundle_missing_source_i     (bundle_missing_source_error),
     .position_packet_drop_i      (pos_packet_drop),
+    .pll_lock_i                  (pll_lock_i),
     .global_enable_o             (global_enable),
     .requested_mode_o            (requested_mode),
     .active_mode_o               (active_mode),
@@ -522,6 +542,12 @@ module spadmic_top_matrix_v1 (
     .tdc_fifo_clr_o              (shared_tdc_fifo_clr),
     .calib_axis_mask_o           (calib_axis_mask),
     .position_mode_o             (position_mode),
+    .pll_fint_sel_o              (pll_fint_sel_o),
+    .pll_ro_sw_o                 (pll_ro_sw_o),
+    .pll_sel_pulse_pfd_o         (pll_sel_pulse_pfd_o),
+    .pll_enable_div_o            (pll_enable_div_o),
+    .pll_sel_40m_o               (pll_sel_40m_o),
+    .clk_160m_ext_select_o       (clk_160m_ext_select_o),
     .matrix_cfg_cmd_start_o      (matrix_cfg_cmd_start),
     .matrix_cfg_cmd_op_o         (matrix_cfg_cmd_op),
     .matrix_cfg_col_idx_o        (matrix_cfg_col_idx),
