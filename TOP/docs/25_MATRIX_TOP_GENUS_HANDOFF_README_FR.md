@@ -423,6 +423,217 @@ Sorties:
 Le wrapper final connecte ces sorties aux 16 drivers data SLVS, au driver clock
 forwarded et au driver valid.
 
+## Vue ASCII top du chip
+
+Le dessin ci-dessous est une vue planning/top-integration. Il n'est pas a
+l'echelle exacte et ne remplace pas le BOX_RING, le DEF, le LEF, ni le floorplan
+Innovus. Il sert a montrer les connexions attendues entre pads, macros et
+blocs de handoff.
+
+Legende:
+
+```text
+[PAD]       pad externe ou driver IO
+[MACRO]     macro physique analog/mixed-signal ou bloc MPTDC protege
+[CORE]      logique du coeur digital spadmic_top_matrix_v1
+[HANDOFF]   bloc present comme netlist/SDC dans handoff/genus
+[GLUE]      logique top/wrapper non livree comme dossier handoff separe
+-->         data/control principal
+==>         bus large ou flux packet/DDR
+~~~>        clock/reset/control wrapper
+<-->        connexion bidirectionnelle ou handshake
+```
+
+```text
+                                      N O R T H   /   top pad row
+        +------------------------------------------------------------------------------------------+
+        | [PAD/SLVS] DATA[15:0]             [PAD/SLVS] DATA_CLK        [PAD/SLVS] DATA_VALID       |
+        |      ^                                  ^                         ^                      |
+        |      | 16 lanes                         | forwarded clock          | pair valid           |
+        |      | ddr_data_l_o[15:0]               | ddr_clk_o                | ddr_pair_valid_o     |
+        |      | ddr_data_h_o[15:0]               |                          |                      |
+        +======|==================================|==========================|======================+
+        |      |                                  |                          |                      |
+        |      |          north output corridor: route short and direct to SLVS drivers             |
+        |      |                                  |                          |                      |
+        |  +---v--------------------------------------------------------------------------------+  |
+        |  | [CORE] output north-east cluster                                                   |  |
+        |  |                                                                                    |  |
+        |  | [HANDOFF] event_bundle_tx  ==> [HANDOFF] output_fifo_256 ==> [HANDOFF] ddr16_pairer|  |
+        |  |      ^                         ^ level/full/overflow        ^ flush/word stream      |  |
+        |  |      |                         |                             |                       |  |
+        |  |      | completed_packet_mask    | CSR status                  |                       |  |
+        |  +------|-------------------------|-----------------------------|-----------------------+  |
+        |         |                         |                             |                          |
+        |         |                         |                             |                          |
+        |  +------|--------------------------------------------------------------------------------+|
+        |  |      |        [CORE] event and packet assembly zone                                   ||
+        |  |      |                                                                                ||
+        |  |  [HANDOFF] event_coordinator                                                         ||
+        |  |      | event_id[13:0], required_packet_mask[3:0], required_tdc_mask[2:0]              ||
+        |  |      | reset_start, bundle_start, accept/reject, observed_reset_ack_mask             ||
+        |  |      |                                                                                ||
+        |  |      +--> [HANDOFF] position_snapshot_packetizer                                      ||
+        |  |      |       input: snapshot_R/Y/B[63:0], event_id, position mode                   ||
+        |  |      |       output: POSITION pkt_valid/data/sop/eop/pending                       ||
+        |  |      |                                                                                ||
+        |  |      +--> TDC packet sources from three MPTDC wrappers                               ||
+        |  |              TDC_R pkt_valid/data/sop/eop/pending                                    ||
+        |  |              TDC_Y pkt_valid/data/sop/eop/pending                                    ||
+        |  |              TDC_B pkt_valid/data/sop/eop/pending                                    ||
+        |  +--------------------------------------------------------------------------------------+|
+        |                                                                                          |
+        |  +-----------------------------------+        +-----------------------------------------+ |
+        |  | [MACRO] matrice3                 |        | [MACRO] MPTDC_R top                      | |
+        |  | left / center-left               |        | full boundary planning: 1061.20 x 801.92 | |
+        |  | AVDD/AVSS, VTUNE macro-owned     |        | plus 5 percent dimension margin + halo   | |
+        |  |                                   |        |                                         | |
+        |  | outputs to digital:               | R_i -->| [GLUE] spadmic_tdc_axis_wrapper R        | |
+ WEST   |  |   R_i[63:0] --------------------+|        | input: spad_event_async_i, cal_r_*       | | EAST
+ left   |  |   Y_i[63:0] -------------------+||        | output: TDC_R packet stream              | | right
+ side   |  |   B_i[63:0] ------------------+|||        +-----------------------------------------+ | side
+        |  |                                   |||                                                        |
+        |  | resets from digital:              |||      +-----------------------------------------+ |
+        |  |   Rz_o[63:0] <-------------------+||      | [MACRO] MPTDC_Y middle                   | |
+        |  |   Yz_o[63:0] <--------------------+|      | same orientation as R/B if possible       | |
+        |  |   Bz_o[63:0] <---------------------+      |                                         | |
+        |  |                                   | Y_i -->| [GLUE] spadmic_tdc_axis_wrapper Y        | |
+        |  | matrix config/readback:           |        | input: spad_event_async_i, cal_y_*       | |
+        |  |   Din[43:0] <--- matrix_din_o     |        | output: TDC_Y packet stream              | |
+        |  |   Cin[43:0] <--- matrix_cin_o     |        +-----------------------------------------+ |
+        |  |   Dout[43:0] --> matrix_dout_i    |                                                  |
+        |  |   Cout[43:0] --> matrix_cout_i    |        +-----------------------------------------+ |
+        |  +-----------------|-----------------+        | [MACRO] MPTDC_B bottom                   | |
+        |                    |                          | same orientation, close to R/Y           | |
+        |                    |                          |                                         | |
+        |                    |                    B_i -->| [GLUE] spadmic_tdc_axis_wrapper B        | |
+        |                    |                          | input: spad_event_async_i, cal_b_*       | |
+        |                    |                          | output: TDC_B packet stream              | |
+        |                    |                          +-----------------------------------------+ |
+        |                    |                                                                        |
+        |  +-----------------v------------------------------------------------------------------+   |
+        |  | [CORE] matrix front-end and control, physically close to matrix pin corridors      |   |
+        |  |                                                                                    |   |
+        |  | R_i/Y_i/B_i ==> [GLUE] snapshot_frontend ==> snapshot_R/Y/B[63:0]                 |   |
+        |  |       |                 |        |         \                                      |   |
+        |  |       |                 |        |          +--> [HANDOFF] position_snapshot    |   |
+        |  |       |                 |        +------------> [HANDOFF] matrix_reset_ctrl     |   |
+        |  |       |                 |                         outputs Rz/Yz/Bz            |   |
+        |  |       |                 +---------------------> CSR snapshot/status              |   |
+        |  |       |                                                                    |       |   |
+        |  |       +--> [HANDOFF] or64_tree R/Y/B --> r/y/b_matrix_event ---------------+       |   |
+        |  |                                                                                    |   |
+        |  | [HANDOFF] matrix_cfg_ctrl                                                        |   |
+        |  |     clk_sys <-> clk_cfg_40m CDC                                                   |   |
+        |  |     CSR cmd/op/col/wdata --> matrix_din_o/matrix_cin_o                            |   |
+        |  |     matrix_dout_i/matrix_cout_i --> rdata/status/errors                           |   |
+        |  +------------------------------------------------------------------------------------+   |
+        |                                                                                          |
+        |  +------------------------------------------------------------------------------------+  |
+        |  | [CORE] control south / CSR / clock-status zone                                      |  |
+        |  |                                                                                    |  |
+        |  | [PAD] i2c_scl_i ----+                                                              |  |
+        |  | [PAD] i2c_sda_i ----+--> [HANDOFF] i2c_slave <--> [HANDOFF] i2c_csr_bridge          |  |
+        |  | [PAD] i2c_RST  ~~~~~+       reset only I2C transport          |                     |  |
+        |  |                                                           CSR req/rsp                |  |
+        |  |                                                               v                     |  |
+        |  |                         [HANDOFF] matrix_top_csr                                    |  |
+        |  |                         mode, axis mask, reset cfg, matrix cfg,                    |  |
+        |  |                         MPTDC cfg, PLL cfg, FIFO/TX/status                         |  |
+        |  +------------------------------------------------------------------------------------+  |
+        |                                                                                          |
+        |  +-----------------------------+       +----------------------------------------------+  |
+        |  | [MACRO] PLL / analog cluster |       | [GLUE] clock wrapper and mux/divider          |  |
+        |  | bottom region               |       |                                              |  |
+        |  | external pads direct to PLL:|       | reset default: PLL 160 MHz selected           |  |
+        |  |   pll_Ibi_KVCO_i            |       | CSR select: clk_160m_ext_select_o             |  |
+        |  |   pll_Icp_i                 |       | clk_160m_ext_i -> mux -> clk_sys              |  |
+        |  |   pll_Ref_in_pll_ro_i       |       | 160 MHz / 4 -> clk_cfg_40m and clk_ref_40m    |  |
+        |  |   pll_Rst_Div_i             |       | PLL lock -> pll_lock_i -> CSR only            |  |
+        |  |   pll_Rst_CP_i              |       | PLL controls from CSR:                        |  |
+        |  | CSR outputs to PLL wrapper: |       |   pll_fint_sel_o[7:0]                         |  |
+        |  |   pll_fint_sel_o[7:0]       |       |   pll_ro_sw_o[4:0]                            |  |
+        |  |   pll_ro_sw_o[4:0]          |       |   pll_sel_pulse_pfd_o                         |  |
+        |  |   pll_enable_div_o          |       |   pll_enable_div_o, pll_sel_40m_o             |  |
+        |  +-----------------------------+       +----------------------------------------------+  |
+        +==========================================================================================+
+        | SOUTH pads/control row: async_rst_n, clk_160m_ext_i, i2c_scl_i, i2c_sda_i, i2c_RST,      |
+        | PLL external controls, digital VDD/VSS. Calibration pads cal_r/y/b_start/stop are TBD   |
+        | side/order and are drawn logically; final placement belongs to pad-ring/layout owner.    |
+        +------------------------------------------------------------------------------------------+
+                                      S O U T H   /   bottom pad row
+```
+
+### Vue ASCII des flux internes du coeur digital
+
+Cette deuxieme vue est plus logique que physique. Elle montre les connexions a
+respecter lorsque les netlists de handoff sont assemblees avec les macros et le
+wrapper final.
+
+```text
+                    +----------------------------------------------------------+
+                    | wrapper chip final                                      |
+                    | pads + BOX_RING + PLL + matrix + SLVS drivers           |
+                    +-------------------------------+--------------------------+
+                                                    |
+                                                    v
+        +--------------------------------------------------------------------------------+
+        | [CORE] spadmic_top_matrix_v1                                                    |
+        |                                                                                |
+        |  Reset/clock                                                                    |
+        |  ----------                                                                    |
+        |  async_rst_n --> reset sync --> rst_sys_n, rst_cfg_n                            |
+        |  i2c_RST -----> reset sync --> rst_i2c_n only                                   |
+        |  clk_sys, clk_cfg_40m, clk_ref_40m come from wrapper clock/PLL                  |
+        |                                                                                |
+        |  Control path                                                                   |
+        |  ------------                                                                  |
+        |  i2c_scl_i/i2c_sda_i                                                           |
+        |      --> i2c_slave                                                             |
+        |      --> i2c_csr_bridge                                                        |
+        |      --> matrix_top_csr                                                        |
+        |          | mode/global_enable/axis_mask                                        |
+        |          | tdc_max_hits, ro_slow_code, ro_fast_code, soft_reset, fifo_clr       |
+        |          | matrix_cfg command/data                                             |
+        |          | PLL control bits and clock-source select                            |
+        |          | status counters/faults                                              |
+        |                                                                                |
+        |  Matrix event path                                                              |
+        |  -----------------                                                             |
+        |  matrice3 R_i/Y_i/B_i[63:0]                                                     |
+        |      --> 3x or64_tree --> matrix_activity                                      |
+        |      --> snapshot_frontend --> snapshot_R/Y/B[63:0]                             |
+        |          |--> event_coordinator reset ack                                      |
+        |          |--> matrix_reset_ctrl --> Rz/Yz/Bz[63:0] back to matrice3             |
+        |          |--> position_snapshot --> POSITION packet source                     |
+        |          +--> matrix_top_csr snapshot/status                                   |
+        |                                                                                |
+        |  Matrix config path                                                             |
+        |  ------------------                                                            |
+        |  matrix_top_csr command                                                        |
+        |      --> matrix_cfg_ctrl                                                       |
+        |      --> matrix_din_o[43:0], matrix_cin_o[43:0] to matrice3                    |
+        |      <-- matrix_dout_i[43:0], matrix_cout_i[43:0] from matrice3                |
+        |      <-- readback/status/error to matrix_top_csr                               |
+        |                                                                                |
+        |  MPTDC / calibration path                                                       |
+        |  ------------------------                                                      |
+        |  event_coordinator + matrix events + cal_r/y/b_start/stop                      |
+        |      --> 3x spadmic_tdc_axis_wrapper                                           |
+        |      --> 3x MPTDC protected macro/block                                        |
+        |      --> TDC_R/TDC_Y/TDC_B packet streams                                      |
+        |                                                                                |
+        |  Output path                                                                    |
+        |  -----------                                                                   |
+        |  TDC_R/TDC_Y/TDC_B packets + POSITION packet                                   |
+        |      --> event_bundle_tx                                                       |
+        |      --> output_fifo_256                                                       |
+        |      --> ddr16_pairer                                                          |
+        |      --> ddr_data_l_o[15:0], ddr_data_h_o[15:0], ddr_clk_o, ddr_pair_valid_o   |
+        |      --> wrapper SLVS data/clock/valid drivers                                 |
+        +--------------------------------------------------------------------------------+
+```
+
 ## Ordre d'integration recommande
 
 1. Verifier que les fichiers netlist/SDC de chaque dossier sont presents.
