@@ -1,0 +1,19 @@
+# Hierarchical Gate Report Substitute
+
+REPORT_STATUS=UNSUPPORTED_NATIVE_COMMAND_SUBSTITUTED
+
+The active Genus build does not provide the native command(s) this
+report previously tried to call. This file is written deliberately
+instead of emitting an invalid-command failure.
+
+Unavailable commands:
+  - report_gates -depth 20
+  - report_gates -hier
+  - report_gates -hierarchy
+
+Substitute evidence to review:
+  - report_gates.rpt
+  - report_hierarchy.rpt
+  - report_area_hier.rpt
+
+Genus 22.13 on the lab server rejects the hierarchical report_gates options seen in the 124954 log. The plain gate, hierarchy, and hierarchical area reports are kept as the supported evidence set.

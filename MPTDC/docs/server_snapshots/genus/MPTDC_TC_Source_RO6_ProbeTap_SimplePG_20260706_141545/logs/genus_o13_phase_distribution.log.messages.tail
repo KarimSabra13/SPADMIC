@@ -1,0 +1,4 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/genus/MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_141545/logs/genus_o13_phase_distribution.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+MPTDC_INFO: LATCH AUDIT PASS: 7 latches (expected 7)
