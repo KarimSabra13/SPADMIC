@@ -1,0 +1,7 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/genus/MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_140109/genus_MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_140109.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|GENUS_TYPICAL|INNOVUS_READY)\b)
+# Last 500 matching lines
+AUDIT_STATUS=PASS
+RO_AUDIT_AUDIT_STATUS=PASS
+[GENUS_TYPICAL] Starting TC-only MPTDC Genus synthesis
+MPTDC_INFO: LATCH AUDIT PASS: 7 latches (expected 7)

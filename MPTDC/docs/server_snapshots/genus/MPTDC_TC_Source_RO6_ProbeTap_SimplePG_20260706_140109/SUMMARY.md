@@ -1,0 +1,285 @@
+# MPTDC Genus Typical Summary
+
+- Flow: `MPTDC_GENUS_AXIS_CORE_TYPICAL_CLOSED`
+- Mode: `MPTDC_TYPICAL_CLOSED_ON22_X1`
+- Package label: `TYPICAL_ONLY_INNOVUS_FEASIBILITY_INPUT`
+- Signoff boundary: `TYPICAL_ONLY_NOT_MMMC`
+- Legacy trace: `O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH`
+- Run ID: `MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_140109`
+- Run mode: `O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH`
+- Branch: `SPADMIC_test`
+- Git HEAD: `f8d70aed18e306380ad02bfb4b591af84f7336cd`
+- Genus exit code: 0
+- Snapshot exit code: 0
+- Result directory: `/sim/ksabra/SPADMIC_work/genus/MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_140109`
+- TYPICAL_ONLY_TAPEOUT_PACKAGE: YES
+- NOT_MMMC_SIGNOFF: YES
+- FINAL_SIGNOFF: NO
+- Signoff status: `TYPICAL_ONLY_TAPEOUT_PACKAGE_NOT_MMMC_SIGNOFF_NOT_FINAL_SIGNOFF`
+- Frequency mode: `r750_delta5`
+- Phase distribution: `BUJIHDX4 -> BUJIHDX12`
+- Packet format: unchanged
+- raw_lfsr_tag: unchanged
+- NFAST encoding: `raw_lfsr_tag`
+- Fast-tag preserve mode: `STRICT`
+- Phase buffer topology: `BUJIHDX4 -> BUJIHDX12 per tap`
+- HDL filelist: `/sim/ksabra/SPADMIC_work/genus/MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_140109/internal/run/filelist_o13_phase_distribution_spadmic_test.f`
+- SDC overlay: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/inputs/mptdc_axis_core_typical_closed.sdc`
+- RO_tune6 instance count: 2
+- mptdc_osc_stub residue count: 0
+- BUHDX4 instance count: 0
+- BUHDX12 instance count: 0
+- BUJIHDX4 instance count: 29
+- BUJIHDX12 instance count: 9
+- BUJIHDX4 phase-buffer u_iso count: 8
+- BUJIHDX12 phase-buffer u_drv count: 8
+- phase-buffer hierarchy text count: 3
+- u_iso text count: 8
+- u_drv text count: 8
+- report_clocks u_ro_tune4/S raw-RO match count: 16
+- report_clocks final-driver generated-clock count: 0
+- RAW_RO_CLOCKS_FOUND: 16
+- BUFFER_PHASE_CLOCKS_FOUND: 16
+- BUFFER_PHASE_CLOCKS_EXPECTED: 16
+- BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP: NO
+- CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS: NO
+- PD intentional Vernier paths expected: 64
+- PD intentional Vernier paths matched: 64
+- PD intentional Vernier sources matched: 8
+- PD intentional Vernier exception applied: YES
+- PD intentional Vernier overmatch: NO
+- PD intentional Vernier undermatch: NO
+- UNKNOWN_REVIEW_REQUIRED count: 0
+- SDC command failure count: 2
+- ACTIVE_SDC_FAILURE_COUNT: 2
+- REPORT_DIAGNOSTIC_WARNING_COUNT: 0
+- RAW_SDC_DIAGNOSTIC_COUNT: 0
+- SDC_235_COUNT: 0
+- TUI_61_COUNT: 0
+- SDC invalid object count: 0
+- EXACT_FAST_TAG_SOURCES_EXPECTED: 24
+- EXACT_FAST_TAG_SOURCES_FOUND: 24
+- EXACT_FAST_TAG_ENDPOINTS_EXPECTED: 192
+- EXACT_FAST_TAG_ENDPOINTS_FOUND: 192
+- EXACT_FAST_TAG_DATAPATHS_EXPECTED: 192
+- EXACT_FAST_TAG_DATAPATHS_FOUND: 192
+- EXACT_FAST_TAG_REPAIR_APPLIED: YES
+- EXACT_FAST_TAG_REPAIR_STATUS: PASS
+- FAST_TAG_EXACT_C_TO_D_SET_MAX_DELAY_RESULT: OK
+- FAST_TAG_EXACT_MAX_DELAY_CONSTRAINT_MODE: OK:constraint_mode:mptdc_axis_core/functional_mode
+- FAST_TAG_EXACT_SOURCE_CELL_TARGET: 
+- FAST_TAG_EXACT_SOURCE_CELL_REQUESTED: NO
+- FAST_TAG_EXACT_SOURCE_CELL_LIB_CELLS_FOUND: 0
+- FAST_TAG_EXACT_SOURCE_CELL_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_CELL_TARGET_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_CELL_METHOD: SKIPPED
+- FAST_TAG_EXACT_SOURCE_CELL_RESULT: SKIPPED_SOURCE_CELL_NOT_REQUESTED
+- FAST_TAG_EXACT_SOURCE_CELL_MODE: SINGLE_TARGET
+- FAST_TAG_EXACT_RESET0_SOURCE_COUNT: 0
+- FAST_TAG_EXACT_SET1_SOURCE_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_UNSUPPORTED_POLARITY_COUNT: 0
+- FAST_TAG_EXACT_SELECTED_RESET0_TARGET: NA
+- FAST_TAG_EXACT_SELECTED_SET1_TARGET: NA
+- FAST_TAG_EXACT_DFRRQHDX4_TARGET_COUNT: 0
+- FAST_TAG_EXACT_DFRSQHDX4_TARGET_COUNT: 0
+- FAST_TAG_EXACT_DFRSQHDX2_TARGET_COUNT: 0
+- FAST_TAG_EXACT_DFRRQJIHDX4_TARGET_COUNT: 0
+- FAST_TAG_EXACT_DFRSJIHDX4_TARGET_COUNT: 0
+- FAST_TAG_EXACT_DFRSJIHDX2_TARGET_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_POLARITY_PRESERVED_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_POLARITY_FAILED_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_FREEZE_RESULT: SKIPPED
+- PD_HIT_TO_NFAST_LOCAL_REPAIR_ENABLE: NA
+- PD_HIT_TO_NFAST_LOCAL_SOURCES_EXPECTED: NA
+- PD_HIT_TO_NFAST_LOCAL_SOURCES_FOUND: NA
+- PD_HIT_TO_NFAST_LOCAL_SOURCE_Q_FOUND: NA
+- PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_EXPECTED: NA
+- PD_HIT_TO_NFAST_LOCAL_ENDPOINTS_FOUND: NA
+- PD_HIT_TO_NFAST_LOCAL_PAIRS_FOUND: NA
+- PD_HIT_TO_NFAST_LOCAL_BITS: NA
+- PD_HIT_TO_NFAST_LOCAL_MAX_DELAY_NS: NA
+- PD_HIT_TO_NFAST_LOCAL_MAX_TRANSITION_NS: NA
+- PD_HIT_TO_NFAST_LOCAL_GROUP_PATH_RESULT: NA
+- PD_HIT_TO_NFAST_LOCAL_SET_MAX_DELAY_RESULT: NA
+- PD_HIT_TO_NFAST_LOCAL_MAX_DELAY_CONSTRAINT_MODE: NA
+- PD_HIT_TO_NFAST_LOCAL_SET_MAX_TRANSITION_RESULT: NA
+- PD_HIT_TO_NFAST_LOCAL_OVERMATCH: NA
+- PD_HIT_TO_NFAST_LOCAL_UNDERMATCH: NA
+- PD_HIT_TO_NFAST_LOCAL_STATUS: NA
+- PD_HIT_TO_NFAST_LOCAL_REVIEW_REASON: NA
+- PD_LOCAL_ON22_REPAIR_ENABLE: 1
+- PD_LOCAL_ON22_APPLY_REPAIR: 1
+- PD_LOCAL_ON22_SOURCE_CELL: ON22JIHDX0
+- PD_LOCAL_ON22_ALLOW_X2: 0
+- PD_LOCAL_ON22_REQUESTED_TARGET_CELLS: ON22JIHDX1,ON22JIHDX2
+- PD_LOCAL_ON22_TARGET_CELLS: ON22JIHDX1
+- PD_LOCAL_ON22_SELECTED_TARGET: ON22JIHDX1
+- PD_LOCAL_ON22_TARGET_LIB_CELLS_FOUND: 1
+- PD_LOCAL_ON22_ENDPOINTS_EXPECTED: 448
+- PD_LOCAL_ON22_ENDPOINTS_FOUND: 448
+- PD_LOCAL_ON22_TIMING_ON22_ROWS_FOUND: 361
+- PD_LOCAL_ON22_TIMING_ON22_LOCAL_ROWS_FOUND: 361
+- PD_LOCAL_ON22_TIMING_UNIQUE_ON22_INSTANCES_FOUND: 361
+- PD_LOCAL_ON22_TIMING_RESOLVED_ON22_INSTANCES_FOUND: 361
+- PD_LOCAL_ON22_SOURCE_DRIVERS_FOUND: 361
+- PD_LOCAL_ON22_SOURCE_CELLS_EXPECTED: AUTO
+- PD_LOCAL_ON22_SOURCE_CELLS_FOUND: 361
+- PD_LOCAL_ON22_UNRESOLVED_CELLS: 0
+- PD_LOCAL_ON22_CHANGED_CELLS: 361
+- PD_LOCAL_ON22_TARGET_CELLS_FOUND: 361
+- PD_LOCAL_ON22_REPAIR_RESULT: OK
+- PD_LOCAL_ON22_OVERMATCH: NO
+- PD_LOCAL_ON22_UNDERMATCH: NO
+- PD_LOCAL_ON22_STATUS: PASS
+- PD_LOCAL_ON22_REVIEW_REASON: NONE
+- Max transition violations: 0
+- Max capacitance violations: 0
+- Max fanout violations: 0
+- Setup WNS ps: 0.3
+- Setup TNS ps: -0.0
+- Setup violating path count: 0
+- Hold WNS ps: NA
+- Hold TNS ps: NA
+- Real timed WNS ps: 0.3
+- Real timed TNS ps: -0.0
+- Real timed violating path count: 0
+- Worst real path family: NA
+- Report helper failure count: 0
+- Report helpers status: PASS
+- FAST_TAG_FLOP_BIAS_MODE: DISABLED
+- FAST_TAG_PRESERVE_MODE: STRICT
+- FAST_TAG_MAPPING_PARSE_STATUS: PASS
+- FAST_TAG_MAPPING_STATUS: PASS
+- FAST_TAG_SOURCE_DFRRQHDX0_COUNT: 0
+- FAST_TAG_SOURCE_DFRRQHDX1_COUNT: 0
+- FAST_TAG_SOURCE_DFRRQHDX2_COUNT: 0
+- FAST_TAG_SOURCE_DFRRQHDX4_COUNT: 0
+- FAST_TAG_SOURCE_DFRSQHDX0_COUNT: 0
+- FAST_TAG_SOURCE_DFRSQHDX1_COUNT: 0
+- FAST_TAG_SOURCE_DFRSQHDX2_COUNT: 0
+- FAST_TAG_SOURCE_DFRSQHDX4_COUNT: 0
+- FAST_TAG_SOURCE_DFRJIHDX0_COUNT: 0
+- FAST_TAG_SOURCE_DFRJIHDX1_COUNT: 0
+- FAST_TAG_SOURCE_DFRJIHDX2_COUNT: 0
+- FAST_TAG_SOURCE_DFRJIHDX4_COUNT: 0
+- FAST_TAG_SOURCE_DFRRQJIHDX0_COUNT: 0
+- FAST_TAG_SOURCE_DFRRQJIHDX1_COUNT: 0
+- FAST_TAG_SOURCE_DFRRQJIHDX2_COUNT: 0
+- FAST_TAG_SOURCE_DFRRQJIHDX4_COUNT: 0
+- FAST_TAG_SOURCE_DFRSJIHDX2_COUNT: 0
+- FAST_TAG_SOURCE_UNKNOWN_COUNT: 0
+- FAST_TAG_MAPPED_SOURCE_COUNT: 56
+- FAST_TAG_MAPPED_ENDPOINT_COUNT: 448
+- FAST_TAG_TOP_PATH_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_COUNT: 24
+- FAST_TAG_EXACT_SOURCE_DFRRQHDX1_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRRQHDX2_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRRQHDX4_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRSQHDX0_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRSQHDX1_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRSQHDX2_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRSQHDX4_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRJIHDX1_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRJIHDX2_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_DFRJIHDX4_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_UNKNOWN_COUNT: 0
+- FAST_TAG_EXACT_ENDPOINT_COUNT: 192
+- FAST_TAG_EXACT_ENDPOINT_DFRHDX2_COUNT: 0
+- FAST_TAG_EXACT_ENDPOINT_DFRHDX4_COUNT: 0
+- FAST_TAG_EXACT_ENDPOINT_DFRSHDX2_COUNT: 0
+- FAST_TAG_EXACT_ENDPOINT_DFRSHDX4_COUNT: 0
+- FAST_TAG_EXACT_ENDPOINT_UNKNOWN_COUNT: 0
+- FAST_TAG_EXACT_SOURCE_PHASE_CLOCK_LOAD_DELTA_ESTIMATE: 24 exact source flops changed candidate; final delta requires Liberty pin-cap report
+- Timing summary parse status: PASS
+- Timing classification parse status: PASS
+- Summary/raw agreement status: PASS
+
+FINAL_DECISION=GENUS_TYPICAL_REVIEW_REQUIRED
+GENUS_TYPICAL_STATUS=GENUS_TYPICAL_REVIEW_REQUIRED
+LEGACY_TRACE=O13_ABS5_PD_Q1_EXCEPTION_EXACT_MATCH
+FINAL_SIGNOFF=NO
+TYPICAL_ONLY_TAPEOUT_PACKAGE=YES
+NOT_MMMC_SIGNOFF=YES
+READY_FOR_O13_INNOVUS_FEASIBILITY=NO_REVIEW_FINAL_TYPICAL_GENUS_FIRST
+INNOVUS_READY=NO_REVIEW_FINAL_TYPICAL_GENUS_FIRST
+
+## Key Files
+- present: `genus_MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_140109.log`
+- present: `mptdc_axis_core.postsyn.v`
+- present: `mptdc_axis_core.postsyn.sdc`
+- present: `final_sdc_overlay_used.sdc`
+- present: `final_filelist_used.f`
+- present: `o13_phase_distribution_check.rpt`
+- present: `run_manifest.txt`
+- present: `report_clocks.rpt`
+- present: `report_clocks_generated.rpt`
+- present: `report_clock_groups.rpt`
+- present: `report_exceptions.rpt`
+- present: `check_timing_intent_post_synth.rpt`
+- present: `report_design_rules.rpt`
+- present: `report_high_fanout.rpt`
+- present: `report_area.rpt`
+- present: `report_qor.rpt`
+- present: `timing_summary.rpt`
+- present: `timing_violations.rpt`
+- present: `timing_pd_capture_hotspots.rpt`
+- present: `timing_clk_sys_violations.rpt`
+- present: `timing_clk_sys_internal_top100.rpt`
+- present: `timing_cdc_async_review.rpt`
+- present: `timing_pd_intentional_vernier.rpt`
+- present: `pd_vernier_exception_check.rpt`
+- present: `pd_vernier_endpoint_discovery.rpt`
+- present: `pd_vernier_source_discovery.rpt`
+- present: `timing_o13_phase_buffer_paths.rpt`
+- present: `o13_clock_model_check.rpt`
+- missing: `o13_clock_model_check.sdc.rpt`
+- present: `sdc_command_failures.md`
+- present: `macro_binding_check.rpt`
+- present: `packet_contract_check.rpt`
+- present: `final_typical_genus_readiness.md`
+- present: `summary_parser_check.rpt`
+- present: `report_helpers_status.rpt`
+- present: `helper_tcl_selftest.rpt`
+- present: `fast_tag_exact_repair_status.rpt`
+- present: `fast_tag_exact_source_discovery.csv`
+- present: `fast_tag_exact_endpoint_discovery.csv`
+- present: `fast_tag_exact_path_pairs.csv`
+- missing: `fast_tag_exact_source_cell_repair.csv`
+- missing: `fast_tag_exact_source_cell_legal_cells.rpt`
+- missing: `fast_tag_exact_source_cell_command_ladder.rpt`
+- missing: `fast_tag_exact_source_freeze.rpt`
+- missing: `pd_hit_to_nfast_local_repair_status.rpt`
+- missing: `pd_hit_to_nfast_local_source_discovery.csv`
+- missing: `pd_hit_to_nfast_local_source_q_discovery.csv`
+- missing: `pd_hit_to_nfast_local_endpoint_discovery.csv`
+- missing: `pd_hit_to_nfast_local_path_pairs.csv`
+- present: `pd_local_on22_repair_status.rpt`
+- present: `pd_local_on22_driver_discovery.csv`
+- present: `pd_local_on22_cell_repair.csv`
+- present: `pd_local_on22_legal_cells.rpt`
+- present: `pd_local_on22_timing_discovery.rpt`
+- present: `reports/fast_tag_exact_repair_status.rpt`
+- present: `reports/fast_tag_exact_source_discovery.csv`
+- present: `reports/fast_tag_exact_endpoint_discovery.csv`
+- present: `reports/fast_tag_exact_path_pairs.csv`
+- missing: `reports/fast_tag_exact_source_cell_repair.csv`
+- missing: `reports/fast_tag_exact_source_cell_legal_cells.rpt`
+- missing: `reports/fast_tag_exact_source_cell_command_ladder.rpt`
+- missing: `reports/fast_tag_exact_source_freeze.rpt`
+- missing: `reports/pd_hit_to_nfast_local_repair_status.rpt`
+- missing: `reports/pd_hit_to_nfast_local_source_discovery.csv`
+- missing: `reports/pd_hit_to_nfast_local_source_q_discovery.csv`
+- missing: `reports/pd_hit_to_nfast_local_endpoint_discovery.csv`
+- missing: `reports/pd_hit_to_nfast_local_path_pairs.csv`
+- present: `reports/pd_local_on22_repair_status.rpt`
+- present: `reports/pd_local_on22_driver_discovery.csv`
+- present: `reports/pd_local_on22_cell_repair.csv`
+- present: `reports/pd_local_on22_legal_cells.rpt`
+- present: `reports/pd_local_on22_timing_discovery.rpt`
+- present: `fast_tag_cell_mapping_guardrail.rpt`
+- present: `final_genus_fast_tag_to_pd_ts_analysis.md`
+- present: `reports/fast_tag_cell_mapping.csv`
+- present: `reports/drv_transition_root_causes.csv`
+- present: `reports/control_drv_root_causes.csv`
+- present: `timing_path_classification.csv`
+- present: `timing_path_classification_summary.md`
