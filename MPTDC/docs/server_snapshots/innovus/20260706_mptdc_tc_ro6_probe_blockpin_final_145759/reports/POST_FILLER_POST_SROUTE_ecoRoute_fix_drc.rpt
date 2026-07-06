@@ -1,0 +1,312 @@
+**INFO: User settings:
+setNanoRouteMode -route_detail_antenna_factor                                             1
+setNanoRouteMode -route_detail_post_route_spread_wire                                     auto
+setNanoRouteMode -drouteStartIteration                                                    0
+setNanoRouteMode -route_extract_third_party_compatible                                    false
+setNanoRouteMode -route_global_exp_timing_driven_std_delay                                57.3
+setNanoRouteMode -route_global_exp_timing_driven_use_tif_timing_engine_for_import_design  false
+setNanoRouteMode -route_exp_design_mode_bottom_routing_layer                              1
+setNanoRouteMode -route_exp_design_mode_top_routing_layer                                 4
+setDesignMode -bottomRoutingLayer                                                         1
+setDesignMode -process                                                                    180
+setDesignMode -topRoutingLayer                                                            4
+
+
+detailRoute -fix_drc
+
+#Start detailRoute on Mon Jul  6 15:30:50 2026
+#
+#num needed restored net=0
+#need_extraction net=0 (total=16346)
+#NanoRoute Version 22.33-s094_1 NR230808-0153/22_13-UB
+#WARNING (NRDB-942) Reset route_exp_with_eco_for_shielding to false because there is no existing shielding wire.
+#Start routing data preparation on Mon Jul  6 15:30:50 2026
+#
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16344 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Build and mark too close pins for the same net.
+#Initial pin access analysis.
+#Detail pin access analysis.
+# MET1         H   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.4850
+# MET2         V   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.5600
+# MET3         H   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.5600
+# METTP        V   Track-Pitch = 1.1200    Line-2-Via Pitch = 0.9500
+#Bottom routing layer index=1(MET1), bottom routing layer for shielding=1(MET1), bottom shield layer=1(MET1)
+#shield_bottom_stripe_layer=1(MET1), shield_top_stripe_layer=4(METTP)
+#pin_access_rlayer=2(MET2)
+#shield_top_dpt_rlayer=-1 top_rlayer=4 top_trim_metal_rlayer=-1 rlayer_lowest=1 bottom_rlayer=1
+#enable_trim_layer_shield=F enable_dpt_layer_shield=F has_line_end_grid=F
+#enable_dpt_layer_shield=F
+#has_line_end_grid=F
+#Processed 0/0 dirty instances, 0/0 dirty terms, 0/0 dirty fterms, 0/0 dirty pgterms, 0/0 misc dirty regions(0 insts marked dirty, reset pre-exisiting dirty flag on 0 insts, 0 nets marked need extraction)
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2731.38 (MB), peak = 2976.36 (MB)
+#Regenerating Ggrids automatically.
+#Auto generating G-grids with size=15 tracks, using layer MET2's pitch = 0.5600.
+#Using automatically generated G-grids.
+#Done routing data preparation.
+#cpu time = 00:00:05, elapsed time = 00:00:05, memory = 2733.38 (MB), peak = 2976.36 (MB)
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16344 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16344 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16344 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start Detail Routing..
+#start initial detail routing ...
+#   number of violations = 15
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0        7        7
+#	MET3          1        3        4
+#	METTP         1        1        2
+#	Totals        4       11       15
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2733.45 (MB), peak = 2976.36 (MB)
+#start 1st fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       13       13
+#	MET3          0        6        6
+#	Totals        2       19       21
+#    number of process antenna violations = 2
+#cpu time = 00:00:02, elapsed time = 00:00:02, memory = 2732.86 (MB), peak = 2976.36 (MB)
+#start 2nd fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       12       12
+#	MET3          0        7        7
+#	Totals        2       19       21
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2733.70 (MB), peak = 2976.36 (MB)
+#start 3rd fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       13       13
+#	MET3          0        6        6
+#	Totals        2       19       21
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2733.78 (MB), peak = 2976.36 (MB)
+#start 4th fixing drc iteration ...
+#   number of violations = 19
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       10       10
+#	MET3          0        7        7
+#	Totals        2       17       19
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2734.99 (MB), peak = 2976.36 (MB)
+#start 5th fixing drc iteration ...
+#   number of violations = 19
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       11       11
+#	MET3          0        6        6
+#	Totals        2       17       19
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2734.23 (MB), peak = 2976.36 (MB)
+#start 6th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0       15       15
+#	MET3          0        3        3
+#	Totals        1       20       21
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2734.13 (MB), peak = 2976.36 (MB)
+#start 7th fixing drc iteration ...
+#   number of violations = 20
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0        9        9
+#	MET3          0        8        8
+#	Totals        1       19       20
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2735.55 (MB), peak = 2976.36 (MB)
+#start 8th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0        9        9
+#	MET3          0        9        9
+#	Totals        1       20       21
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2736.61 (MB), peak = 2976.36 (MB)
+#start 9th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0        8        8
+#	MET3          0       10       10
+#	Totals        1       20       21
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2736.99 (MB), peak = 2976.36 (MB)
+#start 10th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0       13       13
+#	MET3          0        5        5
+#	Totals        1       20       21
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2735.98 (MB), peak = 2976.36 (MB)
+#start 11th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	          Short   Totals
+#	MET1          3        3
+#	MET2         13       13
+#	MET3          5        5
+#	Totals       21       21
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2734.89 (MB), peak = 2976.36 (MB)
+#start 12th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0       14       14
+#	MET3          0        4        4
+#	Totals        1       20       21
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2735.23 (MB), peak = 2976.36 (MB)
+#start 13th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0       13       13
+#	MET3          0        5        5
+#	Totals        1       20       21
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2737.12 (MB), peak = 2976.36 (MB)
+#start 14th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          1        2        3
+#	MET2          0       13       13
+#	MET3          0        5        5
+#	Totals        1       20       21
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2737.20 (MB), peak = 2976.36 (MB)
+#start 15th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       14       14
+#	MET3          0        5        5
+#	Totals        2       19       21
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2737.14 (MB), peak = 2976.36 (MB)
+#start 16th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       14       14
+#	MET3          0        5        5
+#	Totals        2       19       21
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2736.27 (MB), peak = 2976.36 (MB)
+#start 17th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       14       14
+#	MET3          0        5        5
+#	Totals        2       19       21
+#cpu time = 00:00:01, elapsed time = 00:00:01, memory = 2736.10 (MB), peak = 2976.36 (MB)
+#start 18th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       14       14
+#	MET3          0        5        5
+#	Totals        2       19       21
+#cpu time = 00:00:02, elapsed time = 00:00:02, memory = 2736.52 (MB), peak = 2976.36 (MB)
+#start 19th fixing drc iteration ...
+#   number of violations = 21
+#
+#    By Layer and Type :
+#	         MetSpc    Short   Totals
+#	MET1          2        0        2
+#	MET2          0       14       14
+#	MET3          0        5        5
+#	Totals        2       19       21
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 2738.02 (MB), peak = 2976.36 (MB)
+#Complete Detail Routing.
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 803645 um.
+#Total half perimeter of net bounding box = 594463 um.
+#Total wire length on LAYER MET1 = 66335 um.
+#Total wire length on LAYER MET2 = 277968 um.
+#Total wire length on LAYER MET3 = 313578 um.
+#Total wire length on LAYER METTP = 145764 um.
+#Total number of vias = 93687
+#Total number of multi-cut vias = 86082 ( 91.9%)
+#Total number of single cut vias = 7605 (  8.1%)
+#Up-Via Summary (total 93687):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            5724 ( 10.7%)     47816 ( 89.3%)      53540
+# MET2            1531 (  4.5%)     32336 ( 95.5%)      33867
+# MET3             350 (  5.6%)      5930 ( 94.4%)       6280
+#-----------------------------------------------------------
+#                 7605 (  8.1%)     86082 ( 91.9%)      93687 
+#
+#Total number of DRC violations = 21
+#Total number of violations on LAYER MET1 = 2
+#Total number of violations on LAYER MET2 = 14
+#Total number of violations on LAYER MET3 = 5
+#Total number of violations on LAYER METTP = 0
+#Cpu time = 00:00:19
+#Elapsed time = 00:00:19
+#Increased memory = 10.89 (MB)
+#Total memory = 2738.24 (MB)
+#Peak memory = 2976.36 (MB)
+#
+#detailRoute statistics:
+#Cpu time = 00:00:21
+#Elapsed time = 00:00:21
+#Increased memory = 2.96 (MB)
+#Total memory = 2731.68 (MB)
+#Peak memory = 2976.36 (MB)
+#Number of warnings = 1
+#Total number of warnings = 6
+#Number of fails = 0
+#Total number of fails = 0
+#Complete detailRoute on Mon Jul  6 15:31:10 2026
+#

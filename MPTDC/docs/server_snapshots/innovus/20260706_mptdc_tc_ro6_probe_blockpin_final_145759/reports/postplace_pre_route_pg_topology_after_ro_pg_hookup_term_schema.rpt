@@ -1,0 +1,66 @@
+===============================================
+term: Terminal for libCell, ptnCell, or topCell
+-----------------------------------------------
+antennas: objList(antennaData), List of pointers to antenna data for the terminal
+bottomPreferredLayer(settable): obj(layer), Specifies the preferred lowest routing layer. This attribute is a soft limit; that is, the router might use a layer below the specified layer if necessary to complete routing. You can set preferredLayerEffort to determine how strict the router needs to honor this limit. This attribute is intended for usage on always-on power pins that are routed by the signal router rather than the power router (all instances of this term will have the same constraint).
+bumps: objList(bump), Specifies the bumps assigned to this term.
+bus: obj(bus), Pointer to bus object, Null (0x0) for scalar terminal
+cell: obj(libCell ptnCell topCell), Pointer to the cell (libCell, topCell, or ptnCell) that contains the terminal
+defName: string, Fully qualified def name of the terminal from db
+depth: coord, Depth of terminal (not for libCell terms)
+direction: enum(bidi input internal output outputTriState unknown), Specifies the direction of the power or ground terminal from liberty data. PG terminals with no liberty entry will have 'invalid'.
+edge: int, If this term is for a ptnCell (for an hinst that is a ptn), topCell, or inst that is a black-box, and the term is assigned (has pStatus of placed/fixed/cover) the edge value indicates along which edge of the boundary polygon the term is assigned. The edge number starts from the lowest Y, then left-most X vertex, staring with 0, and then counting clock-wise. See the setPinConstraint command document for a figure showing the edge numbering. If the term is not assigned, or not for a ptnCell, topCell, or black-box inst, the value of -1 is returned.
+effectiveStackViaRule: obj(stackViaRule), The stackViaRule that is expected, but not required, to be used by the router for connecting to the instance terms instantiated from this term. The actual stack via rule used (if any) may be effected by other instTerm and term attributes, or by choices made by the software (optimization, clock tree synthesis, the router etc.)
+groundSensitivity: obj(term), Pointer to reference ground terminal (LEF MACRO PIN GROUNDSENSITIVITY equivalent). Typically only used if the cell contains more than one ground terminal. Null (0x0) indicates default assumption will be used for reference terminal.
+hdlName(settable): string, This is the original RTL name for this term. It is used to map RTL simulation results with RTL names to the current netlist for switching activity analysis. It is only maintained properly on the output terms of sequential cells. Optimization will copy this name during any multi-bit merge or splitting transforms to the equivalent term, but not on output pins of combinational cells. The is_phase_inverted attribute will be flipped if the phase is inverted.
+inOutDir: enum(bidi input internal output outputTriState unknown), Terminal direction
+isAnalog: bool, Specifies the terminal is an analog signal. This attribute can be set by liberty files.
+isClk: bool, Indicates that the terminal is a clock terminal
+isInput: bool, Indicates that the terminal is an input
+isIsolated: bool, Specifies the terminal is isolated internally in the cell. It is used for cells where some pins are internally isolated and some are not. This attribute can be set by liberty files.
+isIsolationCellEnable: bool, Identifies the terminal is an isolation enable terminal. This terminal is used to control when to clamp the output and isolate it from the input. This attribute can be set by liberty files, or by CPF commands.
+isLevelShifterEnable: bool, Identifies the terminal is a level shifter enable terminal. This terminal is used to control when to clamp the output and isolate it from the input. This attribute can be set by liberty files, or by CPF commands.
+isMustJoinAllPorts: bool, Specifies that the terminal has the LEF MUSTJOINALLPORTS attribute defined.
+isOutput: bool, Indicates that the terminal is an output
+isRetentionEnable: bool, Identifies the terminal as a retention cell enable terminal. This terminal is used to control when to retain the state and ignore other inputs. This attribute can be set by liberty files, or by CPF commands.
+isScanClk: bool, Indicates that the terminal is a scan clock terminal
+isSpecial(settable): bool, Indicates that the terminal is Special(not set for libCell terms)
+isSwitchEnable: bool, Identifies the terminal is a power switch enable terminal. This terminal is used to control when to turn on/off the power switch. This attribute can be set by liberty files, or by CPF commands.
+isTieHi: bool, Indicates that the terminal is a tieHi
+isTieLo: bool, Indicates that the terminal is a tieLo
+isUnconnected: bool, Specifies the terminal is floating internally. This is used for cells where some of the inputs or outputs are unused by the cell. This attribute can be set by liberty files.
+isViaInPinOnly: bool, Indicates that the pin has a LEF VIAINPINONLY property. It means that vias must be dropped inside the original pin shapes to connect to the pin. In some advanced nodes, the pin shapes can be extended for metal alignment purposes. However, via insertion is not allowed in that extended portion if this attribute is true.
+layer(settable): obj(layer), Pointer to terminal layer
+maxFanout(settable): int, Specifies the maximum fanout value for each “steiner tree” for trunk routing (e.g. pattern = trunk). This attribute is intended for usage on always-on power pins that are routed by the signal router rather than the power router (all instances of this term will have the same constraint).
+mustJoin: obj(term), Pointer to must join term
+name: string, Terminal name
+net: obj(net), Pointer to canonical (flat) net connected to the terminal
+objType: enum(antennaData antennaModel bndry bump bumpGrid bumpTerm bus busGuide busSinkGroup cellDensity densityShape fPlan foreign gCellGridDef group guiLine guiPoly guiRect guiText hInst hInstTerm hNet hTerm head inst instTerm io layer layerRule layerShape libCell marker net netGroup pBlkg pWire pd pgInstTerm pin pinGroup pinGuide pinShape pkgComponent pkgObject prop ptn ptnCell ptnPinBlkg rBlkg resistor resizeBlkg routeType row rule sViaInst sWire sdp shape shapeVia site stackViaRule term text topCell trackDef vCell vWire via viaInst viaRuleGenerate whatIfVia whatIfWire wire), Object type: Terminal
+orient: enum(MX MX90 MY MY90 R0 R180 R270 R90), Orientation of the terminal
+pStatus(settable): enum(cover fixed placed softFixed unplaced), Placement Status of terminal (not for libCell terms)
+pattern(settable): enum(steiner trunk), Specifies the routing pattern. This attribute is intended for usage on always-on power pins that are routed by the signal router rather than the power router (all instances of this term will have the same constraint).
+pd: obj(pd), Pointer to the power domain of the terminal (equivalent to Design Browser effPD)
+pgType: enum(backupGround backupPower deepnWell deeppWell internalGround internalPower invalid nWell pWell primaryGround primaryPower), Specifies the type of the power or ground terminal from liberty data. Signal terminals and PG pins with no liberty entry will have 'invalid'.
+physicalConnection: string, Specifies the physical connection of the term.
+pinShapes: objList(pinShape), All the individual physical pin shapes of the term.
+pins: objList(pin), List of pointers to ports
+preferredLayerEffort(settable): enum(high low medium), Determines how much effort the router uses to meet the preferred layer limits. Use this attribute with topPreferredLayer and bottomPreferredLayer attributes. Higher values will make the router try to obey the preferred routing layer range more strongly at the expense of more congestion and longer total routing length. This attribute is intended for usage on always-on power pins that are routed by the signal router rather than the power router (all instances of this term will have the same constraint).
+props: objList(prop), List of pointers to properties
+pt(settable): pt, Location of terminal (not for libCell terms)
+pt_x(settable): coord, X of location of terminal (not for libCell terms)
+pt_y(settable): coord, Y of location of terminal (not for libCell terms)
+relatedBiasTerm: obj(term), Specifies which bias terminal of this signal terminal. It must be one of the bias terminals defined for this cell. CPF, IEEE1801, liberty, or LEF/OA can set this, with CPF/IEEE1801 having highest precedence, then liberty, then LEF/OA.
+relatedGroundTerm: obj(term), Specifies which ground terminal drives this signal terminal. It must be one of the ground terminals defined for this cell. CPF, IEEE1801, liberty, or LEF/OA can set this, with CPF/IEEE1801 having highest precedence, then liberty, then LEF/OA.
+relatedPowerTerm: obj(term), Specifies which power terminal drives this signal terminal. It must be one of the power terminals defined for this cell. CPF, IEEE1801, liberty, or LEF/OA can set this, with CPF/IEEE1801 having highest precedence, then liberty, then LEF/OA.
+routeRule(settable): obj(rule), The rule (e.g. LEF or DEF NONDEFAULTRULE) to use. This attribute is intended for usage on always-on power pins that are routed by the signal router rather than the power router (all instances of this term will have the same constraint).
+rule: obj(rule), Pointer to non-default rule of the terminal. This attribute is the equivalent of the LEF MACRO PIN TAPERRULE construct and only applies to terminals of libCells (LEF MACROs). A value of 0x0 will be return if the TAPERRULE is not specified (implies tapering the default wiring rule)
+shape: enum(abutment feedThru none ring), Terminal shape
+side: enum(East None North South Up West), Side constraint of terminal (not for libCell terms)
+stackViaRequired(settable): bool, Specifies whether a stack via is required when connecting to the instance terms instantiated from this term. If true, one of the stackViaRule from stackViaRuleList must be used to generate a stack via even if a design rule violation occurs. If false, a stack via is optional. Note that the instTerm stackViaRuleRequired value may override this term setting in some cases. See the documentation of stackViaRule(instTerm) and stackViaRuleRequired(term) for more details.
+stackViaRuleList(settable): string, List of stackViaRule name that are valid choices for connecting to the instance terms instantiated from this term. If the list is empty, no stack via is allowed.
+stripeLayerRange(settable): objList(layer), Limits the signal routing to connect to sWires in the given layer range. Exactly two layers should be given for the bottom and top layers in the range. For example, {metal3 metal5} means the router will only connect to sWires on layers metal3 to metal5. The <layer> names can be input as layer name ‘metal3’, or as a layer index ‘3’. This attribute is intended for usage on always-on power pins that are routed by the signal router rather than the power router (all instances of this term will have the same constraint).
+supplySensitivity: obj(term), Pointer to reference power terminal (LEF MACRO PIN SUPPLYSENSITIVITY equivalent). Typically only used if the cell contains more than one power terminal. Null (0x0) indicates default assumption will be used for reference terminal.
+tiedTo: string, Specifies the PG pin name or 'empty' which the PG term tied to.
+topPreferredLayer(settable): obj(layer), Specifies the preferred highest layer for routing this net. This attribute is a soft limit; that is, the router might use a layer above the specified layer if necessary to complete routing. You can set preferredLayerEffort to determine how strictly the router should honor this limit. This attribute is intended for usage on always-on power pins that are routed by the signal router rather than the power router (all instances of this term will have the same constraint).
+type: enum(analogTerm asyncCtrlTerm clockTerm dQTerm dTerm fFQTerm feedTerm gatedClockTerm groundTerm latchQTerm normalTerm powerTerm rSTerm triStateTerm), Terminal type
+width: coord, Width of terminal (not for libCell terms)

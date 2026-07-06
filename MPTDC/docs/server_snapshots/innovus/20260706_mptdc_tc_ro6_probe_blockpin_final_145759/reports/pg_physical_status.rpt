@@ -1,0 +1,54 @@
+# MPTDC Physical PG Grid Status
+POWER_NET=VDD
+GROUND_NET=VSS
+STDCELL_POWER_PINS=vddi
+STDCELL_GROUND_PINS=gndi
+RO_POWER_PIN_MAP=VDD->VDD VSS->VSS
+
+COMMAND_ADD_RING=addRing -nets {VDD VSS} -type core_rings -follow core -layer {top MET3 bottom MET3 left METTP right METTP} -width {top 2 bottom 2 left 2 right 2} -spacing {top 1 bottom 1 left 1 right 1} -offset {top 2 bottom 2 left 2 right 2}
+ADD_RING_STATUS=PASS
+
+COMMAND_ADD_STRIPE_VERTICAL=addStripe -nets {VDD VSS} -layer METTP -direction vertical -width 2 -spacing 2 -set_to_set_distance 80 -start_from left -start_offset 20
+ADD_STRIPE_VERTICAL_STATUS=PASS
+
+COMMAND_ADD_STRIPE_HORIZONTAL=addStripe -nets {VDD VSS} -layer MET3 -direction horizontal -width 2 -spacing 2 -set_to_set_distance 80 -start_from bottom -start_offset 20
+ADD_STRIPE_HORIZONTAL_STATUS=PASS
+PREPLACE_PG_SROUTE_ENABLED=0
+PRE_ROUTE_PG_SROUTE_MODE_STATUS=SKIPPED
+PRE_ROUTE_PG_SROUTE_MODE_REASON=preplace_pg_sroute_disabled
+SROUTE_STATUS=SKIPPED
+
+RING_CREATED=1
+VERTICAL_STRAP_CREATED=1
+HORIZONTAL_STRAP_CREATED=1
+BLOCK_PG_PIN_STATUS=PASS
+BLOCK_PG_PIN_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_probe_blockpin_final_145759/reports/block_pg_pin_status.rpt
+BLOCK_PG_STITCH_STATUS=PASS
+BLOCK_PG_STITCH_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_probe_blockpin_final_145759/reports/block_pg_stitch_status.rpt
+SROUTE_DONE=0
+SROUTE_EFFECTIVE_STATUS=SKIPPED
+SROUTE_EFFECTIVE_WIRES=0
+SROUTE_EFFECTIVE_OPEN_PORTS=0
+SROUTE_EFFECTIVE_REASON=preplace_pg_sroute_disabled
+SROUTE_PREPLACE_PROGRESS_STATUS=PASS
+RO_INSTANCE_COUNT=2
+RO_VDD_CONNECTED_COUNT=UNKNOWN
+RO_VSS_CONNECTED_COUNT=UNKNOWN
+RO_PG_PIN_QUERY_STATUS=FAIL
+SPECIAL_CONNECTIVITY_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_probe_blockpin_final_145759/reports/pg_verify_connectivity_special.rpt
+SPECIAL_CONNECTIVITY_CAPTURE_STATUS=PASS
+SPECIAL_CONNECTIVITY_COMMAND=verifyConnectivity -type special -nets {VDD VSS}
+ALL_CONNECTIVITY_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_probe_blockpin_final_145759/reports/pg_verify_connectivity_all.rpt
+SPECIAL_NET_OPENS=PARSED_FROM_VERIFY_CONNECTIVITY
+SPECIAL_NET_SHORTS=PARSED_FROM_VERIFY_CONNECTIVITY
+UNCONNECTED_STDCELL_PG_PINS=PARSED_FROM_VERIFY_CONNECTIVITY
+UNCONNECTED_RO_PG_PINS=PARSED_FROM_VERIFY_CONNECTIVITY
+SPECIAL_CONNECTIVITY_BAD=1
+SPECIAL_CONNECTIVITY_BAD_LINES={Net VDD: has an unconnected terminal, has special routes with opens, dangling Wire.} {Net VSS: has an unconnected terminal, has special routes with opens, dangling Wire.} {4 Problem(s) (IMPVFC-96): Terminal(s) are not connected.} {2 Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.} {21 Problem(s) (IMPVFC-94): The net has dangling wire(s).} {Verification Complete : 27 Viols.  0 Wrngs.}
+ALL_CONNECTIVITY_BAD=1
+ALL_CONNECTIVITY_BAD_LINES={Net VDD: has an unconnected terminal, has special routes with opens, dangling Wire.} {Net VSS: has an unconnected terminal, has special routes with opens, dangling Wire.} {4 Problem(s) (IMPVFC-96): Terminal(s) are not connected.} {2 Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.} {21 Problem(s) (IMPVFC-94): The net has dangling wire(s).} {Verification Complete : 27 Viols.  0 Wrngs.}
+PREPLACE_PRIMITIVE_PG_STATUS=PASS
+PG_PHYSICAL_STATUS=PROVISIONAL
+PG_PHYSICAL_PROVISIONAL_REASON=pre_place_verify_connectivity_requires_placed_cells; route_stage_rechecks_regular_and_special_connectivity; sroute_open_ports_deferred_to_route_stage; ro_pg_pin_query_deferred_to_route_connectivity_recheck
+MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG=1
+FINAL_CONNECTIVITY_RECHECK=route_status.rpt

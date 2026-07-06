@@ -1,0 +1,52 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7f74a4d0c110	{221.745 681.16 221.745 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+2	0x7f74a4d04560	{48.0 681.16 48.0 681.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+3	0x7f74a4d0dd90	{219.575 669.76 219.575 669.76}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+4	0x7f74a4d0ddc0	{50.17 669.76 50.17 669.76}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+5	0x7f74a4d0c2c0	{219.575 620.48 219.575 620.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+6	0x7f74a4d0c2f0	{219.575 629.44 219.575 629.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+7	0x7f74a4d0c320	{219.575 638.4 219.575 638.4}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+8	0x7f74a4d0c350	{219.575 647.36 219.575 647.36}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+9	0x7f74a4d0dd30	{219.575 660.8 219.575 660.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+10	0x7f7455f8ffa0	{204.13 610.4 204.41 612.67}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[6] Type: Metal Short # -1 -1 9 2 : 203.9900 610.2600 204.5500 612.8100 2: 203.9900 610.2600 204.5500 612.8100 2
+11	0x7f7455f8ff10	{183.555 610.4 183.835 612.67}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[7] Type: Metal Short # -1 -1 9 2 : 183.4150 610.2600 183.9750 612.8100 2: 183.4150 610.2600 183.9750 612.8100 2
+12	0x7f7455f8ff70	{187.905 610.4 188.185 612.67}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[2] Type: Metal Short # -1 -1 9 2 : 187.7650 610.2600 188.3250 612.8100 2: 187.7650 610.2600 188.3250 612.8100 2
+13	0x7f7455a6a0b0	{167.33 610.4 167.61 612.59}	MET3	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[3] Type: Metal Short # -1 -1 9 2 : 167.1900 610.2600 167.7500 612.7300 3: 167.1900 610.2600 167.7500 612.7300 3
+14	0x7f7455f8fe80	{163.01 610.4 163.29 612.67}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[5] Type: Metal Short # -1 -1 9 2 : 162.8700 610.2600 163.4300 612.8100 2: 162.8700 610.2600 163.4300 612.8100 2
+15	0x7f7455a6a020	{142.405 610.4 142.685 612.59}	MET3	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[0] Type: Metal Short # -1 -1 9 2 : 142.2650 610.2600 142.8250 612.7300 3: 142.2650 610.2600 142.8250 612.7300 3
+16	0x7f7455a6a080	{146.755 610.4 147.035 612.59}	MET3	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[1] Type: Metal Short # -1 -1 9 2 : 146.6150 610.2600 147.1750 612.7300 3: 146.6150 610.2600 147.1750 612.7300 3
+17	0x7f74a4d04530	{50.17 624.96 50.17 624.96}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+18	0x7f74a4d0dca0	{50.17 633.92 50.17 633.92}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+19	0x7f74a4d0dcd0	{50.17 642.88 50.17 642.88}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+20	0x7f74a4d0dd00	{50.4 651.84 50.4 651.84}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+21	0x7f74a4d0dd60	{50.17 660.8 50.17 660.8}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+22	0x7f7455f8fd60	{114.805 610.4 115.085 612.67}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fe_osc_slow_en Type: Metal Short # -1 -1 9 2 : 114.6650 610.2600 115.2250 612.8100 2: 114.6650 610.2600 115.2250 612.8100 2
+23	0x7f7455f8fdf0	{126.18 610.4 126.46 612.67}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_slow_phase_raw[4] Type: Metal Short # -1 -1 9 2 : 126.0400 610.2600 126.6000 612.8100 2: 126.0400 610.2600 126.6000 612.8100 2
+24	0x7f74a4d0c230	{219.575 163.52 219.575 163.52}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+25	0x7f74a4d0c260	{219.575 172.48 219.575 172.48}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+26	0x7f74a4d0c290	{219.575 181.44 219.575 181.44}	MET1	Connectivity	ConnectivityAntenna	Net VDD
+27	0x7f74a4d04680	{219.575 141.12 219.575 141.12}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+28	0x7f7455a6a0e0	{203.98 188.71 204.26 190.9}	MET3	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[6] Type: Metal Short # -1 -1 9 2 : 203.8400 188.5700 204.4000 191.0400 3: 203.8400 188.5700 204.4000 191.0400 3
+29	0x7f7455f8feb0	{167.33 188.63 167.61 190.9}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[3] Type: Metal Short # -1 -1 9 2 : 167.1900 188.4900 167.7500 191.0400 2: 167.1900 188.4900 167.7500 191.0400 2
+30	0x7f7455f8fee0	{183.555 188.63 183.835 190.9}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[7] Type: Metal Short # -1 -1 9 2 : 183.4150 188.4900 183.9750 191.0400 2: 183.4150 188.4900 183.9750 191.0400 2
+31	0x7f7455f8ff40	{187.905 188.63 188.185 190.9}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[2] Type: Metal Short # -1 -1 9 2 : 187.7650 188.4900 188.3250 191.0400 2: 187.7650 188.4900 188.3250 191.0400 2
+32	0x7f7455f8fe20	{142.405 188.63 142.685 190.9}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[0] Type: Metal Short # -1 -1 9 2 : 142.2650 188.4900 142.8250 191.0400 2: 142.2650 188.4900 142.8250 191.0400 2
+33	0x7f7455f8fe50	{163.01 188.63 163.29 190.9}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[5] Type: Metal Short # -1 -1 9 2 : 162.8700 188.4900 163.4300 191.0400 2: 162.8700 188.4900 163.4300 191.0400 2
+34	0x7f7455a6a050	{146.755 188.71 147.035 190.9}	MET3	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[1] Type: Metal Short # -1 -1 9 2 : 146.6150 188.5700 147.1750 191.0400 3: 146.6150 188.5700 147.1750 191.0400 3
+35	0x7f74a4d046b0	{50.17 141.12 50.17 141.12}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+36	0x7f74a4d046e0	{50.4 150.08 50.4 150.08}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+37	0x7f74a4d04710	{50.17 159.04 50.17 159.04}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+38	0x7f74a4d04740	{50.17 168.0 50.17 168.0}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+39	0x7f74a4d04770	{50.17 176.96 50.17 176.96}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+40	0x7f7455f8fd30	{114.805 188.63 115.085 190.9}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fe_osc_fast_en Type: Metal Short # -1 -1 9 2 : 114.6650 188.4900 115.2250 191.0400 2: 114.6650 188.4900 115.2250 191.0400 2
+41	0x7f7455f8fdc0	{126.18 188.63 126.46 190.9}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_fast_phase_raw[4] Type: Metal Short # -1 -1 9 2 : 126.0400 188.4900 126.6000 191.0400 2: 126.0400 188.4900 126.6000 191.0400 2
+42	0x7f74a4d04590	{221.745 121.16 221.745 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+43	0x7f74a4d045c0	{48.0 121.16 48.0 121.16}	MET3	Connectivity	ConnectivityAntenna	Net VDD
+44	0x7f74a4d045f0	{201.16 118.0 201.16 118.0}	METTP	Connectivity	ConnectivityAntenna	Net VDD
+45	0x7f74a4d04620	{219.575 132.16 219.575 132.16}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+46	0x7f74a4d04650	{50.17 132.16 50.17 132.16}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+47	0x7f74a4d0ddf0	{221.745 125.16 221.745 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+48	0x7f74a4d0de20	{48.0 125.16 48.0 125.16}	MET3	Connectivity	ConnectivityAntenna	Net VSS
+49	0x7f7455f8fcd0	{114.615 120.82 114.76 121.27}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[4] & Regular Wire of Net u_core_ro_fast_code_q[3] Actual: 0.145000 Required: 0.230000 Type: ParallelRunLength Spacing # 145 230 3 2 : 114.3850 120.8200 114.6150 121.2700 1: 114.7600 120.8200 115.2100 121.2700 1
+50	0x7f7455f8fd00	{115.21 120.82 115.355 121.27}	MET1	Geometry	Parallel_Run_Length_Spacing	Regular Wire of Net u_core_ro_fast_code_q[2] & Regular Wire of Net u_core_ro_fast_code_q[3] Actual: 0.145000 Required: 0.230000 Type: ParallelRunLength Spacing # 145 230 3 2 : 115.3550 120.8200 115.5850 121.2700 1: 114.7600 120.8200 115.2100 121.2700 1
+51	0x7f7455f8fd90	{114.845 120.77 115.125 121.15}	MET2	Geometry	Metal_Short	Regular Wire of Net u_core_ro_fast_code_q[3] Type: Metal Short # -1 -1 9 2 : 114.7050 120.6300 115.2650 121.2900 2: 114.7050 120.6300 115.2650 121.2900 2
