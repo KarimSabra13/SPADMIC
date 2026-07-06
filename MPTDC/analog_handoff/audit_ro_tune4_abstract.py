@@ -31,8 +31,31 @@ DEFAULT_REPORT = Path("reports") / "ro_tune6_lef_audit.rpt"
 
 REQUIRED_INPUTS = ["rstb"] + [f"code[{idx}]" for idx in range(8)]
 REQUIRED_OUTPUTS = [f"S[{idx}]" for idx in range(8)]
-REQUIRED_SUPPLIES = ["VDD", "VSS", "vdd!"]
+REQUIRED_SUPPLIES = ["VDD", "VSS"]
 REQUIRED_PINS = REQUIRED_INPUTS + REQUIRED_OUTPUTS + REQUIRED_SUPPLIES
+
+
+def split_pin_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    pins: list[str] = []
+    for item in re.split(r"[\s,]+", value.strip()):
+        pin = item.strip()
+        if pin:
+            pins.append(pin)
+    return pins
+
+
+def default_required_supplies(expected_macro: str) -> list[str]:
+    if expected_macro == "RO_tune6":
+        return ["VDD", "VSS"]
+    return ["VDD", "VSS", "vdd!"]
+
+
+def configure_required_supplies(supplies: list[str]) -> None:
+    global REQUIRED_SUPPLIES, REQUIRED_PINS
+    REQUIRED_SUPPLIES = supplies
+    REQUIRED_PINS = REQUIRED_INPUTS + REQUIRED_OUTPUTS + REQUIRED_SUPPLIES
 
 
 def yesno(value: bool) -> str:
@@ -217,7 +240,7 @@ def audit_rtl(path: Path, expected_macro: str) -> dict[str, object]:
     has_code = re.search(r"\binput\s+wire\s+\[[^\]]*7\s*:\s*0[^\]]*\]\s+code\b", block) is not None
     has_s = re.search(r"\boutput\s+wire\s+\[[^\]]*7\s*:\s*0[^\]]*\]\s+S\b", block) is not None
     result["logical_pins_found"] = has_rstb and has_code and has_s
-    result["explicit_supply_pins"] = {"VDD", "VSS", "vdd!"}.issubset(pins)
+    result["explicit_supply_pins"] = set(REQUIRED_SUPPLIES).issubset(pins)
     return result
 
 
@@ -267,6 +290,7 @@ def write_report(
     with report.open("w", encoding="utf-8") as fh:
         fh.write(f"# {expected_macro} LEF/Liberty/RTL Interface Audit\n\n")
         fh.write(f"EXPECTED_MACRO={expected_macro}\n")
+        fh.write(f"REQUIRED_SUPPLY_PINS={','.join(REQUIRED_SUPPLIES)}\n")
         fh.write(f"SOURCE_LEF={source['path']}\n")
         fh.write(f"COPIED_LEF={copied['path']}\n")
         fh.write(f"LIBERTY_FILE={liberty['path']}\n")
@@ -319,6 +343,15 @@ def main() -> int:
     )
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--macro", default=expected_macro)
+    parser.add_argument(
+        "--required-supplies",
+        default=(
+            os.environ.get("O1_RO_REQUIRED_SUPPLIES")
+            or env_values.get("O1_RO_REQUIRED_SUPPLIES")
+            or ",".join(default_required_supplies(expected_macro))
+        ),
+        help="Comma/space separated required supply pins. Default is VDD,VSS for RO_tune6.",
+    )
     parser.add_argument("--source-lef", default=os.environ.get("O1_RO_SOURCE_LEF_PATH") or env_values.get("O1_RO_SOURCE_LEF_PATH"))
     parser.add_argument("--copied-lef", default=os.environ.get("O1_RO_LEF_PATH") or env_values.get("O1_RO_LEF_PATH") or str(DEFAULT_COPIED_LEF))
     parser.add_argument("--liberty", default=os.environ.get("O1_RO_LIBERTY_PATH") or str(DEFAULT_LIBERTY))
@@ -326,6 +359,10 @@ def main() -> int:
     parser.add_argument("--report", default=str(DEFAULT_REPORT))
     args = parser.parse_args()
     expected_macro = args.macro
+    required_supplies = split_pin_list(args.required_supplies)
+    if not required_supplies:
+        required_supplies = default_required_supplies(expected_macro)
+    configure_required_supplies(required_supplies)
 
     source_path = resolve_optional_path(args.source_lef)
     copied_path = resolve_optional_path(args.copied_lef)
