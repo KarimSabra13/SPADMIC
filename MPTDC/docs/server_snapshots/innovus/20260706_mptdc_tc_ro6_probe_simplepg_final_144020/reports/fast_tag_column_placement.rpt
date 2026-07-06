@@ -1,0 +1,82 @@
+# MPTDC Fast-Tag Column Placement
+FAST_TAG_COLUMN_PLACEMENT_ENABLED=1
+FAST_TAG_COLUMN_BITS=ALL
+FAST_TAG_COLUMN_RULE=align_gen_fast_tag_col_with_matching_pd_gen_pd_col_band
+FAST_TAG_TO_PD_TS_FALSE_PATH=NO
+FAST_TAG_TO_PD_TS_MULTICYCLE=NO
+PD_BOX=50.4 250.88 350.4 550.88
+FAST_TAG_COLUMN_SIDE=center
+FAST_TAG_COLUMN_STRIP_BOX=180.320 250.88 220.640 550.88
+FAST_TAG_COLUMN_RECORDS=56
+FAST_TAG_COLUMN_PREPLACE=0
+FAST_TAG_COLUMN_FIX=0
+FAST_TAG_COLUMN_PLACEMENT_STRATEGY=SOFT_REGION_GUIDANCE
+FAST_TAG_COLUMN_ORIENT=AUTO
+COLUMN 0 count=7 band_box=180.320 252.0 220.640 287.28
+  inst=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=267.68
+  inst=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=267.68
+  inst=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=272.16
+  inst=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=272.16
+  inst=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=276.64
+  inst=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=276.64
+  inst=u_core_gen_fast_tag_col[0].u_fast_tag_tag_o_reg[0] bit=0 x=207.76 y=276.64
+COLUMN 1 count=7 band_box=180.320 289.52 220.640 324.8
+  inst=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=305.2
+  inst=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=305.2
+  inst=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=309.68
+  inst=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=309.68
+  inst=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=314.16
+  inst=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=314.16
+  inst=u_core_gen_fast_tag_col[1].u_fast_tag_tag_o_reg[0] bit=0 x=207.76 y=314.16
+COLUMN 2 count=7 band_box=180.320 327.04 220.640 362.32
+  inst=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=342.72
+  inst=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=342.72
+  inst=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=347.2
+  inst=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=347.2
+  inst=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=351.68
+  inst=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=351.68
+  inst=u_core_gen_fast_tag_col[2].u_fast_tag_tag_o_reg[0] bit=0 x=180.88 y=356.16
+COLUMN 3 count=7 band_box=180.320 364.56 220.640 399.84
+  inst=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=380.24
+  inst=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=380.24
+  inst=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=384.72
+  inst=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=384.72
+  inst=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=389.2
+  inst=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=389.2
+  inst=u_core_gen_fast_tag_col[3].u_fast_tag_tag_o_reg[0] bit=0 x=207.76 y=389.2
+COLUMN 4 count=7 band_box=180.320 402.08 220.640 437.36
+  inst=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=417.76
+  inst=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=417.76
+  inst=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=422.24
+  inst=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=422.24
+  inst=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=426.72
+  inst=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=426.72
+  inst=u_core_gen_fast_tag_col[4].u_fast_tag_tag_o_reg[0] bit=0 x=207.76 y=426.72
+COLUMN 5 count=7 band_box=180.320 439.6 220.640 474.88
+  inst=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=455.28
+  inst=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=455.28
+  inst=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=459.76
+  inst=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=459.76
+  inst=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=464.24
+  inst=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=464.24
+  inst=u_core_gen_fast_tag_col[5].u_fast_tag_tag_o_reg[0] bit=0 x=207.76 y=464.24
+COLUMN 6 count=7 band_box=180.320 477.12 220.640 512.4
+  inst=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=492.8
+  inst=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=492.8
+  inst=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=497.28
+  inst=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=497.28
+  inst=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=501.76
+  inst=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=501.76
+  inst=u_core_gen_fast_tag_col[6].u_fast_tag_tag_o_reg[0] bit=0 x=207.76 y=501.76
+COLUMN 7 count=7 band_box=180.320 514.64 220.640 549.92
+  inst=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[1] bit=1 x=180.88 y=530.32
+  inst=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[2] bit=2 x=194.32 y=530.32
+  inst=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[3] bit=3 x=180.88 y=534.8
+  inst=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[4] bit=4 x=194.32 y=534.8
+  inst=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5] bit=5 x=180.88 y=539.28
+  inst=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[6] bit=6 x=194.32 y=539.28
+  inst=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[0] bit=0 x=207.76 y=539.28
+FAST_TAG_COLUMN_CONSTRAINTS=56
+FAST_TAG_COLUMN_PREPLACEMENTS=0
+FAST_TAG_COLUMN_FAILURES=0
+FAST_TAG_COLUMN_PLACEMENT_STATUS=PASS

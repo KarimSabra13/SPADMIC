@@ -1,0 +1,149 @@
+# MPTDC PG Object Dump
+DUMP_LABEL=POSTPLACE_PRE_ROUTE_AFTER_SROUTE
+
+PG_TERM_NAMES_COMMAND=dbGet top.pgTerms.name
+PG_TERM_NAMES_BEGIN
+PG_TERM_NAMES_STATUS=PASS
+PG_TERM_NAMES_VALUE=VDD_LEFT VSS_LEFT VDD_RIGHT VSS_RIGHT
+VDD_LEFT VSS_LEFT VDD_RIGHT VSS_RIGHT
+PG_TERM_NAMES_END
+
+PG_TERM_COUNT_COMMAND=llength [dbGet top.pgTerms.name]
+PG_TERM_COUNT_BEGIN
+PG_TERM_COUNT_STATUS=PASS
+PG_TERM_COUNT_VALUE=4
+4
+PG_TERM_COUNT_END
+
+VDD_PG_TERM_HANDLES_COMMAND=dbGet top.pgTerms.name VDD* -p
+VDD_PG_TERM_HANDLES_BEGIN
+VDD_PG_TERM_HANDLES_STATUS=PASS
+VDD_PG_TERM_HANDLES_VALUE=0x7f5de24e5930 0x7f5de24e59a0
+0x7f5de24e5930 0x7f5de24e59a0
+VDD_PG_TERM_HANDLES_END
+
+VDD_PG_TERM_NAMES_COMMAND=dbGet [dbGet top.pgTerms.name VDD* -p].name
+VDD_PG_TERM_NAMES_BEGIN
+VDD_PG_TERM_NAMES_STATUS=PASS
+VDD_PG_TERM_NAMES_VALUE=VDD_LEFT VDD_RIGHT
+VDD_LEFT VDD_RIGHT
+VDD_PG_TERM_NAMES_END
+
+VDD_PG_TERM_NETS_COMMAND=dbGet [dbGet top.pgTerms.name VDD* -p].net.name
+VDD_PG_TERM_NETS_BEGIN
+VDD_PG_TERM_NETS_STATUS=PASS
+VDD_PG_TERM_NETS_VALUE=VDD VDD
+VDD VDD
+VDD_PG_TERM_NETS_END
+
+VDD_PG_TERM_LAYERS_COMMAND=dbGet [dbGet top.pgTerms.name VDD* -p].pins.allShapes.layer.name
+VDD_PG_TERM_LAYERS_BEGIN
+VDD_PG_TERM_LAYERS_STATUS=PASS
+VDD_PG_TERM_LAYERS_VALUE=METTP METTP
+METTP METTP
+VDD_PG_TERM_LAYERS_END
+
+VSS_PG_TERM_HANDLES_COMMAND=dbGet top.pgTerms.name VSS* -p
+VSS_PG_TERM_HANDLES_BEGIN
+VSS_PG_TERM_HANDLES_STATUS=PASS
+VSS_PG_TERM_HANDLES_VALUE=0x7f5de24e5968 0x7f5de24e59d8
+0x7f5de24e5968 0x7f5de24e59d8
+VSS_PG_TERM_HANDLES_END
+
+VSS_PG_TERM_NAMES_COMMAND=dbGet [dbGet top.pgTerms.name VSS* -p].name
+VSS_PG_TERM_NAMES_BEGIN
+VSS_PG_TERM_NAMES_STATUS=PASS
+VSS_PG_TERM_NAMES_VALUE=VSS_LEFT VSS_RIGHT
+VSS_LEFT VSS_RIGHT
+VSS_PG_TERM_NAMES_END
+
+VSS_PG_TERM_NETS_COMMAND=dbGet [dbGet top.pgTerms.name VSS* -p].net.name
+VSS_PG_TERM_NETS_BEGIN
+VSS_PG_TERM_NETS_STATUS=PASS
+VSS_PG_TERM_NETS_VALUE=VSS VSS
+VSS VSS
+VSS_PG_TERM_NETS_END
+
+VSS_PG_TERM_LAYERS_COMMAND=dbGet [dbGet top.pgTerms.name VSS* -p].pins.allShapes.layer.name
+VSS_PG_TERM_LAYERS_BEGIN
+VSS_PG_TERM_LAYERS_STATUS=PASS
+VSS_PG_TERM_LAYERS_VALUE=METTP METTP
+METTP METTP
+VSS_PG_TERM_LAYERS_END
+
+TERM_NAMES_COMMAND=dbGet top.terms.name
+TERM_NAMES_BEGIN
+TERM_NAMES_STATUS=PASS
+TERM_NAMES_VALUE=clk_sys async_rst_n start_spad_async_i stop_spad_async_i cal_start_async_i cal_stop_async_i {input_sel_i[0]} conv_arm_i fifo_clr_i soft_reset_i {max_hits_i[3]} {max_hits_i[2]} {max_hits_i[1]} {max_hits_i[0]} {ro_slow_code_i[7]} {ro_slow_code_i[6]} {ro_slow_code_i[5]} {ro_slow_code_i[4]} {ro_slow_code_i[3]} {ro_slow_code_i[2]} {ro_slow_code_i[1]} {ro_slow_code_i[0]} {ro_fast_code_i[7]} {ro_fast_code_i[6]} {ro_fast_code_i[5]} {ro_fast_code_i[4]} {ro_fast_code_i[3]} {ro_fast_code_i[2]} {ro_fast_code_i[1]} {ro_fast_code_i[0]} pkt_valid_o pkt_ready_i {pkt_data_o[15]} {pkt_data_o[14]} {pkt_data_o[13]} {pkt_data_o[12]} {pkt_data_o[11]} {pkt_data_o[10]} {pkt_data_o[9]} {pkt_data_o[8]} {pkt_data_o[7]} {pkt_data_o[6]} {pkt_data_o[5]} {pkt_data_o[4]} {pkt_data_o[3]} {pkt_data_o[2]} {pkt_data_o[1]} {pkt_data_o[0]} pkt_sop_o pkt_eop_o packet_active_o packet_pending_o ro_slow_tap0_o ro_fast_tap0_o ready_o busy_o fifo_full_o
+clk_sys async_rst_n start_spad_async_i stop_spad_async_i cal_start_async_i cal_stop_async_i {input_sel_i[0]} conv_arm_i fifo_clr_i soft_reset_i {max_hits_i[3]} {max_hits_i[2]} {max_hits_i[1]} {max_hits_i[0]} {ro_slow_code_i[7]} {ro_slow_code_i[6]} {ro_slow_code_i[5]} {ro_slow_code_i[4]} {ro_slow_code_i[3]} {ro_slow_code_i[2]} {ro_slow_code_i[1]} {ro_slow_code_i[0]} {ro_fast_code_i[7]} {ro_fast_code_i[6]} {ro_fast_code_i[5]} {ro_fast_code_i[4]} {ro_fast_code_i[3]} {ro_fast_code_i[2]} {ro_fast_code_i[1]} {ro_fast_code_i[0]} pkt_valid_o pkt_ready_i {pkt_data_o[15]} {pkt_data_o[14]} {pkt_data_o[13]} {pkt_data_o[12]} {pkt_data_o[11]} {pkt_data_o[10]} {pkt_data_o[9]} {pkt_data_o[8]} {pkt_data_o[7]} {pkt_data_o[6]} {pkt_data_o[5]} {pkt_data_o[4]} {pkt_data_o[3]} {pkt_data_o[2]} {pkt_data_o[1]} {pkt_data_o[0]} pkt_sop_o pkt_eop_o packet_active_o packet_pending_o ro_slow_tap0_o ro_fast_tap0_o ready_o busy_o fifo_full_o
+TERM_NAMES_END
+
+VDD_NET_HANDLES_COMMAND=dbGet top.nets.name VDD -p
+VDD_NET_HANDLES_BEGIN
+VDD_NET_HANDLES_STATUS=PASS
+VDD_NET_HANDLES_VALUE=0x7f5dd5f0cc38
+0x7f5dd5f0cc38
+VDD_NET_HANDLES_END
+
+VDD_SWIRE_COUNT_COMMAND=llength [dbGet [dbGet top.nets.name VDD -p].sWires]
+VDD_SWIRE_COUNT_BEGIN
+VDD_SWIRE_COUNT_STATUS=PASS
+VDD_SWIRE_COUNT_VALUE=389
+389
+VDD_SWIRE_COUNT_END
+
+VDD_SWIRE_LAYERS_COMMAND=dbGet [dbGet top.nets.name VDD -p].sWires.layer.name
+VDD_SWIRE_LAYERS_BEGIN
+VDD_SWIRE_LAYERS_STATUS=PASS
+VDD_SWIRE_LAYERS_VALUE=METTP METTP MET3 MET3 METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET2 MET1 MET2 MET2 MET3 MET3 MET3 MET2 MET3 METTP MET2 MET3 MET3 MET3 METTP METTP MET2 MET3 MET3 MET3 METTP MET2 MET2 MET2 MET2 MET1 MET1 MET1 MET2 MET2 MET2 MET1 MET1 MET1 MET2 MET2 MET2 MET2 MET3 MET3 MET3 METTP MET2 MET3 MET3 MET3 METTP MET1 MET2 MET2 MET2 MET3 MET3 MET3 METTP MET1 MET2 MET2 MET2 MET2 MET3 MET3 MET3 METTP MET2 MET2 MET1 MET2 MET1 MET2 MET2 MET2 MET1 MET2 MET1 MET2 MET2 MET3 MET3 MET2 MET3 MET3 METTP
+METTP METTP MET3 MET3 METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET2 MET1 MET2 MET2 MET3 MET3 MET3 MET2 MET3 METTP MET2 MET3 MET3 MET3 METTP METTP MET2 MET3 MET3 MET3 METTP MET2 MET2 MET2 MET2 MET1 MET1 MET1 MET2 MET2 MET2 MET1 MET1 MET1 MET2 MET2 MET2 MET2 MET3 MET3 MET3 METTP MET2 MET3 MET3 MET3 METTP MET1 MET2 MET2 MET2 MET3 MET3 MET3 METTP MET1 MET2 MET2 MET2 MET2 MET3 MET3 MET3 METTP MET2 MET2 MET1 MET2 MET1 MET2 MET2 MET2 MET1 MET2 MET1 MET2 MET2 MET3 MET3 MET2 MET3 MET3 METTP
+VDD_SWIRE_LAYERS_END
+
+VDD_SWIRE_STATUS_COMMAND=dbGet [dbGet top.nets.name VDD -p].sWires.status
+VDD_SWIRE_STATUS_BEGIN
+VDD_SWIRE_STATUS_STATUS=PASS
+VDD_SWIRE_STATUS_VALUE=routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed
+routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed
+VDD_SWIRE_STATUS_END
+
+VSS_NET_HANDLES_COMMAND=dbGet top.nets.name VSS -p
+VSS_NET_HANDLES_BEGIN
+VSS_NET_HANDLES_STATUS=PASS
+VSS_NET_HANDLES_VALUE=0x7f5dd5f0cc80
+0x7f5dd5f0cc80
+VSS_NET_HANDLES_END
+
+VSS_SWIRE_COUNT_COMMAND=llength [dbGet [dbGet top.nets.name VSS -p].sWires]
+VSS_SWIRE_COUNT_BEGIN
+VSS_SWIRE_COUNT_STATUS=PASS
+VSS_SWIRE_COUNT_VALUE=355
+355
+VSS_SWIRE_COUNT_END
+
+VSS_SWIRE_LAYERS_COMMAND=dbGet [dbGet top.nets.name VSS -p].sWires.layer.name
+VSS_SWIRE_LAYERS_BEGIN
+VSS_SWIRE_LAYERS_STATUS=PASS
+VSS_SWIRE_LAYERS_VALUE=METTP METTP MET3 MET3 METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET2 MET3 MET2 MET3 MET2 MET3 MET3 MET3 METTP MET2 MET3 MET3 MET3 METTP MET2 MET2 MET2 MET2 MET2 MET2 MET2 MET2 MET1 MET1 MET1 MET2 MET2 MET3 MET3 MET3 MET2 MET3 MET1 MET1 MET1 MET2 MET2 MET2 MET2 MET2 MET3 MET3 MET1 MET1 MET1 MET2 MET2 MET2 MET2 MET2 MET3 MET3
+METTP METTP MET3 MET3 METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP METTP MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET3 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET1 MET2 MET3 MET2 MET3 MET2 MET3 MET3 MET3 METTP MET2 MET3 MET3 MET3 METTP MET2 MET2 MET2 MET2 MET2 MET2 MET2 MET2 MET1 MET1 MET1 MET2 MET2 MET3 MET3 MET3 MET2 MET3 MET1 MET1 MET1 MET2 MET2 MET2 MET2 MET2 MET3 MET3 MET1 MET1 MET1 MET2 MET2 MET2 MET2 MET2 MET3 MET3
+VSS_SWIRE_LAYERS_END
+
+VSS_SWIRE_STATUS_COMMAND=dbGet [dbGet top.nets.name VSS -p].sWires.status
+VSS_SWIRE_STATUS_BEGIN
+VSS_SWIRE_STATUS_STATUS=PASS
+VSS_SWIRE_STATUS_VALUE=routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed
+routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed routed
+VSS_SWIRE_STATUS_END
+
+GET_PORTS_VDD_COMMAND=get_ports -quiet VDD
+GET_PORTS_VDD_BEGIN
+GET_PORTS_VDD_STATUS=PASS
+GET_PORTS_VDD_VALUE=
+
+GET_PORTS_VDD_END
+
+GET_PORTS_VSS_COMMAND=get_ports -quiet VSS
+GET_PORTS_VSS_BEGIN
+GET_PORTS_VSS_STATUS=PASS
+GET_PORTS_VSS_VALUE=
+
+GET_PORTS_VSS_END
