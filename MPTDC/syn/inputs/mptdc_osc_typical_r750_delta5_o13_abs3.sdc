@@ -193,27 +193,3 @@ puts "MPTDC_O13_ABS3_SDC_INFO: clk_sys async to raw+buffer oscillator clocks = $
 puts "MPTDC_O13_ABS3_SDC_INFO: raw RO clocks remain analog load-check source clocks"
 puts "MPTDC_O13_ABS3_SDC_INFO: BUJIHDX12 Q clocks are downstream digital phase-clock sources"
 puts "MPTDC_O13_ABS3_SDC_INFO: phase-buffer chain and same-domain oscillator paths remain timed"
-
-if {[info exists ::env(MPTDC_O13_CLOCK_MODEL_RPT)] && $::env(MPTDC_O13_CLOCK_MODEL_RPT) ne ""} {
-    set fh [open $::env(MPTDC_O13_CLOCK_MODEL_RPT) w]
-    puts $fh "# O13 abs3 Clock Model Check"
-    puts $fh ""
-    puts $fh "RAW_RO_CLOCKS_FOUND=[llength $mptdc_o13_abs3_raw_clocks]"
-    puts $fh "BUFFER_PHASE_CLOCKS_FOUND=[llength $mptdc_o13_abs3_buffer_clocks]"
-    puts $fh "BUFFER_PHASE_CLOCKS_EXPECTED=16"
-    puts $fh "BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=$mptdc_o13_abs3_async_status"
-    puts $fh "CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=$mptdc_o13_abs3_async_status"
-    puts $fh "OSCILLATOR_CLOCKS_IN_ASYNC_GROUP=[llength $mptdc_o13_abs3_all_osc_clocks]"
-    puts $fh "CLK_SYS_CLOCKS_FOUND=[llength $mptdc_o13_abs3_clk_sys]"
-    puts $fh ""
-    puts $fh "## Raw RO clocks"
-    foreach clk $mptdc_o13_abs3_raw_clock_names {
-        puts $fh "- $clk"
-    }
-    puts $fh ""
-    puts $fh "## Final buffer phase clocks"
-    foreach clk $mptdc_o13_abs3_buffer_clock_names {
-        puts $fh "- $clk"
-    }
-    close $fh
-}
