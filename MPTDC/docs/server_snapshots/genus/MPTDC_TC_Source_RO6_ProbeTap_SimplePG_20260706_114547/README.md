@@ -1,0 +1,164 @@
+# MPTDC Server Snapshot
+
+- Kind: `genus`
+- Run ID: `MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_114547`
+- Source directory: `/sim/ksabra/SPADMIC_work/genus/MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_114547`
+- Snapshot directory: `/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/docs/server_snapshots/genus/MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_114547`
+- Collection branch: `SPADMIC_test`
+- Collection commit: `4933d804cd994976a497b3ec6051b5ae0317652f`
+- Created UTC: `2026-07-06T10:04:01Z`
+
+## Included Files
+- `README.md`
+- `SUMMARY.md`
+- `logs/genus_MPTDC_TC_Source_RO6_ProbeTap_SimplePG_20260706_114547.messages.tail`
+- `logs/genus_o13_phase_distribution.log.messages.tail`
+- `outputs/final_filelist_used.f`
+- `outputs/final_sdc_overlay_used.sdc`
+- `outputs/mptdc_axis_core.postsyn.sdc`
+- `reports/check_timing_intent_post_synth.rpt`
+- `reports/control_drv_root_causes.csv`
+- `reports/drv_transition_root_causes.csv`
+- `reports/fast_tag_cell_mapping.csv`
+- `reports/fast_tag_exact_endpoint_discovery.csv`
+- `reports/fast_tag_exact_path_pairs.csv`
+- `reports/fast_tag_exact_repair_status.rpt`
+- `reports/fast_tag_exact_source_discovery.csv`
+- `reports/final_typical_genus_repair_1.rpt`
+- `reports/helper_tcl_selftest.rpt`
+- `reports/pd_local_on22_cell_repair.csv`
+- `reports/pd_local_on22_driver_discovery.csv`
+- `reports/pd_local_on22_legal_cells.rpt`
+- `reports/pd_local_on22_repair_status.rpt`
+- `reports/pd_local_on22_timing_discovery.rpt`
+- `reports/report_clocks.rpt`
+- `reports/report_design_rules.rpt`
+- `reports/report_exceptions.rpt`
+- `reports/ro_tune6_lef_audit.rpt`
+- `reports/synthesis/post_elaboration/check_design.rpt`
+- `reports/synthesis/post_elaboration/check_timing_intent.rpt`
+- `reports/synthesis/post_elaboration/check_timing_post_init.rpt`
+- `reports/synthesis/post_elaboration/latch_pre_synth.rpt`
+- `reports/synthesis/post_elaboration/report_clocks.rpt`
+- `reports/synthesis/post_elaboration/report_hierarchy.rpt`
+- `reports/synthesis/post_synthesis/cdc_manual_audit.rpt`
+- `reports/synthesis/post_synthesis/check_timing_intent_post_synth.rpt`
+- `reports/synthesis/post_synthesis/fast_count_capture_endpoint_audit.rpt`
+- `reports/synthesis/post_synthesis/fast_domain_feasibility_audit.rpt`
+- `reports/synthesis/post_synthesis/latch_audit.rpt`
+- `reports/synthesis/post_synthesis/o13_clock_model_check.rpt`
+- `reports/synthesis/post_synthesis/pd_vernier_endpoint_discovery.rpt`
+- `reports/synthesis/post_synthesis/pd_vernier_exception_check.rpt`
+- `reports/synthesis/post_synthesis/pd_vernier_source_discovery.rpt`
+- `reports/synthesis/post_synthesis/report_area.rpt`
+- `reports/synthesis/post_synthesis/report_area_hier.rpt`
+- `reports/synthesis/post_synthesis/report_clock_groups.rpt`
+- `reports/synthesis/post_synthesis/report_clocks.rpt`
+- `reports/synthesis/post_synthesis/report_clocks_generated.rpt`
+- `reports/synthesis/post_synthesis/report_constraints.rpt`
+- `reports/synthesis/post_synthesis/report_design_rules.rpt`
+- `reports/synthesis/post_synthesis/report_design_rules_verbose.rpt`
+- `reports/synthesis/post_synthesis/report_exceptions.rpt`
+- `reports/synthesis/post_synthesis/report_gates.rpt`
+- `reports/synthesis/post_synthesis/report_gates_hier.rpt`
+- `reports/synthesis/post_synthesis/report_helpers_status.rpt`
+- `reports/synthesis/post_synthesis/report_hierarchy.rpt`
+- `reports/synthesis/post_synthesis/report_high_fanout.rpt`
+- `reports/synthesis/post_synthesis/report_power.rpt`
+- `reports/synthesis/post_synthesis/report_power_hier.rpt`
+- `reports/synthesis/post_synthesis/report_qor.rpt`
+- `reports/synthesis/post_synthesis/run_manifest.rpt`
+- `reports/synthesis/post_synthesis/timing_cdc_async_review.rpt`
+- `reports/synthesis/post_synthesis/timing_clk_sys_full_clock.rpt`
+- `reports/synthesis/post_synthesis/timing_clk_sys_internal_top100.rpt`
+- `reports/synthesis/post_synthesis/timing_clk_sys_violations.rpt`
+- `reports/synthesis/post_synthesis/timing_context_bank_hotspots.rpt`
+- `reports/synthesis/post_synthesis/timing_drain_ctrl_hotspots.rpt`
+- `reports/synthesis/post_synthesis/timing_fast_count_to_nfast_hit.rpt`
+- `reports/synthesis/post_synthesis/timing_fifo_hotspots.rpt`
+- `reports/synthesis/post_synthesis/timing_hit_capture_bridge_hotspots.rpt`
+- `reports/synthesis/post_synthesis/timing_hold.rpt`
+- `reports/synthesis/post_synthesis/timing_meas_ctrl_hotspots.rpt`
+- `reports/synthesis/post_synthesis/timing_o13_phase_buffer_paths.rpt`
+- `reports/synthesis/post_synthesis/timing_osc_counter_hotspots.rpt`
+- `reports/synthesis/post_synthesis/timing_osc_fast_full_clock.rpt`
+- `reports/synthesis/post_synthesis/timing_pd_capture_hotspots.rpt`
+- `reports/synthesis/post_synthesis/timing_pd_intentional_vernier.rpt`
+- `reports/synthesis/post_synthesis/timing_setup.rpt`
+- `reports/synthesis/post_synthesis/timing_summary.rpt`
+- `reports/synthesis/post_synthesis/timing_violations.rpt`
+- `reports/synthesis/syn_generic/fast_domain_feasibility_audit.rpt`
+- `reports/synthesis/syn_generic/pd_vernier_endpoint_discovery.rpt`
+- `reports/synthesis/syn_generic/pd_vernier_exception_check.rpt`
+- `reports/synthesis/syn_generic/pd_vernier_source_discovery.rpt`
+- `reports/synthesis/syn_generic/timing_cdc_async_review.rpt`
+- `reports/synthesis/syn_generic/timing_clk_sys_full_clock.rpt`
+- `reports/synthesis/syn_generic/timing_clk_sys_violations.rpt`
+- `reports/synthesis/syn_generic/timing_context_bank_hotspots.rpt`
+- `reports/synthesis/syn_generic/timing_drain_ctrl_hotspots.rpt`
+- `reports/synthesis/syn_generic/timing_fast_count_to_nfast_hit.rpt`
+- `reports/synthesis/syn_generic/timing_fifo_hotspots.rpt`
+- `reports/synthesis/syn_generic/timing_hit_capture_bridge_hotspots.rpt`
+- `reports/synthesis/syn_generic/timing_hold.rpt`
+- `reports/synthesis/syn_generic/timing_meas_ctrl_hotspots.rpt`
+- `reports/synthesis/syn_generic/timing_o13_phase_buffer_paths.rpt`
+- `reports/synthesis/syn_generic/timing_osc_counter_hotspots.rpt`
+- `reports/synthesis/syn_generic/timing_osc_fast_full_clock.rpt`
+- `reports/synthesis/syn_generic/timing_pd_capture_hotspots.rpt`
+- `reports/synthesis/syn_generic/timing_pd_intentional_vernier.rpt`
+- `reports/synthesis/syn_generic/timing_setup.rpt`
+- `reports/synthesis/syn_generic/timing_summary.rpt`
+- `reports/synthesis/syn_generic/timing_violations.rpt`
+- `reports/synthesis/syn_map/fast_domain_feasibility_audit.rpt`
+- `reports/synthesis/syn_map/pd_vernier_endpoint_discovery.rpt`
+- `reports/synthesis/syn_map/pd_vernier_exception_check.rpt`
+- `reports/synthesis/syn_map/pd_vernier_source_discovery.rpt`
+- `reports/synthesis/syn_map/timing_cdc_async_review.rpt`
+- `reports/synthesis/syn_map/timing_clk_sys_full_clock.rpt`
+- `reports/synthesis/syn_map/timing_clk_sys_violations.rpt`
+- `reports/synthesis/syn_map/timing_context_bank_hotspots.rpt`
+- `reports/synthesis/syn_map/timing_drain_ctrl_hotspots.rpt`
+- `reports/synthesis/syn_map/timing_fast_count_to_nfast_hit.rpt`
+- `reports/synthesis/syn_map/timing_fifo_hotspots.rpt`
+- `reports/synthesis/syn_map/timing_hit_capture_bridge_hotspots.rpt`
+- `reports/synthesis/syn_map/timing_hold.rpt`
+- `reports/synthesis/syn_map/timing_meas_ctrl_hotspots.rpt`
+- `reports/synthesis/syn_map/timing_o13_phase_buffer_paths.rpt`
+- `reports/synthesis/syn_map/timing_osc_counter_hotspots.rpt`
+- `reports/synthesis/syn_map/timing_osc_fast_full_clock.rpt`
+- `reports/synthesis/syn_map/timing_pd_capture_hotspots.rpt`
+- `reports/synthesis/syn_map/timing_pd_intentional_vernier.rpt`
+- `reports/synthesis/syn_map/timing_setup.rpt`
+- `reports/synthesis/syn_map/timing_summary.rpt`
+- `reports/synthesis/syn_map/timing_violations.rpt`
+- `reports/synthesis/synthesis/fast_domain_feasibility_audit.rpt`
+- `reports/synthesis/synthesis/pd_vernier_endpoint_discovery.rpt`
+- `reports/synthesis/synthesis/pd_vernier_exception_check.rpt`
+- `reports/synthesis/synthesis/pd_vernier_source_discovery.rpt`
+- `reports/synthesis/synthesis/timing_cdc_async_review.rpt`
+- `reports/synthesis/synthesis/timing_clk_sys_full_clock.rpt`
+- `reports/synthesis/synthesis/timing_clk_sys_violations.rpt`
+- `reports/synthesis/synthesis/timing_context_bank_hotspots.rpt`
+- `reports/synthesis/synthesis/timing_drain_ctrl_hotspots.rpt`
+- `reports/synthesis/synthesis/timing_fast_count_to_nfast_hit.rpt`
+- `reports/synthesis/synthesis/timing_fifo_hotspots.rpt`
+- `reports/synthesis/synthesis/timing_hit_capture_bridge_hotspots.rpt`
+- `reports/synthesis/synthesis/timing_hold.rpt`
+- `reports/synthesis/synthesis/timing_meas_ctrl_hotspots.rpt`
+- `reports/synthesis/synthesis/timing_o13_phase_buffer_paths.rpt`
+- `reports/synthesis/synthesis/timing_osc_counter_hotspots.rpt`
+- `reports/synthesis/synthesis/timing_osc_fast_full_clock.rpt`
+- `reports/synthesis/synthesis/timing_pd_capture_hotspots.rpt`
+- `reports/synthesis/synthesis/timing_pd_intentional_vernier.rpt`
+- `reports/synthesis/synthesis/timing_setup.rpt`
+- `reports/synthesis/synthesis/timing_summary.rpt`
+- `reports/synthesis/synthesis/timing_violations.rpt`
+- `run_manifest.txt`
+
+## Excluded By Policy
+
+- Innovus checkpoints and databases;
+- raw GDS/OAS files;
+- full raw logs unless converted to message tails;
+- large binary artifacts;
+- server work directories outside this snapshot.

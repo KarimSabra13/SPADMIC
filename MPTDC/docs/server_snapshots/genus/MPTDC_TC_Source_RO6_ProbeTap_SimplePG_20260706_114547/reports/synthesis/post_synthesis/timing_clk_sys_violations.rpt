@@ -1,0 +1,5 @@
+# O13 abs4 clk_sys Internal Violations
+
+CLK_SYS_INTERNAL_STATUS=NO_VIOLATIONS_FOUND
+
+No negative-slack clk_sys internal setup paths were reported with -max_slack 0.0.
