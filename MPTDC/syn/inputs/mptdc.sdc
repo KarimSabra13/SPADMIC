@@ -43,7 +43,7 @@ proc mptdc_sdc_object_names {objects} {
     return $names
 }
 
-proc mptdc_try_false_path_pins {label patterns} {
+proc mptdc_try_false_path_pins {label patterns {mode "to_through"}} {
     set matched_count 0
     set to_failures 0
     set through_failures 0
@@ -57,9 +57,11 @@ proc mptdc_try_false_path_pins {label patterns} {
         # Keep the get_pins command directly inside the SDC command.  Genus SDC
         # mode can reject stringified Tcl collection handles when they are
         # stored in variables and later interpolated.
-        if {[catch {set_false_path -to [get_pins -quiet -hierarchical $pattern]} err]} {
-            incr to_failures
-            puts "MPTDC_SDC_WARN: set_false_path -to failed for $label pattern $pattern: $err"
+        if {$mode ne "through_only"} {
+            if {[catch {set_false_path -to [get_pins -quiet -hierarchical $pattern]} err]} {
+                incr to_failures
+                puts "MPTDC_SDC_WARN: set_false_path -to failed for $label pattern $pattern: $err"
+            }
         }
         if {[catch {set_false_path -through [get_pins -quiet -hierarchical $pattern]} err]} {
             incr through_failures
@@ -73,6 +75,9 @@ proc mptdc_try_false_path_pins {label patterns} {
     }
 
     puts "MPTDC_SDC_INFO: false-pathing $label ($matched_count pattern-expanded pins)"
+    if {$mode eq "through_only"} {
+        puts "MPTDC_SDC_INFO: false-pathing $label uses -through only for async control pins"
+    }
     if {$to_failures == 0 && $through_failures == 0} {
         puts "MPTDC_SDC_INFO: false-pathing $label applied without pattern failures"
     } else {
@@ -259,7 +264,7 @@ mptdc_try_false_path_pins "PD conversion clear pins" {
     *gen_pd_row*gen_pd_col*u_pd*/clear_window_i
     *u_pd*/clear_window
     *u_pd*/clear_window_i
-}
+} through_only
 
 # Gray-counter async clears are intentional hard clears for source-domain
 # counter state when oscillator clocks may be stopped. The protocol clears only
@@ -269,7 +274,7 @@ mptdc_try_false_path_pins "Gray counter async clear pins" {
     *u_slow_cnt*/src_async_clr
     *u_fast_cnt*/src_async_clr
     *gray_cnt_sync*/src_async_clr
-}
+} through_only
 
 # START-watchdog state lives in the slow oscillator domain and is intentionally
 # hard-cleared by sys-domain teardown so the counter can reset even if the
@@ -284,7 +289,7 @@ mptdc_try_false_path_pins "START watchdog async clear pins" {
     *start_timeout_latched*/*clr*
     *start_timeout_latched*/*CD*
     *start_timeout_latched*/*RN*
-}
+} through_only
 
 # STOP metadata capture flops are intentionally clocked by the asynchronous STOP
 # event and sample the held slow-ring phase image.  These are source-side event

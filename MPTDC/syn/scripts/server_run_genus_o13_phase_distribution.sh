@@ -1025,7 +1025,8 @@ if [[ -f "$RESULT_DIR/report_clocks.rpt" ]]; then
 fi
 RAW_RO_CLOCKS_FOUND="$(count_expected_clock_names "${RAW_CLOCK_NAMES[@]}")"
 BUFFER_PHASE_CLOCKS_FOUND="$(count_expected_clock_names "${BUFFER_CLOCK_NAMES[@]}")"
-if grep -q 'CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=YES' "$RESULT_DIR/o13_clock_model_check.sdc.rpt" "$RESULT_DIR/o13_clock_model_check.rpt" "$GENUS_LOG" 2>/dev/null; then
+if grep -q 'CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=YES' "$RESULT_DIR/o13_clock_model_check.sdc.rpt" "$RESULT_DIR/o13_clock_model_check.rpt" "$GENUS_LOG" 2>/dev/null \
+  || grep -q 'clk_sys async to raw+buffer oscillator clocks = YES' "$RESULT_DIR/o13_clock_model_check.rpt" "$GENUS_LOG" 2>/dev/null; then
   CLK_SYS_ASYNC_TO_BUFFER_PHASE_CLOCKS=YES
   BUFFER_PHASE_CLOCKS_IN_ASYNC_GROUP=YES
 fi
