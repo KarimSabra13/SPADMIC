@@ -57,8 +57,9 @@ Options:
   -h, --help             Show this help.
 
 This launcher is the corrected RO_tune6 VDD/VSS-only closure path. It requires
-real RO PG hookup, uses simple VDD/VSS block pins, disables the old blockPin
-sroute probe, and keeps the old vdd!/RO-only PG filter strategy disabled.
+real RO PG hookup, uses mesh-side VDD/VSS block pins, enables the guarded
+blockPin sroute probe, and keeps the old vdd!/RO-only PG filter strategy
+disabled.
 Route recovery is disabled by default; enabling it still keeps the final
 verify_drc/connectivity gate authoritative.
 USAGE
@@ -264,7 +265,7 @@ export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 export MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG=1
 export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0
-export MPTDC_PG_STRATEGY=conservative_ro_hookup
+export MPTDC_PG_STRATEGY=conservative_ro_hookup_blockpin_probe
 
 export O1_USE_REAL_RO_ABSTRACT=1
 export O1_RO_CELL_NAME=RO_tune6
@@ -359,10 +360,10 @@ export MPTDC_ENABLE_PREPLACE_PG_SROUTE=0
 export MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=1
 export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
 export MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=1
-export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0
+export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=1
 export MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=64
-export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0
-export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0
+export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1
+export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1
 export MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK=0
 export MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS=0
 export MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES=0
@@ -370,7 +371,7 @@ export MPTDC_SROUTE_CONNECT_STRIPE=1
 export MPTDC_SROUTE_CORE_PIN_STOP_ROUTE=RowEnd
 export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
 
-export MPTDC_ENABLE_RO_PG_PROBE=0
+export MPTDC_ENABLE_RO_PG_PROBE=1
 export MPTDC_ENABLE_RO_PG_HOOKUP=1
 export MPTDC_REQUIRE_RO_PG_HOOKUP=1
 export MPTDC_ENABLE_RO_PG_MACRO_PATCH=0
