@@ -138,6 +138,7 @@ case "$KIND" in
     copy_file "$SRC_DIR/mptdc_axis_core.postsyn.sdc" "outputs/mptdc_axis_core.postsyn.sdc"
     copy_file "$SRC_DIR/final_sdc_overlay_used.sdc" "outputs/final_sdc_overlay_used.sdc"
     copy_file "$SRC_DIR/final_filelist_used.f" "outputs/final_filelist_used.f"
+    copy_file "$SRC_DIR/sdc_command_failures.md" "sdc_command_failures.md"
     copy_file "$SRC_DIR/report_clocks.rpt" "reports/report_clocks.rpt"
     copy_file "$SRC_DIR/report_exceptions.rpt" "reports/report_exceptions.rpt"
     copy_file "$SRC_DIR/check_timing_intent_post_synth.rpt" "reports/check_timing_intent_post_synth.rpt"
