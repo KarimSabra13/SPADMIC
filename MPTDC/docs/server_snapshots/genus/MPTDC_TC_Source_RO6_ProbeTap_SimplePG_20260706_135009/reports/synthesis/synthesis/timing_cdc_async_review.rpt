@@ -1,0 +1,3 @@
+Deferred detailed report could not be generated.
+
+Detailed focused timing reports are generated at post_synthesis only. Stage synthesis keeps a lightweight timing snapshot so reporting cannot block optimization.

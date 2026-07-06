@@ -1,0 +1,23 @@
+# MPTDC Helper Tcl Selftest
+
+Purpose: validate bracket-safe helper string handling inside the active Tcl interpreter.
+
+NAME=gen_pd_row[0].gen_pd_col[7].u_pd/q1_reg/D
+ESCAPED=gen_pd_row\[0\].gen_pd_col\[7\].u_pd/q1_reg/D
+NORMALIZED=gen_pd_row[0].gen_pd_col[7].u_pd/q1_reg/D
+NORMALIZE_STATUS=PASS
+BRACKET_ESCAPE_STATUS=PASS
+
+NAME=gen_phase_buf[7].u_drv/Q
+ESCAPED=gen_phase_buf\[7\].u_drv/Q
+NORMALIZED=gen_phase_buf[7].u_drv/Q
+NORMALIZE_STATUS=PASS
+BRACKET_ESCAPE_STATUS=PASS
+
+NAME=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5]/C
+ESCAPED=u_core_gen_fast_tag_col\[7\].u_fast_tag_tag_o_reg\[5\]/C
+NORMALIZED=u_core_gen_fast_tag_col[7].u_fast_tag_tag_o_reg[5]/C
+NORMALIZE_STATUS=PASS
+BRACKET_ESCAPE_STATUS=PASS
+
+HELPER_TCL_SELFTEST_STATUS=PASS
