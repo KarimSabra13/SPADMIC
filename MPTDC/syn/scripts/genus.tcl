@@ -286,3 +286,7 @@ mptdc_message "  DB: $design(export_dir)/post_synth/$design(TOPLEVEL)"
 # 9. SUMMARY
 #############################################
 mptdc_print_summary
+
+if {[info exists ::env(MPTDC_GENUS_BATCH_EXIT)] && $::env(MPTDC_GENUS_BATCH_EXIT) eq "1"} {
+    exit
+}

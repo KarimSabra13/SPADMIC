@@ -583,6 +583,7 @@ elif [[ "$INPUT_RC" == "0" ]]; then
   echo "[GENUS_TYPICAL] Starting TC-only MPTDC Genus synthesis" | tee -a "$GENUS_LOG"
   (
     cd "$RESULT_DIR/internal/run"
+    export MPTDC_GENUS_BATCH_EXIT=1
     genus -files "$SCRIPT_DIR/genus.tcl" -log "$GENUS_TOOL_LOG"
   ) 2>&1 | tee -a "$GENUS_LOG"
   GENUS_RC=${PIPESTATUS[0]}
