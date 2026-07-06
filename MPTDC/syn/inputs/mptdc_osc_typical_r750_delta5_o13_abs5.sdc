@@ -259,6 +259,21 @@ if {$mptdc_o13_abs5_source_matched_count == $mptdc_o13_abs5_expected_sources && 
     set mptdc_o13_abs5_source_status PASS_8_SLOW_SOURCES
 }
 
+set mptdc_o13_abs5_defer_exact NO
+if {$mptdc_o13_abs5_endpoint_status ne "PASS_64_ENDPOINTS" || \
+    $mptdc_o13_abs5_source_status ne "PASS_8_SLOW_SOURCES"} {
+    set mptdc_o13_abs5_defer_exact YES
+}
+
+if {$mptdc_o13_abs5_defer_exact eq "YES"} {
+    puts "MPTDC_O13_ABS5_SDC_INFO: PD_VERNIER_EXCEPTION_DEFERRED=YES"
+    puts "MPTDC_O13_ABS5_SDC_INFO: PD_VERNIER_DEFER_REASON=initial_sdc_context_missing_mapped_q1_endpoints"
+    puts "MPTDC_O13_ABS5_SDC_INFO: PD_VERNIER_EARLY_ENDPOINT_STATUS=$mptdc_o13_abs5_endpoint_status"
+    puts "MPTDC_O13_ABS5_SDC_INFO: PD_VERNIER_EARLY_FOUND_ENDPOINTS=$mptdc_o13_abs5_q1_matched_count"
+    puts "MPTDC_O13_ABS5_SDC_INFO: PD_VERNIER_EARLY_SOURCE_STATUS=$mptdc_o13_abs5_source_status"
+    puts "MPTDC_O13_ABS5_SDC_INFO: PD_VERNIER_EARLY_FOUND_SOURCES=$mptdc_o13_abs5_source_matched_count"
+    puts "MPTDC_O13_ABS5_SDC_INFO: mapped post-synthesis Tcl hook owns the exact 64-endpoint PD Vernier exception proof"
+} else {
 set mptdc_o13_abs5_overmatch NO
 set mptdc_o13_abs5_undermatch NO
 if {$mptdc_o13_abs5_q1_duplicate_count > 0 || $mptdc_o13_abs5_source_duplicate_count > 0 || \
@@ -473,4 +488,5 @@ if {[info exists ::env(MPTDC_O13_PD_VERNIER_INTENT_RPT)] && $::env(MPTDC_O13_PD_
         }
     }
     close $fh
+}
 }
