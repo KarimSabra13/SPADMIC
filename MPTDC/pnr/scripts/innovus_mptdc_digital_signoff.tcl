@@ -1007,8 +1007,8 @@ proc mptdc_signoff_pg_policy_guard {} {
         lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, or manual_ro_pg_core_sroute"
     }
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair]]
-    if {[lsearch -exact {simple_vdd_vss_pair vdd_vss_pair left_vdd_right_vss} $style] < 0} {
-        lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected simple_vdd_vss_pair"
+    if {[lsearch -exact {mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss simple_vdd_vss_pair vdd_vss_pair left_vdd_right_vss} $style] < 0} {
+        lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected mesh_lr_vdd_vss or a supported legacy simple pair style"
     }
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0]} {
         lappend failures "MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0"
