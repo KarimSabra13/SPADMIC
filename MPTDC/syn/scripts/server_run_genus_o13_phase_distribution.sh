@@ -654,10 +654,21 @@ write_sdc_failure_report() {
     active_tui_61_count="$(grep -E 'Error[[:space:]]*:.*(\[TUI-61\]|A required object parameter could not be found)' "$GENUS_LOG" 2>/dev/null | grep -v '|' | grep -Ev 'report_timing' | sort -u | wc -l | tr -d ' ')"
     local failed_command_count
     failed_command_count="$(grep -E '"set_(false_path|max_delay|max_transition|clock_groups)"[[:space:]]+-[[:space:]]+successful[[:space:]]+[0-9]+[[:space:]]+,[[:space:]]+failed[[:space:]]+[1-9]' "$GENUS_LOG" 2>/dev/null | sort -u | wc -l | tr -d ' ')"
-    local fatal_count
-    fatal_count="$(grep -E 'MPTDC_O13_.*FATAL|MPTDC_SDC_.*ERROR|\[SDC-202\]|\[SDC-209\]' "$GENUS_LOG" 2>/dev/null | grep -v '|' | sort -u | wc -l | tr -d ' ')"
-    active_sdc_failure_count=$((active_sdc_235_count + active_tui_61_count + failed_command_count + fatal_count))
-    report_diagnostic_warning_count=$((raw_sdc_diagnostic_count - active_sdc_235_count - active_tui_61_count))
+    local mptdc_error_count
+    mptdc_error_count="$(grep -E 'MPTDC_O13_.*FATAL|MPTDC_SDC_.*ERROR' "$GENUS_LOG" 2>/dev/null | grep -v '|' | sort -u | wc -l | tr -d ' ')"
+    local generic_sdc_banner_count
+    generic_sdc_banner_count="$(grep -E '\[SDC-202\]|\[SDC-209\]' "$GENUS_LOG" 2>/dev/null | grep -v '|' | sort -u | wc -l | tr -d ' ')"
+    local active_generic_sdc_banner_count=0
+    if (( failed_command_count > 0 || raw_sdc_diagnostic_count > 0 || mptdc_error_count > 0 )); then
+      active_generic_sdc_banner_count="$generic_sdc_banner_count"
+    fi
+    local report_only_raw_sdc_count
+    report_only_raw_sdc_count=$((raw_sdc_diagnostic_count - active_sdc_235_count - active_tui_61_count - invalid_object_count))
+    if (( report_only_raw_sdc_count < 0 )); then
+      report_only_raw_sdc_count=0
+    fi
+    active_sdc_failure_count=$((active_sdc_235_count + active_tui_61_count + invalid_object_count + failed_command_count + mptdc_error_count + active_generic_sdc_banner_count))
+    report_diagnostic_warning_count=$((report_only_raw_sdc_count + generic_sdc_banner_count - active_generic_sdc_banner_count))
     command_failure_count=$active_sdc_failure_count
   fi
   {
@@ -674,6 +685,10 @@ write_sdc_failure_report() {
     echo "SDC_235_COUNT=$sdc_235_count"
     echo "TUI_61_COUNT=$tui_61_count"
     echo "SDC_INVALID_OBJECT_COUNT=$invalid_object_count"
+    if [[ -f "$GENUS_LOG" ]]; then
+      echo "GENERIC_SDC_202_209_COUNT=$generic_sdc_banner_count"
+      echo "GENERIC_SDC_202_209_ACTIVE_COUNT=$active_generic_sdc_banner_count"
+    fi
     echo
     echo "## Extracted SDC/Timing-Intent Diagnostics"
     echo
@@ -688,6 +703,7 @@ write_sdc_failure_report() {
     echo "- ACTIVE_SDC_FAILURE_COUNT gates timing intent and closure readiness."
     echo "- REPORT_DIAGNOSTIC_WARNING_COUNT captures report-only Genus diagnostics such as retrieve_mode noise."
     echo "- Final buffer clocks must be grouped asynchronously against clk_sys."
+    echo "- Generic SDC-202/SDC-209 banners are active only when paired with a failed SDC command, raw object/constraint diagnostic, or MPTDC fatal/error."
     echo "- Any remaining failed false-path, max-delay, clock-group, or generated-clock command requires review before Innovus."
   } > "$out"
 }
