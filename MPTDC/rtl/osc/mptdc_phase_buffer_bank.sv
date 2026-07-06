@@ -152,6 +152,50 @@ module mptdc_phase_buffer_bank (
 
 endmodule
 
+/* verilator lint_off DECLFILENAME */
+(* keep_hierarchy = "yes", dont_touch = "true", preserve *)
+module mptdc_ro_probe_buffer (
+  input  wire phase_tap_i,
+  output wire probe_o
+);
+
+`ifdef MPTDC_PHASE_BUFFER_TOPO_BUHDX4_BUHDX12
+  (* keep = "true", dont_touch = "true" *) wire probe_buf;
+
+  (* keep = "true", dont_touch = "true" *)
+  BUHDX12 u_probe_buf (
+    .A (phase_tap_i),
+    .Q (probe_buf)
+  );
+
+  assign probe_o = probe_buf;
+`elsif MPTDC_PHASE_BUFFER_TOPO_BUJIHDX4_BUJIHDX12
+  (* keep = "true", dont_touch = "true" *) wire probe_buf;
+
+  (* keep = "true", dont_touch = "true" *)
+  BUJIHDX12 u_probe_buf (
+    .A (phase_tap_i),
+    .Q (probe_buf)
+  );
+
+  assign probe_o = probe_buf;
+`elsif MPTDC_PHASE_BUFFER_USE_BUHDX4
+  (* keep = "true", dont_touch = "true" *) wire probe_buf;
+
+  (* keep = "true", dont_touch = "true" *)
+  BUHDX4 u_probe_buf (
+    .A (phase_tap_i),
+    .Q (probe_buf)
+  );
+
+  assign probe_o = probe_buf;
+`else
+  assign probe_o = phase_tap_i;
+`endif
+
+endmodule
+/* verilator lint_on DECLFILENAME */
+
 `ifdef MPTDC_PHASE_BUFFER_NEEDS_BUHDX4
 `undef MPTDC_PHASE_BUFFER_NEEDS_BUHDX4
 `endif

@@ -27,6 +27,7 @@ ROUTE_REPAIR_COMMANDS_VALUE="${MPTDC_ROUTE_REPAIR_COMMANDS:-$DEFAULT_ROUTE_REPAI
 FREE_INTERNAL_VALUE="${MPTDC_PNR_FREE_INTERNAL_PLACEMENT:-0}"
 FREE_ALL_INTERNAL_VALUE="${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-0}"
 AGGRESSIVE_POSTROUTE_VALUE="${MPTDC_CLEANLEF_AGGRESSIVE_POSTROUTE:-0}"
+CORE_UTIL_VALUE="${MPTDC_PNR_CORE_UTIL:-0.55}"
 
 usage() {
   cat <<'USAGE'
@@ -50,13 +51,14 @@ Options:
                          preplacement so placeDesign controls internal logic.
   --aggressive-postroute Use the post-route optimization hard cap and a larger
                          bounded fast-tag ECO upsize/search budget.
+  --core-util <value>    Core utilization for staged area sweeps. Default 0.55.
   --route-repair-commands <cmds>
                          Tcl list of route repair commands used with recovery.
   -h, --help             Show this help.
 
 This launcher is the corrected RO_tune6 VDD/VSS-only closure path. It requires
-real RO PG hookup and uses a guarded blockPin sroute probe, while keeping the
-old vdd!/RO-only PG filter strategy disabled.
+real RO PG hookup, uses simple VDD/VSS block pins, disables the old blockPin
+sroute probe, and keeps the old vdd!/RO-only PG filter strategy disabled.
 Route recovery is disabled by default; enabling it still keeps the final
 verify_drc/connectivity gate authoritative.
 USAGE
@@ -175,6 +177,10 @@ while [[ $# -gt 0 ]]; do
       AGGRESSIVE_POSTROUTE_VALUE=1
       shift
       ;;
+    --core-util)
+      CORE_UTIL_VALUE="${2:?missing --core-util value}"
+      shift 2
+      ;;
     --route-repair-commands)
       ROUTE_REPAIR_COMMANDS_VALUE="${2:?missing --route-repair-commands value}"
       shift 2
@@ -258,7 +264,7 @@ export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
 export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 export MPTDC_ALLOW_PROVISIONAL_PREPLACE_PG=1
 export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=0
-export MPTDC_PG_STRATEGY=conservative_ro_hookup_blockpin_probe
+export MPTDC_PG_STRATEGY=conservative_ro_hookup
 
 export O1_USE_REAL_RO_ABSTRACT=1
 export O1_RO_CELL_NAME=RO_tune6
@@ -273,7 +279,7 @@ fi
 export MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT="$FREE_ALL_INTERNAL_VALUE"
 export MPTDC_PNR_FREE_INTERNAL_PLACEMENT="$FREE_INTERNAL_VALUE"
 
-export MPTDC_PNR_CORE_UTIL=0.55
+export MPTDC_PNR_CORE_UTIL="$CORE_UTIL_VALUE"
 export MPTDC_PNR_FIX_RO_MACROS=1
 export MPTDC_PNR_CREATE_RO_HALOS=0
 export MPTDC_PNR_PD_TILE_CONSTRAINT_MODE=none
@@ -341,7 +347,7 @@ export MPTDC_DB_DISPLAY_LIMIT=50000
 
 export MPTDC_ENABLE_BLOCK_PG_PINS=1
 export MPTDC_BLOCK_PG_PIN_LAYER=METTP
-export MPTDC_BLOCK_PG_PIN_STYLE=mesh_lr_vdd_vss
+export MPTDC_BLOCK_PG_PIN_STYLE=simple_vdd_vss_pair
 export MPTDC_BLOCK_PG_PIN_WIDTH_UM=4.0
 export MPTDC_BLOCK_PG_PIN_DEPTH_UM=28.0
 export MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM=8.0
@@ -353,10 +359,10 @@ export MPTDC_ENABLE_PREPLACE_PG_SROUTE=0
 export MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=1
 export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
 export MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=1
-export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=1
+export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0
 export MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=64
-export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1
-export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1
+export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0
+export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0
 export MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK=0
 export MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS=0
 export MPTDC_SROUTE_PRESERVE_EXISTING_ROUTES=0
@@ -364,7 +370,7 @@ export MPTDC_SROUTE_CONNECT_STRIPE=1
 export MPTDC_SROUTE_CORE_PIN_STOP_ROUTE=RowEnd
 export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
 
-export MPTDC_ENABLE_RO_PG_PROBE=1
+export MPTDC_ENABLE_RO_PG_PROBE=0
 export MPTDC_ENABLE_RO_PG_HOOKUP=1
 export MPTDC_REQUIRE_RO_PG_HOOKUP=1
 export MPTDC_ENABLE_RO_PG_MACRO_PATCH=0
@@ -433,6 +439,7 @@ echo "INNOVUS_RO_LEF=$O1_RO_LEF_PATH"
 echo "O1_RO_LIBERTY_PATH=$O1_RO_LIBERTY_PATH"
 echo "MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"
 echo "MPTDC_PNR_FREE_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_INTERNAL_PLACEMENT"
+echo "MPTDC_PNR_CORE_UTIL=$MPTDC_PNR_CORE_UTIL"
 echo "MPTDC_PNR_FIX_RO_MACROS=$MPTDC_PNR_FIX_RO_MACROS"
 echo "MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-unset}"
 echo "MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=$MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN"

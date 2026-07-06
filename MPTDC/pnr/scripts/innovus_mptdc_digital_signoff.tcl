@@ -927,7 +927,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_ENABLE_BLOCK_PG_PINS 1
         MPTDC_PG_STRATEGY conservative_ro_hookup
         MPTDC_BLOCK_PG_PIN_LAYER METTP
-        MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss
+        MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair
         MPTDC_BLOCK_PG_PIN_WIDTH_UM 4.0
         MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0
         MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0
@@ -1006,9 +1006,9 @@ proc mptdc_signoff_pg_policy_guard {} {
     if {[lsearch -exact {conservative_ro_hookup conservative_ro_hookup_blockpin_probe innovus_sroute_golden_ro manual_ro_pg_core_sroute} $strategy] < 0} {
         lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, or manual_ro_pg_core_sroute"
     }
-    set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]]
-    if {$style ne "mesh_lr_vdd_vss"} {
-        lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected mesh_lr_vdd_vss"
+    set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair]]
+    if {[lsearch -exact {simple_vdd_vss_pair vdd_vss_pair left_vdd_right_vss} $style] < 0} {
+        lappend failures "MPTDC_BLOCK_PG_PIN_STYLE=$style expected simple_vdd_vss_pair"
     }
     if {[mptdc_signoff_env_truthy MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES 0]} {
         lappend failures "MPTDC_ENABLE_BLOCK_PG_STITCH_STRIPES=1 expected 0"
@@ -2635,6 +2635,8 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
 proc mptdc_signoff_block_pg_pin_specs {} {
     set style [mptdc_signoff_block_pg_pin_style]
     switch -- $style {
+        simple_vdd_vss_pair -
+        vdd_vss_pair -
         left_vdd_right_vss {
             return [list [list VDD LEFT 0.50 VDD] [list VSS RIGHT 0.50 VSS]]
         }
@@ -2692,7 +2694,7 @@ proc mptdc_signoff_block_pg_pin_specs {} {
 }
 
 proc mptdc_signoff_block_pg_pin_style {} {
-    return [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]]
+    return [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair]]
 }
 
 proc mptdc_signoff_block_pg_pin_style_is_mesh {} {
@@ -2949,7 +2951,7 @@ proc mptdc_signoff_create_block_pg_pins {} {
     set depth [mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_DEPTH_UM 28.0]
     set core_box [mptdc_signoff_core_box]
     puts $fh "BLOCK_PG_PIN_LAYER=$layer"
-    puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE mesh_lr_vdd_vss]"
+    puts $fh "BLOCK_PG_PIN_STYLE=[mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair]"
     puts $fh "BLOCK_PG_PIN_WIDTH_UM=$width"
     puts $fh "BLOCK_PG_PIN_DEPTH_UM=$depth"
     puts $fh "BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM=[mptdc_signoff_env_double MPTDC_BLOCK_PG_PIN_OUTSIDE_OVERLAP_UM 8.0]"

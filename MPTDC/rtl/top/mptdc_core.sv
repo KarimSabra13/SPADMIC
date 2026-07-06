@@ -58,7 +58,11 @@ module mptdc_core
   output wire                   pkt_sop_o,
   output wire                   pkt_eop_o,
   output wire                   packet_active_o,
-  output wire                   packet_pending_o
+  output wire                   packet_pending_o,
+
+  // Buffered debug taps for direct MPTDC block-level observability.
+  output wire                   ro_slow_tap0_o,
+  output wire                   ro_fast_tap0_o
 );
 
   // synthesis translate_off
@@ -467,6 +471,16 @@ module mptdc_core
   mptdc_phase_buffer_bank u_phase_buf_fast (
     .phase_raw_i (fast_phase_raw[7:0]),
     .phase_buf_o (fast_phase[7:0])
+  );
+
+  mptdc_ro_probe_buffer u_ro_probe_slow_tap0 (
+    .phase_tap_i (slow_phase[0]),
+    .probe_o     (ro_slow_tap0_o)
+  );
+
+  mptdc_ro_probe_buffer u_ro_probe_fast_tap0 (
+    .phase_tap_i (fast_phase[0]),
+    .probe_o     (ro_fast_tap0_o)
   );
 
   assign slow_phase0_guard  = slow_phase[0];

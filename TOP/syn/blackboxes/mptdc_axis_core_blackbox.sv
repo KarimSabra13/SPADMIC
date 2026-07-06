@@ -33,6 +33,8 @@ module mptdc_axis_core
   output wire                    pkt_eop_o,
   output wire                    packet_active_o,
   output wire                    packet_pending_o,
+  output wire                    ro_slow_tap0_o,
+  output wire                    ro_fast_tap0_o,
 
   output wire                    ready_o,
   output wire                    busy_o,

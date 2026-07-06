@@ -42,6 +42,8 @@ module spadmic_tdc_axis_wrapper (
   wire cal_start_async_gated;
   wire cal_stop_async_gated;
   wire stop_async_qualified;
+  wire ro_slow_tap0_unused;
+  wire ro_fast_tap0_unused;
 
   // These enables are configured quiescently through CSR and are treated as
   // stable during active measurement, matching the existing MPTDC async-mux use.
@@ -80,6 +82,8 @@ module spadmic_tdc_axis_wrapper (
     .pkt_eop_o          (pkt_eop_o),
     .packet_active_o    (packet_active_o),
     .packet_pending_o   (packet_pending_o),
+    .ro_slow_tap0_o     (ro_slow_tap0_unused),
+    .ro_fast_tap0_o     (ro_fast_tap0_unused),
     .ready_o            (ready_o),
     .busy_o             (busy_o),
     .fifo_full_o        (fifo_full_o)

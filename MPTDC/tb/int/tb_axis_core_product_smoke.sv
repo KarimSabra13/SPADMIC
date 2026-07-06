@@ -33,6 +33,8 @@ module tb_axis_core_product_smoke;
   logic pkt_eop;
   logic packet_active;
   logic packet_pending;
+  logic ro_slow_tap0;
+  logic ro_fast_tap0;
   logic ready;
   logic busy;
   logic fifo_full;
@@ -66,6 +68,8 @@ module tb_axis_core_product_smoke;
     .pkt_eop_o          (pkt_eop),
     .packet_active_o    (packet_active),
     .packet_pending_o   (packet_pending),
+    .ro_slow_tap0_o     (ro_slow_tap0),
+    .ro_fast_tap0_o     (ro_fast_tap0),
     .ready_o            (ready),
     .busy_o             (busy),
     .fifo_full_o        (fifo_full)
