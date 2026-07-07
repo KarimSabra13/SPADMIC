@@ -5332,6 +5332,10 @@ proc mptdc_signoff_fast_tag_eco_allow_cell {inst} {
     if {$master eq "ON22JIHDX1"} {
         return [dict create allowed 1 class ON22_X1_TO_X2_CANDIDATE master $master]
     }
+    if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_TIMING_PATH_ON22 0] &&
+        [regexp {^ON22JIHDX[01]$} $master]} {
+        return [dict create allowed 1 class FAST_TAG_TIMING_PATH_ON22_TO_X2_CANDIDATE master $master]
+    }
     if {[regexp {^(BU|IN).*JIHDX[0-9]+$} $master] &&
         [regexp -nocase {fast_tag|raw_lfsr|nfast|tag|hit|meas_ctrl} $norm]} {
         return [dict create allowed 1 class FAST_TAG_DATA_BUFFER_OR_INVERTER master $master]
@@ -5499,7 +5503,7 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     puts $fh "FAST_TAG_TO_PD_TS_FALSE_PATH=NO"
     puts $fh "FAST_TAG_TO_PD_TS_MULTICYCLE=NO"
     puts $fh "FAST_TAG_TARGETED_ECO_SCOPE=innovus_only_no_rtl_no_genus"
-    puts $fh "FAST_TAG_TARGETED_ECO_ALLOWED=fast_tag_related_data_buffers_inverters_small_gates_and_ON22JIHDX1_to_ON22JIHDX2"
+    puts $fh "FAST_TAG_TARGETED_ECO_ALLOWED=fast_tag_related_data_buffers_inverters_small_gates_ON22JIHDX1_to_ON22JIHDX2_and_optional_timing_path_ON22_X0_X1_to_X2"
     puts $fh "FAST_TAG_TARGETED_ECO_FORBIDDEN=RO_macros_phase_buffers_oscillator_clocks_clock_tree_cells"
     puts $fh "FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_PROTECT_ENDPOINT_FLOPS 0] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_UPSIZE_SMALL_GATES=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_UPSIZE_SMALL_GATES 1] ? 1 : 0}]"
@@ -5510,6 +5514,8 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
     puts $fh "FAST_TAG_ECO_PATH_MAX_CELLS=[mptdc_signoff_env_int MPTDC_PNR_FAST_TAG_ECO_PATH_MAX_CELLS 128]"
     puts $fh "FAST_TAG_ECO_NAME_FALLBACK=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_NAME_FALLBACK 0] ? 1 : 0}]"
     puts $fh "FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_ENDPOINT_FLOP_RESIZE 0] ? 1 : 0}]"
+    puts $fh "FAST_TAG_ECO_ALLOW_TIMING_PATH_ON22=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ALLOW_TIMING_PATH_ON22 0] ? 1 : 0}]"
+    puts $fh "FAST_TAG_ECO_ON22_TARGET_X2=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ON22_TARGET_X2 0] ? 1 : 0}]"
     if {![mptdc_signoff_fast_tag_targeted_eco_enabled]} {
         puts $fh "FAST_TAG_TARGETED_ECO_STATUS=SKIPPED"
         close $fh
@@ -5621,8 +5627,12 @@ proc mptdc_signoff_apply_fast_tag_targeted_eco {} {
         if {[dict exists $path_scores $inst]} {
             set path_score [dict get $path_scores $inst]
         }
+        if {[mptdc_signoff_env_truthy MPTDC_PNR_FAST_TAG_ECO_ON22_TARGET_X2 0] &&
+            [regexp {^ON22JIHDX[01]$} [dict get $info master]]} {
+            set target ON22JIHDX2
+        }
         puts $fh "FAST_TAG_ECO_ALLOWED_CELL=$inst class=[dict get $info class] master=[dict get $info master] path_score=$path_score resize_target=$target"
-        if {[dict get $info class] eq "ON22_X1_TO_X2_CANDIDATE"} {
+        if {[regexp {ON22} [dict get $info class]]} {
             lappend on22_candidates $inst
         }
         if {$target ne ""} {
@@ -5802,7 +5812,10 @@ proc mptdc_signoff_run_optional_postroute_opt {} {
     if {$setup_passes < 1} {
         set setup_passes 1
     }
-    set setup_hard_cap 10
+    set setup_hard_cap [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_HARD_CAP 10]
+    if {$setup_hard_cap < 1} {
+        set setup_hard_cap 1
+    }
     set setup_max_passes [mptdc_signoff_env_int MPTDC_POSTROUTE_SETUP_OPT_MAX_PASSES 10]
     if {$setup_max_passes < 1} {
         set setup_max_passes 1
