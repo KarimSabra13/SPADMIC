@@ -1084,11 +1084,8 @@ proc mptdc_signoff_pg_policy_guard {} {
         if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
             lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1 for protected_ro_pg_via_stack"
         }
-        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
-            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0 expected 1 for protected_ro_pg_via_stack"
-        }
-        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
-            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0 expected 1 for protected_ro_pg_via_stack"
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0 for protected_ro_pg_via_stack"
         }
         if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 1]} {
             lappend failures "MPTDC_ENABLE_RO_PG_PROBE=0 expected 1 for protected_ro_pg_via_stack"
@@ -2134,13 +2131,10 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
     }
 
     if {[mptdc_signoff_pg_strategy_protected_ro_via_stack]} {
-        set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
-            -blockPin all -blockPinTarget {ring stripe} \
+        set commands [list [list sroute -connect {corePin} -nets $nets \
             -corePinTarget {ring stripe} -allowLayerChange 1]]
         if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
             foreach cmd [list \
-                [list sroute -connect {corePin} -nets $nets \
-                    -corePinTarget {ring stripe} -allowLayerChange 1] \
                 [list sroute -connect {corePin} -nets $nets \
                     -corePinTarget firstAfterRowEnd -allowLayerChange 1] \
             ] {
@@ -2710,6 +2704,47 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
         [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_topology_after_ro_pg_hookup.rpt] \
         POSTPLACE_PRE_ROUTE_AFTER_RO_PG_HOOKUP]
     puts $fh "POSTPLACE_PRE_ROUTE_PG_TOPOLOGY_AFTER_RO_PG_HOOKUP=$pg_topology_after_hookup"
+    if {[mptdc_signoff_pg_strategy_protected_ro_via_stack] &&
+        !$ro_pg_hookup_ok &&
+        [mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 1]} {
+        set reason ro_pg_hookup_failed_before_sroute
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_MODE_STATUS=SKIPPED"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_MODE_REASON=$reason"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_COMMAND_STATUS=SKIPPED"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_STATUS=FAIL"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_REASON=$reason"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FINAL_GATE=route_status.rpt"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_GATE_ACTION=FAIL_FAST"
+        set fail_def [file join [mptdc_signoff_def_dir] 03a_ro_pg_hookup_failed.def]
+        set fail_ckpt [file join [mptdc_signoff_checkpoint_dir] 03a_ro_pg_hookup_failed.enc]
+        set fail_ckpt_dat "${fail_ckpt}.dat"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_DEF=$fail_def"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT=$fail_ckpt"
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_DAT=$fail_ckpt_dat"
+        close $fh
+        set def_status PASS
+        set def_error ""
+        if {[catch {defOut $fail_def} def_error]} {
+            set def_status FAIL
+        }
+        set ckpt_status PASS
+        set ckpt_error ""
+        if {[catch {saveDesign $fail_ckpt} ckpt_error]} {
+            set ckpt_status FAIL
+        }
+        set fh [open $rpt a]
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_DEF_SAVE_STATUS=$def_status"
+        if {$def_error ne ""} {
+            puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_DEF_SAVE_ERROR=[mptdc_signoff_report_value $def_error]"
+        }
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_SAVE_STATUS=$ckpt_status"
+        if {$ckpt_error ne ""} {
+            puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_SAVE_ERROR=[mptdc_signoff_report_value $ckpt_error]"
+        }
+        puts $fh "POSTPLACE_PRE_ROUTE_SROUTE_FAILURE_CHECKPOINT_DAT_EXISTS=[expr {[file isdirectory $fail_ckpt_dat] ? 1 : 0}]"
+        close $fh
+        error "MPTDC_POSTPLACE_PRE_ROUTE_RO_PG_HOOKUP_FAILED: status=FAIL report=$rpt hookup_report=$ro_pg_hookup_rpt"
+    }
     mptdc_signoff_configure_sroute_mode $fh POSTPLACE_PRE_ROUTE
     set command_ok [mptdc_signoff_try_sroute_command $fh POSTPLACE_PRE_ROUTE_SROUTE [mptdc_signoff_postplace_sroute_commands {VDD VSS}]]
     set pg_dump_post [mptdc_signoff_dump_pg_terms \
@@ -3995,23 +4030,38 @@ proc mptdc_signoff_ro_pg_bridge_direction {pin_box target_box} {
 
 proc mptdc_signoff_ro_pg_bridge_area {pin_box target_box direction margin} {
     set pin_ctr [mptdc_signoff_box_center $pin_box]
+    set target_ctr [mptdc_signoff_box_center $target_box]
     set x_overlap [expr {max([lindex $pin_box 0], [lindex $target_box 0]) <= min([lindex $pin_box 2], [lindex $target_box 2])}]
     set y_overlap [expr {max([lindex $pin_box 1], [lindex $target_box 1]) <= min([lindex $pin_box 3], [lindex $target_box 3])}]
     if {$direction eq "horizontal" && $y_overlap} {
         set y [lindex $pin_ctr 1]
+        if {[lindex $target_ctr 0] < [lindex $pin_ctr 0]} {
+            set llx [expr {min([lindex $pin_box 0], [lindex $target_box 0]) - $margin}]
+            set urx [lindex $pin_box 2]
+        } else {
+            set llx [lindex $pin_box 0]
+            set urx [expr {max([lindex $pin_box 2], [lindex $target_box 2]) + $margin}]
+        }
         return [list \
-            [format %.3f [expr {min([lindex $pin_box 0], [lindex $target_box 0]) - $margin}]] \
+            [format %.3f $llx] \
             [format %.3f [expr {$y - $margin}]] \
-            [format %.3f [expr {max([lindex $pin_box 2], [lindex $target_box 2]) + $margin}]] \
+            [format %.3f $urx] \
             [format %.3f [expr {$y + $margin}]]]
     }
     if {$direction eq "vertical" && $x_overlap} {
         set x [lindex $pin_ctr 0]
+        if {[lindex $target_ctr 1] < [lindex $pin_ctr 1]} {
+            set lly [expr {min([lindex $pin_box 1], [lindex $target_box 1]) - $margin}]
+            set ury [lindex $pin_box 3]
+        } else {
+            set lly [lindex $pin_box 1]
+            set ury [expr {max([lindex $pin_box 3], [lindex $target_box 3]) + $margin}]
+        }
         return [list \
             [format %.3f [expr {$x - $margin}]] \
-            [format %.3f [expr {min([lindex $pin_box 1], [lindex $target_box 1]) - $margin}]] \
+            [format %.3f $lly] \
             [format %.3f [expr {$x + $margin}]] \
-            [format %.3f [expr {max([lindex $pin_box 3], [lindex $target_box 3]) + $margin}]]]
+            [format %.3f $ury]]
     }
     return [list \
         [format %.3f [expr {min([lindex $pin_box 0], [lindex $target_box 0]) - $margin}]] \

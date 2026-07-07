@@ -277,11 +277,8 @@ guard_pg_policy() {
       if ! is_truthy "${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-1}"; then
         failures+=("MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-unset} expected 1 for protected_ro_pg_via_stack")
       fi
-      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
-        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-unset} expected 1 for protected_ro_pg_via_stack")
-      fi
-      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
-        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-unset} expected 1 for protected_ro_pg_via_stack")
+      if is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0 for protected_ro_pg_via_stack")
       fi
       if ! is_truthy "${MPTDC_ENABLE_RO_PG_PROBE:-0}"; then
         failures+=("MPTDC_ENABLE_RO_PG_PROBE=${MPTDC_ENABLE_RO_PG_PROBE:-unset} expected 1 for protected_ro_pg_via_stack")
