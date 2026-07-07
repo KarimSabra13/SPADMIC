@@ -65,6 +65,7 @@ done
 
 cd "$REPO_ROOT"
 mptdc_pvs_check_git_head "$REPO_ROOT" "$EXPECTED_HEAD_VALUE"
+mptdc_pvs_prepend_known_cadence_bins
 
 REPORT_DIR="${RESULT_DIR:-$PWD}/reports"
 MANIFEST_DIR="${RESULT_DIR:-$PWD}/manifests"
@@ -121,7 +122,7 @@ for f in \
   "$LVS_TEMPLATE/.technology.rul" \
   "$LVS_TEMPLATE/pvslvsctl"
 do
-  mptdc_pvs_require_file "$f"
+  mptdc_pvs_require_existing_file "$f"
 done
 
 echo "PVS_TEMPLATE_AUDIT_STATUS=PASS" | tee "$MANIFEST_DIR/pvs_template_audit.status"

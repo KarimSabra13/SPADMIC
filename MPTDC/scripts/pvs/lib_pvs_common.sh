@@ -32,6 +32,11 @@ mptdc_pvs_require_file() {
   [[ -s "$path" ]] || mptdc_pvs_die "required file is empty: $path"
 }
 
+mptdc_pvs_require_existing_file() {
+  local path="$1"
+  [[ -f "$path" ]] || mptdc_pvs_die "required file does not exist: $path"
+}
+
 mptdc_pvs_require_dir() {
   local path="$1"
   [[ -d "$path" ]] || mptdc_pvs_die "required directory does not exist: $path"

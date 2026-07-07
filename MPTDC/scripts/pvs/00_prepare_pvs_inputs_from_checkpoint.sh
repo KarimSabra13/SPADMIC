@@ -239,7 +239,19 @@ puts "MPTDC_PVS_PREP_saveNetlist_phys_pg_ERR=$phys_err"
 
 if {[file exists $patched_streamout]} {
   puts "MPTDC_PVS_PREP_STREAMOUT_TEMPLATE=$patched_streamout"
-  source $patched_streamout
+  set ::env(OUT_DIR) $output_dir
+  set ::env(OUTPUT_DIR) $output_dir
+  set ::env(RESULT_DIR) [file dirname $output_dir]
+  set ::env(WORK_DIR) [file dirname $patched_streamout]
+  set ::env(TOP_CELL) $top_cell
+  set ::env(TOP_ONLY_GDS) $top_only_gds
+  set ::env(MERGED_GDS) $merged_gds
+  set ::env(PLAIN_V) $plain_v
+  set ::env(PG_V) $pg_v
+  set ::env(PHYS_PG_V) $phys_pg_v
+  set ::env(DCELL_GDS) $dcell_gds
+  set ::env(RO_GDS) $ro_gds
+  mptdc_pvs_try source_streamout [list source $patched_streamout]
 } elseif {[info exists ::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)] && $::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)} {
   set args [list $top_only_gds -libName DesignLib -units 1000 -mode ALL]
   if {$stream_map ne ""} { lappend args -mapFile $stream_map }
@@ -265,6 +277,10 @@ INNOVUS_RC=${PIPESTATUS[0]}
 echo "INNOVUS_RC=$INNOVUS_RC" | tee -a "$RUN_LOG"
 [[ "$INNOVUS_RC" -eq 0 ]] || exit "$INNOVUS_RC"
 
+if [[ ! -s "$TOP_ONLY_GDS" ]]; then
+  echo "WARN: optional top-only GDS was not produced or is empty: $TOP_ONLY_GDS" | tee -a "$RUN_LOG"
+fi
+mptdc_pvs_require_file "$MERGED_GDS"
 mptdc_pvs_require_file "$PG_V"
 "$SCRIPT_DIR/01_generate_lvs_source_pg_filtered.py" \
   --input "$PG_V" \

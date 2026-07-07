@@ -128,7 +128,7 @@ mptdc_pvs_require_file "$NEW_SRC"
 mptdc_pvs_require_file "$NEW_HCELL"
 mptdc_pvs_require_file "$DCELL_CDL"
 for f in "$OLD_LVS_RUN/run.pvs" "$OLD_LVS_RUN/.config.rul" "$OLD_LVS_RUN/.technology.rul" "$OLD_LVS_RUN/pvslvsctl"; do
-  mptdc_pvs_require_file "$f"
+  mptdc_pvs_require_existing_file "$f"
 done
 
 if [[ -e "$NEW_LVS_RUN" ]]; then

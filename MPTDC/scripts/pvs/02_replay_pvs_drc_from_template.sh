@@ -91,7 +91,7 @@ mptdc_pvs_require_clean_tracked_tree "$REPO_ROOT"
 mptdc_pvs_require_dir "$NEW_BASE"
 mptdc_pvs_require_file "$NEW_GDS"
 for f in "$OLD_DRC_RUN/run.pvs" "$OLD_DRC_RUN/.config.rul" "$OLD_DRC_RUN/.technology.rul"; do
-  mptdc_pvs_require_file "$f"
+  mptdc_pvs_require_existing_file "$f"
 done
 
 if [[ -e "$NEW_DRC_RUN" ]]; then
