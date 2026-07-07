@@ -67,6 +67,58 @@ That failure stopped before producing `mptdc_axis_core_merged_stdcell_ro6.gds`.
 It remains useful as wrapper-debug history, but it has been superseded by the
 manual real-RO6 PVS DRC evidence above.
 
+## Protected-LEF Free-Internal Launch Attempt
+
+The first protected-LEF/free-internal reroute attempt was launched from:
+
+```text
+attempt_date=2026-07-07T18:23 local server time
+source_head=8bcd8f62e375d7863c106d3e4b594eda265d5438
+run_id=mptdc_tc_ro6_realobs_freeint_reroute_20260707_182343
+protected_lef=/sim/ksabra/SPADMIC_work/lef/mptdc_tc_ro6_realobs_freeint_reroute_20260707_182343/RO_tune6_protected_pnr.lef
+protected_lef_summary=/sim/ksabra/SPADMIC_work/lef/mptdc_tc_ro6_realobs_freeint_reroute_20260707_182343/RO_tune6_protected_pnr.summary.rpt
+```
+
+The protected PnR LEF generation succeeded:
+
+```text
+PROXY_KIND=PROTECTED_PNR_REAL_OBS
+MACRO=RO_tune6
+PINS_SOURCE=19
+PINS_KEPT=19
+PINS_DROPPED=NONE
+OBS_COPIED=YES
+OBS_COUNT=1
+OBS_LAYERS=MET1 MET2 MET3 METTP
+METAL_OBS_LAYERS=MET1 MET2 MET3 METTP
+```
+
+The `PINS_DROPPED=NONE` result means the current source LEF already did not
+contain a `vdd!` alias pin. The important checks still passed: the generated LEF
+has a real `OBS` section and no `PIN vdd!`.
+
+Innovus did not launch in this attempt. The wrapper stopped immediately with:
+
+```text
+ERROR: unknown option: --run-id
+Usage:
+  server_run_innovus_mptdc_digital_signoff.sh <RUN_ID> [options]
+```
+
+This was a command-interface mistake, not a PnR, LEF, license, or Innovus
+failure. The wrapper historically required positional `RUN_ID`, and full Innovus
+execution also requires explicit review gates:
+
+```text
+MPTDC_DIGITAL_SIGNOFF_APPROVED=1
+MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
+--mode full_signoff
+```
+
+The wrapper has now been updated to accept `--run-id` and `--expected-head` as
+well, so the documented command style is consistent with the route-checkpoint
+wrappers and still protects against launching on the wrong git commit.
+
 ## New Decision
 
 Do a fresh digital reroute from the Genus handoff using a protected PnR-only RO
@@ -130,7 +182,11 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    blockage perimeter bands.
 
    ```bash
+   export O1_USE_REAL_RO_ABSTRACT=1
+   export O1_RO_CELL_NAME=RO_tune6
    export O1_RO_LEF_PATH="$PROTECTED_RO6_LEF"
+
+   export MPTDC_CLOSURE_SCOPE=TC_ONLY
    export MPTDC_PNR_FIX_RO_MACROS=1
    export MPTDC_PNR_CREATE_RO_HALOS=1
    export MPTDC_RO_PHASE_MIN_CLEARANCE_UM=5.0
@@ -143,10 +199,13 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=1
    export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0
    export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL=0
+   export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
+   export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 
    MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
      --run-id "$REROUTE_RUN_ID" \
-     --expected-head "$EXPECTED_HEAD"
+     --expected-head "$EXPECTED_HEAD" \
+     --mode full_signoff
    ```
 
 5. Inspect the new route evidence before any PVS assembly.

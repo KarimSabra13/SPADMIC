@@ -11,6 +11,7 @@ GENUS_RUN_ID="${MPTDC_GENUS_RUN_ID:-MPTDC_TC_Closure_Genus}"
 GENUS_RUN_DIR="${MPTDC_GENUS_RUN_DIR:-}"
 HANDOFF_DIR="${MPTDC_GENUS_HANDOFF_DIR:-}"
 MODE="${MPTDC_DIGITAL_SIGNOFF_MODE:-validate_only}"
+EXPECTED_HEAD="${MPTDC_EXPECTED_HEAD:-}"
 
 usage() {
   cat <<'USAGE'
@@ -18,6 +19,8 @@ Usage:
   server_run_innovus_mptdc_digital_signoff.sh <RUN_ID> [options]
 
 Options:
+  --run-id <id>           Run ID. Equivalent to the positional RUN_ID.
+  --expected-head <hash>  Require the checked-out git HEAD to match this hash.
   --genus-run-id <id>     Closed Genus run ID used to build the handoff.
   --genus-run-dir <path>  Explicit closed Genus run directory.
   --handoff-dir <path>    Explicit prepared handoff directory.
@@ -549,6 +552,14 @@ configure_xh018_stack() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --run-id)
+      RUN_ID="${2:?missing --run-id value}"
+      shift 2
+      ;;
+    --expected-head)
+      EXPECTED_HEAD="${2:?missing --expected-head value}"
+      shift 2
+      ;;
     --genus-run-id)
       GENUS_RUN_ID="${2:?missing --genus-run-id value}"
       shift 2
@@ -605,6 +616,18 @@ MANIFEST_DIR="$RESULT_DIR/manifests"
 mkdir -p "$LOG_DIR" "$REPORT_DIR" "$MANIFEST_DIR"
 RUN_LOG="$LOG_DIR/digital_signoff_wrapper.log"
 
+if [[ -n "$EXPECTED_HEAD" ]]; then
+  ACTUAL_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
+  if [[ "$ACTUAL_HEAD" != "$EXPECTED_HEAD" ]]; then
+    {
+      echo "ERROR: git HEAD mismatch before digital signoff launch."
+      echo "ACTUAL_HEAD=$ACTUAL_HEAD"
+      echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+    } | tee -a "$RUN_LOG"
+    exit 3
+  fi
+fi
+
 resolve_ro_handoff
 configure_xh018_stack
 export MPTDC_CLOSURE_SCOPE="${MPTDC_CLOSURE_SCOPE:-TC_ONLY}"
@@ -623,6 +646,7 @@ fi
   echo "repo: $REPO_ROOT"
   echo "branch: $(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   echo "head: $(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
+  echo "expected_head: ${EXPECTED_HEAD:-unset}"
   echo "mode: $MODE"
   echo "run_id: $RUN_ID"
   echo "result_dir: $RESULT_DIR"
