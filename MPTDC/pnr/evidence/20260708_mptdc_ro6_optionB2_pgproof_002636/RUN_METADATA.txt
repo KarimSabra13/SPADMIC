@@ -1,0 +1,8 @@
+RUN_ID=20260708_mptdc_ro6_optionB2_pgproof_002636
+RUN_DIR=/sim/ksabra/SPADMIC_work/innovus/20260708_mptdc_ro6_optionB2_pgproof_002636
+ARTIFACT_DIR=MPTDC/pnr/evidence/20260708_mptdc_ro6_optionB2_pgproof_002636
+SOURCE_COMMIT=ea2ad02e92f576236212388be17359d4e268f139
+BASE_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+PNR_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/optionB2_20260708_002635/RO_tune6.optionB2.lef
+PACKAGED_AT=2026-07-07T22:39:10Z
+NOTE=reports/logs/LEF patch summary only; checkpoints and binary implementation artifacts excluded

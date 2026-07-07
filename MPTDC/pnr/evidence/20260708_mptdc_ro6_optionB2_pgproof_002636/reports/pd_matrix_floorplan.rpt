@@ -1,0 +1,599 @@
+MPTDC O0 PD matrix floorplan
+===========================
+Generated: 2026-07-08 00:27:25 CEST
+Topology A: columns=slow/ns, rows=fast/nf
+Topology B remains documented and must be evaluated after real pin order arrives.
+
+PD box: 50.4 250.88 350.4 550.88
+Pitch x/y: 37.5 / 37.5
+PD_TILE_CONSTRAINT_MODE=none
+PD_TILE_APPLY_HIER_BOX=0
+PD_TILE_REGION_MARGIN_UM=0.0
+
+CELL u_core_gen_pd_row[0].gen_pd_col[0].u_pd ns=0 nf=0 origin=(50.4,250.88) tile_box=50.4 250.88 87.92 288.4
+  leaf_member_count=34
+  group_created mptdc_pd_tile_0_0
+  tile_region group=mptdc_pd_tile_0_0 member_count=34 box=50.4 250.88 87.92 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[0].gen_pd_col[1].u_pd ns=0 nf=1 origin=(50.4,288.4) tile_box=50.4 288.4 87.92 325.92
+  leaf_member_count=33
+  group_created mptdc_pd_tile_0_1
+  tile_region group=mptdc_pd_tile_0_1 member_count=33 box=50.4 288.4 87.92 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[0].gen_pd_col[2].u_pd ns=0 nf=2 origin=(50.4,325.92) tile_box=50.4 325.92 87.92 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_0_2
+  tile_region group=mptdc_pd_tile_0_2 member_count=33 box=50.4 325.92 87.92 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[0].gen_pd_col[3].u_pd ns=0 nf=3 origin=(50.4,363.44) tile_box=50.4 363.44 87.92 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_0_3
+  tile_region group=mptdc_pd_tile_0_3 member_count=32 box=50.4 363.44 87.92 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[0].gen_pd_col[4].u_pd ns=0 nf=4 origin=(50.4,400.96) tile_box=50.4 400.96 87.92 438.48
+  leaf_member_count=39
+  group_created mptdc_pd_tile_0_4
+  tile_region group=mptdc_pd_tile_0_4 member_count=39 box=50.4 400.96 87.92 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[0].gen_pd_col[5].u_pd ns=0 nf=5 origin=(50.4,438.48) tile_box=50.4 438.48 87.92 476.0
+  leaf_member_count=32
+  group_created mptdc_pd_tile_0_5
+  tile_region group=mptdc_pd_tile_0_5 member_count=32 box=50.4 438.48 87.92 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[0].gen_pd_col[6].u_pd ns=0 nf=6 origin=(50.4,476.0) tile_box=50.4 476.0 87.92 513.52
+  leaf_member_count=39
+  group_created mptdc_pd_tile_0_6
+  tile_region group=mptdc_pd_tile_0_6 member_count=39 box=50.4 476.0 87.92 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[0].gen_pd_col[7].u_pd ns=0 nf=7 origin=(50.4,513.52) tile_box=50.4 513.52 87.92 551.04
+  leaf_member_count=32
+  group_created mptdc_pd_tile_0_7
+  tile_region group=mptdc_pd_tile_0_7 member_count=32 box=50.4 513.52 87.92 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[0].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[0].u_pd ns=1 nf=0 origin=(87.92,250.88) tile_box=87.92 250.88 125.44 288.4
+  leaf_member_count=32
+  group_created mptdc_pd_tile_1_0
+  tile_region group=mptdc_pd_tile_1_0 member_count=32 box=87.92 250.88 125.44 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[1].u_pd ns=1 nf=1 origin=(87.92,288.4) tile_box=87.92 288.4 125.44 325.92
+  leaf_member_count=39
+  group_created mptdc_pd_tile_1_1
+  tile_region group=mptdc_pd_tile_1_1 member_count=39 box=87.92 288.4 125.44 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[2].u_pd ns=1 nf=2 origin=(87.92,325.92) tile_box=87.92 325.92 125.44 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_1_2
+  tile_region group=mptdc_pd_tile_1_2 member_count=33 box=87.92 325.92 125.44 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[3].u_pd ns=1 nf=3 origin=(87.92,363.44) tile_box=87.92 363.44 125.44 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_1_3
+  tile_region group=mptdc_pd_tile_1_3 member_count=32 box=87.92 363.44 125.44 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[4].u_pd ns=1 nf=4 origin=(87.92,400.96) tile_box=87.92 400.96 125.44 438.48
+  leaf_member_count=33
+  group_created mptdc_pd_tile_1_4
+  tile_region group=mptdc_pd_tile_1_4 member_count=33 box=87.92 400.96 125.44 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[5].u_pd ns=1 nf=5 origin=(87.92,438.48) tile_box=87.92 438.48 125.44 476.0
+  leaf_member_count=32
+  group_created mptdc_pd_tile_1_5
+  tile_region group=mptdc_pd_tile_1_5 member_count=32 box=87.92 438.48 125.44 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[6].u_pd ns=1 nf=6 origin=(87.92,476.0) tile_box=87.92 476.0 125.44 513.52
+  leaf_member_count=32
+  group_created mptdc_pd_tile_1_6
+  tile_region group=mptdc_pd_tile_1_6 member_count=32 box=87.92 476.0 125.44 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[1].gen_pd_col[7].u_pd ns=1 nf=7 origin=(87.92,513.52) tile_box=87.92 513.52 125.44 551.04
+  leaf_member_count=39
+  group_created mptdc_pd_tile_1_7
+  tile_region group=mptdc_pd_tile_1_7 member_count=39 box=87.92 513.52 125.44 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[1].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[0].u_pd ns=2 nf=0 origin=(125.44,250.88) tile_box=125.44 250.88 162.96 288.4
+  leaf_member_count=34
+  group_created mptdc_pd_tile_2_0
+  tile_region group=mptdc_pd_tile_2_0 member_count=34 box=125.44 250.88 162.96 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[1].u_pd ns=2 nf=1 origin=(125.44,288.4) tile_box=125.44 288.4 162.96 325.92
+  leaf_member_count=33
+  group_created mptdc_pd_tile_2_1
+  tile_region group=mptdc_pd_tile_2_1 member_count=33 box=125.44 288.4 162.96 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[2].u_pd ns=2 nf=2 origin=(125.44,325.92) tile_box=125.44 325.92 162.96 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_2_2
+  tile_region group=mptdc_pd_tile_2_2 member_count=33 box=125.44 325.92 162.96 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[3].u_pd ns=2 nf=3 origin=(125.44,363.44) tile_box=125.44 363.44 162.96 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_2_3
+  tile_region group=mptdc_pd_tile_2_3 member_count=32 box=125.44 363.44 162.96 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[4].u_pd ns=2 nf=4 origin=(125.44,400.96) tile_box=125.44 400.96 162.96 438.48
+  leaf_member_count=39
+  group_created mptdc_pd_tile_2_4
+  tile_region group=mptdc_pd_tile_2_4 member_count=39 box=125.44 400.96 162.96 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[5].u_pd ns=2 nf=5 origin=(125.44,438.48) tile_box=125.44 438.48 162.96 476.0
+  leaf_member_count=32
+  group_created mptdc_pd_tile_2_5
+  tile_region group=mptdc_pd_tile_2_5 member_count=32 box=125.44 438.48 162.96 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[6].u_pd ns=2 nf=6 origin=(125.44,476.0) tile_box=125.44 476.0 162.96 513.52
+  leaf_member_count=39
+  group_created mptdc_pd_tile_2_6
+  tile_region group=mptdc_pd_tile_2_6 member_count=39 box=125.44 476.0 162.96 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[2].gen_pd_col[7].u_pd ns=2 nf=7 origin=(125.44,513.52) tile_box=125.44 513.52 162.96 551.04
+  leaf_member_count=32
+  group_created mptdc_pd_tile_2_7
+  tile_region group=mptdc_pd_tile_2_7 member_count=32 box=125.44 513.52 162.96 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[2].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[0].u_pd ns=3 nf=0 origin=(162.96,250.88) tile_box=162.96 250.88 200.48 288.4
+  leaf_member_count=34
+  group_created mptdc_pd_tile_3_0
+  tile_region group=mptdc_pd_tile_3_0 member_count=34 box=162.96 250.88 200.48 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[1].u_pd ns=3 nf=1 origin=(162.96,288.4) tile_box=162.96 288.4 200.48 325.92
+  leaf_member_count=33
+  group_created mptdc_pd_tile_3_1
+  tile_region group=mptdc_pd_tile_3_1 member_count=33 box=162.96 288.4 200.48 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[2].u_pd ns=3 nf=2 origin=(162.96,325.92) tile_box=162.96 325.92 200.48 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_3_2
+  tile_region group=mptdc_pd_tile_3_2 member_count=33 box=162.96 325.92 200.48 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[3].u_pd ns=3 nf=3 origin=(162.96,363.44) tile_box=162.96 363.44 200.48 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_3_3
+  tile_region group=mptdc_pd_tile_3_3 member_count=32 box=162.96 363.44 200.48 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[4].u_pd ns=3 nf=4 origin=(162.96,400.96) tile_box=162.96 400.96 200.48 438.48
+  leaf_member_count=39
+  group_created mptdc_pd_tile_3_4
+  tile_region group=mptdc_pd_tile_3_4 member_count=39 box=162.96 400.96 200.48 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[5].u_pd ns=3 nf=5 origin=(162.96,438.48) tile_box=162.96 438.48 200.48 476.0
+  leaf_member_count=32
+  group_created mptdc_pd_tile_3_5
+  tile_region group=mptdc_pd_tile_3_5 member_count=32 box=162.96 438.48 200.48 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[6].u_pd ns=3 nf=6 origin=(162.96,476.0) tile_box=162.96 476.0 200.48 513.52
+  leaf_member_count=39
+  group_created mptdc_pd_tile_3_6
+  tile_region group=mptdc_pd_tile_3_6 member_count=39 box=162.96 476.0 200.48 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[3].gen_pd_col[7].u_pd ns=3 nf=7 origin=(162.96,513.52) tile_box=162.96 513.52 200.48 551.04
+  leaf_member_count=32
+  group_created mptdc_pd_tile_3_7
+  tile_region group=mptdc_pd_tile_3_7 member_count=32 box=162.96 513.52 200.48 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[3].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[0].u_pd ns=4 nf=0 origin=(200.48,250.88) tile_box=200.48 250.88 238.0 288.4
+  leaf_member_count=39
+  group_created mptdc_pd_tile_4_0
+  tile_region group=mptdc_pd_tile_4_0 member_count=39 box=200.48 250.88 238.0 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[1].u_pd ns=4 nf=1 origin=(200.48,288.4) tile_box=200.48 288.4 238.0 325.92
+  leaf_member_count=39
+  group_created mptdc_pd_tile_4_1
+  tile_region group=mptdc_pd_tile_4_1 member_count=39 box=200.48 288.4 238.0 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[2].u_pd ns=4 nf=2 origin=(200.48,325.92) tile_box=200.48 325.92 238.0 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_4_2
+  tile_region group=mptdc_pd_tile_4_2 member_count=33 box=200.48 325.92 238.0 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[3].u_pd ns=4 nf=3 origin=(200.48,363.44) tile_box=200.48 363.44 238.0 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_4_3
+  tile_region group=mptdc_pd_tile_4_3 member_count=32 box=200.48 363.44 238.0 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[4].u_pd ns=4 nf=4 origin=(200.48,400.96) tile_box=200.48 400.96 238.0 438.48
+  leaf_member_count=39
+  group_created mptdc_pd_tile_4_4
+  tile_region group=mptdc_pd_tile_4_4 member_count=39 box=200.48 400.96 238.0 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[5].u_pd ns=4 nf=5 origin=(200.48,438.48) tile_box=200.48 438.48 238.0 476.0
+  leaf_member_count=39
+  group_created mptdc_pd_tile_4_5
+  tile_region group=mptdc_pd_tile_4_5 member_count=39 box=200.48 438.48 238.0 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[6].u_pd ns=4 nf=6 origin=(200.48,476.0) tile_box=200.48 476.0 238.0 513.52
+  leaf_member_count=33
+  group_created mptdc_pd_tile_4_6
+  tile_region group=mptdc_pd_tile_4_6 member_count=33 box=200.48 476.0 238.0 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[4].gen_pd_col[7].u_pd ns=4 nf=7 origin=(200.48,513.52) tile_box=200.48 513.52 238.0 551.04
+  leaf_member_count=32
+  group_created mptdc_pd_tile_4_7
+  tile_region group=mptdc_pd_tile_4_7 member_count=32 box=200.48 513.52 238.0 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[4].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[0].u_pd ns=5 nf=0 origin=(238.0,250.88) tile_box=238.0 250.88 275.52 288.4
+  leaf_member_count=39
+  group_created mptdc_pd_tile_5_0
+  tile_region group=mptdc_pd_tile_5_0 member_count=39 box=238.0 250.88 275.52 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[1].u_pd ns=5 nf=1 origin=(238.0,288.4) tile_box=238.0 288.4 275.52 325.92
+  leaf_member_count=32
+  group_created mptdc_pd_tile_5_1
+  tile_region group=mptdc_pd_tile_5_1 member_count=32 box=238.0 288.4 275.52 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[2].u_pd ns=5 nf=2 origin=(238.0,325.92) tile_box=238.0 325.92 275.52 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_5_2
+  tile_region group=mptdc_pd_tile_5_2 member_count=33 box=238.0 325.92 275.52 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[3].u_pd ns=5 nf=3 origin=(238.0,363.44) tile_box=238.0 363.44 275.52 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_5_3
+  tile_region group=mptdc_pd_tile_5_3 member_count=32 box=238.0 363.44 275.52 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[4].u_pd ns=5 nf=4 origin=(238.0,400.96) tile_box=238.0 400.96 275.52 438.48
+  leaf_member_count=39
+  group_created mptdc_pd_tile_5_4
+  tile_region group=mptdc_pd_tile_5_4 member_count=39 box=238.0 400.96 275.52 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[5].u_pd ns=5 nf=5 origin=(238.0,438.48) tile_box=238.0 438.48 275.52 476.0
+  leaf_member_count=32
+  group_created mptdc_pd_tile_5_5
+  tile_region group=mptdc_pd_tile_5_5 member_count=32 box=238.0 438.48 275.52 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[6].u_pd ns=5 nf=6 origin=(238.0,476.0) tile_box=238.0 476.0 275.52 513.52
+  leaf_member_count=33
+  group_created mptdc_pd_tile_5_6
+  tile_region group=mptdc_pd_tile_5_6 member_count=33 box=238.0 476.0 275.52 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[5].gen_pd_col[7].u_pd ns=5 nf=7 origin=(238.0,513.52) tile_box=238.0 513.52 275.52 551.04
+  leaf_member_count=32
+  group_created mptdc_pd_tile_5_7
+  tile_region group=mptdc_pd_tile_5_7 member_count=32 box=238.0 513.52 275.52 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[5].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[0].u_pd ns=6 nf=0 origin=(275.52,250.88) tile_box=275.52 250.88 313.04 288.4
+  leaf_member_count=39
+  group_created mptdc_pd_tile_6_0
+  tile_region group=mptdc_pd_tile_6_0 member_count=39 box=275.52 250.88 313.04 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[1].u_pd ns=6 nf=1 origin=(275.52,288.4) tile_box=275.52 288.4 313.04 325.92
+  leaf_member_count=32
+  group_created mptdc_pd_tile_6_1
+  tile_region group=mptdc_pd_tile_6_1 member_count=32 box=275.52 288.4 313.04 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[2].u_pd ns=6 nf=2 origin=(275.52,325.92) tile_box=275.52 325.92 313.04 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_6_2
+  tile_region group=mptdc_pd_tile_6_2 member_count=33 box=275.52 325.92 313.04 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[3].u_pd ns=6 nf=3 origin=(275.52,363.44) tile_box=275.52 363.44 313.04 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_6_3
+  tile_region group=mptdc_pd_tile_6_3 member_count=32 box=275.52 363.44 313.04 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[4].u_pd ns=6 nf=4 origin=(275.52,400.96) tile_box=275.52 400.96 313.04 438.48
+  leaf_member_count=39
+  group_created mptdc_pd_tile_6_4
+  tile_region group=mptdc_pd_tile_6_4 member_count=39 box=275.52 400.96 313.04 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[5].u_pd ns=6 nf=5 origin=(275.52,438.48) tile_box=275.52 438.48 313.04 476.0
+  leaf_member_count=32
+  group_created mptdc_pd_tile_6_5
+  tile_region group=mptdc_pd_tile_6_5 member_count=32 box=275.52 438.48 313.04 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[6].u_pd ns=6 nf=6 origin=(275.52,476.0) tile_box=275.52 476.0 313.04 513.52
+  leaf_member_count=33
+  group_created mptdc_pd_tile_6_6
+  tile_region group=mptdc_pd_tile_6_6 member_count=33 box=275.52 476.0 313.04 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[6].gen_pd_col[7].u_pd ns=6 nf=7 origin=(275.52,513.52) tile_box=275.52 513.52 313.04 551.04
+  leaf_member_count=32
+  group_created mptdc_pd_tile_6_7
+  tile_region group=mptdc_pd_tile_6_7 member_count=32 box=275.52 513.52 313.04 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[6].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[0].u_pd ns=7 nf=0 origin=(313.04,250.88) tile_box=313.04 250.88 350.56 288.4
+  leaf_member_count=32
+  group_created mptdc_pd_tile_7_0
+  tile_region group=mptdc_pd_tile_7_0 member_count=32 box=313.04 250.88 350.56 288.4 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[0].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[1].u_pd ns=7 nf=1 origin=(313.04,288.4) tile_box=313.04 288.4 350.56 325.92
+  leaf_member_count=39
+  group_created mptdc_pd_tile_7_1
+  tile_region group=mptdc_pd_tile_7_1 member_count=39 box=313.04 288.4 350.56 325.92 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[1].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[2].u_pd ns=7 nf=2 origin=(313.04,325.92) tile_box=313.04 325.92 350.56 363.44
+  leaf_member_count=33
+  group_created mptdc_pd_tile_7_2
+  tile_region group=mptdc_pd_tile_7_2 member_count=33 box=313.04 325.92 350.56 363.44 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[2].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[3].u_pd ns=7 nf=3 origin=(313.04,363.44) tile_box=313.04 363.44 350.56 400.96
+  leaf_member_count=32
+  group_created mptdc_pd_tile_7_3
+  tile_region group=mptdc_pd_tile_7_3 member_count=32 box=313.04 363.44 350.56 400.96 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[3].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[4].u_pd ns=7 nf=4 origin=(313.04,400.96) tile_box=313.04 400.96 350.56 438.48
+  leaf_member_count=33
+  group_created mptdc_pd_tile_7_4
+  tile_region group=mptdc_pd_tile_7_4 member_count=33 box=313.04 400.96 350.56 438.48 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[4].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[5].u_pd ns=7 nf=5 origin=(313.04,438.48) tile_box=313.04 438.48 350.56 476.0
+  leaf_member_count=32
+  group_created mptdc_pd_tile_7_5
+  tile_region group=mptdc_pd_tile_7_5 member_count=32 box=313.04 438.48 350.56 476.0 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[5].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[6].u_pd ns=7 nf=6 origin=(313.04,476.0) tile_box=313.04 476.0 350.56 513.52
+  leaf_member_count=32
+  group_created mptdc_pd_tile_7_6
+  tile_region group=mptdc_pd_tile_7_6 member_count=32 box=313.04 476.0 350.56 513.52 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[6].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+CELL u_core_gen_pd_row[7].gen_pd_col[7].u_pd ns=7 nf=7 origin=(313.04,513.52) tile_box=313.04 513.52 350.56 551.04
+  leaf_member_count=39
+  group_created mptdc_pd_tile_7_7
+  tile_region group=mptdc_pd_tile_7_7 member_count=39 box=313.04 513.52 350.56 551.04 constraint=MEMBERS_ONLY status=PASS
+  skipped: setObjFPlanBox Instance {u_core_gen_pd_row[7].gen_pd_col[7].u_pd} disabled_by_MPTDC_PNR_PD_TILE_APPLY_HIER_BOX
+  leaf_tile_box_constraints=0
+  leaf_preplacements=0
+  leaf_preplacement_failures=0
+  leaf_pack_overflow=0
+
+Tile box constraints accepted: 0
+Tile box constraints skipped: 64
+Tile regions accepted: 64
+Tile region failures: 0
+Tile region assignments: 2196
+Leaf tile box constraints accepted: 0
+Leaf preplacements accepted: 0
+Leaf preplacement failures: 0
+Leaf pack overflows: 0
+If tile region count is below 64, the synthesized PD hierarchy could not be decomposed into leaf-cell groups for physical matrix enforcement.

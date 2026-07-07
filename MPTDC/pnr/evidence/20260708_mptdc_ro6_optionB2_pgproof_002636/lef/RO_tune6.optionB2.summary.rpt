@@ -1,0 +1,18 @@
+# MPTDC RO_tune6 Option B2 PG Corridor Patch
+PATCHED_AT_UTC=2026-07-07T22:26:35Z
+SOURCE_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+VIA_STACK_TSV=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_ro6_optionB_newlef_pgproof_235237/reports/ro_pg_via_stack_access.tsv
+OUTPUT_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/optionB2_20260708_002635/RO_tune6.optionB2.lef
+MACRO=RO_tune6
+ROWS_TOTAL=4
+ROWS_CONSUMED=4
+WINDOW_LAYER_COUNT=4
+WINDOW_COUNT=14
+OBS_RECTS_IN=171
+OBS_RECTS_OUT=186
+OBS_RECTS_CUT=20
+PATCH_STATUS=PASS
+ROW_1=u_core_u_osc_fast_u_ro_tune4/VDD orient=MX inst_ll=50.4,120.4 window=-79.94 -70.942 -60.525 -68.942 layers=MET1,MET2,MET3,METTP
+ROW_2=u_core_u_osc_fast_u_ro_tune4/VSS orient=MX inst_ll=50.4,120.4 window=-75.94 -49.715 -62.035 -47.715 layers=MET2,MET3,METTP
+ROW_3=u_core_u_osc_slow_u_ro_tune4/VDD orient=R0 inst_ll=50.4,610.4 window=-79.94 -70.943 -60.525 -68.943 layers=MET1,MET2,MET3,METTP
+ROW_4=u_core_u_osc_slow_u_ro_tune4/VSS orient=R0 inst_ll=50.4,610.4 window=-75.94 -49.715 -62.035 -47.715 layers=MET2,MET3,METTP
