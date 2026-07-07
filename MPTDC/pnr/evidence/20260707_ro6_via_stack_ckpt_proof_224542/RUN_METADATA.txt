@@ -1,0 +1,7 @@
+RUN_ID=mptdc_ro6_via_stack_ckpt_proof_20260707_224542
+RUN_DIR=/sim/ksabra/SPADMIC_work/innovus/mptdc_ro6_via_stack_ckpt_proof_20260707_224542
+ARTIFACT_DIR=MPTDC/pnr/evidence/20260707_ro6_via_stack_ckpt_proof_224542
+SOURCE_COMMIT=2c9856d6fc7c994ea0ddd7dccf3a147d84744e64
+PACKAGED_AT=2026-07-07T20:55:41Z
+
+NOTE=reports/logs/manifests only; checkpoints and large binary database artifacts intentionally excluded

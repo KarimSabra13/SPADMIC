@@ -1,0 +1,332 @@
+**WARN: (IMPFP-3803):	Command "reportRoute" is obsolete and has been replaced by "report_route". 
+The obsolete command still works in this release, but to avoid this warning and to ensure compatibility with future releases, update your script to use "report_route".
+Type 'man IMPFP-3803' for more detail.
+#WARNING (NRIG-1303) The congestion map does not match the GCELL grid. Clearing the congestion map.
+#WARNING (NRDB-856)   around ( 248.2200 191.7090 ) of NET u_core_pd_hit_level[58] on LAYER MET3 is off Y minimum feature grid (0.0050).
+#WARNING (NRDB-856)   around ( 220.7350 191.7090 ) of NET u_core_pd_hit_level[58] on LAYER MET2 is off Y minimum feature grid (0.0050).
+#WARNING (NRDB-856)   around ( 225.5050 191.7090 ) of NET u_core_pd_hit_level[58] on LAYER MET3 is off Y minimum feature grid (0.0050).
+#WARNING (NRDB-856)   around ( 220.7350 195.4680 ) of NET u_core_pd_hit_level[58] on LAYER MET2 is off Y minimum feature grid (0.0050).
+#WARNING (NRDB-856)   around ( 248.2200 191.7090 ) of NET u_core_pd_hit_level[58] on LAYER MET2 is off Y minimum feature grid (0.0050).
+#WARNING (NRDB-856)   around ( 220.7350 191.7090 ) of NET u_core_pd_hit_level[58] on LAYER MET3 is off Y minimum feature grid (0.0050).
+#num needed restored net=0
+#need_extraction net=0 (total=16350)
+#
+# statistics:
+#Cpu time = 00:00:01
+#Elapsed time = 00:00:01
+#Increased memory = -9.64 (MB)
+#Total memory = 1919.88 (MB)
+#Peak memory = 1929.80 (MB)
+#Number of warnings = 7
+#Total number of warnings = 7
+#Number of fails = 0
+#Total number of fails = 0
+#Complete  on Tue Jul  7 22:46:23 2026
+#
+*** Statistics for net list mptdc_axis_core ***
+Number of cells      = 14307
+Number of nets       = 14950
+Number of tri-nets   = 0
+Number of degen nets = 2
+Number of pins       = 54572
+Number of i/os       = 55
+
+Number of nets with    1 terms = 2 (0.0%)
+Number of nets with    2 terms = 9165 (61.3%)
+Number of nets with    3 terms = 4039 (27.0%)
+Number of nets with    4 terms = 767 (5.1%)
+Number of nets with    5 terms = 171 (1.1%)
+Number of nets with    6 terms = 65 (0.4%)
+Number of nets with    7 terms = 69 (0.5%)
+Number of nets with    8 terms = 141 (0.9%)
+Number of nets with    9 terms = 77 (0.5%)
+Number of nets with >=10 terms = 454 (3.0%)
+
+*** 168 Primitives used:
+Primitive OR6JIHDX1 (1 insts)
+Primitive OR4JIHDX0 (1 insts)
+Primitive OR3JIHDX1 (3 insts)
+Primitive OR3JIHDX0 (1 insts)
+Primitive OR2JIHDX4 (1 insts)
+Primitive OR2JIHDX2 (2 insts)
+Primitive OR2JIHDX1 (51 insts)
+Primitive OR2JIHDX0 (4 insts)
+Primitive ON32JIHDX0 (3 insts)
+Primitive ON321JIHDX0 (4 insts)
+Primitive ON31JIHDX0 (9 insts)
+Primitive ON311JIHDX0 (13 insts)
+Primitive ON22JIHDX1 (152 insts)
+Primitive ON22JIHDX0 (284 insts)
+Primitive ON222JIHDX0 (1 insts)
+Primitive ON221JIHDX0 (7 insts)
+Primitive ON21JIHDX1 (20 insts)
+Primitive ON21JIHDX0 (6 insts)
+Primitive ON211JIHDX0 (6 insts)
+Primitive OA32JIHDX1 (1 insts)
+Primitive OA321JIHDX1 (1 insts)
+Primitive OA31JIHDX1 (2 insts)
+Primitive OA22JIHDX0 (1 insts)
+Primitive OA21JIHDX1 (2 insts)
+Primitive OA211JIHDX0 (6 insts)
+Primitive NO6I5JIHDX2 (3 insts)
+Primitive NO6I5JIHDX1 (35 insts)
+Primitive NO6I2JIHDX1 (1 insts)
+Primitive NO5I3JIHDX1 (1 insts)
+Primitive NO5I3JIHDX0 (1 insts)
+Primitive NO5I2JIHDX2 (1 insts)
+Primitive NO5I1JIHDX1 (1 insts)
+Primitive NO4I3JIHDX2 (1 insts)
+Primitive NO4I2JIHDX0 (2 insts)
+Primitive NO3JIHDX1 (3 insts)
+Primitive NO3JIHDX0 (4 insts)
+Primitive NO3I2JIHDX2 (1 insts)
+Primitive NO3I2JIHDX1 (6 insts)
+Primitive NO3I2JIHDX0 (3 insts)
+Primitive NO3I1JIHDX1 (1 insts)
+Primitive NO3I1JIHDX0 (10 insts)
+Primitive NO2JIHDX4 (1 insts)
+Primitive NO2JIHDX2 (13 insts)
+Primitive NO2JIHDX1 (661 insts)
+Primitive NO2JIHDX0 (28 insts)
+Primitive NO2I1JIHDX4 (1 insts)
+Primitive NO2I1JIHDX2 (6 insts)
+Primitive NO2I1JIHDX1 (103 insts)
+Primitive NO2I1JIHDX0 (79 insts)
+Primitive NO22JIHDX0 (24 insts)
+Primitive NA6I5JIHDX1 (9 insts)
+Primitive NA5I4JIHDX1 (10 insts)
+Primitive NA5I4JIHDX0 (1 insts)
+Primitive NA5I3JIHDX1 (34 insts)
+Primitive NA4JIHDX4 (1 insts)
+Primitive NA4JIHDX2 (7 insts)
+Primitive NA4JIHDX1 (173 insts)
+Primitive NA4JIHDX0 (1 insts)
+Primitive NA4I3JIHDX1 (1 insts)
+Primitive NA4I2JIHDX1 (4 insts)
+Primitive NA4I1JIHDX1 (2 insts)
+Primitive NA3JIHDX4 (1 insts)
+Primitive NA3JIHDX2 (1 insts)
+Primitive NA3JIHDX1 (9 insts)
+Primitive NA3JIHDX0 (5 insts)
+Primitive NA3I2JIHDX2 (2 insts)
+Primitive NA3I2JIHDX1 (16 insts)
+Primitive NA3I2JIHDX0 (3 insts)
+Primitive NA3I1JIHDX4 (1 insts)
+Primitive NA3I1JIHDX2 (1 insts)
+Primitive NA3I1JIHDX1 (3 insts)
+Primitive NA3I1JIHDX0 (6 insts)
+Primitive NA2JIHDX4 (3 insts)
+Primitive NA2JIHDX2 (12 insts)
+Primitive NA2JIHDX1 (84 insts)
+Primitive NA2JIHDX0 (24 insts)
+Primitive NA2I1JIHDX2 (9 insts)
+Primitive NA2I1JIHDX1 (43 insts)
+Primitive NA22JIHDX2 (1 insts)
+Primitive NA22JIHDX1 (73 insts)
+Primitive NA22JIHDX0 (43 insts)
+Primitive MU2JIHDX2 (1 insts)
+Primitive MU2JIHDX0 (2660 insts)
+Primitive MU2IJIHDX2 (1 insts)
+Primitive MU2IJIHDX1 (661 insts)
+Primitive MU2IJIHDX0 (58 insts)
+Primitive INJIHDX8 (1 insts)
+Primitive INJIHDX6 (8 insts)
+Primitive INJIHDX4 (19 insts)
+Primitive INJIHDX3 (68 insts)
+Primitive INJIHDX2 (67 insts)
+Primitive INJIHDX1 (328 insts)
+Primitive INJIHDX0 (48 insts)
+Primitive HAJIHDX1 (1 insts)
+Primitive HAJIHDX0 (39 insts)
+Primitive FAJIHDX0 (30 insts)
+Primitive EO3JIHDX1 (3 insts)
+Primitive EO3JIHDX0 (3 insts)
+Primitive EO2JIHDX1 (3 insts)
+Primitive EO2JIHDX0 (9 insts)
+Primitive EN3JIHDX0 (12 insts)
+Primitive EN2JIHDX1 (1 insts)
+Primitive EN2JIHDX0 (10 insts)
+Primitive DLLQJIHDX1 (4 insts)
+Primitive DLHQJIHDX1 (3 insts)
+Primitive DFRSQJIHDX4 (18 insts)
+Primitive DFRSQJIHDX2 (1 insts)
+Primitive DFRSQJIHDX1 (15 insts)
+Primitive DFRSJIHDX2 (12 insts)
+Primitive DFRSJIHDX1 (38 insts)
+Primitive DFRRQJIHDX2 (11 insts)
+Primitive DFRRQJIHDX1 (357 insts)
+Primitive DFRRJIHDX1 (117 insts)
+Primitive DFRQJIHDX2 (10 insts)
+Primitive DFRQJIHDX1 (3886 insts)
+Primitive DFRJIHDX2 (85 insts)
+Primitive DFRJIHDX1 (276 insts)
+Primitive CAGJIHDX1 (12 insts)
+Primitive BUJIHDX8 (42 insts)
+Primitive BUJIHDX6 (3 insts)
+Primitive BUJIHDX4 (30 insts)
+Primitive BUJIHDX3 (11 insts)
+Primitive BUJIHDX2 (48 insts)
+Primitive BUJIHDX12 (47 insts)
+Primitive BUJIHDX1 (70 insts)
+Primitive BUJIHDX0 (4 insts)
+Primitive AO32JIHDX0 (3 insts)
+Primitive AO31JIHDX1 (1 insts)
+Primitive AO31JIHDX0 (3 insts)
+Primitive AO311JIHDX0 (2 insts)
+Primitive AO22JIHDX1 (1176 insts)
+Primitive AO22JIHDX0 (29 insts)
+Primitive AO222JIHDX2 (5 insts)
+Primitive AO222JIHDX1 (23 insts)
+Primitive AO222JIHDX0 (12 insts)
+Primitive AO221JIHDX0 (6 insts)
+Primitive AO21JIHDX1 (9 insts)
+Primitive AO21JIHDX0 (3 insts)
+Primitive AO211JIHDX1 (8 insts)
+Primitive AO211JIHDX0 (2 insts)
+Primitive AND6JIHDX2 (2 insts)
+Primitive AND6JIHDX1 (33 insts)
+Primitive AND5JIHDX2 (1 insts)
+Primitive AND4JIHDX2 (4 insts)
+Primitive AND4JIHDX1 (65 insts)
+Primitive AND4JIHDX0 (1 insts)
+Primitive AND3JIHDX2 (2 insts)
+Primitive AND3JIHDX1 (7 insts)
+Primitive AND2JIHDX4 (9 insts)
+Primitive AND2JIHDX2 (50 insts)
+Primitive AND2JIHDX1 (148 insts)
+Primitive AND2JIHDX0 (1 insts)
+Primitive AN32JIHDX1 (1 insts)
+Primitive AN321JIHDX0 (3 insts)
+Primitive AN31JIHDX1 (2 insts)
+Primitive AN31JIHDX0 (3 insts)
+Primitive AN311JIHDX0 (7 insts)
+Primitive AN22JIHDX4 (1 insts)
+Primitive AN22JIHDX1 (1293 insts)
+Primitive AN22JIHDX0 (2 insts)
+Primitive AN222JIHDX1 (12 insts)
+Primitive AN221JIHDX1 (68 insts)
+Primitive AN221JIHDX0 (1 insts)
+Primitive AN21JIHDX1 (11 insts)
+Primitive AN21JIHDX0 (7 insts)
+Primitive AN211JIHDX1 (1 insts)
+Primitive AN211JIHDX0 (2 insts)
+Primitive RO_tune6 (2 insts)
+************
+*** Net length and connection length statistics (cell mptdc_axis_core) ***
+
+Total net length = 5.741e+05 (2.807e+05 2.934e+05)
+
+Avg net length = 3.840e+01 (sigma = 9.290e+01)
+Sqrt of avg square net length = 1.005e+02
+
+Avg connection length = 1.449e+01 (sigma = 2.926e+01)
+Sqrt of avg square connection length = 3.265e+01
+
+Net and connection length distribution:
+
+[length   range   ]      #net #connection
+[0.00e+00 1.12e+01]:     5845     9365
+[1.12e+01 2.24e+01]:     5157     3655
+[2.24e+01 3.36e+01]:     1406      539
+[3.36e+01 4.48e+01]:      512      313
+[4.48e+01 5.60e+01]:      326      257
+[5.60e+01 6.72e+01]:      226      165
+[6.72e+01 7.84e+01]:      172      109
+[7.84e+01 8.96e+01]:      115       86
+[8.96e+01 1.01e+02]:      103       61
+[1.01e+02 1.12e+02]:       84       41
+[1.12e+02 1.23e+02]:       70       44
+[1.23e+02 1.34e+02]:       60       41
+[1.34e+02 1.46e+02]:       40       29
+[1.46e+02 1.57e+02]:       37       20
+[1.57e+02 1.68e+02]:       37       22
+[1.68e+02 1.79e+02]:       39       15
+[1.79e+02 1.90e+02]:       37       19
+[1.90e+02 2.02e+02]:       36       15
+[2.02e+02 2.13e+02]:       28       10
+[2.13e+02 2.24e+02]:       30        9
+[2.24e+02 2.35e+02]:       21       13
+[2.35e+02 2.46e+02]:       28       15
+[2.46e+02 2.58e+02]:       27       14
+[2.58e+02 2.69e+02]:       18        7
+[2.69e+02 2.80e+02]:       29       14
+[2.80e+02 2.91e+02]:       22        4
+[2.91e+02 3.02e+02]:       23        9
+[3.02e+02 3.14e+02]:       13        6
+[3.14e+02 3.25e+02]:       19        4
+[3.25e+02 3.36e+02]:       18        3
+[3.36e+02 3.47e+02]:       12        3
+[3.47e+02 3.58e+02]:       15        1
+[3.58e+02 3.70e+02]:       15        3
+[3.70e+02 3.81e+02]:       11        2
+[3.81e+02 3.92e+02]:       25        2
+[3.92e+02 4.03e+02]:       20        2
+[4.03e+02 4.14e+02]:       10        1
+[4.14e+02 4.26e+02]:       20        1
+[4.26e+02 4.37e+02]:       19        2
+[4.37e+02 4.48e+02]:       24        1
+[4.48e+02 4.59e+02]:       16        1
+[4.59e+02 4.70e+02]:        8        0
+[4.70e+02 4.82e+02]:       17        1
+[4.82e+02 4.93e+02]:        6        0
+[4.93e+02 5.04e+02]:       13        2
+[5.04e+02 5.15e+02]:       10        1
+[5.15e+02 5.26e+02]:        3        2
+[5.26e+02 5.38e+02]:        6        1
+[5.38e+02 5.49e+02]:        8        3
+[5.49e+02 5.60e+02]:        4        0
+[5.60e+02 5.71e+02]:        5        4
+[5.71e+02 5.82e+02]:        4        0
+[5.82e+02 5.94e+02]:        7        3
+[5.94e+02 6.05e+02]:        8        0
+[6.05e+02 6.16e+02]:        6        2
+[6.16e+02 6.27e+02]:        7        1
+[6.27e+02 6.38e+02]:        4        0
+[6.38e+02 6.50e+02]:        2        0
+[6.50e+02 6.61e+02]:       11        1
+[6.61e+02 6.72e+02]:        2        0
+[6.72e+02 6.83e+02]:        2        2
+[6.83e+02 6.94e+02]:        3        2
+[6.94e+02 7.06e+02]:        1        0
+[7.06e+02 7.17e+02]:        4        0
+[7.17e+02 7.28e+02]:        1        0
+[7.28e+02 7.39e+02]:        1        0
+[7.39e+02 7.50e+02]:        4        1
+[7.50e+02 7.62e+02]:        2        0
+[7.73e+02 7.84e+02]:        1        0
+[7.95e+02 8.06e+02]:        3        0
+[8.06e+02 8.18e+02]:        1        0
+[8.18e+02 8.29e+02]:        2        0
+[8.29e+02 8.40e+02]:        1        0
+[8.51e+02 8.62e+02]:        1        0
+[8.62e+02 8.74e+02]:        1        0
+[8.74e+02 8.85e+02]:        1        0
+[8.85e+02 8.96e+02]:        1        0
+[8.96e+02 9.07e+02]:        2        0
+[9.07e+02 9.18e+02]:        1        0
+[9.18e+02 9.30e+02]:        1        1
+[9.52e+02 9.63e+02]:        1        0
+[9.63e+02 9.74e+02]:        1        0
+[9.74e+02 9.86e+02]:        1        0
+[9.86e+02 9.97e+02]:        1        0
+[9.97e+02 1.01e+03]:        1        0
+[1.01e+03 1.02e+03]:        1        0
+[1.02e+03 1.03e+03]:        1        0
+[1.03e+03 1.04e+03]:        1        0
+[1.04e+03 1.05e+03]:        2        0
+[1.05e+03 1.06e+03]:        1        0
+[1.08e+03 1.09e+03]:        2        0
+[1.09e+03 1.10e+03]:        1        0
+[1.11e+06 infinity]:        6        0
+
+
+Total number of long connections = 0
+Io: nrCon=0
+
+
+Total length: 7.325e+05um, number of vias: 136408
+M1(H) length: 7.840e+00um, number of vias: 54500
+M2(V) length: 3.139e+05um, number of vias: 77307
+M3(H) length: 3.500e+05um, number of vias: 4601
+M4(V) length: 6.864e+04um
+

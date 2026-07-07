@@ -1,0 +1,4 @@
+# checkpoint repair command 1
+COMMAND=mptdc_ckpt_source_tcl /tmp/mptdc_ro6_via_stack_ckpt_proof_20260707_224542.payload.tcl
+HELPER_RESULT=/tmp/mptdc_ro6_via_stack_ckpt_proof_20260707_224542.payload.tcl
+REPORT_STATUS=PASS
