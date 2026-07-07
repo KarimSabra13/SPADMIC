@@ -968,6 +968,9 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_RO_PG_HOOKUP_MARGIN_UM 1.0
         MPTDC_RO_PG_HOOKUP_SPACING_UM 2.0
         MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM 5000.0
+        MPTDC_RO_PG_VIA_STACK_LAYERS {MET1 MET2 MET3 METTP}
+        MPTDC_RO_PG_VIA_STACK_TARGET_LAYERS {METTP MET3 MET2 MET1}
+        MPTDC_RO_PG_VIA_STACK_AREA_MARGIN_UM 0.4
         MPTDC_FILLER_ADD_FILLERS_WITH_DRC 0
         MPTDC_REQUIRE_DRC_SAFE_FILLER 1
         MPTDC_ENABLE_ROUTE_GATE_RECOVERY 1
@@ -1002,14 +1005,18 @@ proc mptdc_signoff_pg_strategy_ro_hookup_blockpin_probe {} {
     return [expr {[mptdc_signoff_pg_strategy] eq "conservative_ro_hookup_blockpin_probe"}]
 }
 
+proc mptdc_signoff_pg_strategy_protected_ro_via_stack {} {
+    return [expr {[mptdc_signoff_pg_strategy] eq "protected_ro_pg_via_stack"}]
+}
+
 proc mptdc_signoff_pg_policy_guard {} {
     if {[mptdc_signoff_env_truthy MPTDC_ALLOW_LEGACY_PG_TOPOLOGY 0]} {
         return
     }
     set failures [list]
     set strategy [mptdc_signoff_pg_strategy]
-    if {[lsearch -exact {conservative_ro_hookup conservative_ro_hookup_blockpin_probe innovus_sroute_golden_ro manual_ro_pg_core_sroute} $strategy] < 0} {
-        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, or manual_ro_pg_core_sroute"
+    if {[lsearch -exact {conservative_ro_hookup conservative_ro_hookup_blockpin_probe innovus_sroute_golden_ro manual_ro_pg_core_sroute protected_ro_pg_via_stack} $strategy] < 0} {
+        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, manual_ro_pg_core_sroute, or protected_ro_pg_via_stack"
     }
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair]]
     if {[lsearch -exact {mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss simple_vdd_vss_pair vdd_vss_pair left_vdd_right_vss} $style] < 0} {
@@ -1072,6 +1079,31 @@ proc mptdc_signoff_pg_policy_guard {} {
         }
         if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
             lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean or RO-filtered before route"
+        }
+    } elseif {$strategy eq "protected_ro_pg_via_stack"} {
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1 for protected_ro_pg_via_stack"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=0 expected 1 for protected_ro_pg_via_stack"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0 expected 1 for protected_ro_pg_via_stack"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_PROBE=0 expected 1 for protected_ro_pg_via_stack"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_HOOKUP=0 expected 1 for protected_ro_pg_via_stack"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 1]} {
+            lappend failures "MPTDC_REQUIRE_RO_PG_HOOKUP=0 expected 1 for protected_ro_pg_via_stack"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_MACRO_PATCH 0]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_MACRO_PATCH=1 expected 0 for protected_ro_pg_via_stack"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
+            lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean before route"
         }
     } elseif {$strategy eq "conservative_ro_hookup_blockpin_probe"} {
         if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
@@ -2101,6 +2133,25 @@ proc mptdc_signoff_postplace_sroute_commands {nets} {
         return $commands
     }
 
+    if {[mptdc_signoff_pg_strategy_protected_ro_via_stack]} {
+        set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
+            -blockPin all -blockPinTarget {ring stripe} \
+            -corePinTarget {ring stripe} -allowLayerChange 1]]
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
+            foreach cmd [list \
+                [list sroute -connect {corePin} -nets $nets \
+                    -corePinTarget {ring stripe} -allowLayerChange 1] \
+                [list sroute -connect {corePin} -nets $nets \
+                    -corePinTarget firstAfterRowEnd -allowLayerChange 1] \
+            ] {
+                if {[lsearch -exact $commands $cmd] < 0} {
+                    lappend commands $cmd
+                }
+            }
+        }
+        return $commands
+    }
+
     if {[mptdc_signoff_pg_strategy_ro_hookup_blockpin_probe]} {
         set commands [list [list sroute -connect {corePin blockPin} -nets $nets \
             -blockPin all -blockPinTarget {ring stripe} \
@@ -2707,6 +2758,7 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     lassign [mptdc_signoff_capture_to_file_selected $special_rpt [mptdc_signoff_pg_connectivity_commands {VDD VSS}]] special_capture_ok special_capture_cmd
     set special_detail_rpt [file join [mptdc_signoff_report_dir] postplace_pre_route_pg_topology_after_sroute_verify_special.rpt]
     set special_bad [mptdc_signoff_pg_connectivity_report_has_errors $special_rpt $special_detail_rpt POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY]
+    mptdc_signoff_finalize_ro_pg_hookup_proof $ro_pg_hookup_rpt $special_bad
     set dangling_only [mptdc_signoff_special_connectivity_dangling_only_status $special_rpt $special_detail_rpt]
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DETAIL_REPORT=$special_detail_rpt"
@@ -3981,6 +4033,280 @@ proc mptdc_signoff_ro_pg_stripe_commands {net layer direction coord area width s
     return $commands
 }
 
+proc mptdc_signoff_ro_pg_stack_layers {} {
+    set layers [list]
+    foreach layer [mptdc_signoff_env MPTDC_RO_PG_VIA_STACK_LAYERS {MET1 MET2 MET3 METTP}] {
+        lappend layers [string toupper $layer]
+    }
+    return $layers
+}
+
+proc mptdc_signoff_ro_pg_target_layers {} {
+    set layers [list]
+    foreach layer [mptdc_signoff_env MPTDC_RO_PG_VIA_STACK_TARGET_LAYERS {METTP MET3 MET2 MET1}] {
+        lappend layers [string toupper $layer]
+    }
+    return $layers
+}
+
+proc mptdc_signoff_ro_pg_layer_index {layer} {
+    set layer [string toupper $layer]
+    set idx 0
+    foreach item [mptdc_signoff_ro_pg_stack_layers] {
+        if {$item eq $layer} {
+            return $idx
+        }
+        incr idx
+    }
+    return -1
+}
+
+proc mptdc_signoff_ro_pg_layers_between {from_layer to_layer} {
+    set layers [mptdc_signoff_ro_pg_stack_layers]
+    set from_idx [mptdc_signoff_ro_pg_layer_index $from_layer]
+    set to_idx [mptdc_signoff_ro_pg_layer_index $to_layer]
+    if {$from_idx < 0 || $to_idx < 0} {
+        return [list]
+    }
+    set out [list]
+    if {$from_idx <= $to_idx} {
+        for {set i $from_idx} {$i <= $to_idx} {incr i} {
+            lappend out [lindex $layers $i]
+        }
+    } else {
+        for {set i $from_idx} {$i >= $to_idx} {incr i -1} {
+            lappend out [lindex $layers $i]
+        }
+    }
+    return $out
+}
+
+proc mptdc_signoff_ro_pg_box_intersection {a b} {
+    if {![mptdc_signoff_box_valid $a] || ![mptdc_signoff_box_valid $b]} {
+        return [list]
+    }
+    set llx [expr {max([lindex $a 0], [lindex $b 0])}]
+    set lly [expr {max([lindex $a 1], [lindex $b 1])}]
+    set urx [expr {min([lindex $a 2], [lindex $b 2])}]
+    set ury [expr {min([lindex $a 3], [lindex $b 3])}]
+    if {$urx <= $llx || $ury <= $lly} {
+        return [list]
+    }
+    return [list $llx $lly $urx $ury]
+}
+
+proc mptdc_signoff_ro_pg_format_box {box} {
+    if {![mptdc_signoff_box_valid $box]} {
+        return ""
+    }
+    return [list \
+        [format %.3f [lindex $box 0]] \
+        [format %.3f [lindex $box 1]] \
+        [format %.3f [lindex $box 2]] \
+        [format %.3f [lindex $box 3]]]
+}
+
+proc mptdc_signoff_ro_pg_lef_macro_geometry {} {
+    set lef_data [mptdc_signoff_ro_pg_lef_pin_rows]
+    if {[dict get $lef_data status] ne "PASS"} {
+        return [dict create status FAIL reason [dict get $lef_data reason] origin [list 0 0] size [list]]
+    }
+    return [dict create status PASS origin [dict get $lef_data origin] size [dict get $lef_data size]]
+}
+
+proc mptdc_signoff_ro_pg_lef_obs_rows {} {
+    set lef [mptdc_signoff_env O1_RO_LEF_PATH ""]
+    if {$lef eq "" || ![file exists $lef]} {
+        return [dict create status FAIL reason missing_lef rows [list]]
+    }
+    set geom [mptdc_signoff_ro_pg_lef_macro_geometry]
+    if {[dict get $geom status] ne "PASS"} {
+        return [dict create status FAIL reason [dict get $geom reason] rows [list]]
+    }
+    set macro [mptdc_signoff_ro_macro_name]
+    set fh [open $lef r]
+    set in_prop 0
+    set in_macro 0
+    set in_obs 0
+    set pin ""
+    set layer ""
+    set rows [list]
+    while {[gets $fh raw] >= 0} {
+        set line [string trim $raw]
+        if {$line eq ""} { continue }
+        if {[regexp -nocase {^PROPERTYDEFINITIONS[[:space:]]*$} $line]} {
+            set in_prop 1
+            continue
+        }
+        if {$in_prop} {
+            if {[regexp -nocase {^END[[:space:]]+PROPERTYDEFINITIONS[[:space:]]*$} $line]} {
+                set in_prop 0
+            }
+            continue
+        }
+        if {!$in_macro} {
+            if {[regexp {^MACRO[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> name] &&
+                $name eq $macro} {
+                set in_macro 1
+            }
+            continue
+        }
+        if {$pin eq "" && !$in_obs &&
+            [regexp {^END[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> name] &&
+            $name eq $macro} {
+            break
+        }
+        if {!$in_obs && [regexp {^PIN[[:space:]]+([^[:space:];]+)} $line -> name]} {
+            set pin $name
+            continue
+        }
+        if {$pin ne "" &&
+            [regexp {^END[[:space:]]+([^[:space:];]+)[[:space:]]*$} $line -> name] &&
+            $name eq $pin} {
+            set pin ""
+            set layer ""
+            continue
+        }
+        if {$pin eq "" && [regexp -nocase {^OBS[[:space:]]*$} $line]} {
+            set in_obs 1
+            set layer ""
+            continue
+        }
+        if {$in_obs && [regexp -nocase {^END[[:space:]]*$} $line]} {
+            set in_obs 0
+            set layer ""
+            continue
+        }
+        if {[regexp {^LAYER[[:space:]]+([^[:space:];]+)} $line -> name]} {
+            set layer [string toupper $name]
+            continue
+        }
+        if {$in_obs && $layer ne "" &&
+            [regexp {^RECT[[:space:]]+([-+0-9.]+)[[:space:]]+([-+0-9.]+)[[:space:]]+([-+0-9.]+)[[:space:]]+([-+0-9.]+)[[:space:]]*;} $line -> x1 y1 x2 y2]} {
+            lappend rows [dict create layer $layer \
+                box [mptdc_signoff_ro_pg_normalize_box [list $x1 $y1 $x2 $y2]]]
+        }
+    }
+    close $fh
+    return [dict create status PASS reason ok rows $rows origin [dict get $geom origin] size [dict get $geom size]]
+}
+
+proc mptdc_signoff_ro_pg_all_obs_shapes_from_lef {} {
+    set obs_data [mptdc_signoff_ro_pg_lef_obs_rows]
+    if {[dict get $obs_data status] ne "PASS"} {
+        return [list]
+    }
+    set out [list]
+    set origin [dict get $obs_data origin]
+    set size [dict get $obs_data size]
+    foreach inst [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]] {
+        set inst_box [mptdc_signoff_cell_box $inst]
+        if {![mptdc_signoff_box_valid $inst_box]} { continue }
+        set orient [mptdc_signoff_cell_orient $inst]
+        foreach row [dict get $obs_data rows] {
+            set abs_box [mptdc_signoff_ro_pg_lef_box_to_abs [dict get $row box] \
+                $inst_box $orient $origin $size]
+            lappend out [dict create inst $inst layer [dict get $row layer] box $abs_box source "lef_obs:$orient"]
+        }
+    }
+    return $out
+}
+
+proc mptdc_signoff_ro_pg_access_obs_clear {inst stack_layers access_box pin_box} {
+    if {![mptdc_signoff_box_valid $access_box]} {
+        return [dict create status FAIL reason invalid_access_box]
+    }
+    set stack [list]
+    foreach layer $stack_layers {
+        lappend stack [string toupper $layer]
+    }
+    set eps 0.000001
+    set violations [list]
+    foreach obs [mptdc_signoff_ro_pg_all_obs_shapes_from_lef] {
+        if {[dict get $obs inst] ne $inst} { continue }
+        set layer [string toupper [dict get $obs layer]]
+        if {[lsearch -exact $stack $layer] < 0} { continue }
+        set overlap [mptdc_signoff_box_overlap_area $access_box [dict get $obs box]]
+        if {$overlap eq "" || $overlap <= $eps} { continue }
+        set pin_overlap [mptdc_signoff_box_overlap_area $pin_box [dict get $obs box]]
+        if {$pin_overlap eq ""} { set pin_overlap 0.0 }
+        if {$overlap > ($pin_overlap + $eps)} {
+            lappend violations "$layer:[mptdc_signoff_ro_pg_format_box [dict get $obs box]]:overlap=[format %.6f $overlap]"
+        }
+    }
+    if {[llength $violations] > 0} {
+        return [dict create status FAIL reason obs_overlap_outside_pin violations $violations]
+    }
+    return [dict create status PASS reason clear]
+}
+
+proc mptdc_signoff_ro_pg_nearest_target_prefer_layers {net pin_box preferred_layers max_distance} {
+    set nh ""
+    catch {set nh [dbGet top.nets.name $net -p]}
+    if {$nh eq "" || $nh eq "0x0"} {
+        return [dict create found 0 reason missing_net]
+    }
+    if {[catch {set swires [dbGet $nh.sWires]} err]} {
+        return [dict create found 0 reason "swire_query_failed:$err"]
+    }
+    set fallback [dict create found 0 reason no_swire_target]
+    set fallback_dist 1.0e30
+    foreach preferred_layer $preferred_layers {
+        set preferred_layer [string toupper $preferred_layer]
+        set best [dict create found 0 reason no_target_within_search]
+        set best_dist 1.0e30
+        foreach sw $swires {
+            if {![mptdc_signoff_ro_pg_valid_handle $sw]} { continue }
+            set shape UNKNOWN
+            set layer UNKNOWN
+            set width UNKNOWN
+            set box [list]
+            catch {set shape [dbGet $sw.shape]}
+            catch {set layer [string toupper [dbGet $sw.layer.name]]}
+            catch {set width [dbGet $sw.width]}
+            catch {set box [mptdc_signoff_flat_box [dbGet $sw.box]]}
+            if {$layer ne $preferred_layer || ![mptdc_signoff_box_valid $box]} {
+                continue
+            }
+            set dist [mptdc_signoff_box_clearance $pin_box $box]
+            if {$dist eq ""} { continue }
+            if {$dist < $fallback_dist} {
+                set fallback_dist $dist
+                set fallback [dict create found 1 in_range 0 handle $sw shape $shape layer $layer width $width box $box distance $dist]
+            }
+            if {$dist <= $max_distance && $dist < $best_dist} {
+                set best_dist $dist
+                set best [dict create found 1 in_range 1 handle $sw shape $shape layer $layer width $width box $box distance $dist]
+            }
+        }
+        if {[dict get $best found]} {
+            return $best
+        }
+    }
+    if {[dict get $fallback found]} {
+        dict set fallback reason nearest_target_out_of_range
+        return $fallback
+    }
+    return $fallback
+}
+
+proc mptdc_signoff_ro_pg_via_commands {net bottom_layer top_layer area} {
+    set area [mptdc_signoff_ro_pg_format_box $area]
+    return [list \
+        [list editPowerVia -add_vias 1 -nets [list $net] -bottom_layer $bottom_layer -top_layer $top_layer -area $area] \
+        [list editPowerVia -add_vias 1 -net $net -bottom_layer $bottom_layer -top_layer $top_layer -area $area] \
+        [list editPowerVia -add_vias 1 -nets [list $net] -bottomLayer $bottom_layer -topLayer $top_layer -area $area] \
+        [list editPowerVia -add_vias 1 -net $net -bottomLayer $bottom_layer -topLayer $top_layer -area $area] \
+        [list editPowerVia -add_vias 1 -nets [list $net] -area $area] \
+        [list editPowerVia -add_vias 1 -net $net -area $area]]
+}
+
+proc mptdc_signoff_ro_pg_append_tsv {path fields} {
+    set fh [open $path a]
+    puts $fh [join $fields "\t"]
+    close $fh
+}
+
 proc mptdc_signoff_ro_pg_marker_near_pin {marker_box pin_rows search} {
     if {![mptdc_signoff_box_valid $marker_box]} { return 0 }
     foreach row $pin_rows {
@@ -4098,7 +4424,238 @@ proc mptdc_signoff_ro_pg_probe {path {label RO_PG_PROBE}} {
     return $path
 }
 
+proc mptdc_signoff_ro_pg_via_stack_hookup {} {
+    set rpt [file join [mptdc_signoff_report_dir] ro_pg_via_stack_status.rpt]
+    set access_tsv [file join [mptdc_signoff_report_dir] ro_pg_via_stack_access.tsv]
+    file mkdir [file dirname $rpt]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC Protected RO PG Via-Stack Status"
+    puts $fh "RO_PG_HOOKUP_STRATEGY=protected_ro_pg_via_stack"
+    puts $fh "RO_PG_HOOKUP_ENABLE=[mptdc_signoff_env MPTDC_ENABLE_RO_PG_HOOKUP 1]"
+    puts $fh "RO_PG_HOOKUP_REQUIRED=[mptdc_signoff_env MPTDC_REQUIRE_RO_PG_HOOKUP 1]"
+    puts $fh "RO_PG_VIA_STACK_LAYER_ORDER=[join [mptdc_signoff_ro_pg_stack_layers] { }]"
+    puts $fh "RO_PG_VIA_STACK_TARGET_LAYERS=[join [mptdc_signoff_ro_pg_target_layers] { }]"
+    puts $fh "RO_PG_VIA_STACK_ACCESS_TSV=$access_tsv"
+    puts $fh "RO_PG_HOOKUP_PASS_MEANING=constructed_access_pending_downstream_raw_special_connectivity_proof"
+    puts $fh "RO_PG_HOOKUP_REQUIRED_DOWNSTREAM_PROOF=verifyConnectivity -type special -nets {VDD VSS}"
+    if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 1]} {
+        puts $fh "RO_PG_HOOKUP_STATUS=SKIPPED"
+        puts $fh "RO_PG_HOOKUP_REASON=disabled_by_env"
+        close $fh
+        return [list 1 $rpt]
+    }
+    set schema [mptdc_signoff_ro_pg_shape_schema_status]
+    if {![dict get $schema supported]} {
+        puts $fh "RO_PG_HOOKUP_STATUS=FAIL"
+        puts $fh "RO_PG_HOOKUP_REASON=[dict get $schema reason]"
+        if {[dict exists $schema detail]} {
+            puts $fh "RO_PG_HOOKUP_SCHEMA_DETAIL=[dict get $schema detail]"
+        }
+        close $fh
+        return [list 0 $rpt]
+    }
+
+    set search [mptdc_signoff_env_double MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0]
+    set margin [mptdc_signoff_env_double MPTDC_RO_PG_HOOKUP_MARGIN_UM 1.0]
+    set via_margin [mptdc_signoff_env_double MPTDC_RO_PG_VIA_STACK_AREA_MARGIN_UM 0.4]
+    set spacing [mptdc_signoff_env_double MPTDC_RO_PG_HOOKUP_SPACING_UM 2.0]
+    set set_distance [mptdc_signoff_env_double MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM 5000.0]
+    puts $fh "RO_PG_HOOKUP_SEARCH_UM=$search"
+    puts $fh "RO_PG_HOOKUP_MARGIN_UM=$margin"
+    puts $fh "RO_PG_VIA_STACK_AREA_MARGIN_UM=$via_margin"
+    puts $fh "RO_PG_HOOKUP_SPACING_UM=$spacing"
+    puts $fh "RO_PG_HOOKUP_SET_DISTANCE_UM=$set_distance"
+
+    set rows [mptdc_signoff_ro_pg_all_pin_shapes]
+    puts $fh "RO_PG_PIN_SHAPE_COUNT=[llength $rows]"
+    puts $fh "RO_PG_PIN_SHAPE_SOURCES=[join [mptdc_signoff_ro_pg_shape_source_counts $rows] { }]"
+    set tsv_fh [open $access_tsv w]
+    puts $tsv_fh "idx\tterminal\tinst\tpin\tnet\tpin_layer\tpin_box\ttarget_status\ttarget_layer\ttarget_distance_um\ttarget_box\tstack_layers\taccess_box\tvia_area\tstatus\treason"
+    close $tsv_fh
+
+    set expected [dict create]
+    foreach inst [mptdc_signoff_collect_cells [mptdc_signoff_ro_cell_patterns]] {
+        foreach spec [mptdc_signoff_ro_pg_supply_specs] {
+            dict set expected "$inst/[lindex $spec 0]" 0
+        }
+    }
+    set failures [list]
+    set created_stripes 0
+    set created_vias 0
+    set rejected_obs 0
+    set idx 0
+    foreach row $rows {
+        incr idx
+        set inst [dict get $row inst]
+        set pin [dict get $row pin]
+        set net [dict get $row net]
+        set layer [string toupper [dict get $row layer]]
+        set pin_box [dict get $row box]
+        set terminal "$inst/$pin"
+        set item_label [mptdc_signoff_report_token "RO_PG_VIA_${idx}_${pin}_${layer}"]
+        if {[dict exists $expected $terminal] && [dict get $expected $terminal]} {
+            mptdc_signoff_ro_pg_append_tsv $access_tsv [list $idx $terminal $inst $pin $net $layer [mptdc_signoff_ro_pg_format_box $pin_box] SKIPPED_ALREADY_CONNECTED "" "" "" "" "" "" SKIPPED already_connected]
+            continue
+        }
+        puts $fh ""
+        puts $fh "${item_label}_TERMINAL=$terminal"
+        puts $fh "${item_label}_NET=$net"
+        puts $fh "${item_label}_PIN_LAYER=$layer"
+        puts $fh "${item_label}_PIN_BOX=[mptdc_signoff_ro_pg_format_box $pin_box]"
+        set target [mptdc_signoff_ro_pg_nearest_target_prefer_layers \
+            $net $pin_box [mptdc_signoff_ro_pg_target_layers] $search]
+        if {![dict get $target found]} {
+            set reason [dict get $target reason]
+            puts $fh "${item_label}_STATUS=FAIL"
+            puts $fh "${item_label}_REASON=$reason"
+            lappend failures "$terminal:$layer:$reason"
+            mptdc_signoff_ro_pg_append_tsv $access_tsv [list $idx $terminal $inst $pin $net $layer [mptdc_signoff_ro_pg_format_box $pin_box] FAIL "" "" "" "" "" "" FAIL $reason]
+            continue
+        }
+        set target_layer [string toupper [dict get $target layer]]
+        set target_box [dict get $target box]
+        set target_dist [format %.3f [dict get $target distance]]
+        set target_status [expr {[dict get $target in_range] ? "PASS" : "OUT_OF_RANGE"}]
+        puts $fh "${item_label}_TARGET_STATUS=$target_status"
+        puts $fh "${item_label}_TARGET_LAYER=$target_layer"
+        puts $fh "${item_label}_TARGET_DISTANCE_UM=$target_dist"
+        puts $fh "${item_label}_TARGET_BOX=[mptdc_signoff_ro_pg_format_box $target_box]"
+        if {![dict get $target in_range]} {
+            set reason "target_out_of_range:$target_dist"
+            lappend failures "$terminal:$layer:$reason"
+            mptdc_signoff_ro_pg_append_tsv $access_tsv [list $idx $terminal $inst $pin $net $layer [mptdc_signoff_ro_pg_format_box $pin_box] $target_status $target_layer $target_dist [mptdc_signoff_ro_pg_format_box $target_box] "" "" "" FAIL $reason]
+            continue
+        }
+        set stack_layers [mptdc_signoff_ro_pg_layers_between $layer $target_layer]
+        puts $fh "${item_label}_STACK_LAYERS=[join $stack_layers { }]"
+        if {[llength $stack_layers] == 0} {
+            set reason "unsupported_layer_stack:${layer}_to_${target_layer}"
+            puts $fh "${item_label}_STATUS=FAIL"
+            puts $fh "${item_label}_REASON=$reason"
+            lappend failures "$terminal:$reason"
+            mptdc_signoff_ro_pg_append_tsv $access_tsv [list $idx $terminal $inst $pin $net $layer [mptdc_signoff_ro_pg_format_box $pin_box] $target_status $target_layer $target_dist [mptdc_signoff_ro_pg_format_box $target_box] "" "" "" FAIL $reason]
+            continue
+        }
+
+        set direction [mptdc_signoff_ro_pg_bridge_direction $pin_box $target_box]
+        set access_box [mptdc_signoff_ro_pg_bridge_area $pin_box $target_box $direction $margin]
+        set via_area [mptdc_signoff_expand_box $pin_box $via_margin]
+        set target_overlap [mptdc_signoff_ro_pg_box_intersection $access_box $target_box]
+        if {[mptdc_signoff_box_valid $target_overlap]} {
+            set via_area [mptdc_signoff_ro_pg_box_intersection $access_box \
+                [mptdc_signoff_expand_box $target_overlap $via_margin]]
+        } else {
+            set via_area [mptdc_signoff_ro_pg_box_intersection $access_box $via_area]
+        }
+        if {![mptdc_signoff_box_valid $via_area]} {
+            set via_area [mptdc_signoff_expand_box [mptdc_signoff_ro_pg_box_intersection $access_box $pin_box] $via_margin]
+        }
+        puts $fh "${item_label}_BRIDGE_DIRECTION=$direction"
+        puts $fh "${item_label}_ACCESS_BOX=[mptdc_signoff_ro_pg_format_box $access_box]"
+        puts $fh "${item_label}_VIA_AREA=[mptdc_signoff_ro_pg_format_box $via_area]"
+        set obs_status [mptdc_signoff_ro_pg_access_obs_clear $inst $stack_layers $access_box $pin_box]
+        puts $fh "${item_label}_OBS_CLEAR_STATUS=[dict get $obs_status status]"
+        puts $fh "${item_label}_OBS_CLEAR_REASON=[dict get $obs_status reason]"
+        if {[dict get $obs_status status] ne "PASS"} {
+            incr rejected_obs
+            set reason [dict get $obs_status reason]
+            if {[dict exists $obs_status violations]} {
+                puts $fh "${item_label}_OBS_VIOLATIONS=[join [dict get $obs_status violations] { | }]"
+                set reason "$reason:[join [dict get $obs_status violations] {|}]"
+            }
+            lappend failures "$terminal:$reason"
+            mptdc_signoff_ro_pg_append_tsv $access_tsv [list $idx $terminal $inst $pin $net $layer [mptdc_signoff_ro_pg_format_box $pin_box] $target_status $target_layer $target_dist [mptdc_signoff_ro_pg_format_box $target_box] [join $stack_layers ,] [mptdc_signoff_ro_pg_format_box $access_box] [mptdc_signoff_ro_pg_format_box $via_area] FAIL $reason]
+            continue
+        }
+
+        set stripe_ok 1
+        set pin_ctr [mptdc_signoff_box_center $pin_box]
+        set coord [expr {$direction eq "horizontal" ? [lindex $pin_ctr 1] : [lindex $pin_ctr 0]}]
+        foreach stack_layer $stack_layers {
+            set width [mptdc_signoff_ro_pg_layer_width $stack_layer]
+            set ok [mptdc_signoff_try_pg_command $fh ${item_label}_${stack_layer}_STRIPE \
+                [mptdc_signoff_ro_pg_stripe_commands $net $stack_layer $direction $coord $access_box $width $spacing $set_distance]]
+            if {$ok} {
+                incr created_stripes
+            } else {
+                set stripe_ok 0
+                lappend failures "$terminal:$stack_layer:stripe_failed"
+            }
+        }
+        set via_ok 1
+        for {set i 0} {$i < ([llength $stack_layers] - 1)} {incr i} {
+            set bottom [lindex $stack_layers $i]
+            set top [lindex $stack_layers [expr {$i + 1}]]
+            set cmd_bottom $bottom
+            set cmd_top $top
+            if {[mptdc_signoff_ro_pg_layer_index $cmd_bottom] > [mptdc_signoff_ro_pg_layer_index $cmd_top]} {
+                set cmd_bottom $top
+                set cmd_top $bottom
+            }
+            set ok [mptdc_signoff_try_pg_command $fh ${item_label}_${bottom}_TO_${top}_VIA \
+                [mptdc_signoff_ro_pg_via_commands $net $cmd_bottom $cmd_top $via_area]]
+            if {$ok} {
+                incr created_vias
+            } else {
+                set via_ok 0
+                lappend failures "$terminal:${bottom}_to_${top}:via_failed"
+            }
+        }
+        if {$stripe_ok && $via_ok} {
+            puts $fh "${item_label}_STATUS=PASS"
+            if {[dict exists $expected $terminal]} {
+                dict set expected $terminal 1
+            }
+            mptdc_signoff_ro_pg_append_tsv $access_tsv [list $idx $terminal $inst $pin $net $layer [mptdc_signoff_ro_pg_format_box $pin_box] $target_status $target_layer $target_dist [mptdc_signoff_ro_pg_format_box $target_box] [join $stack_layers ,] [mptdc_signoff_ro_pg_format_box $access_box] [mptdc_signoff_ro_pg_format_box $via_area] PASS constructed]
+        } else {
+            puts $fh "${item_label}_STATUS=FAIL"
+            mptdc_signoff_ro_pg_append_tsv $access_tsv [list $idx $terminal $inst $pin $net $layer [mptdc_signoff_ro_pg_format_box $pin_box] $target_status $target_layer $target_dist [mptdc_signoff_ro_pg_format_box $target_box] [join $stack_layers ,] [mptdc_signoff_ro_pg_format_box $access_box] [mptdc_signoff_ro_pg_format_box $via_area] FAIL command_failed]
+        }
+    }
+
+    set expected_count [llength [dict keys $expected]]
+    set connected_count 0
+    set missing [list]
+    foreach terminal [lsort [dict keys $expected]] {
+        if {[dict get $expected $terminal]} {
+            incr connected_count
+        } else {
+            lappend missing $terminal
+        }
+    }
+    puts $fh ""
+    puts $fh "RO_PG_VIA_STACK_EXPECTED_TERMINAL_COUNT=$expected_count"
+    puts $fh "RO_PG_VIA_STACK_CONNECTED_TERMINAL_COUNT=$connected_count"
+    puts $fh "RO_PG_VIA_STACK_MISSING_TERMINALS=[join $missing { }]"
+    puts $fh "RO_PG_VIA_STACK_CREATED_STRIPE_COUNT=$created_stripes"
+    puts $fh "RO_PG_VIA_STACK_CREATED_VIA_PAIR_COUNT=$created_vias"
+    puts $fh "RO_PG_VIA_STACK_OBS_REJECTED_COUNT=$rejected_obs"
+    if {[llength $rows] == 0} {
+        lappend failures no_ro_pg_pin_shapes_found
+    }
+    if {$expected_count == 0} {
+        lappend failures no_expected_ro_pg_terminals
+    }
+    if {$connected_count != $expected_count} {
+        lappend failures "missing_terminals:[join $missing ,]"
+    }
+    if {[llength $failures] > 0} {
+        puts $fh "RO_PG_VIA_STACK_CONSTRUCTION_STATUS=FAIL"
+        puts $fh "RO_PG_HOOKUP_STATUS=FAIL"
+        puts $fh "RO_PG_HOOKUP_FAILURES=[join $failures { | }]"
+        close $fh
+        return [list 0 $rpt]
+    }
+    puts $fh "RO_PG_VIA_STACK_CONSTRUCTION_STATUS=PASS"
+    puts $fh "RO_PG_HOOKUP_STATUS=PENDING_CONNECTIVITY_PROOF"
+    close $fh
+    return [list 1 $rpt]
+}
+
 proc mptdc_signoff_ro_pg_hookup {} {
+    if {[mptdc_signoff_pg_strategy_protected_ro_via_stack]} {
+        return [mptdc_signoff_ro_pg_via_stack_hookup]
+    }
     set rpt [file join [mptdc_signoff_report_dir] ro_pg_hookup_status.rpt]
     set fh [open $rpt w]
     puts $fh "# MPTDC RO PG Hookup Status"
@@ -4221,6 +4778,31 @@ proc mptdc_signoff_ro_pg_hookup {} {
     puts $fh "RO_PG_HOOKUP_STATUS=PASS"
     close $fh
     return [list 1 $rpt]
+}
+
+proc mptdc_signoff_finalize_ro_pg_hookup_proof {hookup_rpt special_bad} {
+    if {![mptdc_signoff_pg_strategy_protected_ro_via_stack]} {
+        return
+    }
+    if {$hookup_rpt eq ""} {
+        return
+    }
+    set fh [open $hookup_rpt a]
+    puts $fh ""
+    puts $fh "RO_PG_HOOKUP_CONNECTIVITY_PROOF_LABEL=POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY"
+    puts $fh "RO_PG_HOOKUP_CONNECTIVITY_RAW_BAD=[lindex $special_bad 2]"
+    puts $fh "RO_PG_HOOKUP_CONNECTIVITY_BAD=[lindex $special_bad 0]"
+    puts $fh "RO_PG_HOOKUP_CONNECTIVITY_FILTER_STATUS=[lindex $special_bad 3]"
+    puts $fh "RO_PG_HOOKUP_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
+    puts $fh "RO_PG_HOOKUP_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
+    if {![lindex $special_bad 2] && ![lindex $special_bad 0]} {
+        puts $fh "RO_PG_HOOKUP_CONNECTIVITY_PROOF_STATUS=PASS"
+        puts $fh "RO_PG_HOOKUP_STATUS=PASS"
+    } else {
+        puts $fh "RO_PG_HOOKUP_CONNECTIVITY_PROOF_STATUS=FAIL"
+        puts $fh "RO_PG_HOOKUP_STATUS=FAIL"
+    }
+    close $fh
 }
 
 proc mptdc_signoff_capture_to_file {path commands} {

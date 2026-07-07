@@ -192,6 +192,9 @@ apply_recovery_defaults() {
   export MPTDC_RO_PG_HOOKUP_MARGIN_UM="${MPTDC_RO_PG_HOOKUP_MARGIN_UM:-1.0}"
   export MPTDC_RO_PG_HOOKUP_SPACING_UM="${MPTDC_RO_PG_HOOKUP_SPACING_UM:-2.0}"
   export MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM="${MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM:-5000.0}"
+  export MPTDC_RO_PG_VIA_STACK_LAYERS="${MPTDC_RO_PG_VIA_STACK_LAYERS:-MET1 MET2 MET3 METTP}"
+  export MPTDC_RO_PG_VIA_STACK_TARGET_LAYERS="${MPTDC_RO_PG_VIA_STACK_TARGET_LAYERS:-METTP MET3 MET2 MET1}"
+  export MPTDC_RO_PG_VIA_STACK_AREA_MARGIN_UM="${MPTDC_RO_PG_VIA_STACK_AREA_MARGIN_UM:-0.4}"
   export MPTDC_FILLER_ADD_FILLERS_WITH_DRC="${MPTDC_FILLER_ADD_FILLERS_WITH_DRC:-0}"
   export MPTDC_REQUIRE_DRC_SAFE_FILLER="${MPTDC_REQUIRE_DRC_SAFE_FILLER:-1}"
   export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="${MPTDC_ENABLE_ROUTE_GATE_RECOVERY:-1}"
@@ -268,6 +271,32 @@ guard_pg_policy() {
       fi
       if is_truthy "${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"; then
         failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for innovus_sroute_golden_ro")
+      fi
+      ;;
+    protected_ro_pg_via_stack)
+      if ! is_truthy "${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-1}"; then
+        failures+=("MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=${MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN:-unset} expected 1 for protected_ro_pg_via_stack")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=${MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE:-unset} expected 1 for protected_ro_pg_via_stack")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-unset} expected 1 for protected_ro_pg_via_stack")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_RO_PG_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_PROBE=${MPTDC_ENABLE_RO_PG_PROBE:-unset} expected 1 for protected_ro_pg_via_stack")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_RO_PG_HOOKUP:-1}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_HOOKUP=${MPTDC_ENABLE_RO_PG_HOOKUP:-unset} expected 1 for protected_ro_pg_via_stack")
+      fi
+      if ! is_truthy "${MPTDC_REQUIRE_RO_PG_HOOKUP:-1}"; then
+        failures+=("MPTDC_REQUIRE_RO_PG_HOOKUP=${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset} expected 1 for protected_ro_pg_via_stack")
+      fi
+      if is_truthy "${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_MACRO_PATCH=${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-unset} expected 0 for protected_ro_pg_via_stack")
+      fi
+      if is_truthy "${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"; then
+        failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for protected_ro_pg_via_stack")
       fi
       ;;
     conservative_ro_hookup_blockpin_probe)
@@ -780,6 +809,9 @@ fi
   echo "ro_pg_hookup_margin_um: ${MPTDC_RO_PG_HOOKUP_MARGIN_UM:-unset}"
   echo "ro_pg_hookup_spacing_um: ${MPTDC_RO_PG_HOOKUP_SPACING_UM:-unset}"
   echo "ro_pg_hookup_set_distance_um: ${MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM:-unset}"
+  echo "ro_pg_via_stack_layers: ${MPTDC_RO_PG_VIA_STACK_LAYERS:-unset}"
+  echo "ro_pg_via_stack_target_layers: ${MPTDC_RO_PG_VIA_STACK_TARGET_LAYERS:-unset}"
+  echo "ro_pg_via_stack_area_margin_um: ${MPTDC_RO_PG_VIA_STACK_AREA_MARGIN_UM:-unset}"
   echo "db_display_limit: ${MPTDC_DB_DISPLAY_LIMIT:-unset}"
   echo "route_gate_sroute_recovery: ${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset}"
   echo "filler_add_fillers_with_drc: ${MPTDC_FILLER_ADD_FILLERS_WITH_DRC:-unset}"
