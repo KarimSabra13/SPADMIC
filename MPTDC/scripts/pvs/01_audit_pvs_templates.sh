@@ -95,8 +95,12 @@ REPORT="$REPORT_DIR/pvs_template_audit.rpt"
     "$LVS_TEMPLATE/.technology.rul" \
     "$LVS_TEMPLATE/pvslvsctl"
   do
-    if [[ -s "$f" ]]; then
-      echo "PASS $f"
+    if [[ -f "$f" ]]; then
+      if [[ -s "$f" ]]; then
+        echo "PASS $f"
+      else
+        echo "PASS_EMPTY $f"
+      fi
     else
       echo "FAIL $f"
     fi

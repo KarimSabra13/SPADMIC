@@ -239,10 +239,15 @@ puts "MPTDC_PVS_PREP_saveNetlist_phys_pg_ERR=$phys_err"
 
 if {[file exists $patched_streamout]} {
   puts "MPTDC_PVS_PREP_STREAMOUT_TEMPLATE=$patched_streamout"
-  set ::env(OUT_DIR) $output_dir
+  set result_dir [file dirname $output_dir]
+  set ::env(OUT_DIR) $result_dir
   set ::env(OUTPUT_DIR) $output_dir
-  set ::env(RESULT_DIR) [file dirname $output_dir]
+  set ::env(RESULT_DIR) $result_dir
   set ::env(WORK_DIR) [file dirname $patched_streamout]
+  set ::env(CHK_DAT) $checkpoint
+  set ::env(CKPT) $checkpoint
+  set ::env(CHECKPOINT) $checkpoint
+  set ::env(SOURCE_CHECKPOINT) $checkpoint
   set ::env(TOP_CELL) $top_cell
   set ::env(TOP_ONLY_GDS) $top_only_gds
   set ::env(MERGED_GDS) $merged_gds
