@@ -1,0 +1,52 @@
+EXPECTED_HEAD=72b6ab428d905ac740bf4a5ff11b3496ceec8753
+INNOVUS_RUN_ID=20260706_mptdc_tc_ro6_coordproxy_final_154018
+INNOVUS_DIR=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018
+TECHNOLOGY_LEF_EXPECTED=/eda/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef
+CAPTABLE_TC_EXPECTED=/eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_typ.capTbl
+PVS_STACK=XH018_1131
+PVS_DRC_RULE=/eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_DRC.rul
+PVS_LVS_RULE=/eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_LVS.rul
+PVS_CFG=/eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/pvs.cfg
+PVS_TECH_RULESETS=/eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/XH018_1131/techRuleSets
+QRC_LVSFILE_TC=/eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131/QRC-Typ/lvsfile
+
+17:technology_lef: /eda/pdk/xfab/xh018/cadence/v9_0/techLEF/v9_0_1/xh018_xx31_HD_MET3_METMID.lef
+19:captable_tc: /eda/pdk/xfab/xh018/cadence/v9_0/capTbl/v9_0_1/xh018_xx31_MET3_METMID_typ.capTbl
+21:qrc_root: /eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131
+22:route_layers: MET1 MET2 MET3 METTP
+29:O1_RO_LEF_PATH: /sim/ksabra/SPADMIC_work/lef/ro_tune6_coordinate_proxy_20260706_154018/RO_tune6_coordinate_proxy.lef
+33:O1_RO_LIBERTY_PATH: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib
+
+pvs is /usr/sbin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools/bin/pvs
+pvs is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pvs
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+pegasus is /eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+/usr/sbin/pvs
+/eda/cadence/2023-24/RHELx86/PEGASUS_23.11.000/bin/pegasus
+  WARNING: Running as a non-root user. Functionality may be unavailable.
+pvs: invalid option -- 'e'
+  Error during parsing of command line.
+2026/07/07 10:49:30 WARNING This OS does not appear to be a Cadence supported Linux configuration.
+2026/07/07 10:49:30 For more info, please run CheckSysConf in <cdsRoot/tools.lnx86/bin/checkSysConf <productId>
+Pegasus 23.11-s009 FbGK7KjMGPhkNci2o09sLg 2026-07-07 10:49:30 2273916 lyoelectrosrv01.in2p3.fr
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+
+-----------------------------------------------------------------
+Name          : Pegasus (64-bit)
+Description   : Pegasus Verification System
+Version       : 23.11-s009
+-----------------------------------------------------------------
+Copyright 2023 Cadence Design Systems, Inc.
+All rights reserved worldwide.
+
+-rw-r--r-x 1 cds cds 922441 Jul  8  2025 /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_DRC.rul
+-rw-r--r-x 1 cds cds 241566 Jul  8  2025 /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_LVS.rul
+-rw-r--r-x 1 cds cds 3951 Sep 26  2022 /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/pvs.cfg
+-rw-r--r-x 1 cds cds 941 Nov 30  2017 /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/XH018_1131/techRuleSets
+-rw-r--r-x 1 cds cds 27973 Jul  8  2025 /eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131/QRC-Typ/lvsfile
