@@ -1,0 +1,528 @@
+# MPTDC PG Topology Dump
+DUMP_LABEL=POSTPLACE_PRE_ROUTE_AFTER_SROUTE
+SCHEMA_marker_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/postplace_pre_route_pg_topology_after_sroute_marker_schema.rpt
+SCHEMA_marker_STATUS=PASS
+SCHEMA_sWire_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/postplace_pre_route_pg_topology_after_sroute_sWire_schema.rpt
+SCHEMA_sWire_STATUS=PASS
+SCHEMA_term_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/postplace_pre_route_pg_topology_after_sroute_term_schema.rpt
+SCHEMA_term_STATUS=PASS
+SCHEMA_pin_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/postplace_pre_route_pg_topology_after_sroute_pin_schema.rpt
+SCHEMA_pin_STATUS=PASS
+SCHEMA_pinShape_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/postplace_pre_route_pg_topology_after_sroute_pinShape_schema.rpt
+SCHEMA_pinShape_STATUS=PASS
+
+TOP_NAME_COMMAND=dbGet top.name
+TOP_NAME_BEGIN
+TOP_NAME_STATUS=PASS
+TOP_NAME_VALUE=mptdc_axis_core
+TOP_NAME_END
+
+CORE_BOX_COMMAND=dbGet top.fPlan.coreBox
+CORE_BOX_BEGIN
+CORE_BOX_STATUS=PASS
+CORE_BOX_VALUE={20.16 20.16 996.24 750.4}
+CORE_BOX_END
+
+PG_TERM_NAMES_COMMAND=dbGet top.pgTerms.name
+PG_TERM_NAMES_BEGIN
+PG_TERM_NAMES_STATUS=PASS
+PG_TERM_NAMES_VALUE=VDD_LEFT VSS_LEFT VDD_RIGHT VSS_RIGHT
+PG_TERM_NAMES_END
+
+PG_TERM_NETS_COMMAND=dbGet top.pgTerms.net.name
+PG_TERM_NETS_BEGIN
+PG_TERM_NETS_STATUS=PASS
+PG_TERM_NETS_VALUE=VDD VSS VDD VSS
+PG_TERM_NETS_END
+
+PG_TERM_LAYERS_COMMAND=dbGet top.pgTerms.pins.allShapes.layer.name
+PG_TERM_LAYERS_BEGIN
+PG_TERM_LAYERS_STATUS=PASS
+PG_TERM_LAYERS_VALUE=METTP METTP METTP METTP
+PG_TERM_LAYERS_END
+
+VDD_PGTERM_NAMES_COMMAND=dbGet [dbGet top.pgTerms.net.name VDD -p2].name
+VDD_PGTERM_NAMES_BEGIN
+VDD_PGTERM_NAMES_STATUS=PASS
+VDD_PGTERM_NAMES_VALUE=VDD_LEFT VDD_RIGHT
+VDD_PGTERM_NAMES_END
+
+VSS_PGTERM_NAMES_COMMAND=dbGet [dbGet top.pgTerms.net.name VSS -p2].name
+VSS_PGTERM_NAMES_BEGIN
+VSS_PGTERM_NAMES_STATUS=PASS
+VSS_PGTERM_NAMES_VALUE=VSS_LEFT VSS_RIGHT
+VSS_PGTERM_NAMES_END
+
+VDD_SWIRE_COUNT_COMMAND=llength [dbGet [dbGet top.nets.name VDD -p].sWires]
+VDD_SWIRE_COUNT_BEGIN
+VDD_SWIRE_COUNT_STATUS=PASS
+VDD_SWIRE_COUNT_VALUE=319
+VDD_SWIRE_COUNT_END
+
+VSS_SWIRE_COUNT_COMMAND=llength [dbGet [dbGet top.nets.name VSS -p].sWires]
+VSS_SWIRE_COUNT_BEGIN
+VSS_SWIRE_COUNT_STATUS=PASS
+VSS_SWIRE_COUNT_VALUE=322
+VSS_SWIRE_COUNT_END
+
+SWIRE_NON_FOLLOWPIN_TABLE_BEGIN
+net	idx	shape	layer	status	width	geomType	box	pts
+VDD	1	ring	METTP	routed	2.0	pathSeg	{16.16 16.16 18.16 754.4}	{{17.16 16.16} {17.16 754.4}}
+VDD	2	ring	METTP	routed	2.0	pathSeg	{998.24 16.16 1000.24 754.4}	{{999.24 16.16} {999.24 754.4}}
+VDD	3	ring	MET3	routed	2.0	pathSeg	{16.16 16.16 1000.24 18.16}	{{16.16 17.16} {1000.24 17.16}}
+VDD	4	ring	MET3	routed	2.0	pathSeg	{16.16 752.4 1000.24 754.4}	{{16.16 753.4} {1000.24 753.4}}
+VDD	5	stripe	METTP	routed	2.0	pathSeg	{40.16 16.16 42.16 754.4}	{{41.16 16.16} {41.16 754.4}}
+VDD	6	stripe	METTP	routed	2.0	pathSeg	{120.16 16.16 122.16 754.4}	{{121.16 16.16} {121.16 754.4}}
+VDD	7	stripe	METTP	routed	2.0	pathSeg	{200.16 16.16 202.16 754.4}	{{201.16 16.16} {201.16 754.4}}
+VDD	8	stripe	METTP	routed	2.0	pathSeg	{280.16 16.16 282.16 754.4}	{{281.16 16.16} {281.16 754.4}}
+VDD	9	stripe	METTP	routed	2.0	pathSeg	{360.16 16.16 362.16 754.4}	{{361.16 16.16} {361.16 754.4}}
+VDD	10	stripe	METTP	routed	2.0	pathSeg	{440.16 16.16 442.16 754.4}	{{441.16 16.16} {441.16 754.4}}
+VDD	11	stripe	METTP	routed	2.0	pathSeg	{520.16 16.16 522.16 754.4}	{{521.16 16.16} {521.16 754.4}}
+VDD	12	stripe	METTP	routed	2.0	pathSeg	{600.16 16.16 602.16 754.4}	{{601.16 16.16} {601.16 754.4}}
+VDD	13	stripe	METTP	routed	2.0	pathSeg	{680.16 16.16 682.16 754.4}	{{681.16 16.16} {681.16 754.4}}
+VDD	14	stripe	METTP	routed	2.0	pathSeg	{760.16 16.16 762.16 754.4}	{{761.16 16.16} {761.16 754.4}}
+VDD	15	stripe	METTP	routed	2.0	pathSeg	{840.16 16.16 842.16 754.4}	{{841.16 16.16} {841.16 754.4}}
+VDD	16	stripe	METTP	routed	2.0	pathSeg	{920.16 16.16 922.16 754.4}	{{921.16 16.16} {921.16 754.4}}
+VDD	17	stripe	MET3	routed	2.0	pathSeg	{16.16 40.16 1000.24 42.16}	{{16.16 41.16} {1000.24 41.16}}
+VDD	18	stripe	MET3	routed	2.0	pathSeg	{16.16 120.16 1000.24 122.16}	{{16.16 121.16} {1000.24 121.16}}
+VDD	19	stripe	MET3	routed	2.0	pathSeg	{16.16 200.16 1000.24 202.16}	{{16.16 201.16} {1000.24 201.16}}
+VDD	20	stripe	MET3	routed	2.0	pathSeg	{16.16 280.16 1000.24 282.16}	{{16.16 281.16} {1000.24 281.16}}
+VDD	21	stripe	MET3	routed	2.0	pathSeg	{16.16 360.16 1000.24 362.16}	{{16.16 361.16} {1000.24 361.16}}
+VDD	22	stripe	MET3	routed	2.0	pathSeg	{16.16 440.16 1000.24 442.16}	{{16.16 441.16} {1000.24 441.16}}
+VDD	23	stripe	MET3	routed	2.0	pathSeg	{16.16 520.16 1000.24 522.16}	{{16.16 521.16} {1000.24 521.16}}
+VDD	24	stripe	MET3	routed	2.0	pathSeg	{16.16 600.16 1000.24 602.16}	{{16.16 601.16} {1000.24 601.16}}
+VDD	25	stripe	MET3	routed	2.0	pathSeg	{16.16 680.16 1000.24 682.16}	{{16.16 681.16} {1000.24 681.16}}
+VDD	123	blockwire	MET1	routed	2.0	pathSeg	{55.0 612.29 122.16 614.29}	{{55.0 613.29} {122.16 613.29}}
+VDD	124	blockwire	MET1	routed	2.0	pathSeg	{55.0 155.645 122.16 157.645}	{{55.0 156.645} {122.16 156.645}}
+VDD	125	corewire	MET1	routed	0.8	pathSeg	{16.16 28.72 20.16 29.52}	{{16.16 29.12} {20.16 29.12}}
+VDD	126	corewire	MET1	routed	0.8	pathSeg	{16.16 19.76 20.16 20.56}	{{16.16 20.16} {20.16 20.16}}
+VDD	127	corewire	MET1	routed	0.8	pathSeg	{16.16 55.6 20.16 56.4}	{{16.16 56.0} {20.16 56.0}}
+VDD	128	corewire	MET1	routed	0.8	pathSeg	{16.16 46.64 20.16 47.44}	{{16.16 47.04} {20.16 47.04}}
+VDD	129	corewire	MET1	routed	0.8	pathSeg	{16.16 37.68 20.16 38.48}	{{16.16 38.08} {20.16 38.08}}
+VDD	130	corewire	MET1	routed	0.8	pathSeg	{16.16 109.36 20.16 110.16}	{{16.16 109.76} {20.16 109.76}}
+VDD	131	corewire	MET1	routed	0.8	pathSeg	{16.16 100.4 20.16 101.2}	{{16.16 100.8} {20.16 100.8}}
+VDD	132	corewire	MET1	routed	0.8	pathSeg	{16.16 91.44 20.16 92.24}	{{16.16 91.84} {20.16 91.84}}
+VDD	133	corewire	MET1	routed	0.8	pathSeg	{16.16 82.48 20.16 83.28}	{{16.16 82.88} {20.16 82.88}}
+VDD	134	corewire	MET1	routed	0.8	pathSeg	{16.16 73.52 20.16 74.32}	{{16.16 73.92} {20.16 73.92}}
+VDD	135	corewire	MET1	routed	0.8	pathSeg	{16.16 64.56 20.16 65.36}	{{16.16 64.96} {20.16 64.96}}
+VDD	136	corewire	MET1	routed	0.8	pathSeg	{16.16 216.88 20.16 217.68}	{{16.16 217.28} {20.16 217.28}}
+VDD	137	corewire	MET1	routed	0.8	pathSeg	{16.16 207.92 20.16 208.72}	{{16.16 208.32} {20.16 208.32}}
+VDD	138	corewire	MET1	routed	0.8	pathSeg	{16.16 198.96 20.16 199.76}	{{16.16 199.36} {20.16 199.36}}
+VDD	139	corewire	MET1	routed	0.8	pathSeg	{16.16 190.0 20.16 190.8}	{{16.16 190.4} {20.16 190.4}}
+VDD	140	corewire	MET1	routed	0.8	pathSeg	{16.16 181.04 20.16 181.84}	{{16.16 181.44} {20.16 181.44}}
+VDD	141	corewire	MET1	routed	0.8	pathSeg	{16.16 172.08 20.16 172.88}	{{16.16 172.48} {20.16 172.48}}
+VDD	142	corewire	MET1	routed	0.8	pathSeg	{16.16 163.12 20.16 163.92}	{{16.16 163.52} {20.16 163.52}}
+VDD	143	corewire	MET1	routed	0.8	pathSeg	{16.16 154.16 20.16 154.96}	{{16.16 154.56} {20.16 154.56}}
+VDD	144	corewire	MET1	routed	0.8	pathSeg	{16.16 145.2 20.16 146.0}	{{16.16 145.6} {20.16 145.6}}
+VDD	145	corewire	MET1	routed	0.8	pathSeg	{16.16 136.24 20.16 137.04}	{{16.16 136.64} {20.16 136.64}}
+VDD	146	corewire	MET1	routed	0.8	pathSeg	{16.16 127.28 20.16 128.08}	{{16.16 127.68} {20.16 127.68}}
+VDD	147	corewire	MET1	routed	0.8	pathSeg	{16.16 118.32 20.16 119.12}	{{16.16 118.72} {20.16 118.72}}
+VDD	148	corewire	MET1	routed	0.8	pathSeg	{16.16 440.88 20.16 441.68}	{{16.16 441.28} {20.16 441.28}}
+VDD	149	corewire	MET1	routed	0.8	pathSeg	{16.16 431.92 20.16 432.72}	{{16.16 432.32} {20.16 432.32}}
+VDD	150	corewire	MET1	routed	0.8	pathSeg	{16.16 422.96 20.16 423.76}	{{16.16 423.36} {20.16 423.36}}
+VDD	151	corewire	MET1	routed	0.8	pathSeg	{16.16 414.0 20.16 414.8}	{{16.16 414.4} {20.16 414.4}}
+VDD	152	corewire	MET1	routed	0.8	pathSeg	{16.16 405.04 20.16 405.84}	{{16.16 405.44} {20.16 405.44}}
+VDD	153	corewire	MET1	routed	0.8	pathSeg	{16.16 396.08 20.16 396.88}	{{16.16 396.48} {20.16 396.48}}
+VDD	154	corewire	MET1	routed	0.8	pathSeg	{16.16 387.12 20.16 387.92}	{{16.16 387.52} {20.16 387.52}}
+VDD	155	corewire	MET1	routed	0.8	pathSeg	{16.16 378.16 20.16 378.96}	{{16.16 378.56} {20.16 378.56}}
+VDD	156	corewire	MET1	routed	0.8	pathSeg	{16.16 369.2 20.16 370.0}	{{16.16 369.6} {20.16 369.6}}
+VDD	157	corewire	MET1	routed	0.8	pathSeg	{16.16 360.24 20.16 361.04}	{{16.16 360.64} {20.16 360.64}}
+VDD	158	corewire	MET1	routed	0.8	pathSeg	{16.16 351.28 20.16 352.08}	{{16.16 351.68} {20.16 351.68}}
+VDD	159	corewire	MET1	routed	0.8	pathSeg	{16.16 342.32 20.16 343.12}	{{16.16 342.72} {20.16 342.72}}
+VDD	160	corewire	MET1	routed	0.8	pathSeg	{16.16 333.36 20.16 334.16}	{{16.16 333.76} {20.16 333.76}}
+VDD	161	corewire	MET1	routed	0.8	pathSeg	{16.16 324.4 20.16 325.2}	{{16.16 324.8} {20.16 324.8}}
+VDD	162	corewire	MET1	routed	0.8	pathSeg	{16.16 315.44 20.16 316.24}	{{16.16 315.84} {20.16 315.84}}
+VDD	163	corewire	MET1	routed	0.8	pathSeg	{16.16 306.48 20.16 307.28}	{{16.16 306.88} {20.16 306.88}}
+VDD	164	corewire	MET1	routed	0.8	pathSeg	{16.16 297.52 20.16 298.32}	{{16.16 297.92} {20.16 297.92}}
+VDD	165	corewire	MET1	routed	0.8	pathSeg	{16.16 288.56 20.16 289.36}	{{16.16 288.96} {20.16 288.96}}
+VDD	166	corewire	MET1	routed	0.8	pathSeg	{16.16 279.6 20.16 280.4}	{{16.16 280.0} {20.16 280.0}}
+VDD	167	corewire	MET1	routed	0.8	pathSeg	{16.16 270.64 20.16 271.44}	{{16.16 271.04} {20.16 271.04}}
+VDD	168	corewire	MET1	routed	0.8	pathSeg	{16.16 261.68 20.16 262.48}	{{16.16 262.08} {20.16 262.08}}
+VDD	169	corewire	MET1	routed	0.8	pathSeg	{16.16 252.72 20.16 253.52}	{{16.16 253.12} {20.16 253.12}}
+VDD	170	corewire	MET1	routed	0.8	pathSeg	{16.16 243.76 20.16 244.56}	{{16.16 244.16} {20.16 244.16}}
+VDD	171	corewire	MET1	routed	0.8	pathSeg	{16.16 234.8 20.16 235.6}	{{16.16 235.2} {20.16 235.2}}
+VDD	172	corewire	MET1	routed	0.8	pathSeg	{16.16 225.84 20.16 226.64}	{{16.16 226.24} {20.16 226.24}}
+VDD	173	corewire	MET1	routed	0.8	pathSeg	{16.16 745.52 20.16 746.32}	{{16.16 745.92} {20.16 745.92}}
+VDD	174	corewire	MET1	routed	0.8	pathSeg	{16.16 736.56 20.16 737.36}	{{16.16 736.96} {20.16 736.96}}
+VDD	175	corewire	MET1	routed	0.8	pathSeg	{16.16 727.6 20.16 728.4}	{{16.16 728.0} {20.16 728.0}}
+VDD	176	corewire	MET1	routed	0.8	pathSeg	{16.16 718.64 20.16 719.44}	{{16.16 719.04} {20.16 719.04}}
+VDD	177	corewire	MET1	routed	0.8	pathSeg	{16.16 709.68 20.16 710.48}	{{16.16 710.08} {20.16 710.08}}
+VDD	178	corewire	MET1	routed	0.8	pathSeg	{16.16 700.72 20.16 701.52}	{{16.16 701.12} {20.16 701.12}}
+VDD	179	corewire	MET1	routed	0.8	pathSeg	{16.16 691.76 20.16 692.56}	{{16.16 692.16} {20.16 692.16}}
+VDD	180	corewire	MET1	routed	0.8	pathSeg	{16.16 682.8 20.16 683.6}	{{16.16 683.2} {20.16 683.2}}
+VDD	181	corewire	MET1	routed	0.8	pathSeg	{16.16 673.84 20.16 674.64}	{{16.16 674.24} {20.16 674.24}}
+VDD	182	corewire	MET1	routed	0.8	pathSeg	{16.16 664.88 20.16 665.68}	{{16.16 665.28} {20.16 665.28}}
+VDD	183	corewire	MET1	routed	0.8	pathSeg	{16.16 655.92 20.16 656.72}	{{16.16 656.32} {20.16 656.32}}
+VDD	184	corewire	MET1	routed	0.8	pathSeg	{16.16 646.96 20.16 647.76}	{{16.16 647.36} {20.16 647.36}}
+VDD	185	corewire	MET1	routed	0.8	pathSeg	{16.16 638.0 20.16 638.8}	{{16.16 638.4} {20.16 638.4}}
+VDD	186	corewire	MET1	routed	0.8	pathSeg	{16.16 629.04 20.16 629.84}	{{16.16 629.44} {20.16 629.44}}
+VDD	187	corewire	MET1	routed	0.8	pathSeg	{16.16 620.08 20.16 620.88}	{{16.16 620.48} {20.16 620.48}}
+VDD	188	corewire	MET1	routed	0.8	pathSeg	{16.16 611.12 20.16 611.92}	{{16.16 611.52} {20.16 611.52}}
+VDD	189	corewire	MET1	routed	0.8	pathSeg	{16.16 602.16 20.16 602.96}	{{16.16 602.56} {20.16 602.56}}
+VDD	190	corewire	MET1	routed	0.8	pathSeg	{16.16 593.2 20.16 594.0}	{{16.16 593.6} {20.16 593.6}}
+VDD	191	corewire	MET1	routed	0.8	pathSeg	{16.16 584.24 20.16 585.04}	{{16.16 584.64} {20.16 584.64}}
+VDD	192	corewire	MET1	routed	0.8	pathSeg	{16.16 575.28 20.16 576.08}	{{16.16 575.68} {20.16 575.68}}
+VDD	193	corewire	MET1	routed	0.8	pathSeg	{16.16 566.32 20.16 567.12}	{{16.16 566.72} {20.16 566.72}}
+VDD	194	corewire	MET1	routed	0.8	pathSeg	{16.16 557.36 20.16 558.16}	{{16.16 557.76} {20.16 557.76}}
+VDD	195	corewire	MET1	routed	0.8	pathSeg	{16.16 548.4 20.16 549.2}	{{16.16 548.8} {20.16 548.8}}
+VDD	196	corewire	MET1	routed	0.8	pathSeg	{16.16 539.44 20.16 540.24}	{{16.16 539.84} {20.16 539.84}}
+VDD	197	corewire	MET1	routed	0.8	pathSeg	{16.16 530.48 20.16 531.28}	{{16.16 530.88} {20.16 530.88}}
+VDD	198	corewire	MET1	routed	0.8	pathSeg	{16.16 521.52 20.16 522.32}	{{16.16 521.92} {20.16 521.92}}
+VDD	199	corewire	MET1	routed	0.8	pathSeg	{16.16 512.56 20.16 513.36}	{{16.16 512.96} {20.16 512.96}}
+VDD	200	corewire	MET1	routed	0.8	pathSeg	{16.16 503.6 20.16 504.4}	{{16.16 504.0} {20.16 504.0}}
+VDD	201	corewire	MET1	routed	0.8	pathSeg	{16.16 494.64 20.16 495.44}	{{16.16 495.04} {20.16 495.04}}
+VDD	202	corewire	MET1	routed	0.8	pathSeg	{16.16 485.68 20.16 486.48}	{{16.16 486.08} {20.16 486.08}}
+VDD	203	corewire	MET1	routed	0.8	pathSeg	{16.16 476.72 20.16 477.52}	{{16.16 477.12} {20.16 477.12}}
+VDD	204	corewire	MET1	routed	0.8	pathSeg	{16.16 467.76 20.16 468.56}	{{16.16 468.16} {20.16 468.16}}
+VDD	205	corewire	MET1	routed	0.8	pathSeg	{16.16 458.8 20.16 459.6}	{{16.16 459.2} {20.16 459.2}}
+VDD	206	corewire	MET1	routed	0.8	pathSeg	{16.16 449.84 20.16 450.64}	{{16.16 450.24} {20.16 450.24}}
+VDD	207	corewire	MET1	routed	0.8	pathSeg	{996.24 745.52 1000.24 746.32}	{{996.24 745.92} {1000.24 745.92}}
+VDD	208	corewire	MET1	routed	0.8	pathSeg	{996.24 736.56 1000.24 737.36}	{{996.24 736.96} {1000.24 736.96}}
+VDD	209	corewire	MET1	routed	0.8	pathSeg	{996.24 727.6 1000.24 728.4}	{{996.24 728.0} {1000.24 728.0}}
+VDD	210	corewire	MET1	routed	0.8	pathSeg	{996.24 718.64 1000.24 719.44}	{{996.24 719.04} {1000.24 719.04}}
+VDD	211	corewire	MET1	routed	0.8	pathSeg	{996.24 709.68 1000.24 710.48}	{{996.24 710.08} {1000.24 710.08}}
+VDD	212	corewire	MET1	routed	0.8	pathSeg	{996.24 700.72 1000.24 701.52}	{{996.24 701.12} {1000.24 701.12}}
+VDD	213	corewire	MET1	routed	0.8	pathSeg	{996.24 691.76 1000.24 692.56}	{{996.24 692.16} {1000.24 692.16}}
+VDD	214	corewire	MET1	routed	0.8	pathSeg	{996.24 682.8 1000.24 683.6}	{{996.24 683.2} {1000.24 683.2}}
+VDD	215	corewire	MET1	routed	0.8	pathSeg	{996.24 673.84 1000.24 674.64}	{{996.24 674.24} {1000.24 674.24}}
+VDD	216	corewire	MET1	routed	0.8	pathSeg	{996.24 664.88 1000.24 665.68}	{{996.24 665.28} {1000.24 665.28}}
+VDD	217	corewire	MET1	routed	0.8	pathSeg	{996.24 655.92 1000.24 656.72}	{{996.24 656.32} {1000.24 656.32}}
+VDD	218	corewire	MET1	routed	0.8	pathSeg	{996.24 646.96 1000.24 647.76}	{{996.24 647.36} {1000.24 647.36}}
+VDD	219	corewire	MET1	routed	0.8	pathSeg	{996.24 638.0 1000.24 638.8}	{{996.24 638.4} {1000.24 638.4}}
+VDD	220	corewire	MET1	routed	0.8	pathSeg	{996.24 629.04 1000.24 629.84}	{{996.24 629.44} {1000.24 629.44}}
+VDD	221	corewire	MET1	routed	0.8	pathSeg	{996.24 620.08 1000.24 620.88}	{{996.24 620.48} {1000.24 620.48}}
+VDD	222	corewire	MET1	routed	0.8	pathSeg	{996.24 611.12 1000.24 611.92}	{{996.24 611.52} {1000.24 611.52}}
+VDD	223	corewire	MET1	routed	0.8	pathSeg	{996.24 602.16 1000.24 602.96}	{{996.24 602.56} {1000.24 602.56}}
+VDD	224	corewire	MET1	routed	0.8	pathSeg	{996.24 593.2 1000.24 594.0}	{{996.24 593.6} {1000.24 593.6}}
+VDD	225	corewire	MET1	routed	0.8	pathSeg	{996.24 584.24 1000.24 585.04}	{{996.24 584.64} {1000.24 584.64}}
+VDD	226	corewire	MET1	routed	0.8	pathSeg	{996.24 575.28 1000.24 576.08}	{{996.24 575.68} {1000.24 575.68}}
+VDD	227	corewire	MET1	routed	0.8	pathSeg	{996.24 566.32 1000.24 567.12}	{{996.24 566.72} {1000.24 566.72}}
+VDD	228	corewire	MET1	routed	0.8	pathSeg	{996.24 557.36 1000.24 558.16}	{{996.24 557.76} {1000.24 557.76}}
+VDD	229	corewire	MET1	routed	0.8	pathSeg	{996.24 548.4 1000.24 549.2}	{{996.24 548.8} {1000.24 548.8}}
+VDD	230	corewire	MET1	routed	0.8	pathSeg	{996.24 539.44 1000.24 540.24}	{{996.24 539.84} {1000.24 539.84}}
+VDD	231	corewire	MET1	routed	0.8	pathSeg	{996.24 530.48 1000.24 531.28}	{{996.24 530.88} {1000.24 530.88}}
+VDD	232	corewire	MET1	routed	0.8	pathSeg	{996.24 521.52 1000.24 522.32}	{{996.24 521.92} {1000.24 521.92}}
+VDD	233	corewire	MET1	routed	0.8	pathSeg	{996.24 512.56 1000.24 513.36}	{{996.24 512.96} {1000.24 512.96}}
+VDD	234	corewire	MET1	routed	0.8	pathSeg	{996.24 503.6 1000.24 504.4}	{{996.24 504.0} {1000.24 504.0}}
+VDD	235	corewire	MET1	routed	0.8	pathSeg	{996.24 494.64 1000.24 495.44}	{{996.24 495.04} {1000.24 495.04}}
+VDD	236	corewire	MET1	routed	0.8	pathSeg	{996.24 485.68 1000.24 486.48}	{{996.24 486.08} {1000.24 486.08}}
+VDD	237	corewire	MET1	routed	0.8	pathSeg	{996.24 476.72 1000.24 477.52}	{{996.24 477.12} {1000.24 477.12}}
+VDD	238	corewire	MET1	routed	0.8	pathSeg	{996.24 467.76 1000.24 468.56}	{{996.24 468.16} {1000.24 468.16}}
+VDD	239	corewire	MET1	routed	0.8	pathSeg	{996.24 458.8 1000.24 459.6}	{{996.24 459.2} {1000.24 459.2}}
+VDD	240	corewire	MET1	routed	0.8	pathSeg	{996.24 449.84 1000.24 450.64}	{{996.24 450.24} {1000.24 450.24}}
+VDD	241	corewire	MET1	routed	0.8	pathSeg	{996.24 440.88 1000.24 441.68}	{{996.24 441.28} {1000.24 441.28}}
+VDD	242	corewire	MET1	routed	0.8	pathSeg	{996.24 431.92 1000.24 432.72}	{{996.24 432.32} {1000.24 432.32}}
+VDD	243	corewire	MET1	routed	0.8	pathSeg	{996.24 422.96 1000.24 423.76}	{{996.24 423.36} {1000.24 423.36}}
+VDD	244	corewire	MET1	routed	0.8	pathSeg	{996.24 414.0 1000.24 414.8}	{{996.24 414.4} {1000.24 414.4}}
+VDD	245	corewire	MET1	routed	0.8	pathSeg	{996.24 405.04 1000.24 405.84}	{{996.24 405.44} {1000.24 405.44}}
+VDD	246	corewire	MET1	routed	0.8	pathSeg	{996.24 396.08 1000.24 396.88}	{{996.24 396.48} {1000.24 396.48}}
+VDD	247	corewire	MET1	routed	0.8	pathSeg	{996.24 387.12 1000.24 387.92}	{{996.24 387.52} {1000.24 387.52}}
+VDD	248	corewire	MET1	routed	0.8	pathSeg	{996.24 378.16 1000.24 378.96}	{{996.24 378.56} {1000.24 378.56}}
+VDD	249	corewire	MET1	routed	0.8	pathSeg	{996.24 369.2 1000.24 370.0}	{{996.24 369.6} {1000.24 369.6}}
+VDD	250	corewire	MET1	routed	0.8	pathSeg	{996.24 360.24 1000.24 361.04}	{{996.24 360.64} {1000.24 360.64}}
+VDD	251	corewire	MET1	routed	0.8	pathSeg	{996.24 351.28 1000.24 352.08}	{{996.24 351.68} {1000.24 351.68}}
+VDD	252	corewire	MET1	routed	0.8	pathSeg	{996.24 342.32 1000.24 343.12}	{{996.24 342.72} {1000.24 342.72}}
+VDD	253	corewire	MET1	routed	0.8	pathSeg	{996.24 333.36 1000.24 334.16}	{{996.24 333.76} {1000.24 333.76}}
+VDD	254	corewire	MET1	routed	0.8	pathSeg	{996.24 324.4 1000.24 325.2}	{{996.24 324.8} {1000.24 324.8}}
+VDD	255	corewire	MET1	routed	0.8	pathSeg	{996.24 315.44 1000.24 316.24}	{{996.24 315.84} {1000.24 315.84}}
+VDD	256	corewire	MET1	routed	0.8	pathSeg	{996.24 306.48 1000.24 307.28}	{{996.24 306.88} {1000.24 306.88}}
+VDD	257	corewire	MET1	routed	0.8	pathSeg	{996.24 297.52 1000.24 298.32}	{{996.24 297.92} {1000.24 297.92}}
+VDD	258	corewire	MET1	routed	0.8	pathSeg	{996.24 288.56 1000.24 289.36}	{{996.24 288.96} {1000.24 288.96}}
+VDD	259	corewire	MET1	routed	0.8	pathSeg	{996.24 279.6 1000.24 280.4}	{{996.24 280.0} {1000.24 280.0}}
+VDD	260	corewire	MET1	routed	0.8	pathSeg	{996.24 270.64 1000.24 271.44}	{{996.24 271.04} {1000.24 271.04}}
+VDD	261	corewire	MET1	routed	0.8	pathSeg	{996.24 261.68 1000.24 262.48}	{{996.24 262.08} {1000.24 262.08}}
+VDD	262	corewire	MET1	routed	0.8	pathSeg	{996.24 252.72 1000.24 253.52}	{{996.24 253.12} {1000.24 253.12}}
+VDD	263	corewire	MET1	routed	0.8	pathSeg	{996.24 243.76 1000.24 244.56}	{{996.24 244.16} {1000.24 244.16}}
+VDD	264	corewire	MET1	routed	0.8	pathSeg	{996.24 234.8 1000.24 235.6}	{{996.24 235.2} {1000.24 235.2}}
+VDD	265	corewire	MET1	routed	0.8	pathSeg	{996.24 225.84 1000.24 226.64}	{{996.24 226.24} {1000.24 226.24}}
+VDD	266	corewire	MET1	routed	0.8	pathSeg	{996.24 216.88 1000.24 217.68}	{{996.24 217.28} {1000.24 217.28}}
+VDD	267	corewire	MET1	routed	0.8	pathSeg	{996.24 207.92 1000.24 208.72}	{{996.24 208.32} {1000.24 208.32}}
+VDD	268	corewire	MET1	routed	0.8	pathSeg	{996.24 198.96 1000.24 199.76}	{{996.24 199.36} {1000.24 199.36}}
+VDD	269	corewire	MET1	routed	0.8	pathSeg	{996.24 190.0 1000.24 190.8}	{{996.24 190.4} {1000.24 190.4}}
+VDD	270	corewire	MET1	routed	0.8	pathSeg	{996.24 181.04 1000.24 181.84}	{{996.24 181.44} {1000.24 181.44}}
+VDD	271	corewire	MET1	routed	0.8	pathSeg	{996.24 172.08 1000.24 172.88}	{{996.24 172.48} {1000.24 172.48}}
+VDD	272	corewire	MET1	routed	0.8	pathSeg	{996.24 163.12 1000.24 163.92}	{{996.24 163.52} {1000.24 163.52}}
+VDD	273	corewire	MET1	routed	0.8	pathSeg	{996.24 154.16 1000.24 154.96}	{{996.24 154.56} {1000.24 154.56}}
+VDD	274	corewire	MET1	routed	0.8	pathSeg	{996.24 145.2 1000.24 146.0}	{{996.24 145.6} {1000.24 145.6}}
+VDD	275	corewire	MET1	routed	0.8	pathSeg	{996.24 136.24 1000.24 137.04}	{{996.24 136.64} {1000.24 136.64}}
+VDD	276	corewire	MET1	routed	0.8	pathSeg	{996.24 127.28 1000.24 128.08}	{{996.24 127.68} {1000.24 127.68}}
+VDD	277	corewire	MET1	routed	0.8	pathSeg	{996.24 118.32 1000.24 119.12}	{{996.24 118.72} {1000.24 118.72}}
+VDD	278	corewire	MET1	routed	0.8	pathSeg	{996.24 109.36 1000.24 110.16}	{{996.24 109.76} {1000.24 109.76}}
+VDD	279	corewire	MET1	routed	0.8	pathSeg	{996.24 100.4 1000.24 101.2}	{{996.24 100.8} {1000.24 100.8}}
+VDD	280	corewire	MET1	routed	0.8	pathSeg	{996.24 91.44 1000.24 92.24}	{{996.24 91.84} {1000.24 91.84}}
+VDD	281	corewire	MET1	routed	0.8	pathSeg	{996.24 82.48 1000.24 83.28}	{{996.24 82.88} {1000.24 82.88}}
+VDD	282	corewire	MET1	routed	0.8	pathSeg	{996.24 73.52 1000.24 74.32}	{{996.24 73.92} {1000.24 73.92}}
+VDD	283	corewire	MET1	routed	0.8	pathSeg	{996.24 64.56 1000.24 65.36}	{{996.24 64.96} {1000.24 64.96}}
+VDD	284	corewire	MET1	routed	0.8	pathSeg	{996.24 55.6 1000.24 56.4}	{{996.24 56.0} {1000.24 56.0}}
+VDD	285	corewire	MET1	routed	0.8	pathSeg	{996.24 46.64 1000.24 47.44}	{{996.24 47.04} {1000.24 47.04}}
+VDD	286	corewire	MET1	routed	0.8	pathSeg	{996.24 37.68 1000.24 38.48}	{{996.24 38.08} {1000.24 38.08}}
+VDD	287	corewire	MET1	routed	0.8	pathSeg	{996.24 28.72 1000.24 29.52}	{{996.24 29.12} {1000.24 29.12}}
+VDD	288	corewire	MET1	routed	0.8	pathSeg	{996.24 19.76 1000.24 20.56}	{{996.24 20.16} {1000.24 20.16}}
+VDD	289	corewire	MET1	routed	0.8	pathSeg	{200.16 655.92 219.52 656.72}	{{200.16 656.32} {219.52 656.32}}
+VDD	290	corewire	MET1	routed	0.8	pathSeg	{200.16 127.28 219.52 128.08}	{{200.16 127.68} {219.52 127.68}}
+VDD	291	corewire	MET1	routed	0.8	pathSeg	{200.16 136.24 219.52 137.04}	{{200.16 136.64} {219.52 136.64}}
+VDD	292	corewire	MET1	routed	0.8	pathSeg	{200.16 145.2 219.52 146.0}	{{200.16 145.6} {219.52 145.6}}
+VDD	293	corewire	MET1	routed	0.8	pathSeg	{200.16 154.16 219.52 154.96}	{{200.16 154.56} {219.52 154.56}}
+VDD	294	corewire	MET1	routed	0.8	pathSeg	{200.16 163.12 219.52 163.92}	{{200.16 163.52} {219.52 163.52}}
+VDD	295	corewire	MET1	routed	0.8	pathSeg	{200.16 172.08 219.52 172.88}	{{200.16 172.48} {219.52 172.48}}
+VDD	296	corewire	MET1	routed	0.8	pathSeg	{200.16 602.16 219.52 602.96}	{{200.16 602.56} {219.52 602.56}}
+VDD	297	corewire	MET1	routed	0.8	pathSeg	{200.16 611.12 219.52 611.92}	{{200.16 611.52} {219.52 611.52}}
+VDD	298	corewire	MET1	routed	0.8	pathSeg	{200.16 620.08 219.52 620.88}	{{200.16 620.48} {219.52 620.48}}
+VDD	299	corewire	MET1	routed	0.8	pathSeg	{200.16 629.04 219.52 629.84}	{{200.16 629.44} {219.52 629.44}}
+VDD	300	corewire	MET1	routed	0.8	pathSeg	{200.16 638.0 219.52 638.8}	{{200.16 638.4} {219.52 638.4}}
+VDD	301	corewire	MET1	routed	0.8	pathSeg	{200.16 646.96 219.52 647.76}	{{200.16 647.36} {219.52 647.36}}
+VDD	302	corewire	MET1	routed	0.8	pathSeg	{200.16 118.32 219.52 119.12}	{{200.16 118.72} {219.52 118.72}}
+VDD	303	corewire	MET1	routed	0.8	pathSeg	{200.16 109.36 219.52 110.16}	{{200.16 109.76} {219.52 109.76}}
+VDD	304	corewire	MET1	routed	0.8	pathSeg	{50.4 109.36 122.16 110.16}	{{50.4 109.76} {122.16 109.76}}
+VDD	305	corewire	MET1	routed	0.8	pathSeg	{50.4 118.32 122.16 119.12}	{{50.4 118.72} {122.16 118.72}}
+VDD	306	corewire	MET1	routed	0.8	pathSeg	{50.4 145.2 122.16 146.0}	{{50.4 145.6} {122.16 145.6}}
+VDD	307	corewire	MET1	routed	0.8	pathSeg	{50.4 136.24 122.16 137.04}	{{50.4 136.64} {122.16 136.64}}
+VDD	308	corewire	MET1	routed	0.8	pathSeg	{50.4 127.28 122.16 128.08}	{{50.4 127.68} {122.16 127.68}}
+VDD	309	corewire	MET1	routed	0.8	pathSeg	{50.4 620.08 122.16 620.88}	{{50.4 620.48} {122.16 620.48}}
+VDD	310	corewire	MET1	routed	0.8	pathSeg	{50.4 611.12 122.16 611.92}	{{50.4 611.52} {122.16 611.52}}
+VDD	311	corewire	MET1	routed	0.8	pathSeg	{50.4 602.16 122.16 602.96}	{{50.4 602.56} {122.16 602.56}}
+VDD	312	corewire	MET1	routed	0.8	pathSeg	{50.4 172.08 122.16 172.88}	{{50.4 172.48} {122.16 172.48}}
+VDD	313	corewire	MET1	routed	0.8	pathSeg	{50.4 163.12 122.16 163.92}	{{50.4 163.52} {122.16 163.52}}
+VDD	314	corewire	MET1	routed	0.8	pathSeg	{50.0 154.16 51.41 154.96}	{{50.0 154.56} {51.41 154.56}}
+VDD	315	corewire	MET3	routed	0.8	pathSeg	{51.01 154.16 122.16 154.96}	{{51.01 154.56} {122.16 154.56}}
+VDD	316	corewire	MET1	routed	0.8	pathSeg	{50.4 655.92 122.16 656.72}	{{50.4 656.32} {122.16 656.32}}
+VDD	317	corewire	MET1	routed	0.8	pathSeg	{50.4 646.96 122.16 647.76}	{{50.4 647.36} {122.16 647.36}}
+VDD	318	corewire	MET1	routed	0.8	pathSeg	{50.4 638.0 122.16 638.8}	{{50.4 638.4} {122.16 638.4}}
+VDD	319	corewire	MET1	routed	0.8	pathSeg	{50.4 629.04 122.16 629.84}	{{50.4 629.44} {122.16 629.44}}
+VDD	FOLLOWPIN_ROWS_SKIPPED	97
+VSS	1	ring	METTP	routed	2.0	pathSeg	{13.16 13.16 15.16 757.4}	{{14.16 13.16} {14.16 757.4}}
+VSS	2	ring	METTP	routed	2.0	pathSeg	{1001.24 13.16 1003.24 757.4}	{{1002.24 13.16} {1002.24 757.4}}
+VSS	3	ring	MET3	routed	2.0	pathSeg	{13.16 13.16 1003.24 15.16}	{{13.16 14.16} {1003.24 14.16}}
+VSS	4	ring	MET3	routed	2.0	pathSeg	{13.16 755.4 1003.24 757.4}	{{13.16 756.4} {1003.24 756.4}}
+VSS	5	stripe	METTP	routed	2.0	pathSeg	{44.16 13.16 46.16 757.4}	{{45.16 13.16} {45.16 757.4}}
+VSS	6	stripe	METTP	routed	2.0	pathSeg	{124.16 13.16 126.16 757.4}	{{125.16 13.16} {125.16 757.4}}
+VSS	7	stripe	METTP	routed	2.0	pathSeg	{204.16 13.16 206.16 757.4}	{{205.16 13.16} {205.16 757.4}}
+VSS	8	stripe	METTP	routed	2.0	pathSeg	{284.16 13.16 286.16 757.4}	{{285.16 13.16} {285.16 757.4}}
+VSS	9	stripe	METTP	routed	2.0	pathSeg	{364.16 13.16 366.16 757.4}	{{365.16 13.16} {365.16 757.4}}
+VSS	10	stripe	METTP	routed	2.0	pathSeg	{444.16 13.16 446.16 757.4}	{{445.16 13.16} {445.16 757.4}}
+VSS	11	stripe	METTP	routed	2.0	pathSeg	{524.16 13.16 526.16 757.4}	{{525.16 13.16} {525.16 757.4}}
+VSS	12	stripe	METTP	routed	2.0	pathSeg	{604.16 13.16 606.16 757.4}	{{605.16 13.16} {605.16 757.4}}
+VSS	13	stripe	METTP	routed	2.0	pathSeg	{684.16 13.16 686.16 757.4}	{{685.16 13.16} {685.16 757.4}}
+VSS	14	stripe	METTP	routed	2.0	pathSeg	{764.16 13.16 766.16 757.4}	{{765.16 13.16} {765.16 757.4}}
+VSS	15	stripe	METTP	routed	2.0	pathSeg	{844.16 13.16 846.16 757.4}	{{845.16 13.16} {845.16 757.4}}
+VSS	16	stripe	METTP	routed	2.0	pathSeg	{924.16 13.16 926.16 757.4}	{{925.16 13.16} {925.16 757.4}}
+VSS	17	stripe	MET3	routed	2.0	pathSeg	{13.16 44.16 1003.24 46.16}	{{13.16 45.16} {1003.24 45.16}}
+VSS	18	stripe	MET3	routed	2.0	pathSeg	{13.16 124.16 1003.24 126.16}	{{13.16 125.16} {1003.24 125.16}}
+VSS	19	stripe	MET3	routed	2.0	pathSeg	{13.16 204.16 1003.24 206.16}	{{13.16 205.16} {1003.24 205.16}}
+VSS	20	stripe	MET3	routed	2.0	pathSeg	{13.16 284.16 1003.24 286.16}	{{13.16 285.16} {1003.24 285.16}}
+VSS	21	stripe	MET3	routed	2.0	pathSeg	{13.16 364.16 1003.24 366.16}	{{13.16 365.16} {1003.24 365.16}}
+VSS	22	stripe	MET3	routed	2.0	pathSeg	{13.16 444.16 1003.24 446.16}	{{13.16 445.16} {1003.24 445.16}}
+VSS	23	stripe	MET3	routed	2.0	pathSeg	{13.16 524.16 1003.24 526.16}	{{13.16 525.16} {1003.24 525.16}}
+VSS	24	stripe	MET3	routed	2.0	pathSeg	{13.16 604.16 1003.24 606.16}	{{13.16 605.16} {1003.24 605.16}}
+VSS	25	stripe	MET3	routed	2.0	pathSeg	{13.16 684.16 1003.24 686.16}	{{13.16 685.16} {1003.24 685.16}}
+VSS	124	blockwire	MET2	routed	2.0	pathSeg	{52.26 124.16 54.26 135.42}	{{53.26 124.16} {53.26 135.42}}
+VSS	125	blockwire	MET2	routed	2.0	pathSeg	{52.26 604.16 54.26 634.52}	{{53.26 604.16} {53.26 634.52}}
+VSS	126	corewire	MET1	routed	0.8	pathSeg	{996.24 24.24 1003.24 25.04}	{{996.24 24.64} {1003.24 24.64}}
+VSS	127	corewire	MET1	routed	0.8	pathSeg	{996.24 33.2 1003.24 34.0}	{{996.24 33.6} {1003.24 33.6}}
+VSS	128	corewire	MET1	routed	0.8	pathSeg	{996.24 42.16 1003.24 42.96}	{{996.24 42.56} {1003.24 42.56}}
+VSS	129	corewire	MET1	routed	0.8	pathSeg	{996.24 51.12 1003.24 51.92}	{{996.24 51.52} {1003.24 51.52}}
+VSS	130	corewire	MET1	routed	0.8	pathSeg	{996.24 60.08 1003.24 60.88}	{{996.24 60.48} {1003.24 60.48}}
+VSS	131	corewire	MET1	routed	0.8	pathSeg	{996.24 69.04 1003.24 69.84}	{{996.24 69.44} {1003.24 69.44}}
+VSS	132	corewire	MET1	routed	0.8	pathSeg	{996.24 78.0 1003.24 78.8}	{{996.24 78.4} {1003.24 78.4}}
+VSS	133	corewire	MET1	routed	0.8	pathSeg	{996.24 86.96 1003.24 87.76}	{{996.24 87.36} {1003.24 87.36}}
+VSS	134	corewire	MET1	routed	0.8	pathSeg	{996.24 95.92 1003.24 96.72}	{{996.24 96.32} {1003.24 96.32}}
+VSS	135	corewire	MET1	routed	0.8	pathSeg	{996.24 104.88 1003.24 105.68}	{{996.24 105.28} {1003.24 105.28}}
+VSS	136	corewire	MET1	routed	0.8	pathSeg	{996.24 113.84 1003.24 114.64}	{{996.24 114.24} {1003.24 114.24}}
+VSS	137	corewire	MET1	routed	0.8	pathSeg	{996.24 122.8 1003.24 123.6}	{{996.24 123.2} {1003.24 123.2}}
+VSS	138	corewire	MET1	routed	0.8	pathSeg	{996.24 131.76 1003.24 132.56}	{{996.24 132.16} {1003.24 132.16}}
+VSS	139	corewire	MET1	routed	0.8	pathSeg	{996.24 140.72 1003.24 141.52}	{{996.24 141.12} {1003.24 141.12}}
+VSS	140	corewire	MET1	routed	0.8	pathSeg	{996.24 149.68 1003.24 150.48}	{{996.24 150.08} {1003.24 150.08}}
+VSS	141	corewire	MET1	routed	0.8	pathSeg	{996.24 158.64 1003.24 159.44}	{{996.24 159.04} {1003.24 159.04}}
+VSS	142	corewire	MET1	routed	0.8	pathSeg	{996.24 167.6 1003.24 168.4}	{{996.24 168.0} {1003.24 168.0}}
+VSS	143	corewire	MET1	routed	0.8	pathSeg	{996.24 176.56 1003.24 177.36}	{{996.24 176.96} {1003.24 176.96}}
+VSS	144	corewire	MET1	routed	0.8	pathSeg	{996.24 185.52 1003.24 186.32}	{{996.24 185.92} {1003.24 185.92}}
+VSS	145	corewire	MET1	routed	0.8	pathSeg	{996.24 194.48 1003.24 195.28}	{{996.24 194.88} {1003.24 194.88}}
+VSS	146	corewire	MET1	routed	0.8	pathSeg	{996.24 203.44 1003.24 204.24}	{{996.24 203.84} {1003.24 203.84}}
+VSS	147	corewire	MET1	routed	0.8	pathSeg	{996.24 212.4 1003.24 213.2}	{{996.24 212.8} {1003.24 212.8}}
+VSS	148	corewire	MET1	routed	0.8	pathSeg	{996.24 221.36 1003.24 222.16}	{{996.24 221.76} {1003.24 221.76}}
+VSS	149	corewire	MET1	routed	0.8	pathSeg	{996.24 230.32 1003.24 231.12}	{{996.24 230.72} {1003.24 230.72}}
+VSS	150	corewire	MET1	routed	0.8	pathSeg	{996.24 239.28 1003.24 240.08}	{{996.24 239.68} {1003.24 239.68}}
+VSS	151	corewire	MET1	routed	0.8	pathSeg	{996.24 248.24 1003.24 249.04}	{{996.24 248.64} {1003.24 248.64}}
+VSS	152	corewire	MET1	routed	0.8	pathSeg	{996.24 257.2 1003.24 258.0}	{{996.24 257.6} {1003.24 257.6}}
+VSS	153	corewire	MET1	routed	0.8	pathSeg	{996.24 266.16 1003.24 266.96}	{{996.24 266.56} {1003.24 266.56}}
+VSS	154	corewire	MET1	routed	0.8	pathSeg	{996.24 275.12 1003.24 275.92}	{{996.24 275.52} {1003.24 275.52}}
+VSS	155	corewire	MET1	routed	0.8	pathSeg	{996.24 284.08 1003.24 284.88}	{{996.24 284.48} {1003.24 284.48}}
+VSS	156	corewire	MET1	routed	0.8	pathSeg	{996.24 293.04 1003.24 293.84}	{{996.24 293.44} {1003.24 293.44}}
+VSS	157	corewire	MET1	routed	0.8	pathSeg	{996.24 302.0 1003.24 302.8}	{{996.24 302.4} {1003.24 302.4}}
+VSS	158	corewire	MET1	routed	0.8	pathSeg	{996.24 310.96 1003.24 311.76}	{{996.24 311.36} {1003.24 311.36}}
+VSS	159	corewire	MET1	routed	0.8	pathSeg	{996.24 319.92 1003.24 320.72}	{{996.24 320.32} {1003.24 320.32}}
+VSS	160	corewire	MET1	routed	0.8	pathSeg	{996.24 328.88 1003.24 329.68}	{{996.24 329.28} {1003.24 329.28}}
+VSS	161	corewire	MET1	routed	0.8	pathSeg	{996.24 337.84 1003.24 338.64}	{{996.24 338.24} {1003.24 338.24}}
+VSS	162	corewire	MET1	routed	0.8	pathSeg	{996.24 346.8 1003.24 347.6}	{{996.24 347.2} {1003.24 347.2}}
+VSS	163	corewire	MET1	routed	0.8	pathSeg	{996.24 355.76 1003.24 356.56}	{{996.24 356.16} {1003.24 356.16}}
+VSS	164	corewire	MET1	routed	0.8	pathSeg	{996.24 364.72 1003.24 365.52}	{{996.24 365.12} {1003.24 365.12}}
+VSS	165	corewire	MET1	routed	0.8	pathSeg	{996.24 373.68 1003.24 374.48}	{{996.24 374.08} {1003.24 374.08}}
+VSS	166	corewire	MET1	routed	0.8	pathSeg	{996.24 382.64 1003.24 383.44}	{{996.24 383.04} {1003.24 383.04}}
+VSS	167	corewire	MET1	routed	0.8	pathSeg	{996.24 391.6 1003.24 392.4}	{{996.24 392.0} {1003.24 392.0}}
+VSS	168	corewire	MET1	routed	0.8	pathSeg	{996.24 400.56 1003.24 401.36}	{{996.24 400.96} {1003.24 400.96}}
+VSS	169	corewire	MET1	routed	0.8	pathSeg	{996.24 409.52 1003.24 410.32}	{{996.24 409.92} {1003.24 409.92}}
+VSS	170	corewire	MET1	routed	0.8	pathSeg	{996.24 418.48 1003.24 419.28}	{{996.24 418.88} {1003.24 418.88}}
+VSS	171	corewire	MET1	routed	0.8	pathSeg	{996.24 427.44 1003.24 428.24}	{{996.24 427.84} {1003.24 427.84}}
+VSS	172	corewire	MET1	routed	0.8	pathSeg	{996.24 436.4 1003.24 437.2}	{{996.24 436.8} {1003.24 436.8}}
+VSS	173	corewire	MET1	routed	0.8	pathSeg	{996.24 445.36 1003.24 446.16}	{{996.24 445.76} {1003.24 445.76}}
+VSS	174	corewire	MET1	routed	0.8	pathSeg	{996.24 454.32 1003.24 455.12}	{{996.24 454.72} {1003.24 454.72}}
+VSS	175	corewire	MET1	routed	0.8	pathSeg	{996.24 463.28 1003.24 464.08}	{{996.24 463.68} {1003.24 463.68}}
+VSS	176	corewire	MET1	routed	0.8	pathSeg	{996.24 472.24 1003.24 473.04}	{{996.24 472.64} {1003.24 472.64}}
+VSS	177	corewire	MET1	routed	0.8	pathSeg	{996.24 481.2 1003.24 482.0}	{{996.24 481.6} {1003.24 481.6}}
+VSS	178	corewire	MET1	routed	0.8	pathSeg	{996.24 490.16 1003.24 490.96}	{{996.24 490.56} {1003.24 490.56}}
+VSS	179	corewire	MET1	routed	0.8	pathSeg	{996.24 499.12 1003.24 499.92}	{{996.24 499.52} {1003.24 499.52}}
+VSS	180	corewire	MET1	routed	0.8	pathSeg	{996.24 508.08 1003.24 508.88}	{{996.24 508.48} {1003.24 508.48}}
+VSS	181	corewire	MET1	routed	0.8	pathSeg	{996.24 517.04 1003.24 517.84}	{{996.24 517.44} {1003.24 517.44}}
+VSS	182	corewire	MET1	routed	0.8	pathSeg	{996.24 526.0 1003.24 526.8}	{{996.24 526.4} {1003.24 526.4}}
+VSS	183	corewire	MET1	routed	0.8	pathSeg	{996.24 534.96 1003.24 535.76}	{{996.24 535.36} {1003.24 535.36}}
+VSS	184	corewire	MET1	routed	0.8	pathSeg	{996.24 543.92 1003.24 544.72}	{{996.24 544.32} {1003.24 544.32}}
+VSS	185	corewire	MET1	routed	0.8	pathSeg	{996.24 552.88 1003.24 553.68}	{{996.24 553.28} {1003.24 553.28}}
+VSS	186	corewire	MET1	routed	0.8	pathSeg	{996.24 561.84 1003.24 562.64}	{{996.24 562.24} {1003.24 562.24}}
+VSS	187	corewire	MET1	routed	0.8	pathSeg	{996.24 570.8 1003.24 571.6}	{{996.24 571.2} {1003.24 571.2}}
+VSS	188	corewire	MET1	routed	0.8	pathSeg	{996.24 579.76 1003.24 580.56}	{{996.24 580.16} {1003.24 580.16}}
+VSS	189	corewire	MET1	routed	0.8	pathSeg	{996.24 588.72 1003.24 589.52}	{{996.24 589.12} {1003.24 589.12}}
+VSS	190	corewire	MET1	routed	0.8	pathSeg	{996.24 597.68 1003.24 598.48}	{{996.24 598.08} {1003.24 598.08}}
+VSS	191	corewire	MET1	routed	0.8	pathSeg	{996.24 606.64 1003.24 607.44}	{{996.24 607.04} {1003.24 607.04}}
+VSS	192	corewire	MET1	routed	0.8	pathSeg	{996.24 615.6 1003.24 616.4}	{{996.24 616.0} {1003.24 616.0}}
+VSS	193	corewire	MET1	routed	0.8	pathSeg	{996.24 624.56 1003.24 625.36}	{{996.24 624.96} {1003.24 624.96}}
+VSS	194	corewire	MET1	routed	0.8	pathSeg	{996.24 633.52 1003.24 634.32}	{{996.24 633.92} {1003.24 633.92}}
+VSS	195	corewire	MET1	routed	0.8	pathSeg	{996.24 642.48 1003.24 643.28}	{{996.24 642.88} {1003.24 642.88}}
+VSS	196	corewire	MET1	routed	0.8	pathSeg	{996.24 651.44 1003.24 652.24}	{{996.24 651.84} {1003.24 651.84}}
+VSS	197	corewire	MET1	routed	0.8	pathSeg	{996.24 660.4 1003.24 661.2}	{{996.24 660.8} {1003.24 660.8}}
+VSS	198	corewire	MET1	routed	0.8	pathSeg	{996.24 669.36 1003.24 670.16}	{{996.24 669.76} {1003.24 669.76}}
+VSS	199	corewire	MET1	routed	0.8	pathSeg	{996.24 678.32 1003.24 679.12}	{{996.24 678.72} {1003.24 678.72}}
+VSS	200	corewire	MET1	routed	0.8	pathSeg	{996.24 687.28 1003.24 688.08}	{{996.24 687.68} {1003.24 687.68}}
+VSS	201	corewire	MET1	routed	0.8	pathSeg	{996.24 696.24 1003.24 697.04}	{{996.24 696.64} {1003.24 696.64}}
+VSS	202	corewire	MET1	routed	0.8	pathSeg	{996.24 705.2 1003.24 706.0}	{{996.24 705.6} {1003.24 705.6}}
+VSS	203	corewire	MET1	routed	0.8	pathSeg	{996.24 714.16 1003.24 714.96}	{{996.24 714.56} {1003.24 714.56}}
+VSS	204	corewire	MET1	routed	0.8	pathSeg	{996.24 723.12 1003.24 723.92}	{{996.24 723.52} {1003.24 723.52}}
+VSS	205	corewire	MET1	routed	0.8	pathSeg	{996.24 732.08 1003.24 732.88}	{{996.24 732.48} {1003.24 732.48}}
+VSS	206	corewire	MET1	routed	0.8	pathSeg	{996.24 741.04 1003.24 741.84}	{{996.24 741.44} {1003.24 741.44}}
+VSS	207	corewire	MET1	routed	0.8	pathSeg	{996.24 750.0 1003.24 750.8}	{{996.24 750.4} {1003.24 750.4}}
+VSS	208	corewire	MET1	routed	0.8	pathSeg	{13.16 445.36 20.16 446.16}	{{13.16 445.76} {20.16 445.76}}
+VSS	209	corewire	MET1	routed	0.8	pathSeg	{13.16 454.32 20.16 455.12}	{{13.16 454.72} {20.16 454.72}}
+VSS	210	corewire	MET1	routed	0.8	pathSeg	{13.16 463.28 20.16 464.08}	{{13.16 463.68} {20.16 463.68}}
+VSS	211	corewire	MET1	routed	0.8	pathSeg	{13.16 472.24 20.16 473.04}	{{13.16 472.64} {20.16 472.64}}
+VSS	212	corewire	MET1	routed	0.8	pathSeg	{13.16 481.2 20.16 482.0}	{{13.16 481.6} {20.16 481.6}}
+VSS	213	corewire	MET1	routed	0.8	pathSeg	{13.16 490.16 20.16 490.96}	{{13.16 490.56} {20.16 490.56}}
+VSS	214	corewire	MET1	routed	0.8	pathSeg	{13.16 499.12 20.16 499.92}	{{13.16 499.52} {20.16 499.52}}
+VSS	215	corewire	MET1	routed	0.8	pathSeg	{13.16 508.08 20.16 508.88}	{{13.16 508.48} {20.16 508.48}}
+VSS	216	corewire	MET1	routed	0.8	pathSeg	{13.16 517.04 20.16 517.84}	{{13.16 517.44} {20.16 517.44}}
+VSS	217	corewire	MET1	routed	0.8	pathSeg	{13.16 526.0 20.16 526.8}	{{13.16 526.4} {20.16 526.4}}
+VSS	218	corewire	MET1	routed	0.8	pathSeg	{13.16 534.96 20.16 535.76}	{{13.16 535.36} {20.16 535.36}}
+VSS	219	corewire	MET1	routed	0.8	pathSeg	{13.16 543.92 20.16 544.72}	{{13.16 544.32} {20.16 544.32}}
+VSS	220	corewire	MET1	routed	0.8	pathSeg	{13.16 552.88 20.16 553.68}	{{13.16 553.28} {20.16 553.28}}
+VSS	221	corewire	MET1	routed	0.8	pathSeg	{13.16 561.84 20.16 562.64}	{{13.16 562.24} {20.16 562.24}}
+VSS	222	corewire	MET1	routed	0.8	pathSeg	{13.16 570.8 20.16 571.6}	{{13.16 571.2} {20.16 571.2}}
+VSS	223	corewire	MET1	routed	0.8	pathSeg	{13.16 579.76 20.16 580.56}	{{13.16 580.16} {20.16 580.16}}
+VSS	224	corewire	MET1	routed	0.8	pathSeg	{13.16 588.72 20.16 589.52}	{{13.16 589.12} {20.16 589.12}}
+VSS	225	corewire	MET1	routed	0.8	pathSeg	{13.16 597.68 20.16 598.48}	{{13.16 598.08} {20.16 598.08}}
+VSS	226	corewire	MET1	routed	0.8	pathSeg	{13.16 606.64 20.16 607.44}	{{13.16 607.04} {20.16 607.04}}
+VSS	227	corewire	MET1	routed	0.8	pathSeg	{13.16 615.6 20.16 616.4}	{{13.16 616.0} {20.16 616.0}}
+VSS	228	corewire	MET1	routed	0.8	pathSeg	{13.16 624.56 20.16 625.36}	{{13.16 624.96} {20.16 624.96}}
+VSS	229	corewire	MET1	routed	0.8	pathSeg	{13.16 633.52 20.16 634.32}	{{13.16 633.92} {20.16 633.92}}
+VSS	230	corewire	MET1	routed	0.8	pathSeg	{13.16 642.48 20.16 643.28}	{{13.16 642.88} {20.16 642.88}}
+VSS	231	corewire	MET1	routed	0.8	pathSeg	{13.16 651.44 20.16 652.24}	{{13.16 651.84} {20.16 651.84}}
+VSS	232	corewire	MET1	routed	0.8	pathSeg	{13.16 660.4 20.16 661.2}	{{13.16 660.8} {20.16 660.8}}
+VSS	233	corewire	MET1	routed	0.8	pathSeg	{13.16 669.36 20.16 670.16}	{{13.16 669.76} {20.16 669.76}}
+VSS	234	corewire	MET1	routed	0.8	pathSeg	{13.16 678.32 20.16 679.12}	{{13.16 678.72} {20.16 678.72}}
+VSS	235	corewire	MET1	routed	0.8	pathSeg	{13.16 687.28 20.16 688.08}	{{13.16 687.68} {20.16 687.68}}
+VSS	236	corewire	MET1	routed	0.8	pathSeg	{13.16 696.24 20.16 697.04}	{{13.16 696.64} {20.16 696.64}}
+VSS	237	corewire	MET1	routed	0.8	pathSeg	{13.16 705.2 20.16 706.0}	{{13.16 705.6} {20.16 705.6}}
+VSS	238	corewire	MET1	routed	0.8	pathSeg	{13.16 714.16 20.16 714.96}	{{13.16 714.56} {20.16 714.56}}
+VSS	239	corewire	MET1	routed	0.8	pathSeg	{13.16 723.12 20.16 723.92}	{{13.16 723.52} {20.16 723.52}}
+VSS	240	corewire	MET1	routed	0.8	pathSeg	{13.16 732.08 20.16 732.88}	{{13.16 732.48} {20.16 732.48}}
+VSS	241	corewire	MET1	routed	0.8	pathSeg	{13.16 741.04 20.16 741.84}	{{13.16 741.44} {20.16 741.44}}
+VSS	242	corewire	MET1	routed	0.8	pathSeg	{13.16 750.0 20.16 750.8}	{{13.16 750.4} {20.16 750.4}}
+VSS	243	corewire	MET1	routed	0.8	pathSeg	{13.16 230.32 20.16 231.12}	{{13.16 230.72} {20.16 230.72}}
+VSS	244	corewire	MET1	routed	0.8	pathSeg	{13.16 239.28 20.16 240.08}	{{13.16 239.68} {20.16 239.68}}
+VSS	245	corewire	MET1	routed	0.8	pathSeg	{13.16 248.24 20.16 249.04}	{{13.16 248.64} {20.16 248.64}}
+VSS	246	corewire	MET1	routed	0.8	pathSeg	{13.16 257.2 20.16 258.0}	{{13.16 257.6} {20.16 257.6}}
+VSS	247	corewire	MET1	routed	0.8	pathSeg	{13.16 266.16 20.16 266.96}	{{13.16 266.56} {20.16 266.56}}
+VSS	248	corewire	MET1	routed	0.8	pathSeg	{13.16 275.12 20.16 275.92}	{{13.16 275.52} {20.16 275.52}}
+VSS	249	corewire	MET1	routed	0.8	pathSeg	{13.16 284.08 20.16 284.88}	{{13.16 284.48} {20.16 284.48}}
+VSS	250	corewire	MET1	routed	0.8	pathSeg	{13.16 293.04 20.16 293.84}	{{13.16 293.44} {20.16 293.44}}
+VSS	251	corewire	MET1	routed	0.8	pathSeg	{13.16 302.0 20.16 302.8}	{{13.16 302.4} {20.16 302.4}}
+VSS	252	corewire	MET1	routed	0.8	pathSeg	{13.16 310.96 20.16 311.76}	{{13.16 311.36} {20.16 311.36}}
+VSS	253	corewire	MET1	routed	0.8	pathSeg	{13.16 319.92 20.16 320.72}	{{13.16 320.32} {20.16 320.32}}
+VSS	254	corewire	MET1	routed	0.8	pathSeg	{13.16 328.88 20.16 329.68}	{{13.16 329.28} {20.16 329.28}}
+VSS	255	corewire	MET1	routed	0.8	pathSeg	{13.16 337.84 20.16 338.64}	{{13.16 338.24} {20.16 338.24}}
+VSS	256	corewire	MET1	routed	0.8	pathSeg	{13.16 346.8 20.16 347.6}	{{13.16 347.2} {20.16 347.2}}
+VSS	257	corewire	MET1	routed	0.8	pathSeg	{13.16 355.76 20.16 356.56}	{{13.16 356.16} {20.16 356.16}}
+VSS	258	corewire	MET1	routed	0.8	pathSeg	{13.16 364.72 20.16 365.52}	{{13.16 365.12} {20.16 365.12}}
+VSS	259	corewire	MET1	routed	0.8	pathSeg	{13.16 373.68 20.16 374.48}	{{13.16 374.08} {20.16 374.08}}
+VSS	260	corewire	MET1	routed	0.8	pathSeg	{13.16 382.64 20.16 383.44}	{{13.16 383.04} {20.16 383.04}}
+VSS	261	corewire	MET1	routed	0.8	pathSeg	{13.16 391.6 20.16 392.4}	{{13.16 392.0} {20.16 392.0}}
+VSS	262	corewire	MET1	routed	0.8	pathSeg	{13.16 400.56 20.16 401.36}	{{13.16 400.96} {20.16 400.96}}
+VSS	263	corewire	MET1	routed	0.8	pathSeg	{13.16 409.52 20.16 410.32}	{{13.16 409.92} {20.16 409.92}}
+VSS	264	corewire	MET1	routed	0.8	pathSeg	{13.16 418.48 20.16 419.28}	{{13.16 418.88} {20.16 418.88}}
+VSS	265	corewire	MET1	routed	0.8	pathSeg	{13.16 427.44 20.16 428.24}	{{13.16 427.84} {20.16 427.84}}
+VSS	266	corewire	MET1	routed	0.8	pathSeg	{13.16 436.4 20.16 437.2}	{{13.16 436.8} {20.16 436.8}}
+VSS	267	corewire	MET1	routed	0.8	pathSeg	{13.16 113.84 20.16 114.64}	{{13.16 114.24} {20.16 114.24}}
+VSS	268	corewire	MET1	routed	0.8	pathSeg	{13.16 122.8 20.16 123.6}	{{13.16 123.2} {20.16 123.2}}
+VSS	269	corewire	MET1	routed	0.8	pathSeg	{13.16 131.76 20.16 132.56}	{{13.16 132.16} {20.16 132.16}}
+VSS	270	corewire	MET1	routed	0.8	pathSeg	{13.16 140.72 20.16 141.52}	{{13.16 141.12} {20.16 141.12}}
+VSS	271	corewire	MET1	routed	0.8	pathSeg	{13.16 149.68 20.16 150.48}	{{13.16 150.08} {20.16 150.08}}
+VSS	272	corewire	MET1	routed	0.8	pathSeg	{13.16 158.64 20.16 159.44}	{{13.16 159.04} {20.16 159.04}}
+VSS	273	corewire	MET1	routed	0.8	pathSeg	{13.16 167.6 20.16 168.4}	{{13.16 168.0} {20.16 168.0}}
+VSS	274	corewire	MET1	routed	0.8	pathSeg	{13.16 176.56 20.16 177.36}	{{13.16 176.96} {20.16 176.96}}
+VSS	275	corewire	MET1	routed	0.8	pathSeg	{13.16 185.52 20.16 186.32}	{{13.16 185.92} {20.16 185.92}}
+VSS	276	corewire	MET1	routed	0.8	pathSeg	{13.16 194.48 20.16 195.28}	{{13.16 194.88} {20.16 194.88}}
+VSS	277	corewire	MET1	routed	0.8	pathSeg	{13.16 203.44 20.16 204.24}	{{13.16 203.84} {20.16 203.84}}
+VSS	278	corewire	MET1	routed	0.8	pathSeg	{13.16 212.4 20.16 213.2}	{{13.16 212.8} {20.16 212.8}}
+VSS	279	corewire	MET1	routed	0.8	pathSeg	{13.16 221.36 20.16 222.16}	{{13.16 221.76} {20.16 221.76}}
+VSS	280	corewire	MET1	routed	0.8	pathSeg	{13.16 60.08 20.16 60.88}	{{13.16 60.48} {20.16 60.48}}
+VSS	281	corewire	MET1	routed	0.8	pathSeg	{13.16 69.04 20.16 69.84}	{{13.16 69.44} {20.16 69.44}}
+VSS	282	corewire	MET1	routed	0.8	pathSeg	{13.16 78.0 20.16 78.8}	{{13.16 78.4} {20.16 78.4}}
+VSS	283	corewire	MET1	routed	0.8	pathSeg	{13.16 86.96 20.16 87.76}	{{13.16 87.36} {20.16 87.36}}
+VSS	284	corewire	MET1	routed	0.8	pathSeg	{13.16 95.92 20.16 96.72}	{{13.16 96.32} {20.16 96.32}}
+VSS	285	corewire	MET1	routed	0.8	pathSeg	{13.16 104.88 20.16 105.68}	{{13.16 105.28} {20.16 105.28}}
+VSS	286	corewire	MET1	routed	0.8	pathSeg	{13.16 33.2 20.16 34.0}	{{13.16 33.6} {20.16 33.6}}
+VSS	287	corewire	MET1	routed	0.8	pathSeg	{13.16 42.16 20.16 42.96}	{{13.16 42.56} {20.16 42.56}}
+VSS	288	corewire	MET1	routed	0.8	pathSeg	{13.16 51.12 20.16 51.92}	{{13.16 51.52} {20.16 51.52}}
+VSS	289	corewire	MET1	routed	0.8	pathSeg	{13.16 24.24 20.16 25.04}	{{13.16 24.64} {20.16 24.64}}
+VSS	290	corewire	MET1	routed	0.8	pathSeg	{204.16 104.88 219.52 105.68}	{{204.16 105.28} {219.52 105.28}}
+VSS	291	corewire	MET1	routed	0.8	pathSeg	{204.16 122.8 219.52 123.6}	{{204.16 123.2} {219.52 123.2}}
+VSS	292	corewire	MET1	routed	0.8	pathSeg	{204.16 113.84 219.52 114.64}	{{204.16 114.24} {219.52 114.24}}
+VSS	293	corewire	MET1	routed	0.8	pathSeg	{204.16 651.44 219.52 652.24}	{{204.16 651.84} {219.52 651.84}}
+VSS	294	corewire	MET1	routed	0.8	pathSeg	{204.16 642.48 219.52 643.28}	{{204.16 642.88} {219.52 642.88}}
+VSS	295	corewire	MET1	routed	0.8	pathSeg	{204.16 633.52 219.52 634.32}	{{204.16 633.92} {219.52 633.92}}
+VSS	296	corewire	MET1	routed	0.8	pathSeg	{204.16 624.56 219.52 625.36}	{{204.16 624.96} {219.52 624.96}}
+VSS	297	corewire	MET1	routed	0.8	pathSeg	{204.16 615.6 219.52 616.4}	{{204.16 616.0} {219.52 616.0}}
+VSS	298	corewire	MET1	routed	0.8	pathSeg	{204.16 606.64 219.52 607.44}	{{204.16 607.04} {219.52 607.04}}
+VSS	299	corewire	MET1	routed	0.8	pathSeg	{204.16 597.68 219.52 598.48}	{{204.16 598.08} {219.52 598.08}}
+VSS	300	corewire	MET1	routed	0.8	pathSeg	{204.16 167.6 219.52 168.4}	{{204.16 168.0} {219.52 168.0}}
+VSS	301	corewire	MET1	routed	0.8	pathSeg	{204.16 158.64 219.52 159.44}	{{204.16 159.04} {219.52 159.04}}
+VSS	302	corewire	MET1	routed	0.8	pathSeg	{204.16 149.68 219.52 150.48}	{{204.16 150.08} {219.52 150.08}}
+VSS	303	corewire	MET1	routed	0.8	pathSeg	{204.16 140.72 219.52 141.52}	{{204.16 141.12} {219.52 141.12}}
+VSS	304	corewire	MET1	routed	0.8	pathSeg	{204.16 131.76 219.52 132.56}	{{204.16 132.16} {219.52 132.16}}
+VSS	305	corewire	MET1	routed	0.8	pathSeg	{204.16 660.4 219.52 661.2}	{{204.16 660.8} {219.52 660.8}}
+VSS	306	corewire	MET1	routed	0.8	pathSeg	{50.4 633.52 126.16 634.32}	{{50.4 633.92} {126.16 633.92}}
+VSS	307	corewire	MET1	routed	0.8	pathSeg	{50.4 642.48 126.16 643.28}	{{50.4 642.88} {126.16 642.88}}
+VSS	308	corewire	MET1	routed	0.8	pathSeg	{50.4 651.44 126.16 652.24}	{{50.4 651.84} {126.16 651.84}}
+VSS	309	corewire	MET1	routed	0.8	pathSeg	{50.4 660.4 126.16 661.2}	{{50.4 660.8} {126.16 660.8}}
+VSS	310	corewire	MET1	routed	0.8	pathSeg	{50.4 158.64 126.16 159.44}	{{50.4 159.04} {126.16 159.04}}
+VSS	311	corewire	MET1	routed	0.8	pathSeg	{50.4 167.6 126.16 168.4}	{{50.4 168.0} {126.16 168.0}}
+VSS	312	corewire	MET1	routed	0.8	pathSeg	{50.4 597.68 126.16 598.48}	{{50.4 598.08} {126.16 598.08}}
+VSS	313	corewire	MET1	routed	0.8	pathSeg	{50.4 606.64 126.16 607.44}	{{50.4 607.04} {126.16 607.04}}
+VSS	314	corewire	MET1	routed	0.8	pathSeg	{50.4 615.6 126.16 616.4}	{{50.4 616.0} {126.16 616.0}}
+VSS	315	corewire	MET1	routed	0.8	pathSeg	{50.4 624.56 126.16 625.36}	{{50.4 624.96} {126.16 624.96}}
+VSS	316	corewire	MET1	routed	0.8	pathSeg	{50.4 131.76 126.16 132.56}	{{50.4 132.16} {126.16 132.16}}
+VSS	317	corewire	MET1	routed	0.8	pathSeg	{50.4 140.72 126.16 141.52}	{{50.4 141.12} {126.16 141.12}}
+VSS	318	corewire	MET1	routed	0.8	pathSeg	{50.4 149.68 126.16 150.48}	{{50.4 150.08} {126.16 150.08}}
+VSS	319	corewire	MET1	routed	0.8	pathSeg	{50.4 113.84 126.16 114.64}	{{50.4 114.24} {126.16 114.24}}
+VSS	320	corewire	MET1	routed	0.8	pathSeg	{50.4 122.8 126.16 123.6}	{{50.4 123.2} {126.16 123.2}}
+VSS	321	corewire	MET1	routed	0.8	pathSeg	{50.0 104.88 112.87 105.68}	{{50.0 105.28} {112.87 105.28}}
+VSS	322	corewire	MET3	routed	0.8	pathSeg	{112.47 104.88 126.16 105.68}	{{112.47 105.28} {126.16 105.28}}
+VSS	FOLLOWPIN_ROWS_SKIPPED	98
+SWIRE_NON_FOLLOWPIN_TABLE_END
+
+VERIFY_SPECIAL_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/postplace_pre_route_pg_topology_after_sroute_verify_special.rpt
+VERIFY_SPECIAL_CONSOLE=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/postplace_pre_route_pg_topology_after_sroute_verify_special.console.rpt
+VERIFY_SPECIAL_STATUS=PASS
+
+MARKER_TABLE_BEGIN
+idx	handle	box	layer	type	subType	message
+1	0x7fe0d4b4c7d0	{204.16 598.08 204.16 598.08}	MET1	Connectivity	ConnectivityAntenna	Net VSS
+MARKER_COUNT=1
+MARKER_TABLE_END

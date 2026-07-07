@@ -1,0 +1,93 @@
+*** timeDesign #5 [begin] : totSession cpu/real = 0:21:47.4/0:23:32.3 (0.9), mem = 3945.0M
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**WARN: (IMPEXT-3493):	The design extraction status has been reset by set_analysis_view/update_rc_corner or setExtractRCMode  command. The parasitic data can be regenerated either by extracting the design using the extractRC command or by loading the SPEF or RCDB file(s). To prevent resetting of the extraction status, avoid changing extraction modes.
+Type 'man IMPEXT-3493' for more detail.
+Extraction called for design 'mptdc_axis_core' of instances=14283 and nets=16315 using extraction engine 'postRoute' at effort level 'low' .
+PostRoute (effortLevel low) RC Extraction called for design mptdc_axis_core.
+RC Extraction called in multi-corner(1) mode.
+Process corner(s) are loaded.
+ Corner: tc_rc
+extractDetailRC Option : -outfile /tmp/innovus_temp_2305192_lyoelectrosrv01.in2p3.fr_ksabra_jnLieF/mptdc_axis_core_2305192_tahLIl.rcdb.d -maxResLength 200  -extended
+RC Mode: PostRoute -effortLevel low [Extended CapTable, RC Table Resistances]
+      RC Corner Indexes            0   
+Capacitance Scaling Factor   : 1.00000 
+Coupling Cap. Scaling Factor : 1.00000 
+Resistance Scaling Factor    : 1.00000 
+Clock Cap. Scaling Factor    : 1.00000 
+Clock Res. Scaling Factor    : 1.00000 
+Shrink Factor                : 1.00000
+Initializing multi-corner capacitance tables ... 
+Initializing multi-corner resistance tables ...
+Checking LVS Completed (CPU Time= 0:00:00.1  MEM= 3937.0M)
+Extracted 10.0006% (CPU Time= 0:00:00.5  MEM= 4001.0M)
+Extracted 20.0007% (CPU Time= 0:00:00.6  MEM= 4001.0M)
+Extracted 30.0007% (CPU Time= 0:00:00.7  MEM= 4001.0M)
+Extracted 40.0008% (CPU Time= 0:00:00.9  MEM= 4001.0M)
+Extracted 50.0009% (CPU Time= 0:00:01.0  MEM= 4001.0M)
+Extracted 60.0009% (CPU Time= 0:00:01.1  MEM= 4001.0M)
+Extracted 70.001% (CPU Time= 0:00:01.2  MEM= 4001.0M)
+Extracted 80.001% (CPU Time= 0:00:01.4  MEM= 4001.0M)
+Extracted 90.0011% (CPU Time= 0:00:01.5  MEM= 4001.0M)
+Extracted 100% (CPU Time= 0:00:01.7  MEM= 4005.0M)
+Number of Extracted Resistors     : 277176
+Number of Extracted Ground Cap.   : 284906
+Number of Extracted Coupling Cap. : 0
+PostRoute (effortLevel low) RC Extraction DONE (CPU Time: 0:00:02.2  Real Time: 0:00:02.0  MEM: 3981.035M)
+Starting delay calculation for Setup views
+AAE_INFO: opIsDesignInPostRouteState() is 1
+#################################################################################
+# Design Stage: PostRoute
+# Design Name: mptdc_axis_core
+# Design Mode: 180nm
+# Analysis Mode: MMMC OCV 
+# Parasitics Mode: SPEF/RCDB 
+# Signoff Settings: SI Off 
+#################################################################################
+Start delay calculation (fullDC) (1 T). (MEM=3957.04)
+Initializing multi-corner capacitance tables ... 
+Initializing multi-corner resistance tables ...
+Total number of fetched objects 14935
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+End delay calculation. (MEM=3982.73 CPU=0:00:02.3 REAL=0:00:02.0)
+End delay calculation (fullDC). (MEM=3982.73 CPU=0:00:02.9 REAL=0:00:03.0)
+*** Done Building Timing Graph (cpu=0:00:04.4 real=0:00:04.0 totSessionCpu=0:21:54 mem=4006.7M)
+
+------------------------------------------------------------------
+          timeDesign Summary
+------------------------------------------------------------------
+
+Setup views included:
+ TC_NOMINAL 
+
++--------------------+--------------------------------------------------+
+|     ID Number      |                 Path Group Name                  |
++--------------------+--------------------------------------------------+
+|         1          |FAST_TAG_TO_PD_TS_PHYSICAL                        |
++--------------------+--------------------------------------------------+
+
++--------------------+---------+---------+---------+
+|     Setup mode     |   all   | default |1:FAS..AL|
++--------------------+---------+---------+---------+
+|           WNS (ns):| -0.075  | -0.075  |   N/A   |
+|           TNS (ns):| -4.394  | -4.394  |   N/A   |
+|    Violating Paths:|   172   |   172   |   N/A   |
+|          All Paths:|  4886   |  4886   |   N/A   |
++--------------------+---------+---------+---------+
+
++----------------+-------------------------------+------------------+
+|                |              Real             |       Total      |
+|    DRVs        +------------------+------------+------------------|
+|                |  Nr nets(terms)  | Worst Vio  |  Nr nets(terms)  |
++----------------+------------------+------------+------------------+
+|   max_cap      |      0 (0)       |   0.000    |      0 (0)       |
+|   max_tran     |      0 (0)       |   0.000    |      0 (0)       |
+|   max_fanout   |      0 (0)       |     0      |      0 (0)       |
+|   max_length   |      0 (0)       |     0      |      0 (0)       |
++----------------+------------------+------------+------------------+
+
+Density: 58.596%
+------------------------------------------------------------------
+Reported timing to dir ./timingReports
+Total CPU time: 7.85 sec
+Total Real time: 9.0 sec
+Total Memory Usage: 3940.886719 Mbytes

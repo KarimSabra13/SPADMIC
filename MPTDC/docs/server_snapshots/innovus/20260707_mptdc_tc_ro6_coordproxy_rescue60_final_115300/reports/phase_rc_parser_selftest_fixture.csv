@@ -1,0 +1,17 @@
+family,tap,raw_net,raw_route_length_um,raw_total_cap_pf,isolation_net,isolation_route_length_um,isolation_total_cap_pf,buffered_net,buffered_route_length_um,buffered_total_cap_pf,buffered_wire_cap_pf,buffered_pin_cap_pf,buffered_res_ohm,status,notes
+slow,0,raw_slow_0,100.0,0.020,iso_slow_0,101.0,0.024,buf_slow_0,102.0,0.030,0.012,0.018,10.0,PASS,selftest
+slow,1,raw_slow_1,101.0,0.020,iso_slow_1,102.0,0.024,buf_slow_1,103.0,0.030,0.012,0.018,10.0,PASS,selftest
+slow,2,raw_slow_2,102.0,0.020,iso_slow_2,103.0,0.024,buf_slow_2,104.0,0.030,0.012,0.018,10.0,PASS,selftest
+slow,3,raw_slow_3,103.0,0.020,iso_slow_3,104.0,0.024,buf_slow_3,105.0,0.030,0.012,0.018,10.0,PASS,selftest
+slow,4,raw_slow_4,104.0,0.020,iso_slow_4,105.0,0.024,buf_slow_4,106.0,0.030,0.012,0.018,10.0,PASS,selftest
+slow,5,raw_slow_5,105.0,0.020,iso_slow_5,106.0,0.024,buf_slow_5,107.0,0.030,0.012,0.018,10.0,PASS,selftest
+slow,6,raw_slow_6,106.0,0.020,iso_slow_6,107.0,0.024,buf_slow_6,108.0,0.030,0.012,0.018,10.0,PASS,selftest
+slow,7,raw_slow_7,107.0,0.020,iso_slow_7,108.0,0.024,buf_slow_7,109.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,0,raw_fast_0,100.0,0.020,iso_fast_0,101.0,0.024,buf_fast_0,102.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,1,raw_fast_1,101.0,0.020,iso_fast_1,102.0,0.024,buf_fast_1,103.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,2,raw_fast_2,102.0,0.020,iso_fast_2,103.0,0.024,buf_fast_2,104.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,3,raw_fast_3,103.0,0.020,iso_fast_3,104.0,0.024,buf_fast_3,105.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,4,raw_fast_4,104.0,0.020,iso_fast_4,105.0,0.024,buf_fast_4,106.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,5,raw_fast_5,105.0,0.020,iso_fast_5,106.0,0.024,buf_fast_5,107.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,6,raw_fast_6,106.0,0.020,iso_fast_6,107.0,0.024,buf_fast_6,108.0,0.030,0.012,0.018,10.0,PASS,selftest
+fast,7,raw_fast_7,107.0,0.020,iso_fast_7,108.0,0.024,buf_fast_7,109.0,0.030,0.012,0.018,10.0,PASS,selftest

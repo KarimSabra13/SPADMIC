@@ -1,0 +1,363 @@
+# Matching tail from /sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/logs/innovus_mptdc_digital_signoff.log
+# Pattern: (^\*\*(WARN|ERROR|INFO)|\b(ERROR|WARN|FATAL|PASS|FAIL|STATUS|READY|VIOL|short|SHORT)\b)
+# Last 360 matching lines
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 3999.95M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4057.49M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #24 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #25 GlobalDetailRoute
+**INFO: flowCheckPoint #26 PostEcoSummary
+**INFO: flowCheckPoint #27 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #28 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #29 InitialSummary
+**INFO: flowCheckPoint #30 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4033.91M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4087.76M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #31 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #32 GlobalDetailRoute
+**INFO: flowCheckPoint #33 PostEcoSummary
+**INFO: flowCheckPoint #34 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #35 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #36 InitialSummary
+**INFO: flowCheckPoint #37 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4063.28M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4118.13M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #38 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #39 GlobalDetailRoute
+**INFO: flowCheckPoint #40 PostEcoSummary
+**INFO: flowCheckPoint #41 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #42 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #43 InitialSummary
+**INFO: flowCheckPoint #44 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4089.64M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4146.62M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #45 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #46 GlobalDetailRoute
+**INFO: flowCheckPoint #47 PostEcoSummary
+**INFO: flowCheckPoint #48 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #49 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #50 InitialSummary
+**INFO: flowCheckPoint #51 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4122.66M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4177.51M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #52 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #53 GlobalDetailRoute
+**INFO: flowCheckPoint #54 PostEcoSummary
+**INFO: flowCheckPoint #55 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #56 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #57 InitialSummary
+**INFO: flowCheckPoint #58 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4152.03M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4207.44M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #59 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #60 GlobalDetailRoute
+**INFO: flowCheckPoint #61 PostEcoSummary
+**INFO: flowCheckPoint #62 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #63 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #64 InitialSummary
+**INFO: flowCheckPoint #65 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4174.96M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4233.50M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #66 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #67 GlobalDetailRoute
+**INFO: flowCheckPoint #68 PostEcoSummary
+**INFO: flowCheckPoint #69 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #70 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #71 InitialSummary
+**INFO: flowCheckPoint #72 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4205.51M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4260.93M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #73 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #74 GlobalDetailRoute
+**INFO: flowCheckPoint #75 PostEcoSummary
+**INFO: flowCheckPoint #76 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #77 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #78 InitialSummary
+**INFO: flowCheckPoint #79 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4238.93M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4292.21M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #80 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #81 GlobalDetailRoute
+**INFO: flowCheckPoint #82 PostEcoSummary
+**INFO: flowCheckPoint #83 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #84 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #85 InitialSummary
+**INFO: flowCheckPoint #86 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4271.71M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4321.44M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #87 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #88 GlobalDetailRoute
+**INFO: flowCheckPoint #89 PostEcoSummary
+**INFO: flowCheckPoint #90 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #91 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #92 InitialSummary
+**INFO: flowCheckPoint #93 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4301.96M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4351.12M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #94 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #95 GlobalDetailRoute
+**INFO: flowCheckPoint #96 PostEcoSummary
+**INFO: flowCheckPoint #97 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #98 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #99 InitialSummary
+**INFO: flowCheckPoint #100 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4330.19M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4380.36M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #101 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #102 GlobalDetailRoute
+**INFO: flowCheckPoint #103 PostEcoSummary
+**INFO: flowCheckPoint #104 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #105 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #106 InitialSummary
+**INFO: flowCheckPoint #107 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4357.87M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4409.16M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #108 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #109 GlobalDetailRoute
+**INFO: flowCheckPoint #110 PostEcoSummary
+**INFO: flowCheckPoint #111 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #112 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #113 InitialSummary
+**INFO: flowCheckPoint #114 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4388.73M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4437.89M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #115 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #116 GlobalDetailRoute
+**INFO: flowCheckPoint #117 PostEcoSummary
+**INFO: flowCheckPoint #118 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #119 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #120 InitialSummary
+**INFO: flowCheckPoint #121 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4414.86M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4466.58M).
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: flowCheckPoint #122 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #123 GlobalDetailRoute
+**INFO: flowCheckPoint #124 PostEcoSummary
+**INFO: flowCheckPoint #125 OptimizationRecovery
+**WARN: (IMPOPT-7293):	Vt partitioning has found only one partition, so aborting this LEF Safe optimization step. Please run report_power -leakage to get more info on the Vt partition created.
+**INFO: flowCheckPoint #126 FinalSummary
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #127 InitialSummary
+**INFO: flowCheckPoint #128 OptimizationHold
+**INFO: total 22 insts, 0 nets marked don't touch
+**INFO: total 22 insts, 0 nets marked don't touch DB property
+**INFO: total 22 insts, 0 nets unmarked don't touch
+**INFO: Skipping refine place as no non-legal commits were detected
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #129 GlobalDetailRoute
+#number of short segments in preferred routing layers
+**INFO: flowCheckPoint #130 PostEcoSummary
+**INFO: flowCheckPoint #131 OptimizationRecovery
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #132 FinalSummary
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #133 InitialSummary
+**INFO: flowCheckPoint #134 OptimizationHold
+**INFO: total 0 insts, 0 nets marked don't touch
+**INFO: total 0 insts, 0 nets marked don't touch DB property
+**INFO: total 0 insts, 0 nets unmarked don't touch
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #135 FinalSummary
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #136 InitialSummary
+**INFO: flowCheckPoint #137 OptimizationHold
+**INFO: total 0 insts, 0 nets marked don't touch
+**INFO: total 0 insts, 0 nets marked don't touch DB property
+**INFO: total 0 insts, 0 nets unmarked don't touch
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #138 FinalSummary
+**INFO: User settings:
+**INFO: setDesignMode -flowEffort standard -> setting 'setOptMode -allEndPoints true' for the duration of this command.
+**WARN: (IMPOPT-3564):	The following cells are set dont_use temporarily by the tool because there are no rows defined for their technology site, or they are not placeable in any power domain, or their pins cannot be snapped to the tracks. To avoid this message, review the floorplan, msv setting, the library setting or set manually those cells as dont_use.
+**WARN: (IMPOPT-6118):	The following cells have a dont_touch property but without being dont_use.
+**WARN: (IMPOPT-7139):	'setExtractRCMode -coupled false' has been implicitly activated since current delay calulation is under SIAware false mode.
+**INFO: flowCheckPoint #139 InitialSummary
+**INFO: flowCheckPoint #140 OptimizationPass1
+**WARN: (IMPCCOPT-1182):	The clock_gating_cells property has no usable full-cycle clock gates for power domain auto-default. Gating limited for clock tree clk_sys. You may be able to solve this problem by specifying a list of lib_cells to use with the clock_gating_cells property.
+**INFO: Start fixing DRV (Mem = 4504.67M) ...
+**INFO: Completed fixing DRV (CPU Time = 0:00:03, Mem = 4554.83M).
+**INFO: flowCheckPoint #141 OptimizationPreEco
+**INFO: Skipping DRV recovery as drv did not degrade beyond margin
+**INFO: flowCheckPoint #142 GlobalDetailRoute
+**INFO: flowCheckPoint #143 PostEcoSummary
+**INFO: flowCheckPoint #144 OptimizationRecovery
+**INFO: flowCheckPoint #145 FinalSummary
+**WARN: (IMPSP-5217):	addFiller command is running on a postRoute database. It is recommended to be followed by ecoRoute -target command to make the DRC clean.
+**INFO: User settings:
+**INFO: User settings:
+**WARN: (IMPFP-3803):	Command "reportRoute" is obsolete and has been replaced by "report_route". 
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'BC_HOLD' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'WC_SETUP' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'bc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'tc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.
+**WARN: (IMPCTE-104):	The constraint mode of this inactive view 'wc_view' has been modified and may need to be reanalyzed to ensure proper timing results. To reanalyze timing for this view make the view active using 'set_analysis_view' and run timing analysis.

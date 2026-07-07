@@ -1,0 +1,4 @@
+idx	marker_handle	box	layer	type	subType	message
+1	0x7fe042f823b0	{294.09 555.66 294.47 555.94}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57561 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+2	0x7fe042f82890	{305.29 564.62 305.67 564.9}	MET1	Geometry	Minimal_Area	Regular Wire of Net u_core_n_57557 Actual: 0.10640000 Required: 0.20200000 Type: Minimum Area # 106400 202000 64 0      LEF Description:  AREA 0.202000 ; 
+3	0x7fe042f829e0	{204.16 598.08 204.16 598.08}	MET1	Connectivity	ConnectivityAntenna	Net VSS

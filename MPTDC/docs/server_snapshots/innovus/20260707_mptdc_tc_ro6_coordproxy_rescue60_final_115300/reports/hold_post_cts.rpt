@@ -1,0 +1,46 @@
+*** timeDesign #4 [begin] : totSession cpu/real = 0:09:04.4/0:10:24.5 (0.9), mem = 2762.1M
+Start to check current routing status for nets...
+All nets are already routed correctly.
+End to check current routing status for nets (mem=2748.6M)
+OPTC: user 20.0
+Starting delay calculation for Hold views
+AAE_INFO: opIsDesignInPostRouteState() is 0
+#################################################################################
+# Design Stage: PreRoute
+# Design Name: mptdc_axis_core
+# Design Mode: 180nm
+# Analysis Mode: MMMC Non-OCV 
+# Parasitics Mode: No SPEF/RCDB 
+# Signoff Settings: SI Off 
+#################################################################################
+Calculate delays in Single mode...
+Start delay calculation (fullDC) (1 T). (MEM=2769.16)
+Total number of fetched objects 14918
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+End delay calculation. (MEM=2821.93 CPU=0:00:02.4 REAL=0:00:02.0)
+End delay calculation (fullDC). (MEM=2821.93 CPU=0:00:02.9 REAL=0:00:03.0)
+*** Done Building Timing Graph (cpu=0:00:03.6 real=0:00:04.0 totSessionCpu=0:09:09 mem=2821.9M)
+
+------------------------------------------------------------------
+          timeDesign Summary
+------------------------------------------------------------------
+
+Hold views included:
+ TC_NOMINAL 
+
++--------------------+---------+---------+---------+
+|     Hold mode      |   all   | reg2reg | default |
++--------------------+---------+---------+---------+
+|           WNS (ns):| -0.105  |  0.139  | -0.105  |
+|           TNS (ns):| -0.793  |  0.000  | -0.793  |
+|    Violating Paths:|   22    |    0    |   22    |
+|          All Paths:|  4886   |  4862   |  2188   |
++--------------------+---------+---------+---------+
+
+Density: 58.386%
+Routing Overflow: 0.71% H and 0.02% V
+------------------------------------------------------------------
+Reported timing to dir ./timingReports
+Total CPU time: 4.82 sec
+Total Real time: 5.0 sec
+Total Memory Usage: 2726.417969 Mbytes

@@ -1,0 +1,15 @@
+# MPTDC Post-route PG Connectivity Status
+PG_CONNECTIVITY_STATUS=FAIL
+PG_CONNECTIVITY_STAGE=POST_ROUTE_SPECIAL_NET_VERIFY
+SPECIAL_CONNECTIVITY_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/route_connectivity_special.rpt
+SPECIAL_CONNECTIVITY_BAD=1
+SPECIAL_CONNECTIVITY_BAD_LINES={Net VSS: dangling Wire.} {1 Problem(s) (IMPVFC-94): The net has dangling wire(s).} {Verification Complete : 1 Viols.  0 Wrngs.}
+SPECIAL_CONNECTIVITY_RAW_BAD=1
+SPECIAL_CONNECTIVITY_FILTER_STATUS=DISABLED
+SPECIAL_CONNECTIVITY_FILTERED_RO_TERMINALS=0
+SPECIAL_CONNECTIVITY_NON_RO_FAILURES=0
+SPECIAL_CONNECTIVITY_FILTER_REPORT=
+REGULAR_CONNECTIVITY_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_rescue60_final_115300/reports/route_connectivity_regular.rpt
+REGULAR_CONNECTIVITY_BAD=0
+REGULAR_CONNECTIVITY_BAD_LINES=
+PG_GATE_NOTE=regular_net_connectivity_is_reported_for_route_gate_only

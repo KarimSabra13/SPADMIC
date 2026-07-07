@@ -1,0 +1,170 @@
+**INFO: User settings:
+setNanoRouteMode -route_detail_antenna_factor                                             1
+setNanoRouteMode -route_detail_post_route_spread_wire                                     auto
+setNanoRouteMode -drouteStartIteration                                                    0
+setNanoRouteMode -route_extract_third_party_compatible                                    false
+setNanoRouteMode -route_global_exp_timing_driven_std_delay                                57.3
+setNanoRouteMode -route_global_exp_timing_driven_use_tif_timing_engine_for_import_design  false
+setNanoRouteMode -route_exp_design_mode_bottom_routing_layer                              1
+setNanoRouteMode -route_exp_design_mode_top_routing_layer                                 4
+setDesignMode -bottomRoutingLayer                                                         1
+setDesignMode -process                                                                    180
+setDesignMode -topRoutingLayer                                                            4
+
+
+globalDetailRoute -target
+
+#Start globalDetailRoute on Tue Jul  7 12:42:19 2026
+#
+#num needed restored net=0
+#need_extraction net=0 (total=16343)
+#NanoRoute Version 22.33-s094_1 NR230808-0153/22_13-UB
+#Skip comparing routing design signature in db-snapshot flow
+#WARNING (NRDB-942) Reset route_exp_with_eco_for_shielding to false because there is no existing shielding wire.
+#Total number of trivial nets (e.g. < 2 pins) = 1392 (skipped).
+#Total number of routable nets = 14951.
+#Total number of nets in the design = 16343.
+#14951 routable nets have routed wires.
+#69 detail routed (routable) nets have been constrained (e.g. have preferred extra spacing, require shielding etc.)
+#No nets have been global routed.
+#Start routing data preparation on Tue Jul  7 12:42:19 2026
+#
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Build and mark too close pins for the same net.
+#Initial pin access analysis.
+#Detail pin access analysis.
+# MET1         H   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.4850
+# MET2         V   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.5600
+# MET3         H   Track-Pitch = 0.5600    Line-2-Via Pitch = 0.5600
+# METTP        V   Track-Pitch = 1.1200    Line-2-Via Pitch = 0.9500
+#Bottom routing layer index=1(MET1), bottom routing layer for shielding=1(MET1), bottom shield layer=1(MET1)
+#shield_bottom_stripe_layer=1(MET1), shield_top_stripe_layer=4(METTP)
+#pin_access_rlayer=2(MET2)
+#shield_top_dpt_rlayer=-1 top_rlayer=4 top_trim_metal_rlayer=-1 rlayer_lowest=1 bottom_rlayer=1
+#enable_trim_layer_shield=F enable_dpt_layer_shield=F has_line_end_grid=F
+#enable_dpt_layer_shield=F
+#has_line_end_grid=F
+#Processed 21373/0 dirty instances, 0/0 dirty terms, 0/0 dirty fterms, 0/0 dirty pgterms, 0/0 misc dirty regions(21373 insts marked dirty, reset pre-exisiting dirty flag on 0 insts, 0 nets marked need extraction)
+#cpu time = 00:00:00, elapsed time = 00:00:00, memory = 3580.78 (MB), peak = 3751.83 (MB)
+#Regenerating Ggrids automatically.
+#Auto generating G-grids with size=15 tracks, using layer MET2's pitch = 0.5600.
+#Using automatically generated G-grids.
+#Done routing data preparation.
+#cpu time = 00:00:04, elapsed time = 00:00:04, memory = 3588.78 (MB), peak = 3751.83 (MB)
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Finished routing data preparation on Tue Jul  7 12:42:24 2026
+#
+#Cpu time = 00:00:04
+#Elapsed time = 00:00:04
+#Increased memory = 12.04 (MB)
+#Total memory = 3588.78 (MB)
+#Peak memory = 3751.83 (MB)
+#
+#
+#Start global routing on Tue Jul  7 12:42:24 2026
+#
+#
+#Start global routing initialization on Tue Jul  7 12:42:24 2026
+#
+#WARNING (NRGR-22) Design is already detail routed.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Routing data preparation, pin analysis, global routing and track assignment statistics:
+#Cpu time = 00:00:05
+#Elapsed time = 00:00:05
+#Increased memory = 12.04 (MB)
+#Total memory = 3588.78 (MB)
+#Peak memory = 3751.83 (MB)
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#Minimum voltage of a net in the design = 0.000.
+#Maximum voltage of a net in the design = 1.800.
+#Voltage range [0.000 - 1.800] has 16341 nets.
+#Voltage range [1.800 - 1.800] has 1 net.
+#Voltage range [0.000 - 0.000] has 1 net.
+#
+#Start Detail Routing..
+#start initial detail routing ...
+# ECO: 94.67% of the total area was rechecked for DRC, and 0.00% required routing.
+#   number of violations = 0
+#21373 out of 35684 instances (59.9%) need to be verified(marked ipoed), dirty area = 42.7%.
+#4.65% of the total area is being checked for drcs
+#4.7% of the total area was checked
+#   number of violations = 0
+#cpu time = 00:00:19, elapsed time = 00:00:19, memory = 3594.64 (MB), peak = 3751.83 (MB)
+#Complete Detail Routing.
+#Total number of nets with non-default rule or having extra spacing = 69
+#Total wire length = 813760 um.
+#Total half perimeter of net bounding box = 595724 um.
+#Total wire length on LAYER MET1 = 69971 um.
+#Total wire length on LAYER MET2 = 281921 um.
+#Total wire length on LAYER MET3 = 308771 um.
+#Total wire length on LAYER METTP = 153098 um.
+#Total number of vias = 94549
+#Total number of multi-cut vias = 83252 ( 88.1%)
+#Total number of single cut vias = 11297 ( 11.9%)
+#Up-Via Summary (total 94549):
+#                   single-cut          multi-cut      Total
+#-----------------------------------------------------------
+# MET1            7827 ( 14.5%)     46123 ( 85.5%)      53950
+# MET2            2940 (  8.6%)     31315 ( 91.4%)      34255
+# MET3             530 (  8.4%)      5814 ( 91.6%)       6344
+#-----------------------------------------------------------
+#                11297 ( 11.9%)     83252 ( 88.1%)      94549 
+#
+#Total number of DRC violations = 0
+#Cpu time = 00:00:20
+#Elapsed time = 00:00:20
+#Increased memory = 5.86 (MB)
+#Total memory = 3594.64 (MB)
+#Peak memory = 3751.83 (MB)
+#detailRoute Statistics:
+#Cpu time = 00:00:20
+#Elapsed time = 00:00:20
+#Increased memory = 5.86 (MB)
+#Total memory = 3594.64 (MB)
+#Peak memory = 3751.83 (MB)
+#Skip updating routing design signature in db-snapshot flow
+#
+#globalDetailRoute statistics:
+#Cpu time = 00:00:25
+#Elapsed time = 00:00:25
+#Increased memory = -2.82 (MB)
+#Total memory = 3589.45 (MB)
+#Peak memory = 3751.83 (MB)
+#Number of warnings = 2
+#Total number of warnings = 21
+#Number of fails = 0
+#Total number of fails = 0
+#Complete globalDetailRoute on Tue Jul  7 12:42:44 2026
+#
