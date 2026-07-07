@@ -210,43 +210,47 @@ fi
 
 GENERATED_TCL="$WORK_DIR/prepare_pvs_inputs.tcl"
 {
-  echo "set checkpoint {$SOURCE_CHECKPOINT}"
-  echo "set top_cell {$TOP_CELL}"
-  echo "set output_dir {$OUTPUT_DIR}"
-  echo "set top_only_gds {$TOP_ONLY_GDS}"
-  echo "set merged_gds {$MERGED_GDS}"
-  echo "set plain_v {$PLAIN_V}"
-  echo "set pg_v {$PG_V}"
-  echo "set phys_pg_v {$PHYS_PG_V}"
-  echo "set dcell_gds {$DCELL_GDS}"
-  echo "set ro_gds {$RO_GDS}"
-  echo "set patched_streamout {$PATCHED_STREAMOUT}"
-  echo "set stream_map {$STREAM_MAP}"
-  echo {proc mptdc_pvs_try {label cmd} {
-    set rc [catch {uplevel #0 $cmd} err]
-    puts "MPTDC_PVS_PREP_${label}_RC=$rc ERR=$err"
-    if {$rc} { error $err }
-  }}
-  echo {file mkdir $output_dir}
-  echo {mptdc_pvs_try restoreDesign [list restoreDesign $checkpoint $top_cell]}
-  echo {mptdc_pvs_try defOut [list defOut [file join $output_dir "${top_cell}.def"]]}
-  echo {mptdc_pvs_try saveNetlist_plain [list saveNetlist $plain_v]}
-  echo {mptdc_pvs_try saveNetlist_pg [list saveNetlist -includePowerGround $pg_v]}
-  echo {catch {saveNetlist -phys -includePowerGround $phys_pg_v} phys_err}
-  echo {puts "MPTDC_PVS_PREP_saveNetlist_phys_pg_ERR=$phys_err"}
-  echo {if {[file exists $patched_streamout]} {
-    puts "MPTDC_PVS_PREP_STREAMOUT_TEMPLATE=$patched_streamout"
-    source $patched_streamout
-  } elseif {[info exists ::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)] && $::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)} {
-    set args [list $top_only_gds -libName DesignLib -units 1000 -mode ALL]
-    if {$stream_map ne ""} { lappend args -mapFile $stream_map }
-    mptdc_pvs_try streamOut_top_only [concat [list streamOut] $args]
-    set merge_args [list $merged_gds -libName DesignLib -units 1000 -mode ALL -merge [list $dcell_gds $ro_gds]]
-    if {$stream_map ne ""} { lappend merge_args -mapFile $stream_map }
-    mptdc_pvs_try streamOut_merged [concat [list streamOut] $merge_args]
-  } else {
-    error "No streamout template and generated streamout disabled"
-  }}
+  printf 'set checkpoint {%s}\n' "$SOURCE_CHECKPOINT"
+  printf 'set top_cell {%s}\n' "$TOP_CELL"
+  printf 'set output_dir {%s}\n' "$OUTPUT_DIR"
+  printf 'set top_only_gds {%s}\n' "$TOP_ONLY_GDS"
+  printf 'set merged_gds {%s}\n' "$MERGED_GDS"
+  printf 'set plain_v {%s}\n' "$PLAIN_V"
+  printf 'set pg_v {%s}\n' "$PG_V"
+  printf 'set phys_pg_v {%s}\n' "$PHYS_PG_V"
+  printf 'set dcell_gds {%s}\n' "$DCELL_GDS"
+  printf 'set ro_gds {%s}\n' "$RO_GDS"
+  printf 'set patched_streamout {%s}\n' "$PATCHED_STREAMOUT"
+  printf 'set stream_map {%s}\n' "$STREAM_MAP"
+  cat <<'TCL'
+proc mptdc_pvs_try {label cmd} {
+  set rc [catch {uplevel #0 $cmd} err]
+  puts "MPTDC_PVS_PREP_${label}_RC=$rc ERR=$err"
+  if {$rc} { error $err }
+}
+
+file mkdir $output_dir
+mptdc_pvs_try restoreDesign [list restoreDesign $checkpoint $top_cell]
+mptdc_pvs_try defOut [list defOut [file join $output_dir "${top_cell}.def"]]
+mptdc_pvs_try saveNetlist_plain [list saveNetlist $plain_v]
+mptdc_pvs_try saveNetlist_pg [list saveNetlist -includePowerGround $pg_v]
+catch {saveNetlist -phys -includePowerGround $phys_pg_v} phys_err
+puts "MPTDC_PVS_PREP_saveNetlist_phys_pg_ERR=$phys_err"
+
+if {[file exists $patched_streamout]} {
+  puts "MPTDC_PVS_PREP_STREAMOUT_TEMPLATE=$patched_streamout"
+  source $patched_streamout
+} elseif {[info exists ::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)] && $::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)} {
+  set args [list $top_only_gds -libName DesignLib -units 1000 -mode ALL]
+  if {$stream_map ne ""} { lappend args -mapFile $stream_map }
+  mptdc_pvs_try streamOut_top_only [concat [list streamOut] $args]
+  set merge_args [list $merged_gds -libName DesignLib -units 1000 -mode ALL -merge [list $dcell_gds $ro_gds]]
+  if {$stream_map ne ""} { lappend merge_args -mapFile $stream_map }
+  mptdc_pvs_try streamOut_merged [concat [list streamOut] $merge_args]
+} else {
+  error "No streamout template and generated streamout disabled"
+}
+TCL
 } > "$GENERATED_TCL"
 
 if ! command -v innovus >/dev/null 2>&1; then
