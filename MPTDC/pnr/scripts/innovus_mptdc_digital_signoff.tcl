@@ -895,6 +895,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_CORE_UTIL 0.55
         MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT 0
         MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0
+        MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT 0
         MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE 0
         MPTDC_PNR_FIX_RO_MACROS 0
         MPTDC_PNR_CREATE_RO_HALOS 0
@@ -6491,8 +6492,12 @@ proc mptdc_signoff_place_ro_macros {} {
     if {$slow_y eq ""} { set slow_y 450.0 }
     if {$fast_y eq ""} { set fast_y 50.0 }
     set free_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0]
+    set free_digital_only [mptdc_signoff_env_truthy MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT 0]
     set fix_ro [expr {$free_internal ? 0 : [mptdc_signoff_env_truthy MPTDC_PNR_FIX_RO_MACROS 1]}]
+    set free_digital_ro_policy [expr {$free_digital_only ? "RO_COORDINATE_PROXY_FIXED" : "DEFAULT"}]
     puts $fh "FREE_INTERNAL_PLACEMENT=[expr {$free_internal ? 1 : 0}]"
+    puts $fh "FREE_DIGITAL_ONLY_PLACEMENT=[expr {$free_digital_only ? 1 : 0}]"
+    puts $fh "FREE_DIGITAL_ONLY_RO_POLICY=$free_digital_ro_policy"
     puts $fh "RO_MACRO_FIXED=[expr {$fix_ro ? "YES" : "NO"}]"
     foreach item [list [list $slow $x $slow_y R0 north] [list $fast $x $fast_y MX south]] {
         set inst [lindex $item 0]
@@ -6537,6 +6542,7 @@ proc mptdc_signoff_place_pd_matrix {} {
     mptdc_signoff_source_if_exists innovus_mptdc_floorplan.tcl
     mptdc_signoff_source_if_exists innovus_mptdc_pd_matrix_place.tcl
     set free_all_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT 0]
+    set free_digital_only [mptdc_signoff_env_truthy MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT 0]
     set pd_cells [mptdc_signoff_collect_cells [list *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell*]]
     set rpt [file join [mptdc_signoff_report_dir] pd_matrix_status.rpt]
     set fh [open $rpt w]
@@ -6553,12 +6559,14 @@ proc mptdc_signoff_place_pd_matrix {} {
         mptdc_signoff_set_status PD_MATRIX_STATUS FAIL $rpt
         error "MPTDC_PD_MATRIX_COUNT_FAIL: expected=64 actual=[llength $pd_cells]"
     }
-    if {$free_all_internal} {
+    if {$free_all_internal || $free_digital_only} {
+        set skip_status [expr {$free_digital_only ? "SKIPPED_FREE_DIGITAL_ONLY_PLACEMENT" : "SKIPPED_FREE_ALL_INTERNAL_PLACEMENT"}]
         set fh [open $rpt a]
-        puts $fh "FREE_ALL_INTERNAL_PLACEMENT=1"
-        puts $fh "PD_GRID_PLACEMENT_STATUS=SKIPPED_FREE_ALL_INTERNAL_PLACEMENT"
-        puts $fh "PD_GRID_PLACEMENT_REASON=all_internal_cells_left_to_placeDesign"
-        puts $fh "FAST_TAG_COLUMN_PLACEMENT_STATUS=SKIPPED_FREE_ALL_INTERNAL_PLACEMENT"
+        puts $fh "FREE_ALL_INTERNAL_PLACEMENT=[expr {$free_all_internal ? 1 : 0}]"
+        puts $fh "FREE_DIGITAL_ONLY_PLACEMENT=[expr {$free_digital_only ? 1 : 0}]"
+        puts $fh "PD_GRID_PLACEMENT_STATUS=$skip_status"
+        puts $fh "PD_GRID_PLACEMENT_REASON=digital_cells_left_to_placeDesign"
+        puts $fh "FAST_TAG_COLUMN_PLACEMENT_STATUS=$skip_status"
         puts $fh "PD_PHYSICAL_AUDIT_AFTER_PLACEMENT=YES_REPORT_ONLY"
         puts $fh "PD_MATRIX_STATUS=REVIEW_REQUIRED"
         close $fh
@@ -6697,6 +6705,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     set rpt [file join [mptdc_signoff_report_dir] pd_physical_matrix_status.rpt]
     set csv [file join [mptdc_signoff_report_dir] pd_physical_matrix_tiles.csv]
     set free_all_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT 0]
+    set free_digital_only [mptdc_signoff_env_truthy MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT 0]
     set cells [mptdc_signoff_collect_cells [list *gen_pd_row*gen_pd_col*u_pd* *mptdc_pd_cell*]]
     set regions [dict create]
     if {[llength [info commands mptdc_pnr_floorplan_regions]] > 0} {
@@ -6717,7 +6726,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     set tile_w ""
     set tile_h ""
     set audit_mode [string tolower [mptdc_signoff_env MPTDC_PD_PHYSICAL_AUDIT_MODE auto]]
-    if {$free_all_internal && $audit_mode eq "auto"} {
+    if {($free_all_internal || $free_digital_only) && $audit_mode eq "auto"} {
         set audit_mode free_internal
     }
     if {$audit_mode eq "auto"} {
@@ -6826,6 +6835,7 @@ proc mptdc_signoff_audit_pd_matrix_physical {} {
     puts $fh "PD_TILE_PITCH_Y=$tile_h"
     puts $fh "PD_PHYSICAL_AUDIT_MODE=$audit_mode"
     puts $fh "FREE_ALL_INTERNAL_PLACEMENT=[expr {$free_all_internal ? 1 : 0}]"
+    puts $fh "FREE_DIGITAL_ONLY_PLACEMENT=[expr {$free_digital_only ? 1 : 0}]"
     puts $fh "PD_PHYSICAL_MATRIX_RELAXED_GATE=[expr {$relaxed_gate ? 1 : 0}]"
     puts $fh "PD_TILE_STRICT_CENTER_MAX_OFFSET_UM=$max_center_offset"
     puts $fh "PD_TILE_REGION_MARGIN_UM=$tile_region_margin"
@@ -6871,7 +6881,9 @@ proc mptdc_signoff_count_backend_cells_in_pd_box {pd_box} {
 proc mptdc_signoff_place_phase_buffers {} {
     global mptdc_xh018_cells o13 o12b
     set free_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0]
-    set skip_phase_preplace [mptdc_signoff_env_truthy MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE $free_internal]
+    set free_digital_only [mptdc_signoff_env_truthy MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT 0]
+    set skip_default [expr {$free_internal || $free_digital_only}]
+    set skip_phase_preplace [mptdc_signoff_env_truthy MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE $skip_default]
     mptdc_signoff_set_default_phase_buffer_origins
     set o13(reports_dir) [mptdc_signoff_report_dir]
     set o12b(reports_dir) [mptdc_signoff_report_dir]
@@ -6879,7 +6891,7 @@ proc mptdc_signoff_place_phase_buffers {} {
     mptdc_signoff_source_if_exists innovus_mptdc_phase_buffer_place.tcl
     set placement_applied NOT_RUN
     if {$skip_phase_preplace} {
-        set placement_applied SKIPPED_FREE_INTERNAL_PLACEMENT
+        set placement_applied [expr {$free_digital_only ? "SKIPPED_FREE_DIGITAL_ONLY_PLACEMENT" : "SKIPPED_FREE_INTERNAL_PLACEMENT"}]
     } elseif {[llength [info commands mptdc_pnr_apply_phase_buffer_placement]] > 0} {
         set placement_applied [expr {[mptdc_pnr_apply_phase_buffer_placement final_typical] ? "YES" : "NO"}]
     }
@@ -6900,6 +6912,7 @@ proc mptdc_signoff_place_phase_buffers {} {
     set failures [list]
     set fh [open $rpt w]
     puts $fh "FREE_INTERNAL_PLACEMENT=[expr {$free_internal ? 1 : 0}]"
+    puts $fh "FREE_DIGITAL_ONLY_PLACEMENT=[expr {$free_digital_only ? 1 : 0}]"
     puts $fh "SKIP_PHASE_BUFFER_PREPLACE=[expr {$skip_phase_preplace ? 1 : 0}]"
     foreach row $rows {
         set label [lindex $row 0]
@@ -7106,7 +7119,8 @@ proc mptdc_signoff_place_design {} {
     if {$placement_status eq "FAIL"} {
         error "MPTDC_PLACEMENT_GATE_FAILED: report=[dict get $place_gate status_report]"
     }
-    set ro_phase_post_fatal_default [expr {[mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0] ? 0 : 1}]
+    set ro_phase_post_fatal_default [expr {([mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0] ||
+        [mptdc_signoff_env_truthy MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT 0]) ? 0 : 1}]
     set ro_phase_post_fatal [mptdc_signoff_env_truthy MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL $ro_phase_post_fatal_default]
     mptdc_signoff_audit_ro_phase_overlap \
         [mptdc_signoff_phase_buffer_instances slow iso] \
@@ -8765,8 +8779,82 @@ proc mptdc_signoff_write_phase_and_backend_reports {} {
     mptdc_signoff_set_status EMPTY_SPACE_AUDIT_STATUS $empty_status $empty_rpt
 }
 
+proc mptdc_signoff_collect_dirs_limited {root depth} {
+    if {$root eq "" || ![file isdirectory $root]} {
+        return [list]
+    }
+    set root [file normalize $root]
+    set dirs [list $root]
+    if {$depth <= 0} {
+        return $dirs
+    }
+    foreach child [glob -nocomplain -types d -directory $root *] {
+        foreach subdir [mptdc_signoff_collect_dirs_limited $child [expr {$depth - 1}]] {
+            lappend dirs $subdir
+        }
+    }
+    return [lsort -unique $dirs]
+}
+
+proc mptdc_signoff_collect_matching_files {roots patterns} {
+    set matches [list]
+    foreach root $roots {
+        foreach dir [mptdc_signoff_collect_dirs_limited $root 2] {
+            foreach pattern $patterns {
+                foreach path [glob -nocomplain -types f -directory $dir $pattern] {
+                    lappend matches [file normalize $path]
+                }
+            }
+        }
+    }
+    return [lsort -unique $matches]
+}
+
+proc mptdc_signoff_write_pvs_ready_status {} {
+    set rpt [file join [mptdc_signoff_report_dir] pvs_ready_status.rpt]
+    set roots [list \
+        [mptdc_signoff_outputs_dir] \
+        [mptdc_signoff_def_dir] \
+        [mptdc_signoff_result_dir]]
+    set layout_inputs [mptdc_signoff_collect_matching_files $roots [list *.gds *.gds.gz *.oas *.oas.gz]]
+    set lvs_netlists [mptdc_signoff_collect_matching_files $roots [list *.cdl *.sp *.spi *.spice]]
+    set spef_inputs [mptdc_signoff_collect_matching_files $roots [list *.spef *.spef.gz]]
+    set def_inputs [mptdc_signoff_collect_matching_files $roots [list *.def]]
+    set layout_status [expr {[llength $layout_inputs] > 0 ? "PASS" : "FAIL"}]
+    set lvs_status [expr {[llength $lvs_netlists] > 0 ? "PASS" : "FAIL"}]
+    set pvs_input_status [expr {$layout_status eq "PASS" && $lvs_status eq "PASS" ? "PASS" : "FAIL"}]
+    set pvs_ready [expr {$pvs_input_status eq "PASS" ? "YES" : "NO"}]
+    set fh [open $rpt w]
+    puts $fh "# MPTDC PVS Ready Status"
+    puts $fh "PVS_INPUT_STATUS=$pvs_input_status"
+    puts $fh "PVS_READY_FOR_EXTERNAL_RUN=$pvs_ready"
+    puts $fh "PVS_LAYOUT_INPUT_STATUS=$layout_status"
+    puts $fh "PVS_LAYOUT_INPUT_COUNT=[llength $layout_inputs]"
+    foreach path $layout_inputs { puts $fh "PVS_LAYOUT_INPUT=$path" }
+    puts $fh "PVS_LVS_NETLIST_INPUT_STATUS=$lvs_status"
+    puts $fh "PVS_LVS_NETLIST_INPUT_COUNT=[llength $lvs_netlists]"
+    foreach path $lvs_netlists { puts $fh "PVS_LVS_NETLIST_INPUT=$path" }
+    puts $fh "PVS_SPEF_INPUT_COUNT=[llength $spef_inputs]"
+    foreach path $spef_inputs { puts $fh "PVS_SPEF_INPUT=$path" }
+    puts $fh "PVS_DEF_REFERENCE_COUNT=[llength $def_inputs]"
+    foreach path $def_inputs { puts $fh "PVS_DEF_REFERENCE=$path" }
+    puts $fh "PVS_STACK=[mptdc_signoff_env MPTDC_PVS_STACK XH018_1131]"
+    puts $fh "PVS_DRC_RULE=[mptdc_signoff_env MPTDC_PVS_DRC_RULE /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_DRC.rul]"
+    puts $fh "PVS_LVS_RULE=[mptdc_signoff_env MPTDC_PVS_LVS_RULE /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_LVS.rul]"
+    puts $fh "PVS_CFG=[mptdc_signoff_env MPTDC_PVS_CFG /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/pvs.cfg]"
+    puts $fh "PVS_TECH_RULESETS=[mptdc_signoff_env MPTDC_PVS_TECH_RULESETS /eda/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/XH018_1131/techRuleSets]"
+    puts $fh "QRC_LVSFILE_TC=[mptdc_signoff_env MPTDC_QRC_LVSFILE_TC /eda/pdk/xfab/xh018/cadence/v10_1/QRC_pvs/v10_1_1/XH018_1131/QRC-Typ/lvsfile]"
+    puts $fh "PVS_READY_NOTE=requires_stream_layout_and_cdl_lvs_netlist_before_external_pvs_drc_lvs"
+    close $fh
+    if {$pvs_input_status ne "PASS" && [mptdc_signoff_env_truthy MPTDC_REQUIRE_PVS_READY_INPUTS 0]} {
+        error "MPTDC_PVS_READY_INPUT_GATE_FAILED: report=$rpt"
+    }
+    return [list $pvs_input_status $rpt]
+}
+
 proc mptdc_signoff_write_final_package {} {
     set rpt [file join [mptdc_signoff_report_dir] physical_verification_status.md]
+    lassign [mptdc_signoff_write_pvs_ready_status] pvs_input_state pvs_ready_rpt
     set setup_state [mptdc_signoff_status_state SETUP_STATUS_TC]
     set hold_state [mptdc_signoff_status_state TC_HOLD_STATUS]
     set placement_state [mptdc_signoff_status_state PLACEMENT_STATUS]
@@ -8806,6 +8894,8 @@ proc mptdc_signoff_write_final_package {} {
     puts $fh "DRV_STATUS=$drv_state"
     puts $fh "SETUP_STATUS_TC=$setup_state"
     puts $fh "TC_HOLD_STATUS=$hold_state"
+    puts $fh "PVS_INPUT_STATUS=$pvs_input_state"
+    puts $fh "PVS_READY_STATUS_REPORT=$pvs_ready_rpt"
     puts $fh "MPTDC_TC_PHYSICAL_SIGNOFF=NO"
     puts $fh "TC_ONLY_TAPEOUT_EXCEPTION_READY=NO"
     puts $fh "DIGITAL_PNR_SIGNOFF=PROVISIONAL"
@@ -8816,7 +8906,8 @@ proc mptdc_signoff_write_final_package {} {
     close $fh
     mptdc_signoff_set_status DRC_STATUS DEFERRED $rpt
     mptdc_signoff_set_status LVS_STATUS DEFERRED $rpt
-    mptdc_signoff_set_status DELIVERABLE_STATUS PROVISIONAL [mptdc_signoff_outputs_dir]
+    set deliverable_status [expr {$pvs_input_state eq "PASS" ? "PROVISIONAL" : "REVIEW_REQUIRED"}]
+    mptdc_signoff_set_status DELIVERABLE_STATUS $deliverable_status $pvs_ready_rpt
     mptdc_signoff_set_status MPTDC_TC_PNR_CLOSURE $tc_pnr_state $tc_pnr_evidence
     mptdc_signoff_set_status MPTDC_TC_PHYSICAL_SIGNOFF NO drc_lvs_and_physical_verification_deferred
     mptdc_signoff_set_status TC_ONLY_TAPEOUT_EXCEPTION_READY NO drc_lvs_and_physical_verification_deferred
