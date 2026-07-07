@@ -6617,8 +6617,8 @@ proc mptdc_signoff_place_ro_macros {} {
     if {$fast_y eq ""} { set fast_y 50.0 }
     set free_internal [mptdc_signoff_env_truthy MPTDC_PNR_FREE_INTERNAL_PLACEMENT 0]
     set free_digital_only [mptdc_signoff_env_truthy MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT 0]
-    set fix_ro [expr {$free_internal ? 0 : [mptdc_signoff_env_truthy MPTDC_PNR_FIX_RO_MACROS 1]}]
-    set free_digital_ro_policy [expr {$free_digital_only ? "RO_COORDINATE_PROXY_FIXED" : "DEFAULT"}]
+    set fix_ro [mptdc_signoff_env_truthy MPTDC_PNR_FIX_RO_MACROS 1]
+    set free_digital_ro_policy [expr {$fix_ro ? "RO_MACRO_FIXED_BY_POLICY" : ($free_digital_only ? "RO_COORDINATE_PROXY_FREE" : "DEFAULT")}]
     puts $fh "FREE_INTERNAL_PLACEMENT=[expr {$free_internal ? 1 : 0}]"
     puts $fh "FREE_DIGITAL_ONLY_PLACEMENT=[expr {$free_digital_only ? 1 : 0}]"
     puts $fh "FREE_DIGITAL_ONLY_RO_POLICY=$free_digital_ro_policy"

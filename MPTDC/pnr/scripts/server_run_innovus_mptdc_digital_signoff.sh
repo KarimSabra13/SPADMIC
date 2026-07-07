@@ -657,6 +657,7 @@ fi
   echo "pnr_core_util: ${MPTDC_PNR_CORE_UTIL:-unset}"
   echo "free_all_internal_placement: ${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-unset}"
   echo "free_internal_placement: ${MPTDC_PNR_FREE_INTERNAL_PLACEMENT:-unset}"
+  echo "free_digital_only_placement: ${MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT:-unset}"
   echo "skip_phase_buffer_preplace: ${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-unset}"
   echo "fix_ro_macros: ${MPTDC_PNR_FIX_RO_MACROS:-unset}"
   echo "create_ro_halos: ${MPTDC_PNR_CREATE_RO_HALOS:-unset}"

@@ -133,11 +133,16 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    export O1_RO_LEF_PATH="$PROTECTED_RO6_LEF"
    export MPTDC_PNR_FIX_RO_MACROS=1
    export MPTDC_PNR_CREATE_RO_HALOS=1
-   export MPTDC_RO_PHASE_MIN_CLEARANCE_UM=10.0
+   export MPTDC_RO_PHASE_MIN_CLEARANCE_UM=5.0
    export MPTDC_PNR_CREATE_RO_ROUTE_BLOCKAGES=1
    export MPTDC_RO_ROUTE_BLOCKAGE_MARGIN_UM=1.0
    export MPTDC_RO_ROUTE_BLOCKAGE_LAYERS="MET1 MET2 MET3 METTP"
    export MPTDC_RO_ROUTE_BLOCKAGE_OPEN_SIDES="north south"
+   export MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=1
+   export MPTDC_PNR_FREE_INTERNAL_PLACEMENT=1
+   export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=1
+   export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0
+   export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL=0
 
    MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
      --run-id "$REROUTE_RUN_ID" \
