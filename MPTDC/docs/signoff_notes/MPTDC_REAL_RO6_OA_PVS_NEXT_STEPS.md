@@ -119,6 +119,70 @@ The wrapper has now been updated to accept `--run-id` and `--expected-head` as
 well, so the documented command style is consistent with the route-checkpoint
 wrappers and still protects against launching on the wrong git commit.
 
+## Protected-LEF Free-Internal Innovus Import Attempt
+
+The next attempt used the updated wrapper interface and did launch Innovus:
+
+```text
+attempt_date=2026-07-07T18:27 local server time
+source_head=f015d3a4e67d30a5e9d0a0ddf1edd3119519b592
+run_id=mptdc_tc_ro6_realobs_freeint_reroute_20260707_182715
+result_dir=/sim/ksabra/SPADMIC_work/innovus/mptdc_tc_ro6_realobs_freeint_reroute_20260707_182715
+protected_lef=/sim/ksabra/SPADMIC_work/lef/mptdc_tc_ro6_realobs_freeint_reroute_20260707_182715/RO_tune6_protected_pnr.lef
+```
+
+This attempt proved these front-end gates:
+
+```text
+expected_head=f015d3a4e67d30a5e9d0a0ddf1edd3119519b592
+O1_RO_LEF_MACRO=RO_tune6
+MPTDC_PNR_OSC_WIDTH_UM=168.945
+MPTDC_PNR_OSC_HEIGHT_UM=70.5
+MPTDC_RO_LEF_SIZE_STATUS=PASS
+PRE_PNR_GATE=PASS
+MPTDC_DIGITAL_SIGNOFF_SOURCE_CHECK=PASS
+MPTDC_DIGITAL_SIGNOFF_APPROVED=1
+MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
+```
+
+The manifest also captured the intended reroute policy:
+
+```text
+free_all_internal_placement=1
+free_internal_placement=1
+fix_ro_macros=1
+create_ro_halos=1
+create_ro_route_blockages=1
+ro_route_blockage_margin_um=1.0
+ro_route_blockage_layers=MET1 MET2 MET3 METTP
+ro_route_blockage_open_sides=north south
+ro_phase_min_clearance_um=5.0
+skip_phase_buffer_preplace=1
+place_fast_tags_by_column=0
+```
+
+Innovus failed before floorplan, RO placement, halo creation, route blockage
+creation, placement, or routing:
+
+```text
+MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=import_mmmc
+error=MPTDC_DIGITAL_SIGNOFF_MISSING_FILE: post-synthesis netlist path=
+```
+
+Therefore the missing `ro_macro_status.rpt`, `ro_halo_status.rpt`, and
+`ro_route_blockage_status.rpt` reports are expected. Those stages did not run.
+
+Root cause: the wrapper's pre-PNR gate resolved the default closed Genus handoff
+internally, but the wrapper itself still passed an empty
+`MPTDC_SIGNOFF_HANDOFF_DIR` into Innovus. The pre-PNR gate was therefore checking
+`/sim/ksabra/SPADMIC_work/handoff/genus_typical/mptdc_genus_typical_closed`,
+while Innovus searched an empty/default result directory for
+`mptdc_axis_core.postsyn.v`.
+
+The wrapper has now been fixed to resolve and pass the same default closed
+handoff directory before both source validation and Innovus execution. The next
+rerun should show a concrete `handoff_dir` in `run_manifest.txt`, not `unset`.
+
 ## New Decision
 
 Do a fresh digital reroute from the Genus handoff using a protected PnR-only RO
@@ -147,6 +211,7 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    ```bash
    export MPTDC_WORK_ROOT=/sim/ksabra/SPADMIC_work
    export MPTDC_INNOVUS_WORK=$MPTDC_WORK_ROOT/innovus
+   export MPTDC_GENUS_HANDOFF_DIR=$MPTDC_WORK_ROOT/handoff/genus_typical/mptdc_genus_typical_closed
    export FAILED_RUN_ID=20260707_mptdc_tc_ro6_coordproxy_free_digital_strict_130549
    export SOURCE_CKPT=$MPTDC_INNOVUS_WORK/$FAILED_RUN_ID/checkpoints/04_route_failed.enc.dat
    export RO6_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
@@ -154,6 +219,8 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    export PVS_TECH_LIB=/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/pvtech.lib
 
    test -e "$SOURCE_CKPT"
+   test -f "$MPTDC_GENUS_HANDOFF_DIR/mptdc_axis_core.postsyn.v"
+   test -f "$MPTDC_GENUS_HANDOFF_DIR/mptdc_axis_core.postsyn.sdc"
    test -f "$RO6_LEF"
    test -f "$DCELL_CDL"
    test -f "$PVS_TECH_LIB"

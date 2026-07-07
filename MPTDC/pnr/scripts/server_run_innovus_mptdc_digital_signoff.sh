@@ -609,6 +609,19 @@ esac
 RUN_ID="${RUN_ID:-${MPTDC_INNOVUS_RUN_ID:-MPTDC_TC_Closure_Innovus}}"
 MPTDC_WORK_ROOT="$(abs_path "${MPTDC_WORK_ROOT:-work}")"
 MPTDC_INNOVUS_WORK="$(abs_path "${MPTDC_INNOVUS_WORK:-$MPTDC_WORK_ROOT/innovus}")"
+MPTDC_GENUS_WORK="$(abs_path "${MPTDC_GENUS_WORK:-$MPTDC_WORK_ROOT/genus}")"
+MPTDC_GENUS_HANDOFF_ROOT="$(abs_path "${MPTDC_GENUS_HANDOFF_ROOT:-$MPTDC_WORK_ROOT/handoff/genus_typical}")"
+DEFAULT_CLOSED_HANDOFF="$MPTDC_GENUS_HANDOFF_ROOT/mptdc_genus_typical_closed"
+if [[ -n "$GENUS_RUN_DIR" ]]; then
+  GENUS_RUN_DIR="$(abs_path "$GENUS_RUN_DIR")"
+fi
+if [[ -n "$HANDOFF_DIR" ]]; then
+  HANDOFF_DIR="$(abs_path "$HANDOFF_DIR")"
+elif [[ -d "$DEFAULT_CLOSED_HANDOFF" ]]; then
+  HANDOFF_DIR="$DEFAULT_CLOSED_HANDOFF"
+elif [[ -n "$GENUS_RUN_ID" ]]; then
+  HANDOFF_DIR="$MPTDC_GENUS_HANDOFF_ROOT/$GENUS_RUN_ID"
+fi
 RESULT_DIR="$MPTDC_INNOVUS_WORK/$RUN_ID"
 LOG_DIR="$RESULT_DIR/logs"
 REPORT_DIR="$RESULT_DIR/reports"
@@ -652,6 +665,8 @@ fi
   echo "result_dir: $RESULT_DIR"
   echo "genus_run_id: ${GENUS_RUN_ID:-unset}"
   echo "genus_run_dir: ${GENUS_RUN_DIR:-unset}"
+  echo "genus_handoff_root: $MPTDC_GENUS_HANDOFF_ROOT"
+  echo "default_closed_handoff: $DEFAULT_CLOSED_HANDOFF"
   echo "handoff_dir: ${HANDOFF_DIR:-unset}"
   echo "row_infra_policy: NO_DEDICATED_CORE_TAP_ENDCAP_PENDING_DRC_LVS"
   echo "allow_no_core_tap_endcap_policy: ${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-0}"
