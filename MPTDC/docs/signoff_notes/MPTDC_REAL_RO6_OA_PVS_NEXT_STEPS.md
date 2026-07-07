@@ -228,27 +228,30 @@ failure_checkpoint_dat=/sim/ksabra/SPADMIC_work/innovus/mptdc_tc_ro6_realobs_fre
 ```
 
 The repeated stripe-generation warnings and manufacturing-grid adjustments are
-not the root cause by themselves. The important signal is that the early
-post-place/pre-route PG `sroute` gate was still configured as a clean fail-fast
-gate. It saved a failure checkpoint after `sroute`, before the experiment could
-reach full signal routing, route repair, final route DRC, and real-RO PVS
-assembly.
+not the root cause by themselves. The important signal is that the strict
+post-place/pre-route PG `sroute` gate stopped the run and preserved a failure
+checkpoint for review. This is the right behavior for this failure class: earlier
+PG debug showed that broad PG relaxation or broad post-route `sroute` can create
+or hide real VDD/VSS failures.
 
-For this protected-RO reroute experiment, the next run should not require the
-pre-route PG sroute checkpoint to be final-clean. Instead, let the flow continue
-to route and let the later route/DRC/connectivity gates decide whether the
-design is usable:
+Do not relax this gate to continue routing blindly. Keep:
 
 ```text
-MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0
-MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1
-MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=1
-MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=64
+MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
+MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0
+MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
 ```
 
-This is not a signoff waiver. It only moves the decision point from an early PG
-sroute fail-fast gate to the route-stage evidence where signal routing, PG
-recovery, DRC, shorts, opens, and connectivity are all reported together.
+The next step is to inspect the failure reports and identify whether the
+blocker is a PG pin placement issue, RO PG hookup issue, blockwire bridge, open
+port, dangling special wire, or true VDD/VSS short. The prior PG docs to compare
+against are:
+
+```text
+MPTDC/docs/mptdc_tc_pnr_pg_topology_diagnosis_20260630.md
+MPTDC/docs/pnr/MPTDC_PVS_PG_SHORT_ROOT_CAUSE_20260702.md
+MPTDC/docs/pnr/MPTDC_PNRLEF_FREEALL_AGGR_FINAL_CHECKPOINT_20260701.md
+```
 
 ## New Decision
 
@@ -333,9 +336,10 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=1
    export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0
    export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL=0
-   export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0
-   export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1
-   export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=1
+
+   export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
+   export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
+   export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0
    export MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=64
    export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
    export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
@@ -346,15 +350,41 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
      --mode full_signoff
    ```
 
-5. Inspect the new route evidence before any PVS assembly.
+5. Inspect the strict PG failure evidence before rerunning.
 
-   ```text
-   reports/ro_halo_status.rpt
-   reports/ro_route_blockage_status.rpt
-   reports/00_initial_verify_drc.rpt
-   reports/*verify_drc*.rpt
-   reports/*verify_connectivity*.rpt
-   reports/checkpoint_repair_status.rpt, if checkpoint repair is invoked
+   ```bash
+   export REROUTE_DIR="$MPTDC_INNOVUS_WORK/$REROUTE_RUN_ID"
+   test -d "$REROUTE_DIR/reports"
+
+   grep -E '^(head|expected_head|run_id|result_dir|handoff_dir|block_pg_pin_style|preplace_pg_sroute|postplace_pre_route_sroute|postplace_pre_route_sroute_require_clean|postplace_pre_route_allow_dangling_only|route_gate_sroute_recovery|ro_pg_hookup|ro_pg_hookup_required|ro_pg_hookup_search_um|ro_pg_hookup_margin_um|ro_pg_hookup_spacing_um):' \
+     "$REROUTE_DIR/manifests/run_manifest.txt"
+
+   for f in \
+     "$REROUTE_DIR/reports/block_pg_pin_status.rpt" \
+     "$REROUTE_DIR/reports/ro_macro_status.rpt" \
+     "$REROUTE_DIR/reports/ro_halo_status.rpt" \
+     "$REROUTE_DIR/reports/ro_route_blockage_status.rpt" \
+     "$REROUTE_DIR/reports/ro_pg_hookup_status.rpt" \
+     "$REROUTE_DIR/reports/ro_pg_probe_before_hookup.rpt" \
+     "$REROUTE_DIR/reports/ro_pg_probe_after_hookup.rpt" \
+     "$REROUTE_DIR/reports/postplace_pre_route_sroute_status.rpt" \
+     "$REROUTE_DIR/reports/postplace_pre_route_pg_topology_before_sroute.rpt" \
+     "$REROUTE_DIR/reports/postplace_pre_route_pg_topology_after_ro_pg_hookup.rpt" \
+     "$REROUTE_DIR/reports/postplace_pre_route_pg_topology_after_sroute.rpt" \
+     "$REROUTE_DIR/reports/postplace_pre_route_verify_connectivity_special.rpt" \
+     "$REROUTE_DIR/reports/postplace_pre_route_pg_topology_after_sroute_verify_special.rpt" \
+     "$REROUTE_DIR/reports/pg_verify_connectivity_special.rpt" \
+     "$REROUTE_DIR/reports/pg_verify_connectivity_all.rpt"; do
+       echo "===== $f ====="
+       sed -n '1,260p' "$f" 2>/dev/null || echo "MISSING: $f"
+   done
+
+   grep -RniE 'POSTPLACE_PRE_ROUTE_SROUTE_STATUS|POSTPLACE_PRE_ROUTE_SROUTE_GATE_ACTION|POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY|BLOCK_PG_PIN_STATUS|RO_PG_HOOKUP|Net VDD|Net VSS|IMPVFC|dangling|open|short|unconnected|Verification Complete|Problem\\(s\\)|Different labels|Metal_Short|VDD_LEFT|VDD_RIGHT|VSS_LEFT|VSS_RIGHT' \
+     "$REROUTE_DIR/reports" | head -300
+
+   find "$REROUTE_DIR/reports" -maxdepth 1 -type f \
+     \( -name '*pg*' -o -name '*sroute*' -o -name '*connectivity*' -o -name '*block_pg*' -o -name '*ro_pg*' \) \
+     -print | sort
    ```
 
 6. Reassemble the fresh route with real `SPADMIC/RO_tune6/layout` and rerun PVS
