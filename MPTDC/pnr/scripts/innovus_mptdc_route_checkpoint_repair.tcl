@@ -240,7 +240,7 @@ proc mptdc_ckpt_delete_regular_drc_wires {net} {
         error "mptdc_ckpt_delete_regular_drc_wires requires a net"
     }
     puts "MPTDC_CKPT_DELETE_REGULAR_DRC_WIRES_NET=$net"
-    editDelete -net $net -regular_wire_with_drc -type Regular
+    editDelete -net $net -regular_wire_with_drc
     return $net
 }
 
