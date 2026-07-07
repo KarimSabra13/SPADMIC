@@ -1,0 +1,5 @@
+# MPTDC Post-route DRV Status
+DRV_STATUS=PASS
+DRV_MAX_TRANSITION_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/drv_max_transition.rpt
+DRV_MAX_CAP_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/drv_max_cap.rpt
+DRV_MAX_FANOUT_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/drv_max_fanout.rpt

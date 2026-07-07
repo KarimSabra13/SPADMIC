@@ -1,0 +1,17 @@
+family,tap,raw_ro_pin,raw_net,actual_load_ff,strict_budget_ff,cn_budget_ff,strict_ratio,cn_ratio,first_cell_type,first_cell_input_cap_ff,first_cell_ratio_to_strict_budget,first_cell_ratio_to_cn_budget,budget_label,notes
+slow,0,u_core_u_osc_slow_u_ro_tune4/S[0],u_core_slow_phase_raw[0],24.00,58.72,75.59,0.41,0.32,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,1,u_core_u_osc_slow_u_ro_tune4/S[1],u_core_slow_phase_raw[1],22.00,58.72,75.59,0.37,0.29,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,2,u_core_u_osc_slow_u_ro_tune4/S[2],u_core_slow_phase_raw[2],24.00,58.72,75.59,0.41,0.32,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,3,u_core_u_osc_slow_u_ro_tune4/S[3],u_core_slow_phase_raw[3],18.00,58.72,75.59,0.31,0.24,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,4,u_core_u_osc_slow_u_ro_tune4/S[4],u_core_slow_phase_raw[4],25.00,58.72,75.59,0.43,0.33,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,5,u_core_u_osc_slow_u_ro_tune4/S[5],u_core_slow_phase_raw[5],25.00,58.72,75.59,0.43,0.33,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,6,u_core_u_osc_slow_u_ro_tune4/S[6],u_core_slow_phase_raw[6],23.00,58.72,75.59,0.39,0.30,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,7,u_core_u_osc_slow_u_ro_tune4/S[7],u_core_slow_phase_raw[7],29.00,58.72,75.59,0.49,0.38,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,0,u_core_u_osc_fast_u_ro_tune4/S[0],u_core_fast_phase_raw[0],23.00,58.72,75.59,0.39,0.30,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,1,u_core_u_osc_fast_u_ro_tune4/S[1],u_core_fast_phase_raw[1],21.00,58.72,75.59,0.36,0.28,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,2,u_core_u_osc_fast_u_ro_tune4/S[2],u_core_fast_phase_raw[2],23.00,58.72,75.59,0.39,0.30,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,3,u_core_u_osc_fast_u_ro_tune4/S[3],u_core_fast_phase_raw[3],17.00,58.72,75.59,0.29,0.22,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,4,u_core_u_osc_fast_u_ro_tune4/S[4],u_core_fast_phase_raw[4],25.00,58.72,75.59,0.43,0.33,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,5,u_core_u_osc_fast_u_ro_tune4/S[5],u_core_fast_phase_raw[5],24.00,58.72,75.59,0.41,0.32,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,6,u_core_u_osc_fast_u_ro_tune4/S[6],u_core_fast_phase_raw[6],20.00,58.72,75.59,0.34,0.26,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,7,u_core_u_osc_fast_u_ro_tune4/S[7],u_core_fast_phase_raw[7],27.00,58.72,75.59,0.46,0.36,BUJIHDX4,,,,OK_STRICT,RAW_CAP_SOURCE=property_file:capacitance_max

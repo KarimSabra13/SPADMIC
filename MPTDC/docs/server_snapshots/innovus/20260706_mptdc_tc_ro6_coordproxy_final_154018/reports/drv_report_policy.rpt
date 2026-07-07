@@ -1,0 +1,6 @@
+# MPTDC DRV Report Policy
+DRV_REPORT_MODE=BOUNDED_NO_ALL_VIOLATORS
+MPTDC_SKIP_VERBOSE_DRV_ALL_VIOLATORS=1
+DRV_MAX_TRANSITION_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/drv_max_transition.rpt
+DRV_MAX_CAP_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/drv_max_cap.rpt
+DRV_MAX_FANOUT_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/drv_max_fanout.rpt

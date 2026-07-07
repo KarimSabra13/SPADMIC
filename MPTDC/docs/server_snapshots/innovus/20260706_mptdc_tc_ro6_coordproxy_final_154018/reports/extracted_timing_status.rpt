@@ -1,0 +1,11 @@
+# MPTDC Extracted TC Timing Status
+TC_TIMING_GATE_POLICY=report_failures_without_aborting_physical_package
+TC_SETUP_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/timing_tc_nominal.rpt
+TC_HOLD_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/timing_tc_hold.rpt
+SETUP_STATUS_TC=FAIL
+TC_HOLD_STATUS=PASS
+TC_SETUP_FAILURE_EVIDENCE_BEGIN
+|           WNS (ns):| -0.063  | -0.063  |   N/A   |
+|           TNS (ns):| -2.045  | -2.045  |   N/A   |
+|    Violating Paths:|   125   |   125   |   N/A   |
+TC_SETUP_FAILURE_EVIDENCE_END

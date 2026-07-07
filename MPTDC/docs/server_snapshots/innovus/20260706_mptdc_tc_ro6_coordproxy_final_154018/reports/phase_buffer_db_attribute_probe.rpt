@@ -1,0 +1,140 @@
+# O12B Innovus DB Attribute Probe
+
+Generated: 2026-07-06 16:18:33 CEST
+
+## slow_0_raw_net
+
+object: 0xa614
+kind: net
+name: u_core_slow_phase_raw[0]
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+dbGet_net_probe:
+- query_name=u_core_slow_phase_raw[0]
+- ptr=0x7fda08222060
+  attributes:
+  - skipped_full_dbGet_question_mark_probe
+  candidate_net_values:
+  - .numTerms=2
+  - .numInputTerms=1
+  - .numOutputTerms=1
+  - .area=1674.7739
+  - .box=90.25 582.29 142.685 614.23
+  - .box_sizex=52.435
+  - .box_sizey=31.94
+  - .box_size=52.435 31.94
+  - .bottomPreferredLayer=0x7fda0f213400
+  - .topPreferredLayer=0x7fda0f213400
+  route_metric_probe:
+  - .wires count=8 first=0x7fd9ce40c640
+  - .vias count=3 first=0x7fd9d21d22f8
+
+## slow_0_isolation_net
+
+object: 
+kind: net
+name: u_core_u_phase_buf_slow/gen_phase_buf[0].iso_tap
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+dbGet_net_probe:
+- query_name=u_core_u_phase_buf_slow/gen_phase_buf[0].iso_tap
+- ptr=0x7fda07e17878
+  attributes:
+  - skipped_full_dbGet_question_mark_probe
+  candidate_net_values:
+  - .numTerms=2
+  - .numInputTerms=1
+  - .numOutputTerms=1
+  - .area=30.73
+  - .box=91.0 572.97 94.5 581.75
+  - .box_sizex=3.5
+  - .box_sizey=8.78
+  - .box_size=3.5 8.78
+  - .bottomPreferredLayer=0x7fda0f213400
+  - .topPreferredLayer=0x7fda0f213400
+  route_metric_probe:
+  - .wires count=2 first=0x7fd9cf0a5b08
+  - .vias count=2 first=0x7fd9cf0a5948
+
+## slow_0_buffered_net
+
+object: 0xa615
+kind: net
+name: ro_slow_tap0_o
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+dbGet_net_probe:
+- query_name=ro_slow_tap0_o
+- ptr=0x7fda08216f30
+  attributes:
+  - skipped_full_dbGet_question_mark_probe
+  candidate_net_values:
+  - .numTerms=75
+  - .numInputTerms=74
+  - .numOutputTerms=1
+  - .area=528219.6536
+  - .box=96.38 26.46 1061.2 573.94
+  - .box_sizex=964.82
+  - .box_sizey=547.48
+  - .box_size=964.82 547.48
+  - .bottomPreferredLayer=0x7fda0f213400
+  - .topPreferredLayer=0x7fda0f213400
+  route_metric_probe:
+  - .wires count=315 first=0x7fd9d30357f8
+  - .pWires count=6 first=0x7fd9cfcfbe50
+  - .vias count=138 first=0x7fd990c37fa0
+
+## slow_0_isolation_cell
+
+object: 0xa616
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+
+## slow_0_driver_cell
+
+object: 0xa617
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+
+## slow_0_isolation_input_pin
+
+object: 0xa618
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+
+## slow_0_isolation_output_pin
+
+object: 0xa619
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+
+## slow_0_driver_input_pin
+
+object: 0xa61a
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+
+## slow_0_driver_output_pin
+
+object: 0xa61b
+attributes:
+- <none or unavailable>
+get_db_route_metric_probe:
+- no_supported_route_shape_object_found
+

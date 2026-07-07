@@ -1,0 +1,17 @@
+family,tap,raw_ro_pin,matched_raw_pin_count,raw_net,raw_fanout,raw_net_total_cap_pf,raw_net_total_cap_ff,raw_net_cap_bound_ff,budget_label,strict_ratio,cn_ratio,isolation_input_pin,sinks,notes
+slow,0,u_core_u_osc_slow_u_ro_tune4/S[0],1,u_core_slow_phase_raw[0],1,0.024,24.00,,OK_STRICT,0.41,0.32,u_core_u_phase_buf_slow/gen_phase_buf[0].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,1,u_core_u_osc_slow_u_ro_tune4/S[1],1,u_core_slow_phase_raw[1],1,0.022,22.00,,OK_STRICT,0.37,0.29,u_core_u_phase_buf_slow/gen_phase_buf[1].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,2,u_core_u_osc_slow_u_ro_tune4/S[2],1,u_core_slow_phase_raw[2],1,0.024,24.00,,OK_STRICT,0.41,0.32,u_core_u_phase_buf_slow/gen_phase_buf[2].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,3,u_core_u_osc_slow_u_ro_tune4/S[3],1,u_core_slow_phase_raw[3],1,0.018,18.00,,OK_STRICT,0.31,0.24,u_core_u_phase_buf_slow/gen_phase_buf[3].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,4,u_core_u_osc_slow_u_ro_tune4/S[4],1,u_core_slow_phase_raw[4],1,0.025,25.00,,OK_STRICT,0.43,0.33,u_core_u_phase_buf_slow/gen_phase_buf[4].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,5,u_core_u_osc_slow_u_ro_tune4/S[5],1,u_core_slow_phase_raw[5],1,0.025,25.00,,OK_STRICT,0.43,0.33,u_core_u_phase_buf_slow/gen_phase_buf[5].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,6,u_core_u_osc_slow_u_ro_tune4/S[6],1,u_core_slow_phase_raw[6],1,0.023,23.00,,OK_STRICT,0.39,0.30,u_core_u_phase_buf_slow/gen_phase_buf[6].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+slow,7,u_core_u_osc_slow_u_ro_tune4/S[7],1,u_core_slow_phase_raw[7],1,0.029,29.00,,OK_STRICT,0.49,0.38,u_core_u_phase_buf_slow/gen_phase_buf[7].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,0,u_core_u_osc_fast_u_ro_tune4/S[0],1,u_core_fast_phase_raw[0],1,0.023,23.00,,OK_STRICT,0.39,0.30,u_core_u_phase_buf_fast/gen_phase_buf[0].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,1,u_core_u_osc_fast_u_ro_tune4/S[1],1,u_core_fast_phase_raw[1],1,0.021,21.00,,OK_STRICT,0.36,0.28,u_core_u_phase_buf_fast/gen_phase_buf[1].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,2,u_core_u_osc_fast_u_ro_tune4/S[2],1,u_core_fast_phase_raw[2],1,0.023,23.00,,OK_STRICT,0.39,0.30,u_core_u_phase_buf_fast/gen_phase_buf[2].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,3,u_core_u_osc_fast_u_ro_tune4/S[3],1,u_core_fast_phase_raw[3],1,0.017,17.00,,OK_STRICT,0.29,0.22,u_core_u_phase_buf_fast/gen_phase_buf[3].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,4,u_core_u_osc_fast_u_ro_tune4/S[4],1,u_core_fast_phase_raw[4],1,0.025,25.00,,OK_STRICT,0.43,0.33,u_core_u_phase_buf_fast/gen_phase_buf[4].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,5,u_core_u_osc_fast_u_ro_tune4/S[5],1,u_core_fast_phase_raw[5],1,0.024,24.00,,OK_STRICT,0.41,0.32,u_core_u_phase_buf_fast/gen_phase_buf[5].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,6,u_core_u_osc_fast_u_ro_tune4/S[6],1,u_core_fast_phase_raw[6],1,0.020,20.00,,OK_STRICT,0.34,0.26,u_core_u_phase_buf_fast/gen_phase_buf[6].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max
+fast,7,u_core_u_osc_fast_u_ro_tune4/S[7],1,u_core_fast_phase_raw[7],1,0.027,27.00,,OK_STRICT,0.46,0.36,u_core_u_phase_buf_fast/gen_phase_buf[7].u_iso/A,,RAW_CAP_SOURCE=property_file:capacitance_max

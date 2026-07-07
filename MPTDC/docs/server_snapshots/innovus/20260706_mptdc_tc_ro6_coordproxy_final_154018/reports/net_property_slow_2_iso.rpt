@@ -1,0 +1,22 @@
+O12B net properties u_core_u_phase_buf_slow/gen_phase_buf[2].iso_tap
+====================================================================
+Generated: 2026-07-06 16:18:30 CEST
+
+object | 
+object_query_safe | 0
+capacitance_max | 
+capacitance_max_source | 
+wire_capacitance_max | 
+wire_capacitance_max_source | 
+pin_capacitance_max | 
+pin_capacitance_max_source | 
+resistance_max | 
+resistance_max_source | 
+transition | 
+transition_source | 
+route_length | 
+route_length_source | 
+num_load_pins | 
+num_load_pins_source | 
+fanout | 
+fanout_source | 

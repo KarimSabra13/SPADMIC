@@ -1,0 +1,457 @@
+
+Power Net Detected:
+        Voltage	    Name
+             0V	    VSS
+           1.8V	    VDD
+Using Power View: TC_NOMINAL.
+AAE_INFO: opIsDesignInPostRouteState() is 1
+AAE DB initialization (MEM=3756.73 CPU=0:00:00.0 REAL=0:00:00.0) 
+#################################################################################
+# Design Stage: PostRoute
+# Design Name: mptdc_axis_core
+# Design Mode: 180nm
+# Analysis Mode: MMMC OCV 
+# Parasitics Mode: SPEF/RCDB 
+# Signoff Settings: SI Off 
+#################################################################################
+Start delay calculation (fullDC) (1 T). (MEM=3785.98)
+Total number of fetched objects 14955
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+End delay calculation. (MEM=3829.76 CPU=0:00:02.3 REAL=0:00:03.0)
+End delay calculation (fullDC). (MEM=3829.76 CPU=0:00:02.8 REAL=0:00:03.0)
+Load RC corner of view TC_NOMINAL
+
+Begin Power Analysis
+
+             0V	    VSS
+           1.8V	    VDD
+
+Begin Processing Timing Library for Power Calculation
+
+Ended Processing Timing Library for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3163.12MB/5166.14MB/3163.12MB)
+
+
+
+Begin Processing Power Net/Grid for Power Calculation
+
+Ended Processing Power Net/Grid for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3163.12MB/5166.14MB/3163.12MB)
+
+Begin Processing Timing Window Data for Power Calculation
+
+clk_osc_fast_tap7(750.188MHz) CK: assigning clock clk_osc_fast_tap7 to net u_core_fast_phase_raw[7]
+clk_osc_fast_tap6(750.188MHz) CK: assigning clock clk_osc_fast_tap6 to net u_core_fast_phase_raw[6]
+clk_osc_fast_tap5(750.188MHz) CK: assigning clock clk_osc_fast_tap5 to net u_core_fast_phase_raw[5]
+clk_osc_fast_tap4(750.188MHz) CK: assigning clock clk_osc_fast_tap4 to net u_core_fast_phase_raw[4]
+clk_osc_fast_tap3(750.188MHz) CK: assigning clock clk_osc_fast_tap3 to net u_core_fast_phase_raw[3]
+clk_osc_fast_tap2(750.188MHz) CK: assigning clock clk_osc_fast_tap2 to net u_core_fast_phase_raw[2]
+clk_osc_fast_tap1(750.188MHz) CK: assigning clock clk_osc_fast_tap1 to net u_core_fast_phase_raw[1]
+clk_osc_fast_buf_tap7(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap7 to net u_core_fast_phase[7]
+clk_osc_fast_buf_tap6(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap6 to net u_core_fast_phase[6]
+clk_osc_fast_buf_tap5(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap5 to net u_core_fast_phase[5]
+clk_osc_fast_buf_tap4(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap4 to net u_core_fast_phase[4]
+clk_osc_fast_buf_tap3(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap3 to net u_core_fast_phase[3]
+clk_osc_fast_buf_tap2(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap2 to net u_core_fast_phase[2]
+clk_osc_fast_buf_tap1(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap1 to net u_core_fast_phase[1]
+clk_osc_fast_buf_tap0(750.188MHz) CK: assigning clock clk_osc_fast_buf_tap0 to net ro_fast_tap0_o
+clk_osc_fast(750.188MHz) CK: assigning clock clk_osc_fast to net u_core_fast_phase_raw[0]
+clk_osc_slow_tap7(699.301MHz) CK: assigning clock clk_osc_slow_tap7 to net u_core_slow_phase_raw[7]
+clk_osc_slow_tap6(699.301MHz) CK: assigning clock clk_osc_slow_tap6 to net u_core_slow_phase_raw[6]
+clk_osc_slow_tap5(699.301MHz) CK: assigning clock clk_osc_slow_tap5 to net u_core_slow_phase_raw[5]
+clk_osc_slow_tap4(699.301MHz) CK: assigning clock clk_osc_slow_tap4 to net u_core_slow_phase_raw[4]
+clk_osc_slow_tap3(699.301MHz) CK: assigning clock clk_osc_slow_tap3 to net u_core_slow_phase_raw[3]
+clk_osc_slow_tap2(699.301MHz) CK: assigning clock clk_osc_slow_tap2 to net u_core_slow_phase_raw[2]
+clk_osc_slow_tap1(699.301MHz) CK: assigning clock clk_osc_slow_tap1 to net u_core_slow_phase_raw[1]
+clk_osc_slow_buf_tap7(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap7 to net u_core_slow_phase[7]
+clk_osc_slow_buf_tap6(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap6 to net u_core_slow_phase[6]
+clk_osc_slow_buf_tap5(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap5 to net u_core_slow_phase[5]
+clk_osc_slow_buf_tap4(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap4 to net u_core_slow_phase[4]
+clk_osc_slow_buf_tap3(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap3 to net u_core_slow_phase[3]
+clk_osc_slow_buf_tap2(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap2 to net u_core_slow_phase[2]
+clk_osc_slow_buf_tap1(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap1 to net u_core_slow_phase[1]
+clk_osc_slow_buf_tap0(699.301MHz) CK: assigning clock clk_osc_slow_buf_tap0 to net ro_slow_tap0_o
+clk_osc_slow(699.301MHz) CK: assigning clock clk_osc_slow to net u_core_slow_phase_raw[0]
+clk_sys(160MHz) CK: assigning clock clk_sys to net clk_sys
+** INFO:  (VOLTUS_POWR-2054): Setting default frequency to the dominant frequency 160MHz.
+
+	To force set default frequency/period. Use either of the following command options:
+		set_power_analysis_mode        -default_frequency <frequency value>
+		set_default_switching_activity -period            <period value>.
+
+Ended Processing Timing Window Data for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3164.58MB/5166.14MB/3164.58MB)
+
+Begin Processing User Attributes
+
+Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3164.58MB/5166.14MB/3164.58MB)
+
+Begin Processing Signal Activity
+
+
+Starting Levelizing
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT)
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 10%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 20%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 30%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 40%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 50%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 60%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 70%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 80%
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT): 90%
+
+Finished Levelizing
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT)
+
+Starting Activity Propagation
+2026-Jul-06 16:18:16 (2026-Jul-06 14:18:16 GMT)
+** INFO:  (VOLTUS_POWR-1356): No default input activity has been set. Defaulting to 0.2.
+Use 'set_default_switching_activity -input_activity' command to change the default activity value.
+
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 10%
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 20%
+
+Finished Activity Propagation
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT)
+Ended Processing Signal Activity: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3165.22MB/5166.14MB/3165.22MB)
+
+Begin Power Computation
+
+      ----------------------------------------------------------
+      # of cell(s) missing both power/leakage table: 0
+      # of cell(s) missing power table: 1
+      # of cell(s) missing leakage table: 0
+      ----------------------------------------------------------
+CellName                                  Missing Table(s)
+RO_tune6                                  internal power, 
+
+
+
+Starting Calculating power
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT)
+ ... Calculating switching power
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 10%
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 20%
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 30%
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 40%
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 50%
+ ... Calculating internal and leakage power
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 60%
+2026-Jul-06 16:18:17 (2026-Jul-06 14:18:17 GMT): 70%
+2026-Jul-06 16:18:18 (2026-Jul-06 14:18:18 GMT): 80%
+2026-Jul-06 16:18:18 (2026-Jul-06 14:18:18 GMT): 90%
+
+Finished Calculating power
+2026-Jul-06 16:18:18 (2026-Jul-06 14:18:18 GMT)
+      # of MSMV cell(s) missing power_level: 0
+Ended Power Computation: (cpu=0:00:01, real=0:00:01, mem(process/total/peak)=3168.60MB/5174.15MB/3168.60MB)
+
+Begin Processing User Attributes
+
+Begin Processing set_power
+Ended Processing set_power: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=3168.60MB/5174.15MB/3168.60MB)
+Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3168.60MB/5174.15MB/3168.60MB)
+
+Ended Power Analysis: (cpu=0:00:02, real=0:00:02, mem(process/total/peak)=3168.60MB/5174.15MB/3168.60MB)
+
+Begin Boundary Leakage Calculation
+Ended Boundary Leakage Calculation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=3168.72MB/5174.15MB/3168.72MB)
+Begin Static Power Report Generation
+*----------------------------------------------------------------------------------------
+*	Innovus 22.33-s094_1 (64bit) 08/25/2023 16:48 (Linux 3.10.0-693.el7.x86_64)
+*	
+*
+* 	Date & Time:	2026-Jul-06 16:18:18 (2026-Jul-06 14:18:18 GMT)
+*
+*----------------------------------------------------------------------------------------
+*
+*	Design: mptdc_axis_core
+*
+*	Liberty Libraries used:
+*	        TC_NOMINAL: /eda/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib
+*	        TC_NOMINAL: /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/RO_tune6_real_layout_shell.lib
+*
+*	Parasitic Files used:
+*
+*       Power View : TC_NOMINAL
+*
+*       User-Defined Activity : N.A.
+*
+*       Activity File: N.A.
+*
+*       Hierarchical Global Activity: N.A.
+*
+*       Global Activity: N.A.
+*
+*       Sequential Element Activity: 0.200000
+*
+*       Primary Input Activity: 0.200000
+*
+*       Default icg ratio: N.A.
+*
+*       Global Comb ClockGate Ratio: N.A.
+*
+*	Power Units = 1mW
+*
+*	Time Units = 1e-09 secs
+*
+*       report_power
+*
+-----------------------------------------------------------------------------------------
+*
+
+
+
+Total Power
+-----------------------------------------------------------------------------------------
+Total Internal Power:      136.02721737 	   71.5762%
+Total Switching Power:      54.01802922 	   28.4238%
+Total Leakage Power:         0.00009509 	    0.0001%
+Total Power:               190.04534168
+-----------------------------------------------------------------------------------------
+
+
+Group                           Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+Sequential                           116       7.151   5.574e-05       123.1       64.79
+Macro                                  0      0.8704           0      0.8704       0.458
+IO                                     0           0           0           0           0
+Physical-Only                          0           0    3.31e-09    3.31e-09   1.742e-09
+Combinational                      10.16       12.93   3.759e-05       23.09       12.15
+Clock (Combinational)              9.882       33.06    1.75e-06       42.95        22.6
+Clock (Sequential)                     0           0           0           0           0
+-----------------------------------------------------------------------------------------
+Total                                136       54.02   9.509e-05         190         100
+-----------------------------------------------------------------------------------------
+
+
+Rail                  Voltage   Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+VDD                       1.8        136       54.02   9.509e-05         190         100
+
+
+Clock                           Internal   Switching     Leakage       Total  Percentage 
+                                Power      Power         Power         Power  (%)        
+-----------------------------------------------------------------------------------------
+clk_osc_slow_tap7                 0.3759       1.004   3.016e-08        1.38      0.7259
+clk_osc_slow_tap6                 0.3758      0.9974   3.016e-08       1.373      0.7226
+clk_osc_slow_tap5                 0.3725      0.8871   3.016e-08        1.26      0.6628
+clk_osc_slow_buf_tap5             0.2781       0.358   2.216e-08      0.6361      0.3347
+clk_osc_slow_buf_tap6             0.2814       0.468   2.216e-08      0.7493      0.3943
+clk_osc_slow_buf_tap4             0.2766      0.3073   2.216e-08      0.5839      0.3072
+clk_osc_slow_buf_tap3             0.2803      0.4337   2.216e-08      0.7141      0.3757
+clk_osc_fast_buf_tap4             0.3103       1.504   2.216e-08       1.814      0.9546
+clk_osc_fast_tap4                 0.4116       2.048   3.016e-08        2.46       1.294
+clk_osc_slow_tap3                 0.3748      0.9635   3.016e-08       1.338      0.7042
+clk_osc_fast_buf_tap2             0.3104       1.601   2.216e-08       1.911       1.006
+clk_osc_fast_tap3                 0.4117       2.145   3.016e-08       2.556       1.345
+clk_osc_fast_tap6                 0.4114        1.95   3.016e-08       2.362       1.243
+clk_osc_fast_tap7                 0.4114       1.939   3.016e-08       2.351       1.237
+clk_osc_fast_buf_tap0             0.3108       1.895   2.216e-08       2.205        1.16
+clk_osc_fast_tap1                 0.4115       1.974   3.016e-08       2.385       1.255
+clk_osc_slow                      0.3837       1.947   3.016e-08       2.331       1.226
+clk_sys                            3.589       14.74   1.267e-06       18.33       9.646
+clk_osc_fast_tap2                 0.4117       2.145   3.016e-08       2.557       1.345
+clk_osc_fast_buf_tap1             0.3102       1.431   2.216e-08       1.741       0.916
+clk_osc_fast_tap5                 0.4117        2.19   3.016e-08       2.602       1.369
+clk_osc_fast_buf_tap5             0.3105       1.646   2.216e-08       1.957        1.03
+clk_osc_fast_buf_tap3             0.3104       1.601   2.216e-08       1.911       1.006
+clk_osc_slow_tap2                 0.3732      0.9094   3.016e-08       1.283      0.6748
+clk_osc_slow_buf_tap7             0.2815       0.474   2.216e-08      0.7555      0.3975
+clk_osc_fast_buf_tap6             0.3101       1.406   2.216e-08       1.716      0.9028
+clk_osc_fast                       0.412       2.438   3.016e-08        2.85         1.5
+clk_osc_slow_buf_tap1             0.2788      0.3827   2.216e-08      0.6616      0.3481
+clk_osc_slow_tap4                  0.371      0.8367   3.016e-08       1.208      0.6355
+clk_osc_fast_buf_tap7             0.3101       1.395   2.216e-08       1.705      0.8973
+clk_osc_slow_buf_tap0             0.2893       1.418   2.216e-08       1.707      0.8984
+clk_osc_slow_buf_tap2             0.2787      0.3796   2.216e-08      0.6583      0.3464
+clk_osc_slow_tap1                 0.3733       0.912   3.016e-08       1.285      0.6763
+-----------------------------------------------------------------------------------------
+Total                              9.882       33.94    1.75e-06       43.82       23.06
+-----------------------------------------------------------------------------------------
+Clock: clk_osc_slow_tap7
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_tap6
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_tap5
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap5
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap6
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap4
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap3
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap4
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_tap4
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_tap3
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap2
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_tap3
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_tap6
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_tap7
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap0
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_tap1
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_sys
+Clock Period: 0.006250 usec 
+Clock Toggle Rate:   320.0000 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_tap2
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap1
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_tap5
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap5
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap3
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_tap2
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap7
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap6
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap1
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_tap4
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_fast_buf_tap7
+Clock Period: 0.001333 usec 
+Clock Toggle Rate:  1500.3752 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap0
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_buf_tap2
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+Clock: clk_osc_slow_tap1
+Clock Period: 0.001430 usec 
+Clock Toggle Rate:  1398.6015 Mhz 
+Clock Static Probability:  0.5000
+  
+ 
+ 
+-----------------------------------------------------------------------------------------
+*	Power Distribution Summary: 
+*              Highest Average Power: u_core_u_phase_buf_fast/gen_phase_buf[0].u_drv (BUJIHDX12):            2.205
+*              Highest Leakage Power: FE_OCPC1979_FE_DBTN16_u_core_n_1526 (BUJIHDX12):        2.216e-08
+*                Total Cap:      3.22362e-10 F
+*                Total instances in design: 17614
+*                Total instances in design with no power:     0
+*                Total instances in design with no activty:     0
+
+*                Total Fillers and Decap:  3310
+-----------------------------------------------------------------------------------------
+ 
+** INFO:  (VOLTUS_POWR-3465): There are 0 decaps and 0 fillers in the design
+
+Ended Static Power Report Generation: (cpu=0:00:00, real=0:00:00,
+mem(process/total/peak)=3173.73MB/5174.15MB/3173.73MB)
+

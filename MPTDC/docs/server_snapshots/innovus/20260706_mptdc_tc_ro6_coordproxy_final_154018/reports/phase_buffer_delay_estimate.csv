@@ -1,0 +1,17 @@
+family,tap,isolation_instance,isolation_cell_type,driver_instance,driver_cell_type,isolation_delay_ps,driver_delay_ps,total_chain_delay_ps,isolation_input_transition,isolation_output_transition,driver_input_transition,driver_output_transition,clock_name,notes
+slow,0,u_core_u_phase_buf_slow/gen_phase_buf[0].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[0].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap0,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+slow,1,u_core_u_phase_buf_slow/gen_phase_buf[1].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[1].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap1,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+slow,2,u_core_u_phase_buf_slow/gen_phase_buf[2].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[2].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap2,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+slow,3,u_core_u_phase_buf_slow/gen_phase_buf[3].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[3].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap3,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+slow,4,u_core_u_phase_buf_slow/gen_phase_buf[4].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[4].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap4,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+slow,5,u_core_u_phase_buf_slow/gen_phase_buf[5].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[5].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap5,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+slow,6,u_core_u_phase_buf_slow/gen_phase_buf[6].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[6].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap6,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+slow,7,u_core_u_phase_buf_slow/gen_phase_buf[7].u_iso,BUJIHDX4,u_core_u_phase_buf_slow/gen_phase_buf[7].u_drv,BUJIHDX12,,,,,,,,clk_osc_slow_buf_tap7,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,0,u_core_u_phase_buf_fast/gen_phase_buf[0].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[0].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap0,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,1,u_core_u_phase_buf_fast/gen_phase_buf[1].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[1].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap1,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,2,u_core_u_phase_buf_fast/gen_phase_buf[2].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[2].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap2,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,3,u_core_u_phase_buf_fast/gen_phase_buf[3].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[3].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap3,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,4,u_core_u_phase_buf_fast/gen_phase_buf[4].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[4].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap4,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,5,u_core_u_phase_buf_fast/gen_phase_buf[5].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[5].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap5,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,6,u_core_u_phase_buf_fast/gen_phase_buf[6].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[6].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap6,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE
+fast,7,u_core_u_phase_buf_fast/gen_phase_buf[7].u_iso,BUJIHDX4,u_core_u_phase_buf_fast/gen_phase_buf[7].u_drv,BUJIHDX12,,,,,,,,clk_osc_fast_buf_tap7,ISO_DELAY_ATTR_UNAVAILABLE;DRV_DELAY_ATTR_UNAVAILABLE

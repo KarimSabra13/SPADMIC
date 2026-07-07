@@ -1,0 +1,31 @@
+Extraction called for design 'mptdc_axis_core' of instances=36483 and nets=16345 using extraction engine 'postRoute' at effort level 'low' .
+PostRoute (effortLevel low) RC Extraction called for design mptdc_axis_core.
+RC Extraction called in multi-corner(1) mode.
+Process corner(s) are loaded.
+ Corner: tc_rc
+extractDetailRC Option : -outfile /tmp/innovus_temp_1791488_lyoelectrosrv01.in2p3.fr_ksabra_dl8G6l/mptdc_axis_core_1791488_W2Prm2.rcdb.d -maxResLength 200  -extended
+RC Mode: PostRoute -effortLevel low [Extended CapTable, RC Table Resistances]
+      RC Corner Indexes            0   
+Capacitance Scaling Factor   : 1.00000 
+Coupling Cap. Scaling Factor : 1.00000 
+Resistance Scaling Factor    : 1.00000 
+Clock Cap. Scaling Factor    : 1.00000 
+Clock Res. Scaling Factor    : 1.00000 
+Shrink Factor                : 1.00000
+Initializing multi-corner capacitance tables ... 
+Initializing multi-corner resistance tables ...
+Checking LVS Completed (CPU Time= 0:00:00.1  MEM= 3783.0M)
+Extracted 10.0006% (CPU Time= 0:00:00.4  MEM= 3851.0M)
+Extracted 20.0007% (CPU Time= 0:00:00.5  MEM= 3851.0M)
+Extracted 30.0008% (CPU Time= 0:00:00.7  MEM= 3851.0M)
+Extracted 40.0008% (CPU Time= 0:00:00.8  MEM= 3851.0M)
+Extracted 50.0009% (CPU Time= 0:00:00.9  MEM= 3851.0M)
+Extracted 60.0009% (CPU Time= 0:00:01.0  MEM= 3851.0M)
+Extracted 70.001% (CPU Time= 0:00:01.1  MEM= 3851.0M)
+Extracted 80.0011% (CPU Time= 0:00:01.3  MEM= 3851.0M)
+Extracted 90.0011% (CPU Time= 0:00:01.3  MEM= 3851.0M)
+Extracted 100% (CPU Time= 0:00:01.5  MEM= 3855.0M)
+Number of Extracted Resistors     : 270648
+Number of Extracted Ground Cap.   : 278322
+Number of Extracted Coupling Cap. : 0
+PostRoute (effortLevel low) RC Extraction DONE (CPU Time: 0:00:02.0  Real Time: 0:00:02.0  MEM: 3838.953M)

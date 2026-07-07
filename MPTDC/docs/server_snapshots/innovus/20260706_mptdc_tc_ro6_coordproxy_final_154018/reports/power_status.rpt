@@ -1,0 +1,6 @@
+# MPTDC TC Innovus Power Status
+POWER_STATUS=PROVISIONAL
+POWER_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/power_tc_nominal.rpt
+POWER_SCOPE=innovus_tc_nominal_default_activity
+POWER_SIGNOFF_SCOPE=NO_IR_EM_NO_ACTIVITY_SIGNOFF
+POWER_REPORT_CAPTURE_STATUS=PASS

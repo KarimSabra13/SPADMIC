@@ -1,0 +1,25 @@
+# MPTDC Route Layer Audit
+KNOWN_ROUTE_LAYERS=MET1 MET2 MET3 METTP
+ORDINARY_SIGNAL_PREFERRED_TOP_LAYER=MET3
+GLOBAL_ROUTE_TOP_LAYER=METTP
+GLOBAL_ROUTE_TOP_LAYER_INDEX=4
+GLOBAL_ROUTE_TOP_REASON=promoted_to_post_cts_existing_route_floor
+LAYER_VALUE label={requested_signal_bottom_layer} value={MET1} status=PASS
+LAYER_VALUE label={requested_signal_top_layer} value={MET3} status=PASS
+LAYER_VALUE label={effective_global_top_layer} value={METTP} status=PASS
+EXISTING_LAYER_QUERY_STATUS=PASS command={dbGet top.nets.wires.layer.name} values_seen=126082
+EXISTING_LAYER_QUERY_STATUS=PASS command={dbGet top.nets.sWires.layer.name} values_seen=16356
+EXISTING_LAYER_QUERY_STATUS=PASS command={dbGet top.nets.wires.layer.num} values_seen=126082
+EXISTING_LAYER_QUERY_STATUS=PASS command={dbGet top.nets.sWires.layer.num} values_seen=16356
+EXISTING_LAYER_QUERY_STATUS=SKIPPED command={dbGet top.nets.shapes.layer.name} error={0x0}
+EXISTING_LAYER_QUERY_STATUS=SKIPPED command={get_db wires .layer.name} error={}
+HIGHEST_EXISTING_ROUTE_LAYER=METTP
+HIGHEST_EXISTING_ROUTE_LAYER_INDEX=4
+OBJECT_AUDIT_STATUS=PASS object_type=nets object_count=16304
+OBJECT_AUDIT_COUNT object_type=nets scanned=16304
+OBJECT_AUDIT_STATUS=PASS object_type=timing_nets object_count=1
+OBJECT_AUDIT_COUNT object_type=timing_nets scanned=1
+OBJECT_AUDIT_STATUS=PASS object_type=route_types object_count=2
+OBJECT_AUDIT_COUNT object_type=route_types scanned=2
+ROUTE_LAYER_AUDIT_STATUS=PASS
+INVALID_ROUTE_LAYER_ATTRIBUTE_COUNT=0

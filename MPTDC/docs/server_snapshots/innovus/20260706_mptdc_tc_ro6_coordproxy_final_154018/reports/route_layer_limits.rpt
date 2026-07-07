@@ -1,0 +1,14 @@
+# MPTDC Route Layer Limits
+ROUTE_LAYER_AUDIT_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260706_mptdc_tc_ro6_coordproxy_final_154018/reports/route_layer_audit.rpt
+ROUTE_LAYER_LIMIT_STATUS=APPLIED
+BOTTOM=MET1
+BOTTOM_INDEX=1
+BOTTOM_APPLY_COMMAND=setDesignMode -bottomRoutingLayer 1
+TOP_APPLY_COMMAND=setDesignMode -topRoutingLayer 4
+TOP=METTP
+TOP_INDEX=4
+REASON=promoted_to_post_cts_existing_route_floor
+REQUESTED_TOP=MET3
+REQUESTED_TOP_INDEX=3
+FLOOR_TOP=METTP
+FLOOR_TOP_INDEX=4
