@@ -256,6 +256,7 @@ if {[file exists $patched_streamout]} {
   set ::env(PHYS_PG_V) $phys_pg_v
   set ::env(DCELL_GDS) $dcell_gds
   set ::env(RO_GDS) $ro_gds
+  set ::env(STREAM_MAP) $stream_map
   mptdc_pvs_try source_streamout [list source $patched_streamout]
 } elseif {[info exists ::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)] && $::env(MPTDC_PVS_ALLOW_GENERATED_STREAMOUT)} {
   set args [list $top_only_gds -libName DesignLib -units 1000 -mode ALL]
