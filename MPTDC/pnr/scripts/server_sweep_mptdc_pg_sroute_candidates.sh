@@ -229,11 +229,26 @@ EOF
   route_gate="$(field FINAL_ROUTE_GATE_PASS "$status_report")"
   checkpoint="$(field FINAL_CHECKPOINT_DAT "$status_report")"
   status="$(field CHECKPOINT_REPAIR_STATUS "$status_report")"
-  special_raw="$(field "PG_CANDIDATE_${candidate}_SPECIAL_RAW_BAD" "$command_report")"
-  special_filter_status="$(field "PG_CANDIDATE_${candidate}_SPECIAL_FILTER_STATUS" "$command_report")"
-  special_filtered_ro="$(field "PG_CANDIDATE_${candidate}_SPECIAL_FILTERED_RO_TERMINALS" "$command_report")"
-  special_non_ro="$(field "PG_CANDIDATE_${candidate}_SPECIAL_NON_RO_FAILURES" "$command_report")"
-  unrouted="$(field "PG_CANDIDATE_${candidate}_UNROUTED" "$command_report")"
+  special_raw="$(field FINAL_SPECIAL_CONNECTIVITY_RAW_BAD "$status_report")"
+  special_filter_status="$(field FINAL_SPECIAL_CONNECTIVITY_FILTER_STATUS "$status_report")"
+  special_filtered_ro="$(field FINAL_SPECIAL_CONNECTIVITY_FILTERED_RO_TERMINALS "$status_report")"
+  special_non_ro="$(field FINAL_SPECIAL_CONNECTIVITY_NON_RO_FAILURES "$status_report")"
+  unrouted="$(field FINAL_UNROUTED_NETS "$status_report")"
+  if [[ -z "$special_raw" ]]; then
+    special_raw="$(field "PG_CANDIDATE_${candidate}_SPECIAL_RAW_BAD" "$command_report")"
+  fi
+  if [[ -z "$special_filter_status" ]]; then
+    special_filter_status="$(field "PG_CANDIDATE_${candidate}_SPECIAL_FILTER_STATUS" "$command_report")"
+  fi
+  if [[ -z "$special_filtered_ro" ]]; then
+    special_filtered_ro="$(field "PG_CANDIDATE_${candidate}_SPECIAL_FILTERED_RO_TERMINALS" "$command_report")"
+  fi
+  if [[ -z "$special_non_ro" ]]; then
+    special_non_ro="$(field "PG_CANDIDATE_${candidate}_SPECIAL_NON_RO_FAILURES" "$command_report")"
+  fi
+  if [[ -z "$unrouted" ]]; then
+    unrouted="$(field "PG_CANDIDATE_${candidate}_UNROUTED" "$command_report")"
+  fi
 
   strict_reasons=()
   [[ "$rc" == "0" ]] || strict_reasons+=("wrapper_rc_${rc:-missing}")
