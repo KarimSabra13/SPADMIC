@@ -22,7 +22,7 @@ Real RO local master: MPTDC_GDS_REALRO6_20260707 / RO_tune6 / layout
 Original RO source: SPADMIC / RO_tune6 / layout
 ```
 
-Included files:
+Included files in the original server folder:
 
 ```text
 total 3.8M
@@ -39,6 +39,11 @@ total 3.8M
 -rw-r--r-- 1 ksabra validmgr  113 Jul  7 17:25 technology.rul
 ```
 
+The committed repository evidence intentionally contains only the small text
+files that were actually added under this directory. In this checkout,
+`pvsuidrc.log` is not present; use `PIPO1.LOG`, `mptdc_axis_core_drc.sum`,
+`mptdc_axis_core_drc.err`, and `pvsdrcctl` for the committed triage record.
+
 Excluded intentionally:
 
 ```text
@@ -48,4 +53,3 @@ mptdc_axis_core_drc.err.pvstdb/
 03_metal_drc_grep.txt
 large generated databases/caches
 ```
-

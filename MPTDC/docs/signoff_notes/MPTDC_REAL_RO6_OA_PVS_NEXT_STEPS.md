@@ -3,19 +3,57 @@
 Author: Karim Sabra
 
 This note records the current MPTDC physical-verification decision after the
-latest PVS-prep failure on the `SPADMIC_test` branch. It is an execution-order
-note, not a signoff claim.
+manual real-RO6 PVS DRC evidence on the `SPADMIC_test` branch. It is an
+execution-order note, not a signoff claim.
 
 ```text
 READY_FOR_TAPEOUT=NO
-PVS_DRC_RUN_ON_REAL_RO6_LAYOUT=NO
+PVS_DRC_RUN_ON_REAL_RO6_LAYOUT=YES
 PVS_LVS_RUN_ON_REAL_RO6_LAYOUT=NO
-OA_REAL_RO6_ASSEMBLY_REQUIRED=YES
+OA_REAL_RO6_ASSEMBLY_REQUIRED=DONE_FOR_DRC_TRIAGE
+REAL_RO6_PVS_DRC_STATUS=FAIL_RO_BOUNDARY_DRC
+DIGITAL_REROUTE_REQUIRED=YES
 ```
 
-## Last Known Attempt
+## Current Real-RO6 Evidence
 
-The latest attempted run before this note was:
+After the earlier streamout-wrapper failures, a manual OA assembly did produce a
+real-RO6 PVS DRC run:
+
+```text
+manual_assembly_run=/sim/ksabra/SPADMIC_work/innovus/mptdc_manual_gui_streamout_realro6_20260707_165027
+pvs_drc_run=/sim/ksabra/SPADMIC_work/innovus/mptdc_manual_gui_streamout_realro6_20260707_165027/pvs_drc_realro6_20260707_01
+oa_top=MPTDC_GDS_REALRO6_20260707/mptdc_axis_core/layout
+real_ro_master=MPTDC_GDS_REALRO6_20260707/RO_tune6/layout
+repo_evidence=MPTDC/docs/signoff_notes/pvs_drc_realro6_20260707_01_evidence
+```
+
+The committed evidence shows that the layout was not missing:
+
+- `PIPO1.LOG` translated `MPTDC_GDS_REALRO6_20260707/mptdc_axis_core/layout`
+  with `130049` scalar instances, `2323` polygons, `23588` rectangles, `174840`
+  paths, `433` cells, and `0` streamout errors.
+- `mptdc_axis_core_drc.sum` reports `Total DRC Results : 4783 (4783)`.
+- `pvsdrcctl` has `DENSITY`, `DUMMY_FILL`, `PIMIDE`, and variable antenna ratio
+  disabled, so this is hard layout DRC triage, not a fill-density-only result.
+- The nonzero rule buckets are `B2V1`, `B2V2`, `E3M3V2`, `E4M1V1`, `E7M2V1`,
+  `E8M2V2`, `S1M1`, `S1M2`, `S1M3`, `S1V1`, `S1V2`, `S1WM`, `S3V1`, `S9V2`,
+  `W1M2`, `W1M3`, `W1V1`, `W1V2`, `W2V1`, and `W2V2`.
+
+The project conclusion is that this is no longer primarily a PVS export setup
+problem. The manual assembly exposed a real digital/RO abstraction mismatch:
+the router used a coordinate proxy that did not protect the real `RO_tune6`
+internal metal footprint. The standalone RO remains treated as clean based on
+the analog-side statement; the digital fix is therefore upstream in the PnR
+abstract and route keepout policy.
+
+The PVS warning that `VDD_LEFT`, `VDD_RIGHT`, `VSS_LEFT`, and `VSS_RIGHT` labels
+collapse to one assigned net remains an LVS/PG-label risk to resolve after hard
+DRC is controlled. It is not the immediate reason to hand-waive the 4,783 DRCs.
+
+## Previous Automation Failure
+
+The latest failed automated replay before the real-RO6 manual assembly was:
 
 ```text
 PVS_RUN_ID=20260707_mptdc_tc_ro6_coordproxy_free_digital_strict_130549_pvs_drc_reality_20260707_155255
@@ -25,36 +63,22 @@ SOURCE_CKPT=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_fr
 PVS_DIR=/sim/ksabra/SPADMIC_work/innovus/20260707_mptdc_tc_ro6_coordproxy_free_digital_strict_130549_pvs_drc_reality_20260707_155255
 ```
 
-Observed state:
+That failure stopped before producing `mptdc_axis_core_merged_stdcell_ro6.gds`.
+It remains useful as wrapper-debug history, but it has been superseded by the
+manual real-RO6 PVS DRC evidence above.
 
-- Git/head gate passed at `da55566f30034a0341bc12ba8357b9df59959718`.
-- The Innovus checkpoint restored and loaded `mptdc_axis_core`.
-- The restored database still had `4` Innovus geometry DRC markers.
-- DEF and LVS netlists were written.
-- PVS template audit passed structurally; empty `.config.rul` files are expected
-  and must be reported as `PASS_EMPTY`.
-- Prep failed before producing the final layout view/GDS because the sourced old
-  streamout template attempted to read `::env(STREAM_MAP)`.
-- Because `outputs/mptdc_axis_core_merged_stdcell_ro6.gds` was not produced, the
-  later PVS DRC replay stopped on missing input. That is not a foundry DRC result.
+## New Decision
 
-The immediate wrapper defect was fixed after the failed run by exporting
-`::env(STREAM_MAP)` before sourcing the old streamout template. That fix only
-unblocks replay triage. It does not make the old GDS-stitch path the preferred
-signoff assembly path.
+Do a fresh digital reroute from the Genus handoff using a protected PnR-only RO
+LEF generated from the real RO abstract. The generated PnR LEF must preserve real
+macro OBS and drop only the unwanted `vdd!` alias pin. Then create explicit RO
+route-blockage perimeter bands in Innovus, leaving only intentional pin-access
+sides open.
 
-## Decision
+Do not hand-edit the assembled OA view as the final solution. The OA/PVS run is
+diagnostic evidence. The production fix belongs in the digital route inputs.
 
-Use OA/Virtuoso as the real physical assembly point for signoff triage:
-
-digital layout from the restorable Innovus checkpoint + real
-`SPADMIC/RO_tune6/layout` + XFAB/JIHD standard-cell OA libraries.
-
-The old streamout replay wrappers remain useful for reproducing automation
-failures and generating DEF/netlists, but do not treat a stitched GDS replay as
-more authoritative than an OA assembly that instantiates the real RO6 layout.
-
-## Correct Order
+## Correct Reroute Order
 
 1. Sync the source tree and bind the run to the actual branch head.
 
@@ -83,60 +107,61 @@ more authoritative than an OA assembly that instantiates the real RO6 layout.
    test -f "$PVS_TECH_LIB"
    ```
 
-3. Preserve the checkpoint evidence before editing anything.
+3. Generate the protected PnR-only RO LEF.
 
-   In Innovus, restore `SOURCE_CKPT` and save reports that prove the baseline
-   state: DRC marker count, marker coordinates/rules, route connectivity, macro
-   placements/orientations, and generated DEF/netlists. The four Innovus markers
-   must remain classified separately from any PVS result.
+   ```bash
+   export REROUTE_RUN_ID=mptdc_tc_ro6_realobs_reroute_$(date +%Y%m%d_%H%M%S)
+   export PROTECTED_RO6_LEF=$MPTDC_WORK_ROOT/lef/${REROUTE_RUN_ID}/RO_tune6_protected_pnr.lef
+   export PROTECTED_RO6_LEF_SUMMARY=${PROTECTED_RO6_LEF%.lef}.summary.rpt
 
-4. Export or import the digital layout into an OA library/cell/view.
+   python3 MPTDC/pnr/scripts/generate_ro_protected_pnr_lef.py \
+     --source-lef "$RO6_LEF" \
+     --out-lef "$PROTECTED_RO6_LEF" \
+     --summary "$PROTECTED_RO6_LEF_SUMMARY" \
+     --macro RO_tune6
 
-   Use the site-supported Cadence method that preserves placement, routing,
-   layers, pin text, instance names, and transforms. Acceptable approaches are a
-   direct Innovus-to-OA export if the environment supports it, or a Virtuoso OA
-   import from Innovus DEF/GDS evidence. Name the assembled digital OA view with a
-   dated, non-final name such as:
-
-   ```text
-   library: MPTDC_DIGITAL_20260707
-   cell:    mptdc_axis_core_from_innovus
-   view:    layout
+   sed -n '1,120p' "$PROTECTED_RO6_LEF_SUMMARY"
+   test -s "$PROTECTED_RO6_LEF"
+   grep -n '^  OBS$' "$PROTECTED_RO6_LEF"
+   ! grep -n '^  PIN vdd!$' "$PROTECTED_RO6_LEF"
    ```
 
-5. Configure `cds.lib` before opening the top.
+4. Run a fresh digital Innovus route with the protected RO abstract and route
+   blockage perimeter bands.
 
-   The session must resolve all of these libraries before PVS is launched:
+   ```bash
+   export O1_RO_LEF_PATH="$PROTECTED_RO6_LEF"
+   export MPTDC_PNR_FIX_RO_MACROS=1
+   export MPTDC_PNR_CREATE_RO_HALOS=1
+   export MPTDC_RO_PHASE_MIN_CLEARANCE_UM=10.0
+   export MPTDC_PNR_CREATE_RO_ROUTE_BLOCKAGES=1
+   export MPTDC_RO_ROUTE_BLOCKAGE_MARGIN_UM=1.0
+   export MPTDC_RO_ROUTE_BLOCKAGE_LAYERS="MET1 MET2 MET3 METTP"
+   export MPTDC_RO_ROUTE_BLOCKAGE_OPEN_SIDES="north south"
 
-   - the new digital OA library;
-   - `SPADMIC`, containing `RO_tune6/layout`;
-   - the XFAB/JIHD standard-cell OA libraries used by the placed netlist;
-   - any technology/display libraries required by `/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/pvtech.lib`.
-
-6. Replace RO proxy/abstract instances with the real RO6 layout master.
-
-   For every RO instance in the digital top, preserve:
-
-   - instance name;
-   - origin;
-   - orientation;
-   - pin/net connectivity;
-   - `VDD`/`VSS` supply names;
-   - the intentional RTL/report path convention where the instance path remains
-     `u_ro_tune4` while the physical macro master is `RO_tune6`.
-
-   The required real master is:
-
-   ```text
-   SPADMIC/RO_tune6/layout
+   MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
+     --run-id "$REROUTE_RUN_ID" \
+     --expected-head "$EXPECTED_HEAD"
    ```
 
-7. Run PVS DRC from the Virtuoso GUI on the OA top.
+5. Inspect the new route evidence before any PVS assembly.
+
+   ```text
+   reports/ro_halo_status.rpt
+   reports/ro_route_blockage_status.rpt
+   reports/00_initial_verify_drc.rpt
+   reports/*verify_drc*.rpt
+   reports/*verify_connectivity*.rpt
+   reports/checkpoint_repair_status.rpt, if checkpoint repair is invoked
+   ```
+
+6. Reassemble the fresh route with real `SPADMIC/RO_tune6/layout` and rerun PVS
+   DRC from Virtuoso/OA.
 
    First objective: prove that PVS actually runs on the assembled real RO6
-   layout. Do not continue to LVS from a missing-layout, missing-GDS, unresolved
-   cellview, or unresolved-standard-cell state. If DRC reports violations, triage
-   them in this order:
+   layout after the protected-abstract reroute. Do not continue to LVS from a
+   missing-layout, missing-GDS, unresolved cellview, or unresolved-standard-cell
+   state. If DRC reports violations, triage them in this order:
 
    1. unresolved/missing cell or layer-map problems;
    2. real RO6 boundary, pin, well, text, and supply-label problems;
@@ -144,7 +169,7 @@ more authoritative than an OA assembly that instantiates the real RO6 layout.
    4. the four known Innovus geometry DRC-marker regions;
    5. ordinary route/spacing/antenna violations.
 
-8. Run LVS only after the DRC run is real and understood.
+7. Run LVS only after the DRC run is real and understood.
 
    Use the layout OA top as layout input. Use the Innovus `-includePowerGround`
    source netlist from the same checkpoint attempt as source input. Add the
@@ -152,7 +177,7 @@ more authoritative than an OA assembly that instantiates the real RO6 layout.
    setup. Do not run LVS against a proxy RO layout if the question is real-RO6
    signoff.
 
-9. Record the result without overstating it.
+8. Record the result without overstating it.
 
    Commit only concise evidence summaries. Keep raw PVS databases, logs,
    checkpoints, GDS, OA databases, and large generated reports outside the repo.

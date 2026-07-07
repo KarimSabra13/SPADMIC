@@ -899,6 +899,10 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE 0
         MPTDC_PNR_FIX_RO_MACROS 0
         MPTDC_PNR_CREATE_RO_HALOS 0
+        MPTDC_PNR_CREATE_RO_ROUTE_BLOCKAGES 0
+        MPTDC_RO_ROUTE_BLOCKAGE_MARGIN_UM 1.0
+        MPTDC_RO_ROUTE_BLOCKAGE_LAYERS {MET1 MET2 MET3 METTP}
+        MPTDC_RO_ROUTE_BLOCKAGE_OPEN_SIDES {north south}
         MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN 1
         MPTDC_PNR_FAST_TAG_COLUMN_SIDE center
         MPTDC_PNR_ALLOW_FAST_TAG_CENTER_OVER_PD 1
@@ -1219,6 +1223,126 @@ proc mptdc_signoff_create_ro_halos {{path ""}} {
     close $fh
     if {[llength $failures] > 0} {
         error "MPTDC_RO_HALO_GATE_FAILED: $failures report=$path"
+    }
+    return $path
+}
+
+proc mptdc_signoff_nonnegative_coord {value} {
+    if {![string is double -strict $value]} { return $value }
+    if {$value < 0.0} { return 0.0 }
+    return $value
+}
+
+proc mptdc_signoff_list_has {values needle} {
+    foreach value $values {
+        if {[string equal -nocase $value $needle]} {
+            return 1
+        }
+    }
+    return 0
+}
+
+proc mptdc_signoff_create_route_blockage_box {fh prefix name layers box} {
+    puts $fh "${prefix}_ROUTE_BLOCKAGE_NAME=$name"
+    puts $fh "${prefix}_ROUTE_BLOCKAGE_BOX=$box"
+    puts $fh "${prefix}_ROUTE_BLOCKAGE_LAYERS=$layers"
+    foreach cmd [list \
+        [list createRouteBlk -name $name -box $box -layer $layers] \
+        [list createRouteBlk -box $box -layer $layers] \
+        [list createRouteBlk -box $box]] {
+        puts $fh "${prefix}_ROUTE_BLOCKAGE_COMMAND=$cmd"
+        if {![catch {{*}$cmd} err]} {
+            puts $fh "${prefix}_ROUTE_BLOCKAGE_STATUS=PASS"
+            return 1
+        }
+        puts $fh "${prefix}_ROUTE_BLOCKAGE_ATTEMPT_ERROR=$err"
+    }
+    puts $fh "${prefix}_ROUTE_BLOCKAGE_STATUS=FAIL"
+    return 0
+}
+
+proc mptdc_signoff_create_ro_route_blockages {{path ""}} {
+    set margin [mptdc_signoff_env MPTDC_RO_ROUTE_BLOCKAGE_MARGIN_UM 1.0]
+    set layers [mptdc_signoff_env MPTDC_RO_ROUTE_BLOCKAGE_LAYERS {MET1 MET2 MET3 METTP}]
+    set open_sides [mptdc_signoff_env MPTDC_RO_ROUTE_BLOCKAGE_OPEN_SIDES {north south}]
+    if {$path eq ""} {
+        set path [file join [mptdc_signoff_report_dir] ro_route_blockage_status.rpt]
+    }
+
+    set fh [open $path w]
+    puts $fh "# MPTDC RO Macro Route Blockage Status"
+    puts $fh "RO_ROUTE_BLOCKAGE_ENABLED=[expr {[mptdc_signoff_env_truthy MPTDC_PNR_CREATE_RO_ROUTE_BLOCKAGES 1] ? 1 : 0}]"
+    puts $fh "RO_ROUTE_BLOCKAGE_MARGIN_UM=$margin"
+    puts $fh "RO_ROUTE_BLOCKAGE_LAYERS=$layers"
+    puts $fh "RO_ROUTE_BLOCKAGE_OPEN_SIDES=$open_sides"
+    puts $fh "RO_ROUTE_BLOCKAGE_NOTE=perimeter_bands_only_pin_access_sides_left_open"
+
+    if {![mptdc_signoff_env_truthy MPTDC_PNR_CREATE_RO_ROUTE_BLOCKAGES 1]} {
+        puts $fh "RO_ROUTE_BLOCKAGE_STATUS=SKIPPED"
+        puts $fh "RO_ROUTE_BLOCKAGE_REASON=disabled"
+        close $fh
+        return $path
+    }
+
+    set failures [list]
+    set created 0
+    set ro_map [mptdc_signoff_ro_instances_by_family]
+    foreach family {slow fast} {
+        set inst [dict get $ro_map $family]
+        set box [mptdc_signoff_cell_box $inst]
+        puts $fh "[string toupper $family]_RO_INSTANCE=$inst"
+        puts $fh "[string toupper $family]_RO_BBOX=$box"
+        if {![mptdc_signoff_box_valid $box]} {
+            lappend failures "${family}:invalid_ro_bbox"
+            continue
+        }
+        if {![string is double -strict $margin] || $margin <= 0.0} {
+            lappend failures "${family}:invalid_route_blockage_margin"
+            continue
+        }
+
+        set llx [lindex $box 0]
+        set lly [lindex $box 1]
+        set urx [lindex $box 2]
+        set ury [lindex $box 3]
+        set side_boxes [dict create \
+            west  [list [mptdc_signoff_nonnegative_coord [expr {$llx - $margin}]] [mptdc_signoff_nonnegative_coord [expr {$lly - $margin}]] $llx [expr {$ury + $margin}]] \
+            east  [list $urx [mptdc_signoff_nonnegative_coord [expr {$lly - $margin}]] [expr {$urx + $margin}] [expr {$ury + $margin}]] \
+            south [list [mptdc_signoff_nonnegative_coord [expr {$llx - $margin}]] [mptdc_signoff_nonnegative_coord [expr {$lly - $margin}]] [expr {$urx + $margin}] $lly] \
+            north [list [mptdc_signoff_nonnegative_coord [expr {$llx - $margin}]] $ury [expr {$urx + $margin}] [expr {$ury + $margin}]]]
+
+        foreach side {west east south north} {
+            set prefix "[string toupper $family]_[string toupper $side]"
+            if {[mptdc_signoff_list_has $open_sides $side]} {
+                puts $fh "${prefix}_ROUTE_BLOCKAGE_STATUS=OPEN_FOR_PIN_ACCESS"
+                continue
+            }
+            set side_box [dict get $side_boxes $side]
+            if {![mptdc_signoff_box_valid $side_box]} {
+                puts $fh "${prefix}_ROUTE_BLOCKAGE_STATUS=INVALID_BOX"
+                lappend failures "${family}:${side}:invalid_box"
+                continue
+            }
+            set name "MPTDC_${family}_RO_ROUTE_BLK_${side}"
+            if {[mptdc_signoff_create_route_blockage_box $fh $prefix $name $layers $side_box]} {
+                incr created
+            } else {
+                lappend failures "${family}:${side}:create_failed"
+            }
+        }
+    }
+
+    if {$created == 0} {
+        lappend failures no_route_blockage_bands_created
+    }
+    puts $fh "RO_ROUTE_BLOCKAGE_COUNT=$created"
+    puts $fh "RO_ROUTE_BLOCKAGE_STATUS=[expr {[llength $failures] == 0 ? "PASS" : "FAIL"}]"
+    if {[llength $failures] > 0} {
+        puts $fh "RO_ROUTE_BLOCKAGE_FAILURES=$failures"
+    }
+    close $fh
+    if {[llength $failures] > 0} {
+        error "MPTDC_RO_ROUTE_BLOCKAGE_GATE_FAILED: $failures report=$path"
     }
     return $path
 }
@@ -6527,8 +6651,10 @@ proc mptdc_signoff_place_ro_macros {} {
         puts $fh "${label}_CENTER=[join $ctr ,]"
     }
     set halo_rpt [mptdc_signoff_create_ro_halos]
+    set ro_route_blk_rpt [mptdc_signoff_create_ro_route_blockages]
     puts $fh "RO_MACRO_STATUS=PASS"
     puts $fh "RO_HALO_REPORT=$halo_rpt"
+    puts $fh "RO_ROUTE_BLOCKAGE_REPORT=$ro_route_blk_rpt"
     puts $fh "RO_PHASE_PLACEMENT_STATUS=PROVISIONAL_UNTIL_PHASE_BUFFER_AUDIT"
     close $fh
     mptdc_signoff_set_status RO_MACRO_STATUS PASS $rpt
