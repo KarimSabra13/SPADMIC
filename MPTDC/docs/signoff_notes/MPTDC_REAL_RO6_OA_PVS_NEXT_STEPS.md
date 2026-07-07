@@ -183,6 +183,73 @@ The wrapper has now been fixed to resolve and pass the same default closed
 handoff directory before both source validation and Innovus execution. The next
 rerun should show a concrete `handoff_dir` in `run_manifest.txt`, not `unset`.
 
+## Protected-LEF Free-Internal Route-Stage Attempt
+
+The next rerun resolved the Genus handoff correctly and progressed well past the
+previous import failure:
+
+```text
+attempt_date=2026-07-07T18:31 local server time
+source_head=065e6d297ae5ba9a5659fae9558fffb8e93fe6ad
+run_id=mptdc_tc_ro6_realobs_freeint_reroute_20260707_183153
+result_dir=/sim/ksabra/SPADMIC_work/innovus/mptdc_tc_ro6_realobs_freeint_reroute_20260707_183153
+default_closed_handoff=/sim/ksabra/SPADMIC_work/handoff/genus_typical/mptdc_genus_typical_closed
+handoff_dir=/sim/ksabra/SPADMIC_work/handoff/genus_typical/mptdc_genus_typical_closed
+```
+
+This attempt proved that the protected-RO floorplan controls were applied:
+
+```text
+RO_TUNE6_COUNT=2
+FREE_INTERNAL_PLACEMENT=1
+FREE_DIGITAL_ONLY_RO_POLICY=RO_MACRO_FIXED_BY_POLICY
+RO_MACRO_FIXED=YES
+SLOW_RO_BBOX=50.4 610.4 219.345 680.9
+FAST_RO_BBOX=50.4 120.4 219.345 190.9
+RO_MACRO_STATUS=PASS
+RO_HALO_STATUS=PASS
+RO_ROUTE_BLOCKAGE_STATUS=PASS
+RO_ROUTE_BLOCKAGE_COUNT=4
+```
+
+The slow and fast RO macros were fixed at the intended coordinates, the 5 um
+hard placement halos were created, and west/east route blockage bands were
+created on `MET1 MET2 MET3 METTP` with north/south left open for pin access.
+
+The run then failed later, inside the route stage, before signal routing
+completed:
+
+```text
+MPTDC_DIGITAL_SIGNOFF_STAGE_FAILED: stage=route
+error=MPTDC_POSTPLACE_PRE_ROUTE_SROUTE_GATE_FAILED
+report=/sim/ksabra/SPADMIC_work/innovus/mptdc_tc_ro6_realobs_freeint_reroute_20260707_183153/reports/postplace_pre_route_sroute_status.rpt
+failure_def=/sim/ksabra/SPADMIC_work/innovus/mptdc_tc_ro6_realobs_freeint_reroute_20260707_183153/def/03b_postplace_pre_route_sroute_failed.def
+failure_checkpoint_dat=/sim/ksabra/SPADMIC_work/innovus/mptdc_tc_ro6_realobs_freeint_reroute_20260707_183153/checkpoints/03b_postplace_pre_route_sroute_failed.enc.dat
+```
+
+The repeated stripe-generation warnings and manufacturing-grid adjustments are
+not the root cause by themselves. The important signal is that the early
+post-place/pre-route PG `sroute` gate was still configured as a clean fail-fast
+gate. It saved a failure checkpoint after `sroute`, before the experiment could
+reach full signal routing, route repair, final route DRC, and real-RO PVS
+assembly.
+
+For this protected-RO reroute experiment, the next run should not require the
+pre-route PG sroute checkpoint to be final-clean. Instead, let the flow continue
+to route and let the later route/DRC/connectivity gates decide whether the
+design is usable:
+
+```text
+MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0
+MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1
+MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=1
+MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=64
+```
+
+This is not a signoff waiver. It only moves the decision point from an early PG
+sroute fail-fast gate to the route-stage evidence where signal routing, PG
+recovery, DRC, shorts, opens, and connectivity are all reported together.
+
 ## New Decision
 
 Do a fresh digital reroute from the Genus handoff using a protected PnR-only RO
@@ -266,6 +333,10 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=1
    export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0
    export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL=0
+   export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0
+   export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1
+   export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=1
+   export MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=64
    export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
    export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 
