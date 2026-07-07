@@ -315,10 +315,40 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    ! grep -n '^  PIN vdd!$' "$PROTECTED_RO6_LEF"
    ```
 
-4. Run a fresh digital Innovus route with the protected RO abstract and route
-   blockage perimeter bands.
+4. First isolate the PG sroute strategy from the clean pre-sroute checkpoint.
+
+   Use the saved `03_cts` checkpoint from the failed protected-abstract run.
+   Do not use `03b_postplace_pre_route_sroute_failed.enc.dat`; that checkpoint
+   already contains failed custom hookup/sroute geometry.
 
    ```bash
+   export REROUTE_DIR="$MPTDC_INNOVUS_WORK/$REROUTE_RUN_ID"
+   export SOURCE_CKPT="$REROUTE_DIR/checkpoints/03_cts.enc.dat"
+   test -d "$SOURCE_CKPT"
+
+   export PG_SWEEP_ID=mptdc_ro6_pg_sroute_probe_$(date +%Y%m%d_%H%M%S)
+
+   MPTDC/pnr/scripts/server_sweep_mptdc_pg_sroute_candidates.sh \
+     --checkpoint "$SOURCE_CKPT" \
+     --base-run-id "$PG_SWEEP_ID" \
+     --expected-head "$EXPECTED_HEAD"
+
+   sed -n '1,220p' "$MPTDC_INNOVUS_WORK/${PG_SWEEP_ID}_summary.md"
+   cat "$MPTDC_INNOVUS_WORK/${PG_SWEEP_ID}_summary.csv"
+   awk -F, 'NR==1 || $4=="PASS" {print}' \
+     "$MPTDC_INNOVUS_WORK/${PG_SWEEP_ID}_summary.csv"
+   ```
+
+   Accept a candidate only if the CSV says `strict_pg_clean=PASS`. A
+   `FILTERED_RO_ONLY` or dangling-only result is diagnostic evidence, not
+   acceptance. The raw VDD/VSS special connectivity must be clean.
+
+5. If a native block-pin candidate is clean, run one full-flow proof and stop
+   immediately after the post-place/pre-route PG gate.
+
+   ```bash
+   export PG_PROOF_RUN_ID=mptdc_tc_ro6_realobs_goldenro_pgproof_$(date +%Y%m%d_%H%M%S)
+
    export O1_USE_REAL_RO_ABSTRACT=1
    export O1_RO_CELL_NAME=RO_tune6
    export O1_RO_LEF_PATH="$PROTECTED_RO6_LEF"
@@ -337,6 +367,17 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    export MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=0
    export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL=0
 
+   export MPTDC_PG_STRATEGY=innovus_sroute_golden_ro
+   export MPTDC_SROUTE_MODE_PROFILE=
+   export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1
+   export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1
+   export MPTDC_ENABLE_RO_PG_PROBE=1
+   export MPTDC_ENABLE_RO_PG_HOOKUP=0
+   export MPTDC_REQUIRE_RO_PG_HOOKUP=0
+   export MPTDC_ENABLE_RO_PG_MACRO_PATCH=0
+   export MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=0
+   export MPTDC_STOP_AFTER_POSTPLACE_PRE_ROUTE_SROUTE=1
+
    export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
    export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
    export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0
@@ -344,19 +385,28 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    export MPTDC_DIGITAL_SIGNOFF_APPROVED=1
    export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
 
+   # If the isolated sweep's only strict PASS is mode-specific, replay exactly
+   # that one profile here instead of enabling broad sroute mode experiments:
+   #   core_block_via_closest   -> export MPTDC_SROUTE_MODE_PROFILE=via_closest
+   #   core_block_connect_broken -> export MPTDC_SROUTE_MODE_PROFILE=connect_broken
+   #   core_block_pin_width     -> export MPTDC_SROUTE_MODE_PROFILE=block_pin_width
+   #   core_block_pin_corners   -> export MPTDC_SROUTE_MODE_PROFILE=block_pin_corners
+   #   core_block_target_80     -> export MPTDC_SROUTE_MODE_PROFILE=target_80
+   #   core_block_target_250    -> export MPTDC_SROUTE_MODE_PROFILE=target_250
+
    MPTDC/pnr/scripts/server_run_innovus_mptdc_digital_signoff.sh \
-     --run-id "$REROUTE_RUN_ID" \
+     --run-id "$PG_PROOF_RUN_ID" \
      --expected-head "$EXPECTED_HEAD" \
      --mode full_signoff
    ```
 
-5. Inspect the strict PG failure evidence before rerunning.
+6. Inspect the strict PG proof or failure evidence.
 
    ```bash
-   export REROUTE_DIR="$MPTDC_INNOVUS_WORK/$REROUTE_RUN_ID"
+   export REROUTE_DIR="$MPTDC_INNOVUS_WORK/${PG_PROOF_RUN_ID:-$REROUTE_RUN_ID}"
    test -d "$REROUTE_DIR/reports"
 
-   grep -E '^(head|expected_head|run_id|result_dir|handoff_dir|block_pg_pin_style|preplace_pg_sroute|postplace_pre_route_sroute|postplace_pre_route_sroute_require_clean|postplace_pre_route_allow_dangling_only|route_gate_sroute_recovery|ro_pg_hookup|ro_pg_hookup_required|ro_pg_hookup_search_um|ro_pg_hookup_margin_um|ro_pg_hookup_spacing_um):' \
+   grep -E '^(head|expected_head|run_id|result_dir|handoff_dir|block_pg_pin_style|pg_strategy|sroute_mode_profile|preplace_pg_sroute|postplace_pre_route_sroute|stop_after_postplace_pre_route_sroute|postplace_pre_route_sroute_require_clean|postplace_pre_route_allow_dangling_only|route_gate_sroute_recovery|ro_pg_probe|ro_pg_hookup|ro_pg_hookup_required|ro_pg_macro_patch):' \
      "$REROUTE_DIR/manifests/run_manifest.txt"
 
    for f in \
@@ -368,6 +418,7 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
      "$REROUTE_DIR/reports/ro_pg_probe_before_hookup.rpt" \
      "$REROUTE_DIR/reports/ro_pg_probe_after_hookup.rpt" \
      "$REROUTE_DIR/reports/postplace_pre_route_sroute_status.rpt" \
+     "$REROUTE_DIR/reports/route_status.rpt" \
      "$REROUTE_DIR/reports/postplace_pre_route_pg_topology_before_sroute.rpt" \
      "$REROUTE_DIR/reports/postplace_pre_route_pg_topology_after_ro_pg_hookup.rpt" \
      "$REROUTE_DIR/reports/postplace_pre_route_pg_topology_after_sroute.rpt" \
@@ -387,7 +438,14 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
      -print | sort
    ```
 
-6. Reassemble the fresh route with real `SPADMIC/RO_tune6/layout` and rerun PVS
+   The proof run is successful only when
+   `POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_RAW_BAD=0`,
+   `POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_BAD=0`, and the final execution
+   line is `STOPPED_AFTER_POSTPLACE_PRE_ROUTE_SROUTE`. If native sroute still
+   leaves `IMPVFC-96` or `IMPVFC-200`, implement a real RO PG via-stack patch
+   instead of re-enabling the stripe-only hookup.
+
+7. Reassemble the fresh route with real `SPADMIC/RO_tune6/layout` and rerun PVS
    DRC from Virtuoso/OA.
 
    First objective: prove that PVS actually runs on the assembled real RO6
@@ -401,7 +459,7 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    4. the four known Innovus geometry DRC-marker regions;
    5. ordinary route/spacing/antenna violations.
 
-7. Run LVS only after the DRC run is real and understood.
+8. Run LVS only after the DRC run is real and understood.
 
    Use the layout OA top as layout input. Use the Innovus `-includePowerGround`
    source netlist from the same checkpoint attempt as source input. Add the
@@ -409,7 +467,7 @@ diagnostic evidence. The production fix belongs in the digital route inputs.
    setup. Do not run LVS against a proxy RO layout if the question is real-RO6
    signoff.
 
-8. Record the result without overstating it.
+9. Record the result without overstating it.
 
    Commit only concise evidence summaries. Keep raw PVS databases, logs,
    checkpoints, GDS, OA databases, and large generated reports outside the repo.

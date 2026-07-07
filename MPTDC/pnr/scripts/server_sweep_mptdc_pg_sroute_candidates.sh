@@ -20,6 +20,8 @@ Usage:
 
 Options:
   --checkpoint <path>    Clean source Innovus checkpoint data directory.
+                         Use the pre-sroute 03_cts.enc.dat checkpoint, not a
+                         failed postplace_sroute checkpoint.
   --base-run-id <id>     Prefix for per-candidate repair run IDs.
   --expected-head <sha>  Require repository HEAD to match this commit.
   --innovus-work <path>  Innovus run root. Default: /sim/ksabra/SPADMIC_work/innovus
@@ -27,6 +29,8 @@ Options:
 
 Runs each PG sroute candidate in a fresh Innovus restore from the same source
 checkpoint. This avoids cumulative sroute damage and writes one CSV summary.
+The strict_pg_clean column is PASS only when raw VDD/VSS special connectivity
+is clean and DRC shorts are zero. RO-filtered results are diagnostic only.
 USAGE
 }
 
@@ -90,12 +94,20 @@ if [[ -n "$EXPECTED_HEAD_VALUE" ]]; then
 fi
 
 test -d "$SOURCE_CHECKPOINT"
+case "$(basename "$SOURCE_CHECKPOINT")" in
+  03b_postplace_pre_route_sroute_failed.enc.dat|03b_postplace_pre_route_sroute_failed.enc)
+    echo "ERROR: refusing contaminated failed-sroute checkpoint: $SOURCE_CHECKPOINT" >&2
+    echo "Use the clean pre-sroute checkpoint, normally:" >&2
+    echo "  <run>/checkpoints/03_cts.enc.dat" >&2
+    exit 3
+    ;;
+esac
 mkdir -p "$INNOVUS_WORK_VALUE"
 
 SUMMARY_CSV="$INNOVUS_WORK_VALUE/${BASE_RUN_ID}_summary.csv"
 SUMMARY_MD="$INNOVUS_WORK_VALUE/${BASE_RUN_ID}_summary.md"
 
-printf 'candidate,run_id,rc,drc,shorts,regular_bad,special_bad,special_raw_bad,special_filter_status,special_filtered_ro,special_non_ro,unrouted,route_gate_pass,checkpoint,status_report\n' > "$SUMMARY_CSV"
+printf 'candidate,run_id,rc,strict_pg_clean,strict_pg_reasons,drc,shorts,regular_bad,special_bad,special_raw_bad,special_filter_status,special_filtered_ro,special_non_ro,unrouted,route_gate_pass,checkpoint,status_report\n' > "$SUMMARY_CSV"
 
 cat > "$SUMMARY_MD" <<EOF
 # MPTDC PG Isolated SRoute Candidate Sweep
@@ -108,6 +120,9 @@ cat > "$SUMMARY_MD" <<EOF
 - innovus_work: $INNOVUS_WORK_VALUE
 
 Each candidate restores the same clean checkpoint. Results are not cumulative.
+Acceptance is intentionally strict: strict_pg_clean=PASS requires
+special_raw_bad=0, special_bad=0, and shorts=0. A filtered RO-only result
+is not accepted as clean unless the raw special report is also clean.
 
 EOF
 
@@ -137,7 +152,7 @@ set ::env(MPTDC_ENABLE_RO_PG_PROBE) 1
 set ::env(MPTDC_ENABLE_RO_PG_HOOKUP) 0
 set ::env(MPTDC_REQUIRE_RO_PG_HOOKUP) 0
 set ::env(MPTDC_ENABLE_RO_PG_MACRO_PATCH) 1
-set ::env(MPTDC_ALLOW_RO_DERIVED_PG_DANGLING) 1
+set ::env(MPTDC_ALLOW_RO_DERIVED_PG_DANGLING) 0
 
 set rpt [file join [mptdc_signoff_report_dir] pg_candidate_${candidate}_status.rpt]
 set fh [open \$rpt w]
@@ -220,8 +235,25 @@ EOF
   special_non_ro="$(field "PG_CANDIDATE_${candidate}_SPECIAL_NON_RO_FAILURES" "$command_report")"
   unrouted="$(field "PG_CANDIDATE_${candidate}_UNROUTED" "$command_report")"
 
-  printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
-    "$candidate" "$run_id" "$rc" "$drc" "$shorts" "$regular_bad" "$special_bad" \
+  strict_reasons=()
+  [[ "$rc" == "0" ]] || strict_reasons+=("wrapper_rc_${rc:-missing}")
+  [[ "$shorts" == "0" ]] || strict_reasons+=("shorts_${shorts:-missing}")
+  [[ "$special_raw" == "0" ]] || strict_reasons+=("special_raw_${special_raw:-missing}")
+  [[ "$special_bad" == "0" ]] || strict_reasons+=("special_bad_${special_bad:-missing}")
+  if [[ -n "$drc" && "$drc" != "0" ]]; then
+    strict_reasons+=("drc_${drc}")
+  fi
+  strict_pg_clean=FAIL
+  strict_reason_text=PASS
+  if [[ ${#strict_reasons[@]} -eq 0 ]]; then
+    strict_pg_clean=PASS
+  else
+    strict_reason_text="$(IFS=+; echo "${strict_reasons[*]}")"
+  fi
+
+  printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+    "$candidate" "$run_id" "$rc" "$strict_pg_clean" "$strict_reason_text" \
+    "$drc" "$shorts" "$regular_bad" "$special_bad" \
     "$special_raw" "$special_filter_status" "$special_filtered_ro" "$special_non_ro" \
     "$unrouted" "$route_gate" "$checkpoint" "$status_report" \
     >> "$SUMMARY_CSV"
@@ -231,6 +263,8 @@ EOF
     echo ""
     echo "- run_id: \`$run_id\`"
     echo "- rc: \`$rc\`"
+    echo "- strict_pg_clean: \`$strict_pg_clean\`"
+    echo "- strict_pg_reasons: \`$strict_reason_text\`"
     echo "- final_drc/shorts: \`${drc:-NA}/${shorts:-NA}\`"
     echo "- regular_bad: \`${regular_bad:-NA}\`"
     echo "- special_bad/raw/filter/ro/non_ro: \`${special_bad:-NA}/${special_raw:-NA}/${special_filter_status:-NA}/${special_filtered_ro:-NA}/${special_non_ro:-NA}\`"

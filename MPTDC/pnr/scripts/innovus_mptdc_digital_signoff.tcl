@@ -2295,11 +2295,55 @@ proc mptdc_signoff_try_sroute_mode_group {fh label suffix commands} {
     return $applied
 }
 
+proc mptdc_signoff_sroute_mode_profile_commands {profile} {
+    switch -- [string tolower $profile] {
+        via_closest - core_block_via_closest {
+            return [list VIA_THRU_TO_CLOSEST_RING [list [list setSrouteMode -viaThruToClosestRing true]]]
+        }
+        connect_broken - core_block_connect_broken {
+            return [list CONNECT_BROKEN_CORE_PIN [list [list setSrouteMode -connectBrokenCorePin true]]]
+        }
+        block_pin_width - core_block_pin_width - core_block_width {
+            return [list BLOCK_PIN_ROUTE_WITH_PIN_WIDTH [list [list setSrouteMode -blockPinRouteWithPinWidth true]]]
+        }
+        block_pin_corners - core_block_pin_corners - core_block_corners {
+            return [list BLOCK_PIN_CONNECT_RING_PIN_CORNERS [list [list setSrouteMode -blockPinConnectRingPinCorners true]]]
+        }
+        target_80 - core_block_target_80 {
+            return [list TARGET_SEARCH_DISTANCE_80 [list [list setSrouteMode -targetSearchDistance 80.0]]]
+        }
+        target_250 - core_block_target_250 {
+            return [list TARGET_SEARCH_DISTANCE_250 [list [list setSrouteMode -targetSearchDistance 250.0]]]
+        }
+        default {
+            if {[regexp {^target_([0-9]+(?:[.][0-9]+)?)$} [string tolower $profile] -> distance]} {
+                return [list TARGET_SEARCH_DISTANCE [list [list setSrouteMode -targetSearchDistance $distance]]]
+            }
+        }
+    }
+    error "MPTDC_UNSUPPORTED_SROUTE_MODE_PROFILE: $profile"
+}
+
 proc mptdc_signoff_configure_sroute_mode {fh label} {
     set core_pin_stop [mptdc_signoff_env MPTDC_SROUTE_CORE_PIN_STOP_ROUTE ""]
     set core_pin_stop_ok 0
     if {$core_pin_stop ne ""} {
         set core_pin_stop_ok [mptdc_signoff_try_sroute_mode_group $fh $label CORE_PIN_STOP_ROUTE [list [list setSrouteMode -corePinStopRoute $core_pin_stop]]]
+    }
+
+    set deterministic_profile [mptdc_signoff_env MPTDC_SROUTE_MODE_PROFILE ""]
+    if {$deterministic_profile ne ""} {
+        puts $fh "${label}_SROUTE_MODE_EXPERIMENTS_ENABLED=0"
+        puts $fh "${label}_SROUTE_MODE_PROFILE=$deterministic_profile"
+        set profile_group [mptdc_signoff_sroute_mode_profile_commands $deterministic_profile]
+        set profile_suffix [lindex $profile_group 0]
+        set profile_commands [lindex $profile_group 1]
+        set profile_ok [mptdc_signoff_try_sroute_mode_group $fh $label $profile_suffix $profile_commands]
+        set pass_count [expr {$core_pin_stop_ok + $profile_ok}]
+        puts $fh "${label}_SROUTE_MODE_PASS_COUNT=$pass_count"
+        puts $fh "${label}_SROUTE_MODE_STATUS=[expr {$profile_ok ? "PASS" : "REVIEW_REQUIRED"}]"
+        puts $fh "${label}_SROUTE_MODE_REASON=deterministic_profile"
+        return
     }
 
     if {![mptdc_signoff_env_truthy MPTDC_ENABLE_SROUTE_MODE_EXPERIMENTS 0]} {
@@ -4085,6 +4129,8 @@ proc mptdc_signoff_ro_pg_hookup {} {
     puts $fh "RO_PG_HOOKUP_MARGIN_UM=$margin"
     puts $fh "RO_PG_HOOKUP_SPACING_UM=$spacing"
     puts $fh "RO_PG_HOOKUP_SET_DISTANCE_UM=$set_distance"
+    puts $fh "RO_PG_HOOKUP_PASS_MEANING=geometry_commands_created_not_connectivity_proof"
+    puts $fh "RO_PG_HOOKUP_REQUIRED_DOWNSTREAM_PROOF=verifyConnectivity -type special -nets {VDD VSS}"
 
     set rows [mptdc_signoff_ro_pg_all_pin_shapes]
     puts $fh "RO_PG_PIN_SHAPE_COUNT=[llength $rows]"
@@ -8192,7 +8238,21 @@ proc mptdc_signoff_route_design {} {
         mptdc_signoff_set_status ROUTE_STATUS FAIL [dict get $place_gate status_report]
         error "MPTDC_PRE_ROUTE_PLACEMENT_GATE_FAILED: report=[dict get $place_gate status_report]"
     }
-    mptdc_signoff_run_postplace_pre_route_sroute
+    set postplace_sroute_rpt [mptdc_signoff_run_postplace_pre_route_sroute]
+    if {[mptdc_signoff_env_truthy MPTDC_STOP_AFTER_POSTPLACE_PRE_ROUTE_SROUTE 0]} {
+        set rpt [file join [mptdc_signoff_report_dir] route_status.rpt]
+        set rfh [open $rpt w]
+        puts $rfh "# MPTDC Route Status"
+        puts $rfh "ROUTE_STATUS=PG_PRE_ROUTE_CLEAN_STOP"
+        puts $rfh "ROUTE_STOP_REASON=MPTDC_STOP_AFTER_POSTPLACE_PRE_ROUTE_SROUTE"
+        puts $rfh "POSTPLACE_PRE_ROUTE_SROUTE_REPORT=$postplace_sroute_rpt"
+        puts $rfh "DETAILED_ROUTE_STARTED=0"
+        puts $rfh "SIGNOFF_BOUNDARY=PRE_ROUTE_PG_PROOF_ONLY"
+        close $rfh
+        catch {saveDesign [file join [mptdc_signoff_checkpoint_dir] 03c_postplace_pre_route_sroute_clean.enc]}
+        mptdc_signoff_set_status ROUTE_STATUS PROVISIONAL $rpt
+        return
+    }
 
     set route_cmd [mptdc_signoff_env MPTDC_ROUTE_DESIGN_COMMAND ""]
     if {$route_cmd eq ""} {
@@ -9173,6 +9233,16 @@ proc mptdc_signoff_main {} {
     }
     mptdc_signoff_stage route ROUTE_STATUS {
         mptdc_signoff_route_design
+    }
+    if {[mptdc_signoff_env_truthy MPTDC_STOP_AFTER_POSTPLACE_PRE_ROUTE_SROUTE 0]} {
+        set status_path [mptdc_signoff_write_status]
+        puts "MPTDC_DIGITAL_SIGNOFF_EXECUTION=STOPPED_AFTER_POSTPLACE_PRE_ROUTE_SROUTE"
+        puts "MPTDC_TC_PNR_CLOSURE=DEFERRED evidence=pre_route_pg_proof_only"
+        puts "DIGITAL_PNR_SIGNOFF=NO"
+        puts "NOT_MMMC_SIGNOFF=YES"
+        puts "READY_FOR_TAPEOUT=NO"
+        puts "MPTDC_DIGITAL_SIGNOFF_STATUS=$status_path"
+        return
     }
     mptdc_signoff_stage extraction_sta EXTRACTION_STATUS {
         mptdc_signoff_extract_and_sta
