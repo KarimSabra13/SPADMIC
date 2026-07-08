@@ -18,7 +18,7 @@ already has the main matrix event path split into reusable RTL blocks:
 | Position packet | `spadmic_position_snapshot_packetizer` | Converts R/Y/B snapshots into raw or clustered position packets. |
 | Event control | `spadmic_event_coordinator` | Opens an event, freezes packet/reset masks, starts reset and bundle transmit. |
 | Bundle transmit | `spadmic_event_bundle_tx` | Serializes selected TDC/position packets into one event bundle. |
-| Output FIFO | `spadmic_output_fifo` | Buffers 16-bit event words before DDR pairing. |
+| Output FIFO | `spadmic_output_fifo_topcfg` wrapper over `spadmic_output_fifo` | Buffers top-configured 17-bit entries: 16 data bits plus ordered flush marker before DDR pairing. |
 | DDR16 pairer | `spadmic_ddr16_tx_pairer` | Pairs two 16-bit words into low/high DDR data phases. |
 | DDRs2 adapter | `spadmic_ddrs2_adapter` | Expands internal DDR16 stream to the 19-lane DDRs2 macro contract. |
 | CSR endpoint | `spadmic_matrix_top_csr` | Owns matrix-top CSR config/status, PLL controls, and SLVS/RX GPIO controls. |
@@ -78,7 +78,7 @@ These are clean digital blocks that can become layout "legos":
 | 3 | `position_snapshot` | `spadmic_position_snapshot_packetizer` | Between matrix and TX, preferably upper-right of matrix. |
 | 4 | `event_coordinator` | `spadmic_event_coordinator` | Between matrix-control, MPTDC, position, and TX. |
 | 5 | `event_bundle_tx` | `spadmic_event_bundle_tx` | North/north-east TX region. |
-| 6 | `output_fifo` | `spadmic_output_fifo` | North/north-east TX region, close to pairer. |
+| 6 | `output_fifo` | `spadmic_output_fifo_topcfg` wrapper over `spadmic_output_fifo` | North/north-east TX region, close to pairer. |
 | 7 | `ddr16_pairer` | `spadmic_ddr16_tx_pairer` | North, close to DDRs2 adapter/DDRs2. |
 | 8 | `ddrs2_adapter` | `spadmic_ddrs2_adapter` | North, directly below DDRs2 macro pins. |
 | 9 | `matrix_top_csr` | `spadmic_matrix_top_csr` | Bottom/control region. |
@@ -321,3 +321,834 @@ After `matrix_reset_ctrl`:
 
 Do not start from full top, I2C pad-wrapper, OR64 hard macro, or analog/custom
 macro synthesis.
+
+## 11. Recorded Server Result: `matrix_reset_ctrl`
+
+Server result recorded from the first staged block run on July 8, 2026.
+
+| Item | Value |
+| --- | --- |
+| Source commit | `017de251a41765f188ccf179554ff03c2abe0195` |
+| Unit test | `tb_spadmic_matrix_reset_ctrl_unit` |
+| Unit test result | PASS, `15 pass / 0 fail`, `TB_RC=0` |
+| Unit test log | `TOP/build/directed/tb_spadmic_matrix_reset_ctrl_unit/run.log` |
+| Genus run ID | `genus_ooc_matrix_reset_ctrl_20260708_1424` |
+| Genus run root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_reset_ctrl_20260708_1424` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_reset_ctrl_20260708_1424/matrix_reset_ctrl` |
+| Genus result | PASS, 1 block, 0 failed |
+| Innovus OOC gate run ID | `innovus_ooc_matrix_reset_ctrl_20260708_1426` |
+| Innovus OOC gate root | `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_matrix_reset_ctrl_20260708_1426` |
+| Innovus OOC gate result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, `PNR_RC=0` |
+
+Genus warning classification:
+
+- `tool_error count=0`;
+- `unresolved count=0`;
+- `inferred_latch count=0`;
+- `design_rule count=0`;
+- `no_clock_waveform count=0`;
+- `missing_external_delay count=2`, accepted for this relaxed OOC stage;
+- `tool_warning count=2`, bounded `MESG-11` print-count warnings;
+- `undriven count=8` is a classifier false positive because the first matching
+  report line says `Undriven Port(s) 0`.
+
+Area and timing:
+
+- cell area: `18542.541 um^2` = `0.018543 mm^2`;
+- net area: `9428.707 um^2` = `0.009429 mm^2`;
+- total estimated area: `27971.248 um^2` = `0.027971 mm^2`;
+- worst shown relaxed setup slack: `+2494 ps` at `clk_sys = 6.25 ns`.
+
+Generated Genus outputs:
+
+```text
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_reset_ctrl_20260708_1424/matrix_reset_ctrl/outputs/matrix_reset_ctrl.postsyn.sdc
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_reset_ctrl_20260708_1424/matrix_reset_ctrl/outputs/matrix_reset_ctrl.postsyn.sdf
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_reset_ctrl_20260708_1424/matrix_reset_ctrl/outputs/matrix_reset_ctrl.postsyn.v
+```
+
+Conclusion for this stage: `matrix_reset_ctrl` is valid Genus OOC collateral
+for the next real Innovus import/template step. It is not a routed block and not
+signoff.
+
+## 12. Next Server Commands: `matrix_cfg_ctrl`
+
+`matrix_cfg_ctrl` is the next block because it is the next matrix-control block
+in the planned order. It is more sensitive than reset because it has:
+
+- `clk_sys` and `clk_cfg_40m`;
+- stable-bus/toggle CDC between the two domains;
+- 44 `matrix_cout_i` pulse-clocked samplers;
+- matrix-facing Din/Cin/Dout/Cout pins that may remain soft or region-guided
+  at final top assembly.
+
+Run from the server checkout:
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+
+EXPECTED_HEAD=$(git rev-parse HEAD)
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+```
+
+Run the matrix config tests:
+
+```bash
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_matrix_cfg_ctrl_unit --sim xrun
+TB_CFG_RC=$?
+
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_matrix_cfg_cout_readback_unit --sim xrun
+TB_COUT_RC=$?
+
+echo "TB_CFG_RC=$TB_CFG_RC"
+echo "TB_COUT_RC=$TB_COUT_RC"
+echo "TB_CFG_LOG=TOP/build/directed/tb_spadmic_matrix_cfg_ctrl_unit/run.log"
+echo "TB_COUT_LOG=TOP/build/directed/tb_spadmic_matrix_cfg_cout_readback_unit/run.log"
+```
+
+If both test return codes are zero, run Genus OOC for this block only:
+
+```bash
+GENUS_RUN_ID=genus_ooc_matrix_cfg_ctrl_$(date +%Y%m%d_%H%M)
+
+bash TOP/syn/scripts/run_genus_ooc_block.sh matrix_cfg_ctrl "$GENUS_RUN_ID"
+GENUS_RC=$?
+
+GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
+BLOCK_ROOT="$GENUS_ROOT/matrix_cfg_ctrl"
+
+cat "$GENUS_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/reports/messages/warning_classification.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/qor/report_area.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/check_timing_intent.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_clocks.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_timing_post_opt.rpt"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
+
+echo "GENUS_RC=$GENUS_RC"
+echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+echo "GENUS_ROOT=$GENUS_ROOT"
+echo "BLOCK_ROOT=$BLOCK_ROOT"
+```
+
+Additional report probes for this CDC-heavy block:
+
+```bash
+find "$BLOCK_ROOT/reports/timing" \
+  -maxdepth 1 -type f \
+  \( -name 'report_timing_clk_*' -o -name 'report_timing_unconstrained_clk_*' \) \
+  -print -exec sed -n '1,120p' {} \;
+
+grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
+  "$BLOCK_ROOT/reports" || true
+```
+
+Expected warning posture:
+
+- `tool_error`, `unresolved`, and `inferred_latch` must stay zero;
+- missing external delay warnings are acceptable at this OOC stage;
+- `no_clock_waveform` may appear because `matrix_cout_i[43:0]` are pulse
+  capture inputs used by `spadmic_matrix_cout_bit_sampler`; review the first
+  matching line before accepting it;
+- inter-clock timing reports between `clk_sys` and `clk_cfg_40m` should be
+  present because this block has both clocks.
+
+If `GENUS_RC=0`, run the current single-block Innovus OOC collateral gate:
+
+```bash
+PNR_RUN_ID=innovus_ooc_matrix_cfg_ctrl_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh matrix_cfg_ctrl "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
+cat "$PNR_ROOT/blocks/matrix_cfg_ctrl/SUMMARY.md"
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+Paste back after the run:
+
+- `TB_CFG_RC`, `TB_COUT_RC`;
+- `GENUS_RC`, `GENUS_RUN_ID`, `GENUS_ROOT`, `BLOCK_ROOT`;
+- `warning_classification.rpt`;
+- first 180 lines of `report_area.rpt`;
+- first 180 lines of `check_timing_intent.rpt`;
+- first 180 lines of `report_clocks.rpt`;
+- first 180 lines of `report_timing_post_opt.rpt`;
+- all inter-clock/unconstrained timing report headers printed by the `find`
+  command;
+- `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
+- `ooc_collateral_manifest.csv`.
+
+## 13. Recorded Server Result: `matrix_cfg_ctrl`
+
+Server result recorded from the second staged block run on July 8, 2026.
+
+| Item | Value |
+| --- | --- |
+| Source commit | `017de251a41765f188ccf179554ff03c2abe0195` |
+| Unit tests | `tb_spadmic_matrix_cfg_ctrl_unit`, `tb_spadmic_matrix_cfg_cout_readback_unit` |
+| Unit test result | PASS, `TB_CFG_RC=0`, `TB_COUT_RC=0` |
+| Unit test logs | `TOP/build/directed/tb_spadmic_matrix_cfg_ctrl_unit/run.log`, `TOP/build/directed/tb_spadmic_matrix_cfg_cout_readback_unit/run.log` |
+| Genus run ID | `genus_ooc_matrix_cfg_ctrl_20260708_1432` |
+| Genus run root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_cfg_ctrl_20260708_1432` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_cfg_ctrl_20260708_1432/matrix_cfg_ctrl` |
+| Genus result | PASS, 1 block, 0 failed, `GENUS_RC=0` |
+| Innovus OOC gate run ID | `innovus_ooc_matrix_cfg_ctrl_20260708_1436` |
+| Innovus OOC gate root | `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_matrix_cfg_ctrl_20260708_1436` |
+| Innovus OOC gate result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, `PNR_RC=0` |
+
+Genus warning classification:
+
+- `tool_error count=0`;
+- `unresolved count=0`;
+- `inferred_latch count=0`;
+- `design_rule count=0`;
+- `missing_external_delay count=2`, accepted for this relaxed OOC stage;
+- `tool_warning count=2`, bounded `MESG-11` print-count warnings;
+- `undriven count=8` is a classifier false positive because the detailed
+  Genus check-design text reports `Undriven Port(s) 0`;
+- `no_clock_waveform count=89` is accepted only as a documented OOC/CDC item:
+  the first lines are the `matrix_cout_i[43:0]` pulse-capture clocks feeding
+  `spadmic_matrix_cout_bit_sampler` capture registers. This is not signoff STA
+  closure and must be revisited before final CDC/STA signoff.
+
+Area and timing:
+
+- cell count: `2150`;
+- cell area: `74383.411 um^2` = `0.074383 mm^2`;
+- net area: `30670.329 um^2` = `0.030670 mm^2`;
+- total estimated area: `105053.740 um^2` = `0.105054 mm^2`;
+- clocks reported: `clk_sys` at `6250 ps`, `clk_cfg_40m` at `25000 ps`;
+- worst shown relaxed setup slack in `report_timing_post_opt.rpt`: `+3490 ps`.
+
+CDC and unconstrained timing notes:
+
+- reports for `clk_sys` to/from `clk_cfg_40m` were generated;
+- the unconstrained report shows expected relaxed-OOC paths through the
+  stable-bus/toggle CDC structure, for example `wdata_hold_sys_reg` to
+  `wdata_cfg_reg` and return readback/status paths;
+- the grep probe that included bare `Error` matched signal names such as
+  `error_o` and `last_error_o`; it did not show an actual tool error because
+  `tool_error count=0` and the block summary was PASS.
+
+Generated Genus outputs:
+
+```text
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_cfg_ctrl_20260708_1432/matrix_cfg_ctrl/outputs/matrix_cfg_ctrl.postsyn.sdc
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_cfg_ctrl_20260708_1432/matrix_cfg_ctrl/outputs/matrix_cfg_ctrl.postsyn.sdf
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_cfg_ctrl_20260708_1432/matrix_cfg_ctrl/outputs/matrix_cfg_ctrl.postsyn.v
+```
+
+Conclusion for this stage: `matrix_cfg_ctrl` is valid Genus OOC collateral for
+the current staged plan and is ready for the next real Innovus import/template
+development step. It is not a routed block, not CDC signoff, and not final STA
+signoff.
+
+## 14. Next Server Commands: `position_snapshot`
+
+`position_snapshot` is next because it is the first position-data block between
+the matrix-facing snapshot frontend and the TX/event path. Keep it OOC for
+logic/area/timing evidence, but remember that final placement should still be
+guided by the real matrix pin map and top-level region planning.
+
+Run from the server checkout:
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+
+EXPECTED_HEAD=$(git rev-parse HEAD)
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+```
+
+Run the position packetizer tests:
+
+```bash
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_position_snapshot_packetizer_unit --sim xrun
+TB_POS_PKT_RC=$?
+
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_position_snapshot_cluster_unit --sim xrun
+TB_POS_CLUSTER_RC=$?
+
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_position_modes_unit --sim xrun
+TB_POS_MODES_RC=$?
+
+echo "TB_POS_PKT_RC=$TB_POS_PKT_RC"
+echo "TB_POS_CLUSTER_RC=$TB_POS_CLUSTER_RC"
+echo "TB_POS_MODES_RC=$TB_POS_MODES_RC"
+echo "TB_POS_PKT_LOG=TOP/build/directed/tb_spadmic_position_snapshot_packetizer_unit/run.log"
+echo "TB_POS_CLUSTER_LOG=TOP/build/directed/tb_spadmic_position_snapshot_cluster_unit/run.log"
+echo "TB_POS_MODES_LOG=TOP/build/directed/tb_spadmic_position_modes_unit/run.log"
+```
+
+If all three test return codes are zero, run Genus OOC for this block only:
+
+```bash
+GENUS_RUN_ID=genus_ooc_position_snapshot_$(date +%Y%m%d_%H%M)
+
+bash TOP/syn/scripts/run_genus_ooc_block.sh position_snapshot "$GENUS_RUN_ID"
+GENUS_RC=$?
+
+GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
+BLOCK_ROOT="$GENUS_ROOT/position_snapshot"
+
+cat "$GENUS_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/reports/messages/warning_classification.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/qor/report_area.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/check_timing_intent.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_clocks.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_timing_post_opt.rpt"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
+
+grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
+  "$BLOCK_ROOT/reports" || true
+
+echo "GENUS_RC=$GENUS_RC"
+echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+echo "GENUS_ROOT=$GENUS_ROOT"
+echo "BLOCK_ROOT=$BLOCK_ROOT"
+```
+
+Expected warning posture:
+
+- `tool_error`, `unresolved`, and `inferred_latch` must stay zero;
+- missing external delay warnings are acceptable for this relaxed OOC stage;
+- `no_clock_waveform` should normally stay zero for this block; if it appears,
+  inspect the first matching line before accepting the run;
+- `clk_ref_40m` and `clk_cfg_40m` inter-clock reports are not expected because
+  this block is a `clk_sys` packetizer.
+
+If `GENUS_RC=0`, run the current single-block Innovus OOC collateral gate:
+
+```bash
+PNR_RUN_ID=innovus_ooc_position_snapshot_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh position_snapshot "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
+cat "$PNR_ROOT/blocks/position_snapshot/SUMMARY.md"
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+Paste back after the run:
+
+- `TB_POS_PKT_RC`, `TB_POS_CLUSTER_RC`, `TB_POS_MODES_RC`;
+- `GENUS_RC`, `GENUS_RUN_ID`, `GENUS_ROOT`, `BLOCK_ROOT`;
+- `warning_classification.rpt`;
+- first 180 lines of `report_area.rpt`;
+- first 180 lines of `check_timing_intent.rpt`;
+- first 180 lines of `report_clocks.rpt`;
+- first 180 lines of `report_timing_post_opt.rpt`;
+- `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
+- `ooc_collateral_manifest.csv`.
+
+## 15. Recorded Server Result: `position_snapshot`
+
+Server result recorded from the third staged block run on July 8, 2026.
+
+| Item | Value |
+| --- | --- |
+| Source commit | `017de251a41765f188ccf179554ff03c2abe0195` |
+| Unit tests | `tb_spadmic_position_snapshot_packetizer_unit`, `tb_spadmic_position_snapshot_cluster_unit`, `tb_spadmic_position_modes_unit` |
+| Unit test result | PASS, `TB_POS_PKT_RC=0`, `TB_POS_CLUSTER_RC=0`, `TB_POS_MODES_RC=0` |
+| Genus run ID | `genus_ooc_position_snapshot_20260708_1441` |
+| Genus run root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_position_snapshot_20260708_1441` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_position_snapshot_20260708_1441/position_snapshot` |
+| Genus result | PASS, 1 block, 0 failed, `GENUS_RC=0` |
+| Innovus OOC gate run ID | `innovus_ooc_position_snapshot_20260708_1455` |
+| Innovus OOC gate root | `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_position_snapshot_20260708_1455` |
+| Innovus OOC gate result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, `PNR_RC=0` |
+
+Genus warning classification:
+
+- `tool_error count=0`;
+- `unresolved count=0`;
+- `inferred_latch count=0`;
+- `design_rule count=0`;
+- `no_clock_waveform count=0`;
+- `missing_external_delay count=2`, accepted for this relaxed OOC stage;
+- `tool_warning count=2`, bounded `MESG-11` print-count warnings;
+- `undriven count=8` is a classifier false positive because the detailed
+  Genus check-design text reports `Undriven Port(s) 0`.
+
+Area and timing:
+
+- cell count: `6988`;
+- cell area: `182191.565 um^2` = `0.182192 mm^2`;
+- net area: `105578.406 um^2` = `0.105578 mm^2`;
+- total estimated area: `287769.971 um^2` = `0.287770 mm^2`;
+- clock reported: `clk_sys` at `6250 ps`, `2437` registers;
+- worst shown relaxed setup slack in `report_timing_post_opt.rpt`: `+7 ps`.
+
+Timing risk:
+
+- The run is technically passing for this relaxed typical-only Genus OOC stage,
+  but the worst path is effectively at the edge of the `160 MHz` budget.
+- The critical path is in the cluster scan logic, for example from
+  `u_*_cluster_scan_gap_threshold_q_reg` into cluster `hi` registers.
+- Before claiming physical readiness for a hardened `POSITION_CORE`, review
+  whether the cluster scan needs pipelining, reduced fanout, a slower mode, or
+  a region-guided soft placement rather than immediate hardening.
+
+Generated Genus outputs:
+
+```text
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_position_snapshot_20260708_1441/position_snapshot/outputs/position_snapshot.postsyn.sdc
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_position_snapshot_20260708_1441/position_snapshot/outputs/position_snapshot.postsyn.sdf
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_position_snapshot_20260708_1441/position_snapshot/outputs/position_snapshot.postsyn.v
+```
+
+Conclusion for this stage: `position_snapshot` is valid Genus OOC collateral
+and the current Innovus collateral gate found all required files. It is not a
+routed block and should not be treated as timing-closed until the cluster-scan
+critical path is addressed or physically proven with real Innovus implementation.
+
+## 16. Next Server Commands: `event_coordinator`
+
+`event_coordinator` is next because it is the mode-aware control block between
+matrix activity, calibration activity, reset acknowledgement, position/TDC
+packet availability, and bundle transmit start. It is single-clock `clk_sys`,
+so this should be a cleaner OOC run than `matrix_cfg_ctrl` and
+`position_snapshot`.
+
+Run from the server checkout:
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+
+EXPECTED_HEAD=$(git rev-parse HEAD)
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+```
+
+Run the event coordinator test:
+
+```bash
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_event_coordinator_modes_unit --sim xrun
+TB_EVT_RC=$?
+
+echo "TB_EVT_RC=$TB_EVT_RC"
+echo "TB_EVT_LOG=TOP/build/directed/tb_spadmic_event_coordinator_modes_unit/run.log"
+```
+
+If the test return code is zero, run Genus OOC for this block only:
+
+```bash
+GENUS_RUN_ID=genus_ooc_event_coordinator_$(date +%Y%m%d_%H%M)
+
+bash TOP/syn/scripts/run_genus_ooc_block.sh event_coordinator "$GENUS_RUN_ID"
+GENUS_RC=$?
+
+GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
+BLOCK_ROOT="$GENUS_ROOT/event_coordinator"
+
+cat "$GENUS_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/reports/messages/warning_classification.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/qor/report_area.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/check_timing_intent.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_clocks.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_timing_post_opt.rpt"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
+
+grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
+  "$BLOCK_ROOT/reports" || true
+
+echo "GENUS_RC=$GENUS_RC"
+echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+echo "GENUS_ROOT=$GENUS_ROOT"
+echo "BLOCK_ROOT=$BLOCK_ROOT"
+```
+
+Expected warning posture:
+
+- `tool_error`, `unresolved`, and `inferred_latch` must stay zero;
+- missing external delay warnings are acceptable for this relaxed OOC stage;
+- `no_clock_waveform` should stay zero because this block is single-clock
+  `clk_sys`;
+- `clk_ref_40m` and `clk_cfg_40m` inter-clock reports are not expected.
+
+If `GENUS_RC=0`, run the current single-block Innovus OOC collateral gate:
+
+```bash
+PNR_RUN_ID=innovus_ooc_event_coordinator_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh event_coordinator "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
+cat "$PNR_ROOT/blocks/event_coordinator/SUMMARY.md"
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+Paste back after the run:
+
+- `TB_EVT_RC`;
+- `GENUS_RC`, `GENUS_RUN_ID`, `GENUS_ROOT`, `BLOCK_ROOT`;
+- `warning_classification.rpt`;
+- first 180 lines of `report_area.rpt`;
+- first 180 lines of `check_timing_intent.rpt`;
+- first 180 lines of `report_clocks.rpt`;
+- first 180 lines of `report_timing_post_opt.rpt`;
+- `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
+- `ooc_collateral_manifest.csv`.
+
+## 17. Recorded Server Result: `event_coordinator`
+
+Server result recorded from the fourth staged block run on July 8, 2026.
+
+| Item | Value |
+| --- | --- |
+| Source commit | `017de251a41765f188ccf179554ff03c2abe0195` |
+| Unit test | `tb_spadmic_event_coordinator_modes_unit` |
+| Unit test result | PASS, `24 pass / 0 fail`, `TB_EVT_RC=0` |
+| Unit test log | `TOP/build/directed/tb_spadmic_event_coordinator_modes_unit/run.log` |
+| Genus run ID | `genus_ooc_event_coordinator_20260708_1506` |
+| Genus run root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_coordinator_20260708_1506` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_coordinator_20260708_1506/event_coordinator` |
+| Genus result | PASS, 1 block, 0 failed, `GENUS_RC=0` |
+| Innovus OOC gate run ID | `innovus_ooc_event_coordinator_20260708_1510` |
+| Innovus OOC gate root | `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_event_coordinator_20260708_1510` |
+| Innovus OOC gate result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, `PNR_RC=0` |
+
+Genus warning classification:
+
+- `tool_error count=0`;
+- `unresolved count=0`;
+- `inferred_latch count=0`;
+- `design_rule count=0`;
+- `no_clock_waveform count=0`;
+- `missing_external_delay count=2`, accepted for this relaxed OOC stage;
+- `tool_warning count=2`, bounded `MESG-11` print-count warnings;
+- `undriven count=8` is a classifier false positive because the detailed
+  Genus check-design text reports `Undriven Port(s) 0`.
+
+Area and timing:
+
+- cell count: `156`;
+- cell area: `4904.704 um^2` = `0.004905 mm^2`;
+- net area: `2525.235 um^2` = `0.002525 mm^2`;
+- total estimated area: `7429.939 um^2` = `0.007430 mm^2`;
+- clock reported: `clk_sys` at `6250 ps`, `51` registers;
+- worst shown relaxed setup slack in `report_timing_post_opt.rpt`: `+1969 ps`.
+
+Generated Genus outputs:
+
+```text
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_coordinator_20260708_1506/event_coordinator/outputs/event_coordinator.postsyn.sdc
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_coordinator_20260708_1506/event_coordinator/outputs/event_coordinator.postsyn.sdf
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_coordinator_20260708_1506/event_coordinator/outputs/event_coordinator.postsyn.v
+```
+
+Conclusion for this stage: `event_coordinator` is clean OOC collateral for the
+current staged plan. It is small, single-clock, and has comfortable relaxed
+timing margin. It is still not routed Innovus implementation or signoff.
+
+## 18. Next Server Commands: `event_bundle_tx`
+
+`event_bundle_tx` is next because it starts the TX egress chain. It serializes
+the selected TDC/position packet sources into one event stream before the output
+FIFO and DDR16/DDRs2 path.
+
+Run from the server checkout:
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+
+EXPECTED_HEAD=$(git rev-parse HEAD)
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+```
+
+Run the bundle transmitter test:
+
+```bash
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_event_bundle_tx_unit --sim xrun
+TB_BUNDLE_RC=$?
+
+echo "TB_BUNDLE_RC=$TB_BUNDLE_RC"
+echo "TB_BUNDLE_LOG=TOP/build/directed/tb_spadmic_event_bundle_tx_unit/run.log"
+```
+
+If the test return code is zero, run Genus OOC for this block only:
+
+```bash
+GENUS_RUN_ID=genus_ooc_event_bundle_tx_$(date +%Y%m%d_%H%M)
+
+bash TOP/syn/scripts/run_genus_ooc_block.sh event_bundle_tx "$GENUS_RUN_ID"
+GENUS_RC=$?
+
+GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
+BLOCK_ROOT="$GENUS_ROOT/event_bundle_tx"
+
+cat "$GENUS_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/reports/messages/warning_classification.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/qor/report_area.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/check_timing_intent.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_clocks.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_timing_post_opt.rpt"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
+
+grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
+  "$BLOCK_ROOT/reports" || true
+
+echo "GENUS_RC=$GENUS_RC"
+echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+echo "GENUS_ROOT=$GENUS_ROOT"
+echo "BLOCK_ROOT=$BLOCK_ROOT"
+```
+
+Expected warning posture:
+
+- `tool_error`, `unresolved`, and `inferred_latch` must stay zero;
+- missing external delay warnings are acceptable for this relaxed OOC stage;
+- `no_clock_waveform` should stay zero because this block is single-clock
+  `clk_sys`;
+- `clk_ref_40m` and `clk_cfg_40m` inter-clock reports are not expected.
+
+If `GENUS_RC=0`, run the current single-block Innovus OOC collateral gate:
+
+```bash
+PNR_RUN_ID=innovus_ooc_event_bundle_tx_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh event_bundle_tx "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
+cat "$PNR_ROOT/blocks/event_bundle_tx/SUMMARY.md"
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+Paste back after the run:
+
+- `TB_BUNDLE_RC`;
+- `GENUS_RC`, `GENUS_RUN_ID`, `GENUS_ROOT`, `BLOCK_ROOT`;
+- `warning_classification.rpt`;
+- first 180 lines of `report_area.rpt`;
+- first 180 lines of `check_timing_intent.rpt`;
+- first 180 lines of `report_clocks.rpt`;
+- first 180 lines of `report_timing_post_opt.rpt`;
+- `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
+- `ooc_collateral_manifest.csv`.
+
+## 19. Recorded Server Result: `event_bundle_tx`
+
+Karim ran step 5 on the server on branch `SPADMIC_test`, source commit
+`017de251a41765f188ccf179554ff03c2abe0195`.
+
+| Item | Result |
+| --- | --- |
+| Xcelium test | `tb_spadmic_event_bundle_tx_unit`: `14 pass / 0 fail` |
+| Xcelium return code | `TB_BUNDLE_RC=0` |
+| Xcelium log | `TOP/build/directed/tb_spadmic_event_bundle_tx_unit/run.log` |
+| Genus run ID | `genus_ooc_event_bundle_tx_20260708_1529` |
+| Genus run root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_bundle_tx_20260708_1529` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_bundle_tx_20260708_1529/event_bundle_tx` |
+| Genus result | PASS, 1 block, 0 failed, `GENUS_RC=0` |
+| Innovus OOC gate run ID | `innovus_ooc_event_bundle_tx_20260708_1531` |
+| Innovus OOC gate root | `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_event_bundle_tx_20260708_1531` |
+| Innovus OOC gate result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, `PNR_RC=0` |
+
+Genus warning classification:
+
+- `tool_error count=0`;
+- `unresolved count=0`;
+- `inferred_latch count=0`;
+- `design_rule count=0`;
+- `no_clock_waveform count=0`;
+- `missing_external_delay count=2`, accepted for this relaxed OOC stage;
+- `tool_warning count=2`, bounded `MESG-11` print-count warnings;
+- `undriven count=8` is a classifier false positive because the detailed
+  Genus check-design text reports `Undriven Port(s) 0`.
+
+Area and timing:
+
+- cell count: `132`;
+- cell area: `3590.093 um^2` = `0.003590 mm^2`;
+- net area: `2687.726 um^2` = `0.002688 mm^2`;
+- total estimated area: `6277.819 um^2` = `0.006278 mm^2`;
+- clock reported: `clk_sys` at `6250 ps`, `28` registers;
+- worst shown relaxed setup slack in `report_timing_post_opt.rpt`: `+2799 ps`.
+
+Generated Genus outputs:
+
+```text
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_bundle_tx_20260708_1529/event_bundle_tx/outputs/event_bundle_tx.postsyn.sdc
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_bundle_tx_20260708_1529/event_bundle_tx/outputs/event_bundle_tx.postsyn.sdf
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_bundle_tx_20260708_1529/event_bundle_tx/outputs/event_bundle_tx.postsyn.v
+```
+
+Conclusion for this stage: `event_bundle_tx` is clean OOC collateral for the
+current staged plan. It is small, single-clock, and has comfortable relaxed
+timing margin. It is still not routed Innovus implementation or signoff.
+
+## 20. Next Server Commands: `output_fifo`
+
+`output_fifo` is next in the TX egress chain. The OOC target is intentionally
+`spadmic_output_fifo_topcfg`, not the raw parameter defaults of
+`spadmic_output_fifo`. The wrapper matches the matrix-top integration:
+
+- `DATA_W = mptdc_pkg::NARROW_W + 1`, so entries are 17-bit;
+- `DEPTH = SPADMIC_OUTPUT_FIFO_DEPTH = 256`;
+- `RESERVE_WORDS = SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES = 129`;
+- `LEVEL_W = SPADMIC_OUTPUT_FIFO_LEVEL_W = $clog2(257)`.
+
+Before running this step on the server, pull the patch that adds
+`TOP/rtl/spadmic_output_fifo_topcfg.sv` to `TOP/filelist.f` and maps
+`output_fifo` to the wrapper in the OOC scripts. The Genus summary should show
+top module `spadmic_output_fifo_topcfg`.
+
+Run from the server checkout:
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+
+EXPECTED_HEAD=$(git rev-parse HEAD)
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+```
+
+Run the FIFO directed tests:
+
+```bash
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_output_fifo_unit --sim xrun
+TB_FIFO_RC=$?
+
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_output_fifo_ddr_marker_unit --sim xrun
+TB_FIFO_MARKER_RC=$?
+
+echo "TB_FIFO_RC=$TB_FIFO_RC"
+echo "TB_FIFO_MARKER_RC=$TB_FIFO_MARKER_RC"
+echo "TB_FIFO_LOG=TOP/build/directed/tb_spadmic_output_fifo_unit/run.log"
+echo "TB_FIFO_MARKER_LOG=TOP/build/directed/tb_spadmic_output_fifo_ddr_marker_unit/run.log"
+```
+
+If both test return codes are zero, run Genus OOC for this block only:
+
+```bash
+GENUS_RUN_ID=genus_ooc_output_fifo_$(date +%Y%m%d_%H%M)
+
+bash TOP/syn/scripts/run_genus_ooc_block.sh output_fifo "$GENUS_RUN_ID"
+GENUS_RC=$?
+
+GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
+BLOCK_ROOT="$GENUS_ROOT/output_fifo"
+
+cat "$GENUS_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/reports/messages/warning_classification.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/qor/report_area.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/check_timing_intent.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_clocks.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_timing_post_opt.rpt"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
+
+grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
+  "$BLOCK_ROOT/reports" || true
+
+echo "GENUS_RC=$GENUS_RC"
+echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+echo "GENUS_ROOT=$GENUS_ROOT"
+echo "BLOCK_ROOT=$BLOCK_ROOT"
+```
+
+Expected warning posture:
+
+- `tool_error`, `unresolved`, and `inferred_latch` must stay zero;
+- `no_clock_waveform` should stay zero because this block is single-clock
+  `clk_sys`;
+- missing external delay warnings are acceptable for this relaxed OOC stage;
+- `clk_ref_40m` and `clk_cfg_40m` inter-clock reports are not expected;
+- if the top module is reported as raw `spadmic_output_fifo`, stop and pull the
+  wrapper patch before trusting the result.
+
+If `GENUS_RC=0`, run the current single-block Innovus OOC collateral gate:
+
+```bash
+PNR_RUN_ID=innovus_ooc_output_fifo_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh output_fifo "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
+cat "$PNR_ROOT/blocks/output_fifo/SUMMARY.md"
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+Paste back after the run:
+
+- `TB_FIFO_RC` and `TB_FIFO_MARKER_RC`;
+- `GENUS_RC`, `GENUS_RUN_ID`, `GENUS_ROOT`, `BLOCK_ROOT`;
+- `warning_classification.rpt`;
+- first 180 lines of `report_area.rpt`;
+- first 180 lines of `check_timing_intent.rpt`;
+- first 180 lines of `report_clocks.rpt`;
+- first 180 lines of `report_timing_post_opt.rpt`;
+- `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
+- `ooc_collateral_manifest.csv`.

@@ -46,8 +46,8 @@ case "$BLOCK_IN" in
   event_bundle_tx|spadmic_event_bundle_tx)
     BLOCK_SPEC="event_bundle_tx:spadmic_event_bundle_tx"
     ;;
-  output_fifo|spadmic_output_fifo)
-    BLOCK_SPEC="output_fifo:spadmic_output_fifo"
+  output_fifo|spadmic_output_fifo|spadmic_output_fifo_topcfg)
+    BLOCK_SPEC="output_fifo:spadmic_output_fifo_topcfg"
     ;;
   ddr16_pairer|spadmic_ddr16_tx_pairer)
     BLOCK_SPEC="ddr16_pairer:spadmic_ddr16_tx_pairer"

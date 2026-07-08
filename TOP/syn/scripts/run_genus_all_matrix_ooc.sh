@@ -31,7 +31,7 @@ BLOCKS=(
   "matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl"
   "event_coordinator:spadmic_event_coordinator"
   "event_bundle_tx:spadmic_event_bundle_tx"
-  "output_fifo:spadmic_output_fifo"
+  "output_fifo:spadmic_output_fifo_topcfg"
   "matrix_top_csr:spadmic_matrix_top_csr"
   "i2c_csr_bridge:spadmic_i2c_csr_bridge"
   "i2c_slave:spadmic_i2c_slave"

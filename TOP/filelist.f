@@ -18,6 +18,7 @@ rtl/spadmic_event_coordinator.sv
 rtl/spadmic_ddr16_tx_pairer.sv
 rtl/spadmic_ddrs2_adapter.sv
 rtl/spadmic_output_fifo.sv
+rtl/spadmic_output_fifo_topcfg.sv
 rtl/spadmic_matrix_cfg_ctrl.sv
 rtl/spadmic_matrix_top_csr.sv
 rtl/spadmic_position_snapshot_packetizer.sv
