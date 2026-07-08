@@ -1,0 +1,16 @@
+STAGE=route
+STATUS=FAIL
+ERROR=MPTDC_POSTPLACE_PRE_ROUTE_RO_PG_HOOKUP_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618/reports/postplace_pre_route_sroute_status.rpt hookup_report=/sim/ksabra/SPADMIC_work/innovus/20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618/reports/ro_pg_via_stack_status.rpt
+
+MPTDC_POSTPLACE_PRE_ROUTE_RO_PG_HOOKUP_FAILED: status=FAIL report=/sim/ksabra/SPADMIC_work/innovus/20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618/reports/postplace_pre_route_sroute_status.rpt hookup_report=/sim/ksabra/SPADMIC_work/innovus/20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618/reports/ro_pg_via_stack_status.rpt
+    while executing
+"error "MPTDC_POSTPLACE_PRE_ROUTE_RO_PG_HOOKUP_FAILED: status=FAIL report=$rpt hookup_report=$ro_pg_hookup_rpt""
+    (procedure "mptdc_signoff_run_postplace_pre_route_sroute" line 75)
+    invoked from within
+"mptdc_signoff_run_postplace_pre_route_sroute"
+    (procedure "mptdc_signoff_route_design" line 43)
+    invoked from within
+"mptdc_signoff_route_design"
+    ("uplevel" body line 2)
+    invoked from within
+"uplevel 1 $body"

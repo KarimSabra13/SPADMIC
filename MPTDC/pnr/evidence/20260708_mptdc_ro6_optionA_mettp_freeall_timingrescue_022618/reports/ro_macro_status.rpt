@@ -1,0 +1,19 @@
+RO_TUNE6_COUNT=2
+RO_TUNE6_INSTANCE=u_core_u_osc_fast_u_ro_tune4
+RO_TUNE6_INSTANCE=u_core_u_osc_slow_u_ro_tune4
+FREE_INTERNAL_PLACEMENT=1
+FREE_DIGITAL_ONLY_PLACEMENT=0
+FREE_DIGITAL_ONLY_RO_POLICY=DEFAULT
+RO_MACRO_FIXED=NO
+PLACE_RO instance=u_core_u_osc_slow_u_ro_tune4 region=north x=55.44 y=696.08 orient=R0 fixed=NO
+PLACE_RO_COMMAND=placeInstance u_core_u_osc_slow_u_ro_tune4 55.44 696.08 R0
+PLACE_RO instance=u_core_u_osc_fast_u_ro_tune4 region=south x=55.44 y=206.08 orient=MX fixed=NO
+PLACE_RO_COMMAND=placeInstance u_core_u_osc_fast_u_ro_tune4 55.44 206.08 MX
+SLOW_RO_BBOX=55.44 696.08 224.385 766.58
+SLOW_RO_CENTER=139.9125,731.33
+FAST_RO_BBOX=55.44 206.08 224.385 276.58
+FAST_RO_CENTER=139.9125,241.33
+RO_MACRO_STATUS=PASS
+RO_HALO_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618/reports/ro_halo_status.rpt
+RO_ROUTE_BLOCKAGE_REPORT=/sim/ksabra/SPADMIC_work/innovus/20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618/reports/ro_route_blockage_status.rpt
+RO_PHASE_PLACEMENT_STATUS=PROVISIONAL_UNTIL_PHASE_BUFFER_AUDIT
