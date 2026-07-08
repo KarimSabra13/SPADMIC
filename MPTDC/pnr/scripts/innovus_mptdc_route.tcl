@@ -11,6 +11,14 @@ if {[llength [info commands mptdc_pnr_env]] == 0} {
     }
 }
 
+proc mptdc_pnr_env_truthy {name default_value} {
+    set value [mptdc_pnr_env $name $default_value]
+    switch -nocase -- $value {
+        1 - true - yes - on { return 1 }
+        default { return 0 }
+    }
+}
+
 proc mptdc_pnr_route_signal_bottom_layer {} {
     return [mptdc_pnr_env MPTDC_PNR_SIGNAL_BOTTOM_LAYER MET1]
 }
@@ -21,6 +29,14 @@ proc mptdc_pnr_route_signal_top_layer {} {
 
 proc mptdc_pnr_route_effective_top_floor_layer {} {
     return [mptdc_pnr_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]
+}
+
+proc mptdc_pnr_promote_signal_top_to_effective_floor {} {
+    return [mptdc_pnr_env_truthy MPTDC_PNR_PROMOTE_SIGNAL_TOP_TO_EFFECTIVE_FLOOR 1]
+}
+
+proc mptdc_pnr_allow_special_route_above_signal_top {} {
+    return [mptdc_pnr_env_truthy MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP 0]
 }
 
 proc mptdc_pnr_route_stack_key {} {
@@ -124,12 +140,21 @@ proc mptdc_pnr_route_effective_top_layer {requested_top} {
     set effective $requested_top
     set effective_idx $requested_idx
     set reason requested
-    if {[string is integer -strict $requested_idx] && [string is integer -strict $floor_idx] && $requested_idx < $floor_idx} {
+    set promote_to_floor [mptdc_pnr_promote_signal_top_to_effective_floor]
+    if {$promote_to_floor &&
+        [string is integer -strict $requested_idx] &&
+        [string is integer -strict $floor_idx] &&
+        $requested_idx < $floor_idx} {
         set effective $floor
         set effective_idx $floor_idx
         set reason promoted_to_post_cts_existing_route_floor
+    } elseif {!$promote_to_floor &&
+              [string is integer -strict $requested_idx] &&
+              [string is integer -strict $floor_idx] &&
+              $requested_idx < $floor_idx} {
+        set reason requested_signal_top_preserved
     }
-    return [list top $effective top_index $effective_idx reason $reason requested_top $requested_top requested_top_index $requested_idx floor_top $floor floor_top_index $floor_idx]
+    return [list top $effective top_index $effective_idx reason $reason requested_top $requested_top requested_top_index $requested_idx floor_top $floor floor_top_index $floor_idx promote_signal_top_to_effective_floor $promote_to_floor]
 }
 
 proc mptdc_pnr_route_try_command {commands} {
@@ -184,17 +209,21 @@ proc mptdc_pnr_route_update_max_layer {var_name values} {
     }
 }
 
-proc mptdc_pnr_route_query_existing_layer_values {fh} {
+proc mptdc_pnr_route_query_existing_layer_values {fh {include_special 1}} {
     set max_idx 0
     set query_count 0
-    foreach cmd {
-        {dbGet top.nets.wires.layer.name}
-        {dbGet top.nets.sWires.layer.name}
-        {dbGet top.nets.wires.layer.num}
-        {dbGet top.nets.sWires.layer.num}
-        {dbGet top.nets.shapes.layer.name}
-        {get_db wires .layer.name}
-    } {
+    puts $fh "EXISTING_LAYER_QUERY_INCLUDE_SPECIAL=$include_special"
+    set commands [list \
+        {dbGet top.nets.wires.layer.name} \
+        {dbGet top.nets.wires.layer.num} \
+        {get_db wires .layer.name}]
+    if {$include_special} {
+        lappend commands \
+            {dbGet top.nets.sWires.layer.name} \
+            {dbGet top.nets.sWires.layer.num} \
+            {dbGet top.nets.shapes.layer.name}
+    }
+    foreach cmd $commands {
         if {[catch {set values [uplevel #0 $cmd]} err] || $values eq "" || $values eq "0x0"} {
             puts $fh "EXISTING_LAYER_QUERY_STATUS=SKIPPED command={$cmd} error={$err}"
             continue
@@ -304,11 +333,14 @@ proc mptdc_pnr_audit_route_layers {{path ""}} {
     puts $fh "GLOBAL_ROUTE_TOP_LAYER=[dict get $effective_top top]"
     puts $fh "GLOBAL_ROUTE_TOP_LAYER_INDEX=[dict get $effective_top top_index]"
     puts $fh "GLOBAL_ROUTE_TOP_REASON=[dict get $effective_top reason]"
+    puts $fh "SIGNAL_TOP_PROMOTION_TO_EFFECTIVE_FLOOR=[dict get $effective_top promote_signal_top_to_effective_floor]"
+    set allow_special_above [mptdc_pnr_allow_special_route_above_signal_top]
+    puts $fh "SPECIAL_ROUTE_ABOVE_SIGNAL_TOP_ALLOWED=$allow_special_above"
     mptdc_pnr_route_audit_value $fh invalid requested_signal_bottom_layer $requested_bottom
     mptdc_pnr_route_audit_value $fh invalid requested_signal_top_layer $requested_top
     mptdc_pnr_route_audit_value $fh invalid effective_global_top_layer [dict get $effective_top top]
 
-    set existing [mptdc_pnr_route_query_existing_layer_values $fh]
+    set existing [mptdc_pnr_route_query_existing_layer_values $fh [expr {!$allow_special_above}]]
     puts $fh "HIGHEST_EXISTING_ROUTE_LAYER=[dict get $existing max_layer]"
     puts $fh "HIGHEST_EXISTING_ROUTE_LAYER_INDEX=[dict get $existing max_index]"
     set existing_idx [dict get $existing max_index]
@@ -384,6 +416,8 @@ proc mptdc_pnr_write_route_intent {{path ""}} {
     puts $fh "effective_route_top_layer=[dict get $effective_top top]"
     puts $fh "effective_route_top_layer_index=[dict get $effective_top top_index]"
     puts $fh "effective_route_top_reason=[dict get $effective_top reason]"
+    puts $fh "promote_signal_top_to_effective_floor=[dict get $effective_top promote_signal_top_to_effective_floor]"
+    puts $fh "allow_special_route_above_signal_top=[mptdc_pnr_allow_special_route_above_signal_top]"
     puts $fh "top_metal_policy=[mptdc_pnr_route_power_top_policy]"
     puts $fh "FAST_TAG_TO_PD_TS_TIMED=YES"
     puts $fh "FAST_TAG_TO_PD_TS_POSTROUTE_CLEAN=REVIEW_AFTER_ROUTE"

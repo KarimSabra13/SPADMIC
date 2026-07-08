@@ -717,6 +717,8 @@ fi
   echo "route_layers: ${MPTDC_PNR_ROUTE_LAYER_NAMES:-unset}"
   echo "signal_top_layer: ${MPTDC_PNR_SIGNAL_TOP_LAYER:-unset}"
   echo "effective_top_floor_layer: ${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-unset}"
+  echo "promote_signal_top_to_effective_floor: ${MPTDC_PNR_PROMOTE_SIGNAL_TOP_TO_EFFECTIVE_FLOOR:-unset}"
+  echo "allow_special_route_above_signal_top: ${MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP:-unset}"
   echo "ro_handoff_env: ${MPTDC_RO_HANDOFF_ENV_SOURCED:-unset}"
   echo "ro_handoff_override_status: ${MPTDC_RO_HANDOFF_OVERRIDE_STATUS:-unset}"
   echo "O1_USE_REAL_RO_ABSTRACT: ${O1_USE_REAL_RO_ABSTRACT:-unset}"
