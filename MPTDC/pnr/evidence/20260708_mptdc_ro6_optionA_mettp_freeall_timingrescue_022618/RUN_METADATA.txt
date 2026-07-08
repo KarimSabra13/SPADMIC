@@ -1,0 +1,8 @@
+RUN_ID=20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618
+RUN_DIR=
+ARTIFACT_DIR=MPTDC/pnr/evidence/20260708_mptdc_ro6_optionA_mettp_freeall_timingrescue_022618
+SOURCE_COMMIT=a7ae516cfa77a596d78fda1434b4c359d8194287
+FINAL_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+PNR_LEF=/group/validmgr/PROJET/Prj_xh018/ksabra/lef/RO_tune6.lef
+PACKAGED_AT=2026-07-08T07:23:50Z
+NOTE=Option A real METTP RO_tune6 PG pins; free-all internal placement; RO movable; relaxed floorplan/asymmetry; timing rescue; reports/logs/manifests only
