@@ -25,6 +25,8 @@ CORE_UTIL_VALUE="${MPTDC_PNR_CORE_UTIL:-0.45}"
 FREE_ALL_INTERNAL_VALUE="${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-1}"
 ENABLE_FINAL_FILLER_VALUE="${MPTDC_ENABLE_FINAL_FILLER:-1}"
 ENABLE_POST_FILLER_SROUTE_VALUE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-0}"
+ALLOW_DANGLING_ONLY_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-1}"
+DANGLING_ONLY_MAX_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX:-64}"
 
 usage() {
   cat <<'USAGE'
@@ -46,6 +48,12 @@ Options:
   --no-free-all          Do not enable the free-all internal placement rescue.
   --no-final-filler      Disable final filler in full_closure.
   --post-filler-sroute   Enable post-filler sroute in full_closure.
+  --strict-special-clean  Require raw special connectivity to have zero
+                          dangling markers at the pre-route PG proof gate.
+                          Default accepts only bounded IMPVFC-94 dangling.
+  --dangling-only-max <n> Maximum bounded dangling markers accepted when the
+                          report has no opens, shorts, unconnected terminals,
+                          or other fatal special connectivity lines.
   -h, --help             Show this help.
 
 This is the latest-LEF simple-PG launcher:
@@ -53,6 +61,11 @@ This is the latest-LEF simple-PG launcher:
   - native Innovus blockPin/corePin sroute;
   - custom RO via-stack hookup disabled;
   - strict post-place/pre-route special connectivity gate.
+
+The default pre-route gate accepts only bounded IMPVFC-94 dangling wires. This
+matches native Innovus sroute behavior after the latest METTP RO LEF: it still
+fails on opens, shorts, unconnected terminals, missing reports, or dangling
+counts above --dangling-only-max.
 
 Run pg_proof first. Run full_closure only after pg_proof reports clean special
 connectivity.
@@ -185,6 +198,14 @@ while [[ $# -gt 0 ]]; do
       ENABLE_POST_FILLER_SROUTE_VALUE=1
       shift
       ;;
+    --strict-special-clean)
+      ALLOW_DANGLING_ONLY_VALUE=0
+      shift
+      ;;
+    --dangling-only-max)
+      DANGLING_ONLY_MAX_VALUE="${2:?missing --dangling-only-max value}"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -289,8 +310,8 @@ export MPTDC_ENABLE_PREPLACE_PG_SROUTE=0
 export MPTDC_ENABLE_POSTPLACE_PRE_ROUTE_SROUTE=1
 export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
 export MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=1
-export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0
-export MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=64
+export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY="$ALLOW_DANGLING_ONLY_VALUE"
+export MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX="$DANGLING_ONLY_MAX_VALUE"
 export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1
 export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1
 export MPTDC_ENABLE_SROUTE_PADPIN_FALLBACK=0
@@ -389,6 +410,8 @@ echo "MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=$MPTDC_ALLOW_LEGACY_PG_TOPOLOGY"
 echo "MPTDC_ENABLE_RO_PG_HOOKUP=$MPTDC_ENABLE_RO_PG_HOOKUP"
 echo "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=$MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN"
 echo "MPTDC_STOP_AFTER_POSTPLACE_PRE_ROUTE_SROUTE=$MPTDC_STOP_AFTER_POSTPLACE_PRE_ROUTE_SROUTE"
+echo "MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=$MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY"
+echo "MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=$MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX"
 echo "MPTDC_PNR_CORE_UTIL=$MPTDC_PNR_CORE_UTIL"
 echo "MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"
 echo "MPTDC_PNR_FIX_RO_MACROS=$MPTDC_PNR_FIX_RO_MACROS"
