@@ -61,6 +61,7 @@ This table is the implemented subset for the new matrix top shell. Registers not
 | `0x7000` | `TX_STATUS` | RO | `empty` | DDR16 pairer, bundle, position drop, and output FIFO overflow status |
 | `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `empty` | output FIFO empty/full/almost-full/level/free-space status |
 | `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | reserve entries `129`, `OUTPUT_FIFO_DEPTH=256` |
+| `0x7010` | `SLVS_GPIO_CTRL` | RW | `0` | CSR-driven internal controls for SLVS driver and receiver/tap-monitor custom block |
 
 Implemented command error codes in `MTOP_FAULT[11:8]`:
 
@@ -85,6 +86,9 @@ Phase 4/5 additions in the active implementation:
 - `TX_STATUS[31:16]` exposes the saturating output FIFO overflow counter.
 - `MATRIX_EVENT_STATUS[7:4]` reports the union of currently pending sources and bundle-completed sources.
 - `MATRIX_CFG_RDATA_LO/HI` now report the controller's returned-`Cout` sampled readback value. This is functional RTL behavior, not final matrix timing signoff.
+- `SLVS_GPIO_CTRL` is writable even while acquisition is active because it is an analog/debug control register. It is not protected by `safe_idle`.
+- `SLVS_GPIO_CTRL[31:15]` are reserved and read as zero. Writes to reserved bits have no effect.
+- `VREF_ADJ_B` and `EN_REF_DRV_B` are passed through exactly as written. They are likely analog active-low controls; final polarity/defaults remain analog-designer confirmation items.
 
 Shared TDC configuration notes:
 
@@ -110,7 +114,7 @@ Implemented tests:
 | `0x4000-0x4FFF` | POSITION |
 | `0x5000-0x5FFF` | MATRIX EVENT, SNAPSHOT, RESET |
 | `0x6000-0x6FFF` | MATRIX CONFIGURATION |
-| `0x7000-0x7FFF` | TX, OUTPUT, DEBUG STATUS |
+| `0x7000-0x7FFF` | TX, OUTPUT, SLVS/RECEIVER GPIO, DEBUG STATUS |
 
 Unsupported addresses should return a clean target error if simple. They should not silently appear as implemented zero registers.
 
@@ -235,7 +239,7 @@ The `clk_sys` side snapshots parameters before toggling the CDC request. The `cl
 | `0x7004` | `OUTPUT_FIFO_STATUS` | RO | `0` | output FIFO empty/full/almost-full/level/free-space |
 | `0x7008` | `OUTPUT_FIFO_WATERMARKS` | RO | depth/reservation | event reservation and FIFO depth |
 | `0x700C` | `TX_FAULT_STICKY` | W1C/RO | `0` | pressure, malformed packet, unsupported odd packet |
-| `0x7010` | `TX_COUNTERS` | RO | `0` | transmitted words/pairs, pressure rejects |
+| `0x7010` | `SLVS_GPIO_CTRL` | RW | `0` | internal SLVS driver and receiver/tap-monitor GPIO controls |
 
 Active `TX_STATUS` layout at `0x7000`:
 
@@ -270,6 +274,32 @@ uses `SPADMIC_OUTPUT_FIFO_RESERVE_ENTRIES=129` so the 128 logical words and one
 ordered flush marker can both fit. The integrated FIFO carries 16-bit logical
 words plus an internal ordered flush-marker bit; CSR level/free-space counts
 entries, including any pending marker.
+
+Active `SLVS_GPIO_CTRL` layout at `0x7010`:
+
+| Bits | Field |
+| --- | --- |
+| `[3:0]` | `slvs_s_drv_o[3:0]` |
+| `[4]` | `slvs_en_vref_ext_o` |
+| `[5]` | `slvs_en_drv_o` |
+| `[6]` | `slvs_vref_adj_b_o`, analog active-low polarity to be confirmed |
+| `[7]` | `slvs_en_vref_400mv_o` |
+| `[8]` | `slvs_en_ref_drv_b_o`, analog active-low polarity to be confirmed |
+| `[12:9]` | `rx_s_rx_o[3:0]` |
+| `[13]` | `rx_en_rx_o` |
+| `[14]` | `rx_en_term_o` |
+| `[31:15]` | reserved, read as zero |
+
+These signals are not external pads directly. They are internal digital-top
+outputs intended for the custom SLVS/receiver/tap-monitor circuitry in the
+future chip wrapper/top assembly. The digital RTL does not invert the `_B`
+signals.
+
+For v1 one shared register drives the common SLVS/RX controls that are routed
+to DDRs2 and TXRX4TDC where those macros expose the same top terms. `PAD_VREF_EXT`
+is a real external analog pad; the CSR controls only `EN_VREF_EXT` and the
+associated digital GPIO bits. Writes to this register are allowed during
+acquisition bring-up and are blocked only by global reset.
 
 ## Software Sequences
 

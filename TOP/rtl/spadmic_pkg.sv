@@ -23,6 +23,11 @@ package spadmic_pkg;
   localparam int unsigned SPADMIC_MATRIX_COLUMN_IDX_W = $clog2(SPADMIC_MATRIX_COLUMN_COUNT);
   localparam int unsigned SPADMIC_MATRIX_CFG_BITS_PER_COLUMN = 64;
   localparam int unsigned SPADMIC_DDR16_PHY_W = 16;
+  localparam int unsigned SPADMIC_DDRS2_LANE_W = 19;
+  localparam int unsigned SPADMIC_DDRS2_DATA_LANES = 16;
+  localparam int unsigned SPADMIC_DDRS2_VALID_LANE = 16;
+  localparam int unsigned SPADMIC_DDRS2_FWD_CLK_LANE = 17;
+  localparam int unsigned SPADMIC_DDRS2_SPARE_LANE = 18;
   localparam int unsigned SPADMIC_CSR_ADDR_W  = 16;
   localparam int unsigned SPADMIC_CSR_DATA_W  = mptdc_pkg::CSR_DATA_W;
   localparam int unsigned SPADMIC_EVENT_ID_W  = 14;
@@ -149,6 +154,7 @@ package spadmic_pkg;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_TX_STATUS = 16'h7000;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_OUTPUT_FIFO_STATUS = 16'h7004;
   localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_OUTPUT_FIFO_WATERMARKS = 16'h7008;
+  localparam logic [SPADMIC_CSR_ADDR_W-1:0] SPADMIC_CSR_SLVS_GPIO_CTRL = 16'h7010;
 
   // Position-side cluster summaries keep only the highest-priority two clusters
   // per axis. Additional qualifying clusters set overflow.

@@ -54,6 +54,7 @@ DEFAULT_BLOCKS=(
   i2c_csr_bridge
   i2c_slave
   ddr16_pairer
+  ddrs2_adapter
 )
 
 DDR16_INCLUDED=1
@@ -61,7 +62,7 @@ if [[ "${SPADMIC_INNOVUS_EXCLUDE_DDR16:-0}" == "1" ]]; then
   DDR16_INCLUDED=0
   TMP_BLOCKS=()
   for block in "${DEFAULT_BLOCKS[@]}"; do
-    if [[ "$block" != "ddr16_pairer" ]]; then
+    if [[ "$block" != "ddr16_pairer" && "$block" != "ddrs2_adapter" ]]; then
       TMP_BLOCKS+=("$block")
     fi
   done

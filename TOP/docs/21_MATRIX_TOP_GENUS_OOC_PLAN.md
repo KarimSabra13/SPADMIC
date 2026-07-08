@@ -43,14 +43,16 @@ away from `xx31/JIHD`.
 9. I2C/CSR bridge feasibility.
 10. I2C slave.
 11. DDR16 pairer.
+12. DDRs2 adapter.
 
-`ddr16_pairer` is now included by default because the north SLVS row is part of
-the staged top contract. It is scheduled last because the data-driver row is
-real but lower priority than the control, matrix, packet, and FIFO path for the
-next physical step. Full `spadmic_top_matrix_v1` remains excluded by default.
-Set `SPADMIC_GENUS_EXCLUDE_DDR16=1` only for a narrow debug rerun, and set
-`SPADMIC_GENUS_INCLUDE_FULL_TOP=1` only for an explicitly reviewed full-top
-experiment.
+`ddr16_pairer` and `ddrs2_adapter` are now included by default because the
+north DDRs2 macro boundary is part of the staged top contract. They are
+scheduled last because the data-driver row is real but lower priority than the
+control, matrix, packet, and FIFO path for the next physical step. Full
+`spadmic_top_matrix_v1` remains excluded by default. Set
+`SPADMIC_GENUS_EXCLUDE_DDR16=1` only for a narrow debug rerun; it excludes both
+`ddr16_pairer` and `ddrs2_adapter`. Set `SPADMIC_GENUS_INCLUDE_FULL_TOP=1` only
+for an explicitly reviewed full-top experiment.
 
 For MPTDC, use existing MPTDC axis-core flow/results as source of truth. Do not synthesize three unique MPTDC variants unless a later handoff requires it.
 

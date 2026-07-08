@@ -27,6 +27,15 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
   wire [15:0] ddr_data_h;
   wire ddr_pair_valid;
   wire ddr_clk;
+  wire [3:0] slvs_s_drv;
+  wire slvs_en_vref_ext;
+  wire slvs_en_drv;
+  wire slvs_vref_adj_b;
+  wire slvs_en_vref_400mv;
+  wire slvs_en_ref_drv_b;
+  wire [3:0] rx_s_rx;
+  wire rx_en_rx;
+  wire rx_en_term;
   int pass_count;
   int fail_count;
 
@@ -51,6 +60,15 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
     .i2c_sda_i(i2c_sda),
     .i2c_sda_oe_o(i2c_sda_oe),
     .pll_lock_i(1'b1),
+    .slvs_s_drv_o(slvs_s_drv),
+    .slvs_en_vref_ext_o(slvs_en_vref_ext),
+    .slvs_en_drv_o(slvs_en_drv),
+    .slvs_vref_adj_b_o(slvs_vref_adj_b),
+    .slvs_en_vref_400mv_o(slvs_en_vref_400mv),
+    .slvs_en_ref_drv_b_o(slvs_en_ref_drv_b),
+    .rx_s_rx_o(rx_s_rx),
+    .rx_en_rx_o(rx_en_rx),
+    .rx_en_term_o(rx_en_term),
     .R_i('0),
     .Y_i('0),
     .B_i('0),
@@ -111,6 +129,19 @@ module tb_spadmic_i2c_matrix_top_16b_unit;
 
     i2c_read_csr(16'h7004, rd);
     check("I2C accesses 0x7000 output-FIFO region", rd[0] && !rd[1]);
+
+    i2c_read_csr(SPADMIC_CSR_SLVS_GPIO_CTRL, rd);
+    check("I2C reads SLVS GPIO reset defaults", rd == 32'h0);
+    i2c_write_csr(SPADMIC_CSR_SLVS_GPIO_CTRL, 32'hFFFF_7FFF);
+    i2c_read_csr(SPADMIC_CSR_SLVS_GPIO_CTRL, rd);
+    check("I2C writes/reads SLVS GPIO implemented bits", rd[14:0] == 15'h7FFF);
+    check("I2C SLVS GPIO reserved bits read zero", rd[31:15] == 17'h0);
+    check("I2C SLVS S_DRV reaches top output", slvs_s_drv == 4'hF);
+    check("I2C SLVS control bits reach top outputs",
+          slvs_en_vref_ext && slvs_en_drv && slvs_vref_adj_b &&
+          slvs_en_vref_400mv && slvs_en_ref_drv_b);
+    check("I2C RX controls reach top outputs",
+          rx_s_rx == 4'hF && rx_en_rx && rx_en_term);
 
     i2c_write_csr(SPADMIC_CSR_SHARED_TDC_MAX_HITS, 32'h0000_000F);
     i2c_read_csr(16'h0020, rd);

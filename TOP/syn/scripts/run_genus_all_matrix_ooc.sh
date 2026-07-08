@@ -36,6 +36,7 @@ BLOCKS=(
   "i2c_csr_bridge:spadmic_i2c_csr_bridge"
   "i2c_slave:spadmic_i2c_slave"
   "ddr16_pairer:spadmic_ddr16_tx_pairer"
+  "ddrs2_adapter:spadmic_ddrs2_adapter"
 )
 
 SKIPPED_BLOCKS=("spadmic_top_matrix_v1:spadmic_top_matrix_v1")
@@ -44,9 +45,11 @@ DDR16_INCLUDED=1
 if [[ "${SPADMIC_GENUS_EXCLUDE_DDR16:-0}" == "1" ]]; then
   DDR16_INCLUDED=0
   SKIPPED_BLOCKS+=("ddr16_pairer:spadmic_ddr16_tx_pairer")
+  SKIPPED_BLOCKS+=("ddrs2_adapter:spadmic_ddrs2_adapter")
   TMP_BLOCKS=()
   for item in "${BLOCKS[@]}"; do
-    if [[ "$item" != "ddr16_pairer:spadmic_ddr16_tx_pairer" ]]; then
+    if [[ "$item" != "ddr16_pairer:spadmic_ddr16_tx_pairer" && \
+          "$item" != "ddrs2_adapter:spadmic_ddrs2_adapter" ]]; then
       TMP_BLOCKS+=("$item")
     fi
   done

@@ -88,6 +88,15 @@ module spadmic_matrix_top_csr (
   output logic                                pll_enable_div_o,
   output logic                                pll_sel_40m_o,
   output logic                                clk_160m_ext_select_o,
+  output logic [3:0]                          slvs_s_drv_o,
+  output logic                                slvs_en_vref_ext_o,
+  output logic                                slvs_en_drv_o,
+  output logic                                slvs_vref_adj_b_o,
+  output logic                                slvs_en_vref_400mv_o,
+  output logic                                slvs_en_ref_drv_b_o,
+  output logic [3:0]                          rx_s_rx_o,
+  output logic                                rx_en_rx_o,
+  output logic                                rx_en_term_o,
 
   output logic                                matrix_cfg_cmd_start_o,
   output logic [2:0]                          matrix_cfg_cmd_op_o,
@@ -199,7 +208,8 @@ module spadmic_matrix_top_csr (
       SPADMIC_CSR_POSITION_MODE,
       SPADMIC_CSR_TX_STATUS,
       SPADMIC_CSR_OUTPUT_FIFO_STATUS,
-      SPADMIC_CSR_OUTPUT_FIFO_WATERMARKS: return 1'b1;
+      SPADMIC_CSR_OUTPUT_FIFO_WATERMARKS,
+      SPADMIC_CSR_SLVS_GPIO_CTRL: return 1'b1;
       default: return 1'b0;
     endcase
   endfunction
@@ -391,6 +401,18 @@ module spadmic_matrix_top_csr (
         rd[31:16] = 16'(SPADMIC_OUTPUT_FIFO_DEPTH);
       end
 
+      SPADMIC_CSR_SLVS_GPIO_CTRL: begin
+        rd[3:0]  = slvs_s_drv_o;
+        rd[4]    = slvs_en_vref_ext_o;
+        rd[5]    = slvs_en_drv_o;
+        rd[6]    = slvs_vref_adj_b_o;
+        rd[7]    = slvs_en_vref_400mv_o;
+        rd[8]    = slvs_en_ref_drv_b_o;
+        rd[12:9] = rx_s_rx_o;
+        rd[13]   = rx_en_rx_o;
+        rd[14]   = rx_en_term_o;
+      end
+
       default: rd = '0;
     endcase
 
@@ -427,6 +449,15 @@ module spadmic_matrix_top_csr (
       pll_enable_div_o        <= 1'b1;
       pll_sel_40m_o           <= 1'b0;
       clk_160m_ext_select_o   <= 1'b0;
+      slvs_s_drv_o            <= 4'h0;
+      slvs_en_vref_ext_o      <= 1'b0;
+      slvs_en_drv_o           <= 1'b0;
+      slvs_vref_adj_b_o       <= 1'b0;
+      slvs_en_vref_400mv_o    <= 1'b0;
+      slvs_en_ref_drv_b_o     <= 1'b0;
+      rx_s_rx_o               <= 4'h0;
+      rx_en_rx_o              <= 1'b0;
+      rx_en_term_o            <= 1'b0;
       matrix_cfg_cmd_start_o  <= 1'b0;
       matrix_cfg_cmd_op_o     <= OP_WRITE_COLUMN_64;
       matrix_cfg_cmd_op_q     <= OP_WRITE_COLUMN_64;
@@ -583,6 +614,19 @@ module spadmic_matrix_top_csr (
                 clk_160m_ext_select_o <= csr_wdata_i[16];
                 cfg_accept_o          <= 1'b1;
               end
+            end
+
+            SPADMIC_CSR_SLVS_GPIO_CTRL: begin
+              slvs_s_drv_o         <= csr_wdata_i[3:0];
+              slvs_en_vref_ext_o   <= csr_wdata_i[4];
+              slvs_en_drv_o        <= csr_wdata_i[5];
+              slvs_vref_adj_b_o    <= csr_wdata_i[6];
+              slvs_en_vref_400mv_o <= csr_wdata_i[7];
+              slvs_en_ref_drv_b_o  <= csr_wdata_i[8];
+              rx_s_rx_o            <= csr_wdata_i[12:9];
+              rx_en_rx_o           <= csr_wdata_i[13];
+              rx_en_term_o         <= csr_wdata_i[14];
+              cfg_accept_o         <= 1'b1;
             end
 
             SPADMIC_CSR_POSITION_MODE: begin

@@ -55,6 +55,42 @@ and the 160 MHz source select. PLL lock/status is CSR-visible only. Ibi_KVCO,
 Icp, Ref_in_pll_ro, Rst_Div, and Rst_CP are external pad inputs owned by the
 future pad-ring/PLL wrapper.
 
+[FROZEN] DDRs2 is the analog/custom north fast-output macro and must not be
+synthesized by TOP Genus.
+
+[FROZEN] DDRs2 has 19 lanes total: 16 data, 1 valid, 1 forwarded clock, and 1
+spare.
+
+[FROZEN] DDRs2 has no marker lane. The valid lane is a simple FPGA receiver
+data-valid indication, not an error flag.
+
+[FROZEN] The DDRs2 spare lane is tied low and unused by the v1 protocol.
+
+[FROZEN] The internal digital TX stream remains 16-bit. The DDRs2 19-lane
+macro expansion is handled by `spadmic_ddrs2_adapter`, not by changing
+`spadmic_ddr16_tx_pairer`.
+
+[FROZEN] SLVS/receiver GPIO controls are CSR-driven internal top outputs.
+
+[FROZEN] SLVS driver controls: `S_DRV[3:0]`, `EN_VREF_EXT`, `EN_DRV`,
+`VREF_ADJ_B`, `EN_VREF_400mV`, and `EN_REF_DRV_B`.
+
+[FROZEN] Receiver controls: `S_RX[3:0]`, `EN_RX`, and `EN_TERM`.
+
+[FROZEN] CSR address: `SPADMIC_CSR_SLVS_GPIO_CTRL = 16'h7010`.
+
+[TBD] Analog polarity/defaults for `VREF_ADJ_B` and `EN_REF_DRV_B` must be
+confirmed.
+
+[DEFERRED] I2C pad-wrapper / SDA open-drain physical implementation will be
+handled later.
+
+[FROZEN] PAD_VREF_EXT is a real external analog pad. Digital CSR only controls
+`EN_VREF_EXT` and the related SLVS/RX GPIO bits.
+
+[FROZEN] TXRX4TDC is an analog/custom black-box macro for tap/receiver
+observation or drive. It is not synthesized by TOP Genus.
+
 [FROZEN] `Cout` is the returned `Cin` after matrix propagation/RC effects and must be used for physical matrix configuration readback timing. The existing mirror-readback behavior is not final.
 
 [FROZEN] A real `clk_sys` output FIFO is required between event bundle TX and DDR16 pairer. The physical-planning target depth is 256 logical 16-bit words plus marker metadata, with event admission blocked when free space is below the documented worst-case event reservation.
@@ -425,7 +461,7 @@ Pin family summary from the CSV:
 - [SUPERSEDED] The earlier 1.0 mm2, aspect-ratio-1.8 candidate is no longer the active planning case. It is replaced by the full-boundary Scenario B reservation in the real top envelope.
 - [VERIFIED] Server OOC collateral gate `innovus_matrix_ooc_gate_20260630_1628` returned `OOC_RC=4`, `READY_FOR_NEXT_IMPORT_TEMPLATE`, with all 10 connectivity-first block netlists and SDCs present. At that time DDR16 was excluded by default; this is now superseded by the updated north SLVS/DDR16 contract.
 - [IMPLEMENTED] Builder fixed a warning-classifier false positive where the `Multidriven Port(s)/Pin(s)` report heading was counted as an undriven/multidriven finding even when detailed Genus text said no such issue.
-- [FROZEN] New TOP Genus/Innovus OOC runs include `ddr16_pairer` by default because the north SLVS data/clock/valid row is part of the staged top contract. DDR16 is scheduled last because it is lower priority than reset/OR64/snapshot/config/event/FIFO/CSR/I2C physical readiness. Full `spadmic_top_matrix_v1` remains excluded by default; DDR16 may be excluded only for narrow debug reruns.
+- [FROZEN] New TOP Genus/Innovus OOC runs include `ddr16_pairer` and `ddrs2_adapter` by default because the north DDRs2 macro boundary is part of the staged top contract. The TX path is scheduled last because it is lower priority than reset/OR64/snapshot/config/event/FIFO/CSR/I2C physical readiness. Full `spadmic_top_matrix_v1` remains excluded by default; DDR16/DDRs2 may be excluded only for narrow debug reruns.
 - [FROZEN] Clock mux reset default selects PLL 160 MHz. PLL lock/status is CSR-only for v1; there is no external lock pin.
 
 ## Affected Files

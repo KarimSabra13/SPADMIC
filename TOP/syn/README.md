@@ -38,12 +38,12 @@ The server wrapper currently runs OOC feasibility for:
 - `spadmic_matrix_or_tree`
 - `spadmic_matrix_reset_ctrl`
 - `spadmic_matrix_cfg_ctrl`
-- `spadmic_ddr16_tx_pairer`
 - `spadmic_event_coordinator`
 - `spadmic_matrix_top_csr`
 - `spadmic_i2c_csr_bridge`
 - `spadmic_i2c_slave`
-- `spadmic_top_matrix_v1`
+- `spadmic_ddr16_tx_pairer`
+- `spadmic_ddrs2_adapter`
 
 MPTDC internal synthesis remains governed by the existing MPTDC handoff flow.
 These TOP scripts do not modify or replace that product boundary.

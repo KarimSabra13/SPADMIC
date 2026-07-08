@@ -23,8 +23,10 @@ This is not placement, route, CTS, DRC/LVS, PEX, MMMC, or final signoff.
   dimensional margin, `20 um` halo, `20 um` inter-axis gap
 - Clock pads: one external 160 MHz clock only; 40 MHz clocks are internal
   PLL/divider outputs
-- DDR16: 16 north-row SLVS data drivers plus dedicated forwarded-clock and
-  valid drivers; `ddr16_pairer` is included in staged sub-block OOC by default
+- DDRs2: 19 north-row DDR lanes in the analog/custom macro; lanes 0..15 are
+  data, lane 16 is valid, lane 17 is forwarded clock, lane 18 is spare/tie-low;
+  `ddr16_pairer` and `ddrs2_adapter` are included in staged sub-block OOC by
+  default
 - I2C pad reset: `i2c_RST`, active high, maps to core `i2c_rst_i`
 - Wrapper/pad contract: `TOP/docs/24_MATRIX_TOP_CHIP_WRAPPER_PAD_CONTRACT.md`
 
@@ -49,11 +51,13 @@ The initial OOC order is:
 9. `i2c_csr_bridge`
 10. `i2c_slave`
 11. `ddr16_pairer`
+12. `ddrs2_adapter`
 
 Full `spadmic_top_matrix_v1` remains excluded from Genus OOC unless
-`SPADMIC_GENUS_INCLUDE_FULL_TOP=1` is explicitly set. DDR16 is included by
-default. Use `SPADMIC_GENUS_EXCLUDE_DDR16=1` or
-`SPADMIC_INNOVUS_EXCLUDE_DDR16=1` only for narrow debug reruns.
+`SPADMIC_GENUS_INCLUDE_FULL_TOP=1` is explicitly set. The DDR16 pairer and
+DDRs2 adapter are included by default. Use `SPADMIC_GENUS_EXCLUDE_DDR16=1` or
+`SPADMIC_INNOVUS_EXCLUDE_DDR16=1` only for narrow debug reruns; those switches
+exclude both TX-path blocks.
 
 ## New Inputs And Outputs
 

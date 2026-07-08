@@ -88,6 +88,15 @@ module tb_spadmic_matrix_top_csr_unit;
   wire pll_enable_div;
   wire pll_sel_40m;
   wire clk_160m_ext_select;
+  wire [3:0] slvs_s_drv;
+  wire slvs_en_vref_ext;
+  wire slvs_en_drv;
+  wire slvs_vref_adj_b;
+  wire slvs_en_vref_400mv;
+  wire slvs_en_ref_drv_b;
+  wire [3:0] rx_s_rx;
+  wire rx_en_rx;
+  wire rx_en_term;
   wire matrix_cfg_cmd_start;
   wire [2:0] matrix_cfg_cmd_op;
   wire [5:0] matrix_cfg_col_idx;
@@ -174,6 +183,15 @@ module tb_spadmic_matrix_top_csr_unit;
     .pll_enable_div_o(pll_enable_div),
     .pll_sel_40m_o(pll_sel_40m),
     .clk_160m_ext_select_o(clk_160m_ext_select),
+    .slvs_s_drv_o(slvs_s_drv),
+    .slvs_en_vref_ext_o(slvs_en_vref_ext),
+    .slvs_en_drv_o(slvs_en_drv),
+    .slvs_vref_adj_b_o(slvs_vref_adj_b),
+    .slvs_en_vref_400mv_o(slvs_en_vref_400mv),
+    .slvs_en_ref_drv_b_o(slvs_en_ref_drv_b),
+    .rx_s_rx_o(rx_s_rx),
+    .rx_en_rx_o(rx_en_rx),
+    .rx_en_term_o(rx_en_term),
     .matrix_cfg_cmd_start_o(matrix_cfg_cmd_start),
     .matrix_cfg_cmd_op_o(matrix_cfg_cmd_op),
     .matrix_cfg_col_idx_o(matrix_cfg_col_idx),
@@ -304,6 +322,8 @@ module tb_spadmic_matrix_top_csr_unit;
     check("reset PLL RO switches default zero", rd[12:8] == 5'b00000);
     check("reset PLL divider enabled", rd[14]);
     check("reset PLL source is internal", !rd[16]);
+    csr_read_cmd(SPADMIC_CSR_SLVS_GPIO_CTRL, rd, 1'b0);
+    check("reset SLVS GPIO defaults zero", rd == 32'h0);
     pll_lock = 1'b1;
     csr_read_cmd(SPADMIC_CSR_PLL_STATUS, rd, 1'b0);
     check("PLL status reports lock input", rd[0]);
@@ -395,6 +415,33 @@ module tb_spadmic_matrix_top_csr_unit;
     csr_write_cmd(SPADMIC_CSR_PLL_STATUS, 32'h0000_0001, 1'b1);
     csr_read_cmd(SPADMIC_CSR_MTOP_FAULT, rd, 1'b0);
     check("PLL status is read-only", rd[11:8] == CMD_ERR_BAD_ADDR);
+
+    csr_write_cmd(SPADMIC_CSR_SLVS_GPIO_CTRL, 32'hFFFF_7FFF, 1'b0);
+    check("SLVS GPIO write accepted", cfg_accept);
+    check("SLVS S_DRV output updates", slvs_s_drv == 4'hF);
+    check("SLVS EN_VREF_EXT output updates", slvs_en_vref_ext);
+    check("SLVS EN_DRV output updates", slvs_en_drv);
+    check("SLVS VREF_ADJ_B output updates pass-through", slvs_vref_adj_b);
+    check("SLVS EN_VREF_400mV output updates", slvs_en_vref_400mv);
+    check("SLVS EN_REF_DRV_B output updates pass-through", slvs_en_ref_drv_b);
+    check("RX S_RX output updates", rx_s_rx == 4'hF);
+    check("RX EN_RX output updates", rx_en_rx);
+    check("RX EN_TERM output updates", rx_en_term);
+    csr_read_cmd(SPADMIC_CSR_SLVS_GPIO_CTRL, rd, 1'b0);
+    check("SLVS GPIO readback keeps implemented bits", rd[14:0] == 15'h7FFF);
+    check("SLVS GPIO reserved bits read zero", rd[31:15] == 17'h0);
+    safe_idle = 1'b0;
+    event_busy = 1'b1;
+    csr_write_cmd(SPADMIC_CSR_SLVS_GPIO_CTRL, 32'h0000_0555, 1'b0);
+    check("SLVS GPIO write allowed while acquisition busy", cfg_accept);
+    check("SLVS GPIO busy write updates implemented bits",
+          {rx_en_term, rx_en_rx, rx_s_rx, slvs_en_ref_drv_b,
+           slvs_en_vref_400mv, slvs_vref_adj_b, slvs_en_drv,
+           slvs_en_vref_ext, slvs_s_drv} == 15'h0555);
+    csr_read_cmd(SPADMIC_CSR_SLVS_GPIO_CTRL, rd, 1'b0);
+    check("SLVS GPIO busy write readback", rd == 32'h0000_0555);
+    safe_idle = 1'b1;
+    event_busy = 1'b0;
 
     csr_write_cmd(SPADMIC_CSR_POSITION_MODE, 32'h0000_0000, 1'b0);
     check("position mode cluster write accepted", position_mode == SPADMIC_POS_MODE_CLUSTER);
