@@ -1376,6 +1376,61 @@ proc mptdc_signoff_create_ro_route_blockages {{path ""}} {
     return $path
 }
 
+proc mptdc_signoff_apply_signal_top_route_blockage {{path ""}} {
+    set enabled [mptdc_signoff_env_truthy MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE 0]
+    set layer [mptdc_signoff_env MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER [mptdc_signoff_env MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER METTP]]
+    set scope [mptdc_signoff_env MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_SCOPE core]
+    if {$path eq ""} {
+        set path [file join [mptdc_signoff_report_dir] signal_top_route_blockage_status.rpt]
+    }
+    set fh [open $path w]
+    puts $fh "# MPTDC Signal Top Route Blockage Status"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_ENABLED=[expr {$enabled ? 1 : 0}]"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER=$layer"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_SCOPE=$scope"
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_REASON=keep_regular_signal_routes_off_reserved_top_pg_layer"
+    if {!$enabled} {
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=SKIPPED"
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_SKIP_REASON=disabled"
+        close $fh
+        return $path
+    }
+
+    set box [mptdc_signoff_core_box]
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_BOX=$box"
+    if {![mptdc_signoff_box_valid $box]} {
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=FAIL"
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_ERROR=invalid_core_bbox"
+        close $fh
+        error "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_FAILED: invalid_core_bbox report=$path"
+    }
+
+    set name "MPTDC_SIGNAL_TOP_ROUTE_BLK_${layer}"
+    set llx [lindex $box 0]
+    set lly [lindex $box 1]
+    set urx [lindex $box 2]
+    set ury [lindex $box 3]
+    set commands [list \
+        [list createRouteBlk -name $name -box $llx $lly $urx $ury -layer [list $layer]] \
+        [list createRouteBlk -name $name -box $box -layer [list $layer]] \
+        [list createRouteBlk -name $name -box $box -layer $layer] \
+        [list createRouteBlk -box $llx $lly $urx $ury -layer [list $layer]] \
+        [list createRouteBlk -box $box -layer [list $layer]] \
+        [list createRouteBlk -box $box -layer $layer]]
+    foreach cmd $commands {
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_COMMAND=$cmd"
+        if {![catch {{*}$cmd} err]} {
+            puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=PASS"
+            close $fh
+            return $path
+        }
+        puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_ATTEMPT_ERROR=$err"
+    }
+    puts $fh "SIGNAL_TOP_ROUTE_BLOCKAGE_STATUS=FAIL"
+    close $fh
+    error "MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_FAILED: createRouteBlk_failed report=$path"
+}
+
 proc mptdc_signoff_set_phase_origin_env {stable value force} {
     set legacy [string map {MPTDC_PNR_ MPTDC_O13_} $stable]
     foreach name [list $stable $legacy] {
@@ -8887,6 +8942,7 @@ proc mptdc_signoff_route_design {} {
     }
 
     set route_cmd [mptdc_signoff_env MPTDC_ROUTE_DESIGN_COMMAND ""]
+    set signal_top_blockage_rpt [mptdc_signoff_apply_signal_top_route_blockage]
     if {$route_cmd eq ""} {
         if {[mptdc_signoff_env_truthy MPTDC_ROUTE_DESIGN_PLACEMENT_CHECK 1]} {
             set route_cmd {routeDesign -placementCheck}
@@ -8898,6 +8954,7 @@ proc mptdc_signoff_route_design {} {
     set rcfh [open $route_cmd_rpt w]
     puts $rcfh "ROUTE_COMMAND=$route_cmd"
     puts $rcfh "ROUTE_DESIGN_PLACEMENT_CHECK=[expr {[mptdc_signoff_env_truthy MPTDC_ROUTE_DESIGN_PLACEMENT_CHECK 1] ? 1 : 0}]"
+    puts $rcfh "SIGNAL_TOP_ROUTE_BLOCKAGE_REPORT=$signal_top_blockage_rpt"
     close $rcfh
     if {[catch {uplevel #0 $route_cmd} route_err route_opts]} {
         set rcfh [open $route_cmd_rpt a]

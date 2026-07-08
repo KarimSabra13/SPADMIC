@@ -39,6 +39,10 @@ proc mptdc_pnr_allow_special_route_above_signal_top {} {
     return [mptdc_pnr_env_truthy MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP 0]
 }
 
+proc mptdc_pnr_keep_router_top_at_effective_floor {} {
+    return [mptdc_pnr_env_truthy MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES 0]
+}
+
 proc mptdc_pnr_route_stack_key {} {
     set stack [string tolower [mptdc_pnr_env MPTDC_XH018_STACK xx31]]
     switch -glob -- $stack {
@@ -155,6 +159,25 @@ proc mptdc_pnr_route_effective_top_layer {requested_top} {
         set reason requested_signal_top_preserved
     }
     return [list top $effective top_index $effective_idx reason $reason requested_top $requested_top requested_top_index $requested_idx floor_top $floor floor_top_index $floor_idx promote_signal_top_to_effective_floor $promote_to_floor]
+}
+
+proc mptdc_pnr_route_command_top_layer {requested_top} {
+    set effective_top [mptdc_pnr_route_effective_top_layer $requested_top]
+    set router_top [dict get $effective_top top]
+    set router_top_idx [dict get $effective_top top_index]
+    set router_reason [dict get $effective_top reason]
+    set keep_floor [mptdc_pnr_keep_router_top_at_effective_floor]
+    set floor [dict get $effective_top floor_top]
+    set floor_idx [dict get $effective_top floor_top_index]
+    if {$keep_floor &&
+        [string is integer -strict [dict get $effective_top top_index]] &&
+        [string is integer -strict $floor_idx] &&
+        [dict get $effective_top top_index] < $floor_idx} {
+        set router_top $floor
+        set router_top_idx $floor_idx
+        set router_reason existing_route_floor_required_by_nanroute
+    }
+    return [dict merge $effective_top [list router_top $router_top router_top_index $router_top_idx router_top_reason $router_reason keep_router_top_at_effective_floor $keep_floor]]
 }
 
 proc mptdc_pnr_route_try_command {commands} {
@@ -413,6 +436,7 @@ proc mptdc_pnr_write_route_intent {{path ""}} {
         set path [mptdc_pnr_env MPTDC_PNR_ROUTE_INTENT_REPORT mptdc_route_intent.rpt]
     }
     set effective_top [mptdc_pnr_route_effective_top_layer [mptdc_pnr_route_signal_top_layer]]
+    set route_top [mptdc_pnr_route_command_top_layer [mptdc_pnr_route_signal_top_layer]]
     set fh [open $path w]
     puts $fh "# MPTDC Final Typical Route Intent"
     puts $fh "xh018_stack=[mptdc_pnr_route_stack_key]"
@@ -424,6 +448,10 @@ proc mptdc_pnr_write_route_intent {{path ""}} {
     puts $fh "effective_route_top_reason=[dict get $effective_top reason]"
     puts $fh "promote_signal_top_to_effective_floor=[dict get $effective_top promote_signal_top_to_effective_floor]"
     puts $fh "allow_special_route_above_signal_top=[mptdc_pnr_allow_special_route_above_signal_top]"
+    puts $fh "router_command_top_layer=[dict get $route_top router_top]"
+    puts $fh "router_command_top_layer_index=[dict get $route_top router_top_index]"
+    puts $fh "router_command_top_reason=[dict get $route_top router_top_reason]"
+    puts $fh "keep_router_top_at_effective_floor=[dict get $route_top keep_router_top_at_effective_floor]"
     puts $fh "top_metal_policy=[mptdc_pnr_route_power_top_policy]"
     puts $fh "FAST_TAG_TO_PD_TS_TIMED=YES"
     puts $fh "FAST_TAG_TO_PD_TS_POSTROUTE_CLEAN=REVIEW_AFTER_ROUTE"
@@ -438,24 +466,29 @@ proc mptdc_pnr_apply_route_layer_limits {} {
     set bottom [mptdc_pnr_route_signal_bottom_layer]
     set top [mptdc_pnr_route_signal_top_layer]
     set bottom_idx [mptdc_pnr_route_layer_index $bottom]
-    set effective_top [mptdc_pnr_route_effective_top_layer $top]
-    set top_idx [dict get $effective_top top_index]
-    set effective_top_layer [dict get $effective_top top]
-    if {![mptdc_pnr_route_layer_is_valid $bottom] || ![mptdc_pnr_route_layer_is_valid $effective_top_layer]} {
-        error "MPTDC_ROUTE_LAYER_LIMIT_INVALID: bottom=$bottom top=[dict get $effective_top top]"
+    set route_top [mptdc_pnr_route_command_top_layer $top]
+    set top_idx [dict get $route_top router_top_index]
+    set router_top_layer [dict get $route_top router_top]
+    if {![mptdc_pnr_route_layer_is_valid $bottom] || ![mptdc_pnr_route_layer_is_valid $router_top_layer]} {
+        error "MPTDC_ROUTE_LAYER_LIMIT_INVALID: bottom=$bottom router_top=$router_top_layer"
     }
     set bottom_apply [mptdc_pnr_route_apply_limit bottom $bottom $bottom_idx]
-    set top_apply [mptdc_pnr_route_apply_limit top [dict get $effective_top top] $top_idx]
+    set top_apply [mptdc_pnr_route_apply_limit top $router_top_layer $top_idx]
     set bottom_apply_status [dict get $bottom_apply status]
     set top_apply_status [dict get $top_apply status]
     if {$bottom_apply_status ne "PASS" || $top_apply_status ne "PASS"} {
         error "MPTDC_ROUTE_LAYER_LIMIT_APPLY_FAILED: bottom_errors=[dict get $bottom_apply errors] top_errors=[dict get $top_apply errors]"
     }
-    return [dict merge [list \
+    return [dict merge $route_top [list \
         bottom $bottom \
         bottom_index $bottom_idx \
         bottom_apply_command [dict get $bottom_apply command] \
-        top_apply_command [dict get $top_apply command]] $effective_top]
+        top_apply_command [dict get $top_apply command] \
+        ordinary_signal_top $top \
+        ordinary_signal_top_index [mptdc_pnr_route_layer_index $top] \
+        top $router_top_layer \
+        top_index $top_idx \
+        reason [dict get $route_top router_top_reason]]]
 }
 
 proc mptdc_pnr_write_fast_tag_route_lengths_template {{path ""}} {
