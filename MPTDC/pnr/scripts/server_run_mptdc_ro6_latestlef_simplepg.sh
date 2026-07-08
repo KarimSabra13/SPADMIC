@@ -27,6 +27,7 @@ ENABLE_FINAL_FILLER_VALUE="${MPTDC_ENABLE_FINAL_FILLER:-1}"
 ENABLE_POST_FILLER_SROUTE_VALUE="${MPTDC_ENABLE_POST_FILLER_SROUTE:-0}"
 ALLOW_DANGLING_ONLY_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY:-1}"
 DANGLING_ONLY_MAX_VALUE="${MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX:-64}"
+SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE="${MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE:-0}"
 
 usage() {
   cat <<'USAGE'
@@ -51,6 +52,15 @@ Options:
   --strict-special-clean  Require raw special connectivity to have zero
                           dangling markers at the pre-route PG proof gate.
                           Default accepts only bounded IMPVFC-94 dangling.
+  --signal-top-route-blockage
+                         Add a METTP route blockage over the selected scope.
+                         This is off by default because the 2026-07-08 topblk
+                         run proved that a broad METTP blockage can short
+                         against special PG stripes and block PG pins.
+  --no-signal-top-route-blockage
+                         Keep the router compatible with existing METTP PG
+                         shapes without creating a broad METTP route blockage.
+                         This is the default.
   --dangling-only-max <n> Maximum bounded dangling markers accepted when the
                           report has no opens, shorts, unconnected terminals,
                           or other fatal special connectivity lines.
@@ -198,6 +208,14 @@ while [[ $# -gt 0 ]]; do
       ENABLE_POST_FILLER_SROUTE_VALUE=1
       shift
       ;;
+    --signal-top-route-blockage)
+      SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE=1
+      shift
+      ;;
+    --no-signal-top-route-blockage)
+      SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE=0
+      shift
+      ;;
     --strict-special-clean)
       ALLOW_DANGLING_ONLY_VALUE=0
       shift
@@ -296,14 +314,16 @@ export O1_RO_LIBERTY_PATH="$REPO_ROOT/MPTDC/syn/macros/RO_tune6_real_layout_shel
 export MPTDC_ALLOW_LEGACY_PG_TOPOLOGY=1
 export MPTDC_PG_STRATEGY=innovus_sroute_golden_ro
 
-# Keep ordinary signal detail routing off METTP. METTP is reserved for the
-# simple block PG pins and special PG shapes in this RO6 proof/closure flow.
+# The router command remains compatible with existing METTP PG shapes.  Do not
+# add a broad METTP route blockage by default: the 2026-07-08 topblk run showed
+# that a core-wide METTP blockage is reported as shorts against special PG
+# stripes and edge PG pins.
 export MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
 export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=METTP
 export MPTDC_PNR_PROMOTE_SIGNAL_TOP_TO_EFFECTIVE_FLOOR=0
 export MPTDC_PNR_ALLOW_SPECIAL_ROUTE_ABOVE_SIGNAL_TOP=1
 export MPTDC_PNR_KEEP_ROUTER_TOP_AT_EFFECTIVE_FLOOR_FOR_EXISTING_ROUTES=1
-export MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE=1
+export MPTDC_ENABLE_SIGNAL_TOP_ROUTE_BLOCKAGE="$SIGNAL_TOP_ROUTE_BLOCKAGE_VALUE"
 export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_LAYER=METTP
 export MPTDC_SIGNAL_TOP_ROUTE_BLOCKAGE_SCOPE=core
 

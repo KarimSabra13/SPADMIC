@@ -29,6 +29,7 @@ FREE_ALL_INTERNAL_VALUE="${MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT:-0}"
 FREE_DIGITAL_ONLY_VALUE="${MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT:-0}"
 AGGRESSIVE_POSTROUTE_VALUE="${MPTDC_CLEANLEF_AGGRESSIVE_POSTROUTE:-0}"
 TIMING_RESCUE_VALUE="${MPTDC_CLEANLEF_TIMING_RESCUE:-0}"
+LOCAL_PHASE_PREPLACE_VALUE="${MPTDC_CLEANLEF_LOCAL_PHASE_PREPLACE:-0}"
 CORE_UTIL_VALUE="${MPTDC_PNR_CORE_UTIL:-0.55}"
 PDK_ROOT_VALUE="${MPTDC_PDK_ROOT:-/eda/pdk/xfab/xh018}"
 PVS_STACK_VALUE="${MPTDC_PVS_STACK:-XH018_1131}"
@@ -55,6 +56,12 @@ Options:
                          preplacement so placeDesign controls internal logic.
   --free-digital-only    Keep the RO coordinate proxy fixed, but leave PD,
                          fast-tag, and phase-buffer digital logic to placeDesign.
+  --local-phase-preplace Keep the real RO macros fixed and pre-place/fix the
+                         RO phase isolation/driver buffers next to the macros,
+                         while still allowing PD/fast-tag internal placement.
+                         This is the DRC-first mode for short legal raw RO
+                         access: RO_tune6/S[n] -> iso/A stays local and the
+                         longer phase fabric routes from the buffered outputs.
   --aggressive-postroute Use the post-route optimization hard cap and a larger
                          bounded fast-tag ECO upsize/search budget.
   --timing-rescue        One-run timing rescue mode: implies aggressive
@@ -185,6 +192,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --free-digital-only)
       FREE_DIGITAL_ONLY_VALUE=1
+      shift
+      ;;
+    --local-phase-preplace|--drc-first-local-phase)
+      LOCAL_PHASE_PREPLACE_VALUE=1
       shift
       ;;
     --aggressive-postroute)
@@ -395,6 +406,15 @@ if is_truthy "$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"; then
   export MPTDC_PNR_PD_TILE_FIX_LEAVES=0
 fi
 
+if is_truthy "$LOCAL_PHASE_PREPLACE_VALUE"; then
+  export MPTDC_PNR_FIX_RO_MACROS=1
+  export MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=0
+  export MPTDC_PNR_PHASE_BUF_FIX=1
+  export MPTDC_PNR_FORCE_RO_PHASE_SAFE_ORIGINS=1
+  export MPTDC_RO_PHASE_PREPLACE_AUDIT=1
+  export MPTDC_RO_PHASE_POSTPLACE_AUDIT_FATAL=1
+fi
+
 export MPTDC_RUN_CLK_SYS_CTS=1
 export MPTDC_ENABLE_TC_CLOSURE=1
 export MPTDC_SKIP_VERBOSE_DRV_ALL_VIOLATORS=1
@@ -510,9 +530,11 @@ echo "O1_RO_LIBERTY_PATH=$O1_RO_LIBERTY_PATH"
 echo "MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT"
 echo "MPTDC_PNR_FREE_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_INTERNAL_PLACEMENT"
 echo "MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT=$MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT"
+echo "MPTDC_CLEANLEF_LOCAL_PHASE_PREPLACE=$LOCAL_PHASE_PREPLACE_VALUE"
 echo "MPTDC_PNR_CORE_UTIL=$MPTDC_PNR_CORE_UTIL"
 echo "MPTDC_PNR_FIX_RO_MACROS=$MPTDC_PNR_FIX_RO_MACROS"
 echo "MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-unset}"
+echo "MPTDC_PNR_PHASE_BUF_FIX=${MPTDC_PNR_PHASE_BUF_FIX:-unset}"
 echo "MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN=$MPTDC_PNR_PLACE_FAST_TAGS_BY_COLUMN"
 echo "MPTDC_PD_PHYSICAL_AUDIT_MODE=$MPTDC_PD_PHYSICAL_AUDIT_MODE"
 echo "MPTDC_ENABLE_RO_PG_HOOKUP=$MPTDC_ENABLE_RO_PG_HOOKUP"

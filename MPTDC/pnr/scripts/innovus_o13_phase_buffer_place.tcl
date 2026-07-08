@@ -48,27 +48,36 @@ proc mptdc_o13_phase_stage_instances {family stage_role} {
     return $insts
 }
 
-proc mptdc_o13_place_one {inst x y orient fh} {
+proc mptdc_o13_place_one {inst x y orient fixed fh} {
+    set fixed [expr {$fixed ? 1 : 0}]
     if {[llength [info commands mptdc_pnr_place_instance_row_legal]] > 0} {
-        set place_result [mptdc_pnr_place_instance_row_legal $inst $x $y $orient 0]
+        set place_result [mptdc_pnr_place_instance_row_legal $inst $x $y $orient $fixed]
         if {[dict get $place_result status] eq "PASS"} {
             set actual_orient ""
             set actual_status ""
             set actual_origin ""
             set actual_box ""
+            set fixed_status ""
             catch {set actual_orient [dict get $place_result actual_orient]}
             catch {set actual_status [dict get $place_result actual_status]}
             catch {set actual_origin [dict get $place_result actual_origin]}
             catch {set actual_box [dict get $place_result actual_box]}
-            puts $fh "placed,$inst,$x,$y,$orient,[mptdc_o12b_csv [dict get $place_result command]],actual_orient=$actual_orient actual_status=$actual_status actual_origin=[mptdc_o12b_csv $actual_origin] actual_box=[mptdc_o12b_csv $actual_box]"
+            catch {set fixed_status [dict get $place_result fixed_status]}
+            puts $fh "placed,$inst,$x,$y,$orient,[mptdc_o12b_csv [dict get $place_result command]],fixed_request=$fixed fixed_status=$fixed_status actual_orient=$actual_orient actual_status=$actual_status actual_origin=[mptdc_o12b_csv $actual_origin] actual_box=[mptdc_o12b_csv $actual_box]"
             return 1
         }
         puts $fh "place_attempt_failed,$inst,$x,$y,$orient,,[mptdc_o12b_csv [dict get $place_result errors]]"
         return 0
     }
-    foreach cmd [list \
-        [list placeInstance $inst $x $y $orient] \
-        [list placeInstance $inst $x $y $orient -fixed]] {
+    set cmds [list]
+    if {$fixed} {
+        lappend cmds [list placeInstance $inst $x $y $orient -fixed]
+    }
+    lappend cmds [list placeInstance $inst $x $y $orient]
+    if {!$fixed} {
+        lappend cmds [list placeInstance $inst $x $y $orient -fixed]
+    }
+    foreach cmd $cmds {
         if {![catch {uplevel 1 $cmd} err]} {
             puts $fh "placed,$inst,$x,$y,$orient,[mptdc_o12b_csv $cmd],"
             return 1
@@ -98,8 +107,11 @@ proc mptdc_o13_apply_phase_buffer_placement {mode} {
 
     set pitch [mptdc_o13_env MPTDC_O13_PHASE_BUF_PITCH_UM 4.0]
     set orient [mptdc_o13_env MPTDC_O13_PHASE_BUF_ORIENT AUTO]
+    set fixed [mptdc_o13_env MPTDC_O13_PHASE_BUF_FIX [mptdc_o13_env MPTDC_PNR_PHASE_BUF_FIX 0]]
+    set fixed [expr {[string tolower $fixed] in {1 yes true on}}]
     puts $fh "pitch_um=$pitch"
     puts $fh "orient=$orient"
+    puts $fh "fixed=$fixed"
 
     set missing [list]
     foreach family {slow fast} {
@@ -136,7 +148,7 @@ proc mptdc_o13_apply_phase_buffer_placement {mode} {
                 set inst [lindex $item 1]
                 set x [expr {$base_x + ($tap * $pitch)}]
                 set y $base_y
-                mptdc_o13_place_one $inst $x $y $orient $fh
+                mptdc_o13_place_one $inst $x $y $orient $fixed $fh
             }
         }
     }

@@ -28,6 +28,7 @@ proc mptdc_pnr_phase_buffer_preserve_rules {} {
         {preserve_buhdx4_isolation_stage} \
         {preserve_buhdx12_final_driver_stage} \
         {do_not_buffer_raw_ro_nets} \
+        {keep_ro_to_isolation_buffer_route_local_when_drc_first_mode_is_enabled} \
         {do_not_resize_or_replace_root_phase_drivers_without_review} \
         {keep_phase_drivers_close_to_pd_island} \
     ]
