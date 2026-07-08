@@ -11,6 +11,8 @@ MMMC closure and are not final signoff.
 
 ## Server Command
 
+Run all currently enabled matrix OOC blocks:
+
 ```bash
 cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
 git checkout SPADMIC_test
@@ -18,6 +20,13 @@ git pull --ff-only origin SPADMIC_test
 source /eda/cadence/eda_2023-2024
 export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 bash TOP/syn/scripts/run_genus_all_matrix_ooc.sh matrix_top_genus_<run_id>
+```
+
+Run one block only, for the staged PnR flow:
+
+```bash
+RUN_ID=genus_ooc_matrix_reset_ctrl_$(date +%Y%m%d_%H%M)
+bash TOP/syn/scripts/run_genus_ooc_block.sh matrix_reset_ctrl "$RUN_ID"
 ```
 
 Generated results go under:
@@ -47,6 +56,23 @@ The server wrapper currently runs OOC feasibility for:
 
 MPTDC internal synthesis remains governed by the existing MPTDC handoff flow.
 These TOP scripts do not modify or replace that product boundary.
+
+## Staged Matrix-Side PnR Plan
+
+The block-by-block physical plan is documented in:
+
+- `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`
+- `TOP/docs/27_MATRIX_INTERFACE_PIN_GUIDE_PLAN.md`
+- `TOP/docs/28_SUBBLOCK_ABSTRACT_HANDOFF_PLAN.md`
+
+Per-block filelist and SDC manifests live under:
+
+- `TOP/syn/filelists/ooc/`
+- `TOP/syn/constraints/ooc/`
+
+The current Genus runner still uses the proven filtered `TOP/filelist.f` path.
+The OOC manifests are the starting point for a later pruned-filelist runner once
+the first block results are reviewed on the server.
 
 ## Matrix-Top Filelist Filtering
 

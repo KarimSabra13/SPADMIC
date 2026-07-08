@@ -463,6 +463,8 @@ Pin family summary from the CSV:
 - [IMPLEMENTED] Builder fixed a warning-classifier false positive where the `Multidriven Port(s)/Pin(s)` report heading was counted as an undriven/multidriven finding even when detailed Genus text said no such issue.
 - [FROZEN] New TOP Genus/Innovus OOC runs include `ddr16_pairer` and `ddrs2_adapter` by default because the north DDRs2 macro boundary is part of the staged top contract. The TX path is scheduled last because it is lower priority than reset/OR64/snapshot/config/event/FIFO/CSR/I2C physical readiness. Full `spadmic_top_matrix_v1` remains excluded by default; DDR16/DDRs2 may be excluded only for narrow debug reruns.
 - [FROZEN] Clock mux reset default selects PLL 160 MHz. PLL lock/status is CSR-only for v1; there is no external lock pin.
+- [FROZEN] Matrix-side physical implementation proceeds block by block, not by full-top Genus/Innovus. Matrix, MPTDC protected internals, DDRs2, TXRX4TDC, PLL, pad ring, PTAT, and analog macros remain black boxes. The first OOC hardening target is `spadmic_matrix_reset_ctrl`; matrix-adjacent OR/snapshot/boundary flops remain soft or region-guided until real congestion or routing evidence says otherwise.
+- [IMPLEMENTED] Builder added `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`, `TOP/docs/27_MATRIX_INTERFACE_PIN_GUIDE_PLAN.md`, `TOP/docs/28_SUBBLOCK_ABSTRACT_HANDOFF_PLAN.md`, single-block Genus/Innovus OOC wrappers, and initial per-block OOC filelist/SDC manifests.
 
 ## Affected Files
 

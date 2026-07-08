@@ -61,6 +61,14 @@ if [[ "${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}" == "1" ]]; then
   SKIPPED_BLOCKS=("${SKIPPED_BLOCKS[@]/spadmic_top_matrix_v1:spadmic_top_matrix_v1}")
 fi
 
+CUSTOM_BLOCK_LIST=0
+if [[ -n "${SPADMIC_GENUS_OOC_BLOCKS:-}" ]]; then
+  CUSTOM_BLOCK_LIST=1
+  # shellcheck disable=SC2206
+  BLOCKS=($SPADMIC_GENUS_OOC_BLOCKS)
+  SKIPPED_BLOCKS=("custom_block_list:SPADMIC_GENUS_OOC_BLOCKS")
+fi
+
 if [[ -e "$RUN_ROOT" ]]; then
   echo "ERROR: run directory already exists: $RUN_ROOT" >&2
   exit 2
@@ -84,6 +92,8 @@ mkdir -p "$RUN_ROOT/filelists" "$RUN_ROOT/logs"
   echo "SPADMIC_GENUS_EXCLUDE_DDR16=${SPADMIC_GENUS_EXCLUDE_DDR16:-0}"
   echo "DDR16_INCLUDED=$DDR16_INCLUDED"
   echo "SPADMIC_GENUS_INCLUDE_FULL_TOP=${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}"
+  echo "SPADMIC_GENUS_OOC_BLOCKS=${SPADMIC_GENUS_OOC_BLOCKS:-}"
+  echo "CUSTOM_BLOCK_LIST=$CUSTOM_BLOCK_LIST"
   echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
   echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   echo "STATUS_SHORT_BEGIN"
@@ -148,6 +158,7 @@ FAILED=()
   echo "- Effective top floor layer: \`$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER\`"
   echo "- DDR16 included: \`$DDR16_INCLUDED\`"
   echo "- Full matrix top included: \`${SPADMIC_GENUS_INCLUDE_FULL_TOP:-0}\`"
+  echo "- Custom block list: \`$CUSTOM_BLOCK_LIST\`"
   echo "- Signoff: non-signoff, typical-only feasibility"
   echo
   echo "## Matrix TOP Genus Filelist"

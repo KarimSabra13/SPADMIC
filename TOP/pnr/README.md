@@ -102,9 +102,18 @@ OOC_RUN_ID=innovus_matrix_ooc_gate_$(date +%Y%m%d_%H%M)
 bash TOP/pnr/scripts/server_run_innovus_matrix_ooc.sh "$OOC_RUN_ID" "$GENUS_RUN_ID"
 ```
 
+For a single block in the staged flow:
+
+```bash
+PNR_RUN_ID=innovus_ooc_matrix_reset_ctrl_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh matrix_reset_ctrl "$GENUS_RUN_ID" "$PNR_RUN_ID"
+```
+
 The OOC gate is connectivity-first and includes `ddr16_pairer` by default,
 because the north SLVS row is now part of the staged top contract. Set
 `SPADMIC_INNOVUS_EXCLUDE_DDR16=1` only for a narrow debug rerun.
+
+The block-by-block plan is in `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`.
 
 ## Floorplan Intent
 
