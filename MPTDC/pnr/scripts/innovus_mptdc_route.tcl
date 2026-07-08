@@ -215,8 +215,7 @@ proc mptdc_pnr_route_query_existing_layer_values {fh {include_special 1}} {
     puts $fh "EXISTING_LAYER_QUERY_INCLUDE_SPECIAL=$include_special"
     set commands [list \
         {dbGet top.nets.wires.layer.name} \
-        {dbGet top.nets.wires.layer.num} \
-        {get_db wires .layer.name}]
+        {dbGet top.nets.wires.layer.num}]
     if {$include_special} {
         lappend commands \
             {dbGet top.nets.sWires.layer.name} \
@@ -345,10 +344,17 @@ proc mptdc_pnr_audit_route_layers {{path ""}} {
     puts $fh "HIGHEST_EXISTING_ROUTE_LAYER_INDEX=[dict get $existing max_index]"
     set existing_idx [dict get $existing max_index]
     set effective_top_idx [dict get $effective_top top_index]
+    puts $fh "EXISTING_ROUTE_ABOVE_GLOBAL_TOP_STATUS=PASS"
     if {$existing_idx ne "UNKNOWN" &&
         [string is integer -strict $effective_top_idx] &&
         $existing_idx > $effective_top_idx} {
-        lappend invalid "existing_route_layer_above_global_top=[dict get $existing max_layer]"
+        if {$allow_special_above} {
+            puts $fh "EXISTING_ROUTE_ABOVE_GLOBAL_TOP_STATUS=ALLOWED_SPECIAL_TOP_METAL"
+            puts $fh "EXISTING_ROUTE_ABOVE_GLOBAL_TOP_REASON=simple_pg_metTP_shapes_may_be_reported_by_top_nets_wires"
+        } else {
+            puts $fh "EXISTING_ROUTE_ABOVE_GLOBAL_TOP_STATUS=FAIL"
+            lappend invalid "existing_route_layer_above_global_top=[dict get $existing max_layer]"
+        }
     }
 
     set attrs [list \
