@@ -423,6 +423,7 @@ echo "Starting foreground Innovus latest-LEF simple-PG run..."
 
 exec bash "$SCRIPT_DIR/server_run_innovus_mptdc_digital_signoff.sh" \
   "$RUN_ID" \
+  --expected-head "$ACTUAL_HEAD" \
   --mode full_signoff \
   --genus-run-id "$MPTDC_GENUS_RUN_ID" \
   --handoff-dir "$MPTDC_GENUS_HANDOFF_DIR"
