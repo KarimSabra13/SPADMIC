@@ -602,8 +602,14 @@ echo "MPTDC_GENUS_HANDOFF_DIR=$MPTDC_GENUS_HANDOFF_DIR"
 echo "MPTDC_GENUS_RUN_ID=$MPTDC_GENUS_RUN_ID"
 echo "Starting foreground Innovus full_signoff clean-LEF run..."
 
-exec bash "$SCRIPT_DIR/server_run_innovus_mptdc_digital_signoff.sh" \
+SIGNOFF_ARGS=(
   "$RUN_ID" \
   --mode full_signoff \
   --genus-run-id "$MPTDC_GENUS_RUN_ID" \
   --handoff-dir "$MPTDC_GENUS_HANDOFF_DIR"
+)
+if [[ -n "$EXPECTED_HEAD_VALUE" ]]; then
+  SIGNOFF_ARGS+=(--expected-head "$EXPECTED_HEAD_VALUE")
+fi
+
+exec bash "$SCRIPT_DIR/server_run_innovus_mptdc_digital_signoff.sh" "${SIGNOFF_ARGS[@]}"
