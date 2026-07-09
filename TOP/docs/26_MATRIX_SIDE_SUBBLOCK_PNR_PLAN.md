@@ -1152,3 +1152,100 @@ Paste back after the run:
 - first 180 lines of `report_timing_post_opt.rpt`;
 - `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
 - `ooc_collateral_manifest.csv`.
+
+## 21. Recorded Server Result: `output_fifo` Xcelium + Genus
+
+Karim ran the `output_fifo` tests and Genus OOC step on the server on branch
+`SPADMIC_test`, source commit `eccd432b9801f8781c16ef5fa7494eded08ff77c`.
+This records the digital test and synthesis result only; the Innovus OOC
+collateral gate for this block is still pending.
+
+| Item | Result |
+| --- | --- |
+| Xcelium tests | `tb_spadmic_output_fifo_unit`, `tb_spadmic_output_fifo_ddr_marker_unit` |
+| Xcelium return codes | `TB_FIFO_RC=0`, `TB_FIFO_MARKER_RC=0` |
+| DDR marker test result | `17 pass / 0 fail` |
+| Genus run ID | `genus_ooc_output_fifo_20260709_0653` |
+| Genus run root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo` |
+| Genus top module | `spadmic_output_fifo_topcfg` |
+| Genus result | PASS, 1 block, 0 failed, `GENUS_RC=0` |
+
+The run correctly used the matrix-top-configured wrapper
+`spadmic_output_fifo_topcfg`, not the raw FIFO defaults.
+
+Genus warning classification:
+
+- `tool_error count=0`;
+- `unresolved count=0`;
+- `inferred_latch count=0`;
+- `design_rule count=0`;
+- `no_clock_waveform count=0`;
+- `missing_external_delay count=2`, accepted for this relaxed OOC stage;
+- `tool_warning count=2`, bounded `MESG-11` print-count warnings;
+- `undriven count=8` is a classifier false positive because the detailed
+  Genus check-design text reports `Undriven Port(s) 0`.
+
+Area and timing:
+
+- cell count: `7828`;
+- cell area: `328421.990 um^2` = `0.328422 mm^2`;
+- net area: `130970.578 um^2` = `0.130971 mm^2`;
+- total estimated area: `459392.568 um^2` = `0.459393 mm^2`;
+- clock reported: `clk_sys` at `6250 ps`, `4378` registers;
+- worst shown relaxed setup slack in `report_timing_post_opt.rpt`: `+542 ps`.
+
+Generated Genus outputs:
+
+```text
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo/outputs/output_fifo.postsyn.sdc
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo/outputs/output_fifo.postsyn.sdf
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo/outputs/output_fifo.postsyn.v
+```
+
+Conclusion for this stage: `output_fifo` passed the intended matrix-top wrapper
+synthesis gate, but it is a large flop-based FIFO and the relaxed timing margin
+is much tighter than the small TX control blocks. This is acceptable for the
+current non-signoff OOC collateral stage, but the final implementation should
+prefer a memory-macro or custom SRAM/FIFO option if available.
+
+## 22. Next Server Commands: `output_fifo` Innovus OOC Gate
+
+Run the Innovus OOC collateral gate for the Genus run already produced:
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+
+GENUS_RUN_ID=genus_ooc_output_fifo_20260709_0653
+GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
+BLOCK_ROOT="$GENUS_ROOT/output_fifo"
+
+grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
+  "$BLOCK_ROOT/reports" || true
+
+PNR_RUN_ID=innovus_ooc_output_fifo_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh output_fifo "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
+cat "$PNR_ROOT/blocks/output_fifo/SUMMARY.md"
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+Expected result for the current wrapper is still only
+`READY_FOR_NEXT_IMPORT_TEMPLATE`. This command does not run placement, route,
+CTS, PG, DRC/LVS, PEX, MMMC, or signoff.
