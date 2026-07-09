@@ -138,6 +138,22 @@ and zero unplaced macro instances. It does not prove signal pin connectivity;
 that remains the next assembly implementation gate after macro import/placement
 passes.
 
+After the smoke gate is clean, generate the connected fixed-leaf assembly
+package:
+
+```bash
+PLAN_ROOT=/sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_plan_20260709_1526
+SMOKE_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_tx_egress_leaf_assembly_smoke_parserfix_20260709_1553
+CONNECTED_RUN_ID=tx_egress_connected_assembly_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_tx_egress_connected_assembly.sh "$PLAN_ROOT" "$SMOKE_ROOT" "$CONNECTED_RUN_ID"
+```
+
+This emits a renamed `spadmic_tx_egress_leaf_assembly` RTL wrapper, black-box
+leaf declarations, a Genus-ready filelist, and a connection manifest. The
+wrapper preserves the original `spadmic_tx_egress_core` flush-token glue logic;
+the four TX leaves remain fixed black-box abstracts for the next Genus glue
+synthesis and Innovus assembly-import gate.
+
 ## Future Subblocks
 
 After the TX leaf package is frozen, continue with blocks that are safe as

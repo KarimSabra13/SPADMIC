@@ -216,6 +216,22 @@ smoke gate requires `CHECK_PLACE_STATUS=PASS`, including zero out-of-core and
 zero unplaced macro instances; it intentionally leaves signal connectivity, PG
 hookup, PVS, LVS, PEX, and MMMC for later gates.
 
+After the smoke gate is clean, generate the connected fixed-leaf assembly
+package:
+
+```bash
+PLAN_ROOT=/sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_plan_20260709_1526
+SMOKE_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_tx_egress_leaf_assembly_smoke_parserfix_20260709_1553
+CONNECTED_RUN_ID=tx_egress_connected_assembly_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_tx_egress_connected_assembly.sh "$PLAN_ROOT" "$SMOKE_ROOT" "$CONNECTED_RUN_ID"
+```
+
+This package emits a renamed `spadmic_tx_egress_leaf_assembly` RTL wrapper,
+black-box declarations for the four fixed leaves, a Genus-ready filelist, and a
+connection/glue manifest. It preserves the small flush-token glue logic from
+`spadmic_tx_egress_core`; it does not synthesize, route, hook PG, or claim
+signoff.
+
 ## Floorplan Intent
 
 - `matrice3` on the left, vertically centered.
