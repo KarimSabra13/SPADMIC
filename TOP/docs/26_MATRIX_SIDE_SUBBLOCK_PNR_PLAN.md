@@ -76,6 +76,59 @@ PG_CONNECTIVITY_STATUS=DEFERRED_TOP_LEVEL_HOOKUP
 SIGNOFF_READY=NO
 ```
 
+## 0.1. 2026-07-09 Split-TX OOC Evidence
+
+The first split-TX Genus run passed for the six requested digital OOC blocks:
+
+- Genus run: `/sim/ksabra/SPADMIC_work/genus/genus_ooc_matrix_side_split_20260709_1735`
+- Genus commit: `cffb29c7081c22f6eee23a8aff92fd80d3e6de80`
+- Blocks: `tx_ddr_strip`, `tx_packet_core`, `matrix_reset_ctrl`,
+  `matrix_cfg_ctrl`, `position_snapshot`, `event_coordinator`
+- Result: `PASS`, typical-only, not MMMC, not signoff
+
+`TX_DDR_STRIP` is clean enough for top-review abstract use:
+
+- Innovus run: `innovus_ooc_harden_tx_ddr_strip_fix1_20260709_1812`
+- Commit: `f55dc7c7c00397a3745f27c26d8238cc122f9852`
+- Run root: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_ddr_strip_fix1_20260709_1812`
+- Block root: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_ddr_strip_fix1_20260709_1812/blocks/tx_ddr_strip`
+- Output path: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_ddr_strip_fix1_20260709_1812/blocks/tx_ddr_strip/outputs`
+- Handoff root: `/sim/ksabra/SPADMIC_work/handoff/abstracts/tx_ddr_strip/innovus_ooc_harden_tx_ddr_strip_fix1_20260709_1812`
+- Result: `ABSTRACT_READY_FOR_TOP_REVIEW`
+- Key gates: `INNOVUS_DRC_STATUS=PASS`, `DRC_MARKER_TOTAL=0`,
+  `REGULAR_CONNECTIVITY_STATUS=PASS`,
+  `PG_CONNECTIVITY_STATUS=DEFERRED_TOP_LEVEL_HOOKUP`,
+  `SIGNOFF_READY=NO`
+
+`TX_PACKET_CORE` is the current evidence run to debug; do not consume it as a
+clean top abstract yet:
+
+- Innovus run: `innovus_ooc_harden_tx_packet_core_fix1_20260709_1814`
+- Commit: `f55dc7c7c00397a3745f27c26d8238cc122f9852`
+- Run root: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814`
+- Block root: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core`
+- Output path: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core/outputs`
+- Reports path: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core/reports`
+- Result: `INNOVUS_TC_OOC_REVIEW_REQUIRED`
+- Key settings: `ROUTE_PROFILE=met2_first_antenna`,
+  `SIGNAL_ROUTE_LAYERS=MET2-MET3`, `PLACE_MAX_DENSITY=0.64`
+- Remaining DRC: `DRC_MARKER_TOTAL=68`, with
+  `MET1_MIN_AREA_MARKER_COUNT=10`, `ANTENNA_MARKER_COUNT=58`,
+  `OTHER_MARKER_COUNT=0`
+- Connectivity: `REGULAR_CONNECTIVITY_STATUS=PASS`,
+  `PG_CONNECTIVITY_STATUS=DEFERRED_TOP_LEVEL_HOOKUP`
+- Debug reports:
+  - `reports/ooc_harden_status.rpt`
+  - `reports/verify_drc_post_route.rpt`
+  - `reports/verify_drc_post_route_markers.tsv`
+  - `reports/DRC_MARKER_CLASSIFICATION.rpt`
+  - `reports/POSTROUTE_MIN_AREA_REPAIR.rpt`
+
+The standalone `output_fifo` leaf is not the failing antenna evidence. Its
+clean fallback output path remains:
+
+- `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_output_fifo_scanfix_20260709_1438/blocks/output_fifo/outputs`
+
 Server run template after the implementation commit is on `SPADMIC_test`:
 
 ```bash

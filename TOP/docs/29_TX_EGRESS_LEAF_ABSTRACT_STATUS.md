@@ -10,6 +10,26 @@ but the preferred physical implementation is now split into `TX_PACKET_CORE`
 (`spadmic_ddr16_tx_pairer` + `spadmic_ddrs2_adapter`). Do not force the old
 four-leaf vertical stack into the shallow DDR corridor.
 
+Split-TX evidence update from 2026-07-09:
+
+- `TX_DDR_STRIP` run
+  `innovus_ooc_harden_tx_ddr_strip_fix1_20260709_1812` reached
+  `ABSTRACT_READY_FOR_TOP_REVIEW` with `DRC_MARKER_TOTAL=0`.
+- `TX_PACKET_CORE` run
+  `innovus_ooc_harden_tx_packet_core_fix1_20260709_1814` is the active debug
+  run and is not clean yet: `DRC_MARKER_TOTAL=68`,
+  `MET1_MIN_AREA_MARKER_COUNT=10`, `ANTENNA_MARKER_COUNT=58`,
+  `RESULT=INNOVUS_TC_OOC_REVIEW_REQUIRED`.
+- The standalone `output_fifo` leaf remains clean. Do not confuse the clean
+  `output_fifo` leaf run with the failing combined `TX_PACKET_CORE` route.
+
+Debug paths for the combined packet/FIFO run:
+
+- Run root: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814`
+- Block root: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core`
+- Outputs: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core/outputs`
+- Reports: `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core/reports`
+
 ## Evidence Snapshot
 
 Server evidence was collected on `SPADMIC_test` on 2026-07-09. The two first
