@@ -247,6 +247,59 @@ proc spadmic_ooc_connectivity_status {path} {
     return [expr {$bad ? "FAIL" : "PASS"}]
 }
 
+proc spadmic_ooc_regular_connectivity_status {path} {
+    if {![spadmic_ooc_pg_sroute_enabled]} {
+        if {![file exists $path]} {
+            return MISSING
+        }
+        set bad 0
+        set ignored_pg_no_route 0
+        set fh [open $path r]
+        while {[gets $fh line] >= 0} {
+            set trimmed [string trim $line]
+            if {$trimmed eq ""} {
+                continue
+            }
+            if {[regexp -nocase {STATUS=FAIL|REPORT_STATUS=FAILED} $trimmed]} {
+                set bad 1
+                continue
+            }
+            if {[regexp -nocase {^Net[[:space:]]+(VDD|VSS):[[:space:]]+no[[:space:]]+routing[.]?$} $trimmed]} {
+                set ignored_pg_no_route 1
+                continue
+            }
+            if {[regexp -nocase {^[0-9]+[[:space:]]+Problem\(s\)[[:space:]]+\(IMPVFC-98\):[[:space:]]+Net[[:space:]]+has[[:space:]]+no[[:space:]]+global[[:space:]]+routing[[:space:]]+and[[:space:]]+no[[:space:]]+special[[:space:]]+routing[.]?$} $trimmed]} {
+                set ignored_pg_no_route 1
+                continue
+            }
+            if {[regexp -nocase {^[0-9]+[[:space:]]+total[[:space:]]+info\(s\)[[:space:]]+created[.]?$} $trimmed]} {
+                continue
+            }
+            if {$ignored_pg_no_route &&
+                [regexp -nocase {^Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*[0-9]+[[:space:]]+Viols?[.][[:space:]]+0[[:space:]]+Wrngs[.]?$} $trimmed]} {
+                continue
+            }
+            if {[regexp -nocase {Found[[:space:]]+no[[:space:]]+problems[[:space:]]+or[[:space:]]+warnings} $trimmed] ||
+                [regexp -nocase {Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*0[[:space:]]+Viols?[.][[:space:]]+0[[:space:]]+Wrngs[.]} $trimmed]} {
+                continue
+            }
+            if {[regexp -nocase {^(Error|Warning)[[:space:]]+Limit[[:space:]]*=} $trimmed]} {
+                continue
+            }
+            if {[regexp -nocase {problem|short|open|unconnected|not[[:space:]]+connected|violation|error} $trimmed] &&
+                ![regexp -nocase {no.*(problems|short|open|error|violation)|0[[:space:]]+(problems?|short|open|error|violation|viols)} $trimmed]} {
+                set bad 1
+            }
+        }
+        close $fh
+        if {$ignored_pg_no_route && !$bad} {
+            spadmic_ooc_status_set REGULAR_CONNECTIVITY_NOTE PG_VDD_VSS_NO_ROUTE_IGNORED_BY_DEFER_POLICY
+        }
+        return [expr {$bad ? "FAIL" : "PASS"}]
+    }
+    return [spadmic_ooc_connectivity_status $path]
+}
+
 proc spadmic_ooc_require_file {label path} {
     if {![file exists $path] || [file size $path] == 0} {
         error "SPADMIC_OOC_REQUIRED_FILE_MISSING: $label path=$path"
@@ -483,15 +536,64 @@ proc spadmic_ooc_route_design {} {
     catch {saveDesign [file join $::spadmic_ooc_checkpoints_dir 04_route.enc]}
 }
 
+proc spadmic_ooc_configure_filler_mode {} {
+    set rpt [file join $::spadmic_ooc_reports_dir FILLER_MODE.rpt]
+    set allow_drc [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_FILLER_ADD_FILLERS_WITH_DRC 0]]
+    set require_safe [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_REQUIRE_DRC_SAFE_FILLER 1]]
+    set value [expr {$allow_drc ? "true" : "false"}]
+    set commands [list \
+        [list setFillerMode -add_fillers_with_drc $value] \
+        [list setFillerMode -add_fillers_with_drc [expr {$allow_drc ? 1 : 0}]] \
+        [list setFillerMode -addFillersWithDrc $value] \
+        [list setFillerMode -addFillersWithDrc [expr {$allow_drc ? 1 : 0}]]]
+    set fh [open $rpt w]
+    puts $fh "LABEL=FILLER_MODE"
+    puts $fh "SPADMIC_OOC_FILLER_ADD_FILLERS_WITH_DRC=[expr {$allow_drc ? 1 : 0}]"
+    puts $fh "SPADMIC_OOC_REQUIRE_DRC_SAFE_FILLER=[expr {$require_safe ? 1 : 0}]"
+    puts $fh "REQUESTED_ADD_FILLERS_WITH_DRC=$value"
+    foreach cmd $commands {
+        puts $fh "TRY=$cmd"
+        if {![catch {uplevel #0 $cmd} err]} {
+            puts $fh "STATUS=PASS"
+            puts $fh "COMMAND=$cmd"
+            close $fh
+            spadmic_ooc_status_set FILLER_MODE PASS
+            spadmic_ooc_status_set FILLER_ADD_FILLERS_WITH_DRC [expr {$allow_drc ? "ALLOW" : "DISABLE"}]
+            return 1
+        }
+        puts $fh "ERROR=$err"
+    }
+    if {$allow_drc || !$require_safe} {
+        puts $fh "STATUS=REVIEW_REQUIRED"
+        puts $fh "REASON=setFillerMode_variant_not_accepted"
+        close $fh
+        spadmic_ooc_status_set FILLER_MODE REVIEW_REQUIRED
+        return 1
+    }
+    puts $fh "STATUS=FAIL"
+    puts $fh "REASON=drc_safe_filler_mode_not_applied"
+    close $fh
+    spadmic_ooc_status_set FILLER_MODE FAIL
+    return 0
+}
+
 proc spadmic_ooc_add_fillers {} {
     global mptdc_xh018_cells
     if {![info exists mptdc_xh018_cells(filler)] || [llength $mptdc_xh018_cells(filler)] == 0} {
         error "SPADMIC_OOC_NO_FILLER_CELLS"
     }
+    if {![spadmic_ooc_configure_filler_mode]} {
+        error "SPADMIC_OOC_FILLER_MODE_GATE_FAILED"
+    }
     set fillers $mptdc_xh018_cells(filler)
     spadmic_ooc_try_first ADD_FILLER [list \
         [list addFiller -cell $fillers -prefix FILL] \
         [list addFiller -cell $fillers]] 1
+}
+
+proc spadmic_ooc_postroute_cleanup {} {
+    set commands [list {ecoRoute -target} {ecoRoute -fix_drc} {ecoRoute}]
+    spadmic_ooc_try_all POSTROUTE_DRC_CLEANUP $commands 0
 }
 
 proc spadmic_ooc_postroute_opt_and_timing {} {
@@ -533,7 +635,7 @@ proc spadmic_ooc_verify_reports {} {
     }
     spadmic_ooc_capture_first $route_rpt report_route [list {reportRoute} {report_route}] 0
     set drc_status [spadmic_ooc_parse_drc_report $drc_rpt]
-    set reg_status [spadmic_ooc_connectivity_status $reg_conn_rpt]
+    set reg_status [spadmic_ooc_regular_connectivity_status $reg_conn_rpt]
     if {[spadmic_ooc_pg_sroute_enabled]} {
         set pg_status [spadmic_ooc_connectivity_status $pg_conn_rpt]
     } else {
@@ -625,7 +727,7 @@ proc spadmic_ooc_write_status {} {
     set path [file join $::spadmic_ooc_reports_dir ooc_harden_status.rpt]
     set result ABSTRACT_READY_FOR_TOP_REVIEW
     set required_statuses [list \
-        LIBRARY_SOURCE INIT_DESIGN FLOORPLAN CREATE_PG_PIN_VDD CREATE_PG_PIN_VSS \
+        LIBRARY_SOURCE INIT_DESIGN FLOORPLAN CREATE_PG_PIN_VDD CREATE_PG_PIN_VSS FILLER_MODE \
         PLACE_PINS_WEST PLACE_PINS_SOUTH PLACE_PINS_NORTH PLACE_DESIGN CTS_DESIGN ROUTE_DESIGN \
         ADD_FILLER POSTROUTE_SETUP_TIMING POSTROUTE_HOLD_TIMING EXPORT_DEF EXPORT_LEF EXPORT_GDS \
         EXPORT_DEF_FILE EXPORT_LEF_FILE EXPORT_ABSTRACT_LEF_FILE EXPORT_GDS_FILE EXPORT_NETLIST_FILE HANDOFF_COPY]
@@ -688,6 +790,7 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_add_fillers
     spadmic_ooc_route_design
     spadmic_ooc_route_pg
+    spadmic_ooc_postroute_cleanup
     spadmic_ooc_postroute_opt_and_timing
     spadmic_ooc_verify_reports
     spadmic_ooc_export_outputs
