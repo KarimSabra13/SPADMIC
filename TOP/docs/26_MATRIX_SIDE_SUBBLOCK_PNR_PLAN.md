@@ -1220,11 +1220,74 @@ prefer a memory-macro or custom SRAM/FIFO option if available. The Innovus gate
 is still only a collateral-readiness check; it does not run placement, route,
 CTS, PG, DRC/LVS, PEX, MMMC, or signoff.
 
-## 22. Next Server Commands: `ddr16_pairer`
+## 22. Recorded Server Result: `ddr16_pairer`
 
-`ddr16_pairer` is next because it converts the FIFO 16-bit logical word stream
-into the DDR16 L/H pair interface before the DDRs2 adapter. It is small,
-single-clock, and belongs in the north/north-east TX egress region near DDRs2.
+Karim ran the `ddr16_pairer` test, Genus OOC step, and Innovus OOC collateral
+gate on the server on branch `SPADMIC_test`, source commit
+`bb6a8b8cd66e4954efced5cfbfd20c27c213e608`.
+
+| Item | Result |
+| --- | --- |
+| Xcelium test | `tb_spadmic_ddr16_tx_pairer_unit`: `14 pass / 0 fail` |
+| Xcelium return code | `TB_DDR16_PAIRER_RC=0` |
+| Genus run ID | `genus_ooc_ddr16_pairer_20260709_0705` |
+| Genus run root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705/ddr16_pairer` |
+| Genus top module | `spadmic_ddr16_tx_pairer` |
+| Genus result | PASS, 1 block, 0 failed, `GENUS_RC=0` |
+| Innovus OOC gate run ID | `innovus_ooc_ddr16_pairer_20260709_0706` |
+| Innovus OOC gate root | `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_ddr16_pairer_20260709_0706` |
+| Innovus OOC gate result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, missing collateral count `0`, `PNR_RC=0` |
+
+Genus warning classification:
+
+- `tool_error count=0`;
+- `unresolved count=0`;
+- `inferred_latch count=0`;
+- `design_rule count=0`;
+- `no_clock_waveform count=0`;
+- `missing_external_delay count=2`, accepted for this relaxed OOC stage;
+- `tool_warning count=2`, bounded `MESG-11` print-count warnings;
+- `undriven count=8` is a classifier false positive because the detailed
+  Genus check-design text reports `Undriven Port(s) 0`.
+
+Area and timing:
+
+- cell count: `109`;
+- cell area: `4029.133 um^2` = `0.004029 mm^2`;
+- net area: `1656.809 um^2` = `0.001657 mm^2`;
+- total estimated area: `5685.942 um^2` = `0.005686 mm^2`;
+- clock reported: `clk_sys` at `6250 ps`, `51` registers;
+- worst shown relaxed setup slack in `report_timing_post_opt.rpt`: `+3496 ps`.
+
+Generated Genus outputs:
+
+```text
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705/ddr16_pairer/outputs/ddr16_pairer.postsyn.sdc
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705/ddr16_pairer/outputs/ddr16_pairer.postsyn.sdf
+/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705/ddr16_pairer/outputs/ddr16_pairer.postsyn.v
+```
+
+Innovus OOC collateral manifest:
+
+```text
+ddr16_pairer,/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705/ddr16_pairer/outputs/ddr16_pairer.postsyn.v,/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705/ddr16_pairer/outputs/ddr16_pairer.postsyn.sdc,/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddr16_pairer_20260709_0705/ddr16_pairer/SUMMARY.md,READY,ready_for_next_import_template
+```
+
+Conclusion for this stage: `ddr16_pairer` is clean OOC collateral for the
+current staged TX path plan. It is small, single-clock, and has comfortable
+relaxed timing margin. The Innovus gate is still only a collateral-readiness
+check; it does not run placement, route, CTS, PG, DRC/LVS, PEX, MMMC, or signoff.
+
+## 23. Next Server Commands: `ddrs2_adapter`
+
+`ddrs2_adapter` is next because it maps the DDR16 L/H pair interface into the
+19-lane DDRs2 macro contract. It should sit directly below or near the DDRs2
+custom macro in the north/north-east TX region, with DDRs2-facing pins oriented
+north.
+
+This block has a local OOC SDC update for its `clk_160m_i` port. Pull the latest
+`SPADMIC_test` commit before running this step.
 
 ```bash
 cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
@@ -1238,26 +1301,26 @@ export MPTDC_STDCELL_FAMILY=JIHD
 export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
 ```
 
-Run the DDR16 pairer test:
+Run the DDRs2 adapter test:
 
 ```bash
-bash TOP/scripts/sim/run_tb.sh tb_spadmic_ddr16_tx_pairer_unit --sim xrun
-TB_DDR16_PAIRER_RC=$?
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_ddrs2_adapter_unit --sim xrun
+TB_DDRS2_ADAPTER_RC=$?
 
-echo "TB_DDR16_PAIRER_RC=$TB_DDR16_PAIRER_RC"
-echo "TB_DDR16_PAIRER_LOG=TOP/build/directed/tb_spadmic_ddr16_tx_pairer_unit/run.log"
+echo "TB_DDRS2_ADAPTER_RC=$TB_DDRS2_ADAPTER_RC"
+echo "TB_DDRS2_ADAPTER_LOG=TOP/build/directed/tb_spadmic_ddrs2_adapter_unit/run.log"
 ```
 
 If the test return code is zero, run Genus OOC for this block only:
 
 ```bash
-GENUS_RUN_ID=genus_ooc_ddr16_pairer_$(date +%Y%m%d_%H%M)
+GENUS_RUN_ID=genus_ooc_ddrs2_adapter_$(date +%Y%m%d_%H%M)
 
-bash TOP/syn/scripts/run_genus_ooc_block.sh ddr16_pairer "$GENUS_RUN_ID"
+bash TOP/syn/scripts/run_genus_ooc_block.sh ddrs2_adapter "$GENUS_RUN_ID"
 GENUS_RC=$?
 
 GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
-BLOCK_ROOT="$GENUS_ROOT/ddr16_pairer"
+BLOCK_ROOT="$GENUS_ROOT/ddrs2_adapter"
 
 cat "$GENUS_ROOT/SUMMARY.md"
 cat "$BLOCK_ROOT/SUMMARY.md"
@@ -1280,23 +1343,24 @@ echo "BLOCK_ROOT=$BLOCK_ROOT"
 Expected warning posture:
 
 - `tool_error`, `unresolved`, and `inferred_latch` must stay zero;
-- `no_clock_waveform` should stay zero because this block is single-clock
-  `clk_sys`;
+- `no_clock_waveform` should stay zero after the local `clk_160m_i` OOC SDC
+  update;
 - missing external delay warnings are acceptable for this relaxed OOC stage;
-- `clk_ref_40m` and `clk_cfg_40m` inter-clock reports are not expected.
+- the adapter is mostly combinational, so timing reports can be short and may
+  not resemble register-to-register control blocks.
 
 If `GENUS_RC=0`, run the current single-block Innovus OOC collateral gate:
 
 ```bash
-PNR_RUN_ID=innovus_ooc_ddr16_pairer_$(date +%Y%m%d_%H%M)
+PNR_RUN_ID=innovus_ooc_ddrs2_adapter_$(date +%Y%m%d_%H%M)
 
-bash TOP/pnr/scripts/run_innovus_ooc_block.sh ddr16_pairer "$GENUS_RUN_ID" "$PNR_RUN_ID"
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh ddrs2_adapter "$GENUS_RUN_ID" "$PNR_RUN_ID"
 PNR_RC=$?
 
 PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
 cat "$PNR_ROOT/SUMMARY.md"
 cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
-cat "$PNR_ROOT/blocks/ddr16_pairer/SUMMARY.md"
+cat "$PNR_ROOT/blocks/ddrs2_adapter/SUMMARY.md"
 
 echo "PNR_RC=$PNR_RC"
 echo "PNR_RUN_ID=$PNR_RUN_ID"
@@ -1305,7 +1369,7 @@ echo "PNR_ROOT=$PNR_ROOT"
 
 Paste back after the run:
 
-- `TB_DDR16_PAIRER_RC`;
+- `TB_DDRS2_ADAPTER_RC`;
 - `GENUS_RC`, `GENUS_RUN_ID`, `GENUS_ROOT`, `BLOCK_ROOT`;
 - `warning_classification.rpt`;
 - first 180 lines of `report_area.rpt`;
