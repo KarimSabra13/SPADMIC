@@ -194,6 +194,25 @@ sets scan placement to ignore undefined scan-chain ordering. Use
 `SPADMIC_GENUS_ALLOW_SCAN_CELLS=1` or `SPADMIC_OOC_IGNORE_UNDEFINED_SCAN=0`
 only for an explicit scan/DFT debug rerun.
 
+For Virtuoso import, GDS export must use the XFAB XH018 HD 1131 PnR streamout
+map. The hardening wrapper now defaults to this map when it exists:
+
+```text
+/eda/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_HD_1131/pnr_streamout.map
+```
+
+To fix an existing GDS without rerunning place/CTS/route, restore the saved
+checkpoint and re-stream only:
+
+```bash
+BLOCK_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core
+export SPADMIC_STREAMOUT_MAP_FILE=/eda/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_HD_1131/pnr_streamout.map
+bash TOP/pnr/scripts/run_innovus_ooc_reexport_gds.sh "$BLOCK_ROOT" spadmic_tx_packet_core
+```
+
+The helper writes `reports/REEXPORT_GDS_WITH_MAP.rpt`, backs up the old GDS,
+and updates the matching handoff GDS when the handoff root is present.
+
 This is typical-only OOC implementation for top-review handoff. PVS, PEX,
 MMMC, foundry LVS, and direct OA import remain separate later gates.
 

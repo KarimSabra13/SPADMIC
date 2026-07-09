@@ -129,6 +129,28 @@ clean fallback output path remains:
 
 - `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_output_fifo_scanfix_20260709_1438/blocks/output_fifo/outputs`
 
+Stream-in note: the `tx_packet_core` GDS from the run above was initially
+exported without the official XFAB PnR streamout map. Virtuoso XStream then
+dropped route layers such as `22:0`, `32:0`, `43:0`, and `53:0`, while the
+Virtuoso XH018 stream-in setup expects metals on `MET1=16:0`, `MET2=18:0`,
+`MET3=28:0`, and `METTP=33:0`. Treat that as an incomplete OA import, not as
+evidence that routing is absent in Innovus.
+
+Regenerate the GDS from the saved Innovus checkpoint with:
+
+```bash
+BLOCK_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_fix1_20260709_1814/blocks/tx_packet_core
+export SPADMIC_STREAMOUT_MAP_FILE=/eda/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_HD_1131/pnr_streamout.map
+bash TOP/pnr/scripts/run_innovus_ooc_reexport_gds.sh "$BLOCK_ROOT" spadmic_tx_packet_core
+```
+
+This restore-only helper uses `checkpoints/05_postroute_export.enc.dat` and
+runs `streamOut` only. It does not rerun placement, CTS, routing, DRC repair,
+PVS, LVS, PEX, or MMMC. It writes
+`reports/REEXPORT_GDS_WITH_MAP.rpt`, backs up the previous GDS, overwrites
+`outputs/tx_packet_core.gds`, and copies the regenerated GDS into the handoff
+root when available.
+
 Server run template after the implementation commit is on `SPADMIC_test`:
 
 ```bash
