@@ -192,6 +192,8 @@ def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
             "stdcell_site": "core_jihd",
             "signal_bottom_layer": "MET1",
             "signal_top_layer": "MET3",
+            "signal_bottom_layer_idx": "1",
+            "signal_top_layer_idx": "3",
             "power_layer": "METTP",
             "pg_power_net": "VDD",
             "pg_ground_net": "VSS",

@@ -54,6 +54,20 @@ proc spadmic_ooc_cfg_list {name} {
     return [spadmic_ooc_cfg $name]
 }
 
+proc spadmic_ooc_layer_index {layer fallback} {
+    if {[string is integer -strict $layer]} {
+        return $layer
+    }
+    set upper [string toupper $layer]
+    if {[regexp {^MET([0-9]+)$} $upper -> idx]} {
+        return $idx
+    }
+    if {$upper eq "METTP"} {
+        return 4
+    }
+    return $fallback
+}
+
 proc spadmic_ooc_write_text {path lines} {
     set fh [open $path w]
     foreach line $lines {
@@ -297,9 +311,11 @@ proc spadmic_ooc_place_pins {} {
 proc spadmic_ooc_route_layer_setup {} {
     set bottom [spadmic_ooc_cfg signal_bottom_layer]
     set top [spadmic_ooc_cfg signal_top_layer]
+    set bottom_idx [spadmic_ooc_layer_index [spadmic_ooc_env SPADMIC_OOC_SIGNAL_BOTTOM_LAYER_IDX [spadmic_ooc_cfg signal_bottom_layer_idx]] 1]
+    set top_idx [spadmic_ooc_layer_index [spadmic_ooc_env SPADMIC_OOC_SIGNAL_TOP_LAYER_IDX [spadmic_ooc_cfg signal_top_layer_idx]] 3]
     catch {setDesignMode -bottomRoutingLayer $bottom -topRoutingLayer $top}
-    catch {setNanoRouteMode -routeBottomRoutingLayer $bottom}
-    catch {setNanoRouteMode -routeTopRoutingLayer $top}
+    catch {setNanoRouteMode -routeBottomRoutingLayer $bottom_idx}
+    catch {setNanoRouteMode -routeTopRoutingLayer $top_idx}
     spadmic_ooc_status_set ROUTE_LAYER_SETUP PASS
 }
 
@@ -494,12 +510,13 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_init_design
     spadmic_ooc_floorplan
     spadmic_ooc_place_pins
-    spadmic_ooc_create_pg_pins
-    spadmic_ooc_route_pg
+    spadmic_ooc_route_layer_setup
     spadmic_ooc_place_design
     spadmic_ooc_cts_design
     spadmic_ooc_route_design
+    spadmic_ooc_create_pg_pins
     spadmic_ooc_add_fillers
+    spadmic_ooc_route_pg
     spadmic_ooc_postroute_opt_and_timing
     spadmic_ooc_verify_reports
     spadmic_ooc_export_outputs
