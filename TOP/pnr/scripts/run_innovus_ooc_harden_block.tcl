@@ -76,6 +76,13 @@ proc spadmic_ooc_layer_index {layer fallback} {
     return $fallback
 }
 
+proc spadmic_ooc_snap_to_grid {value {grid 0.56}} {
+    if {$grid <= 0.0} {
+        return $value
+    }
+    return [format %.3f [expr {round(double($value) / double($grid)) * double($grid)}]]
+}
+
 proc spadmic_ooc_write_text {path lines} {
     set fh [open $path w]
     foreach line $lines {
@@ -105,6 +112,43 @@ proc spadmic_ooc_try_first {label commands {required 1}} {
     close $fh
     spadmic_ooc_status_set $label FAIL
     if {$required} {
+        error "SPADMIC_OOC_COMMAND_FAILED: label=$label error=$last_err"
+    }
+    return 0
+}
+
+proc spadmic_ooc_try_all {label commands {required_any 1}} {
+    set rpt [file join $::spadmic_ooc_reports_dir "${label}.rpt"]
+    set fh [open $rpt w]
+    puts $fh "LABEL=$label"
+    set pass_count 0
+    set fail_count 0
+    set last_err ""
+    foreach cmd $commands {
+        puts $fh "TRY=$cmd"
+        if {![catch {uplevel #0 $cmd} err]} {
+            incr pass_count
+            puts $fh "TRY_STATUS=PASS"
+            puts $fh "COMMAND=$cmd"
+        } else {
+            incr fail_count
+            puts $fh "TRY_STATUS=FAIL"
+            puts $fh "ERROR=$err"
+            set last_err $err
+        }
+    }
+    puts $fh "PASS_COUNT=$pass_count"
+    puts $fh "FAIL_COUNT=$fail_count"
+    if {$pass_count > 0} {
+        puts $fh "STATUS=PASS"
+        close $fh
+        spadmic_ooc_status_set $label PASS
+        return 1
+    }
+    puts $fh "STATUS=FAIL"
+    close $fh
+    spadmic_ooc_status_set $label FAIL
+    if {$required_any} {
         error "SPADMIC_OOC_COMMAND_FAILED: label=$label error=$last_err"
     }
     return 0
@@ -274,13 +318,17 @@ proc spadmic_ooc_create_pg_pins {} {
     set ground_pin [spadmic_ooc_cfg pg_ground_pin]
     set pg_width [spadmic_ooc_cfg pg_pin_width_um]
     set pg_depth [spadmic_ooc_cfg pg_pin_depth_um]
+    set pg_grid [spadmic_ooc_cfg_default pg_grid_um 0.56]
     lassign [spadmic_ooc_die_size] die_w die_h
-    set y1 [expr {$die_h - $pg_depth - 0.5}]
-    set y2 [expr {$die_h - 0.5}]
-    set vdd_llx [expr {$die_w * 0.25 - $pg_width / 2.0}]
-    set vdd_urx [expr {$die_w * 0.25 + $pg_width / 2.0}]
-    set vss_llx [expr {$die_w * 0.75 - $pg_width / 2.0}]
-    set vss_urx [expr {$die_w * 0.75 + $pg_width / 2.0}]
+    set y2 [spadmic_ooc_snap_to_grid $die_h $pg_grid]
+    set y1 [spadmic_ooc_snap_to_grid [expr {$y2 - $pg_depth}] $pg_grid]
+    set vdd_cx [spadmic_ooc_snap_to_grid [expr {$die_w * 0.25}] $pg_grid]
+    set vss_cx [spadmic_ooc_snap_to_grid [expr {$die_w * 0.75}] $pg_grid]
+    set half_width [expr {$pg_width / 2.0}]
+    set vdd_llx [spadmic_ooc_snap_to_grid [expr {$vdd_cx - $half_width}] $pg_grid]
+    set vdd_urx [spadmic_ooc_snap_to_grid [expr {$vdd_cx + $half_width}] $pg_grid]
+    set vss_llx [spadmic_ooc_snap_to_grid [expr {$vss_cx - $half_width}] $pg_grid]
+    set vss_urx [spadmic_ooc_snap_to_grid [expr {$vss_cx + $half_width}] $pg_grid]
     spadmic_ooc_try_first CREATE_PG_PIN_VDD [list \
         [list createPGPin $power_pin -net $power_net -geom $layer $vdd_llx $y1 $vdd_urx $y2 -dir bidi] \
         [list createPGPin $power_pin -net $power_net -geom $layer $vdd_llx $y1 $vdd_urx $y2]] 1
@@ -295,10 +343,11 @@ proc spadmic_ooc_create_pg_straps {} {
     set ground_net [spadmic_ooc_cfg pg_ground_net]
     set strap_width [spadmic_ooc_cfg_default pg_strap_width_um [spadmic_ooc_cfg pg_pin_depth_um]]
     set strap_spacing [spadmic_ooc_cfg_default pg_strap_spacing_um $strap_width]
+    set pg_grid [spadmic_ooc_cfg_default pg_grid_um 0.56]
     lassign [spadmic_ooc_die_size] die_w die_h
-    set set_distance [expr {$die_w + 20.0}]
-    set vdd_offset [expr {$die_w * 0.25 - $strap_width / 2.0}]
-    set vss_offset [expr {$die_w * 0.75 - $strap_width / 2.0}]
+    set set_distance [spadmic_ooc_snap_to_grid [expr {$die_w + 20.0}] $pg_grid]
+    set vdd_offset [spadmic_ooc_snap_to_grid [expr {$die_w * 0.25 - $strap_width / 2.0}] $pg_grid]
+    set vss_offset [spadmic_ooc_snap_to_grid [expr {$die_w * 0.75 - $strap_width / 2.0}] $pg_grid]
     set all_ok 1
 
     foreach item [list \
@@ -327,6 +376,8 @@ proc spadmic_ooc_route_pg {} {
         [list sroute -connect {corePin blockPin padPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -padPinTarget {ring stripe} -allowLayerChange 1] \
         [list sroute -connect {corePin blockPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -allowLayerChange 1] \
         [list sroute -connect {corePin} -nets [list $power_net $ground_net] -corePinTarget {ring stripe} -allowLayerChange 1] \
+        [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -blockPin all -allowJogging 1 -layerChangeRange {MET1 METTP}] \
+        [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -blockPin all -allowJogging 1] \
         [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \
         [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
         [list sroute -connect {blockPin padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \
@@ -334,7 +385,7 @@ proc spadmic_ooc_route_pg {} {
         [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
         [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net]] \
         [list sroute -nets [list $power_net $ground_net]]]
-    spadmic_ooc_try_first SROUTE_PG $cmds 1
+    spadmic_ooc_try_all SROUTE_PG $cmds 1
 }
 
 proc spadmic_ooc_place_side_pins {side pins} {

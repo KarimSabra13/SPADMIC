@@ -312,13 +312,14 @@ def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
             "pg_ground_net": "VSS",
             "pg_power_pin": "VDD",
             "pg_ground_pin": "VSS",
+            "pg_grid_um": "0.56",
             "signal_pin_width_um": "0.40",
             "signal_pin_depth_um": "0.80",
             "signal_pin_spacing_um": "1.20",
-            "pg_pin_width_um": "18.0",
-            "pg_pin_depth_um": "2.0",
-            "pg_strap_width_um": "2.0",
-            "pg_strap_spacing_um": "2.0",
+            "pg_pin_width_um": "17.92",
+            "pg_pin_depth_um": "2.24",
+            "pg_strap_width_um": "2.24",
+            "pg_strap_spacing_um": "2.24",
         }
         for key, value in values.items():
             fh.write(f"    variable {key} {tcl_quote(value)}\n")
@@ -529,13 +530,14 @@ def generate_tx_egress_core(layout_dir: Path, out_dir: Path) -> None:
             "pg_ground_net": "VSS",
             "pg_power_pin": "VDD",
             "pg_ground_pin": "VSS",
+            "pg_grid_um": "0.56",
             "signal_pin_width_um": f"{signal_pin_width_um:.2f}",
             "signal_pin_depth_um": f"{signal_pin_depth_um:.2f}",
             "signal_pin_spacing_um": "1.40",
-            "pg_pin_width_um": "60.0",
-            "pg_pin_depth_um": "4.0",
-            "pg_strap_width_um": "4.0",
-            "pg_strap_spacing_um": "4.0",
+            "pg_pin_width_um": "60.48",
+            "pg_pin_depth_um": "3.92",
+            "pg_strap_width_um": "4.48",
+            "pg_strap_spacing_um": "4.48",
         }
         for key, value in values.items():
             fh.write(f"    variable {key} {tcl_quote(value)}\n")
