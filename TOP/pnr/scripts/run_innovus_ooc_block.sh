@@ -28,7 +28,7 @@ GENUS_RUN_ID="$2"
 RUN_ID="${3:-innovus_ooc_${BLOCK_IN}_$(date +%Y%m%d_%H%M)}"
 
 case "$BLOCK_IN" in
-  matrix_reset_ctrl|or64_tree|position_snapshot|matrix_cfg_ctrl|event_coordinator|event_bundle_tx|output_fifo|ddr16_pairer|ddrs2_adapter|matrix_top_csr|i2c_csr_bridge|i2c_slave)
+  matrix_reset_ctrl|or64_tree|position_snapshot|matrix_cfg_ctrl|event_coordinator|event_bundle_tx|tx_egress_cluster|output_fifo|ddr16_pairer|ddrs2_adapter|matrix_top_csr|i2c_csr_bridge|i2c_slave)
     BLOCK="$BLOCK_IN"
     ;;
   spadmic_matrix_reset_ctrl)
@@ -48,6 +48,9 @@ case "$BLOCK_IN" in
     ;;
   spadmic_event_bundle_tx)
     BLOCK="event_bundle_tx"
+    ;;
+  tx_egress_core|spadmic_tx_egress_cluster)
+    BLOCK="tx_egress_cluster"
     ;;
   spadmic_output_fifo)
     BLOCK="output_fifo"

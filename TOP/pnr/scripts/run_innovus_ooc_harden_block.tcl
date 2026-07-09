@@ -169,8 +169,12 @@ proc spadmic_ooc_connectivity_status {path} {
         if {[regexp -nocase {STATUS=FAIL|REPORT_STATUS=FAILED} $trimmed]} {
             set bad 1
         }
+        if {[regexp -nocase {Found[[:space:]]+no[[:space:]]+problems[[:space:]]+or[[:space:]]+warnings} $trimmed] ||
+            [regexp -nocase {Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*0[[:space:]]+Viols?[.][[:space:]]+0[[:space:]]+Wrngs[.]} $trimmed]} {
+            continue
+        }
         if {[regexp -nocase {short|open|unconnected|not[[:space:]]+connected|violation|error} $trimmed] &&
-            ![regexp -nocase {no.*(short|open|error|violation)|0[[:space:]]+(short|open|error|violation)} $trimmed]} {
+            ![regexp -nocase {no.*(short|open|error|violation)|0[[:space:]]+(short|open|error|violation|viols)} $trimmed]} {
             set bad 1
         }
     }
@@ -278,6 +282,10 @@ proc spadmic_ooc_route_pg {} {
     set power_net [spadmic_ooc_cfg pg_power_net]
     set ground_net [spadmic_ooc_cfg pg_ground_net]
     set cmds [list \
+        [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \
+        [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
+        [list sroute -connect {blockPin padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \
+        [list sroute -connect {blockPin padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
         [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
         [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net]] \
         [list sroute -nets [list $power_net $ground_net]]]
@@ -360,6 +368,8 @@ proc spadmic_ooc_add_fillers {} {
 }
 
 proc spadmic_ooc_postroute_opt_and_timing {} {
+    catch {setDelayCalMode -SIAware false}
+    catch {setSIMode -separate_delta_delay_on_data false}
     spadmic_ooc_try_first POSTROUTE_OPT_DRV [list {optDesign -postRoute -drv} {optDesign -postRoute}] 0
     catch {setExtractRCMode -engine postRoute}
     catch {extractRC}
@@ -511,11 +521,11 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_floorplan
     spadmic_ooc_place_pins
     spadmic_ooc_route_layer_setup
+    spadmic_ooc_create_pg_pins
     spadmic_ooc_place_design
     spadmic_ooc_cts_design
-    spadmic_ooc_route_design
-    spadmic_ooc_create_pg_pins
     spadmic_ooc_add_fillers
+    spadmic_ooc_route_design
     spadmic_ooc_route_pg
     spadmic_ooc_postroute_opt_and_timing
     spadmic_ooc_verify_reports

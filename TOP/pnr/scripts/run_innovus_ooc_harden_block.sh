@@ -9,8 +9,9 @@ usage() {
 Usage:
   TOP/pnr/scripts/run_innovus_ooc_harden_block.sh <block> <GENUS_RUN_ID> [RUN_ID]
 
-Supported v1 block:
+Supported blocks:
   ddr16_pairer / spadmic_ddr16_tx_pairer
+  tx_egress_cluster / spadmic_tx_egress_cluster
 
 This is the first real TOP OOC hardening wrapper. It imports one Genus OOC
 netlist/SDC into Innovus, builds a local abstract floorplan, places pins,
@@ -39,8 +40,12 @@ case "$BLOCK_IN" in
     BLOCK="ddr16_pairer"
     TOP_MODULE="spadmic_ddr16_tx_pairer"
     ;;
+  tx_egress_cluster|tx_egress_core|spadmic_tx_egress_cluster)
+    BLOCK="tx_egress_cluster"
+    TOP_MODULE="spadmic_tx_egress_cluster"
+    ;;
   *)
-    echo "ERROR: OOC hardening v1 supports only ddr16_pairer; got: $BLOCK_IN" >&2
+    echo "ERROR: unsupported OOC hardening block: $BLOCK_IN" >&2
     usage >&2
     exit 2
     ;;

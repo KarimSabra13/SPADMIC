@@ -1,3 +1,2 @@
-# Planning constraints for a future TX_EGRESS_CORE wrapper.
-# The wrapper RTL does not exist yet; use the constituent block SDCs first.
-source [file normalize [file join [file dirname [info script]] .. matrix_top_ooc_common.sdc]]
+# Compatibility alias for the earlier planning name.
+source [file normalize [file join [file dirname [info script]] spadmic_tx_egress_cluster.sdc]]

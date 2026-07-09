@@ -39,6 +39,7 @@ TESTS=(
   tb_spadmic_output_fifo_ddr_marker_unit
   tb_spadmic_ddr16_tx_pairer_unit
   tb_spadmic_ddrs2_adapter_unit
+  tb_spadmic_tx_egress_cluster_unit
   tb_spadmic_matrix_cfg_ctrl_unit
   tb_spadmic_matrix_cfg_cout_readback_unit
   tb_spadmic_event_bundle_tx_unit

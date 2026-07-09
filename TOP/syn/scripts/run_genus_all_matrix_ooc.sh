@@ -32,6 +32,7 @@ BLOCKS=(
   "matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl"
   "event_coordinator:spadmic_event_coordinator"
   "event_bundle_tx:spadmic_event_bundle_tx"
+  "tx_egress_cluster:spadmic_tx_egress_cluster"
   "output_fifo:spadmic_output_fifo_topcfg"
   "matrix_top_csr:spadmic_matrix_top_csr"
   "i2c_csr_bridge:spadmic_i2c_csr_bridge"
