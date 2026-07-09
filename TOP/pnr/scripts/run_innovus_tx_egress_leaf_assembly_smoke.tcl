@@ -45,6 +45,17 @@ set ::spadmic_txasm_plan_root [spadmic_txasm_env_required SPADMIC_TXASM_PLAN_ROO
 set ::spadmic_txasm_netlist [spadmic_txasm_env_required SPADMIC_TXASM_NETLIST]
 set ::spadmic_txasm_top_module [spadmic_txasm_env_required SPADMIC_TXASM_TOP_MODULE]
 
+foreach {name value} {
+    MPTDC_XH018_STACK xx31
+    MPTDC_STDCELL_FAMILY JIHD
+    MPTDC_PNR_ROUTE_LAYER_NAMES {MET1 MET2 MET3 METTP}
+    MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY 1
+} {
+    if {![info exists ::env($name)] || $::env($name) eq ""} {
+        set ::env($name) $value
+    }
+}
+
 set ::spadmic_txasm_reports_dir [file join $::spadmic_txasm_run_root reports]
 set ::spadmic_txasm_outputs_dir [file join $::spadmic_txasm_run_root outputs]
 set ::spadmic_txasm_generated_dir [file join $::spadmic_txasm_run_root generated]
@@ -61,6 +72,9 @@ spadmic_txasm_status_set PVS_STATUS DEFERRED
 spadmic_txasm_status_set LVS_STATUS DEFERRED
 spadmic_txasm_status_set PEX_STATUS DEFERRED
 spadmic_txasm_status_set MMMC_STATUS DEFERRED
+spadmic_txasm_status_set MPTDC_XH018_STACK $::env(MPTDC_XH018_STACK)
+spadmic_txasm_status_set MPTDC_STDCELL_FAMILY $::env(MPTDC_STDCELL_FAMILY)
+spadmic_txasm_status_set MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY $::env(MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY)
 
 set placement_tcl [file join $::spadmic_txasm_plan_root tx_egress_leaf_assembly_place.tcl]
 set plan_status [file join $::spadmic_txasm_plan_root tx_egress_leaf_assembly_status.rpt]

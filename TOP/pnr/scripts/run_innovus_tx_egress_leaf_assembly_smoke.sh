@@ -31,6 +31,11 @@ RUN_ID="${2:-innovus_tx_egress_leaf_assembly_smoke_$(date +%Y%m%d_%H%M)}"
 WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 RUN_ROOT="$WORK_ROOT/innovus/$RUN_ID"
 
+export MPTDC_XH018_STACK="${MPTDC_XH018_STACK:-xx31}"
+export MPTDC_STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-JIHD}"
+export MPTDC_PNR_ROUTE_LAYER_NAMES="${MPTDC_PNR_ROUTE_LAYER_NAMES:-MET1 MET2 MET3 METTP}"
+export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-1}"
+
 if [ ! -d "$PLAN_ROOT" ]; then
   echo "ERROR: assembly plan root missing: $PLAN_ROOT" >&2
   exit 2
@@ -85,6 +90,20 @@ innovus -nowin -init "$SCRIPT_DIR/run_innovus_tx_egress_leaf_assembly_smoke.tcl"
   > "$RUN_ROOT/logs/innovus.stdout.log" 2>&1
 innovus_rc=$?
 set -u
+
+if [ ! -s "$RUN_ROOT/reports/tx_egress_leaf_assembly_smoke_status.rpt" ]; then
+  {
+    echo "RESULT=FAILED_BEFORE_STATUS"
+    echo "SIGNOFF_READY=NO"
+    echo "ROUTE_STATUS=NOT_RUN"
+    echo "PG_CONNECTIVITY_STATUS=DEFERRED_TOP_LEVEL_HOOKUP"
+    echo "PVS_STATUS=DEFERRED"
+    echo "LVS_STATUS=DEFERRED"
+    echo "PEX_STATUS=DEFERRED"
+    echo "MMMC_STATUS=DEFERRED"
+    echo "FIRST_ERROR_HINT=Inspect $RUN_ROOT/logs/innovus.stdout.log"
+  } > "$RUN_ROOT/reports/tx_egress_leaf_assembly_smoke_status.rpt"
+fi
 
 {
   echo "# TX Egress Fixed-Leaf Assembly Innovus Smoke"
