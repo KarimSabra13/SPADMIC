@@ -220,6 +220,257 @@ proc spadmic_ooc_parse_drc_report {path} {
     return $result
 }
 
+proc spadmic_ooc_report_value {value} {
+    regsub -all {\s+} $value { } compact
+    return [string trim $compact]
+}
+
+proc spadmic_ooc_flat_box {raw} {
+    set values [list]
+    foreach item $raw {
+        foreach value $item {
+            lappend values $value
+        }
+    }
+    if {[llength $values] < 4} {
+        return [list UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
+    }
+    return [lrange $values 0 3]
+}
+
+proc spadmic_ooc_numeric_or_unknown {value} {
+    if {[string is double -strict $value]} {
+        return $value
+    }
+    return UNKNOWN
+}
+
+proc spadmic_ooc_unique_append {var_name value} {
+    upvar 1 $var_name values
+    if {[lsearch -exact $values $value] < 0} {
+        lappend values $value
+    }
+}
+
+proc spadmic_ooc_write_marker_dump {path} {
+    file mkdir [file dirname $path]
+    set schema_rpt [file rootname $path]_schema.rpt
+    catch {dbSchema marker > $schema_rpt}
+    catch {help marker >> $schema_rpt}
+
+    set markers [list]
+    catch {set markers [dbGet top.markers]}
+
+    set fh [open $path w]
+    puts $fh "idx\tmarker_handle\tbox\tllx\tlly\turx\tury\tcx\tcy\tlayer\ttype\tsubType\tmessage"
+    set idx 0
+    foreach marker $markers {
+        if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} {
+            continue
+        }
+        incr idx
+        set box UNKNOWN
+        set layer UNKNOWN
+        set type UNKNOWN
+        set subtype UNKNOWN
+        set message UNKNOWN
+        catch {set box [dbGet $marker.box]}
+        catch {set layer [dbGet $marker.layer.name]}
+        catch {set type [dbGet $marker.type]}
+        catch {set subtype [dbGet $marker.subType]}
+        catch {set message [dbGet $marker.message]}
+
+        lassign [spadmic_ooc_flat_box $box] llx lly urx ury
+        set llx [spadmic_ooc_numeric_or_unknown $llx]
+        set lly [spadmic_ooc_numeric_or_unknown $lly]
+        set urx [spadmic_ooc_numeric_or_unknown $urx]
+        set ury [spadmic_ooc_numeric_or_unknown $ury]
+        set cx UNKNOWN
+        set cy UNKNOWN
+        if {$llx ne "UNKNOWN" && $urx ne "UNKNOWN"} {
+            set cx [format %.6f [expr {($llx + $urx) / 2.0}]]
+        }
+        if {$lly ne "UNKNOWN" && $ury ne "UNKNOWN"} {
+            set cy [format %.6f [expr {($lly + $ury) / 2.0}]]
+        }
+
+        puts $fh "$idx\t[spadmic_ooc_report_value $marker]\t[spadmic_ooc_report_value $box]\t$llx\t$lly\t$urx\t$ury\t$cx\t$cy\t[spadmic_ooc_report_value $layer]\t[spadmic_ooc_report_value $type]\t[spadmic_ooc_report_value $subtype]\t[spadmic_ooc_report_value $message]"
+    }
+    close $fh
+    return $idx
+}
+
+proc spadmic_ooc_marker_min_area_nets {} {
+    set nets [list]
+    set rows [list]
+    set markers [list]
+    catch {set markers [dbGet top.markers]}
+    foreach marker $markers {
+        if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} {
+            continue
+        }
+        set layer ""
+        set type ""
+        set subtype ""
+        set message ""
+        catch {set layer [dbGet $marker.layer.name]}
+        catch {set type [dbGet $marker.type]}
+        catch {set subtype [dbGet $marker.subType]}
+        catch {set message [dbGet $marker.message]}
+        if {![string equal -nocase $layer "MET1"]} {
+            continue
+        }
+        if {![string equal -nocase $type "Geometry"]} {
+            continue
+        }
+        if {![regexp -nocase {Minimal_Area|Minimum[[:space:]]+Area|Mar} $subtype] &&
+            ![regexp -nocase {Minimum[[:space:]]+Area|Minimal_Area} $message]} {
+            continue
+        }
+        if {![regexp -nocase {Regular[[:space:]]+Wire[[:space:]]+of[[:space:]]+Net[[:space:]]+([^[:space:]]+)} $message -> net]} {
+            continue
+        }
+        spadmic_ooc_unique_append nets $net
+        lappend rows [list $net $marker [spadmic_ooc_report_value $message]]
+    }
+    return [list $nets $rows]
+}
+
+proc spadmic_ooc_selected_net_min_area_repair {} {
+    if {![spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_MIN_AREA_REPAIR 1]]} {
+        spadmic_ooc_status_set POSTROUTE_MIN_AREA_REPAIR DISABLED
+        spadmic_ooc_write_text [file join $::spadmic_ooc_reports_dir POSTROUTE_MIN_AREA_REPAIR.rpt] [list \
+            "LABEL=POSTROUTE_MIN_AREA_REPAIR" \
+            "STATUS=DISABLED" \
+            "OVERRIDE=Set SPADMIC_OOC_ENABLE_MIN_AREA_REPAIR=1 to run selected-net MET1 min-area repair." \
+        ]
+        return 0
+    }
+
+    set rpt [file join $::spadmic_ooc_reports_dir POSTROUTE_MIN_AREA_REPAIR.rpt]
+    set pre_drc [file join $::spadmic_ooc_reports_dir postroute_min_area_repair_pre_verify_drc.rpt]
+    set pre_markers [file join $::spadmic_ooc_reports_dir postroute_min_area_repair_pre_markers.tsv]
+    set post_drc [file join $::spadmic_ooc_reports_dir postroute_min_area_repair_post_verify_drc.rpt]
+    set post_markers [file join $::spadmic_ooc_reports_dir postroute_min_area_repair_post_markers.tsv]
+
+    set fh [open $rpt w]
+    puts $fh "LABEL=POSTROUTE_MIN_AREA_REPAIR"
+    puts $fh "PRE_DRC_REPORT=$pre_drc"
+    puts $fh "PRE_MARKER_REPORT=$pre_markers"
+    close $fh
+
+    if {[catch {redirect -file $pre_drc {verify_drc}} err]} {
+        set fh [open $rpt a]
+        puts $fh "STATUS=FAIL"
+        puts $fh "REASON=pre_verify_failed"
+        puts $fh "ERROR=[spadmic_ooc_report_value $err]"
+        close $fh
+        spadmic_ooc_status_set POSTROUTE_MIN_AREA_REPAIR FAIL
+        return 0
+    }
+    set pre_marker_count [spadmic_ooc_write_marker_dump $pre_markers]
+    lassign [spadmic_ooc_marker_min_area_nets] nets rows
+    set fh [open $rpt a]
+    puts $fh "PRE_MARKER_COUNT=$pre_marker_count"
+    puts $fh "MIN_AREA_MARKER_COUNT=[llength $rows]"
+    puts $fh "MIN_AREA_NET_COUNT=[llength $nets]"
+    puts $fh "MIN_AREA_NETS=[join $nets { }]"
+    foreach row $rows {
+        puts $fh "MIN_AREA_MARKER=[spadmic_ooc_report_value $row]"
+    }
+    close $fh
+
+    if {[llength $nets] == 0} {
+        set pre_status [spadmic_ooc_parse_drc_report $pre_drc]
+        set fh [open $rpt a]
+        puts $fh "STATUS=SKIPPED_NO_MET1_MIN_AREA_MARKERS"
+        puts $fh "PRE_DRC_STATUS=$pre_status"
+        close $fh
+        spadmic_ooc_status_set POSTROUTE_MIN_AREA_REPAIR SKIPPED_NO_MARKERS
+        return 0
+    }
+
+    catch {setNanoRouteMode -route_with_via_in_pin false}
+    catch {setNanoRouteMode -route_with_via_only_for_block_cell_pin false}
+    set selected_mode_ok 1
+    set selected_mode_error ""
+    if {[catch {setNanoRouteMode -route_selected_net_only true} selected_mode_error]} {
+        set selected_mode_ok 0
+    }
+    catch {deselectAll}
+
+    set selected [list]
+    set selection_failures [list]
+    foreach net $nets {
+        if {![catch {selectNet $net} err]} {
+            lappend selected $net
+        } else {
+            lappend selection_failures "$net:$err"
+        }
+    }
+
+    if {!$selected_mode_ok || [llength $selected] == 0} {
+        catch {setNanoRouteMode -route_selected_net_only false}
+        catch {deselectAll}
+        set fh [open $rpt a]
+        puts $fh "SELECTED_NET_MODE_STATUS=[expr {$selected_mode_ok ? "PASS" : "FAIL"}]"
+        puts $fh "SELECTED_NET_MODE_ERROR=[spadmic_ooc_report_value $selected_mode_error]"
+        puts $fh "SELECTED_NET_COUNT=[llength $selected]"
+        puts $fh "SELECTION_FAILURES=[join $selection_failures {; }]"
+        puts $fh "STATUS=FAIL"
+        close $fh
+        spadmic_ooc_status_set POSTROUTE_MIN_AREA_REPAIR FAIL
+        return 0
+    }
+
+    set delete_failures [list]
+    foreach net $selected {
+        if {[catch {editDelete -net $net -regular_wire_with_drc} err]} {
+            lappend delete_failures "$net:$err"
+        }
+    }
+
+    set route_commands [list {globalDetailRoute -select} {detailRoute -select} {ecoRoute -fix_drc}]
+    set route_failures [list]
+    foreach cmd $route_commands {
+        if {[catch {uplevel #0 $cmd} err]} {
+            lappend route_failures "$cmd:$err"
+        }
+    }
+    catch {setNanoRouteMode -route_selected_net_only false}
+    catch {deselectAll}
+
+    if {[catch {redirect -file $post_drc {verify_drc}} err]} {
+        set fh [open $rpt a]
+        puts $fh "POST_DRC_REPORT=$post_drc"
+        puts $fh "POST_DRC_STATUS=FAIL"
+        puts $fh "POST_DRC_ERROR=[spadmic_ooc_report_value $err]"
+        close $fh
+        spadmic_ooc_status_set POSTROUTE_MIN_AREA_REPAIR FAIL
+        return 1
+    }
+    set post_marker_count [spadmic_ooc_write_marker_dump $post_markers]
+    set post_status [spadmic_ooc_parse_drc_report $post_drc]
+
+    set fh [open $rpt a]
+    puts $fh "SELECTED_NET_MODE_STATUS=PASS"
+    puts $fh "SELECTED_NET_COUNT=[llength $selected]"
+    puts $fh "SELECTED_NETS=[join $selected { }]"
+    puts $fh "SELECTION_FAILURES=[join $selection_failures {; }]"
+    puts $fh "DELETE_FAILURES=[join $delete_failures {; }]"
+    puts $fh "ROUTE_COMMANDS=$route_commands"
+    puts $fh "ROUTE_FAILURES=[join $route_failures {; }]"
+    puts $fh "POST_DRC_REPORT=$post_drc"
+    puts $fh "POST_MARKER_REPORT=$post_markers"
+    puts $fh "POST_MARKER_COUNT=$post_marker_count"
+    puts $fh "POST_DRC_STATUS=$post_status"
+    set status [expr {$post_status eq "PASS" ? "PASS" : "REVIEW_REQUIRED"}]
+    puts $fh "STATUS=$status"
+    close $fh
+    spadmic_ooc_status_set POSTROUTE_MIN_AREA_REPAIR $status
+    return 1
+}
+
 proc spadmic_ooc_connectivity_status {path} {
     if {![file exists $path]} {
         return MISSING
@@ -616,12 +867,35 @@ proc spadmic_ooc_postroute_opt_and_timing {} {
     spadmic_ooc_capture_first [file join $::spadmic_ooc_reports_dir report_drv_post_route.rpt] report_drv_post_route [list {report_constraint -all_violators} {report_constraints -all_violators}] 0
 }
 
+proc spadmic_ooc_post_min_area_repair_timing {} {
+    catch {setExtractRCMode -engine postRoute}
+    catch {extractRC}
+    set setup_dir [file join $::spadmic_ooc_reports_dir timing_post_route_setup_after_min_area_repair]
+    set hold_dir [file join $::spadmic_ooc_reports_dir timing_post_route_hold_after_min_area_repair]
+    catch {file mkdir $setup_dir $hold_dir}
+    spadmic_ooc_try_first POSTROUTE_MIN_AREA_REPAIR_SETUP_TIMING [list \
+        [list timeDesign -postRoute -outDir $setup_dir] \
+        [list timeDesign -postRoute]] 0
+    spadmic_ooc_try_first POSTROUTE_MIN_AREA_REPAIR_HOLD_TIMING [list \
+        [list timeDesign -postRoute -hold -outDir $hold_dir] \
+        [list timeDesign -postRoute -hold]] 0
+}
+
 proc spadmic_ooc_verify_reports {} {
     set drc_rpt [file join $::spadmic_ooc_reports_dir verify_drc_post_route.rpt]
+    set drc_marker_tsv [file join $::spadmic_ooc_reports_dir verify_drc_post_route_markers.tsv]
     set reg_conn_rpt [file join $::spadmic_ooc_reports_dir verify_connectivity_regular.rpt]
     set pg_conn_rpt [file join $::spadmic_ooc_reports_dir verify_connectivity_pg.rpt]
     set route_rpt [file join $::spadmic_ooc_reports_dir report_route.rpt]
     spadmic_ooc_capture_first $drc_rpt verify_drc_post_route [list {verify_drc} {verifyGeometry}] 1
+    set marker_count [spadmic_ooc_write_marker_dump $drc_marker_tsv]
+    spadmic_ooc_write_text [file join $::spadmic_ooc_reports_dir DRC_MARKER_DUMP.rpt] [list \
+        "LABEL=DRC_MARKER_DUMP" \
+        "STATUS=PASS" \
+        "MARKER_REPORT=$drc_marker_tsv" \
+        "MARKER_COUNT=$marker_count" \
+    ]
+    spadmic_ooc_status_set DRC_MARKER_DUMP PASS
     spadmic_ooc_capture_first $reg_conn_rpt verify_connectivity_regular [list {verifyConnectivity -type regular} {verifyConnectivity}] 1
     if {[spadmic_ooc_pg_sroute_enabled]} {
         spadmic_ooc_capture_first $pg_conn_rpt verify_connectivity_pg [list {verifyConnectivity -type special -nets {VDD VSS}} {verifyConnectivity -nets {VDD VSS} -type special} {verifyConnectivity -type special}] 1
@@ -792,6 +1066,10 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_route_pg
     spadmic_ooc_postroute_cleanup
     spadmic_ooc_postroute_opt_and_timing
+    set min_area_repair_changed [spadmic_ooc_selected_net_min_area_repair]
+    if {$min_area_repair_changed} {
+        spadmic_ooc_post_min_area_repair_timing
+    }
     spadmic_ooc_verify_reports
     spadmic_ooc_export_outputs
     spadmic_ooc_copy_handoff
