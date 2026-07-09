@@ -10,21 +10,21 @@
 module spadmic_tx_egress_cluster #(
   parameter bit FORWARDED_CLK_INVERT = 1'b0
 ) (
-  input  logic                                      clk_sys,
-  input  logic                                      clk_160m_i,
-  input  logic                                      rst_n,
-  input  logic                                      ddrs2_enable_i,
+  input  wire logic                                      clk_sys,
+  input  wire logic                                      clk_160m_i,
+  input  wire logic                                      rst_n,
+  input  wire logic                                      ddrs2_enable_i,
 
-  input  logic                                      bundle_start_i,
-  input  logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] required_packet_mask_i,
-  input  logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] source_pending_mask_i,
-  input  logic [spadmic_pkg::SPADMIC_EVENT_ID_W-1:0] event_id_i,
+  input  wire logic                                      bundle_start_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] required_packet_mask_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] source_pending_mask_i,
+  input  wire logic [spadmic_pkg::SPADMIC_EVENT_ID_W-1:0] event_id_i,
 
-  input  logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_valid_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_valid_i,
   output logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_ready_o,
-  input  logic [mptdc_pkg::NARROW_W-1:0]            src_data_i [spadmic_pkg::SPADMIC_SRC_COUNT],
-  input  logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_sop_i,
-  input  logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_eop_i,
+  input  wire logic [mptdc_pkg::NARROW_W-1:0]            src_data_i [spadmic_pkg::SPADMIC_SRC_COUNT],
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_sop_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_eop_i,
 
   output logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] completed_packet_mask_o,
   output logic                                      bundle_done_o,

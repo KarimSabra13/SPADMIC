@@ -208,6 +208,8 @@ def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
             "signal_pin_spacing_um": "1.20",
             "pg_pin_width_um": "18.0",
             "pg_pin_depth_um": "2.0",
+            "pg_strap_width_um": "2.0",
+            "pg_strap_spacing_um": "2.0",
         }
         for key, value in values.items():
             fh.write(f"    variable {key} {tcl_quote(value)}\n")
@@ -345,6 +347,8 @@ def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
             "signal_pin_spacing_um": "1.40",
             "pg_pin_width_um": "60.0",
             "pg_pin_depth_um": "4.0",
+            "pg_strap_width_um": "4.0",
+            "pg_strap_spacing_um": "4.0",
         }
         for key, value in values.items():
             fh.write(f"    variable {key} {tcl_quote(value)}\n")

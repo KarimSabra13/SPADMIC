@@ -50,6 +50,14 @@ proc spadmic_ooc_cfg {name} {
     return [set $var]
 }
 
+proc spadmic_ooc_cfg_default {name default_value} {
+    set var "::spadmic_ooc::$name"
+    if {![info exists $var]} {
+        return $default_value
+    }
+    return [set $var]
+}
+
 proc spadmic_ooc_cfg_list {name} {
     return [spadmic_ooc_cfg $name]
 }
@@ -173,8 +181,11 @@ proc spadmic_ooc_connectivity_status {path} {
             [regexp -nocase {Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*0[[:space:]]+Viols?[.][[:space:]]+0[[:space:]]+Wrngs[.]} $trimmed]} {
             continue
         }
-        if {[regexp -nocase {short|open|unconnected|not[[:space:]]+connected|violation|error} $trimmed] &&
-            ![regexp -nocase {no.*(short|open|error|violation)|0[[:space:]]+(short|open|error|violation|viols)} $trimmed]} {
+        if {[regexp -nocase {^(Error|Warning)[[:space:]]+Limit[[:space:]]*=} $trimmed]} {
+            continue
+        }
+        if {[regexp -nocase {problem|short|open|unconnected|not[[:space:]]+connected|violation|error} $trimmed] &&
+            ![regexp -nocase {no.*(problems|short|open|error|violation)|0[[:space:]]+(problems?|short|open|error|violation|viols)} $trimmed]} {
             set bad 1
         }
     }
@@ -278,10 +289,44 @@ proc spadmic_ooc_create_pg_pins {} {
         [list createPGPin $ground_pin -net $ground_net -geom $layer $vss_llx $y1 $vss_urx $y2]] 1
 }
 
+proc spadmic_ooc_create_pg_straps {} {
+    set layer [spadmic_ooc_cfg power_layer]
+    set power_net [spadmic_ooc_cfg pg_power_net]
+    set ground_net [spadmic_ooc_cfg pg_ground_net]
+    set strap_width [spadmic_ooc_cfg_default pg_strap_width_um [spadmic_ooc_cfg pg_pin_depth_um]]
+    set strap_spacing [spadmic_ooc_cfg_default pg_strap_spacing_um $strap_width]
+    lassign [spadmic_ooc_die_size] die_w die_h
+    set set_distance [expr {$die_w + 20.0}]
+    set vdd_offset [expr {$die_w * 0.25 - $strap_width / 2.0}]
+    set vss_offset [expr {$die_w * 0.75 - $strap_width / 2.0}]
+    set all_ok 1
+
+    foreach item [list \
+        [list CREATE_PG_STRAP_VDD $power_net $vdd_offset] \
+        [list CREATE_PG_STRAP_VSS $ground_net $vss_offset]] {
+        lassign $item label net offset
+        set ok [spadmic_ooc_try_first $label [list \
+            [list addStripe -nets [list $net] -layer $layer -direction vertical \
+                -width $strap_width -spacing $strap_spacing -set_to_set_distance $set_distance \
+                -start_from left -start_offset $offset -number_of_sets 1] \
+            [list addStripe -nets [list $net] -layer $layer -direction vertical \
+                -width $strap_width -spacing $strap_spacing -set_to_set_distance $set_distance \
+                -start_from left -start_offset $offset]] 0]
+        if {!$ok} {
+            set all_ok 0
+        }
+    }
+    spadmic_ooc_status_set CREATE_PG_STRAPS [expr {$all_ok ? "PASS" : "FAIL"}]
+}
+
 proc spadmic_ooc_route_pg {} {
     set power_net [spadmic_ooc_cfg pg_power_net]
     set ground_net [spadmic_ooc_cfg pg_ground_net]
+    spadmic_ooc_create_pg_straps
     set cmds [list \
+        [list sroute -connect {corePin blockPin padPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -padPinTarget {ring stripe} -allowLayerChange 1] \
+        [list sroute -connect {corePin blockPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -allowLayerChange 1] \
+        [list sroute -connect {corePin} -nets [list $power_net $ground_net] -corePinTarget {ring stripe} -allowLayerChange 1] \
         [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \
         [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
         [list sroute -connect {blockPin padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \

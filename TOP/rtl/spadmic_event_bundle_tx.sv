@@ -7,21 +7,21 @@
 `default_nettype none
 
 module spadmic_event_bundle_tx (
-  input  logic                                clk_sys,
-  input  logic                                rst_n,
-  input  logic                                bundle_start_i,
-  input  logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] required_packet_mask_i,
-  input  logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] source_pending_mask_i,
-  input  logic [spadmic_pkg::SPADMIC_EVENT_ID_W-1:0] event_id_i,
+  input  wire logic                                clk_sys,
+  input  wire logic                                rst_n,
+  input  wire logic                                bundle_start_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] required_packet_mask_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_MASK_W-1:0] source_pending_mask_i,
+  input  wire logic [spadmic_pkg::SPADMIC_EVENT_ID_W-1:0] event_id_i,
 
-  input  logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_valid_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_valid_i,
   output logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_ready_o,
-  input  logic [mptdc_pkg::NARROW_W-1:0]      src_data_i [spadmic_pkg::SPADMIC_SRC_COUNT],
-  input  logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_sop_i,
-  input  logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_eop_i,
+  input  wire logic [mptdc_pkg::NARROW_W-1:0]      src_data_i [spadmic_pkg::SPADMIC_SRC_COUNT],
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_sop_i,
+  input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_eop_i,
 
   output logic                                word_valid_o,
-  input  logic                                word_ready_i,
+  input  wire logic                                word_ready_i,
   output logic [mptdc_pkg::NARROW_W-1:0]      word_data_o,
   output logic                                flush_o,
 
