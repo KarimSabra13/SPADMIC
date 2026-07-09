@@ -611,7 +611,11 @@ configure_xh018_stack() {
     export MPTDC_PNR_SIGNAL_TOP_LAYER="$signal_top"
     export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="$floor_top"
     export MPTDC_PNR_POWER_LAYER="$floor_top"
-    export MPTDC_PNR_PHASE_TOP_LAYER="$floor_top"
+    if is_truthy "${MPTDC_PNR_PHASE_METTP_EXCEPTION:-1}"; then
+      export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-$floor_top}"
+    else
+      export MPTDC_PNR_PHASE_TOP_LAYER="${MPTDC_PNR_PHASE_TOP_LAYER:-$signal_top}"
+    fi
   fi
 }
 
