@@ -1,0 +1,7 @@
+name,path
+layout_audit_dir,/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/layout_audits/SPADMIC2_20260709_072331
+instances_enriched,/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/layout_audits/SPADMIC2_20260709_072331/csv/SPADMIC2_instances_enriched.csv
+instance_pins_enriched,/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/layout_audits/SPADMIC2_20260709_072331/csv/SPADMIC2_instance_pins_enriched.csv
+ddr_slvs_pins,/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/layout_audits/SPADMIC2_20260709_072331/reports/SPADMIC2_ddr_slvs_pins.csv
+matrix_pins,/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/layout_audits/SPADMIC2_20260709_072331/reports/SPADMIC2_matrix_pins.csv
+nets,/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/layout_audits/SPADMIC2_20260709_072331/csv/SPADMIC2_nets.csv

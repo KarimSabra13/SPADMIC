@@ -1,0 +1,181 @@
+port,side,layer,order,reason,target_x_um,target_y_um,source_inst,source_term,source_x_um,source_y_um
+clk_sys,WEST,MET3,0,clock/reset/control entry,,,,,,
+clk_160m_i,WEST,MET3,1,clock/reset/control entry,,,,,,
+rst_n,WEST,MET3,2,clock/reset/control entry,,,,,,
+ddrs2_enable_i,WEST,MET3,3,clock/reset/control entry,,,,,,
+bundle_start_i,WEST,MET3,4,clock/reset/control entry,,,,,,
+event_id_i[0],WEST,MET3,5,clock/reset/control entry,,,,,,
+event_id_i[1],WEST,MET3,6,clock/reset/control entry,,,,,,
+event_id_i[2],WEST,MET3,7,clock/reset/control entry,,,,,,
+event_id_i[3],WEST,MET3,8,clock/reset/control entry,,,,,,
+event_id_i[4],WEST,MET3,9,clock/reset/control entry,,,,,,
+event_id_i[5],WEST,MET3,10,clock/reset/control entry,,,,,,
+event_id_i[6],WEST,MET3,11,clock/reset/control entry,,,,,,
+event_id_i[7],WEST,MET3,12,clock/reset/control entry,,,,,,
+event_id_i[8],WEST,MET3,13,clock/reset/control entry,,,,,,
+event_id_i[9],WEST,MET3,14,clock/reset/control entry,,,,,,
+event_id_i[10],WEST,MET3,15,clock/reset/control entry,,,,,,
+event_id_i[11],WEST,MET3,16,clock/reset/control entry,,,,,,
+event_id_i[12],WEST,MET3,17,clock/reset/control entry,,,,,,
+event_id_i[13],WEST,MET3,18,clock/reset/control entry,,,,,,
+required_packet_mask_i[0],WEST,MET3,19,clock/reset/control entry,,,,,,
+required_packet_mask_i[1],WEST,MET3,20,clock/reset/control entry,,,,,,
+required_packet_mask_i[2],WEST,MET3,21,clock/reset/control entry,,,,,,
+required_packet_mask_i[3],WEST,MET3,22,clock/reset/control entry,,,,,,
+source_pending_mask_i[0],WEST,MET3,23,clock/reset/control entry,,,,,,
+source_pending_mask_i[1],WEST,MET3,24,clock/reset/control entry,,,,,,
+source_pending_mask_i[2],WEST,MET3,25,clock/reset/control entry,,,,,,
+source_pending_mask_i[3],WEST,MET3,26,clock/reset/control entry,,,,,,
+completed_packet_mask_o[0],WEST,MET3,27,clock/reset/control entry,,,,,,
+completed_packet_mask_o[1],WEST,MET3,28,clock/reset/control entry,,,,,,
+completed_packet_mask_o[2],WEST,MET3,29,clock/reset/control entry,,,,,,
+completed_packet_mask_o[3],WEST,MET3,30,clock/reset/control entry,,,,,,
+bundle_done_o,WEST,MET3,31,clock/reset/control entry,,,,,,
+bundle_busy_o,WEST,MET3,32,clock/reset/control entry,,,,,,
+bundle_idle_o,WEST,MET3,33,clock/reset/control entry,,,,,,
+bundle_missing_source_error_o,WEST,MET3,34,clock/reset/control entry,,,,,,
+output_fifo_level_o[0],WEST,MET3,35,clock/reset/control entry,,,,,,
+output_fifo_level_o[1],WEST,MET3,36,clock/reset/control entry,,,,,,
+output_fifo_level_o[2],WEST,MET3,37,clock/reset/control entry,,,,,,
+output_fifo_level_o[3],WEST,MET3,38,clock/reset/control entry,,,,,,
+output_fifo_level_o[4],WEST,MET3,39,clock/reset/control entry,,,,,,
+output_fifo_level_o[5],WEST,MET3,40,clock/reset/control entry,,,,,,
+output_fifo_level_o[6],WEST,MET3,41,clock/reset/control entry,,,,,,
+output_fifo_level_o[7],WEST,MET3,42,clock/reset/control entry,,,,,,
+output_fifo_level_o[8],WEST,MET3,43,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[0],WEST,MET3,44,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[1],WEST,MET3,45,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[2],WEST,MET3,46,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[3],WEST,MET3,47,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[4],WEST,MET3,48,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[5],WEST,MET3,49,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[6],WEST,MET3,50,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[7],WEST,MET3,51,clock/reset/control entry,,,,,,
+output_fifo_free_words_o[8],WEST,MET3,52,clock/reset/control entry,,,,,,
+output_fifo_empty_o,WEST,MET3,53,clock/reset/control entry,,,,,,
+output_fifo_full_o,WEST,MET3,54,clock/reset/control entry,,,,,,
+output_fifo_almost_full_o,WEST,MET3,55,clock/reset/control entry,,,,,,
+output_fifo_overflow_o,WEST,MET3,56,clock/reset/control entry,,,,,,
+ddr_pair_valid_o,WEST,MET3,57,clock/reset/control entry,,,,,,
+ddr_padded_o,WEST,MET3,58,clock/reset/control entry,,,,,,
+ddr_busy_o,WEST,MET3,59,clock/reset/control entry,,,,,,
+ddr_empty_o,WEST,MET3,60,clock/reset/control entry,,,,,,
+src_valid_i[0],SOUTH,MET3,0,toward FIFO/event-bundle producer,,,,,,
+src_valid_i[1],SOUTH,MET3,1,toward FIFO/event-bundle producer,,,,,,
+src_valid_i[2],SOUTH,MET3,2,toward FIFO/event-bundle producer,,,,,,
+src_valid_i[3],SOUTH,MET3,3,toward FIFO/event-bundle producer,,,,,,
+src_ready_o[0],SOUTH,MET3,4,toward FIFO/event-bundle producer,,,,,,
+src_ready_o[1],SOUTH,MET3,5,toward FIFO/event-bundle producer,,,,,,
+src_ready_o[2],SOUTH,MET3,6,toward FIFO/event-bundle producer,,,,,,
+src_ready_o[3],SOUTH,MET3,7,toward FIFO/event-bundle producer,,,,,,
+src_sop_i[0],SOUTH,MET3,8,toward FIFO/event-bundle producer,,,,,,
+src_sop_i[1],SOUTH,MET3,9,toward FIFO/event-bundle producer,,,,,,
+src_sop_i[2],SOUTH,MET3,10,toward FIFO/event-bundle producer,,,,,,
+src_sop_i[3],SOUTH,MET3,11,toward FIFO/event-bundle producer,,,,,,
+src_eop_i[0],SOUTH,MET3,12,toward FIFO/event-bundle producer,,,,,,
+src_eop_i[1],SOUTH,MET3,13,toward FIFO/event-bundle producer,,,,,,
+src_eop_i[2],SOUTH,MET3,14,toward FIFO/event-bundle producer,,,,,,
+src_eop_i[3],SOUTH,MET3,15,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][0],SOUTH,MET3,16,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][1],SOUTH,MET3,17,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][2],SOUTH,MET3,18,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][3],SOUTH,MET3,19,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][4],SOUTH,MET3,20,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][5],SOUTH,MET3,21,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][6],SOUTH,MET3,22,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][7],SOUTH,MET3,23,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][8],SOUTH,MET3,24,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][9],SOUTH,MET3,25,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][10],SOUTH,MET3,26,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][11],SOUTH,MET3,27,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][12],SOUTH,MET3,28,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][13],SOUTH,MET3,29,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][14],SOUTH,MET3,30,toward FIFO/event-bundle producer,,,,,,
+src_data_i[0][15],SOUTH,MET3,31,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][0],SOUTH,MET3,32,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][1],SOUTH,MET3,33,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][2],SOUTH,MET3,34,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][3],SOUTH,MET3,35,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][4],SOUTH,MET3,36,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][5],SOUTH,MET3,37,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][6],SOUTH,MET3,38,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][7],SOUTH,MET3,39,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][8],SOUTH,MET3,40,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][9],SOUTH,MET3,41,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][10],SOUTH,MET3,42,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][11],SOUTH,MET3,43,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][12],SOUTH,MET3,44,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][13],SOUTH,MET3,45,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][14],SOUTH,MET3,46,toward FIFO/event-bundle producer,,,,,,
+src_data_i[1][15],SOUTH,MET3,47,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][0],SOUTH,MET3,48,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][1],SOUTH,MET3,49,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][2],SOUTH,MET3,50,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][3],SOUTH,MET3,51,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][4],SOUTH,MET3,52,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][5],SOUTH,MET3,53,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][6],SOUTH,MET3,54,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][7],SOUTH,MET3,55,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][8],SOUTH,MET3,56,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][9],SOUTH,MET3,57,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][10],SOUTH,MET3,58,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][11],SOUTH,MET3,59,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][12],SOUTH,MET3,60,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][13],SOUTH,MET3,61,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][14],SOUTH,MET3,62,toward FIFO/event-bundle producer,,,,,,
+src_data_i[2][15],SOUTH,MET3,63,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][0],SOUTH,MET3,64,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][1],SOUTH,MET3,65,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][2],SOUTH,MET3,66,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][3],SOUTH,MET3,67,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][4],SOUTH,MET3,68,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][5],SOUTH,MET3,69,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][6],SOUTH,MET3,70,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][7],SOUTH,MET3,71,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][8],SOUTH,MET3,72,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][9],SOUTH,MET3,73,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][10],SOUTH,MET3,74,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][11],SOUTH,MET3,75,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][12],SOUTH,MET3,76,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][13],SOUTH,MET3,77,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][14],SOUTH,MET3,78,toward FIFO/event-bundle producer,,,,,,
+src_data_i[3][15],SOUTH,MET3,79,toward FIFO/event-bundle producer,,,,,,
+ddrs2_data_h_o[18],NORTH,MET3,0,toward DDR16/DDRs2 output path,40.000,165.600,M1,DATA_H<18>,85.540,3263.312
+ddrs2_data_l_o[18],NORTH,MET3,1,toward DDR16/DDRs2 output path,45.555,165.600,M1,DATA_L<18>,91.095,3263.293
+ddrs2_data_h_o[17],NORTH,MET3,2,toward DDR16/DDRs2 output path,228.000,165.600,M1,DATA_H<17>,273.540,3263.312
+ddrs2_data_l_o[17],NORTH,MET3,3,toward DDR16/DDRs2 output path,233.555,165.600,M1,DATA_L<17>,279.095,3263.293
+ddrs2_data_h_o[16],NORTH,MET3,4,toward DDR16/DDRs2 output path,416.000,165.600,M1,DATA_H<16>,461.540,3263.312
+ddrs2_data_l_o[16],NORTH,MET3,5,toward DDR16/DDRs2 output path,421.555,165.600,M1,DATA_L<16>,467.095,3263.293
+ddrs2_data_h_o[15],NORTH,MET3,6,toward DDR16/DDRs2 output path,604.000,165.600,M1,DATA_H<15>,649.540,3263.312
+ddrs2_data_l_o[15],NORTH,MET3,7,toward DDR16/DDRs2 output path,609.555,165.600,M1,DATA_L<15>,655.095,3263.293
+ddrs2_data_h_o[14],NORTH,MET3,8,toward DDR16/DDRs2 output path,792.000,165.600,M1,DATA_H<14>,837.540,3263.312
+ddrs2_data_l_o[14],NORTH,MET3,9,toward DDR16/DDRs2 output path,797.555,165.600,M1,DATA_L<14>,843.095,3263.293
+ddrs2_data_h_o[13],NORTH,MET3,10,toward DDR16/DDRs2 output path,980.000,165.600,M1,DATA_H<13>,1025.540,3263.312
+ddrs2_data_l_o[13],NORTH,MET3,11,toward DDR16/DDRs2 output path,985.555,165.600,M1,DATA_L<13>,1031.095,3263.293
+ddrs2_data_h_o[12],NORTH,MET3,12,toward DDR16/DDRs2 output path,1168.000,165.600,M1,DATA_H<12>,1213.540,3263.312
+ddrs2_data_l_o[12],NORTH,MET3,13,toward DDR16/DDRs2 output path,1173.555,165.600,M1,DATA_L<12>,1219.095,3263.293
+ddrs2_data_h_o[11],NORTH,MET3,14,toward DDR16/DDRs2 output path,1356.000,165.600,M1,DATA_H<11>,1401.540,3263.312
+ddrs2_data_l_o[11],NORTH,MET3,15,toward DDR16/DDRs2 output path,1361.555,165.600,M1,DATA_L<11>,1407.095,3263.293
+ddrs2_data_h_o[10],NORTH,MET3,16,toward DDR16/DDRs2 output path,1544.000,165.600,M1,DATA_H<10>,1589.540,3263.312
+ddrs2_data_l_o[10],NORTH,MET3,17,toward DDR16/DDRs2 output path,1549.555,165.600,M1,DATA_L<10>,1595.095,3263.293
+ddrs2_data_h_o[9],NORTH,MET3,18,toward DDR16/DDRs2 output path,1732.000,165.600,M1,DATA_H<9>,1777.540,3263.312
+ddrs2_data_l_o[9],NORTH,MET3,19,toward DDR16/DDRs2 output path,1737.555,165.600,M1,DATA_L<9>,1783.095,3263.293
+ddrs2_data_h_o[8],NORTH,MET3,20,toward DDR16/DDRs2 output path,1920.000,165.600,M1,DATA_H<8>,1965.540,3263.312
+ddrs2_data_l_o[8],NORTH,MET3,21,toward DDR16/DDRs2 output path,1925.555,165.600,M1,DATA_L<8>,1971.095,3263.293
+ddrs2_data_h_o[7],NORTH,MET3,22,toward DDR16/DDRs2 output path,2108.000,165.600,M1,DATA_H<7>,2153.540,3263.312
+ddrs2_data_l_o[7],NORTH,MET3,23,toward DDR16/DDRs2 output path,2113.555,165.600,M1,DATA_L<7>,2159.095,3263.293
+ddrs2_data_h_o[6],NORTH,MET3,24,toward DDR16/DDRs2 output path,2296.000,165.600,M1,DATA_H<6>,2341.540,3263.312
+ddrs2_data_l_o[6],NORTH,MET3,25,toward DDR16/DDRs2 output path,2301.555,165.600,M1,DATA_L<6>,2347.095,3263.293
+ddrs2_data_h_o[5],NORTH,MET3,26,toward DDR16/DDRs2 output path,2484.000,165.600,M1,DATA_H<5>,2529.540,3263.312
+ddrs2_data_l_o[5],NORTH,MET3,27,toward DDR16/DDRs2 output path,2489.555,165.600,M1,DATA_L<5>,2535.095,3263.293
+ddrs2_data_h_o[4],NORTH,MET3,28,toward DDR16/DDRs2 output path,2672.000,165.600,M1,DATA_H<4>,2717.540,3263.312
+ddrs2_data_l_o[4],NORTH,MET3,29,toward DDR16/DDRs2 output path,2677.555,165.600,M1,DATA_L<4>,2723.095,3263.293
+ddrs2_data_h_o[3],NORTH,MET3,30,toward DDR16/DDRs2 output path,2860.000,165.600,M1,DATA_H<3>,2905.540,3263.312
+ddrs2_data_l_o[3],NORTH,MET3,31,toward DDR16/DDRs2 output path,2865.555,165.600,M1,DATA_L<3>,2911.095,3263.293
+ddrs2_data_h_o[2],NORTH,MET3,32,toward DDR16/DDRs2 output path,3048.000,165.600,M1,DATA_H<2>,3093.540,3263.312
+ddrs2_data_l_o[2],NORTH,MET3,33,toward DDR16/DDRs2 output path,3053.555,165.600,M1,DATA_L<2>,3099.095,3263.293
+ddrs2_data_h_o[1],NORTH,MET3,34,toward DDR16/DDRs2 output path,3236.000,165.600,M1,DATA_H<1>,3281.540,3263.312
+ddrs2_data_l_o[1],NORTH,MET3,35,toward DDR16/DDRs2 output path,3241.555,165.600,M1,DATA_L<1>,3287.095,3263.293
+ddrs2_data_h_o[0],NORTH,MET3,36,toward DDR16/DDRs2 output path,3424.000,165.600,M1,DATA_H<0>,3469.540,3263.312
+ddrs2_clk_160m_o,NORTH,MET3,37,toward DDR16/DDRs2 output path,3426.810,165.600,M1,CLK_160M,3472.350,3263.385
+ddrs2_data_l_o[0],NORTH,MET3,38,toward DDR16/DDRs2 output path,3429.555,165.600,M1,DATA_L<0>,3475.095,3263.293

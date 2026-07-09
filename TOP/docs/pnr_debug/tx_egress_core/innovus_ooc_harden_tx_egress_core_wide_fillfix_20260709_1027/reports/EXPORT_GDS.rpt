@@ -1,0 +1,4 @@
+LABEL=EXPORT_GDS
+TRY=streamOut /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/outputs/tx_egress_core.gds -libName DesignLib -units 1000 -mode ALL
+STATUS=PASS
+COMMAND=streamOut /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/outputs/tx_egress_core.gds -libName DesignLib -units 1000 -mode ALL

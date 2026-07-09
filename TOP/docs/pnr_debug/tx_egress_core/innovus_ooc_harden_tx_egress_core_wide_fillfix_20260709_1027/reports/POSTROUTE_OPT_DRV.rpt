@@ -1,0 +1,4 @@
+LABEL=POSTROUTE_OPT_DRV
+TRY=optDesign -postRoute -drv
+STATUS=PASS
+COMMAND=optDesign -postRoute -drv

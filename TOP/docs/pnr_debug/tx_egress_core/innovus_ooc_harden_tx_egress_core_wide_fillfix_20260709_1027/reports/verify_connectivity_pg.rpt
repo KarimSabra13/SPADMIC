@@ -1,0 +1,4 @@
+LABEL=verify_connectivity_pg
+STATUS=DEFERRED_TOP_LEVEL_HOOKUP
+REASON=No local special PG route was created. The exported abstract provides METTP VDD/VSS access pins for top-level hookup.
+COMMAND=not_run

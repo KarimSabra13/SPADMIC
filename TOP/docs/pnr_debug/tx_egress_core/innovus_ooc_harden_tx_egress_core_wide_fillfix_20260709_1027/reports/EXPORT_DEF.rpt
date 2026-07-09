@@ -1,0 +1,4 @@
+LABEL=EXPORT_DEF
+TRY=defOut /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/outputs/tx_egress_core.def
+STATUS=PASS
+COMMAND=defOut /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/outputs/tx_egress_core.def

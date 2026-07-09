@@ -1,0 +1,4 @@
+LABEL=EXPORT_NETLIST_PG
+TRY=saveNetlist -includePowerGround /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/outputs/tx_egress_core.routed.pg.v
+STATUS=PASS
+COMMAND=saveNetlist -includePowerGround /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/outputs/tx_egress_core.routed.pg.v

@@ -1,0 +1,30 @@
+LABEL=verify_connectivity_regular
+TRY=verifyConnectivity -type regular
+VERIFY_CONNECTIVITY use new engine.
+
+******** Start: VERIFY CONNECTIVITY ********
+Start Time: Thu Jul  9 10:46:41 2026
+
+Design Name: spadmic_tx_egress_core
+Database Units: 1000
+Design Boundary: (0.0000, 0.0000) (3449.6000, 165.7600)
+Error Limit = 1000; Warning Limit = 50
+Check specified nets
+**** 10:46:41 **** Processed 5000 nets.
+Net VDD: no routing.
+Net VSS: no routing.
+
+Begin Summary 
+    2 Problem(s) (IMPVFC-98): Net has no global routing and no special routing.
+    2 total info(s) created.
+End Summary
+
+End Time: Thu Jul  9 10:46:42 2026
+Time Elapsed: 0:00:01.0
+
+******** End: VERIFY CONNECTIVITY ********
+  Verification Complete : 2 Viols.  0 Wrngs.
+  (CPU Time: 0:00:00.6  MEM: 0.000M)
+
+STATUS=PASS
+COMMAND=verifyConnectivity -type regular

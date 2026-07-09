@@ -1,0 +1,9 @@
+BLOCK_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core
+TOP_MODULE=spadmic_tx_egress_core
+CHECKPOINT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat
+RESTORE_STATUS=PASS
+VERIFY_DRC_STATUS=PASS
+VERIFY_DRC_REPORT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/reports/verify_drc_marker_dump.rpt
+MARKER_TSV=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/reports/verify_drc_post_route_markers.tsv
+MARKER_COUNT=49
+STATUS=PASS

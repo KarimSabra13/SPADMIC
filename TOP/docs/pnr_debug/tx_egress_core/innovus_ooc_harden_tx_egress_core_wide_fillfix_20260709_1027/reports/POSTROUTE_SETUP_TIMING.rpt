@@ -1,0 +1,4 @@
+LABEL=POSTROUTE_SETUP_TIMING
+TRY=timeDesign -postRoute -outDir /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/reports/timing_post_route_setup
+STATUS=PASS
+COMMAND=timeDesign -postRoute -outDir /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/reports/timing_post_route_setup

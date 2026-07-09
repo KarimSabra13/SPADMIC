@@ -1,0 +1,4 @@
+LABEL=FLOORPLAN
+TRY=floorPlan -site core_jihd -s 3433.979 150.000 8.000 8.000 8.000 8.000
+STATUS=PASS
+COMMAND=floorPlan -site core_jihd -s 3433.979 150.000 8.000 8.000 8.000 8.000

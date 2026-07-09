@@ -1,0 +1,4 @@
+LABEL=PLACE_DESIGN
+TRY=place_design
+STATUS=PASS
+COMMAND=place_design

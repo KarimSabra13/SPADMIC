@@ -1,0 +1,13 @@
+LABEL=POSTROUTE_DRC_CLEANUP
+TRY=ecoRoute -target
+TRY_STATUS=PASS
+COMMAND=ecoRoute -target
+TRY=ecoRoute -fix_drc
+TRY_STATUS=PASS
+COMMAND=ecoRoute -fix_drc
+TRY=ecoRoute
+TRY_STATUS=PASS
+COMMAND=ecoRoute
+PASS_COUNT=3
+FAIL_COUNT=0
+STATUS=PASS

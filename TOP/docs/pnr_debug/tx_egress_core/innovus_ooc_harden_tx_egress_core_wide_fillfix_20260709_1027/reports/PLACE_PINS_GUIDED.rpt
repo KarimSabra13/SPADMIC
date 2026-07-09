@@ -1,0 +1,4 @@
+LABEL=PLACE_PINS_GUIDED
+TRY=source /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/generated/ooc_block_pin_assignments.tcl
+STATUS=PASS
+COMMAND=source /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/generated/ooc_block_pin_assignments.tcl

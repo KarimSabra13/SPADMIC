@@ -1,0 +1,7 @@
+LABEL=report_area_post_place
+TRY=report_area
+    Hinst Name         Module Name          Inst Count           Total Area
+------------------------------------------------------------------------
+spadmic_tx_egress_core                            8005           335228.365
+STATUS=PASS
+COMMAND=report_area

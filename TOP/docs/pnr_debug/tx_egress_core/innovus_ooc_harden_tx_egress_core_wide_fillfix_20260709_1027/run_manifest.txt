@@ -1,0 +1,142 @@
+RUN_ID=innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027
+DATE_UTC=2026-07-09T08:27:17Z
+REPO_ROOT=/home/validmgr/ksabra/2026_SPAD/SPADMIC
+TOP_ROOT=/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP
+PNR_ROOT=/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/pnr
+RUN_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027
+BLOCK_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core
+HANDOFF_ROOT=/sim/ksabra/SPADMIC_work/handoff/abstracts/tx_egress_core/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027
+BLOCK=tx_egress_core
+TOP_MODULE=spadmic_tx_egress_core
+GENUS_RUN_ID=genus_ooc_tx_egress_core_wide_pgdefer_20260709_0957
+GENUS_ROOT=/sim/ksabra/SPADMIC_work/genus/genus_ooc_tx_egress_core_wide_pgdefer_20260709_0957
+GENUS_BLOCK_ROOT=/sim/ksabra/SPADMIC_work/genus/genus_ooc_tx_egress_core_wide_pgdefer_20260709_0957/tx_egress_core
+NETLIST=/sim/ksabra/SPADMIC_work/genus/genus_ooc_tx_egress_core_wide_pgdefer_20260709_0957/tx_egress_core/outputs/tx_egress_core.postsyn.v
+SDC=/sim/ksabra/SPADMIC_work/genus/genus_ooc_tx_egress_core_wide_pgdefer_20260709_0957/tx_egress_core/outputs/tx_egress_core.postsyn.sdc
+GENUS_SUMMARY=/sim/ksabra/SPADMIC_work/genus/genus_ooc_tx_egress_core_wide_pgdefer_20260709_0957/tx_egress_core/SUMMARY.md
+LAYOUT_AUDIT_DIR=/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/docs/layout_audits/SPADMIC2_20260709_072331
+MPTDC_XH018_STACK=xx31
+MPTDC_STDCELL_FAMILY=JIHD
+MPTDC_PNR_ROUTE_LAYER_NAMES=MET1 MET2 MET3 METTP
+MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
+MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=METTP
+MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
+BRANCH=SPADMIC_test
+HEAD=8a667bc12098efb3a9099fb4cdc09468bf027c80
+STATUS_SHORT_BEGIN
+?? --audit-tsv
+?? --copied-lef
+?? --macro
+?? --out-lef
+?? --report
+?? --source-lef
+?? --summary
+?? -cells
+?? -lef
+?? -lib
+?? -log
+?? -noTech
+?? -ver
+?? -views
+?? .GenusRestruct_1514628/
+?? .GenusRestruct_198797/
+?? .GenusRestruct_2188097/
+?? .GenusRestruct_2486375/
+?? .cadence/
+?? .metrics
+?? .rs_ksabra.tstamp
+?? F
+?? MPTDC/pnr/logs_prev_20260518_1113_signoff_taps_pdmatrix/
+?? MPTDC/pnr/reports_prev_20260518_1113_signoff_taps_pdmatrix/
+?? MPTDC/pnr/scripts/.GenusRestruct_974702/
+?? MPTDC/pnr/scripts/.metrics
+?? MPTDC/pnr/scripts/checkDesign/
+?? MPTDC/pnr/scripts/mptdc_axis_core.antenna.lef
+?? MPTDC/pnr/scripts/mptdc_axis_core.antenna.rpt
+?? MPTDC/pnr/scripts/mptdc_axis_core.conn.rpt
+?? MPTDC/pnr/scripts/mptdc_axis_core.conn.rpt.old
+?? MPTDC/pnr/scripts/mptdc_axis_core.geom.rpt
+?? MPTDC/pnr/scripts/mptdc_axis_core.geom.rpt.old
+?? MPTDC/pnr/scripts/mptdc_top_asic.antenna.lef
+?? MPTDC/pnr/scripts/mptdc_top_asic.antenna.rpt
+?? MPTDC/pnr/scripts/mptdc_top_asic.antenna.rpt.old
+?? MPTDC/pnr/scripts/mptdc_top_asic.conn.rpt
+?? MPTDC/pnr/scripts/mptdc_top_asic.conn.rpt.old
+?? MPTDC/pnr/scripts/pm.ob
+?? MPTDC/pnr/scripts/power.rpt
+?? MPTDC/pnr/scripts/scheduling_file.cts.1025127
+?? MPTDC/pnr/scripts/scheduling_file.cts.1534428
+?? MPTDC/pnr/scripts/scheduling_file.cts.1572896
+?? MPTDC/pnr/scripts/scheduling_file.cts.1672774
+?? MPTDC/pnr/scripts/scheduling_file.cts.3844666
+?? MPTDC/pnr/scripts/scheduling_file.cts.3926685
+?? MPTDC/pnr/scripts/scheduling_file.cts.3944337
+?? MPTDC/pnr/scripts/scheduling_file.cts.567744
+?? MPTDC/pnr/scripts/scheduling_file.cts.842514
+?? MPTDC/pnr/scripts/scheduling_file.cts.865205
+?? MPTDC/syn/.rs_ksabra.tstamp
+?? MPTDC/syn/scripts/debug.txt
+?? MPTDC/syn/scripts/genus.log1
+?? MPTDC/syn/scripts/genus.log2
+?? MPTDC/syn/scripts/genus.log3
+?? MPTDC/syn/scripts/genus.log4
+?? MPTDC/work/
+?? MPTDC_DIGITAL_SIGNOFF_ERROR:
+?? R
+?? abstract.bak_optionA_manual_mettp_20260708_015011
+?? arb/syn/logs/
+?? arb/syn/outputs/
+?? arb/syn/reports/
+?? arb/syn/scripts/.rs_ksabra.tstamp
+?? arb/syn/scripts/fv/
+?? cat
+?? check_innovus_signoff_availability.sh
+?? done
+?? exit
+?? fi
+?? fv/
+?? "how --name-only 09584446"
+?? innovus.log1
+?? innovus.logv1
+?? logs/
+?? mptdc_axis_core.antenna.lef
+?? mptdc_axis_core.antenna.rpt
+?? mptdc_axis_core.antenna.rpt.old
+?? mptdc_axis_core.conn.rpt
+?? mptdc_axis_core.conn.rpt.old
+?? mptdc_axis_core.drc.rpt
+?? mptdc_axis_core.drc.rpt.old
+?? mptdc_axis_core.geom.rpt
+?? mptdc_axis_core.geom.rpt.old
+?? mv
+?? pm.ob
+?? position/syn/scripts/.rs_ksabra.tstamp
+?? position/syn/scripts/fv/
+?? power.rpt
+?? reports/
+?? run
+?? scheduling_file.cts.1791488
+?? scheduling_file.cts.2276261
+?? scheduling_file.cts.2350753
+?? scheduling_file.cts.3143204
+?? scheduling_file.cts.3623417
+?? scheduling_file.cts.3643728
+?? scheduling_file.cts.3991088
+?? scheduling_file.cts.3998896
+?? scheduling_file.cts.4006820
+?? scheduling_file.cts.4017623
+?? scheduling_file.cts.8129
+?? source
+?? spadmic_ddr16_tx_pairer.conn.rpt
+?? spadmic_ddr16_tx_pairer.conn.rpt.old
+?? spadmic_ddr16_tx_pairer.geom.rpt
+?? spadmic_tx_egress_cluster.conn.rpt
+?? spadmic_tx_egress_cluster.conn.rpt.old
+?? spadmic_tx_egress_cluster.geom.rpt
+?? spadmic_tx_egress_core.conn.rpt
+?? spadmic_tx_egress_core.conn.rpt.old
+?? spadmic_tx_egress_core.geom.rpt
+?? spadmic_tx_egress_core.geom.rpt.old
+?? streamOut.map
+?? "tract abstract.pin abstract.ext; do"
+STATUS_SHORT_END

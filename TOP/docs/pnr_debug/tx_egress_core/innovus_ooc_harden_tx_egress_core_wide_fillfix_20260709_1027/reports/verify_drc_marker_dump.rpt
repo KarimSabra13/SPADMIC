@@ -1,0 +1,47 @@
+#-check_same_via_cell true               # bool, default=false, user setting
+ *** Starting Verify DRC (MEM: 1799.3) ***
+
+  VERIFY DRC ...... Starting Verification
+  VERIFY DRC ...... Initializing
+  VERIFY DRC ...... Deleting Existing Violations
+  VERIFY DRC ...... Creating Sub-Areas
+  VERIFY DRC ...... Using new threading
+  VERIFY DRC ...... Sub-Area: {0.000 0.000 246.560 165.760} 1 of 14
+  VERIFY DRC ...... Sub-Area : 1 complete 3 Viols.
+  VERIFY DRC ...... Sub-Area: {246.560 0.000 493.120 165.760} 2 of 14
+  VERIFY DRC ...... Sub-Area : 2 complete 3 Viols.
+  VERIFY DRC ...... Sub-Area: {493.120 0.000 739.680 165.760} 3 of 14
+  VERIFY DRC ...... Sub-Area : 3 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {739.680 0.000 986.240 165.760} 4 of 14
+  VERIFY DRC ...... Sub-Area : 4 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {986.240 0.000 1232.800 165.760} 5 of 14
+  VERIFY DRC ...... Sub-Area : 5 complete 2 Viols.
+  VERIFY DRC ...... Sub-Area: {1232.800 0.000 1479.360 165.760} 6 of 14
+  VERIFY DRC ...... Sub-Area : 6 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {1479.360 0.000 1725.920 165.760} 7 of 14
+  VERIFY DRC ...... Sub-Area : 7 complete 2 Viols.
+  VERIFY DRC ...... Sub-Area: {1725.920 0.000 1972.480 165.760} 8 of 14
+  VERIFY DRC ...... Sub-Area : 8 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {1972.480 0.000 2219.040 165.760} 9 of 14
+  VERIFY DRC ...... Sub-Area : 9 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {2219.040 0.000 2465.600 165.760} 10 of 14
+  VERIFY DRC ...... Sub-Area : 10 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {2465.600 0.000 2712.160 165.760} 11 of 14
+  VERIFY DRC ...... Sub-Area : 11 complete 0 Viols.
+  VERIFY DRC ...... Sub-Area: {2712.160 0.000 2958.720 165.760} 12 of 14
+  VERIFY DRC ...... Sub-Area : 12 complete 4 Viols.
+  VERIFY DRC ...... Sub-Area: {2958.720 0.000 3205.280 165.760} 13 of 14
+  VERIFY DRC ...... Sub-Area : 13 complete 2 Viols.
+  VERIFY DRC ...... Sub-Area: {3205.280 0.000 3449.600 165.760} 14 of 14
+  VERIFY DRC ...... Sub-Area : 14 complete 0 Viols.
+
+  Verification Complete : 16 Viols.
+
+ Violation Summary By Layer and Type:
+
+	            Mar   Totals
+	MET1         16       16
+	Totals       16       16
+
+ *** End Verify DRC (CPU TIME: 0:00:04.2  ELAPSED TIME: 0:00:04.0  MEM: 299.1M) ***
+

@@ -1,0 +1,768 @@
+# Log excerpt from /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/logs/dump_drc_markers.stdout.log
+# First 400 lines
+
+Cadence Innovus(TM) Implementation System.
+Copyright 2022 Cadence Design Systems, Inc. All rights reserved worldwide.
+
+Version:	v22.33-s094_1, built Fri Aug 25 16:48:21 PDT 2023
+Options:	-nowin -init /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/pnr/scripts/dump_innovus_ooc_drc_markers.tcl -log /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/logs/dump_drc_markers.log 
+Date:		Thu Jul  9 10:52:35 2026
+Host:		lyoelectrosrv01.in2p3.fr (x86_64 w/Linux 4.18.0-553.120.1.el8_10.x86_64) (16cores*64cpus*Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz 22528KB)
+OS:		Rocky Linux 8.10 (Green Obsidian)
+
+License:
+		[10:52:35.004486] Configured Lic search path (21.01-s002): 30000@cadence.cnfm.fr:5280@ccflex01.in2p3.fr:5280@ccflex02.in2p3.fr:5280@ccflex03.in2p3.fr:5280@licences01.ipnl.in2p3.fr:1717@licences01.ipnl.in2p3.fr
+
+		invs	Innovus Implementation System	22.1	checkout succeeded
+		8 CPU jobs allowed with the current license(s). Use setMultiCpuUsage to set your required CPU count.
+Create and set the environment variable TMPDIR to /tmp/innovus_temp_2509494_lyoelectrosrv01.in2p3.fr_ksabra_ZrW1aX.
+
+Change the soft stacksize limit to 0.2%RAM (385 mbytes). Set global soft_stack_size_limit to change the value.
+
+**INFO:  MMMC transition support version v31-84 
+
+[INFO] Loading PVS 22.22 fill procedures
+**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+Sourcing file "/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/pnr/scripts/dump_innovus_ooc_drc_markers.tcl" ...
+#% Begin load design ... (date=07/09 10:53:08, mem=1306.8M)
+Set Default Input Pin Transition as 0.1 ps.
+Loading design 'spadmic_tx_egress_core' saved by 'Innovus' '22.33-s094_1' on 'Thu Jul 9 10:47:03 2026'.
+% Begin Load MMMC data ... (date=07/09 10:53:08, mem=1308.5M)
+% End Load MMMC data ... (date=07/09 10:53:08, total cpu=0:00:00.0, real=0:00:00.0, peak res=1309.7M, current mem=1309.7M)
+
+Loading LEF file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/lef/xh018_xx31_HD_MET3_METMID.lef ...
+
+Loading LEF file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/lef/mptdc_osc_blackbox.lef ...
+Set DBUPerIGU to M2 pitch 560.
+
+Loading LEF file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/lef/xh018_D_CELLS_JIHD.lef ...
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLNP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLN2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'stop_i' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[0]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[1]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[2]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[3]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[4]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[5]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[6]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[7]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[0]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[1]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[2]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[3]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[4]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[5]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[6]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[7]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-200):	Pin 'start_i' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[0]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[1]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[2]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[3]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[4]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[5]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[6]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (EMS-27):	Message (IMPLF-200) has exceeded the current message display limit of 20.
+To increase the message display limit, refer to the product command reference manual.
+**WARN: (IMPLF-201):	Pin 'phase_o[0]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[1]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[2]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[3]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[4]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[5]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[6]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[7]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+
+##  Check design process and node:  
+##  Both design process and tech node are not set.
+
+Loading view definition file from /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/viewDefinition.tcl
+Reading tc_libset timing library '/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib' ...
+Read 854 cells in library 'D_CELLS_JIHD_LPMOS_typ_1_80V_25C' 
+Reading tc_libset timing library '/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib' ...
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_rise' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_fall' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_rise' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_fall' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VDDA' referenced by the pg_pin 'VDDA' in the cell 'MPTDC_OSC_SLOW_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 37)
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VSSA' referenced by the pg_pin 'VSSA' in the cell 'MPTDC_OSC_SLOW_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 42)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'start_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 48)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'start_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 49)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'phase_o' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 64)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'phase_o' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 65)
+Message <TECHLIB-702> has exceeded the message display limit of '20'. Use 'set_message -no_limit -id list_of_msgIDs' to reset the message limit.
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VDDA' referenced by the pg_pin 'VDDA' in the cell 'MPTDC_OSC_FAST_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 75)
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VSSA' referenced by the pg_pin 'VSSA' in the cell 'MPTDC_OSC_FAST_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 80)
+**WARN: (TECHLIB-302):	No function defined for cell 'MPTDC_OSC_FAST_BB'. The cell will only be used for analysis. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib)
+**WARN: (TECHLIB-302):	No function defined for cell 'MPTDC_OSC_SLOW_BB'. The cell will only be used for analysis. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib)
+Read 2 cells in library 'mptdc_osc_blackbox' 
+*** End library_loading (cpu=0.03min, real=0.03min, mem=65.0M, fe_cpu=0.47min, fe_real=0.60min, fe_mem=1378.1M) ***
+% Begin Load netlist data ... (date=07/09 10:53:11, mem=1337.9M)
+*** Begin netlist parsing (mem=1378.1M) ***
+**WARN: (IMPVL-159):	Pin 'VDDA' of cell 'MPTDC_OSC_FAST_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+**WARN: (IMPVL-159):	Pin 'VSSA' of cell 'MPTDC_OSC_FAST_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+**WARN: (IMPVL-159):	Pin 'VDDA' of cell 'MPTDC_OSC_SLOW_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+**WARN: (IMPVL-159):	Pin 'VSSA' of cell 'MPTDC_OSC_SLOW_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+Created 856 new cells from 2 timing libraries.
+Reading netlist ...
+Backslashed names will retain backslash and a trailing blank character.
+Reading verilogBinary netlist '/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.v.bin'
+
+*** Memory Usage v#1 (Current mem = 1386.133M, initial mem = 635.133M) ***
+*** End netlist parsing (cpu=0:00:00.1, real=0:00:00.0, mem=1386.1M) ***
+% End Load netlist data ... (date=07/09 10:53:11, total cpu=0:00:00.1, real=0:00:00.0, peak res=1359.8M, current mem=1359.8M)
+Set top cell to spadmic_tx_egress_core.
+Hooked 856 DB cells to tlib cells.
+** Removed 3 unused lib cells.
+Starting recursive module instantiation check.
+No recursion found.
+Building hierarchical netlist for Cell spadmic_tx_egress_core ...
+***** UseNewTieNetMode *****.
+*** Netlist is unique.
+** info: there are 854 modules.
+** info: there are 8526 stdCell insts.
+
+*** Memory Usage v#1 (Current mem = 1439.047M, initial mem = 635.133M) ***
+*info: set bottom ioPad orient R0
+Start create_tracks
+Loading preference file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/gui.pref.tcl ...
+##  Process: 180           (User Set)               
+##     Node: (not set)                           
+
+##  Check design process and node:  
+##  Design tech node is not set.
+
+Applying the recommended capacitance filtering threshold values for 180nm process node: total_c_th=5, relative_c_th=0.03 and coupling_c_th=3.
+	These values will be used by all post-route extraction engines, including TQuantus, IQuantus and Quantus QRC extraction.
+	For postRoute effortLevel low extraction, the coupling_c_th value will be used only when the -capFilterMode parameter of the setExtractRCMode command is set to relAndCoup or relOrCoup. Default value of -capFilterMode parameter in postRoute extraction effortLevel low is relOnly.
+	The accuracy mode for postRoute effortLevel low extraction will be set to 'standard'.
+	Default value for EffortLevel(-effortLevel option of the setExtractRCMode) in postRoute extraction mode is 'low'.
+**WARN: (IMPOPT-3602):	The specified path group name reg2reg is not defined.
+Type 'man IMPOPT-3602' for more detail.
+Effort level <high> specified for reg2reg path_group
+Slack adjustment of -0 applied on reg2reg path_group
+Slack adjustment of -0 applied on <default> path group
+**WARN: (IMPTCM-77):	Option "-drouteStartIteration" for command setNanoRouteMode is obsolete and will be removed in a future release. The obsolete option still works in this release but to avoid this warning and to ensure compatibility with future releases, remove the obsolete option from your script.
+#WARNING (NRIF-90) Option setNanoRouteMode -route_bottom_routing_layer is obsolete. It will continue to work for the current release. To ensure compatibility with future releases, use option setDesignMode -bottomRoutingLayer instead.
+#WARNING (NRIF-91) Option setNanoRouteMode -route_top_routing_layer is obsolete. It will continue to work for the current release. To ensure compatibility with future releases, use option setDesignMode -topRoutingLayer instead.
+Change floorplan default-technical-site to 'core_jihd'.
+*Info: initialize multi-corner CTS.
+Total number of combinational cells: 450
+Total number of sequential cells: 300
+Total number of tristate cells: 28
+Total number of level shifter cells: 0
+Total number of power gating cells: 0
+Total number of isolation cells: 0
+Total number of power switch cells: 0
+Total number of pulse generator cells: 0
+Total number of always on buffers: 0
+Total number of retention cells: 0
+Total number of physical cells: 73
+List of usable buffers: BUJIHDX0 BUJIHDX12 BUJIHDX1 BUJIHDX2 BUJIHDX3 BUJIHDX4 BUJIHDX6 BUJIHDX8
+Total number of usable buffers: 8
+List of unusable buffers:
+Total number of unusable buffers: 0
+List of usable inverters: INJIHDX0 INJIHDX12 INJIHDX1 INJIHDX2 INJIHDX3 INJIHDX4 INJIHDX6 INJIHDX8
+Total number of usable inverters: 8
+List of unusable inverters:
+Total number of unusable inverters: 0
+List of identified usable delay cells: DLY1JIHDX1 DLY1JIHDX0 DLY2JIHDX1 DLY2JIHDX0 DLY4JIHDX1 DLY4JIHDX0 DLY8JIHDX0 DLY8JIHDX1 STEJIHDX1 STEJIHDX0 STEJIHDX2 STEJIHDX4 BUSSJIHDX1 BUSSJIHDX0
+Total number of identified usable delay cells: 14
+List of identified unusable delay cells:
+Total number of identified unusable delay cells: 0
+Reading floorplan file - /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.fp.gz (mem = 1703.8M).
+% Begin Load floorplan data ... (date=07/09 10:53:12, mem=1678.0M)
+*info: reset 8670 existing net BottomPreferredLayer and AvoidDetour
+Deleting old partition specification.
+Set FPlanBox to (0 0 3449600 165760)
+Start create_tracks
+ ... processed partition successfully.
+Reading binary special route file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.fp.spr.gz (Created by Innovus v22.33-s094_1 on Thu Jul  9 10:46:51 2026, version: 1)
+Convert 0 swires and 0 svias from compressed groups
+0 swires and 0 svias were compressed
+0 swires and 0 svias were decompressed from small or sparse groups
+Ending "Read special route file" (total cpu=0:00:00.0, real=0:00:00.0, peak res=1678.9M, current mem=1678.9M)
+There are 57 nets with weight being set
+There are 57 nets with bottomPreferredRoutingLayer being set
+There are 57 nets with avoidDetour being set
+Extracting standard cell pins and blockage ...... 
+Pin and blockage extraction finished
+Delete all existing relative floorplan constraints.
+% End Load floorplan data ... (date=07/09 10:53:17, total cpu=0:00:00.1, real=0:00:05.0, peak res=1681.1M, current mem=1681.1M)
+Reading congestion map file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.route.congmap.gz ...
+% Begin Load SymbolTable ... (date=07/09 10:53:17, mem=1681.8M)
+Suppress "**WARN ..." messages.
+Un-suppress "**WARN ..." messages.
+% End Load SymbolTable ... (date=07/09 10:53:19, total cpu=0:00:00.1, real=0:00:02.0, peak res=1684.8M, current mem=1684.7M)
+Loading place ...
+% Begin Load placement data ... (date=07/09 10:53:19, mem=1684.7M)
+Reading placement file - /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.place.gz.
+** Reading stdCellPlacement_binary (Created by Innovus v22.33-s094_1 on Thu Jul  9 10:46:58 2026, version# 2) ...
+Read Views for adaptive view pruning ...
+Read 0 views from Binary DB for adaptive view pruning
+*** applyConnectGlobalNets disabled.
+*** Completed restorePlace (cpu=0:00:00.0 real=0:00:00.0 mem=1712.8M) ***
+Total net length = 7.533e+05 (6.220e+05 1.313e+05) (ext = 6.221e+04)
+% End Load placement data ... (date=07/09 10:53:20, total cpu=0:00:00.1, real=0:00:00.0, peak res=1689.4M, current mem=1688.6M)
+Reading PG file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.pg.gz, version#2, (Created by Innovus v22.33-s094_1 on       Thu Jul  9 10:46:53 2026)
+*** Completed restorePGFile (cpu=0:00:00.0 real=0:00:02.0 mem=1708.8M) ***
+% Begin Load routing data ... (date=07/09 10:53:22, mem=1689.1M)
+Reading routing file - /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.route.gz.
+Reading Innovus routing data (Created by Innovus v22.33-s094_1 on Thu Jul  9 10:46:58 2026 Format: 20.1) ...
+*** Total 8658 nets are successfully restored.
+*** Completed restoreRoute (cpu=0:00:00.1 real=0:00:03.0 mem=1726.8M) ***
+% End Load routing data ... (date=07/09 10:53:25, total cpu=0:00:00.1, real=0:00:03.0, peak res=1708.3M, current mem=1707.3M)
+Loading Drc markers ...
+... 49 markers are loaded ...
+... 16 geometry drc markers are loaded ...
+... 31 antenna drc markers are loaded ...
+TAT_INFO: restoreCongMap REAL = 2 : CPU = 0 : MEM = 0.
+Reading property file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.prop
+*** Completed restoreProperty (cpu=0:00:00.0 real=0:00:00.0 mem=1729.8M) ***
+Reading dirtyarea snapshot file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.db.da.gz (Create by Innovus v22.33-s094_1 on Thu Jul  9 10:47:00 2026, version: 7).
+Set Default Input Pin Transition as 0.1 ps.
+Extraction setup Started 
+Initializing multi-corner RC extraction with 1 active RC Corners ...
+Reading Capacitance Table File /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/mmmc/xh018_xx31_MET3_METMID_typ.capTbl ...
+Process name: XX018.
+Importing multi-corner RC tables ... 
+Summary of Active RC-Corners : 
+ 
+ Analysis View: tc_view
+    RC-Corner Name        : tc_rc
+    RC-Corner Index       : 0
+    RC-Corner Temperature : 25 Celsius
+    RC-Corner Cap Table   : '/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/mmmc/xh018_xx31_MET3_METMID_typ.capTbl'
+    RC-Corner PreRoute Res Factor         : 1
+    RC-Corner PreRoute Cap Factor         : 1
+    RC-Corner PostRoute Res Factor        : 1 {1 1 1}
+    RC-Corner PostRoute Cap Factor        : 1 {1 1 1}
+    RC-Corner PostRoute XCap Factor       : 1 {1 1 1}
+    RC-Corner PreRoute Clock Res Factor   : 1	[Derived from postRoute_res (effortLevel low)]
+    RC-Corner PreRoute Clock Cap Factor   : 1	[Derived from postRoute_cap (effortLevel low)]
+    RC-Corner PostRoute Clock Cap Factor  : 1 {1 1 1} 	[Derived from postRoute_cap (effortLevel low)]
+    RC-Corner PostRoute Clock Res Factor  : 1 {1 1 1} 	[Derived from postRoute_res (effortLevel low)]
+    RC-Corner PostRoute Clock coupling capacitance Factor : 1 {1 1 1} 
+Initializing multi-corner capacitance tables ... 
+Initializing multi-corner resistance tables ...
+Start generating vias ..
+#Skip building auto via since it is not turned on.
+Extracting standard cell pins and blockage ...... 
+Pin and blockage extraction finished
+Via generation completed.
+% Begin Load power constraints ... (date=07/09 10:53:33, mem=1718.8M)
+source /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core_power_constraints.tcl
+'set_default_switching_activity' finished successfully.
+% End Load power constraints ... (date=07/09 10:53:33, total cpu=0:00:00.0, real=0:00:00.0, peak res=1725.8M, current mem=1725.8M)
+% Begin load AAE data ... (date=07/09 10:53:33, mem=1741.0M)
+**WARN: (IMPESI-3505):	setDelayCalMode -eng_enablePrePlacedFlow false (default=false) will be obsoleted along with its sgs2set equivalent.  This parameter will continue to be supported in the current release, but will be removed in the next major release of the software.
+AAE DB initialization (MEM=1786.31 CPU=0:00:00.0 REAL=0:00:00.0) 
+% End load AAE data ... (date=07/09 10:53:34, total cpu=0:00:00.7, real=0:00:01.0, peak res=1748.3M, current mem=1748.3M)
+Restoring CCOpt config...
+  Extracting original clock gating for clk_sys...
+    clock_tree clk_sys contains 4448 sinks and 0 clock gates.
+  Extracting original clock gating for clk_sys done.
+  Extracting original clock gating for clk_160m_i...
+    clock_tree clk_160m_i contains 1 sinks and 0 clock gates.
+  Extracting original clock gating for clk_160m_i done.
+  The skew group clk_160m_i/tc_ooc_mode was created. It contains 1 sinks and 1 sources.
+  The skew group clk_sys/tc_ooc_mode was created. It contains 4448 sinks and 1 sources.
+  The skew group clk_160m_i/tc_ooc_mode was created. It contains 1 sinks and 1 sources.
+  The skew group clk_sys/tc_ooc_mode was created. It contains 4448 sinks and 1 sources.
+Restoring CCOpt config done.
+Total number of combinational cells: 450
+Total number of sequential cells: 300
+Total number of tristate cells: 28
+Total number of level shifter cells: 0
+Total number of power gating cells: 0
+Total number of isolation cells: 0
+Total number of power switch cells: 0
+Total number of pulse generator cells: 0
+Total number of always on buffers: 0
+Total number of retention cells: 0
+Total number of physical cells: 73
+List of usable buffers: BUJIHDX0 BUJIHDX12 BUJIHDX1 BUJIHDX2 BUJIHDX3 BUJIHDX4 BUJIHDX6 BUJIHDX8
+Total number of usable buffers: 8
+List of unusable buffers:
+Total number of unusable buffers: 0
+List of usable inverters: INJIHDX0 INJIHDX12 INJIHDX1 INJIHDX2 INJIHDX3 INJIHDX4 INJIHDX6 INJIHDX8
+Total number of usable inverters: 8
+List of unusable inverters:
+Total number of unusable inverters: 0
+List of identified usable delay cells: DLY1JIHDX1 DLY1JIHDX0 DLY2JIHDX1 DLY2JIHDX0 DLY4JIHDX1 DLY4JIHDX0 DLY8JIHDX0 DLY8JIHDX1
+Total number of identified usable delay cells: 8
+List of identified unusable delay cells: STEJIHDX1 STEJIHDX0 STEJIHDX2 STEJIHDX4 BUSSJIHDX1 BUSSJIHDX0
+Total number of identified unusable delay cells: 6
+**WARN: (IMPCTE-107):	The following globals have been obsoleted since version . They will be removed in the next release. 
+timing_enable_separate_device_slew_effect_sensitivities
+#% End load design ... (date=07/09 10:53:34, total cpu=0:00:06.5, real=0:00:26.0, peak res=1771.8M, current mem=1762.5M)
+
+*** Summary of all messages that are not suppressed in this session:
+Severity  ID               Count  Summary                                  
+WARNING   IMPLF-200           21  Pin '%s' in macro '%s' has no ANTENNAGAT...
+WARNING   IMPLF-201           16  Pin '%s' in macro '%s' has no ANTENNADIF...
+WARNING   IMPVL-159            4  Pin '%s' of cell '%s' is defined in LEF ...
+WARNING   IMPESI-3505          1  setDelayCalMode -eng_%s (default=%s) wil...
+WARNING   IMPOPT-3602          1  The specified path group name %s is not ...
+WARNING   NRIF-90              1  Option setNanoRouteMode -route_bottom_ro...
+WARNING   NRIF-91              1  Option setNanoRouteMode -route_top_routi...
+WARNING   IMPCTE-107           1  The following globals have been obsolete...
+WARNING   IMPTCM-77            1  Option "%s" for command %s is obsolete a...
+WARNING   TECHLIB-302          2  No function defined for cell '%s'. The c...
+ERROR     TECHLIB-702         68  No pg_pin with name '%s' has been read i...
+ERROR     TECHLIB-704          4  The voltage_map attribute with name '%s'...
+WARNING   TECHLIB-9108         8   '%s' not specified in the library, usin...
+*** Message Summary: 57 warning(s), 72 error(s)
+
+
+*** Memory Usage v#1 (Current mem = 1844.391M, initial mem = 635.133M) ***
+*** Message Summary: 57 warning(s), 72 error(s)
+
+--- Ending "Innovus" (totcpu=0:00:36.2, real=0:01:03, mem=1844.4M) ---
+
+
+# Last 4000 lines
+
+Cadence Innovus(TM) Implementation System.
+Copyright 2022 Cadence Design Systems, Inc. All rights reserved worldwide.
+
+Version:	v22.33-s094_1, built Fri Aug 25 16:48:21 PDT 2023
+Options:	-nowin -init /home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/pnr/scripts/dump_innovus_ooc_drc_markers.tcl -log /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/logs/dump_drc_markers.log 
+Date:		Thu Jul  9 10:52:35 2026
+Host:		lyoelectrosrv01.in2p3.fr (x86_64 w/Linux 4.18.0-553.120.1.el8_10.x86_64) (16cores*64cpus*Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz 22528KB)
+OS:		Rocky Linux 8.10 (Green Obsidian)
+
+License:
+		[10:52:35.004486] Configured Lic search path (21.01-s002): 30000@cadence.cnfm.fr:5280@ccflex01.in2p3.fr:5280@ccflex02.in2p3.fr:5280@ccflex03.in2p3.fr:5280@licences01.ipnl.in2p3.fr:1717@licences01.ipnl.in2p3.fr
+
+		invs	Innovus Implementation System	22.1	checkout succeeded
+		8 CPU jobs allowed with the current license(s). Use setMultiCpuUsage to set your required CPU count.
+Create and set the environment variable TMPDIR to /tmp/innovus_temp_2509494_lyoelectrosrv01.in2p3.fr_ksabra_ZrW1aX.
+
+Change the soft stacksize limit to 0.2%RAM (385 mbytes). Set global soft_stack_size_limit to change the value.
+
+**INFO:  MMMC transition support version v31-84 
+
+[INFO] Loading PVS 22.22 fill procedures
+**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+Sourcing file "/home/validmgr/ksabra/2026_SPAD/SPADMIC/TOP/pnr/scripts/dump_innovus_ooc_drc_markers.tcl" ...
+#% Begin load design ... (date=07/09 10:53:08, mem=1306.8M)
+Set Default Input Pin Transition as 0.1 ps.
+Loading design 'spadmic_tx_egress_core' saved by 'Innovus' '22.33-s094_1' on 'Thu Jul 9 10:47:03 2026'.
+% Begin Load MMMC data ... (date=07/09 10:53:08, mem=1308.5M)
+% End Load MMMC data ... (date=07/09 10:53:08, total cpu=0:00:00.0, real=0:00:00.0, peak res=1309.7M, current mem=1309.7M)
+
+Loading LEF file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/lef/xh018_xx31_HD_MET3_METMID.lef ...
+
+Loading LEF file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/lef/mptdc_osc_blackbox.lef ...
+Set DBUPerIGU to M2 pitch 560.
+
+Loading LEF file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/lef/xh018_D_CELLS_JIHD.lef ...
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLNP2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'A' in macro 'ANTENNACELLN2JIHD' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'stop_i' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[0]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[1]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[2]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[3]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[4]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[5]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[6]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[7]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[0]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[1]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[2]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[3]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[4]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[5]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[6]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[7]' in macro 'MPTDC_OSC_FAST_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-200):	Pin 'start_i' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[0]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[1]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[2]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[3]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[4]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[5]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (IMPLF-200):	Pin 'ctrl_i[6]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-200' for more detail.
+**WARN: (EMS-27):	Message (IMPLF-200) has exceeded the current message display limit of 20.
+To increase the message display limit, refer to the product command reference manual.
+**WARN: (IMPLF-201):	Pin 'phase_o[0]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[1]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[2]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[3]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[4]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[5]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[6]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+**WARN: (IMPLF-201):	Pin 'phase_o[7]' in macro 'MPTDC_OSC_SLOW_BB' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+Type 'man IMPLF-201' for more detail.
+
+##  Check design process and node:  
+##  Both design process and tech node are not set.
+
+Loading view definition file from /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/viewDefinition.tcl
+Reading tc_libset timing library '/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/liberty_LPMOS/v6_0_0/PVT_1_80V_range/D_CELLS_JIHD_LPMOS_typ_1_80V_25C.lib' ...
+Read 854 cells in library 'D_CELLS_JIHD_LPMOS_typ_1_80V_25C' 
+Reading tc_libset timing library '/home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib' ...
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'input_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_rise' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'output_threshold_pct_fall' not specified in the library, using .lib default of '50%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_rise' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_lower_threshold_pct_fall' not specified in the library, using .lib default of '20%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_rise' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**WARN: (TECHLIB-9108):	 'slew_upper_threshold_pct_fall' not specified in the library, using .lib default of '80%'. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 1)
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VDDA' referenced by the pg_pin 'VDDA' in the cell 'MPTDC_OSC_SLOW_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 37)
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VSSA' referenced by the pg_pin 'VSSA' in the cell 'MPTDC_OSC_SLOW_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 42)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'start_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 48)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'start_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 49)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 56)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'ctrl_i' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 57)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VDDA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_power_pin' specified for the pin 'phase_o' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 64)
+**ERROR: (TECHLIB-702):	No pg_pin with name 'VSSA' has been read in the cell 'MPTDC_OSC_SLOW_BB'. The attribute 'related_ground_pin' specified for the pin 'phase_o' is being ignored. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 65)
+Message <TECHLIB-702> has exceeded the message display limit of '20'. Use 'set_message -no_limit -id list_of_msgIDs' to reset the message limit.
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VDDA' referenced by the pg_pin 'VDDA' in the cell 'MPTDC_OSC_FAST_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 75)
+**ERROR: (TECHLIB-704):	The voltage_map attribute with name 'VSSA' referenced by the pg_pin 'VSSA' in the cell 'MPTDC_OSC_FAST_BB', is absent in the library. The required voltage_map group needs to be added. This pg_pin is ignored. Related low power constructs referencing this pg_pin may not be read correctly. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib, Line 80)
+**WARN: (TECHLIB-302):	No function defined for cell 'MPTDC_OSC_FAST_BB'. The cell will only be used for analysis. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib)
+**WARN: (TECHLIB-302):	No function defined for cell 'MPTDC_OSC_SLOW_BB'. The cell will only be used for analysis. (File /home/validmgr/ksabra/2026_SPAD/SPADMIC/MPTDC/syn/macros/mptdc_osc_blackbox.lib)
+Read 2 cells in library 'mptdc_osc_blackbox' 
+*** End library_loading (cpu=0.03min, real=0.03min, mem=65.0M, fe_cpu=0.47min, fe_real=0.60min, fe_mem=1378.1M) ***
+% Begin Load netlist data ... (date=07/09 10:53:11, mem=1337.9M)
+*** Begin netlist parsing (mem=1378.1M) ***
+**WARN: (IMPVL-159):	Pin 'VDDA' of cell 'MPTDC_OSC_FAST_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+**WARN: (IMPVL-159):	Pin 'VSSA' of cell 'MPTDC_OSC_FAST_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+**WARN: (IMPVL-159):	Pin 'VDDA' of cell 'MPTDC_OSC_SLOW_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+**WARN: (IMPVL-159):	Pin 'VSSA' of cell 'MPTDC_OSC_SLOW_BB' is defined in LEF but not in the timing library.
+Type 'man IMPVL-159' for more detail.
+Created 856 new cells from 2 timing libraries.
+Reading netlist ...
+Backslashed names will retain backslash and a trailing blank character.
+Reading verilogBinary netlist '/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.v.bin'
+
+*** Memory Usage v#1 (Current mem = 1386.133M, initial mem = 635.133M) ***
+*** End netlist parsing (cpu=0:00:00.1, real=0:00:00.0, mem=1386.1M) ***
+% End Load netlist data ... (date=07/09 10:53:11, total cpu=0:00:00.1, real=0:00:00.0, peak res=1359.8M, current mem=1359.8M)
+Set top cell to spadmic_tx_egress_core.
+Hooked 856 DB cells to tlib cells.
+** Removed 3 unused lib cells.
+Starting recursive module instantiation check.
+No recursion found.
+Building hierarchical netlist for Cell spadmic_tx_egress_core ...
+***** UseNewTieNetMode *****.
+*** Netlist is unique.
+** info: there are 854 modules.
+** info: there are 8526 stdCell insts.
+
+*** Memory Usage v#1 (Current mem = 1439.047M, initial mem = 635.133M) ***
+*info: set bottom ioPad orient R0
+Start create_tracks
+Loading preference file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/gui.pref.tcl ...
+##  Process: 180           (User Set)               
+##     Node: (not set)                           
+
+##  Check design process and node:  
+##  Design tech node is not set.
+
+Applying the recommended capacitance filtering threshold values for 180nm process node: total_c_th=5, relative_c_th=0.03 and coupling_c_th=3.
+	These values will be used by all post-route extraction engines, including TQuantus, IQuantus and Quantus QRC extraction.
+	For postRoute effortLevel low extraction, the coupling_c_th value will be used only when the -capFilterMode parameter of the setExtractRCMode command is set to relAndCoup or relOrCoup. Default value of -capFilterMode parameter in postRoute extraction effortLevel low is relOnly.
+	The accuracy mode for postRoute effortLevel low extraction will be set to 'standard'.
+	Default value for EffortLevel(-effortLevel option of the setExtractRCMode) in postRoute extraction mode is 'low'.
+**WARN: (IMPOPT-3602):	The specified path group name reg2reg is not defined.
+Type 'man IMPOPT-3602' for more detail.
+Effort level <high> specified for reg2reg path_group
+Slack adjustment of -0 applied on reg2reg path_group
+Slack adjustment of -0 applied on <default> path group
+**WARN: (IMPTCM-77):	Option "-drouteStartIteration" for command setNanoRouteMode is obsolete and will be removed in a future release. The obsolete option still works in this release but to avoid this warning and to ensure compatibility with future releases, remove the obsolete option from your script.
+#WARNING (NRIF-90) Option setNanoRouteMode -route_bottom_routing_layer is obsolete. It will continue to work for the current release. To ensure compatibility with future releases, use option setDesignMode -bottomRoutingLayer instead.
+#WARNING (NRIF-91) Option setNanoRouteMode -route_top_routing_layer is obsolete. It will continue to work for the current release. To ensure compatibility with future releases, use option setDesignMode -topRoutingLayer instead.
+Change floorplan default-technical-site to 'core_jihd'.
+*Info: initialize multi-corner CTS.
+Total number of combinational cells: 450
+Total number of sequential cells: 300
+Total number of tristate cells: 28
+Total number of level shifter cells: 0
+Total number of power gating cells: 0
+Total number of isolation cells: 0
+Total number of power switch cells: 0
+Total number of pulse generator cells: 0
+Total number of always on buffers: 0
+Total number of retention cells: 0
+Total number of physical cells: 73
+List of usable buffers: BUJIHDX0 BUJIHDX12 BUJIHDX1 BUJIHDX2 BUJIHDX3 BUJIHDX4 BUJIHDX6 BUJIHDX8
+Total number of usable buffers: 8
+List of unusable buffers:
+Total number of unusable buffers: 0
+List of usable inverters: INJIHDX0 INJIHDX12 INJIHDX1 INJIHDX2 INJIHDX3 INJIHDX4 INJIHDX6 INJIHDX8
+Total number of usable inverters: 8
+List of unusable inverters:
+Total number of unusable inverters: 0
+List of identified usable delay cells: DLY1JIHDX1 DLY1JIHDX0 DLY2JIHDX1 DLY2JIHDX0 DLY4JIHDX1 DLY4JIHDX0 DLY8JIHDX0 DLY8JIHDX1 STEJIHDX1 STEJIHDX0 STEJIHDX2 STEJIHDX4 BUSSJIHDX1 BUSSJIHDX0
+Total number of identified usable delay cells: 14
+List of identified unusable delay cells:
+Total number of identified unusable delay cells: 0
+Reading floorplan file - /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.fp.gz (mem = 1703.8M).
+% Begin Load floorplan data ... (date=07/09 10:53:12, mem=1678.0M)
+*info: reset 8670 existing net BottomPreferredLayer and AvoidDetour
+Deleting old partition specification.
+Set FPlanBox to (0 0 3449600 165760)
+Start create_tracks
+ ... processed partition successfully.
+Reading binary special route file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.fp.spr.gz (Created by Innovus v22.33-s094_1 on Thu Jul  9 10:46:51 2026, version: 1)
+Convert 0 swires and 0 svias from compressed groups
+0 swires and 0 svias were compressed
+0 swires and 0 svias were decompressed from small or sparse groups
+Ending "Read special route file" (total cpu=0:00:00.0, real=0:00:00.0, peak res=1678.9M, current mem=1678.9M)
+There are 57 nets with weight being set
+There are 57 nets with bottomPreferredRoutingLayer being set
+There are 57 nets with avoidDetour being set
+Extracting standard cell pins and blockage ...... 
+Pin and blockage extraction finished
+Delete all existing relative floorplan constraints.
+% End Load floorplan data ... (date=07/09 10:53:17, total cpu=0:00:00.1, real=0:00:05.0, peak res=1681.1M, current mem=1681.1M)
+Reading congestion map file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.route.congmap.gz ...
+% Begin Load SymbolTable ... (date=07/09 10:53:17, mem=1681.8M)
+Suppress "**WARN ..." messages.
+Un-suppress "**WARN ..." messages.
+% End Load SymbolTable ... (date=07/09 10:53:19, total cpu=0:00:00.1, real=0:00:02.0, peak res=1684.8M, current mem=1684.7M)
+Loading place ...
+% Begin Load placement data ... (date=07/09 10:53:19, mem=1684.7M)
+Reading placement file - /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.place.gz.
+** Reading stdCellPlacement_binary (Created by Innovus v22.33-s094_1 on Thu Jul  9 10:46:58 2026, version# 2) ...
+Read Views for adaptive view pruning ...
+Read 0 views from Binary DB for adaptive view pruning
+*** applyConnectGlobalNets disabled.
+*** Completed restorePlace (cpu=0:00:00.0 real=0:00:00.0 mem=1712.8M) ***
+Total net length = 7.533e+05 (6.220e+05 1.313e+05) (ext = 6.221e+04)
+% End Load placement data ... (date=07/09 10:53:20, total cpu=0:00:00.1, real=0:00:00.0, peak res=1689.4M, current mem=1688.6M)
+Reading PG file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.pg.gz, version#2, (Created by Innovus v22.33-s094_1 on       Thu Jul  9 10:46:53 2026)
+*** Completed restorePGFile (cpu=0:00:00.0 real=0:00:02.0 mem=1708.8M) ***
+% Begin Load routing data ... (date=07/09 10:53:22, mem=1689.1M)
+Reading routing file - /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.route.gz.
+Reading Innovus routing data (Created by Innovus v22.33-s094_1 on Thu Jul  9 10:46:58 2026 Format: 20.1) ...
+*** Total 8658 nets are successfully restored.
+*** Completed restoreRoute (cpu=0:00:00.1 real=0:00:03.0 mem=1726.8M) ***
+% End Load routing data ... (date=07/09 10:53:25, total cpu=0:00:00.1, real=0:00:03.0, peak res=1708.3M, current mem=1707.3M)
+Loading Drc markers ...
+... 49 markers are loaded ...
+... 16 geometry drc markers are loaded ...
+... 31 antenna drc markers are loaded ...
+TAT_INFO: restoreCongMap REAL = 2 : CPU = 0 : MEM = 0.
+Reading property file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.prop
+*** Completed restoreProperty (cpu=0:00:00.0 real=0:00:00.0 mem=1729.8M) ***
+Reading dirtyarea snapshot file /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core.db.da.gz (Create by Innovus v22.33-s094_1 on Thu Jul  9 10:47:00 2026, version: 7).
+Set Default Input Pin Transition as 0.1 ps.
+Extraction setup Started 
+Initializing multi-corner RC extraction with 1 active RC Corners ...
+Reading Capacitance Table File /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/mmmc/xh018_xx31_MET3_METMID_typ.capTbl ...
+Process name: XX018.
+Importing multi-corner RC tables ... 
+Summary of Active RC-Corners : 
+ 
+ Analysis View: tc_view
+    RC-Corner Name        : tc_rc
+    RC-Corner Index       : 0
+    RC-Corner Temperature : 25 Celsius
+    RC-Corner Cap Table   : '/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/libs/mmmc/xh018_xx31_MET3_METMID_typ.capTbl'
+    RC-Corner PreRoute Res Factor         : 1
+    RC-Corner PreRoute Cap Factor         : 1
+    RC-Corner PostRoute Res Factor        : 1 {1 1 1}
+    RC-Corner PostRoute Cap Factor        : 1 {1 1 1}
+    RC-Corner PostRoute XCap Factor       : 1 {1 1 1}
+    RC-Corner PreRoute Clock Res Factor   : 1	[Derived from postRoute_res (effortLevel low)]
+    RC-Corner PreRoute Clock Cap Factor   : 1	[Derived from postRoute_cap (effortLevel low)]
+    RC-Corner PostRoute Clock Cap Factor  : 1 {1 1 1} 	[Derived from postRoute_cap (effortLevel low)]
+    RC-Corner PostRoute Clock Res Factor  : 1 {1 1 1} 	[Derived from postRoute_res (effortLevel low)]
+    RC-Corner PostRoute Clock coupling capacitance Factor : 1 {1 1 1} 
+Initializing multi-corner capacitance tables ... 
+Initializing multi-corner resistance tables ...
+Start generating vias ..
+#Skip building auto via since it is not turned on.
+Extracting standard cell pins and blockage ...... 
+Pin and blockage extraction finished
+Via generation completed.
+% Begin Load power constraints ... (date=07/09 10:53:33, mem=1718.8M)
+source /sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_egress_core_wide_fillfix_20260709_1027/blocks/tx_egress_core/checkpoints/05_postroute_export.enc.dat/spadmic_tx_egress_core_power_constraints.tcl
+'set_default_switching_activity' finished successfully.
+% End Load power constraints ... (date=07/09 10:53:33, total cpu=0:00:00.0, real=0:00:00.0, peak res=1725.8M, current mem=1725.8M)
+% Begin load AAE data ... (date=07/09 10:53:33, mem=1741.0M)
+**WARN: (IMPESI-3505):	setDelayCalMode -eng_enablePrePlacedFlow false (default=false) will be obsoleted along with its sgs2set equivalent.  This parameter will continue to be supported in the current release, but will be removed in the next major release of the software.
+AAE DB initialization (MEM=1786.31 CPU=0:00:00.0 REAL=0:00:00.0) 
+% End load AAE data ... (date=07/09 10:53:34, total cpu=0:00:00.7, real=0:00:01.0, peak res=1748.3M, current mem=1748.3M)
+Restoring CCOpt config...
+  Extracting original clock gating for clk_sys...
+    clock_tree clk_sys contains 4448 sinks and 0 clock gates.
+  Extracting original clock gating for clk_sys done.
+  Extracting original clock gating for clk_160m_i...
+    clock_tree clk_160m_i contains 1 sinks and 0 clock gates.
+  Extracting original clock gating for clk_160m_i done.
+  The skew group clk_160m_i/tc_ooc_mode was created. It contains 1 sinks and 1 sources.
+  The skew group clk_sys/tc_ooc_mode was created. It contains 4448 sinks and 1 sources.
+  The skew group clk_160m_i/tc_ooc_mode was created. It contains 1 sinks and 1 sources.
+  The skew group clk_sys/tc_ooc_mode was created. It contains 4448 sinks and 1 sources.
+Restoring CCOpt config done.
+Total number of combinational cells: 450
+Total number of sequential cells: 300
+Total number of tristate cells: 28
+Total number of level shifter cells: 0
+Total number of power gating cells: 0
+Total number of isolation cells: 0
+Total number of power switch cells: 0
+Total number of pulse generator cells: 0
+Total number of always on buffers: 0
+Total number of retention cells: 0
+Total number of physical cells: 73
+List of usable buffers: BUJIHDX0 BUJIHDX12 BUJIHDX1 BUJIHDX2 BUJIHDX3 BUJIHDX4 BUJIHDX6 BUJIHDX8
+Total number of usable buffers: 8
+List of unusable buffers:
+Total number of unusable buffers: 0
+List of usable inverters: INJIHDX0 INJIHDX12 INJIHDX1 INJIHDX2 INJIHDX3 INJIHDX4 INJIHDX6 INJIHDX8
+Total number of usable inverters: 8
+List of unusable inverters:
+Total number of unusable inverters: 0
+List of identified usable delay cells: DLY1JIHDX1 DLY1JIHDX0 DLY2JIHDX1 DLY2JIHDX0 DLY4JIHDX1 DLY4JIHDX0 DLY8JIHDX0 DLY8JIHDX1
+Total number of identified usable delay cells: 8
+List of identified unusable delay cells: STEJIHDX1 STEJIHDX0 STEJIHDX2 STEJIHDX4 BUSSJIHDX1 BUSSJIHDX0
+Total number of identified unusable delay cells: 6
+**WARN: (IMPCTE-107):	The following globals have been obsoleted since version . They will be removed in the next release. 
+timing_enable_separate_device_slew_effect_sensitivities
+#% End load design ... (date=07/09 10:53:34, total cpu=0:00:06.5, real=0:00:26.0, peak res=1771.8M, current mem=1762.5M)
+
+*** Summary of all messages that are not suppressed in this session:
+Severity  ID               Count  Summary                                  
+WARNING   IMPLF-200           21  Pin '%s' in macro '%s' has no ANTENNAGAT...
+WARNING   IMPLF-201           16  Pin '%s' in macro '%s' has no ANTENNADIF...
+WARNING   IMPVL-159            4  Pin '%s' of cell '%s' is defined in LEF ...
+WARNING   IMPESI-3505          1  setDelayCalMode -eng_%s (default=%s) wil...
+WARNING   IMPOPT-3602          1  The specified path group name %s is not ...
+WARNING   NRIF-90              1  Option setNanoRouteMode -route_bottom_ro...
+WARNING   NRIF-91              1  Option setNanoRouteMode -route_top_routi...
+WARNING   IMPCTE-107           1  The following globals have been obsolete...
+WARNING   IMPTCM-77            1  Option "%s" for command %s is obsolete a...
+WARNING   TECHLIB-302          2  No function defined for cell '%s'. The c...
+ERROR     TECHLIB-702         68  No pg_pin with name '%s' has been read i...
+ERROR     TECHLIB-704          4  The voltage_map attribute with name '%s'...
+WARNING   TECHLIB-9108         8   '%s' not specified in the library, usin...
+*** Message Summary: 57 warning(s), 72 error(s)
+
+
+*** Memory Usage v#1 (Current mem = 1844.391M, initial mem = 635.133M) ***
+*** Message Summary: 57 warning(s), 72 error(s)
+
+--- Ending "Innovus" (totcpu=0:00:36.2, real=0:01:03, mem=1844.4M) ---
+

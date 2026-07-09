@@ -1,0 +1,375 @@
+LABEL=report_route
+TRY=reportRoute
+**WARN: (IMPFP-3803):	Command "reportRoute" is obsolete and has been replaced by "report_route". 
+The obsolete command still works in this release, but to avoid this warning and to ensure compatibility with future releases, update your script to use "report_route".
+Type 'man IMPFP-3803' for more detail.
+#num needed restored net=0
+#need_extraction net=0 (total=8670)
+#
+# statistics:
+#Cpu time = 00:00:01
+#Elapsed time = 00:00:01
+#Increased memory = -17.09 (MB)
+#Total memory = 2332.85 (MB)
+#Peak memory = 2547.05 (MB)
+#Number of warnings = 0
+#Total number of warnings = 20
+#Number of fails = 0
+#Total number of fails = 0
+#Complete  on Thu Jul  9 10:46:42 2026
+#
+*** Statistics for net list spadmic_tx_egress_core ***
+Number of cells      = 18776
+Number of nets       = 8641
+Number of tri-nets   = 0
+Number of degen nets = 0
+Number of pins       = 40322
+Number of i/os       = 180
+
+Number of nets with    2 terms = 3220 (37.3%)
+Number of nets with    3 terms = 4508 (52.2%)
+Number of nets with    4 terms = 51 (0.6%)
+Number of nets with    5 terms = 50 (0.6%)
+Number of nets with    6 terms = 11 (0.1%)
+Number of nets with    7 terms = 25 (0.3%)
+Number of nets with    8 terms = 11 (0.1%)
+Number of nets with    9 terms = 19 (0.2%)
+Number of nets with >=10 terms = 746 (8.6%)
+
+*** 106 Primitives used:
+Primitive SDFRRQSSJIHDX2 (12 insts)
+Primitive SDFRRQSSJIHDX1 (31 insts)
+Primitive SDFRQSSJIHDX1 (2209 insts)
+Primitive SDFRQSSJIHDX0 (2143 insts)
+Primitive OR3JIHDX0 (1 insts)
+Primitive OR2JIHDX4 (3 insts)
+Primitive OR2JIHDX2 (3 insts)
+Primitive OR2JIHDX1 (1 insts)
+Primitive OR2JIHDX0 (3 insts)
+Primitive ON32JIHDX0 (1 insts)
+Primitive ON22JIHDX0 (2 insts)
+Primitive ON21JIHDX4 (1 insts)
+Primitive ON21JIHDX0 (1 insts)
+Primitive ON211JIHDX4 (1 insts)
+Primitive ON211JIHDX1 (1 insts)
+Primitive NO6I5JIHDX4 (3 insts)
+Primitive NO6I5JIHDX2 (33 insts)
+Primitive NO6I5JIHDX1 (43 insts)
+Primitive NO5I3JIHDX1 (1 insts)
+Primitive NO5I1JIHDX4 (1 insts)
+Primitive NO3JIHDX4 (2 insts)
+Primitive NO3I2JIHDX2 (1 insts)
+Primitive NO3I2JIHDX1 (1 insts)
+Primitive NO3I2JIHDX0 (1 insts)
+Primitive NO2JIHDX4 (3 insts)
+Primitive NO2JIHDX2 (6 insts)
+Primitive NO2JIHDX1 (35 insts)
+Primitive NO2JIHDX0 (6 insts)
+Primitive NO2I1JIHDX4 (3 insts)
+Primitive NO2I1JIHDX2 (11 insts)
+Primitive NO2I1JIHDX1 (11 insts)
+Primitive NO2I1JIHDX0 (8 insts)
+Primitive NO22JIHDX2 (1 insts)
+Primitive NA5I3JIHDX4 (1 insts)
+Primitive NA5I3JIHDX2 (23 insts)
+Primitive NA5I3JIHDX1 (40 insts)
+Primitive NA4JIHDX4 (2 insts)
+Primitive NA4JIHDX1 (228 insts)
+Primitive NA4I3JIHDX2 (2 insts)
+Primitive NA2JIHDX4 (9 insts)
+Primitive NA2JIHDX2 (68 insts)
+Primitive NA2JIHDX1 (66 insts)
+Primitive NA2JIHDX0 (9 insts)
+Primitive NA2I1JIHDX4 (3 insts)
+Primitive NA2I1JIHDX2 (3 insts)
+Primitive NA2I1JIHDX1 (5 insts)
+Primitive NA22JIHDX4 (1 insts)
+Primitive NA22JIHDX2 (2 insts)
+Primitive MU2IJIHDX0 (1 insts)
+Primitive INJIHDX8 (11 insts)
+Primitive INJIHDX6 (15 insts)
+Primitive INJIHDX4 (11 insts)
+Primitive INJIHDX3 (10 insts)
+Primitive INJIHDX2 (15 insts)
+Primitive INJIHDX12 (9 insts)
+Primitive INJIHDX1 (21 insts)
+Primitive INJIHDX0 (6 insts)
+Primitive HAJIHDX0 (12 insts)
+Primitive FEED7JIHD (998 insts)
+Primitive FEED5JIHD (1088 insts)
+Primitive FEED3JIHD (1725 insts)
+Primitive FEED2JIHD (1196 insts)
+Primitive FEED25JIHD (776 insts)
+Primitive FEED1JIHD (2762 insts)
+Primitive FEED15JIHD (789 insts)
+Primitive FEED10JIHD (916 insts)
+Primitive EO2JIHDX1 (1 insts)
+Primitive EN2JIHDX0 (1 insts)
+Primitive DFRRQJIHDX1 (52 insts)
+Primitive DFRRJIHDX1 (1 insts)
+Primitive BUJIHDX8 (84 insts)
+Primitive BUJIHDX6 (20 insts)
+Primitive BUJIHDX4 (51 insts)
+Primitive BUJIHDX3 (41 insts)
+Primitive BUJIHDX2 (176 insts)
+Primitive BUJIHDX12 (28 insts)
+Primitive BUJIHDX1 (46 insts)
+Primitive BUJIHDX0 (1 insts)
+Primitive AO22JIHDX2 (4 insts)
+Primitive AO22JIHDX1 (2 insts)
+Primitive AO22JIHDX0 (215 insts)
+Primitive AO222JIHDX2 (13 insts)
+Primitive AO221JIHDX2 (13 insts)
+Primitive AO221JIHDX1 (1 insts)
+Primitive AO21JIHDX4 (1 insts)
+Primitive AO21JIHDX0 (1 insts)
+Primitive AND6JIHDX4 (4 insts)
+Primitive AND6JIHDX2 (43 insts)
+Primitive AND6JIHDX1 (41 insts)
+Primitive AND5JIHDX2 (1 insts)
+Primitive AND4JIHDX4 (1 insts)
+Primitive AND4JIHDX2 (5 insts)
+Primitive AND4JIHDX1 (60 insts)
+Primitive AND3JIHDX2 (1 insts)
+Primitive AND2JIHDX4 (80 insts)
+Primitive AND2JIHDX2 (250 insts)
+Primitive AND2JIHDX1 (76 insts)
+Primitive AND2JIHDX0 (42 insts)
+Primitive AN22JIHDX4 (1 insts)
+Primitive AN22JIHDX1 (1840 insts)
+Primitive AN222JIHDX4 (1 insts)
+Primitive AN221JIHDX2 (16 insts)
+Primitive AN221JIHDX1 (153 insts)
+Primitive AN21JIHDX4 (1 insts)
+Primitive AN21JIHDX1 (1 insts)
+Primitive AN211JIHDX1 (1 insts)
+************
+*** Net length and connection length statistics (cell spadmic_tx_egress_core) ***
+
+Total net length = 7.789e+05 (6.287e+05 1.503e+05)
+
+Avg net length = 9.014e+01 (sigma = 2.531e+02)
+Sqrt of avg square net length = 2.687e+02
+
+Avg connection length = 2.459e+01 (sigma = 7.918e+01)
+Sqrt of avg square connection length = 8.291e+01
+
+Net and connection length distribution:
+
+[length   range   ]      #net #connection
+[0.00e+00 1.12e+01]:      886     4426
+[1.12e+01 2.24e+01]:     4006     2479
+[2.24e+01 3.36e+01]:     1637      461
+[3.36e+01 4.48e+01]:      277      182
+[4.48e+01 5.60e+01]:      135      128
+[5.60e+01 6.72e+01]:       99      106
+[6.72e+01 7.84e+01]:       96       92
+[7.84e+01 8.96e+01]:       74       84
+[8.96e+01 1.01e+02]:       74       74
+[1.01e+02 1.12e+02]:       59       49
+[1.12e+02 1.23e+02]:       50       44
+[1.23e+02 1.34e+02]:       44       30
+[1.34e+02 1.46e+02]:       51       26
+[1.46e+02 1.57e+02]:       65       16
+[1.57e+02 1.68e+02]:       86       21
+[1.68e+02 1.79e+02]:       61       14
+[1.79e+02 1.90e+02]:       69       16
+[1.90e+02 2.02e+02]:       72       15
+[2.02e+02 2.13e+02]:       53       24
+[2.13e+02 2.24e+02]:       72       11
+[2.24e+02 2.35e+02]:       58       14
+[2.35e+02 2.46e+02]:       44       10
+[2.46e+02 2.58e+02]:       25       15
+[2.58e+02 2.69e+02]:       24       14
+[2.69e+02 2.80e+02]:       10        6
+[2.80e+02 2.91e+02]:       13        8
+[2.91e+02 3.02e+02]:       13       11
+[3.02e+02 3.14e+02]:       18       11
+[3.14e+02 3.25e+02]:       16        6
+[3.25e+02 3.36e+02]:        4        5
+[3.36e+02 3.47e+02]:       10        8
+[3.47e+02 3.58e+02]:        8        8
+[3.58e+02 3.70e+02]:       10       11
+[3.70e+02 3.81e+02]:        4        4
+[3.81e+02 3.92e+02]:        3        2
+[3.92e+02 4.03e+02]:       10        8
+[4.03e+02 4.14e+02]:        6        6
+[4.14e+02 4.26e+02]:        6        7
+[4.26e+02 4.37e+02]:        8        6
+[4.37e+02 4.48e+02]:        7        4
+[4.48e+02 4.59e+02]:        2        3
+[4.59e+02 4.70e+02]:        3        2
+[4.70e+02 4.82e+02]:        2        2
+[4.82e+02 4.93e+02]:        6        3
+[4.93e+02 5.04e+02]:        5        3
+[5.04e+02 5.15e+02]:        6        4
+[5.15e+02 5.26e+02]:        6        1
+[5.26e+02 5.38e+02]:        2        1
+[5.38e+02 5.49e+02]:        2        1
+[5.49e+02 5.60e+02]:        1        0
+[5.60e+02 5.71e+02]:        6        3
+[5.71e+02 5.82e+02]:        3        2
+[5.82e+02 5.94e+02]:        8        7
+[5.94e+02 6.05e+02]:        4        2
+[6.05e+02 6.16e+02]:        8        5
+[6.16e+02 6.27e+02]:        3        2
+[6.27e+02 6.38e+02]:        5        4
+[6.38e+02 6.50e+02]:        4        3
+[6.50e+02 6.61e+02]:        3        5
+[6.61e+02 6.72e+02]:        2        3
+[6.72e+02 6.83e+02]:        6        3
+[6.83e+02 6.94e+02]:        2        4
+[6.94e+02 7.06e+02]:       10        8
+[7.06e+02 7.17e+02]:       10       10
+[7.17e+02 7.28e+02]:        6        5
+[7.28e+02 7.39e+02]:        3        2
+[7.39e+02 7.50e+02]:        6        6
+[7.50e+02 7.62e+02]:       11        4
+[7.62e+02 7.73e+02]:        5        3
+[7.73e+02 7.84e+02]:        8        6
+[7.84e+02 7.95e+02]:        4        2
+[7.95e+02 8.06e+02]:        6        5
+[8.06e+02 8.18e+02]:        5        4
+[8.18e+02 8.29e+02]:        5        4
+[8.29e+02 8.40e+02]:        1        0
+[8.40e+02 8.51e+02]:        4        3
+[8.51e+02 8.62e+02]:        2        1
+[8.62e+02 8.74e+02]:        4        1
+[8.74e+02 8.85e+02]:        1        1
+[8.85e+02 8.96e+02]:        1        0
+[8.96e+02 9.07e+02]:        1        0
+[9.07e+02 9.18e+02]:        3        1
+[9.18e+02 9.30e+02]:        3        1
+[9.30e+02 9.41e+02]:        1        1
+[9.41e+02 9.52e+02]:        1        1
+[9.52e+02 9.63e+02]:        1        0
+[9.63e+02 9.74e+02]:        3        2
+[9.74e+02 9.86e+02]:        1        0
+[9.86e+02 9.97e+02]:        3        0
+[9.97e+02 1.01e+03]:        3        3
+[1.01e+03 1.02e+03]:        4        2
+[1.02e+03 1.03e+03]:        4        2
+[1.03e+03 1.04e+03]:        3        2
+[1.04e+03 1.05e+03]:        2        0
+[1.06e+03 1.08e+03]:        1        0
+[1.08e+03 1.09e+03]:        3        0
+[1.09e+03 1.10e+03]:        3        2
+[1.10e+03 1.11e+03]:        2        0
+[1.11e+06 infinity]:      155       34
+
+Net FE_OFN182002_n nrTerm=2 conLen=1.22e+06 len=(1098910 124140)
+  Inst FE_OFC1235_u_cluster_n_96027 loc=(1140020 41935)
+  Inst u_cluster_g163746 loc=(42280 73640)
+Net FE_OFN181983_n_3287 nrTerm=2 conLen=1.69e+06 len=(1581780 111465)
+  Inst g14506__2398 loc=(997640 82040)
+  Inst FE_OFC645_n_3287 loc=(2575610 59860)
+Net FE_OFN181982_n nrTerm=2 conLen=1.45e+06 len=(1352590 100620)
+  Inst FE_OFC1237_u_cluster_n_96028 loc=(1394820 59855)
+  Inst u_cluster_g163734 loc=(42280 64680)
+Net FE_OFN159_n_3281 nrTerm=2 conLen=1.12e+06 len=(1092340 25810)
+  Inst FE_OFC1157_n_3281 loc=(2559060 135025)
+  Inst g14517__5122 loc=(1469160 135800)
+Net FE_OFN158_n_3243 nrTerm=2 conLen=1.36e+06 len=(1335750 27210)
+  Inst FE_OFC813_n_3243 loc=(2542540 139345)
+  Inst g14513__3680 loc=(1207780 133950)
+Net FE_OFN156_n_3264 nrTerm=2 conLen=1.45e+06 len=(1322460 128775)
+  Inst FE_OFC1191_n_3264 loc=(2521510 36460)
+  Inst g14503__7410 loc=(1199240 64120)
+Net FE_OFN155_n_3282 nrTerm=2 conLen=1.43e+06 len=(1394930 33400)
+  Inst FE_OFC381_n_3282 loc=(2592630 126060)
+  Inst g14512__6783 loc=(1198260 132610)
+Net FE_OFN154_n_3261 nrTerm=2 conLen=1.50e+06 len=(1400255 101875)
+  Inst FE_OFC816_n_3261 loc=(2587620 40785)
+  Inst g14504__6417 loc=(1187480 94920)
+Net FE_OFN147_n_3260 nrTerm=2 conLen=1.12e+06 len=(1096670 26100)
+  Inst FE_RC_29_0 loc=(1728440 55160)
+  Inst FE_OFC796_n_3260 loc=(632100 37615)
+Net FE_OFN144_n_3266 nrTerm=2 conLen=1.23e+06 len=(1098550 128010)
+  Inst FE_OFC810_n_3266 loc=(622020 37615)
+  Inst g14518__8246 loc=(1720180 63390)
+Net FE_OFN143_n_3239 nrTerm=2 conLen=1.18e+06 len=(1092140 87945)
+  Inst FE_OFC812_n_3239 loc=(628740 73455)
+  Inst g14510__8428 loc=(1720740 104610)
+Net FE_OFN142_n_3255 nrTerm=2 conLen=1.18e+06 len=(1118510 64780)
+  Inst FE_OFC809_n_3255 loc=(614740 46575)
+  Inst g14515__2802 loc=(1733060 63390)
+Net FE_OFN141_n_3265 nrTerm=2 conLen=1.19e+06 len=(1138670 51900)
+  Inst FE_OFC896_n_3265 loc=(553140 109295)
+  Inst g14509__4319 loc=(1691060 122530)
+Net FE_OFN140_n_3283 nrTerm=2 conLen=1.16e+06 len=(1137550 25020)
+  Inst FE_OFC1189_n_3283 loc=(590660 100335)
+  Inst g14505__5477 loc=(1727880 112840)
+Net FE_OFN137_n_3272 nrTerm=2 conLen=1.19e+06 len=(1159910 27770)
+  Inst g14508__6260 loc=(1736840 59080)
+  Inst FE_OFC330_n_3272 loc=(577220 55535)
+Net FE_OFN132_n_3277 nrTerm=2 conLen=1.23e+06 len=(1174510 55160)
+  Inst g14507__5107 loc=(1726900 72350)
+  Inst FE_OFC368_n_3277 loc=(552580 40785)
+Net FE_OFN29_n_3253 nrTerm=2 conLen=1.24e+06 len=(1212700 24665)
+  Inst FE_OFC422_n_3253 loc=(483700 135025)
+  Inst g14514__1617 loc=(1694840 135800)
+Net FE_OFN28_n_3245 nrTerm=2 conLen=1.27e+06 len=(1244660 25480)
+  Inst FE_OFC928_n_3245 loc=(477540 121425)
+  Inst g14516__1705 loc=(1720740 126110)
+Net clk_160m_i nrTerm=2 conLen=3.60e+06 len=(3437190 163390)
+  FTerm ddrs2_clk_160m_o loc=(3426920 165760)
+  FTerm clk_160m_i loc=(0 2520)
+Net src_data_i[0][11] nrTerm=2 conLen=1.23e+06 len=(1064750 165595)
+  FTerm src_data_i[0][11] loc=(2271080 0)
+  Inst u_cluster_g162962 loc=(1206380 35950)
+Net src_data_i[0][10] nrTerm=2 conLen=1.28e+06 len=(1183470 99030)
+  FTerm src_data_i[0][10] loc=(2314200 0)
+  Inst u_cluster_g162961 loc=(1130920 28280)
+Net src_data_i[0][9] nrTerm=2 conLen=1.19e+06 len=(1160090 27350)
+  FTerm src_data_i[0][9] loc=(2357880 0)
+  Inst u_cluster_g162966 loc=(1198540 26990)
+Net src_data_i[0][8] nrTerm=2 conLen=1.17e+06 len=(1131950 36310)
+  FTerm src_data_i[0][8] loc=(2401560 0)
+  Inst u_cluster_g162964 loc=(1269660 35950)
+Net src_data_i[0][7] nrTerm=2 conLen=1.19e+06 len=(1168490 24530)
+  FTerm src_data_i[0][7] loc=(2445240 0)
+  Inst u_cluster_g162953 loc=(1276940 24530)
+Net src_data_i[0][6] nrTerm=2 conLen=1.36e+06 len=(1259260 102950)
+  FTerm src_data_i[0][6] loc=(2488920 0)
+  Inst u_cluster_g162958 loc=(1230180 24530)
+Net src_data_i[0][5] nrTerm=2 conLen=1.41e+06 len=(1304430 109670)
+  FTerm src_data_i[0][5] loc=(2532600 0)
+  Inst u_cluster_g162965 loc=(1228500 26990)
+Net src_data_i[0][4] nrTerm=2 conLen=1.50e+06 len=(1407470 93990)
+  FTerm src_data_i[0][4] loc=(2576280 0)
+  Inst u_cluster_g162957 loc=(1169140 26990)
+Net src_data_i[0][3] nrTerm=2 conLen=1.34e+06 len=(1313390 31270)
+  FTerm src_data_i[0][3] loc=(2619960 0)
+  Inst u_cluster_g162956 loc=(1306620 24530)
+Net src_data_i[0][2] nrTerm=2 conLen=1.38e+06 len=(1357070 18390)
+  FTerm src_data_i[0][2] loc=(2663640 0)
+  Inst u_cluster_g162955 loc=(1306620 18030)
+Net src_data_i[0][1] nrTerm=2 conLen=1.45e+06 len=(1337840 111910)
+  FTerm src_data_i[0][1] loc=(2707320 0)
+  Inst u_cluster_g163096 loc=(1369480 19320)
+Net src_data_i[0][0] nrTerm=2 conLen=1.49e+06 len=(1465150 22310)
+  FTerm src_data_i[0][0] loc=(2751000 0)
+  Inst u_cluster_g162959 loc=(1286040 10360)
+Net ddrs2_data_l_o[0] nrTerm=2 conLen=1.18e+06 len=(1153980 23100)
+  FTerm ddrs2_data_l_o[0] loc=(3429720 165760)
+  Inst u_cluster_g90855 loc=(2276820 143500)
+Net ddrs2_data_h_o[0] nrTerm=2 conLen=1.14e+06 len=(1129660 13300)
+  FTerm ddrs2_data_h_o[0] loc=(3424120 165760)
+  Inst u_cluster_g90846 loc=(2294740 152460)
+Net u_cluster_n_181753 nrTerm=2 conLen=2.21e+06 len=(2193775 19190)
+  Inst u_cluster_g163330 loc=(756840 19320)
+  Inst u_cluster_g163686 loc=(2948540 15055)
+
+Total number of long connections = 68
+Io: nrCon=16
+HInst topLevel: nrCon=52
+
+
+Total length: 9.907e+05um, number of vias: 81612
+M1(H) length: 1.272e+05um, number of vias: 43309
+M2(V) length: 2.805e+05um, number of vias: 38303
+M3(H) length: 5.830e+05um, number of vias: 0
+M4(V) length: 0.000e+00um
+
+STATUS=PASS
+COMMAND=reportRoute

@@ -1,0 +1,4 @@
+LABEL=CTS_DESIGN
+TRY=ccopt_design
+STATUS=PASS
+COMMAND=ccopt_design

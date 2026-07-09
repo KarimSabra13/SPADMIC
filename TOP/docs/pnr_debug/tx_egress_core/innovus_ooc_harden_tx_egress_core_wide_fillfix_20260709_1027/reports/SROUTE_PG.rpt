@@ -1,0 +1,6 @@
+LABEL=SROUTE_PG
+STATUS=DEFERRED_TOP_LEVEL_HOOKUP
+POWER_NET=VDD
+GROUND_NET=VSS
+REASON=Local OOC hardening exports METTP VDD/VSS access pins only. Top-level assembly must hook these pins to the final PG network.
+OVERRIDE=Set SPADMIC_OOC_ENABLE_PG_SROUTE=1 to run experimental local PG special routing.
