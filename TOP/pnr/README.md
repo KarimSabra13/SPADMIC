@@ -144,6 +144,8 @@ CSV-aligned north pins under the DDRs2 macro:
 ```bash
 export SPADMIC_OOC_REQUIRE_DRC_SAFE_FILLER=1
 export SPADMIC_OOC_ENABLE_MIN_AREA_REPAIR=1
+unset SPADMIC_GENUS_ALLOW_SCAN_CELLS
+unset SPADMIC_OOC_IGNORE_UNDEFINED_SCAN
 unset SPADMIC_OOC_ENABLE_PG_SROUTE
 
 GENUS_RUN_ID=genus_ooc_tx_leafs_$(date +%Y%m%d_%H%M)
@@ -160,6 +162,12 @@ non-PG `verify_drc` markers, regular connectivity PASS, setup/hold PASS, and PG
 explicitly deferred to top-level hookup. Do not use the wide monolithic
 `tx_egress_core` route profile loop as the primary closure path unless the
 leaf/assembly path needs a regression comparison.
+
+The OOC Genus runner avoids scan-capable sequential cells by default because
+these prototype abstracts do not have scan-chain DEF. The Innovus wrapper also
+sets scan placement to ignore undefined scan-chain ordering. Use
+`SPADMIC_GENUS_ALLOW_SCAN_CELLS=1` or `SPADMIC_OOC_IGNORE_UNDEFINED_SCAN=0`
+only for an explicit scan/DFT debug rerun.
 
 This is typical-only OOC implementation for top-review handoff. PVS, PEX,
 MMMC, foundry LVS, and direct OA import remain separate later gates.

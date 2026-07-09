@@ -28,6 +28,63 @@ proc run_report {cmd out_file {fatal 0}} {
   return 1
 }
 
+proc env_truthy {name default_value} {
+  if {[info exists ::env($name)] && $::env($name) ne ""} {
+    set value $::env($name)
+  } else {
+    set value $default_value
+  }
+  set normalized [string tolower [string trim $value]]
+  return [expr {$normalized eq "1" || $normalized eq "yes" || $normalized eq "true" || $normalized eq "on"}]
+}
+
+proc compact_report_value {value} {
+  regsub -all {\s+} $value { } compact
+  return [string trim $compact]
+}
+
+proc configure_scan_cell_policy {report_dir} {
+  set out_file [file join $report_dir messages scan_cell_policy.rpt]
+  file mkdir [file dirname $out_file]
+  set fh [open $out_file w]
+  puts $fh "LABEL=SCAN_CELL_POLICY"
+  puts $fh "SPADMIC_GENUS_ALLOW_SCAN_CELLS=[expr {[env_truthy SPADMIC_GENUS_ALLOW_SCAN_CELLS 0] ? 1 : 0}]"
+  if {[env_truthy SPADMIC_GENUS_ALLOW_SCAN_CELLS 0]} {
+    puts $fh "STATUS=DISABLED_BY_ENV"
+    puts $fh "REASON=Scan-capable library cells are allowed for this run."
+    close $fh
+    return
+  }
+
+  set count 0
+  set avoid_failures 0
+  if {[catch {
+    foreach cell [get_db lib_cells -if {.scan_enable_pins!=""}] {
+      incr count
+      if {[catch {set_db $cell .avoid true} cell_err]} {
+        incr avoid_failures
+        puts $fh "AVOID_FAILURE=[compact_report_value $cell]: [compact_report_value $cell_err]"
+      }
+    }
+  } err]} {
+    puts $fh "STATUS=SKIPPED_UNSUPPORTED"
+    puts $fh "ERROR=[compact_report_value $err]"
+    close $fh
+    puts "WARN: scan-cell avoidance skipped or unsupported: $err"
+    return
+  }
+
+  puts $fh "SCAN_CAPABLE_LIB_CELL_COUNT=$count"
+  puts $fh "AVOID_FAILURE_COUNT=$avoid_failures"
+  if {$avoid_failures == 0} {
+    puts $fh "STATUS=PASS"
+  } else {
+    puts $fh "STATUS=REVIEW_REQUIRED"
+  }
+  close $fh
+  puts "INFO: scan-capable library cells avoided for prototype OOC synthesis: count=$count failures=$avoid_failures"
+}
+
 proc maybe_run_clock_report {from_clock to_clock out_file} {
   if {[llength [get_clocks $from_clock -quiet]] == 0} {
     return
@@ -230,6 +287,8 @@ maybe_run_unconstrained_clock_report clk_sys clk_ref_40m [file join $REPORT_DIR 
 maybe_run_unconstrained_clock_report clk_ref_40m clk_sys [file join $REPORT_DIR timing report_timing_unconstrained_clk_ref_40m_to_clk_sys.rpt]
 run_report {report_timing -max_paths 20} [file join $REPORT_DIR timing report_timing_pre_synth.rpt]
 
+configure_scan_cell_policy $REPORT_DIR
+
 if {[catch {syn_generic} generic_err]} {
   puts stderr "ERROR: syn_generic failed: $generic_err"
   exit 7
@@ -301,6 +360,7 @@ foreach rel {
   reports/qor/report_area.rpt
   reports/qor/report_area_hierarchy.rpt
   reports/qor/report_design_rules.rpt
+  reports/messages/scan_cell_policy.rpt
   reports/messages/report_messages.rpt
   reports/messages/warning_classification.rpt
 } {

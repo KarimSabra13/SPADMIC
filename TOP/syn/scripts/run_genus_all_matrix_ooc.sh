@@ -75,8 +75,9 @@ select_block_sdc() {
   local block="$1"
   local top="$2"
   local candidate
+  local derived_top="${top%_topcfg}"
 
-  for candidate in "$OOC_SDC_DIR/${top}.sdc" "$OOC_SDC_DIR/${block}.sdc"; do
+  for candidate in "$OOC_SDC_DIR/${top}.sdc" "$OOC_SDC_DIR/${derived_top}.sdc" "$OOC_SDC_DIR/${block}.sdc"; do
     if [[ -f "$candidate" ]]; then
       printf '%s\n' "$candidate"
       return 0

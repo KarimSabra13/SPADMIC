@@ -112,6 +112,75 @@ proc spadmic_ooc_place_max_density {} {
     return [spadmic_ooc_env SPADMIC_OOC_PLACE_MAX_DENSITY [spadmic_ooc_cfg place_max_density]]
 }
 
+proc spadmic_ooc_configure_scan_placement {} {
+    set rpt [file join $::spadmic_ooc_reports_dir SCAN_PLACEMENT_MODE.rpt]
+    set enabled [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_IGNORE_UNDEFINED_SCAN 1]]
+    set allow_reorder [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ALLOW_SCAN_REORDER 0]]
+    set fh [open $rpt w]
+    puts $fh "LABEL=SCAN_PLACEMENT_MODE"
+    puts $fh "SPADMIC_OOC_IGNORE_UNDEFINED_SCAN=[expr {$enabled ? 1 : 0}]"
+    puts $fh "SPADMIC_OOC_ALLOW_SCAN_REORDER=[expr {$allow_reorder ? 1 : 0}]"
+    if {!$enabled} {
+        puts $fh "STATUS=DISABLED_BY_ENV"
+        puts $fh "REASON=Undefined scan-chain handling left to default Innovus placement policy."
+        close $fh
+        spadmic_ooc_status_set SCAN_PLACEMENT_MODE DISABLED_BY_ENV
+        return
+    }
+
+    set required_cmds [list \
+        {setPlaceMode -place_global_ignore_scan true} \
+        {setPlaceMode -ignoreScan true}]
+    set optional_cmds [list]
+    if {!$allow_reorder} {
+        set optional_cmds [list \
+            {setPlaceMode -place_global_reorder_scan false} \
+            {setPlaceMode -place_detail_reorder_scan false}]
+    }
+
+    set required_pass 0
+    set required_fail 0
+    set optional_pass 0
+    set optional_fail 0
+    foreach cmd $required_cmds {
+        puts $fh "TRY_REQUIRED=$cmd"
+        if {![catch {uplevel #0 $cmd} err]} {
+            incr required_pass
+            puts $fh "TRY_STATUS=PASS"
+            puts $fh "COMMAND=$cmd"
+        } else {
+            incr required_fail
+            puts $fh "TRY_STATUS=FAIL"
+            puts $fh "ERROR=[spadmic_ooc_report_value $err]"
+        }
+    }
+    foreach cmd $optional_cmds {
+        puts $fh "TRY_OPTIONAL=$cmd"
+        if {![catch {uplevel #0 $cmd} err]} {
+            incr optional_pass
+            puts $fh "TRY_STATUS=PASS"
+            puts $fh "COMMAND=$cmd"
+        } else {
+            incr optional_fail
+            puts $fh "TRY_STATUS=FAIL"
+            puts $fh "ERROR=[spadmic_ooc_report_value $err]"
+        }
+    }
+
+    puts $fh "REQUIRED_PASS_COUNT=$required_pass"
+    puts $fh "REQUIRED_FAIL_COUNT=$required_fail"
+    puts $fh "OPTIONAL_PASS_COUNT=$optional_pass"
+    puts $fh "OPTIONAL_FAIL_COUNT=$optional_fail"
+    if {$required_pass > 0} {
+        puts $fh "STATUS=PASS"
+        spadmic_ooc_status_set SCAN_PLACEMENT_MODE PASS
+    } else {
+        puts $fh "STATUS=REVIEW_REQUIRED"
+        spadmic_ooc_status_set SCAN_PLACEMENT_MODE REVIEW_REQUIRED
+    }
+    close $fh
+}
+
 proc spadmic_ooc_layer_index {layer fallback} {
     if {[string is integer -strict $layer]} {
         return $layer
@@ -1032,6 +1101,7 @@ proc spadmic_ooc_route_layer_setup {} {
 proc spadmic_ooc_place_design {} {
     set density [spadmic_ooc_place_max_density]
     spadmic_ooc_status_set PLACE_MAX_DENSITY $density
+    spadmic_ooc_configure_scan_placement
     catch {setPlaceMode -place_global_max_density $density}
     spadmic_ooc_try_first PLACE_DESIGN [list {place_design} {placeDesign}] 1
     spadmic_ooc_capture_first [file join $::spadmic_ooc_reports_dir report_area_post_place.rpt] report_area_post_place [list {report_area} {reportArea}] 0
