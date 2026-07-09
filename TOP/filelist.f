@@ -24,6 +24,7 @@ rtl/spadmic_matrix_top_csr.sv
 rtl/spadmic_position_snapshot_packetizer.sv
 rtl/spadmic_event_bundle_tx.sv
 rtl/spadmic_tx_egress_cluster.sv
+rtl/spadmic_tx_egress_core.sv
 
 // ── I2C control plane (from I2C/) ────────────────────────────────
 ../I2C/rtl/spadmic_i2c_slave.sv

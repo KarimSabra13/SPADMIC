@@ -359,6 +359,10 @@ proc spadmic_ooc_place_pins {} {
     spadmic_ooc_place_side_pins WEST [spadmic_ooc_cfg_list pins_west]
     spadmic_ooc_place_side_pins SOUTH [spadmic_ooc_cfg_list pins_south]
     spadmic_ooc_place_side_pins NORTH [spadmic_ooc_cfg_list pins_north]
+    set pin_assignment_tcl [spadmic_ooc_cfg_default pin_assignment_tcl ""]
+    if {$pin_assignment_tcl ne "" && [file exists $pin_assignment_tcl]} {
+        spadmic_ooc_try_first PLACE_PINS_GUIDED [list [list source $pin_assignment_tcl]] 1
+    }
 }
 
 proc spadmic_ooc_route_layer_setup {} {

@@ -49,7 +49,7 @@ DEFAULT_BLOCKS=(
   matrix_cfg_ctrl
   event_coordinator
   event_bundle_tx
-  tx_egress_cluster
+  tx_egress_core
   output_fifo
   matrix_top_csr
   i2c_csr_bridge

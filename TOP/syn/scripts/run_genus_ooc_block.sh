@@ -46,8 +46,8 @@ case "$BLOCK_IN" in
   event_bundle_tx|spadmic_event_bundle_tx)
     BLOCK_SPEC="event_bundle_tx:spadmic_event_bundle_tx"
     ;;
-  tx_egress_cluster|tx_egress_core|spadmic_tx_egress_cluster)
-    BLOCK_SPEC="tx_egress_cluster:spadmic_tx_egress_cluster"
+  tx_egress_cluster|tx_egress_core|spadmic_tx_egress_cluster|spadmic_tx_egress_core)
+    BLOCK_SPEC="tx_egress_core:spadmic_tx_egress_core"
     ;;
   output_fifo|spadmic_output_fifo|spadmic_output_fifo_topcfg)
     BLOCK_SPEC="output_fifo:spadmic_output_fifo_topcfg"

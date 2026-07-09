@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
+import re
 from pathlib import Path
 from typing import Iterable
 
@@ -112,10 +114,23 @@ def summarize_bbox(rows: list[dict[str, str]], cls: str) -> list[str]:
     return lines
 
 
-def write_pin_plan_csv(path: Path, plan: dict[str, list[str]]) -> None:
+def write_pin_plan_csv(path: Path, plan: dict[str, list[str]], assignments: dict[str, dict[str, str]] | None = None) -> None:
+    assignments = assignments or {}
     with path.open("w", newline="") as fh:
         writer = csv.writer(fh)
-        writer.writerow(["port", "side", "layer", "order", "reason"])
+        writer.writerow([
+            "port",
+            "side",
+            "layer",
+            "order",
+            "reason",
+            "target_x_um",
+            "target_y_um",
+            "source_inst",
+            "source_term",
+            "source_x_um",
+            "source_y_um",
+        ])
         for side, ports in plan.items():
             for order, port in enumerate(ports):
                 if side == "NORTH":
@@ -124,7 +139,20 @@ def write_pin_plan_csv(path: Path, plan: dict[str, list[str]]) -> None:
                     reason = "toward FIFO/event-bundle producer"
                 else:
                     reason = "clock/reset/control entry"
-                writer.writerow([port, side, "MET3", order, reason])
+                assignment = assignments.get(port, {})
+                writer.writerow([
+                    port,
+                    side,
+                    "MET3",
+                    order,
+                    reason,
+                    assignment.get("target_x_um", ""),
+                    assignment.get("target_y_um", ""),
+                    assignment.get("source_inst", ""),
+                    assignment.get("source_term", ""),
+                    assignment.get("source_x_um", ""),
+                    assignment.get("source_y_um", ""),
+                ])
 
 
 def write_manifest(path: Path, files: dict[str, Path]) -> None:
@@ -133,6 +161,87 @@ def write_manifest(path: Path, files: dict[str, Path]) -> None:
         writer.writerow(["name", "path"])
         for name, file_path in files.items():
             writer.writerow([name, str(file_path)])
+
+
+def term_lane(term: str) -> int | None:
+    match = re.search(r"[<\[]([0-9]+)[>\]]", term)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def ddrs2_macro_instance(instances: list[dict[str, str]]) -> dict[str, str]:
+    for row in instances:
+        if row.get("cell") == "DDRs2":
+            return row
+    raise SystemExit("could not find DDRs2 macro instance in SPADMIC2_instances_enriched.csv")
+
+
+def tx_egress_core_north_assignments(
+    ddrs2_pins: list[dict[str, str]],
+    block_norm_llx: float,
+    die_height_um: float,
+    signal_pin_depth_um: float,
+) -> tuple[list[str], dict[str, dict[str, str]], list[dict[str, str]]]:
+    mapped: list[tuple[float, str, dict[str, str]]] = []
+    for row in ddrs2_pins:
+        term = row.get("term", "")
+        lane = term_lane(term)
+        if lane is None:
+            continue
+        if term.startswith("DATA_L"):
+            mapped.append((float_or_zero(row.get("norm_top_cx", "")), f"ddrs2_data_l_o[{lane}]", row))
+        elif term.startswith("DATA_H"):
+            mapped.append((float_or_zero(row.get("norm_top_cx", "")), f"ddrs2_data_h_o[{lane}]", row))
+
+    clk_rows = [row for row in ddrs2_pins if row.get("term", "") == "CLK_160M"]
+    if clk_rows:
+        # The macro exposes two CLK_160M pins. The core has one clock output, so
+        # place it at the right/east clock pin and report both source pins in
+        # the context for top-level review.
+        clk_row = max(clk_rows, key=lambda row: float_or_zero(row.get("norm_top_cx", "")))
+        mapped.append((float_or_zero(clk_row.get("norm_top_cx", "")), "ddrs2_clk_160m_o", clk_row))
+
+    mapped.sort(key=lambda item: (item[0], item[1]))
+    ports: list[str] = []
+    assignments: dict[str, dict[str, str]] = {}
+    target_y = die_height_um - (signal_pin_depth_um / 2.0)
+    for x_abs, port, row in mapped:
+        if port in assignments:
+            continue
+        target_x = x_abs - block_norm_llx
+        ports.append(port)
+        assignments[port] = {
+            "target_x_um": f"{target_x:.3f}",
+            "target_y_um": f"{target_y:.3f}",
+            "source_inst": row.get("inst", ""),
+            "source_term": row.get("term", ""),
+            "source_x_um": f"{x_abs:.3f}",
+            "source_y_um": f"{float_or_zero(row.get('norm_top_cy', '')):.3f}",
+        }
+    return ports, assignments, clk_rows
+
+
+def write_pin_assignment_tcl(
+    path: Path,
+    assignments: dict[str, dict[str, str]],
+    side: str,
+    layer: str,
+    width_um: float,
+    depth_um: float,
+) -> None:
+    with path.open("w") as fh:
+        fh.write("# Generated guided pin assignments for TX_EGRESS_CORE north edge.\n")
+        fh.write("set tx_egress_core_pin_assignment_failures [list]\n")
+        for port, assignment in assignments.items():
+            fh.write(f"if {{[catch {{editPin -pin {tcl_quote(port)} -side {side} -layer {layer} ")
+            fh.write(f"-assign {{{assignment['target_x_um']} {assignment['target_y_um']}}} ")
+            fh.write(f"-pinWidth {width_um:.3f} -pinDepth {depth_um:.3f} -fixedPin 1}} err]}} {{\n")
+            fh.write(f"  lappend tx_egress_core_pin_assignment_failures [format {{%s:%s}} {tcl_quote(port)} $err]\n")
+            fh.write("}\n")
+        fh.write("if {[llength $tx_egress_core_pin_assignment_failures] > 0} {\n")
+        fh.write('  error "TX_EGRESS_CORE_PIN_ASSIGNMENT_FAILED $tx_egress_core_pin_assignment_failures"\n')
+        fh.write("}\n")
 
 
 def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
@@ -243,20 +352,84 @@ def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
             fh.write(f"- `{side}`: {', '.join('`' + port + '`' for port in ports)}\n")
 
 
-def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
+def generate_tx_egress_core(layout_dir: Path, out_dir: Path) -> None:
     csv_dir = layout_dir / "csv"
     reports_dir = layout_dir / "reports"
     instances_csv = csv_dir / "SPADMIC2_instances_enriched.csv"
+    instance_pins_csv = csv_dir / "SPADMIC2_instance_pins_enriched.csv"
     ddr_pins_csv = reports_dir / "SPADMIC2_ddr_slvs_pins.csv"
     matrix_pins_csv = reports_dir / "SPADMIC2_matrix_pins.csv"
     nets_csv = csv_dir / "SPADMIC2_nets.csv"
-    for path in [instances_csv, ddr_pins_csv, matrix_pins_csv, nets_csv]:
+    for path in [instances_csv, instance_pins_csv, ddr_pins_csv, matrix_pins_csv, nets_csv]:
         require_file(path)
 
     instances = read_headered_csv(instances_csv)
-    ddr_pins = read_pin_csv(ddr_pins_csv)
+    instance_pins = read_pin_csv(instance_pins_csv)
+    ddr_pins = [row for row in instance_pins if row.get("master_cell") == "DDRs2"]
+    ddr_report_pins = read_pin_csv(ddr_pins_csv)
     matrix_pins = read_pin_csv(matrix_pins_csv)
     counts = class_counts(instances)
+    ddrs2_inst = ddrs2_macro_instance(instances)
+
+    data_clk_rows = [
+        row for row in ddr_pins
+        if row.get("term", "").startswith(("DATA_L", "DATA_H")) or row.get("term", "") == "CLK_160M"
+    ]
+    if not data_clk_rows:
+        raise SystemExit("could not find DDRs2 DATA_L/DATA_H/CLK_160M pins in SPADMIC2_instance_pins_enriched.csv")
+
+    tx_margin_left_um = 40.0
+    tx_margin_right_default_um = 40.0
+    tx_margin_right_min_um = 20.0
+    tx_side_macro_clearance_um = 10.0
+    tx_channel_below_ddrs2_um = 30.0
+    core_margin_um = 8.0
+    target_utilization = 0.65
+    place_max_density = 0.72
+    signal_pin_width_um = 0.40
+    signal_pin_depth_um = 0.80
+    latest_genus_cell_area_um2 = 334245.0
+
+    data_x_min = min(float_or_zero(row.get("norm_top_cx", "")) for row in data_clk_rows)
+    data_x_max = max(float_or_zero(row.get("norm_top_cx", "")) for row in data_clk_rows)
+    side_macro_rows = [row for row in instances if row.get("cell") == "TXRX4TDC2"]
+    side_macro_llx = min([float_or_zero(row.get("norm_llx", "")) for row in side_macro_rows] or [0.0])
+    if side_macro_llx > data_x_max:
+        available_right_margin = side_macro_llx - data_x_max - tx_side_macro_clearance_um
+        tx_margin_right_um = max(
+            tx_margin_right_min_um,
+            min(tx_margin_right_default_um, available_right_margin),
+        )
+    else:
+        tx_margin_right_um = tx_margin_right_default_um
+    block_norm_llx = data_x_min - tx_margin_left_um
+    block_norm_urx = data_x_max + tx_margin_right_um
+    die_width_um = block_norm_urx - block_norm_llx
+    core_width_um = die_width_um - (2.0 * core_margin_um)
+    estimated_core_height = latest_genus_cell_area_um2 / (target_utilization * core_width_um)
+    core_height_um = math.ceil(max(150.0, estimated_core_height))
+    die_height_um = core_height_um + (2.0 * core_margin_um)
+    ddrs2_bottom_y = float_or_zero(ddrs2_inst.get("norm_lly", ""))
+    block_norm_ury = ddrs2_bottom_y - tx_channel_below_ddrs2_um
+    block_norm_lly = block_norm_ury - die_height_um
+    mptdc_top_y = max(
+        [float_or_zero(row.get("norm_ury", "")) for row in instances if row.get("class") == "MPTDC"] or [0.0]
+    )
+    matrix_array_top_y = max(
+        [
+            float_or_zero(row.get("norm_ury", ""))
+            for row in instances
+            if row.get("cell", "").lower().startswith("matrice")
+        ] or [0.0]
+    )
+    side_macro_clearance_x = side_macro_llx - block_norm_urx if side_macro_llx > 0.0 else 0.0
+
+    north_ports, north_assignments, clk_rows = tx_egress_core_north_assignments(
+        ddr_pins,
+        block_norm_llx,
+        die_height_um,
+        signal_pin_depth_um,
+    )
 
     pin_plan = {
         "WEST": [
@@ -279,6 +452,7 @@ def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
             "output_fifo_full_o",
             "output_fifo_almost_full_o",
             "output_fifo_overflow_o",
+            "ddr_pair_valid_o",
             "ddr_padded_o",
             "ddr_busy_o",
             "ddr_empty_o",
@@ -290,29 +464,31 @@ def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
             *bus("src_eop_i", 4),
             *bus2("src_data_i", 4, 16),
         ],
-        "NORTH": [
-            "ddrs2_clk_160m_o",
-            *bus("ddrs2_data_l_o", 19),
-            *bus("ddrs2_data_h_o", 19),
-            "ddr_clk_o",
-            "ddr_pair_valid_o",
-            *bus("ddr_data_l_o", 16),
-            *bus("ddr_data_h_o", 16),
-        ],
+        "NORTH": north_ports,
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)
     config_tcl = out_dir / "ooc_block_harden_config.tcl"
     pin_plan_csv = out_dir / "ooc_block_pin_plan.csv"
+    pin_assignment_tcl = out_dir / "ooc_block_pin_assignments.tcl"
     context_md = out_dir / "ooc_block_context.md"
     input_manifest = out_dir / "ooc_harden_input_manifest.csv"
 
-    write_pin_plan_csv(pin_plan_csv, pin_plan)
+    write_pin_plan_csv(pin_plan_csv, pin_plan, north_assignments)
+    write_pin_assignment_tcl(
+        pin_assignment_tcl,
+        north_assignments,
+        "NORTH",
+        "MET3",
+        signal_pin_width_um,
+        signal_pin_depth_um,
+    )
     write_manifest(
         input_manifest,
         {
             "layout_audit_dir": layout_dir,
             "instances_enriched": instances_csv,
+            "instance_pins_enriched": instance_pins_csv,
             "ddr_slvs_pins": ddr_pins_csv,
             "matrix_pins": matrix_pins_csv,
             "nets": nets_csv,
@@ -323,15 +499,26 @@ def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
         fh.write("# Generated by TOP/pnr/scripts/gen_ooc_block_harden_plan.py\n")
         fh.write("namespace eval spadmic_ooc {\n")
         values = {
-            "block": "tx_egress_cluster",
-            "top_module": "spadmic_tx_egress_cluster",
+            "block": "tx_egress_core",
+            "top_module": "spadmic_tx_egress_core",
             "layout_audit_dir": str(layout_dir),
             "pin_plan_csv": str(pin_plan_csv),
-            "target_utilization": "0.55",
-            "place_max_density": "0.65",
-            "core_width_um": "920.0",
-            "core_height_um": "760.0",
-            "core_margin_um": "20.0",
+            "pin_assignment_tcl": str(pin_assignment_tcl),
+            "target_utilization": f"{target_utilization:.2f}",
+            "place_max_density": f"{place_max_density:.2f}",
+            "core_width_um": f"{core_width_um:.3f}",
+            "core_height_um": f"{core_height_um:.3f}",
+            "core_margin_um": f"{core_margin_um:.3f}",
+            "prelim_top_bbox_llx_um": f"{block_norm_llx:.3f}",
+            "prelim_top_bbox_lly_um": f"{block_norm_lly:.3f}",
+            "prelim_top_bbox_urx_um": f"{block_norm_urx:.3f}",
+            "prelim_top_bbox_ury_um": f"{block_norm_ury:.3f}",
+            "ddrs2_data_pin_x_min_um": f"{data_x_min:.3f}",
+            "ddrs2_data_pin_x_max_um": f"{data_x_max:.3f}",
+            "ddrs2_margin_left_um": f"{tx_margin_left_um:.3f}",
+            "ddrs2_margin_right_um": f"{tx_margin_right_um:.3f}",
+            "txrx4tdc2_clearance_x_um": f"{side_macro_clearance_x:.3f}",
+            "ddrs2_below_channel_um": f"{tx_channel_below_ddrs2_um:.3f}",
             "stdcell_site": "core_jihd",
             "signal_bottom_layer": "MET1",
             "signal_top_layer": "MET3",
@@ -342,8 +529,8 @@ def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
             "pg_ground_net": "VSS",
             "pg_power_pin": "VDD",
             "pg_ground_pin": "VSS",
-            "signal_pin_width_um": "0.40",
-            "signal_pin_depth_um": "0.80",
+            "signal_pin_width_um": f"{signal_pin_width_um:.2f}",
+            "signal_pin_depth_um": f"{signal_pin_depth_um:.2f}",
             "signal_pin_spacing_um": "1.40",
             "pg_pin_width_um": "60.0",
             "pg_pin_depth_um": "4.0",
@@ -357,19 +544,25 @@ def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
         fh.write("}\n")
 
     ddr_data_pin_count = sum(1 for row in ddr_pins if row.get("term", "").startswith(("DATA_L", "DATA_H")))
-    north_pin_count = sum(1 for row in ddr_pins if row.get("nearest_inst_side", "") == "TOP")
+    north_pin_count = sum(1 for row in ddr_report_pins if row.get("nearest_inst_side", "") == "TOP")
     with context_md.open("w") as fh:
-        fh.write("# TX Egress Cluster OOC Hardening Context\n\n")
-        fh.write("This context was generated from the read-only SPADMIC2 layout audit. The block is hardened as a local abstract, not at absolute top coordinates.\n\n")
+        fh.write("# TX_EGRESS_CORE OOC Hardening Context\n\n")
+        fh.write("This context was generated from the read-only SPADMIC2 layout audit. The block is hardened as a local abstract and includes a preliminary top-coordinate placement bbox for review.\n\n")
         fh.write(f"- Layout audit dir: `{layout_dir}`\n")
-        fh.write("- Block: `tx_egress_cluster`\n")
-        fh.write("- Top module: `spadmic_tx_egress_cluster`\n")
+        fh.write("- Block: `tx_egress_core`\n")
+        fh.write("- Top module: `spadmic_tx_egress_core`\n")
         fh.write("- Contents: `spadmic_event_bundle_tx`, `spadmic_output_fifo_topcfg`, `spadmic_ddr16_tx_pairer`, `spadmic_ddrs2_adapter`\n")
-        fh.write("- Local core target: `920.0 um x 760.0 um`, `55%` utilization\n")
+        fh.write(f"- DDRs2 macro: `{ddrs2_inst.get('inst')}` bbox=({float_or_zero(ddrs2_inst.get('norm_llx', '')):.3f}, {float_or_zero(ddrs2_inst.get('norm_lly', '')):.3f})-({float_or_zero(ddrs2_inst.get('norm_urx', '')):.3f}, {float_or_zero(ddrs2_inst.get('norm_ury', '')):.3f}) um\n")
+        fh.write(f"- DDRs2 DATA/CLK span: x=({data_x_min:.3f}, {data_x_max:.3f}) um, span={data_x_max - data_x_min:.3f} um\n")
+        fh.write(f"- Horizontal margin around DATA/CLK span: left `{tx_margin_left_um:.3f} um`, right `{tx_margin_right_um:.3f} um`\n")
+        fh.write(f"- Preliminary top bbox: ({block_norm_llx:.3f}, {block_norm_lly:.3f})-({block_norm_urx:.3f}, {block_norm_ury:.3f}) um\n")
+        fh.write(f"- Local core target: `{core_width_um:.3f} um x {core_height_um:.3f} um`, target util `{target_utilization:.2f}`, max place density `{place_max_density:.2f}`\n")
+        fh.write(f"- Clearance estimate to MPTDC top bbox: `{block_norm_lly - mptdc_top_y:.3f} um`; matrix-array top clearance `{block_norm_lly - matrix_array_top_y:.3f} um`; TXRX4TDC2 east clearance `{side_macro_clearance_x:.3f} um`\n")
         fh.write("- Ordinary signal routing: `MET1`-`MET3`\n")
         fh.write("- Power access: one north `VDD` bar and one north `VSS` bar on `METTP`\n")
-        fh.write("- Pin intent: source/event inputs south, controls/status west, DDRs2 and raw DDR16 egress north\n")
+        fh.write("- Pin intent: source/event inputs south, controls/status west, DDRs2 digital egress north aligned to DDRs2 DATA/CLK pins\n")
         fh.write(f"- DDR/SLVS audit pins read: `{len(ddr_pins)}` total, `{ddr_data_pin_count}` DATA_L/DATA_H pins, `{north_pin_count}` top-side pins\n")
+        fh.write(f"- Visible DDRs2 CLK_160M source pins: `{len(clk_rows)}`; the single cluster clock pin is assigned to the right/east CLK_160M coordinate\n")
         fh.write(f"- Matrix audit pins read: `{len(matrix_pins)}`; source-side pins remain top-level cluster pins until final top placement\n\n")
         fh.write("## Instance Classes\n\n")
         for cls, count in sorted(counts.items()):
@@ -380,6 +573,14 @@ def generate_tx_egress_cluster(layout_dir: Path, out_dir: Path) -> None:
         fh.write("\n## Pin Plan\n\n")
         for side, ports in pin_plan.items():
             fh.write(f"- `{side}`: {len(ports)} pins\n")
+        fh.write("\n## North Pin Alignment\n\n")
+        for port in north_ports:
+            assignment = north_assignments[port]
+            fh.write(
+                f"- `{port}` local_x={assignment['target_x_um']} um "
+                f"from `{assignment['source_inst']}/{assignment['source_term']}` "
+                f"top_x={assignment['source_x_um']} um\n"
+            )
 
 
 def main() -> None:
@@ -393,8 +594,8 @@ def main() -> None:
     if block in {"ddr16_pairer", "spadmic_ddr16_tx_pairer"}:
         generate_ddr16_pairer(args.layout_audit_dir.resolve(), args.out_dir.resolve())
         return
-    if block in {"tx_egress_cluster", "tx_egress_core", "spadmic_tx_egress_cluster"}:
-        generate_tx_egress_cluster(args.layout_audit_dir.resolve(), args.out_dir.resolve())
+    if block in {"tx_egress_cluster", "tx_egress_core", "spadmic_tx_egress_cluster", "spadmic_tx_egress_core"}:
+        generate_tx_egress_core(args.layout_audit_dir.resolve(), args.out_dir.resolve())
         return
     raise SystemExit(f"unsupported hardening block for this generator: {args.block}")
 
