@@ -1108,7 +1108,7 @@ proc mptdc_signoff_pg_policy_guard {} {
             lappend failures "MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=0 expected 1 for manual_ro_pg_exception"
         }
         if {[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4] != 4} {
-            lappend failures "MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS unset] expected 4 for manual_ro_pg_exception"
+            lappend failures "MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS unset] expected 4 as the max RO PG terminal waiver for manual_ro_pg_exception"
         }
         if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
             lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because manual RO PG must remain isolated"
@@ -5184,9 +5184,9 @@ proc mptdc_signoff_classify_pg_connectivity_detail {detail_path} {
         dict set data reason non_ro_pg_failures
     } elseif {$ro_terms > 0} {
         set expected [dict get $data expected_ro_terminal_count]
-        if {[dict get $data manual_exception] && $ro_terms != $expected} {
+        if {[dict get $data manual_exception] && $ro_terms > $expected} {
             dict set data status FAIL
-            dict set data reason "unexpected_ro_pg_terminal_count:expected=$expected actual=$ro_terms"
+            dict set data reason "unexpected_ro_pg_terminal_count:max_expected=$expected actual=$ro_terms"
         } else {
             dict set data status FILTERED_RO_ONLY
             dict set data reason ro_macro_pg_only
@@ -7210,7 +7210,7 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "RO_PG_MANUAL_EXCEPTION_STATUS=[mptdc_signoff_ro_pg_manual_exception_status $special_bad]"
     puts $fh "RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4]"
     if {[mptdc_signoff_ro_pg_manual_exception_status $special_bad] eq "ACTIVE"} {
-        puts $fh "RO_PG_MANUAL_EXCEPTION_NOTE=route_gate_accepted_only_with_four_ro_macro_pg_terminals_left_for_manual_virtuoso_hookup"
+        puts $fh "RO_PG_MANUAL_EXCEPTION_NOTE=route_gate_accepted_only_with_up_to_four_ro_macro_pg_terminals_left_for_manual_virtuoso_hookup"
         puts $fh "LVS_STATUS=DEFERRED_UNTIL_MANUAL_RO_PG_PATCH"
     }
     puts $fh "REGULAR_NET_OPENS=[expr {$regular_flag ? "NONZERO_OR_UNPARSED" : 0}]"

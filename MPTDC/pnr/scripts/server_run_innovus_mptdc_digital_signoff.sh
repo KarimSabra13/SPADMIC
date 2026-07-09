@@ -275,7 +275,7 @@ guard_pg_policy() {
         failures+=("MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=${MPTDC_ALLOW_RO_DERIVED_PG_DANGLING:-unset} expected 1 for manual_ro_pg_exception")
       fi
       if [[ "${MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS:-}" != "4" ]]; then
-        failures+=("MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=${MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS:-unset} expected 4 for manual_ro_pg_exception")
+        failures+=("MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=${MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS:-unset} expected 4 as the max RO PG terminal waiver for manual_ro_pg_exception")
       fi
       if is_truthy "${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"; then
         failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for manual_ro_pg_exception")
