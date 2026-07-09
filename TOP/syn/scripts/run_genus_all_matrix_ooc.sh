@@ -13,6 +13,7 @@ RUN_ID="${1:-matrix_top_genus_$(date +%Y%m%d_%H%M%S)}"
 WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 RUN_ROOT="$WORK_ROOT/genus/$RUN_ID"
 COMMON_SDC="$TOP_SYN_DIR/constraints/matrix_top_ooc_common.sdc"
+OOC_SDC_DIR="$TOP_SYN_DIR/constraints/ooc"
 
 # Keep the matrix-top physical stack aligned with the current MPTDC product
 # boundary. Override only for an explicitly reviewed technology audit.
@@ -68,6 +69,21 @@ if [[ -n "${SPADMIC_GENUS_OOC_BLOCKS:-}" ]]; then
   BLOCKS=($SPADMIC_GENUS_OOC_BLOCKS)
   SKIPPED_BLOCKS=("custom_block_list:SPADMIC_GENUS_OOC_BLOCKS")
 fi
+
+select_block_sdc() {
+  local block="$1"
+  local top="$2"
+  local candidate
+
+  for candidate in "$OOC_SDC_DIR/${top}.sdc" "$OOC_SDC_DIR/${block}.sdc"; do
+    if [[ -f "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  printf '%s\n' "$COMMON_SDC"
+}
 
 if [[ -e "$RUN_ROOT" ]]; then
   echo "ERROR: run directory already exists: $RUN_ROOT" >&2
@@ -182,17 +198,21 @@ FAILED=()
   echo
   echo "## Blocks"
   echo
-  echo "| Block | Top module | Result |"
-  echo "| --- | --- | --- |"
+  echo "| Block | Top module | Constraint SDC | Result |"
+  echo "| --- | --- | --- | --- |"
 } > "$RUN_ROOT/SUMMARY.md"
 
 for item in "${BLOCKS[@]}"; do
   block="${item%%:*}"
   top="${item##*:}"
   block_dir="$RUN_ROOT/$block"
+  block_sdc="$(select_block_sdc "$block" "$top")"
+  block_sdc_rel="${block_sdc#$TOP_SYN_DIR/}"
   mkdir -p "$block_dir/logs"
+  printf '%s\n' "$block_sdc" > "$block_dir/selected_sdc.txt"
   log="$block_dir/logs/genus.log"
   echo "=== Genus OOC: $block ($top) ==="
+  echo "    SDC: $block_sdc"
   set +e
   SPADMIC_REPO_ROOT="$REPO_ROOT" \
   SPADMIC_TOP_ROOT="$TOP_ROOT" \
@@ -202,18 +222,18 @@ for item in "${BLOCKS[@]}"; do
   GENUS_BLOCK_NAME="$block" \
   GENUS_MPTDC_FILELIST="$RUN_ROOT/filelists/mptdc_abs.f" \
   GENUS_TOP_FILELIST="$RUN_ROOT/filelists/top_abs.f" \
-  GENUS_COMMON_SDC="$COMMON_SDC" \
+  GENUS_COMMON_SDC="$block_sdc" \
     genus -files "$SCRIPT_DIR/run_genus_matrix_block.tcl" -log "$log" > "$block_dir/logs/genus.stdout.log" 2>&1
   rc=$?
   set -e
   if [[ "$rc" -eq 0 ]]; then
     PASS=$((PASS + 1))
-    echo "| \`$block\` | \`$top\` | PASS |" >> "$RUN_ROOT/SUMMARY.md"
+    echo "| \`$block\` | \`$top\` | \`$block_sdc_rel\` | PASS |" >> "$RUN_ROOT/SUMMARY.md"
   else
     FAIL=$((FAIL + 1))
     FAILED+=("$block")
     tail -80 "$block_dir/logs/genus.stdout.log" > "$block_dir/logs/failure.tail" || true
-    echo "| \`$block\` | \`$top\` | FAIL rc=$rc, see \`$block/logs/failure.tail\` |" >> "$RUN_ROOT/SUMMARY.md"
+    echo "| \`$block\` | \`$top\` | \`$block_sdc_rel\` | FAIL rc=$rc, see \`$block/logs/failure.tail\` |" >> "$RUN_ROOT/SUMMARY.md"
   fi
 done
 

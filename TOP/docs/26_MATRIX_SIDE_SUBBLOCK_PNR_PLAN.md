@@ -1378,3 +1378,133 @@ Paste back after the run:
 - first 180 lines of `report_timing_post_opt.rpt`;
 - `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
 - `ooc_collateral_manifest.csv`.
+
+## 24. Server Result: `ddrs2_adapter` Initial OOC Run
+
+Server run summary for the first DDRs2 adapter pass:
+
+| Item | Result |
+| --- | --- |
+| Source commit | `ed09a90dab7b260dcc4b07cb9dc7350754c399fa` |
+| Xcelium test | `tb_spadmic_ddrs2_adapter_unit: 17 pass / 0 fail` |
+| Test return code | `TB_DDRS2_ADAPTER_RC=0` |
+| Genus run | `genus_ooc_ddrs2_adapter_20260709_0710` |
+| Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddrs2_adapter_20260709_0710/ddrs2_adapter` |
+| Genus return code | `GENUS_RC=0` |
+| Genus top module | `spadmic_ddrs2_adapter` |
+| Innovus OOC gate | `innovus_ooc_ddrs2_adapter_20260709_0710` |
+| Innovus return code | `PNR_RC=0` |
+| Innovus result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, missing collateral count `0` |
+
+Functional and collateral status:
+
+- the DDRs2 adapter unit test passed all lane mapping, valid-lane, spare-lane,
+  enable, forwarded-clock polarity, and inverted-instance checks;
+- Genus produced `ddrs2_adapter.postsyn.v`, `ddrs2_adapter.postsyn.sdc`, and
+  `ddrs2_adapter.postsyn.sdf`;
+- the Innovus OOC collateral wrapper found the Genus netlist and SDC and created
+  the per-block run directory.
+
+Genus report details from the first run:
+
+- warning classification: `design_rule=0`, `inferred_latch=0`,
+  `tool_error=0`, `unresolved=0`, `no_clock_waveform=0`,
+  `missing_external_delay=2`, `tool_warning=3`, `undriven=7`;
+- the `undriven` count is the known heading-count false positive class, with
+  the first line still reporting `Undriven Port(s) 0`;
+- area: cell count `34`, cell area `426.496 um^2`, net area `677.248 um^2`,
+  total area `1103.744 um^2`;
+- `report_clocks.rpt` said `No clocks to report`;
+- `report_timing_post_opt.rpt` reported only unconstrained-path text.
+
+Conclusion for this first pass: the RTL behavior and collateral handoff are good,
+but this is not acceptable clocked Genus timing evidence. The local DDRs2 adapter
+SDC existed, but the Genus OOC wrapper was still passing only the common
+`matrix_top_ooc_common.sdc`; therefore the local `clk_160m_i` clock was not
+sourced. The next run must use the updated wrapper that selects
+`TOP/syn/constraints/ooc/spadmic_ddrs2_adapter.sdc` for this block.
+
+Innovus OOC collateral manifest from the first run:
+
+```text
+ddrs2_adapter,/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddrs2_adapter_20260709_0710/ddrs2_adapter/outputs/ddrs2_adapter.postsyn.v,/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddrs2_adapter_20260709_0710/ddrs2_adapter/outputs/ddrs2_adapter.postsyn.sdc,/sim/ksabra/SPADMIC_work/genus/genus_ooc_ddrs2_adapter_20260709_0710/ddrs2_adapter/SUMMARY.md,READY,ready_for_next_import_template
+```
+
+## 25. Next Server Commands: `ddrs2_adapter` Clocked Constraint Rerun
+
+Do not rerun full-top Genus or Innovus. This is a narrow DDRs2 adapter rerun to
+prove that the per-block SDC is sourced and that `clk_160m_i` appears in the
+clock report.
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+git rev-parse HEAD
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+```
+
+Run Genus OOC for the adapter only:
+
+```bash
+GENUS_RUN_ID=genus_ooc_ddrs2_adapter_clocked_$(date +%Y%m%d_%H%M)
+
+bash TOP/syn/scripts/run_genus_ooc_block.sh ddrs2_adapter "$GENUS_RUN_ID"
+GENUS_RC=$?
+
+GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
+BLOCK_ROOT="$GENUS_ROOT/ddrs2_adapter"
+
+cat "$GENUS_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/selected_sdc.txt"
+cat "$BLOCK_ROOT/reports/messages/warning_classification.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/qor/report_area.rpt"
+sed -n '1,220p' "$BLOCK_ROOT/reports/timing/check_timing_intent.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_clocks.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_timing_post_opt.rpt"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
+
+grep -nE 'clk_160m_i|No clocks to report' "$BLOCK_ROOT/reports/timing/report_clocks.rpt" || true
+grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
+  "$BLOCK_ROOT/reports" || true
+
+echo "GENUS_RC=$GENUS_RC"
+echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+echo "GENUS_ROOT=$GENUS_ROOT"
+echo "BLOCK_ROOT=$BLOCK_ROOT"
+```
+
+Expected after this patch:
+
+- `cat "$BLOCK_ROOT/selected_sdc.txt"` prints the absolute path to
+  `TOP/syn/constraints/ooc/spadmic_ddrs2_adapter.sdc`;
+- `cat "$BLOCK_ROOT/SUMMARY.md"` contains the same constraint file path;
+- `report_clocks.rpt` reports `clk_160m_i`, not `No clocks to report`;
+- `tool_error`, `unresolved`, and `inferred_latch` remain zero.
+
+If `GENUS_RC=0` and `report_clocks.rpt` reports `clk_160m_i`, run the current
+single-block Innovus OOC collateral gate:
+
+```bash
+PNR_RUN_ID=innovus_ooc_ddrs2_adapter_clocked_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh ddrs2_adapter "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
+cat "$PNR_ROOT/blocks/ddrs2_adapter/SUMMARY.md"
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+Stop and paste back if `report_clocks.rpt` still says `No clocks to report`.

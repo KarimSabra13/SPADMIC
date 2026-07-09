@@ -130,6 +130,7 @@ puts "================================================================"
 puts "SPADMIC matrix-top OOC Genus"
 puts "Block: $BLOCK_NAME"
 puts "Top module: $TOP_MODULE"
+puts "Constraint file: $COMMON_SDC"
 puts "Run directory: $RUN_DIR"
 puts "================================================================"
 
@@ -201,6 +202,7 @@ if {[catch {elaborate $TOP_MODULE} elab_err]} {
 
 current_design $TOP_MODULE
 
+puts "INFO: reading SDC $COMMON_SDC"
 if {[catch {read_sdc $COMMON_SDC} sdc_err]} {
   puts stderr "ERROR: read_sdc failed: $sdc_err"
   exit 5
@@ -273,6 +275,7 @@ puts $summary "# Genus OOC Block Summary"
 puts $summary ""
 puts $summary "- Block: `$BLOCK_NAME`"
 puts $summary "- Top module: `$TOP_MODULE`"
+puts $summary "- Constraint file: `$COMMON_SDC`"
 puts $summary "- Run directory: `$RUN_DIR`"
 puts $summary "- Status: completed tool flow; review reports before claiming closure"
 puts $summary "- Signoff: non-signoff, typical-only feasibility"
