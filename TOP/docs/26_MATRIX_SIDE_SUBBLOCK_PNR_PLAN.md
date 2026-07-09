@@ -1153,15 +1153,14 @@ Paste back after the run:
 - `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
 - `ooc_collateral_manifest.csv`.
 
-## 21. Recorded Server Result: `output_fifo` Xcelium + Genus
+## 21. Recorded Server Result: `output_fifo`
 
-Karim ran the `output_fifo` tests and Genus OOC step on the server on branch
-`SPADMIC_test`, source commit `eccd432b9801f8781c16ef5fa7494eded08ff77c`.
-This records the digital test and synthesis result only; the Innovus OOC
-collateral gate for this block is still pending.
+Karim ran the `output_fifo` tests, Genus OOC step, and Innovus OOC collateral
+gate on the server on branch `SPADMIC_test`.
 
 | Item | Result |
 | --- | --- |
+| Source commit for Xcelium/Genus | `eccd432b9801f8781c16ef5fa7494eded08ff77c` |
 | Xcelium tests | `tb_spadmic_output_fifo_unit`, `tb_spadmic_output_fifo_ddr_marker_unit` |
 | Xcelium return codes | `TB_FIFO_RC=0`, `TB_FIFO_MARKER_RC=0` |
 | DDR marker test result | `17 pass / 0 fail` |
@@ -1170,6 +1169,10 @@ collateral gate for this block is still pending.
 | Genus block root | `/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo` |
 | Genus top module | `spadmic_output_fifo_topcfg` |
 | Genus result | PASS, 1 block, 0 failed, `GENUS_RC=0` |
+| Innovus OOC gate commit | `412e14a65cccef1b3a44d41074e21c099df3d133` |
+| Innovus OOC gate run ID | `innovus_ooc_output_fifo_20260709_0700` |
+| Innovus OOC gate root | `/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_output_fifo_20260709_0700` |
+| Innovus OOC gate result | `READY_FOR_NEXT_IMPORT_TEMPLATE`, missing collateral count `0`, `PNR_RC=0` |
 
 The run correctly used the matrix-top-configured wrapper
 `spadmic_output_fifo_topcfg`, not the raw FIFO defaults.
@@ -1203,15 +1206,25 @@ Generated Genus outputs:
 /sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo/outputs/output_fifo.postsyn.v
 ```
 
+Innovus OOC collateral manifest:
+
+```text
+output_fifo,/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo/outputs/output_fifo.postsyn.v,/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo/outputs/output_fifo.postsyn.sdc,/sim/ksabra/SPADMIC_work/genus/genus_ooc_output_fifo_20260709_0653/output_fifo/SUMMARY.md,READY,ready_for_next_import_template
+```
+
 Conclusion for this stage: `output_fifo` passed the intended matrix-top wrapper
 synthesis gate, but it is a large flop-based FIFO and the relaxed timing margin
 is much tighter than the small TX control blocks. This is acceptable for the
 current non-signoff OOC collateral stage, but the final implementation should
-prefer a memory-macro or custom SRAM/FIFO option if available.
+prefer a memory-macro or custom SRAM/FIFO option if available. The Innovus gate
+is still only a collateral-readiness check; it does not run placement, route,
+CTS, PG, DRC/LVS, PEX, MMMC, or signoff.
 
-## 22. Next Server Commands: `output_fifo` Innovus OOC Gate
+## 22. Next Server Commands: `ddr16_pairer`
 
-Run the Innovus OOC collateral gate for the Genus run already produced:
+`ddr16_pairer` is next because it converts the FIFO 16-bit logical word stream
+into the DDR16 L/H pair interface before the DDRs2 adapter. It is small,
+single-clock, and belongs in the north/north-east TX egress region near DDRs2.
 
 ```bash
 cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
@@ -1223,29 +1236,81 @@ export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 export MPTDC_XH018_STACK=xx31
 export MPTDC_STDCELL_FAMILY=JIHD
 export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+```
 
-GENUS_RUN_ID=genus_ooc_output_fifo_20260709_0653
+Run the DDR16 pairer test:
+
+```bash
+bash TOP/scripts/sim/run_tb.sh tb_spadmic_ddr16_tx_pairer_unit --sim xrun
+TB_DDR16_PAIRER_RC=$?
+
+echo "TB_DDR16_PAIRER_RC=$TB_DDR16_PAIRER_RC"
+echo "TB_DDR16_PAIRER_LOG=TOP/build/directed/tb_spadmic_ddr16_tx_pairer_unit/run.log"
+```
+
+If the test return code is zero, run Genus OOC for this block only:
+
+```bash
+GENUS_RUN_ID=genus_ooc_ddr16_pairer_$(date +%Y%m%d_%H%M)
+
+bash TOP/syn/scripts/run_genus_ooc_block.sh ddr16_pairer "$GENUS_RUN_ID"
+GENUS_RC=$?
+
 GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID"
-BLOCK_ROOT="$GENUS_ROOT/output_fifo"
+BLOCK_ROOT="$GENUS_ROOT/ddr16_pairer"
+
+cat "$GENUS_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/reports/messages/warning_classification.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/qor/report_area.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/check_timing_intent.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_clocks.rpt"
+sed -n '1,180p' "$BLOCK_ROOT/reports/timing/report_timing_post_opt.rpt"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
 
 grep -RniE 'REPORT_COMMAND_FAILED|ELABORATION_FAILED|CHECK_DESIGN_UNRESOLVED_FAILED|TUI-[0-9]+|(^|[|[:space:]])Error([|[:space:]:]|$)' \
   "$BLOCK_ROOT/reports" || true
 
-PNR_RUN_ID=innovus_ooc_output_fifo_$(date +%Y%m%d_%H%M)
+echo "GENUS_RC=$GENUS_RC"
+echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+echo "GENUS_ROOT=$GENUS_ROOT"
+echo "BLOCK_ROOT=$BLOCK_ROOT"
+```
 
-bash TOP/pnr/scripts/run_innovus_ooc_block.sh output_fifo "$GENUS_RUN_ID" "$PNR_RUN_ID"
+Expected warning posture:
+
+- `tool_error`, `unresolved`, and `inferred_latch` must stay zero;
+- `no_clock_waveform` should stay zero because this block is single-clock
+  `clk_sys`;
+- missing external delay warnings are acceptable for this relaxed OOC stage;
+- `clk_ref_40m` and `clk_cfg_40m` inter-clock reports are not expected.
+
+If `GENUS_RC=0`, run the current single-block Innovus OOC collateral gate:
+
+```bash
+PNR_RUN_ID=innovus_ooc_ddr16_pairer_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_block.sh ddr16_pairer "$GENUS_RUN_ID" "$PNR_RUN_ID"
 PNR_RC=$?
 
 PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
 cat "$PNR_ROOT/SUMMARY.md"
 cat "$PNR_ROOT/reports/ooc_collateral_manifest.csv"
-cat "$PNR_ROOT/blocks/output_fifo/SUMMARY.md"
+cat "$PNR_ROOT/blocks/ddr16_pairer/SUMMARY.md"
 
 echo "PNR_RC=$PNR_RC"
 echo "PNR_RUN_ID=$PNR_RUN_ID"
 echo "PNR_ROOT=$PNR_ROOT"
 ```
 
-Expected result for the current wrapper is still only
-`READY_FOR_NEXT_IMPORT_TEMPLATE`. This command does not run placement, route,
-CTS, PG, DRC/LVS, PEX, MMMC, or signoff.
+Paste back after the run:
+
+- `TB_DDR16_PAIRER_RC`;
+- `GENUS_RC`, `GENUS_RUN_ID`, `GENUS_ROOT`, `BLOCK_ROOT`;
+- `warning_classification.rpt`;
+- first 180 lines of `report_area.rpt`;
+- first 180 lines of `check_timing_intent.rpt`;
+- first 180 lines of `report_clocks.rpt`;
+- first 180 lines of `report_timing_post_opt.rpt`;
+- `PNR_RC`, `PNR_RUN_ID`, `PNR_ROOT`;
+- `ooc_collateral_manifest.csv`.
