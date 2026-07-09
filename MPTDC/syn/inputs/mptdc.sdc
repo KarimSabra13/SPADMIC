@@ -399,7 +399,7 @@ set timed_outputs [all_outputs]
 set mptdc_ro_probe_outputs [get_ports -quiet {ro_slow_tap0_o ro_fast_tap0_o}]
 if {[llength $mptdc_ro_probe_outputs] > 0} {
     set timed_outputs [remove_from_collection $timed_outputs $mptdc_ro_probe_outputs]
-    puts "MPTDC_SDC_INFO: RO probe outputs are load-only debug ports, excluded from clk_sys output delay"
+    puts "MPTDC_SDC_INFO: RO raw tap0 outputs are load-only debug ports, excluded from clk_sys output delay"
 }
 
 if {$design(FULLCHIP_OR_MACRO) == "FULLCHIP"} {

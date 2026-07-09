@@ -32,4 +32,4 @@ set mptdc_ro_probe_ports [get_ports -quiet {ro_slow_tap0_o ro_fast_tap0_o}]
 if {[llength $mptdc_ro_probe_ports] != 2} {
     error "MPTDC_AXIS_CORE_TYPICAL_CLOSED_SDC_FATAL: expected 2 RO probe output ports, matched [llength $mptdc_ro_probe_ports]"
 }
-puts "MPTDC_AXIS_CORE_TYPICAL_CLOSED_SDC_INFO: detected load-only buffered RO debug probe outputs"
+puts "MPTDC_AXIS_CORE_TYPICAL_CLOSED_SDC_INFO: detected load-only raw RO tap0 debug outputs"

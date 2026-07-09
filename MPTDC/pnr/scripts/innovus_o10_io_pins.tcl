@@ -36,6 +36,8 @@ proc mptdc_o10_io_pin_side_for_name {pin_name} {
         async_rst_n
         reset_n
         rst_n
+        ro_slow_tap0_o
+        ro_fast_tap0_o
         VDD
         VSS
         vdd
@@ -268,7 +270,7 @@ proc mptdc_o10_place_io_pins {} {
     puts $fh "North side carries the product 16-bit packet output bus and packet framing/status stream pins."
     puts $fh "West side is reserved for SPAD and calibration asynchronous detector inputs."
     puts $fh "East side carries clk_sys, packet ready, mode/control, max_hits, and minimal status pins."
-    puts $fh "South side carries async reset when present. VDD/VSS are special power nets handled by the power-grid plan, not ordinary signal IO ports."
+    puts $fh "South side carries async reset when present and the two raw RO tap0 observability pins. VDD/VSS are special power nets handled by the power-grid plan, not ordinary signal IO ports."
     close $fh
 
     if {!$pass} {
