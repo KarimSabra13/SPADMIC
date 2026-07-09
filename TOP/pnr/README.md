@@ -124,13 +124,17 @@ PNR_RUN_ID=innovus_ooc_harden_ddr16_pairer_$(date +%Y%m%d_%H%M)
 bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddr16_pairer "$GENUS_RUN_ID" "$PNR_RUN_ID"
 ```
 
-The v1 hardening wrapper supports only `ddr16_pairer`. It imports the Genus
-OOC netlist/SDC, generates a local abstract plan from
+The hardening wrapper currently supports `ddr16_pairer` and
+`tx_egress_core`. It imports the Genus OOC netlist/SDC, generates a local
+abstract plan from
 `TOP/docs/layout_audits/SPADMIC2_20260709_072331`, places pins, creates one
 north `VDD` and one north `VSS` `METTP` access pin, runs placement, CTS,
 route, filler insertion, post-route setup/hold/DRV reports, Innovus DRC and
 connectivity reports, then exports DEF/LEF/GDS collateral under the Innovus run
-root and `/sim/ksabra/SPADMIC_work/handoff/abstracts/ddr16_pairer/<RUN_ID>/`.
+root and `/sim/ksabra/SPADMIC_work/handoff/abstracts/<block>/<RUN_ID>/`.
+Local special PG routing is disabled by default: the exported METTP VDD/VSS
+pins are a top-level hookup contract. Set `SPADMIC_OOC_ENABLE_PG_SROUTE=1`
+only for an experimental local PG special-route run.
 
 This is typical-only OOC implementation for top-review handoff. PVS, PEX,
 MMMC, foundry LVS, and direct OA import remain separate later gates.

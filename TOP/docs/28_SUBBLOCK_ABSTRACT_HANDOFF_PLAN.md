@@ -84,6 +84,10 @@ It writes the package under:
 The wrapper uses a local abstract plan generated from
 `TOP/docs/layout_audits/SPADMIC2_20260709_072331`, with signal routing on
 `MET1`-`MET3` and one north `VDD` plus one north `VSS` access bar on `METTP`.
+Local special PG routing is disabled by default; the exported `METTP`
+`VDD`/`VSS` access pins must be connected by the top-level assembly flow.
+Set `SPADMIC_OOC_ENABLE_PG_SROUTE=1` only for an experimental local PG
+special-route run.
 It is typical-only Innovus OOC implementation; PVS, PEX, MMMC, foundry LVS, and
 direct OA import are separate future gates.
 

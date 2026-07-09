@@ -320,6 +320,7 @@ def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
             "pg_pin_depth_um": "2.24",
             "pg_strap_width_um": "2.24",
             "pg_strap_spacing_um": "2.24",
+            "enable_pg_sroute": "0",
         }
         for key, value in values.items():
             fh.write(f"    variable {key} {tcl_quote(value)}\n")
@@ -338,6 +339,7 @@ def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
         fh.write("- Local core target: `120.0 um x 80.0 um`, `55%` utilization\n")
         fh.write("- Ordinary signal routing: `MET1`-`MET3`\n")
         fh.write("- Power access: one north `VDD` bar and one north `VSS` bar on `METTP`\n")
+        fh.write("- Local special PG route is disabled by default; top-level assembly must connect the exported `METTP` VDD/VSS access pins.\n")
         fh.write(f"- DDR/SLVS audit pins read: `{len(ddr_pins)}` total, `{ddr_data_pin_count}` DATA_L/DATA_H pins, `{ddr_bottom_pin_count}` bottom-side pins\n")
         fh.write(f"- MPTDC audit pins read: `{len(mptdc_pins)}`; MPTDC placement is bbox/halo only until final abstracts exist\n\n")
         fh.write("## Instance Classes\n\n")
@@ -538,6 +540,7 @@ def generate_tx_egress_core(layout_dir: Path, out_dir: Path) -> None:
             "pg_pin_depth_um": "3.92",
             "pg_strap_width_um": "4.48",
             "pg_strap_spacing_um": "4.48",
+            "enable_pg_sroute": "0",
         }
         for key, value in values.items():
             fh.write(f"    variable {key} {tcl_quote(value)}\n")
@@ -562,6 +565,7 @@ def generate_tx_egress_core(layout_dir: Path, out_dir: Path) -> None:
         fh.write(f"- Clearance estimate to MPTDC top bbox: `{block_norm_lly - mptdc_top_y:.3f} um`; matrix-array top clearance `{block_norm_lly - matrix_array_top_y:.3f} um`; TXRX4TDC2 east clearance `{side_macro_clearance_x:.3f} um`\n")
         fh.write("- Ordinary signal routing: `MET1`-`MET3`\n")
         fh.write("- Power access: one north `VDD` bar and one north `VSS` bar on `METTP`\n")
+        fh.write("- Local special PG route is disabled by default; top-level assembly must connect the exported `METTP` VDD/VSS access pins.\n")
         fh.write("- Pin intent: source/event inputs south, controls/status west, DDRs2 digital egress north aligned to DDRs2 DATA/CLK pins\n")
         fh.write(f"- DDR/SLVS audit pins read: `{len(ddr_pins)}` total, `{ddr_data_pin_count}` DATA_L/DATA_H pins, `{north_pin_count}` top-side pins\n")
         fh.write(f"- Visible DDRs2 CLK_160M source pins: `{len(clk_rows)}`; the single cluster clock pin is assigned to the right/east CLK_160M coordinate\n")

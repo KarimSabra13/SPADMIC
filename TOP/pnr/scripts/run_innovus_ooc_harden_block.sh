@@ -17,6 +17,9 @@ This is the first real TOP OOC hardening wrapper. It imports one Genus OOC
 netlist/SDC into Innovus, builds a local abstract floorplan, places pins,
 creates local VDD/VSS METTP access pins, runs place/CTS/route/filler/timing/
 DRV/Innovus DRC/connectivity checks, and exports DEF/LEF/GDS collateral.
+By default, local special PG routing is deferred: the abstract exports METTP
+VDD/VSS access pins for top-level hookup. Set SPADMIC_OOC_ENABLE_PG_SROUTE=1
+only for an experimental local PG special-route run.
 
 It is still typical-only Innovus OOC implementation. It does not run PVS,
 PEX, multi-corner signoff, or foundry signoff LVS.
@@ -196,6 +199,14 @@ fi
   echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
   echo "- Ordinary signal route layers: \`MET1 MET2 MET3\`"
   echo "- Power access layer: \`METTP\`"
+  case "${SPADMIC_OOC_ENABLE_PG_SROUTE:-0}" in
+    1|yes|YES|true|TRUE|on|ON)
+    echo "- Local PG special route: \`experimental enabled\`"
+      ;;
+    *)
+    echo "- Local PG special route: \`deferred to top-level hookup\`"
+      ;;
+  esac
   echo "- Layout audit: \`$LAYOUT_AUDIT_DIR\`"
   echo "- Handoff root: \`$HANDOFF_ROOT\`"
   echo "- Innovus return code: \`$innovus_rc\`"

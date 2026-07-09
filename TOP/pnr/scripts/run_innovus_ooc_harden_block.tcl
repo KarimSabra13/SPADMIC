@@ -16,6 +16,11 @@ proc spadmic_ooc_env {name default_value} {
     return $default_value
 }
 
+proc spadmic_ooc_truthy {value} {
+    set normalized [string tolower [string trim $value]]
+    return [expr {$normalized eq "1" || $normalized eq "yes" || $normalized eq "true" || $normalized eq "on"}]
+}
+
 set ::spadmic_ooc_repo_root [spadmic_ooc_env_required SPADMIC_REPO_ROOT]
 set ::spadmic_ooc_run_root [spadmic_ooc_env_required SPADMIC_INNOVUS_RUN_ROOT]
 set ::spadmic_ooc_block_root [spadmic_ooc_env_required SPADMIC_INNOVUS_BLOCK_ROOT]
@@ -60,6 +65,11 @@ proc spadmic_ooc_cfg_default {name default_value} {
 
 proc spadmic_ooc_cfg_list {name} {
     return [spadmic_ooc_cfg $name]
+}
+
+proc spadmic_ooc_pg_sroute_enabled {} {
+    set default_value [spadmic_ooc_cfg_default enable_pg_sroute 0]
+    return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_PG_SROUTE $default_value]]
 }
 
 proc spadmic_ooc_layer_index {layer fallback} {
@@ -371,6 +381,23 @@ proc spadmic_ooc_create_pg_straps {} {
 proc spadmic_ooc_route_pg {} {
     set power_net [spadmic_ooc_cfg pg_power_net]
     set ground_net [spadmic_ooc_cfg pg_ground_net]
+    if {![spadmic_ooc_pg_sroute_enabled]} {
+        spadmic_ooc_status_set CREATE_PG_STRAPS DEFERRED_TOP_LEVEL_HOOKUP
+        spadmic_ooc_status_set CREATE_PG_STRAP_VDD SKIPPED_DEFERRED_TOP
+        spadmic_ooc_status_set CREATE_PG_STRAP_VSS SKIPPED_DEFERRED_TOP
+        spadmic_ooc_status_set SROUTE_PG DEFERRED_TOP_LEVEL_HOOKUP
+        spadmic_ooc_status_set PG_LOCAL_ROUTE_MODE DEFERRED_TOP_LEVEL_HOOKUP
+        spadmic_ooc_write_text [file join $::spadmic_ooc_reports_dir SROUTE_PG.rpt] [list \
+            "LABEL=SROUTE_PG" \
+            "STATUS=DEFERRED_TOP_LEVEL_HOOKUP" \
+            "POWER_NET=$power_net" \
+            "GROUND_NET=$ground_net" \
+            "REASON=Local OOC hardening exports METTP VDD/VSS access pins only. Top-level assembly must hook these pins to the final PG network." \
+            "OVERRIDE=Set SPADMIC_OOC_ENABLE_PG_SROUTE=1 to run experimental local PG special routing." \
+        ]
+        return
+    }
+    spadmic_ooc_status_set PG_LOCAL_ROUTE_MODE EXPERIMENTAL_LOCAL_SROUTE
     spadmic_ooc_create_pg_straps
     set cmds [list \
         [list sroute -connect {corePin blockPin padPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -padPinTarget {ring stripe} -allowLayerChange 1] \
@@ -385,7 +412,7 @@ proc spadmic_ooc_route_pg {} {
         [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
         [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net]] \
         [list sroute -nets [list $power_net $ground_net]]]
-    spadmic_ooc_try_all SROUTE_PG $cmds 1
+    spadmic_ooc_try_first SROUTE_PG $cmds 1
 }
 
 proc spadmic_ooc_place_side_pins {side pins} {
@@ -494,11 +521,24 @@ proc spadmic_ooc_verify_reports {} {
     set route_rpt [file join $::spadmic_ooc_reports_dir report_route.rpt]
     spadmic_ooc_capture_first $drc_rpt verify_drc_post_route [list {verify_drc} {verifyGeometry}] 1
     spadmic_ooc_capture_first $reg_conn_rpt verify_connectivity_regular [list {verifyConnectivity -type regular} {verifyConnectivity}] 1
-    spadmic_ooc_capture_first $pg_conn_rpt verify_connectivity_pg [list {verifyConnectivity -type special -nets {VDD VSS}} {verifyConnectivity -nets {VDD VSS} -type special} {verifyConnectivity -type special}] 1
+    if {[spadmic_ooc_pg_sroute_enabled]} {
+        spadmic_ooc_capture_first $pg_conn_rpt verify_connectivity_pg [list {verifyConnectivity -type special -nets {VDD VSS}} {verifyConnectivity -nets {VDD VSS} -type special} {verifyConnectivity -type special}] 1
+    } else {
+        spadmic_ooc_write_text $pg_conn_rpt [list \
+            "LABEL=verify_connectivity_pg" \
+            "STATUS=DEFERRED_TOP_LEVEL_HOOKUP" \
+            "REASON=No local special PG route was created. The exported abstract provides METTP VDD/VSS access pins for top-level hookup." \
+            "COMMAND=not_run" \
+        ]
+    }
     spadmic_ooc_capture_first $route_rpt report_route [list {reportRoute} {report_route}] 0
     set drc_status [spadmic_ooc_parse_drc_report $drc_rpt]
     set reg_status [spadmic_ooc_connectivity_status $reg_conn_rpt]
-    set pg_status [spadmic_ooc_connectivity_status $pg_conn_rpt]
+    if {[spadmic_ooc_pg_sroute_enabled]} {
+        set pg_status [spadmic_ooc_connectivity_status $pg_conn_rpt]
+    } else {
+        set pg_status DEFERRED_TOP_LEVEL_HOOKUP
+    }
     spadmic_ooc_status_set INNOVUS_DRC_STATUS $drc_status
     spadmic_ooc_status_set REGULAR_CONNECTIVITY_STATUS $reg_status
     spadmic_ooc_status_set PG_CONNECTIVITY_STATUS $pg_status
@@ -560,6 +600,11 @@ proc spadmic_ooc_copy_handoff {} {
         }
     }
     set readme [file join $::spadmic_ooc_handoff_root README.md]
+    if {[spadmic_ooc_pg_sroute_enabled]} {
+        set pg_route_note "- PG special-route stitching: experimental local `sroute` enabled for this run; review `verify_connectivity_pg.rpt` before top use."
+    } else {
+        set pg_route_note "- PG special-route stitching: deferred to top-level hookup; this package exports only `METTP` access pins for `VDD`/`VSS`."
+    }
     spadmic_ooc_write_text $readme [list \
         "# SPADMIC OOC Abstract Handoff: $block" \
         "" \
@@ -570,6 +615,7 @@ proc spadmic_ooc_copy_handoff {} {
         "- Genus SDC: `$::spadmic_ooc_sdc`" \
         "- Ordinary signal routing: `MET1`-`MET3`" \
         "- Power pins: one `VDD` and one `VSS` north-edge bar on `METTP`" \
+        $pg_route_note \
         "- PVS/LVS/PEX/MMMC: deferred; this package is not `SIGNOFF_READY`." \
     ]
     spadmic_ooc_status_set HANDOFF_COPY PASS
@@ -578,19 +624,34 @@ proc spadmic_ooc_copy_handoff {} {
 proc spadmic_ooc_write_status {} {
     set path [file join $::spadmic_ooc_reports_dir ooc_harden_status.rpt]
     set result ABSTRACT_READY_FOR_TOP_REVIEW
-    foreach required [list \
-        LIBRARY_SOURCE INIT_DESIGN FLOORPLAN CREATE_PG_PIN_VDD CREATE_PG_PIN_VSS SROUTE_PG \
+    set required_statuses [list \
+        LIBRARY_SOURCE INIT_DESIGN FLOORPLAN CREATE_PG_PIN_VDD CREATE_PG_PIN_VSS \
         PLACE_PINS_WEST PLACE_PINS_SOUTH PLACE_PINS_NORTH PLACE_DESIGN CTS_DESIGN ROUTE_DESIGN \
         ADD_FILLER POSTROUTE_SETUP_TIMING POSTROUTE_HOLD_TIMING EXPORT_DEF EXPORT_LEF EXPORT_GDS \
-        EXPORT_DEF_FILE EXPORT_LEF_FILE EXPORT_ABSTRACT_LEF_FILE EXPORT_GDS_FILE EXPORT_NETLIST_FILE HANDOFF_COPY] {
+        EXPORT_DEF_FILE EXPORT_LEF_FILE EXPORT_ABSTRACT_LEF_FILE EXPORT_GDS_FILE EXPORT_NETLIST_FILE HANDOFF_COPY]
+    if {[spadmic_ooc_pg_sroute_enabled]} {
+        lappend required_statuses SROUTE_PG
+    }
+    foreach required $required_statuses {
         if {![info exists ::spadmic_ooc_status($required)] || $::spadmic_ooc_status($required) ne "PASS"} {
             set result INNOVUS_TC_OOC_REVIEW_REQUIRED
         }
     }
-    foreach review_key [list INNOVUS_DRC_STATUS REGULAR_CONNECTIVITY_STATUS PG_CONNECTIVITY_STATUS] {
+    foreach review_key [list INNOVUS_DRC_STATUS REGULAR_CONNECTIVITY_STATUS] {
         if {![info exists ::spadmic_ooc_status($review_key)] || $::spadmic_ooc_status($review_key) ne "PASS"} {
             set result INNOVUS_TC_OOC_REVIEW_REQUIRED
         }
+    }
+    set pg_ok 0
+    if {[info exists ::spadmic_ooc_status(PG_CONNECTIVITY_STATUS)]} {
+        if {$::spadmic_ooc_status(PG_CONNECTIVITY_STATUS) eq "PASS"} {
+            set pg_ok 1
+        } elseif {![spadmic_ooc_pg_sroute_enabled] && $::spadmic_ooc_status(PG_CONNECTIVITY_STATUS) eq "DEFERRED_TOP_LEVEL_HOOKUP"} {
+            set pg_ok 1
+        }
+    }
+    if {!$pg_ok} {
+        set result INNOVUS_TC_OOC_REVIEW_REQUIRED
     }
     set ::spadmic_ooc_status(RESULT) $result
     set ::spadmic_ooc_status(SIGNOFF_READY) NO

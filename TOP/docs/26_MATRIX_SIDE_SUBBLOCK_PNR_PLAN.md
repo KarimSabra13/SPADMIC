@@ -188,6 +188,9 @@ Current hardening scope:
 - generated pin plan from `TOP/docs/layout_audits/SPADMIC2_20260709_072331`;
 - ordinary signal routing limited to `MET1`-`MET3`;
 - one north `VDD` and one north `VSS` access pin on `METTP`;
+- local special PG routing disabled by default, with exported `METTP`
+  `VDD`/`VSS` pins handed to the top-level hookup flow
+  (`SPADMIC_OOC_ENABLE_PG_SROUTE=1` enables an experimental local PG route);
 - place, CTS, route, filler, post-route setup/hold/DRV, Innovus DRC, and
   Innovus connectivity reports;
 - DEF, LEF/abstract LEF, GDS, routed netlist, status report, and handoff package.
