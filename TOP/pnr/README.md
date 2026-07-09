@@ -232,6 +232,22 @@ connection/glue manifest. It preserves the small flush-token glue logic from
 `spadmic_tx_egress_core`; it does not synthesize, route, hook PG, or claim
 signoff.
 
+Then run the routed assembly DRC feasibility gate:
+
+```bash
+CONNECTED_ROOT=/sim/ksabra/SPADMIC_work/assembly/tx_egress_connected_assembly_20260709_1604
+GENUS_RUN_ID=genus_tx_egress_connected_assembly_$(date +%Y%m%d_%H%M)
+bash TOP/syn/scripts/run_genus_tx_egress_connected_assembly.sh "$CONNECTED_ROOT" "$GENUS_RUN_ID"
+
+PNR_RUN_ID=innovus_tx_egress_connected_assembly_route_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_innovus_tx_egress_connected_assembly_route.sh "$CONNECTED_ROOT" "$GENUS_RUN_ID" "$PNR_RUN_ID"
+```
+
+The route wrapper imports the Genus glue netlist, loads the fixed leaf LEFs,
+sources the validated placement Tcl, places provisional assembly boundary pins,
+routes the assembly, and gates on zero Innovus `verify_drc` violations. PG
+hookup, PVS, LVS, PEX, MMMC, and foundry signoff remain separate gates.
+
 ## Floorplan Intent
 
 - `matrice3` on the left, vertically centered.

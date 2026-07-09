@@ -154,6 +154,24 @@ wrapper preserves the original `spadmic_tx_egress_core` flush-token glue logic;
 the four TX leaves remain fixed black-box abstracts for the next Genus glue
 synthesis and Innovus assembly-import gate.
 
+After the connected package is clean, run the routed assembly DRC feasibility
+gate:
+
+```bash
+CONNECTED_ROOT=/sim/ksabra/SPADMIC_work/assembly/tx_egress_connected_assembly_20260709_1604
+GENUS_RUN_ID=genus_tx_egress_connected_assembly_$(date +%Y%m%d_%H%M)
+bash TOP/syn/scripts/run_genus_tx_egress_connected_assembly.sh "$CONNECTED_ROOT" "$GENUS_RUN_ID"
+
+PNR_RUN_ID=innovus_tx_egress_connected_assembly_route_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_innovus_tx_egress_connected_assembly_route.sh "$CONNECTED_ROOT" "$GENUS_RUN_ID" "$PNR_RUN_ID"
+```
+
+This gate imports the Genus glue netlist with the fixed TX leaf abstracts,
+applies the validated leaf placement Tcl, places provisional assembly boundary
+pins, routes the glue/assembly, and requires Innovus `verify_drc` to report zero
+violations. It is still not final signoff; PG hookup, PVS, LVS, PEX, and MMMC
+remain deferred.
+
 ## Future Subblocks
 
 After the TX leaf package is frozen, continue with blocks that are safe as
