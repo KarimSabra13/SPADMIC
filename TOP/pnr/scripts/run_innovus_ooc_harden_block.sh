@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+# =============================================================================
+# SPADMIC matrix-top -- single-block Innovus OOC hardening flow
+# =============================================================================
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  TOP/pnr/scripts/run_innovus_ooc_harden_block.sh <block> <GENUS_RUN_ID> [RUN_ID]
+
+Supported v1 block:
+  ddr16_pairer / spadmic_ddr16_tx_pairer
+
+This is the first real TOP OOC hardening wrapper. It imports one Genus OOC
+netlist/SDC into Innovus, builds a local abstract floorplan, places pins,
+creates local VDD/VSS METTP access pins, runs place/CTS/route/filler/timing/
+DRV/Innovus DRC/connectivity checks, and exports DEF/LEF/GDS collateral.
+
+It is still typical-only Innovus OOC implementation. It does not run PVS,
+PEX, multi-corner signoff, or foundry signoff LVS.
+USAGE
+}
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  usage >&2
+  exit 2
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PNR_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+TOP_ROOT="$(cd "$PNR_ROOT/.." && pwd)"
+REPO_ROOT="$(cd "$TOP_ROOT/.." && pwd)"
+BLOCK_IN="$1"
+GENUS_RUN_ID="$2"
+
+case "$BLOCK_IN" in
+  ddr16_pairer|spadmic_ddr16_tx_pairer)
+    BLOCK="ddr16_pairer"
+    TOP_MODULE="spadmic_ddr16_tx_pairer"
+    ;;
+  *)
+    echo "ERROR: OOC hardening v1 supports only ddr16_pairer; got: $BLOCK_IN" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+RUN_ID="${3:-innovus_ooc_harden_${BLOCK}_$(date +%Y%m%d_%H%M)}"
+WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
+GENUS_ROOT="$WORK_ROOT/genus/$GENUS_RUN_ID"
+RUN_ROOT="$WORK_ROOT/innovus/$RUN_ID"
+BLOCK_ROOT="$RUN_ROOT/blocks/$BLOCK"
+HANDOFF_ROOT="$WORK_ROOT/handoff/abstracts/$BLOCK/$RUN_ID"
+LAYOUT_AUDIT_DIR="${SPADMIC_LAYOUT_AUDIT_DIR:-$REPO_ROOT/TOP/docs/layout_audits/SPADMIC2_20260709_072331}"
+
+export MPTDC_XH018_STACK="${MPTDC_XH018_STACK:-xx31}"
+export MPTDC_STDCELL_FAMILY="${MPTDC_STDCELL_FAMILY:-JIHD}"
+export MPTDC_PNR_ROUTE_LAYER_NAMES="${MPTDC_PNR_ROUTE_LAYER_NAMES:-MET1 MET2 MET3 METTP}"
+export MPTDC_PNR_SIGNAL_TOP_LAYER="${MPTDC_PNR_SIGNAL_TOP_LAYER:-MET3}"
+export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER="${MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER:-METTP}"
+export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY="${MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY:-1}"
+
+GENUS_BLOCK_ROOT="$GENUS_ROOT/$BLOCK"
+NETLIST="$GENUS_BLOCK_ROOT/outputs/$BLOCK.postsyn.v"
+SDC="$GENUS_BLOCK_ROOT/outputs/$BLOCK.postsyn.sdc"
+GENUS_SUMMARY="$GENUS_BLOCK_ROOT/SUMMARY.md"
+
+if [[ -e "$RUN_ROOT" ]]; then
+  echo "ERROR: run directory already exists: $RUN_ROOT" >&2
+  exit 2
+fi
+
+mkdir -p "$BLOCK_ROOT"/{checkpoints,generated,logs,outputs,reports,handoff} \
+  "$RUN_ROOT/reports" "$HANDOFF_ROOT"/{innovus,netlist,reports}
+
+fail_summary() {
+  local rc="$1"
+  local reason="$2"
+  {
+    echo "# SPADMIC Matrix TOP Innovus OOC Hardening"
+    echo
+    echo "- Run ID: \`$RUN_ID\`"
+    echo "- Run directory: \`$RUN_ROOT\`"
+    echo "- Block: \`$BLOCK\`"
+    echo "- Top module: \`$TOP_MODULE\`"
+    echo "- Genus run ID: \`$GENUS_RUN_ID\`"
+    echo "- Result: FAIL"
+    echo "- First error: \`$reason\`"
+    echo
+    echo "This wrapper did not claim signoff."
+  } > "$RUN_ROOT/SUMMARY.md"
+  cp "$RUN_ROOT/SUMMARY.md" "$BLOCK_ROOT/SUMMARY.md"
+  cat "$RUN_ROOT/SUMMARY.md"
+  exit "$rc"
+}
+
+[[ -d "$GENUS_ROOT" ]] || fail_summary 6 "Genus run directory not found: $GENUS_ROOT"
+[[ -f "$NETLIST" ]] || fail_summary 6 "Genus netlist not found: $NETLIST"
+[[ -f "$SDC" ]] || fail_summary 6 "Genus SDC not found: $SDC"
+[[ -f "$GENUS_SUMMARY" ]] || fail_summary 6 "Genus block summary not found: $GENUS_SUMMARY"
+[[ -d "$LAYOUT_AUDIT_DIR" ]] || fail_summary 6 "Layout audit directory not found: $LAYOUT_AUDIT_DIR"
+
+{
+  echo "RUN_ID=$RUN_ID"
+  echo "DATE_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "REPO_ROOT=$REPO_ROOT"
+  echo "TOP_ROOT=$TOP_ROOT"
+  echo "PNR_ROOT=$PNR_ROOT"
+  echo "RUN_ROOT=$RUN_ROOT"
+  echo "BLOCK_ROOT=$BLOCK_ROOT"
+  echo "HANDOFF_ROOT=$HANDOFF_ROOT"
+  echo "BLOCK=$BLOCK"
+  echo "TOP_MODULE=$TOP_MODULE"
+  echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+  echo "GENUS_ROOT=$GENUS_ROOT"
+  echo "GENUS_BLOCK_ROOT=$GENUS_BLOCK_ROOT"
+  echo "NETLIST=$NETLIST"
+  echo "SDC=$SDC"
+  echo "GENUS_SUMMARY=$GENUS_SUMMARY"
+  echo "LAYOUT_AUDIT_DIR=$LAYOUT_AUDIT_DIR"
+  echo "MPTDC_XH018_STACK=$MPTDC_XH018_STACK"
+  echo "MPTDC_STDCELL_FAMILY=$MPTDC_STDCELL_FAMILY"
+  echo "MPTDC_PNR_ROUTE_LAYER_NAMES=$MPTDC_PNR_ROUTE_LAYER_NAMES"
+  echo "MPTDC_PNR_SIGNAL_TOP_LAYER=$MPTDC_PNR_SIGNAL_TOP_LAYER"
+  echo "MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER"
+  echo "MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=$MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY"
+  echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
+  echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
+  echo "STATUS_SHORT_BEGIN"
+  git -C "$REPO_ROOT" status --short 2>/dev/null || true
+  echo "STATUS_SHORT_END"
+} > "$RUN_ROOT/run_manifest.txt"
+
+python3 "$SCRIPT_DIR/gen_ooc_block_harden_plan.py" "$BLOCK" \
+  --layout-audit-dir "$LAYOUT_AUDIT_DIR" \
+  --out-dir "$BLOCK_ROOT/generated"
+
+CONFIG_TCL="$BLOCK_ROOT/generated/ooc_block_harden_config.tcl"
+[[ -f "$CONFIG_TCL" ]] || fail_summary 6 "Generated hardening config missing: $CONFIG_TCL"
+
+if ! command -v innovus >/dev/null 2>&1; then
+  fail_summary 3 "innovus command not found; source the Cadence environment first"
+fi
+
+export SPADMIC_REPO_ROOT="$REPO_ROOT"
+export SPADMIC_TOP_ROOT="$TOP_ROOT"
+export SPADMIC_PNR_ROOT="$PNR_ROOT"
+export SPADMIC_INNOVUS_RUN_ROOT="$RUN_ROOT"
+export SPADMIC_INNOVUS_BLOCK_ROOT="$BLOCK_ROOT"
+export SPADMIC_INNOVUS_HANDOFF_ROOT="$HANDOFF_ROOT"
+export SPADMIC_INNOVUS_BLOCK="$BLOCK"
+export SPADMIC_INNOVUS_TOP_MODULE="$TOP_MODULE"
+export SPADMIC_INNOVUS_NETLIST="$NETLIST"
+export SPADMIC_INNOVUS_SDC="$SDC"
+export SPADMIC_INNOVUS_CONFIG_TCL="$CONFIG_TCL"
+export SPADMIC_INNOVUS_GENUS_SUMMARY="$GENUS_SUMMARY"
+
+set +e
+innovus -nowin -init "$SCRIPT_DIR/run_innovus_ooc_harden_block.tcl" \
+  -log "$BLOCK_ROOT/logs/innovus.log" \
+  > "$BLOCK_ROOT/logs/innovus.stdout.log" 2>&1
+innovus_rc=$?
+set -e
+
+status_rpt="$BLOCK_ROOT/reports/ooc_harden_status.rpt"
+result="FAIL"
+if [[ "$innovus_rc" -eq 0 ]] && [[ -f "$status_rpt" ]] && grep -q '^RESULT=ABSTRACT_READY_FOR_TOP_REVIEW$' "$status_rpt"; then
+  result="ABSTRACT_READY_FOR_TOP_REVIEW"
+fi
+
+{
+  echo "block,top_module,genus_run_id,innovus_run_id,netlist,sdc,result,status_report,handoff_root"
+  printf '%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+    "$BLOCK" "$TOP_MODULE" "$GENUS_RUN_ID" "$RUN_ID" "$NETLIST" "$SDC" \
+    "$result" "$status_rpt" "$HANDOFF_ROOT"
+} > "$RUN_ROOT/reports/ooc_harden_manifest.csv"
+
+{
+  echo "# SPADMIC Matrix TOP Innovus OOC Hardening"
+  echo
+  echo "- Run ID: \`$RUN_ID\`"
+  echo "- Run directory: \`$RUN_ROOT\`"
+  echo "- Block: \`$BLOCK\`"
+  echo "- Top module: \`$TOP_MODULE\`"
+  echo "- Genus run ID: \`$GENUS_RUN_ID\`"
+  echo "- Genus root: \`$GENUS_ROOT\`"
+  echo "- Branch: \`$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)\`"
+  echo "- Commit: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)\`"
+  echo "- XH018 stack: \`$MPTDC_XH018_STACK\`"
+  echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
+  echo "- Ordinary signal route layers: \`MET1 MET2 MET3\`"
+  echo "- Power access layer: \`METTP\`"
+  echo "- Layout audit: \`$LAYOUT_AUDIT_DIR\`"
+  echo "- Handoff root: \`$HANDOFF_ROOT\`"
+  echo "- Innovus return code: \`$innovus_rc\`"
+  echo
+  echo "## Result"
+  echo
+  echo "- Result: \`$result\`"
+  echo "- Status report: \`$status_rpt\`"
+  echo "- Manifest: \`reports/ooc_harden_manifest.csv\`"
+  echo
+  echo "This is typical-only Innovus OOC implementation. PVS, PEX, MMMC, and foundry LVS are deferred; do not label this SIGNOFF_READY."
+} > "$RUN_ROOT/SUMMARY.md"
+
+cp "$RUN_ROOT/SUMMARY.md" "$BLOCK_ROOT/SUMMARY.md"
+cat "$RUN_ROOT/SUMMARY.md"
+
+if [[ "$result" == "ABSTRACT_READY_FOR_TOP_REVIEW" ]]; then
+  exit 0
+fi
+if [[ "$innovus_rc" -eq 0 ]]; then
+  exit 8
+fi
+exit "$innovus_rc"

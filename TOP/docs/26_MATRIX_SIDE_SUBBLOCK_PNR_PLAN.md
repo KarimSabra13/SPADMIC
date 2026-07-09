@@ -174,19 +174,37 @@ New single-block entry point:
 
 - `TOP/pnr/scripts/run_innovus_ooc_block.sh <block> <GENUS_RUN_ID> [RUN_ID]`
 
-Current status: this validates Genus collateral and creates per-block Innovus
-directories. It does not yet import/place/route. The real Innovus OOC template
-still needs to be added after the first matrix-side plan review.
+Current collateral-gate status: this validates Genus collateral and creates
+per-block Innovus directories. It does not import/place/route.
 
-Expected future Innovus output per hardenable block:
+First hardening entry point:
+
+- `TOP/pnr/scripts/run_innovus_ooc_harden_block.sh <block> <GENUS_RUN_ID> [RUN_ID]`
+
+Current hardening scope:
+
+- v1 supports only `ddr16_pairer`;
+- local abstract floorplan, not absolute top placement;
+- generated pin plan from `TOP/docs/layout_audits/SPADMIC2_20260709_072331`;
+- ordinary signal routing limited to `MET1`-`MET3`;
+- one north `VDD` and one north `VSS` access pin on `METTP`;
+- place, CTS, route, filler, post-route setup/hold/DRV, Innovus DRC, and
+  Innovus connectivity reports;
+- DEF, LEF/abstract LEF, GDS, routed netlist, status report, and handoff package.
+
+The output label is `ABSTRACT_READY_FOR_TOP_REVIEW` only when the Innovus OOC
+wrapper reaches the export/handoff gate. It is not `SIGNOFF_READY`; PVS, PEX,
+MMMC, foundry LVS, and direct OA import are deferred.
+
+Expected Innovus hardening output per supported hardenable block:
 
 - placed/routed DEF;
 - LEF abstract;
-- GDS if available;
+- GDS;
 - pin placement report;
-- timing report;
+- setup and hold timing reports;
 - congestion/routability report;
-- DRC-oriented report;
+- Innovus DRC/connectivity reports;
 - power pin report;
 - run manifest and block summary.
 
@@ -211,17 +229,61 @@ Scripts added for this plan:
 | `TOP/syn/scripts/run_genus_ooc_block.tcl` | Compatibility Tcl entry point that sources the maintained Tcl. |
 | `TOP/pnr/scripts/run_innovus_ooc_block.sh` | Run one named block through the current Innovus collateral gate. |
 | `TOP/pnr/scripts/run_innovus_ooc_block.tcl` | Placeholder for the future reviewed Innovus import/place template. |
+| `TOP/pnr/scripts/gen_ooc_block_harden_plan.py` | Generate first-block local floorplan/pin-plan collateral from the SPADMIC2 layout audit CSVs. |
+| `TOP/pnr/scripts/run_innovus_ooc_harden_block.sh` | Run one supported block through real Innovus OOC hardening. |
+| `TOP/pnr/scripts/run_innovus_ooc_harden_block.tcl` | Innovus import/place/CTS/route/filler/export template for supported OOC hardening blocks. |
 
-Still missing before official block place/route:
+Still missing before final signoff:
 
-- real Innovus OOC import/place/preCTS Tcl template;
-- per-block pin placement constraints;
-- per-block floorplan dimensions/utilization targets;
-- abstract generation commands for LEF/GDS/DEF;
-- DRC/LVS-oriented report hooks;
-- OA/Virtuoso handoff packaging checklist.
+- PVS DRC/LVS replay for the exported GDS/source;
+- extraction/PEX handoff;
+- MMMC signoff views;
+- final top-level OA import validation.
 
-## 8. First Server Commands: `matrix_reset_ctrl`
+## 8. First Hardening Command: `ddr16_pairer`
+
+Run this on the server using a clean Genus OOC `ddr16_pairer` run, for example
+`genus_ooc_ddr16_pairer_20260709_0705`.
+
+```bash
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+git checkout SPADMIC_test
+git pull --ff-only origin SPADMIC_test
+
+EXPECTED_HEAD=$(git rev-parse HEAD)
+echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+
+source /eda/cadence/eda_2023-2024
+export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+export MPTDC_XH018_STACK=xx31
+export MPTDC_STDCELL_FAMILY=JIHD
+export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+export SPADMIC_LAYOUT_AUDIT_DIR="$PWD/TOP/docs/layout_audits/SPADMIC2_20260709_072331"
+
+GENUS_RUN_ID=genus_ooc_ddr16_pairer_20260709_0705
+PNR_RUN_ID=innovus_ooc_harden_ddr16_pairer_$(date +%Y%m%d_%H%M)
+
+bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddr16_pairer "$GENUS_RUN_ID" "$PNR_RUN_ID"
+PNR_RC=$?
+
+PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+BLOCK_ROOT="$PNR_ROOT/blocks/ddr16_pairer"
+cat "$PNR_ROOT/SUMMARY.md"
+cat "$BLOCK_ROOT/reports/ooc_harden_status.rpt"
+cat "$PNR_ROOT/reports/ooc_harden_manifest.csv"
+find "$BLOCK_ROOT/outputs" -maxdepth 1 -type f -print | sort
+
+echo "PNR_RC=$PNR_RC"
+echo "PNR_RUN_ID=$PNR_RUN_ID"
+echo "PNR_ROOT=$PNR_ROOT"
+```
+
+If `RESULT=ABSTRACT_READY_FOR_TOP_REVIEW`, copy the handoff root from the
+summary into the top-layout review flow. If the result is
+`INNOVUS_TC_OOC_REVIEW_REQUIRED`, inspect the named reports first; do not
+advance it as a clean abstract.
+
+## 9. Earlier Collateral-Only Commands: `matrix_reset_ctrl`
 
 Run this on the server after the patch is pushed.
 

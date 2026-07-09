@@ -113,6 +113,28 @@ The OOC gate is connectivity-first and includes `ddr16_pairer` by default,
 because the north SLVS row is now part of the staged top contract. Set
 `SPADMIC_INNOVUS_EXCLUDE_DDR16=1` only for a narrow debug rerun.
 
+## OOC Hardening Command
+
+The first real block implementation wrapper is separate from the collateral
+gate:
+
+```bash
+GENUS_RUN_ID=genus_ooc_ddr16_pairer_20260709_0705
+PNR_RUN_ID=innovus_ooc_harden_ddr16_pairer_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddr16_pairer "$GENUS_RUN_ID" "$PNR_RUN_ID"
+```
+
+The v1 hardening wrapper supports only `ddr16_pairer`. It imports the Genus
+OOC netlist/SDC, generates a local abstract plan from
+`TOP/docs/layout_audits/SPADMIC2_20260709_072331`, places pins, creates one
+north `VDD` and one north `VSS` `METTP` access pin, runs placement, CTS,
+route, filler insertion, post-route setup/hold/DRV reports, Innovus DRC and
+connectivity reports, then exports DEF/LEF/GDS collateral under the Innovus run
+root and `/sim/ksabra/SPADMIC_work/handoff/abstracts/ddr16_pairer/<RUN_ID>/`.
+
+This is typical-only OOC implementation for top-review handoff. PVS, PEX,
+MMMC, foundry LVS, and direct OA import remain separate later gates.
+
 The block-by-block plan is in `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`.
 
 ## Floorplan Intent

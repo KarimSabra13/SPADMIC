@@ -24,7 +24,9 @@ Expected directory shape under the work root:
 |   |-- <block>.def
 |   |-- <block>.lef
 |   |-- <block>.gds
-|   `-- <block>.abstract.lef
+|   |-- <block>.abstract.lef
+|   |-- <block>.routed.v
+|   `-- <block>.routed.pg.v
 `-- reports/
     |-- area.rpt
     |-- timing.rpt
@@ -61,19 +63,40 @@ If Innovus has not run place/route yet, the package must say
 | `INNOVUS_IMPORTED` | Innovus imported design and libraries. |
 | `PLACED_PRECTS` | Placement ran; CTS/route not complete. |
 | `ROUTED_FEASIBILITY` | Route ran for feasibility only; not signoff. |
+| `INNOVUS_TC_OOC_REVIEW_REQUIRED` | Typical-only Innovus OOC ran but at least one report/export/status needs review before top use. |
 | `ABSTRACT_READY_FOR_TOP_REVIEW` | DEF/LEF/GDS/pin reports are present for top layout review. |
 | `SIGNOFF_READY` | Reserved for explicit DRC/LVS/PEX/MMMC signoff evidence; do not use for current prototype flows. |
 
+## Current Hardening Wrapper
+
+The first real hardening wrapper is:
+
+```bash
+TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddr16_pairer <GENUS_RUN_ID> [RUN_ID]
+```
+
+It writes the package under:
+
+```text
+/sim/ksabra/SPADMIC_work/handoff/abstracts/ddr16_pairer/<RUN_ID>/
+```
+
+The wrapper uses a local abstract plan generated from
+`TOP/docs/layout_audits/SPADMIC2_20260709_072331`, with signal routing on
+`MET1`-`MET3` and one north `VDD` plus one north `VSS` access bar on `METTP`.
+It is typical-only Innovus OOC implementation; PVS, PEX, MMMC, foundry LVS, and
+direct OA import are separate future gates.
+
 ## First Blocks To Package
 
-1. `matrix_reset_ctrl`;
-2. `matrix_cfg_ctrl`;
-3. `position_snapshot`;
-4. `event_coordinator`;
-5. `event_bundle_tx`;
-6. `output_fifo`;
-7. `ddr16_pairer`;
-8. `ddrs2_adapter`;
+1. `ddr16_pairer` for the first routed abstract proof;
+2. `ddrs2_adapter` after DDRs2 macro pin placement is reviewed;
+3. `output_fifo`;
+4. `event_bundle_tx`;
+5. `event_coordinator`;
+6. `position_snapshot`;
+7. `matrix_reset_ctrl`;
+8. `matrix_cfg_ctrl`;
 9. `matrix_top_csr`.
 
 ## Top Reuse Rules
