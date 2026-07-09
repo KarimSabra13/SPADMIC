@@ -76,6 +76,12 @@ leaf abstracts: `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and
 `TOP/docs/29_TX_EGRESS_LEAF_ABSTRACT_STATUS.md`. This is top-review abstract
 evidence only; `SIGNOFF_READY` remains `NO`.
 
+[FROZEN] The TX egress assembly path now starts from the four-leaf manifest and
+`TOP/pnr/scripts/run_tx_egress_leaf_assembly_plan.sh`. The generated placement
+CSV/Tcl package is the input to a true fixed-leaf top/assembly importer. The
+legacy `tx_egress_assembly` OOC alias remains a monolithic RTL-shaped
+regression path, not final macro assembly evidence.
+
 [FROZEN] SLVS/receiver GPIO controls are CSR-driven internal top outputs.
 
 [FROZEN] SLVS driver controls: `S_DRV[3:0]`, `EN_VREF_EXT`, `EN_DRV`,

@@ -174,6 +174,32 @@ MMMC, foundry LVS, and direct OA import remain separate later gates.
 
 The block-by-block plan is in `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`.
 
+## TX Fixed-Leaf Assembly Plan
+
+After the four TX leaves are validated, freeze their manifest and generate the
+true fixed-leaf assembly planning package:
+
+```bash
+MANIFEST=/sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_inputs_20260709_1515/tx_leaf_manifest.csv
+RUN_ID=tx_egress_leaf_assembly_plan_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_tx_egress_leaf_assembly_plan.sh "$MANIFEST" "$RUN_ID"
+```
+
+This writes:
+
+```text
+/sim/ksabra/SPADMIC_work/assembly/<RUN_ID>/README.md
+/sim/ksabra/SPADMIC_work/assembly/<RUN_ID>/tx_egress_leaf_assembly_sources.csv
+/sim/ksabra/SPADMIC_work/assembly/<RUN_ID>/tx_egress_leaf_assembly_placements.csv
+/sim/ksabra/SPADMIC_work/assembly/<RUN_ID>/tx_egress_leaf_assembly_place.tcl
+/sim/ksabra/SPADMIC_work/assembly/<RUN_ID>/tx_egress_leaf_assembly_status.rpt
+```
+
+The generated plan is a fixed-leaf import/placement review artifact. It does
+not replace top assembly, PG hookup, PVS, LVS, PEX, or MMMC. If the local stack
+does not fit the prior shallow TX corridor, keep the lower TX leaves soft or
+region-guided until the top placement proves there is physical room.
+
 ## Floorplan Intent
 
 - `matrice3` on the left, vertically centered.

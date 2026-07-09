@@ -112,6 +112,20 @@ ready for top-layout review, but `SIGNOFF_READY` remains `NO` and the current
 `tx_egress_assembly` alias is still a monolithic RTL-shaped regression path,
 not a true fixed-leaf macro assembly.
 
+Use the fixed-leaf assembly planning wrapper after collecting the four-leaf
+manifest:
+
+```bash
+bash TOP/pnr/scripts/run_tx_egress_leaf_assembly_plan.sh \
+  /sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_inputs_20260709_1515/tx_leaf_manifest.csv \
+  tx_egress_leaf_assembly_plan_$(date +%Y%m%d_%H%M)
+```
+
+The wrapper writes source/placement CSVs and an Innovus Tcl placement include
+under `/sim/ksabra/SPADMIC_work/assembly/<RUN_ID>/`. It is the input to a real
+top/assembly importer; it does not perform top route, PG hookup, PVS, LVS, PEX,
+or MMMC.
+
 ## Top Reuse Rules
 
 - A block abstract is a placement aid, not permission to route inside analog

@@ -98,6 +98,29 @@ signal order should remain:
 event_bundle_tx -> output_fifo -> ddr16_pairer -> ddrs2_adapter -> DDRs2
 ```
 
+## Fixed-Leaf Assembly Planning Package
+
+The four-leaf server manifest can now be turned into a deterministic local
+fixed-leaf placement proposal:
+
+```bash
+MANIFEST=/sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_inputs_20260709_1515/tx_leaf_manifest.csv
+RUN_ID=tx_egress_leaf_assembly_plan_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_tx_egress_leaf_assembly_plan.sh "$MANIFEST" "$RUN_ID"
+```
+
+The generated package includes normalized source and placement CSVs plus
+`tx_egress_leaf_assembly_place.tcl`, which can be sourced by a future
+top/assembly Innovus importer after the leaf abstracts are loaded. This is a
+review package, not a completed assembly run.
+
+The DDRs2 adapter remains the hard north anchor under the DDRs2 macro. The
+full four-leaf local stack is taller than the prior shallow monolithic TX
+corridor, mainly because `output_fifo` is a `540.400 um` tall clean abstract.
+Therefore top absolute placement must be reviewed before route; do not force
+all four rectangles into the old corridor if that causes overlap or impossible
+PG hookup.
+
 ## Future Subblocks
 
 After the TX leaf package is frozen, continue with blocks that are safe as
