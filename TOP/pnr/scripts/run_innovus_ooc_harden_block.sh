@@ -20,6 +20,9 @@ DRV/Innovus DRC/connectivity checks, and exports DEF/LEF/GDS collateral.
 By default, local special PG routing is deferred: the abstract exports METTP
 VDD/VSS access pins for top-level hookup. Set SPADMIC_OOC_ENABLE_PG_SROUTE=1
 only for an experimental local PG special-route run.
+For the wide TX egress core min-area/antenna rescue, set
+SPADMIC_OOC_ROUTE_PROFILE=met2_first_antenna. If the wide bbox still reports
+non-PG DRC, rerun with SPADMIC_OOC_CORE_HEIGHT_UM=160, then 170 maximum.
 
 It is still typical-only Innovus OOC implementation. It does not run PVS,
 PEX, multi-corner signoff, or foundry signoff LVS.
@@ -133,6 +136,16 @@ fail_summary() {
   echo "MPTDC_PNR_SIGNAL_TOP_LAYER=$MPTDC_PNR_SIGNAL_TOP_LAYER"
   echo "MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=$MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER"
   echo "MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=$MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY"
+  echo "SPADMIC_OOC_ROUTE_PROFILE=${SPADMIC_OOC_ROUTE_PROFILE:-default}"
+  echo "SPADMIC_OOC_SIGNAL_BOTTOM_LAYER=${SPADMIC_OOC_SIGNAL_BOTTOM_LAYER:-}"
+  echo "SPADMIC_OOC_SIGNAL_BOTTOM_LAYER_IDX=${SPADMIC_OOC_SIGNAL_BOTTOM_LAYER_IDX:-}"
+  echo "SPADMIC_OOC_SIGNAL_TOP_LAYER=${SPADMIC_OOC_SIGNAL_TOP_LAYER:-}"
+  echo "SPADMIC_OOC_SIGNAL_TOP_LAYER_IDX=${SPADMIC_OOC_SIGNAL_TOP_LAYER_IDX:-}"
+  echo "SPADMIC_OOC_CORE_HEIGHT_UM=${SPADMIC_OOC_CORE_HEIGHT_UM:-}"
+  echo "SPADMIC_OOC_PLACE_MAX_DENSITY=${SPADMIC_OOC_PLACE_MAX_DENSITY:-}"
+  echo "SPADMIC_OOC_ENABLE_ROUTE_EFFORT=${SPADMIC_OOC_ENABLE_ROUTE_EFFORT:-}"
+  echo "SPADMIC_OOC_ENABLE_ANTENNA_REPAIR=${SPADMIC_OOC_ENABLE_ANTENNA_REPAIR:-}"
+  echo "SPADMIC_OOC_REQUIRE_ANTENNA_CLEAN=${SPADMIC_OOC_REQUIRE_ANTENNA_CLEAN:-}"
   echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
   echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   echo "STATUS_SHORT_BEGIN"
@@ -197,7 +210,15 @@ fi
   echo "- Commit: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)\`"
   echo "- XH018 stack: \`$MPTDC_XH018_STACK\`"
   echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
-  echo "- Ordinary signal route layers: \`MET1 MET2 MET3\`"
+  echo "- OOC route profile: \`${SPADMIC_OOC_ROUTE_PROFILE:-default}\`"
+  case "${SPADMIC_OOC_ROUTE_PROFILE:-default}" in
+    met2_first|met2_first_antenna)
+      echo "- Ordinary signal route layers: \`MET2 MET3\`"
+      ;;
+    *)
+      echo "- Ordinary signal route layers: \`${SPADMIC_OOC_SIGNAL_BOTTOM_LAYER:-MET1} ${SPADMIC_OOC_SIGNAL_TOP_LAYER:-MET3}\`"
+      ;;
+  esac
   echo "- Power access layer: \`METTP\`"
   case "${SPADMIC_OOC_ENABLE_PG_SROUTE:-0}" in
     1|yes|YES|true|TRUE|on|ON)

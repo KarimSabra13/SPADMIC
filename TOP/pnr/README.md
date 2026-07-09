@@ -136,6 +136,22 @@ Local special PG routing is disabled by default: the exported METTP VDD/VSS
 pins are a top-level hookup contract. Set `SPADMIC_OOC_ENABLE_PG_SROUTE=1`
 only for an experimental local PG special-route run.
 
+For the wide `tx_egress_core` DDRs2-facing abstract, use the aggressive route
+profile when the default MET1-MET3 route regenerates MET1 minimum-area stubs:
+
+```bash
+export SPADMIC_OOC_ROUTE_PROFILE=met2_first_antenna
+export SPADMIC_OOC_REQUIRE_DRC_SAFE_FILLER=1
+export SPADMIC_OOC_ENABLE_MIN_AREA_REPAIR=1
+unset SPADMIC_OOC_ENABLE_PG_SROUTE
+```
+
+This profile routes ordinary signals with MET2-MET3, enables higher route
+effort plus antenna repair, and keeps local PG deferred to top-level hookup.
+If that still leaves non-PG DRC, the bounded geometry fallback is to rerun with
+`SPADMIC_OOC_CORE_HEIGHT_UM=160`, then at most `170`, while keeping the DDRs2
+north-pin alignment unchanged.
+
 This is typical-only OOC implementation for top-review handoff. PVS, PEX,
 MMMC, foundry LVS, and direct OA import remain separate later gates.
 

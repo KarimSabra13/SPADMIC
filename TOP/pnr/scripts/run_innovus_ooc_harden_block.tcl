@@ -72,6 +72,46 @@ proc spadmic_ooc_pg_sroute_enabled {} {
     return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_PG_SROUTE $default_value]]
 }
 
+proc spadmic_ooc_route_profile {} {
+    return [string tolower [string trim [spadmic_ooc_env SPADMIC_OOC_ROUTE_PROFILE default]]]
+}
+
+proc spadmic_ooc_route_profile_met2_first {} {
+    set profile [spadmic_ooc_route_profile]
+    return [expr {[lsearch -exact [list met2_first met2_first_antenna] $profile] >= 0}]
+}
+
+proc spadmic_ooc_route_profile_effort_enabled {} {
+    set profile [spadmic_ooc_route_profile]
+    if {[lsearch -exact [list met2_first met2_first_antenna met1_effort met1_effort_antenna] $profile] >= 0} {
+        return 1
+    }
+    return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_ROUTE_EFFORT 0]]
+}
+
+proc spadmic_ooc_antenna_repair_enabled {} {
+    set profile [spadmic_ooc_route_profile]
+    set default_value [expr {[regexp -nocase {antenna} $profile] ? 1 : 0}]
+    return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_ANTENNA_REPAIR $default_value]]
+}
+
+proc spadmic_ooc_require_antenna_clean {} {
+    set default_value [expr {[spadmic_ooc_antenna_repair_enabled] ? 1 : 0}]
+    return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_REQUIRE_ANTENNA_CLEAN $default_value]]
+}
+
+proc spadmic_ooc_core_width_um {} {
+    return [spadmic_ooc_env SPADMIC_OOC_CORE_WIDTH_UM [spadmic_ooc_cfg core_width_um]]
+}
+
+proc spadmic_ooc_core_height_um {} {
+    return [spadmic_ooc_env SPADMIC_OOC_CORE_HEIGHT_UM [spadmic_ooc_cfg core_height_um]]
+}
+
+proc spadmic_ooc_place_max_density {} {
+    return [spadmic_ooc_env SPADMIC_OOC_PLACE_MAX_DENSITY [spadmic_ooc_cfg place_max_density]]
+}
+
 proc spadmic_ooc_layer_index {layer fallback} {
     if {[string is integer -strict $layer]} {
         return $layer
@@ -336,6 +376,125 @@ proc spadmic_ooc_marker_min_area_nets {} {
         lappend rows [list $net $marker [spadmic_ooc_flat_box $box] [spadmic_ooc_report_value $message]]
     }
     return [list $nets $rows]
+}
+
+proc spadmic_ooc_marker_classification {} {
+    array set counts {
+        total 0
+        met1_min_area 0
+        antenna 0
+        expected_pg_connectivity 0
+        other 0
+    }
+    set min_area_nets [list]
+    set antenna_nets [list]
+    set other_rows [list]
+    set markers [list]
+    catch {set markers [dbGet top.markers]}
+    foreach marker $markers {
+        if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} {
+            continue
+        }
+        incr counts(total)
+        set layer ""
+        set type ""
+        set subtype ""
+        set message ""
+        catch {set layer [dbGet $marker.layer.name]}
+        catch {set type [dbGet $marker.type]}
+        catch {set subtype [dbGet $marker.subType]}
+        catch {set message [dbGet $marker.message]}
+
+        set report_msg [spadmic_ooc_report_value $message]
+        set is_min_area 0
+        if {[string equal -nocase $layer "MET1"] &&
+            [string equal -nocase $type "Geometry"] &&
+            ([regexp -nocase {Minimal_Area|Minimum[[:space:]]+Area|Mar} $subtype] ||
+             [regexp -nocase {Minimum[[:space:]]+Area|Minimal_Area} $message])} {
+            set is_min_area 1
+        }
+        if {$is_min_area} {
+            incr counts(met1_min_area)
+            if {[regexp -nocase {Regular[[:space:]]+Wire[[:space:]]+of[[:space:]]+Net[[:space:]]+([^[:space:]]+)} $message -> net]} {
+                spadmic_ooc_unique_append min_area_nets $net
+            }
+            continue
+        }
+
+        set is_expected_pg 0
+        if {![spadmic_ooc_pg_sroute_enabled] &&
+            [string equal -nocase $type "Connectivity"] &&
+            [regexp -nocase {Net[[:space:]]+(VDD|VSS)} $message]} {
+            set is_expected_pg 1
+        }
+        if {$is_expected_pg} {
+            incr counts(expected_pg_connectivity)
+            continue
+        }
+
+        set is_antenna 0
+        if {[string equal -nocase $type "Antenna"] ||
+            [regexp -nocase {Antenna|Ant.*Area|ProcessAntenna} $subtype] ||
+            [regexp -nocase {Antenna|S[.]PAR|Antenna[[:space:]]+Side[[:space:]]+Area} $message]} {
+            set is_antenna 1
+        }
+        if {$is_antenna} {
+            incr counts(antenna)
+            if {[regexp -nocase {Regular[[:space:]]+Wire[[:space:]]+of[[:space:]]+Net[[:space:]]+([^[:space:]]+)} $message -> net]} {
+                spadmic_ooc_unique_append antenna_nets $net
+            }
+            continue
+        }
+
+        incr counts(other)
+        lappend other_rows "$marker:$layer:$type:$subtype:$report_msg"
+    }
+    return [list \
+        total $counts(total) \
+        met1_min_area $counts(met1_min_area) \
+        antenna $counts(antenna) \
+        expected_pg_connectivity $counts(expected_pg_connectivity) \
+        other $counts(other) \
+        min_area_nets $min_area_nets \
+        antenna_nets $antenna_nets \
+        other_rows $other_rows]
+}
+
+proc spadmic_ooc_write_marker_classification {path} {
+    array set cls [spadmic_ooc_marker_classification]
+    set require_antenna [spadmic_ooc_require_antenna_clean]
+    set min_area_status [expr {$cls(met1_min_area) == 0 ? "PASS" : "FAIL"}]
+    set antenna_status [expr {$cls(antenna) == 0 ? "PASS" : ($require_antenna ? "FAIL" : "REVIEW_REQUIRED")}]
+    set other_status [expr {$cls(other) == 0 ? "PASS" : "FAIL"}]
+    set overall [expr {$min_area_status eq "PASS" && $antenna_status eq "PASS" && $other_status eq "PASS" ? "PASS" : "FAIL"}]
+
+    spadmic_ooc_write_text $path [list \
+        "LABEL=DRC_MARKER_CLASSIFICATION" \
+        "STATUS=$overall" \
+        "MARKER_TOTAL=$cls(total)" \
+        "MET1_MIN_AREA_MARKER_COUNT=$cls(met1_min_area)" \
+        "MET1_MIN_AREA_NETS=[join $cls(min_area_nets) { }]" \
+        "ANTENNA_MARKER_COUNT=$cls(antenna)" \
+        "ANTENNA_NETS=[join $cls(antenna_nets) { }]" \
+        "EXPECTED_PG_CONNECTIVITY_MARKER_COUNT=$cls(expected_pg_connectivity)" \
+        "OTHER_MARKER_COUNT=$cls(other)" \
+        "OTHER_MARKERS=[join $cls(other_rows) {; }]" \
+        "REQUIRE_ANTENNA_CLEAN=[expr {$require_antenna ? 1 : 0}]" \
+        "MIN_AREA_MARKER_STATUS=$min_area_status" \
+        "ANTENNA_MARKER_STATUS=$antenna_status" \
+        "OTHER_MARKER_STATUS=$other_status" \
+    ]
+
+    spadmic_ooc_status_set DRC_MARKER_CLASSIFICATION $overall
+    spadmic_ooc_status_set DRC_MARKER_TOTAL $cls(total)
+    spadmic_ooc_status_set MET1_MIN_AREA_MARKER_COUNT $cls(met1_min_area)
+    spadmic_ooc_status_set MET1_MIN_AREA_MARKER_STATUS $min_area_status
+    spadmic_ooc_status_set ANTENNA_MARKER_COUNT $cls(antenna)
+    spadmic_ooc_status_set ANTENNA_MARKER_STATUS $antenna_status
+    spadmic_ooc_status_set EXPECTED_PG_CONNECTIVITY_MARKER_COUNT $cls(expected_pg_connectivity)
+    spadmic_ooc_status_set OTHER_MARKER_COUNT $cls(other)
+    spadmic_ooc_status_set OTHER_MARKER_STATUS $other_status
+    return $overall
 }
 
 proc spadmic_ooc_box_is_numeric {box} {
@@ -652,10 +811,13 @@ proc spadmic_ooc_init_design {} {
 }
 
 proc spadmic_ooc_floorplan {} {
-    set core_w [spadmic_ooc_cfg core_width_um]
-    set core_h [spadmic_ooc_cfg core_height_um]
+    set core_w [spadmic_ooc_core_width_um]
+    set core_h [spadmic_ooc_core_height_um]
     set margin [spadmic_ooc_cfg core_margin_um]
     set site [spadmic_ooc_cfg stdcell_site]
+    spadmic_ooc_status_set CORE_WIDTH_UM $core_w
+    spadmic_ooc_status_set CORE_HEIGHT_UM $core_h
+    spadmic_ooc_status_set CORE_MARGIN_UM $margin
     set cmds [list \
         [list floorPlan -site $site -s $core_w $core_h $margin $margin $margin $margin] \
         [list floorPlan -site $site -d [expr {$core_w + 2.0 * $margin}] [expr {$core_h + 2.0 * $margin}] $margin $margin $margin $margin]]
@@ -663,8 +825,8 @@ proc spadmic_ooc_floorplan {} {
 }
 
 proc spadmic_ooc_die_size {} {
-    set core_w [spadmic_ooc_cfg core_width_um]
-    set core_h [spadmic_ooc_cfg core_height_um]
+    set core_w [spadmic_ooc_core_width_um]
+    set core_h [spadmic_ooc_core_height_um]
     set margin [spadmic_ooc_cfg core_margin_um]
     return [list [expr {$core_w + 2.0 * $margin}] [expr {$core_h + 2.0 * $margin}]]
 }
@@ -793,18 +955,83 @@ proc spadmic_ooc_place_pins {} {
 }
 
 proc spadmic_ooc_route_layer_setup {} {
-    set bottom [spadmic_ooc_cfg signal_bottom_layer]
-    set top [spadmic_ooc_cfg signal_top_layer]
-    set bottom_idx [spadmic_ooc_layer_index [spadmic_ooc_env SPADMIC_OOC_SIGNAL_BOTTOM_LAYER_IDX [spadmic_ooc_cfg signal_bottom_layer_idx]] 1]
-    set top_idx [spadmic_ooc_layer_index [spadmic_ooc_env SPADMIC_OOC_SIGNAL_TOP_LAYER_IDX [spadmic_ooc_cfg signal_top_layer_idx]] 3]
-    catch {setDesignMode -bottomRoutingLayer $bottom -topRoutingLayer $top}
-    catch {setNanoRouteMode -routeBottomRoutingLayer $bottom_idx}
-    catch {setNanoRouteMode -routeTopRoutingLayer $top_idx}
-    spadmic_ooc_status_set ROUTE_LAYER_SETUP PASS
+    set profile [spadmic_ooc_route_profile]
+    set bottom_default [spadmic_ooc_cfg signal_bottom_layer]
+    set bottom_idx_default [spadmic_ooc_cfg signal_bottom_layer_idx]
+    if {[spadmic_ooc_route_profile_met2_first]} {
+        set bottom_default MET2
+        set bottom_idx_default 2
+    }
+    set bottom [string toupper [spadmic_ooc_env SPADMIC_OOC_SIGNAL_BOTTOM_LAYER $bottom_default]]
+    set top [string toupper [spadmic_ooc_env SPADMIC_OOC_SIGNAL_TOP_LAYER [spadmic_ooc_cfg signal_top_layer]]]
+    set bottom_idx [spadmic_ooc_layer_index [spadmic_ooc_env SPADMIC_OOC_SIGNAL_BOTTOM_LAYER_IDX $bottom_idx_default] [spadmic_ooc_layer_index $bottom 1]]
+    set top_idx [spadmic_ooc_layer_index [spadmic_ooc_env SPADMIC_OOC_SIGNAL_TOP_LAYER_IDX [spadmic_ooc_cfg signal_top_layer_idx]] [spadmic_ooc_layer_index $top 3]]
+    set effort_enabled [spadmic_ooc_route_profile_effort_enabled]
+    set antenna_repair [spadmic_ooc_antenna_repair_enabled]
+
+    set rpt [file join $::spadmic_ooc_reports_dir ROUTE_LAYER_SETUP.rpt]
+    set fh [open $rpt w]
+    puts $fh "LABEL=ROUTE_LAYER_SETUP"
+    puts $fh "ROUTE_PROFILE=$profile"
+    puts $fh "SIGNAL_BOTTOM_LAYER=$bottom"
+    puts $fh "SIGNAL_TOP_LAYER=$top"
+    puts $fh "SIGNAL_BOTTOM_LAYER_IDX=$bottom_idx"
+    puts $fh "SIGNAL_TOP_LAYER_IDX=$top_idx"
+    puts $fh "ROUTE_EFFORT_ENABLED=[expr {$effort_enabled ? 1 : 0}]"
+    puts $fh "ANTENNA_REPAIR_ENABLED=[expr {$antenna_repair ? 1 : 0}]"
+
+    set commands [list \
+        [list setDesignMode -bottomRoutingLayer $bottom -topRoutingLayer $top] \
+        [list setNanoRouteMode -routeBottomRoutingLayer $bottom_idx] \
+        [list setNanoRouteMode -routeTopRoutingLayer $top_idx]]
+    if {$effort_enabled} {
+        foreach cmd [list \
+            [list setNanoRouteMode -routeWithTimingDriven true] \
+            [list setNanoRouteMode -routeWithSiDriven true] \
+            [list setNanoRouteMode -drouteUseMultiCutViaEffort high]] {
+            lappend commands $cmd
+        }
+    }
+    if {$antenna_repair} {
+        lappend commands [list setNanoRouteMode -drouteFixAntenna true]
+    }
+
+    set required_failures [list]
+    set optional_failures [list]
+    set cmd_idx 0
+    foreach cmd $commands {
+        incr cmd_idx
+        puts $fh "TRY=$cmd"
+        if {[catch {uplevel #0 $cmd} err]} {
+            puts $fh "TRY_STATUS=FAIL"
+            puts $fh "ERROR=[spadmic_ooc_report_value $err]"
+            if {$cmd_idx <= 3} {
+                lappend required_failures "$cmd:$err"
+            } else {
+                lappend optional_failures "$cmd:$err"
+            }
+        } else {
+            puts $fh "TRY_STATUS=PASS"
+            puts $fh "COMMAND=$cmd"
+        }
+    }
+    set status [expr {[llength $required_failures] == 0 ? "PASS" : "FAIL"}]
+    puts $fh "STATUS=$status"
+    puts $fh "REQUIRED_FAILURES=[join $required_failures {; }]"
+    puts $fh "OPTIONAL_FAILURES=[join $optional_failures {; }]"
+    close $fh
+
+    spadmic_ooc_status_set ROUTE_LAYER_SETUP $status
+    spadmic_ooc_status_set ROUTE_PROFILE $profile
+    spadmic_ooc_status_set SIGNAL_ROUTE_LAYERS "${bottom}-${top}"
+    spadmic_ooc_status_set SIGNAL_ROUTE_LAYER_INDEXES "${bottom_idx}-${top_idx}"
+    spadmic_ooc_status_set ROUTE_EFFORT_ENABLED [expr {$effort_enabled ? 1 : 0}]
+    spadmic_ooc_status_set ANTENNA_REPAIR_ENABLED [expr {$antenna_repair ? 1 : 0}]
 }
 
 proc spadmic_ooc_place_design {} {
-    set density [spadmic_ooc_cfg place_max_density]
+    set density [spadmic_ooc_place_max_density]
+    spadmic_ooc_status_set PLACE_MAX_DENSITY $density
     catch {setPlaceMode -place_global_max_density $density}
     spadmic_ooc_try_first PLACE_DESIGN [list {place_design} {placeDesign}] 1
     spadmic_ooc_capture_first [file join $::spadmic_ooc_reports_dir report_area_post_place.rpt] report_area_post_place [list {report_area} {reportArea}] 0
@@ -912,6 +1139,73 @@ proc spadmic_ooc_postroute_opt_and_timing {} {
     spadmic_ooc_capture_first [file join $::spadmic_ooc_reports_dir report_drv_post_route.rpt] report_drv_post_route [list {report_constraint -all_violators} {report_constraints -all_violators}] 0
 }
 
+proc spadmic_ooc_postroute_antenna_repair {} {
+    set rpt [file join $::spadmic_ooc_reports_dir POSTROUTE_ANTENNA_REPAIR.rpt]
+    if {![spadmic_ooc_antenna_repair_enabled]} {
+        spadmic_ooc_write_text $rpt [list \
+            "LABEL=POSTROUTE_ANTENNA_REPAIR" \
+            "STATUS=DISABLED" \
+            "OVERRIDE=Set SPADMIC_OOC_ENABLE_ANTENNA_REPAIR=1 or use SPADMIC_OOC_ROUTE_PROFILE=met2_first_antenna." \
+        ]
+        spadmic_ooc_status_set POSTROUTE_ANTENNA_REPAIR DISABLED
+        return 0
+    }
+
+    set pre_markers [file join $::spadmic_ooc_reports_dir postroute_antenna_repair_pre_markers.tsv]
+    set post_markers [file join $::spadmic_ooc_reports_dir postroute_antenna_repair_post_markers.tsv]
+    spadmic_ooc_write_marker_dump $pre_markers
+    array set pre_cls [spadmic_ooc_marker_classification]
+
+    set fh [open $rpt w]
+    puts $fh "LABEL=POSTROUTE_ANTENNA_REPAIR"
+    puts $fh "PRE_MARKER_REPORT=$pre_markers"
+    puts $fh "PRE_ANTENNA_MARKER_COUNT=$pre_cls(antenna)"
+    puts $fh "PRE_ANTENNA_NETS=[join $pre_cls(antenna_nets) { }]"
+    if {$pre_cls(antenna) == 0} {
+        puts $fh "STATUS=SKIPPED_NO_ANTENNA_MARKERS"
+        close $fh
+        spadmic_ooc_status_set POSTROUTE_ANTENNA_REPAIR SKIPPED_NO_MARKERS
+        return 0
+    }
+
+    set commands [list \
+        [list setNanoRouteMode -drouteFixAntenna true] \
+        [list ecoRoute -fix_antenna] \
+        [list ecoRoute -fix_drc] \
+        [list globalDetailRoute] \
+        [list detailRoute] \
+        [list ecoRoute]]
+    set pass_count 0
+    set fail_count 0
+    set failures [list]
+    foreach cmd $commands {
+        puts $fh "TRY=$cmd"
+        if {[catch {uplevel #0 $cmd} err]} {
+            incr fail_count
+            puts $fh "TRY_STATUS=FAIL"
+            puts $fh "ERROR=[spadmic_ooc_report_value $err]"
+            lappend failures "$cmd:$err"
+        } else {
+            incr pass_count
+            puts $fh "TRY_STATUS=PASS"
+            puts $fh "COMMAND=$cmd"
+        }
+    }
+    spadmic_ooc_write_marker_dump $post_markers
+    array set post_cls [spadmic_ooc_marker_classification]
+    set status [expr {$post_cls(antenna) == 0 ? "PASS" : "REVIEW_REQUIRED"}]
+    puts $fh "PASS_COUNT=$pass_count"
+    puts $fh "FAIL_COUNT=$fail_count"
+    puts $fh "FAILURES=[join $failures {; }]"
+    puts $fh "POST_MARKER_REPORT=$post_markers"
+    puts $fh "POST_ANTENNA_MARKER_COUNT=$post_cls(antenna)"
+    puts $fh "POST_ANTENNA_NETS=[join $post_cls(antenna_nets) { }]"
+    puts $fh "STATUS=$status"
+    close $fh
+    spadmic_ooc_status_set POSTROUTE_ANTENNA_REPAIR $status
+    return 1
+}
+
 proc spadmic_ooc_post_min_area_repair_timing {} {
     catch {setExtractRCMode -engine postRoute}
     catch {extractRC}
@@ -932,13 +1226,17 @@ proc spadmic_ooc_verify_reports {} {
     set reg_conn_rpt [file join $::spadmic_ooc_reports_dir verify_connectivity_regular.rpt]
     set pg_conn_rpt [file join $::spadmic_ooc_reports_dir verify_connectivity_pg.rpt]
     set route_rpt [file join $::spadmic_ooc_reports_dir report_route.rpt]
+    set marker_class_rpt [file join $::spadmic_ooc_reports_dir DRC_MARKER_CLASSIFICATION.rpt]
     spadmic_ooc_capture_first $drc_rpt verify_drc_post_route [list {verify_drc} {verifyGeometry}] 1
     set marker_count [spadmic_ooc_write_marker_dump $drc_marker_tsv]
+    set marker_class_status [spadmic_ooc_write_marker_classification $marker_class_rpt]
     spadmic_ooc_write_text [file join $::spadmic_ooc_reports_dir DRC_MARKER_DUMP.rpt] [list \
         "LABEL=DRC_MARKER_DUMP" \
         "STATUS=PASS" \
         "MARKER_REPORT=$drc_marker_tsv" \
         "MARKER_COUNT=$marker_count" \
+        "CLASSIFICATION_REPORT=$marker_class_rpt" \
+        "CLASSIFICATION_STATUS=$marker_class_status" \
     ]
     spadmic_ooc_status_set DRC_MARKER_DUMP PASS
     spadmic_ooc_capture_first $reg_conn_rpt verify_connectivity_regular [list {verifyConnectivity -type regular} {verifyConnectivity}] 1
@@ -1026,6 +1324,11 @@ proc spadmic_ooc_copy_handoff {} {
     } else {
         set pg_route_note "- PG special-route stitching: deferred to top-level hookup; this package exports only `METTP` access pins for `VDD`/`VSS`."
     }
+    set route_profile [spadmic_ooc_route_profile]
+    set route_layers "MET1-MET3"
+    if {[info exists ::spadmic_ooc_status(SIGNAL_ROUTE_LAYERS)]} {
+        set route_layers $::spadmic_ooc_status(SIGNAL_ROUTE_LAYERS)
+    }
     spadmic_ooc_write_text $readme [list \
         "# SPADMIC OOC Abstract Handoff: $block" \
         "" \
@@ -1034,7 +1337,8 @@ proc spadmic_ooc_copy_handoff {} {
         "- Innovus root: `$::spadmic_ooc_block_root`" \
         "- Genus netlist: `$::spadmic_ooc_netlist`" \
         "- Genus SDC: `$::spadmic_ooc_sdc`" \
-        "- Ordinary signal routing: `MET1`-`MET3`" \
+        "- OOC route profile: `$route_profile`" \
+        "- Ordinary signal routing: `$route_layers`" \
         "- Power pins: one `VDD` and one `VSS` north-edge bar on `METTP`" \
         $pg_route_note \
         "- PVS/LVS/PEX/MMMC: deferred; this package is not `SIGNOFF_READY`." \
@@ -1047,7 +1351,7 @@ proc spadmic_ooc_write_status {} {
     set result ABSTRACT_READY_FOR_TOP_REVIEW
     set required_statuses [list \
         LIBRARY_SOURCE INIT_DESIGN FLOORPLAN CREATE_PG_PIN_VDD CREATE_PG_PIN_VSS FILLER_MODE \
-        PLACE_PINS_WEST PLACE_PINS_SOUTH PLACE_PINS_NORTH PLACE_DESIGN CTS_DESIGN ROUTE_DESIGN \
+        PLACE_PINS_WEST PLACE_PINS_SOUTH PLACE_PINS_NORTH ROUTE_LAYER_SETUP PLACE_DESIGN CTS_DESIGN ROUTE_DESIGN \
         ADD_FILLER POSTROUTE_SETUP_TIMING POSTROUTE_HOLD_TIMING EXPORT_DEF EXPORT_LEF EXPORT_GDS \
         EXPORT_DEF_FILE EXPORT_LEF_FILE EXPORT_ABSTRACT_LEF_FILE EXPORT_GDS_FILE EXPORT_NETLIST_FILE HANDOFF_COPY]
     if {[spadmic_ooc_pg_sroute_enabled]} {
@@ -1058,7 +1362,7 @@ proc spadmic_ooc_write_status {} {
             set result INNOVUS_TC_OOC_REVIEW_REQUIRED
         }
     }
-    foreach review_key [list INNOVUS_DRC_STATUS REGULAR_CONNECTIVITY_STATUS] {
+    foreach review_key [list INNOVUS_DRC_STATUS REGULAR_CONNECTIVITY_STATUS DRC_MARKER_CLASSIFICATION] {
         if {![info exists ::spadmic_ooc_status($review_key)] || $::spadmic_ooc_status($review_key) ne "PASS"} {
             set result INNOVUS_TC_OOC_REVIEW_REQUIRED
         }
@@ -1112,7 +1416,8 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_postroute_cleanup
     spadmic_ooc_postroute_opt_and_timing
     set min_area_repair_changed [spadmic_ooc_selected_net_min_area_repair]
-    if {$min_area_repair_changed} {
+    set antenna_repair_changed [spadmic_ooc_postroute_antenna_repair]
+    if {$min_area_repair_changed || $antenna_repair_changed} {
         spadmic_ooc_post_min_area_repair_timing
     }
     spadmic_ooc_verify_reports

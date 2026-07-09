@@ -117,6 +117,9 @@ This bundle is for local debug/review only. It is not signoff evidence.
 - \`reports/ooc_harden_status.rpt\`
 - \`reports/verify_drc_post_route.rpt\`
 - \`reports/verify_drc_post_route_markers.tsv\` if marker dump was run
+- \`reports/DRC_MARKER_CLASSIFICATION.rpt\`
+- \`reports/ROUTE_LAYER_SETUP.rpt\`
+- \`reports/POSTROUTE_ANTENNA_REPAIR.rpt\`
 - \`reports/FILLER_MODE.rpt\`
 - \`reports/POSTROUTE_DRC_CLEANUP.rpt\`
 - \`reports/verify_connectivity_regular.rpt\`
