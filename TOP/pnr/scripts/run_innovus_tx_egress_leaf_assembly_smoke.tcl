@@ -67,9 +67,25 @@ proc spadmic_txasm_checkplace_count {path pattern} {
     return UNKNOWN
 }
 
+proc spadmic_txasm_checkplace_finished {path} {
+    set text [spadmic_txasm_read_file $path]
+    if {$text eq ""} {
+        return 0
+    }
+    return [regexp -nocase {Finished[[:space:]]+checkPlace|Finished[[:space:]]+checking[[:space:]]+placement} $text]
+}
+
+proc spadmic_txasm_checkplace_count_or_zero_after_finish {path pattern} {
+    set count [spadmic_txasm_checkplace_count $path $pattern]
+    if {$count eq "UNKNOWN" && [spadmic_txasm_checkplace_finished $path]} {
+        return 0
+    }
+    return $count
+}
+
 proc spadmic_txasm_checkplace_status {path} {
-    set out_of_core [spadmic_txasm_checkplace_count $path {Out of Core Area:[[:space:]]*([0-9]+)}]
-    set unplaced [spadmic_txasm_checkplace_count $path {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)}]
+    set out_of_core [spadmic_txasm_checkplace_count_or_zero_after_finish $path {Out of Core Area:[[:space:]]*([0-9]+)}]
+    set unplaced [spadmic_txasm_checkplace_count_or_zero_after_finish $path {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)}]
     if {$out_of_core eq "UNKNOWN" || $unplaced eq "UNKNOWN"} {
         return REVIEW_REQUIRED
     }
@@ -207,8 +223,8 @@ if {$check_place_capture_ok} {
 }
 spadmic_txasm_status_set CHECK_PLACE_REPORT $check_place_rpt
 spadmic_txasm_status_set CHECK_PLACE_CAPTURE_STATUS [expr {$check_place_capture_ok ? "PASS" : "FAIL"}]
-spadmic_txasm_status_set CHECK_PLACE_OUT_OF_CORE_COUNT [spadmic_txasm_checkplace_count $check_place_rpt {Out of Core Area:[[:space:]]*([0-9]+)}]
-spadmic_txasm_status_set CHECK_PLACE_UNPLACED_COUNT [spadmic_txasm_checkplace_count $check_place_rpt {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)}]
+spadmic_txasm_status_set CHECK_PLACE_OUT_OF_CORE_COUNT [spadmic_txasm_checkplace_count_or_zero_after_finish $check_place_rpt {Out of Core Area:[[:space:]]*([0-9]+)}]
+spadmic_txasm_status_set CHECK_PLACE_UNPLACED_COUNT [spadmic_txasm_checkplace_count_or_zero_after_finish $check_place_rpt {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)}]
 spadmic_txasm_status_set CHECK_PLACE_STATUS $check_place_status
 spadmic_txasm_capture [file join $::spadmic_txasm_reports_dir report_area.rpt] {report_area}
 spadmic_txasm_capture [file join $::spadmic_txasm_reports_dir report_design.rpt] {report_design}
