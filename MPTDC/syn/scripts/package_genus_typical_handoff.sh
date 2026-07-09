@@ -343,6 +343,19 @@ copy_file "$RUN_DIR/report_power_hier.rpt" "03_drv_qor/report_power_hier.rpt"
 copy_file "$RUN_DIR/reports/drv_transition_root_causes.csv" "03_drv_qor/drv_transition_root_causes.csv"
 copy_file "$RUN_DIR/reports/control_drv_root_causes.csv" "03_drv_qor/control_drv_root_causes.csv"
 
+# Compatibility copies for the active Innovus pre-PNR gate.  The curated
+# package keeps inputs/reports grouped by review section, while the gate still
+# accepts the older root/02_constraints/03_reports handoff layout.
+copy_file "$RUN_DIR/run_manifest.txt" "run_manifest.txt"
+copy_file "$RUN_DIR/final_filelist_used.f" "final_filelist_used.f"
+copy_file "$RUN_DIR/final_sdc_overlay_used.sdc" "final_sdc_overlay_used.sdc"
+copy_file "$RUN_DIR/final_filelist_used.f" "02_constraints/final_filelist_used.f"
+copy_file "$RUN_DIR/final_sdc_overlay_used.sdc" "02_constraints/final_sdc_overlay_used.sdc"
+copy_file "$RUN_DIR/timing_summary.rpt" "timing_summary.rpt"
+copy_file "$RUN_DIR/report_design_rules.rpt" "report_design_rules.rpt"
+copy_file "$RUN_DIR/timing_summary.rpt" "03_reports/timing_summary.rpt"
+copy_file "$RUN_DIR/report_design_rules.rpt" "03_reports/report_design_rules.rpt"
+
 copy_file "$RUN_DIR/final_typical_genus_repair_1.rpt" "04_repair/final_typical_genus_repair_1.rpt"
 copy_file "$RUN_DIR/final_genus_fast_tag_to_pd_ts_analysis.md" "04_repair/final_genus_fast_tag_to_pd_ts_analysis.md"
 copy_file "$RUN_DIR/helper_tcl_selftest.rpt" "04_repair/helper_tcl_selftest.rpt"
