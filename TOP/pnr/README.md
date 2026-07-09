@@ -124,9 +124,10 @@ PNR_RUN_ID=innovus_ooc_harden_ddr16_pairer_$(date +%Y%m%d_%H%M)
 bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddr16_pairer "$GENUS_RUN_ID" "$PNR_RUN_ID"
 ```
 
-The hardening wrapper supports TX leaf hardening (`event_bundle_tx`,
-`output_fifo`, `ddr16_pairer`, `ddrs2_adapter`) plus the legacy/assembly
-`tx_egress_core` path. It imports the Genus OOC netlist/SDC, generates a local
+The hardening wrapper supports the split TX physical blocks (`tx_packet_core`,
+`tx_ddr_strip`), TX leaf hardening (`event_bundle_tx`, `output_fifo`,
+`ddr16_pairer`, `ddrs2_adapter`), plus the legacy/assembly `tx_egress_core`
+path. It imports the Genus OOC netlist/SDC, generates a local
 abstract plan from
 `TOP/docs/layout_audits/SPADMIC2_20260709_072331`, places pins, creates one
 north `VDD` and one north `VSS` `METTP` access pin, runs placement, CTS,
@@ -137,9 +138,33 @@ Local special PG routing is disabled by default: the exported METTP VDD/VSS
 pins are a top-level hookup contract. Set `SPADMIC_OOC_ENABLE_PG_SROUTE=1`
 only for an experimental local PG special-route run.
 
-The preferred TX recovery path is now four clean leaf abstracts followed by a
-local TX assembly review. Run the DDRs2 adapter first because it owns the wide,
-CSV-aligned north pins under the DDRs2 macro:
+The preferred TX physical path is now two routed split blocks, not one tall
+TX stack:
+
+- `tx_ddr_strip`: `spadmic_ddr16_tx_pairer` plus `spadmic_ddrs2_adapter`,
+  placed as a wide low strip under DDRs2 with guided north pins.
+- `tx_packet_core`: `spadmic_event_bundle_tx` plus
+  `spadmic_output_fifo_topcfg`, placed in the packet/FIFO region above the
+  matrix.
+
+Use `run_innovus_ooc_block.sh` for these two block names; it delegates them to
+the real hardening route/DRC wrapper:
+
+```bash
+GENUS_RUN_ID=genus_ooc_tx_split_$(date +%Y%m%d_%H%M)
+export SPADMIC_GENUS_OOC_BLOCKS="tx_ddr_strip:spadmic_tx_ddr_strip tx_packet_core:spadmic_tx_packet_core"
+bash TOP/syn/scripts/run_genus_all_matrix_ooc.sh "$GENUS_RUN_ID"
+unset SPADMIC_GENUS_OOC_BLOCKS
+
+for BLOCK in tx_ddr_strip tx_packet_core; do
+  PNR_RUN_ID=innovus_ooc_harden_${BLOCK}_$(date +%Y%m%d_%H%M)
+  bash TOP/pnr/scripts/run_innovus_ooc_block.sh "$BLOCK" "$GENUS_RUN_ID" "$PNR_RUN_ID"
+done
+```
+
+The older four clean leaf abstracts remain useful evidence and fallback
+collateral. Run the DDRs2 adapter first only when refreshing individual leaf
+evidence because it owns the wide, CSV-aligned north pins under the DDRs2 macro:
 
 ```bash
 export SPADMIC_OOC_REQUIRE_DRC_SAFE_FILLER=1

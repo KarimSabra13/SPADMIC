@@ -46,6 +46,12 @@ case "$BLOCK_IN" in
   event_bundle_tx|spadmic_event_bundle_tx)
     BLOCK_SPEC="event_bundle_tx:spadmic_event_bundle_tx"
     ;;
+  tx_packet_core|spadmic_tx_packet_core)
+    BLOCK_SPEC="tx_packet_core:spadmic_tx_packet_core"
+    ;;
+  tx_ddr_strip|spadmic_tx_ddr_strip)
+    BLOCK_SPEC="tx_ddr_strip:spadmic_tx_ddr_strip"
+    ;;
   tx_egress_cluster|tx_egress_core|spadmic_tx_egress_cluster|spadmic_tx_egress_core)
     BLOCK_SPEC="tx_egress_core:spadmic_tx_egress_core"
     ;;

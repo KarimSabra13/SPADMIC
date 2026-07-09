@@ -4,6 +4,12 @@ Status: four TX egress digital leaves are ready for top-layout review as
 typical-only OOC abstracts. This is not final timing closure, not MMMC, not PVS,
 not PEX, and not foundry LVS.
 
+Update: the clean leaf abstracts remain valid evidence and fallback collateral,
+but the preferred physical implementation is now split into `TX_PACKET_CORE`
+(`spadmic_event_bundle_tx` + `spadmic_output_fifo_topcfg`) and `TX_DDR_STRIP`
+(`spadmic_ddr16_tx_pairer` + `spadmic_ddrs2_adapter`). Do not force the old
+four-leaf vertical stack into the shallow DDR corridor.
+
 ## Evidence Snapshot
 
 Server evidence was collected on `SPADMIC_test` on 2026-07-09. The two first

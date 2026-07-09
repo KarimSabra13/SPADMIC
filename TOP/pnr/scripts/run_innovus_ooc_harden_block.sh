@@ -10,6 +10,8 @@ Usage:
   TOP/pnr/scripts/run_innovus_ooc_harden_block.sh <block> <GENUS_RUN_ID> [RUN_ID]
 
 Supported blocks:
+  tx_packet_core / spadmic_tx_packet_core
+  tx_ddr_strip / spadmic_tx_ddr_strip
   event_bundle_tx / spadmic_event_bundle_tx
   output_fifo / spadmic_output_fifo_topcfg
   ddr16_pairer / spadmic_ddr16_tx_pairer
@@ -46,6 +48,14 @@ BLOCK_IN="$1"
 GENUS_RUN_ID="$2"
 
 case "$BLOCK_IN" in
+  tx_packet_core|spadmic_tx_packet_core)
+    BLOCK="tx_packet_core"
+    TOP_MODULE="spadmic_tx_packet_core"
+    ;;
+  tx_ddr_strip|spadmic_tx_ddr_strip)
+    BLOCK="tx_ddr_strip"
+    TOP_MODULE="spadmic_tx_ddr_strip"
+    ;;
   event_bundle_tx|spadmic_event_bundle_tx)
     BLOCK="event_bundle_tx"
     TOP_MODULE="spadmic_event_bundle_tx"

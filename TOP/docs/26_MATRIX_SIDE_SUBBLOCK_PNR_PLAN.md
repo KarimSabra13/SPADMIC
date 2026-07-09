@@ -3,6 +3,149 @@
 Status: planning document for block-by-block digital implementation. This is
 not a full-top Genus/Innovus plan and not a signoff claim.
 
+## 0. 2026-07-09 Block-By-Block Direction
+
+This section supersedes the earlier monolithic TX placement idea. The previous
+four-leaf vertical TX stack was useful as an import/placement proof, but it is
+not the final physical organization because it is too tall for the DDRs2 strip.
+
+Hard blocks to prepare first:
+
+| Physical group | RTL top | Contents | Region | First physical gate |
+| --- | --- | --- | --- | --- |
+| `TX_DDR_STRIP` | `spadmic_tx_ddr_strip` | `spadmic_ddr16_tx_pairer` + `spadmic_ddrs2_adapter` | `61.980,3061.110 -> 3584.545,3241.886` | Route/DRC OOC, north pins aligned to DDRs2. |
+| `TX_PACKET_CORE` | `spadmic_tx_packet_core` | `spadmic_event_bundle_tx` + `spadmic_output_fifo_topcfg` | `45.915,2694.624 -> 2112.884,3061.110` preferred | Route/DRC OOC, stream output facing the strip. |
+| `MATRIX_CONTROL_CORE` | not final yet | central event/reset/config/status only | bottom-control or lower/east matrix side | Genus/OOC estimation first. |
+| `POSITION_CORE` | not final yet | packetization/cluster core only | above/east matrix as space permits | Genus/OOC estimation first. |
+| `MATRIX_INTERFACE_SOFT` | soft/region-guided | OR64, snapshot sync, Rz/Yz/Bz, Din/Cin, Dout/Cout, position frontend | matrix top/east/south | Do not harden yet. |
+
+Top layout coordinates from the SPADMIC2 audit:
+
+| Object / region | BBox |
+| --- | --- |
+| box/ring | `(0.000, 0.000) - (4116.031, 3740.792)` |
+| matrix | `(25.915, 776.039) - (2112.884, 2674.624)` |
+| DDRs2 | `(21.980, 3261.886) - (3624.545, 3393.959)` |
+| MPTDC stack | `(2250.020, 534.249) - (3324.154, 3041.110)` |
+| `TX_DDR_STRIP` | `(61.980, 3061.110) - (3584.545, 3241.886)` |
+| `TX_PACKET_CORE` | `(45.915, 2694.624) - (2112.884, 3061.110)` preferred lower portion |
+| `MATRIX_TO_MPTDC_CORRIDOR` | `(2132.884, 776.039) - (2230.020, 2674.624)` routing only |
+| `BOTTOM_CONTROL_LEFT` | `(45.915, 20.000) - (2092.884, 756.039)` |
+
+Immediate implementation rules:
+
+- do not route into DDRs2, matrix, TXRX4TDC, pads, or MPTDC internals;
+- treat MPTDC regions as blockages until a final abstract/pin map exists;
+- use automatic routing between digital subblocks only when pin placement is
+  direct and reviewable;
+- keep CSR/I2C physical wrapper and pad-side SDA/SCL routing deferred;
+- timing is typical-only and relaxed; DRC-clean routability, sane pins, fillers,
+  and export collateral are the first gates.
+
+New OOC RTL tops:
+
+- `spadmic_tx_ddr_strip`: consumes a 16-bit stream plus `tx_flush_i`, pairs words
+  through `spadmic_ddr16_tx_pairer`, and exports the 19-lane DDRs2 contract
+  through `spadmic_ddrs2_adapter`. North pins are guided from the DDRs2 audit
+  and the generated `tx_ddr_strip_pin_guide.csv`.
+- `spadmic_tx_packet_core`: bundles selected TDC/position streams, stores the
+  ordered flush marker in `spadmic_output_fifo_topcfg`, and exports a compact
+  `tx_valid_o/tx_ready_i/tx_data_o[15:0]/tx_flush_o` stream toward the strip.
+
+Expected OOC outputs for routed hard blocks:
+
+- `outputs/<block>.def`
+- `outputs/<block>.lef`
+- `outputs/<block>.abstract.lef`
+- `outputs/<block>.gds`
+- `outputs/<block>.routed.v`
+- `outputs/<block>.routed.pg.v`
+- `reports/ooc_harden_status.rpt`
+- `reports/verify_drc_post_route.rpt`
+- `reports/DRC_MARKER_CLASSIFICATION.rpt`
+- `reports/verify_connectivity_regular.rpt`
+
+Clean early result label:
+
+```text
+RESULT=ABSTRACT_READY_FOR_TOP_REVIEW
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_STATUS=DEFERRED_TOP_LEVEL_HOOKUP
+SIGNOFF_READY=NO
+```
+
+Server run template after the implementation commit is on `SPADMIC_test`:
+
+```bash
+set +e
+
+cd /home/validmgr/ksabra/2026_SPAD/SPADMIC
+CD_RC=$?
+echo "CD_RC=$CD_RC"
+
+RUN_OK=1
+if [ "$CD_RC" -ne 0 ]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: repo path missing"
+    RUN_OK=0
+fi
+
+if [ "$RUN_OK" -eq 1 ]; then
+    git checkout SPADMIC_test
+    git pull --ff-only origin SPADMIC_test
+    PULL_RC=$?
+    ACTUAL_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+    EXPECTED_HEAD=<replace-with-implementation-commit>
+    echo "PULL_RC=$PULL_RC"
+    echo "ACTUAL_HEAD=$ACTUAL_HEAD"
+    echo "EXPECTED_HEAD=$EXPECTED_HEAD"
+    if [ "$PULL_RC" -ne 0 ] || [ "$ACTUAL_HEAD" != "$EXPECTED_HEAD" ]; then
+        echo "STOP_HERE_DO_NOT_CONTINUE: branch/head not as expected"
+        RUN_OK=0
+    fi
+fi
+
+if [ "$RUN_OK" -eq 1 ]; then
+    source /eda/cadence/eda_2023-2024
+    export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
+    export MPTDC_XH018_STACK=xx31
+    export MPTDC_STDCELL_FAMILY=JIHD
+    export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+    export SPADMIC_LAYOUT_AUDIT_DIR="$PWD/TOP/docs/layout_audits/SPADMIC2_20260709_072331"
+fi
+
+if [ "$RUN_OK" -eq 1 ]; then
+    GENUS_RUN_ID=genus_ooc_matrix_side_blocks_$(date +%Y%m%d_%H%M)
+    export SPADMIC_GENUS_OOC_BLOCKS="tx_ddr_strip:spadmic_tx_ddr_strip tx_packet_core:spadmic_tx_packet_core matrix_reset_ctrl:spadmic_matrix_reset_ctrl matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl position_snapshot:spadmic_position_snapshot_packetizer event_coordinator:spadmic_event_coordinator"
+    bash TOP/syn/scripts/run_genus_all_matrix_ooc.sh "$GENUS_RUN_ID"
+    GENUS_RC=$?
+    unset SPADMIC_GENUS_OOC_BLOCKS
+    echo "GENUS_RC=$GENUS_RC"
+    echo "GENUS_RUN_ID=$GENUS_RUN_ID"
+    cat "$SPADMIC_WORK_ROOT/genus/$GENUS_RUN_ID/SUMMARY.md" 2>/dev/null || echo "MISSING GENUS SUMMARY"
+fi
+
+if [ "$RUN_OK" -eq 1 ] && [ "$GENUS_RC" -eq 0 ]; then
+    for BLOCK in tx_ddr_strip tx_packet_core
+    do
+        PNR_RUN_ID=innovus_ooc_harden_${BLOCK}_$(date +%Y%m%d_%H%M)
+        bash TOP/pnr/scripts/run_innovus_ooc_block.sh "$BLOCK" "$GENUS_RUN_ID" "$PNR_RUN_ID"
+        PNR_RC=$?
+        ROOT="$SPADMIC_WORK_ROOT/innovus/$PNR_RUN_ID"
+        HB="$ROOT/blocks/$BLOCK"
+        echo "===== INNOVUS $BLOCK ====="
+        echo "PNR_RC=$PNR_RC"
+        echo "PNR_RUN_ID=$PNR_RUN_ID"
+        cat "$ROOT/SUMMARY.md" 2>/dev/null || echo "MISSING SUMMARY"
+        cat "$HB/reports/ooc_harden_status.rpt" 2>/dev/null || echo "MISSING STATUS"
+        cat "$HB/reports/verify_drc_post_route.rpt" 2>/dev/null || echo "MISSING DRC"
+        cat "$HB/reports/DRC_MARKER_CLASSIFICATION.rpt" 2>/dev/null || echo "MISSING MARKERS"
+        cat "$HB/reports/verify_connectivity_regular.rpt" 2>/dev/null || echo "MISSING CONNECTIVITY"
+    done
+fi
+```
+
 ## 1. Current RTL State
 
 The active digital matrix-top core is `TOP/rtl/spadmic_top_matrix_v1.sv`. It is

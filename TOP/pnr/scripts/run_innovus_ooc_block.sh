@@ -28,8 +28,14 @@ GENUS_RUN_ID="$2"
 RUN_ID="${3:-innovus_ooc_${BLOCK_IN}_$(date +%Y%m%d_%H%M)}"
 
 case "$BLOCK_IN" in
-  matrix_reset_ctrl|or64_tree|position_snapshot|matrix_cfg_ctrl|event_coordinator|event_bundle_tx|tx_egress_core|output_fifo|ddr16_pairer|ddrs2_adapter|matrix_top_csr|i2c_csr_bridge|i2c_slave)
+  tx_packet_core|tx_ddr_strip|matrix_reset_ctrl|or64_tree|position_snapshot|matrix_cfg_ctrl|event_coordinator|event_bundle_tx|tx_egress_core|output_fifo|ddr16_pairer|ddrs2_adapter|matrix_top_csr|i2c_csr_bridge|i2c_slave)
     BLOCK="$BLOCK_IN"
+    ;;
+  spadmic_tx_packet_core)
+    BLOCK="tx_packet_core"
+    ;;
+  spadmic_tx_ddr_strip)
+    BLOCK="tx_ddr_strip"
     ;;
   spadmic_matrix_reset_ctrl)
     BLOCK="matrix_reset_ctrl"
@@ -74,6 +80,12 @@ case "$BLOCK_IN" in
     echo "ERROR: unknown OOC block: $BLOCK_IN" >&2
     usage >&2
     exit 2
+    ;;
+esac
+
+case "$BLOCK" in
+  tx_packet_core|tx_ddr_strip)
+    exec "$SCRIPT_DIR/run_innovus_ooc_harden_block.sh" "$BLOCK" "$GENUS_RUN_ID" "$RUN_ID"
     ;;
 esac
 

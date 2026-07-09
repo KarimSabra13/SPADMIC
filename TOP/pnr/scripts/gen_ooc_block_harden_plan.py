@@ -706,6 +706,243 @@ def generate_ddr16_pairer(layout_dir: Path, out_dir: Path) -> None:
             fh.write(f"- `{side}`: {', '.join('`' + port + '`' for port in ports)}\n")
 
 
+def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
+    csv_dir = layout_dir / "csv"
+    instances_csv = csv_dir / "SPADMIC2_instances_enriched.csv"
+    matrix_pins_csv = layout_dir / "reports" / "SPADMIC2_matrix_pins.csv"
+    nets_csv = csv_dir / "SPADMIC2_nets.csv"
+    for path in [instances_csv, matrix_pins_csv, nets_csv]:
+        require_file(path)
+
+    instances = read_headered_csv(instances_csv)
+    matrix_pins = read_pin_csv(matrix_pins_csv)
+    region_llx = 45.915
+    region_lly = 2694.624
+    region_urx = 2112.884
+    region_ury = 3061.110
+    core_margin_um = 10.0
+    core_width_um = region_urx - region_llx - (2.0 * core_margin_um)
+    core_height_um = region_ury - region_lly - (2.0 * core_margin_um)
+
+    pin_plan = {
+        "WEST": [
+            "clk_sys",
+            "rst_n",
+            "bundle_start_i",
+            *bus("event_id_i", 14),
+            *bus("required_packet_mask_i", 4),
+            *bus("source_pending_mask_i", 4),
+            *bus("completed_packet_mask_o", 4),
+            "bundle_done_o",
+            "bundle_busy_o",
+            "bundle_idle_o",
+            "bundle_missing_source_error_o",
+            *bus("output_fifo_level_o", 9),
+            *bus("output_fifo_free_words_o", 9),
+            "output_fifo_empty_o",
+            "output_fifo_full_o",
+            "output_fifo_almost_full_o",
+            "output_fifo_overflow_o",
+        ],
+        "SOUTH": [
+            *bus("src_valid_i", 4),
+            *bus("src_ready_o", 4),
+            *bus("src_sop_i", 4),
+            *bus("src_eop_i", 4),
+            *bus2("src_data_i", 4, 16),
+        ],
+        "NORTH": ["tx_valid_o", "tx_ready_i", "tx_flush_o", *bus("tx_data_o", 16)],
+    }
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    config_tcl = out_dir / "ooc_block_harden_config.tcl"
+    pin_plan_csv = out_dir / "ooc_block_pin_plan.csv"
+    context_md = out_dir / "ooc_block_context.md"
+    input_manifest = out_dir / "ooc_harden_input_manifest.csv"
+
+    write_pin_plan_csv(pin_plan_csv, pin_plan)
+    write_manifest(
+        input_manifest,
+        {
+            "layout_audit_dir": layout_dir,
+            "instances_enriched": instances_csv,
+            "matrix_pins": matrix_pins_csv,
+            "nets": nets_csv,
+        },
+    )
+    values = common_config_values(
+        "tx_packet_core",
+        "spadmic_tx_packet_core",
+        layout_dir,
+        pin_plan_csv,
+        f"{core_width_um:.3f}",
+        f"{core_height_um:.3f}",
+        target_utilization="0.50",
+        place_max_density="0.72",
+        core_margin_um=f"{core_margin_um:.3f}",
+        signal_pin_spacing_um="1.40",
+        pg_pin_width_um="40.32",
+        pg_pin_depth_um="3.36",
+        pg_strap_width_um="3.36",
+        pg_strap_spacing_um="3.36",
+    )
+    values.update({
+        "prelim_top_bbox_llx_um": f"{region_llx:.3f}",
+        "prelim_top_bbox_lly_um": f"{region_lly:.3f}",
+        "prelim_top_bbox_urx_um": f"{region_urx:.3f}",
+        "prelim_top_bbox_ury_um": f"{region_ury:.3f}",
+        "physical_region": "TX_PACKET_CORE",
+        "handoff_note": "Packet/FIFO logic only; DDR16 pairer and DDRs2 adapter are excluded.",
+    })
+    write_ooc_config_tcl(config_tcl, values, pin_plan)
+    write_leaf_context(
+        context_md,
+        title="TX_PACKET_CORE",
+        layout_dir=layout_dir,
+        block="tx_packet_core",
+        top_module="spadmic_tx_packet_core",
+        contents="`spadmic_event_bundle_tx` plus `spadmic_output_fifo_topcfg`",
+        core_target=f"{core_width_um:.3f} um x {core_height_um:.3f} um",
+        pin_plan=pin_plan,
+        instances=instances,
+        extra_lines=[
+            f"Candidate top region TX_PACKET_CORE bbox=({region_llx:.3f}, {region_lly:.3f})-({region_urx:.3f}, {region_ury:.3f}) um.",
+            "North stream pins face the future TX_DDR_STRIP; source packet pins stay south toward matrix/MPTDC/position producers.",
+            f"Matrix audit pins read: `{len(matrix_pins)}`; matrix-facing capture/reset/config logic remains soft/region-guided.",
+        ],
+    )
+
+
+def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
+    csv_dir = layout_dir / "csv"
+    reports_dir = layout_dir / "reports"
+    instances_csv = csv_dir / "SPADMIC2_instances_enriched.csv"
+    instance_pins_csv = csv_dir / "SPADMIC2_instance_pins_enriched.csv"
+    ddr_pins_csv = reports_dir / "SPADMIC2_ddr_slvs_pins.csv"
+    nets_csv = csv_dir / "SPADMIC2_nets.csv"
+    for path in [instances_csv, instance_pins_csv, ddr_pins_csv, nets_csv]:
+        require_file(path)
+
+    instances = read_headered_csv(instances_csv)
+    instance_pins = read_pin_csv(instance_pins_csv)
+    ddr_pins = [row for row in instance_pins if row.get("master_cell") == "DDRs2"]
+    ddr_report_pins = read_pin_csv(ddr_pins_csv)
+    ddrs2_inst = ddrs2_macro_instance(instances)
+
+    data_clk_rows = [
+        row for row in ddr_pins
+        if row.get("term", "").startswith(("DATA_L", "DATA_H")) or row.get("term", "") == "CLK_160M"
+    ]
+    if not data_clk_rows:
+        raise SystemExit("could not find DDRs2 DATA_L/DATA_H/CLK_160M pins in SPADMIC2_instance_pins_enriched.csv")
+
+    region_llx = 61.980
+    region_lly = 3061.110
+    region_urx = 3584.545
+    region_ury = 3241.886
+    core_margin_um = 10.0
+    signal_pin_width_um = 0.40
+    signal_pin_depth_um = 0.80
+    core_width_um = region_urx - region_llx - (2.0 * core_margin_um)
+    core_height_um = region_ury - region_lly - (2.0 * core_margin_um)
+    die_height_um = region_ury - region_lly
+
+    north_ports, north_assignments, clk_rows = tx_egress_core_north_assignments(
+        ddr_pins,
+        region_llx,
+        die_height_um,
+        signal_pin_depth_um,
+    )
+    pin_plan = {
+        "WEST": ["clk_sys", "clk_160m_i", "rst_n", "ddrs2_enable_i"],
+        "SOUTH": ["tx_valid_i", "tx_ready_o", "tx_flush_i", *bus("tx_data_i", 16)],
+        "NORTH": north_ports,
+    }
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    config_tcl = out_dir / "ooc_block_harden_config.tcl"
+    pin_plan_csv = out_dir / "ooc_block_pin_plan.csv"
+    pin_guide_csv = out_dir / "tx_ddr_strip_pin_guide.csv"
+    pin_assignment_tcl = out_dir / "ooc_block_pin_assignments.tcl"
+    context_md = out_dir / "ooc_block_context.md"
+    input_manifest = out_dir / "ooc_harden_input_manifest.csv"
+
+    write_pin_plan_csv(pin_plan_csv, pin_plan, north_assignments)
+    write_pin_plan_csv(pin_guide_csv, pin_plan, north_assignments)
+    write_pin_assignment_tcl(
+        pin_assignment_tcl,
+        north_assignments,
+        "NORTH",
+        "MET3",
+        signal_pin_width_um,
+        signal_pin_depth_um,
+    )
+    write_manifest(
+        input_manifest,
+        {
+            "layout_audit_dir": layout_dir,
+            "instances_enriched": instances_csv,
+            "instance_pins_enriched": instance_pins_csv,
+            "ddr_slvs_pins": ddr_pins_csv,
+            "nets": nets_csv,
+            "tx_ddr_strip_pin_guide": pin_guide_csv,
+        },
+    )
+    values = common_config_values(
+        "tx_ddr_strip",
+        "spadmic_tx_ddr_strip",
+        layout_dir,
+        pin_plan_csv,
+        f"{core_width_um:.3f}",
+        f"{core_height_um:.3f}",
+        target_utilization="0.25",
+        place_max_density="0.45",
+        core_margin_um=f"{core_margin_um:.3f}",
+        signal_pin_spacing_um="1.40",
+        pg_pin_width_um="60.48",
+        pg_pin_depth_um="3.92",
+        pg_strap_width_um="4.48",
+        pg_strap_spacing_um="4.48",
+        pin_assignment_tcl=pin_assignment_tcl,
+    )
+    data_x_min = min(float_or_zero(row.get("norm_top_cx", "")) for row in data_clk_rows)
+    data_x_max = max(float_or_zero(row.get("norm_top_cx", "")) for row in data_clk_rows)
+    values.update({
+        "prelim_top_bbox_llx_um": f"{region_llx:.3f}",
+        "prelim_top_bbox_lly_um": f"{region_lly:.3f}",
+        "prelim_top_bbox_urx_um": f"{region_urx:.3f}",
+        "prelim_top_bbox_ury_um": f"{region_ury:.3f}",
+        "physical_region": "TX_DDR_STRIP",
+        "tx_ddr_strip_pin_guide_csv": str(pin_guide_csv),
+        "ddrs2_data_pin_x_min_um": f"{data_x_min:.3f}",
+        "ddrs2_data_pin_x_max_um": f"{data_x_max:.3f}",
+        "handoff_note": "Wide low strip only; output FIFO and event bundle logic are excluded.",
+    })
+    write_ooc_config_tcl(config_tcl, values, pin_plan)
+
+    ddr_data_pin_count = sum(1 for row in ddr_pins if row.get("term", "").startswith(("DATA_L", "DATA_H")))
+    north_pin_count = sum(1 for row in ddr_report_pins if row.get("nearest_inst_side", "") == "TOP")
+    write_leaf_context(
+        context_md,
+        title="TX_DDR_STRIP",
+        layout_dir=layout_dir,
+        block="tx_ddr_strip",
+        top_module="spadmic_tx_ddr_strip",
+        contents="`spadmic_ddr16_tx_pairer` plus `spadmic_ddrs2_adapter`",
+        core_target=f"{core_width_um:.3f} um x {core_height_um:.3f} um",
+        pin_plan=pin_plan,
+        instances=instances,
+        extra_lines=[
+            f"Candidate top region TX_DDR_STRIP bbox=({region_llx:.3f}, {region_lly:.3f})-({region_urx:.3f}, {region_ury:.3f}) um.",
+            f"DDRs2 macro `{ddrs2_inst.get('inst')}` bbox=({float_or_zero(ddrs2_inst.get('norm_llx', '')):.3f}, {float_or_zero(ddrs2_inst.get('norm_lly', '')):.3f})-({float_or_zero(ddrs2_inst.get('norm_urx', '')):.3f}, {float_or_zero(ddrs2_inst.get('norm_ury', '')):.3f}) um.",
+            f"DDRs2 DATA/CLK span: x=({data_x_min:.3f}, {data_x_max:.3f}) um, span={data_x_max - data_x_min:.3f} um.",
+            f"DDR/SLVS audit pins read: `{len(ddr_pins)}` total, `{ddr_data_pin_count}` DATA_L/DATA_H pins, `{north_pin_count}` top-side pins.",
+            f"Visible DDRs2 CLK_160M source pins: `{len(clk_rows)}`; the strip clock output is assigned to the right/east CLK_160M coordinate.",
+            f"Generated pin guide: `{pin_guide_csv}`.",
+        ],
+    )
+
+
 def generate_tx_egress_core(
     layout_dir: Path,
     out_dir: Path,
@@ -956,6 +1193,12 @@ def main() -> None:
     block = args.block.strip()
     if block in {"event_bundle_tx", "spadmic_event_bundle_tx"}:
         generate_event_bundle_tx(args.layout_audit_dir.resolve(), args.out_dir.resolve())
+        return
+    if block in {"tx_packet_core", "spadmic_tx_packet_core", "TX_PACKET_CORE"}:
+        generate_tx_packet_core(args.layout_audit_dir.resolve(), args.out_dir.resolve())
+        return
+    if block in {"tx_ddr_strip", "spadmic_tx_ddr_strip", "TX_DDR_STRIP"}:
+        generate_tx_ddr_strip(args.layout_audit_dir.resolve(), args.out_dir.resolve())
         return
     if block in {"output_fifo", "spadmic_output_fifo", "spadmic_output_fifo_topcfg"}:
         generate_output_fifo(args.layout_audit_dir.resolve(), args.out_dir.resolve())
