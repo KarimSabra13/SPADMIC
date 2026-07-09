@@ -200,6 +200,20 @@ not replace top assembly, PG hookup, PVS, LVS, PEX, or MMMC. If the local stack
 does not fit the prior shallow TX corridor, keep the lower TX leaves soft or
 region-guided until the top placement proves there is physical room.
 
+Run the guarded Innovus smoke step before building any connected top route:
+
+```bash
+PLAN_ROOT=/sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_plan_20260709_1526
+SMOKE_RUN_ID=innovus_tx_egress_leaf_assembly_smoke_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_innovus_tx_egress_leaf_assembly_smoke.sh "$PLAN_ROOT" "$SMOKE_RUN_ID"
+```
+
+The smoke wrapper generates a macro-only Verilog top from the leaf LEFs, imports
+the four abstract LEFs, applies the fixed placement Tcl, writes check-place and
+instance-summary reports, and stops before route. It proves macro import and
+fixed placement mechanics only; it intentionally leaves signal connectivity,
+PG hookup, PVS, LVS, PEX, and MMMC for later gates.
+
 ## Floorplan Intent
 
 - `matrice3` on the left, vertically centered.

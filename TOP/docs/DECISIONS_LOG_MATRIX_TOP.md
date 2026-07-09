@@ -82,6 +82,12 @@ CSV/Tcl package is the input to a true fixed-leaf top/assembly importer. The
 legacy `tx_egress_assembly` OOC alias remains a monolithic RTL-shaped
 regression path, not final macro assembly evidence.
 
+[FROZEN] The first TX fixed-leaf importer gate is the macro-only Innovus smoke
+wrapper `TOP/pnr/scripts/run_innovus_tx_egress_leaf_assembly_smoke.sh`. It
+checks leaf LEF import, fixed instance placement, and check-place reporting
+only. It is not signal connectivity, route, PG hookup, PVS, LVS, PEX, MMMC, or
+signoff evidence.
+
 [FROZEN] SLVS/receiver GPIO controls are CSR-driven internal top outputs.
 
 [FROZEN] SLVS driver controls: `S_DRV[3:0]`, `EN_VREF_EXT`, `EN_DRV`,

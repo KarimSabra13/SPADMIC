@@ -126,6 +126,18 @@ under `/sim/ksabra/SPADMIC_work/assembly/<RUN_ID>/`. It is the input to a real
 top/assembly importer; it does not perform top route, PG hookup, PVS, LVS, PEX,
 or MMMC.
 
+The first importer gate is intentionally macro-only:
+
+```bash
+bash TOP/pnr/scripts/run_innovus_tx_egress_leaf_assembly_smoke.sh \
+  /sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_plan_20260709_1526 \
+  innovus_tx_egress_leaf_assembly_smoke_$(date +%Y%m%d_%H%M)
+```
+
+It validates that the four leaf LEFs can be imported as fixed macro instances
+and that the generated placement Tcl is usable in Innovus. It deliberately does
+not route leaf-to-leaf signal connectivity.
+
 ## Top Reuse Rules
 
 - A block abstract is a placement aid, not permission to route inside analog

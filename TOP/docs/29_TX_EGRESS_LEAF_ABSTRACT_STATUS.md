@@ -121,6 +121,21 @@ Therefore top absolute placement must be reviewed before route; do not force
 all four rectangles into the old corridor if that causes overlap or impossible
 PG hookup.
 
+Before writing a connected assembly route wrapper, run the macro-only Innovus
+smoke step:
+
+```bash
+PLAN_ROOT=/sim/ksabra/SPADMIC_work/assembly/tx_egress_leaf_assembly_plan_20260709_1526
+SMOKE_RUN_ID=innovus_tx_egress_leaf_assembly_smoke_$(date +%Y%m%d_%H%M)
+bash TOP/pnr/scripts/run_innovus_tx_egress_leaf_assembly_smoke.sh "$PLAN_ROOT" "$SMOKE_RUN_ID"
+```
+
+This smoke run imports the leaf LEFs, creates four black-box macro instances,
+applies the fixed placement Tcl, and emits `check_place.rpt`,
+`instance_summary.csv`, and `tx_egress_leaf_assembly_smoke_status.rpt`. It does
+not prove signal pin connectivity; that remains the next assembly implementation
+gate after macro import/placement passes.
+
 ## Future Subblocks
 
 After the TX leaf package is frozen, continue with blocks that are safe as
