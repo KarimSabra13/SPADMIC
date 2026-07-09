@@ -60,7 +60,7 @@ module mptdc_core
   output wire                   packet_active_o,
   output wire                   packet_pending_o,
 
-  // Raw tap0 exports for direct MPTDC block-level observability.
+  // Buffered tap0 exports for direct MPTDC block-level observability.
   output wire                   ro_slow_tap0_o,
   output wire                   ro_fast_tap0_o
 );
@@ -473,8 +473,15 @@ module mptdc_core
     .phase_buf_o (fast_phase[7:0])
   );
 
-  assign ro_slow_tap0_o = slow_phase_raw[0];
-  assign ro_fast_tap0_o = fast_phase_raw[0];
+  mptdc_ro_probe_buffer u_ro_probe_slow_tap0 (
+    .phase_tap_i (slow_phase[0]),
+    .probe_o     (ro_slow_tap0_o)
+  );
+
+  mptdc_ro_probe_buffer u_ro_probe_fast_tap0 (
+    .phase_tap_i (fast_phase[0]),
+    .probe_o     (ro_fast_tap0_o)
+  );
 
   assign slow_phase0_guard  = slow_phase[0];
   assign slow_phase7d_probe = slow_phase[7];
