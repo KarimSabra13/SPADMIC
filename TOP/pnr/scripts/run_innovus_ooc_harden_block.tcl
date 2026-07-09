@@ -313,6 +313,8 @@ proc spadmic_ooc_marker_min_area_nets {} {
         set type ""
         set subtype ""
         set message ""
+        set box UNKNOWN
+        catch {set box [dbGet $marker.box]}
         catch {set layer [dbGet $marker.layer.name]}
         catch {set type [dbGet $marker.type]}
         catch {set subtype [dbGet $marker.subType]}
@@ -331,9 +333,30 @@ proc spadmic_ooc_marker_min_area_nets {} {
             continue
         }
         spadmic_ooc_unique_append nets $net
-        lappend rows [list $net $marker [spadmic_ooc_report_value $message]]
+        lappend rows [list $net $marker [spadmic_ooc_flat_box $box] [spadmic_ooc_report_value $message]]
     }
     return [list $nets $rows]
+}
+
+proc spadmic_ooc_box_is_numeric {box} {
+    if {[llength $box] != 4} {
+        return 0
+    }
+    foreach value $box {
+        if {![string is double -strict $value]} {
+            return 0
+        }
+    }
+    return 1
+}
+
+proc spadmic_ooc_expand_box {box delta} {
+    lassign $box llx lly urx ury
+    return [list \
+        [format %.3f [expr {$llx - $delta}]] \
+        [format %.3f [expr {$lly - $delta}]] \
+        [format %.3f [expr {$urx + $delta}]] \
+        [format %.3f [expr {$ury + $delta}]]]
 }
 
 proc spadmic_ooc_selected_net_min_area_repair {} {
@@ -423,10 +446,30 @@ proc spadmic_ooc_selected_net_min_area_repair {} {
         return 0
     }
 
-    set delete_failures [list]
+    set area_delete_count 0
+    set area_delete_failures [list]
+    foreach row $rows {
+        set net [lindex $row 0]
+        set box [lindex $row 2]
+        if {[lsearch -exact $selected $net] < 0} {
+            continue
+        }
+        if {![spadmic_ooc_box_is_numeric $box]} {
+            lappend area_delete_failures "$net:non_numeric_box=$box"
+            continue
+        }
+        set expanded_box [spadmic_ooc_expand_box $box 0.010]
+        if {[catch {editDelete -net $net -layer MET1 -area $expanded_box -type Regular} err]} {
+            lappend area_delete_failures "$net:$expanded_box:$err"
+        } else {
+            incr area_delete_count
+        }
+    }
+
+    set drc_wire_delete_failures [list]
     foreach net $selected {
         if {[catch {editDelete -net $net -regular_wire_with_drc} err]} {
-            lappend delete_failures "$net:$err"
+            lappend drc_wire_delete_failures "$net:$err"
         }
     }
 
@@ -457,7 +500,9 @@ proc spadmic_ooc_selected_net_min_area_repair {} {
     puts $fh "SELECTED_NET_COUNT=[llength $selected]"
     puts $fh "SELECTED_NETS=[join $selected { }]"
     puts $fh "SELECTION_FAILURES=[join $selection_failures {; }]"
-    puts $fh "DELETE_FAILURES=[join $delete_failures {; }]"
+    puts $fh "AREA_DELETE_COUNT=$area_delete_count"
+    puts $fh "AREA_DELETE_FAILURES=[join $area_delete_failures {; }]"
+    puts $fh "DRC_WIRE_DELETE_FAILURES=[join $drc_wire_delete_failures {; }]"
     puts $fh "ROUTE_COMMANDS=$route_commands"
     puts $fh "ROUTE_FAILURES=[join $route_failures {; }]"
     puts $fh "POST_DRC_REPORT=$post_drc"
