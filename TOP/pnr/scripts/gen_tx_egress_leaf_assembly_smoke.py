@@ -91,7 +91,9 @@ def load_macros(plan_root: Path) -> list[Macro]:
 def write_netlist(path: Path, macros: list[Macro]) -> None:
     with path.open("w") as fh:
         fh.write("// Auto-generated macro-only TX egress leaf assembly smoke netlist.\n")
-        fh.write("// This is for Innovus import/placement validation only.\n\n")
+        fh.write("// This is for Innovus import/placement validation only.\n")
+        fh.write("// Leaf module ports are intentionally omitted: this smoke only proves\n")
+        fh.write("// macro import, floorplan capacity, and fixed placement mechanics.\n\n")
         fh.write(f"module {TOP_MODULE} ();\n")
         for macro in macros:
             fh.write(f"  {verilog_ident(macro.macro_name)} {verilog_ident(macro.instance)} ();\n")
@@ -99,19 +101,8 @@ def write_netlist(path: Path, macros: list[Macro]) -> None:
 
         for macro in macros:
             module_name = verilog_ident(macro.macro_name)
-            ports = [verilog_ident(pin) for pin in macro.pins]
-            if ports:
-                fh.write(f"(* black_box *) module {module_name} (\n")
-                for idx, port in enumerate(ports):
-                    comma = "," if idx + 1 < len(ports) else ""
-                    fh.write(f"  {port}{comma}\n")
-                fh.write(");\n")
-                for port in ports:
-                    fh.write(f"  inout {port};\n")
-                fh.write("endmodule\n\n")
-            else:
-                fh.write(f"(* black_box *) module {module_name} ();\n")
-                fh.write("endmodule\n\n")
+            fh.write(f"(* black_box *) module {module_name} ();\n")
+            fh.write("endmodule\n\n")
 
 
 def write_manifest(path: Path, macros: list[Macro]) -> None:

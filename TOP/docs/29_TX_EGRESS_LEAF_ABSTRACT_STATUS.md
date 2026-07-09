@@ -130,11 +130,13 @@ SMOKE_RUN_ID=innovus_tx_egress_leaf_assembly_smoke_$(date +%Y%m%d_%H%M)
 bash TOP/pnr/scripts/run_innovus_tx_egress_leaf_assembly_smoke.sh "$PLAN_ROOT" "$SMOKE_RUN_ID"
 ```
 
-This smoke run imports the leaf LEFs, creates four black-box macro instances,
-applies the fixed placement Tcl, and emits `check_place.rpt`,
-`instance_summary.csv`, and `tx_egress_leaf_assembly_smoke_status.rpt`. It does
-not prove signal pin connectivity; that remains the next assembly implementation
-gate after macro import/placement passes.
+This smoke run imports the leaf LEFs, creates four no-port black-box macro
+instances, applies the fixed placement Tcl, and emits `check_place.rpt`,
+`instance_summary.csv`, and `tx_egress_leaf_assembly_smoke_status.rpt`. The
+smoke gate is clean only when `CHECK_PLACE_STATUS=PASS`, with zero out-of-core
+and zero unplaced macro instances. It does not prove signal pin connectivity;
+that remains the next assembly implementation gate after macro import/placement
+passes.
 
 ## Future Subblocks
 

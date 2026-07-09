@@ -208,11 +208,13 @@ SMOKE_RUN_ID=innovus_tx_egress_leaf_assembly_smoke_$(date +%Y%m%d_%H%M)
 bash TOP/pnr/scripts/run_innovus_tx_egress_leaf_assembly_smoke.sh "$PLAN_ROOT" "$SMOKE_RUN_ID"
 ```
 
-The smoke wrapper generates a macro-only Verilog top from the leaf LEFs, imports
-the four abstract LEFs, applies the fixed placement Tcl, writes check-place and
-instance-summary reports, and stops before route. It proves macro import and
-fixed placement mechanics only; it intentionally leaves signal connectivity,
-PG hookup, PVS, LVS, PEX, and MMMC for later gates.
+The smoke wrapper generates a macro-only Verilog top with no-port black-box leaf
+modules, imports the four abstract LEFs, applies the fixed placement Tcl, writes
+check-place and instance-summary reports, and stops before route. It proves
+macro import, floorplan capacity, and fixed placement mechanics only. A clean
+smoke gate requires `CHECK_PLACE_STATUS=PASS`, including zero out-of-core and
+zero unplaced macro instances; it intentionally leaves signal connectivity, PG
+hookup, PVS, LVS, PEX, and MMMC for later gates.
 
 ## Floorplan Intent
 

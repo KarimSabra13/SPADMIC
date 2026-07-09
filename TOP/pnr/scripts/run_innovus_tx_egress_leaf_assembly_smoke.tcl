@@ -9,6 +9,13 @@ proc spadmic_txasm_env_required {name} {
     return $::env($name)
 }
 
+proc spadmic_txasm_env {name default_value} {
+    if {[info exists ::env($name)] && $::env($name) ne ""} {
+        return $::env($name)
+    }
+    return $default_value
+}
+
 proc spadmic_txasm_status_set {key value} {
     set ::spadmic_txasm_status($key) $value
 }
@@ -37,6 +44,39 @@ proc spadmic_txasm_capture {path body} {
         return 0
     }
     return 1
+}
+
+proc spadmic_txasm_read_file {path} {
+    if {![file exists $path]} {
+        return ""
+    }
+    set fh [open $path r]
+    set text [read $fh]
+    close $fh
+    return $text
+}
+
+proc spadmic_txasm_checkplace_count {path pattern} {
+    set text [spadmic_txasm_read_file $path]
+    if {$text eq ""} {
+        return UNKNOWN
+    }
+    if {[regexp -nocase $pattern $text -> count]} {
+        return $count
+    }
+    return UNKNOWN
+}
+
+proc spadmic_txasm_checkplace_status {path} {
+    set out_of_core [spadmic_txasm_checkplace_count $path {Out of Core Area:[[:space:]]*([0-9]+)}]
+    set unplaced [spadmic_txasm_checkplace_count $path {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)}]
+    if {$out_of_core eq "UNKNOWN" || $unplaced eq "UNKNOWN"} {
+        return REVIEW_REQUIRED
+    }
+    if {$out_of_core == 0 && $unplaced == 0} {
+        return PASS
+    }
+    return REVIEW_REQUIRED
 }
 
 set ::spadmic_txasm_repo_root [spadmic_txasm_env_required SPADMIC_REPO_ROOT]
@@ -75,6 +115,7 @@ spadmic_txasm_status_set MMMC_STATUS DEFERRED
 spadmic_txasm_status_set MPTDC_XH018_STACK $::env(MPTDC_XH018_STACK)
 spadmic_txasm_status_set MPTDC_STDCELL_FAMILY $::env(MPTDC_STDCELL_FAMILY)
 spadmic_txasm_status_set MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY $::env(MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY)
+spadmic_txasm_status_set SMOKE_NETLIST_PORT_MODE NO_PORT_MACROS
 
 set placement_tcl [file join $::spadmic_txasm_plan_root tx_egress_leaf_assembly_place.tcl]
 set plan_status [file join $::spadmic_txasm_plan_root tx_egress_leaf_assembly_status.rpt]
@@ -117,6 +158,12 @@ close $fh
 
 set local_w [spadmic_txasm_read_status_key $plan_status LOCAL_ASSEMBLY_WIDTH_UM 3449.600]
 set local_h [spadmic_txasm_read_status_key $plan_status LOCAL_ASSEMBLY_HEIGHT_UM 746.560]
+set floorplan_guard_um [spadmic_txasm_env SPADMIC_TXASM_CORE_GUARD_UM 1.0]
+if {[catch {expr {double($floorplan_guard_um)}} floorplan_guard]} {
+    set floorplan_guard 1.0
+}
+set floor_w [format "%.3f" [expr {double($local_w) + $floorplan_guard}]]
+set floor_h [format "%.3f" [expr {double($local_h) + $floorplan_guard}]]
 set core_margin 0.0
 
 global init_top_cell init_verilog init_lef_file init_mmmc_file init_pwr_net init_gnd_net init_design_uniquify
@@ -137,19 +184,32 @@ foreach pg_pin $tech(STANDARD_CELL_GND_PINS) {
     catch {globalNetConnect $tech(STANDARD_CELL_GND) -type pgpin -pin $pg_pin -inst *}
 }
 
-if {[catch {floorPlan -site $tech(STANDARD_CELL_SITE) -s $local_w $local_h $core_margin $core_margin $core_margin $core_margin} err]} {
+if {[catch {floorPlan -site $tech(STANDARD_CELL_SITE) -s $floor_w $floor_h $core_margin $core_margin $core_margin $core_margin} err]} {
     spadmic_txasm_status_set FLOORPLAN FAIL
     error "SPADMIC_TXASM_FLOORPLAN_FAILED: $err"
 }
 spadmic_txasm_status_set FLOORPLAN PASS
 spadmic_txasm_status_set LOCAL_ASSEMBLY_WIDTH_UM $local_w
 spadmic_txasm_status_set LOCAL_ASSEMBLY_HEIGHT_UM $local_h
+spadmic_txasm_status_set SMOKE_FLOORPLAN_GUARD_UM [format "%.3f" $floorplan_guard]
+spadmic_txasm_status_set SMOKE_FLOORPLAN_WIDTH_UM $floor_w
+spadmic_txasm_status_set SMOKE_FLOORPLAN_HEIGHT_UM $floor_h
 
 spadmic_apply_tx_leaf_assembly_placement [file join $::spadmic_txasm_reports_dir tx_egress_leaf_assembly_placement.rpt]
 set placement_status [spadmic_txasm_read_status_key [file join $::spadmic_txasm_reports_dir tx_egress_leaf_assembly_placement.rpt] STATUS REVIEW_REQUIRED]
 spadmic_txasm_status_set FIXED_LEAF_PLACEMENT_STATUS $placement_status
 
-spadmic_txasm_capture [file join $::spadmic_txasm_reports_dir check_place.rpt] {checkPlace}
+set check_place_rpt [file join $::spadmic_txasm_reports_dir check_place.rpt]
+set check_place_capture_ok [spadmic_txasm_capture $check_place_rpt {checkPlace}]
+set check_place_status FAIL
+if {$check_place_capture_ok} {
+    set check_place_status [spadmic_txasm_checkplace_status $check_place_rpt]
+}
+spadmic_txasm_status_set CHECK_PLACE_REPORT $check_place_rpt
+spadmic_txasm_status_set CHECK_PLACE_CAPTURE_STATUS [expr {$check_place_capture_ok ? "PASS" : "FAIL"}]
+spadmic_txasm_status_set CHECK_PLACE_OUT_OF_CORE_COUNT [spadmic_txasm_checkplace_count $check_place_rpt {Out of Core Area:[[:space:]]*([0-9]+)}]
+spadmic_txasm_status_set CHECK_PLACE_UNPLACED_COUNT [spadmic_txasm_checkplace_count $check_place_rpt {Unplaced[[:space:]]*=[[:space:]]*([0-9]+)}]
+spadmic_txasm_status_set CHECK_PLACE_STATUS $check_place_status
 spadmic_txasm_capture [file join $::spadmic_txasm_reports_dir report_area.rpt] {report_area}
 spadmic_txasm_capture [file join $::spadmic_txasm_reports_dir report_design.rpt] {report_design}
 catch {defOut -floorplan -netlist -routing [file join $::spadmic_txasm_outputs_dir tx_egress_leaf_assembly_smoke.def]}
@@ -169,7 +229,7 @@ close $fh
 spadmic_txasm_status_set INSTANCE_SUMMARY_FILE $manifest_csv
 
 set result FIXED_LEAF_ASSEMBLY_SMOKE_REVIEW_REQUIRED
-if {$placement_status eq "PASS"} {
+if {$placement_status eq "PASS" && $check_place_status eq "PASS"} {
     set result FIXED_LEAF_ASSEMBLY_SMOKE_PLACED
 }
 spadmic_txasm_status_set RESULT $result
