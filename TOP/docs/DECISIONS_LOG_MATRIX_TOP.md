@@ -70,6 +70,12 @@ data-valid indication, not an error flag.
 macro expansion is handled by `spadmic_ddrs2_adapter`, not by changing
 `spadmic_ddr16_tx_pairer`.
 
+[FROZEN] The 2026-07-09 TX egress pre-assembly checkpoint uses four clean OOC
+leaf abstracts: `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and
+`ddrs2_adapter`. Their evidence and top-placement CSV anchors are recorded in
+`TOP/docs/29_TX_EGRESS_LEAF_ABSTRACT_STATUS.md`. This is top-review abstract
+evidence only; `SIGNOFF_READY` remains `NO`.
+
 [FROZEN] SLVS/receiver GPIO controls are CSR-driven internal top outputs.
 
 [FROZEN] SLVS driver controls: `S_DRV[3:0]`, `EN_VREF_EXT`, `EN_DRV`,

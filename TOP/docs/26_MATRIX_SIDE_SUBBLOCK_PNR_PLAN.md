@@ -201,6 +201,12 @@ The output label is `ABSTRACT_READY_FOR_TOP_REVIEW` only when the Innovus OOC
 wrapper reaches the export/handoff gate. It is not `SIGNOFF_READY`; PVS, PEX,
 MMMC, foundry LVS, and direct OA import are deferred.
 
+The 2026-07-09 TX leaf checkpoint is documented in
+`TOP/docs/29_TX_EGRESS_LEAF_ABSTRACT_STATUS.md`: `ddrs2_adapter`,
+`ddr16_pairer`, `output_fifo`, and `event_bundle_tx` all reached
+`ABSTRACT_READY_FOR_TOP_REVIEW` with zero Innovus DRC markers and PG deferred
+to top-level hookup. Use that record as the pre-assembly anchor.
+
 Expected Innovus hardening output per supported hardenable block:
 
 - placed/routed DEF;

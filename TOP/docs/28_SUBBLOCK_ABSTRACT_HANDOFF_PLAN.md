@@ -106,6 +106,12 @@ direct OA import are separate future gates.
 9. `matrix_cfg_ctrl`;
 10. `matrix_top_csr`.
 
+Current TX leaf evidence is recorded in
+`TOP/docs/29_TX_EGRESS_LEAF_ABSTRACT_STATUS.md`. The four TX leaf abstracts are
+ready for top-layout review, but `SIGNOFF_READY` remains `NO` and the current
+`tx_egress_assembly` alias is still a monolithic RTL-shaped regression path,
+not a true fixed-leaf macro assembly.
+
 ## Top Reuse Rules
 
 - A block abstract is a placement aid, not permission to route inside analog
