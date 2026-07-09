@@ -72,16 +72,18 @@ If Innovus has not run place/route yet, the package must say
 The first real hardening wrapper is:
 
 ```bash
-TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddr16_pairer <GENUS_RUN_ID> [RUN_ID]
+TOP/pnr/scripts/run_innovus_ooc_harden_block.sh <block> <GENUS_RUN_ID> [RUN_ID]
 ```
 
 It writes the package under:
 
 ```text
-/sim/ksabra/SPADMIC_work/handoff/abstracts/ddr16_pairer/<RUN_ID>/
+/sim/ksabra/SPADMIC_work/handoff/abstracts/<block>/<RUN_ID>/
 ```
 
-The wrapper uses a local abstract plan generated from
+The wrapper supports `event_bundle_tx`, `output_fifo`, `ddr16_pairer`,
+`ddrs2_adapter`, `tx_egress_core`, and `tx_egress_assembly`. It uses a local
+abstract plan generated from
 `TOP/docs/layout_audits/SPADMIC2_20260709_072331`, with signal routing on
 `MET1`-`MET3` and one north `VDD` plus one north `VSS` access bar on `METTP`.
 Local special PG routing is disabled by default; the exported `METTP`
@@ -93,15 +95,16 @@ direct OA import are separate future gates.
 
 ## First Blocks To Package
 
-1. `ddr16_pairer` for the first routed abstract proof;
-2. `ddrs2_adapter` after DDRs2 macro pin placement is reviewed;
+1. `ddrs2_adapter` as a wide, shallow bridge with DDRs2-aligned north pins;
+2. `ddr16_pairer`;
 3. `output_fifo`;
 4. `event_bundle_tx`;
-5. `event_coordinator`;
-6. `position_snapshot`;
-7. `matrix_reset_ctrl`;
-8. `matrix_cfg_ctrl`;
-9. `matrix_top_csr`.
+5. `tx_egress_assembly` after the four TX leaves are DRC-clean;
+6. `event_coordinator`;
+7. `position_snapshot`;
+8. `matrix_reset_ctrl`;
+9. `matrix_cfg_ctrl`;
+10. `matrix_top_csr`.
 
 ## Top Reuse Rules
 

@@ -1040,6 +1040,19 @@ proc spadmic_ooc_place_design {} {
 }
 
 proc spadmic_ooc_cts_design {} {
+    if {[spadmic_ooc_truthy [spadmic_ooc_cfg_default allow_cts_skip 0]]} {
+        spadmic_ooc_status_set CTS_DESIGN PASS
+        spadmic_ooc_status_set CTS_STATUS SKIPPED_BY_BLOCK_CONFIG
+        spadmic_ooc_write_text [file join $::spadmic_ooc_reports_dir CTS_DESIGN.rpt] [list \
+            "LABEL=CTS_DESIGN" \
+            "STATUS=PASS" \
+            "CTS_STATUS=SKIPPED_BY_BLOCK_CONFIG" \
+            "REASON=Block has no local sequential clock tree to synthesize; timing is still reported after route." \
+            "COMMAND=not_run"]
+        catch {timeDesign -postCTS -outDir [file join $::spadmic_ooc_reports_dir timing_post_cts]}
+        catch {saveDesign [file join $::spadmic_ooc_checkpoints_dir 03_cts.enc]}
+        return
+    }
     global mptdc_xh018_cells
     if {[info exists mptdc_xh018_cells(cts_buffers)]} {
         catch {set_ccopt_property buffer_cells $mptdc_xh018_cells(cts_buffers)}

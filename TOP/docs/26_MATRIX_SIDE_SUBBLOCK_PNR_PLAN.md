@@ -90,7 +90,7 @@ hiding matrix/analog-sensitive boundaries.
 
 | Combined block | Candidate contents | Why useful | Rule |
 | --- | --- | --- | --- |
-| `TX_EGRESS_CORE` | `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, `ddrs2_adapter` | Keeps the TX data path internal and exposes a compact DDRs2-facing interface. | Place north/north-east, output pins north. |
+| `TX_EGRESS_ASSEMBLY` | clean abstracts for `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, `ddrs2_adapter` | Keeps the four TX leaves locally stitched before full-chip top routing. | Place north/north-east, DDRs2 adapter output pins north and aligned to DDRs2. |
 | `MATRIX_CONTROL_CORE` | central `event_coordinator`, central `matrix_reset_ctrl`, central `matrix_cfg_ctrl`, optional local CSR | Reduces small bottom-control macros. | Do not trap R/Y/B/Rz/Yz/Bz/Din/Cin/Dout/Cout boundary flops away from matrix pins. |
 | `POSITION_CORE` | packet cluster logic and position packetizer | Places packet generation between matrix and TX. | Keep matrix-adjacent capture soft/guided until congestion is known. |
 
@@ -183,7 +183,9 @@ First hardening entry point:
 
 Current hardening scope:
 
-- v1 supports only `ddr16_pairer`;
+- v1 supports TX leaf hardening for `event_bundle_tx`, `output_fifo`,
+  `ddr16_pairer`, and `ddrs2_adapter`, plus the `tx_egress_assembly`
+  regression/assembly alias;
 - local abstract floorplan, not absolute top placement;
 - generated pin plan from `TOP/docs/layout_audits/SPADMIC2_20260709_072331`;
 - ordinary signal routing limited to `MET1`-`MET3`;
@@ -382,7 +384,7 @@ After `matrix_reset_ctrl`:
 6. `ddr16_pairer`;
 7. `ddrs2_adapter`;
 8. `matrix_top_csr`;
-9. candidate `TX_EGRESS_CORE` wrapper after the separate blocks are understood.
+9. `tx_egress_assembly` after the four TX leaf abstracts are DRC-clean.
 
 Do not start from full top, I2C pad-wrapper, OR64 hard macro, or analog/custom
 macro synthesis.

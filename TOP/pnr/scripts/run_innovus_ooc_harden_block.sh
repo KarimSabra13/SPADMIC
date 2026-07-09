@@ -10,8 +10,12 @@ Usage:
   TOP/pnr/scripts/run_innovus_ooc_harden_block.sh <block> <GENUS_RUN_ID> [RUN_ID]
 
 Supported blocks:
+  event_bundle_tx / spadmic_event_bundle_tx
+  output_fifo / spadmic_output_fifo_topcfg
   ddr16_pairer / spadmic_ddr16_tx_pairer
+  ddrs2_adapter / spadmic_ddrs2_adapter
   tx_egress_core / spadmic_tx_egress_core
+  tx_egress_assembly / spadmic_tx_egress_core
 
 This is the first real TOP OOC hardening wrapper. It imports one Genus OOC
 netlist/SDC into Innovus, builds a local abstract floorplan, places pins,
@@ -42,12 +46,28 @@ BLOCK_IN="$1"
 GENUS_RUN_ID="$2"
 
 case "$BLOCK_IN" in
+  event_bundle_tx|spadmic_event_bundle_tx)
+    BLOCK="event_bundle_tx"
+    TOP_MODULE="spadmic_event_bundle_tx"
+    ;;
+  output_fifo|spadmic_output_fifo|spadmic_output_fifo_topcfg)
+    BLOCK="output_fifo"
+    TOP_MODULE="spadmic_output_fifo_topcfg"
+    ;;
   ddr16_pairer|spadmic_ddr16_tx_pairer)
     BLOCK="ddr16_pairer"
     TOP_MODULE="spadmic_ddr16_tx_pairer"
     ;;
+  ddrs2_adapter|spadmic_ddrs2_adapter)
+    BLOCK="ddrs2_adapter"
+    TOP_MODULE="spadmic_ddrs2_adapter"
+    ;;
   tx_egress_cluster|tx_egress_core|spadmic_tx_egress_cluster|spadmic_tx_egress_core)
     BLOCK="tx_egress_core"
+    TOP_MODULE="spadmic_tx_egress_core"
+    ;;
+  tx_egress_assembly)
+    BLOCK="tx_egress_assembly"
     TOP_MODULE="spadmic_tx_egress_core"
     ;;
   *)

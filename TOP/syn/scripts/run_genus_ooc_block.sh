@@ -49,6 +49,9 @@ case "$BLOCK_IN" in
   tx_egress_cluster|tx_egress_core|spadmic_tx_egress_cluster|spadmic_tx_egress_core)
     BLOCK_SPEC="tx_egress_core:spadmic_tx_egress_core"
     ;;
+  tx_egress_assembly)
+    BLOCK_SPEC="tx_egress_assembly:spadmic_tx_egress_core"
+    ;;
   output_fifo|spadmic_output_fifo|spadmic_output_fifo_topcfg)
     BLOCK_SPEC="output_fifo:spadmic_output_fifo_topcfg"
     ;;

@@ -124,8 +124,9 @@ PNR_RUN_ID=innovus_ooc_harden_ddr16_pairer_$(date +%Y%m%d_%H%M)
 bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddr16_pairer "$GENUS_RUN_ID" "$PNR_RUN_ID"
 ```
 
-The hardening wrapper currently supports `ddr16_pairer` and
-`tx_egress_core`. It imports the Genus OOC netlist/SDC, generates a local
+The hardening wrapper supports TX leaf hardening (`event_bundle_tx`,
+`output_fifo`, `ddr16_pairer`, `ddrs2_adapter`) plus the legacy/assembly
+`tx_egress_core` path. It imports the Genus OOC netlist/SDC, generates a local
 abstract plan from
 `TOP/docs/layout_audits/SPADMIC2_20260709_072331`, places pins, creates one
 north `VDD` and one north `VSS` `METTP` access pin, runs placement, CTS,
@@ -136,21 +137,29 @@ Local special PG routing is disabled by default: the exported METTP VDD/VSS
 pins are a top-level hookup contract. Set `SPADMIC_OOC_ENABLE_PG_SROUTE=1`
 only for an experimental local PG special-route run.
 
-For the wide `tx_egress_core` DDRs2-facing abstract, use the aggressive route
-profile when the default MET1-MET3 route regenerates MET1 minimum-area stubs:
+The preferred TX recovery path is now four clean leaf abstracts followed by a
+local TX assembly review. Run the DDRs2 adapter first because it owns the wide,
+CSV-aligned north pins under the DDRs2 macro:
 
 ```bash
-export SPADMIC_OOC_ROUTE_PROFILE=met2_first_antenna
 export SPADMIC_OOC_REQUIRE_DRC_SAFE_FILLER=1
 export SPADMIC_OOC_ENABLE_MIN_AREA_REPAIR=1
 unset SPADMIC_OOC_ENABLE_PG_SROUTE
+
+GENUS_RUN_ID=genus_ooc_tx_leafs_$(date +%Y%m%d_%H%M)
+export SPADMIC_GENUS_OOC_BLOCKS="ddrs2_adapter:spadmic_ddrs2_adapter ddr16_pairer:spadmic_ddr16_tx_pairer output_fifo:spadmic_output_fifo_topcfg event_bundle_tx:spadmic_event_bundle_tx"
+bash TOP/syn/scripts/run_genus_all_matrix_ooc.sh "$GENUS_RUN_ID"
+unset SPADMIC_GENUS_OOC_BLOCKS
+bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh ddrs2_adapter "$GENUS_RUN_ID" \
+  innovus_ooc_harden_ddrs2_adapter_$(date +%Y%m%d_%H%M)
 ```
 
-This profile routes ordinary signals with MET2-MET3, enables higher route
-effort plus antenna repair, and keeps local PG deferred to top-level hookup.
-If that still leaves non-PG DRC, the bounded geometry fallback is to rerun with
-`SPADMIC_OOC_CORE_HEIGHT_UM=160`, then at most `170`, while keeping the DDRs2
-north-pin alignment unchanged.
+Then harden `ddr16_pairer`, `output_fifo`, and `event_bundle_tx` from the same
+Genus run. The stop gate for moving on to OR tree/snapshot/position work is zero
+non-PG `verify_drc` markers, regular connectivity PASS, setup/hold PASS, and PG
+explicitly deferred to top-level hookup. Do not use the wide monolithic
+`tx_egress_core` route profile loop as the primary closure path unless the
+leaf/assembly path needs a regression comparison.
 
 This is typical-only OOC implementation for top-review handoff. PVS, PEX,
 MMMC, foundry LVS, and direct OA import remain separate later gates.
