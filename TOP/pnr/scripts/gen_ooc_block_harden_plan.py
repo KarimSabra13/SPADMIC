@@ -778,7 +778,7 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
         f"{core_width_um:.3f}",
         f"{core_height_um:.3f}",
         target_utilization="0.50",
-        place_max_density="0.72",
+        place_max_density="0.64",
         core_margin_um=f"{core_margin_um:.3f}",
         signal_pin_spacing_um="1.40",
         pg_pin_width_um="40.32",
@@ -792,6 +792,7 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
         "prelim_top_bbox_urx_um": f"{region_urx:.3f}",
         "prelim_top_bbox_ury_um": f"{region_ury:.3f}",
         "physical_region": "TX_PACKET_CORE",
+        "route_profile": "met2_first_antenna",
         "handoff_note": "Packet/FIFO logic only; DDR16 pairer and DDRs2 adapter are excluded.",
     })
     write_ooc_config_tcl(config_tcl, values, pin_plan)
@@ -854,7 +855,16 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
         signal_pin_depth_um,
     )
     pin_plan = {
-        "WEST": ["clk_sys", "clk_160m_i", "rst_n", "ddrs2_enable_i"],
+        "WEST": [
+            "clk_sys",
+            "clk_160m_i",
+            "rst_n",
+            "ddrs2_enable_i",
+            "ddr_pair_valid_o",
+            "ddr_padded_o",
+            "ddr_busy_o",
+            "ddr_empty_o",
+        ],
         "SOUTH": ["tx_valid_i", "tx_ready_o", "tx_flush_i", *bus("tx_data_i", 16)],
         "NORTH": north_ports,
     }

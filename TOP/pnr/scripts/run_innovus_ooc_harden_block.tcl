@@ -73,7 +73,8 @@ proc spadmic_ooc_pg_sroute_enabled {} {
 }
 
 proc spadmic_ooc_route_profile {} {
-    return [string tolower [string trim [spadmic_ooc_env SPADMIC_OOC_ROUTE_PROFILE default]]]
+    set default_profile [spadmic_ooc_cfg_default route_profile default]
+    return [string tolower [string trim [spadmic_ooc_env SPADMIC_OOC_ROUTE_PROFILE $default_profile]]]
 }
 
 proc spadmic_ooc_route_profile_met2_first {} {
