@@ -4,6 +4,10 @@ Status: four TX egress digital leaves are ready for top-layout review as
 typical-only OOC abstracts. This is not final timing closure, not MMMC, not PVS,
 not PEX, and not foundry LVS.
 
+Session closeout for the 2026-07-09 leaf assembly, split TX runs, and GDS
+streamout-map issue is captured in
+`TOP/docs/30_MATRIX_SIDE_SUBBLOCK_PNR_SESSION_CLOSEOUT_20260709.md`.
+
 Update: the clean leaf abstracts remain valid evidence and fallback collateral,
 but the preferred physical implementation is now split into `TX_PACKET_CORE`
 (`spadmic_event_bundle_tx` + `spadmic_output_fifo_topcfg`) and `TX_DDR_STRIP`

@@ -3,6 +3,9 @@
 Status: planning document for block-by-block digital implementation. This is
 not a full-top Genus/Innovus plan and not a signoff claim.
 
+Session closeout for the 2026-07-09 TX/matrix-side OOC work is captured in
+`TOP/docs/30_MATRIX_SIDE_SUBBLOCK_PNR_SESSION_CLOSEOUT_20260709.md`.
+
 ## 0. 2026-07-09 Block-By-Block Direction
 
 This section supersedes the earlier monolithic TX placement idea. The previous
