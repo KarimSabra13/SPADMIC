@@ -30,6 +30,7 @@ FREE_DIGITAL_ONLY_VALUE="${MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT:-0}"
 AGGRESSIVE_POSTROUTE_VALUE="${MPTDC_CLEANLEF_AGGRESSIVE_POSTROUTE:-0}"
 TIMING_RESCUE_VALUE="${MPTDC_CLEANLEF_TIMING_RESCUE:-0}"
 LOCAL_PHASE_PREPLACE_VALUE="${MPTDC_CLEANLEF_LOCAL_PHASE_PREPLACE:-0}"
+MANUAL_RO_PG_EXCEPTION_VALUE="${MPTDC_MANUAL_RO_PG_EXCEPTION:-0}"
 CORE_UTIL_VALUE="${MPTDC_PNR_CORE_UTIL:-0.55}"
 PDK_ROOT_VALUE="${MPTDC_PDK_ROOT:-/eda/pdk/xfab/xh018}"
 PVS_STACK_VALUE="${MPTDC_PVS_STACK:-XH018_1131}"
@@ -62,6 +63,11 @@ Options:
                          This is the DRC-first mode for short legal raw RO
                          access: RO_tune6/S[n] -> iso/A stays local and the
                          longer phase fabric routes from the buffered outputs.
+  --manual-ro-pg-exception
+                         Route core/digital PG normally, but intentionally
+                         leave only the two RO macro VDD/VSS terminal pairs for
+                         manual Virtuoso/OA hookup. This is an isolation run,
+                         not final PVS/LVS signoff evidence.
   --aggressive-postroute Use the post-route optimization hard cap and a larger
                          bounded fast-tag ECO upsize/search budget.
   --timing-rescue        One-run timing rescue mode: implies aggressive
@@ -73,9 +79,11 @@ Options:
                          Tcl list of route repair commands used with recovery.
   -h, --help             Show this help.
 
-This launcher is the corrected RO_tune6 VDD/VSS-only closure path. It requires
-the protected RO PG via-stack hookup proof, keeps post-place blockPin sroute
-disabled, and keeps the old vdd!/RO-only PG filter strategy disabled.
+This launcher is the corrected RO_tune6 VDD/VSS-only closure path. By default it
+requires the protected RO PG via-stack hookup proof, keeps post-place blockPin
+sroute disabled, and keeps the old vdd!/RO-only PG filter strategy disabled.
+The --manual-ro-pg-exception mode is explicitly not a final signoff mode; it
+filters only the four RO macro PG terminals pending manual layout hookup.
 Route recovery is disabled by default; enabling it still keeps the final
 verify_drc/connectivity gate authoritative.
 USAGE
@@ -196,6 +204,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --local-phase-preplace|--drc-first-local-phase)
       LOCAL_PHASE_PREPLACE_VALUE=1
+      shift
+      ;;
+    --manual-ro-pg-exception)
+      MANUAL_RO_PG_EXCEPTION_VALUE=1
       shift
       ;;
     --aggressive-postroute)
@@ -450,10 +462,28 @@ export MPTDC_ENABLE_RO_PG_HOOKUP=1
 export MPTDC_REQUIRE_RO_PG_HOOKUP=1
 export MPTDC_ENABLE_RO_PG_MACRO_PATCH=0
 export MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=0
+export MPTDC_MANUAL_RO_PG_EXCEPTION="$MANUAL_RO_PG_EXCEPTION_VALUE"
+export MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=4
 export MPTDC_RO_PG_HOOKUP_SEARCH_UM=45.0
 export MPTDC_RO_PG_HOOKUP_MARGIN_UM=1.0
 export MPTDC_RO_PG_HOOKUP_SPACING_UM=2.0
 export MPTDC_RO_PG_HOOKUP_SET_DISTANCE_UM=5000.0
+
+if is_truthy "$MANUAL_RO_PG_EXCEPTION_VALUE"; then
+  export MPTDC_MANUAL_RO_PG_EXCEPTION=1
+  export MPTDC_PG_STRATEGY=manual_ro_pg_exception
+  export MPTDC_ENABLE_RO_PG_PROBE=1
+  export MPTDC_ENABLE_RO_PG_HOOKUP=0
+  export MPTDC_REQUIRE_RO_PG_HOOKUP=0
+  export MPTDC_ENABLE_RO_PG_MACRO_PATCH=0
+  export MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=1
+  export MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=4
+  export MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=0
+  export MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE=1
+  export MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=0
+  export MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=1
+  export MPTDC_ROUTE_GATE_SROUTE_RECOVERY=0
+fi
 
 export MPTDC_ENABLE_ROUTE_GATE_RECOVERY="$ROUTE_RECOVERY_VALUE"
 export MPTDC_ROUTE_REPAIR_COMMANDS="$ROUTE_REPAIR_COMMANDS_VALUE"
@@ -531,6 +561,7 @@ echo "MPTDC_PNR_FREE_ALL_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_ALL_INTERNAL_PLACEME
 echo "MPTDC_PNR_FREE_INTERNAL_PLACEMENT=$MPTDC_PNR_FREE_INTERNAL_PLACEMENT"
 echo "MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT=$MPTDC_PNR_FREE_DIGITAL_ONLY_PLACEMENT"
 echo "MPTDC_CLEANLEF_LOCAL_PHASE_PREPLACE=$LOCAL_PHASE_PREPLACE_VALUE"
+echo "MPTDC_MANUAL_RO_PG_EXCEPTION=$MANUAL_RO_PG_EXCEPTION_VALUE"
 echo "MPTDC_PNR_CORE_UTIL=$MPTDC_PNR_CORE_UTIL"
 echo "MPTDC_PNR_FIX_RO_MACROS=$MPTDC_PNR_FIX_RO_MACROS"
 echo "MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE=${MPTDC_PNR_SKIP_PHASE_BUFFER_PREPLACE:-unset}"
@@ -541,6 +572,7 @@ echo "MPTDC_ENABLE_RO_PG_HOOKUP=$MPTDC_ENABLE_RO_PG_HOOKUP"
 echo "MPTDC_REQUIRE_RO_PG_HOOKUP=$MPTDC_REQUIRE_RO_PG_HOOKUP"
 echo "MPTDC_ENABLE_RO_PG_MACRO_PATCH=$MPTDC_ENABLE_RO_PG_MACRO_PATCH"
 echo "MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=$MPTDC_ALLOW_RO_DERIVED_PG_DANGLING"
+echo "MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=$MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS"
 echo "MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN=$MPTDC_POSTPLACE_PRE_ROUTE_ACCEPT_PG_VERIFY_CLEAN"
 echo "MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY=$MPTDC_POSTPLACE_PRE_ROUTE_ALLOW_DANGLING_ONLY"
 echo "MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX=$MPTDC_POSTPLACE_PRE_ROUTE_DANGLING_ONLY_MAX"

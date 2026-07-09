@@ -964,6 +964,7 @@ proc mptdc_signoff_apply_recovery_defaults {} {
         MPTDC_REQUIRE_RO_PG_HOOKUP 1
         MPTDC_ENABLE_RO_PG_MACRO_PATCH 0
         MPTDC_ALLOW_RO_DERIVED_PG_DANGLING 0
+        MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4
         MPTDC_RO_PG_HOOKUP_SEARCH_UM 45.0
         MPTDC_RO_PG_HOOKUP_MARGIN_UM 1.0
         MPTDC_RO_PG_HOOKUP_SPACING_UM 2.0
@@ -1001,6 +1002,10 @@ proc mptdc_signoff_pg_strategy_manual_ro_core_sroute {} {
     return [expr {[mptdc_signoff_pg_strategy] eq "manual_ro_pg_core_sroute"}]
 }
 
+proc mptdc_signoff_pg_strategy_manual_ro_pg_exception {} {
+    return [expr {[mptdc_signoff_pg_strategy] eq "manual_ro_pg_exception"}]
+}
+
 proc mptdc_signoff_pg_strategy_ro_hookup_blockpin_probe {} {
     return [expr {[mptdc_signoff_pg_strategy] eq "conservative_ro_hookup_blockpin_probe"}]
 }
@@ -1015,8 +1020,8 @@ proc mptdc_signoff_pg_policy_guard {} {
     }
     set failures [list]
     set strategy [mptdc_signoff_pg_strategy]
-    if {[lsearch -exact {conservative_ro_hookup conservative_ro_hookup_blockpin_probe innovus_sroute_golden_ro manual_ro_pg_core_sroute protected_ro_pg_via_stack} $strategy] < 0} {
-        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, manual_ro_pg_core_sroute, or protected_ro_pg_via_stack"
+    if {[lsearch -exact {conservative_ro_hookup conservative_ro_hookup_blockpin_probe innovus_sroute_golden_ro manual_ro_pg_core_sroute manual_ro_pg_exception protected_ro_pg_via_stack} $strategy] < 0} {
+        lappend failures "MPTDC_PG_STRATEGY=$strategy expected conservative_ro_hookup, conservative_ro_hookup_blockpin_probe, innovus_sroute_golden_ro, manual_ro_pg_core_sroute, manual_ro_pg_exception, or protected_ro_pg_via_stack"
     }
     set style [string tolower [mptdc_signoff_env MPTDC_BLOCK_PG_PIN_STYLE simple_vdd_vss_pair]]
     if {[lsearch -exact {mesh_lr_vdd_vss mesh_intersection mesh_intersection_vdd_vss simple_vdd_vss_pair vdd_vss_pair left_vdd_right_vss} $style] < 0} {
@@ -1079,6 +1084,34 @@ proc mptdc_signoff_pg_policy_guard {} {
         }
         if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
             lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because PG must be clean or RO-filtered before route"
+        }
+    } elseif {$strategy eq "manual_ro_pg_exception"} {
+        if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
+            lappend failures "MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN=0 expected 1 for manual_ro_pg_exception"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN 0]} {
+            lappend failures "MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0 for manual_ro_pg_exception"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_PROBE 1]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_PROBE=0 expected 1 for manual_ro_pg_exception"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_HOOKUP 0]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_HOOKUP=1 expected 0 for manual_ro_pg_exception"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_REQUIRE_RO_PG_HOOKUP 0]} {
+            lappend failures "MPTDC_REQUIRE_RO_PG_HOOKUP=1 expected 0 for manual_ro_pg_exception"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_MACRO_PATCH 0]} {
+            lappend failures "MPTDC_ENABLE_RO_PG_MACRO_PATCH=1 expected 0 for manual_ro_pg_exception"
+        }
+        if {![mptdc_signoff_env_truthy MPTDC_ALLOW_RO_DERIVED_PG_DANGLING 0]} {
+            lappend failures "MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=0 expected 1 for manual_ro_pg_exception"
+        }
+        if {[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4] != 4} {
+            lappend failures "MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS unset] expected 4 for manual_ro_pg_exception"
+        }
+        if {[mptdc_signoff_env_truthy MPTDC_ROUTE_GATE_SROUTE_RECOVERY 0]} {
+            lappend failures "MPTDC_ROUTE_GATE_SROUTE_RECOVERY=1 expected 0 because manual RO PG must remain isolated"
         }
     } elseif {$strategy eq "protected_ro_pg_via_stack"} {
         if {![mptdc_signoff_env_truthy MPTDC_REQUIRE_POSTPLACE_PRE_ROUTE_SROUTE_CLEAN 1]} {
@@ -2152,7 +2185,8 @@ proc mptdc_signoff_sroute_commands {nets} {
 }
 
 proc mptdc_signoff_postplace_sroute_commands {nets} {
-    if {[mptdc_signoff_pg_strategy_manual_ro_core_sroute]} {
+    if {[mptdc_signoff_pg_strategy_manual_ro_core_sroute] ||
+        [mptdc_signoff_pg_strategy_manual_ro_pg_exception]} {
         set commands [list [list sroute -connect {corePin} -nets $nets \
             -corePinTarget {ring stripe} -allowLayerChange 1]]
         if {[mptdc_signoff_env_truthy MPTDC_ENABLE_POSTPLACE_SROUTE_CANDIDATE_PROBE 0]} {
@@ -2861,6 +2895,9 @@ proc mptdc_signoff_run_postplace_pre_route_sroute {} {
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_FILTER_REPORT=[lindex $special_bad 6]"
+    puts $fh "POSTPLACE_PRE_ROUTE_RO_PG_MANUAL_EXCEPTION=[expr {[mptdc_signoff_ro_pg_manual_exception_enabled] ? 1 : 0}]"
+    puts $fh "POSTPLACE_PRE_ROUTE_RO_PG_MANUAL_EXCEPTION_STATUS=[mptdc_signoff_ro_pg_manual_exception_status $special_bad]"
+    puts $fh "POSTPLACE_PRE_ROUTE_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_STATUS=[dict get $dangling_only status]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_ONLY_REASON=[dict get $dangling_only reason]"
     puts $fh "POSTPLACE_PRE_ROUTE_SPECIAL_CONNECTIVITY_DANGLING_COUNT=[dict get $dangling_only dangling_count]"
@@ -5019,8 +5056,24 @@ proc mptdc_signoff_special_connectivity_dangling_only_status {summary_path detai
 }
 
 proc mptdc_signoff_ro_pg_macro_filter_enabled {} {
-    return [expr {[mptdc_signoff_pg_strategy_manual_ro_core_sroute] &&
-        [mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_MACRO_PATCH 0]}]
+    return [expr {[mptdc_signoff_pg_strategy_manual_ro_pg_exception] ||
+        ([mptdc_signoff_pg_strategy_manual_ro_core_sroute] &&
+        [mptdc_signoff_env_truthy MPTDC_ENABLE_RO_PG_MACRO_PATCH 0])}]
+}
+
+proc mptdc_signoff_ro_pg_manual_exception_enabled {} {
+    return [mptdc_signoff_pg_strategy_manual_ro_pg_exception]
+}
+
+proc mptdc_signoff_ro_pg_manual_exception_status {special_bad} {
+    if {![mptdc_signoff_ro_pg_manual_exception_enabled]} {
+        return DISABLED
+    }
+    if {[lindex $special_bad 2] && ![lindex $special_bad 0] &&
+        [lindex $special_bad 3] eq "FILTERED_RO_ONLY"} {
+        return ACTIVE
+    }
+    return NOT_ACTIVE
 }
 
 proc mptdc_signoff_ro_pg_known_instance {inst} {
@@ -5069,6 +5122,8 @@ proc mptdc_signoff_classify_pg_connectivity_detail {detail_path} {
         non_ro_terminal_count 0 \
         allowed_derived_count 0 \
         non_ro_failure_count 0 \
+        expected_ro_terminal_count [mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4] \
+        manual_exception [expr {[mptdc_signoff_ro_pg_manual_exception_enabled] ? 1 : 0}] \
         allowed_lines [list] \
         non_ro_lines [list] \
         detail_report $detail_path]
@@ -5092,6 +5147,10 @@ proc mptdc_signoff_classify_pg_connectivity_detail {detail_path} {
                 dict incr data non_ro_failure_count
                 dict lappend data non_ro_lines $trimmed
             }
+            continue
+        }
+        if {[regexp {^Net[[:space:]]+(VDD|VSS):[[:space:]]+has an unconnected terminal.*(special routes with opens|dangling Wire)} $trimmed]} {
+            lappend derived_lines $trimmed
             continue
         }
         if {[regexp {^Net[[:space:]]+(VDD|VSS):[[:space:]]+(has special routes with opens|dangling Wire)} $trimmed]} {
@@ -5124,8 +5183,14 @@ proc mptdc_signoff_classify_pg_connectivity_detail {detail_path} {
         dict set data status FAIL
         dict set data reason non_ro_pg_failures
     } elseif {$ro_terms > 0} {
-        dict set data status FILTERED_RO_ONLY
-        dict set data reason ro_macro_pg_only
+        set expected [dict get $data expected_ro_terminal_count]
+        if {[dict get $data manual_exception] && $ro_terms != $expected} {
+            dict set data status FAIL
+            dict set data reason "unexpected_ro_pg_terminal_count:expected=$expected actual=$ro_terms"
+        } else {
+            dict set data status FILTERED_RO_ONLY
+            dict set data reason ro_macro_pg_only
+        }
     } else {
         dict set data status FAIL
         dict set data reason no_ro_macro_terminal_evidence
@@ -5145,6 +5210,8 @@ proc mptdc_signoff_write_ro_pg_macro_filter_report {path summary_path detail_pat
     puts $fh "RO_PG_MACRO_FILTER_RAW_BAD_LINES=[lindex $raw_bad 1]"
     puts $fh "RO_PG_MACRO_FILTER_STATUS=[dict get $class_data status]"
     puts $fh "RO_PG_MACRO_FILTER_REASON=[dict get $class_data reason]"
+    puts $fh "RO_PG_MANUAL_EXCEPTION_ENABLED=[dict get $class_data manual_exception]"
+    puts $fh "RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[dict get $class_data expected_ro_terminal_count]"
     puts $fh "RO_PG_FILTERED_UNCONNECTED_TERMINALS=[dict get $class_data ro_terminal_count]"
     puts $fh "RO_PG_FILTERED_DERIVED_SPECIAL_LINES=[dict get $class_data allowed_derived_count]"
     puts $fh "RO_PG_NON_RO_TERMINALS=[dict get $class_data non_ro_terminal_count]"
@@ -5195,10 +5262,20 @@ proc mptdc_signoff_write_pg_postroute_connectivity_status {special_rpt regular_r
     set regular_bad [mptdc_signoff_connectivity_report_has_errors $regular_rpt]
     set special_flag [lindex $special_bad 0]
     set status [expr {$special_flag ? "FAIL" : "PASS"}]
+    set manual_exception_status [mptdc_signoff_ro_pg_manual_exception_status $special_bad]
+    if {$status eq "PASS" && $manual_exception_status eq "ACTIVE"} {
+        set status MANUAL_RO_EXCEPTION
+    }
     set fh [open $rpt w]
     puts $fh "# MPTDC Post-route PG Connectivity Status"
     puts $fh "PG_CONNECTIVITY_STATUS=$status"
     puts $fh "PG_CONNECTIVITY_STAGE=POST_ROUTE_SPECIAL_NET_VERIFY"
+    puts $fh "RO_PG_MANUAL_EXCEPTION=[expr {[mptdc_signoff_ro_pg_manual_exception_enabled] ? 1 : 0}]"
+    puts $fh "RO_PG_MANUAL_EXCEPTION_STATUS=$manual_exception_status"
+    puts $fh "RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4]"
+    if {$manual_exception_status eq "ACTIVE"} {
+        puts $fh "PG_CONNECTIVITY_NOTE=non_ro_pg_connectivity_clean_with_manual_ro_vdd_vss_exception_pending_virtuoso_patch"
+    }
     puts $fh "SPECIAL_CONNECTIVITY_REPORT=$special_rpt"
     puts $fh "SPECIAL_CONNECTIVITY_BAD=$special_flag"
     puts $fh "SPECIAL_CONNECTIVITY_BAD_LINES=[lindex $special_bad 1]"
@@ -7129,6 +7206,13 @@ proc mptdc_signoff_write_route_gate_status {rpt drc_data regular_bad special_bad
     puts $fh "SPECIAL_NET_CONNECTIVITY_FILTERED_RO_TERMINALS=[lindex $special_bad 4]"
     puts $fh "SPECIAL_NET_CONNECTIVITY_NON_RO_FAILURES=[lindex $special_bad 5]"
     puts $fh "SPECIAL_NET_CONNECTIVITY_FILTER_REPORT=[lindex $special_bad 6]"
+    puts $fh "RO_PG_MANUAL_EXCEPTION=[expr {[mptdc_signoff_ro_pg_manual_exception_enabled] ? 1 : 0}]"
+    puts $fh "RO_PG_MANUAL_EXCEPTION_STATUS=[mptdc_signoff_ro_pg_manual_exception_status $special_bad]"
+    puts $fh "RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4]"
+    if {[mptdc_signoff_ro_pg_manual_exception_status $special_bad] eq "ACTIVE"} {
+        puts $fh "RO_PG_MANUAL_EXCEPTION_NOTE=route_gate_accepted_only_with_four_ro_macro_pg_terminals_left_for_manual_virtuoso_hookup"
+        puts $fh "LVS_STATUS=DEFERRED_UNTIL_MANUAL_RO_PG_PATCH"
+    }
     puts $fh "REGULAR_NET_OPENS=[expr {$regular_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     puts $fh "SPECIAL_NET_OPENS=[expr {$special_flag ? "NONZERO_OR_UNPARSED" : 0}]"
     puts $fh "UNROUTED_NETS=$unrouted"
@@ -9739,6 +9823,7 @@ proc mptdc_signoff_write_final_package {} {
     set extraction_state [mptdc_signoff_status_state EXTRACTION_STATUS]
     set power_state [mptdc_signoff_status_state POWER_STATUS]
     set drv_state [mptdc_signoff_status_state DRV_STATUS]
+    set manual_ro_pg_exception [mptdc_signoff_ro_pg_manual_exception_enabled]
     set tc_pnr_state PASS
     set tc_pnr_evidence tc_only_routed_timed_closure_complete
     set digital_evidence row_and_block_drc_lvs_deferred
@@ -9762,6 +9847,12 @@ proc mptdc_signoff_write_final_package {} {
     puts $fh "MPTDC_TC_PNR_CLOSURE_EVIDENCE=$tc_pnr_evidence"
     puts $fh "PLACEMENT_STATUS=$placement_state"
     puts $fh "PG_CONNECTIVITY_STATUS=$pg_conn_state"
+    puts $fh "RO_PG_MANUAL_EXCEPTION=[expr {$manual_ro_pg_exception ? 1 : 0}]"
+    if {$manual_ro_pg_exception} {
+        puts $fh "RO_PG_MANUAL_EXCEPTION_STATUS=$pg_conn_state"
+        puts $fh "RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=[mptdc_signoff_env_int MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS 4]"
+        puts $fh "RO_PG_MANUAL_EXCEPTION_NOTE=RO_macro_VDD_VSS_pending_manual_Virtuoso_or_OA_hookup_before_final_PVS_LVS"
+    }
     puts $fh "CTS_STATUS=$cts_state"
     puts $fh "ROUTE_STATUS=$route_state"
     puts $fh "EXTRACTION_STATUS=$extraction_state"
@@ -9777,10 +9868,18 @@ proc mptdc_signoff_write_final_package {} {
     puts $fh "NOT_MMMC_SIGNOFF=YES"
     puts $fh "READY_FOR_TAPEOUT=NO"
     puts $fh ""
-    puts $fh "Foundry-qualified PVS/Assura/Calibre DRC/LVS evidence is required before PASS."
+    if {$manual_ro_pg_exception} {
+        puts $fh "Foundry-qualified PVS/Assura/Calibre DRC/LVS evidence must be rerun after the manual RO PG hookup is merged into the signoff layout."
+    } else {
+        puts $fh "Foundry-qualified PVS/Assura/Calibre DRC/LVS evidence is required before PASS."
+    }
     close $fh
     mptdc_signoff_set_status DRC_STATUS DEFERRED $rpt
-    mptdc_signoff_set_status LVS_STATUS DEFERRED $rpt
+    if {$manual_ro_pg_exception} {
+        mptdc_signoff_set_status LVS_STATUS DEFERRED_UNTIL_MANUAL_RO_PG_PATCH $rpt
+    } else {
+        mptdc_signoff_set_status LVS_STATUS DEFERRED $rpt
+    }
     set deliverable_status [expr {$pvs_input_state eq "PASS" ? "PROVISIONAL" : "REVIEW_REQUIRED"}]
     mptdc_signoff_set_status DELIVERABLE_STATUS $deliverable_status $pvs_ready_rpt
     mptdc_signoff_set_status MPTDC_TC_PNR_CLOSURE $tc_pnr_state $tc_pnr_evidence

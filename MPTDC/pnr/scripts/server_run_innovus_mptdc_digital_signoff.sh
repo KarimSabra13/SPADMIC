@@ -188,6 +188,8 @@ apply_recovery_defaults() {
   export MPTDC_REQUIRE_RO_PG_HOOKUP="${MPTDC_REQUIRE_RO_PG_HOOKUP:-1}"
   export MPTDC_ENABLE_RO_PG_MACRO_PATCH="${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-0}"
   export MPTDC_ALLOW_RO_DERIVED_PG_DANGLING="${MPTDC_ALLOW_RO_DERIVED_PG_DANGLING:-0}"
+  export MPTDC_MANUAL_RO_PG_EXCEPTION="${MPTDC_MANUAL_RO_PG_EXCEPTION:-0}"
+  export MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS="${MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS:-4}"
   export MPTDC_RO_PG_HOOKUP_SEARCH_UM="${MPTDC_RO_PG_HOOKUP_SEARCH_UM:-45.0}"
   export MPTDC_RO_PG_HOOKUP_MARGIN_UM="${MPTDC_RO_PG_HOOKUP_MARGIN_UM:-1.0}"
   export MPTDC_RO_PG_HOOKUP_SPACING_UM="${MPTDC_RO_PG_HOOKUP_SPACING_UM:-2.0}"
@@ -251,6 +253,32 @@ guard_pg_policy() {
       fi
       if is_truthy "${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"; then
         failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for manual_ro_pg_core_sroute")
+      fi
+      ;;
+    manual_ro_pg_exception)
+      if is_truthy "${MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN:-0}"; then
+        failures+=("MPTDC_ENABLE_POSTPLACE_SROUTE_BLOCKPIN=1 expected 0 for manual_ro_pg_exception")
+      fi
+      if ! is_truthy "${MPTDC_ENABLE_RO_PG_PROBE:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_PROBE=${MPTDC_ENABLE_RO_PG_PROBE:-unset} expected 1 for manual_ro_pg_exception")
+      fi
+      if is_truthy "${MPTDC_ENABLE_RO_PG_HOOKUP:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_HOOKUP=${MPTDC_ENABLE_RO_PG_HOOKUP:-unset} expected 0 for manual_ro_pg_exception")
+      fi
+      if is_truthy "${MPTDC_REQUIRE_RO_PG_HOOKUP:-0}"; then
+        failures+=("MPTDC_REQUIRE_RO_PG_HOOKUP=${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset} expected 0 for manual_ro_pg_exception")
+      fi
+      if is_truthy "${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-0}"; then
+        failures+=("MPTDC_ENABLE_RO_PG_MACRO_PATCH=${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-unset} expected 0 for manual_ro_pg_exception")
+      fi
+      if ! is_truthy "${MPTDC_ALLOW_RO_DERIVED_PG_DANGLING:-0}"; then
+        failures+=("MPTDC_ALLOW_RO_DERIVED_PG_DANGLING=${MPTDC_ALLOW_RO_DERIVED_PG_DANGLING:-unset} expected 1 for manual_ro_pg_exception")
+      fi
+      if [[ "${MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS:-}" != "4" ]]; then
+        failures+=("MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS=${MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS:-unset} expected 4 for manual_ro_pg_exception")
+      fi
+      if is_truthy "${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-0}"; then
+        failures+=("MPTDC_ROUTE_GATE_SROUTE_RECOVERY=${MPTDC_ROUTE_GATE_SROUTE_RECOVERY:-unset} expected 0 for manual_ro_pg_exception")
       fi
       ;;
     innovus_sroute_golden_ro)
@@ -807,6 +835,12 @@ fi
   echo "ro_pg_hookup_required: ${MPTDC_REQUIRE_RO_PG_HOOKUP:-unset}"
   echo "ro_pg_macro_patch: ${MPTDC_ENABLE_RO_PG_MACRO_PATCH:-unset}"
   echo "allow_ro_derived_pg_dangling: ${MPTDC_ALLOW_RO_DERIVED_PG_DANGLING:-unset}"
+  if [[ "${MPTDC_PG_STRATEGY:-}" == "manual_ro_pg_exception" ]]; then
+    echo "ro_pg_manual_exception: 1"
+  else
+    echo "ro_pg_manual_exception: ${MPTDC_MANUAL_RO_PG_EXCEPTION:-0}"
+  fi
+  echo "ro_pg_manual_exception_expected_terminals: ${MPTDC_RO_PG_MANUAL_EXCEPTION_EXPECTED_TERMINALS:-unset}"
   echo "ro_pg_hookup_search_um: ${MPTDC_RO_PG_HOOKUP_SEARCH_UM:-unset}"
   echo "ro_pg_hookup_margin_um: ${MPTDC_RO_PG_HOOKUP_MARGIN_UM:-unset}"
   echo "ro_pg_hookup_spacing_um: ${MPTDC_RO_PG_HOOKUP_SPACING_UM:-unset}"
