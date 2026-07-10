@@ -1,6 +1,6 @@
 # TX Packet Core HV PVS LVS Triage
 
-Status: `READ_ONLY_COLLECTOR_READY_PENDING_SERVER_INVENTORY`
+Status: `READ_ONLY_INTAKE_COMPLETE_MISMATCH_CLASSIFIED_REBUILD_REQUIRED`
 
 This track is independent of the `spadmic_tx_ddr_strip` P02 PG patch. It must
 not block or alter P02.
@@ -13,13 +13,15 @@ The latest known PVS LVS directory candidate is:
 /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
 ```
 
-It appears to contain an LVS run for the DIFFCON-corrected
-`spadmic_tx_packet_core_HV` layout. Until the controls, timestamps, input
-paths, hashes, and comparison reports are inventoried, it is only a candidate
-run directory. A mismatch is possible but is not yet classified.
+It contains a completed historical LVS run for
+`spadmic_tx_packet_core_HV`. The controls, timestamps, input paths, hashes, and
+comparison reports are now inventoried. The run is classified below and is not
+the qualification run for the final DIFFCON-corrected handoff.
 
 No layout correction, OA edit, GDS rewrite, source-netlist edit, or PVS rerun
-is authorized from this observation alone.
+was authorized from the observation alone. The immutable intake is now
+available and supports the classification below. The historical directory
+remains read-only.
 
 The implemented collector is:
 
@@ -31,6 +33,64 @@ It never invokes PVS or executes a file from the historical run. It hashes and
 reads the source, writes only to a new immutable bundle, does not follow
 symlinks, and compares source type/size/mtime/symlink metadata before and after
 collection. An existing destination is refused.
+
+## Completed Intake And Proven Diagnosis
+
+The server collection completed with `STATUS=PASS`, `ERROR_COUNT=0`, and
+`SOURCE_STABILITY_STATUS=PASS`. The compact Git evidence is under:
+
+```text
+TOP/docs/pvs_lvs_intake/spadmic_tx_packet_core_HV/
+  tx_packet_core_hv_lvs_inventory_20260710_165038/
+```
+
+The historical run completed comparison and reported an explicit `MISMATCH`.
+It is not a valid verdict on the final DIFFCON-corrected handoff because the
+compared inputs and abstraction contract are wrong in several independent
+ways:
+
+| Gate | Evidence | Classification |
+| --- | --- | --- |
+| Input identity | Compared GDS SHA256 is `6d29b541...badf`; the separately reported fixed-DIFFCON handoff SHA256 is `aaa3f7b8...1026` | `RUN_OR_INPUT_IDENTITY` |
+| Top contract | Layout top is `spadmic_tx_packet_core_HV`; source top is `spadmic_tx_packet_core` | `TOP_NAME_OR_HIERARCHY` |
+| Pin extraction | Comparison has layout pins `0`, source pins `156` initially and `154` after supply handling | `BOUNDARY_PORT` |
+| Library abstraction | Source is only the routed PG Verilog and keeps JIHD module definitions; no official JIHD CDL is included | `SOURCE_PARSE_OR_LIBRARY` |
+| Concrete layout connectivity | Extracted net 44 carries both `output_fifo_free_words_o[0]` and `output_fifo_level_o[0]` labels | `CONNECTIVITY_OPEN_SHORT` |
+
+The missing-pin report includes clocks, reset, VDD/VSS, scalar controls,
+ordinary 1D buses, and every `src_data_i[i][j]` bit. Therefore adjacent bracket
+dimensions are not the primary cause of this run: the layout side recognized
+no top pins at all. PVS also finished loading the Verilog source. Flattening the
+active TX interface is a deliberate new physical-contract decision, not a
+retroactive explanation of this historical mismatch.
+
+The OA-to-GDS conversion log reports ignored pin/label layer-purpose pairs,
+including MET3 and METTP pin/label purposes. Combined with `text_depth
+-primary`, the `_HV` wrapper hierarchy, and the zero layout-pin count, this
+invalidates the old boundary comparison before any device-level conclusion.
+
+The source contains thousands of high-level JIHD instances while the layout
+extracts transistor devices. Without the official
+`xh018_D_CELLS_JIHD.cdl`, PVS is comparing incompatible abstraction levels.
+The next source must remove only Verilog definitions covered by that CDL and
+must prove that every used master is present in the CDL before PVS starts.
+
+### Do Not Retry
+
+- Do not rerun the historical controls unchanged; they reproduce the same
+  invalid contract.
+- Do not use `i+j` to flatten two indices; it aliases distinct source/bit pairs.
+- Do not call `[][]` the root cause when all non-array pins are missing too.
+- Do not attribute the mismatch to DIFFCON when the compared GDS hash differs
+  from the fixed handoff and no localized device delta proves that class.
+- Do not use OA XStream output as the new physical authority. The replacement
+  flow qualifies the mapped Innovus GDS directly and imports OA only as a
+  versioned review copy.
+- Do not accept a PVS return code as LVS success. Only an explicit report-level
+  `MATCH` passes.
+
+The compact machine-readable decision is
+`mismatch_classification.rpt` in the intake directory.
 
 ## Phase Mapping
 

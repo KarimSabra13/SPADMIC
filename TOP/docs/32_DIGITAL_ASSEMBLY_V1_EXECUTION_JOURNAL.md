@@ -415,7 +415,7 @@ is reviewed. The reusable failure ledger is
 
 ## Parallel P03/P04 Registration - TX Packet Core HV LVS
 
-Status: `REGISTERED_NON_BLOCKING_TO_P02`
+Status: `READ_ONLY_INTAKE_PASS_MISMATCH_CLASSIFIED_REBUILD_REQUIRED`
 
 Candidate historical LVS directory:
 
@@ -423,16 +423,36 @@ Candidate historical LVS directory:
 /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
 ```
 
-After P02, this directory will be inventoried in read-only mode. Only reports,
-controls, logs, the source netlist actually used, compact maps, and hash
-manifests will be copied into an immutable raw bundle under the Innovus
-handoff root. Git will receive only compact review reports and a mismatch
-diagnostic.
+The read-only collector completed with source stability `PASS`, 98 source
+entries, 88 files, 32 selected text files, and no collector errors. Raw bundle:
 
-No mismatch cause is currently assigned. In particular, the manual DIFFCON
-work is not treated as the cause without extracted-device or connectivity
-evidence. The detailed intake, classification, and rerun policy is in
-`TOP/docs/33_TX_PACKET_CORE_HV_PVS_LVS_TRIAGE.md`.
+```text
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_tx_packet_core/
+  tx_packet_core_hv_lvs_inventory_20260710_165038/pvs/lvs/raw/
+    tx_packet_core_hv_lvs_inventory_20260710_165038
+```
+
+The historical PVS run is an explicit `MISMATCH`, but it does not compare the
+reported final fixed-DIFFCON GDS. Its compared GDS SHA256 is
+`6d29b54199bb961062acd2057bb9f28ec27aebae3e694293e8ae423d92ecbadf`.
+It uses layout top `spadmic_tx_packet_core_HV`, source top
+`spadmic_tx_packet_core`, recognizes zero layout pins versus 156 source pins,
+and provides no official JIHD CDL while the source retains JIHD Verilog module
+definitions. These are independent input, hierarchy, boundary, and library
+contract failures.
+
+One concrete extracted connectivity issue is also recorded: layout net 44 has
+both `output_fifo_free_words_o[0]` and `output_fifo_level_o[0]` labels. The
+missing-pin pattern affects every top pin, not only `src_data_i[i][j]`, so the
+adjacent bracket naming hypothesis is refuted as the primary cause of this
+run. DIFFCON remains unassigned as a cause because the input GDS identity is
+wrong and no localized device delta proves it.
+
+P03/P04 now rebuild the canonical block rather than rerunning this template:
+canonical top on both sides, mapped Innovus GDS, filtered PG netlist, official
+JIHD CDL, strict pin-set and input-hash gates, PVS DRC zero outside antenna,
+and explicit LVS `MATCH`. The detailed evidence and negative command ledger
+are in `TOP/docs/33_TX_PACKET_CORE_HV_PVS_LVS_TRIAGE.md`.
 
 ## Update Procedure
 
