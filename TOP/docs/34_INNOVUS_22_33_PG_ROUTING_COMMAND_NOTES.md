@@ -142,6 +142,26 @@ The wrapper records this as
 `PROCESS_ISOLATION=ONE_INNOVUS_PROCESS_PER_CANDIDATE`. A failed or interrupted
 trial remains diagnostic evidence under its own immutable `trials/` directory.
 
+P02-R4 proved that this process architecture works, but rejected the local
+helper method itself. All ten candidate X coordinates were evaluated in fresh
+processes and all produced the same result:
+
+```text
+PG_CONNECTIVITY_VIOLATION_COUNT=6
+PG_MARKER_COUNT=6
+REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+DRC_MARKER_TOTAL=0
+```
+
+This is negative knowledge with a clear reuse rule: do not test more X values
+with the same bounded `add_shape` plus local second `sroute` sequence. The
+invariance across `x=298.480..1418.480 um` points to a method/topology problem,
+not candidate placement. Exact marker decomposition remains required before a
+different repair is selected.
+
+The complete command, error, and anti-pattern ledger is maintained in
+`TOP/docs/35_INNOVUS_PG_DEBUGGING_PLAYBOOK_AND_FAILURE_LEDGER.md`.
+
 ## Required Gates
 
 - PG-term centers read from the restored DB, not fallback values.

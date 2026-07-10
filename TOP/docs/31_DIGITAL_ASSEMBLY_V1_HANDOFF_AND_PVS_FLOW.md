@@ -148,6 +148,13 @@ repair and runs each candidate in a fresh Innovus process. A clean candidate is
 then replayed from P01 in another fresh process before export. The Innovus
 multiple-restore guard must not be disabled.
 
+R4 confirmed the process isolation but rejected all ten local-helper candidates
+with the same tuple: PG violations 6, PG markers 6, regular connectivity 0, and
+DRC 0. No canonical replay or export ran. The uniform result means that the
+bounded helper plus local second `sroute` mechanism must be diagnosed, not
+repeated at more X coordinates. See
+`TOP/docs/35_INNOVUS_PG_DEBUGGING_PLAYBOOK_AND_FAILURE_LEDGER.md`.
+
 ## 5. Server Initialization
 
 Use this shell-safe preamble. Replace the expected commit after these files are
@@ -306,7 +313,7 @@ The first P02 run ID was
 `innovus_ooc_pg_only_tx_ddr_strip_20260710_135413` and returned 8. Do not
 repeat the same PG command without first inspecting its special-net geometry.
 
-The current P02-R4 command restores the successful narrow P01 run. The wrapper
+The P02-R4 command restores the successful narrow P01 run. The wrapper
 creates one immutable trial directory per X candidate and performs a separate
 canonical replay only after a trial has PG, regular-connectivity, and DRC counts
 of zero:
@@ -326,6 +333,13 @@ cat "$R4_ROOT/reports/vdd_helper_candidate_summary.tsv" 2>/dev/null
 cat "$R4_ROOT/reports/pg_geometry_fix_status.rpt" 2>/dev/null
 cat "$R4_ROOT/reports/pg_geometry_fix_wrapper_status.rpt" 2>/dev/null
 ```
+
+The measured R4 run was
+`innovus_ooc_pg_geometry_fix_r4_tx_ddr_strip_20260710_161123`; all ten trials
+were rejected with six PG markers, so the canonical replay and all parent
+outputs were correctly skipped. Do not rerun this candidate list with the same
+helper mechanism. The next command is read-only marker/log extraction from the
+existing trial directories.
 
 Do not use the PG output if `INTERNAL_PG_STATUS`, regular connectivity, or
 Innovus DRC is not `PASS`. The exported strip GDS explicitly merges the JIHD

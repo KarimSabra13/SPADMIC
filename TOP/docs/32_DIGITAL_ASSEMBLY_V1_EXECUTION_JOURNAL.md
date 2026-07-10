@@ -28,7 +28,7 @@ Genus or Innovus and must not modify MPTDC internals.
 | --- | --- | --- | --- |
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
-| P02 | Restore-only internal PG for the narrow strip | PENDING_SERVER_R4 | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
+| P02 | Restore-only internal PG for the narrow strip | R4_HELPER_METHOD_FAIL_DIAG_PENDING | PG marker decomposition, post-PG connectivity/DRC, merged GDS audit |
 | P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff and historical LVS intake | REGISTERED_PENDING_SERVER_INVENTORY | OA backup, bbox/pin parity, GDS audit, read-only LVS input inventory |
 | P04 | Per-block PVS closure, mismatch classification, and handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, explicit LVS verdict, diagnostic, hashes, promotion gate |
 | P05 | Phase-A TX assembly generation and geometry gate | BLOCKED_BY_P04 | No obstacle overlap, exact placements, exact 19-net contract |
@@ -127,7 +127,7 @@ waived for final handoff; they are the explicit input condition for P02.
 
 ## P02 - Narrow Strip Restore-Only PG
 
-Status: `R3_INFRASTRUCTURE_FAILURE_R4_READY`
+Status: `R4_HELPER_METHOD_FAIL_DIAG_PENDING`
 
 P02 restores the P01 `05_postroute_export` checkpoint. It must not run
 placement, CTS, signal `routeDesign`, or synthesis. It adds only VDD/VSS METTP
@@ -368,6 +368,50 @@ is replayed from P01 in one more fresh process; only that canonical process may
 export DEF, LEF, PG netlist, GDS, and the final checkpoint. The wrapper then
 requires the official stream-map and JIHD-merge GDS audit to pass. This policy
 is recorded as `PROCESS_ISOLATION=ONE_INNOVUS_PROCESS_PER_CANDIDATE`.
+
+P02-R4 executed the process-isolated search:
+
+```text
+REPO_HEAD=38a923e7687b7e2b43c5b21517d154cdd9bc9e0c
+RUN_ID=innovus_ooc_pg_geometry_fix_r4_tx_ddr_strip_20260710_161123
+RUN_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_pg_geometry_fix_r4_tx_ddr_strip_20260710_161123
+R4_RC=8
+PROCESS_ISOLATION=ONE_INNOVUS_PROCESS_PER_CANDIDATE
+CANDIDATE_ROWS=10
+CANDIDATES_ELECTRICALLY_EVALUATED=10
+CANDIDATES_WITH_PG_ZERO=0
+COMMON_PG_CONNECTIVITY_VIOLATION_COUNT=6
+COMMON_PG_MARKER_COUNT=6
+COMMON_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+COMMON_DRC_MARKER_TOTAL=0
+VDD_HELPER_SELECTED_X_UM=NONE
+CANONICAL_REPLAY=NOT_RUN
+GDS_AUDIT_RC=NOT_RUN
+OUTPUT_FILES=0
+```
+
+R4 therefore has two separate verdicts:
+
+- process-isolated candidate orchestration: `PASS`;
+- bounded helper plus local second-`sroute` method: `FAIL`.
+
+All ten X coordinates from `298.480` through `1418.480 um` produced the same
+six-marker result. This rules out another blind X sweep with the same method.
+It does not yet prove the exact electrical cause. Relative to R2's three
+markers, the increase to six suggests that the helper may preserve the original
+components and add new disconnected or dangling geometry, but this remains an
+inference until the final marker TSV and detailed connectivity report are
+compared.
+
+The missing parent `verify_connectivity_*`, DRC, GDS-audit, and output files are
+expected fail-closed behavior. They belong to the canonical replay, which was
+correctly skipped because no trial passed. They are not an export failure.
+
+Next P02 action: read-only comparison of one representative trial's main and
+final marker reports, plus marker-class and `sroute` transcript comparison
+across all ten trials. Do not modify geometry or launch R5 before that evidence
+is reviewed. The reusable failure ledger is
+`TOP/docs/35_INNOVUS_PG_DEBUGGING_PLAYBOOK_AND_FAILURE_LEDGER.md`.
 
 ## Parallel P03/P04 Registration - TX Packet Core HV LVS
 
