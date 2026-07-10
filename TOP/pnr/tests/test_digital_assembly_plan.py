@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import importlib.util
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -88,15 +90,115 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("SPADMIC_PG_FIX_VDD_HELPER_Y0_UM:-126.560", wrapper)
         self.assertIn("SPADMIC_PG_FIX_VDD_HELPER_Y1_UM:-153.440", wrapper)
 
+    def test_pg_helper_candidates_use_fresh_innovus_processes(self) -> None:
+        script = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.tcl"
+        ).read_text()
+        wrapper = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.sh"
+        ).read_text()
+        self.assertEqual(script.count("restoreDesign"), 1)
+        self.assertNotIn("restore_db_stop_at_design_in_memory", script + wrapper)
+        self.assertIn("for CANDIDATE_X in", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_TRIAL_MODE=1", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_TRIAL_MODE=0", wrapper)
+        self.assertIn("ACCEPT_FOR_CANONICAL_REPLAY", wrapper)
+        self.assertIn("ONE_INNOVUS_PROCESS_PER_CANDIDATE", script)
+
     def test_pg_helper_candidates_are_fail_closed(self) -> None:
         script = (
             REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.tcl"
         ).read_text()
-        self.assertIn("restoreDesign $baseline $top", script)
-        self.assertIn("VDD_HELPER_STATUS) FAIL_NO_CLEAN_CANDIDATE", script)
-        self.assertIn('if {$verdict eq "ACCEPT"} { break }', script)
-        self.assertIn("trial_pg_count == 0", script)
-        self.assertIn("trial_drc_count == 0", script)
+        wrapper = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.sh"
+        ).read_text()
+        self.assertIn("PG_HELPER_CANDIDATE_REJECTED", script)
+        self.assertIn("NOT_RUN_CANDIDATE_TRIAL", script)
+        self.assertIn('status(PG_CONNECTIVITY_STATUS) ne "PASS"', script)
+        self.assertIn('status(PG_MARKER_COUNT) != 0', script)
+        self.assertIn('status(REGULAR_CONNECTIVITY_STATUS) ne "PASS"', script)
+        self.assertIn('status(INNOVUS_DRC_STATUS) ne "PASS"', script)
+        self.assertIn('TRIAL_PG" == "0"', wrapper)
+        self.assertIn('TRIAL_MARKERS" == "0"', wrapper)
+        self.assertIn('TRIAL_REGULAR" == "0"', wrapper)
+        self.assertIn('TRIAL_DRC" == "0"', wrapper)
+        self.assertIn("FAIL_NO_CLEAN_CANDIDATE", wrapper)
+
+    def test_pg_wrapper_replays_clean_trial_in_fresh_process(self) -> None:
+        wrapper = REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            checkpoint = root / "source" / "checkpoints" / "05_postroute_export.enc.dat"
+            checkpoint.mkdir(parents=True)
+            stream_map = root / "stream.map"
+            stdcell_gds = root / "stdcells.gds"
+            stream_map.write_text("map\n")
+            stdcell_gds.write_text("gds\n")
+
+            calls = root / "innovus_calls.tsv"
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            fake_innovus = fake_bin / "innovus"
+            fake_innovus.write_text(
+                "#!/usr/bin/env bash\n"
+                "set -u\n"
+                "printf '%s\\t%s\\n' \"$SPADMIC_PG_FIX_TRIAL_MODE\" "
+                "\"$SPADMIC_PG_FIX_RUN_ROOT\" >>\"$FAKE_INNOVUS_CALLS\"\n"
+                "mkdir -p \"$SPADMIC_PG_FIX_RUN_ROOT/reports\"\n"
+                "if [[ \"$SPADMIC_PG_FIX_TRIAL_MODE\" == 1 ]]; then\n"
+                "  {\n"
+                "    echo STATUS=PASS\n"
+                "    echo RESULT=PG_HELPER_CANDIDATE_CLEAN\n"
+                "    echo PG_CONNECTIVITY_VIOLATION_COUNT=0\n"
+                "    echo PG_MARKER_COUNT=0\n"
+                "    echo REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+                "    echo DRC_MARKER_TOTAL=0\n"
+                "  } >\"$SPADMIC_PG_FIX_RUN_ROOT/reports/pg_geometry_fix_status.rpt\"\n"
+                "  exit 0\n"
+                "fi\n"
+                "{\n"
+                "  echo STATUS=FAIL\n"
+                "  echo RESULT=CANONICAL_REPLAY_TEST_STOP\n"
+                "} >\"$SPADMIC_PG_FIX_RUN_ROOT/reports/pg_geometry_fix_status.rpt\"\n"
+                "exit 8\n"
+            )
+            fake_innovus.chmod(0o755)
+
+            env = os.environ.copy()
+            env.update(
+                {
+                    "PATH": f"{fake_bin}:{env.get('PATH', '')}",
+                    "FAKE_INNOVUS_CALLS": str(calls),
+                    "SPADMIC_WORK_ROOT": str(root / "work"),
+                    "SPADMIC_STREAMOUT_MAP_FILE": str(stream_map),
+                    "SPADMIC_STDCELL_GDS": str(stdcell_gds),
+                    "SPADMIC_PG_FIX_VDD_HELPER_CANDIDATES_UM": "970.480 746.480",
+                }
+            )
+            result = subprocess.run(
+                [str(wrapper), str(root / "source"), "tx_ddr_strip", "pg_process_test"],
+                cwd=REPO,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 8, result.stdout)
+            invocation_rows = [line.split("\t") for line in calls.read_text().splitlines()]
+            self.assertEqual([row[0] for row in invocation_rows], ["1", "0"])
+            self.assertNotEqual(invocation_rows[0][1], invocation_rows[1][1])
+            self.assertIn("/trials/trial_01_x_970p480", invocation_rows[0][1])
+            self.assertTrue(invocation_rows[1][1].endswith("/innovus/pg_process_test"))
+
+            run_root = root / "work" / "innovus" / "pg_process_test"
+            candidate_summary = (run_root / "reports" / "vdd_helper_candidate_summary.tsv").read_text()
+            self.assertIn("ACCEPT_FOR_CANONICAL_REPLAY", candidate_summary)
+            self.assertEqual(list((run_root / "trials" / "trial_01_x_970p480" / "outputs").iterdir()), [])
+            wrapper_status = (run_root / "reports" / "pg_geometry_fix_wrapper_status.rpt").read_text()
+            self.assertIn("CANONICAL_REPLAY=RUN", wrapper_status)
+            self.assertIn("CANONICAL_INNOVUS_RC=8", wrapper_status)
 
 
 if __name__ == "__main__":

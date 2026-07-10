@@ -141,10 +141,12 @@ only for `corePin` stitching. See
 - `TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.tcl`
 
 The first exact-geometry run closed VSS and both boundary terminals but left
-the two known VDD rows open. The same scripts now implement P02-R3 with an
-audited local VDD helper stripe between connected anchor rows. Candidate
-geometry is tried only in restored copies and is retained only after zero PG
-connectivity violations and zero DRC.
+the two known VDD rows open. P02-R3 attempted an audited local VDD helper
+search, but Innovus rejected the second restore in that process with
+`IMPIMEX-7031`; no candidate was evaluated. P02-R4 keeps the same physical
+repair and runs each candidate in a fresh Innovus process. A clean candidate is
+then replayed from P01 in another fresh process before export. The Innovus
+multiple-restore guard must not be disabled.
 
 ## 5. Server Initialization
 
@@ -303,6 +305,27 @@ fi
 The first P02 run ID was
 `innovus_ooc_pg_only_tx_ddr_strip_20260710_135413` and returned 8. Do not
 repeat the same PG command without first inspecting its special-net geometry.
+
+The current P02-R4 command restores the successful narrow P01 run. The wrapper
+creates one immutable trial directory per X candidate and performs a separate
+canonical replay only after a trial has PG, regular-connectivity, and DRC counts
+of zero:
+
+```bash
+P01_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_ddr_strip_narrow_20260710_133516/blocks/tx_ddr_strip
+R4_RUN=innovus_ooc_pg_geometry_fix_r4_tx_ddr_strip_$(date +%Y%m%d_%H%M%S)
+
+bash TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.sh \
+  "$P01_ROOT" tx_ddr_strip "$R4_RUN"
+R4_RC=$?
+R4_ROOT="$SPADMIC_WORK_ROOT/innovus/$R4_RUN"
+
+echo "R4_RC=$R4_RC"
+echo "R4_ROOT=$R4_ROOT"
+cat "$R4_ROOT/reports/vdd_helper_candidate_summary.tsv" 2>/dev/null
+cat "$R4_ROOT/reports/pg_geometry_fix_status.rpt" 2>/dev/null
+cat "$R4_ROOT/reports/pg_geometry_fix_wrapper_status.rpt" 2>/dev/null
+```
 
 Do not use the PG output if `INTERNAL_PG_STATUS`, regular connectivity, or
 Innovus DRC is not `PASS`. The exported strip GDS explicitly merges the JIHD

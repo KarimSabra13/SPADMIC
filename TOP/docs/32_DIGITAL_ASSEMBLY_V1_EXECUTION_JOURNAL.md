@@ -28,7 +28,7 @@ Genus or Innovus and must not modify MPTDC internals.
 | --- | --- | --- | --- |
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
-| P02 | Restore-only internal PG for the narrow strip | PENDING_SERVER_R3 | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
+| P02 | Restore-only internal PG for the narrow strip | PENDING_SERVER_R4 | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
 | P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff and historical LVS intake | REGISTERED_PENDING_SERVER_INVENTORY | OA backup, bbox/pin parity, GDS audit, read-only LVS input inventory |
 | P04 | Per-block PVS closure, mismatch classification, and handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, explicit LVS verdict, diagnostic, hashes, promotion gate |
 | P05 | Phase-A TX assembly generation and geometry gate | BLOCKED_BY_P04 | No obstacle overlap, exact placements, exact 19-net contract |
@@ -127,7 +127,7 @@ waived for final handoff; they are the explicit input condition for P02.
 
 ## P02 - Narrow Strip Restore-Only PG
 
-Status: `FAIL_DIAGNOSTIC_REQUIRED`
+Status: `R3_INFRASTRUCTURE_FAILURE_R4_READY`
 
 P02 restores the P01 `05_postroute_export` checkpoint. It must not run
 placement, CTS, signal `routeDesign`, or synthesis. It adds only VDD/VSS METTP
@@ -324,12 +324,50 @@ fixed. All remaining markers are VDD opens:
 - the followpin row centered at `y=144.480 um`;
 - the aggregate VDD network marker caused by those two isolated rows.
 
-P02-R3 extends the same fail-closed script with a local VDD helper stripe. The
-helper spans `y=126.560..153.440 um`, so already-connected VDD rows anchor both
-ends around the two isolated rows. Candidate X locations are grid-aligned and
-tested from independent restores of the main-PG checkpoint. A candidate is
-accepted only when both special connectivity and DRC are zero. Rejected trial
-geometry is discarded by restore and cannot enter the final database.
+P02-R3 attempted to extend the same fail-closed script with a local VDD helper
+stripe spanning `y=126.560..153.440 um`. The main geometry was recreated and
+saved correctly, but the candidate loop attempted a second `restoreDesign` in
+the same Innovus process. Innovus 22.33 rejected every such attempt with
+`IMPIMEX-7031`.
+
+```text
+REPO_HEAD=1ac210cdee536329c162a23fb22e7fadac7f0a3f
+RUN_ID=innovus_ooc_pg_geometry_fix_r3_tx_ddr_strip_20260710_154616
+RUN_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_pg_geometry_fix_r3_tx_ddr_strip_20260710_154616
+R3_RC=8
+RESTORE_DESIGN=PASS
+MAIN_PG_CONNECTIVITY_VIOLATION_COUNT=3
+MAIN_PG_MARKER_COUNT=3
+CHECKPOINT_01=PASS_PRESENT
+CHECKPOINT_02=PASS_PRESENT
+CANDIDATE_ROWS=10
+CANDIDATES_ELECTRICALLY_EVALUATED=0
+CANDIDATE_VERDICT=RESTORE_FAIL
+OUTPUT_FILES=0
+FAILURE_CLASS=INNOVUS_PROCESS_RESTORE_GUARD
+```
+
+The checkpoint inventory and hashes prove that
+`02_core_pin_stitched.enc.dat` is a complete self-contained checkpoint. The
+failure therefore does not change the physical diagnosis: VSS remains closed
+and the same two VDD followpin rows remain isolated. It also does not reject any
+candidate X, because no helper `add_shape`, helper `sroute`, connectivity check,
+or DRC check ran in the candidate phase.
+
+P02-R4 fixes only the orchestration. It never disables the Innovus restore
+guard. Each candidate runs in a fresh process that restores P01 once, recreates
+the exact main stripes, checks the approved three-marker VDD residual, adds one
+helper, and requires these independent gates:
+
+- special PG connectivity: zero violations and zero DB markers;
+- regular connectivity: zero violations;
+- Innovus DRC: zero violations.
+
+Trial processes emit reports and logs only. After a clean trial, the selected X
+is replayed from P01 in one more fresh process; only that canonical process may
+export DEF, LEF, PG netlist, GDS, and the final checkpoint. The wrapper then
+requires the official stream-map and JIHD-merge GDS audit to pass. This policy
+is recorded as `PROCESS_ISOLATION=ONE_INNOVUS_PROCESS_PER_CANDIDATE`.
 
 ## Parallel P03/P04 Registration - TX Packet Core HV LVS
 

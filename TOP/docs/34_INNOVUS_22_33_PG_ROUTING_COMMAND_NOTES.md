@@ -105,7 +105,7 @@ P02-R2 restores the clean P01 checkpoint. It must not restore the failed P02
 checkpoint and must not run placement, CTS, or signal routing.
 
 P02-R2 closed VSS and the north PG terminals but left two isolated VDD
-followpin rows. P02-R3 therefore adds a bounded local VDD helper stripe:
+followpin rows. The local repair therefore adds a bounded VDD helper stripe:
 
 ```text
 helper y range = 126.560 -> 153.440 um
@@ -114,9 +114,33 @@ anchor rows    = 126.560, 153.440 um
 ```
 
 The helper is not a full-height power trunk. It is a local METTP jumper whose
-endpoints coincide with already-connected VDD rows. Candidate X coordinates
-are evaluated from independent checkpoint restores. Only a zero-connectivity,
-zero-DRC candidate is retained.
+endpoints coincide with already-connected VDD rows. Only a zero-PG,
+zero-regular-connectivity, zero-DRC candidate can enter a canonical replay.
+
+## restoreDesign Process Isolation
+
+Innovus 22.33 rejects a second `restoreDesign` in the same process with
+`IMPIMEX-7031`. P02-R3 exposed this guard before any helper candidate was
+created. Its saved `02_core_pin_stitched.enc.dat` checkpoint was complete, but
+all ten candidate rows were `RESTORE_FAIL`; this was an orchestration failure,
+not evidence that the candidate geometries failed electrically.
+
+Do not set `restore_db_stop_at_design_in_memory` to bypass the guard. P02-R4
+uses this process contract instead:
+
+1. Launch a fresh Innovus process for one candidate X.
+2. Restore the clean P01 signal checkpoint exactly once.
+3. Recreate the exact main VDD/VSS geometry and verify the known three-marker
+   VDD residual.
+4. Add one local VDD helper, then require special connectivity, regular
+   connectivity, and DRC all to report zero.
+5. Emit no GDS, LEF, DEF, netlist, or reusable checkpoint from a trial.
+6. After a clean trial, launch another fresh Innovus process and replay the same
+   candidate from P01 before canonical export and GDS audit.
+
+The wrapper records this as
+`PROCESS_ISOLATION=ONE_INNOVUS_PROCESS_PER_CANDIDATE`. A failed or interrupted
+trial remains diagnostic evidence under its own immutable `trials/` directory.
 
 ## Required Gates
 
