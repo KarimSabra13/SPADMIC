@@ -24,20 +24,33 @@ DIE = (0.0, 0.0, 4116.031, 3740.792)
 MATRIX = (25.915, 776.039, 2112.884, 2674.624)
 PACKET_ORIGIN = (61.980, MATRIX[3] + 15.0)
 STRIP_ORIGIN = (61.980, 3061.110)
-PACKET_ORIENT = "MY"
-STRIP_ORIENT = "R0"
 MPTDC_HALO_UM = 20.0
 EXPECTED_PACKET_SIZE = (2066.960, 366.800)
 EXPECTED_STRIP_SIZE = (3522.960, 180.880)
 MIN_STRIP_WIDTH_UM = 3413.515
 SIZE_TOLERANCE_UM = 0.002
+TX_PIN_CONTRACT = Path(__file__).resolve().parents[1] / "interfaces" / "tx_packet_strip_pin_contract.csv"
 
-TX_CONNECTIONS = [
-    ("tx_valid", "tx_valid_o", "tx_valid_i"),
-    ("tx_ready", "tx_ready_i", "tx_ready_o"),
-    ("tx_flush", "tx_flush_o", "tx_flush_i"),
-    *[(f"tx_data_{bit}", f"tx_data_o[{bit}]", f"tx_data_i[{bit}]") for bit in range(16)],
-]
+
+def load_tx_connections(path: Path = TX_PIN_CONTRACT) -> list[tuple[str, str, str]]:
+    if not path.is_file():
+        raise ValueError(f"TX pin contract missing: {path}")
+    with path.open(newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    if len(rows) != 19 or [int(row["order"]) for row in rows] != list(range(19)):
+        raise ValueError(f"TX pin contract must contain ordered rows 0..18: {path}")
+    for row in rows:
+        packet_x = float(row["packet_local_x_um"])
+        strip_x = float(row["strip_local_x_um"])
+        assembly_x = float(row["assembly_x_um"])
+        if abs(packet_x - strip_x) > 0.0005:
+            raise ValueError(f"TX local X differs for {row['net']}: {path}")
+        if abs(assembly_x - (PACKET_ORIGIN[0] + packet_x)) > 0.0005:
+            raise ValueError(f"TX absolute X differs for {row['net']}: {path}")
+    return [(row["net"], row["packet_pin"], row["strip_pin"]) for row in rows]
+
+
+TX_CONNECTIONS = load_tx_connections()
 SHARED_SIGNAL_PORTS = {"clk_sys", "rst_n"}
 STRIP_ROUTED_INPUTS = {"clk_160m_i", "ddrs2_enable_i"}
 PG_PINS = {"VDD", "VSS"}
@@ -200,6 +213,49 @@ def transform_rect(rect: Rect, macro: Macro, origin: tuple[float, float], orient
             oy + rect.ury,
         )
     raise ValueError(f"unsupported orientation: {orient}")
+
+
+def tx_orientation_score(
+    packet: Macro,
+    strip: Macro,
+    packet_orient: str,
+    strip_orient: str = "R0",
+) -> tuple[int, float, float]:
+    rows: list[tuple[float, float]] = []
+    for _, packet_pin_name, strip_pin_name in TX_CONNECTIONS:
+        packet_rect = transform_rect(
+            packet.pins[packet_pin_name].primary_rect(), packet, PACKET_ORIGIN, packet_orient
+        )
+        strip_rect = transform_rect(
+            strip.pins[strip_pin_name].primary_rect(), strip, STRIP_ORIGIN, strip_orient
+        )
+        rows.append((packet_rect.cx, strip_rect.cx))
+    ordered = sorted(rows)
+    strip_x = [strip_value for _, strip_value in ordered]
+    inversions = sum(
+        1
+        for left in range(len(strip_x))
+        for right in range(left + 1, len(strip_x))
+        if strip_x[left] >= strip_x[right]
+    )
+    deltas = [abs(strip_x_um - packet_x_um) for packet_x_um, strip_x_um in rows]
+    return inversions, max(deltas, default=0.0), sum(deltas)
+
+
+def choose_tx_orientations(packet: Macro, strip: Macro) -> tuple[str, str, tuple[int, float, float]]:
+    strip_orient = "R0"
+    candidates = ["R0"]
+    if "Y" in packet.symmetry:
+        candidates.append("MY")
+    scored = [
+        (tx_orientation_score(packet, strip, orient, strip_orient), orient)
+        for orient in candidates
+    ]
+    score, packet_orient = min(
+        scored,
+        key=lambda item: (*item[0], 0 if item[1] == "R0" else 1),
+    )
+    return packet_orient, strip_orient, score
 
 
 def macro_bbox(macro: Macro, origin: tuple[float, float]) -> tuple[float, float, float, float]:
@@ -367,13 +423,18 @@ def load_obstacles(layout_audit_dir: Path) -> list[tuple[str, str, tuple[float, 
     return obstacles
 
 
-def build_proxy_pins(packet: Macro, strip: Macro) -> list[tuple[str, float, float, str, float, float, str]]:
+def build_proxy_pins(
+    packet: Macro,
+    strip: Macro,
+    packet_orient: str,
+    strip_orient: str,
+) -> list[tuple[str, float, float, str, float, float, str]]:
     external = external_pin_map(packet, strip)
     proxies = []
     for name, (owner, pin) in external.items():
         macro = packet if owner == "packet" else strip
         origin = PACKET_ORIGIN if owner == "packet" else STRIP_ORIGIN
-        orient = PACKET_ORIENT if owner == "packet" else STRIP_ORIENT
+        orient = packet_orient if owner == "packet" else strip_orient
         rect = transform_rect(pin.primary_rect(), macro, origin, orient)
         proxies.append(
             (name, rect.cx, rect.cy, rect.layer, rect.urx - rect.llx, rect.ury - rect.lly, owner)
@@ -387,6 +448,8 @@ def write_config_tcl(
     strip: Macro,
     obstacles: list[tuple[str, str, tuple[float, float, float, float], list[str]]],
     proxies: list[tuple[str, float, float, str, float, float, str]],
+    packet_orient: str,
+    strip_orient: str,
 ) -> None:
     selected_nets = [net for net, _, _ in TX_CONNECTIONS] + [
         "clk_sys",
@@ -401,11 +464,11 @@ def write_config_tcl(
         fh.write("set SPADMIC_DA_INSTANCES [list \\\n")
         fh.write(
             "  [list {u_tx_packet_core} {%s} %.3f %.3f {%s}] \\\n"
-            % (packet.name, PACKET_ORIGIN[0], PACKET_ORIGIN[1], PACKET_ORIENT)
+            % (packet.name, PACKET_ORIGIN[0], PACKET_ORIGIN[1], packet_orient)
         )
         fh.write(
             "  [list {u_tx_ddr_strip} {%s} %.3f %.3f {%s}] \\\n"
-            % (strip.name, STRIP_ORIGIN[0], STRIP_ORIGIN[1], STRIP_ORIENT)
+            % (strip.name, STRIP_ORIGIN[0], STRIP_ORIGIN[1], strip_orient)
         )
         fh.write("]\n")
         fh.write("set SPADMIC_DA_ROUTE_NETS [list")
@@ -428,14 +491,20 @@ def write_config_tcl(
         fh.write("]\n")
 
 
-def write_connections_csv(path: Path, packet: Macro, strip: Macro) -> int:
+def write_connections_csv(
+    path: Path,
+    packet: Macro,
+    strip: Macro,
+    packet_orient: str,
+    strip_orient: str,
+) -> tuple[int, float, float]:
     rows = []
     for net, packet_pin_name, strip_pin_name in TX_CONNECTIONS:
         packet_rect = transform_rect(
-            packet.pins[packet_pin_name].primary_rect(), packet, PACKET_ORIGIN, PACKET_ORIENT
+            packet.pins[packet_pin_name].primary_rect(), packet, PACKET_ORIGIN, packet_orient
         )
         strip_rect = transform_rect(
-            strip.pins[strip_pin_name].primary_rect(), strip, STRIP_ORIGIN, STRIP_ORIENT
+            strip.pins[strip_pin_name].primary_rect(), strip, STRIP_ORIGIN, strip_orient
         )
         rows.append(
             {
@@ -464,18 +533,25 @@ def write_connections_csv(path: Path, packet: Macro, strip: Macro) -> int:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    return inversions
+    deltas = [abs(float(row["delta_x_um"])) for row in rows]
+    return inversions, max(deltas, default=0.0), sum(deltas)
 
 
-def write_macro_manifest(path: Path, packet: Macro, strip: Macro) -> None:
+def write_macro_manifest(
+    path: Path,
+    packet: Macro,
+    strip: Macro,
+    packet_orient: str,
+    strip_orient: str,
+) -> None:
     with path.open("w", newline="") as fh:
         writer = csv.writer(fh, lineterminator="\n")
         writer.writerow(
             ["role", "macro", "lef", "width_um", "height_um", "origin_x_um", "origin_y_um", "orient", "pin_count", "symmetry"]
         )
         for role, macro, origin, orient in [
-            ("packet", packet, PACKET_ORIGIN, PACKET_ORIENT),
-            ("strip", strip, STRIP_ORIGIN, STRIP_ORIENT),
+            ("packet", packet, PACKET_ORIGIN, packet_orient),
+            ("strip", strip, STRIP_ORIGIN, strip_orient),
         ]:
             writer.writerow(
                 [
@@ -557,15 +633,13 @@ def main() -> None:
         strip = parse_lef(args.strip_lef.resolve())
         validate_macro(packet, PACKET_MACRO, EXPECTED_PACKET_SIZE)
         validate_strip_macro(strip)
-        if "Y" not in packet.symmetry:
-            raise ValueError(f"{packet.name}: MY required but LEF SYMMETRY Y is absent")
-
         packet_required = ["VDD", "VSS", "clk_sys", "rst_n"] + [item[1] for item in TX_CONNECTIONS]
         strip_required = ["VDD", "VSS", "clk_sys", "clk_160m_i", "rst_n", "ddrs2_enable_i"] + [
             item[2] for item in TX_CONNECTIONS
         ]
         require_pins(packet, packet_required)
         require_pins(strip, strip_required)
+        packet_orient, strip_orient, orientation_score = choose_tx_orientations(packet, strip)
 
         packet_box = macro_bbox(packet, PACKET_ORIGIN)
         strip_box = macro_bbox(strip, STRIP_ORIGIN)
@@ -596,17 +670,40 @@ def main() -> None:
                 "see assembly_geometry_conflicts.csv"
             )
 
-        proxies = build_proxy_pins(packet, strip)
+        proxies = build_proxy_pins(packet, strip, packet_orient, strip_orient)
         write_flat_verilog(out_dir / "spadmic_digital_assembly_v1_p00_tx.v", packet, strip)
-        write_config_tcl(out_dir / "assembly_config.tcl", packet, strip, obstacles, proxies)
-        inversions = write_connections_csv(out_dir / "assembly_connections.csv", packet, strip)
-        write_macro_manifest(out_dir / "assembly_macro_manifest.csv", packet, strip)
+        write_config_tcl(
+            out_dir / "assembly_config.tcl",
+            packet,
+            strip,
+            obstacles,
+            proxies,
+            packet_orient,
+            strip_orient,
+        )
+        inversions, max_delta_x, total_delta_x = write_connections_csv(
+            out_dir / "assembly_connections.csv",
+            packet,
+            strip,
+            packet_orient,
+            strip_orient,
+        )
+        write_macro_manifest(
+            out_dir / "assembly_macro_manifest.csv",
+            packet,
+            strip,
+            packet_orient,
+            strip_orient,
+        )
         (out_dir / "assembly_no_timing.sdc").write_text(
             "# Phase A intentionally has no timing-closure gate.\n"
             "# DRC and selected-net connectivity are the acceptance checks.\n"
         )
         if inversions != 0:
-            raise ValueError(f"TX pin order still crosses after MY: inversions={inversions}")
+            raise ValueError(
+                f"TX pin order crosses after orientation selection: "
+                f"packet={packet_orient} strip={strip_orient} inversions={inversions}"
+            )
 
         status_path.write_text(
             "LABEL=SPADMIC_DIGITAL_ASSEMBLY_V1_PLAN\n"
@@ -614,14 +711,18 @@ def main() -> None:
             "RESULT=PHASE_A_GEOMETRY_READY_FOR_INNOVUS\n"
             f"TOP_MODULE={TOP_MODULE}\n"
             f"PACKET_MACRO={packet.name}\n"
-            f"PACKET_ORIENT={PACKET_ORIENT}\n"
+            f"PACKET_ORIENT={packet_orient}\n"
             f"PACKET_BBOX_UM={' '.join(f'{v:.3f}' for v in packet_box)}\n"
             f"STRIP_MACRO={strip.name}\n"
-            f"STRIP_ORIENT={STRIP_ORIENT}\n"
+            f"STRIP_ORIENT={strip_orient}\n"
             f"STRIP_BBOX_UM={' '.join(f'{v:.3f}' for v in strip_box)}\n"
             f"TX_CHANNEL_HEIGHT_UM={channel_um:.3f}\n"
             f"TX_CONNECTION_COUNT={len(TX_CONNECTIONS)}\n"
             f"TX_PIN_ORDER_INVERSIONS={inversions}\n"
+            f"TX_PIN_MAX_DELTA_X_UM={max_delta_x:.3f}\n"
+            f"TX_PIN_TOTAL_DELTA_X_UM={total_delta_x:.3f}\n"
+            f"TX_ORIENTATION_SCORE={orientation_score[0]},{orientation_score[1]:.3f},{orientation_score[2]:.3f}\n"
+            f"TX_PIN_CONTRACT={TX_PIN_CONTRACT.resolve()}\n"
             "PRIMARY_ROUTE_LAYERS=MET2-MET3\n"
             "MET1_FALLBACK=SELECTED_NETS_ONLY\n"
             "TIMING_STATUS=DEFERRED_BY_PLAN\n"

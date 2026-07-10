@@ -173,3 +173,63 @@ The complete command, error, and anti-pattern ledger is maintained in
 - Official XFAB stream map: PASS.
 - JIHD standard-cell GDS merge: PASS.
 - PVS DRC/LVS remain independent later gates.
+
+## Canonical Clean-Rebuild Strategy
+
+Status: implemented in Git; Innovus server validation pending.
+
+The restore-only R1-R4 experiments remain valid negative evidence, but they no
+longer define the packet/strip implementation path. The canonical path starts
+from fresh RTL and Genus netlists. For `tx_packet_core` and `tx_ddr_strip`, the
+generated OOC configuration selects:
+
+```tcl
+enable_pg_sroute = 1
+pg_route_strategy = explicit_exact
+route_profile = met1_effort
+```
+
+`spadmic_ooc_create_pg_pins` and `spadmic_ooc_create_pg_straps` now call the
+same `spadmic_ooc_pg_pin_centers` function. The main stripes therefore use the
+same snapped X as the north VDD/VSS terminal:
+
+```tcl
+add_shape -net <VDD-or-VSS> -layer METTP -shape STRIPE -status ROUTED \
+  -pathSeg {<pin_center_x> <first_rail_y> <pin_center_x> <die_top_y>} \
+  -width <configured_width>
+```
+
+VDD begins on the first VDD followpin row at the core lower edge. VSS begins
+one half-row later; the JIHD default offset is `4.48 um`. Both end at the die
+top, overlapping their generated PG terminal. `sroute` then requests only
+`corePin` stitching. PG is created before ordinary signal routing so NanoRoute
+sees the METTP power geometry rather than routing signals first and inserting
+PG afterward.
+
+The legacy `addStripe` branch is retained for other blocks, but its formula is
+corrected to account for the core reference:
+
+```text
+start_offset = desired_center_x - core_left - stripe_width / 2
+```
+
+Do not simplify this back to `desired_center_x - stripe_width / 2`; that was
+the exact R1 coordinate bug. Do not add `-extend_to design_boundary` together
+with `-area`; installed help says those options are mutually exclusive.
+
+The mapped GDS export now appends both:
+
+```text
+-mapFile <official-XH018-pnr_streamout.map>
+-merge <xh018_D_CELLS_JIHD.gds>
+```
+
+The shell wrapper runs `audit_innovus_gds_export.py --required-merge` and will
+not report `ABSTRACT_READY_FOR_TOP_REVIEW` unless that audit passes. This
+prevents the earlier LEF-only/small-GDS ambiguity from reaching PVS.
+
+This implementation is not a PG pass claim. Server acceptance still requires
+zero detailed special-connectivity violations and markers, zero regular
+connectivity violations, and zero Innovus DRC markers. If a fresh rebuild
+reproduces isolated VDD rows, capture the exact row/via markers from that fresh
+run; do not resume the coordinate-invariant R4 helper sweep.

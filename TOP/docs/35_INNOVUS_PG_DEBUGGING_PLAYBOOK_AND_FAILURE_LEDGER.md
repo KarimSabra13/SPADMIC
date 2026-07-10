@@ -1,6 +1,6 @@
 # Innovus PG Debugging Playbook and Failure Ledger
 
-Status: living document, updated through TX DDR strip P02-R4 on 2026-07-10.
+Status: living document, updated through the canonical packet/strip rebuild implementation on 2026-07-10.
 
 This document captures both successful techniques and negative knowledge from
 the Phase-A TX work. Its purpose is to prevent later blocks from repeating
@@ -41,6 +41,7 @@ syntax remains in `TOP/docs/34_INNOVUS_22_33_PG_ROUTING_COMMAND_NOTES.md`.
 | P02-R3 | Save main-PG checkpoint, restore it for each candidate in one process | All candidate rows `RESTORE_FAIL`; zero candidates evaluated | Innovus rejects a second `restoreDesign` in one process with `IMPIMEX-7031` | Never repeat restore in one process |
 | P02-R4 | One fresh process per helper X and fresh P01 restore | Infrastructure worked; all 10 candidates were physically evaluated | Process isolation removed R3's orchestration failure | Reuse this candidate architecture |
 | P02-R4 | Local METTP helper plus local second `sroute` | Every X produced PG=6, markers=6, regular=0, DRC=0 | The method is electrically ineffective and X-invariant; exact marker decomposition is pending | Do not expand or repeat this candidate list |
+| Canonical rebuild, server pending | Fresh Genus/Innovus, common pin/stripe centers, exact `add_shape`, PG before signal route | Local generation/tests pass; no Cadence verdict yet | Removes checkpoint damage, core/die offset ambiguity, old nested source ports, and post-signal PG insertion from the experiment | Run packet first; accept only report-level zero gates |
 
 ## 3. Exact Commands and Options Tried
 
@@ -369,3 +370,60 @@ launch Innovus, change geometry, or create a handoff.
 After a future P02 PASS, freeze and hash the strip handoff, run same-artifact
 PVS DRC/LVS, and only then unblock Phase-A assembly. The registered packet-core
 historical LVS intake remains a separate read-only P03/P04 activity.
+
+## 9. Canonical Rebuild Rules Added After R4
+
+The user stopped the restore-only strip repair and prioritized a canonical
+packet-core LVS rebuild. This is a different experiment, not R5 continuation.
+
+### Interface and pin contract
+
+- The active packet source boundary is 64 scalar ports from
+  `TOP/rtl/interfaces/tx_src_data_flat.csv`; do not restore
+  `src_data_i[outer][inner]` at the hard-macro boundary.
+- Packet north and strip south use the 19-row contract in
+  `TOP/pnr/interfaces/tx_packet_strip_pin_contract.csv`.
+- MET3 pin centers are identical in both local macros: `100.800 um` through
+  `1915.200 um` at a constant `100.800 um` pitch.
+- Both assembly origins are `x=61.980 um`, so absolute pin X is also identical:
+  `162.780 um` through `1977.180 um`.
+- The intended short inter-block route is vertical MET2 with MET2/MET3 vias.
+  Do not spread either interface independently after generating this contract.
+
+### Orientation
+
+The assembly generator evaluates packet `R0` and `MY` when LEF symmetry allows
+both. It minimizes, in order: crossing count, maximum absolute X delta, total
+absolute X delta, then prefers R0 on an exact tie. MY is no longer mandatory.
+This preserves compatibility with historical LEFs, where MY removed ordering
+crossings, while selecting R0 for the new exact-X LEFs.
+
+Negative rule: do not infer the correct orientation from pin names or visual
+left-to-right order. Score transformed LEF coordinates after placement.
+
+### PG and route ordering
+
+For the two TX macros only, generated config enables `explicit_exact` PG. The
+new sequence is placement, CTS, filler, exact PG geometry, `sroute corePin`,
+then ordinary signal route. This differs from the old sequence that inserted
+PG after signal routing. Signals remain constrained to MET1-MET3; METTP is the
+power layer.
+
+Negative rule: a fresh flow removes known orchestration and geometry defects,
+but it does not guarantee the JIHD row graph is connected. `add_shape` PASS,
+`sroute` PASS, and DRC 0 are still insufficient without special connectivity 0.
+
+### Antenna milestone
+
+The canonical OOC route profile is `met1_effort`, not the old
+`met2_first_antenna` profile. Antenna repair is intentionally not a milestone
+acceptance dependency while DRC/LVS root causes are isolated. Any antenna
+marker remains a final-handoff blocker and must be classified and repaired
+before promotion; this is not a global waiver.
+
+### Streamout
+
+Every canonical OOC wrapper run requires the official XH018 map and the JIHD
+standard-cell GDS merge. The wrapper now audits the actual Innovus command log
+and output hash. Missing map, missing merge, or failed audit makes the wrapper
+fail even if Innovus itself returns zero.

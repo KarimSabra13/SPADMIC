@@ -901,6 +901,14 @@ proc spadmic_ooc_die_size {} {
     return [list [expr {$core_w + 2.0 * $margin}] [expr {$core_h + 2.0 * $margin}]]
 }
 
+proc spadmic_ooc_pg_pin_centers {} {
+    set pg_grid [spadmic_ooc_cfg_default pg_grid_um 0.56]
+    lassign [spadmic_ooc_die_size] die_w die_h
+    set vdd_cx [spadmic_ooc_snap_to_grid [expr {$die_w * 0.25}] $pg_grid]
+    set vss_cx [spadmic_ooc_snap_to_grid [expr {$die_w * 0.75}] $pg_grid]
+    return [list $vdd_cx $vss_cx]
+}
+
 proc spadmic_ooc_create_pg_pins {} {
     set layer [spadmic_ooc_cfg power_layer]
     set power_net [spadmic_ooc_cfg pg_power_net]
@@ -913,8 +921,7 @@ proc spadmic_ooc_create_pg_pins {} {
     lassign [spadmic_ooc_die_size] die_w die_h
     set y2 [spadmic_ooc_snap_to_grid $die_h $pg_grid]
     set y1 [spadmic_ooc_snap_to_grid [expr {$y2 - $pg_depth}] $pg_grid]
-    set vdd_cx [spadmic_ooc_snap_to_grid [expr {$die_w * 0.25}] $pg_grid]
-    set vss_cx [spadmic_ooc_snap_to_grid [expr {$die_w * 0.75}] $pg_grid]
+    lassign [spadmic_ooc_pg_pin_centers] vdd_cx vss_cx
     set half_width [expr {$pg_width / 2.0}]
     set vdd_llx [spadmic_ooc_snap_to_grid [expr {$vdd_cx - $half_width}] $pg_grid]
     set vdd_urx [spadmic_ooc_snap_to_grid [expr {$vdd_cx + $half_width}] $pg_grid]
@@ -926,6 +933,9 @@ proc spadmic_ooc_create_pg_pins {} {
     spadmic_ooc_try_first CREATE_PG_PIN_VSS [list \
         [list createPGPin $ground_pin -net $ground_net -geom $layer $vss_llx $y1 $vss_urx $y2 -dir bidi] \
         [list createPGPin $ground_pin -net $ground_net -geom $layer $vss_llx $y1 $vss_urx $y2]] 1
+    spadmic_ooc_status_set PG_PIN_VDD_CENTER_X_UM $vdd_cx
+    spadmic_ooc_status_set PG_PIN_VSS_CENTER_X_UM $vss_cx
+    spadmic_ooc_status_set PG_PIN_TOP_Y_UM $y2
 }
 
 proc spadmic_ooc_create_pg_straps {} {
@@ -935,27 +945,49 @@ proc spadmic_ooc_create_pg_straps {} {
     set strap_width [spadmic_ooc_cfg_default pg_strap_width_um [spadmic_ooc_cfg pg_pin_depth_um]]
     set strap_spacing [spadmic_ooc_cfg_default pg_strap_spacing_um $strap_width]
     set pg_grid [spadmic_ooc_cfg_default pg_grid_um 0.56]
+    set strategy [string tolower [spadmic_ooc_cfg_default pg_route_strategy legacy_addstripe]]
+    set core_margin [spadmic_ooc_cfg core_margin_um]
+    set ground_rail_offset [spadmic_ooc_cfg_default pg_ground_first_rail_offset_um 4.48]
     lassign [spadmic_ooc_die_size] die_w die_h
+    lassign [spadmic_ooc_pg_pin_centers] vdd_cx vss_cx
+    set y_top [spadmic_ooc_snap_to_grid $die_h $pg_grid]
+    set vdd_y0 [spadmic_ooc_snap_to_grid $core_margin $pg_grid]
+    set vss_y0 [spadmic_ooc_snap_to_grid [expr {$core_margin + $ground_rail_offset}] $pg_grid]
     set set_distance [spadmic_ooc_snap_to_grid [expr {$die_w + 20.0}] $pg_grid]
-    set vdd_offset [spadmic_ooc_snap_to_grid [expr {$die_w * 0.25 - $strap_width / 2.0}] $pg_grid]
-    set vss_offset [spadmic_ooc_snap_to_grid [expr {$die_w * 0.75 - $strap_width / 2.0}] $pg_grid]
+    # addStripe -start_offset is measured from the core edge, not the die edge.
+    # Subtracting core_margin prevents the exact 10.08um pin/stripe displacement
+    # observed in P02 R1. explicit_exact avoids that ambiguity entirely.
+    set vdd_offset [spadmic_ooc_snap_to_grid [expr {$vdd_cx - $core_margin - $strap_width / 2.0}] $pg_grid]
+    set vss_offset [spadmic_ooc_snap_to_grid [expr {$vss_cx - $core_margin - $strap_width / 2.0}] $pg_grid]
     set all_ok 1
 
     foreach item [list \
-        [list CREATE_PG_STRAP_VDD $power_net $vdd_offset] \
-        [list CREATE_PG_STRAP_VSS $ground_net $vss_offset]] {
-        lassign $item label net offset
-        set ok [spadmic_ooc_try_first $label [list \
-            [list addStripe -nets [list $net] -layer $layer -direction vertical \
-                -width $strap_width -spacing $strap_spacing -set_to_set_distance $set_distance \
-                -start_from left -start_offset $offset -number_of_sets 1] \
-            [list addStripe -nets [list $net] -layer $layer -direction vertical \
-                -width $strap_width -spacing $strap_spacing -set_to_set_distance $set_distance \
-                -start_from left -start_offset $offset]] 0]
+        [list CREATE_PG_STRAP_VDD $power_net $vdd_cx $vdd_y0 $vdd_offset] \
+        [list CREATE_PG_STRAP_VSS $ground_net $vss_cx $vss_y0 $vss_offset]] {
+        lassign $item label net center_x y0 offset
+        if {$strategy eq "explicit_exact"} {
+            set commands [list \
+                [list add_shape -net $net -layer $layer -shape STRIPE -status ROUTED \
+                    -pathSeg [list $center_x $y0 $center_x $y_top] -width $strap_width]]
+        } else {
+            set commands [list \
+                [list addStripe -nets [list $net] -layer $layer -direction vertical \
+                    -width $strap_width -spacing $strap_spacing -set_to_set_distance $set_distance \
+                    -start_from left -start_offset $offset -number_of_sets 1] \
+                [list addStripe -nets [list $net] -layer $layer -direction vertical \
+                    -width $strap_width -spacing $strap_spacing -set_to_set_distance $set_distance \
+                    -start_from left -start_offset $offset]]
+        }
+        set ok [spadmic_ooc_try_first $label $commands 0]
         if {!$ok} {
             set all_ok 0
         }
     }
+    spadmic_ooc_status_set PG_ROUTE_STRATEGY [string toupper $strategy]
+    spadmic_ooc_status_set PG_STRAP_VDD_CENTER_X_UM $vdd_cx
+    spadmic_ooc_status_set PG_STRAP_VSS_CENTER_X_UM $vss_cx
+    spadmic_ooc_status_set PG_STRAP_VDD_Y_RANGE_UM "$vdd_y0,$y_top"
+    spadmic_ooc_status_set PG_STRAP_VSS_Y_RANGE_UM "$vss_y0,$y_top"
     spadmic_ooc_status_set CREATE_PG_STRAPS [expr {$all_ok ? "PASS" : "FAIL"}]
 }
 
@@ -978,21 +1010,24 @@ proc spadmic_ooc_route_pg {} {
         ]
         return
     }
-    spadmic_ooc_status_set PG_LOCAL_ROUTE_MODE EXPERIMENTAL_LOCAL_SROUTE
+    set strategy [string tolower [spadmic_ooc_cfg_default pg_route_strategy legacy_addstripe]]
+    spadmic_ooc_status_set PG_LOCAL_ROUTE_MODE [string toupper $strategy]
     spadmic_ooc_create_pg_straps
-    set cmds [list \
-        [list sroute -connect {corePin blockPin padPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -padPinTarget {ring stripe} -allowLayerChange 1] \
-        [list sroute -connect {corePin blockPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -allowLayerChange 1] \
-        [list sroute -connect {corePin} -nets [list $power_net $ground_net] -corePinTarget {ring stripe} -allowLayerChange 1] \
-        [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -blockPin all -allowJogging 1 -layerChangeRange {MET1 METTP}] \
-        [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -blockPin all -allowJogging 1] \
-        [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \
-        [list sroute -connect {padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
-        [list sroute -connect {blockPin padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1 -layerChangeRange {MET1 METTP}] \
-        [list sroute -connect {blockPin padPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
-        [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net] -allowJogging 1] \
-        [list sroute -connect {blockPin corePin} -nets [list $power_net $ground_net]] \
-        [list sroute -nets [list $power_net $ground_net]]]
+    if {$strategy eq "explicit_exact"} {
+        set cmds [list \
+            [list sroute -connect {corePin} -nets [list $power_net $ground_net] \
+                -corePinTarget {stripe} -corePinCheckStdcellGeoms -allowJogging 1 \
+                -allowLayerChange 1 -layerChangeRange {MET1 METTP}] \
+            [list sroute -connect {corePin} -nets [list $power_net $ground_net] \
+                -corePinTarget {stripe} -allowJogging 1 -allowLayerChange 1 \
+                -layerChangeRange {MET1 METTP}]]
+    } else {
+        set cmds [list \
+            [list sroute -connect {corePin blockPin padPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -padPinTarget {ring stripe} -allowLayerChange 1] \
+            [list sroute -connect {corePin blockPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -allowLayerChange 1] \
+            [list sroute -connect {corePin} -nets [list $power_net $ground_net] -corePinTarget {ring stripe} -allowLayerChange 1] \
+            [list sroute -nets [list $power_net $ground_net]]]
+    }
     spadmic_ooc_try_first SROUTE_PG $cmds 1
 }
 
@@ -1370,6 +1405,10 @@ proc spadmic_ooc_export_outputs {} {
     if {$stream_map ne ""} {
         lappend stream_cmd -mapFile $stream_map
     }
+    set stdcell_gds [spadmic_ooc_env SPADMIC_STDCELL_GDS ""]
+    if {$stdcell_gds ne ""} {
+        lappend stream_cmd -merge $stdcell_gds
+    }
     spadmic_ooc_try_first EXPORT_GDS [list $stream_cmd] 1
     foreach pair [list \
         [list EXPORT_DEF_FILE $def] \
@@ -1495,8 +1534,8 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_place_design
     spadmic_ooc_cts_design
     spadmic_ooc_add_fillers
-    spadmic_ooc_route_design
     spadmic_ooc_route_pg
+    spadmic_ooc_route_design
     spadmic_ooc_postroute_cleanup
     spadmic_ooc_postroute_opt_and_timing
     set min_area_repair_changed [spadmic_ooc_selected_net_min_area_repair]

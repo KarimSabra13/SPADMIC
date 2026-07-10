@@ -20,6 +20,13 @@ plan = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = plan
 SPEC.loader.exec_module(plan)
 
+OOC_MODULE_PATH = REPO / "TOP" / "pnr" / "scripts" / "gen_ooc_block_harden_plan.py"
+OOC_SPEC = importlib.util.spec_from_file_location("ooc_harden_plan", OOC_MODULE_PATH)
+assert OOC_SPEC and OOC_SPEC.loader
+ooc = importlib.util.module_from_spec(OOC_SPEC)
+sys.modules[OOC_SPEC.name] = ooc
+OOC_SPEC.loader.exec_module(ooc)
+
 
 class DigitalAssemblyPlanTest(unittest.TestCase):
     def test_my_mirrors_packet_north_pin(self) -> None:
@@ -49,6 +56,89 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
     def test_tx_contract_is_exactly_nineteen_nets(self) -> None:
         self.assertEqual(len(plan.TX_CONNECTIONS), 19)
         self.assertEqual(sum(name.startswith("tx_data_") for name, _, _ in plan.TX_CONNECTIONS), 16)
+
+    def test_tx_contract_has_exact_shared_x_coordinates(self) -> None:
+        rows = ooc.read_tx_stream_pin_contract()
+        self.assertEqual(len(rows), 19)
+        for order, row in enumerate(rows):
+            self.assertEqual(int(row["order"]), order)
+            self.assertEqual(row["packet_side"], "NORTH")
+            self.assertEqual(row["strip_side"], "SOUTH")
+            self.assertEqual(row["pin_layer"], "MET3")
+            self.assertEqual(row["assembly_route_layer"], "MET2")
+            self.assertAlmostEqual(
+                float(row["packet_local_x_um"]),
+                float(row["strip_local_x_um"]),
+                places=6,
+            )
+            self.assertAlmostEqual(
+                float(row["assembly_x_um"]),
+                plan.PACKET_ORIGIN[0] + float(row["packet_local_x_um"]),
+                places=6,
+            )
+
+    def test_orientation_selection_prefers_r0_for_exact_contract(self) -> None:
+        packet_pins: dict[str, plan.Pin] = {}
+        strip_pins: dict[str, plan.Pin] = {}
+        rows = ooc.read_tx_stream_pin_contract()
+        for row in rows:
+            packet_x = float(row["packet_local_x_um"])
+            strip_x = float(row["strip_local_x_um"])
+            packet_pins[row["packet_pin"]] = plan.Pin(
+                row["packet_pin"], rects=[plan.Rect("MET3", packet_x - 0.2, 366.0, packet_x + 0.2, 366.8)]
+            )
+            strip_pins[row["strip_pin"]] = plan.Pin(
+                row["strip_pin"], rects=[plan.Rect("MET3", strip_x - 0.2, 0.0, strip_x + 0.2, 0.8)]
+            )
+        packet = plan.Macro(plan.PACKET_MACRO, 2066.96, 366.8, {"Y"}, packet_pins, Path("packet.lef"))
+        strip = plan.Macro(plan.STRIP_MACRO, 3433.36, 180.88, {"Y"}, strip_pins, Path("strip.lef"))
+
+        packet_orient, strip_orient, score = plan.choose_tx_orientations(packet, strip)
+        self.assertEqual((packet_orient, strip_orient), ("R0", "R0"))
+        self.assertEqual(score, (0, 0.0, 0.0))
+        self.assertEqual(plan.tx_orientation_score(packet, strip, "MY")[0], 171)
+
+    def test_packet_and_strip_plans_share_contract_and_packet_is_scalar(self) -> None:
+        audit = REPO / "TOP" / "docs" / "layout_audits" / "SPADMIC2_20260709_072331"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            packet_root = root / "packet"
+            strip_root = root / "strip"
+            ooc.generate_tx_packet_core(audit, packet_root)
+            ooc.generate_tx_ddr_strip(audit, strip_root)
+
+            with (packet_root / "ooc_block_pin_plan.csv").open(newline="") as fh:
+                packet_rows = list(csv.DictReader(fh))
+            packet_ports = {row["port"] for row in packet_rows}
+            self.assertTrue({f"src_data_i_s3_b{bit}" for bit in range(16)} <= packet_ports)
+            self.assertFalse(any(port.startswith("src_data_i[") for port in packet_ports))
+
+            canonical = plan.TX_PIN_CONTRACT.read_text()
+            self.assertEqual((packet_root / "tx_packet_strip_pin_contract.csv").read_text(), canonical)
+            self.assertEqual((strip_root / "tx_packet_strip_pin_contract.csv").read_text(), canonical)
+            packet_config = (packet_root / "ooc_block_harden_config.tcl").read_text()
+            strip_config = (strip_root / "ooc_block_harden_config.tcl").read_text()
+            for config in (packet_config, strip_config):
+                self.assertIn("variable enable_pg_sroute {1}", config)
+                self.assertIn("variable pg_route_strategy {explicit_exact}", config)
+                self.assertIn("variable route_profile {met1_effort}", config)
+            self.assertIn("variable core_width_um {3413.000}", strip_config)
+            self.assertIn("-side NORTH -layer MET3 -assign {100.800 366.400}", (packet_root / "ooc_block_pin_assignments.tcl").read_text())
+            self.assertIn("-side SOUTH -layer MET3 -assign {100.800 0.400}", (strip_root / "ooc_block_pin_assignments.tcl").read_text())
+
+    def test_clean_ooc_pg_uses_exact_geometry_before_signal_route(self) -> None:
+        tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_harden_block.tcl").read_text()
+        wrapper = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_harden_block.sh").read_text()
+        self.assertIn("$vdd_cx - $core_margin - $strap_width / 2.0", tcl)
+        self.assertIn("$vss_cx - $core_margin - $strap_width / 2.0", tcl)
+        self.assertIn("add_shape -net $net -layer $layer -shape STRIPE", tcl)
+        self.assertIn("-corePinCheckStdcellGeoms", tcl)
+        self.assertLess(
+            tcl.index("    spadmic_ooc_route_pg\n"),
+            tcl.index("    spadmic_ooc_route_design\n"),
+        )
+        self.assertIn("--required-merge \"$SPADMIC_STDCELL_GDS\"", wrapper)
+        self.assertIn('[[ "$gds_audit_rc" -eq 0 ]]', wrapper)
 
     def test_narrow_strip_clears_txrx_with_ten_um_margin(self) -> None:
         txrx = (3505.519, 464.920, 3638.910, 3265.795)

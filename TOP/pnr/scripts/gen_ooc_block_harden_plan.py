@@ -16,6 +16,14 @@ from pathlib import Path
 from typing import Iterable
 
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TX_SRC_DATA_MANIFEST = REPO_ROOT / "TOP" / "rtl" / "interfaces" / "tx_src_data_flat.csv"
+TX_STREAM_PIN_CONTRACT = REPO_ROOT / "TOP" / "pnr" / "interfaces" / "tx_packet_strip_pin_contract.csv"
+TX_ASSEMBLY_ORIGIN_X_UM = 61.980
+TX_PACKET_DIE_HEIGHT_UM = 366.800
+TX_STRIP_DIE_HEIGHT_UM = 180.880
+
+
 PIN_HEADER = [
     "inst",
     "master_lib",
@@ -78,6 +86,96 @@ def bus(name: str, width: int) -> list[str]:
 
 def bus2(name: str, outer: int, inner: int) -> list[str]:
     return [f"{name}[{outer_idx}][{inner_idx}]" for outer_idx in range(outer) for inner_idx in range(inner)]
+
+
+def tx_src_data_flat_ports(path: Path = TX_SRC_DATA_MANIFEST) -> list[str]:
+    require_file(path)
+    rows = read_headered_csv(path)
+    expected = [
+        (source, bit, f"src_data_i_s{source}_b{bit}")
+        for source in range(4)
+        for bit in range(16)
+    ]
+    actual = [
+        (int(row["source"]), int(row["bit"]), row["name"])
+        for row in rows
+    ]
+    if actual != expected:
+        raise SystemExit(f"TX source-data scalar manifest is not canonical: {path}")
+    return [name for _, _, name in expected]
+
+
+def read_tx_stream_pin_contract(path: Path = TX_STREAM_PIN_CONTRACT) -> list[dict[str, str]]:
+    require_file(path)
+    rows = read_headered_csv(path)
+    if len(rows) != 19:
+        raise SystemExit(f"TX packet/strip pin contract must contain 19 rows: {path}")
+    if [int(row["order"]) for row in rows] != list(range(19)):
+        raise SystemExit(f"TX packet/strip pin contract order is not contiguous: {path}")
+    for row in rows:
+        packet_x = float(row["packet_local_x_um"])
+        strip_x = float(row["strip_local_x_um"])
+        assembly_x = float(row["assembly_x_um"])
+        if not math.isclose(packet_x, strip_x, abs_tol=0.0005):
+            raise SystemExit(f"TX packet/strip local X mismatch for {row['net']}: {path}")
+        if not math.isclose(assembly_x, TX_ASSEMBLY_ORIGIN_X_UM + packet_x, abs_tol=0.0005):
+            raise SystemExit(f"TX assembly X mismatch for {row['net']}: {path}")
+        if row["packet_side"] != "NORTH" or row["strip_side"] != "SOUTH":
+            raise SystemExit(f"TX packet/strip side mismatch for {row['net']}: {path}")
+        if row["pin_layer"] != "MET3" or row["assembly_route_layer"] != "MET2":
+            raise SystemExit(f"TX packet/strip layer mismatch for {row['net']}: {path}")
+    if len({row["net"] for row in rows}) != 19:
+        raise SystemExit(f"TX packet/strip net names are not unique: {path}")
+    return rows
+
+
+def tx_stream_pin_assignments(
+    role: str,
+    *,
+    die_height_um: float,
+    signal_pin_depth_um: float,
+) -> tuple[list[str], dict[str, dict[str, str]]]:
+    rows = read_tx_stream_pin_contract()
+    if role == "packet":
+        pin_key = "packet_pin"
+        peer_key = "strip_pin"
+        x_key = "packet_local_x_um"
+        side = "NORTH"
+        target_y = die_height_um - (signal_pin_depth_um / 2.0)
+        peer = "u_tx_ddr_strip"
+    elif role == "strip":
+        pin_key = "strip_pin"
+        peer_key = "packet_pin"
+        x_key = "strip_local_x_um"
+        side = "SOUTH"
+        target_y = signal_pin_depth_um / 2.0
+        peer = "u_tx_packet_core"
+    else:
+        raise ValueError(f"unsupported TX stream pin role: {role}")
+
+    ports: list[str] = []
+    assignments: dict[str, dict[str, str]] = {}
+    for row in rows:
+        port = row[pin_key]
+        ports.append(port)
+        assignments[port] = {
+            "side": side,
+            "target_x_um": row[x_key],
+            "target_y_um": f"{target_y:.3f}",
+            "source_inst": peer,
+            "source_term": row[peer_key],
+            "source_x_um": row["assembly_x_um"],
+            "source_y_um": "",
+        }
+    return ports, assignments
+
+
+def write_tx_stream_pin_contract(path: Path) -> None:
+    rows = read_tx_stream_pin_contract()
+    with path.open("w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def require_file(path: Path) -> None:
@@ -230,10 +328,25 @@ def write_pin_assignment_tcl(
     width_um: float,
     depth_um: float,
 ) -> None:
+    grouped_assignments = {
+        port: {**assignment, "side": side}
+        for port, assignment in assignments.items()
+    }
+    write_multi_side_pin_assignment_tcl(path, grouped_assignments, layer, width_um, depth_um)
+
+
+def write_multi_side_pin_assignment_tcl(
+    path: Path,
+    assignments: dict[str, dict[str, str]],
+    layer: str,
+    width_um: float,
+    depth_um: float,
+) -> None:
     with path.open("w") as fh:
-        fh.write("# Generated guided pin assignments for OOC north edge.\n")
+        fh.write("# Generated guided pin assignments for deterministic OOC interfaces.\n")
         fh.write("set spadmic_ooc_pin_assignment_failures [list]\n")
         for port, assignment in assignments.items():
+            side = assignment["side"]
             fh.write(f"if {{[catch {{editPin -pin {tcl_quote(port)} -side {side} -layer {layer} ")
             fh.write(f"-assign {{{assignment['target_x_um']} {assignment['target_y_um']}}} ")
             fh.write(f"-pinWidth {width_um:.3f} -pinDepth {depth_um:.3f} -fixedPin 1}} err]}} {{\n")
@@ -320,6 +433,7 @@ def write_leaf_context(
     pin_plan: dict[str, list[str]],
     instances: list[dict[str, str]],
     extra_lines: list[str] | None = None,
+    local_pg_enabled: bool = False,
 ) -> None:
     counts = class_counts(instances)
     with path.open("w") as fh:
@@ -332,7 +446,10 @@ def write_leaf_context(
         fh.write(f"- Local core target: `{core_target}`\n")
         fh.write("- Ordinary signal routing: `MET1`-`MET3`\n")
         fh.write("- Power access: one north `VDD` bar and one north `VSS` bar on `METTP`\n")
-        fh.write("- Local special PG route is disabled by default; top-level assembly must connect the exported `METTP` VDD/VSS access pins.\n")
+        if local_pg_enabled:
+            fh.write("- Local special PG route: enabled with the fail-closed `explicit_exact` strategy.\n")
+        else:
+            fh.write("- Local special PG route is disabled by default; top-level assembly must connect the exported `METTP` VDD/VSS access pins.\n")
         for line in extra_lines or []:
             fh.write(f"- {line}\n")
         fh.write("\n## Instance Classes\n\n")
@@ -723,6 +840,13 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
     core_margin_um = 10.0
     core_width_um = region_urx - region_llx - (2.0 * core_margin_um)
     core_height_um = region_ury - region_lly - (2.0 * core_margin_um)
+    signal_pin_width_um = 0.40
+    signal_pin_depth_um = 0.80
+    stream_ports, stream_assignments = tx_stream_pin_assignments(
+        "packet",
+        die_height_um=TX_PACKET_DIE_HEIGHT_UM,
+        signal_pin_depth_um=signal_pin_depth_um,
+    )
 
     pin_plan = {
         "WEST": [
@@ -749,18 +873,28 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
             *bus("src_ready_o", 4),
             *bus("src_sop_i", 4),
             *bus("src_eop_i", 4),
-            *bus2("src_data_i", 4, 16),
+            *tx_src_data_flat_ports(),
         ],
-        "NORTH": ["tx_valid_o", "tx_ready_i", "tx_flush_o", *bus("tx_data_o", 16)],
+        "NORTH": stream_ports,
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)
     config_tcl = out_dir / "ooc_block_harden_config.tcl"
     pin_plan_csv = out_dir / "ooc_block_pin_plan.csv"
+    pin_contract_csv = out_dir / "tx_packet_strip_pin_contract.csv"
+    pin_assignment_tcl = out_dir / "ooc_block_pin_assignments.tcl"
     context_md = out_dir / "ooc_block_context.md"
     input_manifest = out_dir / "ooc_harden_input_manifest.csv"
 
-    write_pin_plan_csv(pin_plan_csv, pin_plan)
+    write_pin_plan_csv(pin_plan_csv, pin_plan, stream_assignments)
+    write_tx_stream_pin_contract(pin_contract_csv)
+    write_multi_side_pin_assignment_tcl(
+        pin_assignment_tcl,
+        stream_assignments,
+        "MET3",
+        signal_pin_width_um,
+        signal_pin_depth_um,
+    )
     write_manifest(
         input_manifest,
         {
@@ -768,6 +902,8 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
             "instances_enriched": instances_csv,
             "matrix_pins": matrix_pins_csv,
             "nets": nets_csv,
+            "tx_src_data_flat_manifest": TX_SRC_DATA_MANIFEST,
+            "tx_packet_strip_pin_contract": TX_STREAM_PIN_CONTRACT,
         },
     )
     values = common_config_values(
@@ -785,6 +921,7 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
         pg_pin_depth_um="3.36",
         pg_strap_width_um="3.36",
         pg_strap_spacing_um="3.36",
+        pin_assignment_tcl=pin_assignment_tcl,
     )
     values.update({
         "prelim_top_bbox_llx_um": f"{region_llx:.3f}",
@@ -792,7 +929,13 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
         "prelim_top_bbox_urx_um": f"{region_urx:.3f}",
         "prelim_top_bbox_ury_um": f"{region_ury:.3f}",
         "physical_region": "TX_PACKET_CORE",
-        "route_profile": "met2_first_antenna",
+        "route_profile": "met1_effort",
+        "enable_pg_sroute": "1",
+        "pg_route_strategy": "explicit_exact",
+        "pg_ground_first_rail_offset_um": "4.48",
+        "tx_packet_strip_pin_contract_csv": str(pin_contract_csv),
+        "tx_packet_assembly_origin_x_um": f"{TX_ASSEMBLY_ORIGIN_X_UM:.3f}",
+        "antenna_milestone_policy": "DEFER_MANUAL_REPAIR_FINAL_HANDOFF_BLOCKED",
         "handoff_note": "Packet/FIFO logic only; DDR16 pairer and DDRs2 adapter are excluded.",
     })
     write_ooc_config_tcl(config_tcl, values, pin_plan)
@@ -808,9 +951,12 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
         instances=instances,
         extra_lines=[
             f"Candidate top region TX_PACKET_CORE bbox=({region_llx:.3f}, {region_lly:.3f})-({region_urx:.3f}, {region_ury:.3f}) um.",
-            "North stream pins face the future TX_DDR_STRIP; source packet pins stay south toward matrix/MPTDC/position producers.",
+            f"North stream pins use the canonical 19-link contract `{TX_STREAM_PIN_CONTRACT}` and exact MET3 local X coordinates shared with the TX_DDR_STRIP south pins.",
+            "The active source-data boundary uses 64 scalar source-major ports from the canonical manifest; no nested unpacked array crosses the physical boundary.",
+            "Local VDD/VSS special routing is enabled with explicit METTP geometry aligned to the generated PG pins; antenna closure remains a separate final-handoff gate.",
             f"Matrix audit pins read: `{len(matrix_pins)}`; matrix-facing capture/reset/config logic remains soft/region-guided.",
         ],
+        local_pg_enabled=True,
     )
 
 
@@ -844,15 +990,24 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
     core_margin_um = 10.0
     signal_pin_width_um = 0.40
     signal_pin_depth_um = 0.80
-    core_width_um = region_urx - region_llx - (2.0 * core_margin_um)
+    # The original 3522.565um candidate overlaps TXRX4TDC2. The canonical
+    # requested core width reproduces the measured narrow 3433.360um macro and
+    # preserves approximately 10.5um clearance at the approved assembly X.
+    core_width_um = 3413.000
     core_height_um = region_ury - region_lly - (2.0 * core_margin_um)
     die_height_um = region_ury - region_lly
+    canonical_region_urx = region_llx + core_width_um + (2.0 * core_margin_um)
 
     north_ports, north_assignments, clk_rows = tx_egress_core_north_assignments(
         ddr_pins,
         region_llx,
         die_height_um,
         signal_pin_depth_um,
+    )
+    stream_ports, stream_assignments = tx_stream_pin_assignments(
+        "strip",
+        die_height_um=TX_STRIP_DIE_HEIGHT_UM,
+        signal_pin_depth_um=signal_pin_depth_um,
     )
     pin_plan = {
         "WEST": [
@@ -865,7 +1020,7 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
             "ddr_busy_o",
             "ddr_empty_o",
         ],
-        "SOUTH": ["tx_valid_i", "tx_ready_o", "tx_flush_i", *bus("tx_data_i", 16)],
+        "SOUTH": stream_ports,
         "NORTH": north_ports,
     }
 
@@ -873,16 +1028,22 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
     config_tcl = out_dir / "ooc_block_harden_config.tcl"
     pin_plan_csv = out_dir / "ooc_block_pin_plan.csv"
     pin_guide_csv = out_dir / "tx_ddr_strip_pin_guide.csv"
+    pin_contract_csv = out_dir / "tx_packet_strip_pin_contract.csv"
     pin_assignment_tcl = out_dir / "ooc_block_pin_assignments.tcl"
     context_md = out_dir / "ooc_block_context.md"
     input_manifest = out_dir / "ooc_harden_input_manifest.csv"
 
-    write_pin_plan_csv(pin_plan_csv, pin_plan, north_assignments)
-    write_pin_plan_csv(pin_guide_csv, pin_plan, north_assignments)
-    write_pin_assignment_tcl(
+    north_guided_assignments = {
+        port: {**assignment, "side": "NORTH"}
+        for port, assignment in north_assignments.items()
+    }
+    all_assignments = {**stream_assignments, **north_guided_assignments}
+    write_pin_plan_csv(pin_plan_csv, pin_plan, all_assignments)
+    write_pin_plan_csv(pin_guide_csv, pin_plan, all_assignments)
+    write_tx_stream_pin_contract(pin_contract_csv)
+    write_multi_side_pin_assignment_tcl(
         pin_assignment_tcl,
-        north_assignments,
-        "NORTH",
+        all_assignments,
         "MET3",
         signal_pin_width_um,
         signal_pin_depth_um,
@@ -896,6 +1057,7 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
             "ddr_slvs_pins": ddr_pins_csv,
             "nets": nets_csv,
             "tx_ddr_strip_pin_guide": pin_guide_csv,
+            "tx_packet_strip_pin_contract": TX_STREAM_PIN_CONTRACT,
         },
     )
     values = common_config_values(
@@ -920,12 +1082,19 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
     values.update({
         "prelim_top_bbox_llx_um": f"{region_llx:.3f}",
         "prelim_top_bbox_lly_um": f"{region_lly:.3f}",
-        "prelim_top_bbox_urx_um": f"{region_urx:.3f}",
+        "prelim_top_bbox_urx_um": f"{canonical_region_urx:.3f}",
         "prelim_top_bbox_ury_um": f"{region_ury:.3f}",
         "physical_region": "TX_DDR_STRIP",
         "tx_ddr_strip_pin_guide_csv": str(pin_guide_csv),
+        "tx_packet_strip_pin_contract_csv": str(pin_contract_csv),
+        "tx_ddr_strip_assembly_origin_x_um": f"{TX_ASSEMBLY_ORIGIN_X_UM:.3f}",
         "ddrs2_data_pin_x_min_um": f"{data_x_min:.3f}",
         "ddrs2_data_pin_x_max_um": f"{data_x_max:.3f}",
+        "route_profile": "met1_effort",
+        "enable_pg_sroute": "1",
+        "pg_route_strategy": "explicit_exact",
+        "pg_ground_first_rail_offset_um": "4.48",
+        "antenna_milestone_policy": "DEFER_MANUAL_REPAIR_FINAL_HANDOFF_BLOCKED",
         "handoff_note": "Wide low strip only; output FIFO and event bundle logic are excluded.",
     })
     write_ooc_config_tcl(config_tcl, values, pin_plan)
@@ -943,13 +1112,17 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
         pin_plan=pin_plan,
         instances=instances,
         extra_lines=[
-            f"Candidate top region TX_DDR_STRIP bbox=({region_llx:.3f}, {region_lly:.3f})-({region_urx:.3f}, {region_ury:.3f}) um.",
+            f"Canonical narrow TX_DDR_STRIP requested bbox=({region_llx:.3f}, {region_lly:.3f})-({canonical_region_urx:.3f}, {region_ury:.3f}) um; Innovus site/grid snapping is checked from the exported LEF.",
+            f"The rejected original region ended at x={region_urx:.3f} um and overlapped TXRX4TDC2; do not restore that width.",
             f"DDRs2 macro `{ddrs2_inst.get('inst')}` bbox=({float_or_zero(ddrs2_inst.get('norm_llx', '')):.3f}, {float_or_zero(ddrs2_inst.get('norm_lly', '')):.3f})-({float_or_zero(ddrs2_inst.get('norm_urx', '')):.3f}, {float_or_zero(ddrs2_inst.get('norm_ury', '')):.3f}) um.",
             f"DDRs2 DATA/CLK span: x=({data_x_min:.3f}, {data_x_max:.3f}) um, span={data_x_max - data_x_min:.3f} um.",
             f"DDR/SLVS audit pins read: `{len(ddr_pins)}` total, `{ddr_data_pin_count}` DATA_L/DATA_H pins, `{north_pin_count}` top-side pins.",
             f"Visible DDRs2 CLK_160M source pins: `{len(clk_rows)}`; the strip clock output is assigned to the right/east CLK_160M coordinate.",
+            f"South stream pins use the canonical 19-link contract `{TX_STREAM_PIN_CONTRACT}` and exact MET3 local X coordinates shared with the TX_PACKET_CORE north pins.",
+            "Local VDD/VSS special routing is enabled with explicit METTP geometry aligned to the generated PG pins; antenna closure remains a separate final-handoff gate.",
             f"Generated pin guide: `{pin_guide_csv}`.",
         ],
+        local_pg_enabled=True,
     )
 
 

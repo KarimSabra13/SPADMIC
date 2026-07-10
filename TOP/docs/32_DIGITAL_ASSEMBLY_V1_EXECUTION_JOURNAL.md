@@ -490,3 +490,38 @@ After each server phase:
 
 The complete flow contract and server command reference are maintained in
 `TOP/docs/31_DIGITAL_ASSEMBLY_V1_HANDOFF_AND_PVS_FLOW.md`.
+
+## P03-R2 Paired Pin and Clean-PG Implementation
+
+Status: `PASS_LOCAL_CADENCE_SERVER_PENDING`
+
+The canonical packet/strip physical contract is now implemented. A versioned
+19-row CSV assigns identical local MET3 X coordinates to packet north and strip
+south. The active packet OOC plan consumes all 64 scalar source-data names and
+contains no nested source-data physical port. The assembly generator scores R0
+and MY from transformed LEF geometry instead of forcing MY.
+
+The generic OOC PG implementation was corrected at its source. The old
+`addStripe -start_offset` formula omitted the core-left reference and caused
+the measured 10.080 um displacement. TX runs now use explicit `add_shape`
+centerlines shared with their PG terminals, `sroute -connect {corePin}`, and PG
+insertion before signal route. Streamout now includes the official map and JIHD
+merge; the wrapper requires the mapped/merged GDS audit.
+
+Measured local gates:
+
+```text
+PY_COMPILE=PASS
+BASH_SYNTAX=PASS
+PACKET_PLAN_GENERATION=PASS
+STRIP_PLAN_GENERATION=PASS
+TOP_PNR_UNIT_TESTS=24_PASS_0_FAIL
+GIT_DIFF_CHECK=PASS
+CADENCE_INNOVUS=NOT_RUN_LOCAL
+PVS=NOT_RUN_LOCAL
+```
+
+This entry does not close packet or strip physical implementation. Fresh
+packet server Genus/Innovus/PVS is next. Strip rebuild starts only after the
+packet report gates are understood, then the two actual LEFs are scored and
+the signal-only assembly smoke is run.

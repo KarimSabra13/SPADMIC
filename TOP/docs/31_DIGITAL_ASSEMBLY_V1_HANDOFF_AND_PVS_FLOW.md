@@ -538,3 +538,28 @@ Only an approved Phase A checkpoint may seed Phase B. The order remains:
 
 Every phase gets a new immutable package, phase top, OA PG child, DRC run, LVS
 run, and approval gate. Failed packages remain preserved for diagnosis.
+
+## 13. Canonical TX Rebuild Supersession
+
+The restore-only strip PG sequence in Sections 7-8 is retained as historical
+evidence, not as the current execution path. After P02-R4 proved the bounded
+helper method X-invariant, the active flow returned to fresh RTL, Genus, and
+Innovus implementations.
+
+Current source contracts:
+
+```text
+TOP/rtl/interfaces/tx_src_data_flat.csv
+TOP/pnr/interfaces/tx_packet_strip_pin_contract.csv
+```
+
+The packet is rebuilt and qualified first. Only after packet Xcelium, Genus,
+Innovus regular/special connectivity, Innovus DRC, mapped/merged GDS audit,
+PVS base DRC, PVS density DRC, and PVS LVS are classified may the strip be
+rebuilt with the same paired stream coordinates. The final assembly step routes
+the 19 aligned links on MET2/MET3 and keeps assembly PG deferred.
+
+Do not stage the historical `_HV` GDS, the P01 signal-only strip, or any R1-R4
+PG trial as a canonical block. Do not transfer PVS results across GDS hashes.
+The detailed implementation and closure order are in
+`TOP/docs/36_TX_PACKET_CORE_CANONICAL_REBUILD_AND_PVS_CLOSURE.md`.

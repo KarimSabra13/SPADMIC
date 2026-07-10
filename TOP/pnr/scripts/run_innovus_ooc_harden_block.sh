@@ -23,9 +23,10 @@ This is the first real TOP OOC hardening wrapper. It imports one Genus OOC
 netlist/SDC into Innovus, builds a local abstract floorplan, places pins,
 creates local VDD/VSS METTP access pins, runs place/CTS/route/filler/timing/
 DRV/Innovus DRC/connectivity checks, and exports DEF/LEF/GDS collateral.
-By default, local special PG routing is deferred: the abstract exports METTP
-VDD/VSS access pins for top-level hookup. Set SPADMIC_OOC_ENABLE_PG_SROUTE=1
-only for an experimental local PG special-route run.
+Most legacy leaves defer local special PG routing. TX_PACKET_CORE and
+TX_DDR_STRIP enable the explicit-exact PG strategy in their generated config:
+the METTP stripe center is identical to the VDD/VSS pin center and sroute is
+limited to corePin stitching. The wrapper fails closed on special connectivity.
 For the wide TX egress core min-area/antenna rescue, set
 SPADMIC_OOC_ROUTE_PROFILE=met2_first_antenna. If the wide bbox still reports
 non-PG DRC, rerun with SPADMIC_OOC_CORE_HEIGHT_UM=160, then 170 maximum.
@@ -106,6 +107,10 @@ DEFAULT_SPADMIC_STREAMOUT_MAP="/eda/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_
 if [[ -z "${SPADMIC_STREAMOUT_MAP_FILE:-}" && -f "$DEFAULT_SPADMIC_STREAMOUT_MAP" ]]; then
   export SPADMIC_STREAMOUT_MAP_FILE="$DEFAULT_SPADMIC_STREAMOUT_MAP"
 fi
+DEFAULT_SPADMIC_STDCELL_GDS="/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/gds/xh018_D_CELLS_JIHD.gds"
+if [[ -z "${SPADMIC_STDCELL_GDS:-}" && -f "$DEFAULT_SPADMIC_STDCELL_GDS" ]]; then
+  export SPADMIC_STDCELL_GDS="$DEFAULT_SPADMIC_STDCELL_GDS"
+fi
 
 GENUS_BLOCK_ROOT="$GENUS_ROOT/$BLOCK"
 NETLIST="$GENUS_BLOCK_ROOT/outputs/$BLOCK.postsyn.v"
@@ -181,7 +186,9 @@ fail_summary() {
   echo "SPADMIC_OOC_ENABLE_ROUTE_EFFORT=${SPADMIC_OOC_ENABLE_ROUTE_EFFORT:-}"
   echo "SPADMIC_OOC_ENABLE_ANTENNA_REPAIR=${SPADMIC_OOC_ENABLE_ANTENNA_REPAIR:-}"
   echo "SPADMIC_OOC_REQUIRE_ANTENNA_CLEAN=${SPADMIC_OOC_REQUIRE_ANTENNA_CLEAN:-}"
+  echo "SPADMIC_OOC_ENABLE_PG_SROUTE=${SPADMIC_OOC_ENABLE_PG_SROUTE:-}"
   echo "SPADMIC_STREAMOUT_MAP_FILE=${SPADMIC_STREAMOUT_MAP_FILE:-}"
+  echo "SPADMIC_STDCELL_GDS=${SPADMIC_STDCELL_GDS:-}"
   echo "BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo unknown)"
   echo "HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   echo "STATUS_SHORT_BEGIN"
@@ -221,8 +228,35 @@ innovus_rc=$?
 set -e
 
 status_rpt="$BLOCK_ROOT/reports/ooc_harden_status.rpt"
+gds_audit_rpt="$BLOCK_ROOT/reports/gds_export_audit.rpt"
+gds_audit_rc=6
+if [[ -s "$BLOCK_ROOT/outputs/$BLOCK.gds" ]] \
+    && [[ -s "$BLOCK_ROOT/logs/innovus.log" ]] \
+    && [[ -s "${SPADMIC_STREAMOUT_MAP_FILE:-}" ]] \
+    && [[ -s "${SPADMIC_STDCELL_GDS:-}" ]]; then
+  set +e
+  python3 "$SCRIPT_DIR/audit_innovus_gds_export.py" \
+    --gds "$BLOCK_ROOT/outputs/$BLOCK.gds" \
+    --log "$BLOCK_ROOT/logs/innovus.log" \
+    --stream-map "$SPADMIC_STREAMOUT_MAP_FILE" \
+    --required-merge "$SPADMIC_STDCELL_GDS" \
+    --status "$gds_audit_rpt"
+  gds_audit_rc=$?
+  set -e
+else
+  {
+    echo "LABEL=SPADMIC_INNOVUS_GDS_EXPORT_AUDIT"
+    echo "STATUS=FAIL"
+    echo "ERROR=missing_gds_log_stream_map_or_required_merge"
+  } > "$gds_audit_rpt"
+fi
+cp -f "$gds_audit_rpt" "$HANDOFF_ROOT/reports/gds_export_audit.rpt"
+
 result="FAIL"
-if [[ "$innovus_rc" -eq 0 ]] && [[ -f "$status_rpt" ]] && grep -q '^RESULT=ABSTRACT_READY_FOR_TOP_REVIEW$' "$status_rpt"; then
+if [[ "$innovus_rc" -eq 0 ]] \
+    && [[ "$gds_audit_rc" -eq 0 ]] \
+    && [[ -f "$status_rpt" ]] \
+    && grep -q '^RESULT=ABSTRACT_READY_FOR_TOP_REVIEW$' "$status_rpt"; then
   result="ABSTRACT_READY_FOR_TOP_REVIEW"
 fi
 
@@ -267,11 +301,13 @@ fi
   echo "- Layout audit: \`$LAYOUT_AUDIT_DIR\`"
   echo "- Handoff root: \`$HANDOFF_ROOT\`"
   echo "- Innovus return code: \`$innovus_rc\`"
+  echo "- Mapped/merged GDS audit return code: \`$gds_audit_rc\`"
   echo
   echo "## Result"
   echo
   echo "- Result: \`$result\`"
   echo "- Status report: \`$status_rpt\`"
+  echo "- GDS export audit: \`$gds_audit_rpt\`"
   echo "- Manifest: \`reports/ooc_harden_manifest.csv\`"
   echo
   echo "This is typical-only Innovus OOC implementation. PVS, PEX, MMMC, and foundry LVS are deferred; do not label this SIGNOFF_READY."
