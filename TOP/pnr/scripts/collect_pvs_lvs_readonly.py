@@ -545,6 +545,11 @@ def copy_git_candidate(
         "rule installation, or PVS result database is included.\n",
         encoding="utf-8",
     )
+    manifest_path = git_root / "MANIFEST.sha256"
+    with manifest_path.open("w", encoding="utf-8") as handle:
+        for candidate in sorted(git_root.rglob("*"), key=lambda item: str(item.relative_to(git_root))):
+            if candidate.is_file() and candidate != manifest_path:
+                handle.write(f"{digest(candidate)}  {candidate.relative_to(git_root)}\n")
     return git_root
 
 

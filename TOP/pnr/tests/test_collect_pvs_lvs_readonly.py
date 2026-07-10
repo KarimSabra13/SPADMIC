@@ -139,6 +139,7 @@ class CollectPvsLvsReadonlyTest(unittest.TestCase):
             git_root = bundle / "git_text_candidate"
             self.assertTrue((git_root / "controls" / "run.pvs").is_file())
             self.assertTrue((git_root / "reports" / "packet.lvs.sum").is_file())
+            self.assertIn("controls/run.pvs", (git_root / "MANIFEST.sha256").read_text())
             self.assertFalse(any(path.suffix in {".v", ".gds", ".cdl"} for path in git_root.rglob("*")))
 
             second = subprocess.run(

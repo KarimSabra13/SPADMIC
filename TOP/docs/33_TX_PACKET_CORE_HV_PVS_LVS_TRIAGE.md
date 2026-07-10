@@ -116,7 +116,8 @@ Generated evidence includes:
   groups;
 - `hashes.sha256` and `collection_status.rpt`;
 - `git_text_candidate/`, which excludes GDS, OA, full netlists, PDK collateral,
-  installed rule decks, and PVS result databases.
+  installed rule decks, and PVS result databases, and includes its own
+  `MANIFEST.sha256` transfer manifest.
 
 ## Git Evidence Policy
 
