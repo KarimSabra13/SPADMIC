@@ -1,0 +1,26 @@
+class,net,source,sink,route_policy,note
+tx_stream,tx_valid,u_tx_packet_core.tx_valid_o,u_tx_ddr_strip.tx_valid_i,MET2-MET3,Packet word valid
+tx_stream,tx_ready,u_tx_ddr_strip.tx_ready_o,u_tx_packet_core.tx_ready_i,MET2-MET3,Backpressure
+tx_stream,tx_flush,u_tx_packet_core.tx_flush_o,u_tx_ddr_strip.tx_flush_i,MET2-MET3,Ordered flush marker
+tx_stream,tx_data[0],u_tx_packet_core.tx_data_o[0],u_tx_ddr_strip.tx_data_i[0],MET2-MET3,Payload bit 0
+tx_stream,tx_data[1],u_tx_packet_core.tx_data_o[1],u_tx_ddr_strip.tx_data_i[1],MET2-MET3,Payload bit 1
+tx_stream,tx_data[2],u_tx_packet_core.tx_data_o[2],u_tx_ddr_strip.tx_data_i[2],MET2-MET3,Payload bit 2
+tx_stream,tx_data[3],u_tx_packet_core.tx_data_o[3],u_tx_ddr_strip.tx_data_i[3],MET2-MET3,Payload bit 3
+tx_stream,tx_data[4],u_tx_packet_core.tx_data_o[4],u_tx_ddr_strip.tx_data_i[4],MET2-MET3,Payload bit 4
+tx_stream,tx_data[5],u_tx_packet_core.tx_data_o[5],u_tx_ddr_strip.tx_data_i[5],MET2-MET3,Payload bit 5
+tx_stream,tx_data[6],u_tx_packet_core.tx_data_o[6],u_tx_ddr_strip.tx_data_i[6],MET2-MET3,Payload bit 6
+tx_stream,tx_data[7],u_tx_packet_core.tx_data_o[7],u_tx_ddr_strip.tx_data_i[7],MET2-MET3,Payload bit 7
+tx_stream,tx_data[8],u_tx_packet_core.tx_data_o[8],u_tx_ddr_strip.tx_data_i[8],MET2-MET3,Payload bit 8
+tx_stream,tx_data[9],u_tx_packet_core.tx_data_o[9],u_tx_ddr_strip.tx_data_i[9],MET2-MET3,Payload bit 9
+tx_stream,tx_data[10],u_tx_packet_core.tx_data_o[10],u_tx_ddr_strip.tx_data_i[10],MET2-MET3,Payload bit 10
+tx_stream,tx_data[11],u_tx_packet_core.tx_data_o[11],u_tx_ddr_strip.tx_data_i[11],MET2-MET3,Payload bit 11
+tx_stream,tx_data[12],u_tx_packet_core.tx_data_o[12],u_tx_ddr_strip.tx_data_i[12],MET2-MET3,Payload bit 12
+tx_stream,tx_data[13],u_tx_packet_core.tx_data_o[13],u_tx_ddr_strip.tx_data_i[13],MET2-MET3,Payload bit 13
+tx_stream,tx_data[14],u_tx_packet_core.tx_data_o[14],u_tx_ddr_strip.tx_data_i[14],MET2-MET3,Payload bit 14
+tx_stream,tx_data[15],u_tx_packet_core.tx_data_o[15],u_tx_ddr_strip.tx_data_i[15],MET2-MET3,Payload bit 15
+clock,clk_sys,top.clk_sys,u_tx_packet_core.clk_sys u_tx_ddr_strip.clk_sys,MET2-MET3,Shared system clock
+reset,rst_n,top.rst_n,u_tx_packet_core.rst_n u_tx_ddr_strip.rst_n,MET2-MET3,Shared active-low reset
+clock,clk_160m_i,top.clk_160m_i,u_tx_ddr_strip.clk_160m_i,MET2-MET3,Forwarded-clock source
+control,ddrs2_enable_i,top.ddrs2_enable_i,u_tx_ddr_strip.ddrs2_enable_i,MET2-MET3,DDRs2 output enable
+power,VDD,top.VDD,u_tx_packet_core.VDD u_tx_ddr_strip.VDD,METTP,Manual OA PG overlay
+ground,VSS,top.VSS,u_tx_packet_core.VSS u_tx_ddr_strip.VSS,METTP,Manual OA PG overlay

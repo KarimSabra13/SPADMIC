@@ -3,6 +3,34 @@
 Status: server-facing floorplan feasibility infrastructure. No local Innovus
 run is claimed.
 
+## Progressive Digital Assembly V1
+
+The implemented block/assembly handoff flow is described in:
+
+```text
+TOP/docs/31_DIGITAL_ASSEMBLY_V1_HANDOFF_AND_PVS_FLOW.md
+```
+
+It provides:
+
+- a canonical `spadmic_tx_packet_core` OA/GDS promotion path for the manual
+  DIFFCON fixes;
+- a restore-only internal-PG patch for `spadmic_tx_ddr_strip`;
+- immutable block and assembly packages under
+  `/sim/ksabra/SPADMIC_work/handoff/innovus`;
+- read-only OA/LEF bbox and terminal parity checks;
+- guarded PVS DRC/LVS GUI-template replay using the explicit Cadence PVS
+  binary;
+- a top-coordinate Phase-A Innovus route limited to the 19 TX stream nets and
+  four shared clock/reset/control nets;
+- explicit promotion gates for canonical naming, bbox, pins, GDS layer map,
+  internal PG, PVS DRC, and PVS LVS.
+
+The original `3522.960 um` strip overlaps `TXRX4TDC2` by `79.421 um` in the
+authoritative SPADMIC2 coordinates. The Phase-A generator reports this in
+`assembly_geometry_conflicts.csv` and refuses to launch Innovus. Use the
+documented strip-only narrow OOC rerun; do not bypass this geometry gate.
+
 ## Matrix CSV Generator
 
 `scripts/gen_matrix_floorplan_from_csv.py` reads:

@@ -3,6 +3,48 @@
 Status: planning document for block-by-block digital implementation. This is
 not a full-top Genus/Innovus plan and not a signoff claim.
 
+## 2026-07-10 Implemented Progressive Assembly Flow
+
+The executable flow is documented in
+`TOP/docs/31_DIGITAL_ASSEMBLY_V1_HANDOFF_AND_PVS_FLOW.md`. It implements the
+following decisions:
+
+- physical block name `spadmic_tx_packet_core` is canonical; the historical
+  corrected `spadmic_tx_packet_core_HV` OA/GDS is a source candidate only;
+- the corrected `_HV` layout must be backed up, copied manually onto the
+  canonical OA cell, exported with canonical GDS top, and rerun through PVS;
+- Phase A is a top-coordinate overlay, not a rectangular TX super-macro;
+- packet core is fixed `MY` at `(61.980,2689.624)` and strip is `R0` at
+  `(61.980,3061.110)` only after the geometry preflight passes;
+- Phase A automatically routes only the 19 TX stream nets plus `clk_sys`,
+  `rst_n`, `clk_160m_i`, and `ddrs2_enable_i` on MET2-MET3;
+- packet PG is completed in the corrected OA layout; strip PG uses the
+  restore-only Innovus PG patch; the assembly PG is a separate manual OA child;
+- every block/version is staged immutably below
+  `/sim/ksabra/SPADMIC_work/handoff/innovus` with hashes and independent PVS
+  evidence;
+- promotion requires canonical names, OA/LEF bbox and pin parity, XStream map
+  evidence, internal PG PASS, PVS DRC PASS, and PVS LVS MATCH.
+
+The SPADMIC2 audit exposes one blocking geometry conflict in the original
+proposal. The existing strip LEF is `3522.960 um` wide. At `x=61.980`, it ends
+at `x=3584.940`, while `TXRX4TDC2` starts at `x=3505.519`. The overlap is:
+
+```text
+TX_DDR_STRIP / TXRX4TDC2 overlap:
+  bbox   = 3505.519,3061.110 -> 3584.940,3241.990
+  width  = 79.421 um
+  height = 180.880 um
+```
+
+Therefore the current Phase-A script intentionally stops before Innovus and
+writes `assembly_geometry_conflicts.csv`. Moving the strip left is impossible
+without crossing die x=0. The conservative correction is an OOC-only strip
+rehardening with approximately `3413.000 um` core width, producing about
+`3433 um` total width. This preserves the DDR pin guide and gives about 10 um
+clearance to `TXRX4TDC2`. The generated LEF and real audit must still pass the
+preflight; Innovus is not allowed to repair this overlap.
+
 Session closeout for the 2026-07-09 TX/matrix-side OOC work is captured in
 `TOP/docs/30_MATRIX_SIDE_SUBBLOCK_PNR_SESSION_CLOSEOUT_20260709.md`.
 
@@ -28,8 +70,8 @@ Top layout coordinates from the SPADMIC2 audit:
 | --- | --- |
 | box/ring | `(0.000, 0.000) - (4116.031, 3740.792)` |
 | matrix | `(25.915, 776.039) - (2112.884, 2674.624)` |
-| DDRs2 | `(21.980, 3261.886) - (3624.545, 3393.959)` |
-| MPTDC stack | `(2250.020, 534.249) - (3324.154, 3041.110)` |
+| DDRs2 | `(21.980, 3261.886) - (3620.495, 3393.959)` |
+| MPTDC stack | `(2250.020, 535.350) - (3311.220, 3041.110)` |
 | `TX_DDR_STRIP` | `(61.980, 3061.110) - (3584.545, 3241.886)` |
 | `TX_PACKET_CORE` | `(45.915, 2694.624) - (2112.884, 3061.110)` preferred lower portion |
 | `MATRIX_TO_MPTDC_CORRIDOR` | `(2132.884, 776.039) - (2230.020, 2674.624)` routing only |
