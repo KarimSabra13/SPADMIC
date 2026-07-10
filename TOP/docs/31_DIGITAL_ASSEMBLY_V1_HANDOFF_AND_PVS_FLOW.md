@@ -50,6 +50,7 @@ Handoff and PVS:
 - `stage_tx_block_handoffs.sh`, `stage_digital_assembly_handoff.sh`
 - `run_pvs_drc_handoff.sh`, `run_pvs_lvs_handoff.sh`
 - `replay_pvs_handoff_template.py`, `parse_pvs_handoff_result.py`
+- `collect_pvs_lvs_readonly.py`
 - `run_oa_layout_contract_audit.sh`, `compare_oa_lef_contract.py`
 - `audit_xstream_gds_export.py`, `audit_innovus_gds_export.py`
 - `derive_oa_pg_status.py`

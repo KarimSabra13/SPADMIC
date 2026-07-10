@@ -1,6 +1,6 @@
 # TX Packet Core HV PVS LVS Triage
 
-Status: `REGISTERED_PENDING_READ_ONLY_INVENTORY`
+Status: `READ_ONLY_COLLECTOR_READY_PENDING_SERVER_INVENTORY`
 
 This track is independent of the `spadmic_tx_ddr_strip` P02 PG patch. It must
 not block or alter P02.
@@ -20,6 +20,17 @@ run directory. A mismatch is possible but is not yet classified.
 
 No layout correction, OA edit, GDS rewrite, source-netlist edit, or PVS rerun
 is authorized from this observation alone.
+
+The implemented collector is:
+
+```text
+TOP/pnr/scripts/collect_pvs_lvs_readonly.py
+```
+
+It never invokes PVS or executes a file from the historical run. It hashes and
+reads the source, writes only to a new immutable bundle, does not follow
+symlinks, and compares source type/size/mtime/symlink metadata before and after
+collection. An existing destination is refused.
 
 ## Phase Mapping
 
@@ -83,6 +94,30 @@ Use a unique destination below:
 The destination must not exist before staging and must never be overwritten.
 The manifests retain the original absolute and relative source paths.
 
+Collector usage:
+
+```bash
+python3 TOP/pnr/scripts/collect_pvs_lvs_readonly.py \
+  --source-run <historical-PVS-LVS-directory> \
+  --bundle-root <new-immutable-raw-bundle>
+```
+
+Generated evidence includes:
+
+- `source_inventory.tsv`, `inventory_by_date.tsv`, and
+  `inventory_by_size.tsv`;
+- `selected_file_manifest.tsv`, exact copied controls/reports/logs, and local
+  or referenced project source netlists;
+- `external_reference_manifest.tsv` with type, size, mtime, and SHA256 for GDS,
+  PDK, CDL, rule, tool, and other references;
+- `input_contract_extract.rpt`, `pvs_tool_version_extract.rpt`,
+  `lvs_status_extract.rpt`, and `netlist_port_extract.rpt`;
+- `pin_name_audit.rpt`, including adjacent bracket dimensions and empty bracket
+  groups;
+- `hashes.sha256` and `collection_status.rpt`;
+- `git_text_candidate/`, which excludes GDS, OA, full netlists, PDK collateral,
+  installed rule decks, and PVS result databases.
+
 ## Git Evidence Policy
 
 Git receives only small review artifacts after the raw bundle exists:
@@ -121,6 +156,46 @@ and any proven secondary classes:
 Do not assign `MANUAL_DIFFCON_EXTRACTION` merely because DIFFCON was added.
 That class requires a report-level device or connectivity delta at the edited
 location.
+
+## Multi-Dimensional Pin-Name Hypothesis
+
+Names such as `foo[3][2]`, `foo<3><2>`, escaped Verilog identifiers, and truly
+empty forms such as `foo[][]` must be inventoried, but their presence alone is
+not an LVS root cause.
+
+The hypothesis becomes proven only when the evidence shows one of these:
+
+- source parsing changed or rejected the name;
+- layout and source normalized the same bit differently, for example
+  `foo[3][2]` versus `foo<3><2>` without an accepted equivalence rule;
+- an unmatched/extra/missing top-port report names those exact terminals;
+- two distinct scalar pins collapsed onto one canonical name;
+- hierarchy flattening changed array dimensions or bit order.
+
+If both compared sides preserve and match the same scalar terminal names, the
+double dimension is not the mismatch cause.
+
+Do not reroute merely to replace `[][]`. Routing geometry does not repair a
+source-parser or boundary-label naming contract. If a naming mismatch is
+proven, choose one reviewed canonical convention and change every affected
+contract together: RTL/source netlist, OA terminals and labels, LEF pins,
+Verilog escapes, constraints, testbench mappings, and LVS controls. A flattened
+index such as `k=i*NJ+j` or a physical name such as `foo_i_j` is possible only
+after dimensions and ordering are frozen; using `i+j` is not unique and can
+alias different pairs.
+
+## PG, Routing, and Antenna Scope
+
+- Improve packet-core PG only if LVS evidence proves VDD/VSS opens, shorts,
+  missing globals, or boundary-PG disagreement. Do not mix a speculative PG
+  redesign into a port-name investigation.
+- Improve signal routing only after an extracted open/short identifies the net
+  and location. A top-name, library, hierarchy, or label mismatch is not fixed
+  by rerouting.
+- Antenna is a separate DRC/manufacturability gate, not an LVS comparison gate.
+  It may remain deferred during this read-only LVS diagnosis, but it cannot be
+  ignored for final handoff or signoff. Preserve its marker count and repair it
+  in a separately reviewed step.
 
 ## Reproducible Rerun Gate
 

@@ -29,7 +29,7 @@ Genus or Innovus and must not modify MPTDC internals.
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
 | P02 | Restore-only internal PG for the narrow strip | R4_HELPER_METHOD_FAIL_DIAG_PENDING | PG marker decomposition, post-PG connectivity/DRC, merged GDS audit |
-| P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff and historical LVS intake | REGISTERED_PENDING_SERVER_INVENTORY | OA backup, bbox/pin parity, GDS audit, read-only LVS input inventory |
+| P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff and historical LVS intake | READ_ONLY_COLLECTOR_READY | OA backup, bbox/pin parity, GDS audit, read-only LVS input inventory |
 | P04 | Per-block PVS closure, mismatch classification, and handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, explicit LVS verdict, diagnostic, hashes, promotion gate |
 | P05 | Phase-A TX assembly generation and geometry gate | BLOCKED_BY_P04 | No obstacle overlap, exact placements, exact 19-net contract |
 | P06 | Phase-A TX assembly route | BLOCKED_BY_P05 | Checkpoints 00/01/02, selected-net connectivity, DRC, timing |
