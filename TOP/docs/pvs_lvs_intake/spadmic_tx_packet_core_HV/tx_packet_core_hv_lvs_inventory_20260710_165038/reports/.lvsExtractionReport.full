@@ -1,0 +1,275 @@
+			*****************************************************
+			**                                                 **
+			**                L V S  R E P O R T               **
+			**                                                 **
+			*****************************************************
+
+
+Report File Name         : spadmic_tx_packet_core_HV_lvs.sum
+ERC Summary File         : spadmic_tx_packet_core_HV.sum
+LVS Comparison Report    : spadmic_tx_packet_core_HV_lvs.sum.cls
+LVS Softchk Report       : spadmic_tx_packet_core_HV.softchk
+Layout Name              : /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.gds ("spadmic_tx_packet_core_HV")
+User Name                : ebecheto
+Creation Time            : Fri Jul 10 14:50:06 2026
+Current directory        : /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
+PVS Version              : 22.22-s005 Thu Jun 29 17:49:16 PDT 2023
+
+
+			*****************************************************
+			**                                                 **
+			**            D E V E X T  R E P O R T             **
+			**                                                 **
+			*****************************************************
+
+
+    LVS_SOFTCHK result file "spadmic_tx_packet_core_HV.softchk"
+    LVS_SOFTCHK nwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result    28511 (   28567)
+    LVS_SOFTCHK hvnwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK ndftrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK hnw -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK catdiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK anodiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pwitrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pdf -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK bulk -TYPE CONTACT   Total Result        0 (       0)
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803781"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      11)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803784"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       5)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803786"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      13)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803789"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037811"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      28)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037816"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       4)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037817"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037814"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of connectivity for cell "spadmic_tx_packet_core"
+---------------------------------------------------------------------
+
+[WARN] Different labels for net 44, it is assigned to "output_fifo_free_words_o[0]":
+    [1] Label "output_fifo_free_words_o[0]" on layer 50283(MET3_TEXT) at (0.400, 284.760)
+    [2] Label "output_fifo_level_o[0]" on layer 50283(MET3_TEXT) at (0.400, 223.720)
+
+
+Clean cell list (added by extraction report parser )
+ for cell "AN211JIHDX1"
+ for cell "AN21JIHDX0"
+ for cell "AN21JIHDX1"
+ for cell "AN221JIHDX1"
+ for cell "AN221JIHDX2"
+ for cell "AN221JIHDX4"
+ for cell "AN222JIHDX1"
+ for cell "AN22JIHDX1"
+ for cell "AND2JIHDX0"
+ for cell "AND2JIHDX1"
+ for cell "AND2JIHDX2"
+ for cell "AND2JIHDX4"
+ for cell "AND3JIHDX0"
+ for cell "AND3JIHDX1"
+ for cell "AND3JIHDX4"
+ for cell "AND4JIHDX1"
+ for cell "AND6JIHDX1"
+ for cell "AO211JIHDX0"
+ for cell "AO21JIHDX1"
+ for cell "AO21JIHDX4"
+ for cell "AO221JIHDX0"
+ for cell "AO221JIHDX1"
+ for cell "AO221JIHDX2"
+ for cell "AO222JIHDX0"
+ for cell "AO222JIHDX1"
+ for cell "AO222JIHDX2"
+ for cell "AO22JIHDX0"
+ for cell "AO22JIHDX1"
+ for cell "AO22JIHDX2"
+ for cell "AO32JIHDX0"
+ for cell "BUJIHDX1"
+ for cell "BUJIHDX12"
+ for cell "BUJIHDX2"
+ for cell "BUJIHDX3"
+ for cell "BUJIHDX4"
+ for cell "BUJIHDX6"
+ for cell "BUJIHDX8"
+ for cell "DFRQJIHDX1"
+ for cell "DFRRJIHDX1"
+ for cell "DFRRJIHDX2"
+ for cell "DFRRQJIHDX1"
+ for cell "EN2JIHDX0"
+ for cell "EO2JIHDX0"
+ for cell "FEED10JIHD"
+ for cell "FEED15JIHD"
+ for cell "FEED1JIHD"
+ for cell "FEED25JIHD"
+ for cell "FEED2JIHD"
+ for cell "FEED3JIHD"
+ for cell "FEED5JIHD"
+ for cell "FEED7JIHD"
+ for cell "HAJIHDX0"
+ for cell "INJIHDX0"
+ for cell "INJIHDX1"
+ for cell "INJIHDX2"
+ for cell "INJIHDX3"
+ for cell "INJIHDX4"
+ for cell "INJIHDX6"
+ for cell "INJIHDX8"
+ for cell "MU2IJIHDX0"
+ for cell "MU2IJIHDX1"
+ for cell "MU2JIHDX0"
+ for cell "MU2JIHDX1"
+ for cell "NA22JIHDX1"
+ for cell "NA2I1JIHDX0"
+ for cell "NA2I1JIHDX1"
+ for cell "NA2I1JIHDX2"
+ for cell "NA2I1JIHDX4"
+ for cell "NA2JIHDX0"
+ for cell "NA2JIHDX1"
+ for cell "NA2JIHDX2"
+ for cell "NA2JIHDX4"
+ for cell "NA3I2JIHDX2"
+ for cell "NA4JIHDX1"
+ for cell "NA5I3JIHDX0"
+ for cell "NA5I3JIHDX1"
+ for cell "NA5I3JIHDX2"
+ for cell "NA5I3JIHDX4"
+ for cell "NO22JIHDX0"
+ for cell "NO2I1JIHDX0"
+ for cell "NO2I1JIHDX1"
+ for cell "NO2I1JIHDX2"
+ for cell "NO2I1JIHDX4"
+ for cell "NO2JIHDX0"
+ for cell "NO2JIHDX1"
+ for cell "NO2JIHDX2"
+ for cell "NO2JIHDX4"
+ for cell "NO3I2JIHDX0"
+ for cell "NO3I2JIHDX1"
+ for cell "NO3JIHDX0"
+ for cell "NO4I2JIHDX0"
+ for cell "NO5I2JIHDX2"
+ for cell "NO5I3JIHDX1"
+ for cell "NO6I5JIHDX1"
+ for cell "NO6I5JIHDX2"
+ for cell "NO6I5JIHDX4"
+ for cell "ON211JIHDX0"
+ for cell "ON21JIHDX1"
+ for cell "ON221JIHDX0"
+ for cell "ON221JIHDX4"
+ for cell "ON222JIHDX0"
+ for cell "ON22JIHDX0"
+ for cell "ON31JIHDX0"
+ for cell "ON32JIHDX0"
+ for cell "OR2JIHDX0"
+ for cell "OR2JIHDX1"
+ for cell "OR2JIHDX2"
+ for cell "OR2JIHDX4"
+ for cell "OR4JIHDX1"
+ for cell "OR5JIHDX1"
+ for cell "VIA1_CH1_eo"
+ for cell "VIA1_CH1_hd"
+ for cell "VIA1_CH1_so"
+ for cell "VIA1_CH1_so2"
+ for cell "VIA1_CH1_so_hd2"
+ for cell "VIA1_CH1n_beo"
+ for cell "VIA1_CH1s_beo"
+ for cell "VIA1_CH2_eo"
+ for cell "VIA1_CH2_hd"
+ for cell "VIA1_CH2_so"
+ for cell "VIA1_CH2_so2"
+ for cell "VIA1_CH2_so_hd2"
+ for cell "VIA1_CH2n_beo"
+ for cell "VIA1_CH2s_beo"
+ for cell "VIA1_CV1_eo"
+ for cell "VIA1_CV1_hd"
+ for cell "VIA1_CV1_so"
+ for cell "VIA1_CV1e_beo"
+ for cell "VIA1_CV1w_beo"
+ for cell "VIA1_CV2_hd"
+ for cell "VIA1_CV2_so"
+ for cell "VIA1_CV2e_beo"
+ for cell "VIA1_CV2w_beo"
+ for cell "VIA1_C_CDNS_7836878037810"
+ for cell "VIA1_C_CDNS_7836878037818"
+ for cell "VIA1_C_CDNS_783687803782"
+ for cell "VIA1_C_CDNS_783687803783"
+ for cell "VIA1_C_CDNS_783687803785"
+ for cell "VIA1_X_so"
+ for cell "VIA1_Y_so"
+ for cell "VIA1_o"
+ for cell "VIA2_CH1_hd"
+ for cell "VIA2_CH1_so"
+ for cell "VIA2_CH1n_beo"
+ for cell "VIA2_CH1s_beo"
+ for cell "VIA2_CH2_hd"
+ for cell "VIA2_CH2_so"
+ for cell "VIA2_CH2n_beo"
+ for cell "VIA2_CH2s_beo"
+ for cell "VIA2_CV1_hd"
+ for cell "VIA2_CV1_so"
+ for cell "VIA2_CV1e_beo"
+ for cell "VIA2_CV1w_beo"
+ for cell "VIA2_CV2_eo"
+ for cell "VIA2_CV2_hd"
+ for cell "VIA2_CV2_so"
+ for cell "VIA2_CV2e_beo"
+ for cell "VIA2_CV2w_beo"
+ for cell "VIA2_C_CDNS_783687803780"
+ for cell "VIA2_C_CDNS_783687803787"
+ for cell "VIA2_C_CDNS_783687803788"
+ for cell "VIA2_north_TOS_so"
+ for cell "VIA2_o"
+ for cell "VIA2_so"
+ for cell "VIA2_south_TOS_so"

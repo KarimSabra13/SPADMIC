@@ -1,0 +1,44 @@
+##############################################################################################################
+#####  
+#####                                         PVS LVS COMPARISON
+#####  
+#####  Version                       :   22.22-s005
+#####  NVN Run Start                 :   Fri Jul 10 14:50:31 2026
+#####  ERC Summary File              :   spadmic_tx_packet_core_HV.sum
+#####  Extraction Report File        :   spadmic_tx_packet_core_HV_lvs.sum
+#####  Comparison Report File        :   spadmic_tx_packet_core_HV_lvs.sum.cls
+#####  Top Cell                      :   spadmic_tx_packet_core_HV  <vs>  spadmic_tx_packet_core
+#####  
+#####                                :      @     @
+#####                                :       @   @ 
+#####                                :        @ @  
+#####  Run Result                    :     MISMATCH
+#####                                :        @ @  
+#####                                :       @   @ 
+#####                                :      @     @
+#####  
+#####  Run Summary                   :   [ERROR] Extraction Errors (refer to Extraction Report File)
+#####                                :   [ERROR] Connectivity Mismatches
+#####                                :   [WARN]  Top Cell Has Extra Pins
+#####                                :   [INFO]  ERC Results: Empty
+#####                                :   [INFO]  Some Sections Have Been Truncated
+#####  
+#####  Layout Design                 :   SPADMIC_DIGITAL_BLOCKS_VIS_20260709_EB spadmic_tx_packet_core_HV layout
+#####  Schematic File                :   /sim/ksabra/SPADMIC_work/oa_signoff/tx_packet_core_HV_20260710_105525/netlist/tx_packet_core.routed.pg.v (verilog)
+#####  Rules File                    :   /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/.config.rul
+#####                                :   /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/.technology.rul
+#####  Pin Swap File                 :   spadmic_tx_packet_core_HV_lvs.sum.cps
+#####  
+#####  Extraction CPU Time           :   0h 0m 19s - (19s)
+#####  Extraction Exec Time          :   0h 0m 21s - (21s)
+#####  Extraction Peak Memory Usage  :   95.00MB
+#####  NVN CPU Time                  :   0h 0m 2s - (2s)                 
+#####  NVN Exec Time                 :   0h 0m 4s - (4s)                 
+#####  NVN Peak Memory Usage         :   492.93MB
+#####  LVS Total CPU Time            :   0h 0m 21s - (21s)               
+#####  LVS Total Exec Time           :   0h 0m 25s - (25s)               
+#####  LVS Total Peak Memory Usage   :   492.93MB
+#####  
+##############################################################################################################
+
+

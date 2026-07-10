@@ -1,0 +1,37 @@
+text_depth -primary;
+virtual_connect -colon no;
+virtual_connect -semicolon_as_colon yes;
+virtual_connect -noname;
+virtual_connect -report no;
+virtual_connect -depth -primary;
+lvs_ignore_ports no;
+lvs_expand_cell_on_error no;
+lvs_break_ambig_max 32;
+lvs_abort -softchk no;
+lvs_abort -supply_error no;
+lvs_abort -check_device_for_property_rule no;
+lvs_find_shorts no;
+sconnect_upper_shape_count no;
+lvs_report_file "spadmic_tx_packet_core_HV_lvs.sum";
+lvs_report_max 1000 -mismatched_net_limit 100;
+lvs_run_erc_checks yes;
+lvs_report_opt -none;
+report_summary -erc "spadmic_tx_packet_core_HV.sum" -replace;
+max_results -erc 1000;
+results_db -erc "/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV_lvs.err" -ascii;
+mask_svdb_dir "/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/svdb";
+keep_layers -none;
+schematic_path "/sim/ksabra/SPADMIC_work/oa_signoff/tx_packet_core_HV_20260710_105525/netlist/tx_packet_core.routed.pg.v" verilog;
+abort_on_layout_error yes;
+layout_format gdsii;
+layout_path "/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.gds";
+//=== Configurator controls ===
+//   LVS CONFIGURATION  
+//   #Select Floating Checks#  
+#UNDEFINE FloatingGate
+#UNDEFINE FloatingWell
+//   #Special Diode Extraction#  
+#UNDEFINE ParaDioAsDevDio
+//   #Select DUMMY Pattern Generation#   
+#UNDEFINE DUMMY_FILL
+//=== End of configurator controls ===

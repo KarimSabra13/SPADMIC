@@ -1,0 +1,37 @@
+class	path	type	size	mtime_utc	sha256	link_target	copy_status
+PDK_OR_STDCELL	/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmInOut.layertable	missing	0	MISSING	MISSING		REFERENCE_ONLY
+PDK_OR_STDCELL	/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	//	directory	4096	2024-07-22T07:19:41.039354+00:00	MISSING		REFERENCE_ONLY
+OTHER	//.spadmic_tx_packet_core_HV.ecdb	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	//===	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/PvsLVS/spadmic_tx_packet_core_HV	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/PvsLVS/spadmic_tx_packet_core_HV/pvsuilvs.log	missing	0	MISSING	MISSING		REFERENCE_ONLY
+CDL	/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.cdl	missing	0	MISSING	MISSING		REFERENCE_ONLY
+LAYOUT	/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.gds	missing	0	MISSING	MISSING		REFERENCE_ONLY
+SOURCE_NETLIST	/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.spi	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV_lvs.err	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV_lvs.err.waivers.applied	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV_lvs.err.waivers.rejected	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/bin/sh	symlink	4	2025-08-26T17:41:21+00:00	MISSING	bash	REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs	symlink	16	2023-10-13T17:38:33+00:00	MISSING	.cdnWrapperIndep	REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/share/lib/itcl/3.4.1	directory	4096	2023-10-13T17:38:43+00:00	MISSING		REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/share/lib/tcllib/1.18	directory	4096	2023-10-13T17:38:45+00:00	MISSING		REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/share/lib/tcltk/08.64/tcl8.6	directory	4096	2023-10-13T17:39:02+00:00	MISSING		REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/share/lib/tclx/08.40	directory	4096	2023-10-13T17:38:45+00:00	MISSING		REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/share/lib/tclxml/3.2	directory	4096	2023-10-13T17:38:47+00:00	MISSING		REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools.lnx86/pvs/bin/64bit/edbToEcdb	file	2178296	2023-06-30T00:57:40+00:00	e206b55c3e3c4e9ee10a3488900610b94420bf12d9e2c1fd9f1b782257887182		REFERENCE_ONLY
+PDK_OR_STDCELL	/eda/cadence/2023-24/RHELx86/PVS_22.22.000/tools.lnx86/pvs/bin/64bit/pvsvirt	file	6300544	2023-06-30T00:57:42+00:00	fdace2f4de27a70dbe54c1f16b164208ef4164c2af7a5d1c4d8a9462dbe1b4bf		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0	directory	24576	2026-07-10T14:44:30.897212+00:00	MISSING		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.cadence	directory	4096	2026-06-18T13:04:19.263635+00:00	MISSING		REFERENCE_ONLY
+RULE_DECK	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/../xh018_LVS.rul	file	241566	2025-07-08T12:35:49+00:00	30c5b47434035ca4b9540f2f333fc2506a063f0b3dfc05f49de72c3a60c755f0		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.pvsSetup/PVS/../../.xkit/setup/xh018/cadence/pvs/PVS/XH018_1131/metalswitch.pvl	symlink	10	2025-07-10T05:43:05+00:00	MISSING	xh018_1131	REFERENCE_ONLY
+PDK_OR_STDCELL	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmInOut.layertable	file	9597	2025-06-04T06:56:41+00:00	3198c31b841a29b1126206f7962632fd7f6dc239c53931962cd57327d2320869		REFERENCE_ONLY
+PDK_OR_STDCELL	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map	file	1213	2022-04-12T13:27:27+00:00	151695165c1679190e1f95aa0ccb854de233c7a7e3f589a5ac83c93c0c487c7c		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/cds.lib	file	4172	2026-07-10T13:22:23.562570+00:00	68c892b7eccccf01d33068107f8414e66d85be1418420fa3474beb8879649e87		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/pvtech.lib	file	52	2026-06-18T13:48:57.882299+00:00	1fe31de76c4b1c0d69afe6bdb31ccad89dd1f43429697f5043c57d4547a93bef		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/pvtech.lib:	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/ksabra/cds_V0/TX_EGRESS_CORE_VIS_20260709	missing	0	MISSING	MISSING		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/mathez/cds/design	directory	4096	2026-06-26T05:50:31.297650+00:00	MISSING		REFERENCE_ONLY
+OTHER	/group/validmgr/PROJET/Prj_xh018/project.lib	file	1953	2026-07-09T18:28:01.911111+00:00	e3cc151c35dc43790b62a7258b63d09222bbb64f0024d1bd6ce975a70af27296		REFERENCE_ONLY
+SOURCE_NETLIST	/sim/ksabra/SPADMIC_work/oa_signoff/tx_packet_core_HV_20260710_105525/netlist/tx_packet_core.routed.pg.v	file	2385540	2026-07-09T16:38:15.816966+00:00	4d5afdeb460288ef384d5865b18ccda7ee0612938fa10a77b742ba80e06b4d97		COPIED_PROJECT_SOURCE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_tx_packet_core/tx_packet_core_hv_lvs_inventory_20260710_165038/pvs/lvs/raw/tx_packet_core_hv_lvs_inventory_20260710_165038/netlist/external/tx_packet_core.routed.pg.v
+OTHER	/sim/ksabra/SPADMIC_work/oa_signoff/tx_packet_core_HV_20260710_105525/netlist/tx_packet_core.routed.pg.v...	missing	0	MISSING	MISSING		REFERENCE_ONLY

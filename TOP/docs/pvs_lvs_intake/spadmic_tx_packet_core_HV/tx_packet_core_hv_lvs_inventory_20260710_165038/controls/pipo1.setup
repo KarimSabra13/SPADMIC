@@ -1,0 +1,19 @@
+case	"preserve"
+convertDot	"node"
+convertPin	"geometryAndText"
+hierDepth	32
+labelCase	"preserve"
+labelDepth	32
+layerMap	"/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmInOut.layertable"
+library	"SPADMIC_DIGITAL_BLOCKS_VIS_20260709_EB"
+logFile	"/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/PIPO1.LOG"
+maxVertices	2048
+objectMap	"/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map"
+pinAttNum	0
+runDir	"/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV"
+strmFile	"/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.gds"
+strmVersion	5
+techLib	"TECH_XH018"
+topCell	"spadmic_tx_packet_core_HV"
+view	"layout"
+enableColoring

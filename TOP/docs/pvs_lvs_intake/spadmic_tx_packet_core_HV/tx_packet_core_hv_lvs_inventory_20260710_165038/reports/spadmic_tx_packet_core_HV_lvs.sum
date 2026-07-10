@@ -1,0 +1,108 @@
+			*****************************************************
+			**                                                 **
+			**                L V S  R E P O R T               **
+			**                                                 **
+			*****************************************************
+
+
+Report File Name         : spadmic_tx_packet_core_HV_lvs.sum
+ERC Summary File         : spadmic_tx_packet_core_HV.sum
+LVS Comparison Report    : spadmic_tx_packet_core_HV_lvs.sum.cls
+LVS Softchk Report       : spadmic_tx_packet_core_HV.softchk
+Layout Name              : /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.gds ("spadmic_tx_packet_core_HV")
+User Name                : ebecheto
+Creation Time            : Fri Jul 10 14:50:06 2026
+Current directory        : /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
+PVS Version              : 22.22-s005 Thu Jun 29 17:49:16 PDT 2023
+
+
+			*****************************************************
+			**                                                 **
+			**            D E V E X T  R E P O R T             **
+			**                                                 **
+			*****************************************************
+
+
+    LVS_SOFTCHK result file "spadmic_tx_packet_core_HV.softchk"
+    LVS_SOFTCHK nwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result    28511 (   28567)
+    LVS_SOFTCHK hvnwtrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK ndftrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK hnw -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK catdiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK anodiff -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pwitrm -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK pdf -TYPE CONTACT   Total Result        0 (       0)
+    LVS_SOFTCHK bulk -TYPE CONTACT   Total Result        0 (       0)
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803781"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      11)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803784"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       5)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803786"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      13)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_783687803789"
+--------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037811"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      28)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037816"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       4)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037817"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of connectivity for cell "ND_C_auto_CDNS_7836878037814"
+---------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of connectivity for cell "spadmic_tx_packet_core"
+---------------------------------------------------------------------
+
+[WARN] Different labels for net 44, it is assigned to "output_fifo_free_words_o[0]":
+    [1] Label "output_fifo_free_words_o[0]" on layer 50283(MET3_TEXT) at (0.400, 284.760)
+    [2] Label "output_fifo_level_o[0]" on layer 50283(MET3_TEXT) at (0.400, 223.720)
+

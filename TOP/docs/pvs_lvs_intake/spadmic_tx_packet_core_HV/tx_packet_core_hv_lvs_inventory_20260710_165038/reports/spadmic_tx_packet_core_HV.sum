@@ -1,0 +1,207 @@
+********************************************************************************
+*** PVS HERC SUMMARY
+***
+Execute on Date/Time    : Fri Jul 10 14:50:04 2026
+PVS HERC VERSION        : 22.22-s005 Thu Jun 29 17:49:16 PDT 2023
+Rule Deck Path          : /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/.config.rul
+Rule Deck Title         : " XH018 PVS DRC/LVS File v10.1.1 : MET3 / METMID "
+Layout System           : GDSII
+Layout Path             : /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.gds
+Current Directory       : /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
+User Name:              : ebecheto
+Maximum Results         : 1000
+Maximum Result Vertices : 4096
+Layout Depth            : ALL
+Text Depth              : 0
+Summary File            : spadmic_tx_packet_core_HV.sum
+Geometry Flagging       : ACUTE = YES  ANGLED = NO  SKEW = YES  OFFGRID = YES
+                          NONSIMPLE POLYGON = YES  NONSIMPLE PATH = YES
+Keep Empty Checks       : YES
+Excluded Cells          : 
+Layout Primary Cell     : spadmic_tx_packet_core_HV
+LVS Softchk Report      : spadmic_tx_packet_core_HV.softchk
+ASCII ERC Error Report  :
+ERC Results Database    :
+--------------------------------------------------------------------------------
+--- RUNNING TIME WARNINGS
+---
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_783687803781"
+------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      11)
+
+
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_783687803784"
+------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       5)
+
+
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_783687803786"
+------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      13)
+
+
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_783687803789"
+------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_7836878037811"
+-------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (      28)
+
+
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_7836878037816"
+-------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       4)
+
+
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_7836878037817"
+-------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of extraction for cell "ND_C_auto_CDNS_7836878037814"
+-------------------------------------------------------------------------
+
+[WARN] Stamping conflict in SCONNECT(Multiple source nets stamp one target net):
+    LVS_SOFTCHK dnwtrm -TYPE CONTACT   Total Result        1 (       1)
+
+
+
+Warnings and errors of extraction for cell "spadmic_tx_packet_core"
+-------------------------------------------------------------------
+
+[WARN] Different labels for net 44, it is assigned to "output_fifo_free_words_o[0]":
+    [1] Label "output_fifo_free_words_o[0]" on layer 50283(MET3_TEXT) at (0.400, 284.760)
+    [2] Label "output_fifo_level_o[0]" on layer 50283(MET3_TEXT) at (0.400, 223.720)
+
+--------------------------------------------------------------------------------
+--- ORIGINAL LAYER STATISTICS
+---
+LAYER met1_dg .................... Total Original Geometry:      886 (  205510)
+LAYER met2_dg .................... Total Original Geometry:   101245 (  198608)
+LAYER met3_dg .................... Total Original Geometry:    74924 (  123491)
+LAYER mettp_dg ................... Total Original Geometry:        2 (       2)
+LAYER nwell ...................... Total Original Geometry:      110 (   34292)
+LAYER nwrdef ..................... Total Original Geometry:        0 (       0)
+LAYER diff_dg .................... Total Original Geometry:      276 (   69137)
+LAYER diff_dyi ................... Total Original Geometry:        0 (       0)
+LAYER resdiff .................... Total Original Geometry:        0 (       0)
+LAYER mvdg ....................... Total Original Geometry:        0 (       0)
+LAYER pimp ....................... Total Original Geometry:      221 (   68585)
+LAYER nimp ....................... Total Original Geometry:      235 (   68655)
+LAYER pwblk ...................... Total Original Geometry:        1 (       1)
+LAYER poly_dg .................... Total Original Geometry:      482 (  120720)
+LAYER poly_dyi ................... Total Original Geometry:        0 (       0)
+LAYER POLY1_TEXT ................. Total Original Geometry:        0 (       0)
+LAYER id_txt ..................... Total Original Geometry:        0 (       0)
+LAYER cont ....................... Total Original Geometry:    14187 (  926909)
+LAYER met1_dyi ................... Total Original Geometry:        0 (       0)
+LAYER m1hole ..................... Total Original Geometry:        0 (       0)
+LAYER MET1_TEXT .................. Total Original Geometry:        0 (       0)
+LAYER m1rdef ..................... Total Original Geometry:        0 (       0)
+LAYER via1 ....................... Total Original Geometry:       65 (   95164)
+LAYER met2_dyi ................... Total Original Geometry:        0 (       0)
+LAYER m2hole ..................... Total Original Geometry:        0 (       0)
+LAYER MET2_TEXT .................. Total Original Geometry:        0 (       0)
+LAYER m2rdef ..................... Total Original Geometry:        0 (       0)
+LAYER pad ........................ Total Original Geometry:        0 (       0)
+LAYER via2 ....................... Total Original Geometry:       49 (   94639)
+LAYER met3_dyi ................... Total Original Geometry:        0 (       0)
+LAYER m3hole ..................... Total Original Geometry:        0 (       0)
+LAYER MET3_TEXT .................. Total Original Geometry:        0 (       0)
+LAYER m3rdef ..................... Total Original Geometry:        0 (       0)
+LAYER mettp_dyi .................. Total Original Geometry:        0 (       0)
+LAYER mthole ..................... Total Original Geometry:        0 (       0)
+LAYER METTP_TEXT ................. Total Original Geometry:        0 (       0)
+LAYER mtrdef ..................... Total Original Geometry:        0 (       0)
+LAYER sblk ....................... Total Original Geometry:        0 (       0)
+LAYER capm2 ...................... Total Original Geometry:        0 (       0)
+LAYER capm3 ...................... Total Original Geometry:        0 (       0)
+LAYER lvt ........................ Total Original Geometry:        0 (       0)
+LAYER mres ....................... Total Original Geometry:        0 (       0)
+LAYER lndev ...................... Total Original Geometry:        0 (       0)
+LAYER aml ........................ Total Original Geometry:        0 (       0)
+LAYER capm ....................... Total Original Geometry:        0 (       0)
+LAYER viatp ...................... Total Original Geometry:        0 (       0)
+LAYER diodef ..................... Total Original Geometry:        0 (       0)
+LAYER hres ....................... Total Original Geometry:        0 (       0)
+LAYER dnwell ..................... Total Original Geometry:        2 (       2)
+LAYER capdef ..................... Total Original Geometry:        0 (       0)
+LAYER hvgox ...................... Total Original Geometry:        0 (       0)
+LAYER hvpwell .................... Total Original Geometry:        1 (       1)
+LAYER hvnwell .................... Total Original Geometry:        0 (       0)
+LAYER pdd ........................ Total Original Geometry:        0 (       0)
+LAYER sci ........................ Total Original Geometry:        0 (       0)
+LAYER depl ....................... Total Original Geometry:        0 (       0)
+LAYER pwiso ...................... Total Original Geometry:      110 (   34292)
+LAYER dnw_mv ..................... Total Original Geometry:      110 (   34292)
+LAYER dnmrdef .................... Total Original Geometry:        0 (       0)
+LAYER idftxt ..................... Total Original Geometry:        0 (       0)
+LAYER devmark .................... Total Original Geometry:        0 (       0)
+LAYER PHODEF_TEXT ................ Total Original Geometry:        0 (       0)
+LAYER phodef ..................... Total Original Geometry:        0 (       0)
+LAYER ip1txt ..................... Total Original Geometry:        0 (       0)
+LAYER id1txt ..................... Total Original Geometry:        0 (       0)
+LAYER hvdepl ..................... Total Original Geometry:        0 (       0)
+LAYER id2txt ..................... Total Original Geometry:        0 (       0)
+LAYER capm23f .................... Total Original Geometry:        0 (       0)
+LAYER capmh23f ................... Total Original Geometry:        0 (       0)
+LAYER id3txt ..................... Total Original Geometry:        0 (       0)
+LAYER uvwin ...................... Total Original Geometry:        0 (       0)
+LAYER anodop ..................... Total Original Geometry:        0 (       0)
+LAYER catdop ..................... Total Original Geometry:        0 (       0)
+LAYER idttxt ..................... Total Original Geometry:        0 (       0)
+LAYER dnc ........................ Total Original Geometry:        0 (       0)
+LAYER hnw ........................ Total Original Geometry:        0 (       0)
+LAYER ndf ........................ Total Original Geometry:        0 (       0)
+LAYER pdf ........................ Total Original Geometry:        0 (       0)
+LAYER capmh ...................... Total Original Geometry:        0 (       0)
+LAYER capmh2 ..................... Total Original Geometry:        0 (       0)
+LAYER capmh3 ..................... Total Original Geometry:        0 (       0)
+LAYER subcut ..................... Total Original Geometry:        0 (       0)
+LAYER bnimp ...................... Total Original Geometry:        0 (       0)
+LAYER uln ........................ Total Original Geometry:        0 (       0)
+LAYER svt ........................ Total Original Geometry:        0 (       0)
+LAYER dnwella .................... Total Original Geometry:        0 (       0)
+--------------------------------------------------------------------------------
+--- WARNINGS FROM FLAG STATEMENT
+---
+Offgrid Vertex on layer dnwell at location (-1.190,-2.244) in cell spadmic_tx_packet_core_HV.
+Offgrid Vertex on layer dnwell at location (2078.110,-2.244) in cell spadmic_tx_packet_core_HV.
+Offgrid Vertex on layer dnwell at location (2078.110,368.076) in cell spadmic_tx_packet_core_HV.
+Offgrid Vertex on layer dnwell at location (-1.190,368.076) in cell spadmic_tx_packet_core_HV.
+--------------------------------------------------------------------------------
+--- RULECHECK RESULTS STATISTICS
+---
+--------------------------------------------------------------------------------
+--- SUMMARY
+---
+Total CPU Time                    : 19(s)
+Total Real Time                   : 21(s)
+Peak Memory Used                  : 95(M)
+Total Original Geometry           : 192906 (2074300)
+Total ERC RuleChecks              : 0
+Total ERC Results                 : 0 (0)

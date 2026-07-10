@@ -1,0 +1,720 @@
+;| version 1
+text text_p1trm attach p1trm
+text text_m1trm attach m1trm
+text text_m2trm attach m2trm
+text text_m3trm attach m3trm
+text text_mttrm attach mttrm
+text text_dphopin3 attach dphopin3
+connect capswp1 p1trm
+connect capswm1 m1trm
+connect capswm2 m2trm
+connect capswm3 m3trm
+connect dphopin3 dphopin3 by dphopin3
+connect mt_vlbl mttrm
+connect mttrm m3trm by vtpCON
+connect mttrm capm by vtpcm
+connect mttrm capmh by vtpcmh
+connect mttrm capm2_t by vtpcm2
+connect mttrm capmh2_t by vtpcmh2
+connect m3trm m2trm by via2CON
+connect m3trm capm2_b by v2cm2
+connect m3trm capmh2_b by v2cmh2
+connect m3trm capm23f by v2cm
+connect m3trm capmh23f by v2cmh
+connect m3_vlbl m3trm
+connect m2trm m1trm by via1
+connect m2_vlbl m2trm
+connect m1trm p1trm ndiff pdiff by cont
+connect m1_vlbl m1trm
+connect df_vlbl ndiff
+connect df_vlbl pdiff
+connect p1_vlbl p1trm
+connect ndiff bndiff by bndct
+connect df_vlbl bndiff
+connect ndiff davl_c2
+connect ndiff npdct by npdtap
+connect pdiff npdct by npdtap
+sconnect m1trm d_dsdf by d_dsc
+sconnect ndiff nwtrm by ntap
+sconnect ndiff dnwtrm by dntap
+sconnect ndiff hvnwtrm by hntap
+sconnect ndiff ndftrm by ndftap
+sconnect ndiff catdiff by catdfct
+sconnect m1trm catdiff by catm1ct
+stamp catdiff by df_vlbl
+sconnect ndiff hnw by hnwtap
+sconnect pdiff pwitrm by pwitap
+sconnect pdiff pdf by pdftap
+sconnect pdiff anodiff by anodfct
+stamp anodiff by df_vlbl
+sconnect pdiff bulk by ptap
+stamp dphod_c by nwtrm
+stamp dphod_nw by nwtrm
+stamp dpol_p by p1trm
+stamp dpol_n by p1trm
+stamp m1atrm by m1trm
+stamp m1btrm by m1trm
+stamp m1aftrm by m1trm
+stamp m1bftrm by m1trm
+model=mos[ne],ne
+element mos[ne] ne p1trm ndiff bulk
+model=mos[pe],pe
+element mos[pe] pe p1trm pdiff nwtrm
+model=mos[nel],nel
+element mos[nel] nel p1trm ndiff bulk
+model=mos[nelna],nelna
+element mos[nelna] nelna p1trm ndiff bulk
+model=mos[nesvt],nesvt
+element mos[nesvt] nesvt p1trm ndiff bulk
+model=mos[pel],pel
+element mos[pel] pel p1trm pdiff nwtrm
+model=mos[pesvt],pesvt
+element mos[pesvt] pesvt p1trm pdiff nwtrm
+model=mos[nei],nei
+element mos[nei] nei p1trm ndiff pwitrm
+model=mos[pei],pei
+element mos[pei] pei p1trm pdiff dnwtrm
+model=mos[neli],neli
+element mos[neli] neli p1trm ndiff pwitrm
+model=mos[peli],peli
+element mos[peli] peli p1trm pdiff dnwtrm
+model=mos[nelnai],nelnai
+element mos[nelnai] nelnai p1trm ndiff pwitrm
+model=mos[nesvti],nesvti
+element mos[nesvti] nesvti p1trm ndiff pwitrm
+model=mos[pesvti],pesvti
+element mos[pesvti] pesvti p1trm pdiff dnwtrm
+model=generic[NEI_6],NEI_6
+element generic[NEI_6] nei_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NEI_A_6],NEI_A_6
+element generic[NEI_A_6] nei_a_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NEI_M_6],NEI_M_6
+element generic[NEI_M_6] nei_m_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NELI_6],NELI_6
+element generic[NELI_6] neli_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NELI_M_6],NELI_M_6
+element generic[NELI_M_6] neli_m_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NELNAI_6],NELNAI_6
+element generic[NELNAI_6] nelnai_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NELNAI_M_6],NELNAI_M_6
+element generic[NELNAI_M_6] nelnai_m_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NESVTI_6],NESVTI_6
+element generic[NESVTI_6] nesvti_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NESVTI_M_6],NESVTI_M_6
+element generic[NESVTI_M_6] nesvti_m_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[PE_5],PE_5
+element generic[PE_5] pe_5 pdiff[D] p1trm[G] pdiff[S] nwtrm[B] bulk[SB]
+model=generic[PEL_5],PEL_5
+element generic[PEL_5] pel_5 pdiff[D] p1trm[G] pdiff[S] nwtrm[B] bulk[SB]
+model=generic[PEI_5],PEI_5
+element generic[PEI_5] pei_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PEI_A_5],PEI_A_5
+element generic[PEI_A_5] pei_a_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PEI_M_5],PEI_M_5
+element generic[PEI_M_5] pei_m_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PELI_5],PELI_5
+element generic[PELI_5] peli_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PELI_M_5],PELI_M_5
+element generic[PELI_M_5] peli_m_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PESVT_5],PESVT_5
+element generic[PESVT_5] pesvt_5 pdiff[D] p1trm[G] pdiff[S] nwtrm[B] bulk[SB]
+model=generic[PESVTI_5],PESVTI_5
+element generic[PESVTI_5] pesvti_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PESVTI_M_5],PESVTI_M_5
+element generic[PESVTI_M_5] pesvti_m_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=mos[nmma],nmma
+element mos[nmma] nmma_d p1trm hvnwtrm bulk
+model=mos[nmma_bjt],nmma_bjt
+element mos[nmma_bjt] nmma_b p1trm hvnwtrm bulk
+model=mos[pmma],pmma
+element mos[pmma] pmma_d p1trm pwitrm dnwtrm
+model=generic[PMMA_BJT],pmma_bjt
+element generic[PMMA_BJT] pmma_b pwitrm[D] p1trm[G] pwitrm[S] dnwtrm[B] bulk[SB]
+model=mos[nma],nma
+element mos[nma] nma_d p1trm ndiff bulk
+model=mos[nma_bjt],nma_bjt
+element mos[nma_bjt] nma_b p1trm ndiff bulk
+model=mos[pma],pma
+element mos[pma] pma_d p1trm pdiff hnw
+model=generic[PMA_BJT],pma_bjt
+element generic[PMA_BJT] pma_b pdiff[D] p1trm[G] pdiff[S] hnw[B] bulk[SB]
+model=mos[pmb],pmb
+element mos[pmb] pmb p1trm pdiff dnwtrm
+model=mos[nmmc],nmmc
+element mos[nmmc] nmmc_d p1trm ndftrm bulk
+model=mos[nmmd],nmmd
+element mos[nmmd] nmmd_d p1trm ndftrm bulk
+model=mos[nhhv],nhhv
+element mos[nhhv] nhhv_d p1trm ndftrm bulk
+model=mos[nhhvd],nhhvd
+element mos[nhhvd] nhhvd_d p1trm ndftrm bulk
+model=mos[nmmc_bjt],nmmc_bjt
+element mos[nmmc_bjt] nmmc_b p1trm ndftrm bulk
+model=mos[nmmd_bjt],nmmd_bjt
+element mos[nmmd_bjt] nmmd_b p1trm ndftrm bulk
+model=mos[nhhv_bjt],nhhv_bjt
+element mos[nhhv_bjt] nhhv_b p1trm ndftrm bulk
+model=mos[nhhvd_bjt],nhhvd_bjt
+element mos[nhhvd_bjt] nhhvd_b p1trm ndftrm bulk
+model=mos[pmmc],pmmc
+element mos[pmmc] pmmc_d p1trm pdf hnw
+model=generic[PMMC_BJT],pmmc_bjt
+element generic[PMMC_BJT] pmmc_b pdf[D] p1trm[G] pdf[S] hnw[B] bulk[SB]
+model=mos[phhv],phhv
+element mos[phhv] phhv_d p1trm pdf hnw
+model=generic[PHHV_BJT],phhv_bjt
+element generic[PHHV_BJT] phhv_b pdf[D] p1trm[G] pdf[S] hnw[B] bulk[SB]
+model=generic[nmc],nmc
+element generic[nmc] nmc_d ndftrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[nhv],nhv
+element generic[nhv] nhv_d ndftrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[nhvd],nhvd
+element generic[nhvd] nhvd_d ndftrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[nmc_bjt],nmc_bjt
+element generic[nmc_bjt] nmc_b ndftrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[nhv_bjt],nhv_bjt
+element generic[nhv_bjt] nhv_b ndftrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[nhvd_bjt],nhvd_bjt
+element generic[nhvd_bjt] nhvd_b ndftrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[pmc],pmc
+element generic[pmc] pmc_d pdf[D] p1trm[G] pdiff[S] hnw[B]
+model=generic[PMC_BJT],pmc_bjt
+element generic[PMC_BJT] pmc_b pdf[D] p1trm[G] pdiff[S] hnw[B] bulk[SB]
+model=generic[phv],phv
+element generic[phv] phv_d pdf[D] p1trm[G] pdiff[S] hnw[B]
+model=generic[PHV_BJT],phv_bjt
+element generic[PHV_BJT] phv_b pdf[D] p1trm[G] pdiff[S] hnw[B] bulk[SB]
+model=generic[nedi],nedi
+element generic[nedi] nedi2_d dnwtrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[nedia],nedia
+element generic[nedia] nedia2_d dnwtrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[ped],ped
+element generic[ped] ped12_d pwitrm[D] p1trm[G] pdiff[S] bulk[B]
+model=generic[ped2],ped2
+element generic[ped2] ped22_d pwitrm[D] p1trm[G] pdiff[S] bulk[B]
+model=generic[nedi_bjt],nedi_bjt
+element generic[nedi_bjt] nedi2_b dnwtrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[nedia_bjt],nedia_bjt
+element generic[nedia_bjt] nedia2_b dnwtrm[D] p1trm[G] ndiff[S] bulk[B]
+model=generic[ped_bjt],ped_bjt
+element generic[ped_bjt] ped12_b pwitrm[D] p1trm[G] pdiff[S] bulk[B]
+model=generic[ped2_bjt],ped2_bjt
+element generic[ped2_bjt] ped22_b pwitrm[D] p1trm[G] pdiff[S] bulk[B]
+model=bjt[qpva],qpva
+element bjt[qpva] qpva bulk nwtrm pdiff
+model=bjt[qpvb],qpvb
+element bjt[qpvb] qpvb bulk nwtrm pdiff
+model=bjt[qpvc],qpvc
+element bjt[qpvc] qpvc bulk nwtrm pdiff
+model=bjt[qpvascr],qpvascr
+element bjt[qpvascr] qpvascr bulk dnwtrm pwitrm
+model=bjt[qpvhscr],qpvhscr
+element bjt[qpvhscr] qpvhscr bulk hnw pdf
+model=bjt[qpvhbscr],qpvhbscr
+element bjt[qpvhbscr] qpvhbscr bulk hnw pwitrm
+model=bjt[qnva],qnva
+element bjt[qnva] qnva dnwtrm pwitrm ndiff bulk
+model=bjt[qnvb],qnvb
+element bjt[qnvb] qnvb dnwtrm pwitrm ndiff bulk
+model=bjt[qnvba],qnvba
+element bjt[qnvba] qnvba dnwtrm pwitrm ndiff bulk
+model=bjt[qnvbb],qnvbb
+element bjt[qnvbb] qnvbb dnwtrm pwitrm ndiff bulk
+model=bjt[qnvc],qnvc
+element bjt[qnvc] qnvc dnwtrm pwitrm ndiff bulk
+model=bjt[qnvca],qnvca
+element bjt[qnvca] qnvca dnwtrm pwitrm ndiff bulk
+model=bjt[qnvcb],qnvcb
+element bjt[qnvcb] qnvcb dnwtrm pwitrm ndiff bulk
+model=bjt[qnvz],qnvz
+element bjt[qnvz] qnvz dnwtrm pwitrm ndiff bulk
+model=mos[nn3],nn3
+element mos[nn3] nnm p1trm ndiff bulk
+model=mos[ne3],ne3
+element mos[ne3] nem p1trm ndiff bulk
+model=mos[nd3],nd3
+element mos[nd3] ndm p1trm ndiff bulk
+model=mos[ne3lna],ne3lna
+element mos[ne3lna] nemlna p1trm ndiff bulk
+model=mos[pe3],pe3
+element mos[pe3] pem p1trm pdiff nwtrm
+model=mos[pe3ln],pe3ln
+element mos[pe3ln] pemln p1trm pdiff nwtrm
+model=mos[pe3lna],pe3lna
+element mos[pe3lna] pemlna p1trm pdiff nwtrm
+model=mos[ne3i],ne3i
+element mos[ne3i] nemi p1trm ndiff pwitrm
+model=mos[nd3i],nd3i
+element mos[nd3i] ndmi p1trm ndiff pwitrm
+model=mos[ne3lnai],ne3lnai
+element mos[ne3lnai] nemlnai p1trm ndiff pwitrm
+model=mos[nds3i],nds3i
+element mos[nds3i] ndsmiP p1trm ndiff pwitrm
+model=mos[nds3i],nds3i
+element mos[nds3i] ndsmiE p1trm ndiff pwitrm
+model=mos[pe3i],pe3i
+element mos[pe3i] pemi p1trm pdiff dnwtrm
+model=mos[pe3lni],pe3lni
+element mos[pe3lni] pemlni p1trm pdiff dnwtrm
+model=mos[pe3lnai],pe3lnai
+element mos[pe3lnai] pemlnai p1trm pdiff dnwtrm
+model=generic[NE3I_6],NE3I_6
+element generic[NE3I_6] nemi_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NE3I_A_6],NE3I_A_6
+element generic[NE3I_A_6] nemi_a_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NE3I_M_6],NE3I_M_6
+element generic[NE3I_M_6] nemi_m_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[ND3I_6],ND3I_6
+element generic[ND3I_6] ndmi_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[ND3I_M_6],ND3I_M_6
+element generic[ND3I_M_6] ndmi_m_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NE3LNAI_6],NE3LNAI_6
+element generic[NE3LNAI_6] nemlnai_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[NE3LNAI_M_6],NE3LNAI_M_6
+element generic[NE3LNAI_M_6] nemlnai_m_6 ndiff[D] p1trm[G] ndiff[S] pwitrm[B] dnwtrm[NW] bulk[SB]
+model=generic[PE3_5],PE3_5
+element generic[PE3_5] pem_5 pdiff[D] p1trm[G] pdiff[S] nwtrm[B] bulk[SB]
+model=generic[PE3LN_5],PE3LN_5
+element generic[PE3LN_5] pemln_5 pdiff[D] p1trm[G] pdiff[S] nwtrm[B] bulk[SB]
+model=generic[PE3I_5],PE3I_5
+element generic[PE3I_5] pemi_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PE3I_A_5],PE3I_A_5
+element generic[PE3I_A_5] pemi_a_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PE3I_M_5],PE3I_M_5
+element generic[PE3I_M_5] pemi_m_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PE3LNI_5],PE3LNI_5
+element generic[PE3LNI_5] pemlni_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PE3LNI_M_5],PE3LNI_M_5
+element generic[PE3LNI_M_5] pemlni_m_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PE3LNA_5],PE3LNA_5
+element generic[PE3LNA_5] pemlna_5 pdiff[D] p1trm[G] pdiff[S] nwtrm[B] bulk[SB]
+model=generic[PE3LNAI_5],PE3LNAI_5
+element generic[PE3LNAI_5] pemlnai_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[PE3LNAI_M_5],PE3LNAI_M_5
+element generic[PE3LNAI_M_5] pemlnai_m_5 pdiff[D] p1trm[G] pdiff[S] dnwtrm[B] bulk[SB]
+model=generic[MOSVC],mosvc
+element generic[MOSVC] mosvc p1trm[G] nwtrm[NW] bulk[SB]
+model=generic[MOSVCI],mosvci
+element generic[MOSVCI] mosvci p1trm[G] pwitrm[PW] dnwtrm[DNW] bulk[SB]
+model=generic[MOSVCI_M],mosvci_m
+element generic[MOSVCI_M] mosvci_m p1trm[G] pwitrm[PW] dnwtrm[DNW] bulk[SB]
+model=generic[MOSVC3],mosvc3
+element generic[MOSVC3] mosvcm p1trm[G] nwtrm[NW] bulk[SB]
+model=generic[MOSVC3I],mosvc3i
+element generic[MOSVC3I] mosvcim p1trm[G] pwitrm[PW] dnwtrm[DNW] bulk[SB]
+model=generic[MOSVC3I_M],mosvc3i_m
+element generic[MOSVC3I_M] mosvcim_m p1trm[G] pwitrm[PW] dnwtrm[DNW] bulk[SB]
+model=bjt[qpva3],qpva3
+element bjt[qpva3] qpvma bulk nwtrm pdiff
+model=bjt[qpvb3],qpvb3
+element bjt[qpvb3] qpvmb bulk nwtrm pdiff
+model=bjt[qpvc3],qpvc3
+element bjt[qpvc3] qpvmc bulk nwtrm pdiff
+model=res[rnw],rnw
+element res[rnw] rnw nwtrm bulk
+model=res[rnw_scr],rnw_scr
+element res[rnw_scr] rnw_scr nwtrm bulk
+model=res[rdnwmv],rdnwmv
+element res[rdnwmv] rdnwmv dnwtrm bulk
+model=res[rdn],rdn
+element res[rdn] rdn ndiff bulk
+model=res[rdn],rdn
+element res[rdn] rdn_g ndiff bulk
+model=res[rdn],rdn
+element res[rdn] rdni ndiff pwitrm
+model=res[rdn],rdn
+element res[rdn] rdn_gi ndiff pwitrm
+model=res[rdn_esd],rdn_esd
+element res[rdn_esd] rdn_esdg ndiff bulk
+model=res[rdp],rdp
+element res[rdp] rdp pdiff nwtrm
+model=res[rdp],rdp
+element res[rdp] rdp_g pdiff nwtrm
+model=res[rdp],rdp
+element res[rdp] rdpi pdiff dnwtrm
+model=res[rdp],rdp
+element res[rdp] rdp_gi pdiff dnwtrm
+model=res[rdp_io],rdp_io
+element res[rdp_io] rdp_io_g pdiff dnwtrm
+model=res[rdp_esd],rdp_esd
+element res[rdp_esd] rdp_esdg pdiff hnw
+model=res[rdn3s],rdn3s
+element res[rdn3s] rdn3s ndiff bulk
+model=generic[tag_60v],tag_60v
+element generic[tag_60v] tdf_60 df_vlbl[N1]
+model=generic[tag_25v],tag_25v
+element generic[tag_25v] tdf_25 df_vlbl[N1]
+model=res[s_res],s_res
+element res[s_res] s_res bulk
+model=diode[dn],dn
+element diode[dn] d_dn bulk ndiff
+model=diode[dn],dn
+element diode[dn] d_dni1 pwitrm ndiff
+model=diode[dn],dn
+element diode[dn] d_dni2 pdf ndiff
+model=diode[p_dn],dn
+element diode[p_dn] p_dn bulk ndiff
+model=diode[p_dn],dn
+element diode[p_dn] p_dni1 pwitrm ndiff
+model=diode[p_dn],dn
+element diode[p_dn] p_dni2 pdf ndiff
+model=diode[p_dn],dn
+element diode[p_dn] p_dndpl bulk ndiff
+model=diode[p_dn],dn
+element diode[p_dn] p_dndpli pwitrm ndiff
+model=diode[p_dbn],dbn
+element diode[p_dbn] p_dbn bulk bndiff
+model=diode[dp],dp
+element diode[dp] d_dp pdiff nwtrm
+model=diode[dp],dp
+element diode[dp] d_dpi1 pdiff dnwtrm
+model=diode[dp],dp
+element diode[dp] d_dpi2 pdiff hnw
+model=diode[p_dp],dp
+element diode[p_dp] p_dp pdiff nwtrm
+model=diode[p_dp],dp
+element diode[p_dp] p_dpi1 pdiff dnwtrm
+model=diode[p_dp],dp
+element diode[p_dp] p_dpi2 pdiff hnw
+model=diode[p_dpndf],dpndf
+element diode[p_dpndf] p_dpndf pdiff ndftrm
+model=diode[p_dpndf],dpndf
+element diode[p_dpndf] pdpndfh pdiff hnw
+model=diode[dnw],dnw
+element diode[dnw] d_dnw bulk nwtrm
+model=diode[p_dnw],dnw
+element diode[p_dnw] p_dnw bulk nwtrm
+model=diode[dhnw],dhnw
+element diode[dhnw] d_dhnw bulk hvnwtrm
+model=diode[p_dhnw],dhnw
+element diode[p_dhnw] p_dhnw bulk hvnwtrm
+model=diode[dhpw],dhpw
+element diode[dhpw] d_dhpw pwitrm dnwtrm
+model=diode[p_dhpw],dhpw
+element diode[p_dhpw] p_dhpw pwitrm dnwtrm
+model=diode[ddnw],ddnw
+element diode[ddnw] d_ddnw bulk dnwtrm
+model=diode[p_ddnw],ddnw
+element diode[p_ddnw] p_ddnw bulk dnwtrm
+model=diode[ddnwa],ddnwa
+element diode[ddnwa] d_ddnwa bulk dnwtrm
+model=diode[p_ddnwa],ddnwa
+element diode[p_ddnwa] p_ddnwa bulk dnwtrm
+model=diode[ddnwmv],ddnwmv
+element diode[ddnwmv] d_ddnwmv bulk dnwtrm
+model=diode[p_ddnwmv],ddnwmv
+element diode[p_ddnwmv] p_ddnwmv bulk dnwtrm
+model=diode[dphoa],dphoa
+element diode[dphoa] dphoa bulk dnwtrm dphopin3
+model=diode[dphob],dphob
+element diode[dphob] dphob bulk dnwtrm dphopin3
+model=generic[DPHOC],dphoc
+element generic[DPHOC] dphoc bulk[A] catdiff[C] p1trm[POLY1] nwtrm[NW] dphopin3[LPOWER]
+model=generic[DPHOCFP],dphocfp
+element generic[DPHOCFP] dphocfp bulk[A] catdiff[C] p1trm[POLY1] nwtrm[NW] dphopin3[LPOWER]
+model=generic[DPHOC0],dphoc0
+element generic[DPHOC0] dphoc0 bulk[A] catdiff[C] p1trm[POLY1] nwtrm[NW] dphopin3[LPOWER]
+model=generic[DPHOD],dphod
+element generic[DPHOD] dphod anodiff[A1] bulk[A2] dphod_c[C] p1trm[POLY1] dphod_nw[NW] dphopin3[LPOWER]
+model=generic[DPHODFP],dphodfp
+element generic[DPHODFP] dphodfp anodiff[A1] bulk[A2] dphod_c[C] p1trm[POLY1] dphod_nw[NW] dphopin3[LPOWER]
+model=generic[DPHOD0],dphod0
+element generic[DPHOD0] dphod0 anodiff[A1] bulk[A2] dphod_c[C] p1trm[POLY1] dphod_nw[NW] dphopin3[LPOWER]
+model=diode[dapda],dapda
+element diode[dapda] dapda bulk catdiff dphopin3
+model=diode[dapda0],dapda0
+element diode[dapda0] dapda0 bulk catdiff dphopin3
+model=diode[dspada],dspada
+element diode[dspada] dspada bulk catdiff dphopin3
+model=diode[dspada0],dspada0
+element diode[dspada0] dspada0 bulk catdiff dphopin3
+model=generic[DAPB],dapb
+element generic[DAPB] dapb bulk[A] catdiff[C] davl_c2[C2] dphopin3[LPOWER]
+model=generic[DAPB0],dapb0
+element generic[DAPB0] dapb0 bulk[A] catdiff[C] davl_c2[C2] dphopin3[LPOWER]
+model=generic[DSPB],dspb
+element generic[DSPB] dspb bulk[A] catdiff[C] davl_c2[C2] dphopin3[PHOTON]
+model=generic[DSPB0],dspb0
+element generic[DSPB0] dspb0 bulk[A] catdiff[C] davl_c2[C2] dphopin3[PHOTON]
+model=generic[DSPBFEP],dspbfep
+element generic[DSPBFEP] dspbfep bulk[A] catdiff[C] davl_c2[C2] dphopin3[PHOTON]
+model=diode[dipdnw],dipdnw
+element diode[dipdnw] d_dipw pwitrm dnwtrm
+model=diode[p_dipdnw],dipdnw
+element diode[p_dipdnw] p_dipw pwitrm dnwtrm
+model=diode[dipdnwmv],dipdnwmv
+element diode[dipdnwmv] d_dipwmv pwitrm dnwtrm
+model=diode[p_dipdnwmv],dipdnwmv
+element diode[p_dipdnwmv] p_dipwmv pwitrm dnwtrm
+model=diode[p_ddpldnw],ddpldnw
+element diode[p_ddpldnw] pddpldnw pwitrm dnwtrm
+model=diode[dndf],dndf
+element diode[dndf] d_dndf bulk ndftrm
+model=diode[p_dndf],dndf
+element diode[p_dndf] p_dndf bulk ndftrm
+model=diode[dpdwhn],dpdwhn
+element diode[dpdwhn] d_dpdwhn pdf hnw
+model=diode[p_dpdwhn],dpdwhn
+element diode[p_dpdwhn] p_dpdwhn pdf hnw
+model=diode[dwhn],dwhn
+element diode[dwhn] d_dwhn bulk hnw
+model=diode[p_dwhn],dwhn
+element diode[p_dwhn] p_dwhn bulk hnw
+model=diode[dpdd_scr],dpdd_scr
+element diode[dpdd_scr] dpdd_scr pwitrm dnwtrm
+model=diode[p_dpdddnw],dpdddnw
+element diode[p_dpdddnw] pdpdddnw pwitrm dnwtrm
+model=diode[dnpdd_scr],dnpdd_scr
+element diode[dnpdd_scr] dnpddscr pwitrm ndiff
+model=diode[dpp20],dpp20
+element diode[dpp20] dpp20 pwitrm dnwtrm
+model=diode[dnp20],dnp20
+element diode[dnp20] dnp20 bulk ndftrm
+model=diode[dpol],dpol
+element diode[dpol] dpol dpol_p dpol_n
+model=diode[dnhpw],dnhpw
+element diode[dnhpw] d_dnhpw bulk ndiff
+model=diode[dnhpw],dnhpw
+element diode[dnhpw] d_dnhpwi pwitrm ndiff
+model=diode[p_dnhpw],dnhpw
+element diode[p_dnhpw] p_dnhpw bulk ndiff
+model=diode[p_dnhpw],dnhpw
+element diode[p_dnhpw] p_dnhpwi pwitrm ndiff
+model=diode[dphnw],dphnw
+element diode[dphnw] d_dphnw pdiff hvnwtrm
+model=diode[dphnw],dphnw
+element diode[dphnw] d_dphnw1 pdiff dnwtrm
+model=diode[dphnw],dphnw
+element diode[dphnw] d_dphnw2 pdiff hnw
+model=diode[p_dphnw],dphnw
+element diode[p_dphnw] p_dphnw pdiff hvnwtrm
+model=diode[p_dphnw],dphnw
+element diode[p_dphnw] p_dphnw1 pdiff dnwtrm
+model=diode[p_dphnw],dphnw
+element diode[p_dphnw] p_dphnw2 pdiff hnw
+model=diode[dpdnwmv],dpdnwmv
+element diode[dpdnwmv] ddpdnwmv pdiff dnwtrm
+model=diode[p_dpdnwmv],dpdnwmv
+element diode[p_dpdnwmv] pdpdnwmv pdiff dnwtrm
+model=diode[dpdnw],dpdnw
+element diode[dpdnw] d_dpdnw pdiff dnwtrm
+model=diode[p_dpdnw],dpdnw
+element diode[p_dpdnw] p_dpdnw pdiff dnwtrm
+model=diode[dpwhn],dpwhn
+element diode[dpwhn] d_dpwhn pdiff hnw
+model=diode[p_dpwhn],dpwhn
+element diode[p_dpwhn] p_dpwhn pdiff hnw
+model=diode[dsb],dsb
+element diode[dsb] d_dsb d_dsdf hnw bulk
+model=diode[dsba],dsba
+element diode[dsba] d_dsba d_dsdf hnw bulk
+model=res[rnw3],rnw3
+element res[rnw3] rnwm nwtrm bulk
+model=res[rnw3_scr],rnw3_scr
+element res[rnw3_scr] rnwm_scr nwtrm bulk
+model=res[rdn3],rdn3
+element res[rdn3] rdnm ndiff bulk
+model=res[rdn3],rdn3
+element res[rdn3] rdnm_g ndiff bulk
+model=res[rdn3],rdn3
+element res[rdn3] rdnmi ndiff pwitrm
+model=res[rdn3],rdn3
+element res[rdn3] rdnm_gi ndiff pwitrm
+model=res[rdp3],rdp3
+element res[rdp3] rdpm pdiff nwtrm
+model=res[rdp3],rdp3
+element res[rdp3] rdpm_g pdiff nwtrm
+model=res[rdp3],rdp3
+element res[rdp3] rdpmi pdiff dnwtrm
+model=res[rdp3],rdp3
+element res[rdp3] rdpm_gi pdiff dnwtrm
+model=diode[dn3],dn3
+element diode[dn3] d_dnm bulk ndiff
+model=diode[dn3],dn3
+element diode[dn3] d_dnmi1 pwitrm ndiff
+model=diode[dn3],dn3
+element diode[dn3] d_dnmi2 pdf ndiff
+model=diode[p_dn3],dn3
+element diode[p_dn3] p_dnm bulk ndiff
+model=diode[p_dn3],dn3
+element diode[p_dn3] p_dnmi1 pwitrm ndiff
+model=diode[p_dn3],dn3
+element diode[p_dn3] p_dnmi2 pdf ndiff
+model=diode[dnn3],dnn3
+element diode[dnn3] d_dnnm bulk ndiff
+model=diode[p_dnn3],dnn3
+element diode[p_dnn3] p_dnnm bulk ndiff
+model=diode[p_dn3dpl],dn3dpl
+element diode[p_dn3dpl] pdnmdpl bulk ndiff
+model=diode[p_dn3dpl],dn3dpl
+element diode[p_dn3dpl] pdnmdpli pwitrm ndiff
+model=diode[dp3],dp3
+element diode[dp3] d_dpm pdiff nwtrm
+model=diode[dp3],dp3
+element diode[dp3] d_dpmi1 pdiff dnwtrm
+model=diode[dp3],dp3
+element diode[dp3] d_dpmi2 pdiff hnw
+model=diode[p_dp3],dp3
+element diode[p_dp3] p_dpm pdiff nwtrm
+model=diode[p_dp3],dp3
+element diode[p_dp3] p_dpmi1 pdiff dnwtrm
+model=diode[p_dp3],dp3
+element diode[p_dp3] p_dpmi2 pdiff hnw
+model=diode[dnw3],dnw3
+element diode[dnw3] d_dnwm bulk nwtrm
+model=diode[p_dnw3],dnw3
+element diode[p_dnw3] p_dnwm bulk nwtrm
+model=res[rpp1k1],rpp1k1
+element res[rpp1k1] rpp1k1_2 p1trm
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1_s p1trm bulk
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1_p p1trm pwitrm
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1fp p1trm pdf
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1_n p1trm nwtrm
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1_d p1trm dnwtrm
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1_h p1trm hvnwtrm
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1hn p1trm hnw
+model=res[rpp1k1_3],rpp1k1_3
+element res[rpp1k1_3] rpp1k1fn p1trm ndftrm
+model=res[rnp1],rnp1
+element res[rnp1] rnp1_2 p1trm
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1_s p1trm bulk
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1_p p1trm pwitrm
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1fp p1trm pdf
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1_n p1trm nwtrm
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1_d p1trm dnwtrm
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1_h p1trm hvnwtrm
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1hn p1trm hnw
+model=res[rnp1_3],rnp1_3
+element res[rnp1_3] rnp1fn p1trm ndftrm
+model=res[rpp1],rpp1
+element res[rpp1] rpp1_2 p1trm
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1_s p1trm bulk
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1_p p1trm pwitrm
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1fp p1trm pdf
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1_n p1trm nwtrm
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1_d p1trm dnwtrm
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1_h p1trm hvnwtrm
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1hn p1trm hnw
+model=res[rpp1_3],rpp1_3
+element res[rpp1_3] rpp1fn p1trm ndftrm
+model=res[rpp1s],rpp1s
+element res[rpp1s] rpp1s_2 p1trm
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1s_s p1trm bulk
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1s_p p1trm pwitrm
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1sfp p1trm pdf
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1s_n p1trm nwtrm
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1s_d p1trm dnwtrm
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1s_h p1trm hvnwtrm
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1shn p1trm hnw
+model=res[rpp1s_3],rpp1s_3
+element res[rpp1s_3] rpp1sfn p1trm ndftrm
+model=res[rnp1h],rnp1h
+element res[rnp1h] rnp1h_2 p1trm
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1h_s p1trm bulk
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1h_p p1trm pwitrm
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1hfp p1trm pdf
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1h_n p1trm nwtrm
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1h_d p1trm dnwtrm
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1h_h p1trm hvnwtrm
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1hhn p1trm hnw
+model=res[rnp1h_3],rnp1h_3
+element res[rnp1h_3] rnp1hfn p1trm ndftrm
+model=res[pfuse],pfuse
+element res[pfuse] pfuse p1trm
+model=generic[tag_60v],tag_60v
+element generic[tag_60v] tp1_60 p1_vlbl[N1]
+model=generic[tag_25v],tag_25v
+element generic[tag_25v] tp1_25 p1_vlbl[N1]
+model=res[rm1],rm1
+element res[rm1] rm1 m1trm
+model=res[rm2],rm2
+element res[rm2] rm2 m2trm
+model=generic[tag_60v],tag_60v
+element generic[tag_60v] tm1_60 m1_vlbl[N1]
+model=generic[tag_25v],tag_25v
+element generic[tag_25v] tm1_25 m1_vlbl[N1]
+model=generic[tag_60v],tag_60v
+element generic[tag_60v] tm2_60 m2_vlbl[N1]
+model=generic[tag_25v],tag_25v
+element generic[tag_25v] tm2_25 m2_vlbl[N1]
+model=res[rm3],rm3
+element res[rm3] rm3 m3trm
+model=generic[tag_60v],tag_60v
+element generic[tag_60v] tm3_60 m3_vlbl[N1]
+model=generic[tag_25v],tag_25v
+element generic[tag_25v] tm3_25 m3_vlbl[N1]
+model=res[rmtp],rmtp
+element res[rmtp] rmtp mttrm
+model=generic[tag_60v],tag_60v
+element generic[tag_60v] tmt_60 mt_vlbl[N1]
+model=generic[tag_25v],tag_25v
+element generic[tag_25v] tmt_25 mt_vlbl[N1]
+model=cap[csf2p],csf2p
+element cap[csf2p] d_csf2p m1atrm m1btrm
+model=cap[csf3],csf3
+element cap[csf3] d_csf3 m1atrm m1btrm
+model=cap[csf3p],csf3p
+element cap[csf3p] d_csf3p m1atrm m1btrm
+model=cap[csf3a],csf3a
+element cap[csf3a] d_csf3a m1atrm m1btrm
+model=cap[cif3a],cif3a
+element cap[cif3a] d_cif3a m1aftrm m1bftrm
+model=cap[csft4],csft4
+element cap[csft4] d_csft4 m1atrm m1btrm
+model=cap[csft4a],csft4a
+element cap[csft4a] d_csft4a m1atrm m1btrm
+model=cap[cift4a],cift4a
+element cap[cift4a] d_cift4a m1aftrm m1bftrm
+model=cap[csandwt3],csandwt3
+element cap[csandwt3] d_cswt3 m1trm p1trm
+model=cap[cmm4t],cmm4t
+element cap[cmm4t] cmim capm m3trm
+model=cap[cmmh4t],cmmh4t
+element cap[cmmh4t] cmimh capmh m3trm
+model=cap[cdmm4t],cdmm4t
+element cap[cdmm4t] cdmm capm2_b m2trm
+model=cap[cdmmh4t],cdmmh4t
+element cap[cdmmh4t] cdmmh capmh2_b m2trm
+model=cap[cmm3],cmm3
+element cap[cmm3] cmim23f capm23f m2trm
+model=cap[cmmh3],cmmh3
+element cap[cmmh3] cmimh23f capmh23f m2trm
+model=cap[cpod],cpod
+element cap[cpod] cpod p1trm bndiff bulk
+model=cap[cpodhv],cpodhv
+element cap[cpodhv] cpodhv p1trm bndiff bulk
