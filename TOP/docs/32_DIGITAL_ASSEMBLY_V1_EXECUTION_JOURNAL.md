@@ -221,6 +221,53 @@ The next action is a restore-only connectivity probe using
 marker boxes, PG-term geometry, and special-wire database rows. It makes no
 design modification and creates no replacement handoff.
 
+The marker probe completed successfully:
+
+```text
+PROBE_ID=tx_ddr_strip_pg_marker_probe_20260710_141525
+PROBE_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/tx_ddr_strip_pg_marker_probe_20260710_141525
+PG_PROBE_RC=0
+RESTORE_DESIGN=PASS
+DESIGN_MODIFICATION=NOT_RUN
+MARKER_COUNT=9
+RESULT=PG_DIAGNOSTIC_CAPTURED
+```
+
+Exact marker classification:
+
+| Marker | Net | Location or box (um) | Proven cause |
+| --- | --- | --- | --- |
+| 1 | VDD | `828.240,176.960 -> 888.720,180.880` | north PG terminal unconnected |
+| 2 | VDD | `10.080,9.680 -> 3423.280,170.800` | main PG network has multiple components |
+| 3 | VDD | `10.080,143.245 -> 3423.280,145.715` | row at y=144.480 lacks stripe via |
+| 4 | VDD | `10.080,134.540 -> 3423.280,136.755` | row at y=135.520 lacks stripe via |
+| 5 | VDD | `868.560,170.800` | stripe top endpoint dangling |
+| 6 | VSS | `2544.640,176.960 -> 2605.120,180.880` | north PG terminal unconnected |
+| 7 | VSS | `10.080,10.080 -> 3423.280,170.800` | routed PG component is separate from terminal |
+| 8 | VSS | `2584.960,10.080` | stripe extends below first VSS row at y=14.560 |
+| 9 | VSS | `2584.960,170.800` | stripe top endpoint dangling |
+
+The intended stripe centers were read from DB PG terms as VDD `858.480 um`
+and VSS `2574.880 um`, but the generated DEF centers are `868.560 um` and
+`2584.960 um`. The exact `+10.080 um` error equals the core-left coordinate.
+The original offset formula omitted that reference origin.
+
+P02 repair contract:
+
+- restore the clean P01 signal checkpoint, never the failed PG checkpoint;
+- center VDD at x=858.480 and span y=10.080 through the north pin at 180.880;
+- center VSS at x=2574.880 and span y=14.560 through the north pin at 180.880;
+- connect standard-cell core pins to stripes without requesting nonexistent
+  `blockPin` objects;
+- require a via stack on every VDD and VSS followpin row;
+- rerun special and regular connectivity plus DRC before any export;
+- keep the validated signal route unchanged;
+- do not modify or diagnose MPTDC internals from unrelated library-load noise.
+
+Before implementing this geometry, capture the Innovus 22.33 command help for
+`addStripe` area/offset semantics and the supported explicit special-route
+geometry commands. This avoids guessing tool syntax.
+
 ## Parallel P03/P04 Registration - TX Packet Core HV LVS
 
 Status: `REGISTERED_NON_BLOCKING_TO_P02`

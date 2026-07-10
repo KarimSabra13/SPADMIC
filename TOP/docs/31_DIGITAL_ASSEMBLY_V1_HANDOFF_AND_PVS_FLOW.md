@@ -117,6 +117,21 @@ terminals, 4 disconnected special-wire pieces, and 3 dangling wires. This is
 a localized PG topology problem. The run is diagnostic evidence only and its
 GDS must not be promoted.
 
+The read-only marker probe localized every violation. The first attempt placed
+the stripes 10.080 um east of the intended PG-pin centers because
+`-start_offset` was interpreted from the core left edge. Both stripes stopped
+at the core top, 6.160 um below the north PG pins. Two VDD followpin rows also
+lacked via stacks. A repair must restore the P01 signal checkpoint and create
+new geometry with these intended centerlines and extents:
+
+```text
+VDD center x =  858.480 um, y = 10.080 -> 180.880 um
+VSS center x = 2574.880 um, y = 14.560 -> 180.880 um
+```
+
+The exact `addStripe` area syntax must be confirmed from Innovus 22.33 before
+the repair run. The failed P02 checkpoint is evidence, not a repair baseline.
+
 ## 5. Server Initialization
 
 Use this shell-safe preamble. Replace the expected commit after these files are
