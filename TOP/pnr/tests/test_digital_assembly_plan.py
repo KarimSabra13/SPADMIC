@@ -65,6 +65,27 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         )
         plan.validate_strip_macro(macro)
 
+    def test_pg_geometry_fix_preserves_signal_implementation(self) -> None:
+        script = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.tcl"
+        ).read_text()
+        self.assertIn("add_shape -net VDD -layer METTP -shape STRIPE", script)
+        self.assertIn("add_shape -net VSS -layer METTP -shape STRIPE", script)
+        self.assertIn("sroute -connect {corePin}", script)
+        self.assertNotIn("blockPin", script)
+        for forbidden in ("routeDesign", "placeDesign", "ccopt_design", "clockDesign"):
+            self.assertNotIn(forbidden, script)
+
+    def test_pg_geometry_fix_uses_marker_derived_extents(self) -> None:
+        wrapper = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.sh"
+        ).read_text()
+        self.assertIn("SPADMIC_PG_FIX_VDD_X_FALLBACK_UM:-858.480", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_VSS_X_FALLBACK_UM:-2574.880", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_VDD_Y0_UM:-10.080", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_VSS_Y0_UM:-14.560", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_Y1_UM:-180.880", wrapper)
+
 
 if __name__ == "__main__":
     unittest.main()

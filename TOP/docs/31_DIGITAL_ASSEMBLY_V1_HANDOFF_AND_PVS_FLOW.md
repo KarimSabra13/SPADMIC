@@ -132,6 +132,14 @@ VSS center x = 2574.880 um, y = 14.560 -> 180.880 um
 The exact `addStripe` area syntax must be confirmed from Innovus 22.33 before
 the repair run. The failed P02 checkpoint is evidence, not a repair baseline.
 
+The installed Innovus manuals were captured and reviewed. P02-R2 uses
+`add_shape` for exact METTP `SPECIALNETS` stripe geometry and uses `sroute`
+only for `corePin` stitching. See
+`TOP/docs/34_INNOVUS_22_33_PG_ROUTING_COMMAND_NOTES.md`. The R2 scripts are:
+
+- `TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.sh`
+- `TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.tcl`
+
 ## 5. Server Initialization
 
 Use this shell-safe preamble. Replace the expected commit after these files are

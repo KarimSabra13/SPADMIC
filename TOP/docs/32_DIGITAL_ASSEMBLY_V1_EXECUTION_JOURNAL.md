@@ -268,6 +268,36 @@ Before implementing this geometry, capture the Innovus 22.33 command help for
 `addStripe` area/offset semantics and the supported explicit special-route
 geometry commands. This avoids guessing tool syntax.
 
+The command-help capture completed successfully:
+
+```text
+HELP_ID=innovus_pg_command_help_20260710_151605
+COMMAND_HELP_RC=0
+COMMAND_addStripe=MAN
+COMMAND_sroute=MAN
+COMMAND_editAddRoute=MAN
+COMMAND_add_shape=MAN
+POLICY=NO_DESIGN_LOADED_NO_DESIGN_MODIFICATION
+```
+
+The installed manual confirms `addStripe -area`, `-extend_to
+design_boundary`, explicit offset controls, and `sroute` connection classes.
+It also confirms that `add_shape` directly creates DEF `SPECIALNETS` shapes.
+
+P02-R2 uses deterministic `add_shape -shape STRIPE` centerlines and then
+`sroute -connect {corePin}`. It does not request nonexistent block pins. The
+permanent command notes and exact geometry are recorded in
+`TOP/docs/34_INNOVUS_22_33_PG_ROUTING_COMMAND_NOTES.md`.
+
+P02-R2 implementation:
+
+- `TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.sh`
+- `TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.tcl`
+
+Export is fail-closed: no promoted outputs are emitted unless PG
+connectivity, regular connectivity, and Innovus DRC all report zero
+violations. PVS remains pending after a successful P02-R2 run.
+
 ## Parallel P03/P04 Registration - TX Packet Core HV LVS
 
 Status: `REGISTERED_NON_BLOCKING_TO_P02`
