@@ -44,6 +44,7 @@ TESTS=(
   tb_spadmic_matrix_cfg_ctrl_unit
   tb_spadmic_matrix_cfg_cout_readback_unit
   tb_spadmic_event_bundle_tx_unit
+  tb_spadmic_tx_src_data_flat_mapping_unit
   tb_spadmic_matrix_top_csr_unit
   tb_spadmic_matrix_top_csr_16b_unit
   tb_spadmic_top_matrix_v1_shell_unit

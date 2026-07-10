@@ -29,9 +29,9 @@ Genus or Innovus and must not modify MPTDC internals.
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
 | P02 | Restore-only internal PG for the narrow strip | R4_HELPER_METHOD_FAIL_DIAG_PENDING | PG marker decomposition, post-PG connectivity/DRC, merged GDS audit |
-| P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff and historical LVS intake | READ_ONLY_COLLECTOR_READY | OA backup, bbox/pin parity, GDS audit, read-only LVS input inventory |
-| P04 | Per-block PVS closure, mismatch classification, and handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, explicit LVS verdict, diagnostic, hashes, promotion gate |
-| P05 | Phase-A TX assembly generation and geometry gate | BLOCKED_BY_P04 | No obstacle overlap, exact placements, exact 19-net contract |
+| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | RTL_SCALAR_CONTRACT_PASS_GENUS_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
+| P04 | Per-block PVS closure, density qualification, and handoff promotion | BLOCKED_BY_P03_SERVER_PNR | PVS DRC zero outside antenna, explicit LVS match, hashes, promotion gate |
+| P05 | Requalified strip and Phase-A TX assembly geometry gate | BLOCKED_BY_P04 | Strip PG/PVS closure, no obstacle overlap, exact paired 19-net contract |
 | P06 | Phase-A TX assembly route | BLOCKED_BY_P05 | Checkpoints 00/01/02, selected-net connectivity, DRC, timing |
 | P07 | Assembly PVS and promoted handoff | BLOCKED_BY_P06 | GDS audit, PVS DRC zero, LVS match or approved source contract |
 
@@ -453,6 +453,29 @@ canonical top on both sides, mapped Innovus GDS, filtered PG netlist, official
 JIHD CDL, strict pin-set and input-hash gates, PVS DRC zero outside antenna,
 and explicit LVS `MATCH`. The detailed evidence and negative command ledger
 are in `TOP/docs/33_TX_PACKET_CORE_HV_PVS_LVS_TRIAGE.md`.
+
+### P03-R1 Active TX Scalar Interface
+
+Status: `PASS_LOCAL_GENUS_SERVER_PENDING`
+
+The active matrix TX boundary now exposes 64 unique scalar pins
+`src_data_i_s<source>_b<bit>`. A checked-in CSV manifest drives generated RTL
+regions; ordinary 1D buses and the legacy `spadmic_top_v1` arbiter path are
+unchanged. `spadmic_event_bundle_tx` reconstructs the 4x16 array internally.
+
+Measured local results:
+
+- manifest/generator tests: 4 pass, 0 fail;
+- exhaustive mapping oracle: 258 pass, 0 fail;
+- event bundle: 14 pass, 0 fail;
+- TX egress core: 11 pass, 0 fail;
+- TX egress cluster: 13 pass, 0 fail;
+- matrix top shell: 32 pass, 0 fail.
+
+These results prove API mapping and RTL behavior only. P03 remains open until
+fresh server Xcelium, packet OOC Genus, Innovus, and PVS evidence pass. The
+canonical rebuild contract and negative command ledger are maintained in
+`TOP/docs/36_TX_PACKET_CORE_CANONICAL_REBUILD_AND_PVS_CLOSURE.md`.
 
 ## Update Procedure
 

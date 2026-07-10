@@ -16,7 +16,72 @@ module spadmic_event_bundle_tx (
 
   input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_valid_i,
   output logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_ready_o,
-  input  wire logic [mptdc_pkg::NARROW_W-1:0]      src_data_i [spadmic_pkg::SPADMIC_SRC_COUNT],
+  // SPADMIC_TX_SRC_DATA_GENERATED_BEGIN PORT_DECLS
+  input wire logic src_data_i_s0_b0,
+  input wire logic src_data_i_s0_b1,
+  input wire logic src_data_i_s0_b2,
+  input wire logic src_data_i_s0_b3,
+  input wire logic src_data_i_s0_b4,
+  input wire logic src_data_i_s0_b5,
+  input wire logic src_data_i_s0_b6,
+  input wire logic src_data_i_s0_b7,
+  input wire logic src_data_i_s0_b8,
+  input wire logic src_data_i_s0_b9,
+  input wire logic src_data_i_s0_b10,
+  input wire logic src_data_i_s0_b11,
+  input wire logic src_data_i_s0_b12,
+  input wire logic src_data_i_s0_b13,
+  input wire logic src_data_i_s0_b14,
+  input wire logic src_data_i_s0_b15,
+  input wire logic src_data_i_s1_b0,
+  input wire logic src_data_i_s1_b1,
+  input wire logic src_data_i_s1_b2,
+  input wire logic src_data_i_s1_b3,
+  input wire logic src_data_i_s1_b4,
+  input wire logic src_data_i_s1_b5,
+  input wire logic src_data_i_s1_b6,
+  input wire logic src_data_i_s1_b7,
+  input wire logic src_data_i_s1_b8,
+  input wire logic src_data_i_s1_b9,
+  input wire logic src_data_i_s1_b10,
+  input wire logic src_data_i_s1_b11,
+  input wire logic src_data_i_s1_b12,
+  input wire logic src_data_i_s1_b13,
+  input wire logic src_data_i_s1_b14,
+  input wire logic src_data_i_s1_b15,
+  input wire logic src_data_i_s2_b0,
+  input wire logic src_data_i_s2_b1,
+  input wire logic src_data_i_s2_b2,
+  input wire logic src_data_i_s2_b3,
+  input wire logic src_data_i_s2_b4,
+  input wire logic src_data_i_s2_b5,
+  input wire logic src_data_i_s2_b6,
+  input wire logic src_data_i_s2_b7,
+  input wire logic src_data_i_s2_b8,
+  input wire logic src_data_i_s2_b9,
+  input wire logic src_data_i_s2_b10,
+  input wire logic src_data_i_s2_b11,
+  input wire logic src_data_i_s2_b12,
+  input wire logic src_data_i_s2_b13,
+  input wire logic src_data_i_s2_b14,
+  input wire logic src_data_i_s2_b15,
+  input wire logic src_data_i_s3_b0,
+  input wire logic src_data_i_s3_b1,
+  input wire logic src_data_i_s3_b2,
+  input wire logic src_data_i_s3_b3,
+  input wire logic src_data_i_s3_b4,
+  input wire logic src_data_i_s3_b5,
+  input wire logic src_data_i_s3_b6,
+  input wire logic src_data_i_s3_b7,
+  input wire logic src_data_i_s3_b8,
+  input wire logic src_data_i_s3_b9,
+  input wire logic src_data_i_s3_b10,
+  input wire logic src_data_i_s3_b11,
+  input wire logic src_data_i_s3_b12,
+  input wire logic src_data_i_s3_b13,
+  input wire logic src_data_i_s3_b14,
+  input wire logic src_data_i_s3_b15,
+  // SPADMIC_TX_SRC_DATA_GENERATED_END PORT_DECLS
   input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_sop_i,
   input  wire logic [spadmic_pkg::SPADMIC_SRC_COUNT-1:0] src_eop_i,
 
@@ -33,6 +98,74 @@ module spadmic_event_bundle_tx (
 );
   import mptdc_pkg::*;
   import spadmic_pkg::*;
+
+  logic [NARROW_W-1:0] src_data_i [SPADMIC_SRC_COUNT];
+  // SPADMIC_TX_SRC_DATA_GENERATED_BEGIN ARRAY_ASSIGNMENTS src_data_i
+  assign src_data_i[0][0] = src_data_i_s0_b0;
+  assign src_data_i[0][1] = src_data_i_s0_b1;
+  assign src_data_i[0][2] = src_data_i_s0_b2;
+  assign src_data_i[0][3] = src_data_i_s0_b3;
+  assign src_data_i[0][4] = src_data_i_s0_b4;
+  assign src_data_i[0][5] = src_data_i_s0_b5;
+  assign src_data_i[0][6] = src_data_i_s0_b6;
+  assign src_data_i[0][7] = src_data_i_s0_b7;
+  assign src_data_i[0][8] = src_data_i_s0_b8;
+  assign src_data_i[0][9] = src_data_i_s0_b9;
+  assign src_data_i[0][10] = src_data_i_s0_b10;
+  assign src_data_i[0][11] = src_data_i_s0_b11;
+  assign src_data_i[0][12] = src_data_i_s0_b12;
+  assign src_data_i[0][13] = src_data_i_s0_b13;
+  assign src_data_i[0][14] = src_data_i_s0_b14;
+  assign src_data_i[0][15] = src_data_i_s0_b15;
+  assign src_data_i[1][0] = src_data_i_s1_b0;
+  assign src_data_i[1][1] = src_data_i_s1_b1;
+  assign src_data_i[1][2] = src_data_i_s1_b2;
+  assign src_data_i[1][3] = src_data_i_s1_b3;
+  assign src_data_i[1][4] = src_data_i_s1_b4;
+  assign src_data_i[1][5] = src_data_i_s1_b5;
+  assign src_data_i[1][6] = src_data_i_s1_b6;
+  assign src_data_i[1][7] = src_data_i_s1_b7;
+  assign src_data_i[1][8] = src_data_i_s1_b8;
+  assign src_data_i[1][9] = src_data_i_s1_b9;
+  assign src_data_i[1][10] = src_data_i_s1_b10;
+  assign src_data_i[1][11] = src_data_i_s1_b11;
+  assign src_data_i[1][12] = src_data_i_s1_b12;
+  assign src_data_i[1][13] = src_data_i_s1_b13;
+  assign src_data_i[1][14] = src_data_i_s1_b14;
+  assign src_data_i[1][15] = src_data_i_s1_b15;
+  assign src_data_i[2][0] = src_data_i_s2_b0;
+  assign src_data_i[2][1] = src_data_i_s2_b1;
+  assign src_data_i[2][2] = src_data_i_s2_b2;
+  assign src_data_i[2][3] = src_data_i_s2_b3;
+  assign src_data_i[2][4] = src_data_i_s2_b4;
+  assign src_data_i[2][5] = src_data_i_s2_b5;
+  assign src_data_i[2][6] = src_data_i_s2_b6;
+  assign src_data_i[2][7] = src_data_i_s2_b7;
+  assign src_data_i[2][8] = src_data_i_s2_b8;
+  assign src_data_i[2][9] = src_data_i_s2_b9;
+  assign src_data_i[2][10] = src_data_i_s2_b10;
+  assign src_data_i[2][11] = src_data_i_s2_b11;
+  assign src_data_i[2][12] = src_data_i_s2_b12;
+  assign src_data_i[2][13] = src_data_i_s2_b13;
+  assign src_data_i[2][14] = src_data_i_s2_b14;
+  assign src_data_i[2][15] = src_data_i_s2_b15;
+  assign src_data_i[3][0] = src_data_i_s3_b0;
+  assign src_data_i[3][1] = src_data_i_s3_b1;
+  assign src_data_i[3][2] = src_data_i_s3_b2;
+  assign src_data_i[3][3] = src_data_i_s3_b3;
+  assign src_data_i[3][4] = src_data_i_s3_b4;
+  assign src_data_i[3][5] = src_data_i_s3_b5;
+  assign src_data_i[3][6] = src_data_i_s3_b6;
+  assign src_data_i[3][7] = src_data_i_s3_b7;
+  assign src_data_i[3][8] = src_data_i_s3_b8;
+  assign src_data_i[3][9] = src_data_i_s3_b9;
+  assign src_data_i[3][10] = src_data_i_s3_b10;
+  assign src_data_i[3][11] = src_data_i_s3_b11;
+  assign src_data_i[3][12] = src_data_i_s3_b12;
+  assign src_data_i[3][13] = src_data_i_s3_b13;
+  assign src_data_i[3][14] = src_data_i_s3_b14;
+  assign src_data_i[3][15] = src_data_i_s3_b15;
+  // SPADMIC_TX_SRC_DATA_GENERATED_END ARRAY_ASSIGNMENTS
 
   typedef enum logic [1:0] {
     BUNDLE_IDLE = 2'd0,

@@ -17,6 +17,7 @@ BENCHES=(
   tb_spadmic_matrix_snapshot_frontend_unit
   tb_spadmic_position_snapshot_packetizer_unit
   tb_spadmic_event_bundle_tx_unit
+  tb_spadmic_tx_src_data_flat_mapping_unit
   tb_spadmic_tx_egress_cluster_unit
   tb_spadmic_tx_egress_core_unit
   tb_spadmic_matrix_top_csr_unit

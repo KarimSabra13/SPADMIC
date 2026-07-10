@@ -137,6 +137,7 @@ VERILATOR_TBS=(
   tb_spadmic_position_modes_unit
   tb_spadmic_position_snapshot_cluster_unit
   tb_spadmic_event_bundle_tx_unit
+  tb_spadmic_tx_src_data_flat_mapping_unit
   tb_spadmic_ddr16_tx_pairer_unit
   tb_spadmic_ddrs2_adapter_unit
   tb_spadmic_tx_egress_cluster_unit

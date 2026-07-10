@@ -1,0 +1,96 @@
+# TX Packet Core Canonical Rebuild And PVS Closure
+
+Status: `P01_RTL_SCALAR_CONTRACT_PASS_GENUS_SERVER_PENDING`
+
+This runbook replaces the invalid historical `spadmic_tx_packet_core_HV` LVS
+contract with a fresh canonical `spadmic_tx_packet_core` implementation. The
+mapped Innovus GDS is the physical authority. OA is a derived, versioned review
+copy only.
+
+## Fixed Decisions
+
+- PVS scope is DRC plus LVS; PEX is deferred.
+- Layout and source top are both `spadmic_tx_packet_core`.
+- The packet core is rebuilt from RTL through Genus and Innovus; the historical
+  `_HV` GDS is evidence only.
+- Active matrix-path TX source-data ports are scalar. Legacy
+  `spadmic_top_v1` and `spadmic_packet_arbiter4` remain unchanged.
+- Packet footprint remains `2066.960 x 366.800 um`.
+- Packet and strip stream pins use one paired absolute-coordinate contract.
+- Signal routing uses MET1-MET3. METTP is reserved for complete internal PG.
+- PVS base DRC and density-enabled DRC must both be zero outside antenna.
+- An antenna-only result may pass the PVS milestone but blocks final handoff.
+- LVS passes only from an explicit report-level `MATCH`.
+
+## P01 Scalar Source-Data Contract
+
+The canonical manifest is:
+
+```text
+TOP/rtl/interfaces/tx_src_data_flat.csv
+```
+
+It contains exactly 64 unique source-major entries:
+
+```text
+src_data_i_s0_b0 ... src_data_i_s0_b15
+src_data_i_s1_b0 ... src_data_i_s1_b15
+src_data_i_s2_b0 ... src_data_i_s2_b15
+src_data_i_s3_b0 ... src_data_i_s3_b15
+```
+
+`TOP/scripts/generate_tx_src_data_flat.py` writes explicit declarations and
+connections into marked RTL regions. `--check` is mandatory in CI and fails on
+any generated drift. This avoids simulator/synthesis include-path differences
+while retaining one source of truth.
+
+The API change is intentional for the active matrix path. Ordinary 1D buses
+retain normal bracketed names. `spadmic_event_bundle_tx` reconstructs the
+original 4x16 array internally, so arbitration behavior and dynamic indexing
+remain unchanged.
+
+Local evidence:
+
+| Gate | Result |
+| --- | --- |
+| Manifest/generator unit tests | `4 pass / 0 fail` |
+| Exhaustive scalar mapping oracle | `258 pass / 0 fail` |
+| Event bundle regression | `14 pass / 0 fail` |
+| TX egress core regression | `11 pass / 0 fail` |
+| TX egress cluster regression | `13 pass / 0 fail` |
+| Matrix top shell compile/regression | `32 pass / 0 fail` |
+
+The mapping oracle drives every source/bit independently and compares all four
+reconstructed source words. It detects aliases, source swaps, bit swaps,
+duplicates, and missing connections.
+
+## Required Server Gates
+
+1. Run Xcelium for the same four TX regressions and matrix top compile.
+2. Run fresh packet OOC Genus at 6.25 ns. Require no unresolved references,
+   no unclocked sequential logic, no unconstrained paths, WNS non-negative,
+   and TNS zero.
+3. Generate the paired packet/strip pin guide from the new scalar netlist.
+4. Run fresh packet Innovus with complete internal PG, then require regular
+   and special connectivity zero, post-route setup/hold closure, and DRC zero
+   outside the separately classified antenna markers.
+5. Export mapped Innovus GDS with the official XH018 stream map and merged JIHD
+   GDS. Do not promote an OA XStream GDS as the authority.
+6. Prepare a filtered PG LVS source plus official JIHD CDL, create one fresh
+   canonical GUI template, and replay it immutably for base DRC, density DRC,
+   and LVS.
+7. Re-pin/re-route and qualify the strip, then run the connected signal-route
+   assembly smoke. Assembly PG remains a later phase.
+
+## Negative Command Ledger
+
+- Do not flatten with `i+j`; use the explicit source/bit names above.
+- Do not change 1D buses merely because the old layout had zero recognized
+  pins.
+- Do not rerun Genus from the old netlist after changing the RTL boundary.
+- Do not reuse the `_HV` PVS template without canonical top, CDL, and pin-set
+  checks.
+- Do not export if regular or special connectivity is non-zero.
+- Do not infer DRC clean from router transcript or LVS match from process RC.
+- Do not run multiple candidate `restoreDesign` operations in one Innovus
+  process; isolate candidates when exploration is required.
