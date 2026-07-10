@@ -202,6 +202,25 @@ Next P02 action: read-only extraction of the existing DEF special-net
 sections, route reports, and focused Innovus log messages. Do not rerun
 `sroute` until the open topology is identified.
 
+The first read-only extraction completed under
+`/sim/ksabra/SPADMIC_work/diagnostics/tx_ddr_strip_pg_diag_20260710_140628`.
+It established:
+
+- the corrected GDS audit is PASS for file size, official XFAB map, and JIHD
+  merge;
+- both METTP stripes stop at the core top `y=170.800 um`;
+- both boundary PG pins start at `y=176.960 um`, leaving a `6.160 um` gap;
+- `sroute` explicitly reported that VDD/VSS block pins were not found;
+- VDD followpin rows at `y=135.520 um` and `y=144.480 um` have no via stack
+  to the vertical METTP stripe, while the other reported rows do;
+- the MPTDC oscillator Liberty diagnostics are unrelated library-load noise
+  because this strip contains no MPTDC instance and no MPTDC files are changed.
+
+The next action is a restore-only connectivity probe using
+`run_innovus_ooc_pg_probe.sh`. It captures the detailed `-report` output,
+marker boxes, PG-term geometry, and special-wire database rows. It makes no
+design modification and creates no replacement handoff.
+
 ## Parallel P03/P04 Registration - TX Packet Core HV LVS
 
 Status: `REGISTERED_NON_BLOCKING_TO_P02`
