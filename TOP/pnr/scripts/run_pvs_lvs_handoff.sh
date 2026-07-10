@@ -53,6 +53,8 @@ done
 
 spadmic_pvs_require_dir "$PACKAGE"
 spadmic_pvs_require_dir "$TEMPLATE"
+PACKAGE="$(cd "$PACKAGE" && pwd -P)"
+TEMPLATE="$(cd "$TEMPLATE" && pwd -P)"
 for value in "$TEMPLATE_GDS" "$TEMPLATE_SOURCE" "$TEMPLATE_LAYOUT_TOP" "$TEMPLATE_SOURCE_TOP" "$TEMPLATE_CDL"; do
   [[ -n "$value" ]] || spadmic_pvs_die "all template GDS/source/top values are required"
 done
@@ -64,15 +66,27 @@ GDS="$PACKAGE/gds/$LAYOUT_TOP.gds"
 SOURCE="$PACKAGE/netlist/$SOURCE_TOP.lvs.pg.v"
 spadmic_pvs_require_file "$GDS"
 spadmic_pvs_require_file "$SOURCE"
+python3 "$SCRIPT_DIR/audit_innovus_handoff.py" "$PACKAGE"
+HANDOFF_AUDIT_RC=$?
+echo "HANDOFF_AUDIT_RC=$HANDOFF_AUDIT_RC"
+[[ "$HANDOFF_AUDIT_RC" -eq 0 ]] || exit "$HANDOFF_AUDIT_RC"
+SOURCE_PREP_STATUS="$PACKAGE/reports/lvs_source_preparation.rpt"
+spadmic_pvs_require_file "$SOURCE_PREP_STATUS"
+grep -q '^STATUS=PASS$' "$SOURCE_PREP_STATUS" \
+  || spadmic_pvs_die "canonical LVS source preparation did not pass"
+grep -q '^PIN_PARITY_STATUS=PASS$' "$SOURCE_PREP_STATUS" \
+  || spadmic_pvs_die "LEF/source top pin parity did not pass"
 RUN_ID="${RUN_ID:-lvs_$(date +%Y%m%d_%H%M%S)}"
 RUN_DIR="$PACKAGE/pvs/lvs/$RUN_ID"
 
 ARGS=(--mode lvs --template "$TEMPLATE" --run-dir "$RUN_DIR" --cadence-pvs "$PVS_BIN"
   --replace "$TEMPLATE_GDS=$GDS" --replace "$TEMPLATE_SOURCE=$SOURCE"
-  --replace "$TEMPLATE_LAYOUT_TOP=$LAYOUT_TOP" --replace "$TEMPLATE_SOURCE_TOP=$SOURCE_TOP")
-CDL="$PACKAGE/../../../_shared/pdk/xh018_1131_jihd_v6_0/xh018_D_CELLS_JIHD.cdl"
+  --replace "$TEMPLATE_LAYOUT_TOP=$LAYOUT_TOP" --replace "$TEMPLATE_SOURCE_TOP=$SOURCE_TOP"
+  --expected-layout-top "$LAYOUT_TOP" --expected-source-top "$SOURCE_TOP"
+  --expected-gds "$GDS" --expected-source "$SOURCE")
+CDL="$PACKAGE/pdk/xh018_D_CELLS_JIHD.cdl"
 spadmic_pvs_require_file "$CDL"
-ARGS+=(--replace "$TEMPLATE_CDL=$CDL")
+ARGS+=(--replace "$TEMPLATE_CDL=$CDL" --expected-cdl "$CDL")
 if [[ -n "$TEMPLATE_HCELL" || -n "$HCELL" ]]; then
   [[ -n "$TEMPLATE_HCELL" && -n "$HCELL" ]] || spadmic_pvs_die "both template and new HCell paths are required"
   spadmic_pvs_require_file "$HCELL"
@@ -82,6 +96,8 @@ python3 "$SCRIPT_DIR/replay_pvs_handoff_template.py" "${ARGS[@]}"
 PATCH_RC=$?
 echo "PATCH_RC=$PATCH_RC"
 [[ "$PATCH_RC" -eq 0 ]] || exit "$PATCH_RC"
+grep -q '^STATUS=PASS$' "$RUN_DIR/replay_contract_status.rpt" \
+  || spadmic_pvs_die "strict PVS replay contract did not pass"
 spadmic_pvs_require_external_references "$RUN_DIR/external_references.rpt"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then

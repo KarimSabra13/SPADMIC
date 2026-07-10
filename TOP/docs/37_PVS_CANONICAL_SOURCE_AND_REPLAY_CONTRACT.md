@@ -1,0 +1,188 @@
+# PVS Canonical Source And Replay Contract
+
+Status: `IMPLEMENTED_LOCAL_SERVER_TEMPLATE_AND_EXECUTION_PENDING`
+
+This document records the reproducible PVS DRC/LVS contract created after the
+historical `spadmic_tx_packet_core_HV` mismatch was classified. It applies to
+the fresh canonical `spadmic_tx_packet_core` rebuild and then to
+`spadmic_tx_ddr_strip`.
+
+## 1. Package Source Model
+
+Each immutable package contains both source forms:
+
+```text
+netlist/<source_top>.innovus.pg.v  raw saveNetlist -includePowerGround output
+netlist/<source_top>.lvs.pg.v      canonical filtered PVS source
+pdk/xh018_D_CELLS_JIHD.cdl        exact official CDL copy used by replay
+reports/lvs_source_preparation.rpt input, pin, module, and hash gates
+```
+
+The raw source is evidence and is never silently overwritten. The canonical
+source keeps the top and every design-owned/non-JIHD module. It removes a
+module definition only when its case-folded name matches an official CDL
+`.SUBCKT`. Cell instances remain in the design netlist and resolve through the
+package-local CDL during PVS.
+
+This is deliberate abstraction matching. Layout contains merged JIHD device
+geometry; source uses JIHD CDL device definitions. Retaining duplicate Verilog
+cell definitions would return to the historical incompatible abstraction.
+
+## 2. Source Preparation Gates
+
+`TOP/pnr/scripts/prepare_pvs_lvs_source.py` refuses output unless all gates
+pass:
+
+1. Input PG netlist, block LEF, and CDL are non-empty files.
+2. Verilog module/end-module structure is balanced.
+3. The canonical source top has exactly one definition.
+4. Source top does not collide with a CDL subcircuit name.
+5. VDD and VSS are explicit top ports.
+6. No top port contains an adjacent nested dimension `][`.
+7. Exactly one supplied LEF has a macro matching the source top.
+8. Expanded Verilog top ports and LEF pins have exact set parity.
+9. No retained module overlaps the official CDL cell-name set.
+10. Every instantiated master resolves to a retained design module, a CDL
+    subcircuit, or a recognized Verilog primitive.
+11. The output hash is recorded only after every gate passes.
+
+One-dimensional vectors are expanded for parity. Escaped bit names such as
+`\foo[3]` normalize to LEF name `foo[3]`. The active TX source-data boundary
+uses scalar `src_data_i_s<source>_b<bit>` names, so a reintroduced
+`src_data_i[i][j]` top pin fails before PVS.
+
+Negative rules:
+
+- Do not delete every module except the top; custom hierarchy may be required.
+- Do not classify a module as JIHD from a name prefix or suffix. CDL membership
+  is the authority.
+- Do not assume an undefined cell will be resolved later. Missing design/CDL
+  masters stop staging before PVS.
+- Do not edit the routed netlist in place. Preserve raw and derived sources.
+- Do not waive missing VDD/VSS or LEF/source pin differences.
+- Do not treat source parsing as LVS success; it is only a pre-run gate.
+
+## 3. Immutable Staging
+
+`stage_innovus_handoff.py` now performs source preparation while creating a
+new package. It copies the CDL into the package even when the broader shared
+PDK bundle is not requested. `package.json` records canonical source and CDL
+paths and SHA256 hashes. `audit_innovus_handoff.py` independently requires:
+
+- raw and canonical netlists;
+- package-local CDL;
+- source-preparation `STATUS=PASS`;
+- `PIN_PARITY_STATUS=PASS`;
+- matching source top and canonical source hash;
+- matching CDL manifest hash;
+- all original package SHA256 entries.
+
+A failed preparation leaves an immutable failed package for diagnosis. Use a
+new version ID after correcting the input; do not overwrite the failed one.
+
+## 4. Strict Template Replay
+
+`replay_pvs_handoff_template.py` copies only the executable/control portion of
+a GUI-generated template. Every explicit `OLD=NEW` replacement is counted in
+the original copied text. If an old GDS, source, CDL, or top value is absent,
+replay stops with `REPLACEMENT_SOURCE_NOT_FOUND`.
+
+The replacement order matters. Specific GDS/source/CDL paths are replaced
+before the template root is relocated. The previous order relocated the root
+first, changing `/template/old.gds` to `/run/old.gds`; the later exact
+replacement could no longer match. That behavior could report patch success
+while retaining the wrong artifact path. Do not restore that order.
+
+After patching, replay independently proves:
+
+- selected absolute Cadence PVS binary is in `run.pvs`;
+- expected layout top is the `-top_cell` value;
+- expected LVS source top is the `-source_top_cell` value;
+- canonical GDS path occurs in copied controls;
+- canonical source path occurs in LVS controls;
+- package-local CDL path occurs in LVS controls;
+- no replaced template value remains;
+- all external files/directories are inventoried and hashed when regular
+  files.
+
+Generated evidence:
+
+```text
+template_replacements.rpt
+preprocessor_defines.rpt
+replay_contract_status.rpt
+external_references.rpt
+SHA256SUMS
+```
+
+## 5. Base And Density DRC
+
+`run_pvs_drc_handoff.sh --variant base` forces:
+
+```text
+#UNDEFINE DENSITY
+```
+
+`--variant density` forces:
+
+```text
+#DEFINE DENSITY
+```
+
+The requested symbol must already exist as a DEFINE/UNDEFINE control in the
+GUI template. A missing symbol is an error because silently appending a define
+would not prove that the foundry wrapper consumes it. Base and density use
+separate immutable run IDs and status files. Base DRC zero does not transfer to
+density DRC, and neither result transfers across GDS hashes.
+
+## 6. LVS Acceptance
+
+`run_pvs_lvs_handoff.sh` audits the package before cloning the template. It
+requires the canonical source-preparation and pin-parity reports, replaces the
+template GDS/source/CDL/top values, and requires the strict replay contract.
+
+PVS process return code alone is not accepted. The result parser passes only
+an explicit report-level `MATCH`. `MISMATCH`, `UNKNOWN`, missing report, stale
+path, or missing CDL all remain failures.
+
+## 7. GUI Template Requirements
+
+Create one fresh canonical packet template on the Cadence server after the
+new package exists. The GUI run must visibly contain:
+
+- layout GDS: package `gds/spadmic_tx_packet_core.gds`;
+- layout top: `spadmic_tx_packet_core`;
+- Verilog source: package `netlist/spadmic_tx_packet_core.lvs.pg.v`;
+- source top: `spadmic_tx_packet_core`;
+- CDL source: package `pdk/xh018_D_CELLS_JIHD.cdl`;
+- explicit VDD/VSS handling;
+- same XH018_1131 technology/rule-set used by the approved DRC template;
+- DENSITY configurator symbol present for deterministic base/density replay.
+
+Preserve the first GUI run. Replays clone it; they never edit it. Record the
+exact embedded old paths from its controls rather than guessing them from GUI
+labels.
+
+## 8. Commands Not To Retry
+
+- Do not rerun the `_HV` template unchanged.
+- Do not use the old compared GDS or source hash as the new package input.
+- Do not omit the JIHD CDL because the GDS already merged JIHD geometry.
+- Do not keep JIHD Verilog definitions and provide JIHD CDL simultaneously.
+- Do not pass a guessed `--template-cdl`; strict occurrence checking will and
+  should reject it.
+- Do not invoke bare `pvs`; use the explicit Cadence binary selected by the
+  wrapper.
+- Do not infer MATCH from return code, an empty `.err`, DRC zero, or a summary
+  generated for another GDS hash.
+- Do not run density by manually editing a completed base run. Clone the same
+  template into a new immutable density run.
+
+## 9. Local Verification
+
+The local tests cover module filtering by CDL membership, raw-source
+preservation, VDD/VSS and nested-name guards, vector-to-LEF expansion, pin
+parity failure, package hashes, strict replacement occurrence, canonical
+artifact presence, base DENSITY undefine, and density define. Cadence PVS is
+not available locally; the GUI template, extraction, DRC, and comparison
+remain server gates.

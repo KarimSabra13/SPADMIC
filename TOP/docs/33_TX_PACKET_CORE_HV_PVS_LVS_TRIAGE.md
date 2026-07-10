@@ -274,3 +274,16 @@ on the Cadence server. It requires:
 
 Any correction is a later, separately reviewed phase after the mismatch class
 has been proven.
+
+## Canonical Rerun Implementation
+
+The later correction phase is now implemented without modifying the historical
+run. Fresh immutable packages preserve the raw Innovus PG netlist, derive a
+CDL-filtered canonical source, require exact LEF/source top-pin parity, and copy
+the official JIHD CDL into the package. Template replay now requires every old
+GDS/source/CDL/top value to exist before replacement and verifies the patched
+semantic contract afterward.
+
+Base and density DRC are distinct replay variants. LVS accepts only an explicit
+report-level `MATCH`. The complete positive and negative contract is in
+`TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md`.

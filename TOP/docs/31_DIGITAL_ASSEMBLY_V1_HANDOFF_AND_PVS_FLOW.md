@@ -49,6 +49,7 @@ Handoff and PVS:
 - `stage_innovus_handoff.py`, `audit_innovus_handoff.py`
 - `stage_tx_block_handoffs.sh`, `stage_digital_assembly_handoff.sh`
 - `run_pvs_drc_handoff.sh`, `run_pvs_lvs_handoff.sh`
+- `prepare_pvs_lvs_source.py`
 - `replay_pvs_handoff_template.py`, `parse_pvs_handoff_result.py`
 - `collect_pvs_lvs_readonly.py`
 - `run_oa_layout_contract_audit.sh`, `compare_oa_lef_contract.py`
@@ -63,16 +64,17 @@ Handoff and PVS:
   _shared/pdk/xh018_1131_jihd_v6_0/
   _source_archive/tx_packet_core/<backup-id>/
   blocks/spadmic_tx_packet_core/<version>/
-    gds/ lef/ def/ netlist/ reports/ logs/ manifests/ status/ pvs/
+    gds/ lef/ def/ netlist/ pdk/ reports/ logs/ manifests/ status/ pvs/
   blocks/spadmic_tx_ddr_strip/<version>/
     gds/ lef/ def/ netlist/ reports/ logs/ manifests/ status/ pvs/
   assemblies/spadmic_digital_assembly_v1_p00_tx/<version>/
     gds/ lef/ def/ netlist/ reports/ logs/ manifests/ status/ pvs/
 ```
 
-An existing version is never overwritten. PDK GDS/CDL/LEF/typical Liberty and
-the XFAB stream map are copied once under `_shared`. Foundry rule installation
-files are referenced and hashed, not copied.
+An existing version is never overwritten. Every package carries the exact JIHD
+CDL used for source preparation and replay. Broader PDK GDS/LEF/typical Liberty
+and the XFAB stream map may also be copied once under `_shared`. Foundry rule
+installation files are referenced and hashed, not copied.
 
 ## 4. Current Geometry Gate
 
@@ -381,10 +383,19 @@ bash TOP/pnr/scripts/run_pvs_drc_handoff.sh \
   --package "$PACKET_PACKAGE" \
   --template "$PACKET_DRC_TEMPLATE" \
   --template-gds "$PACKET_DRC_TEMPLATE_GDS" \
-  --template-top spadmic_tx_packet_core_HV
-PACKET_DRC_RC=$?
-PACKET_DRC_STATUS="$(find "$PACKET_PACKAGE/pvs/drc" -name pvs_drc_status.rpt -type f | sort | tail -1)"
-cat "$PACKET_DRC_STATUS" 2>/dev/null || echo "MISSING PACKET DRC STATUS"
+  --template-top spadmic_tx_packet_core_HV \
+  --variant base
+PACKET_BASE_DRC_RC=$?
+
+bash TOP/pnr/scripts/run_pvs_drc_handoff.sh \
+  --package "$PACKET_PACKAGE" \
+  --template "$PACKET_DRC_TEMPLATE" \
+  --template-gds "$PACKET_DRC_TEMPLATE_GDS" \
+  --template-top spadmic_tx_packet_core_HV \
+  --variant density
+PACKET_DENSITY_DRC_RC=$?
+
+find "$PACKET_PACKAGE/pvs/drc" -name pvs_drc_status.rpt -type f -print -exec cat {} \;
 ```
 
 Create the packet LVS template once in the PVS GUI with:
@@ -393,7 +404,7 @@ Create the packet LVS template once in the PVS GUI with:
 - layout top: `spadmic_tx_packet_core`;
 - source: `netlist/spadmic_tx_packet_core.lvs.pg.v`;
 - source top: `spadmic_tx_packet_core`;
-- JIHD CDL from `_shared/pdk/.../xh018_D_CELLS_JIHD.cdl`;
+- JIHD CDL from package `pdk/xh018_D_CELLS_JIHD.cdl`;
 - explicit VDD/VSS handling matching the netlist.
 
 Then replay it. `OLD_*` values must be the exact paths/names embedded in that
@@ -451,9 +462,14 @@ STRIP_DRC_TEMPLATE=<strip-GUI-DRC-run-directory>
 OLD_STRIP_DRC_GDS=<GDS-path-embedded-in-DRC-template>
 bash TOP/pnr/scripts/run_pvs_drc_handoff.sh \
   --package "$STRIP_PACKAGE" --template "$STRIP_DRC_TEMPLATE" \
-  --template-gds "$OLD_STRIP_DRC_GDS" --template-top spadmic_tx_ddr_strip
-STRIP_DRC_RC=$?
-STRIP_DRC_STATUS="$(find "$STRIP_PACKAGE/pvs/drc" -name pvs_drc_status.rpt -type f | sort | tail -1)"
+  --template-gds "$OLD_STRIP_DRC_GDS" --template-top spadmic_tx_ddr_strip \
+  --variant base
+STRIP_BASE_DRC_RC=$?
+bash TOP/pnr/scripts/run_pvs_drc_handoff.sh \
+  --package "$STRIP_PACKAGE" --template "$STRIP_DRC_TEMPLATE" \
+  --template-gds "$OLD_STRIP_DRC_GDS" --template-top spadmic_tx_ddr_strip \
+  --variant density
+STRIP_DENSITY_DRC_RC=$?
 
 STRIP_LVS_TEMPLATE=<strip-GUI-LVS-run-directory>
 OLD_STRIP_LVS_GDS=<GDS-path-embedded-in-LVS-template>
@@ -467,8 +483,8 @@ bash TOP/pnr/scripts/run_pvs_lvs_handoff.sh \
   --template-cdl "$OLD_STRIP_CDL"
 STRIP_LVS_RC=$?
 STRIP_LVS_STATUS="$(find "$STRIP_PACKAGE/pvs/lvs" -name pvs_lvs_status.rpt -type f | sort | tail -1)"
-echo "STRIP_DRC_RC=$STRIP_DRC_RC STRIP_LVS_RC=$STRIP_LVS_RC"
-cat "$STRIP_DRC_STATUS" 2>/dev/null || echo "MISSING STRIP DRC STATUS"
+echo "STRIP_BASE_DRC_RC=$STRIP_BASE_DRC_RC STRIP_DENSITY_DRC_RC=$STRIP_DENSITY_DRC_RC STRIP_LVS_RC=$STRIP_LVS_RC"
+find "$STRIP_PACKAGE/pvs/drc" -name pvs_drc_status.rpt -type f -print -exec cat {} \;
 cat "$STRIP_LVS_STATUS" 2>/dev/null || echo "MISSING STRIP LVS STATUS"
 ```
 

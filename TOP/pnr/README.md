@@ -244,6 +244,16 @@ and updates the matching handoff GDS when the handoff root is present.
 This is typical-only OOC implementation for top-review handoff. PVS, PEX,
 MMMC, foundry LVS, and direct OA import remain separate later gates.
 
+The canonical 2026-07-10 packet/strip rebuild is a stricter exception to the
+legacy PG-deferred default. Its generated config enables `explicit_exact`
+internal PG, exports GDS with both the official map and JIHD merge, and requires
+special connectivity plus the GDS audit. Immutable staging keeps the raw
+Innovus PG netlist, derives a CDL-filtered PVS source, requires LEF/source pin
+parity, and stores the exact JIHD CDL in the package. PVS base DRC, density DRC,
+and LVS remain server gates. See
+`TOP/docs/36_TX_PACKET_CORE_CANONICAL_REBUILD_AND_PVS_CLOSURE.md` and
+`TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md`.
+
 The block-by-block plan is in `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`.
 
 ## TX Fixed-Leaf Assembly Plan

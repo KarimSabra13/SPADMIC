@@ -13,8 +13,15 @@ import hashlib
 import json
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from prepare_pvs_lvs_source import prepare_lvs_source
 
 
 DEFAULT_ROOT = Path("/sim/ksabra/SPADMIC_work/handoff/innovus")
@@ -102,6 +109,7 @@ def main() -> None:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--state", choices=["candidate", "qualified"], default="candidate")
     parser.add_argument("--copy-shared-pdk", action="store_true")
+    parser.add_argument("--stdcell-cdl", type=Path)
     args = parser.parse_args()
 
     if args.kind == "block":
@@ -132,14 +140,18 @@ def main() -> None:
     if package.exists():
         raise SystemExit(f"IMMUTABLE_PACKAGE_EXISTS: {package}")
 
-    for directory in ["gds", "lef", "def", "netlist", "reports", "logs", "manifests", "status", "pvs/drc", "pvs/lvs"]:
+    for directory in ["gds", "lef", "def", "netlist", "pdk", "reports", "logs", "manifests", "status", "pvs/drc", "pvs/lvs"]:
         (package / directory).mkdir(parents=True, exist_ok=True)
 
     copied: list[Path] = []
     copied.append(copy_file(gds, package / "gds" / f"{args.layout_top}.gds"))
-    copied.append(copy_file(netlist, package / "netlist" / f"{args.source_top}.lvs.pg.v"))
+    raw_netlist = copy_file(netlist, package / "netlist" / f"{args.source_top}.innovus.pg.v")
+    copied.append(raw_netlist)
+    package_lefs: list[Path] = []
     for lef in lefs:
-        copied.append(copy_file(lef, package / "lef" / lef.name))
+        package_lef = copy_file(lef, package / "lef" / lef.name)
+        copied.append(package_lef)
+        package_lefs.append(package_lef)
     if def_file:
         copied.append(copy_file(def_file, package / "def" / f"{args.name}.def"))
     for report in reports:
@@ -147,24 +159,59 @@ def main() -> None:
     for log in logs:
         copied.append(copy_file(log, package / "logs" / log.name))
 
-    pdk_manifest: dict[str, dict[str, str | int]] = {}
+    stdcell_cdl_source = (
+        require_file(args.stdcell_cdl, "standard-cell CDL")
+        if args.stdcell_cdl
+        else first_existing(PDK_CANDIDATES["stdcell_cdl"], "stdcell_cdl")
+    )
+    package_cdl = copy_file(
+        stdcell_cdl_source,
+        package / "pdk" / "xh018_D_CELLS_JIHD.cdl",
+    )
+    copied.append(package_cdl)
+    canonical_lvs_source = package / "netlist" / f"{args.source_top}.lvs.pg.v"
+    lvs_source_status = package / "reports" / "lvs_source_preparation.rpt"
+    try:
+        prepare_lvs_source(
+            input_netlist=raw_netlist,
+            output_netlist=canonical_lvs_source,
+            source_top=args.source_top,
+            stdcell_cdl=package_cdl,
+            lefs=package_lefs,
+            status_path=lvs_source_status,
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    copied.extend([canonical_lvs_source, lvs_source_status])
+
+    pdk_manifest: dict[str, dict[str, str | int]] = {
+        "stdcell_cdl": {
+            "source": str(stdcell_cdl_source),
+            "package_local": str(package_cdl),
+            "bytes": package_cdl.stat().st_size,
+            "sha256": digest(package_cdl),
+        }
+    }
     if args.copy_shared_pdk:
         shared = handoff_root / "_shared" / "pdk" / "xh018_1131_jihd_v6_0"
         shared.mkdir(parents=True, exist_ok=True)
         for label, candidates in PDK_CANDIDATES.items():
-            src = first_existing(candidates, label)
+            src = stdcell_cdl_source if label == "stdcell_cdl" else first_existing(candidates, label)
             dst = shared / src.name
             if dst.exists():
                 if digest(dst) != digest(src):
                     raise SystemExit(f"shared PDK hash collision: {dst}")
             else:
                 copy_file(src, dst)
-            pdk_manifest[label] = {
-                "source": str(src),
-                "local": str(dst),
-                "bytes": dst.stat().st_size,
-                "sha256": digest(dst),
-            }
+            if label == "stdcell_cdl":
+                pdk_manifest[label]["shared_local"] = str(dst)
+            else:
+                pdk_manifest[label] = {
+                    "source": str(src),
+                    "shared_local": str(dst),
+                    "bytes": dst.stat().st_size,
+                    "sha256": digest(dst),
+                }
 
     rule_manifest = []
     for path in RULE_REFERENCES:
@@ -187,6 +234,10 @@ def main() -> None:
         "source_root": str(source_root),
         "layout_top": args.layout_top,
         "source_top": args.source_top,
+        "lvs_source": str(canonical_lvs_source),
+        "lvs_source_sha256": digest(canonical_lvs_source),
+        "stdcell_cdl": str(package_cdl),
+        "stdcell_cdl_sha256": digest(package_cdl),
         "canonical_name_note": canonical_note,
         "repo_branch": git_value(repo, "branch", "--show-current"),
         "repo_head": git_value(repo, "rev-parse", "HEAD"),
@@ -199,6 +250,9 @@ def main() -> None:
         "LABEL=SPADMIC_INNOVUS_HANDOFF\n"
         "PACKAGE_STATUS=CANDIDATE\n"
         "CANONICAL_NAME_STATUS=PASS\n"
+        "LVS_SOURCE_PREPARATION_STATUS=PASS\n"
+        "PIN_PARITY_STATUS=PASS\n"
+        "STDCELL_CDL_STATUS=PASS\n"
         "BBOX_PARITY_STATUS=UNKNOWN\n"
         "PIN_PARITY_STATUS=UNKNOWN\n"
         "GDS_LAYER_MAP_STATUS=UNKNOWN\n"

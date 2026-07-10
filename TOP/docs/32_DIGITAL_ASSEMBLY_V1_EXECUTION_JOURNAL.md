@@ -525,3 +525,34 @@ This entry does not close packet or strip physical implementation. Fresh
 packet server Genus/Innovus/PVS is next. Strip rebuild starts only after the
 packet report gates are understood, then the two actual LEFs are scored and
 the signal-only assembly smoke is run.
+
+## P04-R1 Canonical PVS Source And Replay Implementation
+
+Status: `PASS_LOCAL_CADENCE_SERVER_PENDING`
+
+The handoff package now preserves the raw Innovus PG source and creates a
+separate canonical LVS source by official JIHD CDL membership. The gate requires
+VDD/VSS, rejects nested top dimensions, and compares expanded source ports to
+the LEF pin set exactly. The package carries the exact CDL and records all
+source/CDL hashes.
+
+Template replay now fails when a requested old value has zero occurrences,
+applies artifact replacements before template-root relocation, and verifies
+canonical top/GDS/source/CDL presence after patching. DRC wrappers expose
+explicit `base` and `density` variants. LVS runs only after package and pin
+parity audits.
+
+Measured local evidence:
+
+```text
+TOP_PNR_UNIT_TESTS=34_PASS_0_FAIL
+PY_COMPILE=PASS
+BASH_SYNTAX=PASS
+PVS_GUI_TEMPLATE=NOT_CREATED_YET
+PVS_BASE_DRC=NOT_RUN
+PVS_DENSITY_DRC=NOT_RUN
+PVS_LVS=NOT_RUN
+```
+
+The reusable source, replay, and anti-pattern notes are in
+`TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md`.

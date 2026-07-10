@@ -128,6 +128,25 @@ syntax, and static fail-closed checks. No local Cadence installation was used,
 so `PG_CONNECTIVITY_STATUS`, Innovus DRC, timing, GDS content, PVS DRC, density,
 and LVS remain unverified until the server run.
 
+## P03 Canonical PVS Source And Replay
+
+Immutable staging now preserves `<top>.innovus.pg.v` and derives
+`<top>.lvs.pg.v`. Only module definitions listed as `.SUBCKT` in the official
+JIHD CDL are removed; instances remain. The package includes its exact CDL copy
+and hashes. Source preparation requires VDD/VSS, no nested top dimensions, and
+exact expanded top-port parity with the canonical LEF.
+
+PVS replay requires actual occurrences of all template GDS, source, CDL, and
+top values before replacement. It then verifies the patched run names the
+canonical paths and tops. Specific artifact paths are patched before template
+root relocation; reversing that order was proven to invalidate exact path
+replacement.
+
+DRC is executed twice from immutable clones: `--variant base` forces DENSITY
+undefined, and `--variant density` forces it defined. LVS is a third immutable
+run and passes only on an explicit report-level `MATCH`. See
+`TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md` for the full ledger.
+
 ## Negative Command Ledger
 
 - Do not flatten with `i+j`; use the explicit source/bit names above.
