@@ -140,6 +140,12 @@ only for `corePin` stitching. See
 - `TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.sh`
 - `TOP/pnr/scripts/run_innovus_ooc_pg_geometry_fix.tcl`
 
+The first exact-geometry run closed VSS and both boundary terminals but left
+the two known VDD rows open. The same scripts now implement P02-R3 with an
+audited local VDD helper stripe between connected anchor rows. Candidate
+geometry is tried only in restored copies and is retained only after zero PG
+connectivity violations and zero DRC.
+
 ## 5. Server Initialization
 
 Use this shell-safe preamble. Replace the expected commit after these files are

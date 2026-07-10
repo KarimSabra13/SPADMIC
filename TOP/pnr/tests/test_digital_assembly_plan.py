@@ -85,6 +85,18 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("SPADMIC_PG_FIX_VDD_Y0_UM:-10.080", wrapper)
         self.assertIn("SPADMIC_PG_FIX_VSS_Y0_UM:-14.560", wrapper)
         self.assertIn("SPADMIC_PG_FIX_Y1_UM:-180.880", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_VDD_HELPER_Y0_UM:-126.560", wrapper)
+        self.assertIn("SPADMIC_PG_FIX_VDD_HELPER_Y1_UM:-153.440", wrapper)
+
+    def test_pg_helper_candidates_are_fail_closed(self) -> None:
+        script = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_geometry_fix.tcl"
+        ).read_text()
+        self.assertIn("restoreDesign $baseline $top", script)
+        self.assertIn("VDD_HELPER_STATUS) FAIL_NO_CLEAN_CANDIDATE", script)
+        self.assertIn('if {$verdict eq "ACCEPT"} { break }', script)
+        self.assertIn("trial_pg_count == 0", script)
+        self.assertIn("trial_drc_count == 0", script)
 
 
 if __name__ == "__main__":

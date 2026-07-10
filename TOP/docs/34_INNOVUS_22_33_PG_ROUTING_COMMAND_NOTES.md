@@ -104,6 +104,20 @@ stripe width = 3.360
 P02-R2 restores the clean P01 checkpoint. It must not restore the failed P02
 checkpoint and must not run placement, CTS, or signal routing.
 
+P02-R2 closed VSS and the north PG terminals but left two isolated VDD
+followpin rows. P02-R3 therefore adds a bounded local VDD helper stripe:
+
+```text
+helper y range = 126.560 -> 153.440 um
+isolated rows  = 135.520, 144.480 um
+anchor rows    = 126.560, 153.440 um
+```
+
+The helper is not a full-height power trunk. It is a local METTP jumper whose
+endpoints coincide with already-connected VDD rows. Candidate X coordinates
+are evaluated from independent checkpoint restores. Only a zero-connectivity,
+zero-DRC candidate is retained.
+
 ## Required Gates
 
 - PG-term centers read from the restored DB, not fallback values.

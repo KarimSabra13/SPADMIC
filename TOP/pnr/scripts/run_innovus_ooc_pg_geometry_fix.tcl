@@ -126,6 +126,10 @@ set vss_y0 [expr {double([pgf_env SPADMIC_PG_FIX_VSS_Y0_UM])}]
 set y1 [expr {double([pgf_env SPADMIC_PG_FIX_Y1_UM])}]
 set expected_core [pgf_env SPADMIC_PG_FIX_EXPECTED_CORE_BOX]
 set expected_die [pgf_env SPADMIC_PG_FIX_EXPECTED_DIE_BOX]
+set helper_candidates [pgf_env SPADMIC_PG_FIX_VDD_HELPER_CANDIDATES_UM]
+set helper_y0 [expr {double([pgf_env SPADMIC_PG_FIX_VDD_HELPER_Y0_UM])}]
+set helper_y1 [expr {double([pgf_env SPADMIC_PG_FIX_VDD_HELPER_Y1_UM])}]
+set helper_area_half_width [expr {double([pgf_env SPADMIC_PG_FIX_VDD_HELPER_AREA_HALF_WIDTH_UM])}]
 set stream_map [pgf_env SPADMIC_STREAMOUT_MAP_FILE]
 set stdcell_gds [pgf_env SPADMIC_PG_FIX_STDCELL_GDS]
 set reports [file join $run_root reports]
@@ -135,8 +139,8 @@ file mkdir $reports $outputs $checkpoints
 
 array set status {
     LABEL SPADMIC_OOC_PG_GEOMETRY_FIX
-    PHASE P02_R2
-    POLICY RESTORE_P01_EXPLICIT_PG_GEOMETRY_NO_SIGNAL_ROUTE
+    PHASE P02_R3
+    POLICY RESTORE_P01_EXPLICIT_PG_GEOMETRY_LOCAL_VDD_HELPER_NO_SIGNAL_ROUTE
     PLACE_ACTION NOT_RUN
     CTS_ACTION NOT_RUN
     SIGNAL_ROUTE_ACTION PRESERVED_NO_ROUTE_DESIGN
@@ -228,6 +232,106 @@ set status(SROUTE_CORE_PIN) PASS
 set status(SROUTE_COMMAND) [pgf_value $sroute_command]
 catch {saveDesign [file join $checkpoints 02_core_pin_stitched.enc]}
 
+set main_detail [file join $reports verify_connectivity_pg_main_detail.rpt]
+set main_console [file join $reports verify_connectivity_pg_main.rpt]
+set main_command "verifyConnectivity -type special -nets {VDD VSS} -report \"$main_detail\""
+set main_capture 1
+if {[catch {uplevel #0 "$main_command > \"$main_console\""} err]} {
+    set main_capture 0
+    set status(VERIFY_MAIN_PG_ERROR) [pgf_value $err]
+}
+set main_count [pgf_violation_count $main_console]
+set status(MAIN_PG_CONNECTIVITY_VIOLATION_COUNT) $main_count
+set status(MAIN_PG_MARKER_COUNT) [pgf_dump_markers [file join $reports pg_connectivity_main_markers.tsv]]
+
+set helper_selected NONE
+set helper_summary [file join $reports vdd_helper_candidate_summary.tsv]
+set helper_fh [open $helper_summary w]
+puts $helper_fh "trial\tx_um\tadd_shape\tsroute\tpg_violations\tdrc_violations\tverdict"
+if {$main_capture && $main_count ne "UNKNOWN" && $main_count == 0} {
+    set status(VDD_HELPER_STATUS) NOT_REQUIRED
+    set helper_selected NOT_REQUIRED
+} else {
+    set main_text [pgf_text $main_detail]
+    if {!$main_capture || $main_count ne "3" ||
+        [regexp {Net VSS} $main_text] ||
+        ![regexp {134[.]540} $main_text] ||
+        ![regexp {143[.]245} $main_text]} {
+        close $helper_fh
+        set status(VDD_HELPER_STATUS) FAIL_UNEXPECTED_MAIN_MARKERS
+        set status(ERROR) MAIN_PG_FAILURE_DOES_NOT_MATCH_APPROVED_VDD_RESIDUAL
+        pgf_write_status $status_path
+        exit 8
+    }
+    set status(VDD_HELPER_STATUS) SEARCHING
+    set baseline [file join $checkpoints 02_core_pin_stitched.enc.dat]
+    if {![file exists $baseline]} {
+        set baseline [file join $checkpoints 02_core_pin_stitched.enc]
+    }
+    set trial 0
+    foreach candidate $helper_candidates {
+        incr trial
+        if {[catch {restoreDesign $baseline $top} restore_err]} {
+            puts $helper_fh "$trial\t$candidate\tNOT_RUN\tNOT_RUN\tUNKNOWN\tUNKNOWN\tRESTORE_FAIL"
+            continue
+        }
+        set x [expr {double($candidate)}]
+        set helper_command [list add_shape -net VDD -layer METTP -shape STRIPE \
+            -status ROUTED -pathSeg [list $x $helper_y0 $x $helper_y1] -width $width]
+        if {[catch {uplevel #0 $helper_command} add_err]} {
+            puts $helper_fh "$trial\t[format %.3f $x]\tFAIL\tNOT_RUN\tUNKNOWN\tUNKNOWN\tADD_SHAPE_FAIL"
+            continue
+        }
+        set area [list \
+            [expr {$x - $helper_area_half_width}] \
+            [expr {$helper_y0 - 1.120}] \
+            [expr {$x + $helper_area_half_width}] \
+            [expr {$helper_y1 + 1.120}]]
+        set helper_sroute [list sroute -connect {corePin} -nets {VDD} -area $area \
+            -corePinTarget stripe -corePinCheckStdcellGeoms -allowJogging 1 \
+            -allowLayerChange 1 -layerChangeRange {MET1 METTP}]
+        if {[catch {uplevel #0 $helper_sroute} route_err]} {
+            puts $helper_fh "$trial\t[format %.3f $x]\tPASS\tFAIL\tUNKNOWN\tUNKNOWN\tSROUTE_FAIL"
+            continue
+        }
+        set trial_detail [file join $reports "vdd_helper_trial_${trial}_pg_detail.rpt"]
+        set trial_console [file join $reports "vdd_helper_trial_${trial}_pg.rpt"]
+        set trial_verify "verifyConnectivity -type special -nets {VDD VSS} -report \"$trial_detail\""
+        if {[catch {uplevel #0 "$trial_verify > \"$trial_console\""} verify_err]} {
+            puts $helper_fh "$trial\t[format %.3f $x]\tPASS\tPASS\tUNKNOWN\tUNKNOWN\tVERIFY_FAIL"
+            continue
+        }
+        set trial_pg_count [pgf_violation_count $trial_console]
+        pgf_dump_markers [file join $reports "vdd_helper_trial_${trial}_markers.tsv"]
+        set trial_drc [file join $reports "vdd_helper_trial_${trial}_drc.rpt"]
+        set trial_drc_capture [pgf_capture $trial_drc {verify_drc}]
+        set trial_drc_count [pgf_violation_count $trial_drc]
+        set verdict REJECT
+        if {$trial_pg_count ne "UNKNOWN" && $trial_pg_count == 0 &&
+            $trial_drc_capture && $trial_drc_count ne "UNKNOWN" &&
+            $trial_drc_count == 0} {
+            set verdict ACCEPT
+            set helper_selected [format %.3f $x]
+        }
+        puts $helper_fh "$trial\t[format %.3f $x]\tPASS\tPASS\t$trial_pg_count\t$trial_drc_count\t$verdict"
+        if {$verdict eq "ACCEPT"} { break }
+    }
+}
+close $helper_fh
+set status(VDD_HELPER_SELECTED_X_UM) $helper_selected
+set status(VDD_HELPER_Y_RANGE_UM) "[format %.3f $helper_y0],[format %.3f $helper_y1]"
+set status(VDD_HELPER_CANDIDATE_REPORT) $helper_summary
+if {$helper_selected eq "NONE"} {
+    set status(VDD_HELPER_STATUS) FAIL_NO_CLEAN_CANDIDATE
+    set status(INTERNAL_PG_STATUS) FAIL
+    pgf_write_status $status_path
+    exit 8
+}
+if {$helper_selected ne "NOT_REQUIRED"} {
+    set status(VDD_HELPER_STATUS) PASS
+    catch {saveDesign [file join $checkpoints 03_vdd_helper_selected.enc]}
+}
+
 set special_detail [file join $reports verify_connectivity_pg_detail.rpt]
 set special_console [file join $reports verify_connectivity_pg.rpt]
 set special_command "verifyConnectivity -type special -nets {VDD VSS} -report \"$special_detail\""
@@ -257,7 +361,7 @@ catch {defOut [file join $reports tx_ddr_strip.pg_postcheck.def]}
 if {$status(PG_CONNECTIVITY_STATUS) ne "PASS" ||
     $status(REGULAR_CONNECTIVITY_STATUS) ne "PASS" ||
     $status(INNOVUS_DRC_STATUS) ne "PASS"} {
-    catch {saveDesign [file join $checkpoints 03_pg_postcheck_failed.enc]}
+    catch {saveDesign [file join $checkpoints 04_pg_postcheck_failed.enc]}
     set status(INTERNAL_PG_STATUS) FAIL
     pgf_write_status $status_path
     exit 8
@@ -271,7 +375,7 @@ if {[catch {write_lef_abstract "${base}.lef"}]} { lefOut "${base}.lef" }
 file copy -force "${base}.lef" "${base}.abstract.lef"
 streamOut "${base}.gds" -libName DesignLib -units 1000 -mode ALL \
     -mapFile $stream_map -merge [list $stdcell_gds]
-catch {saveDesign [file join $checkpoints 04_pg_clean_export.enc]}
+catch {saveDesign [file join $checkpoints 05_pg_clean_export.enc]}
 
 set status(INTERNAL_PG_STATUS) PASS
 set status(STATUS) PASS

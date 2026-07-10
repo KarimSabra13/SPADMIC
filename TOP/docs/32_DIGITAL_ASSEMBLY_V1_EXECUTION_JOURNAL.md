@@ -28,7 +28,7 @@ Genus or Innovus and must not modify MPTDC internals.
 | --- | --- | --- | --- |
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
-| P02 | Restore-only internal PG for the narrow strip | FAIL_DIAGNOSTIC_REQUIRED | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
+| P02 | Restore-only internal PG for the narrow strip | PENDING_SERVER_R3 | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
 | P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff and historical LVS intake | REGISTERED_PENDING_SERVER_INVENTORY | OA backup, bbox/pin parity, GDS audit, read-only LVS input inventory |
 | P04 | Per-block PVS closure, mismatch classification, and handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, explicit LVS verdict, diagnostic, hashes, promotion gate |
 | P05 | Phase-A TX assembly generation and geometry gate | BLOCKED_BY_P04 | No obstacle overlap, exact placements, exact 19-net contract |
@@ -297,6 +297,39 @@ P02-R2 implementation:
 Export is fail-closed: no promoted outputs are emitted unless PG
 connectivity, regular connectivity, and Innovus DRC all report zero
 violations. PVS remains pending after a successful P02-R2 run.
+
+P02-R2 executed as
+`innovus_ooc_pg_geometry_fix_tx_ddr_strip_20260710_153213`. It reduced the PG
+violations from 9 to 3 while preserving zero regular-connectivity and zero DRC
+violations. It correctly emitted no handoff outputs.
+
+```text
+PG_GEOMETRY_FIX_RC=8
+RESTORE_DESIGN=PASS
+GEOMETRY_GUARD=PASS
+PG_TERM_CENTER_GUARD=PASS
+ADD_SHAPE_VDD=PASS
+ADD_SHAPE_VSS=PASS
+SROUTE_CORE_PIN=PASS
+PG_CONNECTIVITY_VIOLATION_COUNT=3
+REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+DRC_MARKER_TOTAL=0
+RESULT=REVIEW_REQUIRED
+```
+
+The boundary-pin gaps, VSS network, stripe offsets, and dangling endpoints are
+fixed. All remaining markers are VDD opens:
+
+- the followpin row centered at `y=135.520 um`;
+- the followpin row centered at `y=144.480 um`;
+- the aggregate VDD network marker caused by those two isolated rows.
+
+P02-R3 extends the same fail-closed script with a local VDD helper stripe. The
+helper spans `y=126.560..153.440 um`, so already-connected VDD rows anchor both
+ends around the two isolated rows. Candidate X locations are grid-aligned and
+tested from independent restores of the main-PG checkpoint. A candidate is
+accepted only when both special connectivity and DRC are zero. Rejected trial
+geometry is discarded by restore and cannot enter the final database.
 
 ## Parallel P03/P04 Registration - TX Packet Core HV LVS
 
