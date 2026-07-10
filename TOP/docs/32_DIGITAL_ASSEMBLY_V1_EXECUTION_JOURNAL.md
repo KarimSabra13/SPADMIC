@@ -28,9 +28,9 @@ Genus or Innovus and must not modify MPTDC internals.
 | --- | --- | --- | --- |
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
-| P02 | Restore-only internal PG for the narrow strip | PENDING_SERVER | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
-| P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff | PENDING_SERVER | OA backup, bbox/pin parity, canonical GDS export, layer-map audit |
-| P04 | Per-block PVS closure and immutable handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, LVS explicit match, hashes, promotion gate |
+| P02 | Restore-only internal PG for the narrow strip | FAIL_DIAGNOSTIC_REQUIRED | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
+| P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff and historical LVS intake | REGISTERED_PENDING_SERVER_INVENTORY | OA backup, bbox/pin parity, GDS audit, read-only LVS input inventory |
+| P04 | Per-block PVS closure, mismatch classification, and handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, explicit LVS verdict, diagnostic, hashes, promotion gate |
 | P05 | Phase-A TX assembly generation and geometry gate | BLOCKED_BY_P04 | No obstacle overlap, exact placements, exact 19-net contract |
 | P06 | Phase-A TX assembly route | BLOCKED_BY_P05 | Checkpoints 00/01/02, selected-net connectivity, DRC, timing |
 | P07 | Assembly PVS and promoted handoff | BLOCKED_BY_P06 | GDS audit, PVS DRC zero, LVS match or approved source contract |
@@ -127,7 +127,7 @@ waived for final handoff; they are the explicit input condition for P02.
 
 ## P02 - Narrow Strip Restore-Only PG
 
-Status: `PENDING_SERVER`
+Status: `FAIL_DIAGNOSTIC_REQUIRED`
 
 P02 restores the P01 `05_postroute_export` checkpoint. It must not run
 placement, CTS, signal `routeDesign`, or synthesis. It adds only VDD/VSS METTP
@@ -149,6 +149,79 @@ Acceptance gates:
 
 PVS DRC/LVS remain later independent gates even if all P02 Innovus checks
 pass.
+
+First-attempt evidence:
+
+```text
+REPO_HEAD=c6c4beb24500ba15bf2d1ea9826d741aa9df56de
+RUN_ID=innovus_ooc_pg_only_tx_ddr_strip_20260710_135413
+RUN_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_pg_only_tx_ddr_strip_20260710_135413
+PG_PATCH_RC=8
+RESTORE_DESIGN=PASS
+SIGNAL_ROUTE_ACTION=PRESERVED_NO_ROUTE_DESIGN
+PLACE_ACTION=NOT_RUN
+CTS_ACTION=NOT_RUN
+ADD_STRIPE_VDD=PASS
+ADD_STRIPE_VSS=PASS
+SROUTE_PG=PASS
+VDD_STRIPE_CENTER_SOURCE=DB_PG_TERM
+VDD_STRIPE_CENTER_X_UM=858.480
+VSS_STRIPE_CENTER_SOURCE=DB_PG_TERM
+VSS_STRIPE_CENTER_X_UM=2574.880
+PG_CONNECTIVITY_STATUS=FAIL
+PG_CONNECTIVITY_VIOLATION_COUNT=9
+REGULAR_CONNECTIVITY_STATUS=PASS
+REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+RESULT=REVIEW_REQUIRED
+SIGNOFF_READY=NO
+```
+
+The 9 PG violations are classified by Innovus as:
+
+```text
+IMPVFC-96  unconnected terminals                    2
+IMPVFC-200 disconnected special-wire pieces         4
+IMPVFC-94  dangling special wires                    3
+```
+
+This proves that command acceptance by `addStripe` and `sroute` did not prove
+electrical PG closure. The signal route remains usable as the restore source;
+the failed PG run is not a handoff candidate.
+
+The generated GDS is 749026 bytes with SHA256
+`b917fcaa74f69234cdd6dc0aaa9a8b5d051e77c4f74669c6079eb7f88f4fc4ca`.
+Its first audit is non-authoritative because the audit imposed a 1 MB minimum
+and compared the resolved `/data/pdk` map path literally against the lexical
+`/eda/pdk` command path. The stream-map hash itself matched the approved XFAB
+hash. A corrected audit must be run under a new immutable report name, but no
+GDS can be promoted while PG connectivity remains FAIL.
+
+Next P02 action: read-only extraction of the existing DEF special-net
+sections, route reports, and focused Innovus log messages. Do not rerun
+`sroute` until the open topology is identified.
+
+## Parallel P03/P04 Registration - TX Packet Core HV LVS
+
+Status: `REGISTERED_NON_BLOCKING_TO_P02`
+
+Candidate historical LVS directory:
+
+```text
+/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
+```
+
+After P02, this directory will be inventoried in read-only mode. Only reports,
+controls, logs, the source netlist actually used, compact maps, and hash
+manifests will be copied into an immutable raw bundle under the Innovus
+handoff root. Git will receive only compact review reports and a mismatch
+diagnostic.
+
+No mismatch cause is currently assigned. In particular, the manual DIFFCON
+work is not treated as the cause without extracted-device or connectivity
+evidence. The detailed intake, classification, and rerun policy is in
+`TOP/docs/33_TX_PACKET_CORE_HV_PVS_LVS_TRIAGE.md`.
 
 ## Update Procedure
 

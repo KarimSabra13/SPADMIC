@@ -110,6 +110,13 @@ must be handled by the restore-only P02 PG phase. The exact new LEF still has
 to pass `gen_spadmic_digital_assembly_v1.py` against the real audit before the
 assembly run starts.
 
+The first P02 restore-only PG attempt preserved signal routing and remained
+DRC clean, but did not close PG connectivity. `sroute` returned successfully,
+while `verifyConnectivity -type special` found 9 violations: 2 unconnected
+terminals, 4 disconnected special-wire pieces, and 3 dangling wires. This is
+a localized PG topology problem. The run is diagnostic evidence only and its
+GDS must not be promoted.
+
 ## 5. Server Initialization
 
 Use this shell-safe preamble. Replace the expected commit after these files are
@@ -189,6 +196,18 @@ Then, manually in Virtuoso:
 The old `_HV` DRC evidence cannot be attached automatically to the canonical
 GDS: the known template GDS and handoff GDS have different SHA256 hashes.
 
+A candidate historical LVS run for the corrected `_HV` layout is registered
+at:
+
+```text
+/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
+```
+
+It must be inventoried read-only before its result or inputs are trusted. This
+parallel P03/P04 investigation does not block the strip-only P02 PG patch.
+The evidence policy and mismatch taxonomy are defined in
+`TOP/docs/33_TX_PACKET_CORE_HV_PVS_LVS_TRIAGE.md`.
+
 Audit the canonical OA and export:
 
 ```bash
@@ -251,6 +270,10 @@ if [ "$RUN_OK" -eq 1 ] && [ "$STRIP_SIGNAL_RC" -eq 0 ]; then
     cat "$STRIP_PG_ROOT/reports/verify_drc_post_pg.rpt" 2>/dev/null || echo "MISSING DRC"
 fi
 ```
+
+The first P02 run ID was
+`innovus_ooc_pg_only_tx_ddr_strip_20260710_135413` and returned 8. Do not
+repeat the same PG command without first inspecting its special-net geometry.
 
 Do not use the PG output if `INTERNAL_PG_STATUS`, regular connectivity, or
 Innovus DRC is not `PASS`. The exported strip GDS explicitly merges the JIHD
