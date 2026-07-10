@@ -77,6 +77,11 @@ paths and SHA256 hashes. `audit_innovus_handoff.py` independently requires:
 - matching CDL manifest hash;
 - all original package SHA256 entries.
 
+For packet and strip, use `--qualification-profile canonical_tx` and include
+the Innovus `canonical_tx_ooc_gate.rpt`. Staging refuses a missing gate, a
+non-PASS gate, a result other than `READY_FOR_PVS_CANDIDATE`, or a macro name
+that differs from the package name.
+
 A failed preparation leaves an immutable failed package for diagnosis. Use a
 new version ID after correcting the input; do not overwrite the failed one.
 

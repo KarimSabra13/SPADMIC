@@ -545,7 +545,7 @@ parity audits.
 Measured local evidence:
 
 ```text
-TOP_PNR_UNIT_TESTS=34_PASS_0_FAIL
+TOP_PNR_UNIT_TESTS=37_PASS_0_FAIL
 PY_COMPILE=PASS
 BASH_SYNTAX=PASS
 PVS_GUI_TEMPLATE=NOT_CREATED_YET
@@ -556,3 +556,18 @@ PVS_LVS=NOT_RUN
 
 The reusable source, replay, and anti-pattern notes are in
 `TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md`.
+
+## P04-R2 Canonical Innovus-To-PVS Gate
+
+Status: `PASS_LOCAL_SERVER_REPORTS_PENDING`
+
+The TX OOC wrapper now invokes a canonical candidate validator after the GDS
+audit. It verifies the physical LEF interface, scalar packet boundary, exact
+paired-pin X coordinates, PG pin semantics, DRC/connectivity/timing/export
+statuses, and mapped/merged GDS evidence. Immutable staging can require this
+gate with `--qualification-profile canonical_tx`.
+
+Local tests prove that deferred antenna is recorded as a final-handoff block,
+non-deferred antenna rejects a candidate, and a stream-pin coordinate drift
+rejects a candidate. Cadence-generated reports remain required before any real
+package can pass.

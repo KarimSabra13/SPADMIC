@@ -147,6 +147,31 @@ undefined, and `--variant density` forces it defined. LVS is a third immutable
 run and passes only on an explicit report-level `MATCH`. See
 `TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md` for the full ledger.
 
+## P04 Canonical OOC Candidate Gate
+
+`validate_tx_canonical_ooc.py` runs automatically after Innovus and the mapped
+GDS audit for packet and strip. It requires:
+
+- exact expected macro name and footprint;
+- all 19 stream pins on MET3 at the canonical X coordinates;
+- all 64 packet source scalar pins and no nested LEF name;
+- VDD/VSS pins on METTP with POWER/GROUND use;
+- Innovus DRC, regular connectivity, and special PG connectivity PASS;
+- both explicit PG shapes and `sroute` PASS;
+- post-route setup and hold timing PASS;
+- DEF/LEF/GDS/PG-netlist exports present;
+- official map and JIHD merge audit PASS.
+
+The current milestone permits nonzero antenna markers only when
+`SPADMIC_TX_ALLOW_ANTENNA_DEFERRED=1` (the wrapper default). The gate then emits
+`ANTENNA_MILESTONE_STATUS=DEFERRED_FINAL_HANDOFF_BLOCKED` and always keeps
+`FINAL_HANDOFF_READY=NO`. Set the variable to `0` for the later antenna-clean
+candidate. This is a visible debt, not a waiver.
+
+Immutable staging with `--qualification-profile canonical_tx` requires the
+gate report to be `PASS` and `READY_FOR_PVS_CANDIDATE`. File presence alone is
+no longer enough to enter PVS.
+
 ## Negative Command Ledger
 
 - Do not flatten with `i+j`; use the explicit source/bit names above.

@@ -252,9 +252,26 @@ else
 fi
 cp -f "$gds_audit_rpt" "$HANDOFF_ROOT/reports/gds_export_audit.rpt"
 
+tx_ooc_gate_rc="NOT_APPLICABLE"
+tx_ooc_gate_rpt="$BLOCK_ROOT/reports/canonical_tx_ooc_gate.rpt"
+if [[ "$BLOCK" == "tx_packet_core" || "$BLOCK" == "tx_ddr_strip" ]]; then
+  TX_GATE_ARGS=(--block-root "$BLOCK_ROOT" --block "$BLOCK" --status "$tx_ooc_gate_rpt")
+  case "${SPADMIC_TX_ALLOW_ANTENNA_DEFERRED:-1}" in
+    1|yes|YES|true|TRUE|on|ON) TX_GATE_ARGS+=(--allow-antenna-deferred) ;;
+  esac
+  set +e
+  python3 "$SCRIPT_DIR/validate_tx_canonical_ooc.py" "${TX_GATE_ARGS[@]}"
+  tx_ooc_gate_rc=$?
+  set -e
+  if [[ -s "$tx_ooc_gate_rpt" ]]; then
+    cp -f "$tx_ooc_gate_rpt" "$HANDOFF_ROOT/reports/canonical_tx_ooc_gate.rpt"
+  fi
+fi
+
 result="FAIL"
 if [[ "$innovus_rc" -eq 0 ]] \
     && [[ "$gds_audit_rc" -eq 0 ]] \
+    && [[ "$tx_ooc_gate_rc" == "NOT_APPLICABLE" || "$tx_ooc_gate_rc" -eq 0 ]] \
     && [[ -f "$status_rpt" ]] \
     && grep -q '^RESULT=ABSTRACT_READY_FOR_TOP_REVIEW$' "$status_rpt"; then
   result="ABSTRACT_READY_FOR_TOP_REVIEW"
@@ -302,12 +319,14 @@ fi
   echo "- Handoff root: \`$HANDOFF_ROOT\`"
   echo "- Innovus return code: \`$innovus_rc\`"
   echo "- Mapped/merged GDS audit return code: \`$gds_audit_rc\`"
+  echo "- Canonical TX OOC gate return code: \`$tx_ooc_gate_rc\`"
   echo
   echo "## Result"
   echo
   echo "- Result: \`$result\`"
   echo "- Status report: \`$status_rpt\`"
   echo "- GDS export audit: \`$gds_audit_rpt\`"
+  echo "- Canonical TX OOC gate: \`$tx_ooc_gate_rpt\`"
   echo "- Manifest: \`reports/ooc_harden_manifest.csv\`"
   echo
   echo "This is typical-only Innovus OOC implementation. PVS, PEX, MMMC, and foundry LVS are deferred; do not label this SIGNOFF_READY."

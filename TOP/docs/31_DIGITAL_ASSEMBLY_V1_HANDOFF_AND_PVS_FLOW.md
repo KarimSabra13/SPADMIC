@@ -575,6 +575,12 @@ PVS base DRC, PVS density DRC, and PVS LVS are classified may the strip be
 rebuilt with the same paired stream coordinates. The final assembly step routes
 the 19 aligned links on MET2/MET3 and keeps assembly PG deferred.
 
+Before staging either TX block, require
+`reports/canonical_tx_ooc_gate.rpt` and pass it to
+`stage_innovus_handoff.py --qualification-profile canonical_tx --report ...`.
+This gate may label antenna deferred for the PVS milestone, but it never labels
+the final handoff ready.
+
 Do not stage the historical `_HV` GDS, the P01 signal-only strip, or any R1-R4
 PG trial as a canonical block. Do not transfer PVS results across GDS hashes.
 The detailed implementation and closure order are in

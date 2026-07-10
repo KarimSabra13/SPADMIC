@@ -44,6 +44,14 @@ class StageInnovusHandoffTest(unittest.TestCase):
             )
             cdl = root / "xh018_D_CELLS_JIHD.cdl"
             cdl.write_text(".SUBCKT AND2JIHDX1 A B Y vddi gndi\n.ENDS\n")
+            tx_gate = source_root / "canonical_tx_ooc_gate.rpt"
+            tx_gate.write_text(
+                "STATUS=PASS\n"
+                "RESULT=READY_FOR_PVS_CANDIDATE\n"
+                "BLOCK=tx_packet_core\n"
+                "MACRO=spadmic_tx_packet_core\n"
+                "FINAL_HANDOFF_READY=NO\n"
+            )
             handoff = root / "handoff"
             command = [
                 "python3", str(STAGE),
@@ -59,6 +67,8 @@ class StageInnovusHandoffTest(unittest.TestCase):
                 "--handoff-root", str(handoff),
                 "--repo-root", str(REPO),
                 "--stdcell-cdl", str(cdl),
+                "--report", str(tx_gate),
+                "--qualification-profile", "canonical_tx",
             ]
             result = subprocess.run(command, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -72,6 +82,7 @@ class StageInnovusHandoffTest(unittest.TestCase):
             self.assertIn("STATUS=PASS", (package / "reports" / "lvs_source_preparation.rpt").read_text())
             manifest = json.loads((package / "manifests" / "package.json").read_text())
             self.assertEqual(manifest["source_top"], "spadmic_tx_packet_core")
+            self.assertEqual(manifest["qualification_profile"], "canonical_tx")
             self.assertEqual(
                 manifest["lvs_source_sha256"],
                 hashlib.sha256(canonical.read_bytes()).hexdigest(),

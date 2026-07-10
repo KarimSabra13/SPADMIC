@@ -91,6 +91,15 @@ def git_value(repo: Path, *args: str) -> str:
         return "UNKNOWN"
 
 
+def key_values(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in path.read_text(errors="replace").splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            values[key] = value
+    return values
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--kind", choices=["block", "assembly"], default="block")
@@ -110,6 +119,11 @@ def main() -> None:
     parser.add_argument("--state", choices=["candidate", "qualified"], default="candidate")
     parser.add_argument("--copy-shared-pdk", action="store_true")
     parser.add_argument("--stdcell-cdl", type=Path)
+    parser.add_argument(
+        "--qualification-profile",
+        choices=["basic", "canonical_tx"],
+        default="basic",
+    )
     args = parser.parse_args()
 
     if args.kind == "block":
@@ -133,6 +147,23 @@ def main() -> None:
     def_file = require_file(args.def_file, "DEF") if args.def_file else None
     reports = [require_file(path, "report") for path in args.report]
     logs = [require_file(path, "log") for path in args.log]
+    canonical_tx_gate: Path | None = None
+    if args.qualification_profile == "canonical_tx":
+        if args.kind != "block" or args.name not in {"spadmic_tx_packet_core", "spadmic_tx_ddr_strip"}:
+            raise SystemExit("canonical_tx qualification is valid only for the two canonical TX blocks")
+        gate_reports = [path for path in reports if path.name == "canonical_tx_ooc_gate.rpt"]
+        if len(gate_reports) != 1:
+            raise SystemExit("CANONICAL_TX_GATE_FAIL: exactly one canonical_tx_ooc_gate.rpt is required")
+        canonical_tx_gate = gate_reports[0]
+        gate = key_values(canonical_tx_gate)
+        if gate.get("STATUS") != "PASS" or gate.get("RESULT") != "READY_FOR_PVS_CANDIDATE":
+            raise SystemExit(
+                "CANONICAL_TX_GATE_FAIL: canonical TX OOC report is not PASS/READY_FOR_PVS_CANDIDATE"
+            )
+        if gate.get("MACRO") != args.name:
+            raise SystemExit(
+                f"CANONICAL_TX_GATE_FAIL: report macro {gate.get('MACRO', 'MISSING')} != {args.name}"
+            )
 
     handoff_root = args.handoff_root.resolve()
     category = "blocks" if args.kind == "block" else "assemblies"
@@ -230,6 +261,7 @@ def main() -> None:
         "name": args.name,
         "version": args.version,
         "state": args.state,
+        "qualification_profile": args.qualification_profile,
         "package_root": str(package),
         "source_root": str(source_root),
         "layout_top": args.layout_top,
@@ -250,6 +282,7 @@ def main() -> None:
         "LABEL=SPADMIC_INNOVUS_HANDOFF\n"
         "PACKAGE_STATUS=CANDIDATE\n"
         "CANONICAL_NAME_STATUS=PASS\n"
+        f"CANONICAL_TX_OOC_GATE_STATUS={'PASS' if canonical_tx_gate else 'NOT_REQUIRED'}\n"
         "LVS_SOURCE_PREPARATION_STATUS=PASS\n"
         "PIN_PARITY_STATUS=PASS\n"
         "STDCELL_CDL_STATUS=PASS\n"

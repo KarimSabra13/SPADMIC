@@ -427,3 +427,11 @@ Every canonical OOC wrapper run requires the official XH018 map and the JIHD
 standard-cell GDS merge. The wrapper now audits the actual Innovus command log
 and output hash. Missing map, missing merge, or failed audit makes the wrapper
 fail even if Innovus itself returns zero.
+
+### Candidate staging gate
+
+The canonical TX gate checks actual LEF dimensions, stream-pin centers, scalar
+packet pins, PG pin layers/use, timing, regular/special connectivity, DRC,
+exports, and the GDS map/merge report. A candidate with deferred antenna can
+enter PVS analysis but remains explicitly blocked from final handoff. Do not
+stage from file existence, Innovus RC, or `ABSTRACT_READY` alone.
