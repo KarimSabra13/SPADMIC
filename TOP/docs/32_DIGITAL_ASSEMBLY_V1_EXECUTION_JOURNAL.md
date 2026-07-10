@@ -27,8 +27,8 @@ Genus or Innovus and must not modify MPTDC internals.
 | Phase | Scope | Current status | Required evidence |
 | --- | --- | --- | --- |
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
-| P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PENDING_SERVER | OOC status, LEF size, DRC, markers, regular connectivity |
-| P02 | Restore-only internal PG for the narrow strip | BLOCKED_BY_P01 | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
+| P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
+| P02 | Restore-only internal PG for the narrow strip | PENDING_SERVER | PG patch status, PG connectivity, post-PG DRC, merged GDS audit |
 | P03 | Canonical corrected `spadmic_tx_packet_core` OA handoff | PENDING_SERVER | OA backup, bbox/pin parity, canonical GDS export, layer-map audit |
 | P04 | Per-block PVS closure and immutable handoff promotion | BLOCKED_BY_P02_P03 | PVS DRC zero, LVS explicit match, hashes, promotion gate |
 | P05 | Phase-A TX assembly generation and geometry gate | BLOCKED_BY_P04 | No obstacle overlap, exact placements, exact 19-net contract |
@@ -71,7 +71,7 @@ environment are not available in this checkout.
 
 ## P01 - Narrow TX DDR Strip Signal PnR
 
-Status: `PENDING_SERVER`
+Status: `PASS`
 
 Reason for this phase:
 
@@ -96,20 +96,59 @@ Acceptance gates:
   SPADMIC2 obstacle check;
 - no full-top or unrelated block run.
 
-Evidence to append after execution:
+Measured evidence:
 
 ```text
-REPO_HEAD=PENDING
-RUN_ID=PENDING
-RUN_ROOT=PENDING
-RETURN_CODE=PENDING
-STATUS_REPORT=PENDING
-DRC_REPORT=PENDING
-MARKER_REPORT=PENDING
-CONNECTIVITY_REPORT=PENDING
-ABSTRACT_LEF=PENDING
-VERDICT=PENDING
+REPO_HEAD=1bf29069837b0a992b98aead50e98be28196a601
+RUN_ID=innovus_ooc_harden_tx_ddr_strip_narrow_20260710_133516
+RUN_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_ddr_strip_narrow_20260710_133516/blocks/tx_ddr_strip
+RETURN_CODE=NOT_INCLUDED_IN_RETURNED_EXCERPT
+STATUS_REPORT=<RUN_ROOT>/reports/ooc_harden_status.rpt
+DRC_REPORT=<RUN_ROOT>/reports/verify_drc_post_route.rpt
+MARKER_REPORT=<RUN_ROOT>/reports/DRC_MARKER_CLASSIFICATION.rpt
+CONNECTIVITY_REPORT=<RUN_ROOT>/reports/verify_connectivity_regular.rpt
+ABSTRACT_LEF=<RUN_ROOT>/outputs/tx_ddr_strip.abstract.lef
+CORE_SIZE_UM=3413.000 x 160.776
+MACRO_SIZE_UM=3433.360 x 180.880
+PLACED_BBOX=61.980,3061.110 -> 3495.340,3241.990
+TXRX4TDC2_X_CLEARANCE_UM=10.179
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+ANTENNA_MARKER_COUNT=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_STATUS=DEFERRED_TOP_LEVEL_HOOKUP
+SIGNOFF_READY=NO
+VERDICT=PASS_SIGNAL_PNR_PG_PENDING
 ```
+
+The regular-connectivity transcript contains exactly two problems: VDD and
+VSS have no global or special route. These are expected in P01 and are not
+waived for final handoff; they are the explicit input condition for P02.
+
+## P02 - Narrow Strip Restore-Only PG
+
+Status: `PENDING_SERVER`
+
+P02 restores the P01 `05_postroute_export` checkpoint. It must not run
+placement, CTS, signal `routeDesign`, or synthesis. It adds only VDD/VSS METTP
+stripes and special routes, then exports a GDS merged with the JIHD standard
+cell GDS through the official XFAB stream map.
+
+Acceptance gates:
+
+- `PG_PATCH_RC=0`
+- `RESTORE_DESIGN=PASS`
+- `SIGNAL_ROUTE_ACTION=PRESERVED_NO_ROUTE_DESIGN`
+- `ADD_STRIPE_VDD=PASS` and `ADD_STRIPE_VSS=PASS`
+- `SROUTE_PG=PASS`
+- `PG_CONNECTIVITY_STATUS=PASS` with zero violations;
+- `REGULAR_CONNECTIVITY_STATUS=PASS` with zero violations;
+- `INNOVUS_DRC_STATUS=PASS` with zero markers;
+- `RESULT=PG_STITCHED_DRC_CLEAN_PENDING_PVS`;
+- merged GDS, abstract LEF, DEF, and PG netlist present.
+
+PVS DRC/LVS remain later independent gates even if all P02 Innovus checks
+pass.
 
 ## Update Procedure
 

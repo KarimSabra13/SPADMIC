@@ -94,10 +94,21 @@ TXRX4TDC2      = 3505.519,464.920 -> 3638.910,3265.795
 overlap        = 79.421 x 180.880 um
 ```
 
-The first corrective attempt is a strip-only OOC rerun with core width
-`3413.000 um`. Expected total width is about `3433 um`, ending near x=3495 and
-retaining roughly 10 um clearance. This is not accepted by estimate: the new
-LEF must pass `gen_spadmic_digital_assembly_v1.py` against the real audit.
+The strip-only OOC rerun completed on 2026-07-10 with core width
+`3413.000 um`. The generated abstract is `3433.360 x 180.880 um`; at the
+approved origin its bbox is:
+
+```text
+narrow strip bbox = 61.980,3061.110 -> 3495.340,3241.990
+TXRX4TDC2         = 3505.519,464.920 -> 3638.910,3265.795
+x clearance       = 10.179 um
+```
+
+Innovus reported zero DRC markers, zero antenna markers, and regular signal
+connectivity PASS. VDD and VSS remain unrouted by deliberate P01 policy and
+must be handled by the restore-only P02 PG phase. The exact new LEF still has
+to pass `gen_spadmic_digital_assembly_v1.py` against the real audit before the
+assembly run starts.
 
 ## 5. Server Initialization
 
