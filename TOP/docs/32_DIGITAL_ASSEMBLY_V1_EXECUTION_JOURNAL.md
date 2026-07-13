@@ -1158,3 +1158,28 @@ R5_TCL_INFO_COMPLETE=1
 R5_CANONICAL_RERUN=BLOCKED
 R5_PVS=BLOCKED
 ```
+
+### P03-R10 Server Evidence - Marker Database Scope And Abort Semantics
+
+Status: `DIAGNOSTIC_HARNESS_REJECTED_NO_VIA_COMMAND_EXECUTED`
+
+The first instrumented replay stopped before `setViaGenMode` or any
+`editPowerVia` call:
+
+```text
+BASELINE_PRECONDITION_FAILED: drc=7 markers=40 regular=0 special=4
+```
+
+The mismatch is a reporting-scope defect. `verify_drc` reports the seven
+current non-antenna DRC violations, while restored `top.markers` retains all
+known classes: seven minimum-area, 29 antenna, and four connectivity markers.
+The marker dump must preserve the raw total but exclude `type=Antenna` and
+`type=Connectivity` from the DRC-comparison TSV. Its accounting is now explicit
+instead of assuming `top.markers` equals the most recent command's count.
+
+The failed guard also exposed an Innovus batch-control defect. Raising Tcl
+`error` from the `-init` script left `innovus -nowin` at an interactive prompt,
+so subsequent shell lines were interpreted as Tcl. `trial_abort` now writes its
+status and calls `exit 8`, ensuring every fail-closed guard terminates the
+Innovus child. The corrected replay uses a new immutable `_drc_probe_r2` root
+and Step 10 report paths; the failed Step 09 root is not reused or deleted.

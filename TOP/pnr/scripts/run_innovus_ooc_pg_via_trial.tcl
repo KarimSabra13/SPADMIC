@@ -92,11 +92,14 @@ proc trial_write_marker_dump {path} {
     set fh [open $path w]
     puts $fh "idx\tmarker_handle\tbox\tllx\tlly\turx\tury\tcx\tcy\tlayer\ttype\tsubType\tmessage"
     set idx 0
+    set raw_count 0
+    set excluded_antenna_count 0
+    set excluded_connectivity_count 0
     foreach marker $markers {
         if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} {
             continue
         }
-        incr idx
+        incr raw_count
         set box UNKNOWN
         set layer UNKNOWN
         set type UNKNOWN
@@ -107,6 +110,16 @@ proc trial_write_marker_dump {path} {
         catch {set type [dbGet $marker.type]}
         catch {set subtype [dbGet $marker.subType]}
         catch {set message [dbGet $marker.message]}
+
+        if {[string equal -nocase $type "Antenna"]} {
+            incr excluded_antenna_count
+            continue
+        }
+        if {[string equal -nocase $type "Connectivity"]} {
+            incr excluded_connectivity_count
+            continue
+        }
+        incr idx
 
         lassign [trial_flat_box $box] llx lly urx ury
         set llx [trial_numeric_or_unknown $llx]
@@ -125,7 +138,7 @@ proc trial_write_marker_dump {path} {
         puts $fh "$idx\t[trial_value $marker]\t[trial_value $box]\t$llx\t$lly\t$urx\t$ury\t$cx\t$cy\t[trial_value $layer]\t[trial_value $type]\t[trial_value $subtype]\t[trial_value $message]"
     }
     close $fh
-    return $idx
+    return [list $idx $raw_count $excluded_antenna_count $excluded_connectivity_count]
 }
 
 proc trial_run_command {fh label command} {
@@ -157,7 +170,8 @@ proc trial_abort {reason {detail ""}} {
         set status(ERROR) [trial_value $detail]
     }
     trial_write_status
-    error "$reason: $detail"
+    puts stderr "SPADMIC_PG_VIA_TRIAL_ABORT: $reason: [trial_value $detail]"
+    exit 8
 }
 
 set checkpoint [trial_env SPADMIC_PG_VIA_TRIAL_CHECKPOINT]
@@ -220,13 +234,25 @@ set pre_regular [file join $reports verify_connectivity_regular_pre_trial.rpt]
 set pre_special [file join $reports verify_connectivity_special_pre_trial.rpt]
 trial_capture $pre_drc {verify_drc}
 set pre_marker_count UNKNOWN
-if {[catch {set pre_marker_count [trial_write_marker_dump $pre_drc_markers]} marker_error]} {
+set pre_marker_database_total UNKNOWN
+set pre_excluded_antenna_count UNKNOWN
+set pre_excluded_connectivity_count UNKNOWN
+if {[catch {
+    lassign [trial_write_marker_dump $pre_drc_markers] \
+        pre_marker_count \
+        pre_marker_database_total \
+        pre_excluded_antenna_count \
+        pre_excluded_connectivity_count
+} marker_error]} {
     set status(PRE_DRC_MARKER_DUMP_STATUS) FAIL
     set status(PRE_DRC_MARKER_DUMP_ERROR) [trial_value $marker_error]
 } else {
     set status(PRE_DRC_MARKER_DUMP_STATUS) PASS
 }
 set status(PRE_DRC_MARKER_COUNT) $pre_marker_count
+set status(PRE_MARKER_DATABASE_TOTAL) $pre_marker_database_total
+set status(PRE_EXCLUDED_ANTENNA_MARKER_COUNT) $pre_excluded_antenna_count
+set status(PRE_EXCLUDED_CONNECTIVITY_MARKER_COUNT) $pre_excluded_connectivity_count
 trial_capture $pre_regular {verifyConnectivity -type regular}
 trial_capture $pre_special {verifyConnectivity -type special -nets {VDD VSS}}
 set pre_drc_count [trial_violation_count $pre_drc]
@@ -316,13 +342,25 @@ trial_capture $post_special {verifyConnectivity -type special -nets {VDD VSS}}
 trial_capture $post_regular {verifyConnectivity -type regular}
 trial_capture $post_drc {verify_drc}
 set post_marker_count UNKNOWN
-if {[catch {set post_marker_count [trial_write_marker_dump $post_drc_markers]} marker_error]} {
+set post_marker_database_total UNKNOWN
+set post_excluded_antenna_count UNKNOWN
+set post_excluded_connectivity_count UNKNOWN
+if {[catch {
+    lassign [trial_write_marker_dump $post_drc_markers] \
+        post_marker_count \
+        post_marker_database_total \
+        post_excluded_antenna_count \
+        post_excluded_connectivity_count
+} marker_error]} {
     set status(POST_DRC_MARKER_DUMP_STATUS) FAIL
     set status(POST_DRC_MARKER_DUMP_ERROR) [trial_value $marker_error]
 } else {
     set status(POST_DRC_MARKER_DUMP_STATUS) PASS
 }
 set status(POST_DRC_MARKER_COUNT) $post_marker_count
+set status(POST_MARKER_DATABASE_TOTAL) $post_marker_database_total
+set status(POST_EXCLUDED_ANTENNA_MARKER_COUNT) $post_excluded_antenna_count
+set status(POST_EXCLUDED_CONNECTIVITY_MARKER_COUNT) $post_excluded_connectivity_count
 set post_special_count [trial_violation_count $post_special]
 set post_regular_count [trial_violation_count $post_regular]
 set post_drc_count [trial_violation_count $post_drc]

@@ -536,3 +536,16 @@ Decision rules:
   cut placement until the marker boxes show which generated cuts collide.
 - If replay counts differ from `4 -> 0` special, `0 -> 0` regular, or `7 -> 25`
   DRC, stop as nondeterministic evidence rather than selecting a repair.
+
+The first marker replay stopped before construction because raw
+`top.markers=40` was compared directly with `verify_drc=7`. A restored marker
+database can retain antenna and connectivity classes across verification
+commands. For DRC delta analysis, record the raw database total separately and
+filter `type=Antenna` plus `type=Connectivity`; require the filtered count to
+match `verify_drc` and require raw-count accounting to balance.
+
+Do not use Tcl `error` as the terminal fail-closed action in a `-nowin -init`
+diagnostic. Innovus may enter its command prompt and consume the caller's next
+shell lines. Write the status report and use an explicit nonzero Innovus exit.
+Preserve the failed diagnostic root and assign a new run ID after repairing the
+harness.

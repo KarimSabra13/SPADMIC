@@ -64,6 +64,12 @@ class AnalyzeTxPacketPgViaDrcTest(unittest.TestCase):
             "POST_DRC_MARKER_DUMP_STATUS=PASS\n"
             "PRE_DRC_MARKER_COUNT=7\n"
             "POST_DRC_MARKER_COUNT=25\n"
+            "PRE_MARKER_DATABASE_TOTAL=40\n"
+            "POST_MARKER_DATABASE_TOTAL=58\n"
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT=29\n"
+            "POST_EXCLUDED_ANTENNA_MARKER_COUNT=29\n"
+            "PRE_EXCLUDED_CONNECTIVITY_MARKER_COUNT=4\n"
+            "POST_EXCLUDED_CONNECTIVITY_MARKER_COUNT=4\n"
             + common_status
             + "POST_DRC_VIOLATION_COUNT=25\n"
             f"POST_SPECIAL_CONNECTIVITY_VIOLATION_COUNT={post_special}\n"

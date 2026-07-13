@@ -522,6 +522,15 @@ markers to account for the DRC delta. Diagnostic PASS does not validate a
 repair; it only supplies the geometry needed to choose the next isolated
 experiment.
 
+The first Step 09 attempt did not reach a via command. Its baseline check
+incorrectly compared `verify_drc=7` with raw `top.markers=40`; the latter also
+contained 29 retained antenna and four retained connectivity markers. The R2
+probe records raw and excluded counts separately and compares only the
+non-antenna, non-connectivity TSV with the DRC report. It also exits Innovus
+explicitly on any guard failure, rather than leaving a `-nowin` command prompt
+alive. The failed Step 09 root remains immutable, and the corrected run uses
+Step 10 plus `_drc_probe_r2`.
+
 ## P03 Canonical PVS Source And Replay
 
 Immutable staging now preserves `<top>.innovus.pg.v` and derives

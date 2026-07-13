@@ -214,6 +214,12 @@ def main() -> int:
         "POST_DRC_VIOLATION_COUNT",
         "PRE_DRC_MARKER_COUNT",
         "POST_DRC_MARKER_COUNT",
+        "PRE_MARKER_DATABASE_TOTAL",
+        "POST_MARKER_DATABASE_TOTAL",
+        "PRE_EXCLUDED_ANTENNA_MARKER_COUNT",
+        "POST_EXCLUDED_ANTENNA_MARKER_COUNT",
+        "PRE_EXCLUDED_CONNECTIVITY_MARKER_COUNT",
+        "POST_EXCLUDED_CONNECTIVITY_MARKER_COUNT",
         "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT",
         "POST_REGULAR_CONNECTIVITY_VIOLATION_COUNT",
         "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT",
@@ -246,6 +252,12 @@ def main() -> int:
     post_drc = trial_counts["POST_DRC_VIOLATION_COUNT"]
     pre_dump_count = trial_counts["PRE_DRC_MARKER_COUNT"]
     post_dump_count = trial_counts["POST_DRC_MARKER_COUNT"]
+    pre_database_total = trial_counts["PRE_MARKER_DATABASE_TOTAL"]
+    post_database_total = trial_counts["POST_MARKER_DATABASE_TOTAL"]
+    pre_excluded_antenna = trial_counts["PRE_EXCLUDED_ANTENNA_MARKER_COUNT"]
+    post_excluded_antenna = trial_counts["POST_EXCLUDED_ANTENNA_MARKER_COUNT"]
+    pre_excluded_connectivity = trial_counts["PRE_EXCLUDED_CONNECTIVITY_MARKER_COUNT"]
+    post_excluded_connectivity = trial_counts["POST_EXCLUDED_CONNECTIVITY_MARKER_COUNT"]
     if pre_drc is not None and pre_dump_count != pre_drc:
         errors.append(f"pre marker count {pre_dump_count} does not match DRC count {pre_drc}")
     if post_drc is not None and post_dump_count != post_drc:
@@ -254,6 +266,14 @@ def main() -> int:
         errors.append(f"pre TSV rows {len(pre_markers)} do not match marker count {pre_dump_count}")
     if post_dump_count is not None and len(post_markers) != post_dump_count:
         errors.append(f"post TSV rows {len(post_markers)} do not match marker count {post_dump_count}")
+    pre_filter_values = (pre_dump_count, pre_excluded_antenna, pre_excluded_connectivity)
+    post_filter_values = (post_dump_count, post_excluded_antenna, post_excluded_connectivity)
+    if pre_database_total is not None and all(value is not None for value in pre_filter_values):
+        if pre_database_total != sum(value for value in pre_filter_values if value is not None):
+            errors.append("pre marker database filter accounting does not balance")
+    if post_database_total is not None and all(value is not None for value in post_filter_values):
+        if post_database_total != sum(value for value in post_filter_values if value is not None):
+            errors.append("post marker database filter accounting does not balance")
     if pre_drc is not None and post_drc is not None and post_drc <= pre_drc:
         errors.append(f"expected rejected method to increase DRC: pre={pre_drc} post={post_drc}")
 
@@ -316,6 +336,12 @@ def main() -> int:
         f"DIRECT_STACK_DRC_STATUS={drc_status}",
         f"PRE_DRC_MARKER_COUNT={len(pre_markers)}",
         f"POST_DRC_MARKER_COUNT={len(post_markers)}",
+        f"PRE_MARKER_DATABASE_TOTAL={pre_database_total if pre_database_total is not None else 'UNKNOWN'}",
+        f"POST_MARKER_DATABASE_TOTAL={post_database_total if post_database_total is not None else 'UNKNOWN'}",
+        f"PRE_EXCLUDED_ANTENNA_MARKER_COUNT={pre_excluded_antenna if pre_excluded_antenna is not None else 'UNKNOWN'}",
+        f"POST_EXCLUDED_ANTENNA_MARKER_COUNT={post_excluded_antenna if post_excluded_antenna is not None else 'UNKNOWN'}",
+        f"PRE_EXCLUDED_CONNECTIVITY_MARKER_COUNT={pre_excluded_connectivity if pre_excluded_connectivity is not None else 'UNKNOWN'}",
+        f"POST_EXCLUDED_CONNECTIVITY_MARKER_COUNT={post_excluded_connectivity if post_excluded_connectivity is not None else 'UNKNOWN'}",
         f"DRC_MARKER_DELTA={drc_delta if drc_delta is not None else 'UNKNOWN'}",
         f"NEW_DRC_MARKER_COUNT={len(new_markers)}",
         f"REMOVED_BASELINE_MARKER_COUNT={len(removed_markers)}",

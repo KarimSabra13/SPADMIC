@@ -302,3 +302,11 @@ with immediate pre/post `top.markers` dumps. Review exact boxes, messages, and
 row attribution before considering constrained cut count, one row at a time,
 or a reviewed single-via construction. Save/export and PVS remain prohibited
 during this diagnosis.
+
+`top.markers` is not scoped automatically to the immediately preceding
+verification command. The restored packet checkpoint retained seven
+minimum-area, 29 antenna, and four connectivity markers, so a post-`verify_drc`
+query returned 40 objects while the report correctly said seven DRC
+violations. DRC replay tooling must retain the raw total for audit, exclude
+`type=Antenna` and `type=Connectivity`, and compare the filtered count with the
+`verify_drc` result.

@@ -943,12 +943,12 @@ pg_via_drc_probe() {
     return 1
   fi
 
-  trial_id="${TX2_SESSION_ID}_pg_via_via-only_drc_probe"
+  trial_id="${TX2_SESSION_ID}_pg_via_via-only_drc_probe_r2"
   trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
-  console="$TX2_SESSION_ROOT/logs/09_pg_via_drc_probe.console.log"
-  copy_dir="$TX2_SESSION_ROOT/reports/09_pg_via_drc_probe"
-  analysis_report="$TX2_SESSION_ROOT/reports/09_pg_via_drc_analysis.rpt"
-  driver_report="$TX2_SESSION_ROOT/reports/09_pg_via_drc_probe_driver.rpt"
+  console="$TX2_SESSION_ROOT/logs/10_pg_via_drc_probe_r2.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/10_pg_via_drc_probe_r2"
+  analysis_report="$TX2_SESSION_ROOT/reports/10_pg_via_drc_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/10_pg_via_drc_probe_driver.rpt"
 
   load_cadence
   cadence_rc=$?
@@ -1013,7 +1013,7 @@ pg_via_drc_probe() {
   elif [[ -r "$console" ]]; then
     sed -n '1,240p' "$console"
   fi
-  record_status 09_pg_via_drc_probe "$status" "$analysis_rc" "$result"
+  record_status 10_pg_via_drc_probe_r2 "$status" "$analysis_rc" "$result"
   [[ "$status" == "PASS" ]]
   return $?
 }
