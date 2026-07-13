@@ -41,10 +41,17 @@ proc trial_violation_count {path} {
     set fh [open $path r]
     set text [read $fh]
     close $fh
+    set counts [list]
     if {[regexp -nocase {Verification Complete[[:space:]]*:[[:space:]]*([0-9]+)[[:space:]]+Viol} $text -> count]} {
-        return $count
+        lappend counts $count
     }
-    return UNKNOWN
+    if {[regexp -nocase {([0-9]+)[[:space:]]+Problem\(s\)[[:space:]]+\(IMPVFC-200\):[[:space:]]+Special Wires:} $text -> count]} {
+        lappend counts $count
+    }
+    if {[llength $counts] == 0} { return UNKNOWN }
+    set unique [lsort -unique $counts]
+    if {[llength $unique] != 1} { return CONFLICT }
+    return [lindex $unique 0]
 }
 
 proc trial_box_is_bounded {box} {
@@ -156,9 +163,9 @@ set pre_special_count [trial_violation_count $pre_special]
 set status(PRE_DRC_VIOLATION_COUNT) $pre_drc_count
 set status(PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT) $pre_regular_count
 set status(PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT) $pre_special_count
-if {$pre_regular_count eq "UNKNOWN" || $pre_regular_count != 0 ||
-    $pre_special_count eq "UNKNOWN" || $pre_special_count <= 0 ||
-    $pre_drc_count eq "UNKNOWN"} {
+if {![string is integer -strict $pre_regular_count] || $pre_regular_count != 0 ||
+    ![string is integer -strict $pre_special_count] || $pre_special_count <= 0 ||
+    ![string is integer -strict $pre_drc_count]} {
     trial_abort BASELINE_PRECONDITION_FAILED \
         "drc=$pre_drc_count regular=$pre_regular_count special=$pre_special_count"
 }
@@ -217,9 +224,9 @@ set status(POST_REGULAR_CONNECTIVITY_VIOLATION_COUNT) $post_regular_count
 set status(POST_DRC_VIOLATION_COUNT) $post_drc_count
 
 if {$command_fail_count == 0 &&
-    $post_special_count ne "UNKNOWN" && $post_special_count == 0 &&
-    $post_regular_count ne "UNKNOWN" && $post_regular_count == 0 &&
-    $post_drc_count ne "UNKNOWN" && $post_drc_count <= $pre_drc_count} {
+    [string is integer -strict $post_special_count] && $post_special_count == 0 &&
+    [string is integer -strict $post_regular_count] && $post_regular_count == 0 &&
+    [string is integer -strict $post_drc_count] && $post_drc_count <= $pre_drc_count} {
     set status(STATUS) PASS
     set status(RESULT) PG_VIA_METHOD_VALIDATED_NOT_CANONICAL
 } else {

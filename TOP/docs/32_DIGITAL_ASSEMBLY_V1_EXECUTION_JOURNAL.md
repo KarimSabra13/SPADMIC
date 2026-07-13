@@ -1036,3 +1036,36 @@ R3_PY_COMPILE=PASS
 R3_DIFF_CHECK=PASS
 R3_CADENCE_DESIGN_MODIFICATION=NOT_RUN
 ```
+
+### P03-R7 Server Evidence - PG Topology Trial Authorization
+
+Status: `PASS_ONE_ISOLATED_VIA_ONLY_TRIAL_AUTHORIZED`
+
+The parser replay at report-driver head
+`53aa3b1b6e5454a52ec4d4e87eda6fb615094e82` consumed the same immutable probe
+artifacts and resolved the Innovus summary count without reopening the design:
+
+```text
+SPECIAL_CONNECTIVITY_VIOLATION_COUNT=4
+SPECIAL_CONNECTIVITY_COUNT_SOURCE=IMPVFC_200_PROBLEM_SUMMARY
+SPECIAL_CONNECTIVITY_COUNT_CONSISTENCY=PASS
+OPEN_COMPONENT_COUNT=4
+CONNECTIVITY_MARKER_VDD_COUNT=4
+CONNECTIVITY_MARKER_VSS_COUNT=0
+EDIT_POWER_VIA_TRIAL_DECISION=READY_FOR_ONE_ISOLATED_TRIAL
+```
+
+Each disconnected VDD row has exactly one intersecting MET1 SWIRE and the same
+selected METTP stripe. The bounded via-search windows are:
+
+```text
+row 1: {515.200 126.160 518.560 126.960}
+row 2: {515.200 135.120 518.560 135.920}
+row 3: {515.200 278.480 518.560 279.280}
+```
+
+This authorizes only the next no-design command-help capture and then one
+fresh-process `via-only` experiment. It does not authorize patch-stack,
+canonical replay, export, staging, or PVS. The trial parser now recognizes the
+same two Innovus count formats and returns `CONFLICT` when both are present but
+disagree; all non-integer count states fail closed.

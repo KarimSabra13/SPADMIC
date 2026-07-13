@@ -458,6 +458,13 @@ solely because the detail report used the second form before parser support was
 added. Do not reinterpret `UNKNOWN` as zero or bypass the count-consistency
 gate.
 
+The corrected replay resolved count `4` from the `IMPVFC-200` summary, matched
+the four VDD connectivity markers, kept VSS at zero, and authorized exactly one
+isolated `via-only` trial. Its three bounded windows are `{515.200 126.160
+518.560 126.960}`, `{515.200 135.120 518.560 135.920}`, and `{515.200 278.480
+518.560 279.280}`. Authorization is method-specific and in-memory only; it is
+not physical closure or permission to run PVS.
+
 `pg-help` starts Innovus with no design loaded and requires installed help for
 `editPowerVia`. `pg-via-trial` then supports two separately isolated methods:
 
