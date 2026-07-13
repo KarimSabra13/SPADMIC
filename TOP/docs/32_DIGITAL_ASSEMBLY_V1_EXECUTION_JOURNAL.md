@@ -1183,3 +1183,5 @@ so subsequent shell lines were interpreted as Tcl. `trial_abort` now writes its
 status and calls `exit 8`, ensuring every fail-closed guard terminates the
 Innovus child. The corrected replay uses a new immutable `_drc_probe_r2` root
 and Step 10 report paths; the failed Step 09 root is not reused or deleted.
+The shell wrapper also connects Innovus stdin to `/dev/null`, so any other
+unhandled Tcl error receives EOF instead of consuming subsequent shell input.

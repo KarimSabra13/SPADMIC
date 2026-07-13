@@ -546,6 +546,6 @@ match `verify_drc` and require raw-count accounting to balance.
 
 Do not use Tcl `error` as the terminal fail-closed action in a `-nowin -init`
 diagnostic. Innovus may enter its command prompt and consume the caller's next
-shell lines. Write the status report and use an explicit nonzero Innovus exit.
-Preserve the failed diagnostic root and assign a new run ID after repairing the
-harness.
+shell lines. Write the status report, use an explicit nonzero Innovus exit, and
+redirect batch-child stdin from `/dev/null` as a fallback EOF. Preserve the
+failed diagnostic root and assign a new run ID after repairing the harness.

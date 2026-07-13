@@ -113,6 +113,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn('grep -Fq "setViaGenMode -area_only 1"', driver)
         self.assertIn('grep -Fq -- "-exclude_stack_vias"', driver)
         self.assertIn("ONE_FRESH_PROCESS_ONE_RESTORE_IN_MEMORY_TRIAL", wrapper)
+        self.assertIn("</dev/null", wrapper)
         self.assertIn("restoreDesign $checkpoint $top", trial)
         self.assertIn("editPowerVia -add_vias 1", trial)
         self.assertIn("setViaGenMode -area_only 1", trial)

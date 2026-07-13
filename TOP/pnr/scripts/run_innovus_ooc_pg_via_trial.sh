@@ -110,6 +110,7 @@ main() {
 
   innovus -nowin -init "$script_dir/run_innovus_ooc_pg_via_trial.tcl" \
     -log "$trial_root/logs/innovus.log" \
+    </dev/null \
     >"$trial_root/logs/innovus.stdout.log" 2>&1
   rc=$?
 
