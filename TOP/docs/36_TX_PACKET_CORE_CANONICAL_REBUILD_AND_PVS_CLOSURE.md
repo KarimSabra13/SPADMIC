@@ -82,6 +82,65 @@ duplicates, and missing connections.
 7. Re-pin/re-route and qualify the strip, then run the connected signal-route
    assembly smoke. Assembly PG remains a later phase.
 
+## Staged Phase-1 Server Driver
+
+`TOP/ci/server_run_tx_packet_canonical_phase1.sh` implements the first two
+server gates as independent operator actions. It deliberately does not launch
+Innovus or PVS. Run it as a child process with `bash`; its status reports are
+the source of truth, and a failing child command cannot terminate the login
+shell. The driver itself uses `set +e`, has no explicit `exit`, and never
+advances automatically.
+
+The command sequence is:
+
+```bash
+set +e
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh init <expected-head>
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh sync
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh preflight
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh xcelium-focus
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh xcelium-full
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh xcelium-report
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh genus
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh genus-report
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh package
+bash TOP/ci/server_run_tx_packet_canonical_phase1.sh status
+```
+
+Stop after every command and inspect `STEP_STATUS`. The prerequisite chain is
+`sync -> preflight -> xcelium-focus -> xcelium-full -> genus`; report and
+package commands may still run after a failure so that evidence can be
+collected. A Genus process return code of zero means only that the tool flow
+completed and wrote a netlist. It does not prove timing closure, resolved
+references, clock coverage, or constraint completeness.
+
+The active session pointer is
+`/sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_active.env`. Each
+timestamped session records:
+
+- the objective and immutable historical-HV policy;
+- exact Git HEAD and dirty-tree inventory without touching unrelated files;
+- generator, local unit-test, and EDA-tool preflight results;
+- five focused scalar-boundary Xcelium tests before the full regression;
+- the full Xcelium summary and compact failure extraction;
+- Genus command, summaries, critical reports, source-interface counts, and
+  output hashes;
+- a text-only evidence package that excludes large console logs and tool
+  databases.
+
+Negative operating rules:
+
+- Do not source this driver; invoke it with `bash`.
+- Do not continue because the command prompt returned. Read the corresponding
+  `status/<step>.rpt` and require `STATUS=PASS` for prerequisites.
+- Do not skip the five focused tests. They isolate scalar alias/order defects
+  before paying for the full regression.
+- Do not call Genus after a failed full Xcelium gate.
+- Do not interpret `06_genus STATUS=PASS` as timing closure. Review
+  `07_genus_review.rpt` before issuing any Innovus command.
+- Do not add raw console logs or tool databases to Git. Promote only reviewed
+  small reports and the measured diagnosis.
+
 ## P02 Paired Physical Contract
 
 The canonical interface file is:

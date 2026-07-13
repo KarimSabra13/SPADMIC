@@ -526,6 +526,45 @@ packet server Genus/Innovus/PVS is next. Strip rebuild starts only after the
 packet report gates are understood, then the two actual LEFs are scored and
 the signal-only assembly smoke is run.
 
+## P03-R3 Staged No-Auto-Advance Server Procedure
+
+Status: `PASS_LOCAL_SERVER_EXECUTION_PENDING`
+
+The first canonical server phase is now encoded in
+`TOP/ci/server_run_tx_packet_canonical_phase1.sh`. The procedure separates
+repository synchronization, tool/static preflight, five focused Xcelium tests,
+the full Xcelium regression, Genus execution, report extraction, and packaging
+into independent commands. Every step writes a structured status report and
+appends an execution journal under one timestamped `/sim` diagnostic root.
+
+This procedure was added because a long interactive command block has two
+failure modes: shell guards can terminate an SSH session, and automatic
+chaining can start an expensive downstream tool before the previous evidence
+has been reviewed. The new driver uses `set +e`, contains no explicit `exit`,
+is always invoked as a child process, and never advances by itself.
+
+The five focused tests are not a replacement for regression. They are an early
+diagnostic gate for scalar source mapping, event-bundle reconstruction, TX core
+and cluster behavior, and matrix-shell integration. Only a clean focused gate
+permits the full Xcelium run; only a clean full run permits Genus.
+
+Genus tool completion remains distinct from Genus closure. The generated
+review preserves `check_design`, timing-intent, post-opt timing, QoR, warning
+classification, unique scalar-name count, nested-name count, and netlist/SDC
+hashes. These reports must be analyzed before packet Innovus is unblocked.
+
+Local implementation evidence:
+
+```text
+DRIVER_BASH_SYNTAX=PASS
+DRIVER_NO_EXPLICIT_EXIT=ENFORCED_BY_UNIT_TEST
+DRIVER_NO_INNOVUS_OR_PVS=ENFORCED_BY_UNIT_TEST
+DRIVER_INIT_TEMP_SESSION=PASS
+TOP_PNR_UNIT_TESTS=40_PASS_0_FAIL
+GIT_DIFF_CHECK=PASS
+CADENCE_SERVER_EXECUTION=NOT_RUN
+```
+
 ## P04-R1 Canonical PVS Source And Replay Implementation
 
 Status: `PASS_LOCAL_CADENCE_SERVER_PENDING`
