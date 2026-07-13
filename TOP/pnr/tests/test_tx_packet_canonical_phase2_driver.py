@@ -29,6 +29,9 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "innovus-report",
             "diagnose",
             "pg-probe",
+            "pg-analyze",
+            "pg-help",
+            "pg-via-trial",
             "package",
             "status",
         ):
@@ -86,6 +89,31 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("DESIGN_MODIFICATION NOT_RUN", probe)
         self.assertNotIn("add_shape", probe)
         self.assertNotIn("sroute", probe)
+
+    def test_pg_repair_isolated_trial_is_fail_closed(self) -> None:
+        driver = DRIVER.read_text()
+        wrapper = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_via_trial.sh"
+        ).read_text()
+        trial = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_via_trial.tcl"
+        ).read_text()
+        command_help = (
+            REPO / "TOP" / "pnr" / "scripts" / "capture_innovus_pg_command_help.tcl"
+        ).read_text()
+        self.assertIn("require_step_pass 05_pg_probe", driver)
+        self.assertIn("require_step_pass 06_pg_analyze", driver)
+        self.assertIn("require_step_pass 07_pg_help", driver)
+        self.assertIn("READY_FOR_ONE_ISOLATED_TRIAL", driver)
+        self.assertIn("editPowerVia", command_help)
+        self.assertIn("ONE_FRESH_PROCESS_ONE_RESTORE_IN_MEMORY_TRIAL", wrapper)
+        self.assertIn("restoreDesign $checkpoint $top", trial)
+        self.assertIn("editPowerVia -add_vias 1", trial)
+        self.assertIn("POST_SPECIAL_CONNECTIVITY_VIOLATION_COUNT", trial)
+        self.assertIn("POST_REGULAR_CONNECTIVITY_VIOLATION_COUNT", trial)
+        self.assertIn("POST_DRC_VIOLATION_COUNT", trial)
+        for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
+            self.assertNotIn(forbidden, trial)
 
     def test_init_inherits_an_accepted_phase1_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

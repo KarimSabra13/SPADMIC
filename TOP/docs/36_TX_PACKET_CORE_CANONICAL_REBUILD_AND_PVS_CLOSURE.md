@@ -363,9 +363,9 @@ The actual blockers are separate and must not be collapsed into one status:
 3. All 19 packet north stream pins are uniformly `+0.280 um` from the canonical
    X centers. The first pin is `101.080` instead of `100.800`; the last is
    `1915.480` instead of `1915.200`. This equals half the configured `0.56 um`
-   grid and is consistent with an `editPin -assign` reference/snap effect, but
-   that causal interpretation remains a hypothesis until the generated command
-   and emitted rectangles are classified together.
+   grid. The generated command requested every canonical center directly and
+   every emitted rectangle moved by the same half-grid amount, establishing a
+   deterministic command-reference mapping rather than random pin placement.
 4. Twenty-nine antenna markers remain. They are accepted only as the explicit
    intermediate status `DEFERRED_FINAL_HANDOFF_BLOCKED`; they are not why this
    milestone failed, and they still block final handoff.
@@ -394,6 +394,84 @@ Do not rerun Xcelium, Genus, packet Innovus, or PVS before these reports are
 reviewed. Do not reuse this Innovus root for a modified candidate, do not scan
 helper X coordinates blindly, and do not treat command success or mapped GDS
 success as connectivity/DRC closure.
+
+### P03-R1 Restore-Only Probe Result
+
+The read-only probe completed from `05_postroute_export` in one fresh Innovus
+22.33 process. It made no design change and produced:
+
+```text
+RESTORE_DESIGN=PASS
+DESIGN_MODIFICATION=NOT_RUN
+VERIFY_SPECIAL_REPORT=PASS
+SPECIAL_CONNECTIVITY_VIOLATION_COUNT=4
+VDD_SWIRE_COUNT=40
+VSS_SWIRE_COUNT=40
+```
+
+All four special-connectivity findings belong to VDD. VSS has no open
+component. Three VDD findings are full-width horizontal row components:
+
+```text
+{10.080 125.000 2056.880 128.120}
+{10.080 133.960 2056.880 137.080}
+{10.080 277.320 2056.880 280.440}
+```
+
+The fourth is the aggregate disconnected VDD network box:
+
+```text
+{10.080 9.680 2056.880 366.240}
+```
+
+The probe's marker count is `40`, but that does not mean 40 PG failures. It is
+the existing `7` minimum-area plus `29` antenna DRC markers plus the `4` VDD
+connectivity markers created by the explicit connectivity check. Keep these
+classes separate.
+
+This topology matches the earlier strip symptom closely enough to reject more
+helper-X scans or another local `sroute`, but not closely enough to copy a
+repair blindly. The strip helper method was coordinate invariant, and the
+MPTDC history also proves that accepted `editPowerVia` commands can still fail
+downstream connectivity. The next method is therefore a bounded trial, not a
+canonical-flow edit.
+
+### R2 Changes and Trial Contract
+
+The paired stream center contract remains `100.800..1915.200 um`. Generated TX
+guided-pin commands now carry a separate `assign_x_um` and subtract exactly
+`0.280 um`; for example, target center `100.800` is issued to Innovus as
+`editPin -assign {100.520 ...}`. The canonical validator continues to check the
+emitted LEF center against `100.800`. Do not weaken it to `101.080`.
+
+`pg-analyze` consumes only the probe text and must correlate each VDD row box
+with an actual horizontal MET1 special wire and the vertical METTP VDD stripe.
+It emits bounded intersection windows. If any row lacks that overlap, or if a
+VSS row is open, the trial is blocked.
+
+`pg-help` starts Innovus with no design loaded and requires installed help for
+`editPowerVia`. `pg-via-trial` then supports two separately isolated methods:
+
+1. `via-only`: adjacent `MET1-MET2`, `MET2-MET3`, and `MET3-METTP`
+   `editPowerVia` calls in each proven overlap window.
+2. `patch-stack`: bounded VDD MET2/MET3 `add_shape` rectangles followed by the
+   same adjacent via pairs. Run this only in a new process after `via-only` is
+   rejected.
+
+Neither mode saves a checkpoint or exports DEF, LEF, GDS, or netlist data.
+Method validation requires all commands to complete, post-trial special
+connectivity zero, regular connectivity zero, and post-trial DRC no greater
+than the pre-trial count. A PASS means only
+`PG_VIA_METHOD_VALIDATED_NOT_CANONICAL`; it does not authorize PVS.
+
+The seven MET1 minimum-area markers are a separate unresolved method failure.
+All seven have identical `0.38 x 0.28 um` geometry, area `0.1064 um2`, below
+the required `0.2020 um2`. The old repair deleted all seven areas, selected all
+seven nets, and ran `globalDetailRoute -select`, `detailRoute -select`, and
+`ecoRoute -fix_drc` without command errors. The same seven markers returned.
+Do not repeat that delete-and-reroute sequence; it deterministically recreates
+the illegal access stubs. A later minimum-area trial needs local wire-context
+evidence and a different construction method.
 
 ## P03 Canonical PVS Source And Replay
 

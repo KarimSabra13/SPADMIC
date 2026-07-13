@@ -233,3 +233,31 @@ zero detailed special-connectivity violations and markers, zero regular
 connectivity violations, and zero Innovus DRC markers. If a fresh rebuild
 reproduces isolated VDD rows, capture the exact row/via markers from that fresh
 run; do not resume the coordinate-invariant R4 helper sweep.
+
+## editPowerVia Trial Discipline
+
+The repository has exercised this Innovus 22.33 syntax successfully at command
+level:
+
+```tcl
+editPowerVia -add_vias 1 -nets {VDD} \
+  -bottom_layer MET1 -top_layer MET2 \
+  -area {<llx> <lly> <urx> <ury>}
+```
+
+For a MET1-to-METTP stack, use explicit adjacent pairs (`MET1-MET2`,
+`MET2-MET3`, `MET3-METTP`) so the report identifies the failed interface.
+Capture `man editPowerVia` from the installed release before relying on it.
+
+Negative evidence is equally important: an older MPTDC run recorded all
+`editPowerVia` construction commands as PASS and still failed raw special
+connectivity. Therefore do not add this command directly to the canonical TX
+flow. Test one restored in-memory candidate, save/export nothing, and require
+the post-command connectivity report to reach zero.
+
+The packet R1 trial has two explicit modes. `via-only` changes only via
+objects. `patch-stack` first creates bounded VDD MET2/MET3 special-net patches
+with verified `add_shape -rect` syntax, then adds adjacent via pairs. Each mode
+must use a separate process and the same immutable source checkpoint. Never
+run patch-stack after via-only in the same loaded design because the result
+would not identify which method changed connectivity.

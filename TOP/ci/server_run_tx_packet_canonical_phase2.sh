@@ -29,6 +29,9 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh innovus-report
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh diagnose
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-probe
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-analyze
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-help
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-via-trial <via-only|patch-stack>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -709,6 +712,174 @@ pg_probe() {
   return $?
 }
 
+pg_analyze() {
+  load_session || return 1
+  require_step_pass 05_pg_probe || return 1
+  local probe_root analyzer report console rc status result
+  probe_root="$TX2_WORK_ROOT/diagnostics/${TX2_SESSION_ID}_pg_probe"
+  analyzer="$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_pg_probe.py"
+  report="$TX2_SESSION_ROOT/reports/06_pg_topology_analysis.rpt"
+  console="$TX2_SESSION_ROOT/logs/06_pg_topology_analysis.console.log"
+  rc=8
+  status=FAIL
+  result=PG_TOPOLOGY_ANALYSIS_INCOMPLETE
+
+  if [[ ! -r "$analyzer" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: PG topology analyzer is missing"
+    echo "ANALYZER=$analyzer"
+  elif [[ ! -d "$probe_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: PG probe root is missing"
+    echo "PROBE_ROOT=$probe_root"
+  else
+    python3 "$analyzer" \
+      --probe-root "$probe_root" \
+      --report "$report" \
+      >"$console" 2>&1
+    rc=$?
+  fi
+
+  if [[ "$rc" -eq 0 && "$(kv_field "$report" STATUS)" == "PASS" ]]; then
+    status=PASS
+    result=PG_TOPOLOGY_CLASSIFIED_NO_DESIGN_MODIFICATION
+  fi
+  if [[ -r "$report" ]]; then
+    cat "$report"
+  elif [[ -r "$console" ]]; then
+    cat "$console"
+  fi
+  record_status 06_pg_analyze "$status" "$rc" "$result"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
+pg_help() {
+  load_session || return 1
+  require_step_pass 06_pg_analyze || return 1
+  local cadence_rc help_id help_root console rc help_status status result copy_dir path
+  help_id="${TX2_SESSION_ID}_pg_repair_help"
+  help_root="$TX2_WORK_ROOT/diagnostics/$help_id"
+  console="$TX2_SESSION_ROOT/logs/07_pg_command_help.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/07_pg_command_help"
+  rc=8
+  status=FAIL
+  result=PG_REPAIR_COMMAND_HELP_INCOMPLETE
+
+  load_cadence
+  cadence_rc=$?
+  if [[ "$cadence_rc" -eq 0 ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    echo "COMMAND=bash TOP/pnr/scripts/run_capture_innovus_pg_command_help.sh $help_id"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_capture_innovus_pg_command_help.sh" "$help_id" \
+      >"$console" 2>&1
+    rc=$?
+  fi
+
+  help_status="$help_root/reports/command_help_status.rpt"
+  if [[ "$rc" -eq 0 \
+      && "$(kv_field "$help_status" STATUS)" == "PASS" \
+      && "$(kv_field "$help_status" COMMAND_editPowerVia)" != "UNAVAILABLE" \
+      && -n "$(kv_field "$help_status" COMMAND_editPowerVia)" ]]; then
+    status=PASS
+    result=EDIT_POWER_VIA_HELP_CAPTURED_NO_DESIGN_LOADED
+  fi
+
+  mkdir -p "$copy_dir"
+  if [[ -d "$help_root/reports" ]]; then
+    for path in "$help_root"/reports/*.rpt; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+  echo "PG_COMMAND_HELP_RC=$rc"
+  echo "PG_COMMAND_HELP_ROOT=$help_root"
+  if [[ -r "$help_status" ]]; then
+    cat "$help_status"
+  elif [[ -r "$console" ]]; then
+    sed -n '1,200p' "$console"
+  fi
+  record_status 07_pg_help "$status" "$rc" "$result"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
+pg_via_trial() {
+  load_session || return 1
+  require_step_pass 06_pg_analyze || return 1
+  require_step_pass 07_pg_help || return 1
+  local mode="$1"
+  local analysis decision cadence_rc trial_id trial_root console rc trial_status
+  local status result copy_dir path status_step
+  analysis="$TX2_SESSION_ROOT/reports/06_pg_topology_analysis.rpt"
+  decision="$(kv_field "$analysis" EDIT_POWER_VIA_TRIAL_DECISION)"
+  rc=8
+  status=FAIL
+  result=PG_VIA_TRIAL_NOT_RUN
+
+  if [[ "$mode" != "via-only" && "$mode" != "patch-stack" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: pg-via-trial requires via-only or patch-stack"
+    return 1
+  fi
+  if [[ "$decision" != "READY_FOR_ONE_ISOLATED_TRIAL" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: topology analysis did not authorize a via trial"
+    echo "EDIT_POWER_VIA_TRIAL_DECISION=${decision:-MISSING}"
+    return 1
+  fi
+
+  trial_id="${TX2_SESSION_ID}_pg_via_${mode}"
+  trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
+  console="$TX2_SESSION_ROOT/logs/08_pg_via_${mode}.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/08_pg_via_${mode}"
+  status_step="08_pg_via_trial_${mode//-/_}"
+
+  load_cadence
+  cadence_rc=$?
+  if [[ "$cadence_rc" -eq 0 ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_pg_via_trial.sh $TX2_BLOCK_ROOT $analysis $mode $trial_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_pg_via_trial.sh" \
+      "$TX2_BLOCK_ROOT" \
+      "$analysis" \
+      "$mode" \
+      "$trial_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    rc=$?
+  fi
+
+  trial_status="$trial_root/reports/pg_via_trial_status.rpt"
+  if [[ "$rc" -eq 0 \
+      && "$(kv_field "$trial_status" STATUS)" == "PASS" \
+      && "$(kv_field "$trial_status" RESULT)" == "PG_VIA_METHOD_VALIDATED_NOT_CANONICAL" ]]; then
+    status=PASS
+    result=PG_VIA_METHOD_VALIDATED_NOT_CANONICAL
+  else
+    result=PG_VIA_METHOD_REJECTED_OR_INCOMPLETE
+  fi
+
+  mkdir -p "$copy_dir"
+  if [[ -r "$trial_root/context.rpt" ]]; then
+    cp -p "$trial_root/context.rpt" "$copy_dir/context.rpt"
+  fi
+  if [[ -d "$trial_root/reports" ]]; then
+    for path in "$trial_root"/reports/*.rpt; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+  echo "PG_VIA_TRIAL_RC=$rc"
+  echo "PG_VIA_TRIAL_ROOT=$trial_root"
+  if [[ -r "$trial_status" ]]; then
+    cat "$trial_status"
+  elif [[ -r "$console" ]]; then
+    sed -n '1,240p' "$console"
+  fi
+  record_status "$status_step" "$status" "$rc" "$result"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -776,6 +947,15 @@ case "$COMMAND" in
     ;;
   pg-probe)
     pg_probe
+    ;;
+  pg-analyze)
+    pg_analyze
+    ;;
+  pg-help)
+    pg_help
+    ;;
+  pg-via-trial)
+    pg_via_trial "$ARGUMENT_1"
     ;;
   package)
     package_evidence

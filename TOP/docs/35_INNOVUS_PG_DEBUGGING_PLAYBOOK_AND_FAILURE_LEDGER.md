@@ -435,3 +435,54 @@ packet pins, PG pin layers/use, timing, regular/special connectivity, DRC,
 exports, and the GDS map/merge report. A candidate with deferred antenna can
 enter PVS analysis but remains explicitly blocked from final handoff. Do not
 stage from file existence, Innovus RC, or `ABSTRACT_READY` alone.
+
+## 10. Packet R1 Probe and Explicit Via Trial
+
+The fresh packet rebuild did reproduce the row-graph failure, but only on VDD.
+The restore-only probe reported three horizontal VDD open components at
+`y=125.000..128.120`, `133.960..137.080`, and `277.320..280.440 um`, plus one
+aggregate VDD component. VSS special connectivity and all regular connectivity
+are clean. This is a topology failure after successful `add_shape` and
+`sroute`, not evidence that the stripe X center is wrong.
+
+Do not confuse the probe's 40 total markers with its PG count. The total is:
+
+```text
+7 MET1 minimum-area + 29 antenna + 4 VDD connectivity = 40
+```
+
+The repository already contains accepted Innovus syntax for adjacent-layer
+power vias:
+
+```tcl
+editPowerVia -add_vias 1 -nets {VDD} \
+  -bottom_layer MET1 -top_layer MET2 -area {<bounded-overlap>}
+```
+
+However, older MPTDC evidence records `editPowerVia` commands as PASS while
+the required downstream `verifyConnectivity -type special -nets {VDD VSS}`
+still failed. Therefore command availability and command RC are only
+capability evidence. They are never closure evidence.
+
+The packet trial policy is:
+
+1. Parse the saved SWIRE table and require each open row to overlap an actual
+   VDD MET1 followpin and the VDD METTP stripe.
+2. Capture installed `editPowerVia` help from the same Innovus release.
+3. Launch one fresh process and restore once for one method.
+4. Run `via-only` first. If it fails, preserve its root and use a new process
+   for `patch-stack`; never accumulate both methods in one session.
+5. Save/export nothing from either trial.
+6. Accept a method only at special connectivity 0, regular connectivity 0,
+   and no DRC increase.
+
+The packet pin correction is independent. All 19 canonical centers were
+emitted at exactly target plus `0.280 um`, so generated TX `editPin` commands
+now subtract that half-grid amount while retaining the original target center
+in the plan CSV and validator. Do not move the interface contract.
+
+The seven minimum-area markers are also independent. The selected-net repair
+deleted seven areas without error and reran three route commands without error,
+yet the exact same seven `0.1064 um2` stubs remained below the `0.2020 um2`
+rule. Repeating those commands is ruled out. Explicit PG-via success, if any,
+does not clear or waive this DRC blocker.

@@ -930,3 +930,77 @@ Local tests prove that deferred antenna is recorded as a final-handoff block,
 non-deferred antenna rejects a candidate, and a stream-pin coordinate drift
 rejects a candidate. Cadence-generated reports remain required before any real
 package can pass.
+
+### P03-R5 Server Evidence - Packet Restore-Only PG Probe
+
+Status: `PASS_READ_ONLY_TOPOLOGY_CAPTURED_PHYSICAL_CANDIDATE_STILL_FAIL`
+
+After the report-schema fix at `50306e960dc6d86ac625d2270e688a65bd8a6bd6`,
+`diagnose` replayed with:
+
+```text
+DIAGNOSIS_STATUS=PASS
+RESULT=BLOCKERS_CLASSIFIED
+DESIGN_MODIFICATION=NOT_RUN
+```
+
+The subsequent probe used one fresh Innovus process and one restore from the
+packet `05_postroute_export` checkpoint:
+
+```text
+RESTORE_DESIGN=PASS
+DESIGN_MODIFICATION=NOT_RUN
+VERIFY_SPECIAL_REPORT=PASS
+SPECIAL_CONNECTIVITY_VIOLATIONS=4
+VDD_SWIRE_COUNT=40
+VSS_SWIRE_COUNT=40
+```
+
+All four connectivity findings are VDD. Three are horizontal components with
+boxes `{10.080 125.000 2056.880 128.120}`, `{10.080 133.960 2056.880
+137.080}`, and `{10.080 277.320 2056.880 280.440}`. The fourth is the aggregate
+VDD network box `{10.080 9.680 2056.880 366.240}`. VSS has no special open.
+
+The probe marker count `40` decomposes as seven minimum-area, 29 antenna, and
+four VDD connectivity markers. It must not be reported as 40 PG failures.
+
+The minimum-area repair ledger proves a rejected method, not merely an
+unclean result:
+
+```text
+SELECTED_NET_COUNT=7
+AREA_DELETE_COUNT=7
+AREA_DELETE_FAILURES=NONE
+ROUTE_FAILURES=NONE
+PRE_MIN_AREA_COUNT=7
+POST_MIN_AREA_COUNT=7
+```
+
+Every marker is the same `0.38 x 0.28 um` MET1 rectangle with actual area
+`0.1064 um2`, below required `0.2020 um2`. The three route commands recreated
+the same access stubs. Do not retry this sequence.
+
+R2 local implementation now separates canonical center from command argument.
+TX pin target `100.800` produces `assign_x_um=100.520`; the validator still
+requires an emitted center of `100.800`. A read-only SWIRE analyzer, installed
+command-help gate, and isolated `via-only`/`patch-stack` PG trials were added.
+Each PG method gets a fresh process and no save/export. A method passes only at
+special connectivity zero, regular connectivity zero, and no DRC increase.
+
+```text
+R2_PY_COMPILE=PASS
+R2_SHELL_SYNTAX=PASS
+R2_TOP_PNR_UNIT_TESTS=64_PASS_0_FAIL
+R2_CADENCE_PG_ANALYSIS=SERVER_PENDING
+R2_CADENCE_PG_VIA_TRIAL=NOT_RUN
+```
+
+Negative rules added by this probe:
+
+- Do not run another helper-X scan or local second `sroute`; packet and strip
+  evidence both identify a method/topology problem.
+- Do not infer that `editPowerVia` works because its command RC is zero; older
+  MPTDC evidence had accepted commands with failing downstream connectivity.
+- Do not combine via-only and patch-stack in one process.
+- Do not save, export, stage, or run PVS from an in-memory method trial.
+- Do not let a PG repair hide the independent minimum-area and antenna gates.

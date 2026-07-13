@@ -156,6 +156,7 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
                             "pin": pin_name,
                             "expected_x": expected_x,
                             "planned_x": float("nan"),
+                            "assign_x": float("nan"),
                             "actual_x": float("nan"),
                             "delta_x": float("nan"),
                             "width": float("nan"),
@@ -166,11 +167,14 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
                 rect = pin.primary_rect()
                 planned_text = pin_plan.get(pin_name, {}).get("target_x_um", "")
                 planned_x = float(planned_text) if planned_text else float("nan")
+                assign_text = pin_plan.get(pin_name, {}).get("assign_x_um", "")
+                assign_x = float(assign_text) if assign_text else float("nan")
                 stream_rows.append(
                     {
                         "pin": pin_name,
                         "expected_x": expected_x,
                         "planned_x": planned_x,
+                        "assign_x": assign_x,
                         "actual_x": rect.cx,
                         "delta_x": rect.cx - expected_x,
                         "width": rect.urx - rect.llx,
@@ -260,7 +264,7 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
     }
 
     lines = [*(f"{key}={value}" for key, value in values.items())]
-    lines.extend(["", "STREAM_PIN_TABLE_BEGIN", "pin\texpected_x_um\tplanned_x_um\tactual_x_um\tdelta_x_um\twidth_um\tlayer"])
+    lines.extend(["", "STREAM_PIN_TABLE_BEGIN", "pin\texpected_x_um\tplanned_x_um\tassign_x_um\tactual_x_um\tdelta_x_um\twidth_um\tlayer"])
     for row in stream_rows:
         def number(key: str) -> str:
             value = float(row[key])
@@ -272,6 +276,7 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
                     str(row["pin"]),
                     number("expected_x"),
                     number("planned_x"),
+                    number("assign_x"),
                     number("actual_x"),
                     number("delta_x"),
                     number("width"),

@@ -22,6 +22,7 @@ TX_STREAM_PIN_CONTRACT = REPO_ROOT / "TOP" / "pnr" / "interfaces" / "tx_packet_s
 TX_ASSEMBLY_ORIGIN_X_UM = 61.980
 TX_PACKET_DIE_HEIGHT_UM = 366.800
 TX_STRIP_DIE_HEIGHT_UM = 180.880
+TX_STREAM_EDITPIN_X_COMPENSATION_UM = 0.280
 
 
 PIN_HEADER = [
@@ -157,10 +158,12 @@ def tx_stream_pin_assignments(
     assignments: dict[str, dict[str, str]] = {}
     for row in rows:
         port = row[pin_key]
+        target_x = float(row[x_key])
         ports.append(port)
         assignments[port] = {
             "side": side,
-            "target_x_um": row[x_key],
+            "target_x_um": f"{target_x:.3f}",
+            "assign_x_um": f"{target_x - TX_STREAM_EDITPIN_X_COMPENSATION_UM:.3f}",
             "target_y_um": f"{target_y:.3f}",
             "source_inst": peer,
             "source_term": row[peer_key],
@@ -223,6 +226,7 @@ def write_pin_plan_csv(path: Path, plan: dict[str, list[str]], assignments: dict
             "order",
             "reason",
             "target_x_um",
+            "assign_x_um",
             "target_y_um",
             "source_inst",
             "source_term",
@@ -245,6 +249,7 @@ def write_pin_plan_csv(path: Path, plan: dict[str, list[str]], assignments: dict
                     order,
                     reason,
                     assignment.get("target_x_um", ""),
+                    assignment.get("assign_x_um", ""),
                     assignment.get("target_y_um", ""),
                     assignment.get("source_inst", ""),
                     assignment.get("source_term", ""),
@@ -347,8 +352,9 @@ def write_multi_side_pin_assignment_tcl(
         fh.write("set spadmic_ooc_pin_assignment_failures [list]\n")
         for port, assignment in assignments.items():
             side = assignment["side"]
+            assign_x_um = assignment.get("assign_x_um", assignment["target_x_um"])
             fh.write(f"if {{[catch {{editPin -pin {tcl_quote(port)} -side {side} -layer {layer} ")
-            fh.write(f"-assign {{{assignment['target_x_um']} {assignment['target_y_um']}}} ")
+            fh.write(f"-assign {{{assign_x_um} {assignment['target_y_um']}}} ")
             fh.write(f"-pinWidth {width_um:.3f} -pinDepth {depth_um:.3f} -fixedPin 1}} err]}} {{\n")
             fh.write(f"  lappend spadmic_ooc_pin_assignment_failures [format {{%s:%s}} {tcl_quote(port)} $err]\n")
             fh.write("}\n")
@@ -935,6 +941,7 @@ def generate_tx_packet_core(layout_dir: Path, out_dir: Path) -> None:
         "pg_ground_first_rail_offset_um": "4.48",
         "tx_packet_strip_pin_contract_csv": str(pin_contract_csv),
         "tx_packet_assembly_origin_x_um": f"{TX_ASSEMBLY_ORIGIN_X_UM:.3f}",
+        "tx_stream_editpin_x_compensation_um": f"{TX_STREAM_EDITPIN_X_COMPENSATION_UM:.3f}",
         "antenna_milestone_policy": "DEFER_MANUAL_REPAIR_FINAL_HANDOFF_BLOCKED",
         "handoff_note": "Packet/FIFO logic only; DDR16 pairer and DDRs2 adapter are excluded.",
     })
@@ -1088,6 +1095,7 @@ def generate_tx_ddr_strip(layout_dir: Path, out_dir: Path) -> None:
         "tx_ddr_strip_pin_guide_csv": str(pin_guide_csv),
         "tx_packet_strip_pin_contract_csv": str(pin_contract_csv),
         "tx_ddr_strip_assembly_origin_x_um": f"{TX_ASSEMBLY_ORIGIN_X_UM:.3f}",
+        "tx_stream_editpin_x_compensation_um": f"{TX_STREAM_EDITPIN_X_COMPENSATION_UM:.3f}",
         "ddrs2_data_pin_x_min_um": f"{data_x_min:.3f}",
         "ddrs2_data_pin_x_max_um": f"{data_x_max:.3f}",
         "route_profile": "met1_effort",

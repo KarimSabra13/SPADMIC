@@ -585,3 +585,27 @@ Do not stage the historical `_HV` GDS, the P01 signal-only strip, or any R1-R4
 PG trial as a canonical block. Do not transfer PVS results across GDS hashes.
 The detailed implementation and closure order are in
 `TOP/docs/36_TX_PACKET_CORE_CANONICAL_REBUILD_AND_PVS_CLOSURE.md`.
+
+## 14. Current Packet R1 Stop and R2 Entry Gate
+
+The first canonical packet implementation is preserved for diagnosis and must
+not be staged. It has clean regular connectivity, positive setup/hold slack,
+and an audited mapped/merged GDS, but it also has four VDD special-connectivity
+findings, seven MET1 minimum-area violations, and 19 uniformly shifted stream
+pins. PVS remains `NOT_RUN` by policy.
+
+The restore-only probe proved that the PG findings are three VDD row components
+plus one aggregate VDD component; VSS is clean. The R2 entry sequence is now:
+
+1. Generate a compact SWIRE/row overlap analysis from immutable probe text.
+2. Capture installed `editPowerVia` command help with no design loaded.
+3. Run one no-save/no-export VDD via method in one fresh restore process.
+4. If that method passes report-level connectivity and DRC gates, integrate it
+   into a new canonical run together with the `-0.280 um` guided-pin command
+   compensation.
+5. Use a different, evidence-driven minimum-area repair; the old selected-net
+   delete plus reroute sequence recreated all seven markers and is retired.
+
+Do not run PVS after a via trial, even if PG reaches zero. A trial is not a
+candidate handoff, and the seven minimum-area markers remain independently
+blocking until a complete new canonical artifact passes every OOC gate.

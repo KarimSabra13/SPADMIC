@@ -8,7 +8,20 @@ if {![info exists ::env(SPADMIC_INNOVUS_HELP_ROOT)] ||
 set root $::env(SPADMIC_INNOVUS_HELP_ROOT)
 set reports [file join $root reports]
 file mkdir $reports
-set commands {addStripe sroute editAddRoute addShape add_shape createShape create_shape}
+set commands {
+    addStripe
+    sroute
+    editPowerVia
+    addPowerVia
+    editAddVia
+    editAddRoute
+    addShape
+    add_shape
+    createShape
+    create_shape
+    setNanoRouteMode
+    getNanoRouteMode
+}
 array set available {}
 
 foreach command $commands {
@@ -36,7 +49,8 @@ foreach command $commands {
     puts $fh "COMMAND_${command}=$available($command)"
 }
 if {$available(addStripe) ne "UNAVAILABLE" &&
-    $available(sroute) ne "UNAVAILABLE"} {
+    $available(sroute) ne "UNAVAILABLE" &&
+    $available(editPowerVia) ne "UNAVAILABLE"} {
     puts $fh "STATUS=PASS"
     puts $fh "RESULT=REQUIRED_COMMAND_HELP_CAPTURED"
     close $fh

@@ -122,9 +122,13 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 self.assertIn("variable enable_pg_sroute {1}", config)
                 self.assertIn("variable pg_route_strategy {explicit_exact}", config)
                 self.assertIn("variable route_profile {met1_effort}", config)
+                self.assertIn("variable tx_stream_editpin_x_compensation_um {0.280}", config)
             self.assertIn("variable core_width_um {3413.000}", strip_config)
-            self.assertIn("-side NORTH -layer MET3 -assign {100.800 366.400}", (packet_root / "ooc_block_pin_assignments.tcl").read_text())
-            self.assertIn("-side SOUTH -layer MET3 -assign {100.800 0.400}", (strip_root / "ooc_block_pin_assignments.tcl").read_text())
+            self.assertIn("-side NORTH -layer MET3 -assign {100.520 366.400}", (packet_root / "ooc_block_pin_assignments.tcl").read_text())
+            self.assertIn("-side SOUTH -layer MET3 -assign {100.520 0.400}", (strip_root / "ooc_block_pin_assignments.tcl").read_text())
+            first_packet_stream = next(row for row in packet_rows if row["port"] == "tx_valid_o")
+            self.assertEqual(first_packet_stream["target_x_um"], "100.800")
+            self.assertEqual(first_packet_stream["assign_x_um"], "100.520")
 
     def test_clean_ooc_pg_uses_exact_geometry_before_signal_route(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_harden_block.tcl").read_text()
