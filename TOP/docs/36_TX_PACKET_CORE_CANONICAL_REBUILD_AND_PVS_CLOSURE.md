@@ -384,6 +384,12 @@ The next two gates are deliberately non-destructive:
   captures detailed special connectivity, PG terminals, special-wire topology,
   and connectivity markers with `DESIGN_MODIFICATION=NOT_RUN`.
 
+The first analyzer replay exposed a report-schema defect: its top-level
+`STATUS=PASS` was shadowed by an unqualified repair-ledger
+`STATUS=REVIEW_REQUIRED`, so the driver stopped before the probe. That stop was
+correctly fail-closed and launched no Innovus process. Repair fields are now
+namespaced as `REPAIR_*`, and the prerequisite reads `DIAGNOSIS_STATUS`.
+
 Do not rerun Xcelium, Genus, packet Innovus, or PVS before these reports are
 reviewed. Do not reuse this Innovus root for a modified candidate, do not scan
 helper X coordinates blindly, and do not treat command success or mapped GDS

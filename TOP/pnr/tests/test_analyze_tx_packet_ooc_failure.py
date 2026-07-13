@@ -156,6 +156,7 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
             values = analyzer.diagnose(block, report)
 
             self.assertEqual(values["STATUS"], "PASS")
+            self.assertEqual(values["DIAGNOSIS_STATUS"], "PASS")
             self.assertEqual(values["PG_COMMAND_STATUS"], "PASS")
             self.assertEqual(values["PG_CONNECTIVITY_STATUS"], "FAIL")
             self.assertEqual(values["PG_PROBLEM_COUNT"], "3")
@@ -171,7 +172,13 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
             )
             self.assertEqual(values["PVS_DECISION"], "DO_NOT_RUN")
             self.assertIn("STREAM_PIN_TABLE_BEGIN", report.read_text())
-            self.assertIn("MIN_AREA_FINAL_TABLE_BEGIN", report.read_text())
+            report_text = report.read_text()
+            self.assertIn("MIN_AREA_FINAL_TABLE_BEGIN", report_text)
+            self.assertIn("REPAIR_STATUS=REVIEW_REQUIRED", report_text)
+            self.assertEqual(
+                [line for line in report_text.splitlines() if line.startswith("STATUS=")],
+                ["STATUS=PASS"],
+            )
             after = hashlib.sha256(
                 (block / "outputs" / "tx_packet_core.abstract.lef").read_bytes()
             ).hexdigest()

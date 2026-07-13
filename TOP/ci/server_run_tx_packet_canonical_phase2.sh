@@ -618,7 +618,7 @@ diagnose_existing() {
     fi
   done
 
-  if [[ "$rc" -eq 0 && "$(kv_field "$report" STATUS)" == "PASS" ]]; then
+  if [[ "$rc" -eq 0 && "$(kv_field "$report" DIAGNOSIS_STATUS)" == "PASS" ]]; then
     status=PASS
     result=BLOCKERS_CLASSIFIED_NO_DESIGN_MODIFICATION
   fi

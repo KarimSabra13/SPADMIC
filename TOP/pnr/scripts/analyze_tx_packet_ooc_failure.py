@@ -224,6 +224,7 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
         "LABEL": "SPADMIC_TX_PACKET_OOC_FAILURE_DIAGNOSIS",
         "POLICY": "READ_ONLY_EXISTING_ARTIFACTS_NO_DESIGN_MODIFICATION",
         "STATUS": "PASS" if captured else "FAIL",
+        "DIAGNOSIS_STATUS": "PASS" if captured else "FAIL",
         "RESULT": "BLOCKERS_CLASSIFIED" if captured else "DIAGNOSTIC_INCOMPLETE",
         "BLOCK_ROOT": str(block_root),
         "PHYSICAL_CANDIDATE_STATUS": "FAIL",
@@ -318,7 +319,7 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
         "POST_DRC_STATUS",
         "STATUS",
     ):
-        lines.append(f"{key}={repair.get(key, 'MISSING')}")
+        lines.append(f"REPAIR_{key}={repair.get(key, 'MISSING')}")
     lines.append("REPAIR_LEDGER_END")
 
     lines.extend(["", "EVIDENCE_HASHES_BEGIN"])

@@ -70,6 +70,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             REPO / "TOP" / "pnr" / "scripts" / "analyze_tx_packet_ooc_failure.py"
         ).read_text())
         self.assertIn("DESIGN_MODIFICATION", text)
+        self.assertIn('kv_field "$report" DIAGNOSIS_STATUS', text)
 
     def test_pg_probe_is_fresh_process_restore_only_and_supports_packet_checkpoint(self) -> None:
         wrapper = (

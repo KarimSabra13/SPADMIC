@@ -863,6 +863,15 @@ TOP_PNR_UNIT_TESTS=60_PASS_0_FAIL
 GIT_DIFF_CHECK=PASS
 ```
 
+The first `diagnose` replay at commit `13057f1b...` captured all physical
+evidence and emitted `STATUS=PASS`, but the same report later copied the
+min-area ledger as an unqualified `STATUS=REVIEW_REQUIRED`. The driver's
+last-value key reader therefore wrote `04_innovus_diagnose STATUS=FAIL` despite
+an analyzer return code of zero. This was report-schema shadowing, not a new
+physical failure. The prerequisite gate correctly prevented `pg-probe`, so no
+Innovus probe process ran. Nested repair fields are now prefixed `REPAIR_`, and
+the driver gates on the dedicated `DIAGNOSIS_STATUS` key.
+
 Negative knowledge from R1:
 
 - Do not rerun Genus; its accepted netlist and SDC hashes remain the source.
