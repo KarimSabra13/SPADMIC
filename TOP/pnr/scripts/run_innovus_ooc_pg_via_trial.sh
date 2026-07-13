@@ -9,7 +9,7 @@ Usage:
     <source-root> <analysis-report> [mode] [trial-id] [top-module] [checkpoint]
 
 Modes:
-  via-only    Add adjacent-layer editPowerVia pairs only.
+  via-only    Add one bounded direct MET1-to-METTP via stack per proven row.
   patch-stack Add bounded MET2/MET3 VDD patches, then adjacent via pairs.
 
 The trial restores once, modifies only the in-memory copy, and never calls
@@ -96,6 +96,8 @@ main() {
     echo "SOURCE_CHECKPOINT=$checkpoint"
     echo "ANALYSIS_REPORT=$analysis"
     echo "ANALYSIS_SHA256=$(sha256sum "$analysis" 2>/dev/null | awk '{print $1}')"
+    echo "HELP_REPORT=${SPADMIC_PG_VIA_TRIAL_HELP_REPORT:-MISSING}"
+    echo "HELP_SHA256=$(sha256sum "${SPADMIC_PG_VIA_TRIAL_HELP_REPORT:-}" 2>/dev/null | awk '{print $1}')"
     echo "TOP_MODULE=$top"
     echo "MODE=$mode"
     echo "TRIAL_ROOT=$trial_root"

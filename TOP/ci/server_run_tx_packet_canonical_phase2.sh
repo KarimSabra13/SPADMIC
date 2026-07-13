@@ -815,7 +815,7 @@ pg_via_trial() {
   require_step_pass 06_pg_analyze || return 1
   require_step_pass 07_pg_help || return 1
   local mode="$1"
-  local analysis decision cadence_rc trial_id trial_root console rc trial_status
+  local analysis decision help_report cadence_rc trial_id trial_root console rc trial_status
   local status result copy_dir path status_step
   analysis="$TX2_SESSION_ROOT/reports/06_pg_topology_analysis.rpt"
   decision="$(kv_field "$analysis" EDIT_POWER_VIA_TRIAL_DECISION)"
@@ -832,6 +832,20 @@ pg_via_trial() {
     echo "EDIT_POWER_VIA_TRIAL_DECISION=${decision:-MISSING}"
     return 1
   fi
+  help_report="$TX2_SESSION_ROOT/reports/07_pg_command_help/man_editPowerVia.rpt"
+  if [[ ! -r "$help_report" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: installed editPowerVia help report is missing"
+    echo "HELP_REPORT=$help_report"
+    return 1
+  fi
+  if ! grep -Fq "setViaGenMode -area_only 1" "$help_report"; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: installed help does not prove bounded area-only generation"
+    return 1
+  fi
+  if ! grep -Fq -- "-exclude_stack_vias" "$help_report"; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: installed help does not prove non-adjacent stack control"
+    return 1
+  fi
 
   trial_id="${TX2_SESSION_ID}_pg_via_${mode}"
   trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
@@ -843,6 +857,7 @@ pg_via_trial() {
   cadence_rc=$?
   if [[ "$cadence_rc" -eq 0 ]]; then
     export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    export SPADMIC_PG_VIA_TRIAL_HELP_REPORT="$help_report"
     echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_pg_via_trial.sh $TX2_BLOCK_ROOT $analysis $mode $trial_id spadmic_tx_packet_core"
     bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_pg_via_trial.sh" \
       "$TX2_BLOCK_ROOT" \

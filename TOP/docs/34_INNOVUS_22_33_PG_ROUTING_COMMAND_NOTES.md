@@ -245,9 +245,21 @@ editPowerVia -add_vias 1 -nets {VDD} \
   -area {<llx> <lly> <urx> <ury>}
 ```
 
-For a MET1-to-METTP stack, use explicit adjacent pairs (`MET1-MET2`,
-`MET2-MET3`, `MET3-METTP`) so the report identifies the failed interface.
-Capture `man editPowerVia` from the installed release before relying on it.
+The installed manual adds two constraints that must govern a bounded packet
+trial:
+
+```tcl
+setViaGenMode -area_only 1
+editPowerVia -add_vias 1 -nets {VDD} \
+  -bottom_layer MET1 -top_layer METTP \
+  -exclude_stack_vias 0 \
+  -area {<llx> <lly> <urx> <ury>}
+```
+
+`-area_only 1` prevents generation outside the supplied windows.
+`-exclude_stack_vias 0` permits the non-adjacent stack between the existing
+MET1 rail and METTP stripe. This is the correct `via-only` hypothesis because
+the packet probe has zero VDD MET2 and MET3 SWIREs.
 
 Negative evidence is equally important: an older MPTDC run recorded all
 `editPowerVia` construction commands as PASS and still failed raw special
@@ -255,9 +267,11 @@ connectivity. Therefore do not add this command directly to the canonical TX
 flow. Test one restored in-memory candidate, save/export nothing, and require
 the post-command connectivity report to reach zero.
 
-The packet R1 trial has two explicit modes. `via-only` changes only via
-objects. `patch-stack` first creates bounded VDD MET2/MET3 special-net patches
-with verified `add_shape -rect` syntax, then adds adjacent via pairs. Each mode
-must use a separate process and the same immutable source checkpoint. Never
-run patch-stack after via-only in the same loaded design because the result
-would not identify which method changed connectivity.
+The earlier MPTDC method issued adjacent-layer commands even when intermediate
+special wires were not proven. Those commands returned PASS while downstream
+connectivity remained broken. Do not repeat them as the packet `via-only`
+method. Reserve adjacent pairs for `patch-stack`, where bounded MET2/MET3
+special-net patches are created first with verified `add_shape -rect` syntax.
+Each mode must use a separate process and the same immutable source checkpoint.
+Never run patch-stack after via-only in the same loaded design because the
+result would not identify which method changed connectivity.

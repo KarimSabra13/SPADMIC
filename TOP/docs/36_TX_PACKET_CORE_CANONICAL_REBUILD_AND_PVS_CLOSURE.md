@@ -468,11 +468,18 @@ not physical closure or permission to run PVS.
 `pg-help` starts Innovus with no design loaded and requires installed help for
 `editPowerVia`. `pg-via-trial` then supports two separately isolated methods:
 
-1. `via-only`: adjacent `MET1-MET2`, `MET2-MET3`, and `MET3-METTP`
-   `editPowerVia` calls in each proven overlap window.
+1. `via-only`: `setViaGenMode -area_only 1`, then one direct MET1-to-METTP
+   `editPowerVia -exclude_stack_vias 0` call in each proven overlap window.
 2. `patch-stack`: bounded VDD MET2/MET3 `add_shape` rectangles followed by the
-   same adjacent via pairs. Run this only in a new process after `via-only` is
+   adjacent via pairs. Run this only in a new process after `via-only` is
    rejected.
+
+The direct-stack correction comes from the installed 22.13 manual captured by
+the 22.33 executable. The previous adjacent-only hypothesis was not run for the
+packet and is now rejected because the SWIRE probe showed zero VDD MET2/MET3
+special wires. Older MPTDC adjacent commands had also returned PASS without
+closing connectivity. The driver refuses to restore a design unless the
+captured manual contains both `-area_only 1` and `-exclude_stack_vias`.
 
 Neither mode saves a checkpoint or exports DEF, LEF, GDS, or netlist data.
 Method validation requires all commands to complete, post-trial special

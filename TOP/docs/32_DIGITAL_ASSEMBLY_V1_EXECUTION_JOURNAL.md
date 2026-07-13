@@ -1069,3 +1069,37 @@ fresh-process `via-only` experiment. It does not authorize patch-stack,
 canonical replay, export, staging, or PVS. The trial parser now recognizes the
 same two Innovus count formats and returns `CONFLICT` when both are present but
 disagree; all non-integer count states fail closed.
+
+### P03-R8 Server Evidence - Installed Via-Generation Semantics
+
+Status: `PASS_HELP_CAPTURED_TRIAL_METHOD_CORRECTED_BEFORE_RESTORE`
+
+The no-design help process captured `man editPowerVia` successfully from the
+installed Innovus release. It proved `-nets`, `-area`, `-bottom_layer`, and
+`-top_layer`, but also exposed two requirements absent from the unrun first
+harness: run `setViaGenMode -area_only 1` to constrain insertion to the supplied
+windows, and set `-exclude_stack_vias 0` to permit a stack across non-adjacent
+layers.
+
+```text
+COMMAND_editPowerVia=MAN
+PG_COMMAND_HELP_RC=0
+STATUS=PASS
+RESULT=EDIT_POWER_VIA_HELP_CAPTURED_NO_DESIGN_LOADED
+```
+
+The probe has `VDD_MET2_SWIRE_COUNT=0` and `VDD_MET3_SWIRE_COUNT=0`. Therefore
+three adjacent-layer calls have no proven intermediate target wires. This is
+also the method older MPTDC evidence showed as command-PASS but
+connectivity-FAIL. It was stopped before execution and replaced by one direct
+MET1-to-METTP stack call per row. Adjacent calls remain only in the separate
+patch-stack fallback after explicit intermediate shapes exist. No design was
+loaded or modified while making this correction.
+
+```text
+R4_FOCUSED_TESTS=11_PASS_0_FAIL
+R4_TOP_PNR_UNIT_TESTS=66_PASS_0_FAIL
+R4_BASH_SYNTAX=PASS
+R4_TCL_INFO_COMPLETE=1
+R4_DESIGN_MODIFICATION=NOT_RUN
+```

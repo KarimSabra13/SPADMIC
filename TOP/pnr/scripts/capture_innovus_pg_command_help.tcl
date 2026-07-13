@@ -12,6 +12,7 @@ set commands {
     addStripe
     sroute
     editPowerVia
+    setViaGenMode
     addPowerVia
     editAddVia
     editAddRoute
@@ -50,7 +51,8 @@ foreach command $commands {
 }
 if {$available(addStripe) ne "UNAVAILABLE" &&
     $available(sroute) ne "UNAVAILABLE" &&
-    $available(editPowerVia) ne "UNAVAILABLE"} {
+    $available(editPowerVia) ne "UNAVAILABLE" &&
+    $available(setViaGenMode) ne "UNAVAILABLE"} {
     puts $fh "STATUS=PASS"
     puts $fh "RESULT=REQUIRED_COMMAND_HELP_CAPTURED"
     close $fh

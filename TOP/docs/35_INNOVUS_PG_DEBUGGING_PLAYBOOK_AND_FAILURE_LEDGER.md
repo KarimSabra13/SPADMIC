@@ -451,8 +451,8 @@ Do not confuse the probe's 40 total markers with its PG count. The total is:
 7 MET1 minimum-area + 29 antenna + 4 VDD connectivity = 40
 ```
 
-The repository already contains accepted Innovus syntax for adjacent-layer
-power vias:
+The repository contains accepted command-level syntax for adjacent-layer power
+vias:
 
 ```tcl
 editPowerVia -add_vias 1 -nets {VDD} \
@@ -463,6 +463,15 @@ However, older MPTDC evidence records `editPowerVia` commands as PASS while
 the required downstream `verifyConnectivity -type special -nets {VDD VSS}`
 still failed. Therefore command availability and command RC are only
 capability evidence. They are never closure evidence.
+
+The packet SWIRE probe changes the first trial method. It has one MET1 VDD rail
+and one METTP VDD stripe at each failed row, but zero VDD MET2/MET3 SWIREs.
+Therefore adjacent calls have no proven intermediate target and must not be
+repeated as `via-only`. Installed `man editPowerVia` explicitly requires
+`setViaGenMode -area_only 1` for bounded generation and exposes
+`-exclude_stack_vias 0` for direct non-adjacent stack creation. The packet
+`via-only` trial uses those two controls with `MET1` and `METTP`; patch-stack
+alone retains adjacent calls after creating intermediate shapes.
 
 The packet trial policy is:
 

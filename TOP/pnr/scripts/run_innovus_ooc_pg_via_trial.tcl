@@ -103,6 +103,7 @@ set checkpoint [trial_env SPADMIC_PG_VIA_TRIAL_CHECKPOINT]
 set root [trial_env SPADMIC_PG_VIA_TRIAL_ROOT]
 set top [trial_env SPADMIC_PG_VIA_TRIAL_TOP]
 set analysis [trial_env SPADMIC_PG_VIA_TRIAL_ANALYSIS]
+set help_report [trial_env SPADMIC_PG_VIA_TRIAL_HELP_REPORT]
 set mode [string tolower [trial_env SPADMIC_PG_VIA_TRIAL_MODE]]
 set reports [file join $root reports]
 file mkdir $reports
@@ -119,6 +120,7 @@ array set status {
 set status(MODE) $mode
 set status(SOURCE_CHECKPOINT) $checkpoint
 set status(ANALYSIS_REPORT) $analysis
+set status(HELP_REPORT) $help_report
 
 array set analysis_values [trial_read_kv $analysis]
 if {![info exists analysis_values(STATUS)] || $analysis_values(STATUS) ne "PASS" ||
@@ -177,11 +179,34 @@ puts $fh "MODE=$mode"
 puts $fh "TARGET_ROW_COUNT=$row_count"
 set command_pass_count 0
 set command_fail_count 0
+set area_only_command [list setViaGenMode -area_only 1]
+if {[trial_run_command $fh VIA_GEN_AREA_ONLY $area_only_command]} {
+    incr command_pass_count
+    set status(VIA_GEN_AREA_ONLY_STATUS) PASS
+} else {
+    incr command_fail_count
+    set status(VIA_GEN_AREA_ONLY_STATUS) FAIL
+    puts $fh "COMMAND_PASS_COUNT=$command_pass_count"
+    puts $fh "COMMAND_FAIL_COUNT=$command_fail_count"
+    close $fh
+    set status(COMMAND_PASS_COUNT) $command_pass_count
+    set status(COMMAND_FAIL_COUNT) $command_fail_count
+    trial_abort AREA_ONLY_MODE_FAILED
+}
 set row 0
 foreach area $areas {
     incr row
     puts $fh "ROW_${row}_AREA=$area"
-    if {$mode eq "patch-stack"} {
+    if {$mode eq "via-only"} {
+        set label ROW_${row}_MET1_TO_METTP_STACK
+        set command [list editPowerVia -add_vias 1 -nets {VDD} \
+            -bottom_layer MET1 -top_layer METTP -exclude_stack_vias 0 -area $area]
+        if {[trial_run_command $fh $label $command]} {
+            incr command_pass_count
+        } else {
+            incr command_fail_count
+        }
+    } else {
         foreach layer {MET2 MET3} {
             set label ROW_${row}_${layer}_PATCH
             set command [list add_shape -net VDD -layer $layer -shape STRIPE -status ROUTED -rect $area]
@@ -191,16 +216,16 @@ foreach area $areas {
                 incr command_fail_count
             }
         }
-    }
-    foreach pair {{MET1 MET2} {MET2 MET3} {MET3 METTP}} {
-        lassign $pair bottom top_layer
-        set label ROW_${row}_${bottom}_TO_${top_layer}_VIA
-        set command [list editPowerVia -add_vias 1 -nets {VDD} \
-            -bottom_layer $bottom -top_layer $top_layer -area $area]
-        if {[trial_run_command $fh $label $command]} {
-            incr command_pass_count
-        } else {
-            incr command_fail_count
+        foreach pair {{MET1 MET2} {MET2 MET3} {MET3 METTP}} {
+            lassign $pair bottom top_layer
+            set label ROW_${row}_${bottom}_TO_${top_layer}_VIA
+            set command [list editPowerVia -add_vias 1 -nets {VDD} \
+                -bottom_layer $bottom -top_layer $top_layer -area $area]
+            if {[trial_run_command $fh $label $command]} {
+                incr command_pass_count
+            } else {
+                incr command_fail_count
+            }
         }
     }
 }
