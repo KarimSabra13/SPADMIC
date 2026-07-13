@@ -215,6 +215,8 @@ bash TOP/ci/server_run_tx_packet_canonical_phase2.sh sync
 bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preflight
 bash TOP/ci/server_run_tx_packet_canonical_phase2.sh innovus
 bash TOP/ci/server_run_tx_packet_canonical_phase2.sh innovus-report
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh diagnose
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-probe
 bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
 bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 ```
@@ -264,6 +266,11 @@ connectivity, DRC classification, GDS audit, measured timing, and hash evidence
 into the diagnostic session. This result authorizes only the later packet PVS
 preflight; it is not PVS, MMMC, antenna closure, or signoff.
 
+When that gate fails, run `diagnose` instead of starting another route. It
+parses only the completed run's text artifacts and abstract LEF. After review,
+`pg-probe` restores `05_postroute_export` once in one fresh Innovus process and
+runs report/query commands only. The probe never edits or saves the design.
+
 ## P02 Paired Physical Contract
 
 The canonical interface file is:
@@ -306,9 +313,81 @@ forming `-start_offset`. This correction is retained even though TX uses
 `add_shape`, because the old formula caused the measured 10.080 um displacement.
 
 Local evidence is limited to deterministic generation, Python tests, shell
-syntax, and static fail-closed checks. No local Cadence installation was used,
-so `PG_CONNECTIVITY_STATUS`, Innovus DRC, timing, GDS content, PVS DRC, density,
-and LVS remain unverified until the server run.
+syntax, and static fail-closed checks. The first server result is recorded
+below. PVS DRC, density qualification, LVS, MMMC, and final antenna closure
+remain unverified.
+
+## P03 Packet Innovus R1 Measured Evidence
+
+Status: `REVIEW_REQUIRED_DIAGNOSTIC_STAGED`
+
+The canonical packet run executed at repository head
+`aae354384ff5cb354132954ec53dba5904c24838`:
+
+```text
+SESSION_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase2_20260713_124110
+INNOVUS_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_canonical_20260713_124110
+INNOVUS_TOOL_RC=0
+CANONICAL_GATE_STATUS=FAIL
+CANONICAL_GATE_RESULT=REVIEW_REQUIRED
+PVS_STATUS=NOT_RUN
+```
+
+The run is not a broad routing failure. The following independent gates are
+measured clean:
+
+```text
+REGULAR_CONNECTIVITY_STATUS=PASS
+SETUP_WNS_NS=0.169
+SETUP_TNS_NS=0.000
+SETUP_VIOLATING_PATH_COUNT=0
+HOLD_WNS_NS=0.209
+HOLD_TNS_NS=0.000
+HOLD_VIOLATING_PATH_COUNT=0
+GDS_FILE_STATUS=PASS
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS_BYTES=16230970
+GDS_SHA256=e4d83514ed2014e28cce911703f4befab897762edd2f96c58bc5473eb0c74dba
+```
+
+The actual blockers are separate and must not be collapsed into one status:
+
+1. `PG_CONNECTIVITY_STATUS=FAIL` even though `SROUTE_PG=PASS`. The command
+   executed, but the VDD/VSS special-net graph is not closed. Exact component
+   geometry and marker coordinates were not captured by the normal report.
+2. Seven MET1 minimum-area markers remain on `n_9705`, `n_9709`, `n_9725`,
+   `n_9733`, `n_9736`, `n_9744`, and `n_9747`. The selected-net repair ran and
+   post-repair timing is clean, but its physical result is still
+   `REVIEW_REQUIRED`.
+3. All 19 packet north stream pins are uniformly `+0.280 um` from the canonical
+   X centers. The first pin is `101.080` instead of `100.800`; the last is
+   `1915.480` instead of `1915.200`. This equals half the configured `0.56 um`
+   grid and is consistent with an `editPin -assign` reference/snap effect, but
+   that causal interpretation remains a hypothesis until the generated command
+   and emitted rectangles are classified together.
+4. Twenty-nine antenna markers remain. They are accepted only as the explicit
+   intermediate status `DEFERRED_FINAL_HANDOFF_BLOCKED`; they are not why this
+   milestone failed, and they still block final handoff.
+
+The canonical pin CSV and validator remain unchanged. Do not normalize the
+observed `+0.280 um` drift into the contract: packet and strip were deliberately
+specified at identical local X centers for R0 assembly. The correct repair is
+to map the requested center to the Innovus command coordinate and then verify
+the emitted LEF center.
+
+The next two gates are deliberately non-destructive:
+
+- `diagnose` hashes and compares the pin plan, generated assignment Tcl,
+  abstract LEF, PG report, repair ledger, and pre/post/final marker TSVs;
+- `pg-probe` restores the final checkpoint once in a fresh Innovus process and
+  captures detailed special connectivity, PG terminals, special-wire topology,
+  and connectivity markers with `DESIGN_MODIFICATION=NOT_RUN`.
+
+Do not rerun Xcelium, Genus, packet Innovus, or PVS before these reports are
+reviewed. Do not reuse this Innovus root for a modified candidate, do not scan
+helper X coordinates blindly, and do not treat command success or mapped GDS
+success as connectivity/DRC closure.
 
 ## P03 Canonical PVS Source And Replay
 

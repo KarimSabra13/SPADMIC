@@ -27,6 +27,8 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preflight
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh innovus
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh innovus-report
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh diagnose
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-probe
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -572,12 +574,147 @@ innovus_report() {
   return $?
 }
 
+diagnose_existing() {
+  load_session || return 1
+  local analyzer report console raw_dir rc status result path
+  analyzer="$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_ooc_failure.py"
+  report="$TX2_SESSION_ROOT/reports/04_innovus_failure_diagnosis.rpt"
+  console="$TX2_SESSION_ROOT/logs/04_innovus_failure_diagnosis.console.log"
+  raw_dir="$TX2_SESSION_ROOT/reports/04_failure_inputs"
+  rc=8
+  status=FAIL
+  result=FAILURE_DIAGNOSTIC_INCOMPLETE
+
+  mkdir -p "$raw_dir"
+  if [[ ! -r "$analyzer" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: failure analyzer is missing"
+    echo "ANALYZER=$analyzer"
+  elif [[ ! -d "$TX2_BLOCK_ROOT" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: completed Innovus block root is missing"
+    echo "BLOCK_ROOT=$TX2_BLOCK_ROOT"
+  else
+    python3 "$analyzer" \
+      --block-root "$TX2_BLOCK_ROOT" \
+      --report "$report" \
+      >"$console" 2>&1
+    rc=$?
+  fi
+
+  for path in \
+    "$TX2_BLOCK_ROOT/reports/ooc_harden_status.rpt" \
+    "$TX2_BLOCK_ROOT/reports/canonical_tx_ooc_gate.rpt" \
+    "$TX2_BLOCK_ROOT/reports/SROUTE_PG.rpt" \
+    "$TX2_BLOCK_ROOT/reports/verify_connectivity_pg.rpt" \
+    "$TX2_BLOCK_ROOT/reports/POSTROUTE_MIN_AREA_REPAIR.rpt" \
+    "$TX2_BLOCK_ROOT/reports/postroute_min_area_repair_pre_markers.tsv" \
+    "$TX2_BLOCK_ROOT/reports/postroute_min_area_repair_post_markers.tsv" \
+    "$TX2_BLOCK_ROOT/reports/verify_drc_post_route_markers.tsv" \
+    "$TX2_BLOCK_ROOT/generated/ooc_block_harden_config.tcl" \
+    "$TX2_BLOCK_ROOT/generated/ooc_block_pin_plan.csv" \
+    "$TX2_BLOCK_ROOT/generated/ooc_block_pin_assignments.tcl"
+  do
+    if [[ -r "$path" ]]; then
+      cp -p "$path" "$raw_dir/$(basename "$path")"
+    fi
+  done
+
+  if [[ "$rc" -eq 0 && "$(kv_field "$report" STATUS)" == "PASS" ]]; then
+    status=PASS
+    result=BLOCKERS_CLASSIFIED_NO_DESIGN_MODIFICATION
+  fi
+  if [[ -r "$report" ]]; then
+    cat "$report"
+  elif [[ -r "$console" ]]; then
+    cat "$console"
+  fi
+  record_status 04_innovus_diagnose "$status" "$rc" "$result"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
+pg_probe() {
+  load_session || return 1
+  require_step_pass 04_innovus_diagnose || return 1
+  local cadence_rc probe_id probe_root console rc probe_status status result copy_dir path
+  cadence_rc=1
+  probe_id="${TX2_SESSION_ID}_pg_probe"
+  probe_root="$TX2_WORK_ROOT/diagnostics/$probe_id"
+  console="$TX2_SESSION_ROOT/logs/05_pg_probe.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/05_pg_probe"
+  rc=8
+  status=FAIL
+  result=PG_TOPOLOGY_PROBE_INCOMPLETE
+
+  load_cadence
+  cadence_rc=$?
+  if [[ "$cadence_rc" -eq 0 ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_pg_probe.sh $TX2_BLOCK_ROOT $probe_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_pg_probe.sh" \
+      "$TX2_BLOCK_ROOT" \
+      "$probe_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    rc=$?
+  fi
+
+  probe_status="$probe_root/reports/pg_probe_status.rpt"
+  if [[ "$rc" -eq 0 \
+      && "$(kv_field "$probe_status" STATUS)" == "PASS" \
+      && "$(kv_field "$probe_status" DESIGN_MODIFICATION)" == "NOT_RUN" ]]; then
+    status=PASS
+    result=PG_TOPOLOGY_DIAGNOSTIC_CAPTURED_READ_ONLY
+  fi
+
+  mkdir -p "$copy_dir"
+  for path in \
+    "$probe_root/context.rpt" \
+    "$probe_root/reports/pg_probe_status.rpt" \
+    "$probe_root/reports/verify_connectivity_special_detail.rpt" \
+    "$probe_root/reports/verify_connectivity_special_console.rpt" \
+    "$probe_root/reports/pg_topology.rpt" \
+    "$probe_root/reports/pg_connectivity_markers.tsv"
+  do
+    if [[ -r "$path" ]]; then
+      cp -p "$path" "$copy_dir/$(basename "$path")"
+    fi
+  done
+
+  echo "PG_PROBE_RC=$rc"
+  echo "PG_PROBE_ROOT=$probe_root"
+  echo "CADENCE_RC=$cadence_rc"
+  if [[ -r "$probe_status" ]]; then
+    cat "$probe_status"
+  elif [[ -r "$console" ]]; then
+    sed -n '1,240p' "$console"
+  fi
+  if [[ -r "$probe_root/reports/verify_connectivity_special_detail.rpt" ]]; then
+    echo
+    echo "===== SPECIAL CONNECTIVITY DETAIL ====="
+    cat "$probe_root/reports/verify_connectivity_special_detail.rpt"
+  fi
+  if [[ -r "$probe_root/reports/pg_connectivity_markers.tsv" ]]; then
+    echo
+    echo "===== PG CONNECTIVITY MARKERS ====="
+    cat "$probe_root/reports/pg_connectivity_markers.tsv"
+  fi
+  if [[ -r "$probe_root/reports/pg_topology.rpt" ]]; then
+    echo
+    echo "===== PG TOPOLOGY SUMMARY ====="
+    grep -E '^(LABEL|TOP_NAME|DIE_BOX|CORE_BOX|PG_TERM_|VDD_PG_TERM|VSS_PG_TERM|VDD_SWIRE_COUNT|VSS_SWIRE_COUNT)' \
+      "$probe_root/reports/pg_topology.rpt"
+  fi
+  record_status 05_pg_probe "$status" "$rc" "$result"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
   tar -czf "$package" \
-    --exclude='status/05_package.rpt' \
-    --exclude='reports/05_package_details.rpt' \
+    --exclude='status/06_package.rpt' \
+    --exclude='reports/06_package_details.rpt' \
     -C "$TX2_SESSION_ROOT" \
     00_objective_and_policy.rpt \
     execution_journal.rpt \
@@ -595,8 +732,8 @@ package_evidence() {
       stat -c 'PACKAGE_BYTES=%s' "$package"
       sha256sum "$package"
     fi
-  } | tee "$TX2_SESSION_ROOT/reports/05_package_details.rpt"
-  record_status 05_package "$status" "$tar_rc" TEXT_ONLY_EVIDENCE_PACKAGE_COMPLETE
+  } | tee "$TX2_SESSION_ROOT/reports/06_package_details.rpt"
+  record_status 06_package "$status" "$tar_rc" TEXT_ONLY_EVIDENCE_PACKAGE_COMPLETE
   [[ "$status" == "PASS" ]]
   return $?
 }
@@ -633,6 +770,12 @@ case "$COMMAND" in
     ;;
   innovus-report)
     innovus_report
+    ;;
+  diagnose)
+    diagnose_existing
+    ;;
+  pg-probe)
+    pg_probe
     ;;
   package)
     package_evidence

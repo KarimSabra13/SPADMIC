@@ -27,6 +27,8 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "preflight",
             "innovus",
             "innovus-report",
+            "diagnose",
+            "pg-probe",
             "package",
             "status",
         ):
@@ -63,7 +65,26 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("POST_REPAIR_TIMING_REQUIRED", text)
         self.assertIn("ANTENNA_MILESTONE_ACCEPTED", text)
         self.assertIn("READY_FOR_PVS_CANDIDATE", text)
-        self.assertIn("--exclude='reports/05_package_details.rpt'", text)
+        self.assertIn("--exclude='reports/06_package_details.rpt'", text)
+        self.assertIn("READ_ONLY_EXISTING_ARTIFACTS_NO_DESIGN_MODIFICATION", (
+            REPO / "TOP" / "pnr" / "scripts" / "analyze_tx_packet_ooc_failure.py"
+        ).read_text())
+        self.assertIn("DESIGN_MODIFICATION", text)
+
+    def test_pg_probe_is_fresh_process_restore_only_and_supports_packet_checkpoint(self) -> None:
+        wrapper = (
+            REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_pg_probe.sh"
+        ).read_text()
+        probe = (
+            REPO / "TOP" / "pnr" / "scripts" / "probe_innovus_ooc_pg_connectivity.tcl"
+        ).read_text()
+        self.assertIn("05_postroute_export.enc.dat", wrapper)
+        self.assertIn('SPADMIC_PG_PROBE_TOP="$top"', wrapper)
+        self.assertIn("POLICY=READ_ONLY_RESTORE_AND_REPORT", wrapper)
+        self.assertIn("restoreDesign $checkpoint $top", probe)
+        self.assertIn("DESIGN_MODIFICATION NOT_RUN", probe)
+        self.assertNotIn("add_shape", probe)
+        self.assertNotIn("sroute", probe)
 
     def test_init_inherits_an_accepted_phase1_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

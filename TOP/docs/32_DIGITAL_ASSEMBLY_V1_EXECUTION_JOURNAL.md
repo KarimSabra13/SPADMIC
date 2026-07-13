@@ -29,8 +29,8 @@ Genus or Innovus and must not modify MPTDC internals.
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
 | P02 | Restore-only internal PG for the narrow strip | R4_HELPER_METHOD_FAIL_DIAG_PENDING | PG marker decomposition, post-PG connectivity/DRC, merged GDS audit |
-| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | XCELIUM_AND_GENUS_FEASIBILITY_PASS_INNOVUS_PREFLIGHT_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
-| P04 | Per-block PVS closure, density qualification, and handoff promotion | BLOCKED_BY_P03_INNOVUS | PVS DRC zero outside antenna, explicit LVS match, hashes, promotion gate |
+| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | INNOVUS_R1_REVIEW_REQUIRED_DIAG_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
+| P04 | Per-block PVS closure, density qualification, and handoff promotion | BLOCKED_BY_P03_INNOVUS_R1 | PVS DRC zero outside antenna, explicit LVS match, hashes, promotion gate |
 | P05 | Requalified strip and Phase-A TX assembly geometry gate | BLOCKED_BY_P04 | Strip PG/PVS closure, no obstacle overlap, exact paired 19-net contract |
 | P06 | Phase-A TX assembly route | BLOCKED_BY_P05 | Checkpoints 00/01/02, selected-net connectivity, DRC, timing |
 | P07 | Assembly PVS and promoted handoff | BLOCKED_BY_P06 | GDS audit, PVS DRC zero, LVS match or approved source contract |
@@ -711,7 +711,7 @@ for this reporting-only update.
 
 ## P03-R4 Staged Packet Innovus Procedure
 
-Status: `IMPLEMENTED_LOCAL_SERVER_PREFLIGHT_PENDING`
+Status: `SERVER_R1_REVIEW_REQUIRED_DIAGNOSTIC_STAGED`
 
 `TOP/ci/server_run_tx_packet_canonical_phase2.sh` continues from the accepted
 Phase-1 gate. It creates a separate active session and unique Innovus run root,
@@ -790,8 +790,91 @@ CANONICAL_TIMING_POST_REPAIR_PRECEDENCE=PASS
 REAL_INNOVUS_GZIP_NEGATIVE_SETUP_DETECTION=PASS_WNS_M0P140_TNS_M0P885_PATHS_8
 ANTENNA_DEFER_POLICY_TEST=PASS
 TOP_PNR_UNIT_TESTS=57_PASS_0_FAIL
-CADENCE_PACKET_INNOVUS=NOT_RUN_YET
+CADENCE_PACKET_INNOVUS=R1_CAPTURED_REVIEW_REQUIRED
 ```
+
+### P03-R4 Server Evidence - Packet Innovus R1
+
+Status: `FAIL_THREE_BLOCKER_CLASSES_PVS_NOT_RUN`
+
+The Phase-2 preflight passed at
+`aae354384ff5cb354132954ec53dba5904c24838`, then the foreground packet run
+completed under:
+
+```text
+SESSION_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase2_20260713_124110
+BLOCK_ROOT=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_tx_packet_core_canonical_20260713_124110/blocks/tx_packet_core
+INNOVUS_RC=0
+WRAPPER_RC=8
+CANONICAL_GATE_STATUS=FAIL
+PVS_STATUS=NOT_RUN
+```
+
+Positive evidence retained from the failed candidate:
+
+```text
+REGULAR_CONNECTIVITY_STATUS=PASS
+SETUP_WNS_NS=0.169 TNS_NS=0.000 VIOLATING_PATHS=0
+HOLD_WNS_NS=0.209 TNS_NS=0.000 VIOLATING_PATHS=0
+GDS_FILE_STATUS=PASS
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS_SHA256=e4d83514ed2014e28cce911703f4befab897762edd2f96c58bc5473eb0c74dba
+OTHER_MARKER_COUNT=0
+```
+
+The candidate failed for three non-antenna classes:
+
+- `PG_CONNECTIVITY_STATUS=FAIL` while `SROUTE_PG=PASS`; execution of `sroute`
+  is not proof that all special-wire components connect.
+- Seven MET1 minimum-area markers remain on `n_9705`, `n_9709`, `n_9725`,
+  `n_9733`, `n_9736`, `n_9744`, and `n_9747` after selected-net repair.
+- Every one of the 19 north stream-pin centers is `+0.280 um` from its CSV
+  target. The delta is uniform from valid through data bit 15 and equals half
+  the configured `0.56 um` grid.
+
+The 29 antenna markers are recorded separately as
+`DEFERRED_FINAL_HANDOFF_BLOCKED`. They are accepted for this diagnostic
+milestone only; final handoff remains `NO`. No unrelated DRC class exists.
+
+The exact pin delta strongly suggests command-reference or grid-snap behavior,
+not random placement. It does not authorize changing the canonical CSV or
+validator. The packet and strip local X contract remains identical; a later
+candidate must compensate the Innovus command mapping and prove the emitted LEF
+centers.
+
+The normal PG report did not retain detailed component geometry. Two new
+operator gates therefore precede any reroute:
+
+1. `diagnose` reads and hashes existing artifacts only, compares planned and
+   emitted stream-pin geometry, and preserves the min-area repair ledger.
+2. `pg-probe` launches one fresh Innovus process, restores
+   `05_postroute_export` once, runs connectivity/database queries only, and
+   records `DESIGN_MODIFICATION=NOT_RUN`.
+
+Local diagnostic implementation evidence:
+
+```text
+ANALYZER_PY_COMPILE=PASS
+PHASE2_DRIVER_BASH_SYNTAX=PASS
+GENERIC_PG_PROBE_BASH_SYNTAX=PASS
+FOCUSED_DIAGNOSTIC_TESTS=7_PASS_0_FAIL
+TOP_PNR_UNIT_TESTS=60_PASS_0_FAIL
+GIT_DIFF_CHECK=PASS
+```
+
+Negative knowledge from R1:
+
+- Do not rerun Genus; its accepted netlist and SDC hashes remain the source.
+- Do not run PVS on this GDS despite the mapped/merged export passing.
+- Do not call this a generic signal-route failure; regular connectivity and
+  both measured timing modes pass.
+- Do not repair or waive antenna while PG, min-area, and paired-pin geometry
+  are unresolved.
+- Do not reuse the failed Innovus root or restore several candidates in one
+  process.
+- Do not accept the `+0.280 um` pin drift by moving the assembly contract.
+- Do not infer PG closure from `add_shape`, `sroute`, or tool return codes.
 
 ## P04-R1 Canonical PVS Source And Replay Implementation
 

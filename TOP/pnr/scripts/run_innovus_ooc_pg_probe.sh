@@ -1,54 +1,111 @@
 #!/usr/bin/env bash
-# Read-only PG connectivity probe for a completed tx_ddr_strip PG attempt.
-set -u -o pipefail
+# Restore one immutable checkpoint in a fresh process and capture PG reports.
+set +e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_RUN_ROOT="${1:-}"
-RUN_ID="${2:-tx_ddr_strip_pg_probe_$(date +%Y%m%d_%H%M%S)}"
-WORK_ROOT="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
+usage() {
+  cat <<'USAGE'
+Usage:
+  TOP/pnr/scripts/run_innovus_ooc_pg_probe.sh <source-root> [probe-id] [top-module] [checkpoint]
 
-if [[ -z "$SOURCE_RUN_ROOT" ]]; then
-  echo "Usage: $0 <pg-run-root> [probe-id]" >&2
-  exit 2
-fi
+The default checkpoint search supports both OOC hardening runs and the older
+TX DDR-strip PG-fix runs. If top-module is omitted, TOP_MODULE is read from
+reports/ooc_harden_status.rpt, with spadmic_tx_ddr_strip as the legacy default.
 
-CHECKPOINT="$SOURCE_RUN_ROOT/checkpoints/02_pg_verified_export.enc.dat"
-[[ -d "$CHECKPOINT" ]] || CHECKPOINT="$SOURCE_RUN_ROOT/checkpoints/02_pg_verified_export.enc"
-if [[ ! -e "$CHECKPOINT" ]]; then
-  echo "ERROR: PG checkpoint missing under $SOURCE_RUN_ROOT/checkpoints" >&2
-  exit 6
-fi
-if ! command -v innovus >/dev/null 2>&1; then
-  echo "ERROR: innovus missing; source /eda/cadence/eda_2023-2024" >&2
-  exit 3
-fi
+Policy: one fresh Innovus process, one restoreDesign, report/query commands
+only, and no modification of the source checkpoint or completed run.
+USAGE
+}
 
-PROBE_ROOT="$WORK_ROOT/diagnostics/$RUN_ID"
-if [[ -e "$PROBE_ROOT" ]]; then
-  echo "ERROR: immutable probe directory exists: $PROBE_ROOT" >&2
-  exit 2
-fi
-mkdir -p "$PROBE_ROOT"/{logs,reports}
+main() {
+  local script_dir source_root run_id top checkpoint_override work_root checkpoint
+  local probe_root rc candidate inferred_top
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source_root="${1:-}"
+  run_id="${2:-pg_connectivity_probe_$(date +%Y%m%d_%H%M%S)}"
+  top="${3:-}"
+  checkpoint_override="${4:-}"
+  work_root="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 
-export SPADMIC_PG_PROBE_CHECKPOINT="$CHECKPOINT"
-export SPADMIC_PG_PROBE_ROOT="$PROBE_ROOT"
-export SPADMIC_PG_PROBE_TOP=spadmic_tx_ddr_strip
+  if [[ -z "$source_root" ]]; then
+    usage >&2
+    return 2
+  fi
+  if [[ ! -d "$source_root" ]]; then
+    echo "ERROR: source root missing: $source_root" >&2
+    return 6
+  fi
 
-{
-  echo "RUN_ID=$RUN_ID"
-  echo "SOURCE_RUN_ROOT=$SOURCE_RUN_ROOT"
-  echo "SOURCE_CHECKPOINT=$CHECKPOINT"
-  echo "PROBE_ROOT=$PROBE_ROOT"
-  echo "HEAD=$(git -C "$SCRIPT_DIR/../../.." rev-parse HEAD 2>/dev/null)"
-  echo "POLICY=READ_ONLY_RESTORE_AND_REPORT"
-} >"$PROBE_ROOT/context.rpt"
+  if [[ -z "$top" && -r "$source_root/reports/ooc_harden_status.rpt" ]]; then
+    inferred_top="$(awk -F= '$1 == "TOP_MODULE" {print substr($0, index($0, "=") + 1)}' "$source_root/reports/ooc_harden_status.rpt" | tail -n 1)"
+    top="$inferred_top"
+  fi
+  top="${top:-spadmic_tx_ddr_strip}"
 
-innovus -nowin -init "$SCRIPT_DIR/probe_innovus_ooc_pg_connectivity.tcl" \
-  -log "$PROBE_ROOT/logs/innovus.log" \
-  >"$PROBE_ROOT/logs/innovus.stdout.log" 2>&1
-RC=$?
+  checkpoint=""
+  if [[ -n "$checkpoint_override" ]]; then
+    checkpoint="$checkpoint_override"
+  else
+    for candidate in \
+      "$source_root/checkpoints/05_postroute_export.enc.dat" \
+      "$source_root/checkpoints/05_postroute_export.enc" \
+      "$source_root/checkpoints/02_pg_verified_export.enc.dat" \
+      "$source_root/checkpoints/02_pg_verified_export.enc"
+    do
+      if [[ -e "$candidate" ]]; then
+        checkpoint="$candidate"
+        break
+      fi
+    done
+  fi
+  if [[ -z "$checkpoint" || ! -e "$checkpoint" ]]; then
+    echo "ERROR: supported PG checkpoint missing under $source_root/checkpoints" >&2
+    return 6
+  fi
+  if ! command -v innovus >/dev/null 2>&1; then
+    echo "ERROR: innovus missing; source /eda/cadence/eda_2023-2024" >&2
+    return 3
+  fi
 
-echo "PG_PROBE_RC=$RC"
-echo "PG_PROBE_ROOT=$PROBE_ROOT"
-cat "$PROBE_ROOT/reports/pg_probe_status.rpt" 2>/dev/null || echo "MISSING STATUS"
-exit "$RC"
+  probe_root="$work_root/diagnostics/$run_id"
+  if [[ -e "$probe_root" ]]; then
+    echo "ERROR: immutable probe directory exists: $probe_root" >&2
+    return 2
+  fi
+  mkdir -p "$probe_root"/{logs,reports}
+  rc=$?
+  if [[ "$rc" -ne 0 ]]; then
+    echo "ERROR: cannot create probe root: $probe_root" >&2
+    return "$rc"
+  fi
+
+  export SPADMIC_PG_PROBE_CHECKPOINT="$checkpoint"
+  export SPADMIC_PG_PROBE_ROOT="$probe_root"
+  export SPADMIC_PG_PROBE_TOP="$top"
+
+  {
+    echo "RUN_ID=$run_id"
+    echo "SOURCE_ROOT=$source_root"
+    echo "SOURCE_CHECKPOINT=$checkpoint"
+    echo "TOP_MODULE=$top"
+    echo "PROBE_ROOT=$probe_root"
+    echo "HEAD=$(git -C "$script_dir/../../.." rev-parse HEAD 2>/dev/null)"
+    echo "POLICY=READ_ONLY_RESTORE_AND_REPORT"
+    echo "DESIGN_MODIFICATION=NOT_RUN"
+  } >"$probe_root/context.rpt"
+
+  innovus -nowin -init "$script_dir/probe_innovus_ooc_pg_connectivity.tcl" \
+    -log "$probe_root/logs/innovus.log" \
+    >"$probe_root/logs/innovus.stdout.log" 2>&1
+  rc=$?
+
+  echo "PG_PROBE_RC=$rc"
+  echo "PG_PROBE_ROOT=$probe_root"
+  if [[ -r "$probe_root/reports/pg_probe_status.rpt" ]]; then
+    cat "$probe_root/reports/pg_probe_status.rpt"
+  else
+    echo "MISSING=$probe_root/reports/pg_probe_status.rpt"
+  fi
+  return "$rc"
+}
+
+main "$@"
