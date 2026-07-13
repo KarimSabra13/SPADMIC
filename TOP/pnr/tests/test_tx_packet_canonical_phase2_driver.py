@@ -104,6 +104,8 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("require_step_pass 05_pg_probe", driver)
         self.assertIn("require_step_pass 06_pg_analyze", driver)
         self.assertIn("require_step_pass 07_pg_help", driver)
+        self.assertIn("SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD", driver)
+        self.assertIn("REPORT_DRIVER_HEAD=", driver)
         self.assertIn("READY_FOR_ONE_ISOLATED_TRIAL", driver)
         self.assertIn("editPowerVia", command_help)
         self.assertIn("ONE_FRESH_PROCESS_ONE_RESTORE_IN_MEMORY_TRIAL", wrapper)

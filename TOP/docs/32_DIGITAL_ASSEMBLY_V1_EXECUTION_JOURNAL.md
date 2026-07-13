@@ -995,6 +995,10 @@ R2_CADENCE_PG_ANALYSIS=SERVER_PENDING
 R2_CADENCE_PG_VIA_TRIAL=NOT_RUN
 ```
 
+The analysis report records both `SOURCE_ARTIFACT_HEAD` (the immutable R1
+implementation) and `REPORT_DRIVER_HEAD` (the newer read-only parser). A newer
+report driver does not change or requalify the physical candidate.
+
 Negative rules added by this probe:
 
 - Do not run another helper-X scan or local second `sroute`; packet and strip

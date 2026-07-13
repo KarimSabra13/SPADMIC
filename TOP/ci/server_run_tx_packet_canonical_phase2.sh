@@ -738,6 +738,13 @@ pg_analyze() {
     rc=$?
   fi
 
+  if [[ -r "$report" ]]; then
+    {
+      echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+      echo "REPORT_DRIVER_HEAD=$(git -C "$TX2_REPO" rev-parse HEAD 2>/dev/null)"
+    } >> "$report"
+  fi
+
   if [[ "$rc" -eq 0 && "$(kv_field "$report" STATUS)" == "PASS" ]]; then
     status=PASS
     result=PG_TOPOLOGY_CLASSIFIED_NO_DESIGN_MODIFICATION
