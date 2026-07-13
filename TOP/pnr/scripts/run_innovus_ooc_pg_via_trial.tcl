@@ -203,7 +203,7 @@ if {![info exists analysis_values(STATUS)] || $analysis_values(STATUS) ne "PASS"
     $analysis_values(EDIT_POWER_VIA_TRIAL_DECISION) ne "READY_FOR_ONE_ISOLATED_TRIAL"} {
     trial_abort ANALYSIS_NOT_READY
 }
-if {$mode ni {via-only patch-stack}} {
+if {$mode ni {via-only via-1x1 patch-stack}} {
     trial_abort BAD_MODE $mode
 }
 if {![info exists analysis_values(VDD_HORIZONTAL_ROW_COMPONENT_COUNT)]} {
@@ -296,10 +296,13 @@ set row 0
 foreach area $areas {
     incr row
     puts $fh "ROW_${row}_AREA=$area"
-    if {$mode eq "via-only"} {
+    if {$mode in {via-only via-1x1}} {
         set label ROW_${row}_MET1_TO_METTP_STACK
         set command [list editPowerVia -add_vias 1 -nets {VDD} \
             -bottom_layer MET1 -top_layer METTP -exclude_stack_vias 0 -area $area]
+        if {$mode eq "via-1x1"} {
+            lappend command -via_rows 1 -via_columns 1
+        }
         if {[trial_run_command $fh $label $command]} {
             incr command_pass_count
         } else {

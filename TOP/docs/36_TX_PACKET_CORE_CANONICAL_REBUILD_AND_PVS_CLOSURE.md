@@ -597,3 +597,21 @@ no longer enough to enter PVS.
   process; isolate candidates when exploration is required.
 - Do not let an antenna-deferred milestone silently become final handoff; the
   deferred status must remain visible until targeted repair and PVS replay.
+
+## P03 Step 10 Marker Result And Constrained Candidate
+
+The Step 10 replay passed as evidence capture and rejected the default physical
+method. It preserved all seven baseline DRC signatures and found exactly 18
+new markers: MET2 short 6, MET2 spacing 2, MET3 short 6, VIA2 cut-short 3, and
+VIA2 cut-spacing 1. The row distribution is 6, 9, and 3. Existing signal-net
+names in every marker prove that the generated intermediate stack footprint,
+not stripe X or missing topology, is the immediate blocker.
+
+The next gate uses the same direct stack and areas with explicit
+`-via_rows 1 -via_columns 1`. It is a single process-isolated multiplicity
+trial, not an X sweep or a canonical rerun. Its analyzer independently checks
+the immutable baseline tuple, raw-marker accounting, filtered marker sets,
+special/regular connectivity, and the trial's own PASS/FAIL classification.
+Even a physically clean result is labeled `VALIDATED_NOT_CANONICAL` and stops
+with no save/export. `patch-stack`, canonical Innovus replay, staging, and PVS
+remain blocked pending review of the Step 11 report.

@@ -549,3 +549,31 @@ diagnostic. Innovus may enter its command prompt and consume the caller's next
 shell lines. Write the status report, use an explicit nonzero Innovus exit, and
 redirect batch-child stdin from `/dev/null` as a fallback EOF. Preserve the
 failed diagnostic root and assign a new run ID after repairing the harness.
+
+## 12. Packet Direct-Stack Geometry Classification
+
+The corrected Step 10 replay balanced the restored marker database as seven
+DRC, 29 antenna, and four connectivity markers before the command. After the
+direct stacks it balanced as 25 DRC, 29 antenna, and zero connectivity
+markers. All seven baseline minimum-area signatures remained and exactly 18
+new signatures explained the count delta.
+
+The new markers are not distributed noise. Six are nearest row 1, nine row 2,
+and three row 3. They consist only of MET2/MET3 signal shorts or spacing and
+VIA2 cut conflicts in the bounded stack areas. This rejects both more helper-X
+searches and the existing patch-stack fallback: the topology is already
+closed, while the intermediate-layer footprint is the measured defect.
+
+One constrained multiplicity candidate is now permitted:
+
+1. Start one fresh Innovus process and restore the clean checkpoint once.
+2. Keep the same three row windows and direct MET1-to-METTP method.
+3. Add `-via_rows 1 -via_columns 1` to each bounded `editPowerVia` call.
+4. Dump and reconcile pre/post markers, special connectivity, and regular
+   connectivity before classifying the result.
+5. Save and export nothing; stop after the classification report.
+
+The candidate is accepted only as `VALIDATED_NOT_CANONICAL` when connectivity
+is zero and DRC does not increase. A coherent rejection is still a successful
+diagnostic gate, but it does not authorize another method automatically.
+Canonical replay and PVS remain blocked in both cases until review.

@@ -1185,3 +1185,39 @@ Innovus child. The corrected replay uses a new immutable `_drc_probe_r2` root
 and Step 10 report paths; the failed Step 09 root is not reused or deleted.
 The shell wrapper also connects Innovus stdin to `/dev/null`, so any other
 unhandled Tcl error receives EOF instead of consuming subsequent shell input.
+
+### P03-R11 Server Evidence - Direct Stack Marker Classification
+
+Status: `PASS_DIAGNOSTIC_CLASSIFIED_PHYSICAL_METHOD_REMAINS_REJECTED`
+
+Step 10 at report-driver head
+`61c9e89dbe30dc6901b906205dc9ce3e1d06db5a` reproduced the reviewed direct
+stack result in a fresh process and reconciled the marker database exactly:
+
+```text
+special connectivity:  4 -> 0
+regular connectivity:  0 -> 0
+filtered DRC markers:   7 -> 25
+raw marker database:   40 -> 54
+excluded antenna:      29 -> 29
+excluded connectivity: 4 -> 0
+new DRC markers:       18
+removed baseline:       0
+```
+
+The 18 new markers are six MET2 shorts, two MET2 parallel-run-length spacing
+violations, six MET3 shorts, three VIA2 cut-shorts, and one VIA2 cut-spacing
+violation. Row attribution is `6 / 9 / 3` for VDD rows 1, 2, and 3. The marker
+messages identify existing routed signal nets at every row, including
+`CTS_20`, `CTS_26`, `FE_OFN265_n_19`, `FE_OFN356_n_7096`,
+`FE_OFN122_n_221`, `FE_OFN4997_n_293`, and one output-FIFO data net. This is
+direct evidence that the default generated stack footprint collides with
+ordinary MET2/MET3 routing and VIA2 cuts; it is not a PG topology ambiguity.
+
+`patch-stack` remains blocked because it would add geometry on the already
+conflicting intermediate layers. The next and only authorized experiment is
+one fresh-process `via-1x1` trial using the same three areas and explicit
+`-via_rows 1 -via_columns 1`. It tests via multiplicity without changing X,
+row selection, stripe geometry, or the source checkpoint. The gate saves and
+exports nothing, classifies both accepted and rejected physical outcomes, and
+still blocks canonical replay and PVS pending operator review.

@@ -10,6 +10,7 @@ Usage:
 
 Modes:
   via-only    Add one bounded direct MET1-to-METTP via stack per proven row.
+  via-1x1     Add one bounded 1-row by 1-column direct stack per proven row.
   patch-stack Add bounded MET2/MET3 VDD patches, then adjacent via pairs.
 
 The trial restores once, modifies only the in-memory copy, and never calls
@@ -33,7 +34,7 @@ main() {
     usage >&2
     return 2
   fi
-  if [[ "$mode" != "via-only" && "$mode" != "patch-stack" ]]; then
+  if [[ "$mode" != "via-only" && "$mode" != "via-1x1" && "$mode" != "patch-stack" ]]; then
     echo "ERROR: unsupported mode: $mode" >&2
     return 2
   fi

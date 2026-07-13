@@ -33,6 +33,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "pg-help",
             "pg-via-trial",
             "pg-via-drc-probe",
+            "pg-via-1x1-trial",
             "package",
             "status",
         ):
@@ -136,6 +137,17 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("DIRECT_STACK_DRC_MARKERS_CLASSIFIED_NO_SAVE_EXPORT", driver)
         self.assertIn("analyze_tx_packet_pg_via_drc.py", driver)
         self.assertIn("POST_DRC_VIOLATION_COUNT)\" != \"25\"", driver)
+        self.assertIn("via-1x1", wrapper)
+        self.assertIn("$mode ni {via-only via-1x1 patch-stack}", trial)
+        self.assertIn("lappend command -via_rows 1 -via_columns 1", trial)
+        self.assertIn("require_step_pass 10_pg_via_drc_probe_r2", driver)
+        self.assertIn('grep -Fq -- "-via_rows"', driver)
+        self.assertIn('grep -Fq -- "-via_columns"', driver)
+        self.assertIn("pg_via_1x1_trial", driver)
+        self.assertIn("analyze_tx_packet_pg_via_candidate.py", driver)
+        self.assertIn("PG_VIA_1X1_CANDIDATE_CLASSIFIED_NO_SAVE_EXPORT", driver)
+        self.assertIn("CANONICAL_RERUN=NOT_RUN", driver)
+        self.assertIn("PVS=NOT_RUN", driver)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, trial)
 

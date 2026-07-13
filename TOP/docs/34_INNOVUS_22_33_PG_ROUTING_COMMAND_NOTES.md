@@ -310,3 +310,27 @@ query returned 40 objects while the report correctly said seven DRC
 violations. DRC replay tooling must retain the raw total for audit, exclude
 `type=Antenna` and `type=Connectivity`, and compare the filtered count with the
 `verify_drc` result.
+
+## Constrained Direct-Stack Trial
+
+The instrumented replay proved that all 18 added DRC markers are localized to
+the three requested stack windows. The default stack is electrically complete
+but intersects existing MET2/MET3 routes and VIA2 cuts. The next bounded syntax
+is therefore:
+
+```tcl
+setViaGenMode -area_only 1
+editPowerVia -add_vias 1 -nets {VDD} \
+  -bottom_layer MET1 -top_layer METTP \
+  -exclude_stack_vias 0 \
+  -via_rows 1 -via_columns 1 \
+  -area {<same-proven-row-window>}
+```
+
+Installed `man editPowerVia` documents both multiplicity options. This is one
+method candidate, not a coordinate sweep: keep all three canonical search
+windows unchanged and run the commands in one new process restored once from
+the immutable post-route checkpoint. A command PASS is still insufficient.
+Reconcile raw and filtered marker counts and require special connectivity 0,
+regular connectivity 0, and no DRC increase. Do not save, export, run
+patch-stack, replay canonical Innovus, or run PVS from this trial.
