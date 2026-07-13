@@ -29,8 +29,8 @@ Genus or Innovus and must not modify MPTDC internals.
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
 | P02 | Restore-only internal PG for the narrow strip | R4_HELPER_METHOD_FAIL_DIAG_PENDING | PG marker decomposition, post-PG connectivity/DRC, merged GDS audit |
-| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | XCELIUM_PASS_GENUS_DETAIL_REVIEW_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
-| P04 | Per-block PVS closure, density qualification, and handoff promotion | BLOCKED_BY_P03_SERVER_PNR | PVS DRC zero outside antenna, explicit LVS match, hashes, promotion gate |
+| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | XCELIUM_PASS_GENUS_MANUAL_PASS_GATE_REPLAY_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
+| P04 | Per-block PVS closure, density qualification, and handoff promotion | BLOCKED_BY_P03_INNOVUS | PVS DRC zero outside antenna, explicit LVS match, hashes, promotion gate |
 | P05 | Requalified strip and Phase-A TX assembly geometry gate | BLOCKED_BY_P04 | Strip PG/PVS closure, no obstacle overlap, exact paired 19-net contract |
 | P06 | Phase-A TX assembly route | BLOCKED_BY_P05 | Checkpoints 00/01/02, selected-net connectivity, DRC, timing |
 | P07 | Assembly PVS and promoted handoff | BLOCKED_BY_P06 | GDS audit, PVS DRC zero, LVS match or approved source contract |
@@ -528,7 +528,7 @@ the signal-only assembly smoke is run.
 
 ## P03-R3 Staged No-Auto-Advance Server Procedure
 
-Status: `PASS_LOCAL_SERVER_EXECUTION_PENDING`
+Status: `PHASE1_SERVER_EVIDENCE_CAPTURED_GENUS_GATE_REPLAY_PENDING`
 
 The first canonical server phase is now encoded in
 `TOP/ci/server_run_tx_packet_canonical_phase1.sh`. The procedure separates
@@ -560,14 +560,17 @@ DRIVER_BASH_SYNTAX=PASS
 DRIVER_NO_EXPLICIT_EXIT=ENFORCED_BY_UNIT_TEST
 DRIVER_NO_INNOVUS_OR_PVS=ENFORCED_BY_UNIT_TEST
 DRIVER_INIT_TEMP_SESSION=PASS
-TOP_PNR_UNIT_TESTS=42_PASS_0_FAIL
+GENUS_GATE_VALIDATOR_TESTS=6_PASS_0_FAIL
+TOP_PNR_UNIT_TESTS=48_PASS_0_FAIL
+PY_COMPILE=PASS
 GIT_DIFF_CHECK=PASS
-CADENCE_SERVER_EXECUTION=NOT_RUN
+CADENCE_SERVER_XCELIUM_AND_GENUS=CAPTURED
+CADENCE_SERVER_GENUS_GATE_REPLAY=NOT_RUN
 ```
 
 ### P03-R3 Server Evidence - 2026-07-13
 
-Status: `XCELIUM_PASS_GENUS_DETAIL_REVIEW_PENDING`
+Status: `XCELIUM_PASS_GENUS_MANUAL_PASS_GATE_REPLAY_PENDING`
 
 The staged procedure ran from Git commit
 `55a9f9b122a063afd8fb169b112110c22d810fe4` with diagnostic root:
@@ -591,8 +594,17 @@ full run then passed all 35 required benches. The original report extractor's
 broad `fail|error` grep produced false-positive review lines from text such as
 `0 fail`, `errors: 0`, `[PASS] ... error expectation`, and the functional port
 name `bundle_missing_source_error_o`. These strings are not simulation or
-Genus failures. The extractor is being narrowed to actual FAIL/MISSING summary
-rows and explicit tool error syntax.
+Genus failures. Report-driver commit
+`b164b8d10daad7b45f6004d6e785dbe432f82ab0` restricted extraction to
+FAIL/MISSING summary rows and explicit simulator error syntax. Replaying only
+`xcelium-report` against the immutable run produced:
+
+```text
+PASS=35
+FAIL=0
+MISSING=0
+FAILURE_MARKER_COUNT=0
+```
 
 Measured Genus evidence:
 
@@ -605,23 +617,62 @@ NESTED_SRC_DATA_NAME_COUNT=0
 UNIQUE_SCALAR_SRC_DATA_NAME_COUNT=64
 UNRESOLVED_REFERENCES=0
 TOOL_ERROR_COUNT=0
-DISPLAYED_POST_OPT_PATHS=20
-DISPLAYED_POST_OPT_SLACK_VALUE=845
+CLOCK_NAME=clk_sys
+CLOCK_PERIOD_PS=6250.0
+CLOCK_REGISTER_COUNT=4407
+SEQUENTIAL_INSTANCE_COUNT=4407
+WNS_PS=845.1
+TNS_PS=0.0
+VIOLATING_PATH_COUNT=0
+DEFAULT_PATH_GROUP_STATUS=NO_PATHS
+INPUTS_WITHOUT_CLOCKED_EXTERNAL_DELAY=0
+OUTPUTS_WITHOUT_CLOCKED_EXTERNAL_DELAY=0
+INPUTS_WITHOUT_EXTERNAL_DRIVER_TRANSITION=101
+OUTPUTS_WITHOUT_EXTERNAL_LOAD=52
+NONBLOCKING_TOOL_WARNING_COUNT=2
 ```
 
-This closes the canonical source-name and unresolved-reference gates. It does
-not yet close the Genus timing gate: the pasted extraction contained only the
-QoR table header and did not expose the exact critical-path/TNS row or the full
-timing-intent categories. The 20 displayed paths all have positive numeric
-slack `845`, but its report unit and aggregate TNS must be taken from the
-complete reports rather than inferred. Packet Innovus remains blocked until
-the complete QoR, clock, timing-intent, and warning-classification sections are
-reviewed.
+The complete reports close the intended typical OOC feasibility criteria. The
+only clock is `clk_sys`; its clock-table register count equals the QoR
+sequential instance count, so all 4407 sequential instances are covered. WNS
+is positive by 845.1 ps, TNS is zero, and there are no violating paths. All
+required timing-intent categories are zero, including unclocked sequential
+logic, conflicting clocks, multiple drivers, invalid exceptions, and missing
+clocked external delays.
+
+The 101 inputs without an external driver/transition and 52 outputs without an
+external load are not connectivity failures. They are an explicit OOC
+environment limitation: this run proves internal typical feasibility but its
+IO timing is optimistic. It is not MMMC and is not signoff. The two classified
+tool warnings are nonblocking `MESG-11` maximum-message-print-count notices.
+The old `undriven count=8` was a classifier defect: it counted zero-valued
+summary headings such as `Undriven Port(s) 0`. Future Genus runs ignore those
+headings; the immutable old report is tolerated only because the underlying
+summary value is zero.
+
+`TOP/syn/scripts/validate_tx_packet_genus_ooc.py` now encodes this decision as
+a fail-closed gate. It also requires exact 64-port scalar parity, no nested top
+port names, exact 4407/4407 clock coverage, complete external drive/load rows,
+output hashes, and `SIGNOFF_READY=NO`. The measured reports satisfy the manual
+review, but packet Innovus remains blocked until the server replays
+`genus-report` and creates `reports/07_genus_gate.rpt` with `STATUS=PASS` and
+`RESULT=READY_FOR_PACKET_INNOVUS_FEASIBILITY`.
 
 The absent `clk_sys` to `clk_cfg_40m` / `clk_ref_40m` reports are expected for
 this OOC block because `spadmic_tx_packet_core.sdc` creates only `clk_sys`; the
 generic report helper writes cross-clock files only when both named clocks
 exist. Their absence is therefore not itself a packet-core timing failure.
+
+Negative knowledge retained from this review:
+
+- Do not rerun Genus merely to repair report extraction or the old warning
+  classifier; replay the validator against the immutable netlist and reports.
+- Do not infer timing closure from twenty displayed `Slack:= 845` lines. Use
+  the full QoR row, timing-intent categories, and clock/register coverage.
+- Do not treat `default No paths` as proof by itself. It is accepted only with
+  zero missing clocked IO delays and the other timing-intent checks.
+- Do not treat this typical-only OOC pass as IO closure, MMMC, or signoff while
+  drive/transition and output-load models remain deferred.
 
 The text evidence package is:
 

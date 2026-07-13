@@ -148,6 +148,9 @@ proc classify_reports {run_dir} {
         if {[regexp -nocase {no violations|No unresolved references|No empty modules|Unresolved References & Empty Modules|Undriven Port\(s\)/Pin\(s\)|Multidriven Port\(s\)/Pin\(s\)|Unloaded Pin\(s\), Port\(s\)|no unloaded port|^No .*undriven|^No .*unconnected|^No .*multiply driven|^No .*multi.?driven} $line]} {
           continue
         }
+        if {[regexp -nocase {^[[:space:]]*(Undriven|Unconnected|Multidriven|Multiply driven|Unloaded)[^:]*[[:space:]]0[[:space:]]*$} $line]} {
+          continue
+        }
         if {[regexp -nocase $patterns($key) $line]} {
           incr count
           if {$first eq ""} {

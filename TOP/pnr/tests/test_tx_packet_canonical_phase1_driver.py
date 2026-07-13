@@ -52,6 +52,9 @@ class TxPacketCanonicalPhase1DriverTest(unittest.TestCase):
         self.assertIn("===== TIMING INTENT CATEGORIES =====", text)
         self.assertIn("===== COMPLETE QOR REPORT =====", text)
         self.assertIn("===== COMPLETE WARNING CLASSIFICATION =====", text)
+        self.assertIn("validate_tx_packet_genus_ooc.py", text)
+        self.assertIn("GENUS_REVIEW_AND_FEASIBILITY_GATE_COMPLETE", text)
+        self.assertIn("--exclude='reports/08_package_details.rpt'", text)
 
     def test_init_creates_auditable_session_without_server_tools(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,6 +1,6 @@
 # TX Packet Core Canonical Rebuild And PVS Closure
 
-Status: `P02_PHYSICAL_CONTRACT_IMPLEMENTED_CADENCE_SERVER_PENDING`
+Status: `P03_GENUS_MANUAL_PASS_GATE_REPLAY_PENDING`
 
 This runbook replaces the invalid historical `spadmic_tx_packet_core_HV` LVS
 contract with a fresh canonical `spadmic_tx_packet_core` implementation. The
@@ -137,7 +137,8 @@ Negative operating rules:
   before paying for the full regression.
 - Do not call Genus after a failed full Xcelium gate.
 - Do not interpret `06_genus STATUS=PASS` as timing closure. Review
-  `07_genus_review.rpt` before issuing any Innovus command.
+  `07_genus_review.rpt` and require `07_genus_gate.rpt STATUS=PASS` before
+  issuing any Innovus command.
 - Do not add raw console logs or tool databases to Git. Promote only reviewed
   small reports and the measured diagnosis.
 
@@ -150,6 +151,40 @@ collection is restricted to FAIL/MISSING summary rows and explicit simulator
 error syntax. Genus review includes the complete QoR, clock, and warning
 classification reports plus focused timing-intent categories; wrapper RC alone
 still cannot close the gate.
+
+`genus-report` runs
+`TOP/syn/scripts/validate_tx_packet_genus_ooc.py` after collecting the readable
+evidence. The validator fails closed unless all of the following are true:
+
+- the post-synthesis netlist and SDC are present and hashed;
+- the top has exactly the canonical 64 scalar source ports and no nested top
+  port names;
+- unresolved references and required timing-intent problem categories are
+  zero;
+- `clk_sys` is 6250 ps and its clocked-register count equals the QoR
+  sequential-instance count;
+- WNS is nonnegative, TNS and violating-path count are zero, and the default
+  path group has no paths;
+- external drive/transition and output-load limitation rows are present, even
+  though their nonzero values do not block physical feasibility;
+- blocking warning classes are zero.
+
+The gate intentionally emits `MMMC_STATUS=NOT_RUN_TYPICAL_ONLY` and
+`SIGNOFF_READY=NO` on a pass. A passing result permits packet Innovus
+feasibility; it cannot be used as a timing-signoff claim. The 2026-07-13 run
+measured WNS `+845.1 ps`, TNS `0`, zero violating paths, and complete
+`4407/4407` register coverage. Its 101 inputs without external
+driver/transition and 52 outputs without external load remain deferred OOC
+modeling limitations.
+
+Future warning classification skips zero-valued report headings such as
+`Undriven Port(s) 0`. Do not rerun an otherwise immutable Genus result solely
+because an older classifier counted those words. The validator checks the
+underlying blocking categories and records the legacy count explicitly.
+
+Evidence packaging excludes its own `08_package` status and package-detail
+report. This prevents a repeated package command from embedding stale hashes
+for an earlier archive inside the new archive.
 
 ## P02 Paired Physical Contract
 

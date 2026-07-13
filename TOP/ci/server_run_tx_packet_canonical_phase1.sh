@@ -472,6 +472,7 @@ genus_report() {
   local netlist="$block_root/outputs/tx_packet_core.postsyn.v"
   local sdc="$block_root/outputs/tx_packet_core.postsyn.sdc"
   local report="$TX_SESSION_ROOT/reports/07_genus_review.rpt"
+  local gate_report="$TX_SESSION_ROOT/reports/07_genus_gate.rpt"
   local nested_count=MISSING scalar_count=MISSING
   local report_driver_head
   report_driver_head="$(git -C "$TX_REPO" rev-parse HEAD 2>/dev/null)"
@@ -583,14 +584,28 @@ genus_report() {
     cp -p "$sdc" "$TX_SESSION_ROOT/reports/07_tx_packet_core.postsyn.sdc"
   fi
 
-  record_status 07_genus_report CAPTURED 0 GENUS_REVIEW_AND_CANONICAL_INTERFACE_EVIDENCE_READY
-  return 0
+  echo
+  echo "===== CANONICAL GENUS FEASIBILITY GATE ====="
+  python3 TOP/syn/scripts/validate_tx_packet_genus_ooc.py \
+    --block-root "$block_root" \
+    --status "$gate_report" 2>&1 | tee "$TX_SESSION_ROOT/logs/07_genus_gate.console.log"
+  local gate_rc=${PIPESTATUS[0]}
+  local gate_status=FAIL
+  if [[ "$gate_rc" -eq 0 ]] && grep -q '^STATUS=PASS$' "$gate_report" 2>/dev/null; then
+    gate_status=PASS
+  fi
+
+  record_status 07_genus_report "$gate_status" "$gate_rc" GENUS_REVIEW_AND_FEASIBILITY_GATE_COMPLETE
+  [[ "$gate_status" == "PASS" ]]
+  return $?
 }
 
 package_evidence() {
   load_session || return 1
   local package="$TX_SESSION_ROOT/packages/${TX_SESSION_ID}_text_evidence.tar.gz"
   tar -czf "$package" \
+    --exclude='status/08_package.rpt' \
+    --exclude='reports/08_package_details.rpt' \
     -C "$TX_SESSION_ROOT" \
     00_objective_and_policy.rpt \
     execution_journal.rpt \
