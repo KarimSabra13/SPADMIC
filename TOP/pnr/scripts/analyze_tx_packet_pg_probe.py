@@ -19,6 +19,10 @@ OPEN_RE = re.compile(
     re.IGNORECASE,
 )
 VIOLATION_RE = re.compile(r"Verification Complete\s*:\s*([0-9]+)\s+Viols", re.IGNORECASE)
+PROBLEM_SUMMARY_RE = re.compile(
+    r"^\s*([0-9]+)\s+Problem\(s\)\s+\(IMPVFC-200\):\s+Special Wires:",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 @dataclass(frozen=True)
@@ -115,14 +119,19 @@ def parse_swires(path: Path) -> list[Swire]:
     return rows
 
 
-def parse_opens(path: Path) -> tuple[list[tuple[str, Box]], int | None]:
+def parse_opens(path: Path) -> tuple[list[tuple[str, Box]], int | None, int | None]:
     text = path.read_text(errors="replace")
     opens = [
         (match.group(1).upper(), Box(*(float(match.group(i)) for i in range(2, 6))))
         for match in OPEN_RE.finditer(text)
     ]
     violations = VIOLATION_RE.findall(text)
-    return opens, int(violations[-1]) if violations else None
+    problem_summaries = PROBLEM_SUMMARY_RE.findall(text)
+    return (
+        opens,
+        int(violations[-1]) if violations else None,
+        int(problem_summaries[-1]) if problem_summaries else None,
+    )
 
 
 def marker_classes(path: Path) -> Counter[str]:
@@ -178,9 +187,27 @@ def main() -> int:
         )
         return 8
 
-    opens, violation_count = parse_opens(detail)
+    opens, verification_count, problem_summary_count = parse_opens(detail)
     swires = parse_swires(topology)
     classes = marker_classes(markers)
+
+    if verification_count is not None and problem_summary_count is not None:
+        violation_count = verification_count
+        count_source = "VERIFICATION_COMPLETE_AND_IMPVFC_200_PROBLEM_SUMMARY"
+        count_consistency = "PASS" if verification_count == problem_summary_count else "FAIL"
+    elif verification_count is not None:
+        violation_count = verification_count
+        count_source = "VERIFICATION_COMPLETE"
+        count_consistency = "PASS"
+    elif problem_summary_count is not None:
+        violation_count = problem_summary_count
+        count_source = "IMPVFC_200_PROBLEM_SUMMARY"
+        count_consistency = "PASS"
+    else:
+        violation_count = None
+        count_source = "NONE"
+        count_consistency = "FAIL"
+
     row_opens = [(net, box) for net, box in opens if box.height <= 10.0]
     aggregate_opens = [(net, box) for net, box in opens if box.height > 10.0]
     vdd_rows = [box for net, box in row_opens if net == "VDD"]
@@ -238,6 +265,7 @@ def main() -> int:
 
     topology_ready = (
         violation_count is not None
+        and count_consistency == "PASS"
         and violation_count == len(opens)
         and len(vdd_rows) == 3
         and len(vss_rows) == 0
@@ -260,6 +288,10 @@ def main() -> int:
         f"RESULT={result}",
         f"PROBE_ROOT={args.probe_root}",
         f"SPECIAL_CONNECTIVITY_VIOLATION_COUNT={violation_count if violation_count is not None else 'UNKNOWN'}",
+        f"SPECIAL_CONNECTIVITY_COUNT_SOURCE={count_source}",
+        f"SPECIAL_CONNECTIVITY_COUNT_CONSISTENCY={count_consistency}",
+        f"SPECIAL_CONNECTIVITY_VERIFICATION_COUNT={verification_count if verification_count is not None else 'NOT_PRESENT'}",
+        f"SPECIAL_CONNECTIVITY_PROBLEM_SUMMARY_COUNT={problem_summary_count if problem_summary_count is not None else 'NOT_PRESENT'}",
         f"OPEN_COMPONENT_COUNT={len(opens)}",
         f"VDD_OPEN_COMPONENT_COUNT={sum(net == 'VDD' for net, _ in opens)}",
         f"VSS_OPEN_COMPONENT_COUNT={sum(net == 'VSS' for net, _ in opens)}",

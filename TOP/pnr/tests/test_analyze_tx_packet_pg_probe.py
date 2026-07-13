@@ -13,7 +13,14 @@ ANALYZER = REPO / "TOP" / "pnr" / "scripts" / "analyze_tx_packet_pg_probe.py"
 
 
 class AnalyzeTxPacketPgProbeTest(unittest.TestCase):
-    def write_probe(self, root: Path, *, include_third_rail: bool = True, vss_row: bool = False) -> None:
+    def write_probe(
+        self,
+        root: Path,
+        *,
+        include_third_rail: bool = True,
+        vss_row: bool = False,
+        count_format: str = "verification",
+    ) -> None:
         reports = root / "reports"
         reports.mkdir(parents=True)
         opens = [
@@ -24,9 +31,25 @@ class AnalyzeTxPacketPgProbeTest(unittest.TestCase):
         ]
         if vss_row:
             opens.append("Net VSS: has special routes with opens at (10.080, 200.000) (2056.880, 203.120)")
+        if count_format == "verification":
+            count_text = f"Verification Complete : {len(opens)} Viols.  0 Wrngs."
+        elif count_format == "problem_summary":
+            count_text = (
+                "Begin Summary\n"
+                f"    {len(opens)} Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.\n"
+                "End Summary"
+            )
+        elif count_format == "disagree":
+            count_text = (
+                f"Verification Complete : {len(opens)} Viols.  0 Wrngs.\n"
+                "Begin Summary\n"
+                f"    {len(opens) + 1} Problem(s) (IMPVFC-200): Special Wires: Pieces of the net are not connected together.\n"
+                "End Summary"
+            )
+        else:
+            raise ValueError(f"unsupported count format: {count_format}")
         (reports / "verify_connectivity_special_detail.rpt").write_text(
-            "\n".join(opens)
-            + f"\nVerification Complete : {len(opens)} Viols.  0 Wrngs.\n"
+            "\n".join(opens) + "\n" + count_text + "\n"
         )
 
         swires = [
@@ -83,8 +106,32 @@ class AnalyzeTxPacketPgProbeTest(unittest.TestCase):
             self.assertIn("VDD_AGGREGATE_COMPONENT_COUNT=1", report)
             self.assertIn("DRC_MINIMUM_AREA_MARKER_COUNT=7", report)
             self.assertIn("DRC_ANTENNA_MARKER_COUNT=29", report)
+            self.assertIn("SPECIAL_CONNECTIVITY_COUNT_SOURCE=VERIFICATION_COMPLETE", report)
+            self.assertIn("SPECIAL_CONNECTIVITY_COUNT_CONSISTENCY=PASS", report)
             self.assertIn("EDIT_POWER_VIA_TRIAL_DECISION=READY_FOR_ONE_ISOLATED_TRIAL", report)
             self.assertIn("VDD_ROW_1_VIA_SEARCH_AREA={515.200 125.000 518.560 128.120}", report)
+
+    def test_accepts_impvfc_200_problem_summary_count(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_probe(root, count_format="problem_summary")
+            result, report = self.run_analyzer(root)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertIn("SPECIAL_CONNECTIVITY_VIOLATION_COUNT=4", report)
+            self.assertIn("SPECIAL_CONNECTIVITY_COUNT_SOURCE=IMPVFC_200_PROBLEM_SUMMARY", report)
+            self.assertIn("SPECIAL_CONNECTIVITY_COUNT_CONSISTENCY=PASS", report)
+            self.assertIn("EDIT_POWER_VIA_TRIAL_DECISION=READY_FOR_ONE_ISOLATED_TRIAL", report)
+
+    def test_blocks_trial_when_count_sources_disagree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_probe(root, count_format="disagree")
+            result, report = self.run_analyzer(root)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertIn("SPECIAL_CONNECTIVITY_COUNT_CONSISTENCY=FAIL", report)
+            self.assertIn("SPECIAL_CONNECTIVITY_VERIFICATION_COUNT=4", report)
+            self.assertIn("SPECIAL_CONNECTIVITY_PROBLEM_SUMMARY_COUNT=5", report)
+            self.assertIn("EDIT_POWER_VIA_TRIAL_DECISION=BLOCKED_NEEDS_TOPOLOGY_REVIEW", report)
 
     def test_blocks_trial_when_a_row_has_no_met1_swire_overlap(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

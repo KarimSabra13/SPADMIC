@@ -1008,3 +1008,31 @@ Negative rules added by this probe:
 - Do not combine via-only and patch-stack in one process.
 - Do not save, export, stage, or run PVS from an in-memory method trial.
 - Do not let a PG repair hide the independent minimum-area and antenna gates.
+
+### P03-R6 Server Evidence - PG Topology Correlation And Count-Format Repair
+
+Status: `PASS_GEOMETRY_CORRELATED_TRIAL_STILL_BLOCKED_BY_REPORT_FORMAT`
+
+The read-only analyzer at report-driver head
+`54e7ba486109ed5cd32f1d985c30aacb5e4c5e66` correlated all three VDD row
+components with one actual MET1 rail and the single vertical METTP VDD stripe.
+It produced bounded overlap windows at row centers `126.560`, `135.520`, and
+`278.880 um`. VSS remained clean and marker decomposition remained
+`7 minimum-area + 29 antenna + 4 VDD connectivity`.
+
+The analyzer correctly remained blocked because
+`SPECIAL_CONNECTIVITY_VIOLATION_COUNT=UNKNOWN`. This was not missing topology:
+the parser recognized only the console form `Verification Complete : N Viols`,
+while this Innovus 22.33 detail report used the summary form
+`N Problem(s) (IMPVFC-200): Special Wires`. The repair accepts either official
+form, records which form supplied the count, and requires both values to agree
+when both appear. A disagreement still blocks the trial. No design or Cadence
+command changed during this correction.
+
+```text
+R3_PG_ANALYZER_TESTS=5_PASS_0_FAIL
+R3_TOP_PNR_UNIT_TESTS=66_PASS_0_FAIL
+R3_PY_COMPILE=PASS
+R3_DIFF_CHECK=PASS
+R3_CADENCE_DESIGN_MODIFICATION=NOT_RUN
+```

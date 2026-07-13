@@ -449,6 +449,15 @@ with an actual horizontal MET1 special wire and the vertical METTP VDD stripe.
 It emits bounded intersection windows. If any row lacks that overlap, or if a
 VSS row is open, the trial is blocked.
 
+Innovus 22.33 emits the special-connectivity total in two observed forms:
+`Verification Complete : N Viols` and
+`N Problem(s) (IMPVFC-200): Special Wires`. The analyzer accepts either form,
+reports its provenance, and requires agreement when both are present. The
+first packet replay proved all three geometric overlaps but stayed blocked
+solely because the detail report used the second form before parser support was
+added. Do not reinterpret `UNKNOWN` as zero or bypass the count-consistency
+gate.
+
 `pg-help` starts Innovus with no design loaded and requires installed help for
 `editPowerVia`. `pg-via-trial` then supports two separately isolated methods:
 
