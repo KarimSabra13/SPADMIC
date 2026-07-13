@@ -225,6 +225,7 @@ export SPADMIC_INNOVUS_GENUS_SUMMARY="$GENUS_SUMMARY"
 set +e
 innovus -nowin -init "$SCRIPT_DIR/run_innovus_ooc_harden_block.tcl" \
   -log "$BLOCK_ROOT/logs/innovus.log" \
+  </dev/null \
   > "$BLOCK_ROOT/logs/innovus.stdout.log" 2>&1
 innovus_rc=$?
 set -e

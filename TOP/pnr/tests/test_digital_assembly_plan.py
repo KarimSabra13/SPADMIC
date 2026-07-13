@@ -154,6 +154,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         )
         self.assertIn("--required-merge \"$SPADMIC_STDCELL_GDS\"", wrapper)
         self.assertIn('[[ "$gds_audit_rc" -eq 0 ]]', wrapper)
+        self.assertIn("</dev/null", wrapper)
 
     def test_narrow_strip_clears_txrx_with_ten_um_margin(self) -> None:
         txrx = (3505.519, 464.920, 3638.910, 3265.795)

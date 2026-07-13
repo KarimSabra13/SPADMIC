@@ -1270,3 +1270,7 @@ STEP12_PY_COMPILE=PASS
 STEP12_BASH_SYNTAX=PASS
 STEP12_TCL_INFO_COMPLETE=1
 ```
+
+The full OOC wrapper also connects Innovus stdin to `/dev/null`. Any fail-closed
+pre-CTS Tcl error therefore receives EOF and cannot consume the operator's
+subsequent interactive shell commands.
