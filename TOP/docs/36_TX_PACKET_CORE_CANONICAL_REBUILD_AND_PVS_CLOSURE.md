@@ -496,6 +496,32 @@ Do not repeat that delete-and-reroute sequence; it deterministically recreates
 the illegal access stubs. A later minimum-area trial needs local wire-context
 evidence and a different construction method.
 
+### P03-R9 Direct-Stack Result And R5 Diagnostic Gate
+
+The authorized direct MET1-to-METTP trial closed special connectivity from
+four violations to zero and kept regular connectivity at zero. It failed the
+independent DRC gate: the seven existing MET1 minimum-area markers remained,
+while six MET2 shorts, two MET2 spacing markers, three VIA2 cut-shorts, one
+VIA2 cut-spacing marker, and six MET3 shorts were added. The total changed
+from seven to 25.
+
+Therefore the method is topology-correct but geometry-rejected. Command PASS,
+special-connectivity zero, and the prior positive timing result do not waive
+the DRC increase; timing was not rerun for this rejected in-memory geometry.
+The in-memory result was not saved or exported, and it is not a PVS source.
+`patch-stack` is blocked because its added MET2/MET3 shapes would target layers
+already carrying the new conflicts.
+
+The next server action is `pg-via-drc-probe`. It uses a new immutable
+diagnostic root, restores the same source checkpoint once, replays the same
+three direct stacks, and dumps the DRC marker database immediately before and
+after. Its analyzer requires exact replay of the reviewed `4 -> 0` special,
+`0 -> 0` regular, and `7 -> 25` DRC tuple. It also requires all seven baseline
+markers to remain equivalent at the marker-signature level and exactly 18 new
+markers to account for the DRC delta. Diagnostic PASS does not validate a
+repair; it only supplies the geometry needed to choose the next isolated
+experiment.
+
 ## P03 Canonical PVS Source And Replay
 
 Immutable staging now preserves `<top>.innovus.pg.v` and derives

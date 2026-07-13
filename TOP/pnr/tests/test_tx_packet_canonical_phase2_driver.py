@@ -32,6 +32,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "pg-analyze",
             "pg-help",
             "pg-via-trial",
+            "pg-via-drc-probe",
             "package",
             "status",
         ):
@@ -122,6 +123,13 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("POST_SPECIAL_CONNECTIVITY_VIOLATION_COUNT", trial)
         self.assertIn("POST_REGULAR_CONNECTIVITY_VIOLATION_COUNT", trial)
         self.assertIn("POST_DRC_VIOLATION_COUNT", trial)
+        self.assertIn("drc_markers_pre_trial.tsv", trial)
+        self.assertIn("drc_markers_post_trial.tsv", trial)
+        self.assertIn("trial_write_marker_dump", trial)
+        self.assertIn("pg_via_drc_probe", driver)
+        self.assertIn("DIRECT_STACK_DRC_MARKERS_CLASSIFIED_NO_SAVE_EXPORT", driver)
+        self.assertIn("analyze_tx_packet_pg_via_drc.py", driver)
+        self.assertIn("POST_DRC_VIOLATION_COUNT)\" != \"25\"", driver)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, trial)
 

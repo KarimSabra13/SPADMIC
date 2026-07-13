@@ -495,3 +495,44 @@ deleted seven areas without error and reran three route commands without error,
 yet the exact same seven `0.1064 um2` stubs remained below the `0.2020 um2`
 rule. Repeating those commands is ruled out. Explicit PG-via success, if any,
 does not clear or waive this DRC blocker.
+
+## 11. Packet Direct-Stack Rejection And Marker Replay
+
+The packet `via-only` trial returned PASS for `setViaGenMode` and all three
+direct MET1-to-METTP `editPowerVia` commands. It also closed the four VDD
+special-connectivity findings without changing regular connectivity. It still
+failed the physical gate because DRC changed from seven to 25.
+
+The exact delta is:
+
+```text
+MET1 minimum-area: 7 -> 7
+MET2 short:         0 -> 6
+MET2 spacing:       0 -> 2
+VIA2 cut-short:     0 -> 3
+VIA2 cut-spacing:   0 -> 1
+MET3 short:         0 -> 6
+```
+
+This is a rejected geometry with a proven topology, not a partial PASS. No
+checkpoint or physical handoff was written. The many MPTDC black-box startup
+messages are pre-existing library diagnostics; they are not evidence that the
+three via commands failed, and they do not override the post-command DRC.
+
+The next gate is an instrumented replay from the same immutable checkpoint in
+one new Innovus process. `verify_drc` must be followed immediately by a marker
+TSV dump before connectivity checks replace the active marker set. The replay
+must reproduce the original counts, preserve all seven baseline marker
+signatures, and explain exactly 18 new marker signatures. Its PASS label means
+only `DIRECT_STACK_DRC_MARKERS_CLASSIFIED_NO_SAVE_EXPORT`.
+
+Decision rules:
+
+- Do not rerun the uninstrumented via-only trial.
+- Do not run patch-stack while MET2/MET3 shorts and VIA2 conflicts are
+  unclassified.
+- Do not save, export, stage, run canonical Innovus, or run PVS from the replay.
+- Do not choose `-via_rows 1 -via_columns 1`, row-by-row insertion, or manual
+  cut placement until the marker boxes show which generated cuts collide.
+- If replay counts differ from `4 -> 0` special, `0 -> 0` regular, or `7 -> 25`
+  DRC, stop as nondeterministic evidence rather than selecting a repair.

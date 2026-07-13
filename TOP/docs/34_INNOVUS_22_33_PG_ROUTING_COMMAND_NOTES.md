@@ -275,3 +275,30 @@ special-net patches are created first with verified `add_shape -rect` syntax.
 Each mode must use a separate process and the same immutable source checkpoint.
 Never run patch-stack after via-only in the same loaded design because the
 result would not identify which method changed connectivity.
+
+## Direct Stack Trial Result
+
+The bounded direct stack is command-valid and topology-effective, but it is
+not physically acceptable in its default generated form:
+
+```text
+COMMAND_PASS_COUNT=4
+COMMAND_FAIL_COUNT=0
+SPECIAL_CONNECTIVITY=4 -> 0
+REGULAR_CONNECTIVITY=0 -> 0
+INNOVUS_DRC=7 -> 25
+```
+
+The 18 added violations are `MET2 Short=6`, `MET2 MetSpc=2`,
+`VIA2 CShort=3`, `VIA2 CutSpc=1`, and `MET3 Short=6`. This proves that
+`editPowerVia -exclude_stack_vias 0` can create the required electrical
+topology while selecting an intermediate stack geometry that collides with the
+routed design. A zero command RC is therefore capability evidence only.
+
+Do not run the existing patch-stack fallback from this result. MET2 and MET3
+are already the short-bearing layers, and the direct method already closes all
+special connectivity. First replay the same method once in a fresh process
+with immediate pre/post `top.markers` dumps. Review exact boxes, messages, and
+row attribution before considering constrained cut count, one row at a time,
+or a reviewed single-via construction. Save/export and PVS remain prohibited
+during this diagnosis.

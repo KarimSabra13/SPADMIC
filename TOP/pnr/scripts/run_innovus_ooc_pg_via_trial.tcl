@@ -67,6 +67,67 @@ proc trial_normalize_box {box} {
     return [regexp -all -inline {[-+]?[0-9]*[.]?[0-9]+} $box]
 }
 
+proc trial_flat_box {raw} {
+    set values [list]
+    foreach item $raw {
+        foreach value $item {
+            lappend values $value
+        }
+    }
+    if {[llength $values] < 4} {
+        return [list UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
+    }
+    return [lrange $values 0 3]
+}
+
+proc trial_numeric_or_unknown {value} {
+    if {[string is double -strict $value]} {
+        return $value
+    }
+    return UNKNOWN
+}
+
+proc trial_write_marker_dump {path} {
+    set markers [dbGet top.markers]
+    set fh [open $path w]
+    puts $fh "idx\tmarker_handle\tbox\tllx\tlly\turx\tury\tcx\tcy\tlayer\ttype\tsubType\tmessage"
+    set idx 0
+    foreach marker $markers {
+        if {$marker eq "" || $marker eq "0x0" || $marker eq "NULL"} {
+            continue
+        }
+        incr idx
+        set box UNKNOWN
+        set layer UNKNOWN
+        set type UNKNOWN
+        set subtype UNKNOWN
+        set message UNKNOWN
+        catch {set box [dbGet $marker.box]}
+        catch {set layer [dbGet $marker.layer.name]}
+        catch {set type [dbGet $marker.type]}
+        catch {set subtype [dbGet $marker.subType]}
+        catch {set message [dbGet $marker.message]}
+
+        lassign [trial_flat_box $box] llx lly urx ury
+        set llx [trial_numeric_or_unknown $llx]
+        set lly [trial_numeric_or_unknown $lly]
+        set urx [trial_numeric_or_unknown $urx]
+        set ury [trial_numeric_or_unknown $ury]
+        set cx UNKNOWN
+        set cy UNKNOWN
+        if {$llx ne "UNKNOWN" && $urx ne "UNKNOWN"} {
+            set cx [format %.6f [expr {($llx + $urx) / 2.0}]]
+        }
+        if {$lly ne "UNKNOWN" && $ury ne "UNKNOWN"} {
+            set cy [format %.6f [expr {($lly + $ury) / 2.0}]]
+        }
+
+        puts $fh "$idx\t[trial_value $marker]\t[trial_value $box]\t$llx\t$lly\t$urx\t$ury\t$cx\t$cy\t[trial_value $layer]\t[trial_value $type]\t[trial_value $subtype]\t[trial_value $message]"
+    }
+    close $fh
+    return $idx
+}
+
 proc trial_run_command {fh label command} {
     puts $fh "TRY_${label}=[trial_value $command]"
     if {[catch {uplevel #0 $command} err]} {
@@ -154,9 +215,18 @@ if {[catch {restoreDesign $checkpoint $top} restore_error]} {
 set status(RESTORE_DESIGN) PASS
 
 set pre_drc [file join $reports verify_drc_pre_trial.rpt]
+set pre_drc_markers [file join $reports drc_markers_pre_trial.tsv]
 set pre_regular [file join $reports verify_connectivity_regular_pre_trial.rpt]
 set pre_special [file join $reports verify_connectivity_special_pre_trial.rpt]
 trial_capture $pre_drc {verify_drc}
+set pre_marker_count UNKNOWN
+if {[catch {set pre_marker_count [trial_write_marker_dump $pre_drc_markers]} marker_error]} {
+    set status(PRE_DRC_MARKER_DUMP_STATUS) FAIL
+    set status(PRE_DRC_MARKER_DUMP_ERROR) [trial_value $marker_error]
+} else {
+    set status(PRE_DRC_MARKER_DUMP_STATUS) PASS
+}
+set status(PRE_DRC_MARKER_COUNT) $pre_marker_count
 trial_capture $pre_regular {verifyConnectivity -type regular}
 trial_capture $pre_special {verifyConnectivity -type special -nets {VDD VSS}}
 set pre_drc_count [trial_violation_count $pre_drc]
@@ -167,9 +237,12 @@ set status(PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT) $pre_regular_count
 set status(PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT) $pre_special_count
 if {![string is integer -strict $pre_regular_count] || $pre_regular_count != 0 ||
     ![string is integer -strict $pre_special_count] || $pre_special_count <= 0 ||
-    ![string is integer -strict $pre_drc_count]} {
+    ![string is integer -strict $pre_drc_count] ||
+    $status(PRE_DRC_MARKER_DUMP_STATUS) ne "PASS" ||
+    ![string is integer -strict $pre_marker_count] ||
+    $pre_marker_count != $pre_drc_count} {
     trial_abort BASELINE_PRECONDITION_FAILED \
-        "drc=$pre_drc_count regular=$pre_regular_count special=$pre_special_count"
+        "drc=$pre_drc_count markers=$pre_marker_count regular=$pre_regular_count special=$pre_special_count"
 }
 
 set command_report [file join $reports pg_via_trial_commands.rpt]
@@ -238,9 +311,18 @@ set status(COMMAND_FAIL_COUNT) $command_fail_count
 set post_special [file join $reports verify_connectivity_special_post_trial.rpt]
 set post_regular [file join $reports verify_connectivity_regular_post_trial.rpt]
 set post_drc [file join $reports verify_drc_post_trial.rpt]
+set post_drc_markers [file join $reports drc_markers_post_trial.tsv]
 trial_capture $post_special {verifyConnectivity -type special -nets {VDD VSS}}
 trial_capture $post_regular {verifyConnectivity -type regular}
 trial_capture $post_drc {verify_drc}
+set post_marker_count UNKNOWN
+if {[catch {set post_marker_count [trial_write_marker_dump $post_drc_markers]} marker_error]} {
+    set status(POST_DRC_MARKER_DUMP_STATUS) FAIL
+    set status(POST_DRC_MARKER_DUMP_ERROR) [trial_value $marker_error]
+} else {
+    set status(POST_DRC_MARKER_DUMP_STATUS) PASS
+}
+set status(POST_DRC_MARKER_COUNT) $post_marker_count
 set post_special_count [trial_violation_count $post_special]
 set post_regular_count [trial_violation_count $post_regular]
 set post_drc_count [trial_violation_count $post_drc]
@@ -251,7 +333,10 @@ set status(POST_DRC_VIOLATION_COUNT) $post_drc_count
 if {$command_fail_count == 0 &&
     [string is integer -strict $post_special_count] && $post_special_count == 0 &&
     [string is integer -strict $post_regular_count] && $post_regular_count == 0 &&
-    [string is integer -strict $post_drc_count] && $post_drc_count <= $pre_drc_count} {
+    [string is integer -strict $post_drc_count] && $post_drc_count <= $pre_drc_count &&
+    $status(POST_DRC_MARKER_DUMP_STATUS) eq "PASS" &&
+    [string is integer -strict $post_marker_count] &&
+    $post_marker_count == $post_drc_count} {
     set status(STATUS) PASS
     set status(RESULT) PG_VIA_METHOD_VALIDATED_NOT_CANONICAL
 } else {

@@ -32,6 +32,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-analyze
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-help
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-via-trial <via-only|patch-stack>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-via-drc-probe
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -902,6 +903,121 @@ pg_via_trial() {
   return $?
 }
 
+pg_via_drc_probe() {
+  load_session || return 1
+  require_step_pass 06_pg_analyze || return 1
+  require_step_pass 07_pg_help || return 1
+  local reference_step reference_trial analysis help_report trial_id trial_root
+  local console copy_dir cadence_rc trial_rc trial_status analysis_report analysis_rc
+  local status result path driver_report
+  reference_step="$TX2_SESSION_ROOT/status/08_pg_via_trial_via_only.rpt"
+  reference_trial="$TX2_SESSION_ROOT/reports/08_pg_via_via-only/pg_via_trial_status.rpt"
+  analysis="$TX2_SESSION_ROOT/reports/06_pg_topology_analysis.rpt"
+  help_report="$TX2_SESSION_ROOT/reports/07_pg_command_help/man_editPowerVia.rpt"
+  status=FAIL
+  result=PG_VIA_DRC_PROBE_NOT_RUN
+  trial_rc=8
+  analysis_rc=8
+
+  if [[ "$(kv_field "$reference_step" STATUS)" != "FAIL" \
+      || "$(kv_field "$reference_step" RESULT)" != "PG_VIA_METHOD_REJECTED_OR_INCOMPLETE" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: rejected via-only step evidence is missing"
+    echo "REFERENCE_STEP=$reference_step"
+    return 1
+  fi
+  if [[ "$(kv_field "$reference_trial" STATUS)" != "FAIL" \
+      || "$(kv_field "$reference_trial" RESULT)" != "PG_VIA_METHOD_REJECTED" \
+      || "$(kv_field "$reference_trial" COMMAND_FAIL_COUNT)" != "0" \
+      || "$(kv_field "$reference_trial" PRE_DRC_VIOLATION_COUNT)" != "7" \
+      || "$(kv_field "$reference_trial" POST_DRC_VIOLATION_COUNT)" != "25" \
+      || "$(kv_field "$reference_trial" PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$reference_trial" POST_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$reference_trial" PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "4" \
+      || "$(kv_field "$reference_trial" POST_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: via-only rejection tuple is not the reviewed 7-to-25 DRC result"
+    echo "REFERENCE_TRIAL=$reference_trial"
+    return 1
+  fi
+  if [[ ! -r "$analysis" || ! -r "$help_report" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: topology analysis or editPowerVia help is missing"
+    return 1
+  fi
+
+  trial_id="${TX2_SESSION_ID}_pg_via_via-only_drc_probe"
+  trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
+  console="$TX2_SESSION_ROOT/logs/09_pg_via_drc_probe.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/09_pg_via_drc_probe"
+  analysis_report="$TX2_SESSION_ROOT/reports/09_pg_via_drc_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/09_pg_via_drc_probe_driver.rpt"
+
+  load_cadence
+  cadence_rc=$?
+  if [[ "$cadence_rc" -eq 0 ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    export SPADMIC_PG_VIA_TRIAL_HELP_REPORT="$help_report"
+    echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_pg_via_trial.sh $TX2_BLOCK_ROOT $analysis via-only $trial_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_pg_via_trial.sh" \
+      "$TX2_BLOCK_ROOT" \
+      "$analysis" \
+      via-only \
+      "$trial_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    trial_rc=$?
+  fi
+
+  trial_status="$trial_root/reports/pg_via_trial_status.rpt"
+  mkdir -p "$copy_dir"
+  if [[ -r "$trial_root/context.rpt" ]]; then
+    cp -p "$trial_root/context.rpt" "$copy_dir/context.rpt"
+  fi
+  if [[ -d "$trial_root/reports" ]]; then
+    for path in "$trial_root"/reports/*.rpt "$trial_root"/reports/*.tsv; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+
+  if [[ -r "$trial_status" ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_pg_via_drc.py" \
+      --trial-root "$trial_root" \
+      --analysis-report "$analysis" \
+      --reference-status "$reference_trial" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ "$trial_rc" -eq 8 \
+      && "$analysis_rc" -eq 0 \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "DIRECT_STACK_DRC_MARKERS_CLASSIFIED" ]]; then
+    status=PASS
+    result=DIRECT_STACK_DRC_MARKERS_CLASSIFIED_NO_SAVE_EXPORT
+  else
+    result=PG_VIA_DRC_PROBE_INCOMPLETE
+  fi
+
+  {
+    echo "TRIAL_RC=$trial_rc"
+    echo "TRIAL_ROOT=$trial_root"
+    echo "TRIAL_STATUS=$trial_status"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    sed -n '1,240p' "$console"
+  fi
+  record_status 09_pg_via_drc_probe "$status" "$analysis_rc" "$result"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -978,6 +1094,9 @@ case "$COMMAND" in
     ;;
   pg-via-trial)
     pg_via_trial "$ARGUMENT_1"
+    ;;
+  pg-via-drc-probe)
+    pg_via_drc_probe
     ;;
   package)
     package_evidence

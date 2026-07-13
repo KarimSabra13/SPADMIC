@@ -1103,3 +1103,58 @@ R4_BASH_SYNTAX=PASS
 R4_TCL_INFO_COMPLETE=1
 R4_DESIGN_MODIFICATION=NOT_RUN
 ```
+
+### P03-R9 Server Evidence - Direct Stack Closes PG And Fails DRC
+
+Status: `REJECTED_TOPOLOGY_CORRECT_GEOMETRY_UNSAFE`
+
+The isolated `via-only` trial at report-driver head
+`1ea182b757a451cf522bdf37b56f49e974d7f1c7` restored the immutable packet
+checkpoint once, enabled area-only via generation, and issued one bounded
+direct MET1-to-METTP stack command for each of the three proven VDD rows. All
+four commands returned PASS, and special connectivity improved from four
+violations to zero. Regular connectivity stayed at zero.
+
+The method is nevertheless rejected. Authoritative `verify_drc` increased
+from seven to 25 violations:
+
+```text
+PRE:  MET1 Mar=7                                      total=7
+POST: MET1 Mar=7
+      MET2 Short=6 MetSpc=2                           subtotal=8
+      VIA2 CShort=3 CutSpc=1                          subtotal=4
+      MET3 Short=6                                    subtotal=6
+                                                     total=25
+DRC_DELTA=18
+```
+
+The seven original minimum-area markers remain. The added violations are on
+the intermediate stack layers, so `patch-stack` is not the next experiment:
+adding MET2/MET3 patches before understanding these collisions would add
+geometry on layers already failing short and spacing rules. The trial saved no
+checkpoint and exported no DEF, LEF, GDS, or netlist.
+
+The Innovus startup log repeats pre-existing MPTDC black-box library messages,
+including missing antenna attributes and `TECHLIB-704/702` VDDA/VSSA mappings.
+They precede the three `editPowerVia` commands. Restore succeeded, all four
+trial commands passed, and the physical rejection is established by the
+post-command DRC report; do not misclassify those startup messages as the cause
+of the 18 new markers.
+
+The first trial ended without saving marker objects, so summaries alone cannot
+prove which generated via geometries collide. R5 adds one separately named,
+fresh-process diagnostic replay. It repeats the same rejected command only to
+dump the DRC marker database immediately before and after, compares it with the
+immutable R9 tuple, attributes each new marker to the nearest proven VDD row,
+and still saves/exports nothing. The gate passes only as a diagnostic capture;
+it cannot validate the physical method.
+
+```text
+R5_FOCUSED_TESTS=10_PASS_0_FAIL
+R5_TOP_PNR_UNIT_TESTS=70_PASS_0_FAIL
+R5_PY_COMPILE=PASS
+R5_BASH_SYNTAX=PASS
+R5_TCL_INFO_COMPLETE=1
+R5_CANONICAL_RERUN=BLOCKED
+R5_PVS=BLOCKED
+```
