@@ -141,6 +141,16 @@ Negative operating rules:
 - Do not add raw console logs or tool databases to Git. Promote only reviewed
   small reports and the measured diagnosis.
 
+Report extraction must distinguish tool failures from verification vocabulary.
+Do not grep case-insensitively for bare `fail` or `error` across test tails:
+passing summaries contain `0 fail`, compiler summaries contain `errors: 0`,
+negative tests intentionally print `[PASS] ... error expectation`, and the TX
+interface has a valid `bundle_missing_source_error_o` port. Xcelium failure
+collection is restricted to FAIL/MISSING summary rows and explicit simulator
+error syntax. Genus review includes the complete QoR, clock, and warning
+classification reports plus focused timing-intent categories; wrapper RC alone
+still cannot close the gate.
+
 ## P02 Paired Physical Contract
 
 The canonical interface file is:

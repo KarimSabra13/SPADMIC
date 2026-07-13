@@ -29,7 +29,7 @@ Genus or Innovus and must not modify MPTDC internals.
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
 | P02 | Restore-only internal PG for the narrow strip | R4_HELPER_METHOD_FAIL_DIAG_PENDING | PG marker decomposition, post-PG connectivity/DRC, merged GDS audit |
-| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | RTL_SCALAR_CONTRACT_PASS_GENUS_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
+| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | XCELIUM_PASS_GENUS_DETAIL_REVIEW_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
 | P04 | Per-block PVS closure, density qualification, and handoff promotion | BLOCKED_BY_P03_SERVER_PNR | PVS DRC zero outside antenna, explicit LVS match, hashes, promotion gate |
 | P05 | Requalified strip and Phase-A TX assembly geometry gate | BLOCKED_BY_P04 | Strip PG/PVS closure, no obstacle overlap, exact paired 19-net contract |
 | P06 | Phase-A TX assembly route | BLOCKED_BY_P05 | Checkpoints 00/01/02, selected-net connectivity, DRC, timing |
@@ -560,9 +560,75 @@ DRIVER_BASH_SYNTAX=PASS
 DRIVER_NO_EXPLICIT_EXIT=ENFORCED_BY_UNIT_TEST
 DRIVER_NO_INNOVUS_OR_PVS=ENFORCED_BY_UNIT_TEST
 DRIVER_INIT_TEMP_SESSION=PASS
-TOP_PNR_UNIT_TESTS=40_PASS_0_FAIL
+TOP_PNR_UNIT_TESTS=42_PASS_0_FAIL
 GIT_DIFF_CHECK=PASS
 CADENCE_SERVER_EXECUTION=NOT_RUN
+```
+
+### P03-R3 Server Evidence - 2026-07-13
+
+Status: `XCELIUM_PASS_GENUS_DETAIL_REVIEW_PENDING`
+
+The staged procedure ran from Git commit
+`55a9f9b122a063afd8fb169b112110c22d810fe4` with diagnostic root:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase1_20260713_102822
+```
+
+Measured Xcelium evidence:
+
+```text
+FOCUSED_TESTS=5_PASS_0_FAIL
+SCALAR_MAPPING_ORACLE=258_PASS_0_FAIL
+FULL_REGRESSION=35_PASS_0_FAIL_0_MISSING
+XCELIUM_RUN=/sim/ksabra/SPADMIC_work/xcelium/xcelium_tx_packet_canonical_20260713_102822
+```
+
+The focused gate proves the scalar mapping, event-bundle reconstruction, TX
+core, TX cluster, and matrix-shell boundary before the full regression. The
+full run then passed all 35 required benches. The original report extractor's
+broad `fail|error` grep produced false-positive review lines from text such as
+`0 fail`, `errors: 0`, `[PASS] ... error expectation`, and the functional port
+name `bundle_missing_source_error_o`. These strings are not simulation or
+Genus failures. The extractor is being narrowed to actual FAIL/MISSING summary
+rows and explicit tool error syntax.
+
+Measured Genus evidence:
+
+```text
+GENUS_RUN=/sim/ksabra/SPADMIC_work/genus/genus_ooc_tx_packet_core_canonical_20260713_102822
+GENUS_TOOL_RC=0
+POSTSYN_NETLIST_SHA256=2462d912e33581c32b72562e1fc9d10878e742d1dedf43c3af1845650303b968
+POSTSYN_SDC_SHA256=e30c45484581d6edad2fcdde60807ad4d4587e921214f9a1174afdd123fbd33d
+NESTED_SRC_DATA_NAME_COUNT=0
+UNIQUE_SCALAR_SRC_DATA_NAME_COUNT=64
+UNRESOLVED_REFERENCES=0
+TOOL_ERROR_COUNT=0
+DISPLAYED_POST_OPT_PATHS=20
+DISPLAYED_POST_OPT_SLACK_VALUE=845
+```
+
+This closes the canonical source-name and unresolved-reference gates. It does
+not yet close the Genus timing gate: the pasted extraction contained only the
+QoR table header and did not expose the exact critical-path/TNS row or the full
+timing-intent categories. The 20 displayed paths all have positive numeric
+slack `845`, but its report unit and aggregate TNS must be taken from the
+complete reports rather than inferred. Packet Innovus remains blocked until
+the complete QoR, clock, timing-intent, and warning-classification sections are
+reviewed.
+
+The absent `clk_sys` to `clk_cfg_40m` / `clk_ref_40m` reports are expected for
+this OOC block because `spadmic_tx_packet_core.sdc` creates only `clk_sys`; the
+generic report helper writes cross-clock files only when both named clocks
+exist. Their absence is therefore not itself a packet-core timing failure.
+
+The text evidence package is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase1_20260713_102822/packages/tx_packet_canonical_phase1_20260713_102822_text_evidence.tar.gz
+SHA256=fde94d254d7636161c4ff473f1c0ee9b88a72ff43c145e81a0983f5a5f21c0e7
+BYTES=197803
 ```
 
 ## P04-R1 Canonical PVS Source And Replay Implementation

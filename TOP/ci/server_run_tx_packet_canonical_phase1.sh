@@ -385,10 +385,28 @@ xcelium_report() {
   load_session || return 1
   local run_root="$TX_WORK_ROOT/xcelium/$TX_XCELIUM_RUN"
   local report="$TX_SESSION_ROOT/reports/05_xcelium_review.rpt"
+  local failure_report="$TX_SESSION_ROOT/reports/05_xcelium_failure_markers.rpt"
+  local report_driver_head tail_file failure_marker_count
+
+  report_driver_head="$(git -C "$TX_REPO" rev-parse HEAD 2>/dev/null)"
+  : > "$failure_report"
+  if [[ -r "$run_root/test_summary.txt" ]]; then
+    grep -nE '^(FAIL|MISSING)[[:space:]]' "$run_root/test_summary.txt" >> "$failure_report"
+  fi
+  for tail_file in "$run_root"/logs/*.tail; do
+    if [[ -r "$tail_file" ]]; then
+      grep -nE 'UVM_(ERROR|FATAL)|(^|[^[:alnum:]_])(FATAL|ERROR)[[:space:]]*:|\*(E|F),' "$tail_file" \
+        | sed "s#^#$tail_file:#" >> "$failure_report"
+    fi
+  done
+  failure_marker_count="$(wc -l < "$failure_report" | tr -d ' ')"
+
   {
     echo "LABEL=SPADMIC_TX_PACKET_XCELIUM_REVIEW"
     echo "RUN_ROOT=$run_root"
     echo "SOURCE_STEP_STATUS=$(status_field 04_xcelium_full STATUS)"
+    echo "REPORT_DRIVER_HEAD=${report_driver_head:-UNKNOWN}"
+    echo "FAILURE_MARKER_COUNT=$failure_marker_count"
     echo
     echo "===== TEST SUMMARY ====="
     if [[ -r "$run_root/test_summary.txt" ]]; then
@@ -398,9 +416,11 @@ xcelium_report() {
     fi
     echo
     echo "===== FAILURE MARKERS ====="
-    grep -nEi 'FAIL|MISSING|ERROR|FATAL|\*E,' \
-      "$run_root/test_summary.txt" \
-      "$run_root"/logs/*.tail 2>/dev/null | tail -240
+    if [[ -s "$failure_report" ]]; then
+      cat "$failure_report"
+    else
+      echo "NONE"
+    fi
   } | tee "$report"
   record_status 05_xcelium_report CAPTURED 0 XCELIUM_REVIEW_REPORT_READY
   return 0
@@ -453,9 +473,12 @@ genus_report() {
   local sdc="$block_root/outputs/tx_packet_core.postsyn.sdc"
   local report="$TX_SESSION_ROOT/reports/07_genus_review.rpt"
   local nested_count=MISSING scalar_count=MISSING
+  local report_driver_head
+  report_driver_head="$(git -C "$TX_REPO" rev-parse HEAD 2>/dev/null)"
   local critical_reports=(
     reports/elaboration/check_design_post_elab.rpt
     reports/timing/check_timing_intent.rpt
+    reports/timing/report_clocks.rpt
     reports/timing/report_timing_post_opt.rpt
     reports/qor/report_qor.rpt
     reports/messages/warning_classification.rpt
@@ -472,6 +495,7 @@ genus_report() {
     echo "RUN_ROOT=$run_root"
     echo "BLOCK_ROOT=$block_root"
     echo "GENUS_TOOL_STEP_STATUS=$(status_field 06_genus STATUS)"
+    echo "REPORT_DRIVER_HEAD=${report_driver_head:-UNKNOWN}"
     echo "NESTED_SRC_DATA_NAME_COUNT=$nested_count"
     echo "UNIQUE_SCALAR_SRC_DATA_NAME_COUNT=$scalar_count"
     echo "CLOSURE_STATUS=REVIEW_REQUIRED_NOT_INFERRED_FROM_TOOL_RC"
@@ -502,6 +526,36 @@ genus_report() {
         echo "MISSING=$source"
       fi
     done
+    echo
+    echo "===== COMPLETE CLOCK REPORT ====="
+    if [[ -r "$block_root/reports/timing/report_clocks.rpt" ]]; then
+      cat "$block_root/reports/timing/report_clocks.rpt"
+    else
+      echo "MISSING=$block_root/reports/timing/report_clocks.rpt"
+    fi
+    echo
+    echo "===== TIMING INTENT CATEGORIES ====="
+    if [[ -r "$block_root/reports/timing/check_timing_intent.rpt" ]]; then
+      grep -nEi -B 2 -A 8 \
+        'unclocked|unconstrained|no[[:space:]_]+clock|clock.*missing|sequential|endpoint|input.*delay|output.*delay' \
+        "$block_root/reports/timing/check_timing_intent.rpt"
+    else
+      echo "MISSING=$block_root/reports/timing/check_timing_intent.rpt"
+    fi
+    echo
+    echo "===== COMPLETE QOR REPORT ====="
+    if [[ -r "$block_root/reports/qor/report_qor.rpt" ]]; then
+      cat "$block_root/reports/qor/report_qor.rpt"
+    else
+      echo "MISSING=$block_root/reports/qor/report_qor.rpt"
+    fi
+    echo
+    echo "===== COMPLETE WARNING CLASSIFICATION ====="
+    if [[ -r "$block_root/reports/messages/warning_classification.rpt" ]]; then
+      cat "$block_root/reports/messages/warning_classification.rpt"
+    else
+      echo "MISSING=$block_root/reports/messages/warning_classification.rpt"
+    fi
     echo
     echo "===== OUTPUT HASHES ====="
     if [[ -s "$netlist" ]]; then
