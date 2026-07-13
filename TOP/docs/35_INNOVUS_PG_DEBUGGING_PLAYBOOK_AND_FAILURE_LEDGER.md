@@ -606,3 +606,28 @@ run inserts the proven 1x1 topology after placement, verifies it before CTS,
 and then lets CTS and signal routing avoid it. This is not a replay of a
 failed checkpoint mutation. The run ID is immutable, the feature is opt-in,
 and classification never triggers immutable PVS staging or PVS execution.
+
+## Step 12 Failure Ledger - Unfilled Row Endpoints
+
+The fresh pre-CTS candidate changed the DRC conclusion but exposed a stage
+milestone error. All five setup/direct-via commands passed and pre-CTS DRC was
+zero, so the post-route MET2/MET3 collision mechanism was removed. Special
+connectivity reported exactly 156 `IMPVFC-94` dangling-wire violations and no
+other class.
+
+The count matches two endpoints on each of the 39 VDD and 39 VSS MET1 row
+wires. Treating this as arbitrary PG failure would discard the successful DRC
+result; treating every pre-CTS open as acceptable would weaken the gate too
+far. The bounded policy is therefore:
+
+1. Accept either strict zero special connectivity, or exactly 156
+   `IMPVFC-94` with zero other problem summaries.
+2. Require pre-CTS DRC zero in both cases.
+3. Run CTS and insert DRC-safe fillers with the PG geometry already present.
+4. Rerun only core-pin `sroute`; do not recreate stripes or direct stacks.
+5. Require post-filler special connectivity zero and DRC zero before signal
+   routing.
+
+This policy is enabled only by the Step 13 environment tuple. The default OOC
+flow and Step 12 strict policy remain unchanged. A coherent Step 13 rejection
+is diagnostic PASS only; it does not authorize PVS or another geometry sweep.

@@ -14,6 +14,7 @@ EXPECTED_AREAS = (
     "515.200 135.120 518.560 135.920",
     "515.200 278.480 518.560 279.280",
 )
+EXPECTED_PRE_CTS_DANGLING_COUNT = 156
 
 
 def read_kv(path: Path) -> dict[str, str]:
@@ -71,6 +72,24 @@ def verification_count(path: Path, *, connectivity: bool) -> int | None:
     return None
 
 
+def connectivity_problem_counts(path: Path) -> tuple[int, int]:
+    if not path.is_file():
+        return 0, 0
+    dangling = 0
+    other = 0
+    pattern = re.compile(
+        r"(\d+)\s+Problem\(s\)\s+\(IMPVFC-(\d+)\):",
+        flags=re.IGNORECASE,
+    )
+    for count_text, code in pattern.findall(path.read_text(errors="replace")):
+        count = int(count_text)
+        if code == "94":
+            dangling += count
+        else:
+            other += count
+    return dangling, other
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--block-root", type=Path, required=True)
@@ -84,6 +103,9 @@ def main() -> int:
     stack_path = reports / "PG_DIRECT_VIA_STACKS.rpt"
     pre_conn_path = reports / "PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY.rpt"
     pre_drc_path = reports / "PG_DIRECT_VIA_PRE_CTS_DRC.rpt"
+    pre_milestone_path = reports / "PG_DIRECT_VIA_PRE_CTS_MILESTONE.rpt"
+    post_filler_conn_path = reports / "PG_POST_FILLER_CONNECTIVITY.rpt"
+    post_filler_drc_path = reports / "PG_POST_FILLER_DRC.rpt"
     marker_path = reports / "DRC_MARKER_CLASSIFICATION.rpt"
     gate_path = reports / "canonical_tx_ooc_gate.rpt"
     final_drc_path = reports / "verify_drc_post_route.rpt"
@@ -107,8 +129,10 @@ def main() -> int:
     manifest = read_kv(manifest_path)
     ooc = read_kv(ooc_path)
     stack = read_kv(stack_path)
+    pre_milestone = read_kv(pre_milestone_path)
     marker = read_kv(marker_path)
     gate = read_kv(gate_path)
+    post_filler_restitch = manifest.get("SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH") == "1"
 
     expected_manifest = {
         "SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS": "1",
@@ -120,6 +144,20 @@ def main() -> int:
     for key, expected in expected_manifest.items():
         if manifest.get(key) != expected:
             errors.append(f"manifest_{key}={manifest.get(key, 'MISSING')} expected={expected}")
+    if post_filler_restitch:
+        expected_restitch_manifest = {
+            "SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT": str(
+                EXPECTED_PRE_CTS_DANGLING_COUNT
+            ),
+            "SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH": "1",
+        }
+        for key, expected in expected_restitch_manifest.items():
+            if manifest.get(key) != expected:
+                errors.append(
+                    f"manifest_{key}={manifest.get(key, 'MISSING')} expected={expected}"
+                )
+        if not pre_milestone_path.is_file():
+            errors.append(f"missing pre-CTS milestone report {pre_milestone_path}")
 
     expected_stack = {
         "LABEL": "SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIAS",
@@ -167,19 +205,56 @@ def main() -> int:
 
     pre_conn_count = verification_count(pre_conn_path, connectivity=True)
     pre_drc_count = verification_count(pre_drc_path, connectivity=False)
+    pre_dangling_count, pre_other_problem_count = connectivity_problem_counts(pre_conn_path)
     pre_conn_status = ooc.get("PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS", "MISSING")
     pre_drc_status = ooc.get("PG_DIRECT_VIA_PRE_CTS_DRC_STATUS", "MISSING")
+    pre_milestone_status = ooc.get("PG_DIRECT_VIA_PRE_CTS_MILESTONE_STATUS", "MISSING")
     if pre_conn_status == "PASS" and pre_conn_count != 0:
         errors.append(f"pre-CTS connectivity status PASS but count={pre_conn_count}")
     if pre_drc_status == "PASS" and pre_drc_count != 0:
         errors.append(f"pre-CTS DRC status PASS but count={pre_drc_count}")
 
-    pre_milestone_clean = (
+    pre_zero_clean = (
         command_clean
         and pre_conn_status == "PASS"
         and pre_drc_status == "PASS"
         and pre_conn_count == 0
         and pre_drc_count == 0
+    )
+    pre_expected_dangling_only = (
+        post_filler_restitch
+        and command_clean
+        and pre_conn_status == "EXPECTED_DANGLING_ONLY"
+        and pre_milestone_status == "PASS"
+        and pre_drc_status == "PASS"
+        and pre_conn_count == EXPECTED_PRE_CTS_DANGLING_COUNT
+        and pre_dangling_count == EXPECTED_PRE_CTS_DANGLING_COUNT
+        and pre_other_problem_count == 0
+        and pre_drc_count == 0
+        and ooc.get("PG_DIRECT_VIA_PRE_CTS_EXPECTED_DANGLING_COUNT")
+        == str(EXPECTED_PRE_CTS_DANGLING_COUNT)
+        and pre_milestone.get("STATUS") == "PASS"
+        and pre_milestone.get("CONNECTIVITY_STATUS") == "EXPECTED_DANGLING_ONLY"
+        and pre_milestone.get("IMPVFC_94_DANGLING_COUNT")
+        == str(EXPECTED_PRE_CTS_DANGLING_COUNT)
+        and pre_milestone.get("OTHER_PROBLEM_COUNT") == "0"
+    )
+    pre_milestone_accepted = pre_zero_clean or pre_expected_dangling_only
+
+    post_filler_conn_count = verification_count(post_filler_conn_path, connectivity=True)
+    post_filler_drc_count = verification_count(post_filler_drc_path, connectivity=False)
+    post_filler_conn_status = ooc.get("PG_POST_FILLER_CONNECTIVITY_STATUS", "MISSING")
+    post_filler_drc_status = ooc.get("PG_POST_FILLER_DRC_STATUS", "MISSING")
+    post_filler_clean = (
+        not post_filler_restitch
+        or (
+            ooc.get("PG_RESTITCH_STAGE") == "POST_FILLER_PRE_ROUTE"
+            and ooc.get("SROUTE_PG_POST_FILLER") == "PASS"
+            and post_filler_conn_status == "PASS"
+            and post_filler_conn_count == 0
+            and post_filler_drc_status == "PASS"
+            and post_filler_drc_count == 0
+        )
     )
     final_fields_present = all(
         key in ooc
@@ -199,8 +274,10 @@ def main() -> int:
 
     if not command_clean:
         physical_status = "REJECTED_PRE_CTS_COMMAND"
-    elif not pre_milestone_clean:
+    elif not pre_milestone_accepted:
         physical_status = "REJECTED_PRE_CTS_MILESTONE"
+    elif post_filler_restitch and not post_filler_clean:
+        physical_status = "REJECTED_POST_FILLER_RESTITCH_MILESTONE"
     elif not final_fields_present:
         physical_status = "REVIEW_REQUIRED_TOOL_FLOW_INCOMPLETE"
     elif ooc.get("PG_CONNECTIVITY_STATUS") != "PASS":
@@ -224,7 +301,7 @@ def main() -> int:
     else:
         physical_status = "REVIEW_REQUIRED_OTHER"
 
-    if pre_milestone_clean:
+    if pre_milestone_accepted and post_filler_clean:
         for path in (marker_path, gate_path, final_drc_path, final_regular_path, final_pg_path):
             if not path.is_file():
                 errors.append(f"missing final candidate artifact {path}")
@@ -257,8 +334,18 @@ def main() -> int:
         f"DIRECT_VIA_COMMAND_FAIL_COUNT={command_fail if command_fail is not None else 'UNKNOWN'}",
         f"PRE_CTS_SPECIAL_CONNECTIVITY_STATUS={pre_conn_status}",
         f"PRE_CTS_SPECIAL_CONNECTIVITY_VIOLATION_COUNT={pre_conn_count if pre_conn_count is not None else 'UNKNOWN'}",
+        f"PRE_CTS_IMPVFC_94_DANGLING_COUNT={pre_dangling_count}",
+        f"PRE_CTS_OTHER_PROBLEM_COUNT={pre_other_problem_count}",
+        f"PRE_CTS_MILESTONE_STATUS={pre_milestone_status}",
         f"PRE_CTS_DRC_STATUS={pre_drc_status}",
         f"PRE_CTS_DRC_VIOLATION_COUNT={pre_drc_count if pre_drc_count is not None else 'UNKNOWN'}",
+        f"POST_FILLER_RESTITCH_ENABLED={'YES' if post_filler_restitch else 'NO'}",
+        f"POST_FILLER_RESTITCH_STAGE={ooc.get('PG_RESTITCH_STAGE', 'NOT_RUN')}",
+        f"POST_FILLER_SROUTE_STATUS={ooc.get('SROUTE_PG_POST_FILLER', 'NOT_RUN')}",
+        f"POST_FILLER_SPECIAL_CONNECTIVITY_STATUS={post_filler_conn_status}",
+        f"POST_FILLER_SPECIAL_CONNECTIVITY_VIOLATION_COUNT={post_filler_conn_count if post_filler_conn_count is not None else 'UNKNOWN'}",
+        f"POST_FILLER_DRC_STATUS={post_filler_drc_status}",
+        f"POST_FILLER_DRC_VIOLATION_COUNT={post_filler_drc_count if post_filler_drc_count is not None else 'UNKNOWN'}",
         f"FINAL_PG_CONNECTIVITY_STATUS={ooc.get('PG_CONNECTIVITY_STATUS', 'MISSING')}",
         f"FINAL_REGULAR_CONNECTIVITY_STATUS={ooc.get('REGULAR_CONNECTIVITY_STATUS', 'MISSING')}",
         f"FINAL_DRC_STATUS={ooc.get('INNOVUS_DRC_STATUS', 'MISSING')}",
@@ -282,6 +369,9 @@ def main() -> int:
         ("DIRECT_VIA_COMMAND_REPORT", stack_path),
         ("PRE_CTS_CONNECTIVITY_REPORT", pre_conn_path),
         ("PRE_CTS_DRC_REPORT", pre_drc_path),
+        ("PRE_CTS_MILESTONE_REPORT", pre_milestone_path),
+        ("POST_FILLER_CONNECTIVITY_REPORT", post_filler_conn_path),
+        ("POST_FILLER_DRC_REPORT", post_filler_drc_path),
         ("FINAL_MARKER_CLASSIFICATION", marker_path),
         ("CANONICAL_GATE", gate_path),
     ):

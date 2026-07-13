@@ -23,6 +23,8 @@ class AnalyzeTxPacketPreroutePgCandidateTest(unittest.TestCase):
         root: Path,
         *,
         pre_connectivity: int = 0,
+        post_filler_restitch: bool = False,
+        post_filler_connectivity: int = 0,
         final_drc: str = "PASS",
         min_area_count: int = 0,
         manifest_areas: str | None = None,
@@ -32,6 +34,12 @@ class AnalyzeTxPacketPreroutePgCandidateTest(unittest.TestCase):
         reports = block_root / "reports"
         reports.mkdir(parents=True)
         area_value = manifest_areas or " ".join(f"{{{area}}}" for area in AREAS)
+        restitch_manifest = ""
+        if post_filler_restitch:
+            restitch_manifest = (
+                "SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT=156\n"
+                "SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH=1\n"
+            )
         (run_root / "run_manifest.txt").write_text(
             "HEAD=driver-head\n"
             "SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS=1\n"
@@ -39,10 +47,35 @@ class AnalyzeTxPacketPreroutePgCandidateTest(unittest.TestCase):
             "SPADMIC_OOC_ENABLE_PG_SROUTE=1\n"
             "SPADMIC_OOC_SIGNAL_BOTTOM_LAYER=MET1\n"
             "SPADMIC_OOC_SIGNAL_TOP_LAYER=MET3\n"
+            + restitch_manifest
         )
         pre_status = "PASS" if pre_connectivity == 0 else "FAIL"
+        pre_extra_fields = ""
+        post_filler_fields = ""
+        if post_filler_restitch and pre_connectivity == 156:
+            pre_status = "EXPECTED_DANGLING_ONLY"
+            pre_extra_fields = (
+                "PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_VIOLATION_COUNT=156\n"
+                "PG_DIRECT_VIA_PRE_CTS_EXPECTED_DANGLING_COUNT=156\n"
+                "PG_DIRECT_VIA_PRE_CTS_DANGLING_COUNT=156\n"
+                "PG_DIRECT_VIA_PRE_CTS_OTHER_PROBLEM_COUNT=0\n"
+                "PG_DIRECT_VIA_PRE_CTS_MILESTONE_STATUS=PASS\n"
+            )
+            post_status = "PASS" if post_filler_connectivity == 0 else "FAIL"
+            post_filler_fields = (
+                "PG_RESTITCH_STAGE=POST_FILLER_PRE_ROUTE\n"
+                "SROUTE_PG_POST_FILLER=PASS\n"
+                f"PG_POST_FILLER_CONNECTIVITY_STATUS={post_status}\n"
+                f"PG_POST_FILLER_CONNECTIVITY_VIOLATION_COUNT={post_filler_connectivity}\n"
+                "PG_POST_FILLER_DRC_STATUS=PASS\n"
+            )
+        candidate_continues = pre_connectivity == 0 or (
+            post_filler_restitch
+            and pre_connectivity == 156
+            and post_filler_connectivity == 0
+        )
         final_fields = ""
-        if pre_connectivity == 0:
+        if candidate_continues:
             final_fields = (
                 f"INNOVUS_DRC_STATUS={final_drc}\n"
                 "REGULAR_CONNECTIVITY_STATUS=PASS\n"
@@ -53,10 +86,12 @@ class AnalyzeTxPacketPreroutePgCandidateTest(unittest.TestCase):
             "PG_DIRECT_VIA_STACKS=PASS\n"
             f"PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS={pre_status}\n"
             "PG_DIRECT_VIA_PRE_CTS_DRC_STATUS=PASS\n"
+            + pre_extra_fields
+            + post_filler_fields
             + final_fields
             + (
                 "RESULT=ABSTRACT_READY_FOR_TOP_REVIEW\n"
-                if final_drc == "PASS" and pre_connectivity == 0
+                if final_drc == "PASS" and candidate_continues
                 else "RESULT=INNOVUS_TC_OOC_REVIEW_REQUIRED\n"
             )
         )
@@ -90,13 +125,37 @@ class AnalyzeTxPacketPreroutePgCandidateTest(unittest.TestCase):
             )
         )
         (reports / "PG_DIRECT_VIA_STACKS.rpt").write_text("\n".join(stack_lines) + "\n")
+        pre_problem = ""
+        if pre_connectivity:
+            code = "94" if post_filler_restitch and pre_connectivity == 156 else "200"
+            pre_problem = f"{pre_connectivity} Problem(s) (IMPVFC-{code}): test fixture\n"
         (reports / "PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY.rpt").write_text(
-            f"Verification Complete : {pre_connectivity} Viols.  0 Wrngs.\nSTATUS=PASS\n"
+            pre_problem
+            + f"Verification Complete : {pre_connectivity} Viols.  0 Wrngs.\nSTATUS=PASS\n"
         )
         (reports / "PG_DIRECT_VIA_PRE_CTS_DRC.rpt").write_text(
             "Verification Complete : 0 Viols.\nSTATUS=PASS\n"
         )
-        if pre_connectivity == 0:
+        if post_filler_restitch and pre_connectivity == 156:
+            (reports / "PG_DIRECT_VIA_PRE_CTS_MILESTONE.rpt").write_text(
+                "STATUS=PASS\n"
+                "CONNECTIVITY_STATUS=EXPECTED_DANGLING_ONLY\n"
+                "IMPVFC_94_DANGLING_COUNT=156\n"
+                "OTHER_PROBLEM_COUNT=0\n"
+            )
+            post_problem = ""
+            if post_filler_connectivity:
+                post_problem = (
+                    f"{post_filler_connectivity} Problem(s) (IMPVFC-200): test fixture\n"
+                )
+            (reports / "PG_POST_FILLER_CONNECTIVITY.rpt").write_text(
+                post_problem
+                + f"Verification Complete : {post_filler_connectivity} Viols.  0 Wrngs.\n"
+            )
+            (reports / "PG_POST_FILLER_DRC.rpt").write_text(
+                "Verification Complete : 0 Viols.\n"
+            )
+        if candidate_continues:
             (reports / "DRC_MARKER_CLASSIFICATION.rpt").write_text(
                 f"MET1_MIN_AREA_MARKER_COUNT={min_area_count}\n"
                 "ANTENNA_MARKER_COUNT=29\n"
@@ -166,6 +225,39 @@ class AnalyzeTxPacketPreroutePgCandidateTest(unittest.TestCase):
             self.assertEqual(rc, 0, report)
             self.assertIn("CANDIDATE_PHYSICAL_STATUS=REJECTED_PRE_CTS_MILESTONE", report)
             self.assertIn("PRE_CTS_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=1", report)
+
+    def test_accepts_exact_pre_cts_dangling_class_after_clean_post_filler_restitch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            block_root = self.write_fixture(
+                Path(tmp),
+                pre_connectivity=156,
+                post_filler_restitch=True,
+            )
+            rc, report = self.run_analyzer(block_root)
+            self.assertEqual(rc, 0, report)
+            self.assertIn("CANDIDATE_PHYSICAL_STATUS=READY_FOR_PVS_PREFLIGHT", report)
+            self.assertIn("PRE_CTS_SPECIAL_CONNECTIVITY_STATUS=EXPECTED_DANGLING_ONLY", report)
+            self.assertIn("PRE_CTS_IMPVFC_94_DANGLING_COUNT=156", report)
+            self.assertIn("PRE_CTS_OTHER_PROBLEM_COUNT=0", report)
+            self.assertIn("POST_FILLER_RESTITCH_ENABLED=YES", report)
+            self.assertIn("POST_FILLER_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0", report)
+            self.assertIn("POST_FILLER_DRC_VIOLATION_COUNT=0", report)
+
+    def test_rejects_post_filler_restitch_when_special_connectivity_remains(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            block_root = self.write_fixture(
+                Path(tmp),
+                pre_connectivity=156,
+                post_filler_restitch=True,
+                post_filler_connectivity=1,
+            )
+            rc, report = self.run_analyzer(block_root)
+            self.assertEqual(rc, 0, report)
+            self.assertIn(
+                "CANDIDATE_PHYSICAL_STATUS=REJECTED_POST_FILLER_RESTITCH_MILESTONE",
+                report,
+            )
+            self.assertIn("POST_FILLER_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=1", report)
 
     def test_fails_on_manifest_area_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

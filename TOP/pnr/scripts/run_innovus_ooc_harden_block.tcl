@@ -77,6 +77,18 @@ proc spadmic_ooc_pre_cts_pg_direct_vias_enabled {} {
     return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS $default_value]]
 }
 
+proc spadmic_ooc_post_filler_pg_restitch_enabled {} {
+    return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH 0]]
+}
+
+proc spadmic_ooc_pre_cts_expected_dangling_count {} {
+    set value [spadmic_ooc_env SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT -1]
+    if {![string is integer -strict $value] || $value < -1} {
+        error "SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT_INVALID: $value"
+    }
+    return $value
+}
+
 proc spadmic_ooc_pg_direct_via_areas {} {
     set default_value [spadmic_ooc_cfg_default pg_direct_via_areas [list]]
     set areas [spadmic_ooc_env SPADMIC_OOC_PG_DIRECT_VIA_AREAS $default_value]
@@ -799,6 +811,33 @@ proc spadmic_ooc_connectivity_status {path} {
     return [expr {$bad ? "FAIL" : "PASS"}]
 }
 
+proc spadmic_ooc_connectivity_problem_counts {path} {
+    if {![file exists $path]} {
+        return [list MISSING 0 0 0]
+    }
+    set violation_count UNKNOWN
+    set dangling_count 0
+    set other_problem_count 0
+    set problem_summary_count 0
+    set fh [open $path r]
+    while {[gets $fh line] >= 0} {
+        set trimmed [string trim $line]
+        if {[regexp -nocase {Verification[[:space:]]+Complete[[:space:]]*:[[:space:]]*([0-9]+)[[:space:]]+Viols?} $trimmed -> count]} {
+            set violation_count $count
+        }
+        if {[regexp -nocase {([0-9]+)[[:space:]]+Problem\(s\)[[:space:]]+\(IMPVFC-([0-9]+)\):} $trimmed -> count code]} {
+            incr problem_summary_count $count
+            if {$code eq "94"} {
+                incr dangling_count $count
+            } else {
+                incr other_problem_count $count
+            }
+        }
+    }
+    close $fh
+    return [list $violation_count $dangling_count $other_problem_count $problem_summary_count]
+}
+
 proc spadmic_ooc_regular_connectivity_status {path} {
     if {![spadmic_ooc_pg_sroute_enabled]} {
         if {![file exists $path]} {
@@ -1018,6 +1057,28 @@ proc spadmic_ooc_create_pg_straps {} {
     spadmic_ooc_status_set CREATE_PG_STRAPS [expr {$all_ok ? "PASS" : "FAIL"}]
 }
 
+proc spadmic_ooc_sroute_core_pins {label} {
+    set power_net [spadmic_ooc_cfg pg_power_net]
+    set ground_net [spadmic_ooc_cfg pg_ground_net]
+    set strategy [string tolower [spadmic_ooc_cfg_default pg_route_strategy legacy_addstripe]]
+    if {$strategy eq "explicit_exact"} {
+        set cmds [list \
+            [list sroute -connect {corePin} -nets [list $power_net $ground_net] \
+                -corePinTarget {stripe} -corePinCheckStdcellGeoms -allowJogging 1 \
+                -allowLayerChange 1 -layerChangeRange {MET1 METTP}] \
+            [list sroute -connect {corePin} -nets [list $power_net $ground_net] \
+                -corePinTarget {stripe} -allowJogging 1 -allowLayerChange 1 \
+                -layerChangeRange {MET1 METTP}]]
+    } else {
+        set cmds [list \
+            [list sroute -connect {corePin blockPin padPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -padPinTarget {ring stripe} -allowLayerChange 1] \
+            [list sroute -connect {corePin blockPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -allowLayerChange 1] \
+            [list sroute -connect {corePin} -nets [list $power_net $ground_net] -corePinTarget {ring stripe} -allowLayerChange 1] \
+            [list sroute -nets [list $power_net $ground_net]]]
+    }
+    spadmic_ooc_try_first $label $cmds 1
+}
+
 proc spadmic_ooc_route_pg {} {
     set power_net [spadmic_ooc_cfg pg_power_net]
     set ground_net [spadmic_ooc_cfg pg_ground_net]
@@ -1040,22 +1101,7 @@ proc spadmic_ooc_route_pg {} {
     set strategy [string tolower [spadmic_ooc_cfg_default pg_route_strategy legacy_addstripe]]
     spadmic_ooc_status_set PG_LOCAL_ROUTE_MODE [string toupper $strategy]
     spadmic_ooc_create_pg_straps
-    if {$strategy eq "explicit_exact"} {
-        set cmds [list \
-            [list sroute -connect {corePin} -nets [list $power_net $ground_net] \
-                -corePinTarget {stripe} -corePinCheckStdcellGeoms -allowJogging 1 \
-                -allowLayerChange 1 -layerChangeRange {MET1 METTP}] \
-            [list sroute -connect {corePin} -nets [list $power_net $ground_net] \
-                -corePinTarget {stripe} -allowJogging 1 -allowLayerChange 1 \
-                -layerChangeRange {MET1 METTP}]]
-    } else {
-        set cmds [list \
-            [list sroute -connect {corePin blockPin padPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -padPinTarget {ring stripe} -allowLayerChange 1] \
-            [list sroute -connect {corePin blockPin} -nets [list $power_net $ground_net] -blockPin all -blockPinTarget {ring stripe} -corePinTarget {ring stripe} -allowLayerChange 1] \
-            [list sroute -connect {corePin} -nets [list $power_net $ground_net] -corePinTarget {ring stripe} -allowLayerChange 1] \
-            [list sroute -nets [list $power_net $ground_net]]]
-    }
-    spadmic_ooc_try_first SROUTE_PG $cmds 1
+    spadmic_ooc_sroute_core_pins SROUTE_PG
     if {[spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
         spadmic_ooc_add_pre_cts_pg_direct_vias
     }
@@ -1067,6 +1113,7 @@ proc spadmic_ooc_add_pre_cts_pg_direct_vias {} {
     set command_rpt [file join $::spadmic_ooc_reports_dir PG_DIRECT_VIA_STACKS.rpt]
     set conn_rpt [file join $::spadmic_ooc_reports_dir PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY.rpt]
     set drc_rpt [file join $::spadmic_ooc_reports_dir PG_DIRECT_VIA_PRE_CTS_DRC.rpt]
+    set milestone_rpt [file join $::spadmic_ooc_reports_dir PG_DIRECT_VIA_PRE_CTS_MILESTONE.rpt]
     set command_pass_count 0
     set command_fail_count 0
 
@@ -1132,12 +1179,72 @@ proc spadmic_ooc_add_pre_cts_pg_direct_vias {} {
         [list verifyConnectivity -type special -nets [list $power_net [spadmic_ooc_cfg pg_ground_net]]] \
         [list verifyConnectivity -nets [list $power_net [spadmic_ooc_cfg pg_ground_net]] -type special]] 1
     spadmic_ooc_capture_first $drc_rpt PG_DIRECT_VIA_PRE_CTS_DRC [list {verify_drc} {verifyGeometry}] 1
+    set raw_conn_status [spadmic_ooc_connectivity_status $conn_rpt]
+    set drc_status [spadmic_ooc_parse_drc_report $drc_rpt]
+    lassign [spadmic_ooc_connectivity_problem_counts $conn_rpt] \
+        conn_violation_count dangling_count other_problem_count problem_summary_count
+    set expected_dangling_count [spadmic_ooc_pre_cts_expected_dangling_count]
+    set conn_status FAIL
+    if {$raw_conn_status eq "PASS" && $conn_violation_count eq "0"} {
+        set conn_status PASS
+    } elseif {$expected_dangling_count >= 0 && \
+        $conn_violation_count eq "$expected_dangling_count" && \
+        $dangling_count == $expected_dangling_count && \
+        $other_problem_count == 0 && \
+        $problem_summary_count == $expected_dangling_count} {
+        set conn_status EXPECTED_DANGLING_ONLY
+    }
+    set milestone_status [expr {($conn_status eq "PASS" || $conn_status eq "EXPECTED_DANGLING_ONLY") && $drc_status eq "PASS" ? "PASS" : "FAIL"}]
+
+    set fh [open $milestone_rpt w]
+    puts $fh "LABEL=SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIA_MILESTONE"
+    puts $fh "POLICY=ZERO_DRC_AND_ZERO_CONNECTIVITY_OR_EXACT_IMPVFC_94_ONLY"
+    puts $fh "RAW_CONNECTIVITY_STATUS=$raw_conn_status"
+    puts $fh "CONNECTIVITY_STATUS=$conn_status"
+    puts $fh "CONNECTIVITY_VIOLATION_COUNT=$conn_violation_count"
+    puts $fh "EXPECTED_DANGLING_COUNT=$expected_dangling_count"
+    puts $fh "IMPVFC_94_DANGLING_COUNT=$dangling_count"
+    puts $fh "OTHER_PROBLEM_COUNT=$other_problem_count"
+    puts $fh "PROBLEM_SUMMARY_COUNT=$problem_summary_count"
+    puts $fh "DRC_STATUS=$drc_status"
+    puts $fh "STATUS=$milestone_status"
+    close $fh
+
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS $conn_status
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_VIOLATION_COUNT $conn_violation_count
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_EXPECTED_DANGLING_COUNT $expected_dangling_count
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_DANGLING_COUNT $dangling_count
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_OTHER_PROBLEM_COUNT $other_problem_count
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_DRC_STATUS $drc_status
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_MILESTONE_STATUS $milestone_status
+    if {$milestone_status ne "PASS"} {
+        error "SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIA_MILESTONE_FAILED: connectivity=$conn_status violations=$conn_violation_count dangling=$dangling_count other=$other_problem_count drc=$drc_status"
+    }
+}
+
+proc spadmic_ooc_post_filler_pg_restitch {} {
+    set power_net [spadmic_ooc_cfg pg_power_net]
+    set ground_net [spadmic_ooc_cfg pg_ground_net]
+    set conn_rpt [file join $::spadmic_ooc_reports_dir PG_POST_FILLER_CONNECTIVITY.rpt]
+    set drc_rpt [file join $::spadmic_ooc_reports_dir PG_POST_FILLER_DRC.rpt]
+
+    spadmic_ooc_sroute_core_pins SROUTE_PG_POST_FILLER
+    spadmic_ooc_capture_first $conn_rpt PG_POST_FILLER_CONNECTIVITY [list \
+        [list verifyConnectivity -type special -nets [list $power_net $ground_net]] \
+        [list verifyConnectivity -nets [list $power_net $ground_net] -type special]] 1
+    spadmic_ooc_capture_first $drc_rpt PG_POST_FILLER_DRC [list {verify_drc} {verifyGeometry}] 1
     set conn_status [spadmic_ooc_connectivity_status $conn_rpt]
     set drc_status [spadmic_ooc_parse_drc_report $drc_rpt]
-    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS $conn_status
-    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_DRC_STATUS $drc_status
-    if {$conn_status ne "PASS" || $drc_status ne "PASS"} {
-        error "SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIA_MILESTONE_FAILED: connectivity=$conn_status drc=$drc_status"
+    lassign [spadmic_ooc_connectivity_problem_counts $conn_rpt] \
+        conn_violation_count dangling_count other_problem_count problem_summary_count
+    spadmic_ooc_status_set PG_RESTITCH_STAGE POST_FILLER_PRE_ROUTE
+    spadmic_ooc_status_set PG_POST_FILLER_CONNECTIVITY_STATUS $conn_status
+    spadmic_ooc_status_set PG_POST_FILLER_CONNECTIVITY_VIOLATION_COUNT $conn_violation_count
+    spadmic_ooc_status_set PG_POST_FILLER_DANGLING_COUNT $dangling_count
+    spadmic_ooc_status_set PG_POST_FILLER_OTHER_PROBLEM_COUNT $other_problem_count
+    spadmic_ooc_status_set PG_POST_FILLER_DRC_STATUS $drc_status
+    if {$conn_status ne "PASS" || $conn_violation_count ne "0" || $drc_status ne "PASS"} {
+        error "SPADMIC_OOC_POST_FILLER_PG_RESTITCH_MILESTONE_FAILED: connectivity=$conn_status violations=$conn_violation_count dangling=$dangling_count other=$other_problem_count drc=$drc_status"
     }
 }
 
@@ -1593,8 +1700,14 @@ proc spadmic_ooc_write_status {} {
     if {[spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
         lappend required_statuses \
             PG_DIRECT_VIA_STACKS \
-            PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS \
-            PG_DIRECT_VIA_PRE_CTS_DRC_STATUS
+            PG_DIRECT_VIA_PRE_CTS_DRC_STATUS \
+            PG_DIRECT_VIA_PRE_CTS_MILESTONE_STATUS
+    }
+    if {[spadmic_ooc_post_filler_pg_restitch_enabled]} {
+        lappend required_statuses \
+            SROUTE_PG_POST_FILLER \
+            PG_POST_FILLER_CONNECTIVITY_STATUS \
+            PG_POST_FILLER_DRC_STATUS
     }
     foreach required $required_statuses {
         if {![info exists ::spadmic_ooc_status($required)] || $::spadmic_ooc_status($required) ne "PASS"} {
@@ -1648,6 +1761,9 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_route_layer_setup
     spadmic_ooc_create_pg_pins
     spadmic_ooc_place_design
+    if {[spadmic_ooc_post_filler_pg_restitch_enabled] && ![spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
+        error "SPADMIC_OOC_POST_FILLER_PG_RESTITCH_REQUIRES_PRE_CTS_PG"
+    }
     if {[spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
         if {![spadmic_ooc_pg_sroute_enabled]} {
             error "SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIAS_REQUIRE_PG_SROUTE"
@@ -1657,6 +1773,9 @@ proc spadmic_ooc_main {} {
     }
     spadmic_ooc_cts_design
     spadmic_ooc_add_fillers
+    if {[spadmic_ooc_post_filler_pg_restitch_enabled]} {
+        spadmic_ooc_post_filler_pg_restitch
+    }
     if {![spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
         spadmic_ooc_status_set PG_ROUTE_STAGE POST_CTS
         spadmic_ooc_route_pg

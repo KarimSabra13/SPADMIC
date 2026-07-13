@@ -144,12 +144,26 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("setViaGenMode -area_only 0", tcl)
         self.assertIn("PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS", tcl)
         self.assertIn("PG_DIRECT_VIA_PRE_CTS_DRC_STATUS", tcl)
+        self.assertIn("SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT", tcl)
+        self.assertIn("SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH", tcl)
+        self.assertIn("EXPECTED_DANGLING_ONLY", tcl)
+        self.assertIn("SROUTE_PG_POST_FILLER", tcl)
+        self.assertIn("PG_POST_FILLER_CONNECTIVITY_STATUS", tcl)
+        self.assertIn("PG_POST_FILLER_DRC_STATUS", tcl)
         self.assertLess(
             tcl.index("        spadmic_ooc_route_pg\n"),
             tcl.index("    spadmic_ooc_cts_design\n"),
         )
         self.assertLess(
             tcl.index("    spadmic_ooc_route_pg\n"),
+            tcl.index("    spadmic_ooc_route_design\n"),
+        )
+        self.assertLess(
+            tcl.index("    spadmic_ooc_add_fillers\n"),
+            tcl.index("        spadmic_ooc_post_filler_pg_restitch\n"),
+        )
+        self.assertLess(
+            tcl.index("        spadmic_ooc_post_filler_pg_restitch\n"),
             tcl.index("    spadmic_ooc_route_design\n"),
         )
         self.assertIn("--required-merge \"$SPADMIC_STDCELL_GDS\"", wrapper)

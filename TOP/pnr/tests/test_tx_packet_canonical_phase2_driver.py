@@ -35,6 +35,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "pg-via-drc-probe",
             "pg-via-1x1-trial",
             "preroute-pg-rerun",
+            "preroute-pg-postfiller-rerun",
             "package",
             "status",
         ):
@@ -149,6 +150,13 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("PG_VIA_1X1_CANDIDATE_CLASSIFIED_NO_SAVE_EXPORT", driver)
         self.assertIn("CANONICAL_RERUN=NOT_RUN", driver)
         self.assertIn("PVS=NOT_RUN", driver)
+        self.assertIn("require_step_pass 12_preroute_pg_rerun", driver)
+        self.assertIn("preroute-pg-postfiller-rerun <expected-report-driver-head>", driver)
+        self.assertIn("SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT=156", driver)
+        self.assertIn("SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH=1", driver)
+        self.assertIn("PRE_CTS_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)\" != \"156\"", driver)
+        self.assertIn("PREROUTE_PG_POSTFILLER_CANDIDATE_CLASSIFIED_NO_AUTOMATIC_PVS_STAGING_OR_PVS", driver)
+        self.assertIn("POST_FILLER_PG_RESTITCH=ENABLED_STRICT_ZERO_CONNECTIVITY_AND_DRC", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)

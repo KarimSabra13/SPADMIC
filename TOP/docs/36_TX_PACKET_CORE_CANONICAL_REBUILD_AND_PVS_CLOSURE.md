@@ -643,3 +643,27 @@ PG stage-order hypothesis while leaving the seven independent MET1
 minimum-area stubs as the next blocker. Only
 `READY_FOR_PVS_PREFLIGHT` plus operator review can authorize a separate PVS
 preflight gate. Neither outcome is final handoff or signoff.
+
+## P03 Step 12 Result And Step 13 Post-Filler Restitch Candidate
+
+Step 12 rejected the strict pre-CTS milestone while proving the stage-order
+hypothesis geometrically. The bounded 1x1 stacks produced zero DRC violations,
+but special connectivity found 156 `IMPVFC-94` dangling endpoints. The count
+equals two endpoints across the 39 VDD and 39 VSS MET1 row wires; no terminal,
+disconnected-component, short, or DRC class accompanied it. The flow stopped
+before CTS, so missing final reports and exports are expected consequences,
+not independent failures.
+
+Step 13 is a fresh immutable candidate with two explicit gates:
+
+1. Pre-CTS: exact `156 IMPVFC-94`, zero other connectivity classes, and zero
+   DRC may advance as `EXPECTED_DANGLING_ONLY`.
+2. Post-filler: rerun only core-pin `sroute`, then require zero special
+   connectivity and zero DRC before ordinary MET1-MET3 routing.
+
+The expected count and restitch behavior are opt-in environment values and are
+recorded in the run manifest. A changed pre-CTS tuple fails closed. A failed
+post-filler gate stops before signal routing. A completed candidate still
+passes through final DRC, regular/PG connectivity, timing, export, stream-map,
+and canonical-gate classification, with immutable staging and PVS remaining
+separate operator-reviewed steps.

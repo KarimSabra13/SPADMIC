@@ -35,6 +35,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-via-drc-probe
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh pg-via-1x1-trial
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-rerun <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-postfiller-rerun <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -1292,6 +1293,161 @@ preroute_pg_rerun() {
   return $?
 }
 
+preroute_pg_postfiller_rerun() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: preroute-pg-postfiller-rerun requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 12_preroute_pg_rerun || return 1
+  local step12 step12_status session_suffix candidate_run candidate_root candidate_block_root
+  local console driver_report analysis_report actual_head cadence_rc wrapper_rc analysis_rc
+  local status result physical_status direct_via_areas
+  step12="$TX2_SESSION_ROOT/reports/12_preroute_pg_candidate_analysis.rpt"
+  step12_status="$TX2_SESSION_ROOT/status/12_preroute_pg_rerun.rpt"
+  status=FAIL
+  result=PREROUTE_PG_POSTFILLER_CANDIDATE_NOT_RUN
+  cadence_rc=NOT_RUN
+  wrapper_rc=NOT_RUN
+  analysis_rc=NOT_RUN
+  actual_head=UNKNOWN
+
+  if [[ "$(kv_field "$step12_status" RESULT)" != "PREROUTE_PG_CANDIDATE_CLASSIFIED_NO_AUTOMATIC_PVS_STAGING_OR_PVS" \
+      || "$(kv_field "$step12" STATUS)" != "PASS" \
+      || "$(kv_field "$step12" RESULT)" != "PREROUTE_PG_CANDIDATE_CLASSIFIED" \
+      || "$(kv_field "$step12" CANDIDATE_PHYSICAL_STATUS)" != "REJECTED_PRE_CTS_MILESTONE" \
+      || "$(kv_field "$step12" DIRECT_VIA_COMMAND_STATUS)" != "PASS" \
+      || "$(kv_field "$step12" DIRECT_VIA_COMMAND_PASS_COUNT)" != "5" \
+      || "$(kv_field "$step12" DIRECT_VIA_COMMAND_FAIL_COUNT)" != "0" \
+      || "$(kv_field "$step12" PRE_CTS_SPECIAL_CONNECTIVITY_STATUS)" != "FAIL" \
+      || "$(kv_field "$step12" PRE_CTS_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "156" \
+      || "$(kv_field "$step12" PRE_CTS_DRC_STATUS)" != "PASS" \
+      || "$(kv_field "$step12" PRE_CTS_DRC_VIOLATION_COUNT)" != "0" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 12 is not the reviewed dangling-only pre-CTS rejection"
+    echo "STEP12_ANALYSIS=$step12"
+    return 1
+  fi
+
+  session_suffix="${TX2_SESSION_ID#tx_packet_canonical_phase2_}"
+  candidate_run="innovus_ooc_harden_tx_packet_core_canonical_preroute_pg1x1_postfiller_${session_suffix}"
+  candidate_root="$TX2_WORK_ROOT/innovus/$candidate_run"
+  candidate_block_root="$candidate_root/blocks/tx_packet_core"
+  console="$TX2_SESSION_ROOT/logs/13_preroute_pg_postfiller_rerun.console.log"
+  driver_report="$TX2_SESSION_ROOT/reports/13_preroute_pg_postfiller_rerun_driver.rpt"
+  analysis_report="$TX2_SESSION_ROOT/reports/13_preroute_pg_postfiller_candidate_analysis.rpt"
+  direct_via_areas="{515.200 126.160 518.560 126.960} {515.200 135.120 518.560 135.920} {515.200 278.480 518.560 279.280}"
+
+  if [[ -e "$candidate_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: immutable candidate root already exists"
+    echo "CANDIDATE_ROOT=$candidate_root"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  local cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+  if [[ "$cd_rc" -eq 0 ]]; then
+    load_cadence
+    cadence_rc=$?
+  fi
+
+  if [[ "$cadence_rc" == "0" && "$actual_head" != "UNKNOWN" ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    export SPADMIC_LAYOUT_AUDIT_DIR="$TX2_LAYOUT_AUDIT_DIR"
+    export SPADMIC_STREAMOUT_MAP_FILE="$TX2_STREAM_MAP"
+    export SPADMIC_STDCELL_GDS="$TX2_STDCELL_GDS"
+    export MPTDC_XH018_STACK=xx31
+    export MPTDC_STDCELL_FAMILY=JIHD
+    export MPTDC_PNR_ROUTE_LAYER_NAMES="MET1 MET2 MET3 METTP"
+    export MPTDC_PNR_SIGNAL_TOP_LAYER=MET3
+    export MPTDC_PNR_EFFECTIVE_TOP_FLOOR_LAYER=METTP
+    export MPTDC_ALLOW_NO_CORE_TAP_ENDCAP_POLICY=1
+    export SPADMIC_OOC_ROUTE_PROFILE=met1_effort
+    export SPADMIC_OOC_SIGNAL_BOTTOM_LAYER=MET1
+    export SPADMIC_OOC_SIGNAL_TOP_LAYER=MET3
+    export SPADMIC_OOC_SIGNAL_BOTTOM_LAYER_IDX=1
+    export SPADMIC_OOC_SIGNAL_TOP_LAYER_IDX=3
+    export SPADMIC_OOC_CORE_WIDTH_UM=2046.969
+    export SPADMIC_OOC_CORE_HEIGHT_UM=346.486
+    export SPADMIC_OOC_PLACE_MAX_DENSITY=0.64
+    export SPADMIC_OOC_ENABLE_ROUTE_EFFORT=1
+    export SPADMIC_OOC_ENABLE_PG_SROUTE=1
+    export SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS=1
+    export SPADMIC_OOC_PG_DIRECT_VIA_AREAS="$direct_via_areas"
+    export SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT=156
+    export SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH=1
+    export SPADMIC_OOC_ENABLE_MIN_AREA_REPAIR=1
+    export SPADMIC_OOC_ENABLE_ANTENNA_REPAIR=0
+    export SPADMIC_OOC_REQUIRE_ANTENNA_CLEAN=0
+    export SPADMIC_OOC_IGNORE_UNDEFINED_SCAN=1
+    export SPADMIC_OOC_ALLOW_SCAN_REORDER=0
+    export SPADMIC_OOC_FILLER_ADD_FILLERS_WITH_DRC=0
+    export SPADMIC_OOC_REQUIRE_DRC_SAFE_FILLER=1
+    export SPADMIC_TX_ALLOW_ANTENNA_DEFERRED=1
+    echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh tx_packet_core $TX2_GENUS_RUN $candidate_run"
+    bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh \
+      tx_packet_core \
+      "$TX2_GENUS_RUN" \
+      "$candidate_run" \
+      2>&1 | tee "$console"
+    wrapper_rc=${PIPESTATUS[0]}
+  fi
+
+  if [[ -r "$candidate_block_root/reports/ooc_harden_status.rpt" ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_preroute_pg_candidate.py" \
+      --block-root "$candidate_block_root" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ ( "$wrapper_rc" == "0" || "$wrapper_rc" == "8" ) \
+      && "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "PREROUTE_PG_CANDIDATE_CLASSIFIED" ]]; then
+    status=PASS
+    result=PREROUTE_PG_POSTFILLER_CANDIDATE_CLASSIFIED_NO_AUTOMATIC_PVS_STAGING_OR_PVS
+  else
+    result=PREROUTE_PG_POSTFILLER_CANDIDATE_CLASSIFICATION_INCOMPLETE
+  fi
+  physical_status="$(kv_field "$analysis_report" CANDIDATE_PHYSICAL_STATUS)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "CANDIDATE_RUN=$candidate_run"
+    echo "CANDIDATE_ROOT=$candidate_root"
+    echo "CANDIDATE_BLOCK_ROOT=$candidate_block_root"
+    echo "WRAPPER_RC=$wrapper_rc"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "CANDIDATE_PHYSICAL_STATUS=${physical_status:-UNKNOWN}"
+    echo "PRE_CTS_EXPECTED_DANGLING_COUNT=156"
+    echo "POST_FILLER_PG_RESTITCH=ENABLED_STRICT_ZERO_CONNECTIVITY_AND_DRC"
+    echo "CANDIDATE_EXPORT=RUN_LOCAL_AND_RUN_ID_HANDOFF_ONLY"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    tail -n 240 "$console"
+  fi
+  record_status 13_preroute_pg_postfiller_rerun "$status" "$analysis_rc" "$result" "$candidate_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -1377,6 +1533,9 @@ case "$COMMAND" in
     ;;
   preroute-pg-rerun)
     preroute_pg_rerun "$ARGUMENT_1"
+    ;;
+  preroute-pg-postfiller-rerun)
+    preroute_pg_postfiller_rerun "$ARGUMENT_1"
     ;;
   package)
     package_evidence

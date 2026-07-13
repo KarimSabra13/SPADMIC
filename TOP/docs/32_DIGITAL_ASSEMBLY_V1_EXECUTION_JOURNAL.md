@@ -1274,3 +1274,34 @@ STEP12_TCL_INFO_COMPLETE=1
 The full OOC wrapper also connects Innovus stdin to `/dev/null`. Any fail-closed
 pre-CTS Tcl error therefore receives EOF and cannot consume the operator's
 subsequent interactive shell commands.
+
+### P03-R13 Server Evidence - Pre-CTS Dangling-Only Classification
+
+Status: `PASS_DIAGNOSTIC_CLASSIFIED_PHYSICAL_CANDIDATE_REJECTED_PRE_CTS`
+
+Step 12 at report-driver head
+`cfb9898f1e534f069b8108773af0e73b5c66d635` proved that the three bounded
+1x1 stacks are geometrically legal before CTS:
+
+```text
+direct-via commands:             5 PASS / 0 FAIL
+pre-CTS DRC:                     0
+pre-CTS special connectivity:  156
+connectivity class:             IMPVFC-94 dangling wire only
+```
+
+The candidate stopped before CTS by design because Step 12 required strict
+zero special connectivity. The count is structured rather than arbitrary:
+the probe established 39 VDD plus 39 VSS MET1 row wires, and
+`156 = 2 * (39 + 39)`, matching two unfinished endpoints per row before
+filler insertion. No `IMPVFC-96`, `IMPVFC-200`, or DRC class was reported at
+this milestone.
+
+Step 13 keeps Step 12 immutable and introduces a separate opt-in candidate.
+Before CTS it accepts only the exact tuple `156 IMPVFC-94`, zero other
+connectivity classes, and zero DRC. After CTS and filler it reruns only
+`sroute -connect {corePin}` and then requires strict zero special connectivity
+and zero DRC before ordinary routing. Any changed count, different IMPVFC
+class, failed command, remaining post-filler open, or new DRC marker aborts
+before signal routing. The step still performs no automatic immutable staging
+or PVS.
