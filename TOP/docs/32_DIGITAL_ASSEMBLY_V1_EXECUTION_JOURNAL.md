@@ -738,6 +738,13 @@ layout-audit inputs, generated route/PG policy, and that the new Innovus root
 does not already exist. No Innovus command may run unless every preflight
 field is `PASS`.
 
+The execution step pins the XH018 `xx31`/JIHD stack, MET1-MET3 signal layer
+names and indices, exact requested core dimensions, placement density, scan
+handling, min-area repair, and DRC-safe filler policy. Do not rely on inherited
+shell defaults here: shared OOC Tcl intentionally supports experimental
+environment overrides, and a stale override from another block could otherwise
+change the canonical database after a clean generated-plan preflight.
+
 The canonical OOC validator previously trusted
 `POSTROUTE_SETUP_TIMING=PASS` and `POSTROUTE_HOLD_TIMING=PASS`. Those fields
 only prove that the `timeDesign` command returned successfully; they do not
@@ -777,6 +784,7 @@ PHASE2_DRIVER_BASH_SYNTAX=PASS
 PHASE2_DRIVER_NO_EXPLICIT_EXIT=ENFORCED_BY_UNIT_TEST
 PHASE2_DRIVER_NO_AUTO_ADVANCE=ENFORCED_BY_UNIT_TEST
 PHASE2_DRIVER_NO_PVS=ENFORCED_BY_UNIT_TEST
+PHASE2_CANONICAL_ENVIRONMENT_PINNING=ENFORCED_BY_UNIT_TEST
 CANONICAL_TIMING_PARSER_PLAIN_AND_GZIP=PASS
 CANONICAL_TIMING_POST_REPAIR_PRECEDENCE=PASS
 REAL_INNOVUS_GZIP_NEGATIVE_SETUP_DETECTION=PASS_WNS_M0P140_TNS_M0P885_PATHS_8

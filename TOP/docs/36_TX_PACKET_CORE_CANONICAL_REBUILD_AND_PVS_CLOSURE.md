@@ -246,6 +246,11 @@ antenna markers may pass this milestone only with an explicit deferred status;
 they always keep `FINAL_HANDOFF_READY=NO`. Min-area and all other DRC markers
 remain blocking.
 
+The driver also pins the core dimensions, density, route-layer indices,
+XH018/JIHD library policy, scan handling, min-area repair, and DRC-safe filler
+settings. This prevents environment variables left by an earlier OOC
+experiment from changing the canonical run after preflight.
+
 `timeDesign` returning successfully is not timing closure. The canonical gate
 parses the generated setup and hold summary files, including gzip output, and
 requires WNS greater than or equal to zero, TNS zero, and zero violating paths
