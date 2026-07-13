@@ -120,6 +120,7 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
             strip_config = (strip_root / "ooc_block_harden_config.tcl").read_text()
             for config in (packet_config, strip_config):
                 self.assertIn("variable enable_pg_sroute {1}", config)
+                self.assertIn("variable enable_pre_cts_pg_direct_vias {0}", config)
                 self.assertIn("variable pg_route_strategy {explicit_exact}", config)
                 self.assertIn("variable route_profile {met1_effort}", config)
                 self.assertIn("variable tx_stream_editpin_x_compensation_um {0.280}", config)
@@ -137,6 +138,16 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("$vss_cx - $core_margin - $strap_width / 2.0", tcl)
         self.assertIn("add_shape -net $net -layer $layer -shape STRIPE", tcl)
         self.assertIn("-corePinCheckStdcellGeoms", tcl)
+        self.assertIn("SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS", tcl)
+        self.assertIn("SPADMIC_OOC_PG_DIRECT_VIA_AREAS", tcl)
+        self.assertIn("-via_rows 1 -via_columns 1", tcl)
+        self.assertIn("setViaGenMode -area_only 0", tcl)
+        self.assertIn("PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS", tcl)
+        self.assertIn("PG_DIRECT_VIA_PRE_CTS_DRC_STATUS", tcl)
+        self.assertLess(
+            tcl.index("        spadmic_ooc_route_pg\n"),
+            tcl.index("    spadmic_ooc_cts_design\n"),
+        )
         self.assertLess(
             tcl.index("    spadmic_ooc_route_pg\n"),
             tcl.index("    spadmic_ooc_route_design\n"),

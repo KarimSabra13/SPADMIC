@@ -615,3 +615,31 @@ special/regular connectivity, and the trial's own PASS/FAIL classification.
 Even a physically clean result is labeled `VALIDATED_NOT_CANONICAL` and stops
 with no save/export. `patch-stack`, canonical Innovus replay, staging, and PVS
 remain blocked pending review of the Step 11 report.
+
+## P03 Step 11 Result And Step 12 Pre-CTS PG Candidate
+
+Step 11 rejected the 1x1 post-route method with a coherent evidence PASS. It
+closed special connectivity `4 -> 0` and kept regular connectivity `0 -> 0`,
+but DRC changed `7 -> 22`. The only improvement over the default stack was the
+removal of three VIA2 cut-short markers. All MET2/MET3 signal and CTS
+collisions remained. The via syntax is usable; the insertion milestone is not.
+
+Step 12 is a new full Innovus candidate, not a mutation of the Step 11 trial.
+It preserves the accepted packet floorplan, pin contract, MET1-MET3 signal
+policy, explicit METTP stripes, Genus netlist/SDC, and all three row windows.
+The only behavioral change is opt-in pre-CTS PG construction:
+
+1. Place standard cells.
+2. Build explicit PG stripes and run core-pin `sroute`.
+3. Add three bounded direct stacks with 1x1 multiplicity.
+4. Require zero special-connectivity and zero DRC violations before CTS.
+5. Run CTS, filler, ordinary route, timing, final DRC/connectivity, and export.
+6. Classify the isolated candidate and stop without immutable PVS staging or
+   PVS execution. Run-local exports and the run-ID handoff copy remain
+   candidate evidence only.
+
+`PG_CLOSED_MIN_AREA_REMAINS` is a useful but non-clean outcome: it proves the
+PG stage-order hypothesis while leaving the seven independent MET1
+minimum-area stubs as the next blocker. Only
+`READY_FOR_PVS_PREFLIGHT` plus operator review can authorize a separate PVS
+preflight gate. Neither outcome is final handoff or signoff.

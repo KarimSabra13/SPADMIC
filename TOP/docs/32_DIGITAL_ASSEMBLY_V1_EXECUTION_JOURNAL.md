@@ -1221,3 +1221,52 @@ one fresh-process `via-1x1` trial using the same three areas and explicit
 row selection, stripe geometry, or the source checkpoint. The gate saves and
 exports nothing, classifies both accepted and rejected physical outcomes, and
 still blocks canonical replay and PVS pending operator review.
+
+### P03-R12 Server Evidence - 1x1 Stack Rejection And Pre-CTS Candidate
+
+Status: `PASS_DIAGNOSTIC_CLASSIFIED_PHYSICAL_METHOD_REMAINS_REJECTED`
+
+Step 11 at report-driver head
+`ab0b86fc6a292fa073dae4e1b6263d90699e5c05` completed with the exact reviewed
+tuple:
+
+```text
+special connectivity:  4 -> 0
+regular connectivity:  0 -> 0
+filtered DRC markers:   7 -> 22
+new DRC markers:       15
+removed baseline:       0
+new marker classes:     MET2=8 MET3=6 VIA2=1
+```
+
+Constraining every direct stack to `-via_rows 1 -via_columns 1` removed the
+three VIA2 cut-short markers from the default-stack trial. It did not remove
+any of the six MET2 shorts, two MET2 spacing violations, six MET3 shorts, or
+the remaining VIA2 cut-spacing violation. The same routed `CTS_20`, `CTS_26`,
+FE_OFN, and output-FIFO nets still appear in the collision messages. Via cut
+multiplicity was therefore a secondary defect; inserting the stack into an
+already clocked and routed design is the controlling defect.
+
+No coordinate sweep or `patch-stack` trial is authorized from this result.
+Step 12 instead creates one fresh full-flow candidate from the accepted Genus
+inputs. Its opt-in order is:
+
+```text
+place -> explicit PG sroute -> bounded 1x1 MET1-to-METTP stacks
+      -> zero-special-connectivity and zero-DRC pre-CTS gates
+      -> CTS -> filler -> ordinary MET1-MET3 route -> final gates
+```
+
+The default OOC order remains unchanged unless
+`SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS=1`. The candidate uses the same
+three measured row windows and fails closed before CTS if either pre-CTS gate
+is nonzero. A completed run is classified separately as clean for PVS
+preflight review, PG-closed with only the known MET1 minimum-area blocker, or
+rejected. Step 12 does not run immutable PVS staging or PVS automatically.
+
+```text
+STEP12_LOCAL_TOP_PNR_TESTS=80_PASS_0_FAIL
+STEP12_PY_COMPILE=PASS
+STEP12_BASH_SYNTAX=PASS
+STEP12_TCL_INFO_COMPLETE=1
+```

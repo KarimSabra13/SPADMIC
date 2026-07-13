@@ -577,3 +577,32 @@ The candidate is accepted only as `VALIDATED_NOT_CANONICAL` when connectivity
 is zero and DRC does not increase. A coherent rejection is still a successful
 diagnostic gate, but it does not authorize another method automatically.
 Canonical replay and PVS remain blocked in both cases until review.
+
+## Step 11 Failure Ledger - 1x1 Is Necessary But Not Sufficient
+
+The three explicit 1x1 stacks returned command PASS and closed all four VDD
+opens. Final DRC was 22, with 15 new markers and no removed baseline marker:
+
+```text
+MET2/Metal_Short=6
+MET2/Parallel_Run_Length_Spacing=2
+MET3/Metal_Short=6
+VIA2/Cut_Spacing=1
+```
+
+Rejected interpretations:
+
+- Do not claim the 1x1 method is clean because connectivity is zero.
+- Do not restore and move X; every reviewed row window intersects the required
+  VDD MET1 row and METTP stripe, while the measured failures name routed nets.
+- Do not add intermediate-layer patches; MET2 and MET3 are already the failing
+  layers.
+- Do not repeat selected-net repair for the seven unchanged MET1 minimum-area
+  stubs.
+- Do not run PVS from the trial; it saved and exported nothing.
+
+The shortest independent experiment changes only stage order. One fresh full
+run inserts the proven 1x1 topology after placement, verifies it before CTS,
+and then lets CTS and signal routing avoid it. This is not a replay of a
+failed checkpoint mutation. The run ID is immutable, the feature is opt-in,
+and classification never triggers immutable PVS staging or PVS execution.

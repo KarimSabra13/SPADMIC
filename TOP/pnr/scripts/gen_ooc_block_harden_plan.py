@@ -421,6 +421,7 @@ def common_config_values(
         "pg_strap_width_um": pg_strap_width_um,
         "pg_strap_spacing_um": pg_strap_spacing_um,
         "enable_pg_sroute": "0",
+        "enable_pre_cts_pg_direct_vias": "0",
     }
     if pin_assignment_tcl is not None:
         values["pin_assignment_tcl"] = str(pin_assignment_tcl)

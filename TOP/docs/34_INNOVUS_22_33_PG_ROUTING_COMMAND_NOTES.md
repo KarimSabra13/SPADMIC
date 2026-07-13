@@ -334,3 +334,31 @@ the immutable post-route checkpoint. A command PASS is still insufficient.
 Reconcile raw and filtered marker counts and require special connectivity 0,
 regular connectivity 0, and no DRC increase. Do not save, export, run
 patch-stack, replay canonical Innovus, or run PVS from this trial.
+
+## 1x1 Result And Stage-Order Rule
+
+The `via-1x1` trial closed special connectivity but changed DRC from seven to
+22. Compared with the default direct stack, it removed all three VIA2
+cut-short markers but retained all 14 MET2/MET3 metal violations and one VIA2
+cut-spacing violation. This proves that `-via_rows 1 -via_columns 1` is the
+preferred bounded cut form, but it cannot make a post-route insertion legal.
+
+For the next candidate, use the same command only after placement and before
+CTS or ordinary routing. The sequence is intentionally opt-in:
+
+```tcl
+setViaGenMode -area_only 1
+editPowerVia -add_vias 1 -nets VDD \
+  -bottom_layer MET1 -top_layer METTP \
+  -exclude_stack_vias 0 \
+  -area {<reviewed-row-window>} \
+  -via_rows 1 -via_columns 1
+```
+
+After all three rows, run `verifyConnectivity -type special -nets {VDD VSS}`
+and `verify_drc` before CTS. Reset `setViaGenMode -area_only 0` before those
+later stages. Both counts must be zero. CTS and NanoRoute then
+see the accepted special-net geometry as an existing obstruction. Do not
+infer final closure from the pre-CTS gate; final DRC, regular connectivity,
+special connectivity, timing, GDS audit, and the canonical packet gate still
+apply.

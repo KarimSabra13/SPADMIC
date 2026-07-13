@@ -34,6 +34,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "pg-via-trial",
             "pg-via-drc-probe",
             "pg-via-1x1-trial",
+            "preroute-pg-rerun",
             "package",
             "status",
         ):
@@ -148,6 +149,15 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("PG_VIA_1X1_CANDIDATE_CLASSIFIED_NO_SAVE_EXPORT", driver)
         self.assertIn("CANONICAL_RERUN=NOT_RUN", driver)
         self.assertIn("PVS=NOT_RUN", driver)
+        self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
+        self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
+        self.assertIn('actual_head" != "$expected_report_driver_head', driver)
+        self.assertIn("SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS=1", driver)
+        self.assertIn("SPADMIC_OOC_PG_DIRECT_VIA_AREAS=", driver)
+        self.assertIn("analyze_tx_packet_preroute_pg_candidate.py", driver)
+        self.assertIn("PREROUTE_PG_CANDIDATE_CLASSIFIED_NO_AUTOMATIC_PVS_STAGING_OR_PVS", driver)
+        self.assertIn("CANDIDATE_EXPORT=RUN_LOCAL_AND_RUN_ID_HANDOFF_ONLY", driver)
+        self.assertIn("IMMUTABLE_PVS_STAGING=NOT_RUN", driver)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, trial)
 

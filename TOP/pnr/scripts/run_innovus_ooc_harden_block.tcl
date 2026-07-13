@@ -72,6 +72,31 @@ proc spadmic_ooc_pg_sroute_enabled {} {
     return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_PG_SROUTE $default_value]]
 }
 
+proc spadmic_ooc_pre_cts_pg_direct_vias_enabled {} {
+    set default_value [spadmic_ooc_cfg_default enable_pre_cts_pg_direct_vias 0]
+    return [spadmic_ooc_truthy [spadmic_ooc_env SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS $default_value]]
+}
+
+proc spadmic_ooc_pg_direct_via_areas {} {
+    set default_value [spadmic_ooc_cfg_default pg_direct_via_areas [list]]
+    set areas [spadmic_ooc_env SPADMIC_OOC_PG_DIRECT_VIA_AREAS $default_value]
+    if {[llength $areas] == 0} {
+        error "SPADMIC_OOC_PG_DIRECT_VIA_AREAS_MISSING"
+    }
+    set validated [list]
+    foreach area $areas {
+        if {![spadmic_ooc_box_is_numeric $area]} {
+            error "SPADMIC_OOC_PG_DIRECT_VIA_AREA_INVALID: $area"
+        }
+        lassign $area llx lly urx ury
+        if {$llx >= $urx || $lly >= $ury} {
+            error "SPADMIC_OOC_PG_DIRECT_VIA_AREA_EMPTY: $area"
+        }
+        lappend validated $area
+    }
+    return $validated
+}
+
 proc spadmic_ooc_route_profile {} {
     set default_profile [spadmic_ooc_cfg_default route_profile default]
     return [string tolower [string trim [spadmic_ooc_env SPADMIC_OOC_ROUTE_PROFILE $default_profile]]]
@@ -1031,6 +1056,89 @@ proc spadmic_ooc_route_pg {} {
             [list sroute -nets [list $power_net $ground_net]]]
     }
     spadmic_ooc_try_first SROUTE_PG $cmds 1
+    if {[spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
+        spadmic_ooc_add_pre_cts_pg_direct_vias
+    }
+}
+
+proc spadmic_ooc_add_pre_cts_pg_direct_vias {} {
+    set power_net [spadmic_ooc_cfg pg_power_net]
+    set areas [spadmic_ooc_pg_direct_via_areas]
+    set command_rpt [file join $::spadmic_ooc_reports_dir PG_DIRECT_VIA_STACKS.rpt]
+    set conn_rpt [file join $::spadmic_ooc_reports_dir PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY.rpt]
+    set drc_rpt [file join $::spadmic_ooc_reports_dir PG_DIRECT_VIA_PRE_CTS_DRC.rpt]
+    set command_pass_count 0
+    set command_fail_count 0
+
+    set fh [open $command_rpt w]
+    puts $fh "LABEL=SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIAS"
+    puts $fh "POLICY=AFTER_PLACE_BEFORE_CTS_BOUNDED_1X1_STACKS"
+    puts $fh "POWER_NET=$power_net"
+    puts $fh "TARGET_AREA_COUNT=[llength $areas]"
+    puts $fh "BOTTOM_LAYER=MET1"
+    puts $fh "TOP_LAYER=METTP"
+    puts $fh "VIA_ROWS=1"
+    puts $fh "VIA_COLUMNS=1"
+
+    set area_only_cmd [list setViaGenMode -area_only 1]
+    puts $fh "TRY_VIA_GEN_AREA_ONLY=$area_only_cmd"
+    if {[catch {uplevel #0 $area_only_cmd} err]} {
+        incr command_fail_count
+        puts $fh "VIA_GEN_AREA_ONLY_STATUS=FAIL"
+        puts $fh "VIA_GEN_AREA_ONLY_ERROR=[spadmic_ooc_report_value $err]"
+    } else {
+        incr command_pass_count
+        puts $fh "VIA_GEN_AREA_ONLY_STATUS=PASS"
+    }
+
+    set row 0
+    foreach area $areas {
+        incr row
+        set command [list editPowerVia -add_vias 1 -nets $power_net \
+            -bottom_layer MET1 -top_layer METTP -exclude_stack_vias 0 \
+            -area $area -via_rows 1 -via_columns 1]
+        puts $fh "ROW_${row}_AREA=$area"
+        puts $fh "TRY_ROW_${row}_MET1_TO_METTP_STACK=$command"
+        if {[catch {uplevel #0 $command} err]} {
+            incr command_fail_count
+            puts $fh "ROW_${row}_MET1_TO_METTP_STACK_STATUS=FAIL"
+            puts $fh "ROW_${row}_ERROR=[spadmic_ooc_report_value $err]"
+        } else {
+            incr command_pass_count
+            puts $fh "ROW_${row}_MET1_TO_METTP_STACK_STATUS=PASS"
+        }
+    }
+    set area_only_reset_cmd [list setViaGenMode -area_only 0]
+    puts $fh "TRY_VIA_GEN_AREA_ONLY_RESET=$area_only_reset_cmd"
+    if {[catch {uplevel #0 $area_only_reset_cmd} err]} {
+        incr command_fail_count
+        puts $fh "VIA_GEN_AREA_ONLY_RESET_STATUS=FAIL"
+        puts $fh "VIA_GEN_AREA_ONLY_RESET_ERROR=[spadmic_ooc_report_value $err]"
+    } else {
+        incr command_pass_count
+        puts $fh "VIA_GEN_AREA_ONLY_RESET_STATUS=PASS"
+    }
+    puts $fh "COMMAND_PASS_COUNT=$command_pass_count"
+    puts $fh "COMMAND_FAIL_COUNT=$command_fail_count"
+    set command_status [expr {$command_fail_count == 0 ? "PASS" : "FAIL"}]
+    puts $fh "STATUS=$command_status"
+    close $fh
+    spadmic_ooc_status_set PG_DIRECT_VIA_STACKS $command_status
+    if {$command_status ne "PASS"} {
+        error "SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIA_COMMAND_FAILED: report=$command_rpt"
+    }
+
+    spadmic_ooc_capture_first $conn_rpt PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY [list \
+        [list verifyConnectivity -type special -nets [list $power_net [spadmic_ooc_cfg pg_ground_net]]] \
+        [list verifyConnectivity -nets [list $power_net [spadmic_ooc_cfg pg_ground_net]] -type special]] 1
+    spadmic_ooc_capture_first $drc_rpt PG_DIRECT_VIA_PRE_CTS_DRC [list {verify_drc} {verifyGeometry}] 1
+    set conn_status [spadmic_ooc_connectivity_status $conn_rpt]
+    set drc_status [spadmic_ooc_parse_drc_report $drc_rpt]
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS $conn_status
+    spadmic_ooc_status_set PG_DIRECT_VIA_PRE_CTS_DRC_STATUS $drc_status
+    if {$conn_status ne "PASS" || $drc_status ne "PASS"} {
+        error "SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIA_MILESTONE_FAILED: connectivity=$conn_status drc=$drc_status"
+    }
 }
 
 proc spadmic_ooc_place_side_pins {side pins} {
@@ -1482,6 +1590,12 @@ proc spadmic_ooc_write_status {} {
     if {[spadmic_ooc_pg_sroute_enabled]} {
         lappend required_statuses SROUTE_PG
     }
+    if {[spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
+        lappend required_statuses \
+            PG_DIRECT_VIA_STACKS \
+            PG_DIRECT_VIA_PRE_CTS_CONNECTIVITY_STATUS \
+            PG_DIRECT_VIA_PRE_CTS_DRC_STATUS
+    }
     foreach required $required_statuses {
         if {![info exists ::spadmic_ooc_status($required)] || $::spadmic_ooc_status($required) ne "PASS"} {
             set result INNOVUS_TC_OOC_REVIEW_REQUIRED
@@ -1534,9 +1648,19 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_route_layer_setup
     spadmic_ooc_create_pg_pins
     spadmic_ooc_place_design
+    if {[spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
+        if {![spadmic_ooc_pg_sroute_enabled]} {
+            error "SPADMIC_OOC_PRE_CTS_PG_DIRECT_VIAS_REQUIRE_PG_SROUTE"
+        }
+        spadmic_ooc_status_set PG_ROUTE_STAGE PRE_CTS
+        spadmic_ooc_route_pg
+    }
     spadmic_ooc_cts_design
     spadmic_ooc_add_fillers
-    spadmic_ooc_route_pg
+    if {![spadmic_ooc_pre_cts_pg_direct_vias_enabled]} {
+        spadmic_ooc_status_set PG_ROUTE_STAGE POST_CTS
+        spadmic_ooc_route_pg
+    }
     spadmic_ooc_route_design
     spadmic_ooc_postroute_cleanup
     spadmic_ooc_postroute_opt_and_timing
