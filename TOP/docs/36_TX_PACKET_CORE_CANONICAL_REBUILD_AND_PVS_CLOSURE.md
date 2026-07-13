@@ -667,3 +667,37 @@ post-filler gate stops before signal routing. A completed candidate still
 passes through final DRC, regular/PG connectivity, timing, export, stream-map,
 and canonical-gate classification, with immutable staging and PVS remaining
 separate operator-reviewed steps.
+
+## P03 Step 13 Result And Step 14 Stage Attribution Probe
+
+Step 13 reached the post-filler milestone at commit
+`e17128ab5f2b007a8eeaee5f06e6fb054d5fd7a3`. Its direct-via setup and
+pre-CTS milestone passed exactly as designed: five commands passed, the 156
+special-connectivity violations were all expected `IMPVFC-94` dangling
+endpoints, and DRC was zero. The post-filler core-pin `sroute` then closed
+special connectivity to zero but left 165 DRC violations. This rejects the
+candidate before signal route, export, staging, and PVS.
+
+Step 14 reuses no exported candidate and changes no source run. It restores
+only Step 13's `03_cts` checkpoint in a fresh process, measures the post-CTS
+state, adds the exact canonical fillers in memory, and measures the
+post-filler/pre-restitch state. Marker-database accounting excludes retained
+antenna/connectivity classes and requires the filtered TSV count to equal the
+authoritative `verify_drc` count at each stage.
+
+The analyzer combines those two measurements with the immutable Step 13 tuple:
+
+```text
+pre-CTS DRC                     = 0
+post-restitch special           = 0
+post-restitch DRC               = 165
+```
+
+It reports one of `CTS_STAGE_INTRODUCES_DRC`,
+`FILLER_STAGE_INTRODUCES_DRC`, or
+`POST_FILLER_SROUTE_INTRODUCES_DRC`. In the last case it also distinguishes a
+redundant restitch from an electrically required but physically destructive
+restitch. Step 14 is evidence-only: `POST_FILLER_SROUTE=NOT_RUN`,
+`SAVE_DESIGN=NOT_RUN`, `EXPORT=NOT_RUN`, and `PVS=NOT_RUN`. Its PASS status
+means the stage was classified coherently, not that the block is physically
+clean or ready for handoff.

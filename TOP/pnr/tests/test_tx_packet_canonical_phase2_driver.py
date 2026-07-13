@@ -36,6 +36,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "pg-via-1x1-trial",
             "preroute-pg-rerun",
             "preroute-pg-postfiller-rerun",
+            "postfiller-stage-probe",
             "package",
             "status",
         ):
@@ -157,6 +158,12 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("PRE_CTS_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)\" != \"156\"", driver)
         self.assertIn("PREROUTE_PG_POSTFILLER_CANDIDATE_CLASSIFIED_NO_AUTOMATIC_PVS_STAGING_OR_PVS", driver)
         self.assertIn("POST_FILLER_PG_RESTITCH=ENABLED_STRICT_ZERO_CONNECTIVITY_AND_DRC", driver)
+        self.assertIn("require_step_pass 13_preroute_pg_postfiller_rerun", driver)
+        self.assertIn("postfiller-stage-probe <expected-report-driver-head>", driver)
+        self.assertIn("POST_FILLER_DRC_VIOLATION_COUNT)\" != \"165\"", driver)
+        self.assertIn("run_innovus_ooc_postfiller_stage_probe.sh", driver)
+        self.assertIn("analyze_tx_packet_postfiller_stage_probe.py", driver)
+        self.assertIn("POSTFILLER_STAGE_ATTRIBUTION_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)
@@ -168,6 +175,30 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("IMMUTABLE_PVS_STAGING=NOT_RUN", driver)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, trial)
+
+        stage_wrapper = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_postfiller_stage_probe.sh"
+        ).read_text()
+        stage_probe = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_postfiller_stage_probe.tcl"
+        ).read_text()
+        self.assertIn("03_cts.enc.dat", stage_wrapper)
+        self.assertIn("</dev/null", stage_wrapper)
+        self.assertIn("restoreDesign $checkpoint $top", stage_probe)
+        self.assertIn("addFiller -cell $fillers -prefix FILL", stage_probe)
+        self.assertIn("pf_capture_stage POST_CTS", stage_probe)
+        self.assertIn("pf_capture_stage POST_FILLER_PRE_RESTITCH", stage_probe)
+        self.assertNotRegex(stage_probe, re.compile(r"(?i)\bsroute\s+-"))
+        for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
+            self.assertNotIn(forbidden, stage_probe)
 
     def test_init_inherits_an_accepted_phase1_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

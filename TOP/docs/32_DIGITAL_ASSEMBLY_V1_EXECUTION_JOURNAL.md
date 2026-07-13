@@ -1305,3 +1305,56 @@ and zero DRC before ordinary routing. Any changed count, different IMPVFC
 class, failed command, remaining post-filler open, or new DRC marker aborts
 before signal routing. The step still performs no automatic immutable staging
 or PVS.
+
+### P03-R14 Server Evidence - Post-Filler Restitch Rejection
+
+Status: `PASS_DIAGNOSTIC_CLASSIFIED_PHYSICAL_CANDIDATE_REJECTED`
+
+Step 13 at report-driver head
+`e17128ab5f2b007a8eeaee5f06e6fb054d5fd7a3` accepted the exact pre-CTS
+milestone and reached the intended post-filler gate:
+
+```text
+pre-CTS direct-via commands:       5 PASS / 0 FAIL
+pre-CTS special connectivity:    156 IMPVFC-94 only
+pre-CTS DRC:                       0
+post-filler corePin sroute:        PASS
+post-filler special connectivity: 0
+post-filler DRC:                 165
+```
+
+The second core-pin `sroute` is electrically effective, but the resulting
+physical state is rejected. The run stopped before ordinary signal routing,
+timing, and export, so the missing LEF/GDS/DEF/netlist and canonical-gate
+errors are consequences of the post-filler DRC abort, not additional root
+causes. No candidate output was staged and PVS remained `NOT_RUN`.
+
+The Step 13 reports do not show whether the 165 violations already existed
+after CTS, appeared when fillers were inserted, or were created by the second
+`sroute`. Step 14 resolves only that ambiguity. It restores this candidate's
+immutable `03_cts` checkpoint in one fresh Innovus process, captures DRC plus
+special/regular connectivity, inserts the exact reviewed filler list with
+DRC-safe filler mode, and captures the same evidence before any PG restitch.
+It dumps filtered marker TSVs at both stages and performs no `sroute`, save,
+export, immutable staging, or PVS.
+
+Step 14 classifications are fail-closed:
+
+- post-CTS DRC nonzero: attribute the first defect to CTS;
+- post-CTS clean and post-filler DRC nonzero: attribute it to filler insertion;
+- both stages DRC-clean: attribute the Step 13 count of 165 to post-filler
+  `sroute`;
+- pre-restitch connectivity zero: the second `sroute` was redundant;
+- pre-restitch special connectivity nonzero: the second `sroute` was
+  electrically necessary but needs a bounded DRC-safe replacement.
+
+No new full-flow candidate is authorized until the Step 14 classification is
+reviewed.
+
+```text
+STEP14_LOCAL_TOP_PNR_TESTS=86_PASS_0_FAIL
+STEP14_PY_COMPILE=PASS
+STEP14_BASH_SYNTAX=PASS
+STEP14_TCL_INFO_COMPLETE=1
+STEP14_DIFF_CHECK=PASS
+```

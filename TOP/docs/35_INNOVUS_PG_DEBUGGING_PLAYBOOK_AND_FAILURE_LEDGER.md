@@ -631,3 +631,39 @@ far. The bounded policy is therefore:
 This policy is enabled only by the Step 13 environment tuple. The default OOC
 flow and Step 12 strict policy remain unchanged. A coherent Step 13 rejection
 is diagnostic PASS only; it does not authorize PVS or another geometry sweep.
+
+## Step 13 Failure Ledger - Restitch Closes PG And Creates 165 DRC
+
+The fresh post-filler candidate passed its bounded pre-CTS gate with exactly
+156 `IMPVFC-94` dangling endpoints and zero DRC. After CTS and filler, the
+second core-pin `sroute` returned command PASS and reduced special
+connectivity to zero, but `verify_drc` reported 165 violations. The flow
+correctly aborted before ordinary routing and export.
+
+Rejected interpretations:
+
+- Do not call the candidate clean because special connectivity is zero.
+- Do not treat 165 as a final-route result; ordinary signal routing never ran.
+- Do not count missing LEF/GDS/timing reports as independent defects; they are
+  expected after the post-filler milestone abort.
+- Do not rerun the same full candidate or start PVS; the stage that introduced
+  DRC is not yet identified.
+- Do not assume filler insertion caused the markers merely because the gate is
+  named post-filler; the gate measured only after the second `sroute`.
+
+The bounded Step 14 experiment is stage attribution, not another PG method:
+
+1. Restore the rejected candidate's immutable `03_cts` checkpoint once in one
+   fresh Innovus process.
+2. Capture `verify_drc`, filtered marker TSV, special connectivity, and regular
+   connectivity before filler insertion.
+3. Apply the same DRC-safe filler mode and exact canonical JIHD filler command
+   used by Step 13.
+4. Repeat the four captures before any post-filler `sroute`.
+5. Save, export, stage, and run PVS nowhere in the probe.
+
+Because Step 13 already establishes post-restitch `connectivity=0` and
+`DRC=165`, two DRC-clean Step 14 stages directly attribute the violations to
+the second `sroute`. The pre-restitch connectivity count then decides whether
+that command can be removed or must be replaced with a bounded DRC-safe
+stitching method.
