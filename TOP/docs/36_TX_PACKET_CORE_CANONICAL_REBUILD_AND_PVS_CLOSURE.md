@@ -1,6 +1,6 @@
 # TX Packet Core Canonical Rebuild And PVS Closure
 
-Status: `P03_GENUS_MANUAL_PASS_GATE_REPLAY_PENDING`
+Status: `P03_GENUS_PASS_INNOVUS_PREFLIGHT_READY`
 
 This runbook replaces the invalid historical `spadmic_tx_packet_core_HV` LVS
 contract with a fresh canonical `spadmic_tx_packet_core` implementation. The
@@ -186,6 +186,79 @@ Evidence packaging excludes its own `08_package` status and package-detail
 report. This prevents a repeated package command from embedding stale hashes
 for an earlier archive inside the new archive.
 
+The accepted 2026-07-13 Phase-1 session is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase1_20260713_102822
+GENUS_GATE_STATUS=PASS
+GENUS_GATE_RESULT=READY_FOR_PACKET_INNOVUS_FEASIBILITY
+GENUS_GATE_ERROR_COUNT=0
+```
+
+The Genus tool run remains tied to source commit `55a9f9b...`; report-driver
+commit `96674eb9...` added and replayed the fail-closed validator without
+modifying the netlist or SDC. Do not rerun Genus for that reporting change.
+
+## Staged Phase-2 Packet Innovus Driver
+
+`TOP/ci/server_run_tx_packet_canonical_phase2.sh` implements packet Innovus as
+another no-auto-advance sequence. It inherits the accepted Phase-1 gate and
+hashes, creates a unique run root, and never launches PVS.
+
+Run each command separately and inspect its status before continuing:
+
+```bash
+set +e
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh init <expected-head> \
+  /sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase1_20260713_102822
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh sync
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preflight
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh innovus
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh innovus-report
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
+bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
+```
+
+The active pointer is
+`/sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase2_active.env`.
+The first review stop is after `preflight`. Require all of these fields before
+running the expensive step:
+
+```text
+STATUS=PASS
+PHASE1_GATE_STATUS=PASS
+PHASE1_GATE_RESULT=READY_FOR_PACKET_INNOVUS_FEASIBILITY
+PHASE1_GATE_ERROR_COUNT=0
+PHASE1_INNOVUS_FEASIBILITY_READY=YES
+PHASE1_SIGNOFF_READY=NO
+PHASE1_MMMC_STATUS=NOT_RUN_TYPICAL_ONLY
+INPUT_STATUS=PASS
+HASH_STATUS=PASS
+TOOL_STATUS=PASS
+PLAN_STATUS=PASS
+RUN_ROOT_UNUSED_STATUS=PASS
+```
+
+The run fixes ordinary signals to MET1-MET3 with `met1_effort`, reserves METTP
+for explicit exact VDD/VSS stripes, and enables core-pin-only `sroute`.
+Antenna repair is disabled during this deterministic first route. Nonzero
+antenna markers may pass this milestone only with an explicit deferred status;
+they always keep `FINAL_HANDOFF_READY=NO`. Min-area and all other DRC markers
+remain blocking.
+
+`timeDesign` returning successfully is not timing closure. The canonical gate
+parses the generated setup and hold summary files, including gzip output, and
+requires WNS greater than or equal to zero, TNS zero, and zero violating paths
+for each mode. If selected-net min-area repair changes routing, only the newer
+post-repair summaries are authoritative. Missing or ambiguous summaries fail
+closed.
+
+`innovus-report` is the second review stop. It requires the wrapper result and
+canonical gate to pass with `READY_FOR_PVS_CANDIDATE`, then copies compact
+connectivity, DRC classification, GDS audit, measured timing, and hash evidence
+into the diagnostic session. This result authorizes only the later packet PVS
+preflight; it is not PVS, MMMC, antenna closure, or signoff.
+
 ## P02 Paired Physical Contract
 
 The canonical interface file is:
@@ -262,7 +335,8 @@ GDS audit for packet and strip. It requires:
 - VDD/VSS pins on METTP with POWER/GROUND use;
 - Innovus DRC, regular connectivity, and special PG connectivity PASS;
 - both explicit PG shapes and `sroute` PASS;
-- post-route setup and hold timing PASS;
+- post-route setup and hold summaries with nonnegative WNS, zero TNS, and zero
+  violating paths;
 - DEF/LEF/GDS/PG-netlist exports present;
 - official map and JIHD merge audit PASS.
 
@@ -286,6 +360,8 @@ no longer enough to enter PVS.
   checks.
 - Do not export if regular or special connectivity is non-zero.
 - Do not infer DRC clean from router transcript or LVS match from process RC.
+- Do not infer timing closure from `timeDesign` command success; parse WNS,
+  TNS, and violating-path counts from the authoritative summary.
 - Do not claim the P02 implementation is physically clean from local generator
   tests; only the server connectivity and DRC reports can establish that.
 - Do not force MY after the paired pin contract; use the measured orientation
@@ -293,3 +369,5 @@ no longer enough to enter PVS.
 - Do not allow mapped streamout without the JIHD `-merge` audit.
 - Do not run multiple candidate `restoreDesign` operations in one Innovus
   process; isolate candidates when exploration is required.
+- Do not let an antenna-deferred milestone silently become final handoff; the
+  deferred status must remain visible until targeted repair and PVS replay.

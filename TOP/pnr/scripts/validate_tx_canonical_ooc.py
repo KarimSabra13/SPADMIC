@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import hashlib
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -21,6 +23,7 @@ SPEC.loader.exec_module(lef_parser)
 
 TX_PIN_CONTRACT = REPO_ROOT / "TOP" / "pnr" / "interfaces" / "tx_packet_strip_pin_contract.csv"
 TX_SOURCE_MANIFEST = REPO_ROOT / "TOP" / "rtl" / "interfaces" / "tx_src_data_flat.csv"
+NUMBER_RE = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
 
 BLOCKS = {
     "tx_packet_core": {
@@ -62,6 +65,79 @@ def require_nonempty(path: Path, errors: list[str], label: str) -> bool:
         errors.append(f"missing_or_empty_{label}={path}")
         return False
     return True
+
+
+def read_text_report(path: Path) -> str:
+    if path.suffix == ".gz":
+        with gzip.open(path, "rt", errors="replace") as handle:
+            return handle.read()
+    return path.read_text(errors="replace")
+
+
+def select_timing_summary(
+    reports: Path,
+    mode: str,
+    errors: list[str],
+    require_post_repair: bool,
+) -> Path | None:
+    post_repair = reports / f"timing_post_route_{mode}_after_min_area_repair"
+    directories = [post_repair] if require_post_repair else [
+        post_repair,
+        reports / f"timing_post_route_{mode}",
+    ]
+    for directory in directories:
+        candidates = sorted(
+            path
+            for path in directory.glob("*.summary*")
+            if path.is_file() and path.stat().st_size > 0
+        )
+        if not candidates:
+            continue
+        if len(candidates) != 1:
+            errors.append(
+                f"{mode}_timing_summary_count={len(candidates)} "
+                f"directory={directory} expected=1"
+            )
+            return None
+        return candidates[0]
+    qualifier = "postrepair" if require_post_repair else "postroute"
+    errors.append(f"missing_{qualifier}_{mode}_timing_summary")
+    return None
+
+
+def parse_timing_summary(
+    path: Path | None,
+    mode: str,
+    errors: list[str],
+) -> tuple[float, float, int]:
+    if path is None:
+        return float("nan"), float("nan"), -1
+    text = read_text_report(path)
+    if not re.search(rf"\|\s*{re.escape(mode)} mode\s*\|", text, re.IGNORECASE):
+        errors.append(f"{mode}_timing_mode_header_missing={path}")
+
+    parsed: dict[str, str] = {}
+    for key, pattern in {
+        "wns": rf"\|\s*WNS \(ns\):\|\s*({NUMBER_RE})",
+        "tns": rf"\|\s*TNS \(ns\):\|\s*({NUMBER_RE})",
+        "violating": r"\|\s*Violating Paths:\|\s*(\d+)",
+    }.items():
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            parsed[key] = match.group(1)
+        else:
+            errors.append(f"{mode}_timing_{key}_missing={path}")
+
+    wns = float(parsed["wns"]) if "wns" in parsed else float("nan")
+    tns = float(parsed["tns"]) if "tns" in parsed else float("nan")
+    violating = int(parsed["violating"]) if "violating" in parsed else -1
+    if wns < 0.0:
+        errors.append(f"{mode}_wns_ns={wns:.3f} expected_nonnegative")
+    if abs(tns) > 0.0005:
+        errors.append(f"{mode}_tns_ns={tns:.3f} expected=0")
+    if violating != 0:
+        errors.append(f"{mode}_violating_paths={violating} expected=0")
+    return wns, tns, violating
 
 
 def validate(
@@ -109,6 +185,50 @@ def validate(
     for key, expected in required_status.items():
         if status.get(key) != expected:
             errors.append(f"ooc_status_{key}={status.get(key, 'MISSING')} expected={expected}")
+
+    repair_statuses = [
+        status.get("POSTROUTE_MIN_AREA_REPAIR", "MISSING"),
+        status.get("POSTROUTE_ANTENNA_REPAIR", "MISSING"),
+    ]
+    no_change_statuses = {"MISSING", "DISABLED", "SKIPPED_NO_MARKERS"}
+    require_post_repair = any(value not in no_change_statuses for value in repair_statuses)
+    repair_timing_statuses = {
+        "POSTROUTE_MIN_AREA_REPAIR_SETUP_TIMING": status.get(
+            "POSTROUTE_MIN_AREA_REPAIR_SETUP_TIMING",
+            "MISSING",
+        ),
+        "POSTROUTE_MIN_AREA_REPAIR_HOLD_TIMING": status.get(
+            "POSTROUTE_MIN_AREA_REPAIR_HOLD_TIMING",
+            "MISSING",
+        ),
+    }
+    if require_post_repair:
+        for key, value in repair_timing_statuses.items():
+            if value != "PASS":
+                errors.append(f"ooc_status_{key}={value} expected=PASS_after_route_repair")
+
+    setup_summary = select_timing_summary(
+        reports,
+        "setup",
+        errors,
+        require_post_repair,
+    )
+    hold_summary = select_timing_summary(
+        reports,
+        "hold",
+        errors,
+        require_post_repair,
+    )
+    setup_wns, setup_tns, setup_violating = parse_timing_summary(
+        setup_summary,
+        "setup",
+        errors,
+    )
+    hold_wns, hold_tns, hold_violating = parse_timing_summary(
+        hold_summary,
+        "hold",
+        errors,
+    )
 
     gds_audit = key_values(gds_audit_path) if gds_audit_path.is_file() else {}
     for key in ["STATUS", "GDS_FILE_STATUS", "GDS_LAYER_MAP_STATUS", "GDS_MERGE_STATUS"]:
@@ -189,9 +309,20 @@ def validate(
         "ANTENNA_MILESTONE_STATUS": antenna_status,
         "PVS_STATUS": "NOT_RUN",
         "FINAL_HANDOFF_READY": "NO",
+        "POST_REPAIR_TIMING_REQUIRED": "YES" if require_post_repair else "NO",
+        "SETUP_TIMING_SUMMARY": str(setup_summary) if setup_summary else "MISSING",
+        "SETUP_WNS_NS": f"{setup_wns:.3f}",
+        "SETUP_TNS_NS": f"{setup_tns:.3f}",
+        "SETUP_VIOLATING_PATH_COUNT": str(setup_violating),
+        "HOLD_TIMING_SUMMARY": str(hold_summary) if hold_summary else "MISSING",
+        "HOLD_WNS_NS": f"{hold_wns:.3f}",
+        "HOLD_TNS_NS": f"{hold_tns:.3f}",
+        "HOLD_VIOLATING_PATH_COUNT": str(hold_violating),
         "LEF_SHA256": digest(lef_path) if lef_path.is_file() else "MISSING",
         "GDS_SHA256": digest(gds_path) if gds_path.is_file() else "MISSING",
         "PG_NETLIST_SHA256": digest(pg_netlist) if pg_netlist.is_file() else "MISSING",
+        "SETUP_TIMING_SHA256": digest(setup_summary) if setup_summary else "MISSING",
+        "HOLD_TIMING_SHA256": digest(hold_summary) if hold_summary else "MISSING",
         "ERROR_COUNT": str(len(errors)),
     }
     report.parent.mkdir(parents=True, exist_ok=True)

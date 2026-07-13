@@ -29,7 +29,7 @@ Genus or Innovus and must not modify MPTDC internals.
 | P00 | Local flow implementation and static validation | PASS | Unit tests, syntax checks, RTL compile, geometry regression |
 | P01 | Narrow `spadmic_tx_ddr_strip` signal PnR | PASS | OOC status, LEF size, DRC, markers, regular connectivity |
 | P02 | Restore-only internal PG for the narrow strip | R4_HELPER_METHOD_FAIL_DIAG_PENDING | PG marker decomposition, post-PG connectivity/DRC, merged GDS audit |
-| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | XCELIUM_PASS_GENUS_MANUAL_PASS_GATE_REPLAY_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
+| P03 | Canonical `spadmic_tx_packet_core` rebuild and historical LVS intake | XCELIUM_AND_GENUS_FEASIBILITY_PASS_INNOVUS_PREFLIGHT_PENDING | Read-only mismatch classification, RTL mapping oracle, Genus/Innovus gates |
 | P04 | Per-block PVS closure, density qualification, and handoff promotion | BLOCKED_BY_P03_INNOVUS | PVS DRC zero outside antenna, explicit LVS match, hashes, promotion gate |
 | P05 | Requalified strip and Phase-A TX assembly geometry gate | BLOCKED_BY_P04 | Strip PG/PVS closure, no obstacle overlap, exact paired 19-net contract |
 | P06 | Phase-A TX assembly route | BLOCKED_BY_P05 | Checkpoints 00/01/02, selected-net connectivity, DRC, timing |
@@ -528,7 +528,7 @@ the signal-only assembly smoke is run.
 
 ## P03-R3 Staged No-Auto-Advance Server Procedure
 
-Status: `PHASE1_SERVER_EVIDENCE_CAPTURED_GENUS_GATE_REPLAY_PENDING`
+Status: `PHASE1_XCELIUM_AND_GENUS_FEASIBILITY_PASS`
 
 The first canonical server phase is now encoded in
 `TOP/ci/server_run_tx_packet_canonical_phase1.sh`. The procedure separates
@@ -565,12 +565,12 @@ TOP_PNR_UNIT_TESTS=48_PASS_0_FAIL
 PY_COMPILE=PASS
 GIT_DIFF_CHECK=PASS
 CADENCE_SERVER_XCELIUM_AND_GENUS=CAPTURED
-CADENCE_SERVER_GENUS_GATE_REPLAY=NOT_RUN
+CADENCE_SERVER_GENUS_GATE_REPLAY=PASS
 ```
 
 ### P03-R3 Server Evidence - 2026-07-13
 
-Status: `XCELIUM_PASS_GENUS_MANUAL_PASS_GATE_REPLAY_PENDING`
+Status: `XCELIUM_AND_GENUS_FEASIBILITY_PASS`
 
 The staged procedure ran from Git commit
 `55a9f9b122a063afd8fb169b112110c22d810fe4` with diagnostic root:
@@ -653,10 +653,31 @@ summary value is zero.
 `TOP/syn/scripts/validate_tx_packet_genus_ooc.py` now encodes this decision as
 a fail-closed gate. It also requires exact 64-port scalar parity, no nested top
 port names, exact 4407/4407 clock coverage, complete external drive/load rows,
-output hashes, and `SIGNOFF_READY=NO`. The measured reports satisfy the manual
-review, but packet Innovus remains blocked until the server replays
-`genus-report` and creates `reports/07_genus_gate.rpt` with `STATUS=PASS` and
-`RESULT=READY_FOR_PACKET_INNOVUS_FEASIBILITY`.
+output hashes, and `SIGNOFF_READY=NO`.
+
+Report-driver commit `96674eb9d91cd148a725fc78c35e6ce2b24a9d70`
+replayed only `genus-report` against the immutable Genus run on 2026-07-13 at
+10:09:29 UTC. The resulting gate is:
+
+```text
+GENUS_GATE_STATUS=PASS
+GENUS_GATE_RESULT=READY_FOR_PACKET_INNOVUS_FEASIBILITY
+GENUS_GATE_ERROR_COUNT=0
+NESTED_TOP_PORT_COUNT=0
+SCALAR_SOURCE_PORT_COUNT=64
+CLOCK_REGISTER_COUNT=4407
+SEQUENTIAL_INSTANCE_COUNT=4407
+WNS_PS=845.1
+TNS_PS=0.0
+VIOLATING_PATH_COUNT=0
+INNOVUS_FEASIBILITY_READY=YES
+MMMC_STATUS=NOT_RUN_TYPICAL_ONLY
+SIGNOFF_READY=NO
+```
+
+This replay unblocks only the staged packet Innovus preflight. It does not
+prove placement, routing, PG connectivity, post-route timing, GDS correctness,
+PVS closure, or final handoff readiness.
 
 The absent `clk_sys` to `clk_cfg_40m` / `clk_ref_40m` reports are expected for
 this OOC block because `spadmic_tx_packet_core.sdc` creates only `clk_sys`; the
@@ -680,6 +701,88 @@ The text evidence package is:
 /sim/ksabra/SPADMIC_work/diagnostics/tx_packet_canonical_phase1_20260713_102822/packages/tx_packet_canonical_phase1_20260713_102822_text_evidence.tar.gz
 SHA256=fde94d254d7636161c4ff473f1c0ee9b88a72ff43c145e81a0983f5a5f21c0e7
 BYTES=197803
+```
+
+This archive was created before the automated Genus gate replay. Preserve it
+as evidence of the immutable source run, but do not claim that it contains the
+later `07_genus_gate.rpt`. A refreshed package is useful only after the next
+staged evidence is collected; rerunning Genus is neither required nor allowed
+for this reporting-only update.
+
+## P03-R4 Staged Packet Innovus Procedure
+
+Status: `IMPLEMENTED_LOCAL_SERVER_PREFLIGHT_PENDING`
+
+`TOP/ci/server_run_tx_packet_canonical_phase2.sh` continues from the accepted
+Phase-1 gate. It creates a separate active session and unique Innovus run root,
+then exposes repository sync, Innovus preflight, one foreground packet Innovus
+run, report collection, and packaging as independent operator commands. It
+does not launch PVS and does not modify historical OA, GDS, PVS, or `_HV`
+evidence.
+
+The fixed physical policy for this attempt is:
+
+```text
+CANONICAL_TOP=spadmic_tx_packet_core
+SIGNAL_ROUTE_POLICY=MET1_TO_MET3
+PG_POLICY=EXPLICIT_EXACT_METTP_STRIPES_COREPIN_SROUTE
+ROUTE_PROFILE=met1_effort
+ANTENNA_REPAIR=DISABLED_FOR_THIS_MILESTONE
+ANTENNA_POLICY=DEFERRED_BUT_FINAL_HANDOFF_BLOCKED
+PVS_STATUS=NOT_RUN
+```
+
+The preflight rechecks the Phase-1 gate, exact post-synthesis netlist and SDC
+hashes, Cadence/Innovus availability, official stream map, JIHD merge GDS,
+layout-audit inputs, generated route/PG policy, and that the new Innovus root
+does not already exist. No Innovus command may run unless every preflight
+field is `PASS`.
+
+The canonical OOC validator previously trusted
+`POSTROUTE_SETUP_TIMING=PASS` and `POSTROUTE_HOLD_TIMING=PASS`. Those fields
+only prove that the `timeDesign` command returned successfully; they do not
+prove timing closure. The validator now parses the actual Innovus setup and
+hold `.summary` or `.summary.gz` files and requires, independently for both
+modes, nonnegative WNS, zero TNS, and zero violating paths. When selected-net
+min-area repair changes routing, its post-repair timing summaries take
+precedence over the earlier reports. Missing, ambiguous, malformed, or
+negative timing evidence fails closed.
+
+The DRC marker policy also had an internal contradiction: Python allowed an
+antenna-only milestone, while Tcl made every nonzero antenna count force the
+overall marker classification to `FAIL`. Tcl now accepts antenna markers only
+when `SPADMIC_OOC_REQUIRE_ANTENNA_CLEAN=0`, records
+`ANTENNA_MARKER_STATUS=REVIEW_REQUIRED` and
+`ANTENNA_MILESTONE_ACCEPTED=1`, and continues to reject min-area or other DRC
+markers. The canonical report still emits `FINAL_HANDOFF_READY=NO`; this is a
+deferred repair debt, not a DRC waiver or signoff result.
+
+Negative operating rules for this stage:
+
+- Do not rerun Xcelium or Genus; inherit and hash-check the accepted outputs.
+- Do not infer closure from the Innovus wrapper return code or successful
+  `timeDesign` commands; inspect measured timing and all canonical gate fields.
+- Do not repair antenna during this first deterministic route. Preserve the
+  marker evidence for a later targeted repair and PVS classification.
+- Do not run PVS, stage a PVS package, or modify OA after this phase. PVS starts
+  only after packet Innovus reports `READY_FOR_PVS_CANDIDATE`.
+- Do not reuse an Innovus run directory after a failure. Diagnose that unique
+  run and initialize a new session for any changed candidate.
+- Do not launch several restore-and-try candidates in one Innovus process.
+
+Local implementation evidence is recorded separately from server evidence:
+
+```text
+PHASE2_DRIVER_BASH_SYNTAX=PASS
+PHASE2_DRIVER_NO_EXPLICIT_EXIT=ENFORCED_BY_UNIT_TEST
+PHASE2_DRIVER_NO_AUTO_ADVANCE=ENFORCED_BY_UNIT_TEST
+PHASE2_DRIVER_NO_PVS=ENFORCED_BY_UNIT_TEST
+CANONICAL_TIMING_PARSER_PLAIN_AND_GZIP=PASS
+CANONICAL_TIMING_POST_REPAIR_PRECEDENCE=PASS
+REAL_INNOVUS_GZIP_NEGATIVE_SETUP_DETECTION=PASS_WNS_M0P140_TNS_M0P885_PATHS_8
+ANTENNA_DEFER_POLICY_TEST=PASS
+TOP_PNR_UNIT_TESTS=57_PASS_0_FAIL
+CADENCE_PACKET_INNOVUS=NOT_RUN_YET
 ```
 
 ## P04-R1 Canonical PVS Source And Replay Implementation

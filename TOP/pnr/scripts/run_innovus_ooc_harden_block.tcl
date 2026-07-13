@@ -536,7 +536,8 @@ proc spadmic_ooc_write_marker_classification {path} {
     set min_area_status [expr {$cls(met1_min_area) == 0 ? "PASS" : "FAIL"}]
     set antenna_status [expr {$cls(antenna) == 0 ? "PASS" : ($require_antenna ? "FAIL" : "REVIEW_REQUIRED")}]
     set other_status [expr {$cls(other) == 0 ? "PASS" : "FAIL"}]
-    set overall [expr {$min_area_status eq "PASS" && $antenna_status eq "PASS" && $other_status eq "PASS" ? "PASS" : "FAIL"}]
+    set antenna_acceptable [expr {$antenna_status eq "PASS" || (!$require_antenna && $antenna_status eq "REVIEW_REQUIRED")}]
+    set overall [expr {$min_area_status eq "PASS" && $antenna_acceptable && $other_status eq "PASS" ? "PASS" : "FAIL"}]
 
     spadmic_ooc_write_text $path [list \
         "LABEL=DRC_MARKER_CLASSIFICATION" \
@@ -552,6 +553,7 @@ proc spadmic_ooc_write_marker_classification {path} {
         "REQUIRE_ANTENNA_CLEAN=[expr {$require_antenna ? 1 : 0}]" \
         "MIN_AREA_MARKER_STATUS=$min_area_status" \
         "ANTENNA_MARKER_STATUS=$antenna_status" \
+        "ANTENNA_MILESTONE_ACCEPTED=[expr {$antenna_acceptable ? 1 : 0}]" \
         "OTHER_MARKER_STATUS=$other_status" \
     ]
 

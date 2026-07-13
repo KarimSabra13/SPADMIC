@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import importlib.util
 import sys
 import tempfile
@@ -106,6 +107,16 @@ class ValidateTxCanonicalOocTest(unittest.TestCase):
             "GDS_LAYER_MAP_STATUS=PASS\n"
             "GDS_MERGE_STATUS=PASS\n"
         )
+        for mode, wns in (("setup", "0.125"), ("hold", "0.080")):
+            timing = reports / f"timing_post_route_{mode}"
+            timing.mkdir()
+            (timing / f"spadmic_tx_packet_core_postRoute_{mode}.summary").write_text(
+                "timeDesign Summary\n"
+                f"|     {mode.title()} mode      |   all   | reg2reg | default |\n"
+                f"|           WNS (ns):|  {wns}  |  {wns}  |  {wns}  |\n"
+                "|           TNS (ns):|  0.000  |  0.000  |  0.000  |\n"
+                "|    Violating Paths:|    0    |    0    |    0    |\n"
+            )
         return block_root
 
     def test_candidate_gate_allows_but_records_deferred_antenna(self) -> None:
@@ -117,6 +128,8 @@ class ValidateTxCanonicalOocTest(unittest.TestCase):
             self.assertEqual(values["RESULT"], "READY_FOR_PVS_CANDIDATE")
             self.assertEqual(values["ANTENNA_MILESTONE_STATUS"], "DEFERRED_FINAL_HANDOFF_BLOCKED")
             self.assertEqual(values["FINAL_HANDOFF_READY"], "NO")
+            self.assertEqual(values["SETUP_WNS_NS"], "0.125")
+            self.assertEqual(values["HOLD_WNS_NS"], "0.080")
 
     def test_final_candidate_gate_rejects_nonzero_antenna_without_defer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -143,6 +156,86 @@ class ValidateTxCanonicalOocTest(unittest.TestCase):
             )
             self.assertEqual(values["STATUS"], "FAIL")
             self.assertIn("stream_pin_x=tx_valid_o", (root / "reports" / "canonical_tx_ooc_gate.rpt").read_text())
+
+    def test_negative_measured_setup_timing_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.make_packet_root(Path(tmp), antenna_count=0)
+            summary = next((root / "reports" / "timing_post_route_setup").glob("*.summary"))
+            summary.write_text(summary.read_text().replace("0.125", "-0.125"))
+            report = root / "reports" / "canonical_tx_ooc_gate.rpt"
+            values = gate.validate(root, "tx_packet_core", report, False)
+            self.assertEqual(values["STATUS"], "FAIL")
+            self.assertIn("setup_wns_ns=-0.125 expected_nonnegative", report.read_text())
+
+    def test_post_repair_timing_summary_takes_precedence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.make_packet_root(Path(tmp), antenna_count=0)
+            status = root / "reports" / "ooc_harden_status.rpt"
+            status.write_text(
+                status.read_text()
+                + "POSTROUTE_MIN_AREA_REPAIR=PASS\n"
+                + "POSTROUTE_MIN_AREA_REPAIR_SETUP_TIMING=PASS\n"
+                + "POSTROUTE_MIN_AREA_REPAIR_HOLD_TIMING=PASS\n"
+            )
+            setup = root / "reports" / "timing_post_route_setup_after_min_area_repair"
+            setup.mkdir()
+            (setup / "spadmic_tx_packet_core_postRoute_setup.summary").write_text(
+                "timeDesign Summary\n"
+                "|     Setup mode     |   all   | reg2reg | default |\n"
+                "|           WNS (ns):|  0.090  |  0.090  |  0.125  |\n"
+                "|           TNS (ns):|  0.000  |  0.000  |  0.000  |\n"
+                "|    Violating Paths:|    0    |    0    |    0    |\n"
+            )
+            timing = root / "reports" / "timing_post_route_hold_after_min_area_repair"
+            timing.mkdir()
+            (timing / "spadmic_tx_packet_core_postRoute_hold.summary").write_text(
+                "timeDesign Summary\n"
+                "|     Hold mode      |   all   | reg2reg | default |\n"
+                "|           WNS (ns):| -0.040  | -0.040  |  0.080  |\n"
+                "|           TNS (ns):| -0.040  | -0.040  |  0.000  |\n"
+                "|    Violating Paths:|    1    |    1    |    0    |\n"
+            )
+            report = root / "reports" / "canonical_tx_ooc_gate.rpt"
+            values = gate.validate(root, "tx_packet_core", report, False)
+            self.assertEqual(values["STATUS"], "FAIL")
+            self.assertEqual(values["POST_REPAIR_TIMING_REQUIRED"], "YES")
+            self.assertIn("hold_violating_paths=1 expected=0", report.read_text())
+
+    def test_route_repair_without_fresh_timing_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.make_packet_root(Path(tmp), antenna_count=0)
+            status = root / "reports" / "ooc_harden_status.rpt"
+            status.write_text(status.read_text() + "POSTROUTE_MIN_AREA_REPAIR=PASS\n")
+            report = root / "reports" / "canonical_tx_ooc_gate.rpt"
+            values = gate.validate(root, "tx_packet_core", report, False)
+            report_text = report.read_text()
+            self.assertEqual(values["STATUS"], "FAIL")
+            self.assertIn("missing_postrepair_setup_timing_summary", report_text)
+            self.assertIn(
+                "ooc_status_POSTROUTE_MIN_AREA_REPAIR_SETUP_TIMING=MISSING",
+                report_text,
+            )
+
+    def test_compressed_innovus_timing_summary_is_supported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.make_packet_root(Path(tmp), antenna_count=0)
+            timing = root / "reports" / "timing_post_route_setup"
+            summary = next(timing.glob("*.summary"))
+            payload = summary.read_text()
+            summary.unlink()
+            compressed = Path(f"{summary}.gz")
+            with gzip.open(compressed, "wt") as handle:
+                handle.write(payload)
+            report = root / "reports" / "canonical_tx_ooc_gate.rpt"
+            values = gate.validate(root, "tx_packet_core", report, False)
+            self.assertEqual(values["STATUS"], "PASS")
+            self.assertEqual(values["SETUP_WNS_NS"], "0.125")
+            self.assertEqual(values["SETUP_TIMING_SUMMARY"], str(compressed))
+
+    def test_tcl_accepts_antenna_only_milestone_when_explicitly_deferred(self) -> None:
+        tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_harden_block.tcl").read_text()
+        self.assertIn("set antenna_acceptable", tcl)
+        self.assertIn("ANTENNA_MILESTONE_ACCEPTED", tcl)
 
 
 if __name__ == "__main__":
