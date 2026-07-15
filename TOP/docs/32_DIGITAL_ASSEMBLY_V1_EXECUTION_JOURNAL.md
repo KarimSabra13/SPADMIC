@@ -1358,3 +1358,51 @@ STEP14_BASH_SYNTAX=PASS
 STEP14_TCL_INFO_COMPLETE=1
 STEP14_DIFF_CHECK=PASS
 ```
+
+### P03-R15 Server Evidence - CTS VIA1 Capture And Filler PG Closure
+
+Status: `PASS_DIAGNOSTIC_CLASSIFIED_PHYSICAL_CANDIDATE_REMAINS_REJECTED`
+
+Step 14 at report-driver head
+`2e03ac5bf082baccfaf309b4886e1b26a36908bc` restored the immutable post-CTS
+checkpoint and produced this reviewed tuple before any second `sroute`:
+
+```text
+post-CTS DRC capture:                 1000 VIA1 markers
+post-CTS special connectivity:        154
+post-CTS regular connectivity:        239
+post-filler/pre-restitch DRC capture: 1000 VIA1 markers
+post-filler/pre-restitch special:        0
+post-filler/pre-restitch regular:      239
+filler marker signatures added:          0
+filler marker signatures removed:        0
+```
+
+Exactly 1000 violations were both reported and dumped at each stage. That is
+proof of at least 1000 post-CTS VIA1 violations, but it is not proof that the
+complete total is exactly 1000; capture completeness remains unproven at this
+round number. The two marker hashes differ because runtime marker handles can
+change, while the analyzer's geometry/layer/type/subtype/message signature
+multisets are identical. Filler insertion did not create this DRC class.
+
+The filler command closed special connectivity `154 -> 0` without any
+post-filler `sroute`. The second Step 13 `sroute` is therefore not electrically
+required for special connectivity. The 239 regular-connectivity findings are
+from the post-CTS, pre-signal-route milestone and are not a final regular
+connectivity gate. Step 13's later count of 165 cannot be subtracted directly
+from the capped pre-restitch capture because the exact pre-restitch total is
+unknown and the geometry state changed.
+
+Step 15 is text-only. It classifies all captured VIA1 subtypes, normalized rule
+templates, named nets, spatial extent, and the Step 13 layer summary. It runs
+no Innovus process and performs no design modification, save, export, staging,
+or PVS. No new candidate is authorized until its representative marker table
+identifies the actual VIA1 rule and the responsible CTS via-generation
+mechanism.
+
+```text
+STEP15_LOCAL_TOP_PNR_TESTS=89_PASS_0_FAIL
+STEP15_PY_COMPILE=PASS
+STEP15_BASH_SYNTAX=PASS
+STEP15_DIFF_CHECK=PASS
+```

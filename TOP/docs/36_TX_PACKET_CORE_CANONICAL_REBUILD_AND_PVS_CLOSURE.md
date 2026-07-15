@@ -701,3 +701,37 @@ restitch. Step 14 is evidence-only: `POST_FILLER_SROUTE=NOT_RUN`,
 `SAVE_DESIGN=NOT_RUN`, `EXPORT=NOT_RUN`, and `PVS=NOT_RUN`. Its PASS status
 means the stage was classified coherently, not that the block is physically
 clean or ready for handoff.
+
+## P03 Step 14 Result And Step 15 VIA1 Text Classification
+
+Step 14 completed at report-driver head
+`2e03ac5bf082baccfaf309b4886e1b26a36908bc`. The post-CTS checkpoint already
+contained a captured 1000-marker VIA1 DRC class. Adding the canonical filler
+set left every DRC signature unchanged, so the filler stage is exonerated for
+that class. In the same in-memory run, filler insertion alone changed special
+connectivity from 154 violations to zero. No post-filler `sroute` was run.
+
+The rounded count has bounded semantics: both `verify_drc` and the filtered TSV
+contain 1000 entries, proving at least 1000 violations but not proving capture
+completeness or an exact total of 1000. The later Step 13 count of 165 belongs
+to a changed geometry state and cannot be compared as a direct delta. The 239
+regular-connectivity findings are also pre-signal-route observations, not a
+final route-connectivity gate.
+
+Step 15 performs only existing-text-artifact analysis. Its accepted tuple is:
+
+```text
+post-CTS:                  DRC>=1000 captured, special=154, regular=239
+post-filler/pre-restitch:  DRC>=1000 captured, special=0,   regular=239
+filler signature delta:    new=0, removed=0
+Step 13 post-restitch:      special=0, reported DRC=165
+```
+
+The analyzer requires all 1000 captured markers to be VIA1, proves signature
+identity independent of marker handles, groups subtype/rule-template/net
+evidence, and emits representative messages. Its PASS result is
+`POSTCTS_VIA1_CAPTURE_CLASSIFIED_NO_DESIGN_MODIFICATION`; this is a
+diagnostic classification only. The next physical action remains blocked
+until the VIA1 rule templates identify whether CTS via selection, cut spacing,
+or another CTS-stage construction setting is responsible. Save, export,
+immutable staging, canonical rerun, and PVS all remain `NOT_RUN`.

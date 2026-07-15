@@ -37,6 +37,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-rerun <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-postfiller-rerun <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh postfiller-stage-probe <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh postcts-via1-analyze <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -1603,6 +1604,126 @@ postfiller_stage_probe() {
   return $?
 }
 
+postcts_via1_analyze() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: postcts-via1-analyze requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 14_postfiller_stage_probe || return 1
+
+  local step13_driver step13_analysis step14_status step14_driver step14_analysis
+  local probe_root step13_block_root actual_head cd_rc analysis_report driver_report
+  local analysis_rc status result next_decision
+  step13_driver="$TX2_SESSION_ROOT/reports/13_preroute_pg_postfiller_rerun_driver.rpt"
+  step13_analysis="$TX2_SESSION_ROOT/reports/13_preroute_pg_postfiller_candidate_analysis.rpt"
+  step14_status="$TX2_SESSION_ROOT/status/14_postfiller_stage_probe.rpt"
+  step14_driver="$TX2_SESSION_ROOT/reports/14_postfiller_stage_probe_driver.rpt"
+  step14_analysis="$TX2_SESSION_ROOT/reports/14_postfiller_stage_analysis.rpt"
+  analysis_report="$TX2_SESSION_ROOT/reports/15_postcts_via1_marker_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/15_postcts_via1_analyze_driver.rpt"
+  actual_head=UNKNOWN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=POST_CTS_VIA1_MARKER_CLASSIFICATION_NOT_RUN
+
+  if [[ "$(kv_field "$step14_status" RESULT)" != "POSTFILLER_STAGE_ATTRIBUTION_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS" \
+      || "$(kv_field "$step14_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step14_analysis" RESULT)" != "POSTFILLER_STAGE_ATTRIBUTION_CLASSIFIED" \
+      || "$(kv_field "$step14_analysis" STAGE_ATTRIBUTION)" != "CTS_STAGE_INTRODUCES_DRC" \
+      || "$(kv_field "$step14_analysis" POST_CTS_DRC_VIOLATION_COUNT)" != "1000" \
+      || "$(kv_field "$step14_analysis" POST_CTS_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "154" \
+      || "$(kv_field "$step14_analysis" POST_CTS_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "239" \
+      || "$(kv_field "$step14_analysis" POST_FILLER_PRE_RESTITCH_DRC_VIOLATION_COUNT)" != "1000" \
+      || "$(kv_field "$step14_analysis" POST_FILLER_PRE_RESTITCH_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step14_analysis" POST_FILLER_PRE_RESTITCH_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "239" \
+      || "$(kv_field "$step14_analysis" FILLER_NEW_DRC_MARKER_COUNT)" != "0" \
+      || "$(kv_field "$step14_analysis" FILLER_REMOVED_DRC_MARKER_COUNT)" != "0" \
+      || "$(kv_field "$step14_analysis" PVS_DECISION)" != "DO_NOT_RUN" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 14 is not the reviewed post-CTS VIA1 evidence tuple"
+    echo "STEP14_ANALYSIS=$step14_analysis"
+    return 1
+  fi
+
+  probe_root="$(kv_field "$step14_driver" PROBE_ROOT)"
+  step13_block_root="$(kv_field "$step13_driver" CANDIDATE_BLOCK_ROOT)"
+  if [[ -z "$probe_root" || ! -d "$probe_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 14 probe root is missing"
+    echo "PROBE_ROOT=${probe_root:-MISSING}"
+    return 1
+  fi
+  if [[ -z "$step13_block_root" || ! -d "$step13_block_root" \
+      || "$step13_block_root" != "$(kv_field "$step13_analysis" BLOCK_ROOT)" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 13 block root is missing or inconsistent"
+    echo "STEP13_BLOCK_ROOT=${step13_block_root:-MISSING}"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_postcts_via1_markers.py" \
+      --probe-root "$probe_root" \
+      --step13-block-root "$step13_block_root" \
+      --step13-analysis "$step13_analysis" \
+      --step14-analysis "$step14_analysis" \
+      --report-driver-head "$actual_head" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "POST_CTS_VIA1_MARKERS_CLASSIFIED" \
+      && "$(kv_field "$analysis_report" POST_CTS_MARKER_SIGNATURE_STABILITY)" == "PASS_IDENTICAL_BEFORE_AND_AFTER_FILLER" \
+      && "$(kv_field "$analysis_report" FILLER_SPECIAL_CONNECTIVITY_EFFECT)" == "CLOSED_154_TO_0_WITHOUT_SROUTE" \
+      && "$(kv_field "$analysis_report" POST_FILLER_SROUTE_ELECTRICAL_NECESSITY)" == "NOT_REQUIRED_FOR_SPECIAL_CONNECTIVITY" \
+      && "$(kv_field "$analysis_report" PVS_DECISION)" == "DO_NOT_RUN" ]]; then
+    status=PASS
+    result=POSTCTS_VIA1_CAPTURE_CLASSIFIED_NO_DESIGN_MODIFICATION
+  else
+    result=POST_CTS_VIA1_MARKER_CLASSIFICATION_INCOMPLETE
+  fi
+  next_decision="$(kv_field "$analysis_report" NEXT_METHOD_DECISION)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP13_ANALYSIS=$step13_analysis"
+    echo "SOURCE_STEP14_ANALYSIS=$step14_analysis"
+    echo "SOURCE_PROBE_ROOT=$probe_root"
+    echo "SOURCE_STEP13_BLOCK_ROOT=$step13_block_root"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "ANALYSIS_MODE=READ_ONLY_TEXT_ARTIFACTS_NO_INNOVUS"
+    echo "NEXT_METHOD_DECISION=${next_decision:-UNKNOWN}"
+    echo "DESIGN_MODIFICATION=NOT_RUN"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  fi
+  record_status 15_postcts_via1_analyze "$status" "$analysis_rc" "$result" "$probe_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -1694,6 +1815,9 @@ case "$COMMAND" in
     ;;
   postfiller-stage-probe)
     postfiller_stage_probe "$ARGUMENT_1"
+    ;;
+  postcts-via1-analyze)
+    postcts_via1_analyze "$ARGUMENT_1"
     ;;
   package)
     package_evidence

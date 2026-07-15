@@ -37,6 +37,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "preroute-pg-rerun",
             "preroute-pg-postfiller-rerun",
             "postfiller-stage-probe",
+            "postcts-via1-analyze",
             "package",
             "status",
         ):
@@ -164,6 +165,14 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("run_innovus_ooc_postfiller_stage_probe.sh", driver)
         self.assertIn("analyze_tx_packet_postfiller_stage_probe.py", driver)
         self.assertIn("POSTFILLER_STAGE_ATTRIBUTION_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
+        self.assertIn("require_step_pass 14_postfiller_stage_probe", driver)
+        self.assertIn("postcts-via1-analyze <expected-report-driver-head>", driver)
+        self.assertIn("analyze_tx_packet_postcts_via1_markers.py", driver)
+        self.assertIn("READ_ONLY_TEXT_ARTIFACTS_NO_INNOVUS", driver)
+        self.assertIn("POSTCTS_VIA1_CAPTURE_CLASSIFIED_NO_DESIGN_MODIFICATION", driver)
+        self.assertIn("POST_CTS_DRC_VIOLATION_COUNT)\" != \"1000\"", driver)
+        self.assertIn("FILLER_SPECIAL_CONNECTIVITY_EFFECT", driver)
+        self.assertIn("NOT_REQUIRED_FOR_SPECIAL_CONNECTIVITY", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)

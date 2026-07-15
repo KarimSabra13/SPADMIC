@@ -667,3 +667,37 @@ Because Step 13 already establishes post-restitch `connectivity=0` and
 the second `sroute`. The pre-restitch connectivity count then decides whether
 that command can be removed or must be replaced with a bounded DRC-safe
 stitching method.
+
+## Step 14 Failure Ledger - CTS Creates The VIA1 Class
+
+The stage probe did not find a clean post-CTS baseline. Both the post-CTS and
+post-filler/pre-restitch captures reported and dumped 1000 DRC markers, all on
+VIA1. Their complete captured marker-signature multisets are identical: filler
+added zero signatures and removed zero signatures. This attributes the first
+captured DRC class to CTS or its immediately saved state, not to filler
+insertion.
+
+Do not treat `1000` as an exact complete total. A report and TSV that both stop
+at exactly 1000 prove `at least 1000`; without explicit completeness evidence,
+the exact total remains unknown. This also means Step 13's later count of 165
+is not a valid arithmetic reduction from 1000. The states differ, and the
+pre-restitch capture may be bounded.
+
+Filler insertion changed special connectivity from 154 to zero without any
+`sroute`, while regular connectivity remained 239. The conclusions are
+separate:
+
+- the second core-pin `sroute` is redundant for special PG connectivity;
+- the 239 regular violations are observed before ordinary signal routing and
+  must not be promoted to a final regular-connectivity failure;
+- filler insertion is not the source of the captured VIA1 DRC signatures;
+- another PG-via geometry or X-coordinate trial would not address the newly
+  isolated CTS-stage class.
+
+The next allowed gate is `postcts-via1-analyze`, a read-only parser over the
+existing Step 14 TSVs and Step 13 reports. It must require the exact reviewed
+tuple, compare signatures independent of marker handles, group every captured
+marker by subtype and normalized rule text, report representative messages and
+named nets, and preserve the lower-bound count semantics. Do not run another
+candidate, canonical replay, or PVS until that table identifies the VIA1 rule
+and the CTS via-generation setting that needs review.
