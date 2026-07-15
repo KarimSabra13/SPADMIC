@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 import tempfile
 import unittest
@@ -26,7 +27,18 @@ CONTRACT = {
     "n_9721": ("1792.65 212.38 1793.03 212.66", "1792.84", "212.52", "1792.28", "g14602__8246/Q", "1789.57 212.78"),
     "n_9706": ("1826.81 212.38 1827.19 212.66", "1827.00", "212.52", "1827.56", "g14617__5477/Q", "1830.27 212.78"),
 }
+CONTRACT_R2 = {
+    **CONTRACT,
+    "n_9696": ("719.69 158.62 720.07 158.90", "719.88", "158.76", "719.04", "g14627__2802/Q", "716.61 159.02"),
+    "n_9693": ("210.09 201.74 210.47 202.02", "210.28", "201.88", "209.44", "g14630__8246/Q", "207.01 201.62"),
+    "n_9697": ("663.13 192.78 663.51 193.06", "663.32", "192.92", "662.48", "g14626__1617/Q", "660.05 192.66"),
+    "n_9677": ("1666.09 201.74 1666.47 202.02", "1666.28", "201.88", "1667.12", "g14646__2398/Q", "1669.55 201.62"),
+}
+R2_LONG_NETS = {"n_9677", "n_9693", "n_9696", "n_9697"}
 POLICY = "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MET1_LANDING_EXTENSIONS"
+POLICY_R2 = (
+    "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_LENGTH_MET1_LANDING_EXTENSIONS"
+)
 MARKER_HEADER = (
     "idx\tmarker_handle\tbox\tllx\tlly\turx\tury\tcx\tcy\t"
     "layer\ttype\tsubType\tmessage"
@@ -55,6 +67,8 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
 
     def write_step20(self, path: Path) -> None:
         path.write_text(
+            "LABEL=SPADMIC_TX_PACKET_MIN_AREA_GEOMETRY_ANALYSIS\n"
+            "POLICY=READ_ONLY_RESTORED_CHECKPOINT_LOCAL_TOPOLOGY_CLASSIFICATION\n"
             "STATUS=PASS\n"
             "RESULT=MIN_AREA_LOCAL_GEOMETRY_CLASSIFIED\n"
             "SELECTED_NET_REROUTE_METHOD_STATUS=REJECTED_NO_IMPROVEMENT\n"
@@ -84,23 +98,72 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "ERROR_COUNT=0\n"
         )
 
+    def write_step21(self, path: Path) -> None:
+        path.write_text(
+            "LABEL=SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS\n"
+            "POLICY=ISOLATED_IN_MEMORY_SIX_NET_MET1_LANDING_PATCH_CLASSIFICATION\n"
+            "STATUS=PASS\n"
+            "RESULT=MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED\n"
+            "TRIAL_PROCESS_STATUS=FAIL\n"
+            "TRIAL_PROCESS_RESULT=SIX_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED\n"
+            "METHOD_STATUS=REJECTED_OR_INCOMPLETE\n"
+            "PATCH_CONTRACT_STATUS=PASS_EXACT_SIX_REVIEWED_EXTENSIONS\n"
+            "PATCH_WIDTH_UM=0.28\n"
+            "PATCH_LENGTH_UM=0.56\n"
+            "PATCH_ATTEMPTED_COUNT=6\n"
+            "PATCH_APPLIED_COUNT=6\n"
+            "COMMAND_PASS_COUNT=24\n"
+            "COMMAND_FAIL_COUNT=0\n"
+            "PRE_DRC_VIOLATION_COUNT=6\n"
+            "FINAL_DRC_VIOLATION_COUNT=4\n"
+            "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "PRE_MARKER_DATABASE_TOTAL=27\n"
+            "FINAL_MARKER_DATABASE_TOTAL=25\n"
+            "REMOVED_MARKER_SIGNATURE_COUNT=6\n"
+            "ADDED_MARKER_SIGNATURE_COUNT=4\n"
+            "FINAL_MIN_AREA_NETS=n_9677 n_9693 n_9696 n_9697\n"
+            "SAVE_DESIGN=NOT_RUN\n"
+            "EXPORT=NOT_RUN\n"
+            "IMMUTABLE_PVS_STAGING=NOT_RUN\n"
+            "PVS_DECISION=DO_NOT_RUN\n"
+            "CANONICAL_RERUN_DECISION=DO_NOT_RUN_FROM_THIS_STEP\n"
+            "NEXT_METHOD_DECISION=STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD\n"
+            "ERROR_COUNT=0\n"
+        )
+
     def write_fixture(
         self,
         root: Path,
         *,
         validated: bool,
         tamper_contract: bool = False,
+        revision: str = "R1",
     ) -> tuple[Path, Path]:
+        is_r2 = revision == "R2"
+        contract = CONTRACT_R2 if is_r2 else CONTRACT
+        policy = POLICY_R2 if is_r2 else POLICY
+        source_key = "STEP21_ANALYSIS" if is_r2 else "STEP20_ANALYSIS"
+        patch_length_policy = (
+            "FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56" if is_r2 else "UNIFORM_0.56"
+        )
         trial_root = root / "trial"
         reports = trial_root / "reports"
         reports.mkdir(parents=True)
-        step20 = root / "step20.rpt"
-        self.write_step20(step20)
+        source = root / ("step21.rpt" if is_r2 else "step20.rpt")
+        (self.write_step21 if is_r2 else self.write_step20)(source)
+        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
         (trial_root / "context.rpt").write_text(
             "SOURCE_CHECKPOINT=/immutable/checkpoints/05_postroute_export.enc.dat\n"
-            f"STEP20_ANALYSIS={step20}\n"
+            f"{source_key}={source}\n"
+            f"{source_key}_SHA256={source_sha}\n"
             f"HEAD={HEAD}\n"
-            f"POLICY={POLICY}\n"
+            f"TRIAL_REVISION={revision}\n"
+            f"POLICY={policy}\n"
             "DESIGN_MODIFICATION=IN_MEMORY_ONLY\n"
             "SOURCE_CHECKPOINT_WRITE=NOT_RUN\n"
             "SAVE_DESIGN=NOT_RUN\n"
@@ -129,13 +192,14 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "contract_status"
         )
         contract_rows = [contract_header]
-        for net, values in CONTRACT.items():
+        for net, values in contract.items():
             box, start_x, start_y, end_x, source_q, source_point = values
             if tamper_contract and net == "n_9696":
-                end_x = "719.31"
+                end_x = "719.03" if is_r2 else "719.31"
+            length = "0.84" if is_r2 and net in R2_LONG_NETS else "0.56"
             contract_rows.append(
                 f"{net}\t{box}\t{start_x}\t{start_y}\t{end_x}\t{start_y}\t"
-                f"0.56\t0.28\t{source_q}\t{source_point}\tPASS\tPASS\tPASS\t"
+                f"{length}\t0.28\t{source_q}\t{source_point}\tPASS\tPASS\tPASS\t"
                 "PASS\tPASS\tPASS"
             )
         (reports / "min_area_landing_patch_contract.tsv").write_text(
@@ -143,18 +207,27 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
         )
         command_lines = [
             "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_COMMANDS",
-            "POLICY=EXACT_SIX_NET_ONE_GRID_MET1_WIRE_EDITOR_EXTENSIONS",
+            "POLICY="
+            + (
+                "EXACT_SIX_NET_MIXED_LENGTH_MET1_WIRE_EDITOR_EXTENSIONS"
+                if is_r2
+                else "EXACT_SIX_NET_ONE_GRID_MET1_WIRE_EDITOR_EXTENSIONS"
+            ),
+            f"TRIAL_REVISION={revision}",
             "PATCH_WIDTH_UM=0.28",
-            "PATCH_LENGTH_UM=0.56",
+            f"PATCH_LENGTH_POLICY={patch_length_policy}",
+            "PATCH_LENGTH_UM=MIXED_0.56_0.84" if is_r2 else "PATCH_LENGTH_UM=0.56",
             "CONTRACT_VALIDATED_COUNT=6",
         ]
-        for net, values in CONTRACT.items():
+        for net, values in contract.items():
             _, start_x, start_y, end_x, source_q, _ = values
             prefix = f"PATCH_{net}"
+            length = "0.84" if is_r2 and net in R2_LONG_NETS else "0.56"
             command_lines.extend(
                 (
                     f"{prefix}_START={start_x} {start_y}",
                     f"{prefix}_END={end_x} {start_y}",
+                    f"{prefix}_LENGTH_UM={length}",
                     f"{prefix}_SOURCE_Q={source_q}",
                     f"{prefix}_SET_EDIT_MODE=setEditMode -nets {net} -shape None "
                     "-force_regular 1 -layer_horizontal MET1 -layer_vertical MET1 "
@@ -180,13 +253,23 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
         final_nets = "" if validated else " ".join(NETS)
         process_status = "PASS" if validated else "FAIL"
         process_result = (
-            "SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+            (
+                "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+                if is_r2
+                else "SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+            )
             if validated
-            else "SIX_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+            else (
+                "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+                if is_r2
+                else "SIX_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+            )
         )
         (reports / "min_area_landing_patch_trial_status.rpt").write_text(
             "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_TRIAL\n"
-            f"POLICY={POLICY}\n"
+            f"POLICY={policy}\n"
+            f"TRIAL_REVISION={revision}\n"
+            f"PATCH_LENGTH_POLICY={patch_length_policy}\n"
             "DESIGN_MODIFICATION=IN_MEMORY_ONLY\n"
             "SOURCE_CHECKPOINT_WRITE=NOT_RUN\n"
             "SAVE_DESIGN=NOT_RUN\n"
@@ -196,7 +279,7 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             f"STATUS={process_status}\n"
             f"RESULT={process_result}\n"
             "SOURCE_CHECKPOINT=/immutable/checkpoints/05_postroute_export.enc.dat\n"
-            f"STEP20_ANALYSIS={step20}\n"
+            f"{source_key}={source}\n"
             "PRE_DRC_VIOLATION_COUNT=6\n"
             "PRE_DRC_MARKER_COUNT=6\n"
             "PRE_MARKER_DATABASE_TOTAL=27\n"
@@ -219,19 +302,26 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "COMMAND_PASS_COUNT=24\n"
             "COMMAND_FAIL_COUNT=0\n"
         )
-        return trial_root, step20
+        return trial_root, source
 
     def run_analyzer(
-        self, trial_root: Path, step20: Path, report: Path
+        self,
+        trial_root: Path,
+        source: Path,
+        report: Path,
+        revision: str = "R1",
     ) -> subprocess.CompletedProcess[str]:
+        source_option = "--step21-analysis" if revision == "R2" else "--step20-analysis"
         return subprocess.run(
             [
                 "python3",
                 str(ANALYZER),
                 "--trial-root",
                 str(trial_root),
-                "--step20-analysis",
-                str(step20),
+                source_option,
+                str(source),
+                "--trial-revision",
+                revision,
                 "--report-driver-head",
                 HEAD,
                 "--report",
@@ -283,6 +373,125 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             result = self.run_analyzer(trial_root, step20, report)
             self.assertEqual(result.returncode, 8, result.stdout)
             self.assertIn("contract_n_9696_end_x=719.31 expected=719.32", report.read_text())
+
+    def test_r2_validated_zero_drc_trial_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root, validated=True, revision="R2"
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R2"
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn("TRIAL_REVISION=R2", text)
+            self.assertIn(
+                "PATCH_LENGTH_POLICY=FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56",
+                text,
+            )
+            self.assertIn("METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY", text)
+            self.assertIn("FINAL_MARKER_DATABASE_TOTAL=21", text)
+
+    def test_r2_coherent_no_improvement_is_classified_as_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root, validated=False, revision="R2"
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R2"
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn(
+                "TRIAL_PROCESS_RESULT=MIXED_LENGTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT",
+                text,
+            )
+            self.assertIn("METHOD_STATUS=REJECTED_OR_INCOMPLETE", text)
+
+    def test_r2_coherent_changed_result_is_classified_as_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root, validated=False, revision="R2"
+            )
+            reports = trial_root / "reports"
+            changed_nets = NETS[:4]
+            changed_rows = self.marker_rows()[:4]
+            (reports / "drc_markers_post_trial.tsv").write_text(
+                MARKER_HEADER + "\n" + "\n".join(changed_rows) + "\n"
+            )
+            self.write_verify(reports / "verify_drc_post_trial.rpt", 4)
+            status_path = reports / "min_area_landing_patch_trial_status.rpt"
+            status = status_path.read_text()
+            status = status.replace(
+                "RESULT=MIXED_LENGTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT",
+                "RESULT=MIXED_LENGTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED",
+            )
+            status = status.replace("FINAL_DRC_VIOLATION_COUNT=6", "FINAL_DRC_VIOLATION_COUNT=4")
+            status = status.replace("FINAL_DRC_MARKER_COUNT=6", "FINAL_DRC_MARKER_COUNT=4")
+            status = status.replace("FINAL_MARKER_DATABASE_TOTAL=27", "FINAL_MARKER_DATABASE_TOTAL=25")
+            status = status.replace(
+                f"FINAL_MIN_AREA_NETS={' '.join(NETS)}",
+                f"FINAL_MIN_AREA_NETS={' '.join(changed_nets)}",
+            )
+            status_path.write_text(status)
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R2"
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn(
+                "TRIAL_PROCESS_RESULT=MIXED_LENGTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED",
+                text,
+            )
+            self.assertIn("FINAL_DRC_VIOLATION_COUNT=4", text)
+
+    def test_r2_source_tuple_drift_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root, validated=True, revision="R2"
+            )
+            source.write_text(
+                source.read_text().replace(
+                    "FINAL_DRC_VIOLATION_COUNT=4",
+                    "FINAL_DRC_VIOLATION_COUNT=3",
+                )
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R2"
+            )
+            self.assertEqual(result.returncode, 8, result.stdout)
+            self.assertIn(
+                "source_FINAL_DRC_VIOLATION_COUNT=3 expected=4",
+                report.read_text(),
+            )
+
+    def test_r2_contract_coordinate_drift_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root,
+                validated=True,
+                tamper_contract=True,
+                revision="R2",
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R2"
+            )
+            self.assertEqual(result.returncode, 8, result.stdout)
+            self.assertIn(
+                "contract_n_9696_end_x=719.03 expected=719.04",
+                report.read_text(),
+            )
+            self.assertIn("METHOD_STATUS=REJECTED_OR_INCOMPLETE", report.read_text())
 
 
 if __name__ == "__main__":

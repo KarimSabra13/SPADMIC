@@ -44,6 +44,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "min-area-second-pass-trial-r2",
             "min-area-geometry-probe",
             "min-area-landing-patch-trial",
+            "min-area-landing-patch-trial-r2",
             "package",
             "status",
         ):
@@ -215,6 +216,11 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("analyze_tx_packet_min_area_landing_patch_trial.py", driver)
         self.assertIn("MIN_AREA_LANDING_PATCH_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
         self.assertIn("21_min_area_landing_patch_trial", driver)
+        self.assertIn("require_step_pass 21_min_area_landing_patch_trial", driver)
+        self.assertIn("min-area-landing-patch-trial-r2 <expected-report-driver-head>", driver)
+        self.assertIn("SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R2", driver)
+        self.assertIn("MIN_AREA_LANDING_PATCH_R2_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
+        self.assertIn("22_min_area_landing_patch_trial_r2", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)
@@ -358,6 +364,12 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("uiSetTool addWire", landing_trial)
         self.assertIn("editAddRoute", landing_trial)
         self.assertIn("editCommitRoute", landing_trial)
+        self.assertIn("SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION", landing_wrapper)
+        self.assertIn("SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION", landing_trial)
+        self.assertIn("FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56", landing_trial)
+        self.assertIn("719.04 0.84", landing_trial)
+        self.assertIn("1667.12 0.84", landing_trial)
+        self.assertIn("1792.28 0.56", landing_trial)
         self.assertIn("-width_horizontal 0.28", landing_trial)
         self.assertIn("-width_vertical 0.28", landing_trial)
         self.assertIn("verify_drc_pre_trial.rpt", landing_trial)
@@ -365,6 +377,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT", landing_trial)
         self.assertIn("FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT", landing_trial)
         self.assertIn("SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
+        self.assertIn("MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, landing_trial)
 

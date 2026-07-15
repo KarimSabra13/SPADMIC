@@ -1678,3 +1678,49 @@ STEP21_BASH_SYNTAX=PASS
 STEP21_TCL_STRUCTURE_CHECK=PASS
 STEP21_DIFF_CHECK=PASS
 ```
+
+### P03-R22 Server Evidence - Step 21 Narrows The Patch Length
+
+Status: `PASS_CLASSIFIED_STEP22_MIXED_LENGTH_TRIAL_READY`
+
+Step 21 completed at report-driver head
+`9c2c4fb96e1844ac261e94306ca1c72530ea6935`. All six reviewed contracts and
+all 24 Wire Editor commands passed. Independent verification preserved regular
+and PG connectivity at zero and the restored antenna sentinel at 21. DRC
+improved from six markers to four, while marker-database accounting changed
+from 27 to 25.
+
+The `0.56 um` extensions closed `n_9706` and `n_9721`. The four surviving
+markers on `n_9677`, `n_9693`, `n_9696`, and `n_9697` all changed from
+`0.1064 um^2` to `0.1777 um^2`, leaving `0.0243 um^2` below the
+`0.2020 um^2` rule. This proves that the direct connected-wire method changes
+the intended geometry, but the uniform length is not sufficient for all six
+local contexts.
+
+Step 22, `min-area-landing-patch-trial-r2`, starts from the immutable routed
+checkpoint again. It does not continue from Step 21's in-memory database. The
+two already closed nets retain total length `0.56 um`; only the four survivors
+receive total length `0.84 um`, one additional `0.28 um` increment:
+
+```text
+n_9696  719.88,158.76  ->  719.04,158.76  length 0.84
+n_9693  210.28,201.88  ->  209.44,201.88  length 0.84
+n_9697  663.32,192.92  ->  662.48,192.92  length 0.84
+n_9677 1666.28,201.88  -> 1667.12,201.88  length 0.84
+n_9721 1792.84,212.52  -> 1792.28,212.52  length 0.56
+n_9706 1827.00,212.52  -> 1827.56,212.52  length 0.56
+```
+
+All endpoints remain inside the reviewed source-instance boxes. Step 22 must
+revalidate the original six-marker checkpoint tuple and every local contract
+before editing. It remains in-memory only and stops after DRC, regular
+connectivity, PG connectivity, restored-antenna, and marker-database evidence.
+Canonical replay, save, export, immutable PVS staging, and PVS remain blocked.
+
+```text
+STEP22_LOCAL_TOP_PNR_TESTS=108_PASS_0_FAIL
+STEP22_PY_COMPILE=PASS
+STEP22_BASH_SYNTAX=PASS
+STEP22_TCL_STRUCTURE_CHECK=PASS
+STEP22_DIFF_CHECK=PASS
+```

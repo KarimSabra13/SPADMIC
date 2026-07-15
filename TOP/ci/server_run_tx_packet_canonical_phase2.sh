@@ -43,6 +43,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-second-pass-trial-r2 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-geometry-probe <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial-r2 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -2601,6 +2602,213 @@ min_area_landing_patch_trial() {
   return $?
 }
 
+min_area_landing_patch_trial_r2() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-landing-patch-trial-r2 requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 21_min_area_landing_patch_trial || return 1
+
+  local step21_status step21_driver step21_analysis source_block_root source_trial_root
+  local actual_head cd_rc cadence_rc trial_id trial_root trial_status console copy_dir
+  local trial_rc analysis_report analysis_rc driver_report status result path
+  local trial_process_status trial_process_result method_status next_decision patch_length_policy
+  step21_status="$TX2_SESSION_ROOT/status/21_min_area_landing_patch_trial.rpt"
+  step21_driver="$TX2_SESSION_ROOT/reports/21_min_area_landing_patch_trial_driver.rpt"
+  step21_analysis="$TX2_SESSION_ROOT/reports/21_min_area_landing_patch_analysis.rpt"
+  actual_head=UNKNOWN
+  cadence_rc=NOT_RUN
+  trial_rc=NOT_RUN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=MIN_AREA_LANDING_PATCH_R2_CLASSIFICATION_NOT_RUN
+
+  if [[ "$(kv_field "$step21_status" STATUS)" != "PASS" \
+      || "$(kv_field "$step21_status" RC)" != "0" \
+      || "$(kv_field "$step21_status" RESULT)" != "MIN_AREA_LANDING_PATCH_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS" \
+      || "$(kv_field "$step21_driver" TRIAL_RC)" != "8" \
+      || "$(kv_field "$step21_driver" ANALYSIS_RC)" != "0" \
+      || "$(kv_field "$step21_driver" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step21_driver" TRIAL_PROCESS_RESULT)" != "SIX_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED" \
+      || "$(kv_field "$step21_driver" METHOD_STATUS)" != "REJECTED_OR_INCOMPLETE" \
+      || "$(kv_field "$step21_driver" DESIGN_MODIFICATION)" != "IN_MEMORY_ONLY" \
+      || "$(kv_field "$step21_driver" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step21_driver" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step21_driver" CANONICAL_RERUN)" != "NOT_RUN" \
+      || "$(kv_field "$step21_driver" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step21_driver" PVS)" != "NOT_RUN" \
+      || "$(kv_field "$step21_analysis" LABEL)" != "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS" \
+      || "$(kv_field "$step21_analysis" POLICY)" != "ISOLATED_IN_MEMORY_SIX_NET_MET1_LANDING_PATCH_CLASSIFICATION" \
+      || "$(kv_field "$step21_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step21_analysis" RESULT)" != "MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED" \
+      || "$(kv_field "$step21_analysis" REPORT_DRIVER_HEAD)" != "$(kv_field "$step21_driver" REPORT_DRIVER_HEAD)" \
+      || "$(kv_field "$step21_analysis" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step21_analysis" TRIAL_PROCESS_RESULT)" != "SIX_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED" \
+      || "$(kv_field "$step21_analysis" METHOD_STATUS)" != "REJECTED_OR_INCOMPLETE" \
+      || "$(kv_field "$step21_analysis" PATCH_CONTRACT_STATUS)" != "PASS_EXACT_SIX_REVIEWED_EXTENSIONS" \
+      || "$(kv_field "$step21_analysis" PATCH_WIDTH_UM)" != "0.28" \
+      || "$(kv_field "$step21_analysis" PATCH_LENGTH_UM)" != "0.56" \
+      || "$(kv_field "$step21_analysis" PATCH_ATTEMPTED_COUNT)" != "6" \
+      || "$(kv_field "$step21_analysis" PATCH_APPLIED_COUNT)" != "6" \
+      || "$(kv_field "$step21_analysis" COMMAND_PASS_COUNT)" != "24" \
+      || "$(kv_field "$step21_analysis" COMMAND_FAIL_COUNT)" != "0" \
+      || "$(kv_field "$step21_analysis" PRE_DRC_VIOLATION_COUNT)" != "6" \
+      || "$(kv_field "$step21_analysis" FINAL_DRC_VIOLATION_COUNT)" != "4" \
+      || "$(kv_field "$step21_analysis" PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step21_analysis" FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step21_analysis" PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step21_analysis" FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step21_analysis" PRE_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step21_analysis" FINAL_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step21_analysis" PRE_MARKER_DATABASE_TOTAL)" != "27" \
+      || "$(kv_field "$step21_analysis" FINAL_MARKER_DATABASE_TOTAL)" != "25" \
+      || "$(kv_field "$step21_analysis" REMOVED_MARKER_SIGNATURE_COUNT)" != "6" \
+      || "$(kv_field "$step21_analysis" ADDED_MARKER_SIGNATURE_COUNT)" != "4" \
+      || "$(kv_field "$step21_analysis" FINAL_MIN_AREA_NETS)" != "n_9677 n_9693 n_9696 n_9697" \
+      || "$(kv_field "$step21_analysis" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step21_analysis" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step21_analysis" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step21_analysis" PVS_DECISION)" != "DO_NOT_RUN" \
+      || "$(kv_field "$step21_analysis" CANONICAL_RERUN_DECISION)" != "DO_NOT_RUN_FROM_THIS_STEP" \
+      || "$(kv_field "$step21_analysis" NEXT_METHOD_DECISION)" != "STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD" \
+      || "$(kv_field "$step21_analysis" ERROR_COUNT)" != "0" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 21 is not the reviewed four-survivor landing-patch tuple"
+    echo "STEP21_STATUS=$step21_status"
+    echo "STEP21_DRIVER=$step21_driver"
+    echo "STEP21_ANALYSIS=$step21_analysis"
+    return 1
+  fi
+
+  source_block_root="$(kv_field "$step21_driver" SOURCE_BLOCK_ROOT)"
+  source_trial_root="$(kv_field "$step21_driver" TRIAL_ROOT)"
+  if [[ -z "$source_block_root" || ! -d "$source_block_root" \
+      || -z "$source_trial_root" || ! -d "$source_trial_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 21 source roots are missing"
+    echo "SOURCE_BLOCK_ROOT=${source_block_root:-MISSING}"
+    echo "SOURCE_STEP21_TRIAL_ROOT=${source_trial_root:-MISSING}"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  trial_id="${TX2_SESSION_ID}_min_area_landing_patch_trial_r2"
+  trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
+  trial_status="$trial_root/reports/min_area_landing_patch_trial_status.rpt"
+  console="$TX2_SESSION_ROOT/logs/22_min_area_landing_patch_trial_r2.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/22_min_area_landing_patch_trial_r2"
+  analysis_report="$TX2_SESSION_ROOT/reports/22_min_area_landing_patch_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/22_min_area_landing_patch_trial_driver.rpt"
+  if [[ -e "$trial_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: immutable Step 22 trial root already exists"
+    echo "TRIAL_ROOT=$trial_root"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    load_cadence
+    cadence_rc=$?
+  fi
+  if [[ "$cadence_rc" == "0" ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    export SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R2
+    echo "COMMAND=SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R2 bash TOP/pnr/scripts/run_innovus_ooc_min_area_landing_patch_trial.sh $source_block_root $step21_analysis $trial_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_min_area_landing_patch_trial.sh" \
+      "$source_block_root" \
+      "$step21_analysis" \
+      "$trial_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    trial_rc=$?
+  fi
+
+  mkdir -p "$copy_dir"
+  if [[ -r "$trial_root/context.rpt" ]]; then
+    cp -p "$trial_root/context.rpt" "$copy_dir/context.rpt"
+  fi
+  if [[ -d "$trial_root/reports" ]]; then
+    for path in "$trial_root"/reports/*.rpt "$trial_root"/reports/*.tsv; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+
+  if [[ -r "$trial_status" ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_min_area_landing_patch_trial.py" \
+      --trial-root "$trial_root" \
+      --step21-analysis "$step21_analysis" \
+      --trial-revision R2 \
+      --report-driver-head "$actual_head" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ ( "$trial_rc" == "0" || "$trial_rc" == "8" ) \
+      && "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED" \
+      && "$(kv_field "$analysis_report" TRIAL_REVISION)" == "R2" ]]; then
+    status=PASS
+    result=MIN_AREA_LANDING_PATCH_R2_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS
+  else
+    result=MIN_AREA_LANDING_PATCH_R2_CLASSIFICATION_INCOMPLETE
+  fi
+  trial_process_status="$(kv_field "$analysis_report" TRIAL_PROCESS_STATUS)"
+  trial_process_result="$(kv_field "$analysis_report" TRIAL_PROCESS_RESULT)"
+  method_status="$(kv_field "$analysis_report" METHOD_STATUS)"
+  patch_length_policy="$(kv_field "$analysis_report" PATCH_LENGTH_POLICY)"
+  next_decision="$(kv_field "$analysis_report" NEXT_METHOD_DECISION)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP21_STATUS=$step21_status"
+    echo "SOURCE_STEP21_DRIVER=$step21_driver"
+    echo "SOURCE_STEP21_ANALYSIS=$step21_analysis"
+    echo "SOURCE_STEP21_TRIAL_ROOT=$source_trial_root"
+    echo "SOURCE_BLOCK_ROOT=$source_block_root"
+    echo "TRIAL_REVISION=R2"
+    echo "TRIAL_RC=$trial_rc"
+    echo "TRIAL_ROOT=$trial_root"
+    echo "TRIAL_STATUS=$trial_status"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "TRIAL_PROCESS_STATUS=${trial_process_status:-UNKNOWN}"
+    echo "TRIAL_PROCESS_RESULT=${trial_process_result:-UNKNOWN}"
+    echo "METHOD_STATUS=${method_status:-UNKNOWN}"
+    echo "PATCH_LENGTH_POLICY=${patch_length_policy:-UNKNOWN}"
+    echo "NEXT_METHOD_DECISION=${next_decision:-UNKNOWN}"
+    echo "DESIGN_MODIFICATION=IN_MEMORY_ONLY"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "CANONICAL_RERUN=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    tail -n 280 "$console"
+  fi
+  record_status 22_min_area_landing_patch_trial_r2 "$status" "$analysis_rc" "$result" "$trial_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -2713,6 +2921,9 @@ case "$COMMAND" in
     ;;
   min-area-landing-patch-trial)
     min_area_landing_patch_trial "$ARGUMENT_1"
+    ;;
+  min-area-landing-patch-trial-r2)
+    min_area_landing_patch_trial_r2 "$ARGUMENT_1"
     ;;
   package)
     package_evidence

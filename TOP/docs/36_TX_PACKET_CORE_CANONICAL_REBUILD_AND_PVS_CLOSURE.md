@@ -981,3 +981,50 @@ the edited design, stages immutable PVS inputs, launches a canonical rerun, or
 runs PVS. Even a validated trial requires separate review and integration
 into a fresh canonical replay together with the already reviewed stream-pin
 command correction.
+
+## P03 Step 21 Result And Step 22 Mixed-Length Trial
+
+Step 21 completed at report-driver head
+`9c2c4fb96e1844ac261e94306ca1c72530ea6935`. The trial was fully executable
+and internally coherent, but not physically closed:
+
+```text
+TRIAL_PROCESS_RESULT=SIX_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+METHOD_STATUS=REJECTED_OR_INCOMPLETE
+PATCH_ATTEMPTED/APPLIED=6/6
+COMMAND_PASS/FAIL=24/0
+DRC=6 -> 4
+REGULAR_CONNECTIVITY=0 -> 0
+SPECIAL_CONNECTIVITY=0 -> 0
+RESTORED_ANTENNA=21 -> 21
+MARKER_DATABASE_TOTAL=27 -> 25
+```
+
+The uniform `0.56 um` geometry closed `n_9706` and `n_9721`. It increased
+each remaining net from `0.1064 um^2` to `0.1777 um^2`; all four still need
+`0.0243 um^2`. Step 22 uses that measured response without persisting or
+incrementally editing the Step 21 database.
+
+The R2 trial root ends in `_min_area_landing_patch_trial_r2`. In one fresh
+Innovus process it restores the same `05_postroute_export.enc.dat`, reproduces
+the original six-marker baseline, and replays all six segments. Total length
+is `0.84 um` for `n_9677`, `n_9693`, `n_9696`, and `n_9697`; it stays
+`0.56 um` for `n_9706` and `n_9721`. The width remains `0.28 um`, and every
+new endpoint remains inside the source instance established by Step 20.
+
+The only physically validated R2 tuple is:
+
+```text
+FINAL_DRC_VIOLATION_COUNT=0
+FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21
+FINAL_MARKER_DATABASE_TOTAL=21
+METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY
+```
+
+The driver also accepts a coherent R2 rejection for evidence classification,
+but such a PASS does not authorize integration. Step 22 cannot save, export,
+stage immutable PVS inputs, launch the canonical replay, or run PVS. Any
+validated result still requires a separate integration gate that reconstructs
+the patch from a fresh canonical run and repeats all downstream checks.

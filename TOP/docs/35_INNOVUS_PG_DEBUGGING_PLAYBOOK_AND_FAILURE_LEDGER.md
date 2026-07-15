@@ -922,3 +922,46 @@ Rejected actions after Step 20:
   coordinates validated against the instance term and VIA1 endpoint.
 - Do not treat a Step 21 classification PASS as physical acceptance unless
   `METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY` is also present.
+
+## Step 21 Result - Connected Landing Patches Improve But Do Not Close All Nets
+
+Step 21 classified coherent evidence and rejected the uniform-length method
+as incomplete. All six exact geometry contracts passed, all six patches were
+applied, and all 24 Wire Editor commands returned PASS. Authoritative checks
+showed:
+
+```text
+DRC markers                 6 -> 4
+regular connectivity        0 -> 0
+PG connectivity             0 -> 0
+restored antenna entries   21 -> 21
+marker database total      27 -> 25
+```
+
+`n_9706` and `n_9721` closed. The other four original signatures were removed
+and replaced by new MET1 minimum-area signatures on the same nets. Each new
+actual area is `0.1777 um^2`, leaving only `0.0243 um^2` to the required
+`0.2020 um^2`. No unrelated DRC class or connectivity marker appeared.
+
+This is positive method evidence, but it is not a geometry to save. The next
+bounded experiment is a mixed-length replay from the original checkpoint:
+
+- Keep `0.56 um` on the two nets that already closed.
+- Use total length `0.84 um` on the four survivors.
+- Revalidate the same VIA1 center, MET2 endpoint, source `Q`, direction, and
+  instance containment before every edit.
+- Stop after independent DRC and connectivity checks; do not route-optimize.
+
+The extra `0.28 um` segment has nominal area `0.0784 um^2`, comfortably above
+the measured `0.0243 um^2` deficit, but overlap and rule interpretation remain
+tool-dependent. Therefore this arithmetic justifies only Step 22's isolated
+trial. It does not predict closure or authorize canonical integration.
+
+Rejected actions after Step 21:
+
+- Do not save or export the partially improved Step 21 database.
+- Do not extend `n_9706` or `n_9721` beyond the length that already closed.
+- Do not apply only four patches to the original checkpoint; the complete six
+  reviewed segments must be replayed because Step 21 state was not persisted.
+- Do not run a canonical replay or PVS until the mixed-length trial is
+  independently classified and explicitly reviewed.
