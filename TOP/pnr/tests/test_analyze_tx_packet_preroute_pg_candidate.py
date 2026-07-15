@@ -213,16 +213,19 @@ class AnalyzeTxPacketPreroutePgCandidateTest(unittest.TestCase):
             self.assertIn("PVS_DECISION=DO_NOT_RUN_FROM_THIS_STEP", report)
 
     def test_classifies_pg_closed_with_only_min_area_remaining(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            block_root = self.write_fixture(Path(tmp), final_drc="FAIL", min_area_count=7)
-            rc, report = self.run_analyzer(block_root)
-            self.assertEqual(rc, 0, report)
-            self.assertIn("CANDIDATE_PHYSICAL_STATUS=PG_CLOSED_MIN_AREA_REMAINS", report)
-            self.assertIn("FINAL_MET1_MIN_AREA_MARKER_COUNT=7", report)
-            self.assertIn(
-                "NEXT_METHOD_DECISION=STOP_PG_EXPERIMENTS_REPAIR_SEVEN_MET1_MIN_AREA_MARKERS",
-                report,
-            )
+        for marker_count in (6, 7):
+            with self.subTest(marker_count=marker_count), tempfile.TemporaryDirectory() as tmp:
+                block_root = self.write_fixture(
+                    Path(tmp), final_drc="FAIL", min_area_count=marker_count
+                )
+                rc, report = self.run_analyzer(block_root)
+                self.assertEqual(rc, 0, report)
+                self.assertIn("CANDIDATE_PHYSICAL_STATUS=PG_CLOSED_MIN_AREA_REMAINS", report)
+                self.assertIn(f"FINAL_MET1_MIN_AREA_MARKER_COUNT={marker_count}", report)
+                self.assertIn(
+                    f"NEXT_METHOD_DECISION=STOP_PG_EXPERIMENTS_REPAIR_{marker_count}_MET1_MIN_AREA_MARKERS",
+                    report,
+                )
 
     def test_classifies_pre_cts_connectivity_rejection_without_final_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

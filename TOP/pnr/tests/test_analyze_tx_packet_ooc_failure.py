@@ -21,7 +21,17 @@ SPEC.loader.exec_module(analyzer)
 
 
 class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
-    def make_block(self, root: Path) -> Path:
+    def make_block(
+        self,
+        root: Path,
+        *,
+        pg_problem_count: int = 3,
+        actual_offset: float = 0.280,
+        assign_offset: float | None = None,
+        pre_min_count: int = 2,
+        post_min_count: int = 1,
+        final_min_count: int = 1,
+    ) -> Path:
         block = root / "block"
         outputs = block / "outputs"
         reports = block / "reports"
@@ -30,9 +40,11 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
         reports.mkdir()
         generated.mkdir()
 
+        pg_status = "PASS" if pg_problem_count == 0 else "FAIL"
         (reports / "ooc_harden_status.rpt").write_text(
             "REGULAR_CONNECTIVITY_STATUS=PASS\n"
-            "PG_CONNECTIVITY_STATUS=FAIL\n"
+            f"PG_CONNECTIVITY_STATUS={pg_status}\n"
+            "INNOVUS_DRC_STATUS=FAIL\n"
             "SROUTE_PG=PASS\n"
             "POSTROUTE_MIN_AREA_REPAIR=REVIEW_REQUIRED\n"
         )
@@ -41,27 +53,33 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
             "ANTENNA_MILESTONE_STATUS=DEFERRED_FINAL_HANDOFF_BLOCKED\n"
         )
         (reports / "SROUTE_PG.rpt").write_text("STATUS=PASS\nCOMMAND=sroute -connect corePin\n")
+        pg_detail = ""
+        if pg_problem_count:
+            pg_detail = (
+                "Net VDD: has special routes with opens.\n"
+                "Begin Summary\n"
+                f"    {pg_problem_count} Problem(s): Special Wires are not connected together.\n"
+                "End Summary\n"
+            )
         (reports / "verify_connectivity_pg.rpt").write_text(
-            "Net VDD: has special routes with opens.\n"
-            "Begin Summary\n"
-            "    3 Problem(s): Special Wires are not connected together.\n"
-            "End Summary\n"
-            "Verification Complete : 3 Viols. 0 Wrngs.\n"
+            pg_detail
+            + f"Verification Complete : {pg_problem_count} Viols. 0 Wrngs.\n"
         )
+        pre_nets = " ".join(f"n_{index}" for index in range(1, pre_min_count + 1))
         (reports / "POSTROUTE_MIN_AREA_REPAIR.rpt").write_text(
-            "PRE_MARKER_COUNT=31\n"
-            "MIN_AREA_MARKER_COUNT=2\n"
-            "MIN_AREA_NET_COUNT=2\n"
-            "MIN_AREA_NETS=n_1 n_2\n"
+            f"PRE_MARKER_COUNT={pre_min_count + 1}\n"
+            f"MIN_AREA_MARKER_COUNT={pre_min_count}\n"
+            f"MIN_AREA_NET_COUNT={pre_min_count}\n"
+            f"MIN_AREA_NETS={pre_nets}\n"
             "SELECTED_NET_MODE_STATUS=PASS\n"
-            "SELECTED_NET_COUNT=2\n"
-            "SELECTED_NETS=n_1 n_2\n"
-            "AREA_DELETE_COUNT=2\n"
+            f"SELECTED_NET_COUNT={pre_min_count}\n"
+            f"SELECTED_NETS={pre_nets}\n"
+            f"AREA_DELETE_COUNT={pre_min_count}\n"
             "AREA_DELETE_FAILURES=\n"
             "DRC_WIRE_DELETE_FAILURES=\n"
             "ROUTE_COMMANDS={globalDetailRoute -select}\n"
             "ROUTE_FAILURES=\n"
-            "POST_MARKER_COUNT=30\n"
+            f"POST_MARKER_COUNT={post_min_count + 1}\n"
             "POST_DRC_STATUS=FAIL\n"
             "STATUS=REVIEW_REQUIRED\n"
         )
@@ -81,15 +99,32 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
             "subType",
             "message",
         ]
-        min_rows = [
-            ["1", "m1", "{1 2 3 4}", "1", "2", "3", "4", "2", "3", "MET1", "Geometry", "Minimal_Area", "Regular Wire of Net n_1"],
-            ["2", "m2", "{5 6 7 8}", "5", "6", "7", "8", "6", "7", "MET1", "Geometry", "Minimal_Area", "Regular Wire of Net n_2"],
-        ]
-        antenna = ["3", "m3", "{9 10 11 12}", "9", "10", "11", "12", "10", "11", "MET1", "Antenna", "Antenna", "Net src_data_i_s0_b0"]
+        min_rows = []
+        for index in range(1, max(pre_min_count, post_min_count, final_min_count) + 1):
+            ll = index * 4 - 3
+            min_rows.append(
+                [
+                    str(index),
+                    f"m{index}",
+                    f"{{{ll} {ll + 1} {ll + 2} {ll + 3}}}",
+                    str(ll),
+                    str(ll + 1),
+                    str(ll + 2),
+                    str(ll + 3),
+                    str(ll + 1),
+                    str(ll + 2),
+                    "MET1",
+                    "Geometry",
+                    "Minimal_Area",
+                    f"Regular Wire of Net n_{index}",
+                ]
+            )
+        antenna_index = len(min_rows) + 1
+        antenna = [str(antenna_index), f"m{antenna_index}", "{99 100 101 102}", "99", "100", "101", "102", "100", "101", "MET1", "Antenna", "Antenna", "Net src_data_i_s0_b0"]
         for name, rows in (
-            ("postroute_min_area_repair_pre_markers.tsv", min_rows + [antenna]),
-            ("postroute_min_area_repair_post_markers.tsv", [min_rows[0], antenna]),
-            ("verify_drc_post_route_markers.tsv", [min_rows[0], antenna]),
+            ("postroute_min_area_repair_pre_markers.tsv", min_rows[:pre_min_count] + [antenna]),
+            ("postroute_min_area_repair_post_markers.tsv", min_rows[:post_min_count] + [antenna]),
+            ("verify_drc_post_route_markers.tsv", min_rows[:final_min_count] + [antenna]),
         ):
             with (reports / name).open("w", newline="") as handle:
                 writer = csv.writer(handle, delimiter="\t")
@@ -102,7 +137,8 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
             for order, row in enumerate(csv.DictReader(handle)):
                 pin = row["packet_pin"]
                 expected = float(row["packet_local_x_um"])
-                actual = expected + 0.280
+                actual = expected + actual_offset
+                assign = expected + assign_offset if assign_offset is not None else None
                 lef.extend(
                     [
                         f"  PIN {pin}",
@@ -116,7 +152,20 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
                     ]
                 )
                 plan_rows.append(
-                    [pin, "NORTH", "MET3", str(order), "paired", f"{expected:.3f}", "366.400", "", "", "", ""]
+                    [
+                        pin,
+                        "NORTH",
+                        "MET3",
+                        str(order),
+                        "paired",
+                        f"{expected:.3f}",
+                        f"{assign:.3f}" if assign is not None else "",
+                        "366.400",
+                        "",
+                        "",
+                        "",
+                        "",
+                    ]
                 )
         lef.append("END spadmic_tx_packet_core")
         (outputs / "tx_packet_core.abstract.lef").write_text("\n".join(lef) + "\n")
@@ -131,6 +180,7 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
                     "order",
                     "reason",
                     "target_x_um",
+                    "assign_x_um",
                     "target_y_um",
                     "source_inst",
                     "source_term",
@@ -183,6 +233,43 @@ class AnalyzeTxPacketOocFailureTest(unittest.TestCase):
                 (block / "outputs" / "tx_packet_core.abstract.lef").read_bytes()
             ).hexdigest()
             self.assertEqual(after, before)
+
+    def test_classifies_closed_pg_and_generated_negative_pin_compensation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            block = self.make_block(
+                root,
+                pg_problem_count=0,
+                actual_offset=-0.280,
+                assign_offset=-0.280,
+                pre_min_count=6,
+                post_min_count=6,
+                final_min_count=6,
+            )
+
+            values = analyzer.diagnose(block, root / "diagnosis.rpt")
+
+            self.assertEqual(values["STATUS"], "PASS")
+            self.assertEqual(
+                values["PHYSICAL_CANDIDATE_STATUS"],
+                "PG_AND_REGULAR_CLOSED_FINAL_REPAIR_REQUIRED",
+            )
+            self.assertEqual(values["FINAL_DRC_STATUS"], "FAIL")
+            self.assertEqual(values["PG_DIAGNOSIS"], "TOPOLOGY_CLOSED")
+            self.assertEqual(values["PG_PROBLEM_COUNT"], "0")
+            self.assertEqual(values["MIN_AREA_REPAIR_EFFECT"], "UNCHANGED_AT_6")
+            self.assertEqual(values["MIN_AREA_FINAL_MARKER_COUNT"], "6")
+            self.assertEqual(values["STREAM_PIN_TARGET_STATUS"], "CANONICAL_TARGETS_PRESERVED")
+            self.assertEqual(values["STREAM_PIN_UNIQUE_ASSIGN_MINUS_TARGET_UM"], "-0.280000")
+            self.assertEqual(values["STREAM_PIN_UNIQUE_ACTUAL_MINUS_ASSIGN_UM"], "0.000000")
+            self.assertEqual(
+                values["STREAM_PIN_ASSIGNMENT_STATUS"],
+                "ACTUAL_MATCHES_GENERATED_ASSIGN_X",
+            )
+            self.assertEqual(
+                values["STREAM_PIN_COMMAND_MAPPING_DECISION"],
+                "REMOVE_NEGATIVE_COMPENSATION_KEEP_CANONICAL_CENTERS",
+            )
 
     def test_missing_required_artifacts_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

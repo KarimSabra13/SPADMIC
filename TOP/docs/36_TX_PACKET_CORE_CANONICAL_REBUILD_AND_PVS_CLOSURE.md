@@ -776,3 +776,40 @@ PASS means the candidate outcome was classified coherently, not that physical
 closure or signoff was achieved. Run-local exports remain evidence only;
 immutable PVS staging and PVS execution remain `NOT_RUN` until a separate
 operator review authorizes them.
+
+## P03 Step 16 Result And Step 17 Final-Closure Analysis
+
+Step 16 completed at report-driver head
+`0a768d9d381cc771ffece6f6b4c3195e48af38be`. The candidate passed final
+regular connectivity, final PG connectivity, setup timing, hold timing, and
+the GDS file/map/merge audit. Final DRC contains only six MET1 minimum-area
+markers; no PG-connectivity or other marker class remains. The earlier
+post-CTS VIA1 capture was therefore incomplete pre-route geometry that normal
+routing replaced.
+
+The remaining gates are deliberately separate:
+
+```text
+FINAL_DRC_STATUS=FAIL
+FINAL_MET1_MIN_AREA_MARKER_COUNT=6
+FINAL_ANTENNA_MARKER_COUNT=177
+STREAM_PIN_COUNT=19
+STREAM_PIN_UNIQUE_DELTA_UM=-0.280000
+PVS_DECISION=DO_NOT_RUN
+```
+
+Step 17, `final-closure-analyze`, is a read-only text-artifact gate over the
+Step 16 block root. It requires the complete reviewed Step 16 tuple, checks
+the current report-driver HEAD, and emits the final marker table and repair
+ledger. For the pin mapping it independently verifies:
+
+1. planned targets still equal the canonical contract;
+2. generated assignments are uniformly `-0.280 um` from those targets;
+3. emitted LEF centers equal the generated assignments.
+
+Only that three-way proof can authorize removing the negative assignment
+compensation while preserving the contract. Step 17 does not edit the
+generator, modify design data, launch Innovus, save or export a design, stage
+immutable PVS inputs, or run PVS. The next physical candidate must combine an
+evidence-backed six-net minimum-area method with the reviewed pin-command
+correction; it is not authorized automatically by a Step 17 PASS.

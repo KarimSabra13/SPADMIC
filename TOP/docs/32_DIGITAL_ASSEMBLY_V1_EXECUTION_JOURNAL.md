@@ -1463,3 +1463,48 @@ STEP16_PY_COMPILE=PASS
 STEP16_BASH_SYNTAX=PASS
 STEP16_DIFF_CHECK=PASS
 ```
+
+### P03-R17 Server Evidence - Step 16 Final Route Narrows Closure
+
+Status: `PASS_CLASSIFIED_PHYSICAL_REPAIR_REQUIRED_PVS_BLOCKED`
+
+Step 16 completed at report-driver head
+`0a768d9d381cc771ffece6f6b4c3195e48af38be`. The fresh no-restitch candidate
+passed the exact pre-CTS policy with 156 `IMPVFC-94` dangling observations,
+zero other pre-CTS connectivity classes, and zero pre-CTS DRC. Ordinary
+signal routing then completed without a second PG `sroute`.
+
+The authoritative final gates are:
+
+```text
+regular connectivity:      PASS, 0 violations
+PG connectivity:           PASS, 0 violations
+post-route DRC:             FAIL, 6 MET1 minimum-area markers
+other DRC marker classes:  0
+antenna milestone:          177, deferred final-handoff blocker
+setup WNS/TNS:             +0.131 ns / 0.000 ns
+hold WNS/TNS:              +0.206 ns / 0.000 ns
+GDS file/map/merge audit:  PASS/PASS/PASS
+```
+
+This proves that the capped pre-route VIA1 enclosure population was not an
+authoritative final DRC class. It also closes the PG investigation: no further
+PG-via coordinate, stack, or restitch experiment is justified by this run.
+The six remaining minimum-area nets are `n_9706`, `n_9677`, `n_9721`,
+`n_9697`, `n_9693`, and `n_9696`.
+
+The canonical gate also found all 19 stream pins uniformly `-0.280 um` from
+their contract centers. The checked-in plan generator records a separate
+canonical target and generated `editPin` assignment, so Step 17 reuses the
+existing failure analyzer to compare target, assignment, emitted LEF center,
+and final marker/repair ledgers. It runs no Innovus process and performs no
+design modification, save, export, immutable staging, or PVS. Another
+candidate remains unauthorized until this read-only report proves the exact
+pin-command mapping and captures the six-marker repair evidence.
+
+```text
+STEP17_LOCAL_TOP_PNR_TESTS=91_PASS_0_FAIL
+STEP17_PY_COMPILE=PASS
+STEP17_BASH_SYNTAX=PASS
+STEP17_DIFF_CHECK=PASS
+```

@@ -127,7 +127,18 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
     post_markers_path = reports / "postroute_min_area_repair_post_markers.tsv"
     final_markers_path = reports / "verify_drc_post_route_markers.tsv"
 
-    required = [status_path, gate_path, lef_path, pin_plan_path, pg_path, repair_path]
+    required = [
+        status_path,
+        gate_path,
+        lef_path,
+        pin_plan_path,
+        config_path,
+        pg_path,
+        repair_path,
+        pre_markers_path,
+        post_markers_path,
+        final_markers_path,
+    ]
     missing = [str(path) for path in required if not path.is_file()]
     status = key_values(status_path)
     gate = key_values(gate_path)
@@ -190,6 +201,25 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
         if isinstance(row["delta_x"], float) and row["delta_x"] == row["delta_x"]
     ]
     unique_deltas = sorted(set(finite_deltas))
+
+    def unique_difference(lhs_key: str, rhs_key: str) -> tuple[list[float], int]:
+        differences: list[float] = []
+        for row in stream_rows:
+            lhs = float(row[lhs_key])
+            rhs = float(row[rhs_key])
+            if lhs == lhs and rhs == rhs:
+                differences.append(round(lhs - rhs, 6))
+        return sorted(set(differences)), len(differences)
+
+    unique_target_contract_deltas, target_contract_count = unique_difference(
+        "planned_x", "expected_x"
+    )
+    unique_assign_target_deltas, assign_target_count = unique_difference(
+        "assign_x", "planned_x"
+    )
+    unique_actual_assign_deltas, actual_assign_count = unique_difference(
+        "actual_x", "assign_x"
+    )
     grid = grid_um(config_path)
     uniform_delta = unique_deltas[0] if len(unique_deltas) == 1 else None
     half_grid_match = (
@@ -209,6 +239,49 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
 
     pg_lines = pg_evidence_lines(pg_path)
     pg_problem_count = parse_pg_problem_count(pg_lines)
+    regular_status = status.get("REGULAR_CONNECTIVITY_STATUS", "MISSING")
+    pg_connectivity_status = status.get("PG_CONNECTIVITY_STATUS", "MISSING")
+    final_drc_status = status.get("INNOVUS_DRC_STATUS", "MISSING")
+    pg_closed = pg_connectivity_status == "PASS" and pg_problem_count == 0
+    target_status = (
+        "CANONICAL_TARGETS_PRESERVED"
+        if target_contract_count == len(contract_rows)
+        and unique_target_contract_deltas == [0.0]
+        else "TARGETS_MISSING_OR_DIFFER_FROM_CONTRACT"
+    )
+    assignment_status = (
+        "ACTUAL_MATCHES_GENERATED_ASSIGN_X"
+        if actual_assign_count == len(contract_rows)
+        and unique_actual_assign_deltas == [0.0]
+        else (
+            "GENERATED_ASSIGN_X_MISSING_OR_INCOMPLETE"
+            if actual_assign_count != len(contract_rows)
+            else "ACTUAL_DIFFERS_FROM_GENERATED_ASSIGN_X"
+        )
+    )
+    remove_negative_compensation = (
+        target_status == "CANONICAL_TARGETS_PRESERVED"
+        and assignment_status == "ACTUAL_MATCHES_GENERATED_ASSIGN_X"
+        and assign_target_count == len(contract_rows)
+        and unique_assign_target_deltas == [-0.28]
+        and unique_deltas == [-0.28]
+    )
+    if regular_status == "PASS" and pg_closed and final_drc_status == "FAIL" and final_min:
+        physical_status = "PG_AND_REGULAR_CLOSED_FINAL_REPAIR_REQUIRED"
+        reroute_decision = "DO_NOT_RERUN_UNTIL_MIN_AREA_AND_PIN_MAPPING_REPAIRS_ARE_REVIEWED"
+    else:
+        physical_status = "FAIL"
+        reroute_decision = "DO_NOT_RERUN_UNTIL_PG_PROBE_AND_REPAIR_EVIDENCE_REVIEWED"
+    if len(post_min) < len(pre_min):
+        min_area_effect = f"REDUCED_{len(pre_min)}_TO_{len(post_min)}"
+    elif len(post_min) == len(pre_min):
+        min_area_effect = f"UNCHANGED_AT_{len(post_min)}"
+    else:
+        min_area_effect = f"INCREASED_{len(pre_min)}_TO_{len(post_min)}"
+
+    def format_differences(values: list[float]) -> str:
+        return ",".join(f"{value:.6f}" for value in values) if values else "UNKNOWN"
+
     evidence_paths = [
         status_path,
         gate_path,
@@ -223,7 +296,12 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
         final_markers_path,
     ]
 
-    captured = not missing and not parse_error and len(stream_rows) == len(contract_rows)
+    captured = (
+        not missing
+        and not parse_error
+        and len(stream_rows) == len(contract_rows)
+        and len(finite_deltas) == len(contract_rows)
+    )
     values = {
         "LABEL": "SPADMIC_TX_PACKET_OOC_FAILURE_DIAGNOSIS",
         "POLICY": "READ_ONLY_EXISTING_ARTIFACTS_NO_DESIGN_MODIFICATION",
@@ -231,15 +309,17 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
         "DIAGNOSIS_STATUS": "PASS" if captured else "FAIL",
         "RESULT": "BLOCKERS_CLASSIFIED" if captured else "DIAGNOSTIC_INCOMPLETE",
         "BLOCK_ROOT": str(block_root),
-        "PHYSICAL_CANDIDATE_STATUS": "FAIL",
+        "PHYSICAL_CANDIDATE_STATUS": physical_status,
         "PVS_DECISION": "DO_NOT_RUN",
-        "REROUTE_DECISION": "DO_NOT_RERUN_UNTIL_PG_PROBE_AND_REPAIR_EVIDENCE_REVIEWED",
-        "REGULAR_CONNECTIVITY_STATUS": status.get("REGULAR_CONNECTIVITY_STATUS", "MISSING"),
+        "REROUTE_DECISION": reroute_decision,
+        "FINAL_DRC_STATUS": final_drc_status,
+        "REGULAR_CONNECTIVITY_STATUS": regular_status,
         "PG_COMMAND_STATUS": sroute.get("STATUS", status.get("SROUTE_PG", "MISSING")),
-        "PG_CONNECTIVITY_STATUS": status.get("PG_CONNECTIVITY_STATUS", "MISSING"),
+        "PG_CONNECTIVITY_STATUS": pg_connectivity_status,
         "PG_PROBLEM_COUNT": str(pg_problem_count) if pg_problem_count is not None else "UNKNOWN",
-        "PG_DIAGNOSIS": "COMMAND_EXECUTED_TOPOLOGY_NOT_CLOSED",
+        "PG_DIAGNOSIS": "TOPOLOGY_CLOSED" if pg_closed else "COMMAND_EXECUTED_TOPOLOGY_NOT_CLOSED",
         "MIN_AREA_REPAIR_STATUS": status.get("POSTROUTE_MIN_AREA_REPAIR", repair.get("STATUS", "MISSING")),
+        "MIN_AREA_REPAIR_EFFECT": min_area_effect,
         "MIN_AREA_PRE_MARKER_COUNT": str(len(pre_min)),
         "MIN_AREA_POST_MARKER_COUNT": str(len(post_min)),
         "MIN_AREA_FINAL_MARKER_COUNT": str(len(final_min)),
@@ -252,6 +332,17 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
             ",".join(f"{delta:.6f}" for delta in unique_deltas) if unique_deltas else "UNKNOWN"
         ),
         "STREAM_PIN_DELTA_STATUS": "UNIFORM" if len(unique_deltas) == 1 else "NONUNIFORM",
+        "STREAM_PIN_TARGET_STATUS": target_status,
+        "STREAM_PIN_UNIQUE_TARGET_MINUS_CONTRACT_UM": format_differences(
+            unique_target_contract_deltas
+        ),
+        "STREAM_PIN_UNIQUE_ASSIGN_MINUS_TARGET_UM": format_differences(
+            unique_assign_target_deltas
+        ),
+        "STREAM_PIN_UNIQUE_ACTUAL_MINUS_ASSIGN_UM": format_differences(
+            unique_actual_assign_deltas
+        ),
+        "STREAM_PIN_ASSIGNMENT_STATUS": assignment_status,
         "PG_GRID_UM": f"{grid:.6f}" if grid is not None else "UNKNOWN",
         "STREAM_PIN_GRID_RELATION": (
             "CONSISTENT_WITH_HALF_GRID_ASSIGNMENT_REFERENCE_SHIFT"
@@ -259,6 +350,11 @@ def diagnose(block_root: Path, report: Path) -> dict[str, str]:
             else "NOT_ESTABLISHED"
         ),
         "STREAM_PIN_CONTRACT_DECISION": "KEEP_CANONICAL_CENTERS_FIX_COMMAND_MAPPING",
+        "STREAM_PIN_COMMAND_MAPPING_DECISION": (
+            "REMOVE_NEGATIVE_COMPENSATION_KEEP_CANONICAL_CENTERS"
+            if remove_negative_compensation
+            else "REVIEW_GENERATED_ASSIGNMENT_EVIDENCE"
+        ),
         "MISSING_REQUIRED_ARTIFACTS": ";".join(missing) if missing else "NONE",
         "LEF_PARSE_ERROR": parse_error or "NONE",
     }

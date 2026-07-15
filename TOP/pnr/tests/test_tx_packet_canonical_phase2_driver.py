@@ -38,6 +38,8 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "preroute-pg-postfiller-rerun",
             "postfiller-stage-probe",
             "postcts-via1-analyze",
+            "preroute-pg-no-restitch-rerun",
+            "final-closure-analyze",
             "package",
             "status",
         ):
@@ -181,6 +183,13 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("PRE_ROUTE_DRC_GATE=NOT_RUN_INCOMPLETE_SIGNAL_GEOMETRY", driver)
         self.assertIn("ORDINARY_SIGNAL_ROUTE=RUN_CANONICAL_ROUTE_DESIGN", driver)
         self.assertIn("PREROUTE_PG_NO_RESTITCH_CANDIDATE_CLASSIFIED_NO_AUTOMATIC_PVS_STAGING_OR_PVS", driver)
+        self.assertIn("require_step_pass 16_preroute_pg_no_restitch_rerun", driver)
+        self.assertIn("final-closure-analyze <expected-report-driver-head>", driver)
+        self.assertIn("17_final_closure_analysis.rpt", driver)
+        self.assertIn("analyze_tx_packet_ooc_failure.py", driver)
+        self.assertIn("FINAL_CLOSURE_BLOCKERS_CLASSIFIED_NO_DESIGN_MODIFICATION", driver)
+        self.assertIn("REMOVE_NEGATIVE_COMPENSATION_KEEP_CANONICAL_CENTERS", driver)
+        self.assertIn("READ_ONLY_TEXT_ARTIFACTS_NO_INNOVUS", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)

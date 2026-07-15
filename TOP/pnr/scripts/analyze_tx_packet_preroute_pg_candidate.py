@@ -300,7 +300,8 @@ def main() -> int:
     elif ooc.get("REGULAR_CONNECTIVITY_STATUS") != "PASS":
         physical_status = "REJECTED_FINAL_REGULAR_CONNECTIVITY"
     elif ooc.get("INNOVUS_DRC_STATUS") == "FAIL" and (
-        met1_min_area == 7
+        met1_min_area is not None
+        and met1_min_area > 0
         and other_count == 0
         and expected_pg_markers == 0
     ):
@@ -324,7 +325,9 @@ def main() -> int:
     if physical_status == "READY_FOR_PVS_PREFLIGHT":
         next_decision = "REVIEW_THEN_RUN_SEPARATE_PVS_PREFLIGHT_GATE"
     elif physical_status == "PG_CLOSED_MIN_AREA_REMAINS":
-        next_decision = "STOP_PG_EXPERIMENTS_REPAIR_SEVEN_MET1_MIN_AREA_MARKERS"
+        next_decision = (
+            f"STOP_PG_EXPERIMENTS_REPAIR_{met1_min_area}_MET1_MIN_AREA_MARKERS"
+        )
     else:
         next_decision = "STOP_AND_REVIEW_CANDIDATE_CLASSIFICATION"
 

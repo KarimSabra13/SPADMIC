@@ -741,3 +741,35 @@ only the invalid continuation policy:
 
 A coherent Step 16 rejection is still useful evidence. It does not weaken any
 final gate or authorize another repair method automatically.
+
+## Step 16 Failure Ledger - PG Closed, Final Repair Scope Is Local
+
+The no-restitch candidate reached authoritative post-route verification. Both
+regular and PG connectivity are zero-violation PASS results, timing is clean,
+and the mapped/merged GDS audit passes. The PG method is therefore accepted
+for this candidate. Do not run another helper-X scan, direct-stack variant,
+patch-stack trial, or post-filler restitch.
+
+Final `verify_drc` reports six MET1 minimum-area markers and no other
+non-antenna marker class. The affected nets are:
+
+```text
+n_9706 n_9677 n_9721 n_9697 n_9693 n_9696
+```
+
+The 177 antenna markers remain a separately labelled deferred final-handoff
+blocker. They must not be merged into the minimum-area repair decision or
+silently accepted as signoff-clean.
+
+The stream-pin failure is also separate. Every one of the 19 emitted centers
+is exactly `0.280 um` west of its canonical target. The generator currently
+stores `assign_x_um = target_x_um - 0.280`; Step 17 must prove from the actual
+run artifacts whether the LEF centers equal those generated assignments. If
+they do, remove the compensation while keeping the canonical contract centers
+unchanged. Do not alter the placement-contract CSV to match the failed
+candidate.
+
+Step 17 is text-only and must report the complete final six-marker table,
+pre/post/final minimum-area counts, repair command ledger, target-to-assignment
+delta, and assignment-to-LEF delta. PVS and another physical candidate remain
+blocked until that evidence is reviewed.

@@ -39,6 +39,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh postfiller-stage-probe <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh postcts-via1-analyze <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-no-restitch-rerun <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh final-closure-analyze <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -1894,6 +1895,138 @@ preroute_pg_no_restitch_rerun() {
   return $?
 }
 
+final_closure_analyze() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: final-closure-analyze requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 16_preroute_pg_no_restitch_rerun || return 1
+
+  local step16_status step16_driver step16_analysis candidate_block_root
+  local actual_head cd_rc analysis_report driver_report analysis_rc
+  local status result physical_status min_area_effect pin_mapping_decision
+  step16_status="$TX2_SESSION_ROOT/status/16_preroute_pg_no_restitch_rerun.rpt"
+  step16_driver="$TX2_SESSION_ROOT/reports/16_preroute_pg_no_restitch_rerun_driver.rpt"
+  step16_analysis="$TX2_SESSION_ROOT/reports/16_preroute_pg_no_restitch_candidate_analysis.rpt"
+  analysis_report="$TX2_SESSION_ROOT/reports/17_final_closure_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/17_final_closure_analyze_driver.rpt"
+  actual_head=UNKNOWN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=FINAL_CLOSURE_CLASSIFICATION_NOT_RUN
+
+  if [[ "$(kv_field "$step16_status" RESULT)" != "PREROUTE_PG_NO_RESTITCH_CANDIDATE_CLASSIFIED_NO_AUTOMATIC_PVS_STAGING_OR_PVS" \
+      || "$(kv_field "$step16_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step16_analysis" RESULT)" != "PREROUTE_PG_CANDIDATE_CLASSIFIED" \
+      || "$(kv_field "$step16_analysis" PRE_CTS_EXPECTED_DANGLING_POLICY)" != "ENABLED_EXACT_156" \
+      || "$(kv_field "$step16_analysis" PRE_CTS_IMPVFC_94_DANGLING_COUNT)" != "156" \
+      || "$(kv_field "$step16_analysis" PRE_CTS_OTHER_PROBLEM_COUNT)" != "0" \
+      || "$(kv_field "$step16_analysis" PRE_CTS_DRC_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step16_analysis" POST_FILLER_RESTITCH_ENABLED)" != "NO" \
+      || "$(kv_field "$step16_analysis" FINAL_PG_CONNECTIVITY_STATUS)" != "PASS" \
+      || "$(kv_field "$step16_analysis" FINAL_REGULAR_CONNECTIVITY_STATUS)" != "PASS" \
+      || "$(kv_field "$step16_analysis" FINAL_DRC_STATUS)" != "FAIL" \
+      || "$(kv_field "$step16_analysis" FINAL_MET1_MIN_AREA_MARKER_COUNT)" != "6" \
+      || "$(kv_field "$step16_analysis" FINAL_ANTENNA_MARKER_COUNT)" != "177" \
+      || "$(kv_field "$step16_analysis" FINAL_OTHER_MARKER_COUNT)" != "0" \
+      || "$(kv_field "$step16_analysis" SETUP_WNS_NS)" != "0.131" \
+      || "$(kv_field "$step16_analysis" HOLD_WNS_NS)" != "0.206" \
+      || "$(kv_field "$step16_analysis" PVS_DECISION)" != "DO_NOT_RUN_FROM_THIS_STEP" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 16 is not the reviewed routed closure tuple"
+    echo "STEP16_ANALYSIS=$step16_analysis"
+    return 1
+  fi
+
+  candidate_block_root="$(kv_field "$step16_driver" CANDIDATE_BLOCK_ROOT)"
+  if [[ -z "$candidate_block_root" || ! -d "$candidate_block_root" \
+      || "$candidate_block_root" != "$(kv_field "$step16_analysis" BLOCK_ROOT)" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 16 candidate block root is missing or inconsistent"
+    echo "CANDIDATE_BLOCK_ROOT=${candidate_block_root:-MISSING}"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_ooc_failure.py" \
+      --block-root "$candidate_block_root" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" DIAGNOSIS_STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "BLOCKERS_CLASSIFIED" \
+      && "$(kv_field "$analysis_report" PHYSICAL_CANDIDATE_STATUS)" == "PG_AND_REGULAR_CLOSED_FINAL_REPAIR_REQUIRED" \
+      && "$(kv_field "$analysis_report" FINAL_DRC_STATUS)" == "FAIL" \
+      && "$(kv_field "$analysis_report" REGULAR_CONNECTIVITY_STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" PG_CONNECTIVITY_STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" PG_PROBLEM_COUNT)" == "0" \
+      && "$(kv_field "$analysis_report" PG_DIAGNOSIS)" == "TOPOLOGY_CLOSED" \
+      && "$(kv_field "$analysis_report" MIN_AREA_FINAL_MARKER_COUNT)" == "6" \
+      && "$(kv_field "$analysis_report" ANTENNA_FINAL_MARKER_COUNT)" == "177" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_COUNT)" == "19" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_EXPECTED_COUNT)" == "19" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_UNIQUE_DELTA_UM)" == "-0.280000" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_DELTA_STATUS)" == "UNIFORM" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_TARGET_STATUS)" == "CANONICAL_TARGETS_PRESERVED" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_UNIQUE_ASSIGN_MINUS_TARGET_UM)" == "-0.280000" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_UNIQUE_ACTUAL_MINUS_ASSIGN_UM)" == "0.000000" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_ASSIGNMENT_STATUS)" == "ACTUAL_MATCHES_GENERATED_ASSIGN_X" \
+      && "$(kv_field "$analysis_report" STREAM_PIN_COMMAND_MAPPING_DECISION)" == "REMOVE_NEGATIVE_COMPENSATION_KEEP_CANONICAL_CENTERS" \
+      && "$(kv_field "$analysis_report" PVS_DECISION)" == "DO_NOT_RUN" ]]; then
+    status=PASS
+    result=FINAL_CLOSURE_BLOCKERS_CLASSIFIED_NO_DESIGN_MODIFICATION
+  else
+    result=FINAL_CLOSURE_CLASSIFICATION_INCOMPLETE
+  fi
+  physical_status="$(kv_field "$analysis_report" PHYSICAL_CANDIDATE_STATUS)"
+  min_area_effect="$(kv_field "$analysis_report" MIN_AREA_REPAIR_EFFECT)"
+  pin_mapping_decision="$(kv_field "$analysis_report" STREAM_PIN_COMMAND_MAPPING_DECISION)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP16_STATUS=$step16_status"
+    echo "SOURCE_STEP16_DRIVER=$step16_driver"
+    echo "SOURCE_STEP16_ANALYSIS=$step16_analysis"
+    echo "CANDIDATE_BLOCK_ROOT=$candidate_block_root"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "ANALYSIS_MODE=READ_ONLY_TEXT_ARTIFACTS_NO_INNOVUS"
+    echo "PHYSICAL_CANDIDATE_STATUS=${physical_status:-UNKNOWN}"
+    echo "MIN_AREA_REPAIR_EFFECT=${min_area_effect:-UNKNOWN}"
+    echo "PIN_MAPPING_DECISION=${pin_mapping_decision:-UNKNOWN}"
+    echo "NEXT_METHOD_DECISION=REVIEW_SIX_MET1_MARKERS_AND_REMOVE_PIN_ASSIGNMENT_COMPENSATION"
+    echo "DESIGN_MODIFICATION=NOT_RUN"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  fi
+  record_status 17_final_closure_analyze "$status" "$analysis_rc" "$result" "$candidate_block_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -1991,6 +2124,9 @@ case "$COMMAND" in
     ;;
   preroute-pg-no-restitch-rerun)
     preroute_pg_no_restitch_rerun "$ARGUMENT_1"
+    ;;
+  final-closure-analyze)
+    final_closure_analyze "$ARGUMENT_1"
     ;;
   package)
     package_evidence
