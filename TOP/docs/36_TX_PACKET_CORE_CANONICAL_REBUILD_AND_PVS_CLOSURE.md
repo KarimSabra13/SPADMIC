@@ -1028,3 +1028,50 @@ but such a PASS does not authorize integration. Step 22 cannot save, export,
 stage immutable PVS inputs, launch the canonical replay, or run PVS. Any
 validated result still requires a separate integration gate that reconstructs
 the patch from a fresh canonical run and repeats all downstream checks.
+
+## P03 Step 22 Result And Step 23 Mixed-Direction Trial
+
+Step 22 completed at report-driver head
+`fd0670189c7cca1bac496fb35c5ce8f71f9033d7`. Its six contracts and 24 edit
+commands passed, but the physical result remained rejected:
+
+```text
+TRIAL_PROCESS_RESULT=MIXED_LENGTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+METHOD_STATUS=REJECTED_OR_INCOMPLETE
+DRC=6 -> 4
+REGULAR_CONNECTIVITY=0 -> 0
+SPECIAL_CONNECTIVITY=0 -> 0
+RESTORED_ANTENNA=21 -> 21
+MARKER_DATABASE_TOTAL=27 -> 25
+```
+
+The `0.84 um` requests on `n_9677`, `n_9693`, `n_9696`, and `n_9697`
+produced the exact same normalized four-marker signatures as Step 21's
+`0.56 um` requests. Each remained `0.1777 um^2`. This invariance establishes
+that the extra toward-source length contributes no counted regular-wire
+geometry. Merge or clipping at the source-pin boundary is the working
+interpretation, not a directly captured fact. Another length increment in
+that direction is not a distinct repair method.
+
+Step 23 uses trial revision R3 and a new immutable root ending in
+`_min_area_landing_patch_trial_r3`. Before Innovus is launched, the driver
+requires the complete Step 22 tuple, four occurrences of the measured
+`0.1777/0.2020 um^2` response, and equal normalized SHA-256 signatures for
+the Step 21 and Step 22 post-trial markers. In a fresh restore it then replays:
+
+1. `n_9706` and `n_9721` with their already-closing toward-source `0.56 um`
+   segments.
+2. `n_9677`, `n_9693`, `n_9696`, and `n_9697` with `0.84 um` segments in the
+   opposite source direction, starting from the same exact VIA1 centers. This
+   preserves Step 22's reviewed total length and changes only direction.
+
+R3 adds an explicit per-net direction field to the geometry contract and
+command report. It accepts physical validation only when DRC is zero, both
+connectivity checks are zero, restored antenna accounting is 21, the complete
+marker database contains only those 21 restored antenna entries, and all
+commands and contracts are exact. A coherent nonzero result is evidence only.
+
+Step 23 remains in-memory and cannot save, export, stage immutable PVS input,
+launch a canonical replay, or run PVS. A validated R3 result would authorize
+review of a separate fresh canonical integration gate, not automatic
+advancement.

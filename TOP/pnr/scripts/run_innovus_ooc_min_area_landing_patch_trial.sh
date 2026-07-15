@@ -14,8 +14,9 @@ and captures independent DRC and connectivity evidence. It does not save,
 export, stage immutable PVS inputs, or run PVS.
 
 Set SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R2 for the reviewed mixed-length
-replay sourced from the Step 21 analysis. The default R1 contract remains the
-uniform 0.56 um Step 21 trial sourced from Step 20.
+replay sourced from Step 21, or R3 for the mixed-direction replay sourced from
+Step 22. The default R1 contract remains the uniform 0.56 um Step 21 trial
+sourced from Step 20.
 USAGE
 }
 
@@ -41,6 +42,10 @@ main() {
     R2)
       analysis_label=STEP21_ANALYSIS
       policy=ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_LENGTH_MET1_LANDING_EXTENSIONS
+      ;;
+    R3)
+      analysis_label=STEP22_ANALYSIS
+      policy=ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_DIRECTION_MET1_LANDING_EXTENSIONS
       ;;
     *)
       echo "ERROR: unsupported landing-patch trial revision: $revision" >&2

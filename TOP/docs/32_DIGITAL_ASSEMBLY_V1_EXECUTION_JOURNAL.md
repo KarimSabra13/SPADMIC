@@ -1724,3 +1724,54 @@ STEP22_BASH_SYNTAX=PASS
 STEP22_TCL_STRUCTURE_CHECK=PASS
 STEP22_DIFF_CHECK=PASS
 ```
+
+### P03-R23 Server Evidence - Step 22 Proves Same-Direction Length Saturation
+
+Status: `PASS_CLASSIFIED_STEP23_MIXED_DIRECTION_TRIAL_READY`
+
+Step 22 completed at report-driver head
+`fd0670189c7cca1bac496fb35c5ce8f71f9033d7`. All six mixed-length contracts
+and all 24 Wire Editor commands passed, but authoritative DRC remained at four.
+Regular and PG connectivity stayed zero, the restored antenna sentinel stayed
+21, and marker-database accounting stayed 25.
+
+The decisive result is geometric, not only numerical. After removing volatile
+marker indices and handles, the four Step 22 marker signatures are identical
+to Step 21: the same boxes, classes, nets, messages, and `0.1777 um^2` actual
+areas. Moving each requested endpoint another `0.28 um` toward its source pin
+therefore added no counted regular-wire geometry. This is consistent with the
+source-pin boundary absorbing or clipping the extra Wire Editor length, but
+Step 20 did not directly capture the complete pin shape. The exact mechanism
+remains inferred; the measured same-direction saturation is sufficient to
+retire further length scaling in that direction.
+
+Step 23, `min-area-landing-patch-trial-r3`, restores the original immutable
+checkpoint again. It first requires the full Step 22 rejection tuple and a
+normalized SHA-256 equality check between the Step 21 and Step 22 post-trial
+marker signatures. It then keeps the two proven patches and reverses only the
+four saturated patches onto the opposite side of each VIA1 landing:
+
+```text
+n_9696  719.88,158.76  ->  720.72,158.76  away from source, 0.84 um
+n_9693  210.28,201.88  ->  211.12,201.88  away from source, 0.84 um
+n_9697  663.32,192.92  ->  664.16,192.92  away from source, 0.84 um
+n_9677 1666.28,201.88  -> 1665.44,201.88  away from source, 0.84 um
+n_9721 1792.84,212.52  -> 1792.28,212.52  toward source, retained
+n_9706 1827.00,212.52  -> 1827.56,212.52  toward source, retained
+```
+
+Every segment remains `0.28 um` wide. The four reversed segments preserve the
+reviewed `0.84 um` total length so that direction is the only changed repair
+variable; the two already-closing segments remain `0.56 um`. Every segment
+starts at the exact reviewed `VIA1_o` center and remains inside the reviewed
+source-instance box. The trial is in-memory only and stops after DRC, regular
+connectivity, PG connectivity, restored-antenna, and marker-database evidence.
+Save, export, canonical replay, immutable PVS staging, and PVS remain blocked.
+
+```text
+STEP23_LOCAL_TOP_PNR_TESTS=113_PASS_0_FAIL
+STEP23_PY_COMPILE=PASS
+STEP23_BASH_SYNTAX=PASS
+STEP23_TCL_STRUCTURE_CHECK=PASS
+STEP23_DIFF_CHECK=PASS
+```

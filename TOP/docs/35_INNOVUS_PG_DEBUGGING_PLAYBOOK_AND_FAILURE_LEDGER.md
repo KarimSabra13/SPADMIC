@@ -965,3 +965,51 @@ Rejected actions after Step 21:
   reviewed segments must be replayed because Step 21 state was not persisted.
 - Do not run a canonical replay or PVS until the mixed-length trial is
   independently classified and explicitly reviewed.
+
+## Step 22 Result - Longer Toward-Source Patches Saturate
+
+Step 22 reproduced the same coherent `6 -> 4` response as Step 21. The two
+`0.56 um` patches on `n_9706` and `n_9721` closed again. Increasing total
+requested length from `0.56 um` to `0.84 um` on the other four nets did not
+change any surviving marker box or message:
+
+```text
+remaining nets               n_9677 n_9693 n_9696 n_9697
+actual area per marker        0.1777 um^2
+required area per marker      0.2020 um^2
+regular connectivity          0
+PG connectivity               0
+restored antenna entries      21
+marker database total         25
+```
+
+Normalized Step 21 and Step 22 post-trial signatures are identical after
+excluding volatile marker indices and handles. The extra endpoint distance was
+accepted by Wire Editor but produced no additional regular MET1 shape. This is
+consistent with merging or clipping at the adjacent source-pin geometry; the
+complete pin shape was not directly captured, so that mechanism remains an
+inference. The invariant marker geometry still proves that continuing in the
+same direction is not a useful repair variable.
+
+Step 23 tests the direct consequence in one isolated replay: retain the two
+directions that already close, and reverse the four saturated segments onto
+the opposite side of their `VIA1_o` landings relative to the source term.
+Those four preserve the reviewed
+`0.84 um` total length so direction is the only changed repair variable. The
+exact reversed endpoints are `720.72`, `211.12`, `664.16`, and `1665.44` on
+their existing Y coordinates; the two closed segments remain `0.56 um`. The
+driver must prove semantic signature equality between Steps 21 and 22 before
+launching Innovus, and the Tcl contract must revalidate each marker, via
+center, MET2 endpoint, source term, direction relation, segment length, and
+source-instance containment before editing.
+
+Rejected actions after Step 22:
+
+- Do not increase the four toward-source lengths again; measured geometry is
+  invariant to that change.
+- Do not continue from either in-memory trial database; restore the original
+  checkpoint and replay all six reviewed segments.
+- Do not replace the connected regular wires with unconstrained rectangles or
+  special-net geometry.
+- Do not save, export, launch a canonical replay, stage PVS inputs, or run PVS
+  from the Step 23 trial even if its classification is coherent.
