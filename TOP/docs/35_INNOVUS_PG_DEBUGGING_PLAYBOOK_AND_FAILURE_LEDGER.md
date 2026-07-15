@@ -668,7 +668,7 @@ the second `sroute`. The pre-restitch connectivity count then decides whether
 that command can be removed or must be replaced with a bounded DRC-safe
 stitching method.
 
-## Step 14 Failure Ledger - CTS Creates The VIA1 Class
+## Step 14 Failure Ledger - Pre-Route CTS Check Captures VIA1 Incomplete Geometry
 
 The stage probe did not find a clean post-CTS baseline. Both the post-CTS and
 post-filler/pre-restitch captures reported and dumped 1000 DRC markers, all on
@@ -701,3 +701,43 @@ marker by subtype and normalized rule text, report representative messages and
 named nets, and preserve the lower-bound count semantics. Do not run another
 candidate, canonical replay, or PVS until that table identifies the VIA1 rule
 and the CTS via-generation setting that needs review.
+
+## Step 15 Failure Ledger - Do Not Gate Final DRC Before Signal Route
+
+Step 15 found one captured class, `VIA1/Cut_Enclosure`, with actual enclosure
+`0.010 um` against required `0.060 um`. The normalized table has two forms:
+962 markers name one regular net and 38 name two regular nets. Across the
+capture there are 403 unique regular nets and zero special nets.
+
+This evidence changes the next action. `03_cts.enc.dat` precedes
+`routeDesign`, and the 239 regular-connectivity findings independently prove
+that ordinary signal geometry is incomplete at that checkpoint. A DRC-zero
+requirement there is not an authoritative physical gate. The marker class may
+be repaired or replaced by the normal router; only post-route `verify_drc` can
+decide that. The capture does not justify changing CTS via rules yet.
+
+Rejected interpretations and actions:
+
+- Do not call the capped 1000-marker capture the exact total.
+- Do not infer a PG via defect from markers that name only regular nets.
+- Do not compare the 1000 VIA1 capture arithmetically with Step 13's 165 MET1
+  pre-route markers.
+- Do not rerun post-filler `sroute`; filler already closed special
+  connectivity from 154 to zero without it.
+- Do not stop before `routeDesign` on incomplete-geometry DRC.
+- Do not stage or run PVS from a pre-route checkpoint.
+
+The bounded Step 16 candidate keeps every proven pre-CTS control and changes
+only the invalid continuation policy:
+
+1. Exact `156 IMPVFC-94`, no other connectivity problem, and zero pre-CTS DRC
+   remain mandatory.
+2. Post-filler restitch is explicitly disabled.
+3. No DRC gate is inserted between filler and ordinary signal routing.
+4. Existing post-route regular connectivity, PG connectivity, DRC, timing,
+   export, GDS audit, and canonical gate remain authoritative and unchanged.
+5. The driver classifies the run but never advances automatically to immutable
+   staging or PVS.
+
+A coherent Step 16 rejection is still useful evidence. It does not weaken any
+final gate or authorize another repair method automatically.

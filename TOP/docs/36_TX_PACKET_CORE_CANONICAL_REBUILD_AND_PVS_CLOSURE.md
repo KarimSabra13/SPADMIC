@@ -735,3 +735,44 @@ diagnostic classification only. The next physical action remains blocked
 until the VIA1 rule templates identify whether CTS via selection, cut spacing,
 or another CTS-stage construction setting is responsible. Save, export,
 immutable staging, canonical rerun, and PVS all remain `NOT_RUN`.
+
+## P03 Step 15 Result And Step 16 No-Restitch Route-Through Candidate
+
+Step 15 completed at report-driver head
+`641a8f0af895d74f134e675f0193d8ccc9763233`. Every captured marker is
+`VIA1/Cut_Enclosure` with `0.010 um` actual versus `0.060 um` required above.
+The normalized templates split into 962 single-regular-net markers and 38
+two-regular-net markers. They cover 403 unique regular nets and no special
+net. The evidence is therefore not a PG-marker population.
+
+This result refines the earlier stage attribution. The class is present in the
+post-CTS checkpoint and filler does not change it, but that checkpoint is
+saved before ordinary `routeDesign`. At the same point 239 regular
+connectivity violations remain. These are incomplete pre-route signal
+geometries, so neither the 1000 VIA1 capture nor Step 13's later 165 MET1
+pre-route count is an authoritative final DRC gate. Changing CTS via rules on
+this evidence would be premature.
+
+Filler insertion independently closes special connectivity `154 -> 0`
+without `sroute`. Step 16 therefore runs one fresh immutable candidate with
+the already proven pre-CTS PG construction and this continuation policy:
+
+```text
+SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS=1
+SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT=156
+SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH=0
+```
+
+The exact pre-CTS milestone remains fail-closed: three bounded 1x1 stack
+commands, only 156 `IMPVFC-94`, no other connectivity class, and zero DRC.
+After CTS and filler, the flow skips the redundant restitch and any pre-route
+DRC-zero check, then runs the existing ordinary router. Acceptance still
+depends on authoritative final regular connectivity, PG connectivity,
+`verify_drc`, timing, exports, stream mapping, GDS audit, and canonical-gate
+classification.
+
+The Step 16 driver creates a new run-ID root and refuses to overwrite it. Its
+PASS means the candidate outcome was classified coherently, not that physical
+closure or signoff was achieved. Run-local exports remain evidence only;
+immutable PVS staging and PVS execution remain `NOT_RUN` until a separate
+operator review authorizes them.

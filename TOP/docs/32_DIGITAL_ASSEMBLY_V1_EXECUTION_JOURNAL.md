@@ -1406,3 +1406,60 @@ STEP15_PY_COMPILE=PASS
 STEP15_BASH_SYNTAX=PASS
 STEP15_DIFF_CHECK=PASS
 ```
+
+### P03-R16 Server Evidence - Step 15 VIA1 Templates And Route-Through Decision
+
+Status: `PASS_DIAGNOSTIC_CLASSIFIED_STEP16_FRESH_CANDIDATE_AUTHORIZED`
+
+Step 15 completed at report-driver head
+`641a8f0af895d74f134e675f0193d8ccc9763233` with no Innovus process and no
+design modification. All 1000 captured markers belong to one rule class:
+
+```text
+layer/subtype:              VIA1/Cut_Enclosure
+actual/required enclosure:  0.010 / 0.060 um above
+single-regular-net form:    962
+two-regular-net form:        38
+unique regular nets:        403
+special nets:                 0
+```
+
+The marker list is still a lower bound because both the report and TSV stop at
+exactly 1000. Its spatial extent also ends near `x=178.490 um`, far short of
+the full block width, so the capture must not be treated as a complete block
+distribution.
+
+The decisive correction is stage semantics. Checkpoint `03_cts.enc.dat` is
+saved before filler insertion and before ordinary `routeDesign`. The 403 data,
+control, and clock-related regular nets therefore identify incomplete
+pre-signal-route geometry, not a final PG topology defect and not an
+authoritative DRC result. Step 13's 165 MET1 violations were also measured
+before ordinary routing, after a redundant second `sroute`; that gate cannot
+be used as a final physical verdict either.
+
+Step 16 is the shortest bounded full-flow candidate:
+
+1. Recreate the proven three pre-CTS 1x1 VDD stacks in a fresh run root.
+2. Accept only exact `156 IMPVFC-94`, zero other connectivity classes, and
+   zero pre-CTS DRC.
+3. Run CTS and the reviewed DRC-safe filler command.
+4. Do not run the redundant post-filler `sroute` and do not run a pre-route
+   DRC-zero gate.
+5. Run canonical ordinary signal routing and all existing post-route cleanup,
+   timing, final DRC, regular connectivity, PG connectivity, export, GDS-map,
+   and canonical-gate checks.
+6. Classify the fresh run and stop. Immutable staging and PVS remain separate
+   operator-reviewed actions even if the candidate reaches
+   `READY_FOR_PVS_PREFLIGHT`.
+
+The analyzer now records the exact dangling policy independently from the
+restitch switch. It fails closed unless the run manifest contains the reviewed
+count, the pre-CTS milestone report proves the exact class, restitch is `0`,
+and final artifacts exist after the accepted pre-CTS milestone.
+
+```text
+STEP16_LOCAL_TOP_PNR_TESTS=90_PASS_0_FAIL
+STEP16_PY_COMPILE=PASS
+STEP16_BASH_SYNTAX=PASS
+STEP16_DIFF_CHECK=PASS
+```

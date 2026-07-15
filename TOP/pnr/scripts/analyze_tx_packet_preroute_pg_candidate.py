@@ -132,7 +132,16 @@ def main() -> int:
     pre_milestone = read_kv(pre_milestone_path)
     marker = read_kv(marker_path)
     gate = read_kv(gate_path)
-    post_filler_restitch = manifest.get("SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH") == "1"
+    post_filler_restitch_value = manifest.get(
+        "SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH", ""
+    )
+    post_filler_restitch = post_filler_restitch_value == "1"
+    expected_dangling_value = manifest.get(
+        "SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT", ""
+    )
+    expected_dangling_policy = (
+        expected_dangling_value == str(EXPECTED_PRE_CTS_DANGLING_COUNT)
+    )
 
     expected_manifest = {
         "SPADMIC_OOC_ENABLE_PRE_CTS_PG_DIRECT_VIAS": "1",
@@ -144,18 +153,24 @@ def main() -> int:
     for key, expected in expected_manifest.items():
         if manifest.get(key) != expected:
             errors.append(f"manifest_{key}={manifest.get(key, 'MISSING')} expected={expected}")
+    if post_filler_restitch_value not in ("", "0", "1"):
+        errors.append(
+            "manifest_SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH="
+            f"{post_filler_restitch_value} expected=0_or_1"
+        )
+    if expected_dangling_value not in ("", "-1", str(EXPECTED_PRE_CTS_DANGLING_COUNT)):
+        errors.append(
+            "manifest_SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT="
+            f"{expected_dangling_value} expected=-1_or_{EXPECTED_PRE_CTS_DANGLING_COUNT}"
+        )
     if post_filler_restitch:
-        expected_restitch_manifest = {
-            "SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT": str(
-                EXPECTED_PRE_CTS_DANGLING_COUNT
-            ),
-            "SPADMIC_OOC_ENABLE_POST_FILLER_PG_RESTITCH": "1",
-        }
-        for key, expected in expected_restitch_manifest.items():
-            if manifest.get(key) != expected:
-                errors.append(
-                    f"manifest_{key}={manifest.get(key, 'MISSING')} expected={expected}"
-                )
+        if not expected_dangling_policy:
+            errors.append(
+                "manifest_SPADMIC_OOC_PRE_CTS_EXPECTED_DANGLING_COUNT="
+                f"{expected_dangling_value or 'MISSING'} "
+                f"expected={EXPECTED_PRE_CTS_DANGLING_COUNT}"
+            )
+    if expected_dangling_policy:
         if not pre_milestone_path.is_file():
             errors.append(f"missing pre-CTS milestone report {pre_milestone_path}")
 
@@ -222,7 +237,7 @@ def main() -> int:
         and pre_drc_count == 0
     )
     pre_expected_dangling_only = (
-        post_filler_restitch
+        expected_dangling_policy
         and command_clean
         and pre_conn_status == "EXPECTED_DANGLING_ONLY"
         and pre_milestone_status == "PASS"
@@ -336,6 +351,12 @@ def main() -> int:
         f"PRE_CTS_SPECIAL_CONNECTIVITY_VIOLATION_COUNT={pre_conn_count if pre_conn_count is not None else 'UNKNOWN'}",
         f"PRE_CTS_IMPVFC_94_DANGLING_COUNT={pre_dangling_count}",
         f"PRE_CTS_OTHER_PROBLEM_COUNT={pre_other_problem_count}",
+        "PRE_CTS_EXPECTED_DANGLING_POLICY="
+        + (
+            f"ENABLED_EXACT_{EXPECTED_PRE_CTS_DANGLING_COUNT}"
+            if expected_dangling_policy
+            else "DISABLED_STRICT_ZERO"
+        ),
         f"PRE_CTS_MILESTONE_STATUS={pre_milestone_status}",
         f"PRE_CTS_DRC_STATUS={pre_drc_status}",
         f"PRE_CTS_DRC_VIOLATION_COUNT={pre_drc_count if pre_drc_count is not None else 'UNKNOWN'}",
