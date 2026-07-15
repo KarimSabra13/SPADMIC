@@ -49,6 +49,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "min-area-landing-patch-trial-r4",
             "min-area-landing-materialization-probe",
             "min-area-landing-materialization-review",
+            "min-area-chained-landing-trial-r6",
             "package",
             "status",
         ):
@@ -277,6 +278,22 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             driver,
         )
         self.assertIn("26_min_area_landing_materialization_review", driver)
+        self.assertIn(
+            "min-area-chained-landing-trial-r6 <expected-report-driver-head>",
+            driver,
+        )
+        self.assertIn("require_step_pass 26_min_area_landing_materialization_review", driver)
+        self.assertIn("SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R6", driver)
+        self.assertIn("PASS_EXACT_SIX_BASE_AND_FOUR_CHAIN_ENDPOINTS", driver)
+        self.assertIn(
+            "MIN_AREA_CHAINED_LANDING_R6_DRC_ZERO_VALIDATED_NO_SAVE_EXPORT_OR_PVS",
+            driver,
+        )
+        self.assertIn(
+            "MIN_AREA_CHAINED_LANDING_R6_CLASSIFIED_NOT_CLOSED_NO_SAVE_EXPORT_OR_PVS",
+            driver,
+        )
+        self.assertIn("27_min_area_chained_landing_trial_r6", driver)
         landing_trial = (
             REPO
             / "TOP"
@@ -458,6 +475,27 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("lp_write_wire_snapshot", landing_trial)
         self.assertIn(
             "PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION",
+            landing_trial,
+        )
+        self.assertIn(
+            "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_CHAINED_ENDPOINT_STUBS",
+            landing_wrapper,
+        )
+        self.assertIn(
+            "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED",
+            landing_trial,
+        )
+        self.assertIn("lp_find_canonical_stub_endpoint", landing_trial)
+        self.assertIn("verify_drc_after_base_stage.rpt", landing_trial)
+        self.assertIn("wire_snapshot_after_base_stage.tsv", landing_trial)
+        self.assertIn("wire_snapshot_post_chain_stage.tsv", landing_trial)
+        self.assertIn("min_area_chained_endpoint_contract.tsv", landing_trial)
+        self.assertIn("BASE_STAGE_EXACT_STATE_NOT_REPRODUCED", landing_trial)
+        self.assertIn("CHAIN_ENDPOINT_CONTRACT_FAILED", landing_trial)
+        self.assertIn("719.495 158.795", landing_trial)
+        self.assertIn("1666.665 201.845", landing_trial)
+        self.assertIn(
+            'set expected_patch_count [expr {$trial_revision eq "R6" ? 10 : 6}]',
             landing_trial,
         )
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):

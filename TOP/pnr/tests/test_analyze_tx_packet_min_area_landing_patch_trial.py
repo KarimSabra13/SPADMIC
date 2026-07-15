@@ -57,6 +57,37 @@ POLICY_R4 = (
 POLICY_R5 = (
     "ONE_FRESH_PROCESS_ONE_RESTORE_R4_REPLAY_WITH_LOCAL_WIRE_MATERIALIZATION_CAPTURE"
 )
+POLICY_R6 = (
+    "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_CHAINED_ENDPOINT_STUBS"
+)
+CHAIN_R6 = {
+    "n_9696": ("719.69 158.62 720.07 158.90", "719.495", "158.795", "718.935", "TOWARD_SOURCE_WEST", "g14627__2802/Q", "719.38 158.68 719.88 158.91", "719.495 158.795", "719.88 158.795"),
+    "n_9693": ("210.09 201.74 210.47 202.02", "209.895", "201.845", "209.335", "TOWARD_SOURCE_WEST", "g14630__8246/Q", "209.78 201.73 210.28 201.96", "209.895 201.845", "210.28 201.845"),
+    "n_9697": ("663.13 192.78 663.51 193.06", "662.935", "192.885", "662.375", "TOWARD_SOURCE_WEST", "g14626__1617/Q", "662.82 192.77 663.32 193.0", "662.935 192.885", "663.32 192.885"),
+    "n_9677": ("1666.09 201.74 1666.47 202.02", "1666.665", "201.845", "1667.225", "TOWARD_SOURCE_EAST", "g14646__2398/Q", "1666.28 201.73 1666.78 201.96", "1666.28 201.845", "1666.665 201.845"),
+}
+BASE_MARKER_BOX_R6 = {
+    "n_9696": "719.38 158.68 720.07 158.91",
+    "n_9693": "209.78 201.73 210.47 201.96",
+    "n_9697": "662.82 192.77 663.51 193.0",
+    "n_9677": "1666.09 201.73 1666.78 201.96",
+}
+BASE_STUB_R6 = {
+    **{
+        net: (values[6], values[7], values[8])
+        for net, values in CHAIN_R6.items()
+    },
+    "n_9706": (
+        "1827.0 212.44 1827.5 212.67",
+        "1827.0 212.555",
+        "1827.385 212.555",
+    ),
+    "n_9721": (
+        "1792.34 212.44 1792.84 212.67",
+        "1792.455 212.555",
+        "1792.84 212.555",
+    ),
+}
 MARKER_HEADER = (
     "idx\tmarker_handle\tbox\tllx\tlly\turx\tury\tcx\tcy\t"
     "layer\ttype\tsubType\tmessage"
@@ -281,6 +312,70 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "CANONICAL_RERUN_DECISION=DO_NOT_RUN_FROM_THIS_STEP\n"
             "NEXT_METHOD_DECISION=STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD\n"
             "ERROR_COUNT=0\n"
+        )
+
+    def write_step26(self, path: Path) -> None:
+        path.write_text(
+            "LABEL=SPADMIC_TX_PACKET_MIN_AREA_LANDING_MATERIALIZATION_ANALYSIS\n"
+            "POLICY=ISOLATED_IN_MEMORY_R4_REPLAY_WIRE_MATERIALIZATION_CLASSIFICATION\n"
+            "STATUS=PASS\n"
+            "RESULT=MIN_AREA_LANDING_MATERIALIZATION_PROBE_CLASSIFIED\n"
+            "REPORT_DRIVER_HEAD=step25-driver-head\n"
+            "TRIAL_REVISION=R5\n"
+            "TRIAL_PROCESS_STATUS=FAIL\n"
+            "TRIAL_PROCESS_RESULT=WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED\n"
+            "METHOD_STATUS=DIAGNOSTIC_CAPTURE_COMPLETE\n"
+            "PATCH_CONTRACT_STATUS=PASS_EXACT_SIX_R4_REPLAY_EXTENSIONS\n"
+            "PATCH_WIDTH_POLICY=FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28\n"
+            "PATCH_WIDTH_UM=MIXED_0.28_0.56\n"
+            "PATCH_LENGTH_POLICY=UNIFORM_0.56\n"
+            "PATCH_LENGTH_UM=0.56\n"
+            "PATCH_DIRECTION_POLICY=ALL_TOWARD_SOURCE\n"
+            "PATCH_ATTEMPTED_COUNT=6\n"
+            "PATCH_APPLIED_COUNT=6\n"
+            "COMMAND_PASS_COUNT=24\n"
+            "COMMAND_FAIL_COUNT=0\n"
+            "PRE_DRC_VIOLATION_COUNT=6\n"
+            "FINAL_DRC_VIOLATION_COUNT=4\n"
+            "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "PRE_MARKER_DATABASE_TOTAL=27\n"
+            "FINAL_MARKER_DATABASE_TOTAL=25\n"
+            "REMOVED_MARKER_SIGNATURE_COUNT=6\n"
+            "ADDED_MARKER_SIGNATURE_COUNT=4\n"
+            "FINAL_MIN_AREA_NETS=n_9677 n_9693 n_9696 n_9697\n"
+            "SAVE_DESIGN=NOT_RUN\n"
+            "EXPORT=NOT_RUN\n"
+            "IMMUTABLE_PVS_STAGING=NOT_RUN\n"
+            "PVS_DECISION=DO_NOT_RUN\n"
+            "CANONICAL_RERUN_DECISION=DO_NOT_RUN_FROM_THIS_STEP\n"
+            "NEXT_METHOD_DECISION=COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY\n"
+            "ERROR_COUNT=0\n"
+            "MATERIALIZATION_CAPTURE_STATUS=COMPLETE\n"
+            "MATERIALIZATION_STATUS=UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT\n"
+            "PRE_WIRE_QUERY_PASS_NET_COUNT=6\n"
+            "POST_WIRE_QUERY_PASS_NET_COUNT=6\n"
+            "PRE_LOCAL_MET1_ROW_COUNT=0\n"
+            "POST_LOCAL_MET1_ROW_COUNT=6\n"
+            "WIRE_ATTRIBUTE_FAIL_COUNT=0\n"
+            "ADDED_LOCAL_MET1_SIGNATURE_COUNT=6\n"
+            "REMOVED_LOCAL_MET1_SIGNATURE_COUNT=0\n"
+            "ADDED_LOCAL_MET2_SIGNATURE_COUNT=12\n"
+            "REMOVED_LOCAL_MET2_SIGNATURE_COUNT=6\n"
+            "CANONICAL_FIXED_STUB_NET_COUNT=6\n"
+            "MET2_SPLIT_NET_COUNT=6\n"
+            "MATERIALIZED_MET1_WIDTH_UM=0.23\n"
+            "MATERIALIZED_MET1_CENTERLINE_LENGTH_UM=0.385\n"
+            "WIRE_EDITOR_PARAMETER_CONTROL_STATUS=REQUESTED_WIDTH_AND_ENDPOINT_NORMALIZED\n"
+            "CLOSED_CONTROL_MATERIALIZATION_MATCH_STATUS=PASS_SAME_CANONICAL_STUB_CLASS_AS_SURVIVORS\n"
+            "PATCH_PARAMETER_SWEEP_DECISION=RETIRED_LENGTH_DIRECTION_AND_WIDTH\n"
+            "REQUESTED_WIDTH_MATERIALIZED_WIDE_NET_COUNT=0\n"
+            "CANONICALIZED_WIDE_NET_COUNT=0\n"
+            "NO_LOCAL_DELTA_WIDE_NET_COUNT=0\n"
         )
 
     def write_wire_snapshots(
@@ -704,6 +799,247 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
         )
         return trial_root, source
 
+    def write_r6_fixture(
+        self, root: Path, *, validated: bool, tamper_chain_start: bool = False
+    ) -> tuple[Path, Path]:
+        trial_root, _ = self.write_fixture(root, validated=True)
+        reports = trial_root / "reports"
+        source = root / "step26_analysis.rpt"
+        self.write_step26(source)
+        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        (trial_root / "context.rpt").write_text(
+            "SOURCE_CHECKPOINT=/immutable/checkpoints/05_postroute_export.enc.dat\n"
+            f"STEP26_ANALYSIS={source}\n"
+            f"STEP26_ANALYSIS_SHA256={source_sha}\n"
+            f"HEAD={HEAD}\n"
+            "TRIAL_REVISION=R6\n"
+            f"POLICY={POLICY_R6}\n"
+            "DESIGN_MODIFICATION=IN_MEMORY_ONLY\n"
+            "SOURCE_CHECKPOINT_WRITE=NOT_RUN\n"
+            "SAVE_DESIGN=NOT_RUN\n"
+            "EXPORT=NOT_RUN\n"
+            "PVS=NOT_RUN\n"
+        )
+
+        base_marker_rows = []
+        for index, (net, box) in enumerate(BASE_MARKER_BOX_R6.items(), start=1):
+            llx, lly, urx, ury = box.split()
+            message = (
+                f"Regular Wire of Net {net} Actual: 0.17770000 "
+                "Required: 0.20200000 Type: Minimum Area"
+            )
+            base_marker_rows.append(
+                f"{index}\tbase_h{index}\t{{{box}}}\t{llx}\t{lly}\t{urx}\t{ury}\t"
+                f"{(float(llx) + float(urx)) / 2.0:.6f}\t"
+                f"{(float(lly) + float(ury)) / 2.0:.6f}\t"
+                f"MET1\tGeometry\tMinimal_Area\t{message}"
+            )
+        base_marker_text = MARKER_HEADER + "\n" + "\n".join(base_marker_rows) + "\n"
+        (reports / "drc_markers_after_base_stage.tsv").write_text(base_marker_text)
+        self.write_verify(reports / "verify_drc_after_base_stage.rpt", 4)
+        self.write_verify(
+            reports / "verify_connectivity_regular_after_base_stage.rpt", 0
+        )
+        self.write_verify(
+            reports / "verify_connectivity_special_after_base_stage.rpt", 0
+        )
+
+        base_wire_rows = [WIRE_HEADER]
+        post_chain_wire_rows = [WIRE_HEADER]
+        for index, net in enumerate(NETS, start=1):
+            marker_box = CONTRACT[net][0]
+            box, point1, point2 = BASE_STUB_R6[net]
+            row_tail = (
+                f"{net}\t{marker_box}\t0.28\t{index}\tfixed_{net}\t"
+                f"INTERSECTS_MARKER\tPASS\t{box}\tPASS\tMET1\tPASS\tfixed\t"
+                f"PASS\t0x0\tPASS\t0.23\tPASS\t0.385\tPASS\t"
+                + "{{"
+                + point1
+                + "} {"
+                + point2
+                + "}}"
+            )
+            base_wire_rows.append("AFTER_BASE_STAGE\t" + row_tail)
+            post_chain_wire_rows.append("AFTER_CHAIN_STAGE\t" + row_tail)
+        (reports / "wire_snapshot_after_base_stage.tsv").write_text(
+            "\n".join(base_wire_rows) + "\n"
+        )
+        (reports / "wire_snapshot_post_chain_stage.tsv").write_text(
+            "\n".join(post_chain_wire_rows) + "\n"
+        )
+
+        chain_header = (
+            "net\tmarker_box\tcanonical_wire\tcanonical_box\tcanonical_pts\t"
+            "start_x\tstart_y\tend_x\tend_y\tlength_um\trequested_width_um\t"
+            "direction\tsource_q\tinside_source_inst_status\tcontract_status"
+        )
+        chain_rows = [chain_header]
+        for net, values in CHAIN_R6.items():
+            marker_box, start_x, start_y, end_x, direction, source_q, box, point1, point2 = values
+            if tamper_chain_start and net == "n_9696":
+                start_x = "719.494"
+            chain_rows.append(
+                f"{net}\t{marker_box}\tfixed_{net}\t{box}\t"
+                f"{{{{{point1}}} {{{point2}}}}}\t{start_x}\t{start_y}\t{end_x}\t"
+                f"{start_y}\t0.56\t0.28\t{direction}\t{source_q}\tPASS\tPASS"
+            )
+        (reports / "min_area_chained_endpoint_contract.tsv").write_text(
+            "\n".join(chain_rows) + "\n"
+        )
+
+        command_lines = [
+            "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_COMMANDS",
+            "POLICY=EXACT_SIX_BASE_STUBS_THEN_FOUR_ACTUAL_ENDPOINT_CHAIN_STUBS",
+            "TRIAL_REVISION=R6",
+            "PATCH_WIDTH_POLICY=UNIFORM_0.28",
+            "PATCH_WIDTH_UM=0.28",
+            "PATCH_LENGTH_POLICY=FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_DYNAMIC_0.56",
+            "PATCH_DIRECTION_POLICY=ALL_TOWARD_SOURCE",
+            "CHAIN_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_ACTUAL_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE",
+            "PATCH_LENGTH_UM=0.56",
+            "CONTRACT_VALIDATED_COUNT=6",
+        ]
+        for net, values in CONTRACT.items():
+            _, start_x, start_y, end_x, source_q, _ = values
+            prefix = f"PATCH_{net}"
+            command_lines.extend(
+                (
+                    f"{prefix}_START={start_x} {start_y}",
+                    f"{prefix}_END={end_x} {start_y}",
+                    f"{prefix}_LENGTH_UM=0.56",
+                    f"{prefix}_WIDTH_UM=0.28",
+                    f"{prefix}_DIRECTION=TOWARD_SOURCE",
+                    f"{prefix}_SOURCE_Q={source_q}",
+                    f"{prefix}_SET_EDIT_MODE=setEditMode -nets {net} -shape None "
+                    "-force_regular 1 -layer_horizontal MET1 -layer_vertical MET1 "
+                    "-snap_to_track_regular 0 -width_horizontal 0.28 "
+                    "-width_vertical 0.28",
+                    f"{prefix}_APPLIED=YES",
+                )
+            )
+        command_lines.extend(
+            (
+                "BASE_STAGE_STATUS=PASS_EXACT_FOUR_0P1777_SURVIVORS",
+                "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT=4",
+            )
+        )
+        for net, values in CHAIN_R6.items():
+            _, start_x, start_y, end_x, direction, source_q, _, _, _ = values
+            prefix = f"CHAIN_{net}"
+            command_lines.extend(
+                (
+                    f"{prefix}_START={start_x} {start_y}",
+                    f"{prefix}_END={end_x} {start_y}",
+                    f"{prefix}_LENGTH_UM=0.56",
+                    f"{prefix}_WIDTH_UM=0.28",
+                    f"{prefix}_DIRECTION={direction}",
+                    f"{prefix}_SOURCE_Q={source_q}",
+                    f"{prefix}_SET_EDIT_MODE=setEditMode -nets {net} -shape None "
+                    "-force_regular 1 -layer_horizontal MET1 -layer_vertical MET1 "
+                    "-snap_to_track_regular 0 -width_horizontal 0.28 "
+                    "-width_vertical 0.28",
+                    f"{prefix}_APPLIED=YES",
+                )
+            )
+        command_lines.extend(
+            (
+                "BASE_PATCH_ATTEMPTED_COUNT=6",
+                "BASE_PATCH_APPLIED_COUNT=6",
+                "CHAIN_PATCH_ATTEMPTED_COUNT=4",
+                "CHAIN_PATCH_APPLIED_COUNT=4",
+                "PATCH_ATTEMPTED_COUNT=10",
+                "PATCH_APPLIED_COUNT=10",
+                "COMMAND_PASS_COUNT=40",
+                "COMMAND_FAIL_COUNT=0",
+            )
+        )
+        (reports / "min_area_landing_patch_commands.rpt").write_text(
+            "\n".join(command_lines) + "\n"
+        )
+
+        final_count = 0 if validated else 4
+        final_database = 21 + final_count
+        final_nets = "" if validated else " ".join(sorted(CHAIN_R6))
+        process_status = "PASS" if validated else "FAIL"
+        process_result = (
+            "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+            if validated
+            else "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED"
+        )
+        self.write_verify(reports / "verify_drc_post_trial.rpt", final_count)
+        (reports / "drc_markers_post_trial.tsv").write_text(
+            MARKER_HEADER
+            + "\n"
+            + (base_marker_text.split("\n", 1)[1] if not validated else "")
+        )
+        (reports / "min_area_landing_patch_trial_status.rpt").write_text(
+            "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_TRIAL\n"
+            f"POLICY={POLICY_R6}\n"
+            "TRIAL_REVISION=R6\n"
+            "PATCH_LENGTH_POLICY=FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_DYNAMIC_0.56\n"
+            "PATCH_DIRECTION_POLICY=ALL_TOWARD_SOURCE\n"
+            "PATCH_WIDTH_POLICY=UNIFORM_0.28\n"
+            "PATCH_WIDTH_UM=0.28\n"
+            "CHAIN_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_ACTUAL_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE\n"
+            "DESIGN_MODIFICATION=IN_MEMORY_ONLY\n"
+            "SOURCE_CHECKPOINT_WRITE=NOT_RUN\n"
+            "SAVE_DESIGN=NOT_RUN\n"
+            "EXPORT=NOT_RUN\n"
+            "PVS=NOT_RUN\n"
+            "RESTORE_DESIGN=PASS\n"
+            f"STATUS={process_status}\n"
+            f"RESULT={process_result}\n"
+            "SOURCE_CHECKPOINT=/immutable/checkpoints/05_postroute_export.enc.dat\n"
+            f"STEP26_ANALYSIS={source}\n"
+            "PRE_DRC_VIOLATION_COUNT=6\n"
+            "PRE_DRC_MARKER_COUNT=6\n"
+            "PRE_MARKER_DATABASE_TOTAL=27\n"
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "PRE_EXCLUDED_CONNECTIVITY_MARKER_COUNT=0\n"
+            "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            f"PRE_MIN_AREA_NETS={' '.join(NETS)}\n"
+            "BASE_STAGE_STATUS=PASS_EXACT_FOUR_0P1777_SURVIVORS\n"
+            "BASE_MARKER_VALUE_STATUS=PASS\n"
+            "BASE_DRC_VIOLATION_COUNT=4\n"
+            "BASE_DRC_MARKER_COUNT=4\n"
+            "BASE_MARKER_DATABASE_TOTAL=25\n"
+            "BASE_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "BASE_EXCLUDED_CONNECTIVITY_MARKER_COUNT=0\n"
+            "BASE_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "BASE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "BASE_MIN_AREA_NETS=n_9677 n_9693 n_9696 n_9697\n"
+            "BASE_WIRE_QUERY_PASS_NET_COUNT=6\n"
+            "BASE_WIRE_ROW_COUNT=6\n"
+            "BASE_LOCAL_MET1_ROW_COUNT=6\n"
+            "BASE_WIRE_ATTRIBUTE_FAIL_COUNT=0\n"
+            "CHAIN_ENDPOINT_CONTRACT_STATUS=PASS_EXACT_FOUR_ACTUAL_CANONICAL_ENDPOINTS\n"
+            "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT=4\n"
+            "CHAIN_STAGE_STATUS=APPLIED_EXACT_FOUR\n"
+            "POST_CHAIN_WIRE_QUERY_PASS_NET_COUNT=6\n"
+            "POST_CHAIN_WIRE_ROW_COUNT=6\n"
+            "POST_CHAIN_LOCAL_MET1_ROW_COUNT=6\n"
+            "POST_CHAIN_WIRE_ATTRIBUTE_FAIL_COUNT=0\n"
+            f"FINAL_DRC_VIOLATION_COUNT={final_count}\n"
+            f"FINAL_DRC_MARKER_COUNT={final_count}\n"
+            f"FINAL_MARKER_DATABASE_TOTAL={final_database}\n"
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "FINAL_EXCLUDED_CONNECTIVITY_MARKER_COUNT=0\n"
+            "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            f"FINAL_MIN_AREA_NETS={final_nets}\n"
+            "CONTRACT_VALIDATED_COUNT=6\n"
+            "BASE_PATCH_ATTEMPTED_COUNT=6\n"
+            "BASE_PATCH_APPLIED_COUNT=6\n"
+            "CHAIN_PATCH_ATTEMPTED_COUNT=4\n"
+            "CHAIN_PATCH_APPLIED_COUNT=4\n"
+            "PATCH_ATTEMPTED_COUNT=10\n"
+            "PATCH_APPLIED_COUNT=10\n"
+            "COMMAND_PASS_COUNT=40\n"
+            "COMMAND_FAIL_COUNT=0\n"
+        )
+        return trial_root, source
+
     def run_analyzer(
         self,
         trial_root: Path,
@@ -717,6 +1053,7 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "R3": "--step22-analysis",
             "R4": "--step23-analysis",
             "R5": "--step24-analysis",
+            "R6": "--step26-analysis",
         }[revision]
         return subprocess.run(
             [
@@ -1268,6 +1605,71 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             self.assertEqual(result.returncode, 8, result.stdout)
             self.assertIn(
                 "r5_replay_command_tuple_not_exact_6_6_24_0",
+                report.read_text(),
+            )
+
+    def test_r6_validated_chained_endpoint_trial_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_r6_fixture(root, validated=True)
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R6")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn(
+                "LABEL=SPADMIC_TX_PACKET_MIN_AREA_CHAINED_LANDING_ANALYSIS",
+                text,
+            )
+            self.assertIn(
+                "TRIAL_PROCESS_RESULT="
+                "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED",
+                text,
+            )
+            self.assertIn(
+                "PATCH_CONTRACT_STATUS="
+                "PASS_EXACT_SIX_BASE_AND_FOUR_CHAIN_ENDPOINTS",
+                text,
+            )
+            self.assertIn("BASE_DRC_VIOLATION_COUNT=4", text)
+            self.assertIn("FINAL_DRC_VIOLATION_COUNT=0", text)
+            self.assertIn(
+                "NEXT_METHOD_DECISION="
+                "INTEGRATE_CHAINED_ENDPOINT_METHOD_IN_FRESH_CANONICAL_REPLAY",
+                text,
+            )
+
+    def test_r6_coherent_nonzero_result_is_classified_as_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_r6_fixture(root, validated=False)
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R6")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn(
+                "TRIAL_PROCESS_RESULT="
+                "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED",
+                text,
+            )
+            self.assertIn("METHOD_STATUS=REJECTED_OR_INCOMPLETE", text)
+            self.assertIn("FINAL_DRC_VIOLATION_COUNT=4", text)
+            self.assertIn(
+                "NEXT_METHOD_DECISION="
+                "STOP_AND_REVIEW_CHAINED_ENDPOINT_EVIDENCE_BEFORE_NEW_METHOD",
+                text,
+            )
+
+    def test_r6_chain_start_drift_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_r6_fixture(
+                root, validated=True, tamper_chain_start=True
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R6")
+            self.assertEqual(result.returncode, 8, result.stdout)
+            self.assertIn(
+                "r6_chain_contract_n_9696_start_x=719.494 expected=719.495",
                 report.read_text(),
             )
 

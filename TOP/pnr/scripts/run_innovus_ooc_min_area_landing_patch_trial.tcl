@@ -153,6 +153,59 @@ proc lp_wire_attr {wire attribute} {
     return [list PASS $value NONE]
 }
 
+proc lp_find_canonical_stub_endpoint {net marker_box via_x via_y direction_sign} {
+    set net_handles [list]
+    catch {set net_handles [lp_valid_handles [dbGet top.nets.name $net -p]]}
+    if {[llength $net_handles] != 1} {
+        return [list FAIL NONE UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
+    }
+    set wires [list]
+    catch {set wires [lp_valid_handles [dbGet "[lindex $net_handles 0].wires"]]}
+    set candidates [list]
+    foreach wire $wires {
+        lassign [lp_wire_attr $wire box] box_status box_value box_error
+        lassign [lp_wire_attr $wire layer.name] layer_status layer layer_error
+        lassign [lp_wire_attr $wire status] route_status_status route_status route_status_error
+        lassign [lp_wire_attr $wire shape] shape_status shape shape_error
+        lassign [lp_wire_attr $wire width] width_status width width_error
+        lassign [lp_wire_attr $wire length] length_status length length_error
+        lassign [lp_wire_attr $wire pts] pts_status pts pts_error
+        if {$box_status ne "PASS" || $layer_status ne "PASS" ||
+            $route_status_status ne "PASS" || $shape_status ne "PASS" ||
+            $width_status ne "PASS" || $length_status ne "PASS" ||
+            $pts_status ne "PASS" || $layer ne "MET1" ||
+            ![string equal -nocase $route_status fixed] || $shape ne "0x0" ||
+            ![lp_close $width 0.23] || ![lp_close $length 0.385]} {
+            continue
+        }
+        set flat_box [lp_flat_box $box_value]
+        if {![lp_boxes_intersect $flat_box $marker_box]} { continue }
+        set values [lp_flat_values $pts]
+        if {[llength $values] < 4} { continue }
+        lassign [lrange $values 0 3] x1 y1 x2 y2
+        if {![lp_close $y1 $y2]} { continue }
+        set near1 [expr {[lp_close $x1 $via_x] && abs($y1 - $via_y) <= 0.050}]
+        set near2 [expr {[lp_close $x2 $via_x] && abs($y2 - $via_y) <= 0.050}]
+        if {$near1 == $near2} { continue }
+        if {$near1} {
+            set far_x $x2
+            set far_y $y2
+        } else {
+            set far_x $x1
+            set far_y $y1
+        }
+        if {($direction_sign < 0 && $far_x >= $via_x) ||
+            ($direction_sign > 0 && $far_x <= $via_x)} {
+            continue
+        }
+        lappend candidates [list $wire $flat_box $far_x $far_y [lp_value $pts]]
+    }
+    if {[llength $candidates] != 1} {
+        return [list FAIL NONE UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
+    }
+    return [linsert [lindex $candidates 0] 0 PASS]
+}
+
 proc lp_write_wire_snapshot {path phase patch_contract} {
     set fh [open $path w]
     puts $fh "phase\tnet\tmarker_box\trequested_width_um\twire_index\twire_handle\tlocal_relation\tbox_status\tbox\tlayer_status\tlayer\troute_status_status\troute_status\tshape_status\tshape\twidth_status\twidth\tlength_status\tlength\tpts_status\tpts"
@@ -426,9 +479,21 @@ if {$trial_revision eq "R1"} {
     set validated_result WIRE_MATERIALIZATION_REPLAY_DRC_ZERO_VALIDATED
     set no_improvement_result WIRE_MATERIALIZATION_REPLAY_NO_IMPROVEMENT
     set changed_result WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED
+} elseif {$trial_revision eq "R6"} {
+    set analysis_key STEP26_ANALYSIS
+    set policy ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_CHAINED_ENDPOINT_STUBS
+    set command_policy EXACT_SIX_BASE_STUBS_THEN_FOUR_ACTUAL_ENDPOINT_CHAIN_STUBS
+    set patch_length_policy FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_DYNAMIC_0.56
+    set patch_direction_policy ALL_TOWARD_SOURCE
+    set patch_width_policy UNIFORM_0.28
+    set patch_width_um 0.28
+    set validated_result CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
+    set no_improvement_result CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
+    set changed_result CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
 } else {
     error "SPADMIC_MIN_AREA_LANDING_UNSUPPORTED_REVISION: $trial_revision"
 }
+set expected_patch_count [expr {$trial_revision eq "R6" ? 10 : 6}]
 set reports [file join $root reports]
 file mkdir $reports
 set command_fh ""
@@ -461,6 +526,11 @@ set status($analysis_key) $source_analysis
 if {$trial_revision eq "R5"} {
     set status(MATERIALIZATION_CAPTURE_POLICY) PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION
     set status(MATERIALIZATION_CAPTURE_STATUS) NOT_RUN
+} elseif {$trial_revision eq "R6"} {
+    set status(CHAIN_CAPTURE_POLICY) EXACT_FOUR_SURVIVOR_ACTUAL_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE
+    set status(BASE_STAGE_STATUS) NOT_RUN
+    set status(CHAIN_ENDPOINT_CONTRACT_STATUS) NOT_RUN
+    set status(CHAIN_STAGE_STATUS) NOT_RUN
 }
 
 array set analysis_values [lp_read_kv $source_analysis]
@@ -613,7 +683,7 @@ if {$trial_revision eq "R1"} {
         NEXT_METHOD_DECISION STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD
         ERROR_COUNT 0
     }
-} else {
+} elseif {$trial_revision eq "R5"} {
     array set expected_analysis {
         LABEL SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS
         POLICY ISOLATED_IN_MEMORY_SIX_NET_MIXED_WIDTH_MET1_LANDING_PATCH_CLASSIFICATION
@@ -653,6 +723,68 @@ if {$trial_revision eq "R1"} {
         CANONICAL_RERUN_DECISION DO_NOT_RUN_FROM_THIS_STEP
         NEXT_METHOD_DECISION STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD
         ERROR_COUNT 0
+    }
+} else {
+    array set expected_analysis {
+        LABEL SPADMIC_TX_PACKET_MIN_AREA_LANDING_MATERIALIZATION_ANALYSIS
+        POLICY ISOLATED_IN_MEMORY_R4_REPLAY_WIRE_MATERIALIZATION_CLASSIFICATION
+        STATUS PASS
+        RESULT MIN_AREA_LANDING_MATERIALIZATION_PROBE_CLASSIFIED
+        TRIAL_REVISION R5
+        TRIAL_PROCESS_STATUS FAIL
+        TRIAL_PROCESS_RESULT WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED
+        METHOD_STATUS DIAGNOSTIC_CAPTURE_COMPLETE
+        PATCH_CONTRACT_STATUS PASS_EXACT_SIX_R4_REPLAY_EXTENSIONS
+        PATCH_WIDTH_POLICY FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28
+        PATCH_WIDTH_UM MIXED_0.28_0.56
+        PATCH_LENGTH_POLICY UNIFORM_0.56
+        PATCH_LENGTH_UM 0.56
+        PATCH_DIRECTION_POLICY ALL_TOWARD_SOURCE
+        PATCH_ATTEMPTED_COUNT 6
+        PATCH_APPLIED_COUNT 6
+        COMMAND_PASS_COUNT 24
+        COMMAND_FAIL_COUNT 0
+        PRE_DRC_VIOLATION_COUNT 6
+        FINAL_DRC_VIOLATION_COUNT 4
+        PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        FINAL_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        PRE_MARKER_DATABASE_TOTAL 27
+        FINAL_MARKER_DATABASE_TOTAL 25
+        REMOVED_MARKER_SIGNATURE_COUNT 6
+        ADDED_MARKER_SIGNATURE_COUNT 4
+        FINAL_MIN_AREA_NETS {n_9677 n_9693 n_9696 n_9697}
+        SAVE_DESIGN NOT_RUN
+        EXPORT NOT_RUN
+        IMMUTABLE_PVS_STAGING NOT_RUN
+        PVS_DECISION DO_NOT_RUN
+        CANONICAL_RERUN_DECISION DO_NOT_RUN_FROM_THIS_STEP
+        NEXT_METHOD_DECISION COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY
+        ERROR_COUNT 0
+        MATERIALIZATION_CAPTURE_STATUS COMPLETE
+        MATERIALIZATION_STATUS UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT
+        PRE_WIRE_QUERY_PASS_NET_COUNT 6
+        POST_WIRE_QUERY_PASS_NET_COUNT 6
+        PRE_LOCAL_MET1_ROW_COUNT 0
+        POST_LOCAL_MET1_ROW_COUNT 6
+        WIRE_ATTRIBUTE_FAIL_COUNT 0
+        ADDED_LOCAL_MET1_SIGNATURE_COUNT 6
+        REMOVED_LOCAL_MET1_SIGNATURE_COUNT 0
+        ADDED_LOCAL_MET2_SIGNATURE_COUNT 12
+        REMOVED_LOCAL_MET2_SIGNATURE_COUNT 6
+        CANONICAL_FIXED_STUB_NET_COUNT 6
+        MET2_SPLIT_NET_COUNT 6
+        MATERIALIZED_MET1_WIDTH_UM 0.23
+        MATERIALIZED_MET1_CENTERLINE_LENGTH_UM 0.385
+        WIRE_EDITOR_PARAMETER_CONTROL_STATUS REQUESTED_WIDTH_AND_ENDPOINT_NORMALIZED
+        CLOSED_CONTROL_MATERIALIZATION_MATCH_STATUS PASS_SAME_CANONICAL_STUB_CLASS_AS_SURVIVORS
+        PATCH_PARAMETER_SWEEP_DECISION RETIRED_LENGTH_DIRECTION_AND_WIDTH
+        REQUESTED_WIDTH_MATERIALIZED_WIDE_NET_COUNT 0
+        CANONICALIZED_WIDE_NET_COUNT 0
+        NO_LOCAL_DELTA_WIDE_NET_COUNT 0
     }
 }
 foreach key [array names expected_analysis] {
@@ -712,7 +844,7 @@ if {![string is integer -strict $pre_drc_count] || $pre_drc_count != 6 ||
 }
 
 # net marker-box start-x start-y end-x length width source-Q source-Q-x source-Q-y direction
-if {$trial_revision eq "R1"} {
+if {$trial_revision eq "R1" || $trial_revision eq "R6"} {
     set patch_contract [list \
         [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.32 0.56 0.28 g14627__2802/Q 716.61 159.02 TOWARD_SOURCE] \
         [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.72 0.56 0.28 g14630__8246/Q 207.01 201.62 TOWARD_SOURCE] \
@@ -887,6 +1019,8 @@ puts $command_fh "PATCH_LENGTH_POLICY=$patch_length_policy"
 puts $command_fh "PATCH_DIRECTION_POLICY=$patch_direction_policy"
 if {$trial_revision eq "R5"} {
     puts $command_fh "MATERIALIZATION_CAPTURE_POLICY=PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION"
+} elseif {$trial_revision eq "R6"} {
+    puts $command_fh "CHAIN_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_ACTUAL_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE"
 }
 if {$trial_revision eq "R2" || $trial_revision eq "R3"} {
     puts $command_fh "PATCH_LENGTH_UM=MIXED_0.56_0.84"
@@ -931,6 +1065,218 @@ foreach contract $patch_contract {
 catch {uiSetTool select}
 catch {setEditMode -reset}
 
+set base_patch_attempted_count $patch_attempted_count
+set base_patch_applied_count $patch_applied_count
+set chain_patch_attempted_count 0
+set chain_patch_applied_count 0
+if {$trial_revision eq "R6"} {
+    if {$command_failed || $command_fail_count != 0 ||
+        $base_patch_attempted_count != 6 || $base_patch_applied_count != 6} {
+        set status(PATCH_ATTEMPTED_COUNT) $patch_attempted_count
+        set status(PATCH_APPLIED_COUNT) $patch_applied_count
+        set status(COMMAND_PASS_COUNT) $command_pass_count
+        set status(COMMAND_FAIL_COUNT) $command_fail_count
+        lp_abort BASE_STAGE_COMMAND_FAILED \
+            "attempted=$base_patch_attempted_count applied=$base_patch_applied_count command_pass=$command_pass_count command_fail=$command_fail_count"
+    }
+
+    set base_drc [file join $reports verify_drc_after_base_stage.rpt]
+    set base_markers [file join $reports drc_markers_after_base_stage.tsv]
+    set base_regular [file join $reports verify_connectivity_regular_after_base_stage.rpt]
+    set base_special [file join $reports verify_connectivity_special_after_base_stage.rpt]
+    if {![lp_capture $base_drc {verify_drc}]} {
+        lp_abort BASE_STAGE_DRC_CAPTURE_FAILED
+    }
+    if {[catch {
+        lassign [lp_write_marker_dump $base_markers] \
+            base_marker_count base_database_total base_antenna_count base_connectivity_count
+    } marker_error]} {
+        lp_abort BASE_STAGE_MARKER_DUMP_FAILED $marker_error
+    }
+    set base_rows [lp_min_area_rows]
+    set base_nets [lp_row_nets $base_rows]
+    if {![lp_capture $base_regular {verifyConnectivity -type regular}] ||
+        ![lp_capture $base_special {verifyConnectivity -type special -nets {VDD VSS}}]} {
+        lp_abort BASE_STAGE_CONNECTIVITY_CAPTURE_FAILED
+    }
+    set base_drc_count [lp_violation_count $base_drc]
+    set base_regular_count [lp_violation_count $base_regular]
+    set base_special_count [lp_violation_count $base_special]
+    set expected_survivor_nets {n_9677 n_9693 n_9696 n_9697}
+    set base_marker_value_status PASS
+    foreach row $base_rows {
+        set message [lindex $row 3]
+        if {![regexp -nocase {Actual:[[:space:]]+0[.]17770000[[:space:]]+Required:[[:space:]]+0[.]20200000} $message]} {
+            set base_marker_value_status FAIL
+        }
+    }
+    set status(BASE_DRC_VIOLATION_COUNT) $base_drc_count
+    set status(BASE_DRC_MARKER_COUNT) $base_marker_count
+    set status(BASE_MARKER_DATABASE_TOTAL) $base_database_total
+    set status(BASE_EXCLUDED_ANTENNA_MARKER_COUNT) $base_antenna_count
+    set status(BASE_EXCLUDED_CONNECTIVITY_MARKER_COUNT) $base_connectivity_count
+    set status(BASE_REGULAR_CONNECTIVITY_VIOLATION_COUNT) $base_regular_count
+    set status(BASE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT) $base_special_count
+    set status(BASE_MIN_AREA_NETS) [join $base_nets { }]
+    set status(BASE_MARKER_VALUE_STATUS) $base_marker_value_status
+    if {![string is integer -strict $base_drc_count] || $base_drc_count != 4 ||
+        ![string is integer -strict $base_marker_count] || $base_marker_count != 4 ||
+        [llength $base_rows] != 4 || $base_nets ne $expected_survivor_nets ||
+        $base_marker_value_status ne "PASS" ||
+        ![string is integer -strict $base_regular_count] || $base_regular_count != 0 ||
+        ![string is integer -strict $base_special_count] || $base_special_count != 0 ||
+        ![string is integer -strict $base_database_total] || $base_database_total != 25 ||
+        ![string is integer -strict $base_antenna_count] || $base_antenna_count != 21 ||
+        ![string is integer -strict $base_connectivity_count] || $base_connectivity_count != 0} {
+        lp_abort BASE_STAGE_EXACT_STATE_NOT_REPRODUCED \
+            "drc=$base_drc_count markers=$base_marker_count rows=[llength $base_rows] nets=$base_nets values=$base_marker_value_status regular=$base_regular_count special=$base_special_count database_total=$base_database_total antenna=$base_antenna_count connectivity=$base_connectivity_count"
+    }
+    set status(BASE_STAGE_STATUS) PASS_EXACT_FOUR_0P1777_SURVIVORS
+
+    set base_wire_snapshot [file join $reports wire_snapshot_after_base_stage.tsv]
+    lassign [lp_write_wire_snapshot $base_wire_snapshot AFTER_BASE_STAGE $patch_contract] \
+        base_wire_query_pass_net_count \
+        base_wire_row_count \
+        base_local_met1_row_count \
+        base_wire_attribute_fail_count
+    set status(BASE_WIRE_QUERY_PASS_NET_COUNT) $base_wire_query_pass_net_count
+    set status(BASE_WIRE_ROW_COUNT) $base_wire_row_count
+    set status(BASE_LOCAL_MET1_ROW_COUNT) $base_local_met1_row_count
+    set status(BASE_WIRE_ATTRIBUTE_FAIL_COUNT) $base_wire_attribute_fail_count
+    if {$base_wire_query_pass_net_count != 6 || $base_local_met1_row_count != 6 ||
+        $base_wire_attribute_fail_count != 0} {
+        lp_abort BASE_STAGE_WIRE_CAPTURE_FAILED \
+            "resolved=$base_wire_query_pass_net_count local_met1=$base_local_met1_row_count attribute_fail=$base_wire_attribute_fail_count"
+    }
+
+    # net marker-box via-x via-y expected-far-x expected-far-y direction-sign source-Q
+    set chain_specs [list \
+        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.495 158.795 -1 g14627__2802/Q] \
+        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.895 201.845 -1 g14630__8246/Q] \
+        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 662.935 192.885 -1 g14626__1617/Q] \
+        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1666.665 201.845 1 g14646__2398/Q]]
+    set chain_contract_path [file join $reports min_area_chained_endpoint_contract.tsv]
+    set chain_contract_fh [open $chain_contract_path w]
+    puts $chain_contract_fh "net\tmarker_box\tcanonical_wire\tcanonical_box\tcanonical_pts\tstart_x\tstart_y\tend_x\tend_y\tlength_um\trequested_width_um\tdirection\tsource_q\tinside_source_inst_status\tcontract_status"
+    set chain_contract [list]
+    set chain_contract_validated_count 0
+    set chain_contract_failures [list]
+    foreach spec $chain_specs {
+        lassign $spec net marker_box via_x via_y expected_start_x expected_start_y direction_sign source_q
+        lassign [lp_find_canonical_stub_endpoint \
+            $net $marker_box $via_x $via_y $direction_sign] \
+            endpoint_status canonical_wire canonical_box start_x start_y canonical_pts
+        set endpoint_match_status FAIL
+        set inside_status FAIL
+        set end_x UNKNOWN
+        set direction UNKNOWN
+        if {$endpoint_status eq "PASS" &&
+            [lp_close $start_x $expected_start_x] &&
+            [lp_close $start_y $expected_start_y]} {
+            set endpoint_match_status PASS
+            set end_x [expr {$start_x + ($direction_sign * 0.56)}]
+            set direction [expr {$direction_sign < 0 ? "TOWARD_SOURCE_WEST" : "TOWARD_SOURCE_EAST"}]
+            set net_handles [list]
+            catch {set net_handles [lp_valid_handles [dbGet top.nets.name $net -p]]}
+            if {[llength $net_handles] == 1} {
+                set iterms [list]
+                catch {set iterms [lp_valid_handles [dbGet "[lindex $net_handles 0].instTerms"]]}
+                foreach iterm $iterms {
+                    set iterm_name UNKNOWN
+                    catch {set iterm_name [dbGet "${iterm}.name"]}
+                    if {$iterm_name ne $source_q} { continue }
+                    set source_box UNKNOWN
+                    catch {set source_box [dbGet "${iterm}.inst.box"]}
+                    set source_box [lp_flat_box $source_box]
+                    if {[lp_point_in_box $start_x [expr {$start_y - 0.14}] $source_box] &&
+                        [lp_point_in_box $start_x [expr {$start_y + 0.14}] $source_box] &&
+                        [lp_point_in_box $end_x [expr {$start_y - 0.14}] $source_box] &&
+                        [lp_point_in_box $end_x [expr {$start_y + 0.14}] $source_box]} {
+                        set inside_status PASS
+                    }
+                    break
+                }
+            }
+        }
+        set contract_status FAIL
+        if {$endpoint_match_status eq "PASS" && $inside_status eq "PASS"} {
+            set contract_status PASS
+            incr chain_contract_validated_count
+            lappend chain_contract [list $net $start_x $start_y $end_x 0.56 0.28 $direction $source_q]
+        } else {
+            lappend chain_contract_failures \
+                "$net:endpoint=$endpoint_status:match=$endpoint_match_status:inside=$inside_status:start=$start_x,$start_y"
+        }
+        set contract_start_x [expr {$endpoint_status eq "PASS" ? [format %.3f $start_x] : "UNKNOWN"}]
+        set contract_start_y [expr {$endpoint_status eq "PASS" ? [format %.3f $start_y] : "UNKNOWN"}]
+        set contract_end_x [expr {$endpoint_match_status eq "PASS" ? [format %.3f $end_x] : "UNKNOWN"}]
+        puts $chain_contract_fh "$net\t[join $marker_box { }]\t[lp_value $canonical_wire]\t[lp_value $canonical_box]\t[lp_value $canonical_pts]\t$contract_start_x\t$contract_start_y\t$contract_end_x\t$contract_start_y\t0.56\t0.28\t$direction\t$source_q\t$inside_status\t$contract_status"
+    }
+    close $chain_contract_fh
+    set status(CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT) $chain_contract_validated_count
+    if {$chain_contract_validated_count != 4 || [llength $chain_contract_failures] != 0} {
+        lp_abort CHAIN_ENDPOINT_CONTRACT_FAILED [join $chain_contract_failures {,}]
+    }
+    set status(CHAIN_ENDPOINT_CONTRACT_STATUS) PASS_EXACT_FOUR_ACTUAL_CANONICAL_ENDPOINTS
+    puts $command_fh "BASE_STAGE_STATUS=$status(BASE_STAGE_STATUS)"
+    puts $command_fh "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT=$chain_contract_validated_count"
+
+    foreach chain $chain_contract {
+        lassign $chain net start_x start_y end_x chain_length chain_width direction source_q
+        incr chain_patch_attempted_count
+        incr patch_attempted_count
+        set label "CHAIN_${net}"
+        puts $command_fh "${label}_START=[format {%.3f %.3f} $start_x $start_y]"
+        puts $command_fh "${label}_END=[format {%.3f %.3f} $end_x $start_y]"
+        puts $command_fh "${label}_LENGTH_UM=[format %.2f $chain_length]"
+        puts $command_fh "${label}_WIDTH_UM=[format %.2f $chain_width]"
+        puts $command_fh "${label}_DIRECTION=$direction"
+        puts $command_fh "${label}_SOURCE_Q=$source_q"
+        set setup_command [list setEditMode \
+            -nets $net \
+            -shape None \
+            -force_regular 1 \
+            -layer_horizontal MET1 \
+            -layer_vertical MET1 \
+            -snap_to_track_regular 0 \
+            -width_horizontal $chain_width \
+            -width_vertical $chain_width]
+        if {![lp_run_command $command_fh "${label}_SET_EDIT_MODE" $setup_command] ||
+            ![lp_run_command $command_fh "${label}_SET_TOOL" {uiSetTool addWire}] ||
+            ![lp_run_command $command_fh "${label}_ADD_ROUTE" [list editAddRoute $start_x $start_y]] ||
+            ![lp_run_command $command_fh "${label}_COMMIT_ROUTE" [list editCommitRoute $end_x $start_y]]} {
+            set command_failed 1
+            break
+        }
+        incr chain_patch_applied_count
+        incr patch_applied_count
+        puts $command_fh "${label}_APPLIED=YES"
+        flush $command_fh
+    }
+    catch {uiSetTool select}
+    catch {setEditMode -reset}
+    set status(CHAIN_STAGE_STATUS) \
+        [expr {$chain_patch_applied_count == 4 ? "APPLIED_EXACT_FOUR" : "INCOMPLETE"}]
+    set post_chain_wire_snapshot [file join $reports wire_snapshot_post_chain_stage.tsv]
+    lassign [lp_write_wire_snapshot $post_chain_wire_snapshot AFTER_CHAIN_STAGE $patch_contract] \
+        post_chain_wire_query_pass_net_count \
+        post_chain_wire_row_count \
+        post_chain_local_met1_row_count \
+        post_chain_wire_attribute_fail_count
+    set status(POST_CHAIN_WIRE_QUERY_PASS_NET_COUNT) $post_chain_wire_query_pass_net_count
+    set status(POST_CHAIN_WIRE_ROW_COUNT) $post_chain_wire_row_count
+    set status(POST_CHAIN_LOCAL_MET1_ROW_COUNT) $post_chain_local_met1_row_count
+    set status(POST_CHAIN_WIRE_ATTRIBUTE_FAIL_COUNT) $post_chain_wire_attribute_fail_count
+    if {$post_chain_wire_query_pass_net_count != 6 || $post_chain_wire_attribute_fail_count != 0} {
+        lp_abort POST_CHAIN_WIRE_CAPTURE_FAILED \
+            "resolved=$post_chain_wire_query_pass_net_count attribute_fail=$post_chain_wire_attribute_fail_count"
+    }
+}
+
+puts $command_fh "BASE_PATCH_ATTEMPTED_COUNT=$base_patch_attempted_count"
+puts $command_fh "BASE_PATCH_APPLIED_COUNT=$base_patch_applied_count"
+puts $command_fh "CHAIN_PATCH_ATTEMPTED_COUNT=$chain_patch_attempted_count"
+puts $command_fh "CHAIN_PATCH_APPLIED_COUNT=$chain_patch_applied_count"
 puts $command_fh "PATCH_ATTEMPTED_COUNT=$patch_attempted_count"
 puts $command_fh "PATCH_APPLIED_COUNT=$patch_applied_count"
 puts $command_fh "COMMAND_PASS_COUNT=$command_pass_count"
@@ -939,6 +1285,10 @@ close $command_fh
 set command_fh ""
 set status(PATCH_ATTEMPTED_COUNT) $patch_attempted_count
 set status(PATCH_APPLIED_COUNT) $patch_applied_count
+set status(BASE_PATCH_ATTEMPTED_COUNT) $base_patch_attempted_count
+set status(BASE_PATCH_APPLIED_COUNT) $base_patch_applied_count
+set status(CHAIN_PATCH_ATTEMPTED_COUNT) $chain_patch_attempted_count
+set status(CHAIN_PATCH_APPLIED_COUNT) $chain_patch_applied_count
 set status(COMMAND_PASS_COUNT) $command_pass_count
 set status(COMMAND_FAIL_COUNT) $command_fail_count
 
@@ -1009,7 +1359,8 @@ set numeric_post [expr {
 if {!$numeric_post ||
     $post_database_total != ($post_marker_count + $post_antenna_count + $post_connectivity_count)} {
     set status(RESULT) PATCH_POSTCHECK_INCOMPLETE
-} elseif {$command_failed || $command_fail_count != 0 || $patch_applied_count != 6} {
+} elseif {$command_failed || $command_fail_count != 0 ||
+        $patch_applied_count != $expected_patch_count} {
     set status(RESULT) PATCH_COMMAND_FAILED
 } elseif {$post_regular_count != 0 || $post_special_count != 0 || $post_connectivity_count != 0} {
     set status(RESULT) PATCH_CONNECTIVITY_REGRESSION

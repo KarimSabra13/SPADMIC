@@ -48,6 +48,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial-r4 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-materialization-probe <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-materialization-review <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-chained-landing-trial-r6 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -3788,6 +3789,237 @@ min_area_landing_materialization_review() {
   return $?
 }
 
+min_area_chained_landing_trial_r6() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-chained-landing-trial-r6 requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 26_min_area_landing_materialization_review || return 1
+
+  local step26_status step26_driver step26_analysis step25_driver
+  local source_block_root source_trial_root source_report_driver_head
+  local actual_head cd_rc cadence_rc trial_id trial_root trial_status
+  local console copy_dir trial_rc analysis_report analysis_rc driver_report
+  local status result path trial_process_status trial_process_result
+  local method_status contract_status base_status chain_status next_decision
+  step26_status="$TX2_SESSION_ROOT/status/26_min_area_landing_materialization_review.rpt"
+  step26_driver="$TX2_SESSION_ROOT/reports/26_min_area_landing_materialization_review_driver.rpt"
+  step26_analysis="$TX2_SESSION_ROOT/reports/26_min_area_landing_materialization_review.rpt"
+  step25_driver="$TX2_SESSION_ROOT/reports/25_min_area_landing_materialization_probe_driver.rpt"
+  actual_head=UNKNOWN
+  cadence_rc=NOT_RUN
+  trial_rc=NOT_RUN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=MIN_AREA_CHAINED_LANDING_R6_CLASSIFICATION_NOT_RUN
+
+  if [[ "$(kv_field "$step26_status" STATUS)" != "PASS" \
+      || "$(kv_field "$step26_status" RC)" != "0" \
+      || "$(kv_field "$step26_status" RESULT)" != "MIN_AREA_LANDING_MATERIALIZATION_EXACTLY_CLASSIFIED_NO_INNOVUS_NO_SAVE_EXPORT_OR_PVS" \
+      || "$(kv_field "$step26_status" HEAD_EXPECTED)" != "$TX2_EXPECTED_HEAD" \
+      || "$(kv_field "$step26_status" SESSION_ROOT)" != "$TX2_SESSION_ROOT" \
+      || "$(kv_field "$step26_driver" SOURCE_ARTIFACT_HEAD)" != "$TX2_EXPECTED_HEAD" \
+      || "$(kv_field "$step26_driver" EXPECTED_REPORT_DRIVER_HEAD)" != "$(kv_field "$step26_driver" REPORT_DRIVER_HEAD)" \
+      || "$(kv_field "$step26_driver" ANALYSIS_RC)" != "0" \
+      || "$(kv_field "$step26_driver" ANALYSIS_REPORT)" != "$step26_analysis" \
+      || "$(kv_field "$step26_driver" ANALYSIS_MODE)" != "READ_ONLY_EXISTING_STEP25_TEXT_ARTIFACTS_NO_INNOVUS" \
+      || "$(kv_field "$step26_driver" MATERIALIZATION_STATUS)" != "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT" \
+      || "$(kv_field "$step26_driver" NEXT_METHOD_DECISION)" != "COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY" \
+      || "$(kv_field "$step26_driver" DESIGN_MODIFICATION)" != "NOT_RUN" \
+      || "$(kv_field "$step26_driver" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step26_driver" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step26_driver" CANONICAL_RERUN)" != "NOT_RUN" \
+      || "$(kv_field "$step26_driver" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step26_driver" PVS)" != "NOT_RUN" \
+      || "$(kv_field "$step26_analysis" LABEL)" != "SPADMIC_TX_PACKET_MIN_AREA_LANDING_MATERIALIZATION_ANALYSIS" \
+      || "$(kv_field "$step26_analysis" POLICY)" != "ISOLATED_IN_MEMORY_R4_REPLAY_WIRE_MATERIALIZATION_CLASSIFICATION" \
+      || "$(kv_field "$step26_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step26_analysis" RESULT)" != "MIN_AREA_LANDING_MATERIALIZATION_PROBE_CLASSIFIED" \
+      || "$(kv_field "$step26_analysis" TRIAL_REVISION)" != "R5" \
+      || "$(kv_field "$step26_analysis" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step26_analysis" TRIAL_PROCESS_RESULT)" != "WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED" \
+      || "$(kv_field "$step26_analysis" METHOD_STATUS)" != "DIAGNOSTIC_CAPTURE_COMPLETE" \
+      || "$(kv_field "$step26_analysis" PATCH_CONTRACT_STATUS)" != "PASS_EXACT_SIX_R4_REPLAY_EXTENSIONS" \
+      || "$(kv_field "$step26_analysis" MATERIALIZATION_CAPTURE_STATUS)" != "COMPLETE" \
+      || "$(kv_field "$step26_analysis" MATERIALIZATION_STATUS)" != "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT" \
+      || "$(kv_field "$step26_analysis" CANONICAL_FIXED_STUB_NET_COUNT)" != "6" \
+      || "$(kv_field "$step26_analysis" MET2_SPLIT_NET_COUNT)" != "6" \
+      || "$(kv_field "$step26_analysis" MATERIALIZED_MET1_WIDTH_UM)" != "0.23" \
+      || "$(kv_field "$step26_analysis" MATERIALIZED_MET1_CENTERLINE_LENGTH_UM)" != "0.385" \
+      || "$(kv_field "$step26_analysis" WIRE_EDITOR_PARAMETER_CONTROL_STATUS)" != "REQUESTED_WIDTH_AND_ENDPOINT_NORMALIZED" \
+      || "$(kv_field "$step26_analysis" CLOSED_CONTROL_MATERIALIZATION_MATCH_STATUS)" != "PASS_SAME_CANONICAL_STUB_CLASS_AS_SURVIVORS" \
+      || "$(kv_field "$step26_analysis" PATCH_PARAMETER_SWEEP_DECISION)" != "RETIRED_LENGTH_DIRECTION_AND_WIDTH" \
+      || "$(kv_field "$step26_analysis" FINAL_DRC_VIOLATION_COUNT)" != "4" \
+      || "$(kv_field "$step26_analysis" FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step26_analysis" FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step26_analysis" FINAL_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step26_analysis" FINAL_MARKER_DATABASE_TOTAL)" != "25" \
+      || "$(kv_field "$step26_analysis" FINAL_MIN_AREA_NETS)" != "n_9677 n_9693 n_9696 n_9697" \
+      || "$(kv_field "$step26_analysis" NEXT_METHOD_DECISION)" != "COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY" \
+      || "$(kv_field "$step26_analysis" ERROR_COUNT)" != "0" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 26 is not the exact canonical-stub materialization tuple"
+    echo "STEP26_STATUS=$step26_status"
+    echo "STEP26_DRIVER=$step26_driver"
+    echo "STEP26_ANALYSIS=$step26_analysis"
+    return 1
+  fi
+
+  source_block_root="$(kv_field "$step25_driver" SOURCE_BLOCK_ROOT)"
+  source_trial_root="$(kv_field "$step26_driver" SOURCE_STEP25_TRIAL_ROOT)"
+  source_report_driver_head="$(kv_field "$step26_driver" SOURCE_STEP25_REPORT_DRIVER_HEAD)"
+  if [[ "$(kv_field "$step25_driver" SOURCE_ARTIFACT_HEAD)" != "$TX2_EXPECTED_HEAD" \
+      || "$(kv_field "$step25_driver" DESIGN_MODIFICATION)" != "IN_MEMORY_ONLY" \
+      || "$(kv_field "$step25_driver" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" CANONICAL_RERUN)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" PVS)" != "NOT_RUN" \
+      || -z "$source_block_root" || ! -d "$source_block_root" \
+      || -z "$source_trial_root" || ! -d "$source_trial_root" \
+      || -z "$source_report_driver_head" \
+      || "$source_report_driver_head" != "$(kv_field "$step26_analysis" REPORT_DRIVER_HEAD)" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 27 source checkpoint/evidence roots are missing or inconsistent"
+    echo "SOURCE_BLOCK_ROOT=${source_block_root:-MISSING}"
+    echo "SOURCE_STEP25_TRIAL_ROOT=${source_trial_root:-MISSING}"
+    echo "SOURCE_STEP25_REPORT_DRIVER_HEAD=${source_report_driver_head:-MISSING}"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  trial_id="${TX2_SESSION_ID}_min_area_chained_landing_trial_r6"
+  trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
+  trial_status="$trial_root/reports/min_area_landing_patch_trial_status.rpt"
+  console="$TX2_SESSION_ROOT/logs/27_min_area_chained_landing_trial_r6.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/27_min_area_chained_landing_trial_r6"
+  analysis_report="$TX2_SESSION_ROOT/reports/27_min_area_chained_landing_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/27_min_area_chained_landing_trial_r6_driver.rpt"
+  if [[ -e "$trial_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: immutable Step 27 trial root already exists"
+    echo "TRIAL_ROOT=$trial_root"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    load_cadence
+    cadence_rc=$?
+  fi
+  if [[ "$cadence_rc" == "0" ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    export SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R6
+    echo "COMMAND=SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R6 bash TOP/pnr/scripts/run_innovus_ooc_min_area_landing_patch_trial.sh $source_block_root $step26_analysis $trial_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_min_area_landing_patch_trial.sh" \
+      "$source_block_root" \
+      "$step26_analysis" \
+      "$trial_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    trial_rc=$?
+  fi
+
+  mkdir -p "$copy_dir"
+  if [[ -r "$trial_root/context.rpt" ]]; then
+    cp -p "$trial_root/context.rpt" "$copy_dir/context.rpt"
+  fi
+  if [[ -d "$trial_root/reports" ]]; then
+    for path in "$trial_root"/reports/*.rpt "$trial_root"/reports/*.tsv; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+
+  if [[ -r "$trial_status" ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_min_area_landing_patch_trial.py" \
+      --trial-root "$trial_root" \
+      --step26-analysis "$step26_analysis" \
+      --trial-revision R6 \
+      --report-driver-head "$actual_head" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ ( "$trial_rc" == "0" || "$trial_rc" == "8" ) \
+      && "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" LABEL)" == "SPADMIC_TX_PACKET_MIN_AREA_CHAINED_LANDING_ANALYSIS" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "MIN_AREA_CHAINED_LANDING_TRIAL_CLASSIFIED" \
+      && "$(kv_field "$analysis_report" TRIAL_REVISION)" == "R6" \
+      && "$(kv_field "$analysis_report" PATCH_CONTRACT_STATUS)" == "PASS_EXACT_SIX_BASE_AND_FOUR_CHAIN_ENDPOINTS" \
+      && "$(kv_field "$analysis_report" CHAIN_CAPTURE_STATUS)" == "COMPLETE" ]]; then
+    status=PASS
+    if [[ "$(kv_field "$analysis_report" METHOD_STATUS)" == "VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY" \
+        && "$(kv_field "$analysis_report" TRIAL_PROCESS_STATUS)" == "PASS" \
+        && "$(kv_field "$analysis_report" TRIAL_PROCESS_RESULT)" == "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED" ]]; then
+      result=MIN_AREA_CHAINED_LANDING_R6_DRC_ZERO_VALIDATED_NO_SAVE_EXPORT_OR_PVS
+    else
+      result=MIN_AREA_CHAINED_LANDING_R6_CLASSIFIED_NOT_CLOSED_NO_SAVE_EXPORT_OR_PVS
+    fi
+  else
+    result=MIN_AREA_CHAINED_LANDING_R6_CLASSIFICATION_INCOMPLETE
+  fi
+  trial_process_status="$(kv_field "$analysis_report" TRIAL_PROCESS_STATUS)"
+  trial_process_result="$(kv_field "$analysis_report" TRIAL_PROCESS_RESULT)"
+  method_status="$(kv_field "$analysis_report" METHOD_STATUS)"
+  contract_status="$(kv_field "$analysis_report" PATCH_CONTRACT_STATUS)"
+  base_status="$(kv_field "$analysis_report" BASE_STAGE_STATUS)"
+  chain_status="$(kv_field "$analysis_report" CHAIN_STAGE_STATUS)"
+  next_decision="$(kv_field "$analysis_report" NEXT_METHOD_DECISION)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP26_STATUS=$step26_status"
+    echo "SOURCE_STEP26_DRIVER=$step26_driver"
+    echo "SOURCE_STEP26_ANALYSIS=$step26_analysis"
+    echo "SOURCE_STEP25_DRIVER=$step25_driver"
+    echo "SOURCE_STEP25_TRIAL_ROOT=$source_trial_root"
+    echo "SOURCE_STEP25_REPORT_DRIVER_HEAD=$source_report_driver_head"
+    echo "SOURCE_BLOCK_ROOT=$source_block_root"
+    echo "TRIAL_REVISION=R6"
+    echo "TRIAL_RC=$trial_rc"
+    echo "TRIAL_ROOT=$trial_root"
+    echo "TRIAL_STATUS=$trial_status"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "TRIAL_PROCESS_STATUS=${trial_process_status:-UNKNOWN}"
+    echo "TRIAL_PROCESS_RESULT=${trial_process_result:-UNKNOWN}"
+    echo "METHOD_STATUS=${method_status:-UNKNOWN}"
+    echo "PATCH_CONTRACT_STATUS=${contract_status:-UNKNOWN}"
+    echo "BASE_STAGE_STATUS=${base_status:-UNKNOWN}"
+    echo "CHAIN_STAGE_STATUS=${chain_status:-UNKNOWN}"
+    echo "NEXT_METHOD_DECISION=${next_decision:-UNKNOWN}"
+    echo "DESIGN_MODIFICATION=IN_MEMORY_ONLY"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "CANONICAL_RERUN=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    tail -n 380 "$console"
+  fi
+  record_status 27_min_area_chained_landing_trial_r6 "$status" "$analysis_rc" "$result" "$trial_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -3915,6 +4147,9 @@ case "$COMMAND" in
     ;;
   min-area-landing-materialization-review)
     min_area_landing_materialization_review "$ARGUMENT_1"
+    ;;
+  min-area-chained-landing-trial-r6)
+    min_area_chained_landing_trial_r6 "$ARGUMENT_1"
     ;;
   package)
     package_evidence

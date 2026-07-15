@@ -16,8 +16,11 @@ export, stage immutable PVS inputs, or run PVS.
 Set SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R2 for the reviewed mixed-length
 replay sourced from Step 21, R3 for the mixed-direction replay sourced from
 Step 22, R4 for the mixed-width replay sourced from Step 23, or R5 for the
-Step 24 replay with pre/post wire-object materialization capture. The default
-R1 contract remains the uniform 0.56 um Step 21 trial sourced from Step 20.
+Step 24 replay with pre/post wire-object materialization capture. R6 replays
+the uniform first-stage stub, validates the exact four-survivor intermediate
+state, and chains a second stub from each survivor's actual materialized
+endpoint. The default R1 contract remains the uniform 0.56 um Step 21 trial
+sourced from Step 20.
 USAGE
 }
 
@@ -55,6 +58,10 @@ main() {
     R5)
       analysis_label=STEP24_ANALYSIS
       policy=ONE_FRESH_PROCESS_ONE_RESTORE_R4_REPLAY_WITH_LOCAL_WIRE_MATERIALIZATION_CAPTURE
+      ;;
+    R6)
+      analysis_label=STEP26_ANALYSIS
+      policy=ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_CHAINED_ENDPOINT_STUBS
       ;;
     *)
       echo "ERROR: unsupported landing-patch trial revision: $revision" >&2

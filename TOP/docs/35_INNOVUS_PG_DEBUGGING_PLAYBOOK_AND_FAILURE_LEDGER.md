@@ -1146,3 +1146,48 @@ Rejected actions after Step 25:
 - Do not save or export the R5 in-memory database.
 - Do not launch a canonical rerun, stage immutable PVS inputs, or run PVS from
   Step 25 or Step 26.
+
+## Step 26 Result - Canonicalization Is Exact
+
+The server-side Step 26 review passed at report-driver head
+`85a9a1b06bd8674fed8a0f57ee6122c772998950`. It reclassified the Step 25 raw
+wire evidence as
+`UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT`. All six edits generate the
+same fixed MET1 primitive regardless of requested width, and all six split the
+intersecting MET2 segment. This retires another first-stage endpoint, direction,
+or width sweep.
+
+The four survivors are at `0.1777/0.2020 um^2`, a deficit of only
+`0.0243 um^2`. R6 tests whether a second canonical primitive, connected at the
+actual far endpoint of the first, contributes the missing component area. This
+is a chained connected-component trial, not a larger first-stage request.
+
+The trial fails closed in three places:
+
+1. Before editing, the Step 26 source tuple and report-driver ancestry must be
+   exact.
+2. After the six base edits, DRC must be exactly four on the known survivors,
+   both connectivity counts must be zero, antenna accounting must remain 21,
+   and all six canonical fixed stubs must be present.
+3. Each of the four chain starts must equal the measured fixed-stub endpoint,
+   and the complete chained strip must remain within the reviewed source
+   instance.
+
+Physical acceptance requires:
+
+```text
+FINAL_DRC_VIOLATION_COUNT=0
+FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21
+FINAL_MARKER_DATABASE_TOTAL=21
+TRIAL_PROCESS_RESULT=CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
+```
+
+Rejected actions before the Step 27 result:
+
+- Do not save or export the isolated R6 database.
+- Do not treat command success, the exact base-stage reproduction, or a reduced
+  nonzero marker count as closure.
+- Do not launch the canonical rerun or PVS until R6 reaches the exact validated
+  tuple and a separate integration gate replays it from a fresh canonical run.

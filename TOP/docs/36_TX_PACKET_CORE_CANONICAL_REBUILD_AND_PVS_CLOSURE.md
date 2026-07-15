@@ -1192,3 +1192,36 @@ fixed `0.23 x 0.385 um` MET1 stubs, six exact one-to-two MET2 splits, unchanged
 DRC/connectivity accounting, and the decision
 `RETIRED_LENGTH_DIRECTION_AND_WIDTH`. It cannot save, export, launch a
 canonical rerun, stage PVS input, or run PVS.
+
+## P03 Step 26 Result And Step 27 Chained-Endpoint Trial
+
+Step 26 passed at report-driver head
+`85a9a1b06bd8674fed8a0f57ee6122c772998950` without launching Innovus. The
+review proved six identical fixed MET1 stubs (`0.23 um` wide and `0.385 um`
+long), six MET2 endpoint splits, and no dependence on the requested first-stage
+width or distance.
+
+Step 27 revision R6 restores the immutable post-route checkpoint once. It
+first applies six uniform base edits and requires the exact known `6 -> 4`
+state. It then discovers the four survivor endpoints from the live database
+and applies one additional toward-source edit from each endpoint. The expected
+starts are `719.495/158.795`, `209.895/201.845`, `662.935/192.885`, and
+`1666.665/201.845`; endpoint drift or any ambiguous canonical stub aborts the
+trial before the chain commands.
+
+The independent analyzer requires ten applied patches, forty successful Wire
+Editor commands, the exact intermediate four-marker tuple, exact endpoint
+contracts, and the final DRC/connectivity/antenna accounting. Only
+`CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED` authorizes design
+of the next fresh canonical integration gate. A coherent nonzero result is
+retained as evidence but does not authorize save, export, canonical replay,
+immutable PVS staging, or PVS.
+
+If R6 validates, the shortest closure path is:
+
+1. Replay the base and chained endpoint method in a fresh canonical packet-core
+   build together with the already-reviewed stream pin correction.
+2. Recheck exact DRC zero, regular and special connectivity zero, timing, and
+   exported artifact provenance.
+3. Stage immutable GDS/netlist/map inputs and run PVS DRC and LVS from those
+   hashes, not from the isolated R6 process.

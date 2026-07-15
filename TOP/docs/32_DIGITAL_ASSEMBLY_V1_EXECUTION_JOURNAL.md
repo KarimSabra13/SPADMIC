@@ -1953,3 +1953,55 @@ STEP26_BASH_SYNTAX=PASS
 STEP26_TCL_STRUCTURE_CHECK=NOT_APPLICABLE_NO_TCL_CHANGE
 STEP26_DIFF_CHECK=PASS
 ```
+
+### P03-R27 Step 26 Result And Chained-Endpoint Closure Trial
+
+Status: `STEP27_R6_READY_FOR_ONE_ISOLATED_SERVER_TRIAL`
+
+Step 26 completed at report-driver head
+`85a9a1b06bd8674fed8a0f57ee6122c772998950`. The read-only review proved the
+same exact canonical materialization on all six nets: one fixed `0.23 um` wide,
+`0.385 um` long MET1 stub and one split MET2 endpoint per edit. It also
+confirmed that requested endpoint distance and width are normalized, so those
+parameters are retired.
+
+The four survivors are only `0.0243 um^2` below the `0.2020 um^2` requirement
+after the first canonical stub. Step 27 therefore tests a different physical
+operation: continue the connected component from the actual far endpoint of
+that materialized stub. It first reproduces the six uniform width-`0.28 um`,
+length-`0.56 um` requests and requires the exact intermediate tuple:
+
+```text
+BASE_DRC_VIOLATION_COUNT=4
+BASE_MIN_AREA_NETS=n_9677 n_9693 n_9696 n_9697
+BASE_MARKER_VALUE_STATUS=PASS
+BASE_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+BASE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0
+BASE_EXCLUDED_ANTENNA_MARKER_COUNT=21
+BASE_MARKER_DATABASE_TOTAL=25
+```
+
+Only then does R6 query the fixed `0.23 x 0.385 um` MET1 objects and issue a
+second requested width-`0.28 um`, length-`0.56 um` edit from each measured far
+endpoint toward its source instance:
+
+```text
+n_9696  719.495 158.795 -> 718.935 158.795
+n_9693  209.895 201.845 -> 209.335 201.845
+n_9697  662.935 192.885 -> 662.375 192.885
+n_9677 1666.665 201.845 -> 1667.225 201.845
+```
+
+The trial is accepted only for exact DRC zero, zero regular and special
+connectivity violations, unchanged antenna count `21`, and marker-database
+total `21`. Any other coherent result is classification evidence only. The
+process remains in-memory and cannot save, export, launch canonical replay,
+stage immutable PVS inputs, or run PVS.
+
+```text
+STEP27_LOCAL_TOP_PNR_TESTS=125_PASS_0_FAIL
+STEP27_PY_COMPILE=PASS
+STEP27_BASH_SYNTAX=PASS
+STEP27_TCL_INFO_COMPLETE=PASS
+STEP27_DIFF_CHECK=PASS
+```
