@@ -285,12 +285,52 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
 
     def write_wire_snapshots(
         self, reports: Path, materialization: str
-    ) -> tuple[int, int]:
+    ) -> tuple[int, int, int, int]:
         pre_rows = [WIRE_HEADER]
         post_rows = [WIRE_HEADER]
         for index, net in enumerate(NETS, start=1):
             marker_box, start_x, start_y, end_x, _, _ = CONTRACT[net]
             requested_width = "0.56" if net in R4_WIDE_NETS else "0.28"
+            if materialization == "fixed_stub":
+                if float(end_x) < float(start_x):
+                    stub_llx = float(start_x) - 0.50
+                    stub_urx = float(start_x)
+                else:
+                    stub_llx = float(start_x)
+                    stub_urx = float(start_x) + 0.50
+                stub_lly = float(start_y) - 0.115
+                stub_ury = float(start_y) + 0.115
+                stub_box = (
+                    f"{stub_llx:.3f} {stub_lly:.3f} "
+                    f"{stub_urx:.3f} {stub_ury:.3f}"
+                )
+                pre_rows.append(
+                    f"PRE_EDIT\t{net}\t{marker_box}\t{requested_width}\t1\t"
+                    f"base_met2_{net}\tINTERSECTS_MARKER\tPASS\t{marker_box}\t"
+                    "PASS\tMET2\tPASS\trouted\tPASS\t0x0\tPASS\t0.28\t"
+                    f"PASS\t0.56\tPASS\t{{{{{start_x} {start_y}}} "
+                    f"{{{start_x} {float(start_y) + 0.56:.2f}}}}}"
+                )
+                post_rows.extend(
+                    (
+                        f"POST_EDIT\t{net}\t{marker_box}\t{requested_width}\t1\t"
+                        f"split_met2_a_{net}\tINTERSECTS_MARKER\tPASS\t{marker_box}\t"
+                        "PASS\tMET2\tPASS\trouted\tPASS\t0x0\tPASS\t0.28\t"
+                        f"PASS\t0.155\tPASS\t{{{{{start_x} {start_y}}} "
+                        f"{{{start_x} {float(start_y) + 0.155:.3f}}}}}",
+                        f"POST_EDIT\t{net}\t{marker_box}\t{requested_width}\t2\t"
+                        f"split_met2_b_{net}\tINTERSECTS_MARKER\tPASS\t{marker_box}\t"
+                        "PASS\tMET2\tPASS\trouted\tPASS\t0x0\tPASS\t0.28\t"
+                        f"PASS\t0.595\tPASS\t{{{{{start_x} {start_y}}} "
+                        f"{{{start_x} {float(start_y) + 0.595:.3f}}}}}",
+                        f"POST_EDIT\t{net}\t{marker_box}\t{requested_width}\t3\t"
+                        f"fixed_met1_{net}\tINTERSECTS_MARKER\tPASS\t{stub_box}\t"
+                        "PASS\tMET1\tPASS\tfixed\tPASS\t0x0\tPASS\t0.23\t"
+                        f"PASS\t0.385\tPASS\t{{{{{start_x} {start_y}}} "
+                        f"{{{end_x} {start_y}}}}}",
+                    )
+                )
+                continue
             common = (
                 f"{net}\t{marker_box}\t{requested_width}\t1\tbase_{net}\t"
                 f"INTERSECTS_MARKER\tPASS\t{marker_box}\tPASS\tMET1\t"
@@ -323,7 +363,14 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
         (reports / "wire_snapshot_post_trial.tsv").write_text(
             "\n".join(post_rows) + "\n"
         )
-        return len(pre_rows) - 1, len(post_rows) - 1
+        pre_data_rows = pre_rows[1:]
+        post_data_rows = post_rows[1:]
+        return (
+            len(pre_data_rows),
+            len(post_data_rows),
+            sum("\tMET1\t" in row for row in pre_data_rows),
+            sum("\tMET1\t" in row for row in post_data_rows),
+        )
 
     def write_fixture(
         self,
@@ -338,7 +385,12 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
         is_r3 = revision == "R3"
         is_r4 = revision == "R4"
         is_r5 = revision == "R5"
-        if materialization not in {"requested", "canonicalized", "none"}:
+        if materialization not in {
+            "requested",
+            "canonicalized",
+            "none",
+            "fixed_stub",
+        }:
             raise ValueError(f"unsupported materialization fixture: {materialization}")
         if is_r5:
             contract = CONTRACT
@@ -543,11 +595,16 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
 
         pre_wire_row_count = 0
         post_wire_row_count = 0
+        pre_local_met1_row_count = 0
+        post_local_met1_row_count = 0
         materialization_status_lines = ""
         if is_r5:
-            pre_wire_row_count, post_wire_row_count = self.write_wire_snapshots(
-                reports, materialization
-            )
+            (
+                pre_wire_row_count,
+                post_wire_row_count,
+                pre_local_met1_row_count,
+                post_local_met1_row_count,
+            ) = self.write_wire_snapshots(reports, materialization)
             materialization_status_lines = (
                 "MATERIALIZATION_CAPTURE_POLICY="
                 "PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION\n"
@@ -556,8 +613,8 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
                 "POST_WIRE_QUERY_PASS_NET_COUNT=6\n"
                 f"PRE_WIRE_ROW_COUNT={pre_wire_row_count}\n"
                 f"POST_WIRE_ROW_COUNT={post_wire_row_count}\n"
-                f"PRE_LOCAL_MET1_ROW_COUNT={pre_wire_row_count}\n"
-                f"POST_LOCAL_MET1_ROW_COUNT={post_wire_row_count}\n"
+                f"PRE_LOCAL_MET1_ROW_COUNT={pre_local_met1_row_count}\n"
+                f"POST_LOCAL_MET1_ROW_COUNT={post_local_met1_row_count}\n"
                 "PRE_WIRE_ATTRIBUTE_FAIL_COUNT=0\n"
                 "POST_WIRE_ATTRIBUTE_FAIL_COUNT=0\n"
                 "WIRE_ATTRIBUTE_FAIL_COUNT=0\n"
@@ -1146,6 +1203,49 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             self.assertIn(
                 "wire_snapshot_POST_EDIT_n_9677_shape_status=FAIL expected=PASS",
                 report.read_text(),
+            )
+
+    def test_r5_uniform_fixed_stub_and_met2_split_are_exactly_classified(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root,
+                validated=False,
+                revision="R5",
+                materialization="fixed_stub",
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R5")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn(
+                "MATERIALIZATION_STATUS="
+                "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT",
+                text,
+            )
+            self.assertIn("CANONICAL_FIXED_STUB_NET_COUNT=6", text)
+            self.assertIn("MET2_SPLIT_NET_COUNT=6", text)
+            self.assertIn("ADDED_LOCAL_MET2_SIGNATURE_COUNT=12", text)
+            self.assertIn("REMOVED_LOCAL_MET2_SIGNATURE_COUNT=6", text)
+            self.assertIn(
+                "WIRE_EDITOR_PARAMETER_CONTROL_STATUS="
+                "REQUESTED_WIDTH_AND_ENDPOINT_NORMALIZED",
+                text,
+            )
+            self.assertIn(
+                "CLOSED_CONTROL_MATERIALIZATION_MATCH_STATUS="
+                "PASS_SAME_CANONICAL_STUB_CLASS_AS_SURVIVORS",
+                text,
+            )
+            self.assertIn(
+                "PATCH_PARAMETER_SWEEP_DECISION="
+                "RETIRED_LENGTH_DIRECTION_AND_WIDTH",
+                text,
+            )
+            self.assertIn(
+                "NEXT_METHOD_DECISION="
+                "COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY",
+                text,
             )
 
     def test_r5_replay_command_failure_fails_closed(self) -> None:

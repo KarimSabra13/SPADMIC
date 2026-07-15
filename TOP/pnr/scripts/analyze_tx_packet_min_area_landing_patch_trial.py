@@ -190,13 +190,23 @@ def wire_signature(row: dict[str, str]) -> tuple[str, ...]:
     return tuple(canonical_cell(row.get(field, "")) for field in WIRE_SIGNATURE_FIELDS)
 
 
-def is_local_met1_wire_signature(signature: tuple[str, ...]) -> bool:
+def is_local_layer_wire_signature(
+    signature: tuple[str, ...], layer_name: str
+) -> bool:
     relation = signature[1]
     layer = signature[3]
     return bool(
-        layer.upper() == "MET1"
+        layer.upper() == layer_name
         and relation in {"INTERSECTS_MARKER", "WITHIN_2UM_CONTEXT"}
     )
+
+
+def is_local_met1_wire_signature(signature: tuple[str, ...]) -> bool:
+    return is_local_layer_wire_signature(signature, "MET1")
+
+
+def is_local_met2_wire_signature(signature: tuple[str, ...]) -> bool:
+    return is_local_layer_wire_signature(signature, "MET2")
 
 
 def width_matches(raw: str, expected: float) -> bool:
@@ -204,6 +214,23 @@ def width_matches(raw: str, expected: float) -> bool:
         return abs(float(raw) - expected) <= 0.001
     except ValueError:
         return False
+
+
+def is_canonical_fixed_met1_stub(signature: tuple[str, ...]) -> bool:
+    box = numeric_box(signature[2])
+    box_width = abs(box[2] - box[0]) if box else None
+    box_height = abs(box[3] - box[1]) if box else None
+    return bool(
+        is_local_met1_wire_signature(signature)
+        and box_width is not None
+        and box_height is not None
+        and abs(box_width - 0.50) <= 0.001
+        and abs(box_height - 0.23) <= 0.001
+        and signature[4].lower() == "fixed"
+        and signature[5] == "0x0"
+        and width_matches(signature[6], 0.23)
+        and width_matches(signature[7], 0.385)
+    )
 
 
 def classify(
@@ -815,9 +842,13 @@ def classify(
     removed_wire_handle_count = 0
     added_local_met1_signature_count = 0
     removed_local_met1_signature_count = 0
+    added_local_met2_signature_count = 0
+    removed_local_met2_signature_count = 0
     requested_width_materialized_wide_net_count = 0
     canonicalized_wide_net_count = 0
     no_local_delta_wide_net_count = 0
+    canonical_fixed_stub_net_count = 0
+    met2_split_net_count = 0
     if is_r5:
         for phase, rows in (
             ("PRE_EDIT", pre_wire_snapshot),
@@ -932,6 +963,16 @@ def classify(
             for signature, count in removed_wire_signatures.items()
             if is_local_met1_wire_signature(signature)
         )
+        added_local_met2_signature_count = sum(
+            count
+            for signature, count in added_wire_signatures.items()
+            if is_local_met2_wire_signature(signature)
+        )
+        removed_local_met2_signature_count = sum(
+            count
+            for signature, count in removed_wire_signatures.items()
+            if is_local_met2_wire_signature(signature)
+        )
 
         for net in EXPECTED_NETS:
             requested_width = 0.56 if net in R4_WIDE_NETS else 0.28
@@ -941,8 +982,45 @@ def classify(
                 for _ in range(count)
                 if signature[0] == net and is_local_met1_wire_signature(signature)
             ]
+            net_local_met2_added = [
+                signature
+                for signature, count in added_wire_signatures.items()
+                for _ in range(count)
+                if signature[0] == net and is_local_met2_wire_signature(signature)
+            ]
+            net_local_met2_removed = [
+                signature
+                for signature, count in removed_wire_signatures.items()
+                for _ in range(count)
+                if signature[0] == net and is_local_met2_wire_signature(signature)
+            ]
             widths = sorted({signature[6] for signature in net_local_added})
-            if any(width_matches(signature[6], requested_width) for signature in net_local_added):
+            canonical_fixed_stub = bool(
+                len(net_local_added) == 1
+                and is_canonical_fixed_met1_stub(net_local_added[0])
+            )
+            met2_split = bool(
+                len(net_local_met2_removed) == 1
+                and len(net_local_met2_added) == 2
+                and all(
+                    signature[4].lower() == "routed"
+                    and width_matches(signature[6], 0.28)
+                    for signature in net_local_met2_removed + net_local_met2_added
+                )
+                and sum(
+                    width_matches(signature[7], 0.155)
+                    for signature in net_local_met2_added
+                )
+                == 1
+            )
+            if canonical_fixed_stub and met2_split:
+                net_status = "CANONICAL_FIXED_0P23_BY_0P385_WITH_MET2_SPLIT"
+                canonical_fixed_stub_net_count += 1
+                met2_split_net_count += 1
+            elif canonical_fixed_stub:
+                net_status = "CANONICAL_FIXED_0P23_BY_0P385"
+                canonical_fixed_stub_net_count += 1
+            elif any(width_matches(signature[6], requested_width) for signature in net_local_added):
                 net_status = "REQUESTED_WIDTH_MATERIALIZED"
             elif any(width_matches(signature[6], 0.28) for signature in net_local_added):
                 net_status = "CANONICALIZED_TO_0P28"
@@ -967,7 +1045,11 @@ def classify(
                 }
             )
 
-        if requested_width_materialized_wide_net_count == 4:
+        if canonical_fixed_stub_net_count == 6 and met2_split_net_count == 6:
+            materialization_status = (
+                "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT"
+            )
+        elif requested_width_materialized_wide_net_count == 4:
             materialization_status = "REQUESTED_0P56_WIDTH_MATERIALIZED"
         elif canonicalized_wide_net_count == 4:
             materialization_status = "WIDE_REQUEST_CANONICALIZED_TO_0P28"
@@ -1077,6 +1159,12 @@ def classify(
         elif materialization_status == "NO_LOCAL_MET1_WIRE_DELTA":
             next_method_decision = (
                 "RETIRE_WIRE_EDITOR_COMMAND_PASS_WITHOUT_LOCAL_WIRE_DELTA"
+            )
+        elif materialization_status == (
+            "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT"
+        ):
+            next_method_decision = (
+                "COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY"
             )
         else:
             next_method_decision = "REVIEW_MIXED_WIRE_MATERIALIZATION_BEFORE_NEW_METHOD"
@@ -1218,6 +1306,44 @@ def classify(
                 ),
                 "REMOVED_LOCAL_MET1_SIGNATURE_COUNT": str(
                     removed_local_met1_signature_count
+                ),
+                "ADDED_LOCAL_MET2_SIGNATURE_COUNT": str(
+                    added_local_met2_signature_count
+                ),
+                "REMOVED_LOCAL_MET2_SIGNATURE_COUNT": str(
+                    removed_local_met2_signature_count
+                ),
+                "CANONICAL_FIXED_STUB_NET_COUNT": str(
+                    canonical_fixed_stub_net_count
+                ),
+                "MET2_SPLIT_NET_COUNT": str(met2_split_net_count),
+                "MATERIALIZED_MET1_WIDTH_UM": (
+                    "0.23"
+                    if canonical_fixed_stub_net_count == 6
+                    else "MIXED_OR_UNKNOWN"
+                ),
+                "MATERIALIZED_MET1_CENTERLINE_LENGTH_UM": (
+                    "0.385"
+                    if canonical_fixed_stub_net_count == 6
+                    else "MIXED_OR_UNKNOWN"
+                ),
+                "WIRE_EDITOR_PARAMETER_CONTROL_STATUS": (
+                    "REQUESTED_WIDTH_AND_ENDPOINT_NORMALIZED"
+                    if materialization_status
+                    == "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT"
+                    else "NOT_EXACTLY_CLASSIFIED"
+                ),
+                "CLOSED_CONTROL_MATERIALIZATION_MATCH_STATUS": (
+                    "PASS_SAME_CANONICAL_STUB_CLASS_AS_SURVIVORS"
+                    if materialization_status
+                    == "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT"
+                    else "NOT_EXACTLY_CLASSIFIED"
+                ),
+                "PATCH_PARAMETER_SWEEP_DECISION": (
+                    "RETIRED_LENGTH_DIRECTION_AND_WIDTH"
+                    if materialization_status
+                    == "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT"
+                    else "PENDING_EXACT_MATERIALIZATION_CLASSIFICATION"
                 ),
                 "REQUESTED_WIDTH_MATERIALIZED_WIDE_NET_COUNT": str(
                     requested_width_materialized_wide_net_count

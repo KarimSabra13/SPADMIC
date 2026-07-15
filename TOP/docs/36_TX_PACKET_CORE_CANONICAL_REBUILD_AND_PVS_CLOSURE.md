@@ -1159,3 +1159,36 @@ Step 25 remains in-memory only. Save, export, canonical replay, immutable PVS
 staging, and PVS are blocked for every materialization classification. The
 result can select the next repair primitive for review, but cannot advance the
 canonical closure flow automatically.
+
+## P03 Step 25 Result And Step 26 Exact Materialization Review
+
+Step 25 completed at report-driver head
+`d03eb3302e92d90d2a7df6c0700c5acb5942d777`. R5 reproduced the same coherent
+but rejected physical result as R4: DRC changed from six to four, both
+connectivity classes stayed zero, restored antenna accounting stayed 21, and
+the total marker database changed from 27 to 25.
+
+The wire snapshots resolve the representation question more narrowly than the
+original four-way classifier. For each of all six nets, the semantic delta is:
+
+1. Remove one routed width-`0.28 um` MET2 segment intersecting the marker.
+2. Add two routed width-`0.28 um` MET2 segments split at the landing.
+3. Add one fixed MET1 stub with `shape=0x0`, database width `0.23 um`, and
+   centerline length `0.385 um`.
+
+The four requested `0.56 um` widths and two requested `0.28 um` widths all
+produce that same primitive. No requested-width object is present. The
+materialization is deterministic canonicalization, not a mixed response.
+
+The two closed nets, `n_9706` and `n_9721`, have the same post-edit primitive
+class as the four survivors. The next method cannot be selected by changing
+the patch command again. It must compare connected-component counting and the
+pre-existing local landing, VIA1 enclosure, and source-pin geometry between
+the closed controls and survivors.
+
+Step 26 is a read-only text review of the immutable Step 25 artifacts. It does
+not restore a design or launch Innovus. The gate passes only for six exact
+fixed `0.23 x 0.385 um` MET1 stubs, six exact one-to-two MET2 splits, unchanged
+DRC/connectivity accounting, and the decision
+`RETIRED_LENGTH_DIRECTION_AND_WIDTH`. It cannot save, export, launch a
+canonical rerun, stage PVS input, or run PVS.

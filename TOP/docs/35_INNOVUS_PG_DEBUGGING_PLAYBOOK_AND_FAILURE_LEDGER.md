@@ -1097,3 +1097,52 @@ Rejected actions after Step 24:
   immutable source checkpoint and replay all six contracts.
 - Do not save, export, launch a canonical rerun, stage PVS inputs, or run PVS
   from the materialization probe.
+
+## Step 25 Result - Wire Editor Emits One Canonical Landing Primitive
+
+Step 25 completed the requested pre/post wire capture with no query or command
+failure. Its top-level physical tuple remained `6 -> 4` MET1 minimum-area
+markers, zero regular and special connectivity violations, 21 restored antenna
+entries, and 25 total marker-database entries.
+
+The raw semantic delta is uniform across all six nets even though the initial
+analyzer used its fallback `MIXED_LOCAL_MET1_MATERIALIZATION` class:
+
+```text
+pre/post wire rows                 143 / 155
+added/removed wire signatures      18 / 6
+added/removed local MET1             6 / 0
+added/removed local MET2            12 / 6
+canonical fixed-stub width          0.23 um
+canonical fixed-stub length         0.385 um
+canonical fixed-stub route status   fixed
+canonical fixed-stub shape          0x0
+```
+
+All four `0.56 um` width requests and both `0.28 um` controls became the same
+fixed MET1 stub. Each original local MET2 endpoint was split into two routed
+MET2 objects around the new landing coordinate. Command width, endpoint
+distance, and direction are therefore not independent physical controls for
+this Wire Editor primitive.
+
+The closed-control comparison is decisive. `n_9706` and `n_9721` close with
+the same canonical stub class that leaves the other four nets at
+`0.1777/0.2020 um^2`. The unresolved difference is below the command layer: it
+is in connected-component counting or the local pin, VIA1, and landing
+geometry already present on each net.
+
+Step 26 performs only a strict text-artifact reclassification. It requires one
+canonical fixed MET1 stub and one-to-two MET2 split per net, records that the
+length/direction/width sweep is retired, and selects a closed-control versus
+survivor landing-component comparison as the next review target.
+
+Rejected actions after Step 25:
+
+- Do not run another Wire Editor endpoint, direction, or width sweep.
+- Do not interpret the requested `0.56 um` width as database width; the
+  materialized wire reports `0.23 um`.
+- Do not replace the regular signal-wire primitive with `add_shape` or a
+  special-net rectangle.
+- Do not save or export the R5 in-memory database.
+- Do not launch a canonical rerun, stage immutable PVS inputs, or run PVS from
+  Step 25 or Step 26.

@@ -47,6 +47,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial-r3 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial-r4 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-materialization-probe <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-materialization-review <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -3512,7 +3513,7 @@ min_area_landing_materialization_probe() {
 
   materialization_status="$(kv_field "$analysis_report" MATERIALIZATION_STATUS)"
   case "$materialization_status" in
-    REQUESTED_0P56_WIDTH_MATERIALIZED|WIDE_REQUEST_CANONICALIZED_TO_0P28|NO_LOCAL_MET1_WIRE_DELTA|MIXED_LOCAL_MET1_MATERIALIZATION)
+    REQUESTED_0P56_WIDTH_MATERIALIZED|WIDE_REQUEST_CANONICALIZED_TO_0P28|NO_LOCAL_MET1_WIRE_DELTA|MIXED_LOCAL_MET1_MATERIALIZATION|UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT)
       materialization_class_ok=YES
       ;;
   esac
@@ -3575,6 +3576,214 @@ min_area_landing_materialization_probe() {
     tail -n 340 "$console"
   fi
   record_status 25_min_area_landing_materialization_probe "$status" "$analysis_rc" "$result" "$trial_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
+min_area_landing_materialization_review() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-landing-materialization-review requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 25_min_area_landing_materialization_probe || return 1
+
+  local step25_status step25_driver step25_analysis step24_analysis source_trial_root
+  local source_report_driver_head source_materialization source_next_decision
+  local actual_head cd_rc analysis_report analysis_rc console driver_report
+  local status result materialization_status next_decision
+  step25_status="$TX2_SESSION_ROOT/status/25_min_area_landing_materialization_probe.rpt"
+  step25_driver="$TX2_SESSION_ROOT/reports/25_min_area_landing_materialization_probe_driver.rpt"
+  step25_analysis="$TX2_SESSION_ROOT/reports/25_min_area_landing_materialization_analysis.rpt"
+  step24_analysis="$TX2_SESSION_ROOT/reports/24_min_area_landing_patch_analysis.rpt"
+  analysis_report="$TX2_SESSION_ROOT/reports/26_min_area_landing_materialization_review.rpt"
+  console="$TX2_SESSION_ROOT/logs/26_min_area_landing_materialization_review.console.log"
+  driver_report="$TX2_SESSION_ROOT/reports/26_min_area_landing_materialization_review_driver.rpt"
+  actual_head=UNKNOWN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=MIN_AREA_LANDING_MATERIALIZATION_EXACT_CLASSIFICATION_NOT_RUN
+
+  source_materialization="$(kv_field "$step25_analysis" MATERIALIZATION_STATUS)"
+  source_next_decision="$(kv_field "$step25_analysis" NEXT_METHOD_DECISION)"
+  case "$source_materialization" in
+    MIXED_LOCAL_MET1_MATERIALIZATION|UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT)
+      ;;
+    *)
+      echo "STOP_HERE_DO_NOT_CONTINUE: Step 25 materialization class is not reviewable"
+      echo "SOURCE_MATERIALIZATION_STATUS=${source_materialization:-MISSING}"
+      return 1
+      ;;
+  esac
+  case "$source_next_decision" in
+    REVIEW_MIXED_WIRE_MATERIALIZATION_BEFORE_NEW_METHOD|COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY)
+      ;;
+    *)
+      echo "STOP_HERE_DO_NOT_CONTINUE: Step 25 next-method decision is not reviewable"
+      echo "SOURCE_NEXT_METHOD_DECISION=${source_next_decision:-MISSING}"
+      return 1
+      ;;
+  esac
+
+  if [[ "$(kv_field "$step25_status" STATUS)" != "PASS" \
+      || "$(kv_field "$step25_status" RC)" != "0" \
+      || "$(kv_field "$step25_status" RESULT)" != "MIN_AREA_LANDING_MATERIALIZATION_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS" \
+      || "$(kv_field "$step25_status" HEAD_EXPECTED)" != "$TX2_EXPECTED_HEAD" \
+      || "$(kv_field "$step25_status" SESSION_ROOT)" != "$TX2_SESSION_ROOT" \
+      || "$(kv_field "$step25_driver" SOURCE_ARTIFACT_HEAD)" != "$TX2_EXPECTED_HEAD" \
+      || "$(kv_field "$step25_driver" EXPECTED_REPORT_DRIVER_HEAD)" != "$(kv_field "$step25_driver" REPORT_DRIVER_HEAD)" \
+      || "$(kv_field "$step25_driver" TRIAL_REVISION)" != "R5" \
+      || "$(kv_field "$step25_driver" TRIAL_RC)" != "8" \
+      || "$(kv_field "$step25_driver" ANALYSIS_RC)" != "0" \
+      || "$(kv_field "$step25_driver" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step25_driver" TRIAL_PROCESS_RESULT)" != "WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED" \
+      || "$(kv_field "$step25_driver" METHOD_STATUS)" != "DIAGNOSTIC_CAPTURE_COMPLETE" \
+      || "$(kv_field "$step25_driver" MATERIALIZATION_CAPTURE_STATUS)" != "COMPLETE" \
+      || "$(kv_field "$step25_driver" MATERIALIZATION_STATUS)" != "$source_materialization" \
+      || "$(kv_field "$step25_driver" DESIGN_MODIFICATION)" != "IN_MEMORY_ONLY" \
+      || "$(kv_field "$step25_driver" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" CANONICAL_RERUN)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step25_driver" PVS)" != "NOT_RUN" \
+      || "$(kv_field "$step25_analysis" LABEL)" != "SPADMIC_TX_PACKET_MIN_AREA_LANDING_MATERIALIZATION_ANALYSIS" \
+      || "$(kv_field "$step25_analysis" POLICY)" != "ISOLATED_IN_MEMORY_R4_REPLAY_WIRE_MATERIALIZATION_CLASSIFICATION" \
+      || "$(kv_field "$step25_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step25_analysis" RESULT)" != "MIN_AREA_LANDING_MATERIALIZATION_PROBE_CLASSIFIED" \
+      || "$(kv_field "$step25_analysis" TRIAL_ROOT)" != "$(kv_field "$step25_driver" TRIAL_ROOT)" \
+      || "$(kv_field "$step25_analysis" REPORT_DRIVER_HEAD)" != "$(kv_field "$step25_driver" REPORT_DRIVER_HEAD)" \
+      || "$(kv_field "$step25_analysis" TRIAL_REVISION)" != "R5" \
+      || "$(kv_field "$step25_analysis" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step25_analysis" TRIAL_PROCESS_RESULT)" != "WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED" \
+      || "$(kv_field "$step25_analysis" METHOD_STATUS)" != "DIAGNOSTIC_CAPTURE_COMPLETE" \
+      || "$(kv_field "$step25_analysis" PATCH_CONTRACT_STATUS)" != "PASS_EXACT_SIX_R4_REPLAY_EXTENSIONS" \
+      || "$(kv_field "$step25_analysis" MATERIALIZATION_CAPTURE_STATUS)" != "COMPLETE" \
+      || "$(kv_field "$step25_analysis" PRE_WIRE_QUERY_PASS_NET_COUNT)" != "6" \
+      || "$(kv_field "$step25_analysis" POST_WIRE_QUERY_PASS_NET_COUNT)" != "6" \
+      || "$(kv_field "$step25_analysis" PRE_WIRE_ROW_COUNT)" != "143" \
+      || "$(kv_field "$step25_analysis" POST_WIRE_ROW_COUNT)" != "155" \
+      || "$(kv_field "$step25_analysis" PRE_LOCAL_MET1_ROW_COUNT)" != "0" \
+      || "$(kv_field "$step25_analysis" POST_LOCAL_MET1_ROW_COUNT)" != "6" \
+      || "$(kv_field "$step25_analysis" WIRE_ATTRIBUTE_FAIL_COUNT)" != "0" \
+      || "$(kv_field "$step25_analysis" ADDED_WIRE_SIGNATURE_COUNT)" != "18" \
+      || "$(kv_field "$step25_analysis" REMOVED_WIRE_SIGNATURE_COUNT)" != "6" \
+      || "$(kv_field "$step25_analysis" ADDED_LOCAL_MET1_SIGNATURE_COUNT)" != "6" \
+      || "$(kv_field "$step25_analysis" REMOVED_LOCAL_MET1_SIGNATURE_COUNT)" != "0" \
+      || "$(kv_field "$step25_analysis" PRE_DRC_VIOLATION_COUNT)" != "6" \
+      || "$(kv_field "$step25_analysis" FINAL_DRC_VIOLATION_COUNT)" != "4" \
+      || "$(kv_field "$step25_analysis" FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step25_analysis" FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step25_analysis" FINAL_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step25_analysis" FINAL_MARKER_DATABASE_TOTAL)" != "25" \
+      || "$(kv_field "$step25_analysis" FINAL_MIN_AREA_NETS)" != "n_9677 n_9693 n_9696 n_9697" \
+      || "$(kv_field "$step25_analysis" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step25_analysis" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step25_analysis" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step25_analysis" PVS_DECISION)" != "DO_NOT_RUN" \
+      || "$(kv_field "$step25_analysis" CANONICAL_RERUN_DECISION)" != "DO_NOT_RUN_FROM_THIS_STEP" \
+      || "$(kv_field "$step25_analysis" ERROR_COUNT)" != "0" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 25 is not the reviewed wire-materialization evidence tuple"
+    echo "STEP25_STATUS=$step25_status"
+    echo "STEP25_DRIVER=$step25_driver"
+    echo "STEP25_ANALYSIS=$step25_analysis"
+    return 1
+  fi
+
+  source_trial_root="$(kv_field "$step25_driver" TRIAL_ROOT)"
+  source_report_driver_head="$(kv_field "$step25_driver" REPORT_DRIVER_HEAD)"
+  if [[ -z "$source_trial_root" || ! -d "$source_trial_root" \
+      || ! -r "$source_trial_root/context.rpt" \
+      || ! -r "$source_trial_root/reports/wire_snapshot_pre_trial.tsv" \
+      || ! -r "$source_trial_root/reports/wire_snapshot_post_trial.tsv" \
+      || -z "$source_report_driver_head" \
+      || ! -r "$step24_analysis" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 25 source evidence is missing"
+    echo "SOURCE_STEP25_TRIAL_ROOT=${source_trial_root:-MISSING}"
+    echo "SOURCE_STEP25_REPORT_DRIVER_HEAD=${source_report_driver_head:-MISSING}"
+    echo "SOURCE_STEP24_ANALYSIS=$step24_analysis"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_min_area_landing_patch_trial.py" \
+      --trial-root "$source_trial_root" \
+      --step24-analysis "$step24_analysis" \
+      --trial-revision R5 \
+      --report-driver-head "$source_report_driver_head" \
+      --report "$analysis_report" \
+      >"$console" 2>&1
+    analysis_rc=$?
+  fi
+
+  materialization_status="$(kv_field "$analysis_report" MATERIALIZATION_STATUS)"
+  next_decision="$(kv_field "$analysis_report" NEXT_METHOD_DECISION)"
+  if [[ "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "MIN_AREA_LANDING_MATERIALIZATION_PROBE_CLASSIFIED" \
+      && "$materialization_status" == "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT" \
+      && "$(kv_field "$analysis_report" CANONICAL_FIXED_STUB_NET_COUNT)" == "6" \
+      && "$(kv_field "$analysis_report" MET2_SPLIT_NET_COUNT)" == "6" \
+      && "$(kv_field "$analysis_report" ADDED_LOCAL_MET1_SIGNATURE_COUNT)" == "6" \
+      && "$(kv_field "$analysis_report" REMOVED_LOCAL_MET1_SIGNATURE_COUNT)" == "0" \
+      && "$(kv_field "$analysis_report" ADDED_LOCAL_MET2_SIGNATURE_COUNT)" == "12" \
+      && "$(kv_field "$analysis_report" REMOVED_LOCAL_MET2_SIGNATURE_COUNT)" == "6" \
+      && "$(kv_field "$analysis_report" MATERIALIZED_MET1_WIDTH_UM)" == "0.23" \
+      && "$(kv_field "$analysis_report" MATERIALIZED_MET1_CENTERLINE_LENGTH_UM)" == "0.385" \
+      && "$(kv_field "$analysis_report" WIRE_EDITOR_PARAMETER_CONTROL_STATUS)" == "REQUESTED_WIDTH_AND_ENDPOINT_NORMALIZED" \
+      && "$(kv_field "$analysis_report" CLOSED_CONTROL_MATERIALIZATION_MATCH_STATUS)" == "PASS_SAME_CANONICAL_STUB_CLASS_AS_SURVIVORS" \
+      && "$(kv_field "$analysis_report" PATCH_PARAMETER_SWEEP_DECISION)" == "RETIRED_LENGTH_DIRECTION_AND_WIDTH" \
+      && "$next_decision" == "COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY" \
+      && "$(kv_field "$analysis_report" ERROR_COUNT)" == "0" ]]; then
+    status=PASS
+    result=MIN_AREA_LANDING_MATERIALIZATION_EXACTLY_CLASSIFIED_NO_INNOVUS_NO_SAVE_EXPORT_OR_PVS
+  else
+    result=MIN_AREA_LANDING_MATERIALIZATION_EXACT_CLASSIFICATION_INCOMPLETE
+  fi
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP25_STATUS=$step25_status"
+    echo "SOURCE_STEP25_DRIVER=$step25_driver"
+    echo "SOURCE_STEP25_ANALYSIS=$step25_analysis"
+    echo "SOURCE_STEP25_TRIAL_ROOT=$source_trial_root"
+    echo "SOURCE_STEP25_REPORT_DRIVER_HEAD=$source_report_driver_head"
+    echo "SOURCE_STEP25_MATERIALIZATION_STATUS=$source_materialization"
+    echo "SOURCE_STEP25_NEXT_METHOD_DECISION=$source_next_decision"
+    echo "SOURCE_STEP24_ANALYSIS=$step24_analysis"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "ANALYSIS_MODE=READ_ONLY_EXISTING_STEP25_TEXT_ARTIFACTS_NO_INNOVUS"
+    echo "MATERIALIZATION_STATUS=${materialization_status:-UNKNOWN}"
+    echo "NEXT_METHOD_DECISION=${next_decision:-UNKNOWN}"
+    echo "DESIGN_MODIFICATION=NOT_RUN"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "CANONICAL_RERUN=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    tail -n 260 "$console"
+  fi
+  record_status 26_min_area_landing_materialization_review "$status" "$analysis_rc" "$result" "$source_trial_root"
   [[ "$status" == "PASS" ]]
   return $?
 }
@@ -3703,6 +3912,9 @@ case "$COMMAND" in
     ;;
   min-area-landing-materialization-probe)
     min_area_landing_materialization_probe "$ARGUMENT_1"
+    ;;
+  min-area-landing-materialization-review)
+    min_area_landing_materialization_review "$ARGUMENT_1"
     ;;
   package)
     package_evidence

@@ -48,6 +48,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "min-area-landing-patch-trial-r3",
             "min-area-landing-patch-trial-r4",
             "min-area-landing-materialization-probe",
+            "min-area-landing-materialization-review",
             "package",
             "status",
         ):
@@ -256,6 +257,26 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             driver,
         )
         self.assertIn("25_min_area_landing_materialization_probe", driver)
+        self.assertIn(
+            "min-area-landing-materialization-review <expected-report-driver-head>",
+            driver,
+        )
+        self.assertIn(
+            "UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT",
+            driver,
+        )
+        self.assertIn("CANONICAL_FIXED_STUB_NET_COUNT", driver)
+        self.assertIn("MET2_SPLIT_NET_COUNT", driver)
+        self.assertIn("RETIRED_LENGTH_DIRECTION_AND_WIDTH", driver)
+        self.assertIn(
+            "READ_ONLY_EXISTING_STEP25_TEXT_ARTIFACTS_NO_INNOVUS",
+            driver,
+        )
+        self.assertIn(
+            "MIN_AREA_LANDING_MATERIALIZATION_EXACTLY_CLASSIFIED_NO_INNOVUS_NO_SAVE_EXPORT_OR_PVS",
+            driver,
+        )
+        self.assertIn("26_min_area_landing_materialization_review", driver)
         landing_trial = (
             REPO
             / "TOP"

@@ -1882,3 +1882,74 @@ STEP25_BASH_SYNTAX=PASS
 STEP25_TCL_STRUCTURE_CHECK=PASS
 STEP25_DIFF_CHECK=PASS
 ```
+
+### P03-R26 Server Evidence - Step 25 Resolves Wire Materialization
+
+Status: `PASS_CLASSIFIED_STEP26_EXACT_TEXT_REVIEW_READY`
+
+Step 25 completed at report-driver head
+`d03eb3302e92d90d2a7df6c0700c5acb5942d777`. The fresh R5 process restored
+the original checkpoint, reproduced the R4 command contract, and captured all
+wire objects before and after the six edits. The physical result remained the
+reviewed evidence-only tuple:
+
+```text
+TRIAL_PROCESS_RESULT=WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED
+METHOD_STATUS=DIAGNOSTIC_CAPTURE_COMPLETE
+DRC=6 -> 4
+REGULAR_CONNECTIVITY=0 -> 0
+SPECIAL_CONNECTIVITY=0 -> 0
+RESTORED_ANTENNA=21 -> 21
+MARKER_DATABASE_TOTAL=27 -> 25
+```
+
+The analyzer's coarse `MIXED_LOCAL_MET1_MATERIALIZATION` label obscures a
+strictly uniform raw result. Every net added exactly one local MET1 object with
+the same attributes:
+
+```text
+route_status=fixed
+shape=0x0
+width=0.23 um
+centerline_length=0.385 um
+added_local_met1_signatures=6
+removed_local_met1_signatures=0
+```
+
+This is independent of whether Wire Editor was asked for width `0.56 um` on
+the four survivors or `0.28 um` on the two controls. Each edit also replaced
+one local routed MET2 segment with two routed MET2 segments around the new
+landing coordinate: six removed local MET2 signatures and twelve added local
+MET2 signatures. The edit therefore spliced the MET2 endpoint and emitted a
+canonical fixed MET1 stub; it did not materialize the requested width or
+requested endpoint distance literally.
+
+The strongest control is internal to the same run. `n_9706` and `n_9721`
+closed with this canonical primitive, while `n_9677`, `n_9693`, `n_9696`, and
+`n_9697` retained `0.1777/0.2020 um^2` markers with the same primitive. Patch
+materialization cannot explain that split. The remaining discriminator must be
+in the pre-existing connected landing component, VIA1 enclosure, or source-pin
+geometry.
+
+Step 26, `min-area-landing-materialization-review`, is text-only. It reruns the
+independent R5 analyzer against the immutable Step 25 trial root, requires all
+six canonical stubs and all six MET2 splits, and emits:
+
+```text
+MATERIALIZATION_STATUS=UNIFORM_FIXED_0P23_BY_0P385_MET1_WITH_MET2_SPLIT
+WIRE_EDITOR_PARAMETER_CONTROL_STATUS=REQUESTED_WIDTH_AND_ENDPOINT_NORMALIZED
+CLOSED_CONTROL_MATERIALIZATION_MATCH_STATUS=PASS_SAME_CANONICAL_STUB_CLASS_AS_SURVIVORS
+PATCH_PARAMETER_SWEEP_DECISION=RETIRED_LENGTH_DIRECTION_AND_WIDTH
+NEXT_METHOD_DECISION=COMPARE_CLOSED_CONTROL_AND_SURVIVOR_LANDING_COMPONENT_GEOMETRY
+```
+
+Step 26 does not launch Innovus. Save, export, canonical replay, immutable PVS
+staging, and PVS remain blocked.
+
+```text
+STEP26_LOCAL_TOP_PNR_TESTS=122_PASS_0_FAIL
+STEP26_PY_COMPILE=PASS
+STEP26_BASH_SYNTAX=PASS
+STEP26_TCL_STRUCTURE_CHECK=NOT_APPLICABLE_NO_TCL_CHANGE
+STEP26_DIFF_CHECK=PASS
+```
