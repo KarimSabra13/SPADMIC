@@ -1118,3 +1118,44 @@ R4 is still evidence-only. It cannot save, export, stage immutable PVS input,
 launch a canonical replay, or run PVS. A DRC-zero classification would require
 a separate reviewed canonical integration gate; a coherent nonzero result
 would retire the mixed-width method without modifying the source checkpoint.
+
+## P03 Step 24 Result And Step 25 Wire-Materialization Probe
+
+Step 24 completed at report-driver head
+`88f3e8d3720c4495666057559709fa1ef0a9e32a`. All contracts and commands
+passed, but R4 remained physically rejected:
+
+```text
+TRIAL_PROCESS_RESULT=MIXED_WIDTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+METHOD_STATUS=REJECTED_OR_INCOMPLETE
+DRC=6 -> 4
+REGULAR_CONNECTIVITY=0 -> 0
+SPECIAL_CONNECTIVITY=0 -> 0
+RESTORED_ANTENNA=21 -> 21
+MARKER_DATABASE_TOTAL=27 -> 25
+```
+
+The four surviving `0.1777 um^2` marker signatures are semantically identical
+to Step 21, even though Step 24 requested width `0.56 um` instead of
+`0.28 um`. Width is therefore retired as an observed DRC outcome variable,
+but the current evidence does not reveal how the Wire Editor represented the
+requested geometry internally.
+
+Step 25 uses trial revision R5 and an immutable root ending in
+`_min_area_landing_materialization_probe`. Its pre-run gate requires the exact
+Step 24 status, driver, and analysis tuple. It also requires equal normalized
+SHA-256 signatures for the Step 21 and Step 24 post-trial markers and exactly
+four Step 24 `0.1777/0.2020 um^2` responses.
+
+R5 restores the original checkpoint once, captures all six nets' wire objects,
+replays the exact R4 command contract, and captures the wire objects again
+before DRC and connectivity verification. The analyzer compares stable wire
+attributes and reports whether the four wide requests were materialized at
+`0.56 um`, canonicalized to `0.28 um`, absent from the local regular-MET1
+delta, or mixed. A classification PASS means the diagnostic evidence is
+complete; it does not mean the physical repair was accepted.
+
+Step 25 remains in-memory only. Save, export, canonical replay, immutable PVS
+staging, and PVS are blocked for every materialization classification. The
+result can select the next repair primitive for review, but cannot advance the
+canonical closure flow automatically.

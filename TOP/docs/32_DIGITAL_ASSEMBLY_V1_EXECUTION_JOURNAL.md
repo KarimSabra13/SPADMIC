@@ -1828,3 +1828,57 @@ STEP24_BASH_SYNTAX=PASS
 STEP24_TCL_STRUCTURE_CHECK=PASS
 STEP24_DIFF_CHECK=PASS
 ```
+
+### P03-R25 Server Evidence - Step 24 Retires Width As An Outcome Variable
+
+Status: `PASS_CLASSIFIED_STEP25_MATERIALIZATION_PROBE_READY`
+
+Step 24 completed at report-driver head
+`88f3e8d3720c4495666057559709fa1ef0a9e32a`. All six mixed-width contracts
+and all 24 Wire Editor commands passed. The physical result nevertheless
+remained rejected:
+
+```text
+TRIAL_PROCESS_RESULT=MIXED_WIDTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+METHOD_STATUS=REJECTED_OR_INCOMPLETE
+DRC=6 -> 4
+REGULAR_CONNECTIVITY=0 -> 0
+SPECIAL_CONNECTIVITY=0 -> 0
+RESTORED_ANTENNA=21 -> 21
+MARKER_DATABASE_TOTAL=27 -> 25
+```
+
+The four `0.56 um` width requests did not change the authoritative marker
+outcome. `n_9677`, `n_9693`, `n_9696`, and `n_9697` again ended at the same
+four `0.1777 um^2` boxes produced by Step 21's `0.28 um` replay. The complete
+normalized Step 21 and Step 24 post-marker signatures are identical after
+volatile indices and handles are excluded. Command success therefore does not
+establish that a `0.56 um` regular MET1 wire was materialized in the database.
+
+Step 25, `min-area-landing-materialization-probe`, resolves that ambiguity in
+one fresh process. It restores the immutable source checkpoint, replays the
+exact R4 commands, and captures every wire on the six nets immediately before
+and after editing. Each row records handle, box, layer, width, length, points,
+route status, shape, and its local relation to the target marker. The analyzer
+compares semantic signatures separately from volatile handles and classifies
+one of four outcomes:
+
+```text
+REQUESTED_0P56_WIDTH_MATERIALIZED
+WIDE_REQUEST_CANONICALIZED_TO_0P28
+NO_LOCAL_MET1_WIRE_DELTA
+MIXED_LOCAL_MET1_MATERIALIZATION
+```
+
+The probe is diagnostic only. It cannot save or export the design, launch a
+canonical rerun, stage immutable PVS inputs, or run PVS. Another endpoint,
+direction, or width sweep is blocked until this materialization evidence is
+reviewed.
+
+```text
+STEP25_LOCAL_TOP_PNR_TESTS=121_PASS_0_FAIL
+STEP25_PY_COMPILE=PASS
+STEP25_BASH_SYNTAX=PASS
+STEP25_TCL_STRUCTURE_CHECK=PASS
+STEP25_DIFF_CHECK=PASS
+```

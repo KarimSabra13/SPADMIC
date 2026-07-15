@@ -47,6 +47,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "min-area-landing-patch-trial-r2",
             "min-area-landing-patch-trial-r3",
             "min-area-landing-patch-trial-r4",
+            "min-area-landing-materialization-probe",
             "package",
             "status",
         ):
@@ -241,6 +242,20 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("STEP23_0P1064_MARKER_COUNT=", driver)
         self.assertIn("MIN_AREA_LANDING_PATCH_R4_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
         self.assertIn("24_min_area_landing_patch_trial_r4", driver)
+        self.assertIn("require_step_pass 24_min_area_landing_patch_trial_r4", driver)
+        self.assertIn(
+            "min-area-landing-materialization-probe <expected-report-driver-head>",
+            driver,
+        )
+        self.assertIn("SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R5", driver)
+        self.assertIn("STEP21_POST_MARKER_SIGNATURE_SHA256=", driver)
+        self.assertIn("STEP24_POST_MARKER_SIGNATURE_SHA256=", driver)
+        self.assertIn("SOURCE_WIDTH_SATURATION_STATUS=", driver)
+        self.assertIn(
+            "MIN_AREA_LANDING_MATERIALIZATION_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS",
+            driver,
+        )
+        self.assertIn("25_min_area_landing_materialization_probe", driver)
         landing_trial = (
             REPO
             / "TOP"
@@ -416,6 +431,14 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
         self.assertIn("MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
         self.assertIn("MIXED_WIDTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
+        self.assertIn("WIRE_MATERIALIZATION_REPLAY_DRC_ZERO_VALIDATED", landing_trial)
+        self.assertIn("wire_snapshot_pre_trial.tsv", landing_trial)
+        self.assertIn("wire_snapshot_post_trial.tsv", landing_trial)
+        self.assertIn("lp_write_wire_snapshot", landing_trial)
+        self.assertIn(
+            "PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION",
+            landing_trial,
+        )
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, landing_trial)
 

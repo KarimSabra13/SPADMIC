@@ -126,6 +126,97 @@ proc lp_point_in_box {x y box} {
                   $y >= $lly - 0.001 && $y <= $ury + 0.001}]
 }
 
+proc lp_expand_box {box delta} {
+    if {![lp_numeric_box $box]} {
+        return [list UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
+    }
+    lassign $box llx lly urx ury
+    return [list \
+        [expr {$llx - $delta}] \
+        [expr {$lly - $delta}] \
+        [expr {$urx + $delta}] \
+        [expr {$ury + $delta}]]
+}
+
+proc lp_boxes_intersect {lhs rhs} {
+    if {![lp_numeric_box $lhs] || ![lp_numeric_box $rhs]} { return 0 }
+    lassign $lhs llx1 lly1 urx1 ury1
+    lassign $rhs llx2 lly2 urx2 ury2
+    return [expr {$llx1 <= $urx2 && $urx1 >= $llx2 &&
+                  $lly1 <= $ury2 && $ury1 >= $lly2}]
+}
+
+proc lp_wire_attr {wire attribute} {
+    if {[catch {set value [dbGet "${wire}.${attribute}"]} err]} {
+        return [list FAIL UNKNOWN [lp_value $err]]
+    }
+    return [list PASS $value NONE]
+}
+
+proc lp_write_wire_snapshot {path phase patch_contract} {
+    set fh [open $path w]
+    puts $fh "phase\tnet\tmarker_box\trequested_width_um\twire_index\twire_handle\tlocal_relation\tbox_status\tbox\tlayer_status\tlayer\troute_status_status\troute_status\tshape_status\tshape\twidth_status\twidth\tlength_status\tlength\tpts_status\tpts"
+    set net_query_pass_count 0
+    set wire_row_count 0
+    set local_met1_row_count 0
+    set attribute_fail_count 0
+    foreach contract $patch_contract {
+        lassign $contract net marker_box start_x start_y end_x patch_length patch_width source_q source_q_x source_q_y patch_direction
+        set net_handles [list]
+        catch {set net_handles [lp_valid_handles [dbGet top.nets.name $net -p]]}
+        if {[llength $net_handles] != 1} {
+            continue
+        }
+        set wires [list]
+        if {[catch {set wires [lp_valid_handles [dbGet "[lindex $net_handles 0].wires"]]}]} {
+            continue
+        }
+        incr net_query_pass_count
+        set expanded_marker [lp_expand_box $marker_box 2.0]
+        set wire_index 0
+        foreach wire $wires {
+            incr wire_index
+            lassign [lp_wire_attr $wire box] box_status box_value box_error
+            lassign [lp_wire_attr $wire layer.name] layer_status layer layer_error
+            lassign [lp_wire_attr $wire status] route_status_status route_status route_status_error
+            lassign [lp_wire_attr $wire shape] shape_status shape shape_error
+            lassign [lp_wire_attr $wire width] width_status width width_error
+            lassign [lp_wire_attr $wire length] length_status length length_error
+            lassign [lp_wire_attr $wire pts] pts_status pts pts_error
+            set flat_box [lp_flat_box $box_value]
+            set relation UNKNOWN_BOX
+            if {[lp_numeric_box $flat_box]} {
+                if {[lp_boxes_intersect $flat_box $marker_box]} {
+                    set relation INTERSECTS_MARKER
+                } elseif {[lp_boxes_intersect $flat_box $expanded_marker]} {
+                    set relation WITHIN_2UM_CONTEXT
+                } else {
+                    set relation OUTSIDE_CONTEXT
+                }
+            }
+            if {$box_status ne "PASS" || $layer_status ne "PASS" ||
+                $route_status_status ne "PASS" || $shape_status ne "PASS" ||
+                $width_status ne "PASS" || $length_status ne "PASS" ||
+                $pts_status ne "PASS"} {
+                incr attribute_fail_count
+            }
+            if {$layer eq "MET1" &&
+                ($relation eq "INTERSECTS_MARKER" ||
+                 $relation eq "WITHIN_2UM_CONTEXT")} {
+                incr local_met1_row_count
+            }
+            puts $fh "$phase\t$net\t[lp_value $marker_box]\t[format %.2f $patch_width]\t$wire_index\t[lp_value $wire]\t$relation\t$box_status\t[lp_value $flat_box]\t$layer_status\t[lp_value $layer]\t$route_status_status\t[lp_value $route_status]\t$shape_status\t[lp_value $shape]\t$width_status\t[lp_value $width]\t$length_status\t[lp_value $length]\t$pts_status\t[lp_value $pts]"
+            incr wire_row_count
+        }
+    }
+    close $fh
+    return [list \
+        $net_query_pass_count \
+        $wire_row_count \
+        $local_met1_row_count \
+        $attribute_fail_count]
+}
+
 proc lp_valid_handles {raw} {
     set handles [list]
     foreach handle $raw {
@@ -324,6 +415,17 @@ if {$trial_revision eq "R1"} {
     set validated_result MIXED_WIDTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
     set no_improvement_result MIXED_WIDTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
     set changed_result MIXED_WIDTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+} elseif {$trial_revision eq "R5"} {
+    set analysis_key STEP24_ANALYSIS
+    set policy ONE_FRESH_PROCESS_ONE_RESTORE_R4_REPLAY_WITH_LOCAL_WIRE_MATERIALIZATION_CAPTURE
+    set command_policy EXACT_SIX_NET_R4_REPLAY_FOR_WIRE_MATERIALIZATION_CAPTURE
+    set patch_length_policy UNIFORM_0.56
+    set patch_direction_policy ALL_TOWARD_SOURCE
+    set patch_width_policy FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28
+    set patch_width_um MIXED_0.28_0.56
+    set validated_result WIRE_MATERIALIZATION_REPLAY_DRC_ZERO_VALIDATED
+    set no_improvement_result WIRE_MATERIALIZATION_REPLAY_NO_IMPROVEMENT
+    set changed_result WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED
 } else {
     error "SPADMIC_MIN_AREA_LANDING_UNSUPPORTED_REVISION: $trial_revision"
 }
@@ -356,6 +458,10 @@ set status(PATCH_DIRECTION_POLICY) $patch_direction_policy
 set status(PATCH_WIDTH_POLICY) $patch_width_policy
 set status(PATCH_WIDTH_UM) $patch_width_um
 set status($analysis_key) $source_analysis
+if {$trial_revision eq "R5"} {
+    set status(MATERIALIZATION_CAPTURE_POLICY) PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION
+    set status(MATERIALIZATION_CAPTURE_STATUS) NOT_RUN
+}
 
 array set analysis_values [lp_read_kv $source_analysis]
 array set expected_analysis {}
@@ -467,7 +573,7 @@ if {$trial_revision eq "R1"} {
         NEXT_METHOD_DECISION STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD
         ERROR_COUNT 0
     }
-} else {
+} elseif {$trial_revision eq "R4"} {
     array set expected_analysis {
         LABEL SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS
         POLICY ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION
@@ -498,6 +604,47 @@ if {$trial_revision eq "R1"} {
         FINAL_MARKER_DATABASE_TOTAL 25
         REMOVED_MARKER_SIGNATURE_COUNT 2
         ADDED_MARKER_SIGNATURE_COUNT 0
+        FINAL_MIN_AREA_NETS {n_9677 n_9693 n_9696 n_9697}
+        SAVE_DESIGN NOT_RUN
+        EXPORT NOT_RUN
+        IMMUTABLE_PVS_STAGING NOT_RUN
+        PVS_DECISION DO_NOT_RUN
+        CANONICAL_RERUN_DECISION DO_NOT_RUN_FROM_THIS_STEP
+        NEXT_METHOD_DECISION STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD
+        ERROR_COUNT 0
+    }
+} else {
+    array set expected_analysis {
+        LABEL SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS
+        POLICY ISOLATED_IN_MEMORY_SIX_NET_MIXED_WIDTH_MET1_LANDING_PATCH_CLASSIFICATION
+        STATUS PASS
+        RESULT MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED
+        TRIAL_REVISION R4
+        TRIAL_PROCESS_STATUS FAIL
+        TRIAL_PROCESS_RESULT MIXED_WIDTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+        METHOD_STATUS REJECTED_OR_INCOMPLETE
+        PATCH_CONTRACT_STATUS PASS_EXACT_SIX_MIXED_WIDTH_EXTENSIONS
+        PATCH_WIDTH_POLICY FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28
+        PATCH_WIDTH_UM MIXED_0.28_0.56
+        PATCH_LENGTH_POLICY UNIFORM_0.56
+        PATCH_LENGTH_UM 0.56
+        PATCH_DIRECTION_POLICY ALL_TOWARD_SOURCE
+        PATCH_ATTEMPTED_COUNT 6
+        PATCH_APPLIED_COUNT 6
+        COMMAND_PASS_COUNT 24
+        COMMAND_FAIL_COUNT 0
+        PRE_DRC_VIOLATION_COUNT 6
+        FINAL_DRC_VIOLATION_COUNT 4
+        PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        FINAL_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        PRE_MARKER_DATABASE_TOTAL 27
+        FINAL_MARKER_DATABASE_TOTAL 25
+        REMOVED_MARKER_SIGNATURE_COUNT 6
+        ADDED_MARKER_SIGNATURE_COUNT 4
         FINAL_MIN_AREA_NETS {n_9677 n_9693 n_9696 n_9697}
         SAVE_DESIGN NOT_RUN
         EXPORT NOT_RUN
@@ -709,6 +856,26 @@ if {$contract_validated_count != 6 || [llength $contract_failures] != 0} {
     lp_abort PATCH_CONTRACT_PRECONDITION_FAILED [join $contract_failures {,}]
 }
 
+set materialization_capture_status NOT_APPLICABLE
+set pre_wire_attribute_fail_count 0
+set post_wire_attribute_fail_count 0
+if {$trial_revision eq "R5"} {
+    set pre_wire_snapshot [file join $reports wire_snapshot_pre_trial.tsv]
+    lassign [lp_write_wire_snapshot $pre_wire_snapshot PRE_EDIT $patch_contract] \
+        pre_wire_query_pass_net_count \
+        pre_wire_row_count \
+        pre_local_met1_row_count \
+        pre_wire_attribute_fail_count
+    set status(PRE_WIRE_QUERY_PASS_NET_COUNT) $pre_wire_query_pass_net_count
+    set status(PRE_WIRE_ROW_COUNT) $pre_wire_row_count
+    set status(PRE_LOCAL_MET1_ROW_COUNT) $pre_local_met1_row_count
+    set status(PRE_WIRE_ATTRIBUTE_FAIL_COUNT) $pre_wire_attribute_fail_count
+    if {$pre_wire_query_pass_net_count != 6} {
+        lp_abort PRE_WIRE_MATERIALIZATION_CAPTURE_FAILED \
+            "resolved=$pre_wire_query_pass_net_count expected=6"
+    }
+}
+
 set command_path [file join $reports min_area_landing_patch_commands.rpt]
 set command_fh [open $command_path w]
 puts $command_fh "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_COMMANDS"
@@ -718,6 +885,9 @@ puts $command_fh "PATCH_WIDTH_POLICY=$patch_width_policy"
 puts $command_fh "PATCH_WIDTH_UM=$patch_width_um"
 puts $command_fh "PATCH_LENGTH_POLICY=$patch_length_policy"
 puts $command_fh "PATCH_DIRECTION_POLICY=$patch_direction_policy"
+if {$trial_revision eq "R5"} {
+    puts $command_fh "MATERIALIZATION_CAPTURE_POLICY=PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION"
+}
 if {$trial_revision eq "R2" || $trial_revision eq "R3"} {
     puts $command_fh "PATCH_LENGTH_UM=MIXED_0.56_0.84"
 } else {
@@ -771,6 +941,31 @@ set status(PATCH_ATTEMPTED_COUNT) $patch_attempted_count
 set status(PATCH_APPLIED_COUNT) $patch_applied_count
 set status(COMMAND_PASS_COUNT) $command_pass_count
 set status(COMMAND_FAIL_COUNT) $command_fail_count
+
+if {$trial_revision eq "R5"} {
+    set post_wire_snapshot [file join $reports wire_snapshot_post_trial.tsv]
+    lassign [lp_write_wire_snapshot $post_wire_snapshot POST_EDIT $patch_contract] \
+        post_wire_query_pass_net_count \
+        post_wire_row_count \
+        post_local_met1_row_count \
+        post_wire_attribute_fail_count
+    set status(POST_WIRE_QUERY_PASS_NET_COUNT) $post_wire_query_pass_net_count
+    set status(POST_WIRE_ROW_COUNT) $post_wire_row_count
+    set status(POST_LOCAL_MET1_ROW_COUNT) $post_local_met1_row_count
+    set status(POST_WIRE_ATTRIBUTE_FAIL_COUNT) $post_wire_attribute_fail_count
+    set status(WIRE_ATTRIBUTE_FAIL_COUNT) \
+        [expr {$pre_wire_attribute_fail_count + $post_wire_attribute_fail_count}]
+    if {$post_wire_query_pass_net_count == 6 &&
+        $pre_wire_attribute_fail_count == 0 &&
+        $post_wire_attribute_fail_count == 0} {
+        set materialization_capture_status COMPLETE
+    } elseif {$post_wire_query_pass_net_count == 6} {
+        set materialization_capture_status PARTIAL_ATTRIBUTE_FAILURES
+    } else {
+        set materialization_capture_status FAILED_NET_QUERY
+    }
+    set status(MATERIALIZATION_CAPTURE_STATUS) $materialization_capture_status
+}
 
 set post_drc [file join $reports verify_drc_post_trial.rpt]
 set post_markers [file join $reports drc_markers_post_trial.tsv]
@@ -830,6 +1025,10 @@ if {!$numeric_post ||
     set status(RESULT) $no_improvement_result
 } else {
     set status(RESULT) $changed_result
+}
+if {$trial_revision eq "R5" && $materialization_capture_status ne "COMPLETE"} {
+    set status(STATUS) FAIL
+    set status(RESULT) WIRE_MATERIALIZATION_CAPTURE_INCOMPLETE
 }
 
 lp_write_status

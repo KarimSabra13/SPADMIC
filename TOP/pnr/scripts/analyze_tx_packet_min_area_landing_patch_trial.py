@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import re
+from collections import Counter
 from pathlib import Path
 
 
@@ -29,6 +30,9 @@ EXPECTED_POLICY_R3 = (
 )
 EXPECTED_POLICY_R4 = (
     "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_WIDTH_MET1_LANDING_EXTENSIONS"
+)
+EXPECTED_POLICY_R5 = (
+    "ONE_FRESH_PROCESS_ONE_RESTORE_R4_REPLAY_WITH_LOCAL_WIRE_MATERIALIZATION_CAPTURE"
 )
 EXPECTED_CONTRACT = {
     "n_9696": ("719.69 158.62 720.07 158.90", "719.88", "158.76", "719.32", "g14627__2802/Q", "716.61 159.02"),
@@ -63,6 +67,20 @@ VALIDATED_RESULT_R3 = "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATE
 NO_IMPROVEMENT_RESULT_R3 = "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
 VALIDATED_RESULT_R4 = "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
 NO_IMPROVEMENT_RESULT_R4 = "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+VALIDATED_RESULT_R5 = "WIRE_MATERIALIZATION_REPLAY_DRC_ZERO_VALIDATED"
+NO_IMPROVEMENT_RESULT_R5 = "WIRE_MATERIALIZATION_REPLAY_NO_IMPROVEMENT"
+
+WIRE_SIGNATURE_FIELDS = (
+    "net",
+    "local_relation",
+    "box",
+    "layer",
+    "route_status",
+    "shape",
+    "width",
+    "length",
+    "pts",
+)
 
 
 def key_values(path: Path) -> dict[str, str]:
@@ -164,6 +182,30 @@ def boxes_match(lhs: str, rhs: str) -> bool:
     )
 
 
+def canonical_cell(value: str) -> str:
+    return " ".join(value.split())
+
+
+def wire_signature(row: dict[str, str]) -> tuple[str, ...]:
+    return tuple(canonical_cell(row.get(field, "")) for field in WIRE_SIGNATURE_FIELDS)
+
+
+def is_local_met1_wire_signature(signature: tuple[str, ...]) -> bool:
+    relation = signature[1]
+    layer = signature[3]
+    return bool(
+        layer.upper() == "MET1"
+        and relation in {"INTERSECTS_MARKER", "WITHIN_2UM_CONTEXT"}
+    )
+
+
+def width_matches(raw: str, expected: float) -> bool:
+    try:
+        return abs(float(raw) - expected) <= 0.001
+    except ValueError:
+        return False
+
+
 def classify(
     trial_root: Path,
     source_analysis: Path,
@@ -171,12 +213,25 @@ def classify(
     report: Path,
     trial_revision: str = "R1",
 ) -> dict[str, str]:
-    if trial_revision not in {"R1", "R2", "R3", "R4"}:
+    if trial_revision not in {"R1", "R2", "R3", "R4", "R5"}:
         raise ValueError(f"unsupported trial revision: {trial_revision}")
     is_r2 = trial_revision == "R2"
     is_r3 = trial_revision == "R3"
     is_r4 = trial_revision == "R4"
-    if is_r4:
+    is_r5 = trial_revision == "R5"
+    if is_r5:
+        source_key = "STEP24_ANALYSIS"
+        expected_policy = EXPECTED_POLICY_R5
+        expected_contract = EXPECTED_CONTRACT
+        command_policy = "EXACT_SIX_NET_R4_REPLAY_FOR_WIRE_MATERIALIZATION_CAPTURE"
+        patch_length_policy = "UNIFORM_0.56"
+        patch_direction_policy = "ALL_TOWARD_SOURCE"
+        patch_width_policy = "FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28"
+        patch_width_um = "MIXED_0.28_0.56"
+        validated_result_name = VALIDATED_RESULT_R5
+        no_improvement_result_name = NO_IMPROVEMENT_RESULT_R5
+        changed_result_name = "WIRE_MATERIALIZATION_REPLAY_CHANGED_NOT_CLOSED"
+    elif is_r4:
         source_key = "STEP23_ANALYSIS"
         expected_policy = EXPECTED_POLICY_R4
         expected_contract = EXPECTED_CONTRACT
@@ -241,6 +296,8 @@ def classify(
     post_regular_path = reports / "verify_connectivity_regular_post_trial.rpt"
     pre_special_path = reports / "verify_connectivity_special_pre_trial.rpt"
     post_special_path = reports / "verify_connectivity_special_post_trial.rpt"
+    pre_wire_snapshot_path = reports / "wire_snapshot_pre_trial.tsv"
+    post_wire_snapshot_path = reports / "wire_snapshot_post_trial.tsv"
     required = [
         context_path,
         status_path,
@@ -256,6 +313,8 @@ def classify(
         pre_special_path,
         post_special_path,
     ]
+    if is_r5:
+        required.extend((pre_wire_snapshot_path, post_wire_snapshot_path))
 
     errors: list[str] = []
     for path in required:
@@ -269,8 +328,51 @@ def classify(
     contract = read_tsv(contract_path)
     pre_markers = read_tsv(pre_markers_path)
     post_markers = read_tsv(post_markers_path)
+    pre_wire_snapshot = read_tsv(pre_wire_snapshot_path) if is_r5 else []
+    post_wire_snapshot = read_tsv(post_wire_snapshot_path) if is_r5 else []
 
-    if is_r4:
+    if is_r5:
+        expected_source = {
+            "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS",
+            "POLICY": "ISOLATED_IN_MEMORY_SIX_NET_MIXED_WIDTH_MET1_LANDING_PATCH_CLASSIFICATION",
+            "STATUS": "PASS",
+            "RESULT": "MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED",
+            "TRIAL_REVISION": "R4",
+            "TRIAL_PROCESS_STATUS": "FAIL",
+            "TRIAL_PROCESS_RESULT": "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED",
+            "METHOD_STATUS": "REJECTED_OR_INCOMPLETE",
+            "PATCH_CONTRACT_STATUS": "PASS_EXACT_SIX_MIXED_WIDTH_EXTENSIONS",
+            "PATCH_WIDTH_POLICY": "FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28",
+            "PATCH_WIDTH_UM": "MIXED_0.28_0.56",
+            "PATCH_LENGTH_POLICY": "UNIFORM_0.56",
+            "PATCH_LENGTH_UM": "0.56",
+            "PATCH_DIRECTION_POLICY": "ALL_TOWARD_SOURCE",
+            "PATCH_ATTEMPTED_COUNT": "6",
+            "PATCH_APPLIED_COUNT": "6",
+            "COMMAND_PASS_COUNT": "24",
+            "COMMAND_FAIL_COUNT": "0",
+            "PRE_DRC_VIOLATION_COUNT": "6",
+            "FINAL_DRC_VIOLATION_COUNT": "4",
+            "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT": "21",
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT": "21",
+            "PRE_MARKER_DATABASE_TOTAL": "27",
+            "FINAL_MARKER_DATABASE_TOTAL": "25",
+            "REMOVED_MARKER_SIGNATURE_COUNT": "6",
+            "ADDED_MARKER_SIGNATURE_COUNT": "4",
+            "FINAL_MIN_AREA_NETS": "n_9677 n_9693 n_9696 n_9697",
+            "SAVE_DESIGN": "NOT_RUN",
+            "EXPORT": "NOT_RUN",
+            "IMMUTABLE_PVS_STAGING": "NOT_RUN",
+            "PVS_DECISION": "DO_NOT_RUN",
+            "CANONICAL_RERUN_DECISION": "DO_NOT_RUN_FROM_THIS_STEP",
+            "NEXT_METHOD_DECISION": "STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD",
+            "ERROR_COUNT": "0",
+        }
+    elif is_r4:
         expected_source = {
             "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS",
             "POLICY": "ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION",
@@ -464,13 +566,22 @@ def classify(
         "PRE_MIN_AREA_NETS": " ".join(EXPECTED_NETS),
         "CONTRACT_VALIDATED_COUNT": "6",
     }
-    if is_r3 or is_r4:
+    if is_r3 or is_r4 or is_r5:
         expected_status["PATCH_DIRECTION_POLICY"] = patch_direction_policy
-    if is_r4:
+    if is_r4 or is_r5:
         expected_status.update(
             {
                 "PATCH_WIDTH_POLICY": patch_width_policy,
                 "PATCH_WIDTH_UM": patch_width_um,
+            }
+        )
+    if is_r5:
+        expected_status.update(
+            {
+                "MATERIALIZATION_CAPTURE_POLICY": (
+                    "PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION"
+                ),
+                "MATERIALIZATION_CAPTURE_STATUS": "COMPLETE",
             }
         )
     for key, expected in expected_status.items():
@@ -506,6 +617,19 @@ def classify(
         "COMMAND_FAIL_COUNT",
     )
     counts = {key: integer(status, key, errors) for key in count_keys}
+    if is_r5:
+        for key in (
+            "PRE_WIRE_QUERY_PASS_NET_COUNT",
+            "POST_WIRE_QUERY_PASS_NET_COUNT",
+            "PRE_WIRE_ROW_COUNT",
+            "POST_WIRE_ROW_COUNT",
+            "PRE_LOCAL_MET1_ROW_COUNT",
+            "POST_LOCAL_MET1_ROW_COUNT",
+            "PRE_WIRE_ATTRIBUTE_FAIL_COUNT",
+            "POST_WIRE_ATTRIBUTE_FAIL_COUNT",
+            "WIRE_ATTRIBUTE_FAIL_COUNT",
+        ):
+            counts[key] = integer(status, key, errors)
     expected_baseline = {
         "PRE_DRC_VIOLATION_COUNT": 6,
         "PRE_DRC_MARKER_COUNT": 6,
@@ -559,7 +683,9 @@ def classify(
             if (is_r2 and net in R2_LONG_NETS) or (is_r3 and net in R3_AWAY_NETS)
             else "0.56"
         )
-        expected_width = "0.56" if is_r4 and net in R4_WIDE_NETS else "0.28"
+        expected_width = (
+            "0.56" if (is_r4 or is_r5) and net in R4_WIDE_NETS else "0.28"
+        )
         expected_fields = {
             "start_x": expected[1],
             "start_y": expected[2],
@@ -576,7 +702,7 @@ def classify(
             "inside_source_inst_status": "PASS",
             "contract_status": "PASS",
         }
-        if is_r3 or is_r4:
+        if is_r3 or is_r4 or is_r5:
             expected_fields["direction"] = (
                 "AWAY_FROM_SOURCE"
                 if is_r3 and net in R3_AWAY_NETS
@@ -597,10 +723,14 @@ def classify(
         "PATCH_LENGTH_UM": "MIXED_0.56_0.84" if is_r2 or is_r3 else "0.56",
         "CONTRACT_VALIDATED_COUNT": "6",
     }
-    if is_r3 or is_r4:
+    if is_r3 or is_r4 or is_r5:
         expected_commands["PATCH_DIRECTION_POLICY"] = patch_direction_policy
-    if is_r4:
+    if is_r4 or is_r5:
         expected_commands["PATCH_WIDTH_POLICY"] = patch_width_policy
+    if is_r5:
+        expected_commands["MATERIALIZATION_CAPTURE_POLICY"] = (
+            "PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION"
+        )
     for key, expected in expected_commands.items():
         if commands.get(key) != expected:
             errors.append(f"commands_{key}={commands.get(key, 'MISSING')} expected={expected}")
@@ -626,7 +756,11 @@ def classify(
                 or (is_r3 and net in R3_AWAY_NETS)
                 else "0.56"
             )
-            expected_width = "0.56" if is_r4 and net in R4_WIDE_NETS else "0.28"
+            expected_width = (
+                "0.56"
+                if (is_r4 or is_r5) and net in R4_WIDE_NETS
+                else "0.28"
+            )
             expected_commands_for_net = {
                 f"{prefix}_START": f"{expected[1]} {expected[2]}",
                 f"{prefix}_END": f"{expected[3]} {expected[2]}",
@@ -634,9 +768,9 @@ def classify(
                 f"{prefix}_SOURCE_Q": expected[4],
                 f"{prefix}_APPLIED": "YES",
             }
-            if is_r4:
+            if is_r4 or is_r5:
                 expected_commands_for_net[f"{prefix}_WIDTH_UM"] = expected_width
-            if is_r3 or is_r4:
+            if is_r3 or is_r4 or is_r5:
                 expected_commands_for_net[f"{prefix}_DIRECTION"] = (
                     "AWAY_FROM_SOURCE"
                     if is_r3 and net in R3_AWAY_NETS
@@ -665,6 +799,182 @@ def classify(
     elif command_fail_count is not None:
         if command_fail_count < 1 or patch_attempted is None or not 1 <= patch_attempted <= 6:
             errors.append("invalid_failed_command_tuple")
+    if is_r5 and (
+        counts.get("PATCH_ATTEMPTED_COUNT"),
+        counts.get("PATCH_APPLIED_COUNT"),
+        counts.get("COMMAND_PASS_COUNT"),
+        counts.get("COMMAND_FAIL_COUNT"),
+    ) != (6, 6, 24, 0):
+        errors.append("r5_replay_command_tuple_not_exact_6_6_24_0")
+
+    materialization_status = "NOT_APPLICABLE"
+    materialization_summary: list[dict[str, str]] = []
+    added_wire_signatures: Counter[tuple[str, ...]] = Counter()
+    removed_wire_signatures: Counter[tuple[str, ...]] = Counter()
+    added_wire_handle_count = 0
+    removed_wire_handle_count = 0
+    added_local_met1_signature_count = 0
+    removed_local_met1_signature_count = 0
+    requested_width_materialized_wide_net_count = 0
+    canonicalized_wide_net_count = 0
+    no_local_delta_wide_net_count = 0
+    if is_r5:
+        for phase, rows in (
+            ("PRE_EDIT", pre_wire_snapshot),
+            ("POST_EDIT", post_wire_snapshot),
+        ):
+            for row in rows:
+                net = row.get("net", "")
+                expected = expected_contract.get(net)
+                expected_width = (
+                    "0.56" if net in R4_WIDE_NETS else "0.28"
+                )
+                if row.get("phase") != phase:
+                    errors.append(
+                        f"wire_snapshot_phase={row.get('phase', 'MISSING')} expected={phase}"
+                    )
+                if expected is None:
+                    errors.append(f"wire_snapshot_unexpected_net={net or 'MISSING'}")
+                    continue
+                if not boxes_match(row.get("marker_box", ""), expected[0]):
+                    errors.append(f"wire_snapshot_{phase}_{net}_marker_box_mismatch")
+                if row.get("requested_width_um") != expected_width:
+                    errors.append(
+                        f"wire_snapshot_{phase}_{net}_requested_width="
+                        f"{row.get('requested_width_um', 'MISSING')} expected={expected_width}"
+                    )
+                for field in (
+                    "box_status",
+                    "layer_status",
+                    "route_status_status",
+                    "shape_status",
+                    "width_status",
+                    "length_status",
+                    "pts_status",
+                ):
+                    if row.get(field) != "PASS":
+                        errors.append(
+                            f"wire_snapshot_{phase}_{net}_{field}="
+                            f"{row.get(field, 'MISSING')} expected=PASS"
+                        )
+                if row.get("wire_handle", "") in {"", "UNKNOWN", "0x0"}:
+                    errors.append(f"wire_snapshot_{phase}_{net}_invalid_wire_handle")
+                if row.get("local_relation") not in {
+                    "INTERSECTS_MARKER",
+                    "WITHIN_2UM_CONTEXT",
+                    "OUTSIDE_CONTEXT",
+                    "UNKNOWN_BOX",
+                }:
+                    errors.append(
+                        f"wire_snapshot_{phase}_{net}_local_relation="
+                        f"{row.get('local_relation', 'MISSING')}"
+                    )
+
+            snapshot_nets = {row.get("net", "") for row in rows}
+            if snapshot_nets != set(EXPECTED_NETS):
+                errors.append(
+                    f"wire_snapshot_{phase}_nets={sorted(snapshot_nets)} "
+                    f"expected={list(EXPECTED_NETS)}"
+                )
+
+        derived_wire_counts = {
+            "PRE_WIRE_ROW_COUNT": len(pre_wire_snapshot),
+            "POST_WIRE_ROW_COUNT": len(post_wire_snapshot),
+            "PRE_LOCAL_MET1_ROW_COUNT": sum(
+                1
+                for row in pre_wire_snapshot
+                if is_local_met1_wire_signature(wire_signature(row))
+            ),
+            "POST_LOCAL_MET1_ROW_COUNT": sum(
+                1
+                for row in post_wire_snapshot
+                if is_local_met1_wire_signature(wire_signature(row))
+            ),
+        }
+        for key, actual in derived_wire_counts.items():
+            if counts.get(key) != actual:
+                errors.append(f"wire_snapshot_{key}={actual} status={counts.get(key)}")
+        for key in (
+            "PRE_WIRE_QUERY_PASS_NET_COUNT",
+            "POST_WIRE_QUERY_PASS_NET_COUNT",
+        ):
+            if counts.get(key) != 6:
+                errors.append(f"wire_snapshot_{key}={counts.get(key)} expected=6")
+        for key in (
+            "PRE_WIRE_ATTRIBUTE_FAIL_COUNT",
+            "POST_WIRE_ATTRIBUTE_FAIL_COUNT",
+            "WIRE_ATTRIBUTE_FAIL_COUNT",
+        ):
+            if counts.get(key) != 0:
+                errors.append(f"wire_snapshot_{key}={counts.get(key)} expected=0")
+
+        pre_signature_counter = Counter(
+            wire_signature(row) for row in pre_wire_snapshot
+        )
+        post_signature_counter = Counter(
+            wire_signature(row) for row in post_wire_snapshot
+        )
+        added_wire_signatures = post_signature_counter - pre_signature_counter
+        removed_wire_signatures = pre_signature_counter - post_signature_counter
+        pre_handles = {row.get("wire_handle", "") for row in pre_wire_snapshot}
+        post_handles = {row.get("wire_handle", "") for row in post_wire_snapshot}
+        pre_handles.discard("")
+        post_handles.discard("")
+        added_wire_handle_count = len(post_handles - pre_handles)
+        removed_wire_handle_count = len(pre_handles - post_handles)
+        added_local_met1_signature_count = sum(
+            count
+            for signature, count in added_wire_signatures.items()
+            if is_local_met1_wire_signature(signature)
+        )
+        removed_local_met1_signature_count = sum(
+            count
+            for signature, count in removed_wire_signatures.items()
+            if is_local_met1_wire_signature(signature)
+        )
+
+        for net in EXPECTED_NETS:
+            requested_width = 0.56 if net in R4_WIDE_NETS else 0.28
+            net_local_added = [
+                signature
+                for signature, count in added_wire_signatures.items()
+                for _ in range(count)
+                if signature[0] == net and is_local_met1_wire_signature(signature)
+            ]
+            widths = sorted({signature[6] for signature in net_local_added})
+            if any(width_matches(signature[6], requested_width) for signature in net_local_added):
+                net_status = "REQUESTED_WIDTH_MATERIALIZED"
+            elif any(width_matches(signature[6], 0.28) for signature in net_local_added):
+                net_status = "CANONICALIZED_TO_0P28"
+            elif net_local_added:
+                net_status = "OTHER_LOCAL_MET1_DELTA"
+            else:
+                net_status = "NO_LOCAL_MET1_DELTA"
+            if net in R4_WIDE_NETS:
+                if net_status == "REQUESTED_WIDTH_MATERIALIZED":
+                    requested_width_materialized_wide_net_count += 1
+                elif net_status == "CANONICALIZED_TO_0P28":
+                    canonicalized_wide_net_count += 1
+                elif net_status == "NO_LOCAL_MET1_DELTA":
+                    no_local_delta_wide_net_count += 1
+            materialization_summary.append(
+                {
+                    "net": net,
+                    "requested_width_um": f"{requested_width:.2f}",
+                    "added_local_met1_signature_count": str(len(net_local_added)),
+                    "added_local_met1_widths": " ".join(widths) if widths else "NONE",
+                    "materialization_status": net_status,
+                }
+            )
+
+        if requested_width_materialized_wide_net_count == 4:
+            materialization_status = "REQUESTED_0P56_WIDTH_MATERIALIZED"
+        elif canonicalized_wide_net_count == 4:
+            materialization_status = "WIDE_REQUEST_CANONICALIZED_TO_0P28"
+        elif no_local_delta_wide_net_count == 4:
+            materialization_status = "NO_LOCAL_MET1_WIRE_DELTA"
+        else:
+            materialization_status = "MIXED_LOCAL_MET1_MATERIALIZATION"
 
     final_drc = counts.get("FINAL_DRC_VIOLATION_COUNT")
     final_markers = counts.get("FINAL_DRC_MARKER_COUNT")
@@ -697,7 +1007,9 @@ def classify(
             f"final_min_area_nets={status.get('FINAL_MIN_AREA_NETS', 'MISSING')} rows={final_min_area_nets}"
         )
 
-    if command_fail_count and command_fail_count > 0:
+    if is_r5 and status.get("MATERIALIZATION_CAPTURE_STATUS") != "COMPLETE":
+        expected_process_result = "WIRE_MATERIALIZATION_CAPTURE_INCOMPLETE"
+    elif command_fail_count and command_fail_count > 0:
         expected_process_result = "PATCH_COMMAND_FAILED"
     elif (final_regular or 0) != 0 or (final_special or 0) != 0 or (final_connectivity_markers or 0) != 0:
         expected_process_result = "PATCH_CONNECTIVITY_REGRESSION"
@@ -730,9 +1042,47 @@ def classify(
     removed = sorted(set(pre_signatures) - set(post_signatures))
     added = sorted(set(post_signatures) - set(pre_signatures))
     validated = expected_process_result == validated_result_name and not errors
-    result = {
-        "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS",
-        "POLICY": (
+    if is_r5:
+        analysis_label = "SPADMIC_TX_PACKET_MIN_AREA_LANDING_MATERIALIZATION_ANALYSIS"
+        analysis_policy = (
+            "ISOLATED_IN_MEMORY_R4_REPLAY_WIRE_MATERIALIZATION_CLASSIFICATION"
+        )
+        analysis_result = (
+            "MIN_AREA_LANDING_MATERIALIZATION_PROBE_CLASSIFIED"
+            if not errors
+            else "MIN_AREA_LANDING_MATERIALIZATION_CLASSIFICATION_INCOMPLETE"
+        )
+        method_status = (
+            "DIAGNOSTIC_CAPTURE_COMPLETE"
+            if not errors
+            else "DIAGNOSTIC_CAPTURE_INCOMPLETE"
+        )
+        contract_status = (
+            "PASS_EXACT_SIX_R4_REPLAY_EXTENSIONS"
+            if counts.get("CONTRACT_VALIDATED_COUNT") == 6
+            else "FAIL"
+        )
+        if validated:
+            next_method_decision = (
+                "REVIEW_DRC_ZERO_MATERIALIZATION_PROBE_BEFORE_CANONICAL_INTEGRATION"
+            )
+        elif materialization_status == "REQUESTED_0P56_WIDTH_MATERIALIZED":
+            next_method_decision = (
+                "REVIEW_DRC_COUNTED_AREA_VERSUS_MATERIALIZED_0P56_WIRES"
+            )
+        elif materialization_status == "WIDE_REQUEST_CANONICALIZED_TO_0P28":
+            next_method_decision = (
+                "RETIRE_WIRE_EDITOR_WIDTH_CONTROL_REVIEW_NEW_REGULAR_WIRE_PRIMITIVE"
+            )
+        elif materialization_status == "NO_LOCAL_MET1_WIRE_DELTA":
+            next_method_decision = (
+                "RETIRE_WIRE_EDITOR_COMMAND_PASS_WITHOUT_LOCAL_WIRE_DELTA"
+            )
+        else:
+            next_method_decision = "REVIEW_MIXED_WIRE_MATERIALIZATION_BEFORE_NEW_METHOD"
+    else:
+        analysis_label = "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS"
+        analysis_policy = (
             "ISOLATED_IN_MEMORY_SIX_NET_MIXED_WIDTH_MET1_LANDING_PATCH_CLASSIFICATION"
             if is_r4
             else (
@@ -744,25 +1094,18 @@ def classify(
                     else "ISOLATED_IN_MEMORY_SIX_NET_MET1_LANDING_PATCH_CLASSIFICATION"
                 )
             )
-        ),
-        "STATUS": "PASS" if not errors else "FAIL",
-        "RESULT": (
+        )
+        analysis_result = (
             "MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED"
             if not errors
             else "MIN_AREA_LANDING_PATCH_CLASSIFICATION_INCOMPLETE"
-        ),
-        "TRIAL_ROOT": str(trial_root),
-        "SOURCE_CHECKPOINT": context.get("SOURCE_CHECKPOINT", "MISSING"),
-        "REPORT_DRIVER_HEAD": report_driver_head,
-        "TRIAL_REVISION": trial_revision,
-        "TRIAL_PROCESS_STATUS": status.get("STATUS", "MISSING"),
-        "TRIAL_PROCESS_RESULT": status.get("RESULT", "MISSING"),
-        "METHOD_STATUS": (
+        )
+        method_status = (
             "VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY"
             if validated
             else "REJECTED_OR_INCOMPLETE"
-        ),
-        "PATCH_CONTRACT_STATUS": (
+        )
+        contract_status = (
             (
                 "PASS_EXACT_SIX_MIXED_WIDTH_EXTENSIONS"
                 if is_r4
@@ -778,7 +1121,36 @@ def classify(
             )
             if counts.get("CONTRACT_VALIDATED_COUNT") == 6
             else "FAIL"
-        ),
+        )
+        if validated:
+            next_method_decision = (
+                "REVIEW_DRC_ZERO_MIXED_WIDTH_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                if is_r4
+                else (
+                    "REVIEW_DRC_ZERO_MIXED_DIRECTION_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                    if is_r3
+                    else (
+                        "REVIEW_DRC_ZERO_MIXED_LENGTH_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                        if is_r2
+                        else "REVIEW_DRC_ZERO_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                    )
+                )
+            )
+        else:
+            next_method_decision = "STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD"
+    result = {
+        "LABEL": analysis_label,
+        "POLICY": analysis_policy,
+        "STATUS": "PASS" if not errors else "FAIL",
+        "RESULT": analysis_result,
+        "TRIAL_ROOT": str(trial_root),
+        "SOURCE_CHECKPOINT": context.get("SOURCE_CHECKPOINT", "MISSING"),
+        "REPORT_DRIVER_HEAD": report_driver_head,
+        "TRIAL_REVISION": trial_revision,
+        "TRIAL_PROCESS_STATUS": status.get("STATUS", "MISSING"),
+        "TRIAL_PROCESS_RESULT": status.get("RESULT", "MISSING"),
+        "METHOD_STATUS": method_status,
+        "PATCH_CONTRACT_STATUS": contract_status,
         "PATCH_WIDTH_POLICY": patch_width_policy,
         "PATCH_WIDTH_UM": patch_width_um,
         "PATCH_LENGTH_POLICY": patch_length_policy,
@@ -806,25 +1178,54 @@ def classify(
         "IMMUTABLE_PVS_STAGING": "NOT_RUN",
         "PVS_DECISION": "DO_NOT_RUN",
         "CANONICAL_RERUN_DECISION": "DO_NOT_RUN_FROM_THIS_STEP",
-        "NEXT_METHOD_DECISION": (
-            (
-                "REVIEW_DRC_ZERO_MIXED_WIDTH_PATCH_BEFORE_CANONICAL_INTEGRATION"
-                if is_r4
-                else (
-                    "REVIEW_DRC_ZERO_MIXED_DIRECTION_PATCH_BEFORE_CANONICAL_INTEGRATION"
-                    if is_r3
-                    else (
-                        "REVIEW_DRC_ZERO_MIXED_LENGTH_PATCH_BEFORE_CANONICAL_INTEGRATION"
-                        if is_r2
-                        else "REVIEW_DRC_ZERO_PATCH_BEFORE_CANONICAL_INTEGRATION"
-                    )
-                )
-            )
-            if validated
-            else "STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD"
-        ),
+        "NEXT_METHOD_DECISION": next_method_decision,
         "ERROR_COUNT": str(len(errors)),
     }
+    if is_r5:
+        result.update(
+            {
+                "MATERIALIZATION_CAPTURE_STATUS": status.get(
+                    "MATERIALIZATION_CAPTURE_STATUS", "MISSING"
+                ),
+                "MATERIALIZATION_STATUS": materialization_status,
+                "PRE_WIRE_QUERY_PASS_NET_COUNT": status.get(
+                    "PRE_WIRE_QUERY_PASS_NET_COUNT", "UNKNOWN"
+                ),
+                "POST_WIRE_QUERY_PASS_NET_COUNT": status.get(
+                    "POST_WIRE_QUERY_PASS_NET_COUNT", "UNKNOWN"
+                ),
+                "PRE_WIRE_ROW_COUNT": status.get("PRE_WIRE_ROW_COUNT", "UNKNOWN"),
+                "POST_WIRE_ROW_COUNT": status.get("POST_WIRE_ROW_COUNT", "UNKNOWN"),
+                "PRE_LOCAL_MET1_ROW_COUNT": status.get(
+                    "PRE_LOCAL_MET1_ROW_COUNT", "UNKNOWN"
+                ),
+                "POST_LOCAL_MET1_ROW_COUNT": status.get(
+                    "POST_LOCAL_MET1_ROW_COUNT", "UNKNOWN"
+                ),
+                "WIRE_ATTRIBUTE_FAIL_COUNT": status.get(
+                    "WIRE_ATTRIBUTE_FAIL_COUNT", "UNKNOWN"
+                ),
+                "ADDED_WIRE_HANDLE_COUNT": str(added_wire_handle_count),
+                "REMOVED_WIRE_HANDLE_COUNT": str(removed_wire_handle_count),
+                "ADDED_WIRE_SIGNATURE_COUNT": str(
+                    sum(added_wire_signatures.values())
+                ),
+                "REMOVED_WIRE_SIGNATURE_COUNT": str(
+                    sum(removed_wire_signatures.values())
+                ),
+                "ADDED_LOCAL_MET1_SIGNATURE_COUNT": str(
+                    added_local_met1_signature_count
+                ),
+                "REMOVED_LOCAL_MET1_SIGNATURE_COUNT": str(
+                    removed_local_met1_signature_count
+                ),
+                "REQUESTED_WIDTH_MATERIALIZED_WIDE_NET_COUNT": str(
+                    requested_width_materialized_wide_net_count
+                ),
+                "CANONICALIZED_WIDE_NET_COUNT": str(canonicalized_wide_net_count),
+                "NO_LOCAL_DELTA_WIDE_NET_COUNT": str(no_local_delta_wide_net_count),
+            }
+        )
 
     evidence = [path for path in required if path.is_file()]
     lines = [f"{key}={value}" for key, value in result.items()]
@@ -844,6 +1245,23 @@ def classify(
     if not removed and not added:
         lines.append("NONE")
     lines.append("MARKER_DELTA_END")
+    if is_r5:
+        lines.extend(("", "WIRE_MATERIALIZATION_SUMMARY_TABLE_BEGIN"))
+        if materialization_summary:
+            lines.append("\t".join(materialization_summary[0].keys()))
+            lines.extend("\t".join(row.values()) for row in materialization_summary)
+        lines.append("WIRE_MATERIALIZATION_SUMMARY_TABLE_END")
+        lines.extend(("", "WIRE_SIGNATURE_DELTA_BEGIN"))
+        lines.append("action\tcount\t" + "\t".join(WIRE_SIGNATURE_FIELDS))
+        for action, signatures in (
+            ("REMOVED", removed_wire_signatures),
+            ("ADDED", added_wire_signatures),
+        ):
+            for signature, count in sorted(signatures.items()):
+                lines.append(f"{action}\t{count}\t" + "\t".join(signature))
+        if not removed_wire_signatures and not added_wire_signatures:
+            lines.append("NONE")
+        lines.append("WIRE_SIGNATURE_DELTA_END")
     lines.extend(("", "ERRORS_BEGIN"))
     lines.extend(errors or ["NONE"])
     lines.extend(("ERRORS_END", "", "EVIDENCE_HASHES_BEGIN"))
@@ -862,14 +1280,16 @@ def main() -> int:
     parser.add_argument("--step21-analysis", type=Path)
     parser.add_argument("--step22-analysis", type=Path)
     parser.add_argument("--step23-analysis", type=Path)
+    parser.add_argument("--step24-analysis", type=Path)
     parser.add_argument(
-        "--trial-revision", choices=("R1", "R2", "R3", "R4"), default="R1"
+        "--trial-revision", choices=("R1", "R2", "R3", "R4", "R5"), default="R1"
     )
     parser.add_argument("--report-driver-head", required=True)
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
     source_analysis = (
         args.source_analysis
+        or args.step24_analysis
         or args.step23_analysis
         or args.step22_analysis
         or args.step21_analysis
@@ -880,12 +1300,13 @@ def main() -> int:
         "R2": args.step21_analysis,
         "R3": args.step22_analysis,
         "R4": args.step23_analysis,
+        "R5": args.step24_analysis,
     }[args.trial_revision]
     if source_analysis is None:
         parser.error("one source analysis argument is required")
     if expected_alias is None and args.source_analysis is None:
         parser.error(
-            f"--{dict(R1='step20', R2='step21', R3='step22', R4='step23')[args.trial_revision]}-analysis "
+            f"--{dict(R1='step20', R2='step21', R3='step22', R4='step23', R5='step24')[args.trial_revision]}-analysis "
             f"is required for {args.trial_revision}"
         )
     result = classify(

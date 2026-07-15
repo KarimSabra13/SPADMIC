@@ -1055,3 +1055,45 @@ Rejected actions after Step 23:
   connected MET1 area.
 - Do not save, export, route-optimize, launch a canonical replay, stage PVS
   inputs, or run PVS from the Step 24 process.
+
+## Step 24 Result - Wider Requests Reproduce The Same Four Markers
+
+Step 24 accepted all four `0.56 um` width settings and all 24 Wire Editor
+commands, but it reproduced Step 21's exact physical response:
+
+```text
+remaining nets               n_9677 n_9693 n_9696 n_9697
+actual area per marker        0.1777 um^2
+required area per marker      0.2020 um^2
+regular connectivity          0
+PG connectivity               0
+restored antenna entries      21
+marker database total         25
+```
+
+The normalized Step 21 and Step 24 post-marker signatures are identical. The
+requested width was therefore ineffective as a DRC outcome variable. This
+does not, by itself, distinguish whether Innovus created a `0.56 um` wire that
+the minimum-area rule did not count, canonicalized the edit to `0.28 um`, or
+left no semantic local-wire delta. The command report proves invocation, not
+database materialization.
+
+Step 25 performs the minimum diagnostic needed to separate those cases. In a
+fresh restore it replays the exact R4 contract and writes pre/post TSV snapshots
+for all wire objects on the six nets. The capture includes wire handle, box,
+layer, route status, shape, width, length, points, and marker-local relation.
+The independent analyzer ignores volatile phase, row index, and handle when
+computing semantic deltas, while reporting handle deltas separately.
+
+Rejected actions after Step 24:
+
+- Do not increase width or length again; all tested straight-line endpoint,
+  direction, and width outcomes have saturated at four markers.
+- Do not treat `setEditMode` or `editCommitRoute` PASS as proof of the emitted
+  wire width.
+- Do not substitute unconstrained rectangles or special-net geometry for a
+  connected regular signal-wire repair.
+- Do not continue from the in-memory R4 database. Step 25 must restore the
+  immutable source checkpoint and replay all six contracts.
+- Do not save, export, launch a canonical rerun, stage PVS inputs, or run PVS
+  from the materialization probe.
