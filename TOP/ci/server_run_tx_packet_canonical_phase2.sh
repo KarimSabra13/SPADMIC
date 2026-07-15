@@ -40,6 +40,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh postcts-via1-analyze <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-no-restitch-rerun <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh final-closure-analyze <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-second-pass-trial <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -2027,6 +2028,170 @@ final_closure_analyze() {
   return $?
 }
 
+min_area_second_pass_trial() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-second-pass-trial requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 17_final_closure_analyze || return 1
+
+  local step17_status step17_driver step17_analysis source_block_root
+  local actual_head cd_rc cadence_rc trial_id trial_root trial_status console copy_dir
+  local trial_rc analysis_report analysis_rc driver_report status result path
+  local method_status trial_process_status trial_process_result drc_sequence next_decision
+  step17_status="$TX2_SESSION_ROOT/status/17_final_closure_analyze.rpt"
+  step17_driver="$TX2_SESSION_ROOT/reports/17_final_closure_analyze_driver.rpt"
+  step17_analysis="$TX2_SESSION_ROOT/reports/17_final_closure_analysis.rpt"
+  actual_head=UNKNOWN
+  cadence_rc=NOT_RUN
+  trial_rc=NOT_RUN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=MIN_AREA_SECOND_PASS_CLASSIFICATION_NOT_RUN
+
+  if [[ "$(kv_field "$step17_status" RESULT)" != "FINAL_CLOSURE_BLOCKERS_CLASSIFIED_NO_DESIGN_MODIFICATION" \
+      || "$(kv_field "$step17_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step17_analysis" RESULT)" != "BLOCKERS_CLASSIFIED" \
+      || "$(kv_field "$step17_analysis" PHYSICAL_CANDIDATE_STATUS)" != "PG_AND_REGULAR_CLOSED_FINAL_REPAIR_REQUIRED" \
+      || "$(kv_field "$step17_analysis" FINAL_DRC_STATUS)" != "FAIL" \
+      || "$(kv_field "$step17_analysis" REGULAR_CONNECTIVITY_STATUS)" != "PASS" \
+      || "$(kv_field "$step17_analysis" PG_CONNECTIVITY_STATUS)" != "PASS" \
+      || "$(kv_field "$step17_analysis" PG_PROBLEM_COUNT)" != "0" \
+      || "$(kv_field "$step17_analysis" MIN_AREA_REPAIR_EFFECT)" != "REDUCED_10_TO_6" \
+      || "$(kv_field "$step17_analysis" MIN_AREA_PRE_MARKER_COUNT)" != "10" \
+      || "$(kv_field "$step17_analysis" MIN_AREA_POST_MARKER_COUNT)" != "6" \
+      || "$(kv_field "$step17_analysis" MIN_AREA_FINAL_MARKER_COUNT)" != "6" \
+      || "$(kv_field "$step17_analysis" ANTENNA_FINAL_MARKER_COUNT)" != "177" \
+      || "$(kv_field "$step17_analysis" STREAM_PIN_TARGET_STATUS)" != "CANONICAL_TARGETS_PRESERVED" \
+      || "$(kv_field "$step17_analysis" STREAM_PIN_COMMAND_MAPPING_DECISION)" != "REMOVE_NEGATIVE_COMPENSATION_KEEP_CANONICAL_CENTERS" \
+      || "$(kv_field "$step17_analysis" PVS_DECISION)" != "DO_NOT_RUN" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 17 is not the reviewed six-marker closure tuple"
+    echo "STEP17_ANALYSIS=$step17_analysis"
+    return 1
+  fi
+
+  source_block_root="$(kv_field "$step17_driver" CANDIDATE_BLOCK_ROOT)"
+  if [[ -z "$source_block_root" || ! -d "$source_block_root" \
+      || "$source_block_root" != "$(kv_field "$step17_analysis" BLOCK_ROOT)" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 17 source block root is missing or inconsistent"
+    echo "SOURCE_BLOCK_ROOT=${source_block_root:-MISSING}"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  trial_id="${TX2_SESSION_ID}_min_area_second_pass_trial"
+  trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
+  trial_status="$trial_root/reports/min_area_second_pass_trial_status.rpt"
+  console="$TX2_SESSION_ROOT/logs/18_min_area_second_pass_trial.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_trial"
+  analysis_report="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_trial_driver.rpt"
+  if [[ -e "$trial_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: immutable Step 18 trial root already exists"
+    echo "TRIAL_ROOT=$trial_root"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    load_cadence
+    cadence_rc=$?
+  fi
+  if [[ "$cadence_rc" == "0" ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_min_area_second_pass_trial.sh $source_block_root $step17_analysis $trial_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_min_area_second_pass_trial.sh" \
+      "$source_block_root" \
+      "$step17_analysis" \
+      "$trial_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    trial_rc=$?
+  fi
+
+  mkdir -p "$copy_dir"
+  if [[ -r "$trial_root/context.rpt" ]]; then
+    cp -p "$trial_root/context.rpt" "$copy_dir/context.rpt"
+  fi
+  if [[ -d "$trial_root/reports" ]]; then
+    for path in "$trial_root"/reports/*.rpt "$trial_root"/reports/*.tsv; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+
+  if [[ -r "$trial_status" ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_min_area_second_pass_trial.py" \
+      --trial-root "$trial_root" \
+      --step17-analysis "$step17_analysis" \
+      --report-driver-head "$actual_head" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ ( "$trial_rc" == "0" || "$trial_rc" == "8" ) \
+      && "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "ITERATIVE_MIN_AREA_TRIAL_CLASSIFIED" ]]; then
+    status=PASS
+    result=MIN_AREA_SECOND_PASS_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS
+  else
+    result=MIN_AREA_SECOND_PASS_CLASSIFICATION_INCOMPLETE
+  fi
+  method_status="$(kv_field "$analysis_report" METHOD_STATUS)"
+  trial_process_status="$(kv_field "$analysis_report" TRIAL_PROCESS_STATUS)"
+  trial_process_result="$(kv_field "$analysis_report" TRIAL_PROCESS_RESULT)"
+  drc_sequence="$(kv_field "$analysis_report" DRC_COUNT_SEQUENCE)"
+  next_decision="$(kv_field "$analysis_report" NEXT_METHOD_DECISION)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP17_STATUS=$step17_status"
+    echo "SOURCE_STEP17_DRIVER=$step17_driver"
+    echo "SOURCE_STEP17_ANALYSIS=$step17_analysis"
+    echo "SOURCE_BLOCK_ROOT=$source_block_root"
+    echo "TRIAL_RC=$trial_rc"
+    echo "TRIAL_ROOT=$trial_root"
+    echo "TRIAL_STATUS=$trial_status"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "TRIAL_PROCESS_STATUS=${trial_process_status:-UNKNOWN}"
+    echo "TRIAL_PROCESS_RESULT=${trial_process_result:-UNKNOWN}"
+    echo "METHOD_STATUS=${method_status:-UNKNOWN}"
+    echo "DRC_COUNT_SEQUENCE=${drc_sequence:-UNKNOWN}"
+    echo "NEXT_METHOD_DECISION=${next_decision:-UNKNOWN}"
+    echo "DESIGN_MODIFICATION=IN_MEMORY_ONLY"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    tail -n 260 "$console"
+  fi
+  record_status 18_min_area_second_pass_trial "$status" "$analysis_rc" "$result" "$trial_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -2127,6 +2292,9 @@ case "$COMMAND" in
     ;;
   final-closure-analyze)
     final_closure_analyze "$ARGUMENT_1"
+    ;;
+  min-area-second-pass-trial)
+    min_area_second_pass_trial "$ARGUMENT_1"
     ;;
   package)
     package_evidence

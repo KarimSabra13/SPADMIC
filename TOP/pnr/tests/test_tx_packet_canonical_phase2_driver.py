@@ -40,6 +40,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "postcts-via1-analyze",
             "preroute-pg-no-restitch-rerun",
             "final-closure-analyze",
+            "min-area-second-pass-trial",
             "package",
             "status",
         ):
@@ -190,6 +191,11 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("FINAL_CLOSURE_BLOCKERS_CLASSIFIED_NO_DESIGN_MODIFICATION", driver)
         self.assertIn("REMOVE_NEGATIVE_COMPENSATION_KEEP_CANONICAL_CENTERS", driver)
         self.assertIn("READ_ONLY_TEXT_ARTIFACTS_NO_INNOVUS", driver)
+        self.assertIn("require_step_pass 17_final_closure_analyze", driver)
+        self.assertIn("min-area-second-pass-trial <expected-report-driver-head>", driver)
+        self.assertIn("run_innovus_ooc_min_area_second_pass_trial.sh", driver)
+        self.assertIn("analyze_tx_packet_min_area_second_pass_trial.py", driver)
+        self.assertIn("MIN_AREA_SECOND_PASS_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)
@@ -225,6 +231,35 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertNotRegex(stage_probe, re.compile(r"(?i)\bsroute\s+-"))
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, stage_probe)
+
+        min_area_wrapper = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_min_area_second_pass_trial.sh"
+        ).read_text()
+        min_area_trial = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_min_area_second_pass_trial.tcl"
+        ).read_text()
+        self.assertIn("ONE_FRESH_PROCESS_ONE_RESTORE_IN_MEMORY_TRIAL", min_area_wrapper)
+        self.assertIn("05_postroute_export.enc.dat", min_area_wrapper)
+        self.assertIn("</dev/null", min_area_wrapper)
+        self.assertEqual(min_area_trial.count("restoreDesign $checkpoint $top"), 1)
+        self.assertIn("SPADMIC_MIN_AREA_TRIAL_ITERATION_LIMIT", min_area_trial)
+        self.assertIn("globalDetailRoute -select", min_area_trial)
+        self.assertIn("detailRoute -select", min_area_trial)
+        self.assertIn("ecoRoute -fix_drc", min_area_trial)
+        self.assertIn("FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT", min_area_trial)
+        self.assertIn("FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT", min_area_trial)
+        self.assertIn("ITERATIVE_MIN_AREA_REPAIR_NO_IMPROVEMENT", min_area_trial)
+        self.assertIn("ITERATIVE_MIN_AREA_REPAIR_VALIDATED", min_area_trial)
+        for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
+            self.assertNotIn(forbidden, min_area_trial)
 
     def test_init_inherits_an_accepted_phase1_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

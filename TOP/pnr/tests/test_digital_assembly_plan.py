@@ -109,6 +109,8 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
 
             with (packet_root / "ooc_block_pin_plan.csv").open(newline="") as fh:
                 packet_rows = list(csv.DictReader(fh))
+            with (strip_root / "ooc_block_pin_plan.csv").open(newline="") as fh:
+                strip_rows = list(csv.DictReader(fh))
             packet_ports = {row["port"] for row in packet_rows}
             self.assertTrue({f"src_data_i_s3_b{bit}" for bit in range(16)} <= packet_ports)
             self.assertFalse(any(port.startswith("src_data_i[") for port in packet_ports))
@@ -123,13 +125,23 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
                 self.assertIn("variable enable_pre_cts_pg_direct_vias {0}", config)
                 self.assertIn("variable pg_route_strategy {explicit_exact}", config)
                 self.assertIn("variable route_profile {met1_effort}", config)
-                self.assertIn("variable tx_stream_editpin_x_compensation_um {0.280}", config)
+                self.assertIn("variable tx_stream_editpin_x_compensation_um {0.000}", config)
             self.assertIn("variable core_width_um {3413.000}", strip_config)
-            self.assertIn("-side NORTH -layer MET3 -assign {100.520 366.400}", (packet_root / "ooc_block_pin_assignments.tcl").read_text())
-            self.assertIn("-side SOUTH -layer MET3 -assign {100.520 0.400}", (strip_root / "ooc_block_pin_assignments.tcl").read_text())
+            self.assertIn("-side NORTH -layer MET3 -assign {100.800 366.400}", (packet_root / "ooc_block_pin_assignments.tcl").read_text())
+            self.assertIn("-side SOUTH -layer MET3 -assign {100.800 0.400}", (strip_root / "ooc_block_pin_assignments.tcl").read_text())
             first_packet_stream = next(row for row in packet_rows if row["port"] == "tx_valid_o")
             self.assertEqual(first_packet_stream["target_x_um"], "100.800")
-            self.assertEqual(first_packet_stream["assign_x_um"], "100.520")
+            self.assertEqual(first_packet_stream["assign_x_um"], "100.800")
+            packet_stream_rows = [
+                row for row in packet_rows if row["source_inst"] == "u_tx_ddr_strip"
+            ]
+            strip_stream_rows = [
+                row for row in strip_rows if row["source_inst"] == "u_tx_packet_core"
+            ]
+            self.assertEqual(len(packet_stream_rows), 19)
+            self.assertEqual(len(strip_stream_rows), 19)
+            for row in packet_stream_rows + strip_stream_rows:
+                self.assertEqual(row["assign_x_um"], row["target_x_um"])
 
     def test_clean_ooc_pg_uses_exact_geometry_before_signal_route(self) -> None:
         tcl = (REPO / "TOP" / "pnr" / "scripts" / "run_innovus_ooc_harden_block.tcl").read_text()

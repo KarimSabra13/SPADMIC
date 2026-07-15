@@ -813,3 +813,42 @@ generator, modify design data, launch Innovus, save or export a design, stage
 immutable PVS inputs, or run PVS. The next physical candidate must combine an
 evidence-backed six-net minimum-area method with the reviewed pin-command
 correction; it is not authorized automatically by a Step 17 PASS.
+
+## P03 Step 17 Result And Step 18 Minimum-Area Second-Pass Trial
+
+Step 17 completed at report-driver head
+`278aa40b10edf61ad1a657efcbada7baaa6a676e`. It confirms that the Step 16
+candidate has closed PG and regular connectivity and that only six
+non-antenna DRC markers remain. The first repair pass reduced the exact MET1
+minimum-area count `10 -> 6`; the six survivors all report `0.1064 um^2`
+actual area against `0.2020 um^2` required area. The repair ledger contains no
+selection, deletion, or route-command failure.
+
+Step 18 reuses the final routed checkpoint only as an immutable source. The
+trial contract is:
+
+1. Start one fresh Innovus process and restore the checkpoint exactly once.
+2. Require the exact baseline tuple: DRC 6, regular connectivity 0, PG
+   connectivity 0, six filtered MET1 minimum-area markers, and 177 excluded
+   antenna markers.
+3. Run the existing area delete, DRC-wire delete, `globalDetailRoute -select`,
+   `detailRoute -select`, and `ecoRoute -fix_drc` sequence on only the current
+   minimum-area nets.
+4. Re-run independent DRC and both connectivity checks after each iteration.
+5. Accept the method only at DRC 0 with both connectivity counts still 0 and
+   the antenna count still 177. Stop on no improvement, a new DRC class, or
+   after three iterations.
+6. Do not save, export, stage immutable PVS inputs, or run PVS.
+
+The Step 18 driver classifies both a coherent success and a coherent rejection
+as completed evidence. `STATUS=PASS` means the trial artifacts were classified
+consistently; only
+`METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY` authorizes folding the
+iterative method into a fresh canonical replay.
+
+The same Step 17 proof resolves the stream-pin mapping. Canonical targets and
+contract centers already match. Generated assignments and emitted LEF centers
+match each other at exactly `target - 0.280 um`. The generator compensation is
+therefore set to zero while the 19 canonical centers remain unchanged. This
+source correction is not applied to the immutable Step 16 checkpoint and is
+validated only in a later fresh replay after Step 18 review.

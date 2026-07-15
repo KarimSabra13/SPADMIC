@@ -1508,3 +1508,41 @@ STEP17_PY_COMPILE=PASS
 STEP17_BASH_SYNTAX=PASS
 STEP17_DIFF_CHECK=PASS
 ```
+
+### P03-R18 Server Evidence - Step 17 Proves Two Bounded Corrections
+
+Status: `PASS_CLASSIFIED_STEP18_ISOLATED_TRIAL_READY`
+
+Step 17 completed at report-driver head
+`278aa40b10edf61ad1a657efcbada7baaa6a676e` without launching Innovus or
+modifying the candidate. Final regular and PG connectivity are both
+zero-violation PASS results. The first selected-net minimum-area repair reduced
+the authoritative final MET1 population from 10 markers to 6, all with the
+same `0.1064 um^2` actual area against `0.2020 um^2` required area:
+
+```text
+n_9677 n_9693 n_9696 n_9697 n_9706 n_9721
+```
+
+The pin evidence is also conclusive. All 19 planned targets equal the
+canonical contract, every generated assignment is exactly `-0.280 um` from
+its target, and every emitted LEF center exactly equals that generated
+assignment. The contract centers remain authoritative. The generator's
+negative compensation is removed by setting it to zero; no placement-contract
+CSV or historical report is rewritten.
+
+Step 18 is not a full candidate rerun. It restores the Step 16 final routed
+checkpoint once in one fresh Innovus process, applies at most three additional
+iterations of the already observed selected-net repair sequence, and runs
+independent DRC, regular-connectivity, and PG-connectivity gates after every
+iteration. It stops on zero DRC, no improvement, any new marker class, an
+antenna-count change from 177, or any connectivity regression. The trial is
+in-memory only and runs no save, export, immutable staging, or PVS action.
+
+```text
+STEP18_LOCAL_TOP_PNR_TESTS=96_PASS_0_FAIL
+STEP18_PY_COMPILE=PASS
+STEP18_BASH_SYNTAX=PASS
+STEP18_TCL_STRUCTURE_CHECK=PASS
+STEP18_DIFF_CHECK=PASS
+```

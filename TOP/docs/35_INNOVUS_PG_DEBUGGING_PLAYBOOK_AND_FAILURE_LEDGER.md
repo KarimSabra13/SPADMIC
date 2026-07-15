@@ -773,3 +773,37 @@ Step 17 is text-only and must report the complete final six-marker table,
 pre/post/final minimum-area counts, repair command ledger, target-to-assignment
 delta, and assignment-to-LEF delta. PVS and another physical candidate remain
 blocked until that evidence is reviewed.
+
+## Step 17 Failure Ledger - Repair Iteration And Pin Command Are Now Separable
+
+Step 17 proves the PG method itself is closed: final PG connectivity and final
+regular connectivity both have zero violations. Do not restart PG stack,
+restitch, or helper-coordinate experiments. The remaining non-antenna DRC
+scope is exactly six MET1 minimum-area markers on `n_9677`, `n_9693`,
+`n_9696`, `n_9697`, `n_9706`, and `n_9721`.
+
+The existing repair is partially effective, not invalid. Its selected-net
+sequence reduced the minimum-area count from 10 to 6 with no command failure.
+The next diagnostic must therefore repeat that exact sequence under bounded
+iteration rather than inventing a broader route or geometry method. Step 18
+uses one fresh process and one restore, checks authoritative `verify_drc`
+after each iteration, and rejects the method on a non-decreasing count, a new
+marker class, antenna-count drift, or connectivity regression. It never
+persists the in-memory result.
+
+The pin discrepancy has a different root cause. For all 19 stream pins:
+
+```text
+canonical target - contract center =  0.000 um
+generated assignment - target      = -0.280 um
+emitted LEF center - assignment     =  0.000 um
+```
+
+This is command-generation behavior, not placement-contract drift. Keep the
+canonical centers and remove only the negative generator compensation. Do not
+shift the CSV contract or accept the failed LEF coordinates as new targets.
+
+The 177 antenna markers remain a separate deferred final-handoff blocker.
+Even a zero-DRC Step 18 result authorizes only a reviewed fresh replay with the
+iterative repair and zero pin compensation; it does not authorize PVS by
+itself.
