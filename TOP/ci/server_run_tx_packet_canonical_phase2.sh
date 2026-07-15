@@ -40,7 +40,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh postcts-via1-analyze <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-no-restitch-rerun <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh final-closure-analyze <expected-report-driver-head>
-  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-second-pass-trial <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-second-pass-trial-r2 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -2028,22 +2028,26 @@ final_closure_analyze() {
   return $?
 }
 
-min_area_second_pass_trial() {
+min_area_second_pass_trial_r2() {
   local expected_report_driver_head="$1"
   if [[ -z "$expected_report_driver_head" ]]; then
-    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-second-pass-trial requires the expected report-driver HEAD"
+    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-second-pass-trial-r2 requires the expected report-driver HEAD"
     return 1
   fi
   load_session || return 1
   require_step_pass 17_final_closure_analyze || return 1
 
-  local step17_status step17_driver step17_analysis source_block_root
+  local step17_status step17_driver step17_analysis step18_status step18_driver
+  local step18_analysis source_block_root
   local actual_head cd_rc cadence_rc trial_id trial_root trial_status console copy_dir
   local trial_rc analysis_report analysis_rc driver_report status result path
   local method_status trial_process_status trial_process_result drc_sequence next_decision
   step17_status="$TX2_SESSION_ROOT/status/17_final_closure_analyze.rpt"
   step17_driver="$TX2_SESSION_ROOT/reports/17_final_closure_analyze_driver.rpt"
   step17_analysis="$TX2_SESSION_ROOT/reports/17_final_closure_analysis.rpt"
+  step18_status="$TX2_SESSION_ROOT/status/18_min_area_second_pass_trial.rpt"
+  step18_driver="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_trial_driver.rpt"
+  step18_analysis="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_analysis.rpt"
   actual_head=UNKNOWN
   cadence_rc=NOT_RUN
   trial_rc=NOT_RUN
@@ -2072,6 +2076,30 @@ min_area_second_pass_trial() {
     return 1
   fi
 
+  if [[ "$(kv_field "$step18_status" STATUS)" != "FAIL" \
+      || "$(kv_field "$step18_status" RC)" != "8" \
+      || "$(kv_field "$step18_status" RESULT)" != "MIN_AREA_SECOND_PASS_CLASSIFICATION_INCOMPLETE" \
+      || "$(kv_field "$step18_driver" TRIAL_RC)" != "8" \
+      || "$(kv_field "$step18_driver" ANALYSIS_RC)" != "8" \
+      || "$(kv_field "$step18_driver" TRIAL_PROCESS_RESULT)" != "BASELINE_PRECONDITION_FAILED" \
+      || "$(kv_field "$step18_analysis" STATUS)" != "FAIL" \
+      || "$(kv_field "$step18_analysis" RESULT)" != "ITERATIVE_MIN_AREA_TRIAL_CLASSIFICATION_INCOMPLETE" \
+      || "$(kv_field "$step18_analysis" TRIAL_PROCESS_RESULT)" != "BASELINE_PRECONDITION_FAILED" \
+      || "$(kv_field "$step18_analysis" PRE_DRC_VIOLATION_COUNT)" != "6" \
+      || "$(kv_field "$step18_analysis" PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step18_analysis" PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step18_analysis" PRE_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step18_analysis" PRE_MARKER_DATABASE_TOTAL)" != "27" \
+      || "$(kv_field "$step18_analysis" ITERATION_COUNT)" != "0" \
+      || "$(kv_field "$step18_analysis" PRE_MIN_AREA_NETS)" != "n_9677 n_9693 n_9696 n_9697 n_9706 n_9721" \
+      || "$(kv_field "$step18_analysis" PVS_DECISION)" != "DO_NOT_RUN" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 18 is not the reviewed no-command restored-marker guard failure"
+    echo "STEP18_STATUS=$step18_status"
+    echo "STEP18_DRIVER=$step18_driver"
+    echo "STEP18_ANALYSIS=$step18_analysis"
+    return 1
+  fi
+
   source_block_root="$(kv_field "$step17_driver" CANDIDATE_BLOCK_ROOT)"
   if [[ -z "$source_block_root" || ! -d "$source_block_root" \
       || "$source_block_root" != "$(kv_field "$step17_analysis" BLOCK_ROOT)" ]]; then
@@ -2092,15 +2120,15 @@ min_area_second_pass_trial() {
     return 1
   fi
 
-  trial_id="${TX2_SESSION_ID}_min_area_second_pass_trial"
+  trial_id="${TX2_SESSION_ID}_min_area_second_pass_trial_r2"
   trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
   trial_status="$trial_root/reports/min_area_second_pass_trial_status.rpt"
-  console="$TX2_SESSION_ROOT/logs/18_min_area_second_pass_trial.console.log"
-  copy_dir="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_trial"
-  analysis_report="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_analysis.rpt"
-  driver_report="$TX2_SESSION_ROOT/reports/18_min_area_second_pass_trial_driver.rpt"
+  console="$TX2_SESSION_ROOT/logs/19_min_area_second_pass_trial_r2.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/19_min_area_second_pass_trial_r2"
+  analysis_report="$TX2_SESSION_ROOT/reports/19_min_area_second_pass_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/19_min_area_second_pass_trial_driver.rpt"
   if [[ -e "$trial_root" ]]; then
-    echo "STOP_HERE_DO_NOT_CONTINUE: immutable Step 18 trial root already exists"
+    echo "STOP_HERE_DO_NOT_CONTINUE: immutable Step 19 R2 trial root already exists"
     echo "TRIAL_ROOT=$trial_root"
     return 1
   fi
@@ -2111,6 +2139,7 @@ min_area_second_pass_trial() {
   fi
   if [[ "$cadence_rc" == "0" ]]; then
     export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    export SPADMIC_MIN_AREA_TRIAL_REVISION=R2
     echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_min_area_second_pass_trial.sh $source_block_root $step17_analysis $trial_id spadmic_tx_packet_core"
     bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_min_area_second_pass_trial.sh" \
       "$source_block_root" \
@@ -2147,7 +2176,7 @@ min_area_second_pass_trial() {
       && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
       && "$(kv_field "$analysis_report" RESULT)" == "ITERATIVE_MIN_AREA_TRIAL_CLASSIFIED" ]]; then
     status=PASS
-    result=MIN_AREA_SECOND_PASS_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS
+    result=MIN_AREA_SECOND_PASS_R2_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS
   else
     result=MIN_AREA_SECOND_PASS_CLASSIFICATION_INCOMPLETE
   fi
@@ -2164,7 +2193,11 @@ min_area_second_pass_trial() {
     echo "SOURCE_STEP17_STATUS=$step17_status"
     echo "SOURCE_STEP17_DRIVER=$step17_driver"
     echo "SOURCE_STEP17_ANALYSIS=$step17_analysis"
+    echo "SOURCE_STEP18_STATUS=$step18_status"
+    echo "SOURCE_STEP18_DRIVER=$step18_driver"
+    echo "SOURCE_STEP18_ANALYSIS=$step18_analysis"
     echo "SOURCE_BLOCK_ROOT=$source_block_root"
+    echo "TRIAL_REVISION=R2"
     echo "TRIAL_RC=$trial_rc"
     echo "TRIAL_ROOT=$trial_root"
     echo "TRIAL_STATUS=$trial_status"
@@ -2187,7 +2220,7 @@ min_area_second_pass_trial() {
   elif [[ -r "$console" ]]; then
     tail -n 260 "$console"
   fi
-  record_status 18_min_area_second_pass_trial "$status" "$analysis_rc" "$result" "$trial_root"
+  record_status 19_min_area_second_pass_trial_r2 "$status" "$analysis_rc" "$result" "$trial_root"
   [[ "$status" == "PASS" ]]
   return $?
 }
@@ -2294,7 +2327,10 @@ case "$COMMAND" in
     final_closure_analyze "$ARGUMENT_1"
     ;;
   min-area-second-pass-trial)
-    min_area_second_pass_trial "$ARGUMENT_1"
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 18 R1 is immutable failed evidence; use min-area-second-pass-trial-r2"
+    ;;
+  min-area-second-pass-trial-r2)
+    min_area_second_pass_trial_r2 "$ARGUMENT_1"
     ;;
   package)
     package_evidence

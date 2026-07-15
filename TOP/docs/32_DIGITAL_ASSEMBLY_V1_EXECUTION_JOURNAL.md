@@ -1546,3 +1546,38 @@ STEP18_BASH_SYNTAX=PASS
 STEP18_TCL_STRUCTURE_CHECK=PASS
 STEP18_DIFF_CHECK=PASS
 ```
+
+### P03-R19 Server Evidence - Step 18 Guard Failure And Step 19 R2
+
+Status: `FAIL_SAFE_NO_REPAIR_COMMAND_R2_REQUIRED`
+
+Step 18 ran at report-driver head
+`9979fdf66290532731934f4b61cf4fca170dfa20` and stopped before opening the
+repair loop. The restored physical baseline was the exact reviewed six-net
+state: DRC 6, six filtered MET1 minimum-area markers, regular connectivity 0,
+PG connectivity 0, and the same six nets from Step 17. No selection, delete,
+or route command ran; `ITERATION_COUNT=0`, and save, export, immutable staging,
+and PVS all remained `NOT_RUN`.
+
+The rejected precondition compared two different marker representations. Step
+17's authoritative final source-run antenna population remains 177. After
+restoring `05_postroute_export.enc.dat`, the marker database contains 21
+antenna entries, six DRC entries, and zero connectivity entries, for an exact
+database total of 27. The restored 21 must not be relabelled as the source-run
+final antenna count or used to clear the 177-marker handoff blocker.
+
+Step 19 R2 keeps the Step 17 source-run proof at 177, requires the exact
+restored tuple `6 + 21 + 0 = 27`, and then requires the restored antenna count
+of 21 to remain unchanged after every in-memory repair iteration. It uses a
+new immutable `_min_area_second_pass_trial_r2` root and refuses to run unless
+the failed Step 18 reports prove `BASELINE_PRECONDITION_FAILED` with zero
+iterations. The repair method itself is unchanged. Canonical replay and PVS
+remain blocked pending the R2 classification.
+
+```text
+STEP19_R2_LOCAL_TOP_PNR_TESTS=98_PASS_0_FAIL
+STEP19_R2_PY_COMPILE=PASS
+STEP19_R2_BASH_SYNTAX=PASS
+STEP19_R2_TCL_STRUCTURE_CHECK=PASS
+STEP19_R2_DIFF_CHECK=PASS
+```

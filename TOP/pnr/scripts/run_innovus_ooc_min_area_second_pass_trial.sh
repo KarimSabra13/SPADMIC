@@ -10,12 +10,13 @@ Usage:
 
 The trial restores the final routed checkpoint once, modifies only the
 in-memory copy, runs at most three repair iterations, and never calls a save or
-export command.
+export command. The corrected invocation requires
+SPADMIC_MIN_AREA_TRIAL_REVISION=R2.
 USAGE
 }
 
 main() {
-  local script_dir source_root analysis run_id top checkpoint_override
+  local script_dir source_root analysis run_id top checkpoint_override revision
   local work_root checkpoint candidate trial_root inferred_top rc analysis_sha
 
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,10 +25,16 @@ main() {
   run_id="${3:-min_area_second_pass_trial_$(date +%Y%m%d_%H%M%S)}"
   top="${4:-}"
   checkpoint_override="${5:-}"
+  revision="${SPADMIC_MIN_AREA_TRIAL_REVISION:-R1}"
   work_root="${SPADMIC_WORK_ROOT:-/sim/ksabra/SPADMIC_work}"
 
   if [[ -z "$source_root" || -z "$analysis" ]]; then
     usage >&2
+    return 2
+  fi
+  if [[ "$revision" != "R2" ]]; then
+    echo "ERROR: this corrected trial requires SPADMIC_MIN_AREA_TRIAL_REVISION=R2" >&2
+    echo "TRIAL_REVISION=$revision" >&2
     return 2
   fi
   if [[ ! -d "$source_root" || ! -r "$analysis" ]]; then
@@ -83,6 +90,7 @@ main() {
   export SPADMIC_MIN_AREA_TRIAL_TOP="$top"
   export SPADMIC_MIN_AREA_TRIAL_ANALYSIS="$analysis"
   export SPADMIC_MIN_AREA_TRIAL_ITERATION_LIMIT=3
+  export SPADMIC_MIN_AREA_TRIAL_REVISION="$revision"
 
   analysis_sha="$(sha256sum "$analysis" 2>/dev/null | awk '{print $1}')"
   {
@@ -93,6 +101,7 @@ main() {
     echo "STEP17_ANALYSIS_SHA256=${analysis_sha:-MISSING}"
     echo "TOP_MODULE=$top"
     echo "ITERATION_LIMIT=3"
+    echo "TRIAL_REVISION=$revision"
     echo "TRIAL_ROOT=$trial_root"
     echo "HEAD=$(git -C "$script_dir/../../.." rev-parse HEAD 2>/dev/null)"
     echo "POLICY=ONE_FRESH_PROCESS_ONE_RESTORE_IN_MEMORY_TRIAL"

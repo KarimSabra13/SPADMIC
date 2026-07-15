@@ -807,3 +807,32 @@ The 177 antenna markers remain a separate deferred final-handoff blocker.
 Even a zero-DRC Step 18 result authorizes only a reviewed fresh replay with the
 iterative repair and zero pin compensation; it does not authorize PVS by
 itself.
+
+## Step 18 Failure Ledger - Restored Marker Representation Is Separate
+
+Step 18 failed safely before any repair command. The restored checkpoint
+proved the intended physical baseline: six DRC markers on the exact reviewed
+nets, zero regular-connectivity violations, and zero PG-connectivity
+violations. The command report was absent because the R1 script opened it only
+after the failed guard; `ITERATION_COUNT=0` proves that no selected-net repair
+was attempted.
+
+The failed comparison was `restored antenna=21` against `source-run
+antenna=177`. These values come from different marker-database persistence
+states and are not directly comparable. Keep 177 as the authoritative Step 17
+source-run final-handoff blocker. For the restored checkpoint, use the exact
+accounting tuple:
+
+```text
+filtered MET1 minimum-area markers = 6
+restored antenna entries           = 21
+restored connectivity entries      = 0
+restored marker database total     = 27
+```
+
+Step 19 R2 changes only the guard and reporting semantics. It requires the
+restored tuple above, records both antenna representations with explicit
+labels, and rejects any iteration where the restored count changes from 21.
+It retains one fresh process, one restore, bounded selected-net repair,
+independent DRC and connectivity checks, and no save, export, immutable
+staging, or PVS. Never reuse the Step 18 trial root.

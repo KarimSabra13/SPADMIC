@@ -82,6 +82,7 @@ class AnalyzeTxPacketMinAreaSecondPassTrialTest(unittest.TestCase):
             f"HEAD={HEAD}\n"
             "POLICY=ONE_FRESH_PROCESS_ONE_RESTORE_IN_MEMORY_TRIAL\n"
             "ITERATION_LIMIT=3\n"
+            "TRIAL_REVISION=R2\n"
             "SOURCE_CHECKPOINT_WRITE=NOT_RUN\n"
             "SAVE_DESIGN=NOT_RUN\n"
             "EXPORT=NOT_RUN\n"
@@ -134,21 +135,29 @@ class AnalyzeTxPacketMinAreaSecondPassTrialTest(unittest.TestCase):
             "EXPORT=NOT_RUN\n"
             "RESTORE_DESIGN=PASS\n"
             "ITERATION_LIMIT=3\n"
+            "TRIAL_REVISION=R2\n"
             "SOURCE_CHECKPOINT=/immutable/checkpoints/05_postroute_export.enc.dat\n"
             f"STEP17_ANALYSIS={step17}\n"
+            "SOURCE_RUN_ANTENNA_MARKER_COUNT=177\n"
+            "ANTENNA_COUNT_COMPARABILITY="
+            "RESTORED_MARKER_DB_REPRESENTATION_NOT_DIRECTLY_COMPARABLE_TO_SOURCE_RUN\n"
+            "RESTORED_ANTENNA_MARKER_COUNT_POLICY="
+            "REQUIRE_EXACT_BASELINE_21_AND_UNCHANGED_ACROSS_ITERATIONS\n"
+            "RESTORED_BASELINE_ANTENNA_MARKER_COUNT=21\n"
+            "RESTORED_BASELINE_MARKER_DATABASE_TOTAL=27\n"
             "PRE_DRC_VIOLATION_COUNT=6\n"
             "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
             "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
             "PRE_DRC_MARKER_COUNT=6\n"
-            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT=177\n"
-            "PRE_MARKER_DATABASE_TOTAL=183\n"
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "PRE_MARKER_DATABASE_TOTAL=27\n"
             "PRE_EXCLUDED_CONNECTIVITY_MARKER_COUNT=0\n"
             f"FINAL_DRC_VIOLATION_COUNT={final_count}\n"
             "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
             "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
             f"FINAL_DRC_MARKER_COUNT={final_count}\n"
-            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=177\n"
-            f"FINAL_MARKER_DATABASE_TOTAL={177 + final_count}\n"
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            f"FINAL_MARKER_DATABASE_TOTAL={21 + final_count}\n"
             "FINAL_EXCLUDED_CONNECTIVITY_MARKER_COUNT=0\n"
             "COMMAND_PASS_COUNT=16\n"
             "COMMAND_FAIL_COUNT=0\n"
@@ -192,6 +201,14 @@ class AnalyzeTxPacketMinAreaSecondPassTrialTest(unittest.TestCase):
             self.assertIn("RESULT=ITERATIVE_MIN_AREA_TRIAL_CLASSIFIED", report)
             self.assertIn("METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY", report)
             self.assertIn("DRC_COUNT_SEQUENCE=6 3 0", report)
+            self.assertIn("SOURCE_RUN_ANTENNA_MARKER_COUNT=177", report)
+            self.assertIn("RESTORED_BASELINE_ANTENNA_MARKER_COUNT=21", report)
+            self.assertIn("RESTORED_FINAL_ANTENNA_MARKER_COUNT=21", report)
+            self.assertIn(
+                "ANTENNA_COUNT_COMPARABILITY="
+                "RESTORED_MARKER_DB_REPRESENTATION_NOT_DIRECTLY_COMPARABLE_TO_SOURCE_RUN",
+                report,
+            )
             self.assertIn(
                 "NEXT_METHOD_DECISION=AUTHORIZE_FRESH_RERUN_WITH_ITERATIVE_REPAIR_AND_ZERO_PIN_COMPENSATION",
                 report,
@@ -227,6 +244,43 @@ class AnalyzeTxPacketMinAreaSecondPassTrialTest(unittest.TestCase):
             self.assertEqual(rc, 8, report)
             self.assertIn("STATUS=FAIL", report)
             self.assertIn("final_drc_report_status_mismatch=1,0", report)
+
+    def test_fails_when_source_run_antenna_proof_is_not_177(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            trial_root, step17 = self.write_fixture(Path(tmp))
+            step17.write_text(
+                step17.read_text().replace(
+                    "ANTENNA_FINAL_MARKER_COUNT=177",
+                    "ANTENNA_FINAL_MARKER_COUNT=21",
+                )
+            )
+            rc, report = self.run_analyzer(trial_root, step17)
+            self.assertEqual(rc, 8, report)
+            self.assertIn(
+                "step17_ANTENNA_FINAL_MARKER_COUNT=21 expected=177",
+                report,
+            )
+
+    def test_fails_when_restored_antenna_representation_drifts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            trial_root, step17 = self.write_fixture(Path(tmp))
+            status = (
+                trial_root / "reports" / "min_area_second_pass_trial_status.rpt"
+            )
+            status.write_text(
+                status.read_text()
+                .replace(
+                    "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21",
+                    "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=20",
+                )
+                .replace(
+                    "FINAL_MARKER_DATABASE_TOTAL=21",
+                    "FINAL_MARKER_DATABASE_TOTAL=20",
+                )
+            )
+            rc, report = self.run_analyzer(trial_root, step17)
+            self.assertEqual(rc, 8, report)
+            self.assertIn("restored_antenna_count_drift=21,20", report)
 
 
 if __name__ == "__main__":

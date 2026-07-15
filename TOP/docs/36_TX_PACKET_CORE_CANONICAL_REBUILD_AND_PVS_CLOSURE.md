@@ -852,3 +852,35 @@ match each other at exactly `target - 0.280 um`. The generator compensation is
 therefore set to zero while the 19 canonical centers remain unchanged. This
 source correction is not applied to the immutable Step 16 checkpoint and is
 validated only in a later fresh replay after Step 18 review.
+
+## P03 Step 18 Safe Failure And Step 19 R2 Restored-Marker Guard
+
+Step 18 completed as failed evidence at report-driver head
+`9979fdf66290532731934f4b61cf4fca170dfa20`. Innovus restored the final routed
+checkpoint and independently reproduced DRC 6, regular connectivity 0, PG
+connectivity 0, and the exact six Step 17 minimum-area nets. It then stopped
+at the baseline precondition with `ITERATION_COUNT=0`; no repair command,
+save, export, immutable staging, or PVS action ran.
+
+The only mismatch was antenna-marker representation. The source-run report
+still authoritatively records 177 final antenna markers. The restored
+checkpoint marker database records 21 antenna entries alongside six DRC
+entries and zero connectivity entries, yielding an exact total of 27. The
+restored 21 is a stability sentinel for the isolated trial, not a replacement
+for the source-run 177-marker final-handoff blocker.
+
+Step 19 uses a distinct R2 identity and enforces both contracts:
+
+1. Step 17 must still prove `ANTENNA_FINAL_MARKER_COUNT=177`.
+2. Failed Step 18 must prove the exact six-net baseline and zero iterations.
+3. R2 must restore the exact marker tuple `DRC=6, antenna=21,
+   connectivity=0, total=27`.
+4. Every iteration must preserve restored antenna count 21, zero connectivity,
+   and exact marker-database accounting.
+5. The existing bounded repair sequence remains unchanged and in-memory only.
+
+The new trial root ends in `_min_area_second_pass_trial_r2`; the Step 18 root
+and copied reports remain immutable. A coherent Step 19 classification is
+still not PVS authorization. A fresh canonical replay remains blocked until
+the operator reviews whether R2 validates zero DRC without connectivity or
+restored-marker drift.

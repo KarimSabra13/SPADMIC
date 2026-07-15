@@ -9,6 +9,16 @@ import hashlib
 import re
 from pathlib import Path
 
+SOURCE_RUN_ANTENNA_MARKER_COUNT = 177
+RESTORED_BASELINE_ANTENNA_MARKER_COUNT = 21
+RESTORED_BASELINE_MARKER_DATABASE_TOTAL = 27
+ANTENNA_COUNT_COMPARABILITY = (
+    "RESTORED_MARKER_DB_REPRESENTATION_NOT_DIRECTLY_COMPARABLE_TO_SOURCE_RUN"
+)
+RESTORED_ANTENNA_MARKER_COUNT_POLICY = (
+    "REQUIRE_EXACT_BASELINE_21_AND_UNCHANGED_ACROSS_ITERATIONS"
+)
+
 
 def key_values(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
@@ -128,6 +138,7 @@ def classify(
         required.append(final_regular_path)
     if final_special_text:
         required.append(final_special_path)
+    required = list(dict.fromkeys(required))
     for path in required:
         if not path.is_file():
             errors.append(f"missing_required_artifact={path}")
@@ -165,6 +176,11 @@ def classify(
         errors.append(
             f"context_ITERATION_LIMIT={context.get('ITERATION_LIMIT', 'MISSING')}"
         )
+    if context.get("TRIAL_REVISION") != "R2":
+        errors.append(
+            f"context_TRIAL_REVISION={context.get('TRIAL_REVISION', 'MISSING')} "
+            "expected=R2"
+        )
     context_analysis = context.get("STEP17_ANALYSIS", "")
     if not context_analysis or Path(context_analysis).resolve() != step17_analysis:
         errors.append(
@@ -183,6 +199,18 @@ def classify(
         "EXPORT": "NOT_RUN",
         "RESTORE_DESIGN": "PASS",
         "ITERATION_LIMIT": "3",
+        "TRIAL_REVISION": "R2",
+        "SOURCE_RUN_ANTENNA_MARKER_COUNT": str(SOURCE_RUN_ANTENNA_MARKER_COUNT),
+        "ANTENNA_COUNT_COMPARABILITY": ANTENNA_COUNT_COMPARABILITY,
+        "RESTORED_ANTENNA_MARKER_COUNT_POLICY": (
+            RESTORED_ANTENNA_MARKER_COUNT_POLICY
+        ),
+        "RESTORED_BASELINE_ANTENNA_MARKER_COUNT": str(
+            RESTORED_BASELINE_ANTENNA_MARKER_COUNT
+        ),
+        "RESTORED_BASELINE_MARKER_DATABASE_TOTAL": str(
+            RESTORED_BASELINE_MARKER_DATABASE_TOTAL
+        ),
     }
     for key, expected in expected_status.items():
         if status.get(key) != expected:
@@ -239,17 +267,34 @@ def classify(
                 f"{label}_report_status_mismatch={report_count},{status_count}"
             )
 
-    if (pre_drc, pre_regular, pre_special, pre_markers, pre_antenna) != (6, 0, 0, 6, 177):
+    if (
+        pre_drc,
+        pre_regular,
+        pre_special,
+        pre_markers,
+        pre_antenna,
+        pre_database_total,
+        pre_connectivity_markers,
+    ) != (
+        6,
+        0,
+        0,
+        6,
+        RESTORED_BASELINE_ANTENNA_MARKER_COUNT,
+        RESTORED_BASELINE_MARKER_DATABASE_TOTAL,
+        0,
+    ):
         errors.append(
             "baseline_tuple="
-            f"{pre_drc},{pre_regular},{pre_special},{pre_markers},{pre_antenna}"
+            f"{pre_drc},{pre_regular},{pre_special},{pre_markers},"
+            f"{pre_antenna},{pre_database_total},{pre_connectivity_markers}"
         )
     if final_regular != 0 or final_special != 0:
         errors.append(f"final_connectivity_tuple={final_regular},{final_special}")
     if final_drc is not None and final_markers is not None and final_drc != final_markers:
         errors.append(f"final_drc_marker_mismatch={final_drc},{final_markers}")
-    if final_antenna != 177:
-        errors.append(f"final_antenna_count={final_antenna}")
+    if final_antenna != pre_antenna:
+        errors.append(f"restored_antenna_count_drift={pre_antenna},{final_antenna}")
     if pre_connectivity_markers != 0 or final_connectivity_markers != 0:
         errors.append(
             "excluded_connectivity_marker_tuple="
@@ -351,9 +396,21 @@ def classify(
         "TRIAL_ROOT": str(trial_root),
         "SOURCE_CHECKPOINT": context.get("SOURCE_CHECKPOINT", "MISSING"),
         "REPORT_DRIVER_HEAD": report_driver_head,
+        "TRIAL_REVISION": context.get("TRIAL_REVISION", "MISSING"),
         "TRIAL_PROCESS_STATUS": status.get("STATUS", "MISSING"),
         "TRIAL_PROCESS_RESULT": status.get("RESULT", "MISSING"),
         "METHOD_STATUS": method_status,
+        "SOURCE_RUN_ANTENNA_MARKER_COUNT": str(SOURCE_RUN_ANTENNA_MARKER_COUNT),
+        "RESTORED_BASELINE_ANTENNA_MARKER_COUNT": (
+            str(pre_antenna) if pre_antenna is not None else "UNKNOWN"
+        ),
+        "RESTORED_FINAL_ANTENNA_MARKER_COUNT": (
+            str(final_antenna) if final_antenna is not None else "UNKNOWN"
+        ),
+        "ANTENNA_COUNT_COMPARABILITY": ANTENNA_COUNT_COMPARABILITY,
+        "RESTORED_ANTENNA_MARKER_COUNT_POLICY": (
+            RESTORED_ANTENNA_MARKER_COUNT_POLICY
+        ),
         "PRE_DRC_VIOLATION_COUNT": str(pre_drc) if pre_drc is not None else "UNKNOWN",
         "FINAL_DRC_VIOLATION_COUNT": str(final_drc) if final_drc is not None else "UNKNOWN",
         "DRC_COUNT_SEQUENCE": sequence_text or "UNKNOWN",

@@ -41,6 +41,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "preroute-pg-no-restitch-rerun",
             "final-closure-analyze",
             "min-area-second-pass-trial",
+            "min-area-second-pass-trial-r2",
             "package",
             "status",
         ):
@@ -192,10 +193,14 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("REMOVE_NEGATIVE_COMPENSATION_KEEP_CANONICAL_CENTERS", driver)
         self.assertIn("READ_ONLY_TEXT_ARTIFACTS_NO_INNOVUS", driver)
         self.assertIn("require_step_pass 17_final_closure_analyze", driver)
-        self.assertIn("min-area-second-pass-trial <expected-report-driver-head>", driver)
+        self.assertIn("min-area-second-pass-trial-r2 <expected-report-driver-head>", driver)
         self.assertIn("run_innovus_ooc_min_area_second_pass_trial.sh", driver)
         self.assertIn("analyze_tx_packet_min_area_second_pass_trial.py", driver)
-        self.assertIn("MIN_AREA_SECOND_PASS_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
+        self.assertIn("MIN_AREA_SECOND_PASS_R2_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
+        self.assertIn("Step 18 R1 is immutable failed evidence", driver)
+        self.assertIn("PRE_EXCLUDED_ANTENNA_MARKER_COUNT)\" != \"21\"", driver)
+        self.assertIn("PRE_MARKER_DATABASE_TOTAL)\" != \"27\"", driver)
+        self.assertIn("19_min_area_second_pass_trial_r2", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)
@@ -251,6 +256,20 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("</dev/null", min_area_wrapper)
         self.assertEqual(min_area_trial.count("restoreDesign $checkpoint $top"), 1)
         self.assertIn("SPADMIC_MIN_AREA_TRIAL_ITERATION_LIMIT", min_area_trial)
+        self.assertIn("SPADMIC_MIN_AREA_TRIAL_REVISION", min_area_trial)
+        self.assertIn("SOURCE_RUN_ANTENNA_MARKER_COUNT", min_area_trial)
+        self.assertIn("RESTORED_BASELINE_ANTENNA_MARKER_COUNT", min_area_trial)
+        self.assertIn(
+            "RESTORED_MARKER_DB_REPRESENTATION_NOT_DIRECTLY_COMPARABLE_TO_SOURCE_RUN",
+            min_area_trial,
+        )
+        self.assertIn("$iter_antenna_count != $pre_antenna_count", min_area_trial)
+        self.assertIn("$pre_database_total != 27", min_area_trial)
+        self.assertIn("$pre_antenna_count != 21", min_area_trial)
+        self.assertLess(
+            min_area_trial.index("set commands_fh [open $command_report w]"),
+            min_area_trial.index("ma_abort BASELINE_PRECONDITION_FAILED"),
+        )
         self.assertIn("globalDetailRoute -select", min_area_trial)
         self.assertIn("detailRoute -select", min_area_trial)
         self.assertIn("ecoRoute -fix_drc", min_area_trial)

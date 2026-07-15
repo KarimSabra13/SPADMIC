@@ -76,7 +76,7 @@ class TxPacketMinAreaSecondPassTclTest(unittest.TestCase):
                 "proc dbGet {query} {\n"
                 "    if {$query eq {top.markers}} {\n"
                 "        set markers [list]\n"
-                "        for {set idx 1} {$idx <= 177} {incr idx} { lappend markers a$idx }\n"
+                "        for {set idx 1} {$idx <= 21} {incr idx} { lappend markers a$idx }\n"
                 "        for {set idx 1} {$idx <= $::marker_count} {incr idx} { lappend markers m$idx }\n"
                 "        return $markers\n"
                 "    }\n"
@@ -123,6 +123,7 @@ class TxPacketMinAreaSecondPassTclTest(unittest.TestCase):
                     "SPADMIC_MIN_AREA_TRIAL_TOP": "spadmic_tx_packet_core",
                     "SPADMIC_MIN_AREA_TRIAL_ANALYSIS": str(analysis),
                     "SPADMIC_MIN_AREA_TRIAL_ITERATION_LIMIT": "3",
+                    "SPADMIC_MIN_AREA_TRIAL_REVISION": "R2",
                 }
             )
             result = subprocess.run(
@@ -147,7 +148,15 @@ class TxPacketMinAreaSecondPassTclTest(unittest.TestCase):
             self.assertIn("FINAL_DRC_VIOLATION_COUNT=0", status)
             self.assertIn("FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0", status)
             self.assertIn("FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0", status)
-            self.assertIn("FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=177", status)
+            self.assertIn("TRIAL_REVISION=R2", status)
+            self.assertIn("SOURCE_RUN_ANTENNA_MARKER_COUNT=177", status)
+            self.assertIn("RESTORED_BASELINE_ANTENNA_MARKER_COUNT=21", status)
+            self.assertIn("FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21", status)
+            self.assertIn(
+                "ANTENNA_COUNT_COMPARABILITY="
+                "RESTORED_MARKER_DB_REPRESENTATION_NOT_DIRECTLY_COMPARABLE_TO_SOURCE_RUN",
+                status,
+            )
             self.assertIn("COMMAND_FAIL_COUNT=0", commands)
 
 

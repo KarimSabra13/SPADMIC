@@ -247,12 +247,16 @@ set root [ma_env SPADMIC_MIN_AREA_TRIAL_ROOT]
 set top [ma_env SPADMIC_MIN_AREA_TRIAL_TOP]
 set analysis [ma_env SPADMIC_MIN_AREA_TRIAL_ANALYSIS]
 set iteration_limit [ma_env SPADMIC_MIN_AREA_TRIAL_ITERATION_LIMIT]
+set trial_revision [ma_env SPADMIC_MIN_AREA_TRIAL_REVISION]
 set reports [file join $root reports]
 file mkdir $reports
 set commands_fh ""
 
 if {![string is integer -strict $iteration_limit] || $iteration_limit < 1 || $iteration_limit > 3} {
     error "SPADMIC_MIN_AREA_TRIAL_BAD_ITERATION_LIMIT: $iteration_limit"
+}
+if {$trial_revision ne "R2"} {
+    error "SPADMIC_MIN_AREA_TRIAL_BAD_REVISION: $trial_revision expected=R2"
 }
 
 array set status {
@@ -271,6 +275,7 @@ array set status {
 set status(SOURCE_CHECKPOINT) $checkpoint
 set status(STEP17_ANALYSIS) $analysis
 set status(ITERATION_LIMIT) $iteration_limit
+set status(TRIAL_REVISION) $trial_revision
 
 array set analysis_values [ma_read_kv $analysis]
 array set expected_analysis {
@@ -304,6 +309,12 @@ if {![info exists analysis_values(MIN_AREA_FINAL_NETS)]} {
     ma_abort STEP17_ANALYSIS_NOT_ACCEPTED MIN_AREA_FINAL_NETS_MISSING
 }
 set expected_nets [lsort -unique $analysis_values(MIN_AREA_FINAL_NETS)]
+set source_run_antenna_count $analysis_values(ANTENNA_FINAL_MARKER_COUNT)
+set antenna_comparability RESTORED_MARKER_DB_REPRESENTATION_NOT_DIRECTLY_COMPARABLE_TO_SOURCE_RUN
+set restored_antenna_policy REQUIRE_EXACT_BASELINE_21_AND_UNCHANGED_ACROSS_ITERATIONS
+set status(SOURCE_RUN_ANTENNA_MARKER_COUNT) $source_run_antenna_count
+set status(ANTENNA_COUNT_COMPARABILITY) $antenna_comparability
+set status(RESTORED_ANTENNA_MARKER_COUNT_POLICY) $restored_antenna_policy
 
 if {[catch {restoreDesign $checkpoint $top} restore_error]} {
     ma_abort RESTORE_FAILED $restore_error
@@ -353,8 +364,31 @@ set status(FINAL_DRC_VIOLATION_COUNT) $pre_drc_count
 set status(FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT) $pre_regular_count
 set status(FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT) $pre_special_count
 set status(FINAL_DRC_MARKER_COUNT) $pre_marker_count
+set status(FINAL_MARKER_DATABASE_TOTAL) $pre_database_total
 set status(FINAL_EXCLUDED_ANTENNA_MARKER_COUNT) $pre_antenna_count
 set status(FINAL_EXCLUDED_CONNECTIVITY_MARKER_COUNT) $pre_connectivity_count
+set status(FINAL_MIN_AREA_NETS) [join $current_nets { }]
+set status(RESTORED_BASELINE_ANTENNA_MARKER_COUNT) $pre_antenna_count
+set status(RESTORED_BASELINE_MARKER_DATABASE_TOTAL) $pre_database_total
+set status(COMMAND_PASS_COUNT) 0
+set status(COMMAND_FAIL_COUNT) 0
+
+set command_report [file join $reports min_area_second_pass_trial_commands.rpt]
+set commands_fh [open $command_report w]
+puts $commands_fh "LABEL=SPADMIC_OOC_MIN_AREA_SECOND_PASS_TRIAL_COMMANDS"
+puts $commands_fh "POLICY=BOUNDED_SELECTED_NET_EXISTING_REPAIR_SEQUENCE"
+puts $commands_fh "TRIAL_REVISION=$trial_revision"
+puts $commands_fh "ITERATION_LIMIT=$iteration_limit"
+puts $commands_fh "SOURCE_RUN_ANTENNA_MARKER_COUNT=$source_run_antenna_count"
+puts $commands_fh "ANTENNA_COUNT_COMPARABILITY=$antenna_comparability"
+puts $commands_fh "RESTORED_ANTENNA_MARKER_COUNT_POLICY=$restored_antenna_policy"
+puts $commands_fh "BASELINE_DRC_VIOLATION_COUNT=$pre_drc_count"
+puts $commands_fh "BASELINE_DRC_MARKER_COUNT=$pre_marker_count"
+puts $commands_fh "BASELINE_MARKER_DATABASE_TOTAL=$pre_database_total"
+puts $commands_fh "BASELINE_ANTENNA_MARKER_COUNT=$pre_antenna_count"
+puts $commands_fh "BASELINE_CONNECTIVITY_MARKER_COUNT=$pre_connectivity_count"
+puts $commands_fh "BASELINE_MIN_AREA_NETS=[join $current_nets { }]"
+flush $commands_fh
 
 if {![string is integer -strict $pre_drc_count] || $pre_drc_count != 6 ||
     ![string is integer -strict $pre_marker_count] || $pre_marker_count != 6 ||
@@ -362,19 +396,12 @@ if {![string is integer -strict $pre_drc_count] || $pre_drc_count != 6 ||
     $current_nets ne $expected_nets ||
     ![string is integer -strict $pre_regular_count] || $pre_regular_count != 0 ||
     ![string is integer -strict $pre_special_count] || $pre_special_count != 0 ||
-    ![string is integer -strict $pre_antenna_count] || $pre_antenna_count != 177 ||
+    ![string is integer -strict $pre_database_total] || $pre_database_total != 27 ||
+    ![string is integer -strict $pre_antenna_count] || $pre_antenna_count != 21 ||
     ![string is integer -strict $pre_connectivity_count] || $pre_connectivity_count != 0} {
     ma_abort BASELINE_PRECONDITION_FAILED \
-        "drc=$pre_drc_count markers=$pre_marker_count rows=[llength $current_rows] nets=$current_nets expected_nets=$expected_nets regular=$pre_regular_count special=$pre_special_count antenna=$pre_antenna_count connectivity=$pre_connectivity_count"
+        "drc=$pre_drc_count markers=$pre_marker_count database_total=$pre_database_total rows=[llength $current_rows] nets=$current_nets expected_nets=$expected_nets regular=$pre_regular_count special=$pre_special_count restored_antenna=$pre_antenna_count source_run_antenna=$source_run_antenna_count connectivity=$pre_connectivity_count"
 }
-
-set command_report [file join $reports min_area_second_pass_trial_commands.rpt]
-set commands_fh [open $command_report w]
-puts $commands_fh "LABEL=SPADMIC_OOC_MIN_AREA_SECOND_PASS_TRIAL_COMMANDS"
-puts $commands_fh "POLICY=BOUNDED_SELECTED_NET_EXISTING_REPAIR_SEQUENCE"
-puts $commands_fh "ITERATION_LIMIT=$iteration_limit"
-puts $commands_fh "BASELINE_DRC_VIOLATION_COUNT=$pre_drc_count"
-puts $commands_fh "BASELINE_MIN_AREA_NETS=[join $current_nets { }]"
 
 set previous_count $pre_drc_count
 set drc_sequence [list $pre_drc_count]
@@ -501,6 +528,9 @@ for {set iteration 1} {$iteration <= $iteration_limit} {incr iteration} {
 
     puts $commands_fh "ITERATION_${iteration}_POST_DRC_VIOLATION_COUNT=$iter_drc_count"
     puts $commands_fh "ITERATION_${iteration}_POST_DRC_MARKER_COUNT=$iter_marker_count"
+    puts $commands_fh "ITERATION_${iteration}_POST_MARKER_DATABASE_TOTAL=$iter_database_total"
+    puts $commands_fh "ITERATION_${iteration}_POST_ANTENNA_MARKER_COUNT=$iter_antenna_count"
+    puts $commands_fh "ITERATION_${iteration}_POST_CONNECTIVITY_MARKER_COUNT=$iter_connectivity_count"
     puts $commands_fh "ITERATION_${iteration}_POST_REGULAR_CONNECTIVITY_VIOLATION_COUNT=$iter_regular_count"
     puts $commands_fh "ITERATION_${iteration}_POST_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=$iter_special_count"
     puts $commands_fh "ITERATION_${iteration}_POST_MIN_AREA_NETS=[join $next_nets { }]"
@@ -514,10 +544,12 @@ for {set iteration 1} {$iteration <= $iteration_limit} {incr iteration} {
         [llength $next_rows] != $iter_marker_count ||
         ![string is integer -strict $iter_regular_count] || $iter_regular_count != 0 ||
         ![string is integer -strict $iter_special_count] || $iter_special_count != 0 ||
-        ![string is integer -strict $iter_antenna_count] || $iter_antenna_count != 177 ||
-        ![string is integer -strict $iter_connectivity_count] || $iter_connectivity_count != 0} {
+        ![string is integer -strict $iter_antenna_count] || $iter_antenna_count != $pre_antenna_count ||
+        ![string is integer -strict $iter_connectivity_count] || $iter_connectivity_count != 0 ||
+        ![string is integer -strict $iter_database_total] ||
+        $iter_database_total != ($iter_marker_count + $iter_antenna_count + $iter_connectivity_count)} {
         ma_abort ITERATION_GATE_FAILED \
-            "iteration=$iteration drc=$iter_drc_count markers=$iter_marker_count min_area_rows=[llength $next_rows] regular=$iter_regular_count special=$iter_special_count antenna=$iter_antenna_count connectivity=$iter_connectivity_count"
+            "iteration=$iteration drc=$iter_drc_count markers=$iter_marker_count database_total=$iter_database_total min_area_rows=[llength $next_rows] regular=$iter_regular_count special=$iter_special_count restored_antenna=$iter_antenna_count baseline_restored_antenna=$pre_antenna_count source_run_antenna=$source_run_antenna_count connectivity=$iter_connectivity_count"
     }
 
     if {$iter_drc_count == 0} {
