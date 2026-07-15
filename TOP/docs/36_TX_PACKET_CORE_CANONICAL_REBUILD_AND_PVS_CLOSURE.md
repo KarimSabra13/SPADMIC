@@ -934,3 +934,50 @@ Step 20 performs no design modification, route command, save, export,
 immutable staging, canonical replay, or PVS. Even complete geometry coverage
 only authorizes review of a separate direct-patch trial; it is not physical
 closure or signoff readiness.
+
+## P03 Step 20 Result And Step 21 MET1 Landing-Extension Trial
+
+Step 20 completed at report-driver head
+`94b62259a11d4b3c05aa38f37791c9366acae2fd`. Its query-only pass preserved
+DRC `6 -> 6`, regular connectivity `0 -> 0`, PG connectivity `0 -> 0`,
+restored antenna entries `21 -> 21`, marker database total `27 -> 27`, and all
+six normalized marker signatures.
+
+Every marker has the same structural cause: a `0.38 x 0.28 um` MET1 landing
+with actual area `0.1064 um^2`, centered under `VIA1_o`, where a routed MET2
+segment terminates. Each source `Q` instance is adjacent to that landing. The
+reviewed Step 21 contract therefore adds one horizontal regular MET1 segment
+from the existing via center toward the source, with width `0.28 um` and
+length `0.56 um`. Four extend west and two east; all twelve endpoints are
+inside their corresponding source-instance boxes.
+
+Step 21 is a distinct immutable trial root ending in
+`_min_area_landing_patch_trial`. It requires the exact Step 20 classification
+and current report-driver HEAD, restores the source checkpoint exactly once,
+and validates all six marker, via, MET2 endpoint, source-term, direction, and
+instance-containment contracts before any edit. It applies no deletion and no
+router command. Each segment is emitted through the installed Wire Editor
+command family and every command result is recorded.
+
+Afterward the trial independently captures `verify_drc`, regular
+connectivity, PG connectivity, filtered marker rows, restored antenna count,
+and total marker-database accounting. A physical method is validated only for
+the exact result:
+
+```text
+FINAL_DRC_VIOLATION_COUNT=0
+FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21
+FINAL_MARKER_DATABASE_TOTAL=21
+METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY
+```
+
+The analysis also classifies command failure, connectivity regression,
+restored-antenna drift, no improvement, and changed-but-not-closed marker
+sets. Classification PASS means the artifacts are internally coherent; it is
+not equivalent to the validated method status. Step 21 never saves or exports
+the edited design, stages immutable PVS inputs, launches a canonical rerun, or
+runs PVS. Even a validated trial requires separate review and integration
+into a fresh canonical replay together with the already reviewed stream-pin
+command correction.

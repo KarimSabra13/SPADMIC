@@ -1629,3 +1629,52 @@ STEP20_BASH_SYNTAX=PASS
 STEP20_TCL_STRUCTURE_CHECK=PASS
 STEP20_DIFF_CHECK=PASS
 ```
+
+### P03-R21 Server Evidence - Step 20 Resolves The Landing Topology
+
+Status: `PASS_CLASSIFIED_STEP21_ISOLATED_TRIAL_READY`
+
+Step 20 completed at report-driver head
+`94b62259a11d4b3c05aa38f37791c9366acae2fd`. The read-only probe preserved
+the exact restored tuple before and after its queries: DRC 6, regular
+connectivity 0, PG connectivity 0, restored antenna entries 21, and marker
+database total 27. All six marker signatures stayed identical.
+
+The local topology is now specific enough for one bounded trial. Every marker
+is a `0.38 x 0.28 um` MET1 landing centered on an exact `VIA1_o`. A routed
+MET2 segment terminates at that same center, and each net has exactly two
+instance terms. The source `Q` instance is adjacent to the landing and gives
+an unambiguous horizontal extension direction. The six reviewed extensions
+are:
+
+```text
+n_9696  719.88,158.76  ->  719.32,158.76
+n_9693  210.28,201.88  ->  209.72,201.88
+n_9697  663.32,192.92  ->  662.76,192.92
+n_9677 1666.28,201.88  -> 1666.84,201.88
+n_9721 1792.84,212.52  -> 1792.28,212.52
+n_9706 1827.00,212.52  -> 1827.56,212.52
+```
+
+Step 21, `min-area-landing-patch-trial`, restores the immutable checkpoint
+once in a fresh Innovus process. Before the first edit it must reproduce all
+six marker boxes, center `VIA1_o` points, width-`0.28 um` MET2 endpoints,
+source `Q` names and points, source direction, and containment of both patch
+endpoints inside the source instance box. It then uses Wire Editor to add one
+regular MET1 segment per net, width `0.28 um` and length `0.56 um`, without
+invoking a router.
+
+The trial runs independent post-edit DRC, regular-connectivity, and
+PG-connectivity checks and preserves restored-marker accounting. It classifies
+both a coherent DRC-zero result and a coherent rejection, but never saves,
+exports, stages immutable PVS inputs, launches a canonical rerun, or runs PVS.
+Only `METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY` can justify later
+integration into a fresh canonical replay.
+
+```text
+STEP21_LOCAL_TOP_PNR_TESTS=103_PASS_0_FAIL
+STEP21_PY_COMPILE=PASS
+STEP21_BASH_SYNTAX=PASS
+STEP21_TCL_STRUCTURE_CHECK=PASS
+STEP21_DIFF_CHECK=PASS
+```

@@ -43,6 +43,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "min-area-second-pass-trial",
             "min-area-second-pass-trial-r2",
             "min-area-geometry-probe",
+            "min-area-landing-patch-trial",
             "package",
             "status",
         ):
@@ -208,6 +209,12 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("analyze_tx_packet_min_area_geometry_probe.py", driver)
         self.assertIn("MIN_AREA_GEOMETRY_PROBE_CLASSIFIED_NO_DESIGN_MODIFICATION", driver)
         self.assertIn("20_min_area_geometry_probe", driver)
+        self.assertIn("require_step_pass 20_min_area_geometry_probe", driver)
+        self.assertIn("min-area-landing-patch-trial <expected-report-driver-head>", driver)
+        self.assertIn("run_innovus_ooc_min_area_landing_patch_trial.sh", driver)
+        self.assertIn("analyze_tx_packet_min_area_landing_patch_trial.py", driver)
+        self.assertIn("MIN_AREA_LANDING_PATCH_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
+        self.assertIn("21_min_area_landing_patch_trial", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)
@@ -322,6 +329,44 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertNotIn("selectNet", geometry_probe)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, geometry_probe)
+
+        landing_wrapper = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_min_area_landing_patch_trial.sh"
+        ).read_text()
+        landing_trial = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_min_area_landing_patch_trial.tcl"
+        ).read_text()
+        self.assertIn(
+            "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MET1_LANDING_EXTENSIONS",
+            landing_wrapper,
+        )
+        self.assertIn("05_postroute_export.enc.dat", landing_wrapper)
+        self.assertIn("</dev/null", landing_wrapper)
+        self.assertEqual(landing_trial.count("restoreDesign $checkpoint $top"), 1)
+        self.assertIn("VIA1_o", landing_trial)
+        self.assertIn("MET2", landing_trial)
+        self.assertIn("PATCH_CONTRACT_PRECONDITION_FAILED", landing_trial)
+        self.assertIn("setEditMode", landing_trial)
+        self.assertIn("uiSetTool addWire", landing_trial)
+        self.assertIn("editAddRoute", landing_trial)
+        self.assertIn("editCommitRoute", landing_trial)
+        self.assertIn("-width_horizontal 0.28", landing_trial)
+        self.assertIn("-width_vertical 0.28", landing_trial)
+        self.assertIn("verify_drc_pre_trial.rpt", landing_trial)
+        self.assertIn("verify_drc_post_trial.rpt", landing_trial)
+        self.assertIn("FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT", landing_trial)
+        self.assertIn("FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT", landing_trial)
+        self.assertIn("SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
+        for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
+            self.assertNotIn(forbidden, landing_trial)
 
     def test_init_inherits_an_accepted_phase1_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

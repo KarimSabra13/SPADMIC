@@ -879,3 +879,46 @@ shapes together with instance origin and orientation. Every optional query is
 caught and reported. Before/after marker signatures and connectivity counts
 must remain identical. Only the resulting local tables can justify a direct
 geometry trial.
+
+## Step 20 Result - Six Markers Are VIA1 Landing Fragments
+
+Step 20 preserved all physical gates and resolved the repeated local pattern.
+Each residual marker is the MET1 landing below a `VIA1_o`; a width-`0.28 um`
+MET2 segment terminates at the same center. No top-level terminal is involved.
+Each net instead connects one adjacent `NO6I5JIHDX2` source `Q` to one distant
+sink. The six marker areas are all `0.1064 um^2` against `0.2020 um^2`
+required, so each needs `0.0956 um^2` additional connected MET1 area.
+
+The local evidence supports one surgical method: extend the MET1 landing one
+`0.56 um` placement/routing-grid step horizontally toward the adjacent source
+`Q`, at the existing `0.28 um` width. This keeps both endpoints inside the
+source-instance box and uses the existing VIA1 center as the attachment point.
+It does not justify a free rectangle, via replacement, selected-net reroute,
+cell movement, or a broad route replay.
+
+Step 21 must fail closed before editing unless all six exact contracts are
+reproduced from the restored database. The required preconditions per net are:
+
+1. Exact reviewed marker box and center.
+2. Exact `VIA1_o` at the center.
+3. A width-`0.28 um` MET2 endpoint at the center.
+4. Exact adjacent source `Q` instance term and reviewed point.
+5. Patch direction toward that source and both endpoints inside its instance
+   box.
+
+The trial uses `setEditMode`, `uiSetTool addWire`, `editAddRoute`, and
+`editCommitRoute` for six independent regular MET1 segments. It runs no route
+optimizer afterward. Command success alone is not acceptance: authoritative
+post-edit DRC must be zero, regular and PG connectivity must remain zero, the
+restored antenna sentinel must remain 21, and marker-database accounting must
+be exact. All state remains in memory; save, export, canonical replay,
+immutable staging, and PVS remain prohibited.
+
+Rejected actions after Step 20:
+
+- Do not add unconstrained `add_shape` special geometry to signal nets.
+- Do not repeat the selected-net delete/reroute sequence rejected by Step 19.
+- Do not patch from master-local pin coordinates; use only restored top-level
+  coordinates validated against the instance term and VIA1 endpoint.
+- Do not treat a Step 21 classification PASS as physical acceptance unless
+  `METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY` is also present.
