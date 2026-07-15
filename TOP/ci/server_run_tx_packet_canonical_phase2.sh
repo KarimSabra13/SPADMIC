@@ -45,6 +45,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial-r2 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial-r3 <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-landing-patch-trial-r4 <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -69,10 +70,14 @@ kv_field() {
 
 normalized_marker_signature_sha256() {
   local path="$1"
+  local net_pattern="${2:-}"
   if [[ ! -r "$path" ]]; then
     return 1
   fi
-  awk -F'\t' 'NR > 1 {print $3 "\t" $10 "\t" $11 "\t" $12 "\t" $13}' "$path" \
+  awk -F'\t' -v net_pattern="$net_pattern" \
+    'NR > 1 && (net_pattern == "" || $13 ~ ("Net (" net_pattern ") ")) {
+      print $3 "\t" $10 "\t" $11 "\t" $12 "\t" $13
+    }' "$path" \
     | LC_ALL=C sort \
     | sha256sum \
     | awk '{print $1}'
@@ -3065,6 +3070,254 @@ min_area_landing_patch_trial_r3() {
   return $?
 }
 
+min_area_landing_patch_trial_r4() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-landing-patch-trial-r4 requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 23_min_area_landing_patch_trial_r3 || return 1
+
+  local step23_status step23_driver step23_analysis source_block_root source_trial_root
+  local step23_pre_markers step23_post_markers survivor_pattern
+  local step23_pre_survivor_signature step23_post_signature step23_area_count
+  local width_precondition_status actual_head cd_rc cadence_rc trial_id
+  local trial_root trial_status console copy_dir trial_rc analysis_report analysis_rc
+  local driver_report status result path trial_process_status trial_process_result
+  local method_status next_decision patch_width_policy
+  step23_status="$TX2_SESSION_ROOT/status/23_min_area_landing_patch_trial_r3.rpt"
+  step23_driver="$TX2_SESSION_ROOT/reports/23_min_area_landing_patch_trial_driver.rpt"
+  step23_analysis="$TX2_SESSION_ROOT/reports/23_min_area_landing_patch_analysis.rpt"
+  step23_pre_markers="$TX2_SESSION_ROOT/reports/23_min_area_landing_patch_trial_r3/drc_markers_pre_trial.tsv"
+  step23_post_markers="$TX2_SESSION_ROOT/reports/23_min_area_landing_patch_trial_r3/drc_markers_post_trial.tsv"
+  survivor_pattern='n_9677|n_9693|n_9696|n_9697'
+  actual_head=UNKNOWN
+  cadence_rc=NOT_RUN
+  trial_rc=NOT_RUN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=MIN_AREA_LANDING_PATCH_R4_CLASSIFICATION_NOT_RUN
+  width_precondition_status=FAIL
+
+  if [[ "$(kv_field "$step23_status" STATUS)" != "PASS" \
+      || "$(kv_field "$step23_status" RC)" != "0" \
+      || "$(kv_field "$step23_status" RESULT)" != "MIN_AREA_LANDING_PATCH_R3_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS" \
+      || "$(kv_field "$step23_status" HEAD_EXPECTED)" != "$TX2_EXPECTED_HEAD" \
+      || "$(kv_field "$step23_status" SESSION_ROOT)" != "$TX2_SESSION_ROOT" \
+      || "$(kv_field "$step23_driver" SOURCE_ARTIFACT_HEAD)" != "$TX2_EXPECTED_HEAD" \
+      || "$(kv_field "$step23_driver" EXPECTED_REPORT_DRIVER_HEAD)" != "$(kv_field "$step23_driver" REPORT_DRIVER_HEAD)" \
+      || "$(kv_field "$step23_driver" TRIAL_REVISION)" != "R3" \
+      || "$(kv_field "$step23_driver" TRIAL_RC)" != "8" \
+      || "$(kv_field "$step23_driver" ANALYSIS_RC)" != "0" \
+      || "$(kv_field "$step23_driver" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step23_driver" TRIAL_PROCESS_RESULT)" != "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED" \
+      || "$(kv_field "$step23_driver" METHOD_STATUS)" != "REJECTED_OR_INCOMPLETE" \
+      || "$(kv_field "$step23_driver" PATCH_DIRECTION_POLICY)" != "FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE" \
+      || "$(kv_field "$step23_driver" DESIGN_MODIFICATION)" != "IN_MEMORY_ONLY" \
+      || "$(kv_field "$step23_driver" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step23_driver" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step23_driver" CANONICAL_RERUN)" != "NOT_RUN" \
+      || "$(kv_field "$step23_driver" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step23_driver" PVS)" != "NOT_RUN" \
+      || "$(kv_field "$step23_analysis" LABEL)" != "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS" \
+      || "$(kv_field "$step23_analysis" POLICY)" != "ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION" \
+      || "$(kv_field "$step23_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step23_analysis" RESULT)" != "MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED" \
+      || "$(kv_field "$step23_analysis" TRIAL_ROOT)" != "$(kv_field "$step23_driver" TRIAL_ROOT)" \
+      || "$(kv_field "$step23_analysis" REPORT_DRIVER_HEAD)" != "$(kv_field "$step23_driver" REPORT_DRIVER_HEAD)" \
+      || "$(kv_field "$step23_analysis" TRIAL_REVISION)" != "R3" \
+      || "$(kv_field "$step23_analysis" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step23_analysis" TRIAL_PROCESS_RESULT)" != "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED" \
+      || "$(kv_field "$step23_analysis" METHOD_STATUS)" != "REJECTED_OR_INCOMPLETE" \
+      || "$(kv_field "$step23_analysis" PATCH_CONTRACT_STATUS)" != "PASS_EXACT_SIX_MIXED_DIRECTION_EXTENSIONS" \
+      || "$(kv_field "$step23_analysis" PATCH_WIDTH_UM)" != "0.28" \
+      || "$(kv_field "$step23_analysis" PATCH_LENGTH_POLICY)" != "FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56" \
+      || "$(kv_field "$step23_analysis" PATCH_LENGTH_UM)" != "MIXED_0.56_0.84" \
+      || "$(kv_field "$step23_analysis" PATCH_DIRECTION_POLICY)" != "FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE" \
+      || "$(kv_field "$step23_analysis" PATCH_ATTEMPTED_COUNT)" != "6" \
+      || "$(kv_field "$step23_analysis" PATCH_APPLIED_COUNT)" != "6" \
+      || "$(kv_field "$step23_analysis" COMMAND_PASS_COUNT)" != "24" \
+      || "$(kv_field "$step23_analysis" COMMAND_FAIL_COUNT)" != "0" \
+      || "$(kv_field "$step23_analysis" PRE_DRC_VIOLATION_COUNT)" != "6" \
+      || "$(kv_field "$step23_analysis" FINAL_DRC_VIOLATION_COUNT)" != "4" \
+      || "$(kv_field "$step23_analysis" PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step23_analysis" FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step23_analysis" PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step23_analysis" FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step23_analysis" PRE_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step23_analysis" FINAL_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step23_analysis" PRE_MARKER_DATABASE_TOTAL)" != "27" \
+      || "$(kv_field "$step23_analysis" FINAL_MARKER_DATABASE_TOTAL)" != "25" \
+      || "$(kv_field "$step23_analysis" REMOVED_MARKER_SIGNATURE_COUNT)" != "2" \
+      || "$(kv_field "$step23_analysis" ADDED_MARKER_SIGNATURE_COUNT)" != "0" \
+      || "$(kv_field "$step23_analysis" FINAL_MIN_AREA_NETS)" != "n_9677 n_9693 n_9696 n_9697" \
+      || "$(kv_field "$step23_analysis" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step23_analysis" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step23_analysis" IMMUTABLE_PVS_STAGING)" != "NOT_RUN" \
+      || "$(kv_field "$step23_analysis" PVS_DECISION)" != "DO_NOT_RUN" \
+      || "$(kv_field "$step23_analysis" CANONICAL_RERUN_DECISION)" != "DO_NOT_RUN_FROM_THIS_STEP" \
+      || "$(kv_field "$step23_analysis" NEXT_METHOD_DECISION)" != "STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD" \
+      || "$(kv_field "$step23_analysis" ERROR_COUNT)" != "0" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 23 is not the reviewed four-survivor direction tuple"
+    echo "STEP23_STATUS=$step23_status"
+    echo "STEP23_DRIVER=$step23_driver"
+    echo "STEP23_ANALYSIS=$step23_analysis"
+    return 1
+  fi
+
+  if [[ ! -r "$step23_pre_markers" || ! -r "$step23_post_markers" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 23 marker evidence is missing"
+    echo "STEP23_PRE_MARKERS=$step23_pre_markers"
+    echo "STEP23_POST_MARKERS=$step23_post_markers"
+    return 1
+  fi
+  step23_pre_survivor_signature="$(normalized_marker_signature_sha256 "$step23_pre_markers" "$survivor_pattern")"
+  step23_post_signature="$(normalized_marker_signature_sha256 "$step23_post_markers")"
+  step23_area_count="$(grep -cF "Actual: 0.10640000 Required: 0.20200000" "$step23_post_markers" 2>/dev/null)"
+  if [[ -z "$step23_pre_survivor_signature" \
+      || "$step23_pre_survivor_signature" != "$step23_post_signature" \
+      || "$step23_area_count" != "4" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 23 survivors are not the four original min-area signatures"
+    echo "STEP23_PRE_SURVIVOR_SIGNATURE_SHA256=${step23_pre_survivor_signature:-MISSING}"
+    echo "STEP23_POST_MARKER_SIGNATURE_SHA256=${step23_post_signature:-MISSING}"
+    echo "STEP23_0P1064_MARKER_COUNT=${step23_area_count:-MISSING}"
+    return 1
+  fi
+  width_precondition_status=PASS_FOUR_ORIGINAL_SURVIVOR_SIGNATURES
+
+  source_block_root="$(kv_field "$step23_driver" SOURCE_BLOCK_ROOT)"
+  source_trial_root="$(kv_field "$step23_driver" TRIAL_ROOT)"
+  if [[ -z "$source_block_root" || ! -d "$source_block_root" \
+      || -z "$source_trial_root" || ! -d "$source_trial_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 23 source roots are missing"
+    echo "SOURCE_BLOCK_ROOT=${source_block_root:-MISSING}"
+    echo "SOURCE_STEP23_TRIAL_ROOT=${source_trial_root:-MISSING}"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  trial_id="${TX2_SESSION_ID}_min_area_landing_patch_trial_r4"
+  trial_root="$TX2_WORK_ROOT/diagnostics/$trial_id"
+  trial_status="$trial_root/reports/min_area_landing_patch_trial_status.rpt"
+  console="$TX2_SESSION_ROOT/logs/24_min_area_landing_patch_trial_r4.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/24_min_area_landing_patch_trial_r4"
+  analysis_report="$TX2_SESSION_ROOT/reports/24_min_area_landing_patch_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/24_min_area_landing_patch_trial_driver.rpt"
+  if [[ -e "$trial_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: immutable Step 24 trial root already exists"
+    echo "TRIAL_ROOT=$trial_root"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    load_cadence
+    cadence_rc=$?
+  fi
+  if [[ "$cadence_rc" == "0" ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    export SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R4
+    echo "COMMAND=SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R4 bash TOP/pnr/scripts/run_innovus_ooc_min_area_landing_patch_trial.sh $source_block_root $step23_analysis $trial_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_min_area_landing_patch_trial.sh" \
+      "$source_block_root" \
+      "$step23_analysis" \
+      "$trial_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    trial_rc=$?
+  fi
+
+  mkdir -p "$copy_dir"
+  if [[ -r "$trial_root/context.rpt" ]]; then
+    cp -p "$trial_root/context.rpt" "$copy_dir/context.rpt"
+  fi
+  if [[ -d "$trial_root/reports" ]]; then
+    for path in "$trial_root"/reports/*.rpt "$trial_root"/reports/*.tsv; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+
+  if [[ -r "$trial_status" ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_min_area_landing_patch_trial.py" \
+      --trial-root "$trial_root" \
+      --step23-analysis "$step23_analysis" \
+      --trial-revision R4 \
+      --report-driver-head "$actual_head" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ ( "$trial_rc" == "0" || "$trial_rc" == "8" ) \
+      && "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED" \
+      && "$(kv_field "$analysis_report" TRIAL_REVISION)" == "R4" ]]; then
+    status=PASS
+    result=MIN_AREA_LANDING_PATCH_R4_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS
+  else
+    result=MIN_AREA_LANDING_PATCH_R4_CLASSIFICATION_INCOMPLETE
+  fi
+  trial_process_status="$(kv_field "$analysis_report" TRIAL_PROCESS_STATUS)"
+  trial_process_result="$(kv_field "$analysis_report" TRIAL_PROCESS_RESULT)"
+  method_status="$(kv_field "$analysis_report" METHOD_STATUS)"
+  patch_width_policy="$(kv_field "$analysis_report" PATCH_WIDTH_POLICY)"
+  next_decision="$(kv_field "$analysis_report" NEXT_METHOD_DECISION)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP23_STATUS=$step23_status"
+    echo "SOURCE_STEP23_DRIVER=$step23_driver"
+    echo "SOURCE_STEP23_ANALYSIS=$step23_analysis"
+    echo "SOURCE_STEP23_TRIAL_ROOT=$source_trial_root"
+    echo "SOURCE_BLOCK_ROOT=$source_block_root"
+    echo "STEP23_PRE_SURVIVOR_SIGNATURE_SHA256=$step23_pre_survivor_signature"
+    echo "STEP23_POST_MARKER_SIGNATURE_SHA256=$step23_post_signature"
+    echo "STEP23_0P1064_MARKER_COUNT=$step23_area_count"
+    echo "SOURCE_WIDTH_PRECONDITION_STATUS=$width_precondition_status"
+    echo "TRIAL_REVISION=R4"
+    echo "TRIAL_RC=$trial_rc"
+    echo "TRIAL_ROOT=$trial_root"
+    echo "TRIAL_STATUS=$trial_status"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "TRIAL_PROCESS_STATUS=${trial_process_status:-UNKNOWN}"
+    echo "TRIAL_PROCESS_RESULT=${trial_process_result:-UNKNOWN}"
+    echo "METHOD_STATUS=${method_status:-UNKNOWN}"
+    echo "PATCH_WIDTH_POLICY=${patch_width_policy:-UNKNOWN}"
+    echo "NEXT_METHOD_DECISION=${next_decision:-UNKNOWN}"
+    echo "DESIGN_MODIFICATION=IN_MEMORY_ONLY"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "CANONICAL_RERUN=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    tail -n 320 "$console"
+  fi
+  record_status 24_min_area_landing_patch_trial_r4 "$status" "$analysis_rc" "$result" "$trial_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -3183,6 +3436,9 @@ case "$COMMAND" in
     ;;
   min-area-landing-patch-trial-r3)
     min_area_landing_patch_trial_r3 "$ARGUMENT_1"
+    ;;
+  min-area-landing-patch-trial-r4)
+    min_area_landing_patch_trial_r4 "$ARGUMENT_1"
     ;;
   package)
     package_evidence

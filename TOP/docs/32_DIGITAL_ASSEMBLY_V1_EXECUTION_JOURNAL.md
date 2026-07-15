@@ -1775,3 +1775,56 @@ STEP23_BASH_SYNTAX=PASS
 STEP23_TCL_STRUCTURE_CHECK=PASS
 STEP23_DIFF_CHECK=PASS
 ```
+
+### P03-R24 Server Evidence - Step 23 Retires The Opposite Direction
+
+Status: `PASS_CLASSIFIED_STEP24_MIXED_WIDTH_TRIAL_READY`
+
+Step 23 completed at report-driver head
+`68af46725451ed2181bbafdb6567ec96158925eb`. All six mixed-direction
+contracts and all 24 Wire Editor commands passed. Authoritative DRC again
+changed from six markers to four, regular and PG connectivity remained zero,
+the restored antenna sentinel remained 21, and marker-database accounting
+changed from 27 to 25.
+
+The four `0.84 um` segments directed away from their source terms had no
+effect on the target landings. Their post-trial markers are the original
+`0.1064 um^2` signatures at the original boxes, not the `0.1777 um^2`
+signatures produced by a `0.56 um` toward-source segment. Only the retained
+toward-source patches on `n_9706` and `n_9721` closed. Length and direction
+are therefore both exhausted for the other four nets.
+
+Step 24, `min-area-landing-patch-trial-r4`, restores the original immutable
+checkpoint once more and changes width only. It replays the useful
+`0.56 um` toward-source endpoints on all six nets. The four survivors use
+width `0.56 um`; the two already-closing controls retain width `0.28 um`:
+
+```text
+n_9696  719.88,158.76  ->  719.32,158.76  width 0.56
+n_9693  210.28,201.88  ->  209.72,201.88  width 0.56
+n_9697  663.32,192.92  ->  662.76,192.92  width 0.56
+n_9677 1666.28,201.88  -> 1666.84,201.88  width 0.56
+n_9721 1792.84,212.52  -> 1792.28,212.52  width 0.28
+n_9706 1827.00,212.52  -> 1827.56,212.52  width 0.28
+```
+
+For each survivor, the reviewed source-Q point is offset by `0.26 um` in Y
+from the VIA1 center. Width `0.28 um` reaches only `0.14 um` from the route
+centerline, whereas width `0.56 um` reaches `0.28 um`. The wider replay is
+therefore a geometry-driven connectivity-to-pin experiment, not another
+arbitrary area increment. Before editing, the Tcl contract validates all four
+strip-edge corners against the source-instance box. The driver also requires
+the four Step 23 post-trial signatures to equal the corresponding four
+original pre-trial signatures.
+
+Step 24 remains in-memory only. Save, export, canonical replay, immutable PVS
+staging, and PVS remain blocked regardless of whether the trial classifies a
+validated closure or a coherent rejection.
+
+```text
+STEP24_LOCAL_TOP_PNR_TESTS=116_PASS_0_FAIL
+STEP24_PY_COMPILE=PASS
+STEP24_BASH_SYNTAX=PASS
+STEP24_TCL_STRUCTURE_CHECK=PASS
+STEP24_DIFF_CHECK=PASS
+```

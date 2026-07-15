@@ -286,6 +286,8 @@ if {$trial_revision eq "R1"} {
     set command_policy EXACT_SIX_NET_ONE_GRID_MET1_WIRE_EDITOR_EXTENSIONS
     set patch_length_policy UNIFORM_0.56
     set patch_direction_policy ALL_TOWARD_SOURCE
+    set patch_width_policy UNIFORM_0.28
+    set patch_width_um 0.28
     set validated_result SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
     set no_improvement_result SIX_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
     set changed_result SIX_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
@@ -295,6 +297,8 @@ if {$trial_revision eq "R1"} {
     set command_policy EXACT_SIX_NET_MIXED_LENGTH_MET1_WIRE_EDITOR_EXTENSIONS
     set patch_length_policy FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56
     set patch_direction_policy ALL_TOWARD_SOURCE
+    set patch_width_policy UNIFORM_0.28
+    set patch_width_um 0.28
     set validated_result MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
     set no_improvement_result MIXED_LENGTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
     set changed_result MIXED_LENGTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
@@ -304,9 +308,22 @@ if {$trial_revision eq "R1"} {
     set command_policy EXACT_SIX_NET_MIXED_DIRECTION_MET1_WIRE_EDITOR_EXTENSIONS
     set patch_length_policy FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56
     set patch_direction_policy FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE
+    set patch_width_policy UNIFORM_0.28
+    set patch_width_um 0.28
     set validated_result MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
     set no_improvement_result MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
     set changed_result MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+} elseif {$trial_revision eq "R4"} {
+    set analysis_key STEP23_ANALYSIS
+    set policy ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_WIDTH_MET1_LANDING_EXTENSIONS
+    set command_policy EXACT_SIX_NET_MIXED_WIDTH_MET1_WIRE_EDITOR_EXTENSIONS
+    set patch_length_policy UNIFORM_0.56
+    set patch_direction_policy ALL_TOWARD_SOURCE
+    set patch_width_policy FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28
+    set patch_width_um MIXED_0.28_0.56
+    set validated_result MIXED_WIDTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
+    set no_improvement_result MIXED_WIDTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
+    set changed_result MIXED_WIDTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
 } else {
     error "SPADMIC_MIN_AREA_LANDING_UNSUPPORTED_REVISION: $trial_revision"
 }
@@ -336,6 +353,8 @@ set status(POLICY) $policy
 set status(TRIAL_REVISION) $trial_revision
 set status(PATCH_LENGTH_POLICY) $patch_length_policy
 set status(PATCH_DIRECTION_POLICY) $patch_direction_policy
+set status(PATCH_WIDTH_POLICY) $patch_width_policy
+set status(PATCH_WIDTH_UM) $patch_width_um
 set status($analysis_key) $source_analysis
 
 array set analysis_values [lp_read_kv $source_analysis]
@@ -409,7 +428,7 @@ if {$trial_revision eq "R1"} {
         NEXT_METHOD_DECISION STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD
         ERROR_COUNT 0
     }
-} else {
+} elseif {$trial_revision eq "R3"} {
     array set expected_analysis {
         LABEL SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS
         POLICY ISOLATED_IN_MEMORY_SIX_NET_MIXED_LENGTH_MET1_LANDING_PATCH_CLASSIFICATION
@@ -439,6 +458,46 @@ if {$trial_revision eq "R1"} {
         FINAL_MARKER_DATABASE_TOTAL 25
         REMOVED_MARKER_SIGNATURE_COUNT 6
         ADDED_MARKER_SIGNATURE_COUNT 4
+        FINAL_MIN_AREA_NETS {n_9677 n_9693 n_9696 n_9697}
+        SAVE_DESIGN NOT_RUN
+        EXPORT NOT_RUN
+        IMMUTABLE_PVS_STAGING NOT_RUN
+        PVS_DECISION DO_NOT_RUN
+        CANONICAL_RERUN_DECISION DO_NOT_RUN_FROM_THIS_STEP
+        NEXT_METHOD_DECISION STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD
+        ERROR_COUNT 0
+    }
+} else {
+    array set expected_analysis {
+        LABEL SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS
+        POLICY ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION
+        STATUS PASS
+        RESULT MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED
+        TRIAL_REVISION R3
+        TRIAL_PROCESS_STATUS FAIL
+        TRIAL_PROCESS_RESULT MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+        METHOD_STATUS REJECTED_OR_INCOMPLETE
+        PATCH_CONTRACT_STATUS PASS_EXACT_SIX_MIXED_DIRECTION_EXTENSIONS
+        PATCH_WIDTH_UM 0.28
+        PATCH_LENGTH_POLICY FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56
+        PATCH_LENGTH_UM MIXED_0.56_0.84
+        PATCH_DIRECTION_POLICY FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE
+        PATCH_ATTEMPTED_COUNT 6
+        PATCH_APPLIED_COUNT 6
+        COMMAND_PASS_COUNT 24
+        COMMAND_FAIL_COUNT 0
+        PRE_DRC_VIOLATION_COUNT 6
+        FINAL_DRC_VIOLATION_COUNT 4
+        PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        FINAL_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        PRE_MARKER_DATABASE_TOTAL 27
+        FINAL_MARKER_DATABASE_TOTAL 25
+        REMOVED_MARKER_SIGNATURE_COUNT 2
+        ADDED_MARKER_SIGNATURE_COUNT 0
         FINAL_MIN_AREA_NETS {n_9677 n_9693 n_9696 n_9697}
         SAVE_DESIGN NOT_RUN
         EXPORT NOT_RUN
@@ -505,31 +564,39 @@ if {![string is integer -strict $pre_drc_count] || $pre_drc_count != 6 ||
         "drc=$pre_drc_count markers=$pre_marker_count database_total=$pre_database_total rows=[llength $pre_rows] nets=$pre_nets regular=$pre_regular_count special=$pre_special_count antenna=$pre_antenna_count connectivity=$pre_connectivity_count"
 }
 
-# net marker-box start-x start-y end-x length source-Q source-Q-x source-Q-y direction
+# net marker-box start-x start-y end-x length width source-Q source-Q-x source-Q-y direction
 if {$trial_revision eq "R1"} {
     set patch_contract [list \
-        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.32 0.56 g14627__2802/Q 716.61 159.02 TOWARD_SOURCE] \
-        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.72 0.56 g14630__8246/Q 207.01 201.62 TOWARD_SOURCE] \
-        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 662.76 0.56 g14626__1617/Q 660.05 192.66 TOWARD_SOURCE] \
-        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1666.84 0.56 g14646__2398/Q 1669.55 201.62 TOWARD_SOURCE] \
-        [list n_9721 {1792.65 212.38 1793.03 212.66} 1792.84 212.52 1792.28 0.56 g14602__8246/Q 1789.57 212.78 TOWARD_SOURCE] \
-        [list n_9706 {1826.81 212.38 1827.19 212.66} 1827.00 212.52 1827.56 0.56 g14617__5477/Q 1830.27 212.78 TOWARD_SOURCE]]
+        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.32 0.56 0.28 g14627__2802/Q 716.61 159.02 TOWARD_SOURCE] \
+        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.72 0.56 0.28 g14630__8246/Q 207.01 201.62 TOWARD_SOURCE] \
+        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 662.76 0.56 0.28 g14626__1617/Q 660.05 192.66 TOWARD_SOURCE] \
+        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1666.84 0.56 0.28 g14646__2398/Q 1669.55 201.62 TOWARD_SOURCE] \
+        [list n_9721 {1792.65 212.38 1793.03 212.66} 1792.84 212.52 1792.28 0.56 0.28 g14602__8246/Q 1789.57 212.78 TOWARD_SOURCE] \
+        [list n_9706 {1826.81 212.38 1827.19 212.66} 1827.00 212.52 1827.56 0.56 0.28 g14617__5477/Q 1830.27 212.78 TOWARD_SOURCE]]
 } elseif {$trial_revision eq "R2"} {
     set patch_contract [list \
-        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.04 0.84 g14627__2802/Q 716.61 159.02 TOWARD_SOURCE] \
-        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.44 0.84 g14630__8246/Q 207.01 201.62 TOWARD_SOURCE] \
-        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 662.48 0.84 g14626__1617/Q 660.05 192.66 TOWARD_SOURCE] \
-        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1667.12 0.84 g14646__2398/Q 1669.55 201.62 TOWARD_SOURCE] \
-        [list n_9721 {1792.65 212.38 1793.03 212.66} 1792.84 212.52 1792.28 0.56 g14602__8246/Q 1789.57 212.78 TOWARD_SOURCE] \
-        [list n_9706 {1826.81 212.38 1827.19 212.66} 1827.00 212.52 1827.56 0.56 g14617__5477/Q 1830.27 212.78 TOWARD_SOURCE]]
+        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.04 0.84 0.28 g14627__2802/Q 716.61 159.02 TOWARD_SOURCE] \
+        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.44 0.84 0.28 g14630__8246/Q 207.01 201.62 TOWARD_SOURCE] \
+        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 662.48 0.84 0.28 g14626__1617/Q 660.05 192.66 TOWARD_SOURCE] \
+        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1667.12 0.84 0.28 g14646__2398/Q 1669.55 201.62 TOWARD_SOURCE] \
+        [list n_9721 {1792.65 212.38 1793.03 212.66} 1792.84 212.52 1792.28 0.56 0.28 g14602__8246/Q 1789.57 212.78 TOWARD_SOURCE] \
+        [list n_9706 {1826.81 212.38 1827.19 212.66} 1827.00 212.52 1827.56 0.56 0.28 g14617__5477/Q 1830.27 212.78 TOWARD_SOURCE]]
+} elseif {$trial_revision eq "R3"} {
+    set patch_contract [list \
+        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 720.72 0.84 0.28 g14627__2802/Q 716.61 159.02 AWAY_FROM_SOURCE] \
+        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 211.12 0.84 0.28 g14630__8246/Q 207.01 201.62 AWAY_FROM_SOURCE] \
+        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 664.16 0.84 0.28 g14626__1617/Q 660.05 192.66 AWAY_FROM_SOURCE] \
+        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1665.44 0.84 0.28 g14646__2398/Q 1669.55 201.62 AWAY_FROM_SOURCE] \
+        [list n_9721 {1792.65 212.38 1793.03 212.66} 1792.84 212.52 1792.28 0.56 0.28 g14602__8246/Q 1789.57 212.78 TOWARD_SOURCE] \
+        [list n_9706 {1826.81 212.38 1827.19 212.66} 1827.00 212.52 1827.56 0.56 0.28 g14617__5477/Q 1830.27 212.78 TOWARD_SOURCE]]
 } else {
     set patch_contract [list \
-        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 720.72 0.84 g14627__2802/Q 716.61 159.02 AWAY_FROM_SOURCE] \
-        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 211.12 0.84 g14630__8246/Q 207.01 201.62 AWAY_FROM_SOURCE] \
-        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 664.16 0.84 g14626__1617/Q 660.05 192.66 AWAY_FROM_SOURCE] \
-        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1665.44 0.84 g14646__2398/Q 1669.55 201.62 AWAY_FROM_SOURCE] \
-        [list n_9721 {1792.65 212.38 1793.03 212.66} 1792.84 212.52 1792.28 0.56 g14602__8246/Q 1789.57 212.78 TOWARD_SOURCE] \
-        [list n_9706 {1826.81 212.38 1827.19 212.66} 1827.00 212.52 1827.56 0.56 g14617__5477/Q 1830.27 212.78 TOWARD_SOURCE]]
+        [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.32 0.56 0.56 g14627__2802/Q 716.61 159.02 TOWARD_SOURCE] \
+        [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.72 0.56 0.56 g14630__8246/Q 207.01 201.62 TOWARD_SOURCE] \
+        [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 662.76 0.56 0.56 g14626__1617/Q 660.05 192.66 TOWARD_SOURCE] \
+        [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1666.84 0.56 0.56 g14646__2398/Q 1669.55 201.62 TOWARD_SOURCE] \
+        [list n_9721 {1792.65 212.38 1793.03 212.66} 1792.84 212.52 1792.28 0.56 0.28 g14602__8246/Q 1789.57 212.78 TOWARD_SOURCE] \
+        [list n_9706 {1826.81 212.38 1827.19 212.66} 1827.00 212.52 1827.56 0.56 0.28 g14617__5477/Q 1830.27 212.78 TOWARD_SOURCE]]
 }
 
 array set marker_row_by_net {}
@@ -541,7 +608,7 @@ set contract_validated_count 0
 set contract_failures [list]
 
 foreach contract $patch_contract {
-    lassign $contract net expected_box start_x start_y end_x patch_length source_q source_q_x source_q_y patch_direction
+    lassign $contract net expected_box start_x start_y end_x patch_length patch_width source_q source_q_x source_q_y patch_direction
     set marker_status FAIL
     set via_status FAIL
     set met2_status FAIL
@@ -613,8 +680,11 @@ foreach contract $patch_contract {
                 set source_status PASS
             }
             set source_box [lp_flat_box $source_box]
-            if {[lp_point_in_box $start_x $start_y $source_box] &&
-                [lp_point_in_box $end_x $start_y $source_box]} {
+            set half_width [expr {$patch_width / 2.0}]
+            if {[lp_point_in_box $start_x [expr {$start_y - $half_width}] $source_box] &&
+                [lp_point_in_box $start_x [expr {$start_y + $half_width}] $source_box] &&
+                [lp_point_in_box $end_x [expr {$start_y - $half_width}] $source_box] &&
+                [lp_point_in_box $end_x [expr {$start_y + $half_width}] $source_box]} {
                 set inside_status PASS
             }
             break
@@ -629,9 +699,9 @@ foreach contract $patch_contract {
         set contract_status PASS
         incr contract_validated_count
     } else {
-        lappend contract_failures "$net:marker=$marker_status:via1=$via_status:met2=$met2_status:source=$source_status:direction=$patch_direction:inside=$inside_status"
+        lappend contract_failures "$net:marker=$marker_status:via1=$via_status:met2=$met2_status:source=$source_status:direction=$patch_direction:width=$patch_width:inside=$inside_status"
     }
-    puts $contract_fh "$net\t[join $expected_box { }]\t[format %.2f $start_x]\t[format %.2f $start_y]\t[format %.2f $end_x]\t[format %.2f $start_y]\t[format %.2f $patch_length]\t0.28\t$source_q\t[format {%.2f %.2f} $source_q_x $source_q_y]\t$patch_direction\t$marker_status\t$via_status\t$met2_status\t$source_status\t$inside_status\t$contract_status"
+    puts $contract_fh "$net\t[join $expected_box { }]\t[format %.2f $start_x]\t[format %.2f $start_y]\t[format %.2f $end_x]\t[format %.2f $start_y]\t[format %.2f $patch_length]\t[format %.2f $patch_width]\t$source_q\t[format {%.2f %.2f} $source_q_x $source_q_y]\t$patch_direction\t$marker_status\t$via_status\t$met2_status\t$source_status\t$inside_status\t$contract_status"
 }
 close $contract_fh
 set status(CONTRACT_VALIDATED_COUNT) $contract_validated_count
@@ -644,7 +714,8 @@ set command_fh [open $command_path w]
 puts $command_fh "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_COMMANDS"
 puts $command_fh "POLICY=$command_policy"
 puts $command_fh "TRIAL_REVISION=$trial_revision"
-puts $command_fh "PATCH_WIDTH_UM=0.28"
+puts $command_fh "PATCH_WIDTH_POLICY=$patch_width_policy"
+puts $command_fh "PATCH_WIDTH_UM=$patch_width_um"
 puts $command_fh "PATCH_LENGTH_POLICY=$patch_length_policy"
 puts $command_fh "PATCH_DIRECTION_POLICY=$patch_direction_policy"
 if {$trial_revision eq "R2" || $trial_revision eq "R3"} {
@@ -658,12 +729,13 @@ set patch_attempted_count 0
 set patch_applied_count 0
 set command_failed 0
 foreach contract $patch_contract {
-    lassign $contract net expected_box start_x start_y end_x patch_length source_q source_q_x source_q_y patch_direction
+    lassign $contract net expected_box start_x start_y end_x patch_length patch_width source_q source_q_x source_q_y patch_direction
     incr patch_attempted_count
     set label "PATCH_${net}"
     puts $command_fh "${label}_START=[format {%.2f %.2f} $start_x $start_y]"
     puts $command_fh "${label}_END=[format {%.2f %.2f} $end_x $start_y]"
     puts $command_fh "${label}_LENGTH_UM=[format %.2f $patch_length]"
+    puts $command_fh "${label}_WIDTH_UM=[format %.2f $patch_width]"
     puts $command_fh "${label}_DIRECTION=$patch_direction"
     puts $command_fh "${label}_SOURCE_Q=$source_q"
     set setup_command [list setEditMode \
@@ -673,8 +745,8 @@ foreach contract $patch_contract {
         -layer_horizontal MET1 \
         -layer_vertical MET1 \
         -snap_to_track_regular 0 \
-        -width_horizontal 0.28 \
-        -width_vertical 0.28]
+        -width_horizontal $patch_width \
+        -width_vertical $patch_width]
     if {![lp_run_command $command_fh "${label}_SET_EDIT_MODE" $setup_command] ||
         ![lp_run_command $command_fh "${label}_SET_TOOL" {uiSetTool addWire}] ||
         ![lp_run_command $command_fh "${label}_ADD_ROUTE" [list editAddRoute $start_x $start_y]] ||

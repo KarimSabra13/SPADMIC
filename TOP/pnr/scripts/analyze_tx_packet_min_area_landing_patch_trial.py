@@ -27,6 +27,9 @@ EXPECTED_POLICY_R2 = (
 EXPECTED_POLICY_R3 = (
     "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_DIRECTION_MET1_LANDING_EXTENSIONS"
 )
+EXPECTED_POLICY_R4 = (
+    "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_WIDTH_MET1_LANDING_EXTENSIONS"
+)
 EXPECTED_CONTRACT = {
     "n_9696": ("719.69 158.62 720.07 158.90", "719.88", "158.76", "719.32", "g14627__2802/Q", "716.61 159.02"),
     "n_9693": ("210.09 201.74 210.47 202.02", "210.28", "201.88", "209.72", "g14630__8246/Q", "207.01 201.62"),
@@ -51,12 +54,15 @@ EXPECTED_CONTRACT_R3 = {
 }
 R2_LONG_NETS = {"n_9677", "n_9693", "n_9696", "n_9697"}
 R3_AWAY_NETS = {"n_9677", "n_9693", "n_9696", "n_9697"}
+R4_WIDE_NETS = {"n_9677", "n_9693", "n_9696", "n_9697"}
 VALIDATED_RESULT = "SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
 NO_IMPROVEMENT_RESULT = "SIX_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
 VALIDATED_RESULT_R2 = "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
 NO_IMPROVEMENT_RESULT_R2 = "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
 VALIDATED_RESULT_R3 = "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
 NO_IMPROVEMENT_RESULT_R3 = "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+VALIDATED_RESULT_R4 = "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+NO_IMPROVEMENT_RESULT_R4 = "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
 
 
 def key_values(path: Path) -> dict[str, str]:
@@ -165,11 +171,24 @@ def classify(
     report: Path,
     trial_revision: str = "R1",
 ) -> dict[str, str]:
-    if trial_revision not in {"R1", "R2", "R3"}:
+    if trial_revision not in {"R1", "R2", "R3", "R4"}:
         raise ValueError(f"unsupported trial revision: {trial_revision}")
     is_r2 = trial_revision == "R2"
     is_r3 = trial_revision == "R3"
-    if is_r3:
+    is_r4 = trial_revision == "R4"
+    if is_r4:
+        source_key = "STEP23_ANALYSIS"
+        expected_policy = EXPECTED_POLICY_R4
+        expected_contract = EXPECTED_CONTRACT
+        command_policy = "EXACT_SIX_NET_MIXED_WIDTH_MET1_WIRE_EDITOR_EXTENSIONS"
+        patch_length_policy = "UNIFORM_0.56"
+        patch_direction_policy = "ALL_TOWARD_SOURCE"
+        patch_width_policy = "FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28"
+        patch_width_um = "MIXED_0.28_0.56"
+        validated_result_name = VALIDATED_RESULT_R4
+        no_improvement_result_name = NO_IMPROVEMENT_RESULT_R4
+        changed_result_name = "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED"
+    elif is_r3:
         source_key = "STEP22_ANALYSIS"
         expected_policy = EXPECTED_POLICY_R3
         expected_contract = EXPECTED_CONTRACT_R3
@@ -178,6 +197,8 @@ def classify(
         patch_direction_policy = (
             "FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE"
         )
+        patch_width_policy = "UNIFORM_0.28"
+        patch_width_um = "0.28"
         validated_result_name = VALIDATED_RESULT_R3
         no_improvement_result_name = NO_IMPROVEMENT_RESULT_R3
         changed_result_name = (
@@ -190,6 +211,8 @@ def classify(
         command_policy = "EXACT_SIX_NET_MIXED_LENGTH_MET1_WIRE_EDITOR_EXTENSIONS"
         patch_length_policy = "FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56"
         patch_direction_policy = "ALL_TOWARD_SOURCE"
+        patch_width_policy = "UNIFORM_0.28"
+        patch_width_um = "0.28"
         validated_result_name = VALIDATED_RESULT_R2
         no_improvement_result_name = NO_IMPROVEMENT_RESULT_R2
         changed_result_name = "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED"
@@ -200,6 +223,8 @@ def classify(
         command_policy = "EXACT_SIX_NET_ONE_GRID_MET1_WIRE_EDITOR_EXTENSIONS"
         patch_length_policy = "UNIFORM_0.56"
         patch_direction_policy = "ALL_TOWARD_SOURCE"
+        patch_width_policy = "UNIFORM_0.28"
+        patch_width_um = "0.28"
         validated_result_name = VALIDATED_RESULT
         no_improvement_result_name = NO_IMPROVEMENT_RESULT
         changed_result_name = "SIX_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED"
@@ -245,7 +270,47 @@ def classify(
     pre_markers = read_tsv(pre_markers_path)
     post_markers = read_tsv(post_markers_path)
 
-    if is_r3:
+    if is_r4:
+        expected_source = {
+            "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS",
+            "POLICY": "ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION",
+            "STATUS": "PASS",
+            "RESULT": "MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED",
+            "TRIAL_REVISION": "R3",
+            "TRIAL_PROCESS_STATUS": "FAIL",
+            "TRIAL_PROCESS_RESULT": "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED",
+            "METHOD_STATUS": "REJECTED_OR_INCOMPLETE",
+            "PATCH_CONTRACT_STATUS": "PASS_EXACT_SIX_MIXED_DIRECTION_EXTENSIONS",
+            "PATCH_WIDTH_UM": "0.28",
+            "PATCH_LENGTH_POLICY": "FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56",
+            "PATCH_LENGTH_UM": "MIXED_0.56_0.84",
+            "PATCH_DIRECTION_POLICY": "FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE",
+            "PATCH_ATTEMPTED_COUNT": "6",
+            "PATCH_APPLIED_COUNT": "6",
+            "COMMAND_PASS_COUNT": "24",
+            "COMMAND_FAIL_COUNT": "0",
+            "PRE_DRC_VIOLATION_COUNT": "6",
+            "FINAL_DRC_VIOLATION_COUNT": "4",
+            "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT": "21",
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT": "21",
+            "PRE_MARKER_DATABASE_TOTAL": "27",
+            "FINAL_MARKER_DATABASE_TOTAL": "25",
+            "REMOVED_MARKER_SIGNATURE_COUNT": "2",
+            "ADDED_MARKER_SIGNATURE_COUNT": "0",
+            "FINAL_MIN_AREA_NETS": "n_9677 n_9693 n_9696 n_9697",
+            "SAVE_DESIGN": "NOT_RUN",
+            "EXPORT": "NOT_RUN",
+            "IMMUTABLE_PVS_STAGING": "NOT_RUN",
+            "PVS_DECISION": "DO_NOT_RUN",
+            "CANONICAL_RERUN_DECISION": "DO_NOT_RUN_FROM_THIS_STEP",
+            "NEXT_METHOD_DECISION": "STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD",
+            "ERROR_COUNT": "0",
+        }
+    elif is_r3:
         expected_source = {
             "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS",
             "POLICY": "ISOLATED_IN_MEMORY_SIX_NET_MIXED_LENGTH_MET1_LANDING_PATCH_CLASSIFICATION",
@@ -399,8 +464,15 @@ def classify(
         "PRE_MIN_AREA_NETS": " ".join(EXPECTED_NETS),
         "CONTRACT_VALIDATED_COUNT": "6",
     }
-    if is_r3:
+    if is_r3 or is_r4:
         expected_status["PATCH_DIRECTION_POLICY"] = patch_direction_policy
+    if is_r4:
+        expected_status.update(
+            {
+                "PATCH_WIDTH_POLICY": patch_width_policy,
+                "PATCH_WIDTH_UM": patch_width_um,
+            }
+        )
     for key, expected in expected_status.items():
         if status.get(key) != expected:
             errors.append(f"trial_{key}={status.get(key, 'MISSING')} expected={expected}")
@@ -487,13 +559,14 @@ def classify(
             if (is_r2 and net in R2_LONG_NETS) or (is_r3 and net in R3_AWAY_NETS)
             else "0.56"
         )
+        expected_width = "0.56" if is_r4 and net in R4_WIDE_NETS else "0.28"
         expected_fields = {
             "start_x": expected[1],
             "start_y": expected[2],
             "end_x": expected[3],
             "end_y": expected[2],
             "length_um": expected_length,
-            "width_um": "0.28",
+            "width_um": expected_width,
             "source_q": expected[4],
             "source_q_point": expected[5],
             "marker_status": "PASS",
@@ -503,9 +576,11 @@ def classify(
             "inside_source_inst_status": "PASS",
             "contract_status": "PASS",
         }
-        if is_r3:
+        if is_r3 or is_r4:
             expected_fields["direction"] = (
-                "AWAY_FROM_SOURCE" if net in R3_AWAY_NETS else "TOWARD_SOURCE"
+                "AWAY_FROM_SOURCE"
+                if is_r3 and net in R3_AWAY_NETS
+                else "TOWARD_SOURCE"
             )
         if not boxes_match(row.get("marker_box", ""), expected[0]):
             errors.append(f"contract_{net}_marker_box={row.get('marker_box', 'MISSING')}")
@@ -517,13 +592,15 @@ def classify(
         "LABEL": "SPADMIC_OOC_MIN_AREA_LANDING_PATCH_COMMANDS",
         "POLICY": command_policy,
         "TRIAL_REVISION": trial_revision,
-        "PATCH_WIDTH_UM": "0.28",
+        "PATCH_WIDTH_UM": patch_width_um,
         "PATCH_LENGTH_POLICY": patch_length_policy,
         "PATCH_LENGTH_UM": "MIXED_0.56_0.84" if is_r2 or is_r3 else "0.56",
         "CONTRACT_VALIDATED_COUNT": "6",
     }
-    if is_r3:
+    if is_r3 or is_r4:
         expected_commands["PATCH_DIRECTION_POLICY"] = patch_direction_policy
+    if is_r4:
+        expected_commands["PATCH_WIDTH_POLICY"] = patch_width_policy
     for key, expected in expected_commands.items():
         if commands.get(key) != expected:
             errors.append(f"commands_{key}={commands.get(key, 'MISSING')} expected={expected}")
@@ -549,6 +626,7 @@ def classify(
                 or (is_r3 and net in R3_AWAY_NETS)
                 else "0.56"
             )
+            expected_width = "0.56" if is_r4 and net in R4_WIDE_NETS else "0.28"
             expected_commands_for_net = {
                 f"{prefix}_START": f"{expected[1]} {expected[2]}",
                 f"{prefix}_END": f"{expected[3]} {expected[2]}",
@@ -556,9 +634,13 @@ def classify(
                 f"{prefix}_SOURCE_Q": expected[4],
                 f"{prefix}_APPLIED": "YES",
             }
-            if is_r3:
+            if is_r4:
+                expected_commands_for_net[f"{prefix}_WIDTH_UM"] = expected_width
+            if is_r3 or is_r4:
                 expected_commands_for_net[f"{prefix}_DIRECTION"] = (
-                    "AWAY_FROM_SOURCE" if net in R3_AWAY_NETS else "TOWARD_SOURCE"
+                    "AWAY_FROM_SOURCE"
+                    if is_r3 and net in R3_AWAY_NETS
+                    else "TOWARD_SOURCE"
                 )
             for key, value in expected_commands_for_net.items():
                 if commands.get(key) != value:
@@ -575,8 +657,8 @@ def classify(
                     "-layer_horizontal MET1",
                     "-layer_vertical MET1",
                     "-snap_to_track_regular 0",
-                    "-width_horizontal 0.28",
-                    "-width_vertical 0.28",
+                    f"-width_horizontal {expected_width}",
+                    f"-width_vertical {expected_width}",
                 )
             ):
                 errors.append(f"commands_{prefix}_SET_EDIT_MODE_contract_mismatch")
@@ -651,12 +733,16 @@ def classify(
     result = {
         "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS",
         "POLICY": (
-            "ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION"
-            if is_r3
+            "ISOLATED_IN_MEMORY_SIX_NET_MIXED_WIDTH_MET1_LANDING_PATCH_CLASSIFICATION"
+            if is_r4
             else (
-                "ISOLATED_IN_MEMORY_SIX_NET_MIXED_LENGTH_MET1_LANDING_PATCH_CLASSIFICATION"
-                if is_r2
-                else "ISOLATED_IN_MEMORY_SIX_NET_MET1_LANDING_PATCH_CLASSIFICATION"
+                "ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION"
+                if is_r3
+                else (
+                    "ISOLATED_IN_MEMORY_SIX_NET_MIXED_LENGTH_MET1_LANDING_PATCH_CLASSIFICATION"
+                    if is_r2
+                    else "ISOLATED_IN_MEMORY_SIX_NET_MET1_LANDING_PATCH_CLASSIFICATION"
+                )
             )
         ),
         "STATUS": "PASS" if not errors else "FAIL",
@@ -678,18 +764,23 @@ def classify(
         ),
         "PATCH_CONTRACT_STATUS": (
             (
-                "PASS_EXACT_SIX_MIXED_DIRECTION_EXTENSIONS"
-                if is_r3
+                "PASS_EXACT_SIX_MIXED_WIDTH_EXTENSIONS"
+                if is_r4
                 else (
-                    "PASS_EXACT_SIX_MIXED_LENGTH_EXTENSIONS"
-                    if is_r2
-                    else "PASS_EXACT_SIX_REVIEWED_EXTENSIONS"
+                    "PASS_EXACT_SIX_MIXED_DIRECTION_EXTENSIONS"
+                    if is_r3
+                    else (
+                        "PASS_EXACT_SIX_MIXED_LENGTH_EXTENSIONS"
+                        if is_r2
+                        else "PASS_EXACT_SIX_REVIEWED_EXTENSIONS"
+                    )
                 )
             )
             if counts.get("CONTRACT_VALIDATED_COUNT") == 6
             else "FAIL"
         ),
-        "PATCH_WIDTH_UM": "0.28",
+        "PATCH_WIDTH_POLICY": patch_width_policy,
+        "PATCH_WIDTH_UM": patch_width_um,
         "PATCH_LENGTH_POLICY": patch_length_policy,
         "PATCH_LENGTH_UM": "MIXED_0.56_0.84" if is_r2 or is_r3 else "0.56",
         "PATCH_DIRECTION_POLICY": patch_direction_policy,
@@ -717,12 +808,16 @@ def classify(
         "CANONICAL_RERUN_DECISION": "DO_NOT_RUN_FROM_THIS_STEP",
         "NEXT_METHOD_DECISION": (
             (
-                "REVIEW_DRC_ZERO_MIXED_DIRECTION_PATCH_BEFORE_CANONICAL_INTEGRATION"
-                if is_r3
+                "REVIEW_DRC_ZERO_MIXED_WIDTH_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                if is_r4
                 else (
-                    "REVIEW_DRC_ZERO_MIXED_LENGTH_PATCH_BEFORE_CANONICAL_INTEGRATION"
-                    if is_r2
-                    else "REVIEW_DRC_ZERO_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                    "REVIEW_DRC_ZERO_MIXED_DIRECTION_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                    if is_r3
+                    else (
+                        "REVIEW_DRC_ZERO_MIXED_LENGTH_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                        if is_r2
+                        else "REVIEW_DRC_ZERO_PATCH_BEFORE_CANONICAL_INTEGRATION"
+                    )
                 )
             )
             if validated
@@ -766,12 +861,16 @@ def main() -> int:
     parser.add_argument("--step20-analysis", type=Path)
     parser.add_argument("--step21-analysis", type=Path)
     parser.add_argument("--step22-analysis", type=Path)
-    parser.add_argument("--trial-revision", choices=("R1", "R2", "R3"), default="R1")
+    parser.add_argument("--step23-analysis", type=Path)
+    parser.add_argument(
+        "--trial-revision", choices=("R1", "R2", "R3", "R4"), default="R1"
+    )
     parser.add_argument("--report-driver-head", required=True)
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
     source_analysis = (
         args.source_analysis
+        or args.step23_analysis
         or args.step22_analysis
         or args.step21_analysis
         or args.step20_analysis
@@ -780,12 +879,13 @@ def main() -> int:
         "R1": args.step20_analysis,
         "R2": args.step21_analysis,
         "R3": args.step22_analysis,
+        "R4": args.step23_analysis,
     }[args.trial_revision]
     if source_analysis is None:
         parser.error("one source analysis argument is required")
     if expected_alias is None and args.source_analysis is None:
         parser.error(
-            f"--{'step22' if args.trial_revision == 'R3' else ('step21' if args.trial_revision == 'R2' else 'step20')}-analysis "
+            f"--{dict(R1='step20', R2='step21', R3='step22', R4='step23')[args.trial_revision]}-analysis "
             f"is required for {args.trial_revision}"
         )
     result = classify(

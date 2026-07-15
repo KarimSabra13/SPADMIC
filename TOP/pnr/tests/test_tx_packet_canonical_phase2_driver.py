@@ -46,6 +46,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "min-area-landing-patch-trial",
             "min-area-landing-patch-trial-r2",
             "min-area-landing-patch-trial-r3",
+            "min-area-landing-patch-trial-r4",
             "package",
             "status",
         ):
@@ -232,6 +233,24 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn('kv_field "$step22_analysis" TRIAL_ROOT', driver)
         self.assertIn("MIN_AREA_LANDING_PATCH_R3_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
         self.assertIn("23_min_area_landing_patch_trial_r3", driver)
+        self.assertIn("require_step_pass 23_min_area_landing_patch_trial_r3", driver)
+        self.assertIn("min-area-landing-patch-trial-r4 <expected-report-driver-head>", driver)
+        self.assertIn("SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R4", driver)
+        self.assertIn("SOURCE_WIDTH_PRECONDITION_STATUS=", driver)
+        self.assertIn("STEP23_PRE_SURVIVOR_SIGNATURE_SHA256=", driver)
+        self.assertIn("STEP23_0P1064_MARKER_COUNT=", driver)
+        self.assertIn("MIN_AREA_LANDING_PATCH_R4_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS", driver)
+        self.assertIn("24_min_area_landing_patch_trial_r4", driver)
+        landing_trial = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_min_area_landing_patch_trial.tcl"
+        ).read_text()
+        self.assertIn("FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28", landing_trial)
+        self.assertIn("set half_width [expr {$patch_width / 2.0}]", landing_trial)
+        self.assertIn("-width_horizontal $patch_width", landing_trial)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)
@@ -387,8 +406,8 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("720.72 0.84", landing_trial)
         self.assertIn("1665.44 0.84", landing_trial)
         self.assertIn("1792.28 0.56", landing_trial)
-        self.assertIn("-width_horizontal 0.28", landing_trial)
-        self.assertIn("-width_vertical 0.28", landing_trial)
+        self.assertIn("-width_horizontal $patch_width", landing_trial)
+        self.assertIn("-width_vertical $patch_width", landing_trial)
         self.assertIn("verify_drc_pre_trial.rpt", landing_trial)
         self.assertIn("verify_drc_post_trial.rpt", landing_trial)
         self.assertIn("FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT", landing_trial)
@@ -396,6 +415,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
         self.assertIn("MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
         self.assertIn("MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
+        self.assertIn("MIXED_WIDTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED", landing_trial)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, landing_trial)
 

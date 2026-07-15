@@ -1013,3 +1013,45 @@ Rejected actions after Step 22:
   special-net geometry.
 - Do not save, export, launch a canonical replay, stage PVS inputs, or run PVS
   from the Step 23 trial even if its classification is coherent.
+
+## Step 23 Result - Opposite-Direction Length Is Also Ineffective
+
+Step 23 classified coherent evidence but rejected the mixed-direction method.
+All six contracts and all 24 edit commands passed, with no regular- or
+special-connectivity regression. The result remained four MET1 minimum-area
+markers.
+
+The marker delta distinguishes the two behaviors:
+
+- `n_9706` and `n_9721`, replayed `0.56 um` toward source, closed again.
+- `n_9677`, `n_9693`, `n_9696`, and `n_9697`, replayed `0.84 um` away from
+  source, remained at their original `0.1064 um^2` boxes.
+- No replacement marker was added for those four; only the two closed marker
+  signatures were removed.
+
+This rules out further straight-line length or direction sweeps. Toward-source
+geometry is necessary, but width `0.28 um` leaves the route centerline
+`0.26 um` away from each survivor's reviewed source-Q point in Y. Its
+half-width is only `0.14 um`.
+
+Step 24 changes only that independent variable. It replays length `0.56 um`
+toward source on all six nets, widens the four survivors to `0.56 um`, and
+retains width `0.28 um` on the two controls. A `0.56 um` strip has a
+`0.28 um` half-width and therefore spans the measured Y offset. The gate must
+fail before Innovus unless:
+
+1. The complete Step 23 rejection tuple is exact.
+2. The four Step 23 post-trial signatures equal those same four original
+   Step 23 pre-trial signatures.
+3. All per-net endpoints, widths, VIA1 centers, MET2 endpoints, source terms,
+   direction relations, and full strip-edge containment checks pass.
+
+Rejected actions after Step 23:
+
+- Do not try another `0.84 um` or longer horizontal endpoint in either
+  direction.
+- Do not widen `n_9706` or `n_9721`; width `0.28 um` already closes them.
+- Do not infer that a command PASS means the wider strip contributes counted
+  connected MET1 area.
+- Do not save, export, route-optimize, launch a canonical replay, stage PVS
+  inputs, or run PVS from the Step 24 process.

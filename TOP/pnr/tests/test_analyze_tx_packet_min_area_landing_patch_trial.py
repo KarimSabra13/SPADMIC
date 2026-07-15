@@ -43,12 +43,16 @@ CONTRACT_R3 = {
 }
 R2_LONG_NETS = {"n_9677", "n_9693", "n_9696", "n_9697"}
 R3_AWAY_NETS = {"n_9677", "n_9693", "n_9696", "n_9697"}
+R4_WIDE_NETS = {"n_9677", "n_9693", "n_9696", "n_9697"}
 POLICY = "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MET1_LANDING_EXTENSIONS"
 POLICY_R2 = (
     "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_LENGTH_MET1_LANDING_EXTENSIONS"
 )
 POLICY_R3 = (
     "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_DIRECTION_MET1_LANDING_EXTENSIONS"
+)
+POLICY_R4 = (
+    "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BOUNDED_MIXED_WIDTH_MET1_LANDING_EXTENSIONS"
 )
 MARKER_HEADER = (
     "idx\tmarker_handle\tbox\tllx\tlly\turx\tury\tcx\tcy\t"
@@ -187,6 +191,47 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "ERROR_COUNT=0\n"
         )
 
+    def write_step23(self, path: Path) -> None:
+        path.write_text(
+            "LABEL=SPADMIC_TX_PACKET_MIN_AREA_LANDING_PATCH_ANALYSIS\n"
+            "POLICY=ISOLATED_IN_MEMORY_SIX_NET_MIXED_DIRECTION_MET1_LANDING_PATCH_CLASSIFICATION\n"
+            "STATUS=PASS\n"
+            "RESULT=MIN_AREA_LANDING_PATCH_TRIAL_CLASSIFIED\n"
+            "TRIAL_REVISION=R3\n"
+            "TRIAL_PROCESS_STATUS=FAIL\n"
+            "TRIAL_PROCESS_RESULT=MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED\n"
+            "METHOD_STATUS=REJECTED_OR_INCOMPLETE\n"
+            "PATCH_CONTRACT_STATUS=PASS_EXACT_SIX_MIXED_DIRECTION_EXTENSIONS\n"
+            "PATCH_WIDTH_UM=0.28\n"
+            "PATCH_LENGTH_POLICY=FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56\n"
+            "PATCH_LENGTH_UM=MIXED_0.56_0.84\n"
+            "PATCH_DIRECTION_POLICY=FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE\n"
+            "PATCH_ATTEMPTED_COUNT=6\n"
+            "PATCH_APPLIED_COUNT=6\n"
+            "COMMAND_PASS_COUNT=24\n"
+            "COMMAND_FAIL_COUNT=0\n"
+            "PRE_DRC_VIOLATION_COUNT=6\n"
+            "FINAL_DRC_VIOLATION_COUNT=4\n"
+            "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0\n"
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21\n"
+            "PRE_MARKER_DATABASE_TOTAL=27\n"
+            "FINAL_MARKER_DATABASE_TOTAL=25\n"
+            "REMOVED_MARKER_SIGNATURE_COUNT=2\n"
+            "ADDED_MARKER_SIGNATURE_COUNT=0\n"
+            "FINAL_MIN_AREA_NETS=n_9677 n_9693 n_9696 n_9697\n"
+            "SAVE_DESIGN=NOT_RUN\n"
+            "EXPORT=NOT_RUN\n"
+            "IMMUTABLE_PVS_STAGING=NOT_RUN\n"
+            "PVS_DECISION=DO_NOT_RUN\n"
+            "CANONICAL_RERUN_DECISION=DO_NOT_RUN_FROM_THIS_STEP\n"
+            "NEXT_METHOD_DECISION=STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD\n"
+            "ERROR_COUNT=0\n"
+        )
+
     def write_fixture(
         self,
         root: Path,
@@ -197,7 +242,16 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
     ) -> tuple[Path, Path]:
         is_r2 = revision == "R2"
         is_r3 = revision == "R3"
-        if is_r3:
+        is_r4 = revision == "R4"
+        if is_r4:
+            contract = CONTRACT
+            policy = POLICY_R4
+            source_key = "STEP23_ANALYSIS"
+            patch_length_policy = "UNIFORM_0.56"
+            patch_direction_policy = "ALL_TOWARD_SOURCE"
+            patch_width_policy = "FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28"
+            patch_width_um = "MIXED_0.28_0.56"
+        elif is_r3:
             contract = CONTRACT_R3
             policy = POLICY_R3
             source_key = "STEP22_ANALYSIS"
@@ -205,23 +259,31 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             patch_direction_policy = (
                 "FOUR_SURVIVORS_AWAY_FROM_SOURCE_TWO_CLOSED_TOWARD_SOURCE"
             )
+            patch_width_policy = "UNIFORM_0.28"
+            patch_width_um = "0.28"
         elif is_r2:
             contract = CONTRACT_R2
             policy = POLICY_R2
             source_key = "STEP21_ANALYSIS"
             patch_length_policy = "FOUR_SURVIVORS_0.84_TWO_CLOSED_0.56"
             patch_direction_policy = "ALL_TOWARD_SOURCE"
+            patch_width_policy = "UNIFORM_0.28"
+            patch_width_um = "0.28"
         else:
             contract = CONTRACT
             policy = POLICY
             source_key = "STEP20_ANALYSIS"
             patch_length_policy = "UNIFORM_0.56"
             patch_direction_policy = "ALL_TOWARD_SOURCE"
+            patch_width_policy = "UNIFORM_0.28"
+            patch_width_um = "0.28"
         trial_root = root / "trial"
         reports = trial_root / "reports"
         reports.mkdir(parents=True)
         source = root / f"{source_key.lower()}.rpt"
-        if is_r3:
+        if is_r4:
+            self.write_step23(source)
+        elif is_r3:
             self.write_step22(source)
         elif is_r2:
             self.write_step21(source)
@@ -278,9 +340,10 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
                 if is_r3 and net in R3_AWAY_NETS
                 else "TOWARD_SOURCE"
             )
+            width = "0.56" if is_r4 and net in R4_WIDE_NETS else "0.28"
             contract_rows.append(
                 f"{net}\t{box}\t{start_x}\t{start_y}\t{end_x}\t{start_y}\t"
-                f"{length}\t0.28\t{source_q}\t{source_point}\t{direction}\tPASS\tPASS\tPASS\t"
+                f"{length}\t{width}\t{source_q}\t{source_point}\t{direction}\tPASS\tPASS\tPASS\t"
                 "PASS\tPASS\tPASS"
             )
         (reports / "min_area_landing_patch_contract.tsv").write_text(
@@ -290,16 +353,20 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_COMMANDS",
             "POLICY="
             + (
-                "EXACT_SIX_NET_MIXED_DIRECTION_MET1_WIRE_EDITOR_EXTENSIONS"
-                if is_r3
+                "EXACT_SIX_NET_MIXED_WIDTH_MET1_WIRE_EDITOR_EXTENSIONS"
+                if is_r4
                 else (
-                    "EXACT_SIX_NET_MIXED_LENGTH_MET1_WIRE_EDITOR_EXTENSIONS"
-                    if is_r2
-                    else "EXACT_SIX_NET_ONE_GRID_MET1_WIRE_EDITOR_EXTENSIONS"
+                    "EXACT_SIX_NET_MIXED_DIRECTION_MET1_WIRE_EDITOR_EXTENSIONS"
+                    if is_r3
+                    else (
+                        "EXACT_SIX_NET_MIXED_LENGTH_MET1_WIRE_EDITOR_EXTENSIONS"
+                        if is_r2
+                        else "EXACT_SIX_NET_ONE_GRID_MET1_WIRE_EDITOR_EXTENSIONS"
+                    )
                 )
             ),
             f"TRIAL_REVISION={revision}",
-            "PATCH_WIDTH_UM=0.28",
+            f"PATCH_WIDTH_UM={patch_width_um}",
             f"PATCH_LENGTH_POLICY={patch_length_policy}",
             f"PATCH_DIRECTION_POLICY={patch_direction_policy}",
             "PATCH_LENGTH_UM=MIXED_0.56_0.84"
@@ -307,6 +374,8 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             else "PATCH_LENGTH_UM=0.56",
             "CONTRACT_VALIDATED_COUNT=6",
         ]
+        if is_r4:
+            command_lines.insert(3, f"PATCH_WIDTH_POLICY={patch_width_policy}")
         for net, values in contract.items():
             _, start_x, start_y, end_x, source_q, _ = values
             prefix = f"PATCH_{net}"
@@ -321,17 +390,19 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
                 if is_r3 and net in R3_AWAY_NETS
                 else "TOWARD_SOURCE"
             )
+            width = "0.56" if is_r4 and net in R4_WIDE_NETS else "0.28"
             command_lines.extend(
                 (
                     f"{prefix}_START={start_x} {start_y}",
                     f"{prefix}_END={end_x} {start_y}",
                     f"{prefix}_LENGTH_UM={length}",
+                    *([f"{prefix}_WIDTH_UM={width}"] if is_r4 else []),
                     f"{prefix}_DIRECTION={direction}",
                     f"{prefix}_SOURCE_Q={source_q}",
                     f"{prefix}_SET_EDIT_MODE=setEditMode -nets {net} -shape None "
                     "-force_regular 1 -layer_horizontal MET1 -layer_vertical MET1 "
-                    "-snap_to_track_regular 0 -width_horizontal 0.28 "
-                    "-width_vertical 0.28",
+                    f"-snap_to_track_regular 0 -width_horizontal {width} "
+                    f"-width_vertical {width}",
                     f"{prefix}_APPLIED=YES",
                 )
             )
@@ -353,22 +424,30 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
         process_status = "PASS" if validated else "FAIL"
         process_result = (
             (
-                "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
-                if is_r3
+                "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+                if is_r4
                 else (
-                    "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
-                    if is_r2
-                    else "SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+                    "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+                    if is_r3
+                    else (
+                        "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+                        if is_r2
+                        else "SIX_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+                    )
                 )
             )
             if validated
             else (
-                "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
-                if is_r3
+                "MIXED_WIDTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+                if is_r4
                 else (
-                    "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
-                    if is_r2
-                    else "SIX_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+                    "MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+                    if is_r3
+                    else (
+                        "MIXED_LENGTH_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+                        if is_r2
+                        else "SIX_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+                    )
                 )
             )
         )
@@ -378,6 +457,8 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             f"TRIAL_REVISION={revision}\n"
             f"PATCH_LENGTH_POLICY={patch_length_policy}\n"
             f"PATCH_DIRECTION_POLICY={patch_direction_policy}\n"
+            f"PATCH_WIDTH_POLICY={patch_width_policy}\n"
+            f"PATCH_WIDTH_UM={patch_width_um}\n"
             "DESIGN_MODIFICATION=IN_MEMORY_ONLY\n"
             "SOURCE_CHECKPOINT_WRITE=NOT_RUN\n"
             "SAVE_DESIGN=NOT_RUN\n"
@@ -423,6 +504,7 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "R1": "--step20-analysis",
             "R2": "--step21-analysis",
             "R3": "--step22-analysis",
+            "R4": "--step23-analysis",
         }[revision]
         return subprocess.run(
             [
@@ -742,6 +824,76 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             self.assertIn(
                 "contract_n_9696_direction=TOWARD_SOURCE "
                 "expected=AWAY_FROM_SOURCE",
+                report.read_text(),
+            )
+
+    def test_r4_validated_zero_drc_trial_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root, validated=True, revision="R4"
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R4"
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn("TRIAL_REVISION=R4", text)
+            self.assertIn(
+                "PATCH_WIDTH_POLICY=FOUR_SURVIVORS_0.56_TWO_CLOSED_0.28",
+                text,
+            )
+            self.assertIn("PATCH_WIDTH_UM=MIXED_0.28_0.56", text)
+            self.assertIn(
+                "PATCH_CONTRACT_STATUS=PASS_EXACT_SIX_MIXED_WIDTH_EXTENSIONS",
+                text,
+            )
+            self.assertIn("METHOD_STATUS=VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY", text)
+
+    def test_r4_source_tuple_drift_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root, validated=True, revision="R4"
+            )
+            source.write_text(
+                source.read_text().replace(
+                    "REMOVED_MARKER_SIGNATURE_COUNT=2",
+                    "REMOVED_MARKER_SIGNATURE_COUNT=6",
+                )
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R4"
+            )
+            self.assertEqual(result.returncode, 8, result.stdout)
+            self.assertIn(
+                "source_REMOVED_MARKER_SIGNATURE_COUNT=6 expected=2",
+                report.read_text(),
+            )
+
+    def test_r4_contract_width_drift_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_fixture(
+                root, validated=True, revision="R4"
+            )
+            contract = trial_root / "reports" / "min_area_landing_patch_contract.tsv"
+            contract.write_text(
+                contract.read_text().replace(
+                    "0.56\t0.56\tg14627__2802/Q",
+                    "0.56\t0.28\tg14627__2802/Q",
+                    1,
+                )
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(
+                trial_root, source, report, revision="R4"
+            )
+            self.assertEqual(result.returncode, 8, result.stdout)
+            self.assertIn(
+                "contract_n_9696_width_um=0.28 expected=0.56",
                 report.read_text(),
             )
 

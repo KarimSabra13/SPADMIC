@@ -1075,3 +1075,46 @@ Step 23 remains in-memory and cannot save, export, stage immutable PVS input,
 launch a canonical replay, or run PVS. A validated R3 result would authorize
 review of a separate fresh canonical integration gate, not automatic
 advancement.
+
+## P03 Step 23 Result And Step 24 Mixed-Width Trial
+
+Step 23 completed at report-driver head
+`68af46725451ed2181bbafdb6567ec96158925eb`. The six contracts and 24 edit
+commands passed, but R3 was physically rejected:
+
+```text
+TRIAL_PROCESS_RESULT=MIXED_DIRECTION_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+METHOD_STATUS=REJECTED_OR_INCOMPLETE
+DRC=6 -> 4
+REGULAR_CONNECTIVITY=0 -> 0
+SPECIAL_CONNECTIVITY=0 -> 0
+RESTORED_ANTENNA=21 -> 21
+MARKER_DATABASE_TOTAL=27 -> 25
+```
+
+The four away-from-source patches produced no counted change: `n_9677`,
+`n_9693`, `n_9696`, and `n_9697` retained their original marker boxes and
+`0.1064 um^2` actual areas. The two retained `0.56 um` toward-source patches
+closed `n_9706` and `n_9721` again. Combined with Step 22's toward-source
+length saturation, this retires both endpoint distance and horizontal
+direction as useful variables for the four survivors.
+
+Step 24 uses trial revision R4 and an immutable root ending in
+`_min_area_landing_patch_trial_r4`. It restores the same source checkpoint and
+replays the Step 21 endpoints toward source. Width is `0.56 um` only on the
+four survivors and remains `0.28 um` on the two closed controls. The wider
+half-width (`0.28 um`) spans the measured `0.26 um` Y offset from each VIA1
+centerline to its source-Q point; the old half-width (`0.14 um`) does not.
+
+The pre-run gate compares a normalized SHA-256 of the four Step 23 post-trial
+markers with the same four nets filtered from Step 23 pre-trial evidence. The
+Tcl contract then validates the exact per-net width and all four strip-edge
+corners inside the source-instance box before any Wire Editor command runs.
+The independent analyzer checks the source tuple, contract TSV, emitted
+per-net width commands, DRC, both connectivity classes, restored antenna
+sentinel, and marker-database accounting.
+
+R4 is still evidence-only. It cannot save, export, stage immutable PVS input,
+launch a canonical replay, or run PVS. A DRC-zero classification would require
+a separate reviewed canonical integration gate; a coherent nonzero result
+would retire the mixed-width method without modifying the source checkpoint.
