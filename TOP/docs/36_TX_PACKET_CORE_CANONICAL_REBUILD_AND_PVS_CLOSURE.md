@@ -884,3 +884,53 @@ and copied reports remain immutable. A coherent Step 19 classification is
 still not PVS authorization. A fresh canonical replay remains blocked until
 the operator reviews whether R2 validates zero DRC without connectivity or
 restored-marker drift.
+
+## P03 Step 19 Result And Step 20 Local-Geometry Probe
+
+Step 19 completed at report-driver head
+`08477b2b3327f3ac22547be855cfaaa3e24187e7`. The corrected R2 guard passed,
+and the bounded repair sequence executed once with 22 command PASS results and
+zero command failures. It did not reduce the physical marker population:
+
+```text
+TRIAL_PROCESS_RESULT=ITERATIVE_MIN_AREA_REPAIR_NO_IMPROVEMENT
+METHOD_STATUS=REJECTED_OR_INCOMPLETE
+DRC_COUNT_SEQUENCE=6 6
+PRE/FINAL_REGULAR_CONNECTIVITY=0/0
+PRE/FINAL_SPECIAL_CONNECTIVITY=0/0
+PRE/FINAL_RESTORED_ANTENNA=21/21
+PRE/FINAL_MARKER_DATABASE_TOTAL=27/27
+```
+
+All six final boxes and nets are unchanged. This is sufficient to reject the
+selected-net deletion plus reroute method for these residual fragments. A
+second identical iteration, broad route replay, or canonical candidate would
+repeat a method with measured zero progress.
+
+Step 20 uses the immutable source checkpoint only for a read-only local
+topology capture. The gate requires the exact Step 19 no-improvement tuple,
+then:
+
+1. Restores `05_postroute_export.enc.dat` exactly once in a fresh process.
+2. Revalidates DRC 6, regular connectivity 0, PG connectivity 0, restored
+   antenna 21, and marker-database total 27.
+3. Captures installed command help and DB schemas before relying on object
+   attributes.
+4. Resolves all six net handles and dumps nearby regular-wire and via-instance
+   boxes and attributes, connected instance terms, instance
+   placement/orientation, master-local pin shapes, and top terms.
+5. Repeats DRC and both connectivity checks and requires the six normalized
+   marker signatures to remain identical.
+6. Classifies complete or partial query coverage, then stops for operator
+   review.
+
+Master pin-shape coordinates are labelled as master-local unless a direct
+instance-terminal query proves otherwise; they must be transformed with the
+captured instance origin and orientation before any patch coordinate is
+derived. Failed optional DB queries remain evidence and do not become claims
+that an object is absent.
+
+Step 20 performs no design modification, route command, save, export,
+immutable staging, canonical replay, or PVS. Even complete geometry coverage
+only authorizes review of a separate direct-patch trial; it is not physical
+closure or signoff readiness.

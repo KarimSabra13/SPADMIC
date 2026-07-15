@@ -1581,3 +1581,51 @@ STEP19_R2_BASH_SYNTAX=PASS
 STEP19_R2_TCL_STRUCTURE_CHECK=PASS
 STEP19_R2_DIFF_CHECK=PASS
 ```
+
+### P03-R20 Server Evidence - Step 19 Rejects Selected-Net Reroute
+
+Status: `PASS_CLASSIFIED_METHOD_REJECTED_STEP20_READ_ONLY_PROBE_READY`
+
+Step 19 completed at report-driver head
+`08477b2b3327f3ac22547be855cfaaa3e24187e7`. R2 accepted the corrected
+restored-marker tuple and entered the repair loop. Every one of the 22 bounded
+commands passed: selected-net mode, six net selections, six area deletes, six
+DRC-wire deletes, `globalDetailRoute -select`, `detailRoute -select`, and
+`ecoRoute -fix_drc`.
+
+Independent verification after the first iteration was unchanged:
+
+```text
+DRC_COUNT_SEQUENCE=6 6
+regular connectivity=0 -> 0
+PG connectivity=0 -> 0
+restored antenna entries=21 -> 21
+marker database total=27 -> 27
+```
+
+The same six nets and same six `0.38 x 0.28 um` MET1 boxes were recreated.
+Each remains `0.1064 um^2` against `0.2020 um^2` required. Command success is
+therefore not repair progress; the selected-net delete/reroute sequence is
+retired for this residual class. Iterations two and three correctly did not
+run after the non-decreasing DRC count.
+
+Step 20 is `min-area-geometry-probe`. It restores the same checkpoint once in
+one fresh process and performs only schema, help, DB-query, and verification
+captures. For each marker it records nearby regular wires and via instances,
+connected instance terms, instance placement/orientation, master-local pin
+shapes, and top terms.
+It repeats DRC and both connectivity checks afterward and requires identical
+marker signatures. Unsupported DB attributes remain explicit failed queries;
+they are not interpreted as absent geometry.
+
+The probe cannot edit, route, save, export, stage immutable PVS input, or run
+PVS. Its purpose is to choose a reviewed direct geometry method and extension
+direction; it does not authorize that method automatically.
+
+```text
+STEP20_LOCAL_TOP_PNR_TESTS=100_PASS_0_FAIL
+STEP20_PY_COMPILE=PASS
+STEP20_BASH_SYNTAX=PASS
+STEP20_TCL_STRUCTURE_CHECK=PASS
+STEP20_DIFF_CHECK=PASS
+```

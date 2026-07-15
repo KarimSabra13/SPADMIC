@@ -42,6 +42,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "final-closure-analyze",
             "min-area-second-pass-trial",
             "min-area-second-pass-trial-r2",
+            "min-area-geometry-probe",
             "package",
             "status",
         ):
@@ -201,6 +202,12 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("PRE_EXCLUDED_ANTENNA_MARKER_COUNT)\" != \"21\"", driver)
         self.assertIn("PRE_MARKER_DATABASE_TOTAL)\" != \"27\"", driver)
         self.assertIn("19_min_area_second_pass_trial_r2", driver)
+        self.assertIn("require_step_pass 19_min_area_second_pass_trial_r2", driver)
+        self.assertIn("min-area-geometry-probe <expected-report-driver-head>", driver)
+        self.assertIn("run_innovus_ooc_min_area_geometry_probe.sh", driver)
+        self.assertIn("analyze_tx_packet_min_area_geometry_probe.py", driver)
+        self.assertIn("MIN_AREA_GEOMETRY_PROBE_CLASSIFIED_NO_DESIGN_MODIFICATION", driver)
+        self.assertIn("20_min_area_geometry_probe", driver)
         self.assertIn("require_step_pass 11_pg_via_1x1_trial", driver)
         self.assertIn("preroute-pg-rerun <expected-report-driver-head>", driver)
         self.assertIn('actual_head" != "$expected_report_driver_head', driver)
@@ -279,6 +286,42 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("ITERATIVE_MIN_AREA_REPAIR_VALIDATED", min_area_trial)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, min_area_trial)
+
+        geometry_wrapper = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_min_area_geometry_probe.sh"
+        ).read_text()
+        geometry_probe = (
+            REPO
+            / "TOP"
+            / "pnr"
+            / "scripts"
+            / "run_innovus_ooc_min_area_geometry_probe.tcl"
+        ).read_text()
+        self.assertIn(
+            "ONE_FRESH_PROCESS_ONE_RESTORE_READ_ONLY_LOCAL_GEOMETRY_PROBE",
+            geometry_wrapper,
+        )
+        self.assertIn("05_postroute_export.enc.dat", geometry_wrapper)
+        self.assertIn("</dev/null", geometry_wrapper)
+        self.assertEqual(geometry_probe.count("restoreDesign $checkpoint $top"), 1)
+        self.assertIn("foreach object {net wire instTerm inst term pin pinShape", geometry_probe)
+        self.assertIn("dbGet top.insts.instTerms.net.name $net -p2", geometry_probe)
+        self.assertIn("MASTER_LOCAL_REQUIRES_INSTANCE_TRANSFORM", geometry_probe)
+        self.assertIn("min_area_local_vias.tsv", geometry_probe)
+        self.assertIn("verify_drc_pre_probe.rpt", geometry_probe)
+        self.assertIn("verify_drc_post_probe.rpt", geometry_probe)
+        self.assertIn("DESIGN_MODIFICATION NOT_RUN", geometry_probe)
+        self.assertNotIn("editDelete", geometry_probe)
+        self.assertNotIn("globalDetailRoute", geometry_probe)
+        self.assertNotIn("detailRoute -select", geometry_probe)
+        self.assertNotIn("ecoRoute", geometry_probe)
+        self.assertNotIn("selectNet", geometry_probe)
+        for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
+            self.assertNotIn(forbidden, geometry_probe)
 
     def test_init_inherits_an_accepted_phase1_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

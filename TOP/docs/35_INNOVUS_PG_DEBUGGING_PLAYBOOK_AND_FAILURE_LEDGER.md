@@ -836,3 +836,46 @@ labels, and rejects any iteration where the restored count changes from 21.
 It retains one fresh process, one restore, bounded selected-net repair,
 independent DRC and connectivity checks, and no save, export, immutable
 staging, or PVS. Never reuse the Step 18 trial root.
+
+## Step 19 Failure Ledger - Selected-Net Repair Is Idempotent
+
+Step 19 passed artifact classification but rejected the physical method. All
+22 selection, deletion, and routing commands returned PASS, while independent
+`verify_drc` produced `DRC_COUNT_SEQUENCE=6 6`. Regular and special
+connectivity stayed at zero, and restored marker accounting stayed exactly
+`6 DRC + 21 antenna + 0 connectivity = 27`.
+
+The post-iteration marker boxes, nets, actual areas, and required areas match
+the baseline. The router recreated the same six terminal-like MET1 fragments:
+
+```text
+box size:          0.38 x 0.28 um
+actual area:       0.1064 um^2
+required area:     0.2020 um^2
+area deficit:      0.0956 um^2
+```
+
+At constant `0.28 um` width the legal total length would need to be at least
+approximately `0.72143 um`, but this arithmetic does not identify a legal
+extension direction or prove that the marker wire is the correct object to
+extend. Local terminal, obstruction, neighboring-wire, and instance-transform
+evidence is required first.
+
+Rejected actions after Step 19:
+
+- Do not repeat the same selected-net delete/reroute sequence.
+- Do not force iterations two or three after a non-decreasing first result.
+- Do not infer that command PASS means geometry changed.
+- Do not insert an unreviewed MET1 rectangle or use stateful Wire Editor
+  commands without identifying the connected terminal and coordinate space.
+- Do not run a fresh canonical candidate or PVS while the six DRC markers and
+  the separate 177-marker antenna handoff blocker remain unresolved.
+
+Step 20 is a read-only schema-guided geometry probe. It captures `dbSchema`
+for net, wire, instance-term, instance, terminal, pin, and pin-shape objects;
+records installed help for candidate direct-edit commands; dumps numeric wire
+and via-instance boxes within 2 um of each marker; and records master-local pin
+shapes together with instance origin and orientation. Every optional query is
+caught and reported. Before/after marker signatures and connectivity counts
+must remain identical. Only the resulting local tables can justify a direct
+geometry trial.

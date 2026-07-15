@@ -41,6 +41,7 @@ Usage:
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh preroute-pg-no-restitch-rerun <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh final-closure-analyze <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-second-pass-trial-r2 <expected-report-driver-head>
+  bash TOP/ci/server_run_tx_packet_canonical_phase2.sh min-area-geometry-probe <expected-report-driver-head>
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh package
   bash TOP/ci/server_run_tx_packet_canonical_phase2.sh status
 
@@ -2225,6 +2226,190 @@ min_area_second_pass_trial_r2() {
   return $?
 }
 
+min_area_geometry_probe() {
+  local expected_report_driver_head="$1"
+  if [[ -z "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: min-area-geometry-probe requires the expected report-driver HEAD"
+    return 1
+  fi
+  load_session || return 1
+  require_step_pass 19_min_area_second_pass_trial_r2 || return 1
+
+  local step19_status step19_driver step19_analysis source_block_root
+  local actual_head cd_rc cadence_rc probe_id probe_root probe_status console copy_dir
+  local probe_rc analysis_report analysis_rc driver_report status result path
+  local topology_capture local_geometry_capture next_decision
+  step19_status="$TX2_SESSION_ROOT/status/19_min_area_second_pass_trial_r2.rpt"
+  step19_driver="$TX2_SESSION_ROOT/reports/19_min_area_second_pass_trial_driver.rpt"
+  step19_analysis="$TX2_SESSION_ROOT/reports/19_min_area_second_pass_analysis.rpt"
+  actual_head=UNKNOWN
+  cadence_rc=NOT_RUN
+  probe_rc=NOT_RUN
+  analysis_rc=NOT_RUN
+  status=FAIL
+  result=MIN_AREA_GEOMETRY_CLASSIFICATION_NOT_RUN
+
+  if [[ "$(kv_field "$step19_status" STATUS)" != "PASS" \
+      || "$(kv_field "$step19_status" RC)" != "0" \
+      || "$(kv_field "$step19_status" RESULT)" != "MIN_AREA_SECOND_PASS_R2_CLASSIFIED_NO_SAVE_EXPORT_OR_PVS" \
+      || "$(kv_field "$step19_driver" TRIAL_REVISION)" != "R2" \
+      || "$(kv_field "$step19_driver" TRIAL_RC)" != "8" \
+      || "$(kv_field "$step19_driver" ANALYSIS_RC)" != "0" \
+      || "$(kv_field "$step19_driver" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step19_driver" TRIAL_PROCESS_RESULT)" != "ITERATIVE_MIN_AREA_REPAIR_NO_IMPROVEMENT" \
+      || "$(kv_field "$step19_driver" METHOD_STATUS)" != "REJECTED_OR_INCOMPLETE" \
+      || "$(kv_field "$step19_driver" DRC_COUNT_SEQUENCE)" != "6 6" \
+      || "$(kv_field "$step19_driver" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step19_driver" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step19_driver" PVS)" != "NOT_RUN" \
+      || "$(kv_field "$step19_analysis" STATUS)" != "PASS" \
+      || "$(kv_field "$step19_analysis" RESULT)" != "ITERATIVE_MIN_AREA_TRIAL_CLASSIFIED" \
+      || "$(kv_field "$step19_analysis" TRIAL_REVISION)" != "R2" \
+      || "$(kv_field "$step19_analysis" TRIAL_PROCESS_STATUS)" != "FAIL" \
+      || "$(kv_field "$step19_analysis" TRIAL_PROCESS_RESULT)" != "ITERATIVE_MIN_AREA_REPAIR_NO_IMPROVEMENT" \
+      || "$(kv_field "$step19_analysis" METHOD_STATUS)" != "REJECTED_OR_INCOMPLETE" \
+      || "$(kv_field "$step19_analysis" PRE_DRC_VIOLATION_COUNT)" != "6" \
+      || "$(kv_field "$step19_analysis" FINAL_DRC_VIOLATION_COUNT)" != "6" \
+      || "$(kv_field "$step19_analysis" DRC_COUNT_SEQUENCE)" != "6 6" \
+      || "$(kv_field "$step19_analysis" ITERATION_COUNT)" != "1" \
+      || "$(kv_field "$step19_analysis" PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step19_analysis" FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step19_analysis" PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step19_analysis" FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT)" != "0" \
+      || "$(kv_field "$step19_analysis" PRE_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step19_analysis" FINAL_EXCLUDED_ANTENNA_MARKER_COUNT)" != "21" \
+      || "$(kv_field "$step19_analysis" PRE_MARKER_DATABASE_TOTAL)" != "27" \
+      || "$(kv_field "$step19_analysis" FINAL_MARKER_DATABASE_TOTAL)" != "27" \
+      || "$(kv_field "$step19_analysis" COMMAND_PASS_COUNT)" != "22" \
+      || "$(kv_field "$step19_analysis" COMMAND_FAIL_COUNT)" != "0" \
+      || "$(kv_field "$step19_analysis" PRE_MIN_AREA_NETS)" != "n_9677 n_9693 n_9696 n_9697 n_9706 n_9721" \
+      || "$(kv_field "$step19_analysis" FINAL_MIN_AREA_NETS)" != "n_9677 n_9693 n_9696 n_9697 n_9706 n_9721" \
+      || "$(kv_field "$step19_analysis" SAVE_DESIGN)" != "NOT_RUN" \
+      || "$(kv_field "$step19_analysis" EXPORT)" != "NOT_RUN" \
+      || "$(kv_field "$step19_analysis" PVS_DECISION)" != "DO_NOT_RUN" \
+      || "$(kv_field "$step19_analysis" ERROR_COUNT)" != "0" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 19 is not the reviewed no-improvement six-marker tuple"
+    echo "STEP19_STATUS=$step19_status"
+    echo "STEP19_DRIVER=$step19_driver"
+    echo "STEP19_ANALYSIS=$step19_analysis"
+    return 1
+  fi
+
+  source_block_root="$(kv_field "$step19_driver" SOURCE_BLOCK_ROOT)"
+  if [[ -z "$source_block_root" || ! -d "$source_block_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: Step 19 source block root is missing"
+    echo "SOURCE_BLOCK_ROOT=${source_block_root:-MISSING}"
+    return 1
+  fi
+
+  cd "$TX2_REPO" 2>/dev/null
+  cd_rc=$?
+  if [[ "$cd_rc" -eq 0 ]]; then
+    actual_head="$(git rev-parse HEAD 2>/dev/null)"
+  fi
+  if [[ "$actual_head" != "$expected_report_driver_head" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: wrong report-driver HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "ACTUAL_HEAD=$actual_head"
+    return 1
+  fi
+
+  probe_id="${TX2_SESSION_ID}_min_area_geometry_probe"
+  probe_root="$TX2_WORK_ROOT/diagnostics/$probe_id"
+  probe_status="$probe_root/reports/min_area_geometry_probe_status.rpt"
+  console="$TX2_SESSION_ROOT/logs/20_min_area_geometry_probe.console.log"
+  copy_dir="$TX2_SESSION_ROOT/reports/20_min_area_geometry_probe"
+  analysis_report="$TX2_SESSION_ROOT/reports/20_min_area_geometry_analysis.rpt"
+  driver_report="$TX2_SESSION_ROOT/reports/20_min_area_geometry_probe_driver.rpt"
+  if [[ -e "$probe_root" ]]; then
+    echo "STOP_HERE_DO_NOT_CONTINUE: immutable Step 20 probe root already exists"
+    echo "PROBE_ROOT=$probe_root"
+    return 1
+  fi
+
+  if [[ "$cd_rc" -eq 0 ]]; then
+    load_cadence
+    cadence_rc=$?
+  fi
+  if [[ "$cadence_rc" == "0" ]]; then
+    export SPADMIC_WORK_ROOT="$TX2_WORK_ROOT"
+    echo "COMMAND=bash TOP/pnr/scripts/run_innovus_ooc_min_area_geometry_probe.sh $source_block_root $step19_analysis $probe_id spadmic_tx_packet_core"
+    bash "$TX2_REPO/TOP/pnr/scripts/run_innovus_ooc_min_area_geometry_probe.sh" \
+      "$source_block_root" \
+      "$step19_analysis" \
+      "$probe_id" \
+      spadmic_tx_packet_core \
+      >"$console" 2>&1
+    probe_rc=$?
+  fi
+
+  mkdir -p "$copy_dir"
+  if [[ -r "$probe_root/context.rpt" ]]; then
+    cp -p "$probe_root/context.rpt" "$copy_dir/context.rpt"
+  fi
+  if [[ -d "$probe_root/reports" ]]; then
+    for path in "$probe_root"/reports/*.rpt "$probe_root"/reports/*.tsv; do
+      if [[ -r "$path" ]]; then
+        cp -p "$path" "$copy_dir/$(basename "$path")"
+      fi
+    done
+  fi
+
+  if [[ -r "$probe_status" ]]; then
+    python3 "$TX2_REPO/TOP/pnr/scripts/analyze_tx_packet_min_area_geometry_probe.py" \
+      --probe-root "$probe_root" \
+      --step19-analysis "$step19_analysis" \
+      --report-driver-head "$actual_head" \
+      --report "$analysis_report"
+    analysis_rc=$?
+  fi
+
+  if [[ "$probe_rc" == "0" \
+      && "$analysis_rc" == "0" \
+      && "$(kv_field "$analysis_report" STATUS)" == "PASS" \
+      && "$(kv_field "$analysis_report" RESULT)" == "MIN_AREA_LOCAL_GEOMETRY_CLASSIFIED" ]]; then
+    status=PASS
+    result=MIN_AREA_GEOMETRY_PROBE_CLASSIFIED_NO_DESIGN_MODIFICATION
+  else
+    result=MIN_AREA_GEOMETRY_CLASSIFICATION_INCOMPLETE
+  fi
+  topology_capture="$(kv_field "$probe_status" TOPOLOGY_CAPTURE_STATUS)"
+  local_geometry_capture="$(kv_field "$analysis_report" LOCAL_GEOMETRY_CAPTURE_STATUS)"
+  next_decision="$(kv_field "$analysis_report" NEXT_METHOD_DECISION)"
+
+  {
+    echo "SOURCE_ARTIFACT_HEAD=$TX2_EXPECTED_HEAD"
+    echo "EXPECTED_REPORT_DRIVER_HEAD=$expected_report_driver_head"
+    echo "REPORT_DRIVER_HEAD=$actual_head"
+    echo "SOURCE_STEP19_STATUS=$step19_status"
+    echo "SOURCE_STEP19_DRIVER=$step19_driver"
+    echo "SOURCE_STEP19_ANALYSIS=$step19_analysis"
+    echo "SOURCE_BLOCK_ROOT=$source_block_root"
+    echo "PROBE_RC=$probe_rc"
+    echo "PROBE_ROOT=$probe_root"
+    echo "PROBE_STATUS=$probe_status"
+    echo "ANALYSIS_RC=$analysis_rc"
+    echo "ANALYSIS_REPORT=$analysis_report"
+    echo "TOPOLOGY_CAPTURE_STATUS=${topology_capture:-UNKNOWN}"
+    echo "LOCAL_GEOMETRY_CAPTURE_STATUS=${local_geometry_capture:-UNKNOWN}"
+    echo "NEXT_METHOD_DECISION=${next_decision:-UNKNOWN}"
+    echo "DESIGN_MODIFICATION=NOT_RUN"
+    echo "SAVE_DESIGN=NOT_RUN"
+    echo "EXPORT=NOT_RUN"
+    echo "IMMUTABLE_PVS_STAGING=NOT_RUN"
+    echo "PVS=NOT_RUN"
+  } >"$driver_report"
+  cat "$driver_report"
+  if [[ -r "$analysis_report" ]]; then
+    cat "$analysis_report"
+  elif [[ -r "$console" ]]; then
+    tail -n 260 "$console"
+  fi
+  record_status 20_min_area_geometry_probe "$status" "$analysis_rc" "$result" "$probe_root"
+  [[ "$status" == "PASS" ]]
+  return $?
+}
+
 package_evidence() {
   load_session || return 1
   local package="$TX2_SESSION_ROOT/packages/${TX2_SESSION_ID}_text_evidence.tar.gz"
@@ -2331,6 +2516,9 @@ case "$COMMAND" in
     ;;
   min-area-second-pass-trial-r2)
     min_area_second_pass_trial_r2 "$ARGUMENT_1"
+    ;;
+  min-area-geometry-probe)
+    min_area_geometry_probe "$ARGUMENT_1"
     ;;
   package)
     package_evidence
