@@ -60,11 +60,68 @@ POLICY_R5 = (
 POLICY_R6 = (
     "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_CHAINED_ENDPOINT_STUBS"
 )
+POLICY_R7 = (
+    "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_SIDE_STUBS"
+)
 CHAIN_R6 = {
     "n_9696": ("719.69 158.62 720.07 158.90", "719.495", "158.795", "718.935", "TOWARD_SOURCE_WEST", "g14627__2802/Q", "719.38 158.68 719.88 158.91", "719.495 158.795", "719.88 158.795"),
     "n_9693": ("210.09 201.74 210.47 202.02", "209.895", "201.845", "209.335", "TOWARD_SOURCE_WEST", "g14630__8246/Q", "209.78 201.73 210.28 201.96", "209.895 201.845", "210.28 201.845"),
     "n_9697": ("663.13 192.78 663.51 193.06", "662.935", "192.885", "662.375", "TOWARD_SOURCE_WEST", "g14626__1617/Q", "662.82 192.77 663.32 193.0", "662.935 192.885", "663.32 192.885"),
     "n_9677": ("1666.09 201.74 1666.47 202.02", "1666.665", "201.845", "1667.225", "TOWARD_SOURCE_EAST", "g14646__2398/Q", "1666.28 201.73 1666.78 201.96", "1666.28 201.845", "1666.665 201.845"),
+}
+VIA_SIDE_R7 = {
+    "n_9696": (
+        "719.69 158.62 720.07 158.90",
+        "719.495",
+        "158.795",
+        "719.880",
+        "158.795",
+        "720.440",
+        "AWAY_FROM_SOURCE_EAST",
+        "g14627__2802/Q",
+        "719.38 158.68 719.88 158.91",
+        "719.495 158.795",
+        "719.88 158.795",
+    ),
+    "n_9693": (
+        "210.09 201.74 210.47 202.02",
+        "209.895",
+        "201.845",
+        "210.280",
+        "201.845",
+        "210.840",
+        "AWAY_FROM_SOURCE_EAST",
+        "g14630__8246/Q",
+        "209.78 201.73 210.28 201.96",
+        "209.895 201.845",
+        "210.28 201.845",
+    ),
+    "n_9697": (
+        "663.13 192.78 663.51 193.06",
+        "662.935",
+        "192.885",
+        "663.320",
+        "192.885",
+        "663.880",
+        "AWAY_FROM_SOURCE_EAST",
+        "g14626__1617/Q",
+        "662.82 192.77 663.32 193.0",
+        "662.935 192.885",
+        "663.32 192.885",
+    ),
+    "n_9677": (
+        "1666.09 201.74 1666.47 202.02",
+        "1666.665",
+        "201.845",
+        "1666.280",
+        "201.845",
+        "1665.720",
+        "AWAY_FROM_SOURCE_WEST",
+        "g14646__2398/Q",
+        "1666.28 201.73 1666.78 201.96",
+        "1666.28 201.845",
+        "1666.665 201.845",
+    ),
 }
 BASE_MARKER_BOX_R6 = {
     "n_9696": "719.38 158.68 720.07 158.91",
@@ -1040,6 +1097,217 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
         )
         return trial_root, source
 
+    def write_r7_fixture(
+        self,
+        root: Path,
+        *,
+        validated: bool,
+        materialized: bool = True,
+        tamper_via_start: bool = False,
+    ) -> tuple[Path, Path]:
+        source_trial, source_step26 = self.write_r6_fixture(
+            root / "step27_source", validated=False
+        )
+        source = root / "step27_analysis.rpt"
+        source_result = self.run_analyzer(
+            source_trial, source_step26, source, revision="R6"
+        )
+        self.assertEqual(source_result.returncode, 0, source_result.stdout)
+
+        trial_root, trial_step26 = self.write_r6_fixture(
+            root / "r7_trial", validated=validated
+        )
+        reports = trial_root / "reports"
+        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        (trial_root / "context.rpt").write_text(
+            "SOURCE_CHECKPOINT=/immutable/checkpoints/05_postroute_export.enc.dat\n"
+            f"STEP27_ANALYSIS={source}\n"
+            f"STEP27_ANALYSIS_SHA256={source_sha}\n"
+            f"HEAD={HEAD}\n"
+            "TRIAL_REVISION=R7\n"
+            f"POLICY={POLICY_R7}\n"
+            "DESIGN_MODIFICATION=IN_MEMORY_ONLY\n"
+            "SOURCE_CHECKPOINT_WRITE=NOT_RUN\n"
+            "SAVE_DESIGN=NOT_RUN\n"
+            "EXPORT=NOT_RUN\n"
+            "PVS=NOT_RUN\n"
+        )
+
+        base_snapshot = (
+            reports / "wire_snapshot_after_base_stage.tsv"
+        ).read_text().splitlines()
+        post_rows = [base_snapshot[0]]
+        for row in base_snapshot[1:]:
+            fields = row.split("\t")
+            fields[0] = "AFTER_VIA_SIDE_STAGE"
+            if materialized and fields[1] in VIA_SIDE_R7:
+                fields[18] = "0.500"
+            post_rows.append("\t".join(fields))
+        (reports / "wire_snapshot_post_via_side_stage.tsv").write_text(
+            "\n".join(post_rows) + "\n"
+        )
+
+        contract_header = (
+            "net\tmarker_box\tcanonical_wire\tcanonical_box\tcanonical_pts\t"
+            "source_side_x\tsource_side_y\tstart_x\tstart_y\tend_x\tend_y\t"
+            "length_um\trequested_width_um\tdirection\tsource_q\t"
+            "normalized_via_endpoint_status\t"
+            "canonical_source_side_endpoint_status\t"
+            "met2_split_endpoint_status\taway_from_source_status\t"
+            "contract_status"
+        )
+        contract_rows = [contract_header]
+        for net, values in VIA_SIDE_R7.items():
+            (
+                marker_box,
+                source_x,
+                source_y,
+                start_x,
+                start_y,
+                end_x,
+                direction,
+                source_q,
+                box,
+                point1,
+                point2,
+            ) = values
+            if tamper_via_start and net == "n_9696":
+                start_x = "719.879"
+            contract_rows.append(
+                f"{net}\t{marker_box}\tfixed_{net}\t{box}\t"
+                f"{{{{{point1}}} {{{point2}}}}}\t{source_x}\t{source_y}\t"
+                f"{start_x}\t{start_y}\t{end_x}\t{start_y}\t0.56\t0.28\t"
+                f"{direction}\t{source_q}\tPASS\tPASS\tPASS\tPASS\tPASS"
+            )
+        (reports / "min_area_normalized_via_side_contract.tsv").write_text(
+            "\n".join(contract_rows) + "\n"
+        )
+
+        command_lines = [
+            "LABEL=SPADMIC_OOC_MIN_AREA_LANDING_PATCH_COMMANDS",
+            "POLICY=EXACT_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_ENDPOINT_OPPOSITE_SIDE_STUBS",
+            "TRIAL_REVISION=R7",
+            "PATCH_WIDTH_POLICY=UNIFORM_0.28",
+            "PATCH_WIDTH_UM=0.28",
+            "PATCH_LENGTH_POLICY=FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_NORMALIZED_VIA_SIDE_0.56",
+            "PATCH_DIRECTION_POLICY=FIRST_STAGE_ALL_TOWARD_SOURCE_SECOND_STAGE_FOUR_AWAY_FROM_SOURCE",
+            "VIA_SIDE_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_NORMALIZED_VIA_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE",
+            "PATCH_LENGTH_UM=0.56",
+            "CONTRACT_VALIDATED_COUNT=6",
+        ]
+        for net, values in CONTRACT.items():
+            _, start_x, start_y, end_x, source_q, _ = values
+            prefix = f"PATCH_{net}"
+            command_lines.extend(
+                (
+                    f"{prefix}_START={start_x} {start_y}",
+                    f"{prefix}_END={end_x} {start_y}",
+                    f"{prefix}_LENGTH_UM=0.56",
+                    f"{prefix}_WIDTH_UM=0.28",
+                    f"{prefix}_DIRECTION=TOWARD_SOURCE",
+                    f"{prefix}_SOURCE_Q={source_q}",
+                    f"{prefix}_SET_EDIT_MODE=setEditMode -nets {net} -shape None "
+                    "-force_regular 1 -layer_horizontal MET1 -layer_vertical MET1 "
+                    "-snap_to_track_regular 0 -width_horizontal 0.28 "
+                    "-width_vertical 0.28",
+                    f"{prefix}_APPLIED=YES",
+                )
+            )
+        command_lines.extend(
+            (
+                "BASE_STAGE_STATUS=PASS_EXACT_FOUR_0P1777_SURVIVORS",
+                "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT=4",
+            )
+        )
+        for net, values in VIA_SIDE_R7.items():
+            _, _, _, start_x, start_y, end_x, direction, source_q, _, _, _ = values
+            prefix = f"VIA_SIDE_{net}"
+            command_lines.extend(
+                (
+                    f"{prefix}_START={start_x} {start_y}",
+                    f"{prefix}_END={end_x} {start_y}",
+                    f"{prefix}_LENGTH_UM=0.56",
+                    f"{prefix}_WIDTH_UM=0.28",
+                    f"{prefix}_DIRECTION={direction}",
+                    f"{prefix}_SOURCE_Q={source_q}",
+                    f"{prefix}_SET_EDIT_MODE=setEditMode -nets {net} -shape None "
+                    "-force_regular 1 -layer_horizontal MET1 -layer_vertical MET1 "
+                    "-snap_to_track_regular 0 -width_horizontal 0.28 "
+                    "-width_vertical 0.28",
+                    f"{prefix}_APPLIED=YES",
+                )
+            )
+        command_lines.extend(
+            (
+                "BASE_PATCH_ATTEMPTED_COUNT=6",
+                "BASE_PATCH_APPLIED_COUNT=6",
+                "VIA_SIDE_PATCH_ATTEMPTED_COUNT=4",
+                "VIA_SIDE_PATCH_APPLIED_COUNT=4",
+                "PATCH_ATTEMPTED_COUNT=10",
+                "PATCH_APPLIED_COUNT=10",
+                "COMMAND_PASS_COUNT=40",
+                "COMMAND_FAIL_COUNT=0",
+            )
+        )
+        (reports / "min_area_landing_patch_commands.rpt").write_text(
+            "\n".join(command_lines) + "\n"
+        )
+
+        status_path = reports / "min_area_landing_patch_trial_status.rpt"
+        status = status_path.read_text()
+        replacements = {
+            f"POLICY={POLICY_R6}": f"POLICY={POLICY_R7}",
+            "TRIAL_REVISION=R6": "TRIAL_REVISION=R7",
+            "PATCH_LENGTH_POLICY=FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_DYNAMIC_0.56": (
+                "PATCH_LENGTH_POLICY=FIRST_STAGE_SIX_0.56_SECOND_STAGE_"
+                "FOUR_NORMALIZED_VIA_SIDE_0.56"
+            ),
+            "PATCH_DIRECTION_POLICY=ALL_TOWARD_SOURCE": (
+                "PATCH_DIRECTION_POLICY=FIRST_STAGE_ALL_TOWARD_SOURCE_"
+                "SECOND_STAGE_FOUR_AWAY_FROM_SOURCE"
+            ),
+            "CHAIN_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_ACTUAL_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE": (
+                "VIA_SIDE_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_NORMALIZED_"
+                "VIA_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE"
+            ),
+            "STEP26_ANALYSIS=": "STEP27_ANALYSIS=",
+            str(trial_step26): str(source),
+            "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED": (
+                "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+            ),
+            "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED": (
+                "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED"
+            ),
+            "CHAIN_ENDPOINT_CONTRACT_STATUS=PASS_EXACT_FOUR_ACTUAL_CANONICAL_ENDPOINTS": (
+                "VIA_SIDE_ENDPOINT_CONTRACT_STATUS="
+                "PASS_EXACT_FOUR_ACTUAL_NORMALIZED_VIA_ENDPOINTS"
+            ),
+            "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT=4": (
+                "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT=4"
+            ),
+            "CHAIN_STAGE_STATUS=APPLIED_EXACT_FOUR": (
+                "VIA_SIDE_STAGE_STATUS=APPLIED_EXACT_FOUR"
+            ),
+            "POST_CHAIN_WIRE_QUERY_PASS_NET_COUNT=6": (
+                "POST_VIA_SIDE_WIRE_QUERY_PASS_NET_COUNT=6"
+            ),
+            "POST_CHAIN_WIRE_ROW_COUNT=6": "POST_VIA_SIDE_WIRE_ROW_COUNT=6",
+            "POST_CHAIN_LOCAL_MET1_ROW_COUNT=6": (
+                "POST_VIA_SIDE_LOCAL_MET1_ROW_COUNT=6"
+            ),
+            "POST_CHAIN_WIRE_ATTRIBUTE_FAIL_COUNT=0": (
+                "POST_VIA_SIDE_WIRE_ATTRIBUTE_FAIL_COUNT=0"
+            ),
+            "CHAIN_PATCH_ATTEMPTED_COUNT=4": (
+                "VIA_SIDE_PATCH_ATTEMPTED_COUNT=4"
+            ),
+            "CHAIN_PATCH_APPLIED_COUNT=4": "VIA_SIDE_PATCH_APPLIED_COUNT=4",
+        }
+        for old, new in replacements.items():
+            status = status.replace(old, new)
+        status_path.write_text(status)
+        return trial_root, source
+
     def run_analyzer(
         self,
         trial_root: Path,
@@ -1054,6 +1322,7 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             "R4": "--step23-analysis",
             "R5": "--step24-analysis",
             "R6": "--step26-analysis",
+            "R7": "--step27-analysis",
         }[revision]
         return subprocess.run(
             [
@@ -1670,6 +1939,97 @@ class AnalyzeTxPacketMinAreaLandingPatchTrialTest(unittest.TestCase):
             self.assertEqual(result.returncode, 8, result.stdout)
             self.assertIn(
                 "r6_chain_contract_n_9696_start_x=719.494 expected=719.495",
+                report.read_text(),
+            )
+
+    def test_r7_validated_normalized_via_side_trial_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_r7_fixture(
+                root, validated=True, materialized=True
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R7")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn(
+                "LABEL=SPADMIC_TX_PACKET_MIN_AREA_NORMALIZED_VIA_SIDE_ANALYSIS",
+                text,
+            )
+            self.assertIn(
+                "TRIAL_PROCESS_RESULT="
+                "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED",
+                text,
+            )
+            self.assertIn(
+                "PATCH_CONTRACT_STATUS="
+                "PASS_EXACT_SIX_BASE_AND_FOUR_NORMALIZED_VIA_ENDPOINTS",
+                text,
+            )
+            self.assertIn("VIA_SIDE_MATERIALIZED_NET_COUNT=4", text)
+            self.assertIn("FINAL_DRC_VIOLATION_COUNT=0", text)
+            self.assertIn(
+                "NEXT_METHOD_DECISION="
+                "INTEGRATE_NORMALIZED_VIA_SIDE_METHOD_IN_FRESH_CANONICAL_REPLAY",
+                text,
+            )
+
+    def test_r7_coherent_nonzero_materialized_result_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_r7_fixture(
+                root, validated=False, materialized=True
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R7")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn(
+                "TRIAL_PROCESS_RESULT="
+                "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED",
+                text,
+            )
+            self.assertIn("METHOD_STATUS=REJECTED_OR_INCOMPLETE", text)
+            self.assertIn("VIA_SIDE_MATERIALIZED_NET_COUNT=4", text)
+            self.assertIn(
+                "NEXT_METHOD_DECISION="
+                "RETIRE_NORMALIZED_VIA_SIDE_WIRE_EDITOR_REVIEW_REGULAR_"
+                "SIGNAL_SHAPE_PRIMITIVE",
+                text,
+            )
+
+    def test_r7_no_local_delta_is_classified_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_r7_fixture(
+                root, validated=False, materialized=False
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R7")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = report.read_text()
+            self.assertIn("VIA_SIDE_NO_LOCAL_DELTA_NET_COUNT=4", text)
+            self.assertIn(
+                "NEXT_METHOD_DECISION="
+                "RETIRE_NORMALIZED_VIA_SIDE_WIRE_EDITOR_NO_LOCAL_DELTA",
+                text,
+            )
+
+    def test_r7_normalized_via_start_drift_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trial_root, source = self.write_r7_fixture(
+                root,
+                validated=True,
+                materialized=True,
+                tamper_via_start=True,
+            )
+            report = root / "analysis.rpt"
+            result = self.run_analyzer(trial_root, source, report, revision="R7")
+            self.assertEqual(result.returncode, 8, result.stdout)
+            self.assertIn(
+                "r7_via_side_contract_n_9696_start_x=719.879 "
+                "expected=719.880",
                 report.read_text(),
             )
 

@@ -37,6 +37,9 @@ EXPECTED_POLICY_R5 = (
 EXPECTED_POLICY_R6 = (
     "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_CHAINED_ENDPOINT_STUBS"
 )
+EXPECTED_POLICY_R7 = (
+    "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_SIDE_STUBS"
+)
 EXPECTED_CONTRACT = {
     "n_9696": ("719.69 158.62 720.07 158.90", "719.88", "158.76", "719.32", "g14627__2802/Q", "716.61 159.02"),
     "n_9693": ("210.09 201.74 210.47 202.02", "210.28", "201.88", "209.72", "g14630__8246/Q", "207.01 201.62"),
@@ -74,11 +77,59 @@ VALIDATED_RESULT_R5 = "WIRE_MATERIALIZATION_REPLAY_DRC_ZERO_VALIDATED"
 NO_IMPROVEMENT_RESULT_R5 = "WIRE_MATERIALIZATION_REPLAY_NO_IMPROVEMENT"
 VALIDATED_RESULT_R6 = "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
 NO_IMPROVEMENT_RESULT_R6 = "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+VALIDATED_RESULT_R7 = (
+    "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED"
+)
+NO_IMPROVEMENT_RESULT_R7 = (
+    "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT"
+)
 R6_CHAIN_CONTRACT = {
     "n_9696": ("719.69 158.62 720.07 158.90", "719.495", "158.795", "718.935", "TOWARD_SOURCE_WEST", "g14627__2802/Q"),
     "n_9693": ("210.09 201.74 210.47 202.02", "209.895", "201.845", "209.335", "TOWARD_SOURCE_WEST", "g14630__8246/Q"),
     "n_9697": ("663.13 192.78 663.51 193.06", "662.935", "192.885", "662.375", "TOWARD_SOURCE_WEST", "g14626__1617/Q"),
     "n_9677": ("1666.09 201.74 1666.47 202.02", "1666.665", "201.845", "1667.225", "TOWARD_SOURCE_EAST", "g14646__2398/Q"),
+}
+R7_VIA_SIDE_CONTRACT = {
+    "n_9696": (
+        "719.69 158.62 720.07 158.90",
+        "719.495",
+        "158.795",
+        "719.880",
+        "158.795",
+        "720.440",
+        "AWAY_FROM_SOURCE_EAST",
+        "g14627__2802/Q",
+    ),
+    "n_9693": (
+        "210.09 201.74 210.47 202.02",
+        "209.895",
+        "201.845",
+        "210.280",
+        "201.845",
+        "210.840",
+        "AWAY_FROM_SOURCE_EAST",
+        "g14630__8246/Q",
+    ),
+    "n_9697": (
+        "663.13 192.78 663.51 193.06",
+        "662.935",
+        "192.885",
+        "663.320",
+        "192.885",
+        "663.880",
+        "AWAY_FROM_SOURCE_EAST",
+        "g14626__1617/Q",
+    ),
+    "n_9677": (
+        "1666.09 201.74 1666.47 202.02",
+        "1666.665",
+        "201.845",
+        "1666.280",
+        "201.845",
+        "1665.720",
+        "AWAY_FROM_SOURCE_WEST",
+        "g14646__2398/Q",
+    ),
 }
 
 WIRE_SIGNATURE_FIELDS = (
@@ -251,14 +302,37 @@ def classify(
     report: Path,
     trial_revision: str = "R1",
 ) -> dict[str, str]:
-    if trial_revision not in {"R1", "R2", "R3", "R4", "R5", "R6"}:
+    if trial_revision not in {"R1", "R2", "R3", "R4", "R5", "R6", "R7"}:
         raise ValueError(f"unsupported trial revision: {trial_revision}")
     is_r2 = trial_revision == "R2"
     is_r3 = trial_revision == "R3"
     is_r4 = trial_revision == "R4"
     is_r5 = trial_revision == "R5"
     is_r6 = trial_revision == "R6"
-    if is_r6:
+    is_r7 = trial_revision == "R7"
+    is_multistage = is_r6 or is_r7
+    if is_r7:
+        source_key = "STEP27_ANALYSIS"
+        expected_policy = EXPECTED_POLICY_R7
+        expected_contract = EXPECTED_CONTRACT
+        command_policy = (
+            "EXACT_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_ENDPOINT_"
+            "OPPOSITE_SIDE_STUBS"
+        )
+        patch_length_policy = (
+            "FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_NORMALIZED_VIA_SIDE_0.56"
+        )
+        patch_direction_policy = (
+            "FIRST_STAGE_ALL_TOWARD_SOURCE_SECOND_STAGE_FOUR_AWAY_FROM_SOURCE"
+        )
+        patch_width_policy = "UNIFORM_0.28"
+        patch_width_um = "0.28"
+        validated_result_name = VALIDATED_RESULT_R7
+        no_improvement_result_name = NO_IMPROVEMENT_RESULT_R7
+        changed_result_name = (
+            "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED"
+        )
+    elif is_r6:
         source_key = "STEP26_ANALYSIS"
         expected_policy = EXPECTED_POLICY_R6
         expected_contract = EXPECTED_CONTRACT
@@ -358,6 +432,10 @@ def classify(
     base_wire_snapshot_path = reports / "wire_snapshot_after_base_stage.tsv"
     chain_contract_path = reports / "min_area_chained_endpoint_contract.tsv"
     post_chain_wire_snapshot_path = reports / "wire_snapshot_post_chain_stage.tsv"
+    via_side_contract_path = reports / "min_area_normalized_via_side_contract.tsv"
+    post_via_side_wire_snapshot_path = (
+        reports / "wire_snapshot_post_via_side_stage.tsv"
+    )
     required = [
         context_path,
         status_path,
@@ -375,7 +453,7 @@ def classify(
     ]
     if is_r5:
         required.extend((pre_wire_snapshot_path, post_wire_snapshot_path))
-    if is_r6:
+    if is_multistage:
         required.extend(
             (
                 base_drc_path,
@@ -383,10 +461,12 @@ def classify(
                 base_regular_path,
                 base_special_path,
                 base_wire_snapshot_path,
-                chain_contract_path,
-                post_chain_wire_snapshot_path,
             )
         )
+    if is_r6:
+        required.extend((chain_contract_path, post_chain_wire_snapshot_path))
+    if is_r7:
+        required.extend((via_side_contract_path, post_via_side_wire_snapshot_path))
 
     errors: list[str] = []
     for path in required:
@@ -402,14 +482,89 @@ def classify(
     post_markers = read_tsv(post_markers_path)
     pre_wire_snapshot = read_tsv(pre_wire_snapshot_path) if is_r5 else []
     post_wire_snapshot = read_tsv(post_wire_snapshot_path) if is_r5 else []
-    base_markers = read_tsv(base_markers_path) if is_r6 else []
-    base_wire_snapshot = read_tsv(base_wire_snapshot_path) if is_r6 else []
+    base_markers = read_tsv(base_markers_path) if is_multistage else []
+    base_wire_snapshot = read_tsv(base_wire_snapshot_path) if is_multistage else []
     chain_contract = read_tsv(chain_contract_path) if is_r6 else []
     post_chain_wire_snapshot = (
         read_tsv(post_chain_wire_snapshot_path) if is_r6 else []
     )
+    via_side_contract = read_tsv(via_side_contract_path) if is_r7 else []
+    post_via_side_wire_snapshot = (
+        read_tsv(post_via_side_wire_snapshot_path) if is_r7 else []
+    )
 
-    if is_r6:
+    if is_r7:
+        expected_source = {
+            "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_CHAINED_LANDING_ANALYSIS",
+            "POLICY": (
+                "ISOLATED_IN_MEMORY_SIX_BASE_THEN_FOUR_CHAINED_ENDPOINT_"
+                "CLASSIFICATION"
+            ),
+            "STATUS": "PASS",
+            "RESULT": "MIN_AREA_CHAINED_LANDING_TRIAL_CLASSIFIED",
+            "TRIAL_REVISION": "R6",
+            "TRIAL_PROCESS_STATUS": "FAIL",
+            "TRIAL_PROCESS_RESULT": (
+                "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED"
+            ),
+            "METHOD_STATUS": "REJECTED_OR_INCOMPLETE",
+            "PATCH_CONTRACT_STATUS": (
+                "PASS_EXACT_SIX_BASE_AND_FOUR_CHAIN_ENDPOINTS"
+            ),
+            "PATCH_WIDTH_POLICY": "UNIFORM_0.28",
+            "PATCH_WIDTH_UM": "0.28",
+            "PATCH_LENGTH_POLICY": (
+                "FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_DYNAMIC_0.56"
+            ),
+            "PATCH_LENGTH_UM": "0.56",
+            "PATCH_DIRECTION_POLICY": "ALL_TOWARD_SOURCE",
+            "PATCH_ATTEMPTED_COUNT": "10",
+            "PATCH_APPLIED_COUNT": "10",
+            "COMMAND_PASS_COUNT": "40",
+            "COMMAND_FAIL_COUNT": "0",
+            "PRE_DRC_VIOLATION_COUNT": "6",
+            "FINAL_DRC_VIOLATION_COUNT": "4",
+            "PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "PRE_EXCLUDED_ANTENNA_MARKER_COUNT": "21",
+            "FINAL_EXCLUDED_ANTENNA_MARKER_COUNT": "21",
+            "PRE_MARKER_DATABASE_TOTAL": "27",
+            "FINAL_MARKER_DATABASE_TOTAL": "25",
+            "REMOVED_MARKER_SIGNATURE_COUNT": "6",
+            "ADDED_MARKER_SIGNATURE_COUNT": "4",
+            "FINAL_MIN_AREA_NETS": "n_9677 n_9693 n_9696 n_9697",
+            "SAVE_DESIGN": "NOT_RUN",
+            "EXPORT": "NOT_RUN",
+            "IMMUTABLE_PVS_STAGING": "NOT_RUN",
+            "PVS_DECISION": "DO_NOT_RUN",
+            "CANONICAL_RERUN_DECISION": "DO_NOT_RUN_FROM_THIS_STEP",
+            "NEXT_METHOD_DECISION": (
+                "STOP_AND_REVIEW_CHAINED_ENDPOINT_EVIDENCE_BEFORE_NEW_METHOD"
+            ),
+            "ERROR_COUNT": "0",
+            "CHAIN_CAPTURE_STATUS": "COMPLETE",
+            "BASE_STAGE_STATUS": "PASS_EXACT_FOUR_0P1777_SURVIVORS",
+            "BASE_DRC_VIOLATION_COUNT": "4",
+            "BASE_DRC_MARKER_COUNT": "4",
+            "BASE_MIN_AREA_NETS": "n_9677 n_9693 n_9696 n_9697",
+            "BASE_REGULAR_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "BASE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": "0",
+            "BASE_EXCLUDED_ANTENNA_MARKER_COUNT": "21",
+            "BASE_MARKER_DATABASE_TOTAL": "25",
+            "BASE_CANONICAL_FIXED_STUB_NET_COUNT": "6",
+            "CHAIN_ENDPOINT_CONTRACT_STATUS": (
+                "PASS_EXACT_FOUR_ACTUAL_CANONICAL_ENDPOINTS"
+            ),
+            "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT": "4",
+            "CHAIN_STAGE_STATUS": "APPLIED_EXACT_FOUR",
+            "BASE_PATCH_ATTEMPTED_COUNT": "6",
+            "BASE_PATCH_APPLIED_COUNT": "6",
+            "CHAIN_PATCH_ATTEMPTED_COUNT": "4",
+            "CHAIN_PATCH_APPLIED_COUNT": "4",
+        }
+    elif is_r6:
         expected_source = {
             "LABEL": "SPADMIC_TX_PACKET_MIN_AREA_LANDING_MATERIALIZATION_ANALYSIS",
             "POLICY": "ISOLATED_IN_MEMORY_R4_REPLAY_WIRE_MATERIALIZATION_CLASSIFICATION",
@@ -706,9 +861,9 @@ def classify(
         "PRE_MIN_AREA_NETS": " ".join(EXPECTED_NETS),
         "CONTRACT_VALIDATED_COUNT": "6",
     }
-    if is_r3 or is_r4 or is_r5 or is_r6:
+    if is_r3 or is_r4 or is_r5 or is_multistage:
         expected_status["PATCH_DIRECTION_POLICY"] = patch_direction_policy
-    if is_r4 or is_r5 or is_r6:
+    if is_r4 or is_r5 or is_multistage:
         expected_status.update(
             {
                 "PATCH_WIDTH_POLICY": patch_width_policy,
@@ -736,6 +891,22 @@ def classify(
                     "PASS_EXACT_FOUR_ACTUAL_CANONICAL_ENDPOINTS"
                 ),
                 "CHAIN_STAGE_STATUS": "APPLIED_EXACT_FOUR",
+                "BASE_MIN_AREA_NETS": "n_9677 n_9693 n_9696 n_9697",
+            }
+        )
+    if is_r7:
+        expected_status.update(
+            {
+                "VIA_SIDE_CAPTURE_POLICY": (
+                    "EXACT_FOUR_SURVIVOR_NORMALIZED_VIA_ENDPOINTS_AFTER_"
+                    "VALIDATED_BASE_STAGE"
+                ),
+                "BASE_STAGE_STATUS": "PASS_EXACT_FOUR_0P1777_SURVIVORS",
+                "BASE_MARKER_VALUE_STATUS": "PASS",
+                "VIA_SIDE_ENDPOINT_CONTRACT_STATUS": (
+                    "PASS_EXACT_FOUR_ACTUAL_NORMALIZED_VIA_ENDPOINTS"
+                ),
+                "VIA_SIDE_STAGE_STATUS": "APPLIED_EXACT_FOUR",
                 "BASE_MIN_AREA_NETS": "n_9677 n_9693 n_9696 n_9697",
             }
         )
@@ -785,7 +956,7 @@ def classify(
             "WIRE_ATTRIBUTE_FAIL_COUNT",
         ):
             counts[key] = integer(status, key, errors)
-    if is_r6:
+    if is_multistage:
         for key in (
             "BASE_DRC_VIOLATION_COUNT",
             "BASE_DRC_MARKER_COUNT",
@@ -798,15 +969,30 @@ def classify(
             "BASE_WIRE_ROW_COUNT",
             "BASE_LOCAL_MET1_ROW_COUNT",
             "BASE_WIRE_ATTRIBUTE_FAIL_COUNT",
+            "BASE_PATCH_ATTEMPTED_COUNT",
+            "BASE_PATCH_APPLIED_COUNT",
+        ):
+            counts[key] = integer(status, key, errors)
+    if is_r6:
+        for key in (
             "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT",
             "POST_CHAIN_WIRE_QUERY_PASS_NET_COUNT",
             "POST_CHAIN_WIRE_ROW_COUNT",
             "POST_CHAIN_LOCAL_MET1_ROW_COUNT",
             "POST_CHAIN_WIRE_ATTRIBUTE_FAIL_COUNT",
-            "BASE_PATCH_ATTEMPTED_COUNT",
-            "BASE_PATCH_APPLIED_COUNT",
             "CHAIN_PATCH_ATTEMPTED_COUNT",
             "CHAIN_PATCH_APPLIED_COUNT",
+        ):
+            counts[key] = integer(status, key, errors)
+    if is_r7:
+        for key in (
+            "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT",
+            "POST_VIA_SIDE_WIRE_QUERY_PASS_NET_COUNT",
+            "POST_VIA_SIDE_WIRE_ROW_COUNT",
+            "POST_VIA_SIDE_LOCAL_MET1_ROW_COUNT",
+            "POST_VIA_SIDE_WIRE_ATTRIBUTE_FAIL_COUNT",
+            "VIA_SIDE_PATCH_ATTEMPTED_COUNT",
+            "VIA_SIDE_PATCH_APPLIED_COUNT",
         ):
             counts[key] = integer(status, key, errors)
     expected_baseline = {
@@ -831,7 +1017,7 @@ def classify(
         "PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": report_violation_count(pre_special_path),
         "FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT": report_violation_count(post_special_path),
     }
-    if is_r6:
+    if is_multistage:
         report_counts.update(
             {
                 "BASE_DRC_VIOLATION_COUNT": report_violation_count(base_drc_path),
@@ -862,7 +1048,7 @@ def classify(
                 f"unexpected_pre_marker_class={net}:{row.get('layer')}:{row.get('type')}"
             )
 
-    if is_r6:
+    if is_multistage:
         expected_base_counts = {
             "BASE_DRC_VIOLATION_COUNT": 4,
             "BASE_DRC_MARKER_COUNT": 4,
@@ -874,34 +1060,60 @@ def classify(
             "BASE_WIRE_QUERY_PASS_NET_COUNT": 6,
             "BASE_LOCAL_MET1_ROW_COUNT": 6,
             "BASE_WIRE_ATTRIBUTE_FAIL_COUNT": 0,
-            "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT": 4,
-            "POST_CHAIN_WIRE_QUERY_PASS_NET_COUNT": 6,
-            "POST_CHAIN_WIRE_ATTRIBUTE_FAIL_COUNT": 0,
             "BASE_PATCH_ATTEMPTED_COUNT": 6,
             "BASE_PATCH_APPLIED_COUNT": 6,
-            "CHAIN_PATCH_ATTEMPTED_COUNT": 4,
-            "CHAIN_PATCH_APPLIED_COUNT": 4,
         }
+        if is_r6:
+            expected_base_counts.update(
+                {
+                    "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT": 4,
+                    "POST_CHAIN_WIRE_QUERY_PASS_NET_COUNT": 6,
+                    "POST_CHAIN_WIRE_ATTRIBUTE_FAIL_COUNT": 0,
+                    "CHAIN_PATCH_ATTEMPTED_COUNT": 4,
+                    "CHAIN_PATCH_APPLIED_COUNT": 4,
+                }
+            )
+        else:
+            expected_base_counts.update(
+                {
+                    "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT": 4,
+                    "POST_VIA_SIDE_WIRE_QUERY_PASS_NET_COUNT": 6,
+                    "POST_VIA_SIDE_WIRE_ATTRIBUTE_FAIL_COUNT": 0,
+                    "VIA_SIDE_PATCH_ATTEMPTED_COUNT": 4,
+                    "VIA_SIDE_PATCH_APPLIED_COUNT": 4,
+                }
+            )
         for key, expected in expected_base_counts.items():
             if counts.get(key) != expected:
-                errors.append(f"r6_{key}={counts.get(key)} expected={expected}")
-        expected_base_nets = tuple(sorted(R6_CHAIN_CONTRACT))
+                errors.append(
+                    f"{trial_revision.lower()}_{key}={counts.get(key)} "
+                    f"expected={expected}"
+                )
+        expected_base_nets = tuple(
+            sorted(R6_CHAIN_CONTRACT if is_r6 else R7_VIA_SIDE_CONTRACT)
+        )
         base_nets = tuple(sorted(marker_net(row) for row in base_markers))
         if len(base_markers) != 4 or base_nets != expected_base_nets:
             errors.append(
-                f"r6_base_marker_rows={len(base_markers)} nets={base_nets} "
+                f"{trial_revision.lower()}_base_marker_rows={len(base_markers)} "
+                f"nets={base_nets} "
                 f"expected={expected_base_nets}"
             )
         for row in base_markers:
             net = marker_net(row)
             if not is_min_area_marker(row):
-                errors.append(f"r6_base_marker_class={net}")
+                errors.append(
+                    f"{trial_revision.lower()}_base_marker_class={net}"
+                )
             if not re.search(
                 r"Actual:\s+0[.]17770000\s+Required:\s+0[.]20200000",
                 row.get("message", ""),
                 re.IGNORECASE,
             ):
-                errors.append(f"r6_base_marker_value={net}:{row.get('message', '')}")
+                errors.append(
+                    f"{trial_revision.lower()}_base_marker_value="
+                    f"{net}:{row.get('message', '')}"
+                )
 
     contract_by_net = {row.get("net", ""): row for row in contract}
     if len(contract) != 6 or tuple(sorted(contract_by_net)) != EXPECTED_NETS:
@@ -934,7 +1146,7 @@ def classify(
             "inside_source_inst_status": "PASS",
             "contract_status": "PASS",
         }
-        if is_r3 or is_r4 or is_r5 or is_r6:
+        if is_r3 or is_r4 or is_r5 or is_multistage:
             expected_fields["direction"] = (
                 "AWAY_FROM_SOURCE"
                 if is_r3 and net in R3_AWAY_NETS
@@ -955,9 +1167,9 @@ def classify(
         "PATCH_LENGTH_UM": "MIXED_0.56_0.84" if is_r2 or is_r3 else "0.56",
         "CONTRACT_VALIDATED_COUNT": "6",
     }
-    if is_r3 or is_r4 or is_r5 or is_r6:
+    if is_r3 or is_r4 or is_r5 or is_multistage:
         expected_commands["PATCH_DIRECTION_POLICY"] = patch_direction_policy
-    if is_r4 or is_r5 or is_r6:
+    if is_r4 or is_r5 or is_multistage:
         expected_commands["PATCH_WIDTH_POLICY"] = patch_width_policy
     if is_r5:
         expected_commands["MATERIALIZATION_CAPTURE_POLICY"] = (
@@ -975,6 +1187,21 @@ def classify(
                 "BASE_PATCH_APPLIED_COUNT": "6",
                 "CHAIN_PATCH_ATTEMPTED_COUNT": "4",
                 "CHAIN_PATCH_APPLIED_COUNT": "4",
+            }
+        )
+    if is_r7:
+        expected_commands.update(
+            {
+                "VIA_SIDE_CAPTURE_POLICY": (
+                    "EXACT_FOUR_SURVIVOR_NORMALIZED_VIA_ENDPOINTS_AFTER_"
+                    "VALIDATED_BASE_STAGE"
+                ),
+                "BASE_STAGE_STATUS": "PASS_EXACT_FOUR_0P1777_SURVIVORS",
+                "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT": "4",
+                "BASE_PATCH_ATTEMPTED_COUNT": "6",
+                "BASE_PATCH_APPLIED_COUNT": "6",
+                "VIA_SIDE_PATCH_ATTEMPTED_COUNT": "4",
+                "VIA_SIDE_PATCH_APPLIED_COUNT": "4",
             }
         )
     for key, expected in expected_commands.items():
@@ -996,6 +1223,16 @@ def classify(
                 "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT",
             )
         )
+    if is_r7:
+        command_status_keys.extend(
+            (
+                "BASE_PATCH_ATTEMPTED_COUNT",
+                "BASE_PATCH_APPLIED_COUNT",
+                "VIA_SIDE_PATCH_ATTEMPTED_COUNT",
+                "VIA_SIDE_PATCH_APPLIED_COUNT",
+                "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT",
+            )
+        )
     for key in command_status_keys:
         if commands.get(key) != status.get(key):
             errors.append(f"commands_status_mismatch_{key}={commands.get(key)}:{status.get(key)}")
@@ -1005,7 +1242,9 @@ def classify(
     patch_attempted = counts.get("PATCH_ATTEMPTED_COUNT")
     patch_applied = counts.get("PATCH_APPLIED_COUNT")
     if command_fail_count == 0:
-        expected_success_tuple = (40, 10, 10) if is_r6 else (24, 6, 6)
+        expected_success_tuple = (
+            (40, 10, 10) if is_multistage else (24, 6, 6)
+        )
         if (command_pass_count, patch_attempted, patch_applied) != expected_success_tuple:
             errors.append(
                 "unexpected_success_command_tuple="
@@ -1032,9 +1271,9 @@ def classify(
                 f"{prefix}_SOURCE_Q": expected[4],
                 f"{prefix}_APPLIED": "YES",
             }
-            if is_r4 or is_r5 or is_r6:
+            if is_r4 or is_r5 or is_multistage:
                 expected_commands_for_net[f"{prefix}_WIDTH_UM"] = expected_width
-            if is_r3 or is_r4 or is_r5 or is_r6:
+            if is_r3 or is_r4 or is_r5 or is_multistage:
                 expected_commands_for_net[f"{prefix}_DIRECTION"] = (
                     "AWAY_FROM_SOURCE"
                     if is_r3 and net in R3_AWAY_NETS
@@ -1092,8 +1331,43 @@ def classify(
                     )
                 ):
                     errors.append(f"commands_{prefix}_SET_EDIT_MODE_contract_mismatch")
+        if is_r7:
+            for net, expected in R7_VIA_SIDE_CONTRACT.items():
+                prefix = f"VIA_SIDE_{net}"
+                expected_via_side_commands = {
+                    f"{prefix}_START": f"{expected[3]} {expected[4]}",
+                    f"{prefix}_END": f"{expected[5]} {expected[4]}",
+                    f"{prefix}_LENGTH_UM": "0.56",
+                    f"{prefix}_WIDTH_UM": "0.28",
+                    f"{prefix}_DIRECTION": expected[6],
+                    f"{prefix}_SOURCE_Q": expected[7],
+                    f"{prefix}_APPLIED": "YES",
+                }
+                for key, value in expected_via_side_commands.items():
+                    if commands.get(key) != value:
+                        errors.append(
+                            f"commands_{key}={commands.get(key, 'MISSING')} "
+                            f"expected={value}"
+                        )
+                setup = commands.get(f"{prefix}_SET_EDIT_MODE", "")
+                if not all(
+                    token in setup
+                    for token in (
+                        "setEditMode",
+                        f"-nets {net}",
+                        "-force_regular 1",
+                        "-layer_horizontal MET1",
+                        "-layer_vertical MET1",
+                        "-snap_to_track_regular 0",
+                        "-width_horizontal 0.28",
+                        "-width_vertical 0.28",
+                    )
+                ):
+                    errors.append(
+                        f"commands_{prefix}_SET_EDIT_MODE_contract_mismatch"
+                    )
     elif command_fail_count is not None:
-        maximum_attempts = 10 if is_r6 else 6
+        maximum_attempts = 10 if is_multistage else 6
         if (
             command_fail_count < 1
             or patch_attempted is None
@@ -1108,7 +1382,28 @@ def classify(
     ) != (6, 6, 24, 0):
         errors.append("r5_replay_command_tuple_not_exact_6_6_24_0")
 
-    if is_r6:
+    via_side_materialized_net_count = 0
+    via_side_no_local_delta_net_count = 0
+    via_side_control_stability_status = "NOT_APPLICABLE"
+    via_side_materialization_summary: list[dict[str, str]] = []
+    if is_multistage:
+        post_stage_phase = (
+            "AFTER_CHAIN_STAGE" if is_r6 else "AFTER_VIA_SIDE_STAGE"
+        )
+        post_stage_rows = (
+            post_chain_wire_snapshot if is_r6 else post_via_side_wire_snapshot
+        )
+        post_stage_row_count_key = (
+            "POST_CHAIN_WIRE_ROW_COUNT"
+            if is_r6
+            else "POST_VIA_SIDE_WIRE_ROW_COUNT"
+        )
+        post_stage_local_count_key = (
+            "POST_CHAIN_LOCAL_MET1_ROW_COUNT"
+            if is_r6
+            else "POST_VIA_SIDE_LOCAL_MET1_ROW_COUNT"
+        )
+        error_prefix = trial_revision.lower()
         for phase, rows, row_count_key, local_count_key in (
             (
                 "AFTER_BASE_STAGE",
@@ -1117,28 +1412,35 @@ def classify(
                 "BASE_LOCAL_MET1_ROW_COUNT",
             ),
             (
-                "AFTER_CHAIN_STAGE",
-                post_chain_wire_snapshot,
-                "POST_CHAIN_WIRE_ROW_COUNT",
-                "POST_CHAIN_LOCAL_MET1_ROW_COUNT",
+                post_stage_phase,
+                post_stage_rows,
+                post_stage_row_count_key,
+                post_stage_local_count_key,
             ),
         ):
             for row in rows:
                 net = row.get("net", "")
                 if row.get("phase") != phase:
                     errors.append(
-                        f"r6_wire_snapshot_phase={row.get('phase', 'MISSING')} expected={phase}"
+                        f"{error_prefix}_wire_snapshot_phase="
+                        f"{row.get('phase', 'MISSING')} expected={phase}"
                     )
                 if net not in EXPECTED_CONTRACT:
-                    errors.append(f"r6_wire_snapshot_unexpected_net={net or 'MISSING'}")
+                    errors.append(
+                        f"{error_prefix}_wire_snapshot_unexpected_net="
+                        f"{net or 'MISSING'}"
+                    )
                     continue
                 if not boxes_match(
                     row.get("marker_box", ""), EXPECTED_CONTRACT[net][0]
                 ):
-                    errors.append(f"r6_wire_snapshot_{phase}_{net}_marker_box_mismatch")
+                    errors.append(
+                        f"{error_prefix}_wire_snapshot_{phase}_{net}_"
+                        "marker_box_mismatch"
+                    )
                 if row.get("requested_width_um") != "0.28":
                     errors.append(
-                        f"r6_wire_snapshot_{phase}_{net}_requested_width="
+                        f"{error_prefix}_wire_snapshot_{phase}_{net}_requested_width="
                         f"{row.get('requested_width_um', 'MISSING')} expected=0.28"
                     )
                 for field in (
@@ -1152,13 +1454,14 @@ def classify(
                 ):
                     if row.get(field) != "PASS":
                         errors.append(
-                            f"r6_wire_snapshot_{phase}_{net}_{field}="
+                            f"{error_prefix}_wire_snapshot_{phase}_{net}_{field}="
                             f"{row.get(field, 'MISSING')} expected=PASS"
                         )
             snapshot_nets = {row.get("net", "") for row in rows}
             if snapshot_nets != set(EXPECTED_NETS):
                 errors.append(
-                    f"r6_wire_snapshot_{phase}_nets={sorted(snapshot_nets)} "
+                    f"{error_prefix}_wire_snapshot_{phase}_nets="
+                    f"{sorted(snapshot_nets)} "
                     f"expected={list(EXPECTED_NETS)}"
                 )
             local_met1_count = sum(
@@ -1168,12 +1471,13 @@ def classify(
             )
             if counts.get(row_count_key) != len(rows):
                 errors.append(
-                    f"r6_wire_snapshot_{row_count_key}={len(rows)} "
+                    f"{error_prefix}_wire_snapshot_{row_count_key}={len(rows)} "
                     f"status={counts.get(row_count_key)}"
                 )
             if counts.get(local_count_key) != local_met1_count:
                 errors.append(
-                    f"r6_wire_snapshot_{local_count_key}={local_met1_count} "
+                    f"{error_prefix}_wire_snapshot_{local_count_key}="
+                    f"{local_met1_count} "
                     f"status={counts.get(local_count_key)}"
                 )
 
@@ -1188,9 +1492,11 @@ def classify(
                 base_local_stubs[0] if base_local_stubs else tuple("" for _ in WIRE_SIGNATURE_FIELDS)
             ):
                 errors.append(
-                    f"r6_base_canonical_stub_{net}=count_{len(base_local_stubs)}"
+                    f"{error_prefix}_base_canonical_stub_{net}="
+                    f"count_{len(base_local_stubs)}"
                 )
 
+    if is_r6:
         chain_contract_by_net = {
             row.get("net", ""): row for row in chain_contract
         }
@@ -1239,6 +1545,131 @@ def classify(
                 for x, y in ((points[0], points[1]), (points[2], points[3]))
             ):
                 errors.append(f"r6_chain_contract_{net}_canonical_endpoint_invalid")
+    if is_r7:
+        via_side_contract_by_net = {
+            row.get("net", ""): row for row in via_side_contract
+        }
+        if len(via_side_contract) != 4 or set(via_side_contract_by_net) != set(
+            R7_VIA_SIDE_CONTRACT
+        ):
+            errors.append(
+                f"r7_via_side_contract_rows={len(via_side_contract)} "
+                f"nets={tuple(sorted(via_side_contract_by_net))}"
+            )
+        for net, expected in R7_VIA_SIDE_CONTRACT.items():
+            row = via_side_contract_by_net.get(net, {})
+            expected_fields = {
+                "source_side_x": expected[1],
+                "source_side_y": expected[2],
+                "start_x": expected[3],
+                "start_y": expected[4],
+                "end_x": expected[5],
+                "end_y": expected[4],
+                "length_um": "0.56",
+                "requested_width_um": "0.28",
+                "direction": expected[6],
+                "source_q": expected[7],
+                "normalized_via_endpoint_status": "PASS",
+                "canonical_source_side_endpoint_status": "PASS",
+                "met2_split_endpoint_status": "PASS",
+                "away_from_source_status": "PASS",
+                "contract_status": "PASS",
+            }
+            if not boxes_match(row.get("marker_box", ""), expected[0]):
+                errors.append(
+                    f"r7_via_side_contract_{net}_marker_box_mismatch"
+                )
+            for key, value in expected_fields.items():
+                if row.get(key) != value:
+                    errors.append(
+                        f"r7_via_side_contract_{net}_{key}="
+                        f"{row.get(key, 'MISSING')} expected={value}"
+                    )
+            if row.get("canonical_wire", "") in {"", "NONE", "UNKNOWN", "0x0"}:
+                errors.append(
+                    f"r7_via_side_contract_{net}_canonical_wire_invalid"
+                )
+            canonical_box = numeric_box(row.get("canonical_box", ""))
+            if not canonical_box or (
+                abs(abs(canonical_box[2] - canonical_box[0]) - 0.50) > 0.001
+                or abs(abs(canonical_box[3] - canonical_box[1]) - 0.23) > 0.001
+            ):
+                errors.append(
+                    f"r7_via_side_contract_{net}_canonical_box_invalid"
+                )
+            points = numeric_box(row.get("canonical_pts", ""))
+            required_points = (
+                (float(expected[1]), float(expected[2])),
+                (float(expected[3]), float(expected[4])),
+            )
+            if not points or any(
+                not any(
+                    abs(x - required_x) <= 0.001
+                    and abs(y - required_y) <= 0.001
+                    for x, y in (
+                        (points[0], points[1]),
+                        (points[2], points[3]),
+                    )
+                )
+                for required_x, required_y in required_points
+            ):
+                errors.append(
+                    f"r7_via_side_contract_{net}_canonical_endpoints_invalid"
+                )
+
+        survivor_nets = set(R7_VIA_SIDE_CONTRACT)
+        controls_stable = True
+        for net in EXPECTED_NETS:
+            base_signatures = Counter(
+                wire_signature(row)
+                for row in base_wire_snapshot
+                if row.get("net") == net
+                and is_local_met1_wire_signature(wire_signature(row))
+            )
+            post_signatures = Counter(
+                wire_signature(row)
+                for row in post_via_side_wire_snapshot
+                if row.get("net") == net
+                and is_local_met1_wire_signature(wire_signature(row))
+            )
+            changed = base_signatures != post_signatures
+            if net in survivor_nets:
+                if changed:
+                    via_side_materialized_net_count += 1
+                    materialization = "LOCAL_MET1_CHANGED"
+                else:
+                    via_side_no_local_delta_net_count += 1
+                    materialization = "NO_LOCAL_MET1_DELTA"
+                via_side_materialization_summary.append(
+                    {
+                        "net": net,
+                        "base_local_met1_signature_count": str(
+                            sum(base_signatures.values())
+                        ),
+                        "post_local_met1_signature_count": str(
+                            sum(post_signatures.values())
+                        ),
+                        "materialization_status": materialization,
+                    }
+                )
+            elif changed:
+                controls_stable = False
+                errors.append(f"r7_unedited_control_local_met1_changed={net}")
+        via_side_control_stability_status = (
+            "PASS_UNEDITED_CONTROLS_STABLE"
+            if controls_stable
+            else "FAIL_UNEDITED_CONTROL_CHANGED"
+        )
+        if (
+            via_side_materialized_net_count
+            + via_side_no_local_delta_net_count
+            != 4
+        ):
+            errors.append(
+                "r7_via_side_materialization_accounting="
+                f"{via_side_materialized_net_count}+"
+                f"{via_side_no_local_delta_net_count} expected=4"
+            )
 
     materialization_status = "NOT_APPLICABLE"
     materialization_summary: list[dict[str, str]] = []
@@ -1530,7 +1961,48 @@ def classify(
     removed = sorted(set(pre_signatures) - set(post_signatures))
     added = sorted(set(post_signatures) - set(pre_signatures))
     validated = expected_process_result == validated_result_name and not errors
-    if is_r6:
+    if is_r7:
+        analysis_label = (
+            "SPADMIC_TX_PACKET_MIN_AREA_NORMALIZED_VIA_SIDE_ANALYSIS"
+        )
+        analysis_policy = (
+            "ISOLATED_IN_MEMORY_SIX_BASE_THEN_FOUR_NORMALIZED_VIA_SIDE_"
+            "CLASSIFICATION"
+        )
+        analysis_result = (
+            "MIN_AREA_NORMALIZED_VIA_SIDE_TRIAL_CLASSIFIED"
+            if not errors
+            else "MIN_AREA_NORMALIZED_VIA_SIDE_CLASSIFICATION_INCOMPLETE"
+        )
+        method_status = (
+            "VALIDATED_ZERO_DRC_ZERO_CONNECTIVITY"
+            if validated
+            else "REJECTED_OR_INCOMPLETE"
+        )
+        contract_status = (
+            "PASS_EXACT_SIX_BASE_AND_FOUR_NORMALIZED_VIA_ENDPOINTS"
+            if counts.get("CONTRACT_VALIDATED_COUNT") == 6
+            and counts.get("VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT") == 4
+            else "FAIL"
+        )
+        if validated:
+            next_method_decision = (
+                "INTEGRATE_NORMALIZED_VIA_SIDE_METHOD_IN_FRESH_CANONICAL_REPLAY"
+            )
+        elif via_side_materialized_net_count == 4:
+            next_method_decision = (
+                "RETIRE_NORMALIZED_VIA_SIDE_WIRE_EDITOR_REVIEW_REGULAR_"
+                "SIGNAL_SHAPE_PRIMITIVE"
+            )
+        elif via_side_no_local_delta_net_count == 4:
+            next_method_decision = (
+                "RETIRE_NORMALIZED_VIA_SIDE_WIRE_EDITOR_NO_LOCAL_DELTA"
+            )
+        else:
+            next_method_decision = (
+                "STOP_AND_REVIEW_NORMALIZED_VIA_SIDE_EVIDENCE_BEFORE_NEW_METHOD"
+            )
+    elif is_r6:
         analysis_label = "SPADMIC_TX_PACKET_MIN_AREA_CHAINED_LANDING_ANALYSIS"
         analysis_policy = (
             "ISOLATED_IN_MEMORY_SIX_BASE_THEN_FOUR_CHAINED_ENDPOINT_CLASSIFICATION"
@@ -1701,12 +2173,9 @@ def classify(
         "NEXT_METHOD_DECISION": next_method_decision,
         "ERROR_COUNT": str(len(errors)),
     }
-    if is_r6:
+    if is_multistage:
         result.update(
             {
-                "CHAIN_CAPTURE_STATUS": (
-                    "COMPLETE" if not errors else "INCOMPLETE"
-                ),
                 "BASE_STAGE_STATUS": status.get("BASE_STAGE_STATUS", "MISSING"),
                 "BASE_DRC_VIOLATION_COUNT": status.get(
                     "BASE_DRC_VIOLATION_COUNT", "UNKNOWN"
@@ -1728,6 +2197,20 @@ def classify(
                     "BASE_MARKER_DATABASE_TOTAL", "UNKNOWN"
                 ),
                 "BASE_CANONICAL_FIXED_STUB_NET_COUNT": "6",
+                "BASE_PATCH_ATTEMPTED_COUNT": status.get(
+                    "BASE_PATCH_ATTEMPTED_COUNT", "UNKNOWN"
+                ),
+                "BASE_PATCH_APPLIED_COUNT": status.get(
+                    "BASE_PATCH_APPLIED_COUNT", "UNKNOWN"
+                ),
+            }
+        )
+    if is_r6:
+        result.update(
+            {
+                "CHAIN_CAPTURE_STATUS": (
+                    "COMPLETE" if not errors else "INCOMPLETE"
+                ),
                 "CHAIN_ENDPOINT_CONTRACT_STATUS": status.get(
                     "CHAIN_ENDPOINT_CONTRACT_STATUS", "MISSING"
                 ),
@@ -1735,17 +2218,43 @@ def classify(
                     "CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT", "UNKNOWN"
                 ),
                 "CHAIN_STAGE_STATUS": status.get("CHAIN_STAGE_STATUS", "MISSING"),
-                "BASE_PATCH_ATTEMPTED_COUNT": status.get(
-                    "BASE_PATCH_ATTEMPTED_COUNT", "UNKNOWN"
-                ),
-                "BASE_PATCH_APPLIED_COUNT": status.get(
-                    "BASE_PATCH_APPLIED_COUNT", "UNKNOWN"
-                ),
                 "CHAIN_PATCH_ATTEMPTED_COUNT": status.get(
                     "CHAIN_PATCH_ATTEMPTED_COUNT", "UNKNOWN"
                 ),
                 "CHAIN_PATCH_APPLIED_COUNT": status.get(
                     "CHAIN_PATCH_APPLIED_COUNT", "UNKNOWN"
+                ),
+            }
+        )
+    if is_r7:
+        result.update(
+            {
+                "VIA_SIDE_CAPTURE_STATUS": (
+                    "COMPLETE" if not errors else "INCOMPLETE"
+                ),
+                "VIA_SIDE_ENDPOINT_CONTRACT_STATUS": status.get(
+                    "VIA_SIDE_ENDPOINT_CONTRACT_STATUS", "MISSING"
+                ),
+                "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT": status.get(
+                    "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT", "UNKNOWN"
+                ),
+                "VIA_SIDE_STAGE_STATUS": status.get(
+                    "VIA_SIDE_STAGE_STATUS", "MISSING"
+                ),
+                "VIA_SIDE_PATCH_ATTEMPTED_COUNT": status.get(
+                    "VIA_SIDE_PATCH_ATTEMPTED_COUNT", "UNKNOWN"
+                ),
+                "VIA_SIDE_PATCH_APPLIED_COUNT": status.get(
+                    "VIA_SIDE_PATCH_APPLIED_COUNT", "UNKNOWN"
+                ),
+                "VIA_SIDE_MATERIALIZED_NET_COUNT": str(
+                    via_side_materialized_net_count
+                ),
+                "VIA_SIDE_NO_LOCAL_DELTA_NET_COUNT": str(
+                    via_side_no_local_delta_net_count
+                ),
+                "VIA_SIDE_CONTROL_STABILITY_STATUS": (
+                    via_side_control_stability_status
                 ),
             }
         )
@@ -1840,17 +2349,34 @@ def classify(
         lines.append("\t".join(contract[0].keys()))
         lines.extend("\t".join(row.values()) for row in contract)
     lines.append("PATCH_CONTRACT_TABLE_END")
-    if is_r6:
+    if is_multistage:
         lines.extend(("", "BASE_MARKER_TABLE_BEGIN"))
         if base_markers:
             lines.append("\t".join(base_markers[0].keys()))
             lines.extend("\t".join(row.values()) for row in base_markers)
         lines.append("BASE_MARKER_TABLE_END")
+    if is_r6:
         lines.extend(("", "CHAIN_ENDPOINT_CONTRACT_TABLE_BEGIN"))
         if chain_contract:
             lines.append("\t".join(chain_contract[0].keys()))
             lines.extend("\t".join(row.values()) for row in chain_contract)
         lines.append("CHAIN_ENDPOINT_CONTRACT_TABLE_END")
+    if is_r7:
+        lines.extend(("", "VIA_SIDE_ENDPOINT_CONTRACT_TABLE_BEGIN"))
+        if via_side_contract:
+            lines.append("\t".join(via_side_contract[0].keys()))
+            lines.extend("\t".join(row.values()) for row in via_side_contract)
+        lines.append("VIA_SIDE_ENDPOINT_CONTRACT_TABLE_END")
+        lines.extend(("", "VIA_SIDE_MATERIALIZATION_SUMMARY_TABLE_BEGIN"))
+        if via_side_materialization_summary:
+            lines.append(
+                "\t".join(via_side_materialization_summary[0].keys())
+            )
+            lines.extend(
+                "\t".join(row.values())
+                for row in via_side_materialization_summary
+            )
+        lines.append("VIA_SIDE_MATERIALIZATION_SUMMARY_TABLE_END")
     lines.extend(("", "FINAL_MARKER_TABLE_BEGIN"))
     if post_markers:
         lines.append("\t".join(post_markers[0].keys()))
@@ -1899,9 +2425,10 @@ def main() -> int:
     parser.add_argument("--step23-analysis", type=Path)
     parser.add_argument("--step24-analysis", type=Path)
     parser.add_argument("--step26-analysis", type=Path)
+    parser.add_argument("--step27-analysis", type=Path)
     parser.add_argument(
         "--trial-revision",
-        choices=("R1", "R2", "R3", "R4", "R5", "R6"),
+        choices=("R1", "R2", "R3", "R4", "R5", "R6", "R7"),
         default="R1",
     )
     parser.add_argument("--report-driver-head", required=True)
@@ -1909,6 +2436,7 @@ def main() -> int:
     args = parser.parse_args()
     source_analysis = (
         args.source_analysis
+        or args.step27_analysis
         or args.step26_analysis
         or args.step24_analysis
         or args.step23_analysis
@@ -1923,12 +2451,13 @@ def main() -> int:
         "R4": args.step23_analysis,
         "R5": args.step24_analysis,
         "R6": args.step26_analysis,
+        "R7": args.step27_analysis,
     }[args.trial_revision]
     if source_analysis is None:
         parser.error("one source analysis argument is required")
     if expected_alias is None and args.source_analysis is None:
         parser.error(
-            f"--{dict(R1='step20', R2='step21', R3='step22', R4='step23', R5='step24', R6='step26')[args.trial_revision]}-analysis "
+            f"--{dict(R1='step20', R2='step21', R3='step22', R4='step23', R5='step24', R6='step26', R7='step27')[args.trial_revision]}-analysis "
             f"is required for {args.trial_revision}"
         )
     result = classify(

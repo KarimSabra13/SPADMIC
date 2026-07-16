@@ -2005,3 +2005,61 @@ STEP27_BASH_SYNTAX=PASS
 STEP27_TCL_INFO_COMPLETE=PASS
 STEP27_DIFF_CHECK=PASS
 ```
+
+### P03-R28 Step 27 Rejection And Normalized-VIA-Side Trial
+
+Status: `STEP28_R7_READY_FOR_ONE_ISOLATED_SERVER_TRIAL`
+
+Step 27 completed at report-driver head
+`94cccda4a1834691f9df80e1b71f6922cf6e225b`. The base stage reproduced the
+known four-marker state exactly, and all four chained endpoint contracts and
+commands passed. The source-side continuation was nevertheless rejected:
+
+```text
+TRIAL_PROCESS_RESULT=CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+METHOD_STATUS=REJECTED_OR_INCOMPLETE
+DRC=6 -> 4
+REGULAR_CONNECTIVITY=0 -> 0
+SPECIAL_CONNECTIVITY=0 -> 0
+RESTORED_ANTENNA=21 -> 21
+MARKER_DATABASE_TOTAL=27 -> 25
+```
+
+The post-chain wire snapshot explains the failure. On `n_9696`, `n_9693`,
+and `n_9697`, the fixed MET1 centerline grew only from `0.385 um` to
+`0.500 um`; the requested `0.56 um` second stage contributed only
+`0.115 um` after normalization. On `n_9677`, the fixed MET1 object remained
+`0.385 um` long. All four DRC markers remained exactly
+`0.1777/0.2020 um^2`. Continuing from the source-side endpoint is therefore
+retired.
+
+Step 28 revision R7 starts from the measured normalized VIA-side endpoint of
+the canonical fixed stub and extends away from the source:
+
+```text
+n_9696   719.880 158.795 ->  720.440 158.795
+n_9693   210.280 201.845 ->  210.840 201.845
+n_9697   663.320 192.885 ->  663.880 192.885
+n_9677  1666.280 201.845 -> 1665.720 201.845
+```
+
+The gate requires both routed MET2 split segments to terminate at each exact
+start point, verifies that the opposite endpoint is the measured source-side
+endpoint, and checks that the edit direction is away from the source
+instance. It also compares the local regular-MET1 signatures before and after
+R7 and requires the two unedited controls, `n_9706` and `n_9721`, to remain
+stable.
+
+Only exact DRC zero, zero regular and special connectivity violations,
+unchanged antenna count `21`, and marker-database total `21` validate the
+method. Any nonzero tuple remains rejected evidence. Step 28 is in-memory
+only; save, export, canonical replay, immutable PVS staging, and PVS remain
+blocked.
+
+```text
+STEP28_LOCAL_TOP_PNR_TESTS=129_PASS_0_FAIL
+STEP28_PY_COMPILE=PASS
+STEP28_BASH_SYNTAX=PASS
+STEP28_TCL_INFO_COMPLETE=PASS
+STEP28_DIFF_CHECK=PASS
+```

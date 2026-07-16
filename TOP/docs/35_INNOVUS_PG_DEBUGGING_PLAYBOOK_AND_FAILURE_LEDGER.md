@@ -1191,3 +1191,67 @@ Rejected actions before the Step 27 result:
   nonzero marker count as closure.
 - Do not launch the canonical rerun or PVS until R6 reaches the exact validated
   tuple and a separate integration gate replays it from a fresh canonical run.
+
+## Step 27 Result - Source-Side Chaining Is Rejected
+
+R6 completed at report-driver head
+`94cccda4a1834691f9df80e1b71f6922cf6e225b`. It reproduced the exact
+four-marker base tuple, validated all four measured source-side endpoints, and
+executed all ten patches and forty Wire Editor commands without command or
+connectivity failure. The physical result did not improve:
+
+```text
+FINAL_DRC_VIOLATION_COUNT=4
+FINAL_MIN_AREA_NETS=n_9677 n_9693 n_9696 n_9697
+FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21
+FINAL_MARKER_DATABASE_TOTAL=25
+```
+
+The source-side second edit was not materialized as another independent
+`0.23 x 0.385 um` fixed stub. Three survivors were merged into fixed MET1
+centerlines of only `0.500 um`; `n_9677` did not change and remained
+`0.385 um`. The four marker signatures and their `0.1777 um^2` actual areas
+were unchanged. Source-side Wire Editor chaining is therefore retired.
+
+## Step 28 Method - Start At The Normalized VIA-Side Endpoint
+
+R7 keeps the validated six-edit base stage but changes the second-stage
+attachment point. It starts at the actual normalized VIA-side endpoint shared
+by the fixed MET1 stub and the two split MET2 segments, then extends away from
+the source. The exact contracts are:
+
+```text
+n_9696   719.880 158.795 ->  720.440 158.795  AWAY_FROM_SOURCE_EAST
+n_9693   210.280 201.845 ->  210.840 201.845  AWAY_FROM_SOURCE_EAST
+n_9697   663.320 192.885 ->  663.880 192.885  AWAY_FROM_SOURCE_EAST
+n_9677  1666.280 201.845 -> 1665.720 201.845  AWAY_FROM_SOURCE_WEST
+```
+
+This trial isolates whether Wire Editor can grow the connected landing
+component through the normalized VIA junction rather than through the
+source-side endpoint that R6 clipped or ignored. The analyzer records an exact
+local regular-MET1 signature delta for each survivor and separately rejects a
+four-net no-op. The unedited closed controls must have identical base and
+post-R7 signatures.
+
+Physical acceptance remains strict:
+
+```text
+TRIAL_PROCESS_RESULT=NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
+FINAL_DRC_VIOLATION_COUNT=0
+FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT=0
+FINAL_EXCLUDED_ANTENNA_MARKER_COUNT=21
+FINAL_MARKER_DATABASE_TOTAL=21
+```
+
+Rejected actions before the Step 28 result:
+
+- Do not repeat source-side chained endpoints.
+- Do not promote a materialized but nonzero R7 tuple to closure.
+- Do not save, export, route-optimize, launch canonical replay, stage PVS
+  inputs, or run PVS from the isolated trial.
+- If R7 changes all four local MET1 components but remains nonzero, retire the
+  Wire Editor path and review a connected regular-signal shape primitive.

@@ -50,6 +50,7 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             "min-area-landing-materialization-probe",
             "min-area-landing-materialization-review",
             "min-area-chained-landing-trial-r6",
+            "min-area-normalized-via-side-trial-r7",
             "package",
             "status",
         ):
@@ -294,6 +295,27 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             driver,
         )
         self.assertIn("27_min_area_chained_landing_trial_r6", driver)
+        self.assertIn(
+            "min-area-normalized-via-side-trial-r7 <expected-report-driver-head>",
+            driver,
+        )
+        self.assertIn("require_step_pass 27_min_area_chained_landing_trial_r6", driver)
+        self.assertIn("SPADMIC_MIN_AREA_LANDING_TRIAL_REVISION=R7", driver)
+        self.assertIn("SOURCE_STEP27_TRIAL_ROOT=", driver)
+        self.assertIn("SOURCE_STEP27_REPORT_DRIVER_HEAD=", driver)
+        self.assertIn(
+            "PASS_EXACT_SIX_BASE_AND_FOUR_NORMALIZED_VIA_ENDPOINTS",
+            driver,
+        )
+        self.assertIn(
+            "MIN_AREA_NORMALIZED_VIA_SIDE_R7_DRC_ZERO_VALIDATED_NO_SAVE_EXPORT_OR_PVS",
+            driver,
+        )
+        self.assertIn(
+            "MIN_AREA_NORMALIZED_VIA_SIDE_R7_CLASSIFIED_NOT_CLOSED_NO_SAVE_EXPORT_OR_PVS",
+            driver,
+        )
+        self.assertIn("28_min_area_normalized_via_side_trial_r7", driver)
         landing_trial = (
             REPO
             / "TOP"
@@ -482,6 +504,10 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
             landing_wrapper,
         )
         self.assertIn(
+            "ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_SIDE_STUBS",
+            landing_wrapper,
+        )
+        self.assertIn(
             "CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED",
             landing_trial,
         )
@@ -495,9 +521,18 @@ class TxPacketCanonicalPhase2DriverTest(unittest.TestCase):
         self.assertIn("719.495 158.795", landing_trial)
         self.assertIn("1666.665 201.845", landing_trial)
         self.assertIn(
-            'set expected_patch_count [expr {$trial_revision eq "R6" ? 10 : 6}]',
+            '$trial_revision eq "R6" || $trial_revision eq "R7" ? 10 : 6',
             landing_trial,
         )
+        self.assertIn(
+            "NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED",
+            landing_trial,
+        )
+        self.assertIn("VIA_SIDE_ENDPOINT_CONTRACT_FAILED", landing_trial)
+        self.assertIn("min_area_normalized_via_side_contract.tsv", landing_trial)
+        self.assertIn("wire_snapshot_post_via_side_stage.tsv", landing_trial)
+        self.assertIn("719.880 158.795 719.495 158.795", landing_trial)
+        self.assertIn("1666.280 201.845 1666.665 201.845", landing_trial)
         for forbidden in ("saveDesign", "defOut", "streamOut", "saveNetlist"):
             self.assertNotIn(forbidden, landing_trial)
 

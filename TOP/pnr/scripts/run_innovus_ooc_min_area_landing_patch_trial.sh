@@ -19,8 +19,10 @@ Step 22, R4 for the mixed-width replay sourced from Step 23, or R5 for the
 Step 24 replay with pre/post wire-object materialization capture. R6 replays
 the uniform first-stage stub, validates the exact four-survivor intermediate
 state, and chains a second stub from each survivor's actual materialized
-endpoint. The default R1 contract remains the uniform 0.56 um Step 21 trial
-sourced from Step 20.
+endpoint. R7 reproduces that intermediate state, starts at each actual
+normalized VIA-side endpoint, and extends away from the source pin. The
+default R1 contract remains the uniform 0.56 um Step 21 trial sourced from
+Step 20.
 USAGE
 }
 
@@ -62,6 +64,10 @@ main() {
     R6)
       analysis_label=STEP26_ANALYSIS
       policy=ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_CHAINED_ENDPOINT_STUBS
+      ;;
+    R7)
+      analysis_label=STEP27_ANALYSIS
+      policy=ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_SIDE_STUBS
       ;;
     *)
       echo "ERROR: unsupported landing-patch trial revision: $revision" >&2

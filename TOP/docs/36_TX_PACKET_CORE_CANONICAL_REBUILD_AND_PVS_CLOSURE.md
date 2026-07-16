@@ -1225,3 +1225,46 @@ If R6 validates, the shortest closure path is:
    exported artifact provenance.
 3. Stage immutable GDS/netlist/map inputs and run PVS DRC and LVS from those
    hashes, not from the isolated R6 process.
+
+## P03 Step 27 Result And Step 28 Normalized-VIA-Side Trial
+
+Step 27 completed at report-driver head
+`94cccda4a1834691f9df80e1b71f6922cf6e225b` and rejected the R6
+source-side chain. The base stage was exact and connectivity stayed clean, but
+the final DRC tuple remained four minimum-area markers with total marker
+database `25`.
+
+The physical database response was asymmetric but uniformly ineffective.
+`n_9696`, `n_9693`, and `n_9697` changed from fixed MET1 centerline length
+`0.385 um` to only `0.500 um`; `n_9677` remained at `0.385 um`. The four
+minimum-area marker signatures and actual area `0.1777 um^2` did not change.
+R6 is immutable rejected evidence and does not authorize canonical replay or
+PVS.
+
+Step 28 revision R7 is the next isolated closure trial. After reproducing the
+same exact base stage, it requires the measured normalized VIA-side endpoint,
+the measured source-side endpoint, and exactly two width-`0.28 um` routed MET2
+segments terminating at the normalized junction. It then issues one
+width-`0.28 um`, length-`0.56 um` regular-MET1 edit away from the source:
+
+```text
+n_9696   719.880 158.795 ->  720.440 158.795
+n_9693   210.280 201.845 ->  210.840 201.845
+n_9697   663.320 192.885 ->  663.880 192.885
+n_9677  1666.280 201.845 -> 1665.720 201.845
+```
+
+The analyzer distinguishes three outcomes:
+
+1. Exact zero DRC and zero connectivity: authorize design of a separate fresh
+   canonical integration replay.
+2. Local MET1 changes on all four survivors but nonzero DRC: retire Wire
+   Editor and review a connected regular-signal shape primitive.
+3. No local MET1 delta on all four survivors: retire this attachment path as a
+   database no-op.
+
+The two closed controls must remain bit-for-bit stable in the local wire
+signature comparison. No R7 outcome directly saves or exports the design.
+Immutable PVS staging, PVS DRC, and LVS remain blocked until a fresh canonical
+integration run reproduces exact DRC zero and both connectivity classes at
+zero.

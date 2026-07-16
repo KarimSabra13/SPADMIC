@@ -153,11 +153,11 @@ proc lp_wire_attr {wire attribute} {
     return [list PASS $value NONE]
 }
 
-proc lp_find_canonical_stub_endpoint {net marker_box via_x via_y direction_sign} {
+proc lp_find_canonical_stub_endpoints {net marker_box via_x via_y direction_sign} {
     set net_handles [list]
     catch {set net_handles [lp_valid_handles [dbGet top.nets.name $net -p]]}
     if {[llength $net_handles] != 1} {
-        return [list FAIL NONE UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
+        return [list FAIL NONE UNKNOWN UNKNOWN UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
     }
     set wires [list]
     catch {set wires [lp_valid_handles [dbGet "[lindex $net_handles 0].wires"]]}
@@ -188,9 +188,13 @@ proc lp_find_canonical_stub_endpoint {net marker_box via_x via_y direction_sign}
         set near2 [expr {[lp_close $x2 $via_x] && abs($y2 - $via_y) <= 0.050}]
         if {$near1 == $near2} { continue }
         if {$near1} {
+            set near_x $x1
+            set near_y $y1
             set far_x $x2
             set far_y $y2
         } else {
+            set near_x $x2
+            set near_y $y2
             set far_x $x1
             set far_y $y1
         }
@@ -198,12 +202,23 @@ proc lp_find_canonical_stub_endpoint {net marker_box via_x via_y direction_sign}
             ($direction_sign > 0 && $far_x <= $via_x)} {
             continue
         }
-        lappend candidates [list $wire $flat_box $far_x $far_y [lp_value $pts]]
+        lappend candidates [list \
+            $wire $flat_box $near_x $near_y $far_x $far_y [lp_value $pts]]
     }
     if {[llength $candidates] != 1} {
-        return [list FAIL NONE UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
+        return [list FAIL NONE UNKNOWN UNKNOWN UNKNOWN UNKNOWN UNKNOWN UNKNOWN]
     }
     return [linsert [lindex $candidates 0] 0 PASS]
+}
+
+proc lp_find_canonical_stub_endpoint {net marker_box via_x via_y direction_sign} {
+    lassign [lp_find_canonical_stub_endpoints \
+        $net $marker_box $via_x $via_y $direction_sign] \
+        endpoint_status canonical_wire canonical_box \
+        near_x near_y far_x far_y canonical_pts
+    return [list \
+        $endpoint_status $canonical_wire $canonical_box \
+        $far_x $far_y $canonical_pts]
 }
 
 proc lp_write_wire_snapshot {path phase patch_contract} {
@@ -490,10 +505,22 @@ if {$trial_revision eq "R1"} {
     set validated_result CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
     set no_improvement_result CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
     set changed_result CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+} elseif {$trial_revision eq "R7"} {
+    set analysis_key STEP27_ANALYSIS
+    set policy ONE_FRESH_PROCESS_ONE_RESTORE_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_SIDE_STUBS
+    set command_policy EXACT_SIX_BASE_STUBS_THEN_FOUR_NORMALIZED_VIA_ENDPOINT_OPPOSITE_SIDE_STUBS
+    set patch_length_policy FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_NORMALIZED_VIA_SIDE_0.56
+    set patch_direction_policy FIRST_STAGE_ALL_TOWARD_SOURCE_SECOND_STAGE_FOUR_AWAY_FROM_SOURCE
+    set patch_width_policy UNIFORM_0.28
+    set patch_width_um 0.28
+    set validated_result NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_DRC_ZERO_VALIDATED
+    set no_improvement_result NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_NO_IMPROVEMENT
+    set changed_result NORMALIZED_VIA_SIDE_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
 } else {
     error "SPADMIC_MIN_AREA_LANDING_UNSUPPORTED_REVISION: $trial_revision"
 }
-set expected_patch_count [expr {$trial_revision eq "R6" ? 10 : 6}]
+set expected_patch_count \
+    [expr {$trial_revision eq "R6" || $trial_revision eq "R7" ? 10 : 6}]
 set reports [file join $root reports]
 file mkdir $reports
 set command_fh ""
@@ -531,6 +558,11 @@ if {$trial_revision eq "R5"} {
     set status(BASE_STAGE_STATUS) NOT_RUN
     set status(CHAIN_ENDPOINT_CONTRACT_STATUS) NOT_RUN
     set status(CHAIN_STAGE_STATUS) NOT_RUN
+} elseif {$trial_revision eq "R7"} {
+    set status(VIA_SIDE_CAPTURE_POLICY) EXACT_FOUR_SURVIVOR_NORMALIZED_VIA_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE
+    set status(BASE_STAGE_STATUS) NOT_RUN
+    set status(VIA_SIDE_ENDPOINT_CONTRACT_STATUS) NOT_RUN
+    set status(VIA_SIDE_STAGE_STATUS) NOT_RUN
 }
 
 array set analysis_values [lp_read_kv $source_analysis]
@@ -724,7 +756,7 @@ if {$trial_revision eq "R1"} {
         NEXT_METHOD_DECISION STOP_AND_REVIEW_PATCH_EVIDENCE_BEFORE_NEW_METHOD
         ERROR_COUNT 0
     }
-} else {
+} elseif {$trial_revision eq "R6"} {
     array set expected_analysis {
         LABEL SPADMIC_TX_PACKET_MIN_AREA_LANDING_MATERIALIZATION_ANALYSIS
         POLICY ISOLATED_IN_MEMORY_R4_REPLAY_WIRE_MATERIALIZATION_CLASSIFICATION
@@ -786,6 +818,64 @@ if {$trial_revision eq "R1"} {
         CANONICALIZED_WIDE_NET_COUNT 0
         NO_LOCAL_DELTA_WIDE_NET_COUNT 0
     }
+} else {
+    array set expected_analysis {
+        LABEL SPADMIC_TX_PACKET_MIN_AREA_CHAINED_LANDING_ANALYSIS
+        POLICY ISOLATED_IN_MEMORY_SIX_BASE_THEN_FOUR_CHAINED_ENDPOINT_CLASSIFICATION
+        STATUS PASS
+        RESULT MIN_AREA_CHAINED_LANDING_TRIAL_CLASSIFIED
+        TRIAL_REVISION R6
+        TRIAL_PROCESS_STATUS FAIL
+        TRIAL_PROCESS_RESULT CHAINED_ENDPOINT_MET1_LANDING_EXTENSIONS_CHANGED_NOT_CLOSED
+        METHOD_STATUS REJECTED_OR_INCOMPLETE
+        PATCH_CONTRACT_STATUS PASS_EXACT_SIX_BASE_AND_FOUR_CHAIN_ENDPOINTS
+        PATCH_WIDTH_POLICY UNIFORM_0.28
+        PATCH_WIDTH_UM 0.28
+        PATCH_LENGTH_POLICY FIRST_STAGE_SIX_0.56_SECOND_STAGE_FOUR_DYNAMIC_0.56
+        PATCH_LENGTH_UM 0.56
+        PATCH_DIRECTION_POLICY ALL_TOWARD_SOURCE
+        PATCH_ATTEMPTED_COUNT 10
+        PATCH_APPLIED_COUNT 10
+        COMMAND_PASS_COUNT 40
+        COMMAND_FAIL_COUNT 0
+        PRE_DRC_VIOLATION_COUNT 6
+        FINAL_DRC_VIOLATION_COUNT 4
+        PRE_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        FINAL_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        PRE_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        FINAL_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        PRE_MARKER_DATABASE_TOTAL 27
+        FINAL_MARKER_DATABASE_TOTAL 25
+        REMOVED_MARKER_SIGNATURE_COUNT 6
+        ADDED_MARKER_SIGNATURE_COUNT 4
+        FINAL_MIN_AREA_NETS {n_9677 n_9693 n_9696 n_9697}
+        SAVE_DESIGN NOT_RUN
+        EXPORT NOT_RUN
+        IMMUTABLE_PVS_STAGING NOT_RUN
+        PVS_DECISION DO_NOT_RUN
+        CANONICAL_RERUN_DECISION DO_NOT_RUN_FROM_THIS_STEP
+        NEXT_METHOD_DECISION STOP_AND_REVIEW_CHAINED_ENDPOINT_EVIDENCE_BEFORE_NEW_METHOD
+        ERROR_COUNT 0
+        CHAIN_CAPTURE_STATUS COMPLETE
+        BASE_STAGE_STATUS PASS_EXACT_FOUR_0P1777_SURVIVORS
+        BASE_DRC_VIOLATION_COUNT 4
+        BASE_DRC_MARKER_COUNT 4
+        BASE_MIN_AREA_NETS {n_9677 n_9693 n_9696 n_9697}
+        BASE_REGULAR_CONNECTIVITY_VIOLATION_COUNT 0
+        BASE_SPECIAL_CONNECTIVITY_VIOLATION_COUNT 0
+        BASE_EXCLUDED_ANTENNA_MARKER_COUNT 21
+        BASE_MARKER_DATABASE_TOTAL 25
+        BASE_CANONICAL_FIXED_STUB_NET_COUNT 6
+        CHAIN_ENDPOINT_CONTRACT_STATUS PASS_EXACT_FOUR_ACTUAL_CANONICAL_ENDPOINTS
+        CHAIN_ENDPOINT_CONTRACT_VALIDATED_COUNT 4
+        CHAIN_STAGE_STATUS APPLIED_EXACT_FOUR
+        BASE_PATCH_ATTEMPTED_COUNT 6
+        BASE_PATCH_APPLIED_COUNT 6
+        CHAIN_PATCH_ATTEMPTED_COUNT 4
+        CHAIN_PATCH_APPLIED_COUNT 4
+    }
 }
 foreach key [array names expected_analysis] {
     set actual MISSING
@@ -844,7 +934,8 @@ if {![string is integer -strict $pre_drc_count] || $pre_drc_count != 6 ||
 }
 
 # net marker-box start-x start-y end-x length width source-Q source-Q-x source-Q-y direction
-if {$trial_revision eq "R1" || $trial_revision eq "R6"} {
+if {$trial_revision eq "R1" || $trial_revision eq "R6" ||
+    $trial_revision eq "R7"} {
     set patch_contract [list \
         [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.32 0.56 0.28 g14627__2802/Q 716.61 159.02 TOWARD_SOURCE] \
         [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 209.72 0.56 0.28 g14630__8246/Q 207.01 201.62 TOWARD_SOURCE] \
@@ -1021,6 +1112,8 @@ if {$trial_revision eq "R5"} {
     puts $command_fh "MATERIALIZATION_CAPTURE_POLICY=PRE_AND_POST_ALL_WIRES_WITH_LOCAL_MET1_CLASSIFICATION"
 } elseif {$trial_revision eq "R6"} {
     puts $command_fh "CHAIN_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_ACTUAL_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE"
+} elseif {$trial_revision eq "R7"} {
+    puts $command_fh "VIA_SIDE_CAPTURE_POLICY=EXACT_FOUR_SURVIVOR_NORMALIZED_VIA_ENDPOINTS_AFTER_VALIDATED_BASE_STAGE"
 }
 if {$trial_revision eq "R2" || $trial_revision eq "R3"} {
     puts $command_fh "PATCH_LENGTH_UM=MIXED_0.56_0.84"
@@ -1069,7 +1162,9 @@ set base_patch_attempted_count $patch_attempted_count
 set base_patch_applied_count $patch_applied_count
 set chain_patch_attempted_count 0
 set chain_patch_applied_count 0
-if {$trial_revision eq "R6"} {
+set via_side_patch_attempted_count 0
+set via_side_patch_applied_count 0
+if {$trial_revision eq "R6" || $trial_revision eq "R7"} {
     if {$command_failed || $command_fail_count != 0 ||
         $base_patch_attempted_count != 6 || $base_patch_applied_count != 6} {
         set status(PATCH_ATTEMPTED_COUNT) $patch_attempted_count
@@ -1149,6 +1244,7 @@ if {$trial_revision eq "R6"} {
             "resolved=$base_wire_query_pass_net_count local_met1=$base_local_met1_row_count attribute_fail=$base_wire_attribute_fail_count"
     }
 
+    if {$trial_revision eq "R6"} {
     # net marker-box via-x via-y expected-far-x expected-far-y direction-sign source-Q
     set chain_specs [list \
         [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.495 158.795 -1 g14627__2802/Q] \
@@ -1271,12 +1367,186 @@ if {$trial_revision eq "R6"} {
         lp_abort POST_CHAIN_WIRE_CAPTURE_FAILED \
             "resolved=$post_chain_wire_query_pass_net_count attribute_fail=$post_chain_wire_attribute_fail_count"
     }
+    } else {
+        # net marker-box via-x via-y expected-near-x expected-near-y
+        # expected-far-x expected-far-y source-direction-sign source-Q source-Q-x
+        set via_side_specs [list \
+            [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.880 158.795 719.495 158.795 -1 g14627__2802/Q 716.61] \
+            [list n_9693 {210.09 201.74 210.47 202.02} 210.28 201.88 210.280 201.845 209.895 201.845 -1 g14630__8246/Q 207.01] \
+            [list n_9697 {663.13 192.78 663.51 193.06} 663.32 192.92 663.320 192.885 662.935 192.885 -1 g14626__1617/Q 660.05] \
+            [list n_9677 {1666.09 201.74 1666.47 202.02} 1666.28 201.88 1666.280 201.845 1666.665 201.845 1 g14646__2398/Q 1669.55]]
+        set via_side_contract_path \
+            [file join $reports min_area_normalized_via_side_contract.tsv]
+        set via_side_contract_fh [open $via_side_contract_path w]
+        puts $via_side_contract_fh "net\tmarker_box\tcanonical_wire\tcanonical_box\tcanonical_pts\tsource_side_x\tsource_side_y\tstart_x\tstart_y\tend_x\tend_y\tlength_um\trequested_width_um\tdirection\tsource_q\tnormalized_via_endpoint_status\tcanonical_source_side_endpoint_status\tmet2_split_endpoint_status\taway_from_source_status\tcontract_status"
+        set via_side_contract [list]
+        set via_side_contract_validated_count 0
+        set via_side_contract_failures [list]
+        foreach spec $via_side_specs {
+            lassign $spec \
+                net marker_box via_x via_y \
+                expected_near_x expected_near_y expected_far_x expected_far_y \
+                source_direction_sign source_q source_q_x
+            lassign [lp_find_canonical_stub_endpoints \
+                $net $marker_box $via_x $via_y $source_direction_sign] \
+                endpoint_status canonical_wire canonical_box \
+                near_x near_y far_x far_y canonical_pts
+            set normalized_via_status FAIL
+            set source_side_endpoint_status FAIL
+            set met2_split_endpoint_status FAIL
+            set away_from_source_status FAIL
+            set end_x UNKNOWN
+            set direction UNKNOWN
+            if {$endpoint_status eq "PASS"} {
+                if {[lp_close $near_x $expected_near_x] &&
+                    [lp_close $near_y $expected_near_y]} {
+                    set normalized_via_status PASS
+                }
+                if {[lp_close $far_x $expected_far_x] &&
+                    [lp_close $far_y $expected_far_y]} {
+                    set source_side_endpoint_status PASS
+                }
+                set away_direction_sign [expr {-$source_direction_sign}]
+                set end_x [expr {$near_x + ($away_direction_sign * 0.56)}]
+                set direction [expr {
+                    $away_direction_sign < 0
+                        ? "AWAY_FROM_SOURCE_WEST"
+                        : "AWAY_FROM_SOURCE_EAST"
+                }]
+                if {($source_q_x < $near_x && $end_x > $near_x) ||
+                    ($source_q_x > $near_x && $end_x < $near_x)} {
+                    set away_from_source_status PASS
+                }
+                set net_handles [list]
+                catch {set net_handles [lp_valid_handles [dbGet top.nets.name $net -p]]}
+                if {[llength $net_handles] == 1} {
+                    set met2_endpoint_count 0
+                    set wires [list]
+                    catch {set wires [lp_valid_handles [dbGet "[lindex $net_handles 0].wires"]]}
+                    foreach wire $wires {
+                        set layer UNKNOWN
+                        set width UNKNOWN
+                        set points UNKNOWN
+                        catch {set layer [dbGet "${wire}.layer.name"]}
+                        catch {set width [dbGet "${wire}.width"]}
+                        catch {set points [dbGet "${wire}.pts"]}
+                        if {$layer eq "MET2" && [lp_close $width 0.28] &&
+                            [lp_has_endpoint $points $near_x $near_y]} {
+                            incr met2_endpoint_count
+                        }
+                    }
+                    if {$met2_endpoint_count == 2} {
+                        set met2_split_endpoint_status PASS
+                    }
+                }
+            }
+            set contract_status FAIL
+            if {$normalized_via_status eq "PASS" &&
+                $source_side_endpoint_status eq "PASS" &&
+                $met2_split_endpoint_status eq "PASS" &&
+                $away_from_source_status eq "PASS"} {
+                set contract_status PASS
+                incr via_side_contract_validated_count
+                lappend via_side_contract \
+                    [list $net $near_x $near_y $end_x 0.56 0.28 $direction $source_q]
+            } else {
+                lappend via_side_contract_failures \
+                    "$net:endpoint=$endpoint_status:via=$normalized_via_status:source_side=$source_side_endpoint_status:met2=$met2_split_endpoint_status:away=$away_from_source_status:near=$near_x,$near_y:far=$far_x,$far_y"
+            }
+            set contract_near_x \
+                [expr {$endpoint_status eq "PASS" ? [format %.3f $near_x] : "UNKNOWN"}]
+            set contract_near_y \
+                [expr {$endpoint_status eq "PASS" ? [format %.3f $near_y] : "UNKNOWN"}]
+            set contract_far_x \
+                [expr {$endpoint_status eq "PASS" ? [format %.3f $far_x] : "UNKNOWN"}]
+            set contract_far_y \
+                [expr {$endpoint_status eq "PASS" ? [format %.3f $far_y] : "UNKNOWN"}]
+            set contract_end_x \
+                [expr {$endpoint_status eq "PASS" ? [format %.3f $end_x] : "UNKNOWN"}]
+            puts $via_side_contract_fh "$net\t[join $marker_box { }]\t[lp_value $canonical_wire]\t[lp_value $canonical_box]\t[lp_value $canonical_pts]\t$contract_far_x\t$contract_far_y\t$contract_near_x\t$contract_near_y\t$contract_end_x\t$contract_near_y\t0.56\t0.28\t$direction\t$source_q\t$normalized_via_status\t$source_side_endpoint_status\t$met2_split_endpoint_status\t$away_from_source_status\t$contract_status"
+        }
+        close $via_side_contract_fh
+        set status(VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT) \
+            $via_side_contract_validated_count
+        if {$via_side_contract_validated_count != 4 ||
+            [llength $via_side_contract_failures] != 0} {
+            lp_abort VIA_SIDE_ENDPOINT_CONTRACT_FAILED \
+                [join $via_side_contract_failures {,}]
+        }
+        set status(VIA_SIDE_ENDPOINT_CONTRACT_STATUS) \
+            PASS_EXACT_FOUR_ACTUAL_NORMALIZED_VIA_ENDPOINTS
+        puts $command_fh "BASE_STAGE_STATUS=$status(BASE_STAGE_STATUS)"
+        puts $command_fh \
+            "VIA_SIDE_ENDPOINT_CONTRACT_VALIDATED_COUNT=$via_side_contract_validated_count"
+
+        foreach via_side $via_side_contract {
+            lassign $via_side \
+                net start_x start_y end_x via_side_length via_side_width \
+                direction source_q
+            incr via_side_patch_attempted_count
+            incr patch_attempted_count
+            set label "VIA_SIDE_${net}"
+            puts $command_fh "${label}_START=[format {%.3f %.3f} $start_x $start_y]"
+            puts $command_fh "${label}_END=[format {%.3f %.3f} $end_x $start_y]"
+            puts $command_fh "${label}_LENGTH_UM=[format %.2f $via_side_length]"
+            puts $command_fh "${label}_WIDTH_UM=[format %.2f $via_side_width]"
+            puts $command_fh "${label}_DIRECTION=$direction"
+            puts $command_fh "${label}_SOURCE_Q=$source_q"
+            set setup_command [list setEditMode \
+                -nets $net \
+                -shape None \
+                -force_regular 1 \
+                -layer_horizontal MET1 \
+                -layer_vertical MET1 \
+                -snap_to_track_regular 0 \
+                -width_horizontal $via_side_width \
+                -width_vertical $via_side_width]
+            if {![lp_run_command $command_fh "${label}_SET_EDIT_MODE" $setup_command] ||
+                ![lp_run_command $command_fh "${label}_SET_TOOL" {uiSetTool addWire}] ||
+                ![lp_run_command $command_fh "${label}_ADD_ROUTE" [list editAddRoute $start_x $start_y]] ||
+                ![lp_run_command $command_fh "${label}_COMMIT_ROUTE" [list editCommitRoute $end_x $start_y]]} {
+                set command_failed 1
+                break
+            }
+            incr via_side_patch_applied_count
+            incr patch_applied_count
+            puts $command_fh "${label}_APPLIED=YES"
+            flush $command_fh
+        }
+        catch {uiSetTool select}
+        catch {setEditMode -reset}
+        set status(VIA_SIDE_STAGE_STATUS) \
+            [expr {$via_side_patch_applied_count == 4 ? "APPLIED_EXACT_FOUR" : "INCOMPLETE"}]
+        set post_via_side_wire_snapshot \
+            [file join $reports wire_snapshot_post_via_side_stage.tsv]
+        lassign [lp_write_wire_snapshot \
+            $post_via_side_wire_snapshot AFTER_VIA_SIDE_STAGE $patch_contract] \
+            post_via_side_wire_query_pass_net_count \
+            post_via_side_wire_row_count \
+            post_via_side_local_met1_row_count \
+            post_via_side_wire_attribute_fail_count
+        set status(POST_VIA_SIDE_WIRE_QUERY_PASS_NET_COUNT) \
+            $post_via_side_wire_query_pass_net_count
+        set status(POST_VIA_SIDE_WIRE_ROW_COUNT) \
+            $post_via_side_wire_row_count
+        set status(POST_VIA_SIDE_LOCAL_MET1_ROW_COUNT) \
+            $post_via_side_local_met1_row_count
+        set status(POST_VIA_SIDE_WIRE_ATTRIBUTE_FAIL_COUNT) \
+            $post_via_side_wire_attribute_fail_count
+        if {$post_via_side_wire_query_pass_net_count != 6 ||
+            $post_via_side_wire_attribute_fail_count != 0} {
+            lp_abort POST_VIA_SIDE_WIRE_CAPTURE_FAILED \
+                "resolved=$post_via_side_wire_query_pass_net_count attribute_fail=$post_via_side_wire_attribute_fail_count"
+        }
+    }
 }
 
 puts $command_fh "BASE_PATCH_ATTEMPTED_COUNT=$base_patch_attempted_count"
 puts $command_fh "BASE_PATCH_APPLIED_COUNT=$base_patch_applied_count"
 puts $command_fh "CHAIN_PATCH_ATTEMPTED_COUNT=$chain_patch_attempted_count"
 puts $command_fh "CHAIN_PATCH_APPLIED_COUNT=$chain_patch_applied_count"
+puts $command_fh "VIA_SIDE_PATCH_ATTEMPTED_COUNT=$via_side_patch_attempted_count"
+puts $command_fh "VIA_SIDE_PATCH_APPLIED_COUNT=$via_side_patch_applied_count"
 puts $command_fh "PATCH_ATTEMPTED_COUNT=$patch_attempted_count"
 puts $command_fh "PATCH_APPLIED_COUNT=$patch_applied_count"
 puts $command_fh "COMMAND_PASS_COUNT=$command_pass_count"
@@ -1289,6 +1559,8 @@ set status(BASE_PATCH_ATTEMPTED_COUNT) $base_patch_attempted_count
 set status(BASE_PATCH_APPLIED_COUNT) $base_patch_applied_count
 set status(CHAIN_PATCH_ATTEMPTED_COUNT) $chain_patch_attempted_count
 set status(CHAIN_PATCH_APPLIED_COUNT) $chain_patch_applied_count
+set status(VIA_SIDE_PATCH_ATTEMPTED_COUNT) $via_side_patch_attempted_count
+set status(VIA_SIDE_PATCH_APPLIED_COUNT) $via_side_patch_applied_count
 set status(COMMAND_PASS_COUNT) $command_pass_count
 set status(COMMAND_FAIL_COUNT) $command_fail_count
 
