@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import re
+import shlex
 import shutil
 from pathlib import Path
 
@@ -80,6 +81,259 @@ def strip_c_style_comments(text: str) -> str:
     return "".join(output)
 
 
+SHELL_VALUE = r'(?:"[^"\n]*"|\'[^\'\n]*\'|[^\s\\;]+)'
+PVS_VALUE = r'(?:"[^"\n]*"|\{[^}\n]*\}|[^;\s]+)'
+
+
+def unquote(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
+def discover_execution_roots(run_text: str) -> list[Path]:
+    roots: set[Path] = set()
+    for match in re.finditer(rf"(?m)^\s*cd\s+({SHELL_VALUE})\s*;\\?\s*$", run_text):
+        value = unquote(match.group(1))
+        if value.startswith("/"):
+            roots.add(Path(value))
+    for option in ("-control", "-cell_tree"):
+        match = re.search(rf"{re.escape(option)}\s+({SHELL_VALUE})", run_text)
+        if match:
+            value = unquote(match.group(1))
+            if value.startswith("/"):
+                roots.add(Path(value).parent)
+    return sorted(roots, key=lambda path: (-len(str(path)), str(path)))
+
+
+def shell_option_value(text: str, option: str) -> str | None:
+    match = re.search(rf"{re.escape(option)}\s+({SHELL_VALUE})", text)
+    return unquote(match.group(1)) if match else None
+
+
+def replace_shell_option(
+    text: str,
+    option: str,
+    value: Path,
+    *,
+    required: bool,
+) -> tuple[str, int]:
+    pattern = re.compile(rf"({re.escape(option)}[ \t]+){SHELL_VALUE}")
+    text, count = pattern.subn(
+        lambda match: match.group(1) + shlex.quote(str(value)),
+        text,
+    )
+    if required and count == 0:
+        raise SystemExit(f"PVS_REPLAY_CONTRACT_FAIL: option missing from run.pvs: {option}")
+    return text, count
+
+
+def replace_shell_file_argument(
+    text: str,
+    basename: str,
+    value: Path,
+) -> tuple[str, int]:
+    pattern = re.compile(
+        rf"(?<!\S)(?:\"(?:[^\"\n]*/)?{re.escape(basename)}\"|"
+        rf"'(?:[^'\n]*/)?{re.escape(basename)}'|"
+        rf"[^\s\\;]*/{re.escape(basename)}|{re.escape(basename)})(?=\s|\\|$)"
+    )
+    return pattern.subn(shlex.quote(str(value)), text)
+
+
+def replace_pvs_directive_path(
+    text: str,
+    directive: str,
+    value: Path,
+    *,
+    required: bool,
+) -> tuple[str, int]:
+    pattern = re.compile(rf"({directive}[ \t]+){PVS_VALUE}", re.I)
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    text, count = pattern.subn(
+        lambda match: f'{match.group(1)}"{escaped}"',
+        text,
+    )
+    if required and count == 0:
+        raise SystemExit(
+            f"PVS_REPLAY_CONTRACT_FAIL: result directive missing: {directive}"
+        )
+    return text, count
+
+
+def normalize_run_file(
+    run_file: Path,
+    run_dir: Path,
+    mode: str,
+    expected_layout_top: str,
+) -> list[str]:
+    text = run_file.read_text()
+    cd_pattern = re.compile(
+        rf"(?m)^([ \t]*)cd[ \t]+({SHELL_VALUE})([ \t]*;\\?[ \t]*)$"
+    )
+    cd_count = 0
+
+    def replace_cd(match: re.Match[str]) -> str:
+        nonlocal cd_count
+        value = unquote(match.group(2))
+        if value.startswith("$"):
+            return match.group(0)
+        cd_count += 1
+        return (
+            f"{match.group(1)}cd {shlex.quote(str(run_dir))}"
+            f"{match.group(3)}"
+        )
+
+    text = cd_pattern.sub(replace_cd, text)
+    control = run_dir / ("pvsdrcctl" if mode == "drc" else "pvslvsctl")
+    text, control_count = replace_shell_option(
+        text,
+        "-control",
+        control,
+        required=True,
+    )
+    cell_tree_count = 0
+    if re.search(r"(?:^|\s)-cell_tree(?:\s|$)", text):
+        cell_tree = run_dir / "cell_tree.txt"
+        if not cell_tree.is_file():
+            raise SystemExit(
+                "PVS_REPLAY_CONTRACT_FAIL: run.pvs requests cell_tree.txt "
+                "but the template did not provide a local copy"
+            )
+        text, cell_tree_count = replace_shell_option(
+            text,
+            "-cell_tree",
+            cell_tree,
+            required=True,
+        )
+    config_count = 0
+    technology_count = 0
+    text, config_count = replace_shell_file_argument(
+        text,
+        ".config.rul",
+        run_dir / ".config.rul",
+    )
+    text, technology_count = replace_shell_file_argument(
+        text,
+        ".technology.rul",
+        run_dir / ".technology.rul",
+    )
+    if config_count == 0 or technology_count == 0:
+        raise SystemExit(
+            "PVS_REPLAY_CONTRACT_FAIL: run.pvs must execute the copied "
+            ".config.rul and .technology.rul"
+        )
+    spice_count = 0
+    if mode == "lvs" and re.search(r"(?:^|\s)-spice(?:\s|$)", text):
+        text, spice_count = replace_shell_option(
+            text,
+            "-spice",
+            run_dir / f"{expected_layout_top}.spi",
+            required=True,
+        )
+    run_file.write_text(text)
+    return [
+        f"WORKING_DIRECTORY_REWRITE_COUNT={cd_count}",
+        f"CONTROL_REWRITE_COUNT={control_count}",
+        f"CELL_TREE_REWRITE_COUNT={cell_tree_count}",
+        f"CONFIG_RULE_REWRITE_COUNT={config_count}",
+        f"TECHNOLOGY_RULE_REWRITE_COUNT={technology_count}",
+        f"SPICE_OUTPUT_REWRITE_COUNT={spice_count}",
+    ]
+
+
+def normalize_control_outputs(
+    control: Path,
+    run_dir: Path,
+    mode: str,
+    expected_layout_top: str,
+) -> list[str]:
+    text = control.read_text()
+    lines: list[str] = []
+    if mode == "drc":
+        summary = run_dir / f"{expected_layout_top}_drc.sum"
+        results = run_dir / f"{expected_layout_top}_drc.err"
+        text, count = replace_pvs_directive_path(
+            text,
+            r"report_summary\s+-drc",
+            summary,
+            required=True,
+        )
+        lines.extend(
+            [
+                f"DRC_SUMMARY={summary}",
+                f"DRC_SUMMARY_REWRITE_COUNT={count}",
+            ]
+        )
+        text, count = replace_pvs_directive_path(
+            text,
+            r"results_db\s+-drc",
+            results,
+            required=False,
+        )
+        lines.extend(
+            [
+                f"DRC_RESULTS_DB={results if count else 'NOT_CONFIGURED'}",
+                f"DRC_RESULTS_DB_REWRITE_COUNT={count}",
+            ]
+        )
+    else:
+        lvs_report = run_dir / f"{expected_layout_top}_lvs.sum"
+        erc_summary = run_dir / f"{expected_layout_top}_erc.sum"
+        erc_results = run_dir / f"{expected_layout_top}_lvs.err"
+        svdb = run_dir / "svdb"
+        text, count = replace_pvs_directive_path(
+            text,
+            r"lvs_report_file",
+            lvs_report,
+            required=True,
+        )
+        lines.extend(
+            [
+                f"LVS_REPORT={lvs_report}",
+                f"LVS_REPORT_REWRITE_COUNT={count}",
+            ]
+        )
+        text, count = replace_pvs_directive_path(
+            text,
+            r"report_summary\s+-erc",
+            erc_summary,
+            required=False,
+        )
+        lines.extend(
+            [
+                f"ERC_SUMMARY={erc_summary if count else 'NOT_CONFIGURED'}",
+                f"ERC_SUMMARY_REWRITE_COUNT={count}",
+            ]
+        )
+        text, count = replace_pvs_directive_path(
+            text,
+            r"results_db\s+-erc",
+            erc_results,
+            required=False,
+        )
+        lines.extend(
+            [
+                f"ERC_RESULTS_DB={erc_results if count else 'NOT_CONFIGURED'}",
+                f"ERC_RESULTS_DB_REWRITE_COUNT={count}",
+            ]
+        )
+        text, count = replace_pvs_directive_path(
+            text,
+            r"mask_svdb_dir",
+            svdb,
+            required=False,
+        )
+        lines.extend(
+            [
+                f"SVDB_DIRECTORY={svdb if count else 'NOT_CONFIGURED'}",
+                f"SVDB_REWRITE_COUNT={count}",
+            ]
+        )
+    control.write_text(text)
+    return lines
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--template", required=True, type=Path)
@@ -117,6 +371,25 @@ def main() -> None:
             shutil.copy2(source, destination)
             copied.append(destination)
 
+    dependency_lines: list[str] = []
+    original_run_text = (template / "run.pvs").read_text(errors="ignore")
+    if shell_option_value(original_run_text, "-cell_tree") is not None:
+        local_cell_tree = run_dir / "cell_tree.txt"
+        if not local_cell_tree.is_file():
+            cell_tree_value = shell_option_value(original_run_text, "-cell_tree")
+            external_cell_tree = Path(cell_tree_value) if cell_tree_value else Path()
+            if not external_cell_tree.is_file():
+                raise SystemExit(
+                    "PVS_REPLAY_CONTRACT_FAIL: run.pvs requests cell_tree.txt "
+                    "but neither the template nor its referenced path provides it"
+                )
+            shutil.copy2(external_cell_tree, local_cell_tree)
+            copied.append(local_cell_tree)
+            dependency_lines.append(
+                f"COPIED_EXTERNAL_CELL_TREE={external_cell_tree}|"
+                f"SHA256={digest(local_cell_tree)}"
+            )
+
     replacements: list[tuple[str, str]] = []
     explicit_replacements: list[tuple[str, str]] = []
     for item in args.replace:
@@ -128,22 +401,30 @@ def main() -> None:
         explicit_replacements.append((old, new))
         if old != new:
             replacements.append((old, new))
-    # Apply specific artifact replacements before relocating the template root;
-    # otherwise an OLD path under the template is rewritten to run_dir first and
-    # can no longer match its canonical GDS/source/CDL replacement.
-    replacements.append((str(template), str(run_dir)))
-
     original_text = {
         path: path.read_text(errors="ignore")
         for path in copied
         if is_text(path)
     }
+    run_file = run_dir / "run.pvs"
+    inferred_execution_roots = discover_execution_roots(original_text[run_file])
     replacement_lines = ["LABEL=SPADMIC_PVS_TEMPLATE_REPLACEMENTS"]
+    replacement_lines.extend(dependency_lines)
     for old, new in explicit_replacements:
         count = sum(text.count(old) for text in original_text.values())
         replacement_lines.append(f"OLD={old}|NEW={new}|OCCURRENCES={count}")
         if old != new and count == 0:
             raise SystemExit(f"REPLACEMENT_SOURCE_NOT_FOUND: {old}")
+    # Apply specific artifacts first. Relocate both the selected template and
+    # any GUI-generated execution root afterward so old sibling run paths
+    # cannot bypass the copied controls.
+    relocation_roots = {template, *inferred_execution_roots}
+    for root in sorted(relocation_roots, key=lambda path: (-len(str(path)), str(path))):
+        if root != run_dir:
+            replacements.append((str(root), str(run_dir)))
+            replacement_lines.append(
+                f"INFERRED_EXECUTION_ROOT={root}|NEW={run_dir}"
+            )
 
     for path in copied:
         if not is_text(path):
@@ -158,6 +439,20 @@ def main() -> None:
         ]:
             text = text.replace(known, args.cadence_pvs)
         path.write_text(text)
+
+    execution_lines = normalize_run_file(
+        run_file,
+        run_dir,
+        args.mode,
+        args.expected_layout_top or "layout",
+    )
+    control = run_dir / required_control
+    output_lines = normalize_control_outputs(
+        control,
+        run_dir,
+        args.mode,
+        args.expected_layout_top or "layout",
+    )
 
     define_lines = ["LABEL=SPADMIC_PVS_PREPROCESSOR_DEFINES"]
     requested_defines = [(name, "DEFINE") for name in args.preprocessor_define]
@@ -180,7 +475,6 @@ def main() -> None:
         if count == 0:
             raise SystemExit(f"PREPROCESSOR_DEFINE_NOT_FOUND: {name}")
 
-    run_file = run_dir / "run.pvs"
     text = run_file.read_text()
     if args.cadence_pvs not in text:
         raise SystemExit("PVS_BINARY_GATE_FAIL: patched run.pvs does not name the selected Cadence binary")
@@ -250,10 +544,21 @@ def main() -> None:
     (run_dir / "external_references.rpt").write_text("\n".join(reference_lines) + "\n")
     (run_dir / "template_replacements.rpt").write_text("\n".join(replacement_lines) + "\n")
     (run_dir / "preprocessor_defines.rpt").write_text("\n".join(define_lines) + "\n")
+    (run_dir / "output_isolation.rpt").write_text(
+        "LABEL=SPADMIC_PVS_OUTPUT_ISOLATION\n"
+        "STATUS=PASS\n"
+        f"MODE={args.mode.upper()}\n"
+        f"RUN_DIR={run_dir}\n"
+        f"CONTROL={control}\n"
+        + "\n".join(execution_lines + output_lines)
+        + "\n"
+    )
     (run_dir / "replay_contract_status.rpt").write_text(
         "LABEL=SPADMIC_PVS_REPLAY_CONTRACT\n"
         "STATUS=PASS\n"
         f"MODE={args.mode.upper()}\n"
+        "EXECUTION_DIRECTORY_STATUS=PASS\n"
+        "OUTPUT_ISOLATION_STATUS=PASS\n"
         f"LAYOUT_TOP={args.expected_layout_top}\n"
         f"SOURCE_TOP={args.expected_source_top or 'NOT_APPLICABLE'}\n"
         f"GDS={args.expected_gds.resolve() if args.expected_gds else 'MISSING'}\n"

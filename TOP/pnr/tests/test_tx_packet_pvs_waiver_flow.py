@@ -61,6 +61,7 @@ class TxPacketPvsWaiverFlowTest(unittest.TestCase):
         self.assertNotIn("require_step_pass 03_pvs_drc_base", lvs)
         self.assertIn("PVS_DRC_PREREQUISITE=NOT_REQUIRED", lvs)
         self.assertIn("LVS_ACCEPTANCE=EXPLICIT_REPORT_LEVEL_MATCH_ONLY", lvs)
+        self.assertIn('isolation_status" == "PASS"', lvs)
         self.assertIn('raw_status" == "MATCH"', lvs)
 
     def test_pvs_drc_is_never_converted_to_pass_by_the_waiver(self) -> None:
@@ -68,7 +69,10 @@ class TxPacketPvsWaiverFlowTest(unittest.TestCase):
         self.assertIn("PVS_DRC_WAIVER=NO", text)
         self.assertNotIn("PVS_DRC_WAIVER=YES", text)
         self.assertIn("PVS_BASE_DRC_NONZERO_RECORDED_LVS_STILL_AUTHORIZED", text)
+        self.assertIn('raw_tool_rc" == "0"', text)
         self.assertIn('raw_evidence" == *"Total DRC Results="*', text)
+        self.assertIn("PVS_TOOL_RC=", text)
+        self.assertIn("OUTPUT_ISOLATION_STATUS=", text)
         self.assertIn("FINAL_SIGNOFF_READY=NO", text)
         self.assertIn("BLOCK_PROMOTION_AUTHORIZED=NO", text)
 

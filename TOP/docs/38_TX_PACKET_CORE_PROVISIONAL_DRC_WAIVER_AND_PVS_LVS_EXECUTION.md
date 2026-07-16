@@ -408,3 +408,72 @@ The failed PVS run directory remains immutable negative evidence. Because the
 active Phase 3 session is bound to its original report-driver head and fixed
 run identifier, the corrected driver must start a fresh Phase 3 session with
 new export, package, and PVS run identifiers.
+
+## 13. Second PVS DRC Replay Output-Isolation Failure
+
+Phase 3 session `tx_packet_pvs_waiver_20260716_130442` passed the corrected
+reference scanner, waiver export, mapped/merged GDS audit, immutable staging,
+source preparation, pin parity, and standard-cell CDL resolution. PVS then
+returned zero, but the run-local parser reported:
+
+```text
+PVS_RC=0
+PVS_DRC_STATUS=UNKNOWN
+EVIDENCE=NONE
+PARSE_RC=8
+RESULT=PVS_BASE_DRC_EXECUTION_OR_CLASSIFICATION_FAILED
+```
+
+This is not DRC zero. It is also not a classified nonzero result. The strict
+parser found no run-local `Total DRC Results` line and correctly refused to
+infer a result from process return code.
+
+The external-reference inventory had no missing paths, but it exposed a
+different contract gap. The selected `_HV` template still referred to the
+historical sibling execution directory:
+
+```text
+/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/
+layoutverification/pvs_drc/spadmic_tx_packet_core
+```
+
+That directory contained the control file, cell tree, historical DRC error
+database, and other GUI-run artifacts. The old replay contract patched the
+copied GDS/top text but did not require the GUI-generated absolute `cd`,
+`-control`, `-cell_tree`, summary, or result-database paths to point into the
+new immutable run. Therefore `PVS_RC=0` could describe execution whose reports
+were generated outside the package. With no attributable run-local summary,
+the design result remains unknown.
+
+The corrected replay contract now:
+
+1. Discovers both the selected template root and the actual GUI execution
+   root embedded in `run.pvs`.
+2. Relocates both roots after exact GDS/source/CDL replacements.
+3. Forces the working directory, control, cell tree, and rule files to copied
+   run-local paths.
+4. Copies and hashes an externally referenced cell tree when the selected
+   template does not contain one.
+5. Forces DRC summary and error-database outputs into the immutable run.
+6. Forces LVS report, ERC report/database, SVDB, and extracted SPICE outputs
+   into the immutable run.
+7. Writes `output_isolation.rpt` and records its PASS state in the replay
+   contract.
+8. Writes `pvs_result_evidence_inventory.rpt` when parsing results.
+9. Rejects conflicting DRC totals instead of choosing one by traversal order.
+10. Requires underlying `PVS_RC=0` before a report-level nonzero total can be
+    accepted as classified DRC debt.
+
+The immutable `130442` DRC directory remains negative replay evidence. Do not
+reparse an external historical summary and attach it to this package. Start a
+fresh Phase 3 session and require all three independent conditions:
+
+```text
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+PVS_DRC_STATUS=PASS or FAIL with one unique Total DRC Results count
+```
+
+Only after that classification should the operator proceed to the independent
+diagnostic LVS gate. The four Innovus MET1 markers remain open manual-fix debt
+regardless of the PVS result.

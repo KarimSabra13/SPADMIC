@@ -553,7 +553,8 @@ stage_handoff() {
 
 pvs_drc_base() {
   local template template_gds template_top run_id run_dir console pvs_rc
-  local raw_status raw_evidence replay_status status result driver_report
+  local raw_status raw_evidence raw_tool_rc replay_status isolation_status
+  local status result driver_report
   load_session || return 1
   require_step_pass 02_stage_handoff || return 1
   check_current_head || return 1
@@ -584,13 +585,19 @@ pvs_drc_base() {
 
   raw_status="$(kv_field "$run_dir/pvs_drc_status.rpt" PVS_DRC_STATUS)"
   raw_evidence="$(kv_field "$run_dir/pvs_drc_status.rpt" EVIDENCE)"
+  raw_tool_rc="$(kv_field "$run_dir/pvs_drc_status.rpt" PVS_RC)"
   replay_status="$(kv_field "$run_dir/replay_contract_status.rpt" STATUS)"
+  isolation_status="$(kv_field "$run_dir/output_isolation.rpt" STATUS)"
   status=FAIL
   result=PVS_BASE_DRC_EXECUTION_OR_CLASSIFICATION_FAILED
-  if [[ "$replay_status" == "PASS" && "$raw_status" == "PASS" ]]; then
+  if [[ "$replay_status" == "PASS" && "$isolation_status" == "PASS" \
+      && "$raw_tool_rc" == "0" \
+      && "$raw_status" == "PASS" ]]; then
     status=PASS
     result=PVS_BASE_DRC_ZERO
-  elif [[ "$replay_status" == "PASS" && "$raw_status" == "FAIL" \
+  elif [[ "$replay_status" == "PASS" && "$isolation_status" == "PASS" \
+      && "$raw_tool_rc" == "0" \
+      && "$raw_status" == "FAIL" \
       && "$raw_evidence" == *"Total DRC Results="* ]]; then
     status=PASS
     result=PVS_BASE_DRC_NONZERO_RECORDED_LVS_STILL_AUTHORIZED
@@ -601,9 +608,11 @@ pvs_drc_base() {
     echo "STATUS=$status"
     echo "RESULT=$result"
     echo "PVS_WRAPPER_RC=$pvs_rc"
+    echo "PVS_TOOL_RC=${raw_tool_rc:-MISSING}"
     echo "PVS_DRC_STATUS=${raw_status:-MISSING}"
     echo "PVS_DRC_EVIDENCE=${raw_evidence:-MISSING}"
     echo "REPLAY_CONTRACT_STATUS=${replay_status:-MISSING}"
+    echo "OUTPUT_ISOLATION_STATUS=${isolation_status:-MISSING}"
     echo "RUN_DIR=$run_dir"
     echo "GDS=$TX3_PACKAGE/gds/spadmic_tx_packet_core.gds"
     echo "WAIVER_SCOPE=EXACT_FOUR_INNOVUS_MET1_MIN_AREA_ONLY"
@@ -630,7 +639,7 @@ pvs_lvs() {
   local template package_gds package_source package_cdl
   local template_gds template_source template_layout_top template_source_top template_cdl
   local run_id run_dir console pvs_rc raw_status raw_evidence replay_status
-  local status result driver_report
+  local isolation_status status result driver_report
   load_session || return 1
   require_step_pass 02_stage_handoff || return 1
   check_current_head || return 1
@@ -679,9 +688,11 @@ pvs_lvs() {
   raw_status="$(kv_field "$run_dir/pvs_lvs_status.rpt" PVS_LVS_STATUS)"
   raw_evidence="$(kv_field "$run_dir/pvs_lvs_status.rpt" EVIDENCE)"
   replay_status="$(kv_field "$run_dir/replay_contract_status.rpt" STATUS)"
+  isolation_status="$(kv_field "$run_dir/output_isolation.rpt" STATUS)"
   status=FAIL
   result=PVS_LVS_NOT_MATCHED
   if [[ "$pvs_rc" -eq 0 && "$replay_status" == "PASS" \
+      && "$isolation_status" == "PASS" \
       && "$raw_status" == "MATCH" ]]; then
     status=PASS
     result=PVS_LVS_EXPLICIT_MATCH
@@ -697,6 +708,7 @@ pvs_lvs() {
     echo "PVS_LVS_STATUS=${raw_status:-MISSING}"
     echo "PVS_LVS_EVIDENCE=${raw_evidence:-MISSING}"
     echo "REPLAY_CONTRACT_STATUS=${replay_status:-MISSING}"
+    echo "OUTPUT_ISOLATION_STATUS=${isolation_status:-MISSING}"
     echo "RUN_DIR=$run_dir"
     echo "LAYOUT_GDS=$package_gds"
     echo "SCHEMATIC_SOURCE=$package_source"

@@ -98,6 +98,8 @@ echo "PATCH_RC=$PATCH_RC"
 [[ "$PATCH_RC" -eq 0 ]] || exit "$PATCH_RC"
 grep -q '^STATUS=PASS$' "$RUN_DIR/replay_contract_status.rpt" \
   || spadmic_pvs_die "strict PVS replay contract did not pass"
+grep -q '^STATUS=PASS$' "$RUN_DIR/output_isolation.rpt" \
+  || spadmic_pvs_die "PVS execution/output isolation did not pass"
 spadmic_pvs_require_external_references "$RUN_DIR/external_references.rpt"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then

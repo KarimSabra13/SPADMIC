@@ -98,9 +98,28 @@ first, changing `/template/old.gds` to `/run/old.gds`; the later exact
 replacement could no longer match. That behavior could report patch success
 while retaining the wrong artifact path. Do not restore that order.
 
+The GUI directory selected as the template is not necessarily the directory
+that `run.pvs` executes. PVS UI files can contain an absolute `cd`, control
+path, cell-tree path, or result-database path pointing to a sibling historical
+run. Therefore replay also discovers the actual GUI execution root and
+relocates it to the immutable run directory. It then forces:
+
+- the shell working directory to the immutable run directory;
+- `-control`, `-cell_tree`, `.config.rul`, and `.technology.rul` to copied
+  run-local files;
+- DRC summary and result-database paths to the immutable run directory;
+- LVS report, ERC summary/database, SVDB, and extracted-layout SPICE paths to
+  the immutable run directory.
+
+If `run.pvs` names an external `cell_tree.txt`, replay copies and hashes it
+before patching. Missing execution dependencies fail the replay contract.
+PVS return code or reports written outside the immutable run are not
+attributable evidence.
+
 After patching, replay independently proves:
 
 - selected absolute Cadence PVS binary is in `run.pvs`;
+- execution and generated result paths are run-local;
 - expected layout top is the `-top_cell` value;
 - expected LVS source top is the `-source_top_cell` value;
 - canonical GDS path occurs in copied controls;
@@ -116,6 +135,7 @@ Generated evidence:
 template_replacements.rpt
 preprocessor_defines.rpt
 replay_contract_status.rpt
+output_isolation.rpt
 external_references.rpt
 SHA256SUMS
 ```
@@ -149,6 +169,12 @@ template GDS/source/CDL/top values, and requires the strict replay contract.
 PVS process return code alone is not accepted. The result parser passes only
 an explicit report-level `MATCH`. `MISMATCH`, `UNKNOWN`, missing report, stale
 path, or missing CDL all remain failures.
+
+The parser also writes `pvs_result_evidence_inventory.rpt`. An unknown DRC
+run records every scanned run-local text artifact and the number of matching
+summary lines. Conflicting `Total DRC Results` totals remain `UNKNOWN`.
+Nonzero DRC is accepted as classified debt only when both the underlying PVS
+tool return code is zero and a unique report-level total exists.
 
 ## 7. GUI Template Requirements
 

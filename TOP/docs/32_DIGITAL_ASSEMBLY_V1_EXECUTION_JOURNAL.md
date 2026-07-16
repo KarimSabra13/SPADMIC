@@ -2121,3 +2121,35 @@ There is no DRC result from this attempt. The scanner now removes PVS/C line
 and block comments before path extraction and has an exact separator
 regression. The failed run is retained, and the corrected flow requires a
 fresh Phase 3 session and run identifier.
+
+### P04-R03 PVS Returned Zero Without Run-Local DRC Evidence
+
+Fresh Phase 3 session `tx_packet_pvs_waiver_20260716_130442` passed export,
+GDS audit, staging, source/CDL preparation, and corrected external-reference
+validation. PVS executed and returned zero, but the parser found no immutable
+run-local summary:
+
+```text
+PVS_RC=0
+PVS_DRC_STATUS=UNKNOWN
+EVIDENCE=NONE
+PARSE_RC=8
+```
+
+The reference inventory showed that the `_HV` GUI template still named the
+historical sibling `layoutverification/pvs_drc/spadmic_tx_packet_core`
+directory for execution artifacts. Inputs had been patched, but absolute
+working-directory, control, cell-tree, and output paths were not yet required
+to be package-local. The zero return code is therefore not attributable DRC
+evidence and cannot be promoted to zero or nonzero classification.
+
+Replay now discovers and relocates the actual GUI execution root, copies an
+external cell tree when required, and forces all DRC/LVS reports and databases
+under the immutable run directory. `output_isolation.rpt` proves the rewritten
+paths. The result parser writes a scanned-file inventory, rejects conflicting
+totals, and the Phase 3 driver requires underlying PVS tool RC zero before
+accepting a report-level nonzero count as DRC debt.
+
+The `130442` run remains immutable negative evidence. A fresh Phase 3 session
+must reproduce export and staging, then obtain a unique run-local
+`Total DRC Results` line before the independent LVS diagnostic proceeds.

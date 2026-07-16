@@ -1310,3 +1310,37 @@ PVS_WRAPPER_RC=1
 No DRC conclusion exists without `pvs_drc_status.rpt`. Strip PVS/C `//` and
 `/* ... */` comments before absolute-path extraction, preserve the failed run,
 and use a fresh immutable run identifier after repairing the scanner.
+
+### PVS GUI Execution Root Escaped The Immutable Replay Directory
+
+The next fresh packet-core base-DRC run passed package audit, replay input
+checks, and external-reference existence checks. PVS returned zero, but result
+classification remained:
+
+```text
+PVS_DRC_STATUS=UNKNOWN
+EVIDENCE=NONE
+PARSE_RC=8
+```
+
+The selected `_HV` directory was not the directory embedded as the GUI run's
+absolute working root. `run.pvs` and related controls could still point to the
+historical sibling `spadmic_tx_packet_core` directory. Consequently PVS could
+execute successfully while writing its `.sum`, `.err`, or other result
+artifacts outside the immutable package. The run-local parser correctly found
+no attributable result.
+
+Do not treat tool RC zero as DRC zero, and do not import an old sibling summary
+afterward. A replay contract must cover both inputs and generated outputs:
+
+- relocate the actual `cd` root, not only the selected template path;
+- force copied control, rule, and cell-tree paths;
+- force DRC/LVS summaries, result databases, SVDB, and extracted SPICE paths;
+- hash externally copied execution dependencies;
+- inventory every run-local result candidate;
+- reject conflicting totals;
+- require PVS tool RC zero before recording report-level nonzero DRC debt.
+
+The repaired replay emits `output_isolation.rpt`. Absence of that PASS report,
+or absence of one unique run-local result line, remains infrastructure failure
+rather than a design verdict.

@@ -23,19 +23,31 @@ class PvsReplayContractTest(unittest.TestCase):
             "layout_top": "old_layout_top",
             "source_top": "old_source_top",
         }
+        historical_run = root / "historical_gui_run"
+        historical_run.mkdir()
+        (historical_run / "cell_tree.txt").write_text("old_layout_top\n")
         if mode == "lvs":
             run_mode = "-lvs"
             source_option = f" -source_top_cell {old['source_top']}"
+            output_option = f" -spice {historical_run / 'old_layout.spi'}"
             control = "pvslvsctl"
         else:
             run_mode = "-drc"
             source_option = ""
+            output_option = ""
             control = "pvsdrcctl"
         (template / "run.pvs").write_text(
             "#!/bin/sh\n"
+            "pwd_d=`pwd`\n"
+            f"cd {historical_run} ;\\\n"
             "/eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs "
             f"{run_mode} -top_cell {old['layout_top']}{source_option} "
-            f"-control {template / control}\n"
+            f"{output_option} "
+            f"-control {historical_run / control} "
+            f"-cell_tree {historical_run / 'cell_tree.txt'} "
+            f"{historical_run / '.config.rul'} "
+            f"{historical_run / '.technology.rul'}\n"
+            "cd $pwd_d\n"
         )
         control_text = (
             f'layout_path "{old["gds"]}";\n'
@@ -43,10 +55,24 @@ class PvsReplayContractTest(unittest.TestCase):
         )
         if mode == "lvs":
             control_text += (
+                'lvs_report_file "old_layout_lvs.sum";\n'
+                'report_summary -erc "old_layout_erc.sum" -replace;\n'
+                f'results_db -erc "{historical_run / "old_layout_lvs.err"}" -ascii;\n'
+                f'mask_svdb_dir "{historical_run / "svdb"}";\n'
                 f'schematic_path "{old["source"]}" verilog;\n'
                 f'schematic_path "{old["cdl"]}" spice;\n'
             )
+        else:
+            control_text += (
+                'report_summary -drc "old_layout_drc.sum" -replace;\n'
+                f'results_db -drc "{historical_run / "old_layout_drc.err"}" -ascii;\n'
+            )
         (template / control).write_text(control_text)
+        (template / "pipo1.setup").write_text(
+            f'runDir\t"{historical_run}"\n'
+            f'logFile\t"{historical_run / "PIPO1.LOG"}"\n'
+            f'strmFile\t"{old["gds"]}"\n'
+        )
         (template / ".config.rul").write_text("// config\n")
         (template / ".technology.rul").write_text(
             'technology "XH018_1131";\n'
@@ -146,6 +172,47 @@ class PvsReplayContractTest(unittest.TestCase):
             self.assertNotIn("/missing/comment-only/reference", references)
             self.assertNotIn("/missing/block-comment/reference", references)
             self.assertIn(str(Path(tmp) / "canonical.gds"), references)
+
+    def test_gui_execution_and_output_paths_are_relocated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result, run_dir = self.run_replay(root, "drc")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            historical = str(root / "historical_gui_run")
+            run_text = (run_dir / "run.pvs").read_text()
+            control_text = (run_dir / "pvsdrcctl").read_text()
+            self.assertIn(f"cd {run_dir}", run_text)
+            self.assertIn(f"-control {run_dir / 'pvsdrcctl'}", run_text)
+            self.assertIn(str(run_dir / ".config.rul"), run_text)
+            self.assertIn(str(run_dir / ".technology.rul"), run_text)
+            self.assertIn(str(run_dir / "canonical_top_drc.sum"), control_text)
+            self.assertIn(str(run_dir / "canonical_top_drc.err"), control_text)
+            self.assertNotIn(historical, run_text)
+            self.assertNotIn(historical, control_text)
+            self.assertNotIn(
+                historical,
+                (run_dir / "external_references.rpt").read_text(),
+            )
+            isolation = (run_dir / "output_isolation.rpt").read_text()
+            self.assertIn("STATUS=PASS", isolation)
+            self.assertIn("DRC_SUMMARY_REWRITE_COUNT=1", isolation)
+            replacements = (run_dir / "template_replacements.rpt").read_text()
+            self.assertIn("COPIED_EXTERNAL_CELL_TREE=", replacements)
+
+    def test_lvs_outputs_are_relocated_for_report_level_classification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result, run_dir = self.run_replay(Path(tmp), "lvs")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            run_text = (run_dir / "run.pvs").read_text()
+            control_text = (run_dir / "pvslvsctl").read_text()
+            self.assertIn(str(run_dir / "canonical_top.spi"), run_text)
+            for output in (
+                run_dir / "canonical_top_lvs.sum",
+                run_dir / "canonical_top_erc.sum",
+                run_dir / "canonical_top_lvs.err",
+                run_dir / "svdb",
+            ):
+                self.assertIn(str(output), control_text)
 
 
 if __name__ == "__main__":
