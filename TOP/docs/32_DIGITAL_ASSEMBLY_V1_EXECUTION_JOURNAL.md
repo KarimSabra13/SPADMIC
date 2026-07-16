@@ -2383,3 +2383,67 @@ antenna answer different questions: an electrically correct net can still
 accumulate excessive manufacturing charge. The four Innovus minimum-area
 markers are also separate geometric debt and were not reproduced among the
 135 PVS antenna-result boxes.
+
+### P04-R09 Virtuoso Import Artifact Selected
+
+The exact immutable package GDS used by the explicit PVS LVS `MATCH` is now
+the selected Virtuoso import baseline:
+
+```text
+PACKAGE=
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/
+spadmic_tx_packet_core/tx_packet_pvs_waiver_20260716_130442
+
+GDS=
+package/gds/spadmic_tx_packet_core.gds
+
+LAYOUT_TOP=spadmic_tx_packet_core
+GDS_BYTES=16103546
+GDS_SHA256=
+48bbf0294f49e2f2201a2e86db71547ead33a9d426e43488df940d0c9e8b242e
+```
+
+No new Innovus export is authorized before import. The selected GDS already
+passed the official stream-map and JIHD-merge audit and is the exact layout
+input bound to:
+
+```text
+PVS_LVS_STATUS=MATCH
+```
+
+A fresh export would create a new physical hash without a matching PVS
+comparison. The first Virtuoso import must therefore use the immutable package
+GDS directly, or a byte-identical copy whose SHA256 is rechecked.
+
+The destination must be a new empty OA library attached to the active project
+XH018 technology. XStream In must use the recorded project layer table and
+object map, preserve case and labels, convert pins as geometry and text, and
+select top `spadmic_tx_packet_core`. The imported top must then prove:
+
+```text
+EXPECTED_SIZE_UM=2066.960000 366.800000
+EXPECTED_TOP_TERMINAL_COUNT=156
+ROUTING_LAYERS_VISIBLE=MET1_MET2_MET3_METTP
+OA_BBOX_PARITY=PASS
+OA_PIN_PARITY=PASS
+```
+
+The import is for review and manual physical repair, not promotion:
+
+```text
+PVS_BASE_ANTENNA_RESULTS=135
+INNOVUS_MET1_MIN_AREA_RESULTS=4
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+FINAL_SIGNOFF_READY=NO
+```
+
+Any OA edit creates a new physical state and invalidates transfer of the old
+LVS verdict. The repaired state requires a new mapped streamout, base and
+density PVS DRC, and a new explicit LVS `MATCH`.
+
+The complete import paths, hashes, XStream settings, verification commands,
+evidence locations, and post-import audit are documented in:
+
+```text
+TOP/docs/40_TX_PACKET_CORE_VIRTUOSO_IMPORT_HANDOFF.md
+```

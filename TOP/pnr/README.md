@@ -253,8 +253,11 @@ special connectivity plus the GDS audit. Immutable staging keeps the raw
 Innovus PG netlist, derives a CDL-filtered PVS source, requires LEF/source pin
 parity, and stores the exact JIHD CDL in the package. PVS base DRC, density DRC,
 and LVS remain server gates. See
-`TOP/docs/36_TX_PACKET_CORE_CANONICAL_REBUILD_AND_PVS_CLOSURE.md` and
-`TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md`.
+`TOP/docs/36_TX_PACKET_CORE_CANONICAL_REBUILD_AND_PVS_CLOSURE.md`,
+`TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md`, and
+`TOP/docs/40_TX_PACKET_CORE_VIRTUOSO_IMPORT_HANDOFF.md`. The last document
+identifies the exact hash-bound GDS selected for controlled Virtuoso import,
+its XStream In settings, and the required post-import OA/LEF audit.
 
 After a classified nonzero PVS base run, use
 `TOP/pnr/scripts/analyze_pvs_drc_run.py` to generate an external rule inventory,
