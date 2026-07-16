@@ -26,6 +26,11 @@ COUNT_LINE_RE = re.compile(r"^(\d+)\s+(\d+)\s+\d+\s+.+$")
 GEOMETRY_RECORD_RE = re.compile(r"^([A-Za-z])\s+(\d+)\s+(\d+)\s*$")
 COORDINATE_RE = re.compile(r"^(-?\d+)\s+(-?\d+)\s*$")
 EXPLICIT_ANTENNA_RE = re.compile(r"\bantenn\w*\b", re.I)
+CONNECTED_GATE_AREA_RATIO_RE = re.compile(
+    r"\bratio\s+of\s+.+?\s+area\s+to\s+(?:the\s+)?connected\s+"
+    r"gates?\s+area\b",
+    re.I,
+)
 
 
 @dataclass(frozen=True)
@@ -314,15 +319,24 @@ def symbol_state(control_text: str, symbol: str) -> str:
     return f"CONFLICT_DEFINE_{defines}_UNDEFINE_{undefines}"
 
 
+def antenna_classification_basis(name: str, description: str) -> str:
+    text = f"{name} {description}"
+    if EXPLICIT_ANTENNA_RE.search(text):
+        return "EXPLICIT_ANTENNA_TERM"
+    if CONNECTED_GATE_AREA_RATIO_RE.search(text):
+        return "CONDUCTOR_AREA_TO_CONNECTED_GATE_AREA_RATIO"
+    return "NONE"
+
+
 def rule_classification(name: str, description: str) -> str:
-    if EXPLICIT_ANTENNA_RE.search(f"{name} {description}"):
-        return "EXPLICIT_ANTENNA"
+    if antenna_classification_basis(name, description) != "NONE":
+        return "ANTENNA_RULE"
     return "NON_ANTENNA_REVIEW"
 
 
 def semantic_category(name: str, description: str) -> str:
     text = f"{name} {description}".lower()
-    if EXPLICIT_ANTENNA_RE.search(text):
+    if rule_classification(name, description) == "ANTENNA_RULE":
         return "ANTENNA"
     if "density" in text:
         return "DENSITY"
@@ -405,8 +419,10 @@ def repair_guidance(category: str) -> str:
             "fill repair into the base-rule diagnosis."
         ),
         "ANTENNA": (
-            "Keep this in the separate antenna closure flow; it is excluded "
-            "only by explicit rule text, never by an assumed rule prefix."
+            "Keep this in the separate antenna closure flow. Review legal "
+            "foundry remedies such as route segmentation or layer hopping, "
+            "antenna-diode insertion, reduced pre-gate conductor area, or "
+            "additional connected diffusion; do not treat it as minimum area."
         ),
         "OTHER_PHYSICAL_RULE": (
             "Use the foundry rule description and result geometry as the "
@@ -509,6 +525,8 @@ def write_markdown(
     correlations: dict[str, list[Geometry]],
     geometry_tsv: Path,
     rule_tsv: Path,
+    antenna_tsv: Path,
+    non_antenna_tsv: Path,
     bin_tsv: Path,
 ) -> None:
     non_antenna = [
@@ -517,17 +535,17 @@ def write_markdown(
         if rule_classification(item.rule.name, item.description)
         == "NON_ANTENNA_REVIEW"
     ]
-    explicit_antenna = [
+    antenna_rules = [
         item
         for item in ordered
         if rule_classification(item.rule.name, item.description)
-        == "EXPLICIT_ANTENNA"
+        == "ANTENNA_RULE"
     ]
     non_antenna_total = sum(item.rule.primary for item in non_antenna)
-    explicit_antenna_total = sum(item.rule.primary for item in explicit_antenna)
+    antenna_total = sum(item.rule.primary for item in antenna_rules)
 
     lines = [
-        "# PVS Base DRC Non-Antenna Analysis",
+        "# PVS Base DRC Rule Classification and Non-Antenna Analysis",
         "",
         "## Verdict",
         "",
@@ -535,28 +553,31 @@ def write_markdown(
         f"- Immutable source run: `{run_dir}`",
         f"- PVS base DRC total: `{total_primary} ({total_expanded})`",
         f"- Retained non-antenna review total: `{non_antenna_total}`",
-        f"- Explicit antenna result total: `{explicit_antenna_total}`",
+        f"- Classified antenna result total: `{antenna_total}`",
         f"- DENSITY configurator state: `{density_state}`",
         f"- VAR_ANT_RATIO configurator state: `{antenna_state}`",
         "- LVS state: separate explicit `MATCH`; it does not waive this DRC debt.",
         "",
         "The classification policy is deliberately conservative. A result is",
-        "excluded as antenna only when its rule name or foundry description",
-        "explicitly contains an antenna term. Every ambiguous rule remains in",
-        "the non-antenna repair inventory.",
+        "classified as antenna only when its rule name or foundry description",
+        "contains an explicit antenna term or describes the antenna mechanism",
+        "as conductor area divided by connected gate area. Every other",
+        "ambiguous rule remains in the non-antenna repair inventory.",
         "",
-        "## Nonzero Rule Inventory",
+        "`VAR_ANT_RATIO=UNDEFINED` disables the optional variable-ratio family;",
+        "it does not disable fixed metal-to-connected-gate antenna checks.",
         "",
-        "| Rank | Rule | Results | Category | Layer | Foundry description |",
+        "## Antenna Rule Inventory",
+        "",
+        "| Rank | Rule | Results | Basis | Layer | Foundry description |",
         "| ---: | --- | ---: | --- | --- | --- |",
     ]
     for rank, item in enumerate(ordered, start=1):
-        classification = rule_classification(item.rule.name, item.description)
-        if classification != "NON_ANTENNA_REVIEW":
+        if rule_classification(item.rule.name, item.description) != "ANTENNA_RULE":
             continue
         lines.append(
             f"| {rank} | `{item.rule.name}` | {item.rule.primary} | "
-            f"{semantic_category(item.rule.name, item.description)} | "
+            f"{antenna_classification_basis(item.rule.name, item.description)} | "
             f"{affected_layer(item.rule.name, item.description)} | "
             f"{markdown_escape(item.description or 'DESCRIPTION_MISSING')} |"
         )
@@ -564,10 +585,53 @@ def write_markdown(
     lines.extend(
         [
             "",
-            "## Per-Rule Evidence",
+            "## Non-Antenna Rule Inventory",
             "",
         ]
     )
+    if not non_antenna:
+        lines.extend(
+            [
+                "No non-antenna PVS base-DRC rule remains after semantic",
+                "classification of the executed foundry descriptions.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "| Rank | Rule | Results | Category | Layer | Foundry description |",
+                "| ---: | --- | ---: | --- | --- | --- |",
+            ]
+        )
+        for rank, item in enumerate(ordered, start=1):
+            if (
+                rule_classification(item.rule.name, item.description)
+                != "NON_ANTENNA_REVIEW"
+            ):
+                continue
+            lines.append(
+                f"| {rank} | `{item.rule.name}` | {item.rule.primary} | "
+                f"{semantic_category(item.rule.name, item.description)} | "
+                f"{affected_layer(item.rule.name, item.description)} | "
+                f"{markdown_escape(item.description or 'DESCRIPTION_MISSING')} |"
+            )
+
+    lines.extend(
+        [
+            "",
+            "## Non-Antenna Per-Rule Evidence",
+            "",
+        ]
+    )
+    if not non_antenna:
+        lines.extend(
+            [
+                "None. The complete antenna geometry remains available in the",
+                "rule inventory and marker-geometry TSV for the deferred antenna",
+                "closure flow.",
+                "",
+            ]
+        )
     for item in ordered:
         classification = rule_classification(item.rule.name, item.description)
         if classification != "NON_ANTENNA_REVIEW":
@@ -644,16 +708,16 @@ def write_markdown(
     lines.extend(
         [
             "",
-            "## Repair Order",
+            "## Closure Order",
             "",
-            "1. Start with the highest-count non-antenna rule, but inspect whether",
-            "   its markers repeat inside merged standard cells or only in top routing.",
-            "2. Review the highest-count spatial bins to identify repeated structures.",
-            "3. Review overlaps with the four known Innovus MET1 minimum-area boxes.",
-            "4. Make one narrowly scoped physical repair class at a time.",
-            "5. Export a new mapped and standard-cell-merged GDS.",
-            "6. Require base PVS DRC zero, then density-enabled PVS DRC zero.",
-            "7. Rerun LVS on the repaired GDS and require a new explicit `MATCH`.",
+            "1. Keep the four Innovus MET1 minimum-area markers as their own",
+            "   manually repairable Innovus debt; this PVS run did not reproduce them.",
+            "2. Defer or repair the classified antenna rules according to the",
+            "   milestone policy, but do not relabel them as generic area errors.",
+            "3. Export a new mapped and standard-cell-merged GDS after any repair.",
+            "4. Require base PVS DRC zero for final closure, then run and require",
+            "   density-enabled PVS DRC zero.",
+            "5. Rerun LVS on the repaired GDS and require a new explicit `MATCH`.",
             "",
             "Do not edit or rerun inside the immutable source run. This report and",
             "all generated TSV files live in the separate analysis directory.",
@@ -661,6 +725,8 @@ def write_markdown(
             "## Machine-Readable Evidence",
             "",
             f"- Rule inventory: `{rule_tsv}`",
+            f"- Antenna rules: `{antenna_tsv}`",
+            f"- Non-antenna rules: `{non_antenna_tsv}`",
             f"- Every result geometry: `{geometry_tsv}`",
             f"- Spatial bins: `{bin_tsv}`",
             f"- Summary source: `{summary_path}`",
@@ -830,11 +896,11 @@ def analyze(args: argparse.Namespace) -> Path:
     all_geometries = [
         geometry for item in ordered for geometry in item.geometries
     ]
-    explicit_antenna = [
+    antenna_rules = [
         item
         for item in ordered
         if rule_classification(item.rule.name, item.description)
-        == "EXPLICIT_ANTENNA"
+        == "ANTENNA_RULE"
     ]
     non_antenna = [
         item
@@ -842,13 +908,23 @@ def analyze(args: argparse.Namespace) -> Path:
         if rule_classification(item.rule.name, item.description)
         == "NON_ANTENNA_REVIEW"
     ]
-    explicit_antenna_primary = sum(item.rule.primary for item in explicit_antenna)
-    explicit_antenna_expanded = sum(item.rule.expanded for item in explicit_antenna)
+    antenna_primary = sum(item.rule.primary for item in antenna_rules)
+    antenna_expanded = sum(item.rule.expanded for item in antenna_rules)
+    explicit_term_rule_count = sum(
+        antenna_classification_basis(item.rule.name, item.description)
+        == "EXPLICIT_ANTENNA_TERM"
+        for item in antenna_rules
+    )
+    gate_area_ratio_rule_count = sum(
+        antenna_classification_basis(item.rule.name, item.description)
+        == "CONDUCTOR_AREA_TO_CONNECTED_GATE_AREA_RATIO"
+        for item in antenna_rules
+    )
     non_antenna_primary = sum(item.rule.primary for item in non_antenna)
     non_antenna_expanded = sum(item.rule.expanded for item in non_antenna)
-    if explicit_antenna_primary + non_antenna_primary != total_primary:
+    if antenna_primary + non_antenna_primary != total_primary:
         raise AnalysisError("antenna/non-antenna primary result partition failed")
-    if explicit_antenna_expanded + non_antenna_expanded != total_expanded:
+    if antenna_expanded + non_antenna_expanded != total_expanded:
         raise AnalysisError("antenna/non-antenna expanded result partition failed")
 
     correlations: dict[str, list[Geometry]] = defaultdict(list)
@@ -861,7 +937,7 @@ def analyze(args: argparse.Namespace) -> Path:
     output_dir.mkdir(parents=True)
     rule_tsv = output_dir / "pvs_drc_rule_inventory.tsv"
     non_antenna_tsv = output_dir / "pvs_drc_non_antenna_rules.tsv"
-    antenna_tsv = output_dir / "pvs_drc_explicit_antenna_rules.tsv"
+    antenna_tsv = output_dir / "pvs_drc_antenna_rules.tsv"
     geometry_tsv = output_dir / "pvs_drc_marker_geometry.tsv"
     bin_tsv = output_dir / "pvs_drc_spatial_bins.tsv"
     correlation_tsv = output_dir / "pvs_innovus_marker_correlation.tsv"
@@ -875,6 +951,7 @@ def analyze(args: argparse.Namespace) -> Path:
         "expanded_results",
         "share_of_total_pct",
         "classification",
+        "classification_basis",
         "category",
         "layer_or_object",
         "description",
@@ -893,6 +970,7 @@ def analyze(args: argparse.Namespace) -> Path:
                 item.rule.expanded,
                 f"{100.0 * item.rule.primary / total_primary:.6f}",
                 rule_classification(item.rule.name, item.description),
+                antenna_classification_basis(item.rule.name, item.description),
                 category,
                 affected_layer(item.rule.name, item.description),
                 item.description,
@@ -914,7 +992,7 @@ def analyze(args: argparse.Namespace) -> Path:
     write_tsv(
         antenna_tsv,
         rule_header,
-        [row for row in rule_rows if row[5] == "EXPLICIT_ANTENNA"],
+        [row for row in rule_rows if row[5] == "ANTENNA_RULE"],
     )
 
     geometry_rows: list[list[object]] = []
@@ -928,6 +1006,10 @@ def analyze(args: argparse.Namespace) -> Path:
                     item.rule.name,
                     item.description,
                     classification,
+                    antenna_classification_basis(
+                        item.rule.name,
+                        item.description,
+                    ),
                     category,
                     layer,
                     geometry.result_index,
@@ -949,6 +1031,7 @@ def analyze(args: argparse.Namespace) -> Path:
             "rule",
             "description",
             "classification",
+            "classification_basis",
             "category",
             "layer_or_object",
             "result_index",
@@ -1054,6 +1137,8 @@ def analyze(args: argparse.Namespace) -> Path:
         correlations=correlations,
         geometry_tsv=geometry_tsv,
         rule_tsv=rule_tsv,
+        antenna_tsv=antenna_tsv,
+        non_antenna_tsv=non_antenna_tsv,
         bin_tsv=bin_tsv,
     )
 
@@ -1063,9 +1148,9 @@ def analyze(args: argparse.Namespace) -> Path:
         for geometry in hits
     }
     status_lines = [
-        "LABEL=SPADMIC_PVS_DRC_NON_ANTENNA_ANALYSIS",
+        "LABEL=SPADMIC_PVS_DRC_RULE_ANALYSIS",
         "STATUS=PASS",
-        "RESULT=PVS_DRC_NON_ANTENNA_DEBT_CLASSIFIED",
+        "RESULT=PVS_DRC_RULE_DEBT_CLASSIFIED",
         f"RUN_DIR={run_dir}",
         f"OUTPUT_DIR={output_dir}",
         "SOURCE_RUN_MUTATION_AUTHORIZED=NO",
@@ -1083,16 +1168,24 @@ def analyze(args: argparse.Namespace) -> Path:
         f"DRC_TOTAL_EXPANDED={total_expanded}",
         "RESULT_COUNT_RECONCILIATION=PASS",
         "ASCII_ERROR_GEOMETRY_RECONCILIATION=PASS",
-        "ANTENNA_EXCLUSION_POLICY=EXPLICIT_RULE_NAME_OR_DESCRIPTION_ONLY",
+        "ANTENNA_CLASSIFICATION_POLICY="
+        "EXPLICIT_TERM_OR_CONDUCTOR_AREA_TO_CONNECTED_GATE_AREA_RATIO",
         "AMBIGUOUS_RULE_POLICY=RETAIN_AS_NON_ANTENNA_REVIEW",
         f"VAR_ANT_RATIO_STATE={antenna_state}",
+        "VAR_ANT_RATIO_SCOPE=ADDITIONAL_OPTIONAL_RULE_FAMILY_ONLY",
         f"DENSITY_STATE={density_state}",
-        f"EXPLICIT_ANTENNA_RULE_COUNT={len(explicit_antenna)}",
-        f"EXPLICIT_ANTENNA_PRIMARY_RESULT_COUNT={explicit_antenna_primary}",
-        f"EXPLICIT_ANTENNA_EXPANDED_RESULT_COUNT={explicit_antenna_expanded}",
+        f"ANTENNA_RULE_COUNT={len(antenna_rules)}",
+        f"ANTENNA_PRIMARY_RESULT_COUNT={antenna_primary}",
+        f"ANTENNA_EXPANDED_RESULT_COUNT={antenna_expanded}",
+        f"ANTENNA_EXPLICIT_TERM_RULE_COUNT={explicit_term_rule_count}",
+        f"ANTENNA_GATE_AREA_RATIO_RULE_COUNT={gate_area_ratio_rule_count}",
+        "ANTENNA_RESULT_STATUS="
+        f"{'NONZERO' if antenna_primary else 'ZERO'}",
         f"NON_ANTENNA_RULE_COUNT={len(non_antenna)}",
         f"NON_ANTENNA_PRIMARY_RESULT_COUNT={non_antenna_primary}",
         f"NON_ANTENNA_EXPANDED_RESULT_COUNT={non_antenna_expanded}",
+        "NON_ANTENNA_RESULT_STATUS="
+        f"{'NONZERO' if non_antenna_primary else 'ZERO'}",
         f"INNOVUS_WAIVER_MARKER_COUNT={len(waiver_markers)}",
         "INNOVUS_WAIVER_MARKERS_WITH_PVS_HITS="
         f"{sum(bool(correlations.get(marker.net)) for marker in waiver_markers)}",
@@ -1107,7 +1200,7 @@ def analyze(args: argparse.Namespace) -> Path:
         f"CONTROL_SHA256={sha256(control_path)}",
         f"RULE_INVENTORY={rule_tsv}",
         f"NON_ANTENNA_RULES={non_antenna_tsv}",
-        f"EXPLICIT_ANTENNA_RULES={antenna_tsv}",
+        f"ANTENNA_RULES={antenna_tsv}",
         f"MARKER_GEOMETRY={geometry_tsv}",
         f"SPATIAL_BINS={bin_tsv}",
         f"INNOVUS_CORRELATION={correlation_tsv}",

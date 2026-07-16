@@ -1414,7 +1414,8 @@ Use `analyze_pvs_drc_run.py` against the immutable base-DRC run. It must:
 - reconcile every `RULECHECK` count with the final `135 (135)`;
 - reconcile every nonzero rule with the ASCII DRC error geometry;
 - record `DENSITY` and `VAR_ANT_RATIO` control state;
-- exclude antenna only on explicit foundry rule wording;
+- classify explicit antenna wording and conductor-area to connected-gate-area
+  ratios as antenna mechanisms;
 - retain ambiguous rules as non-antenna review debt;
 - write outside the immutable PVS run;
 - correlate the four Innovus marker boxes without treating overlap as waiver.
@@ -1422,3 +1423,37 @@ Use `analyze_pvs_drc_run.py` against the immutable base-DRC run. It must:
 The generated rule descriptions and coordinates define the manual repair
 backlog. Only a later repaired export with base DRC zero, density DRC zero, and
 a fresh explicit LVS match can close the packet-core physical signoff gate.
+
+### Literal Antenna Keyword Filter Misclassified Gate-Area Ratio Rules
+
+The first packet-core DRC analyzer correctly parsed and reconciled the complete
+`135 (135)` PVS result set but classified both nonzero rules as generic area
+checks. Their descriptions were:
+
+```text
+R2M3P1  Maximum ratio of MET3 area to connected GATE area ... 400
+R1M3P1  Maximum ratio of MET3 area to connected GATE area ... 400
+```
+
+The failure mechanism was a semantic classifier that required the literal
+word `antenna`. Foundry decks may encode antenna checks by the physical ratio
+they enforce without placing `antenna` in the short rule name or description.
+
+Do not repair this tuple by increasing MET3 area. That can make the antenna
+ratio worse. Classify conductor-area to connected-gate-area ratios as antenna,
+record the basis separately, and keep arbitrary ratio rules in the ambiguous
+non-antenna bucket.
+
+The corrected packet tuple is:
+
+```text
+ANTENNA_RULE_COUNT=2
+ANTENNA_PRIMARY_RESULT_COUNT=135
+NON_ANTENNA_RULE_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=0
+```
+
+`#UNDEFINE VAR_ANT_RATIO` means only that the optional variable-ratio family
+is disabled. It does not invalidate the fixed antenna checks that executed.
+The first analysis directory remains immutable negative evidence; rerun the
+corrected analyzer into a new directory.

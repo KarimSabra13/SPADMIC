@@ -258,8 +258,11 @@ and LVS remain server gates. See
 
 After a classified nonzero PVS base run, use
 `TOP/pnr/scripts/analyze_pvs_drc_run.py` to generate an external rule inventory,
-all result coordinates, spatial bins, explicit-only antenna separation, and
-correlation with known Innovus marker boxes. The packet-core protocol is in
+all result coordinates, spatial bins, semantic antenna separation, and
+correlation with known Innovus marker boxes. Antenna classification covers
+both explicit antenna wording and conductor-area to connected-gate-area ratio
+rules; `VAR_ANT_RATIO` is an additional optional family, not a global antenna
+enable. The packet-core protocol is in
 `TOP/docs/39_TX_PACKET_CORE_PVS_BASE_DRC_NON_ANTENNA_ANALYSIS.md`.
 
 The block-by-block plan is in `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`.

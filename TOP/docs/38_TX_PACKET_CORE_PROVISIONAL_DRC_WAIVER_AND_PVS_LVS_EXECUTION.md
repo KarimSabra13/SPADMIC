@@ -750,7 +750,7 @@ comparison, but cross-probing into Virtuoso requires launching the debug
 environment from the corresponding Virtuoso layout session. That integration
 is optional review work and does not strengthen the existing `MATCH`.
 
-## 17. Read-Only Base DRC Rule Decomposition
+## 17. Read-Only Base DRC Rule Classification
 
 The next step after the explicit LVS match is not another PVS execution. The
 existing immutable base-DRC run already contains an attributable
@@ -767,23 +767,61 @@ zero, the exact classified nonzero DRC status, one summary, and one ASCII DRC
 error database. It reconciles every rule count and every result polygon before
 writing a separate analysis directory.
 
-The antenna policy is explicit-only:
+The first analyzer revision used an explicit-word-only antenna policy:
 
 ```text
 ANTENNA_EXCLUSION_POLICY=EXPLICIT_RULE_NAME_OR_DESCRIPTION_ONLY
+```
+
+The server run proved that this policy was incomplete. Both nonzero rules have
+the foundry description:
+
+```text
+Maximum ratio of MET3 area to connected GATE area ... 400
+```
+
+That is the antenna mechanism even though the literal word `antenna` is
+absent. The corrected policy is:
+
+```text
+ANTENNA_CLASSIFICATION_POLICY=
+EXPLICIT_TERM_OR_CONDUCTOR_AREA_TO_CONNECTED_GATE_AREA_RATIO
 AMBIGUOUS_RULE_POLICY=RETAIN_AS_NON_ANTENNA_REVIEW
 ```
 
-This prevents the 21 deferred Innovus antenna markers, an `A...` foundry rule
-prefix, or a standalone `antenna.ratio` artifact from being incorrectly
-subtracted from the 135 PVS result count. The exact executed `pvsdrcctl` is
-also audited for `DENSITY` and `VAR_ANT_RATIO`.
+The executed packet result is:
+
+```text
+R2M3P1=93
+R1M3P1=42
+ANTENNA_PRIMARY_RESULT_COUNT=135
+NON_ANTENNA_PRIMARY_RESULT_COUNT=0
+VAR_ANT_RATIO_STATE=UNDEFINED
+DENSITY_STATE=UNDEFINED
+```
+
+`VAR_ANT_RATIO=UNDEFINED` disables an additional optional variable-ratio rule
+family; it does not disable the fixed metal-to-connected-gate antenna rules
+that produced the 135 results.
 
 The generated evidence includes rule inventory, every result location in
 microns, spatial bins, overlap with the four Innovus temporary-waiver boxes,
-and a detailed Markdown report. Actual packet-core rule names and counts must
-be taken from that server-generated output; they are not guessed from the
-aggregate total.
+and a detailed Markdown report. The four Innovus MET1 marker boxes have zero
+overlap with all PVS result boxes at the `0.35 um` review margin, so the gate
+state is four separate Innovus minimum-area markers plus 135 PVS antenna
+results, not 135 non-antenna PVS errors.
+
+The first `44f7ec51` analysis directory remains immutable negative evidence:
+its parsing and geometry are valid, but its semantic class and generic area
+repair guidance are rejected. The corrected analyzer must write a new
+directory and report:
+
+```text
+ANTENNA_RULE_COUNT=2
+ANTENNA_PRIMARY_RESULT_COUNT=135
+NON_ANTENNA_RULE_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=0
+```
 
 The full protocol and repair interpretation are documented in:
 

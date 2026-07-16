@@ -27,10 +27,12 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
             "--- RULECHECK RESULTS STATISTICS\n"
             "RULECHECK S1M1 ....................... Total Result      2 (       2)\n"
             "RULECHECK ANT_GATE ................... Total Result      1 (       1)\n"
+            "RULECHECK R1M3P1 ..................... Total Result      1 (       1)\n"
+            "RULECHECK R2M3P1 ..................... Total Result      1 (       1)\n"
             "RULECHECK RATIO1 ..................... Total Result      1 (       1)\n"
             "RULECHECK ZERO ....................... Total Result      0 (       0)\n"
-            "Total DRC RuleChecks              : 4\n"
-            "Total DRC Results                 : 4 (4)\n"
+            "Total DRC RuleChecks              : 6\n"
+            "Total DRC Results                 : 6 (6)\n"
         )
         error.write_text(
             "canonical_top 1000\n"
@@ -59,6 +61,26 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
             "30100 30000\n"
             "30100 30100\n"
             "30000 30100\n"
+            "R1M3P1\n"
+            "1 1 3 Jul 16 12:00:00 2026\n"
+            "Rule File Pathname: /deck/config.rul\n"
+            "Rule File Title: \" Example Foundry Deck \"\n"
+            "\"Maximum ratio of MET3 area to connected GATE area ... 400\"\n"
+            "p 1 4\n"
+            "32500 32500\n"
+            "32600 32500\n"
+            "32600 32600\n"
+            "32500 32600\n"
+            "R2M3P1\n"
+            "1 1 3 Jul 16 12:00:00 2026\n"
+            "Rule File Pathname: /deck/config.rul\n"
+            "Rule File Title: \" Example Foundry Deck \"\n"
+            "\"Maximum ratio of MET3 area to connected GATE area ... 400\"\n"
+            "p 1 4\n"
+            "35000 35000\n"
+            "35100 35000\n"
+            "35100 35100\n"
+            "35000 35100\n"
             "RATIO1\n"
             "1 1 3 Jul 16 12:00:00 2026\n"
             "Rule File Pathname: /deck/config.rul\n"
@@ -76,8 +98,8 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
             "PVS_RC=0\n"
             "PVS_DRC_STATUS=FAIL\n"
             "PVS_DRC_VARIANT=BASE\n"
-            "DRC_TOTAL_PRIMARY=4\n"
-            "DRC_TOTAL_EXPANDED=4\n"
+            "DRC_TOTAL_PRIMARY=6\n"
+            "DRC_TOTAL_EXPANDED=6\n"
         )
         (run / "replay_contract_status.rpt").write_text(
             "LABEL=SPADMIC_PVS_REPLAY_CONTRACT\n"
@@ -112,7 +134,7 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
         run: Path,
         output: Path,
         waiver: Path,
-        expected: int = 4,
+        expected: int = 6,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
@@ -144,19 +166,37 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
 
             status = (output / "pvs_drc_analysis_status.rpt").read_text()
             self.assertIn("STATUS=PASS", status)
-            self.assertIn("DRC_TOTAL_PRIMARY=4", status)
-            self.assertIn("EXPLICIT_ANTENNA_PRIMARY_RESULT_COUNT=1", status)
+            self.assertIn("DRC_TOTAL_PRIMARY=6", status)
+            self.assertIn("ANTENNA_PRIMARY_RESULT_COUNT=3", status)
             self.assertIn("NON_ANTENNA_PRIMARY_RESULT_COUNT=3", status)
+            self.assertIn("ANTENNA_GATE_AREA_RATIO_RULE_COUNT=2", status)
+            self.assertIn("ANTENNA_RESULT_STATUS=NONZERO", status)
+            self.assertIn("NON_ANTENNA_RESULT_STATUS=NONZERO", status)
             self.assertIn("VAR_ANT_RATIO_STATE=UNDEFINED", status)
+            self.assertIn(
+                "VAR_ANT_RATIO_SCOPE=ADDITIONAL_OPTIONAL_RULE_FAMILY_ONLY",
+                status,
+            )
             self.assertIn("PVS_RESULTS_OVERLAPPING_WAIVER_BOXES=1", status)
 
             non_antenna = (output / "pvs_drc_non_antenna_rules.tsv").read_text()
             self.assertIn("S1M1", non_antenna)
             self.assertIn("RATIO1", non_antenna)
             self.assertNotIn("ANT_GATE", non_antenna)
+            self.assertNotIn("R2M3P1", non_antenna)
+
+            antenna = (output / "pvs_drc_antenna_rules.tsv").read_text()
+            self.assertIn("ANT_GATE", antenna)
+            self.assertIn("R1M3P1", antenna)
+            self.assertIn("R2M3P1", antenna)
+            self.assertIn(
+                "CONDUCTOR_AREA_TO_CONNECTED_GATE_AREA_RATIO",
+                antenna,
+            )
+            self.assertIn("\tANTENNA\tMET3\t", antenna)
 
             geometry = (output / "pvs_drc_marker_geometry.tsv").read_text()
-            self.assertEqual(len(geometry.splitlines()), 5)
+            self.assertEqual(len(geometry.splitlines()), 7)
             self.assertIn("1.000000", geometry)
 
             correlation = (
@@ -166,8 +206,10 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
             self.assertIn("S1M1", correlation)
 
             markdown = (output / "pvs_drc_non_antenna_analysis.md").read_text()
-            self.assertIn("## Per-Rule Evidence", markdown)
+            self.assertIn("## Antenna Rule Inventory", markdown)
+            self.assertIn("## Non-Antenna Per-Rule Evidence", markdown)
             self.assertIn("Minimum MET1 spacing/notch", markdown)
+            self.assertIn("fixed metal-to-connected-gate antenna checks", markdown)
             self.assertIn("explicit `MATCH`", markdown)
 
     def test_expected_total_mismatch_fails_without_creating_output(self) -> None:
@@ -179,6 +221,40 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unexpected primary DRC total", result.stderr)
             self.assertFalse(output.exists())
+
+    def test_all_antenna_partition_writes_header_only_non_antenna_table(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run, waiver = self.make_run(root)
+            error = run / "canonical_top_drc.err"
+            text = error.read_text()
+            text = text.replace(
+                "Minimum MET1 spacing/notch ... 0.23",
+                "Maximum gate antenna ratio",
+            )
+            text = text.replace(
+                "Maximum MET2 width ratio",
+                "Maximum ratio of MET2 area to connected GATE area ... 400",
+            )
+            error.write_text(text)
+
+            output = root / "analysis"
+            result = self.run_analyzer(run, output, waiver)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            status = (output / "pvs_drc_analysis_status.rpt").read_text()
+            self.assertIn("ANTENNA_PRIMARY_RESULT_COUNT=6", status)
+            self.assertIn("NON_ANTENNA_PRIMARY_RESULT_COUNT=0", status)
+            self.assertIn("NON_ANTENNA_RESULT_STATUS=ZERO", status)
+
+            non_antenna = (output / "pvs_drc_non_antenna_rules.tsv").read_text()
+            self.assertEqual(len(non_antenna.splitlines()), 1)
+
+            markdown = (output / "pvs_drc_non_antenna_analysis.md").read_text()
+            self.assertIn(
+                "No non-antenna PVS base-DRC rule remains",
+                markdown,
+            )
 
     def test_output_inside_immutable_run_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

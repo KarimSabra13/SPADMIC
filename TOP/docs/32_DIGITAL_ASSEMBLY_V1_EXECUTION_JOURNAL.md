@@ -2245,10 +2245,13 @@ isolation, reconciles the per-rule totals with `135 (135)`, parses every ASCII
 result polygon into micron coordinates, and writes all analysis outside the
 source run.
 
-The antenna split is fail-conservative. Only explicit antenna wording in the
-rule name or foundry description is excluded; ambiguous rules remain in the
-non-antenna repair inventory. The executed control's `DENSITY` and
-`VAR_ANT_RATIO` states are recorded separately.
+The initial antenna split was deliberately literal: only explicit antenna
+wording in the rule name or foundry description was excluded, while ambiguous
+rules remained in the non-antenna repair inventory. The executed control's
+`DENSITY` and `VAR_ANT_RATIO` states were recorded separately. Server evidence
+in P04-R07 later proved that this first semantic policy was incomplete for
+foundry descriptions that encode the antenna mechanism without using the word
+`antenna`.
 
 The analysis also correlates PVS geometry against the four Innovus
 temporary-waiver boxes and emits spatial bins for repeated hotspots. The
@@ -2259,3 +2262,56 @@ promotion is authorized by this preparation step.
 See
 `39_TX_PACKET_CORE_PVS_BASE_DRC_NON_ANTENNA_ANALYSIS.md` for the exact evidence
 contract and manual repair sequence.
+
+### P04-R07 PVS Base DRC Semantic Correction
+
+The read-only extraction at commit `44f7ec51` reconciled all `1277` rulechecks,
+the exact `135 (135)` total, and every ASCII result geometry. It found only:
+
+```text
+R2M3P1=93
+R1M3P1=42
+```
+
+Both executed foundry descriptions are:
+
+```text
+Maximum ratio of MET3 area to connected GATE area ... 400
+```
+
+The first analyzer classified them as generic `AREA` because the description
+does not contain the literal word `antenna`. That semantic result and its
+recommendation to increase connected polygon area are rejected. The counts,
+hashes, geometries, bins, and zero Innovus-box overlap remain valid negative
+evidence and the original output directory must not be overwritten.
+
+Metal area divided by connected gate area is the antenna-ratio mechanism.
+The corrected tuple is:
+
+```text
+ANTENNA_RULE_COUNT=2
+ANTENNA_PRIMARY_RESULT_COUNT=135
+NON_ANTENNA_RULE_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=0
+VAR_ANT_RATIO_STATE=UNDEFINED
+VAR_ANT_RATIO_SCOPE=ADDITIONAL_OPTIONAL_RULE_FAMILY_ONLY
+DENSITY_STATE=UNDEFINED
+```
+
+The optional `VAR_ANT_RATIO` family being disabled does not disable the fixed
+`R1M3P1` and `R2M3P1` checks. The four known Innovus MET1 minimum-area boxes
+had zero PVS-result overlap at `0.35 um`, so the physical debt is now separated:
+
+```text
+INNOVUS_MET1_MIN_AREA_DEBT=4
+PVS_BASE_ANTENNA_DEBT=135
+PVS_BASE_NON_ANTENNA_DEBT=0
+PVS_DENSITY_DRC=NOT_RUN
+PVS_LVS_STATUS=MATCH
+FINAL_SIGNOFF_READY=NO
+```
+
+This removes the proposed non-antenna PVS repair campaign. It does not make
+base DRC pass: antenna remains open for final closure, the four Innovus
+minimum-area markers still require manual repair, density is unrun, and any
+new GDS requires a fresh explicit LVS match.

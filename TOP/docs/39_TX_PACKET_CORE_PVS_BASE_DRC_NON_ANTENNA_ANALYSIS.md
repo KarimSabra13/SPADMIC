@@ -40,85 +40,130 @@ The LVS match proves electrical equivalence only for the exact compared GDS,
 routed source, and package-local standard-cell CDL. It does not waive one PVS
 DRC result and does not transfer to a future repaired GDS.
 
-## 2. What Must Be Classified
+## 2. Server Classification Result
 
-The PVS run completed successfully:
+The read-only server extraction at commit `44f7ec51` proved that the PVS run
+itself is complete and internally coherent:
 
 ```text
 PVS_RC=0
 REPLAY_CONTRACT_STATUS=PASS
 OUTPUT_ISOLATION_STATUS=PASS
+DECLARED_RULECHECK_COUNT=1277
+NONZERO_RULE_COUNT=2
+DRC_TOTAL_PRIMARY=135
+DRC_TOTAL_EXPANDED=135
+RESULT_COUNT_RECONCILIATION=PASS
+ASCII_ERROR_GEOMETRY_RECONCILIATION=PASS
 ```
 
-Three run-local artifacts agree on:
+The only nonzero rules are:
+
+| Rule | Primary | Expanded | Foundry description |
+| --- | ---: | ---: | --- |
+| `R2M3P1` | 93 | 93 | `Maximum ratio of MET3 area to connected GATE area ... 400` |
+| `R1M3P1` | 42 | 42 | `Maximum ratio of MET3 area to connected GATE area ... 400` |
+
+This description is the antenna mechanism: conductor area accumulated before
+a gate connection is divided by the connected gate area and compared with a
+maximum ratio. It is not a generic MET3 maximum-area rule and is not a
+minimum-area rule.
+
+The corrected semantic partition is therefore:
 
 ```text
-Total DRC Results : 135 (135)
-PVS_DRC_STATUS=FAIL
+ANTENNA_RULE_COUNT=2
+ANTENNA_PRIMARY_RESULT_COUNT=135
+ANTENNA_EXPANDED_RESULT_COUNT=135
+ANTENNA_GATE_AREA_RATIO_RULE_COUNT=2
+NON_ANTENNA_RULE_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=0
+NON_ANTENNA_EXPANDED_RESULT_COUNT=0
 ```
 
-The next task is not another PVS run. It is a read-only decomposition of the
-existing `135` into:
+The exact distinction between the foundry prefixes `R1` and `R2` must not be
+guessed from their short names. That distinction requires the licensed XFAB
+rule documentation or PVS result-browser metadata. Both rules are safely and
+correctly classified as antenna-ratio checks from their executed descriptions.
 
-- every nonzero foundry rule;
-- the rule description from the ASCII error database;
-- primary and expanded result counts;
-- every result polygon and bounding box in microns;
-- semantic class such as area, spacing, enclosure, width, bend, or off-grid;
-- spatial concentration;
-- overlap with the four known Innovus MET1 minimum-area marker boxes;
-- explicit antenna results, if the run contains any.
+## 3. Rejected First Classification
 
-The source run must remain immutable.
+The first analyzer revision used this policy:
 
-## 3. Antenna Boundary
+```text
+ANTENNA_EXCLUSION_POLICY=EXPLICIT_RULE_NAME_OR_DESCRIPTION_ONLY
+```
 
-There are two different antenna contexts and they must not be mixed.
+Because neither foundry description contains the literal word `antenna`, that
+revision incorrectly produced:
 
-The provisional Innovus export retained `21` antenna markers in the restored
-Innovus marker database. Those markers were excluded from the exact
-non-antenna Innovus count used to isolate the four MET1 minimum-area errors.
-They are not proof that PVS reports 21 antenna violations.
+```text
+EXPLICIT_ANTENNA_PRIMARY_RESULT_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=135
+```
 
-The PVS base control is a separate foundry-deck execution. The historical
-template normally contains:
+The parsing, counts, hashes, geometry extraction, spatial bins, and Innovus
+correlation from that run remain valid evidence. The semantic class and the
+resulting advice to increase connected polygon area are rejected.
+
+The rejected output directory must remain immutable:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/
+tx_packet_pvs_waiver_20260716_130442/drc_analysis/
+base_non_antenna_44f7ec51_20260716_122729
+```
+
+A corrected analyzer run must use a new output directory. It must not edit,
+delete, or overwrite the rejected report because that report records a real
+classification failure and the evidence that exposed it.
+
+## 4. Antenna and Density Controls
+
+There are three different antenna records and they must remain separate:
+
+1. Innovus restored `21` antenna markers. They are an Innovus marker-database
+   count and are not numerically equivalent to PVS results.
+2. PVS base DRC reports `135` results across two fixed MET3-to-gate antenna
+   ratio rules.
+3. The PVS control contains `#UNDEFINE VAR_ANT_RATIO`, which disables an
+   additional optional variable-ratio rule family.
+
+The executed control also contains:
 
 ```text
 #UNDEFINE DENSITY
 #UNDEFINE VAR_ANT_RATIO
 ```
 
-`VAR_ANT_RATIO` controls the additional variable-ratio antenna check. The
-exact executed packet-core `pvsdrcctl` must still be inspected rather than
-assumed.
-
-The analysis policy is deliberately conservative:
-
-```text
-ANTENNA_EXCLUSION_POLICY=EXPLICIT_RULE_NAME_OR_DESCRIPTION_ONLY
-AMBIGUOUS_RULE_POLICY=RETAIN_AS_NON_ANTENNA_REVIEW
-```
-
-A rule is removed from the non-antenna repair inventory only when its rule name
-or foundry description explicitly contains an antenna term. A rule prefix such
-as `A1...`, a ratio value, or a separate `antenna.ratio` artifact is not enough
-to exclude it.
-
-If the exact run reports:
+The corrected interpretation is:
 
 ```text
 VAR_ANT_RATIO_STATE=UNDEFINED
-EXPLICIT_ANTENNA_PRIMARY_RESULT_COUNT=0
-NON_ANTENNA_PRIMARY_RESULT_COUNT=135
+VAR_ANT_RATIO_SCOPE=ADDITIONAL_OPTIONAL_RULE_FAMILY_ONLY
+DENSITY_STATE=UNDEFINED
+PVS_DENSITY_DRC_STATUS=NOT_RUN
 ```
 
-then the correct conclusion is that all 135 base-deck results remain in the
-non-antenna repair inventory. That conclusion must come from the executed
-control and rule descriptions, not from expectation.
+`VAR_ANT_RATIO=UNDEFINED` does not disable the fixed `R1M3P1` and `R2M3P1`
+checks that actually executed. Likewise, the base run cannot establish
+density cleanliness because density was explicitly disabled.
 
-## 4. Authoritative Artifacts
+The corrected classifier policy is:
 
-The analyzer uses the following run-local evidence:
+```text
+ANTENNA_CLASSIFICATION_POLICY=
+EXPLICIT_TERM_OR_CONDUCTOR_AREA_TO_CONNECTED_GATE_AREA_RATIO
+AMBIGUOUS_RULE_POLICY=RETAIN_AS_NON_ANTENNA_REVIEW
+```
+
+This remains conservative. An arbitrary ratio or rule prefix is not enough.
+The semantic antenna classification requires either explicit antenna wording
+or the specific conductor-area to connected-gate-area mechanism.
+
+## 5. Authoritative Artifacts
+
+The analyzer uses only run-local evidence:
 
 ```text
 pvs_drc_status.rpt
@@ -130,6 +175,17 @@ spadmic_tx_packet_core_drc.sum
 spadmic_tx_packet_core_drc.err
 ```
 
+The server extraction recorded:
+
+```text
+SUMMARY_SHA256=
+5ac8db9c703410f9705425fe7144695f8e2d2810da68e82d9e9ecd4d888693f4
+ASCII_ERROR_DATABASE_SHA256=
+27e0b40af9abe5ed8b72a5591bf2eb93489a6120ba61e8063d8ce6a61f19f718
+CONTROL_SHA256=
+e07c7712ebb7b1b11f36974f67f5d1392e11db74ea41f2bd22bd191b097d968c
+```
+
 `spadmic_tx_packet_core_drc.sum` provides all rule counts and the final total.
 The ASCII `spadmic_tx_packet_core_drc.err` provides, for every nonzero rule:
 
@@ -138,26 +194,13 @@ The ASCII `spadmic_tx_packet_core_drc.err` provides, for every nonzero rule:
 - the rule-level count;
 - every result geometry in database units.
 
-The first error-database line declares the layout top and database units. The
-analyzer converts all result polygons to microns, computes bounding boxes and
-centers, and requires the geometry count for each rule to equal the summary
-count.
+The analyzer converts all result polygons to microns, computes bounding boxes
+and centers, and requires each rule's geometry count to equal its summary
+count. It fails closed if replay, output isolation, references, totals,
+per-rule geometry, base-variant control state, or output immutability do not
+reconcile.
 
-The analysis fails closed if:
-
-- replay or output isolation did not pass;
-- PVS tool RC is not zero;
-- the run is not the classified nonzero base DRC;
-- external references are missing;
-- the summary total is not exactly the expected `135 (135)`;
-- per-rule counts do not sum to the total;
-- a nonzero rule is absent from the ASCII error database;
-- a rule header count differs from the summary;
-- the number of parsed result polygons differs from the rule count;
-- `DENSITY` is not explicitly undefined;
-- the requested output directory is inside the immutable PVS run.
-
-## 5. Read-Only Analyzer
+## 6. Corrected Read-Only Analyzer Contract
 
 The implementation is:
 
@@ -165,58 +208,35 @@ The implementation is:
 TOP/pnr/scripts/analyze_pvs_drc_run.py
 ```
 
-It writes a new external analysis directory containing:
+Each run writes a new external analysis directory containing:
 
 ```text
 pvs_drc_analysis_status.rpt
 pvs_drc_rule_inventory.tsv
+pvs_drc_antenna_rules.tsv
 pvs_drc_non_antenna_rules.tsv
-pvs_drc_explicit_antenna_rules.tsv
 pvs_drc_marker_geometry.tsv
 pvs_drc_spatial_bins.tsv
 pvs_innovus_marker_correlation.tsv
 pvs_drc_non_antenna_analysis.md
 ```
 
-The generated Markdown report is the human review document. The TSV files are
-the source of truth for sorting, filtering, coordinate review, and scripted
-correlation.
-
-## 6. Rule Interpretation
-
-The analyzer derives a repair-oriented category from the foundry description.
-The category is an investigation aid, not a foundry-rule replacement.
-
-| Category | Meaning | First review action |
-| --- | --- | --- |
-| `AREA` | Polygon area below a minimum | Compare with the four known MET1 boxes; add connected area locally |
-| `SPACING_OR_NOTCH` | Gap or notch below minimum | Inspect both sides of the flagged polygon before moving metal |
-| `ENCLOSURE` | Via or stripe lacks surrounding metal | Extend the correct enclosing layer or regenerate the via construct |
-| `WIDTH_OR_SIZE` | Wire, via, or stripe has illegal dimensions | Check streamout shape semantics and regenerate the exact object |
-| `BEND_OR_ANGLE` | Polygon or stripe has an illegal corner | Replace the originating malformed geometry, not broad routing |
-| `OFFGRID` | Geometry is not on the manufacturing grid | Snap the source geometry and re-export with the same stream map |
-| `SKEW_EDGE` | Edge angle is illegal | Replace with an allowed orthogonal or foundry-approved angle |
-| `CONNECTIVITY` | Short or related electrical geometry defect | Treat separately from spacing-only repair |
-| `DENSITY` | Fill/density rule | Handle only in the later density-enabled variant |
-| `OTHER_PHYSICAL_RULE` | No safe generic category | Use the exact foundry description and result browser |
-
-Repair priority is not simply the largest count. A high-count repeated rule
-inside merged standard cells may indicate a streamout, merge, or rule-deck
-configuration problem. A low-count top-routing rule may be the fastest real
-manual repair. The spatial bins and repeated coordinates help distinguish
-those cases.
-
-## 7. Innovus Four-Marker Correlation
-
-The known temporary Innovus waiver table is:
+Every inventory row includes both `classification` and
+`classification_basis`. For the packet run, both rule rows must contain:
 
 ```text
-/sim/ksabra/SPADMIC_work/innovus/
-innovus_tx_packet_min_area_waiver_export_20260716_130442/
-blocks/tx_packet_core/reports/temporary_drc_waiver.tsv
+classification=ANTENNA_RULE
+classification_basis=CONDUCTOR_AREA_TO_CONNECTED_GATE_AREA_RATIO
+category=ANTENNA
+layer_or_object=MET3
 ```
 
-It contains these four nets:
+`pvs_drc_non_antenna_rules.tsv` must contain only its header. Any nonzero data
+row in that file is a correction failure for this exact immutable run.
+
+## 7. Four Innovus Minimum-Area Markers
+
+The known Innovus waiver table contains:
 
 ```text
 n_9677
@@ -225,38 +245,81 @@ n_9696
 n_9697
 ```
 
-The analyzer expands each Innovus box by a small review margin and checks every
-PVS result bounding box for overlap. A hit is direct spatial evidence that a
-PVS result is associated with that local region.
+The server analyzer expanded each box by `0.35 um` and found:
 
-A zero overlap does not prove that the Innovus error disappeared. The PVS deck
-may flag a different polygon footprint, enclosure, or neighboring edge.
-Therefore correlation is evidence for review, not an acceptance gate.
+```text
+INNOVUS_WAIVER_MARKER_COUNT=4
+INNOVUS_WAIVER_MARKERS_WITH_PVS_HITS=0
+PVS_RESULTS_OVERLAPPING_WAIVER_BOXES=0
+```
 
-## 8. Manual Repair Sequence
+This proves that none of the 135 PVS antenna-result bounding boxes overlaps
+the four known Innovus MET1 minimum-area regions at the selected margin. The
+PVS nonzero rule inventory also contains no MET1 minimum-area rule.
 
-After the server analysis is generated:
+The correct gate separation is:
 
-1. Confirm count reconciliation and the exact antenna/density control state.
-2. Read `pvs_drc_non_antenna_rules.tsv` sorted by result count.
-3. Inspect `pvs_drc_spatial_bins.tsv` for repeated structures and hotspots.
-4. Inspect `pvs_innovus_marker_correlation.tsv` for the four known MET1 areas.
-5. Review each foundry rule and coordinate in the PVS result browser.
-6. Determine whether each class originates in top routing, generated vias,
-   merged standard cells, labels, or streamout configuration.
-7. Fix one physical rule class at a time in a new design state.
-8. Re-export GDS with the audited XH018 stream map and JIHD merge.
-9. Run base PVS DRC and require explicit zero.
-10. Run density-enabled PVS DRC and require explicit zero.
-11. Rerun LVS against the repaired GDS and require a new explicit `MATCH`.
-12. Retire the four-marker Innovus exception only after the repaired state
-    passes its own Innovus and PVS gates.
+```text
+INNOVUS_MET1_MIN_AREA_DEBT=4
+PVS_BASE_ANTENNA_DEBT=135
+PVS_BASE_NON_ANTENNA_DEBT=0
+```
 
-The current LVS run remains valuable baseline evidence. It proves that any
-later LVS mismatch was introduced after the provisional matched GDS, but it
-cannot sign off the repaired GDS.
+The zero correlation does not waive or prove physical repair of the four
+Innovus markers. It proves that they are not the source of the 135-result PVS
+failure and must be repaired and rechecked through their own Innovus/export
+path.
 
-## 9. Required Final State
+## 8. Current Subblock State
+
+For the exact provisional package:
+
+```text
+PVS_LVS_STATUS=MATCH
+PVS_BASE_DRC_STATUS=FAIL
+PVS_BASE_ANTENNA_RESULTS=135
+PVS_BASE_NON_ANTENNA_RESULTS=0
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+INNOVUS_MET1_MIN_AREA_MARKERS=4
+FINAL_SIGNOFF_READY=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+```
+
+This is useful progress:
+
+- electrical equivalence is proven for the exact compared package;
+- no non-antenna PVS base-rule class remains to debug;
+- the four Innovus minimum-area markers are isolated from the PVS antenna
+  population;
+- the remaining physical work is now separated into antenna, Innovus
+  minimum-area, and density gates.
+
+It is not signoff. The current PVS base DRC result remains a failure because
+the 135 antenna results are real foundry-deck results.
+
+## 9. Closure Sequence
+
+If antenna is deferred for the immediate milestone, record that as a scoped
+milestone exception, not as PVS base DRC clean. Then:
+
+1. Preserve the matched GDS/source/CDL hashes as the electrical baseline.
+2. Manually repair the four Innovus MET1 minimum-area markers in a new design
+   state.
+3. Re-export with the audited XH018 stream map and required JIHD merge.
+4. Rerun Innovus DRC/connectivity and prove the four-marker exception retired.
+5. Rerun PVS base DRC and classify antenna separately; final closure still
+   requires zero unless an approved signoff waiver exists.
+6. Run the density-enabled PVS variant and require zero.
+7. Rerun LVS against the repaired GDS and require a new explicit `MATCH`.
+8. Archive the new hashes and retire the provisional package.
+
+For antenna closure, inspect `R1M3P1` and `R2M3P1` in the PVS result browser
+and foundry documentation before editing. Candidate remedies include legal
+route segmentation or layer hopping, antenna-diode insertion, reduced
+pre-gate conductor area, or additional connected diffusion. The permitted
+remedy is process- and library-dependent.
+
+## 10. Required Final State
 
 The packet core is not promotable until a future state proves:
 
@@ -273,7 +336,8 @@ Until then:
 
 ```text
 LVS_ELECTRICAL_EQUIVALENCE_BASELINE=MATCH
-PVS_BASE_DRC_DEBT=OPEN
-MANUAL_DRC_FIX_REQUIRED=YES
+PVS_BASE_DRC_DEBT=OPEN_135_ANTENNA
+PVS_BASE_NON_ANTENNA_DEBT=0
+INNOVUS_MANUAL_MIN_AREA_FIX_REQUIRED=YES
 BLOCK_PROMOTION_AUTHORIZED=NO
 ```
