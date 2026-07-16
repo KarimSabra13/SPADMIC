@@ -37,6 +37,49 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def strip_c_style_comments(text: str) -> str:
+    """Remove PVS/C comments without altering quoted path strings."""
+    output: list[str] = []
+    index = 0
+    quote: str | None = None
+    while index < len(text):
+        char = text[index]
+        if quote is not None:
+            output.append(char)
+            if char == "\\" and index + 1 < len(text):
+                output.append(text[index + 1])
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {'"', "'"}:
+            quote = char
+            output.append(char)
+            index += 1
+            continue
+        if text.startswith("//", index):
+            newline = text.find("\n", index + 2)
+            if newline == -1:
+                break
+            output.append("\n")
+            index = newline + 1
+            continue
+        if text.startswith("/*", index):
+            end = text.find("*/", index + 2)
+            if end == -1:
+                output.extend("\n" * text[index:].count("\n"))
+                break
+            comment = text[index : end + 2]
+            output.extend("\n" * comment.count("\n"))
+            index = end + 2
+            continue
+        output.append(char)
+        index += 1
+    return "".join(output)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--template", required=True, type=Path)
@@ -187,7 +230,10 @@ def main() -> None:
     for path in copied:
         if not is_text(path):
             continue
-        for value in re.findall(r"(?:\"|\{|\s)(/[^\s\"'{};]+)", path.read_text(errors="ignore")):
+        reference_text = strip_c_style_comments(path.read_text(errors="ignore"))
+        for value in re.findall(r"(?:\"|\{|\s)(/[^\s\"'{};]+)", reference_text):
+            if value.startswith("//"):
+                continue
             candidate = Path(value)
             if run_dir not in candidate.parents and candidate != run_dir:
                 external_paths.add(candidate)

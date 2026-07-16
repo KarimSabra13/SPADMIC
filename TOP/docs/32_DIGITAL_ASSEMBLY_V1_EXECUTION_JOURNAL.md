@@ -2106,3 +2106,18 @@ conclusion was drawn. The parser now uses braced numeric extraction, writes
 phase checkpoints, catches marker-classification errors, and returns a
 nonzero driver status on failed gates. The failed immutable run is retained;
 the corrected flow requires a new Phase 3 session.
+
+### P04-R02 First PVS DRC Reference-Scanner Failure
+
+Phase 3 session `tx_packet_pvs_waiver_20260716_124911` passed waiver export,
+GDS audit, immutable staging, source preparation, `156/156` pin parity, and
+resolution of all `97` referenced masters through the package-local official
+JIHD CDL. Its first base-DRC replay passed the strict path/top contract but
+stopped before PVS execution.
+
+The external-reference scanner interpreted a PVS rule-deck comment separator
+as path `//===`, emitted `MISSING=//===`, and correctly blocked execution.
+There is no DRC result from this attempt. The scanner now removes PVS/C line
+and block comments before path extraction and has an exact separator
+regression. The failed run is retained, and the corrected flow requires a
+fresh Phase 3 session and run identifier.

@@ -48,7 +48,12 @@ class PvsReplayContractTest(unittest.TestCase):
             )
         (template / control).write_text(control_text)
         (template / ".config.rul").write_text("// config\n")
-        (template / ".technology.rul").write_text('technology "XH018_1131";\n')
+        (template / ".technology.rul").write_text(
+            'technology "XH018_1131";\n'
+            "//============================================================\n"
+            "// Historical reference: /missing/comment-only/reference\n"
+            "/* Retired reference: /missing/block-comment/reference */\n"
+        )
         return template, old
 
     def run_replay(self, root: Path, mode: str, *, omit_cdl_replacement: bool = False, density: bool = False):
@@ -131,6 +136,16 @@ class PvsReplayContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("#DEFINE DENSITY", (run_dir / "pvsdrcctl").read_text())
             self.assertIn("DEFINE=DENSITY|OCCURRENCES=1", (run_dir / "preprocessor_defines.rpt").read_text())
+
+    def test_comment_separators_are_not_external_path_references(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result, run_dir = self.run_replay(Path(tmp), "drc")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            references = (run_dir / "external_references.rpt").read_text()
+            self.assertNotIn("MISSING=//", references)
+            self.assertNotIn("/missing/comment-only/reference", references)
+            self.assertNotIn("/missing/block-comment/reference", references)
+            self.assertIn(str(Path(tmp) / "canonical.gds"), references)
 
 
 if __name__ == "__main__":

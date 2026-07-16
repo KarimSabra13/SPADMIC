@@ -362,3 +362,49 @@ The repair:
 The failed run remains immutable negative evidence. Rerun from a new Phase 3
 session and new run/package identifiers; do not delete or reuse the failed
 directory.
+
+## 12. First PVS DRC Replay Reference-Scanner Failure
+
+The corrected export and immutable staging both passed in Phase 3 session:
+
+```text
+tx_packet_pvs_waiver_20260716_124911
+```
+
+The package audit, source preparation, pin parity, standard-cell CDL
+resolution, mapped/merged GDS audit, and strict DRC replay contract all
+passed. The first `03_pvs_drc_base` attempt then stopped before invoking PVS:
+
+```text
+STATUS=FAIL
+RESULT=PVS_BASE_DRC_EXECUTION_OR_CLASSIFICATION_FAILED
+PVS_WRAPPER_RC=1
+PVS_DRC_STATUS=MISSING
+REPLAY_CONTRACT_STATUS=PASS
+```
+
+The external-reference scanner searched every copied text file for absolute
+paths but did not remove PVS/C comments first. A rule-deck separator beginning
+with `//===` was therefore interpreted as absolute path `//===`. The
+reference report recorded:
+
+```text
+DIRECTORY=//
+MISSING=//===
+```
+
+`spadmic_pvs_require_external_references` correctly rejected the apparent
+missing path, so `run.pvs` was never executed and no `pvs_drc_status.rpt` was
+created. This tuple is not DRC-zero, DRC-nonzero, or a deck result. It is a
+pre-execution replay-control failure.
+
+The repair removes `//` line comments and `/* ... */` block comments before
+absolute-path extraction, preserves quoted live paths, and defensively
+rejects double-slash tokens from the reference set. The regression fixture
+contains both an exact separator and commented-out missing paths and requires
+that none appear in `external_references.rpt`.
+
+The failed PVS run directory remains immutable negative evidence. Because the
+active Phase 3 session is bound to its original report-driver head and fixed
+run identifier, the corrected driver must start a fresh Phase 3 session with
+new export, package, and PVS run identifiers.

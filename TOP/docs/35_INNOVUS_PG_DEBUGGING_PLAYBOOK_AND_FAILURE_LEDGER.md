@@ -1291,3 +1291,22 @@ Do not diagnose this tuple as checkpoint damage or a physical DRC failure.
 Use braced regex literals or parse numeric fields before comparison, and keep
 an initial status/phase report so a Tcl-source failure cannot appear as an
 empty run. The original failed run remains immutable negative evidence.
+
+### PVS Comment Separator Misclassified As External Path
+
+The first provisional base-DRC replay passed package audit and strict replay
+contract validation but did not start PVS. The external-reference scanner
+read the rule-deck separator `//===` as an absolute path, recorded
+`MISSING=//===`, and stopped before `run.pvs`.
+
+Classify this as a replay-control failure only:
+
+```text
+REPLAY_CONTRACT_STATUS=PASS
+PVS_DRC_STATUS=MISSING
+PVS_WRAPPER_RC=1
+```
+
+No DRC conclusion exists without `pvs_drc_status.rpt`. Strip PVS/C `//` and
+`/* ... */` comments before absolute-path extraction, preserve the failed run,
+and use a fresh immutable run identifier after repairing the scanner.
