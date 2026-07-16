@@ -2150,6 +2150,10 @@ paths. The result parser writes a scanned-file inventory, rejects conflicting
 totals, and the Phase 3 driver requires underlying PVS tool RC zero before
 accepting a report-level nonzero count as DRC debt.
 
-The `130442` run remains immutable negative evidence. A fresh Phase 3 session
-must reproduce export and staging, then obtain a unique run-local
-`Total DRC Results` line before the independent LVS diagnostic proceeds.
+The `130442` failed PVS directory remains immutable negative evidence. Since
+the exported package itself passed all staging/hash gates, an urgent
+replay-only retry may reuse that exact package with the corrected commit, a
+new PVS run ID, and a fresh wrapper audit. It must not overwrite the old run
+or claim a complete Phase 3 status chain. A formal driver-owned summary still
+requires a fresh session. Either path must obtain a unique run-local
+`Total DRC Results` line before classifying base DRC.

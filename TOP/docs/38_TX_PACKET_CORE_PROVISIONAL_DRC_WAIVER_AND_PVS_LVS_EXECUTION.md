@@ -465,8 +465,22 @@ The corrected replay contract now:
     accepted as classified DRC debt.
 
 The immutable `130442` DRC directory remains negative replay evidence. Do not
-reparse an external historical summary and attach it to this package. Start a
-fresh Phase 3 session and require all three independent conditions:
+reparse an external historical summary and attach it to this package.
+
+Because `01_waiver_export` and `02_stage_handoff` both passed and the package
+inputs are independently hashed, a replay-only diagnostic retry may reuse the
+exact `130442` package without rerunning Innovus. This exception requires:
+
+- the corrected replay commit pinned by `EXPECTED_HEAD`;
+- a new immutable PVS run ID;
+- a fresh package audit by `run_pvs_drc_handoff.sh`;
+- unchanged package GDS/source/CDL hashes;
+- no edit or deletion of the failed PVS directory.
+
+The replay-only retry does not rewrite the old Phase 3 status, authorize block
+promotion, or create a formal `05_summary`. Use a fresh Phase 3 session later
+if a complete driver-owned status chain is required. For the urgent DRC/LVS
+diagnostic, require all three independent conditions in the new PVS run:
 
 ```text
 REPLAY_CONTRACT_STATUS=PASS
