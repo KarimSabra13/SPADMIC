@@ -1278,3 +1278,16 @@ The waiver does not cover PVS DRC and cannot authorize promotion or final
 signoff. A PVS DRC nonzero result remains a real failure tuple, although it no
 longer blocks the independent LVS diagnostic. See
 `38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.
+
+### Waiver Export Tcl Character-Class Failure
+
+The first provisional export failed after restore because
+`mw_validate_rows` placed POSIX class `[[:space:]]` inside Tcl double quotes.
+Tcl treated the brackets as command substitution and raised
+`invalid command name ":space:"`. Innovus itself returned zero, but the
+missing status report and missing GDS correctly prevented audit and staging.
+
+Do not diagnose this tuple as checkpoint damage or a physical DRC failure.
+Use braced regex literals or parse numeric fields before comparison, and keep
+an initial status/phase report so a Tcl-source failure cannot appear as an
+empty run. The original failed run remains immutable negative evidence.

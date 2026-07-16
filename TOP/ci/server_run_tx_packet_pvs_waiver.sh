@@ -787,36 +787,51 @@ show_status() {
   return 0
 }
 
+COMMAND_RC=0
 case "$COMMAND" in
   init)
     init_session "$ARGUMENT_1" "$ARGUMENT_2"
+    COMMAND_RC=$?
     ;;
   waiver-export)
     waiver_export
+    COMMAND_RC=$?
     ;;
   stage)
     stage_handoff
+    COMMAND_RC=$?
     ;;
   pvs-drc-base)
     pvs_drc_base
+    COMMAND_RC=$?
     ;;
   pvs-lvs)
     pvs_lvs
+    COMMAND_RC=$?
     ;;
   summary)
     summary_report
+    COMMAND_RC=$?
     ;;
   status)
     show_status
+    COMMAND_RC=$?
     ;;
   help|-h|--help)
     usage
+    COMMAND_RC=0
     ;;
   *)
     echo "Unknown subcommand: $COMMAND"
     usage
+    COMMAND_RC=2
     ;;
 esac
 
-# Status files, rather than the child-shell return code, control advancement.
-:
+# The driver is a child process, so a nonzero result cannot terminate the
+# operator's interactive shell. Preserve pass/fail for explicit RC capture.
+if [[ "$COMMAND_RC" -eq 0 ]]; then
+  true
+else
+  false
+fi

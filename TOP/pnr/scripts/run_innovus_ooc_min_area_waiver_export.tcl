@@ -229,7 +229,7 @@ proc mw_row_nets {rows} {
     return [lsort $nets]
 }
 
-proc mw_validate_rows {rows expected_boxes actual_area} {
+proc mw_validate_rows {rows expected_boxes expected_actual_area} {
     array set by_net {}
     foreach row $rows {
         set net [lindex $row 0]
@@ -243,8 +243,12 @@ proc mw_validate_rows {rows expected_boxes actual_area} {
         if {![mw_box_matches [lindex $row 2] $expected_box]} { return 0 }
         set message [lindex $row 3]
         if {![regexp -nocase \
-            "Actual:[[:space:]]+$actual_area[[:space:]]+Required:[[:space:]]+0[.]20200000" \
-            $message]} {
+            {Actual:[[:space:]]+([0-9.]+)[[:space:]]+Required:[[:space:]]+([0-9.]+)} \
+            $message -> actual_area required_area]} {
+            return 0
+        }
+        if {![mw_close $actual_area $expected_actual_area 0.000000001] ||
+            ![mw_close $required_area 0.20200000 0.000000001]} {
             return 0
         }
     }
@@ -331,6 +335,8 @@ set status(SOURCE_CHECKPOINT) $checkpoint
 set status(SOURCE_STEP27_ANALYSIS) $step27_analysis
 set status(WAIVER_SCOPE) EXACT_FOUR_INNOVUS_MET1_MIN_AREA_ONLY
 set status(WAIVER_ID) TX_PACKET_MET1_MIN_AREA_LVS_DIAGNOSTIC_20260716
+set status(PHASE) SOURCE_EVIDENCE_VALIDATION
+mw_write_status
 
 array set source_values [mw_read_kv $step27_analysis]
 array set expected_source {
@@ -385,10 +391,14 @@ foreach key [array names expected_source] {
     }
 }
 
+set status(PHASE) RESTORE_DESIGN
+mw_write_status
 if {[catch {restoreDesign $checkpoint $top} restore_error]} {
     mw_abort RESTORE_FAILED $restore_error
 }
 set status(RESTORE_DESIGN) PASS
+set status(PHASE) BASELINE_VERIFICATION
+mw_write_status
 
 set expected_pre_boxes [list \
     [list n_9696 {719.69 158.62 720.07 158.90}] \
@@ -410,8 +420,14 @@ if {[catch {
 } marker_error]} {
     mw_abort BASELINE_MARKER_DUMP_FAILED $marker_error
 }
-set pre_rows [mw_min_area_rows]
-set pre_nets [mw_row_nets $pre_rows]
+if {[catch {
+    set pre_rows [mw_min_area_rows]
+    set pre_nets [mw_row_nets $pre_rows]
+    set pre_rows_valid [mw_validate_rows \
+        $pre_rows $expected_pre_boxes 0.10640000]
+} row_error]} {
+    mw_abort BASELINE_MARKER_CLASSIFICATION_FAILED $row_error
+}
 if {![mw_capture $pre_regular {verifyConnectivity -type regular}] ||
     ![mw_capture $pre_special {verifyConnectivity -type special -nets {VDD VSS}}]} {
     mw_abort BASELINE_CONNECTIVITY_CAPTURE_FAILED
@@ -431,7 +447,7 @@ set status(PRE_MIN_AREA_NETS) [join $pre_nets { }]
 if {![string is integer -strict $pre_drc_count] || $pre_drc_count != 6 ||
     $pre_marker_count != 6 || [llength $pre_rows] != 6 ||
     $pre_nets ne $expected_pre_nets ||
-    ![mw_validate_rows $pre_rows $expected_pre_boxes {0[.]10640000}] ||
+    !$pre_rows_valid ||
     $pre_regular_count != 0 || $pre_special_count != 0 ||
     $pre_database_total != 27 || $pre_antenna_count != 21 ||
     $pre_connectivity_count != 0} {
@@ -439,6 +455,8 @@ if {![string is integer -strict $pre_drc_count] || $pre_drc_count != 6 ||
         "drc=$pre_drc_count markers=$pre_marker_count rows=[llength $pre_rows] nets=$pre_nets regular=$pre_regular_count special=$pre_special_count database=$pre_database_total antenna=$pre_antenna_count connectivity=$pre_connectivity_count"
 }
 
+set status(PHASE) PATCH_REPLAY
+mw_write_status
 # net marker-box start-x start-y end-x width source-Q source-Q-x source-Q-y
 set patch_contract [list \
     [list n_9696 {719.69 158.62 720.07 158.90} 719.88 158.76 719.32 0.28 g14627__2802/Q 716.61 159.02] \
@@ -602,6 +620,8 @@ if {$patch_attempted_count != 6 || $patch_applied_count != 6 ||
         "attempted=$patch_attempted_count applied=$patch_applied_count pass=$command_pass_count fail=$command_fail_count"
 }
 
+set status(PHASE) WAIVER_STATE_VERIFICATION
+mw_write_status
 set expected_final_boxes [list \
     [list n_9696 {719.38 158.68 720.07 158.91}] \
     [list n_9693 {209.78 201.73 210.47 201.96}] \
@@ -619,8 +639,14 @@ if {[catch {
 } marker_error]} {
     mw_abort FINAL_MARKER_DUMP_FAILED $marker_error
 }
-set final_rows [mw_min_area_rows]
-set final_nets [mw_row_nets $final_rows]
+if {[catch {
+    set final_rows [mw_min_area_rows]
+    set final_nets [mw_row_nets $final_rows]
+    set final_rows_valid [mw_validate_rows \
+        $final_rows $expected_final_boxes 0.17770000]
+} row_error]} {
+    mw_abort FINAL_MARKER_CLASSIFICATION_FAILED $row_error
+}
 if {![mw_capture $final_regular {verifyConnectivity -type regular}] ||
     ![mw_capture $final_special {verifyConnectivity -type special -nets {VDD VSS}}]} {
     mw_abort FINAL_CONNECTIVITY_CAPTURE_FAILED
@@ -640,7 +666,7 @@ set status(FINAL_MIN_AREA_NETS) [join $final_nets { }]
 if {![string is integer -strict $final_drc_count] || $final_drc_count != 4 ||
     $final_marker_count != 4 || [llength $final_rows] != 4 ||
     $final_nets ne $expected_final_nets ||
-    ![mw_validate_rows $final_rows $expected_final_boxes {0[.]17770000}] ||
+    !$final_rows_valid ||
     $final_regular_count != 0 || $final_special_count != 0 ||
     $final_database_total != 25 || $final_antenna_count != 21 ||
     $final_connectivity_count != 0} {
@@ -686,6 +712,8 @@ puts $waiver_rpt_fh "FINAL_SIGNOFF_READY=NO"
 puts $waiver_rpt_fh "WAIVER_TABLE=$waiver_tsv"
 close $waiver_rpt_fh
 
+set status(PHASE) SAVE_AND_EXPORT
+mw_write_status
 set checkpoint_out [file join $checkpoints 05_min_area_waiver_export.enc]
 if {[catch {saveDesign $checkpoint_out} save_error]} {
     mw_abort SAVE_DESIGN_FAILED $save_error
@@ -727,5 +755,6 @@ set status(DEF) "${base}.def"
 set status(INNOVUS_DRC_STATUS) PASS_WITH_EXACT_TEMPORARY_WAIVER
 set status(STATUS) PASS
 set status(RESULT) EXACT_FOUR_MARKER_WAIVER_STATE_EXPORTED_FOR_PROVISIONAL_PVS
+set status(PHASE) COMPLETE
 mw_write_status
 exit 0

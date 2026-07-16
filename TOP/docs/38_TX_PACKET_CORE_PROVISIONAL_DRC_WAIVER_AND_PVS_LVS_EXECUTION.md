@@ -313,3 +313,52 @@ the repaired GDS hash; LVS must be rerun after the physical fix.
   controls.
 - Do not promote `spadmic_tx_packet_core` while
   `WAIVER_RETIREMENT_REQUIRED=YES`.
+
+## 11. First Server Attempt Failure And Repair
+
+The first `01_waiver_export` attempt used report-driver head
+`b8fa0c8c30e5b1513e39d921421333a6d12e7aa7` and immutable run root:
+
+```text
+/sim/ksabra/SPADMIC_work/innovus/
+innovus_tx_packet_min_area_waiver_export_20260716_123932
+```
+
+The source checkpoint restored, but no waiver status report, GDS, netlist,
+LEF, or DEF was produced. The wrapper therefore correctly emitted:
+
+```text
+STATUS=FAIL
+RESULT=PROVISIONAL_WAIVER_EXPORT_NOT_ACCEPTED
+GDS_AUDIT_RC=NOT_RUN
+```
+
+The root cause was in `mw_validate_rows`. A dynamic regular expression was
+placed in Tcl double quotes:
+
+```text
+"Actual:[[:space:]]+..."
+```
+
+Tcl interprets square brackets inside double quotes as command substitution.
+The POSIX regex class was therefore executed as command `:space:`, producing:
+
+```text
+invalid command name ":space:"
+```
+
+This was a control-script failure, not a design, DRC, connectivity, GDS, or
+PVS result. Nothing from the failed run is eligible for staging.
+
+The repair:
+
+1. Uses a braced static regex to extract numeric actual and required areas.
+2. Compares the extracted values numerically at `1e-9` tolerance.
+3. Catches pre- and post-edit marker-classification errors.
+4. Writes phase status before restore, verification, replay, and export.
+5. Preserves a nonzero child-driver shell status when a gate fails.
+6. Adds a direct `tclsh` regression reproducing the marker message.
+
+The failed run remains immutable negative evidence. Rerun from a new Phase 3
+session and new run/package identifiers; do not delete or reuse the failed
+directory.

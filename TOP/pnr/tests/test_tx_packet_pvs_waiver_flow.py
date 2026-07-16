@@ -37,6 +37,20 @@ class TxPacketPvsWaiverFlowTest(unittest.TestCase):
             "status",
         ):
             self.assertIn(f"  {subcommand})", text)
+        result = subprocess.run(
+            ["bash", str(DRIVER), "status"],
+            env={
+                "PATH": "/usr/bin:/bin",
+                "SPADMIC_TX_PACKET_PVS_WAIVER_ACTIVE_ENV": (
+                    "/tmp/spadmic_missing_pvs_waiver_active.env"
+                ),
+            },
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("provisional PVS active session is missing", result.stdout)
 
     def test_lvs_is_independent_of_pvs_drc_but_requires_staging(self) -> None:
         text = DRIVER.read_text()
@@ -92,6 +106,31 @@ class TxPacketPvsWaiverFlowTest(unittest.TestCase):
         self.assertIn("saveNetlist -includePowerGround", text)
         self.assertIn("streamOut", text)
         self.assertIn("-mapFile $stream_map -merge [list $stdcell_gds]", text)
+
+    def test_marker_area_parser_does_not_execute_regex_character_classes(self) -> None:
+        text = TCL.read_text()
+        prefix = text.split("set command_pass_count 0", 1)[0]
+        probe = (
+            prefix
+            + "\n"
+            + "set rows [list [list n_9696 marker "
+            + "{719.69 158.62 720.07 158.90} "
+            + "{Regular Wire of Net n_9696 Actual: 0.10640000 "
+            + "Required: 0.20200000}]]\n"
+            + "set boxes [list [list n_9696 "
+            + "{719.69 158.62 720.07 158.90}]]\n"
+            + "puts \"VALID=[mw_validate_rows $rows $boxes 0.10640000]\"\n"
+        )
+        result = subprocess.run(
+            ["tclsh"],
+            input=probe,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("VALID=1", result.stdout)
+        self.assertNotIn('\"Actual:[[:space:]]', text)
 
     def test_wrapper_requires_mapped_merged_gds_audit(self) -> None:
         text = WRAPPER.read_text()

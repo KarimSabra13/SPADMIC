@@ -2090,3 +2090,19 @@ waiver is retired.
 The complete contract, marker inventory, result matrix, server gates, and
 manual closure checklist are in
 `38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.
+
+### P04-R01 First Waiver Export Control Failure
+
+The first Phase 3 export run
+`innovus_tx_packet_min_area_waiver_export_20260716_123932` failed before
+creating any staged artifacts. Innovus restored the source checkpoint, but a
+double-quoted Tcl regex executed `[[:space:]]` as command substitution and
+raised `invalid command name ":space:"`. Because the script stopped before
+its final status write, the wrapper observed Innovus RC `0`, missing status,
+missing GDS, and `GDS_AUDIT_RC=NOT_RUN`.
+
+This is classified as a control-script failure only. No DRC, LVS, or export
+conclusion was drawn. The parser now uses braced numeric extraction, writes
+phase checkpoints, catches marker-classification errors, and returns a
+nonzero driver status on failed gates. The failed immutable run is retained;
+the corrected flow requires a new Phase 3 session.
