@@ -29,6 +29,7 @@ BLOCKS=(
   "matrix_reset_ctrl:spadmic_matrix_reset_ctrl"
   "or64_tree:spadmic_matrix_or_tree"
   "position_snapshot:spadmic_position_snapshot_packetizer"
+  "position_core:spadmic_position_core"
   "matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl"
   "event_coordinator:spadmic_event_coordinator"
   "event_bundle_tx:spadmic_event_bundle_tx"
@@ -230,14 +231,25 @@ for item in "${BLOCKS[@]}"; do
     genus -files "$SCRIPT_DIR/run_genus_matrix_block.tcl" -log "$log" > "$block_dir/logs/genus.stdout.log" 2>&1
   rc=$?
   set -e
-  if [[ "$rc" -eq 0 ]]; then
+  tc_gate_rc=0
+  if [[ "$rc" -eq 0 && ( "$block" == "event_coordinator" || "$block" == "position_core" ) ]]; then
+    set +e
+    python3 "$SCRIPT_DIR/validate_genus_tc_ooc.py" \
+      --block-root "$block_dir" \
+      --block "$block" \
+      --top-module "$top" \
+      --status "$block_dir/reports/timing/tc_ooc_gate.rpt"
+    tc_gate_rc=$?
+    set -e
+  fi
+  if [[ "$rc" -eq 0 && "$tc_gate_rc" -eq 0 ]]; then
     PASS=$((PASS + 1))
     echo "| \`$block\` | \`$top\` | \`$block_sdc_rel\` | PASS |" >> "$RUN_ROOT/SUMMARY.md"
   else
     FAIL=$((FAIL + 1))
     FAILED+=("$block")
     tail -80 "$block_dir/logs/genus.stdout.log" > "$block_dir/logs/failure.tail" || true
-    echo "| \`$block\` | \`$top\` | \`$block_sdc_rel\` | FAIL rc=$rc, see \`$block/logs/failure.tail\` |" >> "$RUN_ROOT/SUMMARY.md"
+    echo "| \`$block\` | \`$top\` | \`$block_sdc_rel\` | FAIL genus_rc=$rc tc_gate_rc=$tc_gate_rc |" >> "$RUN_ROOT/SUMMARY.md"
   fi
 done
 

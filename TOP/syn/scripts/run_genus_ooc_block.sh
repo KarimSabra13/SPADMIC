@@ -37,6 +37,9 @@ case "$BLOCK_IN" in
   position_snapshot|spadmic_position_snapshot_packetizer)
     BLOCK_SPEC="position_snapshot:spadmic_position_snapshot_packetizer"
     ;;
+  position_core|spadmic_position_core)
+    BLOCK_SPEC="position_core:spadmic_position_core"
+    ;;
   matrix_cfg_ctrl|spadmic_matrix_cfg_ctrl)
     BLOCK_SPEC="matrix_cfg_ctrl:spadmic_matrix_cfg_ctrl"
     ;;

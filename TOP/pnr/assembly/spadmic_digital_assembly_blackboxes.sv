@@ -124,4 +124,68 @@ module spadmic_tx_ddr_strip (
 );
 endmodule
 
+(* black_box, syn_black_box, keep_hierarchy = "yes" *)
+module spadmic_position_core (
+  inout  wire VDD,
+  inout  wire VSS,
+  input  wire logic clk_sys,
+  input  wire logic rst_n,
+  input  wire logic start_i,
+  input  wire spadmic_pkg::spadmic_pos_mode_e mode_i,
+  input  wire logic [spadmic_pkg::SPADMIC_EVENT_ID_W-1:0] event_id_i,
+  input  wire logic [spadmic_pkg::SPADMIC_LINE_W-1:0] snapshot_R_i,
+  input  wire logic [spadmic_pkg::SPADMIC_LINE_W-1:0] snapshot_Y_i,
+  input  wire logic [spadmic_pkg::SPADMIC_LINE_W-1:0] snapshot_B_i,
+  input  wire logic [$clog2(spadmic_pkg::SPADMIC_LINE_W + 1)-1:0] gap_threshold_i,
+  input  wire logic [$clog2(spadmic_pkg::SPADMIC_LINE_W + 1)-1:0] min_cluster_span_i,
+  output      logic pkt_valid_o,
+  input  wire logic pkt_ready_i,
+  output      logic [mptdc_pkg::NARROW_W-1:0] pkt_data_o,
+  output      logic pkt_sop_o,
+  output      logic pkt_eop_o,
+  output      logic packet_pending_o,
+  output      logic busy_o,
+  output      logic snapshot_captured_o,
+  output      logic done_o,
+  output      logic drop_o
+);
+endmodule
+
+(* black_box, syn_black_box, keep_hierarchy = "yes" *)
+module spadmic_event_coordinator (
+  inout  wire VDD,
+  inout  wire VSS,
+  input  wire logic clk_sys,
+  input  wire logic rst_n,
+  input  wire spadmic_pkg::spadmic_operating_mode_e active_mode_i,
+  input  wire logic global_enable_i,
+  input  wire logic [2:0] active_axis_mask_i,
+  input  wire logic matrix_activity_i,
+  input  wire logic cal_activity_i,
+  input  wire logic pre_event_resources_ready_i,
+  input  wire logic raw_snapshot_required_i,
+  input  wire logic auto_reset_enable_i,
+  input  wire logic snapshot_valid_i,
+  input  wire logic position_snapshot_captured_i,
+  input  wire logic [2:0] tdc_start_seen_i,
+  input  wire logic [3:0] packet_pending_mask_i,
+  input  wire logic reset_done_i,
+  input  wire logic bundle_done_i,
+  input  wire logic rearm_ready_i,
+  output      logic event_open_o,
+  output      logic [13:0] event_id_o,
+  output      logic event_id_valid_o,
+  output      logic [3:0] required_packet_mask_o,
+  output      logic [2:0] required_tdc_mask_o,
+  output      logic [3:0] required_reset_ack_mask_o,
+  output      logic [3:0] observed_reset_ack_mask_o,
+  output      logic reset_start_o,
+  output      logic bundle_start_o,
+  output      logic accept_enable_o,
+  output      logic rejected_not_ready_o,
+  output      logic busy_o,
+  output      logic idle_o
+);
+endmodule
+
 `default_nettype wire

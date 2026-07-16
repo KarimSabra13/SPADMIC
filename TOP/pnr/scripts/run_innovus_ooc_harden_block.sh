@@ -12,6 +12,8 @@ Usage:
 Supported blocks:
   tx_packet_core / spadmic_tx_packet_core
   tx_ddr_strip / spadmic_tx_ddr_strip
+  position_core / spadmic_position_core
+  event_coordinator / spadmic_event_coordinator
   event_bundle_tx / spadmic_event_bundle_tx
   output_fifo / spadmic_output_fifo_topcfg
   ddr16_pairer / spadmic_ddr16_tx_pairer
@@ -23,8 +25,9 @@ This is the first real TOP OOC hardening wrapper. It imports one Genus OOC
 netlist/SDC into Innovus, builds a local abstract floorplan, places pins,
 creates local VDD/VSS METTP access pins, runs place/CTS/route/filler/timing/
 DRV/Innovus DRC/connectivity checks, and exports DEF/LEF/GDS collateral.
-Most legacy leaves defer local special PG routing. TX_PACKET_CORE and
-TX_DDR_STRIP enable the explicit-exact PG strategy in their generated config:
+Most legacy leaves defer local special PG routing. TX_PACKET_CORE,
+TX_DDR_STRIP, POSITION_CORE, and EVENT_COORDINATOR enable the explicit-exact
+PG strategy in their generated config:
 the METTP stripe center is identical to the VDD/VSS pin center and sroute is
 limited to corePin stitching. The wrapper fails closed on special connectivity.
 For the wide TX egress core min-area/antenna rescue, set
@@ -56,6 +59,14 @@ case "$BLOCK_IN" in
   tx_ddr_strip|spadmic_tx_ddr_strip)
     BLOCK="tx_ddr_strip"
     TOP_MODULE="spadmic_tx_ddr_strip"
+    ;;
+  position_core|spadmic_position_core)
+    BLOCK="position_core"
+    TOP_MODULE="spadmic_position_core"
+    ;;
+  event_coordinator|spadmic_event_coordinator)
+    BLOCK="event_coordinator"
+    TOP_MODULE="spadmic_event_coordinator"
     ;;
   event_bundle_tx|spadmic_event_bundle_tx)
     BLOCK="event_bundle_tx"

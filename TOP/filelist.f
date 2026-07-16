@@ -22,6 +22,7 @@ rtl/spadmic_output_fifo_topcfg.sv
 rtl/spadmic_matrix_cfg_ctrl.sv
 rtl/spadmic_matrix_top_csr.sv
 rtl/spadmic_position_snapshot_packetizer.sv
+rtl/spadmic_position_core.sv
 rtl/spadmic_event_bundle_tx.sv
 rtl/spadmic_tx_packet_core.sv
 rtl/spadmic_tx_ddr_strip.sv

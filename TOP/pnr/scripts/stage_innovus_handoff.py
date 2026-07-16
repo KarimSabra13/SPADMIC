@@ -394,8 +394,11 @@ def main() -> None:
         "STDCELL_CDL_STATUS=PASS\n"
         "BBOX_PARITY_STATUS=UNKNOWN\n"
         f"GDS_LAYER_MAP_STATUS={'PASS' if waiver_profile else 'UNKNOWN'}\n"
+        f"GDS_MERGE_STATUS={'PASS' if waiver_profile else 'UNKNOWN'}\n"
         "INTERNAL_PG_STATUS=UNKNOWN\n"
-        "PVS_DRC_STATUS=NOT_RUN\n"
+        "TC_TIMING_STATUS=NOT_RUN\n"
+        "PVS_BASE_DRC_STATUS=NOT_RUN\n"
+        "PVS_DENSITY_DRC_STATUS=NOT_RUN\n"
         "PVS_LVS_STATUS=NOT_RUN\n"
         "SIGNOFF_READY=NO\n"
     )

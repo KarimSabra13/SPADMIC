@@ -2447,3 +2447,307 @@ evidence locations, and post-import audit are documented in:
 ```text
 TOP/docs/40_TX_PACKET_CORE_VIRTUOSO_IMPORT_HANDOFF.md
 ```
+
+## P08 - Digital Subblock Portfolio and Reusable Closure Flow
+
+Date: 2026-07-16.
+
+Status:
+
+```text
+LOCAL_IMPLEMENTATION_STATUS=PASS
+FLOORPLAN_PORTFOLIO_STATUS=PASS
+POSITION_RTL_REGRESSION_STATUS=PASS
+EVENT_RTL_REGRESSION_STATUS=PASS
+POSITION_GENUS_STATUS=NOT_RUN
+POSITION_INNOVUS_STATUS=NOT_RUN
+POSITION_PVS_STATUS=NOT_RUN
+EVENT_GENUS_STATUS=NOT_RUN
+EVENT_INNOVUS_STATUS=NOT_RUN
+EVENT_PVS_STATUS=NOT_RUN
+```
+
+This phase converts the TX-specific learning into a reusable sequence for the
+remaining digital blocks. It does not alter the packet GDS, clear packet DRC
+debt, or authorize `p00_tx` promotion.
+
+### P08-R01 Portfolio and Floorplan Contract
+
+The audited layout snapshot remains:
+
+```text
+TOP/docs/layout_audits/SPADMIC2_20260709_072331
+```
+
+The machine-readable portfolio and reservation contracts are:
+
+```text
+TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
+TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
+TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
+```
+
+The new validator proved:
+
+```text
+LABEL=SPADMIC_DIGITAL_SUBBLOCK_PORTFOLIO
+STATUS=PASS
+ERROR_COUNT=0
+```
+
+The next two hard reservations are fixed at:
+
+```text
+POSITION_CORE=528.305,20.000,1480.000,680.000
+EVENT_COORDINATOR=1500.000,280.000,1737.460,500.000
+```
+
+The MPTDC phase is explicitly blocked:
+
+```text
+MPTDC_FRONTEND_STATUS=BLOCKED_ABSTRACT_MISSING
+MPTDC_PROMOTION_POLICY=NO_PROMOTION_WHILE_BLOCKED
+```
+
+No placeholder MPTDC pin or geometry was created.
+
+### P08-R02 Position Physical Boundary
+
+`spadmic_position_core` was added as a transparent wrapper around
+`spadmic_position_snapshot_packetizer`. The active matrix top now instantiates
+the wrapper without changing the instance connections or behavior.
+
+The physical boundary includes:
+
+```text
+TOP/rtl/spadmic_position_core.sv
+TOP/syn/filelists/ooc/spadmic_position_core.f
+TOP/syn/constraints/ooc/spadmic_position_core.sdc
+```
+
+The wrapper contains no `always_ff` or `always_comb` block. It exists to give
+Genus, Innovus, LEF, GDS, and LVS one stable canonical top.
+
+### P08-R03 TC Genus Gates
+
+The event and position constraints now model:
+
+```text
+CLOCK_NAME=clk_sys
+CLOCK_PERIOD_NS=6.25
+INPUT_DELAY_NS=0.50
+OUTPUT_DELAY_NS=0.50
+INPUT_TRANSITION_NS=0.20
+OUTPUT_LOAD_PF=0.02
+```
+
+`validate_genus_tc_ooc.py` fails closed on:
+
+- wrong or duplicate top-module definition;
+- nested/multidimensional top ports;
+- unresolved references;
+- missing clock waveform;
+- missing external delays, transitions, or loads;
+- nonzero warning classes;
+- negative WNS, nonzero TNS, or violating setup paths;
+- missing or empty output/report evidence.
+
+The gate remains typical-only:
+
+```text
+MMMC_STATUS=NOT_RUN_TYPICAL_ONLY
+SIGNOFF_READY=NO
+```
+
+### P08-R04 Innovus OOC Extensions
+
+The common OOC generator and wrapper now support:
+
+```text
+position_core / spadmic_position_core
+event_coordinator / spadmic_event_coordinator
+```
+
+The position plan uses:
+
+```text
+CORE_WIDTH_UM=931.695
+CORE_HEIGHT_UM=640.000
+SNAPSHOT_INPUT_SIDE=NORTH
+PACKET_OUTPUT_SIDE=EAST
+```
+
+The event plan uses:
+
+```text
+CORE_WIDTH_UM=217.460
+CORE_HEIGHT_UM=200.000
+```
+
+Both use:
+
+```text
+PG_ROUTE_STRATEGY=explicit_exact
+ENABLE_PG_SROUTE=1
+ROUTE_PROFILE=met1_effort
+```
+
+East-side pin placement is now conditional. Older three-side block
+configurations remain valid because only configured sides are required to
+pass.
+
+### P08-R05 Hash-Bound PVS and Promotion Evidence
+
+PVS base DRC, density DRC, and LVS status files now record:
+
+```text
+PACKAGE=<immutable-package>
+GDS=<package-GDS>
+GDS_SHA256=<exact-hash>
+```
+
+LVS additionally records the canonical package source path and source
+SHA-256. The promotion gate re-hashes both the GDS and source before approval.
+
+DRC status also records:
+
+```text
+PVS_DRC_VARIANT=BASE
+PVS_DRC_VARIANT=DENSITY
+```
+
+The promotion gate now independently requires:
+
+```text
+HANDOFF_AUDIT_STATUS=PASS
+CANONICAL_NAME_STATUS=PASS
+BBOX_PARITY_STATUS=PASS
+PIN_PARITY_STATUS=PASS
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+INTERNAL_PG_STATUS=PASS
+TC_TIMING_STATUS=PASS
+PVS_BASE_DRC_STATUS=PASS or FORMALLY_WAIVED
+PVS_DENSITY_DRC_STATUS=PASS or FORMALLY_WAIVED
+PVS_LVS_STATUS=MATCH
+```
+
+Every evidence file is hashed into the gate. Promotion rechecks those hashes
+and the GDS hash before writing approval or moving `current`.
+
+The formal waiver schema is exact-GDS and exact-rule scoped. Its canonical
+JSON SHA-256 provides tamper evidence only:
+
+```text
+ATTESTATION_SECURITY=INTEGRITY_ONLY_NOT_CRYPTOGRAPHIC_IDENTITY
+```
+
+The external approval reference remains responsible for signer identity. The
+existing TX four-marker diagnostic waiver is not eligible for this promotion
+path.
+
+### P08-R06 Negative Knowledge Preserved
+
+The following failures are now explicit flow rules:
+
+1. `addStripe` offsets are core-relative unless an explicit area changes the
+   reference. The first strip run shifted both stripes by `10.080 um`.
+2. `addStripe -area` and `-extend_to design_boundary` are mutually exclusive.
+3. Top-level VDD/VSS terminals are not `blockPin` objects. The failed request
+   produced `IMPSR-1254`.
+4. Repeated `restoreDesign` in one process produced `IMPIMEX-7031`; candidate
+   isolation requires one fresh process per candidate.
+5. A command PASS or zero wrapper RC is not a physical PASS.
+6. The helper-X sweep was physically invariant and is not a reusable repair
+   strategy.
+7. Post-route direct power-via stacks closed connectivity but created
+   MET2/MET3 shorts. New blocks build PG before ordinary signal routing.
+8. Raw `top.markers` totals mix DRC, antenna, and connectivity classes.
+9. PVS output must be isolated and parsed; process RC zero alone can still be
+   `UNKNOWN`.
+10. DRC/LVS evidence cannot move between GDS hashes.
+11. Missing MPTDC abstracts must block the phase rather than trigger invented
+    interfaces.
+
+### P08-R07 Local Verification
+
+Local RTL evidence:
+
+```text
+tb_spadmic_position_snapshot_packetizer_unit=25 pass / 0 fail
+tb_spadmic_event_coordinator_modes_unit=24 pass / 0 fail
+```
+
+The focused Python tests, Python compilation, shell syntax checks, generated
+position/event plans, floorplan validation, and `git diff --check` passed
+during implementation. Cadence server runs were deliberately not started from
+the local checkout.
+
+The complete execution order and server commands are recorded in:
+
+```text
+TOP/docs/41_DIGITAL_SUBBLOCK_CLOSURE_AND_ASSEMBLY_ROADMAP.md
+```
+
+### P08-R08 Exact Genus Boundary Gate
+
+The final pre-commit review found a shared Verilog parser defect. In an ANSI
+module header, a numeric packed range was inherited across a later explicit
+direction keyword. For example:
+
+```systemverilog
+input logic [2:0] active_axis_mask_i,
+input logic       matrix_activity_i
+```
+
+was incorrectly interpreted as if `matrix_activity_i` were also three bits.
+The event coordinator appeared to have 118 scalar ports instead of the
+correct 63 scalar bits across 30 base ports.
+
+The parser now resets inherited range state whenever a new `input`, `output`,
+or `inout` begins, while preserving legal inheritance within one declaration:
+
+```systemverilog
+input logic [1:0] first_i, second_i
+```
+
+The TC Genus gate now requires exact post-synthesis contracts:
+
+```text
+spadmic_position_core:
+  EXPECTED_BASE_PORT_COUNT=20
+  EXPECTED_BIT_PORT_COUNT=249
+
+spadmic_event_coordinator:
+  EXPECTED_BASE_PORT_COUNT=30
+  EXPECTED_BIT_PORT_COUNT=63
+```
+
+Missing ports, extra ports, wrong directions, wrong widths, nested ports, or
+multiple top definitions all force:
+
+```text
+BOUNDARY_PORT_STATUS=FAIL
+RESULT=REVIEW_REQUIRED
+```
+
+Negative rule: never promote a netlist merely because a parser returned a
+nonempty port list or a plausible total count. Exact names, directions, and
+widths must agree with the block contract.
+
+### P08-R09 Formal Waiver Cannot Replace DRC Execution
+
+The formal waiver path is restricted to a completed, exact-GDS DRC result
+whose parsed status is explicitly `FAIL`. A valid waiver manifest may convert
+that gate to `FORMALLY_WAIVED`, but it cannot convert any of the following:
+
+```text
+PVS_DRC_STATUS=NOT_RUN
+PVS_DRC_STATUS=UNKNOWN
+missing DRC report
+unattributed DRC report
+```
+
+This prevents administrative evidence from replacing physical verification.
+The waiver also remains invalid when its GDS cannot be read, its payload hash
+does not match, or its exact rule/result coverage is incomplete.

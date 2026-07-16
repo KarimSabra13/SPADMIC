@@ -1,2 +1,2 @@
-# OOC constraints for spadmic_position_snapshot_packetizer.
-source [file normalize [file join [file dirname [info script]] .. matrix_top_ooc_common.sdc]]
+# OOC TC constraints for the soft position snapshot packetizer.
+source [file normalize [file join [file dirname [info script]] spadmic_position_core.sdc]]

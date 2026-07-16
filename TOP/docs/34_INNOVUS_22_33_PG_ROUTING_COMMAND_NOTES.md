@@ -362,3 +362,41 @@ see the accepted special-net geometry as an existing obstruction. Do not
 infer final closure from the pre-CTS gate; final DRC, regular connectivity,
 special connectivity, timing, GDS audit, and the canonical packet gate still
 apply.
+
+## Reusable Hard-Macro PG Rules
+
+The position and event hard-macro generators reuse only the parts of the TX
+learning that are attributable and reproducible:
+
+1. Create one north VDD and one north VSS terminal on `METTP`.
+2. Derive each stripe center from that exact terminal center.
+3. Use `add_shape -pathSeg` for the single explicit stripe.
+4. Start each stripe on the first same-net followpin row and end it at the die
+   top so it overlaps the top terminal.
+5. Run `sroute -connect {corePin}` only for standard-cell rail stitching.
+6. Require zero special connectivity, zero regular connectivity, and zero DRC
+   before accepting the implementation.
+
+Do not request `blockPin` for top-level VDD/VSS terminals. Innovus reported
+`IMPSR-1254` because no hierarchical VDD/VSS block pins existed. Do not treat
+`addStripe created 1 wire`, `sroute created ... wires`, or a zero tool return
+code as closure. Those messages prove command execution only.
+
+Do not calculate `addStripe -start_offset` from the die origin. Without
+`-area`, the reference is the core/region; the failed strip run shifted both
+stripes by exactly the `10.080 um` core-left offset. Also do not combine
+`-area` with `-extend_to design_boundary`; the installed manual declares them
+mutually exclusive.
+
+Do not sweep candidate coordinates by repeatedly restoring a design in one
+Innovus process. Innovus issued `IMPIMEX-7031` because a second
+`restoreDesign` in the same process cannot reliably reset application and
+global state. Each candidate needs one fresh process, one restore, one
+modification method, and one evidence tuple. Rejected candidates stay rejected
+even when every construction command returned PASS.
+
+Do not carry TX-specific helper stripes or post-route power-via experiments
+into a new block by default. The helper-X sweep was physically invariant, and
+post-route direct stacks closed connectivity while creating MET2/MET3 shorts.
+New blocks start with explicit PG before ordinary routing; localized repairs
+are considered only from their own fresh marker evidence.

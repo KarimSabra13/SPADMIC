@@ -81,6 +81,9 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   {
     echo "PVS_DRC_STATUS=DRY_RUN_READY"
     echo "PVS_DRC_VARIANT=${VARIANT^^}"
+    echo "PACKAGE=$PACKAGE"
+    echo "GDS=$GDS"
+    echo "GDS_SHA256=$(sha256sum "$GDS" | awk '{print $1}')"
   } | tee "$RUN_DIR/pvs_drc_status.rpt"
   spadmic_pvs_hash_run "$RUN_DIR"
   exit 0
@@ -92,6 +95,9 @@ python3 "$SCRIPT_DIR/parse_pvs_handoff_result.py" --mode drc --run-dir "$RUN_DIR
   --status "$RUN_DIR/pvs_drc_status.rpt" --tool-rc "$PVS_RC"
 PARSE_RC=$?
 echo "PVS_DRC_VARIANT=${VARIANT^^}" >> "$RUN_DIR/pvs_drc_status.rpt"
+echo "PACKAGE=$PACKAGE" >> "$RUN_DIR/pvs_drc_status.rpt"
+echo "GDS=$GDS" >> "$RUN_DIR/pvs_drc_status.rpt"
+echo "GDS_SHA256=$(sha256sum "$GDS" | awk '{print $1}')" >> "$RUN_DIR/pvs_drc_status.rpt"
 spadmic_pvs_hash_run "$RUN_DIR"
 echo "PVS_RC=$PVS_RC"
 echo "PARSE_RC=$PARSE_RC"

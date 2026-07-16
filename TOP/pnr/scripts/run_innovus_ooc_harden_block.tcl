@@ -1267,9 +1267,10 @@ proc spadmic_ooc_place_side_pins {side pins} {
 }
 
 proc spadmic_ooc_place_pins {} {
-    spadmic_ooc_place_side_pins WEST [spadmic_ooc_cfg_list pins_west]
-    spadmic_ooc_place_side_pins SOUTH [spadmic_ooc_cfg_list pins_south]
-    spadmic_ooc_place_side_pins NORTH [spadmic_ooc_cfg_list pins_north]
+    spadmic_ooc_place_side_pins WEST [spadmic_ooc_cfg_default pins_west [list]]
+    spadmic_ooc_place_side_pins SOUTH [spadmic_ooc_cfg_default pins_south [list]]
+    spadmic_ooc_place_side_pins NORTH [spadmic_ooc_cfg_default pins_north [list]]
+    spadmic_ooc_place_side_pins EAST [spadmic_ooc_cfg_default pins_east [list]]
     set pin_assignment_tcl [spadmic_ooc_cfg_default pin_assignment_tcl ""]
     if {$pin_assignment_tcl ne "" && [file exists $pin_assignment_tcl]} {
         spadmic_ooc_try_first PLACE_PINS_GUIDED [list [list source $pin_assignment_tcl]] 1
@@ -1691,9 +1692,19 @@ proc spadmic_ooc_write_status {} {
     set result ABSTRACT_READY_FOR_TOP_REVIEW
     set required_statuses [list \
         LIBRARY_SOURCE INIT_DESIGN FLOORPLAN CREATE_PG_PIN_VDD CREATE_PG_PIN_VSS FILLER_MODE \
-        PLACE_PINS_WEST PLACE_PINS_SOUTH PLACE_PINS_NORTH ROUTE_LAYER_SETUP PLACE_DESIGN CTS_DESIGN ROUTE_DESIGN \
+        ROUTE_LAYER_SETUP PLACE_DESIGN CTS_DESIGN ROUTE_DESIGN \
         ADD_FILLER POSTROUTE_SETUP_TIMING POSTROUTE_HOLD_TIMING EXPORT_DEF EXPORT_LEF EXPORT_GDS \
         EXPORT_DEF_FILE EXPORT_LEF_FILE EXPORT_ABSTRACT_LEF_FILE EXPORT_GDS_FILE EXPORT_NETLIST_FILE HANDOFF_COPY]
+    foreach {side config_name} {
+        WEST pins_west
+        SOUTH pins_south
+        NORTH pins_north
+        EAST pins_east
+    } {
+        if {[llength [spadmic_ooc_cfg_default $config_name [list]]] > 0} {
+            lappend required_statuses "PLACE_PINS_$side"
+        }
+    }
     if {[spadmic_ooc_pg_sroute_enabled]} {
         lappend required_statuses SROUTE_PG
     }

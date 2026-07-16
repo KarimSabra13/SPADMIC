@@ -1,0 +1,27 @@
+{
+  "schema": "spadmic.formal_drc_waiver.v1",
+  "status": "DRAFT",
+  "block": "REPLACE_WITH_CANONICAL_BLOCK_NAME",
+  "gds_sha256": "REPLACE_WITH_EXACT_GDS_SHA256",
+  "approver": "REPLACE_WITH_APPROVER",
+  "approval_reference": "REPLACE_WITH_REVIEW_OR_TICKET",
+  "approved_utc": "REPLACE_WITH_ISO8601_TIMESTAMP",
+  "scope": "REPLACE_WITH_EXACT_RULE_SCOPE",
+  "justification": "REPLACE_WITH_TECHNICAL_JUSTIFICATION",
+  "review_condition": "REPLACE_WITH_CONDITION_THAT_REOPENS_REVIEW",
+  "coverage": {
+    "base": {
+      "status": "APPROVED_WAIVER",
+      "result_count": 0,
+      "rule_ids": [
+        "REPLACE_WITH_RULE_ID"
+      ],
+      "disposition": "REPLACE_WITH_APPROVED_DISPOSITION"
+    }
+  },
+  "signature": {
+    "algorithm": "SHA256_CANONICAL_JSON",
+    "signer": "REPLACE_WITH_APPROVER",
+    "payload_sha256": "CALCULATE_WITH_VALIDATE_FORMAL_DRC_WAIVER"
+  }
+}

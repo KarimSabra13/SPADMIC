@@ -117,6 +117,56 @@ class PreparePvsLvsSourceTest(unittest.TestCase):
         )[0]
         self.assertEqual(set(source_prep.declaration_ports(module)), {"VDD", "VSS", "data[0]", "data[1]"})
 
+    def test_ansi_range_is_reset_by_each_new_direction(self) -> None:
+        module = source_prep.parse_modules(
+            "module top (\n"
+            "  input logic [2:0] vector_i,\n"
+            "  input logic scalar_i,\n"
+            "  output logic [1:0] vector_o,\n"
+            "  output logic scalar_o\n"
+            "); endmodule\n"
+        )[0]
+        specs = source_prep.declaration_port_specs(module)
+        self.assertEqual(
+            [(port.name, port.direction) for port in specs],
+            [
+                ("vector_i[2]", "input"),
+                ("vector_i[1]", "input"),
+                ("vector_i[0]", "input"),
+                ("scalar_i", "input"),
+                ("vector_o[1]", "output"),
+                ("vector_o[0]", "output"),
+                ("scalar_o", "output"),
+            ],
+        )
+
+    def test_ansi_range_is_inherited_within_one_declaration_group(self) -> None:
+        module = source_prep.parse_modules(
+            "module top (input logic [1:0] first_i, second_i, output logic done_o); "
+            "endmodule\n"
+        )[0]
+        self.assertEqual(
+            source_prep.declaration_ports(module),
+            ["first_i[1]", "first_i[0]", "second_i[1]", "second_i[0]", "done_o"],
+        )
+
+    def test_real_event_boundary_does_not_expand_following_scalars(self) -> None:
+        source = (REPO / "TOP" / "rtl" / "spadmic_event_coordinator.sv").read_text()
+        module = next(
+            item
+            for item in source_prep.parse_modules(source)
+            if item.name == "spadmic_event_coordinator"
+        )
+        ports = source_prep.declaration_ports(module)
+        self.assertEqual(len({port.split("[", 1)[0] for port in ports}), 30)
+        self.assertEqual(len(ports), 61)
+        self.assertIn("active_axis_mask_i[2]", ports)
+        self.assertIn("active_mode_i", ports)
+        self.assertIn("matrix_activity_i", ports)
+        self.assertNotIn("matrix_activity_i[2]", ports)
+        self.assertIn("event_open_o", ports)
+        self.assertNotIn("event_open_o[3]", ports)
+
     def test_unresolved_instance_master_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

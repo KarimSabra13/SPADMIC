@@ -748,7 +748,7 @@ module spadmic_top_matrix_v1 (
     .stop_armed_o      (tdc_stop_armed[2])
   );
 
-  spadmic_position_snapshot_packetizer #(.LINE_W(SPADMIC_LINE_W)) u_pos_packetizer (
+  spadmic_position_core #(.LINE_W(SPADMIC_LINE_W)) u_pos_packetizer (
     .clk_sys          (clk_sys),
     .rst_n            (rst_sys_n),
     .start_i          (pos_packet_start),

@@ -193,6 +193,9 @@ class StageInnovusHandoffTest(unittest.TestCase):
             self.assertIn("TEMPORARY_DRC_WAIVER_STATUS=PASS", qualification)
             self.assertIn("PVS_DRC_WAIVER=NO", qualification)
             self.assertIn("GDS_LAYER_MAP_STATUS=PASS", qualification)
+            self.assertIn("GDS_MERGE_STATUS=PASS", qualification)
+            self.assertIn("PVS_BASE_DRC_STATUS=NOT_RUN", qualification)
+            self.assertIn("PVS_DENSITY_DRC_STATUS=NOT_RUN", qualification)
             self.assertIn("SIGNOFF_READY=NO", qualification)
 
             audit = subprocess.run(

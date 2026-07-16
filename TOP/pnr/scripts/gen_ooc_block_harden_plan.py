@@ -239,6 +239,8 @@ def write_pin_plan_csv(path: Path, plan: dict[str, list[str]], assignments: dict
                     reason = "toward DDR16/DDRs2 output path"
                 elif side == "SOUTH":
                     reason = "toward FIFO/event-bundle producer"
+                elif side == "EAST":
+                    reason = "toward packet aggregation and TX logic"
                 else:
                     reason = "clock/reset/control entry"
                 assignment = assignments.get(port, {})
@@ -529,6 +531,232 @@ def generate_event_bundle_tx(layout_dir: Path, out_dir: Path) -> None:
         pin_plan=pin_plan,
         instances=instances,
         extra_lines=["Word/flush output pins are placed on the north edge toward the output FIFO leaf."],
+    )
+
+
+def generate_event_coordinator(layout_dir: Path, out_dir: Path) -> None:
+    csv_dir = layout_dir / "csv"
+    instances_csv = csv_dir / "SPADMIC2_instances_enriched.csv"
+    nets_csv = csv_dir / "SPADMIC2_nets.csv"
+    for path in [instances_csv, nets_csv]:
+        require_file(path)
+
+    instances = read_headered_csv(instances_csv)
+    region = (1500.000, 280.000, 1737.460, 500.000)
+    core_margin_um = 10.0
+    core_width_um = region[2] - region[0] - (2.0 * core_margin_um)
+    core_height_um = region[3] - region[1] - (2.0 * core_margin_um)
+    pin_plan = {
+        "WEST": [
+            "clk_sys",
+            "rst_n",
+            *bus("active_mode_i", 3),
+            "global_enable_i",
+            *bus("active_axis_mask_i", 3),
+            "raw_snapshot_required_i",
+            "auto_reset_enable_i",
+            "pre_event_resources_ready_i",
+            "rearm_ready_i",
+        ],
+        "SOUTH": [
+            "matrix_activity_i",
+            "cal_activity_i",
+            "snapshot_valid_i",
+            "position_snapshot_captured_i",
+            *bus("tdc_start_seen_i", 3),
+            *bus("packet_pending_mask_i", 4),
+            "reset_done_i",
+            "bundle_done_i",
+        ],
+        "NORTH": [
+            "event_open_o",
+            *bus("event_id_o", 14),
+            "event_id_valid_o",
+            *bus("required_packet_mask_o", 4),
+            *bus("required_tdc_mask_o", 3),
+            *bus("required_reset_ack_mask_o", 4),
+            *bus("observed_reset_ack_mask_o", 4),
+            "reset_start_o",
+            "bundle_start_o",
+            "accept_enable_o",
+            "rejected_not_ready_o",
+            "busy_o",
+            "idle_o",
+        ],
+    }
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    config_tcl = out_dir / "ooc_block_harden_config.tcl"
+    pin_plan_csv = out_dir / "ooc_block_pin_plan.csv"
+    context_md = out_dir / "ooc_block_context.md"
+    input_manifest = out_dir / "ooc_harden_input_manifest.csv"
+    write_pin_plan_csv(pin_plan_csv, pin_plan)
+    write_manifest(
+        input_manifest,
+        {
+            "layout_audit_dir": layout_dir,
+            "instances_enriched": instances_csv,
+            "nets": nets_csv,
+        },
+    )
+    values = common_config_values(
+        "event_coordinator",
+        "spadmic_event_coordinator",
+        layout_dir,
+        pin_plan_csv,
+        f"{core_width_um:.3f}",
+        f"{core_height_um:.3f}",
+        target_utilization="0.20",
+        place_max_density="0.50",
+        core_margin_um=f"{core_margin_um:.3f}",
+        signal_pin_spacing_um="1.20",
+        pg_pin_width_um="20.16",
+        pg_pin_depth_um="2.24",
+        pg_strap_width_um="2.24",
+        pg_strap_spacing_um="2.24",
+    )
+    values.update(
+        {
+            "prelim_top_bbox_llx_um": f"{region[0]:.3f}",
+            "prelim_top_bbox_lly_um": f"{region[1]:.3f}",
+            "prelim_top_bbox_urx_um": f"{region[2]:.3f}",
+            "prelim_top_bbox_ury_um": f"{region[3]:.3f}",
+            "physical_region": "EVENT_COORDINATOR",
+            "route_profile": "met1_effort",
+            "enable_pg_sroute": "1",
+            "pg_route_strategy": "explicit_exact",
+            "pg_ground_first_rail_offset_um": "4.48",
+            "handoff_note": "Event state machine only; central control remains soft.",
+        }
+    )
+    write_ooc_config_tcl(config_tcl, values, pin_plan)
+    write_leaf_context(
+        context_md,
+        title="EVENT_COORDINATOR",
+        layout_dir=layout_dir,
+        block="event_coordinator",
+        top_module="spadmic_event_coordinator",
+        contents="mode-aware event state machine and frozen event masks",
+        core_target=f"{core_width_um:.3f} um x {core_height_um:.3f} um",
+        pin_plan=pin_plan,
+        instances=instances,
+        extra_lines=[
+            f"Reserved top bbox=({region[0]:.3f}, {region[1]:.3f})-({region[2]:.3f}, {region[3]:.3f}) um.",
+            "The block stops at the event-coordinator RTL boundary; sequencer, CSR, and matrix frontend logic remain soft.",
+            "Base DRC, density DRC, and explicit LVS MATCH remain mandatory after mapped/merged streamout.",
+        ],
+        local_pg_enabled=True,
+    )
+
+
+def generate_position_core(layout_dir: Path, out_dir: Path) -> None:
+    csv_dir = layout_dir / "csv"
+    instances_csv = csv_dir / "SPADMIC2_instances_enriched.csv"
+    matrix_pins_csv = layout_dir / "reports" / "SPADMIC2_matrix_pins.csv"
+    nets_csv = csv_dir / "SPADMIC2_nets.csv"
+    for path in [instances_csv, matrix_pins_csv, nets_csv]:
+        require_file(path)
+
+    instances = read_headered_csv(instances_csv)
+    matrix_pins = read_pin_csv(matrix_pins_csv)
+    region = (528.305, 20.000, 1480.000, 680.000)
+    core_margin_um = 10.0
+    core_width_um = region[2] - region[0] - (2.0 * core_margin_um)
+    core_height_um = region[3] - region[1] - (2.0 * core_margin_um)
+    pin_plan = {
+        "WEST": [
+            "clk_sys",
+            "rst_n",
+            "start_i",
+            "mode_i",
+            *bus("event_id_i", 14),
+        ],
+        "SOUTH": [
+            *bus("gap_threshold_i", 7),
+            *bus("min_cluster_span_i", 7),
+            "snapshot_captured_o",
+            "done_o",
+            "drop_o",
+        ],
+        "NORTH": [
+            *bus("snapshot_R_i", 64),
+            *bus("snapshot_Y_i", 64),
+            *bus("snapshot_B_i", 64),
+        ],
+        "EAST": [
+            "pkt_valid_o",
+            "pkt_ready_i",
+            *bus("pkt_data_o", 16),
+            "pkt_sop_o",
+            "pkt_eop_o",
+            "packet_pending_o",
+            "busy_o",
+        ],
+    }
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    config_tcl = out_dir / "ooc_block_harden_config.tcl"
+    pin_plan_csv = out_dir / "ooc_block_pin_plan.csv"
+    context_md = out_dir / "ooc_block_context.md"
+    input_manifest = out_dir / "ooc_harden_input_manifest.csv"
+    write_pin_plan_csv(pin_plan_csv, pin_plan)
+    write_manifest(
+        input_manifest,
+        {
+            "layout_audit_dir": layout_dir,
+            "instances_enriched": instances_csv,
+            "matrix_pins": matrix_pins_csv,
+            "nets": nets_csv,
+        },
+    )
+    values = common_config_values(
+        "position_core",
+        "spadmic_position_core",
+        layout_dir,
+        pin_plan_csv,
+        f"{core_width_um:.3f}",
+        f"{core_height_um:.3f}",
+        target_utilization="0.50",
+        place_max_density="0.62",
+        core_margin_um=f"{core_margin_um:.3f}",
+        signal_pin_spacing_um="1.20",
+        pg_pin_width_um="40.32",
+        pg_pin_depth_um="3.36",
+        pg_strap_width_um="3.36",
+        pg_strap_spacing_um="3.36",
+    )
+    values.update(
+        {
+            "prelim_top_bbox_llx_um": f"{region[0]:.3f}",
+            "prelim_top_bbox_lly_um": f"{region[1]:.3f}",
+            "prelim_top_bbox_urx_um": f"{region[2]:.3f}",
+            "prelim_top_bbox_ury_um": f"{region[3]:.3f}",
+            "physical_region": "POSITION_CORE",
+            "route_profile": "met1_effort",
+            "enable_pg_sroute": "1",
+            "pg_route_strategy": "explicit_exact",
+            "pg_ground_first_rail_offset_um": "4.48",
+            "handoff_note": "Snapshot capture, three cluster scanners, and position packet serialization.",
+        }
+    )
+    write_ooc_config_tcl(config_tcl, values, pin_plan)
+    write_leaf_context(
+        context_md,
+        title="POSITION_CORE",
+        layout_dir=layout_dir,
+        block="position_core",
+        top_module="spadmic_position_core",
+        contents="transparent wrapper around the position snapshot packetizer and three axis scanners",
+        core_target=f"{core_width_um:.3f} um x {core_height_um:.3f} um",
+        pin_plan=pin_plan,
+        instances=instances,
+        extra_lines=[
+            f"Reserved top bbox=({region[0]:.3f}, {region[1]:.3f})-({region[2]:.3f}, {region[3]:.3f}) um.",
+            "The 192 snapshot inputs face north toward the matrix; packet output faces east toward packet aggregation.",
+            f"Matrix audit pins read: `{len(matrix_pins)}`; exact top routes are deferred to the phase-p01 assembly checkpoint.",
+            "Do not absorb the snapshot frontend or central event control into this macro without a new reviewed boundary contract.",
+        ],
+        local_pg_enabled=True,
     )
 
 
@@ -1385,6 +1613,12 @@ def main() -> None:
     block = args.block.strip()
     if block in {"event_bundle_tx", "spadmic_event_bundle_tx"}:
         generate_event_bundle_tx(args.layout_audit_dir.resolve(), args.out_dir.resolve())
+        return
+    if block in {"event_coordinator", "spadmic_event_coordinator"}:
+        generate_event_coordinator(args.layout_audit_dir.resolve(), args.out_dir.resolve())
+        return
+    if block in {"position_core", "spadmic_position_core"}:
+        generate_position_core(args.layout_audit_dir.resolve(), args.out_dir.resolve())
         return
     if block in {"tx_packet_core", "spadmic_tx_packet_core", "TX_PACKET_CORE"}:
         generate_tx_packet_core(args.layout_audit_dir.resolve(), args.out_dir.resolve())

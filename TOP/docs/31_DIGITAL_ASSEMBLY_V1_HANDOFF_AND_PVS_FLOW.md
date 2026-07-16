@@ -31,6 +31,8 @@ Assembly contract:
 - `TOP/pnr/assembly/spadmic_digital_assembly_connections.csv`
 - `TOP/pnr/assembly/spadmic_digital_assembly_v1.f`
 - `TOP/pnr/assembly/spadmic_digital_assembly_phases.csv`
+- `TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv`
+- `TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv`
 - `TOP/pnr/assembly/spadmic_digital_assembly_floorplan.tcl`
 - `TOP/pnr/assembly/spadmic_digital_assembly_blockages.tcl`
 - `TOP/pnr/assembly/spadmic_digital_assembly_pin_guides.tcl`
@@ -56,6 +58,8 @@ Handoff and PVS:
 - `audit_xstream_gds_export.py`, `audit_innovus_gds_export.py`
 - `derive_oa_pg_status.py`
 - `build_innovus_handoff_gate.py`, `promote_innovus_handoff.py`
+- `validate_digital_subblock_portfolio.py`
+- `validate_formal_drc_waiver.py`
 
 ## 3. Immutable Handoff Layout
 
@@ -524,10 +528,13 @@ python3 TOP/pnr/scripts/derive_oa_pg_status.py \
 
 python3 TOP/pnr/scripts/build_innovus_handoff_gate.py \
   --package "$PACKET_PACKAGE" \
-  --drc-status "$PACKET_DRC_STATUS" --lvs-status "$PACKET_LVS_STATUS" \
+  --base-drc-status "$PACKET_BASE_DRC_STATUS" \
+  --density-drc-status "$PACKET_DENSITY_DRC_STATUS" \
+  --lvs-status "$PACKET_LVS_STATUS" \
   --pg-status "$PACKET_PACKAGE/status/packet_internal_pg_gate.rpt" \
   --contract-status "$PACKET_PACKAGE/reports/oa_lef_contract_status.rpt" \
-  --layer-status "$PACKET_PACKAGE/reports/gds_layer_map_status.rpt"
+  --layer-status "$PACKET_PACKAGE/reports/gds_layer_map_status.rpt" \
+  --timing-status "$PACKET_TC_TIMING_STATUS"
 GATE_RC=$?
 PACKET_GATE="$(find "$PACKET_PACKAGE/status" -name 'gate_*.rpt' -type f | sort | tail -1)"
 
@@ -536,6 +543,15 @@ if [ "$GATE_RC" -eq 0 ]; then
       "$PACKET_PACKAGE" --gate-status "$PACKET_GATE"
 fi
 ```
+
+Base DRC, density DRC, and LVS reports must identify the exact package and GDS
+SHA-256. LVS must also identify and hash the canonical package source used in
+the comparison. The layer report must prove both the official stream map and
+required standard-cell GDS merge. Timing, PG, geometry, and pin parity remain
+independent gates. A DRC failure may be converted to `FORMALLY_WAIVED` only by
+an approved manifest for the exact GDS hash and exact base/density scope. The
+manifest's canonical JSON digest is integrity evidence, not a public-key
+identity signature; the external approval reference remains mandatory.
 
 Promotion means block-level physical collateral is approved for assembly. It
 does not mean full-chip signoff, MMMC closure, PEX completion, or pad/analog PG
@@ -547,13 +563,18 @@ Only an approved Phase A checkpoint may seed Phase B. The order remains:
 
 1. `p00_tx`: packet + DDR strip.
 2. `p01_position`: add hard `spadmic_position_core`; keep snapshot frontend soft.
-3. `p02_event_control`: add soft event coordinator and central control regions.
+3. `p02_event_control`: add hard `spadmic_event_coordinator` plus soft central
+   control regions.
 4. `p03_matrix_interface`: guided snapshot/reset/config/OR64 boundary logic.
-5. `p04_mptdc_frontend`: wrapper/frontend logic around MPTDC blockages.
+5. `p04_mptdc_frontend`: blocked until final MPTDC abstracts and exact pin
+   contracts exist; no placeholder pin is invented.
 6. `p05_csr_i2c`: CSR/I2C physical wrapper last.
 
 Every phase gets a new immutable package, phase top, OA PG child, DRC run, LVS
 run, and approval gate. Failed packages remain preserved for diagnosis.
+The authoritative portfolio, fixed reservations, stop rules, and server
+execution order are in
+`TOP/docs/41_DIGITAL_SUBBLOCK_CLOSURE_AND_ASSEMBLY_ROADMAP.md`.
 
 ## 13. Canonical TX Rebuild Supersession
 

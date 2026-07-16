@@ -35,6 +35,12 @@ class ModuleBlock:
     masked: str
 
 
+@dataclass(frozen=True)
+class DeclaredPort:
+    name: str
+    direction: str
+
+
 def digest(path: Path) -> str:
     sha = hashlib.sha256()
     with path.open("rb") as fh:
@@ -185,7 +191,7 @@ def split_commas(text: str) -> list[str]:
     return parts
 
 
-def declaration_ports(module: ModuleBlock) -> list[str]:
+def declaration_port_specs(module: ModuleBlock) -> list[DeclaredPort]:
     module_keyword = re.search(r"\bmodule\b", module.masked)
     if not module_keyword:
         raise ValueError(f"module keyword missing for {module.name}")
@@ -209,10 +215,15 @@ def declaration_ports(module: ModuleBlock) -> list[str]:
     port_close = matching_parenthesis(module.masked, port_open)
     header = module.masked[port_open + 1:port_close]
 
-    ports: list[str] = []
+    ports: list[DeclaredPort] = []
     if re.search(r"\b(?:input|output|inout)\b", header):
+        inherited_direction: str | None = None
         inherited_range: str | None = None
         for segment in split_commas(header):
+            direction_match = re.search(r"\b(input|output|inout)\b", segment)
+            if direction_match:
+                inherited_direction = direction_match.group(1)
+                inherited_range = None
             range_match = re.search(r"\[\s*-?\d+\s*:\s*-?\d+\s*\]", segment)
             if range_match:
                 inherited_range = range_match.group(0)
@@ -223,11 +234,19 @@ def declaration_ports(module: ModuleBlock) -> list[str]:
                 not in {"input", "output", "inout", "wire", "reg", "logic", "signed", "unsigned"}
             ]
             if identifiers:
-                ports.extend(expand_range(identifiers[-1], inherited_range))
+                if inherited_direction is None:
+                    raise ValueError(
+                        f"ANSI top-level port direction missing for {identifiers[-1]} "
+                        f"in {module.name}"
+                    )
+                ports.extend(
+                    DeclaredPort(name, inherited_direction)
+                    for name in expand_range(identifiers[-1], inherited_range)
+                )
     else:
         body = module.masked[port_close + 1:]
-        declarations: list[str] = []
         for declaration in DECLARATION_RE.finditer(body):
+            direction = declaration.group(1)
             payload = declaration.group(2)
             range_match = re.search(r"\[\s*-?\d+\s*:\s*-?\d+\s*\]", payload)
             range_text = range_match.group(0) if range_match else None
@@ -241,15 +260,22 @@ def declaration_ports(module: ModuleBlock) -> list[str]:
                     not in {"wire", "reg", "logic", "signed", "unsigned", "supply0", "supply1"}
                 ]
                 if identifiers:
-                    declarations.extend(expand_range(identifiers[-1], range_text))
-        ports = declarations
+                    ports.extend(
+                        DeclaredPort(name, direction)
+                        for name in expand_range(identifiers[-1], range_text)
+                    )
 
     if not ports:
         raise ValueError(f"no top-level ports parsed for {module.name}")
-    duplicates = sorted({name for name in ports if ports.count(name) > 1})
+    port_names = [port.name for port in ports]
+    duplicates = sorted({name for name in port_names if port_names.count(name) > 1})
     if duplicates:
         raise ValueError(f"duplicate top-level ports for {module.name}: {duplicates}")
     return ports
+
+
+def declaration_ports(module: ModuleBlock) -> list[str]:
+    return [port.name for port in declaration_port_specs(module)]
 
 
 def cdl_subcircuits(path: Path) -> set[str]:
