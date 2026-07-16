@@ -178,7 +178,7 @@ tool return code is zero and a unique report-level total exists.
 
 ## 7. GUI Template Requirements
 
-Create one fresh canonical packet template on the Cadence server after the
+Prefer one fresh canonical packet template on the Cadence server after the
 new package exists. The GUI run must visibly contain:
 
 - layout GDS: package `gds/spadmic_tx_packet_core.gds`;
@@ -193,6 +193,10 @@ new package exists. The GUI run must visibly contain:
 Preserve the first GUI run. Replays clone it; they never edit it. Record the
 exact embedded old paths from its controls rather than guessing them from GUI
 labels.
+
+For the urgent provisional diagnostic, Section 11 permits the immutable
+historical same-block template only after executable input and output
+enforcement. That exception does not relax any canonical input requirement.
 
 ## 8. Commands Not To Retry
 
@@ -244,3 +248,40 @@ are fixed because acceptance never transfers across GDS hashes.
 The waiver inventory, export method, execution gates, and retirement
 requirements are defined in
 `38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.
+
+## 11. Executable LVS Input Enforcement
+
+Template-wide string presence is not enough to prove the LVS source contract.
+The historical packet `_HV` GUI preset names an OA-generated CDL file, while
+its executable `pvslvsctl` contains only the routed Verilog
+`schematic_path`. A replay could therefore pass a naive CDL path check without
+actually loading the package-local official JIHD CDL.
+
+The strict replay now enforces these executable control invariants:
+
+```text
+layout_path = exactly the staged canonical GDS
+schematic_path <canonical filtered source> verilog = exactly one
+schematic_path <package official JIHD CDL> spice = exactly one
+```
+
+The Verilog directive must already exist and is rewritten. The Spice/CDL
+directive is rewritten when present or inserted immediately after the
+existing schematic input when absent. Multiple directives of either format
+are rejected because silently choosing among source decks would make the
+comparison ambiguous.
+
+`output_isolation.rpt` records:
+
+```text
+LAYOUT_GDS_INPUT
+LAYOUT_GDS_REWRITE_COUNT
+SCHEMATIC_VERILOG_INPUT
+SCHEMATIC_VERILOG_ACTION
+SCHEMATIC_CDL_INPUT
+SCHEMATIC_CDL_ACTION
+```
+
+The final replay gate reparses `pvslvsctl` and requires exact canonical path
+equality. A path that appears only in `.preset.autosave`, a comment, or a
+nonexecuted copied file cannot satisfy this gate.

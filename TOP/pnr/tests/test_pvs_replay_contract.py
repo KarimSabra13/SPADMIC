@@ -13,7 +13,13 @@ REPLAY = REPO / "TOP" / "pnr" / "scripts" / "replay_pvs_handoff_template.py"
 
 
 class PvsReplayContractTest(unittest.TestCase):
-    def make_template(self, root: Path, mode: str) -> tuple[Path, dict[str, str]]:
+    def make_template(
+        self,
+        root: Path,
+        mode: str,
+        *,
+        executable_cdl: bool = True,
+    ) -> tuple[Path, dict[str, str]]:
         template = root / "template"
         template.mkdir()
         old = {
@@ -60,8 +66,9 @@ class PvsReplayContractTest(unittest.TestCase):
                 f'results_db -erc "{historical_run / "old_layout_lvs.err"}" -ascii;\n'
                 f'mask_svdb_dir "{historical_run / "svdb"}";\n'
                 f'schematic_path "{old["source"]}" verilog;\n'
-                f'schematic_path "{old["cdl"]}" spice;\n'
             )
+            if executable_cdl:
+                control_text += f'schematic_path "{old["cdl"]}" spice;\n'
         else:
             control_text += (
                 'report_summary -drc "old_layout_drc.sum" -replace;\n'
@@ -80,10 +87,25 @@ class PvsReplayContractTest(unittest.TestCase):
             "// Historical reference: /missing/comment-only/reference\n"
             "/* Retired reference: /missing/block-comment/reference */\n"
         )
+        (template / ".preset.autosave").write_text(
+            f'SchematicDFIIiCDLfile "{old["cdl"]}"\n'
+        )
         return template, old
 
-    def run_replay(self, root: Path, mode: str, *, omit_cdl_replacement: bool = False, density: bool = False):
-        template, old = self.make_template(root, mode)
+    def run_replay(
+        self,
+        root: Path,
+        mode: str,
+        *,
+        executable_cdl: bool = True,
+        omit_cdl_replacement: bool = False,
+        density: bool = False,
+    ):
+        template, old = self.make_template(
+            root,
+            mode,
+            executable_cdl=executable_cdl,
+        )
         run_dir = root / "run"
         new_gds = root / "canonical.gds"
         new_source = root / "canonical.lvs.pg.v"
@@ -126,11 +148,56 @@ class PvsReplayContractTest(unittest.TestCase):
             self.assertIn("xh018_D_CELLS_JIHD.cdl", (run_dir / "pvslvsctl").read_text())
             self.assertIn("#UNDEFINE DENSITY", (run_dir / "pvslvsctl").read_text())
 
-    def test_lvs_replay_fails_when_cdl_was_not_replaced(self) -> None:
+    def test_lvs_replay_adds_missing_executable_cdl_input(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            result, _ = self.run_replay(Path(tmp), "lvs", omit_cdl_replacement=True)
+            result, run_dir = self.run_replay(
+                Path(tmp),
+                "lvs",
+                executable_cdl=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            control = (run_dir / "pvslvsctl").read_text()
+            self.assertEqual(control.count("xh018_D_CELLS_JIHD.cdl"), 1)
+            isolation = (run_dir / "output_isolation.rpt").read_text()
+            self.assertIn("SCHEMATIC_CDL_ACTION=ADDED_MISSING", isolation)
+
+    def test_lvs_replay_rejects_multiple_executable_cdl_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            template, old = self.make_template(root, "lvs")
+            with (template / "pvslvsctl").open("a") as handle:
+                handle.write(f'schematic_path "{old["cdl"]}" spice;\n')
+            new_gds = root / "canonical.gds"
+            new_source = root / "canonical.lvs.pg.v"
+            new_cdl = root / "xh018_D_CELLS_JIHD.cdl"
+            for path in (new_gds, new_source, new_cdl):
+                path.write_text(path.name + "\n")
+            result = subprocess.run(
+                [
+                    "python3", str(REPLAY), "--mode", "lvs",
+                    "--template", str(template), "--run-dir", str(root / "run"),
+                    "--cadence-pvs", "/cadence/bin/pvs",
+                    "--replace", f"{old['gds']}={new_gds}",
+                    "--replace", f"{old['source']}={new_source}",
+                    "--replace", f"{old['cdl']}={new_cdl}",
+                    "--replace", f"{old['layout_top']}=canonical_top",
+                    "--replace", f"{old['source_top']}=canonical_top",
+                    "--expected-layout-top", "canonical_top",
+                    "--expected-source-top", "canonical_top",
+                    "--expected-gds", str(new_gds),
+                    "--expected-source", str(new_source),
+                    "--expected-cdl", str(new_cdl),
+                    "--preprocessor-undefine", "DENSITY",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
             self.assertEqual(result.returncode, 1)
-            self.assertIn("cdl_not_in_replay", result.stdout + result.stderr)
+            self.assertIn(
+                "multiple executable schematic_path spice",
+                result.stdout + result.stderr,
+            )
 
     def test_guessed_old_value_with_zero_occurrences_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

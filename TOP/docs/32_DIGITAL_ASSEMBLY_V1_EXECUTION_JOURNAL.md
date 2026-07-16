@@ -2157,3 +2157,29 @@ new PVS run ID, and a fresh wrapper audit. It must not overwrite the old run
 or claim a complete Phase 3 status chain. A formal driver-owned summary still
 requires a fresh session. Either path must obtain a unique run-local
 `Total DRC Results` line before classifying base DRC.
+
+### P04-R04 PVS Base DRC Classified Nonzero
+
+The replay-only retry at commit `13cc2e14` reused the unchanged, audited
+`tx_packet_pvs_waiver_20260716_130442` package and wrote only to new immutable
+run `tx_packet_pvs_waiver_20260716_130442_pvs_drc_base_outputiso_13cc2e14`.
+Replay and output isolation passed, PVS returned zero, and three run-local
+artifacts agreed on:
+
+```text
+Total DRC Results : 135 (135)
+PVS_DRC_STATUS=FAIL
+```
+
+This is now a design DRC verdict rather than a replay-control failure. The
+`135` foundry-rule results are not waived, base DRC is not clean, density DRC
+is not run, and the block remains ineligible for promotion. The classified
+nonzero result does permit the independent diagnostic LVS.
+
+Before that LVS, replay validation found that the historical `_HV`
+`pvslvsctl` had a Verilog `schematic_path` but no executable standard-cell
+CDL input. The GUI preset's OA-generated CDL field was not sufficient.
+Replay now forces the canonical GDS and filtered Verilog inputs, inserts the
+package-local official JIHD CDL when absent, rejects duplicate source/CDL
+directives, and records the executable-input actions in
+`output_isolation.rpt`.

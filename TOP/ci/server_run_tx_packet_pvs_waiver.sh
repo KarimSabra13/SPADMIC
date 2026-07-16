@@ -35,13 +35,16 @@ Run one subcommand at a time. PVS DRC and LVS are independent after staging.
 The exact four Innovus MET1 minimum-area markers are temporarily accepted only
 for this diagnostic flow. PVS DRC is not waived. Final signoff remains NO.
 
-For pvs-lvs, create a fresh canonical GUI template from the staged package and
+For pvs-lvs, prefer a fresh canonical GUI template from the staged package and
 set:
   SPADMIC_TX_PACKET_PVS_LVS_TEMPLATE=/absolute/template/directory
 
-If that template embeds different old GDS/source/CDL paths or top names, also
-set the corresponding SPADMIC_TX_PACKET_PVS_LVS_TEMPLATE_* variables described
-in TOP/docs/38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md.
+An immutable historical same-block template may be used only as a rule-launch
+scaffold when the current strict replay rewrites and proves all executable
+GDS/source/CDL/top/output paths. Never run the historical template unchanged.
+Set exact old embedded values through the SPADMIC_TX_PACKET_PVS_LVS_TEMPLATE_*
+variables described in
+TOP/docs/38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md.
 USAGE
 }
 
@@ -646,7 +649,7 @@ pvs_lvs() {
 
   template="${SPADMIC_TX_PACKET_PVS_LVS_TEMPLATE:-}"
   if [[ -z "$template" || ! -d "$template" ]]; then
-    echo "STOP_HERE_DO_NOT_CONTINUE: fresh canonical PVS LVS GUI template is required"
+    echo "STOP_HERE_DO_NOT_CONTINUE: PVS LVS GUI template is required"
     echo "SET=SPADMIC_TX_PACKET_PVS_LVS_TEMPLATE=/absolute/template/directory"
     echo "PACKAGE=$TX3_PACKAGE"
     echo "LAYOUT_GDS=$TX3_PACKAGE/gds/spadmic_tx_packet_core.gds"

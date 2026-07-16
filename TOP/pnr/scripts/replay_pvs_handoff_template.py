@@ -161,6 +161,127 @@ def replace_pvs_directive_path(
     return text, count
 
 
+def schematic_path_pattern(format_name: str) -> re.Pattern[str]:
+    return re.compile(
+        rf"(?im)^([ \t]*schematic_path[ \t]+)"
+        rf"(?P<path>{PVS_VALUE})"
+        rf"(?P<suffix>[ \t]+{re.escape(format_name)}[ \t]*;[^\n]*)$"
+    )
+
+
+def schematic_path_values(text: str, format_name: str) -> list[str]:
+    return [
+        unquote(match.group("path"))
+        for match in schematic_path_pattern(format_name).finditer(text)
+    ]
+
+
+def normalize_schematic_path(
+    text: str,
+    format_name: str,
+    value: Path,
+    *,
+    add_if_missing: bool,
+) -> tuple[str, str]:
+    pattern = schematic_path_pattern(format_name)
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise SystemExit(
+            "PVS_REPLAY_CONTRACT_FAIL: multiple executable schematic_path "
+            f"{format_name} directives are not supported"
+        )
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    if matches:
+        text, count = pattern.subn(
+            lambda match: (
+                f'{match.group(1)}"{escaped}"{match.group("suffix")}'
+            ),
+            text,
+        )
+        if count != 1:
+            raise SystemExit(
+                "PVS_REPLAY_CONTRACT_FAIL: failed to normalize executable "
+                f"schematic_path {format_name}"
+            )
+        return text, "REPLACED_EXISTING"
+    if not add_if_missing:
+        raise SystemExit(
+            "PVS_REPLAY_CONTRACT_FAIL: executable schematic_path "
+            f"{format_name} directive is missing"
+        )
+
+    directive = f'schematic_path "{escaped}" {format_name};'
+    existing = list(
+        re.finditer(r"(?im)^[ \t]*schematic_path\b[^\n]*$", text)
+    )
+    if existing:
+        insertion = existing[-1].end()
+        text = text[:insertion] + "\n" + directive + text[insertion:]
+    else:
+        text = text.rstrip() + "\n" + directive + "\n"
+    return text, "ADDED_MISSING"
+
+
+def normalize_control_inputs(
+    control: Path,
+    mode: str,
+    expected_gds: Path | None,
+    expected_source: Path | None,
+    expected_cdl: Path | None,
+) -> list[str]:
+    text = control.read_text()
+    lines: list[str] = []
+    if expected_gds is None:
+        raise SystemExit(
+            "PVS_REPLAY_CONTRACT_FAIL: canonical layout GDS input is required"
+        )
+    text, layout_count = replace_pvs_directive_path(
+        text,
+        r"layout_path",
+        expected_gds,
+        required=True,
+    )
+    if layout_count != 1:
+        raise SystemExit(
+            "PVS_REPLAY_CONTRACT_FAIL: expected exactly one executable "
+            "layout_path directive"
+        )
+    lines.extend(
+        [
+            f"LAYOUT_GDS_INPUT={expected_gds}",
+            f"LAYOUT_GDS_REWRITE_COUNT={layout_count}",
+        ]
+    )
+    if mode == "lvs":
+        if expected_source is None or expected_cdl is None:
+            raise SystemExit(
+                "PVS_REPLAY_CONTRACT_FAIL: canonical LVS source and CDL "
+                "inputs are required"
+            )
+        text, source_action = normalize_schematic_path(
+            text,
+            "verilog",
+            expected_source,
+            add_if_missing=False,
+        )
+        text, cdl_action = normalize_schematic_path(
+            text,
+            "spice",
+            expected_cdl,
+            add_if_missing=True,
+        )
+        lines.extend(
+            [
+                f"SCHEMATIC_VERILOG_INPUT={expected_source}",
+                f"SCHEMATIC_VERILOG_ACTION={source_action}",
+                f"SCHEMATIC_CDL_INPUT={expected_cdl}",
+                f"SCHEMATIC_CDL_ACTION={cdl_action}",
+            ]
+        )
+    control.write_text(text)
+    return lines
+
+
 def normalize_run_file(
     run_file: Path,
     run_dir: Path,
@@ -447,6 +568,13 @@ def main() -> None:
         args.expected_layout_top or "layout",
     )
     control = run_dir / required_control
+    input_lines = normalize_control_inputs(
+        control,
+        args.mode,
+        args.expected_gds,
+        args.expected_source,
+        args.expected_cdl,
+    )
     output_lines = normalize_control_outputs(
         control,
         run_dir,
@@ -514,6 +642,21 @@ def main() -> None:
         ]:
             if required is None:
                 contract_errors.append(f"missing_argument={label}")
+        control_text = control.read_text()
+        if args.expected_source is not None and schematic_path_values(
+            control_text,
+            "verilog",
+        ) != [str(args.expected_source.resolve())]:
+            contract_errors.append(
+                f"source_not_executable_control={args.expected_source.resolve()}"
+            )
+        if args.expected_cdl is not None and schematic_path_values(
+            control_text,
+            "spice",
+        ) != [str(args.expected_cdl.resolve())]:
+            contract_errors.append(
+                f"cdl_not_executable_control={args.expected_cdl.resolve()}"
+            )
     if args.expected_layout_top is None or args.expected_gds is None:
         contract_errors.append("missing_argument=expected_layout_top_or_gds")
     if contract_errors:
@@ -550,7 +693,7 @@ def main() -> None:
         f"MODE={args.mode.upper()}\n"
         f"RUN_DIR={run_dir}\n"
         f"CONTROL={control}\n"
-        + "\n".join(execution_lines + output_lines)
+        + "\n".join(execution_lines + input_lines + output_lines)
         + "\n"
     )
     (run_dir / "replay_contract_status.rpt").write_text(

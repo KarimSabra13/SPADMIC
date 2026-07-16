@@ -1344,3 +1344,27 @@ afterward. A replay contract must cover both inputs and generated outputs:
 The repaired replay emits `output_isolation.rpt`. Absence of that PASS report,
 or absence of one unique run-local result line, remains infrastructure failure
 rather than a design verdict.
+
+### PVS Base DRC Nonzero After Output Isolation
+
+The corrected replay-only retry produced attributable local evidence:
+
+```text
+PVS_RC=0
+PVS_DRC_STATUS=FAIL
+Total DRC Results : 135 (135)
+DRC_TOTAL_MATCH_COUNT=3
+```
+
+Do not classify wrapper RC `8` as a PVS execution crash. PVS completed; the
+wrapper intentionally returns nonzero because base DRC is not zero. The three
+matching totals came from the hidden summary, stdout, and generated `.sum`
+file. This is open PVS DRC debt and is separate from the exact four Innovus
+MET1 markers.
+
+The nonzero base result allows only diagnostic LVS. During LVS preparation,
+the historical `_HV` control was found to have no executable Spice/CDL
+`schematic_path`; its preset-only OA CDL field did not load the official
+standard-cell device netlist. The replay contract must force one canonical
+Verilog source and one package-local JIHD CDL into `pvslvsctl`, rejecting
+duplicates and recording whether the CDL directive was replaced or added.

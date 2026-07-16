@@ -198,10 +198,15 @@ source top   spadmic_tx_packet_core
 cell CDL     package/pdk/xh018_D_CELLS_JIHD.cdl
 ```
 
-Create a fresh canonical PVS LVS GUI template from these exact package
+Prefer a fresh canonical PVS LVS GUI template from these exact package
 artifacts. Do not reuse the historical `spadmic_tx_packet_core_HV` LVS
 template unchanged. The historical template had different top names and
 artifact paths and did not prove the new package-local source/CDL contract.
+
+For the urgent diagnostic only, the immutable historical template may be used
+as a rule-launch scaffold after the current replay code force-rewrites and
+proves every executable layout/source/CDL/top/output path. This exception does
+not reuse the historical GDS, source, results, or verdict.
 
 The replay wrapper requires exact path/top replacements and a passing replay
 contract. PVS return code, empty error log, extracted-net counts, or DRC zero
@@ -252,7 +257,7 @@ bash TOP/ci/server_run_tx_packet_pvs_waiver.sh stage
 bash TOP/ci/server_run_tx_packet_pvs_waiver.sh pvs-drc-base
 ```
 
-Before LVS, create the fresh GUI template and export:
+Before LVS, select the immutable GUI template and export:
 
 ```bash
 export SPADMIC_TX_PACKET_PVS_LVS_TEMPLATE=/absolute/fresh/template
@@ -491,3 +496,123 @@ PVS_DRC_STATUS=PASS or FAIL with one unique Total DRC Results count
 Only after that classification should the operator proceed to the independent
 diagnostic LVS gate. The four Innovus MET1 markers remain open manual-fix debt
 regardless of the PVS result.
+
+## 14. Replay-Only Base DRC Classification
+
+Commit `13cc2e14d1955dfb294f089d450f285b124c2ac8` was replayed against the
+already staged and hash-audited package:
+
+```text
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/
+spadmic_tx_packet_core/tx_packet_pvs_waiver_20260716_130442
+```
+
+The retry used a new immutable run:
+
+```text
+pvs/drc/
+tx_packet_pvs_waiver_20260716_130442_pvs_drc_base_outputiso_13cc2e14
+```
+
+The replay contract and output-isolation reports both passed. PVS itself
+returned zero, and three independently scanned run-local text artifacts
+reported the same total:
+
+```text
+PVS_RC=0
+PVS_DRC_STATUS=FAIL
+DRC_TOTAL_MATCH_COUNT=3
+DRC_TOTAL_PRIMARY=135
+DRC_TOTAL_EXPANDED=135
+Total DRC Results : 135 (135)
+```
+
+The evidence sources were `.drcSummaryReport`, `pvs.stdout.log`, and
+`spadmic_tx_packet_core_drc.sum`. The parser therefore classified an
+attributable nonzero base-DRC result rather than an infrastructure failure.
+Wrapper RC `8` is the expected fail-closed classification for nonzero DRC.
+
+This result is not the four-marker Innovus waiver translated into PVS. The
+PVS foundry deck independently reports `135` results over the exported GDS.
+No PVS waiver or result filter was used. The rule-by-rule distribution still
+needs separate review, density DRC has not run, and:
+
+```text
+PVS_DRC_WAIVER=NO
+MANUAL_DRC_FIX_REQUIRED=YES
+FINAL_SIGNOFF_READY=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+```
+
+The shell probe also attempted to tail a nonexistent
+`drcSummaryReport.txt`. That message is harmless; the real generated summary
+is `spadmic_tx_packet_core_drc.sum`, and its `135 (135)` total agrees with the
+two other run-local evidence sources.
+
+Per the approved result matrix, classified nonzero base DRC authorizes the
+independent diagnostic LVS. It does not authorize density DRC omission,
+waiver retirement, signoff, or promotion.
+
+## 15. Historical LVS Template Executable-Input Gap
+
+The immutable historical LVS template is:
+
+```text
+/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/
+PvsLVS/spadmic_tx_packet_core_HV
+```
+
+Its executable `pvslvsctl` contains one Verilog source:
+
+```text
+schematic_path ".../tx_packet_core.routed.pg.v" verilog;
+```
+
+It does not contain an executable Spice/CDL `schematic_path`. The GUI preset
+mentions an OA-generated `spadmic_tx_packet_core_HV.cdl`, but that preset
+field is not proof that batch `pvslvsctl` reads the package-local official
+JIHD CDL. Merely finding a CDL path anywhere in the copied template was
+therefore an insufficient replay contract.
+
+The exact historical values are:
+
+```text
+TEMPLATE_GDS=
+/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/
+spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.gds
+
+TEMPLATE_SOURCE=
+/sim/ksabra/SPADMIC_work/oa_signoff/tx_packet_core_HV_20260710_105525/
+netlist/tx_packet_core.routed.pg.v
+
+TEMPLATE_LAYOUT_TOP=spadmic_tx_packet_core_HV
+TEMPLATE_SOURCE_TOP=spadmic_tx_packet_core
+
+TEMPLATE_PRESET_CDL=
+./PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.cdl
+```
+
+`TEMPLATE_PRESET_CDL` is replaced only to remove the stale GUI preset value.
+The new executable Spice directive is independently forced from the staged
+package path; it is not inferred from that old preset.
+
+The corrected replay now:
+
+1. Forces exactly one executable `layout_path` to the staged canonical GDS.
+2. Requires exactly one executable Verilog `schematic_path` and rewrites it
+   to `spadmic_tx_packet_core.lvs.pg.v`.
+3. Requires exactly one executable Spice/CDL `schematic_path`.
+4. Inserts the package-local `xh018_D_CELLS_JIHD.cdl` directive when the
+   historical control has none.
+5. Rejects multiple Verilog or Spice/CDL directives instead of guessing which
+   inputs define the comparison.
+6. Records the exact input paths and `REPLACED_EXISTING` or `ADDED_MISSING`
+   actions in `output_isolation.rpt`.
+7. Rechecks that the executable control contains only the canonical source
+   and CDL paths before PVS starts.
+
+This makes the historical directory usable only as an immutable foundry-rule
+launcher. The replay still replaces layout top
+`spadmic_tx_packet_core_HV` with `spadmic_tx_packet_core`, source top remains
+`spadmic_tx_packet_core`, all generated outputs stay in a new package-local
+run, and only an explicit report-level `MATCH` passes.
