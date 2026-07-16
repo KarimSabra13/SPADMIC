@@ -2063,3 +2063,30 @@ STEP28_BASH_SYNTAX=PASS
 STEP28_TCL_INFO_COMPLETE=PASS
 STEP28_DIFF_CHECK=PASS
 ```
+
+### P04 Provisional Four-Marker Waiver And Early PVS LVS
+
+Status: `PHASE3_PROVISIONAL_PVS_WAIVER_FLOW_IMPLEMENTED_SERVER_EXECUTION_PENDING`
+
+The operator chose to defer the Step 28 normalized-VIA-side repair trial and
+obtain an early LVS diagnosis. This is recorded as
+`STEP28_NORMALIZED_VIA_SIDE_TRIAL=SKIPPED_BY_OPERATOR_TEMPORARY_WAIVER_DECISION`;
+it is not a rejection of R7.
+
+Phase 3 restores the original packet-core checkpoint in a fresh process,
+replays only the six validated base edits, and requires the exact known
+four-marker state before saving or exporting. The temporary waiver is limited
+to the four named MET1 minimum-area markers on `n_9677`, `n_9693`, `n_9696`,
+and `n_9697`. Connectivity must remain zero and the mapped/merged GDS audit
+must pass.
+
+PVS DRC and LVS are independent after immutable staging. PVS DRC is not
+waived; an explicit nonzero PVS result is retained as DRC debt while LVS may
+still run. LVS passes only on report-level `MATCH`. Even a PVS DRC zero plus
+LVS `MATCH` remains provisional until the four Innovus markers are fixed, a
+new package is exported, base and density DRC are zero, LVS is rerun, and the
+waiver is retired.
+
+The complete contract, marker inventory, result matrix, server gates, and
+manual closure checklist are in
+`38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.

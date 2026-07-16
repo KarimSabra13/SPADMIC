@@ -121,7 +121,7 @@ def main() -> None:
     parser.add_argument("--stdcell-cdl", type=Path)
     parser.add_argument(
         "--qualification-profile",
-        choices=["basic", "canonical_tx"],
+        choices=["basic", "canonical_tx", "canonical_tx_lvs_waiver"],
         default="basic",
     )
     args = parser.parse_args()
@@ -148,6 +148,9 @@ def main() -> None:
     reports = [require_file(path, "report") for path in args.report]
     logs = [require_file(path, "log") for path in args.log]
     canonical_tx_gate: Path | None = None
+    waiver_gate: Path | None = None
+    waiver_report: Path | None = None
+    waiver_gds_audit: Path | None = None
     if args.qualification_profile == "canonical_tx":
         if args.kind != "block" or args.name not in {"spadmic_tx_packet_core", "spadmic_tx_ddr_strip"}:
             raise SystemExit("canonical_tx qualification is valid only for the two canonical TX blocks")
@@ -163,6 +166,83 @@ def main() -> None:
         if gate.get("MACRO") != args.name:
             raise SystemExit(
                 f"CANONICAL_TX_GATE_FAIL: report macro {gate.get('MACRO', 'MISSING')} != {args.name}"
+            )
+    elif args.qualification_profile == "canonical_tx_lvs_waiver":
+        if args.kind != "block" or args.name != "spadmic_tx_packet_core":
+            raise SystemExit(
+                "canonical_tx_lvs_waiver qualification is valid only for spadmic_tx_packet_core"
+            )
+        gate_reports = [
+            path for path in reports if path.name == "canonical_tx_lvs_waiver_gate.rpt"
+        ]
+        waiver_reports = [
+            path for path in reports if path.name == "temporary_drc_waiver.rpt"
+        ]
+        audit_reports = [
+            path for path in reports if path.name == "gds_export_audit.rpt"
+        ]
+        if len(gate_reports) != 1:
+            raise SystemExit(
+                "CANONICAL_TX_WAIVER_GATE_FAIL: exactly one "
+                "canonical_tx_lvs_waiver_gate.rpt is required"
+            )
+        if len(waiver_reports) != 1:
+            raise SystemExit(
+                "CANONICAL_TX_WAIVER_GATE_FAIL: exactly one temporary_drc_waiver.rpt is required"
+            )
+        if len(audit_reports) != 1:
+            raise SystemExit(
+                "CANONICAL_TX_WAIVER_GATE_FAIL: exactly one gds_export_audit.rpt is required"
+            )
+        waiver_gate = gate_reports[0]
+        waiver_report = waiver_reports[0]
+        waiver_gds_audit = audit_reports[0]
+        gate = key_values(waiver_gate)
+        waiver = key_values(waiver_report)
+        gds_audit = key_values(waiver_gds_audit)
+        expected_gate = {
+            "STATUS": "PASS",
+            "RESULT": "READY_FOR_PROVISIONAL_PVS_DRC_LVS",
+            "MACRO": args.name,
+            "WAIVER_SCOPE": "EXACT_FOUR_INNOVUS_MET1_MIN_AREA_ONLY",
+            "WAIVER_MARKER_COUNT": "4",
+            "WAIVER_NETS": "n_9677 n_9693 n_9696 n_9697",
+            "PVS_DRC_WAIVER": "NO",
+            "LVS_DIAGNOSTIC_ONLY": "YES",
+            "MANUAL_FIX_REQUIRED": "YES",
+            "BLOCK_PROMOTION_AUTHORIZED": "NO",
+            "FINAL_SIGNOFF_READY": "NO",
+        }
+        expected_waiver = {
+            "STATUS": "PASS",
+            "RESULT": "EXACT_FOUR_MARKERS_RECORDED",
+            "WAIVER_SCOPE": "EXACT_FOUR_INNOVUS_MET1_MIN_AREA_ONLY",
+            "WAIVER_MARKER_COUNT": "4",
+            "WAIVER_NETS": "n_9677 n_9693 n_9696 n_9697",
+            "ALLOWED_LAYER": "MET1",
+            "ALLOWED_TYPE": "Geometry",
+            "ALLOWED_SUBTYPE": "Minimal_Area",
+            "PVS_DRC_WAIVER": "NO",
+            "LVS_DIAGNOSTIC_ONLY": "YES",
+            "MANUAL_FIX_REQUIRED": "YES",
+            "BLOCK_PROMOTION_AUTHORIZED": "NO",
+            "FINAL_SIGNOFF_READY": "NO",
+        }
+        for key, expected in expected_gate.items():
+            if gate.get(key) != expected:
+                raise SystemExit(
+                    f"CANONICAL_TX_WAIVER_GATE_FAIL: {key}="
+                    f"{gate.get(key, 'MISSING')} expected={expected}"
+                )
+        for key, expected in expected_waiver.items():
+            if waiver.get(key) != expected:
+                raise SystemExit(
+                    f"CANONICAL_TX_WAIVER_GATE_FAIL: waiver {key}="
+                    f"{waiver.get(key, 'MISSING')} expected={expected}"
+                )
+        if gds_audit.get("STATUS") != "PASS":
+            raise SystemExit(
+                "CANONICAL_TX_WAIVER_GATE_FAIL: mapped/merged GDS audit did not pass"
             )
 
     handoff_root = args.handoff_root.resolve()
@@ -276,19 +356,44 @@ def main() -> None:
         "pdk_collateral": pdk_manifest,
         "foundry_rule_references": rule_manifest,
     }
+    if waiver_gate and waiver_report and waiver_gds_audit:
+        manifest["temporary_drc_waiver"] = {
+            "status": "PASS",
+            "scope": "EXACT_FOUR_INNOVUS_MET1_MIN_AREA_ONLY",
+            "marker_count": 4,
+            "nets": ["n_9677", "n_9693", "n_9696", "n_9697"],
+            "pvs_drc_waiver": False,
+            "lvs_diagnostic_only": True,
+            "manual_fix_required": True,
+            "block_promotion_authorized": False,
+            "final_signoff_ready": False,
+            "gate_report": f"reports/{waiver_gate.name}",
+            "gate_report_sha256": digest(waiver_gate),
+            "waiver_report": f"reports/{waiver_report.name}",
+            "waiver_report_sha256": digest(waiver_report),
+            "gds_audit_report": f"reports/{waiver_gds_audit.name}",
+            "gds_audit_report_sha256": digest(waiver_gds_audit),
+        }
     (package / "manifests" / "package.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
+    waiver_profile = args.qualification_profile == "canonical_tx_lvs_waiver"
     (package / "status" / "qualification.rpt").write_text(
         "LABEL=SPADMIC_INNOVUS_HANDOFF\n"
         "PACKAGE_STATUS=CANDIDATE\n"
         "CANONICAL_NAME_STATUS=PASS\n"
         f"CANONICAL_TX_OOC_GATE_STATUS={'PASS' if canonical_tx_gate else 'NOT_REQUIRED'}\n"
+        f"TEMPORARY_DRC_WAIVER_STATUS={'PASS' if waiver_profile else 'NOT_APPLICABLE'}\n"
+        f"TEMPORARY_DRC_WAIVER_SCOPE={'EXACT_FOUR_INNOVUS_MET1_MIN_AREA_ONLY' if waiver_profile else 'NONE'}\n"
+        f"TEMPORARY_DRC_WAIVER_MARKER_COUNT={'4' if waiver_profile else '0'}\n"
+        f"PVS_DRC_WAIVER={'NO' if waiver_profile else 'NOT_APPLICABLE'}\n"
+        f"LVS_DIAGNOSTIC_ONLY={'YES' if waiver_profile else 'NO'}\n"
+        f"MANUAL_DRC_FIX_REQUIRED={'YES' if waiver_profile else 'NO'}\n"
+        "BLOCK_PROMOTION_AUTHORIZED=NO\n"
         "LVS_SOURCE_PREPARATION_STATUS=PASS\n"
         "PIN_PARITY_STATUS=PASS\n"
         "STDCELL_CDL_STATUS=PASS\n"
         "BBOX_PARITY_STATUS=UNKNOWN\n"
-        "PIN_PARITY_STATUS=UNKNOWN\n"
-        "GDS_LAYER_MAP_STATUS=UNKNOWN\n"
+        f"GDS_LAYER_MAP_STATUS={'PASS' if waiver_profile else 'UNKNOWN'}\n"
         "INTERNAL_PG_STATUS=UNKNOWN\n"
         "PVS_DRC_STATUS=NOT_RUN\n"
         "PVS_LVS_STATUS=NOT_RUN\n"

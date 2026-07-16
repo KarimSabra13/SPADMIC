@@ -191,3 +191,30 @@ parity failure, package hashes, strict replacement occurrence, canonical
 artifact presence, base DENSITY undefine, and density define. Cadence PVS is
 not available locally; the GUI template, extraction, DRC, and comparison
 remain server gates.
+
+## 10. Provisional Packet-Core Waiver Profile
+
+Qualification profile `canonical_tx_lvs_waiver` is a diagnostic extension of
+this contract for one exact `spadmic_tx_packet_core` state. It requires a
+mapped/merged GDS audit and hashes the exact four-marker waiver reports into
+the immutable package.
+
+The profile deliberately records:
+
+```text
+PVS_DRC_WAIVER=NO
+LVS_DIAGNOSTIC_ONLY=YES
+MANUAL_DRC_FIX_REQUIRED=YES
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+PVS DRC remains an honest independent result. LVS does not require DRC zero,
+but it still requires the same canonical source preparation, package-local
+JIHD CDL, strict template replay, and explicit report-level `MATCH` described
+above. A provisional `MATCH` must be rerun after the four physical violations
+are fixed because acceptance never transfers across GDS hashes.
+
+The waiver inventory, export method, execution gates, and retirement
+requirements are defined in
+`38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.

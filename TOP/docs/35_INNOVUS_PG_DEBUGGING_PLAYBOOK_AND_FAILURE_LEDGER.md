@@ -1255,3 +1255,26 @@ Rejected actions before the Step 28 result:
   inputs, or run PVS from the isolated trial.
 - If R7 changes all four local MET1 components but remains nonzero, retire the
   Wire Editor path and review a connected regular-signal shape primitive.
+
+## Provisional Four-Marker Waiver For Early LVS
+
+The schedule exception after Step 27 does not revise the physical conclusion.
+R6 remains rejected, R7 remains unexecuted, and the packet core still has four
+known MET1 minimum-area violations. The exception creates a reproducible
+export of the exact intermediate R6 base state so LVS can be diagnosed before
+manual geometry repair.
+
+The export is fail-closed:
+
+- restore the original checkpoint once;
+- require the exact six-marker baseline;
+- validate and replay only the six base edits;
+- require exactly four named `0.1777/0.2020 um^2` markers;
+- require regular and special connectivity zero;
+- record the marker boxes in an expiring waiver table;
+- export mapped/merged GDS only after all checks pass.
+
+The waiver does not cover PVS DRC and cannot authorize promotion or final
+signoff. A PVS DRC nonzero result remains a real failure tuple, although it no
+longer blocks the independent LVS diagnostic. See
+`38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.

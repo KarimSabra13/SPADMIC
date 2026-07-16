@@ -1268,3 +1268,31 @@ signature comparison. No R7 outcome directly saves or exports the design.
 Immutable PVS staging, PVS DRC, and LVS remain blocked until a fresh canonical
 integration run reproduces exact DRC zero and both connectivity classes at
 zero.
+
+## P04 Schedule Exception - Provisional PVS Before DRC Closure
+
+The default canonical policy above remains the final signoff policy. A
+separate Phase 3 driver now supports one explicit exception requested by the
+operator: reproduce and export the exact four-marker R6 base state, record a
+narrow temporary Innovus waiver, and run PVS DRC and LVS independently.
+
+This exception does not modify the meaning of canonical closure:
+
+```text
+WAIVER_SCOPE=EXACT_FOUR_INNOVUS_MET1_MIN_AREA_ONLY
+PVS_DRC_WAIVER=NO
+LVS_DIAGNOSTIC_ONLY=YES
+BLOCK_PROMOTION_AUTHORIZED=NO
+FINAL_SIGNOFF_READY=NO
+```
+
+The older packet-core GDS is not reused because it predates the reviewed
+four-marker state. A fresh Innovus process replays only the six validated base
+edits and exports only after exact marker and connectivity identity checks.
+The staged package carries the waiver record and its hashes.
+
+PVS base DRC reports its actual zero or nonzero result. LVS can run from the
+same immutable package regardless of the DRC result and passes only on an
+explicit report-level `MATCH`. After manual repair, both PVS DRC and LVS must
+be rerun on the new GDS hash. Full details are in
+`38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.
