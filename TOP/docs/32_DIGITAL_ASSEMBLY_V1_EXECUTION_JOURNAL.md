@@ -2227,3 +2227,35 @@ GUI inspection is permitted only through
 `TOP/pnr/scripts/open_pvs_lvs_gui_review.sh`. The helper validates the match
 and opens a disposable relocated copy so Cadence lock or browser state cannot
 modify the immutable evidence.
+
+### P04-R06 Base PVS DRC Non-Antenna Analysis Prepared
+
+After the explicit provisional LVS match, the next open packet-core gate is
+the classified base PVS DRC debt:
+
+```text
+PVS_BASE_DRC_RESULTS=135
+PVS_DRC_STATUS=FAIL
+PVS_DENSITY_DRC=NOT_RUN
+```
+
+`TOP/pnr/scripts/analyze_pvs_drc_run.py` now provides a read-only decomposition
+of the existing immutable DRC run. It validates the replay and output
+isolation, reconciles the per-rule totals with `135 (135)`, parses every ASCII
+result polygon into micron coordinates, and writes all analysis outside the
+source run.
+
+The antenna split is fail-conservative. Only explicit antenna wording in the
+rule name or foundry description is excluded; ambiguous rules remain in the
+non-antenna repair inventory. The executed control's `DENSITY` and
+`VAR_ANT_RATIO` states are recorded separately.
+
+The analysis also correlates PVS geometry against the four Innovus
+temporary-waiver boxes and emits spatial bins for repeated hotspots. The
+actual rule distribution remains pending the one server-side read-only
+extraction. No PVS rerun, GDS edit, waiver expansion, signoff claim, or block
+promotion is authorized by this preparation step.
+
+See
+`39_TX_PACKET_CORE_PVS_BASE_DRC_NON_ANTENNA_ANALYSIS.md` for the exact evidence
+contract and manual repair sequence.

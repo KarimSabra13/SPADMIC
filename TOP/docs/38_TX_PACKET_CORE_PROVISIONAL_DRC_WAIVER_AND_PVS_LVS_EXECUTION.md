@@ -749,3 +749,54 @@ already-open Virtuoso layout window. It can inspect the result database and
 comparison, but cross-probing into Virtuoso requires launching the debug
 environment from the corresponding Virtuoso layout session. That integration
 is optional review work and does not strengthen the existing `MATCH`.
+
+## 17. Read-Only Base DRC Rule Decomposition
+
+The next step after the explicit LVS match is not another PVS execution. The
+existing immutable base-DRC run already contains an attributable
+`135 (135)` failure and must first be decomposed rule by rule.
+
+Use:
+
+```text
+TOP/pnr/scripts/analyze_pvs_drc_run.py
+```
+
+The analyzer requires the passed replay/output-isolation reports, PVS tool RC
+zero, the exact classified nonzero DRC status, one summary, and one ASCII DRC
+error database. It reconciles every rule count and every result polygon before
+writing a separate analysis directory.
+
+The antenna policy is explicit-only:
+
+```text
+ANTENNA_EXCLUSION_POLICY=EXPLICIT_RULE_NAME_OR_DESCRIPTION_ONLY
+AMBIGUOUS_RULE_POLICY=RETAIN_AS_NON_ANTENNA_REVIEW
+```
+
+This prevents the 21 deferred Innovus antenna markers, an `A...` foundry rule
+prefix, or a standalone `antenna.ratio` artifact from being incorrectly
+subtracted from the 135 PVS result count. The exact executed `pvsdrcctl` is
+also audited for `DENSITY` and `VAR_ANT_RATIO`.
+
+The generated evidence includes rule inventory, every result location in
+microns, spatial bins, overlap with the four Innovus temporary-waiver boxes,
+and a detailed Markdown report. Actual packet-core rule names and counts must
+be taken from that server-generated output; they are not guessed from the
+aggregate total.
+
+The full protocol and repair interpretation are documented in:
+
+```text
+TOP/docs/39_TX_PACKET_CORE_PVS_BASE_DRC_NON_ANTENNA_ANALYSIS.md
+```
+
+This analysis can classify DRC debt but cannot make the design pass:
+
+```text
+PVS_DRC_STATUS=FAIL
+PVS_DENSITY_DRC=NOT_RUN
+LVS_MATCH_STATUS=UNCHANGED_SEPARATE_GATE
+FINAL_SIGNOFF_READY=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+```

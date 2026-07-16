@@ -21,6 +21,8 @@ It provides:
 - read-only OA/LEF bbox and terminal parity checks;
 - guarded PVS DRC/LVS GUI-template replay using the explicit Cadence PVS
   binary;
+- read-only rule, geometry, spatial, and Innovus-marker decomposition of an
+  immutable nonzero PVS DRC run;
 - a top-coordinate Phase-A Innovus route limited to the 19 TX stream nets and
   four shared clock/reset/control nets;
 - explicit promotion gates for canonical naming, bbox, pins, GDS layer map,
@@ -253,6 +255,12 @@ parity, and stores the exact JIHD CDL in the package. PVS base DRC, density DRC,
 and LVS remain server gates. See
 `TOP/docs/36_TX_PACKET_CORE_CANONICAL_REBUILD_AND_PVS_CLOSURE.md` and
 `TOP/docs/37_PVS_CANONICAL_SOURCE_AND_REPLAY_CONTRACT.md`.
+
+After a classified nonzero PVS base run, use
+`TOP/pnr/scripts/analyze_pvs_drc_run.py` to generate an external rule inventory,
+all result coordinates, spatial bins, explicit-only antenna separation, and
+correlation with known Innovus marker boxes. The packet-core protocol is in
+`TOP/docs/39_TX_PACKET_CORE_PVS_BASE_DRC_NON_ANTENNA_ANALYSIS.md`.
 
 The block-by-block plan is in `TOP/docs/26_MATRIX_SIDE_SUBBLOCK_PNR_PLAN.md`.
 

@@ -1399,3 +1399,26 @@ For GUI review, do not open the immutable directory directly. Cadence can
 write `.lvsde.lock`, preset, index, and browser-state files. Use
 `open_pvs_lvs_gui_review.sh` to validate the match and create a disposable
 relocated copy before launching `lvsbrowser` or `pvsgui`.
+
+### Do Not Guess The 135-Result PVS Rule Distribution
+
+The aggregate PVS base result is attributable and nonzero, but the number
+`135` alone does not identify the failing rule classes. Do not assume that it
+means four minimum-area errors plus antenna, and do not subtract the 21
+restored Innovus antenna markers from the PVS count.
+
+Use `analyze_pvs_drc_run.py` against the immutable base-DRC run. It must:
+
+- require replay and output-isolation PASS;
+- require PVS tool RC zero and the classified DRC FAIL;
+- reconcile every `RULECHECK` count with the final `135 (135)`;
+- reconcile every nonzero rule with the ASCII DRC error geometry;
+- record `DENSITY` and `VAR_ANT_RATIO` control state;
+- exclude antenna only on explicit foundry rule wording;
+- retain ambiguous rules as non-antenna review debt;
+- write outside the immutable PVS run;
+- correlate the four Innovus marker boxes without treating overlap as waiver.
+
+The generated rule descriptions and coordinates define the manual repair
+backlog. Only a later repaired export with base DRC zero, density DRC zero, and
+a fresh explicit LVS match can close the packet-core physical signoff gate.
