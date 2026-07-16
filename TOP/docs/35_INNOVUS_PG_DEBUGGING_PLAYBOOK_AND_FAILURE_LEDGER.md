@@ -1457,3 +1457,21 @@ NON_ANTENNA_PRIMARY_RESULT_COUNT=0
 is disabled. It does not invalidate the fixed antenna checks that executed.
 The first analysis directory remains immutable negative evidence; rerun the
 corrected analyzer into a new directory.
+
+The corrected server rerun at commit `03a430d7` passed. Its raw error records
+identify `R1M3P1` as `"(gate output)"` and `R2M3P1` as `"(met3 output)"`,
+while both retain the MET3-area to connected-gate-area ratio description.
+Treat these strings as foundry evidence, not as permission to reverse-engineer
+the exact `R1`/`R2` algorithm.
+
+The resulting repair inventory is intentionally empty for non-antenna PVS
+base DRC:
+
+```text
+ANTENNA_PRIMARY_RESULT_COUNT=135
+NON_ANTENNA_PRIMARY_RESULT_COUNT=0
+```
+
+Do not launch a generic PVS non-antenna repair campaign for this run. The
+remaining non-antenna physical debt is the separate set of four Innovus MET1
+minimum-area markers, followed by the still-unrun density gate.

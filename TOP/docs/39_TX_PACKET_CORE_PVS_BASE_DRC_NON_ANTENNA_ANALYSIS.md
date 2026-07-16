@@ -42,10 +42,23 @@ DRC result and does not transfer to a future repaired GDS.
 
 ## 2. Server Classification Result
 
-The read-only server extraction at commit `44f7ec51` proved that the PVS run
-itself is complete and internally coherent:
+The first read-only server extraction at commit `44f7ec51` proved that the PVS
+run itself is complete and internally coherent. The corrected semantic
+analysis at commit `03a430d75fcff3f301440c550c40096ffb3ea775` then passed in
+this new external analysis directory:
 
 ```text
+/sim/ksabra/SPADMIC_work/diagnostics/
+tx_packet_pvs_waiver_20260716_130442/drc_analysis/
+base_rule_classification_03a430d7_20260716_130727
+```
+
+The corrected status is:
+
+```text
+LABEL=SPADMIC_PVS_DRC_RULE_ANALYSIS
+STATUS=PASS
+RESULT=PVS_DRC_RULE_DEBT_CLASSIFIED
 PVS_RC=0
 REPLAY_CONTRACT_STATUS=PASS
 OUTPUT_ISOLATION_STATUS=PASS
@@ -55,19 +68,27 @@ DRC_TOTAL_PRIMARY=135
 DRC_TOTAL_EXPANDED=135
 RESULT_COUNT_RECONCILIATION=PASS
 ASCII_ERROR_GEOMETRY_RECONCILIATION=PASS
+SOURCE_RUN_MUTATION_AUTHORIZED=NO
+OUTPUT_LOCATION_STATUS=OUTSIDE_IMMUTABLE_SOURCE_RUN
 ```
 
 The only nonzero rules are:
 
-| Rule | Primary | Expanded | Foundry description |
-| --- | ---: | ---: | --- |
-| `R2M3P1` | 93 | 93 | `Maximum ratio of MET3 area to connected GATE area ... 400` |
-| `R1M3P1` | 42 | 42 | `Maximum ratio of MET3 area to connected GATE area ... 400` |
+| Rule | Primary | Share | Foundry description | Raw qualifier |
+| --- | ---: | ---: | --- | --- |
+| `R2M3P1` | 93 | 68.89% | `Maximum ratio of MET3 area to connected GATE area ... 400` | `(met3 output)` |
+| `R1M3P1` | 42 | 31.11% | `Maximum ratio of MET3 area to connected GATE area ... 400` | `(gate output)` |
 
 This description is the antenna mechanism: conductor area accumulated before
 a gate connection is divided by the connected gate area and compared with a
 maximum ratio. It is not a generic MET3 maximum-area rule and is not a
 minimum-area rule.
+
+The raw qualifiers are recorded exactly as emitted by the foundry error
+database. They distinguish the two result presentations, but they do not
+authorize an unsupported interpretation of the internal `R1` and `R2`
+algorithms. The licensed XFAB rule manual or PVS result browser remains
+authoritative for that finer distinction.
 
 The corrected semantic partition is therefore:
 
@@ -79,6 +100,7 @@ ANTENNA_GATE_AREA_RATIO_RULE_COUNT=2
 NON_ANTENNA_RULE_COUNT=0
 NON_ANTENNA_PRIMARY_RESULT_COUNT=0
 NON_ANTENNA_EXPANDED_RESULT_COUNT=0
+NON_ANTENNA_RESULT_STATUS=ZERO
 ```
 
 The exact distinction between the foundry prefixes `R1` and `R2` must not be
@@ -285,6 +307,20 @@ FINAL_SIGNOFF_READY=NO
 BLOCK_PROMOTION_AUTHORIZED=NO
 ```
 
+The gate-by-gate interpretation is:
+
+| Gate | State | Meaning |
+| --- | --- | --- |
+| Immutable handoff package | `PASS/CANDIDATE` | GDS, routed source, LEF, CDL preparation, pin parity, stream map, and standard-cell merge were audited |
+| PVS LVS | `MATCH` | The exact provisional GDS and exact routed source are electrically equivalent |
+| Innovus regular connectivity | `0` | No regular open or short was reported in the exported provisional state |
+| Innovus special connectivity | `0` | No special-net connectivity violation was reported |
+| PVS base non-antenna DRC | `0` | The executed base deck has no non-antenna result to repair |
+| PVS base antenna DRC | `135 OPEN` | Two MET3-to-connected-gate ratio rules remain: 93 `R2M3P1` and 42 `R1M3P1` |
+| Innovus MET1 minimum area | `4 OPEN` | Nets `n_9677`, `n_9693`, `n_9696`, and `n_9697` still require manual physical repair |
+| PVS density | `NOT_RUN` | Density cleanliness is unknown because `DENSITY` was undefined |
+| Final signoff | `NO` | Nonzero antenna, four Innovus markers, and missing density proof prevent promotion |
+
 This is useful progress:
 
 - electrical equivalence is proven for the exact compared package;
@@ -296,6 +332,13 @@ This is useful progress:
 
 It is not signoff. The current PVS base DRC result remains a failure because
 the 135 antenna results are real foundry-deck results.
+
+The `MATCH` and antenna failure can coexist without contradiction. LVS checks
+whether the extracted layout connectivity and devices agree with the source.
+The antenna rules check whether manufacturing charge exposure is acceptable.
+A net can be connected exactly as intended and still violate an antenna
+ratio. Likewise, the four Innovus minimum-area shapes can remain electrically
+connected while being too small for the routing rule.
 
 ## 9. Closure Sequence
 

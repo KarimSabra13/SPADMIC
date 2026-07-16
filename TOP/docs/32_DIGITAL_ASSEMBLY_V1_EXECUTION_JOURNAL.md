@@ -2315,3 +2315,71 @@ This removes the proposed non-antenna PVS repair campaign. It does not make
 base DRC pass: antenna remains open for final closure, the four Innovus
 minimum-area markers still require manual repair, density is unrun, and any
 new GDS requires a fresh explicit LVS match.
+
+### P04-R08 Corrected PVS Rule Classification Confirmed
+
+The corrected analyzer at commit
+`03a430d75fcff3f301440c550c40096ffb3ea775` was executed against the unchanged
+immutable base-DRC run. It wrote only to:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/
+tx_packet_pvs_waiver_20260716_130442/drc_analysis/
+base_rule_classification_03a430d7_20260716_130727
+```
+
+The correction passed every evidence gate:
+
+```text
+STATUS=PASS
+RESULT=PVS_DRC_RULE_DEBT_CLASSIFIED
+SOURCE_RUN_MUTATION_AUTHORIZED=NO
+OUTPUT_LOCATION_STATUS=OUTSIDE_IMMUTABLE_SOURCE_RUN
+RESULT_COUNT_RECONCILIATION=PASS
+ASCII_ERROR_GEOMETRY_RECONCILIATION=PASS
+ANTENNA_RULE_COUNT=2
+ANTENNA_PRIMARY_RESULT_COUNT=135
+NON_ANTENNA_RULE_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=0
+PVS_RESULTS_OVERLAPPING_WAIVER_BOXES=0
+```
+
+The raw foundry records add these exact qualifiers:
+
+```text
+R1M3P1=42  "(gate output)"
+R2M3P1=93  "(met3 output)"
+```
+
+Both retain the same controlling description:
+
+```text
+Maximum ratio of MET3 area to connected GATE area ... 400
+```
+
+Therefore all 135 PVS base results are process-antenna ratio violations. There
+is no residual non-antenna PVS base-rule class. The qualifiers are preserved
+as raw evidence and must not be expanded into an unsupported explanation of
+the foundry's internal `R1` versus `R2` derivation without the licensed rule
+manual or result browser.
+
+The current packet-core state is:
+
+```text
+PVS_LVS_STATUS=MATCH
+PVS_BASE_DRC_STATUS=FAIL
+PVS_BASE_ANTENNA_RESULTS=135
+PVS_BASE_NON_ANTENNA_RESULTS=0
+INNOVUS_MET1_MIN_AREA_RESULTS=4
+INNOVUS_REGULAR_CONNECTIVITY_RESULTS=0
+INNOVUS_SPECIAL_CONNECTIVITY_RESULTS=0
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+FINAL_SIGNOFF_READY=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+```
+
+This state is electrically coherent but physically incomplete. LVS and
+antenna answer different questions: an electrically correct net can still
+accumulate excessive manufacturing charge. The four Innovus minimum-area
+markers are also separate geometric debt and were not reproduced among the
+135 PVS antenna-result boxes.

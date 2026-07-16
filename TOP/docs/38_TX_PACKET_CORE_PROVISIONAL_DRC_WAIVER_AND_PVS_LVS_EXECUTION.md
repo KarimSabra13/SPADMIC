@@ -823,6 +823,32 @@ NON_ANTENNA_RULE_COUNT=0
 NON_ANTENNA_PRIMARY_RESULT_COUNT=0
 ```
 
+The corrected server execution at commit
+`03a430d75fcff3f301440c550c40096ffb3ea775` passed and wrote:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/
+tx_packet_pvs_waiver_20260716_130442/drc_analysis/
+base_rule_classification_03a430d7_20260716_130727
+```
+
+The raw foundry error database qualifies the two result groups as:
+
+```text
+R1M3P1=42  "(gate output)"
+R2M3P1=93  "(met3 output)"
+```
+
+Both use the same executed rule description, so all `135` are antenna-ratio
+process violations. The corrected non-antenna TSV contains only its header,
+and all four Innovus MET1 waiver boxes have zero PVS-result overlap.
+
+This does not contradict the explicit LVS `MATCH`. LVS proves connectivity and
+device equivalence for the exact compared package; antenna checks constrain
+manufacturing charge exposure. The package is electrically matched but still
+fails base PVS DRC, still has four separate Innovus minimum-area markers, and
+still lacks density-enabled PVS evidence.
+
 The full protocol and repair interpretation are documented in:
 
 ```text
