@@ -1,6 +1,6 @@
 # PVS Canonical Source And Replay Contract
 
-Status: `IMPLEMENTED_LOCAL_SERVER_TEMPLATE_AND_EXECUTION_PENDING`
+Status: `IMPLEMENTED_WITH_PROVISIONAL_PACKET_LVS_MATCH`
 
 This document records the reproducible PVS DRC/LVS contract created after the
 historical `spadmic_tx_packet_core_HV` mismatch was classified. It applies to
@@ -285,3 +285,41 @@ SCHEMATIC_CDL_ACTION
 The final replay gate reparses `pvslvsctl` and requires exact canonical path
 equality. A path that appears only in `.preset.autosave`, a comment, or a
 nonexecuted copied file cannot satisfy this gate.
+
+## 12. Provisional Packet Match And GUI Review Contract
+
+The executable-input repair was validated by immutable run:
+
+```text
+tx_packet_pvs_waiver_20260716_130442_pvs_lvs_execinputs_5bcaaf7d
+```
+
+Its result is an explicit report-level match:
+
+```text
+PVS_RC=0
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+```
+
+This proves the canonical GDS, filtered Verilog source, package-local JIHD
+CDL, and canonical top names were the executable comparison inputs. The
+historical `_HV` directory supplied the foundry launch/rule scaffold only.
+
+GUI review must preserve the immutable run. Use
+`open_pvs_lvs_gui_review.sh`, which refuses a non-match, missing evidence,
+failed replay contract, failed output isolation, or missing external
+reference. It copies the complete result to a fresh `/tmp` directory and
+relocates copied run-path metadata before starting:
+
+```text
+lvsbrowser  result and comparison review
+pvsgui      copied setup/preset review
+```
+
+The original run is never opened directly. A shell-launched browser is not a
+substitute for Virtuoso-integrated cross-probing, and a GUI rerun in the
+disposable copy is not attributable signoff evidence.

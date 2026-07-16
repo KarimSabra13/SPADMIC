@@ -1,6 +1,6 @@
 # TX Packet Core Provisional DRC Waiver And PVS LVS Execution
 
-Status: `IMPLEMENTED_LOCAL_SERVER_EXECUTION_PENDING`
+Status: `PROVISIONAL_LVS_MATCH_ACHIEVED_DRC_DEBT_OPEN`
 
 This document defines the deliberate schedule exception used to obtain an
 early, hash-bound PVS LVS result for `spadmic_tx_packet_core` while four known
@@ -616,3 +616,136 @@ launcher. The replay still replaces layout top
 `spadmic_tx_packet_core_HV` with `spadmic_tx_packet_core`, source top remains
 `spadmic_tx_packet_core`, all generated outputs stay in a new package-local
 run, and only an explicit report-level `MATCH` passes.
+
+## 16. Explicit Provisional LVS Match
+
+Commit `5bcaaf7de91286729b9ef1e81a966004d7e6d699` ran the corrected executable-
+input replay against the already staged, hash-audited package:
+
+```text
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/
+spadmic_tx_packet_core/tx_packet_pvs_waiver_20260716_130442
+```
+
+The new immutable LVS run is:
+
+```text
+pvs/lvs/
+tx_packet_pvs_waiver_20260716_130442_pvs_lvs_execinputs_5bcaaf7d
+```
+
+The exact compared artifacts were:
+
+```text
+LAYOUT_TOP=spadmic_tx_packet_core
+SOURCE_TOP=spadmic_tx_packet_core
+
+GDS_SHA256=
+48bbf0294f49e2f2201a2e86db71547ead33a9d426e43488df940d0c9e8b242e
+
+SOURCE_SHA256=
+c45e663b7a1591f02911f2b3efec79fbb988bec072b75ab9a2ddb7ebfee11cb3
+
+STDCELL_CDL_SHA256=
+5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf
+```
+
+The replay and result tuple is:
+
+```text
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+SCHEMATIC_VERILOG_ACTION=REPLACED_EXISTING
+SCHEMATIC_CDL_ACTION=ADDED_MISSING
+PVS_RC=0
+PARSE_RC=0
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+EVIDENCE=svdb/matched
+```
+
+The three positive indicators are corroborating artifacts from one
+comparison, not three separate LVS runs:
+
+```text
+pvs.stdout.log
+spadmic_tx_packet_core_lvs.sum.cls
+svdb/matched
+```
+
+No negative mismatch pattern was found in the 55 scanned run-local text
+artifacts. The source-preparation contract had already proved `156/156`
+top-pin parity, resolution of all 97 referenced standard-cell masters through
+the package-local JIHD CDL, and zero unresolved masters.
+
+This is the strongest PVS comparison verdict available: the layout and source
+circuits match under this exact rule deck and input contract. PVS does not
+emit a useful percentage for this result, so the precise engineering
+statement is `PVS_LVS_STATUS=MATCH`, not a derived numeric score. In ordinary
+language, it is a complete LVS match for the compared package.
+
+It is not a complete signoff result. The same package still has:
+
+```text
+INNOVUS_TEMPORARY_MET1_MIN_AREA_MARKERS=4
+PVS_BASE_DRC_RESULTS=135
+PVS_DENSITY_DRC=NOT_RUN
+MANUAL_DRC_FIX_REQUIRED=YES
+FINAL_LVS_RERUN_AFTER_MANUAL_FIX_REQUIRED=YES
+BLOCK_PROMOTION_AUTHORIZED=NO
+FINAL_SIGNOFF_READY=NO
+```
+
+The match proves that the provisional GDS and routed source agree
+electrically before manual DRC repair. It does not waive the 135 PVS results,
+retire the four-marker exception, or transfer to a future repaired GDS hash.
+
+### 16.1 Safe GUI Review
+
+Do not start `pvsgui` or `lvsbrowser` directly in the immutable run. Cadence
+review tools may write lock files, GUI presets, indexes, or browser state.
+Use the guarded helper, which validates the explicit match and creates a
+disposable relocated copy under `/tmp` before launching a GUI.
+
+Open the actual comparison result first:
+
+```bash
+RUN_DIR=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_tx_packet_core/tx_packet_pvs_waiver_20260716_130442/pvs/lvs/tx_packet_pvs_waiver_20260716_130442_pvs_lvs_execinputs_5bcaaf7d
+
+bash TOP/pnr/scripts/open_pvs_lvs_gui_review.sh \
+    --run-dir "$RUN_DIR" \
+    --view results
+```
+
+This starts `lvsbrowser` in the copied run directory. A matched run may have
+empty mismatch/error tabs; that is expected. The comparison report and
+matched database are the positive evidence.
+
+After closing the result browser, inspect the copied setup:
+
+```bash
+bash TOP/pnr/scripts/open_pvs_lvs_gui_review.sh \
+    --run-dir "$RUN_DIR" \
+    --view setup
+```
+
+This starts `pvsgui` with the copied `.preset.autosave`. Verify visibly:
+
+```text
+layout GDS   package/gds/spadmic_tx_packet_core.gds
+layout top   spadmic_tx_packet_core
+source       package/netlist/spadmic_tx_packet_core.lvs.pg.v
+source top   spadmic_tx_packet_core
+cell CDL     package/pdk/xh018_D_CELLS_JIHD.cdl
+run/output   disposable GUI review directory
+```
+
+Do not press Run and then treat the disposable GUI copy as new evidence. The
+authoritative verdict remains the immutable run and its hashes above.
+
+The shell-launched `lvsbrowser` is not automatically associated with an
+already-open Virtuoso layout window. It can inspect the result database and
+comparison, but cross-probing into Virtuoso requires launching the debug
+environment from the corresponding Virtuoso layout session. That integration
+is optional review work and does not strengthen the existing `MATCH`.

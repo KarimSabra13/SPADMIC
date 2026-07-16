@@ -2066,7 +2066,7 @@ STEP28_DIFF_CHECK=PASS
 
 ### P04 Provisional Four-Marker Waiver And Early PVS LVS
 
-Status: `PHASE3_PROVISIONAL_PVS_WAIVER_FLOW_IMPLEMENTED_SERVER_EXECUTION_PENDING`
+Status: `PHASE3_PROVISIONAL_LVS_MATCH_ACHIEVED_DRC_DEBT_OPEN`
 
 The operator chose to defer the Step 28 normalized-VIA-side repair trial and
 obtain an early LVS diagnosis. This is recorded as
@@ -2183,3 +2183,47 @@ Replay now forces the canonical GDS and filtered Verilog inputs, inserts the
 package-local official JIHD CDL when absent, rejects duplicate source/CDL
 directives, and records the executable-input actions in
 `output_isolation.rpt`.
+
+### P04-R05 Provisional PVS LVS Explicit Match
+
+Commit `5bcaaf7d` reused the unchanged audited `130442` package and created
+new immutable LVS run
+`tx_packet_pvs_waiver_20260716_130442_pvs_lvs_execinputs_5bcaaf7d`.
+The replay replaced the historical executable Verilog input, added the
+previously missing executable package-local JIHD CDL, relocated every output,
+and passed both the strict replay and output-isolation contracts.
+
+PVS and the conservative parser both passed:
+
+```text
+PVS_RC=0
+PARSE_RC=0
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+EVIDENCE=svdb/matched
+```
+
+The positive result is independently visible in `pvs.stdout.log`, the
+comparison `.cls`, and `svdb/matched`. All 55 eligible run-local text
+artifacts were scanned and none contained a negative match pattern. The
+compared GDS, source, and JIHD CDL hashes are recorded in Section 16 of
+`38_TX_PACKET_CORE_PROVISIONAL_DRC_WAIVER_AND_PVS_LVS_EXECUTION.md`.
+
+This achieves the early LVS objective. It does not change the nonzero base
+DRC result:
+
+```text
+PVS_BASE_DRC_RESULTS=135
+INNOVUS_TEMPORARY_MET1_MIN_AREA_MARKERS=4
+PVS_DENSITY_DRC=NOT_RUN
+FINAL_SIGNOFF_READY=NO
+```
+
+The block must still receive manual DRC repair, a new mapped/merged export,
+base and density PVS DRC zero, and a new LVS match on the repaired GDS.
+
+GUI inspection is permitted only through
+`TOP/pnr/scripts/open_pvs_lvs_gui_review.sh`. The helper validates the match
+and opens a disposable relocated copy so Cadence lock or browser state cannot
+modify the immutable evidence.

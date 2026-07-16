@@ -1,6 +1,6 @@
 # Innovus PG Debugging Playbook and Failure Ledger
 
-Status: living document, updated through the canonical packet/strip rebuild implementation on 2026-07-10.
+Status: living document, updated through the provisional packet LVS match on 2026-07-16.
 
 This document captures both successful techniques and negative knowledge from
 the Phase-A TX work. Its purpose is to prevent later blocks from repeating
@@ -1368,3 +1368,34 @@ the historical `_HV` control was found to have no executable Spice/CDL
 standard-cell device netlist. The replay contract must force one canonical
 Verilog source and one package-local JIHD CDL into `pvslvsctl`, rejecting
 duplicates and recording whether the CDL directive was replaced or added.
+
+### Provisional LVS Match After Executable Input Enforcement
+
+The corrected LVS replay at commit `5bcaaf7d` used the same immutable `130442`
+package and a new run ID ending in `pvs_lvs_execinputs_5bcaaf7d`. It proved:
+
+```text
+SCHEMATIC_VERILOG_ACTION=REPLACED_EXISTING
+SCHEMATIC_CDL_ACTION=ADDED_MISSING
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+PVS_RC=0
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+```
+
+This closes the earlier source-contract uncertainty. The canonical filtered
+Verilog and official package JIHD CDL were both executable inputs, not merely
+strings in a GUI preset. The matched result is attributable to the package
+GDS and run-local outputs.
+
+Do not overclassify the result. It proves electrical equivalence for the
+exact compared provisional package, but does not make the block DRC-clean or
+signoff-ready. Base PVS DRC remains `135`, density DRC is unrun, and the four
+Innovus MET1 minimum-area markers still require physical repair.
+
+For GUI review, do not open the immutable directory directly. Cadence can
+write `.lvsde.lock`, preset, index, and browser-state files. Use
+`open_pvs_lvs_gui_review.sh` to validate the match and create a disposable
+relocated copy before launching `lvsbrowser` or `pvsgui`.
