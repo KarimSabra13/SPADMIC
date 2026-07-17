@@ -1,7 +1,7 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active; Position grid-safe Innovus replay
-accepted; immutable handoff staging is next.
+Status: phased server execution active; Position immutable handoff accepted;
+base-PVS-DRC template preflight is next.
 
 Date: 2026-07-17.
 
@@ -41,6 +41,7 @@ The following files are authoritative:
 
 ```text
 TOP/docs/layout_audits/SPADMIC2_20260709_072331/
+TOP/docs/server_snapshots/handoff/position_core_gridfit_20260717_114810/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -73,7 +74,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Grid-safe OOC accepted; stage immutable handoff |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; preflight base PVS DRC |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -402,6 +403,44 @@ qualified hard macro: package audit, package-local source preparation and pin
 parity, PVS base DRC, PVS density DRC, and explicit exact-GDS LVS `MATCH`
 remain separate gates.
 
+#### Recorded Position Step 3 Immutable Handoff
+
+The corrected replay was staged from exact release commit
+`8a617c9f8049340cebc777783255acffd55212d6` into:
+
+```text
+PACKAGE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810
+PACKAGE_STATUS=CANDIDATE
+HANDOFF_STAGE_RC=0
+HANDOFF_AUDIT_RC=0
+HANDOFF_AUDIT_STATUS=PASS
+HANDOFF_AUDIT_ERROR_COUNT=0
+POSITION_IMMUTABLE_HANDOFF_STAGING_STATUS=PASS
+```
+
+The package preserves the accepted physical identity and creates a separate
+canonical LVS source:
+
+```text
+PACKAGE_GDS_SHA256=ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1
+PACKAGE_ABSTRACT_LEF_SHA256=1eb91d021edccd4806a5516ef1f2aa0a2718607ee84c248d2d0e12cd8e698683
+PACKAGE_RAW_PG_NETLIST_SHA256=4078d8b5f277923948371898663ea2b0093fae205bad09e2f91c5f502f251cfd
+PACKAGE_CANONICAL_LVS_SOURCE_SHA256=a5e81c21e633ae1b55d8da5c8e971997f890d9cee42dff2f6cf9f9f43cad9ffb
+PACKAGE_STDCELL_CDL_SHA256=5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf
+```
+
+Source preparation is clean: 160 input module definitions reduce to 2
+design-owned modules after 158 official JIHD definitions are removed. All 159
+referenced masters resolve through 158 CDL definitions and 1 retained design
+module. The source and LEF both expose 251 pins, nested top-port count is zero,
+and unresolved-master count is zero.
+
+The basic package profile deliberately leaves promotion-only fields such as
+`BBOX_PARITY_STATUS`, `INTERNAL_PG_STATUS`, and qualification-level timing at
+`UNKNOWN` or `NOT_RUN`. Those are not staging failures. The copied floorplan,
+GDS-export, connectivity, DRC, and timing reports remain independently hashed,
+while PVS base DRC, density DRC, and LVS remain genuinely `NOT_RUN`.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -468,7 +507,8 @@ The exact Position staging transaction is checked in as
 repository HEAD argument, refuses an existing package version, rechecks the
 source-run commit and accepted artifact hashes, runs package-local LVS source
 preparation and pin parity, audits the immutable package, and stops before
-PVS.
+PVS. The recorded execution passed every staging gate on package version
+`innovus_ooc_harden_position_core_gridfit_20260717_114810`.
 
 For each hard child:
 
@@ -604,18 +644,17 @@ bash TOP/scripts/sim/run_tb.sh \
 
 The RTL regressions pass `25/25` position checks and `24/24` event checks.
 Position TC Genus and the corrected grid-safe Position Innovus replay pass on
-their recorded exact commits. Immutable handoff staging and every Position
-PVS gate remain open. Every Event Genus/Innovus/PVS gate also remains server
-work and must stay labeled `NOT_RUN` until separately executed and reviewed.
+their recorded exact commits. Position immutable handoff staging, canonical
+source preparation, and pin parity also pass. Every Position PVS gate remains
+open. Every Event Genus/Innovus/PVS gate also remains server work and must stay
+labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-The next server action is immutable Position handoff staging and package audit
-only. Stage exact run
-`innovus_ooc_harden_position_core_gridfit_20260717_114810`, require the
-recorded GDS, abstract LEF, and routed-PG-netlist hashes, and preserve the
-package-local canonical LVS source and pin-parity report. Do not stage the old
-`49a7a030...` GDS, run Position PVS, or start Event Genus until the immutable
-package audit is reviewed. Use
-`TOP/ci/server_stage_position_core_handoff.sh` with the documented exact
-release HEAD.
+The next server action is Position base-PVS-DRC template discovery and strict
+replay preflight only. Prefer a fresh Position template that already embeds
+the immutable package GDS and `spadmic_position_core` top. If an older
+Position template is used, record its exact embedded GDS and top before strict
+replacement. Do not guess these values, reuse a different block's template as
+if it were Position evidence, launch density DRC, launch LVS, or start Event
+Genus before the base-template replay contract is reviewed.

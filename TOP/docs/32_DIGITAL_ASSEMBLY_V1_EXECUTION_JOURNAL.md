@@ -2992,3 +2992,114 @@ immutable staging, not for promotion or signoff. This run is typical-only;
 MMMC, PVS base and density DRC, PEX, and foundry LVS remain unexecuted or
 deferred. No PVS result may be attached until staging reproduces these hashes
 and the package-local source preparation and pin-parity audit pass.
+
+### P09-R04 Immutable Position Handoff Accepted
+
+The corrected Position replay was staged and audited in the foreground on
+2026-07-17 from an attributable checkout:
+
+```text
+BRANCH=SPADMIC_test
+HEAD=8a617c9f8049340cebc777783255acffd55212d6
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+PORTFOLIO_RC=0
+SOURCE_FILE_GATE_RC=0
+SOURCE_HASH_GATE_RC=0
+SOURCE_STATUS_GATE_RC=0
+PACKAGE_ABSENCE_RC=0
+```
+
+The staging runner rechecked the original physical source commit
+`179baaf3fc35c931d95d47d70f84c760ccfd17ed`, accepted Genus input hashes, and
+all three primary Innovus output hashes before creating the package. The
+immutable package identity is:
+
+```text
+PACKAGE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810
+PACKAGE_CREATED_UTC=2026-07-17T10:18:24.257509+00:00
+PACKAGE_KIND=block
+PACKAGE_NAME=spadmic_position_core
+PACKAGE_VERSION=innovus_ooc_harden_position_core_gridfit_20260717_114810
+PACKAGE_STATE=candidate
+QUALIFICATION_PROFILE=basic
+LAYOUT_TOP=spadmic_position_core
+SOURCE_TOP=spadmic_position_core
+PACKAGE_REPO_HEAD=8a617c9f8049340cebc777783255acffd55212d6
+```
+
+Staging and independent package audit both passed:
+
+```text
+HANDOFF_STAGE_RC=0
+HANDOFF_AUDIT_RC=0
+HANDOFF_AUDIT_STATUS=PASS
+CANONICAL_NAME_STATUS=PASS
+LVS_SOURCE_PREPARATION_STATUS=PASS
+PIN_PARITY_STATUS=PASS
+STDCELL_CDL_STATUS=PASS
+HANDOFF_AUDIT_ERROR_COUNT=0
+```
+
+The package preserved the reviewed physical artifacts byte-for-byte and
+created a separately hashed canonical LVS source:
+
+```text
+GDS_BYTES=11523506
+GDS_SHA256=ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1
+ABSTRACT_LEF_BYTES=61822
+ABSTRACT_LEF_SHA256=1eb91d021edccd4806a5516ef1f2aa0a2718607ee84c248d2d0e12cd8e698683
+RAW_PG_NETLIST_BYTES=1486584
+RAW_PG_NETLIST_SHA256=4078d8b5f277923948371898663ea2b0093fae205bad09e2f91c5f502f251cfd
+CANONICAL_LVS_SOURCE_BYTES=1471851
+CANONICAL_LVS_SOURCE_SHA256=a5e81c21e633ae1b55d8da5c8e971997f890d9cee42dff2f6cf9f9f43cad9ffb
+STDCELL_CDL_BYTES=2306599
+STDCELL_CDL_SHA256=5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf
+```
+
+Canonical-source preparation removed only official CDL-owned standard-cell
+definitions and retained the complete design hierarchy required by PVS:
+
+```text
+INPUT_MODULE_COUNT=160
+RETAINED_MODULE_COUNT=2
+REMOVED_STDCELL_MODULE_COUNT=158
+SOURCE_TOP_PORT_COUNT=251
+LEF_PIN_COUNT=251
+NESTED_TOP_PORT_COUNT=0
+REFERENCED_MASTER_COUNT=159
+CDL_RESOLVED_MASTER_COUNT=158
+DESIGN_RESOLVED_MASTER_COUNT=1
+UNRESOLVED_MASTER_COUNT=0
+ERROR_COUNT=0
+```
+
+The package-local floorplan report still proves `951.440 x 659.680 um` with
+positive reservation margins, and the copied GDS audit still binds the exact
+`ebba26a4...` GDS to the approved stream map and JIHD merge.
+
+Final staging acceptance was exact:
+
+```text
+RUN_OK=1
+PACKAGE_HASH_GATE_RC=0
+MANIFEST_GATE_RC=0
+QUALIFICATION_GATE_RC=0
+AUDIT_REPORT_GATE_RC=0
+SOURCE_PREP_GATE_RC=0
+PACKAGE_EVIDENCE_GATE_RC=0
+POSITION_IMMUTABLE_HANDOFF_STAGING_STATUS=PASS
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+The `basic` qualification profile intentionally leaves package-promotion
+fields `BBOX_PARITY_STATUS`, `GDS_LAYER_MAP_STATUS`,
+`GDS_MERGE_STATUS`, and `INTERNAL_PG_STATUS` as `UNKNOWN`, and
+`TC_TIMING_STATUS` as `NOT_RUN`. This does not erase the independently copied
+and hashed Innovus reports, but those placeholders cannot be promoted to
+package-level PASS without their later dedicated gates.
+
+No PVS tool was launched. The next gate is an attributable Position base-DRC
+template and strict replay preflight. Base DRC, density DRC, and exact-package
+LVS all remain `NOT_RUN`.
