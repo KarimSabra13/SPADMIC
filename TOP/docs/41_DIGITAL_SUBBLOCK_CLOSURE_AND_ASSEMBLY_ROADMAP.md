@@ -1,8 +1,8 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: implementation ready for phased server execution.
+Status: phased server execution active; Position TC Genus accepted.
 
-Date: 2026-07-16.
+Date: 2026-07-17.
 
 This document is the execution authority for converting the remaining
 matrix-top digital logic into reusable hard macros or controlled soft regions.
@@ -72,7 +72,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Run TC Genus, then isolated Innovus |
+| 1 | Position core | Hard macro | `spadmic_position_core` | TC Genus PASS; run isolated Innovus |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -232,6 +232,44 @@ missing or additional base ports, wrong directions, wrong scalar/vector
 widths, nested ports, and duplicate top definitions. The current contracts
 are 20 base ports / 249 scalar bits for `spadmic_position_core` and 30 base
 ports / 63 scalar bits for `spadmic_event_coordinator`.
+
+#### Recorded Position Step 1 Result
+
+The foreground server run completed on 2026-07-17 from exact commit
+`67570818ac8e9cf38b44b4c8f91dca6f0a45673b`:
+
+```text
+POSITION_GENUS_RUN=genus_ooc_position_core_20260717_101642
+POSITION_GENUS_RC=0
+STATUS=PASS
+TC_TIMING_STATUS=PASS
+RESULT=READY_FOR_ISOLATED_INNOVUS_OOC
+BOUNDARY_PORT_STATUS=PASS
+EXPECTED_BASE_PORT_COUNT=20
+ACTUAL_BASE_PORT_COUNT=20
+EXPECTED_BIT_PORT_COUNT=249
+ACTUAL_BIT_PORT_COUNT=249
+UNRESOLVED_REFERENCE_COUNT=0
+CLOCK_PERIOD_PS=6250.0
+CLOCK_REGISTER_COUNT=2437
+WNS_PS=14.0
+TNS_PS=0.0
+VIOLATING_PATH_COUNT=0
+ERROR_COUNT=0
+```
+
+The netlist and SDC evidence hashes are:
+
+```text
+POSTSYN_NETLIST_SHA256=53bc725784e78fba8c2188f8ef9e31965abc84ffa02c195be1bf8e6e916518c6
+POSTSYN_SDC_SHA256=69929a339cb2b2951bee4f7b2b6b558277e13bfac504951c57b38cf497d4f21f
+```
+
+All blocking warning classes were zero. `tool_warning count=2` records the
+generic `MESG-11` maximum-message-print-count warning and does not override
+the explicit zero design-rule, latch, timing-intent, tool-error, and
+unresolved-reference gates. This result is `TYPICAL_CLOSED` and
+`INNOVUS_HANDOFF_READY`; it is not MMMC or signoff evidence.
 
 ### Position Step 2: Isolated Innovus
 
@@ -465,13 +503,15 @@ bash TOP/scripts/sim/run_tb.sh \
 ```
 
 The RTL regressions pass `25/25` position checks and `24/24` event checks.
-Genus, Innovus, PVS base DRC, PVS density DRC, and PVS LVS for the two new hard
-macros remain server work and must stay labeled `NOT_RUN` until executed.
+Position TC Genus now passes on the recorded exact commit. Position Innovus
+and PVS, plus every Event Genus/Innovus/PVS gate, remain server work and must
+stay labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-The next server action is Position Step 1 only: update to the released commit,
-run the isolated `spadmic_position_core` TC Genus job, and return the generated
-`tc_ooc_gate.rpt` plus block summary. Do not start Position Innovus in the same
-step. This preserves a clean evidence boundary and lets the first failing gate
-determine the next command.
+Position Step 1 is accepted. The next server action is Position Step 2 only:
+pull the documented release commit, bind Innovus to
+`genus_ooc_position_core_20260717_101642`, run one isolated OOC implementation,
+and return the DRC, regular-connectivity, special-PG-connectivity, timing, and
+mapped/merged-GDS reports. Do not stage an immutable package or start Event
+Genus until the Position Innovus tuple has been reviewed.

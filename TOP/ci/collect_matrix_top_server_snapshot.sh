@@ -131,7 +131,7 @@ case "$KIND" in
         */logs/failure.tail|*/reports/messages/warning_classification.rpt)
           copy_file "$file" "$rel"
           ;;
-        */reports/elaboration/check_design_post_elab.rpt|*/reports/messages/report_messages.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/timing/report_timing_*.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_area_hierarchy.rpt|*/reports/qor/report_qor.rpt|*/reports/qor/report_design_rules.rpt)
+        */reports/elaboration/check_design_post_elab.rpt|*/reports/messages/report_messages.rpt|*/reports/timing/check_timing_intent.rpt|*/reports/timing/report_clocks.rpt|*/reports/timing/tc_ooc_gate.rpt|*/reports/timing/report_timing_*.rpt|*/reports/qor/report_area.rpt|*/reports/qor/report_area_hierarchy.rpt|*/reports/qor/report_qor.rpt|*/reports/qor/report_design_rules.rpt)
           copy_excerpt "$file" "$rel" 220
           ;;
         */outputs/*.postsyn.sdc)

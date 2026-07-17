@@ -2751,3 +2751,79 @@ unattributed DRC report
 This prevents administrative evidence from replacing physical verification.
 The waiver also remains invalid when its GDS cannot be read, its payload hash
 does not match, or its exact rule/result coverage is incomplete.
+
+## P09 - Position Core Server Closure
+
+### P09-R01 TC Genus Accepted
+
+The first Position hard-macro server gate ran in the foreground on 2026-07-17
+from exact repository state:
+
+```text
+BRANCH=SPADMIC_test
+HEAD=67570818ac8e9cf38b44b4c8f91dca6f0a45673b
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+PORTFOLIO_STATUS=PASS
+PORTFOLIO_ERROR_COUNT=0
+EDA_RC=0
+```
+
+Run identity:
+
+```text
+POSITION_GENUS_RUN=genus_ooc_position_core_20260717_101642
+POSITION_GENUS_ROOT=/sim/ksabra/SPADMIC_work/genus/genus_ooc_position_core_20260717_101642/position_core
+POSITION_GENUS_RC=0
+```
+
+The exact TC and boundary tuple is:
+
+```text
+STATUS=PASS
+TC_TIMING_STATUS=PASS
+RESULT=READY_FOR_ISOLATED_INNOVUS_OOC
+TOP_MODULE=spadmic_position_core
+CLOCK_PERIOD_PS=6250.0
+CLOCK_REGISTER_COUNT=2437
+BOUNDARY_PORT_STATUS=PASS
+EXPECTED_BASE_PORT_COUNT=20
+ACTUAL_BASE_PORT_COUNT=20
+EXPECTED_BIT_PORT_COUNT=249
+ACTUAL_BIT_PORT_COUNT=249
+UNRESOLVED_REFERENCE_COUNT=0
+WNS_PS=14.0
+TNS_PS=0.0
+VIOLATING_PATH_COUNT=0
+ERROR_COUNT=0
+MMMC_STATUS=NOT_RUN_TYPICAL_ONLY
+SIGNOFF_READY=NO
+```
+
+Artifact hashes:
+
+```text
+POSTSYN_NETLIST_SHA256=53bc725784e78fba8c2188f8ef9e31965abc84ffa02c195be1bf8e6e916518c6
+POSTSYN_SDC_SHA256=69929a339cb2b2951bee4f7b2b6b558277e13bfac504951c57b38cf497d4f21f
+```
+
+Every timing-intent lint count was zero. The warning classifier reported zero
+for design rules, inferred latches, missing external delays, missing clock
+waveforms, tool errors, undriven objects, and unresolved references. The two
+generic tool warnings were `MESG-11` maximum-message-print-count records; they
+are retained as diagnostic context and are not a blocking class in this gate.
+
+Classification:
+
+```text
+GENUS_MILESTONE=TYPICAL_CLOSED
+INNOVUS_HANDOFF_STATUS=READY
+MMMC_SIGNOFF_STATUS=NOT_RUN
+FINAL_SIGNOFF_READY=NO
+NEXT_GATE=POSITION_ISOLATED_INNOVUS_OOC
+```
+
+Negative rule: the positive `14 ps` WNS is deliberately not called MMMC
+closure. Position still needs isolated Innovus placement/CTS/route, zero DRC,
+zero regular and special connectivity debt, mapped/merged GDS audit, immutable
+packaging, PVS base and density DRC, and explicit LVS `MATCH` before promotion.
