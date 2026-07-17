@@ -3549,3 +3549,95 @@ The next read-only transaction is
 full numbered rule-set metadata, exact metal-switch selection and PDK revision,
 balanced conditional-block hashes and bounded semantic context, and an
 optional user-guide text scan. It does not create a template or execute PVS.
+
+### P09-R09 Position PVS Rule-Semantics Review
+
+The named-rule-set and conditional-block reviewer ran in the foreground on
+2026-07-17 from exact commit
+`8f4154d658c7fd9d6cb8deca98c6f5bf04807705` and immutable rule-setup
+diagnostic `position_pvs_drc_rule_setup_discovery_20260717_150856`:
+
+```text
+CHECKOUT_RC=0
+PULL_RC=0
+EXPECTED_HEAD=8f4154d658c7fd9d6cb8deca98c6f5bf04807705
+ACTUAL_HEAD=8f4154d658c7fd9d6cb8deca98c6f5bf04807705
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+REVIEW_RC=0
+POSITION_RULE_SEMANTICS_REVIEW_COMMAND_STATUS=PASS
+```
+
+All pinned R08 evidence, the accepted Position GDS, the immutable package,
+project and PDK rule-set metadata, PDK deck/configuration, metal switch, and
+user guide reproduced. Package manifests passed before and after review, and
+no package or source file changed.
+
+The project and PDK metadata agree on the selected named rule set:
+
+```text
+RULE_SET=default
+DRC_RULES=metalswitch.pvl+xh018_DRC.rul
+DRC_GUI_CONFIG=pvs.cfg
+DEFAULT_RULE_SET_EVIDENCE_STATUS=PASS
+```
+
+The selected XH018 v10.1.1 switch is `MET3 / METMID`: `METAL3` and `MIDMET`
+are defined; `METAL4`, `METAL5`, `METAL6`, `THKMET`, and
+`XFAB_IP_BBOX_ANTENNA` are undefined. The normal `pvs.cfg` default for
+`DENSITY`, `POPPING`, `PIMIDE`, `DUMMY_FILL`, and `VAR_ANT_RATIO` is zero.
+
+The complete conditional inventory is balanced:
+
+```text
+DENSITY_CONDITIONAL_BLOCK_COUNT=1
+DENSITY_RULE_COUNT=34
+POPPING_CONDITIONAL_BLOCK_COUNT=1
+POPPING_RULE_COUNT=6
+PIMIDE_CONDITIONAL_BLOCK_COUNT=1
+DUMMY_FILL_CONDITIONAL_BLOCK_COUNT=2
+VAR_ANT_RATIO_CONDITIONAL_BLOCK_COUNT=78
+UNMATCHED_CONDITIONAL_COUNT=0
+```
+
+The PDK guide establishes that density is an additional post-fill family,
+dummy fill generates virtual shapes, popping adds W5M* checks intended mostly
+for post-fill chip-level use, and `VAR_ANT_RATIO` adds user-ratio `ADD_*`
+antenna checks. The primary seed's defined `VAR_ANT_RATIO` therefore adds
+coverage rather than suppressing standard antenna rules.
+
+`PIMIDE` remains the only unresolved Position-specific selector. Its exact
+deck branch checks PAD geometry for a PIMIDE marker when enabled, but the deck
+and guide do not prove whether the accepted Position hierarchy contains either
+stream layer. R09 therefore remains an evidence pass and does not authorize
+preflight:
+
+```text
+STATUS=PASS
+DEFAULT_RULE_SET_EVIDENCE_STATUS=PASS
+DEFAULT_RULE_SET_SELECTION_STATUS=REVIEW_REQUIRED
+PIMIDE_APPLICABILITY_STATUS=REVIEW_REQUIRED
+PACKAGE_MODIFIED=NO
+PVS_TEMPLATE_CREATED=NO
+STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+Compact R09 evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_rule_semantics_review_20260717_161842/
+```
+
+The next read-only transaction is
+`TOP/ci/server_review_position_core_pvs_drc_gds_layer_applicability.sh`. It
+pins the accepted GDS, official stream map, exact PVS deck, and complete R09
+diagnostic; resolves `pad` and `pimide` to exact stream tuples; parses the GDS
+hierarchy; and counts target geometry only in structures reachable from
+`spadmic_position_core`. It cannot create a template or execute PVS.

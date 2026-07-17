@@ -1,8 +1,8 @@
 # Digital Subblock Closure and Assembly Roadmap
 
 Status: phased server execution active; Position immutable handoff accepted;
-Position-template discovery complete with no attributable template found;
-cross-block seed-control review is next.
+named default PVS rule set and optional-rule semantics attributable; accepted
+GDS PAD/PIMIDE hierarchy applicability is next.
 
 Date: 2026-07-17.
 
@@ -44,6 +44,7 @@ The following files are authoritative:
 TOP/docs/layout_audits/SPADMIC2_20260709_072331/
 TOP/docs/server_snapshots/handoff/position_core_gridfit_20260717_114810/
 TOP/docs/server_snapshots/pvs_drc/position_template_discovery_20260717_125002/
+TOP/docs/server_snapshots/pvs_drc/position_rule_semantics_review_20260717_161842/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -76,7 +77,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; PVS rule semantics review pending |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Rule semantics accepted; GDS PAD/PIMIDE applicability pending |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -563,6 +564,39 @@ the complete named `techRuleSets` files and balanced conditional blocks before
 the `default` selection or cross-block seed policy can be accepted. Strict
 preflight, template creation, PVS execution, and promotion remain unauthorized.
 
+#### Recorded Position Step 7 Rule-Semantics Review
+
+P09-R09 ran on 2026-07-17 from exact commit
+`8f4154d658c7fd9d6cb8deca98c6f5bf04807705`. It reproduced all R08 hashes,
+the accepted GDS and package manifest, and every inspected PDK/project source
+before and after collection.
+
+```text
+REVIEW_RC=0
+STATUS=PASS
+DEFAULT_RULE_SET_EVIDENCE_STATUS=PASS
+DIRECTIVE_CONDITIONAL_BLOCK_GATE_STATUS=PASS
+USER_GUIDE_TEXT_STATUS=PASS_MATCHES_FOUND
+PACKAGE_MODIFIED=NO
+PVS_EXECUTED=NO
+```
+
+The named `default` DRC rule set is exactly `metalswitch.pvl` plus
+`xh018_DRC.rul` with `pvs.cfg`, using the XH018 v10.1.1 `MET3 / METMID`
+switch. All five normal GUI defaults are zero. The deck contains one density
+family with 34 rules, one popping family with six W5M* rules, one PIMIDE
+branch, two dummy-fill branches, and 78 variable-ratio antenna blocks, with no
+unmatched conditionals.
+
+The guide resolves the OOC policy for density, dummy generation, post-fill
+popping checks, and supplemental `VAR_ANT_RATIO` checks. It does not resolve
+whether the PIMIDE pad-marker branch applies to the accepted Position layout.
+The next read-only gate therefore resolves exact `pad`/`pimide` stream tuples
+from the pinned deck and counts only geometry reachable from
+`spadmic_position_core` in the exact accepted GDS. Strict preflight, template
+creation, PVS execution, and promotion remain unauthorized until that evidence
+is returned and manually accepted.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -773,19 +807,21 @@ labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-P09-R08 resolved `.pvsSetup/PVS`, identified the three controls that enable
-`VAR_ANT_RATIO`, pinned the exact DRC/config files, and exposed the optional
-PDK branch classes. It did not prove the named `default` rule-set binding or
-the applicability of the optional `POPPING`, `PIMIDE`, and dummy-generation
-branches to Position.
+P09-R09 proved the named `default` rule-set binding, selected XH018 metal
+stack, normal option defaults, balanced conditional families, and the guide's
+scope for density, dummy generation, popping, and supplemental variable-ratio
+antenna checks. The remaining option-policy question is whether the exact
+accepted Position hierarchy contains PAD or PIMIDE geometry.
 
 The next server action is
-`TOP/ci/server_review_position_core_pvs_drc_rule_semantics.sh`, using immutable
-diagnostic root `position_pvs_drc_rule_setup_discovery_20260717_150856`.
-Return its numbered rule sets, metal-switch and revision records, PDK defaults,
-conditional-block summary and context, optional user-guide scan, and source
-identity report before authorizing any strict dry-run.
+`TOP/ci/server_review_position_core_pvs_drc_gds_layer_applicability.sh`, using
+immutable diagnostic root
+`position_pvs_drc_rule_semantics_review_20260717_161842`. Return its collector
+status, GDS parser summary, target-layer mapping/context, stream-map context,
+option-policy contract, reachable layer inventory, structure inventory, and
+source identity report before authorizing any strict dry-run.
 
 Do not select or copy the cross-block seed, create a Position template, launch
 strict replay or PVS, or advance Position base DRC, density DRC, LVS, block
-promotion, signoff, or Event Genus before the semantic review is accepted.
+promotion, signoff, or Event Genus before the GDS layer-applicability review is
+accepted.
