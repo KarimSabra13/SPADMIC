@@ -1,0 +1,8 @@
+file	bytes	sha256	DENSITY	POPPING	PIMIDE	DUMMY_FILL	VAR_ANT_RATIO
+/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/density.pvl	16	d83f4531a59700a84a7f52c5ad285399c458afdc8a1c78e15109570e903bb3b3	1	0	0	0	0
+/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/dummy.cfg	884	a6a2d818fb2b6c43ec1ea170dcdf20fdc04ec36c873f2384ac55d1a458d7624d	2	0	0	5	0
+/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/dummy_out.pvl	1220	53e05918c7e131558adbb82b4a31df87794b13454e5e355fa9ef5267211b4e2a	0	0	0	1	0
+/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/pvs.cfg	3951	c4e82fbcca0db9454924969d010aab6b34ab480bc44a3a28aa53e26b73a1ead7	2	1	1	3	16
+/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/pvs_BBantenna.cfg	3156	a44111b9a4caaafe2c64ef33a99d397c858c9634483f03099b73445ee7ff969b	2	0	0	3	16
+/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_DRC.rul	922441	0b1ce563da515dd50d17a5e16baa2a2addc10354aa06ab5e1a111b01ed039cb6	79	2	12	2	78
+/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS/xh018_LVS.rul	241566	30c5b47434035ca4b9540f2f333fc2506a063f0b3dfc05f49de72c3a60c755f0	0	0	1	2	0

@@ -76,7 +76,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; relative PVS rule setup and three selector effects need review |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; PVS rule semantics review pending |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -529,6 +529,40 @@ unauthorized. The next read-only gate resolves the relative mapping, identifies
 the three enabled candidates, and inventories the bounded rule setup for
 manual review.
 
+#### Recorded Position Step 6 Rule-Setup Discovery
+
+P09-R08 ran on 2026-07-17 from exact commit
+`329950f10f42d8ddc50a4ada8d626a3cdebf04ea`. It reproduced the immutable
+preprocessor diagnostic, accepted Position GDS SHA-256 `ebba26a4...`, package
+manifest, source `pvtech.lib`, and primary seed-control identity before reading
+the bounded setup.
+
+```text
+RULE_SETUP_RC=0
+STATUS=PASS
+PVTECH_MAPPING_RAW=.pvsSetup/PVS
+MATRIX_CANDIDATE_COUNT=114
+VAR_ANT_DEFINED_CANDIDATE_COUNT=3
+RULE_SETUP_COLLECTOR_GATE_RC=0
+PACKAGE_MODIFIED=NO
+RULE_DECK_COPIED=NO
+PVS_EXECUTED=NO
+```
+
+The raw mapping resolves to the project `.pvsSetup/PVS` directory, and the
+canonical XH018 v10.1 PVS root also exists. The normal PDK configuration
+defaults all five reviewed options to zero. Deck context identifies `POPPING`
+as an IMD-popping family, `PIMIDE` as a pad-marker branch, `DUMMY_FILL` as a
+generation/output selector, and `VAR_ANT_RATIO` as an additional antenna
+family. Those facts do not yet prove which optional process branches apply to
+the internal Position block.
+
+The prior rule-reference excerpt omitted the names surrounding its four
+`DrcRules` entries. A final read-only semantic review must therefore capture
+the complete named `techRuleSets` files and balanced conditional blocks before
+the `default` selection or cross-block seed policy can be accepted. Strict
+preflight, template creation, PVS execution, and promotion remain unauthorized.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -739,17 +773,19 @@ labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-P09-R07 proved the two exact candidate tuples and the raw relative technology
-mapping `.pvsSetup/PVS`. It also exposed that the prior `/PVS` reference was a
-substring-extraction artifact, not an absolute path.
+P09-R08 resolved `.pvsSetup/PVS`, identified the three controls that enable
+`VAR_ANT_RATIO`, pinned the exact DRC/config files, and exposed the optional
+PDK branch classes. It did not prove the named `default` rule-set binding or
+the applicability of the optional `POPPING`, `PIMIDE`, and dummy-generation
+branches to Position.
 
 The next server action is
-`TOP/ci/server_discover_position_core_pvs_rule_setup.sh`, using immutable
-diagnostic root `position_pvs_drc_preprocessor_review_20260717_140420`. Return
-its mapping resolution, three enabled candidate names, rule-setup inventory,
-symbol-file summary, directive context, and rule-reference excerpts before
-authorizing any strict dry-run.
+`TOP/ci/server_review_position_core_pvs_drc_rule_semantics.sh`, using immutable
+diagnostic root `position_pvs_drc_rule_setup_discovery_20260717_150856`.
+Return its numbered rule sets, metal-switch and revision records, PDK defaults,
+conditional-block summary and context, optional user-guide scan, and source
+identity report before authorizing any strict dry-run.
 
-Do not select or copy the cross-block seed, launch strict replay or PVS, or
-advance Position base DRC, density DRC, LVS, block promotion, signoff, or
-Event Genus before the directive review is accepted.
+Do not select or copy the cross-block seed, create a Position template, launch
+strict replay or PVS, or advance Position base DRC, density DRC, LVS, block
+promotion, signoff, or Event Genus before the semantic review is accepted.

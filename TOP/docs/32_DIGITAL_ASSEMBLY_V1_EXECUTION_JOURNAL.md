@@ -3460,3 +3460,92 @@ Compact evidence is retained under:
 ```text
 TOP/docs/server_snapshots/pvs_drc/position_preprocessor_review_20260717_140420/
 ```
+
+### P09-R08 Position PVS Rule-Setup Discovery
+
+The relative-mapping and bounded rule-setup collector ran in the foreground on
+2026-07-17 from exact commit
+`329950f10f42d8ddc50a4ada8d626a3cdebf04ea` and immutable preprocessor
+diagnostic `position_pvs_drc_preprocessor_review_20260717_140420`:
+
+```text
+CHECKOUT_RC=0
+PULL_RC=0
+EXPECTED_HEAD=329950f10f42d8ddc50a4ada8d626a3cdebf04ea
+ACTUAL_HEAD=329950f10f42d8ddc50a4ada8d626a3cdebf04ea
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+RULE_SETUP_RC=0
+POSITION_RULE_SETUP_DISCOVERY_COMMAND_STATUS=PASS
+```
+
+All prior diagnostic hashes, the accepted Position GDS, the package manifest,
+the source `pvtech.lib`, and the primary seed control reproduced. Package
+manifests passed before and after collection, and neither package nor source
+controls changed.
+
+The previous `/PVS` rendering is conclusively a substring-extraction artifact.
+The exact raw mapping and its resolved project path are:
+
+```text
+PVTECH_MAPPING_RAW=.pvsSetup/PVS
+MAPPING_LEXICAL=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.pvsSetup/PVS
+MAPPING_CANONICAL=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.pvsSetup/PVS
+MAPPING_CANONICAL_EXISTS=YES
+```
+
+The scan also found the canonical PDK setup at
+`/data/pdk/xfab/xh018/cadence/v10_1/pvs/v10_1_1/PVS`. It recorded 59 bounded
+inventory entries, 35 readable text files, and seven directive-bearing files.
+The exact DRC deck is 922441 bytes with SHA-256
+`0b1ce563da515dd50d17a5e16baa2a2addc10354aa06ab5e1a111b01ed039cb6`.
+
+The normal `pvs.cfg` defaults every reviewed selector to `0`. The primary
+cross-block seed differs only by defining `VAR_ANT_RATIO`; the only three
+controls with that state are `SPADMIC2`, `TXRX4TDC2_HV`, and
+`spadmic_tx_packet_core`.
+
+Bounded deck context establishes the selector classes without proving Position
+applicability:
+
+```text
+DENSITY      = separate optional density family
+POPPING      = optional IMD Popping Checks family
+PIMIDE       = optional pad-marker branch
+DUMMY_FILL   = dummy generation and output selector
+VAR_ANT_RATIO= additional variable-ratio antenna family
+```
+
+The reference excerpt showed four `DrcRules` variants but omitted their
+surrounding rule-set names. It therefore does not yet bind the source
+`-ruleSet "default"` selector to one exact entry. Likewise, seeing an optional
+branch in the deck does not prove that the Position block requires that branch.
+
+P09-R08 remains a discovery pass:
+
+```text
+STATUS=PASS
+PREPROCESSOR_SEMANTIC_REVIEW_STATUS=REVIEW_REQUIRED
+TEMPLATE_SELECTION_AUTHORIZED=NO
+CROSS_BLOCK_TEMPLATE_REUSE_AUTHORIZED=NO
+STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+Compact evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_rule_setup_discovery_20260717_150856/
+```
+
+The next read-only transaction is
+`TOP/ci/server_review_position_core_pvs_drc_rule_semantics.sh`. It records the
+full numbered rule-set metadata, exact metal-switch selection and PDK revision,
+balanced conditional-block hashes and bounded semantic context, and an
+optional user-guide text scan. It does not create a template or execute PVS.
