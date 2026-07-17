@@ -1,7 +1,8 @@
 # Digital Subblock Closure and Assembly Roadmap
 
 Status: phased server execution active; Position immutable handoff accepted;
-base-PVS-DRC template preflight is next.
+Position-template discovery complete with no attributable template found;
+cross-block seed-control review is next.
 
 Date: 2026-07-17.
 
@@ -42,6 +43,7 @@ The following files are authoritative:
 ```text
 TOP/docs/layout_audits/SPADMIC2_20260709_072331/
 TOP/docs/server_snapshots/handoff/position_core_gridfit_20260717_114810/
+TOP/docs/server_snapshots/pvs_drc/position_template_discovery_20260717_125002/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -74,7 +76,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; preflight base PVS DRC |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; Position PVS template not found; review seed controls |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -441,6 +443,38 @@ The basic package profile deliberately leaves promotion-only fields such as
 GDS-export, connectivity, DRC, and timing reports remain independently hashed,
 while PVS base DRC, density DRC, and LVS remain genuinely `NOT_RUN`.
 
+#### Recorded Position Step 4 PVS DRC Template Discovery
+
+The discovery-only gate ran on 2026-07-17 from exact commit
+`ddf80bdceb61f64e7fb2b2891603fa6e38463795`. It rechecked the immutable
+package, reproduced GDS SHA-256 `ebba26a4...`, and verified the package SHA
+manifest before reading any template controls.
+
+The configured PVS DRC root contained 114 candidate directories, but no path
+or inventoried control named Position:
+
+```text
+DISCOVERY_RC=0
+STATUS=PASS
+RESULT=CANDIDATES_RECORDED_FOR_REVIEW
+TEMPLATE_CANDIDATE_COUNT=114
+POSITION_NAMED_CANDIDATE_COUNT=0
+POSITION_TEMPLATE_EVIDENCE_STATUS=NOT_FOUND
+ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN
+TEMPLATE_SELECTION_AUTHORIZED=NO
+CROSS_BLOCK_TEMPLATE_REUSE_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PACKAGE_MODIFIED=NO
+PVS_EXECUTED=NO
+```
+
+The command passed because the search and immutable evidence capture were
+complete. It did not find a Position template and did not execute DRC. The
+non-HV `spadmic_tx_packet_core` controls are the closest same-project digital
+scaffold candidate, but they remain cross-block input requiring explicit
+control-risk review and strict dry-run proof. Historical packet DRC results
+cannot transfer to the Position GDS.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -651,18 +685,21 @@ labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-The next server action is Position base-PVS-DRC template discovery and strict
-replay preflight only. Prefer a fresh Position template that already embeds
-the immutable package GDS and `spadmic_position_core` top. If an older
-Position template is used, record its exact embedded GDS and top before strict
-replacement. Do not guess these values, reuse a different block's template as
-if it were Position evidence, launch density DRC, launch LVS, or start Event
-Genus before the base-template replay contract is reviewed.
+P09-R05 completed template discovery. Its 114 candidates contain no Position
+path/control match, so `ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN` and
+all Position PVS gates remain `NOT_RUN`.
 
-Run `TOP/ci/server_discover_position_core_pvs_drc_template.sh` first. It only
-audits the immutable package, searches configured read-only roots, and hashes
-candidate control files into a separate diagnostics directory. A discovery
-`STATUS=PASS` means candidates were inventoried; it deliberately leaves
-`ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN`,
-`TEMPLATE_SELECTION_AUTHORIZED=NO`, and `PVS_REPLAY_AUTHORIZED=NO`. Review the
-candidate inventory before issuing the separate strict base-replay dry run.
+The next server action is P09-R06, a read-only control review of the exact
+non-HV `spadmic_tx_packet_core` directory as a possible rule-launch scaffold.
+Run `TOP/ci/server_review_position_core_pvs_drc_seed.sh` with the exact current
+repository HEAD and the immutable R05 diagnostic root. It verifies the R05
+inventory hashes, package/GDS identity, and exact candidate-control hashes;
+then records technology, DENSITY, input/output directives, and executable
+waiver/rule-suppression keyword evidence in a new diagnostics directory.
+
+P09-R06 does not run strict replay or PVS and cannot authorize cross-block
+reuse. Review its status and risk report first. Only a clean, separately
+approved result may advance to an isolated strict dry-run preflight that
+rewrites the seed GDS/top into `spadmic_position_core` and proves all inputs,
+execution paths, outputs, and external references. Do not launch base DRC,
+density DRC, LVS, or Event Genus before that preflight is accepted.

@@ -3103,3 +3103,93 @@ package-level PASS without their later dedicated gates.
 No PVS tool was launched. The next gate is an attributable Position base-DRC
 template and strict replay preflight. Base DRC, density DRC, and exact-package
 LVS all remain `NOT_RUN`.
+
+### P09-R05 Position PVS DRC Template Discovery
+
+The discovery-only transaction ran in the foreground on 2026-07-17 from the
+exact checked-in discovery implementation:
+
+```text
+BRANCH=SPADMIC_test
+EXPECTED_HEAD=ddf80bdceb61f64e7fb2b2891603fa6e38463795
+ACTUAL_HEAD=ddf80bdceb61f64e7fb2b2891603fa6e38463795
+CHECKOUT_RC=0
+PULL_RC=0
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+DISCOVERY_RC=0
+POSITION_TEMPLATE_DISCOVERY_COMMAND_STATUS=PASS
+```
+
+Before searching, the runner re-audited the accepted immutable package and
+reproduced the exact Position GDS identity:
+
+```text
+PACKAGE_FILE_GATE_RC=0
+EXPECTED_GDS_SHA=ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1
+ACTUAL_GDS_SHA=ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1
+PACKAGE_HASH_GATE_RC=0
+PACKAGE_STATUS_GATE_RC=0
+PACKAGE_SHA_MANIFEST_RC=0
+PACKAGE_MODIFIED=NO
+```
+
+One configured search root existed. The two alternate capitalization paths
+did not:
+
+```text
+SEARCH_ROOT_STATUS=FOUND ROOT=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc
+SEARCH_ROOT_STATUS=MISSING ROOT=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsDRC
+SEARCH_ROOT_STATUS=MISSING ROOT=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PVS_DRC
+```
+
+The found root contained 114 GUI-generated DRC directories. Every candidate
+was inventoried with control-file sizes, hashes, embedded GDS/top references,
+technology information, and DENSITY-hook evidence. None had a path or control
+reference attributable to `position` or `spadmic_position_core`:
+
+```text
+STATUS=PASS
+RESULT=CANDIDATES_RECORDED_FOR_REVIEW
+TEMPLATE_CANDIDATE_COUNT=114
+POSITION_NAMED_CANDIDATE_COUNT=0
+POSITION_TEMPLATE_EVIDENCE_STATUS=NOT_FOUND
+ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN
+TEMPLATE_SELECTION_AUTHORIZED=NO
+CROSS_BLOCK_TEMPLATE_REUSE_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+`STATUS=PASS` classifies the immutable discovery transaction, not the missing
+Position template and not PVS DRC. Therefore Position base DRC, density DRC,
+and LVS all remain `NOT_RUN`.
+
+The nearest review candidate is the non-HV `spadmic_tx_packet_core` directory.
+It is a same-project digital-block rule scaffold using `XH018_1131`,
+`TECH_XH018_HD`, and an explicit DENSITY hook. Its exact controls were pinned
+from the discovery output:
+
+```text
+CONFIG_SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+PRESET_SHA256=97b3a7e63c3e8a01ea1291a19de384e2c41f77cd11653a92c7f5618e73421000
+TECHNOLOGY_SHA256=74a297facf6422635df2c58d79aa8b8ae46ca0b8232380471a88a182d8400ab6
+PIPO1_SHA256=949ce7ec915d1ddbd3e78534720c33aad9036d83932c6bac33730a113aba00dd
+PVSDRCCTL_SHA256=b9a8451c6cc43647ec606ae706e450893e3673e22215dc5a64edeeb383b902ef
+RUN_PVS_SHA256=11ae3fc935041b8a4e0f3b406941c699c769ed1d50a504e8df36fcb544c7255a
+```
+
+This is not Position evidence and has not been selected for replay. The next
+gate is `server_review_position_core_pvs_drc_seed.sh`: it binds the exact R05
+inventory and seed hashes, snapshots the controls into a separate diagnostic
+directory, checks executable GDS/top/technology/DENSITY/output directives,
+and scans for waiver or rule-suppression controls. It deliberately runs no
+replay and no PVS and leaves every authorization field at `NO` pending review.
+
+Compact source evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_template_discovery_20260717_125002/
+```

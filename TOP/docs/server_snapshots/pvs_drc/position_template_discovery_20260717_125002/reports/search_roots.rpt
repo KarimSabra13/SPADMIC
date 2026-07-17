@@ -1,0 +1,4 @@
+LABEL=SPADMIC_POSITION_PVS_DRC_TEMPLATE_SEARCH_ROOTS
+SEARCH_ROOT_STATUS=FOUND ROOT=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc
+SEARCH_ROOT_STATUS=MISSING ROOT=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsDRC
+SEARCH_ROOT_STATUS=MISSING ROOT=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PVS_DRC
