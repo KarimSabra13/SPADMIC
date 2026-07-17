@@ -3382,3 +3382,81 @@ Compact R06b evidence is retained under:
 ```text
 TOP/docs/server_snapshots/pvs_drc/position_seed_review_20260717_133839/
 ```
+
+### P09-R07 Position Preprocessor Evidence Collection
+
+The read-only PDK/preprocessor collector ran in the foreground on 2026-07-17
+from exact commit `0d549dc248b9e315113cee1a7af68887c6fcb487` and corrected
+R06b diagnostic `position_pvs_drc_seed_review_20260717_133839`:
+
+```text
+CHECKOUT_RC=0
+PULL_RC=0
+EXPECTED_HEAD=0d549dc248b9e315113cee1a7af68887c6fcb487
+ACTUAL_HEAD=0d549dc248b9e315113cee1a7af68887c6fcb487
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+COLLECT_RC=0
+POSITION_PREPROCESSOR_REVIEW_COMMAND_STATUS=PASS
+```
+
+All pinned R06b reports, source controls, the accepted Position GDS, and the
+immutable package reproduced. Package manifests passed before and after the
+collection, and no source or package file changed.
+
+The complete 114-candidate matrix has only two tuples:
+
+```text
+candidate_count  DENSITY    POPPING    PIMIDE     DUMMY_FILL  VAR_ANT_RATIO
+111              UNDEFINED  UNDEFINED  UNDEFINED  UNDEFINED   UNDEFINED
+3                UNDEFINED  UNDEFINED  UNDEFINED  UNDEFINED   DEFINED
+```
+
+This proves that `DENSITY`, `POPPING`, `PIMIDE`, and `DUMMY_FILL` have the
+same undefined state in every discovered control. It does not prove the PDK
+coverage effect of those states. `VAR_ANT_RATIO` is the sole varying selector;
+the exact three candidate names remain in the immutable matrix and are
+isolated by the next collector.
+
+The 52-byte technology library is exact:
+
+```text
+UNDEFINE XH018_1131
+DEFINE XH018_1131 .pvsSetup/PVS
+```
+
+The R07 reference extractor emitted `/PVS` because it retained only the
+slash-prefixed suffix of the relative token. `/PVS` is therefore a parser
+artifact, not an attributable absolute path. The follow-up preserves the raw
+`.pvsSetup/PVS` token, resolves it against the directory containing
+`pvtech.lib`, and performs a bounded read-only inventory and directive search.
+
+R07 remains an evidence-capture pass rather than a PVS authorization:
+
+```text
+STATUS=PASS
+MATRIX_CANDIDATE_COUNT=114
+MATRIX_INCOMPLETE_COUNT=0
+UNIQUE_DIRECTIVE_TUPLE_COUNT=2
+MATRIX_COMPLETENESS_STATUS=PASS
+PREPROCESSOR_SEMANTIC_REVIEW_STATUS=REVIEW_REQUIRED
+PACKAGE_POST_REVIEW_SHA_MANIFEST_RC=0
+PACKAGE_MODIFIED=NO
+PVS_TEMPLATE_CREATED=NO
+TEMPLATE_SELECTION_AUTHORIZED=NO
+CROSS_BLOCK_TEMPLATE_REUSE_AUTHORIZED=NO
+STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+Compact evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_preprocessor_review_20260717_140420/
+```

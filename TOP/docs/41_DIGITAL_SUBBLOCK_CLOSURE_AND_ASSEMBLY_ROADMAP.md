@@ -76,7 +76,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; seed contract clean; three PDK selector meanings need review |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; relative PVS rule setup and three selector effects need review |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -518,9 +518,16 @@ last enables an additional antenna family. The dummy-fill selector is
 undefined, but its rule-deck impact plus the meanings of `POPPING` and
 `PIMIDE` still require exact PDK evidence.
 
+R07 compared all 114 candidates and found only two tuples. All candidates
+undefine `DENSITY`, `POPPING`, `PIMIDE`, and `DUMMY_FILL`; 111 undefine
+`VAR_ANT_RATIO` and three define it. The exact `pvtech.lib` maps
+`XH018_1131` to the relative token `.pvsSetup/PVS`. The rendered `/PVS`
+reference is a collector parsing artifact and must not be used as a path.
+
 Cross-block reuse, strict dry-run preflight, replay, and PVS execution remain
-unauthorized. The next read-only gate compares all 114 candidate tuples and
-captures the exact XH018 `pvtech.lib` configuration for manual review.
+unauthorized. The next read-only gate resolves the relative mapping, identifies
+the three enabled candidates, and inventories the bounded rule setup for
+manual review.
 
 ## 7. Event Coordinator
 
@@ -732,18 +739,16 @@ labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-P09-R06b closed the whitespace-sensitive checker defect and proved the exact
-seed control contract. It also proved that the raw seed enables
-`VAR_ANT_RATIO` while disabling `DENSITY`, `POPPING`, `PIMIDE`, and
-`DUMMY_FILL`.
+P09-R07 proved the two exact candidate tuples and the raw relative technology
+mapping `.pvsSetup/PVS`. It also exposed that the prior `/PVS` reference was a
+substring-extraction artifact, not an absolute path.
 
-The next server action is the read-only PDK semantics collector:
-`TOP/ci/server_review_position_core_pvs_drc_preprocessor.sh`. Run it from the
-exact current repository HEAD with corrected diagnostic root
-`position_pvs_drc_seed_review_20260717_133839`. Return its status, directive
-tuple summary, primary preset/context extracts, `pvtech` key lines, reference
-candidates, and bounded technology-library content before authorizing any
-strict dry-run.
+The next server action is
+`TOP/ci/server_discover_position_core_pvs_rule_setup.sh`, using immutable
+diagnostic root `position_pvs_drc_preprocessor_review_20260717_140420`. Return
+its mapping resolution, three enabled candidate names, rule-setup inventory,
+symbol-file summary, directive context, and rule-reference excerpts before
+authorizing any strict dry-run.
 
 Do not select or copy the cross-block seed, launch strict replay or PVS, or
 advance Position base DRC, density DRC, LVS, block promotion, signoff, or

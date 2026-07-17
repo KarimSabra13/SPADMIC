@@ -466,13 +466,14 @@ if [ "$RUN_OK" -eq 1 ]; then
 
     {
         echo "LABEL=SPADMIC_POSITION_PVS_DRC_PVTECH_REFERENCE_CANDIDATES"
-        grep -Eo '/[^"[:space:];]+' "$TECHLIB_PATH" 2>/dev/null | sort -u
+        awk '$1 == "DEFINE" && NF >= 3 {print "REFERENCE_RAW=" $3}' \
+            "$TECHLIB_PATH" 2>/dev/null | sort -u
     } >"$PVTECH_REFERENCE_REPORT"
 
     PRIMARY_CONTEXT_LINE_COUNT="$(grep -Ec '^[0-9]+[-:]' "$PRIMARY_CONTEXT_REPORT")"
     PRIMARY_PRESET_LINE_COUNT="$(grep -Ec '^[0-9]+[-:]' "$PRIMARY_PRESET_REPORT")"
     PVTECH_KEY_LINE_COUNT="$(grep -Ec '^[0-9]+[-:]' "$PVTECH_KEY_REPORT")"
-    PVTECH_REFERENCE_CANDIDATE_COUNT="$(grep -Ec '^/' "$PVTECH_REFERENCE_REPORT")"
+    PVTECH_REFERENCE_CANDIDATE_COUNT="$(grep -Ec '^REFERENCE_RAW=' "$PVTECH_REFERENCE_REPORT")"
 fi
 
 if [ "$RUN_OK" -eq 1 ]; then
