@@ -3193,3 +3193,106 @@ Compact source evidence is retained under:
 ```text
 TOP/docs/server_snapshots/pvs_drc/position_template_discovery_20260717_125002/
 ```
+
+### P09-R06 Position PVS DRC Cross-Block Seed Review
+
+The read-only seed review ran in the foreground on 2026-07-17 after the
+server checkout was updated to the exact review implementation:
+
+```text
+BRANCH=SPADMIC_test
+EXPECTED_HEAD=2c6b0170845bf125d48700ed8594e5d3da121e14
+ACTUAL_HEAD=2c6b0170845bf125d48700ed8594e5d3da121e14
+CHECKOUT_RC=0
+PULL_RC=0
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+REVIEW_RC=0
+POSITION_SEED_CONTROL_REVIEW_COMMAND_STATUS=PASS
+```
+
+The reviewer reproduced all three R05 diagnostic hashes, re-audited the
+immutable Position package, and reproduced the accepted Position GDS hash.
+The package SHA manifest passed before and after review, and every pinned
+primary-seed control retained its R05 identity:
+
+```text
+DISCOVERY_FILE_GATE_RC=0
+DISCOVERY_HASH_GATE_RC=0
+DISCOVERY_STATUS_GATE_RC=0
+PACKAGE_FILE_GATE_RC=0
+PACKAGE_HASH_GATE_RC=0
+PACKAGE_STATUS_GATE_RC=0
+PACKAGE_SHA_MANIFEST_RC=0
+PACKAGE_POST_REVIEW_SHA_MANIFEST_RC=0
+PRIMARY_CONTROL_IDENTITY_GATE_RC=0
+PRIMARY_CONTROL_COPY_GATE_RC=0
+SOURCE_TEMPLATE_RECHECK_RC=0
+PACKAGE_MODIFIED=NO
+PINNED_SOURCE_CONTROLS_UNCHANGED=YES
+```
+
+The selected review input remained the exact non-HV packet-core directory,
+classified only as a cross-block launch-scaffold candidate. Its `run.pvs`,
+`pvsdrcctl`, and `.technology.rul` checks passed; its executable risk scan
+contained zero matching lines. The reviewer also observed one DENSITY
+directive among five preprocessor directives.
+
+The sole reported contract failure was not a seed-control mismatch. The
+`pipo1.setup` inventory visibly contained:
+
+```text
+16:techLib    "TECH_XH018_HD"
+```
+
+but the original checker searched for one literal run of spaces while the
+file separates the field and value with a tab. It therefore emitted:
+
+```text
+CONTRACT_LINE_RC=1 FILE=.../spadmic_tx_packet_core/pipo1.setup EXPECTED=techLib    "TECH_XH018_HD"
+PRIMARY_EXECUTABLE_CONTRACT_GATE_RC=1
+```
+
+This is retained as a checker false-negative, not converted into a control
+PASS after the fact. The checked-in follow-up changes that one gate to a
+POSIX-whitespace expression, regression-tests tabs and spaces, and emits all
+five preprocessor directives into a dedicated report. Since only one of the
+five is DENSITY, the other four still require explicit semantic review even
+after the corrected executable contract is rerun.
+
+The original server status remains authoritative for this diagnostic:
+
+```text
+STATUS=PASS
+RESULT=CROSS_BLOCK_SEED_CONTROLS_RECORDED_FOR_REVIEW
+PRIMARY_CONTROL_IDENTITY_STATUS=PASS
+PRIMARY_EXECUTABLE_CONTRACT_STATUS=FAIL
+DENSITY_HOOK_STATUS=PASS
+AUTOMATED_CONTROL_RISK_SCAN_STATUS=PASS
+EXECUTABLE_RISK_LINE_COUNT=0
+SEED_TECHNICAL_REVIEW_STATUS=REVIEW_REQUIRED
+ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN
+TEMPLATE_SELECTION_AUTHORIZED=NO
+CROSS_BLOCK_TEMPLATE_REUSE_AUTHORIZED=NO
+STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=POSITION_PVS_DRC_SEED_CONTROL_MANUAL_REVIEW
+```
+
+No source template or immutable package file was modified and no PVS tool was
+launched. The next transaction is a rerun of the corrected read-only reviewer,
+followed by manual classification of its complete preprocessor-directive
+report. Strict dry-run preflight remains unauthorized until that review is
+accepted.
+
+Compact source evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_seed_review_20260717_132208/
+```

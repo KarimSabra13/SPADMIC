@@ -76,7 +76,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; Position PVS template not found; review seed controls |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; seed controls recorded; four non-Density directives need review |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -475,6 +475,38 @@ scaffold candidate, but they remain cross-block input requiring explicit
 control-risk review and strict dry-run proof. Historical packet DRC results
 cannot transfer to the Position GDS.
 
+#### Recorded Position Step 5 Cross-Block Seed Review
+
+P09-R06 ran on 2026-07-17 from exact commit
+`2c6b0170845bf125d48700ed8594e5d3da121e14`. It reproduced the R05 discovery
+hashes, immutable Position GDS SHA-256 `ebba26a4...`, package manifest, and all
+pinned non-HV packet-core seed-control hashes before and after review.
+
+```text
+REVIEW_RC=0
+STATUS=PASS
+RESULT=CROSS_BLOCK_SEED_CONTROLS_RECORDED_FOR_REVIEW
+PRIMARY_CONTROL_IDENTITY_STATUS=PASS
+DENSITY_HOOK_STATUS=PASS
+AUTOMATED_CONTROL_RISK_SCAN_STATUS=PASS
+EXECUTABLE_RISK_LINE_COUNT=0
+PACKAGE_MODIFIED=NO
+PINNED_SOURCE_CONTROLS_UNCHANGED=YES
+PVS_EXECUTED=NO
+```
+
+The original reviewer reported `PRIMARY_EXECUTABLE_CONTRACT_STATUS=FAIL`
+only because its `TECH_XH018_HD` check required literal spaces while the
+verified `pipo1.setup` field is tab-separated. This is a checker
+false-negative; it is not evidence that the seed controls are wrong. The
+corrected reviewer accepts POSIX whitespace and exposes all preprocessor
+directives. The observed control has five such directives, one for DENSITY,
+so four non-Density directives remain a real manual-review gate.
+
+Cross-block reuse, strict dry-run preflight, replay, and PVS execution remain
+unauthorized. The next accepted state can only come from rerunning the
+corrected read-only reviewer and classifying its complete directive report.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -685,21 +717,19 @@ labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-P09-R05 completed template discovery. Its 114 candidates contain no Position
-path/control match, so `ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN` and
-all Position PVS gates remain `NOT_RUN`.
+P09-R06 recorded the exact non-HV `spadmic_tx_packet_core` controls without
+changing the seed or Position package and without running PVS. Its one
+executable-contract failure was a whitespace-sensitive checker false-negative,
+but it also exposed a real unresolved fact: the control has five preprocessor
+directives and only one is the reviewed DENSITY hook.
 
-The next server action is P09-R06, a read-only control review of the exact
-non-HV `spadmic_tx_packet_core` directory as a possible rule-launch scaffold.
-Run `TOP/ci/server_review_position_core_pvs_drc_seed.sh` with the exact current
-repository HEAD and the immutable R05 diagnostic root. It verifies the R05
-inventory hashes, package/GDS identity, and exact candidate-control hashes;
-then records technology, DENSITY, input/output directives, and executable
-waiver/rule-suppression keyword evidence in a new diagnostics directory.
+The next server action is to rerun
+`TOP/ci/server_review_position_core_pvs_drc_seed.sh` from the exact corrected
+repository HEAD and the immutable R05 diagnostic root. Return the corrected
+contract report and the new
+`primary_pvsdrcctl_preprocessor_directives.rpt`. Manually classify all four
+non-Density directives before designing or authorizing a strict dry-run.
 
-P09-R06 does not run strict replay or PVS and cannot authorize cross-block
-reuse. Review its status and risk report first. Only a clean, separately
-approved result may advance to an isolated strict dry-run preflight that
-rewrites the seed GDS/top into `spadmic_position_core` and proves all inputs,
-execution paths, outputs, and external references. Do not launch base DRC,
-density DRC, LVS, or Event Genus before that preflight is accepted.
+Do not select or copy the cross-block seed, launch strict replay or PVS, or
+advance Position base DRC, density DRC, LVS, block promotion, signoff, or
+Event Genus before the directive review is accepted.
