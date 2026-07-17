@@ -1,7 +1,7 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active; Position Innovus clean baseline reviewed,
-reservation-corrected replay required.
+Status: phased server execution active; Position grid-safe Innovus replay
+accepted; immutable handoff staging is next.
 
 Date: 2026-07-17.
 
@@ -73,7 +73,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Clean OOC baseline; replay grid-safe bbox |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Grid-safe OOC accepted; stage immutable handoff |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -358,6 +358,50 @@ report proves `met1_effort`, `MET1-MET3`, and `EXPLICIT_EXACT`. The wrapper
 now sources those summary fields from `ooc_harden_status.rpt`; this reporting
 defect did not invalidate the zero-violation route evidence.
 
+#### Recorded Position Step 2 Corrected Replay
+
+The reservation-corrected replay ran in one fresh foreground Innovus process
+on 2026-07-17 from exact commit
+`179baaf3fc35c931d95d47d70f84c760ccfd17ed`. It reused the accepted Genus
+netlist and SDC without modification:
+
+```text
+POSITION_GENUS_RUN=genus_ooc_position_core_20260717_101642
+POSTSYN_NETLIST_SHA256=53bc725784e78fba8c2188f8ef9e31965abc84ffa02c195be1bf8e6e916518c6
+POSTSYN_SDC_SHA256=69929a339cb2b2951bee4f7b2b6b558277e13bfac504951c57b38cf497d4f21f
+POSITION_PNR_RUN=innovus_ooc_harden_position_core_gridfit_20260717_114810
+POSITION_PNR_RC=0
+```
+
+The actual die is `951.440 x 659.680 um` inside the fixed
+`951.695 x 660.000 um` reservation. The remaining width and height margins
+are `0.255 um` and `0.320 um`, respectively. The abstract LEF records the
+same `951.440 x 659.680 um` macro size.
+
+```text
+POSITION_GRID_SAFE_REPLAY_STATUS=PASS
+RESULT=ABSTRACT_READY_FOR_TOP_REVIEW
+TOP_RESERVATION_FIT_STATUS=PASS
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_STATUS=PASS
+POSTROUTE_SETUP_TIMING=PASS
+POSTROUTE_HOLD_TIMING=PASS
+WORST_REPORTED_SETUP_SLACK_NS=0.048
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS_SHA256=ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1
+ABSTRACT_LEF_SHA256=1eb91d021edccd4806a5516ef1f2aa0a2718607ee84c248d2d0e12cd8e698683
+ROUTED_PG_NETLIST_SHA256=4078d8b5f277923948371898663ea2b0093fae205bad09e2f91c5f502f251cfd
+```
+
+This tuple supersedes the overflowed `49a7a030...` GDS as the Position
+candidate for immutable staging. It is still typical-only and is not a
+qualified hard macro: package audit, package-local source preparation and pin
+parity, PVS base DRC, PVS density DRC, and explicit exact-GDS LVS `MATCH`
+remain separate gates.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -552,17 +596,17 @@ bash TOP/scripts/sim/run_tb.sh \
 ```
 
 The RTL regressions pass `25/25` position checks and `24/24` event checks.
-Position TC Genus passes on the recorded exact commit. The first Position
-Innovus implementation is physically clean but rejected for top-reservation
-overflow; its grid-safe replay and all Position PVS gates remain open. Every
-Event Genus/Innovus/PVS gate also remains server work and must stay labeled
-`NOT_RUN` until separately executed and reviewed.
+Position TC Genus and the corrected grid-safe Position Innovus replay pass on
+their recorded exact commits. Immutable handoff staging and every Position
+PVS gate remain open. Every Event Genus/Innovus/PVS gate also remains server
+work and must stay labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-The next server action is one corrected Position Step 2 replay only. Pull the
-documented release commit, bind Innovus to the unchanged accepted Genus run
-`genus_ooc_position_core_20260717_101642`, and require both the original clean
-physical tuple and `TOP_RESERVATION_FIT_STATUS=PASS`. Do not stage the old
-`49a7a030...` GDS, run Position PVS, or start Event Genus before that replay is
-reviewed.
+The next server action is immutable Position handoff staging and package audit
+only. Stage exact run
+`innovus_ooc_harden_position_core_gridfit_20260717_114810`, require the
+recorded GDS, abstract LEF, and routed-PG-netlist hashes, and preserve the
+package-local canonical LVS source and pin-parity report. Do not stage the old
+`49a7a030...` GDS, run Position PVS, or start Event Genus until the immutable
+package audit is reviewed.

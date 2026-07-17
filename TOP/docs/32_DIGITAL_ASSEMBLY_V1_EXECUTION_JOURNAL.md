@@ -2910,3 +2910,85 @@ PG mode, and PG strategy fields now come from `ooc_harden_status.rpt`.
 No RTL, accepted Genus artifact, timing constraint, placement reservation, or
 PDK input changed. The next run must reuse the exact accepted Genus netlist and
 SDC hashes, then repeat every Innovus physical gate before packaging.
+
+### P09-R03 Grid-Safe Innovus Replay Accepted
+
+The corrected Position replay executed in one fresh foreground Innovus process
+on 2026-07-17 from an attributable checkout:
+
+```text
+BRANCH=SPADMIC_test
+HEAD=179baaf3fc35c931d95d47d70f84c760ccfd17ed
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+PORTFOLIO_RC=0
+POSITION_GENUS_RUN=genus_ooc_position_core_20260717_101642
+POSTSYN_NETLIST_SHA256=53bc725784e78fba8c2188f8ef9e31965abc84ffa02c195be1bf8e6e916518c6
+POSTSYN_SDC_SHA256=69929a339cb2b2951bee4f7b2b6b558277e13bfac504951c57b38cf497d4f21f
+POSITION_PNR_RUN=innovus_ooc_harden_position_core_gridfit_20260717_114810
+POSITION_PNR_RC=0
+```
+
+The generated plan and the actual Innovus geometry agree with the grid-safe
+contract:
+
+```text
+REQUESTED_CORE_WIDTH_UM=931.280
+REQUESTED_CORE_HEIGHT_UM=639.520
+ACTUAL_DIE_WIDTH_UM=951.440
+ACTUAL_DIE_HEIGHT_UM=659.680
+TOP_RESERVATION_WIDTH_UM=951.695
+TOP_RESERVATION_HEIGHT_UM=660.000
+TOP_RESERVATION_WIDTH_MARGIN_UM=0.255
+TOP_RESERVATION_HEIGHT_MARGIN_UM=0.320
+TOP_RESERVATION_FIT_STATUS=PASS
+ABSTRACT_LEF_SIZE_UM=951.440 x 659.680
+```
+
+Every reviewed Innovus gate remained clean after the geometry correction:
+
+```text
+RESULT=ABSTRACT_READY_FOR_TOP_REVIEW
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+MET1_MIN_AREA_MARKER_COUNT=0
+ANTENNA_MARKER_COUNT=0
+OTHER_MARKER_COUNT=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+REGULAR_CONNECTIVITY_VIOLATION_COUNT=0
+REGULAR_CONNECTIVITY_WARNING_COUNT=0
+PG_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_VIOLATION_COUNT=0
+PG_CONNECTIVITY_WARNING_COUNT=0
+POSTROUTE_SETUP_TIMING=PASS
+POSTROUTE_HOLD_TIMING=PASS
+WORST_REPORTED_SETUP_SLACK_NS=0.048
+TIMING_ANALYSIS_VIEW=tc_view
+ROUTE_PROFILE=met1_effort
+SIGNAL_ROUTE_LAYERS=MET1-MET3
+PG_LOCAL_ROUTE_MODE=EXPLICIT_EXACT
+PG_ROUTE_STRATEGY=EXPLICIT_EXACT
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS_EXPORT_ERROR_COUNT=0
+```
+
+Accepted output identity:
+
+```text
+GDS_BYTES=11523506
+GDS_SHA256=ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1
+ABSTRACT_LEF_BYTES=61822
+ABSTRACT_LEF_SHA256=1eb91d021edccd4806a5516ef1f2aa0a2718607ee84c248d2d0e12cd8e698683
+ROUTED_PG_NETLIST_BYTES=1486584
+ROUTED_PG_NETLIST_SHA256=4078d8b5f277923948371898663ea2b0093fae205bad09e2f91c5f502f251cfd
+POSITION_GRID_SAFE_REPLAY_STATUS=PASS
+NEXT_GATE=IMMUTABLE_POSITION_HANDOFF_STAGING
+```
+
+The old `49a7a030...` GDS remains a rejected feasibility artifact because its
+boundary exceeds the reservation. The new `ebba26a4...` GDS is authorized for
+immutable staging, not for promotion or signoff. This run is typical-only;
+MMMC, PVS base and density DRC, PEX, and foundry LVS remain unexecuted or
+deferred. No PVS result may be attached until staging reproduces these hashes
+and the package-local source preparation and pin-parity audit pass.
