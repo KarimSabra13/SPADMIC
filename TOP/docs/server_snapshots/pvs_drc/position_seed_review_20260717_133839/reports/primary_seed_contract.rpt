@@ -1,0 +1,16 @@
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/run.pvs EXPECTED=-drc
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/run.pvs EXPECTED=-top_cell spadmic_tx_packet_core
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/run.pvs EXPECTED=-control /group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/pvsdrcctl
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/run.pvs EXPECTED=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/.config.rul
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/run.pvs EXPECTED=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/.technology.rul
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/pvsdrcctl EXPECTED=layout_path "/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/spadmic_tx_packet_core.gds";
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/pvsdrcctl EXPECTED=#UNDEFINE DENSITY
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/pvsdrcctl EXPECTED=report_summary -drc
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/pvsdrcctl EXPECTED=results_db -drc
+CONTRACT_LINE_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/.technology.rul EXPECTED=technology "XH018_1131" -ruleSet "default"
+CONTRACT_REGEX_RC=0 FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_tx_packet_core/pipo1.setup EXPECTED_TECHLIB=TECH_XH018_HD
+DENSITY_DIRECTIVE_COUNT=1
+PREPROCESSOR_DIRECTIVE_COUNT=5
+NON_DENSITY_PREPROCESSOR_DIRECTIVE_COUNT=4
+PREPROCESSOR_DIRECTIVE_REVIEW_STATUS=REVIEW_REQUIRED
+PRIMARY_EXECUTABLE_CONTRACT_GATE_RC=0

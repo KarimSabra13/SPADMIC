@@ -76,7 +76,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; seed controls recorded; four non-Density directives need review |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Immutable handoff accepted; seed contract clean; three PDK selector meanings need review |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -497,15 +497,30 @@ PVS_EXECUTED=NO
 
 The original reviewer reported `PRIMARY_EXECUTABLE_CONTRACT_STATUS=FAIL`
 only because its `TECH_XH018_HD` check required literal spaces while the
-verified `pipo1.setup` field is tab-separated. This is a checker
-false-negative; it is not evidence that the seed controls are wrong. The
-corrected reviewer accepts POSIX whitespace and exposes all preprocessor
-directives. The observed control has five such directives, one for DENSITY,
-so four non-Density directives remain a real manual-review gate.
+verified `pipo1.setup` field is tab-separated. R06b reran the corrected gate
+from exact commit `6baf4a95224edf0a2669ae5d4db43df925f8d73c` and proved:
+
+```text
+REVIEW_RC=0
+PRIMARY_EXECUTABLE_CONTRACT_STATUS=PASS
+PREPROCESSOR_DIRECTIVE_COUNT=5
+NON_DENSITY_PREPROCESSOR_DIRECTIVE_COUNT=4
+PREPROCESSOR_DIRECTIVE_REVIEW_STATUS=REVIEW_REQUIRED
+PACKAGE_MODIFIED=NO
+PINNED_SOURCE_CONTROLS_UNCHANGED=YES
+PVS_EXECUTED=NO
+```
+
+The exact tuple is `DENSITY=UNDEFINED`, `POPPING=UNDEFINED`,
+`PIMIDE=UNDEFINED`, `DUMMY_FILL=UNDEFINED`, and
+`VAR_ANT_RATIO=DEFINED`. The first is the base/density variant split, and the
+last enables an additional antenna family. The dummy-fill selector is
+undefined, but its rule-deck impact plus the meanings of `POPPING` and
+`PIMIDE` still require exact PDK evidence.
 
 Cross-block reuse, strict dry-run preflight, replay, and PVS execution remain
-unauthorized. The next accepted state can only come from rerunning the
-corrected read-only reviewer and classifying its complete directive report.
+unauthorized. The next read-only gate compares all 114 candidate tuples and
+captures the exact XH018 `pvtech.lib` configuration for manual review.
 
 ## 7. Event Coordinator
 
@@ -717,18 +732,18 @@ labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-P09-R06 recorded the exact non-HV `spadmic_tx_packet_core` controls without
-changing the seed or Position package and without running PVS. Its one
-executable-contract failure was a whitespace-sensitive checker false-negative,
-but it also exposed a real unresolved fact: the control has five preprocessor
-directives and only one is the reviewed DENSITY hook.
+P09-R06b closed the whitespace-sensitive checker defect and proved the exact
+seed control contract. It also proved that the raw seed enables
+`VAR_ANT_RATIO` while disabling `DENSITY`, `POPPING`, `PIMIDE`, and
+`DUMMY_FILL`.
 
-The next server action is to rerun
-`TOP/ci/server_review_position_core_pvs_drc_seed.sh` from the exact corrected
-repository HEAD and the immutable R05 diagnostic root. Return the corrected
-contract report and the new
-`primary_pvsdrcctl_preprocessor_directives.rpt`. Manually classify all four
-non-Density directives before designing or authorizing a strict dry-run.
+The next server action is the read-only PDK semantics collector:
+`TOP/ci/server_review_position_core_pvs_drc_preprocessor.sh`. Run it from the
+exact current repository HEAD with corrected diagnostic root
+`position_pvs_drc_seed_review_20260717_133839`. Return its status, directive
+tuple summary, primary preset/context extracts, `pvtech` key lines, reference
+candidates, and bounded technology-library content before authorizing any
+strict dry-run.
 
 Do not select or copy the cross-block seed, launch strict replay or PVS, or
 advance Position base DRC, density DRC, LVS, block promotion, signoff, or

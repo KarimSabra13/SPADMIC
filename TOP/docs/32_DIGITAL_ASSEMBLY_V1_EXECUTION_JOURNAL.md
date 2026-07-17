@@ -3296,3 +3296,89 @@ Compact source evidence is retained under:
 ```text
 TOP/docs/server_snapshots/pvs_drc/position_seed_review_20260717_132208/
 ```
+
+### P09-R06b Corrected Position Seed Review
+
+The corrected read-only reviewer ran in the foreground on 2026-07-17 from
+exact commit `6baf4a95224edf0a2669ae5d4db43df925f8d73c`:
+
+```text
+CHECKOUT_RC=0
+PULL_RC=0
+EXPECTED_HEAD=6baf4a95224edf0a2669ae5d4db43df925f8d73c
+ACTUAL_HEAD=6baf4a95224edf0a2669ae5d4db43df925f8d73c
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+REVIEW_RC=0
+POSITION_SEED_CONTROL_REVIEW_COMMAND_STATUS=PASS
+```
+
+All R05 discovery, immutable package, Position GDS, and primary seed-control
+hashes reproduced. The package SHA manifest passed before and after review,
+the source controls remained unchanged, and the corrected whitespace-tolerant
+technology-library contract passed:
+
+```text
+PRIMARY_CONTROL_IDENTITY_STATUS=PASS
+PRIMARY_EXECUTABLE_CONTRACT_STATUS=PASS
+CONTRACT_REGEX_RC=0 EXPECTED_TECHLIB=TECH_XH018_HD
+AUTOMATED_CONTROL_RISK_SCAN_STATUS=PASS
+EXECUTABLE_RISK_LINE_COUNT=0
+PACKAGE_POST_REVIEW_SHA_MANIFEST_RC=0
+PACKAGE_MODIFIED=NO
+PINNED_SOURCE_CONTROLS_UNCHANGED=YES
+```
+
+The exact preprocessor tuple is now known:
+
+```text
+#UNDEFINE DENSITY
+#UNDEFINE POPPING
+#UNDEFINE PIMIDE
+#UNDEFINE DUMMY_FILL
+#DEFINE VAR_ANT_RATIO
+```
+
+`DENSITY=UNDEFINED` establishes the seed as a base-DRC configuration and
+requires a separate density-enabled run. `VAR_ANT_RATIO=DEFINED` enables the
+additional variable-ratio antenna family; it is not a suppression. The
+primary control labels `DUMMY_FILL` as a dummy-pattern generation selector,
+but its rule-deck impact still requires review. The meanings and coverage
+effects of `POPPING` and `PIMIDE` are not established by the generated control
+alone and must not be guessed.
+
+The corrected review therefore closed the executable-contract defect without
+authorizing the next execution stage:
+
+```text
+STATUS=PASS
+PREPROCESSOR_DIRECTIVE_COUNT=5
+NON_DENSITY_PREPROCESSOR_DIRECTIVE_COUNT=4
+PREPROCESSOR_DIRECTIVE_REVIEW_STATUS=REVIEW_REQUIRED
+SEED_TECHNICAL_REVIEW_STATUS=REVIEW_REQUIRED
+ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN
+TEMPLATE_SELECTION_AUTHORIZED=NO
+CROSS_BLOCK_TEMPLATE_REUSE_AUTHORIZED=NO
+STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=POSITION_PVS_DRC_SEED_PREPROCESSOR_MANUAL_REVIEW
+```
+
+The next checked-in transaction,
+`server_review_position_core_pvs_drc_preprocessor.sh`, binds this exact R06b
+diagnostic, compares the directive tuple across all 114 discovered controls,
+captures the primary GUI-preset descriptions and adjacent comments, and
+snapshots the exact `pvtech.lib` configuration and references. It remains
+read-only and cannot create a replay directory or launch PVS.
+
+Compact R06b evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_seed_review_20260717_133839/
+```
