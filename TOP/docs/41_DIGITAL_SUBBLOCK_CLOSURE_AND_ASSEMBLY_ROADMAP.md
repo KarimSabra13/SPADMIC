@@ -1,6 +1,7 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active; Position TC Genus accepted.
+Status: phased server execution active; Position Innovus clean baseline reviewed,
+reservation-corrected replay required.
 
 Date: 2026-07-17.
 
@@ -72,7 +73,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | TC Genus PASS; run isolated Innovus |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Clean OOC baseline; replay grid-safe bbox |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -99,8 +100,10 @@ All coordinates are top-level microns:
 The OOC generators subtract a `10 um` margin from each hard reservation:
 
 ```text
-position core = 931.695 um x 640.000 um
-event core    = 217.460 um x 200.000 um
+position requested core = 931.280 um x 639.520 um
+position expected die   = 951.440 um x 659.680 um
+event requested core    = 217.280 um x 199.360 um
+event expected die      = 237.440 um x 219.520 um
 ```
 
 These are maximum reserved envelopes, not permission to increase placement
@@ -118,6 +121,7 @@ GENUS_TC_TIMING_STATUS=PASS
 INNOVUS_REGULAR_CONNECTIVITY_STATUS=PASS
 INNOVUS_SPECIAL_CONNECTIVITY_STATUS=PASS
 INNOVUS_DRC_STATUS=PASS
+TOP_RESERVATION_FIT_STATUS=PASS
 GDS_LAYER_MAP_STATUS=PASS
 GDS_MERGE_STATUS=PASS
 LEF_BBOX_PARITY_STATUS=PASS
@@ -308,6 +312,51 @@ done
 
 Do not stage a package unless all Innovus gates are zero and the GDS audit
 proves both map and merge.
+
+#### Recorded Position Step 2 Result
+
+The first isolated Position implementation ran in the foreground on
+2026-07-17 from exact commit
+`64a1a29846f42b382aea4d1afbed8455963fbbec`, bound to the accepted Genus run
+`genus_ooc_position_core_20260717_101642`:
+
+```text
+POSITION_PNR_RUN=innovus_ooc_harden_position_core_20260717_111443
+POSITION_PNR_RC=0
+RESULT=ABSTRACT_READY_FOR_TOP_REVIEW
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_STATUS=PASS
+MET1_MIN_AREA_MARKER_COUNT=0
+ANTENNA_MARKER_COUNT=0
+OTHER_MARKER_COUNT=0
+POSTROUTE_SETUP_TIMING=PASS
+POSTROUTE_HOLD_TIMING=PASS
+WORST_REPORTED_SETUP_SLACK_PS=26
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS_SHA256=49a7a030f24752226b39ba7a4371ab62a1927c42bf7494ecc6abccf75f12eaac
+```
+
+The physical route tuple is clean, but top review rejected this GDS as an
+immutable package candidate. `verifyConnectivity` reports an actual design
+boundary of `952.000 x 660.240 um`; the fixed `POSITION_CORE` reservation is
+only `951.695 x 660.000 um`. The excess is `0.305 um` in width and `0.240 um`
+in height. Packaging or PVS on this GDS would be wasted because the required
+floorplan replay changes its hash.
+
+The OOC generator now reads the checked-in region CSV rather than duplicating
+Position/Event coordinates, floors the usable core to the `0.560 um` grid,
+and predicts a Position die of `951.440 x 659.680 um`. Innovus now records
+actual die dimensions and requires `TOP_RESERVATION_FIT_STATUS=PASS` before
+returning `ABSTRACT_READY_FOR_TOP_REVIEW`.
+
+The run-level `SUMMARY.md` also contained three nonphysical fallback strings:
+`default`, `MET1 MET3`, and deferred PG hookup. The authoritative status
+report proves `met1_effort`, `MET1-MET3`, and `EXPLICIT_EXACT`. The wrapper
+now sources those summary fields from `ooc_harden_status.rpt`; this reporting
+defect did not invalidate the zero-violation route evidence.
 
 ## 7. Event Coordinator
 
@@ -503,15 +552,17 @@ bash TOP/scripts/sim/run_tb.sh \
 ```
 
 The RTL regressions pass `25/25` position checks and `24/24` event checks.
-Position TC Genus now passes on the recorded exact commit. Position Innovus
-and PVS, plus every Event Genus/Innovus/PVS gate, remain server work and must
-stay labeled `NOT_RUN` until separately executed and reviewed.
+Position TC Genus passes on the recorded exact commit. The first Position
+Innovus implementation is physically clean but rejected for top-reservation
+overflow; its grid-safe replay and all Position PVS gates remain open. Every
+Event Genus/Innovus/PVS gate also remains server work and must stay labeled
+`NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-Position Step 1 is accepted. The next server action is Position Step 2 only:
-pull the documented release commit, bind Innovus to
-`genus_ooc_position_core_20260717_101642`, run one isolated OOC implementation,
-and return the DRC, regular-connectivity, special-PG-connectivity, timing, and
-mapped/merged-GDS reports. Do not stage an immutable package or start Event
-Genus until the Position Innovus tuple has been reviewed.
+The next server action is one corrected Position Step 2 replay only. Pull the
+documented release commit, bind Innovus to the unchanged accepted Genus run
+`genus_ooc_position_core_20260717_101642`, and require both the original clean
+physical tuple and `TOP_RESERVATION_FIT_STATUS=PASS`. Do not stage the old
+`49a7a030...` GDS, run Position PVS, or start Event Genus before that replay is
+reviewed.

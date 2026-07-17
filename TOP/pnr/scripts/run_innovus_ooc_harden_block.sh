@@ -293,6 +293,45 @@ if [[ "$innovus_rc" -eq 0 ]] \
   result="ABSTRACT_READY_FOR_TOP_REVIEW"
 fi
 
+status_value() {
+  local key="$1"
+  if [[ -s "$status_rpt" ]]; then
+    awk -F= -v key="$key" '$1 == key {print substr($0, index($0, "=") + 1); exit}' "$status_rpt"
+  fi
+}
+
+summary_route_profile="$(status_value ROUTE_PROFILE)"
+summary_signal_route_layers="$(status_value SIGNAL_ROUTE_LAYERS)"
+summary_pg_local_route_mode="$(status_value PG_LOCAL_ROUTE_MODE)"
+summary_pg_route_strategy="$(status_value PG_ROUTE_STRATEGY)"
+
+if [[ -z "$summary_route_profile" ]]; then
+  summary_route_profile="${SPADMIC_OOC_ROUTE_PROFILE:-default}"
+fi
+if [[ -z "$summary_signal_route_layers" ]]; then
+  case "$summary_route_profile" in
+    met2_first|met2_first_antenna)
+      summary_signal_route_layers="MET2-MET3"
+      ;;
+    *)
+      summary_signal_route_layers="${SPADMIC_OOC_SIGNAL_BOTTOM_LAYER:-MET1}-${SPADMIC_OOC_SIGNAL_TOP_LAYER:-MET3}"
+      ;;
+  esac
+fi
+if [[ -z "$summary_pg_local_route_mode" ]]; then
+  case "${SPADMIC_OOC_ENABLE_PG_SROUTE:-0}" in
+    1|yes|YES|true|TRUE|on|ON)
+      summary_pg_local_route_mode="ENABLED_FROM_ENVIRONMENT"
+      ;;
+    *)
+      summary_pg_local_route_mode="DEFERRED_TO_TOP_LEVEL"
+      ;;
+  esac
+fi
+if [[ -z "$summary_pg_route_strategy" ]]; then
+  summary_pg_route_strategy="UNREPORTED"
+fi
+
 {
   echo "block,top_module,genus_run_id,innovus_run_id,netlist,sdc,result,status_report,handoff_root"
   printf '%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
@@ -313,24 +352,12 @@ fi
   echo "- Commit: \`$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)\`"
   echo "- XH018 stack: \`$MPTDC_XH018_STACK\`"
   echo "- Standard-cell family: \`$MPTDC_STDCELL_FAMILY\`"
-  echo "- OOC route profile: \`${SPADMIC_OOC_ROUTE_PROFILE:-default}\`"
-  case "${SPADMIC_OOC_ROUTE_PROFILE:-default}" in
-    met2_first|met2_first_antenna)
-      echo "- Ordinary signal route layers: \`MET2 MET3\`"
-      ;;
-    *)
-      echo "- Ordinary signal route layers: \`${SPADMIC_OOC_SIGNAL_BOTTOM_LAYER:-MET1} ${SPADMIC_OOC_SIGNAL_TOP_LAYER:-MET3}\`"
-      ;;
-  esac
+  echo "- OOC route profile: \`$summary_route_profile\`"
+  echo "- Ordinary signal route layers: \`$summary_signal_route_layers\`"
   echo "- Power access layer: \`METTP\`"
-  case "${SPADMIC_OOC_ENABLE_PG_SROUTE:-0}" in
-    1|yes|YES|true|TRUE|on|ON)
-    echo "- Local PG special route: \`experimental enabled\`"
-      ;;
-    *)
-    echo "- Local PG special route: \`deferred to top-level hookup\`"
-      ;;
-  esac
+  echo "- Local PG route mode: \`$summary_pg_local_route_mode\`"
+  echo "- PG route strategy: \`$summary_pg_route_strategy\`"
+  echo "- Physical configuration source: \`$status_rpt\`"
   echo "- Layout audit: \`$LAYOUT_AUDIT_DIR\`"
   echo "- Handoff root: \`$HANDOFF_ROOT\`"
   echo "- Innovus return code: \`$innovus_rc\`"

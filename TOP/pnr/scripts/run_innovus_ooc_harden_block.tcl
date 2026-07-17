@@ -960,7 +960,82 @@ proc spadmic_ooc_floorplan {} {
     spadmic_ooc_try_first FLOORPLAN $cmds 1
 }
 
+proc spadmic_ooc_normalize_box {box} {
+    while {[llength $box] == 1 && [llength [lindex $box 0]] > 1} {
+        set box [lindex $box 0]
+    }
+    return $box
+}
+
+proc spadmic_ooc_capture_floorplan_geometry {} {
+    set report [file join $::spadmic_ooc_reports_dir floorplan_geometry.rpt]
+    set reserve_llx [spadmic_ooc_cfg_default prelim_top_bbox_llx_um ""]
+    set reserve_lly [spadmic_ooc_cfg_default prelim_top_bbox_lly_um ""]
+    set reserve_urx [spadmic_ooc_cfg_default prelim_top_bbox_urx_um ""]
+    set reserve_ury [spadmic_ooc_cfg_default prelim_top_bbox_ury_um ""]
+    if {$reserve_llx eq "" || $reserve_lly eq "" || $reserve_urx eq "" || $reserve_ury eq ""} {
+        spadmic_ooc_status_set TOP_RESERVATION_FIT_STATUS NOT_APPLICABLE
+        spadmic_ooc_write_text $report [list \
+            "LABEL=SPADMIC_OOC_FLOORPLAN_GEOMETRY" \
+            "STATUS=NOT_APPLICABLE" \
+            "REASON=complete_preliminary_top_bbox_not_configured"]
+        return
+    }
+    if {[catch {set die_box [spadmic_ooc_normalize_box [dbGet top.fPlan.box]]} err]} {
+        spadmic_ooc_status_set TOP_RESERVATION_FIT_STATUS FAIL
+        spadmic_ooc_write_text $report [list \
+            "LABEL=SPADMIC_OOC_FLOORPLAN_GEOMETRY" \
+            "STATUS=FAIL" \
+            "ERROR=[spadmic_ooc_report_value $err]"]
+        return
+    }
+    if {[llength $die_box] != 4} {
+        spadmic_ooc_status_set TOP_RESERVATION_FIT_STATUS FAIL
+        spadmic_ooc_write_text $report [list \
+            "LABEL=SPADMIC_OOC_FLOORPLAN_GEOMETRY" \
+            "STATUS=FAIL" \
+            "ERROR=unexpected_die_box_[spadmic_ooc_report_value $die_box]"]
+        return
+    }
+    lassign $die_box die_llx die_lly die_urx die_ury
+    set die_width [expr {double($die_urx) - double($die_llx)}]
+    set die_height [expr {double($die_ury) - double($die_lly)}]
+    set reserve_width [expr {double($reserve_urx) - double($reserve_llx)}]
+    set reserve_height [expr {double($reserve_ury) - double($reserve_lly)}]
+    set width_margin [expr {$reserve_width - $die_width}]
+    set height_margin [expr {$reserve_height - $die_height}]
+    set tolerance [spadmic_ooc_cfg_default floorplan_fit_tolerance_um 0.001]
+    set fit_status FAIL
+    if {$width_margin >= -$tolerance && $height_margin >= -$tolerance} {
+        set fit_status PASS
+    }
+    set ::spadmic_ooc_actual_die_width_um [format %.3f $die_width]
+    set ::spadmic_ooc_actual_die_height_um [format %.3f $die_height]
+    spadmic_ooc_status_set ACTUAL_DIE_BBOX_UM [join $die_box { }]
+    spadmic_ooc_status_set ACTUAL_DIE_WIDTH_UM [format %.3f $die_width]
+    spadmic_ooc_status_set ACTUAL_DIE_HEIGHT_UM [format %.3f $die_height]
+    spadmic_ooc_status_set TOP_RESERVATION_WIDTH_UM [format %.3f $reserve_width]
+    spadmic_ooc_status_set TOP_RESERVATION_HEIGHT_UM [format %.3f $reserve_height]
+    spadmic_ooc_status_set TOP_RESERVATION_WIDTH_MARGIN_UM [format %.3f $width_margin]
+    spadmic_ooc_status_set TOP_RESERVATION_HEIGHT_MARGIN_UM [format %.3f $height_margin]
+    spadmic_ooc_status_set TOP_RESERVATION_FIT_STATUS $fit_status
+    spadmic_ooc_write_text $report [list \
+        "LABEL=SPADMIC_OOC_FLOORPLAN_GEOMETRY" \
+        "STATUS=$fit_status" \
+        "ACTUAL_DIE_BBOX_UM=[join $die_box { }]" \
+        "ACTUAL_DIE_WIDTH_UM=[format %.3f $die_width]" \
+        "ACTUAL_DIE_HEIGHT_UM=[format %.3f $die_height]" \
+        "TOP_RESERVATION_WIDTH_UM=[format %.3f $reserve_width]" \
+        "TOP_RESERVATION_HEIGHT_UM=[format %.3f $reserve_height]" \
+        "TOP_RESERVATION_WIDTH_MARGIN_UM=[format %.3f $width_margin]" \
+        "TOP_RESERVATION_HEIGHT_MARGIN_UM=[format %.3f $height_margin]" \
+        "FIT_TOLERANCE_UM=[format %.3f $tolerance]"]
+}
+
 proc spadmic_ooc_die_size {} {
+    if {[info exists ::spadmic_ooc_actual_die_width_um] && [info exists ::spadmic_ooc_actual_die_height_um]} {
+        return [list $::spadmic_ooc_actual_die_width_um $::spadmic_ooc_actual_die_height_um]
+    }
     set core_w [spadmic_ooc_core_width_um]
     set core_h [spadmic_ooc_core_height_um]
     set margin [spadmic_ooc_cfg core_margin_um]
@@ -1660,10 +1735,13 @@ proc spadmic_ooc_copy_handoff {} {
         }
     }
     set readme [file join $::spadmic_ooc_handoff_root README.md]
-    if {[spadmic_ooc_pg_sroute_enabled]} {
-        set pg_route_note "- PG special-route stitching: experimental local `sroute` enabled for this run; review `verify_connectivity_pg.rpt` before top use."
-    } else {
-        set pg_route_note "- PG special-route stitching: deferred to top-level hookup; this package exports only `METTP` access pins for `VDD`/`VSS`."
+    set pg_route_mode DEFERRED_TO_TOP_LEVEL
+    if {[info exists ::spadmic_ooc_status(PG_LOCAL_ROUTE_MODE)]} {
+        set pg_route_mode $::spadmic_ooc_status(PG_LOCAL_ROUTE_MODE)
+    }
+    set pg_route_strategy UNREPORTED
+    if {[info exists ::spadmic_ooc_status(PG_ROUTE_STRATEGY)]} {
+        set pg_route_strategy $::spadmic_ooc_status(PG_ROUTE_STRATEGY)
     }
     set route_profile [spadmic_ooc_route_profile]
     set route_layers "MET1-MET3"
@@ -1681,7 +1759,8 @@ proc spadmic_ooc_copy_handoff {} {
         "- OOC route profile: `$route_profile`" \
         "- Ordinary signal routing: `$route_layers`" \
         "- Power pins: one `VDD` and one `VSS` north-edge bar on `METTP`" \
-        $pg_route_note \
+        "- Local PG route mode: `$pg_route_mode`" \
+        "- PG route strategy: `$pg_route_strategy`" \
         "- PVS/LVS/PEX/MMMC: deferred; this package is not `SIGNOFF_READY`." \
     ]
     spadmic_ooc_status_set HANDOFF_COPY PASS
@@ -1730,6 +1809,10 @@ proc spadmic_ooc_write_status {} {
             set result INNOVUS_TC_OOC_REVIEW_REQUIRED
         }
     }
+    if {[info exists ::spadmic_ooc_status(TOP_RESERVATION_FIT_STATUS)] &&
+        $::spadmic_ooc_status(TOP_RESERVATION_FIT_STATUS) ni {PASS NOT_APPLICABLE}} {
+        set result INNOVUS_TC_OOC_REVIEW_REQUIRED
+    }
     set pg_ok 0
     if {[info exists ::spadmic_ooc_status(PG_CONNECTIVITY_STATUS)]} {
         if {$::spadmic_ooc_status(PG_CONNECTIVITY_STATUS) eq "PASS"} {
@@ -1768,6 +1851,7 @@ proc spadmic_ooc_main {} {
     spadmic_ooc_source_libraries
     spadmic_ooc_init_design
     spadmic_ooc_floorplan
+    spadmic_ooc_capture_floorplan_geometry
     spadmic_ooc_place_pins
     spadmic_ooc_route_layer_setup
     spadmic_ooc_create_pg_pins

@@ -54,16 +54,35 @@ class DigitalSubblockPortfolioTest(unittest.TestCase):
             ooc.generate_event_coordinator(portfolio.DEFAULT_AUDIT, root / "event")
             position = (root / "position" / "ooc_block_harden_config.tcl").read_text()
             event = (root / "event" / "ooc_block_harden_config.tcl").read_text()
-            self.assertIn("variable core_width_um {931.695}", position)
-            self.assertIn("variable core_height_um {640.000}", position)
+            self.assertIn("variable core_width_um {931.280}", position)
+            self.assertIn("variable core_height_um {639.520}", position)
+            self.assertIn("variable expected_die_width_um {951.440}", position)
+            self.assertIn("variable expected_die_height_um {659.680}", position)
             self.assertIn("variable pins_east", position)
             self.assertIn("{pkt_valid_o}", position)
-            self.assertIn("variable core_width_um {217.460}", event)
-            self.assertIn("variable core_height_um {200.000}", event)
+            self.assertIn("variable core_width_um {217.280}", event)
+            self.assertIn("variable core_height_um {199.360}", event)
+            self.assertIn("variable expected_die_width_um {237.440}", event)
+            self.assertIn("variable expected_die_height_um {219.520}", event)
             for config in (position, event):
                 self.assertIn("variable enable_pg_sroute {1}", config)
                 self.assertIn("variable pg_route_strategy {explicit_exact}", config)
                 self.assertIn("variable route_profile {met1_effort}", config)
+                self.assertIn("variable floorplan_grid_um {0.560}", config)
+
+            position_manifest = (
+                root / "position" / "ooc_harden_input_manifest.csv"
+            ).read_text()
+            event_manifest = (
+                root / "event" / "ooc_harden_input_manifest.csv"
+            ).read_text()
+            for manifest in (position_manifest, event_manifest):
+                self.assertIn("floorplan_regions", manifest)
+                self.assertIn("spadmic_digital_floorplan_regions.csv", manifest)
+
+            generator = OOC_PATH.read_text()
+            self.assertIn('region = floorplan_region("POSITION_CORE")', generator)
+            self.assertIn('region = floorplan_region("EVENT_COORDINATOR")', generator)
 
     def test_position_wrapper_is_transparent_and_used_by_matrix_top(self) -> None:
         wrapper = (REPO / "TOP" / "rtl" / "spadmic_position_core.sv").read_text()
@@ -98,6 +117,14 @@ class DigitalSubblockPortfolioTest(unittest.TestCase):
             tcl,
         )
         self.assertIn("EAST pins_east", tcl)
+        self.assertIn("proc spadmic_ooc_capture_floorplan_geometry", tcl)
+        self.assertIn("TOP_RESERVATION_FIT_STATUS", tcl)
+        self.assertIn("TOP_RESERVATION_WIDTH_MARGIN_UM", tcl)
+        self.assertIn("TOP_RESERVATION_HEIGHT_MARGIN_UM", tcl)
+        self.assertLess(
+            tcl.index("    spadmic_ooc_capture_floorplan_geometry\n"),
+            tcl.index("    spadmic_ooc_place_pins\n"),
+        )
 
 
 if __name__ == "__main__":

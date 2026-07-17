@@ -2827,3 +2827,86 @@ Negative rule: the positive `14 ps` WNS is deliberately not called MMMC
 closure. Position still needs isolated Innovus placement/CTS/route, zero DRC,
 zero regular and special connectivity debt, mapped/merged GDS audit, immutable
 packaging, PVS base and density DRC, and explicit LVS `MATCH` before promotion.
+
+### P09-R02 Clean Innovus Baseline Rejected by Top Bbox Review
+
+The isolated Position Innovus run executed in the foreground on 2026-07-17
+from exact repository state:
+
+```text
+BRANCH=SPADMIC_test
+HEAD=64a1a29846f42b382aea4d1afbed8455963fbbec
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+POSITION_GENUS_RUN=genus_ooc_position_core_20260717_101642
+POSITION_PNR_RUN=innovus_ooc_harden_position_core_20260717_111443
+POSITION_PNR_RC=0
+```
+
+The accepted physical evidence inside the run is:
+
+```text
+RESULT=ABSTRACT_READY_FOR_TOP_REVIEW
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+MET1_MIN_AREA_MARKER_COUNT=0
+ANTENNA_MARKER_COUNT=0
+OTHER_MARKER_COUNT=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_STATUS=PASS
+POSTROUTE_SETUP_TIMING=PASS
+POSTROUTE_HOLD_TIMING=PASS
+WORST_REPORTED_SETUP_SLACK_PS=26
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS_BYTES=11490808
+GDS_SHA256=49a7a030f24752226b39ba7a4371ab62a1927c42bf7494ecc6abccf75f12eaac
+ABSTRACT_LEF_SHA256=db1634f39f3bd74d367165543adf1d886aee5b62efdd46c37e8205599778faf7
+ROUTED_PG_NETLIST_SHA256=d747840553b92ed974fc64e819735bbccfb188b13eb5e18ba49d7e5053fbc24f
+```
+
+Regular and VDD/VSS special connectivity each report zero violations and zero
+warnings. `verify_drc` reports zero violations across all 12 subareas. The 50
+reported setup paths are positive; the worst shown path has `0.026 ns` slack
+in `tc_view`. This remains typical-only, non-OCV evidence with SI off, not MMMC
+or signoff.
+
+Top review found a separate package blocker. The connectivity reports expose
+the actual Innovus design boundary as `952.000 x 660.240 um`, while the audited
+`POSITION_CORE` reservation is `951.695 x 660.000 um`. Therefore:
+
+```text
+OOC_ROUTE_STATUS=CLEAN
+TOP_RESERVATION_WIDTH_EXCESS_UM=0.305
+TOP_RESERVATION_HEIGHT_EXCESS_UM=0.240
+TOP_RESERVATION_FIT_STATUS=FAIL_DERIVED_FROM_REPORTED_BOUNDARY
+IMMUTABLE_PACKAGE_AUTHORIZED=NO
+PVS_AUTHORIZED=NO
+NEXT_GATE=POSITION_GRID_SAFE_INNOVUS_REPLAY
+```
+
+The run is retained as useful route-feasibility evidence, but its GDS is not
+an immutable PVS candidate. PVS would be wasted because a corrected floorplan
+replay necessarily changes the GDS hash.
+
+Root causes and corrections:
+
+- Position and Event OOC plans duplicated hard-coded reservation coordinates
+  instead of consuming `spadmic_digital_floorplan_regions.csv`.
+- The requested core did not reserve for Innovus's `0.560 um` site/grid
+  snapping of the core margins and dimensions.
+- The wrapper did not compare the actual `top.fPlan.box` against the fixed
+  top-level reservation.
+- Run `SUMMARY.md` echoed environment defaults for route/PG fields instead of
+  the generated physical status.
+
+The generator now reads the checked-in reservation, requests a grid-safe
+Position core of `931.280 x 639.520 um`, and predicts a
+`951.440 x 659.680 um` die. Innovus now writes `floorplan_geometry.rpt` and
+cannot return `ABSTRACT_READY_FOR_TOP_REVIEW` when
+`TOP_RESERVATION_FIT_STATUS` is not `PASS`. Summary route profile, route-layer,
+PG mode, and PG strategy fields now come from `ooc_harden_status.rpt`.
+
+No RTL, accepted Genus artifact, timing constraint, placement reservation, or
+PDK input changed. The next run must reuse the exact accepted Genus netlist and
+SDC hashes, then repeat every Innovus physical gate before packaging.

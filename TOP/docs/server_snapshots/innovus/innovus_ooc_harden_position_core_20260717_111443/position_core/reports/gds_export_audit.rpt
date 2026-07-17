@@ -1,0 +1,14 @@
+LABEL=SPADMIC_INNOVUS_GDS_EXPORT_AUDIT
+STATUS=PASS
+GDS_FILE_STATUS=PASS
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+GDS=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_position_core_20260717_111443/blocks/position_core/outputs/position_core.gds
+GDS_BYTES=11490808
+GDS_SHA256=49a7a030f24752226b39ba7a4371ab62a1927c42bf7494ecc6abccf75f12eaac
+STREAM_MAP=/eda/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_HD_1131/pnr_streamout.map
+STREAM_MAP_RESOLVED=/data/pdk/xfab/xh018/cadence/v10_1/PDK/IC61/v10_1_1/TECH_XH018_HD_1131/pnr_streamout.map
+STREAM_MAP_SHA256=4d7b850f74ef193b6bc7b15b1e52fd38ba61cc4a6e1b283c4201343a20ad233d
+REQUIRED_MERGE=/data/pdk/xfab/xh018/diglibs/D_CELLS_JIHD/v6_0/gds_cdl/v6_0_0/gds/xh018_D_CELLS_JIHD.gds
+INNOVUS_LOG=/sim/ksabra/SPADMIC_work/innovus/innovus_ooc_harden_position_core_20260717_111443/blocks/position_core/logs/innovus.log
+ERROR_COUNT=0

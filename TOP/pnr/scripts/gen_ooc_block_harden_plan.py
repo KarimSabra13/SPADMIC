@@ -19,6 +19,10 @@ from typing import Iterable
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TX_SRC_DATA_MANIFEST = REPO_ROOT / "TOP" / "rtl" / "interfaces" / "tx_src_data_flat.csv"
 TX_STREAM_PIN_CONTRACT = REPO_ROOT / "TOP" / "pnr" / "interfaces" / "tx_packet_strip_pin_contract.csv"
+FLOORPLAN_REGIONS = (
+    REPO_ROOT / "TOP" / "pnr" / "assembly" / "spadmic_digital_floorplan_regions.csv"
+)
+OOC_FLOORPLAN_GRID_UM = 0.56
 TX_ASSEMBLY_ORIGIN_X_UM = 61.980
 TX_PACKET_DIE_HEIGHT_UM = 366.800
 TX_STRIP_DIE_HEIGHT_UM = 180.880
@@ -59,6 +63,45 @@ PIN_HEADER = [
 def read_headered_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="") as fh:
         return list(csv.DictReader(fh))
+
+
+def floorplan_region(
+    name: str,
+    path: Path = FLOORPLAN_REGIONS,
+) -> tuple[float, float, float, float]:
+    require_file(path)
+    matches = [row for row in read_headered_csv(path) if row["region"] == name]
+    if len(matches) != 1:
+        raise SystemExit(f"floorplan region {name} must have exactly one row: {path}")
+    row = matches[0]
+    if row["kind"] != "HARD_RESERVATION":
+        raise SystemExit(f"floorplan region {name} is not a hard reservation: {path}")
+    return tuple(
+        float(row[key]) for key in ("llx_um", "lly_um", "urx_um", "ury_um")
+    )
+
+
+def grid_safe_core_dimensions(
+    region: tuple[float, float, float, float],
+    core_margin_um: float,
+    grid_um: float = OOC_FLOORPLAN_GRID_UM,
+) -> tuple[float, float, float, float]:
+    if grid_um <= 0.0:
+        raise ValueError("floorplan grid must be positive")
+    snapped_margin = math.ceil((core_margin_um - 1e-9) / grid_um) * grid_um
+    reservation_width = region[2] - region[0]
+    reservation_height = region[3] - region[1]
+    core_width = math.floor(
+        (reservation_width - (2.0 * snapped_margin) + 1e-9) / grid_um
+    ) * grid_um
+    core_height = math.floor(
+        (reservation_height - (2.0 * snapped_margin) + 1e-9) / grid_um
+    ) * grid_um
+    if core_width <= 0.0 or core_height <= 0.0:
+        raise ValueError("hard reservation is too small after grid-safe margins")
+    expected_die_width = core_width + (2.0 * snapped_margin)
+    expected_die_height = core_height + (2.0 * snapped_margin)
+    return core_width, core_height, expected_die_width, expected_die_height
 
 
 def read_pin_csv(path: Path) -> list[dict[str, str]]:
@@ -542,10 +585,11 @@ def generate_event_coordinator(layout_dir: Path, out_dir: Path) -> None:
         require_file(path)
 
     instances = read_headered_csv(instances_csv)
-    region = (1500.000, 280.000, 1737.460, 500.000)
+    region = floorplan_region("EVENT_COORDINATOR")
     core_margin_um = 10.0
-    core_width_um = region[2] - region[0] - (2.0 * core_margin_um)
-    core_height_um = region[3] - region[1] - (2.0 * core_margin_um)
+    core_width_um, core_height_um, expected_die_width_um, expected_die_height_um = (
+        grid_safe_core_dimensions(region, core_margin_um)
+    )
     pin_plan = {
         "WEST": [
             "clk_sys",
@@ -595,6 +639,7 @@ def generate_event_coordinator(layout_dir: Path, out_dir: Path) -> None:
         input_manifest,
         {
             "layout_audit_dir": layout_dir,
+            "floorplan_regions": FLOORPLAN_REGIONS,
             "instances_enriched": instances_csv,
             "nets": nets_csv,
         },
@@ -621,6 +666,9 @@ def generate_event_coordinator(layout_dir: Path, out_dir: Path) -> None:
             "prelim_top_bbox_lly_um": f"{region[1]:.3f}",
             "prelim_top_bbox_urx_um": f"{region[2]:.3f}",
             "prelim_top_bbox_ury_um": f"{region[3]:.3f}",
+            "floorplan_grid_um": f"{OOC_FLOORPLAN_GRID_UM:.3f}",
+            "expected_die_width_um": f"{expected_die_width_um:.3f}",
+            "expected_die_height_um": f"{expected_die_height_um:.3f}",
             "physical_region": "EVENT_COORDINATOR",
             "route_profile": "met1_effort",
             "enable_pg_sroute": "1",
@@ -659,10 +707,11 @@ def generate_position_core(layout_dir: Path, out_dir: Path) -> None:
 
     instances = read_headered_csv(instances_csv)
     matrix_pins = read_pin_csv(matrix_pins_csv)
-    region = (528.305, 20.000, 1480.000, 680.000)
+    region = floorplan_region("POSITION_CORE")
     core_margin_um = 10.0
-    core_width_um = region[2] - region[0] - (2.0 * core_margin_um)
-    core_height_um = region[3] - region[1] - (2.0 * core_margin_um)
+    core_width_um, core_height_um, expected_die_width_um, expected_die_height_um = (
+        grid_safe_core_dimensions(region, core_margin_um)
+    )
     pin_plan = {
         "WEST": [
             "clk_sys",
@@ -704,6 +753,7 @@ def generate_position_core(layout_dir: Path, out_dir: Path) -> None:
         input_manifest,
         {
             "layout_audit_dir": layout_dir,
+            "floorplan_regions": FLOORPLAN_REGIONS,
             "instances_enriched": instances_csv,
             "matrix_pins": matrix_pins_csv,
             "nets": nets_csv,
@@ -731,6 +781,9 @@ def generate_position_core(layout_dir: Path, out_dir: Path) -> None:
             "prelim_top_bbox_lly_um": f"{region[1]:.3f}",
             "prelim_top_bbox_urx_um": f"{region[2]:.3f}",
             "prelim_top_bbox_ury_um": f"{region[3]:.3f}",
+            "floorplan_grid_um": f"{OOC_FLOORPLAN_GRID_UM:.3f}",
+            "expected_die_width_um": f"{expected_die_width_um:.3f}",
+            "expected_die_height_um": f"{expected_die_height_um:.3f}",
             "physical_region": "POSITION_CORE",
             "route_profile": "met1_effort",
             "enable_pg_sroute": "1",
@@ -752,6 +805,7 @@ def generate_position_core(layout_dir: Path, out_dir: Path) -> None:
         instances=instances,
         extra_lines=[
             f"Reserved top bbox=({region[0]:.3f}, {region[1]:.3f})-({region[2]:.3f}, {region[3]:.3f}) um.",
+            f"Grid-safe expected die size={expected_die_width_um:.3f} um x {expected_die_height_um:.3f} um on the {OOC_FLOORPLAN_GRID_UM:.3f} um floorplan grid.",
             "The 192 snapshot inputs face north toward the matrix; packet output faces east toward packet aggregation.",
             f"Matrix audit pins read: `{len(matrix_pins)}`; exact top routes are deferred to the phase-p01 assembly checkpoint.",
             "Do not absorb the snapshot frontend or central event control into this macro without a new reviewed boundary contract.",

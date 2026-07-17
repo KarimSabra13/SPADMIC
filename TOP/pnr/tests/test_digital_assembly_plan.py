@@ -181,6 +181,13 @@ class DigitalAssemblyPlanTest(unittest.TestCase):
         self.assertIn("--required-merge \"$SPADMIC_STDCELL_GDS\"", wrapper)
         self.assertIn('[[ "$gds_audit_rc" -eq 0 ]]', wrapper)
         self.assertIn("</dev/null", wrapper)
+        self.assertIn('summary_route_profile="$(status_value ROUTE_PROFILE)"', wrapper)
+        self.assertIn('summary_signal_route_layers="$(status_value SIGNAL_ROUTE_LAYERS)"', wrapper)
+        self.assertIn('summary_pg_local_route_mode="$(status_value PG_LOCAL_ROUTE_MODE)"', wrapper)
+        self.assertIn('summary_pg_route_strategy="$(status_value PG_ROUTE_STRATEGY)"', wrapper)
+        self.assertIn('echo "- OOC route profile: \\`$summary_route_profile\\`"', wrapper)
+        self.assertIn('echo "- Local PG route mode: \\`$summary_pg_local_route_mode\\`"', wrapper)
+        self.assertNotIn('echo "- OOC route profile: \\`${SPADMIC_OOC_ROUTE_PROFILE:-default}\\`"', wrapper)
 
     def test_narrow_strip_clears_txrx_with_ten_um_margin(self) -> None:
         txrx = (3505.519, 464.920, 3638.910, 3265.795)
