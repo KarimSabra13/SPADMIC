@@ -463,6 +463,13 @@ Stage only the reviewed canonical replay, never an exploratory candidate.
 Package the mapped/merged GDS, abstract LEF, DEF, PG netlist, Genus TC gate,
 Innovus reports, and Innovus log with `stage_innovus_handoff.py`.
 
+The exact Position staging transaction is checked in as
+`TOP/ci/server_stage_position_core_handoff.sh`. It requires an explicit
+repository HEAD argument, refuses an existing package version, rechecks the
+source-run commit and accepted artifact hashes, runs package-local LVS source
+preparation and pin parity, audits the immutable package, and stops before
+PVS.
+
 For each hard child:
 
 1. Audit the staged package.
@@ -609,4 +616,6 @@ only. Stage exact run
 recorded GDS, abstract LEF, and routed-PG-netlist hashes, and preserve the
 package-local canonical LVS source and pin-parity report. Do not stage the old
 `49a7a030...` GDS, run Position PVS, or start Event Genus until the immutable
-package audit is reviewed.
+package audit is reviewed. Use
+`TOP/ci/server_stage_position_core_handoff.sh` with the documented exact
+release HEAD.
