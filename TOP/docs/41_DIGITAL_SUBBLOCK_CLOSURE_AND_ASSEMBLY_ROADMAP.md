@@ -658,3 +658,11 @@ Position template is used, record its exact embedded GDS and top before strict
 replacement. Do not guess these values, reuse a different block's template as
 if it were Position evidence, launch density DRC, launch LVS, or start Event
 Genus before the base-template replay contract is reviewed.
+
+Run `TOP/ci/server_discover_position_core_pvs_drc_template.sh` first. It only
+audits the immutable package, searches configured read-only roots, and hashes
+candidate control files into a separate diagnostics directory. A discovery
+`STATUS=PASS` means candidates were inventoried; it deliberately leaves
+`ATTRIBUTABLE_POSITION_TEMPLATE_STATUS=NOT_PROVEN`,
+`TEMPLATE_SELECTION_AUTHORIZED=NO`, and `PVS_REPLAY_AUTHORIZED=NO`. Review the
+candidate inventory before issuing the separate strict base-replay dry run.
