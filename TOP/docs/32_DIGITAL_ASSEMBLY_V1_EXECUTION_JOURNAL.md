@@ -4347,3 +4347,182 @@ The review launched no PVS process, and Event Genus correctly remained
 `OUTCOME_CLASS=ATTRIBUTABLE_MATCH` and `EVENT_OOC_START_AUTHORIZED=YES`, start
 Event TC Genus in the same foreground transaction. Position density debt still
 blocks Position promotion and signoff.
+
+### P09-R19 Position LVS Match Accepted Without PVS Rerun
+
+The corrected read-only review ran on 2026-07-20 from exact commit
+`b53b1fade963c6c57c6b0629ae9a4b21fdac06db`. Its diagnostic is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_lvs_match_review_20260720_163037
+```
+
+The source diagnostic, immutable PVS run, package, GDS, canonical source, CDL,
+positive evidence file, and every copied report retained their accepted
+hashes. All independent review gates passed:
+
+```text
+REVIEW_RC=0
+REVIEW_MANIFEST_RC=0
+SOURCE_FILE_GATE_RC=0
+SOURCE_HASH_GATE_RC=0
+SOURCE_DIAGNOSTIC_MANIFEST_RC=0
+SOURCE_STATUS_GATE_RC=0
+RUN_COPY_IDENTITY_GATE_RC=0
+RUN_MANIFEST_RC=0
+PACKAGE_SHA_MANIFEST_RC=0
+RUN_MATCH_GATE_RC=0
+RUN_REPLAY_GATE_RC=0
+RUN_ISOLATION_GATE_RC=0
+RUN_REFERENCE_GATE_RC=0
+RUN_CONTROL_GATE_RC=0
+PACKAGE_GATE_RC=0
+SOURCE_POST_RECHECK_RC=0
+PACKAGE_POST_REVIEW_SHA_MANIFEST_RC=0
+```
+
+The new directive-aware control audit recorded control SHA-256
+`fd3f7a3647e8a7aaf5d0fbec03073d45af592bbabe0b2bca88373e84d1f1b1be`
+and exactly one accepted executable value for each of `layout_path`, Verilog
+`schematic_path`, Spice `schematic_path`, and `mask_svdb_dir`. Its
+`ERROR_COUNT=0` resolves the prior unscoped literal-count failure.
+
+The accepted physical result is:
+
+```text
+STATUS=PASS
+RESULT=EXISTING_EXACT_GDS_PVS_LVS_MATCH_ACCEPTED
+OUTCOME_CLASS=ATTRIBUTABLE_MATCH
+PVS_WRAPPER_RC=0
+PVS_TOOL_RC=0
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+SOURCE_PVS_EXECUTED=YES
+PVS_EXECUTED=NO
+PVS_RERUN_AUTHORIZED=NO
+EVENT_OOC_START_AUTHORIZED=YES
+```
+
+This acceptance does not erase other Position gates:
+
+```text
+PVS_BASE_DRC_STATUS=PASS
+PVS_DENSITY_DRC_STATUS=FAIL
+PVS_DENSITY_DRC_PRIMARY_RESULTS=4
+DENSITY_DEBT_CLASS=OOC_WHOLE_EXTENT_MINIMUM_COVERAGE
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+Compact tracked evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_match_review_20260720_163037/
+```
+
+## P10 - Event Coordinator Server Closure
+
+### P10-R01 TC Genus Accepted
+
+Because the Position review authorized Event OOC start, Event Genus ran in the
+same foreground shell transaction on exact commit
+`b53b1fade963c6c57c6b0629ae9a4b21fdac06db`:
+
+```text
+EVENT_GENUS_RUN=genus_ooc_event_coordinator_20260720_163038
+EVENT_GENUS_ROOT=/sim/ksabra/SPADMIC_work/genus/genus_ooc_event_coordinator_20260720_163038/event_coordinator
+EVENT_ENV_RC=0
+EVENT_GENUS_RC=0
+```
+
+The exact TC and boundary gate passed:
+
+```text
+STATUS=PASS
+TC_TIMING_STATUS=PASS
+RESULT=READY_FOR_ISOLATED_INNOVUS_OOC
+TOP_MODULE=spadmic_event_coordinator
+CLOCK_NAME=clk_sys
+CLOCK_PERIOD_PS=6250.0
+CLOCK_REGISTER_COUNT=51
+EXPECTED_BASE_PORT_COUNT=30
+ACTUAL_BASE_PORT_COUNT=30
+EXPECTED_BIT_PORT_COUNT=63
+ACTUAL_BIT_PORT_COUNT=63
+UNRESOLVED_REFERENCE_COUNT=0
+WNS_PS=2143.7
+TNS_PS=0.0
+VIOLATING_PATH_COUNT=0
+MMMC_STATUS=NOT_RUN_TYPICAL_ONLY
+SIGNOFF_READY=NO
+POSTSYN_NETLIST_SHA256=b28454211dc5eeda84f17cc5864adcd1c15cd761a9d825e3f5a78182fe0b0ccb
+POSTSYN_SDC_SHA256=c32e0a54b392017256a790ec73352d7161093c73a4360fe933083c88f7d1cb6a
+ERROR_COUNT=0
+```
+
+The complete timing-intent report has zero findings in all classes. The QoR
+summary records 184 leaf instances, 48 sequential instances, 136
+combinational instances, cell area `5112.934`, net area `2713.204`, and total
+area `7826.138`. Warning classification has zero physical or timing-risk
+classes; the two retained tool warnings are `MESG-11` maximum-print-count
+messages and did not invalidate the TC gate.
+
+Compact tracked evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/genus/genus_ooc_event_coordinator_20260720_163038/
+```
+
+### P10-R02 Isolated Event Innovus Transaction Prepared
+
+`TOP/ci/server_run_event_coordinator_innovus.sh` is the only authorized next
+Cadence command. It binds the exact P10-R01 source run, source commit, netlist
+hash, and SDC hash; revalidates TC timing and the 30-port/63-bit boundary into
+a new diagnostic; creates and post-checks a hash manifest for the complete
+accepted Genus evidence set; checks the assembly portfolio; and launches one
+fresh Event Innovus process.
+
+The transaction accepts physical output only when all of these remain
+separate and pass:
+
+```text
+RESULT=ABSTRACT_READY_FOR_TOP_REVIEW
+TOP_RESERVATION_FIT_STATUS=PASS
+ACTUAL_DIE_WIDTH_UM=237.440
+ACTUAL_DIE_HEIGHT_UM=219.520
+INNOVUS_DRC_STATUS=PASS
+DRC_MARKER_TOTAL=0
+REGULAR_CONNECTIVITY_STATUS=PASS
+PG_CONNECTIVITY_STATUS=PASS
+POSTROUTE_SETUP_TIMING=PASS
+POSTROUTE_HOLD_TIMING=PASS
+GDS_LAYER_MAP_STATUS=PASS
+GDS_MERGE_STATUS=PASS
+RUN_ARTIFACT_HASH_GATE_RC=0
+SOURCE_POST_RECHECK_RC=0
+ASSEMBLY_INSERTION_AUTHORIZED=NO
+FULL_TOP_PNR_AUTHORIZED=NO
+```
+
+An attributable pass authorizes only immutable Event handoff staging. Event
+base DRC, density DRC, LVS, block promotion, MMMC, and signoff remain separate
+future gates.
+
+The full digital assembly remains ordered and blocked as follows:
+
+```text
+p00_tx: packet DRC debt plus strip PG/PVS closure remain
+p01_position: OOC LVS accepted; density debt open; waits for promoted p00
+p02_event_control: Event Genus ready; Innovus next; waits for promoted p01
+p03_matrix_interface: soft guided assembly waits for promoted p02
+p04_mptdc_frontend: blocked by missing final MPTDC abstracts and pin contract
+p05_csr_i2c: deferred until promoted p04 and pad/control contract
+```
+
+The four TX implementation children (`event_bundle_tx`, `output_fifo`,
+`ddr16_pairer`, and `ddrs2_adapter`) remain abstract-ready supporting evidence,
+not additional top-level macros to duplicate in the assembly. Full-top Genus
+and Innovus remain unauthorized.

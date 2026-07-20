@@ -46,6 +46,13 @@ class DigitalSubblockPortfolioTest(unittest.TestCase):
         mptdc = next(row for row in rows if row["block"] == "mptdc_frontend")
         self.assertEqual(mptdc["current_gate"], "BLOCKED_ABSTRACT_MISSING")
         self.assertEqual(mptdc["promotion_policy"], "NO_PROMOTION_WHILE_BLOCKED")
+        position = next(row for row in rows if row["block"] == "position_core")
+        event = next(row for row in rows if row["block"] == "event_coordinator")
+        self.assertEqual(
+            position["current_gate"],
+            "PVS_BASE_ZERO_DENSITY_FOUR_RULES_LVS_MATCH_ACCEPTED",
+        )
+        self.assertEqual(event["current_gate"], "GENUS_TC_READY_INNOVUS_NOT_RUN")
 
     def test_position_and_event_ooc_plans_use_reserved_geometry_and_exact_pg(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,10 +1,9 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active; Position base PVS DRC is attributable
-zero, density PVS DRC is attributable four-rule whole-extent debt, and three
-exact-GDS LVS attempts stopped before PVS. The latest passed replay but exposed
-one stale auxiliary CDL reference. One corrected foreground retry is
-authorized now.
+Status: phased server execution active. Position has attributable base DRC
+zero and an accepted exact-GDS LVS `MATCH`; its four-rule whole-extent density
+debt remains open. Event has a hash-bound typical-corner Genus `PASS` and is
+ready for one isolated Innovus OOC transaction. No assembly phase is promoted.
 
 Date: 2026-07-20.
 
@@ -55,6 +54,8 @@ TOP/docs/server_snapshots/pvs_drc/position_density_drc_20260720_133314/
 TOP/docs/server_snapshots/pvs_lvs/position_lvs_template_identity_20260720_141229_failed/
 TOP/docs/server_snapshots/pvs_lvs/position_lvs_semantic_audit_20260720_143505_failed/
 TOP/docs/server_snapshots/pvs_lvs/position_lvs_auxiliary_cdl_reference_20260720_152848_failed/
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_match_review_20260720_163037/
+TOP/docs/server_snapshots/genus/genus_ooc_event_coordinator_20260720_163038/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -87,8 +88,8 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground exact-GDS PVS LVS retry with auxiliary CDL normalization; retain density debt |
-| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Start immediately after attributable Position LVS |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Retain accepted LVS match; resolve density only at assembled-fill review or by formal waiver |
+| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run one hash-bound isolated Innovus OOC transaction |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
 | 5 | MPTDC frontend | Blocked soft region | unavailable final boundary | Wait for abstracts and pin contract |
@@ -807,55 +808,73 @@ The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
 `clk_sys`, external input delays/transitions, output delays, and output loads.
 Its logical and physical top remains `spadmic_event_coordinator`.
 
-After the read-only Position LVS match review passes, begin the same two-step
-process without waiting for Position density disposition:
+### Recorded Event Genus Result
+
+The read-only Position review passed at diagnostic
+`position_pvs_lvs_match_review_20260720_163037`, so Event Genus started in the
+same foreground transaction. The exact synthesis run is:
+
+```text
+SOURCE_COMMIT=b53b1fade963c6c57c6b0629ae9a4b21fdac06db
+EVENT_GENUS_RUN=genus_ooc_event_coordinator_20260720_163038
+EVENT_GENUS_RC=0
+STATUS=PASS
+TC_TIMING_STATUS=PASS
+RESULT=READY_FOR_ISOLATED_INNOVUS_OOC
+CLOCK_PERIOD_PS=6250.0
+CLOCK_REGISTER_COUNT=51
+EXPECTED_BASE_PORT_COUNT=30
+ACTUAL_BASE_PORT_COUNT=30
+EXPECTED_BIT_PORT_COUNT=63
+ACTUAL_BIT_PORT_COUNT=63
+UNRESOLVED_REFERENCE_COUNT=0
+WNS_PS=2143.7
+TNS_PS=0.0
+VIOLATING_PATH_COUNT=0
+POSTSYN_NETLIST_SHA256=b28454211dc5eeda84f17cc5864adcd1c15cd761a9d825e3f5a78182fe0b0ccb
+POSTSYN_SDC_SHA256=c32e0a54b392017256a790ec73352d7161093c73a4360fe933083c88f7d1cb6a
+MMMC_STATUS=NOT_RUN_TYPICAL_ONLY
+SIGNOFF_READY=NO
+```
+
+The timing-intent report has zero findings in every class. Warning
+classification has zero design-rule, inferred-latch, missing-delay,
+no-clock-waveform, tool-error, undriven, and unresolved findings. The two
+remaining tool warnings are the accepted `MESG-11` maximum-print-count class.
+QoR records 184 leaf instances, 48 sequential instances, cell area
+`5112.934`, and total estimated area `7826.138`.
+
+Compact tracked evidence is under:
+
+```text
+TOP/docs/server_snapshots/genus/genus_ooc_event_coordinator_20260720_163038/
+```
+
+### Next Event Transaction
+
+Run exactly one isolated Event Innovus process. The server driver binds the
+accepted source commit and both artifact hashes, reruns the Genus TC validator
+into a new diagnostic without modifying the source run, validates the checked
+floorplan portfolio, post-checks the complete accepted Genus evidence hash
+manifest, and then invokes only the Event hardening wrapper:
 
 ```bash
 set +e
 source /eda/cadence/eda_2023-2024
 export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
 
-EVENT_GENUS_RUN="genus_ooc_event_coordinator_$(date +%Y%m%d_%H%M%S)"
-bash TOP/syn/scripts/run_genus_ooc_block.sh \
-    event_coordinator \
-    "$EVENT_GENUS_RUN"
-EVENT_GENUS_RC=$?
-
-EVENT_GENUS_ROOT="$SPADMIC_WORK_ROOT/genus/$EVENT_GENUS_RUN/event_coordinator"
-echo "EVENT_GENUS_RC=$EVENT_GENUS_RC"
-cat "$EVENT_GENUS_ROOT/reports/timing/tc_ooc_gate.rpt" 2>/dev/null
+bash TOP/ci/server_run_event_coordinator_innovus.sh "$EXPECTED_HEAD"
+EVENT_INNOVUS_TRANSACTION_RC=$?
+echo "EVENT_INNOVUS_TRANSACTION_RC=$EVENT_INNOVUS_TRANSACTION_RC"
 ```
 
-Only after that gate passes:
-
-```bash
-set +e
-source /eda/cadence/eda_2023-2024
-export SPADMIC_WORK_ROOT=/sim/ksabra/SPADMIC_work
-
-EVENT_PNR_RUN="innovus_ooc_harden_event_coordinator_$(date +%Y%m%d_%H%M%S)"
-bash TOP/pnr/scripts/run_innovus_ooc_harden_block.sh \
-    event_coordinator \
-    "$EVENT_GENUS_RUN" \
-    "$EVENT_PNR_RUN"
-EVENT_PNR_RC=$?
-
-EVENT_PNR_ROOT="$SPADMIC_WORK_ROOT/innovus/$EVENT_PNR_RUN/blocks/event_coordinator"
-echo "EVENT_PNR_RC=$EVENT_PNR_RC"
-
-for REPORT in \
-    ooc_harden_status.rpt \
-    verify_connectivity_regular.rpt \
-    verify_connectivity_pg.rpt \
-    verify_drc_post_route.rpt \
-    gds_export_audit.rpt
-do
-    echo
-    echo "===== $REPORT ====="
-    cat "$EVENT_PNR_ROOT/reports/$REPORT" 2>/dev/null || \
-        echo "MISSING: $EVENT_PNR_ROOT/reports/$REPORT"
-done
-```
+Acceptance requires a grid-fit `237.440 x 219.520 um` die, zero Innovus DRC
+markers, regular and special PG connectivity `PASS`, setup and hold `PASS`,
+mapped/merged GDS audit `PASS`, and immutable source hashes after execution.
+Even on pass, Event PVS remains `NOT_RUN`, Event promotion remains `NO`, and
+the next gate is review plus immutable Event handoff staging. Event assembly
+insertion and full-top PnR remain explicitly unauthorized while `p00_tx` and
+`p01_position` are unpromoted.
 
 ## 8. Immutable Package and PVS
 
@@ -950,6 +969,28 @@ Never mutate an approved checkpoint in place. Each phase creates a new layout
 top, immutable package, base DRC run, density DRC run, LVS run, and approval
 gate.
 
+### Current Cross-Block Disposition
+
+Independent OOC qualification may move ahead of assembly insertion. The
+current state must therefore be read as this gate matrix, not as one global
+ready flag:
+
+| Scope | Current attributable state | Remaining gate | Assembly effect |
+| --- | --- | --- | --- |
+| TX packet core | exact-GDS LVS `MATCH`; provisional physical baseline | 4 Innovus MET1 minimum-area markers, 135 PVS antenna results, density not run | blocks `p00_tx` promotion |
+| TX DDR strip | signal route DRC/connectivity clean | internal PG reconstruction, mapped GDS, base+density DRC, LVS | blocks `p00_tx` promotion |
+| TX implementation children | `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and `ddrs2_adapter` abstracts are ready for top review | parent/package-level PG and PVS remain | supporting leaf evidence only; do not place as duplicate top macros |
+| Position core | base DRC `PASS`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p01_position` still waits for promoted `p00_tx` and density disposition |
+| Event coordinator | TC Genus and exact 30-port/63-bit boundary `PASS` | isolated Innovus, immutable handoff, base+density DRC, exact-GDS LVS | OOC Innovus may run now; `p02_event_control` still waits for promoted `p01` |
+| Central control | stable RTL in a soft guide | assembled timing, congestion, connectivity, and verification | inserted only with `p02_event_control` |
+| Matrix interface | stable RTL in a soft guide | guided placement, pin access, congestion, timing, DRC/LVS | inserted only after promoted `p02` |
+| MPTDC/TC frontend | route corridor and three axis blockages reserved | final MPTDC abstracts and exact pin contract are missing | hard stop at `p04_mptdc_frontend`; no invented dimensions or pins |
+| CSR/I2C | RTL present; physical wrapper deferred | promoted `p04`, pad contract, physical wrapper, assembled verification | deferred `p05_csr_i2c` |
+
+The required promotion order remains `p00_tx`, `p01_position`,
+`p02_event_control`, `p03_matrix_interface`, `p04_mptdc_frontend`, then
+`p05_csr_i2c`. Event OOC progress does not bypass TX or Position phase gates.
+
 ## 11. Negative Knowledge
 
 Do not repeat these failed or misleading methods:
@@ -1010,11 +1051,11 @@ source preparation, pin parity, rule semantics, option applicability, and
 strict preflight pass. Base PVS DRC has attributable report-level `0 (0)`
 evidence. Density PVS DRC has attributable `4 (4)` whole-extent coverage debt,
 not localized geometry debt. Exact-GDS LVS has explicit `MATCH` evidence. The
-first read-only acceptance review passed all immutable evidence gates but
-stopped on an unscoped raw control-path count; its directive-aware replacement
-remains server work.
-Every Event Genus/Innovus/PVS gate remains server work and must stay labeled
-`NOT_RUN` until separately executed and reviewed.
+directive-aware read-only review accepted that immutable match without rerunning
+PVS. Event TC Genus now passes with exact boundary parity, nonnegative WNS,
+zero TNS, zero violating paths, and pinned post-synthesis artifact hashes.
+Event Innovus and every Event PVS gate remain `NOT_RUN` until separately
+executed and reviewed.
 
 ## 13. Immediate Next Action
 
@@ -1040,13 +1081,29 @@ input hashes, run and diagnostic manifests, and post-execution package/source
 checks passed. The original transaction failed only its stale
 `SVDB_REWRITE_COUNT=1` assertion after execution.
 
-The first read-only review, diagnostic
-`position_pvs_lvs_match_review_20260720_161519`, revalidated every immutable
-hash, manifest, result, replay, isolation, and reference gate. It failed only
-an unscoped `pvslvsctl` full-path line-count gate and did not run PVS. Retry
-`TOP/ci/server_review_position_core_pvs_lvs_match.sh` against diagnostic
-`position_pvs_lvs_execution_20260720_155406`. The replacement audit must prove
-one exact executable GDS, Verilog, CDL, and run-local SVDB directive and return
-`OUTCOME_CLASS=ATTRIBUTABLE_MATCH`. On that pass, start Event TC Genus
-immediately and review Position density disposition in parallel. Position
-promotion remains forbidden because density is still `FAIL`.
+The corrected read-only review passed at
+`position_pvs_lvs_match_review_20260720_163037`. Its directive-aware audit
+proved one exact executable GDS, Verilog source, CDL, and run-local SVDB path;
+the review returned `OUTCOME_CLASS=ATTRIBUTABLE_MATCH` and did not rerun PVS.
+
+Event TC Genus then passed at
+`genus_ooc_event_coordinator_20260720_163038`. The immediate foreground action
+is one call to `TOP/ci/server_run_event_coordinator_innovus.sh` at the exact
+committed HEAD. Return the generated `event_innovus_execution_*` diagnostic,
+OOC status, regular and PG connectivity reports, DRC report, floorplan report,
+GDS audit, and manifest before staging a package.
+
+If that transaction is attributable `PASS`, the next Event sequence is:
+
+1. Review and stage an immutable Event GDS/LEF/DEF/PG-netlist handoff.
+2. Run Event base PVS DRC against the exact staged GDS.
+3. Run Event density PVS DRC and classify every nonzero rule.
+4. Run exact-GDS Event PVS LVS against its canonical source and CDL.
+5. Promote Event only when all required Event gates pass or an exact formal
+   disposition exists.
+
+In parallel, retain the Position density debt for assembled-fill review or a
+formal exact-rule waiver; do not rerun its accepted LVS. The assembly-critical
+workstream still starts with TX packet DRC repair and TX strip PG/PVS closure,
+because `p00_tx` must promote before Position or Event can be inserted into an
+assembly checkpoint. Full-top Genus and Innovus remain unauthorized.
