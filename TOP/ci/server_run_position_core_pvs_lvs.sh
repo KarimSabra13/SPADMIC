@@ -18,11 +18,18 @@ EXPECTED_SOURCE_SHA=a5e81c21e633ae1b55d8da5c8e971997f890d9cee42dff2f6cf9f9f43cad
 EXPECTED_CDL_SHA=5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf
 
 LVS_TEMPLATE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/PvsLVS/spadmic_tx_packet_core_HV
-TEMPLATE_GDS="$LVS_TEMPLATE/spadmic_tx_packet_core_HV.gds"
-TEMPLATE_SOURCE=/sim/ksabra/SPADMIC_work/oa_signoff/tx_packet_core_HV_20260710_105525/netlist/tx_packet_core.routed.pg.v
-TEMPLATE_LAYOUT_TOP=spadmic_tx_packet_core_HV
-TEMPLATE_SOURCE_TOP=spadmic_tx_packet_core
-TEMPLATE_CDL=./PvsLVS/spadmic_tx_packet_core_HV/spadmic_tx_packet_core_HV.cdl
+TEMPLATE_BASELINE_ID=SERVER_OBSERVED_20260720_141229
+EXPECTED_TEMPLATE_CONFIG_SHA=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+EXPECTED_TEMPLATE_PRESET_SHA=43d19579b0569863b1c5fcc317206cc5f3f70611b22f9bdea932d757ff902dfe
+EXPECTED_TEMPLATE_TECHNOLOGY_SHA=74a297facf6422635df2c58d79aa8b8ae46ca0b8232380471a88a182d8400ab6
+EXPECTED_TEMPLATE_PIPO1_SHA=ed8c1a13ab8ec90af3f367b4d408e5f9c767f1e99736e31f02c54be9fa91abbc
+EXPECTED_TEMPLATE_CONTROL_SHA=8e53876734717f4c0857f1310d08e3a4c8fb18aeaa7694800b7d0cdcd511c5e6
+EXPECTED_TEMPLATE_RUN_SHA=dfe5394bd98c828e868a7a3f18acda2f56f993ba58dcf8343f097858f77b0c27
+TEMPLATE_GDS=UNKNOWN
+TEMPLATE_SOURCE=UNKNOWN
+TEMPLATE_LAYOUT_TOP=UNKNOWN
+TEMPLATE_SOURCE_TOP=UNKNOWN
+TEMPLATE_AUDIT=UNKNOWN
 
 EXPECTED_DENSITY_STATUS_SHA=8ec65bc2a36c6ea51bb163e3bce796d8288f4dee25a4b4c27670a3309ef66686
 EXPECTED_DENSITY_RUN_SHA=9b6a1ec7fa75111a393a6a63f7af44cc66f1c7ef6334506d24cd35880c8ce90e
@@ -57,6 +64,7 @@ PACKAGE_GATE_RC=NOT_RUN
 PACKAGE_SHA_MANIFEST_RC=NOT_RUN
 TEMPLATE_FILE_GATE_RC=NOT_RUN
 TEMPLATE_IDENTITY_GATE_RC=NOT_RUN
+TEMPLATE_SEMANTIC_GATE_RC=NOT_RUN
 SOURCE_REFERENCE_GATE_RC=NOT_RUN
 PVS_WRAPPER_RC=NOT_RUN
 RUN_DIR=UNKNOWN
@@ -370,12 +378,12 @@ fi
 if [ "$RUN_OK" -eq 1 ]; then
     TEMPLATE_IDENTITY_GATE_RC=0
     for SPEC in \
-        ".config.rul|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" \
-        ".preset.autosave|24a96996d39f98e12c1b1bbc7dc7af74ff2ba5b1152dd0afe462b7ffb3cf2687" \
-        ".technology.rul|74a297facf6422635df2c58d79aa8b8ae46ca0b8232380471a88a182d8400ab6" \
-        "pipo1.setup|449148fe96167a6d0787861c3575a6f31f4c9598e972ee8a7026e9fb3383dc85" \
-        "pvslvsctl|7fc5ffd6115ee9ab9aa78a3964f01a43941a0926e2c1d1c53c5b7ede3f25767d" \
-        "run.pvs|8c0c4e925cf7e595be64685bf01e5bc3e9059ea655a4da0980e67d04dfc113a9"
+        ".config.rul|$EXPECTED_TEMPLATE_CONFIG_SHA" \
+        ".preset.autosave|$EXPECTED_TEMPLATE_PRESET_SHA" \
+        ".technology.rul|$EXPECTED_TEMPLATE_TECHNOLOGY_SHA" \
+        "pipo1.setup|$EXPECTED_TEMPLATE_PIPO1_SHA" \
+        "pvslvsctl|$EXPECTED_TEMPLATE_CONTROL_SHA" \
+        "run.pvs|$EXPECTED_TEMPLATE_RUN_SHA"
     do
         NAME="${SPEC%%|*}"
         EXPECTED_SHA="${SPEC#*|}"
@@ -387,6 +395,39 @@ if [ "$RUN_OK" -eq 1 ]; then
     done
     echo "TEMPLATE_IDENTITY_GATE_RC=$TEMPLATE_IDENTITY_GATE_RC"
     [ "$TEMPLATE_IDENTITY_GATE_RC" -eq 0 ] || RUN_OK=0
+fi
+
+if [ "$RUN_OK" -eq 1 ]; then
+    TEMPLATE_AUDIT="$DIAGNOSTIC_ROOT/template_scaffold_audit.rpt"
+    python3 TOP/pnr/scripts/audit_pvs_lvs_control_scaffold.py \
+        --template "$LVS_TEMPLATE" \
+        --output "$TEMPLATE_AUDIT" \
+        --expected-pvs-bin "$PVS_BIN"
+    TEMPLATE_SEMANTIC_GATE_RC=$?
+    echo "TEMPLATE_SEMANTIC_GATE_RC=$TEMPLATE_SEMANTIC_GATE_RC"
+
+    if [ "$TEMPLATE_SEMANTIC_GATE_RC" -eq 0 ]; then
+        TEMPLATE_GDS="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_GDS)"
+        TEMPLATE_SOURCE="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_SOURCE)"
+        TEMPLATE_LAYOUT_TOP="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_LAYOUT_TOP)"
+        TEMPLATE_SOURCE_TOP="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_SOURCE_TOP)"
+        for VALUE in \
+            "$TEMPLATE_GDS" \
+            "$TEMPLATE_SOURCE" \
+            "$TEMPLATE_LAYOUT_TOP" \
+            "$TEMPLATE_SOURCE_TOP"
+        do
+            if [ -z "$VALUE" ] || [ "$VALUE" = "UNKNOWN" ]; then
+                TEMPLATE_SEMANTIC_GATE_RC=1
+            fi
+        done
+    fi
+
+    echo "TEMPLATE_GDS=$TEMPLATE_GDS"
+    echo "TEMPLATE_SOURCE=$TEMPLATE_SOURCE"
+    echo "TEMPLATE_LAYOUT_TOP=$TEMPLATE_LAYOUT_TOP"
+    echo "TEMPLATE_SOURCE_TOP=$TEMPLATE_SOURCE_TOP"
+    [ "$TEMPLATE_SEMANTIC_GATE_RC" -eq 0 ] || RUN_OK=0
 fi
 
 if [ "$RUN_OK" -eq 1 ]; then
@@ -429,7 +470,6 @@ if [ "$RUN_OK" -eq 1 ]; then
         --template-source "$TEMPLATE_SOURCE" \
         --template-layout-top "$TEMPLATE_LAYOUT_TOP" \
         --template-source-top "$TEMPLATE_SOURCE_TOP" \
-        --template-cdl "$TEMPLATE_CDL" \
         --run-id "$RUN_ID" \
         --allow-cross-block-control-scaffold \
         2>&1 | tee "$DIAGNOSTIC_ROOT/pvs_lvs.console.log"
@@ -523,10 +563,14 @@ if [ "$RUN_FILE_GATE_RC" = "0" ]; then
     [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
     [ "$(grep -Foc "$PACKAGE_SOURCE" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_AUDIT_GATE_RC=1
     [ "$(grep -Foc "$PACKAGE_CDL" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_AUDIT_GATE_RC=1
-    grep -Fq "$TEMPLATE_SOURCE" "$RUN_DIR/pvslvsctl"
-    [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
-    grep -Fq "$TEMPLATE_GDS" "$RUN_DIR/pvslvsctl"
-    [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
+    if [ "$TEMPLATE_SOURCE" != "$PACKAGE_SOURCE" ]; then
+        grep -Fq "$TEMPLATE_SOURCE" "$RUN_DIR/pvslvsctl"
+        [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
+    fi
+    if [ "$TEMPLATE_GDS" != "$PACKAGE_GDS" ]; then
+        grep -Fq "$TEMPLATE_GDS" "$RUN_DIR/pvslvsctl"
+        [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
+    fi
     echo "RUN_AUDIT_GATE_RC=$RUN_AUDIT_GATE_RC"
 
     (
@@ -618,12 +662,12 @@ if [ "$DIAGNOSTIC_ROOT" != "UNKNOWN" ]; then
         "$DENSITY_REFERENCES|$EXPECTED_DENSITY_REFERENCES_SHA" \
         "$DENSITY_ANALYSIS|$EXPECTED_DENSITY_ANALYSIS_SHA" \
         "$DENSITY_INVENTORY|$EXPECTED_DENSITY_INVENTORY_SHA" \
-        "$LVS_TEMPLATE/.config.rul|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" \
-        "$LVS_TEMPLATE/.preset.autosave|24a96996d39f98e12c1b1bbc7dc7af74ff2ba5b1152dd0afe462b7ffb3cf2687" \
-        "$LVS_TEMPLATE/.technology.rul|74a297facf6422635df2c58d79aa8b8ae46ca0b8232380471a88a182d8400ab6" \
-        "$LVS_TEMPLATE/pipo1.setup|449148fe96167a6d0787861c3575a6f31f4c9598e972ee8a7026e9fb3383dc85" \
-        "$LVS_TEMPLATE/pvslvsctl|7fc5ffd6115ee9ab9aa78a3964f01a43941a0926e2c1d1c53c5b7ede3f25767d" \
-        "$LVS_TEMPLATE/run.pvs|8c0c4e925cf7e595be64685bf01e5bc3e9059ea655a4da0980e67d04dfc113a9" \
+        "$LVS_TEMPLATE/.config.rul|$EXPECTED_TEMPLATE_CONFIG_SHA" \
+        "$LVS_TEMPLATE/.preset.autosave|$EXPECTED_TEMPLATE_PRESET_SHA" \
+        "$LVS_TEMPLATE/.technology.rul|$EXPECTED_TEMPLATE_TECHNOLOGY_SHA" \
+        "$LVS_TEMPLATE/pipo1.setup|$EXPECTED_TEMPLATE_PIPO1_SHA" \
+        "$LVS_TEMPLATE/pvslvsctl|$EXPECTED_TEMPLATE_CONTROL_SHA" \
+        "$LVS_TEMPLATE/run.pvs|$EXPECTED_TEMPLATE_RUN_SHA" \
         "$PVS_BIN|e2a50b5eb73539f78adb042ede0613c8ef9be3d9e2ed4a453a3c9266bcae3f15" \
         "$STREAM_LAYER_TABLE|3198c31b841a29b1126206f7962632fd7f6dc239c53931962cd57327d2320869" \
         "$STREAM_OBJECT_MAP|151695165c1679190e1f95aa0ccb854de233c7a7e3f589a5ac83c93c0c487c7c" \
@@ -689,6 +733,15 @@ if [ "$DIAGNOSTIC_ROOT" != "UNKNOWN" ]; then
         echo "SOURCE_DENSITY_DRC_STATUS_SHA256=$EXPECTED_DENSITY_STATUS_SHA"
         echo "MANUAL_REVIEW_DECISION=AUTHORIZE_ONE_FOREGROUND_EXACT_GDS_PVS_LVS"
         echo "CROSS_BLOCK_TEMPLATE_REUSE_SCOPE=CONTROL_SCAFFOLD_ONLY"
+        echo "TEMPLATE_BASELINE_ID=$TEMPLATE_BASELINE_ID"
+        echo "TEMPLATE_CONTROL_SOURCE_MUTATION_AUTHORIZED=NO"
+        echo "TEMPLATE_IDENTITY_GATE_RC=$TEMPLATE_IDENTITY_GATE_RC"
+        echo "TEMPLATE_SEMANTIC_GATE_RC=$TEMPLATE_SEMANTIC_GATE_RC"
+        echo "TEMPLATE_SCAFFOLD_AUDIT=$TEMPLATE_AUDIT"
+        echo "TEMPLATE_LAYOUT_TOP=$TEMPLATE_LAYOUT_TOP"
+        echo "TEMPLATE_SOURCE_TOP=$TEMPLATE_SOURCE_TOP"
+        echo "TEMPLATE_GDS=$TEMPLATE_GDS"
+        echo "TEMPLATE_SOURCE=$TEMPLATE_SOURCE"
         echo "PACKAGE=$PACKAGE"
         echo "PACKAGE_GDS=$PACKAGE_GDS"
         echo "PACKAGE_GDS_SHA256=$EXPECTED_GDS_SHA"

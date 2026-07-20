@@ -1,8 +1,9 @@
 # Digital Subblock Closure and Assembly Roadmap
 
 Status: phased server execution active; Position base PVS DRC is attributable
-zero, density PVS DRC is attributable four-rule whole-extent debt, and one
-foreground exact-GDS PVS LVS transaction is authorized next.
+zero, density PVS DRC is attributable four-rule whole-extent debt, and the
+first exact-GDS LVS attempt stopped before replay on mutable GUI-scaffold
+identity. One guarded foreground retry is authorized now.
 
 Date: 2026-07-20.
 
@@ -50,6 +51,7 @@ TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_111548_fail
 TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_113452/
 TOP/docs/server_snapshots/pvs_drc/position_base_drc_20260720_115921/
 TOP/docs/server_snapshots/pvs_drc/position_density_drc_20260720_133314/
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_template_identity_20260720_141229_failed/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -82,7 +84,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground exact-GDS PVS LVS; retain density disposition debt |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Corrected foreground exact-GDS PVS LVS retry; retain density disposition debt |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Start immediately after attributable Position LVS |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -684,6 +686,34 @@ electrical comparison. Run
 `TOP/ci/server_run_position_core_pvs_lvs.sh` next. If it records an explicit
 `MATCH`, start Event OOC immediately while density disposition remains tracked.
 
+#### Recorded Position Step 10 Exact-GDS LVS No-Execution Stop
+
+The first foreground exact-GDS LVS transaction at commit
+`285dfc53b6bcf544bb5a42545edb17f3edc6b2c1` passed all density, package, GDS,
+canonical source, and CDL gates, then stopped before replay. Four mutable GUI
+controls in the historical TX LVS scaffold no longer matched their July 10
+hashes. The resulting diagnostic
+`position_pvs_lvs_execution_20260720_141229` records:
+
+```text
+TEMPLATE_IDENTITY_GATE_RC=1
+PVS_WRAPPER_RC=NOT_RUN
+PVS_LVS_STATUS=UNKNOWN
+PVS_EXECUTED=NO
+STATUS=FAIL
+RESULT=EXACT_GDS_PVS_LVS_NOT_EXECUTED
+```
+
+This is neither an LVS match nor mismatch. Base DRC remains `PASS`; density
+remains attributable `FAIL` with four whole-extent rules; the package is
+unchanged. The corrected driver pins the exact observed six-file state and
+adds a read-only semantic audit of the current launcher and control before
+cloning. The clone still forces the package GDS, canonical LVS source, both
+Position tops, and package JIHD CDL, and it must pass replay, output-isolation,
+external-reference, and run-manifest gates before PVS starts. No additional
+rule discovery or density rerun is authorized. Run the corrected foreground
+LVS transaction once.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -914,10 +944,13 @@ percent coverage rules: `R1M1`, `R1M2`, `R1M3`, and `R1MT`.
 Run one foreground exact-GDS LVS transaction now through
 `TOP/ci/server_run_position_core_pvs_lvs.sh`. It binds the same GDS SHA-256,
 canonical package source, package-local JIHD CDL, canonical layout/source top,
-and a hash-pinned XH018 launcher used only as a control scaffold. It accepts
-only an explicit attributable `MATCH` or explicit attributable `MISMATCH`;
-tool return code zero alone is insufficient. Do not rerun density and do not
-insert another template-discovery stage.
+and an observed-byte-pinned XH018 launcher used only as a control scaffold.
+The first attempt stopped before replay when the GUI-managed scaffold had
+drifted. The corrected gate now also audits the current launcher semantics and
+extracts its old values before strict clone-and-rewrite. It accepts only an
+explicit attributable `MATCH` or explicit attributable `MISMATCH`; tool return
+code zero alone is insufficient. Do not rerun density and do not insert
+another template-discovery stage.
 
 On `MATCH`, start Event coordinator OOC immediately and review Position density
 disposition in parallel. On `MISMATCH`, classify the one immutable mismatch

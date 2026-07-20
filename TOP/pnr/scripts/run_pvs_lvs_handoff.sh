@@ -26,7 +26,7 @@ usage() {
 Usage: run_pvs_lvs_handoff.sh --package DIR --template DIR \
   --template-gds FILE --template-source FILE \
   --template-layout-top CELL --template-source-top CELL \
-  --template-cdl FILE [--template-hcell FILE --hcell FILE] \
+  [--template-cdl FILE] [--template-hcell FILE --hcell FILE] \
   [--run-id ID] [--dry-run] [--allow-cross-block-control-scaffold]
 
 The GUI template must be for the same hierarchy unless a separately reviewed
@@ -66,7 +66,7 @@ spadmic_pvs_require_dir "$PACKAGE"
 spadmic_pvs_require_dir "$TEMPLATE"
 PACKAGE="$(cd "$PACKAGE" && pwd -P)"
 TEMPLATE="$(cd "$TEMPLATE" && pwd -P)"
-for value in "$TEMPLATE_GDS" "$TEMPLATE_SOURCE" "$TEMPLATE_LAYOUT_TOP" "$TEMPLATE_SOURCE_TOP" "$TEMPLATE_CDL"; do
+for value in "$TEMPLATE_GDS" "$TEMPLATE_SOURCE" "$TEMPLATE_LAYOUT_TOP" "$TEMPLATE_SOURCE_TOP"; do
   [[ -n "$value" ]] || spadmic_pvs_die "all template GDS/source/top values are required"
 done
 spadmic_pvs_check_head "$REPO_ROOT"
@@ -97,7 +97,10 @@ ARGS=(--mode lvs --template "$TEMPLATE" --run-dir "$RUN_DIR" --cadence-pvs "$PVS
   --expected-gds "$GDS" --expected-source "$SOURCE")
 CDL="$PACKAGE/pdk/xh018_D_CELLS_JIHD.cdl"
 spadmic_pvs_require_file "$CDL"
-ARGS+=(--replace "$TEMPLATE_CDL=$CDL" --expected-cdl "$CDL")
+if [[ -n "$TEMPLATE_CDL" ]]; then
+  ARGS+=(--replace "$TEMPLATE_CDL=$CDL")
+fi
+ARGS+=(--expected-cdl "$CDL")
 if [[ -n "$TEMPLATE_HCELL" || -n "$HCELL" ]]; then
   [[ -n "$TEMPLATE_HCELL" && -n "$HCELL" ]] || spadmic_pvs_die "both template and new HCell paths are required"
   spadmic_pvs_require_file "$HCELL"

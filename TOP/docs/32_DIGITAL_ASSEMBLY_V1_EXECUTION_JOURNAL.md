@@ -4042,3 +4042,64 @@ and package-local JIHD CDL SHA-256
 An explicit `MATCH` starts Event OOC immediately while density disposition is
 reviewed in parallel. An explicit `MISMATCH` is preserved and classified
 without rerunning PVS. Neither outcome silently closes the density gate.
+
+### P09-R14 Position Exact-GDS LVS Template-Identity Stop
+
+The first authorized exact-GDS LVS transaction ran in the foreground on
+2026-07-20 from exact commit
+`285dfc53b6bcf544bb5a42545edb17f3edc6b2c1`. Its diagnostic is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_lvs_execution_20260720_141229
+```
+
+The accepted density diagnostic, package manifest, exact GDS, canonical LVS
+source, and package-local JIHD CDL all passed their hash and semantic gates.
+The transaction then stopped before replay because four GUI-managed files in
+the historical TX LVS control scaffold had changed since the July 10 intake:
+
+```text
+.preset.autosave  24a96996... -> 43d19579...
+pipo1.setup        449148fe... -> ed8c1a13...
+pvslvsctl          7fc5ffd6... -> 8e538767...
+run.pvs            8c0c4e92... -> dfe5394b...
+```
+
+`.config.rul` remained the empty-file hash `e3b0c442...`, and
+`.technology.rul` remained `74a297fa...`. The fail-closed result is:
+
+```text
+TEMPLATE_FILE_GATE_RC=0
+TEMPLATE_IDENTITY_GATE_RC=1
+PVS_WRAPPER_RC=NOT_RUN
+PVS_TOOL_RC=UNKNOWN
+PVS_LVS_STATUS=UNKNOWN
+PVS_EXECUTED=NO
+PACKAGE_POST_EXECUTION_SHA_MANIFEST_RC=0
+STATUS=FAIL
+RESULT=EXACT_GDS_PVS_LVS_NOT_EXECUTED
+```
+
+The missing run evidence and console log are therefore expected. This event is
+not a `MISMATCH`, does not invalidate base DRC zero or the classified density
+debt, and does not authorize a density rerun. Compact negative evidence is
+retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_template_identity_20260720_141229_failed/
+```
+
+The correction uses the exact six hashes observed by the failed transaction as
+the new byte baseline and adds a read-only semantic audit before any clone or
+PVS process can start. It requires one LVS launcher, no DRC mode, one layout
+and source top, one executable GDS and Verilog source, safe port comparison,
+one set of isolated LVS/ERC outputs, and `DUMMY_FILL` undefined. The audit
+extracts the current scaffold values instead of guessing them. Replay then
+clones the immutable scaffold and independently forces the accepted Position
+GDS, canonical source, canonical tops, and package JIHD CDL. A GUI preset CDL
+is never accepted as executable evidence.
+
+The aggressive next action remains one corrected foreground exact-GDS LVS
+transaction. An attributable `MATCH` starts Event OOC immediately while the
+four-rule density disposition proceeds in parallel. An attributable
+`MISMATCH` is classified once without rerunning PVS.

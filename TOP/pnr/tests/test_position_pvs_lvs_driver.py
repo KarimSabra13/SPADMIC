@@ -13,6 +13,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 DRIVER = REPO / "TOP" / "ci" / "server_run_position_core_pvs_lvs.sh"
 LVS_WRAPPER = REPO / "TOP" / "pnr" / "scripts" / "run_pvs_lvs_handoff.sh"
+SCAFFOLD_AUDIT = (
+    REPO / "TOP" / "pnr" / "scripts" / "audit_pvs_lvs_control_scaffold.py"
+)
 SNAPSHOT = (
     REPO
     / "TOP"
@@ -36,6 +39,37 @@ class PositionPvsLvsDriverTests(unittest.TestCase):
         self.assertIn("--allow-cross-block-control-scaffold", text)
         self.assertIn('SPADMIC_CADENCE_PVS_BIN="$PVS_BIN"', text)
         self.assertIn("PVS_WRAPPER_RC=${PIPESTATUS[0]}", text)
+
+    def test_driver_pins_and_semantically_audits_observed_server_scaffold(self) -> None:
+        text = DRIVER.read_text()
+        for token in (
+            "TEMPLATE_BASELINE_ID=SERVER_OBSERVED_20260720_141229",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "43d19579b0569863b1c5fcc317206cc5f3f70611b22f9bdea932d757ff902dfe",
+            "74a297facf6422635df2c58d79aa8b8ae46ca0b8232380471a88a182d8400ab6",
+            "ed8c1a13ab8ec90af3f367b4d408e5f9c767f1e99736e31f02c54be9fa91abbc",
+            "8e53876734717f4c0857f1310d08e3a4c8fb18aeaa7694800b7d0cdcd511c5e6",
+            "dfe5394bd98c828e868a7a3f18acda2f56f993ba58dcf8343f097858f77b0c27",
+            "audit_pvs_lvs_control_scaffold.py",
+            "TEMPLATE_CONTROL_SOURCE_MUTATION_AUTHORIZED=NO",
+            "TEMPLATE_IDENTITY_GATE_RC",
+            "TEMPLATE_SEMANTIC_GATE_RC",
+            'TEMPLATE_GDS="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_GDS)"',
+            'TEMPLATE_SOURCE="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_SOURCE)"',
+            'TEMPLATE_LAYOUT_TOP="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_LAYOUT_TOP)"',
+            'TEMPLATE_SOURCE_TOP="$(kv_field "$TEMPLATE_AUDIT" TEMPLATE_SOURCE_TOP)"',
+        ):
+            self.assertIn(token, text)
+        self.assertEqual(text.count("audit_pvs_lvs_control_scaffold.py"), 1)
+        self.assertIn('if [ "$TEMPLATE_SOURCE" != "$PACKAGE_SOURCE" ]; then', text)
+        self.assertIn('if [ "$TEMPLATE_GDS" != "$PACKAGE_GDS" ]; then', text)
+        for stale_digest in (
+            "24a96996d39f98e12c1b1bbc7dc7af74ff2ba5b1152dd0afe462b7ffb3cf2687",
+            "449148fe96167a6d0787861c3575a6f31f4c9598e972ee8a7026e9fb3383dc85",
+            "7fc5ffd6115ee9ab9aa78a3964f01a43941a0926e2c1d1c53c5b7ede3f25767d",
+            "8c0c4e925cf7e595be64685bf01e5bc3e9059ea655a4da0980e67d04dfc113a9",
+        ):
+            self.assertNotIn(stale_digest, text)
 
     def test_driver_binds_density_debt_and_all_exact_lvs_inputs(self) -> None:
         text = DRIVER.read_text()
@@ -143,6 +177,28 @@ class PositionPvsLvsDriverTests(unittest.TestCase):
             "STDCELL_CDL_SHA256=",
         ):
             self.assertIn(token, text)
+
+    def test_lvs_wrapper_does_not_infer_cdl_from_gui_preset(self) -> None:
+        text = LVS_WRAPPER.read_text()
+        self.assertIn("[--template-cdl FILE]", text)
+        self.assertIn('if [[ -n "$TEMPLATE_CDL" ]]; then', text)
+        self.assertIn('ARGS+=(--expected-cdl "$CDL")', text)
+        self.assertNotIn(
+            'for value in "$TEMPLATE_GDS" "$TEMPLATE_SOURCE" '
+            '"$TEMPLATE_LAYOUT_TOP" "$TEMPLATE_SOURCE_TOP" "$TEMPLATE_CDL"',
+            text,
+        )
+
+    def test_scaffold_audit_is_executable_python(self) -> None:
+        self.assertTrue(SCAFFOLD_AUDIT.is_file())
+        self.assertTrue(SCAFFOLD_AUDIT.stat().st_mode & 0o111)
+        result = subprocess.run(
+            ["python3", "-m", "py_compile", str(SCAFFOLD_AUDIT)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_shell_syntax(self) -> None:
         for script in (DRIVER, LVS_WRAPPER):
