@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Replay a same-block GUI PVS DRC template inside an immutable handoff package.
+# Replay a GUI PVS DRC control scaffold inside an immutable handoff package.
 set -u -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,15 +14,18 @@ TEMPLATE_TOP=""
 VARIANT="base"
 RUN_ID=""
 DRY_RUN=0
+ALLOW_CROSS_BLOCK_CONTROL_SCAFFOLD=0
+CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS=NO
 
 usage() {
   cat <<'EOF'
 Usage: run_pvs_drc_handoff.sh --package DIR --template DIR \
   --template-gds FILE --template-top CELL [--variant base|density] \
-  [--run-id ID] [--dry-run]
+  [--run-id ID] [--dry-run] [--allow-cross-block-control-scaffold]
 
-The GUI template must be for the same block/hierarchy. The script clones it;
-the original template remains read-only.
+The GUI template must be for the same block/hierarchy unless a separately
+reviewed wrapper explicitly authorizes control-scaffold-only cross-block reuse.
+The script clones the controls; the original template remains read-only.
 EOF
 }
 
@@ -35,10 +38,18 @@ while [[ $# -gt 0 ]]; do
     --variant) VARIANT="$2"; shift 2 ;;
     --run-id) RUN_ID="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --allow-cross-block-control-scaffold)
+      ALLOW_CROSS_BLOCK_CONTROL_SCAFFOLD=1
+      shift
+      ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; spadmic_pvs_die "unknown option: $1" ;;
   esac
 done
+
+if [[ "$ALLOW_CROSS_BLOCK_CONTROL_SCAFFOLD" -eq 1 ]]; then
+  CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS=YES
+fi
 
 spadmic_pvs_require_dir "$PACKAGE"
 spadmic_pvs_require_dir "$TEMPLATE"
@@ -81,6 +92,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   {
     echo "PVS_DRC_STATUS=DRY_RUN_READY"
     echo "PVS_DRC_VARIANT=${VARIANT^^}"
+    echo "CROSS_BLOCK_CONTROL_SCAFFOLD_AUTHORIZED=$CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS"
     echo "PACKAGE=$PACKAGE"
     echo "GDS=$GDS"
     echo "GDS_SHA256=$(sha256sum "$GDS" | awk '{print $1}')"
@@ -95,6 +107,7 @@ python3 "$SCRIPT_DIR/parse_pvs_handoff_result.py" --mode drc --run-dir "$RUN_DIR
   --status "$RUN_DIR/pvs_drc_status.rpt" --tool-rc "$PVS_RC"
 PARSE_RC=$?
 echo "PVS_DRC_VARIANT=${VARIANT^^}" >> "$RUN_DIR/pvs_drc_status.rpt"
+echo "CROSS_BLOCK_CONTROL_SCAFFOLD_AUTHORIZED=$CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS" >> "$RUN_DIR/pvs_drc_status.rpt"
 echo "PACKAGE=$PACKAGE" >> "$RUN_DIR/pvs_drc_status.rpt"
 echo "GDS=$GDS" >> "$RUN_DIR/pvs_drc_status.rpt"
 echo "GDS_SHA256=$(sha256sum "$GDS" | awk '{print $1}')" >> "$RUN_DIR/pvs_drc_status.rpt"

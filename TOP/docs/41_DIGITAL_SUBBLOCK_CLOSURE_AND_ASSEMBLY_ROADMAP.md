@@ -801,27 +801,29 @@ bash TOP/scripts/sim/run_tb.sh \
 The RTL regressions pass `25/25` position checks and `24/24` event checks.
 Position TC Genus and the corrected grid-safe Position Innovus replay pass on
 their recorded exact commits. Position immutable handoff staging, canonical
-source preparation, and pin parity also pass. Every Position PVS gate remains
-open. Every Event Genus/Innovus/PVS gate also remains server work and must stay
-labeled `NOT_RUN` until separately executed and reviewed.
+source preparation, pin parity, rule semantics, and exact-GDS option
+applicability also pass. Position strict dry-run, base DRC, density DRC, and
+LVS remain open. Every Event Genus/Innovus/PVS gate also remains server work
+and must stay labeled `NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
-P09-R09 proved the named `default` rule-set binding, selected XH018 metal
-stack, normal option defaults, balanced conditional families, and the guide's
-scope for density, dummy generation, popping, and supplemental variable-ratio
-antenna checks. The remaining option-policy question is whether the exact
-accepted Position hierarchy contains PAD or PIMIDE geometry.
+P09-R10 parsed the complete accepted Position GDS hierarchy and proved zero
+reachable geometry and text for PAD `19/0`, PIMIDE `221/5`, and NOPIM `46/0`.
+The PIMIDE branch is therefore not applicable to Position OOC DRC. The default
+rule-set selection and full option policy are accepted: base DRC keeps DENSITY,
+POPPING, PIMIDE, and DUMMY_FILL undefined while retaining VAR_ANT_RATIO; the
+density variant changes only DENSITY to defined.
 
 The next server action is
-`TOP/ci/server_review_position_core_pvs_drc_gds_layer_applicability.sh`, using
-immutable diagnostic root
-`position_pvs_drc_rule_semantics_review_20260717_161842`. Return its collector
-status, GDS parser summary, target-layer mapping/context, stream-map context,
-option-policy contract, reachable layer inventory, structure inventory, and
-source identity report before authorizing any strict dry-run.
+`TOP/ci/server_preflight_position_core_pvs_drc.sh`, using immutable diagnostic
+root `position_pvs_drc_gds_layer_applicability_20260720_105724`. This is one
+combined strict dry-run transaction for base and density. It may clone the
+pinned packet-core controls as a control scaffold, but must rewrite the exact
+Position GDS/top and all outputs into isolated run-local paths and must not
+execute PVS.
 
-Do not select or copy the cross-block seed, create a Position template, launch
-strict replay or PVS, or advance Position base DRC, density DRC, LVS, block
-promotion, signoff, or Event Genus before the GDS layer-applicability review is
-accepted.
+If both dry-run contracts pass, authorize one foreground base DRC immediately
+and classify its report-level result. Keep density as the next independent run
+and exact-GDS LVS as a separate electrical gate. Do not reopen rule-set,
+preprocessor, or PIMIDE discovery unless an attributable input hash changes.

@@ -1,0 +1,4 @@
+symbol	layer_def_line	internal_layer	gds_layer	gds_datatype	layer_map_line	status
+PAD	160	50190	19	0	159	PASS
+PIMIDE	268	22150	221	5	267	PASS
+NOPIM	265	50460	46	0	264	PASS

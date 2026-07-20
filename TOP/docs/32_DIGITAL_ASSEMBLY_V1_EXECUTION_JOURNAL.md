@@ -3641,3 +3641,103 @@ pins the accepted GDS, official stream map, exact PVS deck, and complete R09
 diagnostic; resolves `pad` and `pimide` to exact stream tuples; parses the GDS
 hierarchy; and counts target geometry only in structures reachable from
 `spadmic_position_core`. It cannot create a template or execute PVS.
+
+### P09-R10 Position PVS GDS Layer Applicability Review
+
+The binary GDS applicability review ran in the foreground on 2026-07-20 from
+exact commit `a622dd0bf88478ecf124a448296c7390702d2d1f` and immutable R09
+diagnostic `position_pvs_drc_rule_semantics_review_20260717_161842`:
+
+```text
+CHECKOUT_RC=0
+PULL_RC=0
+EXPECTED_HEAD=a622dd0bf88478ecf124a448296c7390702d2d1f
+ACTUAL_HEAD=a622dd0bf88478ecf124a448296c7390702d2d1f
+TRACKED_DIFF_RC=0
+STAGED_DIFF_RC=0
+REVIEW_RC=0
+POSITION_GDS_LAYER_APPLICABILITY_COMMAND_STATUS=PASS
+```
+
+Every pinned R09 report, the accepted package manifest, Position GDS, official
+stream map, and DRC deck reproduced. The GDS parser consumed the complete
+11,523,506-byte stream, found the declared `spadmic_position_core` top, and
+proved the complete 218-structure hierarchy reachable with no unresolved
+references or cycle edges:
+
+```text
+GDS_PARSE_STATUS=PASS
+GDS_TOP_STRUCTURE_STATUS=PASS
+GDS_HIERARCHY_STATUS=PASS
+STRUCTURE_COUNT=218
+REACHABLE_STRUCTURE_COUNT=218
+REACHABLE_UNRESOLVED_REFERENCE_COUNT=0
+REACHABLE_HIERARCHY_CYCLE_EDGE_COUNT=0
+SERIALIZED_ELEMENT_RECORD_COUNT=129097
+ERROR_COUNT=0
+```
+
+The exact PVS target mappings were resolved before counting geometry:
+
+```text
+PAD     internal=50190 GDS=19/0  reachable_geometry=0 reachable_text=0
+PIMIDE  internal=22150 GDS=221/5 reachable_geometry=0 reachable_text=0
+NOPIM   internal=50460 GDS=46/0  reachable_geometry=0 reachable_text=0
+```
+
+Because the exact accepted hierarchy contains neither PAD nor PIMIDE geometry,
+the optional PIMIDE branch is not applicable to Position OOC DRC. The absence
+of named target entries in the Innovus stream map is consistent with the
+binary inventory and is not used as a substitute for the direct PVS deck
+mapping.
+
+The accepted Position option policy is now complete:
+
+```text
+DEFAULT_RULE_SET=default
+DEFAULT_RULE_SET_SELECTION_STATUS=PASS
+DENSITY_STATE=UNDEFINED
+DENSITY_POLICY=BASE_DRC_PLUS_SEPARATE_DENSITY_DRC
+POPPING_STATE=UNDEFINED
+POPPING_POLICY=DEFER_TO_POST_FILL_CHIP_LEVEL_CONTEXT
+DUMMY_FILL_STATE=UNDEFINED
+DUMMY_FILL_POLICY=NO_VIRTUAL_DUMMY_GENERATION_DURING_POSITION_OOC_DRC
+VAR_ANT_RATIO_STATE=DEFINED
+VAR_ANT_RATIO_POLICY=RETAIN_SUPPLEMENTAL_ADD_RULE_FAMILY
+PIMIDE_STATE=UNDEFINED
+PIMIDE_POSITION_APPLICABILITY_STATUS=NOT_APPLICABLE_NO_REACHABLE_PAD_OR_PIMIDE_GEOMETRY
+```
+
+The server transaction itself correctly stopped at a recommendation and did
+not self-authorize execution:
+
+```text
+STATUS=PASS
+STRICT_DRY_RUN_PREFLIGHT_RECOMMENDATION=READY_FOR_MANUAL_AUTHORIZATION
+STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+Manual review accepts the recommendation for strict dry-run preflight only.
+The pinned packet-core controls may now be reused as a control scaffold because
+the exact named rule set, metal stack, option semantics, and Position-specific
+PIMIDE applicability are all bound. This does not authorize a PVS process.
+
+To avoid another single-question discovery cycle, P09-R11 materializes both
+base and density run-local controls in one transaction. It must prove exact
+Position GDS/top replacement, isolated output paths, complete external
+references, preserved non-density selectors, opposite explicit DENSITY states,
+source immutability, and package-manifest integrity. Only then may one
+foreground base DRC execution be authorized and classified.
+
+Compact R10 evidence and the manual decision are retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_gds_layer_applicability_20260720_105724/
+```
