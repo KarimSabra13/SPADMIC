@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Replay a same-block GUI PVS LVS template inside an immutable handoff package.
+# Replay a reviewed GUI PVS LVS control scaffold inside an immutable package.
 set -u -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,6 +18,8 @@ TEMPLATE_HCELL=""
 HCELL=""
 RUN_ID=""
 DRY_RUN=0
+ALLOW_CROSS_BLOCK_CONTROL_SCAFFOLD=0
+CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS=NO
 
 usage() {
   cat <<'EOF'
@@ -25,11 +27,12 @@ Usage: run_pvs_lvs_handoff.sh --package DIR --template DIR \
   --template-gds FILE --template-source FILE \
   --template-layout-top CELL --template-source-top CELL \
   --template-cdl FILE [--template-hcell FILE --hcell FILE] \
-  [--run-id ID] [--dry-run]
+  [--run-id ID] [--dry-run] [--allow-cross-block-control-scaffold]
 
-Create the first LVS template once in the PVS GUI for the same hierarchy,
-then use this wrapper for deterministic replay. MATCH is never inferred from
-return code alone.
+The GUI template must be for the same hierarchy unless a separately reviewed
+wrapper explicitly authorizes control-scaffold-only cross-block reuse. The
+script clones and rewrites executable inputs and outputs; MATCH is never
+inferred from return code alone.
 EOF
 }
 
@@ -46,10 +49,18 @@ while [[ $# -gt 0 ]]; do
     --hcell) HCELL="$2"; shift 2 ;;
     --run-id) RUN_ID="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --allow-cross-block-control-scaffold)
+      ALLOW_CROSS_BLOCK_CONTROL_SCAFFOLD=1
+      shift
+      ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; spadmic_pvs_die "unknown option: $1" ;;
   esac
 done
+
+if [[ "$ALLOW_CROSS_BLOCK_CONTROL_SCAFFOLD" -eq 1 ]]; then
+  CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS=YES
+fi
 
 spadmic_pvs_require_dir "$PACKAGE"
 spadmic_pvs_require_dir "$TEMPLATE"
@@ -105,11 +116,16 @@ spadmic_pvs_require_external_references "$RUN_DIR/external_references.rpt"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   {
     echo "PVS_LVS_STATUS=DRY_RUN_READY"
+    echo "CROSS_BLOCK_CONTROL_SCAFFOLD_AUTHORIZED=$CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS"
     echo "PACKAGE=$PACKAGE"
+    echo "LAYOUT_TOP=$LAYOUT_TOP"
+    echo "SOURCE_TOP=$SOURCE_TOP"
     echo "GDS=$GDS"
     echo "GDS_SHA256=$(sha256sum "$GDS" | awk '{print $1}')"
     echo "LVS_SOURCE=$SOURCE"
     echo "LVS_SOURCE_SHA256=$(sha256sum "$SOURCE" | awk '{print $1}')"
+    echo "STDCELL_CDL=$CDL"
+    echo "STDCELL_CDL_SHA256=$(sha256sum "$CDL" | awk '{print $1}')"
   } | tee "$RUN_DIR/pvs_lvs_status.rpt"
   spadmic_pvs_hash_run "$RUN_DIR"
   exit 0
@@ -121,10 +137,15 @@ python3 "$SCRIPT_DIR/parse_pvs_handoff_result.py" --mode lvs --run-dir "$RUN_DIR
   --status "$RUN_DIR/pvs_lvs_status.rpt" --tool-rc "$PVS_RC"
 PARSE_RC=$?
 echo "PACKAGE=$PACKAGE" >> "$RUN_DIR/pvs_lvs_status.rpt"
+echo "CROSS_BLOCK_CONTROL_SCAFFOLD_AUTHORIZED=$CROSS_BLOCK_CONTROL_SCAFFOLD_STATUS" >> "$RUN_DIR/pvs_lvs_status.rpt"
+echo "LAYOUT_TOP=$LAYOUT_TOP" >> "$RUN_DIR/pvs_lvs_status.rpt"
+echo "SOURCE_TOP=$SOURCE_TOP" >> "$RUN_DIR/pvs_lvs_status.rpt"
 echo "GDS=$GDS" >> "$RUN_DIR/pvs_lvs_status.rpt"
 echo "GDS_SHA256=$(sha256sum "$GDS" | awk '{print $1}')" >> "$RUN_DIR/pvs_lvs_status.rpt"
 echo "LVS_SOURCE=$SOURCE" >> "$RUN_DIR/pvs_lvs_status.rpt"
 echo "LVS_SOURCE_SHA256=$(sha256sum "$SOURCE" | awk '{print $1}')" >> "$RUN_DIR/pvs_lvs_status.rpt"
+echo "STDCELL_CDL=$CDL" >> "$RUN_DIR/pvs_lvs_status.rpt"
+echo "STDCELL_CDL_SHA256=$(sha256sum "$CDL" | awk '{print $1}')" >> "$RUN_DIR/pvs_lvs_status.rpt"
 spadmic_pvs_hash_run "$RUN_DIR"
 echo "PVS_RC=$PVS_RC"
 echo "PARSE_RC=$PARSE_RC"

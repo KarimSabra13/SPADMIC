@@ -3952,3 +3952,93 @@ attributable nonzero result is fully reconciled and classified without a PVS
 rerun, after which exact-GDS LVS still proceeds as an independent evidence
 gate. Block promotion remains forbidden until base, density, and LVS all meet
 their separate contracts.
+
+### P09-R13 Position Density PVS DRC Attributable Four-Rule Debt
+
+The authorized foreground density transaction ran on 2026-07-20 from exact
+commit `d327be8596fccc8a60d46d5cd0138b93b6c2f03e`. It reused the accepted
+Position package and unchanged GDS SHA-256
+`ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1`.
+The immutable evidence roots are:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_drc_density_execution_20260720_133314
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/pvs/drc/position_density_drc_20260720_133314
+```
+
+The PVS executable returned RC `0`, while three report-level observations
+agreed on the physical result `4 (4)`. The wrapper returned classification RC
+`8`, as designed for a physical nonzero result. Replay, output isolation, run
+files, run manifest, package identity, source identity, rule analysis, and
+diagnostic manifest all passed:
+
+```text
+DENSITY_DRC_RC=0
+STATUS=PASS
+RESULT=PVS_DENSITY_DRC_NONZERO_RULE_DEBT_CLASSIFIED
+OUTCOME_CLASS=ATTRIBUTABLE_NONZERO_RESULTS
+PVS_WRAPPER_RC=8
+PVS_TOOL_RC=0
+PVS_BASE_DRC_STATUS=PASS
+PVS_DENSITY_DRC_STATUS=FAIL
+DRC_TOTAL_PRIMARY=4
+DRC_TOTAL_EXPANDED=4
+DRC_TOTAL_MATCH_COUNT=3
+RESULT_COUNT_RECONCILIATION=PASS
+ASCII_ERROR_GEOMETRY_RECONCILIATION=PASS
+RULE_ANALYSIS_STATUS=PASS
+DIAGNOSTIC_MANIFEST_RC=0
+```
+
+The four rules are:
+
+| Rule | Layer | Results | Foundry description |
+| --- | --- | ---: | --- |
+| `R1M1` | MET1 | 1 | Minimum layer-area / EXTENT-area ratio, 30.0% |
+| `R1M2` | MET2 | 1 | Minimum layer-area / EXTENT-area ratio, 30.0% |
+| `R1M3` | MET3 | 1 | Minimum layer-area / EXTENT-area ratio, 30.0% |
+| `R1MT` | METTP | 1 | Minimum layer-area / EXTENT-area ratio, 30.0% |
+
+Every marker covers the complete Position extent:
+
+```text
+0.000000 0.000000 951.440000 659.680000
+```
+
+These are four whole-window density deficits, not four localized minimum-area
+defects. The immutable analyzer output classified them as generic `AREA` and
+suggested increasing connected polygons near markers. That generic guidance is
+wrong for this rule form and is retained only as original evidence. The
+analyzer now classifies `ratio ... EXTENT area` as `DENSITY`, removes the TX
+marker comparison from generic area guidance, and directs review to the
+foundry fill and assembled chip-level policy.
+
+The prior user-guide evidence classifies density checks as default-off,
+post-fill/chip-level. This run used the required separate density variant, but
+the unfilled OOC macro does not authorize virtual `DUMMY_FILL` or local polygon
+repair. The four-result density gate remains `FAIL` pending assembled-fill
+disposition or a formal waiver. Base zero remains valid and no antenna result
+was present:
+
+```text
+ANTENNA_PRIMARY_RESULT_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=4
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+Compact evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_density_drc_20260720_133314/
+```
+
+The aggressive next gate is one foreground exact-GDS PVS LVS transaction via
+`TOP/ci/server_run_position_core_pvs_lvs.sh`. It binds the unchanged GDS,
+canonical Position LVS source SHA-256
+`a5e81c21e633ae1b55d8da5c8e971997f890d9cee42dff2f6cf9f9f43cad9ffb`,
+and package-local JIHD CDL SHA-256
+`5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf`.
+An explicit `MATCH` starts Event OOC immediately while density disposition is
+reviewed in parallel. An explicit `MISMATCH` is preserved and classified
+without rerunning PVS. Neither outcome silently closes the density gate.

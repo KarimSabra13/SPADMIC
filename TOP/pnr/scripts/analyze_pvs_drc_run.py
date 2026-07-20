@@ -338,7 +338,7 @@ def semantic_category(name: str, description: str) -> str:
     text = f"{name} {description}".lower()
     if rule_classification(name, description) == "ANTENNA_RULE":
         return "ANTENNA"
-    if "density" in text:
+    if "density" in text or ("ratio" in text and "extent area" in text):
         return "DENSITY"
     if "offgrid" in text or "off-grid" in text:
         return "OFFGRID"
@@ -382,9 +382,9 @@ def affected_layer(name: str, description: str) -> str:
 def repair_guidance(category: str) -> str:
     guidance = {
         "AREA": (
-            "Increase connected polygon area at the reported location while "
-            "preserving spacing and connectivity; compare against the four "
-            "known Innovus MET1 minimum-area boxes."
+            "Increase the localized polygon area at the reported marker while "
+            "preserving spacing and connectivity; verify the exact object in "
+            "the result browser before changing routing."
         ),
         "SPACING_OR_NOTCH": (
             "Inspect both sides of the reported gap or notch in the GDS result "
@@ -415,8 +415,9 @@ def repair_guidance(category: str) -> str:
             "reported conductors before changing spacing-only geometry."
         ),
         "DENSITY": (
-            "Handle in the dedicated density-enabled PVS variant; do not mix "
-            "fill repair into the base-rule diagnosis."
+            "Treat this as whole-window coverage debt in the dedicated "
+            "density-enabled variant. Review the foundry fill and assembled "
+            "chip-level policy; do not apply a localized minimum-area repair."
         ),
         "ANTENNA": (
             "Keep this in the separate antenna closure flow. Review legal "

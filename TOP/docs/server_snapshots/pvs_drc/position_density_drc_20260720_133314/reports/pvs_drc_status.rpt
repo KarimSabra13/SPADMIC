@@ -1,0 +1,16 @@
+LABEL=SPADMIC_PVS_HANDOFF_RESULT
+MODE=DRC
+PVS_RC=0
+PVS_DRC_STATUS=FAIL
+EVIDENCE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/pvs/drc/position_density_drc_20260720_133314/.drcSummaryReport:Total DRC Results=4(4)
+SCANNED_TEXT_FILE_COUNT=31
+RESULT_EVIDENCE_INVENTORY=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/pvs/drc/position_density_drc_20260720_133314/pvs_result_evidence_inventory.rpt
+DRC_TOTAL_MATCH_COUNT=3
+DRC_TOTAL_PRIMARY=4
+DRC_TOTAL_EXPANDED=4
+SIGNOFF_READY=NO
+PVS_DRC_VARIANT=DENSITY
+CROSS_BLOCK_CONTROL_SCAFFOLD_AUTHORIZED=YES
+PACKAGE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810
+GDS=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/gds/spadmic_position_core.gds
+GDS_SHA256=ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1

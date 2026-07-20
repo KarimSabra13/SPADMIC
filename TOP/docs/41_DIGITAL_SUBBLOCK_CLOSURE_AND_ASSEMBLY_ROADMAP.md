@@ -1,8 +1,8 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active; Position immutable handoff, option
-policy, corrected strict preflight, and attributable zero-result base PVS DRC
-pass; foreground density PVS DRC is authorized next.
+Status: phased server execution active; Position base PVS DRC is attributable
+zero, density PVS DRC is attributable four-rule whole-extent debt, and one
+foreground exact-GDS PVS LVS transaction is authorized next.
 
 Date: 2026-07-20.
 
@@ -49,6 +49,7 @@ TOP/docs/server_snapshots/pvs_drc/position_gds_layer_applicability_20260720_1057
 TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_111548_failed/
 TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_113452/
 TOP/docs/server_snapshots/pvs_drc/position_base_drc_20260720_115921/
+TOP/docs/server_snapshots/pvs_drc/position_density_drc_20260720_133314/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -81,8 +82,8 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground density PVS DRC and immediate rule classification |
-| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground exact-GDS PVS LVS; retain density disposition debt |
+| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Start immediately after attributable Position LVS |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
 | 5 | MPTDC frontend | Blocked soft region | unavailable final boundary | Wait for abstracts and pin contract |
@@ -647,12 +648,41 @@ PVS_EXECUTED=NO
 The base control has DENSITY undefined and the density control has it defined;
 all other accepted option states are identical. Strict preflight is complete.
 No additional rule-set, PIMIDE, or control-discovery step is allowed unless a
-pinned input changes. The active action is one foreground base PVS DRC through
-`TOP/ci/server_run_position_core_pvs_base_drc.sh`. It records a true zero or,
-for a unique nonzero report total, performs complete immutable rule and
-geometry classification in the same transaction. Either attributable outcome
-moves directly to the independent density run; base DRC, density DRC, LVS, and
-promotion remain open until their own evidence says otherwise.
+pinned input changes.
+
+#### Recorded Position Step 9 Base And Density PVS DRC
+
+The foreground base run at commit
+`31738aa650492516340e54b7535c5d805b897090` produced attributable report-level
+`0 (0)` evidence. The subsequent density run at commit
+`d327be8596fccc8a60d46d5cd0138b93b6c2f03e` produced an attributable,
+fully reconciled `4 (4)` result:
+
+```text
+PVS_BASE_DRC_STATUS=PASS
+PVS_DENSITY_DRC_STATUS=FAIL
+DRC_TOTAL_PRIMARY=4
+DRC_TOTAL_EXPANDED=4
+RULE_ANALYSIS_STATUS=PASS
+ANTENNA_PRIMARY_RESULT_COUNT=0
+NON_ANTENNA_PRIMARY_RESULT_COUNT=4
+```
+
+The rules are `R1M1`, `R1M2`, `R1M3`, and `R1MT`, one per routed metal layer.
+Each compares layer area against the complete `951.440 x 659.680 um` extent and
+requires 30 percent coverage. They are whole-window density checks, not four
+localized minimum-area defects. The immutable analyzer output is preserved,
+including its original generic `AREA` guidance, but the reviewed semantic
+classification is `DENSITY`. The analyzer regression now applies that
+classification automatically.
+
+Foundry guidance classifies these checks as post-fill/chip-level. Position OOC
+therefore carries explicit density debt pending assembled-fill review or a
+formal waiver. No virtual dummy fill or local shape repair is authorized.
+This blocks Position promotion but does not block the independent exact-GDS
+electrical comparison. Run
+`TOP/ci/server_run_position_core_pvs_lvs.sh` next. If it records an explicit
+`MATCH`, start Event OOC immediately while density disposition remains tracked.
 
 ## 7. Event Coordinator
 
@@ -858,11 +888,10 @@ bash TOP/scripts/sim/run_tb.sh \
 The RTL regressions pass `25/25` position checks and `24/24` event checks.
 Position TC Genus and the corrected grid-safe Position Innovus replay pass on
 their recorded exact commits. Position immutable handoff staging, canonical
-source preparation, pin parity, rule semantics, and exact-GDS option
-applicability also pass. The initial Position strict dry-run exposed a replay
-path-order defect and did not execute PVS; the corrected base-plus-density
-strict preflight passes. The foreground base PVS DRC now has attributable
-report-level zero evidence. Density DRC and LVS remain open. Every Event
+source preparation, pin parity, rule semantics, option applicability, and
+strict preflight pass. Base PVS DRC has attributable report-level `0 (0)`
+evidence. Density PVS DRC has attributable `4 (4)` whole-extent coverage debt,
+not localized geometry debt. Exact-GDS LVS remains open. Every Event
 Genus/Innovus/PVS gate also remains server work and must stay labeled `NOT_RUN`
 until separately executed and reviewed.
 
@@ -876,18 +905,21 @@ POPPING, PIMIDE, and DUMMY_FILL undefined while retaining VAR_ANT_RATIO; the
 density variant changes only DENSITY to defined.
 
 The foreground base transaction passed on immutable diagnostic
-`position_pvs_drc_base_execution_20260720_115921`. Its exact PVS total is
-`0 (0)`, wrapper and tool return codes are zero, replay and output isolation
-pass, and all source/package manifests reproduce. The optional rule-analysis
-files are absent by design because
-`RULE_ANALYSIS_STATUS=NOT_APPLICABLE_ZERO_RESULTS`.
+`position_pvs_drc_base_execution_20260720_115921` with exact total `0 (0)`.
+The foreground density transaction passed its attribution/classification
+contract on diagnostic `position_pvs_drc_density_execution_20260720_133314`,
+while its physical result remains `FAIL` with exactly four whole-extent 30
+percent coverage rules: `R1M1`, `R1M2`, `R1M3`, and `R1MT`.
 
-Run one foreground density transaction now through
-`TOP/ci/server_run_position_core_pvs_density_drc.sh`. Do not insert another
-discovery or manual semantics review between base and density. The driver
-accepts a report-level zero or a fully reconciled/classified nonzero result.
-After either attributable density outcome, collect exact-GDS LVS immediately
-as a separate electrical gate. A nonzero density result remains physical debt;
-it does not invalidate base zero or prevent independent LVS evidence. Block
-promotion remains forbidden until base, density, and LVS all meet their own
-closure contracts.
+Run one foreground exact-GDS LVS transaction now through
+`TOP/ci/server_run_position_core_pvs_lvs.sh`. It binds the same GDS SHA-256,
+canonical package source, package-local JIHD CDL, canonical layout/source top,
+and a hash-pinned XH018 launcher used only as a control scaffold. It accepts
+only an explicit attributable `MATCH` or explicit attributable `MISMATCH`;
+tool return code zero alone is insufficient. Do not rerun density and do not
+insert another template-discovery stage.
+
+On `MATCH`, start Event coordinator OOC immediately and review Position density
+disposition in parallel. On `MISMATCH`, classify the one immutable mismatch
+without rerunning PVS. Position promotion remains forbidden because density is
+still `FAIL` even if LVS matches.

@@ -258,6 +258,31 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
             self.assertIn("# PVS Density DRC Rule Classification", markdown)
             self.assertIn("separate accepted base-DRC evidence", markdown)
 
+    def test_extent_area_ratio_is_whole_window_density_not_local_area(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run, waiver = self.make_run(root)
+            error = run / "canonical_top_drc.err"
+            error.write_text(
+                error.read_text().replace(
+                    "Maximum MET2 width ratio",
+                    "Minimum ratio of METTP area to EXTENT area ... 30.0%",
+                )
+            )
+
+            output = root / "analysis"
+            result = self.run_analyzer(run, output, waiver)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            inventory = (output / "pvs_drc_rule_inventory.tsv").read_text()
+            row = next(
+                line for line in inventory.splitlines() if line.startswith("5\tRATIO1\t")
+            )
+            self.assertIn("\tDENSITY\tMETTP\t", row)
+            self.assertIn("whole-window coverage debt", row)
+            self.assertIn("do not apply a localized minimum-area repair", row)
+            self.assertNotIn("known Innovus MET1", row)
+
     def test_expected_total_mismatch_fails_without_creating_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
