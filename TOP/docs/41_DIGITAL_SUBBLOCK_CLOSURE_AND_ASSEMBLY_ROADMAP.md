@@ -684,10 +684,10 @@ classification automatically.
 Foundry guidance classifies these checks as post-fill/chip-level. Position OOC
 therefore carries explicit density debt pending assembled-fill review or a
 formal waiver. No virtual dummy fill or local shape repair is authorized.
-This blocks Position promotion but does not block the independent exact-GDS
-electrical comparison. Run
-`TOP/ci/server_run_position_core_pvs_lvs.sh` next. If it records an explicit
-`MATCH`, start Event OOC immediately while density disposition remains tracked.
+This blocks Position promotion but did not block the independent exact-GDS
+electrical comparison. That comparison has now produced an explicit `MATCH`;
+the remaining Position action is a read-only acceptance review of its immutable
+evidence while density disposition remains tracked.
 
 #### Recorded Position Step 10 Exact-GDS LVS No-Execution Stop
 
@@ -760,13 +760,55 @@ the exact package-local CDL before scalar top-name rewrites. It still reports
 and rejects every unrelated missing reference. Run one foreground retry on the
 unchanged Position package; do not rerun DRC or add another discovery stage.
 
+#### Recorded Position Step 13 Exact-GDS LVS Match And Audit Correction
+
+The foreground retry at commit
+`ea786a6b6f367dcf2a7e30ef1f81b38ef84b98e4` passed the corrected auxiliary-CDL
+gate and executed PVS on the unchanged Position GDS, canonical source, package
+JIHD CDL, and canonical tops. The immutable roots are:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_lvs_execution_20260720_155406
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/pvs/lvs/position_exact_gds_lvs_20260720_155406
+```
+
+The PVS process and wrapper returned zero. The raw result report records one
+unambiguous report-level verdict with no negative evidence:
+
+```text
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+PVS_RESULT_EVIDENCE=.../position_exact_gds_lvs_20260720_155406/svdb/matched
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+RUN_MANIFEST_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+```
+
+The execution driver returned `STATUS=FAIL` only because its post-run audit
+still expected `SVDB_REWRITE_COUNT=1`. The accepted scaffold had no incoming
+SVDB directive, so replay correctly reported `SVDB_ACTION=ADDED_MISSING` and
+`SVDB_REWRITE_COUNT=0` for the exact run-local SVDB path. This is a stale audit
+assertion after PVS, not an LVS mismatch. No PVS rerun is authorized.
+
+Future executions now audit the exact SVDB directory, `ADDED_MISSING`, and
+rewrite count zero. For this already completed run,
+`TOP/ci/server_review_position_core_pvs_lvs_match.sh` performs a read-only,
+hash-pinned acceptance review of the source diagnostic, immutable run,
+manifests, comparison inputs, positive evidence, and zero negative count. A
+passing review records `OUTCOME_CLASS=ATTRIBUTABLE_MATCH` and authorizes Event
+OOC start. Position promotion and signoff remain forbidden because density is
+still `FAIL` with four whole-extent rules.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
 `clk_sys`, external input delays/transitions, output delays, and output loads.
 Its logical and physical top remains `spadmic_event_coordinator`.
 
-After position OOC review, repeat the same two-step process:
+After the read-only Position LVS match review passes, begin the same two-step
+process without waiting for Position density disposition:
 
 ```bash
 set +e
@@ -967,9 +1009,10 @@ their recorded exact commits. Position immutable handoff staging, canonical
 source preparation, pin parity, rule semantics, option applicability, and
 strict preflight pass. Base PVS DRC has attributable report-level `0 (0)`
 evidence. Density PVS DRC has attributable `4 (4)` whole-extent coverage debt,
-not localized geometry debt. Exact-GDS LVS remains open. Every Event
-Genus/Innovus/PVS gate also remains server work and must stay labeled `NOT_RUN`
-until separately executed and reviewed.
+not localized geometry debt. Exact-GDS LVS has explicit `MATCH` evidence; only
+the read-only acceptance review of the stale post-run SVDB assertion remains.
+Every Event Genus/Innovus/PVS gate remains server work and must stay labeled
+`NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
@@ -987,22 +1030,16 @@ contract on diagnostic `position_pvs_drc_density_execution_20260720_133314`,
 while its physical result remains `FAIL` with exactly four whole-extent 30
 percent coverage rules: `R1M1`, `R1M2`, `R1M3`, and `R1MT`.
 
-Run one foreground exact-GDS LVS transaction now through
-`TOP/ci/server_run_position_core_pvs_lvs.sh`. It binds the same GDS SHA-256,
-canonical package source, package-local JIHD CDL, canonical layout/source top,
-and an observed-byte-pinned XH018 launcher used only as a control scaffold.
-The first attempt stopped before replay when the GUI-managed scaffold had
-drifted. The corrected gate now also audits the current launcher semantics and
-extracts its old values before strict clone-and-rewrite. A second no-run exposed
-an optional missing SVDB directive; replay now adds one explicit run-local
-SVDB path. A third no-run passed replay and exposed a stale same-basename CDL
-path in auxiliary copied metadata; replay now canonicalizes that path before
-scalar top rewrites while retaining strict rejection of unrelated references.
-The transaction accepts only an attributable `MATCH` or attributable
-`MISMATCH`; tool return code zero alone is insufficient. Do not rerun density
-and do not insert another template-discovery stage.
+Do not rerun PVS. The exact-GDS transaction
+`position_exact_gds_lvs_20260720_155406` already executed and produced
+`PVS_LVS_STATUS=MATCH`, zero negative patterns, three positive patterns, and a
+nonempty run-local `svdb/matched` file. Replay, output isolation, all exact
+input hashes, run and diagnostic manifests, and post-execution package/source
+checks passed. The original transaction failed only its stale
+`SVDB_REWRITE_COUNT=1` assertion after execution.
 
-On `MATCH`, start Event coordinator OOC immediately and review Position density
-disposition in parallel. On `MISMATCH`, classify the one immutable mismatch
-without rerunning PVS. Position promotion remains forbidden because density is
-still `FAIL` even if LVS matches.
+Run `TOP/ci/server_review_position_core_pvs_lvs_match.sh` against diagnostic
+`position_pvs_lvs_execution_20260720_155406`. It must execute no PVS process and
+must return `OUTCOME_CLASS=ATTRIBUTABLE_MATCH`. On that pass, start Event TC
+Genus immediately and review Position density disposition in parallel.
+Position promotion remains forbidden because density is still `FAIL`.

@@ -1,0 +1,10 @@
+LABEL=SPADMIC_PVS_REPLAY_CONTRACT
+STATUS=PASS
+MODE=LVS
+EXECUTION_DIRECTORY_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+LAYOUT_TOP=spadmic_position_core
+SOURCE_TOP=spadmic_position_core
+GDS=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/gds/spadmic_position_core.gds
+SOURCE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/netlist/spadmic_position_core.lvs.pg.v
+CDL=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/pdk/xh018_D_CELLS_JIHD.cdl

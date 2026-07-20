@@ -152,6 +152,16 @@ class PositionPvsLvsDriverTests(unittest.TestCase):
         ):
             self.assertIn(token, text)
 
+    def test_driver_audits_run_local_svdb_added_to_optional_scaffold(self) -> None:
+        text = DRIVER.read_text()
+        for token in (
+            '"$RUN_ISOLATION|SVDB_DIRECTORY=$RUN_DIR/svdb"',
+            '"$RUN_ISOLATION|SVDB_ACTION=ADDED_MISSING"',
+            '"$RUN_ISOLATION|SVDB_REWRITE_COUNT=0"',
+        ):
+            self.assertIn(token, text)
+        self.assertNotIn('"$RUN_ISOLATION|SVDB_REWRITE_COUNT=1"', text)
+
     def test_gate_separation_and_aggressive_next_step_are_explicit(self) -> None:
         text = DRIVER.read_text()
         for token in (

@@ -4215,3 +4215,83 @@ top rewrites. The package CDL remains the sole executable comparison library;
 GUI metadata never selects it. Different missing basenames remain visible to
 the strict external-reference gate. Run one new foreground LVS transaction on
 the unchanged Position artifacts. Do not rerun base or density DRC.
+
+### P09-R17 Position Exact-GDS LVS Explicit Match With Post-Run Audit Stop
+
+The auxiliary-CDL-normalized foreground transaction ran on 2026-07-20 from
+exact commit `ea786a6b6f367dcf2a7e30ef1f81b38ef84b98e4`. Its immutable evidence
+roots are:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_lvs_execution_20260720_155406
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/pvs/lvs/position_exact_gds_lvs_20260720_155406
+```
+
+All inherited density, package, source, scaffold-byte, scaffold-semantic, and
+foundry-reference gates passed. Replay bound the exact Position GDS SHA-256
+`ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1`,
+canonical source SHA-256
+`a5e81c21e633ae1b55d8da5c8e971997f890d9cee42dff2f6cf9f9f43cad9ffb`,
+package JIHD CDL SHA-256
+`5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf`,
+and `spadmic_position_core` as both tops. The auxiliary CDL reference was
+normalized to the package path and the strict external-reference report
+contained no `MISSING` entry.
+
+PVS executed. The wrapper, parser, and PVS process returned zero, and the raw
+result report records an explicit match:
+
+```text
+PVS_WRAPPER_RC=0
+PVS_TOOL_RC=0
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+PVS_RESULT_EVIDENCE=.../position_exact_gds_lvs_20260720_155406/svdb/matched
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+RUN_FILE_GATE_RC=0
+RUN_MANIFEST_RC=0
+DIAGNOSTIC_COPY_GATE_RC=0
+SOURCE_POST_RECHECK_RC=0
+PACKAGE_POST_EXECUTION_SHA_MANIFEST_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+```
+
+The top-level transaction nevertheless returned `STATUS=FAIL` and
+`OUTCOME_CLASS=NOT_CLASSIFIED` because one post-run assertion was stale:
+
+```text
+STALE_EXPECTATION=SVDB_REWRITE_COUNT=1
+SVDB_DIRECTORY=.../position_exact_gds_lvs_20260720_155406/svdb
+SVDB_ACTION=ADDED_MISSING
+SVDB_REWRITE_COUNT=0
+RUN_AUDIT_GATE_RC=1
+```
+
+The accepted source scaffold has no `mask_svdb_dir`; replay adds one exact
+run-local directive. No old directive was rewritten, so count zero is the
+correct result. This is a post-execution audit-policy defect, not an LVS
+mismatch or uncertain physical result. Rerunning PVS would add no evidence and
+is not authorized.
+
+The future execution driver now requires the exact run-local SVDB directory,
+`SVDB_ACTION=ADDED_MISSING`, and `SVDB_REWRITE_COUNT=0`. A dedicated read-only
+review driver, `TOP/ci/server_review_position_core_pvs_lvs_match.sh`, accepts
+only the exact `15:54:06` diagnostic and run. It pins the compact report hashes,
+checks the diagnostic, run, and package manifests, compares copied reports to
+the immutable run, revalidates all GDS/source/CDL identities and control paths,
+requires a nonempty positive evidence file, and requires zero negative match
+patterns. It records `PVS_EXECUTED=NO` for the review and
+`SOURCE_PVS_EXECUTED=YES` for the immutable source transaction.
+
+Compact evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_match_20260720_155406_audit_stop/
+```
+
+On review `PASS`, Position has attributable exact-GDS LVS `MATCH`; base DRC
+remains `PASS`; density remains `FAIL` with four OOC whole-extent coverage
+rules. Event TC OOC may start immediately while density disposition proceeds
+in parallel. Position promotion and signoff remain forbidden.
