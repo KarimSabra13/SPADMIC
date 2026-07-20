@@ -518,6 +518,7 @@ def write_markdown(
     layout_top: str,
     total_primary: int,
     total_expanded: int,
+    drc_variant: str,
     density_state: str,
     antenna_state: str,
     ordered: list[RuleEvidence],
@@ -529,6 +530,8 @@ def write_markdown(
     non_antenna_tsv: Path,
     bin_tsv: Path,
 ) -> None:
+    variant_title = drc_variant.title()
+    variant_label = f"{drc_variant.lower()}-DRC"
     non_antenna = [
         item
         for item in ordered
@@ -566,13 +569,14 @@ def write_markdown(
         )
 
     lines = [
-        "# PVS Base DRC Rule Classification and Non-Antenna Analysis",
+        f"# PVS {variant_title} DRC Rule Classification and Non-Antenna Analysis",
         "",
         "## Verdict",
         "",
         f"- Layout top: `{layout_top}`",
         f"- Immutable source run: `{run_dir}`",
-        f"- PVS base DRC total: `{total_primary} ({total_expanded})`",
+        f"- PVS {drc_variant.lower()} DRC total: "
+        f"`{total_primary} ({total_expanded})`",
         f"- Retained non-antenna review total: `{non_antenna_total}`",
         f"- Classified antenna result total: `{antenna_total}`",
         f"- DENSITY configurator state: `{density_state}`",
@@ -612,7 +616,7 @@ def write_markdown(
     if not non_antenna:
         lines.extend(
             [
-                "No non-antenna PVS base-DRC rule remains after semantic",
+                f"No non-antenna PVS {variant_label} rule remains after semantic",
                 "classification of the executed foundry descriptions.",
             ]
         )
@@ -665,7 +669,7 @@ def write_markdown(
                 f"### {item.rule.name}",
                 "",
                 f"- Results: `{item.rule.primary} ({item.rule.expanded})` "
-                f"or `{share:.2f}%` of the base total.",
+                f"or `{share:.2f}%` of the {drc_variant.lower()} total.",
                 f"- Category: `{category}`",
                 f"- Layer/object: `{affected_layer(item.rule.name, item.description)}`",
                 f"- Foundry description: `{item.description or 'DESCRIPTION_MISSING'}`",
@@ -743,11 +747,23 @@ def write_markdown(
                 "2. Review the antenna family separately from non-antenna debt.",
             ]
         )
+    lines.append("3. Export a new mapped and standard-cell-merged GDS after any repair.")
+    if drc_variant == "BASE":
+        lines.extend(
+            [
+                "4. Require base PVS DRC zero for final closure, then run and require",
+                "   density-enabled PVS DRC zero.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "4. Retain the separate accepted base-DRC evidence and repair or",
+                "   rerun this density variant until its report-level total is zero.",
+            ]
+        )
     lines.extend(
         [
-            "3. Export a new mapped and standard-cell-merged GDS after any repair.",
-            "4. Require base PVS DRC zero for final closure, then run and require",
-            "   density-enabled PVS DRC zero.",
             "5. Run LVS on the final exact GDS and require an explicit `MATCH`.",
             "",
             "Do not edit or rerun inside the immutable source run. This report and",
@@ -800,6 +816,10 @@ def analyze(args: argparse.Namespace) -> Path:
     )
     control_path = require_file(run_dir / "pvsdrcctl", "executed PVS DRC control")
 
+    expected_variant = args.expected_variant.upper()
+    expected_density_state = (
+        "DEFINED" if expected_variant == "DENSITY" else "UNDEFINED"
+    )
     status = kv_report(status_path)
     replay = kv_report(replay_path)
     isolation = kv_report(isolation_path)
@@ -810,9 +830,9 @@ def analyze(args: argparse.Namespace) -> Path:
             "this analyzer expects a classified nonzero DRC run, found "
             f"{status.get('PVS_DRC_STATUS', 'MISSING')}"
         )
-    if status.get("PVS_DRC_VARIANT") != "BASE":
+    if status.get("PVS_DRC_VARIANT") != expected_variant:
         raise AnalysisError(
-            "this analyzer expects the base DRC variant, found "
+            f"this analyzer expects the {expected_variant.lower()} DRC variant, found "
             f"{status.get('PVS_DRC_VARIANT', 'MISSING')}"
         )
     if replay.get("STATUS") != "PASS" or replay.get("MODE") != "DRC":
@@ -898,9 +918,10 @@ def analyze(args: argparse.Namespace) -> Path:
     control_text = control_path.read_text(errors="replace")
     density_state = symbol_state(control_text, "DENSITY")
     antenna_state = symbol_state(control_text, "VAR_ANT_RATIO")
-    if density_state != "UNDEFINED":
+    if density_state != expected_density_state:
         raise AnalysisError(
-            f"expected base DRC with DENSITY undefined, found {density_state}"
+            f"expected {expected_variant.lower()} DRC with DENSITY "
+            f"{expected_density_state.lower()}, found {density_state}"
         )
     if antenna_state not in {"DEFINED", "UNDEFINED"}:
         raise AnalysisError(
@@ -1161,6 +1182,7 @@ def analyze(args: argparse.Namespace) -> Path:
         layout_top=layout_top,
         total_primary=total_primary,
         total_expanded=total_expanded,
+        drc_variant=expected_variant,
         density_state=density_state,
         antenna_state=antenna_state,
         ordered=ordered,
@@ -1190,7 +1212,7 @@ def analyze(args: argparse.Namespace) -> Path:
         "OUTPUT_ISOLATION_STATUS=PASS",
         "PVS_RC=0",
         "PVS_DRC_STATUS=FAIL",
-        "PVS_DRC_VARIANT=BASE",
+        f"PVS_DRC_VARIANT={expected_variant}",
         f"LAYOUT_TOP={layout_top}",
         f"DBU_PER_UM={dbu_per_um}",
         f"DECLARED_RULECHECK_COUNT={declared_rulechecks}",
@@ -1241,7 +1263,17 @@ def analyze(args: argparse.Namespace) -> Path:
         f"LAYOUT_DEPTH={metadata.get('Layout Depth', 'UNKNOWN')}",
         f"TEXT_DEPTH={metadata.get('Text Depth', 'UNKNOWN')}",
         "LVS_MATCH_STATUS=UNCHANGED_SEPARATE_GATE",
-        "PVS_DENSITY_DRC_STATUS=NOT_RUN",
+        *(
+            [
+                "PVS_BASE_DRC_STATUS=FAIL",
+                "PVS_DENSITY_DRC_STATUS=NOT_RUN",
+            ]
+            if expected_variant == "BASE"
+            else [
+                "PVS_BASE_DRC_STATUS=UNCHANGED_SEPARATE_GATE",
+                "PVS_DENSITY_DRC_STATUS=FAIL",
+            ]
+        ),
         "FINAL_SIGNOFF_READY=NO",
         "BLOCK_PROMOTION_AUTHORIZED=NO",
     ]
@@ -1255,6 +1287,11 @@ def main() -> None:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--expected-primary", type=int)
     parser.add_argument("--expected-expanded", type=int)
+    parser.add_argument(
+        "--expected-variant",
+        choices=("base", "density"),
+        default="base",
+    )
     parser.add_argument("--innovus-waiver-tsv", type=Path)
     parser.add_argument("--correlation-margin-um", type=float, default=0.35)
     parser.add_argument("--spatial-bin-um", type=float, default=10.0)

@@ -135,6 +135,7 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
         output: Path,
         waiver: Path,
         expected: int = 6,
+        variant: str = "base",
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
@@ -148,6 +149,8 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
                 str(expected),
                 "--expected-expanded",
                 str(expected),
+                "--expected-variant",
+                variant,
                 "--innovus-waiver-tsv",
                 str(waiver),
             ],
@@ -178,6 +181,8 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
                 status,
             )
             self.assertIn("PVS_RESULTS_OVERLAPPING_WAIVER_BOXES=1", status)
+            self.assertIn("PVS_DRC_VARIANT=BASE", status)
+            self.assertIn("PVS_BASE_DRC_STATUS=FAIL", status)
 
             non_antenna = (output / "pvs_drc_non_antenna_rules.tsv").read_text()
             self.assertIn("S1M1", non_antenna)
@@ -211,6 +216,47 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
             self.assertIn("Minimum MET1 spacing/notch", markdown)
             self.assertIn("fixed metal-to-connected-gate antenna checks", markdown)
             self.assertIn("explicit `MATCH`", markdown)
+
+    def test_density_variant_requires_defined_selector_and_stays_separate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run, waiver = self.make_run(root)
+            status_path = run / "pvs_drc_status.rpt"
+            status_path.write_text(
+                status_path.read_text().replace(
+                    "PVS_DRC_VARIANT=BASE",
+                    "PVS_DRC_VARIANT=DENSITY",
+                )
+            )
+            control_path = run / "pvsdrcctl"
+            control_path.write_text(
+                control_path.read_text().replace(
+                    "#UNDEFINE DENSITY",
+                    "#DEFINE DENSITY",
+                )
+            )
+
+            output = root / "density_analysis"
+            result = self.run_analyzer(
+                run,
+                output,
+                waiver,
+                variant="density",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            status = (output / "pvs_drc_analysis_status.rpt").read_text()
+            self.assertIn("PVS_DRC_VARIANT=DENSITY", status)
+            self.assertIn("DENSITY_STATE=DEFINED", status)
+            self.assertIn(
+                "PVS_BASE_DRC_STATUS=UNCHANGED_SEPARATE_GATE",
+                status,
+            )
+            self.assertIn("PVS_DENSITY_DRC_STATUS=FAIL", status)
+
+            markdown = (output / "pvs_drc_non_antenna_analysis.md").read_text()
+            self.assertIn("# PVS Density DRC Rule Classification", markdown)
+            self.assertIn("separate accepted base-DRC evidence", markdown)
 
     def test_expected_total_mismatch_fails_without_creating_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

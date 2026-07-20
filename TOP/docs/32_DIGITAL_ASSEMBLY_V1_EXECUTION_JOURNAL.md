@@ -3881,3 +3881,74 @@ retains `PVS_BASE_DRC_STATUS=FAIL` with explicit rule debt. Either accepted
 outcome proceeds directly to foreground density DRC on the same GDS. There is
 no further rule-set, preprocessor, PIMIDE, or template-discovery review unless
 a pinned input changes.
+
+### P09-R12 Position Base PVS DRC Attributable Zero
+
+The authorized foreground base transaction ran on 2026-07-20 from exact
+commit `31738aa650492516340e54b7535c5d805b897090`. It used the accepted Position
+package and unchanged GDS SHA-256
+`ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1`.
+The immutable evidence roots are:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_drc_base_execution_20260720_115921
+/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/pvs/drc/position_base_drc_20260720_115921
+```
+
+The PVS tool, replay, output-isolation, run-file, run-manifest, source
+recheck, package recheck, diagnostic-copy, and diagnostic-manifest gates all
+passed. Three independently scanned text observations agreed on the same zero
+total:
+
+```text
+BASE_DRC_RC=0
+STATUS=PASS
+RESULT=PVS_BASE_DRC_ZERO_RESULTS_RECORDED
+PVS_WRAPPER_RC=0
+PVS_TOOL_RC=0
+PVS_BASE_DRC_STATUS=PASS
+DRC_TOTAL_PRIMARY=0
+DRC_TOTAL_EXPANDED=0
+DRC_TOTAL_MATCH_COUNT=3
+OUTCOME_CLASS=ATTRIBUTABLE_ZERO_RESULTS
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+RUN_FILE_GATE_RC=0
+RUN_AUDIT_GATE_RC=0
+RUN_MANIFEST_RC=0
+DIAGNOSTIC_COPY_GATE_RC=0
+SOURCE_POST_RECHECK_RC=0
+PACKAGE_POST_EXECUTION_SHA_MANIFEST_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+```
+
+The report-level evidence is
+`.drcSummaryReport:Total DRC Results=0(0)`. The three matches are consistent
+copies of that result, not three violations. The base control retained exactly
+one `#UNDEFINE DENSITY`; `POPPING`, `PIMIDE`, and `DUMMY_FILL` remained
+undefined while `VAR_ANT_RATIO` remained defined.
+
+No rule-analysis directory was created because a zero-result run has no rule
+debt to classify:
+
+```text
+RULE_ANALYSIS_RC=NOT_APPLICABLE
+RULE_ANALYSIS_STATUS=NOT_APPLICABLE_ZERO_RESULTS
+```
+
+The operator's optional inspection loop printed `MISSING=` for the two
+rule-analysis paths. Those messages are expected on this branch and are not a
+run or manifest failure. Compact accepted evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_base_drc_20260720_115921/
+```
+
+Base DRC is closed only for the exact accepted GDS. Density DRC and LVS remain
+independent. The next transaction is
+`TOP/ci/server_run_position_core_pvs_density_drc.sh`, which runs one fresh
+density variant in the foreground. An attributable zero closes density. An
+attributable nonzero result is fully reconciled and classified without a PVS
+rerun, after which exact-GDS LVS still proceeds as an independent evidence
+gate. Block promotion remains forbidden until base, density, and LVS all meet
+their separate contracts.

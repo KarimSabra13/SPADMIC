@@ -1,8 +1,8 @@
 # Digital Subblock Closure and Assembly Roadmap
 
 Status: phased server execution active; Position immutable handoff, option
-policy, and corrected base-plus-density strict preflight pass; foreground base
-PVS DRC is authorized next.
+policy, corrected strict preflight, and attributable zero-result base PVS DRC
+pass; foreground density PVS DRC is authorized next.
 
 Date: 2026-07-20.
 
@@ -48,6 +48,7 @@ TOP/docs/server_snapshots/pvs_drc/position_rule_semantics_review_20260717_161842
 TOP/docs/server_snapshots/pvs_drc/position_gds_layer_applicability_20260720_105724/
 TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_111548_failed/
 TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_113452/
+TOP/docs/server_snapshots/pvs_drc/position_base_drc_20260720_115921/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -80,7 +81,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground base PVS DRC and immediate rule classification |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground density PVS DRC and immediate rule classification |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -860,9 +861,10 @@ their recorded exact commits. Position immutable handoff staging, canonical
 source preparation, pin parity, rule semantics, and exact-GDS option
 applicability also pass. The initial Position strict dry-run exposed a replay
 path-order defect and did not execute PVS; the corrected base-plus-density
-strict preflight now passes. Base DRC, density DRC, and LVS remain open. Every
-Event Genus/Innovus/PVS gate also remains server work and must stay labeled
-`NOT_RUN` until separately executed and reviewed.
+strict preflight passes. The foreground base PVS DRC now has attributable
+report-level zero evidence. Density DRC and LVS remain open. Every Event
+Genus/Innovus/PVS gate also remains server work and must stay labeled `NOT_RUN`
+until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
@@ -873,16 +875,19 @@ rule-set selection and full option policy are accepted: base DRC keeps DENSITY,
 POPPING, PIMIDE, and DUMMY_FILL undefined while retaining VAR_ANT_RATIO; the
 density variant changes only DENSITY to defined.
 
-The corrected execution of `TOP/ci/server_preflight_position_core_pvs_drc.sh`
-passed both fresh dry-run controls in immutable diagnostic
-`position_pvs_drc_strict_preflight_20260720_113452`. Run one foreground base
-DRC now through `TOP/ci/server_run_position_core_pvs_base_drc.sh`. The wrapper
-must preserve the distinction between transaction PASS and physical DRC PASS:
-a report-level zero records `PVS_BASE_DRC_STATUS=PASS`; a reconciled nonzero
-records `PVS_BASE_DRC_STATUS=FAIL` plus complete rule debt while still proving
-that execution and classification were attributable.
+The foreground base transaction passed on immutable diagnostic
+`position_pvs_drc_base_execution_20260720_115921`. Its exact PVS total is
+`0 (0)`, wrapper and tool return codes are zero, replay and output isolation
+pass, and all source/package manifests reproduce. The optional rule-analysis
+files are absent by design because
+`RULE_ANALYSIS_STATUS=NOT_APPLICABLE_ZERO_RESULTS`.
 
-After either attributable base outcome, run density next on the same exact GDS.
-Do not insert another discovery review between base and density. Exact-GDS LVS
-remains a separate electrical gate, and block promotion remains forbidden until
-base, density, and LVS all meet their own closure contracts.
+Run one foreground density transaction now through
+`TOP/ci/server_run_position_core_pvs_density_drc.sh`. Do not insert another
+discovery or manual semantics review between base and density. The driver
+accepts a report-level zero or a fully reconciled/classified nonzero result.
+After either attributable density outcome, collect exact-GDS LVS immediately
+as a separate electrical gate. A nonzero density result remains physical debt;
+it does not invalidate base zero or prevent independent LVS evidence. Block
+promotion remains forbidden until base, density, and LVS all meet their own
+closure contracts.
