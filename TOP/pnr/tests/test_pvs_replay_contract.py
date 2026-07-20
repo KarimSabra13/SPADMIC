@@ -20,6 +20,8 @@ class PvsReplayContractTest(unittest.TestCase):
         *,
         executable_cdl: bool = True,
         svdb_directory: bool = True,
+        stale_same_basename_metadata_cdl: bool = False,
+        unrelated_missing_metadata_cdl: bool = False,
         layout_top: str = "old_layout_top",
         historical_run_name: str = "historical_gui_run",
     ) -> tuple[Path, dict[str, str]]:
@@ -93,9 +95,22 @@ class PvsReplayContractTest(unittest.TestCase):
             "// Historical reference: /missing/comment-only/reference\n"
             "/* Retired reference: /missing/block-comment/reference */\n"
         )
-        (template / ".preset.autosave").write_text(
-            f'SchematicDFIIiCDLfile "{old["cdl"]}"\n'
-        )
+        metadata_cdl = old["cdl"]
+        if stale_same_basename_metadata_cdl:
+            metadata_cdl = str(
+                root
+                / "blocks"
+                / old["source_top"]
+                / "tx_packet_pvs_waiver"
+                / "pdk"
+                / "xh018_D_CELLS_JIHD.cdl"
+            )
+        preset_text = f'SchematicDFIIiCDLfile "{metadata_cdl}"\n'
+        if unrelated_missing_metadata_cdl:
+            preset_text += (
+                f'UnrelatedCDL "{root / "missing" / "custom_analog.cdl"}"\n'
+            )
+        (template / ".preset.autosave").write_text(preset_text)
         return template, old
 
     def run_replay(
@@ -105,6 +120,8 @@ class PvsReplayContractTest(unittest.TestCase):
         *,
         executable_cdl: bool = True,
         svdb_directory: bool = True,
+        stale_same_basename_metadata_cdl: bool = False,
+        unrelated_missing_metadata_cdl: bool = False,
         omit_cdl_replacement: bool = False,
         density: bool = False,
         colliding_execution_root: bool = False,
@@ -115,6 +132,10 @@ class PvsReplayContractTest(unittest.TestCase):
             mode,
             executable_cdl=executable_cdl,
             svdb_directory=svdb_directory,
+            stale_same_basename_metadata_cdl=(
+                stale_same_basename_metadata_cdl
+            ),
+            unrelated_missing_metadata_cdl=unrelated_missing_metadata_cdl,
             layout_top=layout_top,
             historical_run_name=(
                 layout_top if colliding_execution_root else "historical_gui_run"
@@ -174,6 +195,41 @@ class PvsReplayContractTest(unittest.TestCase):
             self.assertEqual(control.count("xh018_D_CELLS_JIHD.cdl"), 1)
             isolation = (run_dir / "output_isolation.rpt").read_text()
             self.assertIn("SCHEMATIC_CDL_ACTION=ADDED_MISSING", isolation)
+
+    def test_lvs_replay_normalizes_same_basename_auxiliary_cdl_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result, run_dir = self.run_replay(
+                root,
+                "lvs",
+                executable_cdl=False,
+                stale_same_basename_metadata_cdl=True,
+                omit_cdl_replacement=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            canonical_cdl = root / "xh018_D_CELLS_JIHD.cdl"
+            preset = (run_dir / ".preset.autosave").read_text()
+            self.assertIn(str(canonical_cdl), preset)
+            self.assertNotIn("tx_packet_pvs_waiver", preset)
+            references = (run_dir / "external_references.rpt").read_text()
+            self.assertIn(f"FILE={canonical_cdl}|", references)
+            self.assertNotIn("tx_packet_pvs_waiver", references)
+            replacements = (run_dir / "template_replacements.rpt").read_text()
+            self.assertIn("INFERRED_AUXILIARY_CDL_REFERENCE=", replacements)
+            self.assertIn(f"NEW={canonical_cdl}|OCCURRENCES=1", replacements)
+
+    def test_lvs_replay_keeps_unrelated_missing_cdl_reference_visible(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            unrelated = root / "missing" / "custom_analog.cdl"
+            result, run_dir = self.run_replay(
+                root,
+                "lvs",
+                unrelated_missing_metadata_cdl=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            references = (run_dir / "external_references.rpt").read_text()
+            self.assertIn(f"MISSING={unrelated}", references)
 
     def test_lvs_replay_adds_missing_run_local_svdb_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

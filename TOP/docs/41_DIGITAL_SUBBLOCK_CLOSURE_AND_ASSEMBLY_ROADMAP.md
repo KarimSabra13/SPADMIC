@@ -1,9 +1,10 @@
 # Digital Subblock Closure and Assembly Roadmap
 
 Status: phased server execution active; Position base PVS DRC is attributable
-zero, density PVS DRC is attributable four-rule whole-extent debt, and the
-first two exact-GDS LVS attempts stopped before replay on scaffold byte and
-optional-SVDB audit gates. One corrected foreground retry is authorized now.
+zero, density PVS DRC is attributable four-rule whole-extent debt, and three
+exact-GDS LVS attempts stopped before PVS. The latest passed replay but exposed
+one stale auxiliary CDL reference. One corrected foreground retry is
+authorized now.
 
 Date: 2026-07-20.
 
@@ -53,6 +54,7 @@ TOP/docs/server_snapshots/pvs_drc/position_base_drc_20260720_115921/
 TOP/docs/server_snapshots/pvs_drc/position_density_drc_20260720_133314/
 TOP/docs/server_snapshots/pvs_lvs/position_lvs_template_identity_20260720_141229_failed/
 TOP/docs/server_snapshots/pvs_lvs/position_lvs_semantic_audit_20260720_143505_failed/
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_auxiliary_cdl_reference_20260720_152848_failed/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -85,7 +87,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground exact-GDS PVS LVS retry with run-local SVDB normalization; retain density debt |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground exact-GDS PVS LVS retry with auxiliary CDL normalization; retain density debt |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Start immediately after attributable Position LVS |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -737,6 +739,27 @@ rejects duplicates, and adds or rewrites exactly one SVDB path under the
 unique package-local run. This closes the false audit gate while strengthening
 output isolation. Run one foreground retry; do not rerun DRC.
 
+#### Recorded Position Step 12 Auxiliary-CDL Reference Correction
+
+The foreground attempt at commit
+`98a616c30246f457f0f105e91868a9213825dc96` passed scaffold identity and
+semantics, canonical comparison-input checks, replay, and output isolation.
+The replay report proved that the package CDL and run-local SVDB were added.
+The final external-reference gate stopped on one path before PVS started:
+
+```text
+MISSING=.../blocks/spadmic_position_core/tx_packet_pvs_waiver_20260716_130442/pdk/xh018_D_CELLS_JIHD.cdl
+PVS_WRAPPER_RC=1
+PVS_EXECUTED=NO
+PVS_LVS_STATUS=UNKNOWN
+```
+
+This hybrid path is auxiliary copied-control metadata, not the executable CDL
+selected for comparison. Replay now maps same-basename auxiliary CDL paths to
+the exact package-local CDL before scalar top-name rewrites. It still reports
+and rejects every unrelated missing reference. Run one foreground retry on the
+unchanged Position package; do not rerun DRC or add another discovery stage.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -972,7 +995,10 @@ The first attempt stopped before replay when the GUI-managed scaffold had
 drifted. The corrected gate now also audits the current launcher semantics and
 extracts its old values before strict clone-and-rewrite. A second no-run exposed
 an optional missing SVDB directive; replay now adds one explicit run-local
-SVDB path. The transaction accepts only an attributable `MATCH` or attributable
+SVDB path. A third no-run passed replay and exposed a stale same-basename CDL
+path in auxiliary copied metadata; replay now canonicalizes that path before
+scalar top rewrites while retaining strict rejection of unrelated references.
+The transaction accepts only an attributable `MATCH` or attributable
 `MISMATCH`; tool return code zero alone is insufficient. Do not rerun density
 and do not insert another template-discovery stage.
 

@@ -81,6 +81,18 @@ def strip_c_style_comments(text: str) -> str:
     return "".join(output)
 
 
+def absolute_path_references(text: str) -> set[Path]:
+    references: set[Path] = set()
+    reference_text = strip_c_style_comments(text)
+    for value in re.findall(
+        r"(?:\"|\{|\s)(/[^\s\"'{};]+)",
+        reference_text,
+    ):
+        if not value.startswith("//"):
+            references.add(Path(value))
+    return references
+
+
 SHELL_VALUE = r'(?:"[^"\n]*"|\'[^\'\n]*\'|[^\s\\;]+)'
 PVS_VALUE = r'(?:"[^"\n]*"|\{[^}\n]*\}|[^;\s]+)'
 
@@ -559,6 +571,36 @@ def main() -> None:
         replacement_lines.append(f"OLD={old}|NEW={new}|OCCURRENCES={count}")
         if old != new and count == 0:
             raise SystemExit(f"REPLACEMENT_SOURCE_NOT_FOUND: {old}")
+
+    if args.mode == "lvs" and args.expected_cdl is not None:
+        canonical_cdl = args.expected_cdl.resolve()
+        explicit_by_source = dict(explicit_replacements)
+        auxiliary_cdl_references = sorted(
+            {
+                candidate
+                for text in original_text.values()
+                for candidate in absolute_path_references(text)
+                if candidate.name == canonical_cdl.name
+                and candidate.resolve() != canonical_cdl
+            },
+            key=str,
+        )
+        for candidate in auxiliary_cdl_references:
+            old = str(candidate)
+            if old in explicit_by_source:
+                if Path(explicit_by_source[old]).resolve() != canonical_cdl:
+                    raise SystemExit(
+                        "PVS_REPLAY_CONTRACT_FAIL: explicit same-basename "
+                        f"CDL replacement conflicts with {canonical_cdl}: {old}"
+                    )
+                continue
+            count = sum(text.count(old) for text in original_text.values())
+            replacements.append((old, str(canonical_cdl)))
+            replacement_lines.append(
+                "INFERRED_AUXILIARY_CDL_REFERENCE="
+                f"{old}|NEW={canonical_cdl}|OCCURRENCES={count}"
+            )
+
     # Relocate both the selected template and any GUI-generated execution root
     # so old sibling run paths cannot bypass the copied controls.
     relocation_roots = {template, *inferred_execution_roots}
@@ -693,15 +735,13 @@ def main() -> None:
         raise SystemExit("PVS_REPLAY_CONTRACT_FAIL: " + "; ".join(contract_errors))
 
     run_file.chmod(0o755)
-    external_paths = set()
+    external_paths: set[Path] = set()
     for path in copied:
         if not is_text(path):
             continue
-        reference_text = strip_c_style_comments(path.read_text(errors="ignore"))
-        for value in re.findall(r"(?:\"|\{|\s)(/[^\s\"'{};]+)", reference_text):
-            if value.startswith("//"):
-                continue
-            candidate = Path(value)
+        for candidate in absolute_path_references(
+            path.read_text(errors="ignore")
+        ):
             if run_dir not in candidate.parents and candidate != run_dir:
                 external_paths.add(candidate)
     reference_lines = ["LABEL=SPADMIC_PVS_EXTERNAL_REFERENCES"]

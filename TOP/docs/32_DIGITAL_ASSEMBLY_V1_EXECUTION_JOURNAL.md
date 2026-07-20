@@ -4163,3 +4163,55 @@ path. This preserves the stronger output-isolation requirement without
 requiring mutable GUI metadata. The next action remains one foreground
 exact-GDS LVS retry on the unchanged Position artifacts. No DRC rerun or new
 template-discovery stage is authorized.
+
+### P09-R16 Position Exact-GDS LVS Auxiliary-CDL Reference Stop
+
+The next foreground attempt ran on 2026-07-20 from exact commit
+`98a616c30246f457f0f105e91868a9213825dc96`. Its fresh diagnostic is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_lvs_execution_20260720_152848
+```
+
+Every inherited density, package, source, scaffold-byte, scaffold-semantic,
+and foundry-reference gate passed. Replay also completed and proved the exact
+Position GDS, canonical source, package JIHD CDL, Position tops, package-local
+outputs, and newly materialized SVDB path:
+
+```text
+TEMPLATE_IDENTITY_GATE_RC=0
+TEMPLATE_SEMANTIC_GATE_RC=0
+PATCH_RC=0
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+SCHEMATIC_CDL_ACTION=ADDED_MISSING
+SVDB_ACTION=ADDED_MISSING
+```
+
+The final external-reference gate then found one stale auxiliary path:
+
+```text
+MISSING=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/tx_packet_pvs_waiver_20260716_130442/pdk/xh018_D_CELLS_JIHD.cdl
+ERROR: patched PVS template has missing external references
+PVS_WRAPPER_RC=1
+PVS_EXECUTED=NO
+```
+
+This is not a comparison-input failure. The executable control had no incoming
+Spice path, and replay independently added the accepted package CDL. The mixed
+Position block and TX run path identifies an auxiliary same-basename CDL
+reference that was reached by the scalar top rewrite. PVS did not start, so
+`PVS_LVS_STATUS=UNKNOWN` remains correct and no match or mismatch exists.
+
+Compact evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_auxiliary_cdl_reference_20260720_152848_failed/
+```
+
+Replay now canonicalizes only absolute auxiliary references whose basename
+exactly matches the already selected package CDL, and does so before scalar
+top rewrites. The package CDL remains the sole executable comparison library;
+GUI metadata never selects it. Different missing basenames remain visible to
+the strict external-reference gate. Run one new foreground LVS transaction on
+the unchanged Position artifacts. Do not rerun base or density DRC.
