@@ -3741,3 +3741,79 @@ Compact R10 evidence and the manual decision are retained under:
 ```text
 TOP/docs/server_snapshots/pvs_drc/position_gds_layer_applicability_20260720_105724/
 ```
+
+### P09-R11 Position PVS Strict Preflight Initial Failure
+
+The combined base and density strict dry-run preflight first ran in the
+foreground on 2026-07-20 from exact commit
+`3d8c0e025cbaa6caa300e7efc2290983bcec90e2` and immutable R10 diagnostic
+`position_pvs_drc_gds_layer_applicability_20260720_105724`.
+
+All attribution and input gates passed. The repository was clean at the exact
+expected head, every R10 hash and status reproduced, the accepted Position GDS
+remained `ebba26a4...`, the package manifest passed, and every pinned seed
+control retained its expected hash. The base replay contract also materialized
+successfully:
+
+```text
+INPUT_HASH_GATE_RC=0
+INPUT_MANIFEST_GATE_RC=0
+INPUT_STATUS_GATE_RC=0
+PACKAGE_GATE_RC=0
+PACKAGE_SHA_MANIFEST_RC=0
+SEED_FILE_GATE_RC=0
+SEED_IDENTITY_GATE_RC=0
+PVS_REPLAY_PATCH_STATUS=PASS
+PATCH_RC=0
+```
+
+The first base dry-run then rejected two false external references:
+
+```text
+MISSING=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_position_core
+MISSING=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_position_core/PIPO1.LOG
+ERROR: patched PVS template has missing external references
+BASE_DRY_RUN_RC=1
+DENSITY_DRY_RUN_RC=NOT_RUN
+DIAGNOSTIC_COPY_GATE_RC=1
+```
+
+This is a replay-tool path-order defect, not a Position package, PDK, seed, or
+PVS result. The packet-core top token was replaced before the longer absolute
+packet-core execution root. That changed the old root into an unrecognized
+`.../spadmic_position_core` path before run-directory relocation could match
+it. The repair applies all replacement sources longest-first and includes a
+regression where the old top name is also the GUI execution-directory name.
+The old wrapper also marked diagnostic copying failed because it required the
+files of the deliberately unrun density variant. The corrected failure path
+copies all available partial artifacts and requires a complete variant only
+when that variant's dry-run return code is zero.
+
+No PVS process ran, no source or package changed, and neither base nor density
+DRC acquired a result:
+
+```text
+STATUS=FAIL
+STRICT_DRY_RUN_PREFLIGHT_STATUS=FAIL
+PVS_BASE_DRC_EXECUTION_AUTHORIZED=NO
+PVS_DENSITY_DRC_EXECUTION_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=NO
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+The failed transaction is retained rather than overwritten:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_drc_strict_preflight_20260720_111548
+TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_111548_failed/
+```
+
+The next transaction is a fresh corrected R11 base-plus-density dry-run. It
+does not reopen rule-set or applicability discovery. If both dry-run contracts
+pass, the next action is one foreground base PVS DRC execution and report-level
+classification.

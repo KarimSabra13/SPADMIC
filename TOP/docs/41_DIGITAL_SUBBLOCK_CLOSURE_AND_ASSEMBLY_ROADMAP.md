@@ -1,10 +1,10 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active; Position immutable handoff accepted;
-named default PVS rule set and optional-rule semantics attributable; accepted
-GDS PAD/PIMIDE hierarchy applicability is next.
+Status: phased server execution active; Position immutable handoff and option
+policy accepted; first strict dry-run exposed a replay path-order defect;
+corrected base-plus-density preflight rerun pending.
 
-Date: 2026-07-17.
+Date: 2026-07-20.
 
 This document is the execution authority for converting the remaining
 matrix-top digital logic into reusable hard macros or controlled soft regions.
@@ -45,6 +45,8 @@ TOP/docs/layout_audits/SPADMIC2_20260709_072331/
 TOP/docs/server_snapshots/handoff/position_core_gridfit_20260717_114810/
 TOP/docs/server_snapshots/pvs_drc/position_template_discovery_20260717_125002/
 TOP/docs/server_snapshots/pvs_drc/position_rule_semantics_review_20260717_161842/
+TOP/docs/server_snapshots/pvs_drc/position_gds_layer_applicability_20260720_105724/
+TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_111548_failed/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -77,7 +79,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Rule semantics accepted; GDS PAD/PIMIDE applicability pending |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Corrected strict preflight rerun after replay path-order fix |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -597,6 +599,36 @@ from the pinned deck and counts only geometry reachable from
 creation, PVS execution, and promotion remain unauthorized until that evidence
 is returned and manually accepted.
 
+#### Recorded Position Step 8 Applicability and Strict Preflight
+
+P09-R10 ran on 2026-07-20 from exact commit
+`a622dd0bf88478ecf124a448296c7390702d2d1f`. It parsed the complete accepted
+GDS hierarchy and proved zero reachable PAD `19/0`, PIMIDE `221/5`, and NOPIM
+`46/0` geometry or text. The PIMIDE branch is not applicable to Position OOC
+DRC, so strict preflight was manually authorized with the accepted base and
+density option policy.
+
+The first P09-R11 attempt ran from exact commit
+`3d8c0e025cbaa6caa300e7efc2290983bcec90e2`. All repository, R10, package,
+GDS, and seed identity gates passed, and the base replay patch contract passed.
+The dry-run then stopped before density because scalar replacement of
+`spadmic_tx_packet_core` corrupted the longer historical execution path before
+that path could be relocated. It reported:
+
+```text
+MISSING=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_position_core
+MISSING=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/layoutverification/pvs_drc/spadmic_position_core/PIPO1.LOG
+BASE_DRY_RUN_RC=1
+DENSITY_DRY_RUN_RC=NOT_RUN
+PVS_EXECUTED=NO
+```
+
+The replay helper now orders replacements by descending source length, with a
+regression for this exact top-name/execution-root collision. This failed
+attempt is tooling evidence only: base DRC, density DRC, LVS, and promotion all
+remain open. The corrected R11 rerun is the only remaining dry-run action; no
+additional rule-set or PIMIDE review is required unless a pinned input changes.
+
 ## 7. Event Coordinator
 
 The event coordinator now has a complete TC OOC SDC with a `6.25 ns`
@@ -802,9 +834,11 @@ The RTL regressions pass `25/25` position checks and `24/24` event checks.
 Position TC Genus and the corrected grid-safe Position Innovus replay pass on
 their recorded exact commits. Position immutable handoff staging, canonical
 source preparation, pin parity, rule semantics, and exact-GDS option
-applicability also pass. Position strict dry-run, base DRC, density DRC, and
-LVS remain open. Every Event Genus/Innovus/PVS gate also remains server work
-and must stay labeled `NOT_RUN` until separately executed and reviewed.
+applicability also pass. The first Position strict dry-run exposed a replay
+path-order defect and did not execute PVS; corrected strict dry-run, base DRC,
+density DRC, and LVS remain open. Every Event Genus/Innovus/PVS gate also
+remains server work and must stay labeled `NOT_RUN` until separately executed
+and reviewed.
 
 ## 13. Immediate Next Action
 
@@ -815,13 +849,14 @@ rule-set selection and full option policy are accepted: base DRC keeps DENSITY,
 POPPING, PIMIDE, and DUMMY_FILL undefined while retaining VAR_ANT_RATIO; the
 density variant changes only DENSITY to defined.
 
-The next server action is
-`TOP/ci/server_preflight_position_core_pvs_drc.sh`, using immutable diagnostic
-root `position_pvs_drc_gds_layer_applicability_20260720_105724`. This is one
-combined strict dry-run transaction for base and density. It may clone the
-pinned packet-core controls as a control scaffold, but must rewrite the exact
-Position GDS/top and all outputs into isolated run-local paths and must not
-execute PVS.
+The first execution of `TOP/ci/server_preflight_position_core_pvs_drc.sh`
+proved all immutable inputs but exposed a replacement-order defect before the
+base dry-run could complete. The corrected helper relocates longer absolute
+paths before replacing the scalar top name. Rerun the same combined base and
+density transaction against immutable diagnostic root
+`position_pvs_drc_gds_layer_applicability_20260720_105724`. It must rewrite the
+exact Position GDS/top and all outputs into isolated run-local paths and must
+not execute PVS.
 
 If both dry-run contracts pass, authorize one foreground base DRC immediately
 and classify its report-level result. Keep density as the next independent run

@@ -536,9 +536,8 @@ def main() -> None:
         replacement_lines.append(f"OLD={old}|NEW={new}|OCCURRENCES={count}")
         if old != new and count == 0:
             raise SystemExit(f"REPLACEMENT_SOURCE_NOT_FOUND: {old}")
-    # Apply specific artifacts first. Relocate both the selected template and
-    # any GUI-generated execution root afterward so old sibling run paths
-    # cannot bypass the copied controls.
+    # Relocate both the selected template and any GUI-generated execution root
+    # so old sibling run paths cannot bypass the copied controls.
     relocation_roots = {template, *inferred_execution_roots}
     for root in sorted(relocation_roots, key=lambda path: (-len(str(path)), str(path))):
         if root != run_dir:
@@ -547,11 +546,19 @@ def main() -> None:
                 f"INFERRED_EXECUTION_ROOT={root}|NEW={run_dir}"
             )
 
+    # A scalar top name can also be a component of an absolute template path.
+    # Rewrite longest sources first so the complete path is relocated before
+    # the scalar substitution can change that path into an unrecognized one.
+    ordered_replacements = sorted(
+        replacements,
+        key=lambda item: (-len(item[0]), item[0], item[1]),
+    )
+
     for path in copied:
         if not is_text(path):
             continue
         text = path.read_text()
-        for old, new in replacements:
+        for old, new in ordered_replacements:
             text = text.replace(old, new)
         # The copied run is pinned to the selected Cadence binary regardless of PATH.
         for known in [
@@ -606,7 +613,7 @@ def main() -> None:
     text = run_file.read_text()
     if args.cadence_pvs not in text:
         raise SystemExit("PVS_BINARY_GATE_FAIL: patched run.pvs does not name the selected Cadence binary")
-    stale = [old for old, _ in replacements if old and old in "\n".join(p.read_text(errors="ignore") for p in copied)]
+    stale = [old for old, _ in ordered_replacements if old and old in "\n".join(p.read_text(errors="ignore") for p in copied)]
     if stale:
         raise SystemExit(f"STALE_TEMPLATE_PATHS: {stale}")
     all_patched_text = "\n".join(

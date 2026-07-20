@@ -19,6 +19,8 @@ class PvsReplayContractTest(unittest.TestCase):
         mode: str,
         *,
         executable_cdl: bool = True,
+        layout_top: str = "old_layout_top",
+        historical_run_name: str = "historical_gui_run",
     ) -> tuple[Path, dict[str, str]]:
         template = root / "template"
         template.mkdir()
@@ -26,12 +28,12 @@ class PvsReplayContractTest(unittest.TestCase):
             "gds": str(template / "old.gds"),
             "source": str(template / "old.pg.v"),
             "cdl": str(template / "old.cdl"),
-            "layout_top": "old_layout_top",
+            "layout_top": layout_top,
             "source_top": "old_source_top",
         }
-        historical_run = root / "historical_gui_run"
+        historical_run = root / historical_run_name
         historical_run.mkdir()
-        (historical_run / "cell_tree.txt").write_text("old_layout_top\n")
+        (historical_run / "cell_tree.txt").write_text(f"{layout_top}\n")
         if mode == "lvs":
             run_mode = "-lvs"
             source_option = f" -source_top_cell {old['source_top']}"
@@ -100,11 +102,17 @@ class PvsReplayContractTest(unittest.TestCase):
         executable_cdl: bool = True,
         omit_cdl_replacement: bool = False,
         density: bool = False,
+        colliding_execution_root: bool = False,
     ):
+        layout_top = "old_layout_top"
         template, old = self.make_template(
             root,
             mode,
             executable_cdl=executable_cdl,
+            layout_top=layout_top,
+            historical_run_name=(
+                layout_top if colliding_execution_root else "historical_gui_run"
+            ),
         )
         run_dir = root / "run"
         new_gds = root / "canonical.gds"
@@ -265,6 +273,28 @@ class PvsReplayContractTest(unittest.TestCase):
             self.assertIn("DRC_SUMMARY_REWRITE_COUNT=1", isolation)
             replacements = (run_dir / "template_replacements.rpt").read_text()
             self.assertIn("COPIED_EXTERNAL_CELL_TREE=", replacements)
+
+    def test_top_name_inside_execution_root_is_relocated_before_scalar_rewrite(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result, run_dir = self.run_replay(
+                root,
+                "drc",
+                colliding_execution_root=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            false_root = str(root / "canonical_top")
+            old_root = str(root / "old_layout_top")
+            for name in ("run.pvs", "pvsdrcctl", "pipo1.setup"):
+                text = (run_dir / name).read_text()
+                self.assertNotIn(false_root, text)
+                self.assertNotIn(old_root, text)
+            pipo = (run_dir / "pipo1.setup").read_text()
+            self.assertIn(f'runDir\t"{run_dir}"', pipo)
+            self.assertIn(f'logFile\t"{run_dir / "PIPO1.LOG"}"', pipo)
+            references = (run_dir / "external_references.rpt").read_text()
+            self.assertNotIn(false_root, references)
+            self.assertNotIn(old_root, references)
 
     def test_lvs_outputs_are_relocated_for_report_level_classification(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -59,6 +59,16 @@ class PositionPvsStrictPreflightDriverTests(unittest.TestCase):
         ):
             self.assertIn(token, text)
 
+    def test_driver_reports_partial_failure_without_requiring_unrun_artifacts(self) -> None:
+        text = DRIVER.read_text()
+        self.assertIn("FINAL_RESULT=STRICT_DRY_RUN_PREFLIGHT_INCOMPLETE", text)
+        self.assertIn('echo "RESULT=$FINAL_RESULT"', text)
+        self.assertIn(
+            '"$DENSITY_RUN_DIR|$DIAGNOSTIC_ROOT/density|$DENSITY_DRY_RUN_RC"',
+            text,
+        )
+        self.assertIn('elif [ "$VARIANT_DRY_RUN_RC" = "0" ]; then', text)
+
     def test_shell_syntax(self) -> None:
         for script in (DRIVER, HANDOFF):
             result = subprocess.run(
