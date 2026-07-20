@@ -1,8 +1,8 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active; Position immutable handoff and option
-policy accepted; first strict dry-run exposed a replay path-order defect;
-corrected base-plus-density preflight rerun pending.
+Status: phased server execution active; Position immutable handoff, option
+policy, and corrected base-plus-density strict preflight pass; foreground base
+PVS DRC is authorized next.
 
 Date: 2026-07-20.
 
@@ -47,6 +47,7 @@ TOP/docs/server_snapshots/pvs_drc/position_template_discovery_20260717_125002/
 TOP/docs/server_snapshots/pvs_drc/position_rule_semantics_review_20260717_161842/
 TOP/docs/server_snapshots/pvs_drc/position_gds_layer_applicability_20260720_105724/
 TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_111548_failed/
+TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_113452/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -79,7 +80,7 @@ before launching Cadence.
 | --- | --- | --- | --- | --- |
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
-| 1 | Position core | Hard macro | `spadmic_position_core` | Corrected strict preflight rerun after replay path-order fix |
+| 1 | Position core | Hard macro | `spadmic_position_core` | Foreground base PVS DRC and immediate rule classification |
 | 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run after position OOC evidence |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
@@ -625,9 +626,32 @@ PVS_EXECUTED=NO
 
 The replay helper now orders replacements by descending source length, with a
 regression for this exact top-name/execution-root collision. This failed
-attempt is tooling evidence only: base DRC, density DRC, LVS, and promotion all
-remain open. The corrected R11 rerun is the only remaining dry-run action; no
-additional rule-set or PIMIDE review is required unless a pinned input changes.
+attempt is tooling evidence only.
+
+The corrected P09-R11 transaction then ran from exact commit
+`130954a9ddd074633cea0e612fd4ea7355a44b84` and produced diagnostic
+`position_pvs_drc_strict_preflight_20260720_113452`. Both fresh control sets
+passed every input, replay, output-isolation, external-reference, selector,
+run-manifest, source-recheck, and package-recheck gate:
+
+```text
+BASE_DRY_RUN_RC=0
+DENSITY_DRY_RUN_RC=0
+RUN_AUDIT_GATE_RC=0
+STRICT_DRY_RUN_PREFLIGHT_STATUS=PASS
+DIAGNOSTIC_MANIFEST_RC=0
+PVS_EXECUTED=NO
+```
+
+The base control has DENSITY undefined and the density control has it defined;
+all other accepted option states are identical. Strict preflight is complete.
+No additional rule-set, PIMIDE, or control-discovery step is allowed unless a
+pinned input changes. The active action is one foreground base PVS DRC through
+`TOP/ci/server_run_position_core_pvs_base_drc.sh`. It records a true zero or,
+for a unique nonzero report total, performs complete immutable rule and
+geometry classification in the same transaction. Either attributable outcome
+moves directly to the independent density run; base DRC, density DRC, LVS, and
+promotion remain open until their own evidence says otherwise.
 
 ## 7. Event Coordinator
 
@@ -834,11 +858,11 @@ The RTL regressions pass `25/25` position checks and `24/24` event checks.
 Position TC Genus and the corrected grid-safe Position Innovus replay pass on
 their recorded exact commits. Position immutable handoff staging, canonical
 source preparation, pin parity, rule semantics, and exact-GDS option
-applicability also pass. The first Position strict dry-run exposed a replay
-path-order defect and did not execute PVS; corrected strict dry-run, base DRC,
-density DRC, and LVS remain open. Every Event Genus/Innovus/PVS gate also
-remains server work and must stay labeled `NOT_RUN` until separately executed
-and reviewed.
+applicability also pass. The initial Position strict dry-run exposed a replay
+path-order defect and did not execute PVS; the corrected base-plus-density
+strict preflight now passes. Base DRC, density DRC, and LVS remain open. Every
+Event Genus/Innovus/PVS gate also remains server work and must stay labeled
+`NOT_RUN` until separately executed and reviewed.
 
 ## 13. Immediate Next Action
 
@@ -849,16 +873,16 @@ rule-set selection and full option policy are accepted: base DRC keeps DENSITY,
 POPPING, PIMIDE, and DUMMY_FILL undefined while retaining VAR_ANT_RATIO; the
 density variant changes only DENSITY to defined.
 
-The first execution of `TOP/ci/server_preflight_position_core_pvs_drc.sh`
-proved all immutable inputs but exposed a replacement-order defect before the
-base dry-run could complete. The corrected helper relocates longer absolute
-paths before replacing the scalar top name. Rerun the same combined base and
-density transaction against immutable diagnostic root
-`position_pvs_drc_gds_layer_applicability_20260720_105724`. It must rewrite the
-exact Position GDS/top and all outputs into isolated run-local paths and must
-not execute PVS.
+The corrected execution of `TOP/ci/server_preflight_position_core_pvs_drc.sh`
+passed both fresh dry-run controls in immutable diagnostic
+`position_pvs_drc_strict_preflight_20260720_113452`. Run one foreground base
+DRC now through `TOP/ci/server_run_position_core_pvs_base_drc.sh`. The wrapper
+must preserve the distinction between transaction PASS and physical DRC PASS:
+a report-level zero records `PVS_BASE_DRC_STATUS=PASS`; a reconciled nonzero
+records `PVS_BASE_DRC_STATUS=FAIL` plus complete rule debt while still proving
+that execution and classification were attributable.
 
-If both dry-run contracts pass, authorize one foreground base DRC immediately
-and classify its report-level result. Keep density as the next independent run
-and exact-GDS LVS as a separate electrical gate. Do not reopen rule-set,
-preprocessor, or PIMIDE discovery unless an attributable input hash changes.
+After either attributable base outcome, run density next on the same exact GDS.
+Do not insert another discovery review between base and density. Exact-GDS LVS
+remains a separate electrical gate, and block promotion remains forbidden until
+base, density, and LVS all meet their own closure contracts.

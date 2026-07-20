@@ -3813,7 +3813,71 @@ The failed transaction is retained rather than overwritten:
 TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_111548_failed/
 ```
 
-The next transaction is a fresh corrected R11 base-plus-density dry-run. It
-does not reopen rule-set or applicability discovery. If both dry-run contracts
-pass, the next action is one foreground base PVS DRC execution and report-level
-classification.
+### P09-R11 Position PVS Strict Preflight Corrected Pass
+
+The corrected combined preflight ran in the foreground on 2026-07-20 from
+exact commit `130954a9ddd074633cea0e612fd4ea7355a44b84` against the unchanged
+R10 applicability diagnostic. The fresh diagnostic is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_drc_strict_preflight_20260720_113452
+```
+
+All previously passing attribution, source, package, GDS, and seed-control
+gates reproduced. The longest-source-first replay correction eliminated both
+false external references. Fresh base and density control directories then
+passed replay, output-isolation, external-reference, selector, and complete
+run-manifest audits:
+
+```text
+PREFLIGHT_RC=0
+BASE_DRY_RUN_RC=0
+DENSITY_DRY_RUN_RC=0
+RUN_AUDIT_GATE_RC=0
+DIAGNOSTIC_COPY_GATE_RC=0
+SOURCE_POST_RECHECK_RC=0
+PACKAGE_POST_PREFLIGHT_SHA_MANIFEST_RC=0
+STATUS=PASS
+STRICT_DRY_RUN_PREFLIGHT_STATUS=PASS
+DIAGNOSTIC_MANIFEST_RC=0
+POSITION_PVS_STRICT_PREFLIGHT_COMMAND_STATUS=PASS
+```
+
+Both controls bind `spadmic_position_core` and exact GDS SHA-256
+`ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1`.
+The base control has exactly one `#UNDEFINE DENSITY`; the density control has
+exactly one `#DEFINE DENSITY`. Both keep `POPPING`, `PIMIDE`, and `DUMMY_FILL`
+undefined and retain `VAR_ANT_RATIO` defined. Every external reference is a
+resolved, hashed file. No PVS process ran:
+
+```text
+PVS_EXECUTED=NO
+PVS_BASE_DRC_STATUS=NOT_RUN
+PVS_DENSITY_DRC_STATUS=NOT_RUN
+PVS_LVS_STATUS=NOT_RUN
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=FOREGROUND_BASE_PVS_DRC
+```
+
+Compact successful evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/position_strict_preflight_20260720_113452/
+```
+
+R11 is the final dry-run and closes the Position discovery/preflight sequence.
+The next transaction is
+`TOP/ci/server_run_position_core_pvs_base_drc.sh`. It executes one fresh base
+PVS DRC in the foreground and accepts only two attributable outcomes:
+
+1. PVS returns zero and the unique report-level total is `0 (0)`.
+2. PVS returns zero but the wrapper returns classification RC `8` for a unique
+   nonzero report total; the existing immutable rule analyzer must then
+   reconcile every rule and geometry in the same transaction.
+
+Transaction PASS does not flatten the physical result: the second outcome
+retains `PVS_BASE_DRC_STATUS=FAIL` with explicit rule debt. Either accepted
+outcome proceeds directly to foreground density DRC on the same GDS. There is
+no further rule-set, preprocessor, PIMIDE, or template-discovery review unless
+a pinned input changes.

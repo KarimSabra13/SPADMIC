@@ -256,6 +256,46 @@ class AnalyzePvsDrcRunTest(unittest.TestCase):
                 markdown,
             )
 
+    def test_analysis_without_waiver_does_not_claim_tx_lvs_or_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run, _ = self.make_run(root)
+            (run / "pvsdrcctl").write_text(
+                "#UNDEFINE DENSITY\n"
+                "#DEFINE VAR_ANT_RATIO\n"
+            )
+            output = root / "position_analysis"
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(SCRIPT),
+                    "--run-dir",
+                    str(run),
+                    "--output-dir",
+                    str(output),
+                    "--expected-primary",
+                    "6",
+                    "--expected-expanded",
+                    "6",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            markdown = (output / "pvs_drc_non_antenna_analysis.md").read_text()
+            self.assertIn(
+                "this DRC analysis does not infer an LVS result",
+                markdown,
+            )
+            self.assertIn(
+                "`VAR_ANT_RATIO=DEFINED` enables the supplemental",
+                markdown,
+            )
+            self.assertNotIn("four Innovus MET1", markdown)
+            self.assertNotIn("separate explicit `MATCH`", markdown)
+
     def test_output_inside_immutable_run_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -1,0 +1,6 @@
+LABEL=SPADMIC_PVS_EXTERNAL_REFERENCES
+FILE=/eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs|8481|e2a50b5eb73539f78adb042ede0613c8ef9be3d9e2ed4a453a3c9266bcae3f15
+FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmInOut.layertable|9597|3198c31b841a29b1126206f7962632fd7f6dc239c53931962cd57327d2320869
+FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map|1213|151695165c1679190e1f95aa0ccb854de233c7a7e3f589a5ac83c93c0c487c7c
+FILE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/pvtech.lib|52|1fe31de76c4b1c0d69afe6bdb31ccad89dd1f43429697f5043c57d4547a93bef
+FILE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_position_core/innovus_ooc_harden_position_core_gridfit_20260717_114810/gds/spadmic_position_core.gds|11523506|ebba26a43c6fdf8257b60625ac7f823d7ce13a3c9b83607470393116b49f72e1

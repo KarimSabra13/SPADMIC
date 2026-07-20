@@ -543,6 +543,27 @@ def write_markdown(
     ]
     non_antenna_total = sum(item.rule.primary for item in non_antenna)
     antenna_total = sum(item.rule.primary for item in antenna_rules)
+    if waiver_markers:
+        lvs_statement = (
+            "- LVS state: separate explicit `MATCH`; it does not waive this "
+            "DRC debt."
+        )
+    else:
+        lvs_statement = (
+            "- LVS state: separate gate; this DRC analysis does not infer an "
+            "LVS result."
+        )
+    if antenna_state == "UNDEFINED":
+        variable_ratio_statement = (
+            "`VAR_ANT_RATIO=UNDEFINED` disables the optional variable-ratio "
+            "family; it does not disable fixed metal-to-connected-gate "
+            "antenna checks."
+        )
+    else:
+        variable_ratio_statement = (
+            "`VAR_ANT_RATIO=DEFINED` enables the supplemental variable-ratio "
+            "family in addition to the standard antenna checks."
+        )
 
     lines = [
         "# PVS Base DRC Rule Classification and Non-Antenna Analysis",
@@ -556,7 +577,7 @@ def write_markdown(
         f"- Classified antenna result total: `{antenna_total}`",
         f"- DENSITY configurator state: `{density_state}`",
         f"- VAR_ANT_RATIO configurator state: `{antenna_state}`",
-        "- LVS state: separate explicit `MATCH`; it does not waive this DRC debt.",
+        lvs_statement,
         "",
         "The classification policy is deliberately conservative. A result is",
         "classified as antenna only when its rule name or foundry description",
@@ -564,8 +585,7 @@ def write_markdown(
         "as conductor area divided by connected gate area. Every other",
         "ambiguous rule remains in the non-antenna repair inventory.",
         "",
-        "`VAR_ANT_RATIO=UNDEFINED` disables the optional variable-ratio family;",
-        "it does not disable fixed metal-to-connected-gate antenna checks.",
+        variable_ratio_statement,
         "",
         "## Antenna Rule Inventory",
         "",
@@ -705,19 +725,30 @@ def write_markdown(
             "correlation was not requested."
         )
 
+    lines.extend(["", "## Closure Order", ""])
+    if waiver_markers:
+        lines.extend(
+            [
+                "1. Keep the supplied Innovus markers as their own manually",
+                "   repairable debt; do not treat them as a PVS waiver.",
+                "2. Defer or repair the classified antenna rules according to the",
+                "   milestone policy, but do not relabel them as generic area errors.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "1. Review the classified non-antenna rules before changing the",
+                "   layout; retain every ambiguous rule in the repair inventory.",
+                "2. Review the antenna family separately from non-antenna debt.",
+            ]
+        )
     lines.extend(
         [
-            "",
-            "## Closure Order",
-            "",
-            "1. Keep the four Innovus MET1 minimum-area markers as their own",
-            "   manually repairable Innovus debt; this PVS run did not reproduce them.",
-            "2. Defer or repair the classified antenna rules according to the",
-            "   milestone policy, but do not relabel them as generic area errors.",
             "3. Export a new mapped and standard-cell-merged GDS after any repair.",
             "4. Require base PVS DRC zero for final closure, then run and require",
             "   density-enabled PVS DRC zero.",
-            "5. Rerun LVS on the repaired GDS and require a new explicit `MATCH`.",
+            "5. Run LVS on the final exact GDS and require an explicit `MATCH`.",
             "",
             "Do not edit or rerun inside the immutable source run. This report and",
             "all generated TSV files live in the separate analysis directory.",
