@@ -136,7 +136,6 @@ def main() -> None:
         "lvs_report_file": r"^[ \t]*lvs_report_file[ \t]+",
         "erc_report_summary": r"^[ \t]*report_summary[ \t]+-erc[ \t]+",
         "erc_results_db": r"^[ \t]*results_db[ \t]+-erc[ \t]+",
-        "svdb_directory": r"^[ \t]*mask_svdb_dir[ \t]+",
         "lvs_ignore_ports_no": r"^[ \t]*lvs_ignore_ports[ \t]+no[ \t]*;",
         "lvs_expand_cell_on_error_no": (
             r"^[ \t]*lvs_expand_cell_on_error[ \t]+no[ \t]*;"
@@ -155,6 +154,14 @@ def main() -> None:
         control_counts[label] = count
         if count != 1:
             errors.append(f"{label}_count={count}")
+
+    svdb_count = regex_count(
+        control_text,
+        r"^[ \t]*mask_svdb_dir[ \t]+",
+    )
+    control_counts["svdb_directory"] = svdb_count
+    if svdb_count > 1:
+        errors.append(f"svdb_directory_count={svdb_count}")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     lines = [

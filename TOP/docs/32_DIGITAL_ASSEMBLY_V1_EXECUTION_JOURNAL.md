@@ -4103,3 +4103,63 @@ The aggressive next action remains one corrected foreground exact-GDS LVS
 transaction. An attributable `MATCH` starts Event OOC immediately while the
 four-rule density disposition proceeds in parallel. An attributable
 `MISMATCH` is classified once without rerunning PVS.
+
+### P09-R15 Position Exact-GDS LVS Optional-SVDB Audit Stop
+
+The scaffold-rebased foreground attempt ran on 2026-07-20 from exact commit
+`0a0220a5c5d3914ffcd408432394e73c9b4a0f55`. Its fresh diagnostic is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_lvs_execution_20260720_143505
+```
+
+All six observed control hashes matched. The density source diagnostic,
+package GDS, canonical LVS source, JIHD CDL, package manifest, PVS executable,
+foundry files, and post-transaction source/package rechecks also passed. The
+read-only audit extracted the expected historical control contract:
+
+```text
+LVS_MODE_OCCURRENCES=1
+DRC_MODE_OCCURRENCES=0
+TEMPLATE_LAYOUT_TOP=spadmic_tx_packet_core_HV
+TEMPLATE_SOURCE_TOP=spadmic_tx_packet_core
+LAYOUT_PATH_COUNT=1
+SCHEMATIC_VERILOG_COUNT=1
+SCHEMATIC_SPICE_COUNT=0
+```
+
+The sole audit failure was:
+
+```text
+SVDB_DIRECTORY_COUNT=0
+ERROR_COUNT=1
+ERROR=svdb_directory_count=0
+TEMPLATE_SEMANTIC_GATE_RC=1
+```
+
+This was an audit-policy defect, not an unsafe input. `mask_svdb_dir` is an
+output-location directive. The replay implementation already allowed it to be
+absent, but the new intake audit incorrectly required exactly one. No replay
+or PVS process started:
+
+```text
+PVS_WRAPPER_RC=NOT_RUN
+PVS_TOOL_RC=UNKNOWN
+PVS_LVS_STATUS=UNKNOWN
+PVS_EXECUTED=NO
+SOURCE_POST_RECHECK_RC=0
+PACKAGE_POST_EXECUTION_SHA_MANIFEST_RC=0
+```
+
+Compact evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_semantic_audit_20260720_143505_failed/
+```
+
+The corrected contract accepts zero or one incoming `mask_svdb_dir`, rejects
+duplicates, and makes replay materialize exactly one explicit run-local SVDB
+path. This preserves the stronger output-isolation requirement without
+requiring mutable GUI metadata. The next action remains one foreground
+exact-GDS LVS retry on the unchanged Position artifacts. No DRC rerun or new
+template-discovery stage is authorized.

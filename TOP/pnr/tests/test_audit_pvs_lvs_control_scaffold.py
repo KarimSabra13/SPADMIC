@@ -16,7 +16,13 @@ PVS_BIN = "/eda/cadence/2023-24/RHELx86/PVS_22.22.000/bin/pvs"
 
 
 class PvsLvsControlScaffoldAuditTests(unittest.TestCase):
-    def make_template(self, root: Path, *, executable_cdl: bool = False) -> Path:
+    def make_template(
+        self,
+        root: Path,
+        *,
+        executable_cdl: bool = False,
+        svdb_directory: bool = True,
+    ) -> Path:
         template = root / "template"
         template.mkdir()
         old_run = root / "historical_gui_run"
@@ -51,9 +57,10 @@ class PvsLvsControlScaffoldAuditTests(unittest.TestCase):
             "lvs_run_erc_checks yes;\n"
             'report_summary -erc "historical_erc.sum" -replace;\n'
             f'results_db -erc "{old_run / "historical_lvs.err"}" -ascii;\n'
-            f'mask_svdb_dir "{old_run / "svdb"}";\n'
-            f'schematic_path "{old_source}" verilog;\n'
         )
+        if svdb_directory:
+            control += f'mask_svdb_dir "{old_run / "svdb"}";\n'
+        control += f'schematic_path "{old_source}" verilog;\n'
         if executable_cdl:
             control += f'schematic_path "{old_cdl}" spice;\n'
         control += (
@@ -118,6 +125,29 @@ class PvsLvsControlScaffoldAuditTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn(f"TEMPLATE_EXECUTABLE_CDL={root / 'historical.cdl'}", report)
             self.assertIn("SCHEMATIC_SPICE_COUNT=1", report)
+
+    def test_missing_svdb_directory_is_valid_input_for_replay_normalization(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            template = self.make_template(root, svdb_directory=False)
+            result = self.run_audit(root, template)
+            report = (root / "audit.rpt").read_text()
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("STATUS=PASS", report)
+            self.assertIn("SVDB_DIRECTORY_COUNT=0", report)
+
+    def test_duplicate_svdb_directories_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            template = self.make_template(root)
+            with (template / "pvslvsctl").open("a") as handle:
+                handle.write(f'mask_svdb_dir "{root / "second_svdb"}";\n')
+            result = self.run_audit(root, template)
+            report = (root / "audit.rpt").read_text()
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("ERROR=svdb_directory_count=2", report)
 
     def test_duplicate_verilog_source_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

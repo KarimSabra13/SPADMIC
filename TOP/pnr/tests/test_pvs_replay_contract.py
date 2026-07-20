@@ -19,6 +19,7 @@ class PvsReplayContractTest(unittest.TestCase):
         mode: str,
         *,
         executable_cdl: bool = True,
+        svdb_directory: bool = True,
         layout_top: str = "old_layout_top",
         historical_run_name: str = "historical_gui_run",
     ) -> tuple[Path, dict[str, str]]:
@@ -66,9 +67,12 @@ class PvsReplayContractTest(unittest.TestCase):
                 'lvs_report_file "old_layout_lvs.sum";\n'
                 'report_summary -erc "old_layout_erc.sum" -replace;\n'
                 f'results_db -erc "{historical_run / "old_layout_lvs.err"}" -ascii;\n'
-                f'mask_svdb_dir "{historical_run / "svdb"}";\n'
-                f'schematic_path "{old["source"]}" verilog;\n'
             )
+            if svdb_directory:
+                control_text += (
+                    f'mask_svdb_dir "{historical_run / "svdb"}";\n'
+                )
+            control_text += f'schematic_path "{old["source"]}" verilog;\n'
             if executable_cdl:
                 control_text += f'schematic_path "{old["cdl"]}" spice;\n'
         else:
@@ -100,6 +104,7 @@ class PvsReplayContractTest(unittest.TestCase):
         mode: str,
         *,
         executable_cdl: bool = True,
+        svdb_directory: bool = True,
         omit_cdl_replacement: bool = False,
         density: bool = False,
         colliding_execution_root: bool = False,
@@ -109,6 +114,7 @@ class PvsReplayContractTest(unittest.TestCase):
             root,
             mode,
             executable_cdl=executable_cdl,
+            svdb_directory=svdb_directory,
             layout_top=layout_top,
             historical_run_name=(
                 layout_top if colliding_execution_root else "historical_gui_run"
@@ -168,6 +174,60 @@ class PvsReplayContractTest(unittest.TestCase):
             self.assertEqual(control.count("xh018_D_CELLS_JIHD.cdl"), 1)
             isolation = (run_dir / "output_isolation.rpt").read_text()
             self.assertIn("SCHEMATIC_CDL_ACTION=ADDED_MISSING", isolation)
+
+    def test_lvs_replay_adds_missing_run_local_svdb_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result, run_dir = self.run_replay(
+                Path(tmp),
+                "lvs",
+                svdb_directory=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            control = (run_dir / "pvslvsctl").read_text()
+            self.assertEqual(control.count("mask_svdb_dir"), 1)
+            self.assertIn(f'mask_svdb_dir "{run_dir / "svdb"}";', control)
+            isolation = (run_dir / "output_isolation.rpt").read_text()
+            self.assertIn(f"SVDB_DIRECTORY={run_dir / 'svdb'}", isolation)
+            self.assertIn("SVDB_ACTION=ADDED_MISSING", isolation)
+            self.assertIn("SVDB_REWRITE_COUNT=0", isolation)
+
+    def test_lvs_replay_rejects_multiple_svdb_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            template, old = self.make_template(root, "lvs")
+            with (template / "pvslvsctl").open("a") as handle:
+                handle.write(f'mask_svdb_dir "{root / "second_svdb"}";\n')
+            new_gds = root / "canonical.gds"
+            new_source = root / "canonical.lvs.pg.v"
+            new_cdl = root / "xh018_D_CELLS_JIHD.cdl"
+            for path in (new_gds, new_source, new_cdl):
+                path.write_text(path.name + "\n")
+            result = subprocess.run(
+                [
+                    "python3", str(REPLAY), "--mode", "lvs",
+                    "--template", str(template), "--run-dir", str(root / "run"),
+                    "--cadence-pvs", "/cadence/bin/pvs",
+                    "--replace", f"{old['gds']}={new_gds}",
+                    "--replace", f"{old['source']}={new_source}",
+                    "--replace", f"{old['cdl']}={new_cdl}",
+                    "--replace", f"{old['layout_top']}=canonical_top",
+                    "--replace", f"{old['source_top']}=canonical_top",
+                    "--expected-layout-top", "canonical_top",
+                    "--expected-source-top", "canonical_top",
+                    "--expected-gds", str(new_gds),
+                    "--expected-source", str(new_source),
+                    "--expected-cdl", str(new_cdl),
+                    "--preprocessor-undefine", "DENSITY",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn(
+                "multiple mask_svdb_dir directives",
+                result.stdout + result.stderr,
+            )
 
     def test_lvs_replay_rejects_multiple_executable_cdl_inputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

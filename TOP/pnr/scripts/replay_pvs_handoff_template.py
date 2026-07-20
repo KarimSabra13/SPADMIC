@@ -445,9 +445,32 @@ def normalize_control_outputs(
             svdb,
             required=False,
         )
+        if count > 1:
+            raise SystemExit(
+                "PVS_REPLAY_CONTRACT_FAIL: multiple mask_svdb_dir "
+                "directives are not supported"
+            )
+        if count == 0:
+            escaped = str(svdb).replace("\\", "\\\\").replace('"', '\\"')
+            directive = f'mask_svdb_dir "{escaped}";'
+            anchors = list(
+                re.finditer(
+                    r"(?im)^[ \t]*results_db[ \t]+-erc\b[^\n]*$",
+                    text,
+                )
+            )
+            if anchors:
+                insertion = anchors[-1].end()
+                text = text[:insertion] + "\n" + directive + text[insertion:]
+            else:
+                text = text.rstrip() + "\n" + directive + "\n"
+            svdb_action = "ADDED_MISSING"
+        else:
+            svdb_action = "REPLACED_EXISTING"
         lines.extend(
             [
-                f"SVDB_DIRECTORY={svdb if count else 'NOT_CONFIGURED'}",
+                f"SVDB_DIRECTORY={svdb}",
+                f"SVDB_ACTION={svdb_action}",
                 f"SVDB_REWRITE_COUNT={count}",
             ]
         )
