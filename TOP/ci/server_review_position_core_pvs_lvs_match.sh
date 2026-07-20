@@ -44,6 +44,7 @@ RUN_REFERENCES="$RUN_DIR/external_references.rpt"
 RUN_DEFINES="$RUN_DIR/preprocessor_defines.rpt"
 RUN_INVENTORY="$RUN_DIR/pvs_result_evidence_inventory.rpt"
 RUN_REPLACEMENTS="$RUN_DIR/template_replacements.rpt"
+RUN_CONTROL_AUDITOR=TOP/pnr/scripts/audit_pvs_lvs_run_control.py
 
 RUN_OK=1
 CD_RC=NOT_RUN
@@ -181,6 +182,7 @@ if [ "$RUN_OK" -eq 1 ]; then
         "$RUN_DIR/pvs.stdout.log" \
         "$RUN_DIR/SHA256SUMS" \
         "$PVS_EVIDENCE" \
+        "$RUN_CONTROL_AUDITOR" \
         "$PACKAGE_GDS" \
         "$PACKAGE_SOURCE" \
         "$PACKAGE_CDL" \
@@ -414,11 +416,16 @@ if [ "$RUN_OK" -eq 1 ]; then
 fi
 
 if [ "$RUN_OK" -eq 1 ]; then
-    RUN_CONTROL_GATE_RC=0
-    [ "$(grep -Foc "$PACKAGE_GDS" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_CONTROL_GATE_RC=1
-    [ "$(grep -Foc "$PACKAGE_SOURCE" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_CONTROL_GATE_RC=1
-    [ "$(grep -Foc "$PACKAGE_CDL" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_CONTROL_GATE_RC=1
-    [ "$(grep -Foc "$RUN_DIR/svdb" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_CONTROL_GATE_RC=1
+    RUN_CONTROL_AUDIT="$DIAGNOSTIC_ROOT/run_control_audit.rpt"
+    python3 "$RUN_CONTROL_AUDITOR" \
+        --control "$RUN_DIR/pvslvsctl" \
+        --expected-gds "$PACKAGE_GDS" \
+        --expected-source "$PACKAGE_SOURCE" \
+        --expected-cdl "$PACKAGE_CDL" \
+        --expected-svdb "$RUN_DIR/svdb" \
+        >"$RUN_CONTROL_AUDIT"
+    RUN_CONTROL_GATE_RC=$?
+    cat "$RUN_CONTROL_AUDIT"
     echo "RUN_CONTROL_GATE_RC=$RUN_CONTROL_GATE_RC"
     [ "$RUN_CONTROL_GATE_RC" -eq 0 ] || RUN_OK=0
 fi
@@ -540,6 +547,7 @@ if [ "$DIAGNOSTIC_ROOT" != "UNKNOWN" ]; then
         echo "SOURCE_RECORDED_LVS_POSITIVE_MATCH_COUNT=3"
         echo "REVIEW_RUN_AUDIT_GATE_RC=$REVIEW_RUN_AUDIT_GATE_RC"
         echo "RUN_AUDIT_CORRECTION=SVDB_ADDED_MISSING_IS_VALID_NORMALIZATION"
+        echo "REVIEW_GATE_CORRECTION=EXECUTABLE_DIRECTIVE_AUDIT_REPLACES_UNSCOPED_LITERAL_COUNTS"
         echo "PACKAGE=$PACKAGE"
         echo "PACKAGE_GDS=$PACKAGE_GDS"
         echo "PACKAGE_GDS_SHA256=$EXPECTED_GDS_SHA"
@@ -570,6 +578,7 @@ if [ "$DIAGNOSTIC_ROOT" != "UNKNOWN" ]; then
         echo "RUN_ISOLATION_GATE_RC=$RUN_ISOLATION_GATE_RC"
         echo "RUN_REFERENCE_GATE_RC=$RUN_REFERENCE_GATE_RC"
         echo "RUN_CONTROL_GATE_RC=$RUN_CONTROL_GATE_RC"
+        echo "RUN_CONTROL_AUDIT=${RUN_CONTROL_AUDIT:-UNKNOWN}"
         echo "PACKAGE_GATE_RC=$PACKAGE_GATE_RC"
         echo "DIAGNOSTIC_COPY_GATE_RC=$DIAGNOSTIC_COPY_GATE_RC"
         echo "SOURCE_POST_RECHECK_RC=$SOURCE_POST_RECHECK_RC"

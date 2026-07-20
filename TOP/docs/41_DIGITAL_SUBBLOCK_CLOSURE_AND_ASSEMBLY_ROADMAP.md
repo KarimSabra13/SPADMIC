@@ -1009,8 +1009,10 @@ their recorded exact commits. Position immutable handoff staging, canonical
 source preparation, pin parity, rule semantics, option applicability, and
 strict preflight pass. Base PVS DRC has attributable report-level `0 (0)`
 evidence. Density PVS DRC has attributable `4 (4)` whole-extent coverage debt,
-not localized geometry debt. Exact-GDS LVS has explicit `MATCH` evidence; only
-the read-only acceptance review of the stale post-run SVDB assertion remains.
+not localized geometry debt. Exact-GDS LVS has explicit `MATCH` evidence. The
+first read-only acceptance review passed all immutable evidence gates but
+stopped on an unscoped raw control-path count; its directive-aware replacement
+remains server work.
 Every Event Genus/Innovus/PVS gate remains server work and must stay labeled
 `NOT_RUN` until separately executed and reviewed.
 
@@ -1038,8 +1040,13 @@ input hashes, run and diagnostic manifests, and post-execution package/source
 checks passed. The original transaction failed only its stale
 `SVDB_REWRITE_COUNT=1` assertion after execution.
 
-Run `TOP/ci/server_review_position_core_pvs_lvs_match.sh` against diagnostic
-`position_pvs_lvs_execution_20260720_155406`. It must execute no PVS process and
-must return `OUTCOME_CLASS=ATTRIBUTABLE_MATCH`. On that pass, start Event TC
-Genus immediately and review Position density disposition in parallel.
-Position promotion remains forbidden because density is still `FAIL`.
+The first read-only review, diagnostic
+`position_pvs_lvs_match_review_20260720_161519`, revalidated every immutable
+hash, manifest, result, replay, isolation, and reference gate. It failed only
+an unscoped `pvslvsctl` full-path line-count gate and did not run PVS. Retry
+`TOP/ci/server_review_position_core_pvs_lvs_match.sh` against diagnostic
+`position_pvs_lvs_execution_20260720_155406`. The replacement audit must prove
+one exact executable GDS, Verilog, CDL, and run-local SVDB directive and return
+`OUTCOME_CLASS=ATTRIBUTABLE_MATCH`. On that pass, start Event TC Genus
+immediately and review Position density disposition in parallel. Position
+promotion remains forbidden because density is still `FAIL`.

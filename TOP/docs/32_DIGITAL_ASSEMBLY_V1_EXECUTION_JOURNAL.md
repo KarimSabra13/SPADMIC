@@ -4295,3 +4295,55 @@ On review `PASS`, Position has attributable exact-GDS LVS `MATCH`; base DRC
 remains `PASS`; density remains `FAIL` with four OOC whole-extent coverage
 rules. Event TC OOC may start immediately while density disposition proceeds
 in parallel. Position promotion and signoff remain forbidden.
+
+### P09-R18 Position LVS Match Review Raw-Control Count Stop
+
+The first read-only match-acceptance review ran on 2026-07-20 from exact commit
+`597d8f3e457b71b05bfdded450ebc8f91d4bc9e9`. Its fresh diagnostic is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/position_pvs_lvs_match_review_20260720_161519
+```
+
+The source diagnostic and immutable run remained intact. Every report hash,
+source and run manifest, package manifest, copied-report identity, explicit
+match, replay, isolation, external-reference, and post-review recheck gate
+passed. The review failed only this newly introduced aggregate gate:
+
+```text
+RUN_MATCH_GATE_RC=0
+RUN_REPLAY_GATE_RC=0
+RUN_ISOLATION_GATE_RC=0
+RUN_REFERENCE_GATE_RC=0
+RUN_CONTROL_GATE_RC=1
+RUN_MANIFEST_RC=0
+REVIEW_RUN_AUDIT_GATE_RC=1
+```
+
+The failed gate used `grep -Foc` on four full path strings in `pvslvsctl` and
+required each line count to equal one. It did not scope matches to executable
+PVS directives and did not emit the individual observed counts. Therefore the
+specific raw literal that differed from one is unknown, and no more specific
+claim is justified from the returned evidence. The already-passing replay and
+isolation reports prove the exact executable GDS, Verilog, CDL, and run-local
+SVDB bindings.
+
+The corrected reviewer replaces those raw substring counts with
+`audit_pvs_lvs_run_control.py`. The auditor strips comments, parses only
+`layout_path`, Verilog and Spice `schematic_path`, and `mask_svdb_dir`, requires
+one exact accepted value for each, records the control SHA-256 and parsed
+values, and never mutates the source run. Regression coverage proves that
+incidental metadata or comments cannot create a false failure and that a wrong
+executable path remains a hard failure.
+
+Compact evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_lvs/position_lvs_match_review_20260720_161519_failed/
+```
+
+The review launched no PVS process, and Event Genus correctly remained
+`NOT_RUN`. Retry only the read-only review. If it records
+`OUTCOME_CLASS=ATTRIBUTABLE_MATCH` and `EVENT_OOC_START_AUTHORIZED=YES`, start
+Event TC Genus in the same foreground transaction. Position density debt still
+blocks Position promotion and signoff.

@@ -45,6 +45,7 @@ STREAM_LAYER_TABLE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/
 STREAM_OBJECT_MAP=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/PDK/TECH_XH018_1131/strmOutObjects.map
 PVTECH_LIB=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/pvtech.lib
 LVS_RULE=/group/validmgr/PROJET/Prj_xh018/ebecheto/cds_V0/.xkit/setup/xh018/cadence/pvs/PVS/xh018_LVS.rul
+RUN_CONTROL_AUDITOR=TOP/pnr/scripts/audit_pvs_lvs_run_control.py
 
 RUN_OK=1
 CD_RC=NOT_RUN
@@ -70,6 +71,7 @@ PVS_WRAPPER_RC=NOT_RUN
 RUN_DIR=UNKNOWN
 RUN_FILE_GATE_RC=NOT_RUN
 RUN_AUDIT_GATE_RC=NOT_RUN
+RUN_CONTROL_AUDIT_RC=NOT_RUN
 RUN_MANIFEST_RC=NOT_RUN
 DIAGNOSTIC_COPY_GATE_RC=NOT_RUN
 SOURCE_POST_RECHECK_RC=NOT_RUN
@@ -563,8 +565,17 @@ if [ "$RUN_FILE_GATE_RC" = "0" ]; then
     done
     grep -q '^MISSING=' "$RUN_REFERENCES"
     [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
-    [ "$(grep -Foc "$PACKAGE_SOURCE" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_AUDIT_GATE_RC=1
-    [ "$(grep -Foc "$PACKAGE_CDL" "$RUN_DIR/pvslvsctl")" -eq 1 ] || RUN_AUDIT_GATE_RC=1
+    RUN_CONTROL_AUDIT="$DIAGNOSTIC_ROOT/run_control_audit.rpt"
+    python3 "$RUN_CONTROL_AUDITOR" \
+        --control "$RUN_DIR/pvslvsctl" \
+        --expected-gds "$PACKAGE_GDS" \
+        --expected-source "$PACKAGE_SOURCE" \
+        --expected-cdl "$PACKAGE_CDL" \
+        --expected-svdb "$RUN_DIR/svdb" \
+        >"$RUN_CONTROL_AUDIT"
+    RUN_CONTROL_AUDIT_RC=$?
+    cat "$RUN_CONTROL_AUDIT"
+    [ "$RUN_CONTROL_AUDIT_RC" -eq 0 ] || RUN_AUDIT_GATE_RC=1
     if [ "$TEMPLATE_SOURCE" != "$PACKAGE_SOURCE" ]; then
         grep -Fq "$TEMPLATE_SOURCE" "$RUN_DIR/pvslvsctl"
         [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
@@ -573,6 +584,7 @@ if [ "$RUN_FILE_GATE_RC" = "0" ]; then
         grep -Fq "$TEMPLATE_GDS" "$RUN_DIR/pvslvsctl"
         [ "$?" -ne 0 ] || RUN_AUDIT_GATE_RC=1
     fi
+    echo "RUN_CONTROL_AUDIT_RC=$RUN_CONTROL_AUDIT_RC"
     echo "RUN_AUDIT_GATE_RC=$RUN_AUDIT_GATE_RC"
 
     (
@@ -770,6 +782,8 @@ if [ "$DIAGNOSTIC_ROOT" != "UNKNOWN" ]; then
         echo "REPLAY_CONTRACT_STATUS=$REPLAY_CONTRACT_STATUS"
         echo "OUTPUT_ISOLATION_STATUS=$OUTPUT_ISOLATION_STATUS"
         echo "RUN_FILE_GATE_RC=$RUN_FILE_GATE_RC"
+        echo "RUN_CONTROL_AUDIT_RC=$RUN_CONTROL_AUDIT_RC"
+        echo "RUN_CONTROL_AUDIT=${RUN_CONTROL_AUDIT:-UNKNOWN}"
         echo "RUN_AUDIT_GATE_RC=$RUN_AUDIT_GATE_RC"
         echo "RUN_MANIFEST_RC=$RUN_MANIFEST_RC"
         echo "DIAGNOSTIC_COPY_GATE_RC=$DIAGNOSTIC_COPY_GATE_RC"

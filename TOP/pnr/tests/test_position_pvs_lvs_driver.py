@@ -161,6 +161,10 @@ class PositionPvsLvsDriverTests(unittest.TestCase):
         ):
             self.assertIn(token, text)
         self.assertNotIn('"$RUN_ISOLATION|SVDB_REWRITE_COUNT=1"', text)
+        self.assertIn("audit_pvs_lvs_run_control.py", text)
+        self.assertIn("RUN_CONTROL_AUDIT_RC", text)
+        self.assertNotIn('grep -Foc "$PACKAGE_SOURCE"', text)
+        self.assertNotIn('grep -Foc "$PACKAGE_CDL"', text)
 
     def test_gate_separation_and_aggressive_next_step_are_explicit(self) -> None:
         text = DRIVER.read_text()
