@@ -4983,3 +4983,90 @@ either attributable density outcome, the next gate is
 `REVIEW_EVENT_DENSITY_DRC_AND_PREPARE_EXACT_GDS_LVS`. The density physical
 gate is `PASS` only for `0 (0)`; an attributable nonzero transaction remains
 a physical density `FAIL` with explicit rule debt.
+
+### P10-R11 Event Density PVS DRC Classified Debt Accepted
+
+The authorized foreground density transaction completed on 2026-07-21 from
+exact commit `66ea5eb65de37387a023a77fc4239f1dfab6c6cf`. Its immutable roots are:
+
+```text
+DIAGNOSTIC_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/event_pvs_drc_density_execution_20260721_112300
+RUN_DIR=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527/pvs/drc/event_density_drc_20260721_112300
+```
+
+The repository, accepted base diagnostic, source and package manifests, exact
+Event GDS, seed controls, foundry references, replay contract, output
+isolation, run manifest, result reconciliation, post-execution identities, and
+the 28-file diagnostic manifest passed. The evidence transaction and physical
+gate remain deliberately separate:
+
+```text
+STATUS=PASS
+RESULT=EVENT_PVS_DENSITY_DRC_NONZERO_RULE_DEBT_CLASSIFIED
+OUTCOME_CLASS=ATTRIBUTABLE_NONZERO_RESULTS
+PVS_WRAPPER_RC=8
+PVS_TOOL_RC=0
+PVS_BASE_DRC_STATUS=PASS
+PVS_DENSITY_DRC_STATUS=FAIL
+DRC_TOTAL_PRIMARY=4
+DRC_TOTAL_EXPANDED=4
+DRC_TOTAL_MATCH_COUNT=3
+RESULT_COUNT_RECONCILIATION=PASS
+ASCII_ERROR_GEOMETRY_RECONCILIATION=PASS
+ANTENNA_RESULT_STATUS=ZERO
+RULE_ANALYSIS_STATUS=PASS
+DIAGNOSTIC_MANIFEST_RC=0
+```
+
+PVS completed all 1300 checks and finished normally. The four nonzero rules are
+`R1M1`, `R1M2`, `R1M3`, and `R1MT`, one each for MET1, MET2, MET3, and METTP.
+Each is a 30 percent area-to-EXTENT check with aggregate result bounding box
+`0.000000 0.000000 237.360000 219.520000` um. They are whole-window density
+coverage debt, not local minimum-area defects, and no antenna rule is nonzero.
+
+No local polygon repair, virtual dummy fill, density rerun, or silent waiver is
+authorized. The debt stays open for assembled-fill disposition or an exact
+formal waiver. Compact tracked evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/event_density_drc_20260721_112300/
+```
+
+### P10-R12 Event Exact-GDS PVS LVS Execution Prepared
+
+`TOP/ci/server_run_event_coordinator_pvs_lvs.sh` is the only authorized next
+Event EDA transaction. It requires the exact P10-R11 diagnostic root, checks
+the complete diagnostic manifest, pins the observed status, PVS-result,
+preprocessor, rule-analysis, and rule-inventory hashes, and semantically
+revalidates replay, output isolation, external references, and all four density
+rules before execution.
+
+The driver separately binds the immutable package manifest and these exact LVS
+inputs:
+
+```text
+LAYOUT_TOP=spadmic_event_coordinator
+SOURCE_TOP=spadmic_event_coordinator
+GDS_SHA256=837538f219dacc9521f02bc58b3e2e5e587f859b4e70b69a1ca4a3e5fe7b6857
+LVS_SOURCE_SHA256=f9ec957b23b1a229c7c2ff19309fb7463dfc5cac7e570ad1ca68ad8b08089b27
+STDCELL_CDL_SHA256=5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf
+```
+
+It reuses the hash-reviewed TX LVS GUI controls only as a cross-block control
+scaffold, writes all outputs into a fresh package-local run directory, and
+launches exactly one PVS LVS process in the foreground. The corrected
+directive-aware audit requires one executable GDS path, Verilog source, CDL,
+and run-local SVDB path. It explicitly accepts the normal
+`SVDB_ACTION=ADDED_MISSING` with `SVDB_REWRITE_COUNT=0`, avoiding the stale
+post-run assertion that stopped the first Position LVS transaction.
+
+Only an explicit `MATCH` with tool RC zero, zero negative evidence, positive
+match evidence, replay and output-isolation passes, and valid run/source/package
+manifests can produce `ATTRIBUTABLE_MATCH`. An explicit mismatch is recorded as
+`ATTRIBUTABLE_MISMATCH` without being confused with infrastructure failure.
+Neither outcome authorizes a rerun in the same transaction.
+
+Event base DRC remains `PASS`; density remains `FAIL` with four classified
+whole-extent rules. Even if LVS matches, promotion, `p02_event_control`
+insertion, full-top PnR, and signoff remain unauthorized until density receives
+an exact disposition and the preceding assembly phases promote.

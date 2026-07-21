@@ -54,7 +54,7 @@ class DigitalSubblockPortfolioTest(unittest.TestCase):
         )
         self.assertEqual(
             event["current_gate"],
-            "PVS_BASE_ZERO_DENSITY_EXECUTION_NEXT",
+            "PVS_BASE_ZERO_DENSITY_FOUR_RULES_LVS_EXECUTION_NEXT",
         )
 
     def test_position_and_event_ooc_plans_use_reserved_geometry_and_exact_pg(self) -> None:

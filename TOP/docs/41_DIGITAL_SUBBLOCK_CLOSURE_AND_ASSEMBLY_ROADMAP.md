@@ -92,7 +92,7 @@ before launching Cadence.
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
 | 1 | Position core | Hard macro | `spadmic_position_core` | Retain accepted LVS match; resolve density only at assembled-fill review or by formal waiver |
-| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run one exact staged-GDS base PVS DRC transaction |
+| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run one exact-GDS PVS LVS transaction; retain four density rules as separate debt |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
 | 5 | MPTDC frontend | Blocked soft region | unavailable final boundary | Wait for abstracts and pin contract |
@@ -920,18 +920,30 @@ finished normally, and three report-level observations agreed on exact total
 diagnostic manifest passed. Compact evidence is under
 `TOP/docs/server_snapshots/pvs_drc/event_base_drc_20260721_110404/`.
 
+The density transaction then ran at
+`event_pvs_drc_density_execution_20260721_112300` from exact commit
+`66ea5eb65de37387a023a77fc4239f1dfab6c6cf`. PVS completed all 1300 checks
+normally and reported exact total `4 (4)`. All counts and ASCII result geometry
+reconciled. The four rules are `R1M1`, `R1M2`, `R1M3`, and `R1MT`, one each on
+MET1, MET2, MET3, and METTP. Every marker spans the same complete
+`237.360 x 219.520 um` extent and checks 30 percent area coverage. These are
+whole-window density rules, not localized minimum-area defects; antenna debt is
+zero. Compact evidence is under
+`TOP/docs/server_snapshots/pvs_drc/event_density_drc_20260721_112300/`.
+
 ### Next Event Transaction
 
-Run only `TOP/ci/server_run_event_coordinator_pvs_density_drc.sh`. It binds the
-accepted base diagnostic and exact report hashes, package manifest, Event GDS,
-seed controls, foundry deck, stream map, and external references before one
-fresh foreground density run. A report-level zero closes density. A nonzero
-result is accepted as evidence only after all result and ASCII geometry totals
-reconcile and every rule is classified. It never runs LVS.
+Run only `TOP/ci/server_run_event_coordinator_pvs_lvs.sh`. It binds the exact
+density diagnostic, its complete manifest and observed report hashes, the
+unchanged package GDS, canonical package-local LVS source, standard-cell CDL,
+reviewed LVS control scaffold, and external references before one fresh
+foreground LVS process. It accepts only an explicit attributable `MATCH` or
+`MISMATCH`; process return code alone cannot pass the transaction.
 
-Event base DRC is `PASS`; density DRC, LVS, promotion, assembly insertion, and
-full-top PnR remain separate gates. `p02_event_control` still waits for promoted
-`p01_position`, which itself waits for promoted `p00_tx`.
+Event base DRC is `PASS`; density DRC is `FAIL` with four classified
+whole-extent rules; exact-GDS LVS is `NOT_RUN`. LVS completion does not resolve
+density debt or authorize promotion. `p02_event_control` still waits for
+promoted `p01_position`, which itself waits for promoted `p00_tx`.
 
 ## 8. Immutable Package and PVS
 
@@ -1047,7 +1059,7 @@ ready flag:
 | TX DDR strip | signal route DRC/connectivity clean | internal PG reconstruction, mapped GDS, base+density DRC, LVS | blocks `p00_tx` promotion |
 | TX implementation children | `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and `ddrs2_adapter` abstracts are ready for top review | parent/package-level PG and PVS remain | supporting leaf evidence only; do not place as duplicate top macros |
 | Position core | base DRC `PASS`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p01_position` still waits for promoted `p00_tx` and density disposition |
-| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged; exact-GDS base DRC `PASS` with `0 (0)` | density DRC, exact-GDS LVS | density DRC may run now; `p02_event_control` still waits for promoted `p01` |
+| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged; base DRC `PASS` with `0 (0)`; density `FAIL` with four whole-extent rules | exact-GDS LVS plus assembled-fill disposition or exact formal density waiver | LVS may run once; `p02_event_control` still waits for promoted `p01` and no promotion is authorized |
 | Central control | stable RTL in a soft guide | assembled timing, congestion, connectivity, and verification | inserted only with `p02_event_control` |
 | Matrix interface | stable RTL in a soft guide | guided placement, pin access, congestion, timing, DRC/LVS | inserted only after promoted `p02` |
 | MPTDC/TC frontend | route corridor and three axis blockages reserved | final MPTDC abstracts and exact pin contract are missing | hard stop at `p04_mptdc_frontend`; no invented dimensions or pins |
@@ -1162,15 +1174,19 @@ the exact downstream Innovus transaction passed at
 staging then passed at `event_handoff_staging_20260721_101249`, followed by the
 strict dry-run pass at `event_pvs_drc_strict_preflight_20260721_104756`.
 Event base DRC then passed at `event_pvs_drc_base_execution_20260721_110404`
-with exact total `0 (0)`. The immediate foreground action is one call to
-`TOP/ci/server_run_event_coordinator_pvs_density_drc.sh` at the exact committed
-HEAD and against that base diagnostic. Do not rerun Event Innovus, staging,
-preflight, or base DRC.
+with exact total `0 (0)`. Event density DRC completed at
+`event_pvs_drc_density_execution_20260721_112300` with four attributable,
+reconciled whole-extent 30 percent coverage rules: `R1M1`, `R1M2`, `R1M3`, and
+`R1MT`. The immediate foreground action is one call to
+`TOP/ci/server_run_event_coordinator_pvs_lvs.sh` at the exact committed HEAD
+and against that density diagnostic. Do not rerun Event Innovus, staging,
+preflight, base DRC, or density DRC.
 
 The remaining Event sequence is:
 
-1. Run Event density PVS DRC and classify every nonzero rule.
-2. Run exact-GDS Event PVS LVS against its canonical source and CDL.
+1. Run exact-GDS Event PVS LVS against its canonical source and CDL.
+2. Review the LVS result without rerunning it and retain the four density rules
+   for assembled-fill disposition or an exact formal waiver.
 3. Promote Event only when all required Event gates pass or an exact formal
    disposition exists.
 
