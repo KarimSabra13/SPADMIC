@@ -4804,3 +4804,109 @@ Do not start Event PVS before this preflight is returned and reviewed. Event
 OOC qualification remains independent of assembly order: `p00_tx` promotion,
 then Position density disposition and `p01_position` promotion, still precede
 any `p02_event_control` insertion.
+
+### P10-R07 Event PVS DRC Strict Preflight Accepted
+
+The foreground dry-run transaction completed on 2026-07-21 from exact commit
+`9223b07d86273d6e66c11c49691a8d1a2219bfd3`. Its immutable diagnostic is:
+
+```text
+/sim/ksabra/SPADMIC_work/diagnostics/event_pvs_drc_strict_preflight_20260721_104756
+```
+
+Repository attribution, staging and package manifests, all six package
+artifact hashes, handoff audit, pinned PDK and seed identities, GDS hierarchy
+parsing, selector applicability, both isolated dry-runs, post-preflight source
+checks, and the 35-file diagnostic manifest passed:
+
+```text
+PREFLIGHT_RC=0
+SOURCE_STAGING_MANIFEST_RC=0
+PACKAGE_HASH_GATE_RC=0
+PACKAGE_SHA_MANIFEST_RC=0
+HANDOFF_AUDIT_RC=0
+PDK_HASH_GATE_RC=0
+SEED_IDENTITY_GATE_RC=0
+GDS_LAYER_COLLECTOR_RC=0
+GDS_LAYER_APPLICABILITY_GATE_RC=0
+BASE_DRY_RUN_RC=0
+DENSITY_DRY_RUN_RC=0
+RUN_AUDIT_GATE_RC=0
+SOURCE_POST_RECHECK_RC=0
+SOURCE_STAGING_POST_MANIFEST_RC=0
+PACKAGE_POST_PREFLIGHT_SHA_MANIFEST_RC=0
+STATUS_CONTRACT_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+EVENT_PVS_DRC_STRICT_PREFLIGHT_TRANSACTION_STATUS=PASS
+```
+
+The collector parsed all 86 structures reachable from
+`spadmic_event_coordinator`. It found zero geometry and zero text on PAD 19/0,
+PIMIDE 221/5, and NOPIM 46/0, so PIMIDE is not applicable to this exact OOC
+GDS. Both controls bind GDS SHA-256
+`837538f219dacc9521f02bc58b3e2e5e587f859b4e70b69a1ca4a3e5fe7b6857`.
+The base has one `#UNDEFINE DENSITY`; the density variant has one
+`#DEFINE DENSITY`. POPPING, PIMIDE, and DUMMY_FILL remain undefined, while
+VAR_ANT_RATIO remains defined.
+
+The applicability collector itself records `STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO`
+and `PVS_REPLAY_AUTHORIZED=NO` because it only gathers evidence. The enclosing
+preflight is the decision gate. After validating that evidence it records:
+
+```text
+EVENT_STRICT_DRY_RUN_PREFLIGHT_STATUS=PASS
+EVENT_PVS_BASE_DRC_EXECUTION_AUTHORIZED=YES
+EVENT_PVS_DENSITY_DRC_EXECUTION_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=BASE_ONLY
+PVS_EXECUTED=NO
+EVENT_PVS_BASE_DRC_STATUS=NOT_RUN
+EVENT_PVS_DENSITY_DRC_STATUS=NOT_RUN
+EVENT_PVS_LVS_STATUS=NOT_RUN
+ASSEMBLY_INSERTION_AUTHORIZED=NO
+ASSEMBLY_BLOCKED_BY=p00_tx,p01_position
+FULL_TOP_PNR_AUTHORIZED=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=RUN_EVENT_PVS_BASE_DRC_ON_EXACT_STAGED_GDS
+```
+
+Compact tracked evidence and the exact source-report hashes are retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/event_strict_preflight_20260721_104756/
+```
+
+### P10-R08 Event Base PVS DRC Execution Prepared
+
+`TOP/ci/server_run_event_coordinator_pvs_base_drc.sh` is the only authorized
+next Event EDA transaction. It binds the complete P10-R07 diagnostic manifest,
+the exact status and control-report hashes, the accepted Event package and GDS,
+the reviewed seed controls, and all external-reference hashes. It then launches
+exactly one fresh base PVS DRC process in the foreground. It does not use the
+dry-run option and does not invoke density DRC or LVS.
+
+The driver keeps tool execution and physical closure separate. It accepts only
+these two attributable transaction outcomes:
+
+```text
+ATTRIBUTABLE_ZERO_RESULTS:
+  PVS_WRAPPER_RC=0
+  PVS_TOOL_RC=0
+  PVS_BASE_DRC_STATUS=PASS
+  DRC_TOTAL_PRIMARY=0
+  DRC_TOTAL_EXPANDED=0
+
+ATTRIBUTABLE_NONZERO_RESULTS:
+  PVS_WRAPPER_RC=8
+  PVS_TOOL_RC=0
+  PVS_BASE_DRC_STATUS=FAIL
+  every summary count and ASCII error geometry reconciled
+```
+
+An attributable nonzero run is a successful evidence transaction but remains a
+failed Event base-DRC physical gate. Any replay, output-isolation, result,
+manifest, hash, or rule-analysis failure stops without rerunning PVS. In either
+accepted evidence outcome, density execution remains unauthorized in this
+transaction and the next gate is
+`REVIEW_EVENT_BASE_DRC_AND_PREPARE_DENSITY_EXECUTION`. Event LVS, promotion,
+assembly insertion, and full-top PnR remain forbidden.

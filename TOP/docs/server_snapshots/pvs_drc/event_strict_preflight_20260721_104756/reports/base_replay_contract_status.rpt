@@ -1,0 +1,10 @@
+LABEL=SPADMIC_PVS_REPLAY_CONTRACT
+STATUS=PASS
+MODE=DRC
+EXECUTION_DIRECTORY_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+LAYOUT_TOP=spadmic_event_coordinator
+SOURCE_TOP=NOT_APPLICABLE
+GDS=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527/gds/spadmic_event_coordinator.gds
+SOURCE=NOT_APPLICABLE
+CDL=NOT_APPLICABLE
