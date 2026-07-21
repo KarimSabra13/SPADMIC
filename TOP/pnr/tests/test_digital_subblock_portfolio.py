@@ -54,7 +54,7 @@ class DigitalSubblockPortfolioTest(unittest.TestCase):
         )
         self.assertEqual(
             event["current_gate"],
-            "INNOVUS_ATTRIBUTABLE_ABSTRACT_READY_HANDOFF_STAGING_NEXT",
+            "IMMUTABLE_HANDOFF_STAGED_PVS_STRICT_PREFLIGHT_NEXT",
         )
 
     def test_position_and_event_ooc_plans_use_reserved_geometry_and_exact_pg(self) -> None:

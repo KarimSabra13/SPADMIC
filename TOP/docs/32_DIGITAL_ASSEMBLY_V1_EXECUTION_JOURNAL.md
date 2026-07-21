@@ -4516,7 +4516,7 @@ The full digital assembly remains ordered and blocked as follows:
 ```text
 p00_tx: packet DRC debt plus strip PG/PVS closure remain
 p01_position: OOC LVS accepted; density debt open; waits for promoted p00
-p02_event_control: Event Genus ready; Innovus next; waits for promoted p01
+p02_event_control: Event package staged; PVS preflight next; waits for promoted p01
 p03_matrix_interface: soft guided assembly waits for promoted p02
 p04_mptdc_frontend: blocked by missing final MPTDC abstracts and pin contract
 p05_csr_i2c: deferred until promoted p04 and pad/control contract
@@ -4685,3 +4685,122 @@ permit `p01_position`; only after that can the independently qualified Event
 macro and central-control soft region enter `p02_event_control`. Matrix,
 MPTDC, and CSR/I2C remain later ordered phases. OOC progress is retained as
 reusable evidence but does not bypass parent checkpoint promotion.
+
+### P10-R05 Immutable Event Handoff Staging Accepted
+
+The foreground staging transaction ran on 2026-07-21 from exact commit
+`0fff3d2afb447f746c69ea946450ff6f5cdd7400`. The accepted immutable roots are:
+
+```text
+DIAGNOSTIC_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/event_handoff_staging_20260721_101249
+PACKAGE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527
+```
+
+Repository attribution, source diagnostic identity, package staging, package
+audit, canonical LVS-source preparation, post-staging source recheck, and both
+SHA-256 manifests passed:
+
+```text
+EVENT_STAGE_RC=0
+SOURCE_DIAGNOSTIC_MANIFEST_RC=0
+SOURCE_STATUS_GATE_RC=0
+SOURCE_COPY_IDENTITY_GATE_RC=0
+SOURCE_HASH_GATE_RC=0
+HANDOFF_STAGE_RC=0
+HANDOFF_AUDIT_RC=0
+PACKAGE_HASH_GATE_RC=0
+PACKAGE_MANIFEST_GATE_RC=0
+PACKAGE_SHA_MANIFEST_RC=0
+SOURCE_POST_RECHECK_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+STATUS_CONTRACT_RC=0
+PACKAGE_MANIFEST_RC=0
+EVENT_HANDOFF_STAGING_TRANSACTION_STATUS=PASS
+```
+
+The package identity is exact:
+
+```text
+PACKAGE_GDS_SHA256=837538f219dacc9521f02bc58b3e2e5e587f859b4e70b69a1ca4a3e5fe7b6857
+PACKAGE_LEF_SHA256=56345986a887317f0374984b1ea8b3442ea482aeec0572614e9fd2c0b6732a14
+PACKAGE_DEF_SHA256=f9d6a927c7cecad40916cac67b8142f6fb6c6b013e3d57ab779889fd0ab21a68
+PACKAGE_RAW_PG_NETLIST_SHA256=0ecc571317f6beaa13c7f006ac3ecc4f1ff2a72b9655a176c0fa21e3c0a07398
+PACKAGE_LVS_SOURCE_SHA256=f9ec957b23b1a229c7c2ff19309fb7463dfc5cac7e570ad1ca68ad8b08089b27
+PACKAGE_STDCELL_CDL_SHA256=5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf
+```
+
+Canonical source preparation retained one Event top, removed 52 standard-cell
+module definitions represented by the official CDL, matched 65 source ports to
+65 LEF pins, resolved all 52 referenced masters through the CDL, and left zero
+unresolved masters. The package remains a `CANDIDATE`; no PVS process ran.
+
+The basic qualification report still prints `UNKNOWN` for bbox parity, GDS
+map/merge, and internal PG. Those are generic promotion placeholders, not
+physical failures. The package separately hashes the accepted floorplan,
+mapped/merged GDS, regular/PG connectivity, Innovus DRC, and setup/hold reports.
+
+Compact tracked staging evidence is retained under:
+
+```text
+TOP/docs/server_snapshots/handoff/event_coordinator_20260720_173527/
+```
+
+The accepted boundary is:
+
+```text
+EVENT_IMMUTABLE_HANDOFF_STAGING_STATUS=PASS
+EVENT_PVS_BASE_DRC_STATUS=NOT_RUN
+EVENT_PVS_DENSITY_DRC_STATUS=NOT_RUN
+EVENT_PVS_LVS_STATUS=NOT_RUN
+PVS_EXECUTED=NO
+EVENT_PVS_PREFLIGHT_AUTHORIZED=YES
+ASSEMBLY_INSERTION_AUTHORIZED=NO
+ASSEMBLY_BLOCKED_BY=p00_tx,p01_position
+FULL_TOP_PNR_AUTHORIZED=NO
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=PREPARE_EVENT_PVS_BASE_DRC_STRICT_PREFLIGHT
+```
+
+### P10-R06 Event PVS DRC Strict Preflight Prepared
+
+`TOP/ci/server_preflight_event_coordinator_pvs_drc.sh` is the only authorized
+next Event transaction. It binds the accepted staging diagnostic and package,
+rechecks both manifests and all six package artifact hashes, and audits the
+package before preparing any replay control.
+
+The transaction parses the complete hierarchy reachable from
+`spadmic_event_coordinator` in the exact staged GDS. It requires zero reachable
+PAD, PIMIDE, and NOPIM geometry before accepting the OOC selector policy. It
+then clones the already hash-reviewed TX GUI controls only as a cross-block
+launch scaffold into two fresh, isolated run directories. The base control
+contains one `#UNDEFINE DENSITY`; the density control contains one
+`#DEFINE DENSITY`. Both require `POPPING`, `PIMIDE`, and `DUMMY_FILL` undefined
+and `VAR_ANT_RATIO` defined.
+
+Both helper calls include `--dry-run`. The wrapper rejects any generated PVS
+stdout log, verifies replay and output isolation, checks every external
+reference, rechecks all source identities, and writes a complete diagnostic
+manifest. A passing result authorizes only the subsequent exact-GDS Event base
+DRC execution:
+
+```text
+EVENT_STRICT_DRY_RUN_PREFLIGHT_STATUS=PASS
+EVENT_PVS_BASE_DRC_EXECUTION_AUTHORIZED=YES
+EVENT_PVS_DENSITY_DRC_EXECUTION_AUTHORIZED=NO
+PVS_REPLAY_AUTHORIZED=BASE_ONLY
+PVS_EXECUTED=NO
+EVENT_PVS_BASE_DRC_STATUS=NOT_RUN
+EVENT_PVS_DENSITY_DRC_STATUS=NOT_RUN
+EVENT_PVS_LVS_STATUS=NOT_RUN
+ASSEMBLY_INSERTION_AUTHORIZED=NO
+ASSEMBLY_BLOCKED_BY=p00_tx,p01_position
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+NEXT_GATE=RUN_EVENT_PVS_BASE_DRC_ON_EXACT_STAGED_GDS
+```
+
+Do not start Event PVS before this preflight is returned and reviewed. Event
+OOC qualification remains independent of assembly order: `p00_tx` promotion,
+then Position density disposition and `p01_position` promotion, still precede
+any `p02_event_control` insertion.

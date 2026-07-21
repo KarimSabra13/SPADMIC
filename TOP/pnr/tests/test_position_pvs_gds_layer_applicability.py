@@ -214,6 +214,43 @@ class PositionPvsGdsLayerApplicabilityTest(unittest.TestCase):
             structures = (output / "gds_structure_inventory.tsv").read_text()
             self.assertRegex(structures, r"(?m)^unused_pad_library_cell\tNO\t")
 
+    def test_event_subject_uses_event_labels_without_changing_analysis(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            paths = self.build_fixture(root)
+            output = root / "output"
+            command = self.command(paths, output)
+            command.extend(
+                [
+                    "--subject-label",
+                    "event",
+                    "--top-structure",
+                    "spadmic_position_core",
+                ]
+            )
+
+            result = subprocess.run(
+                command, text=True, capture_output=True, check=False
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            status = (output / "gds_layer_applicability_collector_status.rpt").read_text()
+            policy = (output / "event_option_policy_contract.rpt").read_text()
+            self.assertIn(
+                "LABEL=SPADMIC_EVENT_PVS_DRC_GDS_LAYER_APPLICABILITY_COLLECTOR",
+                status,
+            )
+            self.assertIn(
+                "PIMIDE_EVENT_APPLICABILITY_STATUS="
+                "NOT_APPLICABLE_NO_REACHABLE_PAD_OR_PIMIDE_GEOMETRY",
+                status,
+            )
+            self.assertIn("LABEL=SPADMIC_EVENT_PVS_DRC_OPTION_POLICY_CONTRACT", policy)
+            self.assertIn(
+                "DUMMY_FILL_POLICY=NO_VIRTUAL_DUMMY_GENERATION_DURING_EVENT_OOC_DRC",
+                policy,
+            )
+
     def test_malformed_gds_fails_closed_and_keeps_pvs_unauthorized(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

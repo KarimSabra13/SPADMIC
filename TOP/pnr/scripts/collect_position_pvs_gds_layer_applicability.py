@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inventory attributable GDS layers relevant to Position PVS option policy."""
+"""Inventory attributable GDS layers relevant to a hard-block PVS option policy."""
 
 from __future__ import annotations
 
@@ -311,7 +311,7 @@ def aggregate_elements(
 
 
 def parse_target_mappings(
-    deck: Path,
+    deck: Path, subject: str,
 ) -> tuple[dict[str, LayerMapping], list[str], list[str]]:
     lines = deck.read_text(errors="replace").splitlines()
     map_by_internal: dict[int, list[tuple[int, int, int]]] = {}
@@ -378,7 +378,7 @@ def parse_target_mappings(
                     range(max(1, line_number - 2), min(len(lines), line_number + 2) + 1)
                 )
     context = [
-        "LABEL=SPADMIC_POSITION_PVS_DRC_TARGET_LAYER_MAPPING_CONTEXT",
+        f"LABEL=SPADMIC_{subject}_PVS_DRC_TARGET_LAYER_MAPPING_CONTEXT",
         f"SOURCE={deck}",
         f"SOURCE_SHA256={sha256_file(deck)}",
         *(f"{index}:{lines[index - 1]}" for index in sorted(context_indexes)),
@@ -404,6 +404,8 @@ def count_tuple(
 def collect(args: argparse.Namespace) -> int:
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    subject = args.subject_label.upper()
+    subject_lower = args.subject_label.lower()
     source_paths = [args.gds.resolve(), args.stream_map.resolve(), args.drc_rule.resolve()]
     errors: list[str] = []
 
@@ -413,7 +415,7 @@ def collect(args: argparse.Namespace) -> int:
         write_lines(
             output / "gds_layer_applicability_collector_status.rpt",
             [
-                "LABEL=SPADMIC_POSITION_PVS_DRC_GDS_LAYER_APPLICABILITY_COLLECTOR",
+                f"LABEL=SPADMIC_{subject}_PVS_DRC_GDS_LAYER_APPLICABILITY_COLLECTOR",
                 "COLLECTOR_STATUS=FAIL",
                 "SOURCE_REQUIRED_FILE_GATE_STATUS=FAIL",
                 "STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO",
@@ -435,7 +437,9 @@ def collect(args: argparse.Namespace) -> int:
     if not known_hash_gate:
         errors.append("known_source_hash_mismatch")
 
-    mappings, mapping_report, mapping_context = parse_target_mappings(source_paths[2])
+    mappings, mapping_report, mapping_context = parse_target_mappings(
+        source_paths[2], subject
+    )
     write_lines(output / "pvs_target_layer_mapping.tsv", mapping_report)
     write_lines(output / "pvs_target_layer_context.rpt", mapping_context)
     mapping_gate = all(symbol in mappings for symbol in TARGETS)
@@ -451,7 +455,7 @@ def collect(args: argparse.Namespace) -> int:
     write_lines(
         output / "stream_map_target_context.rpt",
         [
-            "LABEL=SPADMIC_POSITION_PVS_DRC_STREAM_MAP_TARGET_CONTEXT",
+            f"LABEL=SPADMIC_{subject}_PVS_DRC_STREAM_MAP_TARGET_CONTEXT",
             f"STREAM_MAP={source_paths[1]}",
             f"STREAM_MAP_BYTES={source_paths[1].stat().st_size}",
             f"STREAM_MAP_SHA256={before[source_paths[1]]}",
@@ -520,7 +524,7 @@ def collect(args: argparse.Namespace) -> int:
         )
 
     parser_summary = [
-        "LABEL=SPADMIC_POSITION_PVS_DRC_GDS_PARSER_SUMMARY",
+        f"LABEL=SPADMIC_{subject}_PVS_DRC_GDS_PARSER_SUMMARY",
         f"GDS={source_paths[0]}",
         f"GDS_BYTES={source_paths[0].stat().st_size}",
         f"GDS_SHA256={before[source_paths[0]]}",
@@ -577,7 +581,7 @@ def collect(args: argparse.Namespace) -> int:
         recommendation = "HOLD"
 
     policy_report = [
-        "LABEL=SPADMIC_POSITION_PVS_DRC_OPTION_POLICY_CONTRACT",
+        f"LABEL=SPADMIC_{subject}_PVS_DRC_OPTION_POLICY_CONTRACT",
         "DEFAULT_RULE_SET=default",
         "DEFAULT_RULE_SET_SELECTION_STATUS=PASS",
         "DENSITY_STATE=UNDEFINED",
@@ -585,17 +589,17 @@ def collect(args: argparse.Namespace) -> int:
         "POPPING_STATE=UNDEFINED",
         "POPPING_POLICY=DEFER_TO_POST_FILL_CHIP_LEVEL_CONTEXT",
         "DUMMY_FILL_STATE=UNDEFINED",
-        "DUMMY_FILL_POLICY=NO_VIRTUAL_DUMMY_GENERATION_DURING_POSITION_OOC_DRC",
+        f"DUMMY_FILL_POLICY=NO_VIRTUAL_DUMMY_GENERATION_DURING_{subject}_OOC_DRC",
         "VAR_ANT_RATIO_STATE=DEFINED",
         "VAR_ANT_RATIO_POLICY=RETAIN_SUPPLEMENTAL_ADD_RULE_FAMILY",
         f"PIMIDE_STATE=UNDEFINED",
-        f"PIMIDE_POSITION_APPLICABILITY_STATUS={pimide_status}",
+        f"PIMIDE_{subject}_APPLICABILITY_STATUS={pimide_status}",
         f"STRICT_DRY_RUN_PREFLIGHT_RECOMMENDATION={recommendation}",
         "STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO",
         "PVS_REPLAY_AUTHORIZED=NO",
         "PVS_EXECUTED=NO",
     ]
-    write_lines(output / "position_option_policy_contract.rpt", policy_report)
+    write_lines(output / f"{subject_lower}_option_policy_contract.rpt", policy_report)
 
     after = {path: sha256_file(path) for path in source_paths}
     source_recheck = before == after
@@ -613,7 +617,7 @@ def collect(args: argparse.Namespace) -> int:
         (required_gate, known_hash_gate, mapping_gate, parse_gate, top_gate, hierarchy_gate, source_recheck)
     )
     status_lines = [
-        "LABEL=SPADMIC_POSITION_PVS_DRC_GDS_LAYER_APPLICABILITY_COLLECTOR",
+        f"LABEL=SPADMIC_{subject}_PVS_DRC_GDS_LAYER_APPLICABILITY_COLLECTOR",
         f"COLLECTOR_STATUS={'PASS' if technical_pass else 'FAIL'}",
         "SOURCE_REQUIRED_FILE_GATE_STATUS=PASS",
         f"KNOWN_SOURCE_HASH_GATE_STATUS={'PASS' if known_hash_gate else 'FAIL'}",
@@ -651,7 +655,7 @@ def collect(args: argparse.Namespace) -> int:
             status_lines.append(f"{upper}_MAPPING_STATUS=NOT_FOUND")
     status_lines.extend(
         [
-            f"PIMIDE_POSITION_APPLICABILITY_STATUS={pimide_status}",
+            f"PIMIDE_{subject}_APPLICABILITY_STATUS={pimide_status}",
             f"STRICT_DRY_RUN_PREFLIGHT_RECOMMENDATION={recommendation}",
             "STRICT_DRY_RUN_PREFLIGHT_AUTHORIZED=NO",
             "PVS_REPLAY_AUTHORIZED=NO",
@@ -671,6 +675,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--drc-rule", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--top-structure", default="spadmic_position_core")
+    parser.add_argument(
+        "--subject-label",
+        choices=("position", "event"),
+        default="position",
+        help="label used in generated contracts; defaults preserve Position output",
+    )
     parser.add_argument("--expected-gds-sha", required=True)
     parser.add_argument("--expected-stream-map-sha", required=True)
     parser.add_argument("--expected-drc-sha", required=True)

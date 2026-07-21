@@ -58,6 +58,7 @@ TOP/docs/server_snapshots/pvs_lvs/position_lvs_auxiliary_cdl_reference_20260720_
 TOP/docs/server_snapshots/pvs_lvs/position_lvs_match_review_20260720_163037/
 TOP/docs/server_snapshots/genus/genus_ooc_event_coordinator_20260720_163038/
 TOP/docs/server_snapshots/innovus/innovus_ooc_harden_event_coordinator_20260720_173527/
+TOP/docs/server_snapshots/handoff/event_coordinator_20260720_173527/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -91,7 +92,7 @@ before launching Cadence.
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
 | 1 | Position core | Hard macro | `spadmic_position_core` | Retain accepted LVS match; resolve density only at assembled-fill review or by formal waiver |
-| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Stage the reviewed immutable Event handoff package |
+| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run the staged package's strict PVS DRC dry-run preflight |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
 | 5 | MPTDC frontend | Blocked soft region | unavailable final boundary | Wait for abstracts and pin contract |
@@ -893,13 +894,19 @@ TOP/docs/server_snapshots/innovus/innovus_ooc_harden_event_coordinator_20260720_
 
 ### Next Event Transaction
 
-Run only `TOP/ci/server_stage_event_coordinator_handoff.sh`. It verifies the
-complete source diagnostic manifest, exact Event run and Genus identities,
-all four output hashes, physical gate tuple, and diagnostic-to-run copy
-identity. It then stages one immutable candidate package, prepares the
-package-local canonical LVS source, checks LEF/source pin parity and the
-standard-cell CDL, audits the package, and rechecks every source after
-staging. It refuses to overwrite an existing package and does not invoke PVS.
+Immutable staging passed at
+`event_handoff_staging_20260721_101249` from exact commit
+`0fff3d2afb447f746c69ea946450ff6f5cdd7400`. The resulting candidate package,
+canonical LVS source, 65-port LEF/source parity, standard-cell CDL resolution,
+package audit, and both manifests are attributable. Compact evidence is under
+`TOP/docs/server_snapshots/handoff/event_coordinator_20260720_173527/`.
+
+Run only `TOP/ci/server_preflight_event_coordinator_pvs_drc.sh`. It rechecks the
+staging diagnostic and exact package, parses the complete hierarchy reachable
+from `spadmic_event_coordinator` for PAD/PIMIDE/NOPIM applicability, then
+materializes isolated base and density controls with `--dry-run`. It does not
+launch PVS. A pass authorizes only the later Event base-DRC execution; density
+execution remains unauthorized until the base result is reviewed.
 
 Event base DRC, density DRC, LVS, promotion, assembly insertion, and full-top
 PnR remain separate gates. `p02_event_control` still waits for promoted
@@ -922,8 +929,9 @@ PVS. The recorded execution passed every staging gate on package version
 The equivalent Event transaction is
 `TOP/ci/server_stage_event_coordinator_handoff.sh`. It is pinned to the
 accepted `event_innovus_execution_20260720_173527` diagnostic and package
-version `innovus_ooc_harden_event_coordinator_20260720_173527`. Its first
-successful server execution is still pending; Event PVS remains `NOT_RUN`.
+version `innovus_ooc_harden_event_coordinator_20260720_173527`. Staging passed
+at `event_handoff_staging_20260721_101249`; Event PVS remains `NOT_RUN` while
+the strict dry-run preflight is prepared.
 
 For each hard child:
 
@@ -1016,7 +1024,7 @@ ready flag:
 | TX DDR strip | signal route DRC/connectivity clean | internal PG reconstruction, mapped GDS, base+density DRC, LVS | blocks `p00_tx` promotion |
 | TX implementation children | `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and `ddrs2_adapter` abstracts are ready for top review | parent/package-level PG and PVS remain | supporting leaf evidence only; do not place as duplicate top macros |
 | Position core | base DRC `PASS`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p01_position` still waits for promoted `p00_tx` and density disposition |
-| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus with zero DRC and clean regular/PG connectivity | immutable handoff, base+density DRC, exact-GDS LVS | handoff staging may run now; `p02_event_control` still waits for promoted `p01` |
+| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged with source/LEF parity | exact-GDS selector preflight, base+density DRC, exact-GDS LVS | strict dry-run preflight may run now; `p02_event_control` still waits for promoted `p01` |
 | Central control | stable RTL in a soft guide | assembled timing, congestion, connectivity, and verification | inserted only with `p02_event_control` |
 | Matrix interface | stable RTL in a soft guide | guided placement, pin access, congestion, timing, DRC/LVS | inserted only after promoted `p02` |
 | MPTDC/TC frontend | route corridor and three axis blockages reserved | final MPTDC abstracts and exact pin contract are missing | hard stop at `p04_mptdc_frontend`; no invented dimensions or pins |
@@ -1091,8 +1099,9 @@ PVS. Event TC Genus now passes with exact boundary parity, nonnegative WNS,
 zero TNS, zero violating paths, and pinned post-synthesis artifact hashes.
 Event Innovus now has an attributable grid-fit pass with zero DRC, clean
 regular and PG connectivity, typical setup/hold pass, and mapped/merged GDS.
-The immutable Event package and every Event PVS gate remain `NOT_RUN` until
-separately executed and reviewed.
+The immutable Event package is staged and audited with canonical source
+preparation and pin parity. Every Event PVS gate remains `NOT_RUN`; the next
+transaction materializes and audits dry-run controls only.
 
 ## 13. Immediate Next Action
 
@@ -1125,20 +1134,21 @@ the review returned `OUTCOME_CLASS=ATTRIBUTABLE_MATCH` and did not rerun PVS.
 
 Event TC Genus passed at `genus_ooc_event_coordinator_20260720_163038`, and
 the exact downstream Innovus transaction passed at
-`innovus_ooc_harden_event_coordinator_20260720_173527`. The immediate
+`innovus_ooc_harden_event_coordinator_20260720_173527`. Immutable handoff
+staging then passed at `event_handoff_staging_20260721_101249`. The immediate
 foreground action is one call to
-`TOP/ci/server_stage_event_coordinator_handoff.sh` at the exact committed
-HEAD. Do not rerun Event Innovus and do not start PVS in the staging
-transaction.
+`TOP/ci/server_preflight_event_coordinator_pvs_drc.sh` at the exact committed
+HEAD. Do not rerun Event Innovus or staging, and do not start PVS in the
+preflight transaction.
 
 The remaining Event sequence is:
 
-1. Stage and audit the immutable Event GDS/LEF/DEF/PG-netlist package.
-2. Prepare a strict dry-run Event PVS DRC replay against that package.
-3. Run Event base PVS DRC against the exact staged GDS.
-4. Run Event density PVS DRC and classify every nonzero rule.
-5. Run exact-GDS Event PVS LVS against its canonical source and CDL.
-6. Promote Event only when all required Event gates pass or an exact formal
+1. Run and review the strict dry-run Event PVS DRC replay against the staged
+   package.
+2. Run Event base PVS DRC against the exact staged GDS.
+3. Run Event density PVS DRC and classify every nonzero rule.
+4. Run exact-GDS Event PVS LVS against its canonical source and CDL.
+5. Promote Event only when all required Event gates pass or an exact formal
    disposition exists.
 
 In parallel, retain the Position density debt for assembled-fill review or a
