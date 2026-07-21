@@ -5070,3 +5070,86 @@ Event base DRC remains `PASS`; density remains `FAIL` with four classified
 whole-extent rules. Even if LVS matches, promotion, `p02_event_control`
 insertion, full-top PnR, and signoff remain unauthorized until density receives
 an exact disposition and the preceding assembly phases promote.
+
+### P10-R13 Event Exact-GDS PVS LVS Match Accepted
+
+The authorized foreground exact-GDS LVS transaction completed on 2026-07-21
+from exact commit `624ae1e2967eb66a63e3b33139c66f483e14886f`. Its immutable
+roots are:
+
+```text
+DIAGNOSTIC_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/event_pvs_lvs_execution_20260721_121034
+RUN_DIR=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527/pvs/lvs/event_exact_gds_lvs_20260721_121034
+```
+
+The repository, complete source density diagnostic, package manifest, exact
+GDS/source/CDL identities, reviewed template controls, external references,
+replay contract, output isolation, executable run-control audit, run manifest,
+post-execution source/package identities, and the 23-file diagnostic manifest
+all passed. The exact accepted result is:
+
+```text
+STATUS=PASS
+RESULT=EVENT_PVS_EXACT_GDS_LVS_MATCH_RECORDED
+OUTCOME_CLASS=ATTRIBUTABLE_MATCH
+PVS_WRAPPER_RC=0
+PVS_TOOL_RC=0
+PVS_LVS_STATUS=MATCH
+LVS_NEGATIVE_MATCH_COUNT=0
+LVS_POSITIVE_MATCH_COUNT=3
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+RUN_CONTROL_AUDIT_RC=0
+RUN_AUDIT_GATE_RC=0
+RUN_MANIFEST_RC=0
+SOURCE_POST_RECHECK_RC=0
+PACKAGE_POST_EXECUTION_SHA_MANIFEST_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+```
+
+PVS compared `spadmic_event_coordinator` against the same canonical source top
+and reported `2660 insts vs 2660 insts` followed by explicit
+`Run Result : MATCH`. ERC results were empty. The run-control audit proved one
+exact executable GDS, one canonical Verilog source, one standard-cell CDL, and
+one run-local SVDB path. The compared identities are:
+
+```text
+GDS_SHA256=837538f219dacc9521f02bc58b3e2e5e587f859b4e70b69a1ca4a3e5fe7b6857
+LVS_SOURCE_SHA256=f9ec957b23b1a229c7c2ff19309fb7463dfc5cac7e570ad1ca68ad8b08089b27
+STDCELL_CDL_SHA256=5ff10b0b31003da9bb6db59eba7d52c82435e3ab68b2ba0a1956e4d9fbaef8cf
+CONTROL_SHA256=2cff739bd7ea5a48d0fc62523385c3b6f4623caf3f5adc4f151b6384ce9d9740
+SVDB_ACTION=ADDED_MISSING
+SVDB_REWRITE_COUNT=0
+```
+
+The matched run retained the observed `NVN-13002`, `NVN-15191`, and
+`NVN-13259` warnings plus
+`joinNets - cell 'output_fifo_free_words_o' is not found`. They did not create
+negative match evidence or prevent the explicit top-cell match; they remain
+recorded warnings rather than silently discarded evidence.
+
+This closes only the Event exact-GDS LVS gate. The independent physical tuple
+remains:
+
+```text
+EVENT_PVS_BASE_DRC_STATUS=PASS
+EVENT_PVS_DENSITY_DRC_STATUS=FAIL
+PVS_DENSITY_DRC_PRIMARY_RESULTS=4
+PVS_DENSITY_DRC_EXPANDED_RESULTS=4
+EVENT_PVS_LVS_STATUS=MATCH
+DENSITY_DEBT_CLASS=OOC_WHOLE_EXTENT_MINIMUM_COVERAGE
+DENSITY_DISPOSITION_STATUS=REVIEW_REQUIRED_FOR_ASSEMBLED_FILL_OR_FORMAL_WAIVER
+ASSEMBLY_INSERTION_AUTHORIZED=NO
+ASSEMBLY_BLOCKED_BY=p00_tx,p01_position
+BLOCK_PROMOTION_AUTHORIZED=NO
+SIGNOFF_READY=NO
+```
+
+Do not rerun Event Innovus, staging, DRC, or LVS. The Event OOC result is usable
+as accepted evidence, but density disposition and the preceding `p00_tx` and
+`p01_position` assembly promotions remain open. Compact tracked evidence is
+retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_lvs/event_lvs_match_20260721_121034/
+```

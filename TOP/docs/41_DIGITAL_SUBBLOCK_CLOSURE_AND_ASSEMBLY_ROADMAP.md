@@ -1,10 +1,9 @@
 # Digital Subblock Closure and Assembly Roadmap
 
-Status: phased server execution active. Position has attributable base DRC
-zero and an accepted exact-GDS LVS `MATCH`; its four-rule whole-extent density
-debt remains open. Event has an attributable grid-fit Innovus OOC `PASS` with
-zero DRC markers and clean connectivity; immutable handoff staging is next.
-No assembly phase is promoted.
+Status: phased server execution active. Position and Event each have
+attributable base DRC zero, accepted exact-GDS LVS `MATCH`, and four-rule
+whole-extent density debt still open. Neither block is promoted, and no
+assembly phase is promoted.
 
 Date: 2026-07-21.
 
@@ -59,6 +58,10 @@ TOP/docs/server_snapshots/pvs_lvs/position_lvs_match_review_20260720_163037/
 TOP/docs/server_snapshots/genus/genus_ooc_event_coordinator_20260720_163038/
 TOP/docs/server_snapshots/innovus/innovus_ooc_harden_event_coordinator_20260720_173527/
 TOP/docs/server_snapshots/handoff/event_coordinator_20260720_173527/
+TOP/docs/server_snapshots/pvs_drc/event_strict_preflight_20260721_104756/
+TOP/docs/server_snapshots/pvs_drc/event_base_drc_20260721_110404/
+TOP/docs/server_snapshots/pvs_drc/event_density_drc_20260721_112300/
+TOP/docs/server_snapshots/pvs_lvs/event_lvs_match_20260721_121034/
 TOP/pnr/assembly/spadmic_digital_subblock_portfolio.csv
 TOP/pnr/assembly/spadmic_digital_floorplan_regions.csv
 TOP/pnr/assembly/spadmic_digital_assembly_phases.csv
@@ -92,7 +95,7 @@ before launching Cadence.
 | 0 | TX packet core | Hard macro | `spadmic_tx_packet_core` | Manual MET1 and antenna closure |
 | 0 | TX DDR strip | Hard macro | `spadmic_tx_ddr_strip` | Internal PG and PVS closure |
 | 1 | Position core | Hard macro | `spadmic_position_core` | Retain accepted LVS match; resolve density only at assembled-fill review or by formal waiver |
-| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Run one exact-GDS PVS LVS transaction; retain four density rules as separate debt |
+| 2 | Event coordinator | Hard macro | `spadmic_event_coordinator` | Retain accepted LVS match; resolve density only at assembled-fill review or by formal waiver |
 | 3 | Central control | Soft region | stable logical modules | Insert with `p02_event_control` |
 | 4 | Matrix interface | Soft region | stable logical modules | Guided assembly placement |
 | 5 | MPTDC frontend | Blocked soft region | unavailable final boundary | Wait for abstracts and pin contract |
@@ -931,19 +934,25 @@ whole-window density rules, not localized minimum-area defects; antenna debt is
 zero. Compact evidence is under
 `TOP/docs/server_snapshots/pvs_drc/event_density_drc_20260721_112300/`.
 
-### Next Event Transaction
+### Recorded Event Exact-GDS LVS Result
 
-Run only `TOP/ci/server_run_event_coordinator_pvs_lvs.sh`. It binds the exact
-density diagnostic, its complete manifest and observed report hashes, the
+The exact-GDS transaction ran at `event_pvs_lvs_execution_20260721_121034`
+from exact commit `624ae1e2967eb66a63e3b33139c66f483e14886f`. It bound the
 unchanged package GDS, canonical package-local LVS source, standard-cell CDL,
-reviewed LVS control scaffold, and external references before one fresh
-foreground LVS process. It accepts only an explicit attributable `MATCH` or
-`MISMATCH`; process return code alone cannot pass the transaction.
+reviewed control scaffold, and external references. Replay, output isolation,
+the directive-aware run-control audit, run/source/package manifests, and the
+23-file diagnostic manifest all passed.
 
-Event base DRC is `PASS`; density DRC is `FAIL` with four classified
-whole-extent rules; exact-GDS LVS is `NOT_RUN`. LVS completion does not resolve
-density debt or authorize promotion. `p02_event_control` still waits for
-promoted `p01_position`, which itself waits for promoted `p00_tx`.
+PVS returned tool RC zero and explicit `MATCH` evidence with zero negative and
+three positive observations. The top comparison was
+`2660 insts vs 2660 insts`, and ERC results were empty. Compact evidence is
+under
+`TOP/docs/server_snapshots/pvs_lvs/event_lvs_match_20260721_121034/`.
+
+This accepts only the Event exact-GDS LVS gate. Base DRC remains `PASS`, and
+density DRC remains `FAIL` with four classified whole-extent rules. Do not
+rerun Event DRC or LVS. `p02_event_control` still waits for density disposition
+and promoted `p01_position`, which itself waits for promoted `p00_tx`.
 
 ## 8. Immutable Package and PVS
 
@@ -966,7 +975,9 @@ version `innovus_ooc_harden_event_coordinator_20260720_173527`. Staging passed
 at `event_handoff_staging_20260721_101249`; strict preflight then passed at
 `event_pvs_drc_strict_preflight_20260721_104756`; base DRC then passed with
 exact report-level `0 (0)` at `event_pvs_drc_base_execution_20260721_110404`.
-Event density DRC and LVS remain `NOT_RUN`.
+Density DRC then completed with four attributable whole-extent coverage rules
+at `event_pvs_drc_density_execution_20260721_112300`, and exact-GDS LVS
+returned an attributable `MATCH` at `event_pvs_lvs_execution_20260721_121034`.
 
 For each hard child:
 
@@ -1059,7 +1070,7 @@ ready flag:
 | TX DDR strip | signal route DRC/connectivity clean | internal PG reconstruction, mapped GDS, base+density DRC, LVS | blocks `p00_tx` promotion |
 | TX implementation children | `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and `ddrs2_adapter` abstracts are ready for top review | parent/package-level PG and PVS remain | supporting leaf evidence only; do not place as duplicate top macros |
 | Position core | base DRC `PASS`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p01_position` still waits for promoted `p00_tx` and density disposition |
-| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged; base DRC `PASS` with `0 (0)`; density `FAIL` with four whole-extent rules | exact-GDS LVS plus assembled-fill disposition or exact formal density waiver | LVS may run once; `p02_event_control` still waits for promoted `p01` and no promotion is authorized |
+| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged; base DRC `PASS` with `0 (0)`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p02_event_control` still waits for promoted `p01` and density disposition |
 | Central control | stable RTL in a soft guide | assembled timing, congestion, connectivity, and verification | inserted only with `p02_event_control` |
 | Matrix interface | stable RTL in a soft guide | guided placement, pin access, congestion, timing, DRC/LVS | inserted only after promoted `p02` |
 | MPTDC/TC frontend | route corridor and three axis blockages reserved | final MPTDC abstracts and exact pin contract are missing | hard stop at `p04_mptdc_frontend`; no invented dimensions or pins |
@@ -1136,8 +1147,8 @@ Event Innovus now has an attributable grid-fit pass with zero DRC, clean
 regular and PG connectivity, typical setup/hold pass, and mapped/merged GDS.
 The immutable Event package is staged and audited with canonical source
 preparation and pin parity. Event base PVS DRC is an attributable `0 (0)`
-`PASS`; density DRC and exact-GDS LVS remain `NOT_RUN`. The next transaction
-runs only the isolated density control.
+`PASS`; density DRC is an attributable `4 (4)` physical `FAIL`, and exact-GDS
+LVS is an attributable accepted `MATCH`. No Event PVS rerun is authorized.
 
 ## 13. Immediate Next Action
 
@@ -1177,16 +1188,18 @@ Event base DRC then passed at `event_pvs_drc_base_execution_20260721_110404`
 with exact total `0 (0)`. Event density DRC completed at
 `event_pvs_drc_density_execution_20260721_112300` with four attributable,
 reconciled whole-extent 30 percent coverage rules: `R1M1`, `R1M2`, `R1M3`, and
-`R1MT`. The immediate foreground action is one call to
-`TOP/ci/server_run_event_coordinator_pvs_lvs.sh` at the exact committed HEAD
-and against that density diagnostic. Do not rerun Event Innovus, staging,
-preflight, base DRC, or density DRC.
+`R1MT`. Event exact-GDS LVS then completed at
+`event_pvs_lvs_execution_20260721_121034` from exact commit
+`624ae1e2967eb66a63e3b33139c66f483e14886f`. It returned explicit
+`PVS_LVS_STATUS=MATCH`, zero negative observations, three positive
+observations, and a passing directive-aware run-control audit. Do not rerun
+Event Innovus, staging, preflight, base DRC, density DRC, or LVS.
 
 The remaining Event sequence is:
 
-1. Run exact-GDS Event PVS LVS against its canonical source and CDL.
-2. Review the LVS result without rerunning it and retain the four density rules
-   for assembled-fill disposition or an exact formal waiver.
+1. Retain the accepted exact-GDS LVS result without rerunning it.
+2. Resolve the four density rules through assembled-fill disposition or an
+   exact formal waiver.
 3. Promote Event only when all required Event gates pass or an exact formal
    disposition exists.
 
