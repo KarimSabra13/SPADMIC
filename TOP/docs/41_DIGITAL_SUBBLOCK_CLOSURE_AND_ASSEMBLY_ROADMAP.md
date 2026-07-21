@@ -892,7 +892,7 @@ diagnostic and compact tracked snapshot:
 TOP/docs/server_snapshots/innovus/innovus_ooc_harden_event_coordinator_20260720_173527/
 ```
 
-### Recorded Event Strict Preflight
+### Recorded Event PVS Progress
 
 Immutable staging passed at
 `event_handoff_staging_20260721_101249` from exact commit
@@ -912,18 +912,25 @@ The base control contains one `#UNDEFINE DENSITY`, and the density control one
 ran. Compact evidence is under
 `TOP/docs/server_snapshots/pvs_drc/event_strict_preflight_20260721_104756/`.
 
+The resulting base transaction ran at
+`event_pvs_drc_base_execution_20260721_110404` from exact commit
+`e0325d688a73b261742dc70097b1059aba8e035b`. PVS completed all 1290 checks,
+finished normally, and three report-level observations agreed on exact total
+`0 (0)`. Replay, output isolation, all source and package identities, and the
+diagnostic manifest passed. Compact evidence is under
+`TOP/docs/server_snapshots/pvs_drc/event_base_drc_20260721_110404/`.
+
 ### Next Event Transaction
 
-Run only `TOP/ci/server_run_event_coordinator_pvs_base_drc.sh`. It rechecks the
-complete preflight manifest, exact source-report hashes, package manifest,
-Event GDS, seed controls, and external references before launching one fresh
-foreground base PVS DRC process. Report-level zero results are accepted
-directly. Nonzero results are accepted as an attributable transaction only
-after every rule count and ASCII error geometry reconciles; the Event base DRC
-physical status remains `FAIL` in that case. It never runs density or LVS.
+Run only `TOP/ci/server_run_event_coordinator_pvs_density_drc.sh`. It binds the
+accepted base diagnostic and exact report hashes, package manifest, Event GDS,
+seed controls, foundry deck, stream map, and external references before one
+fresh foreground density run. A report-level zero closes density. A nonzero
+result is accepted as evidence only after all result and ASCII geometry totals
+reconcile and every rule is classified. It never runs LVS.
 
-Event base DRC, density DRC, LVS, promotion, assembly insertion, and full-top
-PnR remain separate gates. `p02_event_control` still waits for promoted
+Event base DRC is `PASS`; density DRC, LVS, promotion, assembly insertion, and
+full-top PnR remain separate gates. `p02_event_control` still waits for promoted
 `p01_position`, which itself waits for promoted `p00_tx`.
 
 ## 8. Immutable Package and PVS
@@ -945,8 +952,9 @@ The equivalent Event transaction is
 accepted `event_innovus_execution_20260720_173527` diagnostic and package
 version `innovus_ooc_harden_event_coordinator_20260720_173527`. Staging passed
 at `event_handoff_staging_20260721_101249`; strict preflight then passed at
-`event_pvs_drc_strict_preflight_20260721_104756`. Event PVS remains `NOT_RUN`
-while the one-run base execution transaction is prepared.
+`event_pvs_drc_strict_preflight_20260721_104756`; base DRC then passed with
+exact report-level `0 (0)` at `event_pvs_drc_base_execution_20260721_110404`.
+Event density DRC and LVS remain `NOT_RUN`.
 
 For each hard child:
 
@@ -1039,7 +1047,7 @@ ready flag:
 | TX DDR strip | signal route DRC/connectivity clean | internal PG reconstruction, mapped GDS, base+density DRC, LVS | blocks `p00_tx` promotion |
 | TX implementation children | `event_bundle_tx`, `output_fifo`, `ddr16_pairer`, and `ddrs2_adapter` abstracts are ready for top review | parent/package-level PG and PVS remain | supporting leaf evidence only; do not place as duplicate top macros |
 | Position core | base DRC `PASS`; density `FAIL` with four whole-extent rules; exact-GDS LVS accepted `MATCH` | assembled-fill disposition or exact formal density waiver | OOC evidence usable; `p01_position` still waits for promoted `p00_tx` and density disposition |
-| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged; exact-GDS strict preflight `PASS` | base+density DRC, exact-GDS LVS | base DRC may run now; `p02_event_control` still waits for promoted `p01` |
+| Event coordinator | TC Genus boundary `PASS`; grid-fit Innovus clean; immutable candidate handoff staged; exact-GDS base DRC `PASS` with `0 (0)` | density DRC, exact-GDS LVS | density DRC may run now; `p02_event_control` still waits for promoted `p01` |
 | Central control | stable RTL in a soft guide | assembled timing, congestion, connectivity, and verification | inserted only with `p02_event_control` |
 | Matrix interface | stable RTL in a soft guide | guided placement, pin access, congestion, timing, DRC/LVS | inserted only after promoted `p02` |
 | MPTDC/TC frontend | route corridor and three axis blockages reserved | final MPTDC abstracts and exact pin contract are missing | hard stop at `p04_mptdc_frontend`; no invented dimensions or pins |
@@ -1115,8 +1123,9 @@ zero TNS, zero violating paths, and pinned post-synthesis artifact hashes.
 Event Innovus now has an attributable grid-fit pass with zero DRC, clean
 regular and PG connectivity, typical setup/hold pass, and mapped/merged GDS.
 The immutable Event package is staged and audited with canonical source
-preparation and pin parity. Every Event PVS gate remains `NOT_RUN`; the next
-transaction materializes and audits dry-run controls only.
+preparation and pin parity. Event base PVS DRC is an attributable `0 (0)`
+`PASS`; density DRC and exact-GDS LVS remain `NOT_RUN`. The next transaction
+runs only the isolated density control.
 
 ## 13. Immediate Next Action
 
@@ -1151,18 +1160,18 @@ Event TC Genus passed at `genus_ooc_event_coordinator_20260720_163038`, and
 the exact downstream Innovus transaction passed at
 `innovus_ooc_harden_event_coordinator_20260720_173527`. Immutable handoff
 staging then passed at `event_handoff_staging_20260721_101249`, followed by the
-strict dry-run pass at `event_pvs_drc_strict_preflight_20260721_104756`. The
-immediate foreground action is one call to
-`TOP/ci/server_run_event_coordinator_pvs_base_drc.sh` at the exact committed
-HEAD and against that diagnostic. Do not rerun Event Innovus, staging, or the
-preflight.
+strict dry-run pass at `event_pvs_drc_strict_preflight_20260721_104756`.
+Event base DRC then passed at `event_pvs_drc_base_execution_20260721_110404`
+with exact total `0 (0)`. The immediate foreground action is one call to
+`TOP/ci/server_run_event_coordinator_pvs_density_drc.sh` at the exact committed
+HEAD and against that base diagnostic. Do not rerun Event Innovus, staging,
+preflight, or base DRC.
 
 The remaining Event sequence is:
 
-1. Run Event base PVS DRC against the exact staged GDS.
-2. Run Event density PVS DRC and classify every nonzero rule.
-3. Run exact-GDS Event PVS LVS against its canonical source and CDL.
-4. Promote Event only when all required Event gates pass or an exact formal
+1. Run Event density PVS DRC and classify every nonzero rule.
+2. Run exact-GDS Event PVS LVS against its canonical source and CDL.
+3. Promote Event only when all required Event gates pass or an exact formal
    disposition exists.
 
 In parallel, retain the Position density debt for assembled-fill review or a

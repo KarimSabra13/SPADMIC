@@ -1,0 +1,16 @@
+LABEL=SPADMIC_PVS_HANDOFF_RESULT
+MODE=DRC
+PVS_RC=0
+PVS_DRC_STATUS=PASS
+EVIDENCE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527/pvs/drc/event_base_drc_20260721_110404/.drcSummaryReport:Total DRC Results=0(0)
+SCANNED_TEXT_FILE_COUNT=25
+RESULT_EVIDENCE_INVENTORY=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527/pvs/drc/event_base_drc_20260721_110404/pvs_result_evidence_inventory.rpt
+DRC_TOTAL_MATCH_COUNT=3
+DRC_TOTAL_PRIMARY=0
+DRC_TOTAL_EXPANDED=0
+SIGNOFF_READY=NO
+PVS_DRC_VARIANT=BASE
+CROSS_BLOCK_CONTROL_SCAFFOLD_AUTHORIZED=YES
+PACKAGE=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527
+GDS=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527/gds/spadmic_event_coordinator.gds
+GDS_SHA256=837538f219dacc9521f02bc58b3e2e5e587f859b4e70b69a1ca4a3e5fe7b6857

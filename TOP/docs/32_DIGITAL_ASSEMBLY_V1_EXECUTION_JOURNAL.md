@@ -4910,3 +4910,76 @@ accepted evidence outcome, density execution remains unauthorized in this
 transaction and the next gate is
 `REVIEW_EVENT_BASE_DRC_AND_PREPARE_DENSITY_EXECUTION`. Event LVS, promotion,
 assembly insertion, and full-top PnR remain forbidden.
+
+### P10-R09 Event Base PVS DRC Zero Result Accepted
+
+The authorized foreground base transaction completed on 2026-07-21 from
+exact commit `e0325d688a73b261742dc70097b1059aba8e035b`. Its immutable roots are:
+
+```text
+DIAGNOSTIC_ROOT=/sim/ksabra/SPADMIC_work/diagnostics/event_pvs_drc_base_execution_20260721_110404
+RUN_DIR=/sim/ksabra/SPADMIC_work/handoff/innovus/blocks/spadmic_event_coordinator/innovus_ooc_harden_event_coordinator_20260720_173527/pvs/drc/event_base_drc_20260721_110404
+```
+
+The repository, strict-preflight reports and manifest, package manifest, Event
+GDS, seed controls, foundry deck, stream map, replay contract, output
+isolation, run manifest, post-execution source and package identities, and the
+24-file diagnostic manifest all passed. The exact physical result is:
+
+```text
+STATUS=PASS
+RESULT=EVENT_PVS_BASE_DRC_ZERO_RESULTS_RECORDED
+OUTCOME_CLASS=ATTRIBUTABLE_ZERO_RESULTS
+PVS_WRAPPER_RC=0
+PVS_TOOL_RC=0
+PVS_BASE_DRC_STATUS=PASS
+EVENT_PVS_BASE_DRC_STATUS=PASS
+DRC_TOTAL_PRIMARY=0
+DRC_TOTAL_EXPANDED=0
+DRC_TOTAL_MATCH_COUNT=3
+REPLAY_CONTRACT_STATUS=PASS
+OUTPUT_ISOLATION_STATUS=PASS
+RULE_ANALYSIS_STATUS=NOT_APPLICABLE_ZERO_RESULTS
+SOURCE_POST_RECHECK_RC=0
+PACKAGE_POST_EXECUTION_SHA_MANIFEST_RC=0
+DIAGNOSTIC_MANIFEST_RC=0
+```
+
+PVS completed all 1290 rule checks, reported `Total DRC Results : 0 (0)`,
+and finished normally. The three total matches are three consistent
+report-level observations of the same zero-result tuple. They are not three
+violations. Rule analysis is absent by design because there is no rule debt.
+
+This closes only Event base DRC for GDS SHA-256
+`837538f219dacc9521f02bc58b3e2e5e587f859b4e70b69a1ca4a3e5fe7b6857`.
+Density DRC and exact-GDS LVS remain `NOT_RUN`; promotion, assembly insertion,
+full-top PnR, and signoff remain unauthorized. Compact tracked evidence is
+retained under:
+
+```text
+TOP/docs/server_snapshots/pvs_drc/event_base_drc_20260721_110404/
+```
+
+### P10-R10 Event Density PVS DRC Execution Prepared
+
+`TOP/ci/server_run_event_coordinator_pvs_density_drc.sh` is the only
+authorized next Event EDA transaction. It requires the exact P10-R09
+diagnostic root and pins the accepted status, PVS result, replay, output
+isolation, preprocessor, and external-reference report hashes. It also
+rechecks the complete source diagnostic manifest, package manifest, exact GDS,
+seed scaffold, foundry DRC deck, stream map, and external references before
+launching exactly one fresh density PVS DRC process in the foreground.
+
+The transaction requires one `#DEFINE DENSITY` and retains POPPING, PIMIDE,
+and DUMMY_FILL undefined and VAR_ANT_RATIO defined. It accepts a report-level
+zero result directly. A nonzero result is an accepted evidence transaction
+only when the PVS wrapper returns its classified-result code, every total
+reconciles, ASCII error geometry reconciles, and every rule is inventoried in
+the same transaction. Infrastructure, replay, isolation, hash, manifest, or
+classification failures stop without rerunning PVS.
+
+The driver does not run LVS and does not authorize promotion or assembly. For
+either attributable density outcome, the next gate is
+`REVIEW_EVENT_DENSITY_DRC_AND_PREPARE_EXACT_GDS_LVS`. The density physical
+gate is `PASS` only for `0 (0)`; an attributable nonzero transaction remains
+a physical density `FAIL` with explicit rule debt.
